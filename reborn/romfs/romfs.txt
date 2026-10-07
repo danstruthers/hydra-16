@@ -7,10 +7,32 @@
 README              README
 lib/namespace       lib/namespace       ; The default namespace (the plan's appendix E): init runs it
 lib/profile         lib/profile         ; What each shell runs as it starts (rc's: phase 4)
+lib/shell           lib/shell           ; The shell init and wstart start in each window: HyForth's (forth -l)
+lib/edit/help       lib/edit/help       ; edit's keys (its ^G)
 doc/api.md          ../obj/gen/api.md   ; The system calls' reference (tools/apigen.js makes it at the build)
 bench/bench.hl      bench/bench.hl      ; hylang's, HyForth's and BASIC's benchmarks, the same in each (sim/bench.js compares them)
 bench/bench.fs      bench/bench.fs
 bench/bench.bas     bench/bench.bas
+bench/hl/calls.hl   bench/hl/calls.hl
+bench/hl/fib.hl     bench/hl/fib.hl
+bench/hl/tak.hl     bench/hl/tak.hl
+bench/hl/ack.hl     bench/hl/ack.hl
+bench/hl/loop.hl    bench/hl/loop.hl
+bench/hl/while.hl   bench/hl/while.hl
+bench/hl/dotimes.hl bench/hl/dotimes.hl
+bench/hl/nested.hl  bench/hl/nested.hl
+bench/hl/gcd.hl     bench/hl/gcd.hl
+bench/hl/collatz.hl bench/hl/collatz.hl
+bench/hl/hash.hl    bench/hl/hash.hl
+bench/hl/sieve.hl   bench/hl/sieve.hl
+bench/hl/sort.hl    bench/hl/sort.hl
+bench/hl/matrix.hl  bench/hl/matrix.hl
+bench/hl/queens.hl  bench/hl/queens.hl
+bench/hl/mapf.hl    bench/hl/mapf.hl
+bench/hl/fold.hl    bench/hl/fold.hl
+bench/hl/each.hl    bench/hl/each.hl
+bench/hl/chars.hl   bench/hl/chars.hl
+bench/hl/digits.hl  bench/hl/digits.hl
 lib/forth/hydra.fs  ../obj/gen/hydra.fs ; HyForth's constants and error codes (tools/apigen.js makes it too)
 lib/forth/startup.fs lib/forth/startup.fs ; What HyForth loads as it starts
 lib/forth/profile.fs lib/forth/profile.fs ; What forth -l (HyForth as a login shell) runs after it
@@ -38,6 +60,8 @@ lib/forth/cons.fs   lib/forth/cons.fs
 lib/forth/proc.fs   lib/forth/proc.fs
 lib/forth/clock.fs  lib/forth/clock.fs
 lib/forth/disk.fs   lib/forth/disk.fs
+lib/font/iso8859-15 ../modules/vid/iso8859-15.fnt ; The screen's fonts, 8 x 8, for /dev/vid/font: vid's own ...
+lib/font/cp437      lib/font/cp437              ;   and the PC's (both the X16 ROM's charsets, public domain)
 lib/forth/pc.fs     lib/forth/pc.fs
 lib/hylang/globals.hl lib/hylang/globals.hl ; hylang's library: danlang's (lib/ there), globals loaded as hylang starts
 lib/hylang/hylib.hl lib/hylang/hylib.hl     ;   (hylib.hl loads it, then hylang's own: clock ...)
@@ -63,6 +87,8 @@ bin/fsck            ../obj/programs/fsck.hyx
 bin/label           ../obj/programs/label.hyx
 bin/grep            ../obj/programs/grep.hyx    ; The tools in C (programs/grep, programs/sort)
 bin/sort            ../obj/programs/sort.hyx
+bin/db              ../obj/programs/db.hyx      ; The debugger (C: programs/db)
+bin/edit            ../obj/programs/edit.hyx    ; The screen editor (C: programs/edit)
 bin/scom            bin/scom                    ; A song run by its name (an rc script: #!/bin/rc)
 songs/scom.zsm      songs/scom.zsm              ; Songs (play /rom/songs/test.zsm): ZSM files, the X16's
 songs/test.zsm      songs/test.zsm              ;   (the old system's test song, from os_rom/songs/test.mml)

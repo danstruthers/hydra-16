@@ -17,7 +17,7 @@
 ;             go to the disk at once.  A card's blocks are cached (L2_SLOTS of them, written through).  Opening a
 ;             card's starts it (E_NODEV: no card; E_BUSY: open in #S)
 ;     N/ctl   reads as the disk: "sdhc 7580 MB 15523840 blocks" (sdsc, rom; ram and sram in KB), or "none".
-;             init: the card started again (after it's changed); start SIZE: a RAM disk of SIZE 8K banks (or
+;             init: the card started again (after it's changed); start SIZE [FROM-TO]: a RAM disk of SIZE 8K banks (or
 ;             SIZE K, SIZE M: 256K, 1M), and an empty HydraFS on it; stop: its banks given back (not while it's
 ;             open).  And HydraFS's: format [-f] [-p] [-s SIZE] [LABEL], label TEXT, check [fix] (hfs.s), and its
 ;             lines in the text (the label, the space free, the last check's results)
@@ -1843,22 +1843,35 @@ c_start:
             ldx         dk
             lda         d_state,X
             bne         @busy
-            lda         z:srv_argn
-            cmp         #1
-            bne         @inval
-            jsr         ram_size
-            bcs         @inval
-            sta         n                                   ; (Its banks)
+            jsr         start_args                          ; Its size (n: its banks), and from where
+            bcs         @done
             ldx         dk
             cpx         #DISK_S
             beq         @shared
-            jsr         BANKS_ALLOC                         ; This task's
+            lda         num + 2                             ; This task's banks, on modules FROM-TO ($m0-$mF)
+            asl
+            asl
+            asl
+            asl
+            tax
+            lda         num + 3
+            asl
+            asl
+            asl
+            asl
+            ora         #$0F
+            tay
+            lda         n
+            jsr         BANKS_ALLOC_IN
             bcs         @done
             ldy         #DS_RAM
             bra         @started
 
 @shared:
-            jsr         SEG_CREATE                          ; A shared segment
+            lda         n                                   ; A shared segment, from shared bank IDs FROM-TO
+            ldx         num + 2
+            ldy         num + 3
+            jsr         SEG_CREATE_IN
             bcs         @done
             ldy         #DS_SRAM
 @started:
@@ -2063,6 +2076,144 @@ ram_size:
             sec
             rts
 
+; start's words: n = its banks (SIZE), num + 2 and num + 3 = FROM and TO (from anywhere: 0 and $FF).  OUT: C = 0;
+; or C = 1, .A = E_INVAL
+start_args:
+            lda         z:srv_argn
+            beq         @inval
+            cmp         #3
+            bcs         @inval
+            jsr         ram_size
+            bcs         @inval
+            sta         n
+            lda         #0
+            sta         num + 2
+            dec         a
+            sta         num + 3
+            lda         z:srv_argn
+            cmp         #2
+            bne         :+
+            jsr         ram_range
+            bcs         @inval
+:
+            clc
+            rts
+
+@inval:
+            lda         #E_INVAL
+            sec
+            rts
+
+; start's FROM-TO, its second word after it: num + 2 = FROM, num + 3 = TO, bytes (decimal, or $hex), FROM <= TO, and
+; on r modules (0-15).  OUT: C = 0; or C = 1
+ram_range:
+            lda         srv_argp + 2
+            sta         src
+            lda         srv_argp + 3
+            sta         src + 1
+            ldy         #0
+            jsr         @number
+            bcs         @bad
+            sta         num + 2
+            lda         (src),Y
+            cmp         #'-'
+            bne         @bad
+            iny
+            jsr         @number
+            bcs         @bad
+            sta         num + 3
+            lda         (src),Y                             ; (The word's end)
+            bne         @bad
+            lda         num + 3
+            cmp         num + 2
+            bcc         @bad
+            ldx         dk                                  ; (r: modules)
+            cpx         #DISK_S
+            beq         :+
+            cmp         #16
+            bcs         @bad
+:
+            clc
+            rts
+
+@bad:
+            sec
+            rts
+
+@number:                                                    ; .A = the byte at (src),Y on, .Y past it; or C = 1
+            stz         num
+            stz         num + 1                             ; (num + 1: its digits)
+            lda         (src),Y
+            cmp         #'$'
+            beq         @hex
+@dec:
+            lda         (src),Y
+            sec
+            sbc         #'0'
+            cmp         #10
+            bcs         @end
+            pha
+            lda         num                                 ; * 10 (past 255: bad)
+            cmp         #26
+            bcs         @big
+            asl
+            asl
+            adc         num
+            asl
+            sta         num
+            pla
+            clc
+            adc         num
+            bcs         @bad
+            sta         num
+            inc         num + 1
+            iny
+            bra         @dec
+
+@hex:
+            iny
+:
+            lda         (src),Y
+            cmp         #'0'
+            bcc         @end
+            cmp         #'9' + 1
+            bcc         @d09
+            ora         #$20                                ; (a-f, A-F)
+            cmp         #'a'
+            bcc         @end
+            cmp         #'f' + 1
+            bcs         @end
+            sbc         #'a' - 10 - 1                       ; (C = 0: - 'a' + 10)
+            bra         @nib
+
+@d09:
+            sbc         #'0' - 1                            ; (C = 0: - '0')
+@nib:
+            ldx         num + 1                             ; (Two digits at most)
+            cpx         #2
+            bcs         @bad
+            asl         num
+            asl         num
+            asl         num
+            asl         num
+            ora         num
+            sta         num
+            inc         num + 1
+            iny
+            bra         :-
+
+@big:
+            pla
+            sec
+            rts
+
+@end:
+            lda         num + 1                             ; (A digit at least)
+            beq         @bad
+            lda         num
+            clc
+            rts
+
 ; src = the ctl command's first word after it
 arg_word:
             lda         srv_argp
@@ -2122,6 +2273,48 @@ gen_disk:
             ldx         #>s_blocks
             jsr         srv_tputs
             FAR2        hfs_ctl_lines                       ; (Its HydraFS, if it has one)
+            ldx         dk                                  ; A RAM disk's memory: its banks ("banks $10-$13"),
+            lda         d_state,X                           ;   or its segment ("segment 0")
+            cmp         #DS_RAM
+            beq         @banks
+            cmp         #DS_SRAM
+            bne         @end
+            lda         #<s_segment
+            ldx         #>s_segment
+            jsr         srv_tputs
+            ldx         dk
+            lda         d_aux,X
+            ldx         #0
+            jsr         srv_tputdec
+            bra         @nl
+
+@banks:
+            lda         #<s_banks
+            ldx         #>s_banks
+            jsr         srv_tputs
+            ldx         dk
+            lda         d_aux,X                             ; (The first)
+            pha
+            jsr         srv_tputhex
+            lda         #<s_to
+            ldx         #>s_to
+            jsr         srv_tputs
+            jsr         get_blocks                          ; (The last: the first + its blocks / 16 - 1)
+            ldx         #4
+:
+            lsr         num + 1
+            ror         num
+            dex
+            bne         :-
+            pla
+            clc
+            adc         num
+            dec         a
+            jsr         srv_tputhex
+@nl:
+            lda         #LF
+            jsr         srv_tputc
+@end:
             clc
             rts
 
@@ -2244,6 +2437,9 @@ s_sram:     .byte       "sram ", 0
 s_mb:       .byte       " MB ", 0
 s_kb:       .byte       " KB ", 0
 s_blocks:   .byte       " blocks", LF, 0
+s_banks:    .byte       "banks $", 0
+s_to:       .byte       "-$", 0
+s_segment:  .byte       "segment ", 0
 s_disks:    .byte       "0123456789abcdefxrs"                ; (By disk: its name)
 
 .include "srvlib.s"

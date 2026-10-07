@@ -11,7 +11,8 @@
 //   --seed N  the power-up's random RAM (default 1: the same each run)
 //   -j N      N tests at a time, each in a process of its own (default: the CPU's cores; -j 1, one after another
 //             here).  The reports come in the list's order either way
-//   --dl      in the danlang emulator (sim/dl), not sim/lib's; judged the same way
+//   --dl      in the danlang emulator (sim/dl), not sim/lib's; judged the same way.  A test marked jsOnly (its
+//             reason: the VERA's, which sim/dl hasn't yet) is skipped there, and said so (SKIP)
 // The emulator runs as fast as the host can, never paced to the Hydra's clock (run.js -i is): the cycles a test
 // reports, and its budgets, are the emulated machine's.
 'use strict';
@@ -211,8 +212,10 @@ async function main(argv) {
     process.exit(r.ok ? 0 : 1);
   }
   if (opt.build) require('../build.js').build({ quiet: true });
-  const list = opt.names.length ? tests.filter(t => opt.names.includes(t.name)) : tests;
-  if (!list.length) { console.error('no such test: ' + opt.names.join(' ')); process.exit(2); }
+  const named = opt.names.length ? tests.filter(t => opt.names.includes(t.name)) : tests;
+  if (!named.length) { console.error('no such test: ' + opt.names.join(' ')); process.exit(2); }
+  const list = named.filter(t => !(opt.dl && t.jsOnly));
+  for (const t of named) if (!list.includes(t)) console.log('SKIP ' + (t.name + ' ').padEnd(8) + t.what + '  (' + t.jsOnly + ')');
   let failed = 0;
   if (opt.jobs > 1 && list.length > 1) failed = await parallel(list, opt);
   else {

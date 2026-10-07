@@ -13,11 +13,14 @@
 ; nothing costs a look.  Three waits the scheduler ends itself, as it looks for the next task: ST_SLEEP, once the
 ; time in the kernel task's table has come (so the tick's interrupt does no more than count); ST_BLOCKED, once
 ; the task it's waiting to call is free (so a call's end wakes nobody); and ST_EVENT, once the event count of the
-; server it's waiting on has changed (so an irq entry wakes its clients by adding 1 to a byte: file.s).
+; server it's waiting on has changed (so an irq entry wakes its clients by adding 1 to a byte: file.s).  A task
+; that's stopped (TF_STOPPED: /proc's ctl, TASKSTOP) is passed by whatever its state, till it's started again.
 
 .include "kdefs.inc"
 
 .segment "KCODE"
+
+.assert     TF_STOPPED = $80, error, "The scheduler tests TF_STOPPED with bit"
 
 ; ****************************************************************************
 ; YIELD: let the other tasks run.  Keeps every register and flag (the frame has them)
@@ -97,7 +100,9 @@ K_SCHED_PICK:
             beq         @kernel
             stx         T_REGISTER                          ; A quick look at it
             lda         TK_STATE
+            bit         TK_FLAGS                            ; (N: stopped, TF_STOPPED)
             sty         T_REGISTER
+            bmi         @skip
             cmp         #ST_READY
             beq         @found
             cmp         #ST_SLEEP

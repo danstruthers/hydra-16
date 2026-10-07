@@ -36,6 +36,7 @@ int __fastcall__ hy_call (unsigned call, struct hy_regs* regs);
 int __fastcall__ fstat (int fd, struct stat* st);
 int __fastcall__ hy_dirstat (DIR* dir, struct stat* st);    /* readdir's last entry, whole */
 int __fastcall__ isatty (int fd);                           /* fd: a console (#c's cons)? */
+int __fastcall__ hy_fd2path (int fd, char* buf);            /* The name fd was opened by (HY_PATH_MAX + 1 bytes) */
 
 /* ---- The environment (rc's variables: getenv and putenv are stdlib.h's) */
 
@@ -70,6 +71,16 @@ void __fastcall__ hy_exits (const char* msg);               /* End with a messag
                                                             **   success (0), anything else 1 and the message */
 int __fastcall__ hy_note (int task, unsigned char note);    /* A note (HY_NOTE_*) to a task (HY_NOTE_GROUP |
                                                             **   a group: its tasks) */
+unsigned char hy_parent (void);                             /* The task that started this one (0xFF: none) */
+
+/* ---- Semaphores: every task's, by number; a mutex (HY_SEM_MUTEX) is given back only by the task that took it */
+
+int __fastcall__ hy_sem_new (unsigned char count, unsigned char flags);  /* One: its number, or -1 */
+int __fastcall__ hy_sem_acquire (unsigned char sem);        /* Take one, waiting till there's one (a note ends
+                                                            **   the wait: -1, EINTR) */
+int __fastcall__ hy_sem_try (unsigned char sem);            /* Take one if there's one (none: -1, EAGAIN) */
+int __fastcall__ hy_sem_release (unsigned char sem);        /* Give one back, and wake its waiters */
+int __fastcall__ hy_sem_free (unsigned char sem);           /* Free it (its waiters' waits end: -1) */
 
 /* ---- The namespace, Plan 9's: a bind or mount with no flags replaces what's at old; HY_MBEFORE and HY_MAFTER
 ** add to old's union, before or after its members; HY_MCREATE: a file made in the union is made in it */
@@ -78,7 +89,9 @@ int __fastcall__ hy_bind (const char* new, const char* old, unsigned char flags)
 int __fastcall__ hy_mount (char dev, const char* spec, const char* old, unsigned char flags);  /* '#dev' and spec */
 int __fastcall__ hy_unmount (const char* new, const char* old);     /* old's member new (NULL: all of old's) */
 
-/* ---- RAM banks: the task's own, 8K each, at HY_BANK_WINDOW ($8000-$9FFF) when selected (hy_bank) */
+/* ---- RAM banks: the task's own, 8K each, at HY_BANK_WINDOW ($8000-$9FFF) when selected (hy_bank).  (cc65 2.19's
+** optimizer has been seen to drop the index of hy_bank (a[i]), selecting the wrong bank: edit selects its banks with
+** a function of its own, programs/edit/blocks.s's setbank) */
 
 #define HY_BANK_WINDOW      ((unsigned char*) 0x8000)
 #define hy_bank(b)          (*(volatile unsigned char*) 0 = (b))    /* (Its bank register, $00) */

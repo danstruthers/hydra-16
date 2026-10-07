@@ -281,12 +281,29 @@ main:
             EXPECT_OK   "stop"
             jsr         ctl_read
             EXPECT_A    5, "r/ctl: none"
+            WRITE_      ctl, s_start2_1, s_start2_1_end - s_start2_1
+            EXPECT_ERR  E_INVAL, "r/ctl: start 4 2-1 (E_INVAL: FROM past TO)"
+            WRITE_      ctl, s_start5_5, s_start5_5_end - s_start5_5
+            EXPECT_ERR  E_NOMEM, "r/ctl: start 4 5-5 (E_NOMEM: no RAM module 5)"
+            WRITE_      ctl, s_start1_1, s_start1_1_end - s_start1_1
+            EXPECT_OK   "r/ctl: start 4 1-1 (RAM module 1's banks)"
+            jsr         ctl_read
+            jsr         banks_at
+            stx         cnt                                 ; (The checks use .X)
+            lda         buf + 1,X
+            EXPECT_A    '1', "r/ctl: banks $10-$13"
+            ldx         cnt
+            lda         buf + 2,X
+            EXPECT_A    '0', "(its first's low digit)"
+            WRITE_      ctl, s_stop, 4
             lda         ctl
             jsr         CLOSE
 
 ; ---- The shared RAM disk
             OPEN_       s_ctls, O_RDWR, 6
             sta         ctl
+            WRITE_      ctl, s_start16x, s_start16x_end - s_start16x
+            EXPECT_ERR  E_NOMEM, "s/ctl: start 16k $90-$90 (E_NOMEM: 2 banks, 1 ID)"
             WRITE_      ctl, s_start16k, 9
             EXPECT_OK   "s/ctl: start 16k (2 banks)"
             jsr         ctl_read
@@ -407,7 +424,30 @@ readall:
 ; ctl read from its start, into buf.  OUT: .A = the count read
 ctl_read:
             SEEK_       ctl, 0
-            READ_       ctl, 64
+            READ_       ctl, 128
+            rts
+
+; .X = where "banks $" ends in buf ($FF: not there; then buf + 1 and on are no digits)
+banks_at:
+            ldx         #0
+@at:
+            ldy         #0
+:
+            lda         buf,X
+            cmp         s_banks,Y
+            bne         @next
+            inx
+            iny
+            cpy         #s_banks_end - s_banks
+            bne         :-
+            dex                                             ; (The $)
+            rts
+
+@next:
+            inx
+            cpx         #120
+            bcc         @at
+            ldx         #$FF
             rts
 
 .rodata
@@ -437,4 +477,14 @@ s_start2x:  .byte       "start 2x"
 s_start0:   .byte       "start 0"
 s_start4:   .byte       "start 4"
 s_start16k: .byte       "start 16k"
+s_start16x: .byte       "start 16k $90-$90"
+s_start16x_end:
+s_start2_1: .byte       "start 4 2-1"
+s_start2_1_end:
+s_start5_5: .byte       "start 4 5-5"
+s_start5_5_end:
+s_start1_1: .byte       "start 4 1-1"
+s_start1_1_end:
+s_banks:    .byte       "banks $"
+s_banks_end:
 s_stop:     .byte       "stop"

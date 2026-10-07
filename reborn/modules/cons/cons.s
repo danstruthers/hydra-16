@@ -9,11 +9,14 @@
 ;   /cons       the window's console.  A read gets a line, edited here (cooked): Backspace and Delete, Left, Right,
 ;               Home and End (and Ctrl-A, Ctrl-E), Ctrl-U, the history with Up and Down; Enter ends it, Ctrl-D on
 ;               an empty line is the end of the input.  Or (raw: consctl's rawon) each key as it comes, the
-;               terminal's cursor and function keys as one code each (KEY_*; an Escape alone waits for the key
-;               after it).  A write goes into the window's text, and out if the window is shown (each LF as CR LF;
-;               a BEL rings the sound driver's bell too, #a/bell: the one call from a driver to another)
+;               terminal's cursor and function keys as one code each (KEY_*; an Escape alone is a key once
+;               ESC_TICKS have passed with nothing after it).  A write goes into the window's text, and out if the window is shown (each LF as CR LF;
+;               a BEL rings the sound driver's bell too, #a/bell: one of the two calls from a driver to another,
+;               the screen's #v/term the other)
 ;   /consctl    rawon, rawoff (raw lasts till the window's last consctl closes, as Plan 9's does); group (the
-;               window's notes go to the writer's note group).  It reads as the state
+;               window's notes go to the writer's note group); screen, serial, both (where the windows are shown:
+;               every window's, the console's terminals: the Vera X's screen, the serial port, or both, as it
+;               starts; screen with no screen: E_NODEV).  It reads as the state
 ;   /wctl       new (a window), current N (window N shown).  It reads as the windows, a line each (* the shown one)
 ;   /wnew       a read waits for the user's Ctrl-] c, then makes a window, shown, and gives its number (init's: it
 ;               starts a shell there)
@@ -36,6 +39,12 @@
 ; doesn't work, and on the board the Rockwell's sending back to back at 115200 loses characters (2 idle bits then;
 ; 1 otherwise).  The interrupts' work is a few dozen cycles each: the IRQs-off budget (200 cycles) has the
 ; dispatch's 115 in it.
+;   The screen (the Vera X's, phase 8: docs/plans/VIDEO.md) is a second terminal, its driver's (vid: #v/term, an
+; ANSI terminal; opened the first time, with no screen nothing from then on): after each request the shown window's
+; text goes there too, the same bytes as the serial port's, all there is (a place of its own in the text, scr_l, so
+; the screen needn't wait for the line); a window just shown is repainted there from its last SCR_ROWS lines.  With
+; the serial port off (consctl's screen), the shown window takes its writes whole, as a hidden one does: nothing paces
+; it but the screen.
 ;
 ; /pc (#P, docs/plans/PC.md): a folder on the PC, served by the PC tool (sim/tools/hydrapc.js, which is the
 ; terminal too) over the serial port, in frames between the console's bytes (sim/lib/pcproto.js): PC_MARK, then the
@@ -73,7 +82,11 @@ WIN_MAX         = 4             ; Windows
 TEXT_SIZE       = 2048          ; Each window's text: its last output ...
 TEXT_MAX        = TEXT_SIZE - 1 ;   (of which this much is kept)
 INQ_SIZE        = 64            ; Each window's keys, waiting to be read
-SCREEN_ROWS     = 24            ; A window shown again: its text's last 24 lines
+SCREEN_ROWS     = 24            ; A window shown again: its text's last 24 lines (the serial terminal's) ...
+SCR_ROWS        = 60            ;   or 60 (the screen's: 80 x 60)
+SCR_BUF         = 128           ; The screen's bytes, a write to #v/term at a time
+TERM_SERIAL     = 1             ; term: the windows shown on the serial port ...
+TERM_SCREEN     = 2             ;   and on the screen
 LINE_MAX        = 127           ; A line's length at most (and its LF)
 HIST_N          = 4             ; Each window's history: its lines ...
 HIST_SIZE       = 128           ;   each its length, then LINE_MAX characters
@@ -113,6 +126,8 @@ PC_WAIT_ATTACH  = TICK_HZ       ;   an attach's (no PC tool: E_IO this soon)
 PC_STALE        = TICK_HZ       ; A request this long past its time is given up (its client stopped asking)
 PC_QUIET        = TICK_HZ / 10  ; A frame coming in that stops this long has lost a byte
 PC_NAP          = 8             ; Timer 2's rounds (about 65,000 cycles) between looks at the time, a reply awaited
+ESC_NAP         = 2             ;   and an Escape alone (ESC_TICKS: then it's a key, not a sequence's start)
+ESC_TICKS       = TICK_HZ / 10
 PS_ATTACH       = 1             ; pc_step: the attach is out ...
 PS_REQ          = 2             ;   the request is out
 
@@ -124,6 +139,9 @@ rx_tp:      .res        2                                   ;   and the tail's
 tx_head:    .res        1                                   ; The send ring: the serve entry's end ...
 tx_tail:    .res        1                                   ;   and timer 2's
 tx_busy:    .res        1                                   ; <> 0: a byte is going (timer 2 runs)
+t2_nap:     .res        1                                   ; <> 0: timer 2 runs on with nothing to send (its rounds)
+esc_wait:   .res        1                                   ; <> 0: an Escape alone awaited (key_next), timer 2's
+                                                            ;   rounds bringing its reader back to look at the time
 t2_lo:      .res        1                                   ; Timer 2 for a character: a round's count ...
 t2_hi:      .res        1
 t2_rounds:  .res        1                                   ;   the rounds (more than 1 at slow rates) ...
@@ -148,7 +166,8 @@ eof:        .res        1                                   ;   <> 0: Ctrl-D on 
 was_cr:     .res        1                                   ;   and the last key was CR (an LF after it: the same)
 esc_st:     .res        1                                   ; A sequence coming in: 0 none, 1 ESC, 2 ESC [, 3 ESC O
 esc_n:      .res        1                                   ;   its number (ESC [ n ~) ...
-esc_semi:   .res        1                                   ;   past a ; (the modifiers: not kept)
+esc_semi:   .res        1                                   ;   past a ; (the modifiers: not kept) ...
+esc_at:     .res        2                                   ;   and the tick its ESC came at
 key_pb:     .res        1                                   ; A key put back (the one after an ESC that started
                                                             ;   nothing), or 0
 hi_n:       .res        1                                   ; The history: its lines ...
@@ -192,6 +211,15 @@ kbd_wait:   .res        1                                   ; <> 0: a /kbdin wri
 bell:       .res        1                                   ; <> 0: a BEL the shown window sent (ring's) ...
 bell_st:    .res        1                                   ;   #a/bell: 0 not opened yet, 1 open, 2 none ...
 bell_fd:    .res        1                                   ;   and its fd
+term:       .res        1                                   ; Where the windows are shown: TERM_SERIAL, TERM_SCREEN
+scr_st:     .res        1                                   ; The screen, #v/term: 0 not opened yet, 1 open, 2 none ...
+scr_fd:     .res        1                                   ;   its fd ...
+scr_l:      .res        1                                   ;   the shown window's next byte to it (its text's place) ...
+scr_h:      .res        1
+scr_rep:    .res        1                                   ;   <> 0: a window just shown, to repaint there ...
+scr_n:      .res        1                                   ;   its bytes in scr_buf ...
+scr_buf:    .res        SCR_BUF
+back_n:     .res        1                                   ; lines_back's lines
 pc_txbuf:   .res        PC_TX_SIZE                          ; /pc: the frame going out ...
 pc_rxbuf:   .res        PC_RX_SIZE                          ;   the frame come in ...
 pc_req:     .res        RQ_NAMELEN + 1                      ;   the request out, as its client asked it ...
@@ -249,6 +277,9 @@ init:
             sta         pc_owner
             lda         #$FF
             sta         lw
+            lda         #TERM_SERIAL | TERM_SCREEN          ; Both terminals (the screen's, if there's one) ...
+            sta         term
+            sta         scr_rep                             ;   the screen cleared as it's first written
             ldx         #0                                  ; Window 0: shown, init's group's
             jsr         w_init
             lda         #INIT_TASK
@@ -390,17 +421,23 @@ t2_next:
 @idle:
             stz         tx_busy
             inc         TASK_EVENT                          ; (The writers waiting for room look again; /pc's
-            lda         pc_step                             ;   client looks at the time)
+            lda         #PC_NAP                             ;   client looks at the time, and an Escape's reader)
+            ldy         pc_step
+            bne         @nap
+            lda         #ESC_NAP
+            ldy         esc_wait
             beq         @stop
-            lda         #PC_NAP                             ; A /pc reply awaited: timer 2 runs on, its rounds
-            sta         t2_left                             ;   $FFxx cycles (tx_start puts the rate's back)
-            lda         #$FF
+@nap:                                                       ; A /pc reply awaited, or an Escape alone: timer 2 runs
+            sta         t2_left                             ;   on, its rounds $FFxx cycles (tx_start puts the
+            lda         #$FF                                ;   rate's back)
             sta         t2_hi
             sta         VIA_T2CH
+            sta         t2_nap
             lda         #0
             rts
 
 @stop:
+            stz         t2_nap
             lda         VIA_T2CL                            ; (Its interrupt cleared)
             lda         #0
             rts
@@ -420,6 +457,7 @@ tx_start:
             cpy         tx_head
             beq         @done
             inc         tx_busy
+            stz         t2_nap
             ldy         rate                                ; (A character's time: /pc's wait may have had timer 2)
             lda         rate_hi,Y
             sta         t2_hi
@@ -550,13 +588,14 @@ distribute:
 @done:
             rts
 
-; Window .X shown, with the keys: repainted (pump)
+; Window .X shown, with the keys: repainted (pump), on both terminals
 w_show:
             stx         w_in
             lda         w_group,X
             sta         win_grp
             lda         #1
             sta         repaint
+            sta         scr_rep
             inc         TASK_EVENT                          ; (Its readers and writers, and the last one's, look
             rts                                             ;   again)
 
@@ -800,11 +839,16 @@ w_put:
             plx
             rts
 
-; Is window .X's text going out: is it shown, and the line not /ser's?  OUT: Z = 1 yes.  Keeps .X, .Y
+; Is window .X's text going out on the serial port: is it shown, the line not /ser's, and the port on (term)?
+; OUT: Z = 1 yes.  Keeps .X, .Y
 w_out:
             cpx         w_in
             bne         :+
             lda         ser_rd
+            bne         :+
+            lda         term
+            and         #TERM_SERIAL
+            eor         #TERM_SERIAL
 :
             rts
 
@@ -840,10 +884,13 @@ w_room:
 
 ; After each request: /pc's frame out first, all of it (and a request long past its time given up); then the shown
 ; window's text, as the send ring has room (each LF as CR LF); a window just shown first: the screen cleared, and its
-; text from the start of its last SCREEN_ROWS lines.  None while the line is /ser's
+; text from the start of its last SCREEN_ROWS lines.  None while the line is /ser's; with the serial port off
+; (term), the text passes it by.  Then the screen's (scr_pump)
 pump:
             lda         ser_rd
-            bne         @done
+            beq         :+
+            jmp         tx_start
+:
             lda         pc_step
             beq         :+
             lda         #PC_STALE
@@ -853,10 +900,22 @@ pump:
 :
             jsr         pc_pump
             bcs         @done
+            lda         term
+            and         #TERM_SERIAL
+            bne         @serial
+            stz         repaint                             ; (The port off: the text passes it by)
+            ldx         w_in
+            lda         w_hl,X
+            sta         w_sl,X
+            lda         w_hh,X
+            sta         w_sh,X
+            bra         @done
+
+@serial:
             lda         repaint
             beq         @text
             jsr         tx_free
-            cmp         #8
+            cmp         #S_CLEAR_N
             bcc         @done
             ldx         #0
 :
@@ -901,10 +960,24 @@ pump:
             bra         @text
 
 @done:
+            jsr         scr_pump
             jmp         tx_start
 
-; The shown window's next byte out: the start of its text's last SCREEN_ROWS lines (or its oldest byte)
+; The shown window's next byte out (the serial port's): the start of its text's last SCREEN_ROWS lines (or its
+; oldest byte)
 replay:
+            lda         #SCREEN_ROWS
+            jsr         lines_back
+            ldx         w_in
+            lda         tq
+            sta         w_sl,X
+            lda         tq + 1
+            sta         w_sh,X
+            rts
+
+; tq = the start of the shown window's text's last .A lines (or its oldest byte).  Modifies .A, .X, m, cnt, tp
+lines_back:
+            sta         back_n
             ldx         w_in
             lda         w_hl,X                              ; tq: back from the end ...
             sta         tq
@@ -935,16 +1008,164 @@ replay:
             bne         @back
             inc         cnt
             lda         cnt
-            cmp         #SCREEN_ROWS
+            cmp         back_n
             bcc         @back
             inc         tq                                  ; (From the byte after that LF)
             bne         @start
             inc         tq + 1
 @start:
+            rts
+
+; After each request (pump): the shown window's text to the screen (#v/term), all there is (each LF as CR LF); a
+; window just shown first: the screen cleared, and its text from the start of its last SCR_ROWS lines.  None while
+; the line is /ser's (the text waits, as for the serial port); with the screen off (term) or none, the text passes
+; it by.  Modifies .A, .X, .Y, r0, r1, tq, tp, m, cnt
+scr_pump:
+            lda         ser_rd
+            bne         @done
+            lda         term
+            and         #TERM_SCREEN
+            beq         @by
+            jsr         scr_open
+            bcc         @on
+@by:
+            ldx         w_in                                ; (Its place: the text's end)
+            lda         w_hl,X
+            sta         scr_l
+            lda         w_hh,X
+            sta         scr_h
+@done:
+            rts
+
+@on:
+            stz         scr_n
+            lda         scr_rep
+            beq         @text
+            stz         scr_rep
+            ldx         #0                                  ; The screen cleared ...
+:
+            lda         s_clear,X
+            beq         :+
+            jsr         scr_put
+            inx
+            bra         :-
+:
+            lda         #SCR_ROWS                           ;   and the window's last lines
+            jsr         lines_back
             lda         tq
-            sta         w_sl,X
+            sta         scr_l
             lda         tq + 1
-            sta         w_sh,X
+            sta         scr_h
+@text:
+            ldx         w_in                                ; Behind by more than the text keeps?  From its oldest
+            sec
+            lda         w_hl,X
+            sbc         scr_l
+            sta         m
+            lda         w_hh,X
+            sbc         scr_h
+            sta         m + 1
+            lda         w_ch,X
+            cmp         m + 1
+            bne         :+
+            lda         w_cl,X
+            cmp         m
+:
+            bcs         @byte
+            sec
+            lda         w_hl,X
+            sbc         w_cl,X
+            sta         scr_l
+            lda         w_hh,X
+            sbc         w_ch,X
+            sta         scr_h
+@byte:
+            ldx         w_in                                ; All of it there?
+            lda         scr_l
+            cmp         w_hl,X
+            bne         :+
+            lda         scr_h
+            cmp         w_hh,X
+            beq         @flush
+:
+            lda         scr_l
+            sta         tq
+            lda         scr_h
+            sta         tq + 1
+            jsr         t_at
+            inc         scr_l
+            bne         :+
+            inc         scr_h
+:
+            lda         (tp)
+            cmp         #LF
+            bne         :+
+            lda         #CR
+            jsr         scr_put
+            lda         #LF
+:
+            jsr         scr_put
+            bra         @byte
+
+@flush:
+            jmp         scr_flush
+
+; The screen's file, #v/term, open (the first time: opened; no screen, scr_st 2 from then on).  OUT: C = 0 open;
+; C = 1 none.  Modifies .A, .X, .Y, r0
+scr_open:
+            lda         scr_st
+            cmp         #1
+            beq         @open
+            bcs         @none
+            LDR         r0, s_scr
+            lda         #O_WRITE
+            jsr         OPEN
+            ldx         #2
+            bcs         :+
+            sta         scr_fd
+            ldx         #1
+:
+            stx         scr_st
+            cpx         #1
+            bne         @none
+@open:
+            clc
+            rts
+
+@none:
+            sec
+            rts
+
+; .A to the screen's buffer (written when it's full).  Keeps .X.  Modifies .A, .Y, r0, r1
+scr_put:
+            ldy         scr_n
+            sta         scr_buf,Y
+            iny
+            sty         scr_n
+            cpy         #SCR_BUF
+            bcc         :+
+            phx
+            jsr         scr_flush
+            plx
+:
+            rts
+
+; The screen's buffer to #v/term (a write that fails: the screen gone, none from then on).  Modifies .A, .X, .Y,
+; r0, r1
+scr_flush:
+            lda         scr_n
+            beq         @done
+            sta         r1
+            stz         r1 + 1
+            LDR         r0, scr_buf
+            lda         scr_fd
+            jsr         WRITE
+            bcc         :+
+            lda         #2
+            sta         scr_st
+:
+            stz         scr_n
+@done:
             rts
 
 ; A fid made (srvlib): its window, from the spec (none: window 0); a window that isn't there: E_NOENT.  (R_DUP's
@@ -1072,6 +1293,7 @@ h_ser:
             jsr         rx_reset                            ;   acted on (what came for it and wasn't read
             lda         #1                                  ;   dropped), the shown window repainted
             sta         repaint
+            sta         scr_rep
             inc         TASK_EVENT                          ; (Its writers look again)
 @done:
             clc
@@ -1474,8 +1696,9 @@ w_write:
             clc
             rts
 
-; The bell: a BEL the shown window sent rings the sound driver's, by a write to #a/bell (opened the first time:
-; the one call from a driver to another).  No sound driver: no bell, from then on.  Modifies .A, .X, .Y, r0-r2
+; The bell: a BEL the shown window sent rings the sound driver's, by a write to #a/bell (opened the first time: one
+; of the console's two calls to another driver, the screen's the other).  No sound driver: no bell, from then on.
+; Modifies .A, .X, .Y, r0-r2
 ring:
             lda         bell
             beq         @done
@@ -1584,6 +1807,7 @@ flush:
             stz         ln_len
             stz         ln_pos
             stz         esc_st
+            stz         esc_wait
 :
             clc
             rts
@@ -1602,12 +1826,17 @@ key_next:
 
 @byte:
             jsr         iq_get
-            bcs         @done
+            bcc         :+
+            jmp         @none
+:
             ldx         esc_st
             bne         @seq
             cmp         #ESC
             bne         @key
-            inc         esc_st                              ; (1: ESC)
+            inc         esc_st                              ; (1: ESC; when, for one alone)
+            jsr         TICKS
+            sta         esc_at
+            stx         esc_at + 1
             bra         @byte
 
 @key:
@@ -1616,6 +1845,7 @@ key_next:
             rts
 
 @seq:
+            stz         esc_wait
             dex
             bne         @csi
             cmp         #'['                                ; ESC, then [ or O starts a sequence
@@ -1712,6 +1942,54 @@ key_next:
 @ss3key:
             lda         ss3_key,X
             clc
+            rts
+
+@none:                                                      ; None yet: an ESC alone ESC_TICKS is a key
+            lda         esc_st
+            cmp         #1
+            beq         :+
+            sec
+            rts
+:
+            jsr         TICKS
+            sec
+            sbc         esc_at
+            tay
+            txa
+            sbc         esc_at + 1
+            bne         @alone
+            cpy         #ESC_TICKS
+            bcs         @alone
+            lda         #1                                  ; (Not yet: timer 2's rounds bring its reader back)
+            sta         esc_wait
+            jsr         esc_nap
+            sec
+            rts
+
+@alone:
+            stz         esc_st
+            stz         esc_wait
+            lda         #ESC
+            clc
+            rts
+
+; Timer 2 napping, if it's idle (nothing to send, no nap): its rounds add to the event count (t2_next), so an
+; Escape's reader comes back to look at the time.  Modifies .A
+esc_nap:
+            php
+            sei
+            lda         tx_busy
+            ora         t2_nap
+            bne         @done
+            lda         #ESC_NAP
+            sta         t2_left
+            lda         #$FF
+            sta         t2_hi
+            sta         t2_nap
+            sta         VIA_T2CL
+            sta         VIA_T2CH                            ; (It starts)
+@done:
+            plp
             rts
 
 ; ****************************************************************************
@@ -2140,8 +2418,73 @@ gen_consctl:
             lda         z:srv_id
             ldx         #0
             jsr         srv_tputdec
+            lda         #<s_terminal                        ; The terminals the windows are shown on (the screen
+            ldx         #>s_terminal                        ;   only if there's one)
+            jsr         srv_tputs
+            lda         term
+            and         #TERM_SCREEN
+            beq         :+
+            jsr         scr_open
+            lda         term
+            bcc         :++
+:
+            lda         #TERM_SERIAL
+:
+            asl
+            tax
+            lda         term_names - 2,X
+            pha
+            lda         term_names - 1,X
+            tax
+            pla
+            jsr         srv_tputs
             lda         #LF
             jsr         srv_tputc
+            clc
+            rts
+
+; screen, serial, both: where the windows are shown (all of them); a terminal turned on is repainted.  screen with
+; no screen: E_NODEV (both: the serial port alone, then)
+c_screen:
+            lda         #TERM_SCREEN
+            bra         c_term
+
+c_serial:
+            lda         #TERM_SERIAL
+            bra         c_term
+
+c_both:
+            lda         #TERM_SERIAL | TERM_SCREEN
+c_term:
+            sta         m
+            and         #TERM_SCREEN
+            beq         @set
+            jsr         scr_open
+            bcc         @set
+            lda         m
+            and         #TERM_SERIAL
+            bne         @set
+            lda         #E_NODEV
+            sec
+            rts
+
+@set:
+            lda         term                                ; Those turned on: repainted
+            eor         #$FF
+            and         m
+            lsr
+            bcc         :+
+            ldy         #1
+            sty         repaint
+:
+            lsr
+            bcc         :+
+            ldy         #1
+            sty         scr_rep
+:
+            lda         m
+            sta         term
+            inc         TASK_EVENT                          ; (A writer waiting for the line's room looks again)
             clc
             rts
 
@@ -2872,7 +3215,8 @@ edit_keys:  .byte       CR, LF, CTRL_D, BS, DEL, KEY_DEL, KEY_LEFT, KEY_RIGHT, K
 edit_vec:   .word       ed_cr, ed_lf, ed_eof, ed_bs, ed_bs, ed_del, ed_left, ed_right, ed_home, ed_home, ed_end, ed_end
             .word       ed_kill, ed_up, ed_down
 .assert     * - edit_vec = EDIT_N * 2, error, "edit_keys and edit_vec don't match"
-s_clear:    .byte       ESC, "[H", ESC, "[2J", 0            ; (The terminal's screen cleared, the cursor home)
+s_clear:    .byte       ESC, "[r", ESC, "[H", ESC, "[2J", 0 ; (The terminal's scrolling region the whole screen, the
+S_CLEAR_N   = * - s_clear - 1                               ;   screen cleared, the cursor home)
 s_bell:     .byte       "#a/bell", 0
 
 ; ****************************************************************************
@@ -2935,6 +3279,9 @@ cons_cmds:
             .word       s_rawon_w, c_rawon
             .word       s_rawoff_w, c_rawoff
             .word       s_group_w, c_group
+            .word       s_screen_w, c_screen
+            .word       s_serial_w, c_serial
+            .word       s_both_w, c_both
             .word       0
 wctl_cmds:
             .word       s_new_w, c_new
@@ -2961,6 +3308,12 @@ s_kbdin:    .byte       "kbdin", 0
 s_rawon_w:  .byte       "rawon", 0
 s_rawoff_w: .byte       "rawoff", 0
 s_group_w:  .byte       "group", 0
+s_screen_w: .byte       "screen", 0
+s_serial_w: .byte       "serial", 0
+s_both_w:   .byte       "both", 0
+term_names: .word       s_serial_w, s_screen_w, s_both_w    ; (term 1-3)
+s_terminal: .byte       LF, "terminal ", 0
+s_scr:      .byte       "#v/term", 0
 s_new_w:    .byte       "new", 0
 s_current_w: .byte      "current", 0
 s_rawon:    .byte       "rawon", LF, 0

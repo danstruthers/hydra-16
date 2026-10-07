@@ -107,7 +107,7 @@ main:
             sta         ctl
             EXPECT_OK   "OPEN #c/consctl"
             READ_       ctl, 64
-            EXPECT_A    24, "consctl reads as its state: rawoff, group 1, window 0 (24 bytes)"
+            EXPECT_A    40, "consctl reads as its state: rawoff, group 1, window 0, terminal serial (40 bytes)"
             lda         buf + 13
             EXPECT_A    '1', "group 1: init's"
 

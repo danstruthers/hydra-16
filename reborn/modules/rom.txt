@@ -8,6 +8,7 @@ module      storage
 module      kdev
 module      snd
 module      gpio
+module      vid
 module      rc
 module      wstart
 module      echo
@@ -39,7 +40,8 @@ module      uniq
 module      xd
 module      cmp
 module      more
-module      edit
+module      ed
+module      hwtest
 module      play
 module      xmodem
 module      forth

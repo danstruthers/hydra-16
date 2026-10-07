@@ -2508,6 +2508,15 @@ k_load:
             lda         #0
             jmp         EXITS
 @on:
+            lda         vm_full                             ; (The machine's arena full, and this load the line's own
+            beq         :+                                  ;   (a script's: nothing under it, no frame of the
+            lda         depth + 1                           ;   machine's): emptied, as at a line's start, its code
+            bne         :+                                  ;   made again)
+            lda         depth
+            cmp         #3
+            bcs         :+
+            FARN        7, vm_reset
+:
             lda         rd_owner                            ; (The text its own still: on)
             cmp         ld_fdv
             bne         :+

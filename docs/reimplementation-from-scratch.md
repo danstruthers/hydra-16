@@ -572,7 +572,7 @@ A driver module has `init`, `serve`, `irq` and `stop` entries and a device lette
 
 A library module is code other modules call: the server library (§12.3), a big-number library for hylang, a graphics library for the Vera X.  A module calls a routine in another bank with **`XCALL`** (`.A` = bank, `r15` = address; registers pass through), which the kernel does from BIOS page 0, switching the caller's `$01` and back, as the X16's `jsrfar` does.
 
-(As built: no `XCALL` yet.  srvlib is assembled into each server, and a module of up to four banks calls between its own banks itself, through trampolines in its RAM (`FAR2`, `FAR1`, and `FARN` from any bank to any).  A program may have library modules of its own (`HT_LIBRARY`), assembled with it and run in its task, called through the same trampolines with the library's bank, which the program finds in the module directory: hylang's numbers are `hylnum`, its strings and hashes `hylstr`.)
+(As built: `XCALL` came after the review of October 2026, with the routine's address in `r15` and its bank in `r14`, so `.A` passes through too.  srvlib is assembled into each server, and a module of up to four banks calls between its own banks itself, through trampolines in its RAM (`FAR2`, `FAR1`, and `FARN` from any bank to any).  A program may have library modules of its own (`HT_LIBRARY`), assembled with it and run in its task, called through the same trampolines with the library's bank, which the program finds in the module directory: hylang's numbers are `hylnum`, its strings and hashes `hylstr`.)
 
 ---
 
@@ -669,7 +669,7 @@ The default namespace file is in [Appendix E](#appendix-e-the-default-namespace)
 | `#g` GPIO | `/dev/gpio/0-7`, `port`, `ctl`, `ca1` | As today; CA1's interrupt is the kernel's (the VIA is) |
 | `#r` raw RAM | `/dev/ram` | Task 0's debugging view, as today, readable only by `init` and the kernel |
 
-(As built, phase 5.7: `#p` is kdev's, not task 0's (2.6); `mem` and `ram` through a new kernel call, `TASKMEM`, for drivers only, a byte at a time with T switched; `regs` and `env` through `TASKREAD`'s `TR_FRAME` and `TR_ENV`; `note` takes a note's name or number.  Who may: any task's but the kernel task's and a driver's, as `NOTE` has it.  `fd` is still to come: a channel keeps no name.)
+(As built, phase 5.7: `#p` is kdev's, not task 0's (2.6); `mem` and `ram` through a new kernel call, `TASKMEM`, for drivers only, a byte at a time with T switched; `regs` and `env` through `TASKREAD`'s `TR_FRAME` and `TR_ENV`; `note` takes a note's name or number.  Who may: any task's but the kernel task's and a driver's, as `NOTE` has it.  `fd` came after the review of October 2026: a channel keeps the name it was opened by, which `FD2PATH` gives too.  `#s` and `#r` came then too, kdev's: `#s/ctl` names a segment (`name NAME N`, kdev holding it while it's named) and each name reads as its number; `#r` has `task` and `shared`, init's alone, read only.)
 
 #### **14.2 The console: `cons`** (a driver module; task F)
 
@@ -697,7 +697,7 @@ One driver owns the SPI bus and every disk (as built, a module of two banks: Hyd
 * The **song player** is a program (`play`), not part of the driver: a client of `/dev/snd` like any other, with today's timing (the system tick, a fraction, read ahead without waiting).
 * Later: the VERA's PSG and PCM as more channels (phase 8).
 
-(As built, phase 5.1, `reborn/modules/snd`: the library and `#a` as above, with `sndctl`'s `claim`, `release`, `volume` and `reset`, and `#a/bell` for the console's bell.  Claims are a task's (the task's that opened the file), given back as its last file of `#a` closes.  There's no `clock`: the old player had stopped timing songs by timer B (on the board it didn't keep its period), so the driver owns no interrupt and keeps the chip's timers quiet.  Phase 5.2, `reborn/modules/play`: the player as above, `play [-l] song [n]`; `scom` is an rc script on the ROM disk, since rc runs a `#!` file by its interpreter.)
+(As built, phase 5.1, `reborn/modules/snd`: the library and `#a` as above, with `sndctl`'s `claim`, `release`, `volume` and `reset`, and `#a/bell` for the console's bell.  Claims are a task's (the task's that opened the file), given back as its last file of `#a` closes.  There's no `clock`: the old player had stopped timing songs by timer B (on the board it didn't keep its period), so the driver owns no interrupt and keeps the chip's timers quiet.  Phase 5.2, `reborn/modules/play`: the player as above, `play [-l] song [n]`; `scom` is an rc script on the ROM disk, since rc runs a `#!` file by its interpreter.  October 2026, the sound plan (`docs/plans/SOUND_PARITY.md`): `sndctl` takes each channel's commands as text too, `patch`, `note`, `off`, `level` (`vol`), `pan`, `bend`, `drum` and `reg`, so rc and BASIC's `SOUND "..."` reach everything.)
 
 #### **14.5 The rest**
 
@@ -749,7 +749,7 @@ Small programs, each a module in the paged ROM (in place) or a C program in `/ro
 
 Whether each is assembly or C is chosen by size and speed: C first where it saves time (`sort`, `grep`, `fsck`'s report), assembly for what runs often (`ls`, `cat`, `echo`).
 
-(As built, phase 4.3: the file, text and system tools are modules in assembly, on a library they share (`reborn/sdk/asm/toollib.s`: flags, errors and exit statuses as Plan 9's, buffered output, directories read whole, a tree walked); `mkfs`, `fsck` and `label` are RAM programs on the ROM disk's `/rom/bin`, bound at `/bin` after the caches.  `grep` and `sort` came in C with 4.5, `date` waits for the clock (phase 5), and `hwtest` for a way to reset into it.  `/proc`'s args, cwd and ns came with them (the calls `TASKREAD` and `NSINFO`; ns reads as the binds and mounts that make the namespace, as Plan 9's does), and the module directory now holds 127 modules.)
+(As built, phase 4.3: the file, text and system tools are modules in assembly, on a library they share (`reborn/sdk/asm/toollib.s`: flags, errors and exit statuses as Plan 9's, buffered output, directories read whole, a tree walked); `mkfs`, `fsck` and `label` are RAM programs on the ROM disk's `/rom/bin`, bound at `/bin` after the caches.  `grep` and `sort` came in C with 4.5, `date` waits for the clock (phase 5), and `hwtest` for a way to reset into it (it came after the review of October 2026, with `REBOOT`).  `/proc`'s args, cwd and ns came with them (the calls `TASKREAD` and `NSINFO`; ns reads as the binds and mounts that make the namespace, as Plan 9's does), and the module directory now holds 127 modules.)
 
 (As built, phase 4.6: `edit` is a module, as the tools are (its text has the task's RAM from its break up, some 29K), with the old editor's commands; its lines come from the console's cooked mode, edited there, or from a file, and its files keep LF line ends.  Ctrl-C comes back to its prompt through a note handler.)
 
@@ -1039,7 +1039,7 @@ Each phase ends with something that runs, a set of tests that pass in the emulat
 | 7.4 | **Data and IO**: strings, characters, atoms, hashes with tags and methods, streams over fds, `load`, `save` | M |
 | 7.5 | **The shell layer**: the line rule (lisp or rc), `run`, `sh`, `sh-out`, environment access, the profile | M |
 | 7.6 | **The library**: `globals.dl` ported to `globals.hl`; examples (`harn.hl` as a sample program) | S |
-| 7.7 | **hylang as the login shell**: `init` starts it on the console (rc stays the shell of scripts and `system()`) | S |
+| 7.7 | **hylang as the login shell**: `init` starts it on the console (rc stays the shell of scripts and `system()`).  (Decided otherwise, October 2026: HyForth is the login shell, the ROM's `/lib/shell` naming `forth -l`; hylang is one a card can name) | S |
 
 **Tests:** the conformance suite against the C# danlang; GC stress (long-running loops with allocation); the shell rule; Ctrl-C in a loop.
 
@@ -1050,6 +1050,8 @@ Each phase ends with something that runs, a set of tests that pass in the emulat
 #### **Phase 9: Tools and debugging**
 
 The debugger as a program over `/proc` (`regs`, `ctl`'s `stop`, `step`, `break ADDR`, `mem`, symbols from module `.dbg` files copied to the card or `/pc`); a screen editor on conio; an assembler (a program, or HyForth words); more tools (§15.3); networking when a W5500 card exists.
+
+(As built, October 2026: the debugger is `db`, a C program on the ROM disk, over `/proc/N/ctl` and `mem` and `TASKREAD`'s frame.  `ctl`'s `step` and `next` are the kernel's `TASKSTEP` (a driver's call): the stopped task's next instruction run out of line in its own zero page with a `BRK` after it, and `JMP`, `JSR`, `RTS` and `RTI` done on its frame, so no trace flag and no code patched in a ROM.  `break ADDR` became the debugger's own breakpoints, `BRK`s it writes into RAM through `mem`, with `ctl`'s `break` to have a `BRK` stop the task rather than note it; `SPAWN_STOPPED` starts a program at its first instruction.  Symbols are ld65's label files (`-Ln`, which the build makes), not `.dbg` files.  The screen editor is `edit` (the line editor became `ed`), nano's way, a C program on conio whose text is in the task's RAM banks, a block with a gap in each.  reborn's `docs/status.md`, 9.1 and 9.2.)
 
 #### **Phase 10: The X16 migration utility**
 
@@ -1084,7 +1086,7 @@ Phases 6, 7 and 8 depend only on phase 5 and can go in any order or in parallel;
 | IRQ dispatcher plus three fast handlers | One fast path | 1 |
 | Software interrupts (`SW_INT`, `SWI_REGISTER`) | Dropped; BRK is a fault note | 1 |
 | `MM_*` (4 tiers, handles), `SH_*`, `FP_*`, `MM_REF`, `SH_REF` | `BRK`, `PAGES_*`, `BANKS_*`, segments | 1 |
-| Semaphores | Kept (`SEM_*`), in the kernel task | 1 |
+| Semaphores | Kept (`SEM_*`), in the kernel task (as built: step 1.10, after the review of October 2026) | 1 |
 | The thunk table on pages 0 and 1 | One generated jump table on page 0 | 0, 1 |
 | fds in task RAM, transfer areas, 256-byte IO unit | Channels, kcopy, no unit | 2 |
 | `IO_CTL` codes | ctl files | 2 |
@@ -1132,13 +1134,13 @@ Phases 6, 7 and 8 depend only on phase 5 and can go in any order or in parallel;
 | Programs built for today's ABI stop working | They're rebuilt with the new SDKs (all are in the repository); the change is announced with the parity release |
 
 **Open questions** for the user:
-1. **The new system's name**, and whether it lives in this repository (a new folder) or a new one.
-2. **Device letters** (§14): the ones proposed follow Plan 9 where there's an equivalent; confirm or change.
-3. **hylang**: the file extension (`.hl`?), the rule for telling lisp lines from rc lines (§17.4), and whether `$` becomes environment access inside hylang.
+1. **The new system's name**, and whether it lives in this repository (a new folder) or a new one.  (Decided, October 2026: `reborn`, in `reborn/` of this repository, until the parity release; the name's for then.)
+2. **Device letters** (§14): the ones proposed follow Plan 9 where there's an equivalent; confirm or change.  (Decided, October 2026: as built, confirmed: `#/ #c #n #t #m #p #| #e #g #i #a #d #S #f #P #s #r`, and `#v`, `#k` to come.)
+3. **hylang**: the file extension (`.hl`?), the rule for telling lisp lines from rc lines (§17.4), and whether `$` becomes environment access inside hylang.  (Settled as built: `.hl`; a line that starts with `(`, `{`, `[` or a character right against `(` or `{` is hylang's, any other rc's; `$name` is an environment variable.)
 4. **danlang's license**: it's GPLv3 (Daniel and Simon Struthers).  hylang in the ROM makes the ROM image a combined work; choose a license for the Hydra's software as a whole, or relicense hylang.  (Decided: the user took danlang's GPLv3 license off, and hylang is in the system's ROM.)
-5. **Each shell's `/ram` permission check**: keep it (generalised in srvlib) or drop it as unnecessary on a single-user machine.
-6. **Binaries in Git**: move the ROM images to release artefacts, or keep committing them for people without a toolchain.
-7. **Which tools in C and which in assembly** (§15.3), once the C target's code size is measured in phase 4.
+5. **Each shell's `/ram` permission check**: keep it (generalised in srvlib) or drop it as unnecessary on a single-user machine.  (Decided, October 2026: dropped; each shell's namespace keeps the areas apart.)
+6. **Binaries in Git**: move the ROM images to release artefacts, or keep committing them for people without a toolchain.  (Decided, October 2026: commit `reborn/bin`'s images at the parity release, for people without a toolchain.)
+7. **Which tools in C and which in assembly** (§15.3), once the C target's code size is measured in phase 4.  (Settled as built: the tools in assembly, on toollib; `grep` and `sort` in C.)
 
 ---
 
@@ -1160,7 +1162,7 @@ A sketch of the calls; the specification file is the final word.  Each group has
 | **Servers and drivers** (`$F9B0`, 32) | `SRV_REGISTER`, `IRQ_OWN`, `IRQ_RELEASE`, `CLIENT_READ`, `CLIENT_WRITE`, `CLIENT_INFO`, `WAIT_ADD`, `WAKE_ALL`, `ROMREAD` |
 | Spare | `$FA10` up to the end of the table's space |
 
-The bases above are illustrative: the generator assigns them, and the specification fixes them once published.
+The bases above are illustrative: the generator assigns them, and the specification fixes them once published.  (As built, after the review of October 2026: the calls above are in `spec/api.def` but these: `NOTED` (a handler's C says what it would), `CLOCK_TEXT` (`/dev/time` is the time as text), and `CLIENT_INFO`, `WAIT_ADD` and `WAKE_ALL` (a server's event count and `WAKE`); `CLOCK` is `TIME`.  `XCALL` takes its routine's bank in `r14`, not `.A`, so `.A` passes through.  And more came as they were needed: the environments' calls, `TASKINFO`, `TASKREAD`, `TASKMEM`, `TASKSTOP`, `TASKSTEP`, `KMESG`, `NSINFO`, `SEGINFO`, `BANKS_ALLOC_IN`, `SEG_CREATE_IN`, `REBOOT`, the server calls' `SRV_TAKE` and `SRV_REPLY`.)
 
 ### **Appendix B: The request block**
 

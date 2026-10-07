@@ -898,17 +898,18 @@ HFS_PUT_KB_ALL:
             bne         :-
 
 HFS_PUT_KB:
-            asl         HFS_CL                              ; (4 KB a cluster)
-            rol         HFS_CL + 1
-            rol         HFS_CL + 2
-            rol         HFS_CL + 3
+            ldx         HFS_SHIFT                           ; (A cluster's KB: 2 ^ (the shift - 1))
+            dex
+            beq         @dec
+:
             asl         HFS_CL
             rol         HFS_CL + 1
             rol         HFS_CL + 2
             rol         HFS_CL + 3
+            dex
+            bne         :-
+@dec:
             jmp         HFS_PUT_DEC
-
-.assert     HFS_CLUSTER_BLOCKS * HFS_BLOCK = 4096, error, "HFS_PUT_KB: a cluster is 4 KB"
 
 ; Add the text at HFS_TEXTS,X (zero-terminated) to the line.  Modifies: .A, .X
 HFS_PUT_TEXT:

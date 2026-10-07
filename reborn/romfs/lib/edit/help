@@ -1,0 +1,21 @@
+edit: the keys (^ is Ctrl; M- is Esc then the key, or Alt with it)
+
+^G         this help                  ^L          the screen drawn again
+^O         save, asking the name      ^S          save
+^R         open a file                M-,  M-.    the file before, after
+^X         close the file (the last one: edit ends)
+^W         find                       M-W  M-Q    find again, backwards
+M-R        replace (y, n, a: all)     M-G         go to a line ($: the last)
+M-A        mark: a block's start      M-6         copy the line, or block
+^K         cut the line, or block     ^U          paste what was cut
+M-U        undo                       M-E         redo
+arrows  ^B ^F ^P ^N   move            Home End  ^A ^E   a line's start, end
+PgUp PgDn  ^Y ^V      a page          M-\  M-/    the text's start, end
+Del  ^D    delete                     Backspace   rub out
+Tab        a tab (stops every 8)      M-I         auto-indent on, off
+M-X        the help lines on, off
+
+^K again and again cuts lines into the cut buffer together.  A file whose
+lines end CR LF keeps them so.  Ctrl-C does nothing here.
+
+A key, to go on.

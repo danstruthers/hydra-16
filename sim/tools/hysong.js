@@ -34,6 +34,7 @@
 //   v N                     volume 0-127 (the carriers' levels, General MIDI's curve)
 //   p l|r|c|0               speakers: left, right, both, none
 //   @name                   the instrument, from the next note on
+//   I N                     the ROM's patch N as the instrument (0-162), from the next note on
 //   k N                     transpose (semitones)      D N    detune (64ths of a semitone)
 //   M pms,ams               the channel's LFO sensitivities (vibrato 0-7, tremolo 0-3)
 //   L rate,pmd,amd,wave     the LFO (the whole chip): rate 0-255, depths 0-127, wave 0 saw 1 square 2 triangle 3 noise
@@ -228,6 +229,11 @@ function compileTrack(ch, mml, score, rom, out) {
       const m = /^\w+/.exec(s.slice(i)); i += m[0].length;
       if (!score.inst[m[0]]) throw new Error('channel ' + ch + ': no instrument @' + m[0]);
       st.pending = score.inst[m[0]]; st.instName = m[0];
+    } else if (c === 'I') {
+      const n = num();
+      if (!(n >= 0 && n < rom.patches.length)) throw new Error('channel ' + ch + ': no patch ' + n);
+      score.inst['#' + n] = rom.patches[n];
+      st.pending = rom.patches[n]; st.instName = '#' + n;
     } else if (c === 'k') st.tr = num();
     else if (c === 'D') st.det = num();
     else if (c === 'M') { const pms = num(); i++; const ams = num(); st.lfo = (pms & 7) << 4 | (ams & 3); put(u, 0x38 + ch, st.lfo); }

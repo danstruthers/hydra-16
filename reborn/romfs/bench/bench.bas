@@ -1,7 +1,7 @@
 1 REM bench.bas - BASIC's side of the benchmarks (bench.hl is hylang's, bench.fs HyForth's: the same algorithms,
-2 REM the same sizes, the same results).  basic bench.bas [reps [quick]]: each benchmark run reps times (1), and a
+2 REM the same sizes, the same results).  basic bench.bas [reps [q|f]]: each benchmark run reps times (1), and a
 3 REM line for each,  bench basic NAME RESULT TICKS REPS:  its value, and the ticks the reps took (200 a second).
-4 REM quick: smaller sizes (the regression test's).  Each is BASIC's own way: FOR and NEXT, GOSUB for a call (its
+4 REM q: smaller sizes (the regression test's).  Each is BASIC's own way: FOR and NEXT, GOSUB for a call (its
 5 REM arguments and its result in variables), a stack of its own for Fibonacci's recursion (GOSUB keeps no
 6 REM locals), integer arrays for bytes.  The benchmarks come first, as a GOTO or GOSUB back looks for its line
 7 REM from the program's start; their variables are made first (line 9), as a variable is looked for among them in
@@ -36,7 +36,7 @@
 900 REM The runs: reps and quick from the arguments; each benchmark (its size N, kept in M) run RP times.  Its
 901 REM loops are GOTO's, so that the stack is the benchmark's (fib's GOSUBs 15 deep, 7 bytes each)
 910 RP=VAL(ARG$(1)):IF RP<1 THEN RP=1
-920 Q=ARG$(2)<>"":DIM F%(1023),B%(255),K(20)
+920 Q=ARG$(2)="q":DIM F%(1023),B%(255),K(20)
 930 READ N$,NF,NQ:IF N$="done" THEN PRINT "bench basic done":END
 940 N=NF:IF Q THEN N=NQ
 950 BN=BN+1:GOSUB 990:T0=T:RR=0

@@ -152,6 +152,9 @@ BOOT:
             lda         #$FF
             sta         K_PARENT,X
             sta         K_TASK_BANK,X
+            sta         K_SEM_MAKER,X                       ; (No semaphores: SEM_MAX = TASKS)
+            stz         K_SEM_WAITLO,X
+            stz         K_SEM_WAITHI,X
             stz         K_IRQ_STRAY,X
             stz         K_EXIT_STATE,X
             stz         K_TASK_TYPE,X

@@ -179,7 +179,18 @@ K_POST:
             sta         K0_POSTFAULT
             KPUTS       P_S_CRLF
 
-@hwt:                                                       ; A T typed: the hardware test, if the ROM has it
+@hwt:                                                       ; A T typed (or REBOOT_HWTEST's word, taken once): the
+            ldx         #3                                  ;   hardware test, if the ROM has it
+:
+            lda         K_HWT_WORD,X
+            cmp         P_HWT_WORD,X
+            bne         @key
+            dex
+            bpl         :-
+            stz         K_HWT_WORD
+            bra         @start
+
+@key:
             lda         ACIA_STATUS
             and         #ACIA_ST_RDRF
             beq         @done
@@ -187,6 +198,7 @@ K_POST:
             and         #$DF                                ; (Either case)
             cmp         #'T'
             bne         @done
+@start:
             FARCALL     K_MD_VALID
             bcs         @nohwt
             lda         MD_HWTEST
@@ -470,6 +482,7 @@ P_PUTC:
             rts
 
 .segment "KRODATA_P4"
+P_HWT_WORD:     .byte   "HWT!"                              ; (REBOOT_HWTEST's: sys.s)
 P_STRINGS:
 P_S_POST:   .byte       CR, LF, "POST ZP:", 0
 P_S_ST:     .byte       " ST:", 0

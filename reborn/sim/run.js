@@ -7,7 +7,8 @@
 //
 // Usage: node sim/run.js [options]
 //   -i, --interactive   the terminal is the Hydra's serial console, in real time.  Ctrl-A x quits, Ctrl-A r resets,
-//                       Ctrl-A s shows the state, Ctrl-A h helps
+//                       Ctrl-A s shows the state, Ctrl-A b stops it (the monitor: below), Ctrl-A v shows the Vera X's
+//                       screen as text, Ctrl-A p saves it as a PNG, Ctrl-A h helps
 //   --cycles N          stop at cycle N (default 30000000: 8.4 s at 3.58 MHz; interactive: never)
 //   --input TEXT        keys to type (\r, \n: Return; \w: wait 2M cycles), one every 20000 cycles from cycle 200000
 //   --paste             type them as fast as the line goes (a byte arriving while the last is unread is lost)
@@ -18,6 +19,17 @@
 //   --seed N            the power-up's random RAM and registers, repeatable (default: random)
 //   --trace N           the last N instructions in the report (default 25)
 //   --watch-pc ADDR     log each time the PC reaches ADDR (hex, or a kernel label), on BIOS page 0
+//   --watch ADDR[:T]    log each write to ADDR ($0000-$7FFF: hex, or a module's label, MODULE:LABEL), by any task or
+//                       task T's; --watch-read ADDR[:T] each read
+//   --trace-calls [L]   log each system call a program makes, by name, its registers (r0's string, if it's one), and
+//                       what it gives back; L: only these, a list (OPEN,READ,t1: a name, or tN, task N's)
+//   --break SPEC        stop before the instruction at SPEC: a kernel label (K_OPEN), a module's (rc:main: while the
+//                       task has its bank), page:ADDR (0:E000), or ADDR (any page or bank).  The report says where;
+//                       with -i, the monitor
+//   --log FILE          the log's lines (the watches, the call trace, the marks) into FILE, not the terminal
+// The monitor (-i: Ctrl-A b, or a break): the Hydra stopped, a command line of its own: c continue; n [N] the next N
+// instructions, each shown; r the registers; t the tasks; m ADDR [N] [T] N bytes (64) at ADDR in task T's view (the
+// task running's); b [SPEC] a break (none: the list); d N the Nth break gone; w ADDR[:T] a write watch; x quit
 //   --bios FILE, --prom FILE   other images (--prom: the whole paged ROM, its sockets' images one after another)
 //   --sd FILE           a card image (../sim/tools/hydrafs.js makes them), SD device 0, then 1 ...: read and
 //                       written in the file itself, as the Hydra reads and writes it
@@ -27,12 +39,19 @@
 //   --pc-log            list /pc's requests as they're served (opens, creates, removes, renames, errors)
 //   --pc-damage F[,F...]  damage /pc's frames on the line, to try the resends: qN the Nth frame the Hydra sends, rN
 //                       the Nth reply (a byte of its body gets bit 6 flipped)
+//   --vera [V]          a Vera X card in slot 0 (sim/lib/vera.js): the VERA, its gateware version V (47.0.2, the X16
+//                       community's, by default; 0.9: fvdhoef's, without FX's registers or the version)
+//   --vera-config MS    the VERA's FPGA configuring itself after power-up and a reset: MS milliseconds (100)
+//   --screen            after the report, the VERA's text layer as text (its characters as ISO-8859-1)
+//   --frame-png FILE    at the end, the VERA's screen as a PNG (640 x 480); with -i, Ctrl-A p's file (screen-N.png)
+//   --view [PORT]       with -i: the VERA's screen live in a browser, at http://localhost:PORT (8016) (sim/view.js)
 // From Node: boot(opt) gives the machine; labels() the kernel's labels; state(m) each task's state.
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { createMachine } = require('./lib/machine.js');
+const { createMachine, romBank } = require('./lib/machine.js');
 const { createPcHost } = require('./lib/pchost.js');
+const { encodePng } = require('./lib/png.js');
 
 const ROOT = path.join(__dirname, '..');
 const hx = (v, n = 2) => v.toString(16).toUpperCase().padStart(n, '0');
@@ -118,16 +137,141 @@ function report(m, lbl) {
     console.log('   ' + hx(w, 1) + ':' + hx(pc, 4) + ' ' + lbl.at(pc, w).padEnd(24) + ' T' + hx(t, 1) + ' A=' + hx(a) + ' X=' + hx(x) + ' Y=' + hx(y) + ' S=' + hx(s) + ' P=' + hx(p));
 }
 
+// The calls' names by their jump table slots, and the errors' by their codes (obj/gen/api.json: tools/apigen.js)
+function api() {
+  const f = path.join(ROOT, 'obj', 'gen', 'api.json');
+  const a = fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : { calls: [], errors: [] };
+  return { calls: new Map(a.calls.map(c => [c.addr, c.name])), errNames: new Map(a.errors.map(e => [e.code, e.name])) };
+}
+
+// The module directory (paged ROM bank 0 at $A200, the image's): name -> { bank, banks }
+function modDir(prom) {
+  const at = a => prom[romBank(0) * 0x4000 + ((a - 0xA000) ^ 0x2000)], out = new Map();
+  for (let e = 0; e < at(0xA205); e++) {
+    const b = 0xA208 + e * 16;
+    let name = '';
+    for (let i = 0; i < 12 && at(b + 4 + i); i++) name += String.fromCharCode(at(b + 4 + i));
+    out.set(name, { bank: at(b), banks: at(b + 1) });
+  }
+  return out;
+}
+
+// A module's label (obj/modules/NAME/NAME.lbl, or obj/tests/NAME/: ld65's -Ln): its address, or undefined
+function modLabel(mod, label) {
+  for (const d of ['modules', 'tests']) {
+    const f = path.join(ROOT, 'obj', d, mod, mod + '.lbl');
+    if (!fs.existsSync(f)) continue;
+    for (const line of fs.readFileSync(f, 'latin1').split(/\r?\n/)) {
+      const m = line.match(/^al ([0-9A-F]+) \.(\w+)$/);
+      if (m && m[2] === label) return parseInt(m[1], 16);
+    }
+  }
+  return undefined;
+}
+
+// A break's place: a kernel label, MODULE:LABEL (with its banks), PAGE:ADDR, or ADDR.  { pc, page, bank, banks }, or
+// null
+function breakSpec(spec, lbl, prom) {
+  let m;
+  if (lbl.byName.has(spec)) return { pc: lbl.byName.get(spec), page: lbl.pageOf.get(spec) || 0, bank: -1 };
+  if ((m = spec.match(/^([0-9a-f]):\$?([0-9a-f]{1,4})$/i))) return { pc: parseInt(m[2], 16), page: parseInt(m[1], 16), bank: -1 };
+  if ((m = spec.match(/^\$?([0-9a-f]{1,4})$/i))) return { pc: parseInt(m[1], 16), page: -1, bank: -1 };
+  if ((m = spec.match(/^(\w+):(\w+)$/))) {
+    const pc = modLabel(m[1], m[2]), md = modDir(prom).get(m[1]);
+    if (pc === undefined) return null;
+    return pc >= 0xA000 && pc < 0xE000 && md ? { pc, page: -1, bank: md.bank, banks: md.banks } : { pc, page: -1, bank: -1 };
+  }
+  return null;
+}
+
+// A watch's place: ADDR or MODULE:LABEL, then :T for one task's.  { addr, task }, or null
+function watchSpec(spec) {
+  let m = spec.match(/^(.*?)(?::([0-9a-f]))?$/i), task = -1, where = spec;
+  if (m && m[2] !== undefined && !/^\w+:\w+$/.test(spec) || /^\w+:\w+:[0-9a-f]$/i.test(spec)) { where = m[1]; task = parseInt(m[2], 16); }
+  let addr;
+  if ((m = where.match(/^\$?([0-9a-f]{1,4})$/i))) addr = parseInt(m[1], 16);
+  else if ((m = where.match(/^(\w+):(\w+)$/))) addr = modLabel(m[1], m[2]);
+  return addr >= 0 && addr < 0x8000 ? { addr, task } : null;
+}
+
+// The VERA's text layer as lines, a heading first (--screen, Ctrl-A v)
+function screenLines(m) {
+  if (!m.vera) return ['--- no Vera X (--vera)'];
+  const c = m.vera.cells();
+  if (!c) return ['--- the screen: ' + (m.vera.ready ? 'no text layer shown' : 'the VERA is configuring')];
+  return ['--- the screen (layer ' + c.layer + ', ' + c.cols + ' x ' + c.rows + '):', ...m.vera.text().map(l => '   |' + l)];
+}
+
+// The VERA's screen into a PNG file
+function savePng(m, file) {
+  const f = m.vera.frame();
+  fs.writeFileSync(file, encodePng({ width: 640, height: 480, pixels: f.pixels, rgb: f.rgb }, require('zlib').deflateSync));
+}
+
 function interactive(m, opt) {
   const cpu = m.cpu, acia = m.acia, cps = opt.clock * 1e6, stdin = process.stdin, stdout = process.stdout, tty = stdin.isTTY;
   const now = () => Number(process.hrtime.bigint()) / 1e9;
   const limit = opt.cyclesSet ? opt.cycles : Infinity;
   let sent = 0, prefix = false, quit = '', eof = false, stopAt = Infinity, baseT = now(), baseC = cpu.cyc;
+  let mon = false, line = '';                                   // (The monitor: stopped, and its command line)
   const say = t => stdout.write('\r\n[sim] ' + t + '\r\n');
   const status = () => 'cycle ' + cpu.cyc + ' (' + (cpu.cyc / cps).toFixed(1) + ' s), task ' + hx(m.T, 1) + ', page ' + hx(m.W, 1) +
     ', PC ' + hx(cpu.PC, 4) + (cpu.waiting ? ' (WAI: idle)' : '') + '; tasks: ' + state(m).map(s => hx(s.task, 1) + ' ' + s.name + ' ' + s.state).join(', ');
-  const help = () => say('Ctrl-A then: x quit, r reset (the reset button), s status, h this help, Ctrl-A a Ctrl-A.');
+  const help = () => say('Ctrl-A then: x quit, r reset (the reset button), s status, b the monitor, v the screen as text, p the screen as a PNG, h this help, Ctrl-A a Ctrl-A.');
+  let pngs = 0;
+  const lbl = opt.lbl;
+  const regs = () => 'T' + hx(m.T, 1) + ' ' + hx(m.W, 1) + ':' + hx(cpu.PC, 4) + ' ' + lbl.at(cpu.PC, m.W).padEnd(24) + ' A=' + hx(cpu.A) +
+    ' X=' + hx(cpu.X) + ' Y=' + hx(cpu.Y) + ' S=' + hx(cpu.S) + ' P=' + hx(cpu.P) + ' U=' + hx(m.U, 1) + ' RAM=' + hx(m.taskRam[m.T][0]) +
+    ' ROM=' + hx(m.taskRam[m.T][1]) + ' cycle ' + cpu.cyc;
+  const monSay = t => stdout.write(t.replace(/\n/g, '\r\n') + '\r\n');
+  function monitor(why) {                                       // The Hydra stopped: the monitor's prompt
+    flush();
+    mon = true; line = '';
+    say('the monitor (' + why + '): c continue, n [N] step, r registers, t tasks, m ADDR [N] [T], b [SPEC], d N, w ADDR[:T], x quit');
+    monSay(regs());
+    stdout.write('mon> ');
+  }
+  function command(text) {
+    const w = text.trim().split(/\s+/), c = w[0] || '';
+    if (c === 'c') { mon = false; m.skipBreak = true; baseT = now(); baseC = cpu.cyc; say('continued'); setTimeout(tick, 0); return; }
+    if (c === 'x' || c === 'q') { quit = 'quit (the monitor)'; mon = false; setTimeout(tick, 0); return; }
+    if (c === 'n') {
+      const n = Math.max(1, +w[1] || 1);
+      for (let i = 0; i < n && !cpu.halted; i++) {
+        m.skipBreak = true;
+        m.run(cpu.cyc + 1);
+        if (n <= 32 || i >= n - 4) monSay(regs());
+      }
+      flush();
+    } else if (c === 'r') monSay(regs());
+    else if (c === 't') monSay(status());
+    else if (c === 'm') {
+      const a = parseInt((w[1] || '').replace(/^\$/, ''), 16), n = Math.min(+w[2] || 64, 1024), t = w[3] !== undefined ? parseInt(w[3], 16) & 15 : m.T;
+      if (!(a >= 0)) monSay('m ADDR [N] [T]');
+      else for (let o = 0; o < n; o += 16) {
+        let hex = '', asc = '';
+        for (let i = 0; i < 16 && o + i < n; i++) {
+          const x = (a + o + i) & 0xFFFF, v = x < 0x8000 ? m.taskRam[t][x] : m.rd(x);
+          hex += hx(v) + ' '; asc += v >= 0x20 && v < 0x7F ? String.fromCharCode(v) : '.';
+        }
+        monSay(hx((a + o) & 0xFFFF, 4) + '  ' + hex.padEnd(48) + ' ' + asc);
+      }
+    } else if (c === 'b') {
+      if (!w[1]) opt.breaks.forEach((b, i) => monSay(i + ': ' + (b.page >= 0 ? hx(b.page, 1) + ':' : '') + hx(b.pc, 4) + ' ' + (b.spec || '')));
+      else { const b = breakSpec(w[1], lbl, opt.promImage); if (b) { b.spec = w[1]; opt.breaks.push(b); monSay('break ' + (opt.breaks.length - 1)); } else monSay('b: ' + w[1] + '?'); }
+    } else if (c === 'd') { const i = +w[1]; if (i >= 0 && i < opt.breaks.length) opt.breaks.splice(i, 1); else monSay('d N'); }
+    else if (c === 'w') { const x = watchSpec(w[1] || ''); if (x) { opt.watches.push(x); monSay('watching $' + hx(x.addr, 4)); } else monSay('w ADDR[:T]'); }
+    else if (c) monSay(c + '?');
+    stdout.write('mon> ');
+  }
+  function onMonKey(b) {
+    if (b === 0x0D || b === 0x0A) { stdout.write('\r\n'); const t = line; line = ''; command(t); }
+    else if (b === 0x08 || b === 0x7F) { if (line) { line = line.slice(0, -1); stdout.write('\b \b'); } }
+    else if (b === 0x03) { line = ''; stdout.write('^C\r\nmon> '); }
+    else if (b >= 0x20 && b < 0x7F) { line += String.fromCharCode(b); stdout.write(String.fromCharCode(b)); }
+  }
   function onKey(b) {
+    if (mon) return onMonKey(b);
     if (prefix) {
       prefix = false;
       const k = String.fromCharCode(b).toLowerCase();
@@ -135,6 +279,9 @@ function interactive(m, opt) {
       else if (k === 'x' || k === 'q') quit = 'quit (Ctrl-A x)';
       else if (k === 'r') { m.hwReset(); say('reset'); }
       else if (k === 's') say(status());
+      else if (k === 'b') monitor('Ctrl-A b');
+      else if (k === 'v') { flush(); stdout.write('\r\n' + screenLines(m).join('\r\n') + '\r\n'); }
+      else if (k === 'p') { if (!m.vera) say('no Vera X (--vera)'); else { const f = opt.framePng || 'screen-' + (++pngs) + '.png'; savePng(m, f); say('the screen: ' + f); } }
       else help();
       return;
     }
@@ -144,7 +291,7 @@ function interactive(m, opt) {
   }
   if (tty) stdin.setRawMode(true);
   stdin.on('data', buf => { for (const b of buf) if (!(!tty && b === 0x0D)) onKey(b); });
-  stdin.on('end', () => { eof = true; });
+  stdin.on('end', () => { eof = true; if (mon) { mon = false; quit = 'end of input (the monitor)'; setTimeout(tick, 0); } });
   stdin.resume();
   const flush = () => {
     if (sent < m.out.length) { stdout.write(m.out.slice(sent)); sent = m.out.length; }
@@ -152,6 +299,7 @@ function interactive(m, opt) {
   };
   const finish = why => { flush(); say('stopped: ' + why + '; ' + status()); if (tty) stdin.setRawMode(false); process.exit(cpu.halted ? 1 : 0); };
   function tick() {
+    if (mon) return;                                            // (Stopped: the monitor's)
     const t = now();
     if (opt.speed > 0) {
       let target = baseC + (t - baseT) * cps * opt.speed;
@@ -159,6 +307,7 @@ function interactive(m, opt) {
       m.run(Math.min(target, limit, stopAt));
     } else while (now() - t < 0.02 && !cpu.halted && cpu.cyc < Math.min(limit, stopAt)) m.run(Math.min(cpu.cyc + 200000, limit, stopAt));
     flush();
+    if (m.breakHit) { const b = m.breakHit; m.breakHit = null; return monitor('break ' + opt.breaks.indexOf(b) + (b.spec ? ': ' + b.spec : '')); }
     if (eof && !acia.rxQueue.length && stopAt === Infinity) stopAt = cpu.cyc + cps * 3;
     if (cpu.halted) return finish('halted: ' + cpu.halted);
     if (quit) return finish(quit);
@@ -166,6 +315,7 @@ function interactive(m, opt) {
     if (cpu.cyc >= stopAt) return finish('end of input');
     setTimeout(tick, opt.speed > 0 ? 4 : 0);
   }
+  if (opt.view && m.vera) { require('./view.js').startView(m, opt.view); say('the screen: http://localhost:' + opt.view); }
   say('the Hydra\'s serial console.  Ctrl-A x quits, Ctrl-A h for help.');
   tick();
 }
@@ -179,7 +329,9 @@ function cardFile(dev, file) {
 }
 
 function main(argv) {
-  const opt = { cycles: 30000000, speed: 1, clock: CLOCK, pcWatches: [] }, lbl = labels();
+  const opt = { cycles: 30000000, speed: 1, clock: CLOCK, pcWatches: [], watches: [], readWatches: [], breaks: [] }, lbl = labels();
+  const breakArgs = [];
+  opt.lbl = lbl;
   const unescape = s => s.replace(/\\r|\\n/g, '\r').replace(/\\w/g, 'Ā').replace(/\\t/g, '\t');
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i], next = () => argv[++i];
@@ -200,6 +352,23 @@ function main(argv) {
     else if (a === '--pc-read-only') opt.pcReadOnly = true;
     else if (a === '--pc-log') opt.pcLog = true;
     else if (a === '--pc-damage') opt.pcDamage = next().split(',').map(s => s.trim().toLowerCase());
+    else if (a === '--vera') {
+      opt.vera = Object.assign(opt.vera || {}, { version: [47, 0, 2] });
+      if (/^\d+(\.\d+)*$/.test(argv[i + 1] || '')) { const v = next(); opt.vera.version = v === '0.9' ? null : v.split('.').map(Number).concat([0, 0]).slice(0, 3); }
+    } else if (a === '--vera-config') opt.veraConfigMs = +next();
+    else if (a === '--screen') opt.screen = true;
+    else if (a === '--frame-png') opt.framePng = next();
+    else if (a === '--view') opt.view = /^\d+$/.test(argv[i + 1] || '') ? +next() : 8016;
+    else if (a === '--watch' || a === '--watch-read') {
+      const w = watchSpec(next() || '');
+      if (!w) { console.error(a + ': ADDR[:T] ($0000-$7FFF)?'); process.exit(2); }
+      (a === '--watch' ? opt.watches : opt.readWatches).push(w);
+    } else if (a === '--trace-calls') {
+      const { calls, errNames } = api();
+      opt.calls = calls; opt.errNames = errNames;
+      if (argv[i + 1] && !argv[i + 1].startsWith('-')) opt.callFilter = new Set(next().split(',').map(x => x.trim()).map(x => /^t[0-9a-f]$/i.test(x) ? 't' + parseInt(x.slice(1), 16) : x.toUpperCase()));
+    } else if (a === '--break') breakArgs.push(next());
+    else if (a === '--log') { const fd = fs.openSync(next(), 'w'); opt.log = t => fs.writeSync(fd, '[sim] ' + t + '\n'); }
     else if (a === '--watch-pc') {
       const w = next(), pc = lbl.byName.has(w) ? lbl.byName.get(w) : parseInt(w.replace(/^\$/, ''), 16);
       if (!(pc >= 0)) { console.error('--watch-pc: ' + w + '?'); process.exit(2); }
@@ -208,13 +377,25 @@ function main(argv) {
   }
   if (opt.pcDir) opt.pcHost = createPcHost({ dir: opt.pcDir, readOnly: !!opt.pcReadOnly, damage: opt.pcDamage,
     log: opt.pcLog ? t => (opt.interactive ? process.stdout.write('\r\n[pc] ' + t + '\r\n') : console.log('[pc] ' + t)) : undefined });
-  const m = boot(opt);
+  opt.promImage = opt.prom ? fs.readFileSync(opt.prom) : chips();
+  if (opt.veraConfigMs !== undefined) { if (!opt.vera) { console.error('--vera-config: with --vera'); process.exit(2); } opt.vera.configCycles = Math.round(opt.veraConfigMs * opt.clock * 1e3); }
+  if ((opt.screen || opt.framePng || opt.view) && !opt.vera) { console.error('--screen, --frame-png and --view: with --vera'); process.exit(2); }
+  for (const spec of breakArgs) {
+    const b = breakSpec(spec, lbl, opt.promImage);
+    if (!b) { console.error('--break: ' + spec + '?'); process.exit(2); }
+    b.spec = spec; opt.breaks.push(b);
+  }
+  if (opt.callFilter) for (const x of opt.callFilter) if (!x.startsWith('t') && ![...opt.calls.values()].includes(x)) { console.error('--trace-calls: no call ' + x); process.exit(2); }
+  const m = boot(Object.assign({}, opt, { prom: opt.promImage }));
   if (opt.interactive) return interactive(m, opt);
   m.run(opt.cycles);
+  if (m.breakHit) console.log('--- break ' + opt.breaks.indexOf(m.breakHit) + ': ' + m.breakHit.spec);
   if (opt.pcHost) for (const b of opt.pcHost.flush()) m.out += String.fromCharCode(b);   // (A frame cut short: the output's)
   process.stdout.write(m.out.replace(/\r\n/g, '\n').replace(/\r/g, '\n'));
   if (!m.out.endsWith('\n')) console.log();
   report(m, lbl);
+  if (opt.screen) console.log(screenLines(m).join('\n'));
+  if (opt.framePng) { savePng(m, opt.framePng); console.log('--- the screen: ' + opt.framePng); }
   if (opt.pcHost) console.log('--- ' + opt.pcHost.report() + '; ' + m.acia.pcLost + ' reply byte(s) lost (they came while the last was unread)');
   process.exit(m.cpu.halted ? 1 : 0);
 }

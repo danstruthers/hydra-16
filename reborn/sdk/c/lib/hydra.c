@@ -1,6 +1,6 @@
 /*
-** hydra.c - hydra.h's calls of the Hydra's own (on hy_call): the tick, sleeping, tasks and exit statuses, the
-** namespace, RAM banks, error texts.  A failed call returns -1 (errno and _oserror set: hy_call).
+** hydra.c - hydra.h's calls of the Hydra's own (on hy_call): the tick, sleeping, tasks and exit statuses,
+** semaphores, the namespace, an fd's name, RAM banks, error texts.  A failed call returns -1 (errno and _oserror set: hy_call).
 */
 
 #include <stdio.h>
@@ -93,6 +93,47 @@ int __fastcall__ hy_note (int task, unsigned char note)
     return hy_call (HY_NOTE, &r) ? -1 : 0;
 }
 
+unsigned char hy_parent (void)
+{
+    hy_call (HY_GETPPID, &r);
+    return r.a;
+}
+
+/* ---- Semaphores */
+
+int __fastcall__ hy_sem_new (unsigned char count, unsigned char flags)
+{
+    r.a = count;
+    r.x = flags;
+    return hy_call (HY_SEM_NEW, &r) ? -1 : r.a;
+}
+
+static int __fastcall__ sem_call (unsigned call, unsigned char sem)
+{
+    r.a = sem;
+    return hy_call (call, &r) ? -1 : 0;
+}
+
+int __fastcall__ hy_sem_acquire (unsigned char sem)
+{
+    return sem_call (HY_SEM_ACQUIRE, sem);
+}
+
+int __fastcall__ hy_sem_try (unsigned char sem)
+{
+    return sem_call (HY_SEM_TRY, sem);
+}
+
+int __fastcall__ hy_sem_release (unsigned char sem)
+{
+    return sem_call (HY_SEM_RELEASE, sem);
+}
+
+int __fastcall__ hy_sem_free (unsigned char sem)
+{
+    return sem_call (HY_SEM_FREE, sem);
+}
+
 /* ---- The namespace */
 
 int __fastcall__ hy_bind (const char* new, const char* old, unsigned char flags)
@@ -117,6 +158,15 @@ int __fastcall__ hy_unmount (const char* new, const char* old)
     r.r[0] = (unsigned) new;
     r.r[1] = (unsigned) old;
     return hy_call (HY_UNMOUNT, &r) ? -1 : 0;
+}
+
+/* ---- Files */
+
+int __fastcall__ hy_fd2path (int fd, char* buf)
+{
+    r.a = fd;
+    r.r[0] = (unsigned) buf;
+    return hy_call (HY_FD2PATH, &r) ? -1 : 0;
 }
 
 /* ---- RAM banks */

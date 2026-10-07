@@ -14,24 +14,27 @@
 .global     IRQ_ENTRY, IRQ_RESTORE, IRQ_EXIT, NMI_ENTRY
 .global     IRQ_STUB_0, IRQ_STUB_F, IRQ_VIA, K_FAR, K_FAR_GO, K_PEEK_PAGE
 ; ---- irq.s: interrupts
-.global     IRQ_HANDLER, IRQ_SWITCH, IRQ_STRAY, IRQ_INIT, IRQ_SET_OWNER, IRQ_RELEASE_ALL, NMI_HANDLER, K_KIRQ
+.global     IRQ_HANDLER, IRQ_SWITCH, IRQ_STRAY, IRQ_BRK_NOTE, IRQ_INIT, IRQ_SET_OWNER, IRQ_RELEASE_ALL, NMI_HANDLER
+.global     K_KIRQ
 ; ---- sched.s: the scheduler, waiting, time
 .global     K_SCHED_SWITCH, K_SCHED_RESUME, K_YIELD, K_PAUSE, K_WAKE, K_EVWAIT, K_PREEMPT_OFF, K_PREEMPT_ON
 .global     K_SLEEP, K_SLEEP_UNTIL, K_TICKS
 ; ---- call.s: calls into other tasks, and kcopy
 .global     K_SCALL, K_KCALL, K_KDISPATCH, K_KCOPY, K_ROMREAD
 ; ---- task.s: tasks and modules
-.global     K_EXITS, K_WAIT, K_GETPID, K_TASK_BOOT, K_TASK_BOOT_INIT, K_BOOT_STARTED, K_TASK_RESERVE
+.global     K_EXITS, K_WAIT, K_GETPID, K_GETPPID,K_TASK_BOOT, K_TASK_BOOT_INIT, K_BOOT_STARTED, K_TASK_RESERVE
 .global     K_MD_VALID, K_STR_CRLF, K_MODINFO, K_SPAWN_K, K_TASK_GO, K_TASK_LOAD
 ; ---- load.s: SPAWN and the loader (page 3)
 .global     K_SPAWN, K_LOAD
 ; ---- cons.s: the bring-up console (polled)
 .global     K_CONS_INIT, K_PUTC, K_PUTS, K_GETC, K_PUTHEX, K_PUTNIB, K_PUTSTR
 ; ---- sys.s: the small calls
-.global     K_SYSINFO, K_ERRSTR, K_NOSYS, K_IRQ_OWN, K_IRQ_RELEASE, K_DBG_KCOPY
+.global     K_SYSINFO, K_ERRSTR, K_XCALL, K_REBOOT, K_NOSYS, K_IRQ_OWN, K_IRQ_RELEASE, K_DBG_KCOPY
 ; ---- mem.s: memory (page 1)
 .global     K_MEM_START, K_SEG_EXIT, K_BRK, K_PAGES_ALLOC, K_PAGES_FREE, K_BANKS, K_BANKS_ALLOC, K_BANKS_FREE
-.global     K_SEG_CREATE, K_SEG_ATTACH, K_SEG_DETACH, K_SEG_MAP, K_SEGINFO
+.global     K_SEG_CREATE, K_SEG_ATTACH, K_SEG_DETACH, K_SEG_MAP, K_SEGINFO, K_BANKS_ALLOC_IN, K_SEG_CREATE_IN
+; ---- sem.s: semaphores (page 1)
+.global     K_SEM_NEW, K_SEM_ACQUIRE, K_SEM_TRY, K_SEM_RELEASE, K_SEM_FREE, K_SEM_EXIT
 ; ---- notes.s: notes (signals)
 .global     K_NOTE, K_NOTE_POST, K_NOTE_QUEUE, K_NOTE_QUEUED, K_UPAUSE, K_NOTE_CHECK, K_NOTE_RETURN, K_NOTE_TRAMP, K_NOTIFY
 ; ---- file.s: files (page 2)
@@ -44,13 +47,15 @@
 ; ---- env.s: environments (page 2)
 .global     K_ENV_GET, K_ENV_PUT, K_ENV_DEL, K_ENV_NAME, K_ENV_INHERIT, K_ENV_CLEAR, K_ENV_INIT, K_ENV_READ
 ; ---- info.s: what the kernel knows of the tasks (page 1)
-.global     K_TASKINFO, K_DBG_PS, K_TASKREAD, K_TASKMEM, K_KMESG
+.global     K_TASKINFO, K_DBG_PS, K_TASKREAD, K_TASKMEM, K_TASKSTOP, K_FD2PATH, K_KMESG
 ; ---- time.s: the clock, and the DS1747 (page 1)
 .global     K_TIME, K_TIME_SET, K_RTC
 ; ---- far.s: the jump table's way to calls on other pages
 .global     K_FARJMP
 ; ---- post.s: the power-on self test (page 4)
 .global     K_POST
+; ---- debug.s: the debugger's steps and breakpoints (page 4; K_TRAP on page 0)
+.global     K_TRAP, K_TASKSTEP, K_TASKSTEP_K
 ; ---- errtext.s (made from spec/errors.def)
 .global     ERR_TEXTS
 

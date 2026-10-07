@@ -1,9 +1,66 @@
 ; ****************************************************************************
-; sys.s - the small calls: what the system has, error texts, the RAM modules' probe, and the debugging calls.
+; sys.s - the small calls: what the system has, error texts, far calls, the RAM modules' probe, and the debugging
+; calls.
 
 .include "kdefs.inc"
 
 .segment "KCODE"
+
+; REBOOT: the system started again, as the reset button does: IRQs off, the VIA's and ACIA's interrupts quieted
+; (only the button resets the chips: the boot takes them as it finds them), the reset entry.  .A = REBOOT_HWTEST:
+; "HWT!" in the kernel task's RAM first, which POST takes as a T typed
+K_REBOOT:
+            sei
+            stz         T_REGISTER                          ; ---- The kernel task's RAM (no way back: no stack)
+            and         #REBOOT_HWTEST
+            beq         :+
+            ldx         #3
+@word:
+            lda         K_STR_HWT,X
+            sta         K_HWT_WORD,X
+            dex
+            bpl         @word
+:
+            lda         #$7F                                ; Every VIA interrupt off, and none pending
+            sta         VIA_IER
+            sta         VIA_IFR
+            sta         ACIA_STATUS                         ; (The ACIA: a programmed reset)
+            jmp         RESET_ENTRY
+
+; XCALL: the routine at r15 in paged ROM bank r14 (its low byte), as the X16's jsrfar: the caller's bank register
+; ($01) the routine's for the call, then back; .A, .X, .Y, the flags and r0-r13 pass through both ways.  Here on page
+; 0, which the switch of $01 leaves where it is.  The stack, as the routine runs: its return (here), the caller's
+; bank, the caller's return
+K_XCALL:
+            pha                                             ; (A byte for the caller's bank)
+            php
+            pha
+            phx
+            tsx                                             ; (S+1 X, S+2 A, S+3 P, S+4 the byte)
+            lda         ROM_BANK
+            sta         $0104,X
+            lda         r14
+            sta         ROM_BANK                            ; The routine's bank
+            plx
+            pla
+            plp
+            jsr         @go
+            php                                             ; Back: the caller's bank, and the byte gone (P over
+            pha                                             ;   it)
+            phx
+            tsx                                             ; (S+1 X, S+2 A, S+3 P, S+4 the bank)
+            lda         $0104,X
+            sta         ROM_BANK
+            lda         $0103,X
+            sta         $0104,X
+            plx
+            pla
+            plp
+            plp
+            rts
+
+@go:
+            jmp         (r15)
 
 ; SYSINFO: .A = the ABI version; .X = the RAM modules installed; r0 = the free tasks (bit = task)
 K_SYSINFO:
@@ -146,3 +203,6 @@ K_DBG_KCOPY:
 .segment "KRODATA"
 K_STR_ERRNUM:   .byte   "error $"
 K_STR_ERRNUM_END:
+
+.segment "KRODATA"
+K_STR_HWT:      .byte   "HWT!"                              ; (REBOOT_HWTEST's word: post.s has it too)

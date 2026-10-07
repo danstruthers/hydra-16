@@ -52,6 +52,9 @@ bank t).  Every fixed address is in `include/layout.inc`, and nowhere else.
 * **Programs** take the lowest free task (init is task 1); **drivers** the highest (task F first).
 * A task's **exit record** (its code and message) waits for its parent's `WAIT`, and the task isn't used again
   till then; a parent that ends first leaves its children and their records to init.
+* **Semaphores** (`SEM_*`, `kernel/sem.s`) are the kernel task's, every task's by number: a wait is the task's bit
+  among a semaphore's waiters and `PAUSE`, and a release wakes them all to look again.  A task's end frees the ones
+  it made and gives back the mutexes it holds, as it detaches its shared segments.
 
 ## Reaching other tasks
 
@@ -175,6 +178,9 @@ bank t).  Every fixed address is in `include/layout.inc`, and nowhere else.
   in the module's `DATA` too, as the first `hylang`'s core was (its heap, objects, scopes and I/O): it runs with
   either bank at `$A000`, so it calls nothing of either bank's and reads no table of theirs (a text its caller hands
   it is fine: the caller's bank is there); a call from it into a bank saves the bank register and sets it.
+* `XCALL` calls a routine in any bank of the paged ROM (`r15` its address, `r14` its bank), as the X16's `jsrfar`:
+  everything else passes through both ways, and the caller's bank comes back after it.  A program that makes far
+  calls keeps its note handler in RAM.
 * A program may have library modules of its own (`HT_LIBRARY`), as the first `hylang` had `hylnum` and `hylstr`: each is
   assembled with the program (its .s files include them), its code and read-only data a bank of their own with a
   header first (`HYX2_LIBRARY "name", "segment", "memory"`), and the module's folder has its own link, `NAME.cfg`,
@@ -221,14 +227,24 @@ bank t).  Every fixed address is in `include/layout.inc`, and nowhere else.
 * **Another task's memory only through `/proc`** (`mem`, `ram`; `regs` too): any task's but the kernel task's and a
   driver's, as `NOTE` lets any task note any other (one user: Plan 9's owner rule lets every task in).  The kernel's
   `TASKMEM` serves only a driver (kdev), so the files are the one way in.
+* **A step runs out of line** (`TASKSTEP`, behind `/proc/N/ctl`'s `step` and `next`): the stopped task's next
+  instruction copied into its own zero page with a `BRK` after it, run as the task, and the `BRK` stops it again;
+  `JMP`, `JSR`, `RTS` and `RTI` are done on its frame.  No trace flag and no code patched in a ROM: a breakpoint is
+  the debugger's `BRK` in RAM (through `mem`), which stops the task once `ctl`'s `break` says so.
 * **A server times a wait itself.**  The kernel has no timed `E_AGAIN`: a client waits for the server's event
   count to change.  A server that must give up on something that doesn't come (`/pc`'s reply) makes the count
   change now and then from an interrupt it owns (the console's timer 2, run on in rounds), and its client, asking
   again, looks at the time (`TICKS`).
-* **One driver owns the YM2151** (`snd`, `#a`), and only its task writes the chip.  The one call from a driver to
-  another is the console's bell: `cons` writes `#a/bell` when the shown window sends a BEL.  What's a task's in a
-  driver (a claim of channels) is the task's that opened the file it came through, given back as that task's last
-  file of the device closes.
+* **One driver owns the YM2151** (`snd`, `#a`), and only its task writes the chip.  The calls from a driver to
+  another are the console's: its bell (`cons` writes `#a/bell` when the shown window sends a BEL) and its screen
+  (`#v/term`, the shown window's text).  A driver called never calls the console, so no two wait on each other.
+  What's a task's in a driver (a claim of channels) is the task's that opened the file it came through, given back
+  as that task's last file of the device closes.
+* **One driver owns the VERA** (`vid`, `#v`), and only its task writes the chip, but for a task that claims it
+  (`ctl`'s `claim`): then the claimer's, its registers its to write, till it releases it or its last file of `#v`
+  closes (its end); the console's text for the screen waits in the driver meanwhile.  vid's code keeps `CTRL` at 0
+  (ADDR0, DCSEL 0), setting another DCSEL only with the VERA's interrupt off, as its irq entry writes `DC_VIDEO`
+  (the cursor's blink).
 * `PUTC`, `PUTS` and `GETC` are a write to fd 1 and a read from fd 0; a task without them (the kernel, a driver)
   has the bring-up console, polled.
 
@@ -243,8 +259,10 @@ bank t).  Every fixed address is in `include/layout.inc`, and nowhere else.
   members; anything else binds the first of its candidates that's there.
 * A name's mount point is the longest one it starts with, in whole elements; its candidates are that union's
   members, in order, each with the rest of the name.  `OPEN`, `REMOVE` and the stat calls try them in turn till
-  one isn't `E_NOENT`; `CREATE` goes to the `MCREATE` member (or the first).  A directory opened at a mount point
-  with more members than one is a union directory: `READ` gives every member's records, one member after another.
+  one isn't `E_NOENT` or `E_NODEV` (a member whose device is gone, as a RAM disk stopped, is passed over; if every
+  member that answered was gone, the error is `E_NODEV`); `CREATE` goes to the `MCREATE` member (or the first).  A
+  directory opened at a mount point with more members than one is a union directory: `READ` gives every member's
+  records, one member after another.
 * A task's default namespace comes from the namespace file, `/rom/lib/namespace` (and a card's after it), by
   `sdk/asm/nslib.s`'s `ns_default`, Plan 9's `newns`: init's own, and each shell's, which init starts with an empty
   one (`SPAWN_NEWNS`).  `$task` in it is the task, whose own area of the RAM disk (`r/N`) is its `/ram`.

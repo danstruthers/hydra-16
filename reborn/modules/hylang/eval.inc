@@ -2804,7 +2804,6 @@ s_nhangup:  .byte       "hangup", 0
 s_nalarm:   .byte       "alarm", 0
 s_nbrk:     .byte       "brk", 0
 s_note:     .byte       "note", 0
-s_bufcall:  .byte       "A buffer is called with an index: (b i)", 0
 amp_digits: .byte       "_123456789"
 n_err:      .byte       "&err"
 n_code:     .byte       "&code"
@@ -2831,6 +2830,7 @@ s_intr:     .byte       "interrupted", 0
 s_starts:   .byte       "S-Expression starts with incorrect type. Got ", 0
 s_expected: .byte       ", Expected Function.", 0
 s_exitnum:  .byte       "'exit' expects a Number", 0
+s_bufcall:  .byte       "A buffer is called with an index: (b i)", 0
 s_manyargs: .byte       "Too many arguments: more than the stack holds", 0
 s_takes:    .byte       "The function takes ", 0
 s_btakes:   .byte       "' takes ", 0

@@ -73,6 +73,28 @@ call KMESG system impl=K_KMESG far
   doc:    The kernel's messages: what it printed on the bring-up console (the banner, POST, the boot's tasks, a
   doc:    driver's own lines), its last KMESG_SIZE bytes.  /dev/kmesg (kdev's #n/kmesg) is them as a file.
 
+call REBOOT system impl=K_REBOOT
+  in:     .A = 0, or REBOOT_HWTEST
+  out:    (doesn't return)
+  errors: -
+  blocks: no
+  hl:     .A=n? ->
+  doc:    Start the system again, as the reset button does (the VIA's and ACIA's interrupts quieted first: only the
+  doc:    button resets the chips); with REBOOT_HWTEST, into the hardware test, as a T typed during POST does.
+  doc:    Every task ends where it is: files written are on their disks already (the disks write through).
+
+call XCALL system impl=K_XCALL
+  in:     r15 = a routine's address ($A000-$DFFF); r14 (its low byte) = the paged ROM bank it's in; .A, .X, .Y,
+  in:     the flags and r0-r13: the routine's
+  out:    .A, .X, .Y, the flags and r0-r15 as the routine leaves them
+  errors: -
+  blocks: no
+  doc:    Call a routine in another bank of the paged ROM (a library module's: HT_LIBRARY, its bank from MODINFO),
+  doc:    as the X16's jsrfar: the caller's bank register ($01) is set to the routine's for the call and back
+  doc:    after it, and everything else passes through both ways.  The routine runs in the caller's task, with its
+  doc:    RAM and zero page.  A note may come while it runs: a program that makes far calls keeps its note handler
+  doc:    in RAM, as a module of several banks does.
+
 # ---- task
 
 call EXITS task impl=K_EXITS
@@ -96,7 +118,7 @@ call WAIT task impl=K_WAIT
 call SPAWN task impl=K_SPAWN far
   in:     r0 = the program's path (through the namespace: /bin/NAME; or #m/NAME, a module in the paged ROM);
   in:     r1 = its arguments (zero-terminated strings, an empty one after the last: 176 bytes at most), or 0;
-  in:     .A = flags (SPAWN_NEWGROUP, SPAWN_NEWNS, SPAWN_FDMAP, SPAWN_NOENV); r2 = an fd map (with SPAWN_FDMAP)
+  in:     .A = flags (SPAWN_NEWGROUP, SPAWN_NEWNS, SPAWN_FDMAP, SPAWN_NOENV, SPAWN_STOPPED); r2 = an fd map (with SPAWN_FDMAP)
   out:    .A = the new task
   errors: E_NOENT (no such file), E_NOEXEC (not a program this kernel runs), E_NOTASK (no free task), E_TOOBIG
   errors: (the arguments), E_INVAL (the map), E_MFILE, E_INTR (and what else OPEN and READ give)
@@ -112,7 +134,8 @@ call SPAWN task impl=K_SPAWN far
   doc:    caller's channel and offset; the rest are closed.  Its parent is
   doc:    the caller, which can WAIT for it.  It's in the caller's note group unless SPAWN_NEWGROUP starts one (its
   doc:    number: the child's), and it shares the caller's namespace unless SPAWN_NEWNS gives it an empty one.  Its
-  doc:    environment is a copy of the caller's (SPAWN_NOENV: empty).
+  doc:    environment is a copy of the caller's (SPAWN_NOENV: empty).  SPAWN_STOPPED: it's stopped at its entry
+  doc:    point, for the debugger (TASKSTEP; /proc/N/ctl's step, or start).
 
 call GETPID task impl=K_GETPID
   in:     -
@@ -247,16 +270,71 @@ call TASKREAD task impl=K_TASKREAD far
   in:     .A = a task ($FF: this one); .X = what: TR_ARGS (its arguments: ARGS_MAX bytes), TR_CWD (its current
   in:     directory: PATH_MAX + 1 bytes), TR_ENV (its environment's first variables, whole, and a 0: ENV_SIZE bytes
   in:     at most), TR_FRAME (its state and the frame it left as it was switched out: TF_SIZE bytes, TF_*) or
-  in:     TR_ENVAT (part of its environment); r0 = a buffer that big; r1 = TR_ENVAT's count (the most it copies);
-  in:     r2 = TR_ENVAT's offset
+  in:     TR_ENVAT (part of its environment), or TR_FD (its fd r2: FI_SIZE bytes, FI_*); r0 = a buffer that big;
+  in:     r1 = TR_ENVAT's count (the most it copies); r2 = TR_ENVAT's offset, or TR_FD's fd
   out:    the bytes in the buffer; .A/.X = TR_ENVAT's: the environment's bytes in use (its 0 too: it copied as many
   out:    as there are from r2, r1 at most)
-  errors: E_SRCH, E_INVAL (another what)
+  errors: E_SRCH, E_INVAL (another what), E_BADF (TR_FD: not an open fd)
   blocks: no
   hl:     .A=n .X=n r0=buf r1=count r2=n? -> buf .A/.X
-  doc:    Another task's arguments, current directory, environment or registers, as they are now: /proc's args,
-  doc:    cwd, env and regs, ps.  The kernel task copies them a byte at a time, with IRQs off for each.  An
+  doc:    Another task's arguments, current directory, environment, registers or open files, as they are now:
+  doc:    /proc's args, cwd, env, regs and fd, ps.  The kernel task copies them a byte at a time, with IRQs off for each.  An
   doc:    environment may be ENV_MAX bytes: TR_ENVAT reads one whole, a part at a time.
+
+call GETPPID task impl=K_GETPPID
+  in:     -
+  out:    .A = this task's parent ($FF: none)
+  errors: -
+  blocks: no
+  hl:     -> .A
+  doc:    The task that started this one (Plan 9's getppid): init once that one has ended; none for init, the
+  doc:    drivers and the kernel task.
+
+call SEM_NEW task impl=K_SEM_NEW far
+  in:     .A = its count: how many can take it before a taker waits (0-255); .X = 0, or SEM_MUTEX: a mutex (its
+  in:     count 1, and it has a holder: only the task that took it gives it back)
+  out:    .A = the semaphore (0 to SEM_MAX - 1)
+  errors: E_NOMEM (none free: SEM_MAX in all)
+  blocks: no
+  hl:     .A=n .X=n? -> .A
+  doc:    Make a semaphore, for tasks that share something (a shared segment, a device) or wait for each other.
+  doc:    Every task sees the same ones, by number.  It lasts till SEM_FREE, or the end of the task that made it.
+
+call SEM_ACQUIRE task impl=K_SEM_ACQUIRE far
+  in:     .A = a semaphore
+  out:    -
+  errors: E_INVAL (not a semaphore, or freed while this task waited), E_BUSY (a mutex this task holds already),
+  errors: E_INTR (a note came: taken on the way out)
+  blocks: yes
+  hl:     .A=n ->
+  doc:    Take one of a semaphore's count; if there's none, wait (using no CPU) till SEM_RELEASE gives one back.  A
+  doc:    mutex's holder is then this task.
+
+call SEM_TRY task impl=K_SEM_TRY far
+  in:     .A = a semaphore
+  out:    -
+  errors: E_INVAL (not a semaphore), E_BUSY (a mutex this task holds already), E_AGAIN (none to take)
+  blocks: no
+  hl:     .A=n ->
+  doc:    SEM_ACQUIRE without the wait.
+
+call SEM_RELEASE task impl=K_SEM_RELEASE far
+  in:     .A = a semaphore
+  out:    -
+  errors: E_INVAL (not a semaphore), E_PERM (a mutex this task doesn't hold), E_RANGE (its count is 255)
+  blocks: no
+  hl:     .A=n ->
+  doc:    Give one back to a semaphore's count, and wake the tasks waiting for it: the first to run takes it.
+
+call SEM_FREE task impl=K_SEM_FREE far
+  in:     .A = a semaphore
+  out:    -
+  errors: E_INVAL (not a semaphore)
+  blocks: no
+  hl:     .A=n ->
+  doc:    Free a semaphore (any task may): its number can be made again, and the tasks waiting for it wake with
+  doc:    E_INVAL.  The end of the task that made it frees it too, and a task's end gives back the mutexes it
+  doc:    holds.
 
 # ---- memory (BIOS ROM page 1)
 
@@ -354,6 +432,23 @@ call SEGINFO memory impl=K_SEGINFO far
   blocks: no
   hl:     -> .A .X r0
   doc:    The shared RAM, as free shows it.
+
+call BANKS_ALLOC_IN memory impl=K_BANKS_ALLOC_IN far
+  in:     .A = how many; .X = the lowest bank it may take; .Y = the highest (module m's are $m0-$mF)
+  out:    .A = the first
+  errors: E_INVAL (0), E_NOMEM (no run that long there)
+  blocks: no
+  hl:     .A=n .X=n .Y=n -> .A
+  doc:    BANKS_ALLOC, from a range of the task's banks (the RAM disk's start FROM-TO: the modules its banks are on).
+
+call SEG_CREATE_IN memory impl=K_SEG_CREATE_IN far
+  in:     .A = how many banks (1-128); .X = the lowest shared bank ID it may take; .Y = the highest (U << 4 | the
+  in:     bank's low nibble; segments have $80-$FF)
+  out:    .A = the segment
+  errors: E_INVAL (0), E_NOMEM (no run that long there)
+  blocks: no
+  hl:     .A=n .X=n .Y=n -> .A
+  doc:    SEG_CREATE, from a range of the shared RAM (the shared RAM disk's start FROM-TO).
 
 # ---- file (BIOS ROM page 2)
 
@@ -490,6 +585,15 @@ call PIPE file impl=K_PIPE far
   doc:    A pipe (#|): what's written to one end is read from the other, 512 bytes held between them.  A read
   doc:    waits for something to read, and is the end (0) once no writer is left; a write waits for room, and is
   doc:    E_PIPE once no reader is left.
+
+call FD2PATH file impl=K_FD2PATH far
+  in:     .A = an fd; r0 = a buffer (PATH_MAX + 1 bytes)
+  out:    the name in the buffer, zero-terminated
+  errors: E_BADF (not an open fd)
+  blocks: no
+  hl:     .A=n r0=buf(PATH_MAX+1) -> buf=z
+  doc:    The name an fd's file was opened by (Plan 9's fd2path), whole and clean, as OPEN or CREATE made it (an
+  doc:    fd SPAWN or DUP gave shares its channel, and its name): the namespace's, or a # name; a pipe's #|/pipe.
 
 # ---- name: the namespace (BIOS ROM page 3).  Its names are found here, Plan 9's way: the longest mount point a
 # name starts with (whole elements), then that union's members in order, each with the rest of the name.  A bind
@@ -710,6 +814,30 @@ call TASKMEM server impl=K_TASKMEM far
   doc:    register points at it meanwhile: not for a driver, whose irq entry might run).  A byte at a time, IRQs
   doc:    off for each.
 
+call TASKSTOP server impl=K_TASKSTOP far
+  in:     .A = a task; .X = 1 to stop it, 0 to start it again
+  out:    -
+  errors: E_PERM (the caller isn't a driver; the kernel task, a driver), E_SRCH (not a task, or not started)
+  blocks: no
+  doc:    Stop a task where it is (the scheduler passes it by: its waits go on, and end, but it doesn't run), or
+  doc:    start it again: /proc's ctl (kdev, which decides who may), for the debugger.  TASKINFO's TI_FLAGS has
+  doc:    TF_STOPPED while it's stopped.  A kill note starts it, to end it.
+
+call TASKSTEP server impl=K_TASKSTEP far
+  in:     .A = a task; .X = TS_STEP, TS_NEXT, TS_BREAKS or TS_NOBREAKS
+  out:    -
+  errors: E_PERM (the caller isn't a driver; the kernel task, a driver), E_SRCH (not a task, or not started),
+  errors: E_INVAL (another .X; to step: a BRK or STP), E_BUSY (to step: not stopped, or a step still out)
+  errors: (or in the kernel: in a call, its PC at $E000 or above, or W not 0)
+  blocks: no
+  doc:    The debugger's step (/proc's ctl: kdev).  TS_STEP: a stopped task runs its next instruction and stops
+  doc:    again (TI_FLAGS: TF_STOPPED once it has).  JMP, JSR, RTS and RTI are done at once, on its frame; others
+  doc:    run out of line, in its zero page, a BRK after them.  TS_NEXT: the same, but a JSR runs its subroutine
+  doc:    whole, as a JSR to the kernel's jump table always does (a subroutine that reads bytes after its JSR
+  doc:    can't be stepped over).  TS_BREAKS: from now any BRK stops the task, its PC back on the BRK (the
+  doc:    debugger's breakpoints, BRKs it writes into the program); TS_NOBREAKS: a BRK is the program's own again
+  doc:    (NOTE_BRK).  SPAWN_STOPPED starts a program stopped at its entry point.
+
 # ---- dbg (for the tests and the debugger: unstable)
 
 call DBG_SCALL dbg impl=K_SCALL
@@ -783,7 +911,9 @@ const ME_FLAGS        3        "MODINFO: its flags (HF_*)"
 const ME_NAME         4        "MODINFO: its name (12 bytes, zero-padded)"
 const ME_SIZE         16
 const TI_STATE        0        "TASKINFO's answer: the task's state (0: free, 1 ready, 2 wait, 3 call, 4 idle, 5 new, 6 sleep, 7 blocked, 8 event)"
-const TI_FLAGS        1        "TASKINFO: its flags ($01: a driver)"
+const TI_FLAGS        1        "TASKINFO: its flags (TF_DRIVER, TF_STOPPED)"
+const TF_DRIVER       $01      "TI_FLAGS: a driver"
+const TF_STOPPED      $80      "TI_FLAGS: stopped (/proc's ctl: TASKSTOP)"
 const TI_PARENT       2        "TASKINFO: its parent ($FF: none)"
 const TI_CPU          3        "TASKINFO: its CPU time, in ticks (3 bytes)"
 const TI_BANK         6        "TASKINFO: its module's paged ROM bank ($FF: none)"
@@ -798,10 +928,14 @@ const NOTE_ALARM      4        "Notes: alarm (142)"
 const NOTE_BRK        5        "Notes: sys: brk, a BRK instruction (133)"
 const NOTE_USER       16       "Notes: 16-31 are the programs' own (128 + the note)"
 const NOTE_GROUP      $80      "NOTE's .A: a note group, not a task"
+const SEM_MUTEX       $01      "SEM_NEW's .X: a mutex (its count 1, given back only by its holder)"
+const REBOOT_HWTEST   $01      "REBOOT's .A: into the hardware test"
+const SEM_MAX         16       "Semaphores: as many as there can be at once"
 const SPAWN_NEWGROUP  $01      "SPAWN's flags: the child starts a note group of its own"
 const SPAWN_NEWNS     $02      "SPAWN's flags: the child starts with an empty namespace of its own (else it shares its parent's)"
 const SPAWN_FDMAP     $04      "SPAWN's flags: the child's fds are r2's map (else the caller's 0, 1 and 2)"
 const SPAWN_NOENV     $08      "SPAWN's flags: the child starts with an empty environment (else a copy of its parent's)"
+const SPAWN_STOPPED   $10      "SPAWN's flags: the child stops at its entry point, for the debugger (/proc/N/ctl's step)"
 const ENV_SIZE        1024     "TASKREAD's TR_ENV: its buffer, an environment's first variables, whole, and a 0"
 const ENV_MAX         8192     "An environment's bytes at most: each variable its name's length, its name, its value's length (2), its value; a 0"
 const ENV_NAME_MAX    31       "A variable's name's length at most"
@@ -817,6 +951,13 @@ const TR_CWD          1        "TASKREAD: a task's current directory (PATH_MAX +
 const TR_ENV          2        "TASKREAD: a task's environment's first variables, whole, and a 0 (ENV_SIZE bytes at most)"
 const TR_FRAME        3        "TASKREAD: a task's state and frame (TF_SIZE bytes)"
 const TR_ENVAT        4        "TASKREAD: part of a task's environment (r1 bytes at most, from offset r2; .A/.X its bytes in use)"
+const TR_FD           5        "TASKREAD: a task's fd r2 (FI_SIZE bytes)"
+const FI_NAME         0        "TR_FD's: the name its file was opened by (PATH_MAX + 1 bytes, zero-terminated) ..."
+const FI_MODE         64       "TR_FD's: its open mode (O_*) ..."
+const FI_DEV          65       "TR_FD's: its server's device letter ..."
+const FI_QTYPE        66       "TR_FD's: its qid type (QT_DIR ...) ..."
+const FI_OFFSET       67       "TR_FD's: and its offset (4 bytes, low first)"
+const FI_SIZE         71
 const TF_STATE        0        "TR_FRAME's: the task's state (0 free, 1 ready, 2 waiting, 3 calling, 4 idle, 5 new, 6 sleeping, 7 blocked, 8 waiting for an event)"
 const TF_S            1        "TR_FRAME's: its stack pointer, as it was before the frame"
 const TF_U            2        "TR_FRAME's: the frame: U"
@@ -832,6 +973,10 @@ const TF_SIZE         12
 const TM_READ         0        "TASKMEM: from the task's memory"
 const TM_WRITE        $01      "TASKMEM: to the task's memory"
 const TM_BANK         $80      "TASKMEM's flag: its RAM bank r3, at $8000-$9FFF"
+const TS_STEP         0        "TASKSTEP: one instruction"
+const TS_NEXT         1        "TASKSTEP: one instruction, a JSR's subroutine whole"
+const TS_BREAKS       2        "TASKSTEP: from now, the task's BRKs stop it (the debugger's breakpoints)"
+const TS_NOBREAKS     3        "TASKSTEP: its BRKs are its own again (NOTE_BRK)"
 const NI_FROM         0        "NSINFO's answer (NI_SIZE bytes): the mount point (PATH_MAX + 1 bytes, zero-terminated)"
 const NI_PATH         64       "NSINFO: the path in the device (zero-terminated, no leading /)"
 const NI_DEV          128      "NSINFO: the device letter"
@@ -925,6 +1070,9 @@ const SND_R_VOL       $06      "Sound: the channel's volume (0-127, as General M
 const SND_R_PAN       $07      "Sound: the channel's speakers (SND_PAN_*)"
 const SND_R_BEND      $09      "Sound: the channel's bend (signed: 64ths of a semitone; the note playing too)"
 const SND_R_DRUM      $0A      "Sound: a General MIDI drum (its patch and pitch), keyed on"
+const SND_R_FREQ_LO   $0B      "Sound: a frequency's low byte (Hz), for SND_R_FREQ (only kept)"
+const SND_R_FREQ      $0C      "Sound: key on at a frequency, SND_R_FREQ_LO's byte and this its high one (Hz; 0: key off)"
+const SND_R_GLIDE     $0D      "Sound: the channel's pitch to note n without a new attack (legato)"
 const SND_PAN_LEFT    1        "Sound: SND_R_PAN's speakers"
 const SND_PAN_RIGHT   2
 const SND_PAN_BOTH    3

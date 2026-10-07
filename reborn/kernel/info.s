@@ -84,16 +84,26 @@ K_TASKINFO:
             clc
             rts
 
-; TASKREAD: a task's arguments, current directory, environment, or its state and frame.  IN: .A = a task ($FF:
-; this one); .X = TR_ARGS, TR_CWD, TR_ENV, TR_FRAME or TR_ENVAT (r1: the most; r2: from where); r0 = a buffer
-; (TA_ARGS_MAX + 1, PATH_MAX + 1, ENV_SIZE, TF_SIZE or r1 bytes).  OUT: the bytes in it (TR_ENV, TR_ENVAT: .A/.X =
-; the environment's bytes in use); or C = 1, .A = E_SRCH, E_INVAL
+; TASKREAD: a task's arguments, current directory, environment, its state and frame, or an fd.  IN: .A = a task
+; ($FF: this one); .X = TR_ARGS, TR_CWD, TR_ENV, TR_FRAME, TR_ENVAT (r1: the most; r2: from where) or TR_FD (r2: the
+; fd); r0 = a buffer (TA_ARGS_MAX + 1, PATH_MAX + 1, ENV_SIZE, TF_SIZE, r1 or FI_SIZE bytes).  OUT: the bytes in
+; it (TR_ENV, TR_ENVAT: .A/.X = the environment's bytes in use); or C = 1, .A = E_SRCH, E_INVAL, E_BADF (TR_FD)
 K_TASKREAD:
-            cpx         #TR_ENVAT + 1
+            cpx         #TR_FD + 1
             bcc         :+
             FAIL        E_INVAL
 
 :
+            KCALL_FAR   K_TASKREAD_K
+            rts
+
+; FD2PATH: the name fd .A's file was opened by.  IN: r0 = a buffer (PATH_MAX + 1 bytes).  OUT: C = 0; or C = 1,
+; .A = E_BADF.  (TASKREAD's TR_FD, of this task, its name alone)
+K_FD2PATH:
+            sta         r2
+            stz         r2 + 1
+            lda         #$FF
+            ldx         #TR_FD | TR_NAME
             KCALL_FAR   K_TASKREAD_K
             rts
 
@@ -122,6 +132,12 @@ K_TASKREAD_K:
             bne         :+
             jmp         @frame
 :
+            and         #$FF ^ TR_NAME
+            cmp         #TR_FD
+            bne         :+
+            jmp         @fd
+:
+            lda         K0_TMP3
             cmp         #TR_ENV
             bcc         :+
             FARCALL     K_ENV_READ                          ; (TR_ENV, TR_ENVAT: the environment's, env.s: .X = the
@@ -213,6 +229,70 @@ K_TASKREAD_K:
             sty         K_XBUF + TF_ROM
             ldy         #TF_SIZE
             jmp         @copy
+
+@fd:                                                        ; Its fd (the caller's r2): its channel's name, mode,
+            stx         K0_TMP                              ;   device, qid type and offset (K0_TMP: the task)
+            ldx         K0_TMP2
+            ldy         T_REGISTER
+            php
+            sei
+            QL_GET      r2
+            plp
+            cmp         #FD_MAX
+            bcs         @badf
+            tay                                             ; .Y = the fd
+            ldx         K0_TMP
+            php
+            sei
+            stx         T_REGISTER                          ; ---- The task
+            lda         TA_FD,Y
+            stz         T_REGISTER                          ; ---- Back
+            plp
+            cmp         #CH_MAX
+            bcs         @badf                               ; ($FF: closed)
+            tax                                             ; .X = the channel
+            lsr                                             ; K_PTR = its name, K_CH_NAME + 64 * it
+            lsr
+            clc
+            adc         #>K_CH_NAME
+            sta         K_PTR + 1
+            txa
+            and         #3
+            lsr
+            ror
+            ror
+            sta         K_PTR
+            ldy         #PATH_MAX
+:
+            lda         (K_PTR),Y
+            sta         K_XBUF + FI_NAME,Y
+            dey
+            bpl         :-
+            lda         K_CH_MODE,X
+            sta         K_XBUF + FI_MODE
+            lda         K_CH_DEV,X
+            sta         K_XBUF + FI_DEV
+            lda         K_CH_QTYPE,X
+            sta         K_XBUF + FI_QTYPE
+            lda         K_CH_OFF0,X                         ; (Its offset: no task changes it while a KCALL runs)
+            sta         K_XBUF + FI_OFFSET
+            lda         K_CH_OFF1,X
+            sta         K_XBUF + FI_OFFSET + 1
+            lda         K_CH_OFF2,X
+            sta         K_XBUF + FI_OFFSET + 2
+            lda         K_CH_OFF3,X
+            sta         K_XBUF + FI_OFFSET + 3
+            ldy         #FI_SIZE
+            bit         K0_TMP3                             ; (FD2PATH's: its name alone)
+            bpl         :+
+            ldy         #PATH_MAX + 1
+:
+            jmp         @copy
+
+@badf:
+            FAIL        E_BADF
+
+.assert     FI_NAME = 0 .and FI_SIZE <= 176 .and TR_NAME = $80 .and <K_CH_NAME = 0, error, "TR_FD's record, in K_XBUF"
 
 .assert     TF_Y - TF_U = FR_Y - FR_U .and TF_PC - TF_U = FR_PCL - FR_U .and TF_RAM = TF_U + FRAME_SIZE, error, "TF_* and FR_*"
 
@@ -375,6 +455,51 @@ tm_next:
 :
             dec         K_CNT
             rts
+
+; TASKSTOP: stop task .A (.X <> 0: TF_STOPPED, which the scheduler passes by) or start it again (.X = 0), wherever
+; it is.  A driver's call (kdev's, for /proc/N/ctl); not of the kernel task or a driver.  OUT: C = 0; or C = 1,
+; .A = E_PERM, E_SRCH (free, or not started).  Modifies .A, .X, .Y, K_TASK, K_TMP
+K_TASKSTOP:
+            sta         K_TASK
+            lda         TK_FLAGS                            ; (A driver's call only)
+            and         #TF_DRIVER
+            beq         @perm
+            stz         K_TMP                               ; K_TMP: the flag, set or not
+            txa
+            beq         :+
+            lda         #TF_STOPPED
+            sta         K_TMP
+:
+            ldx         K_TASK
+            beq         @perm                               ; (The kernel task)
+            cpx         #TASKS
+            bcs         @srch
+            ldy         T_REGISTER
+            php
+            sei
+            QL_GET      TK_STATE
+            beq         @srch_back                          ; (Free)
+            cmp         #ST_NEW
+            beq         @srch_back
+            QL_GET      TK_FLAGS
+            bit         #TF_DRIVER
+            bne         @perm_back
+            and         #$FF ^ TF_STOPPED
+            ora         K_TMP
+            QL_PUT      TK_FLAGS
+            plp
+            clc
+            rts
+
+@srch_back:
+            plp
+@srch:
+            FAIL        E_SRCH
+
+@perm_back:
+            plp
+@perm:
+            FAIL        E_PERM
 
 ; DBG_PS: a line for each task in use: "T ST FL PA CPU    NAME" (its number, state, flags, parent, CPU time in
 ; ticks, all hex; its name).  Its scratch: K_TASK, and PS_INFO (its TA_PATH: it makes no request) for

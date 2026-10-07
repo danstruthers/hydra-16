@@ -1,0 +1,5 @@
+; while: the sum of i & 3 for i below n, by while over two locals
+; (bench.hl loads this: its functions, then its run)
+(fun {b-while n} {do =(s 0) =(i 0) (while (< i n) (set! s (+ s (bit-and i 3))) (set! i (+ i 1))) s})
+
+(bench "while" (fn {} {b-while (bench.size 4000 1000)}))

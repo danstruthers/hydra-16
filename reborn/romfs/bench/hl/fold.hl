@@ -1,0 +1,8 @@
+; fold: a = (3a + x) & 1023 over the list 0 to n - 1, by foldl and a function made with fn, k times
+; (bench.hl loads this: its functions, then its run)
+(fun {b-fold n k} {do
+  =(l (range 0 n)) =(r 0)
+  (dotimes {rep k} (set! r (foldl (fn {a x} {bit-and (+ (* a 3) x) 1023}) 0 l)))
+  r})
+
+(bench "fold" (fn {} {b-fold 200 (bench.size 10 3)}))

@@ -321,6 +321,7 @@ K_TASK_SETUP:
             stz         TK_INNOTE
             stz         TK_WOKEN
             stz         TK_EVENT
+            stz         TK_STEPHIT                          ; (No step out: debug.s)
             stz         TA_NOTIFY + 1
             stz         T_REGISTER                          ; ---- Back (a moment)
             plp
@@ -560,7 +561,31 @@ K_TASK_START:
             jmp         K_EXITS
 
 @entry:
+            lda         #TF_HOLD                            ; SPAWN_STOPPED's?
+            bit         TK_FLAGS
+            bne         @hold
             jmp         (TA_ENTRY)
+
+@hold:                                                      ; Stopped, its frame's PC its entry point (as YIELD's
+            lda         TA_ENTRY + 1                        ;   frame: PC, P, A, X, W, Y, U), for the debugger's
+            pha                                             ;   first step
+            lda         TA_ENTRY
+            pha
+            php
+            sei
+            pha
+            phx
+            lda         W_REGISTER
+            pha
+            phy
+            lda         U_REGISTER
+            pha
+            lda         TK_FLAGS
+            and         #$FF ^ TF_HOLD
+            ora         #TF_STOPPED
+            sta         TK_FLAGS
+            stz         TK_DUE
+            jmp         K_SCHED_SWITCH
 
 ; A RAM program's first instructions (its first frame's PC): it loads itself (load.s: K_LOAD), then starts as every
 ; program does.  One that can't be loaded ends at once, with the error as its code
@@ -802,6 +827,17 @@ K_SPAWN_K:
             lda         K_NGROUP,Y
             sta         K_NGROUP,X
 :
+            lda         K0_SPAWNF                           ; SPAWN_STOPPED: it stops at its entry point (TF_HOLD:
+            and         #SPAWN_STOPPED                      ;   K_TASK_MAIN)
+            beq         :+
+            lda         #TF_HOLD
+            php
+            sei
+            stx         T_REGISTER                          ; ---- The child
+            sta         TK_FLAGS
+            stz         T_REGISTER                          ; ---- Back
+            plp
+:
             FARCALL     K_FD_INHERIT                        ; Its fds: the map's (file.s)
             FARCALL     K_NS_INHERIT                        ; Its namespace: the caller's, or its own (ns.s)
             FARCALL     K_ENV_INHERIT                       ; Its environment: a copy of the caller's, or empty
@@ -859,6 +895,8 @@ K_EXIT_K:
             sty         K0_TMP
             FARCALL     IRQ_RELEASE_ALL                     ; Its lines
             FARCALL     K_SEG_EXIT                          ; Its shared segments (mem.s)
+            ldy         K0_TMP
+            FARCALL     K_SEM_EXIT                          ; Its semaphores, and the mutexes it holds (sem.s)
             ldy         K0_TMP
             FARCALL     K_FILE_EXIT                         ; Its device letters; the channels it served (file.s)
             FARCALL     K_NS_EXIT                           ; Its namespace (ns.s)
@@ -1055,6 +1093,20 @@ K_WAIT_K:
 K_GETPID:
             lda         T_REGISTER
             and         #TASKS - 1
+            clc
+            rts
+
+; GETPPID: .A = this task's parent ($FF: none), a quick look at the kernel task's table.  Modifies .Y
+K_GETPPID:
+            php
+            sei
+            lda         T_REGISTER
+            and         #TASKS - 1
+            tay
+            stz         T_REGISTER
+            lda         K_PARENT,Y
+            sty         T_REGISTER
+            plp
             clc
             rts
 

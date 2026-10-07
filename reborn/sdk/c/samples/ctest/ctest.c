@@ -134,6 +134,7 @@ int main (int argc, char* argv[])
     check (mkdir ("ctdir2", 0) == 0 && stat ("ctdir2", &st) == 0 && S_ISDIR (st.st_mode), "stat: a directory");
     fd = open ("ct.txt", O_RDONLY);
     check (fd >= 0 && fstat (fd, &st) == 0 && st.st_size == 5, "fstat");
+    check (hy_fd2path (fd, line) == 0 && strcmp (line + strlen (line) - 7, "/ct.txt") == 0, "hy_fd2path");
     close (fd);
     dir = opendir (".");
     seen = 0;
@@ -158,6 +159,17 @@ int main (int argc, char* argv[])
     i = hy_spawn (CODE, args, 0);
     check (i > 0 && hy_wait (i, msg) == 1 && strcmp (msg, "oops") == 0, "hy_spawn, hy_wait: a message");
     check (hy_spawn ("/nosuch", args, 0) < 0 && errno == ENOENT, "hy_spawn: no such program");
+    check (hy_parent () < 16 && hy_parent () != hy_task (), "hy_parent: the shell's task");
+
+    /* semaphores */
+    i = hy_sem_new (1, 0);
+    check (i >= 0 && hy_sem_try (i) == 0 && hy_sem_try (i) < 0 && errno == EAGAIN, "hy_sem_new, hy_sem_try");
+    check (hy_sem_release (i) == 0 && hy_sem_acquire (i) == 0 && hy_sem_release (i) == 0,
+           "hy_sem_acquire, hy_sem_release");
+    check (hy_sem_free (i) == 0 && hy_sem_try (i) < 0 && _oserror == HY_E_INVAL, "hy_sem_free");
+    i = hy_sem_new (0, HY_SEM_MUTEX);
+    check (i >= 0 && hy_sem_acquire (i) == 0 && hy_sem_try (i) < 0 && _oserror == HY_E_BUSY && hy_sem_free (i) == 0,
+           "a mutex");
 
     /* the namespace: a bind, a union, an unmount; a mount */
     getcwd (cwd, sizeof cwd);

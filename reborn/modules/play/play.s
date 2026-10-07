@@ -1,7 +1,11 @@
 ; ****************************************************************************
 ; play [-l] song [n] - a song (a ZSM file: the Commander X16's format, which Furnace exports) on the YM2151, through
 ; /dev/snd: to its end once; with n, its loop n more times; -l, its loop till it's stopped (Ctrl-C).  The old
-; system's player (os_rom/sound/player.s), a program now.
+; system's player (os_rom/sound/player.s), a program now.  A song whose name ends in .mml is a score (hysong.js's
+; language: mml.inc), compiled as it plays into the stream hysong.js would make of it; play -o score.mml song.zsm
+; writes that stream to a ZSM file instead.  play [-x] -m ch mml ... plays a line of MML on a channel (its own
+; instrument, if the line doesn't name one), play [-x] -c ch notes ... a chord (a note a channel, from ch); -x, the
+; X16's MML (FMPLAY's, FMCHORD's).
 ;   The header (16 bytes): "zm", a version, the loop point (3 bytes: an offset in the file; 0: none, and a loop is
 ; the whole song), the PCM table's (ignored), the FM channels it uses (claimed: /dev/sndctl's claim), the PSG's
 ; (ignored), the tick rate (Hz; 0: 60), 2 reserved.  Then the stream: $00-$3F a PSG write (skipped: the Hydra has
@@ -12,7 +16,8 @@
 ; average, if not each tick.  It holds the CPU for the song (PREEMPT_OFF): a task switch comes only as it sleeps or
 ; waits, so a tick's work isn't cut in two by another task's slice.  It reads the file ahead as it waits, 256
 ; bytes at a time.  Its end, or Ctrl-C, closes /dev/snd, which gives its channels back, keyed off.
-;   Its status: none; "usage"; the song's error ("play: song: why"); "not a song", "no sound", "channels busy".
+;   Its status: none; "usage"; the song's error ("play: song: why"); "not a song", "no sound", "channels busy"; a
+; score's error ("channel 2: a note before an instrument" ...).
 
 .include "hydra.inc"
 .include "hyx2.inc"
@@ -21,6 +26,8 @@
 
             HYX2_PROGRAM "play", main
 
+            .import     patches, drum_patch, drum_kc, volume_atten
+
 HDR_SIZE        = 16            ; The header ...
 H_LOOP          = 3             ;   its loop point (3) ...
 H_FM            = 9             ;   the FM channels ...
@@ -28,6 +35,10 @@ H_RATE          = 12            ;   the tick rate (2)
 FRAME_MAX       = 254           ; A tick's pairs, a write's at most (127 of them)
 FOREVER         = $FF           ; loops: the loop till it's stopped
 F_LOOP          = $01           ; -l
+F_OUT           = $02           ; -o
+F_LINE          = $04           ; -m
+F_CHORD         = $08           ; -c
+F_X16           = $10           ; -x
 
 .zeropage
 next:       .res        4                                   ; The next tick's time: a fraction (2), then the tick
@@ -61,8 +72,27 @@ main:
             bne         :+
             jmp         tl_badusage
 :
+            lda         tl_flags                            ; -m ch mml, -c ch notes: made a score
+            and         #F_LINE | F_CHORD
+            beq         :+
+            jmp         mml_line
+:
             MOVR        song, tl_arg
+            jsr         mml_name
             stz         loops
+            lda         tl_flags                            ; -o score song: the score compiled into a file
+            and         #F_OUT
+            beq         @times
+            lda         mml
+            beq         @usage
+            jsr         tl_next
+            beq         @usage
+            jsr         open_song
+            jsr         mml_load
+            jmp         mml_out
+@usage:
+            jmp         tl_badusage
+@times:
             jsr         tl_next                             ; n: the loop's times more
             beq         @args
             MOVR        r0, tl_arg
@@ -92,17 +122,18 @@ main:
             lda         #FOREVER
             sta         loops
 :
-            MOVR        r0, song                            ; The song, and its header
-            lda         #O_READ
-            jsr         OPEN
-            bcc         :+
-            pha                                             ; (MOVR changes .A)
-            MOVR        r0, song
-            pla
-            jsr         tl_err
-            jmp         tl_end
+            jsr         open_song                           ; The song, and its header (a score: read whole)
+            lda         mml
+            beq         :+
+            jsr         mml_load
+            lda         m_mask
+            sta         hdr + H_FM
+            stz         loop + 1
+            stz         loop + 2
+            lda         #HDR_SIZE
+            sta         loop
+            bra         play_sound
 :
-            sta         fd
             LDR         r0, hdr
             LDR         r1, HDR_SIZE
             lda         fd
@@ -129,6 +160,7 @@ main:
             lda         #HDR_SIZE
             sta         loop
 :
+play_sound:
             LDR         r0, s_snd                           ; The sound driver's files
             lda         #O_WRITE
             jsr         OPEN
@@ -200,6 +232,21 @@ puts2:
             stz         r1 + 1
             lda         #2
             jmp         WRITE
+
+; The song (its name at song) opened: fd.  Not: its error, and the end
+open_song:
+            MOVR        r0, song
+            lda         #O_READ
+            jsr         OPEN
+            bcc         :+
+            pha                                             ; (MOVR changes .A)
+            MOVR        r0, song
+            pla
+            jsr         tl_err
+            jmp         tl_end
+:
+            sta         fd
+            rts
 
 ; sndctl's "claim $NN": the song's FM channels.  OUT: C = 0; or C = 1: another program has one
 claim:
@@ -356,6 +403,13 @@ start:
             stz         eof
             lda         loops
             sta         rloops
+            lda         mml                                 ; (A score: compiled ahead, the ring full)
+            beq         :++
+            jsr         mml_start
+:
+            jsr         m_step
+            bcc         :-
+:
             jsr         stage_read
             jsr         unstage
             jmp         stage_read
@@ -378,6 +432,10 @@ unstage:
 ; is to be played again (rloops: so the stream finds it there after its $80, with no wait for a seek and a read).
 ; OUT: staged (0: the end); eof at the file's end, or an error
 stage_read:
+            lda         mml
+            beq         :+
+            jmp         mml_stage
+:
             lda         staged
             ora         staged + 1
             ora         eof
@@ -451,6 +509,17 @@ delay:
             dex
             bne         :-
             jsr         stage_read                          ; (Read ahead: this is the time for it)
+            lda         mml                                 ; (A score: compiled ahead till the tick before)
+            beq         :+
+            sec
+            lda         next + 2
+            sbc         #1
+            sta         m_tick
+            lda         next + 3
+            sbc         #0
+            sta         m_tick + 1
+            jsr         mml_idle
+:
             lda         next + 2
             ldx         next + 3
             jmp         SLEEP_UNTIL                         ; (A time that's passed: at once)
@@ -516,7 +585,8 @@ s_name:     .byte       "play: ", 0
 s_colon:    .byte       ": ", 0
 s_nl:       .byte       LF, 0
 tl_name:    .byte       "play", 0
-tl_flagset: .byte       "l", 0
-tl_usage:   .byte       "play [-l] song [n]", 0
+tl_flagset: .byte       "lomcx", 0
+tl_usage:   .byte       "play [-l] song [n]; play -o score.mml song.zsm; play [-lx] -m|-c ch mml", 0
 
+.include "mml.inc"
 .include "toollib.s"

@@ -1127,9 +1127,24 @@ srv_words:
             sec
             rts
 
-; srv_arg + .Y = the number at srv_ctl + .X (decimal, or $hex), or 0.  Keeps .X, .Y
+; srv_arg + .Y = the number at srv_ctl + .X (decimal, or $hex; after a -, its two's complement), or 0.  Keeps .X, .Y
 srv_number:
             stx         srv_x
+            lda         srv_ctl,X
+            cmp         #'-'
+            bne         @plain
+            inx
+            jsr         @plain
+            sec
+            lda         #0
+            sbc         srv_arg,Y
+            sta         srv_arg,Y
+            lda         #0
+            sbc         srv_arg + 1,Y
+            sta         srv_arg + 1,Y
+            rts
+
+@plain:
             stz         r3                                  ; (r3: the number so far)
             stz         r3 + 1
             lda         srv_ctl,X

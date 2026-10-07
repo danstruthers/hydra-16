@@ -99,7 +99,7 @@ an I2C or SPI transaction is one) and closed after, a failure's file closed too.
 | `gpio` | `#g` (`/dev/gpio`) | `(gpio pin)` (its level, 0 or 1), `(gpio! pin level)` (the pin made an output, then set), `(gpio-in pin)`, `(gpio-out pin)`, `(gpio-port)` (all 8, a byte), `(gpio-port! byte)`, `(gpio-ddr! byte)` (1: an output), `(gpio-ca1! :rise \| :fall)`, `(gpio-ca2! 0 \| 1 \| :in)`, `(gpio-wait)` (CA1's next edge: its count), `(gpio-state)` (a hash from `ctl`: each pin its direction and level, `{:out 1}`; `:ca1` `{:rise 3}`; `:ca2` 0, 1 or `:in`) |
 | `i2c` | `#i` (`/dev/i2c`) | `(i2c-devices)` (the addresses that answer, a list), `(i2c-read addr n [reg])` (bytes, a list; `reg` written first, a repeated start before the read), `(i2c-write addr bytes [reg])`, `(i2c-speed khz)`, `(i2c-reg-size 1 \| 2)` |
 | `spi` | `#S` (`/dev/spi`) | `(spi dev bytes)` (a transaction: the bytes that came back), `(spi-read dev n)` (n clocked in), `(spi-mode dev 0 \| 3)` |
-| `snd` | `#a` (`/dev`) | `(snd-claim ch...)`, `(snd-release ch...)`, `(snd-patch ch n)` (the X16's 163), `(snd-note ch note)` (MIDI: 60 middle C), `(snd-off ch)`, `(snd-vol ch v)` (0-127), `(snd-pan ch :left \| :right \| :both)`, `(snd-bend ch n)`, `(snd-drum ch n)` (General MIDI's), `(snd-volume v)` (the master, 0-200), `(snd-reset)`, `(snd-reg reg value...)` (the chip's registers, pairs), `(note-of "C#4")` (a note's number), `(tune {{note beats} ...} [ch] [tempo])` (notes played in step with the tick, a rest NIL; 120 a minute), `(play path [times])` (a ZSM song, by `play`) |
+| `snd` | `#a` (`/dev`) | `(snd-claim ch...)`, `(snd-release ch...)`, `(snd-patch ch n)` (the X16's 163), `(snd-note ch note)` (MIDI: 60 middle C), `(snd-off ch)`, `(snd-level ch v)` (a channel's volume, 0-127; `snd-vol` its old name), `(snd-pan ch :left \| :right \| :both)`, `(snd-bend ch n)`, `(snd-drum ch n)` (General MIDI's), `(snd-freq ch hz)`, `(snd-glide ch n)` (no new attack), `(snd-lfo rate pmd amd wave)`, `(snd-sens ch pms ams)`, `(snd-noise n)` (channel 7's, 0-31; negative: off), `(snd-volume v)` (the master, 0-200), `(snd-reset)`, `(snd-reg reg value...)` (the chip's registers, pairs), `(snd-regs)` (the 256 as written, a buffer), `(note-of "C#4")` (a note's number), `(tune {{note beats} ...} [ch] [tempo])` (notes played in step with the tick, a rest NIL; 120 a minute), `(play path [times])` (a ZSM song, by `play`), `(snd-mml ch mml)` and `(snd-chord ch notes)` (a line of MML and a chord, by `play -m` and `-c`) |
 | `disk` | `#d` (`/dev/sd`), `#f` | `(disks)` (the disks started, hashes: `:disk`, `:kind`, `:blocks`, `:label`, from each `ctl`), `(disk-start d)`, `(disk-stop d)`, `(df)` (each file system's room, hashes: `:disk`, `:label`, `:free`, `:size`, in KB), `(cards)` (the SD cards there, their SPI devices) |
 | `proc` | `#p` (`/proc`) | `(task-args task)` (a list of strings), `(task-cwd task)`, `(task-env task)` (a hash, its names strings), `(task-ns task)` (a line each), `(task-regs task)` (a hash: `:pc`, `:a` ... `:rom`), `(task-mem task addr n)` (bytes, a list), `(task-ram task bank offset n)` |
 | `clock` | `#t` (`/dev`) | `(set-date "2026-10-04 12:00:00")` (the clock and the DS1747), `(rtc)` (a list: `:running`, `:stopped` or `:none`, and `:battery-low`) |
@@ -159,32 +159,62 @@ when it's bound.
 
 ## Against HyForth
 
-The same benchmarks are written in each, on the ROM disk at `/rom/bench`: `bench.hl` and `bench.fs`, the same
-algorithms and sizes, each loop the language's own (a tail call in hylang, `DO LOOP` or `BEGIN WHILE REPEAT` in
-HyForth), every value under 16,384 (hylang's fixnums, a cell that doesn't overflow).  Each prints a line a benchmark,
-`bench LANGUAGE NAME RESULT TICKS REPS`, for the reps run of it (`hylang /rom/bench/bench.hl [reps [quick]]`, `forth
-/rom/bench/bench.fs [reps [quick]]`, on the board too), and `node sim/bench.js` runs both in the emulator and prints
-the table (`--quick`, the small sizes; `--hylang-reps`, `--forth-reps`: HyForth's default 20, as one of its runs is a
-few ticks).  The `bench` test runs both at the quick sizes and checks each result is the same.  In October 2026, at
-3.58 MHz, one run of each: hylang's code evaluated (the evaluator alone, as it was), and compiled (the bytecode
-machine's, below):
+Twenty benchmarks are written in each language, on the ROM disk at `/rom/bench`: `bench.hl` (which loads each
+benchmark's own file, `hl/NAME.hl`) and `bench.fs`.  They have the same algorithms, sizes and results, each written
+the language's own way (a tail call, `while`, `dotimes` or `each` in hylang, `DO LOOP` or `BEGIN WHILE REPEAT` in
+HyForth; lists, `map`, `filter` and `foldl` in hylang where HyForth loops over an array and `EXECUTE`s a word), every
+value under 16,384 (hylang's fixnums, a cell that doesn't overflow), as deep as HyForth's data stack (32 cells)
+takes.  Each prints a line a benchmark, `bench LANGUAGE NAME RESULT TICKS REPS` (`hylang /rom/bench/bench.hl [reps
+[q|f [name...]]]`, `forth /rom/bench/bench.fs [reps [q|f [name...]]]`, on the board too).  `node sim/bench.js` runs
+both in the emulator and prints them by kind (calls, loops, arithmetic, bytes, lists, text), with each kind's
+geometric mean: `--quick` (the small sizes), `--only` and `--kind` (some of them), `--hylang-reps` and
+`--forth-reps` (1 and 5), `--together`, `--vs TREE` (another tree's build beside this one's, the same benchmarks
+on its disk: another branch's worktree), `--json FILE`.  Each of hylang's runs in a hylang of its own;
+`--together` runs them in one.  The `bench` test
+runs both at the quick sizes and checks each result is the same.
 
-| Benchmark | What | Result | Evaluated | Compiled | HyForth | Compiled / HyForth |
-| :-------- | :--- | -----: | --------: | -------: | ------: | -----------------: |
-| `loop` | A counting loop of 4,000 steps | 4000 | 9,105 ms | 1,290 ms | 76 ms | 17x |
-| `calls` | 2,000 calls of a function of two arguments | 2000 | 7,660 ms | 1,525 ms | 65 ms | 23x |
-| `fib` | Fibonacci of 16, recursively (3,193 calls) | 987 | 6,775 ms | 1,340 ms | 181 ms | 7.4x |
-| `sieve` | The primes below 1,024, a byte each | 172 | 14,730 ms | 2,755 ms | 332 ms | 8.3x |
-| `sort` | 100 bytes sorted by insertion | 407 | 17,085 ms | 4,240 ms | 480 ms | 8.8x |
-| `gcd` | gcd(i, j) by subtraction, for i and j 1 to 20, summed | 880 | 9,340 ms | 1,675 ms | 350 ms | 4.8x |
-| All | | | 64,695 ms | 12,825 ms | 1,484 ms | 8.6x (the ratios' geometric mean 10.0x) |
+In October 2026 (`reborn-hynat`, the native code), at 3.58 MHz, one run of each, beside the bytecode machine's
+(`reborn` at 76546a8, `--vs`):
 
-HyForth's code is threaded 65C02 code and its loop counter a register's.  hylang's evaluator ran each step as a call
-with its scope made on the heap, so its tightest loops (`loop`, `calls`) were about 120 times HyForth's, and code
-that does more each step (a buffer's bytes, a comparison, arithmetic) about 30 to 45.  Compiled, a call makes nothing
-on the heap and an argument is a word at a fixed place, so recursion, arithmetic and a buffer's bytes are 5 to 9
-times HyForth's; a counting loop's step is some 1,200 cycles (its 13 ops, a tail call among them, each dispatched:
-HyForth's is 68), so the tightest loops are 17 to 23 times.
+| Kind | Benchmark | What | Result | hylang | Bytecode | HyForth | hylang / HyForth |
+| :--- | :-------- | :--- | -----: | -----: | -------: | ------: | ---------------: |
+| calls | `calls` | 2,000 calls of a function of two arguments, in a tail call's loop | 2000 | 540 ms | 995 ms | 65 ms | 8.3x |
+| calls | `fib` | Fibonacci of 16, recursively (3,193 calls) | 987 | 515 ms | 980 ms | 181 ms | 2.8x |
+| calls | `tak` | Takeuchi's function, tak(9, 6, 3) six times (1,758 calls of three arguments) | 36 | 310 ms | 560 ms | 199 ms | 1.6x |
+| calls | `ack` | Ackermann's, ack(2, 9) eight times (1,840 calls, 22 deep) | 168 | 255 ms | 520 ms | 115 ms | 2.2x |
+| loops | `loop` | A counting loop of 4,000 steps, a tail call each | 4000 | 400 ms | 925 ms | 77 ms | 5.2x |
+| loops | `while` | A sum of i & 3 for i below 4,000, by `while` over two locals | 6000 | 725 ms | 3,685 ms | 421 ms | 1.7x |
+| loops | `dotimes` | The same sum by `dotimes` (HyForth: `DO LOOP`) | 6000 | 750 ms | 3,655 ms | 213 ms | 3.5x |
+| loops | `nested` | A `dotimes` in a `dotimes`, 60 by 60, `bit-xor` and a test | 1800 | 825 ms | 5,435 ms | 309 ms | 2.7x |
+| arith | `gcd` | gcd(i, j) by subtraction, for i and j 1 to 20, summed | 880 | 475 ms | 950 ms | 351 ms | 1.4x |
+| arith | `collatz` | The Collatz steps of 1 to 60, summed (1,457) | 1457 | 420 ms | 2,220 ms | 289 ms | 1.5x |
+| arith | `hash` | h = ((h & 255) * 31 + i) & 4095 for i below 2,000 | 4072 | 715 ms | 4,820 ms | 669 ms | 1.1x |
+| bytes | `sieve` | The primes below 1,024, a byte each | 172 | 1,105 ms | 1,905 ms | 332 ms | 3.3x |
+| bytes | `sort` | 100 bytes sorted by insertion | 407 | 1,815 ms | 3,270 ms | 480 ms | 3.8x |
+| bytes | `matrix` | Two 10 by 10 matrices of bytes multiplied, summed | 1375 | 965 ms | 4,030 ms | 1,082 ms | 0.9x |
+| bytes | `queens` | The 7 queens' 40 placements, by backtracking | 40 | 2,505 ms | 4,390 ms | 1,301 ms | 1.9x |
+| lists | `mapf` | `sum`, `map`, `filter` over `range` 0 to 39, 20 times (HyForth: a loop, `EXECUTE`) | 9880 | 1,025 ms | 2,345 ms | 207 ms | 5.0x |
+| lists | `fold` | `foldl` of a function made with `fn` over 200 items, 10 times | 964 | 1,265 ms | 4,535 ms | 712 ms | 1.8x |
+| lists | `each` | `each` over 200 items, 10 times (HyForth: an array) | 700 | 450 ms | 1,855 ms | 209 ms | 2.2x |
+| text | `chars` | The a's in 64 characters, 40 times: `char-at`, `char-code` | 7 | 775 ms | 2,270 ms | 203 ms | 3.8x |
+| text | `digits` | The numbers below 1,000 written out, their lengths summed | 2890 | 1,820 ms | 1,950 ms | 2,105 ms | 0.9x |
+| All | | | | 17,655 ms | 51,295 ms | 9,520 ms | 1.9x (the ratios' geometric mean 2.3x) |
+
+hylang is nearest HyForth where a step does much (`matrix` and `digits` 0.9 times, `hash` 1.1, `gcd` 1.4,
+`collatz` 1.5, `tak` 1.6, `while` 1.7).  A call (`calls` 8.3 times) and a tail loop's step (`loop` 5.2) cost most
+next to HyForth's, whose calls are a JSR and whose loop counter is a register's; then the walks of `map` and
+`filter` (`mapf` 5.0).  The bits' built-ins (`bit-and`, `bit-or`, `bit-xor`, `shl`, `shr`) and the
+characters' (`char-at`, `char-code`) were each a built-in's call, some 2,000 cycles, where HyForth's `AND` and `C@`
+take a few; native code has them in the machine's quick way for fixnums (a string's byte), as `*` of two, and the
+loops that use them came from 7 to 16 times HyForth's time to 1.7 to 3.5 (`while`, `dotimes`, `nested`), `hash`
+from 4.6 to 1.1, `chars` from 9.6 to 3.8.
+
+The arena: the native code of all twenty benchmarks' 41 functions is 37,405 bytes (their bytecode 3,698): `RET` in
+ROM and stubs of 5 bytes (not 93 and 11) made it a third smaller, and a code's place even let the arena have eight
+banks (64K, not four), so all of them fit in one hylang: `--together` 18,010 ms, as each in its own (17,655), where
+with four banks the arena filled by `sort`'s and the rest were evaluated (then 110,185 ms against 33,945).  A
+script that fills it gets it emptied between its items: with an arena of one bank, a script of all twenty's files
+took 62 million cycles, against 58 with eight banks and 204 when it stayed full.
 
 BASIC has the same benchmarks too (`bench.bas`), which `sim/bench.js` and the `bench` test run with these two: the
 three side by side are in docs/basic.md, "Against hylang and HyForth".
@@ -235,10 +265,10 @@ The plan has it whole; in short:
   item at a time, the reader's text refilled from it, and seeks it back if a nested `load` used the text
   meanwhile.
 * **The bytecode machine** (`vm.inc`, in the seventh bank; its compiler in the sixth): a function `fun` defines is
-  compiled as it's defined,
-  any other at its second call, to the code of a small machine whose value register is `ex`; the code is in an
-  arena of RAM banks of its own (four at most, 32K), never moved, and the function's word 4 is its place (word 5
-  counts its calls till then).  A frame is the function's word and its arguments, where the caller pushed them on
+  compiled as it's defined, any other at its second call, to the code of a small machine whose value register is
+  `ex`; the code is in an arena of RAM banks of its own (eight at most, 64K), never moved, and the function's word 4
+  is its place (word 5 counts its calls till then; `fun` counts one, so a function it couldn't compile, the arena
+  full, is compiled at its next call).  A frame is the function's word and its arguments, where the caller pushed them on
   the evaluation stack, then a record of two words (its return and its scope), so a call makes nothing on the heap
   and an argument is a word at a fixed place; a call in tail position (`TCALL`) reuses its caller's frame.
   Constants, arguments, globals, `if`, `do`, `and`, `or` and `while` are compiled in place, and `set` (`=(...)`),
@@ -270,7 +300,39 @@ The plan has it whole; in short:
   a name's built-in value (a special form, an operator) only while no frame has bound the name, and marks it
   (`SF_INLINED`); bound in a frame then, or bound again globally, every function's code is dropped and compiled again
   as it's next called.  Ctrl-C and notes are taken at each call, as the evaluator takes them.  The arena full,
-  nothing is compiled till the evaluator's next start (a line at the prompt), which empties it.
+  nothing is compiled till the evaluator's next start (a line at the prompt) or a script's next item (`load`'s,
+  when nothing is under the `load`, so no frame of the machine's is left), which empties it.
+* **Native code** (`vmx.inc`, in the eighth bank): the machine's code is the 65C02's own.  The compiler writes a
+  function's bytecode in a scratch bank of its own (`vm_sb`, 4K at most: a bigger function is evaluated), and
+  `vm_xlate` makes it native code in the arena, in two passes (each op's place, in a map bank, `vm_mb`; then the
+  code).  An op is a stub (`jsr vm_sj` and its code's word in the machine: `vm_sj` points `vm_ip` at the data
+  after them, the op as it was, and jumps to the code, whose next op is `jmp (vm_ip)`), or in line: its own code
+  from a template (`vmxt.inc`, made by `tools/hyvmxt.js`), its operands patched in, with its stub after it as its
+  slow way (not fixnums, a scope made, a cache missed, Ctrl-C).  In line: constants, arguments and locals, pushes,
+  jumps, the fused ops, the quick ops of two values, blocks' and loops' ops, `SHEAD` and `CALL` while their caches
+  hold, `CSELF`, `TSELF`, `JE`, and `HEAD` of one argument (a buffer, or a function partially applied, pushed), and
+  `BCALL` of `*` of two (fixnums whose product is one: `vm_bmul`, by quarter squares), of `bit-and`, `bit-or`,
+  `bit-xor`, `shl` and `shr` of two fixnums (`vm_band` ...: a fixnum's tag bit is its bits' for `and` and `or`; a
+  shift a bit a step, `shl`'s while its sign holds), `char-at` of a string and an index in it, and `char-code` of a
+  character (`vx_tsel`'s table, `vx_bcb`: each a template that calls the machine's routine, its stub if it says
+  no).  A tail call of the function by its own name whose arguments call nothing has its `SHEAD` flagged by the
+  compiler (m's bit 7, `vc_shflag`): its head isn't pushed while its cache (this frame's function alone) holds,
+  and `TSELF` takes the arguments as they are (`vm_shf` says if the machine's way pushed it).  `map`, `filter`, `foldl` and the
+  other walks but `foldr`, called from native code, walk their list in the machine (`vm_walk`): the function
+  called for each item as `CALL` would, returning to a trampoline at the arena's first bytes (`jmp vm_wret`).  A `CALL` whose
+  cache missed goes on past its look at it (`op_callm`), where a buffer given a fixnum
+  index has its byte at once; `buffer-put` of three is the first thing `BCALL`'s code looks for.  `CALL` and
+  `CSELF` have a return pad past their data, where their returns go: the caller's frame found again from the
+  call's h and r (`vm_s`, `vm_rb`, `vm_mat`), so `RET` in line only finds the caller's code, drops the frame and
+  looks for an error (the caller's r, the byte before the pad, says if it's returned too: `vm_reterr`).  The pad
+  gives the frame the machine found already, if it did, so the machine's `RET` and the evaluator's resume
+  (`HEAD`'s and `SHEAD`'s t are the pad, `VXK_Q`) go through it as well.  `RET` is `jmp vm_nret`, the machine's
+  code for it in ROM (a function has two or three).  A code's place is even (a `NOP` before a stub puts a pad or a
+  record's scope word there), so its fixnum is its bank's index (3 bits) and its address's bits 12-1, and the
+  arena has eight banks.  The places in the data that are code
+  (jumps' targets, blocks' parents and table, a function's start, calls' returns) are the native code's, so
+  every op's code in the machine runs as it did.  Native code runs in the RAM window ($8000-$9FFF) a heap cell is read through, so whatever reads
+  one is the machine's, in ROM, and sets the code's bank again before going on.
 * **Built-ins**: a table of all danlang's (its arity, flags, the bank its code is in), so partial application, too
   many arguments and taking errors are the dispatcher's (till phase 7 made the last, those not made yet answered
   `Not yet: 'name'`).
@@ -301,12 +363,13 @@ The plan has it whole; in short:
   `spec/errors.def`: `obj/gen/errnames.inc`).  `sh` and `sh-out` run `rc -c`, their input and output through
   pipes; `date`, `date-parts` and `seconds-of` work the calendar on 32-bit seconds.  `hylang file args...` runs
   the file (`args`: its path and the args), its status 0, 1 after an error (on stderr), or `(exit n)`'s.
-* **The module**: hylang is one program of seven banks (a module may have eight since phase 7): the evaluator, its
+* **The module**: hylang is one program of eight banks (a module's most): the evaluator, its
   special forms, the dispatch and the built-ins that run the machine in the first; the reader, the printer, the
   list built-ins, equality and order in the second; the numbers (and, as yet, `fn`, the type tests and `error`)
   in the third; strings, hashes and the errors' messages in the fourth; streams, the system library and the
   Hydra's built-ins (`hydrabi.inc`) in the fifth; the collector and the bytecode machine's compiler in the sixth;
-  the machine in the seventh.  What every bank calls is in the task's RAM (the heap, the
+  the machine in the seventh; its native code's translator and templates in the eighth.  What every bank calls
+  is in the task's RAM (the heap, the
   output, the evaluation stack): the most of that code is kept in the fourth bank and copied to the RAM as hylang
   starts (`hylang.cfg`'s DATA4), so the first bank's room is the evaluator's.  `+`, `-`, `1+`, `1-`, `zero?`,
   `one?` and the comparisons work fixnums in the first bank (`bi_fast`), without a far call.  The Hydra layers

@@ -25,7 +25,8 @@
 
 ; ---- The format (docs/plans/HYDRAFS.md)
 HFS_BLOCK           = BLOCK     ; A block: a disk's sector
-HFS_CLUSTER_BLOCKS  = 8         ; A cluster (what space is allocated in): 8 blocks, 4 KB
+HFS_CLUSTER_BLOCKS  = 8         ; A cluster (what space is allocated in) on a card: 8 blocks, 4 KB (a volume's own:
+                                ;   its superblock's HFS_SB_CSHIFT, HFS_SHIFT while it's the one in hand)
 HFS_ENTRY_SIZE      = 64        ; A directory entry (a directory is a file of them)
 HFS_NAME_MAX        = 31        ; A name's characters (any byte but '/' and 0; case-sensitive)
 HFS_WC_N            = 64        ; The walk cache's records (srv.s): each its disk (1: $FF, free) ...
@@ -39,7 +40,9 @@ HFS_WC_ENT          = HFS_WC_NAME + HFS_NAME_MAX        ;   and its entry (HFS_E
 HFS_WC_SIZE         = HFS_WC_ENT + HFS_ENTRY_SIZE
 HFS_VERSION         = 2         ; The newest format this reads (and writes, with a quick format): 2 has a
 HFS_VERSION_FULL    = 1         ;   free map that's written as it's used (HFS_SB_MAPINIT); 1's is all written
-HFS_CSHIFT          = 3         ;   and its cluster size, as a shift (HFS_CLUSTER_BLOCKS)
+HFS_CSHIFT          = 3         ;   and its cluster size, as a shift (HFS_CLUSTER_BLOCKS) ...
+HFS_CSHIFT_RAM      = 1         ;   a RAM disk's (1 KB clusters: a small disk holds more files) ...
+HFS_CSHIFT_MAX      = 3         ;   and the most this reads (1 to it: HFS_SHIFT_SET's tables)
 HFS_PART_TYPE       = $7F       ; A HydraFS partition's type (for an OS in development, by convention)
 HFS_PART_ALIGN      = 2048      ; A new partition starts on a 1 MB boundary (block 2048 on an empty card)
 MBR_TABLE           = $1BE      ; Block 0: the partition table, 4 entries of MBR_ENTRY_SIZE bytes ...
@@ -260,6 +263,13 @@ HFS_CK_SP:  .res        2                                   ;   the walk's direc
 ; superblock's numbers the server works from.  The counters (free, hint, qid, stamp, the map written) change here,
 ; and go back to the superblock at the end of the request (HFS_FINISH)
 HFS_V_STATE: .res       DISKS                               ; 0: not looked at yet; 1: HydraFS; $FF: not one
+HFS_V_CSHIFT: .res      DISKS                               ; Its clusters' size, as a shift (its superblock's)
+; The volume in hand's clusters (HFS_SHIFT_SET: HFS_VOLUME, HFS_FID_CHECK, a format): their size, as a shift ...
+HFS_SHIFT:  .res        1
+HFS_CBLK:   .res        1                                   ;   their blocks ...
+HFS_CBMASK: .res        1                                   ;   less 1 ...
+HFS_CBYTEHI: .res       1                                   ;   their bytes' high byte ...
+HFS_CBYTEMASKHI: .res   1                                   ;   less 1
 HFS_V_BASE: .res        DISKS * 4                           ; Its first block (its partition's, or 0)
 HFS_V_CLUSTERS: .res    DISKS * 4                           ; Clusters in the data area
 HFS_V_MAP:  .res        DISKS * 4                           ; The free map's first block
