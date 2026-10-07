@@ -7,7 +7,8 @@
 //
 // Usage: node sim/run.js [options]
 //   -i, --interactive   the terminal is the Hydra's serial console, in real time.  Ctrl-A x quits, Ctrl-A r resets,
-//                       Ctrl-A s shows the state, Ctrl-A b stops it (the monitor: below), Ctrl-A h helps
+//                       Ctrl-A s shows the state, Ctrl-A b stops it (the monitor: below), Ctrl-A v shows the Vera X's
+//                       screen as text, Ctrl-A p saves it as a PNG, Ctrl-A h helps
 //   --cycles N          stop at cycle N (default 30000000: 8.4 s at 3.58 MHz; interactive: never)
 //   --input TEXT        keys to type (\r, \n: Return; \w: wait 2M cycles), one every 20000 cycles from cycle 200000
 //   --paste             type them as fast as the line goes (a byte arriving while the last is unread is lost)
@@ -38,12 +39,19 @@
 //   --pc-log            list /pc's requests as they're served (opens, creates, removes, renames, errors)
 //   --pc-damage F[,F...]  damage /pc's frames on the line, to try the resends: qN the Nth frame the Hydra sends, rN
 //                       the Nth reply (a byte of its body gets bit 6 flipped)
+//   --vera [V]          a Vera X card in slot 0 (sim/lib/vera.js): the VERA, its gateware version V (47.0.2, the X16
+//                       community's, by default; 0.9: fvdhoef's, without FX's registers or the version)
+//   --vera-config MS    the VERA's FPGA configuring itself after power-up and a reset: MS milliseconds (100)
+//   --screen            after the report, the VERA's text layer as text (its characters as ISO-8859-1)
+//   --frame-png FILE    at the end, the VERA's screen as a PNG (640 x 480); with -i, Ctrl-A p's file (screen-N.png)
+//   --view [PORT]       with -i: the VERA's screen live in a browser, at http://localhost:PORT (8016) (sim/view.js)
 // From Node: boot(opt) gives the machine; labels() the kernel's labels; state(m) each task's state.
 'use strict';
 const fs = require('fs');
 const path = require('path');
 const { createMachine, romBank } = require('./lib/machine.js');
 const { createPcHost } = require('./lib/pchost.js');
+const { encodePng } = require('./lib/png.js');
 
 const ROOT = path.join(__dirname, '..');
 const hx = (v, n = 2) => v.toString(16).toUpperCase().padStart(n, '0');
@@ -186,6 +194,20 @@ function watchSpec(spec) {
   return addr >= 0 && addr < 0x8000 ? { addr, task } : null;
 }
 
+// The VERA's text layer as lines, a heading first (--screen, Ctrl-A v)
+function screenLines(m) {
+  if (!m.vera) return ['--- no Vera X (--vera)'];
+  const c = m.vera.cells();
+  if (!c) return ['--- the screen: ' + (m.vera.ready ? 'no text layer shown' : 'the VERA is configuring')];
+  return ['--- the screen (layer ' + c.layer + ', ' + c.cols + ' x ' + c.rows + '):', ...m.vera.text().map(l => '   |' + l)];
+}
+
+// The VERA's screen into a PNG file
+function savePng(m, file) {
+  const f = m.vera.frame();
+  fs.writeFileSync(file, encodePng({ width: 640, height: 480, pixels: f.pixels, rgb: f.rgb }, require('zlib').deflateSync));
+}
+
 function interactive(m, opt) {
   const cpu = m.cpu, acia = m.acia, cps = opt.clock * 1e6, stdin = process.stdin, stdout = process.stdout, tty = stdin.isTTY;
   const now = () => Number(process.hrtime.bigint()) / 1e9;
@@ -195,7 +217,8 @@ function interactive(m, opt) {
   const say = t => stdout.write('\r\n[sim] ' + t + '\r\n');
   const status = () => 'cycle ' + cpu.cyc + ' (' + (cpu.cyc / cps).toFixed(1) + ' s), task ' + hx(m.T, 1) + ', page ' + hx(m.W, 1) +
     ', PC ' + hx(cpu.PC, 4) + (cpu.waiting ? ' (WAI: idle)' : '') + '; tasks: ' + state(m).map(s => hx(s.task, 1) + ' ' + s.name + ' ' + s.state).join(', ');
-  const help = () => say('Ctrl-A then: x quit, r reset (the reset button), s status, b the monitor, h this help, Ctrl-A a Ctrl-A.');
+  const help = () => say('Ctrl-A then: x quit, r reset (the reset button), s status, b the monitor, v the screen as text, p the screen as a PNG, h this help, Ctrl-A a Ctrl-A.');
+  let pngs = 0;
   const lbl = opt.lbl;
   const regs = () => 'T' + hx(m.T, 1) + ' ' + hx(m.W, 1) + ':' + hx(cpu.PC, 4) + ' ' + lbl.at(cpu.PC, m.W).padEnd(24) + ' A=' + hx(cpu.A) +
     ' X=' + hx(cpu.X) + ' Y=' + hx(cpu.Y) + ' S=' + hx(cpu.S) + ' P=' + hx(cpu.P) + ' U=' + hx(m.U, 1) + ' RAM=' + hx(m.taskRam[m.T][0]) +
@@ -257,6 +280,8 @@ function interactive(m, opt) {
       else if (k === 'r') { m.hwReset(); say('reset'); }
       else if (k === 's') say(status());
       else if (k === 'b') monitor('Ctrl-A b');
+      else if (k === 'v') { flush(); stdout.write('\r\n' + screenLines(m).join('\r\n') + '\r\n'); }
+      else if (k === 'p') { if (!m.vera) say('no Vera X (--vera)'); else { const f = opt.framePng || 'screen-' + (++pngs) + '.png'; savePng(m, f); say('the screen: ' + f); } }
       else help();
       return;
     }
@@ -290,6 +315,7 @@ function interactive(m, opt) {
     if (cpu.cyc >= stopAt) return finish('end of input');
     setTimeout(tick, opt.speed > 0 ? 4 : 0);
   }
+  if (opt.view && m.vera) { require('./view.js').startView(m, opt.view); say('the screen: http://localhost:' + opt.view); }
   say('the Hydra\'s serial console.  Ctrl-A x quits, Ctrl-A h for help.');
   tick();
 }
@@ -326,6 +352,13 @@ function main(argv) {
     else if (a === '--pc-read-only') opt.pcReadOnly = true;
     else if (a === '--pc-log') opt.pcLog = true;
     else if (a === '--pc-damage') opt.pcDamage = next().split(',').map(s => s.trim().toLowerCase());
+    else if (a === '--vera') {
+      opt.vera = Object.assign(opt.vera || {}, { version: [47, 0, 2] });
+      if (/^\d+(\.\d+)*$/.test(argv[i + 1] || '')) { const v = next(); opt.vera.version = v === '0.9' ? null : v.split('.').map(Number).concat([0, 0]).slice(0, 3); }
+    } else if (a === '--vera-config') opt.veraConfigMs = +next();
+    else if (a === '--screen') opt.screen = true;
+    else if (a === '--frame-png') opt.framePng = next();
+    else if (a === '--view') opt.view = /^\d+$/.test(argv[i + 1] || '') ? +next() : 8016;
     else if (a === '--watch' || a === '--watch-read') {
       const w = watchSpec(next() || '');
       if (!w) { console.error(a + ': ADDR[:T] ($0000-$7FFF)?'); process.exit(2); }
@@ -345,6 +378,8 @@ function main(argv) {
   if (opt.pcDir) opt.pcHost = createPcHost({ dir: opt.pcDir, readOnly: !!opt.pcReadOnly, damage: opt.pcDamage,
     log: opt.pcLog ? t => (opt.interactive ? process.stdout.write('\r\n[pc] ' + t + '\r\n') : console.log('[pc] ' + t)) : undefined });
   opt.promImage = opt.prom ? fs.readFileSync(opt.prom) : chips();
+  if (opt.veraConfigMs !== undefined) { if (!opt.vera) { console.error('--vera-config: with --vera'); process.exit(2); } opt.vera.configCycles = Math.round(opt.veraConfigMs * opt.clock * 1e3); }
+  if ((opt.screen || opt.framePng || opt.view) && !opt.vera) { console.error('--screen, --frame-png and --view: with --vera'); process.exit(2); }
   for (const spec of breakArgs) {
     const b = breakSpec(spec, lbl, opt.promImage);
     if (!b) { console.error('--break: ' + spec + '?'); process.exit(2); }
@@ -359,6 +394,8 @@ function main(argv) {
   process.stdout.write(m.out.replace(/\r\n/g, '\n').replace(/\r/g, '\n'));
   if (!m.out.endsWith('\n')) console.log();
   report(m, lbl);
+  if (opt.screen) console.log(screenLines(m).join('\n'));
+  if (opt.framePng) { savePng(m, opt.framePng); console.log('--- the screen: ' + opt.framePng); }
   if (opt.pcHost) console.log('--- ' + opt.pcHost.report() + '; ' + m.acia.pcLost + ' reply byte(s) lost (they came while the last was unread)');
   process.exit(m.cpu.halted ? 1 : 0);
 }

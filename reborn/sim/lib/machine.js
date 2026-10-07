@@ -10,12 +10,12 @@
 //     IRQ line, or V[0..3] when no line is active (and for BRK);
 //   * the devices: the ACIA (port 1, acia.js), the VIA (port 0, via.js) with SD cards on its SPI port (sd.js) and
 //     an I2C bus on port A (i2c.js: opt.i2c, its devices), the YM2151 (port 4, ym2151.js), a DS1747 in U7
-//     (ds1747.js).
+//     (ds1747.js), and a Vera X card in slot 0 (vera.js: opt.vera, true or its options; ports 2 and 3, IRQ line 2).
 // RAM and the pseudo-registers power up random, like the hardware (seeded: opt.seed >= 0, the same each time).
 //
 // createMachine(opt): opt.osrom, opt.pagedrom (the images, Uint8Arrays) and the options hydrasim.js documents
 // (modules, sharedU, model, ramFault, u7Fault, aciaLine, stuckIrq, acia, paste, input, sd: block devices, rtc,
-// rtcBatteryLow, clock, trace, watches, pcWatches, marks, profile, ymLog), and opt.log(text) for the watches and
+// rtcBatteryLow, clock, trace, watches, pcWatches, marks, profile, ymLog, vera), and opt.log(text) for the watches and
 // marks.  opt.pcHost: what the serial port sends goes through its push(byte, cycle), which gives back the bytes that
 // are the console's (the rest are /pc's frames: pchost.js, run.js --pc-dir), and its send(bytes) is what the PC
 // sends.  opt.pcHist: count the instructions run at each page:PC (pcHist).  run(limit) runs to a cycle; the rest is
@@ -33,6 +33,7 @@ const { createI2c } = require('./i2c.js');
 const { createSpi } = require('./sd.js');
 const { createYm } = require('./ym2151.js');
 const { createRtc, RTC_REGS, RTC_TASK } = require('./ds1747.js');
+const { createVera } = require('./vera.js');
 
 const hx = (v, n = 2) => v.toString(16).toUpperCase().padStart(n, '0');
 const LINES = 16;                                             // The IRQ lines (0 the highest priority)
@@ -72,6 +73,7 @@ function createMachine(opt) {
   for (const t of (opt.ca1 || []).slice().sort((a, b) => a - b)) ca1Edges.push([t, 0], [t + 500, 1]);
   let ca1At = 0;
   const ym = createYm({ clock: opt.clock, log: !!opt.ymLog, resetDelay: opt.ymResetDelay || 0 });
+  const vera = opt.vera ? createVera(Object.assign({ clock: opt.clock, rnd }, opt.vera === true ? {} : opt.vera)) : null;   // (Its VRAM: random)
 
   // Which task's copy of $0000-$7FFF an access uses (the model what-ifs change this)
   const model = opt.model || '', u7 = opt.u7Fault, ramFault = opt.ramFault, plain = !model && !u7;
@@ -105,6 +107,7 @@ function createMachine(opt) {
       if (a >= 0xFF10 && a < 0xFF14) return acia.read(a - 0xFF10, t);
       if (a < 0xFF10) return via.read(a - 0xFF00);
       if (a === 0xFF41) return ym.readStatus(t);
+      if (vera && a >= 0xFF20 && a < 0xFF40) { const b = vera.read(a - 0xFF20, t); return b < 0 ? 0xFF : b; }   // (Configuring: floating)
       return 0xFF;
     }
     if (a === 0xFFF0) return regT; if (a === 0xFFF1) return regU; if (a === 0xFFF2) return V; if (a === 0xFFF3) return regW;
@@ -127,6 +130,7 @@ function createMachine(opt) {
     if (a < 0xFF10) { via.write(a - 0xFF00, v); return; }
     if (a === 0xFF40) { ym.select(v); return; }                 // YM2151: register, then data
     if (a === 0xFF41) { ym.write(v, t); return; }
+    if (vera && a >= 0xFF20 && a < 0xFF40) { vera.write(a - 0xFF20, v, t); return; }
     if (a === 0xFFF0) { regT = v; T = v & 15; return; } if (a === 0xFFF1) { regU = v; U = v & 15; return; }
     if (a === 0xFFF2) { V = v; return; } if (a === 0xFFF3) { regW = v; W = v & 15; return; }
     if (a === 0xFFFE) { vecRam[V & 15] = (vecRam[V & 15] & 0xFF00) | v; return; }
@@ -137,6 +141,7 @@ function createMachine(opt) {
     let n = LINES;
     if (acia.irqActive() && opt.aciaLine < n) n = opt.aciaLine;
     if (via.irqActive()) n = 0;                                 // VIA: IRQ line 0
+    if (vera && vera.irqActive() && 2 < n) n = 2;              // The VERA: line 2 (slot 0's IRQ A)
     if (ym.irqActive() && 4 < n) n = 4;                         // YM2151: line 4
     if (opt.stuckIrq >= 0 && opt.stuckIrq < n) n = opt.stuckIrq;
     return n < LINES ? n : -1;
@@ -169,10 +174,11 @@ function createMachine(opt) {
     via.tick(d);
     while (ca1At < ca1Edges.length && ca1Edges[ca1At][0] <= t) via.ca1(ca1Edges[ca1At++][1]);
     ym.tick(t);
+    if (vera) vera.tick(t);
     acia.tick(d, t);
   }
   // Cycles to the next device event (for a WAI: the CPU sleeps until then)
-  const nextEvent = () => Math.min(via.nextEvent(), ym.nextEvent(devCyc), acia.nextEvent(),
+  const nextEvent = () => Math.min(via.nextEvent(), ym.nextEvent(devCyc), acia.nextEvent(), vera ? vera.nextEvent(devCyc) : Infinity,
     ca1At < ca1Edges.length ? Math.max(1, ca1Edges[ca1At][0] - devCyc) : Infinity);
 
   // Run until cycle limit (or a halt)
@@ -259,18 +265,19 @@ function createMachine(opt) {
     }
   }
 
-  // The reset button (RESB): the CPU, the VIA, the ACIA and the YM2151 reset; RAM, the pseudo-registers
-  // (plain latches) and the SD cards keep their state, as on the board
+  // The reset button (RESB): the CPU, the VIA, the ACIA and the YM2151 reset, and the VERA configures itself again;
+  // RAM, the pseudo-registers (plain latches), VRAM and the SD cards keep their state, as on the board
   function hwReset() {
     via.reset();
     acia.reset();
     ym.reset();
+    if (vera) vera.reset(cpu.cyc);
     cpu.reset();
   }
 
   // (A task's RAM bank b, as it is: undefined if it was never written; tools/hysnap.js reads hylang's heap with it)
   const taskBankMem = (t, b) => taskBank[t * 256 + b];
-  Object.assign(m, { cpu, acia, via, i2c, ym, rtc, taskRam, vecRam, pcHist, iOffTop, stackLow, stackLowAt, profHist, profCyc, profTask, run, hwReset, rd, taskBankMem });
+  Object.assign(m, { cpu, acia, via, i2c, ym, vera, rtc, taskRam, vecRam, pcHist, iOffTop, stackLow, stackLowAt, profHist, profCyc, profTask, run, hwReset, rd, taskBankMem });
   Object.defineProperties(m, {                                // (The pseudo-registers, the trace and the profile's count, as they are now)
     trace: { get: () => {                                     // (The ring, oldest first: [W, T, PC, A, X, Y, S, P] each)
       const out = [];
