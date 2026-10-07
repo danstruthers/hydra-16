@@ -7,15 +7,16 @@
 ; instrument, if the line doesn't name one), play [-x] -c ch notes ... a chord (a note a channel, from ch); -x, the
 ; X16's MML (FMPLAY's, FMCHORD's).
 ;   The header (16 bytes): "zm", a version, the loop point (3 bytes: an offset in the file; 0: none, and a loop is
-; the whole song), the PCM table's (ignored), the FM channels it uses (claimed: /dev/sndctl's claim), the PSG's
-; (ignored), the tick rate (Hz; 0: 60), 2 reserved.  Then the stream: $00-$3F a PSG write (skipped: the Hydra has
-; no PSG), $40 an extension (skipped), $41-$7F n register/value pairs, $80 the end (or the loop), $81-$FF a delay
-; of n ticks.
-;   Each tick's pairs go to /dev/snd in one write (another program's can't come between them); then it sleeps to
-; the next tick by the system's tick (TICK_HZ a second: SLEEP_UNTIL), keeping a fraction, so the tempo is exact on
-; average, if not each tick.  It holds the CPU for the song (PREEMPT_OFF): a task switch comes only as it sleeps or
-; waits, so a tick's work isn't cut in two by another task's slice.  It reads the file ahead as it waits, 256
-; bytes at a time.  Its end, or Ctrl-C, closes /dev/snd, which gives its channels back, keyed off.
+; the whole song), the PCM table's (ignored), the FM channels it uses and the PSG's (claimed: /dev/sndctl's claim),
+; the tick rate (Hz; 0: 60), 2 reserved.  Then the stream: $00-$3F a PSG write (the register, then its value: to
+; /dev/psg, the Vera X's PSG; with no card, dropped there), $40 an extension (skipped), $41-$7F n register/value
+; pairs, $80 the end (or the loop), $81-$FF a delay of n ticks.
+;   Each tick's pairs go to /dev/snd in one write, its PSG writes to /dev/psg in another (another program's can't
+; come between them); then it sleeps to the next tick by the system's tick (TICK_HZ a second: SLEEP_UNTIL), keeping
+; a fraction, so the tempo is exact on average, if not each tick.  It holds the CPU for the song (PREEMPT_OFF): a
+; task switch comes only as it sleeps or waits, so a tick's work isn't cut in two by another task's slice.  It reads
+; the file ahead as it waits, 256 bytes at a time.  Its end, or Ctrl-C, closes /dev/snd, which gives its channels
+; back, keyed off.
 ;   Its status: none; "usage"; the song's error ("play: song: why"); "not a song", "no sound", "channels busy"; a
 ; score's error ("channel 2: a note before an instrument" ...).
 
@@ -31,6 +32,7 @@
 HDR_SIZE        = 16            ; The header ...
 H_LOOP          = 3             ;   its loop point (3) ...
 H_FM            = 9             ;   the FM channels ...
+H_PSG           = 10            ;   the PSG's (2) ...
 H_RATE          = 12            ;   the tick rate (2)
 FRAME_MAX       = 254           ; A tick's pairs, a write's at most (127 of them)
 FOREVER         = $FF           ; loops: the loop till it's stopped
@@ -53,17 +55,20 @@ song:       .res        2                                   ; The song's name (i
 why:        .res        2                                   ; What's wrong (fail's)
 fd:         .res        1                                   ; The song's fd ...
 snd:        .res        1                                   ;   /dev/snd's ...
-ctl:        .res        1                                   ;   and /dev/sndctl's
+ctl:        .res        1                                   ;   /dev/sndctl's ...
+psg:        .res        1                                   ;   and /dev/psg's ($FF: none)
 loops:      .res        1                                   ; The loop's times to come (FOREVER: forever) ...
 rloops:     .res        1                                   ;   and the read ahead's count of them
 eof:        .res        1                                   ; <> 0: the file's end (or an error), read ahead
-out:        .res        1                                   ; frame's bytes
+out:        .res        1                                   ; frame's bytes ...
+pout:       .res        1                                   ;   and pframe's
 loop:       .res        3                                   ; The loop point
 hdr:        .res        HDR_SIZE
-words:      .res        12                                  ; sndctl's claim
+words:      .res        16                                  ; sndctl's claim
 inbuf:      .res        256                                 ; The file, played from here ...
 stage:      .res        256                                 ;   and read ahead into here
-frame:      .res        FRAME_MAX                           ; A tick's register pairs
+frame:      .res        FRAME_MAX                           ; A tick's register pairs ...
+pframe:     .res        FRAME_MAX                           ;   and its PSG's
 
 .code
 main:
@@ -171,6 +176,7 @@ play_sound:
             jsr         OPEN
             bcs         no_sound
             sta         ctl
+            jsr         open_psg
             jsr         claim                               ; Its channels, its alone
             bcs         busy
             stz         out
@@ -248,7 +254,19 @@ open_song:
             sta         fd
             rts
 
-; sndctl's "claim $NN": the song's FM channels.  OUT: C = 0; or C = 1: another program has one
+; /dev/psg opened (none: the PSG's writes dropped), its frame empty
+open_psg:
+            LDR         r0, s_psg
+            lda         #O_WRITE
+            jsr         OPEN
+            bcc         :+
+            lda         #$FF
+:
+            sta         psg
+            stz         pout
+            rts
+
+; sndctl's "claim $NN $PPPP": the song's FM channels and its PSG's.  OUT: C = 0; or C = 1: another program has one
 claim:
             ldx         #0
 :
@@ -259,19 +277,31 @@ claim:
             bra         :-
 :
             lda         hdr + H_FM
-            lsr
-            lsr
-            lsr
-            lsr
-            jsr         @hex
-            lda         hdr + H_FM
-            jsr         @hex
+            jsr         @byte
+            lda         #' '
+            sta         words,X
+            inx
+            lda         #'$'
+            sta         words,X
+            inx
+            lda         hdr + H_PSG + 1
+            jsr         @byte
+            lda         hdr + H_PSG
+            jsr         @byte
             LDR         r0, words
             stx         r1
             stz         r1 + 1
             lda         ctl
             jmp         WRITE
 
+@byte:
+            pha
+            lsr
+            lsr
+            lsr
+            lsr
+            jsr         @hex
+            pla
 @hex:
             and         #$0F
             ora         #'0'
@@ -292,17 +322,15 @@ stream:
             jsr         byte
             bcs         @end                                ; (The file's end)
             cmp         #$40
-            bcc         @psg
+            bcs         :+
+            jmp         psg_write
+:
             beq         @ext
             cmp         #$80
             bcc         @fm
             beq         @eof
             and         #$7F                                ; A delay: n ticks
             jsr         delay
-            bra         stream
-
-@psg:                                                       ; A PSG write: its value, skipped
-            jsr         byte
             bra         stream
 
 @ext:                                                       ; An extension: its bytes, skipped
@@ -351,6 +379,29 @@ stream:
             bra         stream                              ; (The read ahead went on into the loop already)
 
 @end:
+            jsr         flush
+            jmp         tl_end
+
+; A PSG write: its register (.A), then its value, gathered for the tick; then the stream again (or its end)
+psg_write:
+            ldy         pout
+            cpy         #FRAME_MAX
+            bcc         :+
+            pha
+            jsr         flush
+            pla
+            ldy         pout
+:
+            sta         pframe,Y
+            jsr         byte
+            bcs         :+
+            ldy         pout
+            sta         pframe + 1,Y
+            iny
+            iny
+            sty         pout
+            jmp         stream
+:
             jsr         flush
             jmp         tl_end
 
@@ -472,19 +523,31 @@ stage_read:
 @done:
             rts
 
-; The tick's register pairs to /dev/snd (one write), if there are any.  Keeps .X
+; The tick's register pairs to /dev/snd (one write), and its PSG writes to /dev/psg (another), if there are any.
+; Keeps .X
 flush:
-            lda         out
-            beq         @done
             phx
+            lda         out
+            beq         @psg
             sta         r1
             stz         r1 + 1
             LDR         r0, frame
             lda         snd
             jsr         WRITE
             stz         out
-            plx
+@psg:
+            lda         pout
+            beq         @done
+            sta         r1
+            stz         r1 + 1
+            LDR         r0, pframe
+            lda         psg
+            bmi         :+
+            jsr         WRITE
+:
+            stz         pout
 @done:
+            plx
             rts
 
 ; A delay of .A song ticks (1-127): the tick's writes out, the file read ahead, then a sleep till the time n song
@@ -577,6 +640,7 @@ rate:
 .rodata
 s_snd:      .byte       "/dev/snd", 0
 s_sndctl:   .byte       "/dev/sndctl", 0
+s_psg:      .byte       "/dev/psg", 0
 s_claim:    .byte       "claim $", 0
 s_notsong:  .byte       "not a song", 0
 s_nosound:  .byte       "no sound", 0

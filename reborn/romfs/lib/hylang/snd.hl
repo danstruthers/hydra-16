@@ -1,11 +1,12 @@
-; snd.hl - the YM2151, through the sound driver's files (#a, /dev): (use "snd").  /dev/snd takes register/value pairs
-; (the registers the chip doesn't have, below $20, are the driver's commands for a channel: SND_R_CH, then a patch, a
-; note, key off, volume, speakers, bend, a drum, a frequency, a glide); /dev/sndctl takes claim N and release N (a
-; mask of channels), volume N (the master, 0-200: 100 as written) and reset, and each channel's commands as text.
-; Each is opened the first time it's wanted, and stays open: a task's claimed channels go back as its last #a file
-; closes (at its end).  A channel's command goes with the channel in one write, so another program's can't come
-; between.  A channel is 0-7, a note MIDI's (60: middle C).  Songs are play's (the program).  A failure is the
-; system's error.
+; snd.hl - the YM2151, and the Vera X's PSG, through the sound driver's files (#a, /dev): (use "snd").  /dev/snd takes
+; register/value pairs (the registers the chip doesn't have, below $20, are the driver's commands for a channel:
+; SND_R_CH, then a patch, a note, key off, volume, speakers, bend, a drum, a frequency, a glide, a waveform);
+; /dev/sndctl takes claim N P and release N P (masks of channels: the YM2151's, the PSG's), volume N (the master,
+; 0-200: 100 as written) and reset, and each channel's commands as text.  Each is opened the first time it's wanted,
+; and stays open: a task's claimed channels go back as its last #a file closes (at its end).  A channel's command
+; goes with the channel in one write, so another program's can't come between.  A channel is 0-7 (the YM2151's) or
+; 8-23 (with a Vera X, the PSG's: the same words, and snd-wave), a note MIDI's (60: middle C).  Songs are play's
+; (the program).  A failure is the system's error.
 
 (def {snd.fd} NIL)
 (def {snd.ctlfd} NIL)
@@ -23,9 +24,13 @@
 ; A channel's command (SND_R_*) and its value (a byte: a negative one's two's complement)
 (fun {snd.cmd ch cmd v} {snd.out (list 2 ch cmd (bit-and v 255))})
 
-; The channels claimed, so no other program writes them; given back
-(fun {snd-claim} {snd.ctl (format "claim {}" (foldl (fn {m c} {bit-or m (shl 1 c)}) 0 &_))})
-(fun {snd-release} {snd.ctl (format "release {}" (foldl (fn {m c} {bit-or m (shl 1 c)}) 0 &_))})
+; The channels claimed (0-23), so no other program writes them; given back.  (sndctl's two masks: the YM2151's
+; channels, 0-7, and the PSG's, 8-23)
+(fun {snd.masks cs} {format "{} {}"
+  (foldl (fn {m c} {if (< c 8) (bit-or m (shl 1 c)) m}) 0 cs)
+  (foldl (fn {m c} {if (< c 8) m (bit-or m (shl 1 (- c 8)))}) 0 cs)})
+(fun {snd-claim} {snd.ctl (format "claim {}" (snd.masks &_))})
+(fun {snd-release} {snd.ctl (format "release {}" (snd.masks &_))})
 
 ; The master volume (0-200: 100 as written); the chip and every setting cleared (the claims stay)
 (fun {snd-volume v} {snd.ctl (format "volume {}" v)})
@@ -54,6 +59,14 @@
 ; A note at a frequency (Hz: 0, off), keyed on; the pitch to a note without a new attack (legato)
 (fun {snd-freq ch hz} {snd.out (list 2 ch 11 (bit-and hz 255) 12 (shr hz 8))})
 (fun {snd-glide ch n} {snd.cmd ch 13 n})
+
+; A PSG channel's waveform (:pulse, :saw, :triangle or :noise; or 0-3) and its width (0-63; 63, a square, if it
+; isn't given)
+(fun {snd-wave ch w} {do
+  =(n (if (num? w) w (index-of {:pulse :saw :triangle :noise} w)))
+  (if (and (>= n 0) (< n 4))
+    (snd.cmd ch 14 (bit-or (shl n 6) (bit-and ?(&_ (fst &_) 63) 63)))
+    (error "'snd-wave' expects :pulse, :saw, :triangle or :noise" :inval))})
 
 ; The chip's own registers: the LFO (the whole chip's: its rate, its depths of pitch and amplitude (0-127), its wave:
 ; 0 saw, 1 square, 2 triangle, 3 noise); a channel's sensitivity to it (vibrato 0-7, tremolo 0-3); channel 7's noise

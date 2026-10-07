@@ -261,8 +261,11 @@ The console is an ANSI terminal.  `lib facility` has, beside `page` and `at-xy (
 
 ## Sound
 
-`lib sound` drives the YM2151 (`#a`), with C's and hylang's names, the channel first: `snd-reset`,
-`snd-volume ( v -- )` (0-200), `snd-claim ( ch -- )`, `snd-release`, `snd-patch ( ch n -- )`, `snd-note ( ch
+`lib sound` drives the YM2151 (`#a`), and with a Vera X its PSG (channels 8-23), with C's and hylang's names, the
+channel first: `snd-reset`, `snd-volume ( v -- )` (0-200), `snd-claim ( mask -- )` (bit n channel n),
+`snd-release`, `snd-claim-psg ( mask -- )` and `snd-release-psg` (the PSG's: bit n channel 8 + n), `snd-wave ( ch
+w width -- )` (a PSG channel's waveform, 0 pulse, 1 saw, 2 triangle, 3 noise, and its width, 0-63: 63 a square),
+`snd-patch ( ch n -- )`, `snd-note ( ch
 note -- )` (a MIDI number: 60 middle C), `snd-off ( ch -- )`, `snd-level ( ch v -- )` (a channel's volume, 0-127;
 `snd-vol` its old name), `snd-pan ( ch pan -- )` (1 left, 2 right, 3 both), `snd-bend ( ch n -- )`, `snd-drum ( ch
 n -- )` (General MIDI's drum n), `snd-freq ( ch hz -- )` (a note at a frequency), `snd-glide ( ch n -- )` (to a

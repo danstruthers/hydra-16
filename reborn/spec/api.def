@@ -1059,10 +1059,11 @@ const R_WSTAT         7
 const R_REMOVE        8
 const R_FLUSH         9
 const R_DUP           10
-const SND_CHANNELS    8        "Sound (#a, the YM2151): its channels, 0-7"
+const SND_CHANNELS    24       "Sound (#a): its channels: 0-7 the YM2151's, 8-23 the Vera X's PSG (its voices 0-15)"
+const SND_PSG         8        "Sound: the PSG's first channel (its voice 0)"
 const SND_PATCHES     163      "Sound: its patches (0-127: General MIDI's programs; 128-162: drums and percussion)"
 const SND_DRUMS       128      "Sound: General MIDI's drums (MIDI channel 10's notes)"
-const SND_R_CH        $02      "Sound: a command, at a register the chip doesn't have: the channel the next commands are for (0-7)"
+const SND_R_CH        $02      "Sound: a command, at a register the chip doesn't have: the channel the next commands are for (0-23)"
 const SND_R_PATCH     $03      "Sound: load patch n into the channel (its speakers stay)"
 const SND_R_NOTE      $04      "Sound: key on MIDI note n (60: middle C; 69: A, 440 Hz), with the channel's bend"
 const SND_R_OFF       $05      "Sound: key off (the release)"
@@ -1073,9 +1074,14 @@ const SND_R_DRUM      $0A      "Sound: a General MIDI drum (its patch and pitch)
 const SND_R_FREQ_LO   $0B      "Sound: a frequency's low byte (Hz), for SND_R_FREQ (only kept)"
 const SND_R_FREQ      $0C      "Sound: key on at a frequency, SND_R_FREQ_LO's byte and this its high one (Hz; 0: key off)"
 const SND_R_GLIDE     $0D      "Sound: the channel's pitch to note n without a new attack (legato)"
+const SND_R_WAVE      $0E      "Sound: a PSG channel's waveform: SND_WAVE_* << 6 | its pulse width (0-63: 63 a square)"
 const SND_PAN_LEFT    1        "Sound: SND_R_PAN's speakers"
 const SND_PAN_RIGHT   2
 const SND_PAN_BOTH    3
+const SND_WAVE_PULSE  0        "Sound: SND_R_WAVE's waveforms (the PSG's)"
+const SND_WAVE_SAW    1
+const SND_WAVE_TRIANGLE 2
+const SND_WAVE_NOISE  3
 const r0  $02 "The call registers r0-r15: arguments and results"
 const r1  $04
 const r2  $06

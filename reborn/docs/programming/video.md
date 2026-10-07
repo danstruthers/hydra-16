@@ -31,6 +31,7 @@ and serves it as files.  A program uses the screen three ways, from the easiest:
 | `sprites` | The sprites' attributes (VRAM `$1FC00`: 128 of 8 bytes) | The attributes (sprite 0 is the console's cursor) |
 | `font` | The console's font (VRAM `$1F000`: 256 characters of 8 bytes, a byte a row) | A font: `cat /lib/font/cp437 >/dev/vid/font` |
 | `frame` | Waits for the next frame (59.5 a second), then gives the frames counted, in decimal | |
+| `psg` | The PSG's 64 registers (VRAM `$1F9C0`: 16 voices of 4) as written here | Register/value pairs: the sound driver's (its channels 8-23); kept while the chip's claimed, and written as the claim ends |
 
 So a picture is a file copy away: a 320x240 picture of 8 bits a pixel, its bytes in a file, then
 
@@ -77,6 +78,9 @@ The VRAM a claimer may use without saying so is `$00000-$1AFFF` (108K: a 320x240
 console's map is at `$1B000-$1EFFF`, its font at `$1F000-$1F7FF`, the cursor's image at `$1F800`.  With `claim all`
 all of VRAM is the program's, and the console's map and font are made again at the release.  The release sets the
 chip up for the console: the palette, the sprites (all off but the cursor), the layers, the scales, the interrupts.
+The PSG is the sound driver's (`/dev/snd`'s channels 8-23, through `/dev/vid/psg`): during a claim its writes are
+kept, not made, and the release writes them, so a song's voices pick up where they are; a claimer that wants the
+PSG for itself claims those channels from `/dev/sndctl` too (`claim 0 65535`).
 
 ```
             LDR         r0, s_ctl                           ; "/dev/vid/ctl"
@@ -104,7 +108,8 @@ with the base changed.
 ## In the emulator
 
 `node sim/run.js --vera` puts a Vera X in slot 0 (`sim/lib/vera.js`: the registers, VRAM, the layers, sprites and
-their collisions, the scan's timing and interrupts, the PCM FIFO; not FX, and no sound is made).  `--screen` prints the
-text layer after the report, `--frame-png FILE` saves the screen, and with `-i`, `--view` shows it live in a browser
-(http://localhost:8016) while the terminal stays the serial console; Ctrl-A v prints it, Ctrl-A p saves it.  Tests
-set `machine: { vera: true }`, and `m.vera.text()` is the screen's text.
+their collisions, the scan's timing and interrupts, the PCM FIFO, the PSG's registers; not FX, and no sound is
+made).  `--screen` prints the text layer after the report, `--frame-png FILE` saves the screen, and with `-i`,
+`--view` shows it live in a browser (http://localhost:8016) while the terminal stays the serial console; Ctrl-A v
+prints it, Ctrl-A p saves it.  Tests set `machine: { vera: true }`; `m.vera.text()` is the screen's text,
+`m.vera.psg` the PSG's registers and `m.vera.psgOns` its voices' starts.

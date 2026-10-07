@@ -1,16 +1,21 @@
 /*
-** snd.h - the YM2151 sound chip, through the sound driver (#a, at /dev: snd, sndctl).
+** snd.h - the YM2151 sound chip, and the Vera X's PSG, through the sound driver (#a, at /dev: snd, sndctl, psg).
 **
 ** The chip has 8 channels (0-7), each a voice of 4 FM operators.  A channel plays a patch (an instrument: 0-127
 ** are General MIDI's, 128-162 drum and percussion sounds) at a MIDI note (60 is middle C, 69 A at 440 Hz).  Its
 ** level (its volume, 0-127) and the master volume scale what it plays, raw register writes too; its bend moves
 ** the pitch in 64ths of a semitone.  snd_drum plays one of General MIDI's drums (MIDI channel 10's note numbers).
 **
-** Claim the channels a program uses (snd_claim): other programs' writes to them are then dropped, and the
-** console's bell leaves channel 7 alone while it's claimed.  They're given back when the program ends.  Anything
-** else: snd_write, a register of the chip's (the YM2151's data sheet).  snd_regs reads back what was written.
-** Each call is one request to the driver; snd_writes sends many register/value pairs in one.  The calls open
-** /dev/snd (and /dev/sndctl) the first time; they return 0, or -1 with errno set (EBUSY: a channel another
+** With a Vera X, channels 8-23 (SND_PSG on) are its PSG's 16 voices, with the same calls: a note, off, a level,
+** pan, a bend, a frequency, a glide; snd_wave sets a voice's waveform (SND_WAVE_*: a pulse of a width, a sawtooth,
+** a triangle, noise; a patch below 4 is one too), and there's no envelope (a note sounds till it's off).  With no
+** card they do nothing (/dev/sndctl reads "channels 8").
+**
+** Claim the channels a program uses (snd_claim, snd_claim_psg): other programs' writes to them are then dropped,
+** and the console's bell leaves channel 7 alone while it's claimed.  They're given back when the program ends.
+** Anything else: snd_write, a register of the chip's (the YM2151's data sheet).  snd_regs reads back what was
+** written.  Each call is one request to the driver; snd_writes sends many register/value pairs in one.  The calls
+** open /dev/snd (and /dev/sndctl) the first time; they return 0, or -1 with errno set (EBUSY: a channel another
 ** program has claimed).
 **
 ** Notes by name and tunes: snd_note_of, snd_tune (as HyForth's note-of and tune, and hylang's).  Lines of MML, the
@@ -32,12 +37,20 @@
 #define SND_PAN_RIGHT       HY_SND_PAN_RIGHT
 #define SND_PAN_BOTH        HY_SND_PAN_BOTH
 #define SND_ALL             0xFF            /* snd_claim's mask: every channel */
+#define SND_PSG             HY_SND_PSG      /* The PSG's first channel (8: its voice 0) */
+#define SND_PSG_ALL         0xFFFF          /* snd_claim_psg's mask: every voice */
+#define SND_WAVE_PULSE      HY_SND_WAVE_PULSE /* snd_wave's waveforms */
+#define SND_WAVE_SAW        HY_SND_WAVE_SAW
+#define SND_WAVE_TRIANGLE   HY_SND_WAVE_TRIANGLE
+#define SND_WAVE_NOISE      HY_SND_WAVE_NOISE
 #define SND_FOREVER         0xFF            /* snd_play's loops: the song's loop till it's stopped */
 
 int snd_open (void);                                                    /* (The other calls open it too) */
 void snd_close (void);
 int __fastcall__ snd_claim (unsigned char mask);                        /* Bit n: channel n */
 int __fastcall__ snd_release (unsigned char mask);
+int __fastcall__ snd_claim_psg (unsigned mask);                         /* The PSG's: bit n, channel 8 + n */
+int __fastcall__ snd_release_psg (unsigned mask);
 int snd_reset (void);                                                   /* The chip and every setting cleared */
 int __fastcall__ snd_volume (unsigned char vol);                        /* The master volume, 0-200 (100: as
                                                                         **   written) */
@@ -58,6 +71,9 @@ int __fastcall__ snd_sens (unsigned char ch, unsigned char pms, unsigned char am
                                                                         **   0-7, tremolo 0-3 */
 int __fastcall__ snd_drum (unsigned char ch, unsigned char note);       /* A General MIDI drum (35: kick, 38:
                                                                         **   snare, 42: closed hi-hat ...) */
+int __fastcall__ snd_wave (unsigned char ch, unsigned char wave, unsigned char width);
+                                                                        /* A PSG channel's waveform (SND_WAVE_*)
+                                                                        **   and its width (0-63: 63 a square) */
 
 int __fastcall__ snd_lfo (unsigned char rate, unsigned char pmd, unsigned char amd, unsigned char wave);
                                                                         /* The LFO (the whole chip's): its rate,

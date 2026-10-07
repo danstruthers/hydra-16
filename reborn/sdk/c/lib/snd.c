@@ -3,7 +3,7 @@
 ** library takes the registers the chip doesn't have as its commands: HY_SND_R_*), a read of it gives back the
 ** registers as written, and /dev/sndctl takes the words that claim and release channels, set the master volume and
 ** clear the chip.  Each opened the first time it's needed, and closed at the end (which gives the claimed channels
-** back).
+** back).  The PSG's channels (8-23) take the same commands.
 */
 
 #include <stdio.h>
@@ -41,8 +41,8 @@ void snd_close (void)
     }
 }
 
-/* sndctl's word, and a number after it (none: -1) */
-static int ctl (const char* word, int n)
+/* sndctl's word, and a number after it if there's one */
+static int ctl (const char* word, unsigned char has, unsigned n)
 {
     unsigned k;
 
@@ -50,7 +50,7 @@ static int ctl (const char* word, int n)
         return -1;
     }
     strcpy (line, word);
-    if (n >= 0) {
+    if (has) {
         k = strlen (line);
         line[k] = ' ';
         utoa (n, line + k + 1, 10);
@@ -60,22 +60,33 @@ static int ctl (const char* word, int n)
 
 int __fastcall__ snd_claim (unsigned char mask)
 {
-    return ctl ("claim", mask);
+    return ctl ("claim", 1, mask);
 }
 
 int __fastcall__ snd_release (unsigned char mask)
 {
-    return ctl ("release", mask);
+    return ctl ("release", 1, mask);
+}
+
+/* (The PSG's mask: sndctl's second, after the YM2151's) */
+int __fastcall__ snd_claim_psg (unsigned mask)
+{
+    return ctl ("claim 0", 1, mask);
+}
+
+int __fastcall__ snd_release_psg (unsigned mask)
+{
+    return ctl ("release 0", 1, mask);
 }
 
 int snd_reset (void)
 {
-    return ctl ("reset", -1);
+    return ctl ("reset", 0, 0);
 }
 
 int __fastcall__ snd_volume (unsigned char vol)
 {
-    return ctl ("volume", vol);
+    return ctl ("volume", 1, vol);
 }
 
 int __fastcall__ snd_writes (const unsigned char* pairs, unsigned n)
@@ -152,6 +163,11 @@ int __fastcall__ snd_freq (unsigned char ch, unsigned hz)
 int __fastcall__ snd_glide (unsigned char ch, unsigned char note)
 {
     return command (ch, HY_SND_R_GLIDE, note);
+}
+
+int __fastcall__ snd_wave (unsigned char ch, unsigned char wave, unsigned char width)
+{
+    return command (ch, HY_SND_R_WAVE, wave << 6 | (width & 63));
 }
 
 /* The chip's own registers: the LFO ($18 its rate, $19 its depths: pitch's with bit 7, $1B its wave), a channel's

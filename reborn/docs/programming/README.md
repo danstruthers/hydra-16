@@ -49,7 +49,7 @@ The login shell is HyForth over rc; rc is the shell of scripts and `system()`.
  task 2+ programs    the shells, the tools, yours: in place from the paged ROM, or in RAM from $0800
  task A  vid         #v  /dev/vid: the Vera X (with no card it ends as it starts)
  task B  gpio        #g  /dev/gpio, #i  /dev/i2c
- task C  snd         #a  /dev/snd, sndctl, bell
+ task C  snd         #a  /dev/snd, sndctl, bell, psg
  task D  kdev        #/ #n #t #m #p #| #e #s #r: the root, null, ticks, modules, /proc, pipes, /env, segments
  task E  storage     #S  /dev/spi, #d  /dev/sd, #f  HydraFS: /rom, /ram, /sram, /sd/N
  task F  cons        #c  /dev/cons ..., #P  /pc

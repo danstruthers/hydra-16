@@ -8,7 +8,9 @@
 ; between.  A failure is a THROW of the system's error, named by the file (/dev/snd: busy).  And hylang's note-of (a
 ; note's MIDI number, by its name) and tune (notes and their beats played).  The two volumes: snd-volume the
 ; master's, snd-level a channel's (snd-vol, its old name).  snd-regs reads the registers back.  snd-freq, snd-glide
-; (the driver's commands), snd-lfo, snd-sens and snd-noise (the chip's own registers) as C's and hylang's.
+; (the driver's commands), snd-lfo, snd-sens and snd-noise (the chip's own registers) as C's and hylang's.  With a
+; Vera X, channels 8-23 are its PSG's, with the same words: snd-wave sets a voice's waveform, snd-claim-psg and
+; snd-release-psg claim them and give them back.
 ;   Songs are play's (the program, play song.zsm at the shell): snd-play runs it; and lines of MML (the score
 ; language's, play -m and -c): snd-mml, snd-chord.
 
@@ -58,6 +60,16 @@ sndvolume:                                                  ; ( v -- ): the mast
             HEADER      "snd-claim", 0
 sndclaim:                                                   ; ( mask -- ): channels claimed (bit n: channel n), so
             LDR         w, s_claim                          ;   no other program writes them
+            bra         snd_ctl_n
+
+            HEADER      "snd-claim-psg", 0
+sndclaimpsg:                                                ; ( mask -- ): the PSG's channels claimed (bit n:
+            LDR         w, s_claim_psg                      ;   channel 8 + n, its voice n)
+            bra         snd_ctl_n
+
+            HEADER      "snd-release-psg", 0
+sndreleasepsg:                                              ; ( mask -- ): given back
+            LDR         w, s_release_psg
             bra         snd_ctl_n
 
             HEADER      "snd-release", 0
@@ -192,6 +204,30 @@ sndnoise:                                                   ; ( n -- ): channel 
             sta         cmd + 1
             inx
             lda         #2
+            jmp         snd_write
+
+            HEADER      "snd-wave", 0
+sndwave:                                                    ; ( ch w width -- ): a PSG channel's waveform (0 pulse,
+            lda         dlo + 1,x                           ;   1 saw, 2 triangle, 3 noise) and its width (0-63: 63
+            lsr                                             ;   a square)
+            ror
+            ror
+            and         #$C0
+            sta         cmd + 3
+            lda         dlo,x
+            and         #$3F
+            ora         cmd + 3
+            sta         cmd + 3
+            lda         dlo + 2,x
+            sta         cmd + 1
+            lda         #SND_R_CH
+            sta         cmd
+            lda         #SND_R_WAVE
+            sta         cmd + 2
+            inx
+            inx
+            inx
+            lda         #4
             jmp         snd_write
 
             HEADER      "snd-lfo", 0
@@ -591,6 +627,8 @@ s_reset:    .byte       "reset", 0
 s_volume:   .byte       "volume", 0
 s_claim:    .byte       "claim", 0
 s_release:  .byte       "release", 0
+s_claim_psg: .byte      "claim 0", 0
+s_release_psg: .byte    "release 0", 0
 
 ; ---- Notes by name, and tunes (hylang's note-of and tune)
 

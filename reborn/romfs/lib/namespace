@@ -12,7 +12,7 @@ bind -a '#n' /dev           # null zero kmesg
 bind -a '#t' /dev           # ticks
 bind '#g' /dev/gpio         # 0-7 port ctl ca1: the VIA's port A on J27
 bind '#i' /dev/i2c          # ctl, and a file each I2C device on PA0 and PA1
-bind -a '#a' /dev           # snd sndctl bell
+bind -a '#a' /dev           # snd sndctl bell psg
 bind '#v' /dev/vid          # ctl term vram pal sprites font frame: the Vera X (none without a card)
 bind '#d' /dev/sd
 bind '#S' /dev/spi

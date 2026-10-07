@@ -1,15 +1,21 @@
 ; ****************************************************************************
 ; snd - the sound driver (docs/reimplementation-from-scratch.md, §14.4): the YM2151 and the old system's library for
-; it (os_rom/sound: snd_lib.s, snd_srv.s, ym.s, beep.s), ported, on srvlib: the device #a (a boot driver: task C).
+; it (os_rom/sound: snd_lib.s, snd_srv.s, ym.s, beep.s), ported, on srvlib: the device #a (a boot driver: task C);
+; and the Vera X's PSG, through the video driver (vid's #v/psg: the VERA is vid's), as channels 8-23.
 ;   /snd     a write: YM2151 register/value byte pairs, through the library (an odd last byte is dropped); a read:
 ;            the registers as they were written (the shadow, 256 bytes: the chip's can't be read)
-;   /sndctl  claim N, release N (a mask of channels: bit n, channel n), volume N (the master volume, 0-200: 100 as
-;            written; more, louder, up to 23 dB), reset (the chip and every setting cleared; the claims stay); and
-;            each channel's commands as text (/snd's SND_R_*): patch CH P, note CH N, off CH, level CH V (vol, its old
-;            name), pan CH left|right|both (or 0-3), bend CH B (-128 to 127), drum CH N, freq CH HZ (0: off),
-;            glide CH N (legato), sens CH PMS AMS, and reg R V [R V]; the chip's own: lfo RATE PMD AMD WAVE, noise
-;            N|off.  A channel is 0-7 (with a Vera X, 8-23 are to be its PSG's).  It reads as the state: "volume 100", then
-;            "claimed" and the channels claimed
+;   /sndctl  claim N [P], release N [P] (masks of channels: N's bit n, channel n (0-7); P's, channel 8 + n), volume
+;            N (the master volume, 0-200: 100 as written; more, louder, up to 23 dB), reset (the chips and every
+;            setting cleared; the claims stay); and each channel's commands as text (/snd's SND_R_*): patch CH P,
+;            note CH N, off CH, level CH V (vol, its old name), pan CH left|right|both (or 0-3), bend CH B (-128 to
+;            127), drum CH N, freq CH HZ (0: off), glide CH N (legato), wave CH pulse|saw|triangle|noise (or 0-3)
+;            [WIDTH] (the PSG's), sens CH PMS AMS, and reg R V [R V]; the YM2151's own: lfo RATE PMD AMD WAVE, noise
+;            N|off.  A channel is 0-7, the YM2151's, or 8-23, the PSG's (E_NODEV with no card).  It reads as the
+;            state: "volume 100", "channels 24" (8 with no card), then "claimed" and the channels claimed
+;   /psg     a write: the PSG's register/value pairs (0-63: voice n's frequency, low and high, at 4n and 4n + 1, its
+;            speakers (bits 7 R, 6 L) and volume (0-63) at 4n + 2, its waveform (bits 7-6) and pulse width at 4n + 3),
+;            as ZSM's PSG writes are (an odd last byte, and a register past 63, dropped); a read: them as written (64
+;            bytes).  With no card, taken and dropped
 ;   /bell    a write: the console's bell (cons writes it at a BEL it sends): a short beep on channel 7, unless
 ;            channel 7 is claimed
 ; Claims: a channel claimed is its claimer's alone, the other tasks' writes to it dropped, till it releases it or
@@ -20,13 +26,20 @@
 ; written, a song's register stream too; the shadow keeps the level as written.  Which operators are carriers
 ; depends on the channel's algorithm ($20-$27: CON), so a new algorithm writes the levels again.  The register
 ; numbers the chip doesn't have (below $20) are commands (SND_R_*), each for the channel SND_R_CH chose: a patch
-; (patches.s: the X16's), a note (MIDI numbers, with a bend), key off, volume, speakers, a drum (General MIDI's).
+; (patches.s: the X16's), a note (MIDI numbers, with a bend), key off, volume, speakers, a drum (General MIDI's), a
+; frequency, a glide, a waveform (the PSG's).
 ; A write to $14, the timers' control, keeps their interrupts off: the driver owns no IRQ line (the old system's
 ; sound clock, timer B counting a song's ticks, is gone: on the board timer B didn't keep its period, and the song
 ; player came to time songs by the system's tick).
 ;   Pitch: the YM2151's key code at its 3.58 MHz clock: octave (3 bits) and note (4 bits: C# D D# _ E F F# _ G G#
 ; A _ A# B C _), where MIDI note 61 (C#4) is $40 and 69 (A4, 440 Hz) is $4A; the key fraction ($30-$37, bits 7-2)
 ; is 1/64 of a semitone.
+;   The PSG (16 voices: a frequency, a waveform, a volume, speakers; no envelope) takes the same commands on channels
+; 8-23: a note sets its voice's frequency and its volume the most (63), key off its volume 0; a patch below 4 is a
+; waveform (SND_WAVE_*, a square's width); a drum, nothing.  Its volumes go to the chip with the channel's
+; attenuation (its level's and the master volume's, as the YM2151's carriers' levels), 1.5 of the PSG's 0.5 dB steps
+; a TL step.  Its registers as written are kept here (/psg), the chip's as vid keeps them; the pairs a request makes
+; go to vid in one write at its end (#v/psg, opened the first time it's wanted: with no card, again the next time).
 
 .include "hydra.inc"
 .include "hw.inc"
@@ -47,7 +60,12 @@ YM_TIMEOUT      = 64 * CPU_CLOCK_MULT
 IOBUF           = 64            ; A write's bytes, a part at a time
 PATCH_SIZE      = 26            ; patches.s: a patch's registers
 BELL_CH         = 7             ; The bell's channel
-ENT_SND         = 1             ; srv_tree's /snd
+ENT_SND         = 1             ; srv_tree's /snd ...
+ENT_PSG         = 4             ;   and /psg
+PSG_REGS        = 64            ; The PSG's registers (16 voices of 4)
+PSG_OUT         = PSG_REGS * 2  ; psg_out: all of them, a pair each
+PSG_ON          = $3F           ; A PSG note's volume (as written: its level attenuates it)
+PSG_SQUARE      = $3F           ; A PSG voice's waveform after a reset: pulse, a square (width 63)
 
 .zeropage
 ch:         .res        1                                   ; The channel the library works on
@@ -56,16 +74,19 @@ t:          .res        2                                   ; Scratch
 owner:      .res        1                                   ; The request's task (its fid's: 1-16)
 cnt:        .res        1                                   ; A write's part: its bytes ...
 done:       .res        2                                   ;   and the bytes taken before it
+u:          .res        3                                   ; psg_cook's scratch
+kind:       .res        1                                   ; The write's file: 0 /snd, $80 /psg
 
 .bss
 shadow:     .res        256                                 ; Every register as last written (the carriers' TL
                                                             ;   before the attenuation)
-vol:        .res        8                                   ; Each channel's volume (0-127) ...
-atten:      .res        8                                   ;   its carriers' attenuation (TL steps, signed) ...
-bend:       .res        8                                   ;   its bend ...
-note:       .res        8                                   ;   its note ($FF: none) ...
-fine:       .res        8                                   ;   its 64ths above the note (freq's) ...
-chown:      .res        8                                   ;   and its claimer (a task + 1; 0: none)
+vol:        .res        SND_CHANNELS                        ; Each channel's volume (0-127) ...
+atten:      .res        SND_CHANNELS                        ;   its attenuation (TL steps, signed) ...
+bend:       .res        SND_CHANNELS                        ;   its bend ...
+note:       .res        SND_CHANNELS                        ;   its note ($FF: none) ...
+fine:       .res        SND_CHANNELS                        ;   its 64ths above the note (freq's) ...
+chown:      .res        SND_CHANNELS                        ;   and its claimer (a task + 1; 0: none)
+mask:       .res        3                                   ; A claim's channels (bit n: channel n)
 refs:       .res        16                                  ; Each task's fids on #a
 master:     .res        1                                   ; The master volume, a percentage (0-200) ...
 master_tl:  .res        1                                   ;   and its TL steps, signed (127: silent; 0: as
@@ -73,12 +94,23 @@ master_tl:  .res        1                                   ;   and its TL steps
 iobuf:      .res        IOBUF
 f_note:     .res        1                                   ; cmd_freq: the note of the table's octave (+ 64) ...
 f_semi:     .res        1                                   ;   and the semitone in it
+psg:        .res        PSG_REGS                            ; The PSG's registers as written (the volumes before
+                                                            ;   the attenuation)
+psg_out:    .res        PSG_OUT                             ; Pairs for #v/psg (the volumes attenuated) ...
+psg_n:      .res        1                                   ;   their bytes ...
+psg_fd:     .res        1                                   ;   and #v/psg's fd ($FF: not open)
+pw:         .res        2                                   ; psg_pitch's: a semitone's width / 4 ...
+pr:         .res        2                                   ;   the frequency word ...
+psh:        .res        1                                   ;   and the octaves below the table's
 
 .code
 
 ; Its init: the chip and the library reset, the master volume 100 (songs as written), and its device letter
-; registered.  (A chip that doesn't answer: its writes fail, E_IO)
+; registered.  (A chip that doesn't answer: its writes fail, E_IO.  #v/psg isn't there yet: vid starts later)
 init:
+            lda         #$FF
+            sta         psg_fd
+            stz         psg_n
             lda         #100
             sta         master
             stz         master_tl
@@ -91,6 +123,7 @@ init:
 
 ; /snd: a read, a write.  (Its opens, dups and clunks: the hooks count them)
 h_snd:
+            stz         kind
             cmp         #R_READ
             bne         :+
             jmp         r_snd
@@ -100,8 +133,22 @@ h_snd:
             clc
             rts
 
-; /snd: a write: register/value pairs, through the library, IOBUF bytes at a time (an odd last byte dropped).  The
-; chip not answering: the pairs written so far count, or E_IO if none.  IN: .X = the fid
+; /psg: a read, a write (the PSG's registers)
+h_psg:
+            ldy         #$80
+            sty         kind
+            cmp         #R_READ
+            bne         :+
+            jmp         r_psg
+:
+            cmp         #R_WRITE
+            beq         w_snd
+            clc
+            rts
+
+; /snd, /psg: a write: register/value pairs, through the library, IOBUF bytes at a time (an odd last byte
+; dropped); then the PSG's pairs it made, to vid.  The chip not answering: the pairs written so far count, or E_IO
+; if none.  IN: .X = the fid
 w_snd:
             lda         srv_fid_aux,X
             sta         owner
@@ -145,7 +192,13 @@ w_snd:
             ldx         iobuf,Y                             ; .X = the register, .A = the value
             lda         iobuf + 1,Y
             phy
+            bit         kind
+            bmi         :+
             jsr         pair
+            bra         :++
+:
+            jsr         psg_pair
+:
             ply
             bcs         @timeout
             iny
@@ -163,10 +216,12 @@ w_snd:
 
 @end:
             MOVR        TASK_INBOX + RQ_DONE, TASK_INBOX + RQ_COUNT
+            jsr         psg_flush
             clc
             rts
 
 @timeout:
+            jsr         psg_flush
             tya                                             ; (The pairs before this one)
             clc
             adc         done
@@ -220,6 +275,61 @@ r_snd:
             clc
             rts
 
+; /psg: a read: the PSG's registers as written, from the offset (64 bytes in all; past them, nothing)
+r_psg:
+            stz         TASK_INBOX + RQ_DONE
+            stz         TASK_INBOX + RQ_DONE + 1
+            lda         TASK_INBOX + RQ_OFFSET + 1
+            ora         TASK_INBOX + RQ_OFFSET + 2
+            ora         TASK_INBOX + RQ_OFFSET + 3
+            bne         @end
+            sec                                             ; r2: what's left after the offset ...
+            lda         #PSG_REGS
+            sbc         TASK_INBOX + RQ_OFFSET
+            bcc         @end
+            beq         @end
+            sta         r2
+            stz         r2 + 1
+            lda         TASK_INBOX + RQ_COUNT + 1           ;   or the count, if that's less
+            bne         :+
+            lda         TASK_INBOX + RQ_COUNT
+            cmp         r2
+            bcs         :+
+            sta         r2
+:
+            clc
+            lda         #<psg
+            adc         TASK_INBOX + RQ_OFFSET
+            sta         r0
+            lda         #>psg
+            adc         #0
+            sta         r0 + 1
+            jsr         srv_toclient
+@end:
+            clc
+            rts
+
+; A /psg pair: register .X = .A through the library, unless its voice's channel is another task's (or the PSG has
+; no register .X).  OUT: C = 0
+psg_pair:
+            cpx         #PSG_REGS
+            bcs         @drop
+            pha
+            phx
+            txa
+            lsr
+            lsr
+            clc
+            adc         #SND_PSG
+            jsr         owned
+            plx
+            pla
+            bcs         @drop
+            jsr         psg_set
+@drop:
+            clc
+            rts
+
 ; /bell: a write: the beep (channel 7 claimed: none), and all of it taken
 h_bell:
             cmp         #R_WRITE
@@ -232,14 +342,13 @@ h_bell:
             clc
             rts
 
-; sndctl's claim N: channels N, the fid's task's (all of them, or none if another task has one)
+; sndctl's claim N [P]: those channels, the fid's task's (all of them, or none if another task has one)
 c_claim:
             jsr         ctl_mask
             bcs         @done
-            sta         t                                   ; (The mask, for both passes)
             ldx         #0
 @check:
-            lsr         t
+            jsr         mask_next
             bcc         @next
             lda         chown,X
             beq         @next
@@ -251,25 +360,31 @@ c_claim:
 
 @next:
             inx
-            cpx         #8
+            cpx         #SND_CHANNELS
             bne         @check
-            lda         srv_arg                             ; All free: taken
-            sta         t
+            jsr         ctl_mask                            ; All free: taken (the mask again)
             ldx         #0
 @take:
-            lsr         t
+            jsr         mask_next
             bcc         :+
             lda         owner
             sta         chown,X
 :
             inx
-            cpx         #8
+            cpx         #SND_CHANNELS
             bne         @take
             clc
 @done:
             rts
 
-; sndctl's release N: channels N given back, those the fid's task has
+; The mask's next channel's bit (from channel 0): C = 1, in the mask.  Modifies the mask
+mask_next:
+            lsr         mask + 2
+            ror         mask + 1
+            ror         mask
+            rts
+
+; sndctl's release N [P]: those channels given back, those the fid's task has
 c_release:
             jsr         ctl_mask
             bcs         :+
@@ -277,7 +392,8 @@ c_release:
 :
             rts
 
-; The command's number, a mask (owner: the fid's task).  OUT: C = 0, .A = it; or C = 1, .A = E_INVAL (none)
+; The command's numbers, the channels' masks (N: bit n, channel n, 0-7; P, if it's there: bit n, channel 8 + n): mask,
+; owner the fid's task.  OUT: C = 0; or C = 1, .A = E_INVAL (none)
 ctl_mask:
             lda         z:srv_argn
             beq         @inval
@@ -285,6 +401,17 @@ ctl_mask:
             lda         srv_fid_aux,X
             sta         owner
             lda         srv_arg
+            sta         mask
+            stz         mask + 1
+            stz         mask + 2
+            lda         z:srv_argn
+            cmp         #2
+            bcc         :+
+            lda         srv_arg + 2
+            sta         mask + 1
+            lda         srv_arg + 3
+            sta         mask + 2
+:
             clc
             rts
 
@@ -305,6 +432,7 @@ c_volume:
             lda         srv_arg
 :
             jsr         master_set
+            jsr         psg_flush
             clc
             rts
 
@@ -313,18 +441,16 @@ c_volume:
             sec
             rts
 
-; sndctl's reset: the chip and the library cleared
+; sndctl's reset: the chips and the library cleared
 c_reset:
             jsr         reset
-            bcc         :+
-            lda         #E_IO
-:
-            rts
+            jmp         ctl_io
 
 ; sndctl's channel commands, each its binary command's (/snd's SND_R_*) as text: patch CH P, note CH N, off CH,
 ; level CH V (vol, its old name), pan CH left|right|both (or 0-3), bend CH B (signed: -128 to 127), drum CH N; and
 ; reg R V [R V], registers as /snd writes them.  A channel another task has claimed: E_BUSY; a number out of range,
-; or one missing: E_INVAL; the chip not answering: E_IO.  (ctl_ch and ctl_chbyte answer an error themselves)
+; or one missing: E_INVAL; a PSG channel with no card: E_NODEV; the chip not answering: E_IO.  (ctl_ch and
+; ctl_chbyte answer an error themselves)
 c_patch:
             ldx         #SND_PATCHES
             jsr         ctl_chbyte
@@ -450,10 +576,8 @@ c_reg:
             cpy         cnt
             bcc         @pair
             clc
-            rts
-
 @ioerr:
-            jmp         ctl_ioerr
+            jmp         ctl_io
 
 @inval:
             jmp         ctl_inval
@@ -523,9 +647,72 @@ c_lfo:
 @inval:
             jmp         ctl_inval
 
+; wave CH W [WIDTH]: a PSG channel's waveform (pulse, saw, triangle, noise: SND_WAVE_*, or its number) and its width
+; (0-63; 63, a square, if it isn't given: for the others, 63 their own shape)
+c_wave:
+            jsr         ctl_ch
+            cpy         #SND_PSG
+            bcc         @inval                              ; (The YM2151's channels have none)
+            lda         z:srv_argn
+            cmp         #2
+            bcc         @inval
+            lda         srv_argp + 2
+            sta         z:srv_p
+            lda         srv_argp + 3
+            sta         z:srv_p + 1
+            ldx         #0
+@word:
+            lda         wave_words,X
+            sta         r3
+            lda         wave_words + 1,X
+            sta         r3 + 1
+            jsr         srv_same                            ; (Keeps .X)
+            beq         @named
+            inx
+            inx
+            cpx         #8
+            bcc         @word
+            lda         (srv_p)                             ; A number, 0-3 (not a word that reads as 0)
+            cmp         #'0'
+            bcc         @inval
+            cmp         #'9' + 1
+            bcs         @inval
+            lda         srv_arg + 3
+            bne         @inval
+            lda         srv_arg + 2
+            cmp         #4
+            bcc         @wave
+@inval:
+            jmp         ctl_inval
+
+@named:
+            txa
+            lsr
+@wave:
+            lsr                                             ; (Bits 1-0 to 7-6)
+            ror
+            ror
+            sta         t
+            lda         #$3F                                ; Its width
+            ldx         z:srv_argn
+            cpx         #3
+            bcc         :+
+            lda         srv_arg + 5
+            bne         @inval
+            lda         srv_arg + 4
+            cmp         #$40
+            bcs         @inval
+:
+            ora         t
+            ldy         ch
+            jsr         psg_wave
+            jmp         ctl_io
+
 ; sens CH PMS AMS: the channel's sensitivity to the LFO, of its pitch (vibrato, 0-7) and its amplitude (tremolo, 0-3)
 c_sens:
             jsr         ctl_ch
+            cpy         #SND_PSG
+            bcs         @inval                              ; (The YM2151's alone)
             lda         z:srv_argn
             cmp         #3
             bcc         @inval
@@ -593,10 +780,12 @@ c_noise:
 @inval:
             jmp         ctl_inval
 
-; (The chip's answer: C = 1, E_IO)
+; The PSG's pairs to vid, and the chip's answer (C = 1: E_IO)
 ctl_io:
+            php
+            jsr         psg_flush
+            plp
             bcc         :+
-ctl_ioerr:
             lda         #E_IO
 :
             rts
@@ -646,7 +835,7 @@ ctl_busy:
             rts
 
 ; ch = the first number, owner the fid's task: C = 1 if another task has it.  (Out of range: ctl_drop's, from
-; ctl_ch's or ctl_chbyte's caller)
+; ctl_ch's or ctl_chbyte's caller; the PSG's with no card, E_NODEV, the same way)
 ctl_ch1:
             lda         srv_arg + 1
             bne         @range
@@ -654,6 +843,11 @@ ctl_ch1:
             cmp         #SND_CHANNELS
             bcs         @range
             sta         ch
+            cmp         #SND_PSG
+            bcc         :+
+            jsr         psg_here
+            bcs         @nodev
+:
             ldx         z:srv_fid
             lda         srv_fid_aux,X
             sta         owner
@@ -665,12 +859,34 @@ ctl_ch1:
             pla
             bra         ctl_drop
 
-; sndctl's state: "volume 100", then "claimed" and the channels claimed
+@nodev:
+            pla                                             ; (Its own return and ctl_ch's)
+            pla
+            pla
+            pla
+            lda         #E_NODEV
+            sec
+            rts
+
+; sndctl's state: "volume 100", "channels 24" (with no card, 8), then "claimed" and the channels claimed
 gen_ctl:
+            jsr         psg_here                            ; (A card's PSG: its registers sent, if they're new)
+            lda         #SND_PSG
+            bcs         :+
+            jsr         psg_flush
+            lda         #SND_CHANNELS
+:
+            pha
             lda         #<s_volume
             ldx         #>s_volume
             jsr         srv_tputs
             lda         master
+            ldx         #0
+            jsr         srv_tputdec
+            lda         #<s_channels
+            ldx         #>s_channels
+            jsr         srv_tputs
+            pla
             ldx         #0
             jsr         srv_tputdec
             lda         #LF
@@ -685,11 +901,11 @@ gen_ctl:
             lda         #' '
             jsr         srv_tputc
             tya
-            ora         #'0'
-            jsr         srv_tputc
+            ldx         #0
+            jsr         srv_tputdec                         ; (Keeps .Y)
 :
             iny
-            cpy         #8
+            cpy         #SND_CHANNELS
             bne         :--
             lda         #LF
             jsr         srv_tputc
@@ -725,12 +941,15 @@ clunked:
             bne         @done
             sty         owner
             lda         #$FF
+            sta         mask
+            sta         mask + 1
+            sta         mask + 2
             jsr         release
 @done:
             clc
             rts
 
-; A stat record made (srvlib): /snd's length, 256
+; A stat record made (srvlib): /snd's length, 256; /psg's, 64
 stat:
             lda         z:srv_e
             cmp         #ENT_SND
@@ -738,17 +957,21 @@ stat:
             lda         #1
             sta         srv_stat + SR_LENGTH + 1
 :
+            cmp         #ENT_PSG
+            bne         :+
+            lda         #PSG_REGS
+            sta         srv_stat + SR_LENGTH
+:
             rts
 
 ; ****************************************************************************
 ; Claims, the volume
 
-; Channels .A given back, those owner has (keyed off)
+; The channels in mask given back, those owner has (keyed off).  OUT: C = 0
 release:
-            sta         t
             ldx         #0
 @channel:
-            lsr         t
+            jsr         mask_next
             bcc         @next
             lda         chown,X
             cmp         owner
@@ -756,13 +979,14 @@ release:
             stz         chown,X
             phx
             txa                                             ; Key off
-            ldx         #$08
-            jsr         set
+            tay
+            jsr         cmd_off
             plx
 @next:
             inx
-            cpx         #8
+            cpx         #SND_CHANNELS
             bne         @channel
+            jsr         psg_flush
             clc
             rts
 
@@ -820,7 +1044,7 @@ master_set:
             lda         volume_atten,X
 @set:
             sta         master_tl
-            ldy         #7
+            ldy         #SND_CHANNELS - 1
 @channel:
             jsr         atten_set
             tya
@@ -832,18 +1056,11 @@ master_set:
 ; ****************************************************************************
 ; The library
 
-; Reset: the chip cleared (chip_init), the shadow too, and each channel on both speakers, at full volume, with no
-; bend and no note.  The claims stay.  OUT: C = 0; or C = 1: the chip didn't answer
+; Reset: every channel at full volume, with no bend and no note; the PSG's voices silent, on both speakers, a
+; square (to vid); the YM2151 cleared (chip_init), the shadow too, and each channel on both speakers.  The claims
+; stay.  OUT: C = 0; or C = 1: the YM2151 didn't answer
 reset:
-            jsr         chip_init
-            bcs         @done
-            ldx         #0
-            txa
-:
-            sta         shadow,X
-            inx
-            bne         :-
-            ldy         #7
+            ldy         #SND_CHANNELS - 1
 @channel:
             lda         #$7F
             sta         vol,Y
@@ -853,6 +1070,38 @@ reset:
             lda         #$FF
             sta         note,Y
             jsr         atten_set
+            dey
+            bpl         @channel
+            ldx         #PSG_REGS - 4                       ; The PSG's voices ...
+@voice:
+            stz         psg,X
+            stz         psg + 1,X
+            lda         #$C0
+            sta         psg + 2,X
+            lda         #PSG_SQUARE
+            sta         psg + 3,X
+            dex
+            dex
+            dex
+            dex
+            bpl         @voice
+            ldx         #0                                  ;   to the chip
+:
+            jsr         psg_put
+            inx
+            cpx         #PSG_REGS
+            bcc         :-
+            jsr         psg_flush
+            jsr         chip_init                           ; The YM2151
+            bcs         @done
+            ldx         #0
+            txa
+:
+            sta         shadow,X
+            inx
+            bne         :-
+            ldy         #7
+@fm:
             tya
             ora         #$20                                ; Both speakers (RL), algorithm 0
             tax
@@ -860,7 +1109,7 @@ reset:
             jsr         set
             bcs         @done
             dey
-            bpl         @channel
+            bpl         @fm
             clc
 @done:
             rts
@@ -1010,9 +1259,13 @@ cook:
             ply
             rts
 
-; A channel's four levels written again (a new algorithm or volume).  IN: .A = the channel.  OUT: C = 0; or C = 1:
-; the chip didn't take one.  Keeps .X, .Y
+; A channel's four levels written again (a new algorithm or volume; the PSG's, its volume).  IN: .A = the channel.
+; OUT: C = 0; or C = 1: the chip didn't take one.  Keeps .X, .Y
 recook:
+            cmp         #SND_PSG
+            bcc         :+
+            jmp         psg_recook
+:
             phx
             ora         #$60
             tax
@@ -1058,8 +1311,15 @@ pitch:
             sta         t
             txa
             adc         t + 1
-            bmi         @lowest                             ; (Below note 0)
+            bpl         :+
+            lda         #0                                  ; (Below note 0: note 0)
+            sta         t
+:
             sta         t + 1
+            cpy         #SND_PSG                            ; (The PSG's: its frequency)
+            bcc         :+
+            jmp         psg_pitch
+:
             lda         t                                   ; The note: t / 64
             asl
             rol         t + 1
@@ -1084,9 +1344,6 @@ pitch:
             inx
             bra         @octave
 
-@lowest:
-            lda         #0
-            pha
 @low:
             pla                                             ; Below C#0: C#0
             lda         #0
@@ -1197,10 +1454,15 @@ load_patch:
             sta         ptr + 1
             rts
 
-; Channel ch keyed off, then on (all four operators).  OUT: C = 0; or C = 1: the chip didn't take it
+; Channel ch keyed off, then on (all four operators; the PSG's, its volume up).  OUT: C = 0; or C = 1: the chip
+; didn't take it
 key_on:
-            ldx         #$08
             lda         ch
+            cmp         #SND_PSG
+            bcc         :+
+            jmp         psg_on
+:
+            ldx         #$08
             jsr         set
             bcs         @done
             ora         #$78
@@ -1230,7 +1492,8 @@ pair:
             sta         shadow,X                            ; A command, for the channel SND_R_CH chose
             pha
             lda         shadow + SND_R_CH
-            and         #$07
+            cmp         #SND_CHANNELS
+            bcs         @not_mine                           ; (One there isn't: nothing)
             sta         ch
             jsr         owned
             bcs         @not_mine
@@ -1271,7 +1534,6 @@ pair:
             jmp         set
 
 @select:
-            and         #$07
 @keep:
             sta         shadow,X
 @dropped:
@@ -1295,9 +1557,20 @@ LR_CMD          = 4
 
 ; The commands.  IN: .A = the value, .Y = ch = the channel.  OUT: C = 0; or C = 1: the chip didn't take it
 cmd_patch:
+            cpy         #SND_PSG
+            bcs         @psg
             cmp         #SND_PATCHES
             bcs         cmd_none
             jmp         load_patch
+
+@psg:                                                       ; (The PSG's: a waveform, a square's width)
+            cmp         #4
+            bcs         cmd_none
+            lsr
+            ror
+            ror
+            ora         #$3F
+            jmp         psg_wave
 
 cmd_none:                                                   ; (Out of range: nothing)
             clc
@@ -1309,12 +1582,18 @@ cmd_note:
             lda         #0
             sta         fine,Y
             jsr         pitch
-            bcs         cmd_done
+            bcs         :+
             jmp         key_on
+:
+            rts
 
 cmd_off:
             lda         #$FF
             sta         note,Y
+            cpy         #SND_PSG
+            bcc         :+
+            jmp         psg_off
+:
             ldx         #$08
             tya
             jmp         set
@@ -1335,6 +1614,8 @@ cmd_pan:
             asl
             asl
             sta         t
+            cpy         #SND_PSG
+            bcs         @psg
             tya
             ora         #$20
             tax
@@ -1343,11 +1624,24 @@ cmd_pan:
             ora         t
             jmp         set
 
+@psg:                                                       ; (The PSG's: its volume register's bits 7-6, the
+            jsr         psg_reg                             ;   same)
+            inx
+            inx
+            lda         psg,X
+            and         #$3F
+            ora         t
+            jsr         psg_set
+            clc
+            rts
+
 cmd_bend:
             sta         bend,Y
             jmp         pitch
 
 cmd_drum:
+            cpy         #SND_PSG                            ; (The PSG: none)
+            bcs         cmd_none
             cmp         #SND_DRUMS
             bcs         cmd_none
             tax
@@ -1508,6 +1802,297 @@ cmd_glide:
             sta         fine,Y
             jmp         pitch
 
+; A PSG channel's waveform and width (the voice's register 3: SND_WAVE_* << 6 | the width); the YM2151's, nothing
+cmd_wave:
+            cpy         #SND_PSG
+            bcs         :+
+            clc
+            rts
+:
+            jmp         psg_wave
+
+; ****************************************************************************
+; The PSG (the Vera X's, through vid: #v/psg): channels 8-23, its voices 0-15
+
+; Channel .Y's voice's first register (4 a voice): .X.  Modifies .A.  Keeps .Y
+psg_reg:
+            tya
+            sec
+            sbc         #SND_PSG
+            asl
+            asl
+            tax
+            rts
+
+; PSG register .X = .A as written: kept, and queued for the chip (a volume with its channel's attenuation).  Keeps
+; .X, .Y
+psg_set:
+            sta         psg,X
+; PSG register .X queued for the chip as kept (a volume attenuated; the queue full, sent first).  Keeps .X, .Y
+psg_put:
+            phy
+            lda         psg_n
+            cmp         #PSG_OUT
+            bcc         :+
+            phx
+            jsr         psg_flush
+            plx
+:
+            txa
+            and         #$03
+            cmp         #2
+            bne         @plain
+            txa                                             ; A volume: its channel's
+            lsr
+            lsr
+            clc
+            adc         #SND_PSG
+            tay
+            lda         psg,X
+            jsr         psg_cook
+            bra         @queue
+
+@plain:
+            lda         psg,X
+@queue:
+            ldy         psg_n
+            sta         psg_out + 1,Y
+            txa
+            sta         psg_out,Y
+            iny
+            iny
+            sty         psg_n
+            ply
+            rts
+
+; A PSG volume register for the chip: .A as written (speakers, volume) with channel .Y's attenuation (TL's 0.75 dB
+; steps, 1.5 of the PSG's 0.5 dB each), 0-63; a volume 0 stays 0.  OUT: .A.  Modifies u.  Keeps .X, .Y
+psg_cook:
+            sta         u                                   ; Its speakers ...
+            and         #$3F
+            beq         @done                               ;   and its volume
+            sta         u + 1
+            lda         atten,Y
+            bmi         @louder
+            lsr                                             ; Quieter: less the attenuation * 1.5, to 0
+            clc
+            adc         atten,Y
+            sta         u + 2
+            lda         u + 1
+            sec
+            sbc         u + 2
+            bcs         @done
+            lda         #0
+            bra         @done
+
+@louder:
+            eor         #$FF                                ; Louder (the master volume past 100): more by
+            inc         a                                   ;   -the attenuation * 1.5, to 63
+            sta         u + 2
+            lsr
+            clc
+            adc         u + 2
+            adc         u + 1                               ; (C = 0: 48 + 63 at most)
+            cmp         #$40
+            bcc         @done
+            lda         #$3F
+@done:
+            sta         u + 2
+            lda         u
+            and         #$C0
+            ora         u + 2
+            rts
+
+; The PSG's queued pairs sent to vid (#v/psg: opened the first time, every register sent then, as the chip has
+; none of them yet).  No card: dropped.  Modifies .A, .X, .Y, r0, r1
+psg_flush:
+            lda         psg_n
+            beq         @done
+            lda         psg_fd
+            bpl         @send
+            jsr         psg_open
+            bcs         @drop
+@send:
+            LDR         r0, psg_out
+            lda         psg_n
+            sta         r1
+            stz         r1 + 1
+            lda         psg_fd
+            jsr         WRITE
+@drop:
+            stz         psg_n
+@done:
+            rts
+
+; Is there a PSG (a Vera X: #v/psg open, or opened now)?  OUT: C = 0 yes; C = 1 no.  Modifies .A, .X, .Y, r0, r1
+psg_here:
+            lda         psg_fd
+            bmi         psg_open
+            clc
+            rts
+
+; #v/psg opened: psg_fd, and every register queued (the queue's pairs among them).  OUT: C = 0; or C = 1: no card.
+; Modifies .A, .X, .Y, r0, r1
+psg_open:
+            LDR         r0, s_vpsg
+            lda         #O_WRITE
+            jsr         OPEN
+            bcs         @done
+            sta         psg_fd
+            stz         psg_n
+            ldx         #0
+:
+            jsr         psg_put
+            inx
+            cpx         #PSG_REGS
+            bcc         :-
+            clc
+@done:
+            rts
+
+; A PSG channel's note on: its volume as written the most (its level attenuating it).  IN: ch.  OUT: C = 0
+psg_on:
+            ldy         ch
+            jsr         psg_reg
+            inx
+            inx
+            lda         psg,X
+            ora         #PSG_ON
+            jsr         psg_set
+            clc
+            rts
+
+; A PSG channel's note off: its volume 0 (speakers kept).  IN: .Y = the channel.  OUT: C = 0.  Keeps .Y
+psg_off:
+            jsr         psg_reg
+            inx
+            inx
+            lda         psg,X
+            and         #$C0
+            jsr         psg_set
+            clc
+            rts
+
+; A PSG channel's waveform and width (.A: its register 3).  IN: .Y = the channel.  OUT: C = 0.  Keeps .Y
+psg_wave:
+            pha
+            jsr         psg_reg
+            pla
+            inx
+            inx
+            inx
+            jsr         psg_set
+            clc
+            rts
+
+; A PSG channel's volume to the chip again (a new attenuation).  IN: .A = the channel.  OUT: C = 0.  Keeps .X, .Y
+psg_recook:
+            phx
+            phy
+            tay
+            jsr         psg_reg
+            inx
+            inx
+            jsr         psg_put
+            ply
+            plx
+            clc
+            rts
+
+; A PSG channel's pitch: t (in 64ths of a semitone over MIDI note 0, up to 129) as its frequency word (Hz * 2^17 /
+; 48,828.125: the VERA's 25 MHz / 512), from the table of the octave C9-C10 (MIDI 120-132), the 64ths between its
+; semitones a straight line (under a cent off), then halved to the note's octave, rounded.  IN: .Y = the channel.
+; OUT: C = 0.  Keeps .Y
+psg_pitch:
+            lda         t                                   ; The note (t / 64) ...
+            asl
+            rol         t + 1
+            asl
+            rol         t + 1
+            lda         t
+            and         #$3F
+            sta         t                                   ;   and its 64ths
+            lda         t + 1
+            ldx         #0                                  ; The octaves below the table's
+@octave:
+            cmp         #120
+            bcs         :+
+            adc         #12                                 ; (C = 0)
+            inx
+            bra         @octave
+:
+            stx         psh
+            sbc         #120                                ; (C = 1) The semitone in it, 0-11
+            asl
+            tax
+            sec                                             ; Its width to the next / 4 (under 1024)
+            lda         psg_freq + 2,X
+            sbc         psg_freq,X
+            sta         pw
+            lda         psg_freq + 3,X
+            sbc         psg_freq + 1,X
+            lsr
+            ror         pw
+            lsr
+            ror         pw
+            sta         pw + 1
+            stz         pr                                  ; * the 64ths (0-63) / 16: the 64ths' part
+            stz         pr + 1
+            phy
+            ldy         #6
+@multiply:
+            lsr         t
+            bcc         :+
+            clc
+            lda         pr
+            adc         pw
+            sta         pr
+            lda         pr + 1
+            adc         pw + 1
+            sta         pr + 1
+:
+            asl         pw
+            rol         pw + 1
+            dey
+            bne         @multiply
+            ply
+            ldy         #4
+:
+            lsr         pr + 1
+            ror         pr
+            dey
+            bne         :-
+            clc                                             ; + the semitone's word: the table's octave's
+            lda         pr
+            adc         psg_freq,X
+            sta         pr
+            lda         pr + 1
+            adc         psg_freq + 1,X
+            sta         pr + 1
+            ldx         psh                                 ; Halved to the note's octave, rounded (the last bit
+            beq         @word                               ;   out added)
+:
+            lsr         pr + 1
+            ror         pr
+            dex
+            bne         :-
+            lda         pr
+            adc         #0
+            sta         pr
+            lda         pr + 1
+            adc         #0
+            sta         pr + 1
+@word:
+            ldy         ch
+            jsr         psg_reg
+            lda         pr
+            jsr         psg_set
+            inx
+            lda         pr + 1
+            jsr         psg_set
+            clc
+            rts
+
 ; The console's bell: a short beep on channel 7, a sine (four operators in step) that fades by itself, so nothing
 ; has to turn it off.  (Through the library: the master volume's, and the shadow keeps it)
 beep:
@@ -1570,9 +2155,10 @@ low_reg:
             .byte       0, LR_CHIP, LR_SELECT, LR_CMD, LR_CMD + 1, LR_CMD + 2, LR_CMD + 3, LR_CMD + 4
                                                             ; $00-$07: -, test and LFO reset, SND_R_CH, SND_R_PATCH,
                                                             ;   SND_R_NOTE, SND_R_OFF, SND_R_VOL, SND_R_PAN
-            .byte       LR_KEY, LR_CMD + 5, LR_CMD + 6, 0, LR_CMD + 7, LR_CMD + 8, 0, LR_CHIP
+            .byte       LR_KEY, LR_CMD + 5, LR_CMD + 6, 0, LR_CMD + 7, LR_CMD + 8, LR_CMD + 9, LR_CHIP
                                                             ; $08-$0F: key on, SND_R_BEND, SND_R_DRUM,
-                                                            ;   SND_R_FREQ_LO (kept), SND_R_FREQ, SND_R_GLIDE, -, noise
+                                                            ;   SND_R_FREQ_LO (kept), SND_R_FREQ, SND_R_GLIDE,
+                                                            ;   SND_R_WAVE, noise
             .byte       LR_CHIP, LR_CHIP, LR_CHIP, 0, LR_CHIP, 0, 0, 0
                                                             ; $10-$17: timer A, timer B, -, the timers' control
             .byte       LR_CHIP, LR_CHIP, 0, LR_CHIP, 0, 0, 0, 0
@@ -1580,11 +2166,14 @@ low_reg:
 .assert     SND_R_CH = 2 .and SND_R_PATCH = 3 .and SND_R_NOTE = 4 .and SND_R_OFF = 5, error, "low_reg: the commands"
 .assert     SND_R_VOL = 6 .and SND_R_PAN = 7 .and SND_R_BEND = 9 .and SND_R_DRUM = $0A, error, "low_reg: the commands"
 .assert     SND_R_FREQ_LO = $0B .and SND_R_FREQ = $0C .and SND_R_GLIDE = $0D, error, "low_reg: the commands"
+.assert     SND_R_WAVE = $0E, error, "low_reg: the commands"
 
 cmd_lo:
             .lobytes    cmd_patch, cmd_note, cmd_off, cmd_vol, cmd_pan, cmd_bend, cmd_drum, cmd_freq, cmd_glide
+            .lobytes    cmd_wave
 cmd_hi:
             .hibytes    cmd_patch, cmd_note, cmd_off, cmd_vol, cmd_pan, cmd_bend, cmd_drum, cmd_freq, cmd_glide
+            .hibytes    cmd_wave
 
 ; The frequencies of C8 to C9 (MIDI 108-120), in Hz (A4 440): cmd_freq's octave
 FREQ_C8         = 4186
@@ -1594,13 +2183,18 @@ freq_lo:
 freq_hi:
             .hibytes    FREQ_C8, 4435, 4699, 4978, 5274, 5588, 5920, 6272, 6645, 7040, 7459, 7902, FREQ_C9
 
+; The PSG's frequency words (Hz * 2^17 / 48,828.125) of C9 to C10 (MIDI 120-132, A4 440): psg_pitch's octave
+psg_freq:
+            .word       22473, 23810, 25226, 26726, 28315, 29998, 31782, 33672, 35674, 37796, 40043, 42424, 44947
+
 ; The device
 srv_tree:
             SRV_ENTRY   s_root,    $FF, SK_DIR,  0,          SM_READ,            0      ; 0
             SRV_ENTRY   s_snd,     0,   SK_DATA, h_snd,      SM_READ | SM_WRITE, 0      ; 1 (ENT_SND)
-            SRV_ENTRY   s_sndctl,  0,   SK_CTL,  ctl_cmds,   SM_READ | SM_WRITE, 4      ; 2 (reads as 4)
+            SRV_ENTRY   s_sndctl,  0,   SK_CTL,  ctl_cmds,   SM_READ | SM_WRITE, 5      ; 2 (reads as 5)
             SRV_ENTRY   s_bell,    0,   SK_DATA, h_bell,     SM_WRITE,           0      ; 3
-            SRV_ENTRY   s_sndctl,  $FE, SK_TEXT, gen_ctl,    SM_READ,            0      ; 4 (its state: no directory's)
+            SRV_ENTRY   s_psg,     0,   SK_DATA, h_psg,      SM_READ | SM_WRITE, 0      ; 4 (ENT_PSG)
+            SRV_ENTRY   s_sndctl,  $FE, SK_TEXT, gen_ctl,    SM_READ,            0      ; 5 (its state: no directory's)
             .word       0
 ctl_cmds:
             .word       s_claim, c_claim
@@ -1618,16 +2212,21 @@ ctl_cmds:
             .word       s_reg, c_reg
             .word       s_freq, c_freq
             .word       s_glide, c_glide
+            .word       s_wave, c_wave
             .word       s_lfo, c_lfo
             .word       s_sens, c_sens
             .word       s_noise, c_noise
             .word       0
 pan_words:
             .word       s_left, s_right, s_both
+wave_words:
+            .word       s_pulse, s_saw, s_triangle, s_noise
 s_root:     .byte       "/", 0
 s_snd:      .byte       "snd", 0
 s_sndctl:   .byte       "sndctl", 0
 s_bell:     .byte       "bell", 0
+s_psg:      .byte       "psg", 0
+s_vpsg:     .byte       "#v/psg", 0
 s_claim:    .byte       "claim", 0
 s_release:  .byte       "release", 0
 s_volume_w: .byte       "volume", 0
@@ -1643,12 +2242,17 @@ s_drum:     .byte       "drum", 0
 s_reg:      .byte       "reg", 0
 s_freq:     .byte       "freq", 0
 s_glide:    .byte       "glide", 0
+s_wave:     .byte       "wave", 0
 s_lfo:      .byte       "lfo", 0
 s_sens:     .byte       "sens", 0
 s_noise:    .byte       "noise", 0
 s_left:     .byte       "left", 0
 s_right:    .byte       "right", 0
 s_both:     .byte       "both", 0
+s_pulse:    .byte       "pulse", 0
+s_saw:      .byte       "saw", 0
+s_triangle: .byte       "triangle", 0
+s_channels: .byte       LF, "channels ", 0
 s_volume:   .byte       "volume ", 0
 s_claimed:  .byte       "claimed", 0
 

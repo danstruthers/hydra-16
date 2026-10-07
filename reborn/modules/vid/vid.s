@@ -23,6 +23,9 @@
 ;             cat /lib/font/cp437 >/dev/vid/font for the PC's
 ;   /frame    a read waits for the next frame (one since this fid last read, or opened it: the VERA's VSYNC, 59.5 a
 ;             second), then gives the frames counted ("1234" and an LF); a non-blocking fd gets E_AGAIN instead
+;   /psg      the PSG's registers (VRAM $1F9C0: 16 voices of 4 bytes), the sound driver's (snd's channels 8-23): a
+;             write's register/value pairs (0-63; others dropped, and an odd last byte) kept and written to the chip
+;             (while it's claimed, kept only, and written as the claim ends); a read gives them as kept
 ; VRAM, shared by agreement (VIDEO.md): $00000-$1AFFF a program's; $1B000-$1EFFF the console's text map (128 x 64
 ; cells of 2 bytes: its 64 rows a ring, the screen's top at map row top, so a scroll is a VSCROLL write and a row
 ; blanked); $1F000-$1F7FF its font; $1F800 the cursor's image (8 x 8, 4 bits a pixel); $1F9C0 on the chip's
@@ -83,7 +86,9 @@ FF              = $0C
 ESC             = $1B
 E_TERM          = 2             ; srv_tree's entries: term ...
 E_VRAM          = 3             ;   the VRAM's files (vram, pal, sprites, font: their regions, SE_AUX) ...
-E_FRAME         = 7             ;   frame
+E_FRAME         = 7             ;   frame ...
+E_PSG           = 8             ;   psg
+PSG_REGS        = 64            ; The PSG's registers
 
 .zeropage
 frames:     .res        4                                   ; The frames counted (the irq entry's)
@@ -134,6 +139,7 @@ pend_h:     .res        2                                   ; The text kept whil
 pend_n:     .res        2                                   ;   the bytes there (PEND_SIZE at most) ...
 pend_lost:  .res        1                                   ;   <> 0: older ones gone
 pend:       .res        PEND_SIZE
+psg:        .res        PSG_REGS                            ; The PSG's registers as written to /psg
 iobuf:      .res        256
 
 .code
@@ -149,6 +155,11 @@ init:
             sta         cur_mode
             lda         #1
             sta         cur_on
+            ldx         #PSG_REGS - 1                       ; The PSG quiet (till snd writes it)
+:
+            stz         psg,X
+            dex
+            bpl         :-
             jsr         TICKS                               ; ---- The card: looked for, DETECT_TICKS at most
             sta         t
             stx         t + 1
@@ -279,7 +290,7 @@ irq_on:
             rts
 
 ; ****************************************************************************
-; The chip set up for the console, its interrupts off meanwhile (IEN 0: irq_on after): the registers, the PSG quiet,
+; The chip set up for the console, its interrupts off meanwhile (IEN 0: irq_on after): the registers, the PSG /psg's,
 ; the palette, the sprites (all off but the cursor's), the cursor's image, the layers, the screen's size; and the
 ; font, and the terminal reset, the screen cleared (setup_all).  Modifies .A, .X, .Y, p, n
 setup_all:
@@ -296,11 +307,16 @@ setup:
             stz         dcv
             stz         VERA_DC_VIDEO
             plp
-            lda         #<PSG_ADDR                          ; ---- VRAM's registers: the PSG's, quiet (zeros) ...
+            lda         #<PSG_ADDR                          ; ---- VRAM's registers: the PSG's, /psg's ...
             ldx         #>PSG_ADDR
             jsr         vseek1
-            ldx         #64
-            jsr         vzero
+            ldx         #0
+:
+            lda         psg,X
+            sta         VERA_DATA0
+            inx
+            cpx         #PSG_REGS
+            bcc         :-
             ldx         #0                                  ;   the palette ...
 :
             lda         palette,X
@@ -1732,6 +1748,100 @@ h_vram:
             clc
             rts
 
+; /psg: a write: register/value pairs, each kept, and written to the chip through ADDR1 (ADDR0, the cursor's, left
+; as it is) unless the chip's claimed (setup writes them as the claim ends); a register past the PSG's, and an odd
+; last byte, dropped.  A read: them as kept, from the offset (64 bytes in all)
+h_psg:
+            cmp         #R_WRITE
+            beq         @write
+            cmp         #R_READ
+            beq         @read
+            clc
+            rts
+
+@read:
+            stz         TASK_INBOX + RQ_DONE
+            stz         TASK_INBOX + RQ_DONE + 1
+            lda         TASK_INBOX + RQ_OFFSET + 1
+            ora         TASK_INBOX + RQ_OFFSET + 2
+            ora         TASK_INBOX + RQ_OFFSET + 3
+            bne         @end
+            sec                                             ; r2: what's left after the offset ...
+            lda         #PSG_REGS
+            sbc         TASK_INBOX + RQ_OFFSET
+            bcc         @end
+            beq         @end
+            sta         r2
+            stz         r2 + 1
+            lda         TASK_INBOX + RQ_COUNT + 1           ;   or the count, if that's less
+            bne         :+
+            lda         TASK_INBOX + RQ_COUNT
+            cmp         r2
+            bcs         :+
+            sta         r2
+:
+            clc
+            lda         #<psg
+            adc         TASK_INBOX + RQ_OFFSET
+            sta         r0
+            lda         #>psg
+            adc         #0
+            sta         r0 + 1
+            jsr         srv_toclient
+@end:
+            clc
+            rts
+
+@write:
+            jsr         counted
+@part:
+            jsr         part
+            beq         @end
+            LDR         r0, iobuf
+            jsr         CLIENT_READ
+            lda         r2 + 1                              ; Its pairs (256 bytes: 128)
+            lsr
+            lda         r2
+            ror
+            beq         @parted
+            sta         n
+            stz         t                                   ; t: $FF, to the chip too (ADDR1 at the PSG, no
+            lda         claimer                             ;   increment); 0, the chip's claimed
+            bne         :+
+            dec         t
+            lda         #VERA_CTRL_ADDRSEL
+            sta         VERA_CTRL
+            lda         #>PSG_ADDR
+            sta         VERA_ADDR_M
+            lda         #1
+            sta         VERA_ADDR_H
+:
+            ldy         #0
+@pair:
+            ldx         iobuf,Y
+            cpx         #PSG_REGS
+            bcs         @next
+            lda         iobuf + 1,Y
+            sta         psg,X
+            bit         t
+            bpl         @next
+            txa
+            ora         #<PSG_ADDR
+            sta         VERA_ADDR_L
+            lda         psg,X
+            sta         VERA_DATA1
+@next:
+            iny
+            iny
+            dec         n
+            bne         @pair
+            bit         t
+            bpl         @parted
+            stz         VERA_CTRL
+@parted:
+            jsr         parted
+            bra         @part
+
 ; /frame: a read: the next frame (since this fid's last), then the frames counted; none yet: E_AGAIN (the irq
 ; entry's event, every frame).  IN: .X = the fid
 h_frame:
@@ -2246,7 +2356,7 @@ clunked:
             clc
             rts
 
-; A stat record made: the files' lengths (the VRAM's regions'; term's: rows x (cols + 1))
+; A stat record made: the files' lengths (the VRAM's regions'; term's: rows x (cols + 1); psg's, 64)
 stat:
             lda         z:srv_e
             cmp         #E_TERM
@@ -2271,6 +2381,12 @@ stat:
             rts
 
 @vram:
+            cmp         #E_PSG
+            bne         :+
+            lda         #PSG_REGS
+            sta         srv_stat + SR_LENGTH
+            rts
+:
             cmp         #E_VRAM
             bcc         @done
             cmp         #E_FRAME
@@ -2295,14 +2411,15 @@ stat:
 
 srv_tree:
             SRV_ENTRY   s_root,    $FF, SK_DIR,  0,          SM_READ,            0      ; 0
-            SRV_ENTRY   s_ctl,     0,   SK_CTL,  ctl_cmds,   SM_READ | SM_WRITE, 8      ; 1 (reads as 8)
+            SRV_ENTRY   s_ctl,     0,   SK_CTL,  ctl_cmds,   SM_READ | SM_WRITE, 9      ; 1 (reads as 9)
             SRV_ENTRY   s_term,    0,   SK_DATA, h_term,     SM_READ | SM_WRITE, 0      ; 2 (E_TERM)
             SRV_ENTRY   s_vram,    0,   SK_DATA, h_vram,     SM_READ | SM_WRITE, 0      ; 3 (E_VRAM: region 0)
             SRV_ENTRY   s_pal,     0,   SK_DATA, h_vram,     SM_READ | SM_WRITE, 1      ; 4
             SRV_ENTRY   s_sprites, 0,   SK_DATA, h_vram,     SM_READ | SM_WRITE, 2      ; 5
             SRV_ENTRY   s_font,    0,   SK_DATA, h_vram,     SM_READ | SM_WRITE, 3      ; 6
             SRV_ENTRY   s_frame,   0,   SK_DATA, h_frame,    SM_READ,            0      ; 7 (E_FRAME)
-            SRV_ENTRY   s_ctl,     $FE, SK_TEXT, gen_ctl,    SM_READ,            0      ; 8 (ctl's state)
+            SRV_ENTRY   s_psg,     0,   SK_DATA, h_psg,      SM_READ | SM_WRITE, 0      ; 8 (E_PSG)
+            SRV_ENTRY   s_ctl,     $FE, SK_TEXT, gen_ctl,    SM_READ,            0      ; 9 (ctl's state)
             .word       0
 
 ctl_cmds:
@@ -2395,6 +2512,7 @@ s_pal:      .byte       "pal", 0
 s_sprites:  .byte       "sprites", 0
 s_font:     .byte       "font", 0
 s_frame:    .byte       "frame", 0
+s_psg:      .byte       "psg", 0
 s_mode:     .byte       "mode", 0
 s_cursor:   .byte       "cursor", 0
 s_border:   .byte       "border", 0

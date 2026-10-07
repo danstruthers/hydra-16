@@ -235,9 +235,11 @@ bank t).  Every fixed address is in `include/layout.inc`, and nowhere else.
   count to change.  A server that must give up on something that doesn't come (`/pc`'s reply) makes the count
   change now and then from an interrupt it owns (the console's timer 2, run on in rounds), and its client, asking
   again, looks at the time (`TICKS`).
-* **One driver owns the YM2151** (`snd`, `#a`), and only its task writes the chip.  The calls from a driver to
-  another are the console's: its bell (`cons` writes `#a/bell` when the shown window sends a BEL) and its screen
-  (`#v/term`, the shown window's text).  A driver called never calls the console, so no two wait on each other.
+* **One driver owns the YM2151** (`snd`, `#a`), and only its task writes the chip; one owns the VERA (`vid`, `#v`).
+  The calls from a driver to another are three: the console's bell (`cons` writes `#a/bell` when the shown window
+  sends a BEL) and its screen (`#v/term`, the shown window's text), and the PSG's registers (`snd` writes
+  `#v/psg`: its channels 8-23).  A driver called never calls the console, and `vid` calls nobody, so no two wait
+  on each other.
   What's a task's in a driver (a claim of channels) is the task's that opened the file it came through, given back
   as that task's last file of the device closes.
 * **One driver owns the VERA** (`vid`, `#v`), and only its task writes the chip, but for a task that claims it

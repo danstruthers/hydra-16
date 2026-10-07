@@ -1,6 +1,6 @@
 ## **Sound words: an assessment, and parity everywhere**
 
-An assessment of the sound vocabulary in the rebuilt system (`reborn/`, October 2026): what each place has (the sound driver's files, C, HyForth, hylang, BASIC), how far apart they are, and a plan to bring them all to one set: the largest that exists anywhere the Hydra draws on (its own driver and score language, the old system, and the Commander X16's BASIC, whose chips the Hydra now shares: the YM2151 on the board, the VERA's PSG and PCM on the Vera X).  Nothing here is built yet; the questions at the end are the user's.
+An assessment of the sound vocabulary in the rebuilt system (`reborn/`, October 2026): what each place has (the sound driver's files, C, HyForth, hylang, BASIC), how far apart they are, and a plan to bring them all to one set: the largest that exists anywhere the Hydra draws on (its own driver and score language, the old system, and the Commander X16's BASIC, whose chips the Hydra now shares: the YM2151 on the board, the VERA's PSG and PCM on the Vera X).  The questions at the end were the user's, and their answers follow them; steps 1 to 5 of the order of work are built (October 2026: step 5's notes are [As built: the PSG](#as-built-the-psg)), and step 6, PCM, is to come.
 
 ### **Contents**
 1. [What exists](#what-exists)
@@ -10,6 +10,7 @@ An assessment of the sound vocabulary in the rebuilt system (`reborn/`, October 
 5. [How each place reaches it](#how-each-place-reaches-it)
 6. [The order of work](#the-order-of-work)
 7. [Questions](#questions)
+8. [As built: the PSG](#as-built-the-psg)
 
 ---
 
@@ -70,7 +71,7 @@ One row a thing to do; ✓ there, ✗ not, ~ partly (the note says how).
 | A chord (notes at once, over channels) | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ `FMCHORD` | ~ (a line a channel) |
 | A song (ZSM) played | ~ `play` | ✓ | ~ by `sh` | ✓ | ✗ | | |
 | The bell | ✓ `/dev/bell` | ✗ | ✓ | ✓ | ✓ | | |
-| PSG voices (the Vera X) | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ (8 words) | |
+| PSG voices (the Vera X) | ✓ channels 8-23, `wave`, `/dev/psg` (step 5) | ✓ | ✓ | ✓ | ~ `SOUND "..."` | ✓ (8 words) | |
 | PCM (the Vera X) | ✗ | ✗ | ✗ | ✗ | ✗ | | |
 
 So: **C, HyForth and hylang are at parity with the driver** (13 words, the same names and order: the channel first), with two small gaps (HyForth and hylang can't read the registers back; C has no note names, tunes or beep).  **BASIC is the one well behind**: of the 13 it has a note and its release, a patch and a volume only with a note, and the four `sndctl` words only as text (`SOUND "claim 255"`); not pan, bend, drums or the registers.  **Nothing on the Hydra itself plays MML**, the vocabulary the score language and the X16's BASIC share; and nothing has a frequency in Hz, legato, the LFO by name, chords, or the PSG.
@@ -159,3 +160,14 @@ Each step with its tests: the driver's commands by their effect on the emulated 
 3. **`/dev/sndctl` takes every channel command as text** too, beside `/dev/snd`'s binary commands.
 4. **The volumes: `snd-volume` (the master, 0-200) and `snd-level` (a channel's, 0-127)**, `snd-vol` kept as an old name for the channel's.  (The user asked about `snd-vol-l` and `snd-vol-r`; the hardware has no level for a side: the YM2151's left and right are a switch each a channel, which is pan, the VERA's PSG the same, and the mixer has no control.)  So C's `snd_level`, hylang's `(snd-level ch v)`, and the text `level CH N`; the target table's `snd-vol` reads `snd-level`.
 5. **The Hydra's units everywhere**, the migration utility mapping the X16's; `play -x` still plays X16 MML strings as they are.
+
+### **As built: the PSG**
+
+Step 5, October 2026 (the rebuilt system's `snd`, `vid`, `play` and the languages' libraries; the `psg` test):
+
+* **Channels 8-23 are the PSG's 16 voices**, with the FM channels' commands, binary (`/dev/snd`'s `SND_R_*`, `SND_R_CH` 8-23) and text (`/dev/sndctl`): `note` sets the voice's frequency word (from the note, its 64ths and the bend, through a table of the top octave halved to the note's, rounded: under a cent off) and its volume the most, `off` its volume 0, `level` and the master volume attenuate its volume as they do the FM carriers' levels (1.5 of the PSG's 0.5 dB steps a TL step), `pan` sets its speaker bits, `bend`, `freq` and `glide` as the FM channels'; `patch` below 4 is a waveform (a square's width); `drum` does nothing; `sens` is the YM2151's alone (`E_INVAL`).  One new command: **`wave CH W [WIDTH]`** (`pulse`, `saw`, `triangle`, `noise`, or 0-3; the width 0-63, 63 if it isn't given: a square, or the other waveforms' own shape), binary `SND_R_WAVE` (`$0E`: the voice's register 3, `SND_WAVE_* << 6 | width`).  With no card a channel 8-23 is `E_NODEV` as text and nothing as binary.
+* **`sndctl`**: its state has `channels 24` (8 with no card) after the volume; `claim N [P]` and `release N [P]` take a second mask, the PSG's (bit n, channel 8 + n), so a ZSM's header masks go straight in; the claimed channels are listed in decimal.
+* **`/dev/psg`** (`#a`): the PSG's 64 registers as a ZSM writes them (register/value pairs), through the same library (the volumes attenuated, a claimed voice another task's dropped); a read gives them as written.  `play` sends a song's `$00-$3F` writes there, a tick's in one write beside its `/dev/snd` write, and claims its PSG voices with `claim $NN $PPPP`.
+* **The VERA stays vid's** (one owner, as the YM2151 is snd's): snd writes the PSG through **`#v/psg`**, its pairs queued as a request makes them and sent in one write at its end (the file opened the first time it's wanted, all 64 registers sent then; with no card, again the next time).  vid writes them through data port 1, so ADDR0's place (the cursor's) holds; while the chip's claimed it keeps them, and the release writes them back (the setup wrote zeros before).  The third driver-to-driver call (after cons's bell and screen); vid calls nobody.
+* **The words**: C's `snd_wave (ch, wave, width)`, `snd_claim_psg (mask)`, `snd_release_psg (mask)` (`SND_PSG`, `SND_PSG_ALL`, `SND_WAVE_*`); HyForth's `snd-wave ( ch w width -- )`, `snd-claim-psg ( mask -- )`, `snd-release-psg ( mask -- )`; hylang's `(snd-wave ch w [width])` (`:pulse`, `:saw`, `:triangle`, `:noise`) and `snd-claim`/`snd-release` taking channels 0-23; BASIC's `SOUND "wave 8 saw"` (the text).  Every other word reaches the PSG's channels as it is.
+* **Not yet**: the PSG in scores (MML; `play` is at 97% of its bank), its own envelopes (a note sounds till it's off), PCM (step 6), and sound in the emulator (the VERA keeps the PSG's registers and notes its voices' starts, which the test checks).
