@@ -286,7 +286,8 @@ left|right|both`, `bend CH B`, `drum CH N`, `freq CH HZ`, `glide CH N`, `wave CH
 its PSG's voices: the same commands, and `wave`; `claim`'s P is their mask, bit n channel 8 + n.  The
 VIA's port A is `/dev/gpio` (pins `0`-`7`, `port`, `ctl`, `ca1`) and `/dev/i2c` the I2C bus on two of its pins;
 `/dev/spi` the SPI devices; `/dev/seg` names shared segments; `/dev/vid` is the Vera X (its screen, VRAM, the PSG,
-`pcm` and `pcmctl`, its PCM, and `mouse` and `mousectl`, its mouse: [../programming/video.md](../programming/video.md)); `/pc` a folder on the PC (through
+`pcm` and `pcmctl`, its PCM, `mouse` and `mousectl`, its mouse, and `draw`, drawing on its bitmap:
+[../programming/video.md](../programming/video.md)); `/pc` a folder on the PC (through
 the PC tool, `sim/tools/hydrapc.js`, which is the terminal too).
 
 ### Scores

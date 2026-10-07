@@ -1,6 +1,6 @@
 ## **Video: the Vera X card in slot 0**
 
-A plan for the Hydra-16's supported video card: a card in **slot 0** carrying the **VERA** (the Versatile Embedded Retro Adapter, the Commander X16's video chip: an iCE40UP5K FPGA with 128K of video RAM, VGA out, a 16-voice PSG and PCM audio).  The card is called **Vera X** here.  Its 32 registers fill slot 0's **I/O ports 2 and 3** (`$FF20-$FF3F`).  Its interrupt is slot 0's **IRQ A, line 2**; **IRQ B, line 3**, stays free, as the keyboard and mouse controller is polled over I2C (step 6).  The VERA's source (the module's PCB, gateware v0.9 and its programmer's reference) is in `c:\source\vera-module`.  Steps 1 to 4, step 6 (the keyboard and mouse) and step 7's PSG and PCM are built in the rebuilt system (`reborn/`, phase 8): see [As built](#as-built-october-2026).  The console that step 4 put on the screen is being rebuilt by the text windows' plan ([WINDOWS.md](WINDOWS.md)): [The console and the text windows](#the-console-and-the-text-windows) says what that changes here.  Next, in the user's order (2026-10-07): the graphics words (step 5), then the rest ([Order of work](#order-of-work)).
+A plan for the Hydra-16's supported video card: a card in **slot 0** carrying the **VERA** (the Versatile Embedded Retro Adapter, the Commander X16's video chip: an iCE40UP5K FPGA with 128K of video RAM, VGA out, a 16-voice PSG and PCM audio).  The card is called **Vera X** here.  Its 32 registers fill slot 0's **I/O ports 2 and 3** (`$FF20-$FF3F`).  Its interrupt is slot 0's **IRQ A, line 2**; **IRQ B, line 3**, stays free, as the keyboard and mouse controller is polled over I2C (step 6).  The VERA's source (the module's PCB, gateware v0.9 and its programmer's reference) is in `c:\source\vera-module`.  Steps 1 to 4, 5's graphics words, 6 (the keyboard and mouse) and 7's PSG and PCM are built in the rebuilt system (`reborn/`, phase 8): see [As built](#as-built-october-2026).  The console that step 4 put on the screen is being rebuilt by the text windows' plan ([WINDOWS.md](WINDOWS.md)): [The console and the text windows](#the-console-and-the-text-windows) says what that changes here.  Next, in the user's order (2026-10-07): the rest ([Order of work](#order-of-work)).
 
 ### **As built (October 2026)**
 
@@ -30,6 +30,12 @@ A plan for the Hydra-16's supported video card: a card in **slot 0** carrying th
   * **The cursor blinks by its z now** (sprite 0's byte 6, through data port 1, ADDR1 kept there), not by DC_VIDEO's sprites bit, which blinked every sprite, the pointer among them.  A scroll's row copy and the PSG's writes borrow ADDR1 and put it back.
   * **`input` opens its files by their devices' names** (`#i/42`, `#c/kbin`, `#v/mousein`), so it runs in any namespace.
   * Tests: the mouse test (vid's files and the input program on the SMC's packets: 48 checks) and the kbd test (keys typed at the SMC reaching HyForth, the login shell).
+* **The graphics words** (step 5): drawing is vid's own, `/dev/vid/draw` (`modules/vid/draw.inc`: `pen`, `plot`, `line` (Bresenham's), `box`, `bar`, `circle` and `disc` (the midpoint way), `text` (the console's font), `clear`, on the bitmap at any depth), so it's quick, the console stays over it, and every language has the same words: HyForth's `lib video` (`romfs/lib/forth/video.fs`), hylang's `(use "video")`, C's `vera.h` (`sdk/c/lib/vera.c`), and cc65's TGI through a driver of its own, `hydra_tgi` (`sdk/c/lib/tgihydra.s`: cc65's TGI kernel is in `none.lib` already).  Where it went otherwise than planned:
+  * **The plan's `vmode`, `cls`, `spimg` and `tile`** became ctl's commands (`bitmap`, `mode`), `clear`, `sprite!` (a sprite's 8 bytes); tiles are VRAM and the layer's registers, for a claimer.  The pen's colour is `pen`, not `color` (HyForth's and hylang's `color` is the terminal's), and a filled box `bar` (TGI's name; Core has `fill`).
+  * **The pen is the driver's**, one for every program: srvlib's commands take 4 words, so a line couldn't carry its colour too, and a shell's lines each open `/dev/vid/draw` anew.
+  * **`bitmap 640` is 1 or 2 bits a pixel**: at 4 or 8 it was more than the program's VRAM, and drew over the console's map and font.
+  * **cx16-320-8 isn't there**: cc65's X16 driver (`cx320p1`) calls the X16's kernal, so the Hydra's is new, over `/dev/vid/draw`.
+  * Samples: `sketch` (`vera.h`, the mouse) and `shapes` (TGI).  The draw test (rc, HyForth, hylang, both samples).
 * The programmer's chapter is `reborn/docs/programming/video.md`; the status, `reborn/docs/status.md`'s phase 8.
 
 ### **The console and the text windows**
@@ -294,7 +300,7 @@ With a keyboard, the Hydra is a standalone computer: switch on, get a prompt on 
 
 **From here**, in the user's order (2026-10-07):
 1. **The keyboard and mouse** (step 6): done (As built, above), and the SMC in the wiring guide.  The mouse's words in each language come with the graphics words.
-2. **The graphics words** (step 5): HyForth's `video` library and turtle graphics; hylang's; C's `vera.h`; a TGI driver from cc65's `cx16-320-8`.
+2. **The graphics words** (step 5): done (As built, above), the mouse's words with them.
 3. **The rest of the Vera X**: FX in the emulator (the chip's line and polygon helpers, its cache writes and multiplier: `vera.js` keeps their registers only), and FX in the graphics words where it helps; the VERA's SD card (its SPI controller, a second back end for `#d`'s cards); the output modes (VGA, composite, RGB) and the 240p line doubling in `ctl`; the PSG in scores (`play`'s MML); the VERA in the danlang emulator; demos (step 8).
 4. **With the text windows**: their W8 (the seats, the keyboard and the mouse in the console) once 1 is in.
 5. **The hardware**: the carrier card (option A), its timing checked on the bus; then option B, the one-board Vera X.

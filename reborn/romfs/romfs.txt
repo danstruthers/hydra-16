@@ -71,6 +71,7 @@ lib/forth/cons.fs   lib/forth/cons.fs
 lib/forth/proc.fs   lib/forth/proc.fs
 lib/forth/clock.fs  lib/forth/clock.fs
 lib/forth/disk.fs   lib/forth/disk.fs
+lib/forth/video.fs  lib/forth/video.fs          ;   the Vera X's screen: drawing, turtle graphics, sprites, the mouse
 lib/font/iso8859-15 ../modules/vid/iso8859-15.fnt ; The screen's fonts, 8 x 8, for /dev/vid/font: vid's own ...
 lib/font/cp437      lib/font/cp437              ;   and the PC's (both the X16 ROM's charsets, public domain)
 lib/forth/pc.fs     lib/forth/pc.fs
@@ -78,6 +79,7 @@ lib/hylang/globals.hl lib/hylang/globals.hl ; hylang's library: danlang's (lib/ 
 lib/hylang/hylib.hl lib/hylang/hylib.hl     ;   (hylib.hl loads it, then hylang's own: clock ...)
 lib/hylang/dice.hl  lib/hylang/dice.hl      ;   (from its snapshot, the module hysnap) and the others by (load "dice")
 lib/hylang/screen.hl lib/hylang/screen.hl
+lib/hylang/video.hl lib/hylang/video.hl
 lib/hylang/newns.hl lib/hylang/newns.hl     ; (newns): the default namespace built again, in hylang's own
 lib/hylang/dev.hl   lib/hylang/dev.hl       ; The device libraries, (use "gpio") ...: hylang over the devices' files
 lib/hylang/gpio.hl  lib/hylang/gpio.hl      ;   (dev.hl: what they share)
@@ -110,6 +112,8 @@ sample/c/hello      ../obj/samples/c/hello.hyx  ; The C SDK's samples, built (sd
 sample/c/upper      ../obj/samples/c/upper.hyx
 sample/c/code       ../obj/samples/c/code.hyx
 sample/c/keys       ../obj/samples/c/keys.hyx
+sample/c/sketch     ../obj/samples/c/sketch.hyx
+sample/c/shapes     ../obj/samples/c/shapes.hyx
 sample/c/tones      ../obj/samples/c/tones.hyx
 sample/c/jukebox    ../obj/samples/c/jukebox.hyx
 sample/c/ctest      ../obj/samples/c/ctest.hyx

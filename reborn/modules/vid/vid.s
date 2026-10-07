@@ -6,8 +6,8 @@
 ; answer, so it looks for DETECT_TICKS; with no card it ends (E_NODEV: no #v, and nothing at /dev/vid).
 ;   /ctl      mode 80x60, mode 80x30, mode 40x30 (the text's columns and rows; the screen cleared); cursor blink,
 ;             cursor on, cursor off; border N (its colour, 0-255); bitmap 320 D, bitmap 640 D, bitmap off (layer 0,
-;             under the text, a bitmap from VRAM 0 of D bits a pixel: 1, 2, 4 or 8; 320 across shows the text
-;             40x30, 640 80x60); claim, claim all, release (the chip, for direct access: below); reset (the chip set
+;             under the text, a bitmap from VRAM 0 of D bits a pixel: 1, 2, 4 or 8, 640 across 1 or 2; 320 across
+;             shows the text 40x30, 640 80x60); claim, claim all, release (the chip, for direct access: below); reset (the chip set
 ;             up again for the console, the screen cleared).  It reads as the state, a line each: "vera 47.0.2" (the
 ;             gateware's version; "vera 0.9" without one), "mode 80x60", "cursor blink", "border 0", "bitmap off",
 ;             and "claimed", with the claimer's task (and "all") if the chip's claimed
@@ -41,6 +41,8 @@
 ;             left for right, with mousectl's swap on), each a change
 ;   /mousectl pointer on|off (the pointer, sprite 1: an arrow, its image at $1F820; on, it's shown once the mouse has
 ;             moved, but while the chip's claimed), swap on|off.  It reads as the state: "pointer on", "swap off"
+;   /draw     drawing on layer 0's bitmap (ctl's bitmap): pen C, plot X Y, line X0 Y0 X1 Y1, box X0 Y0 X1 Y1, bar X0
+;             Y0 X1 Y1, circle X Y R, disc X Y R, clear [C], text X Y STRING (draw.inc has the rest).  It reads as "pen 15"
 ;   /pcmctl   rate HZ (the VERA's nearest: 381 Hz a step, up to 48,828; 0 stops it), bits 8|16, mono, stereo, volume
 ;             N (0-15), reset (the FIFO emptied), drain (waits till the FIFO's empty); the PCM's task's, or anyone's
 ;             while no task has /pcm (another's: E_BUSY).  It reads as the state: "rate 22126", "bits 8", "mono",
@@ -114,7 +116,8 @@ E_VRAM          = 3             ;   the VRAM's files (vram, pal, sprites, font: 
 E_FRAME         = 7             ;   frame ...
 E_PSG           = 8             ;   psg ...
 E_PCM           = 9             ;   pcm ...
-E_MOUSE         = 13            ;   mouse
+E_MOUSE         = 13            ;   mouse ...
+E_DRAW          = 17            ;   draw
 MREC            = 10            ; The mouse's state, a record (mx on): x, y, the buttons, the time, its change
 MQ_N            = 8             ; The buttons' changes queued (a power of 2)
 PCM_16          = $20           ; AUDIO_CTRL: 16 bits a sample ...
@@ -212,6 +215,8 @@ init:
             sta         cur_mode
             lda         #1
             sta         cur_on
+            lda         #DRAW_FRONT                         ; The drawing's colour
+            sta         dcolor
             lda         #1                                  ; The mouse: in the middle, its pointer on
             sta         ptr_mode
             LDR         mx, 320
@@ -3123,6 +3128,11 @@ c_bitmap:
             bpl         :-
             bra         @inval
 :
+            cpx         #2                                  ; (640 across: 1 or 2 bits a pixel, as 4 and 8 would be
+            bne         :+                                  ;   more than the program's 108K of VRAM)
+            cpy         #2
+            bcs         @inval
+:
             sty         bmdepth
             stx         bitmap
             jsr         layer0_set
@@ -3378,6 +3388,8 @@ srv_tree:
             SRV_ENTRY   s_mousein, 0,   SK_CTL,  mousein_cmds, SM_WRITE,         0      ; 14
             SRV_ENTRY   s_mousectl, 0,  SK_CTL,  mousectl_cmds, SM_READ | SM_WRITE, 16  ; 15 (reads as 16)
             SRV_ENTRY   s_mousectl, $FE, SK_TEXT, gen_mousectl, SM_READ,         0      ; 16 (mousectl's)
+            SRV_ENTRY   s_draw,    0,   SK_CTL,  draw_cmds,  SM_READ | SM_WRITE, 18     ; 17 (E_DRAW; reads as 18)
+            SRV_ENTRY   s_draw,    $FE, SK_TEXT, gen_draw,   SM_READ,            0      ; 18 (draw's)
             .word       0
 
 ctl_cmds:
@@ -3392,6 +3404,18 @@ ctl_cmds:
 
 mousein_cmds:
             .word       s_m, mi_move
+            .word       0
+
+draw_cmds:
+            .word       s_pen, c_pen
+            .word       s_plot, c_plot
+            .word       s_line, c_line
+            .word       s_box, c_box
+            .word       s_bar, c_bar
+            .word       s_circle, c_circle
+            .word       s_disc, c_disc
+            .word       s_clear, c_clear
+            .word       s_text, c_text
             .word       0
 
 mousectl_cmds:
@@ -3520,6 +3544,16 @@ s_pcmctl:   .byte       "pcmctl", 0
 s_mouse:    .byte       "mouse", 0
 s_mousein:  .byte       "mousein", 0
 s_mousectl: .byte       "mousectl", 0
+s_draw:     .byte       "draw", 0
+s_pen:      .byte       "pen", 0
+s_plot:     .byte       "plot", 0
+s_line:     .byte       "line", 0
+s_box:      .byte       "box", 0
+s_bar:      .byte       "bar", 0
+s_circle:   .byte       "circle", 0
+s_disc:     .byte       "disc", 0
+s_clear:    .byte       "clear", 0
+s_text:     .byte       "text", 0
 s_m:        .byte       "m", 0
 s_pointer:  .byte       "pointer", 0
 s_swap:     .byte       "swap", 0
@@ -3557,4 +3591,5 @@ s_nl_bitmap: .byte      LF, "bitmap ", 0
 s_nl_claimed: .byte     LF, "claimed", 0
 s_sp_all:   .byte       " all", 0
 
+.include "draw.inc"
 .include "srvlib.s"

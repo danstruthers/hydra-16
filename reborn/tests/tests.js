@@ -371,7 +371,7 @@ const C_LINES = [
 // zzz on the screen), then both (the screen repainted from the window's text); colours (SGR, a file on the PC);
 // a font from the ROM disk; a bad command
 const SCREEN_LINES = [
-  ["ls /dev/vid", "ctl\nterm\nvram\npal\nsprites\nfont\nframe\npsg\npcm\npcmctl\nmouse\nmousein\nmousectl"],
+  ["ls /dev/vid", "ctl\nterm\nvram\npal\nsprites\nfont\nframe\npsg\npcm\npcmctl\nmouse\nmousein\nmousectl\ndraw"],
   ["cat /dev/vid/ctl", "vera 47.0.2\nmode 80x60\ncursor blink\nborder 0\nbitmap off\nclaimed"],
   ["grep terminal /dev/consctl", "terminal both"],
   ["echo serial >/dev/consctl; echo z^zz; grep -c 'z[z]z' /dev/vid/term; echo both >/dev/consctl", "zzz\n0"],
@@ -1047,6 +1047,26 @@ function pcReport(m, attaches, naks, repeats) {
   return f;
 }
 
+// The draw test's lines at HyForth (lib video) and hylang (video.hl), and what each prints ('': nothing): vid's
+// /dev/vid/draw on the bitmap at each depth, read back by vpeek; the turtle; rc's lines to the file
+const DRAW_FORTH = [
+  ['lib video', ''], ['320 8 bitmap  0 pen clear  5 pen 10 20 plot  20 320 * 10 + 0 vpeek .', '5 '],
+  ['0 0 9 0 line  4 0 vpeek .', '5 '], ['20 20 29 29 box  20 320 * 25 + 0 vpeek .  25 320 * 25 + 0 vpeek .', '5 0 '],
+  ['40 40 44 42 bar  41 320 * 42 + 0 vpeek .  43 320 * 42 + 0 vpeek .', '5 0 '],
+  ['100 100 10 circle  100 320 * 110 + 0 vpeek .  100 320 * 100 + 0 vpeek .', '5 0 '],
+  ['200 100 5 disc  100 320 * 203 + 0 vpeek .', '5 '], ['-5 -5 plot  5000 0 plot', 'plot: invalid argument'],
+  ['320 4 bitmap  0 pen clear  7 pen 1 0 plot  0 0 vpeek .  12 pen 0 0 plot  0 0 vpeek .', '7 199 '],
+  ['320 2 bitmap  0 pen clear  2 pen 2 0 plot  0 0 vpeek .', '8 '],
+  ['640 1 bitmap  0 pen clear  1 pen 3 0 plot  0 0 vpeek .  0 479 639 479 line  479 80 * 0 vpeek .', '16 255 '],
+  ['640 4 bitmap', 'invalid argument'], ['320 8 bitmap  cs 7 pen 50 fd 90 rt 40 fd heading .', '90 '],
+  ['95 320 * 160 + 0 vpeek .  70 320 * 180 + 0 vpeek .', '7 7 '], ['200 $F00 palette!  2 100 50 sprite-at', ''],
+  ['0 pen clear  6 pen 0 0 s" Hi" text  1 0 vpeek .  0 0 vpeek .  3 320 * 3 + 0 vpeek .', '6 0 6 '],
+  ['echo pen 4 >/dev/vid/draw; cat /dev/vid/draw', 'pen 4'],
+];
+const DRAW_HY = [['(use "video")', 'NIL'], ['(pen 9)', 'NIL'], ['(plot 30 30)', 'NIL'], ['(vpeek (+ (* 30 320) 30))', '9'], ['(cs)', 'NIL'],
+  ['(pen 11)', 'NIL'], ['(fd 30)', 'NIL'], ['(vpeek (+ (* 95 320) 160))', '11'], ['(heading)', '0'],
+  ['(text 0 10 "H")', 'NIL'], ['(vpeek (+ (* 10 320) 1))', '11']];
+
 module.exports = {
   IRQ_OFF_MAX,
   tests: [
@@ -1519,7 +1539,7 @@ module.exports = {
     },
     {
       name: 'rom', what: 'the ROM disk: /rom (#f, spec x) walked on the Hydra, every file read back against its source (romfs/romfs.txt)',
-      init: 't_rom', cycles: 200e6,
+      init: 't_rom', cycles: 260e6,                         // (522K of files: the walk takes some 220M)
       check(m, out) {
         const romfs = require('../tools/romfs.js'), { crc16 } = require('../tools/romimg.js');
         const files = romfs.manifest(path.join(__dirname, '..', 'romfs', 'romfs.txt')), seen = new Map(), f = [];
@@ -2315,6 +2335,33 @@ module.exports = {
         if (leds !== '2 6 2 0 2') f.push('the LEDs: ' + leds + ' (2 6 2 0 2 wanted: Num Lock, Caps Lock on and off, Num Lock off and on)');
         if (s.lost) f.push(s.lost + ' key codes lost on the SMC');
         if (s.keys.length) f.push(s.keys.length + ' key codes left unread');
+        return f;
+      },
+    },
+    {
+      name: 'draw', what: 'the graphics words (VIDEO.md step 5): vid\'s /dev/vid/draw (pen, plot, line, box, bar, circle, disc, clear) on the bitmap at 8, 4, 2 and 1 bits a pixel (640 across), what falls off it, bad numbers, a bitmap too big; HyForth\'s lib video (the drawing, vpeek, the turtle, text, the palette, a sprite) and rc\'s lines to the file; hylang\'s video.hl (the drawing, vpeek, the turtle, text); the C SDK\'s shapes sample (cc65\'s TGI on hydra_tgi: a line, a bar, a circle, an ellipse and text, read back) and sketch (vera.h, drawing after the emulator\'s mouse till a key)',
+      init: 'init', cycles: 260e6, jsOnly: 'the danlang emulator has no VERA yet',
+      // (The mouse for sketch: to the top left, onto the strip's colour 2 and clicked, then to (150, 120), pressed,
+      // dragged 20 right and 20 down, let go; then a key, x, ends it)
+      get machine() {
+        const W = '\u0101', M = '\u0400', P = '\u0100';
+        return { vera: true, smc: { moves: [[-400, -400, 0], [50, 5, 0], [0, 0, 1], [0, 0, 0], [100, 115, 0], [0, 0, 1], [20, 0, 1], [0, 20, 1], [0, 0, 0]] },
+          input: DRAW_FORTH.map(l => W + l[0] + '\r').join('') + W + 'hylang\r' + DRAW_HY.map(l => W + l[0] + '\r').join('') + W + 'exit\r' +
+            W + '/rom/sample/c/shapes\r' + W + '/rom/sample/c/sketch\r' + '\u0102' + P + P + (M + P).repeat(9) + 'x\u0103' + W + 'echo $status\r' };
+      },
+      get expect() {
+        return [DRAW_FORTH.map(l => '/> ' + l[0] + '\n' + (l[1] ? l[1] + '\n' : '')).join('') + '/> hylang\n',
+          DRAW_HY.map(l => 'hylang> ' + l[0] + '\n=> ' + l[1] + '\n').join(''), '/> /rom/sample/c/shapes\n320x240, 256 colours: 4 4 2 14 11, text 165 dots\n/> /rom/sample/c/sketch\n/> echo $status\n0\n'];
+      },
+      check(m) {
+        const v = m.vera.vram, f = [];
+        if (v[0x1FA00 + 400] !== 0 || v[0x1FA00 + 401] !== 15) f.push('palette entry 200 isn\'t $F00 (red)');
+        const sp = Array.from(v.subarray(0x1FC00 + 18, 0x1FC00 + 22)).join(' ');
+        if (sp !== '100 0 50 0') f.push('sprite 2 at ' + sp + ' (100 0 50 0 wanted: 100, 50)');
+        let picked = 0;                                       // (sketch's lines, in the strip's colour 2)
+        for (let y = 10; y < 240; y++) for (let x = 0; x < 320; x++) if (v[y * 320 + x] === 2) picked++;
+        if (picked < 40 || v[120 * 320 + 160] !== 2 || v[130 * 320 + 170] !== 2) f.push('sketch\'s drag: ' + picked + ' pixels in colour 2 (40 or more wanted, through (160, 120) and (170, 130))');
+        if (m.smc.lost || m.smc.mouseLost) f.push('codes lost on the SMC');
         return f;
       },
     },

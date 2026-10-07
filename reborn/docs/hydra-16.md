@@ -312,9 +312,11 @@ The Vera X's driver (`vid`, task A) finds the card as the system starts, sets it
 where the console writes), `vram`, `pal`, `sprites`, `font`, `frame` (a frame waited for), `psg`, `pcm` and `pcmctl`.  A
 program can draw by writing those files, or **claim** the chip and write its registers itself, as an X16 program does.
 Its keyboard and mouse are an input controller's, the X16's SMC on the I2C bus: the `input` program types its keys
-into the console and gives the mouse to `/dev/vid/mouse` (Plan 9's), a sprite its pointer.  In the emulator, `--vera`
+into the console and gives the mouse to `/dev/vid/mouse` (Plan 9's), a sprite its pointer.  The driver draws on the bitmap (`/dev/vid/draw`: lines, boxes,
+circles, text), with the same words in HyForth (`lib video`, a turtle too), hylang, C (`vera.h`, and cc65's TGI).
+In the emulator, `--vera`
 puts one in slot 0, `--smc` its controller, and `--view` shows its screen in a browser, its keys and mouse the
-controller's.  The languages' graphics words and the carrier card come next.  [The screen](programming/video.md), [the
+controller's.  The carrier card comes next.  [The screen](programming/video.md), [the
 card](hardware.md#the-vera-x-slot-0), [VIDEO.md](design/plans/VIDEO.md).
 
 ---

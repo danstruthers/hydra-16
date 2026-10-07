@@ -79,7 +79,7 @@ commands to its `ctl`, and read as text where that's what it is.
 | `#S` | SPI devices | `N/data` (a transaction), `N/ctl` (`mode 0`, `mode 3`) |
 | `#g`, `#i` | GPIO, I2C | `0`-`7`, `port`, `ctl`, `ca1`; `ctl` and a file each device |
 | `#a` | Sound | `snd`, `sndctl`, `bell`, `psg` (the Vera X's PSG) |
-| `#v` | The Vera X | `ctl`, `term`, `vram`, `pal`, `sprites`, `font`, `frame`, `psg`, `pcm`, `pcmctl`, `mouse`, `mousein`, `mousectl` |
+| `#v` | The Vera X | `ctl`, `term`, `vram`, `pal`, `sprites`, `font`, `frame`, `psg`, `pcm`, `pcmctl`, `mouse`, `mousein`, `mousectl`, `draw` |
 | `#t`, `#n` | Time, null | `time`, `ticks`; `null`, `zero`, `kmesg` |
 | `#m` | Modules | A file each (its image), `bin` |
 | `#p` | Tasks | `N/status`, `args`, `cwd`, `env`, `ns`, `fd`, `regs`, `mem`, `ram`, `note`, `ctl` |

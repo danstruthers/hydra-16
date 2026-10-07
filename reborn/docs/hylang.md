@@ -77,6 +77,7 @@ system's error: its text (`ERRSTR`'s, after the name it's about: `x: not found`)
 | **Buffers** | Bytes changed in place (shared, as a hash is): `(buffer n [fill])`, `(buffer s)`, `(buffer l)`, `(buffer b)`, `buffer?`, `(b i)` and `buffer-get`, `buffer-put` (its old byte), `buffer-fill`, `buffer-copy` (overlapping too), `buffer-cmp` (a part of one against a string's or a buffer's bytes, as `cmp` orders strings), `read-buffer` (how many; NIL at the stream's end); `len`, `bytes`, `from-bytes`, `eq`, `cmp` and `save` take one; printed `<buffer>{1 2}` | `modules/hylang/buffers.inc`: a string's cell, its blob changed in place |
 | **Where** | `(platform)`, `(hydra?)` | `:hydra`, T |
 | **The screen** | `(use "screen")`: `cls`, `at`, `color`, `bold`, `plain`, `clear-line`, `cursor-off`, `cursor-on` | The console is a terminal (ANSI) |
+| **The Vera X's** | `(use "video")`: the bitmap, drawing on it (vid's `draw`: `pen`, `plot`, `line`, `box`, `bar`, `circle`, `disc`, `text`, `clear`), the turtle (`cs`, `home`, `fd`, `bk`, `rt`, `lt`, `pu`, `pd`, `heading`, `seth`: its place in rationals), VRAM, the palette, sprites, `vsync`, the mouse | HyForth's `lib video`, the same names |
 
 ### 2. The Hydra's built-ins
 

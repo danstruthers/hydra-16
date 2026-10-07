@@ -39,6 +39,7 @@ and serves it as files.  A program uses the screen three ways, from the easiest:
 | `mouse` | The mouse, after a change, as Plan 9's `/dev/mouse` (below: "The keyboard and the mouse") | `m X Y`: the mouse moved there |
 | `mousein` | | The mouse's moves, as the `input` program has them: `m DX DY B` |
 | `mousectl` | `pointer on`, `swap off` | `pointer on`, `pointer off`, `swap on`, `swap off` |
+| `draw` | The pen: `pen 15` | Drawing on the bitmap (below: "Drawing"): `pen C`, `plot X Y`, `line X0 Y0 X1 Y1`, `box`, `bar`, `circle X Y R`, `disc`, `text X Y STRING`, `clear [C]` |
 
 So a picture is a file copy away: a 320x240 picture of 8 bits a pixel, its bytes in a file, then
 
@@ -51,6 +52,50 @@ echo bitmap 320 8 >/dev/vid/ctl
 shows it on layer 0, under the console's text (which is layer 1: its cells' background colour 0 lets layer 0 show
 through; `bitmap 320` makes the text 40x30, as the picture is shown 2x).  `echo bitmap off >/dev/vid/ctl` takes it
 away.  (`cp` won't write a device's file: it makes the file it copies to, and a device's files are there already.)
+A bitmap 640 across is 1 or 2 bits a pixel: at 4 or 8 it would be more than the program's 108K of VRAM.
+
+## Drawing
+
+`/dev/vid/draw` draws on the bitmap, the driver doing the drawing in its own code, so it's quick (a line of 300
+pixels is some 60,000 cycles) and the console stays on the screen over it.  A write is a command: `pen C` (the
+colour: the driver's, one for every program, `pen 15` as it starts; a read gives it), `plot X Y`, `line X0 Y0 X1
+Y1`, `box X0 Y0 X1 Y1` (its outline), `bar X0 Y0 X1 Y1` (filled), `circle X Y R`, `disc X Y R` (filled), `text
+X Y STRING` (the console's font, 8 x 8: each character's dots in the pen's colour, the rest left as it is) and `clear
+[C]` (all of the bitmap, in colour 0 or C).  Coordinates are the bitmap's pixels (320 x 240, or 640 x 480), each
+-4096 to 4095; what falls off the bitmap isn't drawn.  With no bitmap a command is `E_INVAL`; while the chip's
+claimed, `E_BUSY` (a claimer draws for itself).
+
+```
+echo bitmap 320 8 >/dev/vid/ctl
+echo pen 4 >/dev/vid/draw; echo circle 160 120 50 >/dev/vid/draw; echo text 120 116 Hydra >/dev/vid/draw
+```
+
+Each language has the same words for it, and more:
+
+| What | rc (`/dev/vid/draw`) | HyForth (`lib video`) | hylang (`(use "video")`) | C (`vera.h`) |
+| :--- | :--- | :--- | :--- | :--- |
+| The bitmap | `echo bitmap 320 8 >/dev/vid/ctl` | `bitmap ( width depth -- )`, `bitmap-off` | `(bitmap 320 8)`, `(bitmap-off)` | `vid_bitmap (320, 8)` (0: off) |
+| The pen's colour | `pen C` | `pen ( c -- )` | `(pen c)` | `vid_pen (c)` |
+| A point, a line | `plot X Y`, `line X0 Y0 X1 Y1` | `plot ( x y -- )`, `line ( x0 y0 x1 y1 -- )` | `(plot x y)`, `(line x0 y0 x1 y1)` | `vid_plot`, `vid_line` |
+| A box, a bar (filled) | `box`, `bar X0 Y0 X1 Y1` | `box`, `bar ( x0 y0 x1 y1 -- )` | `(box ...)`, `(bar ...)` | `vid_box`, `vid_bar` |
+| A circle, a disc (filled) | `circle`, `disc X Y R` | `circle`, `disc ( x y r -- )` | `(circle x y r)`, `(disc x y r)` | `vid_circle`, `vid_disc` |
+| Text (the console's font) | `text X Y STRING` | `text ( x y c-addr u -- )` | `(text x y s)` | `vid_text (x, y, s)` |
+| All of it cleared | `clear [C]` | `clear` | `(clear)` | `vid_clear ()` |
+| The turtle | | `cs`, `home`, `fd`, `bk ( n -- )`, `rt`, `lt ( deg -- )`, `pu`, `pd`, `heading`, `seth` | `(cs)`, `(home)`, `(fd n)`, `(rt deg)` ... | |
+| VRAM | `/dev/vid/vram` | `vpoke ( addr bank c -- )`, `vpeek ( addr bank -- c )`, `vram!`, `vram@ ( addr bank c-addr u -- )` | `(vpoke addr v)`, `(vpeek addr)`, `(vram! addr bytes)`, `(vram@ addr n)` | `vera_write`, `vera_read`, `vera_load`; `vpoke`, `vpeek` (claimed) |
+| The palette, sprites | `/dev/vid/pal`, `sprites` | `palette! ( index rgb -- )`, `sprite! ( n c-addr -- )`, `sprite-at ( n x y -- )`, `sprite-off ( n -- )` | `(palette! i rgb)`, `(sprite! n bytes)`, `(sprite-at n x y)`, `(sprite-off n)` | `vid_palette`, `vid_sprite`, `vid_sprite_at`, `vid_sprite_off` |
+| The next frame | `/dev/vid/frame` | `vsync` | `(vsync)` | `vera_wait_frame ()` |
+| The mouse | `/dev/vid/mouse` | `mouse ( -- x y b )`, `mouse-wait` | `(mouse)`, `(mouse-wait)` | `vid_mouse`, `vid_mouse_wait` |
+
+HyForth's turtle is Logo's: it starts in the middle heading up, its pen down; `fd` draws as it goes, `rt` and `lt`
+turn it (degrees, clockwise), `cs` clears and takes it home.  `: square 4 0 do 80 fd 90 rt loop ;` draws a square.
+hylang's keeps its place in rationals, so it never drifts.  The palette's entries are `$RGB`, 4 bits each.
+
+**cc65's TGI** (`tgi.h`) draws there too, so cc65's portable graphics programs run: `tgi_install (hydra_tgi)`,
+then `tgi_init ()`: 320 x 240 in 256 colours (TGI's colour n the palette's entry its palette gives), lines, bars,
+circles, ellipses and arcs, text in the console's font (or TGI's vector fonts), `tgi_getpixel`.  The driver is
+`sdk/c/lib/tgihydra.s`, over `/dev/vid/draw`.  The samples: `shapes` (TGI) and `sketch` (`vera.h` and the
+mouse: `/rom/sample/c/sketch`).
 
 A game paces itself by `frame`: a read waits for the next VSYNC.  In C, `fread` a line from it; in HyForth,
 `read-line`.
