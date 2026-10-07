@@ -2822,6 +2822,23 @@ module.exports = {
         'echo done\ndone\n%'],
     },
     {
+      name: 'scrollview', what: 'the scrollback\'s view (W6b): Ctrl-] [ (its end), PgUp, the arrows, Space\'s mark and Enter\'s copy (the lines marked to the cursor\'s, into /dev/snarf); Enter alone (the cursor\'s line); Escape twice; Shift-PgUp (a page up) while a program writes on (its output there after: the view left with q), Home and End; its footer\'s %y on the serial port (default chrome serial on)',
+      init: 't_rc', cycles: 200e6,
+      // (30 lines and the command's two rows: the view a page up from its end, its top the command's first row; up
+      // from the last row (line 22) to line 21, marked, down twice (the top a line down): lines 21-23 copied.  Then
+      // the view at the end, up twice: the line two above the prompt's, line 22, copied alone)
+      get machine() {
+        const L = '\u0100', UP = '\x1b[A', DOWN = '\x1b[B', PGUP = '\x1b[5~';
+        return { input: 'āfor(i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30) echo line $i\r' +
+          'ā\x1d[' + L + PGUP + L + UP + L + ' ' + L + DOWN + L + DOWN + L + '\r' + 'ācat /dev/snarf\r' +
+          'ā\x1d[' + L + UP + L + UP + L + '\r' + 'ācat /dev/snarf\r' + 'ā\x1d[' + L + '\x1b\x1b' +
+          'āsleep 1; echo after the view\r' + '\x1b[5;2~' + L + '\x1b[H' + L + '\x1b[F' + L + L + 'q' +
+          'āecho default chrome serial on >/dev/wctl\r' + 'ā\x1b[5;2~' + L + 'q' + 'āecho done\r' };
+      },
+      expect: ['% cat /dev/snarf\nline 21\nline 22\nline 23\n%', '% cat /dev/snarf\nline 22\n%', 'after the view\n%',
+        ' 1-21/', '  Space: mark, Enter: copy, q: leave', 'echo done\ndone\n%'],
+    },
+    {
       name: 'pcm', what: 'the Vera X\'s PCM (vid\'s /pcm and /pcmctl), at rc: its files and state; the rate (the VERA\'s nearest) and volume; raw samples from a card into the FIFO, drained; bad commands; /pcm one task\'s (another\'s pcmctl: busy); WAV files played (8 bits mono, made signed; 16 bits stereo past an odd chunk; a float one, not a song); a ZSM\'s PCM instruments (one, then one looped, stopped by the FIFO emptied: from RAM) and its claim of the PCM; one too big for RAM (from the file); the FIFO\'s bytes in order, none lost, its runs dry only at the ends',
       init: 't_rc', cycles: 150e6, jsOnly: 'the danlang emulator has no VERA yet',
       get machine() { return { input: typed(PCM_LINES), vera: { pcmLog: true }, sd: pcmCard() }; },

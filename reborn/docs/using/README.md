@@ -27,5 +27,5 @@ at `/proc`), controlled by writing commands to its `ctl`.  Each task has a names
 built by binds and mounts, so `/bin` is a union of the RAM disk's, the cards', the ROM disk's and the ROM's
 programs.  The console is windows, rio's way on a serial terminal: each window is a whole console, shown one at a
 time, in groups (a group a shell session: Ctrl-] c; Ctrl-] n and p between groups, Ctrl-] Tab between its windows,
-Ctrl-] and a digit to one, Ctrl-] w a list of them).  The login shell is HyForth over rc (`forth -l`): a line is Forth if its
+Ctrl-] and a digit to one, Ctrl-] w a list of them; Ctrl-] [ the scrollback, Ctrl-] y a paste of `/dev/snarf`).  The login shell is HyForth over rc (`forth -l`): a line is Forth if its
 first word is a Forth word or a number, else an rc command line.

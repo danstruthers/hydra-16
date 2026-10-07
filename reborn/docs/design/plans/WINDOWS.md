@@ -511,6 +511,14 @@ October 2026, on `reborn-text-windows` (reborn's `docs/status.md`, "The text win
 * **A paste is fed as the window's keys' queue has room**, before each request, as `kbdin`'s writes are: an 8K paste goes in as the program reads.  An LF goes as a CR, as a terminal pastes.
 * **`?2004` is the console's**, as `?1` is (it decodes the keys): it isn't passed to the terminal, so the PC's own pastes aren't bracketed.  Its brackets reach only a `keys vt` reader: the decoder drops a sequence that isn't a key, and `CSI 200 ~` isn't one of `keys hydra`'s.
 
+### **As built: W6b**
+
+* **The view is a window of the console's own**, as the list is: its rows are the lines copied in, a row's three planes at a time through a RAM buffer (the banks are seen one at a time), so neither painter knows about views.  A move copies its rows again and paints the terminals whole: a page at 9600 baud takes a couple of seconds, at 115200 a fraction of one.
+* **It stays on its text while the program writes**: a line's index from the oldest doesn't change while the scrollback grows, and the lines dropped off the oldest end (the scrollback full) are counted per window, so the view's top and mark move up with them when it next looks.
+* **Selection is by lines**, Space to mark and the cursor to extend, as a line editor would; a character selection can come with `/` and the rest later.  The selection shows reversed to the row's end, its blank end written out in the view's copy.
+* **Shift-PgUp is taken, not watched for**, while it's bound: the window's decoder drops it, as it isn't the program's (Ctrl-Tab's bytes reach no program anyway).  In the view it's the view's own PgUp.
+* **The footer says where it is**: `%y`, a chrome code, is the shown view's place; the view's own footer format carries it and the keys' hint.
+
 ### **Decisions**
 
 The user's answers to the plan's questions, 2026-10-07:

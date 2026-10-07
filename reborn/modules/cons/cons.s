@@ -50,6 +50,11 @@
 ;               Ctrl-] y pastes it into the window shown as its keys (an LF a CR, as a terminal's paste), between
 ;               CSI 200 ~ and CSI 201 ~ if its program asked for bracketed paste (?2004), which only a keys vt
 ;               reader gets (the decoder drops what isn't a key)
+; The scrollback's view (W6b): Ctrl-] [ or Shift-PgUp (taken from the window's keys while it's bound) shows the
+; window shown's lines (its scrollback's and screen's) in a window of the console's own, its program going on
+; meanwhile.  The arrows, PgUp, PgDn, Home and End move it; Space marks the cursor's line, and the lines from it to
+; the cursor's are the selection; Enter copies the selection (none: the cursor's line) to /snarf, a line each, and
+; leaves; q, Escape twice, or its key again leaves.  Its footer has %y, its place
 ; The chrome (W4): a terminal shows the bar (a row, console-wide, at its top or its bottom) and the shown window's
 ; header and footer (a row each, above and below its screen), as that window's chrome is on there (w_chr; by default
 ; all of it on the screen, none on the serial port).  Each is rendered from its format (chr_render: %n its number, %l
@@ -68,7 +73,8 @@
 ; are bindings (W5d), wctl's key lines change them: key prefix ^X or ctrl-X (a control: not Ctrl-C, Ctrl-\,
 ; Escape, CR or LF); key KEY ACTION, KEY after the prefix a character (not a digit: Ctrl-] and a digit is always that
 ; window), ^X or ctrl-X, tab or shift-tab; key ctrl-tab ACTION, key ctrl-shift-tab ACTION; ACTION next, previous (the group's windows),
-; next-group, previous-group, new (a group: Ctrl-] c's), list, hold, close, paste (Ctrl-] y) or none.  The list (Ctrl-] w) is a window
+; next-group, previous-group, new (a group: Ctrl-] c's), list, hold, close, paste (Ctrl-] y), scrollback (Ctrl-]
+; [) or none; key shift-pgup ACTION too (scrollback: the view a page up).  The list (Ctrl-] w) is a window
 ; of the console's own, shown till a window's key (its number in hex), or the arrows and Enter, shows that one; q,
 ; Escape twice, or the list's key again shows the one before.
 ;
@@ -145,8 +151,9 @@ KA_NEW          = 5             ;   a group wanted (Ctrl-] c's: /wnew's) ...
 KA_LIST         = 6             ;   the windows' list ...
 KA_HOLD         = 7             ;   the window shown held, or not ...
 KA_CLOSE        = 8             ;   its note group a hangup ...
-KA_PASTE        = 9             ;   the snarf buffer pasted
-KA_N            = 10
+KA_PASTE        = 9             ;   the snarf buffer pasted ...
+KA_VIEW         = 10            ;   the scrollback's view
+KA_N            = 11
 SNARF_MAX       = 8192          ; /snarf's bytes, at most: its bank's
 LS_ROW          = 3             ; The list's first window's row
 RATE_BOOT       = 5             ; 9600: the kernel's bring-up console's
@@ -281,7 +288,7 @@ kw_p:       .res        3                                   ;   and them
 want_new:   .res        1                                   ; <> 0: Ctrl-] c, a window wanted (for /wnew's reader)
 kb_act:     .res        128                                 ; The keys (key's): each one's action after the prefix
                                                             ;   (KA_*; ESC's: Shift-Tab's, ESC [ Z) ...
-kb_ct:      .res        2                                   ;   and Ctrl-Tab's and Ctrl-Shift-Tab's
+kb_ct:      .res        3                                   ;   and Ctrl-Tab's, Ctrl-Shift-Tab's and Shift-PgUp's
 ls_w:       .res        1                                   ; The windows' list (Ctrl-] w): its window ($FF: none) ...
 ls_from:    .res        1                                   ;   the one shown before it ...
 ls_n:       .res        1                                   ;   the windows listed ...
@@ -296,6 +303,19 @@ ps_i:       .res        2                                   ;   the snarf buffer
 ps_ph:      .res        1                                   ;   its part (0 the bracket before, 1 the text, 2 the
 ps_k:       .res        1                                   ;   bracket after), that bracket's next byte ...
 ps_br:      .res        1                                   ;   and <> 0: bracketed (?2004)
+vv_w:       .res        1                                   ; The scrollback's view: its window ($FF: none) ...
+vv_src:     .res        1                                   ;   the window it shows ...
+vv_top:     .res        1                                   ;   that one's line at its top (0: the oldest) ...
+vv_cur:     .res        1                                   ;   its cursor's row ...
+vv_ma:      .res        1                                   ;   the marked line ($FF: none), and the cursor's: the
+vv_mb:      .res        1                                   ;   selection's ends ...
+vv_n:       .res        1                                   ;   the lines, its rows ...
+vv_r:       .res        1
+vv_add:     .res        2                                   ;   the lines dropped off the oldest end (vt_lines'), as
+vv_seen:    .res        2                                   ;   they are and as it last saw them ...
+vv_esc:     .res        1                                   ;   its keys' sequence (1: ESC, 2: ESC [, 3: past a ;) ...
+vv_num:     .res        1                                   ;   its number ...
+vv_i:       .res        1                                   ;   and scratch
 bar_pos:    .res        1                                   ; The bar: 0 none, BAR_TOP, BAR_BOTTOM ...
 bar_fmt:    .res        FMT_SIZE                            ;   its format
 def_chr:    .res        1                                   ; A new window's chrome, header and footer
@@ -449,8 +469,11 @@ init:
             sta         kb_ct
             lda         #KA_PREV
             sta         kb_ct + 1
+            lda         #KA_VIEW
+            sta         kb_ct + 2
             lda         #$FF
             sta         ls_w
+            sta         vv_w
             sta         sn_bank                             ; (/snarf: empty, no bank yet; no paste)
             sta         ps_w
             stz         sn_len
@@ -733,11 +756,17 @@ distribute:
             beq         :+
             rts
 :
-            lda         ls_w                                ; (The list, another window shown: gone)
+            lda         ls_w                                ; (The list, or the view, another window shown: gone)
+            bmi         :+
+            cmp         w_in
+            beq         :+
+            jsr         ls_close
+:
+            lda         vv_w
             bmi         @byte
             cmp         w_in
             beq         @byte
-            jsr         ls_close
+            jsr         vv_close
 @byte:
             jsr         rx_get
             bcc         :+
@@ -759,10 +788,15 @@ distribute:
             bra         @byte
 
 @key:
-            pha                                             ; (To the window, or the list's; then the console's look:
-            ldx         ls_w                                ;   the window's decoder drops the sequences that aren't
-            bmi         :+                                  ;   keys)
+            pha                                             ; (To the window, or the list's or the view's; then the
+            ldx         ls_w                                ;   console's look: the window's decoder drops the
+            bmi         :+                                  ;   sequences that aren't keys)
             jsr         ls_key
+            bra         @watch
+:
+            ldx         vv_w
+            bmi         :+
+            jsr         vv_key
             bra         @watch
 :
             ldx         w_in
@@ -855,11 +889,15 @@ k_hold:                                                     ; The window shown h
             inc         TASK_EVENT                          ; (Its writers look again)
             rts
 
-k_close:                                                    ; Its note group a hangup (the list: the one before)
-            ldx         w_in
+k_close:                                                    ; Its note group a hangup (the list or the view: the
+            ldx         w_in                                ;   window before)
             cpx         ls_w
             bne         :+
             jmp         ls_back
+:
+            cpx         vv_w
+            bne         :+
+            jmp         vv_back
 :
             lda         w_group,X
             ora         #NOTE_GROUP
@@ -874,6 +912,8 @@ k_paste:
             beq         @none
             lda         w_in
             cmp         ls_w
+            beq         @none
+            cmp         vv_w
             beq         @none
             sta         ps_w
             FAR2        vt_paste
@@ -976,6 +1016,434 @@ ps_next:
             rts
 @done:
             sec
+            rts
+
+; Ctrl-] [, Shift-PgUp: the scrollback's view of the window shown, at its end (the window's last lines, its cursor
+; on the last); its key again leaves it.  A window of the console's own, its notes the window's (Ctrl-C's)
+k_view:
+            lda         vv_w
+            bmi         :+
+            jmp         vv_back
+:
+            lda         w_in
+            cmp         ls_w
+            beq         @none
+            sta         vv_src
+            lda         #$FF
+            jsr         w_make
+            bcs         @none
+            stx         vv_w
+            ldy         vv_src
+            lda         w_group,Y
+            sta         w_group,X
+            txa                                             ; Its label, its footer
+            jsr         lbl_ptr
+            ldy         #0
+:
+            lda         s_vv_label,Y
+            sta         (m),Y
+            beq         :+
+            iny
+            bra         :-
+:
+            lda         vv_w
+            ldy         #1
+            jsr         fmt_at
+            lda         #<s_vv_foot
+            ldx         #>s_vv_foot
+            jsr         fmt_copy
+            lda         vv_src                              ; The lines, its rows
+            FAR2        vt_lines
+            sta         vv_n
+            lda         vv_add
+            sta         vv_seen
+            lda         vv_add + 1
+            sta         vv_seen + 1
+            ldx         vv_w
+            FAR2        vt_size
+            stx         vv_r
+            lda         #$FF
+            sta         vv_ma
+            stz         vv_esc
+            jsr         vv_end
+            jsr         vv_fill
+            ldx         vv_w
+            jmp         w_show
+@none:
+            rts
+
+; The view filled again (vt.s), its footer with it; marked, the selection to the cursor's line
+vv_fill:
+            lda         vv_ma
+            cmp         #$FF
+            beq         :+
+            clc
+            lda         vv_top
+            adc         vv_cur
+            sta         vv_mb
+:
+            FAR2        vt_view
+            lda         #3
+            tsb         chr_dirty
+            rts
+
+; The view's key .A: the arrows, PgUp, PgDn, Home, End (a terminal's sequences, either form); Space, Enter, q,
+; Escape twice
+vv_key:
+            ldx         vv_src                              ; (Its window gone: it goes too)
+            ldy         w_used,X
+            bne         :+
+            jmp         vv_close
+:
+            ldx         vv_esc
+            beq         @plain
+            dex
+            bne         @seq
+            cmp         #'['                                ; ESC: [ or O starts a sequence, ESC again leaves
+            beq         :+
+            cmp         #'O'
+            beq         :+
+            stz         vv_esc
+            cmp         #ESC
+            bne         @plain
+            jmp         vv_back
+:
+            lda         #2
+            sta         vv_esc
+            stz         vv_num
+            rts
+@seq:
+            cmp         #'0'                                ; (Its first number; past a ;, the rest dropped)
+            bcc         :+
+            cmp         #'9' + 1
+            bcs         :+
+            dex
+            beq         @first
+            rts
+@first:
+            and         #$0F
+            ldy         vv_num
+            sty         p
+            jsr         dec_add
+            sta         vv_num
+            rts
+:
+            cmp         #';'
+            bne         :+
+            lda         #3
+            sta         vv_esc
+            rts
+:
+            cmp         #$40
+            bcc         @done
+            stz         vv_esc
+            cmp         #'~'
+            beq         @tilde
+            ldx         #3
+:
+            cmp         vk_let,X
+            beq         :+
+            dex
+            bpl         :-
+            rts
+:
+            lda         vk_letm,X
+            tax
+            jmp         vv_move
+@tilde:
+            lda         vv_num
+            ldx         #5
+:
+            cmp         vk_num,X
+            beq         :+
+            dex
+            bpl         :-
+            rts
+:
+            lda         vk_numm,X
+            tax
+            jmp         vv_move
+@plain:
+            cmp         #ESC
+            bne         :+
+            lda         #1
+            sta         vv_esc
+            rts
+:
+            cmp         #' '
+            beq         @mark
+            cmp         #CR
+            beq         @copy
+            cmp         #LF
+            beq         @copy
+            cmp         #'q'
+            bne         @done
+            jmp         vv_back
+@mark:                                                      ; (Space: the cursor's line marked, or none)
+            jsr         vv_lines
+            lda         vv_ma
+            cmp         #$FF
+            bne         :+
+            clc
+            lda         vv_top
+            adc         vv_cur
+            sta         vv_ma
+            jmp         vv_fill
+:
+            lda         #$FF
+            sta         vv_ma
+            jmp         vv_fill
+@copy:
+            jmp         vv_copy
+@done:
+            rts
+
+; The view moved by .X (0 up, 1 down, 2 a page up, 3 a page down, 4 to the start, 5 to the end), its lines counted
+; again first
+vv_move:
+            phx
+            jsr         vv_lines
+            pla
+            asl
+            tax
+            jsr         @go
+            jmp         vv_fill
+@go:
+            jmp         (vv_vec,X)
+
+vv_up:                                                      ; (Its cursor up a row, else its top up a line)
+            lda         vv_cur
+            beq         :+
+            dec         vv_cur
+            rts
+:
+            lda         vv_top
+            beq         :+
+            dec         vv_top
+:
+            rts
+
+vv_down:                                                    ; (Its cursor down a row, else its top down a line)
+            lda         vv_cur
+            inc         a
+            cmp         vv_r
+            bcs         @top
+            clc
+            adc         vv_top
+            cmp         vv_n
+            bcs         @done
+            inc         vv_cur
+            rts
+@top:
+            clc
+            lda         vv_top
+            adc         vv_r
+            cmp         vv_n
+            bcs         @done
+            inc         vv_top
+@done:
+            rts
+
+vv_pgup:                                                    ; (Its top a page up; at the start, its cursor too)
+            lda         vv_top
+            bne         :+
+            stz         vv_cur
+            rts
+:
+            sec
+            sbc         vv_r
+            bcs         :+
+            lda         #0
+:
+            sta         vv_top
+            rts
+
+vv_pgdn:                                                    ; (Its top a page down; at the end, its cursor too)
+            jsr         vv_last
+            cmp         vv_top
+            beq         vv_end
+            bcc         vv_end
+            clc
+            lda         vv_top
+            adc         vv_r
+            cmp         vv_i
+            bcc         :+
+            lda         vv_i
+:
+            sta         vv_top
+            rts
+
+vv_home:
+            stz         vv_top
+            stz         vv_cur
+            rts
+
+vv_end:                                                     ; (The last lines, its cursor on the last)
+            jsr         vv_last
+            sta         vv_top
+            sec
+            lda         vv_n
+            sbc         vv_top
+            cmp         vv_r
+            bcc         :+
+            lda         vv_r
+:
+            dec         a
+            sta         vv_cur
+            rts
+
+vv_last:                                                    ; (.A, vv_i: its top at the end, the lines less its
+            sec                                             ;   rows, 0 at least)
+            lda         vv_n
+            sbc         vv_r
+            bcs         :+
+            lda         #0
+:
+            sta         vv_i
+            rts
+
+; The view's lines counted again: those dropped off the oldest end since it last looked move its top and mark up
+; with their lines; its top no further than the end
+vv_lines:
+            lda         vv_src
+            FAR2        vt_lines
+            sta         vv_n
+            sec                                             ; (The lines dropped: 255 at most)
+            lda         vv_add
+            sbc         vv_seen
+            tax
+            lda         vv_add + 1
+            sbc         vv_seen + 1
+            beq         :+
+            ldx         #$FF
+:
+            stx         vv_i
+            lda         vv_add
+            sta         vv_seen
+            lda         vv_add + 1
+            sta         vv_seen + 1
+            sec
+            lda         vv_top
+            sbc         vv_i
+            bcs         :+
+            lda         #0
+:
+            sta         vv_top
+            lda         vv_ma
+            cmp         #$FF
+            beq         :++
+            sec
+            sbc         vv_i
+            bcs         :+
+            lda         #0
+:
+            sta         vv_ma
+:
+            jsr         vv_last
+            cmp         vv_top
+            bcs         :+
+            sta         vv_top
+:
+            rts
+
+; Enter: the selection (none: the cursor's line) into the snarf buffer, in place of what it had: each line's text and
+; an LF.  Then the view's left
+vv_copy:
+            jsr         vv_lines
+            jsr         sn_bankget
+            bcs         @out
+            stz         sn_len
+            stz         sn_len + 1
+            clc
+            lda         vv_top
+            adc         vv_cur
+            sta         vv_mb
+            lda         vv_ma                               ; (vv_ma its first line, vv_mb its last)
+            cmp         #$FF
+            bne         :+
+            lda         vv_mb
+:
+            cmp         vv_mb
+            bcc         :+
+            ldx         vv_mb
+            sta         vv_mb
+            txa
+:
+            sta         vv_ma
+@line:
+            ldx         vv_ma
+            cpx         vv_n
+            bcs         @out
+            lda         vv_src
+            FAR2        vt_line                             ; (.A: its length; its text in vbuf)
+            sta         vv_i
+            ldx         #0
+:
+            cpx         vv_i
+            bcs         :+
+            lda         vbuf,X
+            phx
+            jsr         sn_put
+            plx
+            inx
+            bra         :-
+:
+            lda         #LF
+            jsr         sn_put
+            lda         vv_ma
+            cmp         vv_mb
+            bcs         @out
+            inc         vv_ma
+            bra         @line
+@out:
+            jmp         vv_back
+
+; The window the view showed shown again (if it's still there), the view gone
+vv_back:
+            ldx         vv_src
+            lda         w_used,X
+            beq         vv_close
+            jsr         w_show
+vv_close:
+            ldx         vv_w
+            lda         #$FF
+            sta         vv_w
+            jmp         w_free
+
+; /snarf's bank, taken the first time.  OUT: C = 0; or C = 1, .A = the error
+sn_bankget:
+            lda         sn_bank
+            cmp         #$FF
+            clc
+            bne         :+
+            lda         #1
+            jsr         BANKS_ALLOC
+            bcs         :+
+            sta         sn_bank
+:
+            rts
+
+; .A at the snarf buffer's end (SNARF_MAX bytes at most: past them, dropped).  Modifies .A, .Y, p
+sn_put:
+            ldy         sn_len + 1
+            cpy         #>SNARF_MAX
+            bcs         @done
+            pha
+            lda         sn_len
+            sta         p
+            tya
+            adc         #>BANK_WINDOW
+            sta         p + 1
+            ldy         $00
+            lda         sn_bank
+            sta         $00
+            pla
+            sta         (p)
+            sty         $00
+            inc         sn_len
+            bne         @done
+            inc         sn_len + 1
+@done:
             rts
 
 ; The windows' list (Ctrl-] w): a window of the console's own, a line a window (the one chosen marked >, then its key:
@@ -2059,7 +2527,10 @@ kw_watch:
             bne         :+
             ldx         kw_n
             cpx         #2
-            bcs         @reset
+            bcc         @more
+            stz         kw_st
+            rts
+@more:
             inc         kw_n
             rts
 :
@@ -2084,7 +2555,7 @@ kw_watch:
             bne         @done
             lda         kw_p                                ; ESC [ 27 ; 5 (6) ; 9 ~
             cmp         #27
-            bne         @done
+            bne         @spgup
             lda         kw_p + 2
             cmp         #9
             bne         @done
@@ -2105,6 +2576,24 @@ kw_watch:
             bne         @done
             lda         kb_ct + 1
             jmp         k_do
+@spgup:                                                     ; ESC [ 5 ; 2 ~: Shift-PgUp, by its binding (the view's
+            cmp         #5                                  ;   own while it's shown: its PgUp); the view, entered,
+            bne         @done                               ;   a page up
+            lda         kw_p + 1
+            cmp         #2
+            bne         @done
+            lda         vv_w
+            bpl         @done
+            lda         kb_ct + 2
+            cmp         #KA_VIEW
+            beq         :+
+            jmp         k_do
+:
+            jsr         k_view
+            lda         vv_w
+            bmi         @done
+            ldx         #2
+            jmp         vv_move
 @size:
             lda         kw_p                                ; ESC [ 8 ; R ; C t
             cmp         #8
@@ -2456,14 +2945,8 @@ h_snarf:
             stz         sn_len
             stz         sn_len + 1
 :
-            lda         sn_bank                             ; (Its bank, the first time)
-            cmp         #$FF
-            bne         :+
-            lda         #1
-            jsr         BANKS_ALLOC
+            jsr         sn_bankget                          ; (Its bank, the first time)
             bcs         @done
-            sta         sn_bank
-:
             sec                                             ; n: the room from the offset
             lda         #<SNARF_MAX
             sbc         TASK_INBOX + RQ_OFFSET
@@ -3303,6 +3786,15 @@ key_raw:
 
 @tildekey:
             lda         tilde_key,X
+            cmp         #KEY_PGUP                           ; (Shift-PgUp, bound: the console's, not a key)
+            bne         :+
+            ldy         esc_mod
+            cpy         #2
+            bne         :+
+            ldy         kb_ct + 2
+            beq         :+
+            jmp         @byte
+:
             bra         @mods
 
 @bracket:                                                   ; (Raw, keys vt: as it came, its ESC now, the rest
@@ -4240,6 +4732,30 @@ cr_grp:                                                     ; %g: its group's
             ldx         w_in
             lda         w_grp,X
             jmp         cr_dec
+
+cr_y:                                                       ; %y: the scrollback's view's place (shown): the
+            lda         w_in                                ;   lines shown, of them
+            cmp         vv_w
+            bne         @none
+            lda         vv_top
+            inc         a
+            jsr         cr_dec
+            lda         #'-'
+            jsr         cr_put
+            clc
+            lda         vv_top
+            adc         vv_r
+            cmp         vv_n
+            bcc         :+
+            lda         vv_n
+:
+            jsr         cr_dec
+            lda         #'/'
+            jsr         cr_put
+            lda         vv_n
+            jmp         cr_dec
+@none:
+            rts
 
 cr_lbl:                                                     ; %l: its label
             ldx         w_in
@@ -5537,7 +6053,9 @@ c_keys:
 c_key:
             lda         z:srv_argn
             cmp         #2
-            bne         @inval
+            beq         @two
+            jmp         @inval
+@two:
             lda         srv_argp                            ; The first word
             sta         p
             lda         srv_argp + 1
@@ -5556,8 +6074,15 @@ c_key:
             lda         #<s_cstab_w
             ldx         #>s_cstab_w
             jsr         word_is
-            bne         @key
+            bne         :+
             ldy         #1
+            bra         @ct
+:
+            lda         #<s_spgup_w
+            ldx         #>s_spgup_w
+            jsr         word_is
+            bne         @key
+            ldy         #2
 @ct:
             phy
             jsr         @action
@@ -6875,13 +7400,23 @@ s_list_w:   .byte       "list", 0
 s_hold_w:   .byte       "hold", 0
 s_close_w:  .byte       "close", 0
 s_paste_w:  .byte       "paste", 0
+s_view_w:   .byte       "scrollback", 0
+s_spgup_w:  .byte       "shift-pgup", 0
 ka_names:   .word       s_none_w, s_next_w, s_prev_w, s_gnext_w, s_gprev_w, s_new_w, s_list_w, s_hold_w, s_close_w
-            .word       s_paste_w
+            .word       s_paste_w, s_view_w
 ka_vec:     .word       k_none, win_next, win_prev, grp_next, grp_prev, k_new, ls_open, k_hold, k_close
-            .word       k_paste
+            .word       k_paste, k_view
 .assert     * - ka_vec = KA_N * 2 .and ka_vec - ka_names = KA_N * 2, error, "ka_names and ka_vec: KA_N each"
 kb_def:     .byte       HT, KA_NEXT, ESC, KA_PREV, 'c', KA_NEW, 'n', KA_GNEXT, 'p', KA_GPREV, 'w', KA_LIST
-            .byte       'h', KA_HOLD, 'x', KA_CLOSE, 'y', KA_PASTE, 0   ; (The keys after the prefix, as it starts)
+            .byte       'h', KA_HOLD, 'x', KA_CLOSE, 'y', KA_PASTE, '[', KA_VIEW, 0     ; (The keys after the prefix,
+                                                            ;   as it starts)
+s_vv_label: .byte       "scrollback", 0                     ; The view's label and footer
+s_vv_foot:  .byte       "%[7] %y  Space: mark, Enter: copy, q: leave%=", 0
+vk_let:     .byte       "ABHF"                              ; Its keys: the arrows, Home, End ...
+vk_letm:    .byte       0, 1, 4, 5                          ;   their moves (vv_vec's) ...
+vk_num:     .byte       5, 6, 1, 7, 4, 8                    ;   and ESC [ n ~'s: PgUp, PgDn, Home (1, 7), End (4, 8)
+vk_numm:    .byte       2, 3, 4, 4, 5, 5
+vv_vec:     .word       vv_up, vv_down, vv_pgup, vv_pgdn, vv_home, vv_end
 s_bp_open:  .byte       ESC, "[200~", 0                     ; (Bracketed paste's)
 s_bp_close: .byte       ESC, "[201~", 0
 s_hex:      .byte       "0123456789abcdef"
@@ -6908,10 +7443,10 @@ s_head_def: .byte       "%[1]%n %l%=%w"
             .res        FMT_SIZE - (* - s_head_def), 0
 s_foot_def: .byte       "%s"
             .res        FMT_SIZE - (* - s_foot_def), 0
-cr_codes:   .byte       "nglpswGcrmtdL=[%"                  ; chr_render's codes, and theirs
+cr_codes:   .byte       "nglpswGcrmtdL=[%y"                 ; chr_render's codes, and theirs
 CRC_N       = * - cr_codes
 cr_vec:     .word       cr_num, cr_grp, cr_lbl, cr_prog, cr_stat, cr_wins, cr_groups, cr_cols, cr_rows, cr_modes
-            .word       cr_time, cr_date, cr_leds, cr_right, cr_sgr, cr_pct
+            .word       cr_time, cr_date, cr_leds, cr_right, cr_sgr, cr_pct, cr_y
 cr_tens:    .byte       1, 10, 100
 sgr_on:     .byte       0, F_BOLD, F_DIM, 0, F_UL, F_BLINK, F_BLINK, F_REV, F_INVIS, 0      ; (SGR 0-9's)
 sgr_off:    .byte       $FF, $FF, <~(F_BOLD | F_DIM), $FF, <~F_UL, <~F_BLINK, $FF, <~F_REV, <~F_INVIS, $FF ; (20-29's)

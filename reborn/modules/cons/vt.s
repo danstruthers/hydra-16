@@ -241,6 +241,9 @@ rz_n:       .res        1
 rz_y:       .res        1                                   ;   a cursor's row ...
 rz_k:       .res        1                                   ;   the rows to or from the scrollback ...
 rz_d:       .res        1                                   ;   and those blanked or dropped at the bottom
+vw_add:     .res        WIN_MAX * 2                         ; Each window's lines dropped off its oldest end (the
+                                                            ;   scrollback full, a row in): the view's
+vbuf:       .res        3 * 128                             ; A row's cells (its planes'), or a line's text (vt_line)
 
 .segment "CODE2"
 ; ****************************************************************************
@@ -275,8 +278,14 @@ vt_new:
             ldx         vt_i
             sta         vw_bank,X
             stz         vw_abank,X                          ; (No alternate screen yet ...
-            stz         ans_n,X                             ;   no answers, no label)
+            stz         ans_n,X                             ;   no answers, no label, no lines dropped)
             stz         ans_r,X
+            txa
+            asl
+            tax
+            stz         vw_add,X
+            stz         vw_add + 1,X
+            ldx         vt_i
             txa
             jsr         lbl_at
             lda         #0
@@ -317,6 +326,234 @@ vt_keymodes:
             tax
             lda         v_mode
             and         #VM_CKM | VM_KPAM
+            rts
+
+; ****************************************************************************
+; The scrollback's view (W6b): cons.s's window vv_w showing window vv_src's lines (its scrollback's, oldest first,
+; then its screen's)
+
+; Window .A's lines: .A = them; vv_add, those dropped off its oldest end so far
+vt_lines:
+            pha
+            jsr         vt_load
+            pla
+            asl
+            tax
+            lda         vw_add,X
+            sta         vv_add
+            lda         vw_add + 1,X
+            sta         vv_add + 1
+            clc
+            lda         v_sbn
+            adc         v_rows
+            rts
+
+; The view filled: its rows vv_src's lines from vv_top on (past them, blank), those from vv_ma to vv_mb (either
+; order; vv_ma $FF: none) to the row's end, reversed; its cursor at the start of its row vv_cur.  If it's shown, the
+; terminals painted again
+vt_view:
+            stz         vt_k
+@row:
+            lda         vv_w
+            jsr         vt_load
+            lda         vt_k
+            cmp         v_rows
+            bcc         :+
+            jmp         @cursor
+:
+            lda         vv_src                              ; The line's cells, into vbuf
+            jsr         vt_load
+            clc
+            lda         vv_top
+            adc         vt_k
+            sta         vt_j
+            clc
+            lda         v_sbn
+            adc         v_rows
+            cmp         vt_j
+            beq         @blank
+            bcc         @blank
+            jsr         text_row
+            lda         vb0
+            sta         $00
+            ldy         #127
+:
+            lda         (vq),Y
+            sta         vbuf,Y
+            dey
+            bpl         :-
+            lda         vb1
+            sta         $00
+            ldy         #127
+:
+            lda         (vq),Y
+            sta         vbuf + 128,Y
+            dey
+            bpl         :-
+            lda         vb2
+            sta         $00
+            ldy         #127
+:
+            lda         (vq),Y
+            sta         vbuf + 256,Y
+            dey
+            bpl         :-
+            bra         @put
+@blank:                                                     ; (Past them: a blank row)
+            stz         vbuf + META
+            lda         #COL_DEF
+            sta         vbuf + 128 + META
+            stz         vbuf + 256 + META
+@put:
+            lda         vv_w                                ; Into the view's row
+            jsr         vt_load
+            lda         vt_k
+            jsr         row_ptr
+            lda         vb0
+            sta         $00
+            ldy         #127
+:
+            lda         vbuf,Y
+            sta         (vq),Y
+            dey
+            bpl         :-
+            lda         vb1
+            sta         $00
+            ldy         #127
+:
+            lda         vbuf + 128,Y
+            sta         (vq),Y
+            dey
+            bpl         :-
+            lda         vb2
+            sta         $00
+            ldy         #127
+:
+            lda         vbuf + 256,Y
+            sta         (vq),Y
+            dey
+            bpl         :-
+            jsr         @sel
+            bcc         :+
+            jsr         @reverse
+:
+            inc         vt_k
+            jmp         @row
+
+@cursor:                                                    ; Its cursor, shown; painted, if it's shown
+            stz         v_x
+            lda         vv_cur
+            sta         v_y
+            stz         v_wrap
+            lda         v_mode
+            ora         #VM_TCEM
+            sta         v_mode
+            jsr         cur_row
+            lda         vv_w
+            cmp         w_in
+            bne         :+
+            lda         #1
+            sta         ts_ser
+            sta         ts_scr
+:
+            rts
+
+@sel:                                                       ; (C = 1: line vt_j is in the selection)
+            lda         vv_ma
+            cmp         #$FF
+            beq         @no
+            cmp         vv_mb                               ; (Its first: the lesser)
+            bcc         :+
+            lda         vv_mb
+:
+            cmp         vt_j
+            beq         :+
+            bcs         @no
+:
+            lda         vv_ma                               ; (Its last: the greater)
+            cmp         vv_mb
+            bcs         :+
+            lda         vv_mb
+:
+            cmp         vt_j
+            bcc         @no
+            sec
+            rts
+@no:
+            clc
+            rts
+
+@reverse:                                                   ; (The row at vq to its end, its blank end's cells
+            lda         vb1                                 ;   written as blanks; all of it reversed)
+            sta         $00
+            ldy         #META
+            lda         (vq),Y
+            sta         vt_n
+            lda         vb0
+            sta         $00
+            lda         (vq),Y
+            tay
+@fill:
+            cpy         v_cols
+            bcs         @full
+            lda         vb0
+            sta         $00
+            lda         #' '
+            sta         (vq),Y
+            lda         vb1
+            sta         $00
+            lda         vt_n
+            sta         (vq),Y
+            lda         vb2
+            sta         $00
+            lda         #0
+            sta         (vq),Y
+            iny
+            bra         @fill
+@full:
+            lda         vb0
+            sta         $00
+            ldy         #META
+            lda         v_cols
+            sta         (vq),Y
+            lda         vb2
+            sta         $00
+            ldy         v_cols
+:
+            dey
+            bmi         :+
+            lda         (vq),Y
+            ora         #F_REV
+            sta         (vq),Y
+            bra         :-
+:
+            rts
+
+; Window .A's line .X (0: its scrollback's oldest) as text, into vbuf: its trailing blanks off, DEC graphics as
+; ASCII (as /text's).  OUT: .A = its length
+vt_line:
+            stx         vt_j
+            jsr         vt_load
+            jsr         text_row
+            jsr         row_chars
+            sta         vt_n
+            lda         vb0
+            sta         $00
+            ldy         #0
+:
+            cpy         vt_n
+            bcs         :++
+            lda         (vq),Y
+            cmp         #$20
+            bcs         :+
+            tax
+            lda         dec_ascii,X
+:
+            sta         vbuf,Y
+            iny
+            bra         :--
+:
+            lda         vt_n
             rts
 
 ; Bracketed paste (?2004) in window .A's screen: .A <> 0, it's set
@@ -3450,12 +3687,20 @@ scroll_up:
             jsr         map_row
             jsr         pool_ptr
             jsr         blank_row
-            lda         su_f                                ; (Into the scrollback: it's a row longer)
-            bne         :+
+            lda         su_f                                ; (Into the scrollback: it's a row longer, or, full,
+            bne         :+                                  ;   its oldest gone: counted, for the view)
             lda         v_sbn
             cmp         v_sb0
-            bcs         :+
+            bcs         @drop
             inc         v_sbn
+            bra         :+
+@drop:
+            lda         vt_w
+            asl
+            tax
+            inc         vw_add,X
+            bne         :+
+            inc         vw_add + 1,X
 :
             dec         su_n
             bne         @one

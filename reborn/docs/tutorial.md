@@ -156,7 +156,8 @@ shown.  `new-window top` runs a program in a window of its own, in this group (i
 `new-window -g` starts another shell session.  Ctrl-] w lists the windows to choose from (a window's key, or the
 arrows and Enter).  The keys can be changed: `echo key prefix ctrl-a >/dev/wctl` makes Ctrl-A the prefix, as
 screen's.  `/dev/snarf` is the console's cut buffer, one for every window: `echo date >/dev/snarf`, then Ctrl-] y
-in any window types it there.
+in any window types it there.  Ctrl-] [ (or Shift-PgUp) looks back through a window's scrollback: the arrows and
+PgUp move, Space marks a line, Enter copies the lines from it to the cursor into `/dev/snarf`, q goes back.
 
 **Tasks working together.**  The C SDK's multitasking demos start four or five copies of themselves, each in a task
 of its own, and draw what they do as they do it: memory they share (a shared segment), and semaphores to take turns
