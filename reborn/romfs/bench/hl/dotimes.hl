@@ -1,0 +1,5 @@
+; dotimes: the same sum, by dotimes
+; (bench.hl loads this: its functions, then its run)
+(fun {b-dotimes n} {do =(s 0) (dotimes {i n} (set! s (+ s (bit-and i 3)))) s})
+
+(bench "dotimes" (fn {} {b-dotimes (bench.size 4000 1000)}))

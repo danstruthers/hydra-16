@@ -1,0 +1,8 @@
+; each: the sum of x & 7 over the list 0 to n - 1, by each, k times
+; (bench.hl loads this: its functions, then its run)
+(fun {b-each n k} {do
+  =(l (range 0 n)) =(r 0)
+  (dotimes {rep k} (do (set! r 0) (each {x l} (set! r (+ r (bit-and x 7))))))
+  r})
+
+(bench "each" (fn {} {b-each 200 (bench.size 10 3)}))

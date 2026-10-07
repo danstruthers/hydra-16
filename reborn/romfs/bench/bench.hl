@@ -1,0 +1,26 @@
+; bench.hl - hylang's side of the hylang/HyForth benchmarks (bench.fs is HyForth's: the same algorithms, the same
+; sizes, the same results).  hylang bench.hl [reps [q|f [name...]]]: each benchmark named (all of them, bench.names,
+; if none is) loaded from /rom/bench/hl (its functions, then its run) and run reps times (1); a line for each,
+;   bench hylang NAME RESULT TICKS REPS
+; its value, and the ticks the reps took (200 a second).  q: smaller sizes (the regression test's).  Each is written
+; the language's own way: a tail call, while, dotimes or each in hylang, DO LOOP or BEGIN WHILE REPEAT in HyForth;
+; lists, map, filter and foldl in hylang where HyForth loops over an array and EXECUTEs a word.  Every value stays
+; under 16,384, so hylang's integers are its fixnums and HyForth's cells don't overflow.  sim/bench.js runs both and
+; compares them, each of hylang's in a hylang of its own (or all in one: --together).
+
+(def {bench.reps} (if (> (len args) 1) (val (snd args)) 1))
+(def {bench.quick} (if (> (len args) 2) (== (thd args) "q") NIL))
+(def {bench.names} {"calls" "fib" "tak" "ack" "loop" "while" "dotimes" "nested" "gcd" "collatz"
+  "hash" "sieve" "sort" "matrix" "queens" "mapf" "fold" "each" "chars" "digits"})
+(def {bench.only} (if (> (len args) 3) (drop 3 args) bench.names))
+(fun {bench.size full quick} {if bench.quick quick full})
+
+(fun {bench name f} {do
+  =(t0 (ticks))
+  =(r (bench.run f bench.reps NIL))
+  =(dt (bit-and (- (ticks) t0) 32767))
+  (print (format "bench hylang {} {} {} {}" name r dt bench.reps))})
+(fun {bench.run f n r} {if (zero? n) r (bench.run f (- n 1) (f))})
+
+(each {name bench.only} (load (format "/rom/bench/hl/{}.hl" name)))
+(print "bench hylang done")

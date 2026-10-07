@@ -1,0 +1,40 @@
+; proc.hl - the tasks, by their files (#p, /proc/N, N in decimal): (use "proc").  A task's files: args (its
+; arguments, a space between each), cwd, env (its variables, name=value lines), ns (the binds and mounts that made
+; its namespace), regs (its registers as it was switched out), mem (its 64K as it sees it) and ram (its banks: bank
+; b's byte o at b * 8192 + o); mem, ram and regs aren't the kernel task's or a driver's (:perm).  The task first.  A
+; failure is the system's error.
+
+(use "dev")
+
+(fun {proc.file task name} {format "/proc/{}/{}" task name})
+
+; Its arguments, a list of strings
+(fun {task-args task} {filter (fn {a} {> (len a) 0}) (str-split (str-trim (dev.read (proc.file task "args"))) " ")})
+
+; Its current directory
+(fun {task-cwd task} {str-trim (dev.read (proc.file task "cwd"))})
+
+; Its environment, a hash: each variable's name (a string), its value
+(fun {task-env task} {hash-create (map proc.var (dev.lines (proc.file task "env")))})
+(fun {proc.var line} {do
+  =(at (index-of line "="))
+  (list (substring line 0 at) (substring line (+ at 1) (- (len line) at 1)))})
+
+; Its namespace: the binds and mounts that made it, a line each
+(fun {task-ns task} {dev.lines (proc.file task "ns")})
+
+; Its registers as it was switched out, a hash: :pc, :a, :x, :y, :s, :p, :w, :u, :ram, :rom
+(fun {task-regs task} {hash-create (map proc.reg (str-split (str-trim (dev.read (proc.file task "regs"))) " "))})
+(fun {proc.reg w} {do
+  =(at (index-of w "="))
+  (list (to-atom (str-lower (substring w 0 at))) (val (+ "#x" (substring w (+ at 1) (- (len w) at 1)))))})
+
+; n bytes of its memory from addr, as it sees it; of its RAM bank from offset: lists
+(fun {task-mem task addr n} {proc.bytes (proc.file task "mem") addr n})
+(fun {task-ram task bank offset n} {proc.bytes (proc.file task "ram") (+ (* bank 8192) offset) n})
+
+; n bytes of the file from offset, read till there are n (a read gives a part at a time), or its end
+(fun {proc.bytes path offset n} {dev.with path 0 (fn {fd} {do (sys-seek fd offset) (proc.more fd n {})})})
+(fun {proc.more fd n got} {do
+  =(b (if (> n 0) (dev.bytes (sys-read fd (min n 1024))) NIL))
+  (if b (proc.more fd (- n (len b)) (join got b)) got)})

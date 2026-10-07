@@ -1,0 +1,18 @@
+; spi.hl - the SPI devices, by their files (#S, /dev/spi): (use "spi").  A device is 0-15 (0-7 the board's headers,
+; 8-15 the slots'), its files data (a write: its bytes sent with the device selected, a transaction, the bytes it
+; sent back meanwhile kept; a read: the bytes kept, or with none, as many clocked in, sending $FF) and ctl (mode 0 or
+; mode 3).  Open by one at a time, and not while it's a card's (:busy).  The device first.  A failure is the
+; system's error.
+
+(use "dev")
+
+(fun {spi.file d name} {format "/dev/spi/{}/{}" (dev.hex d 1) name})
+
+; A transaction: the bytes sent (a list, or a string's); those the device sent back in their place, a list
+(fun {spi d bytes} {dev.bytes (dev.with (spi.file d "data") 2 (fn {fd} {do (sys-write fd bytes) (sys-read fd (len bytes))}))})
+
+; n bytes clocked in ($FF sent), a list
+(fun {spi-read d n} {dev.bytes (dev.with (spi.file d "data") 0 (fn {fd} {sys-read fd n}))})
+
+; Its mode: 0 (SCLK idles low) or 3 (high)
+(fun {spi-mode d mode} {dev.write (spi.file d "ctl") (format "mode {}" mode)})

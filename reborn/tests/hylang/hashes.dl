@@ -1,0 +1,129 @@
+; hashes.dl - hashes: keys (atoms, strings and numbers), get, put, remove, len, keys and values, clone, methods (&0),
+; tags (private, locked, read-only, not-nil), to# and from#, equality
+
+(def {hs} #({{:a 1} {"s" 2} {3 :three}}))
+(check (hs :a) 1)
+(check (hs "s") 2)
+(check (hs 3) :three)
+(check (hs :none) NIL)
+(check (len hs) 3)
+(check (hash-key? hs "s") T)
+(check (hash-key? hs :s) NIL)
+(check (hash-key? hs 3) T)
+(check (len (hash-keys hs)) 3)
+(check (in? "s" (hash-keys hs)) T)
+(check (in? 3 (hash-keys hs)) T)
+(check (in? :a (hash-keys hs)) T)
+(check (sort (filter num? (hash-values hs))) {1 2})
+(check (type-of hs) :hash)
+(check (hash-get NIL :a) NIL)
+(check-error (hash-get 5 :a))
+(check-error (hs {1}))
+(check-error (hs 1.5))
+(check (hs 3.0) :three)
+
+; put: the old value back (NIL if there was none); putting NIL takes the entry out
+(check (hash-put hs {:b 5}) NIL)
+(check (hs :b) 5)
+(check (hash-put hs {:b 6}) 5)
+(check (hs :b) 6)
+(check (hash-put hs {:x 1} {:y 2}) {NIL NIL})
+(hash-put hs {:a NIL})
+(check (hash-key? hs :a) NIL)
+; an entry's value is evaluated, with tags after it or without; a tag is an atom
+(def {hv} (hash-create))
+(hash-put hv {:p (+ 1 2)})
+(hash-put hv {:q (+ 1 2) :t})
+(check (hv :p) 3)
+(check (hv :q) 3)
+(check (hash-tag? hv {:q :t}) T)
+(check-error (hash-put hv {:r 1 2}))
+(check (hash-key? hv :r) NIL)
+(check-error (hash-add-tag hv 5))
+
+; remove
+(check (hash-remove hs :b) 6)
+(check (hash-key? hs :b) NIL)
+(check (hash-remove hs :b) NIL)
+(check (hash-remove hs "s") 2)
+(check-error (hash-remove 5 :a))
+
+; clone: a copy of its own
+(def {hs2} (hash-clone hs))
+(hash-put hs2 {:c 1})
+(check (hash-key? hs :c) NIL)
+(check (hash-key? hs2 :c) T)
+(check ((hash-clone hs {:c 9}) :c) 9)
+
+; a hash called: (h key) is the value at key; a function there is a method, applied to what follows with &0 the
+; hash, as any function is (fewer arguments than its formals: partially applied); hash-call does the same
+(def {obj} #({
+  {:n 5}
+  {:get @({} {(&0 :n)})}
+  {:add @({x} {(hash-put &0 {:n (+ x (&0 :n))})})}
+}))
+(check (obj :get) 5)
+(obj :add 3)
+(check (obj :get) 8)
+(check (obj :n) 8)
+(check-error (obj :n 1))
+(check (function? (obj :add)) T)
+((obj :add) 2)
+(check (obj :n) 10)
+(check (hash-call obj :get) 10)
+(check (obj) obj)
+(check (obj :none) NIL)
+
+; tags
+(def {hp} #({{:secret 1} {:get @({} {(&0 :secret)})}}))
+(hash-make-private hp :secret)
+(check (hash-private? hp :secret) T)
+(check-error (hp :secret))
+(check (hp :get) 1)
+(def {hl} #({{:a 1}}))
+(hash-lock hl)
+(check (hash-locked? hl) T)
+(check-error (hash-put hl {:new 1}))
+(check (hash-put hl {:a 2}) 1)
+; a clone keeps the hash's own tags (applied after its overrides)
+(check (hash-locked? (hash-clone hl)) T)
+(check ((hash-clone hl {:b 3}) :b) 3)
+(check-error (hash-put (hash-clone hl) {:new 1}))
+(def {hc} #({{:a 1}}))
+(hash-make-const hc)
+(check (hash-const? hc) T)
+(check-error (hash-put hc {:a 2}))
+(check-error (hash-remove hc :a))
+(def {hn} #({{:k 1}}))
+(hash-make-not-nil hn :k)
+(check-error (hash-put hn {:k NIL}))
+(def {ht} #())
+(hash-add-tag ht :mytag)
+(check (hash-tag? ht :mytag) T)
+(check (hash-tag? ht :other) NIL)
+; what isn't an entry, an override or a tag: an error, saying what
+(check-error (hash-put ht 5))
+(check-error (hash-clone ht 5))
+(check-error (hash-clone ht {:c 1 2}))
+(check (from# (hash-clone (to# {{:a 1}}) {:b 2} :t {{:c 3} {:d 4}})) {{:a 1} {:b 2} {:c 3} {:d 4} :t})
+(check-error (hash-clone ht {:c 1} 5) "A hash's entry is {key value tag...}, not 5")
+(check-error (hash-tag? ht 5))
+(check-error (hash-tag? ht {:none :t}) "Key :none not found when looking up tag for hash entry")
+
+; to# and from#
+(check (from# #({{:a 1}})) {{:a 1}})
+(check ((to# {{:a 1} {"b" 2}}) "b") 2)
+(check (from# (to# {{:x 5}})) {{:x 5}})
+(check-error (to# 5))
+(check-error (from# 5))
+
+; equality: the same keys and values
+(check (eq #({{:a 1}}) #({{:a 1}})) T)
+(check (eq #({{:a 1}}) #({{:a 2}})) NIL)
+(check (eq #({{:a 1}}) #({{:a 1} {:b 2}})) NIL)
+(check (eq #() #()) T)
+
+; hash-create, by name
+(check (len (hash-create)) 0)
+(check ((hash-create {{:k 1}}) :k) 1)
+(check (hash-private? hp) NIL)

@@ -1,0 +1,30 @@
+; i2c.hl - the I2C bus on port A's PA0 and PA1, by its files (#i, /dev/i2c): (use "i2c").  Its files: NN (the
+; device at address NN, two hex digits: a write sends its bytes, a read reads, a transaction each, 64 bytes at
+; most; with a subaddress, the file's offset is the device's register, written first, then the data, a repeated
+; start before a read) and ctl (speed N in kHz, subaddress 0, 1 or 2).  The directory lists the devices that answer.
+; The device's address first.  A failure is the system's error (a device that doesn't answer: :io).
+
+(use "dev")
+
+(fun {i2c.file addr} {+ "/dev/i2c/" (dev.hex addr 2)})
+(fun {i2c.ctl line} {dev.write "/dev/i2c/ctl" line})
+
+; The addresses that answer, a list
+(fun {i2c-devices} {map (fn {n} {val (+ "#x" n)}) (filter (fn {n} {== (len n) 2}) (ls "/dev/i2c"))})
+
+; n bytes from the device (64 at most), a list; from its register reg, if it's given (i2c-reg-size's bytes)
+(fun {i2c-read addr n} {do
+  =(reg ?(&_ (fst &_) 0))
+  (dev.bytes (dev.with (i2c.file addr) 0 (fn {fd} {do (sys-seek fd reg) (sys-read fd n)})))})
+
+; Bytes (a list, or a string's) to the device; to its register reg, if it's given; NIL
+(fun {i2c-write addr bytes} {do
+  =(reg ?(&_ (fst &_) 0))
+  (dev.with (i2c.file addr) 1 (fn {fd} {do (sys-seek fd reg) (sys-write fd bytes)}))
+  NIL})
+
+; The bus's speed, kHz (1-100)
+(fun {i2c-speed khz} {i2c.ctl (format "speed {}" khz)})
+
+; A register's bytes, written before the data: 0 (none), 1 or 2 (high first)
+(fun {i2c-reg-size n} {i2c.ctl (format "subaddress {}" n)})

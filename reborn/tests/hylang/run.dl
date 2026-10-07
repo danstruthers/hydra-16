@@ -1,0 +1,18 @@
+; run.dl - danlang's regression suite: danlang tests/regress/run.dl.  Each test file's checks in turn (a file that
+; stops with an error counts as a failure), then the count; the status is 1 if any check failed
+(def {regress-dir} (do
+  =(here (fst args))
+  =(cut (max (last-index-of here "/") (last-index-of here "\\")))
+  (substring here 0 (+ cut 1))))
+
+(load (+ regress-dir "harness.dl"))
+
+(each {f {"reader" "eval" "scope" "control" "errors" "lists" "strings" "numbers" "hashes" "types" "io" "system" "bits" "buffers" "library"}}
+  (def {test-file} f)
+  (try (load (+ regress-dir f ".dl"))
+    (do
+      (def {test-fails} (+ test-fails 1))
+      (print (format "FAIL {}: stopped: {}" f &err)))))
+
+(print (format "{} checks, {} failed" test-count test-fails))
+(exit ?((zero? test-fails) 0 1))

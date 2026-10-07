@@ -1,0 +1,160 @@
+; run.dl - the Hydra-16 in danlang, on its own (sim/run.js's counterpart): it boots the BIOS ROM and the paged ROM's
+; chips (bin/bios.bin, bin/prom0.bin ...: node build.js) and either runs for a while and shows the console's output,
+; or is the serial console, live.  (hydra.dl is a test's run: sim/test.js --dl's.)
+;
+; Usage (from reborn): danlang sim/dl/run.dl [options]
+;   -i, --interactive   the terminal is the Hydra's serial console, in real time.  Ctrl-] x (or Ctrl-A x, as
+;                       run.js's) quits, Ctrl-] r resets, Ctrl-] s shows the state, Ctrl-] h helps, Ctrl-] Ctrl-] types
+;                       Ctrl-] (Ctrl-A Ctrl-A, Ctrl-A); Ctrl-C is the Hydra's
+;   --cycles N          stop at cycle N (default 30000000: 8.4 s at 3.58 MHz; interactive: never)
+;   --input TEXT        keys to type (\r, \n: Return; \w: wait 2M cycles; \p: wait for a prompt), one every 20000
+;                       cycles from cycle 200000
+;   --speed N           interactive: N times real time (default 1; 0: as fast as it goes)
+;   --clock MHz         the CPU clock (3.579545; 7.15909 with jumper J7: build with --clock 2 too)
+;   --acia wdc          a WDC W65C51N in the serial port (build with --acia wdc too)
+;   --modules N         RAM modules installed (default 2)
+;   --seed N            the power-up's junk RAM and registers (default 1)
+;   --bios FILE, --prom FILE   other images (--prom: the whole paged ROM, as sim/dl/image.js writes a test's)
+;   --sd FILE           a card image (sim/tools/hydrafs.js makes them), SD device 0, then 1 ...: read and
+;                       written in the file itself
+; e.g. danlang sim/dl/run.dl -i --input "\phylang\r": the console, and hylang started at the shell's first prompt
+(def {here} (substring (fst args) 0 (+ 1 (max (last-index-of (fst args) "/") (last-index-of (fst args) "\\")))))
+(each {f {"cpu.dl" "machine.dl" "devices.dl" "spi.dl" "i2c.dl" "rtc.dl"}} (load (+ here f)))
+(def {root} (+ here "../../"))
+(def {peer-on} NIL)
+
+; ---- the options
+(def {run-i stop-cyc run-input run-speed run-bios run-prom run-sds} NIL -1 "" 1 "" "" {})
+(def {argv argk} (tail args) 0)
+(fun {usage why} {do (print-to stderr (+ "run.dl: " why " (sim/dl/run.dl's head says its options)")) (exit 2)})
+(fun {next-arg} {do
+  (set! {argk} (+ argk 1))
+  (if (< argk (len argv)) (nth argk argv) (usage (+ (nth (- argk 1) argv) " needs a value")))})
+(fun {num-arg} {do (set {s} (next-arg)) (set {v} (val s)) (if (num? v) v (usage (+ s " isn't a number")))})
+(while {< argk (len argv)}
+  (set {a} (nth argk argv))
+  (cond
+    {(in? a {"-i" "--interactive"}) (set! {run-i} T)}
+    {(== a "--cycles") (set! {stop-cyc} (num-arg))}
+    {(== a "--input") (set! {run-input} (next-arg))}
+    {(== a "--speed") (set! {run-speed} (num-arg))}
+    {(== a "--clock") (set! {clock-mhz} (num-arg))}
+    {(== a "--acia") (set! {ac-wdc} (== (next-arg) "wdc"))}
+    {(== a "--modules") (set! {opt-modules} (num-arg))}
+    {(== a "--seed") (set! {opt-seed} (num-arg))}
+    {(== a "--bios") (set! {run-bios} (next-arg))}
+    {(== a "--prom") (set! {run-prom} (next-arg))}
+    {(== a "--sd") (set! {run-sds} (join run-sds (list (next-arg))))}
+    {T (usage (+ "what's " a "?"))})
+  (set! {argk} (+ argk 1)))
+(if (< stop-cyc 0) (set! {stop-cyc} (if run-i INF 30000000)) 0)
+
+; The keys to type: --input's text as codes (\r \n Return, \w a wait, \p a wait for a prompt: type-keys's 256, 257)
+(fun {input-codes s} {do
+  (set {out} {})
+  (set {k} 0)
+  (while {< k (len s)}
+    (set {c} (char-code (char-at s k)))
+    (if (and (== c 92) (< (+ k 1) (len s)))
+      (do (set {e} (char-at s (+ k 1)))
+          (set {out} (join out (list (if (in? e {\r \n}) 13 (if (== e \w) 256 (if (== e \p) 257 (char-code e)))))))
+          (set {k} (+ k 2)))
+      (do (set {out} (join out (list c))) (set {k} (+ k 1)))))
+  out})
+
+; ---- the images: the BIOS ROM, and the paged ROM (its chips one after another: bin/prom0.bin, prom1.bin ...)
+(fun {chips} {do
+  (set {s} "")
+  (set {k} 0)
+  (while {exists? (+ root "bin/prom" k ".bin")} (set {s} (+ s (read-file (+ root "bin/prom" k ".bin")))) (set {k} (+ k 1)))
+  (if (zero? k) (usage "no bin/prom0.bin: node build.js") s)})
+(def {t0} (time))
+(load-roms (read-file (if (> (len run-bios) 0) run-bios (+ root "bin/bios.bin"))) (if (> (len run-prom) 0) (read-file run-prom) (chips)))
+
+; The cards: each image's blocks read from it, and those written written back to it at once
+(def {sd-streams} (hash-create))
+(dotimes {k (len run-sds)} (do
+  (set {file} (nth k run-sds))
+  (if (not (exists? file)) (usage (+ "no card image " file)) 0)
+  (spi-card k file (div ((stat file) :length) 512) NIL)
+  (set {c} (cards k))                             ; (its stream one that reads and writes)
+  (if (c :stream) (close (c :stream)) 0)
+  (hash-put c [:stream (open file :update)])
+  (hash-put sd-streams [k (c :stream)])))
+(fun {card-wrote dev n blk} {do
+  (set {st} (hash-get sd-streams dev))
+  (if st (do (seek st (* n 512)) (write-bytes st blk)) 0)})
+
+(set! {ac-charcyc} (char-cycles))
+(power-up)
+(type-keys (input-codes run-input))
+(devsched)
+
+; ---- the console's output: kept in pieces (a string grows by copying), written as it's flushed
+(def {out-now out-pieces} "" (hash-create))
+(fun {on-tx v at} {do
+  (set! {out-now} (+ out-now (code-char v)))
+  (if (> (len out-now) 4096) (do (hash-put out-pieces [(len out-pieces) out-now]) (set! {out-now} "")) 0)})
+(fun {flush-out} {do
+  (each {k (range (len out-pieces))} (write (out-pieces k)))
+  (if (> (len out-now) 0) (write out-now) 0)
+  (set! {out-pieces out-now} (hash-create) "")})
+
+(def {cps} (* clock-mhz 1000000))
+(fun {state} {+ "cycle " cyc " (" (to-fixed (/ cyc cps) 1) " s), task " (hex tt 1) ", page " (hex ww 1) ", PC " (hex pc 4)
+  (if waiting " (WAI: idle)" "") (if halted (+ ", HALTED: " halted) "")})
+
+; ---- run for a while: the output, then where it stopped
+(if (not run-i) (do
+  (print-to stderr "[sim] set up in" (- (time) t0) "s")
+  (set {t1} (time))
+  (while {and (< cyc stop-cyc) (not halted)} (run (min stop-cyc (+ cyc 200000))))
+  (flush-out)
+  (print)
+  (print "--- stopped at" (state) "after" (max 1 (- (time) t1)) "s; instructions decoded and kept:" (len dcache))
+  (exit (if halted 1 0))) 0)
+
+; ---- the serial console, live: the output as it comes, the keys typed (a terminal's keys as the sequences it sends),
+; paced to real time (or run-speed times it); the commands after Ctrl-] or Ctrl-A (prefix: which), and Ctrl-C
+; (on-note's: typed, as a byte)
+(def {esc-keys} (to# [[:up "\e[A"] [:down "\e[B"] [:right "\e[C"] [:left "\e[D"] [:home "\e[H"] [:end "\e[F"]
+  [:ins "\e[2~"] [:del "\e[3~"] [:pgup "\e[5~"] [:pgdn "\e[6~"] [:f1 "\eOP"] [:f2 "\eOQ"] [:f3 "\eOR"] [:f4 "\eOS"]
+  [:f5 "\e[15~"] [:f6 "\e[17~"] [:f7 "\e[18~"] [:f8 "\e[19~"] [:f9 "\e[20~"] [:f10 "\e[21~"] [:f11 "\e[23~"] [:f12 "\e[24~"]]))
+(def {prefix last-key quit ctrlc} NIL 0 "" NIL)
+(fun {say text} {do (flush-out) (write (+ "\r\n[sim] " text "\r\n"))})
+(fun {type-codes l} {do (ac-sync cyc) (type-keys l) (ac-sched) (dev-due)})
+(fun {command c} {cond
+  {(== c prefix) (type-codes (list c))}
+  {(in? c {120 88 113 81}) (set! {quit} "quit")}
+  {(in? c {114 82}) (do (hw-reset) (say "reset"))}
+  {(in? c {115 83}) (say (state))}
+  {T (say "Ctrl-] (or Ctrl-A) then: x quit, r reset (the reset button), s state, h this help; Ctrl-] again, a Ctrl-].")}})
+(fun {on-key k} {if (nil? k) 0
+  (if (atom? k) (if (hash-get esc-keys k) (type-codes (bytes (esc-keys k))) 0)
+    (do (set {c} (char-code k))
+        (if prefix (do (command c) (set! {prefix} NIL))
+          (if (in? c {1 29}) (set! {prefix} c)
+            (if (== c 10) (if (== last-key 13) 0 (type-codes {13}))     ; (piped text: a line ends in CR, as Enter sends)
+              (type-codes (list c)))))
+        (set! {last-key} c)))})
+(on-note (fn {n} {do (set! {ctrlc} T) T}))
+
+(say "the Hydra's serial console (danlang).  Ctrl-] x quits, Ctrl-] h for help.")
+(def {base-t base-c} (clock) cyc)
+(while {== quit ""}
+  (set {now} (clock))
+  (if (> run-speed 0)
+    (do (set {target} (+ base-c (* (- now base-t) cps run-speed)))
+        (if (> (- target cyc) (* cps run-speed 1/4)) (do (set! {base-t base-c} now cyc) (set {target} (+ cyc (* cps run-speed 1/100)))) 0)
+        (run (min (floor target) stop-cyc)))
+    (run (min stop-cyc (+ cyc 200000))))
+  (flush-out)
+  (if ctrlc (do (set! {ctrlc} NIL) (type-codes {3})) 0)
+  (while {and (== quit "") (key?)} (on-key (key)))
+  (if halted (set! {quit} (+ "halted: " halted)) 0)
+  (if (>= cyc stop-cyc) (set! {quit} "--cycles reached") 0)
+  (if (> run-speed 0) (do
+    (set {ahead} (- (/ (- cyc base-c) (* cps run-speed)) (- (clock) base-t)))
+    (if (> ahead 1/500) (sleep (min ahead 1/50)) 0)) 0))
+(say (+ "stopped: " quit "; " (state)))
+(exit (if halted 1 0))

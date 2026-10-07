@@ -1,0 +1,115 @@
+; ****************************************************************************
+; romfs.txt - the ROM disk's files (tools/romfs.js): a line a file, its path on the ROM disk (/rom), then its source,
+; relative to this folder; ';' starts a comment.  The build makes a read-only HydraFS volume of them in the paged ROM,
+; in the banks after the modules (the disk x: mount '#f' /rom x), and reads every file back from the image to check
+; it.  The directories are made for the paths.
+
+README              README
+lib/namespace       lib/namespace       ; The default namespace (the plan's appendix E): init runs it
+lib/profile         lib/profile         ; What each shell runs as it starts (rc's: phase 4)
+lib/shell           lib/shell           ; The shell init and wstart start in each window: HyForth's (forth -l)
+lib/edit/help       lib/edit/help       ; edit's keys (its ^G)
+lib/as/hydra.inc    ../obj/sdk/hydra.inc ; as's include files (/lib/as: .include finds them there): the SDK's ...
+lib/as/hyx2.inc     ../sdk/asm/hyx2.inc
+lib/as/macros.inc   ../sdk/asm/macros.inc
+lib/as/toollib.inc  ../sdk/asm/toollib.inc
+lib/as/toollib.s    ../sdk/asm/toollib.s
+lib/as/srvlib.inc   ../sdk/asm/srvlib.inc
+lib/as/srvlib.s     ../sdk/asm/srvlib.s
+lib/as/nslib.s      ../sdk/asm/nslib.s
+lib/as/hi.s         ../sdk/asm/samples/hi/hi.s ;   and its samples
+lib/as/tick.s       ../sdk/asm/samples/tick/tick.s
+lib/as/upper.s      ../sdk/asm/samples/upper/upper.s
+doc/api.md          ../obj/gen/api.md   ; The system calls' reference (tools/apigen.js makes it at the build)
+bench/bench.hl      bench/bench.hl      ; hylang's, HyForth's and BASIC's benchmarks, the same in each (sim/bench.js compares them)
+bench/bench.fs      bench/bench.fs
+bench/bench.bas     bench/bench.bas
+bench/hl/calls.hl   bench/hl/calls.hl
+bench/hl/fib.hl     bench/hl/fib.hl
+bench/hl/tak.hl     bench/hl/tak.hl
+bench/hl/ack.hl     bench/hl/ack.hl
+bench/hl/loop.hl    bench/hl/loop.hl
+bench/hl/while.hl   bench/hl/while.hl
+bench/hl/dotimes.hl bench/hl/dotimes.hl
+bench/hl/nested.hl  bench/hl/nested.hl
+bench/hl/gcd.hl     bench/hl/gcd.hl
+bench/hl/collatz.hl bench/hl/collatz.hl
+bench/hl/hash.hl    bench/hl/hash.hl
+bench/hl/sieve.hl   bench/hl/sieve.hl
+bench/hl/sort.hl    bench/hl/sort.hl
+bench/hl/matrix.hl  bench/hl/matrix.hl
+bench/hl/queens.hl  bench/hl/queens.hl
+bench/hl/mapf.hl    bench/hl/mapf.hl
+bench/hl/fold.hl    bench/hl/fold.hl
+bench/hl/each.hl    bench/hl/each.hl
+bench/hl/chars.hl   bench/hl/chars.hl
+bench/hl/digits.hl  bench/hl/digits.hl
+lib/forth/hydra.fs  ../obj/gen/hydra.fs ; HyForth's constants and error codes (tools/apigen.js makes it too)
+lib/forth/startup.fs lib/forth/startup.fs ; What HyForth loads as it starts
+lib/forth/profile.fs lib/forth/profile.fs ; What forth -l (HyForth as a login shell) runs after it
+lib/forth/coreext.fl ../obj/forthlib/coreext.fl ; HyForth's libraries: a word set each, pre-compiled (tools/forthlib.js)
+lib/forth/exception.fl ../obj/forthlib/exception.fl
+lib/forth/file.fl   ../obj/forthlib/file.fl
+lib/forth/facility.fl ../obj/forthlib/facility.fl
+lib/forth/string.fl ../obj/forthlib/string.fl
+lib/forth/search.fl ../obj/forthlib/search.fl
+lib/forth/tools.fl  ../obj/forthlib/tools.fl
+lib/forth/double.fl ../obj/forthlib/double.fl
+lib/forth/hydra.fl  ../obj/forthlib/hydra.fl
+lib/forth/disasm.fl ../obj/forthlib/disasm.fl  ; The old HyForth's: disasm (and see of a code word)
+lib/forth/bits.fl   ../obj/forthlib/bits.fl     ;   tbit sbit cbit
+lib/forth/random.fl ../obj/forthlib/random.fl   ; rand rand32 rseed random
+lib/forth/sound.fl  ../obj/forthlib/sound.fl    ;   the sound words (snd-note ...)
+lib/forth/memory.fl ../obj/forthlib/memory.fl   ; The standard's other word sets: Memory-Allocation ...
+lib/forth/locals.fl ../obj/forthlib/locals.fl   ;   Locals
+lib/forth/block.fl  ../obj/forthlib/block.fl    ;   Block
+lib/forth/shell.fl  ../obj/forthlib/shell.fl    ; HyForth as a shell (profile.fs loads it)
+lib/forth/gpio.fs   lib/forth/gpio.fs           ; The device libraries, source over the devices' files (hylang's)
+lib/forth/i2c.fs    lib/forth/i2c.fs
+lib/forth/spi.fs    lib/forth/spi.fs
+lib/forth/cons.fs   lib/forth/cons.fs
+lib/forth/proc.fs   lib/forth/proc.fs
+lib/forth/clock.fs  lib/forth/clock.fs
+lib/forth/disk.fs   lib/forth/disk.fs
+lib/font/iso8859-15 ../modules/vid/iso8859-15.fnt ; The screen's fonts, 8 x 8, for /dev/vid/font: vid's own ...
+lib/font/cp437      lib/font/cp437              ;   and the PC's (both the X16 ROM's charsets, public domain)
+lib/forth/pc.fs     lib/forth/pc.fs
+lib/hylang/globals.hl lib/hylang/globals.hl ; hylang's library: danlang's (lib/ there), globals loaded as hylang starts
+lib/hylang/hylib.hl lib/hylang/hylib.hl     ;   (hylib.hl loads it, then hylang's own: clock ...)
+lib/hylang/dice.hl  lib/hylang/dice.hl      ;   (from its snapshot, the module hysnap) and the others by (load "dice")
+lib/hylang/screen.hl lib/hylang/screen.hl
+lib/hylang/newns.hl lib/hylang/newns.hl     ; (newns): the default namespace built again, in hylang's own
+lib/hylang/dev.hl   lib/hylang/dev.hl       ; The device libraries, (use "gpio") ...: hylang over the devices' files
+lib/hylang/gpio.hl  lib/hylang/gpio.hl      ;   (dev.hl: what they share)
+lib/hylang/i2c.hl   lib/hylang/i2c.hl
+lib/hylang/spi.hl   lib/hylang/spi.hl
+lib/hylang/cons.hl  lib/hylang/cons.hl
+lib/hylang/proc.hl  lib/hylang/proc.hl
+lib/hylang/clock.hl lib/hylang/clock.hl
+lib/hylang/disk.hl  lib/hylang/disk.hl
+lib/hylang/pc.hl    lib/hylang/pc.hl
+lib/hylang/snd.hl   lib/hylang/snd.hl
+lib/hylang/login.hl lib/hylang/login.hl     ; hylang -l, a login shell: login.hl, profile.hl (and shell.hl,
+lib/hylang/profile.hl lib/hylang/profile.hl ;   the shell's rule: an rc command line at the prompt)
+lib/basic/profile.bas lib/basic/profile.bas ; basic -l, a login shell: run as typed after its namespace and window
+lib/hylang/shell.hl lib/hylang/shell.hl
+bin/mkfs            ../obj/programs/mkfs.hyx    ; The disk tools: RAM programs (programs/), loaded from here
+bin/fsck            ../obj/programs/fsck.hyx
+bin/label           ../obj/programs/label.hyx
+bin/grep            ../obj/programs/grep.hyx    ; The tools in C (programs/grep, programs/sort)
+bin/sort            ../obj/programs/sort.hyx
+bin/db              ../obj/programs/db.hyx      ; The debugger (C: programs/db)
+bin/edit            ../obj/programs/edit.hyx    ; The screen editor (C: programs/edit)
+bin/scom            bin/scom                    ; A song run by its name (an rc script: #!/bin/rc)
+songs/scom.zsm      songs/scom.zsm              ; Songs (play /rom/songs/test.zsm): ZSM files, the X16's
+songs/test.zsm      songs/test.zsm              ;   (the old system's test song, from os_rom/songs/test.mml)
+sample/hi           ../obj/samples/hi.hyx       ; The assembly SDK's samples, built (sdk/asm/samples/)
+sample/upper        ../obj/samples/upper.hyx
+sample/tick         ../obj/samples/tick.hyx
+sample/c/hello      ../obj/samples/c/hello.hyx  ; The C SDK's samples, built (sdk/c/samples/)
+sample/c/upper      ../obj/samples/c/upper.hyx
+sample/c/code       ../obj/samples/c/code.hyx
+sample/c/keys       ../obj/samples/c/keys.hyx
+sample/c/tones      ../obj/samples/c/tones.hyx
+sample/c/jukebox    ../obj/samples/c/jukebox.hyx
+sample/c/ctest      ../obj/samples/c/ctest.hyx

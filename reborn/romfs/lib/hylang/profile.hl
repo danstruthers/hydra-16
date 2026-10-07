@@ -1,0 +1,12 @@
+; profile.hl - what hylang -l runs as it starts, after its namespace (login.hl): what /rom/lib/profile does for rc.
+; Through the /lib union, a /lib/hylang/profile.hl on the RAM disk or a card takes the place of this one (the ROM's).
+; $window is its window (init's, wstart's): its console goes at /dev, and its notes (Ctrl-C) to hylang's note group.
+
+(use "shell")              ; The shell: an rc command line at the prompt; cd, bind, mount, unmount, newns, the prompt
+
+(do
+  =(w (env "window"))
+  (if (and w (not (== w "0")))
+    (do (unmount "/dev" "#c") (bind (+ "#c" w) "/dev" :after))
+    NIL))
+(dev.write "/dev/consctl" "group")

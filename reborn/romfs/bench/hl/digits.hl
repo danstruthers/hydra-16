@@ -1,0 +1,5 @@
+; digits: the numbers below n written out (to-str), their lengths summed
+; (bench.hl loads this: its functions, then its run)
+(fun {b-digits n} {do =(s 0) (dotimes {i n} (set! s (+ s (len (to-str i))))) s})
+
+(bench "digits" (fn {} {b-digits (bench.size 1000 300)}))

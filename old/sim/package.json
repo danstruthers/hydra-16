@@ -1,0 +1,9 @@
+{
+  "name": "hydra16-sim",
+  "private": true,
+  "description": "The Hydra-16's emulator, regression tests and PC tools; only tools/hydrapc.js (the PC tool for /pc) needs a package",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "serialport": "^13.0.0"
+  }
+}

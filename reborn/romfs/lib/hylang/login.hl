@@ -1,0 +1,6 @@
+; login.hl - what hylang -l (a login shell: init's or wstart's, as /lib/shell names it) runs before its first prompt,
+; read from the ROM disk by its device's name (#fx), as a window's shell starts in an empty namespace: the namespace
+; made (newns's), then /lib/hylang/profile.hl, through the /lib union (a card's or the RAM disk's in the ROM's place).
+
+(load "#fx/lib/hylang/newns.hl")
+(load "/lib/hylang/profile.hl")

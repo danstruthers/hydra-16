@@ -1,0 +1,8 @@
+; nested: the pairs i, j below n whose i xor j is even, by a dotimes in a dotimes
+; (bench.hl loads this: its functions, then its run)
+(fun {b-nested n} {do
+  =(c 0)
+  (dotimes {i n} (dotimes {j n} (if (zero? (bit-and (bit-xor i j) 1)) (set! c (+ c 1)))))
+  c})
+
+(bench "nested" (fn {} {b-nested (bench.size 60 30)}))

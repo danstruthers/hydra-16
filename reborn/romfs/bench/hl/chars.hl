@@ -1,0 +1,9 @@
+; chars: the a's in a string of 64 characters (char-at, char-code), k times
+; (bench.hl loads this: its functions, then its run)
+(def {b-text} "the quick brown fox jumps over a lazy dog and a cat at the gate.")
+(fun {b-chars k} {do =(c 0) (dotimes {rep k} (do
+  (set! c 0)
+  (dotimes {i (len b-text)} (if (== (char-code (char-at b-text i)) 97) (set! c (+ c 1))))))
+  c})
+
+(bench "chars" (fn {} {b-chars (bench.size 40 10)}))

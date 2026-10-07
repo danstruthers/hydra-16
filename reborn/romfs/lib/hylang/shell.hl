@@ -1,0 +1,126 @@
+; shell.hl - hylang as a shell (docs/hylang.md, "The prompt"): (use "shell"), as hylang -l's profile does.  At the
+; prompt a line that starts with (, {, [, or a prefix right against ( or { (?(, =(, #( ...) is hylang's; any other is
+; an rc command line, which the REPL hands to shell-line: run whole by rc (rc -c) and waited for, its code status
+; (and $status, rc's, in the environment, so the next line's rc has it).  So pipes, redirections, globbing, quoting
+; and $x are rc's; each line is an rc of its own, so what one sets (a variable, a function) goes with it, as in
+; HyForth's shell.  A line ending in & isn't waited for: its task is $apid, in a note group of its own.  What an rc
+; line can't do to hylang (it runs in a task of its own: hylang's directory and namespace stay as they were) is done
+; here when it's the line's one command, its arguments parsed as rc's built-ins do ('...' quotes, '' in it a ';
+; $name, the environment's variable, its first word): cd, bind, mount, unmount, newns; and exit ends hylang (its code
+; status, or the one given).  Ctrl-C while rc runs is rc's (on-note's function takes it meanwhile), and the shell
+; goes on.  The prompt is shell-prompt's: the directory (under /sd/N, N: and the path on the card) and "> ".
+
+(use "dev")
+
+(def {status} 0)
+(def {shell.running} NIL)
+
+; The prompt: /rom/lib> , 0:/games>
+(fun {shell-prompt} {do
+  =(d (cwd))
+  =(card (and (>= (len d) 5) (== (substring d 0 4) "/sd/") (or (== (len d) 5) (== (substring d 5 1) "/"))))
+  (+ (if card (+ (substring d 4 1) ":" (if (== (len d) 5) "/" (substring d 5 (- (len d) 5)))) d) "> ")})
+
+; An rc command line typed at the prompt (the REPL's: an expression's first line that isn't hylang's).  A failure of
+; the shell's own is said as rc says its ("/none: not found")
+(fun {shell-line line} {do
+  (try (shell.do line) (do (print &err) NIL))
+  (set! {shell.running} NIL)
+  NIL})
+
+(fun {shell.do line} {do
+  =(cmd (fst (str-split line " ")))
+  (if (and (elem? cmd {"cd" "bind" "mount" "unmount" "newns" "exit"}) (shell.simple? line))
+    (shell.builtin (shell.words line))
+    (if (== (substring line (- (len line) 1) 1) "&")
+      (shell.bg (str-trim (substring line 0 (- (len line) 1))))
+      (shell.fg line)))})
+
+; A line with no rc syntax but words and quotes: one command
+(fun {shell.simple? line} {not (any? (fn {c} {elem? c (str-chars ";|&<>`{}()^=")}) (str-chars line))})
+
+; ---- rc's lines
+
+; Run, and waited for (Ctrl-C meanwhile rc's)
+(fun {shell.fg line} {shell.waitfor (sys-spawn "/bin/rc" (list "-c" line))})
+(fun {shell.waitfor tk} {do (set! {shell.running} T) (shell.ended (shell.wait tk))})
+(fun {shell.wait tk} {try (sys-wait tk) (if (eq &code :intr) (shell.wait tk) (error &err &code))})
+
+; Its end: status its code (its message's number, if it has one), $status its message (or its code); after Ctrl-C,
+; a new line
+(fun {shell.ended r} {do
+  (set! {shell.running} NIL)
+  =(code (snd r))
+  =(msg (thd r))
+  (set! {status} (if (> (len msg) 0) (try (val msg) code) code))
+  (setenv "status" (if (> (len msg) 0) msg (if (== code 0) "" (to-str code))))
+  (if (== msg "interrupt") (write "\n") NIL)                    ; (A new line, as rc gives)
+  NIL})
+
+; Run, not waited for, in a note group of its own (SPAWN_NEWGROUP): its task $apid
+(fun {shell.bg line} {do
+  (setenv "apid" (to-str (sys-spawn "/bin/rc" (list "-c" line) 1)))
+  NIL})
+
+; Ctrl-C while rc runs: rc's
+(on-note (fn {n} {and shell.running (eq n :interrupt)}))
+
+; ---- What rc can't do to hylang
+
+(fun {shell.builtin w} {do
+  =(cmd (fst w))
+  =(a (tail w))
+  (if (== cmd "cd") (shell.cd a)
+  (if (== cmd "exit") (exit (if a (val (fst a)) status))
+  (if (== cmd "newns") (if a (shell.usage "newns") (do (newns) NIL))
+  (if (== cmd "unmount") (shell.unmount a)
+  (shell.bindmount cmd a)))))})
+
+(fun {shell.usage text} {error (+ "usage: " text)})
+
+; cd [dir]: none, $home (or /)
+(fun {shell.cd a} {do
+  =(h (env "home"))
+  (if (nil? a) (cd (if h (shell.first h) "/")) (if (tail a) (shell.usage "cd [dir]") (cd (fst a))))
+  NIL})
+
+; bind [-abc] new old; mount [-abc] '#x' old [spec]: -a after, -b before, -c create
+(fun {shell.bindmount cmd a} {do
+  =(o (shell.opts a {}))
+  =(fl (fst o))
+  =(r (snd o))
+  =(u (if (== cmd "bind") "bind [-abc] new old" "mount [-abc] '#x' old [spec]"))
+  (if (or (elem? :bad fl) (< (len r) 2) (> (len r) ?((== cmd "bind") 2 3))) (shell.usage u)
+    (eval (join (list ?((== cmd "bind") bind mount) (fst r) (snd r)) (tail (tail r)) fl)))
+  NIL})
+(fun {shell.opts a fl} {if (and a (> (len (fst a)) 1) (== (substring (fst a) 0 1) "-"))
+  (shell.opts (tail a) (join fl (map shell.flag (tail (str-chars (fst a))))))
+  (list fl a)})
+(fun {shell.flag c} {do =(i (index-of "abc" (to-str c))) (if (< i 0) :bad (nth i {:after :before :create}))})
+
+; unmount [new] old
+(fun {shell.unmount a} {do
+  (if (== (len a) 1) (unmount (fst a))
+    (if (== (len a) 2) (unmount (snd a) (fst a)) (shell.usage "unmount [new] old")))
+  NIL})
+
+; ---- A line's words, as rc's built-ins have them: blanks between them; '...' quotes ('' in it a '); $name, the
+; environment's variable (its first word)
+
+(fun {shell.words line} {shell.w (str-chars line) "" NIL {}})
+(fun {shell.w cs w any ws} {if (nil? cs) (if any (join ws (list w)) ws) (do
+  =(k (char-code (fst cs)))
+  (if (or (== k 32) (== k 9)) (shell.w (tail cs) "" NIL (if any (join ws (list w)) ws))
+  (if (== k 39) (shell.q (tail cs) w ws)
+  (if (== k 36) (shell.v (tail cs) "" w ws)
+  (shell.w (tail cs) (+ w (to-str (fst cs))) T ws)))))})
+(fun {shell.q cs w ws} {if (nil? cs) (join ws (list w))
+  (if (== (char-code (fst cs)) 39)
+    (if (and (tail cs) (== (char-code (fst (tail cs))) 39))
+      (shell.q (tail (tail cs)) (+ w "'") ws)
+      (shell.w (tail cs) w T ws))
+    (shell.q (tail cs) (+ w (to-str (fst cs))) ws))})
+(fun {shell.v cs n w ws} {if (and cs (or (alpha? (fst cs)) (digit? (fst cs)) (== (char-code (fst cs)) 95)))
+  (shell.v (tail cs) (+ n (to-str (fst cs))) w ws)
+  (shell.w cs (+ w (shell.first (env n))) T ws)})
+(fun {shell.first v} {if (nil? v) "" (if (string? v) v (fst v))})

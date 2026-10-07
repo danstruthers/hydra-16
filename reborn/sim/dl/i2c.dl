@@ -1,0 +1,69 @@
+; i2c.dl - the I2C bus on the VIA's port A (PA0 SCL, PA1 SDA: open drain, pulled up), and its devices: memories, as
+; 24C02-style EEPROMs are (a write's first byte sets the address, the rest are written from it on; a read gives bytes
+; from it on, wrapping at the size).  sim/lib/i2c.js is the reference.  i2c-bus is told the master's lines (1: let go,
+; 0: driven low) after each write to port A or its DDR; the levels are the AND of the master's, the pull-ups' and the
+; devices' (a device pulls SDA low to ack, or to send a 0).  Counted: starts, stops, the bytes the devices took and gave.
+
+(def {i2c-on i2c-scl-l i2c-sda-l i2c-out i2c-state i2c-bit i2c-shift i2c-ack i2c-dev i2c-rw i2c-first i2c-byte}
+  NIL 1 1 1 :idle 0 0 NIL NIL 0 NIL 0)
+(def {i2c-devs} (hash-create))
+(def {i2c-starts i2c-stops i2c-taken i2c-given} 0 0 0 0)
+
+; A memory of size bytes at address addr
+(fun {i2c-device addr size} {do
+  (hash-put i2c-devs [addr (to# [[:mem (buffer size)] {:ptr 0} [:size size]])])
+  (set! {i2c-on} T)})
+
+(fun {i2c-scl} {do i2c-scl-l})
+(fun {i2c-sda} {bit-and i2c-sda-l i2c-out})
+
+(fun {i2c-bus scl sda} {do
+  (set {line-sda} (bit-and sda i2c-out))
+  (set {was-scl} i2c-scl-l)
+  (set {was-sda} (bit-and i2c-sda-l i2c-out))
+  (set! {i2c-sda-l} sda)
+  (if (and (== scl 1) (== was-scl 1) (not (== line-sda was-sda)))
+    ; SDA changing while SCL is high: a start or a stop
+    (do (if (zero? line-sda)
+          (set! {i2c-state i2c-bit i2c-shift i2c-ack i2c-out i2c-starts} :addr 0 0 NIL 1 (+ i2c-starts 1))
+          (set! {i2c-state i2c-out i2c-stops} :idle 1 (+ i2c-stops 1)))
+        (set! {i2c-scl-l} scl))
+    (do (set! {i2c-scl-l} scl)
+        (if (and (== scl 1) (zero? was-scl)) (i2c-rise (bit-and i2c-sda-l i2c-out))
+          (if (and (zero? scl) (== was-scl 1)) (i2c-fall) 0))))})
+
+; SCL up: a bit taken (or an ack read)
+(fun {i2c-rise sda} {if (in? i2c-state {:addr :rx})
+  (if (< i2c-bit 8) (set! {i2c-shift i2c-bit} (bit-and (+ (shl i2c-shift 1) sda) 255) (+ i2c-bit 1)) 0)
+  (if (== i2c-state :tx)
+    (if (< i2c-bit 8) (set! {i2c-bit} (+ i2c-bit 1))
+      (if (== sda 1) (set! {i2c-state} :ignore) (set! {i2c-bit} 9)))
+    0)})
+
+; SCL down: the device's next bit, or its ack
+(fun {i2c-fall} {if i2c-ack
+  ; The ack's clock done: SDA let go
+  (do (set! {i2c-ack i2c-out i2c-bit i2c-shift} NIL 1 0 0)
+      (if (== i2c-state :tx) (i2c-send) 0))
+  (if (and (in? i2c-state {:addr :rx}) (== i2c-bit 8))
+    (if (== i2c-state :addr)
+      (do (set! {i2c-dev} (hash-get i2c-devs (shr i2c-shift 1)))
+          (if (nil? i2c-dev) (set! {i2c-state} :ignore)
+            (do (set! {i2c-rw} (bit-and i2c-shift 1))
+                (set! {i2c-state i2c-first} (if (== i2c-rw 1) :tx :rx) T)
+                (set! {i2c-out i2c-ack} 0 T))))
+      (do (if i2c-first
+            (do (hash-put i2c-dev [:ptr (mod i2c-shift (i2c-dev :size))]) (set! {i2c-first} NIL))
+            (do (buffer-put (i2c-dev :mem) (i2c-dev :ptr) i2c-shift)
+                (hash-put i2c-dev [:ptr (mod (+ (i2c-dev :ptr) 1) (i2c-dev :size))])))
+          (set! {i2c-taken i2c-out i2c-ack} (+ i2c-taken 1) 0 T)))
+    (if (== i2c-state :tx)
+      (if (== i2c-bit 9) (i2c-send)
+        (if (< i2c-bit 8) (set! {i2c-out} (bit-and (shr i2c-byte (- 7 i2c-bit)) 1)) (set! {i2c-out} 1)))
+      0))})
+
+; A byte to send: its first bit out
+(fun {i2c-send} {do
+  (set! {i2c-byte} ((i2c-dev :mem) (i2c-dev :ptr)))
+  (hash-put i2c-dev [:ptr (mod (+ (i2c-dev :ptr) 1) (i2c-dev :size))])
+  (set! {i2c-given i2c-bit i2c-out} (+ i2c-given 1) 0 (bit-and (shr i2c-byte 7) 1))})

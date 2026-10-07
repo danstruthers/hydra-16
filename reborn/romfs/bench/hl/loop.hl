@@ -1,0 +1,5 @@
+; loop: a counting loop, a tail call a step
+; (bench.hl loads this: its functions, then its run)
+(fun {b-loop n acc} {if (zero? n) acc (b-loop (- n 1) (+ acc 1))})
+
+(bench "loop" (fn {} {b-loop (bench.size 4000 1000) 0}))

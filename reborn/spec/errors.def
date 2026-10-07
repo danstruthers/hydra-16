@@ -1,0 +1,47 @@
+# ****************************************************************************
+# errors.def - the error codes (C = 1 from a call, the code in .A), with POSIX names, the text ERRSTR gives, and
+# the C library's errno for each (cc65's: its own code sets them too, and it has 18; _oserror keeps the code).
+# tools/apigen.js makes errors.inc, the kernel's text table, the C library's errno map, and the reference.
+#
+#   error NAME CODE "text" ERRNO
+
+# ---- general ($01-$1F)
+error E_PERM          $01 "not allowed"           EACCES
+error E_INVAL         $02 "invalid argument"      EINVAL
+error E_NOSYS         $03 "no such call"          ENOSYS
+error E_AGAIN         $04 "not yet: try again"    EAGAIN
+error E_INTR          $05 "interrupted"           EINTR
+error E_NOMEM         $06 "out of memory"         ENOMEM
+error E_BUSY          $07 "busy"                  EBUSY
+error E_RANGE         $08 "out of range"          ERANGE
+error E_FAULT         $09 "bad address"           EINVAL
+error E_NAMETOOLONG   $0A "name too long"         EINVAL
+error E_TOOBIG        $0B "too big"               ERANGE
+
+# ---- files ($20-$3F)
+error E_NOENT         $20 "not found"             ENOENT
+error E_EXIST         $21 "already exists"        EEXIST
+error E_NOTDIR        $22 "not a directory"       EINVAL
+error E_ISDIR         $23 "is a directory"        EACCES
+error E_NOTEMPTY      $24 "directory not empty"   EACCES
+error E_BADF          $25 "bad file descriptor"   EBADF
+error E_MFILE         $26 "no free file descriptor" EMFILE
+error E_NFILE         $27 "too many open files"   EMFILE
+error E_NOSPC         $28 "disk full"             ENOSPC
+error E_ROFS          $29 "read-only"             EACCES
+error E_IO            $2A "i/o error"             EIO
+error E_NODEV         $2B "no such device"        ENODEV
+error E_PIPE          $2C "broken pipe"           EIO
+error E_NOEXEC        $2D "not a program"         ENOEXEC
+error E_EOF           $2E "end of file"           EIO
+error E_NOTFS         $2F "no file system"        ENODEV
+error E_MEDIA         $30 "medium error"          EIO
+
+# ---- tasks ($40-$4F)
+error E_NOTASK        $40 "no free task"          EAGAIN
+error E_SRCH          $41 "no such task"          EINVAL
+error E_CHILD         $42 "no such child"         EINVAL
+
+# ---- names ($50-$5F)
+error E_NSFULL        $50 "namespace full"        ENOMEM
+error E_NSLOOP        $51 "too many binds"        EINVAL

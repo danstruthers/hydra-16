@@ -1,88 +1,43 @@
 ## **Hydra 16**
 
-Project to create a multi-tasking 6502-based computer and basic operating system.
+A multitasking 65C02 computer and its operating system, HydraOS.
 
-The code is built with the **cc65** suite (https://cc65.github.io/).  The board schematics and PCB layouts are done in **KiCAD 9.0** (https://www.kicad.org).
+The Hydra-16's hardware gives each of 16 tasks its own 32K of RAM, zero page and stack included, with its own RAM and ROM bank selections, so a task switch is one register write.  HydraOS runs on it, Plan 9's way:
+* **One kernel** in the BIOS ROM: a preemptive scheduler, one interrupt path, notes, memory and banks, and a jump table made from a specification.  Everything else is a module of the paged ROM, run in place in a task of its own.
+* **Everything a file:** devices are file servers (the console's windows, the disks and HydraFS, sound, GPIO and I2C, the clock, the Vera X, and `/pc`, a folder on the PC over the serial line), and each task has a namespace of its own, built by binds and mounts.
+* **Shells and languages:** rc, Plan 9's shell, and the core tools; HyForth (Forth 2012), the login shell; hylang (danlang, a lisp); BASIC (Microsoft's); SDKs for C (cc65) and assembly, and `as`, an assembler on the Hydra itself.
+* **Tools:** a screen editor (`edit`), a debugger (`db`), a song player that plays ZSM songs and compiles scores as it plays.
 
-### **Memory Map**
-* PER-TASK memory map (each task has its own copy of this memory space, except for shared RAM pages, as discussed below)
+The code is built with **cc65** (https://cc65.github.io/), and the board is designed in **KiCad 9** (https://www.kicad.org).
 
-| Start | End  | Description |
-| :---- | :--- | :---------- |
-| $00 | | RAM Page selection register (Pages `$00-$EF` are task-specific.  Pages `$F0-$FF` are shared between all tasks, and are further indexed using the U register, below) |
-| $01  | | ROM Page selection register |
-| $02 | $0F | Reserved Zero-page entries for future use |
-| $10 | $FF | Remaining Zero-page |
-| $0100 | $01FF | Hardware Stack |
-| $0200 | $7DFF | Availabe Task RAM space |
-| $7E00 | $7EFF | Monitor input buffer (256 bytes) |
-| $7F00 | $7FFF | Onboard serial driver input buffer (256 bytes) |
-| $8000 | $9FFF | Paged RAM (8K pages; task-specific and shared pages all show up here) |
-| $A000 | $DFFF | Paged ROM (16K pages; ROMs are shared between all tasks, but the page selection is per-task, see `$01` above) |
+### **Quick start**
 
-* SHARED memory map (all tasks see the following areas the same)
+```
+cd reborn
+node build.js                      build HydraOS (needs Node.js and cc65): bin/bios.bin, bin/prom0.bin ...
+node sim/run.js -i                 use the Hydra in your terminal, in the emulator (Ctrl-A x quits)
+node sim/test.js                   the regression tests
+```
 
-| Start | End  | Description |
-| :---- | :--- | :---------- |
-| $E000 | $FFFF | BIOS/OS ROM paged area (indexed by the W register; see below) |
-| $E000 | $E009 | RESET Vector entry point. Code saves `W` register to `ZP_W_SAVE` and then resets W to zero. This is replicated at the beginning of each BIOS page so that arbitrary W register values at startup/RESET result in the correct entry point being executed. |
-| $E00A | $FEFF | Effective BIOS paged area.  Compiler segments (pages) `BIOS_P1 - BIOS_PF` are available for BIOS implementers to add more BIOS calls, corresponding to `W` register values of `$01 - $0F`, respectively. |
+The ROM images are in Git (`reborn/bin/`) and on each GitHub release, so the chips can be programmed without a toolchain.
 
-#### **I/O Ports**
+### **Documentation**
 
-There are 15 shared I/O ports on the Hydra, with 16 1-byte registers per port, located from $FFF0-$FFEF.  Some ports are taken by the on-board devices.  Others are reserved for specific add-on cards (ports 2 & 3 for video, for example).  Still others are assigned to card slots, usually to correspond with the assigned IRQ numbers, with two I/O ports per slot.  I/O port assignment currently matches IRQ assignment for devices.  Though this arrangement is not a requirement, it does make things easier to track if followed.
+| | |
+| :-- | :-- |
+| [HydraOS](reborn/README.md) | Building, running and testing it, and its tree |
+| [The first hour](reborn/docs/tutorial.md) | A tutorial: switching it on, the shell, files, windows, the languages, sound, a program of your own |
+| [The guides](reborn/docs/using/README.md) | rc, the tools, HyForth, hylang, BASIC |
+| [The programmer's guide](reborn/docs/programming/README.md) | Calls, memory, tasks and notes, files and namespaces, servers and drivers, modules, video |
+| [Status](reborn/docs/status.md) | Where it stands, what was measured, what's next |
+| [Hardware Reference](docs/hardware.md) | The board in detail |
+| [The plan and the design notes](docs/README.md) | How HydraOS was designed, and the plans |
 
-The area from $FFF0 to $FFFF (that would have been reserved for I/O port 15) is the System port, where pseudo-registers T-W ($FFF0-$FFF3) and the interrupt vector addresses ($FFFA-$FFFF) live.  There are 6 unused bytes ($FFF4-$FFF9) that are reserved for future System expansion.
+### **Repository**
 
-| Start | End  | Description |
-| :---- | :--- | :---------- |
-|  | | **I/O Ports** `$00-$0E` |
-| $FF00 | $FF0F | Onboard VIA (65C22) |
-| $FF10 | FF13 | Onboard ACIA (65C51) Serial |
-| $FF14 | $FF1F | Unused |
-| $FF20 | $FF3F | Reserved for future Video |
-| $FF40 | $FF41 | Onboard YM2151 Sound generator |
-| $FF42 | $FF4F | Unused |
-| $FF50 | $FFEF | Unused (future I/O ports, expansion cards) |
-|  | | **Pseudo-registers** |
-| $FFF0 | | `T` Register (current task selector) |
-| $FFF1 | | `U` Register (current shared memory macro-page) |
-| $FFF2 | | `V` Register (interrupt vector selector) |
-| $FFF3 | | `W` Register (BOIS page selection register) |
-| $FFF4 | $FFF9 | Unused (future pseudo-register expansion) |
-| | | **Vectors** (replicated on each BIOS page) |
-| $FFFA | $FFFB | NMI Interrupt handler vector |
-| $FFFC | $FFFD | Reset Vector (Set to `$E000`) |
-| $FFFE | $FFFF | Interrupt Vector (see below) |
-
-
-### **Interrupts**
-
-Interrupt priority is lowest number == highest priority, so the S/W interrupt vector (#15) is the lowest priority.  
-The interrupt vector (`$FFFE & $FFFF`) is actually a 16-entry pseudo-register indexed by either a) `V` register bits 0-3 if no hardware interrupt is active when a `BRK` instruction is executed, or b) the lowest numbered active interrupt request line (via the IRQ priority decoder circuit) if one or more H/W IRQs is active.  It is also indexed on write by `V` register bits 0-3, which is how the interrupt vectors are set by driver initialization functions.  
-Hardware interrupts ignore `V` register bits 4-7, but sub-functions could be S/W triggered by setting those bits and calling `BRK`, and then checking them in the H/W interrupt vector, similar to how the S/W vector _will eventually_ work.  
-An unused H/W interrupt could be used by S/W to add another S/W interrupt handler, giving another 16 S/W interrupts per IRQ, so long as those are not used by other H/W; _see IRQ Slot assignments, below_.  
-**_All_** interrupts can be called via the S/W interrupt mechanism by setting `V` to the IRQ #, and then calling `BRK`.  Just remember that `V` is a shared, pseudo-register, so should be saved and restored (preferrably to `ZP_V_SAVE`) by each task whenever used.
-
-| IRQ # | Description |
-| ---: | :--- |
-| 0 | On-board VIA |
-| 1 | On-board ACIA (Serial) |
-| 2 | Card Slot 0 (low) |
-| 3 | Card Slot 0 (high) |
-| 4 | On-board Sound (YM 2151) |
-| 5 | Card Slot 1 (low) |
-| 6 | Card Slot 2 (low) |
-| 7 | Card Slot 3 (low) |
-| 8 | Card Slot 4 (low) |
-| 9 | Card Slot 5 (low) |
-| 10 | Card Slot 1 (high) |
-| 11 | Card Slot 2 (high) |
-| 12 | Card Slot 3 (high) |
-| 13 | Card Slot 4 (high) |
-| 14 | Card Slot 5 (high) |
-| 15 | S/W interrupt (Set Register `V[0..3]` = `$F`, Set `V[4..7]` = S/W Interrupt number)\* |
-
-\* Call `jsr SW_INT` after loading S/W interrupt number ($0-F) into A
-
-Have fun!
+| Folder | What |
+| :----- | :--- |
+| `reborn/` | HydraOS: the kernel, the modules, the SDKs, the ROM disk, the emulator, the tests and the documents |
+| `board/` | KiCad schematics and PCBs: main board, memory daughter card, bus breakout card |
+| `docs/` | The hardware reference, the plan HydraOS was built to, and the design notes |
+| `old/` | The old system (the 1.8C line: `os_rom/`, its programs, emulator, build and documents), frozen at HydraOS 1.0; `node old/build.js test` still builds and tests it |

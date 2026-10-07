@@ -1,0 +1,16 @@
+; sort: n bytes (x' = 13x + 7, mod 256, from 1) sorted by insertion in a buffer; the first, the middle and the
+; last added
+; (bench.hl loads this: its functions, then its run)
+(fun {b-sort n} {do
+  =(b (buffer n))
+  (b-sort-fill b n 0 1)
+  (b-sort-i b n 1)
+  (+ (b 0) (b (- n 1)) (b (shr n 1)))})
+(fun {b-sort-fill b n i x} {
+  if (>= i n) NIL (do (buffer-put b i x) (b-sort-fill b n (+ i 1) (bit-and (+ (* x 13) 7) 255)))})
+(fun {b-sort-i b n i} {if (>= i n) NIL (do (b-sort-ins b (- i 1) (b i)) (b-sort-i b n (+ i 1)))})
+(fun {b-sort-ins b j v} {
+  if (and (>= j 0) (> (b j) v)) (do (buffer-put b (+ j 1) (b j)) (b-sort-ins b (- j 1) v))
+  (buffer-put b (+ j 1) v)})
+
+(bench "sort" (fn {} {b-sort (bench.size 100 40)}))

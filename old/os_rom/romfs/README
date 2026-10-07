@@ -1,0 +1,15 @@
+The Hydra-16's built-in files: /rom, in the paged ROM (read-only).
+
+  /rom/bin     programs, found by name when $PATH or the card hasn't got them:
+                 hello    arguments, arithmetic, the heap, the clock (C)
+                 upper    a filter: its input in capitals (hello | upper)
+                 code     ends with the exit status it's given (code 3; code oops)
+                 keys     conio: the screen and the keys as they're typed
+                 tones    the sound library: a scale, a chord, drums
+                 jukebox  a song in the background (jukebox /rom/songs/test.zsm 5)
+                 scom     a song: a guitar riff
+  /rom/lib     HyForth libraries (lib name), when $LIBPATH or the card hasn't got them (none yet)
+  /rom/songs   songs (ZSM): play /rom/songs/test.zsm
+
+The files come from os_rom/romfs.txt: sim/tools/mkromdisk.js makes them a HydraFS volume
+on the ROM disk (the paged ROM, /sd/x), and the boot shell binds /rom to it.

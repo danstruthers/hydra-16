@@ -1,0 +1,35 @@
+; screen.dl - the terminal's screen, by ANSI's sequences (the Hydra's console is a terminal, and so is a PC's
+; window): (use "screen").  Columns and rows count from 1, as the terminal's do.
+
+(def {screen.colors} {:black :red :green :yellow :blue :magenta :cyan :white})
+
+; A sequence: ESC [ and its text
+(fun {screen.csi s} {write "\e[" s})
+
+; The screen cleared, the cursor at its top left
+(fun {cls} {do (screen.csi "2J") (screen.csi "H")})
+
+; The cursor at a column and row
+(fun {at col row} {screen.csi (format "{};{}H" row col)})
+
+; The rest of the line cleared
+(fun {clear-line} {screen.csi "K"})
+
+; Colours (an atom of screen.colors): the text's, and its background's if given
+(fun {color fg} {do
+  =(f (index-of screen.colors fg))
+  ?((< f 0) (error (format "{} isn't a colour" fg)) NIL)
+  ?((defined? &1)
+    (do
+      =(b (index-of screen.colors &1))
+      ?((< b 0) (error (format "{} isn't a colour" &1)) (screen.csi (format "{};{}m" (+ 30 f) (+ 40 b)))))
+    (screen.csi (format "{}m" (+ 30 f))))
+})
+
+; Bold, and back to plain text (no colour)
+(fun {bold} {screen.csi "1m"})
+(fun {plain} {screen.csi "0m"})
+
+; The cursor hidden, or shown
+(fun {cursor-off} {screen.csi "?25l"})
+(fun {cursor-on} {screen.csi "?25h"})

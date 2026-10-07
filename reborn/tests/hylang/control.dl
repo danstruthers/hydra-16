@@ -1,0 +1,93 @@
+; control.dl - if, and, or, <=>, while, each, dotimes, range, try and error-message
+
+; if: only NIL is false; a Q-expression branch is data, returned as it is
+(check (if T 1 2) 1)
+(check (if NIL 1 2) 2)
+(check (if NIL 1) NIL)
+(check (if 0 :yes :no) :yes)
+(check (if "" :yes :no) :yes)
+(check (if {} :yes :no) :no)
+(check (if {1} :yes :no) :yes)
+(check (if T {a} {b}) {a})
+(check (if NIL (error "not evaluated") 2) 2)
+(check-error (if (error "x") 1 2))
+(check-error (if T))
+
+; and, or: the value that decided them, short-circuited; an error stops them
+(check (and) T)
+(check (or) NIL)
+(check (and T T) T)
+(check (and T NIL) NIL)
+(check (and 1 2) 2)
+(check (or NIL 5) 5)
+(check (or NIL NIL) NIL)
+(check (or T (error "not evaluated")) T)
+(check (and NIL (error "not evaluated")) NIL)
+(check-error (and (error "boom") T) "boom")
+(check-error (and T (error "boom")) "boom")
+(check-error (or (error "boom")) "boom")
+(check-error (or NIL (error "boom") T) "boom")
+
+; <=>: a number's sign, compared in case blocks, the last a default
+(check (<=> (cmp 3 5) {< :less} {= :same} {:more}) :less)
+(check (<=> (cmp 5 5) {< :less} {= :same} {:more}) :same)
+(check (<=> (cmp 7 5) {< :less} {= :same} {:more}) :more)
+(check (<=> 1 {<> :not-zero} {:zero}) :not-zero)
+(check (<=> 0 {>= :non-negative} {:negative}) :non-negative)
+(check (<=> 0 {> :a} {< :b} {<> :c} {= :d} {:e}) :d)
+(check-error (<=> :a {:x}))
+(check-error (<=> 1))
+
+; while: its body as long as its test isn't NIL; the last value
+(check (do =(wi 0) (while (< wi 5) =(wi (+ wi 1))) wi) 5)
+(check (do =(wj 0) (while (< wj 3) =(wj (+ wj 1)) wj)) 3)
+(check (while NIL 1) NIL)
+(check (do =(wk 0) (while {< wk 2} {=(wk (+ wk 1))}) wk) 2)
+(check-error (while (error "x") 1))
+(check-error (do =(wl 0) (while (< wl 5) =(wl (+ wl 1)) (if (eq wl 3) (error "at 3")))))
+
+; each: a function called with each item, or a body run with a name for each; NIL
+(check (output-of (each print {1 2})) "1\n2\n")
+(check (output-of (each {x {1 2 3}} (write x ","))) "1,2,3,")
+(check (output-of (each {c "ab"} (write c "."))) "a.b.")
+(check (output-of (each (fn {x} {write (* x 10)}) {1 2})) "1020")
+(check (each print {}) NIL)
+(check (each {x {1}} x) NIL)
+(check-error (each {x {1 2}} (error "stop")))
+(check-error (each 5 {1}))
+(check-error (each print 5))
+
+; dotimes: 0 ... n-1
+(check (output-of (dotimes {i 3} (write i))) "012")
+(check (output-of (dotimes 2 print)) "0\n1\n")
+(check (output-of (dotimes {i 0} (write i))) "")
+(check (do =(dsum 0) (dotimes {i 5} (set! {dsum} (+ dsum i))) dsum) 10)
+(check-error (dotimes {i :a} 1))
+(check-error (dotimes {i 2.5} 1))
+
+; range
+(check (range 5) {0 1 2 3 4})
+(check (range 2 5) {2 3 4})
+(check (range 10 0 -3) {10 7 4 1})
+(check (range 0) {})
+(check (range 5 2) {})
+(check-error (range 1 2 0))
+(check-error (range :a))
+
+; try: an error's handler (with &err its message), or NIL; a value goes through
+(check (try (+ 1 2)) 3)
+(check (try (+ 1 2) 0) 3)
+(check (try (error "x")) NIL)
+(check (try (error "x") :caught) :caught)
+(check (try (error "x") &err) "x")
+(check (try (error "bad") (fn {m} {+ "got " m})) "got bad")
+(check (try {error "q"} &err) "q")
+(check (try (/ 1 0) &err) "Division by zero.")
+(fun {ctl-inner} {error "deep"})
+(fun {ctl-outer} {+ 1 (ctl-inner)})
+(check (try (ctl-outer) &err) "deep")
+(check (try (try (error "a") (error "b")) &err) "b")
+
+; error-message
+(check (error-message (error "m")) "m")
+(check (error-message 5) NIL)

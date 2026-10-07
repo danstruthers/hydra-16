@@ -1,0 +1,33 @@
+; dev.hl - what the device libraries share (gpio.hl, i2c.hl, spi.hl ...): (use "dev").  A device is files, each
+; driven by one request at a time: a read is one READ (a pin's level, a transaction's bytes, a ctl's text) and a
+; write one WRITE (a command, a transaction), the file opened for it and closed after, by the sys- functions (so it's
+; an example of driving a device by hand too).  Bytes are a list of integers, 0-255 (a string's will do where
+; they're written).  A failure is the system's error, the file closed first.
+
+; (f fd) with the file open (mode: 0 to read, 1 to write, 2 both); its value, the file closed after.  (An error
+; passes what it reaches: a failed open calls nothing, and a failure of f's closes the file and goes on.)
+(fun {dev.with path mode f} {dev.with2 (sys-open path mode) f})
+(fun {dev.with2 fd f} {dev.close fd (try (f fd) (do (sys-close fd) (error &err &code)))})
+(fun {dev.close fd v} {do (sys-close fd) v})
+
+; What one READ of the file gives, a string: n bytes at most (256 if n isn't given)
+(fun {dev.read path} {do
+  =(n ?(&_ (fst &_) 256))
+  (dev.with path 0 (fn {fd} {sys-read fd n}))})
+
+; Its text, its lines (a list of strings, without their line ends)
+(fun {dev.lines path} {filter (fn {l} {> (len l) 0}) (str-split (dev.read path) "\n")})
+
+; Its text, trimmed, a number
+(fun {dev.num path} {val (str-trim (dev.read path))})
+
+; One WRITE of the text (a string) or the bytes (a list) to the file; NIL
+(fun {dev.write path data} {do
+  (dev.with path 1 (fn {fd} {sys-write fd data}))
+  NIL})
+
+; A string's bytes, a list
+(fun {dev.bytes s} {map char-code (str-chars s)})
+
+; A number in hex, w digits, lower case (a device's name: an I2C address, an SPI device's 0-f)
+(fun {dev.hex n w} {str-lower (hex n w)})

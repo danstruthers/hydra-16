@@ -1,0 +1,15 @@
+# The old documentation PDF (old/sim/tools/mkpdf.js): never a text file, whatever core.autocrlf says
+*.pdf binary
+# HydraOS's ROM images (reborn/bin), kept for programming the chips: bytes
+reborn/bin/*.bin binary
+# The ROM disk's files (reborn/romfs): bytes for the Hydra (LF line ends), the same on every checkout
+reborn/romfs/** -text
+# The Forth 2012 test suite (reborn/tests/forth): as it came, byte for byte
+reborn/tests/forth/** -text
+# danlang's regression suite (reborn/tests/hylang): its files as danlang's master has them, byte for byte
+reborn/tests/hylang/** -text
+# hylang's own checks (reborn/tests/hyhydra): LF, as the suite's files beside them on the card
+reborn/tests/hyhydra/** -text
+# BASIC's suite (reborn/tests/basic): LF, its programs and scripts as BASIC reads them from the card, its outputs as
+# BASIC writes them (trailing spaces and all)
+reborn/tests/basic/** -text

@@ -1,0 +1,5 @@
+; fib: Fibonacci, recursively
+; (bench.hl loads this: its functions, then its run)
+(fun {b-fib n} {if (< n 2) n (+ (b-fib (- n 1)) (b-fib (- n 2)))})
+
+(bench "fib" (fn {} {b-fib (bench.size 16 12)}))

@@ -1,0 +1,37 @@
+; harness.dl - the regression suite's checks (run.dl loads this, then each test file in turn)
+;   (check expr want)           expr's value is equal (eq) to want's
+;   (check-error expr)          expr's value is an error
+;   (check-error expr message)  ... with that message
+; Each is an fexpr: it gets its expressions as they're written and evaluates them itself (an error is a value to it,
+; not a reason to stop; a Q-expression written there is itself, data, as it would be anywhere else).  A failure is
+; printed with the test file and the expression; run.dl counts them.
+
+(def {test-count test-fails test-file} 0 0 "")
+
+; An expression's value, as the caller would have it
+(def {test-value} (fexpr {x} {do
+  =(v (eval x))
+  ?((qexpr? v) v (eval v))
+}))
+
+(def {test-failed} (fexpr {x got want} {do
+  (def {test-fails} (+ test-fails 1))
+  (print (format "FAIL {}: {} gave {}, not {}" test-file (repr (eval x)) (repr (eval got)) (repr (eval want))))
+  NIL
+}))
+
+(def {check} (fexpr {x want} {do
+  (def {test-count} (+ test-count 1))
+  =(got (test-value x))
+  =(w (test-value want))
+  ?((eq got w) T (test-failed x got w))
+}))
+
+(def {check-error} (fexpr {x} {do
+  (def {test-count} (+ test-count 1))
+  =(got (test-value x))
+  =(msg ?((defined? &1) (test-value &1) NIL))
+  ?((and (error? got) (or (nil? msg) (eq (error-message got) msg)))
+    T
+    (test-failed x got ?(msg (error msg) :an-error)))
+}))

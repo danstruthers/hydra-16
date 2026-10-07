@@ -1,0 +1,22 @@
+; ****************************************************************************
+; The /rom file system: the files on the ROM disk, a HydraFS volume in the paged ROM from bank 2 (hfs's x,
+; which the boot shell mounts at /rom: mount hfs /rom x).  sim/tools/mkromdisk.js makes it, after the link (build.js), and checks each
+; file read back from the image.  A line per file: its path in /rom, then its source (relative to this folder).
+; /rom/bin and /rom/lib are the last members of /bin and /lib (lib/namespace), where the shell looks for programs
+; and HyForth libraries, so these run with no card at all.
+
+README              romfs/README
+boot.hys            romfs/boot.hys      ; The boot script when the current directory has none (no card)
+lib/namespace       romfs/namespace     ; The default namespace: /bin and /lib (the boot shell runs it first)
+
+; Programs (C: programs/c/samples), and a song that runs by its name (scom)
+bin/hello.hyx       ../programs/c/bin/hello.hyx
+bin/upper.hyx       ../programs/c/bin/upper.hyx
+bin/code.hyx        ../programs/c/bin/code.hyx
+bin/keys.hyx        ../programs/c/bin/keys.hyx
+bin/tones.hyx       ../programs/c/bin/tones.hyx
+bin/jukebox.hyx     ../programs/c/bin/jukebox.hyx
+bin/scom.zsm        ../programs/songs/scom.zsm
+
+; Songs (play /rom/songs/test.zsm: sndtest's, from songs/test.mml)
+songs/test.zsm      songs/test.zsm

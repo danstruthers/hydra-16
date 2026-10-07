@@ -1,0 +1,124 @@
+; snd.hl - the YM2151, and the Vera X's PSG, through the sound driver's files (#a, /dev): (use "snd").  /dev/snd takes
+; register/value pairs (the registers the chip doesn't have, below $20, are the driver's commands for a channel:
+; SND_R_CH, then a patch, a note, key off, volume, speakers, bend, a drum, a frequency, a glide, a waveform);
+; /dev/sndctl takes claim N P and release N P (masks of channels: the YM2151's, the PSG's), volume N (the master,
+; 0-200: 100 as written) and reset, and each channel's commands as text.  Each is opened the first time it's wanted,
+; and stays open: a task's claimed channels go back as its last #a file closes (at its end).  A channel's command
+; goes with the channel in one write, so another program's can't come between.  A channel is 0-7 (the YM2151's) or
+; 8-23 (with a Vera X, the PSG's: the same words, and snd-wave), a note MIDI's (60: middle C).  Songs are play's
+; (the program).  A failure is the system's error.
+
+(def {snd.fd} NIL)
+(def {snd.ctlfd} NIL)
+
+; Bytes to /dev/snd, a line to /dev/sndctl (each opened if it isn't)
+(fun {snd.out bytes} {do
+  (if snd.fd NIL (set! {snd.fd} (sys-open "/dev/snd" 1)))
+  (sys-write snd.fd bytes)
+  NIL})
+(fun {snd.ctl line} {do
+  (if snd.ctlfd NIL (set! {snd.ctlfd} (sys-open "/dev/sndctl" 1)))
+  (sys-write snd.ctlfd line)
+  NIL})
+
+; A channel's command (SND_R_*) and its value (a byte: a negative one's two's complement)
+(fun {snd.cmd ch cmd v} {snd.out (list 2 ch cmd (bit-and v 255))})
+
+; The channels claimed (0-23), so no other program writes them; given back.  (sndctl's two masks: the YM2151's
+; channels, 0-7, and the PSG's, 8-23)
+(fun {snd.masks cs} {format "{} {}"
+  (foldl (fn {m c} {if (< c 8) (bit-or m (shl 1 c)) m}) 0 cs)
+  (foldl (fn {m c} {if (< c 8) m (bit-or m (shl 1 (- c 8)))}) 0 cs)})
+(fun {snd-claim} {snd.ctl (format "claim {}" (snd.masks &_))})
+(fun {snd-release} {snd.ctl (format "release {}" (snd.masks &_))})
+
+; The master volume (0-200: 100 as written); the chip and every setting cleared (the claims stay)
+(fun {snd-volume v} {snd.ctl (format "volume {}" v)})
+(fun {snd-reset} {snd.ctl "reset"})
+
+; Chip registers written: register and value, in pairs
+(fun {snd-reg reg value} {snd.out (join (list reg value) &_)})
+
+; A patch (the X16's, 0-162) into the channel; a note keyed on; keyed off (its release)
+(fun {snd-patch ch n} {snd.cmd ch 3 n})
+(fun {snd-note ch note} {snd.cmd ch 4 note})
+(fun {snd-off ch} {snd.cmd ch 5 0})
+
+; The channel's level, its volume (0-127: snd-volume is the master's; snd-vol, its old name); its speakers
+; (:left, :right or :both); its bend (64ths of a semitone, signed)
+(fun {snd-level ch v} {snd.cmd ch 6 v})
+(fun {snd-vol ch v} {snd-level ch v})
+(fun {snd-pan ch pan} {do
+  =(p (+ 1 (index-of {:left :right :both} pan)))
+  (if (> p 0) (snd.cmd ch 7 p) (error "'snd-pan' expects :left, :right or :both" :inval))})
+(fun {snd-bend ch n} {snd.cmd ch 9 n})
+
+; A General MIDI drum (35: a kick) keyed on, on the channel
+(fun {snd-drum ch n} {snd.cmd ch 10 n})
+
+; A note at a frequency (Hz: 0, off), keyed on; the pitch to a note without a new attack (legato)
+(fun {snd-freq ch hz} {snd.out (list 2 ch 11 (bit-and hz 255) 12 (shr hz 8))})
+(fun {snd-glide ch n} {snd.cmd ch 13 n})
+
+; A PSG channel's waveform (:pulse, :saw, :triangle or :noise; or 0-3) and its width (0-63; 63, a square, if it
+; isn't given)
+(fun {snd-wave ch w} {do
+  =(n (if (num? w) w (index-of {:pulse :saw :triangle :noise} w)))
+  (if (and (>= n 0) (< n 4))
+    (snd.cmd ch 14 (bit-or (shl n 6) (bit-and ?(&_ (fst &_) 63) 63)))
+    (error "'snd-wave' expects :pulse, :saw, :triangle or :noise" :inval))})
+
+; The chip's own registers: the LFO (the whole chip's: its rate, its depths of pitch and amplitude (0-127), its wave:
+; 0 saw, 1 square, 2 triangle, 3 noise); a channel's sensitivity to it (vibrato 0-7, tremolo 0-3); channel 7's noise
+; at frequency n (0-31; negative: off)
+(fun {snd-lfo rate pmd amd wave} {snd.out (list 24 rate 25 (bit-or 128 pmd) 25 (bit-and amd 127) 27 (bit-and wave 3))})
+(fun {snd-sens ch pms ams} {snd.out (list (+ 56 ch) (bit-or (shl (bit-and pms 7) 4) (bit-and ams 3)))})
+(fun {snd-noise n} {snd.out (list 15 (if (< n 0) 0 (bit-or 128 (bit-and n 31))))})
+
+; The chip's 256 registers as written (the driver's shadow: the chip's can't be read), a buffer: /dev/snd opened for
+; it (from its start: the driver gives them in one read) and closed
+(fun {snd-regs} {do
+  =(fd (sys-open "/dev/snd" 0))
+  =(regs (sys-read fd 256))
+  (sys-close fd)
+  (buffer regs)})
+
+; A note's MIDI number, by its name: a letter, # or b, an octave (C4 60, C#4 and Db4 61, A4 69, B-1 11)
+(fun {snd.bad} {error "'note-of' expects a note: C4, C#4, Db4 ..." :inval})
+(fun {note-of name} {do
+  (if (< (len name) 2) (snd.bad)
+    (do
+      =(semi (index-of "C.D.EF.G.A.B" (str-upper (substring name 0 1))))
+      =(sh (index-of "b.#" (substring name 1 1)))
+      =(at (if (>= sh 0) 2 1))
+      =(oct (try (val (substring name at (- (len name) at))) NIL))
+      (if (and (>= semi 0) (not (== (substring name 0 1) ".")) (num? oct))
+        (+ (* 12 (+ oct 1)) semi (if (>= sh 0) (- sh 1) 0))
+        (snd.bad))))})
+
+; A tune played on the channel (0 if it isn't given) at a tempo (beats a minute: 120): a list of notes, each a note
+; (a name, a number, or NIL for a rest) and its beats.  Each is keyed on at its beat, in step with the system's tick
+; (from the next but one, so the first isn't late), the one before keyed off just before it; the same work before
+; each, so they keep time
+(fun {tune notes} {do
+  =(ch ?(&_ (fst &_) 0))
+  =(tempo ?((> (len &_) 1) (snd &_) 120))
+  =(ns (map (fn {n} {list (snd.num (fst n)) (snd n)}) notes))
+  (snd-off ch)
+  (snd.tune ch ns (+ (ticks) 2) 0 (/ (* 60 (tick-rate)) tempo))})
+(fun {snd.num n} {if (num? n) n (if (nil? n) NIL (note-of n))})
+(fun {snd.tune ch notes t0 at per} {do
+  (sleep-until (bit-and (+ t0 (truncate (* at per))) 65535))
+  (snd-off ch)
+  (if notes
+    (do (if (fst (fst notes)) (snd-note ch (fst (fst notes))) NIL)
+      (snd.tune ch (tail notes) t0 (+ at (snd (fst notes))) per))
+    NIL)})
+
+; A song (a ZSM file) played, times times (1 if it isn't given): play's (the program); its exit code
+(fun {play path} {if &_ (run "play" path (to-str (- (fst &_) 1))) (run "play" path)})
+
+; A line of MML (the score language's: play -m) on the channel, its own instrument if it names none, played to its
+; end; a chord (play -c): its notes at once, a channel each from ch, with the commands before each.  play's exit code
+(fun {snd-mml ch mml} {run "play" "-m" (to-str ch) mml})
+(fun {snd-chord ch notes} {run "play" "-c" (to-str ch) notes})

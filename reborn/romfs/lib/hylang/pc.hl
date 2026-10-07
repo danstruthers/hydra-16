@@ -1,0 +1,5 @@
+; pc.hl - /pc, a folder on the PC, through the serial port (#P: the PC tool, sim/tools/hydrapc.js): (use "pc").
+; /pc's files are files, for everything else (read-file, ls, open ...).
+
+; Whether the PC tool answers (none: a second, then NIL)
+(fun {pc?} {try (do (sys-close (sys-open "/pc")) T) NIL})

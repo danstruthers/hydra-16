@@ -1,0 +1,274 @@
+; Special thanks to buildyourownlisp.com for the inspiration from 'lispy'!
+:(math.pi    3.14159_26535_89793_23846_26433_83279_50288_41971_69399_37510_58209_74944_59230_78164_06286_20899_86280_34825_34211_70679_82148_08651_32823_06647_09384)
+:(math.e     2.71828_18284_59045_23536_02874_71352_66249_77572_47093_69995)
+:(math.phi   1.61803_39887_49894_84820_45868_34365_63811_77203_09179_80576)
+:(math.gamma 0.57721_56649_01532_86061)
+
+; function definition: fun, fn, fexpr, def, set, set! and let are built in
+
+; cons (an item onto the front of a list) is built in
+
+; composition helpers
+(fun {flip f a b} {f b a})
+(fun {ghost}      {eval &_})
+(fun {comp f g x} {f (g x)}) ; Compose
+
+; comparisons: not, ==, >=, <=, neg? and pos? are built in
+
+:({<> !=} neq neq)
+
+; test helpers: nil?, t?, zero? and one? are built in
+:({=0 =1}  zero? one?)
+:({0? 1?}  zero? one?)
+
+; logical operators
+(fun {xor a b} {and (or a b) (not (and a b))})
+
+; math helper functions (1+ and 1- are built in)
+(fun {>=0 n}    {>= n 0})
+(fun {<=0 n}    {<= n 0})
+(fun {>0 n}     {> n 0})
+(fun {<0 n}     {< n 0})
+(fun {!=0 n}    {not (zero? n)})
+(fun {!=1 n}    {not (one? n)})
+(fun {square n} {* n n})
+(fun {cube n}   {* n (square n)})
+(fun {recip n}  {/ 1 n})
+
+:(inverse recip)
+:(trunc truncate)
+
+; currying
+(fun {unpack f l}  {eval (cons f l)})
+(fun {pack f}      {f &_})
+
+:({apply curry uncurry} unpack unpack pack)
+
+; a list's items, as they're written (not evaluated): fst, snd, thd, nth (from 0) and last are built in; past the
+; list's end is an error
+:({first second third fourth fifth sixth seventh eighth ninth tenth}
+  (nth 0) (nth 1) (nth 2) (nth 3) (nth 4) (nth 5) (nth 6) (nth 7) (nth 8) (nth 9))
+
+; coalescing operator to find first non-nil argument in the list
+(fun {?? a} ?{a a ?(&_ .(?? &_))})
+
+; take n items, and drop n (as many as there are) are built in
+
+:(skip drop)
+
+; split list at N
+(fun {split n l} {[(take n l) (drop n l)]})
+
+; is x in l? (elem? x l) is built in
+
+(fun {has-element? l x} {elem? x l})
+
+; do (built in) evaluates its arguments in turn and returns the last one's value
+:(begin do)
+:(block do)
+
+; map, filter, foldl and foldr are built in
+
+; pairs of items, one from each list, as long as both have them
+(fun {zip a b} ?{
+  (and a b)
+  (cons [(fst a) (fst b)] (zip (tail a) (tail b)))
+  NIL
+})
+
+; is f true of any item? of every item? the first it's true of, and how many: any?, all?, find and count are built in
+
+; a list's items, and the items of the lists in it, in one list
+(fun {flatten l} ?{
+  l
+  ?((qexpr? (fst l))
+    (join (flatten (fst l)) (flatten (tail l)))
+    (cons (fst l) (flatten (tail l))))
+  NIL
+})
+
+; the items, each once (the first time it comes)
+(fun {distinct l} ?{l (cons (fst l) (distinct (remove-all (fst l) (tail l)))) NIL})
+
+; sum, product, min and max are built in
+(fun {avg s}     {/ (sum s) (len s)})
+
+; Switch/Cond
+; a clause's test and value run where the clause was written (each the first of a list, made code: eval (head ...))
+(fun {cond} ?{
+  &_
+  ?((eval (head (fst &_)))
+    (eval (head (tail (fst &_))))
+    .(cond (tail &_)))
+  (error "Selection not found")
+})
+
+;:(switch cond)
+
+(fun {case x} ?{
+  &_
+  ?((eq x (eval (head (fst &_))))
+    (eval (head (tail (fst &_))))
+    .(case (cons x (tail &_))))
+  (error "Case not found")
+})
+
+; math functions (abs is built in)
+
+(fun {floor a} {
+  let {
+    do
+      =(tr (trunc a))
+      (<=> (cmp a tr) {< (1- tr)} {tr})
+  }
+})
+
+(fun {ceil a} {
+  let {
+    do
+     =(tr (trunc a))
+     (<=> (cmp a tr) {> (1+ tr)} {tr})
+  }
+})
+
+; round: the nearest integer, a half away from zero
+(fun {round a} {
+  ?((neg? a) (- (floor (- 1/2 a))) (floor (+ a 1/2)))
+})
+
+; div and mod: the quotient rounded down (toward minus infinity, as mod has it), so (+ (* b (div a b)) (mod a b)) is a
+(fun {div a b} ?{
+  (and (num? a) (num? b))
+  (floor (/ a b))
+  (error "Cannot perform 'div' on non-numbers")
+})
+
+(fun {mod a b} ?{
+  (and (num? a) (num? b))
+  (- a (* b (floor (/ a b))))
+  (error "Cannot perform 'mod' on non-numbers")
+})
+
+:(% mod)
+
+(fun {divmod a b} ?{
+  (and (num? a) (num? b))
+  (cons (div a b) (list (mod a b)))
+  (error "Cannot perform 'divmod' on non-numbers")
+})
+
+(fun {fdiv a b} ?{
+  (and (num? a) (num? b))
+  (to-fixed (/ a b) ?((and (defined? &1) (num? &1)) &1 10))
+  (error "Cannot perform 'fdiv' on non-numbers")
+})
+
+(fun {frecip n} ?{(defined? &1) (fdiv 1 n &1) (fdiv 1 n)})
+:(finverse frecip)
+
+(fun {odd? n} ?{
+  (num? n)
+  (=1 (mod n 2))
+  (error "Cannot perform 'odd?' on non-number")
+})
+
+(fun {even? n} ?{
+  (num? n)
+  (=0 (mod n 2))
+  (error "Cannot perform 'even?' on non-number")
+})
+
+(fun {positive? a} ?{(num? a) (pos? a) (error "Only numbers can be positive")})
+(fun {negative? a} ?{(num? a) (neg? a) (error "Only numbers can be negative")})
+
+:({+? -? 0?} positive? negative? zero?)
+
+; a to the power b, a whole number
+(fun {pow a b} ?{
+  (not (eq b (trunc b)))
+  (error "'pow' takes a whole number as its power")
+  ?((-? b)
+    (/ 1 (pow a (- b)))
+    ?((zero? b)
+      1
+      ?((even? b)
+        (* (pow a (/ b 2)) (pow a (/ b 2)))
+        (* a (pow a (1- b)))
+      )
+    )
+  )
+})
+
+(fun {minimum} .{min &1})
+(fun {maximum} .{max &1})
+
+; String helpers
+(fun {starts-with? s sub} {=0 (index-of s sub)})
+(fun {ends-with?   s sub} {and (>= (len s) (len sub)) (eq (substring s (- (len s) (len sub))) sub)})
+(fun {contains?    s sub} {>=0 (index-of s sub)})
+
+; Repeat: a list of d's values, run n times
+(fun {repeat n d} ?{(=0 n) NIL (cons (eval d) (repeat (1- n) d))})
+:(times repeat)
+
+; Libraries: (use "name") loads lib/name.dl (on the Hydra, /lib/hylang/name.hl) once; NIL, or the error that
+; stopped it (then it isn't counted as loaded)
+(def {used} {})
+(fun {use name} ?{
+  (elem? name used)
+  NIL
+  (do (load name) (set! {used} (cons name used)) NIL)
+})
+
+; sort and related
+; (in? x l) is built in
+(fun {remove-fst f l} ?{
+  l
+  (do
+    =(hd (fst l))
+    =(tl (tail l))
+    ?(
+      (eq f hd)
+      tl
+      (cons hd (remove-fst f tl))
+    )
+  )
+})
+
+(fun {remove-min} {remove-fst .(min &1) &1})
+(fun {remove-max} {remove-fst .(max &1) &1})
+
+(fun {remove-all f l} ?{
+  l
+  (do
+    =(hd (fst l))
+    =(tl (tail l))
+    ?(
+      (eq f hd)
+      (remove-all f tl)
+      (cons hd (remove-all f tl))
+    )
+  )
+})
+
+; sort is built in: (sort l), or (sort l less)
+(fun {sort-desc l} {reverse (sort l)})
+
+(fun {best-of n l} {take n (sort-desc l)})
+(fun {worst-of n l} {take n (sort l)})
+
+:({top bottom} best-of worst-of)
+
+(fun {between?} ?{(<= &1 &2) (and (>= &3 &1) (<= &3 &2)) (between? &2 &1 &3)})
+:(><? between?)
+(fun {not-between?} {not (between? &1 &2 &3)})
+:(!><? not-between?)
+
+(fun {all-between?} ?{&3 (and (between? &1 &2 (fst &3)) (all-between? &1 &2 (tail &3))) T})
+:(*><? all-between?)
+
+(fun {all-not-between?} ?{&3 (and (not-between? &1 &2 (fst &3)) (all-not-between? &1 &2 (tail &3))) T})
+:(*!><? all-not-between?)
+
+(fun {not-all-between?} {not (all-between? &1 &2 &3)})
+:(!*><? not-all-between?)

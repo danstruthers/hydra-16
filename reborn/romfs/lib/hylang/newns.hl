@@ -1,0 +1,54 @@
+; newns.hl - (newns): the default namespace built again in hylang's own, as sdk/asm/nslib.s builds a task's (init's,
+; rc's newns): its area of the RAM disk, #fr/N (N its task), emptied and made, with bin and lib in it; then the
+; namespace file's lines, /rom/lib/namespace's, and a card's (/sd/0/lib/namespace) if it has one.  A line is a bind
+; or a mount, its words separated by spaces or tabs ('...' a word quoted, '' in it a '; # at a word's start a
+; comment; $task in a word this task's number):
+;   bind [-a | -b] [-c] new old
+;   mount [-a | -b] [-c] '#x' old [spec]
+; A line that fails is said ("newns: the line: its error"), but for what isn't there (:noent, :nodev, :notfs); the
+; rest go on.  hylang's (newns) loads this file, which does it each time it's loaded.
+
+; A directory's names removed, those under them first (4 deep at most)
+(fun {ns-empty p d} {
+  if (> d 4) NIL
+    (each {n (ls p)}
+      (if (dir? (+ p "/" n)) (ns-empty (+ p "/" n) (+ d 1)))
+      (try (remove (+ p "/" n)) NIL))})
+
+; The task's area: emptied (one a task before it with its number left), made, with bin and lib in it
+(fun {ns-area p} {do
+  (if (dir? p) (ns-empty p 0))
+  (try (mkdir p) NIL)
+  (try (mkdir (+ p "/bin")) NIL)
+  (try (mkdir (+ p "/lib")) NIL)})
+
+; A word as it's meant: '...' unquoted ('' a '), $task the task's number
+(fun {ns-word w tn} {
+  str-replace (if (== (substring w 0 1) "'") (str-replace (substring w 1 (- (len w) 2)) "''" "'") w) "$task" tn})
+
+; A line's words, to a comment
+(fun {ns-words line tn} {ns-cut (filter (fn {w} {> (len w) 0}) (str-split line)) tn})
+(fun {ns-cut ws tn} {
+  if (nil? ws) {}
+    (if (== (substring (fst ws) 0 1) "#") {}
+      (cons (ns-word (fst ws) tn) (ns-cut (tail ws) tn)))})
+
+; A command's flag: -a after, -b before, -c create
+(fun {ns-flag w} {if (== w "-a") :after (if (== w "-b") :before (if (== w "-c") :create NIL))})
+
+; A line run: bind or mount, its flags and the rest; its error said, but for what isn't there
+(fun {ns-line line tn} {
+  let {{ws (ns-words line tn)}}
+    (if (nil? ws) NIL
+      (let {{fl (map ns-flag (filter (fn {w} {== (substring w 0 1) "-"}) (tail ws)))}
+            {args (filter (fn {w} {!= (substring w 0 1) "-"}) (tail ws))}
+            {cmd (if (== (fst ws) "bind") bind (if (== (fst ws) "mount") mount NIL))}}
+        (if (nil? cmd) (print (+ "newns: " line ": not bind or mount"))
+          (try (eval (cons cmd (join args fl)))
+            (if (elem? &code {:noent :nodev :notfs}) NIL (print (+ "newns: " line ": " &err)))))))})
+
+(let {{tn (to-str (pid))}}
+  (ns-area (+ "#fr/" tn))
+  (if (exists? "#fx/lib/namespace") (each {l (read-lines "#fx/lib/namespace")} (ns-line l tn)))
+  (if (exists? "/sd/0/lib/namespace") (each {l (read-lines "/sd/0/lib/namespace")} (ns-line l tn)))
+  NIL)

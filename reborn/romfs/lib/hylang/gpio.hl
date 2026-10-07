@@ -1,0 +1,49 @@
+; gpio.hl - the VIA's port A on header J27, by its files (#g, /dev/gpio): (use "gpio").  Its files: 0-7 (a pin:
+; reads as 0 or 1; a write of 0 or 1 sets it, the pin an output), port (all 8: a byte), ctl (in N, out N, ddr N,
+; ca1 rise or fall, ca2 0, 1 or in; it reads as the pins and the handshake lines, a line each) and ca1 (a read waits
+; for CA1's next edge, then gives the edges counted).  A pin is 0-7, the pin first.  A failure is the system's error.
+
+(use "dev")
+
+(fun {gpio.ctl line} {dev.write "/dev/gpio/ctl" line})
+(fun {gpio.file pin} {+ "/dev/gpio/" (to-str pin)})
+
+; A pin's level, 0 or 1
+(fun {gpio pin} {dev.num (gpio.file pin)})
+
+; The pin made an output, its level set (0 or 1)
+(fun {gpio! pin level} {dev.write (gpio.file pin) ?((== level 0) "0" "1")})
+
+; The pin made an input, or an output
+(fun {gpio-in pin} {gpio.ctl (format "in {}" pin)})
+(fun {gpio-out pin} {gpio.ctl (format "out {}" pin)})
+
+; All 8 pins' levels, a byte (bit n, pin n)
+(fun {gpio-port} {char-code (char-at (dev.read "/dev/gpio/port" 1) 0)})
+
+; The outputs' levels set from a byte (the inputs keep theirs)
+(fun {gpio-port! byte} {dev.write "/dev/gpio/port" (list byte)})
+
+; The pins' directions: bit n 1, pin n an output
+(fun {gpio-ddr! byte} {gpio.ctl (format "ddr {}" byte)})
+
+; CA1's active edge, :rise or :fall
+(fun {gpio-ca1! edge} {if (eq edge :rise) (gpio.ctl "ca1 rise")
+  (if (eq edge :fall) (gpio.ctl "ca1 fall") (error "'gpio-ca1!' expects :rise or :fall" :inval))})
+
+; CA2: 0 (an output, low), 1 (high) or :in (an input)
+(fun {gpio-ca2! v} {gpio.ctl ?((eq v :in) "ca2 in" (format "ca2 {}" ?((== v 0) 0 1)))})
+
+; CA1's next edge waited for: the edges counted
+(fun {gpio-wait} {dev.num "/dev/gpio/ca1"})
+
+; The pins and the handshake lines, a hash: each pin (0-7) its direction and level, {:out 1}; :ca1 its edge and
+; the edges counted, {:rise 3}; :ca2 its level, or :in
+(fun {gpio-state} {hash-create (map gpio.entry (dev.lines "/dev/gpio/ctl"))})
+(fun {gpio.entry line} {do
+  =(w (str-split line " "))
+  ?((digit? (char-at line 0))
+    (list (val (fst w)) (list (to-atom (snd w)) (val (thd w))))
+    ?((== (fst w) "ca1")
+      (list :ca1 (list (to-atom (snd w)) (val (thd w))))
+      (list (to-atom (fst w)) ?((== (snd w) "in") :in (val (snd w))))))})

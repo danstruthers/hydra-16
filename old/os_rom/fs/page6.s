@@ -1,0 +1,33 @@
+.debuginfo
+
+; ****************************************************************************
+; BIOS ROM page 6 (W = 6): the HydraFS server (hfs_srv.s, hfs_write.s).  It runs in the storage task, on
+; the SD card's block layer, which stays on page 3 with SPI and /dev/sd: a block's far call costs about
+; 120 cycles, next to about 150,000 to move the block.
+;
+;   This file is included inside `.scope PAGE6` (see all.s), before the rest of page 6, so the gate labels
+;   below take precedence over the routines of the same name on other pages.  Page 3 reaches page 6 through
+;   the global aliases after the scope (HFS_FORGET_P6, ...): PAGE3 is assembled first, and a scope can't be
+;   named before it's been seen.
+
+.segment "GATES_P6"
+
+; Gates from page 6 to the block layer (page 3).  HydraFS calls the first three through SD_CACHE_LOAD,
+; SD_READ_BLOCK and SD_WRITE_BLOCK (hfs_srv.s), which count its blocks from its partition's first
+FAR_GATE_INLINE     SD_CACHE_LOAD_P3, PAGE3::SD_CACHE_LOAD, 3
+FAR_GATE_INLINE     SD_READ_BLOCK_P3, PAGE3::SD_READ_BLOCK, 3
+FAR_GATE_INLINE     SD_WRITE_BLOCK_P3, PAGE3::SD_WRITE_BLOCK, 3
+FAR_GATE_INLINE     SD_START,       PAGE3::SD_START,        3
+FAR_GATE_INLINE     SD_CARD_SIZE,   PAGE3::SD_CARD_SIZE,    3
+FAR_GATE_INLINE     HFS_PART_FIND,  PAGE3::HFS_PART_FIND,   3   ; (The card's HydraFS partition: hfs_format.s)
+
+; ... and to page 0 (they run in the current task: the storage task)
+FAR_GATE_INLINE     IO_SRV_MAP,     ::IO_SRV_MAP,           0
+FAR_GATE_INLINE     TASK_MAY,       PAGE5::TASK_MAY,        5   ; (The RAM disk's areas: HFS_AREA_CHECK)
+FAR_GATE_INLINE     IO_SRV_UNMAP,   ::IO_SRV_UNMAP,         0
+
+; ... to page 9: the clock (HydraFS's stamps)
+FAR_GATE_INLINE     CLOCK_GET,      ::CLOCK_GET_P9,         9
+
+; ... and back to page 3: the check's routine for each run of a file's clusters (HFS_EACH_RUN calls it)
+FAR_GATE_INLINE     HFS_CK_RUN,     PAGE3::HFS_CK_RUN,      3

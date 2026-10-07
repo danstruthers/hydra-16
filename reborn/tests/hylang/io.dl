@@ -1,0 +1,95 @@
+; io.dl - streams (open, close, print-to, write-to, read-line, read-byte, read-all, seek, tell; stdout), save and
+; load, output-of, args
+
+(def {io-tmp} (+ regress-dir "io.tmp"))
+
+; written, then read
+(def {io-s} (open io-tmp :write))
+(check (type-of io-s) :stream)
+(print-to io-s "line one" 1)
+(write-to io-s "line" " " "two")
+(close io-s)
+(def {io-s} (open io-tmp))
+(check (read-line io-s) "line one 1")
+(check (read-line io-s) "line two")
+(check (read-line io-s) NIL)
+(check (read-byte io-s) NIL)
+(close io-s)
+(def {io-s} (open io-tmp))
+(check (read-all io-s) "line one 1\nline two")
+(check (read-all io-s) "")
+(close io-s)
+
+; appended
+(def {io-s} (open io-tmp :append))
+(write-to io-s "!\r\nthree")
+(close io-s)
+(def {io-s} (open io-tmp))
+(read-line io-s)
+(check (read-line io-s) "line two!")
+(check (read-line io-s) "three")
+(close io-s)
+
+; bytes, and places
+(def {io-s} (open io-tmp))
+(check (read-byte io-s) (char-code \l))
+(check (read-byte io-s) (char-code \i))
+(check (tell io-s) 2)
+(seek io-s 5)
+(check (tell io-s) 5)
+(check (read-line io-s) "one 1")
+(check-error (seek io-s -1))
+(check-error (write-to io-s "x"))
+(close io-s)
+(check-error (read-line io-s))
+(check (close io-s) NIL)
+
+; read and written in place (:update): the file's there, as it was, till it's written over
+(def {io-s} (open io-tmp :update))
+(check (read-line io-s) "line one 1")
+(seek io-s 0)
+(write-to io-s "LINE")
+(seek io-s 0)
+(check (read-line io-s) "LINE one 1")
+(close io-s)
+(def {io-s} (open io-tmp))
+(check (read-line io-s) "LINE one 1")
+(close io-s)
+(check (try (open (+ regress-dir "no-such-file.tmp") :update) &code) :noent)
+
+; what can't be done
+(check-error (open (+ regress-dir "no-such-dir/x.txt")))
+(check-error (open io-tmp :sideways))
+(check-error (read-line 5))
+(check-error (print-to 5 "x"))
+(check-error (close stdout))
+
+; the console's streams
+(check (output-of (print-to stdout "x" 1)) "x 1\n")
+(check (output-of (write-to stdout "x")) "x")
+
+; save (a value written, to be read back) and load (a file's expressions run, its last one's value)
+(save {1 "a\tb" :c {2}} io-tmp :overwrite)
+(check (load io-tmp) {1 "a\tb" :c {2}})
+(save {1 {} {{}}} io-tmp :overwrite)
+(check (load io-tmp) {1 {} {{}}})
+(save #({{:a 1} {"b" {2 3}}}) io-tmp :overwrite)
+(check ((load io-tmp) "b") {2 3})
+(check-error (save 1 io-tmp))
+(check (error-code (save 1 (+ regress-dir "no-such-dir/x.tmp"))) :noent)
+(save 2 io-tmp :append)
+(check (load io-tmp) 2)
+(check-error (load "no-such-file-at-all"))
+
+; output-of
+(check (output-of) "")
+(check-error (output-of (print 1) (error "x")))
+
+; args: the script's name, then its arguments
+(check (string? (fst args)) T)
+
+; the console's other streams
+(check (type-of stdin) :stream)
+(check (type-of stderr) :stream)
+(check-error (write-to stdin "x"))
+(check-error (read-line stderr))

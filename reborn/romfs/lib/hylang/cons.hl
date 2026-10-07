@@ -1,0 +1,31 @@
+; cons.hl - the console's windows, by their files (#c, /dev): (use "cons").  /dev/wctl takes new (a window made, and
+; shown) and current N (window N shown), and reads as the windows, a line each (* the one shown); /dev/consctl takes
+; rawon and rawoff (raw lasts while a consctl is open: each key as it comes, unechoed); /dev/bell, a write, rings the
+; console's bell (#a's: a short beep).  $window is this shell's window.  A failure is the system's error.
+
+(use "dev")
+
+(def {cons.ctl} NIL)
+
+; This one's window ($window; none: 0)
+(fun {window} {do =(w (env "window")) (if w (val w) 0)})
+
+; The windows, a list of their numbers; and the one shown
+(fun {windows} {map (fn {l} {val (fst (str-split l " "))}) (dev.lines "/dev/wctl")})
+(fun {shown-window} {val (fst (str-split (fst (filter (fn {l} {elem? "*" (str-split l " ")}) (dev.lines "/dev/wctl"))) " "))})
+
+; A window made, and shown (its shell: wstart's)
+(fun {new-window} {dev.write "/dev/wctl" "new"})
+
+; Window n shown
+(fun {show-window n} {dev.write "/dev/wctl" (format "current {}" n)})
+
+; The keys raw (each as it comes, unechoed), till raw-off: consctl kept open meanwhile
+(fun {raw-on} {do
+  (if cons.ctl NIL (set! {cons.ctl} (sys-open "/dev/consctl" 1)))
+  (sys-write cons.ctl "rawon")
+  NIL})
+(fun {raw-off} {if cons.ctl (do (sys-write cons.ctl "rawoff") (sys-close cons.ctl) (set! {cons.ctl} NIL) NIL) NIL})
+
+; The bell: #a's beep (a BEL written, with no sound driver)
+(fun {beep} {if (exists? "/dev/bell") (dev.write "/dev/bell" "\a") (do (write "\a") NIL)})

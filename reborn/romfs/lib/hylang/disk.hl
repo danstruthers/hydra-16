@@ -1,0 +1,43 @@
+; disk.hl - the disks, by their files (#d, /dev/sd): (use "disk").  A disk is named by its letter, a string (0-f a
+; card on that SPI device, x the ROM disk, r the RAM disk, s the shared one; a number, 0-15, for a card).  A disk's
+; ctl reads as it ("sdhc 7580 MB 15523840 blocks", or "none"; then its file system's lines: "hydrafs label=ROM",
+; "free 192 KB of 252 KB"), and takes init (a card started again), stop (a RAM disk's banks given back), format,
+; label, check.  The directory lists the disks started.  A failure is the system's error.
+
+(use "dev")
+
+(fun {disk.name d} {if (num? d) (dev.hex d 1) d})
+(fun {disk.ctl d} {dev.lines (format "/dev/sd/{}/ctl" (disk.name d))})
+(fun {disk.cmd d line} {dev.write (format "/dev/sd/{}/ctl" (disk.name d)) line})
+
+; The first of its ctl's lines that has the text, from the text on (NIL: none)
+(fun {disk.find lines text} {do
+  =(l (filter (fn {x} {>= (index-of x text) 0}) lines))
+  (if l (substring (fst l) (index-of (fst l) text) (len (fst l))) NIL)})
+
+; The disks started, a list of hashes: :disk (its letter), :kind (:sdhc, :sdsc, :rom, :ram ...), :blocks (512 bytes
+; each), and :label if it has a file system
+(fun {disks} {filter (fn {h} {not (eq (h :kind) :none)}) (map disk.info (ls "/dev/sd"))})
+(fun {disk.info d} {do
+  =(l (disk.ctl d))
+  =(w (str-split (fst l) " "))
+  =(lb (disk.find l "label="))
+  (hash-create (join (list (list :disk d) (list :kind (to-atom (fst w))))
+    (if (> (len w) 4) (list (list :blocks (val (nth 3 w)))) NIL)
+    (if lb (do =(x (fst (str-split lb " "))) (list (list :label (substring x 6 (- (len x) 6))))) NIL)))})
+
+; Each disk's file system's room, a list of hashes: :disk, :label, :free and :size (KB)
+(fun {df} {filter (fn {h} {not (nil? h)}) (map disk.room (ls "/dev/sd"))})
+(fun {disk.room d} {do
+  =(f (disk.find (disk.ctl d) "free "))
+  (if f
+    (do =(w (str-split f " "))
+      (hash-create (list (list :disk d) (list :label ((disk.info d) :label)) (list :free (val (nth 1 w))) (list :size (val (nth 4 w))))))
+    NIL)})
+
+; A card started again (as after it's changed); a RAM disk stopped (its banks given back)
+(fun {disk-start d} {disk.cmd d "init"})
+(fun {disk-stop d} {disk.cmd d "stop"})
+
+; The SD cards there: their SPI devices, a list (0-15; each one's ctl read, which starts it)
+(fun {cards} {filter (fn {n} {try (not (== (fst (disk.ctl n)) "none")) NIL}) (range 16)})
