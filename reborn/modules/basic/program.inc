@@ -63,15 +63,22 @@ L2340:
 RESTART:
         jsr     IO_RESET                        ; (Files LOAD or SAVE had: closed; a script: its end)
         lsr     Z14
-        lda     interactive                     ; (OK: at the console only)
-        beq     L2351
+        lda     interactive                     ; (OK: at the console only, and not the shell's, which has its
+        beq     L2351                           ;   prompt)
+        lda     shell
+        bne     L2351
         lda     #<QT_OK
         ldy     #>QT_OK
         jsr     GOSTROUT
 L2351:
         ldx     #$FF                            ; (Direct mode while the line's read: INLIN tells it from INPUT's)
         stx     CURLIN+1
+        jsr     SHELL_PROMPT                    ; (The shell's, at the console: hyshell.inc)
         jsr     INLIN
+        jsr     SHELL_LINE                      ; (% or the shell's rule: rc's, or its own)
+        bcs     L2351
+        ldx     #<(INPUTBUFFER-1)
+        ldy     #>(INPUTBUFFER-1)
         stx     TXTPTR
         sty     TXTPTR+1
         jsr     CHRGET
@@ -84,7 +91,10 @@ L2351:
         stx     CURLIN+1
         bcc     NUMBERED_LINE
         bit     ldfd                            ; (A file being loaded: its lines without a number, a #!
-        bpl     L2351                           ;   line say, passed over)
+        bmi     :+                              ;   line say, passed over; but the profile's, as typed)
+        lda     ld_exec
+        beq     L2351
+:
         jsr     PARSE_INPUT_LINE
         jmp     NEWSTT2
 

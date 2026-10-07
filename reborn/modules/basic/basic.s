@@ -47,3 +47,4 @@
 .include "rnd.inc"
 .include "trig.inc"
 .include "hyio.inc"
+.include "hyshell.inc"

@@ -154,9 +154,37 @@ to Microsoft's code are fixes (RND's and an integer limit's 4-byte constants mad
 and in EhyBASIC's last good build (its sources' CONFIG_2A, the binary `hydrabas021126-0307-good-inline.bin`, run on
 a bare 65C02).
 
-## To come
+## The shell: basic -l
 
-The shell: reviewed against HyForth's and hylang's before it's added.
+HyForth's and hylang's rules ([hyforth.md](hyforth.md), "The shell"; [hylang.md](hylang.md), "The prompt"), with
+BASIC's idea of its own lines (`hyshell.inc`):
+
+* **The rule.**  At the prompt a line is BASIC's if it's a program line (a number first), `?`, a statement's keyword
+  as its first word (or an alias of one: `JSR`), or an assignment (a name, `$` or `%` after it as it may be, then
+  `=` or a subscript's `(`); any other is an rc command line, run whole by rc (`rc -c`) and waited for.  So pipes,
+  redirections, globbing, quoting and `$x` are rc's, and BASIC isn't given a shell grammar.  The words are matched
+  whole, in either case (`printf` is rc's, `print` BASIC's); a name in both is BASIC's (`sleep`, which means the same,
+  but `wait`, `if`, `for` too), and `%` before a line makes it rc's whatever it is, at any BASIC's prompt.
+* **Statuses.**  An rc line's code is `$status` (rc's: the program's exit message, or its code); one ending in `&`
+  isn't waited for (its task `$apid`, in a note group of its own).  Ctrl-C while rc runs is rc's, and the shell goes
+  on, on a new line.  `exit` ends BASIC with the last code; `bye` with 0.
+* **What an rc line can't do.**  It runs in a task of its own, so BASIC's current directory and namespace are the
+  shell's own commands, their arguments rc's way (`'...'` quoted, `''` a quote; `$name` the environment's variable,
+  its first word): `cd [dir]` (none: `$home`), `bind [-a|-b] [-c] new old`, `mount [-a|-b] [-c] #x old [spec]`,
+  `unmount [new] old`, `newns`.  A usage that isn't right says so (`usage: bind [-a|-b] [-c] new old`), a failure
+  says the system's text (`/none: not found`), and either sets `$status`.
+* **The prompt** is HyForth's and hylang's: the directory and `> ` (`/rom/lib> `; on a card `0:/games> `), on a line of
+  its own, in place of `OK`.
+* **`basic -l`**, a login shell: its namespace made (`newns`: the SDK's nslib, its zero page BASIC's temporaries,
+  its 2.4K of buffers in a bank taken for the while), its window's console at `/dev` (not window 0's: `#c` taken off,
+  `#c$window` put after), its notes its note group's (`/dev/consctl`'s `group`) — what rc's `/lib/profile` does, done
+  in code, as a profile of BASIC's can't hold a shell command in an `IF` — then `/lib/basic/profile.bas` (the ROM
+  disk's; through the `/lib` union a card's or the RAM disk's in its place) run as typed lines, and the prompt.  A
+  card's `/lib/shell` with `/bin/basic -l` makes it a window's shell, init's and wstart's.
+* **`ENV$(name$)`**, the environment's variable (its first word; `""` if it isn't set), as hylang's `env` and
+  HyForth's `getenv`.
+
+The module is 14.7K of its bank now (nslib 2K of it).
 
 ## The test
 
@@ -168,4 +196,6 @@ and EOF at the end, CLOSE, the file's `cat`; FILE OPEN, FILE NOT OPEN, a file no
 sound (SOUND's notes with a patch, a volume and off, SLEEP between two timed on the emulator's YM2151, BEEP's bell,
 `/dev/sndctl`'s volume kept and its error, ILLEGAL QUANTITY); SYS (calls by name and RREG, one not there, machine code
 above HIMEM called by SYS and by USR, registers in and out); memory (FRE past 32767, a 32K array, 301 strings and
-the garbage collector, an integer array, HIMEM and its errors).
+the garbage collector, an integer array, HIMEM and its errors); the shell (`basic -l` at rc's prompt: BASIC's lines and
+rc's by the rule, `cd` and the prompt, `$status`, `%`, a usage, ENV$, a program line, `exit`).  `bawin`: a card's
+`/lib/shell` naming `/bin/basic -l`, init's in window 0 and wstart's in a window made (`$window`, ENV$).

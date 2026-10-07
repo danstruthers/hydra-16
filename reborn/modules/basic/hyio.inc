@@ -205,6 +205,17 @@ main:
             sta         IOPTR+1
             lda         (IOPTR)
             beq         @prompt
+            cmp         #'-'                                ; (-l: a login shell)
+            bne         :+
+            ldy         #1
+            lda         (IOPTR),y
+            cmp         #'l'
+            bne         :+
+            iny
+            lda         (IOPTR),y
+            bne         :+
+            jmp         LOGIN
+:
             ldy         #0
 :
             lda         (IOPTR),y
@@ -259,9 +270,16 @@ IO_RESET:
             lda         #$FF
             sta         save_fd
 :
+            lda         ld_exec                             ; (The profile's lines: on to its end, an error or not)
+            beq         :+
+            lda         #SRC_LOAD
+            sta         cur_src
+            bra         :++
+:
             ldx         #SRC_LOAD
             jsr         SRC_CLOSE
             stz         cur_src
+:
             stz         ld_run
             stz         nolf1
             lda         script
@@ -694,6 +712,7 @@ LOAD_DONE:
             ldx         #SRC_LOAD
             jsr         SRC_CLOSE
             stz         cur_src
+            stz         ld_exec                             ; (The profile's end too)
 LOAD_END:
             lda         ld_run
             stz         ld_run

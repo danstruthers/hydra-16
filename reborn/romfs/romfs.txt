@@ -55,6 +55,7 @@ lib/hylang/pc.hl    lib/hylang/pc.hl
 lib/hylang/snd.hl   lib/hylang/snd.hl
 lib/hylang/login.hl lib/hylang/login.hl     ; hylang -l, a login shell: login.hl, profile.hl (and shell.hl,
 lib/hylang/profile.hl lib/hylang/profile.hl ;   the shell's rule: an rc command line at the prompt)
+lib/basic/profile.bas lib/basic/profile.bas ; basic -l, a login shell: run as typed after its namespace and window
 lib/hylang/shell.hl lib/hylang/shell.hl
 bin/mkfs            ../obj/programs/mkfs.hyx    ; The disk tools: RAM programs (programs/), loaded from here
 bin/fsck            ../obj/programs/fsck.hyx
