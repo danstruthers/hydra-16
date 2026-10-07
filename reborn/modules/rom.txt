@@ -45,5 +45,6 @@ module      hwtest
 module      play
 module      xmodem
 module      forth
+module      basic
 module      hylang
 module      hysnap      ; (hylang's snapshot: its heap with its library loaded, made by tools/hysnap.js at the build)

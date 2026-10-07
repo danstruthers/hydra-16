@@ -216,6 +216,9 @@ with four banks the arena filled by `sort`'s and the rest were evaluated (then 1
 script that fills it gets it emptied between its items: with an arena of one bank, a script of all twenty's files
 took 62 million cycles, against 58 with eight banks and 204 when it stayed full.
 
+BASIC has the same benchmarks too (`bench.bas`), which `sim/bench.js` and the `bench` test run with these two: the
+three side by side are in docs/basic.md, "Against hylang and HyForth".
+
 ## The design
 
 The plan has it whole; in short:

@@ -8,3 +8,6 @@ reborn/tests/forth/** -text
 reborn/tests/hylang/** -text
 # hylang's own checks (reborn/tests/hyhydra): LF, as the suite's files beside them on the card
 reborn/tests/hyhydra/** -text
+# BASIC's suite (reborn/tests/basic): LF, its programs and scripts as BASIC reads them from the card, its outputs as
+# BASIC writes them (trailing spaces and all)
+reborn/tests/basic/** -text

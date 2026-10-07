@@ -14,6 +14,7 @@
 //   obj/gen/forthsys.inc  HyForth's sys- words, for its Hydra library (forthlib/hydra.s)
 //   obj/gen/hylsys.inc    hylang's sys- functions, the calls' records (modules/hylang/hysys.inc), from the hl: lines
 //   obj/gen/hydra.fs      the constants and error codes for HyForth, a library on the ROM disk (/lib/forth)
+//   obj/gen/basicsys.inc  BASIC's SYS "NAME": the calls a program makes, by name (modules/basic/hyio.inc)
 //
 // Usage: node tools/apigen.js [ROOT]       (ROOT: the reborn folder; default: this file's parent)
 // From Node: require('./apigen.js').generate(root) gives { calls, errors, consts, groups }.
@@ -247,6 +248,15 @@ function forthSys(api) {
   return s;
 }
 
+// ---- BASIC (modules/basic): SYS "NAME" calls one by its name.  basicsys.inc: each call a program makes (forth's),
+// its name (upper case, its last character's bit 7 set: bmacros.inc's htasc) and its address; a 0 after the last
+function basicSys(api) {
+  let s = header(';', 'basicsys.inc - BASIC\'s SYS "NAME": the calls a program makes, by name (modules/basic/hyio.inc)');
+  s += 'SYS_NAMES:' + CRLF;
+  for (const c of forthCalls(api)) s += '            htasc       "' + c.name + '"' + CRLF + '            .word       ' + hx(c.addr, 4) + CRLF;
+  return s + '            .byte       0' + CRLF;
+}
+
 // ---- hylang (modules/hylang): a sys- function for each call a program makes (forth's), from its hl: line (the
 // format: spec/api.def's header).  hylsys.inc: each call's record, read by hysys.inc's sys: its name (lower case, no
 // sys-, a 0), its address, the arguments it needs and the most it takes, its inputs (a count, then each one's kind,
@@ -415,6 +425,7 @@ function generate(root) {
   write(path.join(gen, 'forthsys.inc'), forthSys(api));
   write(path.join(gen, 'hylsys.inc'), hylSys(api));
   write(path.join(gen, 'hydra.fs'), forthLib(api, errors));
+  write(path.join(gen, 'basicsys.inc'), basicSys(api));
   write(path.join(gen, 'api.json'), JSON.stringify({
     calls: api.calls.map(c => ({ name: c.name, addr: c.addr, group: c.group, in: c.in.join(' '), out: c.out.join(' '), errors: c.errors, blocks: c.blocks })),
     errors, consts: api.consts.map(k => ({ name: k.name, value: k.value })),
