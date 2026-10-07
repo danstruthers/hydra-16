@@ -15,7 +15,9 @@
 ;               #a/bell: one of the calls from a driver to another, the screen's #v/term another)
 ;   /consctl    rawon, rawoff (raw lasts till the window's last consctl closes, as Plan 9's does); keys vt, keys
 ;               hydra (raw's keys: as a VT100 sends them, following the window's DECCKM, DECKPAM and VT52 mode, or
-;               as one code each, KEY_*: as it starts, and again with its last consctl); group (the
+;               as one code each, KEY_*: as it starts, and again with its last consctl); scroll smooth, scroll
+;               jump (the window shown on the serial port: every byte its writers write goes out, they waiting for
+;               the line; or they go on, the terminal painted as it can, skipping what came between); group (the
 ;               window's notes go to the writer's note group); screen, serial, both (where the windows are shown:
 ;               every window's, the console's terminals: the Vera X's screen, the serial port, or both, as it
 ;               starts; screen with no screen: E_NODEV).  It reads as the state
@@ -30,7 +32,8 @@
 ;               shell, forth's send); all of them, as its keys' queue has room, the writer waiting for the rest
 ;   /text       the window's scrollback and screen as text, a line a row (rio's)
 ; The keys: Ctrl-] then a digit shows that window (Ctrl-] n the next; Ctrl-] c asks for a new one, for /wnew's
-; reader; Ctrl-] Ctrl-] is a Ctrl-]); Ctrl-C and Ctrl-\ are notes (interrupt, kill) to the shown window's note
+; reader; Ctrl-] h holds the window shown's output, its writers waiting, till Ctrl-] h again (the VT100's No Scroll);
+; Ctrl-] Ctrl-] is a Ctrl-]); Ctrl-C and Ctrl-\ are notes (interrupt, kill) to the shown window's note
 ; group, in either mode.  A window goes when the last of its cons fids closes (but window 0).
 ;
 ; Receiving: the ACIA's interrupt (LINE_ACIA) puts each byte into the receive ring and adds 1 to the event count
@@ -184,6 +187,8 @@ w_group:    .res        WIN_MAX                             ;   its note group (
 w_cons:     .res        WIN_MAX                             ;   its cons fids ...
 w_ctl:      .res        WIN_MAX                             ;   its consctl fids (raw ends with the last) ...
 kvt:        .res        WIN_MAX                             ;   <> 0: keys vt ...
+w_jump:     .res        WIN_MAX                             ;   <> 0: scroll jump ...
+w_hold:     .res        WIN_MAX                             ;   <> 0: held (Ctrl-] h) ...
 kp_n:       .res        WIN_MAX                             ;   a key's sequence: its bytes, those read ...
 kp_i:       .res        WIN_MAX
 kp_buf:     .res        WIN_MAX * KP_SIZE                   ;   and them
@@ -533,6 +538,8 @@ distribute:
             beq         @new
             cmp         #'n'                                ; n: the next window
             beq         @next
+            cmp         #'h'                                ; h: the window shown held, or not
+            beq         @hold
             sec                                             ; A digit: that window
             sbc         #'0'
             cmp         #WIN_MAX
@@ -555,6 +562,14 @@ distribute:
             beq         :--
             jsr         w_show
             bra         @byte
+
+@hold:
+            ldx         w_in
+            lda         w_hold,X
+            eor         #1
+            sta         w_hold,X
+            inc         TASK_EVENT                          ; (Its writers look again)
+            jmp         @byte
 
 @new:
             lda         #1
@@ -611,6 +626,8 @@ w_init:
             stz         kvt,X
             stz         kp_n,X
             stz         kp_i,X
+            stz         w_jump,X
+            stz         w_hold,X
             lda         #INIT_TASK
             sta         w_group,X
             cpx         lw                                  ; (Its old state, if it was loaded: gone)
@@ -1336,7 +1353,14 @@ w_write:
             lda         srv_fid_aux,X
             jsr         load
             jsr         scr_ready
-            lda         lw                                  ; The shown window, the serial port being painted?
+            ldx         lw                                  ; Held: none yet
+            lda         w_hold,X
+            beq         :+
+            jmp         again
+:
+            lda         w_jump,X                            ; The shown window (but scroll jump's), the serial port
+            bne         :+                                  ;   being painted?
+            txa
             cmp         w_in
             bne         :+
             lda         term
@@ -2294,6 +2318,39 @@ word_is:
 @done:
             rts
 
+; scroll smooth, scroll jump: the window shown's every byte to the serial port, its writers waiting for the line; or
+; its writers going on, the serial port's terminal painted as it can (vt.s)
+c_scroll:
+            lda         z:srv_argn
+            beq         @inval
+            lda         srv_argp
+            sta         p
+            lda         srv_argp + 1
+            sta         p + 1
+            lda         #<s_jump_w
+            ldx         #>s_jump_w
+            jsr         word_is
+            bne         :+
+            ldy         #1
+            bra         @set
+:
+            lda         #<s_smooth_w
+            ldx         #>s_smooth_w
+            jsr         word_is
+            bne         @inval
+            ldy         #0
+@set:
+            ldx         z:srv_id
+            tya
+            sta         w_jump,X
+            inc         TASK_EVENT                          ; (Its writers look again)
+            clc
+            rts
+@inval:
+            lda         #E_INVAL
+            sec
+            rts
+
 ; group: the window's notes (Ctrl-C, Ctrl-\) go to the writer's note group
 c_group:
             ldx         z:srv_id
@@ -2327,6 +2384,17 @@ gen_consctl:
 :
             lda         #<s_keys_hydra
             ldx         #>s_keys_hydra
+:
+            jsr         srv_tputs
+            ldy         z:srv_id                            ; scroll smooth, scroll jump
+            lda         w_jump,Y
+            beq         :+
+            lda         #<s_scroll_jump
+            ldx         #>s_scroll_jump
+            bra         :++
+:
+            lda         #<s_scroll_smooth
+            ldx         #>s_scroll_smooth
 :
             jsr         srv_tputs
             lda         #<s_group
@@ -3204,6 +3272,7 @@ cons_cmds:
             .word       s_rawon_w, c_rawon
             .word       s_rawoff_w, c_rawoff
             .word       s_keys_w, c_keys
+            .word       s_scroll_w, c_scroll
             .word       s_group_w, c_group
             .word       s_screen_w, c_screen
             .word       s_serial_w, c_serial
@@ -3250,6 +3319,11 @@ s_vt_w:     .byte       "vt", 0
 s_hydra_w:  .byte       "hydra", 0
 s_keys_vt:  .byte       "keys vt", LF, 0
 s_keys_hydra: .byte     "keys hydra", LF, 0
+s_scroll_w: .byte       "scroll", 0
+s_jump_w:   .byte       "jump", 0
+s_smooth_w: .byte       "smooth", 0
+s_scroll_jump: .byte    "scroll jump", LF, 0
+s_scroll_smooth: .byte  "scroll smooth", LF, 0
 s_group:    .byte       "group ", 0
 s_window:   .byte       LF, "window ", 0
 s_shown:    .byte       " *", 0

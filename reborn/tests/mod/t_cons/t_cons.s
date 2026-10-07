@@ -21,7 +21,7 @@ got:        .res        1                                   ; The note this task
 fd:         .res        1
 
 .bss
-buf:        .res        64
+buf:        .res        96
 info:       .res        TI_SIZE
 w1:         .res        1                                   ; Window 1's cons
 saved:      .res        1                                   ; Fd 0, kept
@@ -109,9 +109,9 @@ main:
             OPEN_       s_consctl, O_RDWR
             sta         ctl
             EXPECT_OK   "OPEN #c/consctl"
-            READ_       ctl, 64
-            EXPECT_A    51, "consctl reads as its state: rawoff, keys hydra, group 1, window 0, terminal serial (51 bytes)"
-            lda         buf + 24
+            READ_       ctl, 96
+            EXPECT_A    65, "consctl reads as its state: rawoff, keys hydra, scroll smooth, group 1, window 0, terminal serial (65 bytes)"
+            lda         buf + 38
             EXPECT_A    '1', "group 1: init's"
 
 ; ---- A BEL printed: the sound driver's bell too (#a/bell: tests.js looks for channel 7's key-on)

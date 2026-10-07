@@ -442,6 +442,8 @@ const VT_PAINT_RC = [
   'cat /ram/scr',
   'echo done',
 ].join('\n') + '\n';
+// (vtjump's: the ROM disk's api.md, 38K, cat to the window shown with scroll jump)
+const vtJump = () => fs.readFileSync(path.join(__dirname, '..', 'obj', 'gen', 'api.md'), 'latin1');
 const vtModel = bytes => new VT({ onlcr: true }).write(bytes);
 const vtText = bytes => vtModel(bytes).text().replace(/\n$/, '');
 const vtFile = bytes => () => Buffer.from(bytes, 'latin1');
@@ -2398,6 +2400,21 @@ module.exports = {
         const scr = s0 < 0 ? [] : out.slice(s0 + 9).split('\n').map(l => l.replace(/ +$/, ''));
         const rows = want.screen.map(r => r.dw ? [...VT.rowText(r)].map(c => c + ' ').join('').replace(/ +$/, '') : VT.rowText(r));
         for (let r = 0; r < 24; r++) if (scr[r] !== rows[r]) { f.push('the screen\'s row ' + (r + 1) + ': ' + JSON.stringify(scr[r]) + ', not ' + JSON.stringify(rows[r])); break; }
+        return f;
+      },
+    },
+    {
+      name: 'vtjump', what: 'scroll jump (consctl): the ROM disk\'s api.md (38K) cat to the window shown, its writer not waiting for the serial line, the terminal painted as it can: far fewer bytes sent than written, the file\'s last line shown at the end; scroll smooth again',
+      init: 't_rc', cycles: 300e6,
+      get machine() { return { input: typed([['echo scroll jump >/dev/consctl; cat /rom/doc/api.md; echo scroll smooth >/dev/consctl; echo after']]) }; },
+      expect: ['\nafter\n%'],
+      check(m) {
+        const f = [], out = m.out.replace(/\r/g, ''), at = out.indexOf('echo after\n'), end = out.indexOf('\nafter\n', at);
+        if (at < 0 || end < 0) return ['no output between the command and its end'];
+        const big = vtJump(), sent = end - at, last = big.trim().split('\n').pop();
+        this.notes = ['sent ' + sent + ' bytes for the file\'s ' + big.length];
+        if (sent > big.length * 0.6) f.push('scroll jump sent ' + sent + ' bytes of the file\'s ' + big.length + ' (more than 60%)');
+        if (!out.slice(at, end).includes(last)) f.push('the file\'s last line not shown: ' + last);
         return f;
       },
     },

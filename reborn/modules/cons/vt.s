@@ -171,6 +171,8 @@ sp_dec:     .res        1                                   ;   <> 0: its G0 is 
 sp_cy:      .res        1                                   ;   its cursor's row ...
 sp_cx:      .res        1                                   ;   its cursor's column ...
 ser_tcem:   .res        1                                   ; The serial port's cursor: shown (VM_TCEM) or not
+sp_again:   .res        1                                   ;   <> 0: the window written to as it was painted (scroll
+                                                            ;   jump): painted again after ...
 sp_full:    .res        1                                   ;   <> 0: past the last column (the row before painted
                                                             ;   to its end)
 scr_x:      .res        1                                   ; vid's cursor as it is ($FF: not known) ...
@@ -330,6 +332,7 @@ vt_write:
             lda         lw
             jsr         vt_load
             jsr         fw_setup
+            jsr         jump_again
             stz         vw_k
 @byte:
             ldx         vw_k
@@ -339,7 +342,11 @@ vt_write:
             beq         :+
             jsr         tx_free
             cmp         #VT_ROOM
-            bcc         @done
+            bcs         :+
+            ldx         vt_w                                ; (No room: scroll smooth, the rest waits; scroll jump,
+            lda         w_jump,X                            ;   it's taken, the serial port painted after)
+            beq         @done
+            jsr         ser_dirty
 :
             ldx         vw_k
             lda         iobuf,X
@@ -349,6 +356,23 @@ vt_write:
 
 @done:
             lda         vw_k
+            rts
+
+; Scroll jump: the shown window written to while the serial port's painted, which is to paint it again after
+jump_again:
+            lda         vt_w
+            cmp         w_in
+            bne         @done
+            lda         term
+            and         #TERM_SERIAL
+            beq         @done
+            lda         ser_rd
+            bne         @done
+            lda         ts_ser
+            beq         @done
+            lda         #1
+            sta         sp_again
+@done:
             rts
 
 ; .A, a byte of window lw's output (its line editor's echo: cons.s has made sure of the room)
@@ -1522,7 +1546,8 @@ d_colm:                                                     ; ?3: no 132 columns
             jsr         ser_dirty
             jmp         scr_dirty
 
-d_sclm:                                                     ; ?4: kept (W2: jump scroll)
+d_sclm:                                                     ; ?4: kept (DECRQM's), not acted on: scroll jump is the
+                                                            ;   console's (consctl), as resets send ?4l
             lda         vd_set
             sta         v_mode2
             jmp         fs_raw
@@ -3573,6 +3598,7 @@ ser_paint:
             inx
             bra         :-
 :
+            stz         sp_again
             stz         sp_row
             stz         sp_col
             stz         sp_cy
@@ -3682,6 +3708,12 @@ ser_paint:
             cmp         #160
             bcc         @wait
             jsr         ser_state
+            lda         sp_again                            ; (Written to meanwhile: painted again)
+            beq         :+
+            lda         #1
+            sta         ts_ser
+            rts
+:
             stz         ts_ser
             inc         TASK_EVENT                          ; (The window's writers, waiting, look again)
 @wait:

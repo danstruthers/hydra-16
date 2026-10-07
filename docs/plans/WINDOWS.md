@@ -443,6 +443,11 @@ October 2026, on `reborn-text-windows` (reborn's `docs/status.md`, "The text win
 * **The maps moved out of the window's state** (into `vw_maps`, through `vmap`), as a second map wouldn't fit its page.
 * **Double width and height on the screen** show the characters a space apart (the VERA can't scale one row); on the serial port they're the terminal's own.
 
+### **As built: W2d**
+
+* **Jump scroll is the console's setting** (`consctl`'s `scroll jump`), not DECSCLM's: programs' resets send `?4l` (jump), and a window shouldn't start skipping its output for that.  The plan's `wctl` `scroll` became `consctl`'s, beside raw mode and `keys`, as it's the window's own and needs no group.
+* **Hold** is Ctrl-] h; the keyboard's Scroll Lock comes with the input controller (W8).
+
 ### **Decisions**
 
 The user's answers to the plan's questions, 2026-10-07:

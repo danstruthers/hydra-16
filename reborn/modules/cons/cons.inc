@@ -30,7 +30,7 @@ VM2_VT52        = $02           ;   and (v_mode2) VT52 mode (DECANM reset)
 
 ; ---- cons.s's, for vt.s
 .globalzp   tx_head, tx_tail, w_in, ser_rd, cnt, lw
-.global     tx_buf, iobuf, term, scr_st, scr_fd, bell, inq, w_iqh, w_iqt
+.global     tx_buf, iobuf, term, scr_st, scr_fd, bell, inq, w_iqh, w_iqt, w_jump
 .globalzp   hyx2_to, hyx2_a                                 ; The trampolines between the banks (hyx2.inc)
 .global     hyx2_far1, hyx2_far2
 
