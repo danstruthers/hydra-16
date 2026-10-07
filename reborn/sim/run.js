@@ -45,6 +45,10 @@
 //   --screen            after the report, the VERA's text layer as text (its characters as ISO-8859-1)
 //   --frame-png FILE    at the end, the VERA's screen as a PNG (640 x 480); with -i, Ctrl-A p's file (screen-N.png)
 //   --view [PORT]       with -i: the VERA's screen live in a browser, at http://localhost:PORT (8016) (sim/view.js)
+//   --sound [PORT]      with -i: the sound (the YM2151's, and the Vera X's PSG and PCM with --vera: sim/lib/audio.js)
+//                       in a browser, at http://localhost:PORT (8016; --view's page, if there's one), its Sound
+//                       button to hear it, some 0.15 s behind; in time at --speed 1
+//   --wav FILE          the sound into FILE (48,000 stereo 16-bit samples a second), as the Hydra's time passes
 // From Node: boot(opt) gives the machine; labels() the kernel's labels; state(m) each task's state.
 'use strict';
 const fs = require('fs');
@@ -315,7 +319,11 @@ function interactive(m, opt) {
     if (cpu.cyc >= stopAt) return finish('end of input');
     setTimeout(tick, opt.speed > 0 ? 4 : 0);
   }
-  if (opt.view && m.vera) { require('./view.js').startView(m, opt.view); say('the screen: http://localhost:' + opt.view); }
+  if (opt.view || opt.soundPort) {
+    const port = opt.view || opt.soundPort;
+    require('./view.js').startView(m, port, { screen: !!opt.view, sound: !!opt.soundPort });
+    say((opt.view ? 'the screen' : 'the sound') + ': http://localhost:' + port + (opt.soundPort ? ' (its Sound button)' : ''));
+  }
   say('the Hydra\'s serial console.  Ctrl-A x quits, Ctrl-A h for help.');
   tick();
 }
@@ -326,6 +334,25 @@ function cardFile(dev, file) {
   return { dev, blocks, file,
     read: n => { const b = Buffer.alloc(512); fs.readSync(fd, b, 0, 512, n * 512); return b; },
     write: (n, b) => { fs.writeSync(fd, Buffer.from(b), 0, 512, n * 512); } };
+}
+
+// A WAV file of the sound (48,000 stereo 16-bit samples a second), written as it comes: write(samples), and close()
+// to give its header the length
+function wavFile(file, rate) {
+  const fd = fs.openSync(file, 'w');
+  let bytes = 0;
+  const header = () => {
+    const h = Buffer.alloc(44);
+    h.write('RIFF', 0); h.writeUInt32LE(36 + bytes, 4); h.write('WAVEfmt ', 8); h.writeUInt32LE(16, 16);
+    h.writeUInt16LE(1, 20); h.writeUInt16LE(2, 22); h.writeUInt32LE(rate, 24); h.writeUInt32LE(rate * 4, 28);
+    h.writeUInt16LE(4, 32); h.writeUInt16LE(16, 34); h.write('data', 36); h.writeUInt32LE(bytes, 40);
+    fs.writeSync(fd, h, 0, 44, 0);
+  };
+  header();
+  return {
+    write: samples => { const b = Buffer.from(samples.buffer, samples.byteOffset, samples.byteLength); fs.writeSync(fd, b, 0, b.length, 44 + bytes); bytes += b.length; },
+    close: () => { header(); fs.closeSync(fd); },
+  };
 }
 
 function main(argv) {
@@ -359,6 +386,8 @@ function main(argv) {
     else if (a === '--screen') opt.screen = true;
     else if (a === '--frame-png') opt.framePng = next();
     else if (a === '--view') opt.view = /^\d+$/.test(argv[i + 1] || '') ? +next() : 8016;
+    else if (a === '--sound') { opt.sound = true; opt.soundPort = /^\d+$/.test(argv[i + 1] || '') ? +next() : 8016; }
+    else if (a === '--wav') { opt.sound = true; opt.wav = next(); }
     else if (a === '--watch' || a === '--watch-read') {
       const w = watchSpec(next() || '');
       if (!w) { console.error(a + ': ADDR[:T] ($0000-$7FFF)?'); process.exit(2); }
@@ -380,6 +409,8 @@ function main(argv) {
   opt.promImage = opt.prom ? fs.readFileSync(opt.prom) : chips();
   if (opt.veraConfigMs !== undefined) { if (!opt.vera) { console.error('--vera-config: with --vera'); process.exit(2); } opt.vera.configCycles = Math.round(opt.veraConfigMs * opt.clock * 1e3); }
   if ((opt.screen || opt.framePng || opt.view) && !opt.vera) { console.error('--screen, --frame-png and --view: with --vera'); process.exit(2); }
+  if (opt.soundPort && !opt.interactive) { console.error('--sound: with -i (--wav FILE keeps it in a file)'); process.exit(2); }
+  if (opt.view && opt.soundPort) opt.soundPort = opt.view;    // (One page for both)
   for (const spec of breakArgs) {
     const b = breakSpec(spec, lbl, opt.promImage);
     if (!b) { console.error('--break: ' + spec + '?'); process.exit(2); }
@@ -387,8 +418,14 @@ function main(argv) {
   }
   if (opt.callFilter) for (const x of opt.callFilter) if (!x.startsWith('t') && ![...opt.calls.values()].includes(x)) { console.error('--trace-calls: no call ' + x); process.exit(2); }
   const m = boot(Object.assign({}, opt, { prom: opt.promImage }));
+  if (opt.wav) {
+    const w = wavFile(opt.wav, require('./lib/audio.js').RATE);
+    m.audio.on(w.write);
+    process.on('exit', () => w.close());
+  }
   if (opt.interactive) return interactive(m, opt);
-  m.run(opt.cycles);
+  if (opt.sound) while (m.cpu.cyc < opt.cycles && !m.cpu.halted && !m.breakHit) m.run(Math.min(opt.cycles, m.cpu.cyc + 2000000));   // (The sound: given out as it goes)
+  else m.run(opt.cycles);
   if (m.breakHit) console.log('--- break ' + opt.breaks.indexOf(m.breakHit) + ': ' + m.breakHit.spec);
   if (opt.pcHost) for (const b of opt.pcHost.flush()) m.out += String.fromCharCode(b);   // (A frame cut short: the output's)
   process.stdout.write(m.out.replace(/\r\n/g, '\n').replace(/\r/g, '\n'));

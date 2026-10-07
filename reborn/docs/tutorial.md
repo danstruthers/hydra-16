@@ -174,7 +174,8 @@ hylang> exit
 
 ## 7. Sound
 
-`scom` plays a short song on the YM2151 (in the emulator, its notes are counted, not heard): `play
+`scom` plays a short song on the YM2151 (in the emulator, hear it with `node sim/run.js -i --sound`, then the
+Sound button at http://localhost:8016): `play
 /rom/songs/test.zsm` plays a ZSM file, the format the Commander X16's tools (and Furnace) export.
 
 ## 8. A program of your own

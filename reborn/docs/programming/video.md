@@ -140,9 +140,12 @@ with the base changed.
 ## In the emulator
 
 `node sim/run.js --vera` puts a Vera X in slot 0 (`sim/lib/vera.js`: the registers, VRAM, the layers, sprites and
-their collisions, the scan's timing and interrupts, the PCM FIFO's level, the PSG's registers; not FX, and no sound
-is made).  `--screen` prints the text layer after the report, `--frame-png FILE` saves the screen, and with `-i`,
-`--view` shows it live in a browser (http://localhost:8016) while the terminal stays the serial console; Ctrl-A v
-prints it, Ctrl-A p saves it.  Tests set `machine: { vera: true }`; `m.vera.text()` is the screen's text,
-`m.vera.psg` the PSG's registers and `m.vera.psgOns` its voices' starts; with `vera: { pcmLog: true }`,
-`m.vera.pcmLog` is the bytes the FIFO took, and `m.vera.pcmUnderruns` counts its runs dry while it played.
+their collisions, the scan's timing and interrupts, the PCM FIFO, the PSG's registers; not FX).  `--screen` prints
+the text layer after the report, `--frame-png FILE` saves the screen, and with `-i`, `--view` shows it live in a
+browser (http://localhost:8016) while the terminal stays the serial console; Ctrl-A v prints it, Ctrl-A p saves it.
+Its sound, the PSG's and the PCM's, is made with the YM2151's (`sim/lib/audio.js`) when it's asked for: `-i
+--sound` plays it in the browser (the same page as `--view`'s, its Sound button) and `--wav FILE` keeps it.  Tests
+set `machine: { vera: true }`; `m.vera.text()` is the screen's text, `m.vera.psg` the PSG's registers and
+`m.vera.psgOns` its voices' starts; with `vera: { pcmLog: true }`, `m.vera.pcmLog` is the bytes the FIFO took, and
+`m.vera.pcmUnderruns` counts its runs dry while it played; with `sound: true` too, `start(m)` can listen
+(`m.audio.on(fn)`: the sound test's).

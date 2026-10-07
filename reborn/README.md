@@ -24,6 +24,9 @@ node build.js                       the BIOS ROM (bin/bios.bin), the paged ROM (
 node sim/run.js                     boot them in the emulator for a while, then report (the output, the tasks)
 node sim/run.js -i                  the Hydra's serial console, live (Ctrl-A x quits, Ctrl-A h helps)
 node sim/run.js -i --sd card.img    the same with a card in SD device 0 (an image: ../sim/tools/hydrafs.js)
+node sim/run.js -i --sound          the same, its sound heard in a browser (http://localhost:8016, its Sound
+                                    button: the YM2151, and with --vera the Vera X's PSG and PCM); --wav FILE
+                                    keeps it in a file
 node sim/run.js -i --pc-dir DIR     the same with the folder DIR at /pc (the emulator plays the PC tool:
                                     ../sim/tools/hydrapc.js on a real PC)
 node sim/run.js --trace-calls       each system call a program makes, by name, and what it gives back; --break K_OPEN
