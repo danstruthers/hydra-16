@@ -95,6 +95,10 @@ main:
             bne         :+
             inc         interactive
 :
+            lda         login                               ; (basic -l: the login, the profile opened)
+            beq         :+
+            FARN        8, sh_login
+:
             lda         argp                                ; A script: basic file args
             ora         argp + 1
             beq         prompt
@@ -120,27 +124,43 @@ prompt:
             stx         top_s
 @line:
             jsr         code_sel
+            lda         sh_src                              ; (The profile's lines first)
+            beq         @console
+            FARN        8, sh_getline
+            bcc         @have
+@console:
             lda         interactive
+            beq         @read
+            lda         login                               ; (The shell's: its directory first)
             beq         :+
+            FARN        8, sh_prompt
+            bra         @read
+:
             lda         #'>'
             jsr         out_byte
             lda         #' '
             jsr         out_byte
-:
+@read:
             jsr         out_flush
             FARN        6, con_cooked                       ; (The console's lines cooked: a line read)
             jsr         read_line
-            bcc         :+
+            bcc         @have
             jsr         out_flush
             lda         #0
             LDR         r0, 0
             jmp         EXITS
-:
+@have:
+            FARN        8, sh_line                          ; (rc's, or the shell's own: run already)
+            bcc         @lb903
+            jmp         @line
+@lb903:
             LDW         lp, lbuf                            ; (An empty line: nothing)
             ldy         #0
 :
             lda         lbuf,y
-            beq         @line
+            bne         @lb902
+            jmp         @line
+@lb902:
             cmp         #' '
             bne         :+
             iny
@@ -149,7 +169,7 @@ prompt:
             jsr         is_digit_main
             bcs         @now
             FARN        7, text_line                        ; (A line with a number first: into the program)
-            bra         @line
+            jmp         @line
 @now:
             FARN        7, prompt_cmd                       ; (RUN, LIST ...: C = 0 done)
             bcs         @lb901

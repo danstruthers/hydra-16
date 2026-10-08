@@ -7,7 +7,8 @@
 ;   A module of eight banks: the interpreter and the top (run.inc, main.inc, fn.inc) in the first; the compiler in the
 ; second (lex.inc, comp.inc, expr.inc, stmt.inc) and the third (stmt3.inc); the numbers in the fourth (num.inc); the
 ; heap and strings in the fifth (heap.inc); input and output in the sixth (io.inc); the system, the errors' messages
-; and the program's text in the seventh (sys.inc, prog.inc).  What every bank calls is in the task's RAM (ram.inc).
+; and the program's text in the seventh (sys.inc, prog.inc); the shell (basic -l) in the eighth (shell.inc), nslib's
+; newns in the first.  What every bank calls is in the task's RAM (ram.inc).
 
 .setcpu "65C02"
 
@@ -38,7 +39,11 @@
 .include "io.inc"
 .include "sys.inc"
 .include "prog.inc"
+.segment "CODE8"                                            ; (The last bank's: build.js links eight)
+.include "shell.inc"
 
-; (The other banks' segments, so each is linked even before it has code)
-.segment "CODE8"
-            .byte       0
+; nslib (the SDK's: newns, basic -l's), its code in the first bank, its buffers at $8000 in a bank of their own while
+; it runs (newns_do)
+NS_BSS      = $8000
+.include "nslib.s"
+.assert NS_BSS_SIZE <= $2000, error, "nslib's buffers: a bank"
