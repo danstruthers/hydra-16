@@ -842,10 +842,6 @@ num_sign_vt:
 fn_disp4:
             tax
             jmp         (fn_jt4,x)
-fn_jt4:
-            .repeat     F_B5 - F_B4
-            .word       rt_todo4
-            .endrepeat
 
 rt_todo4:
             lda         #73                                 ; (Advanced feature unavailable: not yet)

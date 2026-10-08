@@ -13,7 +13,7 @@ ET_REC          = 2             ; (etinfo its type)
 etype:      .res        1
 etinfo:     .res        1
 e_op:       .res        1                                   ; (An operator's op)
-fn_ent:     .res        2                                   ; (A built-in's entry in fn_tab)
+fn_e:       .res        9                                   ; (A built-in's entry in fn_tab, copied)
 fn_argn:    .res        1                                   ; (Its arguments, counted)
 dname:      .res        NAME_MAX + 2                        ; (A dotted name's whole: designator's)
 dnl:        .res        1
@@ -133,13 +133,14 @@ e_and:
             lda         #K_AND
             jsr         is_kw
             bne         :+
-            lda         #OP_AND
-            sta         e_op
             lda         etype                               ; (A number first)
             bne         @type
             jsr         lex_next
             jsr         e_not
-            jmp         num_op_emit
+            lda         #OP_AND
+            sta         e_op
+            jsr         num_op_emit
+            bra         @more
 :
             rts
 @type:
@@ -670,7 +671,8 @@ arr_etype:
 
 ; ---- Variables found (or made)
 
-; A variable's class for tname (tsuf): a string's ($, AS STRING, DEFSTR) or a record's or a number's.  OUT: scls
+; A variable's class for tname (tsuf): a string's ($, declared AS STRING, DEFSTR's letter) or a record's or a
+; number's.  OUT: scls
 scalar_class:
             lda         tsuf
             cmp         #'$'
@@ -680,9 +682,13 @@ scalar_class:
             lda         #SC_REC                             ; (Declared a record, or AS STRING: so)
             jsr         class_known
             bcc         @have
-            lda         #SC_STR
+            lda         #SC_STR                             ; (A string's declared so; else DEFSTR's, as it is here)
             jsr         class_known
-            bcc         @have
+            bcs         :+
+            lda         spl + SP_FLAGS
+            and         #SF_DECL
+            bne         @str
+:
             jsr         is_defstr
             bcc         @str
 @num:
@@ -706,7 +712,11 @@ array_class:
             bcc         @have
             lda         #SC_SARR
             jsr         class_known
-            bcc         @have
+            bcs         :+
+            lda         spl + SP_FLAGS
+            and         #SF_DECL
+            bne         @str
+:
             jsr         is_defstr
             bcc         @str
 @num:
@@ -721,7 +731,10 @@ array_class:
 ; Is tname known in class .A here (this scope's, or a shared global)?  OUT: C = 0 yes (sent, spl)
 class_known:
             sta         scls
-            jmp         var_find
+            pha
+            jsr         var_find
+            pla
+            rts
 
 ; Does tname start with one of DEFSTR's letters?  OUT: C = 0 yes
 is_defstr:
@@ -773,6 +786,7 @@ var_find:
 
 ; The scalar variable tname (its class by scalar_class), found or made: spl
 var_lookup:
+            jsr         const_only
             jsr         scalar_class
 var_lookup_cls:
             jsr         var_find
@@ -796,6 +810,7 @@ var_lookup_cls:
 ; The array tname (its class by array_class), found or made (0 to 10 in each dimension when it's used, as it isn't
 ; DIMmed): spl
 arr_lookup:
+            jsr         const_only
             jsr         array_class
             jsr         var_find
             bcc         @have
@@ -901,58 +916,99 @@ proc_find:
 
 ; A FUNCTION's call in an expression (procs.inc)
 e_fcall:
+            jsr         const_only
             jmp         fcall_expr
+
+; In a CONST's value: a variable, an array or a FUNCTION isn't a constant
+const_only:
+            lda         cconst
+            bne         :+
+            rts
+:
+            lda         #ER_CONST
+            ldx         #0
+            jmp         c_error
 
 ; ---- The built-in functions (fn_tab): each its keyword, its routine (F_*), its result (ET_*), its arguments (the
 ; least and the most), their types (N a number, S a string, A either), F_NONE as an operand that's itself (CSNG)
 
 e_func:
-            ldx         #0
+            LDW         t0, fn_tab                          ; (Its entry: by its keyword)
 @find:
-            lda         fn_tab,x
-            beq         @none
+            lda         (t0)
+            bne         :+
+            jmp         syntax_err
+:
             cmp         tkv
             beq         @found
-            txa
+            lda         t0
             clc
             adc         #FN_ENTRY
-            tax
+            sta         t0
+            bcc         @find
+            inc         t0 + 1
             bra         @find
-@none:
-            jmp         syntax_err
 @found:
-            stx         fn_ent
+            ldy         #FN_ENTRY - 1                       ; (Copied: fn_e)
+:
+            lda         (t0),y
+            sta         fn_e,y
+            dey
+            bpl         :-
             jsr         lex_next
-            ldx         fn_ent
-            lda         fn_tab + 1,x                        ; (Special forms: their own)
+            lda         fn_e + 1                            ; (Special forms: their own)
             cmp         #F_SPECIAL
             bcc         :+
             jmp         fn_special
 :
             stz         fn_argn
-            lda         fn_tab + 4,x                        ; (None at most: () may follow)
+            lda         fn_e + 4                            ; (None at most: () may follow)
             bne         @args
             lda         #'('
             jsr         is_op
-            bne         @call
+            beq         @lb901
+            jmp         @call
+@lb901:
             jsr         lex_next
             lda         #')'
             jsr         need_op
-            bra         @call
+            jmp         @call
 @args:
             lda         #'('
             jsr         is_op
             bne         @noparen
             jsr         lex_next
+            lda         #')'                                ; (() alone: none, if none will do)
+            jsr         is_op
+            bne         @arg
+            lda         fn_e + 3
+            beq         @lb900
+            jmp         @syntax
+@lb900:
+            jsr         lex_next
+            bra         @call
 @arg:
-            ldx         fn_ent                              ; (Its type)
-            txa
-            clc
-            adc         fn_argn
-            tax
-            lda         fn_tab + 5,x
+            ldx         fn_argn                             ; (Its type)
+            lda         fn_e + 5,x
             pha
+            lda         fn_argn                             ; (Kept: the argument's expression may call others)
+            pha
+            ldx         #FN_ENTRY - 1
+:
+            lda         fn_e,x
+            pha
+            dex
+            bpl         :-
             jsr         expr
+            ldx         #0
+:
+            pla
+            sta         fn_e,x
+            inx
+            cpx         #FN_ENTRY
+            bne         :-
+            pla
+            sta         fn_argn
             pla
             cmp         #'A'
             beq         @ok
@@ -969,39 +1025,34 @@ e_func:
             lda         #','
             jsr         is_op
             bne         @close
-            ldx         fn_ent
             lda         fn_argn
-            cmp         fn_tab + 4,x
+            cmp         fn_e + 4
             bcs         @syntax
             jsr         lex_next
             bra         @arg
 @close:
             lda         #')'
             jsr         need_op
-            ldx         fn_ent
             lda         fn_argn
-            cmp         fn_tab + 3,x
+            cmp         fn_e + 3
             bcc         @syntax
             bra         @call
 @noparen:
-            ldx         fn_ent                              ; (No arguments given: only if none are needed: RND)
-            lda         fn_tab + 3,x
+            lda         fn_e + 3                            ; (No arguments given: only if none are needed: RND)
             bne         @syntax
 @call:
-            ldx         fn_ent
-            lda         fn_tab + 3,x                        ; (Some optional: their count pushed)
-            cmp         fn_tab + 4,x
+            lda         fn_e + 3                            ; (Some optional: their count pushed)
+            cmp         fn_e + 4
             beq         :+
             lda         #OP_PUSHI8
             ldx         #2
             jsr         emit_op
             lda         fn_argn
             jsr         emit
-            ldx         fn_ent
 :
-            lda         fn_tab + 2,x
+            lda         fn_e + 2
             sta         etype
-            lda         fn_tab + 1,x
+            lda         fn_e + 1
             beq         @done                               ; (F_NONE: the operand itself)
             pha
             lda         #OP_FN
@@ -1014,10 +1065,112 @@ e_func:
 @syntax:
             jmp         syntax_err
 
-; Functions of a form of their own (fn_special: procs.inc's and the rest's)
+; Functions of a form of their own: INSTR([i,] s, t) (its count pushed), LBOUND and UBOUND (an array, then its
+; dimension: 1 if none), INPUT$(n [, [#]f]) (its count pushed); fn_e its entry, its ( next
 fn_special:
-            FARN        3, fn_special3
-            rts
+            lda         fn_e + 1
+            pha
+            lda         #'('
+            jsr         need_op
+            pla
+            cmp         #F_SP_INSTR
+            beq         @instr
+            cmp         #F_SP_INPUT
+            beq         @input
+            pha                                             ; (LBOUND, UBOUND: the array's reference)
+            lda         tk
+            cmp         #TK_NAME
+            beq         :+
+            jmp         syntax_err
+:
+            jsr         arr_lookup
+            lda         #OP_REFV
+            jsr         emit_slot
+            jsr         lex_next
+            lda         #','
+            jsr         is_op
+            bne         :+
+            jsr         lex_next
+            jsr         expr_num
+            bra         :++
+:
+            lda         #OP_PUSHI8
+            ldx         #2
+            jsr         emit_op
+            lda         #1
+            jsr         emit
+:
+            lda         #')'
+            jsr         need_op
+            pla
+            ldx         #F_LBOUND
+            cmp         #F_SP_LBOUND
+            beq         :+
+            ldx         #F_UBOUND
+:
+            stz         etype
+            txa
+            bra         @emit
+@instr:
+            jsr         expr                                ; (A number first: i)
+            ldy         #2
+            lda         etype
+            bne         :+
+            jsr         need_comma
+            jsr         expr_str
+            ldy         #3
+:
+            phy
+            jsr         need_comma
+            jsr         expr_str
+            lda         #')'
+            jsr         need_op
+            lda         #OP_PUSHI8
+            ldx         #2
+            jsr         emit_op
+            pla
+            jsr         emit
+            stz         etype
+            lda         #F_INSTR
+            bra         @emit
+@input:
+            jsr         expr_num
+            ldy         #1
+            lda         #','
+            jsr         is_op
+            bne         :++
+            jsr         lex_next
+            lda         #'#'
+            jsr         is_op
+            bne         :+
+            jsr         lex_next
+:
+            jsr         expr_num
+            ldy         #2
+:
+            phy
+            lda         #')'
+            jsr         need_op
+            lda         #OP_PUSHI8
+            ldx         #2
+            jsr         emit_op
+            pla
+            jsr         emit
+            lda         #ET_STR
+            sta         etype
+            lda         #F_INPUTS
+@emit:
+            pha
+            lda         #OP_FN
+            ldx         #2
+            jsr         emit_op
+            pla
+            jmp         emit
+
+; A , must be next (read past)
+need_comma:
+            lda         #','
+            jmp         need_op
 
 FN_ENTRY        = 9
 .macro FN kw, f, res, lo, hi, types

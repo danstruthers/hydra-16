@@ -98,6 +98,7 @@ ER_TOOLONG      = 83            ; A line too long
 ER_PARAM        = 84            ; Parameter type mismatch
 ER_INSUB        = 85            ; Not in a procedure (EXIT SUB, SHARED ...)
 ER_EXPECT       = 86            ; (A syntax error, with what was expected: ex_text)
+ER_CONST        = 87            ; (A CONST's value that isn't a constant)
 
 ; .A, .X = an address (low, high)
 .macro LDAX addr

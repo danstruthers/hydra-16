@@ -301,6 +301,8 @@ param_local:
             lsr         a
             lsr         a
             sta         spl + SP_TYPE
+            lda         #SF_DECL                            ; (Declared: its kind's its own, DEFSTR or not)
+            sta         spl + SP_FLAGS
             jsr         sym_put
             jmp         lex_next_keep
 pk_class:   .byte       SC_NUM, SC_STR, SC_NARR, SC_SARR, SC_REC, SC_RARR
@@ -324,6 +326,7 @@ st_declare:
 ; ---- Pass 2: SUB name [(parameters)] [STATIC], FUNCTION: the body's start
 st_sub_kw:
 st_sub:
+            stz         pr_static                           ; (Its parameters: locals, STATIC or not)
             lda         st_kw
             sta         pr_func
             lda         nblk                                ; (Not in a block, nor in another procedure)

@@ -20,11 +20,20 @@ ad_kind:    .res        1
 ad_slot:    .res        2
 ad_count:   .res        2
 ad_x:       .res        1
+dm_info:    .res        1                                   ; (DIM's: its info, the dimensions whose lowest is given,
+dm_mask:    .res        1                                   ;   OPTION BASE, a highest (biased), the dimensions of an
+dm_base:    .res        1                                   ;   array, PRESERVE's old elements and their count)
+dm_hi:      .res        2
+dm_n:       .res        1
+dm_ca:      .res        3
+dm_cnt:     .res        2
 
 .segment "CODE5"
 
 ; The heap emptied
 heap_init:
+            lda         #HLIM_START
+            sta         hlim
             stz         hp
             lda         #WIN
             sta         hp + 1
@@ -46,6 +55,7 @@ heap_alloc:
             ldx         #0
             jmp         b_error
 :
+            jsr         heap_room                           ; (Room below the limit: collected, or the limit raised)
             lda         hp                                  ; (The block at hp)
             sta         cb
             lda         hp + 1
@@ -92,6 +102,77 @@ heap_alloc:
             jmp         b_error
 @done:
             jmp         code_sel
+
+; Room for hsize bytes at hp below the heap's limit: if not, the heap collected; if still not (or it's more than half
+; full after), the limit raised (to LB_HEAP_END: past it, Out of memory)
+heap_room:
+            jsr         hp_end                              ; (.A: the logical bank its end would be in)
+            cmp         hlim
+            bcc         @done
+            jsr         gc_collect
+            jsr         hp_end
+            cmp         hlim
+            bcc         @half
+            inc         a                                   ; (Still not: the limit past it)
+            sta         hlim
+@half:
+            lda         hp + 2                              ; (More than half full: more banks)
+            sec
+            sbc         #LB_HEAP - 1
+            asl         a
+            sta         t4
+            lda         hlim
+            sec
+            sbc         #LB_HEAP
+            cmp         t4
+            bcs         @cap
+            lda         hp + 2
+            sec
+            sbc         #LB_HEAP - 1
+            clc
+            adc         hlim
+            sta         hlim
+@cap:
+            lda         hlim
+            cmp         #LB_HEAP_END + 1
+            bcc         :+
+            lda         #LB_HEAP_END
+            sta         hlim
+:
+            jsr         hp_end
+            cmp         hlim
+            bcc         @done
+            lda         #ER_MEMORY
+            ldx         #0
+            jmp         b_error
+@done:
+            rts
+
+; .A = the logical bank hp + hsize is in
+hp_end:
+            clc
+            lda         hp
+            adc         hsize
+            lda         hp + 1
+            adc         hsize + 1
+            ldx         hp + 2
+            bcc         :+
+            sbc         #0                                  ; (Past 64K: 8 banks more)
+            pha
+            txa
+            clc
+            adc         #8
+            tax
+            pla
+:
+            cmp         #WIN_END
+            bcc         :+
+            sbc         #WIN_END - WIN
+            inx
+            bra         :-
+:
+            txa
+            rts
 
 ; A string's (heap_str) or a number's (heap_num) block of .A/.X bytes: its length written; hres it
 heap_str:
@@ -647,14 +728,263 @@ mul_t4:
             sec
             rts
 
+; ---- The fifth bank's statements (fn.inc: ST_B5 on)
+st_disp5:
+            tax
+            jmp         (st_jt5,x)
+st_jt5:
+            .word       st_dim, st_erase
+.assert     * - st_jt5 = (ST_B6 - ST_B5) * 2, error, "st_jt5 and fn.inc's ST_B5 group differ"
+
+; ST_DIM (DIM, REDIM): an array made in its variable.  The stack: each dimension's lowest (if it's given) and highest,
+; the variable's VT_REF, then the info: byte 1 the dimensions (1 to 8) | the elements' kind << 4 (LK_NUM, LK_STR) |
+; $40 PRESERVE | $80 REDIM; byte 2 the dimensions whose lowest is given (bit i: the ith, from 0); byte 3 OPTION BASE.
+; DIM of one made already: Duplicate definition.  PRESERVE: the elements copied, in their order, as many as both have
+st_dim:
+            jsr         pop_vt                              ; (The info)
+            ldy         #1
+            lda         (vt),y
+            sta         dm_info
+            iny
+            lda         (vt),y
+            sta         dm_mask
+            iny
+            lda         (vt),y
+            sta         dm_base
+            jsr         pop_vt                              ; (The variable: its slot)
+            ldy         #1
+            lda         (vt),y
+            sta         ad_slot
+            iny
+            lda         (vt),y
+            sta         ad_slot + 1
+            lda         dm_info
+            and         #$0F
+            sta         ad_n
+            dec         a                                   ; (Each dimension, the last first: .X 4 * its number)
+            asl         a
+            asl         a
+            tax
+@dim:
+            phx
+            jsr         pop_s16                             ; (Its highest, biased)
+            plx
+            lda         t0
+            sta         dm_hi
+            lda         t0 + 1
+            sta         dm_hi + 1
+            txa                                             ; (Its lowest: given, or OPTION BASE's)
+            lsr         a
+            lsr         a
+            tay
+            lda         dm_mask
+            and         bit_of5,y
+            beq         @base
+            phx
+            jsr         pop_s16
+            plx
+            bra         @lo
+@base:
+            lda         dm_base
+            sta         t0
+            lda         #$80
+            sta         t0 + 1
+@lo:
+            lda         t0
+            sta         ad_dims,x
+            lda         t0 + 1
+            eor         #$80
+            sta         ad_dims + 1,x
+            sec                                             ; (Its count: highest - lowest + 1)
+            lda         dm_hi
+            sbc         t0
+            sta         ad_dims + 2,x
+            lda         dm_hi + 1
+            sbc         t0 + 1
+            sta         ad_dims + 3,x
+            bcc         @bad
+            inc         ad_dims + 2,x
+            bne         :+
+            inc         ad_dims + 3,x
+            beq         @bad
+:
+            dex
+            dex
+            dex
+            dex
+            bpl         @dim
+            MOVW        vu, ad_slot                         ; (Made already?)
+            ldy         #3
+            lda         (vu),y
+            cmp         #NOBANK
+            beq         @make
+            bit         dm_info
+            bmi         :+
+            lda         #ER_DUP
+            ldx         #0
+            jmp         b_error
+:
+            bvs         @preserve
+@make:
+            jsr         dm_kind
+            jmp         arr_make
+@bad:
+            lda         #ER_SUBSCRIPT
+            ldx         #0
+            jmp         b_error
+@preserve:
+            ldy         #VAL_SIZE - 1                       ; (The old one kept on the stack while the new is made:
+:                                                           ;   the collector may move it)
+            lda         (vu),y
+            sta         (vsp),y
+            dey
+            bpl         :-
+            jsr         vsp_up
+            jsr         dm_kind
+            jsr         arr_make
+            jsr         top_vt                              ; (The old one's values: cursor A, their count)
+            MOVW        vu, vt
+            jsr         arr_vals
+            MOVW        dm_cnt, t4
+            lda         ca
+            sta         dm_ca
+            lda         ca + 1
+            sta         dm_ca + 1
+            lda         cal
+            sta         dm_ca + 2
+            MOVW        vu, ad_slot                         ; (The new one's: cursor B)
+            jsr         arr_vals
+            lda         ca
+            sta         cb
+            lda         ca + 1
+            sta         cb + 1
+            lda         cal
+            sta         cbl
+            lda         dm_ca
+            sta         ca
+            lda         dm_ca + 1
+            sta         ca + 1
+            lda         dm_ca + 2
+            sta         cal
+            lda         t4 + 1                              ; (The fewer: 5 bytes each)
+            cmp         dm_cnt + 1
+            bne         :+
+            lda         t4
+            cmp         dm_cnt
+:
+            bcc         :+
+            MOVW        t4, dm_cnt
+:
+            lda         t4
+            sta         cn
+            lda         t4 + 1
+            sta         cn + 1
+            asl         cn
+            rol         cn + 1
+            asl         cn
+            rol         cn + 1
+            clc
+            lda         cn
+            adc         t4
+            sta         cn
+            lda         cn + 1
+            adc         t4 + 1
+            sta         cn + 1
+            jsr         far_copy
+            jsr         pop_vt
+            jmp         code_sel
+
+; The elements' kind (dm_info's) and size (a value each), for arr_make
+dm_kind:
+            lda         dm_info
+            lsr         a
+            lsr         a
+            lsr         a
+            lsr         a
+            and         #3
+            sta         ad_kind
+            lda         #1
+            sta         ad_esize
+            rts
+
+; Cursor A at the first value of the array at (vu) (a VT_ARR, made), t4 its values' count
+arr_vals:
+            ldy         #1
+            lda         (vu),y
+            sta         ca
+            iny
+            lda         (vu),y
+            sta         ca + 1
+            iny
+            lda         (vu),y
+            sta         cal
+            jsr         ca_sel
+            jsr         ca_rd                               ; (Its dimensions; an element's values)
+            sta         dm_n
+            jsr         ca_rd
+            sta         t4
+            stz         t4 + 1
+:
+            jsr         ca_rd                               ; (Each dimension: its lowest, its count)
+            jsr         ca_rd
+            jsr         ca_rd
+            sta         t4 + 2
+            jsr         ca_rd
+            sta         t4 + 3
+            jsr         mul_t4
+            sta         t4
+            stx         t4 + 1
+            dec         dm_n
+            bne         :-
+            rts
+
+; t0 = the integer taken off the stack, biased (+ 32768), from -32768 to 32767: else Subscript out of range
+pop_s16:
+            jsr         pop_int16
+            ldy         #4                                  ; (Its sign: bit 15's)
+            lda         (vt),y
+            eor         t0 + 1
+            bmi         @bad
+            lda         t0 + 1
+            eor         #$80
+            sta         t0 + 1
+            rts
+@bad:
+            lda         #ER_SUBSCRIPT
+            ldx         #0
+            jmp         b_error
+bit_of5:    .byte       $01, $02, $04, $08, $10, $20, $40, $80
+
+; ST_ERASE: the array in the variable (the VT_REF under its elements' kind) dropped: not made, as before its DIM
+st_erase:
+            jsr         pop_vt                              ; (The kind)
+            ldy         #1
+            lda         (vt),y
+            pha
+            jsr         pop_vt
+            ldy         #1
+            lda         (vt),y
+            sta         vu
+            iny
+            lda         (vt),y
+            sta         vu + 1
+            lda         #VT_ARR
+            sta         (vu)
+            pla
+            ldy         #1
+            sta         (vu),y
+            iny
+            lda         #0
+            sta         (vu),y
+            iny
+            lda         #NOBANK
+            sta         (vu),y
+            rts
+
 ; ---- The fifth bank's functions (fn.inc: F_B5 on)
 fn_disp5:
             tax
             jmp         (fn_jt5,x)
-fn_jt5:
-            .repeat     F_B6 - F_B5
-            .word       rt_todo5
-            .endrepeat
 
 rt_todo5:
             lda         #73

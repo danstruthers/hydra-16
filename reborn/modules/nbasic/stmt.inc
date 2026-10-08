@@ -24,6 +24,11 @@ st_vec:     .res        2                                   ;   and its routine)
 pr_last:    .res        1                                   ; (PRINT's last item: 0, or ; or ,)
 ch_head:    .res        2                                   ; (chain_add's and chain_fix's)
 fr_slots:   .res        6                                   ; (FOR's)
+tgt_slot:   .res        2                                   ; (tgt_begin's: the target's slot, flags, fixed length,
+tgt_flags:  .res        1                                   ;   type, indices (0: a variable))
+tgt_fix:    .res        2
+tgt_type:   .res        1
+tgt_n:      .res        1
 sel_type:   .res        1
 
 .segment "CODE2"
@@ -308,6 +313,8 @@ st_assign:
             pha
             lda         spl + SP_INFO
             pha
+            lda         spl + SP_INFO + 1
+            pha
             lda         scls
             pha
             jsr         lex_next
@@ -321,6 +328,8 @@ st_assign:
             jmp         type_err
 :
             pla                                             ; (A fixed-length string: padded or cut)
+            sta         t4 + 1
+            pla
             sta         t4
             pla
             and         #SF_FIXED
@@ -329,7 +338,7 @@ st_assign:
             ldx         #3
             jsr         emit_op
             lda         t4
-            ldx         #0
+            ldx         t4 + 1
             jsr         emit_w
 :
             pla
@@ -368,6 +377,112 @@ st_assign:
             jsr         emit_op
             tya
             jmp         emit
+
+; ---- A value's target (READ's, INPUT's ...): tgt_begin reads it (a variable, or an array's element) and emits what
+; comes before its value (an element's array and indices); the caller emits the value; tgt_end emits its store.
+; tgt_type its type (ET_*)
+
+tgt_begin:
+            lda         tk
+            cmp         #TK_NAME
+            beq         :+
+            lda         #ER_VARREQ
+            ldx         #0
+            jmp         c_error
+:
+            jsr         const_find                          ; (A constant: not assignable)
+            bcs         :+
+            lda         #ER_DUP
+            ldx         #0
+            jmp         c_error
+:
+            ldy         #0                                  ; (An element?)
+:
+            lda         (lp),y
+            cmp         #' '
+            bne         :+
+            iny
+            bra         :-
+:
+            cmp         #'('
+            beq         @elem
+            jsr         fn_result
+            bcc         :+
+            jsr         var_lookup
+:
+            lda         spl + SP_SLOT
+            sta         tgt_slot
+            lda         spl + SP_SLOT + 1
+            sta         tgt_slot + 1
+            lda         spl + SP_FLAGS
+            sta         tgt_flags
+            lda         spl + SP_INFO
+            sta         tgt_fix
+            lda         spl + SP_INFO + 1
+            sta         tgt_fix + 1
+            lda         scls
+            jsr         class_type
+            sta         tgt_type
+            stz         tgt_n
+            jmp         lex_next
+@elem:
+            jsr         arr_lookup
+            jsr         arr_etype
+            lda         etype
+            sta         tgt_type
+            stz         tgt_flags
+            lda         #OP_REFV
+            jsr         emit_slot
+            jsr         lex_next
+            jsr         lex_next
+            jsr         emit_indices
+            sta         tgt_n
+            rts
+
+; The target's store emitted (its value emitted after tgt_begin)
+tgt_end:
+            lda         tgt_n
+            bne         @elem
+            lda         tgt_flags                           ; (A fixed-length string: padded or cut)
+            and         #SF_FIXED
+            beq         :+
+            lda         #OP_FIXLEN
+            ldx         #3
+            jsr         emit_op
+            lda         tgt_fix
+            ldx         tgt_fix + 1
+            jsr         emit_w
+:
+            lda         #OP_STV
+            ldx         #3
+            jsr         emit_op
+            lda         tgt_slot
+            ldx         tgt_slot + 1
+            jmp         emit_w
+@elem:
+            lda         #OP_APUT
+            ldx         #2
+            jsr         emit_op
+            lda         tgt_n
+            jmp         emit
+
+; A variable's or an element's place pushed (a VT_REF, a VT_LOC: SWAP's), its type tgt_type
+place_emit:
+            jsr         tgt_begin
+            lda         tgt_n
+            beq         :+
+            lda         #OP_AREF
+            ldx         #2
+            jsr         emit_op
+            lda         tgt_n
+            jmp         emit
+:
+            lda         #OP_REFV
+            ldx         #3
+            jsr         emit_op
+            lda         tgt_slot
+            ldx         tgt_slot + 1
+            jmp         emit_w
 
 ; The type (ET_*) of a variable's class .A
 class_type:
@@ -806,13 +921,14 @@ st_for:
             sta         (t4),y
             jsr         cpc_get                             ; (The body's start)
             pha
+            phx
             lda         #7
             jsr         blk_word
+            ldy         #1
+            pla
+            sta         (t4),y
             pla
             sta         (t4)
-            ldy         #1
-            txa
-            sta         (t4),y
             rts
 
 ; A hidden slot (FOR's limit and step, SELECT's selector): a local in a procedure, else a global.  OUT: .A/.X

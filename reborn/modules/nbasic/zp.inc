@@ -20,5 +20,7 @@ tsp:        .res        2                                   ; A string token's b
 tstart:     .res        2                                   ; The token's start
 sp0:        .res        2                                   ; (The symbols': comp.inc)
 np:         .res        2                                   ; (A number's bytes: num.inc)
+gv:         .res        2                                   ; (The collector's: a value's place)
 pe:         .res        2                                   ; (CALL's: the procedure's entry)
 argp:       .res        2                                   ; The arguments after the options (a script's path first)
+xp:         .res        2                                   ; (to2's: its call's place, stmt3.inc)

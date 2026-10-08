@@ -20,6 +20,7 @@ cont_ip:    .res        2                                   ; STOP's (and an err
 ibuf:       .res        IBUF_SIZE                           ; stdin's bytes read
 ilen:       .res        1
 ipos:       .res        1
+got_intr:   .res        1                                   ; <> 0: stdin's read ended by Ctrl-C
 sr_buf:     .res        SR_SIZE                             ; (FSTAT's)
 
 .code
@@ -185,6 +186,8 @@ prog_compile:
 ; The program run from its start: its globals as they were made, the value stack empty.  OUT: C = 1 STOPped
 prog_run:
             stz         end_status
+            stz         dptr                                ; (READ: from DATA's first item)
+            stz         dptr + 1
             jsr         stack_reset
             lda         #0
             tax
@@ -249,6 +252,7 @@ getc_in:
             bne         @end
             lda         #$80                                ; (Ctrl-C at the prompt: the line dropped)
             trb         intr
+            sta         got_intr                            ; (INPUT's: Break)
             sec
             rts
 @end:

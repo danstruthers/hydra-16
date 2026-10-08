@@ -96,6 +96,8 @@ ex_text:    .res        2                                   ; (ER_EXPECT's: what
 cerr_col:   .res        2                                   ; (An error's column)
 stmt_ok:    .res        1                                   ; (The statement's end checked)
 cpc_t:      .res        1                                   ; (cpc_get's and ca_addr's)
+lref_data:  .res        1                                   ; (label_ref's: <> 0, its DATA's place, not its code's)
+cconst:     .res        1                                   ; <> 0: a CONST's value compiled (no variables, FUNCTIONs)
 
 .segment "CODE2"
 
@@ -661,6 +663,8 @@ var_new:
             jsr         spl_clear
             lda         sscope
             beq         @global
+            lda         pr_static                           ; (SUB ... STATIC: a global's slot, in its scope)
+            bne         @global
             jsr         local_new
             sta         spl + SP_SLOT
             stz         spl + SP_SLOT + 1
@@ -712,6 +716,12 @@ label_ref:
 :
             lda         spl + SL_DEF
             beq         @fix
+            lda         lref_data                           ; (Its DATA's place, or its code's)
+            beq         :+
+            lda         spl + SL_DATA
+            ldx         spl + SL_DATA + 1
+            jmp         emit_w
+:
             lda         spl + SL_CODE
             ldx         spl + SL_CODE + 1
             jmp         emit_w
@@ -743,7 +753,11 @@ label_ref:
             jsr         ca_wr
             lda         cline
             jsr         ca_wr
-            lda         cline + 1
+            lda         cline + 1                           ; (Bit 15: its DATA's place is wanted)
+            ldx         lref_data
+            beq         :+
+            ora         #$80
+:
             jsr         ca_wr
             jsr         code_sel
             lda         #0
@@ -760,6 +774,7 @@ fix_all:
             lda         fixtop
             cmp         #<SYM_END
             bne         :+
+            stz         lref_data
             rts
 :
             lda         fixtop
@@ -776,7 +791,12 @@ fix_all:
             jsr         ca_rd
             sta         cline
             jsr         ca_rd
+            pha                                             ; (Bit 15: its DATA's place)
+            and         #$7F
             sta         cline + 1
+            pla
+            and         #$80
+            sta         lref_data
             lda         sent                                ; (The label's payload)
             ldx         sent + 1
             jsr         sym_ca
@@ -793,22 +813,34 @@ fix_all:
             dex
             bne         :-
 :
-            jsr         ca_rd                               ; (SL_DEF, SL_CODE)
+            jsr         ca_rd                               ; (SL_DEF, SL_CODE, SL_DATA)
             beq         @undef
             jsr         ca_rd
             pha
             jsr         ca_rd
             tax
             pla
+            ldy         lref_data
+            beq         :+
+            jsr         ca_rd
+            pha
+            jsr         ca_rd
+            tax
+            pla
+:
+            pha
             MOVW        t0, t4
+            pla
             jsr         patch_w
             lda         fixtop
             clc
             adc         #6
             sta         fixtop
-            bcc         @each
+            bcs         @lb900
+            jmp         @each
+@lb900:
             inc         fixtop + 1
-            bra         @each
+            jmp         @each
 @undef:
             jsr         code_sel
             lda         #ER_LABEL
@@ -857,11 +889,17 @@ prog_init:
             stz         defstr + 1
             stz         defstr + 2
             stz         defstr + 3
-            rts
+            ; (fall through)
 
-; The DATA items' end (none yet: their region's)
+; DATA's items' end: a length of $FFFF after the last
 data_end:
-            rts
+            MOVW        t0, dtop
+            lda         #LB_DATA
+            jsr         ca_reg
+            lda         #$FF
+            jsr         ca_wr
+            jsr         ca_wr
+            jmp         code_sel
 
 ; The program compiled (the text region's lines), from its first line; its globals made.  An error: err_entry's
 ; (with its line); C = 0 done
@@ -910,6 +948,10 @@ c_lines:
             stz         cscope
             stz         nblk
             stz         stmt_ok
+            stz         defstr                              ; (DEFSTR's letters: none at its start)
+            stz         defstr + 1
+            stz         defstr + 2
+            stz         defstr + 3
             lda         #'d'                                ; (The program's numbers: read in decimal at its start)
             sta         cbase
             stz         cbase + 1
@@ -930,6 +972,8 @@ c_lines:
 ; The compiler's state for a line or a program: the base its numbers are read in
 c_begin:
             stz         nblk
+            stz         cconst
+            stz         lref_data
             rts
 
 ; A line at the prompt compiled (lbuf), into the prompt's code region, after the program's symbols
@@ -941,7 +985,7 @@ compile_line:
             sta         cpass
             inc         cpass
             stz         cscope
-            stz         nblk
+            jsr         c_begin
             stz         cline
             stz         cline + 1
             jsr         emit_init
@@ -1044,8 +1088,11 @@ c_scan:
             cmp         #K_FUNCTION
             beq         @proc
             cmp         #K_TYPE
-            bne         @done
+            bne         :+
             FARN        3, scan_type
+            rts
+:
+            FARN        3, scan_defs                        ; (DEFSTR and the like: their letters)
 @done:
             rts
 @proc:

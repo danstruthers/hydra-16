@@ -20,6 +20,8 @@ ar_cnt:     .res        2
 ar_val:     .res        2
 rf_val:     .res        5                                   ; (RETF's: the result; RET's: the return)
 rf_ret:     .res        2
+sw_v:       .res        2 * VAL_SIZE                        ; (SWAP's: the two values)
+sw_dir:     .res        1
 
 .enum
 OP_END                                                      ; The end (the program's, a line's at the prompt)
@@ -93,6 +95,7 @@ OP_CAT                                                      ; Two strings joined
 OP_FIXLEN                                                   ; n16: a string padded or cut to n
 OP_FN                                                       ; f: a function, its arguments on the stack
 OP_ST                                                       ; s: a statement's routine
+OP_SWAP                                                     ; The values at two places (VT_REF, VT_LOC) exchanged
 OP_COUNT
 .endenum
 
@@ -177,7 +180,7 @@ op_tab:
             .word       op_eq, op_ne, op_lt, op_gt, op_le, op_ge
             .word       op_seq, op_sne, op_slt, op_sgt, op_sle, op_sge
             .word       op_not, op_and, op_or, op_xor, op_eqv, op_imp
-            .word       op_cat, op_fixlen, op_fn, op_st
+            .word       op_cat, op_fixlen, op_fn, op_st, op_swap
 .assert     * - op_tab = OP_COUNT * 2, error, "op_tab and the ops' enum differ"
 
 ; ---- The end, STOP, the banks
@@ -1835,6 +1838,84 @@ op_wbk:
             jsr         code_sel
 :
             jmp         nx3
+
+; SWAP: the values at the two places on top (VT_REF, VT_LOC) exchanged, the places taken off
+op_swap:
+            lda         #2
+            jsr         vu_depth
+            ldx         #0
+            jsr         place_in
+            lda         #1
+            jsr         vu_depth
+            ldx         #VAL_SIZE
+            jsr         place_in
+            ldx         #0                                  ; (The first's value to the second's place ...
+            jsr         place_out
+            lda         #2                                  ;   and the second's to the first's)
+            jsr         vu_depth
+            ldx         #VAL_SIZE
+            jsr         place_out
+            jsr         pop_vt
+            jsr         pop_vt
+            jmp         nx1
+
+; The value at the place at (vu) (a VT_REF or a VT_LOC) copied to sw_v + .X (place_in), or from there (place_out)
+place_in:
+            stz         sw_dir
+            bra         place_io
+place_out:
+            lda         #1
+            sta         sw_dir
+place_io:
+            lda         (vu)
+            cmp         #VT_LOC
+            beq         @loc
+            ldy         #1                                  ; (A slot: its address)
+            lda         (vu),y
+            sta         t0
+            iny
+            lda         (vu),y
+            sta         t0 + 1
+            ldy         #0
+@ram:
+            lda         sw_dir
+            bne         :+
+            lda         (t0),y
+            sta         sw_v,x
+            bra         :++
+:
+            lda         sw_v,x
+            sta         (t0),y
+:
+            inx
+            iny
+            cpy         #VAL_SIZE
+            bne         @ram
+            rts
+@loc:
+            phx
+            jsr         loc_ca
+            plx
+            bcs         @none
+            ldy         #VAL_SIZE
+@far:
+            lda         sw_dir
+            bne         :+
+            jsr         ca_rd
+            sta         sw_v,x
+            bra         :++
+:
+            lda         sw_v,x
+            jsr         ca_wr
+:
+            inx
+            dey
+            bne         @far
+            jmp         code_sel
+@none:
+            lda         #ER_SUBSCRIPT
+            ldx         #0
+            jmp         err_entry
 
 ; ---- Not yet
 op_fget:

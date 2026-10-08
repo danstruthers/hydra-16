@@ -94,12 +94,25 @@ F_SP_UBOUND
 .endenum
 
 .enum                                                       ; Statements
+ST_B4                                                       ; The numbers' (fns4.inc)
+ST_RANDOMIZE = ST_B4                                        ; RANDOMIZE n (0: from the clock)
+ST_BASE                                                     ; BASE b$
+ST_DIGITS                                                   ; DIGITS n
+ST_B5                                                       ; The heap's (heap.inc)
+ST_DIM = ST_B5                                              ; DIM, REDIM: an array made
+ST_ERASE                                                    ; ERASE: an array dropped
 ST_B6                                                       ; Input and output's (io.inc)
 ST_PRN = ST_B6                                              ; PRINT's value
 ST_PRNL                                                     ; Its new line
 ST_PRZONE                                                   ; , (the next zone)
 ST_PRTAB                                                    ; TAB(n)
 ST_PRSPC                                                    ; SPC(n)
+ST_READ                                                     ; READ: DATA's next item pushed, a string
+ST_RESTORE                                                  ; RESTORE: DATA's next item's place set
+ST_INPUT                                                    ; INPUT's prompt, its line read
+ST_INFLD                                                    ; Its next field pushed (a number or a string)
+ST_INEND                                                    ; Its end: -1 pushed if it's to be typed again
+ST_LGET                                                     ; LINE INPUT's line pushed, a string
 ST_B7                                                       ; The system's (sys.inc)
 ST_ENDN = ST_B7                                             ; END n
 ST_END
@@ -137,23 +150,29 @@ fn_disp_lo: .byte       <fn_disp4, <fn_disp5, <fn_disp6, <fn_disp7
 fn_disp_hi: .byte       >fn_disp4, >fn_disp5, >fn_disp6, >fn_disp7
 
 st_call:
-            ldx         #6
-            cmp         #ST_B7
-            bcc         :+
+            ldx         #4
+            cmp         #ST_B5
+            bcc         @have
             inx
-:
+            cmp         #ST_B6
+            bcc         @have
+            inx
+            cmp         #ST_B7
+            bcc         @have
+            inx
+@have:
             sec
-            sbc         st_first - 6,x
+            sbc         st_first - 4,x
             asl         a
             pha
-            lda         st_disp_lo - 6,x
+            lda         st_disp_lo - 4,x
             sta         hyx2_to
-            lda         st_disp_hi - 6,x
+            lda         st_disp_hi - 4,x
             sta         hyx2_to + 1
             lda         hyx2_bank1 - 1,x
             sta         hyx2_n
             pla
             jmp         hyx2_farn
-st_first:   .byte       ST_B6, ST_B7
-st_disp_lo: .byte       <st_disp6, <st_disp7
-st_disp_hi: .byte       >st_disp6, >st_disp7
+st_first:   .byte       ST_B4, ST_B5, ST_B6, ST_B7
+st_disp_lo: .byte       <st_disp4, <st_disp5, <st_disp6, <st_disp7
+st_disp_hi: .byte       >st_disp4, >st_disp5, >st_disp6, >st_disp7
