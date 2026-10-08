@@ -1,5 +1,5 @@
 /*
-** screen.c - the terminal (an ANSI one: the console's; its size $COLUMNS x $LINES, or 80 x 24): a title line, the
+** screen.c - the terminal (an ANSI one: the console's; its size the window's, conio's, drawn again as it changes): a title line, the
 ** text's rows, a message line, and two lines naming the commonest keys.  What's on the screen is kept (the shadows),
 ** and a row is written only where it changed: the cursor's row alone as it's typed in, every row below it as lines
 ** come and go, the rows that come in as the screen scrolls a few lines (the terminal scrolls the text's rows itself:
@@ -273,14 +273,9 @@ static void helpline (unsigned char srow, unsigned char k)
     }
 }
 
-unsigned char s_init (void)
+/* The screen's size: the window's (conio's), no wider than MAXW, 8 rows at least, its text's rows' shadows a bank */
+static void size (void)
 {
-    int b = hy_banks_alloc (1);
-
-    if (b < 0) {
-        return 1;
-    }
-    vbank = b;
     screensize (&W, &H);
     if (W > MAXW) {
         W = MAXW;
@@ -291,7 +286,24 @@ unsigned char s_init (void)
     if ((H - 2) * W > BLK - 2 * MAXW) {
         H = (BLK - 2 * MAXW) / W + 2;
     }
+}
+
+unsigned char s_init (void)
+{
+    int b = hy_banks_alloc (1);
+
+    if (b < 0) {
+        return 1;
+    }
+    vbank = b;
+    size ();
     return 0;
+}
+
+void s_resize (void)
+{
+    size ();
+    s_all ();
 }
 
 void s_done (void)

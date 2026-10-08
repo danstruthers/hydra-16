@@ -1,0 +1,8 @@
+; The psgmml test's edge cases at a slow rate: key offs at their attacks' ticks (q1 of a 64th: a unit, half a
+; tick), as an envelope rises; the same register written twice in a tick
+#rate 50
+@e { wave noise 9 env 5 1 2 3 }
+@f { env 0 0 0 0 }
+I @e o4 l64 q1 c d e q8 c d e l4 q1 c
+J @f o5 l64 q1 [c d e]4 pl c pr c
+A I 3 o4 l8 c

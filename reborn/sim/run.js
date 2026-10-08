@@ -8,7 +8,11 @@
 // Usage: node sim/run.js [options]
 //   -i, --interactive   the terminal is the Hydra's serial console, in real time.  Ctrl-A x quits, Ctrl-A r resets,
 //                       Ctrl-A s shows the state, Ctrl-A b stops it (the monitor: below), Ctrl-A v shows the Vera X's
-//                       screen as text, Ctrl-A p saves it as a PNG, Ctrl-A h helps
+//                       screen as text, Ctrl-A p saves it as a PNG, Ctrl-A h helps.  The terminal's size is told
+//                       to the Hydra as the PC tool tells it (ESC [ 8 ; rows ; columns t), when it asks (ESC [ 18 t, not
+//                       shown) and as the window changes
+//   --win32-input       -i: Windows Terminal's win32-input-mode, as the PC tool's (sim/lib/win32in.js): Ctrl-Tab and
+//                       Ctrl-Shift-Tab reach the Hydra (once Windows Terminal's own binding for them is gone)
 //   --cycles N          stop at cycle N (default 30000000: 8.4 s at 3.58 MHz; interactive: never)
 //   --input TEXT        keys to type (\r, \n: Return; \w: wait 2M cycles), one every 20000 cycles from cycle 200000
 //   --paste             type them as fast as the line goes (a byte arriving while the last is unread is lost)
@@ -42,9 +46,14 @@
 //   --vera [V]          a Vera X card in slot 0 (sim/lib/vera.js): the VERA, its gateware version V (47.0.2, the X16
 //                       community's, by default; 0.9: fvdhoef's, without FX's registers or the version)
 //   --vera-config MS    the VERA's FPGA configuring itself after power-up and a reset: MS milliseconds (100)
+//   --vera-sd FILE      a card image on the VERA's own SD port (its SPI controller: the storage driver's disk v)
 //   --screen            after the report, the VERA's text layer as text (its characters as ISO-8859-1)
 //   --frame-png FILE    at the end, the VERA's screen as a PNG (640 x 480); with -i, Ctrl-A p's file (screen-N.png)
-//   --view [PORT]       with -i: the VERA's screen live in a browser, at http://localhost:PORT (8016) (sim/view.js)
+//   --view [PORT]       with -i: the VERA's screen live in a browser, at http://localhost:PORT (8016) (sim/view.js);
+//                       with --smc, the page's keys and mouse are the input controller's
+//   --smc               the Vera X's input controller: the X16's SMC on the I2C bus at $42 (sim/lib/smc.js), a PS/2
+//                       keyboard and mouse on it
+//   --kbd TEXT          keys typed at its keyboard, as --input's are (after them; \e Escape, \b Backspace); --smc too
 //   --sound [PORT]      with -i: the sound (the YM2151's, and the Vera X's PSG and PCM with --vera: sim/lib/audio.js)
 //                       in a browser, at http://localhost:PORT (8016; --view's page, if there's one), its Sound
 //                       button to hear it, some 0.15 s behind; in time at --speed 1
@@ -56,6 +65,7 @@ const path = require('path');
 const { createMachine, romBank } = require('./lib/machine.js');
 const { createPcHost } = require('./lib/pchost.js');
 const { encodePng } = require('./lib/png.js');
+const { createWin32Input, ENABLE: W32_ENABLE, DISABLE: W32_DISABLE } = require('./lib/win32in.js');
 
 const ROOT = path.join(__dirname, '..');
 const hx = (v, n = 2) => v.toString(16).toUpperCase().padStart(n, '0');
@@ -294,14 +304,32 @@ function interactive(m, opt) {
     acia.type(String.fromCharCode(b));
   }
   if (tty) stdin.setRawMode(true);
-  stdin.on('data', buf => { for (const b of buf) if (!(!tty && b === 0x0D)) onKey(b); });
+  const w32 = opt.win32 && tty && stdout.isTTY ? createWin32Input(bytes => { for (const b of bytes) onKey(b); }) : null;
+  let w32wait = null;
+  if (w32) stdout.write(W32_ENABLE);
+  stdin.on('data', buf => {
+    if (w32) {                                                // (A record part-way: the rest soon, or it's bytes)
+      for (const b of buf) w32.push(b);
+      clearTimeout(w32wait);
+      if (w32.pending()) w32wait = setTimeout(() => w32.flush(), 50);
+      return;
+    }
+    for (const b of buf) if (!(!tty && b === 0x0D)) onKey(b);
+  });
   stdin.on('end', () => { eof = true; if (mon) { mon = false; quit = 'end of input (the monitor)'; setTimeout(tick, 0); } });
   stdin.resume();
+  const tellSize = () => { if (stdout.isTTY && stdout.columns && stdout.rows) acia.type('\x1b[8;' + stdout.rows + ';' + stdout.columns + 't'); };
+  stdout.on('resize', tellSize);
   const flush = () => {
-    if (sent < m.out.length) { stdout.write(m.out.slice(sent)); sent = m.out.length; }
+    if (sent < m.out.length) {
+      let s = m.out.slice(sent);
+      if (s.includes('\x1b[18t')) { s = s.split('\x1b[18t').join(''); tellSize(); }   // (The Hydra asking the size)
+      stdout.write(s);
+      sent = m.out.length;
+    }
     if (m.out.length > 1 << 16) { m.out = m.out.slice(-1024); sent = m.out.length; }
   };
-  const finish = why => { flush(); say('stopped: ' + why + '; ' + status()); if (tty) stdin.setRawMode(false); process.exit(cpu.halted ? 1 : 0); };
+  const finish = why => { flush(); say('stopped: ' + why + '; ' + status()); if (w32) stdout.write(W32_DISABLE); if (tty) stdin.setRawMode(false); process.exit(cpu.halted ? 1 : 0); };
   function tick() {
     if (mon) return;                                            // (Stopped: the monitor's)
     const t = now();
@@ -321,7 +349,7 @@ function interactive(m, opt) {
   }
   if (opt.view || opt.soundPort) {
     const port = opt.view || opt.soundPort;
-    require('./view.js').startView(m, port, { screen: !!opt.view, sound: !!opt.soundPort });
+    require('./view.js').startView(m, port, { screen: !!opt.view, sound: !!opt.soundPort, input: !!opt.smc });
     say((opt.view ? 'the screen' : 'the sound') + ': http://localhost:' + port + (opt.soundPort ? ' (its Sound button)' : ''));
   }
   say('the Hydra\'s serial console.  Ctrl-A x quits, Ctrl-A h for help.');
@@ -363,8 +391,11 @@ function main(argv) {
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i], next = () => argv[++i];
     if (a === '-i' || a === '--interactive') opt.interactive = true;
+    else if (a === '--win32-input') opt.win32 = true;
     else if (a === '--cycles') { opt.cycles = +next(); opt.cyclesSet = true; }
     else if (a === '--input') opt.input = unescape(next());
+    else if (a === '--smc') opt.smc = true;
+    else if (a === '--kbd') { opt.smc = true; opt.kbd = unescape(next()).replace(/\\e/g, '\x1b').replace(/\\b/g, '\b'); }
     else if (a === '--paste') opt.paste = true;
     else if (a === '--speed') opt.speed = +next();
     else if (a === '--clock') opt.clock = +next();
@@ -383,6 +414,7 @@ function main(argv) {
       opt.vera = Object.assign(opt.vera || {}, { version: [47, 0, 2] });
       if (/^\d+(\.\d+)*$/.test(argv[i + 1] || '')) { const v = next(); opt.vera.version = v === '0.9' ? null : v.split('.').map(Number).concat([0, 0]).slice(0, 3); }
     } else if (a === '--vera-config') opt.veraConfigMs = +next();
+    else if (a === '--vera-sd') opt.veraSd = next();
     else if (a === '--screen') opt.screen = true;
     else if (a === '--frame-png') opt.framePng = next();
     else if (a === '--view') opt.view = /^\d+$/.test(argv[i + 1] || '') ? +next() : 8016;
@@ -406,7 +438,9 @@ function main(argv) {
   }
   if (opt.pcDir) opt.pcHost = createPcHost({ dir: opt.pcDir, readOnly: !!opt.pcReadOnly, damage: opt.pcDamage,
     log: opt.pcLog ? t => (opt.interactive ? process.stdout.write('\r\n[pc] ' + t + '\r\n') : console.log('[pc] ' + t)) : undefined });
+  if (opt.kbd) opt.input = (opt.input || '') + '\u0102' + opt.kbd + '\u0103';   // (acia.js: typed at the keyboard)
   opt.promImage = opt.prom ? fs.readFileSync(opt.prom) : chips();
+  if (opt.veraSd) { if (!opt.vera) { console.error('--vera-sd: with --vera'); process.exit(2); } opt.vera.sd = cardFile(0, opt.veraSd); }
   if (opt.veraConfigMs !== undefined) { if (!opt.vera) { console.error('--vera-config: with --vera'); process.exit(2); } opt.vera.configCycles = Math.round(opt.veraConfigMs * opt.clock * 1e3); }
   if ((opt.screen || opt.framePng || opt.view) && !opt.vera) { console.error('--screen, --frame-png and --view: with --vera'); process.exit(2); }
   if (opt.soundPort && !opt.interactive) { console.error('--sound: with -i (--wav FILE keeps it in a file)'); process.exit(2); }

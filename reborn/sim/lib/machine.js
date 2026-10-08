@@ -10,7 +10,9 @@
 //     IRQ line, or V[0..3] when no line is active (and for BRK);
 //   * the devices: the ACIA (port 1, acia.js), the VIA (port 0, via.js) with SD cards on its SPI port (sd.js) and
 //     an I2C bus on port A (i2c.js: opt.i2c, its devices), the YM2151 (port 4, ym2151.js), a DS1747 in U7
-//     (ds1747.js), and a Vera X card in slot 0 (vera.js: opt.vera, true or its options; ports 2 and 3, IRQ line 2).
+//     (ds1747.js), a Vera X card in slot 0 (vera.js: opt.vera, true or its options; ports 2 and 3, IRQ line 2), and
+//     its input controller, the X16's SMC on the I2C bus at $42 (smc.js: opt.smc, true or its options; keys typed at
+//     it from the input's \u0102 to its \u0103, acia.js).
 // RAM and the pseudo-registers power up random, like the hardware (seeded: opt.seed >= 0, the same each time).
 //
 // createMachine(opt): opt.osrom, opt.pagedrom (the images, Uint8Arrays) and the options hydrasim.js documents
@@ -30,6 +32,7 @@ const { createCpu, FLAGS } = require('./cpu65c02.js');
 const { createAcia } = require('./acia.js');
 const { createVia } = require('./via.js');
 const { createI2c } = require('./i2c.js');
+const { createSmc } = require('./smc.js');
 const { createSpi } = require('./sd.js');
 const { createYm } = require('./ym2151.js');
 const { createRtc, RTC_REGS, RTC_TASK } = require('./ds1747.js');
@@ -62,12 +65,14 @@ function createMachine(opt) {
   let regT = rnd(256), regU = rnd(256), V = rnd(256), regW = rnd(256);
   let T = regT & 15, U = regU & 15, W = regW & 15;
   const m = { out: '' };                                      // The serial output (the ACIA's)
+  const smc = opt.smc ? createSmc(Object.assign({ log }, opt.smc === true ? {} : opt.smc)) : null;
   const acia = createAcia({ clock: opt.clock, wdc: opt.acia === 'wdc', paste: opt.paste, input: opt.input, consoleOnly: !!opt.pcHost,
+    keyboard: smc ? c => smc.type(c) : null,
     onTx: (v, t) => { for (const b of opt.pcHost ? opt.pcHost.push(v, t) : [v]) out(b, t); } });
   function out(v, t) { if (opt.pcHost) acia.shown(v, t); m.out += String.fromCharCode(v); for (const k of opt.marks || []) if (m.out.endsWith(k)) log('mark: ' + JSON.stringify(k) + ' at cycle ' + t); }
   if (opt.pcHost) opt.pcHost.send = bytes => acia.send(bytes);   // (The PC's replies: on the line, at its rate)
   const spi = createSpi(opt.sd || [], opt.spiEcho || []);
-  const i2c = opt.i2c ? createI2c({ devices: opt.i2c }) : null;     // (opt.i2c: { address: size }, memories)
+  const i2c = opt.i2c || smc ? createI2c({ devices: Object.assign({}, opt.i2c, smc ? { 0x42: smc } : {}) }) : null;   // (opt.i2c: { address: size }, memories)
   const via = createVia({ portB: spi.portB, miso: spi.miso, portAIn: opt.gpioIn, i2c });
   // CA1's pulses (opt.ca1: cycles): low at each, high again 500 cycles on (its edges, in order)
   const ca1Edges = [];
@@ -283,7 +288,7 @@ function createMachine(opt) {
 
   // (A task's RAM bank b, as it is: undefined if it was never written; tools/hysnap.js reads hylang's heap with it)
   const taskBankMem = (t, b) => taskBank[t * 256 + b];
-  Object.assign(m, { cpu, acia, via, i2c, ym, vera, audio, rtc, taskRam, vecRam, pcHist, iOffTop, stackLow, stackLowAt, profHist, profCyc, profTask, run, hwReset, rd, taskBankMem });
+  Object.assign(m, { cpu, acia, via, i2c, smc, ym, vera, audio, rtc, taskRam, vecRam, pcHist, iOffTop, stackLow, stackLowAt, profHist, profCyc, profTask, run, hwReset, rd, taskBankMem });
   Object.defineProperties(m, {                                // (The pseudo-registers, the trace and the profile's count, as they are now)
     trace: { get: () => {                                     // (The ring, oldest first: [W, T, PC, A, X, Y, S, P] each)
       const out = [];

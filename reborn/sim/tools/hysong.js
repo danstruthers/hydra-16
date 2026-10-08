@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// hysong.js: the Hydra's score compiler.  A score (text: instruments, and a line of MML for each YM2151 channel)
-// becomes a ZSM song (the Commander X16's format, which the Hydra's player plays: os_rom/sound/player.s), with the
+// hysong.js: the Hydra's score compiler.  A score (text: instruments, and a line of MML for each YM2151 channel and
+// each of the Vera X's PSG voices) becomes a ZSM song (the Commander X16's format, which the Hydra's player plays: os_rom/sound/player.s), with the
 // patches and volumes worked out here, so the song is plain register writes and delays: it plays on an X16 or in
 // any ZSM player as well.  Optionally a VGM too (to hear it on the PC), and a ca65 source that puts it in the paged
 // ROM (sndtest's song: os_rom/songs/).
@@ -12,13 +12,22 @@
 //   #rate 200               the song's ticks a second (default 200: the Hydra's own tick)
 //   #title Some text        (kept in the report)
 //   @name { ... }           an instrument (below)
-//   A ...  (to H)           MML for channel 0 (to 7); a channel's lines are joined in order
+//   A ...  (to H)           MML for channel 0 (to 7), the YM2151's; a channel's lines are joined in order
+//   I ...  (to X)           MML for channel 8 (to 23), the PSG's voices 0-15 (the letter less A is the sound
+//                           driver's channel, as play -m takes it)
 //
 // An instrument: "gm N" (the ROM's patch N: 0-127 General MIDI's, 128-162 drums), or the voice itself:
 //   alg 0-7  fb 0-7  pms 0-7  ams 0-3, then each operator (m1 m2 c1 c2), each followed by any of
 //   mul 0-15 (0: 1/2)  dt1 0-7  dt2 0-3  tl 0-127 (attenuation)  ks 0-3  ar 0-31  d1r 0-31  d2r 0-31  d1l 0-15
 //   rr 0-15  am 0-1 (tremolo on).  Unset: 0 (tl: 127, silent).  Which operators sound: alg 0-3 c2; 4 c1 c2; 5, 6
 //   m2 c1 c2; 7 all four.
+// A PSG instrument (for channels I-X) is its waveform and envelope instead:
+//   wave W [WIDTH]          W pulse, saw, triangle or noise (or 0-3), WIDTH 0-63 (a pulse's duty: 63 a square;
+//                           the default)
+//   env A D S R             the volume's envelope, in the song's ticks: A ticks rising from 0 to the note's
+//                           volume, D falling by S (the PSG's 0.5 dB steps, 0-63: D 0, none) to the level it holds
+//                           till the key off, then R falling to silence (0: at once).  Each a straight line in the
+//                           volume register (so in dB), written as it changes.  Unset: 0 0 0 0 (a note on, then off)
 //
 // MML (a channel's line):
 //   c d e f g a b [+ # -] [len] [.]   a note (+ or #: sharp, -: flat); len 1 2 4 8 16 32 64 (or 3 6 12 24 48:
@@ -31,16 +40,21 @@
 //   o N  > <                octave (o4 c: middle C, MIDI 60); up, down
 //   l N                     the length for notes without one
 //   q N                     the part of a note held before its key off, in eighths (1-8; default 7)
-//   v N                     volume 0-127 (the carriers' levels, General MIDI's curve)
+//   v N                     volume 0-127 (the carriers' levels, General MIDI's curve; the PSG's: the next note's,
+//                           1.5 of its steps for each 0.75 dB of the curve, as the sound driver attenuates it)
 //   p l|r|c|0               speakers: left, right, both, none
 //   @name                   the instrument, from the next note on
-//   I N                     the ROM's patch N as the instrument (0-162), from the next note on
+//   I N                     the ROM's patch N as the instrument (0-162), from the next note on; the PSG's: waveform
+//                           N (0-3, as wave), width 63
 //   k N                     transpose (semitones)      D N    detune (64ths of a semitone)
 //   M pms,ams               the channel's LFO sensitivities (vibrato 0-7, tremolo 0-3)
 //   L rate,pmd,amd,wave     the LFO (the whole chip): rate 0-255, depths 0-127, wave 0 saw 1 square 2 triangle 3 noise
 //   N n  N-                 noise (channel 7's C2) on at frequency n (0-31); off
-//   y reg,val               any register (e.g. the timers)
+//   y reg,val               any register (e.g. the timers); the PSG's: its registers, 0-63
 //   [ ... ]N                repeat N times (nested)
+// On the PSG's channels x, M, L and N (the YM2151's) are errors; a slide's steps write the frequency.  The writes of a
+// tick: the PSG's at once (a ZSM's $00-$3F), the YM2151's in chunks of 63 (a chunk out as it fills, the rest at the
+// tick's end); the song's end at the longest channel's time, or after the last envelope's last step if that's later.
 
 'use strict';
 const fs = require('fs');
@@ -51,6 +65,20 @@ const SLOTS = { m1: 0, m2: 1, c1: 2, c2: 3 };                // Operator: its re
 const CARRIERS = [[3], [3], [3], [3], [2, 3], [1, 2, 3], [1, 2, 3], [0, 1, 2, 3]];
 const NOTE_CODE = [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]; // C# D D# E F F# G G# A A# B C
 const atten = v => v <= 0 ? 127 : Math.min(127, Math.round(-40 * Math.log10(Math.min(v, 127) / 127) / 0.75));
+const FM = 8;                                               // The YM2151's channels; the PSG's are 8-23
+const PSG_FREQ = [22473, 23810, 25226, 26726, 28315, 29998, 31782, 33672, 35674, 37796, 40043, 42424, 44947];
+const WAVES = { pulse: 0, saw: 1, triangle: 2, noise: 3 };
+// A PSG voice's frequency word (Hz * 2^17 / 48,828.125) for pitch p (64ths of a semitone over MIDI 0), as the sound
+// driver works it out (snd.s: psg_pitch): the octave C9-C10's words, the 64ths between semitones a straight line,
+// halved to the note's octave, rounded
+function psgWord(p) {
+  p = Math.max(0, Math.min(131 * 64 + 63, p));
+  let n = p >> 6, oct = 0;
+  while (n < 120) { n += 12; oct++; }
+  const k = n - 120, w = PSG_FREQ[k] + ((((PSG_FREQ[k + 1] - PSG_FREQ[k]) >> 2) * (p & 63)) >> 4);
+  return oct ? (w >> oct) + ((w >> (oct - 1)) & 1) : w;
+}
+const psgVol = v => v <= 0 ? 0 : Math.max(0, 63 - atten(v) - (atten(v) >> 1));
 
 // ---- The sound driver's patches and drum map (modules/snd/patches.s: the old system's os_rom/sound/patches.s)
 function romPatches() {
@@ -67,6 +95,7 @@ function romPatches() {
 
 // ---- An instrument's tokens as a patch (26 bytes: $20, $38, then $40-$F8 by 8, as the ROM's)
 function instrument(name, toks, rom) {
+  if (toks.includes('wave') || toks.includes('env')) return psgInstrument(name, toks);
   if (toks[0] === 'gm') {
     const n = +toks[1];
     if (!(n >= 0 && n < rom.patches.length)) throw new Error('@' + name + ': no patch ' + toks[1]);
@@ -91,9 +120,31 @@ function instrument(name, toks, rom) {
   return p;
 }
 
+// ---- A PSG instrument's tokens: its waveform register (3: the waveform, the width) and its envelope
+function psgInstrument(name, toks) {
+  const p = { psg: true, wave: 63, env: [0, 0, 0, 0] };
+  const bad = () => { throw new Error('@' + name + ': an instrument it can\'t read'); };
+  for (let i = 0; i < toks.length; i++) {
+    if (toks[i] === 'wave') {
+      const w = toks[++i], n = w in WAVES ? WAVES[w] : /^\d+$/.test(w || '') ? +w : -1;
+      if (!(n >= 0 && n <= 3)) bad();
+      let width = 63;
+      if (/^\d+$/.test(toks[i + 1] || '')) { width = +toks[++i]; if (width > 63) bad(); }
+      p.wave = n << 6 | width;
+    } else if (toks[i] === 'env') {
+      for (let k = 0; k < 4; k++) {
+        const v = toks[++i];
+        if (!/^\d+$/.test(v || '') || +v > (k === 2 ? 63 : 255)) bad();
+        p.env[k] = +v;
+      }
+    } else bad();
+  }
+  return p;
+}
+
 // ---- The score
 function parseScore(text, rom) {
-  const score = { tempo: 120, rate: 200, title: '', inst: {}, tracks: ['', '', '', '', '', '', '', ''] };
+  const score = { tempo: 120, rate: 200, title: '', inst: {}, tracks: new Array(24).fill('') };
   text = text.replace(/;[^\n]*/g, '');
   text = text.replace(/@(\w+)\s*\{([^}]*)\}/g, (m, name, body) => { score.inst[name] = instrument(name, body.trim().split(/\s+/), rom); return ''; });
   for (const line of text.split(/\r?\n/)) {
@@ -105,7 +156,7 @@ function parseScore(text, rom) {
       else if (m[1] === 'rate') score.rate = +m[2];
       else if (m[1] === 'title') score.title = m[2];
       else throw new Error('#' + m[1] + '?');
-    } else if ((m = /^([A-H])\s+(.*)$/.exec(s))) score.tracks[m[1].charCodeAt(0) - 65] += ' ' + m[2];
+    } else if ((m = /^([A-X])\s+(.*)$/.exec(s))) score.tracks[m[1].charCodeAt(0) - 65] += ' ' + m[2];
     else throw new Error('what is this line? ' + s);
   }
   return score;
@@ -228,6 +279,7 @@ function compileTrack(ch, mml, score, rom, out) {
     } else if (c === '@') {
       const m = /^\w+/.exec(s.slice(i)); i += m[0].length;
       if (!score.inst[m[0]]) throw new Error('channel ' + ch + ': no instrument @' + m[0]);
+      if (score.inst[m[0]].psg) throw new Error('channel ' + ch + ': the other chip\'s instrument');
       st.pending = score.inst[m[0]]; st.instName = m[0];
     } else if (c === 'I') {
       const n = num();
@@ -251,12 +303,157 @@ function compileTrack(ch, mml, score, rom, out) {
   return { units: u, notes };
 }
 
+// ---- A PSG channel's MML (8-23: voice ch - 8) as writes at ticks: { t, seq, reg, val, psg }.  As play makes them
+// (modules/play/mml.inc): a note's attack, its pitch and volume, at once; a slide's steps, its key off and its
+// envelope's steps as they come due, before each command (the envelope's to the track's time: its steps are the
+// earliest of the three, a slide's first at a tie, then a key off), and the rest after the last command
+function compilePsg(ch, mml, score, rom, out) {
+  const R = 4 * (ch - FM);                                  // The voice's registers: frequency (2), volume, waveform
+  const put = (t, reg, val) => out.push({ t, seq: out.length, reg, val: val & 255, psg: true });
+  const st = { oct: 4, len: 4, gate: 7, vol: 100, pk: psgVol(100), pan: 0xC0, inst: null, instName: '', pending: null,
+    tr: 0, det: 0, pitch: null, legato: false, slide: false };
+  let u = 0, cur = 0, slide = null, koff = null, env = null, ep = { a: 0, d: 0, s: 0, r: 0, p: 0 };
+  const s = expand(mml);
+  let i = 0;
+  const fail = why => { throw new Error('channel ' + ch + ': ' + why); };
+  const ws = () => { while (i < s.length && /\s/.test(s[i])) i++; };
+  const num = () => {
+    ws();
+    const m = /^(-?)(?:\$([0-9A-Fa-f]+)|(\d+))/.exec(s.slice(i));
+    if (!m) return null;
+    i += m[0].length;
+    return (m[1] ? -1 : 1) * (m[2] !== undefined ? parseInt(m[2], 16) : +m[3]);
+  };
+  const len = () => {
+    let n = num(), d = UNITS / (n === null ? st.len : n);
+    if (!Number.isInteger(d)) fail('length ' + n);
+    let add = d;
+    while (s[i] === '.') { add /= 2; d += add; i++; }
+    ws();
+    if (s[i] === '^') { i++; d += len(); }
+    return d;
+  };
+  // The envelope: a segment from `from` by d (signed) over n ticks from tick T, its changes numbered 1 to |d| (the
+  // jth at tick T + ceil (j n / |d|), its value from + floor (|d| k / n)); j the next one's
+  const segment = (phase, from, to, n, T) => { env = { phase, from, d: to - from, n, T, j: 1 }; if (to === from) envDone(); };
+  const envDone = () => {
+    const { phase, T, n } = env;
+    env = null;
+    const fall = Math.min(ep.s, ep.p);
+    if (phase === 'A' && ep.d > 0 && fall > 0) segment('D', ep.p, ep.p - fall, ep.d, T + n);
+  };
+  const envNext = () => {
+    const ad = Math.abs(env.d), k = Math.floor((env.j * env.n + ad - 1) / ad), q = Math.floor(ad * k / env.n);
+    return { t: env.T + k, q, val: env.from + Math.sign(env.d) * q };
+  };
+  const keyOff = () => {
+    const t = koff;
+    koff = null; env = null;
+    if (ep.r > 0 && cur > 0) segment('R', cur, 0, ep.r, t);
+    else { cur = 0; put(t, R + 2, st.pan); }
+  };
+  const fill = end => {
+    for (;;) {
+      let best = null, bt = Infinity, step = null, e = null;
+      if (slide && slide.t >= slide.t1) slide = null;
+      if (slide) {
+        const q = Math.max(1, slide.t1 - slide.t0), k = slide.t - slide.t0;
+        step = { at: tick(slide.u + k * slide.dur / q, score), pitch: Math.round(slide.from + (slide.to - slide.from) * k / q) };
+        best = 'slide'; bt = step.at;
+      }
+      if (koff !== null && koff < bt) { best = 'koff'; bt = koff; }
+      if (env) { e = envNext(); if (e.t < bt && (end || e.t <= tick(u, score))) best = 'env'; }
+      if (best === 'slide') { const w = psgWord(step.pitch); put(step.at, R, w & 255); put(step.at, R + 1, w >> 8); slide.t += 2; }
+      else if (best === 'koff') keyOff();
+      else if (best === 'env') {
+        put(e.t, R + 2, st.pan | e.val); cur = e.val; env.j = e.q + 1;
+        if (e.q === Math.abs(env.d)) envDone();
+      } else return;
+    }
+  };
+  const play = (pitch, dur) => {
+    const glide = st.slide && st.pitch !== null, T = tick(u, score);
+    if (st.pending) { st.inst = st.pending; st.pending = null; put(T, R + 3, st.inst.wave); }
+    if (glide) slide = { t: T, t0: T, t1: tick(u + dur, score), from: st.pitch, to: pitch, u, dur };
+    else { const w = psgWord(pitch); put(T, R, w & 255); put(T, R + 1, w >> 8); }
+    if (!(st.legato || glide)) {                            // The attack: the envelope from its start
+      const [a, d, sus, r] = st.inst.env;
+      ep = { a, d, s: sus, r, p: st.pk };
+      env = null;
+      if (a > 0) { cur = 0; put(T, R + 2, st.pan); segment('A', 0, ep.p, a, T); }
+      else {
+        cur = ep.p; put(T, R + 2, st.pan | cur);
+        const fall = Math.min(ep.s, ep.p);
+        if (ep.d > 0 && fall > 0) segment('D', ep.p, ep.p - fall, ep.d, T);
+      }
+    }
+    st.pitch = pitch;
+    ws();
+    st.legato = s[i] === '&';
+    if (st.legato) i++;
+    st.slide = false;
+    if (!st.legato) koff = tick(u + Math.max(1, Math.round(dur * st.gate / 8)), score);
+    u += dur;
+  };
+  let notes = 0;
+  while (i < s.length) {
+    ws();
+    if (i >= s.length) break;
+    fill(false);
+    const c = s[i++];
+    const at = i;
+    if ('cdefgab'.includes(c)) {
+      let n = { c: 0, d: 2, e: 4, f: 5, g: 7, a: 9, b: 11 }[c];
+      while ('+#-'.includes(s[i]) && s[i]) n += s[i++] === '-' ? -1 : 1;
+      const dur = len();
+      if (!st.inst && !st.pending) fail('a note before an instrument');
+      play(((st.oct + 1) * 12 + n + st.tr) * 64 + st.det, dur);
+      notes++;
+    } else if (c === 'r') u += len();
+    else if (c === 'o') st.oct = num();
+    else if (c === '>') st.oct++;
+    else if (c === '<') st.oct--;
+    else if (c === 'l') st.len = num();
+    else if (c === 'q') st.gate = num();
+    else if (c === 'v') { st.vol = num(); st.pk = psgVol(st.vol); }
+    else if (c === 'p') {
+      ws(); const w = s[i++];
+      st.pan = { l: 0x40, r: 0x80, c: 0xC0, 0: 0 }[w];
+      if (st.pan === undefined) fail('p' + w);
+      if (st.inst) put(tick(u, score), R + 2, st.pan | cur);
+    } else if (c === '@') {
+      const m = /^\w+/.exec(s.slice(i)); i += m[0].length;
+      if (!score.inst[m[0]]) fail('no instrument @' + m[0]);
+      if (!score.inst[m[0]].psg) fail('the other chip\'s instrument');
+      st.pending = score.inst[m[0]]; st.instName = m[0];
+    } else if (c === 'I') {
+      const n = num();
+      if (!(n >= 0 && n <= 3)) fail('no such patch ' + n);
+      score.inst['%' + n] = score.inst['%' + n] || { psg: true, wave: n << 6 | 63, env: [0, 0, 0, 0] };
+      st.pending = score.inst['%' + n]; st.instName = '%' + n;
+    } else if (c === 'k') st.tr = num();
+    else if (c === 'D') st.det = num();
+    else if (c === 'y') {
+      const reg = num(); i++; const val = num();
+      if (!(reg >= 0 && reg < 64)) fail('y: a PSG register is 0-63');
+      put(tick(u, score), reg, val);
+    } else if (c === '_') st.slide = true;
+    else if (c === '&') st.legato = true;
+    else if (c === '|') { /* (A bar line: ignored) */ }
+    else if ('xMLN'.includes(c)) fail(c + ' is the YM2151\'s');
+    else fail('what is "' + c + '" at ' + s.slice(at - 1, at + 20));
+  }
+  fill(true);
+  return { units: u, notes, pan: st.pan };
+}
+
 const tick = (u, score) => Math.round(u * score.rate * 60 * 4 / (score.tempo * UNITS));
 
 // ---- The ZSM: the writes by tick (the same value twice in a row is left out, but for key on and off), then delays
-function zsm(score, writes, mask) {
-  writes.sort((a, b) => tick(a.u, score) - tick(b.u, score) || a.seq - b.seq);
-  const shadow = new Array(256).fill(-1);
+const tickOf = (w, score) => w.t !== undefined ? w.t : tick(w.u, score);
+function zsm(score, writes, mask, pmask) {
+  writes.sort((a, b) => tickOf(a, score) - tickOf(b, score) || a.seq - b.seq);
+  const shadow = new Array(256).fill(-1), pshadow = new Array(64).fill(-1);
   const data = [];
   let now = 0, n = 0, pairs = [];
   const flush = () => {
@@ -267,20 +464,28 @@ function zsm(score, writes, mask) {
     pairs = [];
   };
   for (const w of writes) {
-    const t = tick(w.u, score);
+    const t = tickOf(w, score);
     if (t > now) {
       flush();
       for (let d = t - now; d > 0; d -= 127) data.push(0x80 | Math.min(d, 127));
       now = t;
     }
+    if (w.psg) {                                            // The PSG's: at once
+      if (pshadow[w.reg] === w.val) continue;
+      pshadow[w.reg] = w.val;
+      data.push(w.reg, w.val);
+      n++;
+      continue;
+    }
     if (w.reg !== 0x08 && w.reg !== 0x01 && w.reg !== 0x19 && shadow[w.reg] === w.val) continue;
     shadow[w.reg] = w.val;
     pairs.push(w.reg, w.val);
     n++;
+    if (pairs.length === 63 * 2) flush();
   }
   flush();
   data.push(0x80);
-  const hdr = [0x7A, 0x6D, 1, 0, 0, 0, 0, 0, 0, mask, 0, 0, score.rate & 255, score.rate >> 8, 0, 0];
+  const hdr = [0x7A, 0x6D, 1, 0, 0, 0, 0, 0, 0, mask, pmask & 255, pmask >> 8, score.rate & 255, score.rate >> 8, 0, 0];
   return { bytes: Buffer.from([...hdr, ...data]), writes: n, ticks: now };
 }
 
@@ -346,18 +551,21 @@ function main() {
   const rom = romPatches();
   const score = parseScore(fs.readFileSync(files[0], 'latin1'), rom);
   const writes = [];
-  let mask = 0, longest = 0;
-  const report = [];
+  let mask = 0, pmask = 0, longest = 0;
+  const report = [], pans = [];
   score.tracks.forEach((mml, ch) => {
     if (!mml.trim()) return;
-    const r = compileTrack(ch, mml, score, rom, writes);
-    mask |= 1 << ch;
+    const r = ch < FM ? compileTrack(ch, mml, score, rom, writes) : compilePsg(ch, mml, score, rom, writes);
+    if (ch < FM) mask |= 1 << ch;
+    else { pmask |= 1 << (ch - FM); pans.push([ch - FM, r.pan]); }
     longest = Math.max(longest, r.units);
     report.push(String.fromCharCode(65 + ch) + ': ' + r.notes + ' notes, ' + (r.units / UNITS) + ' bars');
   });
-  writes.push({ u: longest, seq: writes.length, reg: 0x08, val: 0 });   // (The end: every channel off)
-  for (let ch = 1; ch < 8; ch++) writes.push({ u: longest, seq: writes.length, reg: 0x08, val: ch });
-  const song = zsm(score, writes, mask);
+  let end = tick(longest, score);                           // The end: every channel off (the PSG's used), at the
+  for (const w of writes) end = Math.max(end, tickOf(w, score));   //   longest's time or the last write's
+  for (let ch = 0; ch < 8; ch++) writes.push({ t: end, seq: writes.length, reg: 0x08, val: ch });
+  for (const [v, pan] of pans) writes.push({ t: end, seq: writes.length, reg: 4 * v + 2, val: pan, psg: true });
+  const song = zsm(score, writes, mask, pmask);
   fs.writeFileSync(files[1], song.bytes);
   if (opt.vgm) fs.writeFileSync(opt.vgm, vgm(song.bytes, score.rate));
   if (opt.rom) fs.writeFileSync(opt.rom, romSource(song.bytes, path.basename(files[0])).replace(/\n/g, '\r\n'));
@@ -368,4 +576,4 @@ function main() {
 if (require.main === module) {
   try { main(); } catch (e) { console.error('hysong: ' + e.message); process.exit(1); }
 }
-module.exports = { parseScore, romPatches };
+module.exports = { parseScore, romPatches, psgWord, psgVol };

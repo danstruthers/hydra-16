@@ -155,7 +155,7 @@ task's side of the task calls, memory, semaphores, notes and the clock; page 2 f
 namespaces and the loader (`SPAWN`); page 4 POST and the debugger's steps; the rest is room.  Page 0 is the scarce one.
 [The kernel's pages](conventions.md#the-kernels-pages).
 
-**The paged ROM** (`bin/prom0.bin` ...: a 512K image for each chip it fills; four now, some 113 of its 256 banks).  Bank
+**The paged ROM** (`bin/prom0.bin` ...: a 512K image for each chip it fills; four now, some 124 of its 256 banks).  Bank
 0 holds the module directory and the ROM disk's partition table; bank 1 the hardware test (the old system's, unchanged);
 the modules from bank 2, each at `$A000` of its first bank (about fifty: the drivers, init, the shells, the tools, the
 languages; a module may span two to eight banks); then the ROM disk's HydraFS volume (`/rom`: the programs that run from
@@ -178,7 +178,11 @@ its line's owner, a driver; the longest stretch with interrupts off is held unde
 [The conventions' interrupts](conventions.md#interrupts).
 
 **Memory.**  A task's 32K: its program and data, a break (`BREAK`) for more; RAM banks (`BANKS_ALLOC`, 8K each through
-the window); shared segments of the shared RAM, by name (`/dev/seg`); semaphores.  [Memory](programming/memory.md).
+the window); shared segments of the shared RAM, by name (`/dev/seg`); semaphores (16, counting ones and mutexes).
+[Memory](programming/memory.md).  The C SDK's multitasking demos show tasks sharing a segment and taking turns with
+semaphores, and draw them as they go: `race` (lost updates, then a mutex), `chorus` (the console shared: a mutex, a
+baton), `philo` (the dining philosophers, and a deadlock), `prodcons` (a ring and counting semaphores) and `round` (four
+tasks singing a round, each keeping its own time).  [The demos](../sdk/c/README.md#the-multitasking-demos).
 
 **Notes** are Plan 9's signals: by name or number (`interrupt`, `kill`, `hangup` ...), to a task or its group, caught by
 a handler or not.  **Calls between tasks**: a server answers in its own task; the kernel copies between tasks (`kcopy`);
@@ -219,25 +223,38 @@ namespace](programming/files.md#the-namespace), [NAMESPACES.md](design/plans/NAM
 ## 8. The console: windows, the serial port, the screen
 
 The console driver (`cons`, task F) serves `#c`: **windows**, rio's way on a serial terminal: each a whole console with
-its own shell, shown one at a time (Ctrl-] and a digit shows that one, Ctrl-] c makes one, Ctrl-] n the next), a hidden
+its own shell, shown one at a time (Ctrl-] and a digit shows that one; Ctrl-] c makes a group, a shell session, and
+Ctrl-] n and p go between groups, Ctrl-] Tab or Ctrl-Tab between a group's windows, Ctrl-] w lists them, Ctrl-] [
+shows the scrollback (Space and Enter copy lines to `/dev/snarf`, the cut buffer, which Ctrl-] y pastes), Ctrl-] s
+and v split a window into tiles shown together (`wctl`'s `layout rows`, `columns`, `grid`), a window can float over
+the rest in a box (`float`), Ctrl-] ? lists the keys, and `wctl`'s `key` lines change them; `new-window` runs a program in a window of its own), a hidden
 one running on, its output kept and shown again.  A read is a line, edited at the console (Backspace, the arrows, Home,
 End, Ctrl-U, the lines before); `consctl` turns raw keys on; Ctrl-C (an interrupt) and Ctrl-\ (a kill) are notes to the
 shown window's group.  **The serial port** runs at 9600 at boot, and to 115200 (`/dev/serctl`), every byte paced by VIA
 timer 2.  **The screen**: with a Vera X, the shown window is on its screen too (`consctl`'s `screen`, `serial`,
-`both`).  [The tools](using/tools.md), [the screen](programming/video.md#the-consoles-terminal).  Text windows (screens
-in the console's RAM banks, a whole VT100, window groups, headers and a bar) are being built:
-[WINDOWS.md](design/plans/WINDOWS.md).
+`both`).  [The tools](using/tools.md), [the screen](programming/video.md#the-consoles-terminal).
+
+**Each window keeps its screen** in the console's RAM banks, written by a whole VT100 (the VT100's and VT102's
+sequences, their reports, VT52 mode, the alternate screen, double width and height), so a window shown again is
+painted exactly as it was; `/dev/text` reads it as text.  **Its size** is the smaller of the terminals it's shown
+on, less their chrome (`consctl` reads with `size C R`; a raw reader gets `KEY_RESIZE`; the PC tool tells the
+Hydra its window's size), and the line editor wraps at it.  **Its chrome**: the bar (the windows, the time), its
+header and its footer, each a row drawn from a format (`wctl`'s `bar`, `header`, `footer`; `/lib/windows` has the
+defaults), on the screen by default and on the serial port with `chrome serial on`; its title (`/dev/label`, OSC 2)
+and its status line (`status`, or the VT320's) show there.  Window groups, Ctrl-Tab, the scrollback's view and
+snarf, tiles and the two seats come next: [WINDOWS.md](design/plans/WINDOWS.md).
 
 ---
 
 ## 9. Storage: disks and HydraFS
 
 The storage driver (`storage`, task E) owns the SPI bus and the disks, at `/dev/sd`: `0`-`f` the SD cards by their SPI
-device (through a cache of their blocks), `x` the ROM disk, `r` the RAM disk (each shell has its own area, `/ram`) and
-`s` the shared one (`/sram`).  HydraFS is on each, the old system's file system, ported: directories, files to 4 GB, a
+device (through a cache of their blocks), `x` the ROM disk, `r` the RAM disk (each shell has its own area, `/ram`),
+`s` the shared one (`/sram`), and `v` the Vera X's SD card (on the VERA's own SPI controller).  HydraFS is on each, the old system's file system, ported: directories, files to 4 GB, a
 card's partitions ([HYDRAFS.md](design/plans/HYDRAFS.md) is its format).  The cards are at `/sd/N`, and a card's `bin`
 and `lib` join `/bin` and `/lib`.  `df`, `mkfs`, `fsck` and `label` look after them; the PC's `sim/tools/hydrafs.js`
-makes card images.  [Disks](using/tools.md#disks), [DISKS.md](design/plans/DISKS.md).
+makes card images.  A card's writes are kept back a block at a time: close the file, or
+`echo sync >/dev/sd/N/ctl`, before taking the card out.  [Disks](using/tools.md#disks), [DISKS.md](design/plans/DISKS.md).
 
 ---
 
@@ -288,7 +305,8 @@ call (`XCALL`).  [Modules and programs](programming/modules.md).
 * **Debugging**: `db` on the Hydra (a program started stopped, stepped, run to breakpoints, with ld65's symbols), and
   the emulator's call traces, breaks and monitor.  [The debugger](using/tools.md#the-debugger).
 
-The samples are on the ROM disk (`/rom/sample`).  [The programmer's guide](programming/README.md) is the way in.
+The samples are on the ROM disk (`/rom/sample`; `bind -a /rom/sample/c /bin` runs the C ones by name), the C SDK's
+multitasking demos among them.  [The programmer's guide](programming/README.md) is the way in.
 
 ---
 
@@ -296,8 +314,9 @@ The samples are on the ROM disk (`/rom/sample`).  [The programmer's guide](progr
 
 **The YM2151** (8 FM channels) is the sound driver's (`snd`, task C, `#a`): `/dev/snd` takes register and value pairs,
 `/dev/sndctl` claims channels, sets the volume, and takes each channel's command as text
-(`echo note 0 60 >/dev/sndctl`), so every language and rc make sound the same way; `/dev/bell` rings.  **With a Vera X**, channels 8-23 are its PSG's
-voices (the same commands, and `wave`), and its **PCM** plays samples (`/dev/vid/pcm`, `pcmctl`).  **`play`** plays the
+(`echo note 0 60 >/dev/sndctl`), so every language and rc make sound the same way; `/dev/bell` rings.  **With a Vera
+X**, channels 8-23 are its PSG's voices (the same commands, and `wave`), and its **PCM** plays samples (`/dev/vid/pcm`,
+`pcmctl`).  **`play`** plays the
 X16's ZSM songs (their PSG and PCM parts too), scores in the score language (compiled as they play), a line of it or a
 chord (`-m`, `-c`; the X16's MML with `-x`), and WAV files.  The languages' words: C's `snd.h`, HyForth's `lib sound`,
 hylang's `(use "snd")`, BASIC's `SOUND` and `PLAY`.  In the emulator, `run.js -i --sound` plays it in a browser and
@@ -312,8 +331,12 @@ The Vera X's driver (`vid`, task A) finds the card as the system starts, sets it
 `/dev/vid`: `ctl` (modes 80x60, 80x30, 40x30, a bitmap under the text, the cursor, claims), `term` (an ANSI terminal,
 where the console writes), `vram`, `pal`, `sprites`, `font`, `frame` (a frame waited for), `psg`, `pcm` and `pcmctl`.  A
 program can draw by writing those files, or **claim** the chip and write its registers itself, as an X16 program does.
-In the emulator, `--vera` puts one in slot 0 and `--view` shows its screen in a browser.  The languages' graphics words,
-the keyboard (an input controller on the card) and the carrier card come next.  [The screen](programming/video.md), [the
+Its keyboard and mouse are an input controller's, the X16's SMC on the I2C bus: the `input` program types its keys
+into the console and gives the mouse to `/dev/vid/mouse` (Plan 9's), a sprite its pointer.  The driver draws on the bitmap (`/dev/vid/draw`: lines, boxes,
+circles, text), with the same words in HyForth (`lib video`, a turtle too), hylang, C (`vera.h`, and cc65's TGI).
+In the emulator, `--vera`
+puts one in slot 0, `--smc` its controller, and `--view` shows its screen in a browser, its keys and mouse the
+controller's.  The carrier card comes next.  [The screen](programming/video.md), [the
 card](hardware.md#the-vera-x-slot-0), [VIDEO.md](design/plans/VIDEO.md).
 
 ---
@@ -355,10 +378,10 @@ POST's, a driver's) are `/dev/kmesg`, its last 4K.
   W65C51N; `node build.js prog DIR` for a program of your own.
 * **The emulator**, `node sim/run.js`: the board cycle by cycle, running the real images.  `-i` is the serial console
   live (Ctrl-A x quits, r the reset button, b a monitor: steps, registers, memory, breaks, watches); `--sd card.img` a
-  card; `--pc-dir DIR` a folder as `/pc`; `--vera` a Vera X, `--view` its screen in a browser; `--sound` the sound in a
+  card; `--pc-dir DIR` a folder as `/pc`; `--vera` a Vera X (`--vera-sd card.img` a card in its SD slot), `--view` its screen in a browser; `--sound` the sound in a
   browser, `--wav FILE` in a file; `--trace-calls`, `--break`, `--watch` for debugging.  The top of `sim/run.js` lists
   them all; [the hardware reference](hardware.md#in-the-emulator) says what's modelled.
-* **The tests**, `node sim/test.js`: 86 of them, each booting its own image and judged on its output, its time budgets
+* **The tests**, `node sim/test.js`: 115 of them, each booting its own image and judged on its output, its time budgets
   and its own checks, as many at a time as the PC has cores; `--dl` runs them in the danlang emulator (`sim/dl`), the
   emulator written again in danlang.
 * **The PC tools** (`sim/tools`): `hydrapc.js` (the PC tool: the terminal, and `/pc` over the serial line; `npm install`

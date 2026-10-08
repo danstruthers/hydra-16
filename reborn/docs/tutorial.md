@@ -146,9 +146,38 @@ task  state   parent     cpu group  name
 `/proc/5` has a task's state as files: `status`, `args`, `fd` (its open files), `regs`, `mem`, and `ctl`, which
 takes `stop`, `start`, `kill`.
 
-The console has windows, as rio has on Plan 9: each is a whole console with its own shell.  Ctrl-] c makes one (and
-shows it), Ctrl-] and a digit shows that window, Ctrl-] n the next.  A window that isn't shown runs on; its output is
-kept, and shown again when you come back.  `echo $window` says which one you're in.
+The console has windows, as rio has on Plan 9: each is a whole console, kept whole while it isn't shown.  Windows
+come in groups, a group a shell session: Ctrl-] c starts one (and shows it), with a shell; a program's own windows
+(`echo new >/dev/wctl`) join its window's group.  Ctrl-] and a digit shows that window, Ctrl-] n and Ctrl-] p the
+next and previous group, Ctrl-] Tab (or Ctrl-Tab, where the terminal sends it) the group's next window, and Ctrl-] x
+hangs up the window shown.  A window that isn't shown runs on; its output is kept, and shown again when you come
+back.  `echo $window` says which one you're in, and `cat /dev/wctl` lists them: number, group, size, `*` the one
+shown.  `new-window top` runs a program in a window of its own, in this group (it goes when the program ends);
+`new-window -g` starts another shell session.  Ctrl-] w lists the windows to choose from (a window's key, or the
+arrows and Enter).  The keys can be changed: `echo key prefix ctrl-a >/dev/wctl` makes Ctrl-A the prefix, as
+screen's.  `/dev/snarf` is the console's cut buffer, one for every window: `echo date >/dev/snarf`, then Ctrl-] y
+in any window types it there.  Ctrl-] [ (or Shift-PgUp) looks back through a window's scrollback: the arrows and
+PgUp move, Space marks a line, Enter copies the lines from it to the cursor into `/dev/snarf`, q goes back.
+`echo history 128 >/dev/wctl` keeps 128 more lines in that window.  Ctrl-] s (or v) splits the window: a new
+shell below it (or beside it), both shown at once; Ctrl-] and an arrow moves between them, Ctrl-] z shows one alone
+and back, and `echo layout grid >/dev/wctl` (or `rows`, `columns`, `tabs`) arranges the group's windows.  Ctrl-] ?
+lists the keys.
+
+**Tasks working together.**  The C SDK's multitasking demos start four or five copies of themselves, each in a task
+of its own, and draw what they do as they do it: memory they share (a shared segment), and semaphores to take turns
+and wait for each other.  Put them in `/bin` first, then run them one at a time (each needs the tasks):
+
+```
+/> bind -a /rom/sample/c /bin
+/> race                lost updates on a shared counter, then none with a mutex
+/> chorus              four tasks print on one console: tangled, then whole lines, then in turn
+/> philo               the dining philosophers (Ctrl-C ends it); philo -d deadlocks, and says so
+/> prodcons            producers and consumers through a ring: counting semaphores
+/> round               a four-voice round, each voice a task keeping its own time
+```
+
+[The C SDK's guide](../sdk/c/README.md#the-multitasking-demos) says what each shows, and their sources are in
+`sdk/c/samples`.
 
 ## 6. The languages
 

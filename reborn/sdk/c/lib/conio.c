@@ -2,13 +2,15 @@
 ** conio.c - cc65's conio for the Hydra's console, an ANSI terminal on the serial port: the screen through ANSI
 ** sequences (cursor moves, clearing, colours, reverse), and the keys read raw from the window's console (its own
 ** fds on /dev/cons, and /dev/consctl's rawon while the program runs: no echo, each key as it comes, the terminal's
-** cursor and function keys as one code each: hydra.h's CH_*).  The screen's size is $COLUMNS x $LINES (the
-** environment), or 80 x 24.  Output goes out as stdout's does (PUTC), so conio and printf keep their order; wherex
-** and wherey follow what conio writes (not printf's).
+** cursor and function keys as one code each: hydra.h's CH_*).  The screen's size is the window's (its consctl's
+** size line: the smaller of the terminals it's shown on), asked again after a CH_RESIZE; with no console,
+** $COLUMNS x $LINES (the environment), or 80 x 24.  Output goes out as stdout's does (PUTC), so conio and printf
+** keep their order; wherex and wherey follow what conio writes (not printf's).
 */
 
 #include <conio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <hydra.h>
@@ -23,6 +25,37 @@ static int pending = -1;                                /* A key kbhit saw */
 
 /* ---- The screen */
 
+/* The window's size, its consctl's size line (C R).  0: none (no console) */
+static unsigned char consize (void)
+{
+    static char b[100];
+    int fd, n;
+    char* p;
+
+    if ((fd = _hy_open ("/dev/consctl", HY_O_READ)) < 0) {
+        return 0;
+    }
+    n = read (fd, b, sizeof b - 1);
+    close (fd);
+    if (n <= 0) {
+        return 0;
+    }
+    b[n] = 0;
+    for (p = b; p; p = strchr (p, '\n')) {
+        if (*p == '\n') {
+            ++p;
+        }
+        if (!strncmp (p, "size ", 5)) {
+            width = atoi (p + 5);
+            if ((p = strchr (p + 5, ' ')) != 0) {
+                height = atoi (p + 1);
+            }
+            return width && height;
+        }
+    }
+    return 0;
+}
+
 static void size (void)
 {
     char* v;
@@ -31,6 +64,9 @@ static void size (void)
         return;
     }
     sized = 1;
+    if (consize ()) {
+        return;
+    }
     width = 80;
     height = 24;
     if ((v = getenv ("COLUMNS")) != 0 && atoi (v) > 0) {
@@ -277,6 +313,9 @@ char _hy_cgetc (void)
         while (read (kfd, &c, 1) != 1) {
             hy_yield ();
         }
+    }
+    if (c == CH_RESIZE) {
+        sized = 0;                                      /* (The window's size: asked again) */
     }
     return c == '\r' ? '\n' : c;                        /* (Enter: CH_ENTER) */
 }

@@ -1,6 +1,6 @@
 ## **Video: the Vera X card in slot 0**
 
-A plan for the Hydra-16's supported video card: a card in **slot 0** carrying the **VERA** (the Versatile Embedded Retro Adapter, the Commander X16's video chip: an iCE40UP5K FPGA with 128K of video RAM, VGA out, a 16-voice PSG and PCM audio).  The card is called **Vera X** here.  Its 32 registers fill slot 0's **I/O ports 2 and 3** (`$FF20-$FF3F`).  Its interrupt is slot 0's **IRQ A, line 2**, and **IRQ B, line 3**, is for its keyboard and mouse controller.  The VERA's source (the module's PCB, gateware v0.9 and its programmer's reference) is in `c:\source\vera-module`.  Steps 1 to 4, and step 7's PSG and PCM, are built in the rebuilt system (`reborn/`, phase 8): see [As built](#as-built-october-2026).
+A plan for the Hydra-16's supported video card: a card in **slot 0** carrying the **VERA** (the Versatile Embedded Retro Adapter, the Commander X16's video chip: an iCE40UP5K FPGA with 128K of video RAM, VGA out, a 16-voice PSG and PCM audio).  The card is called **Vera X** here.  Its 32 registers fill slot 0's **I/O ports 2 and 3** (`$FF20-$FF3F`).  Its interrupt is slot 0's **IRQ A, line 2**; **IRQ B, line 3**, stays free, as the keyboard and mouse controller is polled over I2C (step 6).  The VERA's source (the module's PCB, gateware v0.9 and its programmer's reference) is in `c:\source\vera-module`.  Steps 1 to 4, 5's graphics words, 6 (the keyboard and mouse) and 7's PSG and PCM are built in the rebuilt system (`reborn/`, phase 8): see [As built](#as-built-october-2026).  The console that step 4 put on the screen is being rebuilt by the text windows' plan ([WINDOWS.md](WINDOWS.md)): [The console and the text windows](#the-console-and-the-text-windows) says what that changes here.  Next, in the user's order (2026-10-07): the rest ([Order of work](#order-of-work)).
 
 ### **As built (October 2026)**
 
@@ -18,23 +18,58 @@ A plan for the Hydra-16's supported video card: a card in **slot 0** carrying th
 | 25 | Audio left | 26 | Audio right |
 
 **Built** in `reborn/`, which differs from this plan (written for the old system's ROM) as follows:
-* **The emulator's VERA** (step 1): `reborn/sim/lib/vera.js`, the v47.0.2 chip (FX's registers kept, its effects not modelled; its sound, the PSG's and the PCM's, made since with the YM2151's: `sim/lib/audio.js`, `run.js --sound`, `--wav`); `run.js --vera`, `--screen`, `--frame-png`, and `--view` (the screen live in a browser) rather than a web emulator; the vera test.
+* **The emulator's VERA** (step 1): `reborn/sim/lib/vera.js`, the v47.0.2 chip (FX too, since the rest's work: below; its sound, the PSG's and the PCM's, made since with the YM2151's: `sim/lib/audio.js`, `run.js --sound`, `--wav`); `run.js --vera`, `--screen`, `--frame-png`, and `--view` (the screen live in a browser) rather than a web emulator; the vera test.
 * **The driver** (step 2) is a module, `vid` (a boot driver, task A), not BIOS page E.  It detects the card itself, as it starts (not POST): the version register, or ADDR0 read back for v0.9, for 0.3 s (the FPGA configuring itself after a reset).  Its font is built in (ISO-8859-15, the X16 ROM's PXLfont), with `/lib/font/cp437` beside it; no boot logo yet.  The frame interrupt goes through the kernel's one IRQ path to vid's irq entry.
 * **`/dev/vid`** (step 3): `ctl`, `term`, `vram`, `pal`, `sprites`, `font` and `frame`.  `ctl`'s commands: `mode 80x60`, `mode 80x30`, `mode 40x30`, `cursor blink|on|off`, `border N`, `bitmap 320 D`, `bitmap 640 D`, `bitmap off` (layer 0), `claim`, `claim all`, `release`, `reset`.  `frame` reads as text (the count in decimal, and an LF), as the GPIO's `ca1` does.  Claims as step 5 plans them.
 * **The screen console** (step 4): the terminal is vid's (`#v/term`), and the console driver, `cons`, writes the shown window's text there as it sends it to the serial port; consctl's `screen`, `serial` and `both` choose.  The cursor is sprite 0 (an underline at VRAM `$1F800`, blinked by `DC_VIDEO`'s sprite bit).  No keyboard yet (step 6).
 * **The PSG** (step 7's first part): sound channels 8-23, the sound driver's (`snd`, `#a`), with the FM channels' commands (a note, off, a level, pan, a bend, a frequency in Hz, a glide; a patch below 4 is a waveform) and one more, `wave` (the waveform and its width).  The VERA stays vid's: snd writes the PSG's registers through `#v/psg` (register/value pairs, a request's in one write), which vid keeps and writes through data port 1 (ADDR0, the cursor's, left alone); while the chip's claimed it only keeps them, and the release writes them (it set the PSG to zeros before).  Volumes go to the chip attenuated by the channel's level and the master volume, as the FM carriers' levels are.  `/dev/psg` (`#a`) takes a song's raw PSG writes, and `play` sends a ZSM's there (its PSG voices claimed, from the header's mask) instead of skipping them.  `sndctl` reads `channels 24` with a card (8 without), and its `claim` and `release` take a second mask, the PSG's.  [SOUND_PARITY.md](SOUND_PARITY.md)'s step 5 has the rest.
 * **PCM** (step 7's second part): vid's `/dev/vid/pcm` (the FIFO: a write taken below a quarter full, as much as fits, the rest waiting for the next frame, so the frames feed it rather than AFLOW's interrupt) and `pcmctl` (`rate` in Hz, the VERA's nearest; `bits`, `mono`, `stereo`, `volume`, `reset`, `drain`), one task's at a time.  `play` plays WAV files and a ZSM's PCM extension (its instruments read into RAM if they fit, about 20K).  SOUND_PARITY.md's step 6.
+* **The keyboard and mouse** (step 6, below): the emulator's SMC (`sim/lib/smc.js`: its answers as `x16-smc`'s, a read's made as its address comes and unanswered when there's nothing; `run.js --smc`, `--kbd TEXT`, and `--view`'s keys and mouse); the console's `#c/kbin`; the `input` program (`modules/input`, 1.8K), which init starts after the shells; vid's `/dev/vid/mouse`, `mousein` and `mousectl`, and the pointer.  Where it went otherwise than planned:
+  * **The idle rate.**  A look that finds nothing costs some 5,000 cycles (the request to gpio, the bus, the scheduler), 10% of the CPU at 67 a second, so `input` looks 10 times a second after 2 s with nothing (1.8% of the CPU, measured), and the first key after a quiet spell waits a tenth of a second at most.  The SMC's buffer (15 key codes) holds that much typing.
+  * **The buttons' changes are queued** in vid (8 of them, each `/mouse` fid reading them in turn), as Plan 9's are, so a click between two reads isn't lost; the moves aren't (a read gives the latest).
+  * **The cursor blinks by its z now** (sprite 0's byte 6, through data port 1, ADDR1 kept there), not by DC_VIDEO's sprites bit, which blinked every sprite, the pointer among them.  A scroll's row copy and the PSG's writes borrow ADDR1 and put it back.
+  * **`input` opens its files by their devices' names** (`#i/42`, `#c/kbin`, `#v/mousein`), so it runs in any namespace.
+  * Tests: the mouse test (vid's files and the input program on the SMC's packets: 48 checks) and the kbd test (keys typed at the SMC reaching HyForth, the login shell).
+* **The graphics words** (step 5): drawing is vid's own, `/dev/vid/draw` (`modules/vid/draw.inc`: `pen`, `plot`, `line` (Bresenham's), `box`, `bar`, `circle` and `disc` (the midpoint way), `text` (the console's font), `clear`, on the bitmap at any depth), so it's quick, the console stays over it, and every language has the same words: HyForth's `lib video` (`romfs/lib/forth/video.fs`), hylang's `(use "video")`, C's `vera.h` (`sdk/c/lib/vera.c`), and cc65's TGI through a driver of its own, `hydra_tgi` (`sdk/c/lib/tgihydra.s`: cc65's TGI kernel is in `none.lib` already).  Where it went otherwise than planned:
+  * **The plan's `vmode`, `cls`, `spimg` and `tile`** became ctl's commands (`bitmap`, `mode`), `clear`, `sprite!` (a sprite's 8 bytes); tiles are VRAM and the layer's registers, for a claimer.  The pen's colour is `pen`, not `color` (HyForth's and hylang's `color` is the terminal's), and a filled box `bar` (TGI's name; Core has `fill`).
+  * **The pen is the driver's**, one for every program: srvlib's commands take 4 words, so a line couldn't carry its colour too, and a shell's lines each open `/dev/vid/draw` anew.
+  * **`bitmap 640` is 1 or 2 bits a pixel**: at 4 or 8 it was more than the program's VRAM, and drew over the console's map and font.
+  * **cx16-320-8 isn't there**: cc65's X16 driver (`cx320p1`) calls the X16's kernal, so the Hydra's is new, over `/dev/vid/draw`.
+  * Samples: `sketch` (`vera.h`, the mouse) and `shapes` (TGI).  The draw test (rc, HyForth, hylang, both samples).
+* **The rest** (Order of work's 3), so far:
+  * **The output modes**: ctl's `output vga`, `output ntsc [mono] [240p]`, `output rgb [240p]` (DC_VIDEO's bits; the card brings out what it has: the VERA X its VGA).  The emulator had NTSC's and RGB's timing already.
+  * **FX in the emulator** (`vera.js`, from x16-emulator's `video.c`): ADDR1's line, polygon and affine modes, 4-bit mode and its nibbles, the 16-bit hop, the 32-bit cache (filled by reads, written 4 bytes at a time under a mask, or a byte at a time cycling), transparent writes, the multiplier and its accumulator, 2-bit polygon poking, the fill length.  The vera test checks it (15 checks).
+  * **The VERA's SD card** is the storage driver's disk `v` (`/dev/sd/v`, `/sd/v`): a card as 0-f are (the cache, HydraFS, partitions, `mkfs`), its bytes through VERA_SPI_DATA and CTRL (390 kHz while it starts, 12.5 MHz after) in place of the VIA's bit loops.  The storage driver touches those two registers only, which share nothing with vid's ports, so it needs no claim; with no Vera X, the busy bit never clears and the card isn't there.  Reading a 32K file is 6.6M cycles against the VIA card's 11.7M (each with a prompt's round trip); the rest is HydraFS's and the request's.  The emulator's card is `sd.js`'s, byte by byte (`--vera-sd FILE`).  The vsd test.
+  * **The PSG in scores**: channels I-X of the score language are the PSG's voices (sound channels 8-23, the letter less A), in `hysong.js` and `play` (`mml.inc`) alike, byte for byte: the same notes, rests and commands as the YM2151's (but `x`, `M`, `L`, `N`), and instruments of their own, `wave W [WIDTH]` and `env A D S R` (ticks, and the PSG's 0.5 dB steps: each segment a straight line in the volume register, written as it changes; the release runs on through rests, a new attack cuts it, and the song's end waits for the last).  A note's frequency word is the sound driver's for its pitch.  `play -m 8` and `-c` take the PSG's channels (`-x`: PSGPLAY's `I` and `V`), so every language's `snd-mml` does.  `play`'s first bank was full: the driver's patches moved to its second, copied into RAM when wanted.  A score may be some 17K now (the PSG's tracks' tables).  `/rom/songs/vera.mml` uses both chips; the psgmml test.
+  * **The VERA in the danlang emulator** (`sim/dl/vera.dl`, and the SMC, `smc.dl`): vera.js but for its sound and its picture (the registers and ports, VRAM and the registers it shadows, the scan and its interrupts, sprite collisions, the PCM FIFO's level, FX, the SPI controller and a card on it, the FPGA configuring itself); I2C devices that acknowledge or not, and the ACIA's keyboard mode, for the SMC.  The harness (`bridge.js`) loads danlang's VRAM and registers into a JS VERA (`vera.js`'s `load`), so a check that looks at the screen draws it the same way.  All ten of the Vera X's tests run in danlang now, and pass (the vera test's counts the same as JS's to the byte).  `sim/dl/run.dl --vera --smc`.
+  * **FX in vid's drawing**: a line at 8 or 4 bits a pixel, 320 across, its ends on the bitmap, is FX's line helper (a write a pixel: its slope in 512ths, rounded, so a long line ends where it should); `clear` is 32-bit cache writes.  A 300-pixel line from HyForth went from some 246,000 cycles to 82,000 (the rest is HyForth's and the request's).  ADDR1 is lent meanwhile, as for a scroll.
 * The programmer's chapter is `reborn/docs/programming/video.md`; the status, `reborn/docs/status.md`'s phase 8.
 
+### **The console and the text windows**
+
+The text windows' plan ([WINDOWS.md](WINDOWS.md); the user's decisions of 2026-10-07; W1 to W3 built on the branch `reborn-text-windows`, not yet merged) rebuilds the console that step 4 put on the screen.  What it changes for the Vera X:
+* **cons is the terminal, and vid's `/term` is one of its back ends.**  Each window is a whole VT100 (and VT102), its screen's cells in task F's RAM banks.  The screen and the serial port are back ends: one *follows* a window's output while it's up to date with the window, and is *painted* from the cells otherwise (a window shown again, a catch-up, chrome).  So vid's terminal keeps the subset step 4 gave it: what it can't do (inserting and deleting lines and characters, SU, SD, REP), cons paints instead.  No more is planned for vid's terminal.
+* **While the chip's claimed**, `/term`'s writes get `E_BUSY` (the 1K vid kept for the claim's time is gone), and cons paints the window again after the release.
+* **A change of the screen under the console** (a `mode`, a `bitmap`, a `reset`, a claim's end): vid refuses the console's next write, once.  cons then reads the screen's size from vid's `ctl` (`mode 80x60`) and resizes its windows.  A window is sized to the smaller of the terminals that show it, each less its chrome, and its program gets `KEY_RESIZE` (or reads `consctl`'s `size`).  Nothing polls.
+* **The DEC special graphics** (`ESC ( 0`, line drawing) are the fonts' first 32 glyphs: vid's built-in font's and `/lib/font/cp437`'s (`tools/decfont.js` puts them there).  A console font for the screen must keep them there.  A read of `/term` gives them as ASCII.
+* **Double width and height** are shown a space apart on the screen (the VERA can't scale one row); the serial port's terminal does its own.
+* **Chrome**: by default the screen shows the bar, the window's header and its footer (a program's window is 80 x 57 of the 80 x 60), and the serial port none.  A program can turn its window's chrome on or off on either terminal.
+* **The keys go through one decoder.**  cons decodes the terminal's key sequences (xterm's, and from W5 their modifiers) into a code each.  The keyboard (step 6) sends exactly what a PC terminal sends, into `#c/kbin`, so its keys go through the same decoder.  It sends Ctrl-Tab as `CSI 9;5u` and Ctrl-Shift-Tab as `CSI 9;6u`, which a PC's terminal can't always send, and Scroll Lock as hold (Ctrl-] h).
+* **Two seats (W8)**: the screen with its keyboard, and the serial port.  They're mirrored by default (`both`); independent seats are a `consctl` setting, each with its own group shown, focus, size and keys.  `#c/kbin`'s keys are the screen seat's.
+* **The mouse in the console (W8)**: a click focuses a window (in tiles), and xterm's mouse reports (`?1000`, `?1006`) go to the programs that ask for them.  The `input` program sends the buttons, the wheel and drags into `#c/kbin` as SGR reports (`CSI < b;x;y M`), in cells.  Until then the mouse is vid's alone (`/dev/vid/mouse`, step 6).
+
+So W1 to W7 need nothing more from the Vera X; W8 needs step 6 (the keyboard, the mouse); and step 6 needs only `#c/kbin` from cons.  The two sessions agreed `#c/kbin` (2026-10-07): it's built on reborn, and carried into the two-bank cons when `reborn-text-windows` next merges reborn.
+
 ### **Contents**
-1. [Why the VERA](#why-the-vera)
-2. [The card](#the-card)
-3. [The registers on the Hydra](#the-registers-on-the-hydra)
-4. [Sharing one chip between 16 tasks](#sharing-one-chip-between-16-tasks)
-5. [The software, in steps](#the-software-in-steps)
-6. [The emulator](#the-emulator)
-7. [Risks and open questions](#risks-and-open-questions)
-8. [Order of work](#order-of-work)
+1. [The console and the text windows](#the-console-and-the-text-windows)
+2. [Why the VERA](#why-the-vera)
+3. [The card](#the-card)
+4. [The registers on the Hydra](#the-registers-on-the-hydra)
+5. [Sharing one chip between 16 tasks](#sharing-one-chip-between-16-tasks)
+6. [The software, in steps](#the-software-in-steps)
+7. [The emulator](#the-emulator)
+8. [Risks and open questions](#risks-and-open-questions)
+9. [Order of work](#order-of-work)
 
 ---
 
@@ -87,13 +122,13 @@ A small slot card with a 2x12 socket for an unmodified VERA module, which can be
 
 **Why `RD#` and `WR#` come from `PHI2`, not just R/W:** the VERA latches write data when the strobe ends.  If `WR#` were only R/W, the write would end when `CS#` goes high.  `CS#` comes through the board's decoding (U14, then the 74LS154 U19), so it rises some tens of nanoseconds after `PHI2` falls, by which time the CPU may have stopped driving the data (the W65C02S holds it about 10 ns).  A fast NAND on `PHI2` ends the strobe within a few nanoseconds of `PHI2` falling, while the data is still there.  This is how the X16 does it.  Check it on the bus breakout card with a logic analyzer before trusting it; the fallback is a 74ACT574 latching the data on `PHI2`'s falling edge.
 
-**IRQ B (line 3): the input controller.**  A Hydra with a screen wants a keyboard, and the board has none (its console is the serial port).  The card adds a small microcontroller (an RP2040, or an AVR like the X16's SMC) for a PS/2 keyboard and mouse, and optionally two SNES pads:
-* It talks over **I2C**, which every slot already has (pins 28 and 30, bit-banged by the VIA, `PA0`/`PA1`).  It needs no I/O port, and ports 2 and 3 are the VERA's.
-* It pulls **`IRQB` (line 3)** while it has keys, mouse moves or pad changes waiting, so nothing polls.  Line 3 is just below the VERA in priority, and above the YM2151 (4).
-* A keystroke is a few bytes at I2C speed, which is plenty fast for typing.  Mouse packets come at most 100 times a second.
+**The input controller.**  A Hydra with a screen wants a keyboard, and the board has none (its console is the serial port).  The card adds the X16's own: its **SMC**, an ATtiny861 with the X16 community's firmware (`x16-smc`, unchanged), for a PS/2 keyboard and a PS/2 mouse:
+* It talks over **I2C**, which every slot already has (pins 28 and 30, bit-banged by the VIA, `PA0`/`PA1`), at address `$42`.  It needs no I/O port, and ports 2 and 3 are the VERA's.
+* **It's polled.**  IRQ B (line 3) stays free: the board's IRQ lines are levels and can't be masked, so a line held low till the controller is read over I2C (milliseconds, in gpio's task) would bring the CPU straight back into the interrupt each time it left it.  The X16 polls its SMC too (60 times a second).
+* Its other pins (the X16's power supply, reset and NMI buttons, the activity LED) are left unconnected.
 * PS/2 can't be read directly from the VIA instead: its bits come every 60-100 µs, and the ROM sometimes keeps interrupts off for longer than that (the emulator reports runs of over 1,000 cycles, about 300 µs).
 
-**The VERA's SD card slot** is on its own SPI controller, at 12.5 MHz with auto-transfer.  That's much faster than the Hydra's VIA-driven SPI.  It could later carry a second HydraFS card (an SPI back end for `drivers/sd.s`), which makes it a fast card for programs and assets.
+**The VERA's SD card slot** is on its own SPI controller, at 12.5 MHz with auto-transfer.  That's much faster than the Hydra's VIA-driven SPI.  It carries a second HydraFS card (an SPI back end for the storage driver's cards: disk `v`, As built), which makes it a fast card for programs and assets.
 
 #### **Option B: Vera X on one board** (later)
 
@@ -206,10 +241,18 @@ With a keyboard, the Hydra is a standalone computer: switch on, get a prompt on 
   * a **TGI driver** made from cc65's `cx16-320-8`, so cc65's portable graphics programs run.
 * **Assembly:** `hw.inc`'s names, and a page in the Programmer's Guide (`docs/programming/video.md`): the registers, the sharing rules, the VRAM map, and the interrupt conventions.
 
-**6. Keyboard, mouse and pads** (the input controller on IRQ line 3):
-* **The firmware**, for an RP2040 (or an AVR, after the X16's SMC firmware), turns PS/2 scan codes into the console's key codes, including the cursor and function keys conio decodes (`CH_CURS_UP` ...).
-* **An `input` driver** on line 3 reads the controller over I2C (the first I2C driver: `/dev/i2c` is useful on its own).  It feeds keys to `/dev/cons`, and offers `/dev/mouse` (Plan 9's format: `m x y buttons`) and `/dev/pads`.
-* **The mouse** can drive a sprite as its pointer.
+**6. Keyboard and mouse** (the input controller, polled over I2C):
+* **The controller is the X16's SMC** (option A, above), or anything that answers its registers (a later one could take USB keyboards).  Its protocol, as `x16-smc` has it:
+  * a read that names no register first gets the *default request*'s answer (`$40` sets it): `$41`, a key code; `$43`, a key code (0: none) and a mouse packet (0: none).  With nothing to give, it doesn't acknowledge its address, so a look that finds nothing costs an address byte;
+  * key codes are the IBM PC/AT's key numbers (1-127: a key's place, not its character), with bit 7 set for a release;
+  * mouse packets are the PS/2 mouse's: 3 bytes, or 4 with a wheel (`$20` asks for a mouse's mode, `$22` reads the one it got);
+  * `$30`-`$32` are its version; `$1A` sends the keyboard a command (`$ED`: its LEDs).
+* **`input`, a program, is its driver** (a user-level driver, as 9front's `nusb/kb` is): srvlib's servers run only when a request comes, and this needs to poll.  init starts it as the shells start, in a note group of its own (so a Ctrl-C at the keyboard can't reach it); with no controller it ends at once.  Every 3 ticks (67 times a second) it reads the controller through gpio's `/dev/i2c/42` till there's nothing more; after 2 s with nothing, 10 times a second (As built, above).
+* **The keys go to the console.**  `input` turns the key numbers into what a PC terminal (xterm) sends, from the modifiers (Shift, Ctrl, Alt as an ESC first, AltGr, Caps Lock, Num Lock) and a keymap (the US layout built in), and writes them to cons's `#c/kbin`.  cons takes them as it takes the serial port's (Ctrl-C and Ctrl-\ as notes, Ctrl-] and its key as the console's, the rest to the window shown), from a ring of their own: [The console and the text windows](#the-console-and-the-text-windows).  The keyboard's own repeat is kept (PS/2 keyboards repeat by themselves).  Caps Lock's, Num Lock's and Scroll Lock's LEDs follow their state.
+* **The mouse is vid's** (as Plan 9's is the screen's).  `input` writes its moves and buttons to `/dev/vid/mousein`.  `/dev/vid/mouse` reads as Plan 9's (`m`, then x, y, the buttons and the time in milliseconds, each 11 digits and a space), a read waiting for a change (the buttons' changes queued); a write of `m x y` moves the pointer.  x and y are the screen's pixels (640 x 480; 320 x 240 in `mode 40x30`).  The pointer is a sprite (an arrow, its image in VRAM's free `$1F820`), shown once the mouse moves, and left to a claimer while the chip's claimed (it reads `/dev/vid/mouse` and draws its own).  `/dev/vid/mousectl`: `pointer on`, `pointer off`, `swap` (the buttons, left-handed).
+* **The pads** (SNES): the SMC has none (the X16's are on its VIA).  Later, on a controller of our own or the GPIO header.
+* **In the emulator**: the SMC on the I2C bus (`sim/lib/smc.js`, its answers as `x16-smc`'s), keys typed at it in tests, and the browser view's keyboard and mouse (`--view`).
+* **On the bench**: the SMC on the protoboard beside the glue, on the breakout card's I2C header (J10): [vera-wiring.md](../../vera-wiring.md).
 
 **7. Sound.**
 * **The PSG**: 16 more voices for `/dev/snd` (channels 8-23: frequency, waveform, pulse width, volume, pan).  The ZSM player plays a song's PSG writes instead of skipping them (`sound/player.s`).  HyForth's `note` and C's `snd.h` reach them as they reach the FM channels.
@@ -260,11 +303,11 @@ With a keyboard, the Hydra is a standalone computer: switch on, get a prompt on 
 
 ### **Order of work**
 
-1. The emulator's VERA, `--screen`, and its tests.
-2. The carrier card (option A) with the glue logic: check the timing on the breakout card.
-3. Detection, the `vid` driver, the font and the screen console (output only).  Now the Hydra shows its prompt on a monitor.
-4. `/dev/vid`, claims, HyForth's `video` library, C's `vera.h`.
-5. The input controller and its firmware, `/dev/i2c`, keyboard input: a standalone Hydra.
-6. PSG and PCM in `/dev/snd` and the player.
-7. Demos and games; the TGI driver; the web emulator.
-8. Option B: the one-board Vera X.
+**Done** (phase 8, `reborn/docs/status.md`): the emulator's VERA (step 1); detection, `vid`, the font and the screen console (2 and 4); `/dev/vid` and claims (3); the PSG and PCM (7); and, for the bench, the card wired through a bus breakout card ([vera-wiring.md](../../vera-wiring.md)).
+
+**From here**, in the user's order (2026-10-07):
+1. **The keyboard and mouse** (step 6): done (As built, above), and the SMC in the wiring guide.  The mouse's words in each language come with the graphics words.
+2. **The graphics words** (step 5): done (As built, above), the mouse's words with them.
+3. **The rest of the Vera X**: FX in the emulator and in vid's lines and clear, the output modes (VGA, composite, RGB, the 240p line doubling, in `ctl`), the VERA's SD card (disk `v`), the PSG in scores (`play`'s MML) and the VERA in the danlang emulator are done (As built, above); then demos (step 8).
+4. **With the text windows**: their W8 (the seats, the keyboard and the mouse in the console) once 1 is in.
+5. **The hardware**: the carrier card (option A), its timing checked on the bus; then option B, the one-board Vera X.

@@ -192,8 +192,9 @@ it, and a file past it is INCLUDED again.
 The Hydra's console is an ANSI terminal (`page` and `at-xy` already send its sequences), so these are its
 sequences too, in `facility.fl`.  They match the other languages: Forth 2012 where it has a word (`page`, `at-xy`
 from 0, the keys); hylang's `screen.hl` names (`clear-line`, `bold`, `plain`, `cursor-off`, `cursor-on`, `color`);
-C's conio's colour numbers (0-7 the terminal's eight, 8-15 their bright ones) and screen size (`$LINES` and
-`$COLUMNS`, else 24 by 80); and the console's raw keys (`KEY_UP` ...).
+C's conio's colour numbers (0-7 the terminal's eight, 8-15 their bright ones) and screen size (the window's,
+`consctl`'s `size` line; with no console `$LINES` and `$COLUMNS`, else 24 by 80); and the console's raw keys
+(`KEY_UP` ...).
 
 | Word | Stack | Sends, or does | Elsewhere |
 | :--- | :--- | :--- | :--- |
@@ -204,7 +205,7 @@ C's conio's colour numbers (0-7 the terminal's eight, 8-15 their bright ones) an
 | `cursor-up`, `cursor-down`, `cursor-right`, `cursor-left` | `( n -- )` | `CSI n A`, `B`, `C`, `D` | |
 | `cursor-save`, `cursor-restore` | `( -- )` | `ESC 7`, `ESC 8` | |
 | `cursor-off`, `cursor-on` | `( -- )` | `CSI ?25l`, `CSI ?25h` | hylang, C `cursor` |
-| `form` | `( -- rows cols )` | The screen's size: `$LINES` and `$COLUMNS`, else 24 and 80 | C `screensize` |
+| `form` | `( -- rows cols )` | The window's size: its `consctl`'s `size` line (the smaller of the terminals it's shown on); with no console, `$LINES` and `$COLUMNS`, else 24 and 80 | C `screensize`, hylang `(window-size)` |
 | `color` | `( c -- )` | The text's colour, 0-15: `CSI 30`-`37 m`, `90`-`97 m` | hylang `color`, C `textcolor` |
 | `bgcolor` | `( c -- )` | The background's, 0-15: `CSI 40`-`47 m`, `100`-`107 m` | hylang `color`'s second, C `bgcolor` |
 | `black` `red` `green` `yellow` `blue` `magenta` `cyan` `white` | `( -- c )` | 0-7 | C's `COLOR_*`, hylang's atoms |
@@ -213,11 +214,12 @@ C's conio's colour numbers (0-7 the terminal's eight, 8-15 their bright ones) an
 | `bold`, `dim`, `underline`, `blink`, `reverse` | `( -- )` | `CSI 1m`, `2m`, `4m`, `5m`, `7m` | hylang `bold`, C `revers` |
 | `sgr` | `( n -- )` | `CSI n m`: any other attribute (the old `Acol`) | |
 | `beep` | `( -- )` | A BEL: the console rings the bell | hylang `beep` |
-| `ekey` | `( -- u )` | A key, raw: a character, or a cursor or function key (`k-up` ...), as `key` reads them | Facility Ext; hylang `(key)`, C `cgetc` |
+| `ekey` | `( -- u )` | A key, raw: a character, or a cursor or function key (`k-up` ...), as `key` reads them; with the console's `keys mods` (`consctl`'s), a modified one with its masks or'd in (`k-ctrl-mask k-up or`) | Facility Ext; hylang `(key)`, C `cgetc` |
 | `ekey?` | `( -- flag )` | Whether one is waiting | hylang `(key?)`, C `kbhit` |
 | `ekey>char` | `( u -- u false \| char true )` | | Facility Ext |
 | `ekey>fkey` | `( u -- u false \| x true )` | | Facility Ext |
 | `k-up` `k-down` `k-left` `k-right` `k-home` `k-end` `k-prior` `k-next` `k-insert` `k-delete` `k-f1` ... `k-f12` | `( -- x )` | The console's codes (`KEY_UP` ... `KEY_F12`) | Facility Ext; C's `CH_*` |
+| `k-resize` | `( -- x )` | Not a key: the window's size changed (`KEY_RESIZE`, a raw read's; `form` has the new one).  `ekey>fkey` takes it as a key's | C's `CH_RESIZE` |
 | `k-shift-mask`, `k-ctrl-mask`, `k-alt-mask` | `( -- x )` | Never set: the console decodes no modifiers | Facility Ext |
 | `emit?` | `( -- flag )` | Always true | Facility Ext |
 
@@ -253,7 +255,7 @@ is in the library's buffer till its next.  Where hylang gives a list or a hash, 
 
 | Library | Device | Words | hylang's, not here |
 | :--- | :--- | :--- | :--- |
-| `cons` | `#c` (`/dev`) | `window ( -- n )` (`$window`; none: 0), `windows ( -- c-addr u )` (`wctl`'s lines, `*` the one shown), `new-window`, `show-window ( n -- )` | `raw-on`, `raw-off` (`key` and `ekey` set the raw mode, a line read ends it), `beep` (Facility's) |
+| `cons` | `#c` (`/dev`) | `window ( -- n )` (`$window`; none: 0), `windows ( -- c-addr u )` (`wctl`'s lines, `*` the one shown), `new-window ( c-addr u -- )` (a command line run in a window made and shown, in this one's group; empty: the shell), `new-group` (the same, in a group of its own), `show-window ( n -- )`, `window-label ( c-addr u -- )` (its title; empty: its program's name again), `window-status ( c-addr u -- )` (its status line, the footer's `%s`), `window-ctl ( c-addr u -- )` (a `wctl` line: `chrome screen off` ...) | `raw-on`, `raw-off` (`key` and `ekey` set the raw mode, a line read ends it), `beep` (Facility's) |
 | `gpio` | `#g` (`/dev/gpio`) | `gpio ( pin -- level )`, `gpio! ( pin level -- )` (an output, set), `gpio-in`, `gpio-out ( pin -- )`, `gpio-port ( -- byte )`, `gpio-port! ( byte -- )`, `gpio-ddr! ( byte -- )`, `gpio-ca1! ( rise? -- )`, `gpio-ca2! ( n -- )` (0, 1, -1 an input), `gpio-wait ( -- count )` (CA1's next edge), `gpio-state ( -- c-addr u )` (`ctl`'s lines) | |
 | `i2c` | `#i` (`/dev/i2c`) | `i2c-read`, `i2c-write ( addr reg c-addr u -- )` (at the device's register, `i2c-reg-size` bytes of it: 0, none), `i2c-speed ( khz -- )`, `i2c-reg-size ( n -- )`, `i2c-devices ( -- )` (the addresses that answer, typed), `i2c? ( addr -- flag )` | |
 | `spi` | `#S` (`/dev/spi`) | `spi ( dev c-addr u -- )` (a transaction: the bytes that came back in the bytes' place), `spi-read ( dev c-addr u -- )` (u clocked in), `spi-mode ( dev mode -- )` (0 or 3) | |
@@ -261,6 +263,7 @@ is in the library's buffer till its next.  Where hylang gives a list or a hash, 
 | `clock` | `#t` (`/dev`) | `set-date ( c-addr u -- )` (`2026-10-04 12:00:00`: the clock and the DS1747), `rtc ( -- c-addr u )` (`running`, `stopped` or `none`, and `battery low`) | |
 | `disk` | `#d` (`/dev/sd`) | `disk-ctl ( disk -- c-addr u )` (its ctl's text; a disk by its letter: `[char] x`), `disk-start`, `disk-stop ( disk -- )`, `cards ( -- mask )` (bit n: a card on SPI device n) | `disks` (`disk-ctl` of each), `df` (the program) |
 | `pc` | `#P` (`/pc`) | `pc? ( -- flag )` (the PC tool answers; none: a second, then false) | |
+| `video` | `#v` (`/dev/vid`) | The bitmap (`bitmap`, `bitmap-off`) and drawing on it, by vid's `draw` (`pen`, `plot`, `line`, `box`, `bar`, `circle`, `disc`, `text`, `clear`); the turtle (`cs`, `home`, `fd`, `bk`, `rt`, `lt`, `pu`, `pd`, `heading`, `seth`: Logo's, in 16ths of a pixel); VRAM (`vpoke ( addr bank c -- )`, `vpeek`, `vram!`, `vram@`), `palette!`, sprites (`sprite!`, `sprite-at`, `sprite-off`), `vsync`, `border`; the mouse (`mouse`, `mouse-wait ( -- x y buttons )`) | |
 | `sound` | `#a` (`/dev`) | (in `sound.fl`, beside 6.8's words) `note-of ( c-addr u -- n )` (`C#4`, `Db4`, `B-1`: a MIDI number, 60 middle C; not a note: THROW -24), `tune ( c-addr u ch tempo -- )` (`C4 1 E4 1 - 1 G4 2`: notes and their beats, `-` a rest; tempo beats a minute; Ctrl-C ends it, the note off) | `play` (the program) |
 
 ## The shell
@@ -297,7 +300,8 @@ first line is the shell's program and arguments (`/bin/forth -l`); with none, `r
 2026 the ROM disk has one, `/rom/lib/shell`, naming `/bin/forth -l`: HyForth is the login shell, the user's
 choice; a card's or the shared RAM disk's `/lib/shell` comes first in `/lib`'s union.)  wstart is given it
 as its arguments, and runs in init's namespace (not an empty one of its own now), so the program is found as init
-finds it; each window's shell still starts in an empty namespace of its own, which its profile builds.  Each shell's
+finds it; each window's shell still starts in an empty namespace of its own, which its profile builds.  (`new-window`
+with no command reads `/lib/shell` too, and starts its shell the same way.)  Each shell's
 `/ram` is its own area, so a `/lib/shell` for every window is a card's (`/sd/0/lib/shell`) or the shared RAM disk's
 (`/sram/lib/shell`, till the next reset).  hylang will be chosen the same way.
 

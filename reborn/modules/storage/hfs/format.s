@@ -289,7 +289,9 @@ HFS_FORMAT_GO:
 @super:
             jsr         HFS_FORMAT_SB
             bcs         @done
-            stz         SD_CVALID                           ; (The cache may hold the card's old blocks)
+            clc
+            jsr         HFS_DROP                            ; (The cache may hold the card's old blocks)
+            bcs         @done
             lda         #0
             clc
 
@@ -935,8 +937,7 @@ HFS_PART_MAKE:
             sec
 
 @done:
-            stz         SD_CVALID                           ; (The cache's block 0 may differ from the card's)
-            rts
+            jmp         HFS_DROP                            ; (The cache's block 0 may differ from the card's)
 
 HFS_PART_CHS:   .byte   $FE, $FF, $FF, HFS_PART_TYPE, $FE, $FF, $FF
 

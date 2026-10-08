@@ -1,6 +1,8 @@
 // bridge.js - a test (tests/tests.js) run in the danlang emulator (sim/dl/hydra.dl) instead of sim/lib's: its spec
 // written (the images, the cards, the keys, the machine's options, the marks), danlang run on it, and what came out
-// read back as the JS machine's would be, for sim/test.js to judge (its marks, budgets, IRQs-off stretch and checks).
+// read back as the JS machine's would be, for sim/test.js to judge (its marks, budgets, IRQs-off stretch and checks):
+// a Vera X's VRAM and registers into a JS one (sim/lib/vera.js's load), so a check that looks at the screen draws
+// it as the JS machine's would (frame, cells, text); its card's blocks written into the test's card, as the VIA's.
 // The PC's end of /pc or of XMODEM (sim/lib/pchost.js, xmpeer.js) stays here, in the harness: each byte the Hydra's
 // serial port sends comes over danlang's stdout, and the console's bytes and the PC's go back over its stdin.
 //
@@ -11,6 +13,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawn, spawnSync } = require('child_process');
+const { createVera } = require('../lib/vera.js');
 
 const ROOT = path.join(__dirname, '..', '..');
 const HYDRA_DL = process.env.HYDRA_DL || path.join(__dirname, 'hydra.dl');
@@ -73,6 +76,20 @@ function writeSpec(t, m, opt, dir, extra) {
     }
     out.push('(spi-card ' + c.dev + ' ' + dlPath(file) + ' ' + c.blocks + ' ' + (c.sdsc ? 'T' : 'NIL') + ')');
   }
+  if (m.vera) {                                             // (A Vera X: its version, its configuring's cycles, the PCM
+    const vo = m.vera === true ? {} : m.vera;               //   log; a card on its SPI controller, spi.dl's device 16)
+    const ver = vo.version === undefined ? [47, 0, 2] : vo.version;
+    out.push('(vera-setup ' + (ver ? dlList(ver) : 'NIL') + ' ' + (vo.configCycles === undefined ? -1 : vo.configCycles) + ' ' + (vo.pcmLog ? 'T' : 'NIL') + ')');
+    if (vo.sd) {
+      let file = vo.sd.file;
+      if (!file) { file = path.join(dir, 'card16.img'); fs.writeFileSync(file, vo.sd.data || Buffer.alloc(0)); }
+      out.push('(spi-card 16 ' + dlPath(file) + ' ' + vo.sd.blocks + ' ' + (vo.sd.sdsc ? 'T' : 'NIL') + ')', '(vera-card)');
+    }
+  }
+  if (m.smc) {                                              // (Its input controller: the mouse, the moves typed)
+    const so = m.smc === true ? {} : m.smc;
+    out.push('(smc-setup ' + (so.mouse === false ? 'NIL' : 'T') + ' ' + dlList((so.moves || []).map(dlList)) + ')');
+  }
   fs.writeFileSync(path.join(dir, 'spec.dl'), out.join('\n') + '\n', 'latin1');
 }
 
@@ -129,7 +146,8 @@ async function runDl(t, machine, opt, extra) {
   // The cards' blocks written, back in the cards (as the JS machine's writes go)
   const cards = fs.readFileSync(path.join(dir, 'cards.bin'));
   for (let i = 0; i + 517 <= cards.length; i += 517) {
-    const dev = cards[i], n = cards.readUInt32LE(i + 1), card = (machine.sd || []).find(c => c.dev === dev);
+    const dev = cards[i], n = cards.readUInt32LE(i + 1);
+    const card = dev === 16 ? machine.vera && machine.vera.sd : (machine.sd || []).find(c => c.dev === dev);   // (16: the Vera X's)
     if (card) card.write(n, Uint8Array.from(cards.subarray(i + 5, i + 517)));
   }
   const marks = {};
@@ -149,6 +167,17 @@ async function runDl(t, machine, opt, extra) {
       charCycles: () => r.acia.charCycles, rxLost: r.acia.rxLost },
     dl: { errText },
   };
+  if (r.vera) {                                             // The Vera X: a JS one, as danlang's left it (for frame, cells, text)
+    const vb = fs.readFileSync(path.join(dir, 'vera.bin')), vo = machine.vera === true ? {} : machine.vera;
+    const v = createVera({ clock: machine.clock, rnd: () => 0, version: vo.version });
+    let at = 0;
+    const take = n => vb.subarray(at, at += n);
+    v.load({ vram: take(131072), palette: take(512), sprites: take(1024), psg: take(64), dc: take(256), layers: take(14) });
+    Object.assign(v, { frames: r.vera.frames, psgOns: r.vera.psgOns, pcmIn: r.vera.pcmIn, pcmOut: r.vera.pcmOut, pcmLost: r.vera.pcmLost,
+      pcmUnderruns: r.vera.pcmUnderruns, pcmLog: r.vera.pcmLog === null ? null : [...take(r.vera.pcmLog)] });
+    m.vera = v;
+  }
+  if (r.smc) m.smc = r.smc;
   return { m, marks };
 }
 

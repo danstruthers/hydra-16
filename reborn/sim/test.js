@@ -12,7 +12,7 @@
 //   -j N      N tests at a time, each in a process of its own (default: the CPU's cores; -j 1, one after another
 //             here).  The reports come in the list's order either way
 //   --dl      in the danlang emulator (sim/dl), not sim/lib's; judged the same way.  A test marked jsOnly (its
-//             reason: the VERA's, which sim/dl hasn't yet) is skipped there, and said so (SKIP)
+//             reason: the sound, which sim/dl doesn't make) is skipped there, and said so (SKIP)
 // The emulator runs as fast as the host can, never paced to the Hydra's clock (run.js -i is): the cycles a test
 // reports, and its budgets, are the emulated machine's.
 'use strict';

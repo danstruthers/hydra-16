@@ -132,8 +132,13 @@ HFS_META_BUF:
 ; OUT: C = 0; or C = 1, .A = a card error.  Modifies: .A, .X, .Y
 HFS_META_FLUSH:
             bit         HFS_MSTATE
-            bmi         :+
+            bmi         @changed
             clc                                             ; (Unchanged: nothing to write)
+            rts
+
+@changed:
+            FAR1        blk_flush                           ; (A file's data kept back goes to the card first: an
+            bcc         :+                                  ;   entry never points at what isn't there)
             rts
 :
             ldx         #3                                  ; (SD_LBA is the caller's)
@@ -638,7 +643,7 @@ HFS_MAP_WRITTEN:
             cpy         #HFS_SB_MAPINIT + 4
             bne         :-
             jsr         SD_WRITE_BLOCK
-            stz         SD_CVALID                           ; (The cache may have held one of these blocks)
+            jsr         HFS_DROP                            ; (The cache may have held one of these blocks)
 
 @done:
             rts
@@ -650,6 +655,22 @@ HFS_MAP_WRITTEN:
             sta         SD_BUF + 1
             lda         HFS_CARD
             sta         SD_DEV
+            rts
+
+; The block buffer forgets its block (stz SD_CVALID), written first if it's kept back.  OUT: an error before (C = 1,
+; .A) kept; else the write's.  Modifies: .X, .Y
+HFS_DROP:
+            bcs         @was
+            FAR1        blk_flush
+            stz         SD_CVALID
+            rts
+
+@was:
+            pha
+            FAR1        blk_flush
+            stz         SD_CVALID
+            pla
+            sec
             rts
 
 ; Is HFS_C one of the card's clusters (under its count)?  OUT: C = 0: it is.  Modifies: .A, .X
@@ -1596,7 +1617,11 @@ HFS_W_RANGE:
             bne         @load
             jsr         HFS_AT_END
             bcc         @load
-            stz         SD_CVALID                           ; (The block buffer is about to hold it)
+            FAR1        blk_flush                           ; (The block buffer is about to hold it: a block kept
+            bcc         :+                                  ;   back there written first)
+            jmp         @error
+:
+            stz         SD_CVALID
             bra         @copy
 
 @load:
@@ -1650,6 +1675,14 @@ HFS_W_RANGE:
             bne         :-
 
 @copied:
+            lda         SD_POS                              ; (The part changed: a RAM disk writes back only it)
+            sta         blk_part
+            lda         SD_POS + 1
+            and         #1
+            sta         blk_part + 1
+            MOVR        blk_plen, SD_N
+            lda         #1                                  ; (A card's: kept back)
+            sta         blk_keep
             lda         SD_CACHE                            ; ... -> the disk (and the block buffer holds it)
             sta         SD_BUF
             lda         SD_CACHE + 1

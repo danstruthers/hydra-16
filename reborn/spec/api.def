@@ -1006,6 +1006,9 @@ const KEY_F9          $92
 const KEY_F10         $93
 const KEY_F11         $94
 const KEY_F12         $95
+const KEY_FOCUS       $97      "Keys: the focus moved to another window of this one's group; its number is the next key (a raw read's, keys hydra's)"
+const KEY_RESIZE      $96      "Keys: the window's size changed (a raw read's, keys hydra's: consctl reads with the new one)"
+const KEY_MOD         $98      "Keys: a key the terminal sent modified (keys mods's): the modifiers next (1 Shift, 2 Alt, 4 Ctrl), then the key"
 const O_READ          0        "Open modes"
 const O_WRITE         1
 const O_RDWR          2

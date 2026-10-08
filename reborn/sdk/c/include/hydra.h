@@ -54,6 +54,8 @@ unsigned long hy_time (void);                               /* The clock: second
 
 unsigned hy_ticks (void);                                   /* The tick count (it wraps after about 5.5 minutes) */
 int __fastcall__ hy_sleep_ticks (unsigned ticks);           /* Up to 32767 ticks; a note ends it sooner (-1) */
+int __fastcall__ hy_sleep_until (unsigned tick);            /* Till the tick count is tick (at most 32767 ahead;
+                                                            **   one passed: at once), for steady timing */
 void hy_yield (void);                                       /* Let the other tasks run */
 
 /* ---- Tasks and exit statuses (Plan 9's: a code, 0 for success, and a message) */
@@ -100,6 +102,32 @@ unsigned char hy_banks (void);                              /* The banks it has 
 int __fastcall__ hy_banks_alloc (unsigned char n);          /* n of them, in a run: the first, or -1 */
 int __fastcall__ hy_banks_free (unsigned char first, unsigned char n);
 
+/* ---- Shared segments: shared RAM banks (8K each) that several tasks attach to, by number (pass it to the others,
+** say as an argument).  hy_seg_map selects one of its banks at HY_BANK_WINDOW (the U register, then the bank
+** register: a task's own, kept across task switches).  The last task attached to go frees it */
+
+int __fastcall__ hy_seg_create (unsigned char banks);       /* One of banks banks (1-128), this task attached: its
+                                                            **   number, or -1 */
+int __fastcall__ hy_seg_attach (unsigned char seg);         /* Attach this task to one */
+int __fastcall__ hy_seg_detach (unsigned char seg);
+unsigned char* __fastcall__ hy_seg_map (unsigned char seg, unsigned char bank);
+                                                            /* Its bank (0 on) at HY_BANK_WINDOW: the window, or
+                                                            **   NULL (this task isn't attached; no such bank) */
+
+/* ---- The window's chrome (W4): its title, its status line, any line of its wctl ("chrome screen off" ...).  Each a
+** write: 0, or -1 (errno) */
+
+int __fastcall__ hy_wlabel (const char* s);                 /* Its title (OSC 2's too; "": its program's name again) */
+int __fastcall__ hy_wstatus (const char* s);                /* Its status line (the footer's %s): 55 characters */
+int __fastcall__ hy_wctl (const char* s);                   /* A line to its wctl (55 characters) */
+
+#define HY_WGROUP           1                               /* hy_wnew's: the window in a group of its own */
+int __fastcall__ hy_wnew (unsigned char flags);             /* A window made (not shown), in this one's group (wctl's
+                                                            **   new; HY_WGROUP: new group): its number, its files
+                                                            **   #cN (#cN/cons ...), or -1.  It goes with its last
+                                                            **   cons closed (the new-window command's: a program in
+                                                            **   one) */
+
 /* ---- Errors */
 
 const char* __fastcall__ hy_errstr (unsigned char code);    /* An error code's text (ERRSTR) */
@@ -126,6 +154,13 @@ const char* __fastcall__ hy_errstr (unsigned char code);    /* An error code's t
 #define CH_F8               HY_KEY_F8
 #define CH_F9               HY_KEY_F9
 #define CH_F10              HY_KEY_F10
+#define CH_RESIZE           HY_KEY_RESIZE                   /* (The window's size changed: screensize has the new one) */
+#define CH_FOCUS            HY_KEY_FOCUS                    /* (The focus moved in its group: the window's number next) */
+#define CH_MOD              HY_KEY_MOD                      /* (consctl's keys mods: a modified key, its modifiers next,
+                                                            **   HY_MOD_*, then the key) */
+#define HY_MOD_SHIFT        1
+#define HY_MOD_ALT          2
+#define HY_MOD_CTRL         4
 #define CH_ENTER            '\n'
 #define CH_ESC              0x1B
 

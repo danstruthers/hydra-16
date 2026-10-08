@@ -1,0 +1,511 @@
+; vera.dl - the Vera X card in slot 0 (sim/lib/vera.js, the reference: its header has the chip whole), its 32
+; registers at $FF20-$FF3F, its IRQ# on line 2.  Modelled as vera.js models it, but for its sound and its picture:
+; the registers and the data ports (the byte each has fetched ahead), VRAM (junk at power-up) and the write-only
+; registers it shadows (the PSG, the palette, the sprites); the scan (VGA's, or NTSC's and RGB's two fields) in the
+; CPU's cycles, SCANLINE, the LINE and VSYNC interrupts, sprite collisions at VSYNC; the PCM FIFO's level, AFLOW, its
+; bytes and the PSG's voices counted (ve-pcmin, ve-pcmout, ve-pcmlost, ve-under; ve-ons) and the bytes it took
+; (ve-log, with the spec's pcmLog); FX; the SPI controller, a card on it (spi.dl's card logic, as device 16; its
+; transfer state is the VIA's selected device's, so the two aren't used at once, as the storage driver doesn't); the
+; FPGA configuring itself after power-up and a reset.  hydra.dl writes VRAM and the registers out at the end, and the
+; harness (bridge.js) draws the screen from them with vera.js as a check asks (frame, cells, text).
+;
+; The machine (machine.dl) brings it up to time (vera-tick) when it's accessed (vera-read, vera-write) or its next
+; event is due (vera-next: cycles from its own cycle), and asks for its IRQ line (vera-irq?).
+
+(def {ve-on ve-ver ve-cfg ve-logon ve-dcmask ve-k ve-pq} NIL NIL 0 NIL 63 1 1)
+(def {ve-vram ve-pal ve-spr ve-psg ve-dc ve-lay ve-fifo ve-cache ve-log ve-smask ve-defpal}
+  (buffer 0) (buffer 512) (buffer 1024) (buffer 64) (buffer 256) (buffer 14) (buffer 4096) (buffer 4) (buffer 0) (buffer 640) (buffer 0))
+(def {ve-steps} (hash-create))
+(def {ve-steplist} {0 0 1 -1 2 -2 4 -4 8 -8 16 -16 32 -32 64 -64 128 -128 256 -256 512 -512 40 -40 80 -80 160 -160 320 -320 640 -640})
+(dotimes {i 32} (hash-put ve-steps [i (nth i ve-steplist)]))
+; The ports (0 and 1): the address, the step's index, the nibble bits (v0.9's), the byte fetched ahead, FX's nibble bit
+; and its increment
+(def {ve-a0 ve-a1 ve-i0 ve-i1 ve-n0 ve-n1 ve-r0 ve-r1 ve-nb0 ve-nb1 ve-ni0 ve-ni1} 0 0 0 0 0 0 0 0 0 0 0 0)
+(def {ve-asel ve-dcsel ve-ien ve-isr ve-irqline ve-curt} 0 0 0 0 0 0)
+(def {ve-actl ve-arate ve-loop ve-fcnt ve-fwr ve-frd ve-phase ve-pcmat ve-fed} 0 0 NIL 0 0 0 0 0 NIL)
+(def {ve-ss ve-autotx ve-slow ve-spibusy ve-spiin ve-card ve-cardc} 0 0 0 0 255 NIL NIL)
+(def {ve-ready ve-start ve-ulen ve-pf ve-lastu ve-nextu ve-nextcyc ve-coll} 0 0 800 525 -1 0 0 0)
+(def {ve-frames ve-ons ve-nons ve-pcmin ve-pcmout ve-pcmlost ve-under ve-nlog} 0 (hash-create) 0 0 0 0 0 0)
+; FX: ADDR1's mode, the switches, the cache's place, the accumulator, the increments and positions (32 bits: the
+; pixel in bits 16-26), the fill's length, the affine mode's tiles and map; and whether the data ports' reads and
+; writes are as v0.9's (none of FX on: the fast way)
+(def {ve-fmode ve-f4 ve-fhop ve-fcycle ve-ffill ve-fcw ve-ftrans ve-fpoly2 ve-fpoking ve-fcinc ve-fcnib ve-fcbyte}
+  0 NIL NIL NIL NIL NIL NIL NIL NIL NIL 0 0)
+(def {ve-fmult ve-fsub ve-fclip ve-falign ve-facc ve-fxi ve-fyi ve-fx ve-fy ve-flen ve-ftile ve-fmap ve-fmsize ve-frfast ve-fwfast}
+  NIL NIL NIL 0 0 0 0 0 0 0 0 0 2 T T)
+
+; The card, with options: its version (a list of three; NIL: v0.9's, no FX and no version register), its configuring's
+; cycles (-1: 0.1 s), the PCM log
+(fun {vera-setup ver cfg logon} {do
+  (set! {ve-on ve-ver ve-logon ve-dcmask} T ver logon (if ver 63 1))
+  (set! {ve-k ve-pq} (/ 25 clock-mhz) (/ 390625/8 (* clock-mhz 1000000)))
+  (set! {ve-cfg} (if (< cfg 0) (round (* 1/10 clock-mhz 1000000)) cfg))
+  (set! {ve-vram} (buffer 131072))
+  (set {junk} (buffer 4096))
+  (dotimes {i 4096} (buffer-put junk i (pu (+ 920000 i))))
+  (dotimes {b 32} (buffer-copy ve-vram (* b 4096) junk (bit-and (* b 53) 4095)))
+  (dotimes {b 32} (buffer-copy ve-vram (+ (* b 4096) (- 4096 (bit-and (* b 53) 4095))) junk 0 (bit-and (* b 53) 4095)))
+  (set! {ve-defpal} (buffer DEFAULT-PALETTE))
+  (if logon (set! {ve-log} (buffer 1048576)) 0)
+  (set! {ve-ready} ve-cfg)
+  (ve-reset ve-cfg)})
+; Its SD card: spi.dl's device 16
+(fun {vera-card} {set! {ve-card ve-cardc} T (cards 16)})
+
+; The FPGA configured, at cycle at: the gateware's start (VRAM kept)
+(fun {ve-reset at} {do
+  (set! {ve-a0 ve-a1 ve-i0 ve-i1 ve-n0 ve-n1} 0 0 0 0 0 0)
+  (set! {ve-asel ve-dcsel ve-ien ve-isr ve-irqline} 0 0 0 0 0)
+  (buffer-fill ve-dc 0)
+  (buffer-put ve-dc 1 128) (buffer-put ve-dc 2 128) (buffer-put ve-dc 5 160) (buffer-put ve-dc 7 240)
+  (buffer-fill ve-lay 0)
+  (buffer-copy ve-pal 0 ve-defpal)
+  (buffer-fill ve-spr 0) (buffer-fill ve-psg 0)
+  (set! {ve-actl ve-arate ve-loop ve-fcnt ve-fwr ve-frd ve-phase ve-pcmat ve-fed} 0 0 NIL 0 0 0 0 at NIL)
+  (set! {ve-ss ve-autotx ve-slow ve-spibusy ve-spiin} 0 0 0 0 255)
+  (ve-fxreset)
+  (set! {ve-r0 ve-r1} (ve-vram 0) (ve-vram 0))
+  (set! {ve-start ve-ulen ve-pf ve-lastu ve-coll} at 800 525 -1 0)
+  (ve-plan)})
+(fun {ve-fxreset} {do
+  (set! {ve-fmode ve-f4 ve-fhop ve-fcycle ve-ffill ve-fcw ve-ftrans ve-fpoly2 ve-fpoking ve-fcinc ve-fcnib ve-fcbyte}
+    0 NIL NIL NIL NIL NIL NIL NIL NIL NIL 0 0)
+  (set! {ve-fmult ve-fsub ve-fclip ve-falign ve-facc ve-fxi ve-fyi ve-fx ve-fy ve-flen ve-ftile ve-fmap ve-fmsize}
+    NIL NIL NIL 0 0 0 0 #x8000 #x8000 0 0 0 2)
+  (set! {ve-nb0 ve-nb1 ve-ni0 ve-ni1} 0 0 0 0)
+  (buffer-fill ve-cache 0)
+  (ve-fast)})
+; Whether FX leaves the data ports alone: reads (no mode, no nibbles, no hop, no cache fill), writes (and no cache
+; write, no transparency, no cycling, no poking)
+(fun {ve-fast} {do
+  (set {plain} (and (zero? ve-fmode) (not ve-f4) (not ve-fhop)))
+  (set! {ve-frfast ve-fwfast} (and plain (not ve-ffill)) (and plain (not ve-fcw) (not ve-ftrans) (not ve-fcycle) (not ve-fpoking)))})
+
+; ---- the ports' registers, by port
+(fun {ve-addr s} {if (zero? s) ve-a0 ve-a1})
+(fun {ve-addr! s v} {if (zero? s) (set! {ve-a0} v) (set! {ve-a1} v)})
+(fun {ve-inc s} {if (zero? s) ve-i0 ve-i1})
+(fun {ve-inc! s v} {if (zero? s) (set! {ve-i0} v) (set! {ve-i1} v)})
+(fun {ve-nib s} {if (zero? s) ve-n0 ve-n1})
+(fun {ve-nib! s v} {if (zero? s) (set! {ve-n0} v) (set! {ve-n1} v)})
+(fun {ve-rd s} {if (zero? s) ve-r0 ve-r1})
+(fun {ve-nb s} {if (zero? s) ve-nb0 ve-nb1})
+(fun {ve-nb! s v} {if (zero? s) (set! {ve-nb0} v) (set! {ve-nb1} v)})
+(fun {ve-ni s} {if (zero? s) ve-ni0 ve-ni1})
+(fun {ve-ni! s v} {if (zero? s) (set! {ve-ni0} v) (set! {ve-ni1} v)})
+(fun {ve-fetch s} {if (zero? s) (set! {ve-r0} (ve-vram ve-a0)) (set! {ve-r1} (ve-vram ve-a1))})
+(fun {ve-step s} {ve-addr! s (bit-and (+ (ve-addr s) (ve-steps (ve-inc s))) #x1FFFF)})
+(fun {s16 x} {if (>= x 32768) (- x 65536) x})
+(fun {s32 x} {if (>= x 2147483648) (- x 4294967296) x})
+
+; ---- the scan
+(fun {ve-ntsc?} {> (bit-and (ve-dc 0) 3) 1})
+(fun {ve-unit-at at} {floor (/ (* (- at ve-start) ve-k) ve-ulen)})
+(fun {ve-cyc-of u} {if (>= u INF) INF (ceil (+ ve-start (/ (* u ve-ulen) ve-k) 1/1000000))})
+(fun {ve-line-of uf} {if (== ve-pf 525) uf (do (set {y} (if (< uf 525) (- uf 42) (- uf 568))) (if (>= y 0) y -1))})
+(fun {ve-plan} {do (set {u} (ve-after T T)) (set! {ve-nextu ve-nextcyc} u (ve-cyc-of u))})
+; The first unit after ve-lastu at place c of a frame (base: the frame ve-lastu + 1 is in); INF if there's none
+(fun {ve-unit-of c base} {if (>= c ve-pf) INF (do (set {u} (+ base c)) (if (<= u ve-lastu) (+ u ve-pf) u))})
+; The first unit after ve-lastu that starts a VSYNC (vs) or the LINE interrupt's line (ln)
+(fun {ve-after vs ln} {do
+  (set {base} (* (div (+ ve-lastu 1) ve-pf) ve-pf))
+  (set {il} (- ve-irqline (bit-and ve-irqline 1)))
+  (if (== ve-pf 525)
+    (min (if vs (ve-unit-of 480 base) INF) (if ln (ve-unit-of ve-irqline base) INF))
+    (min (if vs (min (ve-unit-of 522 base) (ve-unit-of 1048 base)) INF)
+         (if ln (min (ve-unit-of (+ il 42) base) (ve-unit-of (+ il 568) base)) INF)))})
+; A mode's timing changed (VGA and NTSC's): the scan starts again now
+(fun {ve-retime at} {do
+  (set {n} (ve-ntsc?))
+  (if (if n (== ve-pf 1050) (== ve-pf 525)) 0
+    (do (set! {ve-start ve-ulen ve-pf ve-lastu} at (if n 794 800) (if n 1050 525) -1) (ve-plan)))})
+; The units up to cycle at done: their interrupts' flags
+(fun {ve-scan at} {if (or (< at ve-ready) (< at ve-nextcyc)) 0 (do
+  (set {to} (ve-unit-at at))
+  (set {u} 0)
+  (set {y} 0)
+  (while {<= ve-nextu to}
+    (set! {u} ve-nextu)
+    (set! {y} (ve-line-of (mod u ve-pf)))
+    (if (== y 480) (ve-vsync u to) 0)
+    (if (and (>= y 0) (== y (if (== ve-pf 525) ve-irqline (- ve-irqline (bit-and ve-irqline 1))))) (set! {ve-isr} (bit-or ve-isr 2)) 0)
+    (set! {ve-lastu} u)
+    (ve-plan))
+  (set! {ve-lastu} to)
+  (ve-plan))})
+; VSYNC at unit u (the scan's at unit to): ISR's flag, the frame's sprite collisions (for the last frame passed)
+(fun {ve-vsync u to} {do
+  (set! {ve-isr ve-frames} (bit-or ve-isr 1) (+ ve-frames 1))
+  (if (< (- to u) ve-pf) (set! {ve-coll} (if (bit? (ve-dc 0) 6) (ve-frame-coll) 0)) 0)
+  (set! {ve-isr} (bit-or (bit-and ve-isr 15) ve-coll))
+  (if (pos? ve-coll) (set! {ve-isr} (bit-or ve-isr 4)) 0)
+  (set! {ve-coll} 0)})
+(fun {ve-scanline at} {do
+  (set {uf} (mod (max 0 (ve-unit-at at)) ve-pf))
+  (set {sl} (if (== ve-pf 525) uf (mod uf 525)))
+  (if (>= sl 512) #x1FF sl)})
+(fun {ve-field at} {do
+  (set {uf} (mod (max 0 (ve-unit-at at)) ve-pf))
+  (if (== ve-pf 525) (bit-and uf 1) (if (>= uf 525) 1 0))})
+
+; ---- sprite collisions: the frame's (each line the composer would show, once), as the renderer finds them (in
+; order, 800 clocks a line at most): the masks met, bits 4-7
+(fun {ve-frame-coll} {do
+  (set {anyc} NIL)
+  (dotimes {i 128} (if (and (pos? (bit-and (ve-spr (+ (* i 8) 6)) 12)) (pos? (bit-and (ve-spr (+ (* i 8) 6)) #xF0))) (set! {anyc} T) 0))
+  (if (not anyc) 0 (do
+    (set {coll} 0)
+    (set {lasty} -1)
+    (set {vs} (shl (ve-dc 6) 1))
+    (set {vend} (min 480 (shl (ve-dc 7) 1)))
+    (set {yy} vs)
+    (set {ey} 0)
+    (while {< yy vend}
+      (set! {ey} (ve-effy yy))
+      (if (== ey lasty) 0 (do (set! {lasty} ey) (set! {coll} (bit-or coll (ve-sprite-coll ey)))))
+      (set! {yy} (+ yy 1)))
+    coll))})
+(fun {ve-effy y} {do (set {e} (shr (* (- y (shl (ve-dc 6) 1)) (ve-dc 2)) 7)) (if (>= e 480) 479 e)})
+(def {sc-budget sc-coll sc-px sc-done} 0 0 0 NIL)
+(fun {ve-sprite-coll y} {do
+  (buffer-fill ve-smask 0)
+  (set! {sc-budget sc-coll sc-done} 801 0 NIL)
+  (set {i} 0)
+  (while {and (< i 128) (not sc-done)}
+    (set! {sc-budget} (- sc-budget 1))
+    (if (zero? sc-budget) (set! {sc-done} T) (ve-sprite i y))
+    (if (<= sc-budget 0) (set! {sc-done} T) 0)
+    (set! {i} (+ i 1)))
+  sc-coll})
+(fun {ve-sprite i y} {do
+  (set {a} (* i 8))
+  (set {at7} (ve-spr (+ a 7)))
+  (set {at6} (ve-spr (+ a 6)))
+  (if (zero? (bit-and (shr at6 2) 3)) 0 (do
+    (set {wlog} (+ (bit-and (shr at7 4) 3) 3))
+    (set {hlog} (+ (shr at7 6) 3))
+    (set {w} (shl 1 wlog))
+    (set {h} (shl 1 hlog))
+    (set {sx} (bit-or (ve-spr (+ a 2)) (shl (bit-and (ve-spr (+ a 3)) 3) 8)))
+    (set {sy} (bit-or (ve-spr (+ a 4)) (shl (bit-and (ve-spr (+ a 5)) 3) 8)))
+    (if (>= sx (- 1024 w)) (set! {sx} (- sx 1024)) 0)
+    (if (>= sy (- 1024 h)) (set! {sy} (- sy 1024)) 0)
+    (if (or (< y sy) (>= y (+ sy h))) 0 (do
+      (set {mode8} (shr (ve-spr (+ a 1)) 7))
+      (set {base} (bit-or (shl (ve-spr a) 5) (shl (bit-and (ve-spr (+ a 1)) 15) 13)))
+      (set {mask} (bit-and at6 #xF0))
+      (set {ry} (if (bit? at6 1) (- h 1 (- y sy)) (- y sy)))
+      (set {rowat} (+ base (shl ry (- wlog (- 1 mode8)))))
+      (set {fmask} (- (shl (- 2 mode8) 2) 1))
+      (set {px} 0)
+      (set {pxstop} NIL)
+      (set {lx} 0)
+      (set {ix} 0)
+      (set {c} 0)
+      (while {and (< px w) (not pxstop)}
+        (set! {lx} (+ sx px))
+        (if (and (>= lx 0) (< lx 640)) (do
+          (if (zero? (bit-and px fmask)) (do (set! {sc-budget} (- sc-budget 1)) (if (zero? sc-budget) (set! {pxstop} T) 0)) 0)
+          (if pxstop 0 (do
+            (set! {sc-budget} (- sc-budget 1))
+            (if (zero? sc-budget) (set! {pxstop} T) (do
+              (set! {ix} (if (bit? at6 0) (- w 1 px) px))
+              (set! {c} (if (pos? mode8) (ve-vram (bit-and (+ rowat ix) #x1FFFF))
+                (bit-and (shr (ve-vram (bit-and (+ rowat (shr ix 1)) #x1FFFF)) (if (pos? (bit-and ix 1)) 0 4)) 15)))
+              (if (zero? c) 0 (do
+                (set! {sc-coll} (bit-or sc-coll (bit-and (ve-smask lx) mask)))
+                (buffer-put ve-smask lx (bit-or (ve-smask lx) mask))))))))) 0)
+        (set! {px} (+ px 1)))))))})
+
+; ---- the PCM FIFO's level, as of cycle at (as many samples at once as time has passed)
+(fun {ve-glen} {do (set {g} (bit-and (shr ve-actl 4) 3)) (if (zero? g) 1 (if (== g 3) 4 2))})
+(fun {ve-pcm at} {if (<= at ve-pcmat) 0 (do
+  (set {s0} (floor (* ve-pcmat ve-pq)))
+  (set {s1} (floor (* at ve-pq)))
+  (set! {ve-pcmat} at)
+  (if (or (zero? ve-arate) (<= s1 s0)) 0 (ve-drain (- s1 s0))))})
+(fun {ve-drain ns} {do
+  (set {p0} ve-phase)
+  (set! {ve-phase} (+ ve-phase (* ns ve-arate)))
+  (set {reads} (- (div ve-phase 128) (div p0 128)))
+  (set! {ve-phase} (mod ve-phase 32768))
+  (set {g} (ve-glen))
+  (set {more} T)
+  (set {n} 0)
+  (set {per} 0)
+  (while {and more (> reads 0) (> ve-fcnt 0)}
+    (set! {n} (min reads (div ve-fcnt g)))
+    (if (zero? n)
+      (do (set! {ve-pcmout ve-fcnt ve-frd} (+ ve-pcmout ve-fcnt) 0 ve-fwr) (set! {reads} (- reads 1)))
+      (do (set! {ve-fcnt ve-frd ve-pcmout} (- ve-fcnt (* n g)) (mod (+ ve-frd (* n g)) 4096) (+ ve-pcmout (* n g))) (set! {reads} (- reads n))))
+    (if (and ve-loop (zero? ve-fcnt))
+      (do (set! {per} (div ve-fwr g))
+          (if (zero? per) (set! {more} NIL) (do (set! {reads} (mod reads per)) (set! {ve-frd ve-fcnt} 0 ve-fwr)))) 0))
+  (if (and (> reads 0) (zero? ve-fcnt) ve-fed (not ve-loop)) (set! {ve-under ve-fed} (+ ve-under 1) NIL) 0)})
+; Cycles from cycle at till the FIFO goes under its low mark (INF: it won't by itself)
+(fun {ve-aflow-in at} {if (or (zero? ve-arate) (< ve-fcnt 1024) ve-loop) INF (do
+  (set {reads} (+ (div (- ve-fcnt 1024) (ve-glen)) 1))
+  (set {samples} (ceil (/ (- (* reads 128) (mod ve-phase 128)) ve-arate)))
+  (max 1 (ceil (/ samples ve-pq))))})
+
+; ---- VRAM: a write, and the register it shadows
+(fun {ve-put a b} {do
+  (set {a} (bit-and a #x1FFFF))
+  (buffer-put ve-vram a b)
+  (if (< a #x1F9C0) 0
+    (if (< a #x1FA00)
+      (do (set {r} (- a #x1F9C0))
+          (set {was} (ve-psg r))
+          (buffer-put ve-psg r b)
+          (if (and (== (bit-and r 3) 2) (zero? (bit-and was #x3F)) (pos? (bit-and b #x3F)) (pos? (bit-and b #xC0)))
+            (do (hash-put ve-ons [ve-nons (list (shr r 2) ve-curt)]) (set! {ve-nons} (+ ve-nons 1))) 0))
+      (if (< a #x1FC00) (buffer-put ve-pal (- a #x1FA00) b) (buffer-put ve-spr (- a #x1FC00) b))))})
+
+; ---- FX (vera.js's fxStep ... fxRegRead): a data port's access, its address, then the port stepped
+(fun {ve-fxstep s write} {do
+  (set {a} (ve-addr s))
+  (set {n} (ve-steps (ve-inc s)))
+  (if (and ve-f4 (pos? (ve-ni s)) (zero? n))
+    (if (pos? (ve-nb s))
+      (do (if (zero? (bit-and (ve-inc s) 1)) (ve-addr! s (+ (ve-addr s) 1)) 0) (ve-nb! s 0))
+      (do (if (pos? (bit-and (ve-inc s) 1)) (ve-addr! s (- (ve-addr s) 1)) 0) (ve-nb! s 1))) 0)
+  (if (and (== s 1) ve-fhop)
+    (if (== n 4) (set! {n} (if (== ve-falign (bit-and a 3)) 1 3))
+      (if (== n 320) (set! {n} (if (== ve-falign (bit-and a 3)) 1 319)) 0)) 0)
+  (ve-addr! s (bit-and (+ (ve-addr s) n) #x1FFFF))
+  (if (and (== s 1) (== ve-fmode 1)) (ve-fxline)
+    (if (and (== ve-fmode 2) (not write)) (ve-fxpoly s)
+      (if (and (== s 1) (== ve-fmode 3) (not write))
+        (set! {ve-fx ve-fy} (bit-and (+ ve-fx ve-fxi) #xFFFFFFFF) (bit-and (+ ve-fy ve-fyi) #xFFFFFFFF)) 0)))
+  a})
+; Line draw: ADDR0's step when X's fraction carries
+(fun {ve-fxline} {do
+  (set! {ve-fx} (bit-and (+ ve-fx ve-fxi) #xFFFFFFFF))
+  (if (pos? (bit-and ve-fx #x10000)) (do
+    (set! {ve-fx} (bit-and ve-fx #xFFFEFFFF))
+    (if (and ve-f4 (pos? ve-ni0))
+      (if (pos? ve-nb1)
+        (do (if (zero? (bit-and ve-i0 1)) (set! {ve-a1} (+ ve-a1 1)) 0) (set! {ve-nb1} 0))
+        (do (if (pos? (bit-and ve-i0 1)) (set! {ve-a1} (- ve-a1 1)) 0) (set! {ve-nb1} 1))) 0)
+    (set! {ve-a1} (bit-and (+ ve-a1 (ve-steps ve-i0)) #x1FFFF))) 0)})
+; Polygon fill: X and Y step, ADDR1 at ADDR0 + X
+(fun {ve-fxpoly s} {do
+  (set! {ve-fx ve-fy} (bit-and (+ ve-fx ve-fxi) #xFFFFFFFF) (bit-and (+ ve-fy ve-fyi) #xFFFFFFFF))
+  (set! {ve-flen} (bit-and (- (shr (s32 ve-fy) 16) (shr (s32 ve-fx) 16)) #xFFFF))
+  (if (and (zero? s) ve-fcycle (not ve-ffill)) (set! {ve-fcbyte} (bit-and (+ ve-fcbyte 1) 3)) 0)
+  (if (== s 1)
+    (if ve-f4 (set! {ve-a1 ve-nb1} (bit-and (+ ve-a0 (shr ve-fx 17)) #x1FFFF) (bit-and (shr ve-fx 16) 1))
+      (set! {ve-a1} (bit-and (+ ve-a0 (shr ve-fx 16)) #x1FFFF))) 0)})
+; The affine mode: ADDR1 at the tile map's pixel under (X, Y), its byte fetched
+(fun {ve-fxaffine} {if (== ve-fmode 3) (do
+  (set {tx} (bit-and (shr ve-fx 19) 255))
+  (set {ty} (bit-and (shr ve-fy 19) 255))
+  (set {sx} (bit-and (shr ve-fx 16) 7))
+  (set {sy} (bit-and (shr ve-fy 16) 7))
+  (set {n4} (if ve-f4 1 0))
+  (if ve-fclip 0 (set! {tx ty} (bit-and tx (- ve-fmsize 1)) (bit-and ty (- ve-fmsize 1))))
+  (set {a} (if (or (>= tx ve-fmsize) (>= ty ve-fmsize)) (+ ve-ftile (shl sy (- 3 n4)) (shr sx n4))
+    (+ ve-ftile (shl (ve-vram (bit-and (+ ve-fmap (* ty ve-fmsize) tx) #x1FFFF)) (- 6 n4)) (shl sy (- 3 n4)) (shr sx n4))))
+  (set! {ve-nb1} (shr (bit-and sx 1) (- 1 n4)))
+  (set! {ve-a1} (bit-and a #x1FFFF))
+  (set! {ve-r1} (ve-vram ve-a1))) 0})
+; A byte written FX's way (4-bit mode: a nibble; transparent writes: 0 left alone)
+(fun {ve-fxput a nibble b} {do
+  (set {a} (bit-and a #x1FFFF))
+  (if ve-f4
+    (ve-put a (if (pos? nibble)
+      (if (or (not ve-ftrans) (pos? (bit-and b 15))) (bit-or (bit-and (ve-vram a) #xF0) (bit-and b 15)) (ve-vram a))
+      (if (or (not ve-ftrans) (pos? (bit-and b #xF0))) (bit-or (bit-and (ve-vram a) 15) (bit-and b #xF0)) (ve-vram a))))
+    (if (and ve-ftrans (zero? b)) 0 (ve-put a b)))})
+; A cache write's byte: mask 0 the whole byte, 1 its high nibble, 2 its low, 3 none
+(fun {ve-cacheput a b mask} {if (and ve-ftrans (zero? b)) 0 (do
+  (set {a} (bit-and a #x1FFFF))
+  (if (zero? mask) (ve-put a b)
+    (if (== mask 1) (ve-put a (bit-or (bit-and (ve-vram a) 15) (bit-and b #xF0)))
+      (if (== mask 2) (ve-put a (bit-or (bit-and (ve-vram a) #xF0) (bit-and b 15))) 0))))})
+(fun {ve-product} {* (s16 (bit-or (shl (ve-cache 1) 8) (ve-cache 0))) (s16 (bit-or (shl (ve-cache 3) 8) (ve-cache 2)))})
+(fun {ve-acc-step} {s32 (bit-and (if ve-fsub (- ve-facc (ve-product)) (+ ve-facc (ve-product))) #xFFFFFFFF)})
+; A data port's write, FX's way
+(fun {ve-fxwrite s b} {if (and ve-fpoking (pos? ve-fmode))
+  (do (set! {ve-fpoking} NIL)
+      (ve-fast)
+      (set {m} (shr b 6))
+      (set {keep} (if (zero? m) #x3F (if (== m 1) #xCF (if (== m 2) #xF3 #xFC))))
+      (buffer-put ve-vram ve-a1 (bit-or (bit-and (ve-cache ve-fcbyte) (bit-xor keep 255)) (bit-and ve-r1 keep))))
+  (do
+    (set {nibble} (ve-nb s))
+    (set {a} (ve-fxstep s T))
+    (set {data} (if ve-fcycle (ve-cache ve-fcbyte) b))
+    (if ve-fcw
+      (do (set {a} (bit-and a #x1FFFC))
+          (set {r} (if ve-fmult (bit-and (ve-acc-step) #xFFFFFFFF) 0))
+          (dotimes {i 4} (do
+            (set {byte} (if ve-fcycle data (if ve-fmult (bit-and (shr r (* 8 i)) 255) (ve-cache i))))
+            (ve-cacheput (+ a i) byte (if ve-ftrans
+              (if ve-f4 (+ (if (zero? (bit-and byte #xF0)) 2 0) (if (zero? (bit-and byte 15)) 1 0)) (if (pos? byte) 0 3))
+              (bit-and (shr b (* 2 i)) 3))))))
+      (ve-fxput a nibble data))
+    (ve-fetch s))})
+; A data port's read, FX's way: the byte fetched ahead, the port stepped, the cache filled
+(fun {ve-fxread s} {do
+  (set {nibble} (ve-nb s))
+  (ve-fxstep s NIL)
+  (set {b} (ve-rd s))
+  (if (and (== s 1) (== ve-fmode 3)) (ve-fxaffine) (ve-fetch s))
+  (if ve-ffill
+    (if ve-f4
+      (do (set {nn} (if (pos? nibble) (shl (bit-and b 15) 4) (bit-and b #xF0)))
+          (if (pos? ve-fcnib)
+            (do (buffer-put ve-cache ve-fcbyte (bit-or (bit-and (ve-cache ve-fcbyte) #xF0) (shr nn 4))) (set! {ve-fcnib ve-fcbyte} 0 (bit-and (+ ve-fcbyte 1) 3)))
+            (do (buffer-put ve-cache ve-fcbyte (bit-or (bit-and (ve-cache ve-fcbyte) 15) nn)) (set! {ve-fcnib} 1))))
+      (do (buffer-put ve-cache ve-fcbyte b)
+          (set! {ve-fcbyte} (if ve-fcinc (bit-or (bit-and ve-fcbyte 2) (bit-and (+ ve-fcbyte 1) 1)) (bit-and (+ ve-fcbyte 1) 3))))) 0)
+  b})
+; FX's increments: DCSEL 3's two registers, a signed 15-bit step (x 32 with bit 15)
+(fun {ve-incr lo hi} {do
+  (set {v} (+ (shl (bit-and hi #x7F) 15) (shl lo 7)))
+  (if (bit? hi 6) (set! {v} (bit-or v #xFFC00000)) 0)
+  (if (bit? hi 7) (set! {v} (shl v 5)) 0)
+  (bit-and v #xFFFFFFFF)})
+; A write to DCSEL 2-6's registers (i: DCSEL * 4 + the register)
+(fun {ve-fxreg i b} {do
+  (if (== i 8) (set! {ve-fmode ve-f4 ve-fhop ve-fcycle ve-ffill ve-fcw ve-ftrans}
+                 (bit-and b 3) (bit? b 2) (bit? b 3) (bit? b 4) (bit? b 5) (bit? b 6) (bit? b 7))
+  (if (== i 9) (set! {ve-ftile ve-fclip ve-fpoly2} (shl (bit-and b #xFC) 9) (bit? b 1) (bit? b 0))
+  (if (== i 10) (set! {ve-fmap ve-fmsize} (shl (bit-and b #xFC) 9) (shl 2 (shl (bit-and b 3) 1)))
+  (if (== i 11) (do (set! {ve-fcinc ve-fcnib ve-fcbyte ve-fmult ve-fsub} (bit? b 0) (bit-and (shr b 1) 1) (bit-and (shr b 2) 3) (bit? b 4) (bit? b 5))
+                    (if (bit? b 6) (set! {ve-facc} (ve-acc-step)) 0)
+                    (if (bit? b 7) (set! {ve-facc} 0) 0))
+  (if (== i 12) (set! {ve-fxi} (ve-incr (ve-dc 12) (ve-dc 13)))
+  (if (== i 13) (do (set! {ve-fxi} (ve-incr (ve-dc 12) (ve-dc 13)))
+                    (if (or (== ve-fmode 1) (== ve-fmode 2)) (set! {ve-fx} (bit-or (bit-and ve-fx #x07FF0000) #x8000)) 0))
+  (if (== i 14) (set! {ve-fyi} (ve-incr (ve-dc 14) (ve-dc 15)))
+  (if (== i 15) (do (set! {ve-fyi} (ve-incr (ve-dc 14) (ve-dc 15)))
+                    (if (or (== ve-fmode 1) (== ve-fmode 2)) (set! {ve-fy} (bit-or (bit-and ve-fy #x07FF0000) #x8000)) 0))
+  (if (== i 16) (do (set! {ve-fx} (bit-or (bit-and ve-fx #x0700FF80) (shl b 16))) (ve-fxaffine))
+  (if (== i 17) (do (set! {ve-fx} (bit-or (bit-and ve-fx #x00FFFF00) (shl (bit-and b 7) 24) (bit-and b #x80))) (ve-fxaffine))
+  (if (== i 18) (do (set! {ve-fy} (bit-or (bit-and ve-fy #x0700FF80) (shl b 16))) (ve-fxaffine))
+  (if (== i 19) (do (set! {ve-fy} (bit-or (bit-and ve-fy #x00FFFF00) (shl (bit-and b 7) 24) (bit-and b #x80))) (ve-fxaffine))
+  (if (== i 20) (set! {ve-fx} (bit-or (bit-and ve-fx #x07FF0080) (shl b 8)))
+  (if (== i 21) (set! {ve-fy} (bit-or (bit-and ve-fy #x07FF0080) (shl b 8)))
+  (if (and (>= i 24) (<= i 27)) (buffer-put ve-cache (- i 24) b) 0)))))))))))))))
+  (ve-fast)})
+; A read of DCSEL 5's fill length (22, 23), or 6's accumulator's side effects (24 reset, 25 accumulate): -1, none
+(fun {ve-fxregread i} {if (== i 22)
+  (if (>= ve-flen 768) (if (and ve-fpoly2 (== ve-fmode 2)) 0 #x80)
+    (if ve-f4
+      (if (and ve-fpoly2 (== ve-fmode 2))
+        (bit-or (shr (bit-and ve-fy #x8000) 8) (bit-and (shr ve-fx 11) #x60) (bit-and (shr ve-fx 14) #x10) (shl (bit-and ve-flen 7) 1) (shr (bit-and ve-fx #x8000) 15))
+        (bit-or (if (pos? (bit-and ve-flen #xFFF8)) #x80 0) (bit-and (shr ve-fx 11) #x60) (bit-and (shr ve-fx 14) #x10) (shl (bit-and ve-flen 7) 1)))
+      (bit-or (if (pos? (bit-and ve-flen #xFFF0)) #x80 0) (bit-and (shr ve-fx 11) #x60) (shl (bit-and ve-flen 15) 1))))
+  (if (== i 23) (shr (bit-and ve-flen #x03F8) 2)
+    (do (if (== i 24) (set! {ve-facc} 0) (if (== i 25) (set! {ve-facc} (ve-acc-step)) 0)) -1))})
+
+; ---- the bus: a register read (-1: no answer, the FPGA configuring) or written, at cycle at
+(fun {vera-read r at} {do (set! {ve-curt} at) (if (< at ve-ready) -1 (do (ve-scan at) (ve-rreg r at)))})
+(fun {vera-write r b at} {do (set! {ve-curt} at) (if (< at ve-ready) 0 (do (ve-scan at) (ve-wreg r b at)))})
+(fun {ve-rreg r at} {if (< r 3)
+  (if (zero? r) (bit-and (ve-addr ve-asel) 255)
+    (if (== r 1) (bit-and (shr (ve-addr ve-asel) 8) 255)
+      (bit-or (shr (ve-addr ve-asel) 16) (shl (ve-inc ve-asel) 3)
+        (if ve-ver (bit-or (shl (ve-nb ve-asel) 1) (shl (ve-ni ve-asel) 2)) (shl (ve-nib ve-asel) 1)))))
+  (if (< r 5) (ve-data-read (- r 3))
+    (if (== r 5) (bit-or (shl ve-dcsel 1) ve-asel)
+      (if (== r 6) (bit-or (shr (bit-and ve-irqline #x100) 1) (shr (bit-and (ve-scanline at) #x100) 2) ve-ien)
+        (if (== r 7) (do (ve-pcm at) (bit-or ve-isr (if (< ve-fcnt 1024) 8 0)))
+          (if (== r 8) (bit-and (ve-scanline at) 255)
+            (if (< r 13) (ve-dcread (+ (* ve-dcsel 4) (- r 9)) at)
+              (if (< r 27) (ve-lay (- r 13))
+                (if (== r 27) (do (ve-pcm at) (bit-or ve-actl (if (>= ve-fcnt 4095) #x80 0) (if (zero? ve-fcnt) #x40 0)))
+                  (if (== r 28) ve-arate
+                    (if (== r 29) 0
+                      (if (== r 30) (ve-spiread at)
+                        (bit-or (if (< at ve-spibusy) #x80 0) (shl ve-autotx 2) (shl ve-slow 1) ve-ss))))))))))))})
+(fun {ve-dcread i at} {if (zero? i) (bit-or (bit-and (ve-dc 0) #x7F) (shl (ve-field at) 7))
+  (if (or (< i 8) (and (== i 8) ve-ver)) (ve-dc i)
+    (do (set {b} (if (and ve-ver (>= i 22) (<= i 25)) (ve-fxregread i) -1))
+        (if (>= b 0) b (if ve-ver (if (zero? (bit-and i 3)) #x56 (nth (- (bit-and i 3) 1) ve-ver)) 0))))})
+(fun {ve-data-read s} {if (and ve-ver (not ve-frfast)) (ve-fxread s)
+  (do (set {b} (ve-rd s)) (ve-step s) (ve-fetch s) b)})
+(fun {ve-data-write s b} {if (and ve-ver (not ve-fwfast)) (ve-fxwrite s b)
+  (do (ve-put (ve-addr s) b) (ve-step s) (ve-fetch s))})
+(fun {ve-spiread at} {do
+  (set {b} ve-spiin)
+  (if (and (pos? ve-autotx) (>= at ve-spibusy)) (set! {ve-spibusy ve-spiin} (+ at (ve-spitime)) (ve-spibyte 255)) 0)
+  b})
+(fun {ve-spitime} {max 1 (round (/ (* 8 clock-mhz) (if (pos? ve-slow) 0.390625 12.5)))})
+; A byte clocked: what comes back (the card's, selected, the byte it had for the one before; else $FF)
+(fun {ve-spibyte b} {if (and ve-card (pos? ve-ss)) (do (set {out} sel-cur) (set! {sel-cur} (card-byte ve-cardc 16 b)) out) 255})
+(fun {ve-wreg r b at} {if (zero? r)
+  (if (and ve-ver ve-fpoly2 ve-f4 (== ve-fmode 2) (== ve-asel 1))
+    (do (set! {ve-fpoking ve-a1} T (bit-or (bit-and ve-a1 #x1FFFC) (bit-and b 3))) (ve-fast) (ve-fetch 1))
+    (do (ve-addr! ve-asel (bit-or (bit-and (ve-addr ve-asel) #x1FF00) b))
+        (if (and ve-fhop (== ve-asel 1)) (set! {ve-falign} (bit-and b 3)) 0)
+        (ve-fetch ve-asel)))
+  (if (== r 1) (do (ve-addr! ve-asel (bit-or (bit-and (ve-addr ve-asel) #x100FF) (shl b 8))) (ve-fetch ve-asel))
+  (if (== r 2) (do (ve-addr! ve-asel (bit-or (bit-and (ve-addr ve-asel) #xFFFF) (shl (bit-and b 1) 16)))
+                   (ve-nib! ve-asel (bit-and (shr b 1) 3)) (ve-inc! ve-asel (shr b 3))
+                   (ve-nb! ve-asel (bit-and (shr b 1) 1)) (ve-ni! ve-asel (bit-and (shr b 2) 1))
+                   (ve-fetch ve-asel))
+  (if (< r 5) (ve-data-write (- r 3) b)
+  (if (== r 5) (if (bit? b 7) (ve-reconfigure at) (set! {ve-dcsel ve-asel} (bit-and (shr b 1) ve-dcmask) (bit-and b 1)))
+  (if (== r 6) (do (set! {ve-irqline ve-ien} (bit-or (bit-and ve-irqline 255) (shl (bit-and b #x80) 1)) (bit-and b 15)) (ve-plan))
+  (if (== r 7) (set! {ve-isr} (bit-and ve-isr (bit-xor b 255)))
+  (if (== r 8) (do (set! {ve-irqline} (bit-or (bit-and ve-irqline #x100) b)) (ve-plan))
+  (if (< r 13) (ve-dcwrite (+ (* ve-dcsel 4) (- r 9)) b at)
+  (if (< r 27) (buffer-put ve-lay (- r 13) b)
+  (if (== r 27) (ve-actl-write b at)
+  (if (== r 28) (do (ve-pcm at) (set! {ve-arate} (if (> b 128) (- 256 b) b)))
+  (if (== r 29) (ve-fifo-write b at)
+  (if (== r 30) (if (>= at ve-spibusy) (set! {ve-spibusy ve-spiin} (+ at (ve-spitime)) (ve-spibyte b)) 0)
+    (do (if (and (pos? ve-ss) (zero? (bit-and b 1)) ve-card) (card-reset) 0)
+        (set! {ve-ss ve-slow ve-autotx} (bit-and b 1) (bit-and (shr b 1) 1) (bit-and (shr b 2) 1))))))))))))))))})
+(fun {ve-dcwrite i b at} {if (and ve-ver (>= i 252)) 0
+  (if (zero? i) (do (buffer-put ve-dc 0 (bit-and b #x7F)) (ve-retime at))
+    (do (buffer-put ve-dc i b) (if (and ve-ver (>= i 8)) (ve-fxreg i b) 0)))})
+(fun {ve-actl-write b at} {do
+  (ve-pcm at)
+  (if (== (bit-and b #xC0) #xC0) (set! {ve-loop} T)
+    (do (set! {ve-loop} NIL) (if (bit? b 7) (set! {ve-fcnt ve-fwr ve-frd ve-fed} 0 0 0 NIL) 0)))
+  (if (bit? b 6) (set! {ve-frd ve-fcnt} 0 ve-fwr) 0)
+  (set! {ve-actl} (bit-and b #x3F))})
+(fun {ve-fifo-write b at} {do
+  (ve-pcm at)
+  (if (< ve-fcnt 4095)
+    (do (buffer-put ve-fifo ve-fwr b)
+        (set! {ve-fwr ve-fcnt ve-pcmin ve-fed} (mod (+ ve-fwr 1) 4096) (+ ve-fcnt 1) (+ ve-pcmin 1) T)
+        (if (and ve-logon (< ve-nlog 1048576)) (do (buffer-put ve-log ve-nlog b) (set! {ve-nlog} (+ ve-nlog 1))) 0))
+    (set! {ve-pcmlost} (+ ve-pcmlost 1)))})
+; CTRL's reset bit, or RESB: the FPGA configures itself again
+(fun {ve-reconfigure at} {do (set! {ve-ready} (+ at ve-cfg)) (ve-reset ve-ready)})
+(fun {vera-reset at} {ve-reconfigure at})
+
+; ---- the interrupt, and the next event
+(fun {vera-irq?} {and (>= ve-curt ve-ready) (pos? (bit-and (bit-or ve-isr (if (< ve-fcnt 1024) 8 0)) ve-ien))})
+(fun {vera-tick at} {do (set! {ve-curt} at) (if (>= at ve-ready) (do (ve-scan at) (if (bit? ve-ien 3) (ve-pcm at) 0)) 0)})
+(fun {vera-next dc} {if (< dc ve-ready) (max 1 (- ve-ready dc)) (do
+  (set {nx} INF)
+  (if (pos? (bit-and ve-ien 7)) (do
+    (set {nu} (ve-after (pos? (bit-and ve-ien 5)) (pos? (bit-and ve-ien 2))))
+    (if (< nu INF) (set! {nx} (max 1 (- (ve-cyc-of nu) dc))) 0)) 0)
+  (if (bit? ve-ien 3) (set! {nx} (min nx (ve-aflow-in dc))) 0)
+  nx)})
+
+; The palette at reset (the gateware's: 12 bits, $0RGB), its bytes as the registers have them (low, then high)
+(def {DEFAULT-PALETTE} {
+  0 0 255 15 0 8 254 10 76 12 197 0 10 0 231 14 133 13 64 6 119 15 51 3 119 7 246 10 143 0 187 11
+  0 0 17 1 34 2 51 3 68 4 85 5 102 6 119 7 136 8 153 9 170 10 187 11 204 12 221 13 238 14 255 15
+  17 2 51 4 68 6 102 8 136 10 153 12 187 15 17 2 34 4 51 6 68 8 85 10 102 12 119 15 0 2 17 4
+  17 6 34 8 34 10 51 12 51 15 0 2 0 4 0 6 0 8 0 10 0 12 0 15 33 2 67 4 100 6 134 8
+  168 10 201 12 235 15 17 2 50 4 83 6 116 8 149 10 182 12 215 15 16 2 49 4 81 6 98 8 130 10 163 12
+  195 15 16 2 48 4 64 6 96 8 128 10 144 12 176 15 33 1 67 3 100 5 134 7 168 9 201 11 251 13 33 1
+  66 3 99 4 132 6 165 8 198 9 247 11 32 1 65 2 97 4 130 5 162 6 195 8 243 9 32 1 64 2 96 3
+  128 4 160 5 192 6 240 7 33 1 67 3 101 4 134 6 168 8 202 9 252 11 33 1 66 2 100 3 133 4 166 5
+  200 6 249 7 32 0 65 1 98 1 131 2 164 2 197 3 246 3 32 0 65 0 97 0 130 0 162 0 195 0 243 0
+  34 1 68 3 102 4 136 6 170 8 204 9 255 11 34 1 68 2 102 3 136 4 170 5 204 6 255 7 34 0 68 1
+  102 1 136 2 170 2 204 3 255 3 34 0 68 0 102 0 136 0 170 0 204 0 255 0 18 1 52 3 86 4 104 6
+  138 8 172 9 207 11 18 1 36 2 70 3 88 4 106 5 140 6 159 7 2 0 20 1 38 1 56 2 74 2 92 3
+  111 3 2 0 20 0 22 0 40 0 42 0 60 0 63 0 18 1 52 3 70 5 104 7 138 9 156 11 191 13 18 1
+  36 3 54 4 72 6 90 8 108 9 127 11 2 1 20 2 22 4 40 5 42 6 60 8 63 9 2 1 4 2 6 3
+  8 4 10 5 12 6 15 7 18 2 52 4 70 6 104 8 138 10 156 12 190 15 17 2 35 4 53 6 71 8 89 10
+  107 12 125 15 1 2 19 4 21 6 38 8 40 10 58 12 60 15 1 2 3 4 4 6 6 8 8 10 9 12 11 15})
