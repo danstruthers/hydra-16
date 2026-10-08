@@ -913,6 +913,24 @@ kw_y:
 kw_z:
             .byte       0
 
+; tname = the keyword .A's name (tnl its length, no suffix): a TYPE's, a field's that's a keyword's (POINT).  OUT: C = 1
+; none
+kw_tname:
+            jsr         kw_name
+            bcs         @none
+            sty         tnl
+            stz         tnl + 1
+            stz         tsuf
+            dey
+:
+            lda         (t0),y
+            sta         tname,y
+            dey
+            bpl         :-
+            clc
+@none:
+            rts
+
 ; A keyword's name, for LIST and errors: kw_name .A = its number -> t0 its characters, .Y its length (C = 1: none)
 kw_name:
             sta         t4 + 1

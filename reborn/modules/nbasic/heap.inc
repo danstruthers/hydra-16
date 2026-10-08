@@ -27,6 +27,10 @@ dm_hi:      .res        2
 dm_n:       .res        1
 dm_ca:      .res        3
 dm_cnt:     .res        2
+dm_type:    .res        1                                   ; (DIM's: an array of records' type)
+ad_tag:     .res        1                                   ; (arr_make's: the slot's tag, VT_ARR or VT_REC; a record's
+ad_type:    .res        1                                   ;   type, its values' kinds ty_kinds')
+rc_s:       .res        3                                   ; (ST_RCOPY's source)
 ms_s:       .res        2                                   ; (The MID$ statement's start, count, v$'s length, new$'s)
 ms_n:       .res        2
 ms_l:       .res        2
@@ -556,6 +560,18 @@ arr_auto:
             sta         ad_kind
             lda         #1
             sta         ad_esize
+            lda         #VT_ARR
+            sta         ad_tag
+            lda         ad_kind                             ; (An array of records: its type's values an element)
+            cmp         #LK_REC
+            bne         :+
+            ldy         #4
+            lda         (vu),y
+            sta         ad_type
+            tax
+            lda         ty_n,x
+            sta         ad_esize
+:
             MOVW        ad_slot, vu
             ; (fall through)
 
@@ -625,7 +641,9 @@ arr_make:
             sta         t0
             bcc         :+
             inc         t0 + 1
-            beq         @big
+            bne         @lb905
+            jmp         @big
+@lb905:
 :
             lda         t0
             ldx         t0 + 1
@@ -640,6 +658,7 @@ arr_make:
             asl         a
             asl         a
             tax
+            beq         @elem                               ; (A record's: none)
             ldy         #0
 :
             lda         ad_dims,y
@@ -651,12 +670,27 @@ arr_make:
             lda         ad_count                            ; (Its values: count * esize defaults)
             ora         ad_count + 1
             beq         @made
+            lda         ad_kind                             ; (A record's: its type's kinds, each value's)
+            cmp         #LK_REC
+            beq         @rec
             ldx         ad_esize
 :
             lda         ad_kind
             jsr         cb_default
             dex
             bne         :-
+            bra         @dec
+@rec:
+            ldx         ad_type
+            ldy         ty_off,x
+            ldx         ad_esize
+:
+            lda         ty_kinds,y
+            jsr         cb_default
+            iny
+            dex
+            bne         :-
+@dec:
             lda         ad_count
             bne         :+
             dec         ad_count + 1
@@ -664,8 +698,8 @@ arr_make:
             dec         ad_count
             bra         @elem
 @made:
-            MOVW        vu, ad_slot                         ; (The slot: its VT_ARR)
-            lda         #VT_ARR
+            MOVW        vu, ad_slot                         ; (The slot: its VT_ARR, or VT_REC; byte 4 as it was)
+            lda         ad_tag
             sta         (vu)
             ldy         #1
             lda         hres
@@ -737,7 +771,7 @@ st_disp5:
             tax
             jmp         (st_jt5,x)
 st_jt5:
-            .word       st_dim, st_erase, st_mids
+            .word       st_dim, st_erase, st_mids, st_rcopy
 .assert     * - st_jt5 = (ST_B6 - ST_B5) * 2, error, "st_jt5 and fn.inc's ST_B5 group differ"
 
 ; ST_DIM (DIM, REDIM): an array made in its variable.  The stack: each dimension's lowest (if it's given) and highest,
@@ -755,6 +789,9 @@ st_dim:
             iny
             lda         (vt),y
             sta         dm_base
+            iny
+            lda         (vt),y
+            sta         dm_type
             jsr         pop_vt                              ; (The variable: its slot)
             ldy         #1
             lda         (vt),y
@@ -909,6 +946,17 @@ dm_kind:
             sta         ad_kind
             lda         #1
             sta         ad_esize
+            lda         #VT_ARR
+            sta         ad_tag
+            lda         ad_kind                             ; (Records: their type's values an element)
+            cmp         #LK_REC
+            bne         :+
+            lda         dm_type
+            sta         ad_type
+            tax
+            lda         ty_n,x
+            sta         ad_esize
+:
             rts
 
 ; Cursor A at the first value of the array at (vu) (a VT_ARR, made), t4 its values' count
@@ -1165,6 +1213,141 @@ cb_plus5:
 :
             sta         cb + 1
             jmp         cb_sel
+
+; ---- Records
+
+; The record whose slot is at (vu) (a VT_REC not made yet: its type in byte 4) made: a block of its type's values
+; (their defaults), as an array's of one element with no dimensions; its VT_REC in the slot
+rec_make:
+            ldy         #4
+            lda         (vu),y
+            sta         ad_type
+            tax
+            lda         ty_n,x
+            sta         ad_esize
+            stz         ad_n
+            lda         #1                                  ; (One element)
+            sta         ad_dims + 2
+            stz         ad_dims + 3
+            lda         #LK_REC
+            sta         ad_kind
+            lda         #VT_REC
+            sta         ad_tag
+            MOVW        ad_slot, vu
+            jmp         arr_make
+
+; ST_RCOPY: a record's values (their count taken off first) copied from the source's place (on top: a record
+; variable's VT_REF, or an element's VT_LOC) to the destination's (under it); each made first if it isn't yet
+st_rcopy:
+            jsr         pop_int16
+            lda         t0
+            jsr         rc_k5
+            lda         #1
+            jsr         rc_make
+            lda         #2
+            jsr         rc_make
+            lda         #1                                  ; (The source's first value: kept)
+            jsr         rc_ca
+            lda         ca
+            sta         rc_s
+            lda         ca + 1
+            sta         rc_s + 1
+            lda         cal
+            sta         rc_s + 2
+            lda         #2                                  ; (The destination's: cursor B)
+            jsr         rc_ca
+            MOVW        cb, ca
+            lda         cal
+            sta         cbl
+            lda         rc_s
+            sta         ca
+            lda         rc_s + 1
+            sta         ca + 1
+            lda         rc_s + 2
+            sta         cal
+            jsr         far_copy
+            jsr         pop_vt
+            jmp         pop_vt
+
+; cn = 5 * .A (its values' bytes)
+rc_k5:
+            sta         cn
+            stz         cn + 1
+            asl         a
+            rol         cn + 1
+            asl         a
+            rol         cn + 1
+            clc
+            adc         cn
+            sta         cn
+            bcc         :+
+            inc         cn + 1
+:
+            rts
+
+; The place .A below the top: a record variable's VT_REF's record made if it isn't yet
+rc_make:
+            jsr         ms_depth
+            lda         (vt)
+            cmp         #VT_LOC
+            beq         @done
+            ldy         #1
+            lda         (vt),y
+            sta         vu
+            iny
+            lda         (vt),y
+            sta         vu + 1
+            lda         (vu)                                ; (A parameter's element: there already)
+            cmp         #VT_LOC
+            beq         @done
+            ldy         #3
+            lda         (vu),y
+            cmp         #NOBANK
+            bne         @done
+            jsr         rec_make
+@done:
+            rts
+
+; Cursor A at the first value of the place .A below the top
+rc_ca:
+            jsr         ms_depth
+            lda         (vt)
+            cmp         #VT_LOC
+            bne         @ref
+            MOVW        vu, vt
+            FARN        1, loc_ca
+            bcc         :+
+            lda         #ER_SUBSCRIPT
+            ldx         #0
+            jmp         b_error
+:
+            rts
+@ref:
+            ldy         #1                                  ; (Its slot's VT_REC: its block, past its header; a
+            lda         (vt),y                              ;   parameter's element's place: there)
+            sta         vu
+            iny
+            lda         (vt),y
+            sta         vu + 1
+            lda         (vu)
+            cmp         #VT_LOC
+            bne         :+
+            FARN        1, loc_ca
+            rts
+:
+            ldy         #1
+            lda         (vu),y
+            sta         ca
+            iny
+            lda         (vu),y
+            sta         ca + 1
+            iny
+            lda         (vu),y
+            sta         cal
+            lda         #2
+            ldx         #0
+            jsr         ca_plus5
+            jmp         ca_sel
 
 ; ---- The fifth bank's functions (fn.inc: F_B5 on)
 fn_disp5:

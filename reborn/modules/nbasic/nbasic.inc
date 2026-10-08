@@ -99,6 +99,7 @@ ER_PARAM        = 84            ; Parameter type mismatch
 ER_INSUB        = 85            ; Not in a procedure (EXIT SUB, SHARED ...)
 ER_EXPECT       = 86            ; (A syntax error, with what was expected: ex_text)
 ER_CONST        = 87            ; (A CONST's value that isn't a constant)
+ER_FIELD        = 88            ; (A record's field that isn't its type's)
 EO_SIZE         = 80            ; (ERR$'s text at most)
 ESC             = $1B
 BEL             = $07

@@ -18,6 +18,7 @@ ar_esize:   .res        1
 ar_lo:      .res        2
 ar_cnt:     .res        2
 ar_val:     .res        2
+ar_k:       .res        1                                   ; (AGETF's, APUTF's field)
 rf_val:     .res        5                                   ; (RETF's: the result; RET's: the return)
 rf_ret:     .res        2
 sw_v:       .res        2 * VAL_SIZE                        ; (SWAP's: the two values)
@@ -1671,6 +1672,8 @@ op_call:
 ; The default value of kind .A (LK_*) pushed.  Keeps .Y
 push_default:
             phy
+            pha
+            and         #7
             tax
             lda         dk_tag,x
             sta         (vsp)
@@ -1684,14 +1687,17 @@ push_default:
             lda         dk_bank,x
             sta         (vsp),y
             iny
-            lda         #0
+            pla                                             ; (A record's type, an array of them's: byte 4)
+            lsr         a
+            lsr         a
+            lsr         a
             sta         (vsp),y
             jsr         vsp_up
             ply
             rts
-dk_tag:     .byte       VT_INT, VT_STR, VT_ARR, VT_REC, VT_ARR
-dk_bank:    .byte       0, NOBANK, NOBANK, NOBANK, NOBANK
-dk_b1:      .byte       0, 0, 0, 0, 1
+dk_tag:     .byte       VT_INT, VT_STR, VT_ARR, VT_REC, VT_ARR, VT_ARR
+dk_bank:    .byte       0, NOBANK, NOBANK, NOBANK, NOBANK, NOBANK
+dk_b1:      .byte       0, 0, 0, 0, 1, 3
 
 ; RET np: the frame dropped but its parameters (the caller's WBK reads them), back to the caller
 op_ret:
@@ -2121,14 +2127,169 @@ vt_next:
 :
             rts
 
-; ---- Not yet
+; ---- Records' fields: FGET k, FPUT k (a record variable's: its VT_REF on the stack), AGETF n k, APUTF n k (an
+; element's of an array of records: its n indices, the array's VT_REF under them); k the field's first value
+
 op_fget:
+            jsr         top_vt
+            jsr         rec_ca
+            ldy         #0
+:
+            jsr         ca_rd
+            sta         (vt),y
+            iny
+            cpy         #VAL_SIZE
+            bne         :-
+            jsr         code_sel
+            jmp         nx2
 op_fput:
+            jsr         pop_vu
+            MOVW        ar_val, vu
+            jsr         top_vt
+            jsr         rec_ca
+            MOVW        vu, ar_val
+            ldy         #0
+:
+            lda         (vu),y
+            jsr         ca_wr
+            iny
+            cpy         #VAL_SIZE
+            bne         :-
+            jsr         code_sel
+            jsr         pop_vt
+            jmp         nx2
 op_agetf:
+            jsr         fld_k
+            jsr         arr_elem
+            jsr         fld_plus
+            ldy         #0
+:
+            jsr         ca_rd
+            sta         (vt),y
+            iny
+            cpy         #VAL_SIZE
+            bne         :-
+            jsr         code_sel
+            clc
+            lda         vt
+            adc         #VAL_SIZE
+            sta         vsp
+            lda         vt + 1
+            adc         #0
+            sta         vsp + 1
+            jmp         nx3
 op_aputf:
-            lda         #ER_SYNTAX
+            jsr         fld_k
+            jsr         pop_vu
+            MOVW        ar_val, vu
+            jsr         arr_elem
+            jsr         fld_plus
+            MOVW        vu, ar_val
+            ldy         #0
+:
+            lda         (vu),y
+            jsr         ca_wr
+            iny
+            cpy         #VAL_SIZE
+            bne         :-
+            jsr         code_sel
+            MOVW        vsp, vt
+            jmp         nx3
+
+; Cursor A at the field ((ip),1: its first value) of the record whose VT_REF is at (vt): its block made first if it
+; isn't yet (rec_make)
+rec_ca:
+            ldy         #1                                  ; (Its field: read while the code's bank is in)
+            lda         (ip),y
+            sta         ar_k
+            lda         (vt),y
+            sta         vu
+            iny
+            lda         (vt),y
+            sta         vu + 1
+            lda         (vu)                                ; (An element's place, a parameter's: there)
+            cmp         #VT_LOC
+            bne         :+
+            jsr         loc_ca
+            bcc         @at
+            lda         #ER_SUBSCRIPT
             ldx         #0
             jmp         err_entry
+@at:
+            lda         ar_k
+            jsr         k5
+            jsr         ca_plus
+            jmp         ca_sel
+:
+            ldy         #3
+            lda         (vu),y
+            cmp         #NOBANK
+            bne         :+
+            lda         vt
+            pha
+            lda         vt + 1
+            pha
+            FARN        5, rec_make
+            pla
+            sta         vt + 1
+            pla
+            sta         vt
+            ldy         #1
+            lda         (vt),y
+            sta         vu
+            iny
+            lda         (vt),y
+            sta         vu + 1
+:
+            ldy         #1
+            lda         (vu),y
+            sta         ca
+            iny
+            lda         (vu),y
+            sta         ca + 1
+            iny
+            lda         (vu),y
+            sta         cal
+            lda         ar_k                                ; (Past its header, 2 bytes, to 5k)
+            jsr         k5
+            clc
+            adc         #2
+            bcc         :+
+            inx
+:
+            jsr         ca_plus
+            jmp         ca_sel
+
+; ar_k = the field ((ip),2: its first value), read while the code's bank is at $8000
+fld_k:
+            ldy         #2
+            lda         (ip),y
+            sta         ar_k
+            rts
+
+; Cursor A (at an element) on to its field (ar_k)
+fld_plus:
+            lda         ar_k
+            jsr         k5
+            jsr         ca_plus
+            jmp         ca_sel
+
+; .A/.X = 5 * .A
+k5:
+            sta         t4
+            stz         t4 + 1
+            asl         a
+            rol         t4 + 1
+            asl         a
+            rol         t4 + 1
+            clc
+            adc         t4
+            pha
+            lda         t4 + 1
+            adc         #0
+            tax
+            pla
+            rts
 
 ; ---- 5 * n, for a frame's slots
 mul5_lo:

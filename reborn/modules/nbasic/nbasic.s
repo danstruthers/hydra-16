@@ -31,6 +31,7 @@
 .include "stmt.inc"
 .include "procs.inc"
 .include "stmt3.inc"
+.include "rec.inc"
 .include "num.inc"
 .include "fns4.inc"
 .include "heap.inc"

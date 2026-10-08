@@ -603,11 +603,25 @@ e_name:
             jsr         arr_etype
             lda         etype
             pha
+            lda         spl + SP_TYPE                       ; (An array of records': its type)
+            pha
             lda         #OP_REFV
             jsr         emit_slot
             jsr         lex_next                            ; (Past the name: its ()
             jsr         lex_next
             jsr         emit_indices                        ; (Its indices, and its ): .A their count)
+            pha
+            lda         #'.'                                ; (A record's field after it: the third bank's)
+            jsr         is_op
+            bne         :+
+            pla
+            plx
+            ply
+            FARN        3, e_afield
+            rts
+:
+            pla
+            plx                                             ; (Its type: dropped)
             pha
             lda         #OP_AGET
             ldx         #2
@@ -621,6 +635,12 @@ e_name:
             jsr         proc_find                           ; (A FUNCTION with no parameters: called)
             bcs         :+
             jmp         e_fcall
+:
+            jsr         has_dot                             ; (rec.field: the third bank's)
+            bcs         :+
+            FARN        3, e_field
+            bcs         :+
+            rts
 :
             jsr         var_lookup
             lda         scls                                ; (Its type)
@@ -661,12 +681,34 @@ emit_indices:
 ; etype = the type of the array (scls) whose element it is
 arr_etype:
             stz         etype
+            ldx         #ET_STR
             lda         scls
             cmp         #SC_SARR
-            bne         :+
-            lda         #ET_STR
-            sta         etype
+            beq         :+
+            ldx         #ET_REC
+            cmp         #SC_RARR
+            bne         :++
 :
+            stx         etype
+:
+            rts
+
+; Has tname a . in it?  OUT: C = 0 yes
+has_dot:
+            ldx         #0
+:
+            cpx         tnl
+            beq         @no
+            lda         tname,x
+            cmp         #'.'
+            beq         @yes
+            inx
+            bra         :-
+@yes:
+            clc
+            rts
+@no:
+            sec
             rts
 
 ; ---- Variables found (or made)

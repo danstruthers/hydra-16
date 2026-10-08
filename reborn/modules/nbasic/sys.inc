@@ -284,6 +284,7 @@ err_msgs:
             .byte       ER_INSUB, "not in a procedure", 0
             .byte       ER_EXPECT, "syntax error: ", 0
             .byte       ER_CONST, "not a constant", 0
+            .byte       ER_FIELD, "no such field", 0
             .byte       0
 
 ; ---- The system's errors

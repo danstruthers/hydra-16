@@ -102,6 +102,7 @@ ST_B5                                                       ; The heap's (heap.i
 ST_DIM = ST_B5                                              ; DIM, REDIM: an array made
 ST_ERASE                                                    ; ERASE: an array dropped
 ST_MIDS                                                     ; MID$(v$, start, len) = new$
+ST_RCOPY                                                    ; A record copied: dest's place, src's, its values
 ST_B6                                                       ; Input and output's (io.inc)
 ST_PRN = ST_B6                                              ; PRINT's value
 ST_PRNL                                                     ; Its new line

@@ -224,6 +224,8 @@ st3_tab:
             .word       cs_palette - 1
             .byte       K_SPRITE
             .word       cs_sprite - 1
+            .byte       K_TYPE
+            .word       cs_type - 1
             .byte       K_WINDOW
             .word       cs_window - 1
             .byte       K_VIEW
@@ -372,6 +374,21 @@ decl_kind:
             bne         :+
             ldy         #LK_SARR
 :
+            ldx         #LK_REC                             ; (A record's, an array of them's: | its type << 3)
+            cmp         #SC_REC
+            beq         :+
+            ldx         #LK_RARR
+            cmp         #SC_RARR
+            bne         :++
+:
+            lda         dm_type
+            asl         a
+            asl         a
+            asl         a
+            stx         c3_t
+            ora         c3_t
+            tay
+:
             rts
 
 ; A declared name (SHARED's, STATIC's): name [()] [AS type]; tname its, scls its class
@@ -394,6 +411,7 @@ decl_name:
 :
             jsr         as_clause
             jsr         name_back
+            stz         dm_type
             lda         dm_as
             cmp         #$FF
             bne         @typed
@@ -406,13 +424,18 @@ decl_name:
             rts
 @typed:
             and         #7
-            ldx         #0                                  ; (A number's, a string's; an array's 2 on)
+            ldx         #0                                  ; (A number's, a string's; an array's 2 on; a record's 4 on)
             cmp         #PK_NUM
             beq         :+
             inx
             cmp         #PK_STR
             beq         :+
-            jmp         type3                               ; (A record's: to come)
+            lda         dm_as
+            lsr         a
+            lsr         a
+            lsr         a
+            sta         dm_type
+            ldx         #4
 :
             lda         dm_dims
             beq         :+
@@ -422,7 +445,7 @@ decl_name:
             lda         decl_cls,x
             sta         scls
             jmp         suf_check
-decl_cls:   .byte       SC_NUM, SC_STR, SC_NARR, SC_SARR
+decl_cls:   .byte       SC_NUM, SC_STR, SC_NARR, SC_SARR, SC_REC, SC_SARR, SC_RARR
 
 ; [AS type]: dm_as its PK_* ($FF: none), as_fix a fixed length's
 as_clause:
@@ -532,6 +555,7 @@ dim_item:
 
 ; DIM of an array: its variable (found or made), its info, ST_DIM
 dim_array:
+            stz         dm_type
             lda         dm_as
             cmp         #$FF
             bne         @as
@@ -545,7 +569,12 @@ dim_array:
             ldx         #SC_SARR
             cmp         #PK_STR
             beq         :+
-            jmp         type3                               ; (Records: to come)
+            lda         dm_as                               ; (Records: their type)
+            lsr         a
+            lsr         a
+            lsr         a
+            sta         dm_type
+            ldx         #SC_RARR
 :
             stx         scls
             jsr         suf_check
@@ -556,7 +585,13 @@ dim_array:
             sta         sscope
             jsr         decl_kind
             C2          var_new
+            lda         dm_type
+            sta         spl + SP_TYPE
+            bra         @made
 @found:
+            lda         spl + SP_TYPE
+            sta         dm_type
+@made:
             jsr         decl_flags
             lda         #OP_REFV
             C2          emit_slot
@@ -569,6 +604,10 @@ dim_array:
             bne         :+
             ldx         #LK_STR << 4
 :
+            cmp         #SC_RARR
+            bne         :+
+            ldx         #LK_REC << 4
+:
             txa
             ora         dm_dims
             ora         dm_pres
@@ -578,13 +617,14 @@ dim_array:
             C2          emit
             lda         optbase
             C2          emit
-            lda         #0
+            lda         dm_type                             ; (An array of records' type)
             C2          emit
             lda         #ST_DIM
             jmp         emit_st3
 
 ; DIM of a scalar: DIM x (made, if it isn't), DIM x AS type (declared: if it's here already, Duplicate definition)
 dim_scalar:
+            stz         dm_type
             lda         dm_as
             cmp         #$FF
             bne         @typed
@@ -598,7 +638,12 @@ dim_scalar:
             ldx         #SC_STR
             cmp         #PK_STR
             beq         :+
-            jmp         type3                               ; (Records: to come)
+            lda         dm_as                               ; (A record: its type)
+            lsr         a
+            lsr         a
+            lsr         a
+            sta         dm_type
+            ldx         #SC_REC
 :
             stx         scls
             jsr         suf_check
@@ -610,6 +655,8 @@ dim_scalar:
 :
             jsr         decl_kind
             C2          var_new
+            lda         dm_type                             ; (A record's type)
+            sta         spl + SP_TYPE
             lda         as_fix                              ; (Its fixed length)
             sta         spl + SP_INFO
             lda         as_fix + 1
@@ -976,6 +1023,8 @@ cs_shared:
             bcc         :+
             jsr         decl_kind
             C2          var_new
+            lda         dm_type
+            sta         spl + SP_TYPE
 :
             jsr         decl_flags                          ; (AS: declared so)
             lda         cscope                              ; (Here: its slot)
@@ -1007,6 +1056,8 @@ cs_static:
             C2          global_new
             sta         spl + SP_SLOT
             stx         spl + SP_SLOT + 1
+            lda         dm_type
+            sta         spl + SP_TYPE
             lda         dm_as                               ; (AS: declared so)
             cmp         #$FF
             beq         :+
@@ -2307,15 +2358,11 @@ opt_nums:
 @done:
             rts
 
-; ---- To come
-
-; Pass 1: a TYPE and its fields
-scan_type:
-            rts
-
-; END TYPE
+; ---- END TYPE without its TYPE (stmt.inc's END)
 end_proc:
-            jmp         not_yet3
+            lda         #ER_BLOCK
+            ldx         #0
+            jmp         b_error
 
 ; PRINT USING fmt$; items [; | ,] (stmt.inc's PRINT: USING current; PRINT #n's too): each item by the format's next
 ; field; a new line after, but after a ; or a , at the end
@@ -2378,7 +2425,3 @@ file_num:
             lda         #ST_FOUT
             jmp         emit_st3
 
-; A TYPE's name (tname): C = 0 and .A its number; C = 1 none (as yet: none)
-type_find:
-            sec
-            rts

@@ -224,7 +224,11 @@ as_type:
             dex
             bpl         :-
             cmp         #K_STRING
-            bne         @bad
+            beq         :+
+            jsr         kw_tname                            ; (Another keyword: a TYPE's name, its text: POINT)
+            bcs         @bad
+            bra         @named
+:
             jsr         lex_next
             lda         #'*'                                ; (STRING * n)
             jsr         is_op
@@ -250,6 +254,7 @@ as_type:
 @type:
             cmp         #TK_NAME
             bne         @bad
+@named:
             FARN        3, type_find                        ; (C = 0: .A its number)
             bcs         @bad
             asl         a
@@ -1100,10 +1105,14 @@ arg_one:
             jsr         kind_of_arg
             sta         t4 + 2
             and         #7
+            cmp         #PK_RARR                            ; (An array of records: as an array)
+            beq         @array
+            cmp         #PK_REC
+            beq         @record
             cmp         #PK_NARR
             bcs         @array
-            cmp         #PK_REC
-            bcs         @record
+            jsr         has_dot                             ; (A record's field: its value)
+            bcc         @value
             jsr         arg_is_var                          ; A number or a string: by reference if it's a variable
             bcs         @value
             jsr         const_find
@@ -1135,22 +1144,64 @@ arg_one:
             lda         #')'
             jmp         need_op
 @record:
-            lda         tk                                  ; A record: its variable's reference
-            cmp         #TK_NAME
+            lda         tk                                  ; A record: its variable's reference, or an element's
+            cmp         #TK_NAME                            ;   place (an array of records')
             bne         @syntax
+            ldy         #0
+:
+            lda         (lp),y
+            cmp         #' '
+            bne         :+
+            iny
+            bra         :-
+:
+            cmp         #'('
+            beq         @relem
             jsr         var_lookup
             lda         scls
             cmp         #SC_REC
             bne         @param
+            jsr         rec_type
             lda         #OP_REFV
             jsr         emit_slot
             jmp         lex_next
+@relem:
+            jsr         arr_lookup
+            lda         scls
+            cmp         #SC_RARR
+            bne         @param
+            jsr         rec_type
+            lda         #OP_REFV
+            jsr         emit_slot
+            jsr         lex_next
+            jsr         lex_next
+            jsr         emit_indices
+            pha
+            lda         #OP_AREF
+            ldx         #2
+            jsr         emit_op
+            pla
+            jmp         emit
 @param:
             lda         #ER_PARAM
             ldx         #0
             jmp         c_error
 @syntax:
             jmp         syntax_err
+
+; A record's type (spl's) must be its parameter's (t4 + 2: PK_REC | type << 3): else Parameter type mismatch
+rec_type:
+            lda         t4 + 2
+            lsr         a
+            lsr         a
+            lsr         a
+            cmp         spl + SP_TYPE
+            beq         :+
+            lda         #ER_PARAM
+            ldx         #0
+            jmp         c_error
+:
+            rts
 
 ; The argument's type (etype) must be its parameter's (t4 + 2: PK_NUM or PK_STR)
 arg_type:

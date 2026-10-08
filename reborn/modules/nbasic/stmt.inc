@@ -29,6 +29,7 @@ tgt_flags:  .res        1                                   ;   type, indices (0
 tgt_fix:    .res        2
 tgt_type:   .res        1
 tgt_n:      .res        1
+tgt_fk:     .res        1                                   ; (A record's field's first value + 1: 0 none)
 sel_type:   .res        1
 
 .segment "CODE2"
@@ -300,10 +301,24 @@ st_assign:
             bra         :-
 :
             cmp         #'('
-            beq         @elem
+            bne         @lb900
+            jmp         @elem
+@lb900:
+            jsr         has_dot                             ; (rec.field = ...: the third bank's)
+            bcs         :+
+            FARN        3, a_field
+            bcs         :+
+            rts
+:
             jsr         fn_result                           ; (A FUNCTION's own name, in it: its result's slot)
             bcc         :+
             jsr         var_lookup
+:
+            lda         scls                                ; (A record: copied whole)
+            cmp         #SC_REC
+            bne         :+
+            FARN        3, a_record
+            rts
 :
             lda         spl + SP_SLOT                       ; (Its slot, its class, kept on the 6502's stack)
             pha
@@ -351,11 +366,35 @@ st_assign:
             jsr         arr_lookup                          ; name(indices) = ...: its reference, indices, value
             lda         scls
             pha
+            lda         spl + SP_TYPE                       ; (An array of records': its type)
+            pha
             lda         #OP_REFV
             jsr         emit_slot
             jsr         lex_next
             jsr         lex_next
             jsr         emit_indices
+            pha
+            lda         #'.'                                ; (arr(i).field = ...: the third bank's)
+            jsr         is_op
+            bne         :+
+            pla
+            plx
+            ply
+            FARN        3, a_efield
+            rts
+:
+            tsx                                             ; (A record, the element whole: copied)
+            lda         $0103,x
+            cmp         #SC_RARR
+            bne         :+
+            pla
+            plx
+            ply
+            FARN        3, a_erecord
+            rts
+:
+            pla                                             ; (The count over the class: the type dropped)
+            plx
             pha
             lda         #'='
             jsr         need_op
@@ -383,6 +422,7 @@ st_assign:
 ; tgt_type its type (ET_*)
 
 tgt_begin:
+            stz         tgt_fk
             lda         tk
             cmp         #TK_NAME
             beq         :+
@@ -406,6 +446,12 @@ tgt_begin:
 :
             cmp         #'('
             beq         @elem
+            jsr         has_dot                             ; (rec.field: the third bank's)
+            bcs         :+
+            FARN        3, t_field
+            bcs         :+
+            rts
+:
             jsr         fn_result
             bcc         :+
             jsr         var_lookup
@@ -431,18 +477,27 @@ tgt_begin:
             lda         etype
             sta         tgt_type
             stz         tgt_flags
+            lda         spl + SP_TYPE                       ; (An array of records': its type)
+            pha
             lda         #OP_REFV
             jsr         emit_slot
             jsr         lex_next
             jsr         lex_next
             jsr         emit_indices
             sta         tgt_n
+            lda         #'.'                                ; (arr(i).field: the third bank's)
+            jsr         is_op
+            beq         :+
+            pla
+            rts
+:
+            plx
+            lda         tgt_n
+            FARN        3, t_efield
             rts
 
 ; The target's store emitted (its value emitted after tgt_begin)
 tgt_end:
-            lda         tgt_n
-            bne         @elem
             lda         tgt_flags                           ; (A fixed-length string: padded or cut)
             and         #SF_FIXED
             beq         :+
@@ -453,6 +508,28 @@ tgt_end:
             ldx         tgt_fix + 1
             jsr         emit_w
 :
+            ldx         tgt_fk                              ; (A record's field: FPUT k, APUTF n k)
+            beq         @plain
+            dex
+            phx
+            lda         tgt_n
+            bne         @efld
+            lda         #OP_FPUT
+            ldx         #2
+            jsr         emit_op
+            pla
+            jmp         emit
+@efld:
+            lda         #OP_APUTF
+            ldx         #3
+            jsr         emit_op
+            lda         tgt_n
+            jsr         emit
+            pla
+            jmp         emit
+@plain:
+            lda         tgt_n
+            bne         @elem
             lda         #OP_STV
             ldx         #3
             jsr         emit_op
@@ -469,6 +546,10 @@ tgt_end:
 ; A variable's or an element's place pushed (a VT_REF, a VT_LOC: SWAP's), its type tgt_type
 place_emit:
             jsr         tgt_begin
+            lda         tgt_fk                              ; (A record's field: not a place, SWAP's)
+            beq         :+
+            jmp         type_err
+:
             lda         tgt_n
             beq         :+
             lda         #OP_AREF

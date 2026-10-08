@@ -61,6 +61,7 @@ LK_STR          = 1
 LK_ARR          = 2
 LK_REC          = 3
 LK_SARR         = 4             ; (An array of strings: its VT_ARR not made yet, its byte 1 LK_STR)
+LK_RARR         = 5             ; (An array of records: byte 1 LK_REC; with LK_REC, | the type << 3: its byte 4)
 
 
 .bss
@@ -621,6 +622,8 @@ global_new:
 ; The default value of kind .A (LK_*) at (t4): 0, "", an array or a record not made yet
 default_value:
             phy
+            pha
+            and         #7
             tax
             lda         lk_tag,x
             sta         (t4)
@@ -634,13 +637,16 @@ default_value:
             lda         lk_bank,x
             sta         (t4),y
             iny
-            lda         #0
+            pla                                             ; (A record's type, an array of them's: byte 4)
+            lsr         a
+            lsr         a
+            lsr         a
             sta         (t4),y
             ply
             rts
-lk_tag:     .byte       VT_INT, VT_STR, VT_ARR, VT_REC, VT_ARR
-lk_bank:    .byte       0, NOBANK, NOBANK, NOBANK, NOBANK
-lk_b1:      .byte       0, 0, LK_NUM, 0, LK_STR
+lk_tag:     .byte       VT_INT, VT_STR, VT_ARR, VT_REC, VT_ARR, VT_ARR
+lk_bank:    .byte       0, NOBANK, NOBANK, NOBANK, NOBANK, NOBANK
+lk_b1:      .byte       0, 0, LK_NUM, 0, LK_STR, LK_REC
 
 ; A new local's slot: .A, its kind .Y.  Past 255 slots: Out of memory
 local_new:
@@ -938,6 +944,8 @@ compile_prog:
             stz         defstr + 2
             stz         defstr + 3
             stz         optbase
+            stz         ntypes                              ; (No TYPEs yet)
+            stz         ty_top
             lda         #1                                  ; Pass 1: the procedures and types
             sta         cpass
             jsr         c_lines
@@ -948,6 +956,12 @@ compile_prog:
             lda         nblk                                ; (A block left open)
             beq         :+
             jsr         blk_unclosed
+:
+            lda         ty_open                             ; (A TYPE without END TYPE)
+            beq         :+
+            lda         #ER_BLOCK
+            ldx         #0
+            jmp         c_error
 :
             jsr         lt_add                              ; (Its end: a statement's place too)
             lda         #OP_END
@@ -967,6 +981,7 @@ c_lines:
             stz         cscope
             stz         nblk
             stz         stmt_ok
+            stz         ty_open
             stz         defstr                              ; (DEFSTR's letters: none at its start)
             stz         defstr + 1
             stz         defstr + 2
@@ -1005,6 +1020,7 @@ compile_line:
             inc         cpass
             stz         cscope
             jsr         c_begin
+            stz         ty_open
             stz         cline
             stz         cline + 1
             jsr         emit_init
@@ -1022,6 +1038,11 @@ compile_line:
 
 ; A line of the program compiled (pass 2): its label or number, then its statements (stmt.inc)
 c_line:
+            lda         ty_open                             ; (A TYPE's lines: passed over)
+            beq         :+
+            FARN        3, ty_skip
+            rts
+:
             jsr         lex_next                            ; A number first: its label
             lda         tk
             cmp         #TK_NUM
@@ -1084,6 +1105,11 @@ num_label:
 
 ; A line in pass 1: SUB and FUNCTION (their names and parameters), TYPE (its fields), DEFSTR (its letters)
 c_scan:
+            lda         ty_open                             ; (A TYPE's fields: the third bank's)
+            beq         :+
+            FARN        3, scan_field
+            rts
+:
             jsr         lex_next
             lda         tk
             cmp         #TK_NUM                             ; (A line number: past it)
