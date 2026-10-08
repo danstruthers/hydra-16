@@ -2782,7 +2782,7 @@ module.exports = {
         const w32 = s => { const o = []; const d = createWin32Input(b => o.push(...b)); for (const c of Buffer.from(s, 'latin1')) d.push(c); d.flush(); return String.fromCharCode(...o); };
         const rec = (vk, uc, cs) => '\x1b[' + vk + ';15;' + uc + ';1;' + cs + ';1_';
         const CTAB = w32(rec(9, 9, 8)), CSTAB = w32(rec(9, 9, 0x18)), L = '\u0100', W = '\x01w' + L;
-        return { input: 'āecho new >/dev/wctl; echo new group >/dev/wctl\r' + 'āecho key prefix ctrl-a >/dev/wctl\r' +
+        return { input: 'āecho b115200 >/dev/serctl\r' + 'āecho new >/dev/wctl; echo new group >/dev/wctl\r' + 'āecho key prefix ctrl-a >/dev/wctl\r' +
           'āsleep 60 >\'#c1/cons\' &\r' + 'āsleep 60 >\'#c2/cons\' &\r' + 'āecho monitor on >\'#c1/wctl\'\r' +
           'āecho monitor on >\'#c2/wctl\'\r' + 'āecho monitor off >\'#c2/wctl\'\r' + 'āecho x >\'#c1/cons\'; echo x >\'#c2/cons\'\r' +
           'āecho key 5 list >/dev/wctl\r' + 'āecho key z bogus >/dev/wctl\r' + 'āecho key prefix ctrl-c >/dev/wctl\r' +
@@ -2795,11 +2795,11 @@ module.exports = {
           'bye\r' + 'āecho done\r' };
       },
       expect: ['5 list >/dev/wctl\necho: write error: invalid argument', 'z bogus >/dev/wctl\necho: write error: invalid argument',
-        'prefix ctrl-c >/dev/wctl\necho: write error: invalid argument', '> 0  0 rc  (group 0)\n  1  1+   (group 0)\n  2  2   (group 1)\n',
+        'prefix ctrl-c >/dev/wctl\necho: write error: invalid argument', '> 0  0 rc  (group 0)', '  1  1+   (group 0)', '  2  2   (group 1)',
         'cat /dev/wctl\n0 0 80 24 *\n1 0 80 24\n2 1 80 24\n', '640 128 395 120  ok', 'echo done\ndone\n%'],
       check(m) {
         const out = m.out.replace(/\r/g, ''), marked = [];
-        for (const part of out.split('The windows: ').slice(1)) { const k = part.match(/\n> ([0-9a-f]) /); marked.push(k ? k[1] : '?'); }
+        for (const part of out.split('A window\'s key, or the arrows').slice(1)) { const k = part.match(/> ([0-9a-f])  \d/); marked.push(k ? k[1] : '?'); }
         return marked.join(' ') === '0 2 1 0 2' ? [] : ['the lists marked ' + marked.join(' ') + ', not 0 2 1 0 2'];
       },
     },
@@ -2891,6 +2891,32 @@ module.exports = {
           '\x1d\x1b[A\x1d\x1b[A' + W + 'head -2 /dev/vid/term | tail -1\r' + W };
       },
       expect: ['2 3 + .\n5 ', 'cat /dev/wctl\n0 0 80 11 *\n1 0 80 11\n', 'tail -1\n0 forth'],
+    },
+    {
+      name: 'popups', what: 'popups (W7b: wctl\'s float X Y C R): window 1 floating at 20, 6 (30 x 8: its consctl\'s size), boxed, shown over window 0 as twelve lines are written there (painted around the box); Ctrl-] 0 and window 0 alone again; Ctrl-] ? (the keys, a popup: the bindings) and q; then the popup over the group\'s two tiles (rows: windows 0 and 2; window 1, floating, no tile), the screen at the end checked: the tiles\' headers, the box, the text in each',
+      init: 't_rc', cycles: 300e6,
+      get machine() {
+        const L = '\u0100', W = L + L + L;
+        return { input: 'āecho b115200 >/dev/serctl\r' + 'āecho new >/dev/wctl\r' + 'āsleep 1000 >\'#c1/cons\' &\r' +
+          'āecho float 20 6 30 8 >\'#c1/wctl\'; echo popup text >\'#c1/cons\'\r' + 'āgrep size \'#c1/consctl\'\r' +
+          'ā{sleep 2; for(i in 1 2 3 4 5 6 7 8 9 10 11 12) echo under the popup, a long line, $i} &\r' +
+          'āecho current 1 >/dev/wctl\r' + W + W + W + '\x1d0' + W + 'echo keys\r' + W + '\x1d?' + W + 'q' + W +
+          'echo new >/dev/wctl\r' + W + 'sleep 1000 >\'#c2/cons\' &\r' + W + 'echo two >\'#c2/cons\'; echo layout rows >/dev/wctl\r' + W +
+          '{sleep 3; echo fin^ish >\'#c1/cons\'} &\r' + W + 'echo current 1 >/dev/wctl\r' + W + W + W };
+      },
+      expect: ['size 30 8', ' w', 'the windows', ' ?', 'these keys', 'finish'],
+      check(m) {
+        const f = [];
+        const t = new VT({ cols: 80, rows: 24 }).write(m.out);
+        const lines = t.lines();
+        if (!/^0 rc/.test(lines[0]) || !/^2/.test(lines[12])) f.push('the tiles\' headers at rows 1 and 13: ' + lines[0] + ' | ' + lines[12]);
+        if (lines[5].slice(19, 21) !== '+-' || lines[5][50] !== '+' || lines[14][19] !== '+' || lines[14][50] !== '+')
+          f.push('the box from row 6, column 20 to row 15, column 51: ' + lines[5] + ' | ' + lines[14]);
+        if (!lines[6].slice(20).startsWith('popup text') || lines[6][19] !== '|') f.push('the popup\'s text in its box: ' + lines[6]);
+        if (!lines[7].slice(20).startsWith('finish')) f.push('the line written into it last: ' + lines[7]);
+        if (!lines.slice(13, 24).some(l => l.startsWith('two'))) f.push('window 2\'s text in its tile, rows 14-24');
+        return f;
+      },
     },
     {
       name: 'pcm', what: 'the Vera X\'s PCM (vid\'s /pcm and /pcmctl), at rc: its files and state; the rate (the VERA\'s nearest) and volume; raw samples from a card into the FIFO, drained; bad commands; /pcm one task\'s (another\'s pcmctl: busy); WAV files played (8 bits mono, made signed; 16 bits stereo past an odd chunk; a float one, not a song); a ZSM\'s PCM instruments (one, then one looped, stopped by the FIFO emptied: from RAM) and its claim of the PCM; one too big for RAM (from the file); the FIFO\'s bytes in order, none lost, its runs dry only at the ends',

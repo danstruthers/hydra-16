@@ -304,7 +304,39 @@ tj_e:       .res        1
 tj_kind:    .res        1                                   ;   the chrome row's (CR_*), reversed (F_REV) or not)
 tj_rev:     .res        1
 tj_fr:      .res        1                                   ; (tj_room's: the send ring's room)
-tj_end:     .res        2                                   ; Each terminal's paint: its tile's rows' end
+tj_end:     .res        2                                   ; Each terminal's paint: its pane's rows' end
+w_fl:       .res        WIN_MAX                             ; Each window's float (W7b, wctl's): 0 none, 1 at w_fx,
+w_fx:       .res        WIN_MAX                             ;   w_fy, 2 centred; w_fc x w_fr its size
+w_fy:       .res        WIN_MAX
+w_fc:       .res        WIN_MAX
+w_fr:       .res        WIN_MAX
+pm:         .res        1                                   ; (panes': a popup's shown, the panes, the background
+pn:         .res        1                                   ;   (0 tiles, 1 a window, 2 none), its window, the group)
+pb:         .res        1
+pu:         .res        1
+un_g:       .res        1
+ps_k:       .res        1                                   ; (pane_set's: the pane; its header's row, rows, columns,
+pg_h:       .res        1                                   ;   footer's row, box)
+pg_y:       .res        1
+pg_x:       .res        1
+pg_c:       .res        1
+pg_r:       .res        1
+pg_f:       .res        1
+pg_box:     .res        1
+cx0:        .res        2                                   ; Each terminal's popup's box (what's under it painted
+cx1:        .res        2                                   ;   around it): its columns, its rows
+cy0:        .res        2
+cy1:        .res        2
+tj_clip:    .res        1                                   ; (tj_put's: <> 0 around the box; the place; a gap first)
+tj_cx:      .res        1
+tj_cy:      .res        1
+tj_gap:     .res        1
+wr_r:       .res        1                                   ; (A row's: the window's, the terminal's)
+wr_y:       .res        1
+bd_bot:     .res        1                                   ; (tj_bord's)
+bd_j:       .res        1
+vh_k:       .res        1                                   ; (vt_help's)
+vh_a:       .res        1
 dr_lo:      .res        WIN_MAX * 2                         ; Each window's rows changed, on each terminal (the serial
 dr_hi:      .res        WIN_MAX * 2                         ;   port's, then the screen's): the first ($FF: none), last
 dr_on:      .res        1                                   ; <> 0: the loaded window's kept (shown in a tile)
@@ -359,7 +391,8 @@ vt_new:
             stz         vw_add,X
             stz         vw_add + 1,X
             ldx         vt_i
-            stz         vw_hs,X                             ; (No history)
+            stz         w_fl,X                              ; (Not floating; no history)
+            stz         vw_hs,X
             stz         vw_hn,X
             stz         vw_hh,X
             txa
@@ -903,9 +936,12 @@ vt_put:
 ; where the window's is, and its bytes to #v/term.  (cons.s has opened #v/term if the screen's on, and leaves the
 ; line /ser's alone)
 vt_pump:
-            ldx         w_in                                ; (The shown group tiled: its tiles')
+            ldx         w_in                                ; (The shown group tiled, or a popup shown: the panes')
+            lda         w_fl,X
+            bne         :+
             jsr         tile_of
-            bcs         :+
+            bcs         :++
+:
             jmp         tile_pump
 :
             lda         ser_rd
@@ -5450,8 +5486,14 @@ geom_tile:
 
 ; tg, tn, tk: window .X's group, its tiles, the window's tile (the group's windows in order; TILE_MAX - 1 at most: those
 ; past share the last); trk its place among them.  OUT: C = 1, its group isn't tiled (tabs, or its only window), or
-; it's zoomed and this its focus (the others keep their tiles, hidden).  Keeps .X
+; it's zoomed and this its focus (the others keep their tiles, hidden), or it floats (W7b: those that do aren't the
+; group's tiles).  Keeps .X
 tile_of:
+            lda         w_fl,X
+            beq         :+
+            sec
+            rts
+:
             lda         w_grp,X
             sta         tg
             tay
@@ -5470,6 +5512,8 @@ tile_of:
 @w:
             lda         w_used,Y
             beq         @nx
+            lda         w_fl,Y
+            bne         @nx
             lda         w_grp,Y
             cmp         tg
             bne         @nx
@@ -5672,6 +5716,9 @@ slot_win:
             ldy         tg
             lda         g_focus,Y
             sta         sw_f
+            tax                                             ; (A popup: the group's 4th, as it's not a tile)
+            lda         w_fl,X
+            bne         @nth
             stz         sw_n
             ldx         #0
 :
@@ -5679,6 +5726,8 @@ slot_win:
             beq         :+
             lda         w_used,X
             beq         @fn
+            lda         w_fl,X
+            bne         @fn
             lda         w_grp,X
             cmp         tg
             bne         @fn
@@ -5699,6 +5748,8 @@ slot_win:
 @w:
             lda         w_used,X
             beq         @nx
+            lda         w_fl,X
+            bne         @nx
             lda         w_grp,X
             cmp         tg
             bne         @nx
@@ -5716,9 +5767,30 @@ slot_win:
             clc
             rts
 
-; Is window .A shown in a tile (the shown group's, tiled)?  OUT: C = 0 yes, tk its tile
+; Is window .A shown in a pane (a tile of the shown group's, the window under a popup, the popup)?  OUT: C = 0 yes,
+; tk its pane
 tile_vis:
-            tax
+            sta         sw_me
+            jsr         panes
+            ldx         sw_me
+            lda         pm
+            beq         @tiles
+            cpx         w_in                                ; (The popup: the last)
+            bne         :+
+            ldx         pn
+            dex
+            stx         tk
+            clc
+            rts
+:
+            lda         pb
+            beq         @tiles
+            cpx         pu                                  ; (The window under it: the first)
+            bne         @no
+            stz         tk
+            clc
+            rts
+@tiles:
             jsr         tile_of
             bcs         @no
             ldy         w_in
@@ -5741,6 +5813,8 @@ tile_vis:
 tile_wide:
             stx         tl_t
             ldx         w_in
+            lda         w_fl,X                              ; (A popup shown: painted, none followed)
+            bne         @no
             jsr         tile_of
             bcs         @yes
             jsr         tile_rect
@@ -5877,6 +5951,15 @@ dr_at:                                                      ; (.Y: its place in 
 vt_tile:
             sta         vt_ta
             sty         vt_ty
+            lda         w_fl,X                              ; (Floating: its float's size)
+            beq         :+
+            jsr         float_at
+            lda         pg_r
+            inc         a
+            ldy         pg_c
+            clc
+            rts
+:
             jsr         tile_of
             bcs         @no
             jsr         tile_rect
@@ -5889,7 +5972,8 @@ vt_tile:
             ldy         vt_ty
             rts
 
-; The terminals, the shown group tiled (vt_pump's): each painted (tile_paint) as tj_start finds it's wanted
+; The terminals, the shown group tiled or a popup shown (vt_pump's): each painted (tile_paint) as tj_start finds it's
+; wanted
 tile_pump:
             lda         ser_rd
             bne         @screen
@@ -5924,7 +6008,8 @@ tile_pump:
 @done:
             rts
 
-; Terminal out_t's paint begun, if it's wanted: all of it (ts 1, or its chrome changed), else its tiles written to
+; Terminal out_t's paint begun, if it's wanted: all of it (ts 1, or its chrome changed), else the panes written to.  The
+; popup's box (a popup shown) found for it, what's under it to be painted around
 tj_start:
             ldx         out_t
             lda         bits,X                              ; (Its chrome changed: all of it)
@@ -5946,10 +6031,9 @@ tj_start:
             stz         tj_clr,X
             bra         @go
 @all:
-            ldx         w_in
-            jsr         tile_of
+            jsr         panes
             ldx         out_t
-            ldy         tn                                  ; (Its tiles, a bit each)
+            ldy         pn                                  ; (Its panes, a bit each)
             lda         #0
 :
             sec
@@ -5967,12 +6051,33 @@ tj_start:
             stz         tj_c,X
             lda         #2
             sta         ts_ser,X
+            jsr         panes                               ; (The popup's box)
+            lda         pm
+            beq         @done
+            lda         pn
+            dec         a
+            jsr         pane_set
+            ldx         out_t
+            lda         pg_x
+            dec         a
+            sta         cx0,X
+            clc
+            lda         pg_x
+            adc         pg_c
+            sta         cx1,X
+            lda         pg_y
+            dec         a
+            sta         cy0,X
+            clc
+            lda         pg_y
+            adc         pg_r
+            sta         cy1,X
 @done:
             rts
 
-; Terminal out_t painted, the shown group tiled: cleared (all of it), its bar, its tiles (tj_m), their borders (all of
-; it), then the shown window's state.  The serial port's as the send ring has room (on at the next request's end),
-; the screen's all at once
+; Terminal out_t painted, the shown group tiled or a popup shown: cleared (all of it), the bar, the panes (tj_m), the
+; borders between tiles (all of it), then the shown window's state.  The serial port's as the send ring has room (on
+; at the next request's end), the screen's all at once
 tile_paint:
             ldx         out_t
             lda         tj_ph,X
@@ -6012,7 +6117,7 @@ tj_clear:                                                   ; (Cleared: what the
             stz         scr_f
             stz         scr_dec
             bra         @next
-@part:                                                      ; (Some tiles: the terminal's rendition not known, its
+@part:                                                      ; (Some panes: the terminal's rendition not known, its
             lda         #16                                 ;   characters ASCII's)
             jsr         tj_rooma
             bcs         @wait
@@ -6036,10 +6141,13 @@ tj_clear:                                                   ; (Cleared: what the
 @wait:
             rts
 
-tj_bar:                                                     ; (The bar: all of it's)
+tj_bar:                                                     ; (The bar: all of it's; under the popup, around it)
             ldx         out_t
             lda         tj_clr,X
             beq         @next
+            jsr         panes
+            lda         pm
+            sta         tj_clip
             lda         w_in
             jsr         vt_load
             jsr         chr_geom
@@ -6068,8 +6176,8 @@ tj_bar:                                                     ; (The bar: all of i
 @wait:
             rts
 
-tj_tiles:                                                   ; (Each tile of tj_m's: its header, its rows)
-@tile:
+tj_panes:                                                   ; (Each pane of tj_m's: its rows, its header and footer,
+@pane:                                                      ;   or its box)
             ldx         out_t
             lda         tj_m,X
             bne         :+
@@ -6079,7 +6187,7 @@ tj_tiles:                                                   ; (Each tile of tj_m
             stz         tj_c,X
             jmp         tile_paint
 :
-            ldy         #0                                  ; (Its lowest: the tile)
+            ldy         #0                                  ; (Its lowest: the pane)
 :
             lsr
             bcs         :+
@@ -6088,22 +6196,22 @@ tj_tiles:                                                   ; (Each tile of tj_m
 :
             tya
             sta         tj_k,X
-            ldx         w_in
-            jsr         tile_of
+            jsr         panes
             ldx         out_t
             lda         tj_k,X
-            jsr         slot_win
+            jsr         pane_set
             bcc         :+
             jmp         @end
 :
-            stx         tj_w
-            txa
+            lda         tj_w
             jsr         vt_load
-            lda         out_t
-            sta         tl_t
-            ldx         tj_w
-            jsr         tile_of
-            jsr         tile_rect
+            stz         tj_clip                             ; (What's under the popup: around it)
+            lda         pm
+            beq         :+
+            lda         pg_box
+            bne         :+
+            inc         tj_clip
+:
             ldx         out_t
             lda         tj_r,X
             bne         @rows
@@ -6115,42 +6223,37 @@ tj_tiles:                                                   ; (Each tile of tj_m
 @head:
             jsr         dr_clear
             ldx         out_t
-            lda         tl_r
+            clc
+            lda         pg_r
+            adc         #2
             sta         tj_end,X
-            lda         tl_y                                ; Its header (the focused one's reversed), rendered as
-            sta         tj_y                                ;   its window's
-            lda         tl_x
-            sta         tj_x
-            lda         tl_c
-            sta         tj_wd
-            lda         #CR_HEAD
-            sta         tj_kind
-            lda         #0
-            ldy         tj_w
-            cpy         w_in
-            bne         :+
-            lda         #F_REV
-:
-            sta         tj_rev
-            lda         w_in
-            pha
-            lda         tj_w
-            sta         w_in
-            jsr         tj_crow
-            pla
-            sta         w_in
+            jsr         tj_hrow                             ; Its header, or its box's top
             bcs         @wait
             ldx         out_t
             inc         tj_r,X
             stz         tj_c,X
 @rows:
-            ldx         out_t                               ; Its rows
+            ldx         out_t                               ; Its rows, then its footer or its box's bottom
             lda         tj_r,X
             cmp         tj_end,X
             bcs         @end
-            cmp         tl_r
-            bcs         @end
+            dec         a
+            cmp         pg_r
+            bcs         @foot
+            lda         pg_box
+            bne         :+
             jsr         tj_wrow
+            bra         :++
+:
+            jsr         tj_brow
+:
+            bcs         @wait
+            ldx         out_t
+            inc         tj_r,X
+            stz         tj_c,X
+            bra         @rows
+@foot:
+            jsr         tj_frow
             bcs         @wait
             ldx         out_t
             inc         tj_r,X
@@ -6165,21 +6268,26 @@ tj_tiles:                                                   ; (Each tile of tj_m
             sta         tj_m,X
             stz         tj_r,X
             stz         tj_c,X
-            jmp         @tile
+            jmp         @pane
 @wait:
             rts
 
 tj_seps:                                                    ; (The borders between tiles side by side: all of it's)
             ldx         out_t
             lda         tj_clr,X
-            bne         @slot
+            beq         @next
+            jsr         panes
+            lda         pb
+            beq         @go
 @next:
             ldx         out_t
             inc         tj_ph,X
             jmp         tile_paint
+@go:
+            lda         pm
+            sta         tj_clip
 @slot:
-            ldx         w_in
-            jsr         tile_of
+            jsr         pane_grp
             ldx         out_t
             lda         tj_k,X
             cmp         tn
@@ -6215,13 +6323,9 @@ tj_seps:                                                    ; (The borders betwe
             ldx         out_t
             adc         tj_r,X
             ldx         tj_x
-            jsr         out_cup_abs
+            jsr         tj_at
             lda         #VLINE
-            sta         cell_c
-            lda         #COL_DEF
-            sta         cell_a
-            stz         cell_f
-            jsr         tj_cell
+            jsr         tj_line
             ldx         out_t
             inc         tj_r,X
             bra         @row
@@ -6234,9 +6338,11 @@ tj_seps:                                                    ; (The borders betwe
             rts
 
 tj_state:                                                   ; (Then the shown window's state: following, as a paint
-            lda         #160                                ;   leaves it; else its cursor in its tile)
+            lda         #160                                ;   leaves it; else its cursor in its tile or its box)
             jsr         tj_rooma
-            bcs         @wait
+            bcc         @go
+            rts
+@go:
             lda         w_in
             jsr         vt_load
             jsr         chr_geom
@@ -6266,17 +6372,32 @@ tj_state:                                                   ; (Then the shown wi
             stz         fw_scr
             bra         @end
 @cursor:
+            jsr         panes                               ; (Its pane: the popup's, or its tile)
+            lda         pm
+            beq         @tile
+            lda         pn
+            dec         a
+            jsr         pane_set
+            lda         w_in
+            jsr         vt_load
+            clc
+            lda         pg_y
+            bra         @at
+@tile:
             ldx         w_in
             lda         out_t
             sta         tl_t
             jsr         tile_of
             jsr         tile_rect
+            lda         tl_x
+            sta         pg_x
             sec
             lda         tl_y
+@at:
             adc         v_y
             pha
             clc
-            lda         tl_x
+            lda         pg_x
             adc         v_x
             tax
             pla
@@ -6291,6 +6412,58 @@ tj_state:                                                   ; (Then the shown wi
 @wait:
             rts
 
+; Its header row (a pane's with one), or a box's top border.  OUT: C = 1, no room yet
+tj_hrow:
+            lda         pg_box
+            beq         :+
+            lda         #0
+            jmp         tj_bord
+:
+            lda         pg_h
+            ldy         #CR_HEAD
+            bra         tj_chr
+; Its footer row (a pane's with one), or a box's bottom border
+tj_frow:
+            lda         pg_box
+            beq         :+
+            lda         #1
+            jmp         tj_bord
+:
+            lda         pg_f
+            ldy         #CR_FOOT
+; Chrome row .Y (CR_HEAD, CR_FOOT) of the pane's window at terminal row .A ($FF: none), rendered as its (the focused
+; one's reversed)
+tj_chr:
+            cmp         #$FF
+            bne         :+
+            clc
+            rts
+:
+            sta         tj_y
+            sty         tj_kind
+            lda         pg_x
+            sta         tj_x
+            lda         pg_c
+            sta         tj_wd
+            lda         #0
+            ldy         tj_w
+            cpy         w_in
+            bne         :+
+            ldy         tj_kind
+            cpy         #CR_HEAD
+            bne         :+
+            lda         #F_REV
+:
+            sta         tj_rev
+            lda         w_in
+            pha
+            lda         tj_w
+            sta         w_in
+            jsr         tj_crow
+            pla
+            sta         w_in
+            rts
+
 ; A chrome row (tj_kind, CR_*) rendered at the width tj_wd, out at tj_y, tj_x from its cell tj_c on (each cell's
 ; rendition xor tj_rev).  OUT: C = 1, no room yet
 tj_crow:
@@ -6298,13 +6471,12 @@ tj_crow:
             ldx         tj_wd
             FAR1        chr_render
             ldx         out_t
-            lda         tj_c,X
-            bne         @cell
-            jsr         tj_room
-            bcs         @out
+            clc
+            lda         tj_x
+            adc         tj_c,X
+            tax
             lda         tj_y
-            ldx         tj_x
-            jsr         out_cup_abs
+            jsr         tj_at
 @cell:
             ldx         out_t
             ldy         tj_c,X
@@ -6321,7 +6493,7 @@ tj_crow:
             lda         cr_f,Y
             eor         tj_rev
             sta         cell_f
-            jsr         tj_cell
+            jsr         tj_put
             ldx         out_t
             inc         tj_c,X
             bra         @cell
@@ -6330,58 +6502,18 @@ tj_crow:
 @out:
             rts
 
-; Tile row tj_r of window tj_w (loaded; tl_*: its tile), from cell tj_c on: all of it, its cells to its last that
-; isn't blank; else them all, and blanks past the window's columns and rows to the tile's.  OUT: C = 1, no room yet
+; Pane row tj_r - 1, its window's (tj_w, loaded; pg_*: the pane), from cell tj_c on: a whole paint's to its last cell
+; that isn't blank; else all of them, and blanks past the window's columns and rows to the pane's (as an EL if it
+; reaches the terminal's right edge).  OUT: C = 1, no room yet
 tj_wrow:
+            jsr         wr_setup
             ldx         out_t
-            lda         tj_c,X
-            bne         :+
-            jsr         tj_room
-            bcc         @cup
-            rts
-@cup:
             clc
-            lda         tl_y
-            ldx         out_t
-            adc         tj_r,X
-            ldx         tl_x
-            jsr         out_cup_abs
-:
-            ldx         out_t                               ; (tj_n: its cells, tj_e: and blanks to there; vq the row)
-            lda         tj_r,X
-            dec         a
-            cmp         v_rows
-            bcs         @none
-            jsr         row_ptr
-            ldx         out_t
-            lda         tj_clr,X
-            beq         @all
-            jsr         row_last
-            cmp         tl_c
-            bcc         :+
-            lda         tl_c
-:
-            sta         tj_n
-            sta         tj_e
-            bra         @cell
-@all:
-            lda         v_cols
-            cmp         tl_c
-            bcc         :+
-            lda         tl_c
-:
-            sta         tj_n
-            lda         tl_c
-            sta         tj_e
-            bra         @cell
-@none:
-            stz         tj_n
-            stz         tj_e
-            ldx         out_t
-            lda         tj_clr,X
-            bne         @cell
-            lda         tl_c
-            sta         tj_e
+            lda         pg_x
+            adc         tj_c,X
+            tax
+            lda         wr_y
+            jsr         tj_at
 @cell:
             ldx         out_t
             lda         tj_c,X
@@ -6392,40 +6524,303 @@ tj_wrow:
             ldx         out_t
             ldy         tj_c,X
             cpy         tj_n
-            bcs         @blank
-            jsr         cell_get
-            bra         @emit
-@blank:
-            clc                                             ; (The tile to the terminal's right edge: the rest an EL)
-            lda         tl_x
-            adc         tl_c
-            ldy         out_t
-            bne         @edge1
-            cmp         ser_cols
-            bra         @edge
-@edge1:
-            cmp         scr_cols
-@edge:
-            bne         @space
-            jsr         tj_eol
+            bcc         @put
+            jsr         tj_eolq                             ; (Blank to its end: an EL, if it can)
+            bcs         @put
             ldx         out_t
             lda         tj_e
             sta         tj_c,X
-            bra         @cell
-@space:
-            lda         #' '
-            sta         cell_c
-            lda         #COL_DEF
-            sta         cell_a
-            stz         cell_f
-@emit:
-            jsr         tj_cell
+            bra         @done
+@put:
+            jsr         wr_cell
+            jsr         tj_put
             ldx         out_t
             inc         tj_c,X
             bra         @cell
 @done:
             clc
 @out:
+            rts
+
+; A box's row tj_r - 1 (the popup's): its border, its window's cells (all of them, blanks past them), its border
+tj_brow:
+            jsr         wr_setup
+            ldx         out_t
+            clc
+            lda         pg_x
+            adc         tj_c,X
+            dec         a
+            tax
+            lda         wr_y
+            jsr         tj_at
+@cell:
+            ldx         out_t
+            lda         tj_c,X
+            sec
+            sbc         #2
+            bcc         :+
+            cmp         pg_c
+            bcs         @done
+:
+            jsr         tj_room
+            bcs         @out
+            ldx         out_t
+            ldy         tj_c,X
+            beq         @side
+            dey
+            cpy         pg_c
+            bcs         @side
+            jsr         wr_cell
+            jsr         tj_put
+            bra         @next
+@side:
+            lda         #VLINE
+            jsr         tj_line
+@next:
+            ldx         out_t
+            inc         tj_c,X
+            bra         @cell
+@done:
+            clc
+@out:
+            rts
+
+; A box's border, its top (.A 0, the window's label in it) or its bottom (1), from cell tj_c on
+tj_bord:
+            sta         bd_bot
+            clc
+            lda         pg_y
+            adc         pg_r
+            ldx         bd_bot
+            bne         :+
+            lda         pg_y
+            dec         a
+:
+            sta         tj_y
+            ldx         out_t
+            clc
+            lda         pg_x
+            adc         tj_c,X
+            dec         a
+            tax
+            lda         tj_y
+            jsr         tj_at
+@cell:
+            ldx         out_t
+            lda         tj_c,X
+            sta         bd_j
+            sec
+            sbc         #2
+            bcc         :+
+            cmp         pg_c
+            bcs         @done
+:
+            jsr         tj_room
+            bcs         @out
+            lda         bd_j
+            beq         @left
+            dec         a
+            cmp         pg_c
+            bcs         @right
+            lda         bd_bot                              ; (A line; on the top, the label from its second)
+            bne         @line
+            lda         tj_w
+            jsr         lbl_at
+            lda         bd_j
+            sec
+            sbc         #2
+            bcc         @line
+            tay                                             ; (Within the label: its end not before it)
+:
+            lda         (vt_a),Y
+            beq         @line
+            dey
+            bpl         :-
+            lda         bd_j
+            sec
+            sbc         #2
+            tay
+            lda         (vt_a),Y
+            sta         cell_c
+            lda         #COL_DEF
+            sta         cell_a
+            stz         cell_f
+            jsr         tj_put
+            bra         @next
+@left:
+            lda         #$0D                                ; (DEC: l, m)
+            ldx         bd_bot
+            beq         @glyph
+            lda         #$0E
+            bra         @glyph
+@right:
+            lda         #$0C                                ; (k, j)
+            ldx         bd_bot
+            beq         @glyph
+            lda         #$0B
+            bra         @glyph
+@line:
+            lda         #$12                                ; (q)
+@glyph:
+            jsr         tj_line
+@next:
+            ldx         out_t
+            inc         tj_c,X
+            bra         @cell
+@done:
+            clc
+@out:
+            rts
+
+; (A row's) wr_y: its terminal row; tj_n: the window's cells to paint (vq: its row), tj_e: all to paint
+wr_setup:
+            ldx         out_t
+            lda         tj_r,X
+            dec         a
+            sta         wr_r
+            clc
+            adc         pg_y
+            sta         wr_y
+            lda         wr_r
+            cmp         v_rows
+            bcs         @none
+            jsr         row_ptr
+            ldx         out_t
+            lda         tj_clr,X
+            beq         @all
+            lda         pg_box
+            bne         @all
+            jsr         row_last
+            cmp         pg_c
+            bcc         :+
+            lda         pg_c
+:
+            sta         tj_n
+            sta         tj_e
+            rts
+@all:
+            lda         v_cols
+            cmp         pg_c
+            bcc         :+
+            lda         pg_c
+:
+            sta         tj_n
+            lda         pg_c
+            sta         tj_e
+            rts
+@none:
+            stz         tj_n
+            stz         tj_e
+            ldx         out_t
+            lda         tj_clr,X
+            beq         :+
+            lda         pg_box
+            beq         @done
+:
+            lda         pg_c
+            sta         tj_e
+@done:
+            rts
+
+; cell_c, cell_a, cell_f: the row's cell .Y (vq), or a blank past the window's (tj_n)
+wr_cell:
+            cpy         tj_n
+            bcs         :+
+            jmp         cell_get
+:
+            lda         #' '
+            sta         cell_c
+            lda         #COL_DEF
+            sta         cell_a
+            stz         cell_f
+            rts
+
+; A line-drawing cell .A (DEC graphics' place, $00-$1F) put
+tj_line:
+            sta         cell_c
+            lda         #COL_DEF
+            sta         cell_a
+            stz         cell_f
+; The cell (cell_c, cell_a, cell_f) at tj_cy, tj_cx, the place then the next column: under the popup's box (tj_clip),
+; not put (a gap: a CUP before the next); else a CUP first after a gap
+tj_put:
+            lda         tj_clip
+            beq         @out
+            ldx         out_t
+            lda         tj_cy
+            cmp         cy0,X
+            bcc         @out
+            cmp         cy1,X
+            beq         :+
+            bcs         @out
+:
+            lda         tj_cx
+            cmp         cx0,X
+            bcc         @out
+            cmp         cx1,X
+            beq         @skip
+            bcs         @out
+@skip:
+            lda         #1
+            sta         tj_gap
+            inc         tj_cx
+            rts
+@out:
+            lda         tj_gap
+            beq         :+
+            stz         tj_gap
+            lda         tj_cy
+            ldx         tj_cx
+            jsr         out_cup_abs
+:
+            jsr         tj_cell
+            inc         tj_cx
+            rts
+
+; A row begun at terminal row .A, column .X (a CUP before its first cell)
+tj_at:
+            sta         tj_cy
+            stx         tj_cx
+            lda         #1
+            sta         tj_gap
+            rts
+
+; The row's blank rest as an EL (in the default colours), if the pane reaches the terminal's right edge and the
+; popup's box isn't on the row.  OUT: C = 0 done; C = 1 not
+tj_eolq:
+            clc
+            lda         pg_x
+            adc         pg_c
+            ldy         out_t
+            bne         :+
+            cmp         ser_cols
+            bra         :++
+:
+            cmp         scr_cols
+:
+            bne         @no
+            lda         tj_clip
+            beq         @el
+            ldx         out_t
+            lda         tj_cy
+            cmp         cy0,X
+            bcc         @el
+            cmp         cy1,X
+            beq         @no
+            bcc         @no
+@el:
+            lda         tj_gap
+            beq         :+
+            stz         tj_gap
+            lda         tj_cy
+            ldx         tj_cx
+            jsr         out_cup_abs
+:
+            jsr         tj_eol
+            clc
+            rts
+@no:
+            sec
             rts
 
 ; EL on terminal out_t, in the default colours (the rendition first, if it isn't)
@@ -6489,7 +6884,7 @@ tj_rooma:
             bne         @yes
             pha
             jsr         tx_free
-            sta         tj_fr                               ; (tx_free: .A the room)
+            sta         tj_fr
             pla
             cmp         tj_fr
             beq         @yes
@@ -6499,6 +6894,377 @@ tj_rooma:
             rts
 @no:
             sec
+            rts
+
+; ****************************************************************************
+; Panes (W7b): what's shown, the shown group tiled or a popup shown
+
+; pm <> 0: the shown window floats (a popup); pn: the panes; the background (pb): 0 its group's tiles, 1 a window
+; (pu: its group's last shown that doesn't float), 2 none; a popup the last pane
+panes:
+            stz         pm
+            ldx         w_in
+            lda         w_fl,X
+            beq         @tiles
+            inc         pm
+            ldy         w_grp,X
+            jsr         under
+            bcs         @alone
+            stx         pu
+            jsr         tile_of
+            bcs         @one
+            stz         pb
+            lda         tn
+            inc         a
+            sta         pn
+            rts
+@one:
+            lda         #1
+            sta         pb
+            lda         #2
+            sta         pn
+            rts
+@alone:
+            lda         #2
+            sta         pb
+            lda         #1
+            sta         pn
+            rts
+@tiles:
+            jsr         tile_of
+            stz         pb
+            lda         tn
+            bcc         :+
+            lda         #0
+:
+            sta         pn
+            rts
+
+; .X = group .Y's window under a popup: its last shown that doesn't float (g_under), else its first that doesn't.
+; OUT: C = 1, none
+under:
+            sty         un_g
+            ldx         g_under,Y
+            cpx         #WIN_MAX
+            bcs         @scan
+            jsr         @fits
+            bcc         @yes
+@scan:
+            ldx         #0
+:
+            jsr         @fits
+            bcc         @yes
+            inx
+            cpx         #WIN_MAX
+            bcc         :-
+            sec
+            rts
+@yes:
+            clc
+            rts
+@fits:                                                      ; (.X there, in the group, not floating: C = 0)
+            lda         w_used,X
+            beq         @not
+            lda         w_grp,X
+            cmp         un_g
+            bne         @not
+            lda         w_fl,X
+            bne         @not
+            clc
+            rts
+@not:
+            sec
+            rts
+
+; tg, tn: the shown group's tiles (tile_of's of its window under the popup, or of the window shown)
+pane_grp:
+            ldx         w_in
+            lda         pm
+            beq         :+
+            ldx         pu
+:
+            jmp         tile_of
+
+; Pane .A on terminal out_t (panes' first): its window (tj_w), its header's row (pg_h, $FF none), its rows' (pg_y, pg_r)
+; and columns' (pg_x, pg_c), its footer's (pg_f), pg_box <> 0 a popup's box.  OUT: C = 1, none
+pane_set:
+            sta         ps_k
+            lda         pm
+            beq         @tile
+            lda         ps_k
+            inc         a
+            cmp         pn
+            bne         :+
+            jmp         @float
+:
+            lda         pb
+            beq         @tile
+            ldx         pu                                  ; (A window under the popup, as it's shown alone: its
+            stx         tj_w                                ;   chrome's rows)
+            lda         w_in
+            pha
+            stx         w_in
+            txa
+            jsr         vt_load
+            jsr         chr_geom
+            pla
+            sta         w_in
+            ldx         out_t
+            lda         tr_head,X
+            sta         pg_h
+            lda         tr_off,X
+            sta         pg_y
+            lda         tr_foot,X
+            sta         pg_f
+            stz         pg_x
+            lda         ser_cols
+            cpx         #0
+            beq         :+
+            lda         scr_cols
+:
+            sta         pg_c
+            lda         v_rows
+            sta         pg_r
+            stz         pg_box
+            clc
+            rts
+@tile:
+            jsr         pane_grp
+            lda         ps_k
+            jsr         slot_win
+            bcs         @done
+            stx         tj_w
+            lda         out_t
+            sta         tl_t
+            jsr         tile_of
+            jsr         tile_rect
+            lda         tl_y
+            sta         pg_h
+            inc         a
+            sta         pg_y
+            lda         tl_x
+            sta         pg_x
+            lda         tl_c
+            sta         pg_c
+            lda         tl_r
+            dec         a
+            sta         pg_r
+            lda         #$FF
+            sta         pg_f
+            stz         pg_box
+            clc
+@done:
+            rts
+@float:
+            ldx         w_in
+            stx         tj_w
+            lda         out_t
+            sta         tl_t
+            jsr         float_at
+            lda         #$FF
+            sta         pg_h
+            sta         pg_f
+            lda         #1
+            sta         pg_box
+            clc
+            rts
+
+; pg_x, pg_y, pg_c, pg_r: window .X's float on terminal tl_t: its size (w_fc x w_fr) no more than the terminal less its
+; box's border, at w_fx, w_fy or (w_fl 2) centred, its box inside the terminal.  Keeps .X
+float_at:
+            ldy         tl_t
+            lda         ser_cols
+            sta         ta_w
+            lda         ser_rows
+            sta         ta_h
+            cpy         #0
+            beq         :+
+            lda         scr_cols
+            sta         ta_w
+            lda         scr_rows
+            sta         ta_h
+:
+            sec                                             ; Its size
+            lda         ta_w
+            sbc         #2
+            cmp         w_fc,X
+            bcc         :+
+            lda         w_fc,X
+:
+            sta         pg_c
+            sec
+            lda         ta_h
+            sbc         #2
+            cmp         w_fr,X
+            bcc         :+
+            lda         w_fr,X
+:
+            sta         pg_r
+            lda         w_fl,X                              ; Its place
+            cmp         #2
+            bne         @at
+            sec
+            lda         ta_w
+            sbc         pg_c
+            lsr
+            sta         pg_x
+            sec
+            lda         ta_h
+            sbc         pg_r
+            lsr
+            sta         pg_y
+            bra         @in
+@at:
+            lda         w_fx,X
+            sta         pg_x
+            lda         w_fy,X
+            sta         pg_y
+@in:
+            lda         pg_x                                ; (Its box inside the terminal)
+            bne         :+
+            inc         pg_x
+:
+            lda         pg_y
+            bne         :+
+            inc         pg_y
+:
+            clc
+            lda         pg_x
+            adc         pg_c
+            cmp         ta_w
+            bcc         :+
+            sec
+            lda         ta_w
+            sbc         pg_c
+            dec         a
+            sta         pg_x
+:
+            clc
+            lda         pg_y
+            adc         pg_r
+            cmp         ta_h
+            bcc         :+
+            sec
+            lda         ta_h
+            sbc         pg_r
+            dec         a
+            sta         pg_y
+:
+            rts
+
+; Window .X (its float, shown: cons.s's Ctrl-] ?) the keys' bindings, a line each: the key after the prefix and what
+; it does; the digits, the prefix itself, Ctrl-Tab's, Ctrl-Shift-Tab's, Shift-PgUp's; how to leave
+vt_help:
+            txa
+            jsr         vt_load
+            jsr         fw_setup
+            ldx         #<s_kh_head
+            ldy         #>s_kh_head
+            jsr         vh_str
+            lda         kb_pfx                              ; (The prefix: ^X)
+            ora         #'@'
+            pha
+            lda         #'^'
+            jsr         vt_byte
+            pla
+            jsr         vt_byte
+            ldx         #<s_kh_then
+            ldy         #>s_kh_then
+            jsr         vh_str
+            stz         vh_k
+@key:
+            ldx         vh_k
+            lda         kb_act,X
+            beq         @next
+            sta         vh_a
+            lda         #' '
+            jsr         vt_byte
+            lda         vh_k                                ; Its key: a character, ^X, Tab, S-Tab (ESC's)
+            cmp         #HT
+            bne         :+
+            ldx         #<s_kh_tab
+            ldy         #>s_kh_tab
+            jsr         vh_str
+            bra         @what
+:
+            cmp         #ESC
+            bne         :+
+            ldx         #<s_kh_stab
+            ldy         #>s_kh_stab
+            jsr         vh_str
+            bra         @what
+:
+            cmp         #' '
+            bcs         :+
+            pha
+            lda         #'^'
+            jsr         vt_byte
+            pla
+            ora         #'@'
+:
+            jsr         vt_byte
+@what:
+            lda         vh_a
+            jsr         vh_desc
+@next:
+            inc         vh_k
+            bpl         @key
+            ldx         #<s_kh_digits
+            ldy         #>s_kh_digits
+            jsr         vh_str
+            ldx         #0                                  ; Ctrl-Tab's, Ctrl-Shift-Tab's, Shift-PgUp's
+@ct:
+            stx         vh_k
+            lda         kb_ct,X
+            beq         :+
+            sta         vh_a
+            ldy         vh_cth,X
+            lda         vh_ctl,X
+            tax
+            jsr         vh_str
+            lda         vh_a
+            jsr         vh_desc
+:
+            ldx         vh_k
+            inx
+            cpx         #3
+            bcc         @ct
+            ldx         #<s_kh_end
+            ldy         #>s_kh_end
+            jmp         vh_str
+
+; Action .A's words, a tab before, a line end after (to the loaded window)
+vh_desc:
+            pha
+            lda         #HT
+            jsr         vt_byte
+            pla
+            asl
+            tax
+            lda         kh_desc + 1,X
+            tay
+            lda         kh_desc,X
+            tax
+            jsr         vh_str
+            lda         #CR
+            jsr         vt_byte
+            lda         #LF
+            jmp         vt_byte
+
+; The string at .X/.Y into the loaded window (vt_byte each)
+vh_str:
+            stx         vk
+            sty         vk + 1
+            ldy         #0
+:
+            lda         (vk),Y
+            beq         :+
+            phy
+            jsr         vt_byte
+            ply
+            iny
+            bra         :-
+:
             rts
 
 ; Terminal .X's chrome rows (the shown window's, loaded; tr_*: chr_geom's), each rendered (cons.s) and written: its
@@ -7328,7 +8094,36 @@ v52_final:  .byte       "ABCDHJKIFGYZ=><"
 v52_vec:    .word       v52_csi, v52_csi, v52_csi, v52_csi, v52_csi, v52_csi, v52_csi, v52_ri, v52_gfx, v52_ascii
             .word       v52_y, v52_id, e_deckpam, e_deckpnm, v52_ansi
 .assert     * - v52_vec = V52_N * 2, error, "v52_final and v52_vec don't match"
-tj_vec:     .word       tj_clear, tj_bar, tj_tiles, tj_seps, tj_state   ; (tile_paint's parts)
+tj_vec:     .word       tj_clear, tj_bar, tj_panes, tj_seps, tj_state   ; (tile_paint's parts)
+kh_desc:    .word       s_kh_none, s_kh_next, s_kh_prev, s_kh_gnext, s_kh_gprev, s_kh_new, s_kh_list, s_kh_hold
+            .word       s_kh_close, s_kh_paste, s_kh_view, s_kh_split, s_kh_vsplit, s_kh_zoom, s_kh_help
+.assert     * - kh_desc = KA_N * 2, error, "kh_desc: KA_N"
+s_kh_none:  .byte       0                                   ; (The keys' popup's words: what each does)
+s_kh_next:  .byte       "next window", 0
+s_kh_prev:  .byte       "previous window", 0
+s_kh_gnext: .byte       "next group", 0
+s_kh_gprev: .byte       "previous group", 0
+s_kh_new:   .byte       "new group, a shell", 0
+s_kh_list:  .byte       "the windows", 0
+s_kh_hold:  .byte       "hold", 0
+s_kh_close: .byte       "close: hang up", 0
+s_kh_paste: .byte       "paste /dev/snarf", 0
+s_kh_view:  .byte       "scrollback", 0
+s_kh_split: .byte       "split, below", 0
+s_kh_vsplit: .byte      "split, beside", 0
+s_kh_zoom:  .byte       "zoom", 0
+s_kh_help:  .byte       "these keys", 0
+s_kh_head:  .byte       ESC, "[?25l", 0
+s_kh_then:  .byte       " then", CR, LF, 0
+s_kh_tab:   .byte       "Tab", 0
+s_kh_stab:  .byte       "S-Tab", 0
+s_kh_digits: .byte      " 0-9", HT, "that window", CR, LF, " arrows", HT, "next, previous", CR, LF, 0
+s_kh_ct:    .byte       " C-Tab", 0
+s_kh_cst:   .byte       " CS-Tab", 0
+s_kh_spg:   .byte       " S-PgUp", 0
+vh_ctl:     .byte       <s_kh_ct, <s_kh_cst, <s_kh_spg
+vh_cth:     .byte       >s_kh_ct, >s_kh_cst, >s_kh_spg
+s_kh_end:   .byte       " q", HT, "leave", 0
 state_vec:  .word       0, st_esc, st_esci, st_csi, st_csii, st_csix, st_osc, st_stre, st_str, st_stre, st_y1, st_y2
 ESC_N       = 10
 esc_final:  .byte       "78DEHMZc=>"

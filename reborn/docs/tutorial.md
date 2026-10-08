@@ -160,7 +160,8 @@ in any window types it there.  Ctrl-] [ (or Shift-PgUp) looks back through a win
 PgUp move, Space marks a line, Enter copies the lines from it to the cursor into `/dev/snarf`, q goes back.
 `echo history 128 >/dev/wctl` keeps 128 more lines in that window.  Ctrl-] s (or v) splits the window: a new
 shell below it (or beside it), both shown at once; Ctrl-] and an arrow moves between them, Ctrl-] z shows one alone
-and back, and `echo layout grid >/dev/wctl` (or `rows`, `columns`, `tabs`) arranges the group's windows.
+and back, and `echo layout grid >/dev/wctl` (or `rows`, `columns`, `tabs`) arranges the group's windows.  Ctrl-] ?
+lists the keys.
 
 **Tasks working together.**  The C SDK's multitasking demos start four or five copies of themselves, each in a task
 of its own, and draw what they do as they do it: memory they share (a shared segment), and semaphores to take turns

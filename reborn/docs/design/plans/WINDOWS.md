@@ -535,6 +535,13 @@ October 2026, on `reborn-text-windows` (reborn's `docs/status.md`, "The text win
 * **A split starts a shell**: Ctrl-] s and v ask `/wnew`'s reader (wstart) for a window in the focused window's group, as Ctrl-] c does for one of its own.
 * **Tests wait by time, not for the prompt**, in tiled layouts: a tile painted again ends with its blanks, not the prompt.
 
+### **As built: W7b**
+
+* **A popup is a floating window shown**: its group's other windows stay where they are (its tiles, or the window last shown that doesn't float), drawn under it; floating windows take no tile.  It has the keys while it's shown, as any shown window has.
+* **While one's up, nothing follows**: every pane is painted from its cells as it changes, the rows that changed, and what's under the popup around its box (each cell put at its place, skipped under the box, a CUP after the gap), so a program under a dialog goes on showing its output (the user's choice for W7: the focused live, the rest painted).
+* **Its box is DEC line drawing**, its label in the top border; `float C R` centres it on each terminal (the screen's and the serial port's may differ), and it's kept inside each, its size no more than the terminal less the box.
+* **The console's own popups**: Ctrl-] w's list (in the shown group now, so it floats over what was shown) and Ctrl-] ?'s keys, the bindings as they are (`key` lines included), both left with q.  The scrollback's view stays a whole window: it's for reading.
+
 ### **Decisions**
 
 The user's answers to the plan's questions, 2026-10-07:
