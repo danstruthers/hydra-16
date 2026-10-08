@@ -792,6 +792,13 @@ and the constants kept between calls make a 12-digit `sin` 220,000 cycles, `exp`
 built-ins of its second table (`pow` was library code, whole powers only).  The suite: 1,530 checks; the `numbers`
 test 5,525 calls; 5,131 random math calls and 6,500 random expressions more, none different.
 
+**HyForth's numbers** (October 2026, NUMBERS.md's step 5).  `lib numbers` (`numbers.fl`, 7K): a number stack in a
+RAM bank of the task's, its numbers in the stored format, worked by the two libraries, with hylang's names (`n+`,
+`n.`, `nsqrt`, `to-fixed`, `nformat` ...).  A word Forth doesn't read as a cell or a double that is a number (`2/3`,
+`1.25`, `#xFF`, `2i`, a cell past 16 bits) goes on it, or is compiled; BASE is its base too, and `set-base` selects
+any of hylang's, in which cells are read and shown as well when it isn't a radix.  The core: 289 bytes of hooks.
+Its test, `fnumbers`: a file of the number words in the Forth 2012 suite's way; the whole suite, 88 tests.
+
 | Step | | Notes |
 |---|---|---|
 | 7.0 The language's specification | Done | `docs/hylang.md`: hylang 1 is danlang (`C:\source\danlang`, its `master`), readied for the port in C# first (lexical scope, tail calls, fexprs, `try`, loops, the missing basics, its number bugs fixed, and a system library a PC has too: files, programs and the shell, the environment, the clock, bits and bytes, the system's errors as codes), with its regression suite (965 checks) run unchanged on both; where the two may differ (8-bit strings, the call depth, `/lib/hylang`, Ctrl-C an error); and what makes it the Hydra's, in four layers: the system library, the Hydra's built-ins (notes, namespaces, tasks, memory and banks, keys), device libraries in hylang over the devices' files (console, GPIO, I2C, SPI, sound, disks, `/proc`, the clock's chip, `/pc`), and a `sys-` function for every call.  Decided: the extension `.hl`; `$name` an environment variable; danlang's GPLv3 license taken off by the user, so hylang is in the system's ROM (the plan's §22, questions 3 and 4) |
@@ -852,9 +859,9 @@ compatibility in the system).  Some of it is there already: `play -x` plays the 
 
 1. Under way (October 2026, `reborn-numbers`): one number system for every language, [NUMBERS.md](design/plans/NUMBERS.md)
    and [BASIC.md](design/plans/BASIC.md), the user's answers in both.  Done: step 1 (danlang's `base` and the stored
-   format, `feature/numbers`), step 2 (the numbers library, `modules/numbers`, 33 entries), step 3 (hylang on it)
-   and step 4 (the math functions: danlang's, the library `math`, hylang's); next, HyForth's `lib numbers` (step 5),
-   C's `num.h` and `calc`, and the new BASIC.
+   format, `feature/numbers`), step 2 (the numbers library, `modules/numbers`, 33 entries), step 3 (hylang on it),
+   step 4 (the math functions: danlang's, the library `math`, hylang's) and step 5 (HyForth's `lib numbers`); next,
+   C's `num.h` and `calc` (step 6), and the new BASIC.
 2. Under way (October 2026, another session): text windows ([WINDOWS.md](design/plans/WINDOWS.md): screens in
    task F's RAM banks, a whole VT100, window groups, headers, footers and a bar; the user has answered its
    questions).  PCM is done (8.5: `/dev/vid/pcm`, `pcmctl`; `play`'s WAV files and a ZSM's PCM).

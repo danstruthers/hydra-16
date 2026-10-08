@@ -728,6 +728,9 @@ interpret:
             bra         @check
 @undef:
             inx
+            lda         #0                                  ; (The numbers library's number, if it is one)
+            jsr         num_call
+            bcc         @check
             jmp         throw_13
 
 ; jsr to w2 (an xt)
@@ -1363,15 +1366,17 @@ s_undef:    .byte       " ?", 0
 s_error:    .byte       "error ", 0
 s_line:     .byte       "line ", 0
 s_colon:    .byte       ": ", 0
-err_code:   .word       -3 & $FFFF, -4 & $FFFF, -8 & $FFFF, -10 & $FFFF, -14 & $FFFF, -16 & $FFFF, -17 & $FFFF
-            .word       -21 & $FFFF, -22 & $FFFF, -24 & $FFFF, -28 & $FFFF, -49 & $FFFF, -50 & $FFFF, -59 & $FFFF
-            .word       -60 & $FFFF, -61 & $FFFF, -258 & $FFFF, -259 & $FFFF, 0
-err_text:   .word       e_3, e_4, e_8, e_10, e_14, e_16, e_17, e_21, e_22, e_24, e_28, e_49, e_50, e_59, e_60, e_61
-            .word       e_258, e_259
+err_code:   .word       -3 & $FFFF, -4 & $FFFF, -8 & $FFFF, -10 & $FFFF, -11 & $FFFF, -14 & $FFFF, -16 & $FFFF
+            .word       -17 & $FFFF, -21 & $FFFF, -22 & $FFFF, -24 & $FFFF, -28 & $FFFF, -44 & $FFFF, -45 & $FFFF
+            .word       -46 & $FFFF, -49 & $FFFF, -50 & $FFFF, -59 & $FFFF, -60 & $FFFF, -61 & $FFFF, -258 & $FFFF
+            .word       -259 & $FFFF, 0
+err_text:   .word       e_3, e_4, e_8, e_10, e_11, e_14, e_16, e_17, e_21, e_22, e_24, e_28, e_44, e_45, e_46, e_49
+            .word       e_50, e_59, e_60, e_61, e_258, e_259
 e_3:        .byte       "stack overflow", 0
 e_4:        .byte       "stack underflow", 0
 e_8:        .byte       "dictionary full", 0
 e_10:       .byte       "division by zero", 0
+e_11:       .byte       "result out of range", 0
 e_14:       .byte       "compile only", 0
 e_16:       .byte       "no name", 0
 e_17:       .byte       "number too long", 0
@@ -1379,6 +1384,9 @@ e_21:       .byte       "unsupported operation", 0
 e_22:       .byte       "control structure mismatch", 0
 e_24:       .byte       "invalid numeric argument", 0
 e_28:       .byte       "interrupt", 0
+e_44:       .byte       "number stack overflow", 0
+e_45:       .byte       "number stack underflow", 0
+e_46:       .byte       "outside the function's domain", 0
 e_49:       .byte       "search order full", 0
 e_50:       .byte       "search order empty", 0
 e_59:       .byte       "allocate failed", 0

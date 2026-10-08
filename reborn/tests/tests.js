@@ -792,6 +792,21 @@ function floadCard() {
   return [imageCard(0, f, 16384)];
 }
 
+// The fnumbers test's card: tester.fr and numberstest.fth (tests/forth), and nums.fs, which REQUIREs string.fl
+// (COMPARE), hydra.fl (CODE-BANKS) and numbers.fl, then INCLUDEs them
+function fnumCard() {
+  fs.mkdirSync(CARD_DIR, { recursive: true });
+  hydrafs.setNow(0x1000);
+  const f = path.join(CARD_DIR, 'fnum0.img');
+  hydrafs.mkfs(f, 8, 'FNUM', undefined, true);
+  const v = new hydrafs.Volume(f);
+  for (const n of ['tester.fr', 'numberstest.fth']) v.put(n, fs.readFileSync(path.join(__dirname, 'forth', n)));
+  v.put('nums.fs', Buffer.from('REQUIRE string.fl\nREQUIRE hydra.fl\nREQUIRE numbers.fl\nS" tester.fr" INCLUDED\n' +
+    'S" numberstest.fth" INCLUDED\n'));
+  v.close();
+  return [imageCard(0, f, 16384)];
+}
+
 // The lshell test's card: /lib/shell, HyForth as the shell (or the shell given: the hywin test's, hylang)
 function shellCard(line = '/bin/forth -l', name = 'shell0') {
   fs.mkdirSync(CARD_DIR, { recursive: true });
@@ -1445,6 +1460,15 @@ module.exports = {
       expect: ['include load.fs\n15 6 5 99 255 65 35 1 1 \n', 'swap - 300 < .\n-1 \n'],
     },
     {
+      name: 'fnumbers', what: 'HyForth\'s numbers (numbers.fl, on the numbers and math libraries): numberstest.fth, each number word checked as the test suite checks (tester.fr\'s T{ ... -> ... }T): literals of every kind (and cells and doubles Forth\'s still), compiled with code banks and without, the number stack, the arithmetic, the tests, the conversions, the bits, text in the base and in others (set-base: cells read and shown by the library), the math functions, digits, the errors, nvariable, nconstant, nvalue; then n., n.base, n.s, nformat and cells in bases that aren\'t a radix, typed',
+      init: 't_rc', cycles: 150e6,
+      get machine() {
+        return { sd: fnumCard(), input: 'ācd /sd/0; forth <nums.fs; echo $status\r' };
+      },
+      expect: ['Typed: 1/3 FF #b11111111 <3> 1 2 3 \n255 is FF and #b11111111, { and } {\n<-+> -+- --+  -0+00+ \n' +
+        '#x255 -#x1 #xFFFF 255 \n0 errors in the number word tests\n\n%'],
+    },
+    {
       name: 'lshell', what: 'the shell /lib/shell names (the ROM\'s: /bin/forth -l, HyForth the login shell): init\'s in window 0, wstart\'s in a window made (Ctrl-] c: $window); send, a line typed in another window (#cN/kbdin), run there, then one longer than its keys\' queue (the write waiting for room)',
       init: 'init', cycles: 300e6,
       // (Window 1 made and shown (\x1d c), its shell sends window 0 a line, then one longer than window 0's keys' queue
@@ -1520,7 +1544,7 @@ module.exports = {
     },
     {
       name: 'rom', what: 'the ROM disk: /rom (#f, spec x) walked on the Hydra, every file read back against its source (romfs/romfs.txt)',
-      init: 't_rom', cycles: 200e6,
+      init: 't_rom', cycles: 250e6,
       check(m, out) {
         const romfs = require('../tools/romfs.js'), { crc16 } = require('../tools/romimg.js');
         const files = romfs.manifest(path.join(__dirname, '..', 'romfs', 'romfs.txt')), seen = new Map(), f = [];

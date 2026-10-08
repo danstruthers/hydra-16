@@ -263,8 +263,10 @@ value:                                                      ; ( x "name" -- )
             HEADER      "to", F_IMMEDIATE
 to:                                                         ; ( x "name" -- ): the VALUE's cell; or ( x1 x2 "name"
             jsr         parse_name                          ;   -- ), a 2VALUE's two (its jsr do2value: the
-            lda         state                               ;   Double-Number library's), as 2! stores them; or,
-            beq         :+                                  ;   compiling, a local (the locals library's: first)
+            lda         state                               ;   Double-Number library's), as 2! stores them; or an
+            beq         :+                                  ;   NVALUE's number (the numbers library's: num_dov, its
+                                                            ;   code num_to); or, compiling, a local (the locals
+                                                            ;   library's: first)
             lda         #3
             jsr         loc_call
             bcs         :+
@@ -286,13 +288,25 @@ to:                                                         ; ( x "name" -- ): t
             ldy         #1
             lda         (w),y
             cmp         #<do2value
-            bne         @one
+            bne         @nval
             iny
             lda         (w),y
             cmp         #>do2value
-            bne         @one
+            bne         @nval
             lda         #<twostore
             ldy         #>twostore
+            bra         :+
+@nval:
+            ldy         #1                                  ; (An NVALUE: the numbers library's code for it)
+            lda         (w),y
+            cmp         num_dov
+            bne         @one
+            iny
+            lda         (w),y
+            cmp         num_dov + 1
+            bne         @one
+            lda         num_to
+            ldy         num_to + 1
             bra         :+
 @one:
             lda         #<store

@@ -856,8 +856,13 @@ sign:
 :
             rts
 
-; ( n -- addr u ): n as text, signed
+; ( n -- addr u ): n as text, signed (in the numbers library's base, if it isn't a radix)
 n_text:
+            lda         #2
+            jsr         num_textc
+            bcs         :+
+            rts
+:
             lda         dhi,x                               ; (Its sign, kept)
             pha
             jsr         abs
@@ -874,11 +879,26 @@ n_text:
 
 ; ( u -- addr u ): u as text
 u_text:
+            lda         #3
+            jsr         num_textc
+            bcs         :+
+            rts
+:
             dex
             jsr         zero_tos
             jsr         lessnum
             jsr         nums
             jmp         numgreater
+
+; The numbers library's text for the top, num_call .A (2-4), if its base isn't a radix (num_custom).  OUT: C = 0
+; done, ( c-addr u ); or C = 1
+num_textc:
+            ldy         num_custom
+            bne         :+
+            sec
+            rts
+:
+            jmp         num_call
 
             HEADER      ".", 0
 dot:
@@ -953,7 +973,9 @@ digit:
             rts
 
 ; The interpreter's number: ( c-addr u -- n 1 | d 2 | 0 ): a sign, a prefix (# decimal, $ hex, % binary), digits in
-; BASE, a . at its end for a double; or 'c', a char
+; BASE, a . at its end for a double; or 'c', a char.  With the numbers library, one past a cell (-32768 to 65535) or
+; a double isn't (the library's, on its number stack: the interpreter's num_call), nor any in a base of its that
+; isn't a radix (num_custom: the library reads them)
 number:
             lda         dlo,x                               ; 'c'
             cmp         #3
@@ -979,6 +1001,13 @@ number:
             jmp         one
 
 @digits:
+            lda         num_custom                          ; (A base that isn't a radix: the numbers library's)
+            beq         :+
+            lda         #1
+            jsr         num_call
+            bcs         :+
+            rts
+:
             lda         base                                ; (BASE, kept: a prefix changes it a moment)
             pha
             lda         base + 1
@@ -989,10 +1018,13 @@ number:
             jsr         num_prefix                          ; (-$10 and $-10 alike)
             lda         dlo,x                               ; Nothing left: not a number
             ora         dhi,x
-            beq         @not
+            bne         @lb200
+            jmp         @not
+@lb200:
             lda         cnt
             pha
             jsr         twotor_call                         ; ud 0 0, then the text
+            stz         num_ovf
             jsr         tonumber
             pla
             sta         cnt
@@ -1013,6 +1045,24 @@ number:
             bne         @not2
             inx
             inx
+            lda         num_vec + 1                         ; (Past 32 bits, with the numbers library: its;
+            beq         @dok                                ;   below 0, -2147483648 at most: num_ovf 1 too)
+            lda         num_ovf
+            bne         @not
+            bit         cnt
+            bpl         @dok
+            lda         dhi,x
+            cmp         #$80
+            bcc         @dok
+            bne         @dbig
+            lda         dlo,x
+            ora         dlo + 1,x
+            ora         dhi + 1,x
+            beq         @dok
+@dbig:
+            inc         num_ovf
+            bra         @not
+@dok:
             bit         cnt
             bpl         :+
             jsr         dnegate
@@ -1023,6 +1073,21 @@ number:
 @single:
             inx
             inx
+            lda         num_vec + 1                         ; (Past a cell, with the numbers library: its; below
+            beq         @cell                               ;   0, -32768 at most)
+            lda         num_ovf
+            ora         dlo,x
+            ora         dhi,x
+            bne         @not
+            bit         cnt
+            bpl         @cell
+            lda         dhi + 1,x
+            cmp         #$80
+            bcc         @cell
+            bne         @not
+            lda         dlo + 1,x
+            bne         @not
+@cell:
             inx                                             ; (ud's high cell: dropped)
             bit         cnt
             bpl         :+

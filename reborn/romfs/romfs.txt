@@ -63,6 +63,7 @@ lib/forth/sound.fl  ../obj/forthlib/sound.fl    ;   the sound words (snd-note ..
 lib/forth/memory.fl ../obj/forthlib/memory.fl   ; The standard's other word sets: Memory-Allocation ...
 lib/forth/locals.fl ../obj/forthlib/locals.fl   ;   Locals
 lib/forth/block.fl  ../obj/forthlib/block.fl    ;   Block
+lib/forth/numbers.fl ../obj/forthlib/numbers.fl ; hylang's numbers: the number stack, n+ n. nsqrt ... (the libraries numbers, math)
 lib/forth/shell.fl  ../obj/forthlib/shell.fl    ; HyForth as a shell (profile.fs loads it)
 lib/forth/gpio.fs   lib/forth/gpio.fs           ; The device libraries, source over the devices' files (hylang's)
 lib/forth/i2c.fs    lib/forth/i2c.fs
