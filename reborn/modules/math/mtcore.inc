@@ -17,6 +17,7 @@ ME              = 29            ;   and its error's bound
 MAX_DIGITS      = 100           ; The precision at most (DIGITS)
 EXP_MOST        = 20000         ; exp's argument, and a power's y log x, at most this far from 0
 
+.ifndef NM_COPY
 .segment "NUMBANK"
 mt_n:       .res        1                                   ; The precision (significant digits)
 mt_need:    .res        2                                   ; (The bits a value needs: the precision's, and 8)
@@ -54,152 +55,35 @@ mt_bt:      .res        1
 mt_cid:     .res        1                                   ; (m_const's constant: 0 pi, 1 log 2, 2 log 10)
 mt_cq:      .res        2                                   ; (The bits asked for, and made at)
 mt_cm:      .res        2
+mt_s6:      .res        2                                   ; (m_round's: the power of 10 R6 holds (m_sig's 10^|s|),
+mt_s6ok:    .res        1                                   ;   if it holds one, and whether R31 is 2^(b - 1))
+mt_b31ok:   .res        1
 
-.code
+.endif
+            NM_CODE
 
-; ---- The registers, by number (R, M ...: the macros' first argument the result's)
 
-.macro RSET dst, v                                          ; R(dst) = v (16 bits, signed)
-            lda         #dst
-            sta         nrc
-            lda         #<(v)
-            ldx         #>(v)
-            jsr         r_set16
-.endmacro
-.macro RSETV dst, var                                       ; R(dst) = var (16 bits, signed)
-            lda         #dst
-            sta         nrc
-            lda         var
-            ldx         var + 1
-            jsr         r_set16
-.endmacro
-.macro RCOPY dst, src                                       ; R(dst) = R(src)
-            lda         #src
-            sta         nra
-            lda         #dst
-            sta         nrc
-            jsr         r_copy
-.endmacro
-.macro RADD rc, ra, rb                                      ; R(rc) = R(ra) + R(rb)
-            lda         #ra
-            sta         nra
-            lda         #rb
-            sta         nrb
-            lda         #rc
-            sta         nrc
-            jsr         r_add
-.endmacro
-.macro RSUB rc, ra, rb                                      ; R(rc) = R(ra) - R(rb)
-            lda         #ra
-            sta         nra
-            lda         #rb
-            sta         nrb
-            lda         #rc
-            sta         nrc
-            jsr         r_sub
-.endmacro
-.macro RMUL rc, ra, rb                                      ; R(rc) = R(ra) * R(rb) (rc another register)
-            lda         #ra
-            sta         nra
-            lda         #rb
-            sta         nrb
-            lda         #rc
-            sta         nrc
-            jsr         r_mul
-.endmacro
-.macro RMULW rc, ra, rb                                     ; R(rc) = R(ra) * R(rb) / 2^w (rc another register)
-            RMUL        rc, ra, rb
-            lda         #rc
-            jsr         m_shrw
-.endmacro
-.macro RDIV rq, rr, ra, rb                                  ; R(rq) = R(ra) / R(rb) (toward 0), R(rr) the remainder
-            lda         #ra
-            sta         nra
-            lda         #rb
-            sta         nrb
-            lda         #rq
-            sta         nrq
-            lda         #rr
-            sta         nrr
-            jsr         r_divmod
-.endmacro
-.macro RSHR r, var                                          ; |R(r)| = |R(r)| / 2^var
-            lda         #r
-            sta         nrc
-            MOVR        n_k, var
-            jsr         r_shr
-.endmacro
-.macro RSHL r, var                                          ; |R(r)| = |R(r)| * 2^var
-            lda         #r
-            sta         nrc
-            MOVR        n_k, var
-            jsr         r_shl
-.endmacro
-.macro RSHRN r, n                                           ; |R(r)| = |R(r)| / 2^n (a constant)
-            lda         #r
-            sta         nrc
-            LDR         n_k, n
-            jsr         r_shr
-.endmacro
-.macro RSHLN r, n                                           ; |R(r)| = |R(r)| * 2^n (a constant)
-            lda         #r
-            sta         nrc
-            LDR         n_k, n
-            jsr         r_shl
-.endmacro
-.macro RNEG r                                               ; R(r) = -R(r)
-            ldx         #r
-            jsr         r_negate
-.endmacro
-.macro RABS r                                               ; R(r) = |R(r)|
-            ldx         #r
-            stz         r_neg,x
-.endmacro
-.macro RCLR r                                               ; R(r) = 0
-            ldx         #r
-            jsr         r_clear
-.endmacro
-.macro RDIV16 r, var                                        ; |R(r)| = |R(r)| / var (16 bits, 1 or more)
-            lda         #r
-            sta         nrc
-            MOVR        mt_d, var
-            jsr         m_div16
-.endmacro
-.macro RUCMP ra, rb                                         ; .A = |R(ra)| against |R(rb)|: $FF less, 0, 1 more
-            lda         #ra
-            sta         nra
-            lda         #rb
-            sta         nrb
-            jsr         r_ucmp
-.endmacro
-.macro ADDV var, v                                          ; var += v (16 bits, a constant)
-            clc
-            lda         var
-            adc         #<(v)
-            sta         var
-            lda         var + 1
-            adc         #>(v)
-            sta         var + 1
-.endmacro
-.macro ADDVV vt, va, vb                                     ; vt = va + vb (16 bits)
-            clc
-            lda         va
-            adc         vb
-            sta         vt
-            lda         va + 1
-            adc         vb + 1
-            sta         vt + 1
-.endmacro
-.macro SUBVV vt, va, vb                                     ; vt = va - vb (16 bits)
+; R(nrc) = R(nra) * R(nrb) / 2^w, its columns below w's whole bytes less 3 not made: their sum and its carries are
+; under cut 256^(cut + 1), under cut / 65536 of the result's ulp (a few thousandths): the truncation's bound
+; (under an ulp) all but unchanged, well inside each core's error's
+m_mulw:
+            lda         mt_w + 1
+            sta         n_t
+            lda         mt_w
+            lsr         n_t
+            ror         a
+            lsr         n_t
+            ror         a
+            lsr         n_t
+            ror         a
             sec
-            lda         va
-            sbc         vb
-            sta         vt
-            lda         va + 1
-            sbc         vb + 1
-            sta         vt + 1
-.endmacro
-
+            sbc         #3
+            bcs         :+
+            lda         #0
+:
+            sta         n_cut
+            jsr         r_mulc
+            lda         nrc
 ; R(.A) = R(.A) / 2^w (its magnitude)
 m_shrw:
             sta         nrc
@@ -226,7 +110,7 @@ m_bitlen:
 :
             sta         mt_bl
             txa
-            jsr         r_page
+            RPAGE
             sta         nd + 1
             stz         nd
             ldy         mt_bl
@@ -599,11 +483,18 @@ m_log10x:
             sta         mt_u + 1
 :
             sty         mt_g
-            stz         mt_e                                ; (mt_e.mt_e+1.mt_v = mt_u * 77, 24 bits)
-            stz         mt_e + 1
+            stz         mt_e                                ; (mt_e.mt_e+1.mt_v = mt_u * 77, 24 bits: 77's 7 bits,
+            stz         mt_e + 1                            ;   the top first, a shift and an add each)
             stz         mt_v
-            ldx         #77
-@add:
+            lda         #77 << 1
+            sta         mt_q8
+            ldx         #7
+@bit:
+            asl         mt_v
+            rol         mt_e
+            rol         mt_e + 1
+            asl         mt_q8
+            bcc         @next
             clc
             lda         mt_v
             adc         mt_u
@@ -611,11 +502,11 @@ m_log10x:
             lda         mt_e
             adc         mt_u + 1
             sta         mt_e
-            bcc         :+
+            bcc         @next
             inc         mt_e + 1
-:
+@next:
             dex
-            bne         @add
+            bne         @bit
             lda         mt_g                                ; (Its high 16 bits the floor; below 0, up if any's left)
             beq         @rts
             lda         mt_v
@@ -662,16 +553,16 @@ m_sig:
             SUBVV       mt_p, mt_p, mt_e
 @try:
             ADDVV       mt_t, mt_k10, mt_p                  ; (s = k10 + p)
-            SUBVV       mt_q, mt_b, mt_one16                ; (2^(b - 1): R31)
+            lda         mt_b31ok                            ; (2^(b - 1): R31, unless it's there)
+            bne         :+
+            SUBVV       mt_q, mt_b, mt_one16
             ldy         #31
             jsr         m_pow2
+            inc         mt_b31ok
+:
             lda         mt_t + 1
             bmi         @down
-            lda         #6                                  ; (s 0 or more: (x 10^s + 2^(b - 1)) / 2^b)
-            sta         nrc
-            lda         mt_t
-            ldx         mt_t + 1
-            jsr         r_pow10
+            jsr         m_p10s                              ; (s 0 or more: (x 10^s + 2^(b - 1)) / 2^b; 10^s R6)
             lda         mt_sx
             sta         nra
             lda         #6
@@ -688,17 +579,7 @@ m_sig:
             jsr         r_copy
             bra         @check
 @down:
-            sec                                             ; (Below 0: ((x + 2^(b - 1) 10^-s) / 2^b) / 10^-s)
-            lda         #0
-            sbc         mt_t
-            pha
-            lda         #0
-            sbc         mt_t + 1
-            tax
-            lda         #6
-            sta         nrc
-            pla
-            jsr         r_pow10
+            jsr         m_p10s                              ; (Below 0: ((x + 2^(b - 1) 10^-s) / 2^b) / 10^-s; 10^-s R6)
             RMUL        7, 31, 6
             lda         mt_sx
             sta         nra
@@ -744,10 +625,44 @@ m_sig:
 @rts:
             rts
 
-; hv = MA / 2^mt_b times 10^mt_k10, within ME, rounded to mt_n digits: C = 0.  C = 1 if what ME allows doesn't
-; round the same.  Uses R0-R7, R30, R31
-m_round:
-            lda         #4                                  ; (10^(n - 1), 10^n)
+; R6 = 10^|s| (s: mt_t), unless it holds it already (mt_s6ok, mt_s6: a rounding's own)
+m_p10s:
+            lda         mt_s6ok
+            beq         @make
+            lda         mt_t
+            cmp         mt_s6
+            bne         @make
+            lda         mt_t + 1
+            cmp         mt_s6 + 1
+            beq         @rts
+@make:
+            lda         mt_t
+            ldx         mt_t + 1
+            bpl         :+
+            sec
+            lda         #0
+            sbc         mt_t
+            pha
+            lda         #0
+            sbc         mt_t + 1
+            tax
+            pla
+:
+            ldy         #6
+            sty         nrc
+            jsr         r_pow10
+            MOVR        mt_s6, mt_t
+            lda         #1
+            sta         mt_s6ok
+@rts:
+            rts
+
+; R4 = 10^(n - 1), R5 = 10^n (n: mt_n): from the state if they're kept for n, else made and kept
+m_p10:
+            lda         mt_n
+            cmp         st_p10n
+            beq         @copy
+            lda         #4
             sta         nrc
             lda         mt_n
             dec         a
@@ -758,6 +673,48 @@ m_round:
             lda         mt_n
             ldx         #0
             jsr         r_pow10
+            ldx         #4                                  ; (Kept: their lengths and bytes)
+            lda         r_len,x
+            sta         st_p10l
+            ldx         #5
+            lda         r_len,x
+            sta         st_p10l + 1
+            ldy         #P10_BYTES - 1
+:
+            lda         regs + 4 * 256,y
+            sta         st_p10,y
+            lda         regs + 5 * 256,y
+            sta         st_p10 + P10_BYTES,y
+            dey
+            bpl         :-
+            lda         mt_n
+            sta         st_p10n
+            rts
+@copy:
+            ldy         #P10_BYTES - 1
+:
+            lda         st_p10,y
+            sta         regs + 4 * 256,y
+            lda         st_p10 + P10_BYTES,y
+            sta         regs + 5 * 256,y
+            dey
+            bpl         :-
+            ldx         #4
+            lda         st_p10l
+            sta         r_len,x
+            stz         r_neg,x
+            ldx         #5
+            lda         st_p10l + 1
+            sta         r_len,x
+            stz         r_neg,x
+            rts
+
+; hv = MA / 2^mt_b times 10^mt_k10, within ME, rounded to mt_n digits: C = 0.  C = 1 if what ME allows doesn't
+; round the same.  Uses R0-R7, R30, R31
+m_round:
+            stz         mt_s6ok                             ; (R6 and R31 not m_sig's yet)
+            stz         mt_b31ok
+            jsr         m_p10                               ; (10^(n - 1), 10^n: R4, R5)
             ldx         #MA
             lda         r_neg,x
             sta         mt_rs                               ; (Its sign)
@@ -926,5 +883,7 @@ m_divax:
             lda         mt_t
             rts
 
-.rodata
+            NM_RODATA
 mt_one16:   .word       1
+mt_32:      .word       32
+            NM_CODE

@@ -7,6 +7,38 @@
 ; global's address in the RAM.  A code address (a16) is a logical bank's 3 bits and 13.
 
 
+; vt = the second value from the top, vu = the top (two_vals', inline)
+.macro TWO_VT
+            sec
+            lda         vsp
+            sbc         #VAL_SIZE
+            sta         vu
+            tax
+            lda         vsp + 1
+            sbc         #0
+            sta         vu + 1
+            sta         vt + 1
+            txa
+            sec
+            sbc         #VAL_SIZE
+            sta         vt
+            bcs         :+
+            dec         vt + 1
+:
+.endmacro
+
+; ip on past n bytes, then the next op (nx3's, inline)
+.macro NEXT_N n
+            clc
+            lda         ip
+            adc         #n
+            sta         ip
+            bcc         :+
+            inc         ip + 1
+:
+            jmp         next
+.endmacro
+
 .bss
 fr_sign:    .res        1                                   ; (FOR's: the step's sign, the variable's slot)
 fr_v:       .res        2
@@ -23,6 +55,20 @@ rf_val:     .res        5                                   ; (RETF's: the resul
 rf_ret:     .res        2
 sw_v:       .res        2 * VAL_SIZE                        ; (SWAP's: the two values)
 sw_dir:     .res        1
+id_d:       .res        4                                   ; (idiv32's: the divisor's magnitude, the dividend's sign,
+id_sa:      .res        1                                   ;   the quotient's, its bits to go)
+id_sq:      .res        1
+id_n:       .res        1
+fx_m:       .res        12                                  ; (The decimals': x's digits, y's, the result's (4 bytes
+fx_q:       .res        4                                   ;   each, signed), a quotient, a temporary, their places,
+fx_t:       .res        4                                   ;   the result's, the op, a count, a sign)
+fx_pa:      .res        1
+fx_pb:      .res        1
+fx_pr:      .res        1
+fx_op:      .res        1
+fx_k:       .res        1
+fx_s:       .res        1
+fx_r        = fx_m + 8
 
 .enum
 OP_END                                                      ; The end (the program's, a line's at the prompt)
@@ -101,6 +147,7 @@ OP_ST                                                       ; s: a statement's r
 OP_SWAP                                                     ; The values at two places (VT_REF, VT_LOC) exchanged
 OP_ONERR                                                    ; a16: ON ERROR GOTO's handler ($FFFF: none)
 OP_RESUME                                                   ; n [a16]: 0 the statement again, 1 the next, 2 a16
+OP_PUSHF                                                    ; t, b4: a VT_FIX (its type, its digits)
 OP_COUNT
 .endenum
 
@@ -187,7 +234,7 @@ op_tab:
             .word       op_eq, op_ne, op_lt, op_gt, op_le, op_ge
             .word       op_seq, op_sne, op_slt, op_sgt, op_sle, op_sge
             .word       op_not, op_and, op_or, op_xor, op_eqv, op_imp
-            .word       op_cat, op_fixlen, op_fn, op_st, op_swap, op_onerr, op_resume
+            .word       op_cat, op_fixlen, op_fn, op_st, op_swap, op_onerr, op_resume, op_pushf
 .assert     * - op_tab = OP_COUNT * 2, error, "op_tab and the ops' enum differ"
 
 ; ---- The end, STOP, the banks
@@ -240,15 +287,38 @@ op_bnk:
 
 ; ip = the a16 after the op
 jump:
-            ldy         #2
+            ldy         #1
+            jsr         ip_a16
+            bit         intr                                ; (Ctrl-C: stopped at the target, CONT's place)
+            bmi         brk_here
+            jmp         next
+
+; ip = the a16 at ip + .Y (its low byte): within the code's bank (as ip is), ip alone; else ip_set's
+ip_a16:
+            iny
             lda         (ip),y
             tax
             dey
             lda         (ip),y
-            jsr         ip_set
-            bit         intr                                ; (Ctrl-C: stopped at the target, CONT's place)
-            bmi         brk_here
-            jmp         next
+            sta         t0
+            txa
+            lsr         a                                   ; (Its bank: the top 3 bits)
+            lsr         a
+            lsr         a
+            lsr         a
+            lsr         a
+            cmp         ipl
+            bne         @far
+            lda         t0
+            sta         ip
+            txa
+            and         #$1F
+            ora         #WIN
+            sta         ip + 1
+            rts
+@far:
+            lda         t0
+            jmp         ip_set
 
 op_jmp:
             bra         jump
@@ -268,9 +338,20 @@ brk_here:
 
 ; A value taken: is it 0?  OUT: Z = 1 yes
 pop_zero:
-            jsr         pop_vt
+            sec                                             ; (pop_vt's, inline)
+            lda         vsp
+            sbc         #VAL_SIZE
+            sta         vsp
+            sta         vt
+            lda         vsp + 1
+            sbc         #0
+            sta         vsp + 1
+            sta         vt + 1
             lda         (vt)
-            bne         @slow                               ; (Not an integer: the numbers')
+            beq         :+
+            cmp         #VT_FIX                             ; (A VT_FIX: its digits; not an integer: the numbers')
+            bcc         @slow
+:
             ldy         #4
             lda         (vt),y
             dey
@@ -286,11 +367,15 @@ pop_zero:
 
 op_jf:
             jsr         pop_zero
-            beq         jump
-            jmp         nx3
+            bne         :+
+            jmp         jump
+:
+            NEXT_N      3
 op_jt:
             jsr         pop_zero
-            bne         jump
+            beq         :+
+            jmp         jump
+:
             jmp         nx3
 
 ; ---- GOSUB, RETURN, ON
@@ -488,6 +573,18 @@ op_pushi32:
             jsr         ip_plus
             jmp         next
 
+op_pushf:
+            ldy         #5
+:
+            lda         (ip),y
+            dey
+            sta         (vsp),y
+            bne         :-
+            jsr         vsp_up
+            lda         #6
+            jsr         ip_plus
+            jmp         next
+
 ; A value of tag .A whose far address is ip's + t0 (its length's two bytes, then its bytes): the code's own
 push_code:
             sta         (vsp)
@@ -586,26 +683,62 @@ slot_abs:
             rts
 
 op_ldv:
-            jsr         slot_vt
-            ldy         #4
-:
+            ldy         #2                                  ; (A global: its place; a frame's slot: slot_x's)
+            lda         (ip),y
+            beq         @frame
+            sta         vt + 1
+            dey
+            lda         (ip),y
+            sta         vt
+@have:
+.repeat 5, I
+            ldy         #4 - I
             lda         (vt),y
             sta         (vsp),y
+.endrep
+            clc
+            lda         vsp
+            adc         #VAL_SIZE
+            sta         vsp
+            bcc         :+
+            inc         vsp + 1
+:
+            NEXT_N      3
+@frame:
             dey
-            bpl         :-
-            jsr         vsp_up
-            jmp         nx3
+            lda         (ip),y
+            jsr         slot_x
+            bra         @have
 
 op_stv:
-            jsr         slot_vt
-            jsr         pop_vu
-            ldy         #4
-:
+            ldy         #2
+            lda         (ip),y
+            beq         @frame
+            sta         vt + 1
+            dey
+            lda         (ip),y
+            sta         vt
+@have:
+            sec                                             ; (vu: the value, taken off)
+            lda         vsp
+            sbc         #VAL_SIZE
+            sta         vsp
+            sta         vu
+            lda         vsp + 1
+            sbc         #0
+            sta         vsp + 1
+            sta         vu + 1
+.repeat 5, I
+            ldy         #4 - I
             lda         (vu),y
             sta         (vt),y
+.endrep
+            NEXT_N      3
+@frame:
             dey
-            bpl         :-
-            jmp         nx3
+            lda         (ip),y
+            jsr         slot_x
+            bra         @have
 
 op_refv:
             jsr         slot_vt
@@ -680,9 +813,29 @@ num_slow:
             FARN        4, num_op
             jmp         nx1
 
-op_add:
-            jsr         two_vals
+; ADD, SUB of two values not both integers: VT_FIX's here (fx_addsub), else the numbers'
+add_fix:
+            lda         #0
+            bra         :+
+sub_fix:
+            lda         #1
+:
+            jsr         fx_addsub
             bcs         num_slow
+; The result (fx_r, fx_pr) a VT_FIX in vt's place, the top dropped
+fx_done:
+            jsr         fx_store
+            lda         vu
+            sta         vsp
+            lda         vu + 1
+            sta         vsp + 1
+            jmp         nx1
+
+op_add:
+            TWO_VT
+            lda         (vt)
+            ora         (vu)
+            bne         add_fix
             clc
             ldy         #1
             lda         (vt),y
@@ -703,11 +856,17 @@ op_add:
             sta         t0 + 3
 int_t0:
             ldy         #4                                  ; (vt = t0, the top dropped)
-:
-            lda         t0 - 1,y
+            lda         t0 + 3
             sta         (vt),y
             dey
-            bne         :-
+            lda         t0 + 2
+            sta         (vt),y
+            dey
+            lda         t0 + 1
+            sta         (vt),y
+            dey
+            lda         t0
+            sta         (vt),y
             lda         vu
             sta         vsp
             lda         vu + 1
@@ -715,8 +874,12 @@ int_t0:
             jmp         nx1
 
 op_sub:
-            jsr         two_vals
-            bcs         num_slow
+            TWO_VT
+            lda         (vt)
+            ora         (vu)
+            beq         :+
+            jmp         sub_fix
+:
             sec
             ldy         #1
             lda         (vt),y
@@ -733,20 +896,28 @@ op_sub:
             iny
             lda         (vt),y
             sbc         (vu),y
-            bvs         num_slow
+            bvc         :+
+            jmp         num_slow
+:
             sta         t0 + 3
             bra         int_t0
 
 ; MUL: two integers each of 16 bits (signed), their product here; else the numbers'
 op_mul:
             jsr         two_vals
-            bcs         num_slow
+            bcs         @fix
             jsr         small2
             bcc         @lb900
             jmp         num_slow
 @lb900:
             FARN        4, mul16
             jmp         nx1
+@fix:
+            jsr         fx_mul
+            bcs         :+
+            jmp         fx_done
+:
+            jmp         num_slow
 
 ; Are vt's and vu's integers both of 16 bits, signed?  C = 0 yes
 small2:
@@ -781,10 +952,209 @@ small1:
             rts
 
 op_div:
-op_idiv:
-op_mod:
 op_pow:
             jmp         num_slow
+
+; \ and MOD of two integers here (32 bits: the quotient toward 0, the remainder the dividend's sign); 0 for a
+; divisor, or -2^31 \ -1 (2^31: past 32 bits), the numbers' way
+op_idiv:
+            jsr         two_vals
+            bcs         @slow
+            jsr         idiv32
+            bcs         @slow
+            jmp         int_t0
+@slow:
+            jmp         num_slow
+op_mod:
+            jsr         two_vals
+            bcs         @slow
+            jsr         idiv32
+            bcs         @slow
+            ldx         #3
+:
+            lda         t4,x
+            sta         t0,x
+            dex
+            bpl         :-
+            jmp         int_t0
+@slow:
+            jmp         num_slow
+
+; t0 = (vt) \ (vu), t4 = (vt) MOD (vu), two integers of 32 bits: C = 0; C = 1 if not here (a divisor of 0, a
+; quotient of 2^31)
+idiv32:
+            ldy         #4                                  ; (The signs: the remainder's the dividend's, the
+            lda         (vt),y                              ;   quotient's the two's)
+            sta         id_sa
+            eor         (vu),y
+            sta         id_sq
+            lda         (vu),y                              ; (The divisor's magnitude: id_d)
+            bmi         @dneg
+            ldy         #1
+            ldx         #0
+:
+            lda         (vu),y
+            sta         id_d,x
+            iny
+            inx
+            cpx         #4
+            bne         :-
+            bra         @dmag
+@dneg:
+            ldy         #1
+            ldx         #0
+            sec
+:
+            lda         #0
+            sbc         (vu),y
+            sta         id_d,x
+            iny
+            inx
+            tya                                             ; (Not cpx: the borrow kept)
+            eor         #5
+            bne         :-
+@dmag:
+            lda         id_d
+            ora         id_d + 1
+            ora         id_d + 2
+            ora         id_d + 3
+            bne         :+
+            sec                                             ; (0: the numbers' way, its error)
+            rts
+:
+            lda         id_sa                               ; (The dividend's magnitude: t0)
+            bmi         @aneg
+            ldy         #4
+:
+            lda         (vt),y
+            sta         t0 - 1,y
+            dey
+            bne         :-
+            bra         @amag
+@aneg:
+            ldy         #1
+            ldx         #0
+            sec
+:
+            lda         #0
+            sbc         (vt),y
+            sta         t0,x
+            iny
+            inx
+            tya                                             ; (Not cpx: the borrow kept)
+            eor         #5
+            bne         :-
+@amag:
+            lda         id_d + 1                            ; (A divisor below 256: a byte at a time, the
+            ora         id_d + 2                            ;   remainder in .A)
+            ora         id_d + 3
+            bne         @wide
+            lda         #0
+            ldx         #3
+@byte:
+            ldy         t0,x                                ; (A 0 with no remainder: a 0)
+            bne         :+
+            cmp         #0
+            beq         @nextb
+:
+            ldy         #8
+@bit:
+            asl         t0,x
+            rol         a
+            bcs         @take
+            cmp         id_d
+            bcc         @keep
+@take:
+            sbc         id_d
+            inc         t0,x
+@keep:
+            dey
+            bne         @bit
+@nextb:
+            dex
+            bpl         @byte
+            sta         t4
+            stz         t4 + 1
+            stz         t4 + 2
+            stz         t4 + 3
+            bra         @signs
+@wide:
+            stz         t4                                  ; (Wider: a bit at a time, 32 of them)
+            stz         t4 + 1
+            stz         t4 + 2
+            stz         t4 + 3
+            lda         #32
+            sta         id_n
+@wbit:
+            asl         t0
+            rol         t0 + 1
+            rol         t0 + 2
+            rol         t0 + 3
+            rol         t4
+            rol         t4 + 1
+            rol         t4 + 2
+            rol         t4 + 3
+            sec
+            lda         t4
+            sbc         id_d
+            pha
+            lda         t4 + 1
+            sbc         id_d + 1
+            pha
+            lda         t4 + 2
+            sbc         id_d + 2
+            tax
+            lda         t4 + 3
+            sbc         id_d + 3
+            bcc         @wno
+            sta         t4 + 3
+            stx         t4 + 2
+            pla
+            sta         t4 + 1
+            pla
+            sta         t4
+            inc         t0
+            bra         @wnext
+@wno:
+            pla
+            pla
+@wnext:
+            dec         id_n
+            bne         @wbit
+@signs:
+            lda         id_sq                               ; (The quotient's sign; 2^31 positive, past 32 bits)
+            bmi         @qneg
+            lda         t0 + 3
+            bpl         @rem
+            sec
+            rts
+@qneg:
+            sec
+            ldx         #0
+            ldy         #4
+:
+            lda         #0
+            sbc         t0,x
+            sta         t0,x
+            inx
+            dey
+            bne         :-
+@rem:
+            lda         id_sa                               ; (The remainder's)
+            bpl         @done
+            sec
+            ldx         #0
+            ldy         #4
+:
+            lda         #0
+            sbc         t4,x
+            sta         t4,x
+            inx
+            dey
+            bne         :-
+@done:
+            clc
+            rts
 
 op_neg:
             jsr         top_vt
@@ -823,8 +1193,10 @@ op_neg:
 
 ; Comparisons: two integers here (their order: t4 = $FF, 0, 1); else the numbers' CMP
 cmp_ints:
-            jsr         two_vals
-            bcs         @slow
+            TWO_VT
+            lda         (vt)
+            ora         (vu)
+            bne         @slow
             sec                                             ; (vt - vu, signed)
             ldy         #1
             lda         (vt),y
@@ -844,7 +1216,8 @@ cmp_ints:
             lda         (vt),y
             sbc         (vu),y
             bvc         :+
-            eor         #$80
+            eor         #$80                                ; (Past 32 bits: its sign the other way, and not 0)
+            ora         #1
 :
             bmi         @below
             ora         t0
@@ -860,7 +1233,10 @@ cmp_ints:
             sta         t4
             rts
 @slow:
+            jsr         fx_cmp                              ; (VT_FIX's here)
+            bcc         :+
             FARN        4, num_cmp2                         ; (t4: the order)
+:
             rts
 
 ; The comparison's truth (C = 1 true) put in the second value's place (-1 or 0), the top dropped
@@ -872,7 +1248,7 @@ cmp_put:
             sta         t0 + 1
             sta         t0 + 2
             sta         t0 + 3
-            jsr         two_vals                            ; (vt, vu again: the slow ways' banks may change them)
+            TWO_VT                                          ; (vt, vu again: the slow ways' banks may change them)
             lda         #VT_INT
             sta         (vt)
             jmp         int_t0
@@ -1079,10 +1455,13 @@ slot_at:
 ; C = 1 if the loop is done: v past l, as the step's sign says (above it for a step of 0 or more, below it for one
 ; below 0)
 for_test:
-            ldy         #5                                  ; (The step's sign)
+            ldy         #5                                  ; (The step's sign: an integer's or a VT_FIX's top byte)
             jsr         slot_at
             lda         (vt)
-            bne         @ssign
+            beq         :+
+            cmp         #VT_FIX
+            bcc         @ssign
+:
             ldy         #4
             lda         (vt),y
             bra         :+
@@ -1101,6 +1480,8 @@ for_test:
             jsr         cmp_vv
             bra         :+
 @slow:
+            jsr         fx_cmp
+            bcc         :+
             FARN        4, num_cmp2
 :
             lda         fr_sign
@@ -1131,45 +1512,162 @@ op_fort:
             jmp         next
 
 op_forn:
-            ldy         #1                                  ; v + s, into v
+            ldy         #2                                  ; v + s, into v (v: vt; s: vu; a global's place, or a
+            lda         (ip),y                              ;   frame's slot by slot_at)
+            beq         @vframe
+            sta         vt + 1
+            dey
+            lda         (ip),y
+            sta         vt
+            bra         @vhave
+@vframe:
+            ldy         #1
             jsr         slot_at
-            MOVW        fr_v, vt
+@vhave:
+            lda         vt
+            sta         fr_v
+            lda         vt + 1
+            sta         fr_v + 1
+            ldy         #6
+            lda         (ip),y
+            beq         @sframe
+            sta         vu + 1
+            dey
+            lda         (ip),y
+            sta         vu
+            bra         @shave
+@sframe:
             ldy         #5
             jsr         slot_at
             MOVW        vu, vt
             MOVW        vt, fr_v
+@shave:
             lda         (vt)
             ora         (vu)
-            bne         @slow
-            clc
+            beq         :+
+            jmp         @slow
+:
+            clc                                             ; (In place: past 32 bits, its low bytes taken back)
             ldy         #1
             lda         (vt),y
             adc         (vu),y
-            sta         t0
+            sta         (vt),y
             iny
             lda         (vt),y
             adc         (vu),y
-            sta         t0 + 1
+            sta         (vt),y
             iny
             lda         (vt),y
             adc         (vu),y
-            sta         t0 + 2
+            sta         (vt),y
             iny
             lda         (vt),y
             adc         (vu),y
-            bvs         @slow
+            bvc         :+
+            jmp         @undo
+:
             sta         (vt),y
+            lda         (vu),y                              ; (Integers: the step's sign, l (vu), the test here)
+            sta         fr_sign
+            lda         (ip),y
+            beq         @lframe
+            sta         vu + 1
             dey
-            lda         t0 + 2
-            sta         (vt),y
+            lda         (ip),y
+            sta         vu
+            bra         @lhave
+@lframe:
+            ldy         #3
+            jsr         slot_at
+            MOVW        vu, vt
+            MOVW        vt, fr_v
+@lhave:
+            lda         (vu)
+            beq         :+
+            jmp         @test
+:
+            sec                                             ; (Up: done if l - v is below 0; down: if v - l is)
+            ldy         #1
+            bit         fr_sign
+            bmi         @down
+            lda         (vu),y
+            sbc         (vt),y
+            iny
+            lda         (vu),y
+            sbc         (vt),y
+            iny
+            lda         (vu),y
+            sbc         (vt),y
+            iny
+            lda         (vu),y
+            sbc         (vt),y
+            bra         @sign
+@down:
+            lda         (vt),y
+            sbc         (vu),y
+            iny
+            lda         (vt),y
+            sbc         (vu),y
+            iny
+            lda         (vt),y
+            sbc         (vu),y
+            iny
+            lda         (vt),y
+            sbc         (vu),y
+@sign:
+            bvc         :+
+            eor         #$80
+:
+            bpl         :+
+            jmp         @done
+:
+            bit         intr                                ; (Back to the body: Ctrl-C looked for; within the
+            bpl         :+                                  ;   code's bank, ip alone)
+            jmp         @brk
+:
+            ldy         #8
+            lda         (ip),y
+            tax
+            lsr         a
+            lsr         a
+            lsr         a
+            lsr         a
+            lsr         a
+            cmp         ipl
+            bne         @far
             dey
-            lda         t0 + 1
+            lda         (ip),y
+            sta         ip
+            txa
+            and         #$1F
+            ora         #WIN
+            sta         ip + 1
+            jmp         next
+@far:
+            ldy         #7
+            jsr         ip_a16
+            jmp         next
+@undo:
+            sec                                             ; (v's low bytes back: v + s - s)
+            ldy         #1
+            lda         (vt),y
+            sbc         (vu),y
             sta         (vt),y
-            dey
-            lda         t0
+            iny
+            lda         (vt),y
+            sbc         (vu),y
             sta         (vt),y
-            bra         @test
+            iny
+            lda         (vt),y
+            sbc         (vu),y
+            sta         (vt),y
 @slow:
+            lda         #0                                  ; (VT_FIX's: here)
+            jsr         fx_addsub
+            bcs         @lib
+            jsr         fx_store
+            bra         @test
+@lib:
             jsr         push_vt                             ; (v and s pushed, added, the sum taken back to v)
             MOVW        vt, vu
             jsr         push_vt
@@ -1185,15 +1683,15 @@ op_forn:
             bpl         :-
 @test:
             jsr         for_test
-            bcs         :+
+            bcs         @done
+@again:
             bit         intr                                ; (Back to the body: Ctrl-C looked for)
             bmi         @brk
             ldy         #7
-            jmp         jump_y
-:
-            lda         #9
-            jsr         ip_plus
+            jsr         ip_a16
             jmp         next
+@done:
+            NEXT_N      9
 @brk:
             jmp         brk_here
 
@@ -1209,12 +1707,7 @@ push_vt:
 
 ; ip = the a16 at ip + .Y (its low byte), then the next op
 jump_y:
-            iny
-            lda         (ip),y
-            tax
-            dey
-            lda         (ip),y
-            jsr         ip_set
+            jsr         ip_a16
             jmp         next
 
 ; t4 = the order of the integers at (vt) and (vu): $FF, 0, 1
@@ -1238,7 +1731,8 @@ cmp_vv:
             lda         (vt),y
             sbc         (vu),y
             bvc         :+
-            eor         #$80
+            eor         #$80                                ; (Past 32 bits: its sign the other way, and not 0)
+            ora         #1
 :
             bmi         @below
             ora         t0
@@ -1252,6 +1746,372 @@ cmp_vv:
             lda         #0
 @have:
             sta         t4
+            rts
+
+; ---- Small fixed decimals here (VT_FIX), as the numbers library works them: + - * and the order of two values, each a
+; VT_FIX or an integer (a fixed decimal of no places); a sum's places the more of the two's, a product's both's (16
+; or more: the library's), the 0s at the result's digits' end dropped while it has places.  Past 31 bits on the way,
+; or a product's factor past 16 bits: C = 1, the library's way (its results the same)
+
+; vt's and vu's values as decimals: fx_m (x's digits, then y's), fx_pa, fx_pb (their places).  C = 1 if either isn't
+; an integer or a VT_FIX
+fx_load:
+            lda         (vt)
+            jsr         fx_places
+            bcs         @rts
+            sta         fx_pa
+            lda         (vu)
+            jsr         fx_places
+            bcs         @rts
+            sta         fx_pb
+            ldy         #4
+:
+            lda         (vt),y
+            sta         fx_m - 1,y
+            lda         (vu),y
+            sta         fx_m + 3,y
+            dey
+            bne         :-
+            clc
+@rts:
+            rts
+
+; .A = the places of a value of type .A (an integer's: 0): C = 0; C = 1 if it's neither
+fx_places:
+            cmp         #VT_FIX
+            bcs         @fix
+            cmp         #VT_INT                             ; (C = 1)
+            bne         @rts
+            clc
+@rts:
+            rts
+@fix:
+            and         #$0F
+            clc
+            rts
+
+; x and y at the same places (the more of the two's: fx_pr), the other's digits times 10s: C = 1 if past 31 bits
+fx_align:
+            lda         fx_pa
+            sec
+            sbc         fx_pb
+            beq         @same
+            bcc         @x
+            sta         fx_k                                ; (y has fewer)
+            lda         fx_pa
+            sta         fx_pr
+            ldx         #4
+            bra         @ten
+@x:
+            eor         #$FF
+            inc         a
+            sta         fx_k
+            lda         fx_pb
+            sta         fx_pr
+            ldx         #0
+@ten:
+            jsr         fx_x10
+            bcs         @rts
+            dec         fx_k
+            bne         @ten
+            rts
+@same:
+            lda         fx_pa
+            sta         fx_pr
+            clc
+@rts:
+            rts
+
+; fx_m,x (4 bytes, signed) times 10 (.X kept): C = 1 if it might pass 31 bits (its top byte past $0B, or below $F4)
+fx_x10:
+            lda         fx_m + 3,x
+            clc
+            adc         #$0C
+            cmp         #$18
+            bcs         @rts
+            asl         fx_m,x                              ; (* 2, kept)
+            rol         fx_m + 1,x
+            rol         fx_m + 2,x
+            rol         fx_m + 3,x
+            lda         fx_m,x
+            sta         fx_t
+            lda         fx_m + 1,x
+            sta         fx_t + 1
+            lda         fx_m + 2,x
+            sta         fx_t + 2
+            lda         fx_m + 3,x
+            sta         fx_t + 3
+            asl         fx_m,x                              ; (* 8, the * 2 added)
+            rol         fx_m + 1,x
+            rol         fx_m + 2,x
+            rol         fx_m + 3,x
+            asl         fx_m,x
+            rol         fx_m + 1,x
+            rol         fx_m + 2,x
+            rol         fx_m + 3,x
+            clc
+            lda         fx_m,x
+            adc         fx_t
+            sta         fx_m,x
+            lda         fx_m + 1,x
+            adc         fx_t + 1
+            sta         fx_m + 1,x
+            lda         fx_m + 2,x
+            adc         fx_t + 2
+            sta         fx_m + 2,x
+            lda         fx_m + 3,x
+            adc         fx_t + 3
+            sta         fx_m + 3,x
+            clc
+@rts:
+            rts
+
+; fx_m,x (4 bytes) = -it
+fx_neg:
+            sec
+            ldy         #4
+:
+            lda         #0
+            sbc         fx_m,x
+            sta         fx_m,x
+            inx
+            dey
+            bne         :-
+            rts
+
+; fx_r = vt's + vu's (.A = 0) or vt's - vu's (.A = 1) as decimals: C = 0; C = 1 not here
+fx_addsub:
+            sta         fx_op
+            jsr         fx_load
+            bcs         @rts
+            jsr         fx_align
+            bcs         @rts
+            lda         fx_op
+            bne         @sub
+            clc
+            lda         fx_m
+            adc         fx_m + 4
+            sta         fx_r
+            lda         fx_m + 1
+            adc         fx_m + 5
+            sta         fx_r + 1
+            lda         fx_m + 2
+            adc         fx_m + 6
+            sta         fx_r + 2
+            lda         fx_m + 3
+            adc         fx_m + 7
+            sta         fx_r + 3
+            bvc         fx_trim
+            sec
+            rts
+@sub:
+            sec
+            lda         fx_m
+            sbc         fx_m + 4
+            sta         fx_r
+            lda         fx_m + 1
+            sbc         fx_m + 5
+            sta         fx_r + 1
+            lda         fx_m + 2
+            sbc         fx_m + 6
+            sta         fx_r + 2
+            lda         fx_m + 3
+            sbc         fx_m + 7
+            sta         fx_r + 3
+            bvc         fx_trim
+            sec
+@rts:
+            rts
+
+; fx_r's 0s at its end dropped while it has places (fx_pr): C = 0
+fx_trim:
+            lda         fx_pr
+            beq         @done
+            lda         fx_r                                ; (Odd: none)
+            lsr         a
+            bcs         @done
+            lda         fx_r + 3                            ; (Its magnitude's, its sign kept)
+            sta         fx_s
+            bpl         @try
+            ldx         #8
+            jsr         fx_neg
+@try:
+            jsr         fx_div10
+            bne         @end
+            ldx         #3
+:
+            lda         fx_q,x
+            sta         fx_r,x
+            dex
+            bpl         :-
+            dec         fx_pr
+            beq         @end
+            lda         fx_r
+            lsr         a
+            bcc         @try
+@end:
+            lda         fx_s
+            bpl         @done
+            ldx         #8
+            jsr         fx_neg
+@done:
+            clc
+            rts
+
+; fx_q = fx_r / 10 (its magnitude): .A the remainder (Z = 1: 0).  A byte at a time from the top: with r the
+; remainder so far and b the byte, 256 r + b = 10 (25 r) + (6 r + b), (6 r + b) / 10 from the tables (6 r + b to 309)
+fx_div10:
+            stz         fx_k
+            ldy         #3
+@byte:
+            ldx         fx_k
+            lda         fx_25,x
+            sta         fx_t
+            lda         fx_6,x
+            clc
+            adc         fx_r,y
+            tax
+            bcs         @hi
+            lda         fx_d10r,x
+            sta         fx_k
+            lda         fx_d10q,x
+            bra         @q
+@hi:
+            lda         fx_d10r + 256,x
+            sta         fx_k
+            lda         fx_d10q + 256,x
+@q:
+            clc
+            adc         fx_t
+            sta         fx_q,y
+            dey
+            bpl         @byte
+            lda         fx_k
+            rts
+fx_25:      .byte       0, 25, 50, 75, 100, 125, 150, 175, 200, 225
+fx_6:       .byte       0, 6, 12, 18, 24, 30, 36, 42, 48, 54
+fx_d10q:
+.repeat 310, I
+            .byte       I / 10
+.endrep
+fx_d10r:
+.repeat 310, I
+            .byte       I .mod 10
+.endrep
+
+; fx_r = vt's * vu's as decimals: C = 0; C = 1 not here
+fx_mul:
+            jsr         fx_load
+            bcs         @rts
+            lda         fx_pa
+            clc
+            adc         fx_pb
+            cmp         #16
+            bcs         @rts
+            sta         fx_pr
+            lda         fx_m + 3                            ; (Its sign: the two's; their magnitudes)
+            eor         fx_m + 7
+            sta         fx_s
+            lda         fx_m + 3
+            bpl         :+
+            ldx         #0
+            jsr         fx_neg
+:
+            lda         fx_m + 7
+            bpl         :+
+            ldx         #4
+            jsr         fx_neg
+:
+            lda         fx_m + 2                            ; (Each 16 bits at most)
+            ora         fx_m + 3
+            ora         fx_m + 6
+            ora         fx_m + 7
+            bne         @no
+            stz         fx_r + 2
+            stz         fx_r + 3
+            ldx         #16
+@bit:
+            lsr         fx_m + 1
+            ror         fx_m
+            bcc         :+
+            clc
+            lda         fx_r + 2
+            adc         fx_m + 4
+            sta         fx_r + 2
+            lda         fx_r + 3
+            adc         fx_m + 5
+            sta         fx_r + 3
+:
+            ror         fx_r + 3
+            ror         fx_r + 2
+            ror         fx_r + 1
+            ror         fx_r
+            dex
+            bne         @bit
+            lda         fx_r + 3                            ; (Past 31 bits: the library's)
+            bmi         @no
+            lda         fx_s
+            bpl         :+
+            ldx         #8
+            jsr         fx_neg
+:
+            jmp         fx_trim
+@no:
+            sec
+@rts:
+            rts
+
+; t4 = the order of vt's and vu's values as decimals ($FF, 0, 1): C = 0; C = 1 not here
+fx_cmp:
+            jsr         fx_load
+            bcs         @rts
+            jsr         fx_align
+            bcs         @rts
+            sec                                             ; (x - y, signed)
+            lda         fx_m
+            sbc         fx_m + 4
+            sta         t0
+            lda         fx_m + 1
+            sbc         fx_m + 5
+            ora         t0
+            sta         t0
+            lda         fx_m + 2
+            sbc         fx_m + 6
+            ora         t0
+            sta         t0
+            lda         fx_m + 3
+            sbc         fx_m + 7
+            bvc         :+
+            eor         #$80                                ; (Past 32 bits: its sign the other way, and not 0)
+            ora         #1
+:
+            bmi         @below
+            ora         t0
+            beq         @equal
+            lda         #1
+            bra         @have
+@below:
+            lda         #$FF
+            bra         @have
+@equal:
+            lda         #0
+@have:
+            sta         t4
+            clc
+@rts:
+            rts
+
+; vt's value = fx_r, a VT_FIX of fx_pr places
+fx_store:
+            lda         fx_pr
+            ora         #VT_FIX
+            sta         (vt)
+            ldy         #4
+:
+            lda         fx_r - 1,y
+            sta         (vt),y
+            dey
+            bne         :-
             rts
 
 ; ---- Arrays: AGET n (n indices and an array's VT_REF: its element), APUT n (and a value: stored), AREF n (its place)
@@ -1342,9 +2202,14 @@ arr_index:
             plx
             phx
             jsr         arr_sub                             ; (Index x's: t0 = it less the lowest, checked)
-            lda         ar_idx                              ; (ar_idx = ar_idx * count + t0)
+            lda         ar_idx                              ; (ar_idx = ar_idx * count + t0: none to make of 0)
             ldx         ar_idx + 1
+            bne         :+
+            cmp         #0
+            beq         :++
+:
             jsr         mul_cnt
+:
             clc
             adc         t0
             sta         ar_idx

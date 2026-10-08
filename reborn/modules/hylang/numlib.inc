@@ -1,8 +1,9 @@
 ; ****************************************************************************
 ; numlib.inc - hylang's numbers on the numbers library (modules/numbers, docs/design/plans/NUMBERS.md's step 3), in
 ; its third bank.  A number is a fixnum (bit 0 set: -16384 to 16383, worked where it's met, as ever), or a cell of
-; PK_NUMBER: its length and its blob, the number's bytes in the stored format, in its one form.  So a value's form is
-; its number's: an integer in a fixnum's range is always a fixnum.
+; PK_SNUM (its length and the number's bytes in the stored format, in its one form: 7 or fewer) or of PK_NUMBER (its
+; length and its blob, the bytes: 8 or more).  So a value's form is its number's: an integer in a fixnum's range is
+; always a fixnum, a number of 7 bytes or fewer always a PK_SNUM.
 ;   The library works the rest: each operand's bytes staged in the scratch (the reader's, free while a number is
 ; worked, as hylang's own registers were: NL_A, NL_B), the result's there too (NL_R), made a value after (nl_value);
 ; a base's string apart, in the RAM (NL_S, NL_T: the scratch's end is sys's, hysys.inc's, as a call is made).
@@ -263,9 +264,8 @@ nl_put:
             lda         nl_v
             ldx         nl_v + 1
             jsr         kind_of
-            cmp         #PK_NUMBER
-            bne         @no
-            jsr         nl_blob                             ; (Its blob's bytes: hp, nl_len of them)
+            jsr         nl_bytes                            ; (Its bytes: hp, nl_len of them)
+            bcs         @no
             ldy         #0
             ldx         nl_len + 1
             beq         @last
@@ -292,6 +292,30 @@ nl_put:
             sta         nd + 1
             lda         nl_len
             ldx         nl_len + 1
+            clc
+            rts
+@no:
+            sec
+            rts
+
+; nl_v's number's bytes, a cell of kind .A (kind_of's: PK_SNUM, its own; PK_NUMBER, its blob's): hp = them (their
+; bank in the window), nl_len = how many.  OUT: C = 1 if it's neither
+nl_bytes:
+            cmp         #PK_SNUM
+            beq         @short
+            cmp         #PK_NUMBER
+            bne         @no
+            jsr         nl_blob
+            clc
+            rts
+@short:
+            lda         nl_v
+            ldx         nl_v + 1
+            jsr         deref
+            lda         (hp)
+            sta         nl_len
+            stz         nl_len + 1
+            inc         hp                                  ; (A cell of 8 bytes: its bytes in its page)
             clc
             rts
 @no:
@@ -375,8 +399,8 @@ nl_fixbytes:
             rts
 
 ; hv = the number whose bytes are at nd (.A, .X of them, in its one form): a fixnum if it's an integer in a fixnum's
-; range, else a cell of PK_NUMBER (its blob, the bytes).  OUT: C = 1 if there's no room.  It may collect (nd's bytes,
-; the scratch's, are kept)
+; range, else a cell of PK_SNUM (7 bytes or fewer: the bytes in it) or of PK_NUMBER (its blob, the bytes).  OUT: C = 1
+; if there's no room.  It may collect (nd's bytes, the scratch's, are kept)
 nl_value:
             sta         nl_len
             stx         nl_len + 1
@@ -425,6 +449,26 @@ nl_value:
             bcs         @cell
             rts
 @cell:
+            lda         nl_len + 1                          ; (7 bytes or fewer: in the cell)
+            bne         @blob
+            lda         nl_len
+            cmp         #8
+            bcs         @blob
+            lda         #PK_SNUM
+            jsr         cell_alloc
+            bcs         @rts
+            lda         hv
+            ldx         hv + 1
+            jsr         deref
+            lda         nl_len
+            sta         (hp)
+            inc         hp
+            MOVW        hq, nd
+            MOVW        hn, nl_len
+            jsr         copy_in
+            clc
+            rts
+@blob:
             lda         #PK_NUMBER
             jsr         cell_alloc
             bcs         @rts
@@ -531,12 +575,11 @@ n_kind:
             lda         nl_v
             ldx         nl_v + 1
             jsr         kind_of
-            cmp         #PK_NUMBER
-            bne         @not
             phy
-            jsr         nl_blob
-            lda         (hp)
+            jsr         nl_bytes
             ply
+            bcs         @not
+            lda         (hp)
             cmp         #NT_FIXED
             bcc         @int
             cmp         #NT_RATIONAL

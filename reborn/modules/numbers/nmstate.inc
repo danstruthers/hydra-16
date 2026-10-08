@@ -2,7 +2,8 @@
 ; nmstate.inc - the libraries' state, in their bank: INIT, which makes a bank theirs; the base's string (GET_BASE;
 ; SET_BASE is nmtext.inc's); the random generator's seed (SEED).
 
-; INIT: the bank made the libraries' (r13): the base decimal, the precision 12 digits, the random generator seeded
+; INIT: the bank made the libraries' (r13): the base decimal, the precision 12 digits, the random generator seeded,
+; the math library's constants cached (pi, log 2, log 10 at NC_BITS bits: obj/gen/numconst.inc)
 nm_init:
             jsr         nm_begin0
             lda         #'d'
@@ -10,14 +11,39 @@ nm_init:
             stz         st_base + 1
             lda         #DIGITS_START
             sta         st_digits
-            ldx         #2 * NCONST - 1                     ; (No constants cached: the math library's)
+            ldy         #0                                  ; (The constants: their bytes, two halves)
 :
-            stz         st_cbits,x
+            lda         nm_consts,y
+            sta         st_const,y
+            lda         nm_consts + NCONST * CONST_BYTES / 2,y
+            sta         st_const + NCONST * CONST_BYTES / 2,y
+            iny
+            cpy         #NCONST * CONST_BYTES / 2
+            bne         :-
+            ldx         #2 * NCONST - 2                     ; (Each at NC_BITS bits)
+:
+            lda         #<NC_BITS
+            sta         st_cbits,x
+            lda         #>NC_BITS
+            sta         st_cbits + 1,x
+            dex
             dex
             bpl         :-
+            stz         st_p10n                             ; (No powers of 10 kept; the base not parsed yet; no
+            stz         st_zpfree                           ;   options)
+            stz         st_fv
+            stz         st_wf
             jsr         rn_clock
             lda         #NUMBERS_MAGIC
             sta         st_magic
+            clc
+            jmp         nm_end
+
+; OPTIONS: .A = the program's options (bit 0: $70-$7F needn't be kept over a call)
+nm_options:
+            jsr         nm_begin
+            and         #1
+            sta         st_zpfree
             clc
             jmp         nm_end
 

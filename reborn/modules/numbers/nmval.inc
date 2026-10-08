@@ -14,6 +14,7 @@ OP_SUB          = 1
 OP_MUL          = 2
 OP_DIV          = 3
 
+.ifndef NM_COPY
 .segment "NUMBANK"
 n_x:        .res        2                                   ; (An operation's numbers: values; their kinds, places)
 n_y:        .res        2
@@ -42,7 +43,8 @@ s_hi:       .res        NSTACK                              ;   whether each is 
 s_own:      .res        NSTACK                              ;   (its room given back as it's used)
 s_n:        .res        1
 
-.code
+.endif
+            NM_CODE
 
 ; ---- Kinds, parts, lengths
 
@@ -547,6 +549,8 @@ n_fix0:
             lda         n_pl                                ; (Ten divides it: a place fewer)
             ora         n_pl + 1
             beq         @made
+            jsr         r0_div10                            ; (Not divisible: no division to find it out)
+            bne         @made
             lda         #0
             sta         nra
             lda         #1
@@ -596,6 +600,50 @@ n_fix0:
             lda         n_pl + 1
             jsr         a_put
             jmp         r_write
+
+; Z = 1 if R0's magnitude is divisible by 10 (0 is): even, and its bytes' sum divisible by 5 (256 is 1 more than a
+; multiple of 5).  Uses n_t
+r0_div10:
+            ldx         r_len                               ; (R0's)
+            beq         @rts
+            lda         regs
+            and         #1
+            bne         @rts                                ; (Odd: Z = 0)
+            stz         n_t
+            stz         n_t + 1
+            clc
+@byte:
+            lda         regs - 1,x
+            adc         n_t
+            sta         n_t
+            bcc         :+
+            inc         n_t + 1
+            clc
+:
+            dex
+            bne         @byte
+            lda         n_t                                 ; (The sum's two bytes added: 256 is 1)
+            adc         n_t + 1
+            adc         #0
+            pha                                             ; (Its two nibbles added: 16 is 1)
+            lsr
+            lsr
+            lsr
+            lsr
+            sta         n_t
+            pla
+            and         #$0F
+            clc
+            adc         n_t
+@five:
+            cmp         #5
+            bcc         @mod
+            sbc         #5
+            bra         @five
+@mod:
+            cmp         #0
+@rts:
+            rts
 
 ; R(.Y) = R(.A) * R(.X)
 n_mulr:
@@ -1221,7 +1269,7 @@ n_spop2:
 :
             rts
 
-.rodata
+            NM_RODATA
 n_zero:     .byte       $00                                 ; (The number 0)
 
 ; The complex operations: their programs (x = a + bi, y = c + di)
@@ -1239,4 +1287,4 @@ CPX_DIV = * - cpx_code                                      ; ((ac + bd)/n + (bc
             .byte       CP_XR, CP_YR, OP_MUL, CP_XI, CP_YI, OP_MUL, OP_ADD, CP_AT, OP_DIV
             .byte       CP_XI, CP_YR, OP_MUL, CP_XR, CP_YI, OP_MUL, OP_SUB, CP_AT, OP_DIV, CP_END
 
-.code
+            NM_CODE

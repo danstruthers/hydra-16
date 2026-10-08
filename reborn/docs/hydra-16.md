@@ -291,7 +291,7 @@ blocks, `SUB` and `FUNCTION` with variables of their own, records (`TYPE`), `INC
 / 3` shows `1/3`, `2 ^ 100` all its digits), in any base; files, `PRINT USING`, `ON ERROR`; sound and `PLAY`,
 graphics on the Vera X, `SYS` (machine code, or any call by name); a prompt that keeps a program (numbered lines,
 `LIST`, `SAVE`, `EDIT` in the screen editor), scripts and pipelines, and a shell mode.  A program is compiled whole
-into a stack machine's code, then run: 9.2 times HyForth's time and 4.0 times hylang's over the twenty benchmarks (the
+into a stack machine's code, then run: 7.4 times HyForth's time and 3.2 times hylang's over the twenty benchmarks (the
 first BASIC, Microsoft's by way of EhyBASIC, which it replaced, was some 44 times HyForth's).  [The
 guide](using/basic.md), [its design](basic.md).
 

@@ -2,11 +2,13 @@
 ; nmrand.inc - RANDOM (hylang's generator: a 16-bit xorshift, its state in the bank, st_rand) and FIB (hylang's, by
 ; doubling).
 
+.ifndef NM_COPY
 .segment "NUMBANK"
 n_fn:       .res        2                                   ; (FIB's n, shifted out a bit at a time)
 n_fb:       .res        1                                   ; (Its bits left)
 
-.code
+.endif
+            NM_CODE
 
 ; RANDOM: r0 = n, an integer: 1 or more, an integer from 0 below it at r2; 0, a fixed decimal from 0 up to 1, of the
 ; precision's places (st_digits), at r2.  NE_INT: n isn't an integer, or it's below 0
@@ -65,7 +67,7 @@ rn_below:
             bne         @byte
             dey
             lda         #0
-            jsr         r_page
+            RPAGE
             sta         na + 1
             stz         na
             lda         (na),y                              ; (R0's top byte: the bits it has)

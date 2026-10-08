@@ -784,11 +784,12 @@ bi_random:
             LDAX        s_randint
             jmp         n_error
 
-; IN: .A, .X = a PK_NUMBER cell.  OUT: .A = its number's tag (its first byte)
+; IN: .A, .X = a PK_SNUM or PK_NUMBER cell.  OUT: .A = its number's tag (its first byte: hp its bytes)
 nl_tag:
             sta         nl_v
             stx         nl_v + 1
-            jsr         nl_blob
+            jsr         kind_of
+            jsr         nl_bytes
             lda         (hp)
             rts
 
@@ -1312,8 +1313,11 @@ n_whole:
             lda         n_v
             ldx         n_v + 1
             jsr         kind_of
+            cmp         #PK_SNUM
+            beq         :+
             cmp         #PK_NUMBER
             bne         @no
+:
             lda         n_v
             ldx         n_v + 1
             jsr         nl_tag

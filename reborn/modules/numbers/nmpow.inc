@@ -2,6 +2,7 @@
 ; nmpow.inc - POW, whole powers exactly (and n_intof, an integer in a register): nmconv.inc's once, a file of its own
 ; so that the math library has it too (its RPOW's whole powers: n_powxy) without the conversions.
 
+.ifndef NM_COPY
 .segment "NUMBANK"
 n_e:        .res        2                                   ; (POW: its exponent's magnitude, its length, sign, bit)
 n_el:       .res        1
@@ -13,7 +14,8 @@ n_b:        .res        2
 n_slot:     .res        2
 n_work:     .res        2
 
-.code
+.endif
+            NM_CODE
 
 ; ---- Integers
 
@@ -253,8 +255,8 @@ n_ebit:
             lda         #0
             rts
 
-.rodata
+            NM_RODATA
 n_one:      .byte       $01                                 ; (The number 1)
 bit_mask:   .byte       $01, $02, $04, $08, $10, $20, $40, $80
 bit_above:  .byte       $FE, $FC, $F8, $F0, $E0, $C0, $80, $00
-.code
+            NM_CODE

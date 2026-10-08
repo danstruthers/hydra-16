@@ -89,8 +89,11 @@ print_val:
             jsr         print_buffer
             jmp         @after
 @lb17b:
-            cmp         #PK_NUMBER                          ; (A number: numlib.inc's)
+            cmp         #PK_SNUM                            ; (A number: numlib.inc's)
+            beq         @number
+            cmp         #PK_NUMBER
             bne         :+
+@number:
             lda         pv
             ldx         pv + 1
             FARN        3, num_print

@@ -533,8 +533,11 @@ h_keyeq:
             bne         @no
             cmp         #PK_STRING
             beq         @string
+            cmp         #PK_SNUM
+            beq         :+
             cmp         #PK_NUMBER
             bne         @no
+:
             FARN        3, n_qcmp                           ; (Two numbers past fixnums: their order 0)
             lda         q_r
             rts

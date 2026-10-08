@@ -38,6 +38,8 @@ VT_LOC          = 6             ; An element (or a field) given by reference: th
 VT_FRM          = 7             ; A procedure's frame: its return (a code address), the caller's fp
 VT_GOS          = 8             ; GOSUB's return: a code address
 VT_ERR          = 9             ; An error handler's mark: the error's sp (the error's state is err_*)
+VT_FIX          = $B0           ; A fixed decimal of 0-15 places whose digits fit in 32 bits (VT_FIX + places, as
+                                ;   the stored format's tag): its digits, signed (little-endian)
 VAL_SIZE        = 5
 NOBANK          = $FF
 

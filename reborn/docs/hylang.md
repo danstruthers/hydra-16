@@ -342,9 +342,10 @@ The plan has it whole; in short:
   `Not yet: 'name'`).
   Strings are made by capturing output (a bank of its own), as danlang's `StringBuilder`.
 * **Numbers** (`numlib.inc`, `numbi.inc`, `numbits.inc`, in the third bank, on the numbers library, the module
-  `numbers`: [NUMBERS.md](design/plans/NUMBERS.md)): a number is a fixnum, or a cell of one kind, `PK_NUMBER`, its
-  bytes in the stored format in a blob (an integer to 255 bytes, a fixed decimal, a rational in lowest terms, a
-  complex number), so an integer in a fixnum's range is always a fixnum.  The library works the rest: each operand
+  `numbers`: [NUMBERS.md](design/plans/NUMBERS.md)): a number is a fixnum, or a cell: `PK_SNUM` (its bytes in the
+  stored format in the cell itself, 7 or fewer: [NUMSPEED.md](design/plans/NUMSPEED.md)'s step 9) or `PK_NUMBER`
+  (its bytes in a blob: an integer to 255 bytes, a fixed decimal, a rational in lowest terms, a complex number), so an
+  integer in a fixnum's range is always a fixnum, a number of 7 bytes or fewer always a `PK_SNUM`.  The library works the rest: each operand
   staged in the reader's scratch, the result made a value after; a number's text through a RAM bank of hylang's own.
   Fixnums keep their quick ways (`+`, `-`, `*`, `/`, the comparisons, the bytecode machine's ops, the native code),
   and while the base is plain decimal hylang reads and prints them itself.  Each entry to the number code sets an
