@@ -99,9 +99,10 @@ PASS kmesg   the kernel's messages: KMESG (the boot's banner first, at offsets, 
 PASS rc      rc: quoting, lists, redirections, pipelines, if, for, while, switch, functions, globs, scripts, Ctrl-C, its start  (3 checks, 87.0M cycles)
 PASS tools   the core tools at rc: files, text, tasks, the disks' (/rom/bin); /proc's args, cwd, ns; the SDK's samples  (3 checks, 155.0M cycles)
 PASS c       the C target (cc65): its samples at rc, the library's test (ctest), conio's raw keys (an Escape alone too; and raw ended with the program)  (66 checks, 85.0M cycles)
+PASS cnum    the numbers in C and assembly: num.h's test (ntest: the number libraries from C, printf's and scanf's %N and %{base}), calc at rc (its operators, functions, bases, digits, errors, its input a line at a time, long results), the assembly sample nsum (numbers.inc, numlib.s)  (65 checks, 90.4M cycles)
 PASS ed      ed, the line editor: a file made, printed, changed and written; its errors; q twice; Ctrl-C at its prompt; w name  (3 checks, 23.6M cycles)
 PASS edit    edit, the screen editor (/rom/bin/edit, its text in RAM banks): a file typed and saved; a line cut and pasted; o replaced with 0, all; a cut undone; a line copied into a second file; a CR LF file kept so; a 20K file (several blocks) cut, pasted and saved  (3 checks, 173.0M cycles)
-PASS as      as, the assembler (the module as): the SDK's hi from /lib/as, with its include files there, the same bytes as the build's (ca65 and ld65), run, its labels file (-l); t_asall (tests/ram: every opcode in each mode, directives, expressions, labels, macros, conditionals, segments, .include, .incbin) the same as the build's; -b with .org; errors with their files and lines; a warning  (3 checks, 76.8M cycles)
+PASS as      as, the assembler (the module as): the SDK's hi from /lib/as, with its include files there, the same bytes as the build's (ca65 and ld65), run, its labels file (-l); nsum (numbers.inc's macros, numlib.s) the same; t_asall (tests/ram: every opcode in each mode, directives, expressions, labels, macros, conditionals, segments, .include, .incbin) the same as the build's; -b with .org; errors with their files and lines; a warning  (3 checks, 102.4M cycles)
 PASS sound   the simulator's sound (sim/lib/audio.js: run.js --sound, --wav), at rc: the YM2151's (opm.js, ymfm's) A4 on channel 4, then the Vera X's PSG's A5 on a sawtooth (channel 8), each heard at its pitch; the stream 48,000 samples a second of the Hydra's time  (3 checks, 23.6M cycles)
 PASS snd     sound (#a): snd, sndctl and bell; the volume, claims (one another program holds), the shadow, tones (C, snd.h); sndctl's channel commands as text (patch, note, level and vol, pan by word and number, bend below 0, off, drum, reg: their registers on the chip; a channel another program has; numbers out of range, or missing); freq (a note by its frequency, its 64ths), glide, lfo, sens, noise  (3 checks, 80.6M cycles)
 PASS mml     scores (play's, modules/play/mml.inc: hysong.js's language compiled as it plays): play -o's ZSM of the old test song (every channel, algorithm and LFO waveform, noise, slides, legato, drums, repeats, the timers) and of scom, each the same as hysong.js's byte for byte; scom played as a score and as hysong.js's ZSM, the chip's writes the same, in the same order, and in time; play -m (a line on a channel, its own instrument), -c (a chord, a note a channel), -x (the X16's MML: T, upper-case notes, S0 legato, K), I (a patch by number); a score's errors, the lines'  (3 checks, 244.0M cycles)
@@ -799,6 +800,13 @@ RAM bank of the task's, its numbers in the stored format, worked by the two libr
 any of hylang's, in which cells are read and shown as well when it isn't a radix.  The core: 289 bytes of hooks.
 Its test, `fnumbers`: a file of the number words in the Forth 2012 suite's way; the whole suite, 88 tests.
 
+**Numbers in C, assembly and at rc** (October 2026, NUMBERS.md's step 6).  `num.h`: each of the two libraries'
+entries a C function (`num_add (dst, room, a, b)` ...) on numbers' bytes in the stored format.  `printf` writes them,
+`%N`, and takes a base in braces for them and for C's integers alike (`%{x}N`, `%{#b}d`), a number of any length
+written whole; `scanf` reads them the same way (cc65's own cores, altered).  For assembly, `numbers.inc`'s `NUMCALL`
+and `MATHCALL`, and `numlib.s`.  `calc` at rc: `calc 2/3 + 0.5` is `7/6`, `calc -b x 255` `FF`.  Its test, `cnum`
+(`ntest`, `calc`, the sample `nsum`); the whole suite, 89 tests.
+
 | Step | | Notes |
 |---|---|---|
 | 7.0 The language's specification | Done | `docs/hylang.md`: hylang 1 is danlang (`C:\source\danlang`, its `master`), readied for the port in C# first (lexical scope, tail calls, fexprs, `try`, loops, the missing basics, its number bugs fixed, and a system library a PC has too: files, programs and the shell, the environment, the clock, bits and bytes, the system's errors as codes), with its regression suite (965 checks) run unchanged on both; where the two may differ (8-bit strings, the call depth, `/lib/hylang`, Ctrl-C an error); and what makes it the Hydra's, in four layers: the system library, the Hydra's built-ins (notes, namespaces, tasks, memory and banks, keys), device libraries in hylang over the devices' files (console, GPIO, I2C, SPI, sound, disks, `/proc`, the clock's chip, `/pc`), and a `sys-` function for every call.  Decided: the extension `.hl`; `$name` an environment variable; danlang's GPLv3 license taken off by the user, so hylang is in the system's ROM (the plan's §22, questions 3 and 4) |
@@ -860,8 +868,8 @@ compatibility in the system).  Some of it is there already: `play -x` plays the 
 1. Under way (October 2026, `reborn-numbers`): one number system for every language, [NUMBERS.md](design/plans/NUMBERS.md)
    and [BASIC.md](design/plans/BASIC.md), the user's answers in both.  Done: step 1 (danlang's `base` and the stored
    format, `feature/numbers`), step 2 (the numbers library, `modules/numbers`, 33 entries), step 3 (hylang on it),
-   step 4 (the math functions: danlang's, the library `math`, hylang's) and step 5 (HyForth's `lib numbers`); next,
-   C's `num.h` and `calc` (step 6), and the new BASIC.
+   step 4 (the math functions: danlang's, the library `math`, hylang's), step 5 (HyForth's `lib numbers`) and
+   step 6 (C's `num.h`, `printf`'s `%N`, assembly's macros, `calc`); next, the new BASIC (step 7).
 2. Under way (October 2026, another session): text windows ([WINDOWS.md](design/plans/WINDOWS.md): screens in
    task F's RAM banks, a whole VT100, window groups, headers, footers and a bar; the user has answered its
    questions).  PCM is done (8.5: `/dev/vid/pcm`, `pcmctl`; `play`'s WAV files and a ZSM's PCM).

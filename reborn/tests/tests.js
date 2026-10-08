@@ -259,7 +259,7 @@ const TOOL_LINES = [
   ["sleep 30 & sleep 30 & kill $apid; slay sleep; wait; ps","task  state",true],
   ["kill 8; kill x; echo $status","kill: 8: no such task\nkill: x: invalid argument\n1"],
   ["sleep 1; echo slept","slept"],
-  ["ls /rom/bin; whatis mkfs","db\nedit\nfsck\ngrep\nlabel\nmkfs\nscom\nsort\n/bin/mkfs"],
+  ["ls /rom/bin; whatis mkfs","calc\ndb\nedit\nfsck\ngrep\nlabel\nmkfs\nscom\nsort\n/bin/mkfs"],
   ["label s; label s Shared Disk; label s","SRAM\nShared Disk"],
   ["fsck s","hydrafs label=Shared Disk\nfree 253 KB of 255 KB\ncheck: lost 0, unmarked 0, twice 0\nsegment 15"],
   ["mkfs s Fresh; ls /sram; label s; echo $status","Fresh\n"],
@@ -365,6 +365,26 @@ const C_LINES = [
     "usage: grep [-chilnsv] [-e] pattern [file ...]",
     "usage",
   ].join('\n')],
+];
+
+// The numbers in C (cnum's lines, as the C test's): num.h's test (ntest: its "ok" lines), calc at rc (rc's own
+// characters quoted: ^ * ( ) #), and the assembly sample nsum (numbers.inc's macros, numlib.s)
+const CNUM_LINES = [
+  ["/rom/sample/c/ntest","ok - num_init: the libraries",true],
+  ["calc 2/3 + 0.5; calc sqrt 2; calc -b x 255","7/6\n1.41421356237\nFF"],
+  ["calc '2^100'; calc -d 30 pi; calc -b '#b' 0.75","1267650600228229401496703205376\n3.14159265358979323846264338328\n#b0.11"],
+  ["calc '(1+2)*3'; calc 'log(e)^2'; calc 'sqrt 2^2'; calc 'gcd(12, 18)'","9\n1\n2\n6"],
+  ["calc -17 % 5; calc 'fixed(1/3, 5)'; calc '#xFF + 1'; calc sqrt -4; calc -b c 5","-2\n0.33333\n256\n2i\n--+"],
+  ["calc 1/0; echo $status; calc foo; calc 2 +; calc -b zz 5", [
+    "calc: division by zero",
+    "division by zero",
+    "calc: foo: unknown",
+    "calc: an operand is missing",
+    "calc: zz: not a base",
+  ].join('\n')],
+  ["echo 1/3+1/6 >/ram/e; echo x >>/ram/e; echo '0.1 + 0.2' >>/ram/e; calc </ram/e; echo $status","1/2\ncalc: x: unknown\n0.3\nx: unknown"],
+  ["calc 'fib 2000' | wc -c; calc -b b '2^1000' | wc -c","    419\n   1002"],
+  ["/rom/sample/nsum 1/3 0.5 2; /rom/sample/nsum 1 x; echo $status","17/6\nsqrt 1.68325082306\nnot a number"],
 ];
 
 // The console on the Vera X's screen (phase 8: cons's second terminal, vid's /term), at rc: /dev/vid; consctl's
@@ -1083,7 +1103,7 @@ module.exports = {
         'ācat /dev/sd/s/ctl\r' + 'āecho $window\r' + 'ā\x1dc' + 'āecho $window\r' + 'āls \'#fr\'\r' + 'āls /ram\r' + 'āls /dev\r' +
         'āecho stop >>\'#d/s/ctl\'; echo still; cat /sram/x\r' }; },
       expect: ['% ls \'#fr\'\n1/\n2/\n%', '% ls /ram\nbin/\nlib/\n%',
-        '% ls /bin\ndb\nedit\nfsck\ngrep\nlabel\nmkfs\nscom\nsort\ninit\nhello\nrc\nwstart\n', 't_child\n% t_child f\n', '% ls \'#fr\'/2\nbin/\nlib/\nmark\n%',
+        '% ls /bin\ncalc\ndb\nedit\nfsck\ngrep\nlabel\nmkfs\nscom\nsort\ninit\nhello\nrc\nwstart\n', 't_child\n% t_child f\n', '% ls \'#fr\'/2\nbin/\nlib/\nmark\n%',
         'prompt=(', '% cat /dev/sd/s/ctl\nsram 512 KB 1024 blocks\nhydrafs label=SRAM\n', '% echo $window\n0\n%',
         '% echo $window\n1\n%', '% ls \'#fr\'\n1/\n2/\n4/\n%', '% ls /ram\nbin/\nlib/\n%', '\ncons\nconsctl\nwctl\nwnew\nser\nserctl\nkbdin\n%',
         '% echo stop >>\'#d/s/ctl\'; echo still; cat /sram/x\nstill\ncat: /sram/x: no such device\n%'],
@@ -1645,6 +1665,13 @@ module.exports = {
       },
     },
     {
+      name: 'cnum', what: 'the numbers in C and assembly: num.h\'s test (ntest: the number libraries from C, printf\'s and scanf\'s %N and %{base}), calc at rc (its operators, functions, bases, digits, errors, its input a line at a time, long results), the assembly sample nsum (numbers.inc, numlib.s)',
+      init: 't_rc', cycles: 150e6,
+      // (Each line typed at its prompt, as the C test's)
+      machine: { input: CNUM_LINES.map(l => 'ā' + l[0] + '\r').join('') },
+      expect: [...CNUM_LINES.map(l => '% ' + l[0] + '\n' + (l[2] ? l[1] : l[1] + '\n%')), '\nntest: 0 failed\n%'],
+    },
+    {
       name: 'ed', what: 'ed, the line editor: a file made, printed, changed and written; its errors; q twice; Ctrl-C at its prompt; w name',
       init: 't_rc', cycles: 80e6,
       // (rc's prompt waited for, then each session typed ahead: the console keeps the keys till ed reads its lines)
@@ -1695,7 +1722,7 @@ module.exports = {
         '% wc /pc/big.txt; head -3 /pc/big.txt\n   2001    4001   20004 /pc/big.txt\nline 1000\nline 1001\nline 0001\n%'],
     },
     {
-      name: 'as', what: 'as, the assembler (the module as): the SDK\'s hi from /lib/as, with its include files there, the same bytes as the build\'s (ca65 and ld65), run, its labels file (-l); t_asall (tests/ram: every opcode in each mode, directives, expressions, labels, macros, conditionals, segments, .include, .incbin) the same as the build\'s; -b with .org; errors with their files and lines; a warning',
+      name: 'as', what: 'as, the assembler (the module as): the SDK\'s hi from /lib/as, with its include files there, the same bytes as the build\'s (ca65 and ld65), run, its labels file (-l); nsum (numbers.inc\'s macros, numlib.s) the same; t_asall (tests/ram: every opcode in each mode, directives, expressions, labels, macros, conditionals, segments, .include, .incbin) the same as the build\'s; -b with .org; errors with their files and lines; a warning',
       init: 't_rc', cycles: 200e6,
       pc: {
         files: () => {
@@ -1709,11 +1736,12 @@ module.exports = {
       },
       machine: {
         input: ['echo b115200 >/dev/serctl', 'as -l /lib/as/hi.s /ram/hi; echo $status', 'cmp /ram/hi /rom/sample/hi; echo $status', '/ram/hi Ann',
-          'grep main /ram/hi.lbl', 'as /pc/t_asall.s /ram/t_asall; cmp /ram/t_asall /pc/t_asall.hyx; echo $status', 'as -b /pc/raw.s /ram/raw; xd /ram/raw',
+          'grep main /ram/hi.lbl', 'as /lib/as/nsum.s /ram/nsum; cmp /ram/nsum /rom/sample/nsum; echo $status', 'as /pc/t_asall.s /ram/t_asall; cmp /ram/t_asall /pc/t_asall.hyx; echo $status', 'as -b /pc/raw.s /ram/raw; xd /ram/raw',
           'as /pc/bad.s /ram/bad; echo $status', 'as /pc/warn.s /ram/warn; echo $status; xd /ram/warn', 'as'].map(l => 'ā' + l + '\r').join(''),
       },
       expect: ['% as -l /lib/as/hi.s /ram/hi; echo $status\n\n%', '% cmp /ram/hi /rom/sample/hi; echo $status\n\n%', '% /ram/hi Ann\nHello, Ann!\nI\'m task ',
-        '% grep main /ram/hi.lbl\nal 000830 .main\n%', '% as /pc/t_asall.s /ram/t_asall; cmp /ram/t_asall /pc/t_asall.hyx; echo $status\n\n%',
+        '% grep main /ram/hi.lbl\nal 000830 .main\n%', '% as /lib/as/nsum.s /ram/nsum; cmp /ram/nsum /rom/sample/nsum; echo $status\n\n%',
+        '% as /pc/t_asall.s /ram/t_asall; cmp /ram/t_asall /pc/t_asall.hyx; echo $status\n\n%',
         '% as -b /pc/raw.s /ram/raw; xd /ram/raw\n0000000  4c 00 c0 00 c0 05 00 ',
         '% as /pc/bad.s /ram/bad; echo $status\nas: /pc/bad.s:2: not an instruction, directive or macro: frob\nas: /pc/bad.s:3: stop\nas: /pc/bad.s:4: a bad expression\n1\n%',
         '% as /pc/warn.s /ram/warn; echo $status; xd /ram/warn\nas: /pc/warn.s:2: warning: careful\n\n0000000  60 ', '% as\nusage: as [-bl] file.s [out]\n%'],

@@ -16,7 +16,9 @@
 //   obj/gen/hylsys.inc    hylang's sys- functions, the calls' records (modules/hylang/hysys.inc), from the hl: lines
 //   obj/gen/hydra.fs      the constants and error codes for HyForth, a library on the ROM disk (/lib/forth)
 //   obj/gen/basicsys.inc  BASIC's SYS "NAME": the calls a program makes, by name (modules/basic/hyio.inc)
-//   obj/sdk/numbers.inc   the number libraries' entries (NUM_ADD ...) and constants, for programs in assembly
+//   obj/sdk/numbers.inc   the number libraries' entries (NUM_ADD ...), constants and call macros, for programs in
+//                         assembly
+//   obj/sdk/c/numdefs.h   their constants, for C (num.h includes it)
 //   obj/gen/numbers_jt.inc, math_jt.inc   each number library's jump table (its module includes it)
 //
 // Usage: node tools/apigen.js [ROOT]       (ROOT: the reborn folder; default: this file's parent)
@@ -207,10 +209,20 @@ function sdkInc(api, errors) {
 
 // The number libraries, for programs in assembly: each entry's address (XCALL's r15), and the constants
 function numbersInc(nums) {
-  let s = header(';', 'numbers.inc - the number libraries\' entries and constants, for programs in assembly');
+  let s = header(';', 'numbers.inc - the number libraries\' entries, constants and call macros, for programs in assembly');
   s += '; A call (spec/numbers.def): XCALL, r15 the entry (its address here), r14 its library\'s bank (MODINFO finds it,' + CRLF;
   s += '; by the library\'s name), r13 the libraries\' bank (a bank of the program\'s, which NUM_INIT fills); r0-r3 the' + CRLF;
   s += '; operands, the result\'s place and its room; .A/.X the result\'s length, C = 0; or C = 1 and .A an error (NE_).' + CRLF;
+  s += '; NUMCALL NUM_ADD (an entry of the numbers library\'s) and MATHCALL MATH_SQRT (the math library\'s) make one, .A,' + CRLF;
+  s += '; .X and .Y the entry\'s, from three bytes of the program\'s: num_bank (r13), num_mod and math_mod (r14), which' + CRLF;
+  s += '; numlib.s\'s num_open sets (or the program\'s own code).' + CRLF;
+  for (const [m, mod] of [['NUMCALL', 'num_mod'], ['MATHCALL', 'math_mod']]) {
+    s += CRLF + '.macro ' + pad(m, 12) + 'entry' + CRLF;
+    for (const l of ['pha', 'lda #<(entry)', 'sta r15', 'lda #>(entry)', 'sta r15 + 1', 'lda ' + mod, 'sta r14', 'lda num_bank', 'sta r13', 'pla',
+      'jsr XCALL'])
+      s += ('            ' + pad(l.split(' ')[0], 12) + l.split(' ').slice(1).join(' ')).trimEnd() + CRLF;
+    s += '.endmacro' + CRLF;
+  }
   for (const l of nums.libs) {
     s += CRLF + '; ---- ' + l.name + ': ' + l.doc + CRLF;
     for (const e of l.entries) {
@@ -248,6 +260,16 @@ function cHeader(api, errors) {
   for (const e of errors) s += def(e.name, cx(e.code), e.text);
   s += CRLF + '/* ---- constants */' + CRLF;
   for (const k of api.consts) s += def(k.name, k.text.startsWith('$') ? '0x' + k.text.slice(1) : k.text, k.doc);
+  s += CRLF + '#endif' + CRLF;
+  return s;
+}
+
+// C: the number libraries' constants (num.h includes them), named as in assembly
+function cNumHeader(nums) {
+  const def = (name, value, doc) => ('#define ' + pad(name, 24) + pad(value, 10) + (doc ? '/* ' + doc.replace(/\*\//g, '* /') + ' */' : '')).trimEnd() + CRLF;
+  let s = '/*' + CRLF + '** numdefs.h - the number libraries\' constants, for C (cc65).  Made by tools/apigen.js from spec/numbers.def:' + CRLF;
+  s += '** don\'t edit.  num.h includes it.' + CRLF + '*/' + CRLF + CRLF + '#ifndef _NUMDEFS_H' + CRLF + '#define _NUMDEFS_H' + CRLF + CRLF;
+  for (const k of nums.consts) s += def(k.name, k.text.startsWith('$') ? '0x' + k.text.slice(1) : k.text, k.doc);
   s += CRLF + '#endif' + CRLF;
   return s;
 }
@@ -492,6 +514,7 @@ function generate(root) {
   write(path.join(gen, 'basicsys.inc'), basicSys(api));
   const nums = readNumbers(path.join(root, 'spec', 'numbers.def'));
   write(path.join(root, 'obj', 'sdk', 'numbers.inc'), numbersInc(nums));
+  write(path.join(root, 'obj', 'sdk', 'c', 'numdefs.h'), cNumHeader(nums));
   for (const l of nums.libs) write(path.join(gen, l.name + '_jt.inc'), numbersJt(l));
   write(path.join(gen, 'api.json'), JSON.stringify({
     calls: api.calls.map(c => ({ name: c.name, addr: c.addr, group: c.group, in: c.in.join(' '), out: c.out.join(' '), errors: c.errors, blocks: c.blocks })),

@@ -101,7 +101,8 @@ The C SDK (`sdk/c`) is cc65 with the Hydra's library under the standard one: std
 `stat`, `opendir`, `getenv`, `system` (`rc -c`), `signal` over notes, conio over the console's raw mode.  A failed
 call returns -1 and sets `errno` (and `_oserror` the system's own code).  Any call is `hy_call (HY_NAME, &regs)`;
 `hydra.h` wraps the Hydra's own: `hy_spawn`, `hy_wait`, `hy_note`, `hy_bind`, `hy_banks_alloc`, `hy_sem_*`,
-`hy_fd2path` ...  [../../sdk/c/README.md](../../sdk/c/README.md) is its guide.
+`hy_fd2path` ...  `num.h` calls the number libraries (modules of the paged ROM, by `XCALL`): `num_add`, `num_sqrt`
+..., and `printf`'s `%N`.  [../../sdk/c/README.md](../../sdk/c/README.md) is its guide.
 
 ## From HyForth, hylang and BASIC
 

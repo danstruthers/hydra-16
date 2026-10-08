@@ -2,7 +2,7 @@
 
 The programs in `/bin`.  Most are modules in the paged ROM, which run in place (`/dev/mod/NAME`, bound into `/bin`
 by `#m/bin`); a few are files on the ROM disk, read into RAM to run (`/rom/bin`: `mkfs`, `fsck`, `label`, `grep`,
-`sort`, `db`, `edit`, `scom`).  `/bin` is a union, so a program of your own in `/ram/bin`, `/sram/bin` or a card's `/bin` comes
+`sort`, `db`, `edit`, `calc`, `scom`).  `/bin` is a union, so a program of your own in `/ram/bin`, `/sram/bin` or a card's `/bin` comes
 before the ROM's of the same name.
 
 They behave as Plan 9's do:
@@ -275,6 +275,7 @@ from RAM module 1's banks; `>>`, as a stopped disk's directory isn't listed), `i
 | `play [-lx] -m ch mml ...` | A line of MML (a score's channel's: below) on channel ch, the channel's own instrument if the line names none: `play -m 0 t180 o4 l8 c d e f g` |
 | `play [-lx] -c ch notes ...` | A chord: each note on the next channel from ch, the commands before each with it (`play -c 0 o4 l2 I0 c e g`); `-x`, either in the Commander X16's MML (`play -x -m 0 T120 O4 L8 CDEFG`) |
 | `xmodem -r file`, `xmodem -s [-k] file` | A file received or sent with XMODEM over the serial line, with any terminal program on the PC: `-r` receives, `-s` sends (`-k`: 1K blocks) |
+| `calc [-b base] [-d digits] [expression ...]` | An expression worked out exactly, with the Hydra's numbers (the number libraries', hylang's), its value in decimal or in the base `-b` names (hylang's base strings: `x`, `#x`, `b`, `c`, `16r` ...): `calc 2/3 + 0.5` is `7/6`, `calc sqrt 2` `1.41421356237`, `calc -b x 255` `FF`.  Numbers are read in decimal (`0.5`, `2i`), or in a base by their own prefix (`#xFF`); `+ - * /` (exactly), `%` (an integer's remainder), `^`, parentheses; `sqrt exp log sin cos tan atan` (`-d` digits: 12), `abs floor round truncate fib numerator denominator re im rational random`, `gcd(a, b)`, `pow(a, b)`, `complex(a, b)`, `fixed(a, places)`; `pi`, `e`, `i`.  rc's `^ * ( ) #` need quotes: `calc '2^100'`.  With no expression, each line of its input |
 | `forth`, `hylang`, `basic`, `rc` | The languages and the shell: [hyforth.md](hyforth.md), [hylang.md](hylang.md), [basic.md](basic.md), [rc.md](rc.md) |
 
 The sound device is `/dev/snd` (register and value pairs), `/dev/sndctl` (`claim N [P]`, `release N [P]`, `volume

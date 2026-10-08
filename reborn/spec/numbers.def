@@ -3,8 +3,9 @@
 # conversions, text in every base, bits) and the math library (its functions), which every language calls
 # (docs/design/plans/NUMBERS.md).  The one source of truth for their jump tables and each language's bindings, as
 # api.def is for the system calls: tools/apigen.js reads it, and makes obj/sdk/numbers.inc (the entries' addresses,
-# NUM_ADD ..., MATH_SQRT ..., and the constants, for programs in assembly) and each library's jump table
-# (obj/gen/numbers_jt.inc, math_jt.inc).
+# NUM_ADD ..., MATH_SQRT ..., the constants, and the macros NUMCALL and MATHCALL, for programs in assembly), the
+# constants for C (obj/sdk/c/numdefs.h, which num.h includes) and each library's jump table (obj/gen/numbers_jt.inc,
+# math_jt.inc).
 #
 # The format:
 #   library NAME "what it's for"          a library module (HT_LIBRARY): its jump table after its header, 3 bytes
@@ -63,6 +64,19 @@ const NK_INT       0   "A kind: an integer"
 const NK_FIXED     1   "A fixed decimal"
 const NK_RATIONAL  2   "A rational"
 const NK_COMPLEX   3   "A complex number"
+
+const NPARSE_PROGRAM 1 "PARSE's .Y: the text is a program's (a bare number starts with a digit 0-9)"
+const NPARSE_WHOLE 2   "PARSE's .Y: the whole text must be the number"
+const NFMT_NUMBER  0   "FORMAT's arguments: a number's entry (its address after)"
+const NFMT_STRING  1   "A string's (zero-terminated)"
+const NFMT_END     $FF "The table's end"
+const NBIT_AND     0   "BITS's operations (.Y): and"
+const NBIT_OR      1   "Or"
+const NBIT_XOR     2   "Xor"
+const NBIT_NOT     3   "Not (x alone: -x - 1)"
+const NBIT_SHL     4   "Shift left by y"
+const NBIT_SHR     5   "Shift right by y (toward minus infinity)"
+const NBIT_TEST    6   "Bit y's test (.A = 0 or 1, no result)"
 
 # ---- numbers: the state, and text
 
