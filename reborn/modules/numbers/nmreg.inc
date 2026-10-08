@@ -8,6 +8,7 @@
 
 NR_DIG          = >(DIGS - $8000)               ; (A number's digits as it's written: their pages, as registers')
 
+.ifndef NM_COPY
 .segment "NUMBANK"
 r_len:      .res        NRALL                               ; Each register's length (bytes; 0: zero) ...
 r_neg:      .res        NRALL                               ;   and sign ($FF: negative)
@@ -39,8 +40,25 @@ n_qb:       .res        1
 n_z:        .res        1
 n_cnt:      .res        2
 n_k:        .res        2                                   ; (A shift's count)
+d_s:        .res        1                                   ; (r_divmod's: the divisor's shift, the quotient's byte
+d_j:        .res        1                                   ;   being made, its estimate, rhat, the divisor's top two
+d_qh:       .res        1                                   ;   digits, a window's top bytes, the carry, R's byte)
+d_rh:       .res        1
+d_v1:       .res        1
+d_v0:       .res        1
+d_t:        .res        4
+d_kl:       .res        1
+d_kh:       .res        1
+d_w:        .res        1
+n_cut:      .res        1                                   ; (r_mulc's: the product's columns below this not made)
+n_j0:       .res        1
+n_sq:       .res        1                                   ; (r_mulc's: a square (1), a diagonal's product)
+n_dl:       .res        1
+n_dh:       .res        1
+mm_zp:      .res        8                                   ; (r_mul's: np, nq, nt, nu kept)
 
-.code
+.endif
+            NM_CODE
 
 ; ---- Too big
 
@@ -54,22 +72,22 @@ n_big:
 ; na, nb, nc = the pages of nra, nrb, nrc (r_abc); na, nb (r_ab); nc (r_c)
 r_abc:
             lda         nrc
-            jsr         r_page
+            RPAGE
             sta         nc + 1
             stz         nc
 r_ab:
             lda         nrb
-            jsr         r_page
+            RPAGE
             sta         nb + 1
             stz         nb
             lda         nra
-            jsr         r_page
+            RPAGE
             sta         na + 1
             stz         na
             rts
 r_c:
             lda         nrc
-            jsr         r_page
+            RPAGE
             sta         nc + 1
             stz         nc
             rts
@@ -379,7 +397,7 @@ r_maxlen:
 ; Register .X's bytes from its length to n_m made 0 (nd its page)
 r_zext:
             txa
-            jsr         r_page
+            RPAGE
             sta         nd + 1
             stz         nd
             ldy         r_len,x
@@ -583,7 +601,7 @@ mul8:
             lda         n_x8
             rts
 
-.rodata
+            NM_RODATA
 sq_lo:                                                      ; (f(n) = n^2 / 4 rounded down: its low bytes, its high)
 .repeat 512, I
             .byte       <((I * I) / 4)
@@ -592,10 +610,21 @@ sq_hi:
 .repeat 512, I
             .byte       >((I * I) / 4)
 .endrep
-.code
+nsq_lo:                                                     ; (f(|k - 255|), k 0 to 510: r_mul's, from 255 - a)
+.repeat 511, I
+            .byte       <(((I - 255) * (I - 255)) / 4)
+.endrep
+nsq_hi:
+.repeat 511, I
+            .byte       >(((I - 255) * (I - 255)) / 4)
+.endrep
+            NM_CODE
 
-; nrc = nra * nrb (nrc another register).  Too big: n_big
+; nrc = nra * nrb (nrc another register).  Too big: n_big.  r_mulc: the product's columns (bytes) below n_cut not
+; made (a truncated product: m_mulw's, whose shift drops them)
 r_mul:
+            stz         n_cut
+r_mulc:
             ldx         nra
             lda         r_neg,x
             ldx         nrb
@@ -619,6 +648,12 @@ r_mul:
             ldx         nrc
             jmp         r_clear
 @fits:
+            stz         n_sq                                ; (A square: its cross products once)
+            lda         nra
+            cmp         nrb
+            bne         :+
+            inc         n_sq
+:
             jsr         r_abc
             ldy         #0                                  ; (0, then each of nra's bytes times nrb added in)
             tya
@@ -627,45 +662,174 @@ r_mul:
             iny
             cpy         n_lc
             bne         @clear
+            ldx         #7                                  ; (np, nq, nt, nu: the tables' pointers a while, kept)
+:
+            lda         np,x
+            sta         mm_zp,x
+            dex
+            bpl         :-
             stz         n_i
 @row:
-            ldy         n_i
+            lda         n_cut                               ; (Its columns from cut - i: none below the cut; a
+            sec                                             ;   square's from i + 1)
+            sbc         n_i
+            bcs         :+
+            lda         #0
+:
+            ldx         n_sq
+            beq         :+
+            ldx         n_i
+            inx
+            stx         n_j0
+            cmp         n_j0
+            bcs         :+
+            txa
+:
+            sta         n_j0
+            cmp         n_lb
+            bcc         :+
+            jmp         @next
+:
+            ldy         n_i                                 ; (a: its pointers into the tables)
             lda         (na),y
-            beq         @next
-            sta         n_m8
-            lda         nc                                  ; (nd: the product's byte n_i on)
+            bne         :+
+            jmp         @next
+:
+            tax
             clc
-            adc         n_i
+            adc         #<sq_lo
+            sta         np
+            lda         #>sq_lo
+            adc         #0
+            sta         np + 1
+            txa
+            clc
+            adc         #<sq_hi
+            sta         nq
+            lda         #>sq_hi
+            adc         #0
+            sta         nq + 1
+            txa
+            eor         #$FF
+            tax
+            clc
+            adc         #<nsq_lo
+            sta         nt
+            lda         #>nsq_lo
+            adc         #0
+            sta         nt + 1
+            txa
+            clc
+            adc         #<nsq_hi
+            sta         nu
+            lda         #>nsq_hi
+            adc         #0
+            sta         nu + 1
+            lda         n_i                                 ; (nd: the product's byte i + j0 on, moved on a byte a
+            clc                                             ;   time: its page nc's)
+            adc         n_j0
             sta         nd
             lda         nc + 1
-            adc         #0
             sta         nd + 1
             stz         n_cy
-            ldy         #0
+            ldx         n_j0
 @col:
+            txa                                             ; (b)
+            tay
             lda         (nb),y
-            jsr         mul8
+            tay
+            lda         (np),y                              ; (a b: its low byte, then its high, .Y)
+            sec
+            sbc         (nt),y
+            sta         n_phi
+            lda         (nq),y
+            sbc         (nu),y
+            tay
+            lda         n_phi                               ; (The carry added, then the product's byte)
             clc
             adc         n_cy
             bcc         :+
-            inc         n_phi
+            iny
 :
             clc
-            adc         (nd),y
-            sta         (nd),y
-            lda         n_phi
+            adc         (nd)
+            sta         (nd)
+            tya
             adc         #0
             sta         n_cy
-            iny
-            cpy         n_lb
+            inc         nd
+            inx
+            cpx         n_lb
             bne         @col
             lda         n_cy
-            sta         (nd),y
+            sta         (nd)
 @next:
             inc         n_i
             lda         n_i
             cmp         n_la
-            bne         @row
+            beq         :+
+            jmp         @row
+:
+            ldx         #7
+:
+            lda         mm_zp,x
+            sta         np,x
+            dex
+            bpl         :-
+            lda         n_sq                                ; (A square: the cross products doubled, the diagonal's
+            beq         @made                               ;   squares added)
+            ldy         #0
+            ldx         n_lc
+            clc
+:
+            lda         (nc),y
+            rol         a
+            sta         (nc),y
+            iny
+            dex
+            bne         :-
+            stz         n_i
+@diag:
+            ldy         n_i
+            lda         (na),y
+            beq         @dnext
+            asl         a                                   ; (a^2 = sq[2a])
+            tax
+            bcs         @dhi
+            lda         sq_lo,x
+            sta         n_dl
+            lda         sq_hi,x
+            bra         :+
+@dhi:
+            lda         sq_lo + 256,x
+            sta         n_dl
+            lda         sq_hi + 256,x
+:
+            sta         n_dh
+            tya                                             ; (At 2i, its carry on up)
+            asl         a
+            tay
+            lda         (nc),y
+            clc
+            adc         n_dl
+            sta         (nc),y
+            iny
+            lda         (nc),y
+            adc         n_dh
+            sta         (nc),y
+            bcc         @dnext
+:
+            iny
+            lda         (nc),y
+            adc         #0
+            sta         (nc),y
+            bcs         :-
+@dnext:
+            inc         n_i
+            lda         n_i
+            cmp         n_la
+            bne         @diag
+@made:
             ldx         nrc
             lda         n_sa
             sta         r_neg,x
@@ -689,12 +853,14 @@ r_mul:
 
 ; |nrc| = |nrc| * .A (1-255), in place.  Too big: n_big
 r_mulsmall:
+            stz         n_cy
+; |nrc| = |nrc| * .A + n_cy (each 0-255), in place
+r_muladd:
             sta         n_m8
             jsr         r_c
             ldx         nrc
             lda         r_len,x
             sta         n_lc
-            stz         n_cy
             ldy         #0
 @byte:
             cpy         n_lc
@@ -730,152 +896,357 @@ r_divsmall:
             jsr         r_c
             ldx         nrc
             ldy         r_len,x
-            stz         n_cy                                ; (The remainder so far)
+            lda         #0                                  ; (The remainder so far, in .A)
 @byte:
             dey
             cpy         #$FF
-            beq         @done
+            bne         :+
+            jmp         @done
+:
+            tax                                             ; (A 0 with no remainder: its quotient's byte 0)
+            bne         @div
+            lda         (nc),y
+            beq         @byte
+            txa
+@div:
+            pha
             lda         (nc),y
             sta         n_q8
-            lda         n_cy
-            ldx         #8
-@bit:
+            pla
+.repeat 8                                                   ; (Its 8 steps, unrolled)
             asl         n_q8
-            rol
-            bcs         @sub
+            rol         a
+            bcs         :+
             cmp         n_d8
-            bcc         @no
-@sub:
+            bcc         :++
+:
             sbc         n_d8
             inc         n_q8
-@no:
-            dex
-            bne         @bit
-            sta         n_cy
+:
+.endrep
+            pha
             lda         n_q8
             sta         (nc),y
-            bra         @byte
+            pla
+            jmp         @byte
 @done:
+            sta         n_cy
             jsr         r_normc
             lda         n_cy
             rts
 
 ; nrq = nra / nrb (toward 0), nrr = nra - nrq * nrb (nra's sign): nrq and nrr registers of their own, nrb not 0.
-; A bit at a time: the remainder shifted up through nra's bits, nrb taken from it where it can be
+; A byte of the quotient at a time (Knuth's algorithm D, NUMSPEED.md's step 4): the remainder (nrr, nra's bytes at
+; first) and the divisor (nrb, as it is); each quotient byte estimated from the remainder's window's top three bytes
+; and the divisor's top two, both as if shifted till the divisor's top bit is 1 (its digits then), at most one too
+; many; the divisor times it taken from the window, and added back if it was.  A divisor of a byte: r_divsmall
 r_divmod:
             ldx         nra
             lda         r_neg,x
-            sta         n_sa
+            sta         n_sa                                ; (The remainder's sign)
             ldx         nrb
             eor         r_neg,x
-            sta         n_sb                                ; (The quotient's sign)
+            sta         n_sb                                ; (The quotient's)
             ldx         nra
             lda         r_len,x
             sta         n_la
             ldx         nrb
             lda         r_len,x
             sta         n_lb
-            lda         nrr                                 ; (nd: the remainder, n_lb bytes and n_rx, its bit past
-            jsr         r_page                              ;   them; nc: the quotient)
+            lda         nra                                 ; (na: the dividend; nb: the divisor; nc: the quotient;
+            RPAGE      ;   nd: the remainder)
+            sta         na + 1
+            stz         na
+            lda         nrb
+            RPAGE
+            sta         nb + 1
+            stz         nb
+            lda         nrq
+            RPAGE
+            sta         nc + 1
+            stz         nc
+            lda         nrr
+            RPAGE
             sta         nd + 1
             stz         nd
-            lda         nrq
+            lda         n_lb
+            cmp         #2
+            bcs         @wide
+            lda         nrq                                 ; (A divisor of a byte: the quotient nra / it, in place)
             sta         nrc
-            jsr         r_abc
-            ldy         #0
-            tya
-@clear:
-            sta         (nd),y
-            iny
-            cpy         n_lb
-            bne         @clear
-            stz         n_rx
-            ldy         n_la
-            sty         n_i
-@byte:
-            ldy         n_i
-            beq         @made
-            dey
-            sty         n_i
+            jsr         r_copy
+            lda         (nb)
+            jsr         r_divsmall                          ; (.A: the remainder)
+            ldx         nrr
+            sta         (nd)
+            lda         #1
+            sta         r_len,x
+            jmp         @signs
+@wide:
+            ldy         #0                                  ; (The remainder: the dividend's bytes, and a 0 above)
+@copy:
+            cpy         n_la
+            beq         :+
             lda         (na),y
-            sta         n_ab
-            lda         #8
-            sta         n_bits
-@bit:
-            asl         n_ab                                ; (Its next bit into the remainder)
-            ldy         #0
-            ldx         n_lb
-@shift:
-            lda         (nd),y
-            rol
             sta         (nd),y
             iny
-            dex
-            bne         @shift
-            rol         n_rx
-            lda         n_rx                                ; (Not less than nrb: nrb taken, the quotient's bit 1)
-            bne         @take
-            ldy         n_lb
-@cmp:
-            dey
-            cpy         #$FF
-            beq         @take
-            lda         (nd),y
-            cmp         (nb),y
-            beq         @cmp
-            bcc         @zero
-@take:
-            ldy         #0
-            ldx         n_lb
-            sec
-@sub:
-            lda         (nd),y
-            sbc         (nb),y
+            bra         @copy
+:
+            lda         #0
             sta         (nd),y
-            iny
-            dex
-            bne         @sub
-            stz         n_rx
-            sec
-            bra         @qbit
-@zero:
-            clc
-@qbit:
-            rol         n_qb
-            dec         n_bits
-            bne         @bit
-            ldy         n_i
-            lda         n_qb
-            sta         (nc),y
-            bra         @byte
-@made:
-            ldx         nrq                                 ; (Their lengths and signs)
+            lda         n_la                                ; (Shorter than the divisor: a quotient of 0)
+            cmp         n_lb
+            bcs         :+
+            ldx         nrq
+            stz         r_len,x
+            ldx         nrr
             lda         n_la
             sta         r_len,x
+            bra         @signs
+:
+            ldy         n_lb                                ; (The divisor's top three bytes, then its shift: d_v
+            dey                                             ;   its top two digits as shifted)
+            lda         (nb),y
+            sta         d_t + 2
+            dey
+            lda         (nb),y
+            sta         d_t + 1
+            stz         d_t
+            dey
+            bmi         :+
+            lda         (nb),y
+            sta         d_t
+:
+            stz         d_s
+            lda         d_t + 2
+@norm:
+            bmi         :+
+            inc         d_s
+            asl         d_t
+            rol         d_t + 1
+            rol         d_t + 2
+            lda         d_t + 2
+            bra         @norm
+:
+            sta         d_v1
+            lda         d_t + 1
+            sta         d_v0
+            lda         n_la                                ; (j: the quotient's byte, from its top)
+            sec
+            sbc         n_lb
+            sta         d_j
+            inc         a
+            ldx         nrq
+            sta         r_len,x
+@digit:
+            jsr         d_qhat                              ; (d_qh: its estimate)
+            jsr         d_mulsub                            ; (The divisor times it taken off: C = 1 if too many)
+            bcc         :+
+            jsr         d_addback
+            dec         d_qh
+:
+            ldy         d_j
+            lda         d_qh
+            sta         (nc),y
+            lda         d_j
+            beq         :+
+            dec         d_j
+            jmp         @digit
+:
+            ldx         nrr                                 ; (The remainder: the divisor's length)
+            lda         n_lb
+            sta         r_len,x
+@signs:
+            ldx         nrq                                 ; (Their signs, their lengths without top 0s)
             lda         n_sb
             sta         r_neg,x
-            jsr         r_normc
+            ldx         nrr
+            lda         n_sa
+            sta         r_neg,x
             lda         nrr
             sta         nrc
             jsr         r_c
-            ldx         nrr
-            lda         n_lb
-            sta         r_len,x
-            lda         n_sa
-            sta         r_neg,x
             jsr         r_normc
             lda         nrq
             sta         nrc
             jsr         r_c
             jmp         r_normc
 
+; d_qh = the estimate of the quotient's byte d_j: the window R(d_j .. d_j + lb)'s top three bytes shifted as the
+; divisor was (d_s), over its top two digits (d_v1, d_v0); Knuth's: (u2 u1) / v1 at most 255, then less while its
+; times v0 is past (rhat u0)
+d_qhat:
+            lda         d_j                                 ; (The window's top four bytes: R(j + lb) ... R(j + lb - 3))
+            clc
+            adc         n_lb
+            tay
+            lda         (nd),y
+            sta         d_t + 3
+            dey
+            lda         (nd),y
+            sta         d_t + 2
+            dey
+            lda         (nd),y
+            sta         d_t + 1
+            stz         d_t
+            dey
+            cpy         #$FF
+            beq         :+
+            lda         (nd),y
+            sta         d_t
+:
+            ldx         d_s                                 ; (Shifted)
+            beq         @shifted
+:
+            asl         d_t
+            rol         d_t + 1
+            rol         d_t + 2
+            rol         d_t + 3
+            dex
+            bne         :-
+@shifted:
+            lda         d_t + 3                             ; (u2 = v1: 255, rhat u1 + v1)
+            cmp         d_v1
+            bcc         @divide
+            lda         #255
+            sta         d_qh
+            lda         d_t + 2
+            clc
+            adc         d_v1
+            sta         d_rh
+            bcc         @check
+            rts
+@divide:
+            lda         d_t + 2                             ; ((u2 u1) / v1: d_qh, its remainder rhat .A)
+            sta         d_qh
+            lda         d_t + 3
+            ldx         #8
+:
+            asl         d_qh
+            rol         a
+            bcs         @take
+            cmp         d_v1
+            bcc         @keep
+@take:
+            sbc         d_v1
+            inc         d_qh
+@keep:
+            dex
+            bne         :-
+            sta         d_rh
+@check:
+            lda         d_qh                                ; (qhat v0 past (rhat u1'): one less, rhat + v1)
+            sta         n_m8
+            lda         d_v0
+            jsr         mul8
+            ldx         n_phi
+            cpx         d_rh
+            bcc         @done
+            bne         @less
+            cmp         d_t + 1
+            bcc         @done
+            beq         @done
+@less:
+            dec         d_qh
+            lda         d_rh
+            clc
+            adc         d_v1
+            sta         d_rh
+            bcc         @check                              ; (rhat past a byte: no more)
+@done:
+            rts
+
+; R(j .. j + lb) -= d_qh * the divisor: C = 1 if it went below 0 (one too many)
+d_mulsub:
+            lda         d_qh
+            sta         n_m8
+            stz         d_kl                                ; (The carry: a product's high byte and a borrow, 9 bits)
+            stz         d_kh
+            ldy         #0
+            lda         d_j
+            sta         d_w                                 ; (R's byte: j + i)
+@byte:
+            lda         (nb),y
+            jsr         mul8                                ; (.A low, n_phi high; .Y kept)
+            clc
+            adc         d_kl
+            sta         d_t
+            lda         n_phi
+            adc         d_kh
+            sta         d_kl
+            lda         #0
+            adc         #0
+            sta         d_kh
+            phy
+            ldy         d_w
+            lda         (nd),y
+            sec
+            sbc         d_t
+            sta         (nd),y
+            bcs         :+
+            inc         d_kl                                ; (A borrow: one more off the next)
+            bne         :+
+            inc         d_kh
+:
+            inc         d_w
+            ply
+            iny
+            cpy         n_lb
+            bne         @byte
+            ldy         d_w                                 ; (The window's top byte, less the carry)
+            lda         (nd),y
+            sec
+            sbc         d_kl
+            sta         (nd),y
+            lda         #0
+            sbc         d_kh
+            bcs         :+
+            sec                                             ; (Below 0)
+            rts
+:
+            clc
+            rts
+
+; R(j .. j + lb) += the divisor (it went below 0: one too many taken)
+d_addback:
+            ldy         #0
+            lda         d_j
+            sta         d_w
+            ldx         n_lb
+            clc
+@byte:
+            lda         (nb),y
+            phy
+            ldy         d_w
+            adc         (nd),y
+            sta         (nd),y
+            ply
+            inc         d_w
+            iny
+            dex
+            bne         @byte
+            ldy         d_w                                 ; (Its carry to the top byte)
+            lda         (nd),y
+            adc         #0
+            sta         (nd),y
+            rts
+
 ; nrc = 10 ^ .A, .X.  Too big: n_big
 r_pow10:
+            cpx         #0                                  ; (To 10^24: the table's; past it, 10^24 times 10^(k - 24))
+            bne         @big
+            cmp         #P10_TAB
+            bcs         @big
+            jmp         r_p10set
+@big:
+            sec
+            sbc         #P10_TAB - 1
             pha
-            phx
-            lda         #1
-            ldx         #0
-            jsr         r_set16
+            txa
+            sbc         #0
+            pha
+            lda         #P10_TAB - 1
+            jsr         r_p10set
             plx
             pla
 ; |nrc| = |nrc| * 10 ^ .A, .X, in place (by 100s, then a 10).  Too big: n_big (at once for 10 ^ 615 or more:
@@ -915,6 +1286,28 @@ r_scale10:
             lda         #10
             jmp         r_mulsmall
 @done:
+            rts
+
+; nrc = 10 ^ .A (below P10_TAB), from the table (pow10.inc)
+r_p10set:
+            tay
+            lda         p10_len,y
+            sta         n_t
+            lda         p10_off,y
+            tax
+            jsr         r_c
+            ldy         #0
+:
+            lda         p10_dat,x
+            sta         (nc),y
+            inx
+            iny
+            cpy         n_t
+            bne         :-
+            ldx         nrc
+            lda         n_t
+            sta         r_len,x
+            stz         r_neg,x
             rts
 
 ; .A, .X = the trailing zero bits of nrc's magnitude (not 0)
@@ -1241,3 +1634,5 @@ r_one_p:
             cmp         #1
 @rts:
             rts
+
+.include "pow10.inc"

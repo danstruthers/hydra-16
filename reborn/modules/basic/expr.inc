@@ -544,6 +544,22 @@ emit_num:
             lda         tint
             jmp         emit
 @bytes:
+            FARN        4, num_isfix32                      ; (A fixed decimal whose digits fit in 32 bits: PUSHF, its
+            bcs         @pushn                              ;   value)
+            lda         #OP_PUSHF
+            ldx         #6
+            jsr         emit_op
+            lda         tnum
+            jsr         emit
+            ldx         #0
+:
+            lda         tint,x
+            jsr         emit
+            inx
+            cpx         #4
+            bne         :-
+            rts
+@pushn:
             lda         tnl
             clc
             adc         #3

@@ -11,6 +11,7 @@ NS_B            = $8410         ;   another ...
 NS_R            = $8820         ;   the result (NUM_MAX each)
 TX_NUM          = $9BE0         ; The text bank: a number to be written (NUM_MAX + 2: to $9FF2) ...
 TX_ROOM         = TX_NUM - $8000 ;   and its text, from $8000
+NB_ROOM         = 64            ; An operand's bytes below $8000 (nba, nbb), if it's this long or less
 
 
 .bss
@@ -21,12 +22,19 @@ nsb:        .res        1                                   ; The scratch bank a
 txb:        .res        1
 nia:        .res        6                                   ; An integer's bytes, as an operand: the first ...
 nib:        .res        6                                   ;   and the second
+nba:        .res        NB_ROOM                             ; A VT_NUM's bytes as an operand, the first's and the
+nbb:        .res        NB_ROOM                             ;   second's, if they fit (else NS_A, NS_B)
+nmag:       .res        5                                   ; (int_sf's: a negative integer's magnitude, from nmag + 1)
 n_op:        .res        1                                   ; (num_op's op)
 nlen:       .res        2                                   ; (A result's length)
 nsign:      .res        1                                   ; (A number's sign: $FF, 0, 1)
 digits_set: .res        1                                   ; (The math library's precision, as set: DIGITS's)
 mi_buf:     .res        ME_SIZE                             ; (num_init's: a module's entry)
+rr3:        .res        2                                   ; (round_r0's: r3 kept)
+rsrc:       .res        2                                   ; (result_vt's: the result's place)
 nt_base:    .res        2                                   ; num_text's base (0: the base)
+nolen:      .res        1                                   ; (operand's: an integer's or a VT_FIX's bytes' length)
+rv_tag:     .res        1                                   ; (result_vt's: a fixed decimal's tag)
 
 .segment "CODE4"
 
@@ -66,6 +74,8 @@ num_init:
             bcs         @none
             sta         num_bank
             NUMCALL     NUM_INIT
+            lda         #1                                  ; ($70-$7F not BASIC's: not kept over a call)
+            NUMCALL     NUM_OPTIONS
             lda         #12
             sta         digits_set
             ldx         #LB_NSB                             ; (The scratch and text banks: taken now)
@@ -256,26 +266,26 @@ int_sf:
             inc         a
             rts
 @neg:
-            sec                                             ; (The magnitude: -t0, in t4 + 1 ... (t0 kept))
+            sec                                             ; (The magnitude: -t0 (t0 kept), from nmag + 1)
             ldx         #0
             ldy         #4
             lda         #0
             sbc         t0
-            sta         nia + 1                             ; (A copy, negated, from nia + 1)
+            sta         nmag + 1
             lda         #0
             sbc         t0 + 1
-            sta         nia + 2
+            sta         nmag + 2
             lda         #0
             sbc         t0 + 2
-            sta         nia + 3
+            sta         nmag + 3
             lda         #0
             sbc         t0 + 3
-            sta         nia + 4
+            sta         nmag + 4
             lda         #$90
             sta         t4
             ldy         #1
 :
-            lda         nia,y
+            lda         nmag,y
             sta         (np),y
             iny
             cpy         #5
@@ -303,7 +313,13 @@ int_sf:
 operand:
             sty         t4 + 3
             lda         (vt)
-            beq         @int
+            bne         :+
+            jmp         @int
+:
+            cmp         #VT_FIX
+            bcc         :+
+            jmp         @fix
+:
             cmp         #VT_NUM
             beq         :+
             lda         #ER_TYPE
@@ -324,11 +340,22 @@ operand:
             sta         cn
             jsr         ca_rd
             sta         cn + 1
+            lda         cn + 1                              ; (Below $8000 if it fits: nba, nbb)
+            bne         @bank
+            lda         cn
+            cmp         #NB_ROOM + 1
+            bcs         @bank
+            LDW         cb, nba
+            ldx         t4 + 3
+            beq         @to
+            LDW         cb, nbb
+            bra         @to
+@bank:
             LDW         cb, NS_A
             ldx         t4 + 3
-            beq         :+
+            beq         @to
             LDW         cb, NS_B
-:
+@to:
             lda         #LB_NSB
             sta         cbl
             MOVW        t4, cb
@@ -356,6 +383,8 @@ operand:
             LDW         np, nib
 :
             jsr         int_sf
+            sta         nolen
+@at:
             ldx         t4 + 3                              ; (r0 or r1: 2 bytes each)
             txa
             asl         a
@@ -367,6 +396,29 @@ operand:
             lda         nsb
             sta         RAM_BANK
             rts
+@fix:
+            ldy         #4                                  ; A VT_FIX: its tag, then its digits' bytes, in nba or nbb
+:
+            lda         (vt),y                              ;   (their room: ROUND's over them)
+            sta         t0 - 1,y
+            dey
+            bne         :-
+            LDW         np, nba + 1
+            ldx         t4 + 3
+            beq         :+
+            LDW         np, nbb + 1
+:
+            jsr         int_sf
+            inc         a
+            sta         nolen
+            lda         np
+            bne         :+
+            dec         np + 1
+:
+            dec         np
+            lda         (vt)
+            sta         (np)
+            bra         @at
 
 ; ---- The ops: two values (or one) worked by the libraries, the result in the first's place
 
@@ -505,13 +557,21 @@ round_ops:
             rts
 round_one:
 round_r0:
-            lda         r0 + 1                              ; (In the RAM: an integer already)
-            bpl         @done
+            lda         (r0)                                ; (An integer already: as it is; its bank's selected)
+            cmp         #NT_FIXED
+            bcc         @done
             MOVW        t4 + 2, r2
+            MOVW        rr3, r3
             MOVW        r2, r0
+            LDW         r3, NB_ROOM                         ; (Over itself: its room, below $8000 or in the bank)
+            lda         r0 + 1
+            bpl         :+
+            LDW         r3, NUM_MAX
+:
             NUMCALL     NUM_ROUND
             bcs         n_fail
             MOVW        r2, t4 + 2
+            MOVW        r3, rr3
 @done:
             rts
 
@@ -543,14 +603,16 @@ n_result1:
             jsr         result_vt
             jmp         code_sel
 
-; The number at r2 (nlen bytes, in the scratch bank) put at vt: a VT_INT if it fits, else a number in the heap
+; The number at r2 (nlen bytes, in the scratch bank) put at vt: a VT_INT if it fits, a VT_FIX if it's a fixed
+; decimal whose digits do, else a number in the heap
 result_vt:
             MOVW        np, r2
             lda         nsb
             sta         RAM_BANK
             jsr         sf_int32
-            bcs         @heap
+            bcs         @fix
             lda         #VT_INT
+@value:
             sta         (vt)
             ldy         #4
 :
@@ -559,8 +621,24 @@ result_vt:
             dey
             bne         :-
             rts
-@heap:
-            MOVW        t4, r2                              ; (The heap's room for it: then copied)
+@fix:
+            lda         (np)
+            cmp         #NT_FIXED
+            bcc         rv_heap
+            cmp         #NT_FIXED + 16
+            bcs         rv_heap
+            sta         rv_tag
+            inc         np
+            bne         :+
+            inc         np + 1
+:
+            jsr         sf_int32
+            bcs         rv_heap
+            lda         rv_tag
+            bra         @value
+rv_heap:
+            MOVW        rsrc, r2                            ; (The heap's room for it: then copied; not t4, which a
+                                                            ;   collection changes)
             lda         vt
             pha
             lda         vt + 1
@@ -599,7 +677,7 @@ result_vt:
             sta         cb + 1
             inc         cbl
 :
-            MOVW        ca, t4
+            MOVW        ca, rsrc
             lda         #LB_NSB
             sta         cal
             MOVW        cn, nlen
@@ -626,16 +704,62 @@ num_cmp2:
 ; Is the value at vt 0?  OUT: Z = 1 yes
 num_is_zero:
             lda         (vt)
+            cmp         #VT_FIX
+            bcs         @fix
             cmp         #VT_NUM
             bne         @no                                 ; (Not a number: not 0)
             ldy         #0
             jsr         operand
             NUMCALL     NUM_KIND
             jsr         code_sel
-            cpx         #0
+            txa                                             ; (Z: .A's, through FARN)
             rts
 @no:
             lda         #1
+            rts
+@fix:
+            ldy         #4                                  ; (A VT_FIX: its digits)
+            lda         (vt),y
+            dey
+            ora         (vt),y
+            dey
+            ora         (vt),y
+            dey
+            ora         (vt),y
+            rts
+
+; The VT_FIX at vt made a VT_NUM in the heap, the same number (CONST's: its bytes)
+fix_heap:
+            ldy         #0
+            jsr         operand                             ; (Its bytes at nba: nolen of them)
+            MOVW        r2, r0
+            lda         nolen
+            sta         nlen
+            stz         nlen + 1
+            jsr         rv_heap
+            jmp         code_sel
+
+; Is the number at tnum a fixed decimal of 0-15 places whose digits fit in 32 bits (signed)?  OUT: C = 0 yes (tint its
+; digits); C = 1 no
+num_isfix32:
+            lda         tnum
+            cmp         #NT_FIXED
+            bcc         @no
+            cmp         #NT_FIXED + 16
+            bcs         @no
+            LDW         np, tnum + 1
+            jsr         sf_int32
+            bcs         @no
+            ldx         #3
+:
+            lda         t0,x
+            sta         tint,x
+            dex
+            bpl         :-
+            clc
+            rts
+@no:
+            sec
             rts
 
 ; The value at vt made an integer in place (VT_INT), rounded if it isn't one (a half to the even); past 32 bits:
@@ -758,7 +882,18 @@ mul16:
 num_text:
             stz         nsign
             lda         (vt)
-            bne         @num
+            beq         @int
+            cmp         #VT_FIX
+            bcc         @num
+            ldy         #0                                  ; (A VT_FIX: its bytes at nba, its sign its digits')
+            jsr         operand
+            ldy         #4
+            lda         (vt),y
+            bpl         :+
+            dec         nsign
+:
+            jmp         @call
+@int:
             ldy         #4                                  ; (An integer's sign)
             lda         (vt),y
             bpl         :+
@@ -813,7 +948,10 @@ num_text:
 ; .A = the sign of the number at vt ($FF, 0, 1: a complex number's real part's)
 num_sign_vt:
             lda         (vt)
-            bne         @num
+            beq         @int
+            cmp         #VT_FIX                             ; (A VT_FIX: its digits', as an integer's)
+            bcc         @num
+@int:
             ldy         #4
             lda         (vt),y
             bmi         @neg

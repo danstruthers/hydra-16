@@ -8,24 +8,46 @@
 
 ; ---- A call's start and end
 
-; The library's bank selected (r13's), the caller's kept (v_bank), its zero page $70-$7F kept (v_zp), the stack as
-; the entry has it noted (nm_fail goes back to it).  Then the state checked: INIT must have run (NE_INIT).  Keeps .A,
-; .X (in v_ax too), .Y
+; The library's bank selected (r13's), the caller's kept (v_bank), the stack as the entry has it noted (nm_fail goes
+; back to it).  Then the state checked: INIT must have run (NE_INIT); and the caller's zero page $70-$7F kept (v_zp)
+; unless it said it needn't be (OPTIONS: st_zpfree).  Keeps .A, .X (in v_ax too), .Y
 nm_begin:
-            jsr         nm_begin0
-            inc         v_sp                                ; (Past this return too)
-            inc         v_sp
+            jsr         nm_bank
+            tsx                                             ; (The stack as the entry has it, past this return)
+            inx
+            inx
+            stx         v_sp
             lda         st_magic
             cmp         #NUMBERS_MAGIC
             bne         @init
+            lda         st_zpfree
+            sta         v_zpfree
+            bne         :+
+            jsr         nm_keep
+:
             lda         v_ax
             ldx         v_ax + 1
             rts
 @init:
+            lda         #1                                  ; (Nothing kept: nothing put back)
+            sta         v_zpfree
             lda         #NE_INIT
             jmp         nm_fail
 
+; INIT's: as nm_begin, the zero page always kept, no state yet
 nm_begin0:
+            jsr         nm_bank
+            tsx
+            inx
+            inx
+            stx         v_sp
+            jsr         nm_keep
+            lda         v_ax
+            ldx         v_ax + 1
+            rts
+
+; The library's bank selected, the caller's kept (v_bank), .A, .X kept (v_ax), the arena empty
+nm_bank:
             pha
             phx
             lda         RAM_BANK                            ; (The caller's bank, kept once the library's is there)
@@ -37,16 +59,15 @@ nm_begin0:
             pla
             sta         v_ax
             LDR         a_top, arena                        ; (The arena empty)
-.repeat 16, I                                               ; (The zero page kept, unrolled: each call's)
+            rts
+
+; The caller's zero page kept (v_zp), and put back as the call ends (v_zpfree 0)
+nm_keep:
+.repeat 16, I                                               ; (Unrolled: each call's)
             lda         na + I
             sta         v_zp + I
 .endrep
-            tsx                                             ; (The stack as the entry has it, past this return)
-            inx
-            inx
-            stx         v_sp
-            lda         v_ax
-            ldx         v_ax + 1
+            stz         v_zpfree
             rts
 
 ; The call's end: the caller's zero page and bank back, C, .A and .X as they are
@@ -54,10 +75,13 @@ nm_end:
             php
             pha
             phx
+            lda         v_zpfree
+            bne         :+
 .repeat 16, I
             lda         v_zp + I
             sta         na + I
 .endrep
+:
             lda         v_bank
             sta         RAM_BANK
             plx
@@ -229,6 +253,44 @@ m_add:
 nm_in:
             sta         np
             stx         np + 1
+            cpx         #$7E                                ; (A short one below $7E00: its length from its tags,
+            bcs         @measure                            ;   then copied straight)
+            lda         (np)
+            cmp         #NT_POS
+            bcc         @one
+            cmp         #NT_LONG_POS
+            bcc         @int
+            cmp         #NT_FIXED
+            bcc         @measure
+            cmp         #NT_FIXED + 16
+            bcs         @measure
+            ldy         #1                                  ; (A fixed decimal of 0-15 places: its digits' tag)
+            lda         (np),y
+            cmp         #NT_POS
+            bcc         @two
+            cmp         #NT_LONG_POS
+            bcs         @measure
+            and         #$0F
+            adc         #3                                  ; (C = 0: 1 + 1 + its bytes)
+            bra         @short
+@one:
+            lda         #1
+            bra         @short
+@two:
+            lda         #2
+            bra         @short
+@int:
+            and         #$0F
+            clc
+            adc         #2
+@short:
+            sta         v_len
+            stz         v_len + 1
+            ldx         #0
+            jsr         a_room
+            jsr         m_copy_in
+            jmp         a_made
+@measure:
             jsr         nm_measure
             lda         np + 1                              ; (Its end below $8000, all of it in the caller's own
             pha                                             ;   RAM: copied straight)
@@ -351,11 +413,14 @@ nm_out:
             stx         v_len + 1
             lda         r3 + 1
             cmp         v_len + 1
-            bcc         @room
+            bcc         @noroom
             bne         :+
             lda         r3
             cmp         v_len
-            bcc         @room
+            bcs         :+
+@noroom:
+            lda         #NE_ROOM
+            jmp         nm_fail
 :
             MOVR        np, r2
             lda         r2                                  ; (Its end below $8000, all of it in the caller's own
@@ -369,6 +434,36 @@ nm_out:
             jsr         m_copy_out
             bra         @done
 :
+            lda         v_len + 1                           ; (Its end in the caller's bank, 32 bytes at most: through
+            bne         @slow                               ;   the stack, the caller's bank selected once)
+            lda         v_len
+            cmp         #33
+            bcs         @slow
+            lda         r2 + 1
+            cmp         #$80
+            bcc         @slow
+            cmp         #$9F
+            bcs         @slow
+            ldy         v_len
+@push:
+            dey
+            lda         (nq),y
+            pha
+            tya
+            bne         @push
+            ldx         v_len                               ; (Its count: v_len is the library's bank's)
+            lda         v_bank
+            sta         RAM_BANK
+@pull:
+            pla
+            sta         (np),y
+            iny
+            dex
+            bne         @pull
+            lda         r13
+            sta         RAM_BANK
+            bra         @done
+@slow:
             MOVR        v_left, v_len
 @byte:
             lda         v_left

@@ -3,13 +3,15 @@
 ; NUMERATOR, DENOMINATOR, COMPLEX, PART, FROM_INT, TO_INT), as danlang's (and numref.js's) are; hylang's numbi.inc's
 ; where it had them.
 
+.ifndef NM_COPY
 .segment "NUMBANK"
 n_mode:     .res        1                                   ; (TRUNCATE's 0, FLOOR's 1, ROUND's 2; PART's part)
 n_places:   .res        2                                   ; (TO_FIXED's places)
 n_dig:      .res        1                                   ; (A digit, as TO_FIXED makes it)
 n_sign:     .res        1                                   ; (A sign kept)
 
-.code
+.endif
+            NM_CODE
 
 ; ---- Integers
 
@@ -199,7 +201,7 @@ nm_whole:
             bra         @up
 @half:
             lda         #2                                  ; (A half: to the even one)
-            jsr         r_page
+            RPAGE
             sta         na + 1
             stz         na
             ldx         #2

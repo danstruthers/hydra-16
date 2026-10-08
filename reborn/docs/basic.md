@@ -62,7 +62,8 @@ A value is 5 bytes: a tag and 4 more (`basic.inc`).
 | Tag | |
 | :--- | :--- |
 | `VT_INT` | An integer of 32 bits, in the value itself: most numbers a program uses |
-| `VT_NUM` | Any other number, in the stored format of the numbers library (spec/numbers.def), in the heap |
+| `VT_FIX` | A fixed decimal of 0-15 places whose digits fit in 32 bits, in the value itself: its tag the stored format's (`$B0` + its places), its digits signed |
+| `VT_NUM` | Any other number, in the stored format of the numbers library (spec/numbers.def), in the heap (or the code's: a literal) |
 | `VT_STR` | A string in the heap (bank `$FF`: `""`) |
 | `VT_ARR`, `VT_REC` | An array or a record: its heap block (bank `$FF`: not made yet) |
 | `VT_REF` | A slot given by reference (a parameter's) |
@@ -119,8 +120,10 @@ number, in the bank its group is in (`fn.inc`'s `F_B4` ... and `ST_B4` ...).
 ## Numbers
 
 Every number is the numbers library's (`modules/numbers`, the stored format of spec/numbers.def), called through
-its bank of RAM (`num.inc`): an integer that fits 32 bits stays a `VT_INT` (the operators try that first), any other
-lives in the heap.  The math library (`modules/math`) gives `SQR` ... `ATN` and `^` of a power that isn't whole,
+its bank of RAM (`num.inc`): an integer that fits 32 bits stays a `VT_INT` (the operators try that first), a fixed
+decimal whose digits do a `VT_FIX` (a literal's `PUSHF`; `+`, `-`, `*`, the comparisons, `FOR`'s step and `IF` of those
+and integers worked by the interpreter as the library has them, past 31 bits the library's), any other lives in the
+heap.  The math library (`modules/math`) gives `SQR` ... `ATN` and `^` of a power that isn't whole,
 exact when the answer is, else `DIGITS` significant digits.  `BASE` sets the library's base for `PRINT`, `STR$`,
 `VAL`, `INPUT` and `READ`, and the compiler's (`cbase`) for the program's text after it; `RUN` starts in decimal.
 
@@ -182,38 +185,38 @@ sim/bench.js`, October 2026: hylang 1 rep each in a hylang of its own, HyForth 5
 
 | Kind | Benchmark | Result | HyForth ms | hylang ms | BASIC ms | BASIC/HyForth | BASIC/hylang |
 | :--- | :-------- | -----: | ---------: | --------: | -------: | ------------: | -----------: |
-| calls | `calls` | 2000 | 65 | 535 | 1,960 | 30.2x | 3.7x |
-| calls | `fib` | 987 | 182 | 520 | 2,875 | 15.8x | 5.5x |
-| calls | `tak` | 36 | 200 | 305 | 1,670 | 8.3x | 5.5x |
-| calls | `ack` | 168 | 116 | 260 | 1,990 | 17.2x | 7.7x |
-| loops | `loop` | 4000 | 77 | 400 | 1,805 | 23.4x | 4.5x |
-| loops | `while` | 6000 | 424 | 725 | 3,505 | 8.3x | 4.8x |
-| loops | `dotimes` | 6000 | 215 | 750 | 2,335 | 10.9x | 3.1x |
-| loops | `nested` | 1800 | 311 | 825 | 3,005 | 9.7x | 3.6x |
-| arith | `gcd` | 880 | 352 | 475 | 2,370 | 6.7x | 5.0x |
-| arith | `collatz` | 1457 | 290 | 425 | 3,230 | 11.1x | 7.6x |
-| arith | `hash` | 4072 | 673 | 715 | 2,170 | 3.2x | 3.0x |
-| bytes | `sieve` | 172 | 334 | 1,115 | 3,690 | 11.0x | 3.3x |
-| bytes | `sort` | 407 | 483 | 1,820 | 6,380 | 13.2x | 3.5x |
-| bytes | `matrix` | 1375 | 1,088 | 970 | 2,950 | 2.7x | 3.0x |
-| bytes | `queens` | 40 | 1,308 | 2,520 | 13,970 | 10.7x | 5.5x |
-| lists | `mapf` | 9880 | 208 | 1,020 | 1,310 | 6.3x | 1.3x |
-| lists | `fold` | 964 | 716 | 1,270 | 2,995 | 4.2x | 2.4x |
-| lists | `each` | 700 | 210 | 450 | 2,410 | 11.5x | 5.4x |
-| text | `chars` | 7 | 204 | 780 | 3,895 | 19.1x | 5.0x |
-| text | `digits` | 2890 | 2,143 | 1,795 | 4,830 | 2.3x | 2.7x |
-| All | | | 9,599 | 17,675 | 69,345 | 9.2x | 4.0x |
+| calls | `calls` | 2000 | 65 | 540 | 1,755 | 27.0x | 3.3x |
+| calls | `fib` | 987 | 182 | 520 | 2,690 | 14.8x | 5.2x |
+| calls | `tak` | 36 | 201 | 310 | 1,565 | 7.8x | 5.0x |
+| calls | `ack` | 168 | 116 | 260 | 1,855 | 16.0x | 7.1x |
+| loops | `loop` | 4000 | 77 | 395 | 1,450 | 18.8x | 3.7x |
+| loops | `while` | 6000 | 423 | 730 | 3,135 | 7.4x | 4.3x |
+| loops | `dotimes` | 6000 | 214 | 750 | 1,935 | 9.0x | 2.6x |
+| loops | `nested` | 1800 | 312 | 825 | 2,560 | 8.2x | 3.1x |
+| arith | `gcd` | 880 | 353 | 480 | 2,070 | 5.9x | 4.3x |
+| arith | `collatz` | 1457 | 291 | 425 | 1,595 | 5.5x | 3.8x |
+| arith | `hash` | 4072 | 673 | 715 | 1,960 | 2.9x | 2.7x |
+| bytes | `sieve` | 172 | 334 | 1,110 | 2,700 | 8.1x | 2.4x |
+| bytes | `sort` | 407 | 484 | 1,825 | 4,870 | 10.1x | 2.7x |
+| bytes | `matrix` | 1375 | 1,088 | 970 | 2,410 | 2.2x | 2.5x |
+| bytes | `queens` | 40 | 1,308 | 2,515 | 10,715 | 8.2x | 4.3x |
+| lists | `mapf` | 9880 | 208 | 1,025 | 1,210 | 5.8x | 1.2x |
+| lists | `fold` | 964 | 716 | 1,270 | 2,790 | 3.9x | 2.2x |
+| lists | `each` | 700 | 210 | 450 | 1,830 | 8.7x | 4.1x |
+| text | `chars` | 7 | 204 | 780 | 3,625 | 17.8x | 4.6x |
+| text | `digits` | 2890 | 2,143 | 1,800 | 2,375 | 1.1x | 1.3x |
+| All | | | 9,602 | 17,695 | 55,095 | 7.4x | 3.2x |
 
-The last row's ratios are the geometric means; by kind, BASIC/HyForth: calls 16.2x, loops 11.9x, arithmetic 6.2x,
-arrays (bytes) 8.1x, lists 6.7x, text 6.6x; BASIC/hylang 5.4x, 4.0x, 4.9x, 3.7x, 2.5x and 3.7x.  Over the six
-benchmarks the first BASIC had (calls, fib, loop, gcd, sieve, sort), 14.9 times HyForth's time and 4.2 times hylang's,
-where the first BASIC (EhyBASIC, Microsoft's 2A, retired for this one) was 44 and 12.3 times: three times as fast.
+The last row's ratios are the geometric means; by kind, BASIC/HyForth: calls 14.9x, loops 10.1x, arithmetic 4.5x,
+arrays (bytes) 6.2x, lists 5.8x, text 4.4x; BASIC/hylang 5.0x, 3.4x, 3.5x, 2.9x, 2.2x and 2.5x.  Over the six
+benchmarks the first BASIC had (calls, fib, loop, gcd, sieve, sort), 12.4 times HyForth's time and 3.5 times hylang's,
+where the first BASIC (EhyBASIC, Microsoft's 2A, retired for this one) was 44 and 12.3 times.  (Before the numbers'
+speed work, [NUMSPEED.md](design/plans/NUMSPEED.md), all twenty took 69,345 ms: 9.2 and 4.0 times.)
 
-BASIC is nearest where a statement does much or a call is hylang's own cost too: `mapf` (1.3 times hylang's: its
-`map` and `filter` make lists, BASIC calls a `FUNCTION` on integers), `fold` (2.4), and next to HyForth `digits`
-(2.3: a number's text is the library's in both), `matrix` (2.7) and `hash` (3.2).  It's farthest where a step is
-small: a `FOR` loop's step with a statement is some 1,600 cycles (`loop`, 23 times HyForth's `DO LOOP`), a
-`FUNCTION`'s call some 1,900 more (`calls`, 30 times a `JSR`), a recursion's call deeper (`ack` 7.7 times hylang's,
-`collatz` 7.6), and `MID$`'s new string for each character (`chars`, 19 times `C@`).  The interpreter's own time is
-the next work: `FORN` and a call's frame (its arguments by reference, its mark, its locals' defaults) are the most of
-it.
+BASIC is nearest where a statement does much or a call is hylang's own cost too: `mapf` (1.2 times hylang's: its
+`map` and `filter` make lists, BASIC calls a `FUNCTION` on integers), `fold` (2.2), and next to HyForth `digits`
+(1.1: a number's text is the library's in both), `matrix` (2.2) and `hash` (2.9).  It's farthest where a step is
+small: an empty `FOR` loop's pass is some 360 cycles (`loop`, 19 times HyForth's `DO LOOP`), a `FUNCTION`'s call
+(`calls`, 27 times a `JSR`), a recursion's call deeper (`ack` 7.1 times hylang's), and `MID$`'s new string for
+each character (`chars`, 18 times `C@`).  A call's frame (its arguments by reference, its mark, its locals' defaults)
+is the most of the interpreter's own time now.

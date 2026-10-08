@@ -17,6 +17,11 @@ nm_arith:
             jsr         nm_begin
             sty         n_opc
             jsr         nm_in2
+            lda         n_opc                               ; (Two small numbers: their own way, nmsmall.inc)
+            jsr         s_arith
+            bcs         :+
+            jmp         nm_out
+:
             lda         n_opc
             cmp         #OP_DIV
             bne         @op
@@ -67,7 +72,10 @@ nm_abs:
 nm_cmp:
             jsr         nm_begin
             jsr         nm_in2
+            jsr         s_cmp                               ; (Two small numbers: their own way)
+            bcc         :+
             jsr         n_cmp
+:
             ldx         #0
             clc
             jmp         nm_end

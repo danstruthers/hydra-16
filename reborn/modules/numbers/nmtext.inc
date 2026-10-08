@@ -12,28 +12,10 @@
 NAMED           = 19
 TEXT_MAX        = 255                                       ; (PARSE: a text's characters read, at most)
 
+; (Text is only the second bank's: its variables there, in its scope)
 .segment "NUMBANK"
-f_radix:    .res        1                                   ; f_: the base a call has.  Its size; negative ($FF);
-f_neg:      .res        1                                   ;   balanced ($FF); least digit first ($80); no two digits
-f_bal:      .res        1                                   ;   the same but for case (1); its 0's place among its
-f_le:       .res        1                                   ;   digits; decimal (1: 0-9, none of those three); its
-f_ci:       .res        1                                   ;   prefix written (1: its string's #); its digits
-f_zero:     .res        1
-f_dec:      .res        1
-f_pre:      .res        1
-f_dset:     .res        80
-w_radix:    .res        1                                   ; w_: the base a number's read or written in, the same
-w_neg:      .res        1
-w_bal:      .res        1
-w_le:       .res        1
-w_ci:       .res        1
-w_zero:     .res        1
-w_dec:      .res        1
-w_pre:      .res        1
-w_dset:     .res        80
-B_SIZE          = w_radix - f_radix
-f_spec:     .res        BASE_MAX                            ; f_'s string (its prefix: # and the string past its #)
-f_body:     .res        1                                   ; (Where its string's # ends)
+; (f_ and w_, f_spec and f_body: the state's, nmbank.inc, so that the state's base stays parsed between calls: st_fv
+; says f_ is it, st_wf that w_ is f_)
 t_dir:      .res        1                                   ; (A base's modifiers: < $FF, > 1; = $FF; - $FF, + 0,
 t_eq:       .res        1                                   ;   neither $80)
 t_sgn:      .res        1
@@ -58,6 +40,10 @@ t_left:     .res        2
 t_k:        .res        2
 t_i:        .res        2
 t_top:      .res        1
+t_pend:     .res        1                                   ; (p_decimal's: a digit waiting for its pair (1), it)
+t_pd:       .res        1
+t_r100:      .res        1                                   ; (d_100's remainder)
+t_q1:       .res        1
 t_chk:      .res        1                                   ; (1: a text checked, its number not made)
 t_rk:       .res        1                                   ; (A plain base's chunk: its size's power, its digits,
 t_kk:       .res        1                                   ;   its remainder, a count, a quotient)
@@ -80,22 +66,31 @@ G_AT            = f_at - g_ptrs
 t_raw           = DIGS
 t_num           = DIGS + 256
 
-.code
+            NM_CODE
 
 ; ---- Bases
 
-; f_ = the base the state has (st_base)
+; f_ = the base the state has (st_base): parsed already (st_fv), else parsed now
 b_state:
+            lda         st_fv
+            bne         @rts
             ldx         #0
 :
             lda         st_base,x
             sta         f_spec,x
-            beq         b_parse
+            beq         :+
             inx
             bra         :-
+:
+            jsr         b_parse
+            lda         #1
+            sta         st_fv
+@rts:
+            rts
 
 ; f_ = the base the caller's string at np names (zero-terminated: BASE_MAX bytes at most).  NE_BASE: it names none
 b_caller:
+            stz         st_fv                               ; (f_spec the caller's)
             ldx         #0
 :
             jsr         c_get
@@ -111,6 +106,8 @@ b_caller:
 ; its own ([...]: 2-80, each once, none a control character, a space or one of < > [ ] ( ) . / _ \ ' "), or a named
 ; base's letter (not with =: it's balanced or not already).  NE_BASE: it names none
 b_parse:
+            stz         st_fv                               ; (f_ and w_ about to change)
+            stz         st_wf
             ldx         #0
             stz         w_pre
             lda         f_spec
@@ -201,6 +198,8 @@ b_parse:
             sta         f_radix,y
             dey
             bpl         :-
+            lda         #1                                  ; (w_ the same)
+            sta         st_wf
             rts
 b_bad:
             lda         #NE_BASE
@@ -255,6 +254,7 @@ b_digit:
 
 ; w_ (a radix's or digits of its own) balanced if t_eq, least first if t_dir is <, negative if t_sgn is -
 b_said:
+            stz         st_wf
             lda         t_eq
             sta         w_bal
             lda         t_dir
@@ -271,6 +271,7 @@ b_said:
 ; w_ = the named base whose letter is .A (any case): least first if t_dir says, negative if t_sgn says, else as it
 ; is.  OUT: C = 1 if no base has that letter.  Keeps .X
 b_named:
+            stz         st_wf
             ora         #$20
             ldy         #NAMED - 1
 :
@@ -360,6 +361,7 @@ b_unique:
 
 ; w_ finished: w_ci (no two digits the same in upper case: then in upper case), its 0's place, whether it's decimal
 b_finish:
+            stz         st_wf
             lda         #1
             sta         w_ci
             ldx         #0
@@ -418,18 +420,24 @@ b_finish:
 @rts:
             rts
 
-; w_ = f_
+; w_ = f_ (unless it is: st_wf)
 b_cur:
+            lda         st_wf
+            bne         @rts
             ldy         #B_SIZE - 1
 :
             lda         f_radix,y
             sta         w_radix,y
             dey
             bpl         :-
+            lda         #1
+            sta         st_wf
+@rts:
             rts
 
 ; w_ = decimal, its prefix written (#d)
 b_decimal:
+            stz         st_wf
             lda         #10
             sta         w_radix
             stz         w_neg
@@ -508,6 +516,8 @@ nm_set_base:
             inx
             bra         :-
 :
+            lda         #1                                  ; (f_ the state's base now)
+            sta         st_fv
             lda         f_pre
             asl
             ora         f_dec
@@ -1083,6 +1093,7 @@ t_keep:
 np_print:
             sta         n_v
             stx         n_v + 1
+            stz         st_wf
             stz         w_pre
             jsr         n_kind
             cmp         #NK_COMPLEX
@@ -1275,8 +1286,7 @@ np_pairs:
             stz         t_np
             stz         t_np + 1
 @pair:
-            lda         #100
-            jsr         r_divsmall
+            jsr         d_100
             sta         (nd)
             inc         nd
             bne         :+
@@ -1309,6 +1319,64 @@ np_pairs:
             dec         t_k
 @rts:
             rts
+
+; |R1| = |R1| / 100, in place (np_pairs'): a byte at a time from the top by tables, 256 r = 100 q1 + r1 (d1q, d1r
+; for the remainder r), then (r1 + the byte) / 100 (d2q, d2r: to 354).  OUT: .A = the remainder
+d_100:
+            lda         #1
+            sta         nrc
+            jsr         r_c
+            ldx         #1
+            ldy         r_len,x
+            stz         t_r100
+@byte:
+            dey
+            cpy         #$FF
+            beq         @done
+            ldx         t_r100
+            lda         d1q,x
+            sta         t_q1
+            lda         d1r,x
+            clc
+            adc         (nc),y
+            tax
+            bcs         @hi
+            lda         d2r,x
+            sta         t_r100
+            lda         d2q,x
+            bra         @q
+@hi:
+            lda         d2r + 256,x
+            sta         t_r100
+            lda         d2q + 256,x
+@q:
+            clc
+            adc         t_q1
+            sta         (nc),y
+            bra         @byte
+@done:
+            jsr         r_normc
+            lda         t_r100
+            rts
+
+            NM_RODATA
+d1q:
+.repeat 100, I
+            .byte       (I * 256) / 100
+.endrep
+d1r:
+.repeat 100, I
+            .byte       (I * 256) .mod 100
+.endrep
+d2q:
+.repeat 355, I
+            .byte       I / 100
+.endrep
+d2r:
+.repeat 355, I
+            .byte       I .mod 100
+.endrep
+            NM_CODE
 
 ; ---- Read
 
@@ -1754,10 +1822,13 @@ p_decimal:
             tax
             jsr         r_set16
             stz         t_dot
+            stz         t_pend
             ldx         t_from
             lda         t_num,x
             cmp         #'.'
-            beq         @not
+            bne         :+
+            jmp         @not
+:
 @char:
             lda         t_num,x
             cmp         #'.'
@@ -1777,22 +1848,28 @@ p_decimal:
             sta         t_d
             lda         t_chk
             bne         @counted
-            phx
-            lda         #0
-            sta         nrc
-            lda         #10
-            jsr         r_mulsmall
-            lda         #2
-            sta         nrc
+            lda         t_pend                              ; (Two at a time: R0 * 100 + the pair, in one pass)
+            bne         :+
             lda         t_d
-            ldx         #0
-            jsr         r_set16
+            sta         t_pd
+            inc         t_pend
+            bra         @counted
+:
+            stz         t_pend
+            phx
+            lda         t_pd                                ; (The pair: 10 its first + its second)
+            asl         a
+            sta         n_cy
+            asl         a
+            asl         a
+            clc
+            adc         n_cy
+            adc         t_d
+            sta         n_cy
             lda         #0
-            sta         nra
             sta         nrc
-            lda         #2
-            sta         nrb
-            jsr         r_add
+            lda         #100
+            jsr         r_muladd
             plx
 @counted:
             lda         t_dot
@@ -1804,6 +1881,15 @@ p_decimal:
             inx
             cpx         t_to
             bne         @char
+            lda         t_pend                              ; (A digit left over: R0 * 10 + it)
+            beq         :+
+            lda         t_pd
+            sta         n_cy
+            lda         #0
+            sta         nrc
+            lda         #10
+            jsr         r_muladd
+:
             clc
             rts
 @not:
@@ -1943,6 +2029,7 @@ p_make:
 ; digits not each once, isn't a number.  Else #[<>]?[+-]? and a named base's letter, then its digits so.  OUT: C = 1
 ; if it isn't one
 p_based:
+            stz         st_wf
             ldx         t_from                              ; (Past #: < or >, =, + or -)
             inx
             jsr         p_dir
@@ -2310,6 +2397,7 @@ f_peek:
 ; A } ahead of f_ptr (before the string's 0)?  OUT: C = 0, the spec between in f_spec (t_n its length; past BASE_MAX
 ; - 1, one that names no base), f_ptr past the }; C = 1, f_ptr as it was, if there's none
 f_close:
+            stz         st_fv                               ; (f_spec the format's)
             lda         f_ptr
             pha
             lda         f_ptr + 1
@@ -2377,7 +2465,7 @@ f_arg:
             lda         #$FF
             rts
 
-.rodata
+            NM_RODATA
 ; The named bases: each one's letter, size, digits and flags (balanced, least first, negative)
 NB_BAL          = $01
 NB_LE           = $02
@@ -2406,4 +2494,4 @@ NLEGAL          = * - n_legal
 ; What's never a digit (danlang's IsUniqueSet), past the control characters and the space
 n_invalid:  .byte       "<>[]()./_\'", $22
 NINVALID        = * - n_invalid
-.code
+            NM_CODE

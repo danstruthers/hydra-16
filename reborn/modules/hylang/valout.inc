@@ -536,6 +536,8 @@ bo_to_atom:
             beq         @text
             cmp         #PK_NUMBER
             beq         @text
+            cmp         #PK_SNUM
+            beq         @text
 @not:
             LDAX        s_otoatom
             jmp         l_error

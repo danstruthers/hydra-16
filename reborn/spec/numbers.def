@@ -352,6 +352,14 @@ entry BYTES numbers impl=nm_bytes
   doc:    Bytes checked: a number in the stored format, in its one form (danlang's bytes-number), copied to the
   doc:    result's place.
 
+entry OPTIONS numbers impl=nm_options
+  in:     .A = the options: bit 0 = 1 if the zero page the libraries borrow ($70-$7F) needn't be kept over a call
+  out:    -
+  errors: -
+  names:  hl - | bas - | fs - | c -
+  doc:    The program's options, kept in its bank till INIT clears them.  With bit 0, a call leaves $70-$7F as it
+  doc:    used them, not as they were: a program that doesn't use them saves some 350 cycles a call (BASIC).
+
 # ---- math: the functions (the module math: numbers's registers and tower, in the same bank of RAM, r13).  A result
 # that isn't exact is a fixed decimal of the precision's significant digits, correctly rounded (danlang's NumMath.cs:
 # the value worked in binary fixed point with a bound on its error, again with more bits till all the bound allows
