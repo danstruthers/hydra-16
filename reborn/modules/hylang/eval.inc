@@ -24,6 +24,10 @@ depth:      .res        2                                   ; Frames on the stac
 ev_jv:      .res        2                                   ; (A jump's address: a frame's, a built-in's)
 bi_n:       .res        1                                   ; (A built-in called: its number, its arguments counted,
 bi_count:   .res        1                                   ;   to 255)
+bi_n2:      .res        1                                   ; (<> 0: ev_toomany's bi_n the second table's; it clears it)
+bi_t2:      .res        1                                   ; (bi_bind's table; ev_toomany's, and its most and least)
+bi_tmax:    .res        1
+bi_tmin:    .res        1
 fx_a:       .res        2                                   ; (fx_op's: its values, how many, its built-in, scratch;
 fx_b:       .res        2                                   ;   ev_quick's: the call, its arguments as written)
 fx_k:       .res        1
@@ -675,11 +679,15 @@ ev_head:
             lsr
             bcs         @notfn
             ldx         ex + 1
-            cpx         #IMM_PAGES
-            bcs         @cell
+            cpx         #>BUILTIN2
+            bcs         @high
             cpx         #>BUILTIN0
             bcc         :+
             jmp         ev_builtin
+@high:
+            cpx         #IMM_PAGES                          ; (The second table's: ordinary, their arguments evaluated)
+            bcs         @cell
+            jmp         ev_bargs
 :
             cpx         #0                                  ; (exit, with a status: the end)
             bne         @notfn
@@ -853,6 +861,7 @@ ev_builtin:
             bcs         @args
             jmp         ev_return
 @args:
+ev_bargs:
             MOVW        cf, ex
             stz         cn
             stz         cn + 1
@@ -873,6 +882,11 @@ ev_pcall:
             lda         ex
             ror
             sta         bi_n
+            stz         bi_t2                               ; (The second table's: bi_t2)
+            cpx         #>BUILTIN2
+            bcc         :+
+            inc         bi_t2
+:
             lda         cf                                  ; (Its values, counted, and the arguments)
             ldx         cf + 1
             ldy         #1
@@ -887,11 +901,19 @@ ev_pcall:
 :
             sta         bi_count
             ldx         bi_n
+            ldy         bi_t2                               ; (The second table's: its most there, and bi_n2 for
+            bne         @max2                               ;   ev_toomany)
             cmp         bi_max,x
+@maxed:
             beq         :+
             bcc         :+
             jmp         ev_toomany
+@max2:
+            sty         bi_n2
+            cmp         bi_max + 256,x
+            bra         @maxed
 :
+            stz         bi_n2
             lda         cf                                  ; (Its values pushed: the call's first)
             ldx         cf + 1
             ldy         #1
@@ -1029,7 +1051,7 @@ k_arg:
 ; OUT: C = 1 if cf takes errors as values (an ordinary built-in that looks at values: error?, type-of ...)
 takes_err:
             lda         cf + 1
-            cmp         #IMM_PAGES
+            cmp         #>BUILTIN2                          ; (The second table's: none)
             bcs         @no
             lsr
             lda         cf
@@ -1056,8 +1078,12 @@ ev_apply:
             jmp         ev_intr
 :
             lda         cf + 1
-            cmp         #IMM_PAGES
+            cmp         #>BUILTIN2
             bcc         ev_bapply
+            cmp         #IMM_PAGES
+            bcs         :+
+            jmp         ev_bapply2
+:
             jmp         ev_fapply
 
 ; A built-in (cf) applied to its values: fewer than it needs is it partially applied, waiting for the rest
@@ -1068,14 +1094,14 @@ ev_bapply:
             sta         bi_n
             tax
             lda         cn + 1
-            bne         @many
+            bne         ev_bmany
             lda         cn
             cmp         bi_min,x
-            bcc         @partial
+            bcc         ev_bpartial
             cmp         bi_max,x
-            beq         @call
-            bcc         @call
-@many:
+            beq         ev_bacall
+            bcc         ev_bacall
+ev_bmany:
             lda         #255                                ; (More than it takes: given by map, apply ...)
             ldx         cn + 1
             bne         :+
@@ -1085,7 +1111,7 @@ ev_bapply:
             stz         ev_inargs
             jsr         discard_args
             jmp         ev_toomany
-@call:
+ev_bacall:
             jsr         args_at
             bcc         :+
             LDAX        s_manyargs
@@ -1096,7 +1122,7 @@ ev_bapply:
             and         #BF_FAST
             beq         :+
             jsr         bi_fast
-            bcc         @done
+            bcc         ev_bdone
             ldx         bi_n
 :
             lda         bi_lo,x
@@ -1110,23 +1136,23 @@ ev_bapply:
 :
             lda         bi_flags,x
             and         #BF_BANK
-            bne         @far
+            bne         ev_bfar
             jsr         bi_jump
-            bra         @done
-@far:
+            bra         ev_bdone
+ev_bfar:
             tax                                             ; (In another bank: called there)
             lda         hyx2_bank1,x
             sta         hyx2_n
             MOVW        hyx2_to, ev_jv
             jsr         hyx2_farn
-@done:
+ev_bdone:
             bcc         :+
             jmp         ev_nomem
 :
             stz         ev_inargs
             jsr         drop_args
             jmp         ev_return
-@partial:
+ev_bpartial:
             jsr         args_list                           ; (Its values, a list: the partially applied built-in)
             MOVW        eu, hv
             MOVW        et, cf
@@ -1142,6 +1168,43 @@ ev_bapply:
 
 bi_jump:
             jmp         (ev_jv)
+
+; A built-in of the second table (cf: BUILTIN2 and up; .A its high byte) applied to its values: ev_bapply's way, for
+; an ordinary one in a bank
+ev_bapply2:
+            lsr
+            lda         cf
+            ror
+            sta         bi_n
+            tax
+            lda         cn + 1
+            bne         @many
+            lda         cn
+            cmp         bi_min + 256,x
+            bcs         :+
+            jmp         ev_bpartial
+:
+            cmp         bi_max + 256,x
+            beq         @call
+            bcc         @call
+@many:
+            lda         #1                                  ; (ev_toomany's: the second table's)
+            sta         bi_n2
+            jmp         ev_bmany
+@call:
+            jsr         args_at
+            bcc         :+
+            LDAX        s_manyargs
+            jmp         ev_error_args
+:
+            ldx         bi_n
+            lda         bi_lo + 256,x
+            sta         ev_jv
+            lda         bi_hi + 256,x
+            sta         ev_jv + 1
+            lda         bi_flags + 256,x
+            and         #BF_BANK
+            jmp         ev_bfar
 
 ; bi_n (BF_FAST's) on its cn values at argp, if they're fixnums and so is its answer (or it's T or NIL): fx_op's.
 ; OUT: C = 0, ex = its value; C = 1, not here (its own code's)
@@ -1359,7 +1422,7 @@ ev_quick:
             bcs         @lb561
             jmp         eq_no
 @lb561:
-            cmp         #IMM_PAGES
+            cmp         #>BUILTIN2                          ; (The second table's: not quick)
             bcs         eq_no
             lsr
             lda         ex
@@ -1890,6 +1953,8 @@ ev_apply_values:
             bcs         @cell
             cpx         #>BUILTIN0
             bcc         @notfn
+            cpx         #>BUILTIN2                          ; (The second table's: ordinary)
+            bcs         @values
             txa                                             ; (A built-in: not a special form)
             lsr
             lda         cf
@@ -2444,30 +2509,50 @@ intr_err:
 @rts:
             rts
 
-; Built-in bi_n given bi_count arguments, more than it takes: "'len' takes 1 argument, not 2"
+; Built-in bi_n (the second table's if bi_n2 <> 0: cleared) given bi_count arguments, more than it takes: "'len'
+; takes 1 argument, not 2"
 ev_toomany:
+            lda         bi_n2
+            sta         bi_t2
+            stz         bi_n2
+            ldx         bi_n                                ; (The most it takes, the least)
+            lda         bi_t2
+            bne         :+
+            lda         bi_max,x
+            sta         bi_tmax
+            lda         bi_min,x
+            bra         :++
+:
+            lda         bi_max + 256,x
+            sta         bi_tmax
+            lda         bi_min + 256,x
+:
+            sta         bi_tmin
             jsr         err_begin
             lda         #$27
             jsr         out_byte
             ldx         bi_n
+            lda         bi_t2
+            bne         :+
             FARN        2, bi_name
+            bra         :++
+:
+            FARN        2, bi_name2
+:
             LDAX        s_btakes
             jsr         msg_out
-            ldx         bi_n
-            lda         bi_max,x
-            cmp         bi_min,x
+            lda         bi_tmax
+            cmp         bi_tmin
             beq         :+
             LDAX        s_atmost
             jsr         msg_out
 :
-            ldx         bi_n
-            lda         bi_max,x
+            lda         bi_tmax
             ldx         #0
             jsr         out_dec
             LDAX        s_argument
             jsr         msg_out
-            ldx         bi_n
-            lda         bi_max,x
+            lda         bi_tmax
             cmp         #1
             beq         :+
             lda         #'s'

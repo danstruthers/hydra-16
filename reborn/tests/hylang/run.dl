@@ -9,6 +9,7 @@
 
 (each {f {"reader" "eval" "scope" "control" "errors" "lists" "strings" "numbers" "hashes" "types" "io" "system" "bits" "buffers" "library"}}
   (def {test-file} f)
+  (base "d")
   (try (load (+ regress-dir f ".dl"))
     (do
       (def {test-fails} (+ test-fails 1))

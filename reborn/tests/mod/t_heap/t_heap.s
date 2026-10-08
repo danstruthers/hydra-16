@@ -34,7 +34,7 @@ main:
             jsr         heap_init
             EXPECT_OK   "heap_init: two banks of cells, one of blobs"
             lda         free_pages
-            EXPECT_A    26, "26 free pages (32, less the immediates' 6)"
+            EXPECT_A    32 - IMM_PAGES, "24 free pages (32, less the immediates' 8)"
 
 ; ---- Values
             lda         #<NIL

@@ -215,6 +215,16 @@ function lparse(text, fmt, source) {
   }
   return { err: K.NE_NOTNUM };
 }
+// PARSE with .Y's bit 1: the whole text (255 characters at most) or nothing, as numref.js's parse reads it
+function lwhole(text, fmt, source) {
+  if (text.length > 255) return { err: K.NE_NOTNUM };
+  let v;
+  try { v = R.parse(text, fmt, source); }
+  catch (e) { if (e instanceof R.NumError) return { err: K['NE_' + e.code] }; throw e; }
+  if (v === null) return { err: K.NE_NOTNUM };
+  try { return { bytes: numfmt.encode(v), used: text.length }; }
+  catch (e) { if (e instanceof RangeError) return { err: K.NE_BIG }; throw e; }
+}
 // FORMAT: danlang's format; args: { num } or { str }; cur the base for {}
 function lformat(fmt, args, cur) {
   let out = '', ai = 0;
@@ -474,9 +484,10 @@ function calls(seed = 1066) {
   const BAD = ['', '#', 'w', 'a', '=x', '#=d', '1r', '81r', '123r', '0r', '[0]', '[00]', '[0 1]', '[a.b]', '[a/b]', 'x ', ' x', '#xx',
     '<<x', '[01', '01]', '#[abc', 'xr', '#2', '##x', '-', '[' + '0123456789'.repeat(9) + ']'];
   for (const b of [...BASES, ...BAD]) {
-    let ok = true;
-    try { R.NumberFormat.of(b); } catch (e) { ok = false; }
-    call('SET_BASE', { r0: where(str(b)) }, ok ? { ok: true } : { err: K.NE_BASE }, 'SET_BASE "' + b + '"');
+    let ok = true, fb = null;
+    try { fb = R.NumberFormat.of(b); } catch (e) { ok = false; }
+    call('SET_BASE', { r0: where(str(b)) }, ok ? { a: (fb.prefix ? 2 : 0) | (fb.isDecimal ? 1 : 0), x: 0 } : { err: K.NE_BASE },
+      'SET_BASE "' + b + '"' + (ok ? ': decimal ' + fb.isDecimal + ', its prefix ' + fb.prefix : ''));
     if (ok) call('GET_BASE', { flags: RESULT, room: 100 }, { bytes: txt(b) }, 'GET_BASE "' + b + '"');
   }
   call('SET_BASE', { r0: { data: str('d') } }, { ok: true }, 'SET_BASE d');
@@ -523,6 +534,25 @@ function calls(seed = 1066) {
     ['1+2i', 'x'], ['A+Bi', 'x'], ['10', 'b'], ['#xFF', 'b'], ['1.1', 'd'], ['12', '[012]'], ['1.5', '#d']])
     for (const src of [false, true]) parse(t, b, src);
   parse('#xFF', null, false, 'PARSE "#xFF", the base at its start');
+  // PARSE, .Y's bit 1: the whole text, or not a number (a reader's word, val's text)
+  const whole = (t, b, source) => {
+    const fm = b === null ? R.DECIMAL : R.NumberFormat.of(b);
+    call('PARSE', { flags: RESULT | (rnd(2) ? IN_BANK : 0), room: BANK_RES_ROOM, y: 2 | (source ? 1 : 0), r0: where(txt(t)), r1: t.length, r4: b === null ? 0 : where(str(b)) },
+      lwhole(t, fm, !!source), 'PARSE "' + t.slice(0, 40) + '", the whole text' + (b === null ? '' : ' in "' + b + '"') + (source ? ', a program\'s' : ''));
+  };
+  for (const t of ['1+', '1/x', '1/0x', '1/0', '12+X', '12 + 3', '  42', '42  ', '  42  ', '1/2)', '#xFF zz', '3.14.15', '1_000', '1 _', '-0', '2/4',
+    '1+2i', '1+2i+3i', '#x10+#x2i', '0.5-1/3i', '1.5/2', '#d1+#d2i', '#=[abc]ab', '', ' ', '7' + ' '.repeat(248), '7' + ' '.repeat(249),
+    '7' + ' '.repeat(300), '1'.repeat(255), '1'.repeat(256), 'x'.repeat(300)])
+    for (const src of [false, true]) whole(t, null, src);
+  for (const [t, b] of [['FF', 'x'], ['FFG', 'x'], ['1.8', 'x'], ['+-0', 'c'], ['A+Bi', 'x'], ['10 ', 'b'], ['102', 'b']])
+    for (const src of [false, true]) whole(t, b, src);
+  for (let k = 0; k < 60; k++) {                                // (Written, then read back whole)
+    const x = numfmt.decode(operand(!!(k % 4))), b = BASES[rnd(BASES.length)];
+    if ([x, x.re, x.im].some(r => r && isFix(r) && r.places > 600)) continue;
+    let t;
+    try { t = R.display(x, R.NumberFormat.of(b.replace(/^#/, ''))); } catch (e) { continue; }
+    whole(t, b.replace(/^#/, ''), k % 3 === 0);
+  }
   // FORMAT: its arguments in r1's buffer (t_num's arg1, or the bank's at $8800), the table first
   const fmt = (fstr, args, inBank) => {
     const at0 = inBank ? BANK_ARG1 : tnumLabel('arg1'), blob = [], table = [];

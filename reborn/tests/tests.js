@@ -858,7 +858,7 @@ const HYSUITE_PARTS = [
   { files: ['eval3'], checks: 1 },
   { files: ['eval4'], checks: 1 },
   { files: ['eval5'], checks: 3 },
-  { files: ['eval6', 'scope', 'control', 'errors', 'lists', 'strings', 'numbers', 'hashes', 'types', 'io', 'system', 'bits', 'buffers', 'library'], checks: 1145,
+  { files: ['eval6', 'scope', 'control', 'errors', 'lists', 'strings', 'numbers', 'hashes', 'types', 'io', 'system', 'bits', 'buffers', 'library'], checks: 1232,
     about: 'danlang\'s library, hylang\'s from its snapshot (globals.dl) and the ROM disk\'s /lib/hylang (dice.dl and screen.dl, where load finds a bare name, and use); files written on the card, programs run, the clock a DS1747\'s' },
 ];
 // A part's own files for the card: part.dl (run.dl with the part's list) and the pieces it names of a file that's cut
@@ -966,7 +966,7 @@ const HYLANG_LINES = [
   ['(list (gensym) (gensym "TMP") (to-atom "AB") (to-atom 5) (< (random 6) 6))', '{g__1 tmp__2 :ab :5 T}'],
   ['(* 99999999999 99999999999)', '9999999999800000000001'],
   ['(list (/ 7 2) (* 1.5 2) (+ 1/2 0.5) (- 0 12345678901234567890) (* (complex 0 1) (complex 0 1)))', '{7/2 3 1 -12345678901234567890 -1}'],
-  ['(list (to-str 255 "x") (to-str -7 "#m") (val "#zHYDRA") (to-fixed 2/3) (truncate -7/2) (fib 100))', '{"#xFF" "#mst" 30157606 0.6666666666 -3 354224848179261915075}'],
+  ['(list (to-str 255 "x") (to-str -7 "#m") (val "#zHYDRA") (to-fixed 2/3) (truncate -7/2) (fib 100))', '{"FF" "#mst" 30157606 0.6666666666 -3 354224848179261915075}'],
   ['(list (shl 1 40) (bit-and -1 #xffff) (hex 255 4) (bin 5) (lo -1) (word 52 18))', '{1099511627776 65535 "00FF" "101" 255 4660}'],
   ['(error-code (bit-and 1.5 1))', ':inval'], ['(< (random 100000000000000000000000) 100000000000000000000000)', 'T'],
   ['(list (str-split "a,b;;c" {"," ";"}) (str-upper "hi") (char-at "abc" 1) (str-pad-left "7" 3 "0") (code-char 66))',
@@ -996,7 +996,7 @@ const HYLANG_G = [
   ['(output-of (each {c "ab"} (write c ".")))', '"a.b."'], ['(try (error "x") &err)', '"x"'],
   ['(sort {3 1 2} >)', '{3 2 1}'], ['(filter (fn {x} {> x 1}) {1 2 3})', '{2 3}'], ['(foldr cons {} {1 2})', '{1 2}'],
   ['(list (subset {1 2 3} 1) (to-atom "x"))', '{{2 3} :x}'],
-  ['(list (* 99999999999 99999999999) (/ 7 2) (+ 0.5 0.25) (/ (complex 1 2) (complex 3 4)) (to-str 1/2 "#b"))', '{9999999999800000000001 7/2 0.75 11/25+2/25i "#b1/#b10"}'],
+  ['(list (* 99999999999 99999999999) (/ 7 2) (+ 0.5 0.25) (/ (complex 1 2) (complex 3 4)) (to-str 1/2 "#b"))', '{9999999999800000000001 7/2 0.75 11/25+2/25i "#b0.1"}'],
   ['(list (val "#[01]101") (fib 100) (shl -3 70) (to-fixed 1/3 5))', '{5 354224848179261915075 -3541774862152233910272 0.33333}'],
   ['(def {g} (to# {{:a "x"} {:b {1 2}} :t}))', 'NIL'],
   ['(list (g :b) (from# (hash-clone g {:c 3})) (str-split "a b" " ") (str-upper \\q))', '{{1 2} {{:a "x"} {:b {1 2}} {:c 3} :t} {"a" "b"} \\Q}'],

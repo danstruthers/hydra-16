@@ -37,12 +37,10 @@ nm_begin0:
             pla
             sta         v_ax
             LDR         a_top, arena                        ; (The arena empty)
-            ldx         #15
-@zp:
-            lda         na,x
-            sta         v_zp,x
-            dex
-            bpl         @zp
+.repeat 16, I                                               ; (The zero page kept, unrolled: each call's)
+            lda         na + I
+            sta         v_zp + I
+.endrep
             tsx                                             ; (The stack as the entry has it, past this return)
             inx
             inx
@@ -56,12 +54,10 @@ nm_end:
             php
             pha
             phx
-            ldx         #15
-@zp:
-            lda         v_zp,x
-            sta         na,x
-            dex
-            bpl         @zp
+.repeat 16, I
+            lda         v_zp + I
+            sta         na + I
+.endrep
             lda         v_bank
             sta         RAM_BANK
             plx
@@ -234,6 +230,8 @@ nm_in:
             sta         np
             stx         np + 1
             jsr         nm_measure
+            lda         np + 1                              ; (Its end below $8000, all of it in the caller's own
+            pha                                             ;   RAM: copied straight)
             lda         np                                  ; (Back to its start: np less its length)
             sec
             sbc         v_len
@@ -244,6 +242,12 @@ nm_in:
             lda         v_len
             ldx         v_len + 1
             jsr         a_room
+            pla
+            cmp         #$80
+            bcs         :+
+            jsr         m_copy_in
+            jmp         a_made
+:
             MOVR        v_left, v_len
 @byte:
             lda         v_left
@@ -259,6 +263,83 @@ nm_in:
             bra         @byte
 @done:
             jmp         a_made
+
+; v_len bytes copied from the caller's np to the arena's nu, each moved on past them: both in the RAM as it is (the
+; caller's below $8000)
+m_copy_in:
+            ldy         #0
+            ldx         v_len + 1
+            beq         @rest
+@page:
+            lda         (np),y
+            sta         (nu),y
+            iny
+            bne         @page
+            inc         np + 1
+            inc         nu + 1
+            dex
+            bne         @page
+@rest:
+            cpy         v_len
+            beq         @end
+            lda         (np),y
+            sta         (nu),y
+            iny
+            bra         @rest
+@end:
+            tya
+            clc
+            adc         nu
+            sta         nu
+            bcc         :+
+            inc         nu + 1
+:
+            tya
+            clc
+            adc         np
+            sta         np
+            bcc         :+
+            inc         np + 1
+:
+            rts
+
+; v_len bytes copied from nq (the library's) to the caller's np (below $8000), each moved on past them
+m_copy_out:
+            ldy         #0
+            ldx         v_len + 1
+            beq         @rest
+@page:
+            lda         (nq),y
+            sta         (np),y
+            iny
+            bne         @page
+            inc         nq + 1
+            inc         np + 1
+            dex
+            bne         @page
+@rest:
+            cpy         v_len
+            beq         @end
+            lda         (nq),y
+            sta         (np),y
+            iny
+            bra         @rest
+@end:
+            tya
+            clc
+            adc         nq
+            sta         nq
+            bcc         :+
+            inc         nq + 1
+:
+            tya
+            clc
+            adc         np
+            sta         np
+            bcc         :+
+            inc         np + 1
+:
+            rts
 
 ; The call's end with the number .A, .X (a value), copied to the caller's place r2 (its room r3): .A, .X = its
 ; length, C = 0.  No room: NE_ROOM
@@ -277,6 +358,17 @@ nm_out:
             bcc         @room
 :
             MOVR        np, r2
+            lda         r2                                  ; (Its end below $8000, all of it in the caller's own
+            clc                                             ;   RAM: copied straight)
+            adc         v_len
+            lda         r2 + 1
+            adc         v_len + 1
+            bcs         :+
+            cmp         #$80
+            bcs         :+
+            jsr         m_copy_out
+            bra         @done
+:
             MOVR        v_left, v_len
 @byte:
             lda         v_left

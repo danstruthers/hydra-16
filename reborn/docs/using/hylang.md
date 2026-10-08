@@ -69,9 +69,24 @@ hylang> (+ 0.1 0.2)
 => 0.3
 ```
 
-Bases are read with `#` (`#xFF`, `#b101`, `#16rFF`) and written with `(to-str n "x")`; `hex`, `bin`, the bit
-functions (`bit-and`, `shl` ...), `lo`, `hi` and `word` are for bytes and words.  Complex numbers, `random`,
-`truncate`, `to-fixed`, `div` and `mod` are there too.
+Bases are read with `#` (`#xFF`, `#b101`, `#16rFF`) and written with `(to-str n "x")` (`FF`; `"#x"` writes
+`#xFF`) or `format`'s `{x}`.  A fraction in another base has a radix point where it ends (`(to-str 1/2 "#b")` is
+`#b0.1`), and complex numbers are written as they're read, `1+2i`.  `(base "x")` makes a base the one everywhere:
+numbers are printed in it and read in it, a program's too (there a bare number starts with a digit: `0FF`), till
+`(base "d")`.
+
+```
+hylang> (base "x")
+=> "d"
+hylang> (+ 0FF 1)
+=> 100
+hylang> (base "d")
+=> "x"
+```
+
+`hex`, `bin`, the bit functions (`bit-and`, `shl` ...), `lo`, `hi` and `word` are for bytes and words.  Complex
+numbers, `random`, `truncate`, `to-fixed`, `div` and `mod` are there too, and `(number-bytes n)` and
+`(bytes-number b)` give a number's bytes in the format every language of the Hydra's stores numbers in.
 
 ## Lists, strings and hashes
 

@@ -120,6 +120,7 @@ PASS cons    the console: lines, editing, history, raw keys, Ctrl-C, windows (sh
 PASS mem     memory: BREAK, pages, banks, a shared segment between tasks (and kcopy from it); #r (raw RAM, init's); #s (a segment by name)  (46 checks, 10.0M cycles)
 PASS sem     semaphores: counts and mutexes, waits ended by a release, a free and a note, a task's end; GETPPID  (36 checks, 8.8M cycles)
 PASS xcall   XCALL: a library module's routines (t_lib), registers and flags both ways, its bank and back, a system call from it  (9 checks, 4.2M cycles)
+PASS numbers the numbers library (modules/numbers): its calls as a card's file has them (tests/numtest.js), each checked against the reference (sim/tools/numfmt.js), and to keep the caller's bank, zero page and r0-r3  (6 checks, 1553.2M cycles)
 PASS step    the debugger's steps (TASKSTEP, /proc/N/ctl): a program started stopped (SPAWN_STOPPED), each kind of instruction a step at a time (out of line, or on its frame), a JSR stepped over, a breakpoint, a program's own BRK; refused steps  (65 checks, 10.6M cycles)
 PASS db      the debugger at rc (/rom/bin/db): the SDK's hi started stopped, its labels from /pc (ld65's), registers, steps, a disassembly, a breakpoint hit twice, a JSR to the kernel stepped over, until, memory read and written, and on to its end  (3 checks, 32.2M cycles)
 PASS banks   a module of two banks: calls between them (FAR2, FAR1), registers and C, each bank's data  (6 checks, 3.6M cycles)
@@ -769,6 +770,18 @@ the same as the bytecode machine's).  Some 2,000 cycles a call before; now `whil
 before), 1.9 times HyForth's time (the ratios' geometric mean 2.3; 3.6 and 4.0 before), 2.8 times the bytecode's
 speed; all in one hylang 18,010.
 
+**Numbers on the numbers library** (October 2026, [NUMBERS.md](design/plans/NUMBERS.md)'s step 3, on
+`reborn-numbers`).  A number past a fixnum is a cell of one kind, `PK_NUMBER`, its bytes in the stored format in a
+blob, and the library (the module `numbers`, step 2's) works it: `numreg.inc`, `numval.inc` and `numtext.inc` are
+gone, and `numlib.inc` stages a call's operands in the reader's scratch and makes its result a value.  Fixnums keep
+their quick ways.  danlang's `base` (followed everywhere: print, `to-str`, `format`, `val`, `read`, a program's
+text), `number-bytes` and `bytes-number` are in, the first three of a second table of built-ins (512 now: the values
+`$0600`-`$07FF`, ordinary built-ins in a bank, applied the evaluator's own way; the first 256 as before).  danlang's
+suite, its `numbers.dl` and `run.dl` from `feature/numbers`: 1,424 checks, all passing; a new cross-check
+(`sim/tools/hyxcheck.js`): 6,500 random number expressions, danlang's and hylang's lines the same.  The twenty
+benchmarks as before (17,690 ms); rationals twice as quick and fixed decimals nine times, integers a little past a
+fixnum a quarter to two-thirds slower (a library call each).  The third bank: 9,928 bytes, 14,088 before.
+
 | Step | | Notes |
 |---|---|---|
 | 7.0 The language's specification | Done | `docs/hylang.md`: hylang 1 is danlang (`C:\source\danlang`, its `master`), readied for the port in C# first (lexical scope, tail calls, fexprs, `try`, loops, the missing basics, its number bugs fixed, and a system library a PC has too: files, programs and the shell, the environment, the clock, bits and bytes, the system's errors as codes), with its regression suite (965 checks) run unchanged on both; where the two may differ (8-bit strings, the call depth, `/lib/hylang`, Ctrl-C an error); and what makes it the Hydra's, in four layers: the system library, the Hydra's built-ins (notes, namespaces, tasks, memory and banks, keys), device libraries in hylang over the devices' files (console, GPIO, I2C, SPI, sound, disks, `/proc`, the clock's chip, `/pc`), and a `sys-` function for every call.  Decided: the extension `.hl`; `$name` an environment variable; danlang's GPLv3 license taken off by the user, so hylang is in the system's ROM (the plan's §22, questions 3 and 4) |
@@ -827,22 +840,27 @@ compatibility in the system).  Some of it is there already: `play -x` plays the 
 
 ## Next
 
-1. Under way (October 2026, another session): text windows ([WINDOWS.md](design/plans/WINDOWS.md): screens in
+1. Under way (October 2026, `reborn-numbers`): one number system for every language, [NUMBERS.md](design/plans/NUMBERS.md)
+   and [BASIC.md](design/plans/BASIC.md), the user's answers in both.  Done: step 1 (danlang's `base` and the stored
+   format, `feature/numbers`), step 2 (the numbers library, `modules/numbers`, 33 entries) and step 3 (hylang on it);
+   next, step 4 (`math`: `sqrt` ... `pi`, danlang first), then HyForth's `lib numbers`, C's `num.h` and `calc`, and
+   the new BASIC.
+2. Under way (October 2026, another session): text windows ([WINDOWS.md](design/plans/WINDOWS.md): screens in
    task F's RAM banks, a whole VT100, window groups, headers, footers and a bar; the user has answered its
    questions).  PCM is done (8.5: `/dev/vid/pcm`, `pcmctl`; `play`'s WAV files and a ZSM's PCM).
-2. The parity release, done (October 2026): the user declared parity on the emulator's word, the board's day to
+3. The parity release, done (October 2026): the user declared parity on the emulator's word, the board's day to
    come after it.  HydraOS 1.0 (in `reborn/` still): the old tree moved to `old/`, frozen; `reborn/bin`'s images in
    Git; reborn merged into `main`, tagged `hydraos-1.0` and released on GitHub with the ROM images.
-3. Then, the user's choice after PCM and text windows: the languages' graphics words (HyForth's `video` and turtle
+4. Then, the user's choice after PCM and text windows: the languages' graphics words (HyForth's `video` and turtle
    graphics, hylang's, C's `vera.h` and TGI), on the emulator's VERA.  The rest of 8.6 wants the board: the carrier
    card first, so the driver meets the user's VERA X (its detection, the write timing on the bus, the console at
    power-up), then the input controller (the keyboard into `cons`); and FX in the emulator, the VERA in the danlang
    emulator.  On the board too: the boot, POST, the tick, the console at 115200, a real card read and written.
-4. Small things left: the progress a long full format or check shows (3.4: HydraFS's `HFS_PG_*` are empty);
+5. Small things left: the progress a long full format or check shows (3.4: HydraFS's `HFS_PG_*` are empty);
    hylang's `screen.hl` with HyForth's terminal words; the two budgets the WDC and 7.16 MHz builds miss (above).
    Full banks, where more means a second bank: hylang's first (98%), `as` and `basic` (93%); `play`'s first (full: its
    second, PCM's, has room).
    HyForth's Floating-Point is left out (the user's choice, October 2026).
-5. Later: networking (9.4) when a W5500 card exists; the X16 migration utility (phase 10) at the end.  And
+6. Later: networking (9.4) when a W5500 card exists; the X16 migration utility (phase 10) at the end.  And
    NEXT_STEPS.md's, outside the plan: releases with ROM and card images (a starter card), a web emulator,
    `CONTRIBUTING.md`, a game library and games, music import (VGM, MIDI) and a tracker.

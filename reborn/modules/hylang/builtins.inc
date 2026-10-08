@@ -1,7 +1,10 @@
 ; ****************************************************************************
 ; builtins.inc - hylang's built-ins (phase 3): the table of all danlang's (Builtins.cs's Arity: each one's name,
 ; the arguments it needs and the most it takes, its flags, its code), and the code of those in the first bank.  A
-; built-in is the value BUILTIN0 + 2 * its number; each is bound to its name as hylang starts (bi_bind).
+; built-in is the value BUILTIN0 + 2 * its number; each is bound to its name as hylang starts (bi_bind).  The first
+; 256 are worked by their number (a byte) as it is; those past them (the second table: BUILTIN2 and up) are ordinary
+; ones whose code is in another bank, which the evaluator calls its own way (eval.inc's ev_bapply2) and the bytecode
+; machine through it.
 ;   An ordinary built-in's code gets its values at argp (cn of them, on the stack: roots), ee the caller's scope;
 ; it gives back ex, or C = 1 if there's no room.  A special form's (BF_SPECIAL: forms.inc) and one that runs the
 ; machine (BF_MACHINE) are jumped to.
@@ -17,6 +20,9 @@ BI_N            .set 0
 
 ; A built-in: its name, the arguments it needs and the most it takes, its flags, its code
 .macro BI name, min, max, flags, code
+.if BI_N >= 256
+.assert     ((flags) & (BF_SPECIAL | BF_ERRORS | BF_MACHINE | BF_FAST)) = 0 .and ((flags) & BF_BANK) <> 0, error, .sprintf("builtins.inc: %s: past the first 256, an ordinary built-in in another bank", name)
+.endif
             .ident(.sprintf("bi_min_%d", BI_N)) = min
             .ident(.sprintf("bi_max_%d", BI_N)) = max
             .ident(.sprintf("bi_fl_%d", BI_N)) = flags
@@ -326,9 +332,23 @@ BIN_BUFPUT      = BI_N
             BI          "buffer-fill", 2, 4, B6, bi_buffer_fill
             BI          "buffer-copy", 3, 5, B6, bi_buffer_copy
             BI          "read-buffer", 2, 4, B6, bi_read_buffer
+.assert     BI_N <= 256, error, "builtins.inc: the first table's 256 built-ins at most"
+BI_N        .set 256        ; (The second table: ordinary built-ins in a bank, BUILTIN2 and up)
+            BI          "base", 0, 1, B3, bi_base              ; (The numbers': numbi.inc's)
+            BI          "number-bytes", 1, 1, B3, bi_number_bytes
+            BI          "bytes-number", 1, 1, B3, bi_bytes_number
 
 BI_COUNT        = BI_N
-.assert     BI_COUNT <= 256, error, "builtins.inc: 256 built-ins at most (BUILTIN0 + 2 * n, below IMM_PAGES)"
+.repeat 256, I                                              ; (The first table's unused entries: none)
+.ifndef .ident(.sprintf("bi_min_%d", I))
+            .ident(.sprintf("bi_min_%d", I)) = 0
+            .ident(.sprintf("bi_max_%d", I)) = 0
+            .ident(.sprintf("bi_fl_%d", I)) = 0
+            .ident(.sprintf("bi_cd_%d", I)) = 0
+            .ident(.sprintf("bi_nm_%d", I)) = 0
+.endif
+.endrep
+.assert     BI_COUNT <= 512, error, "builtins.inc: 512 built-ins at most (BUILTIN0 + 2 * n, below IMM_PAGES)"
 
 .rodata
 ; The table: each built-in's least and most arguments, flags, code
@@ -365,15 +385,31 @@ bi_names_hi:
 .endrep
 
 .segment "CODE2"
-; Each built-in bound to its name (as its global value).  OUT: C = 1 if there's no room
+; Each built-in bound to its name (as its global value): the first table's (bi_t2 0), the second's (bi_t2 1).
+; OUT: C = 1 if there's no room
 bi_bind:
+            stz         bi_t2
             ldx         #0
 @one:
             phx
-            lda         bi_names_lo,x                       ; (Its name: its length)
+            lda         bi_t2                               ; (Its name: its length)
+            bne         :+
+            lda         bi_names_lo,x
             sta         hq
             lda         bi_names_hi,x
             sta         hq + 1
+            bra         :++
+:
+            lda         bi_names_lo + 256,x
+            sta         hq
+            lda         bi_names_hi + 256,x
+            sta         hq + 1
+:
+            lda         hq + 1                              ; (None: an unused entry's)
+            bne         :+
+            plx
+            bra         @next
+:
             ldy         #0
 :
             lda         (hq),y
@@ -388,7 +424,7 @@ bi_bind:
             plx
             bcs         @rts
             phx
-            lda         hv                                  ; (Its value: BUILTIN0 + 2 * x)
+            lda         hv                                  ; (Its value: BUILTIN0 + 2 * x, BUILTIN2 + 2 * x)
             ldx         hv + 1
             jsr         deref
             pla
@@ -399,11 +435,38 @@ bi_bind:
             lda         #0
             rol
             ora         #>BUILTIN0
+            ldx         bi_t2
+            beq         :+
+            ora         #>BUILTIN2
+:
             iny
             sta         (hp),y
             plx
+@next:
             inx
-            cpx         #<BI_COUNT                          ; (256: till .X is 0 again)
+            lda         bi_t2
+            bne         @second
+            txa                                             ; (The first table: till .X is 0 again, or its last)
+            beq         @first_done
+            .if BI_COUNT < 256
+            cpx         #<BI_COUNT
+            bne         @one
+            clc
+            rts
+            .else
+            bra         @one
+            .endif
+@first_done:
+            .if BI_COUNT > 256
+            inc         bi_t2                               ; (The second table)
+            ldx         #0
+            bra         @one
+            .else
+            clc
+            rts
+            .endif
+@second:
+            cpx         #<(BI_COUNT - 256)
             bne         @one
             clc
 @rts:
@@ -415,6 +478,18 @@ bi_name:
             lda         bi_names_lo,x
             pha
             lda         bi_names_hi,x
+            tax
+            pla
+            jsr         out_text
+            plx
+            rts
+
+; The second table's built-in .X's name out (the built-in 256 + .X).  Keeps .X
+bi_name2:
+            phx
+            lda         bi_names_lo + 256,x
+            pha
+            lda         bi_names_hi + 256,x
             tax
             pla
             jsr         out_text

@@ -9,8 +9,9 @@ SNIL            = $0004         ; The empty S-expression, ()
 EXIT_VAL        = $0006         ; exit
 UNBOUND         = $0008         ; (A symbol's global value when it has none)
 CHAR0           = $0200         ; The characters: CHAR0 + 2 * the code
-BUILTIN0        = $0400         ; The built-ins: BUILTIN0 + 2 * the number
-IMM_PAGES       = 6             ; (The pages below this one are the immediates': no memory behind them)
+BUILTIN0        = $0400         ; The built-ins: BUILTIN0 + 2 * the number (512 at most)
+BUILTIN2        = $0600         ; (The second table's first, the 257th: from here, ordinary ones in a bank alone)
+IMM_PAGES       = 8             ; (The pages below this one are the immediates': no memory behind them)
 
 .define FIX(n) (((n) * 2 + 1) & $FFFF)                      ; A fixnum's value
 
@@ -80,10 +81,11 @@ PK_QCONS        = 4             ; A Q-expression's (a list's) cons
 PK_SCOPED       = 5             ; A Q-expression and the scope it was written in (NIL: the global one); an fexpr's
                                 ;   argument (an S-expression, a symbol) and its caller's scope
 PK_STRING       = 6             ; A string: its length, its blob
-PK_BIGNUM       = 7             ; An integer past a fixnum: its sign and length, its blob
-PK_FIXED        = 8             ; A fixed decimal: its digits (an integer), its places (a fixnum)
-PK_RATIO        = 9             ; A rational: its numerator, its denominator
-PK_COMPLEX      = 10            ; A complex number: its real part, its imaginary part
+PK_NUMBER       = 7             ; A number past a fixnum: its length, its blob (its bytes in the stored format, in its
+                                ;   one form: numlib.inc's, the numbers library's)
+PK_FREE8        = 8             ; (No kind: once a fixed decimal's, a rational's, a complex number's: PK_NUMBER now)
+PK_FREE9        = 9
+PK_FREE10       = 10
 PK_ERROR        = 11            ; An error: its message, its code
 PK_PARTIAL      = 12            ; A partially applied built-in: the built-in, the values given it
 PK_SYMBOL       = 13            ; A symbol: its name (a blob), its global value, the next in its bucket, flags

@@ -21,6 +21,7 @@ A plan (October 2026) for the user's request: BASIC on hylang's number system in
 16. [Answers](#answers-the-users-7-october-2026)
 17. [As built: step 1](#as-built-step-1)
 18. [As built: step 2](#as-built-step-2)
+19. [As built: step 3](#as-built-step-3)
 
 ---
 
@@ -305,3 +306,36 @@ Done, on `reborn-numbers` (not merged yet): the numbers library, all 33 of its e
   * text: 79 base strings (every named base, modifiers, radixes, digits of one's own, and ones that name none) set and got back; 527 numbers written in every kind of base (from the state's base too, the edges of 2040 bits, no room); 485 texts read: what's written read back, with its `#` and bare in its base, a program's text, junk, numbers with text after them, spaces, past 255 characters; 50 formats; each against `numref.js` (and the model where it's too big);
   * `numref.js`'s integers have no end, the library's 255 bytes, so `numtest.js` has a model of the library's way (its registers' values as each is made, as `nmval.inc` makes them) that says where it's too big; where it isn't, the model's answer and `numref.js`'s must be the same, and are, for every call.
   * Every call's answer is the reference's, every `NE_BIG` where the model has it.  1,533M cycles (64 seconds).  Run with three other seeds too (7, 99, 2026): the same.
+
+### **As built: step 3**
+
+Done, on `reborn-numbers` (not merged yet): hylang's numbers are the library's.
+
+* **A number's cell** (`hylang.inc`): a fixnum as ever (bit 0 set, -16384 to 16383), or a cell of one kind, `PK_NUMBER`: its length and its blob, the number's bytes in the stored format, in its one form.  The four kinds there were (`PK_BIGNUM`, `PK_FIXED`, `PK_RATIO`, `PK_COMPLEX`) are one; kinds 8-10 are free.  An integer in a fixnum's range is always a fixnum, so a value's form is still its number's (`eq`, hashes' keys).
+* **The bridge** (`numlib.inc`, the third bank): the library found as hylang starts (`MODINFO`, the module `numbers`; without it hylang says so and stops), a RAM bank for its work (`r13`) and another for a number's text (8K: room for a complex number of rationals in binary).  A call's operands are staged in the reader's scratch (`NL_A`, `NL_B`, each `NUM_MAX` bytes: a fixnum's bytes made, a cell's blob copied), its result written after them (`NL_R`) and made a value (`nl_value`: a fixnum if it's an integer that fits, else a cell and a blob); a base's string in the RAM (`NL_S`).  `DISPLAY` writes into the text's bank and `out_byte` sends it on; past 8K, what fits; too big in its base (`NE_BIG`), in decimal with `#d`.  hylang's abort points (a built-in that runs out of room deep inside) came with it from `numreg.inc`.
+* **Fixnums as before**: `+`, `-`, `*`, `/` and the comparisons on fixnums are worked where they were (the evaluator's quick built-ins, the bytecode machine's quick ops, the native code's templates), and only a number past a fixnum goes to the library.  While the base is plain decimal without its prefix (`SET_BASE`'s answer, below), hylang reads and prints fixnums itself too.
+* **The built-ins** (`numbi.inc`, `numbits.inc`, rewritten): the arithmetic folds its arguments through `ADD` ... `DIV`; `abs`, `truncate`, `to-fixed`, `to-rational`, `rational.n`, `rational.d`, `complex`, `val`, `fib`, `random`, `to-str` and `format`'s `{base}` (a new placeholder in hylang's `format`), the bits (`bit-and`, `bit-or`, `bit-xor` quick on fixnums), `hex`, `bin`, `lo`, `hi`, `word`, `bytes`, `from-bytes`, the type tests, `range`, a hash's numeric key (`2.0` is the key `2`), and the system library's conversions (lengths, offsets, times, a call's registers).  New, as danlang has them: `(base)` and `(base b)`, the base everywhere (print, `repr`, `to-str`, `format`'s `{}`, `val`, `read`, a program's text from the next expression read, `save` with the prefix), and `number-bytes` and `bytes-number`, the stored format.  `numreg.inc`, `numval.inc` and `numtext.inc` are gone: 5,500 lines less.
+* **A wider table of built-ins**: hylang's had 256 of 256 (a built-in is the value `BUILTIN0 + 2 * n`, `n` a byte), so the three new ones, and step 4's nine, need more.  The values `$0600`-`$07FF` (`BUILTIN2`, the immediates' pages now 8, two pages of the first bank of cells less) are a second table: built-ins 256 to 511, each an ordinary one whose code is in another bank (the `BI` macro checks it).  The first 256 are worked as they were, by their number, at no cost; the evaluator applies the second table's in a way of its own (`ev_bapply2`: the arguments counted, partially applied, a far call), and the bytecode machine and its compiler call them as any function, through the evaluator.  `base`, `number-bytes` and `bytes-number` are the first three there.
+* **The library, for hylang**: `SET_BASE` gives back what the base is (`.A`: bit 0 decimal, bit 1 its prefix written); `PARSE`'s `.Y` bit 1 reads the whole text or nothing (`val`, a word of the reader's: `1/0x` isn't a number, as `1/0` is a division by zero).  A caller's number below `$8000` is copied in and out straight (each byte through the bank's test before: about 60 cycles a byte, 20 now), and the zero page `$70`-`$7F` kept unrolled: 224 cycles a call less.
+* **The system calls**: hylang's `sys` puts each argument straight in its register (`r0`-`r15`) as it's converted, and a conversion past a fixnum calls the library, which uses `r0`-`r5` and `r13`-`r15` itself; so those conversions keep the call registers (`nl_rsave`, `nl_rrest`), and a fixnum is converted without the library.
+* **The third bank**: 9,928 bytes (8,082 of code), 14,088 before: 4,160 bytes back, not most of its 12K, as the plan hoped: the built-ins, their error messages and the bridge stay there.  The library grew to 13,610 bytes.
+* **Tests**:
+  * `tests/hylang`'s `numbers.dl` and `run.dl` are danlang's (`feature/numbers`, `76607f9`): the suite is 1,424 checks (`hysuite5` 1,232), none failing.
+  * The `hylang` test: two answers changed to danlang's (`(to-str 255 "x")` is `FF`, `(to-str 1/2 "#b")` is `#b0.1`); `heap`: 24 free pages, the immediates' 8.
+  * The `numbers` test: 5,154 calls (136 more): `SET_BASE`'s answer for each of 79 base strings, and `PARSE`'s whole texts (junk, spaces, 255 characters and past, numbers written in a base and read back).
+  * The whole suite: 87 tests, all passing.
+  * **The cross-check** (`sim/tools/hyxcheck.js`, new): random number expressions (the tower's arithmetic past a fixnum and back, the edges of a fixnum, the order, the conversions and tests, the bits, numbers written in every base and read back, texts that may not be numbers, `format`'s placeholders, `fib`, `pow`, the stored format), printed a line each by danlang and by hylang in the emulator, from a card, compared byte for byte: 2,500 (its seed, 2100) and 4,000 more (seed 77), none different.
+* **Speed**: the 20 benchmarks (`sim/bench.js --vs`, against step 2's tree): 17,690 ms, 17,730 before, each the same or quicker; none of them goes past a fixnum.  Past one, in ticks (200 a second), step 2's hylang and this one:
+
+| Work | Before | Now |
+| :--- | -----: | --: |
+| 1/1 + 1/2 + ... + 1/39 | 299 | 137 |
+| A product of 30 fixed decimals | 648 | 67 |
+| 200!, in hexadecimal | 1,482 | 1,111 |
+| 200!, in decimal | 806 | 963 |
+| 300 sums of 21-digit integers | 246 | 314 |
+| 300 orders of 20-digit integers | 108 | 152 |
+| 200 shifts and xors of 31-digit integers | 153 | 248 |
+| 20 numbers of 60 digits read | 323 | 373 |
+
+  Rationals and fixed decimals are much quicker (the library's binary gcd, its scaled digits); an integer a little past a fixnum is a quarter to two-thirds slower, as the plan expected: each operation is a call (its operands staged and copied in, the call and the zero page, the result copied out and made a cell and a blob), where hylang's registers were its own.  Profiled (`(+ a b)`, `(< a b)`, 20 digits): the library a third of the time, half of it moving numbers in and out; the collector and the heap another third.

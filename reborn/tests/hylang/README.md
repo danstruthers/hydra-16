@@ -10,8 +10,9 @@ nearly all of the suite's time in its tail loops, is cut into pieces on the test
 `HYSUITE_PARTS`, `HYSUITE_CUTS`).  The files here stay as danlang has them.
 
 The old hylang (phase 7 as first built, to commit `a0973eb`) is gone: hylang was written again from scratch, to the
-plan "danlang: review and 65C02 plan" (`docs/hylang.md` has its design), and passes the whole suite (1,334 checks).
-Each phase ran the files it made pass, from an emulated card, and none that passed failed after; the phase each
+plan "danlang: review and 65C02 plan" (`docs/hylang.md` has its design), and passes the whole suite (1,424 checks
+since the numbers plan's step 3, its `numbers.dl` and `run.dl` danlang's `feature/numbers`: the base, the stored
+format).  Each phase ran the files it made pass, from an emulated card, and none that passed failed after; the phase each
 first ran from:
 
 | File | What | Runs from |

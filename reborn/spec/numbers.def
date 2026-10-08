@@ -77,11 +77,12 @@ entry INIT numbers impl=nm_init
 
 entry SET_BASE numbers impl=nm_set_base
   in:     r0 = a base string (its bytes and a 0: "x", "#x", "#16r", "c", "<x", "=16r", "[01]" ...)
-  out:    -
+  out:    .A = what it is: bit 0 decimal (0-9, not balanced, least digit first or negative), bit 1 its prefix written
   errors: NE_BASE
   names:  hl base | bas BASE | fs set-base | c num_set_base
   doc:    The base numbers are shown and read in, everywhere: the string's # says whether a number written in it
-  doc:    shows its prefix ("#x": #xFF; "x": FF).  HyForth's BASE, hex and decimal set it too.
+  doc:    shows its prefix ("#x": #xFF; "x": FF).  HyForth's BASE, hex and decimal set it too.  What it gives back lets
+  doc:    a language read and write its small integers itself while the base is decimal without its prefix.
 
 entry GET_BASE numbers impl=nm_get_base
   in:     r2 = a place for its string; r3 = its room
@@ -91,8 +92,8 @@ entry GET_BASE numbers impl=nm_get_base
   doc:    The base, its string (as SET_BASE was given it).
 
 entry PARSE numbers impl=nm_parse
-  in:     r0 = text; r1 = its length; r4 = a base string (0: the base); .Y = 1 if the text is a program's (a bare
-  in:     number must start with a digit 0-9 there)
+  in:     r0 = text; r1 = its length; r4 = a base string (0: the base); .Y bit 0 = 1 if the text is a program's (a
+  in:     bare number must start with a digit 0-9 there), bit 1 = 1 if the whole text must be the number
   out:    .A/.X = the number's length; r5 = the characters it used (from the start, spaces around it passed over)
   errors: NE_NOTNUM NE_DIV0 NE_BIG NE_ROOM NE_BASE
   names:  hl val | bas VAL | fs >n | c num_parse
@@ -100,8 +101,9 @@ entry PARSE numbers impl=nm_parse
   doc:    bases, radixes, digits of one's own, the modifiers, a number with a # of its own in its own base,
   doc:    fractions, a radix point, fixed decimals in decimal, complex numbers: 1+2i, 2i), as numref.js's parse
   doc:    reads a whole text.  It reads the longest start of the text that's a number (of its first 255 characters)
-  doc:    and says how much, so a caller reads numbers one after another; a caller with a word of its own (hylang's
-  doc:    reader) checks r5 is all of it.  The first such start that's a rational of 0 below (1/0): NE_DIV0.  (BASIC's
+  doc:    and says how much, so a caller reads numbers one after another (BASIC's VAL, C's strtod).  With .Y's bit 1, the
+  doc:    whole text or nothing, as numref.js's parse has it (a word of a reader's own, val: "1/0x" isn't a number, as
+  doc:    "1/0" is a division by zero).  The first such start that's a rational of 0 below (1/0): NE_DIV0.  (BASIC's
   doc:    exponents, 1E6, come with BASIC.)
 
 entry DISPLAY numbers impl=nm_display

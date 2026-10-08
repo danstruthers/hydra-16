@@ -57,13 +57,21 @@ print_val:
             jmp         @scoped
 @lb19:
             cmp         #PK_STRING
-            beq         @string
+            bne         @lb205
+            jmp         @string
+@lb205:
             cmp         #PK_SYMBOL
-            beq         @symbol
+            bne         @lb204
+            jmp         @symbol
+@lb204:
             cmp         #PK_ATOM
-            beq         @atom
+            bne         @lb203
+            jmp         @atom
+@lb203:
             cmp         #PK_ERROR
-            beq         @error
+            bne         @lb200
+            jmp         @error
+@lb200:
             cmp         #PK_FUNC
             bne         @lb202
             jmp         @func
@@ -81,10 +89,8 @@ print_val:
             jsr         print_buffer
             jmp         @after
 @lb17b:
-            cmp         #PK_BIGNUM                          ; (A number: numtext.inc's)
-            bcc         :+
-            cmp         #PK_COMPLEX + 1
-            bcs         :+
+            cmp         #PK_NUMBER                          ; (A number: numlib.inc's)
+            bne         :+
             lda         pv
             ldx         pv + 1
             FARN        3, num_print
@@ -98,6 +104,13 @@ print_val:
             jsr         out_text
             jmp         @after
 @fixnum:
+            lda         nl_dec                              ; (In a base not decimal, or with its prefix: numlib.inc's)
+            bne         :+
+            lda         pv
+            ldx         pv + 1
+            FARN        3, num_print
+            jmp         @after
+:
             lda         pv + 1
             cmp         #$80
             ror
@@ -167,13 +180,7 @@ print_val:
             ldx         pv + 1
             ldy         #0
             jsr         cell_get                            ; (Its number: the value's bits 8-1)
-            pha
-            txa
-            lsr
-            pla
-            ror
-            tax
-            jsr         bi_name
+            jsr         pr_bname
             lda         pv                                  ; (Its values: a list's items, after a space)
             ldx         pv + 1
             ldy         #1
@@ -425,14 +432,25 @@ print_imm:
             lda         #<s_fnopen                          ; (<function>(+))
             ldx         #>s_fnopen
             jsr         out_text
-            lda         pv + 1
-            lsr
             lda         pv
-            ror
-            tax
-            jsr         bi_name
+            ldx         pv + 1
+            jsr         pr_bname
             lda         #')'
             jmp         out_byte
+
+; The built-in .A, .X's name out (the first table's or the second's)
+pr_bname:
+            pha
+            txa
+            lsr
+            pla
+            ror
+            cpx         #>BUILTIN2
+            tax
+            bcs         :+
+            jmp         bi_name
+:
+            jmp         bi_name2
 
 ; The name a character (.A) prints by.  OUT: C = 0, hq = its entry in cn_table, .X = its name's length; C = 1 if
 ; it has none (.A kept)

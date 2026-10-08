@@ -1,9 +1,9 @@
 ; ****************************************************************************
-; numbi.inc - hylang's number built-ins (phase 5), in its third bank, as danlang's: + - * / (fixnums first, the rest
-; by numval.inc's tower), abs, rational.n, rational.d, to-rational, to-fixed, truncate, complex, val, fib, random,
-; the bits and bytes; and what the other banks call: a number's sign, whole value and order, range, to-str in a base.
-; Each built-in gets its values at argp (cn of them) and gives back ex (C = 1 if there's no room); those that work
-; numbers past a fixnum set an abort point (n_enter) as they start, and end through n_leave.
+; numbi.inc - hylang's number built-ins, in its third bank, as danlang's: + - * / (fixnums first, the rest by the
+; numbers library: numlib.inc), abs, rational.n, rational.d, to-rational, to-fixed, truncate, complex, val, fib,
+; random, base, number-bytes, bytes-number; and what the other banks call: a number's sign, whole value and order,
+; range, to-str in a base, format's {base}, the four bytes of the system's calls.  Each built-in gets its values at
+; argp (cn of them) and gives back ex (C = 1 if there's no room).
 
 .segment "CODE3"
 
@@ -133,10 +133,10 @@ bi_div:
             bne         nm_general
             jmp         nm_done
 
-; The operation nm_op over the arguments, any numbers (past a fixnum, or not all fixnums): the first, then it with
-; each after it in turn (n_op); (- x) its negation, (/ x) its reciprocal
+; The operation nm_op over the arguments, any numbers (past a fixnum, or not all fixnums), by the library: the first's
+; bytes at NL_A, then it with each after it in turn (each at NL_B, the result at NL_A); (- x) its negation, (/ x) its
+; reciprocal
 nm_general:
-            jsr         n_enter
             stz         nm_i                                ; (Each a number)
             stz         nm_i + 1
 @check:
@@ -153,83 +153,74 @@ nm_general:
             cmp         #'+'
             bne         :+
             LDAX        s_addnum
-            jsr         n_error
-            jmp         n_leave
+            jmp         n_error
 :
-            jsr         nm_notnum
-            jmp         n_leave
+            jmp         nm_notnum
 @numbers:
-            ldx         nm_op                               ; (Its operation)
-            ldy         #OP_ADD
-            cpx         #'+'
-            beq         @op
-            iny
-            cpx         #'-'
-            beq         @op
-            iny
-            cpx         #'*'
-            beq         @op
-            iny
-@op:
-            sty         n_opc2
+            ldx         #0                                  ; (Its entry)
+            lda         nm_op
+:
+            cmp         nm_ops,x
+            beq         :+
+            inx
+            bra         :-
+:
+            lda         nm_entry_lo,x
+            sta         n_entry
+            lda         nm_entry_hi,x
+            sta         n_entry + 1
             stz         nm_i
             stz         nm_i + 1
-            jsr         nm_argv                             ; (ex: the first)
-            sta         ex
-            stx         ex + 1
             lda         cn                                  ; (One: -x, or 1/x)
             cmp         #1
-            bne         @next
+            bne         @first
             lda         cn + 1
-            bne         @next
-            lda         n_opc2
-            cmp         #OP_SUB
+            bne         @first
+            lda         nm_op
+            cmp         #'-'
             bne         :+
-            MOVW        n_x, ex
-            jsr         n_neg
-            MOVW        ex, hv
-            bra         @done
+            jsr         nm_argv
+            jsr         nl_one
+            NLCALL      NUM_NEG
+            jmp         nl_result
 :
-            cmp         #OP_DIV
-            bne         @done
-            MOVW        n_y, ex
+            cmp         #'/'
+            bne         @first
+            LDR         nd, NL_A                            ; (1, then it)
             lda         #<FIX(1)
-            sta         ex
-            stz         ex + 1
-            bra         @divide
+            ldx         #0
+            jsr         nl_put
+            bra         @next
+@first:
+            LDR         nd, NL_A
+            jsr         nm_argv
+            jsr         nl_put
 @next:
             lda         nm_i
             cmp         cn
             lda         nm_i + 1
             sbc         cn + 1
             bcs         @done
+            LDR         nd, NL_B
             jsr         nm_argv
-            sta         n_y
-            stx         n_y + 1
-@divide:
-            MOVW        n_x, ex
-            lda         n_opc2
-            cmp         #OP_DIV
-            bne         @do
-            lda         n_y
-            ldx         n_y + 1
-            jsr         n_zero_p
-            bne         @do
-            LDAX        s_divzero
-            jsr         n_error
-            jmp         n_leave
-@do:
-            lda         n_opc2
-            jsr         n_op
-            MOVW        ex, hv
-            lda         cn                                  ; (Done, if it was (/ x))
-            cmp         #1
-            bne         @next
-            lda         cn + 1
-            bne         @next
+            jsr         nl_put
+            LDR         r0, NL_A
+            LDR         r1, NL_B
+            LDR         r2, NL_A
+            LDR         r3, NL_ROOM
+            MOVR        r15, n_entry
+            jsr         nl_call
+            bcc         :+
+            jmp         nl_error
+:
+            sta         nl_len
+            stx         nl_len + 1
+            bra         @next
 @done:
-            clc
-            jmp         n_leave
+            LDR         nd, NL_A
+            lda         nl_len
+            ldx         nl_len + 1
+            jmp         nl_ex
 
 ; .A, .X = the argument nm_i, nm_i one more
 nm_argv:
@@ -411,7 +402,7 @@ nm_plus1:
             plp
             rts
 
-; (abs x): x's magnitude: x, or -x if it's below 0
+; (abs x): x's magnitude: x, or -x if it's below 0 (danlang's: a complex number by its order, too)
 bi_abs:
             jsr         n_arg0
             lda         ex
@@ -422,19 +413,36 @@ bi_abs:
             LDAX        s_absnum
             jmp         n_error
 :
-            jsr         n_enter
-            MOVW        n_x, ex
+            lda         ex                                  ; (Below 0?)
+            ldx         ex + 1
+            lsr
+            bcc         @lib
+            lda         ex + 1
+            bpl         @self
+            jsr         nm_neg1
+            jmp         nl_result
+@lib:
+            MOVW        q_a, ex
             lda         #<FIX(0)
-            sta         n_y
-            stz         n_y + 1
-            jsr         n_cmp
+            sta         q_b
+            stz         q_b + 1
+            jsr         n_qcmp
+            lda         q_r
             cmp         #$FF
-            bne         @done
-            jsr         n_neg
-            MOVW        ex, hv
-@done:
+            bne         @self
+            jsr         nm_neg1
+            jmp         nl_result
+@self:
             clc
-            jmp         n_leave
+            rts
+
+; ex's negation, by the library: C, .A, .X its answer at NL_R
+nm_neg1:
+            lda         ex
+            ldx         ex + 1
+            jsr         nl_one
+            NLCALL      NUM_NEG
+            rts
 
 ; ---- Conversions
 
@@ -446,7 +454,7 @@ n_real_arg:
             lda         ex
             ldx         ex + 1
             jsr         n_kind
-            cmp         #NK_CPX
+            cmp         #NK_COMPLEX
             bcc         @rts
             jsr         nu_begin
             lda         #$27
@@ -461,110 +469,40 @@ n_real_arg:
 @rts:
             rts
 
-; (to-rational x): a real number as a rational (an integer when it's whole)
-bi_to_rational:
-            LDAX        n_torat
+; ex, a real number (n_real_arg's error .A, .X), and the library's entry r15 on it: the result, ex
+nb_real1:
             jsr         n_real_arg
             bcc         :+
             clc
             rts
 :
-            jsr         n_enter
-            jsr         nb_rat
-            MOVW        ex, hv
-            clc
-            jmp         n_leave
-
-; hv = ex, a real number, as a rational in lowest terms (an integer if it's whole)
-nb_rat:
             lda         ex
             ldx         ex + 1
-            ldy         #4
-            jsr         n_load
-            jmp         n_rat
+            jsr         nl_one
+            jsr         nl_call
+            jmp         nl_result
 
-; (rational.n x), (rational.d x): a real number's numerator, or denominator, as a rational in lowest terms
+; (to-rational x): a real number as a rational (an integer when it's whole)
+bi_to_rational:
+            LDR         r15, NUM_TO_RATIONAL
+            LDAX        n_torat
+            jmp         nb_real1
+
+; (rational.n x), (rational.d x): a real number's numerator, or denominator, in lowest terms
 bi_rational_n:
+            LDR         r15, NUM_NUMERATOR
             LDAX        n_ratn
-            ldy         #0
-            bra         nb_ratpart
+            jmp         nb_real1
 bi_rational_d:
+            LDR         r15, NUM_DENOMINATOR
             LDAX        n_ratd
-            ldy         #1
-nb_ratpart:
-            sty         n_c
-            jsr         n_real_arg
-            bcc         :+
-            clc
-            rts
-:
-            jsr         n_enter
-            jsr         nb_rat
-            lda         hv
-            ldx         hv + 1
-            jsr         n_kind
-            cmp         #NK_RAT
-            beq         @part
-            lda         n_c                                 ; (An integer: itself, over 1)
-            beq         @int
-            lda         #<FIX(1)
-            sta         ex
-            stz         ex + 1
-            bra         @done
-@int:
-            MOVW        ex, hv
-            bra         @done
-@part:
-            lda         hv
-            ldx         hv + 1
-            ldy         n_c
-            jsr         cell_get
-            sta         ex
-            stx         ex + 1
-@done:
-            clc
-            jmp         n_leave
+            jmp         nb_real1
 
 ; (truncate x): a real number's integer part (toward 0)
 bi_truncate:
+            LDR         r15, NUM_TRUNCATE
             LDAX        n_trunc
-            jsr         n_real_arg
-            bcc         :+
-            clc
-            rts
-:
-            jsr         n_enter
-            lda         ex
-            ldx         ex + 1
-            jsr         n_kind
-            beq         @done                               ; (An integer: itself)
-            jsr         nb_trunc
-            MOVW        ex, hv
-@done:
-            clc
-            jmp         n_leave
-
-; hv = ex, a real number, truncated (toward 0): R0
-nb_trunc:
-            lda         ex
-            ldx         ex + 1
-            ldy         #0
-            jsr         n_load
-            lda         #0
-            sta         nra
-            lda         #1
-            sta         nrb
-            lda         #2
-            sta         nrq
-            lda         #3
-            sta         nrr
-            jsr         r_divmod
-            lda         #2
-            sta         nra
-            lda         #0
-            sta         nrc
-            jsr         r_copy
-            jmp         r_store
+            jmp         nb_real1
 
 ; (to-fixed x [places]): a real number as a fixed decimal of places (10, 0 to 10000) places, cut short
 bi_to_fixed:
@@ -613,94 +551,15 @@ bi_to_fixed:
             jsr         out_text
             jmp         nu_end
 @places:
-            jsr         n_enter
             jsr         n_arg0
-            lda         ex                                  ; (|n|/d: R0/R1; its sign kept)
+            lda         ex
             ldx         ex + 1
-            ldy         #0
-            jsr         n_load
-            ldx         #0
-            lda         r_neg,x
-            sta         n_sign
-            stz         r_neg,x
-            lda         #0                                  ; (Its whole part: R2; the rest, R3)
-            sta         nra
-            lda         #1
-            sta         nrb
-            lda         #2
-            sta         nrq
-            lda         #3
-            sta         nrr
-            jsr         r_divmod
-            stz         n_fdig
-            stz         n_fdig + 1
-@place:
-            ldx         #3                                  ; (While there's more, and places: a digit more)
-            lda         r_len,x
-            beq         @made
-            lda         n_fdig
-            cmp         nm_p
-            lda         n_fdig + 1
-            sbc         nm_p + 1
-            bcs         @made
-            inc         n_fdig
-            bne         :+
-            inc         n_fdig + 1
-:
-            lda         #3
-            sta         nrc
-            lda         #10
-            jsr         r_mulsmall
-            lda         #2
-            sta         nrc
-            lda         #10
-            jsr         r_mulsmall
-            stz         n_d
-@less:
-            lda         #3                                  ; (The digit: R1 taken from R3 while it can be)
-            sta         nra
-            lda         #1
-            sta         nrb
-            jsr         r_ucmp
-            cmp         #$FF
-            beq         @digit
-            lda         #3
-            sta         nra
-            sta         nrc
-            lda         #1
-            sta         nrb
-            jsr         r_sub
-            inc         n_d
-            bra         @less
-@digit:
-            lda         n_d
-            ldx         #0
-            ldy         #4
-            sty         nrc
-            jsr         r_set16
-            lda         #2
-            sta         nra
-            sta         nrc
-            lda         #4
-            sta         nrb
-            jsr         r_add
-            bra         @place
-@made:
-            lda         #2                                  ; (Its digits, R0, with its sign)
-            sta         nra
-            lda         #0
-            sta         nrc
-            jsr         r_copy
-            ldx         #0
-            lda         n_sign
-            beq         :+
-            jsr         r_negate
-:
-            MOVW        n_pl, n_fdig
-            jsr         n_fix0
-            MOVW        ex, hv
-            clc
-            jmp         n_leave
+            jsr         nl_one
+            LDR         r15, NUM_TO_FIXED
+            lda         nm_p
+            ldx         nm_p + 1
+            jsr         nl_call
+            jmp         nl_result
 
 ; (complex re im): a complex number of two real numbers (a real one if im is 0)
 bi_complex:
@@ -708,50 +567,40 @@ bi_complex:
             lda         ex
             ldx         ex + 1
             jsr         n_kind
-            sta         n_k1
+            sta         nm_sign
             jsr         n_arg1
             lda         ex
             ldx         ex + 1
             jsr         n_kind
-            sta         n_k2
             cmp         #NK_NOT
             beq         @notnum
-            lda         n_k1
+            tax
+            lda         nm_sign
             cmp         #NK_NOT
             beq         @notnum
-            cmp         #NK_CPX
+            cmp         #NK_COMPLEX
             bne         :+
             LDAX        s_cpxre
             jmp         n_error
 :
-            lda         n_k2
-            cmp         #NK_CPX
+            cpx         #NK_COMPLEX
             bne         :+
             LDAX        s_cpxim
             jmp         n_error
 :
-            lda         ex                                  ; (im 0: re)
+            jsr         n_arg1                              ; (re at NL_A, im at NL_B)
+            MOVW        nl_w, ex
+            jsr         n_arg0
+            lda         ex
             ldx         ex + 1
-            jsr         n_zero_p
-            bne         :+
-            jsr         n_arg0
-            clc
-            rts
-:
-            MOVW        eu, ex
-            jsr         n_arg0
-            MOVW        et, ex
-            lda         #PK_COMPLEX
-            jsr         make2
-            bcs         @rts
-            MOVW        ex, hv
-@rts:
-            rts
+            jsr         nl_two
+            NLCALL      NUM_COMPLEX
+            jmp         nl_result_a
 @notnum:
             LDAX        s_cpxnum
             jmp         n_error
 
-; (val s): the number a string (or a character) is written as, spaces around it allowed
+; (val s): the number a string (or a character) is written as, in the base, spaces around it allowed
 bi_val:
             jsr         n_arg0
             lda         ex
@@ -763,20 +612,20 @@ bi_val:
 :
             lda         hn + 1                              ; (Longer than 255: not a number)
             bne         @not
-            jsr         num_parse
-            bcs         @rts
-            lda         n_abt
-            bne         @rts
-            lda         n_res
-            bne         :+
-            MOVW        ex, hv
-            clc
-            rts
-:
-            cmp         #NP_DIVZ
-            bne         @not
-            LDAX        s_divzero
-            jmp         n_error
+            MOVR        r0, hq                              ; (Its bytes: in the window, its bank there for the
+            MOVR        r1, hn                              ;   library to read)
+            LDR         r4, 0
+            LDR         r2, NL_R
+            LDR         r3, NL_ROOM
+            LDR         r15, NUM_PARSE
+            ldy         #2                                  ; (The whole text: not a program's)
+            jsr         nl_call
+            bcc         @num
+            cmp         #NE_NOTNUM
+            beq         @not
+            jmp         nl_error
+@num:
+            jmp         nl_result
 @not:
             jsr         nu_begin                            ; ("'val': "abc" isn't a number")
             LDAX        s_valnot
@@ -789,8 +638,6 @@ bi_val:
             LDAX        s_valnot2
             jsr         out_text
             jmp         nu_end
-@rts:
-            rts
 
 ; IN: .A, .X = a value.  OUT: C = 0, hq its bytes (in the window: a string's), hn their count, if it's a string or a
 ; character (its byte, at n_c); C = 1 if it isn't
@@ -828,11 +675,11 @@ n_text_of:
             pha
             iny
             lda         (hp),y
-            sta         n_t
+            pha
             iny
             lda         (hp),y
             tax
-            lda         n_t
+            pla
             jsr         blob_data
             pla
             sta         hn + 1
@@ -866,11 +713,11 @@ n_bytes_of:
             pha
             iny
             lda         (hp),y
-            sta         n_t
+            pha
             iny
             lda         (hp),y
             tax
-            lda         n_t
+            pla
             jsr         blob_data
             pla
             sta         hn + 1
@@ -880,7 +727,7 @@ n_bytes_of:
             clc
             rts
 
-; (fib n): the nth Fibonacci number (n 0 or more): by doubling, from n's top bit down
+; (fib n): the nth Fibonacci number (n 0 or more)
 bi_fib:
             LDAX        n_fib
             sta         nm_m
@@ -892,218 +739,57 @@ bi_fib:
             clc
             rts
 :
-            sta         nm_n
-            stx         nm_n + 1
             txa
             bpl         :+
             LDAX        s_fibneg
             jmp         n_error
 :
-            jsr         n_enter
-            lda         #0                                  ; (a = 0: R0; b = 1: R1)
-            sta         nrc
-            tax
-            jsr         r_set16
-            lda         #1
-            sta         nrc
-            ldx         #0
-            jsr         r_set16
-            lda         #16
-            sta         n_bits
-@bit:
-            lda         #1                                  ; (t = a(2b - a): R3; b = aa + bb; a = t)
-            sta         nra
-            sta         nrb
-            lda         #2
-            sta         nrc
-            jsr         r_add
-            lda         #2
-            sta         nra
-            sta         nrc
-            lda         #0
-            sta         nrb
-            jsr         r_sub
-            lda         #0
-            ldx         #2
-            ldy         #3
-            jsr         n_mulr
-            lda         #0
-            ldx         #0
-            ldy         #4
-            jsr         n_mulr
-            lda         #1
-            ldx         #1
-            ldy         #5
-            jsr         n_mulr
-            lda         #4
-            sta         nra
-            lda         #5
-            sta         nrb
-            lda         #1
-            sta         nrc
-            jsr         r_add
-            lda         #3
-            sta         nra
-            lda         #0
-            sta         nrc
-            jsr         r_copy
-            asl         nm_n                                ; (n's bit: a, b = b, a + b)
-            rol         nm_n + 1
-            bcc         @next
-            lda         #0
-            sta         nra
-            lda         #1
-            sta         nrb
-            lda         #2
-            sta         nrc
-            jsr         r_add
-            lda         #1
-            sta         nra
-            lda         #0
-            sta         nrc
-            jsr         r_copy
-            lda         #2
-            sta         nra
-            lda         #1
-            sta         nrc
-            jsr         r_copy
-@next:
-            dec         n_bits
-            beq         @lb218
-            jmp         @bit
-@lb218:
-            lda         #0
-            sta         nrc
-            jsr         r_store
-            MOVW        ex, hv
-            clc
-            jmp         n_leave
+            jsr         n_arg0
+            lda         ex
+            ldx         ex + 1
+            jsr         nl_one
+            NLCALL      NUM_FIB
+            jmp         nl_result
 
-; (random n): an integer from 0 up to, not including, n (an integer, 1 or more): a 16-bit xorshift's bytes, seeded by
-; the tick count as it's first wanted; drawn again while they're n or more
+; (random n): an integer from 0 up to, not including, n (an integer, 1 or more; or a fixed decimal of no places): the
+; library's generator (hylang's: a 16-bit xorshift)
 bi_random:
             jsr         n_arg0
             lda         ex
             ldx         ex + 1
             jsr         n_kind
+            beq         @int
+            cmp         #NK_FIXED                           ; (A fixed decimal of no places)
+            bne         @notint
+            lda         ex
+            ldx         ex + 1
+            jsr         nl_tag
+            cmp         #NT_FIXED
+            bne         @notint
+@int:
+            lda         ex                                  ; (Above 0)
+            ldx         ex + 1
+            jsr         n_sign3
+            cmp         #2
             beq         :+
-            cmp         #NK_FIX                             ; (A fixed decimal of no places: its digits)
-            beq         @lb217
-            jmp         @notint
-@lb217:
-            lda         ex
-            ldx         ex + 1
-            ldy         #1
-            jsr         cell_get
-            cmp         #<FIX(0)
-            beq         @lb216
-            jmp         @notint
-@lb216:
-            cpx         #0
-            beq         @lb215
-            jmp         @notint
-@lb215:
-            lda         ex
-            ldx         ex + 1
-            ldy         #0
-            jsr         cell_get
-            sta         ex
-            stx         ex + 1
-:
-            jsr         n_enter
-            lda         #0                                  ; (n: R0)
-            sta         nrc
-            lda         ex
-            ldx         ex + 1
-            jsr         r_load
-            ldx         #0
-            lda         r_neg,x
-            bne         @low
-            lda         r_len,x
-            bne         :+
-@low:
             LDAX        s_randpos
-            jsr         n_error
-            jmp         n_leave
+            jmp         n_error
 :
-            lda         rn_x                                ; (Seeded: the tick count, not 0)
-            ora         rn_x + 1
-            bne         @draw
-            jsr         TICKS
-            eor         #$5A
-            sta         rn_x
-            txa
-            eor         #$A5
-            sta         rn_x + 1
-            ora         rn_x
-            bne         @draw
-            inc         rn_x
-@draw:
-            lda         #1                                  ; (R1: as many bytes as n, its top one masked as n's)
-            sta         nrc
-            jsr         r_c
-            ldx         #0
-            lda         r_len,x
-            sta         n_la
-            ldx         #1
-            sta         r_len,x
-            stz         r_neg,x
-            ldy         #0
-@byte:
-            jsr         rn_next
-            sta         (nc),y
-            iny
-            cpy         n_la
-            bne         @byte
-            dey
-            lda         #0
-            jsr         r_page
-            sta         na + 1
-            stz         na
-            lda         (na),y                              ; (n's top byte: the bits it has)
-            ldx         #$FF
-:
-            asl
-            bcs         :+
-            pha
-            txa
-            lsr
-            tax
-            pla
-            bra         :-
-:
-            txa
-            and         (nc),y
-            sta         (nc),y
-            jsr         r_normc
-            lda         #1                                  ; (n or more: again)
-            sta         nra
-            lda         #0
-            sta         nrb
-            jsr         r_ucmp
-            cmp         #$FF
-            bne         @draw
-            jsr         r_store
-            MOVW        ex, hv
-            clc
-            jmp         n_leave
+            lda         ex
+            ldx         ex + 1
+            jsr         nl_one
+            NLCALL      NUM_RANDOM
+            jmp         nl_result
 @notint:
             LDAX        s_randint
             jmp         n_error
 
-; The generator's next byte (rn_x: a 16-bit xorshift, 7 9 8).  OUT: .A.  Keeps .Y
-rn_next:
-            lda         rn_x + 1
-            lsr
-            lda         rn_x
-            ror
-            eor         rn_x + 1
-            sta         rn_x + 1
-            ror
-            eor         rn_x
-            sta         rn_x
-            eor         rn_x + 1
-            sta         rn_x + 1
+; IN: .A, .X = a PK_NUMBER cell.  OUT: .A = its number's tag (its first byte)
+nl_tag:
+            sta         nl_v
+            stx         nl_v + 1
+            jsr         nl_blob
+            lda         (hp)
             rts
 
 ; The argument .Y / 2 (0, 1 ...), a whole number for 'fn' (nm_m) as what (.A, .X: "an index", "a count" ...).  OUT: C =
@@ -1143,6 +829,225 @@ nb_whole:
 @rts:
             rts
 
+; ---- The base, and the stored format
+
+; (base): the base, its string.  (base b): the base from now on b (a string: "x", "#16r", "c" ...), the one before
+; given back
+bi_base:
+            LDR         r2, NL_S                            ; (The base before)
+            LDR         r3, NL_BASE_MAX
+            NLCALL      NUM_GET_BASE
+            sta         nl_i
+            lda         cn
+            beq         @old
+            jsr         n_arg0
+            lda         ex
+            ldx         ex + 1
+            jsr         kind_of
+            cmp         #PK_STRING
+            beq         :+
+            LDAX        s_basestr
+            jmp         n_error
+:
+            ldx         nl_i                                ; (The base before: after the new one's room)
+:
+            lda         NL_S,x
+            sta         NL_T,x
+            dex
+            bpl         :-
+            lda         ex
+            ldx         ex + 1
+            jsr         nl_spec
+            LDR         r0, NL_S
+            NLCALL      NUM_SET_BASE
+            bcc         :+
+            jsr         nu_begin                            ; ("'base': Invalid base specifier #q?")
+            LDAX        s_basebad
+            jsr         out_text
+            LDAX        NL_S
+            jsr         out_text
+            jmp         nu_end
+:
+            jsr         nl_flags_set
+            LDAX        NL_T
+            bra         @string
+@old:
+            LDAX        NL_S
+@string:
+            sta         hq
+            stx         hq + 1
+            lda         nl_i
+            sta         hn
+            stz         hn + 1
+            jsr         string_make
+            bcs         :+
+            MOVW        ex, hv
+:
+            rts
+
+; (number-bytes n): n in the stored format, its bytes (a list)
+bi_number_bytes:
+            jsr         n_arg0
+            LDR         nd, NL_A
+            lda         ex
+            ldx         ex + 1
+            jsr         nl_put
+            bcc         :+
+            LDAX        s_nbnum
+            jmp         n_error
+:
+            sta         nl_i                                ; (Its bytes from the last: each consed on)
+            stx         nl_i + 1
+            stz         cf
+            stz         cf + 1
+@byte:
+            lda         nl_i
+            ora         nl_i + 1
+            beq         @made
+            lda         nl_i
+            bne         :+
+            dec         nl_i + 1
+:
+            dec         nl_i
+            clc
+            lda         #<NL_A
+            adc         nl_i
+            sta         nd
+            lda         #>NL_A
+            adc         nl_i + 1
+            sta         nd + 1
+            lda         (nd)
+            ldx         #0
+            jsr         fix_ax
+            sta         et
+            stx         et + 1
+            MOVW        eu, cf
+            lda         #PK_QCONS
+            jsr         make2
+            bcs         @rts
+            MOVW        cf, hv
+            bra         @byte
+@made:
+            MOVW        ex, cf
+            clc
+@rts:
+            rts
+
+; (bytes-number b): the number b's bytes (a list of bytes, 0-255, or a buffer) are, in the stored format, in its
+; one form
+bi_bytes_number:
+            jsr         n_arg0
+            stz         nl_i
+            stz         nl_i + 1
+            lda         ex
+            ldx         ex + 1
+            jsr         kind_of
+            cmp         #PK_BUFFER
+            bne         @list
+            lda         ex                                  ; (A buffer: its bytes, NUM_MAX at most)
+            ldx         ex + 1
+            jsr         n_bytes_of
+            lda         hn + 1
+            cmp         #>NUM_MAX
+            bcc         :+
+            beq         @lb206
+            jmp         @bad
+@lb206:
+            lda         hn
+            cmp         #<NUM_MAX
+            bcc         @lb205
+            jmp         @bad
+@lb205:
+:
+            MOVW        nl_i, hn
+            LDR         nd, NL_A
+            ldy         #0
+            ldx         hn + 1
+            beq         @last
+@page:
+            lda         (hq),y
+            sta         (nd),y
+            iny
+            bne         @page
+            inc         hq + 1
+            inc         nd + 1
+            dex
+            bne         @page
+@last:
+            cpy         hn
+            bne         @lb204
+            jmp         @check
+@lb204:
+            lda         (hq),y
+            sta         (nd),y
+            iny
+            bra         @last
+@list:
+            lda         ex
+            ldx         ex + 1
+            jsr         q_conses
+            bcc         :+
+            LDAX        s_bnlist
+            jmp         n_error
+:
+            sta         n_v                                 ; (n_v: its conses left)
+            stx         n_v + 1
+            LDR         nd, NL_A
+@item:
+            lda         n_v
+            ora         n_v + 1
+            beq         @check
+            lda         nl_i + 1                            ; (NUM_MAX at most)
+            cmp         #>NUM_MAX
+            bcc         :+
+            lda         nl_i
+            cmp         #<NUM_MAX
+            bcc         @lb203
+            jmp         @bad
+@lb203:
+:
+            lda         n_v
+            ldx         n_v + 1
+            ldy         #0
+            jsr         cell_get
+            sta         n_x
+            stx         n_x + 1
+            lsr                                             ; (A byte: a fixnum 0-255)
+            bcc         @nonbyte
+            lda         n_x
+            ldx         n_x + 1
+            jsr         unfix
+            cpx         #0
+            bne         @nonbyte
+            ldy         nl_i
+            sta         (nd),y
+            inc         nl_i
+            bne         :+
+            inc         nl_i + 1
+            inc         nd + 1
+:
+            lda         n_v
+            ldx         n_v + 1
+            ldy         #1
+            jsr         cell_get
+            sta         n_v
+            stx         n_v + 1
+            bra         @item
+@check:
+            LDR         r0, NL_A                            ; (Its one form: BYTES's)
+            MOVR        r1, nl_i
+            LDR         r2, NL_R
+            LDR         r3, NL_ROOM
+            NLCALL      NUM_BYTES
+            bcs         @bad
+            jmp         nl_result
+@bad:
+            LDAX        s_bnbad
+            jmp         n_error
+@nonbyte:
+            LDAX        s_bnbyte
+            jmp         n_error
+
 ; ---- What the other banks call
 
 ; IN: .A, .X = a value.  OUT: C = 0 and .A, .X = it if it's a whole number (an integer, or a fixed decimal of no
@@ -1150,40 +1055,80 @@ nb_whole:
 n_whole:
             sta         n_v
             stx         n_v + 1
-            jsr         n_kind
-            beq         @int
-            cmp         #NK_FIX
-            bne         @no
-            lda         n_v
-            ldx         n_v + 1
-            ldy         #1
-            jsr         cell_get
-            cmp         #<FIX(0)
-            bne         @no
-            cpx         #0
-            bne         @no
-            lda         n_v
-            ldx         n_v + 1
-            ldy         #0
-            jsr         cell_get
-            sta         n_v
-            stx         n_v + 1
-@int:
-            lda         n_v
             lsr
-            bcc         @big
+            bcc         @cell
             lda         n_v
             ldx         n_v + 1
             jsr         unfix
             clc
             rts
-@big:
-            lda         n_v                                 ; (A bignum: past 16 bits)
+@cell:
+            lda         n_v
             ldx         n_v + 1
+            jsr         kind_of
+            cmp         #PK_NUMBER
+            bne         @no
+            lda         n_v
+            ldx         n_v + 1
+            jsr         nl_tag
             ldy         #0
-            jsr         cell_get
-            txa
-            bmi         :+
+            cmp         #NT_FIXED                           ; (A fixed decimal of no places: its digits, after its
+            bne         @int                                ;   tag)
+            iny
+            lda         (hp),y
+@int:
+            cmp         #NT_FIXED                           ; (Not an integer)
+            bcs         @no
+            cmp         #NT_POS                             ; (-64 to 63: the tag, 7 bits)
+            bcs         @big
+            ldx         #0
+            cmp         #$40
+            bcc         :+
+            ora         #$80
+            ldx         #$FF
+:
+            clc
+            rts
+@big:
+            cmp         #NT_LONG_POS                        ; (Its sign: a long one's bit 0, else bit 4)
+            bcc         :+
+            and         #1
+            sta         n_t
+            bra         @past
+:
+            and         #NT_NEG - NT_POS
+            sta         n_t
+            lda         (hp),y                              ; (A byte or two: its value, if it's in 16 bits)
+            and         #1
+            pha
+            iny
+            lda         (hp),y
+            sta         n_x
+            stz         n_x + 1
+            pla
+            beq         :+
+            iny
+            lda         (hp),y
+            bmi         @past
+            sta         n_x + 1
+:
+            lda         n_t
+            beq         :+
+            sec
+            lda         #0
+            sbc         n_x
+            sta         n_x
+            lda         #0
+            sbc         n_x + 1
+            sta         n_x + 1
+:
+            lda         n_x
+            ldx         n_x + 1
+            clc
+            rts
+@past:
+            lda         n_t
+            bne         :+
             lda         #$FF
             ldx         #$7F
             clc
@@ -1199,40 +1144,60 @@ n_whole:
 
 ; q_a against q_b, two numbers (eqcmp.inc's): q_r = $FF less, 0 the same, 1 more (too big to work out: 1)
 n_qcmp:
-            jsr         n_enter
-            MOVW        n_x, q_a
-            MOVW        n_y, q_b
             lda         #1
             sta         q_r
-            jsr         n_cmp
+            MOVW        nl_w, q_b
+            lda         q_a
+            ldx         q_a + 1
+            jsr         nl_two
+            bcs         @rts
+            NLCALL      NUM_CMP
+            bcs         @rts
             sta         q_r
+@rts:
             clc
-            jmp         n_leave
+            rts
 
 ; IN: .A, .X = a value.  OUT: C = 0 and .A = its sign: 0 below 0, 1 0, 2 above (<=>'s); C = 1 if it isn't a number
 n_sign3:
             sta         n_x
             stx         n_x + 1
-            jsr         n_kind
-            cmp         #NK_NOT
-            bne         :+
-            sec
+            lsr
+            bcc         @cell
+            ldx         n_x + 1                             ; (A fixnum: by its value)
+            bmi         @neg
+            lda         n_x
+            cmp         #<FIX(0)
+            bne         @pos
+            txa
+            bne         @pos
+            lda         #1
+            clc
             rts
-:
-            jsr         n_enter
-            lda         #<FIX(0)
-            sta         n_y
-            stz         n_y + 1
-            jsr         n_cmp
+@neg:
+            lda         #0
+            clc
+            rts
+@pos:
+            lda         #2
+            clc
+            rts
+@cell:
+            lda         n_x
+            ldx         n_x + 1
+            jsr         nl_one
+            bcs         @rts
+            NLCALL      NUM_KIND
+            txa
             clc
             adc         #1
             clc
-            jmp         n_leave
+@rts:
+            rts
 
 ; (range to), (range from to [step]) of numbers (lists.inc's bl_range, those past fixnums): the numbers from from (0)
-; up to, not including, to, by step (1); down, with a negative step
+; up to, not including, to, by step (1); down, with a negative step.  x at NL_A, to at NL_B, step at NL_R
 n_range:
-            jsr         n_enter
             stz         nm_i
             stz         nm_i + 1
 @check:
@@ -1244,10 +1209,10 @@ n_range:
             cmp         #NK_NOT
             bne         @check
             LDAX        s_rangenum
-            jsr         n_error
-            jmp         n_leave
+            jmp         n_error
 @numbers:
-            lda         #<FIX(0)                            ; (from: the root stack's; step, eu; to, n_xi)
+            LDR         nd, NL_A                            ; (x: from, or 0)
+            lda         #<FIX(0)
             ldx         #0
             ldy         cn
             dey
@@ -1256,67 +1221,73 @@ n_range:
             lda         ex
             ldx         ex + 1
 :
-            jsr         n_rpush
+            jsr         nl_put
+            sta         n_xl
+            stx         n_xl + 1
+            LDR         nd, NL_R                            ; (step: 1, or the third)
             lda         #<FIX(1)
-            sta         n_yi
-            stz         n_yi + 1
-            lda         cn
-            cmp         #3
+            ldx         #0
+            ldy         cn
+            cpy         #3
             bcc         :+
             jsr         n_arg2
-            MOVW        n_yi, ex
+            lda         ex
+            ldx         ex + 1
 :
-            ldy         #0
+            jsr         nl_put
+            ldy         #0                                  ; (to)
             lda         cn
             cmp         #1
             beq         :+
             ldy         #2
 :
+            LDR         nd, NL_B
             lda         (argp),y
-            sta         n_xi
+            pha
             iny
             lda         (argp),y
-            sta         n_xi + 1
-            MOVW        n_x, n_yi                           ; (Its direction: step's sign; 0, an error)
-            lda         #<FIX(0)
-            sta         n_y
-            stz         n_y + 1
-            jsr         n_cmp
-            eor         #$FE                                ; (n_c2: what x against to is, on the way)
-            sta         n_c2
-            cmp         #$FE
+            tax
+            pla
+            jsr         nl_put
+            LDR         r0, NL_R                            ; (Its direction: step's sign; 0, an error)
+            NLCALL      NUM_KIND
+            txa
             bne         :+
             LDAX        s_rangestep
-            jsr         n_error
-            jmp         n_leave
+            jmp         n_error
 :
+            eor         #$FE                                ; (What x against to is, on the way: -step's sign)
+            sta         n_c
             stz         cf                                  ; (The list: cf its first cons, cr its last)
             stz         cf + 1
             stz         cr
             stz         cr + 1
 @next:
-            ldx         rsp                                 ; (x before to, going up; after it, going down)
-            dex
-            lda         rs_lo,x
-            sta         n_x
-            lda         rs_hi,x
-            sta         n_x + 1
-            MOVW        n_y, n_xi
-            jsr         n_cmp
-            cmp         n_c2
-            beq         @lb214
+            LDR         r0, NL_A                            ; (x before to, going up; after it, going down)
+            LDR         r1, NL_B
+            NLCALL      NUM_CMP
+            bcc         :+
+            jmp         nl_error
+:
+            cmp         n_c
+            beq         @lb202
             jmp         @done
-@lb214:
-            ldx         rsp                                 ; (x put in the list)
-            dex
-            lda         rs_lo,x
-            sta         et
-            lda         rs_hi,x
-            sta         et + 1
+@lb202:
+            LDR         nd, NL_A                            ; (x's value, a cons at the list's end)
+            lda         n_xl
+            ldx         n_xl + 1
+            jsr         nl_value
+            bcc         @lb201
+            jmp         @rts
+@lb201:
+            MOVW        et, hv
             stz         eu
             stz         eu + 1
             lda         #PK_QCONS
-            jsr         n_make2
+            jsr         make2
+            bcc         @lb200
+            jmp         @rts
+@lb200:
             lda         cf
             ora         cf + 1
             bne         :+
@@ -1327,36 +1298,31 @@ n_range:
             ldx         hv + 1
             pha
             phx
-            MOVW        n_t, hv
+            MOVW        n_v, hv
             MOVW        hv, cr
             plx
             pla
             ldy         #1
             jsr         cell_set
-            MOVW        hv, n_t
+            MOVW        hv, n_v
 @last:
             MOVW        cr, hv
-            ldx         rsp                                 ; (x = x + step)
-            dex
-            lda         rs_lo,x
-            sta         n_x
-            lda         rs_hi,x
-            sta         n_x + 1
-            MOVW        n_y, n_yi
-            lda         #OP_ADD
-            jsr         n_op
-            ldx         rsp
-            dex
-            lda         hv
-            sta         rs_lo,x
-            lda         hv + 1
-            sta         rs_hi,x
+            LDR         r0, NL_A                            ; (x = x + step)
+            LDR         r1, NL_R
+            LDR         r2, NL_A
+            LDR         r3, NL_ROOM
+            NLCALL      NUM_ADD
+            bcc         :+
+            jmp         nl_error
+:
+            sta         n_xl
+            stx         n_xl + 1
             jmp         @next
 @done:
             MOVW        ex, cf
-            jsr         root_pop
             clc
-            jmp         n_leave
+@rts:
+            rts
 
 ; (to-str x base), valout.inc's: the number x in the base (a string)
 n_to_str2:
@@ -1378,20 +1344,18 @@ n_to_str2:
             LDAX        s_tostrbase
             jmp         n_error
 :
-            jsr         n_enter
             lda         ex
             ldx         ex + 1
-            jsr         n_text_of
-            lda         hn + 1
-            beq         :+
-            stz         hn                                  ; (Past 255 bytes: as an empty one, wrong)
-:
-            jsr         n_arg0                              ; (n_v: the number, n_text_of's used it)
-            MOVW        n_v, ex
+            jsr         nl_spec
+            jsr         n_arg0
             jsr         cap_begin
             sta         nu_start
             stx         nu_start + 1
-            jsr         n_tobase
+            lda         #1
+            sta         nl_spc
+            lda         ex
+            ldx         ex + 1
+            jsr         nl_display
             bcs         @error
             lda         nu_start
             ldx         nu_start + 1
@@ -1399,60 +1363,103 @@ n_to_str2:
             bcs         :+
             MOVW        ex, hv
 :
-            jmp         n_leave
+            rts
 @error:
-            sta         nm_m
-            stx         nm_m + 1
+            MOVW        nl_v, ex                            ; (The error: past the capture given up)
             lda         nu_start
             ldx         nu_start + 1
             jsr         cap_drop
-            jsr         nu_begin
-            lda         nm_m
-            ldx         nm_m + 1
-            jsr         out_text
-            lda         nm_m
-            cmp         #<s_cpxbase
-            bne         :+
-            lda         nm_m + 1
-            cmp         #>s_cpxbase
-            beq         @made
-:
-            ldx         #0
-:
-            cpx         n_tl
-            beq         :+
-            lda         n_text,x
-            jsr         out_byte
-            inx
-            bra         :-
-:
-            lda         n_lowrad
-            beq         @made
-            LDAX        s_lowbase
-            jsr         out_text
-@made:
-            jsr         nu_end
-            jmp         n_leave
+            MOVW        ex, nl_v
+            clc
+            rts
 
-; ---- For the system library (the fifth bank's): integers to and from four bytes (lengths, offsets, times), ticks
+; The value .A, .X out in the base whose string is at NL_S (format's {base}, valout.inc's).  OUT: C = 1 and ex the
+; error if it isn't a number ("'format's {x} is a base, for a number") or the string names no base
+n_fmt_base:
+            sta         n_x
+            stx         n_x + 1
+            jsr         n_kind
+            cmp         #NK_NOT
+            beq         @notnum
+            lda         #1
+            sta         nl_spc
+            lda         n_x
+            ldx         n_x + 1
+            jmp         nl_display
+@notnum:
+            jsr         nu_begin
+            LDAX        s_fmtnum1
+            jsr         out_text
+            LDAX        NL_S
+            jsr         out_text
+            LDAX        s_fmtnum2
+            jsr         out_text
+            jsr         nu_end
+            sec
+            rts
+
+; IN: .A, .X = a whole number (n_whole's).  OUT: hv = the integer it equals (a fixed decimal of no places: its digits)
+; C = 1 if there's no room (hashes.inc's: a key)
+n_intval:
+            sta         n_v
+            stx         n_v + 1
+            sta         hv
+            stx         hv + 1
+            lsr
+            bcs         @rts
+            lda         n_v                                 ; (An integer: itself)
+            ldx         n_v + 1
+            jsr         nl_tag
+            cmp         #NT_FIXED
+            bcc         @rts
+            lda         n_v
+            ldx         n_v + 1
+            jsr         nl_one
+            NLCALL      NUM_TRUNCATE
+            bcs         @rts
+            pha
+            LDR         nd, NL_R
+            pla
+            jmp         nl_value
+@rts:
+            clc
+            rts
+
+; ---- For the system library (the fifth bank's): integers to and from four bytes (lengths, offsets, times), ticks.
+; These are worked as a system call's registers are set (hysys.inc's sy_put) and read: the call registers r0-r15 kept
+; across the library's calls (nl_rsave, nl_rrest)
 
 ; hv = the integer of the four bytes at n_w32 (least first; unsigned).  OUT: C = 1 if there's no room
 n_u32:
-            jsr         n_enter
-            stz         nrc
-            jsr         r_c
-            ldx         nrc
-            stz         r_neg,x
-            ldy         #3
-:
-            lda         n_w32,y
-            sta         (nc),y
-            dey
-            bpl         :-
-            lda         #4
-            sta         r_len,x
-            jsr         r_store
-            jmp         n_leave
+            lda         n_w32 + 3                           ; (0-16383: a fixnum, here)
+            ora         n_w32 + 2
+            bne         @lib
+            lda         n_w32 + 1
+            cmp         #$40
+            bcs         @lib
+            tax
+            lda         n_w32
+            jsr         fix_ax
+            sta         hv
+            stx         hv + 1
+            clc
+            rts
+@lib:
+            jsr         nl_rsave
+            jsr         @made
+            jmp         nl_rrest
+@made:
+            MOVR        r0, n_w32
+            MOVR        r1, n_w32 + 2
+            LDR         r2, NL_R
+            LDR         r3, NL_ROOM
+            LDR         r15, NUM_FROM_INT
+            ldy         #0
+            jsr         nl_call
+            pha
+            LDR         nd, NL_R
+            pla
+            jmp         nl_value
 
 ; n_w32 = the integer .A, .X (0 to 2^32 - 1), or the number equal to one (2.0).  OUT: C = 1 if it isn't one.
 ; n_to_i32: -2^31 to 2^32 - 1, a negative one's two's complement (an offset: SEEK's)
@@ -1465,70 +1472,59 @@ n_to_u32:
             ror         n_sgn
             sta         n_v
             stx         n_v + 1
-            jsr         n_kind
-            beq         @int
-            cmp         #NK_FIX
-            bne         @no
-            lda         n_v                                 ; (A fixed decimal of no places: its digits)
-            ldx         n_v + 1
-            ldy         #1
-            jsr         cell_get
-            cmp         #<FIX(0)
-            bne         @no
-            cpx         #0
-            bne         @no
-            lda         n_v
-            ldx         n_v + 1
+            lsr
+            bcc         @cell
+            lda         n_v                                 ; (A fixnum: here)
+            jsr         unfix
+            sta         n_w32
+            stx         n_w32 + 1
             ldy         #0
-            jsr         cell_get
-            sta         n_v
-            stx         n_v + 1
-@int:
-            stz         nrc
-            lda         n_v
-            ldx         n_v + 1
-            jsr         r_load
-            ldx         #0
-            lda         r_neg,x
-            beq         :+
-            bit         n_sgn                               ; (Negative: n_to_i32's)
+            txa
+            bpl         :+
+            bit         n_sgn                               ; (Below 0: n_to_i32's)
             bpl         @no
+            dey
 :
-            lda         r_len,x
-            cmp         #5
-            bcs         @no
-            sta         n_t
-            stz         nrc
-            jsr         r_c
-            ldy         #0
+            sty         n_w32 + 2
+            sty         n_w32 + 3
+            clc
+            rts
+@cell:
+            lda         n_v
+            ldx         n_v + 1
+            jsr         n_kind
+            beq         :+
+            cmp         #NK_FIXED
+            bne         @no
 :
-            lda         #0
-            cpy         n_t
-            bcs         :+
-            lda         (nc),y
+            jsr         nl_rsave
+            lda         n_v
+            ldx         n_v + 1
+            jsr         nl_one
+            bcs         @nolib
+            NLCALL      NUM_TO_INT
+            bcs         @nolib
+            tay
+            ldx         #3
 :
-            sta         n_w32,y
-            iny
-            cpy         #4
-            bcc         :--
-            ldx         #0
-            lda         r_neg,x
+            lda         r4,x
+            sta         n_w32,x
+            dex
+            bpl         :-
+            jsr         nl_rrest
+            cpy         #2                                  ; (Past 32 bits either way)
+            beq         @no
+            cpy         #1                                  ; (2^31 to 2^32 - 1: either's)
             beq         @ok
-            ldy         #0                                  ; (Its two's complement: 2^31 at most)
-            sec
-:
-            lda         #0
-            sbc         n_w32,y
-            sta         n_w32,y
-            iny
-            tya
-            eor         #4
-            bne         :-
-            lda         n_w32 + 3
+            lda         n_w32 + 3                           ; (Below 0: n_to_i32's)
+            bpl         @ok
+            bit         n_sgn
             bpl         @no
 @ok:
             clc
             rts
+@nolib:
+            jsr         nl_rrest
 @no:
             sec
             rts
@@ -1536,72 +1532,70 @@ n_to_u32:
 ; n_w32 = the ticks in .A, .X seconds, a real number 0 or more (TICK_HZ a second, the fraction's floor: sleep's;
 ; 2^32 - 1 at most).  OUT: C = 1 if it isn't one
 n_ticks:
+            jsr         nl_rsave
+            jsr         @ticks
+            jmp         nl_rrest
+@ticks:
             sta         n_v
             stx         n_v + 1
             jsr         n_kind
-            cmp         #NK_CPX
+            cmp         #NK_COMPLEX
             bcs         @no
-            jsr         n_enter
+            lda         n_v                                 ; (Below 0: not one)
+            ldx         n_v + 1
+            jsr         n_sign3
+            cmp         #0
+            beq         @no
+            lda         #<FIX(TICK_HZ)                      ; (x * TICK_HZ, its floor)
+            sta         nl_w
+            lda         #>FIX(TICK_HZ)
+            sta         nl_w + 1
             lda         n_v
             ldx         n_v + 1
-            ldy         #0
-            jsr         n_load                              ; (R0 / R1)
-            ldx         #0
-            lda         r_neg,x
-            bne         @neg
-            stz         nrc
-            lda         #TICK_HZ
-            jsr         r_mulsmall
-            stz         nra
-            lda         #1
-            sta         nrb
-            lda         #2
-            sta         nrq
-            lda         #3
-            sta         nrr
-            jsr         r_divmod
-            ldx         #2                                  ; (R2: past 4 bytes, the most)
-            lda         r_len,x
-            cmp         #5
-            bcc         :+
-            lda         #$FF
+            jsr         nl_two
+            NLCALL      NUM_MUL
+            bcs         @most
+            LDR         r0, NL_A
+            LDR         r2, NL_R
+            NLCALL      NUM_FLOOR
+            LDR         r0, NL_R
+            NLCALL      NUM_TO_INT
+            cmp         #2
+            beq         @most
+            ldx         #3
+:
+            lda         r4,x
+            sta         n_w32,x
+            dex
+            bpl         :-
+            clc
+            rts
+@most:
+            lda         #$FF                                ; (Past 32 bits: the most)
             sta         n_w32
             sta         n_w32 + 1
             sta         n_w32 + 2
             sta         n_w32 + 3
             clc
-            jmp         n_leave
-:
-            sta         n_t
-            lda         #2
-            sta         nrc
-            jsr         r_c
-            ldy         #0
-:
-            lda         #0
-            cpy         n_t
-            bcs         :+
-            lda         (nc),y
-:
-            sta         n_w32,y
-            iny
-            cpy         #4
-            bcc         :--
-            clc
-            jmp         n_leave
-@neg:
-            sec
-            jmp         n_leave
+            rts
 @no:
             sec
             rts
 
 .bss
-n_opc2:     .res        1                                   ; (nm_general's operation)
+n_entry:    .res        2                                   ; (nm_general's entry)
 n_w32:      .res        4                                   ; (n_u32's and n_to_u32's four bytes, least first)
 n_sgn:      .res        1                                   ; (n_to_i32's: bit 7, a negative one taken)
+n_v:        .res        2                                   ; (A value)
+n_x:        .res        2
+n_t:        .res        2                                   ; (A count, a part)
+n_c:        .res        1                                   ; (A byte; range's direction)
+n_xl:       .res        2                                   ; (range's x: its bytes' count)
 
 .segment "RODATA3"
+nm_ops:     .byte       "+-*/"
+nm_entry_lo: .lobytes   NUM_ADD, NUM_SUB, NUM_MUL, NUM_DIV
+nm_entry_hi: .hibytes   NUM_ADD, NUM_SUB, NUM_MUL, NUM_DIV
 n_torat:    .byte       "to-rational", 0
 n_ratn:     .byte       "rational.n", 0
 n_ratd:     .byte       "rational.d", 0
@@ -1626,5 +1620,15 @@ s_rangenum: .byte       "'range' expects Numbers", 0
 s_rangestep: .byte      "'range' step cannot be 0", 0
 s_otostr3:  .byte       "Only a Number has a base for 'to-str'", 0
 s_tostrbase: .byte      "Second 'to-str' parameter must be a String", 0
+s_badbase:  .byte       "Invalid base specifier ", 0
+s_basestr:  .byte       "'base' expects a string: a base (", $22, "x", $22, ", ", $22, "#16r", $22, ", ", $22, "c", $22, " ...)", 0
+s_basebad:  .byte       "'base': Invalid base specifier ", 0
+s_nbnum:    .byte       "'number-bytes' expects a number", 0
+s_bnlist:   .byte       "'bytes-number' expects a list of bytes or a buffer", 0
+s_bnbyte:   .byte       "'bytes-number' expects bytes, 0-255", 0
+s_bnbad:    .byte       "'bytes-number': not a number in the stored format", 0
+s_fmtbase:  .byte       "'format': Invalid base specifier ", 0
+s_fmtnum1:  .byte       "'format's {", 0
+s_fmtnum2:  .byte       "} is a base, for a number", 0
 
 .segment "CODE3"

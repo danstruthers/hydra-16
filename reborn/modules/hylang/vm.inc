@@ -1256,6 +1256,8 @@ vm_wfok:
             bcs         @cell
             cpx         #>BUILTIN0
             bcc         @no
+            cpx         #>BUILTIN2                          ; (The second table's: the evaluator's)
+            bcs         @no
             txa
             lsr
             lda         vm_wf
@@ -2703,8 +2705,8 @@ vm_head:
             lsr
             bcs         @notfn
             ldx         ex + 1
-            cpx         #IMM_PAGES
-            bcs         @cell
+            cpx         #>BUILTIN2
+            bcs         @high
             cpx         #>BUILTIN0
             bcc         @notfn
             txa                                             ; (A built-in: not a special form, nor one that takes
@@ -2714,8 +2716,13 @@ vm_head:
             tax
             lda         vb_flags,x
             and         #BF_SPECIAL | BF_ERRORS
-            bne         @eval
+            beq         @lb200
+            jmp         @eval
+@lb200:
             bra         @push
+@high:
+            cpx         #IMM_PAGES                          ; (The second table's: ordinary, CALL's)
+            bcc         @push
 @cell:
             lda         pk,x
             cmp         #PK_FUNC
@@ -3909,7 +3916,10 @@ vm_cother:
 ; runs the machine or isn't given as many arguments as it takes (the evaluator's: partially applied, or an error)
 vm_cbuiltin:
             cpx         #>BUILTIN0
-            bcs         @lb845
+            bcc         :+
+            cpx         #>BUILTIN2                          ; (The second table's: the evaluator's)
+            bcc         @lb845
+:
             jmp         vm_cout
 @lb845:
             txa
@@ -7380,6 +7390,8 @@ vc_call:
             bcs         @cell
             cpx         #>BUILTIN0
             bcc         @any
+            cpx         #>BUILTIN2                          ; (The second table's: a call as any)
+            bcs         @any
             txa                                             ; (A built-in)
             lsr
             lda         vc_v

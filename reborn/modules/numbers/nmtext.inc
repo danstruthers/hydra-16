@@ -43,6 +43,7 @@ t_n:        .res        1                                   ;   program's text)
 t_from:     .res        1
 t_to:       .res        1
 t_src:      .res        1
+t_whole:    .res        1                                   ; (PARSE: the whole text, or its longest start)
 t_mark:     .res        2                                   ; (The arena's top as a try began)
 t_re:       .res        2                                   ; (A complex number's real part; a denominator's place)
 t_p:        .res        1                                   ; (A place in the text; where a complex number's + or -
@@ -493,7 +494,8 @@ b_call:
 
 ; ---- SET_BASE
 
-; SET_BASE: r0 = a base string (its bytes and a 0), the base from now on.  NE_BASE: it names none
+; SET_BASE: r0 = a base string (its bytes and a 0), the base from now on.  OUT: .A = what it is: bit 0 decimal (0-9,
+; not balanced, least digit first or negative), bit 1 its prefix written (its string's #).  NE_BASE: it names none
 nm_set_base:
             jsr         nm_begin
             MOVR        np, r0
@@ -506,6 +508,10 @@ nm_set_base:
             inx
             bra         :-
 :
+            lda         f_pre
+            asl
+            ora         f_dec
+            ldx         #0
             clc
             jmp         nm_end
 
@@ -1306,14 +1312,25 @@ np_pairs:
 
 ; ---- Read
 
-; PARSE: r0 = text, r1 = its length; r4 = a base string (0: the base); .Y = 1 if the text is a program's (a bare
-; number there starts with a digit 0-9).  The number the text starts with (its longest start that's one, among its
-; first TEXT_MAX characters: spaces before it, and after it, passed over) at r2; r5 = the characters it took.
-; NE_NOTNUM: it starts with none; NE_DIV0: the longest that might be is a rational of 0 below (1/0); NE_BASE
+; PARSE: r0 = text, r1 = its length; r4 = a base string (0: the base); .Y bit 0 = 1 if the text is a program's (a bare
+; number there starts with a digit 0-9), bit 1 = 1 if the whole text must be the number.  The number the text starts
+; with (its longest start that's one, among its first TEXT_MAX characters: spaces before it, and after it, passed
+; over; or, bit 1, the whole text, spaces at its ends passed over) at r2; r5 = the characters it took.  NE_NOTNUM: it
+; starts with none (it isn't one); NE_DIV0: the longest that might be is a rational of 0 below (1/0); NE_BASE
 nm_parse:
             jsr         nm_begin
-            sty         t_src
+            tya
+            and         #1
+            sta         t_src
+            tya
+            and         #2
+            sta         t_whole
             jsr         b_call
+            lda         t_whole                             ; (The whole text: TEXT_MAX characters at most)
+            beq         :+
+            lda         r1 + 1
+            bne         @not
+:
             MOVR        np, r0                              ; (Its first TEXT_MAX characters: t_raw)
             lda         r1 + 1
             bne         :+
@@ -1343,6 +1360,8 @@ nm_parse:
             beq         @not
             jsr         p_text
             bcc         @make
+            lda         t_whole                             ; (The whole text: one try)
+            bne         @not
             dec         t_try
             bra         @try
 @not:
