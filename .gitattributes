@@ -21,3 +21,5 @@ reborn/tests/hyhydra/** -text
 # BASIC's suite (reborn/tests/basic): LF, its programs and scripts as BASIC reads them from the card, its outputs as
 # BASIC writes them (trailing spaces and all)
 reborn/tests/basic/** -text
+# The numbers' speed programs (reborn/tests/speed): LF, as BASIC and hylang read them from the card
+reborn/tests/speed/** -text
