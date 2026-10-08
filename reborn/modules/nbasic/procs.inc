@@ -427,15 +427,19 @@ st_sub:
 
 ; t4 = procs' entry of pr_num
 proc_entry:
+            stz         t4 + 1
             lda         pr_num
             asl         a
+            rol         t4 + 1
             asl         a
+            rol         t4 + 1
             asl         a
+            rol         t4 + 1
             clc
             adc         #<procs
             sta         t4
-            lda         #>procs
-            adc         #0
+            lda         t4 + 1
+            adc         #>procs
             sta         t4 + 1
             rts
 

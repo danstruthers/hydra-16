@@ -101,6 +101,7 @@ main:
             jsr         prog_compile
             jsr         prog_run
             jsr         out_flush
+            FARN        6, con_cooked
             lda         end_status
             LDR         r0, 0
             jmp         EXITS
@@ -121,6 +122,7 @@ prompt:
             jsr         out_byte
 :
             jsr         out_flush
+            FARN        6, con_cooked                       ; (The console's lines cooked: a line read)
             jsr         read_line
             bcc         :+
             jsr         out_flush
@@ -144,11 +146,14 @@ prompt:
             bra         @line
 @now:
             FARN        7, prompt_cmd                       ; (RUN, LIST ...: C = 0 done)
-            bcc         @line
+            bcs         @lb901
+            jmp         @line
+@lb901:
             lda         #1
             sta         in_comp
             FARN        2, compile_line
             stz         in_comp
+            stz         in_prog                             ; (The prompt's line: its errors not the program's)
             jsr         stack_reset
             lda         #<(LB_IMM << 13)
             ldx         #>(LB_IMM << 13)
@@ -186,6 +191,12 @@ prog_compile:
 ; The program run from its start: its globals as they were made, the value stack empty.  OUT: C = 1 STOPped
 prog_run:
             stz         end_status
+            lda         #1                                  ; (The program's: ON ERROR none yet)
+            sta         in_prog
+            stz         eh_in
+            lda         #$FF
+            sta         eh_addr
+            sta         eh_addr + 1
             stz         dptr                                ; (READ: from DATA's first item)
             stz         dptr + 1
             jsr         stack_reset
@@ -279,7 +290,22 @@ err_entry:
             sta         t0
             stx         t0 + 1
             FARN        7, lt_find
+            lda         in_prog                             ; (ON ERROR's handler takes it: the program's, not in the
+            beq         @say                                ;   handler already, not Ctrl-C)
+            lda         eh_in
+            bne         @say
+            lda         eh_addr + 1
+            cmp         #$FF
+            beq         @say
+            lda         err_code + 1
+            bne         :+
+            lda         err_code
+            cmp         #ER_BREAK
+            beq         @say
+:
+            jmp         err_trap
 @say:
+err_said:
             FARN        7, err_say
             ; (fall through)
 
@@ -288,6 +314,7 @@ top_error:
             ldx         top_s
             txs
             jsr         out_flush
+            FARN        6, con_cooked
             lda         script
             beq         :+
             lda         #1

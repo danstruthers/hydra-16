@@ -113,8 +113,21 @@ ST_INPUT                                                    ; INPUT's prompt, it
 ST_INFLD                                                    ; Its next field pushed (a number or a string)
 ST_INEND                                                    ; Its end: -1 pushed if it's to be typed again
 ST_LGET                                                     ; LINE INPUT's line pushed, a string
+ST_CLS                                                      ; CLS
+ST_LOCATE                                                   ; LOCATE row, col, cursor (each -1: not given)
+ST_COLOR                                                    ; COLOR fg, bg (each -1: not given)
+ST_WIDTH                                                    ; WIDTH n
+ST_BEEP                                                     ; BEEP
+ST_SLEEP                                                    ; SLEEP: ticks (below 0: till a key)
+ST_WRVAL                                                    ; WRITE's value
+ST_WRCOM                                                    ; Its ,
 ST_B7                                                       ; The system's (sys.inc)
 ST_ENDN = ST_B7                                             ; END n
+ST_ERROR                                                    ; ERROR n
+ST_SHELL                                                    ; SHELL line$ ("": rc alone)
+ST_ENVIRON                                                  ; ENVIRON "name=value"
+ST_POKE                                                     ; POKE addr, b
+ST_BANK                                                     ; BANK n
 ST_END
 .endenum
 

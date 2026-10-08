@@ -148,6 +148,32 @@ st3_tab:
             .word       cs_input - 1
             .byte       K_LINE
             .word       cs_line - 1
+            .byte       K_RESUME
+            .word       cs_resume - 1
+            .byte       K_ERROR
+            .word       cs_error - 1
+            .byte       K_CLS
+            .word       cs_cls - 1
+            .byte       K_LOCATE
+            .word       cs_locate - 1
+            .byte       K_COLOR
+            .word       cs_color - 1
+            .byte       K_WIDTH
+            .word       cs_width - 1
+            .byte       K_BEEP
+            .word       cs_beep - 1
+            .byte       K_SLEEP
+            .word       cs_sleep - 1
+            .byte       K_WRITE
+            .word       cs_write - 1
+            .byte       K_SHELL
+            .word       cs_shell - 1
+            .byte       K_ENVIRON
+            .word       cs_environ - 1
+            .byte       K_POKE
+            .word       cs_poke - 1
+            .byte       K_BANK
+            .word       cs_bank - 1
             .byte       0
 
 ; ---- This bank's helpers
@@ -1328,17 +1354,239 @@ in_prompt:
             lda         c3_t
             rts
 
+; ---- Errors
+
+; ON ERROR GOTO label (stmt.inc's ON: ERROR current): errors to the handler at the label; ON ERROR GOTO 0: none
+on_error:
+            C2          lex_next
+            lda         #K_GOTO
+            jsr         need_kw3
+            lda         #OP_ONERR
+            ldx         #3
+            C2          emit_op
+            jsr         num_zero3
+            bcs         :+
+            C2          label_operand
+            rts
+:
+            lda         #$FF
+            tax
+            C2          emit_w
+            C2          lex_next
+            rts
+
+; Is the current token the number 0?  OUT: C = 1 yes
+num_zero3:
+            lda         tk
+            cmp         #TK_NUM
+            bne         @no
+            lda         tisint
+            beq         @no
+            lda         tint
+            ora         tint + 1
+            ora         tint + 2
+            ora         tint + 3
+            bne         @no
+            sec
+            rts
+@no:
+            clc
+            rts
+
+; RESUME [0]: the failing statement again; RESUME NEXT: the one after it; RESUME label
+cs_resume:
+            jsr         at_end3
+            bcs         @stmt
+            jsr         num_zero3
+            bcs         @zero
+            lda         #K_NEXT
+            jsr         is_kw3
+            beq         @next
+            lda         #OP_RESUME
+            ldx         #4
+            C2          emit_op
+            lda         #2
+            C2          emit
+            C2          label_operand
+            rts
+@zero:
+            C2          lex_next
+@stmt:
+            lda         #0
+            bra         :+
+@next:
+            C2          lex_next
+            lda         #1
+:
+            pha
+            lda         #OP_RESUME
+            ldx         #2
+            C2          emit_op
+            pla
+            C2          emit
+            rts
+
+; ERROR n: the error n made
+cs_error:
+            C2          expr_num
+            lda         #ST_ERROR
+            jmp         emit_st3
+
+; ---- The console
+
+; CLS, BEEP
+cs_cls:
+            lda         #ST_CLS
+            jmp         emit_st3
+cs_beep:
+            lda         #ST_BEEP
+            jmp         emit_st3
+
+; LOCATE [row] [, [col] [, cursor]]
+cs_locate:
+            lda         #3
+            jsr         opt_nums
+            lda         #ST_LOCATE
+            jmp         emit_st3
+
+; COLOR [fg] [, bg]
+cs_color:
+            lda         #2
+            jsr         opt_nums
+            lda         #ST_COLOR
+            jmp         emit_st3
+
+; WIDTH n
+cs_width:
+            C2          expr_num
+            lda         #ST_WIDTH
+            jmp         emit_st3
+
+; SLEEP [seconds]: its ticks (seconds * TICK_HZ); none: -1 (till a key)
+cs_sleep:
+            jsr         at_end3
+            bcc         :+
+            lda         #$FF
+            jsr         emit_i8
+            bra         @st
+:
+            C2          expr_num
+            lda         #OP_PUSHI32
+            ldx         #5
+            C2          emit_op
+            lda         #<TICK_HZ
+            ldx         #>TICK_HZ
+            C2          emit_w
+            lda         #0
+            tax
+            C2          emit_w
+            lda         #OP_MUL
+            ldx         #1
+            C2          emit_op
+@st:
+            lda         #ST_SLEEP
+            jmp         emit_st3
+
+; WRITE [items]: each written (a string in quotes), commas between, then a new line
+cs_write:
+            lda         #'#'
+            jsr         is_op3
+            bne         @item
+            jmp         not_yet3                            ; (WRITE #n: files', to come)
+@item:
+            jsr         at_end3
+            bcs         @end
+            C2          expr
+            lda         #ST_WRVAL
+            jsr         emit_st3
+            lda         #','
+            jsr         is_op3
+            bne         @end
+            C2          lex_next
+            lda         #ST_WRCOM
+            jsr         emit_st3
+            bra         @item
+@end:
+            lda         #ST_PRNL
+            jmp         emit_st3
+
+; ---- The system
+
+; SHELL [line$]: the line run by rc (none: rc alone), waited for
+cs_shell:
+            jsr         at_end3
+            bcc         :+
+            lda         #OP_PUSHE
+            ldx         #1
+            C2          emit_op
+            bra         @st
+:
+            C2          expr_str
+@st:
+            lda         #ST_SHELL
+            jmp         emit_st3
+
+; ENVIRON "name=value"
+cs_environ:
+            C2          expr_str
+            lda         #ST_ENVIRON
+            jmp         emit_st3
+
+; POKE addr, b
+cs_poke:
+            C2          expr_num
+            lda         #','
+            jsr         need_op3
+            C2          expr_num
+            lda         #ST_POKE
+            jmp         emit_st3
+
+; BANK n
+cs_bank:
+            C2          expr_num
+            lda         #ST_BANK
+            jmp         emit_st3
+
+; Up to .A numbers (LOCATE's, COLOR's), each optional, commas between: each pushed, -1 for one not given
+opt_nums:
+            sta         c3_t
+@each:
+            jsr         at_end3
+            bcs         @none
+            lda         #','
+            jsr         is_op3
+            beq         @none
+            C2          expr_num
+            bra         @sep
+@none:
+            lda         #$FF
+            jsr         emit_i8
+@sep:
+            dec         c3_t
+            beq         @done
+            lda         #','
+            jsr         is_op3
+            bne         @rest
+            C2          lex_next
+            bra         @each
+@rest:
+            lda         #$FF
+            jsr         emit_i8
+            dec         c3_t
+            bne         @rest
+@done:
+            rts
+
 ; ---- To come
 
 ; Pass 1: a TYPE and its fields
 scan_type:
             rts
 
-; END TYPE; PRINT #, PRINT USING, ON ERROR
+; END TYPE; PRINT #, PRINT USING
 end_proc:
 print_file:
 print_using:
-on_error:
             jmp         not_yet3
 
 ; A TYPE's name (tname): C = 0 and .A its number; C = 1 none (as yet: none)

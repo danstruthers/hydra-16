@@ -199,6 +199,7 @@ prompt_cmd:
             rts
 @bye:
             jsr         out_flush
+            FARN        6, con_cooked
             lda         #0
             LDR         r0, 0
             jmp         EXITS
@@ -236,10 +237,13 @@ text_line:
             jmp         b_error
 
 ; ---- An error's line: the line table's last statement at or before the code address t0 (the program's code: the
-; prompt's, none).  OUT: err_line
+; prompt's, none).  OUT: err_line; err_ip its start, err_next the next statement's ($FFFF none)
 lt_find:
             stz         err_line
             stz         err_line + 1
+            lda         #$FF
+            sta         err_next
+            sta         err_next + 1
             lda         t0 + 1
             cmp         #LB_IMM << 5
             bcs         @done
@@ -264,7 +268,11 @@ lt_find:
             cmp         t4 + 2
             lda         t4 + 1
             sbc         t4 + 3
-            bcc         @done
+            bcc         @next
+            lda         t4 + 2
+            sta         err_ip
+            lda         t4 + 3
+            sta         err_ip + 1
             jsr         ca_rd
             sta         err_line
             jsr         ca_rd
@@ -276,6 +284,11 @@ lt_find:
             bcc         @entry
             inc         t0 + 3
             bra         @entry
+@next:
+            lda         t4 + 2
+            sta         err_next
+            lda         t4 + 3
+            sta         err_next + 1
 @done:
             jmp         code_sel
 

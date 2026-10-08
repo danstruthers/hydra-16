@@ -417,6 +417,40 @@ st_digits:
             ldx         #0
             jmp         b_error
 
+; TIMER's value: t0-t3 milliseconds pushed as seconds, a fixed decimal of 3 places
+num_ms:
+            lda         #VT_INT
+            sta         (vsp)
+            ldy         #4
+:
+            lda         t0 - 1,y
+            sta         (vsp),y
+            dey
+            bne         :-
+            jsr         vsp_up
+            lda         #<1000
+            ldx         #>1000
+            jsr         push_ax4
+            lda         #OP_DIV
+            jsr         num_op
+            lda         #3
+            ldx         #0
+            jsr         push_ax4
+            jmp         f_fixed
+
+; .A/.X (0-65535) pushed, an integer
+push_ax4:
+            pha
+            jsr         push_zero
+            jsr         top_vt
+            pla
+            ldy         #1
+            sta         (vt),y
+            iny
+            txa
+            sta         (vt),y
+            rts
+
 ; INPUT's number: the text at r0 (r1 bytes, in the RAM) read whole, pushed.  OUT: C = 1 not a number (0 pushed)
 num_field:
             jsr         push_zero

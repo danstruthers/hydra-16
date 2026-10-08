@@ -645,7 +645,8 @@ st_if:
             jmp         patch_w
 @else:
             jsr         lex_next
-            lda         #OP_JMP                             ; (Past the ELSE's statements)
+            jsr         lt_add                              ; (Past the ELSE's statements: RESUME NEXT's too)
+            lda         #OP_JMP
             jsr         emit_fwd
             pla
             sta         t4
@@ -688,6 +689,7 @@ stmts_line:
             lda         #K_ELSE
             jsr         is_kw
             beq         @done
+            jsr         lt_add                              ; (Each a statement of the line table's)
             jsr         c_stmt
             lda         #':'
             jsr         is_op

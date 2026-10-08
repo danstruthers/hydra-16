@@ -96,6 +96,8 @@ OP_FIXLEN                                                   ; n16: a string padd
 OP_FN                                                       ; f: a function, its arguments on the stack
 OP_ST                                                       ; s: a statement's routine
 OP_SWAP                                                     ; The values at two places (VT_REF, VT_LOC) exchanged
+OP_ONERR                                                    ; a16: ON ERROR GOTO's handler ($FFFF: none)
+OP_RESUME                                                   ; n [a16]: 0 the statement again, 1 the next, 2 a16
 OP_COUNT
 .endenum
 
@@ -180,7 +182,7 @@ op_tab:
             .word       op_eq, op_ne, op_lt, op_gt, op_le, op_ge
             .word       op_seq, op_sne, op_slt, op_sgt, op_sle, op_sge
             .word       op_not, op_and, op_or, op_xor, op_eqv, op_imp
-            .word       op_cat, op_fixlen, op_fn, op_st, op_swap
+            .word       op_cat, op_fixlen, op_fn, op_st, op_swap, op_onerr, op_resume
 .assert     * - op_tab = OP_COUNT * 2, error, "op_tab and the ops' enum differ"
 
 ; ---- The end, STOP, the banks
@@ -1551,15 +1553,7 @@ op_aref:
 op_call:
             ldy         #1
             lda         (ip),y
-            asl         a
-            asl         a
-            asl         a
-            clc
-            adc         #<procs
-            sta         pe
-            lda         #>procs
-            adc         #0
-            sta         pe + 1
+            jsr         pe_of
             ldy         #6                                  ; (Never compiled: a DECLARE alone)
             lda         (pe),y
             bne         :+
@@ -1916,6 +1910,172 @@ place_io:
             lda         #ER_SUBSCRIPT
             ldx         #0
             jmp         err_entry
+
+; pe = procs' entry of the procedure .A
+pe_of:
+            stz         pe + 1
+            asl         a
+            rol         pe + 1
+            asl         a
+            rol         pe + 1
+            asl         a
+            rol         pe + 1
+            clc
+            adc         #<procs
+            sta         pe
+            lda         pe + 1
+            adc         #>procs
+            sta         pe + 1
+            rts
+
+; ---- Errors' handlers
+
+; ON ERROR GOTO a16 (or 0: $FFFF).  ON ERROR GOTO 0 in the handler: the error stops the program, as if there were none
+op_onerr:
+            ldy         #1
+            lda         (ip),y
+            sta         eh_addr
+            iny
+            lda         (ip),y
+            sta         eh_addr + 1
+            cmp         #$FF
+            bne         :+
+            lda         eh_in
+            beq         :+
+            stz         eh_in
+            jmp         err_said
+:
+            jmp         nx3
+
+; RESUME (n 0): the failing statement again; RESUME NEXT (1): the one after it; RESUME label (2, a16).  The value stack
+; as the failing statement began.  Not in a handler: RESUME without error
+op_resume:
+            lda         eh_in
+            bne         :+
+            lda         #ER_RESUME
+            ldx         #0
+            jmp         err_entry
+:
+            stz         eh_in
+            MOVW        vsp, err_vsp
+            ldy         #1
+            lda         (ip),y
+            beq         @stmt
+            cmp         #1
+            beq         @next
+            ldy         #2
+            lda         (ip),y
+            pha
+            iny
+            lda         (ip),y
+            tax
+            pla
+            bra         @go
+@next:
+            lda         err_next
+            ldx         err_next + 1
+            bra         @go
+@stmt:
+            lda         err_ip
+            ldx         err_ip + 1
+@go:
+            jsr         ip_set
+            jmp         next
+
+; An error to ON ERROR's handler (err_entry's): the 6502's stack the interpreter's, the value stack as the failing
+; statement began (err_vsp), the handler run
+err_trap:
+            ldx         run_s
+            txs
+            jsr         err_base
+            MOVW        vsp, err_vsp
+            lda         #1
+            sta         eh_in
+            lda         eh_addr
+            ldx         eh_addr + 1
+            jsr         ip_set
+            jmp         next
+
+; err_vsp = the failing statement's value stack's start: past its frame's slots (a procedure's: its mark's return
+; follows its CALL, which names it: its parameters, mark and locals) and past the GOSUBs' returns over them
+err_base:
+            MOVW        vt, frp
+@find:
+            lda         vt                                  ; (A frame's mark from frp up: a procedure's)
+            cmp         vsp
+            lda         vt + 1
+            sbc         vsp + 1
+            bcs         @main
+            lda         (vt)
+            cmp         #VT_FRM
+            beq         @frame
+            jsr         vt_next
+            bra         @find
+@main:
+            MOVW        vt, frp
+            bra         @gos
+@frame:
+            ldy         #1                                  ; (Its CALL's p: the byte before its return)
+            lda         (vt),y
+            sec
+            sbc         #1
+            sta         t0
+            iny
+            lda         (vt),y
+            sbc         #0
+            sta         t0 + 1
+            lsr         a
+            lsr         a
+            lsr         a
+            lsr         a
+            lsr         a
+            sta         cal
+            lda         t0 + 1
+            and         #$1F
+            ora         #WIN
+            sta         ca + 1
+            lda         t0
+            sta         ca
+            jsr         ca_sel
+            jsr         ca_rd
+            jsr         code_sel
+            jsr         pe_of
+            ldy         #3                                  ; (Past the mark and its locals)
+            lda         (pe),y
+            inc         a
+            tax
+            clc
+            lda         vt
+            adc         mul5_lo,x
+            sta         vt
+            lda         vt + 1
+            adc         mul5_hi,x
+            sta         vt + 1
+@gos:
+            lda         vt                                  ; (Past GOSUBs' returns)
+            cmp         vsp
+            lda         vt + 1
+            sbc         vsp + 1
+            bcs         :+
+            lda         (vt)
+            cmp         #VT_GOS
+            bne         :+
+            jsr         vt_next
+            bra         @gos
+:
+            MOVW        err_vsp, vt
+            rts
+
+; vt on past a value
+vt_next:
+            clc
+            lda         vt
+            adc         #VAL_SIZE
+            sta         vt
+            bcc         :+
+            inc         vt + 1
+:
+            rts
 
 ; ---- Not yet
 op_fget:

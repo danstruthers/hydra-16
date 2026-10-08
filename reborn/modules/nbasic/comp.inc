@@ -931,6 +931,7 @@ compile_prog:
             beq         :+
             jsr         blk_unclosed
 :
+            jsr         lt_add                              ; (Its end: a statement's place too)
             lda         #OP_END
             ldx         #1
             jsr         emit_op
