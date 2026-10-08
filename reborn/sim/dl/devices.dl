@@ -12,7 +12,7 @@
 (def {ac-txend ac-txsent ac-gapmin ac-charcyc} (- INF) 0 INF 0)
 (def {rxq rxh rxn rxdelay rxlost typedat typedlast} (hash-create) 0 0 200000 0 -1 -1)
 (def {pcq pcqh pcqt pcdelay pclost} (hash-create) 0 0 0 0)
-(def {ac-sent ac-tail ac-sentat promptfrom ac-rxat} 0 "" 0 -1 0)
+(def {ac-sent ac-tail ac-sentat promptfrom ac-rxat ac-esc} 0 "" 0 -1 0 0)
 (def {lat-min lat-max lat-sum lat-n} INF 0 0 0)
 
 ; The rates (the control register's low 4 bits), named for 1.8432 MHz; the ACIA's clock is 14.318 MHz / 8
@@ -29,7 +29,7 @@
 (fun {rx-shift} {do (hash-remove rxq rxh) (set! {rxh} (+ rxh 1))})
 (fun {prompt-tail?} {do
   (set {l} (len ac-tail))
-  (and (> l 0) (or (== (char-at ac-tail (- l 1)) \>) (== ac-tail "> ") (== ac-tail "% ") (== ac-tail " <")))})
+  (and (> l 0) (or (== (char-at ac-tail (- l 1)) \>) (== (char-at ac-tail (- l 1)) \%) (== ac-tail "> ") (== ac-tail "% ") (== ac-tail " <")))})
 (fun {prompted at} {and (> ac-sent promptfrom) (prompt-tail?) (>= (- at ac-sentat) 300000)})
 
 (fun {acia-in c at} {do (set! {ac-rx ac-rdrf ac-rxat} c 1 at) (if (zero? (bit-and ac-cmd 2)) (set! {ac-irq} 1) 0)})
@@ -53,10 +53,19 @@
     (if (== r 2) (set! {ac-cmd ac-charcyc} v (do (set! {ac-cmd} v) (char-cycles)))
       (set! {ac-ctrl ac-txsent ac-gapmin ac-charcyc} v 0 INF (do (set! {ac-ctrl} v) (char-cycles)))))})
 
-; A byte of the console's output (for a wait for a prompt)
+; A byte of the console's output (for a wait for a prompt): the tail its printable characters' (an escape sequence,
+; and a control but CR and LF, left out: a window painted again just after its prompt leaves the prompt the tail)
 (fun {acia-shown v at} {do
+  (set! {ac-sent ac-sentat} (+ ac-sent 1) at)
+  (if (== ac-esc 1) (set! {ac-esc} (if (== v 91) 2 (if (and (>= v 32) (<= v 47)) 3 0)))
+    (if (== ac-esc 2) (if (and (>= v 64) (<= v 126)) (set! {ac-esc} 0) 0)
+      (if (== ac-esc 3) (if (and (>= v 48) (<= v 126)) (set! {ac-esc} 0) 0)
+        (if (== v 27) (set! {ac-esc} 1)
+          (if (and (< v 32) (not (== v 10)) (not (== v 13))) 0
+            (acia-tail v))))))})
+(fun {acia-tail v} {do
   (set {s} (+ ac-tail (code-char v)))
-  (set! {ac-sent ac-tail ac-sentat} (+ ac-sent 1) (if (> (len s) 2) (substring s 1) s) at)})
+  (set! {ac-tail} (if (> (len s) 2) (substring s 1) s))})
 
 (fun {acia-tick d at} {do
   (if (> ac-txtimer 0) (do (set! {ac-txtimer} (- ac-txtimer d))

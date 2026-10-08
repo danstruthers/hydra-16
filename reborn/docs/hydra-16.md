@@ -223,14 +223,26 @@ namespace](programming/files.md#the-namespace), [NAMESPACES.md](design/plans/NAM
 ## 8. The console: windows, the serial port, the screen
 
 The console driver (`cons`, task F) serves `#c`: **windows**, rio's way on a serial terminal: each a whole console with
-its own shell, shown one at a time (Ctrl-] and a digit shows that one, Ctrl-] c makes one, Ctrl-] n the next), a hidden
+its own shell, shown one at a time (Ctrl-] and a digit shows that one; Ctrl-] c makes a group, a shell session, and
+Ctrl-] n and p go between groups, Ctrl-] Tab or Ctrl-Tab between a group's windows, Ctrl-] w lists them, Ctrl-] [
+shows the scrollback (Space and Enter copy lines to `/dev/snarf`, the cut buffer, which Ctrl-] y pastes), Ctrl-] s
+and v split a window into tiles shown together (`wctl`'s `layout rows`, `columns`, `grid`), a window can float over
+the rest in a box (`float`), Ctrl-] ? lists the keys, and `wctl`'s `key` lines change them; `new-window` runs a program in a window of its own), a hidden
 one running on, its output kept and shown again.  A read is a line, edited at the console (Backspace, the arrows, Home,
 End, Ctrl-U, the lines before); `consctl` turns raw keys on; Ctrl-C (an interrupt) and Ctrl-\ (a kill) are notes to the
 shown window's group.  **The serial port** runs at 9600 at boot, and to 115200 (`/dev/serctl`), every byte paced by VIA
 timer 2.  **The screen**: with a Vera X, the shown window is on its screen too (`consctl`'s `screen`, `serial`,
-`both`).  [The tools](using/tools.md), [the screen](programming/video.md#the-consoles-terminal).  Text windows (screens
-in the console's RAM banks, a whole VT100, window groups, headers and a bar) are being built:
-[WINDOWS.md](design/plans/WINDOWS.md).
+`both`).  [The tools](using/tools.md), [the screen](programming/video.md#the-consoles-terminal).
+
+**Each window keeps its screen** in the console's RAM banks, written by a whole VT100 (the VT100's and VT102's
+sequences, their reports, VT52 mode, the alternate screen, double width and height), so a window shown again is
+painted exactly as it was; `/dev/text` reads it as text.  **Its size** is the smaller of the terminals it's shown
+on, less their chrome (`consctl` reads with `size C R`; a raw reader gets `KEY_RESIZE`; the PC tool tells the
+Hydra its window's size), and the line editor wraps at it.  **Its chrome**: the bar (the windows, the time), its
+header and its footer, each a row drawn from a format (`wctl`'s `bar`, `header`, `footer`; `/lib/windows` has the
+defaults), on the screen by default and on the serial port with `chrome serial on`; its title (`/dev/label`, OSC 2)
+and its status line (`status`, or the VT320's) show there.  Window groups, Ctrl-Tab, the scrollback's view and
+snarf, tiles and the two seats come next: [WINDOWS.md](design/plans/WINDOWS.md).
 
 ---
 
@@ -364,7 +376,7 @@ POST's, a driver's) are `/dev/kmesg`, its last 4K.
   card; `--pc-dir DIR` a folder as `/pc`; `--vera` a Vera X, `--view` its screen in a browser; `--sound` the sound in a
   browser, `--wav FILE` in a file; `--trace-calls`, `--break`, `--watch` for debugging.  The top of `sim/run.js` lists
   them all; [the hardware reference](hardware.md#in-the-emulator) says what's modelled.
-* **The tests**, `node sim/test.js`: 86 of them, each booting its own image and judged on its output, its time budgets
+* **The tests**, `node sim/test.js`: 103 of them, each booting its own image and judged on its output, its time budgets
   and its own checks, as many at a time as the PC has cores; `--dl` runs them in the danlang emulator (`sim/dl`), the
   emulator written again in danlang.
 * **The PC tools** (`sim/tools`): `hydrapc.js` (the PC tool: the terminal, and `/pc` over the serial line; `npm install`

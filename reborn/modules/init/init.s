@@ -2,7 +2,8 @@
 ; init - the first program (task 1): its fds 0-2 on the console (#c/cons, the console driver's window 0; or, without
 ; it, none, and the bring-up console's); the RAM disks started (r: 256K, s: 512K, each halved till it fits); its
 ; namespace from the namespace file (nslib.s's ns_default: its own area of the RAM disk, /rom/lib/namespace, a card's
-; /lib/namespace; with no /rom/lib/namespace, the one built in here: the devices at their places); the tasks listed;
+; /lib/namespace; with no /rom/lib/namespace, the one built in here: the devices at their places); the windows' chrome
+; (/lib/windows's lines written to #c/wctl, a card's before the ROM's); the tasks listed;
 ; hello run and waited for; then window 0's shell (rc -l, a namespace of its own: it builds it, newns, and its
 ; profile puts its window at /dev) and the windows' starter (wstart: the shell in the next window the user asks for,
 ; Ctrl-] c), each started again when it ends.  The shell is /lib/shell's line, if there is one (its program and
@@ -22,6 +23,10 @@ sh0:        .res        1                                   ; Window 0's shell .
 sw:         .res        1                                   ;   and the windows' starter
 fd:         .res        1
 banks:      .res        1                                   ; A RAM disk's size, in 8K banks
+wfd:        .res        1                                   ; /lib/windows: #c/wctl's fd ...
+wn:         .res        1                                   ;   wbuf's bytes ...
+wi:         .res        1                                   ;   a line's start, its end
+wj:         .res        1
 
 SH_MAX      = 64                                            ; /lib/shell's bytes read, at most
 
@@ -31,6 +36,7 @@ shraw:      .res        SH_MAX                              ; /lib/shell, as rea
 shline:     .res        SH_MAX + 2                          ;   its line's words: the shell's program, then its
 shargs:     .res        2                                   ;   arguments (shargs: where), SPAWN's way (each one
                                                             ;   zero-terminated, an empty one after the last)
+wbuf:       .res        256                                 ; /lib/windows, a part at a time
 
 .code
 main:
@@ -51,6 +57,7 @@ main:
             PRINT       s_builtin                           ; (None: the one built in)
             jsr         namespace
 :
+            jsr         windows                             ; The windows' chrome: /lib/windows
             PRINT       s_up
             jsr         GETPID
             jsr         PUTHEX
@@ -305,6 +312,126 @@ ramdisk:
             lda         fd
             jmp         CLOSE
 
+; The windows' chrome: /lib/windows's lines (a card's before the ROM's: /lib's union) written to #c/wctl, a write
+; each; an empty line, or one starting #, skipped; one longer than wbuf dropped.  No file: the console's own (the
+; ROM's file says the same)
+windows:
+            LDR         r0, s_windows
+            lda         #O_READ
+            jsr         OPEN
+            bcc         :+
+            rts
+:
+            sta         fd
+            LDR         r0, s_wctl
+            lda         #O_WRITE
+            jsr         OPEN
+            bcs         @close
+            sta         wfd
+            stz         wn
+@read:
+            clc                                             ; As much more as wbuf has room for
+            lda         #<wbuf
+            adc         wn
+            sta         r0
+            lda         #>wbuf
+            adc         #0
+            sta         r0 + 1
+            sec
+            lda         #255
+            sbc         wn
+            sta         r1
+            stz         r1 + 1
+            lda         fd
+            jsr         READ
+            bcs         @last
+            cmp         #0
+            beq         @last
+            clc
+            adc         wn
+            sta         wn
+            stz         wi
+@line:
+            ldy         wi                                  ; A line: to its LF
+:
+            cpy         wn
+            bcs         @part
+            lda         wbuf,Y
+            cmp         #LF
+            beq         :+
+            iny
+            bra         :-
+:
+            sty         wj
+            jsr         wline
+            ldy         wj
+            iny
+            sty         wi
+            bra         @line
+@part:
+            ldx         #0                                  ; (Its start, not its end: to wbuf's start)
+            ldy         wi
+            bne         :+
+            cpy         wn                                  ; (None of it: the next)
+            beq         @read
+            lda         wn                                  ; (wbuf full of one line: dropped)
+            cmp         #255
+            bcc         @read
+            stz         wn
+            bra         @read
+:
+            cpy         wn
+            bcs         :+
+            lda         wbuf,Y
+            sta         wbuf,X
+            inx
+            iny
+            bra         :-
+:
+            stx         wn
+            bra         @read
+@last:
+            stz         wi                                  ; (The last, with no LF)
+            lda         wn
+            sta         wj
+            jsr         wline
+            lda         wfd
+            jsr         CLOSE
+@close:
+            lda         fd
+            jsr         CLOSE
+@done:
+            rts
+
+; wbuf's line wi to wj: to #c/wctl, unless it's empty or a comment (#)
+wline:
+            ldy         wi
+            cpy         wj
+            bcs         @done
+            lda         wbuf,Y
+            cmp         #'#'
+            beq         @done
+            cmp         #CR
+            beq         @done
+            clc
+            tya
+            adc         #<wbuf
+            sta         r0
+            lda         #>wbuf
+            adc         #0
+            sta         r0 + 1
+            sec
+            lda         wj
+            sbc         wi
+            sta         r1
+            stz         r1 + 1
+            lda         wfd
+            jsr         WRITE
+            bcc         @done
+            jmp         error
+@done:
+            rts
+
 ; The namespace, built in (a bind each: its flags, new, old): what can't be bound is said, and the rest goes on
 namespace:
             ldx         #0
@@ -367,6 +494,8 @@ S_RC_LEN    = * - s_rcl
             .byte       "-l", 0, 0
 S_RCL_LEN   = * - s_rcl
 s_lshell:   .byte       "/lib/shell", 0
+s_windows:  .byte       "/lib/windows", 0
+s_wctl:     .byte       "#c/wctl", 0
 s_wstart:   .byte       "#m/wstart", 0
 s_builtin:  .byte       "init: no /rom/lib/namespace: the one built in", CR, LF, 0
 s_ctlr:     .byte       "#d/r/ctl", 0

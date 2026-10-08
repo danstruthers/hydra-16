@@ -4,7 +4,7 @@
 ; move, a line erased, a line's end wrapping, BS and TAB, the screen scrolling (70 lines), the colours (SGR: read in
 ; the map's cells through /vram), the cursor's sprite (/sprites); /frame's count and its rate; /vram written and read
 ; back, /pal, /font, the files' lengths (STAT); ctl's commands (mode, cursor, border, bitmap, and bad ones); a claim
-; (the terminal's text kept, then shown at the release), claim all (the font back at the release), and a claim
+; (a write to the terminal E_BUSY meanwhile), claim all (the font back at the release), and a claim
 ; another task holds (E_BUSY) ended by its end.  Its report goes out on the serial port raw (#c/ser), past the screen.  Its child ("t_vid c") claims the chip and holds it half a second.
 ; (It reads a register or two of the chip itself, as a check: VSCROLL, for the map's top row; DC_VIDEO, DC_BORDER
 ; and L0_CONFIG.)
@@ -402,12 +402,14 @@ main:
             CTL         "bitmap off"
             EXPECT_OK   "bitmap off"
             CTL         "mode 80x60"
+            PUT         tw, t_clear, t_clear_n
+            EXPECT_ERR  E_BUSY, "the first write to /term after a mode: E_BUSY, once (the console paints again)"
             CTL         "cursor blink"
             CTL         "border 0"
             CTL         "flash"
             EXPECT_ERR  E_INVAL, "a command it doesn't have: E_INVAL"
 
-; ---- A claim: the terminal's text kept meanwhile, shown at the release
+; ---- A claim: a write to the terminal E_BUSY meanwhile (cons paints its window again after the release)
             PUT         tw, t_clear, t_clear_n
             CTL         "claim"
             EXPECT_OK   "claim"
@@ -415,15 +417,19 @@ main:
             SAME        s_state3
             EXPECT_A    0, "ctl: claimed 1"
             PUT         tw, s_kept, 4
-            EXPECT_OK   "a write to /term while it's claimed"
+            EXPECT_ERR  E_BUSY, "a write to /term while it's claimed: E_BUSY"
             AT          tr, 0, 4
             SAME        s_none
-            EXPECT_A    0, "not shown yet"
+            EXPECT_A    0, "not shown"
             CTL         "release"
             EXPECT_OK   "release"
+            PUT         tw, s_kept, 4
+            EXPECT_ERR  E_BUSY, "the first write to /term after the release: E_BUSY, once"
+            PUT         tw, s_kept, 4
+            EXPECT_OK   "the next"
             AT          tr, 0, 4
             SAME        s_kept
-            EXPECT_A    0, "shown at the release"
+            EXPECT_A    0, "shown"
             CTL         "claim all"
             EXPECT_OK   "claim all"
             LDR         r0, s_font                          ; A's glyph gone ...

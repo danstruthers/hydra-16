@@ -55,7 +55,13 @@ int main (int argc, char* argv[])
   ends the program.
 * conio (`conio.h`) works the console as an ANSI terminal: `clrscr`, `gotoxy`, `textcolor`, `revers`, `cursor`;
   `cgetc` reads keys raw (no echo, each as it's typed, the cursor and function keys as one code each: `CH_*` in
-  `hydra.h`) until the program ends.
+  `hydra.h`) until the program ends.  `screensize` is the window's size (its `consctl`'s `size` line); `cgetc`
+  gives `CH_RESIZE` when it changes, and `screensize` then has the new one.  With `keys mods` written to `consctl`, a
+  key the terminal sent modified comes as `CH_MOD`, its modifiers (`HY_MOD_SHIFT`, `HY_MOD_ALT`, `HY_MOD_CTRL`), then
+  the key.
+* The window's chrome (`hydra.h`): `hy_wlabel` its title, `hy_wstatus` its status line (the footer's `%s`),
+  `hy_wctl` any line of its `wctl` (`chrome screen off` ...); `hy_wnew (flags)` a window made, not shown (`HY_WGROUP`:
+  in a group of its own), its number: its files `#cN` (`#cN/cons` ...), the window gone with its last cons closed.
 * Sound (`snd.h`): claim the channels it uses (`snd_claim`), then patches, notes, volumes, bends and drums on
   them; they're given back as it ends.  `snd_play` plays a song in the background (`play`, in a task of its own).
 * `time` is the system's clock (`/dev/time`; `hy_time`, in seconds since 2000), `clock` the ticks since the

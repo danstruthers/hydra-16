@@ -93,7 +93,7 @@ whose lines end CR LF is written with CR LF again.
 | `M-I`, `M-X`, `^L` | Auto-indent on and off; the help lines off and on; the screen drawn again |
 
 Ctrl-C does nothing in `edit` (it's the console's interrupt), and `^\` and `^]` never reach a program, so nano's keys
-there are Meta keys here.  The screen is the terminal's size (`$COLUMNS` and `$LINES`, else 80 by 24).  `ed` is
+there are Meta keys here.  The screen is the window's size (`consctl`'s: the smaller of the terminals it's shown on; with no console `$COLUMNS` and `$LINES`, else 80 by 24), and `edit` draws itself again as it changes.  `ed` is
 the line editor (Text, above), for scripts and a terminal without a screen.
 
 ## Tasks
@@ -106,6 +106,7 @@ the line editor (Text, above), for scripts and a terminal without a screen.
 | `slay [-i] name ...` | Each task running a program of that name, as `kill` |
 | `sleep seconds` | Nothing for that long; Ctrl-C ends it |
 | `ns [task]` | A task's namespace (none: this one's) as the binds and mounts that make it |
+| `new-window [-g] [command ...]` | A window made and shown, in this one's group (`-g`: a group of its own, another shell session), running the command (rc's: `new-window 'ls -l; sleep 5'`), or with none the shell (`/lib/shell`'s, as Ctrl-] c starts); `$window` is its number.  It isn't waited for, and the window goes when its program ends |
 
 The tasks' own files are under `/proc/N`: `status`, `args`, `cwd`, `env`, `ns`, `fd` (its open files: `0 rw #c 291
 #c/cons`), `regs`, `mem` and `ram` (its memory), `note` (write `interrupt`, `kill`, `hangup` or a number to send
@@ -286,7 +287,12 @@ its PSG's voices: the same commands, and `wave`; `claim`'s P is their mask, bit 
 VIA's port A is `/dev/gpio` (pins `0`-`7`, `port`, `ctl`, `ca1`) and `/dev/i2c` the I2C bus on two of its pins;
 `/dev/spi` the SPI devices; `/dev/seg` names shared segments; `/dev/vid` is the Vera X (its screen, VRAM, the PSG,
 and `pcm` and `pcmctl`, its PCM: [../programming/video.md](../programming/video.md)); `/pc` a folder on the PC (through
-the PC tool, `sim/tools/hydrapc.js`, which is the terminal too).
+the PC tool, `sim/tools/hydrapc.js`, which is the terminal too, and tells the Hydra its window's size; with
+`--win32-input`, in Windows Terminal, Ctrl-Tab reaches the Hydra once Windows Terminal's own binding for it is gone).  A window's size is
+`consctl`'s `size` line (`grep size /dev/consctl`): the smaller of the terminals it's shown on.  Its chrome (the
+bar, its header and footer: on the screen, by default) shows its title (`echo title >/dev/label`) and status line
+(`echo status text >/dev/wctl`); `/lib/windows` has the formats, and `wctl` changes them (`echo chrome serial on
+>/dev/wctl` puts them on the serial port's terminal too).
 
 ### Scores
 

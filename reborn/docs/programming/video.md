@@ -55,12 +55,16 @@ A game paces itself by `frame`: a read waits for the next VSYNC.  In C, `fread` 
 ## The console's terminal
 
 The screen shows the console's windows as the serial terminal does: the window shown, with the keys (Ctrl-] and a
-digit shows another, repainted on both).  `consctl` chooses where: `screen`, `serial` or `both` (every window's; it
+digit shows another, painted on both from its screen, which the console keeps).  A window is the smaller terminal's
+size, the serial port's 80 x 24 with both on: on the screen its rows at the top, below the chrome, the scrolling region kept to them.  The chrome is the bar (the windows and the time) and the window's header and footer, a row each, on the screen by default (none on the serial port: `wctl`'s `chrome`), so a window on the screen alone is 80 x 57.  `consctl` chooses where: `screen`, `serial` or `both` (every window's; it
 starts `both`), and reads with a line `terminal both`.  With `screen` alone, output isn't paced by the serial line.
 
 The terminal is 80x60 (`mode 80x30` and `mode 40x30` make the characters bigger), in 16 colours: the ANSI ones, 0-15
-as conio numbers them.  It takes CR, LF, BS, TAB, FF; ESC 7 and ESC 8, ESC D (index), ESC E (next line), ESC M
-(reverse index), ESC c; CSI `A` `B` `C` `D` `E` `F` `G` `d` `H` `f` (moves), `J` and `K` (0, 1, 2), `m` (0, 1
+as conio numbers them.  A font's first 32 glyphs are the DEC Special Graphics (`tools/decfont.js` puts them in the
+console's fonts, `/lib/font/cp437` too); reading `term` gives them as ASCII (`-`, `|`, `+` ...), as the console's
+`/text` does.  It takes CR, LF, BS, TAB, FF; ESC 7 and ESC 8, ESC D (index), ESC E (next line), ESC M
+(reverse index), ESC c, the character sets (`ESC ( 0` and `ESC ) 0` the DEC Special Graphics, the VT100's line
+drawing, `ESC ( B` ASCII; SO and SI choose G1 or G0); CSI `A` `B` `C` `D` `E` `F` `G` `d` `H` `f` (moves), `J` and `K` (0, 1, 2), `m` (0, 1
 bold, shown bright, 22, 7 reverse, 27, 30-37, 39, 40-47, 49, 90-97, 100-107), `r` (the scrolling region, as a
 VT100's: `CSI 2;23r`, then an LF at row 23 scrolls rows 2-23 alone and ESC M at row 2 scrolls them down; `CSI r`
 the whole screen again), `s` and `u`, `?25h` and `?25l`.  Others are taken and dropped.  The whole screen scrolls by
@@ -105,8 +109,11 @@ instruments (their data read into RAM when it fits, about 20K, else read from th
 The VERA has one set of address registers, so two tasks can't both write it.  A program that wants the chip writes
 `claim` to `ctl` and keeps the file open: till it writes `release`, or closes its last file of `#v` (its end does),
 the chip is its own.  It may write any register; the driver leaves the chip alone, and another task's commands and
-reads of the chip's files get `E_BUSY` (a second `claim` too).  The console's output meanwhile waits in the driver
-(its last 1K), and is shown when the claim ends.
+reads of the chip's files get `E_BUSY` (a second `claim` too), and so does any write to `term`, the claimer's too.
+The console keeps its windows' screens itself, so it paints the window shown again once the claim ends.  The first
+write to `term` after the screen changed under the console (a `mode`, a `bitmap`, a `reset`, a claim's end) is
+refused once with `E_BUSY` too: the console then reads the size from `ctl`'s `mode` line, sizes its windows to it,
+and paints the window shown again.
 
 The VRAM a claimer may use without saying so is `$00000-$1AFFF` (108K: a 320x240 bitmap of 8 bits is 75K); the
 console's map is at `$1B000-$1EFFF`, its font at `$1F000-$1F7FF`, the cursor's image at `$1F800`.  With `claim all`

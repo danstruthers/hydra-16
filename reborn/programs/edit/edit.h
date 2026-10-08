@@ -117,6 +117,7 @@ extern unsigned char helpshown;                 /* The two help lines shown */
 unsigned char s_init (void);                    /* (1: no room: no bank for the screen's copy) */
 void s_done (void);
 void s_all (void);                              /* Everything drawn again */
+void s_resize (void);                           /* The window's size changed (CH_RESIZE): drawn again at it */
 void s_render (void);                           /* The screen made to show D and the cursor */
 void s_msg (const char* m);                     /* A message on the message line, till the next key */
 void s_msg2 (const char* a, const char* b);     /* ... of two parts */

@@ -3,8 +3,8 @@
 ; lib) and its namespace built (nslib's ns_default).  Then, its fds 0-2 still closed (its lines go out on the
 ; bring-up console), the times: rc -c 'x=1' from SPAWN to its end, and ls /bin (the caches, /rom/bin, then #m/bin;
 ; its output to #n/null).  Then its fds 0-2 #c/cons, $window 0, and rc -l (newns, then /rom/lib/profile) in a note
-; group of its own, waited for: "t_rc: rc ended" when it does.  tests.js types rc's commands (the rc and tools
-; tests) and looks for what they say.
+; group of its own, waited for: "t_rc: rc ended" when it does (and meanwhile, as init does, any orphan's record, init's
+; now: new-window's programs').  tests.js types rc's commands (the rc and tools tests) and looks for what they say.
 
 .include "hydra.inc"
 .include "hyx2.inc"
@@ -18,6 +18,7 @@ fd:         .res        1
 code:       .res        1                                   ; A child's exit code
 map:        .res        4                                   ; ls's fds: none, #n/null, none
 msg:        .res        32
+rc:         .res        1                                   ; rc's task
 
 .code
 main:
@@ -89,10 +90,14 @@ main:
             lda         #SPAWN_NEWGROUP | SPAWN_NEWNS
             jsr         SPAWN
             bcs         @ended
-            pha
+            sta         rc
+@wait:                                                      ; (Any child's record: rc's ends it)
             LDR         r0, msg
-            pla
+            lda         #$FF
             jsr         WAIT
+            bcs         @wait
+            cmp         rc
+            bne         @wait
             phx
             PRINT       s_ended
             pla                                             ; Its code and message
