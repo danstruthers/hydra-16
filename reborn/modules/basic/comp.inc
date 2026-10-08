@@ -14,7 +14,8 @@ PROC_MAX        = 128
 PE_SIZE         = 8             ; A procedure's entry (procs): its code (2), parameters (1), locals (1), its locals'
                                 ;   kinds' code address (2), flags (1), its result's kind (1)
 BLK_MAX         = 32            ; Blocks open at once (IF, FOR, DO ...)
-BE_SIZE         = 12            ; (A block's entry: its kind, then its own: stmt.inc)
+BE_SIZE         = 14            ; (A block's entry: its kind, then its own: stmt.inc; its line, the last two)
+BE_LINE         = 12
 
 ; A symbol's class (scls)
 SC_NUM          = 'N'           ; A number's variable
@@ -395,6 +396,21 @@ line_next:
             jmp         @more
 @done:
             LDW         lp, lbuf
+            lda         inc_dep                             ; (The program's first line #!: a script's, passed over)
+            bne         :+
+            lda         cline + 1
+            bne         :+
+            lda         cline
+            cmp         #1
+            bne         :+
+            lda         lbuf
+            cmp         #'#'
+            bne         :+
+            lda         lbuf + 1
+            cmp         #'!'
+            bne         :+
+            stz         lbuf
+:
             jsr         inc_check                           ; (INCLUDE "f": f's lines next)
             bcc         :+
             jmp         line_next
@@ -902,11 +918,20 @@ label_ref:
             sta         sscope
             jsr         sym_find
             bcc         :+
+            lda         cmode                               ; (At the prompt: the program's, or Label not defined)
+            bne         @undef
             jsr         spl_clear                           ; (Not seen yet: made, undefined)
             jsr         sym_add
 :
             lda         spl + SL_DEF
+            bne         :+
+            lda         cmode
             beq         @fix
+@undef:
+            lda         #ER_LABEL
+            ldx         #0
+            jmp         c_error
+:
             lda         lref_data                           ; (Its DATA's place, or its code's)
             beq         :+
             lda         spl + SL_DATA
@@ -1075,6 +1100,9 @@ prog_init:
             stz         ltop + 1
             stz         dtop
             stz         dtop + 1
+            jsr         data_end                            ; (READ: none, Out of DATA)
+            stz         dptr
+            stz         dptr + 1
             stz         optbase
             stz         defstr
             stz         defstr + 1
@@ -1347,6 +1375,12 @@ blk_unclosed:
             lda         nblk
             dec         a
             jsr         blk_entry
+            ldy         #BE_LINE                            ; (Said at its start)
+            lda         (t4),y
+            sta         cline
+            iny
+            lda         (t4),y
+            sta         cline + 1
             lda         (t4)                               ; (Its kind: the error for it)
             tax
             lda         blk_errs,x

@@ -26,6 +26,7 @@ c3_len:     .res        1
 c3_cb:      .res        3                                   ; (CONST's: the code's cursor, the value stack, kept)
 c3_vsp:     .res        2
 in_loop:    .res        2                                   ; (INPUT's start: Redo from start's way back)
+in_semi:    .res        1                                   ; (INPUT ;: 2, the flags' bit, else 0)
 bs_tmp:     .res        BASE_ROOM                           ; (BASE's: its string, written in the program)
 xp_x:       .res        1                                   ; (to2's)
 xp_y:       .res        1
@@ -104,6 +105,28 @@ c_stmt3:
 
 not_yet3:
             lda         #73
+            ldx         #0
+            jmp         b_error
+
+; SYSTEM [n], BYE [n]: BASIC's end (its status n, else 0)
+cs_system:
+            lda         tk
+            beq         @none
+            cmp         #TK_OP
+            beq         @none
+            C2          expr_num
+            bra         @emit
+@none:
+            lda         #0
+            jsr         emit_i8
+@emit:
+            lda         #ST_SYSTEM
+            jmp         emit_st3
+
+; The prompt's commands (LIST, NEW, CONT, LOAD, SAVE, EDIT, DELETE, CLEAR, RUN) in a program, or after a : at the
+; prompt: only at the prompt
+cs_prompt:
+            lda         #ER_PROMPT
             ldx         #0
             jmp         b_error
 
@@ -214,6 +237,28 @@ st3_tab:
             .word       cs_play - 1
             .byte       K_INCLUDE
             .word       cs_include - 1
+            .byte       K_SYSTEM
+            .word       cs_system - 1
+            .byte       K_BYE
+            .word       cs_system - 1
+            .byte       K_LIST
+            .word       cs_prompt - 1
+            .byte       K_NEW
+            .word       cs_prompt - 1
+            .byte       K_CONT
+            .word       cs_prompt - 1
+            .byte       K_LOAD
+            .word       cs_prompt - 1
+            .byte       K_SAVE
+            .word       cs_prompt - 1
+            .byte       K_EDIT
+            .word       cs_prompt - 1
+            .byte       K_DELETE
+            .word       cs_prompt - 1
+            .byte       K_CLEAR
+            .word       cs_prompt - 1
+            .byte       K_RUN
+            .word       cs_prompt - 1
             .byte       K_SYS
             .word       cs_sys - 1
             .byte       K_RREG
@@ -1395,16 +1440,13 @@ cs_input:
             jsr         file_in
             bra         @each
 :
-            lda         #';'
-            jsr         is_op3
-            bne         :+
-            C2          lex_next
-:
+            jsr         in_semi_kw
             C2          cpc_get                             ; (Redo from start's way back: here)
             sta         in_loop
             stx         in_loop + 1
             lda         #1                                  ; (? after the prompt, or after none)
             jsr         in_prompt
+            ora         in_semi
             jsr         emit_i8
             lda         #ST_INPUT
             jsr         emit_st3
@@ -1454,14 +1496,10 @@ cs_line:
             jsr         file_in
             bra         @target
 :
-            lda         #';'
-            jsr         is_op3
-            bne         :+
-            C2          lex_next
-:
+            jsr         in_semi_kw
             lda         #0
             jsr         in_prompt
-            lda         #0
+            lda         in_semi
             jsr         emit_i8
             lda         #ST_INPUT
             jsr         emit_st3
@@ -1475,6 +1513,18 @@ cs_line:
             lda         #ST_LGET
             jsr         emit_st3
             C2          tgt_end
+            rts
+
+; INPUT ; (LINE INPUT ;): in_semi its flag (2), the ; passed; else 0
+in_semi_kw:
+            stz         in_semi
+            lda         #';'
+            jsr         is_op3
+            bne         :+
+            C2          lex_next
+            lda         #2
+            sta         in_semi
+:
             rts
 
 ; INPUT's and LINE INPUT's prompt pushed: "text" then ; (the flags .A) or , (none); no prompt: "" (the flags .A).

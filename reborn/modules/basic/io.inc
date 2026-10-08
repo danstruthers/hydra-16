@@ -301,14 +301,18 @@ st_input:
             jmp         b_error
 @have:
             stz         lbuf + 255
-            lda         ocol                                ; (stdin not the console: no echo, so a new line)
-            beq         :+
-            lda         interactive
-            bne         :+
+            lda         interactive                         ; (stdin not the console: no echo, so a new line; INPUT
+            bne         @nl                                 ;   ;: none, its column kept)
+            lda         in_flags
+            and         #2
+            bne         @kept
+            lda         ocol
+            beq         @nl
             lda         #LF
             jsr         out_byte
-:
+@nl:
             stz         ocol
+@kept:
             stz         in_pos
             stz         in_bad
             stz         in_end

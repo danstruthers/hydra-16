@@ -112,8 +112,8 @@ main:
             jsr         prog_run
             jsr         out_flush
             FARN        6, con_cooked
-            lda         end_status
             LDR         r0, 0
+            lda         end_status
             jmp         EXITS
 s_nolib:    .byte       "no numbers library", 0
 
@@ -146,8 +146,8 @@ prompt:
             jsr         read_line
             bcc         @have
             jsr         out_flush
-            lda         #0
             LDR         r0, 0
+            lda         #0
             jmp         EXITS
 @have:
             FARN        8, sh_line                          ; (rc's, or the shell's own: run already)
@@ -347,6 +347,8 @@ err_entry:
             MOVW        err_line, cline
             bra         @say
 @run:
+            lda         running                             ; (Not running: the prompt's own, no line)
+            beq         @say
             jsr         ip_get                              ; Running: its statement's line (the program's code)
             sta         t0
             stx         t0 + 1
@@ -369,6 +371,7 @@ err_entry:
             jsr         cont_set                            ; (Not taken: CONT's state)
 @say:
 err_said:
+            stz         running
             FARN        7, err_say
             ; (fall through)
 
@@ -380,8 +383,8 @@ top_error:
             FARN        6, con_cooked
             lda         script
             beq         :+
-            lda         #1
             LDR         r0, 0
+            lda         #1
             jmp         EXITS
 :
             jmp         prompt

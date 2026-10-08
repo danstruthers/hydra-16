@@ -239,6 +239,12 @@ blk_open:
             bpl         :-
             pla
             sta         (t4)
+            ldy         #BE_LINE                            ; (Its line: an error's, if it's left open)
+            lda         cline
+            sta         (t4),y
+            iny
+            lda         cline + 1
+            sta         (t4),y
             inc         nblk
             rts
 
@@ -1258,7 +1264,15 @@ st_exit:
             lda         #OP_JMP
             jmp         chain_add
 @none:
-            lda         #ER_BLOCK
+            lda         #ER_BLOCK                           ; (EXIT SUB outside one: Not in a procedure)
+            ldx         t0
+            cpx         #B_SUB
+            beq         :+
+            cpx         #B_FUNC
+            bne         :++
+:
+            lda         #ER_INSUB
+:
             ldx         #0
             jmp         c_error
 

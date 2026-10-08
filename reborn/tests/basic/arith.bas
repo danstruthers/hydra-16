@@ -1,88 +1,84 @@
-10 REM ARITH.BAS: ARITHMETIC, PRECEDENCE,
-11 REM LITERALS, INTEGER VARIABLES, NAMES
-20 N$="ARITH"
-100 X=2+3:E=5:GOSUB 9000
-101 X=2-5:E=-3:GOSUB 9000
-102 X=6*7:E=42:GOSUB 9000
-103 X=7/2:E=3.5:GOSUB 9000
-104 X=2^10:E=1024:GOSUB 9000
-105 X=2+3*4:E=14:GOSUB 9000
-106 X=(2+3)*4:E=20:GOSUB 9000
-107 X=2*3^2:E=18:GOSUB 9000
-108 X=10-2-3:E=5:GOSUB 9000
-109 X=100/10/2:E=5:GOSUB 9000
-110 X=2^3^2:E=64:GOSUB 9000
-111 X=-2^2:E=-4:GOSUB 9000
-112 X=2^-1:E=.5:GOSUB 9000
-113 X=5--3:E=8:GOSUB 9000
-114 X=-(-5):E=5:GOSUB 9000
-115 X=+7:E=7:GOSUB 9000
-116 X=((((1+2))*(3+4))):E=21:GOSUB 9000
-117 X=1+2*3-4/2:E=5:GOSUB 9000
-118 X=2*-3:E=-6:GOSUB 9000
-119 X=-3*-3:E=9:GOSUB 9000
-120 X=2+3*4^2/8-1:E=7:GOSUB 9000
-121 X=(1+2)*(3+4)/(5+2):E=3:GOSUB 9000
-130 X=1E3:E=1000:GOSUB 9000
-131 X=1.5E-2:E=.015:GOSUB 9000
-132 X=12.5E+1:E=125:GOSUB 9000
-133 X=.5:E=1/2:GOSUB 9000
-134 X=1E38:E=1E38:GOSUB 9000
-135 X=1E-38*1E-10:E=0:GOSUB 9000
-136 X=123456789:E=123456789:GOSUB 9000
-137 X=999999999:E=999999999:GOSUB 9000
-138 X=65535*65537:E=4294967295:GOSUB 9000
-139 X=.1+.2:E=.3:GOSUB 9000
-140 X=1/3*3:E=1:GOSUB 9000
-141 X=2/3+1/3:E=1:GOSUB 9000
-142 X=1E10/1E5:E=1E5:GOSUB 9000
-143 X=1.000000001:E=1:GOSUB 9000
-144 X=3.14159265:E=3.14159265:GOSUB 9000
-145 X=1E-30:E=1E-30:GOSUB 9000
-146 X=-1E30:E=-1E30:GOSUB 9000
-147 X=0^-1:E=0:GOSUB 9000
-150 X=0*5:E=0:GOSUB 9000
-151 X=-0:E=0:GOSUB 9000
-152 X=0/5:E=0:GOSUB 9000
-153 X=0^0:E=1:GOSUB 9000
-154 X=0^2:E=0:GOSUB 9000
-155 X=4^.5:E=2:GOSUB 9000
-156 X=8^(1/3):E=2:GOSUB 9000
-157 X=(-2)^3:E=-8:GOSUB 9000
-158 X=10^-2:E=.01:GOSUB 9000
-159 X=2^31:E=2147483648:GOSUB 9000
-160 A=5:A=A+1:X=A:E=6:GOSUB 9000
-161 A=3:B=4:X=A*A+B*B:E=25:GOSUB 9000
-162 A=1:FOR I=1 TO 20:A=A*2:NEXT
-163 X=A:E=1048576:GOSUB 9000
-164 A=1:FOR I=1 TO 10:A=A/2:NEXT
-165 X=A*1024:E=1:GOSUB 9000
-170 A%=7:X=A%:E=7:GOSUB 9000
-171 A%=3.7:X=A%:E=3:GOSUB 9000
-172 A%=-3.7:X=A%:E=-4:GOSUB 9000
-173 A%=32767:X=A%:E=32767:GOSUB 9000
-174 A%=-32768:X=A%:E=-32768:GOSUB 9000
-175 A%=10/4:X=A%:E=2:GOSUB 9000
-176 A%=7:B%=2:X=A%/B%:E=3.5:GOSUB 9000
-177 A%=5:A%=A%*2:X=A%:E=10:GOSUB 9000
-178 A%=-1:X=A%+1:E=0:GOSUB 9000
-179 A%=1.9999:X=A%:E=1:GOSUB 9000
-180 AB=1:ABC=2:X=AB:E=2:GOSUB 9000
-181 Z1=3:X=Z1:E=3:GOSUB 9000
-182 Q=1:Q%=2:Q$="3":X=Q:E=1:GOSUB 9000
-183 X=Q%:E=2:GOSUB 9000
-184 X=VAL(Q$):E=3:GOSUB 9000
-185 X=ZZ:E=0:GOSUB 9000
-186 X=ZZ%:E=0:GOSUB 9000
-187 X=LEN(ZZ$):E=0:GOSUB 9000
-188 LOVELY=4:X=LO:E=4:GOSUB 9000
-8999 GOTO 9900
-9000 T=T+1:IF X=E THEN RETURN
-9010 IF E=0 THEN 9030
-9020 IF ABS((X-E)/E)<1E-8 THEN RETURN
-9030 F=F+1:PRINT "FAIL";T;X;E
-9040 RETURN
-9100 T=T+1:IF X$=E$ THEN RETURN
-9110 F=F+1:PRINT "FAIL";T;"[";X$;"][";E$;"]"
-9120 RETURN
-9900 PRINT N$;":";T;"CHECKS,";F;"FAILED"
+' arith.bas - BASIC's numbers: exact integers of any size, fractions, fixed decimals, complex numbers; the
+' operators and their order; literals (E notation, &H, the Hydra's # forms); a number's suffixes, one variable
+DIM SHARED checks, failed
+SUB ck (got, want, what$)
+    checks = checks + 1
+    IF got <> want THEN failed = failed + 1: PRINT "FAIL "; what$; ":"; got; "not"; want
+END SUB
+
+' The operators
+ck 2 + 3, 5, "+"
+ck 2 - 5, -3, "-"
+ck 6 * 7, 42, "*"
+ck 7 / 2, 3.5, "/"
+ck 2 ^ 10, 1024, "^"
+ck 7 \ 2, 3, "\"
+ck -7 \ 2, -3, "\ toward 0"
+ck 7 MOD 2, 1, "MOD"
+ck -7 MOD 2, -1, "MOD's sign"
+ck 7.6 \ 2.4, 4, "\ rounds first"
+' Their order
+ck 2 + 3 * 4, 14, "* before +"
+ck (2 + 3) * 4, 20, "( )"
+ck 2 * 3 ^ 2, 18, "^ before *"
+ck 10 - 2 - 3, 5, "- from the left"
+ck 100 / 10 / 2, 5, "/ from the left"
+ck 2 ^ 3 ^ 2, 64, "^ from the left"
+ck -2 ^ 2, -4, "- after ^"
+ck 2 ^ -1, 1 / 2, "^ -"
+ck 5 - -3, 8, "- -"
+ck 2 * -3, -6, "* -"
+ck 7 MOD 4 + 1, 4, "MOD before +"
+ck 10 \ 3 * 2, 1, "\ after *"
+ck 1 + 2 = 3, -1, "= after +"
+' Exact
+ck 0.1 + 0.2, 0.3, "0.1 + 0.2"
+ck 1 / 3 + 1 / 3 + 1 / 3, 1, "thirds"
+ck 10 / 4, 5 / 2, "a fraction"
+ck 2 ^ 100, VAL("1267650600228229401496703205376"), "2 ^ 100"
+ck 2 ^ 64 - 1, 18446744073709551615, "2 ^ 64 - 1"
+ck (2 ^ 70) \ (2 ^ 60), 1024, "big \"
+ck (10 ^ 30 + 7) MOD 10, 7, "big MOD"
+ck 1.25 * 4, 5, "1.25 * 4"
+ck 3 / 4 * 4, 3, "3 / 4 * 4"
+ck 1 / 7 * 7, 1, "sevenths"
+ck 0.5 ^ 2, 0.25, "0.5 ^ 2"
+ck 4 ^ 0.5, 2, "4 ^ 0.5"
+ck (9 / 4) ^ 0.5, 3 / 2, "(9/4) ^ 0.5"
+' Complex numbers
+ck (1 + 2i) * (1 - 2i), 5, "(1+2i)(1-2i)"
+ck 2i * 2i, -4, "2i * 2i"
+ck SQR(-4), 2i, "SQR(-4)"
+ck (3 + 4i) - 4i, 3, "back to real"
+' Literals
+ck 1E3, 1000, "1E3"
+ck 1.5E-2, 0.015, "1.5E-2"
+ck 12.5E+1, 125, "12.5E+1"
+ck 1D2, 100, "1D2"
+ck &HFF, 255, "&HFF"
+ck &hff, 255, "&hff"
+ck &O17, 15, "&O17"
+ck &B101, 5, "&B101"
+ck #xFF, 255, "#xFF"
+ck #b101, 5, "#b101"
+ck #16r1F, 31, "#16r1F"
+ck #b0.1, 1 / 2, "#b0.1"
+ck .5, 1 / 2, ".5"
+' A suffix: one variable, x and x% and x# the same
+x = 5: ck x%, 5, "x%"
+x# = 7: ck x, 7, "x#"
+x! = 9: ck x&, 9, "x&"
+DIM y AS INTEGER: y = 2.5: ck y, 2.5, "AS INTEGER: exact"
+ck CINT(2.5), 2, "CINT a half to even"
+ck CINT(3.5), 4, "CINT 3.5"
+ck CINT(-2.5), -2, "CINT -2.5"
+ck CLNG(7.5), 8, "CLNG"
+ck CSNG(1 / 3), 1 / 3, "CSNG as it is"
+ck CDBL(0.1), 0.1, "CDBL as it is"
+' Numbers in a base
+BASE "x"
+ck 0FF, #d255, "BASE x: 0FF"
+ck 10, #d16, "BASE x: 10"
+BASE "d"
+ck 10, 10, "BASE d again"
+PRINT "arith:"; checks; "checks,"; failed; "failed"

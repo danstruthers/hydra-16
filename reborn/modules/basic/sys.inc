@@ -14,6 +14,9 @@ err_vsp:    .res        2                                   ;   and the value st
 eh_addr:    .res        2                                   ; ON ERROR's handler ($FFFF: none)
 eh_in:      .res        1                                   ; <> 0: in it
 in_prog:    .res        1                                   ; <> 0: the program running (not the prompt's line)
+err_name:   .res        2                                   ; (A file the error's: its name said first; 0 none)
+running:    .res        1                                   ; <> 0: code running (a program's, the prompt's line's):
+                                                            ;   an error's line from it
 eo_cap:     .res        1                                   ; $80: the messages' output to eo_buf (ERR$'s)
 eo_len:     .res        1
 eo_buf:     .res        EO_SIZE
@@ -86,8 +89,30 @@ st_error:
 ; alone).  err_line its line (0: none)
 err_say:
             jsr         out_flush
+            lda         ofd                                 ; (The output's line not ended: ended first)
+            cmp         #1
+            bne         :+
+            lda         ocol
+            beq         :+
+            lda         #LF
+            jsr         out_byte
+            stz         ocol
+            jsr         out_flush
+:
             lda         #2
             sta         ofd
+            lda         err_name + 1                        ; (A file's: its name first, as rc's errors)
+            beq         :+
+            MOVW        t0, err_name
+            stz         err_name + 1
+            ldx         #0
+            jsr         msg_out_ram
+            lda         #':'
+            jsr         out_byte
+            lda         #' '
+            jsr         out_byte
+            jmp         @msg
+:
             lda         err_line
             ora         err_line + 1
             beq         @msg
@@ -109,12 +134,15 @@ err_say:
             jsr         msg_out_ram
             bra         @colon
 @prog:
-            ldx         #0                                  ; (The program's file, or "line")
-            lda         pname
+            ldx         #0                                  ; (The program's file, or "line" and its number: a
+            lda         pname                               ;   typed program's line's, as LIST shows it)
             bne         :+
             LDW         t0, s_line
             jsr         msg_out
-            bra         @num
+            jsr         erl_num
+            sta         t0
+            stx         t0 + 1
+            bra         @dec
 :
             LDW         t0, pname
             jsr         msg_out_ram
@@ -125,10 +153,10 @@ err_say:
             MOVW        t0, err_line
             lda         t0 + 1                              ; (An INCLUDE's file's: its own line)
             cmp         #>INC_LINE
-            bcc         :+
+            bcc         @dec
             and         #>(INC_STEP - 1)
             sta         t0 + 1
-:
+@dec:
             stz         t0 + 2
             stz         t0 + 3
             jsr         dec_out
@@ -308,6 +336,7 @@ err_msgs:
             .byte       ER_EXPECT, "syntax error: ", 0
             .byte       ER_CONST, "not a constant", 0
             .byte       ER_FIELD, "no such field", 0
+            .byte       ER_PROMPT, "only at the prompt", 0
             .byte       0
 
 ; ---- The system's errors
@@ -1371,6 +1400,18 @@ f_bank:
             ldx         #0
             jmp         push_ax7
 
+; ---- SYSTEM [n] (BYE): BASIC's end, from a program or the prompt (its status n)
+st_system:
+            jsr         pop_int16
+            lda         t0
+            sta         end_status
+            FARN        6, fl_closeall
+            jsr         out_flush
+            FARN        6, con_cooked
+            LDR         r0, 0
+            lda         end_status
+            jmp         EXITS
+
 ; ---- END n: the program's end, its status n
 st_endn:
             jsr         pop_int16
@@ -1391,7 +1432,7 @@ st_disp7:
             tax
             jmp         (st_jt7,x)
 st_jt7:
-            .word       st_endn, st_error, st_shell, st_environ, st_poke, st_bank
+            .word       st_endn, st_error, st_shell, st_environ, st_poke, st_bank, st_system
 .assert     * - st_jt7 = (ST_B8 - ST_B7) * 2, error, "st_jt7 and fn.inc's ST_B7 group differ"
 
 rt_todo7:

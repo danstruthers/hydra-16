@@ -1,44 +1,71 @@
-10 REM DATA.BAS: DATA, READ, RESTORE, DEF FN
-20 N$="DATA"
-100 READ A,B,C:X=A+B+C:E=6:GOSUB 9000
-101 READ D$:X$=D$:E$="FOUR":GOSUB 9100
-102 READ G:X=G:E=5.5:GOSUB 9000
-103 READ H:X=H:E=-6:GOSUB 9000
-104 READ K$:X$=K$:E$="HELLO WORLD":GOSUB 9100
-105 READ L$:X$=L$:E$="PRINT":GOSUB 9100
-106 READ M$:X$=M$:E$="A,B":GOSUB 9100
-107 READ P:X=P:E=1E3:GOSUB 9000
-108 READ Q$:X$=Q$:E$="":GOSUB 9100
-109 READ R:X=R:E=7:GOSUB 9000
-110 RESTORE:READ A:X=A:E=1:GOSUB 9000
-111 READ A,B:X=A*10+B:E=23:GOSUB 9000
-112 RESTORE:S=0:FOR I=1 TO 3:READ A
-113 S=S+A:NEXT:X=S:E=6:GOSUB 9000
-114 READ U$,V:X$=U$+STR$(V):E$="FOUR 5.5"
-115 GOSUB 9100
-120 DEF FNA(Y)=Y*Y+1
-121 X=FNA(3):E=10:GOSUB 9000
-122 DEF FNB(Y)=FNA(Y)+1
-123 X=FNB(2):E=6:GOSUB 9000
-124 K=5:DEF FNC(Z)=Z+K:X=FNC(1):E=6:GOSUB 9000
-125 K=10:X=FNC(1):E=11:GOSUB 9000
-126 Z=100:Y=FNC(1):X=Z:E=100:GOSUB 9000
-127 X=FNA(FNA(1)):E=5:GOSUB 9000
-128 DEF FND(W)=SQR(W)+INT(W/2)
-129 X=FND(16):E=12:GOSUB 9000
-130 DEF FNE(V)=-V:X=FNE(-4):E=4:GOSUB 9000
-131 X=FNA(2)+FNE(3):E=2:GOSUB 9000
-132 DEF FNA(Y)=Y+100:X=FNA(1):E=101:GOSUB 9000
-8999 GOTO 9900
-9000 T=T+1:IF X=E THEN RETURN
-9010 IF E=0 THEN 9030
-9020 IF ABS((X-E)/E)<1E-8 THEN RETURN
-9030 F=F+1:PRINT "FAIL";T;X;E
-9040 RETURN
-9100 T=T+1:IF X$=E$ THEN RETURN
-9110 F=F+1:PRINT "FAIL";T;"[";X$;"][";E$;"]"
-9120 RETURN
-9900 PRINT N$;":";T;"CHECKS,";F;"FAILED"
-9990 DATA 1,2,3,"FOUR",5.5,-6
-9991 DATA  HELLO WORLD,PRINT,"A,B",1E3
-9992 DATA "",7
+' data.bas - DATA, READ and RESTORE (numbers of every kind, strings quoted and bare, RESTORE to a label, past the
+' end); the declarations: CONST, OPTION BASE, DEFSTR and DEFINT, a suffix's variable
+OPTION BASE 1
+DIM SHARED checks, failed
+SUB ck (got, want, what$)
+    checks = checks + 1
+    IF got <> want THEN failed = failed + 1: PRINT "FAIL "; what$; ":"; got; "not"; want
+END SUB
+
+DATA 1, -2.5, 1/3, 2i, &HFF, #b101, 1E3
+READ a, b, c, d, e, f, g
+ck a, 1, "READ"
+ck b, -2.5, "a decimal"
+ck c, 1 / 3, "a fraction"
+ck d, 2i, "complex"
+ck e, 255, "&HFF"
+ck f, 5, "#b101"
+ck g, 1000, "1E3"
+DATA "quoted, with a comma", bare words ,  spaced  , ""
+READ s1$, s2$, s3$, s4$
+ck s1$ = "quoted, with a comma", -1, "a quoted string"
+ck s2$ = "bare words", -1, "a bare string"
+ck s3$ = "spaced", -1, "spaces around it dropped"
+ck s4$ = "", -1, "an empty string"
+DATA 42, 1180591620717411303424, 2 ^ 70
+READ n$, big, two
+ck n$ = "42", -1, "a number read as a string"
+ck big, 2 ^ 70, "a big number"
+ck two, 2, "2 ^ 70: as VAL reads it"
+' RESTORE
+RESTORE
+READ a
+ck a, 1, "RESTORE"
+RESTORE more
+READ x, y
+ck x * 10 + y, 78, "RESTORE label"
+more:
+DATA 7, 8
+DATA 9
+READ z
+ck z, 9, "on after it"
+ON ERROR GOTO bad
+e = 0: READ z
+ck e, 4, "out of DATA"
+ON ERROR GOTO 0
+' CONST
+CONST limit = 10, title$ = "Hydra", twoPi = 2 * PI
+ck limit * 2, 20, "CONST"
+ck title$ = "Hydra", -1, "a string CONST"
+ck twoPi > 6.28, -1, "a CONST of an expression"
+' OPTION BASE 1
+DIM ob(3)
+ck LBOUND(ob), 1, "OPTION BASE 1"
+ck UBOUND(ob), 3, "its highest"
+DIM ob0(0 TO 2)
+ck LBOUND(ob0), 0, "0 TO 2 all the same"
+' DEFSTR, DEFINT: the names' kinds
+DEFSTR s
+sx = "a string"
+ck LEN(sx), 8, "DEFSTR s"
+DEFINT i-k
+ivar = 2.5
+ck ivar, 2.5, "DEFINT changes nothing"
+' Suffixes: one variable
+q = 3
+ck q% + q& + q! + q#, 12, "q% q& q! q#"
+PRINT "data:"; checks; "checks,"; failed; "failed"
+END
+bad:
+e = ERR
+RESUME NEXT

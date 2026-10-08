@@ -652,8 +652,8 @@ sh_newns:
 sh_exit:
             jsr         out_flush
             FARN        6, con_cooked
-            lda         sh_code
             LDR         r0, 0
+            lda         sh_code
             jmp         EXITS
 
 ; The namespace made, as newns makes it (nslib's ns_default), its buffers at $8000 in a bank taken for the while.

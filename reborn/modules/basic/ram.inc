@@ -66,6 +66,7 @@ ca_rd:
             lda         (ca)
             inc         ca
             beq         :+
+            ora         #0                                  ; (N, Z the byte's; C kept)
             rts
 :
             inc         ca + 1
@@ -104,6 +105,7 @@ cb_rd:
             lda         (cb)
             inc         cb
             beq         :+
+            ora         #0                                  ; (N, Z the byte's; C kept)
             rts
 :
             inc         cb + 1
@@ -344,6 +346,7 @@ pop_int16:
 
 ; ---- END's way out of the interpreter, from any bank: back to run_code's caller (C = 0)
 run_exit:
+            stz         running
             lda         hyx2_bank1
             sta         $01
             ldx         run_s

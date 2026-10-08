@@ -15,7 +15,7 @@
 //   obj/gen/forthsys.inc  HyForth's sys- words, for its Hydra library (forthlib/hydra.s)
 //   obj/gen/hylsys.inc    hylang's sys- functions, the calls' records (modules/hylang/hysys.inc), from the hl: lines
 //   obj/gen/hydra.fs      the constants and error codes for HyForth, a library on the ROM disk (/lib/forth)
-//   obj/gen/basicsys.inc  BASIC's SYS "NAME": the calls a program makes, by name (modules/basic/hyio.inc)
+//   obj/gen/basicsys.inc  BASIC's SYS "NAME": the calls a program makes, by name (modules/basic/machine.inc)
 //   obj/sdk/numbers.inc   the number libraries' entries (NUM_ADD ...), constants and call macros, for programs in
 //                         assembly
 //   obj/sdk/c/numdefs.h   their constants, for C (num.h includes it)
@@ -335,9 +335,9 @@ function forthSys(api) {
 }
 
 // ---- BASIC (modules/basic): SYS "NAME" calls one by its name.  basicsys.inc: each call a program makes (forth's),
-// its name (upper case, its last character's bit 7 set: bmacros.inc's htasc) and its address; a 0 after the last
+// its name (upper case, its last character's bit 7 set: machine.inc's htasc) and its address; a 0 after the last
 function basicSys(api) {
-  let s = header(';', 'basicsys.inc - BASIC\'s SYS "NAME": the calls a program makes, by name (modules/basic/hyio.inc)');
+  let s = header(';', 'basicsys.inc - BASIC\'s SYS "NAME": the calls a program makes, by name (modules/basic/machine.inc)');
   s += 'SYS_NAMES:' + CRLF;
   for (const c of forthCalls(api)) s += '            htasc       "' + c.name + '"' + CRLF + '            .word       ' + hx(c.addr, 4) + CRLF;
   return s + '            .byte       0' + CRLF;

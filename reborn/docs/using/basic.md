@@ -20,7 +20,7 @@ Contents: [Starting it](#starting-it) · [A program](#a-program) · [Numbers](#n
 | `basic <prog.bas` | The file's lines as if typed at the prompt, quietly; its end ends BASIC |
 | `basic -l` | BASIC as a login shell: its namespace made, `/lib/basic/profile.bas` run, then its prompt (`/> `) |
 
-`SYSTEM` (or `BYE`) ends BASIC; at the shell, `exit` too.
+`SYSTEM` (or `BYE`) ends BASIC, at the prompt or in a program (`SYSTEM n`: its status n); at the shell, `exit` too.
 
 ## A program
 
@@ -67,8 +67,11 @@ the same as hylang's, HyForth's and C's.
 | A fraction | `10 / 4` is `5/2`; `1 / 3` | A division's result when it isn't whole: exact, in lowest terms |
 | A complex number | `2i`, `1 + 2i`, `SQR(-4)` is `2i` | Its parts any of the above |
 
-* **Written exactly**: `PRINT 1 / 3` shows `1/3`, never `.3333333`; `PRINT 2 ^ 100` shows all of it.  A fixed
-  decimal shows its places (`0.50`).  `PRINT USING` rounds to a picture when asked (below).
+* **Written exactly**: `PRINT 1 / 3` shows `1/3`, never `.3333333`; `PRINT 2 ^ 100` shows all of it.  A number
+  has one form, so a fixed decimal shows no 0s at its end (`1.50` is `1.5`, `100.0` is `100`).  `PRINT USING`
+  rounds to a picture when asked (below).
+* **Exponents**: `1E6`, `2.5E-3`, `1D2` (QuickBASIC's), read exactly, in the program and by `VAL`, `READ` and
+  `INPUT` (in decimal: in another base, `E` is a digit); `.5` is `0.5`.
 * **In any base**: QuickBASIC's `&HFF`, `&O17`, `&B101`, and the Hydra's own, a `#` and the base: `#xFF`, `#b101`,
   `#o17`, `#16r1F`, `#c+-0` (balanced ternary), `#b0.1` (a half).  `BASE "x"` makes hexadecimal the base everything
   is shown and read in: `PRINT`, `STR$`, `VAL`, `INPUT`, `READ`, and the program's own numbers after it (in base x
@@ -117,7 +120,8 @@ DIM p AS point, path(1 TO 100) AS point
 p.x = 3: path(1) = p: PRINT path(1).x
 ```
 
-  A field is a number, a string, a fixed-length string or a record of another `TYPE`; `p = q` copies one.
+  A field is a number, a string, a fixed-length string or a record of another `TYPE`; `p = q` copies one, and so do
+  `s.at = p` and `q = path(2).at` (a field that's a record).
 * **`SHARED`** and **`STATIC`**: [Procedures](#procedures).  `DIM SHARED x` at the main level makes `x` every
   procedure's.
 
@@ -195,10 +199,10 @@ as `VAL` reads it); `RESTORE` goes back to the first, `RESTORE label` to the fir
 | | |
 | :--- | :--- |
 | `PRINT [items]`, `?` | Items separated by `;` (none between) or `,` (the next zone of 14 columns); a `;` or `,` at the end: no new line.  A number has a space before it (or its `-`) and one after.  `TAB(n)` to column n, `SPC(n)` n spaces |
-| `PRINT USING fmt$; items` | QuickBASIC's pictures: `#` a digit, `.` the point, `,` thousands, `+` `-` a sign, `$$` `**` `^^^^`, `!` `\  \` `&` strings, `_` the next character as it is; and the Hydra's placeholders: `{}` a value in the base, `{x}` `{#b}` `{c}` in a base named (`PRINT USING "{x} is {}"; 255, 255`) |
+| `PRINT USING fmt$; items` | QuickBASIC's pictures: `#` a digit, `.` the point, `,` thousands, `+` `-` a sign, `$$` `**`, `!` `\  \` `&` strings, `_` the next character as it is; and the Hydra's placeholders: `{}` a value in the base, `{x}` `{#b}` `{c}` in a base named (`PRINT USING "{x} is {}"; 255, 255`) |
 | `WRITE items` | Comma-separated, strings quoted |
-| `INPUT ["prompt";] a, b$` | A line typed, its values comma-separated (`?` after the prompt; `,` in its place: none); not enough of them, or a number that isn't: `Redo from start` |
-| `LINE INPUT ["prompt";] a$` | A whole line |
+| `INPUT [;] ["prompt";] a, b$` | A line typed, its values comma-separated (`?` after the prompt; `,` in its place: none); not enough of them, or a number that isn't: `Redo from start`.  `INPUT ;`: the line goes on after the answer |
+| `LINE INPUT [;] ["prompt";] a$` | A whole line, as it was typed |
 | `INKEY$` | The key typed, or `""` if none (it doesn't wait); the arrow keys and the like as two characters, `CHR$(0)` and a code |
 | `INPUT$(n)` | n keys, waited for |
 | `CLS`, `LOCATE row, col`, `CSRLIN`, `POS(0)` | The screen cleared; the cursor moved (from 1, 1); where it is |
@@ -221,7 +225,7 @@ CLOSE
 | | |
 | :--- | :--- |
 | `OPEN path FOR INPUT \| OUTPUT \| APPEND \| BINARY AS #n` | A file (made or emptied for `OUTPUT`), or a device (`/dev/cons`, `/pc/x`); `#n` 1 to 255, `FREEFILE` the next free.  A path goes through the namespace, as rc's do |
-| `CLOSE [#n, ...]` | Those files, or all |
+| `CLOSE [#n, ...]` | Those files (one not open: nothing), or all |
 | `PRINT #n, ...`, `PRINT #n, USING ...`, `WRITE #n, ...` | As the console's |
 | `INPUT #n, a, b$`, `LINE INPUT #n, a$`, `INPUT$(k, #n)` | As the console's; past the end, `Input past end of file` |
 | `GET #n, [pos], v`, `PUT #n, [pos], v` | In `BINARY`: a string's bytes (its length's worth read), or a number's (its bytes in the stored format, as `MKN$` makes them), at the byte pos (from 1) or where it is |
@@ -229,13 +233,19 @@ CLOSE
 | `KILL path`, `NAME old AS new`, `MKDIR`, `RMDIR`, `CHDIR`, `FILES [path]` | Files and directories: removed, renamed, made; the current directory; a directory's names |
 | `DIR$(path)`, `DIR$` | A directory's first name, then the next (`""` after the last) |
 
+In a file's statements a `#` is the file's: `PRINT #x1, ...` writes to the file whose number is in `x1`, though
+`#x1` is a number elsewhere (`PRINT (#xFF)` prints 255).
+
 ## Errors
 
-* Without a handler, an error stops the program with its message, file and line: `primes.bas:12: division by
-  zero` (and BASIC's status 1, in a script).
+* Without a handler, an error stops the program with its message, file and line, on a line of its own:
+  `primes.bas:12: division by zero` (a typed program's, by the line's number: `line 20: ...`; an `INCLUDE`d
+  file's, its own name and line; a file BASIC can't open: `none.bas: not found`), and BASIC's status is 1 in a
+  script.
 * `ON ERROR GOTO label` sends an error to a handler (`ON ERROR GOTO 0`: none).  In it, `ERR` is its code, `ERL` its
-  line, `ERR$` its message; `RESUME` runs the statement again, `RESUME NEXT` the one after it, `RESUME label` goes
-  there.  `ERROR n` makes one.
+  line (in a program with line numbers its line's number, or the nearest one before it, as QuickBASIC's; else its
+  line in its file), `ERR$` its message; `RESUME` runs the statement again, `RESUME NEXT` the one after it,
+  `RESUME label` goes there.  `ERROR n` makes one.
 * The codes are QuickBASIC's (5 illegal function call, 6 overflow, 9 subscript out of range, 11 division by zero, 13
   type mismatch, 53 file not found, 62 input past end of file ...), and the system's errors are one list with
   them: a few as QuickBASIC's (53 not found, 58 already exists, 61 disk full, 70 permission denied, 76 path not
@@ -255,12 +265,12 @@ each waits till it's played.  `BEEP` rings the bell.
 | | |
 | :--- | :--- |
 | `SHELL "rc line"` | rc runs it, and BASIC waits; `STATUS` is its status after |
-| `SHELL$("line")` | Its output, as a string |
+| `SHELL$("line")` | Its output, as a string (its new lines at the end dropped) |
 | `ENV$("name")`, `ENVIRON$("name")`, `ENVIRON "name=value"` | The environment's variables (rc's) |
 | `ARG$(n)`, `COMMAND$` | A script's arguments (`ARG$(0)` its name); all of them as one line |
-| `TIMER`, `DATE$`, `TIME$` | Seconds since midnight (to a tick, 1/200); `"2026-10-08"`, `"14:05:09"` |
+| `TIMER`, `DATE$`, `TIME$` | Seconds since midnight, by the ticks (1/200): one `TIMER` less another is exact; `"2026-10-08"`, `"14:05:09"` |
 | `SYS "NAME" [, a [, x [, y]]]`, `RREG a, x, y, p` | A system call by its name (`/rom/doc/api.md`): `r0`-`r15` from bytes 2-33 (`POKE` them first); the registers after (`p` bit 0: it failed, `a` the error) |
-| `SYS addr`, `CALL ABSOLUTE (addr)` | Machine code |
+| `SYS addr`, `CALL ABSOLUTE (addr)` | Machine code (at `$8000`-`$9FFF`: in `BANK`'s bank) |
 | `PEEK(addr)`, `POKE addr, b`, `BANK n`, `BANK()` | A byte of the task's memory; the RAM bank at `$8000` (BASIC's own data lives in banks too: leave theirs alone) |
 | `FRE()` | The memory free, in bytes |
 
@@ -290,7 +300,7 @@ BASIC keeps a program at its prompt, as QuickBASIC's window did.
 | | |
 | :--- | :--- |
 | `LOAD "f.bas"`, `SAVE ["f.bas"]`, `NEW` | A file read into it; written (with no name, to the one it came from); emptied |
-| `RUN`, `RUN "f.bas"` | It run (read and checked first); a file loaded and run |
+| `RUN`, `RUN "f.bas"` | It run (read and checked first, its numbers in decimal); a file loaded and run |
 | `LIST [from-to]` | Its lines, or those from a line or label to another |
 | `EDIT [label]` | The editing mode: the program in the screen editor (`edit`), at the label, or the last error's line; ^X back to the prompt, the program read and checked again |
 | `CONT` | On after `STOP`, Ctrl-C or an error's stop |
@@ -299,7 +309,8 @@ BASIC keeps a program at its prompt, as QuickBASIC's window did.
 
 A line typed with a number first goes into the program at its number (a number alone takes that line out), so a
 program can be typed line by line as BASIC's always were.  Any other line runs at once: `PRINT 2 ^ 64`, `x = 5`,
-`plot 1, 2` (the program's `SUB plot`).  After a run its variables and procedures are still there to use.
+`plot 1, 2` (the program's `SUB plot`).  After a run its variables and procedures are still there to use.  These
+commands are the prompt's, at a line's start: in a program, or after a `:`, they're `only at the prompt`.
 
 ## The shell
 
@@ -324,7 +335,7 @@ runs `/lib/basic/profile.bas` before its first prompt (a card's or the RAM disk'
 
 | Numbers | |
 | :--- | :--- |
-| `ABS(x)`, `SGN(x)` | Its size; -1, 0 or 1 |
+| `ABS(x)`, `SGN(x)` | A real number's size; -1, 0 or 1 |
 | `INT(x)`, `FIX(x)`, `CINT(x)`, `CLNG(x)` | Down to an integer; toward 0; to the nearest (a half to the even) |
 | `CSNG(x)`, `CDBL(x)` | x as it is |
 | `SQR`, `EXP`, `LOG`, `SIN`, `COS`, `TAN`, `ATN`, `PI` | The math functions, in radians, to `DIGITS` digits (exact when they can be) |
@@ -361,7 +372,8 @@ runs `/lib/basic/profile.bas` before its first prompt (a card's or the RAM disk'
 
 * **From QuickBASIC**: the same language, but for one number type, exact, and what the Hydra adds.  Not here:
   `DEF FN` (a `FUNCTION` instead), `FIELD`, `LSET` and `RSET`, `RANDOM` files, the `ON` events, `PCOPY`, `VARPTR`
-  and `SADD`, `$DYNAMIC` and `$STATIC`.
+  and `SADD`, `$DYNAMIC` and `$STATIC`, `PRINT USING`'s `^^^^`, `RUN` from a line, and `RUN` and `CLEAR` in a
+  program (they're the prompt's).
 * **From the Hydra's first BASIC** (Microsoft's, 2A): a program with line numbers mostly runs as it is, with
   spaces between its keywords and names where it ran them together (`FORI=1TO9` is `FOR I = 1 TO 9`), and these
   changed: `DEF FN` and `USR` are gone; `OPEN n, "name", "W"` is `OPEN "name" FOR OUTPUT AS #n`; `GET` is

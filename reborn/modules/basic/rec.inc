@@ -98,6 +98,11 @@ scan_type:
 ; entry written: its values, fields)
 scan_field:
             C2          lex_next
+            lda         tk                                  ; (A number first: the line's, past it)
+            cmp         #TK_NUM
+            bne         :+
+            C2          lex_next
+:
             lda         tk
             bne         :+
             rts
@@ -277,6 +282,11 @@ scan_field:
 ; Pass 2: a TYPE's line passed over (stmt.inc's c_line, while ty_open), END TYPE its end
 ty_skip:
             C2          lex_next
+            lda         tk                                  ; (A number first: the line's, past it)
+            cmp         #TK_NUM
+            bne         :+
+            C2          lex_next
+:
             lda         #K_END
             jsr         is_kw3
             bne         @done

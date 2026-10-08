@@ -1,0 +1,41 @@
+10 PRINT "ten": REM as typed, Its Case Kept
+30 print "thirty"
+20 Print "twenty"
+40 GOTO 60
+50 PRINT "not this"
+60 PRINT "sixty"
+LIST
+LIST 20
+LIST 20-40
+LIST -20
+LIST 40-
+30 PRINT "thirty again"
+50
+LIST
+RUN
+DELETE 20-30
+LIST
+x = 41: PRINT x + 1
+CLEAR
+PRINT x
+SAVE "p1.bas"
+NEW
+LIST
+PRINT "empty"
+LOAD "p1.bas"
+LIST
+RUN "p1.bas"
+LOAD "lab.bas"
+LIST start-middle
+LIST done
+RUN
+NEW
+10 PRINT "a";
+20 STOP
+30 PRINT "b"
+RUN
+PRINT "at the prompt"
+CONT
+KILL "p1.bas"
+SYSTEM
+PRINT "never"

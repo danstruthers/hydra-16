@@ -149,6 +149,7 @@ ST_SHELL                                                    ; SHELL line$ ("": r
 ST_ENVIRON                                                  ; ENVIRON "name=value"
 ST_POKE                                                     ; POKE addr, b
 ST_BANK                                                     ; BANK n
+ST_SYSTEM                                                   ; SYSTEM n (BYE): BASIC's end, its status n
 ST_B8                                                       ; The Hydra's (machine.inc)
 ST_SOUND = ST_B8                                            ; SOUND ch, note, patch, vol (each -1: not given)
 ST_SOUNDS                                                   ; SOUND "text"

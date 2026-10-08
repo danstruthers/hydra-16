@@ -100,7 +100,10 @@ text_load:
             lda         #O_READ
             jsr         OPEN
             bcc         :+
-            ldx         #1                                  ; (The system's error)
+            pha                                             ; (The system's error, said with the file's name)
+            MOVW        err_name, sv_ptr
+            pla
+            ldx         #1
             jmp         b_error
 :
             stz         t0
@@ -545,8 +548,8 @@ tx_print:
 pc_bye:
             jsr         out_flush
             FARN        6, con_cooked
-            lda         #0
             LDR         r0, 0
+            lda         #0
             jmp         EXITS
 
 ; LIST [from][-[to]]: the text's lines (all; from a line's number or label to another's; a line or label alone:

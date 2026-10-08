@@ -112,6 +112,8 @@ run_code:
             jsr         ip_set
             tsx
             stx         run_s
+            lda         #1
+            sta         running
             jmp         next
 
 ; ip = the code address .A/.X (its bank selected)
@@ -218,6 +220,7 @@ op_stop:
             FARN        7, err_say
             sec
 :
+            stz         running
             ldx         run_s
             txs
             rts
@@ -243,6 +246,8 @@ jump:
             dey
             lda         (ip),y
             jsr         ip_set
+            bit         intr                                ; (Ctrl-C: stopped at the target, CONT's place)
+            bmi         brk_here
             jmp         next
 
 op_jmp:

@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; nbasic.inc - the new BASIC's values, memory and codes (docs/basic.md, "The design").
+; basic.inc - BASIC's values, memory and codes (docs/basic.md, "The design").
 ;
 ; Memory.  The task's RAM holds the interpreter's state, the globals (5 bytes each) and the value stack (frames,
 ; GOSUB's returns and the expressions' values, 5 bytes each); everything else is in the task's RAM banks, each seen
@@ -100,6 +100,7 @@ ER_INSUB        = 85            ; Not in a procedure (EXIT SUB, SHARED ...)
 ER_EXPECT       = 86            ; (A syntax error, with what was expected: ex_text)
 ER_CONST        = 87            ; (A CONST's value that isn't a constant)
 ER_FIELD        = 88            ; (A record's field that isn't its type's)
+ER_PROMPT       = 89            ; (The prompt's command elsewhere: LIST, NEW, LOAD ... in a program)
 INC_MAX         = 8             ; INCLUDE's files at most (one in another: INC_DEPTH deep), each its lines numbered
 INC_DEPTH       = 4             ;   INC_LINE + its number * INC_STEP on (2047 lines at most), the program's below
 INC_LINE        = $4000
