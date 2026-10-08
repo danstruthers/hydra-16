@@ -52,10 +52,14 @@
             sta         nrc
             jsr         r_mul
 .endmacro
-.macro RMULW rc, ra, rb                                     ; R(rc) = R(ra) * R(rb) / 2^w (rc another register)
-            RMUL        rc, ra, rb
+.macro RMULW rc, ra, rb                                     ; R(rc) = R(ra) * R(rb) / 2^w (rc another register: m_mulw)
+            lda         #ra
+            sta         nra
+            lda         #rb
+            sta         nrb
             lda         #rc
-            jsr         m_shrw
+            sta         nrc
+            jsr         m_mulw
 .endmacro
 .macro RDIV rq, rr, ra, rb                                  ; R(rq) = R(ra) / R(rb) (toward 0), R(rr) the remainder
             lda         #ra

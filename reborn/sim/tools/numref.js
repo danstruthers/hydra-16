@@ -257,6 +257,7 @@ function atanhInv(m, b) {
   return sum;
 }
 const guard = b => bitLen(BigInt(b)) + 10;
+const atanInvExact = (m, b) => atanInv(m, b + 64) >> 64n;   // (atan(1/m) at b bits, cut toward 0: the tables')
 function piFixed(b) { const g = guard(b); return (16n * atanInv(5, b + g) - 4n * atanInv(239, b + g)) >> BigInt(g); }
 function ln2Fixed(b) { const g = guard(b); return (2n * atanhInv(3, b + g)) >> BigInt(g); }
 function ln10Fixed(b) { const g = guard(b); return (6n * atanhInv(3, b + g) + 2n * atanhInv(9, b + g)) >> BigInt(g); }
@@ -731,5 +732,5 @@ module.exports = {
   truncate, floor, round, toFixed, toRational, numerator, denominator, complex, part, fromInt, toInt,
   bits, fib, Random, NumberFormat, DECIMAL, display, parse,
   MAX_DIGITS, getDigits, setDigits, sqrt: msqrt, exp: mexp, log: mlog, trig: mtrig, atan: matan, pi: mpi, rpow,
-  piFixed, ln2Fixed, ln10Fixed,
+  piFixed, ln2Fixed, ln10Fixed, atanInvExact,
 };

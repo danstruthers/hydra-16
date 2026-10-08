@@ -20,6 +20,8 @@
 //                         assembly
 //   obj/sdk/c/numdefs.h   their constants, for C (num.h includes it)
 //   obj/gen/numbers_jt.inc, math_jt.inc   each number library's jump table (its module includes it)
+//   obj/gen/pow10.inc     the powers of 10 to 10^24 the registers' r_pow10 copies (nmreg.inc)
+//   obj/gen/atantab.inc   atan(1/m) for m 2 to 15 at 192 bits, the math library's ATAN's (mttrig.inc)
 //   obj/gen/numconst.inc  the math library's constants (pi, log 2, log 10) at NC_BITS bits, from sim/tools/numref.js:
 //                         the numbers library's INIT puts them in the state's cache (docs/design/plans/NUMSPEED.md)
 //
@@ -253,6 +255,45 @@ function numConst() {
     for (let k = 0; k < CONST_BYTES; k += 16) s += '            .byte       ' + b.slice(k, k + 16).map(x => hx(x, 2)).join(', ') + CRLF;
   }
   s += '.code' + CRLF;
+  return s;
+}
+
+// The powers of 10 below P10_TAB, for r_pow10 (nmreg.inc, both libraries' banks: NM_RODATA): each's length, its
+// bytes' offset in p10_dat, its bytes least first
+const P10_TAB = 25;
+function pow10Inc() {
+  let s = header(';', 'pow10.inc - the powers of 10 below P10_TAB for r_pow10 (modules/numbers/nmreg.inc): lengths, offsets, bytes');
+  const dat = [], off = [], len = [];
+  for (let k = 0; k < P10_TAB; k++) {
+    let v = 10n ** BigInt(k);
+    off.push(dat.length);
+    let n = 0;
+    while (v) { dat.push(Number(v & 255n)); v >>= 8n; n++; }
+    len.push(n);
+  }
+  if (dat.length > 256) throw new Error('pow10: past 256 bytes');
+  s += 'P10_TAB         = ' + P10_TAB + CRLF + '            NM_RODATA' + CRLF;
+  s += 'p10_len:    .byte       ' + len.join(', ') + CRLF + 'p10_off:    .byte       ' + off.join(', ') + CRLF + 'p10_dat:' + CRLF;
+  for (let k = 0; k < dat.length; k += 16) s += '            .byte       ' + dat.slice(k, k + 16).map(x => hx(x, 2)).join(', ') + CRLF;
+  s += '            NM_CODE' + CRLF;
+  return s;
+}
+
+// atan(1/m), m 2 to 15, at AT_BITS bits (cut toward 0: made at 64 bits more by numref.js's series, then shifted):
+// AT_BITS / 8 bytes each, least first
+const AT_BITS = 192;
+function atanTab() {
+  const R = require('../sim/tools/numref.js');
+  let s = header(';', 'atantab.inc - atan(1/m) for m 2 to 15 at AT_BITS bits, for ATAN (modules/math/mttrig.inc)');
+  s += 'AT_BITS         = ' + AT_BITS + CRLF + '            NM_RODATA' + CRLF + 'at_tab:' + CRLF;
+  for (let m = 2; m <= 15; m++) {
+    const v = R.atanInvExact(m, AT_BITS);
+    const b = [];
+    for (let x = v, k = 0; k < AT_BITS / 8; k++, x >>= 8n) b.push(Number(x & 255n));
+    s += '; m = ' + m + CRLF;
+    for (let k = 0; k < b.length; k += 12) s += '            .byte       ' + b.slice(k, k + 12).map(x => hx(x, 2)).join(', ') + CRLF;
+  }
+  s += '            NM_CODE' + CRLF;
   return s;
 }
 
@@ -537,6 +578,8 @@ function generate(root) {
   write(path.join(root, 'obj', 'sdk', 'c', 'numdefs.h'), cNumHeader(nums));
   for (const l of nums.libs) write(path.join(gen, l.name + '_jt.inc'), numbersJt(l));
   write(path.join(gen, 'numconst.inc'), numConst());
+  write(path.join(gen, 'pow10.inc'), pow10Inc());
+  write(path.join(gen, 'atantab.inc'), atanTab());
   write(path.join(gen, 'api.json'), JSON.stringify({
     calls: api.calls.map(c => ({ name: c.name, addr: c.addr, group: c.group, in: c.in.join(' '), out: c.out.join(' '), errors: c.errors, blocks: c.blocks })),
     errors, consts: api.consts.map(k => ({ name: k.name, value: k.value })),

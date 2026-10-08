@@ -50,6 +50,11 @@ d_t:        .res        4
 d_kl:       .res        1
 d_kh:       .res        1
 d_w:        .res        1
+n_cut:      .res        1                                   ; (r_mulc's: the product's columns below this not made)
+n_j0:       .res        1
+n_sq:       .res        1                                   ; (r_mulc's: a square (1), a diagonal's product)
+n_dl:       .res        1
+n_dh:       .res        1
 mm_zp:      .res        8                                   ; (r_mul's: np, nq, nt, nu kept)
 
 .endif
@@ -615,8 +620,11 @@ nsq_hi:
 .endrep
             NM_CODE
 
-; nrc = nra * nrb (nrc another register).  Too big: n_big
+; nrc = nra * nrb (nrc another register).  Too big: n_big.  r_mulc: the product's columns (bytes) below n_cut not
+; made (a truncated product: m_mulw's, whose shift drops them)
 r_mul:
+            stz         n_cut
+r_mulc:
             ldx         nra
             lda         r_neg,x
             ldx         nrb
@@ -640,6 +648,12 @@ r_mul:
             ldx         nrc
             jmp         r_clear
 @fits:
+            stz         n_sq                                ; (A square: its cross products once)
+            lda         nra
+            cmp         nrb
+            bne         :+
+            inc         n_sq
+:
             jsr         r_abc
             ldy         #0                                  ; (0, then each of nra's bytes times nrb added in)
             tya
@@ -656,6 +670,26 @@ r_mul:
             bpl         :-
             stz         n_i
 @row:
+            lda         n_cut                               ; (Its columns from cut - i: none below the cut; a
+            sec                                             ;   square's from i + 1)
+            sbc         n_i
+            bcs         :+
+            lda         #0
+:
+            ldx         n_sq
+            beq         :+
+            ldx         n_i
+            inx
+            stx         n_j0
+            cmp         n_j0
+            bcs         :+
+            txa
+:
+            sta         n_j0
+            cmp         n_lb
+            bcc         :+
+            jmp         @next
+:
             ldy         n_i                                 ; (a: its pointers into the tables)
             lda         (na),y
             bne         :+
@@ -691,14 +725,14 @@ r_mul:
             lda         #>nsq_hi
             adc         #0
             sta         nu + 1
-            lda         nc                                  ; (nd: the product's byte n_i on, moved on a byte a time)
-            clc
-            adc         n_i
+            lda         n_i                                 ; (nd: the product's byte i + j0 on, moved on a byte a
+            clc                                             ;   time: its page nc's)
+            adc         n_j0
             sta         nd
             lda         nc + 1
             sta         nd + 1
             stz         n_cy
-            ldx         #0
+            ldx         n_j0
 @col:
             txa                                             ; (b)
             tay
@@ -742,6 +776,60 @@ r_mul:
             sta         np,x
             dex
             bpl         :-
+            lda         n_sq                                ; (A square: the cross products doubled, the diagonal's
+            beq         @made                               ;   squares added)
+            ldy         #0
+            ldx         n_lc
+            clc
+:
+            lda         (nc),y
+            rol         a
+            sta         (nc),y
+            iny
+            dex
+            bne         :-
+            stz         n_i
+@diag:
+            ldy         n_i
+            lda         (na),y
+            beq         @dnext
+            asl         a                                   ; (a^2 = sq[2a])
+            tax
+            bcs         @dhi
+            lda         sq_lo,x
+            sta         n_dl
+            lda         sq_hi,x
+            bra         :+
+@dhi:
+            lda         sq_lo + 256,x
+            sta         n_dl
+            lda         sq_hi + 256,x
+:
+            sta         n_dh
+            tya                                             ; (At 2i, its carry on up)
+            asl         a
+            tay
+            lda         (nc),y
+            clc
+            adc         n_dl
+            sta         (nc),y
+            iny
+            lda         (nc),y
+            adc         n_dh
+            sta         (nc),y
+            bcc         @dnext
+:
+            iny
+            lda         (nc),y
+            adc         #0
+            sta         (nc),y
+            bcs         :-
+@dnext:
+            inc         n_i
+            lda         n_i
+            cmp         n_la
+            bne         @diag
+@made:
             ldx         nrc
             lda         n_sa
             sta         r_neg,x
@@ -1143,11 +1231,20 @@ d_addback:
 
 ; nrc = 10 ^ .A, .X.  Too big: n_big
 r_pow10:
+            cpx         #0                                  ; (To 10^24: the table's; past it, 10^24 times 10^(k - 24))
+            bne         @big
+            cmp         #P10_TAB
+            bcs         @big
+            jmp         r_p10set
+@big:
+            sec
+            sbc         #P10_TAB - 1
             pha
-            phx
-            lda         #1
-            ldx         #0
-            jsr         r_set16
+            txa
+            sbc         #0
+            pha
+            lda         #P10_TAB - 1
+            jsr         r_p10set
             plx
             pla
 ; |nrc| = |nrc| * 10 ^ .A, .X, in place (by 100s, then a 10).  Too big: n_big (at once for 10 ^ 615 or more:
@@ -1187,6 +1284,28 @@ r_scale10:
             lda         #10
             jmp         r_mulsmall
 @done:
+            rts
+
+; nrc = 10 ^ .A (below P10_TAB), from the table (pow10.inc)
+r_p10set:
+            tay
+            lda         p10_len,y
+            sta         n_t
+            lda         p10_off,y
+            tax
+            jsr         r_c
+            ldy         #0
+:
+            lda         p10_dat,x
+            sta         (nc),y
+            inx
+            iny
+            cpy         n_t
+            bne         :-
+            ldx         nrc
+            lda         n_t
+            sta         r_len,x
+            stz         r_neg,x
             rts
 
 ; .A, .X = the trailing zero bits of nrc's magnitude (not 0)
@@ -1513,3 +1632,5 @@ r_one_p:
             cmp         #1
 @rts:
             rts
+
+.include "pow10.inc"

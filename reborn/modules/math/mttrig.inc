@@ -368,6 +368,14 @@ m_atancore:
             RCOPY       MA, 3
             bra         @y
 :
+            lda         mt_w + 1                            ; (w AT_BITS or fewer: atan(1/m) from the table)
+            bne         @series
+            lda         mt_w
+            cmp         #AT_BITS + 1
+            bcs         @series
+            jsr         m_attab
+            bra         @y
+@series:
             MOVR        mt_t, mt_w
             lda         mt_m
             jsr         m_atan_inv
@@ -444,3 +452,55 @@ m_atancore:
             stz         mt_k10
             stz         mt_k10 + 1
             rts
+
+; MA = atan(1/mt_m) at mt_w bits (AT_BITS or fewer; mt_m 2-15): the table's, shifted down (under an ulp off, as the
+; series' would be at most)
+m_attab:
+            lda         mt_m                                ; (Its entry: at_tab + (m - 2) * AT_BITS / 8, nt)
+            sec
+            sbc         #2
+            tax
+            lda         #<at_tab
+            sta         nt
+            lda         #>at_tab
+            sta         nt + 1
+:
+            dex
+            bmi         :+
+            lda         nt
+            clc
+            adc         #AT_BITS / 8
+            sta         nt
+            bcc         :-
+            inc         nt + 1
+            bra         :-
+:
+            lda         #MA
+            RPAGE
+            sta         nd + 1
+            stz         nd
+            ldy         #0
+:
+            lda         (nt),y
+            sta         (nd),y
+            iny
+            cpy         #AT_BITS / 8
+            bne         :-
+            ldx         #MA
+            lda         #AT_BITS / 8
+            sta         r_len,x
+            stz         r_neg,x
+            lda         #MA
+            sta         nrc
+            jsr         r_c
+            jsr         r_normc
+            sec                                             ; (Down to w bits)
+            lda         #<AT_BITS
+            sbc         mt_w
+            sta         n_k
+            lda         #>AT_BITS
+            sbc         mt_w + 1
+            sta         n_k + 1
+            jmp         r_shr
+
+.include "atantab.inc"

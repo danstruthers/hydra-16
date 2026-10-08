@@ -14,6 +14,10 @@ mt_kq:      .res        2                                   ; (A root's degree)
 mt_re:      .res        2                                   ; (A complex result's real part: a value)
 mt_lt:      .res        2                                   ; (log's power of 2)
 mt_need2:   .res        1                                   ; (trig's: bit 7 sin r, bits 0-3 cos r)
+mt_g16:     .res        2                                   ; (m_isqrt's guess: the top 16 bits, the remainder, its
+mt_r16:     .res        2                                   ;   root, a trial)
+mt_rt:      .res        1
+mt_tr:      .res        2
 
 .code
 
@@ -305,11 +309,98 @@ m_isqrt:
             ldx         mt_sy
             jmp         r_clear
 :
+            lda         mt_q + 1                            ; (Past 16 bits: from its top 16 bits' root)
+            bne         @guess
+            lda         mt_q
+            cmp         #17
+            bcs         @guess
             ADDV        mt_q, 1                             ; (2^ceil(bits / 2))
             lsr         mt_q + 1
             ror         mt_q
             ldy         #0
             jsr         m_pow2
+            jmp         @step
+@guess:
+            sec                                             ; (s = bits - 16, made even: x / 2^s's 15 or 16 bits)
+            lda         mt_q
+            sbc         #16
+            sta         mt_q
+            bcs         :+
+            dec         mt_q + 1
+:
+            lda         mt_q
+            and         #1
+            beq         :+
+            ADDV        mt_q, 1
+:
+            lda         mt_sx
+            sta         nra
+            lda         #0
+            sta         nrc
+            jsr         r_copy
+            RSHR        0, mt_q
+            ldx         #0                                  ; (Its top: R0's two bytes)
+            stz         mt_g16 + 1
+            lda         r_len,x
+            beq         :++
+            lda         regs
+            sta         mt_g16
+            lda         r_len,x
+            cmp         #2
+            bcc         :+
+            lda         regs + 1
+            sta         mt_g16 + 1
+:
+:
+            stz         mt_rt                               ; (Its root, two bits at a time)
+            stz         mt_r16
+            stz         mt_r16 + 1
+            ldx         #8
+@bits:
+            asl         mt_g16
+            rol         mt_g16 + 1
+            rol         mt_r16
+            rol         mt_r16 + 1
+            asl         mt_g16
+            rol         mt_g16 + 1
+            rol         mt_r16
+            rol         mt_r16 + 1
+            asl         mt_rt                               ; (root * 2; the trial root * 4 + 1)
+            lda         mt_rt
+            asl         a
+            sta         mt_tr
+            lda         #0
+            rol         a
+            sta         mt_tr + 1
+            lda         mt_tr
+            ora         #1
+            sta         mt_tr
+            lda         mt_r16
+            sec
+            sbc         mt_tr
+            tay
+            lda         mt_r16 + 1
+            sbc         mt_tr + 1
+            bcc         :+
+            sta         mt_r16 + 1
+            sty         mt_r16
+            inc         mt_rt
+:
+            dex
+            bne         @bits
+            lda         #0                                  ; (x0 = (root + 1) 2^(s / 2): no less than sqrt(x))
+            sta         nrc
+            lda         mt_rt
+            clc
+            adc         #1
+            ldx         #0
+            bcc         :+
+            inx
+:
+            jsr         r_set16
+            lsr         mt_q + 1
+            ror         mt_q
+            RSHL        0, mt_q
 @step:
             lda         mt_sx                               ; (y = (x + n / x) / 2)
             sta         nra

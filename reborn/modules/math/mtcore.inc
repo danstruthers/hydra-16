@@ -63,6 +63,27 @@ mt_b31ok:   .res        1
             NM_CODE
 
 
+; R(nrc) = R(nra) * R(nrb) / 2^w, its columns below w's whole bytes less 3 not made: their sum and its carries are
+; under cut 256^(cut + 1), under cut / 65536 of the result's ulp (a few thousandths): the truncation's bound
+; (under an ulp) all but unchanged, well inside each core's error's
+m_mulw:
+            lda         mt_w + 1
+            sta         n_t
+            lda         mt_w
+            lsr         n_t
+            ror         a
+            lsr         n_t
+            ror         a
+            lsr         n_t
+            ror         a
+            sec
+            sbc         #3
+            bcs         :+
+            lda         #0
+:
+            sta         n_cut
+            jsr         r_mulc
+            lda         nrc
 ; R(.A) = R(.A) / 2^w (its magnitude)
 m_shrw:
             sta         nrc
