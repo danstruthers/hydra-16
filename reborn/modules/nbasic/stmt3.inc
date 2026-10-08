@@ -174,6 +174,30 @@ st3_tab:
             .word       cs_poke - 1
             .byte       K_BANK
             .word       cs_bank - 1
+            .byte       K_OPEN
+            .word       cs_open - 1
+            .byte       K_CLOSE
+            .word       cs_close - 1
+            .byte       K_GET
+            .word       cs_get - 1
+            .byte       K_PUT
+            .word       cs_put - 1
+            .byte       K_SEEK
+            .word       cs_seek - 1
+            .byte       K_KILL
+            .word       cs_kill - 1
+            .byte       K_NAME
+            .word       cs_name - 1
+            .byte       K_MKDIR
+            .word       cs_mkdir - 1
+            .byte       K_RMDIR
+            .word       cs_rmdir - 1
+            .byte       K_CHDIR
+            .word       cs_chdir - 1
+            .byte       K_FILES
+            .word       cs_files - 1
+            .byte       K_MID
+            .word       cs_mids - 1
             .byte       0
 
 ; ---- This bank's helpers
@@ -1253,7 +1277,11 @@ cs_input:
             lda         #'#'
             jsr         is_op3
             bne         :+
-            jmp         not_yet3                            ; (INPUT #n: files', to come)
+            C2          cpc_get                             ; (A file's: its line, then its fields)
+            sta         in_loop
+            stx         in_loop + 1
+            jsr         file_in
+            bra         @each
 :
             lda         #';'
             jsr         is_op3
@@ -1292,7 +1320,16 @@ cs_input:
             C2          emit_jmp
             rts
 
-; LINE INPUT [;] ["prompt" ;] v$: a whole line (LINE's graphics to come)
+; #n, for INPUT and LINE INPUT (# current): its number, then ST_FINPUT
+file_in:
+            C2          lex_next
+            C2          expr_num
+            lda         #','
+            jsr         need_op3
+            lda         #ST_FINPUT
+            jmp         emit_st3
+
+; LINE INPUT [;] ["prompt" ;] v$, LINE INPUT #n, v$: a whole line (LINE's graphics to come)
 cs_line:
             lda         #K_INPUT
             jsr         is_kw3
@@ -1303,7 +1340,8 @@ cs_line:
             lda         #'#'
             jsr         is_op3
             bne         :+
-            jmp         not_yet3
+            jsr         file_in
+            bra         @target
 :
             lda         #';'
             jsr         is_op3
@@ -1316,6 +1354,7 @@ cs_line:
             jsr         emit_i8
             lda         #ST_INPUT
             jsr         emit_st3
+@target:
             C2          tgt_begin
             lda         tgt_type
             cmp         #ET_STR
@@ -1489,10 +1528,12 @@ cs_sleep:
 
 ; WRITE [items]: each written (a string in quotes), commas between, then a new line
 cs_write:
+            stz         c3_t                                ; (A file's: ST_FEND after)
             lda         #'#'
             jsr         is_op3
             bne         @item
-            jmp         not_yet3                            ; (WRITE #n: files', to come)
+            jsr         file_num
+            inc         c3_t
 @item:
             jsr         at_end3
             bcs         @end
@@ -1508,6 +1549,208 @@ cs_write:
             bra         @item
 @end:
             lda         #ST_PRNL
+            jsr         emit_st3
+            lda         c3_t
+            beq         :+
+            lda         #ST_FEND
+            jmp         emit_st3
+:
+            rts
+
+; ---- Files
+
+; OPEN path FOR INPUT | OUTPUT | APPEND | BINARY AS [#]n [LEN = x]
+cs_open:
+            C2          expr_str
+            lda         #K_FOR
+            jsr         need_kw3
+            ldy         #3
+:
+            lda         open_kws,y
+            jsr         is_kw3
+            beq         :+
+            dey
+            bpl         :-
+            jmp         syn3
+:
+            lda         open_modes,y
+            pha
+            C2          lex_next
+            lda         #K_AS
+            jsr         need_kw3
+            jsr         opt_hash
+            C2          expr_num
+            pla
+            jsr         emit_i8
+            lda         #ST_OPEN
+            jsr         emit_st3
+            lda         #K_LEN                              ; (LEN = x: QuickBASIC's record length, not needed)
+            jsr         is_kw3
+            bne         :+
+            C2          lex_next
+            lda         #'='
+            jsr         need_op3
+            C2          expr_num
+            lda         #OP_DROP
+            ldx         #1
+            C2          emit_op
+:
+            rts
+open_kws:   .byte       K_INPUT, K_OUTPUT, K_APPEND, K_BINARY
+open_modes: .byte       FM_INPUT, FM_OUTPUT, FM_APPEND, FM_BINARY
+
+; A # (if it's there) read past
+opt_hash:
+            lda         #'#'
+            jsr         is_op3
+            bne         :+
+            C2          lex_next
+:
+            rts
+
+; CLOSE [[#]n, ...]: those files, or all
+cs_close:
+            jsr         at_end3
+            bcc         @each
+            lda         #ST_CLOSEALL
+            jmp         emit_st3
+@each:
+            jsr         opt_hash
+            C2          expr_num
+            lda         #ST_CLOSE
+            jsr         emit_st3
+            lda         #','
+            jsr         is_op3
+            bne         :+
+            C2          lex_next
+            bra         @each
+:
+            rts
+
+; GET [#]n, [pos], v and PUT [#]n, [pos], v: the file and place (ST_GSET)
+get_put:
+            jsr         opt_hash
+            C2          expr_num
+            lda         #','
+            jsr         need_op3
+            lda         #','
+            jsr         is_op3
+            bne         :+
+            lda         #0                                  ; (No place: where it is)
+            jsr         emit_i8
+            bra         :++
+:
+            C2          expr_num
+:
+            lda         #','
+            jsr         need_op3
+            lda         #ST_GSET
+            jmp         emit_st3
+
+; GET [#]n, [pos], v: v read (its value first: a string's length)
+cs_get:
+            jsr         get_put
+            C2          lex_mark
+            C2          tgt_begin
+            C2          lex_back
+            C2          expr
+            lda         #ST_GET
+            jsr         emit_st3
+            C2          tgt_end
+            rts
+
+; PUT [#]n, [pos], value
+cs_put:
+            jsr         get_put
+            C2          expr
+            lda         etype
+            cmp         #ET_REC
+            bne         :+
+            jmp         type3
+:
+            lda         #ST_PUT
+            jmp         emit_st3
+
+; SEEK [#]n, pos
+cs_seek:
+            jsr         opt_hash
+            C2          expr_num
+            lda         #','
+            jsr         need_op3
+            C2          expr_num
+            lda         #ST_SEEK
+            jmp         emit_st3
+
+; KILL, MKDIR, RMDIR, CHDIR path$
+cs_kill:
+            lda         #ST_KILL
+            bra         path_st
+cs_mkdir:
+            lda         #ST_MKDIR
+            bra         path_st
+cs_rmdir:
+            lda         #ST_RMDIR
+            bra         path_st
+cs_chdir:
+            lda         #ST_CHDIR
+path_st:
+            pha
+            C2          expr_str
+            pla
+            jmp         emit_st3
+
+; NAME old$ AS new$
+cs_name:
+            C2          expr_str
+            lda         #K_AS
+            jsr         need_kw3
+            C2          expr_str
+            lda         #ST_NAME
+            jmp         emit_st3
+
+; FILES [path$]
+cs_files:
+            jsr         at_end3
+            bcc         :+
+            lda         #OP_PUSHE
+            ldx         #1
+            C2          emit_op
+            bra         @st
+:
+            C2          expr_str
+@st:
+            lda         #ST_FILES
+            jmp         emit_st3
+
+; ---- MID$(v$, start [, len]) = new$: v$ with new$'s bytes put in from start
+cs_mids:
+            lda         #'('
+            jsr         need_op3
+            C2          place_emit
+            lda         tgt_type
+            cmp         #ET_STR
+            beq         :+
+            jmp         type3
+:
+            lda         #','
+            jsr         need_op3
+            C2          expr_num
+            lda         #','
+            jsr         is_op3
+            bne         :+
+            C2          lex_next
+            C2          expr_num
+            bra         :++
+:
+            lda         #$FF
+            jsr         emit_i8
+:
+            lda         #')'
+            jsr         need_op3
+            lda         #'='
+            jsr         need_op3
+            C2          expr_str
+            lda         #ST_MIDS
             jmp         emit_st3
 
 ; ---- The system
@@ -1583,11 +1826,70 @@ opt_nums:
 scan_type:
             rts
 
-; END TYPE; PRINT #, PRINT USING
+; END TYPE
 end_proc:
-print_file:
-print_using:
             jmp         not_yet3
+
+; PRINT USING fmt$; items [; | ,] (stmt.inc's PRINT: USING current; PRINT #n's too): each item by the format's next
+; field; a new line after, but after a ; or a , at the end
+print_using:
+            C2          lex_next
+            C2          expr_str
+            lda         #';'
+            jsr         need_op3
+            lda         #ST_USTART
+            jsr         emit_st3
+            stz         c3_lo
+@item:
+            jsr         at_end3
+            bcs         @end
+            C2          expr
+            lda         #ST_UITEM
+            jsr         emit_st3
+            stz         c3_lo
+            lda         #';'
+            jsr         is_op3
+            beq         :+
+            lda         #','
+            jsr         is_op3
+            bne         @end
+:
+            inc         c3_lo
+            C2          lex_next
+            bra         @item
+@end:
+            lda         #ST_UEND
+            jsr         emit_st3
+            lda         c3_lo
+            bne         :+
+            lda         #ST_PRNL
+            jmp         emit_st3
+:
+            rts
+
+; PRINT #n, items (stmt.inc's PRINT: # current): the items' output to the file
+print_file:
+            jsr         file_num
+            lda         #K_USING
+            jsr         is_kw3
+            bne         :+
+            jsr         print_using
+            bra         :++
+:
+            stz         pr_last
+            C2          print_items
+:
+            lda         #ST_FEND
+            jmp         emit_st3
+
+; #n, (a file's number, then a comma: # current) compiled, then ST_FOUT
+file_num:
+            C2          lex_next
+            C2          expr_num
+            lda         #','
+            jsr         need_op3
+            lda         #ST_FOUT
+            jmp         emit_st3
 
 ; A TYPE's name (tname): C = 0 and .A its number; C = 1 none (as yet: none)
 type_find:

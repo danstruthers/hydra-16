@@ -102,6 +102,12 @@ ER_CONST        = 87            ; (A CONST's value that isn't a constant)
 EO_SIZE         = 80            ; (ERR$'s text at most)
 ESC             = $1B
 BEL             = $07
+FMAX            = 8             ; Files open at once (#1 to #255)
+FBSZ            = 32            ; Each one's read buffer (FMAX of them: 256 bytes)
+FM_INPUT        = 1             ; A file's modes (OPEN's, a bit each)
+FM_OUTPUT       = 2
+FM_APPEND       = 4
+FM_BINARY       = 8
 
 ; .A, .X = an address (low, high)
 .macro LDAX addr

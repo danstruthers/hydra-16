@@ -35,6 +35,7 @@ mu_m:       .res        1
 dt_year:    .res        2                                   ; (DATE$'s)
 dt_mon:     .res        1
 dt_days:    .res        2
+dir_fd:     .res        1                                   ; (DIR$'s directory: 0 none)
 sh_args:    .res        2
 
 .segment "CODE7"
@@ -684,6 +685,72 @@ eo_put:
             inx
             rts
 
+; ---- DIR$
+
+; DIR$(path$): the directory's first name (a directory's with /), "" if none; DIR$: the next, "" after the last
+f_dir:
+            jsr         pop_int16                           ; (Its arguments' count)
+            lda         t0
+            beq         @next
+            lda         dir_fd                              ; (A directory before: closed)
+            beq         :+
+            dec         a
+            jsr         CLOSE
+            stz         dir_fd
+:
+            jsr         str_lbuf
+            cmp         #0
+            bne         :+
+            lda         #'.'
+            sta         lbuf
+            stz         lbuf + 1
+:
+            LDR         r0, lbuf
+            lda         #O_READ
+            jsr         OPEN
+            bcc         :+
+            jmp         sys_err
+:
+            inc         a                                   ; (Kept: fd + 1)
+            sta         dir_fd
+@next:
+            lda         dir_fd
+            beq         @none
+            LDR         r0, sr_buf
+            LDR         r1, SR_SIZE
+            lda         dir_fd
+            dec         a
+            jsr         READ
+            bcs         @last
+            cmp         #0
+            beq         @last
+            ldx         #0                                  ; (Its name, to eo_buf)
+:
+            lda         sr_buf + SR_NAME,x
+            beq         :+
+            sta         eo_buf,x
+            inx
+            cpx         #32
+            bcc         :-
+:
+            lda         sr_buf + SR_MODE + 1
+            and         #DM_DIR
+            beq         :+
+            lda         #'/'
+            sta         eo_buf,x
+            inx
+:
+            txa
+            jmp         eo_push
+@last:
+            lda         dir_fd
+            dec         a
+            jsr         CLOSE
+            stz         dir_fd
+@none:
+            lda         #0
+            jmp         str_push
+
 ; ---- The environment, the arguments
 
 ; ENV$(name$), ENVIRON$(name$): rc's variable (its words, spaces between), "" if there's none
@@ -1185,7 +1252,7 @@ fn_disp7:
             tax
             jmp         (fn_jt7,x)
 fn_jt7:
-            .word       f_command, f_date, rt_todo7, f_env, f_peek, rt_todo7, f_shells, f_status, f_time, f_timer
+            .word       f_command, f_date, f_dir, f_env, f_peek, rt_todo7, f_shells, f_status, f_time, f_timer
             .word       f_arg, f_bank
 .assert     * - fn_jt7 = (F_END - F_B7) * 2, error, "fn_jt7 and fn.inc's F_B7 group differ"
 

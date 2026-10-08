@@ -27,6 +27,10 @@ dm_hi:      .res        2
 dm_n:       .res        1
 dm_ca:      .res        3
 dm_cnt:     .res        2
+ms_s:       .res        2                                   ; (The MID$ statement's start, count, v$'s length, new$'s)
+ms_n:       .res        2
+ms_l:       .res        2
+ms_b:       .res        2
 
 .segment "CODE5"
 
@@ -733,7 +737,7 @@ st_disp5:
             tax
             jmp         (st_jt5,x)
 st_jt5:
-            .word       st_dim, st_erase
+            .word       st_dim, st_erase, st_mids
 .assert     * - st_jt5 = (ST_B6 - ST_B5) * 2, error, "st_jt5 and fn.inc's ST_B5 group differ"
 
 ; ST_DIM (DIM, REDIM): an array made in its variable.  The stack: each dimension's lowest (if it's given) and highest,
@@ -980,6 +984,187 @@ st_erase:
             lda         #NOBANK
             sta         (vu),y
             rts
+
+; ST_MIDS: MID$(v$, start [, len]) = new$.  The stack: v$'s place (VT_REF, VT_LOC), start, len (below 0: all), new$.
+; v$ made a copy of itself with new$'s bytes from start on, as many as len, new$'s and v$'s room past start allow (its
+; length the same: a string's never changed in place, another may share it).  start not in v$: Illegal function call
+st_mids:
+            lda         #3                                  ; (Its start: 1 on)
+            jsr         ms_int
+            lda         t0
+            ora         t0 + 1
+            bne         @lb904
+            jmp         @bad
+@lb904:
+            MOVW        ms_s, t0
+            lda         #2
+            jsr         ms_int
+            MOVW        ms_n, t0
+            lda         #1                                  ; (new$'s length)
+            jsr         ms_depth
+            jsr         str_get_a
+            MOVW        ms_b, sla
+            jsr         ms_old                              ; (v$'s)
+            MOVW        ms_l, sla
+            lda         ms_l                                ; (start past its end: Illegal function call)
+            cmp         ms_s
+            lda         ms_l + 1
+            sbc         ms_s + 1
+            bcs         @lb903
+            jmp         @bad
+@lb903:
+            sec                                             ; (The count: its room from start ...
+            lda         ms_l
+            sbc         ms_s
+            sta         t4
+            lda         ms_l + 1
+            sbc         ms_s + 1
+            sta         t4 + 1
+            inc         t4
+            bne         :+
+            inc         t4 + 1
+:
+            jsr         ms_min
+            MOVW        t4, ms_b                            ;   new$'s length, len)
+            jsr         ms_min
+            lda         ms_n
+            ora         ms_n + 1
+            beq         @done
+            lda         ms_l                                ; (The copy: v$'s bytes)
+            ldx         ms_l + 1
+            jsr         heap_str
+            jsr         ms_old                              ; (Again: the collector may have moved it)
+            MOVW        cn, ms_l
+            jsr         far_copy
+            jsr         cb_at_hres                          ; (Then new$'s, from start)
+            clc
+            lda         ms_s
+            adc         #1
+            pha
+            lda         ms_s + 1
+            adc         #0
+            tax
+            pla
+            jsr         cb_plus5
+            lda         #1
+            jsr         ms_depth
+            jsr         str_get_a
+            MOVW        cn, ms_n
+            jsr         far_copy
+            lda         #VT_STR                             ; (v$ the copy)
+            sta         sw_v
+            lda         hres
+            sta         sw_v + 1
+            lda         hres + 1
+            sta         sw_v + 2
+            lda         hres + 2
+            sta         sw_v + 3
+            lda         #4
+            jsr         ms_depth
+            MOVW        vu, vt
+            ldx         #0
+            FARN        1, place_out
+@done:
+            sec                                             ; (Its four values off)
+            lda         vsp
+            sbc         #4 * VAL_SIZE
+            sta         vsp
+            bcs         :+
+            dec         vsp + 1
+:
+            rts
+@bad:
+            lda         #ER_FUNC
+            ldx         #0
+            jmp         b_error
+
+; ms_n = the fewer of ms_n and t4
+ms_min:
+            lda         t4
+            cmp         ms_n
+            lda         t4 + 1
+            sbc         ms_n + 1
+            bcs         :+
+            MOVW        ms_n, t4
+:
+            rts
+
+; vt = the value .A (1-4) below the stack's top
+ms_depth:
+            tax
+            lda         #0
+:
+            clc
+            adc         #VAL_SIZE
+            dex
+            bne         :-
+            sta         t4
+            sec
+            lda         vsp
+            sbc         t4
+            sta         vt
+            lda         vsp + 1
+            sbc         #0
+            sta         vt + 1
+            rts
+
+; t0 = the integer .A (1-4) below the top: 0 to 65535 (below 0, or past it: 65535)
+ms_int:
+            jsr         ms_depth
+            lda         (vt)
+            beq         :+
+            FARN        4, num_to_int
+:
+            ldy         #1
+            lda         (vt),y
+            sta         t0
+            iny
+            lda         (vt),y
+            sta         t0 + 1
+            ldy         #3
+            lda         (vt),y
+            iny
+            ora         (vt),y
+            beq         :+
+            lda         #$FF
+            sta         t0
+            sta         t0 + 1
+:
+            rts
+
+; sw_v = v$'s value (the place 4 below the top), its length sla and bytes cursor A's (str_get_a's)
+ms_old:
+            lda         #4
+            jsr         ms_depth
+            MOVW        vu, vt
+            ldx         #0
+            FARN        1, place_in
+            LDW         vt, sw_v
+            lda         (vt)
+            cmp         #VT_STR
+            beq         :+
+            lda         #ER_TYPE
+            ldx         #0
+            jmp         b_error
+:
+            jmp         str_get_a
+
+; Cursor B on past .A/.X bytes (into the banks after: selected)
+cb_plus5:
+            clc
+            adc         cb
+            sta         cb
+            txa
+            adc         cb + 1
+@wrap:
+            cmp         #WIN_END
+            bcc         :+
+            sbc         #WIN_END - WIN
+            inc         cbl
+            bra         @wrap
+:
+            sta         cb + 1
+            jmp         cb_sel
 
 ; ---- The fifth bank's functions (fn.inc: F_B5 on)
 fn_disp5:

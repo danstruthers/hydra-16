@@ -101,6 +101,7 @@ ST_DIGITS                                                   ; DIGITS n
 ST_B5                                                       ; The heap's (heap.inc)
 ST_DIM = ST_B5                                              ; DIM, REDIM: an array made
 ST_ERASE                                                    ; ERASE: an array dropped
+ST_MIDS                                                     ; MID$(v$, start, len) = new$
 ST_B6                                                       ; Input and output's (io.inc)
 ST_PRN = ST_B6                                              ; PRINT's value
 ST_PRNL                                                     ; Its new line
@@ -121,6 +122,25 @@ ST_BEEP                                                     ; BEEP
 ST_SLEEP                                                    ; SLEEP: ticks (below 0: till a key)
 ST_WRVAL                                                    ; WRITE's value
 ST_WRCOM                                                    ; Its ,
+ST_OPEN                                                     ; OPEN: path, number, mode (FM_*)
+ST_CLOSE                                                    ; CLOSE #n
+ST_CLOSEALL                                                 ; CLOSE
+ST_FOUT                                                     ; PRINT #n's, WRITE #n's output to the file
+ST_FEND                                                     ;   and back to the console
+ST_FINPUT                                                   ; INPUT #n's, LINE INPUT #n's line read
+ST_SEEK                                                     ; SEEK #n, pos
+ST_GSET                                                     ; GET's and PUT's file and place
+ST_GET                                                      ; GET's value read (the variable's on the stack)
+ST_PUT                                                      ; PUT's value written
+ST_KILL                                                     ; KILL path
+ST_NAME                                                     ; NAME old AS new
+ST_MKDIR                                                    ; MKDIR path
+ST_RMDIR                                                    ; RMDIR path
+ST_CHDIR                                                    ; CHDIR path
+ST_FILES                                                    ; FILES [path]
+ST_USTART                                                   ; PRINT USING's format
+ST_UITEM                                                    ; Its next item, by its next field
+ST_UEND                                                     ; Its end: the format's text to its next field
 ST_B7                                                       ; The system's (sys.inc)
 ST_ENDN = ST_B7                                             ; END n
 ST_ERROR                                                    ; ERROR n
