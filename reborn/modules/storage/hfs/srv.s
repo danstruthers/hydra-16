@@ -22,7 +22,7 @@
 .segment "CODE2"
 
 HFS_MAGIC:  .byte   "HYDRAFS1"
-HFS_NAMES:  .byte   "0123456789abcdefxrs"                   ; (A disk's name, by its number)
+HFS_NAMES:  .byte   "0123456789abcdefxrsv"                   ; (A disk's name, by its number)
 
 ; A request for #f (storage.s's h_fs, through FAR2).  IN: .A = the request (R_*), and TASK_INBOX, TASK_PATH.
 ; OUT: C = 0; or C = 1, .A = the error.  What it changed goes to the disk first (HFS_FINISH); one that can change a
@@ -89,7 +89,10 @@ HFS_CLUNK:
             lda         #$FF
             sta         HFS_H_CARD,X
             lda         HFS_H_FLAGS,X
-            bpl         HFS_OK                              ; (HFS_HF_DIRTY)
+            bmi         :+                                  ; (HFS_HF_DIRTY: its entry, its data first)
+            FAR1        blk_flush                           ; (Its last block, if it's kept back: to the card now)
+            rts
+:
             jmp         HFS_ENT_PUT
 
 HFS_OK:
@@ -579,7 +582,7 @@ HFS_DIR_ERR:
 HFS_DIR_RET:
             rts
 
-; The cards' directory (HFS_FID_DISKS): a directory for each card started, 0-f
+; The cards' directory (HFS_FID_DISKS): a directory for each card started, 0-f, then v (the Vera X's)
 HFS_DISKS_READ:
             jsr         HFS_DIR_SKIP
             bcs         HFS_DIR_RET
@@ -603,6 +606,10 @@ HFS_DISKS_READ:
             inx
             cpx         #SPI_DEVS
             bcc         @disk
+            bne         :+
+            ldx         #DISK_V                             ; (Then the Vera X's)
+            bra         @disk
+:
             bra         HFS_DIR_END
 
 ; HFS_SKIP = the records before the request's offset (SD_POS / SR_SIZE), which must be a record's start (an
@@ -820,6 +827,8 @@ HFS_WALK:
             txa
             cmp         #SPI_DEVS                           ; (A card's, or a spec's)
             bcc         @disk
+            cmp         #DISK_V
+            beq         @disk
             ldx         HFS_SPEC
             bne         @disk
 

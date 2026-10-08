@@ -377,13 +377,15 @@ const C_LINES = [
 // zzz on the screen), then both (the screen repainted from the window's text); colours (SGR, a file on the PC);
 // a font from the ROM disk; a bad command
 const SCREEN_LINES = [
-  ["ls /dev/vid", "ctl\nterm\nvram\npal\nsprites\nfont\nframe\npsg\npcm\npcmctl"],
-  ["cat /dev/vid/ctl", "vera 47.0.2\nmode 80x60\ncursor blink\nborder 0\nbitmap off\nclaimed"],
+  ["ls /dev/vid", "ctl\nterm\nvram\npal\nsprites\nfont\nframe\npsg\npcm\npcmctl\nmouse\nmousein\nmousectl\ndraw"],
+  ["cat /dev/vid/ctl", "vera 47.0.2\nmode 80x60\ncursor blink\nborder 0\nbitmap off\noutput vga\nclaimed"],
   ["grep terminal /dev/consctl", "terminal both"],
   ["echo serial >/dev/consctl; echo z^zz; grep -c 'z[z]z' /dev/vid/term; echo both >/dev/consctl", "zzz\n0"],
   ["grep -c 'z[z]z' /dev/vid/term", "1"],
   ["cat /lib/font/cp437 >/dev/vid/font", null],
   ["echo flash >/dev/vid/ctl", "echo: write error: invalid argument"],
+  ["echo output ntsc mono 240p >/dev/vid/ctl; grep output /dev/vid/ctl; echo output vga >/dev/vid/ctl", "output ntsc mono 240p"],
+  ["echo output vga 240p >/dev/vid/ctl; grep output /dev/vid/ctl", "echo: write error: invalid argument\noutput vga"],
   ["cat /pc/box", "\x1b(0lqk\x1b(B"],
   ["cat /pc/colours", "\x1b[31;44mR\x1b[0mn\x1b[1;32mG\x1b[0;7mV\x1b[m"],
   ["cat /pc/reverse", "\x1b[?5h", true],
@@ -692,6 +694,89 @@ function psgCard() {
   return [imageCard(0, f, 16384)];
 }
 
+// The ramw test's lines, at the login shell (HyForth): a file of 70 writes of 10 bytes, then written over in its
+// first block, across its first block's end and at its end (one byte more after it), on the RAM disk, the shared one
+// and a card, each read back; then 100 writes of 16 bytes to /ram, and to a card, timed (the file made before them and
+// closed after; the marks [rw A] and [rw B] made by emit and .(, so the line typed isn't one); then two files on the
+// card left open, each written twice (the first write allocating: its data goes to the card before the map does), the
+// one's second write synced, the other's left kept back (nothing after it reaches the storage driver); and its card
+// (blank HydraFS)
+const RAMW_LINES = ['variable fd', ': w ( a u -- ) w/o create-file throw fd ! ;', ': p ( a u -- ) fd @ write-file throw ;',
+  ': at ( n -- ) s>d fd @ reposition-file throw ;', ': c fd @ close-file throw ;',
+  ': t ( a u -- ) w 70 0 do s" 0123456789" p loop 5 at s" abc" p 508 at s" XYZWV" p 699 at s" !+" p c ;',
+  ': n ( -- ) 100 0 do s" 0123456789abcdef" p loop ;',
+  's" /ram/w" t', 's" /sram/w" t', 's" /sd/0/w" t', 'cat /ram/w; echo; cat /sram/w; echo; cat /sd/0/w; echo',
+  's" /ram/n" w', '91 emit .( b0 A])', '91 emit .( b0 B])', '91 emit .( rw A])', 'n', '91 emit .( rw B])', 'c',
+  's" /sd/0/n" w', '91 emit .( cw A])', 'n', '91 emit .( cw B])', 'c', 'ls -l /ram/n /sd/0/n',
+  's" /sd/0/k" w s" first part, written. " p s" then synced" p', 'echo sync >/dev/sd/0/ctl',
+  's" /sd/0/u" w s" first part, written. " p s" second part: kept back" p', '91 emit .( ramw done.)'];
+const RAMW_TEXT = (() => { const b = [...'0123456789'.repeat(70)]; b.splice(5, 3, ...'abc'); b.splice(508, 5, ...'XYZWV'); b.splice(699, 1, '!', '+'); return b.join(''); })();
+function ramwCard() {
+  fs.mkdirSync(CARD_DIR, { recursive: true });
+  hydrafs.setNow(0x1000);
+  const img = path.join(CARD_DIR, 'ramw.img');
+  fs.rmSync(img, { force: true });
+  hydrafs.mkfs(img, 8, 'RAMW', undefined, true);
+  return imageCard(0, img, Math.floor(fs.statSync(img).size / 512));
+}
+
+// The psgmml test's card: scores on the PSG's channels (I-X) and hysong.js's ZSMs of them: the ROM disk's
+// songs/vera.mml (both chips, each waveform and envelope) as v.mml and vpc.zsm, tests/scores/edges.mml and edges2.mml
+// as e and f; and scores that are wrong (an instrument on the other chip's channel, both ways; x on the PSG; y past
+// its registers; three instruments it can't read; a note before an instrument on channel 23)
+const PSG_SCORES = { v: path.join(__dirname, '..', 'romfs', 'songs', 'vera.mml'), e: path.join(__dirname, 'scores', 'edges.mml'), f: path.join(__dirname, 'scores', 'edges2.mml') };
+const PSG_BAD = ['@w { wave saw }\nA @w c\n', '@g { gm 0 }\nI @g c\n', '@w { wave saw }\nI @w x36\n', '@w { wave saw }\nJ @w y 64,1 c\n',
+  '@w { wave square }\nI @w c\n', '@w { env 1 2 64 3 }\nI @w c\n', '@w { wave saw alg 3 }\nI @w c\n', '@w { wave saw }\nX c\n'];
+function psgScoreCard() {
+  fs.mkdirSync(CARD_DIR, { recursive: true });
+  hydrafs.setNow(0x1000);
+  const f = path.join(CARD_DIR, 'psgmml0.img');
+  fs.rmSync(f, { force: true });
+  hydrafs.mkfs(f, 8, 'SCORES', undefined, true);
+  const v = new hydrafs.Volume(f);
+  for (const [n, score] of Object.entries(PSG_SCORES)) {
+    const zsm = path.join(CARD_DIR, 'psgmml-' + n + '.zsm');
+    require('child_process').execFileSync(process.execPath, [path.join(__dirname, '..', 'sim', 'tools', 'hysong.js'), score, zsm, '--quiet']);
+    v.put(n + '.mml', fs.readFileSync(score));
+    v.put(n + 'pc.zsm', fs.readFileSync(zsm));
+  }
+  PSG_BAD.forEach((t, i) => v.put('b' + (i + 1) + '.mml', Buffer.from(t)));
+  v.close();
+  return [imageCard(0, f, 16384)];
+}
+const PSG_MML_LINES = [
+  ['cd /sd/0; play -o v.mml /ram/v.zsm; cmp /ram/v.zsm vpc.zsm && echo same', 'same'],
+  ['play -o e.mml /ram/e.zsm; cmp /ram/e.zsm epc.zsm && echo same', 'same'],
+  ['play -o f.mml /ram/f.zsm; cmp /ram/f.zsm fpc.zsm && echo same', 'same'],
+  ["echo '[b0' 'A]'", '[b0 A]'], ["echo '[b0' 'B]'", '[b0 B]'], ["echo '[po' 'A]'", '[po A]'], ['play -o v.mml /ram/p.zsm', null],
+  ["echo '[po' 'B]'", '[po B]'],
+  ['play b1.mml; play b2.mml; play b3.mml; play b4.mml', 'play: b1.mml: channel 0: the other chip\'s instrument\nplay: b2.mml: channel 8: the other chip\'s instrument\nplay: b3.mml: channel 8: the YM2151\'s only\nplay: b4.mml: channel 9: a PSG register is 0-63'],
+  ['play b5.mml; play b6.mml; play b7.mml; play b8.mml', 'play: b5.mml: an instrument it can\'t read\nplay: b6.mml: an instrument it can\'t read\nplay: b7.mml: an instrument it can\'t read\nplay: b8.mml: channel 23: a note before an instrument'],
+  ['echo reset >/dev/sndctl; play v.mml; echo played', 'played'],
+  ['play -m 8 o4 l8 c d e; play -x -m 9 I128 V40 O5 L4 C; play -c 13 o4 l4 c e g; play -c 21 c d e f', 'play: c: more notes than channels'],
+];
+// A ZSM's PSG voices' starts (a volume from 0 to more, a speaker on: vera.js's psgOns), each voice's count and its
+// first one's tick
+function zsmPsgOns(b) {
+  const vol = new Array(16).fill(0), n = new Array(16).fill(0), first = new Array(16).fill(-1);
+  let i = 16, t = 0;
+  while (i < b.length) {
+    const c = b[i++];
+    if (c < 0x40) {
+      const v = b[i++];
+      if ((c & 3) === 2) {
+        const k = c >> 2;
+        if (!(vol[k] & 0x3F) && (v & 0x3F) && (v & 0xC0)) { n[k]++; if (first[k] < 0) first[k] = t; }
+        vol[k] = v;
+      }
+    } else if (c === 0x40) i += b[i++] & 0x3F;
+    else if (c < 0x80) i += 2 * (c & 0x3F);
+    else if (c === 0x80) break;
+    else t += c & 0x7F;
+  }
+  return { n, first };
+}
+
 // The PCM test's lines (with a Vera X: vid's /pcm and /pcmctl): its files and state; the rate (the VERA's nearest)
 // and volume; raw samples from a card, drained; bad commands; /pcm one task's (another's pcmctl command: busy);
 // WAV files played (8 bits mono, made signed; 16 bits stereo, past a chunk of an odd size; a float one, not a song);
@@ -833,7 +918,7 @@ function mmlCard() {
     v.put(n + 'pc.zsm', fs.readFileSync(zsm));
   }
   v.put('bad.mml', Buffer.from('#tempo 100\nA o4 c d e\n'));
-  v.put('bad2.mml', Buffer.from('@p { gm 0 }\nA @p c\nX c d e\n'));
+  v.put('bad2.mml', Buffer.from('@p { gm 0 }\nA @p c\nZ c d e\n'));
   v.close();
   return [imageCard(0, f, 16384)];
 }
@@ -1275,6 +1360,44 @@ function pcReport(m, attaches, naks, repeats) {
   return f;
 }
 
+// The draw test's lines at HyForth (lib video) and hylang (video.hl), and what each prints ('': nothing): vid's
+// /dev/vid/draw on the bitmap at each depth, read back by vpeek; the turtle; rc's lines to the file
+const DRAW_FORTH = [
+  ['echo serial >/dev/consctl', ''], ['lib video', ''], ['320 8 bitmap  0 pen clear  5 pen 10 20 plot  20 320 * 10 + 0 vpeek .', '5 '],
+  ['0 0 9 0 line  4 0 vpeek .', '5 '], ['20 20 29 29 box  20 320 * 25 + 0 vpeek .  25 320 * 25 + 0 vpeek .', '5 0 '],
+  ['40 40 44 42 bar  41 320 * 42 + 0 vpeek .  43 320 * 42 + 0 vpeek .', '5 0 '],
+  ['100 100 10 circle  100 320 * 110 + 0 vpeek .  100 320 * 100 + 0 vpeek .', '5 0 '],
+  ['200 100 5 disc  100 320 * 203 + 0 vpeek .', '5 '], ['-5 -5 plot  5000 0 plot', 'plot: invalid argument'],
+  ['320 4 bitmap  0 pen clear  7 pen 1 0 plot  0 0 vpeek .  12 pen 0 0 plot  0 0 vpeek .', '7 199 '],
+  ['320 2 bitmap  0 pen clear  2 pen 2 0 plot  0 0 vpeek .', '8 '],
+  ['640 1 bitmap  0 pen clear  1 pen 3 0 plot  0 0 vpeek .  0 479 639 479 line  479 80 * 0 vpeek .', '16 255 '],
+  ['640 4 bitmap', 'invalid argument'], ['320 8 bitmap  cs 7 pen 50 fd 90 rt 40 fd heading .', '90 '],
+  ['95 320 * 160 + 0 vpeek .  70 320 * 180 + 0 vpeek .', '7 7 '], ['200 $F00 palette!  2 100 50 sprite-at', ''],
+  ['0 pen clear  6 pen 0 0 s" Hi" text  1 0 vpeek .  0 0 vpeek .  3 320 * 3 + 0 vpeek .', '6 0 6 '],
+  ['echo pen 4 >/dev/vid/draw; cat /dev/vid/draw', 'pen 4'],
+];
+const DRAW_HY = [['(use "video")', 'NIL'], ['(pen 9)', 'NIL'], ['(plot 30 30)', 'NIL'], ['(vpeek (+ (* 30 320) 30))', '9'], ['(cs)', 'NIL'],
+  ['(pen 11)', 'NIL'], ['(fd 30)', 'NIL'], ['(vpeek (+ (* 95 320) 160))', '11'], ['(heading)', '0'],
+  ['(text 0 10 "H")', 'NIL'], ['(vpeek (+ (* 10 320) 1))', '11']];
+
+// The vsd test's card: a HydraFS volume (hello.txt) on the VERA's own SD port, its writes kept; and its lines
+function veraCard() {
+  fs.mkdirSync(CARD_DIR, { recursive: true });
+  const img = path.join(CARD_DIR, 'vsd.img');
+  hydrafs.setNow(0x1000);
+  hydrafs.mkfs(img, 8, 'VERASD', undefined, true);
+  const v = new hydrafs.Volume(img);
+  v.put('hello.txt', Buffer.from('hello from the vera\n'));
+  v.close();
+  return imageCard(0, img, Math.floor(fs.statSync(img).size / 512));
+}
+const VSD_LINES = [
+  ['cat /dev/sd/v/ctl', 'sdhc 8 MB 16384 blocks\nhydrafs label=VERASD\nfree 8180 KB of 8188 KB'],
+  ['cat /sd/v/hello.txt', 'hello from the vera'],
+  ['echo written >/sd/v/new.txt; cat /sd/v/new.txt', 'written'],
+  ['ls /sd', 'v/'],
+];
+
 module.exports = {
   IRQ_OFF_MAX,
   tests: [
@@ -1297,7 +1420,7 @@ module.exports = {
       expect: ['% ls \'#fr\'\n1/\n2/\n%', '% ls /ram\nbin/\nlib/\n%',
         '% ls /bin\ndb\nedit\nfsck\ngrep\nlabel\nmkfs\nscom\nsort\ninit\nhello\nrc\nwstart\n', 't_child\n% t_child f\n', '% ls \'#fr\'/2\nbin/\nlib/\nmark\n%',
         'prompt=(', '% cat /dev/sd/s/ctl\nsram 512 KB 1024 blocks\nhydrafs label=SRAM\n', '% echo $window\n0\n%',
-        '% echo $window\n1\n%', '% ls \'#fr\'\n1/\n2/\n4/\n%', '% ls /ram\nbin/\nlib/\n%', '\ncons\nconsctl\nwctl\nwnew\nser\nserctl\nkbdin\ntext\nlabel\nsnarf\n%',
+        '% echo $window\n1\n%', '% ls \'#fr\'\n1/\n2/\n4/\n%', '% ls /ram\nbin/\nlib/\n%', '\ncons\nconsctl\nwctl\nwnew\nser\nserctl\nkbdin\ntext\nlabel\nsnarf\nkbin\n%',
         '% echo stop >>\'#d/s/ctl\'; echo still; cat /sram/x\nstill\ncat: /sram/x: no such device\n%'],
     },
     {
@@ -1747,7 +1870,7 @@ module.exports = {
     },
     {
       name: 'rom', what: 'the ROM disk: /rom (#f, spec x) walked on the Hydra, every file read back against its source (romfs/romfs.txt)',
-      init: 't_rom', cycles: 300e6,
+      init: 't_rom', cycles: 300e6,                         // (the walk takes some 240M)
       check(m, out) {
         const romfs = require('../tools/romfs.js'), { crc16 } = require('../tools/romimg.js');
         const files = romfs.manifest(path.join(__dirname, '..', 'romfs', 'romfs.txt')), seen = new Map(), f = [];
@@ -2066,7 +2189,7 @@ module.exports = {
           'play -o s.mml /ram/s.zsm; cmp /ram/s.zsm spc.zsm && echo same', 'play bad.mml; echo $status', 'play bad2.mml',
           'echo reset >/dev/sndctl; play spc.zsm; echo reset >/dev/sndctl; play s.mml; echo played',
           'echo patch 0 0 >/dev/sndctl; echo patch 1 0 >/dev/sndctl; play -m 0 o4 l8 c d e; play -c 0 o4 l2 I0 c e g',
-          'play -x -m 1 T240 O4 L8 CDE S0 CD K E; echo lines', 'play -m 9 c; play -c 0 c d e f g a b c d',
+          'play -x -m 1 T240 O4 L8 CDE S0 CD K E; echo lines', 'play -m 24 c; play -c 0 c d e f g a b c d',
           'play -m 0 I0 c t100; play -x -m 0 I0 c Z'].map(l => '\u0101' + l + '\r').join('') };
       },
       expect: ['cmp /ram/t.zsm tpc.zsm && echo same\nsame\n%', 'cmp /ram/s.zsm spc.zsm && echo same\nsame\n%',
@@ -2521,8 +2644,8 @@ module.exports = {
     },
     // ---- Phase 8: the Vera X (the emulator's VERA: sim/lib/vera.js; the driver: modules/vid)
     {
-      name: 'vera', what: 'the emulator\'s Vera X (sim/lib/vera.js), the chip as a program sees it (no vid): the version register; ADDR0 and ADDR1, their steps, a data port\'s byte fetched ahead; the display\'s registers at the start; VSYNC (59.5 a second), LINE and SCANLINE (bit 8 too); sprites colliding; the PCM FIFO (empty, full, AFLOW and its interrupt\'s time); a PSG voice; the SPI port with no card; CTRL\'s reset',
-      init: 't_vera', without: ['vid'], cycles: 40e6, machine: { vera: true }, jsOnly: 'the danlang emulator has no VERA yet',
+      name: 'vera', what: 'the emulator\'s Vera X (sim/lib/vera.js), the chip as a program sees it (no vid): the version register; ADDR0 and ADDR1, their steps, a data port\'s byte fetched ahead; the display\'s registers at the start; VSYNC (59.5 a second), LINE and SCANLINE (bit 8 too); sprites colliding; the PCM FIFO (empty, full, AFLOW and its interrupt\'s time); a PSG voice; the SPI port with no card; FX (the cache\'s writes and fill, transparency, the multiplier, the line helper, the fill length); CTRL\'s reset',
+      init: 't_vera', without: ['vid'], cycles: 40e6, machine: { vera: true },
       check(m) {
         const f = [];
         if (!m.vera.psgOns.some(k => k.startsWith('voice 0 '))) f.push('PSG voice 0 never came on');
@@ -2533,23 +2656,23 @@ module.exports = {
     },
     {
       name: 'vid', what: 'the Vera X\'s driver (vid: #v), through its files: ctl\'s state; the terminal (/term): text written and read back, a CSI move, a line erased, wrapping, BS and TAB, 70 lines scrolled, SGR\'s colours (in the map\'s cells), the cursor\'s sprite; /frame (a frame a read, 59.5 a second); /vram, /pal, /font, the files\' lengths; ctl\'s commands (mode, cursor, border, bitmap, bad ones); claims: a write to the terminal E_BUSY meanwhile, shown after the release; claim all (the font back); another task\'s (E_BUSY), ended by its end',
-      init: 't_vid', cycles: 80e6, machine: { vera: true }, jsOnly: 'the danlang emulator has no VERA yet',
+      init: 't_vid', cycles: 80e6, machine: { vera: true },
     },
     {
       name: 'vid-none', what: 'vid with no card: its init looks for DETECT_TICKS, then ends; no #v (E_NODEV)',
       init: 't_vid', cycles: 30e6, expect: ['ok - no card: #v isn\'t there (E_NODEV)', 't_vid: PASS'],
     },
     {
-      name: 'screen', what: 'the console on the Vera X\'s screen (cons\'s second terminal: vid\'s /term), at rc: /dev/vid; consctl\'s terminal both, serial (the screen left as it was), both again (repainted); a font written to /dev/vid/font; colours from a file (SGR, in the cells); DECSCNM (every cell reversed); the DEC graphics (ESC ( 0) as the font\'s glyphs; what rc shows, on the screen as on the serial port',
-      init: 't_rc', cycles: 150e6, pc: { files: { colours: SCREEN_COLOURS, box: '\x1b(0lqk\x1b(B\n', reverse: '\x1b[?5h' } }, jsOnly: 'the danlang emulator has no VERA yet',
+      name: 'screen', what: 'the console on the Vera X\'s screen (cons\'s second terminal: vid\'s /term), at rc: /dev/vid; consctl\'s terminal both, serial (the screen left as it was), both again (repainted); a font written to /dev/vid/font; ctl\'s output (NTSC, mono, 240p; VGA has neither); colours from a file (SGR, in the cells); DECSCNM (every cell reversed); the DEC graphics (ESC ( 0) as the font\'s glyphs; what rc shows, on the screen as on the serial port',
+      init: 't_rc', cycles: 150e6, pc: { files: { colours: SCREEN_COLOURS, box: '\x1b(0lqk\x1b(B\n', reverse: '\x1b[?5h' } },
       get machine() { return { input: typed(SCREEN_LINES), vera: true }; },
       get expect() { return expected(SCREEN_LINES); },
       check(m) {
         const f = [], c = m.vera.cells(), text = m.vera.text();
         if (!c) return ['no text layer on the screen'];
         // (The window shown is the smaller terminal's size, the serial port's 80 x 24: its rows below the screen's
-        // chrome, the bar and its header, then its footer: W4)
-        if (!text.some(l => l.startsWith('% cat /dev/vid/ctl'))) f.push('the screen lacks rc\'s line "% cat /dev/vid/ctl"');
+        // chrome, the bar and its header, then its footer: W4; rc's line looked for one its last 24 rows still have)
+        if (!text.some(l => l.startsWith('% echo flash >/dev/vid/ctl'))) f.push('the screen lacks rc\'s line "% echo flash >/dev/vid/ctl"');
         if (text.slice(27).some(l => l)) f.push('the screen has text below the window\'s 24 rows and its footer');
         if (!/^ 0 \S+ .* \d\d:\d\d$/.test(text[0] || '')) f.push('the screen\'s bar (row 1) isn\'t " 0 label ... HH:MM": ' + JSON.stringify(text[0]));
         if (!/^0 \S+ .* 0 \S+$/.test(text[1] || '')) f.push('the window\'s header (row 2) isn\'t "0 label ... 0 label": ' + JSON.stringify(text[1]));
@@ -2581,7 +2704,7 @@ module.exports = {
     },
     {
       name: 'vtpaint', what: 'a window painted (W1): text in colours, a box in DEC graphics, a line autowrapped, a double-width row, a region and the cursor, written into a window not shown, which is then shown: what the serial port\'s terminal shows (sim/lib/vt.js: its characters and colours) and what the screen shows, as the window has it',
-      init: 't_rc', cycles: 200e6, pc: { files: { 'vt/paint': vtFile(VT_PAINT), 'vt/paint.rc': VT_PAINT_RC } }, jsOnly: 'the danlang emulator has no VERA yet',
+      init: 't_rc', cycles: 200e6, pc: { files: { 'vt/paint': vtFile(VT_PAINT), 'vt/paint.rc': VT_PAINT_RC } },
       get machine() {
         return { vera: true, input: typed([['rc /pc/vt/paint.rc']]) };
       },
@@ -2645,7 +2768,7 @@ module.exports = {
     },
     {
       name: 'vtmode', what: 'a window\'s size from the screen\'s (W3): the screen alone (80 x 60, less its chrome\'s 3 rows: the bar, the header, the footer), vid\'s mode changed under the console (40x30: its next write refused once, the size looked at, the windows resized and the screen painted again; 80x30), then both terminals (the smaller: the serial port\'s 80 x 24)',
-      init: 't_rc', cycles: 150e6, pc: { files: { 'vt/mode.rc': VT_MODE_RC } }, jsOnly: 'the danlang emulator has no VERA yet',
+      init: 't_rc', cycles: 150e6, pc: { files: { 'vt/mode.rc': VT_MODE_RC } },
       get machine() { return { vera: true, input: typed([['rc /pc/vt/mode.rc']]) }; },
       expect: ['size 80 57\nsize 40 27\nsize 80 27\nsize 80 24\n', '\ndone\n%'],
       check(m) {
@@ -2702,7 +2825,7 @@ module.exports = {
     },
     {
       name: 'winchrome', what: 'the chrome on the screen (W4): its label (#c0/label, OSC 2, empty: its program\'s name), its status line (wctl\'s status, and DECSASD\'s, after DECSSDT 2), the header\'s and footer\'s formats (%p, %l, %n, %s, %c, %r, %m, %[7], %=), the bar (its defaults: the windows, the time; at the bottom; off), a window\'s chrome rows turned off (its size grows by each), activity in a window not shown (monitor on: +; a bell: !); read back from vid\'s screen',
-      init: 't_rc', cycles: 260e6, jsOnly: 'the danlang emulator has no VERA yet',
+      init: 't_rc', cycles: 260e6,
       pc: { files: { 'vt/chrome.rc': CHROME_RC, 'vt/sasd': '\x1b[2$~\x1b[1$}\x1b[2Kfrom vt\x1b[0$}', 'vt/title': '\x1b]2;titled\x07', 'vt/bel': '\x07' } },
       get machine() { return { vera: true, input: typed([['rc /pc/vt/chrome.rc']]) }; },
       expect: ['\ndone\n%'],
@@ -2747,7 +2870,7 @@ module.exports = {
     },
     {
       name: 'winwords', what: 'the window\'s chrome in HyForth and hylang (W4c; C\'s are ctest\'s): window-label (read back from /dev/label; hylang\'s read too), window-status (the footer\'s %s, on the screen\'s footer row: both terminals on, the window 80 x 24 below the bar and header), window-ctl',
-      init: 't_rc', cycles: 200e6, jsOnly: 'the danlang emulator has no VERA yet',
+      init: 't_rc', cycles: 200e6,
       get machine() {
         return { vera: true, input: 'āforth\rĀĀ' + 'lib cons s" fth" window-label s" st-fth" window-status s" monitor off" window-ctl\rĀ' + 'bye\r' +
           'ācat /dev/label; echo; head -27 /dev/vid/term | tail -1\r' +
@@ -2884,7 +3007,7 @@ module.exports = {
     },
     {
       name: 'tilesplit', what: 'splits (W7a): Ctrl-] s, a window with a shell (wstart\'s, HyForth) below in the group, rows; a Forth line there; Ctrl-] Up back to window 0, its wctl (two windows, each 80 x 11: the serial port\'s tiles, the smaller); Ctrl-] v, a third; the Vera X\'s screen read back: the bar, then window 0\'s tile\'s header',
-      init: 'init', cycles: 600e6, jsOnly: 'the danlang emulator has no VERA yet',
+      init: 'init', cycles: 600e6,
       get machine() {
         const L = '\u0100', W = L + L + L + L + L;
         return { vera: true, input: 'ā\x1ds' + W + W + '2 3 + .\r' + W + '\x1d\x1b[A' + W + 'cat /dev/wctl\r' + W + '\x1dv' + W + W +
@@ -2920,7 +3043,7 @@ module.exports = {
     },
     {
       name: 'pcm', what: 'the Vera X\'s PCM (vid\'s /pcm and /pcmctl), at rc: its files and state; the rate (the VERA\'s nearest) and volume; raw samples from a card into the FIFO, drained; bad commands; /pcm one task\'s (another\'s pcmctl: busy); WAV files played (8 bits mono, made signed; 16 bits stereo past an odd chunk; a float one, not a song); a ZSM\'s PCM instruments (one, then one looped, stopped by the FIFO emptied: from RAM) and its claim of the PCM; one too big for RAM (from the file); the FIFO\'s bytes in order, none lost, its runs dry only at the ends',
-      init: 't_rc', cycles: 150e6, jsOnly: 'the danlang emulator has no VERA yet',
+      init: 't_rc', cycles: 150e6,
       get machine() { return { input: typed(PCM_LINES), vera: { pcmLog: true }, sd: pcmCard() }; },
       get expect() { return expected(PCM_LINES); },
       // (The FIFO's bytes: the raw samples, the 8-bit WAV file's made signed, the 16-bit one's as they are, the first
@@ -2949,8 +3072,109 @@ module.exports = {
       },
     },
     {
+      name: 'mouse', what: 'the mouse (VIDEO.md step 6): vid\'s /mouse, /mousein and /mousectl (its state; /mouse\'s first read at once, Plan 9\'s 49 bytes; a non-blocking read\'s E_AGAIN; moves, the pointer\'s sprite at them, kept on the screen; swap; the buttons\' changes queued and read in turn; the pointer off and on; a write to /mouse; bad lines; a claim and its release; mode 40x30\'s size), then the input program on the emulator\'s SMC: a move, a click and the wheel from its PS/2 packets',
+      init: 't_mouse', cycles: 45e6,
+      // (The SMC's mouse: a move, then the left button pressed and let go, then the wheel up, each 2M cycles apart,
+      // from 12M cycles on: by then the input program has asked for the mouse's mode and read it)
+      machine: { vera: true, smc: { moves: [[30, 20, 0], [0, 0, 1], [0, 0, 0], [0, 0, 0, -1]] },
+        input: '\u0102' + '\u0100'.repeat(6) + '\u0400\u0100\u0400\u0100\u0400\u0100\u0400\u0103' },
+      check(m) {
+        const s = m.smc, f = [];
+        if (s.mouseId !== 3) f.push('the SMC\'s mouse in mode ' + s.mouseId + ' (3, a wheel\'s, asked for)');
+        if (s.mouseLost) f.push(s.mouseLost + ' packets lost on the SMC');
+        this.notes = ['the SMC: ' + s.reads + ' reads, ' + s.nacks + ' with nothing (unanswered); the I2C bus: ' + m.i2c.stats.starts + ' starts'];
+        return f;
+      },
+    },
+    {
+      name: 'kbd', what: 'the keyboard (VIDEO.md step 6): init\'s input program, the emulator\'s SMC typed at, the keys into the console (#c/kbin) as a PC terminal sends them, at the login shell (HyForth): Shift and punctuation; Left to edit a line; Up, its history; Caps Lock; the keypad\'s digits, and its cursor keys with Num Lock off; Ctrl-C, a note to the window\'s shell; the keyboard\'s LEDs following the locks',
+      init: 'init', cycles: 120e6,
+      get machine() {
+        const tap = n => String.fromCharCode(0x200 + n), W = '\u0101';  // (smc.js's key n pressed and let go; a prompt)
+        const LEFT = tap(79), UP = tap(83), CAPS = tap(30), NUM = tap(90), KP1 = tap(93), KP2 = tap(98), KP4 = tap(92);
+        return { vera: true, smc: true, input: '\u0102' + W + '.( Hello, World!) cr\r' + W + '.( ac)' + LEFT + LEFT + 'b\r' + W + UP + '\r' +
+          W + CAPS + '.( shout)' + CAPS + '\r' + W + '.( ' + KP1 + KP2 + ')\r' + W + '.( xz)' + NUM + KP4 + KP4 + 'y' + NUM + '\r' +
+          W + ': spin begin again ;\r' + W + 'spin\r\u0100\x03' + W + '.( back)\r' + '\u0103' };
+      },
+      expect: ['/> .( Hello, World!) cr\nHello, World!\n/> ', '\nabc\n/> .( abc)\nabc\n/> .( SHOUT)\nSHOUT\n/> .( 12)\n12\n/> .( xz)',
+        '\nxyz\n/> : spin begin again ;\n/> spin\ninterrupt\n/> .( back)\nback\n/> '],
+      check(m) {
+        const s = m.smc, f = [], leds = s.commands.filter(c => c[0] === 0xED).map(c => c[1]).join(' ');
+        if (leds !== '2 6 2 0 2') f.push('the LEDs: ' + leds + ' (2 6 2 0 2 wanted: Num Lock, Caps Lock on and off, Num Lock off and on)');
+        if (s.lost) f.push(s.lost + ' key codes lost on the SMC');
+        if (s.keys.length) f.push(s.keys.length + ' key codes left unread');
+        return f;
+      },
+    },
+    {
+      name: 'draw', what: 'the graphics words (VIDEO.md step 5): vid\'s /dev/vid/draw (pen, plot, line, box, bar, circle, disc, clear) on the bitmap at 8, 4, 2 and 1 bits a pixel (640 across), what falls off it, bad numbers, a bitmap too big (the console on the serial port alone meanwhile: a bitmap 320 across makes the screen\'s text 40 columns, and the windows with it); HyForth\'s lib video (the drawing, vpeek, the turtle, text, the palette, a sprite) and rc\'s lines to the file; hylang\'s video.hl (the drawing, vpeek, the turtle, text); the C SDK\'s shapes sample (cc65\'s TGI on hydra_tgi: a line, a bar, a circle, an ellipse and text, read back) and sketch (vera.h, drawing after the emulator\'s mouse till a key)',
+      init: 'init', cycles: 260e6,
+      // (The mouse for sketch: to the top left, onto the strip's colour 2 and clicked, then to (150, 120), pressed,
+      // dragged 20 right and 20 down, let go; then a key, x, ends it)
+      get machine() {
+        const W = '\u0101', M = '\u0400', P = '\u0100';
+        return { vera: true, smc: { moves: [[-400, -400, 0], [50, 5, 0], [0, 0, 1], [0, 0, 0], [100, 115, 0], [0, 0, 1], [20, 0, 1], [0, 20, 1], [0, 0, 0]] },
+          input: DRAW_FORTH.map(l => W + l[0] + '\r').join('') + W + 'hylang\r' + DRAW_HY.map(l => W + l[0] + '\r').join('') + W + 'exit\r' +
+            W + '/rom/sample/c/shapes\r' + W + '/rom/sample/c/sketch\r' + '\u0102' + P + P + (M + P).repeat(9) + 'x\u0103' + W + 'echo $status\r' };
+      },
+      get expect() {
+        return [DRAW_FORTH.map(l => '/> ' + l[0] + '\n' + (l[1] ? l[1] + '\n' : '')).join('') + '/> hylang\n',
+          DRAW_HY.map(l => 'hylang> ' + l[0] + '\n=> ' + l[1] + '\n').join(''), '/> /rom/sample/c/shapes\n320x240, 256 colours: 4 4 2 14 11, text 165 dots\n/> /rom/sample/c/sketch\n/> echo $status\n0\n'];
+      },
+      check(m) {
+        const v = m.vera.vram, f = [];
+        if (v[0x1FA00 + 400] !== 0 || v[0x1FA00 + 401] !== 15) f.push('palette entry 200 isn\'t $F00 (red)');
+        const sp = Array.from(v.subarray(0x1FC00 + 18, 0x1FC00 + 22)).join(' ');
+        if (sp !== '100 0 50 0') f.push('sprite 2 at ' + sp + ' (100 0 50 0 wanted: 100, 50)');
+        let picked = 0;                                       // (sketch's lines, in the strip's colour 2)
+        for (let y = 10; y < 240; y++) for (let x = 0; x < 320; x++) if (v[y * 320 + x] === 2) picked++;
+        if (picked < 40 || v[120 * 320 + 160] !== 2 || v[130 * 320 + 170] !== 2) f.push('sketch\'s drag: ' + picked + ' pixels in colour 2 (40 or more wanted, through (160, 120) and (170, 130))');
+        if (m.smc.lost || m.smc.mouseLost) f.push('codes lost on the SMC');
+        return f;
+      },
+    },
+    {
+      name: 'ramw', what: 'small writes (HydraFS on a RAM disk writes back only the part of a block a write changed; a card\'s block is kept back): a file of 70 writes, written over in its first block, across a block\'s end and at its end, on /ram, /sram and a card, read back; 100 writes of 16 bytes to /ram and to a card, a write\'s time; a card\'s block kept back (its file open: not on the card) and synced (on it)',
+      init: 'init', cycles: 120e6,
+      get machine() { this.card = ramwCard(); return { sd: [this.card], input: RAMW_LINES.map(l => '\u0101' + l + '\r').join('') + '\u0101' }; },
+      expect: ['[ramw done.'],
+      // (October 2026: 15,400, from 24,200 when a RAM disk wrote back the whole block)
+      budgets: [{ what: 'a write of 16 bytes to /ram (HyForth\'s write-file, 100 of them: its request to the storage driver, HydraFS, the RAM disk)',
+        from: '[rw A]', to: '[rw B]', minus: ['[b0 A]', '[b0 B]'], per: 100, max: 18000 },
+        // (October 2026: 25,000 with a card's block kept back, from some 225,000 when each write wrote its block)
+        { what: 'a write of 16 bytes to a card (the same: its block kept back, written as the next is wanted)',
+          from: '[cw A]', to: '[cw B]', minus: ['[b0 A]', '[b0 B]'], per: 100, max: 40000 }],
+      check(m, out) {
+        const f = [], n = out.split(RAMW_TEXT).length - 1;
+        if (n !== 3) f.push('the file as written, read back ' + n + ' times (3 wanted: /ram, /sram, the card)');
+        for (const p of ['/ram/n', '/sd/0/n']) if (!new RegExp('-rw\\S*\\s.*\\b1600\\b.*' + p).test(out.replace(/\r/g, ''))) f.push(p + ' isn\'t 1600 bytes long');
+        this.card.save();
+        const raw = fs.readFileSync(this.card.file, 'latin1');
+        if (!raw.includes('then synced')) f.push('the card: a block synced, not on it');
+        if (raw.includes('second part: kept back')) f.push('the card: a block kept back (its file open, not synced) on it already');
+        const v = new hydrafs.Volume(this.card.file), e = v.tryWalk('w'), got = e ? v.read(e).toString('latin1') : '';
+        for (const p of v.check()) f.push('the card: ' + p);
+        v.close();
+        if (got !== RAMW_TEXT) f.push('the card\'s w: ' + got.length + ' bytes, not as written');
+        return f;
+      },
+    },
+    {
+      name: 'vsd', what: 'the Vera X\'s SD card (the storage driver\'s disk v, on the VERA\'s own SPI controller: the emulator\'s card there), at the login shell: its ctl (an SDHC card, its HydraFS), a file read, one written, /sd listing it',
+      init: 'init', cycles: 120e6,
+      get machine() { this.card = veraCard(); return { vera: { sd: this.card }, input: VSD_LINES.map(l => '\u0101' + l[0] + '\r').join('') + '\u0101' }; },
+      get expect() { return VSD_LINES.map(l => '/> ' + l[0] + '\n' + l[1] + '\n/> '); },
+      check() {
+        this.card.save();
+        const v = new hydrafs.Volume(this.card.file);
+        const e = v.tryWalk('new.txt'), got = e ? v.read(e).toString('latin1') : '';
+        v.close();
+        return got === 'written\n' ? [] : ['the card\'s new.txt: ' + JSON.stringify(got) + ' ("written\\n" wanted)'];
+      },
+    },
+    {
       name: 'psg', what: 'the Vera X\'s PSG as sound channels 8-23 (snd, through vid\'s /psg), at rc: sndctl\'s state (24 channels); a note (its frequency word), a waveform by name, by number and as a patch, speakers, a level, a frequency, a bend, a note off; claims of the PSG\'s channels (sndctl\'s second mask); the master volume on their volumes; errors; /psg and /dev/vid/psg; a note while the VERA\'s claimed, on the chip as the claim ends; hylang\'s and HyForth\'s snd-wave and claims of the PSG\'s channels; a ZSM of PSG writes played (play: its PSG channels claimed, its voices in time)',
-      init: 't_rc', cycles: 180e6, jsOnly: 'the danlang emulator has no VERA yet',
+      init: 't_rc', cycles: 180e6,
       get machine() { return { input: typed(PSG_LINES), vera: true, sd: psgCard() }; },
       get expect() {
         const claim = PSG_LINES.findIndex(l => l[2]);
@@ -2980,6 +3204,43 @@ module.exports = {
         const gap = (at(1) - at(0)) / (3579545 * mult / 60);
         if (!(Math.abs(gap - 30) <= 2 * 60 / 200)) f.push('the song: its voice 1 on ' + gap.toFixed(2) + ' ticks after its voice 0 (30 wanted)');
         this.notes.push('the song: its voice 1 on ' + gap.toFixed(2) + ' song ticks after its voice 0 (30)');
+        return f;
+      },
+    },
+    {
+      name: 'psgmml', what: 'the PSG in scores (play\'s, mml.inc, and hysong.js\'s: channels I-X, sound channels 8-23): play -o\'s ZSMs of the ROM disk\'s songs/vera.mml (both chips; each waveform; envelopes; slides, legato, triplets, ties; I, y, k, D, v, q, p) and of two scores of edge cases, each the same as hysong.js\'s byte for byte; the errors (the other chip\'s instrument, both ways; x; y past 63; instruments it can\'t read; channel 23\'s number); vera.mml played on the Vera X (its voices\' starts as many as its ZSM\'s, the lead\'s first 751 song ticks after the hats\'); a line (-m 8), the X16\'s (-x: I as the waveform register, V), a chord (-c 13), one with more notes than the PSG\'s channels left',
+      init: 't_rc', cycles: 600e6,
+      get machine() { return { input: typed(PSG_MML_LINES), vera: true, sd: psgScoreCard() }; },
+      get expect() { return expected(PSG_MML_LINES); },
+      // (October 2026: 36M, from 129M when play -o wrote what each step of the score made, a byte or two at a time)
+      budgets: [{ what: 'play -o of songs/vera.mml into /ram (10.5K, 256 bytes a write)', from: '[po A]', to: '[po B]', minus: ['[b0 A]', '[b0 B]'],
+        per: 1, max: 45e6 }],
+      // (Each voice's registers at the end (its frequency word, its speakers and volume, its waveform; null: any).
+      // 0: -m 8's E4 (MIDI 64), on the song's lead's pulse of width 24, off; 1: -x's C5 on its triangle of width 0
+      // (I128), off; 2, 3, 4: the song's hats (noise), pad (saw) and chirp (a square), off; 5-7: the chord's C4 E4 G4,
+      // off; 12: the chirp's y 51,191 (its waveform register))
+      voices: [[64, 0xC0, 0x18], [72, 0xC0, 0x80], [null, 0xC0, 0xFF], [null, 0xC0, 0x7F], [null, 0xC0, 0x3F], [60, 0xC0, null], [64, 0xC0, null], [67, 0xC0, null],
+        [null, null, null], [null, null, null], [null, null, null], [null, null, null], [null, null, 0xBF]],
+      check(m) {
+        const f = [], p = m.vera.psg, hx = v => '$' + v.toString(16).toUpperCase();
+        const { psgWord } = require('../sim/tools/hysong.js');
+        this.voices.forEach(([note, vol, wave], v) => {
+          const w = p[v * 4] | p[v * 4 + 1] << 8;
+          if (note !== null && w !== psgWord(note * 64)) f.push('voice ' + v + ': frequency word ' + w + ', not ' + psgWord(note * 64));
+          if (vol !== null && p[v * 4 + 2] !== vol) f.push('voice ' + v + ': speakers and volume ' + hx(p[v * 4 + 2]) + ', not ' + hx(vol));
+          if (wave !== null && p[v * 4 + 3] !== wave) f.push('voice ' + v + ': waveform and width ' + hx(p[v * 4 + 3]) + ', not ' + hx(wave));
+        });
+        for (let v = 0; v < 16; v++) if (p[v * 4 + 2] & 0x3F) f.push('voice ' + v + ': its volume ' + (p[v * 4 + 2] & 0x3F) + ' at the end');
+        // (The song's voices' starts: the ZSM's, and the lines' after it (-m's 3 on voice 0, -x's 1 on voice 1, the
+        // chord's on 5-7); the lead's first (voice 0) 751 song ticks after the hats' (voice 2), within two system ticks)
+        const z = zsmPsgOns(fs.readFileSync(path.join(CARD_DIR, 'psgmml-v.zsm'))), ons = new Array(16).fill(0), at = new Array(16).fill(-1);
+        for (const o of m.vera.psgOns) { const [, v, c] = o.match(/voice (\d+) at cycle (\d+)/).map(Number); ons[v]++; if (at[v] < 0) at[v] = c; }
+        const lines = [3, 1, 0, 0, 0, 1, 1, 1];
+        for (let v = 0; v < 16; v++) if (ons[v] !== z.n[v] + (lines[v] || 0)) f.push('voice ' + v + ': ' + ons[v] + ' starts, not ' + (z.n[v] + (lines[v] || 0)));
+        const mult = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'obj', 'build.json'), 'utf8')).clock || 1;
+        const gap = (at[0] - at[2]) / (3579545 * mult / 200);
+        if (!(Math.abs(gap - (z.first[0] - z.first[2])) <= 2 * 200 / 200)) f.push('the song: its lead on ' + gap.toFixed(2) + ' ticks after its hats (' + (z.first[0] - z.first[2]) + ' wanted)');
+        this.notes = ['the song: ' + z.n.slice(0, 5).join(', ') + ' starts on voices 0-4; its lead on ' + gap.toFixed(2) + ' song ticks after its hats (' + (z.first[0] - z.first[2]) + ')'];
         return f;
       },
     },

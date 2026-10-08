@@ -107,6 +107,7 @@ the line editor (Text, above), for scripts and a terminal without a screen.
 | `sleep seconds` | Nothing for that long; Ctrl-C ends it |
 | `ns [task]` | A task's namespace (none: this one's) as the binds and mounts that make it |
 | `new-window [-g] [command ...]` | A window made and shown, in this one's group (`-g`: a group of its own, another shell session), running the command (rc's: `new-window 'ls -l; sleep 5'`), or with none the shell (`/lib/shell`'s, as Ctrl-] c starts); `$window` is its number.  It isn't waited for, and the window goes when its program ends |
+| `input` | The Vera X's keyboard and mouse (its input controller, the X16's SMC): their keys into the console, as the serial terminal's, and the mouse into `/dev/vid/mouse`.  init starts it; with no controller it ends at once |
 
 The tasks' own files are under `/proc/N`: `status`, `args`, `cwd`, `env`, `ns`, `fd` (its open files: `0 rw #c 291
 #c/cons`), `regs`, `mem` and `ram` (its memory), `note` (write `interrupt`, `kill`, `hangup` or a number to send
@@ -244,8 +245,9 @@ The kernel's messages (the boot's, POST's, a driver's) are `/dev/kmesg`, its las
 ## Disks
 
 The disks are under `/dev/sd`, a directory each: `0`-`f` the SD cards (by their SPI device), `x` the ROM disk, `r`
-the RAM disk (each shell's own area of it is its `/ram`), `s` the shared RAM disk (`/sram`).  Each has `data` (the
-disk's bytes) and `ctl`, which reads as the disk and its file system:
+the RAM disk (each shell's own area of it is its `/ram`), `s` the shared RAM disk (`/sram`), and `v` the Vera X's SD
+card (the card on its own SD header, through the VERA's SPI controller: `/sd/v`, a card as `0`-`f` are, and nearly
+twice as fast).  Each has `data` (the disk's bytes) and `ctl`, which reads as the disk and its file system:
 
 ```
 /> cat /dev/sd/r/ctl
@@ -264,8 +266,14 @@ banks $00-$1f
 
 Through the ctl files directly: `start SIZE [FROM-TO]` and `stop` on a RAM disk (`echo start 128K 1-1 >>'#d/r/ctl'`:
 from RAM module 1's banks; `>>`, as a stopped disk's directory isn't listed), `init` on a card (after it's changed),
-`format`, `label`, `check`.  The cards' file systems are at `/sd/N`; a card's `bin` and `lib`, if it has them, join
+`format`, `label`, `check`, `sync`.  The cards' file systems are at `/sd/N`; a card's `bin` and `lib`, if it has them, join
 `/bin` and `/lib`.
+
+A card's writes are kept back a block at a time: the block a file's last write changed stays in the storage driver's
+buffer till another block's wanted, the file's closed, or `echo sync >/dev/sd/0/ctl` (any card's `ctl`) writes it,
+so a program writing a few bytes at a time isn't slowed by the card.  Close a file (end the program writing it), or
+`sync`, before taking its card out or switching off: a block still kept back is lost then (and `init` drops it, as
+the card may be another).  The RAM disks' writes go at once.
 
 ## Others
 
@@ -286,7 +294,8 @@ left|right|both`, `bend CH B`, `drum CH N`, `freq CH HZ`, `glide CH N`, `wave CH
 its PSG's voices: the same commands, and `wave`; `claim`'s P is their mask, bit n channel 8 + n.  The
 VIA's port A is `/dev/gpio` (pins `0`-`7`, `port`, `ctl`, `ca1`) and `/dev/i2c` the I2C bus on two of its pins;
 `/dev/spi` the SPI devices; `/dev/seg` names shared segments; `/dev/vid` is the Vera X (its screen, VRAM, the PSG,
-and `pcm` and `pcmctl`, its PCM: [../programming/video.md](../programming/video.md)); `/pc` a folder on the PC (through
+`pcm` and `pcmctl`, its PCM, `mouse` and `mousectl`, its mouse, and `draw`, drawing on its bitmap:
+[../programming/video.md](../programming/video.md)); `/pc` a folder on the PC (through
 the PC tool, `sim/tools/hydrapc.js`, which is the terminal too, and tells the Hydra its window's size; with
 `--win32-input`, in Windows Terminal, Ctrl-Tab reaches the Hydra once Windows Terminal's own binding for it is gone).  A window's size is
 `consctl`'s `size` line (`grep size /dev/consctl`): the smaller of the terminals it's shown on.  Its chrome (the
@@ -304,17 +313,27 @@ whole), and `play` plays one as it is, compiling it as it goes into the same reg
 ; A score: ; to the line's end is a comment
 #tempo 120                        ; quarter notes a minute (120); #rate N: its ticks a second (200)
 @piano { gm 0 }                   ; an instrument: one of the driver's 163 patches, or a voice's operators
-A @piano o4 l8 c d e f g4 r4 c2   ; channel 0 (A-H: 0-7); a channel's lines are joined in order
+@lead { wave pulse 24 env 2 14 12 18 }   ; a PSG instrument: a waveform, an envelope (in the song's ticks)
+A @piano o4 l8 c d e f g4 r4 c2   ; channel 0 (A-H: 0-7, the YM2151's); a channel's lines are joined in order
 B @piano o3 l2 c [g e]2 c         ; [ ... ]N: repeated N times
+I @lead o5 l8 e a b > c           ; channel 8 (I-X: 8-23, the Vera X's PSG's voices 0-15)
 ```
 
 Notes `c` to `b` (`+` or `#` sharp, `-` flat), a length (1 a whole note ... 64; 3 6 12 24 48 triplets), dots, `^`
 ties; `r` a rest; `x N` a General MIDI drum; `o` `>` `<` the octave; `l` the default length; `q` the part of a note
 held (eighths); `v` the volume (0-127); `p l|r|c|0` the speakers; `k` transpose; `D` detune (64ths); `M` and `L`
 the LFO; `N` the noise; `y reg,val` a register; `_` a slide to the next note, `&` legato; `I N` the driver's patch
-N as the instrument.  A score is read whole into memory (some 24K at most); a mistake in it is said with its
-channel (`play: x.mml: channel 2: no such drum`).  A line (`-m`) or a chord (`-c`) is the same language, and `t N`
-sets its tempo, before its first note.  `-x` takes the X16's MML (FMPLAY's): upper-case notes, `T` the tempo, `V`
-0-63 (doubled), `P` 1-3 (left, right, both), `S` 0-7 (the gap after a note; `S0` legato), `K` (the next note keyed
-on), `I` a patch, `O`, `L`, `R`, `<`, `>` as above; each line starts afresh (T120 O4 L4), not where the last left
-off.  The languages' words run it: C's `snd_mml` and `snd_chord`, HyForth's and hylang's `snd-mml` and `snd-chord`.
+N as the instrument.  The PSG's channels (I-X, with a Vera X) take the same notes, lengths, rests, `o` `l` `q` `v`
+`p` `k` `D`, slides and legato, and instruments of their own: `wave W [WIDTH]` (`pulse`, `saw`, `triangle` or
+`noise`, or 0-3; a pulse's width 0-63, 63 a square) and `env A D S R`: A ticks rising from silence to the note's
+volume, D falling by S (the PSG's 0.5 dB steps, 0-63) to what it holds till its key off, then R falling to silence
+(all 0, none: a note on, then off).  `I N` there is waveform N, `y` the PSG's registers (0-63), and `v` the next
+note's volume; `x`, `M`, `L` and `N` are the YM2151's alone.  `/rom/songs/vera.mml` uses both chips.  A score is
+read whole into memory (some 17K at most); a mistake in it is said with its channel (`play: x.mml: channel 2: no
+such drum`).  A line (`-m`) or a chord (`-c`) is the same language, and `t N`
+sets its tempo, before its first note; on a PSG channel (`play -m 8 c d e`) a line plays the channel's own waveform,
+at its own level, on both speakers unless `p` says, and a chord stays on its first channel's chip.  `-x` takes the
+X16's MML (FMPLAY's, and PSGPLAY's on a PSG channel): upper-case notes, `T` the tempo, `V` 0-63 (doubled; the PSG's:
+its volume), `P` 1-3 (left, right, both), `S` 0-7 (the gap after a note; `S0` legato), `K` (the next note keyed
+on), `I` a patch (the PSG's: its waveform register, 0-255), `O`, `L`, `R`, `<`, `>` as above; each line starts
+afresh (T120 O4 L4), not where the last left off.  The languages' words run it: C's `snd_mml` and `snd_chord`, HyForth's and hylang's `snd-mml` and `snd-chord`.

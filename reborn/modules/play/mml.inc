@@ -4,28 +4,46 @@
 ; which the player plays as it plays a file's.  Included by play.s.
 ;   A score (hysong.js's header has it whole): ';' a comment; #tempo N (quarter notes a minute; 120), #rate N (its
 ; ticks a second; 200), #title ...; @name { ... } an instrument (gm N, a patch of the driver's; or alg fb pms ams,
-; then m1 m2 c1 c2 each with mul dt1 dt2 tl ks ar d1r d2r d1l rr am); A ... to H ..., MML for channels 0-7, a
-; channel's lines joined in order.  MML: notes (c-b, + # -, a length, dots, ^ ties), r rests, x drums, o > < l q v
-; p @ k D M L N y, _ slides, & legato, | bars, [ ... ]N repeats.
+; then m1 m2 c1 c2 each with mul dt1 dt2 tl ks ar d1r d2r d1l rr am; a PSG instrument, wave W [WIDTH] and env A D S
+; R); A ... to H ..., MML for channels 0-7 (the YM2151's), I ... to X ..., for 8-23 (the Vera X's PSG's voices 0-15),
+; a channel's lines joined in order.  MML: notes (c-b, + # -, a length, dots, ^ ties), r rests, x drums, o > < l q v
+; p @ k D M L N y, _ slides, & legato, | bars, [ ... ]N repeats (on the PSG's channels, x M L N errors).
 ;   How: the score is read whole into memory (past the BSS: BREAK), its comments and instruments blanked out (the
 ; instruments kept in a table), its lines checked.  Each channel's MML is a track: a cursor through its lines (a
 ; repeat's start and end on a stack), its settings, and its writes waiting (a FIFO, each with its tick).  A note
 ; queues its attack's writes (its instrument's registers, its pitch, its key on) and leaves its key off and a
 ; slide's steps for later, so each track's writes come in the order of their ticks; the tracks' are merged by tick
 ; (a track before the ones after it: hysong.js sorts them so), the same register and value twice in a row left out
-; (but key on and off, $01 and $19), each tick's pairs in chunks of 63, then the delay.  Times are in eighths of
+; (but key on and off, $01 and $19), each tick's pairs in chunks of 63, then the delay.  A PSG track's writes are
+; the PSG's (the stream's $00-$3F, at once), from FIFOs of their own (pf_): a note's attack its waveform (a new
+; instrument's), its frequency (the sound driver's word for its pitch) and its volume; then, as they come due, its
+; envelope's changes (a straight line each in the volume register: the attack's from 0 to the note's volume, the
+; decay's down by S, the release's from the key off to 0), its slide's steps and its key off, the earliest first
+; (psg_fill).  The song's end: the longest track's time, or the last write's if that's later (a release past it);
+; every YM2151 channel keyed off, every PSG voice of the score's silent.  Times are in eighths of
 ; hysong.js's units (192 a whole note: a dot of a 64th is half of one), as 32-bit numbers; a tick is the time's,
 ; rounded (round (u * rate * 5 / (tempo * 32)), exactly), and a slide's steps' times and pitches the same way.
 ;   The compiled bytes go into a ring (m_ring) that the player's read ahead (stage_read: mml_stage) takes from, and
-; that's filled as the player waits for its next tick (mml_idle), the time there is; at the start, all of it.
+; that's filled as the player waits for its next tick (mml_idle), the time there is; at the start, all of it.  -o
+; fills it to a stage (256 bytes) before each write (mml_fill), not a step's byte or two a write.
+;   The driver's patches and drum map are in the second bank (patches.s: RODATA2), copied into RAM when they're
+; wanted (pt_copy, pt_drum): gm N into its instrument, I N into one of its own ("#" and N), a drum into m_dbuf.
 
-MML_INSTS       = 32            ; Instruments a score may name
+MML_INSTS       = 32            ; Instruments a score may name (and each I N it uses: one each)
 INST_NAME       = 16            ; An instrument's name: 15 characters at most, then 0
 PATCH_SIZE      = 26            ; A patch: $20, $38, then $40-$F8 by 8 (patches.s's)
-INST_SIZE       = INST_NAME + PATCH_SIZE
+I_KIND          = PATCH_SIZE    ; Then its kind: 0 the YM2151's, 1 the PSG's (its bytes: 0 its waveform register, 1-4
+                                ;   its envelope's A, D, S and R)
+INST_SIZE       = INST_NAME + PATCH_SIZE + 1
 FIFO            = 32            ; A track's writes waiting (a note's attack: 26 for its instrument, 2 its pitch, 2 key on)
+PFIFO           = 8             ;   a PSG track's (a note's attack: its waveform, its pitch (2), its volume)
 RP_DEPTH        = 8             ; Repeats inside repeats
-TRACKS          = 8
+TRACKS          = 24            ; The channels: 0-7 the YM2151's (A-H), 8-23 the PSG's voices 0-15 (I-X)
+FM_TRACKS       = 8
+PSG_TRACKS      = TRACKS - FM_TRACKS
+E_ATTACK        = 1             ; An envelope's segments
+E_DECAY         = 2
+E_RELEASE       = 3
 RING            = 1024          ; The compiled bytes ahead of the player
 RING_ROOM       = 140           ; A step's bytes at most: a chunk of 63 pairs, and a delay
 
@@ -50,7 +68,8 @@ m_rate:     .res        2
 m_rate10:   .res        2                                   ; rate * 10 ...
 m_c:        .res        2                                   ;   tempo * 32 ...
 m_d:        .res        2                                   ;   and tempo * 64 (a tick: round (u * rate10 / d))
-m_mask:     .res        1                                   ; The channels with MML
+m_mask:     .res        3                                   ; The channels with MML: the YM2151's, the PSG's (2)
+m_top:      .res        1                                   ; The last one, + 1
 m_ninst:    .res        1                                   ; The instruments ...
 m_insts:    .res        MML_INSTS * INST_SIZE               ;   their names and patches
 m_letter:   .res        1                                   ; The track's letter (getc's)
@@ -79,6 +98,27 @@ m_np:       .res        1                                   ; Pairs waiting for 
 m_pairs:    .res        126                                 ;   and them
 m_known:    .res        32                                  ; The registers written (a bit each) ...
 m_shadow:   .res        256                                 ;   their values
+p_known:    .res        64                                  ; The PSG's registers written (<> 0) ...
+p_shadow:   .res        64                                  ;   their values
+m_h:        .res        3                                   ; A FIFO's head's tick
+m_dbuf:     .res        PATCH_SIZE                          ; A drum's patch (the driver's, from the second bank)
+m_iname:    .res        4                                   ; I N's instrument's name
+m_kind:     .res        1                                   ; (define's: 1 the YM2151's words, 2 the PSG's)
+m_dig:      .res        2                                   ; (track_msg's: the channel's digits)
+m_lim:      .res        1                                   ; (-c's: the channel past the chip's last)
+m_pick:     .res        1                                   ; (psg_fill's: the write it takes ...
+m_pt:       .res        3                                   ;   and its tick)
+m_k:        .res        2                                   ; (A slide's step's k)
+m_ef:       .res        1                                   ; (An envelope's segment: from ...
+m_eto:      .res        1                                   ;   to ...
+m_en:       .res        1                                   ;   over so many ticks)
+m_ea:       .res        1                                   ; (mul8's, div8's)
+m_eb:       .res        1
+m_ek:       .res        2
+m_px:       .res        2                                   ; (psg_word's: the pitch ...
+m_pw:       .res        2                                   ;   a semitone's width / 4 ...
+m_pr:       .res        2                                   ;   the word ...
+m_ps:       .res        1                                   ;   and the octaves it's halved)
 m_longest:  .res        4                                   ; The longest track's time
 m_ending:   .res        1                                   ; <> 0: every track done (the end's tick m_endt)
 m_endt:     .res        3
@@ -171,12 +211,39 @@ tk_su2:     .res        TRACKS
 tk_su3:     .res        TRACKS
 tk_sd_lo:   .res        TRACKS                              ;   and its length
 tk_sd_hi:   .res        TRACKS
-; Each track's FIFO (FIFO each: track * FIFO + its place) and repeats (RP_DEPTH each: track * RP_DEPTH + depth)
-fi_t0:      .res        TRACKS * FIFO
-fi_t1:      .res        TRACKS * FIFO
-fi_t2:      .res        TRACKS * FIFO
-fi_reg:     .res        TRACKS * FIFO
-fi_val:     .res        TRACKS * FIFO
+; Each PSG track's (PSG_TRACKS of each, at name - FM_TRACKS,X for track .X)
+tk_pk:      .res        PSG_TRACKS                          ; Its notes' volume (0-63: v's, or the X16's V)
+tk_cur:     .res        PSG_TRACKS                          ; Its voice's volume, as its envelope left it
+tk_ea:      .res        PSG_TRACKS                          ; Its last attack's envelope: A ...
+tk_ed:      .res        PSG_TRACKS                          ;   D ...
+tk_es:      .res        PSG_TRACKS                          ;   S ...
+tk_er:      .res        PSG_TRACKS                          ;   R ...
+tk_ep:      .res        PSG_TRACKS                          ;   and the volume
+tk_eph:     .res        PSG_TRACKS                          ; The envelope's segment (0: none; E_ATTACK ...): from ...
+tk_ef:      .res        PSG_TRACKS
+tk_eneg:    .res        PSG_TRACKS                          ;   <> 0: down ...
+tk_ead:     .res        PSG_TRACKS                          ;   by so much ...
+tk_en:      .res        PSG_TRACKS                          ;   over so many ticks ...
+tk_eT0:     .res        PSG_TRACKS                          ;   from this one ...
+tk_eT1:     .res        PSG_TRACKS
+tk_eT2:     .res        PSG_TRACKS
+tk_ej:      .res        PSG_TRACKS                          ;   its next change's number ...
+tk_et0:     .res        PSG_TRACKS                          ;   that one's tick ...
+tk_et1:     .res        PSG_TRACKS
+tk_et2:     .res        PSG_TRACKS
+tk_eq:      .res        PSG_TRACKS                          ;   and the volume's change by then
+; Each track's FIFO (FIFO each: track * FIFO + its place; a PSG track's PFIFO, in pf_: (track - 8) * PFIFO + its
+; place) and repeats (RP_DEPTH each: track * RP_DEPTH + depth)
+pf_t0:      .res        PSG_TRACKS * PFIFO
+pf_t1:      .res        PSG_TRACKS * PFIFO
+pf_t2:      .res        PSG_TRACKS * PFIFO
+pf_reg:     .res        PSG_TRACKS * PFIFO
+pf_val:     .res        PSG_TRACKS * PFIFO
+fi_t0:      .res        FM_TRACKS * FIFO
+fi_t1:      .res        FM_TRACKS * FIFO
+fi_t2:      .res        FM_TRACKS * FIFO
+fi_reg:     .res        FM_TRACKS * FIFO
+fi_val:     .res        FM_TRACKS * FIFO
 rp_s_lo:    .res        TRACKS * RP_DEPTH                   ; Its start (past the [) ...
 rp_s_hi:    .res        TRACKS * RP_DEPTH
 rp_e_lo:    .res        TRACKS * RP_DEPTH                   ;   its end (past the ] and its count) ...
@@ -290,6 +357,8 @@ prep:
             stz         m_rate + 1
             stz         m_ninst
             stz         m_mask
+            stz         m_mask + 1
+            stz         m_mask + 2
             jsr         uncomment
             jsr         instruments
             jsr         lines
@@ -442,6 +511,7 @@ define:
             iny
             cpy         #INST_NAME + 10
             bcc         :-
+            stz         m_kind                              ; (Its chip: not known yet)
             jsr         cp_inc                              ; Its body: words
             lda         #$FF                                ; (The operator: none yet)
             sta         m_r
@@ -451,6 +521,13 @@ define:
             jsr         voice_word
             bra         @word
 @end:
+            lda         m_kind                              ; (The PSG's: its kind)
+            cmp         #2
+            bne         :+
+            ldy         #INST_NAME + I_KIND
+            lda         #1
+            sta         (m_x),Y
+:
             inc         m_ninst
             MOVR        mp, m_atpos
 @blank:                                                     ; From the @ to the }: blanks
@@ -561,6 +638,12 @@ voice_word:
             jmp         fail
 
 @found:
+            cpx         #V_WAVE                             ; (The PSG's words)
+            bcc         :+
+            jmp         psg_def
+:
+            lda         #1                                  ; (The YM2151's)
+            jsr         kind_is
             cpx         #V_M1                               ; An operator: the settings after it its
             bcc         :+
             cpx         #V_C2 + 1
@@ -613,27 +696,55 @@ voice_word:
             rts
 
 @gm:
-            lda         nv + 1                              ; gm N: the driver's patch N
+            lda         nv + 1                              ; gm N: the driver's patch N, copied
             bne         @bad
             lda         nv
             cmp         #163
             bcs         @bad
+            lda         m_x
+            pha
+            lda         m_x + 1
+            pha
+            clc
+            lda         m_x
+            adc         #INST_NAME
+            sta         m_x
+            bcc         :+
+            inc         m_x + 1
+:
+            lda         nv
+            FAR2        pt_copy
+            pla
+            sta         m_x + 1
+            pla
+            sta         m_x
+            rts
+
+; ****************************************************************************
+; The driver's patches and drum map (patches.s), in the second bank
+
+.pushseg
+.segment "CODE2"
+
+; Patch .A copied to m_x (26 bytes).  Modifies mp, m_w, m_rem
+pt_copy:
             jsr         patch_of
-            ldy         #0
+            ldy         #PATCH_SIZE - 1
 :
             lda         (mp),Y
-            phy
-            pha
-            tya
-            clc
-            adc         #INST_NAME
-            tay
-            pla
             sta         (m_x),Y
-            ply
-            iny
-            cpy         #PATCH_SIZE
-            bcc         :-
+            dey
+            bpl         :-
+            rts
+
+; Drum .X's patch (its General MIDI note's) copied to m_dbuf; .A its key code.  Modifies mp, m_x, m_w, m_rem
+pt_drum:
+            phx
+            LDR         m_x, m_dbuf
+            lda         drum_patch,X
+            jsr         pt_copy
+            plx
+            lda         drum_kc,X
             rts
 
 ; mp = the driver's patch .A (patches + .A * 26).  Keeps .X
@@ -670,6 +781,135 @@ patch_of:
             lda         m_rem + 1
             adc         #>patches
             sta         mp + 1
+            rts
+
+.popseg
+
+; An instrument's words all one chip's: .A this one's (1 the YM2151's, 2 the PSG's).  Keeps .X
+kind_is:
+            ldy         m_kind
+            beq         :+
+            cmp         m_kind
+            beq         :+
+            jmp         psg_bad
+:
+            sta         m_kind
+            rts
+
+; wave W [WIDTH] (W pulse, saw, triangle, noise, or 0-3; WIDTH 0-63: 63 if none) or env A D S R (0-255 each, S
+; 0-63): a PSG instrument's words (voice_word's, .X which; its patch's byte 0 its waveform register, 1-4 its
+; envelope)
+psg_def:
+            phx
+            lda         m_kind                              ; (The first: a square, no envelope)
+            bne         :+
+            ldy         #INST_NAME
+            lda         #$3F
+            sta         (m_x),Y
+:
+            lda         #2
+            jsr         kind_is
+            plx
+            cpx         #V_ENV
+            beq         @env
+            jsr         body_word                           ; wave: its waveform ...
+            bcs         psg_bad
+            jsr         wave_of
+            bcs         psg_bad
+            lsr                                             ;   (bits 7-6)
+            ror
+            ror
+            and         #$C0
+            sta         m_reg
+            jsr         body_word                           ;   and its width, if a number's next
+            bcs         @square
+            jsr         word_num
+            bcs         @unread
+            lda         nv + 1
+            bne         psg_bad
+            lda         nv
+            cmp         #64
+            bcs         psg_bad
+            bra         @wave
+@unread:
+            MOVR        cp, m_y
+@square:
+            lda         #$3F
+@wave:
+            ora         m_reg
+            ldy         #INST_NAME
+            sta         (m_x),Y
+            rts
+@env:
+            lda         #1
+            sta         m_slot
+@num:
+            jsr         body_word
+            bcs         psg_bad
+            jsr         word_num
+            bcs         psg_bad
+            lda         nv + 1
+            bne         psg_bad
+            lda         m_slot                              ; (S: 0-63)
+            cmp         #3
+            bne         :+
+            lda         nv
+            cmp         #64
+            bcs         psg_bad
+:
+            lda         m_slot
+            clc
+            adc         #INST_NAME
+            tay
+            lda         nv
+            sta         (m_x),Y
+            inc         m_slot
+            lda         m_slot
+            cmp         #5
+            bcc         @num
+            rts
+
+psg_bad:
+            LDR         r0, s_badinst
+            jmp         fail
+
+; The waveform at m_y (.Y long): pulse, saw, triangle, noise, or 0-3.  OUT: C = 0, .A; or C = 1, not one
+wave_of:
+            jsr         word_num
+            bcs         @name
+            lda         nv + 1
+            bne         @no
+            lda         nv
+            cmp         #4
+            rts
+@name:
+            ldx         #0
+@try:
+            lda         wave_lo,X
+            sta         mp
+            lda         wave_hi,X
+            beq         @no
+            sta         mp + 1
+            ldy         #0
+:
+            lda         (mp),Y
+            beq         @end
+            cmp         (m_y),Y
+            bne         @next
+            iny
+            bra         :-
+@end:
+            cpy         m_len
+            beq         @found
+@next:
+            inx
+            bra         @try
+@found:
+            txa
+            clc
+            rts
+@no:
+            sec
             rts
 
 ; nv = the number at m_y (.Y long: decimal, a - before it allowed).  OUT: C = 1, not one.  Keeps .X
@@ -749,7 +989,7 @@ nv_neg:
             sta         nv + 1
             rts
 
-; The lines: each, its blanks trimmed, empty; #tempo N, #rate N or #title ...; or A-H, blanks, its MML (the channel's
+; The lines: each, its blanks trimmed, empty; #tempo N, #rate N or #title ...; or A-X, blanks, its MML (the channel's
 ; bit in m_mask).  Anything else: "what is this line?"  A channel's lines are linked, its first in tk_first: each
 ; one's letter and the blank after it become the place of the channel's next line (0 after its last), so its
 ; cursor goes from one to the next at once
@@ -809,9 +1049,9 @@ lines:
             cmp         #TAB
             bne         @what
 :
-            lda         bits,X
-            ora         m_mask
-            sta         m_mask
+            jsr         mask_of
+            ora         m_mask,Y
+            sta         m_mask,Y
             lda         tk_line_hi,X                        ; Linked: the last one's place, or the first
             beq         @first
             sta         mp + 1
@@ -1237,6 +1477,7 @@ t_to_at:
 
 ; Every track at its start: its cursor at its first line's MML, its settings hysong.js's; the stream at its start
 mml_reset:
+            stz         m_top
             ldx         #TRACKS - 1
 @track:
             lda         tk_first_lo,X
@@ -1248,10 +1489,18 @@ mml_reset:
             sta         tk_line_hi,X
             adc         #0
             sta         tk_cur_hi,X
-            lda         m_mask                              ; (A channel with no MML: done)
-            and         bits,X
-            eor         bits,X
+            jsr         mask_of                             ; (A channel with no MML: done)
+            sta         m_bit
+            and         m_mask,Y
+            eor         m_bit
             sta         tk_end,X
+            bne         :+
+            lda         m_top                               ; (The last with MML: m_top)
+            bne         :+
+            txa
+            inc         a
+            sta         m_top
+:
             lda         #4
             sta         tk_oct,X
             sta         tk_len,X
@@ -1288,6 +1537,23 @@ mml_reset:
             stz         tk_fn,X
             stz         tk_koff,X
             stz         tk_sl,X
+            cpx         #FM_TRACKS                          ; A PSG track's: its notes' volume (v 100's; a line's,
+            bcc         @next                               ;   the most: the channel's own level makes it less)
+            lda         #63
+            ldy         m_line
+            bne         :+
+            lda         #100
+            jsr         psg_vol
+:
+            sta         tk_pk - FM_TRACKS,X
+            stz         tk_cur - FM_TRACKS,X
+            stz         tk_eph - FM_TRACKS,X
+            stz         tk_ea - FM_TRACKS,X
+            stz         tk_ed - FM_TRACKS,X
+            stz         tk_es - FM_TRACKS,X
+            stz         tk_er - FM_TRACKS,X
+            stz         tk_ep - FM_TRACKS,X
+@next:
             dex
             bmi         :+
             jmp         @track
@@ -1308,6 +1574,36 @@ mml_reset:
             stz         m_known,X
             dex
             bpl         :-
+            ldx         #63
+:
+            stz         p_known,X
+            dex
+            bpl         :-
+            rts
+
+; Track .X's bit in m_mask: .A, in its byte .Y (0 the YM2151's, 1 and 2 the PSG's).  Keeps .X
+mask_of:
+            txa
+            lsr
+            lsr
+            lsr
+            tay
+            txa
+            and         #7
+            phx
+            tax
+            lda         bits,X
+            plx
+            rts
+
+; The header's channels, the score's (play's, -o's): the YM2151's and the PSG's
+mml_hdr:
+            lda         m_mask
+            sta         hdr + H_FM
+            lda         m_mask + 1
+            sta         hdr + H_PSG
+            lda         m_mask + 2
+            sta         hdr + H_PSG + 1
             rts
 
 ; cp and cl: track trk's cursor and line
@@ -1593,10 +1889,41 @@ put:
             pha
             ldx         trk
             lda         tk_fn,X
+            cpx         #FM_TRACKS
+            bcs         @psg
             cmp         #FIFO
             bcc         :+
+@full:
             LDR         r0, s_toomuch
             jmp         track_fail
+@psg:
+            cmp         #PFIFO
+            bcs         @full
+            clc
+            adc         tk_fh,X
+            and         #PFIFO - 1
+            sta         m_slot
+            txa
+            sec
+            sbc         #FM_TRACKS
+            asl
+            asl
+            asl
+            ora         m_slot
+            tax
+            pla
+            sta         pf_reg,X
+            tya
+            sta         pf_val,X
+            lda         m_at
+            sta         pf_t0,X
+            lda         m_at + 1
+            sta         pf_t1,X
+            lda         m_at + 2
+            sta         pf_t2,X
+            ldx         trk
+            inc         tk_fn,X
+            rts
 :
             clc
             adc         tk_fh,X
@@ -1655,6 +1982,14 @@ load_inst:
             sta         tk_inst_hi,X
             stz         tk_pend_lo,X
             stz         tk_pend_hi,X
+            cpx         #FM_TRACKS                          ; (A PSG track's: its waveform register)
+            bcc         :+
+            lda         (mp)
+            tay
+            lda         #3
+            jsr         preg
+            jmp         put_now
+:
             lda         (mp)
             and         #$3F
             ora         tk_pan,X
@@ -1857,6 +2192,13 @@ play_note:
             jsr         slide_start
             bra         @attack
 @pitch:
+            ldx         trk                                 ; (A PSG track's: its frequency)
+            cpx         #FM_TRACKS
+            bcc         :+
+            jsr         t_to_at
+            jsr         psg_fput
+            bra         @attack
+:
             lda         m_drum
             beq         :+
             lda         m_dkc
@@ -1884,6 +2226,11 @@ play_note:
             bne         @pitched
 :
             stz         tk_katk,X
+            cpx         #FM_TRACKS                          ; (A PSG track's: its envelope)
+            bcc         :+
+            jsr         env_attack
+            bra         @pitched
+:
             ldy         trk
             lda         #$08
             jsr         put_now
@@ -2036,6 +2383,38 @@ slide_start:
 ; The slide's next step into the FIFO (its key code and fraction at its tick); none left: the slide done.  A key off
 ; due before the step's tick goes first
 slide_step:
+            jsr         slide_at
+            bcc         :+
+            rts
+:
+            ldx         trk                                 ; A key off due before it: first
+            lda         tk_koff,X
+            beq         @step
+            lda         tk_k0,X
+            cmp         m_at
+            lda         tk_k1,X
+            sbc         m_at + 1
+            lda         tk_k2,X
+            sbc         m_at + 2
+            bcs         @step
+            lda         m_at
+            pha
+            lda         m_at + 1
+            pha
+            lda         m_at + 2
+            pha
+            jsr         koff_put
+            pla
+            sta         m_at + 2
+            pla
+            sta         m_at + 1
+            pla
+            sta         m_at
+@step:
+            jmp         slide_put
+
+; The slide's next step's tick in m_at (k in m_k, Q in m_q), if it has one (t < t1): C = 0; or C = 1, the slide done
+slide_at:
             ldx         trk
             lda         tk_sc0,X                            ; t < t1?
             cmp         tk_s10,X
@@ -2045,17 +2424,18 @@ slide_step:
             sbc         tk_s12,X
             bcc         :+
             stz         tk_sl,X
+            sec
             rts
 :
-            sec                                             ; k = t - t0 (16 bits), kept on the stack
+            sec                                             ; k = t - t0 (16 bits)
             lda         tk_sc0,X
             sbc         tk_s00,X
             sta         m_w
-            pha
+            sta         m_k
             lda         tk_sc1,X
             sbc         tk_s01,X
             sta         m_w + 1
-            pha
+            sta         m_k + 1
             lda         tk_sd_lo,X                          ; k * dur divmod Q
             sta         tl_num
             lda         tk_sd_hi,X
@@ -2092,35 +2472,23 @@ slide_step:
             adc         tl_num + 3
             sta         m_a + 3
             jsr         tick_of                             ; m_at: the step's tick
-            ldx         trk                                 ; A key off due before it: first
-            lda         tk_koff,X
-            beq         @step
-            lda         tk_k0,X
-            cmp         m_at
-            lda         tk_k1,X
-            sbc         m_at + 1
-            lda         tk_k2,X
-            sbc         m_at + 2
-            bcs         @step
-            lda         m_at
-            pha
-            lda         m_at + 1
-            pha
-            lda         m_at + 2
-            pha
-            jsr         koff_put
-            pla
-            sta         m_at + 2
-            pla
-            sta         m_at + 1
-            pla
-            sta         m_at
-@step:
-            pla                                             ; (k)
-            sta         m_w + 1
-            pla
+            clc
+            rts
+
+; The slide's step (slide_at's) into the FIFO at m_at: its pitch's key code and fraction (a PSG track's: its
+; frequency); and t on by 2
+slide_put:
+            lda         m_k
             sta         m_w
+            lda         m_k + 1
+            sta         m_w + 1
             jsr         slide_pitch                         ; m_pv: the step's pitch
+            ldx         trk
+            cpx         #FM_TRACKS
+            bcc         :+
+            jsr         psg_fput
+            bra         @next
+:
             jsr         kcf
             ldy         m_kc
             lda         trk
@@ -2130,6 +2498,7 @@ slide_step:
             lda         trk
             ora         #$30
             jsr         put
+@next:
             ldx         trk                                 ; t += 2
             clc
             lda         tk_sc0,X
@@ -2240,6 +2609,10 @@ koff_put:
             sta         m_at + 1
             lda         tk_k2,X
             sta         m_at + 2
+            cpx         #FM_TRACKS                          ; (A PSG track's: its envelope's release)
+            bcc         :+
+            jmp         env_release
+:
             ldy         trk
             lda         #$08
             jmp         put
@@ -2255,6 +2628,10 @@ tk_fill:
             beq         :+
             clc
             rts
+:
+            cpx         #FM_TRACKS
+            bcc         :+
+            jmp         psg_fill
 :
             lda         tk_sl,X
             beq         :+
@@ -2275,6 +2652,523 @@ tk_fill:
             jsr         command
             jsr         cur_put
             bra         tk_fill
+
+; A PSG track's FIFO filled (tk_fill's): the earliest of its slide's next step, its key off and its envelope's next
+; change (that one to the track's time only, till its MML's done; a slide's first at a tie, then a key off); or, none
+; of them, the MML's next command; till there's a write (hysong.js's compilePsg's fill).  OUT: C = 0, writes
+; waiting; or C = 1: the track's done
+psg_fill:
+            ldx         trk
+            lda         tk_fn,X
+            beq         :+
+            clc
+            rts
+:
+            stz         m_pick                              ; (1 the slide, 2 the key off, 3 the envelope)
+            lda         tk_sl,X
+            beq         @koff
+            jsr         slide_at
+            bcs         psg_fill                            ; (Done: again)
+            lda         #1
+            sta         m_pick
+            lda         m_at
+            sta         m_pt
+            lda         m_at + 1
+            sta         m_pt + 1
+            lda         m_at + 2
+            sta         m_pt + 2
+            ldx         trk
+@koff:
+            lda         tk_koff,X
+            beq         @env
+            lda         m_pick
+            beq         :+
+            lda         tk_k0,X                             ; (Before the slide's?)
+            cmp         m_pt
+            lda         tk_k1,X
+            sbc         m_pt + 1
+            lda         tk_k2,X
+            sbc         m_pt + 2
+            bcs         @env
+:
+            lda         #2
+            sta         m_pick
+            lda         tk_k0,X
+            sta         m_pt
+            lda         tk_k1,X
+            sta         m_pt + 1
+            lda         tk_k2,X
+            sta         m_pt + 2
+@env:
+            lda         tk_eph - FM_TRACKS,X
+            beq         @go
+            lda         m_pick
+            beq         :+
+            lda         tk_et0 - FM_TRACKS,X                ; (Before the others?)
+            cmp         m_pt
+            lda         tk_et1 - FM_TRACKS,X
+            sbc         m_pt + 1
+            lda         tk_et2 - FM_TRACKS,X
+            sbc         m_pt + 2
+            bcs         @go
+:
+            lda         tk_end,X                            ; (To the track's time, till its MML's done)
+            bne         :+
+            lda         tk_t0,X
+            cmp         tk_et0 - FM_TRACKS,X
+            lda         tk_t1,X
+            sbc         tk_et1 - FM_TRACKS,X
+            lda         tk_t2,X
+            sbc         tk_et2 - FM_TRACKS,X
+            bcc         @go
+:
+            lda         #3
+            sta         m_pick
+@go:
+            lda         m_pick
+            beq         @command
+            cmp         #2
+            bcc         @slide
+            beq         @key
+            jsr         env_step
+            jmp         psg_fill
+@key:
+            jsr         koff_put
+            jmp         psg_fill
+@slide:
+            jsr         slide_put                           ; (slide_at's m_at, m_k and m_q kept)
+            jmp         psg_fill
+@command:
+            lda         tk_end,X
+            beq         :+
+            sec
+            rts
+:
+            jsr         cur_get
+            jsr         command
+            jsr         cur_put
+            jmp         psg_fill
+
+; ****************************************************************************
+; A PSG track's voice: its registers, its frequency, its volume and envelope
+
+; Register .A (0-3) of track trk's voice: 4 (trk - 8) + .A.  Keeps .X, .Y
+preg:
+            sta         m_reg
+            lda         trk
+            sec
+            sbc         #FM_TRACKS
+            asl
+            asl
+            ora         m_reg
+            rts
+
+; The voice's volume register, its speakers (tk_pan) and volume .A, into the FIFO at tick m_at
+vol_put:
+            ldx         trk
+            ora         tk_pan,X
+            tay
+            lda         #2
+            jsr         preg
+            jmp         put
+
+; The voice's frequency for pitch m_pv, its two registers into the FIFO at tick m_at
+psg_fput:
+            jsr         psg_word
+            ldy         m_pr
+            lda         #0
+            jsr         preg
+            jsr         put
+            ldy         m_pr + 1
+            lda         #1
+            jsr         preg
+            jmp         put
+
+; m_pr = the PSG's frequency word for pitch m_pv (64ths of a semitone over MIDI note 0, taken as 0 to 131 and 63
+; 64ths), as the sound driver works it out (snd.s's psg_pitch; hysong.js's psgWord): the octave C9-C10's words
+; (psg_tab), the 64ths between its semitones a straight line, halved to the note's octave, rounded
+psg_word:
+            lda         m_pv + 1
+            bmi         @low
+            cmp         #>(132 * 64)
+            bcs         @high
+            sta         m_px + 1
+            lda         m_pv
+            sta         m_px
+            bra         @ok
+@low:
+            stz         m_px
+            stz         m_px + 1
+            bra         @ok
+@high:
+            lda         #<(132 * 64 - 1)
+            sta         m_px
+            lda         #>(132 * 64 - 1)
+            sta         m_px + 1
+@ok:
+            lda         m_px                                ; The note (px / 64) ...
+            asl
+            rol         m_px + 1
+            asl
+            rol         m_px + 1
+            lda         m_px
+            and         #$3F
+            sta         m_px                                ;   and its 64ths
+            lda         m_px + 1
+            ldx         #0                                  ; The octaves below the table's
+@octave:
+            cmp         #120
+            bcs         :+
+            adc         #12                                 ; (C = 0)
+            inx
+            bra         @octave
+:
+            stx         m_ps
+            sbc         #120                                ; (C = 1) The semitone in it, 0-11
+            asl
+            tax
+            sec                                             ; Its width to the next / 4
+            lda         psg_tab + 2,X
+            sbc         psg_tab,X
+            sta         m_pw
+            lda         psg_tab + 3,X
+            sbc         psg_tab + 1,X
+            lsr
+            ror         m_pw
+            lsr
+            ror         m_pw
+            sta         m_pw + 1
+            stz         m_pr                                ; * the 64ths (6 bits) / 16
+            stz         m_pr + 1
+            ldy         #6
+@multiply:
+            lsr         m_px
+            bcc         :+
+            clc
+            lda         m_pr
+            adc         m_pw
+            sta         m_pr
+            lda         m_pr + 1
+            adc         m_pw + 1
+            sta         m_pr + 1
+:
+            asl         m_pw
+            rol         m_pw + 1
+            dey
+            bne         @multiply
+            ldy         #4
+:
+            lsr         m_pr + 1
+            ror         m_pr
+            dey
+            bne         :-
+            clc                                             ; + the semitone's word
+            lda         m_pr
+            adc         psg_tab,X
+            sta         m_pr
+            lda         m_pr + 1
+            adc         psg_tab + 1,X
+            sta         m_pr + 1
+            ldx         m_ps                                ; Halved to the note's octave, rounded (the last
+            beq         @done                               ;   bit out added)
+:
+            lsr         m_pr + 1
+            ror         m_pr
+            dex
+            bne         :-
+            lda         m_pr
+            adc         #0
+            sta         m_pr
+            lda         m_pr + 1
+            adc         #0
+            sta         m_pr + 1
+@done:
+            rts
+
+; The PSG's volume (0-63) for v .A (0-127): 63 less 1.5 of its attenuation (att_of's), 0 at least (the sound
+; driver's 1.5 of its 0.5 dB steps a TL step); v 0, 0.  Keeps .X
+psg_vol:
+            cmp         #0
+            beq         @done
+            phx
+            tax
+            lda         volume_atten,X
+            plx
+            sta         m_att
+            lsr
+            clc
+            adc         m_att
+            sta         m_att
+            lda         #63
+            sec
+            sbc         m_att
+            bcs         @done
+            lda         #0
+@done:
+            rts
+
+; A note's attack on the voice (play_note's, at the track's time): its instrument's envelope (none: a line's with
+; none) and its volume kept for the note; its volume register (0 if it rises, else the note's), and the envelope's
+; first segment
+env_attack:
+            jsr         t_to_at
+            ldx         trk
+            lda         tk_pk - FM_TRACKS,X
+            sta         tk_ep - FM_TRACKS,X
+            stz         tk_eph - FM_TRACKS,X
+            stz         tk_ea - FM_TRACKS,X
+            stz         tk_ed - FM_TRACKS,X
+            stz         tk_es - FM_TRACKS,X
+            stz         tk_er - FM_TRACKS,X
+            lda         tk_inst_hi,X
+            beq         @set
+            sta         mp + 1
+            lda         tk_inst_lo,X
+            sta         mp
+            ldy         #1
+            lda         (mp),Y
+            sta         tk_ea - FM_TRACKS,X
+            iny
+            lda         (mp),Y
+            sta         tk_ed - FM_TRACKS,X
+            iny
+            lda         (mp),Y
+            sta         tk_es - FM_TRACKS,X
+            iny
+            lda         (mp),Y
+            sta         tk_er - FM_TRACKS,X
+@set:
+            lda         tk_ea - FM_TRACKS,X
+            beq         @full
+            sta         m_en                                ; Rising: from 0 over A
+            stz         tk_cur - FM_TRACKS,X
+            lda         #0
+            jsr         vol_put
+            ldx         trk
+            stz         m_ef
+            lda         tk_ep - FM_TRACKS,X
+            sta         m_eto
+            lda         #E_ATTACK
+            jmp         env_seg
+@full:
+            lda         tk_ep - FM_TRACKS,X                 ; At once: then the decay
+            sta         tk_cur - FM_TRACKS,X
+            jsr         vol_put
+            jmp         env_decay
+
+; The key off (koff_put's, at tick m_at): the envelope's release, from the volume now over R ticks; R 0 (or
+; silent already), the volume 0 at once
+env_release:
+            ldx         trk
+            stz         tk_eph - FM_TRACKS,X
+            lda         tk_er - FM_TRACKS,X
+            beq         @now
+            sta         m_en
+            lda         tk_cur - FM_TRACKS,X
+            beq         @now
+            sta         m_ef
+            stz         m_eto
+            lda         #E_RELEASE
+            jmp         env_seg
+@now:
+            stz         tk_cur - FM_TRACKS,X
+            lda         #0
+            jmp         vol_put
+
+; The decay, from tick m_at: from the note's volume down by S (to 0 at most) over D ticks, if both are more than 0
+env_decay:
+            ldx         trk
+            lda         tk_ed - FM_TRACKS,X
+            beq         @none
+            sta         m_en
+            lda         tk_ep - FM_TRACKS,X
+            sta         m_ef
+            sec
+            sbc         tk_es - FM_TRACKS,X
+            bcs         :+
+            lda         #0
+:
+            sta         m_eto
+            cmp         m_ef
+            beq         @none
+            lda         #E_DECAY
+            jmp         env_seg
+@none:
+            rts
+
+; The envelope's segment: .A its kind, from m_ef to m_eto over m_en ticks (1 at least) from tick m_at, its next
+; change worked out; none to make (the same volume): the next segment at once (env_done)
+env_seg:
+            ldx         trk
+            sta         tk_eph - FM_TRACKS,X
+            lda         m_ef
+            sta         tk_ef - FM_TRACKS,X
+            lda         m_en
+            sta         tk_en - FM_TRACKS,X
+            lda         m_at
+            sta         tk_eT0 - FM_TRACKS,X
+            lda         m_at + 1
+            sta         tk_eT1 - FM_TRACKS,X
+            lda         m_at + 2
+            sta         tk_eT2 - FM_TRACKS,X
+            lda         #1
+            sta         tk_ej - FM_TRACKS,X
+            stz         tk_eneg - FM_TRACKS,X
+            sec                                             ; |to - from|, and down or up
+            lda         m_eto
+            sbc         m_ef
+            bcs         :+
+            eor         #$FF
+            inc         a
+            inc         tk_eneg - FM_TRACKS,X
+:
+            sta         tk_ead - FM_TRACKS,X
+            bne         env_next
+; The segment done: after the attack, the decay (from the attack's end, T + n); else none
+env_done:
+            ldx         trk
+            lda         tk_eph - FM_TRACKS,X
+            stz         tk_eph - FM_TRACKS,X
+            cmp         #E_ATTACK
+            bne         @none
+            clc
+            lda         tk_eT0 - FM_TRACKS,X
+            adc         tk_en - FM_TRACKS,X
+            sta         m_at
+            lda         tk_eT1 - FM_TRACKS,X
+            adc         #0
+            sta         m_at + 1
+            lda         tk_eT2 - FM_TRACKS,X
+            adc         #0
+            sta         m_at + 2
+            jmp         env_decay
+@none:
+            rts
+
+; The segment's next change, its jth (of |d|): at tick T + k, k = ceil (j n / |d|); the volume's change by then,
+; q = floor (|d| k / n) (several at one tick: the last)
+env_next:
+            ldx         trk
+            lda         tk_ej - FM_TRACKS,X                 ; k = (j n + |d| - 1) / |d|
+            sta         m_ea
+            lda         tk_en - FM_TRACKS,X
+            jsr         mul8
+            ldx         trk
+            clc
+            lda         m_ek
+            adc         tk_ead - FM_TRACKS,X
+            sta         m_ek
+            bcc         :+
+            inc         m_ek + 1
+:
+            lda         m_ek
+            bne         :+
+            dec         m_ek + 1
+:
+            dec         m_ek
+            lda         tk_ead - FM_TRACKS,X
+            jsr         div8
+            ldx         trk
+            lda         m_ek                                ; (k: n at most)
+            sta         m_ea
+            clc
+            adc         tk_eT0 - FM_TRACKS,X
+            sta         tk_et0 - FM_TRACKS,X
+            lda         tk_eT1 - FM_TRACKS,X
+            adc         #0
+            sta         tk_et1 - FM_TRACKS,X
+            lda         tk_eT2 - FM_TRACKS,X
+            adc         #0
+            sta         tk_et2 - FM_TRACKS,X
+            lda         tk_ead - FM_TRACKS,X                ; q = |d| k / n
+            jsr         mul8
+            ldx         trk
+            lda         tk_en - FM_TRACKS,X
+            jsr         div8
+            ldx         trk
+            lda         m_ek
+            sta         tk_eq - FM_TRACKS,X
+            rts
+
+; The envelope's next change into the FIFO (the volume register at its tick); the segment done at its last
+env_step:
+            ldx         trk
+            lda         tk_et0 - FM_TRACKS,X
+            sta         m_at
+            lda         tk_et1 - FM_TRACKS,X
+            sta         m_at + 1
+            lda         tk_et2 - FM_TRACKS,X
+            sta         m_at + 2
+            lda         tk_eneg - FM_TRACKS,X
+            bne         :+
+            clc
+            lda         tk_ef - FM_TRACKS,X
+            adc         tk_eq - FM_TRACKS,X
+            bra         :++
+:
+            sec
+            lda         tk_ef - FM_TRACKS,X
+            sbc         tk_eq - FM_TRACKS,X
+:
+            sta         tk_cur - FM_TRACKS,X
+            jsr         vol_put
+            ldx         trk
+            lda         tk_eq - FM_TRACKS,X
+            cmp         tk_ead - FM_TRACKS,X
+            bne         :+
+            jmp         env_done
+:
+            inc         a
+            sta         tk_ej - FM_TRACKS,X
+            jmp         env_next
+
+; m_ek = .A * m_ea (8 bits by 8).  Keeps .X
+mul8:
+            sta         m_ek
+            lda         #0
+            ldy         #8
+            lsr         m_ek
+:
+            bcc         :+
+            clc
+            adc         m_ea
+:
+            ror
+            ror         m_ek
+            dey
+            bne         :--
+            sta         m_ek + 1
+            rts
+
+; m_ek = m_ek / .A (16 bits by 8; .A not 0), the remainder in .A.  Keeps .X
+div8:
+            sta         m_eb
+            lda         #0
+            ldy         #16
+@bit:
+            asl         m_ek
+            rol         m_ek + 1
+            rol
+            bcs         @sub
+            cmp         m_eb
+            bcc         @next
+@sub:
+            sbc         m_eb                                ; (C = 1)
+            inc         m_ek
+@next:
+            dey
+            bne         @bit
+            rts
+
+; Not on a PSG track (x, M, L, N: the YM2151's)
+fm_only:
+            lda         trk
+            cmp         #FM_TRACKS
+            bcs         :+
+            rts
+:
+            LDR         r0, s_ymonly
+            jmp         track_fail
 
 ; The track's next command (cp at it)
 command:
@@ -2463,6 +3357,7 @@ c_rest:
 
 ; x N: a General MIDI drum (the driver's patch and key code); the instrument @ named last for the notes after it
 c_drum:
+            jsr         fm_only
             jsr         num_must
             lda         nv + 1
             bne         @bad
@@ -2470,14 +3365,12 @@ c_drum:
             cmp         #128
             bcs         @bad
             tax
-            lda         drum_kc,X
+            FAR2        pt_drum
             sta         m_dkc
-            lda         drum_patch,X
-            jsr         patch_of
             ldx         trk
-            lda         mp
+            lda         #<m_dbuf
             sta         tk_pend_lo,X
-            lda         mp + 1
+            lda         #>m_dbuf
             sta         tk_pend_hi,X
             stz         tk_slide,X
             stz         tk_legato,X
@@ -2571,6 +3464,13 @@ vol_set:
             lda         m_line
             bne         @cmd
 :
+            cpx         #FM_TRACKS                          ; (A PSG track's: its notes' volume, from the next on)
+            bcc         :+
+            lda         tk_vol,X
+            jsr         psg_vol
+            sta         tk_pk - FM_TRACKS,X
+            rts
+:
             jmp         levels
 @cmd:
             ldy         trk
@@ -2599,6 +3499,18 @@ c_pan:
 pan_set:
             ldx         trk
             sta         tk_pan,X
+            cpx         #FM_TRACKS                          ; (A PSG track's: its volume register now, if it has an
+            bcc         @fm                                 ;   instrument or it's a line's)
+            lda         tk_inst_hi,X
+            ora         m_line
+            beq         :+
+            jsr         t_to_at
+            ldx         trk
+            lda         tk_cur - FM_TRACKS,X
+            jmp         vol_put
+:
+            rts
+@fm:
             lda         tk_inst_hi,X
             bne         @inst
             lda         m_line
@@ -2672,10 +3584,16 @@ c_inst:
             bcc         :+
             inc         cp + 1
 :
+            ldy         #INST_NAME + I_KIND                 ; The right chip's: its kind (0, 1) + C (1: a PSG
+            lda         (m_x),Y                             ;   track) 1, the wrong one's
+            ldx         trk
+            cpx         #FM_TRACKS
+            adc         #0
+            cmp         #1
+            beq         @kind
             clc                                             ; Its patch: past the name
             lda         m_x
             adc         #INST_NAME
-            ldx         trk
             sta         tk_pend_lo,X
             sta         tk_name_lo,X
             lda         m_x + 1
@@ -2686,9 +3604,13 @@ c_inst:
 @none:
             LDR         r0, s_unknown
             jmp         track_fail
+@kind:
+            LDR         r0, s_kind
+            jmp         track_fail
 
 ; M pms,ams: the channel's LFO sensitivities
 c_sens:
+            jsr         fm_only
             jsr         num_must
             lda         nv
             and         #7
@@ -2715,6 +3637,7 @@ c_sens:
 
 ; L rate,pmd,amd,wave: the LFO
 c_lfo:
+            jsr         fm_only
             jsr         num_must
             ldy         nv
             lda         #$18
@@ -2741,6 +3664,7 @@ c_lfo:
 
 ; N n, N-: the noise
 c_noise:
+            jsr         fm_only
             jsr         peek
             cmp         #'-'
             bne         :+
@@ -2757,9 +3681,21 @@ c_noise:
             lda         #$0F
             jmp         put_now
 
-; y reg,val: a register
+; y reg,val: a register (a PSG track's: the PSG's, 0-63)
 c_reg:
             jsr         num_must
+            ldx         trk
+            cpx         #FM_TRACKS
+            bcc         @num
+            lda         nv + 1
+            bne         @bad
+            lda         nv
+            cmp         #64
+            bcc         @num
+@bad:
+            LDR         r0, s_badreg
+            jmp         track_fail
+@num:
             lda         nv
             pha
             jsr         getc
@@ -2768,26 +3704,132 @@ c_reg:
             pla
             jmp         put_now
 
-; I N: the driver's patch N, the instrument for the next note on (hysong.js's too)
+; I N: the instrument for the next note on (hysong.js's too): on a YM2151 channel the driver's patch N (0-162); on
+; the PSG's, waveform N (0-3, as wave: width 63; the X16's, -x, its waveform register N, 0-255).  Each an instrument
+; of its own, "#" or "%" and N (made the first time)
 c_inum:
             jsr         num_must
             lda         nv + 1
             bne         @bad
+            ldx         trk
+            cpx         #FM_TRACKS
+            bcs         @psg
             lda         nv
             cmp         #163
             bcs         @bad
-            jsr         patch_of
+            lda         #'#'
+            jsr         inst_named
+            bcc         @set                                ; (Made: the patch copied in)
+            lda         nv
+            FAR2        pt_copy
+            bra         @set
+@psg:
+            lda         m_x16
+            bne         :+
+            lda         nv
+            cmp         #4
+            bcs         @bad
+:
+            lda         #'%'
+            jsr         inst_named
+            bcc         @set
+            lda         nv                                  ; Made: its waveform register (the X16's: N) ...
+            ldx         m_x16
+            bne         :+
+            lsr                                             ;   (N to bits 7-6, width 63)
+            ror
+            ror
+            and         #$C0
+            ora         #$3F
+:
+            sta         (m_x)
+            ldy         #I_KIND                             ;   and its kind
+            lda         #1
+            sta         (m_x),Y
+@set:
             ldx         trk
-            lda         mp
+            lda         m_x
             sta         tk_pend_lo,X
             sta         tk_name_lo,X
-            lda         mp + 1
+            lda         m_x + 1
             sta         tk_pend_hi,X
             sta         tk_name_hi,X
             rts
 @bad:
             LDR         r0, s_nopatch
             jmp         track_fail
+
+; I N's instrument: named .A and N (nv's low byte, as two letters), found or made (its name, the rest 0).  OUT: m_x
+; its patch (past its name); C = 0 found, or C = 1 made.  None left: the track's error
+inst_named:
+            sta         m_iname
+            lda         nv
+            lsr
+            lsr
+            lsr
+            lsr
+            clc
+            adc         #'A'
+            sta         m_iname + 1
+            lda         nv
+            and         #$0F
+            clc
+            adc         #'A'
+            sta         m_iname + 2
+            stz         m_iname + 3
+            stz         m_r
+@try:
+            lda         m_r
+            cmp         m_ninst
+            bcs         @new
+            jsr         inst_ptr
+            ldy         #0
+:
+            lda         (m_x),Y
+            cmp         m_iname,Y
+            bne         @next
+            iny
+            cmp         #0
+            bne         :-
+            jsr         @patch
+            clc
+            rts
+@next:
+            inc         m_r
+            bra         @try
+@new:
+            cmp         #MML_INSTS
+            bcc         :+
+            LDR         r0, s_toomany
+            jmp         track_fail
+:
+            jsr         inst_ptr
+            inc         m_ninst
+            ldy         #0
+:
+            lda         m_iname,Y
+            sta         (m_x),Y
+            iny
+            cpy         #4
+            bcc         :-
+            lda         #0
+:
+            sta         (m_x),Y
+            iny
+            cpy         #INST_SIZE
+            bcc         :-
+            jsr         @patch
+            sec
+            rts
+@patch:
+            clc
+            lda         m_x
+            adc         #INST_NAME
+            sta         m_x
+            bcc         :+
+            inc         m_x + 1
+:
+            rts
 
 ; t N (a line's or a chord's; the X16's T): the tempo, quarter notes a minute, before any time has passed
 c_tempo:
@@ -2839,6 +3881,12 @@ c_xvol:
 :
             ldx         trk
             sta         tk_vol,X
+            cpx         #FM_TRACKS                          ; (A PSG track's: V its notes' volume, the X16's)
+            bcc         :+
+            lsr
+            sta         tk_pk - FM_TRACKS,X
+            rts
+:
             jmp         vol_set
 
 c_xpan:
@@ -3202,37 +4250,30 @@ m_next:
 @track:
             jsr         tk_fill
             bcs         @next
-            ldx         trk                                 ; Its head's place
-            txa
-            asl
-            asl
-            asl
-            asl
-            asl
-            ora         tk_fh,X
-            tax
+            ldx         trk                                 ; Its head's tick
+            jsr         fifo_head
             ldy         m_best                              ; Earlier than the best so far?
             bmi         @take
-            lda         fi_t0,X
+            lda         m_h
             cmp         m_bt
-            lda         fi_t1,X
+            lda         m_h + 1
             sbc         m_bt + 1
-            lda         fi_t2,X
+            lda         m_h + 2
             sbc         m_bt + 2
             bcs         @next
 @take:
-            lda         fi_t0,X
+            lda         m_h
             sta         m_bt
-            lda         fi_t1,X
+            lda         m_h + 1
             sta         m_bt + 1
-            lda         fi_t2,X
+            lda         m_h + 2
             sta         m_bt + 2
             lda         trk
             sta         m_best
 @next:
             inc         trk
             lda         trk
-            cmp         #TRACKS
+            cmp         m_top
             bcc         @track
             ldx         m_best
             bmi         @last
@@ -3244,25 +4285,12 @@ m_next:
             sta         m_at + 2
             jsr         delay_to                            ; Its time yet?
             bcs         @out
-            ldx         m_best                              ; Taken from its FIFO
-            txa
-            asl
-            asl
-            asl
-            asl
-            asl
-            ora         tk_fh,X
-            tay
-            lda         tk_fh,X
-            inc         a
-            and         #FIFO - 1
-            sta         tk_fh,X
-            dec         tk_fn,X
-            lda         fi_val,Y
-            pha
-            lda         fi_reg,Y
-            ply
+            ldx         m_best                              ; Taken from its FIFO (a PSG track's: the PSG's)
+            jsr         fifo_take
+            bcs         :+
             jmp         emit
+:
+            jmp         emit_psg
 @out:
             rts
 
@@ -3274,6 +4302,20 @@ m_next:
             dex
             bpl         :-
             jsr         tick_at
+            lda         m_at                                ; (Or now, if that's later: an envelope's last step)
+            cmp         m_now
+            lda         m_at + 1
+            sbc         m_now + 1
+            lda         m_at + 2
+            sbc         m_now + 2
+            bcs         :+
+            lda         m_now
+            sta         m_at
+            lda         m_now + 1
+            sta         m_at + 1
+            lda         m_now + 2
+            sta         m_at + 2
+:
             lda         m_at
             sta         m_endt
             lda         m_at + 1
@@ -3298,8 +4340,27 @@ m_next:
             jsr         emit
             inc         m_r
             lda         m_r
-            cmp         #TRACKS
+            cmp         #FM_TRACKS
             bcc         :-
+            ldx         #FM_TRACKS                          ; Every PSG voice of the score's silent
+@voice:
+            jsr         mask_of
+            and         m_mask,Y
+            beq         :+
+            phx
+            txa
+            sec
+            sbc         #FM_TRACKS
+            asl
+            asl
+            ora         #2
+            ldy         tk_pan,X
+            jsr         emit_psg
+            plx
+:
+            inx
+            cpx         #TRACKS
+            bcc         @voice
             jsr         flush_pairs
             lda         #$80
             jsr         rout
@@ -3346,6 +4407,91 @@ delay_to:
             bne         :+
             inc         m_now + 2
 :
+            sec
+            rts
+
+; PSG register .A = .Y into the stream at once (its own command: the register, then the value), unless the same
+; value as the register's last
+emit_psg:
+            tax
+            lda         p_known,X
+            beq         @new
+            tya
+            cmp         p_shadow,X
+            bne         @put
+            rts
+@new:
+            inc         p_known,X
+@put:
+            tya
+            sta         p_shadow,X
+            txa
+            jsr         rout
+            tya
+            jmp         rout
+
+; Track .X's FIFO's head: its tick in m_h, .Y its place (C = 1: in the PSG tracks' FIFOs, pf_).  Keeps .X
+fifo_head:
+            cpx         #FM_TRACKS
+            bcs         @psg
+            txa
+            asl
+            asl
+            asl
+            asl
+            asl
+            ora         tk_fh,X
+            tay
+            lda         fi_t0,Y
+            sta         m_h
+            lda         fi_t1,Y
+            sta         m_h + 1
+            lda         fi_t2,Y
+            sta         m_h + 2
+            clc
+            rts
+@psg:
+            txa
+            sbc         #FM_TRACKS                          ; (C = 1)
+            asl
+            asl
+            asl
+            ora         tk_fh,X
+            tay
+            lda         pf_t0,Y
+            sta         m_h
+            lda         pf_t1,Y
+            sta         m_h + 1
+            lda         pf_t2,Y
+            sta         m_h + 2
+            sec
+            rts
+
+; Track .X's FIFO's head taken: .A its register, .Y its value (C = 1: a PSG track's)
+fifo_take:
+            jsr         fifo_head
+            bcs         @psg
+            lda         tk_fh,X
+            inc         a
+            and         #FIFO - 1
+            sta         tk_fh,X
+            dec         tk_fn,X
+            lda         fi_val,Y
+            pha
+            lda         fi_reg,Y
+            ply
+            clc
+            rts
+@psg:
+            lda         tk_fh,X
+            inc         a
+            and         #PFIFO - 1
+            sta         tk_fh,X
+            dec         tk_fn,X
+            lda         pf_val,Y
+            pha
+            lda         pf_reg,Y
+            ply
             sec
             rts
 
@@ -3519,6 +4665,12 @@ mml_line:
             stz         m_plen
             lda         m_ch
             sta         m_r
+            ldx         #FM_TRACKS                          ; (Its notes on its first channel's chip's)
+            cmp         #FM_TRACKS
+            bcc         :+
+            ldx         #TRACKS
+:
+            stx         m_lim
             ldx         #0
 @word:
             lda         m_text,X                            ; (Past blanks)
@@ -3549,7 +4701,7 @@ mml_line:
             bra         @word
 @note:
             lda         m_r                                 ; A note: its line, on the next channel
-            cmp         #TRACKS
+            cmp         m_lim
             bcc         :+
             LDR         r0, s_toomanyn
             jmp         fail
@@ -3580,8 +4732,7 @@ mml_line:
             sta         (mp)
             MOVR        m_end, mp
             jsr         prep
-            lda         m_mask
-            sta         hdr + H_FM
+            jsr         mml_hdr
             stz         loop + 1
             stz         loop + 2
             lda         #HDR_SIZE
@@ -3650,8 +4801,7 @@ mml_out:
             sta         hdr + 1
             lda         #1
             sta         hdr + 2
-            lda         m_mask
-            sta         hdr + H_FM
+            jsr         mml_hdr
             lda         m_rate
             sta         hdr + H_RATE
             lda         m_rate + 1
@@ -3663,6 +4813,7 @@ mml_out:
             stz         eof
             jsr         mml_start
 @stage:
+            jsr         mml_fill                            ; (A stage's worth compiled: a write each, not a step)
             stz         staged
             stz         staged + 1
             jsr         mml_stage
@@ -3683,6 +4834,15 @@ mml_out:
 :
             rts
 
+; -o's: steps compiled till the ring holds a stage (256 bytes) or the song's done
+mml_fill:
+            lda         m_rn + 1
+            bne         @done
+            jsr         m_step
+            bcc         mml_fill
+@done:
+            rts
+
 ; ****************************************************************************
 ; Errors
 
@@ -3693,8 +4853,14 @@ track_fail:
             sty         m_r
             LDR         r0, s_channel
             jsr         msg_add
-            lda         trk
-            ora         #'0'
+            jsr         ch_digits
+            cpx         #0
+            beq         :+
+            pha
+            txa
+            jsr         msg_char
+            pla
+:
             jsr         msg_char
             lda         #':'
             jsr         msg_char
@@ -3708,13 +4874,21 @@ track_fail:
 track_msg:
             lda         #0
             jsr         msg_char
-            ldx         #63                                 ; (Moved along for "channel N: ")
+            jsr         ch_digits
+            sta         m_dig
+            stx         m_dig + 1
+            ldy         #63 - 11                            ; (Moved along for "channel N: ", or NN)
+            cpx         #0
+            beq         :+
+            dey
 :
-            lda         m_msg - 11,X
+            ldx         #63
+:
+            lda         m_msg,Y
             sta         m_msg,X
             dex
-            cpx         #11
-            bcs         :-
+            dey
+            bpl         :-
             ldy         #0
 :
             lda         s_channel,Y
@@ -3723,8 +4897,12 @@ track_msg:
             iny
             bra         :-
 :
-            lda         trk
-            ora         #'0'
+            lda         m_dig + 1
+            beq         :+
+            sta         m_msg,Y
+            iny
+:
+            lda         m_dig
             sta         m_msg,Y
             lda         #':'
             sta         m_msg + 1,Y
@@ -3732,6 +4910,22 @@ track_msg:
             sta         m_msg + 2,Y
             LDR         r0, m_msg
             jmp         fail
+
+; Track trk's number as digits: .A its units', .X its tens' (0: none).  Keeps .Y
+ch_digits:
+            lda         trk
+            ldx         #0
+            cmp         #10
+            bcc         @units
+            ldx         #'0'
+:
+            inx
+            sbc         #10                                 ; (C = 1)
+            cmp         #10
+            bcs         :-
+@units:
+            ora         #'0'
+            rts
 
 ; The message at r0 started in m_msg (msg_add: added); msg_char adds .A; fail_msg ends it and fails
 msg_start:
@@ -3789,6 +4983,9 @@ s_badpan:   .byte       "p takes l, r, c or 0", 0
 s_unknown:  .byte       "no such instrument", 0
 s_deep:     .byte       "repeats too deep", 0
 s_nopatch:  .byte       "no such patch", 0
+s_ymonly:   .byte       "the YM2151's only", 0
+s_badreg:   .byte       "a PSG register is 0-63", 0
+s_kind:     .byte       "the other chip's instrument", 0
 s_tempo1:   .byte       "t is a tempo, before any notes", 0
 s_toomanyn: .byte       "more notes than channels", 0
 s_whatis:   .byte       "what is ", 0
@@ -3829,6 +5026,8 @@ x16_hi:     .hibytes    c_xnote - 1, c_xnote - 1, c_xnote - 1, c_xnote - 1, c_xn
 V_GM        = 0
 V_M1        = 5
 V_C2        = 8
+V_WAVE      = 20
+V_ENV       = 21
 s_gm:       .byte       "gm", 0
 s_alg:      .byte       "alg", 0
 s_fb:       .byte       "fb", 0
@@ -3849,10 +5048,21 @@ s_d2r:      .byte       "d2r", 0
 s_d1l:      .byte       "d1l", 0
 s_rr:       .byte       "rr", 0
 s_am:       .byte       "am", 0
+s_wave:     .byte       "wave", 0                           ; (The PSG's: V_WAVE, V_ENV)
+s_env:      .byte       "env", 0
 voice_lo:   .lobytes    s_gm, s_alg, s_fb, s_pms, s_ams, s_m1, s_m2, s_c1, s_c2, s_mul, s_dt1, s_dt2, s_tl, s_ks
-            .lobytes    s_ar, s_d1r, s_d2r, s_d1l, s_rr, s_am, 0
+            .lobytes    s_ar, s_d1r, s_d2r, s_d1l, s_rr, s_am, s_wave, s_env, 0
 voice_hi:   .hibytes    s_gm, s_alg, s_fb, s_pms, s_ams, s_m1, s_m2, s_c1, s_c2, s_mul, s_dt1, s_dt2, s_tl, s_ks
-            .hibytes    s_ar, s_d1r, s_d2r, s_d1l, s_rr, s_am, 0
+            .hibytes    s_ar, s_d1r, s_d2r, s_d1l, s_rr, s_am, s_wave, s_env, 0
+; The PSG's waveforms (0-3), and the octave C9-C10's frequency words (Hz * 2^17 / 48,828.125: the sound driver's
+; psg_freq)
+s_pulse:    .byte       "pulse", 0
+s_saw:      .byte       "saw", 0
+s_tri:      .byte       "triangle", 0
+s_noise:    .byte       "noise", 0
+wave_lo:    .lobytes    s_pulse, s_saw, s_tri, s_noise, 0
+wave_hi:    .hibytes    s_pulse, s_saw, s_tri, s_noise, 0
+psg_tab:    .word       22473, 23810, 25226, 26726, 28315, 29998, 31782, 33672, 35674, 37796, 40043, 42424, 44947
 ; (The patch's bytes from INST_NAME: 0 $20 (FB, CON), 1 $38 (PMS, AMS), 2-5 DT1/MUL, 6-9 TL, 10-13 KS/AR, 14-17
 ; AM/D1R, 18-21 DT2/D2R, 22-25 D1L/RR)
 voice_reg:  .byte       0, INST_NAME, INST_NAME, INST_NAME + 1, INST_NAME + 1, 0, 0, 0, 0

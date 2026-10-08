@@ -79,7 +79,7 @@ Sizes are rough: **S** a few days, **M** a few weeks, **L** longer.
 #### **2. A standalone computer**
 
 * **Video: the Vera X card (L).**  640x480 VGA, text and tiles, 128 sprites, the screen as the console ([VIDEO.md](VIDEO.md)).
-* **Keyboard, mouse and game pads (M).**  Vera X's input controller on IRQ line 3, over I2C ([VIDEO.md](VIDEO.md#the-card)).
+* **Keyboard, mouse and game pads (M).**  Vera X's input controller on IRQ line 3, over I2C ([VIDEO.md](VIDEO.md#the-card)).  (Built, October 2026, for the keyboard and mouse: the X16's SMC, polled over I2C, not on line 3; VIDEO.md's step 6.)
 * **Files from the PC without the card (M).**  Two ways, both worth having:
   * **XMODEM** ([IDEAS.md](IDEAS.md) item 6): send and receive single files with any terminal program.
   * **`/pc`**: *(Built: [PC.md](PC.md).)*  A small Node program on the PC serves a folder over the serial port, and the Hydra mounts it as a file server (9P-style requests, which is what the IO layer speaks inside).  Then `cc65` output is runnable at once (`/pc/bin/game`), with no copying.  The emulator can serve a folder the same way.  For a programmer this is the biggest workflow win.

@@ -6,8 +6,9 @@
 (fun {round x} {floor (+ x 1/2)})
 
 ; ---- the ACIA (port 1): a Rockwell R65C51 (TDRE and the TX interrupt), or a WDC W65C51N (ac-wdc: TDRE always 1, no
-; TX interrupt).  Keys come from rxq (codes; 256: wait 2M cycles; 257: wait for a prompt), the PC's own bytes from pcq
-(def {ac-wdc ac-paste} NIL NIL)
+; TX interrupt).  Keys come from rxq (codes; 256: wait 2M cycles; 257: wait for a prompt; 258 to 259: typed at the
+; keyboard instead, the SMC's, one each KBD-DELAY cycles), the PC's own bytes from pcq
+(def {ac-wdc ac-paste ac-kbd KBD-DELAY} NIL NIL NIL 150000)
 (def {ac-cmd ac-ctrl ac-tdre ac-txtimer ac-irq ac-rdrf ac-rx ac-overruns} 0 0 1 0 0 0 0 0)
 (def {ac-txend ac-txsent ac-gapmin ac-charcyc} (- INF) 0 INF 0)
 (def {rxq rxh rxn rxdelay rxlost typedat typedlast} (hash-create) 0 0 200000 0 -1 -1)
@@ -93,15 +94,17 @@
   (if (== (rxq rxh) 257)
     (if (prompted at) (do (rx-shift) (set! {promptfrom rxdelay} -1 20000) (if (>= rxh rxn) (set! {typedlast} at) 0) (key-head)) 0)
     (do (set! {rxdelay} (- rxdelay d))
-        (if (and (<= rxdelay 0) (or (zero? ac-rdrf) ac-paste)) (do
+        (if (and (<= rxdelay 0) (or (zero? ac-rdrf) ac-paste ac-kbd (== (rxq rxh) 258))) (do
           (set {c} (rxq rxh))
           (rx-shift)
           (if (>= rxh rxn) (set! {typedlast} at) 0)
+          (if (or (== c 258) (== c 259)) (set! {ac-kbd rxdelay} (and (== c 258) smc-on) (if (and (== c 258) smc-on) KBD-DELAY 20000))
+          (if (and ac-kbd (not (== c 256))) (do (smc-type c) (set! {rxdelay} KBD-DELAY))
           (if (== c 256) (do (set! {rxdelay} 2000000) (if (>= rxh rxn) (set! {typedlast} (+ at rxdelay)) 0))
             (if (pos? ac-rdrf) (set! {rxlost rxdelay} (+ rxlost 1) ac-charcyc)
               (do (if (< typedat 0) (do (set! {typedat} at) (ioff-start)) 0)
                   (acia-in c at)
-                  (set! {rxdelay} (if ac-paste ac-charcyc 20000)))))
+                  (set! {rxdelay} (if ac-paste ac-charcyc 20000)))))))
           (key-head)) 0))) 0})
 
 (fun {acia-irq?} {and (pos? ac-irq) (or (and (not ac-wdc) (== (bit-and ac-cmd 12) 4) (pos? ac-tdre)) (and (zero? (bit-and ac-cmd 2)) (pos? ac-rdrf)))})
@@ -111,7 +114,7 @@
     (if (< rxh rxn)
       (if (== (rxq rxh) 257)
         (if (and (> ac-sent promptfrom) (prompt-tail?)) (min n (max 1 (- (+ ac-sentat 300000) ac-cyc))) n)
-        (if (> rxdelay 0) (min n rxdelay) (if (or (zero? ac-rdrf) ac-paste) 1 n)))
+        (if (> rxdelay 0) (min n rxdelay) (if (or (zero? ac-rdrf) ac-paste ac-kbd (== (rxq rxh) 258)) 1 n)))
       n))})
 (fun {acia-reset} {set! {ac-cmd ac-ctrl ac-tdre ac-txtimer ac-irq ac-rdrf} 0 0 1 0 0 0})
 

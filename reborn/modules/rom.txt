@@ -12,6 +12,7 @@ module      vid
 module      rc
 module      wstart
 module      newwin
+module      input
 module      echo
 module      cat
 module      ls

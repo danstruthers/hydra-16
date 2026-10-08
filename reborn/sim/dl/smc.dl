@@ -1,0 +1,121 @@
+; smc.dl - the input controller: the X16's SMC on the I2C bus at $42, a PS/2 keyboard and mouse on it
+; (sim/lib/smc.js, the reference: its header has the firmware's answers).  The I2C side (i2c.dl's device, :smc):
+; smc-addr as its address comes (NIL: not acknowledged), smc-put each byte written, smc-get each byte read, smc-end
+; as its transaction ends.  The host's side: smc-type (a key code as the ACIA's keyboard mode passes it: a character,
+; or 512 + n key n tapped, 768 + n pressed, 896 + n let go, 1024 the next of the spec's moves), smc-move.  The
+; keyboard's buffer holds 15 codes, the mouse's 15 bytes; more are lost (counted).
+
+(def {smc-on smc-reg smc-dflt smc-reading smc-mid smc-leds smc-lost smc-mlost smc-reads smc-nacks}
+  NIL #x41 #x41 NIL 0 0 0 0 0 0)
+(def {smc-kq smc-kh smc-kn smc-mq smc-mh smc-mn smc-d smc-dn smc-b smc-bn smc-bat}
+  (buffer 16) 0 0 (buffer 16) 0 0 (buffer 3) 0 (buffer 8) 0 0)
+(def {smc-moves smc-nmoves smc-atmove smc-cmds smc-ncmds} (hash-create) 0 0 (hash-create) 0)
+(def {SMC-VERSION} {47 2 3})
+
+; The US keyboard: each printable character's key number, and whether it's shifted (its code: key * 2 + shifted)
+(def {smc-us} (hash-create))
+(fun {smc-row first plain shifted} {do
+  (set {k} first)
+  (each {ch plain} (do (hash-put smc-us [(char-code ch) (* k 2)]) (set! {k} (+ k 1))))
+  (set! {k} first)
+  (each {ch shifted} (do (hash-put smc-us [(char-code ch) (+ (* k 2) 1)]) (set! {k} (+ k 1))))})
+(smc-row 1 "`1234567890-=" "~!@#$%^&*()_+")
+(smc-row 17 (+ "qwertyuiop[]" (code-char 92)) "QWERTYUIOP{}|")
+(smc-row 31 (+ "asdfghjkl;" (code-char 39)) (+ "ASDFGHJKL:" (code-char 34)))
+(smc-row 46 "zxcvbnm,./" "ZXCVBNM<>?")
+(hash-put smc-us [32 122])
+
+; The SMC on the bus: the mouse there (or not), the moves for code 1024 (a list of lists: dx dy buttons [wheel])
+(fun {smc-setup mouse moves} {do
+  (set! {smc-on smc-mid} T (if mouse 0 -1))
+  (each {mv moves} (do (hash-put smc-moves [smc-nmoves mv]) (set! {smc-nmoves} (+ smc-nmoves 1))))
+  (hash-put i2c-devs [#x42 (to# {{:kind :smc}})])
+  (set! {i2c-on} T)})
+
+(fun {smc-msize} {if (or (== smc-mid 3) (== smc-mid 4)) 4 3})
+; ---- the I2C side
+(fun {smc-addr rw} {if (zero? rw) (do (set! {smc-dn smc-reading} 0 NIL) T)
+  (do (set! {smc-reading} T)
+      (smc-answer smc-reg)
+      (set! {smc-bat smc-reg smc-reads} 0 smc-dflt (+ smc-reads 1))
+      (if (zero? smc-bn) (do (set! {smc-nacks} (+ smc-nacks 1)) NIL) T))})
+(fun {smc-put v} {do (if (< smc-dn 3) (do (buffer-put smc-d smc-dn v) (set! {smc-dn} (+ smc-dn 1))) 0) T})
+(fun {smc-get} {if (< smc-bat smc-bn) (do (set {v} (smc-b smc-bat)) (set! {smc-bat} (+ smc-bat 1)) v) 255})
+(fun {smc-end} {if smc-reading (set! {smc-reading} NIL)
+  (do (set {dn} smc-dn)
+      (set! {smc-dn} 0)
+      (if (zero? dn) 0 (do
+        (set! {smc-reg} (smc-d 0))
+        (if (< dn 2) 0 (do
+          (set {r} (smc-d 0))
+          (set {v} (smc-d 1))
+          (if (== r #x40) (set! {smc-dflt} v)
+            (if (== r #x20) (do (set! {smc-mid} (if (< smc-mid 0) -1 (if (or (== v 3) (== v 4)) v 0))) (set! {smc-mh smc-mn} 0 0))
+              (if (== r #x1A) (if (>= dn 3) (do (smc-cmd (list v (smc-d 2))) (if (== v #xED) (set! {smc-leds} (bit-and (smc-d 2) 7)) 0)) 0)
+                (if (== r #x19) (smc-cmd (list v)) 0))))
+          (set! {smc-reg} smc-dflt))))))})
+(fun {smc-cmd l} {do (hash-put smc-cmds [smc-ncmds l]) (set! {smc-ncmds} (+ smc-ncmds 1))})
+; The answer for register r, into smc-b
+(fun {smc-out v} {do (buffer-put smc-b smc-bn v) (set! {smc-bn} (+ smc-bn 1))})
+(fun {smc-keycode always} {if (pos? smc-kn)
+  (do (smc-out (smc-kq smc-kh)) (set! {smc-kh smc-kn} (bit-and (+ smc-kh 1) 15) (- smc-kn 1)) T)
+  (do (if always (smc-out 0) 0) NIL)})
+(fun {smc-packet} {do
+  (set {n} (smc-msize))
+  (if (and (>= smc-mid 0) (>= smc-mn n))
+    (do (dotimes {i n} (do (smc-out (smc-mq smc-mh)) (set! {smc-mh smc-mn} (bit-and (+ smc-mh 1) 15) (- smc-mn 1)))) T)
+    (do (smc-out 0) NIL))})
+(fun {smc-answer r} {do
+  (set! {smc-bn} 0)
+  (if (== r 7) (smc-keycode T)
+    (if (== r #x41) (if (smc-keycode T) 0 (set! {smc-bn} 0))
+      (if (== r #x21) (smc-packet)
+        (if (== r #x42) (if (smc-packet) 0 (set! {smc-bn} 0))
+          (if (== r #x43) (do (set {k} (smc-keycode T)) (set {p} (smc-packet)) (if (or k p) 0 (set! {smc-bn} 0)))
+            (if (== r #x18) (smc-out 0)
+              (if (== r #x22) (smc-out (if (< smc-mid 0) 255 smc-mid))
+                (if (and (>= r #x30) (<= r #x32)) (smc-out (nth (- r #x30) SMC-VERSION)) 0))))))))})
+
+; ---- the host's side
+(fun {smc-key n down} {if (>= smc-kn 15) (set! {smc-lost} (+ smc-lost 1))
+  (do (buffer-put smc-kq (bit-and (+ smc-kh smc-kn) 15) (bit-or (bit-and n #x7F) (if down 0 #x80))) (set! {smc-kn} (+ smc-kn 1)))})
+(fun {smc-tap n} {do (smc-key n T) (smc-key n NIL)})
+(fun {smc-type c} {if (== c 1024) (smc-next-move)
+  (if (and (>= c 896) (< c 1024)) (smc-key (- c 896) NIL)
+    (if (>= c 768) (smc-key (- c 768) T)
+      (if (>= c 512) (smc-tap (- c 512))
+        (if (or (== c 13) (== c 10)) (smc-tap 43)
+          (if (== c 9) (smc-tap 16)
+            (if (or (== c 8) (== c 127)) (smc-tap 15)
+              (if (== c 27) (smc-tap 110)
+                (if (and (>= c 1) (<= c 26)) (do (smc-key 58 T) (smc-tap (shr (smc-us (+ c 96)) 1)) (smc-key 58 NIL))
+                  (do (set {k} (hash-get smc-us c))
+                      (if (nil? k) 0 (do
+                        (if (odd? k) (smc-key 44 T) 0)
+                        (smc-tap (shr k 1))
+                        (if (odd? k) (smc-key 44 NIL) 0))))))))))))})
+(fun {smc-next-move} {if (< smc-atmove smc-nmoves) (do
+  (set {mv} (smc-moves smc-atmove))
+  (set! {smc-atmove} (+ smc-atmove 1))
+  (smc-move (nth 0 mv) (nth 1 mv) (if (> (len mv) 2) (nth 2 mv) 0) (if (> (len mv) 3) (nth 3 mv) 0))) 0})
+; A move (y down, as on the screen) and the buttons: packets of at most 255 a step, as the mouse sends them
+(fun {smc-move dx dy buttons wheel} {if (< smc-mid 0) 0 (do
+  (set {x} dx)
+  (set {y} (- 0 dy))
+  (set {w} wheel)
+  (set {go} T)
+  (set {sx} 0)
+  (set {sy} 0)
+  (set {n} 0)
+  (while {go}
+    (set! {sx} (max -255 (min 255 x)))
+    (set! {sy} (max -255 (min 255 y)))
+    (set! {n} (smc-msize))
+    (if (> (+ smc-mn n) 15) (do (set! {smc-mlost} (+ smc-mlost 1)) (set! {go} NIL)) (do
+      (smc-mput (bit-or 8 (bit-and buttons 7) (if (< sx 0) #x10 0) (if (< sy 0) #x20 0)))
+      (smc-mput (bit-and sx 255))
+      (smc-mput (bit-and sy 255))
+      (if (== n 4) (smc-mput (if (== smc-mid 4) (bit-and w 15) (bit-and w 255))) 0)
+      (set! {x y w} (- x sx) (- y sy) 0)
+      (if (and (zero? x) (zero? y)) (set! {go} NIL) 0))))) })
+(fun {smc-mput v} {do (buffer-put smc-mq (bit-and (+ smc-mh smc-mn) 15) v) (set! {smc-mn} (+ smc-mn 1))})

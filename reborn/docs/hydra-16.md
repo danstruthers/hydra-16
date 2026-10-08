@@ -155,7 +155,7 @@ task's side of the task calls, memory, semaphores, notes and the clock; page 2 f
 namespaces and the loader (`SPAWN`); page 4 POST and the debugger's steps; the rest is room.  Page 0 is the scarce one.
 [The kernel's pages](conventions.md#the-kernels-pages).
 
-**The paged ROM** (`bin/prom0.bin` ...: a 512K image for each chip it fills; four now, some 113 of its 256 banks).  Bank
+**The paged ROM** (`bin/prom0.bin` ...: a 512K image for each chip it fills; four now, some 124 of its 256 banks).  Bank
 0 holds the module directory and the ROM disk's partition table; bank 1 the hardware test (the old system's, unchanged);
 the modules from bank 2, each at `$A000` of its first bank (about fifty: the drivers, init, the shells, the tools, the
 languages; a module may span two to eight banks); then the ROM disk's HydraFS volume (`/rom`: the programs that run from
@@ -249,11 +249,12 @@ snarf, tiles and the two seats come next: [WINDOWS.md](design/plans/WINDOWS.md).
 ## 9. Storage: disks and HydraFS
 
 The storage driver (`storage`, task E) owns the SPI bus and the disks, at `/dev/sd`: `0`-`f` the SD cards by their SPI
-device (through a cache of their blocks), `x` the ROM disk, `r` the RAM disk (each shell has its own area, `/ram`) and
-`s` the shared one (`/sram`).  HydraFS is on each, the old system's file system, ported: directories, files to 4 GB, a
+device (through a cache of their blocks), `x` the ROM disk, `r` the RAM disk (each shell has its own area, `/ram`),
+`s` the shared one (`/sram`), and `v` the Vera X's SD card (on the VERA's own SPI controller).  HydraFS is on each, the old system's file system, ported: directories, files to 4 GB, a
 card's partitions ([HYDRAFS.md](design/plans/HYDRAFS.md) is its format).  The cards are at `/sd/N`, and a card's `bin`
 and `lib` join `/bin` and `/lib`.  `df`, `mkfs`, `fsck` and `label` look after them; the PC's `sim/tools/hydrafs.js`
-makes card images.  [Disks](using/tools.md#disks), [DISKS.md](design/plans/DISKS.md).
+makes card images.  A card's writes are kept back a block at a time: close the file, or
+`echo sync >/dev/sd/N/ctl`, before taking the card out.  [Disks](using/tools.md#disks), [DISKS.md](design/plans/DISKS.md).
 
 ---
 
@@ -330,8 +331,12 @@ The Vera X's driver (`vid`, task A) finds the card as the system starts, sets it
 `/dev/vid`: `ctl` (modes 80x60, 80x30, 40x30, a bitmap under the text, the cursor, claims), `term` (an ANSI terminal,
 where the console writes), `vram`, `pal`, `sprites`, `font`, `frame` (a frame waited for), `psg`, `pcm` and `pcmctl`.  A
 program can draw by writing those files, or **claim** the chip and write its registers itself, as an X16 program does.
-In the emulator, `--vera` puts one in slot 0 and `--view` shows its screen in a browser.  The languages' graphics words,
-the keyboard (an input controller on the card) and the carrier card come next.  [The screen](programming/video.md), [the
+Its keyboard and mouse are an input controller's, the X16's SMC on the I2C bus: the `input` program types its keys
+into the console and gives the mouse to `/dev/vid/mouse` (Plan 9's), a sprite its pointer.  The driver draws on the bitmap (`/dev/vid/draw`: lines, boxes,
+circles, text), with the same words in HyForth (`lib video`, a turtle too), hylang, C (`vera.h`, and cc65's TGI).
+In the emulator, `--vera`
+puts one in slot 0, `--smc` its controller, and `--view` shows its screen in a browser, its keys and mouse the
+controller's.  The carrier card comes next.  [The screen](programming/video.md), [the
 card](hardware.md#the-vera-x-slot-0), [VIDEO.md](design/plans/VIDEO.md).
 
 ---
@@ -373,10 +378,10 @@ POST's, a driver's) are `/dev/kmesg`, its last 4K.
   W65C51N; `node build.js prog DIR` for a program of your own.
 * **The emulator**, `node sim/run.js`: the board cycle by cycle, running the real images.  `-i` is the serial console
   live (Ctrl-A x quits, r the reset button, b a monitor: steps, registers, memory, breaks, watches); `--sd card.img` a
-  card; `--pc-dir DIR` a folder as `/pc`; `--vera` a Vera X, `--view` its screen in a browser; `--sound` the sound in a
+  card; `--pc-dir DIR` a folder as `/pc`; `--vera` a Vera X (`--vera-sd card.img` a card in its SD slot), `--view` its screen in a browser; `--sound` the sound in a
   browser, `--wav FILE` in a file; `--trace-calls`, `--break`, `--watch` for debugging.  The top of `sim/run.js` lists
   them all; [the hardware reference](hardware.md#in-the-emulator) says what's modelled.
-* **The tests**, `node sim/test.js`: 103 of them, each booting its own image and judged on its output, its time budgets
+* **The tests**, `node sim/test.js`: 115 of them, each booting its own image and judged on its output, its time budgets
   and its own checks, as many at a time as the PC has cores; `--dl` runs them in the danlang emulator (`sim/dl`), the
   emulator written again in danlang.
 * **The PC tools** (`sim/tools`): `hydrapc.js` (the PC tool: the terminal, and `/pc` over the serial line; `npm install`

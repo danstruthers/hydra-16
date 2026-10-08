@@ -263,6 +263,7 @@ is in the library's buffer till its next.  Where hylang gives a list or a hash, 
 | `clock` | `#t` (`/dev`) | `set-date ( c-addr u -- )` (`2026-10-04 12:00:00`: the clock and the DS1747), `rtc ( -- c-addr u )` (`running`, `stopped` or `none`, and `battery low`) | |
 | `disk` | `#d` (`/dev/sd`) | `disk-ctl ( disk -- c-addr u )` (its ctl's text; a disk by its letter: `[char] x`), `disk-start`, `disk-stop ( disk -- )`, `cards ( -- mask )` (bit n: a card on SPI device n) | `disks` (`disk-ctl` of each), `df` (the program) |
 | `pc` | `#P` (`/pc`) | `pc? ( -- flag )` (the PC tool answers; none: a second, then false) | |
+| `video` | `#v` (`/dev/vid`) | The bitmap (`bitmap`, `bitmap-off`) and drawing on it, by vid's `draw` (`pen`, `plot`, `line`, `box`, `bar`, `circle`, `disc`, `text`, `clear`); the turtle (`cs`, `home`, `fd`, `bk`, `rt`, `lt`, `pu`, `pd`, `heading`, `seth`: Logo's, in 16ths of a pixel); VRAM (`vpoke ( addr bank c -- )`, `vpeek`, `vram!`, `vram@`), `palette!`, sprites (`sprite!`, `sprite-at`, `sprite-off`), `vsync`, `border`; the mouse (`mouse`, `mouse-wait ( -- x y buttons )`) | |
 | `sound` | `#a` (`/dev`) | (in `sound.fl`, beside 6.8's words) `note-of ( c-addr u -- n )` (`C#4`, `Db4`, `B-1`: a MIDI number, 60 middle C; not a note: THROW -24), `tune ( c-addr u ch tempo -- )` (`C4 1 E4 1 - 1 G4 2`: notes and their beats, `-` a rest; tempo beats a minute; Ctrl-C ends it, the note off) | `play` (the program) |
 
 ## The shell

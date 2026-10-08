@@ -1,0 +1,117 @@
+; video.hl - the Vera X's screen, by its files (#v, /dev/vid): (use "video").  HyForth's video library's names.  A
+; bitmap under the console's text (layer 0: ctl's bitmap), drawn on by vid itself (/dev/vid/draw), so the console
+; stays on the screen over it: (bitmap 320 8) (320 or 640 across; 1, 2, 4 or 8 bits a pixel, 640's 1 or 2),
+; (bitmap-off), (pen c) (the colour drawn in: vid's, one for all), (plot x y), (line x0 y0 x1 y1), (box x0 y0 x1 y1),
+; (bar x0 y0 x1 y1) (filled), (circle x y r), (disc x y r) (filled), (clear), (text x y s) (the console's font, 8 x
+; 8: 40 characters at most).  Turtle graphics, Logo's: (cs), (home),
+; (fd n), (bk n), (rt degrees), (lt degrees), (pu), (pd), (heading), (seth degrees).  The chip's parts: (vpoke addr
+; v) and (vpeek addr) (VRAM: a 17-bit address), (vram! addr bytes), (vram@ addr n) (a list of bytes), (palette!
+; index rgb) (#xRGB), (sprite! n bytes) (its 8), (sprite-at n x y), (sprite-off n), (vsync) (the next frame),
+; (border c).  The mouse: (mouse) (as it is: a list, x y buttons; 1 left, 2 middle, 4 right), (mouse-wait) (its next
+; change).  /dev/vid/draw, frame and mouse are opened the first time they're wanted, and stay open.  A failure is
+; the system's error (a bad number, or no bitmap: :inval; the chip claimed: :busy).
+
+(use "dev")
+
+(def {video.dfd} NIL)
+(def {video.vfd} NIL)
+(def {video.ffd} NIL)
+(def {video.mfd} NIL)
+(def {video.w} 320)
+(def {video.h} 240)
+
+; A command to /dev/vid/draw (opened if it isn't), its words
+(fun {video.draw} {do
+  (if video.dfd NIL (set! {video.dfd} (sys-open "/dev/vid/draw" 1)))
+  (sys-write video.dfd (str-join &_ " "))
+  NIL})
+(fun {video.ctl line} {dev.write "/dev/vid/ctl" line})
+
+; The bitmap
+(fun {bitmap w d} {do
+  (set! {video.w} w)
+  (set! {video.h} (if (== w 320) 240 480))
+  (video.ctl (format "bitmap {} {}" w d))})
+(fun {bitmap-off} {video.ctl "bitmap off"})
+(fun {border c} {video.ctl (format "border {}" c)})
+
+; Drawing on it
+(fun {pen c} {video.draw "pen" c})
+(fun {plot x y} {video.draw "plot" x y})
+(fun {line x0 y0 x1 y1} {video.draw "line" x0 y0 x1 y1})
+(fun {box x0 y0 x1 y1} {video.draw "box" x0 y0 x1 y1})
+(fun {bar x0 y0 x1 y1} {video.draw "bar" x0 y0 x1 y1})
+(fun {circle x y r} {video.draw "circle" x y r})
+(fun {disc x y r} {video.draw "disc" x y r})
+(fun {clear} {video.draw "clear"})
+(fun {text x y s} {video.draw "text" x y s})
+
+; The turtle: its place (exact: rationals), its heading in degrees (0 up, clockwise), its pen
+(def {video.sins} {0 175 349 523 698 872 1045 1219 1392 1564 1736 1908 2079 2250 2419 2588 2756 2924 3090 3256 3420
+  3584 3746 3907 4067 4226 4384 4540 4695 4848 5000 5150 5299 5446 5592 5736 5878 6018 6157 6293 6428 6561 6691 6820
+  6947 7071 7193 7314 7431 7547 7660 7771 7880 7986 8090 8192 8290 8387 8480 8572 8660 8746 8829 8910 8988 9063 9135
+  9205 9272 9336 9397 9455 9511 9563 9613 9659 9703 9744 9781 9816 9848 9877 9903 9925 9945 9962 9976 9986 9994
+  9998 10000})
+(def {video.tx} 160)
+(def {video.ty} 120)
+(def {video.th} 0)
+(def {video.down} 1)
+
+; sin of the degrees, x 10000
+(fun {video.sin d} {do
+  =(a (mod d 360))
+  (if (> a 180) (- 0 (video.sin (- a 180)))
+    (nth (if (> a 90) (- 180 a) a) video.sins))})
+
+(fun {home} {do
+  (set! {video.tx} (div video.w 2))
+  (set! {video.ty} (div video.h 2))
+  (set! {video.th} 0)
+  (set! {video.down} 1)
+  NIL})
+(fun {cs} {do (clear) (home)})
+(fun {pu} {do (set! {video.down} 0) NIL})
+(fun {pd} {do (set! {video.down} 1) NIL})
+(fun {rt d} {do (set! {video.th} (mod (+ video.th d) 360)) NIL})
+(fun {lt d} {rt (- 0 d)})
+(fun {heading} {video.th})
+(fun {seth d} {do (set! {video.th} (mod d 360)) NIL})
+
+; Forward n pixels, a line drawn with the pen down
+(fun {fd n} {do
+  =(x0 (truncate video.tx))
+  =(y0 (truncate video.ty))
+  (set! {video.tx} (+ video.tx (/ (* n (video.sin video.th)) 10000)))
+  (set! {video.ty} (- video.ty (/ (* n (video.sin (+ video.th 90))) 10000)))
+  (if (== video.down 1) (line x0 y0 (truncate video.tx) (truncate video.ty)) NIL)})
+(fun {bk n} {fd (- 0 n)})
+
+; VRAM: a byte, bytes (a list) written, n read
+(fun {vpoke addr v} {vram! addr (list v)})
+(fun {vpeek addr} {fst (vram@ addr 1)})
+(fun {video.vram addr} {do
+  (if video.vfd NIL (set! {video.vfd} (sys-open "/dev/vid/vram" 2)))
+  (sys-seek video.vfd addr)
+  video.vfd})
+(fun {vram! addr bytes} {do (sys-write (video.vram addr) bytes) NIL})
+(fun {vram@ addr n} {dev.bytes (sys-read (video.vram addr) n)})
+
+; A palette entry (#xRGB: 4 bits each) and a sprite's attributes, written where they go
+(fun {video.at name offset bytes} {dev.with (+ "/dev/vid/" name) 1 (fn {fd} {do (sys-seek fd offset) (sys-write fd bytes)})})
+(fun {palette! index rgb} {do (video.at "pal" (* 2 index) (list (bit-and rgb 255) (bit-and (shr rgb 8) 15))) NIL})
+(fun {sprite! n bytes} {do (video.at "sprites" (* 8 n) bytes) NIL})
+(fun {sprite-at n x y} {do (video.at "sprites" (+ (* 8 n) 2) (list (lo x) (hi x) (lo y) (hi y))) NIL})
+(fun {sprite-off n} {do (video.at "sprites" (+ (* 8 n) 6) (list 0)) NIL})
+
+; The next frame (59.5 a second)
+(fun {vsync} {do
+  (if video.ffd NIL (set! {video.ffd} (sys-open "/dev/vid/frame" 0)))
+  (sys-read video.ffd 16)
+  NIL})
+
+; The mouse: x, y and the buttons, from a /mouse record (Plan 9's: m, then 4 fields of 11 and a space)
+(fun {video.fields r} {map (fn {i} {val (str-trim (substring r (+ 1 (* 12 i)) 11))}) {0 1 2}})
+(fun {mouse} {dev.with "/dev/vid/mouse" 0 (fn {fd} {video.fields (sys-read fd 49)})})
+(fun {mouse-wait} {do
+  (if video.mfd NIL (do (set! {video.mfd} (sys-open "/dev/vid/mouse" 0)) (sys-read video.mfd 49)))
+  (video.fields (sys-read video.mfd 49))})

@@ -28,5 +28,6 @@ built by binds and mounts, so `/bin` is a union of the RAM disk's, the cards', t
 programs.  The console is windows, rio's way on a serial terminal: each window is a whole console, shown one at a
 time, in groups (a group a shell session: Ctrl-] c; Ctrl-] n and p between groups, Ctrl-] Tab between its windows,
 Ctrl-] and a digit to one, Ctrl-] w a list of them; Ctrl-] s and v split one into tiles shown together; Ctrl-] [ the
-scrollback, Ctrl-] y a paste of `/dev/snarf`, Ctrl-] ? the keys).  The login shell is HyForth over rc (`forth -l`): a line is Forth if its
+scrollback, Ctrl-] y a paste of `/dev/snarf`, Ctrl-] ? the keys).  With a Vera X, they're on its screen too, and its
+keyboard types into them as the serial terminal does.  The login shell is HyForth over rc (`forth -l`): a line is Forth if its
 first word is a Forth word or a number, else an rc command line.

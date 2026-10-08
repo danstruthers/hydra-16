@@ -37,6 +37,21 @@ stat:       .res        SR_SIZE
 
 .code
 
+; Sprite 0's byte 6 (its z: the cursor's), from /sprites.  OUT: .A
+sprite0_z:
+            LDR         r0, s_sprites
+            lda         #O_READ
+            jsr         OPEN
+            sta         k
+            LDR         r0, buf
+            LDR         r1, 8
+            lda         k
+            jsr         READ
+            lda         k
+            jsr         CLOSE
+            lda         buf + 6
+            rts
+
 ; READ count bytes at offset of fd fdv into buf.  OUT: .A/.X the count, C
 .macro AT       fdv, offset, count
             LDR         r0, offset
@@ -381,11 +396,12 @@ main:
             EXPECT_OK   "cursor on"
             lda         VERA_DC_VIDEO
             and         #VERA_DC_SPRITES
-            EXPECT_A    VERA_DC_SPRITES, "the cursor's sprite shown (DC_VIDEO)"
+            EXPECT_A    VERA_DC_SPRITES, "the sprites on (DC_VIDEO)"
+            jsr         sprite0_z
+            EXPECT_A    $0C, "the cursor's sprite shown (its z 3)"
             CTL         "cursor off"
-            lda         VERA_DC_VIDEO
-            and         #VERA_DC_SPRITES
-            EXPECT_A    0, "cursor off: hidden"
+            jsr         sprite0_z
+            EXPECT_A    0, "cursor off: hidden (its z 0)"
             CTL         "border 6"
             EXPECT_OK   "border 6"
             lda         VERA_DC_BORDER
@@ -598,10 +614,10 @@ s_font:     .byte       "#v/font", 0
 s_frame:    .byte       "#v/frame", 0
 s_me:       .byte       "#m/t_vid", 0
 s_c:        .byte       "c", 0, 0
-s_state0:   .byte       "vera 47.0.2", LF, "mode 80x60", LF, "cursor blink", LF, "border 0", LF, "bitmap off", LF, "claimed", LF, 0
-s_state1:   .byte       "vera 47.0.2", LF, "mode 80x30", LF, "cursor blink", LF, "border 0", LF, "bitmap off", LF, "claimed", LF, 0
-s_state2:   .byte       "vera 47.0.2", LF, "mode 40x30", LF, "cursor off", LF, "border 6", LF, "bitmap 320 8", LF, "claimed", LF, 0
-s_state3:   .byte       "vera 47.0.2", LF, "mode 80x60", LF, "cursor blink", LF, "border 0", LF, "bitmap off", LF, "claimed 1", LF, 0
+s_state0:   .byte       "vera 47.0.2", LF, "mode 80x60", LF, "cursor blink", LF, "border 0", LF, "bitmap off", LF, "output vga", LF, "claimed", LF, 0
+s_state1:   .byte       "vera 47.0.2", LF, "mode 80x30", LF, "cursor blink", LF, "border 0", LF, "bitmap off", LF, "output vga", LF, "claimed", LF, 0
+s_state2:   .byte       "vera 47.0.2", LF, "mode 40x30", LF, "cursor off", LF, "border 6", LF, "bitmap 320 8", LF, "output vga", LF, "claimed", LF, 0
+s_state3:   .byte       "vera 47.0.2", LF, "mode 80x60", LF, "cursor blink", LF, "border 0", LF, "bitmap off", LF, "output vga", LF, "claimed 1", LF, 0
 s_hello:    .byte       "hello ", 0
 s_world:    .byte       "world", 0
 s_ab:       .byte       "AB  ", 0

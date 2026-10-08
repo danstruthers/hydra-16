@@ -7,6 +7,7 @@
 WIN_MAX         = 16            ; Windows (as task F's banks allow: 3 each, 6 with an alternate screen)
 INQ_SIZE        = 64            ; Each window's keys, waiting to be read
 IOBUF           = 64            ; A write's bytes, a part at a time
+KI_SIZE         = 64            ; The keyboard's ring (/kbin's keys): KI_SIZE - 1 at most (a power of 2)
 ANS_SIZE        = 32            ; Each window's answers (DA, DSR ...: vt.s's, for a raw reader), at most
 LBL_SIZE        = 32            ; Each window's label (OSC 0 and 2's title), with its zero
 TERM_SERIAL     = 1             ; term: the windows shown on the serial port ...

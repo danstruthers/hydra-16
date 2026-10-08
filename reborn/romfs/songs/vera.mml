@@ -1,0 +1,34 @@
+; vera.mml - a score for both chips: the YM2151's bass and drums, and the Vera X's PSG (channels I-X) with each of
+; its waveforms and envelopes.  play /rom/songs/vera.mml plays it (with a Vera X: without one, its PSG part is
+; silent); sim/tools/hysong.js compiles it on the PC, to the same ZSM as play -o.
+#tempo 128
+#title Vera
+@bass  { gm 33 }
+@lead  { wave pulse 24  env 2 14 12 18 }
+@arp   { wave triangle  env 0 0 0 5 }
+@hat   { wave noise  env 0 4 40 1 }
+@pad   { wave saw  env 60 30 10 90 }
+@chirp { env 0 8 63 0 }
+
+; The bass and drums (the YM2151)
+A @bass o2 l8 v110 [a a > a < a g g > g < g | f f > f < f e e > e < e]4
+B v100 [x36 4 x38 4 x36 8 x36 8 x38 4]8
+
+; The lead: legato, slides, ties, triplets
+I @lead o5 l8 v112 r1 r1
+I e4 a4 b8 > c8 < b8 a8 | g4. e8 _g4 a4 | f8 g8 a8 > c8 _d4 c8 < b8 | a2 ^4 r4
+I e4 a4 b8 > c8 < b8 a8 | g4. e8 g4 & a4 | l12 f g a > c d e l8 d4 c8 < b8 | a1
+
+; An arpeggio, its pan moving, on a triangle
+J @arp o4 l16 v90 pl [a > c e a < e c < a > c]2 pr [g b > d g < d < b g b]2 pc [f a > c f < c < a f a]2 [e g+ b > e < b g+ e g+]2
+J pl [a > c e a < e c < a > c]2 pr [g b > d g < d < b g b]2 pc [f a > c f < c < a f a]2 [e g+ b > e < b g+ e g+]2
+
+; Hats on the noise
+K @hat o8 l16 v80 [c c c c q4 c c q7 c c]16
+
+; A pad, its release past the others' end
+L @pad o3 l1 v96 a g f e a g f e
+
+; A chirp by number and by register: I, y, k, D, v, q
+M I 0 o6 l32 v100 r1 r1 r1 [c d e g]2 k 2 D 16 [c d e g]2 k 0 D 0 q 2 v 70 c d e g v 120 c d e g
+M y 51,191 r2 @chirp o7 c4 d4 e4 g4

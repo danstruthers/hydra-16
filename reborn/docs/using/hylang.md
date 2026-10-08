@@ -182,6 +182,7 @@ Each device has a library over its files, loaded by `use`; each is also an examp
 | `"clock"` | `(set-date "2026-10-04 12:00:00")`, `(rtc)` |
 | `"pc"` | `(pc?)`: whether the PC tool answers (`/pc`'s files are files) |
 | `"screen"` | The terminal: `cls`, `at`, `color`, `bold` |
+| `"video"` | The Vera X's screen: `(bitmap 320 8)`, `(pen c)`, `(plot x y)`, `(line x0 y0 x1 y1)`, `(box ...)`, `(bar ...)`, `(circle x y r)`, `(disc x y r)`, `(text x y s)`, `(clear)`; the turtle, `(cs)`, `(fd n)`, `(rt deg)` ...; `(vpeek addr)`, `(vpoke addr v)`, `(palette! i rgb)`, `(sprite-at n x y)`, `(vsync)`, `(mouse)` ([../programming/video.md](../programming/video.md)) |
 
 ```
 hylang> (use "cons")

@@ -46,6 +46,12 @@
 ;   /serctl     the rate: b300, b600, b1200, b2400, b4800, b9600, b19200, b115200.  It reads as it
 ;   /kbdin      a write's bytes are the window's keys, as if typed (rio's kbdin: a line sent to another window's
 ;               shell, forth's send); all of them, as its keys' queue has room, the writer waiting for the rest
+;   /kbin       the console's keyboard (the Vera X's, its input controller's: the input program writes it, what a PC
+;               terminal sends for each key; 9front kbdfs's kbin, which its keyboard driver writes): a write's bytes
+;               are keys typed at the console, as the serial port's are (Ctrl-C and Ctrl-\ notes, the prefix and the
+;               key after it the windows'), in a ring of their own (KI_SIZE), so /ser and /pc's frames never see
+;               them; all of them, as the ring has room, the writer waiting for the rest.  The same file in every
+;               window (the console's, as ser is)
 ;   /text       the window's scrollback and screen as text, a line a row (rio's)
 ;   /snarf      the console's cut buffer (rio's), one for all its windows: SNARF_MAX bytes at most, in a bank of
 ;               its own (taken at the first write).  A write at its start empties it first (a write replaces it);
@@ -353,6 +359,15 @@ w_iqt:      .res        WIN_MAX
 eg_c:       .res        1                                   ; ed_goto's: the column it goes to ...
 eg_x:       .res        1                                   ;   <> 0: the character before written again
 kbd_wait:   .res        1                                   ; <> 0: a /kbdin writer waits for a queue's room
+d_src:      .res        1                                   ; Whose keys distribute hands out now (0 the serial
+                                                            ;   port's, 1 the keyboard's) ...
+d_pfx2:     .res        1                                   ;   and the other's d_pfx (d_swap)
+ki_head:    .res        1                                   ; The keyboard's ring: h_kbin's end ...
+ki_tail:    .res        1                                   ;   and distribute's
+ki_pfx:     .res        1                                   ;   <> 0: h_kbin's last key was the prefix (pfx's, the
+                                                            ;   irq entry's, for the keyboard)
+ki_wait:    .res        1                                   ; <> 0: a /kbin writer waits for the ring's room
+ki_buf:     .res        KI_SIZE                             ; The keyboard's ring
 bell:       .res        1                                   ; <> 0: a BEL the shown window sent (ring's) ...
 bell_st:    .res        1                                   ;   #a/bell: 0 not opened yet, 1 open, 2 none ...
 bell_fd:    .res        1                                   ;   and its fd
@@ -747,11 +762,14 @@ rx_get:
 ; The windows
 
 ; Before each request: the keys come in, each to the window shown (its queue), Ctrl-] and the key after it acted on;
-; /pc's frames taken out (pc_rx).  None while /ser is open for reading: the bytes are its
+; /pc's frames taken out (pc_rx).  The serial port's, then the keyboard's (/kbin's ring: d_get); while /ser is open
+; for reading only the keyboard's, the line's bytes its
 distribute:
+            stz         d_src
             lda         ser_rd
             beq         :+
-            rts
+            jsr         d_swap                              ; (The keyboard's only)
+            inc         d_src
 :
             lda         ls_w                                ; (The list, or the view, another window shown: gone)
             bmi         :+
@@ -765,10 +783,12 @@ distribute:
             beq         @byte
             jsr         vv_close
 @byte:
-            jsr         rx_get
+            jsr         d_get
             bcc         :+
             jmp         paste_feed                          ; (Then a paste's next keys)
 :
+            ldx         d_src                               ; (The keyboard's: no frames)
+            bne         @keys
             ldx         pc_rxs                              ; A /pc frame's?
             bne         @frame
             cmp         #PC_MARK
@@ -874,6 +894,52 @@ distribute:
             jmp         @byte
 
 @done:
+            rts
+
+; The next key for distribute (.A; none, C): the serial port's (rx_get), then the keyboard's, each with its own
+; d_pfx (the other's in d_pfx2)
+d_get:
+            lda         d_src
+            bne         @kb
+            jsr         rx_get
+            bcs         :+
+            rts
+:
+            ldx         ki_tail                             ; (On to the keyboard's, if it has any)
+            cpx         ki_head
+            beq         @wake
+            jsr         d_swap
+            inc         d_src
+@kb:
+            ldx         ki_tail
+            cpx         ki_head
+            beq         @none
+            lda         ki_buf,X
+            pha
+            inx
+            txa
+            and         #KI_SIZE - 1
+            sta         ki_tail
+            pla
+            clc
+            rts
+@none:
+            jsr         d_swap                              ; (The serial port's d_pfx in place again)
+            stz         d_src
+@wake:
+            lda         ki_wait                             ; (A /kbin writer waiting for room: it looks again)
+            beq         :+
+            stz         ki_wait
+            inc         TASK_EVENT
+:
+            sec
+            rts
+
+d_swap:
+            lda         d_pfx
+            ldx         d_pfx2
+            sta         d_pfx2
+            stx         d_pfx
             rts
 
 ; The keys' action .A (KA_*: a binding's)
@@ -3032,6 +3098,103 @@ h_kbdin:
             stz         TASK_INBOX + RQ_DONE + 1
             clc
 @done:
+            rts
+
+; /kbin: a write's bytes are the console's keyboard's, as many as the ring has room for (IOBUF at most), the bytes
+; taken the write's count done: the kernel sends the rest in the next request.  Each is taken as the irq entry takes
+; the serial port's: Ctrl-C and Ctrl-\ notes to the shown window's group at once, the rest into the ring (the prefix
+; and a digit: the digit's window's group the notes' from then on), for distribute.  No room: E_AGAIN, the writer
+; waiting till distribute takes them (ki_wait)
+h_kbin:
+            cmp         #R_WRITE
+            beq         :+
+            clc
+            rts
+:
+            lda         ki_tail                             ; The ring's room (a key's place kept free) ...
+            clc
+            sbc         ki_head
+            and         #KI_SIZE - 1
+            bne         :+
+            lda         #1
+            sta         ki_wait
+            jmp         again
+:
+            ldx         TASK_INBOX + RQ_COUNT + 1           ;   the count at most (IOBUF is more than the room)
+            bne         :+
+            cmp         TASK_INBOX + RQ_COUNT
+            bcc         :+
+            lda         TASK_INBOX + RQ_COUNT
+:
+            sta         cnt
+            stz         n
+            stz         n + 1
+            jsr         from_client
+            bcs         @done
+            ldy         #0
+:
+            cpy         cnt
+            beq         :+
+            lda         iobuf,Y
+            phy
+            jsr         ki_key
+            ply
+            iny
+            bra         :-
+:
+            inc         TASK_EVENT                          ; (The window's readers look again)
+            lda         cnt
+            sta         TASK_INBOX + RQ_DONE
+            stz         TASK_INBOX + RQ_DONE + 1
+            clc
+@done:
+            rts
+
+; A key from the keyboard (.A), as the irq entry takes the serial port's: a note, or into the ring
+ki_key:
+            ldx         ki_pfx
+            bne         @after
+            cmp         #CTRL_C
+            beq         @intr
+            cmp         #CTRL_BSL
+            beq         @kill
+            cmp         kb_pfx
+            bne         @store
+            sta         ki_pfx                              ; (The prefix: it goes into the ring too)
+@store:
+            ldx         ki_head
+            sta         ki_buf,X
+            inx
+            txa
+            and         #KI_SIZE - 1
+            sta         ki_head
+            rts
+
+@after:                                                     ; The key after the prefix: a digit is the window that
+            stz         ki_pfx                              ;   has the keys now (its note group Ctrl-C's)
+            tax
+            eor         #'0'
+            cmp         #10
+            bcs         :+
+            tay
+            lda         w_group,Y
+            sta         win_grp
+:
+            txa
+            bra         @store
+
+@intr:                                                      ; The notes, to the shown window's group
+            lda         #1 << (NOTE_INTERRUPT - 1)
+            bra         @note
+
+@kill:
+            lda         #1 << (NOTE_KILL - 1)
+@note:
+            ldx         win_grp
+            php
+            sei
+            jsr         NOTE_QUEUE
+            plp
             rts
 
 ; /snarf: the console's cut buffer (all the windows' one).  A read gives it from the offset, IOBUF bytes at a time; a
@@ -7596,6 +7759,7 @@ srv_tree:
             SRV_ENTRY   s_text,    0,   SK_DATA, h_text,      SM_READ,            0     ; 11
             SRV_ENTRY   s_label,   0,   SK_DATA, h_label,     SM_READ | SM_WRITE, 0     ; 12
             SRV_ENTRY   s_snarf,   0,   SK_DATA, h_snarf,     SM_READ | SM_WRITE, 0     ; 13
+            SRV_ENTRY   s_kbin,    0,   SK_DATA, h_kbin,      SM_WRITE,           0     ; 14
             .word       0
 cons_cmds:
             .word       s_rawon_w, c_rawon
@@ -7644,6 +7808,7 @@ s_kbdin:    .byte       "kbdin", 0
 s_text:     .byte       "text", 0
 s_label:    .byte       "label", 0
 s_snarf:    .byte       "snarf", 0
+s_kbin:     .byte       "kbin", 0
 s_bar_w:    .byte       "bar", 0
 s_header_w: .byte       "header", 0
 s_footer_w: .byte       "footer", 0
