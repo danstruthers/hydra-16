@@ -7,6 +7,38 @@
 ; global's address in the RAM.  A code address (a16) is a logical bank's 3 bits and 13.
 
 
+; vt = the second value from the top, vu = the top (two_vals', inline)
+.macro TWO_VT
+            sec
+            lda         vsp
+            sbc         #VAL_SIZE
+            sta         vu
+            tax
+            lda         vsp + 1
+            sbc         #0
+            sta         vu + 1
+            sta         vt + 1
+            txa
+            sec
+            sbc         #VAL_SIZE
+            sta         vt
+            bcs         :+
+            dec         vt + 1
+:
+.endmacro
+
+; ip on past n bytes, then the next op (nx3's, inline)
+.macro NEXT_N n
+            clc
+            lda         ip
+            adc         #n
+            sta         ip
+            bcc         :+
+            inc         ip + 1
+:
+            jmp         next
+.endmacro
+
 .bss
 fr_sign:    .res        1                                   ; (FOR's: the step's sign, the variable's slot)
 fr_v:       .res        2
@@ -255,15 +287,38 @@ op_bnk:
 
 ; ip = the a16 after the op
 jump:
-            ldy         #2
+            ldy         #1
+            jsr         ip_a16
+            bit         intr                                ; (Ctrl-C: stopped at the target, CONT's place)
+            bmi         brk_here
+            jmp         next
+
+; ip = the a16 at ip + .Y (its low byte): within the code's bank (as ip is), ip alone; else ip_set's
+ip_a16:
+            iny
             lda         (ip),y
             tax
             dey
             lda         (ip),y
-            jsr         ip_set
-            bit         intr                                ; (Ctrl-C: stopped at the target, CONT's place)
-            bmi         brk_here
-            jmp         next
+            sta         t0
+            txa
+            lsr         a                                   ; (Its bank: the top 3 bits)
+            lsr         a
+            lsr         a
+            lsr         a
+            lsr         a
+            cmp         ipl
+            bne         @far
+            lda         t0
+            sta         ip
+            txa
+            and         #$1F
+            ora         #WIN
+            sta         ip + 1
+            rts
+@far:
+            lda         t0
+            jmp         ip_set
 
 op_jmp:
             bra         jump
@@ -283,7 +338,15 @@ brk_here:
 
 ; A value taken: is it 0?  OUT: Z = 1 yes
 pop_zero:
-            jsr         pop_vt
+            sec                                             ; (pop_vt's, inline)
+            lda         vsp
+            sbc         #VAL_SIZE
+            sta         vsp
+            sta         vt
+            lda         vsp + 1
+            sbc         #0
+            sta         vsp + 1
+            sta         vt + 1
             lda         (vt)
             beq         :+
             cmp         #VT_FIX                             ; (A VT_FIX: its digits; not an integer: the numbers')
@@ -304,11 +367,15 @@ pop_zero:
 
 op_jf:
             jsr         pop_zero
-            beq         jump
-            jmp         nx3
+            bne         :+
+            jmp         jump
+:
+            NEXT_N      3
 op_jt:
             jsr         pop_zero
-            bne         jump
+            beq         :+
+            jmp         jump
+:
             jmp         nx3
 
 ; ---- GOSUB, RETURN, ON
@@ -616,26 +683,62 @@ slot_abs:
             rts
 
 op_ldv:
-            jsr         slot_vt
-            ldy         #4
-:
+            ldy         #2                                  ; (A global: its place; a frame's slot: slot_x's)
+            lda         (ip),y
+            beq         @frame
+            sta         vt + 1
+            dey
+            lda         (ip),y
+            sta         vt
+@have:
+.repeat 5, I
+            ldy         #4 - I
             lda         (vt),y
             sta         (vsp),y
+.endrep
+            clc
+            lda         vsp
+            adc         #VAL_SIZE
+            sta         vsp
+            bcc         :+
+            inc         vsp + 1
+:
+            NEXT_N      3
+@frame:
             dey
-            bpl         :-
-            jsr         vsp_up
-            jmp         nx3
+            lda         (ip),y
+            jsr         slot_x
+            bra         @have
 
 op_stv:
-            jsr         slot_vt
-            jsr         pop_vu
-            ldy         #4
-:
+            ldy         #2
+            lda         (ip),y
+            beq         @frame
+            sta         vt + 1
+            dey
+            lda         (ip),y
+            sta         vt
+@have:
+            sec                                             ; (vu: the value, taken off)
+            lda         vsp
+            sbc         #VAL_SIZE
+            sta         vsp
+            sta         vu
+            lda         vsp + 1
+            sbc         #0
+            sta         vsp + 1
+            sta         vu + 1
+.repeat 5, I
+            ldy         #4 - I
             lda         (vu),y
             sta         (vt),y
+.endrep
+            NEXT_N      3
+@frame:
             dey
-            bpl         :-
-            jmp         nx3
+            lda         (ip),y
+            jsr         slot_x
+            bra         @have
 
 op_refv:
             jsr         slot_vt
@@ -729,8 +832,10 @@ fx_done:
             jmp         nx1
 
 op_add:
-            jsr         two_vals
-            bcs         add_fix
+            TWO_VT
+            lda         (vt)
+            ora         (vu)
+            bne         add_fix
             clc
             ldy         #1
             lda         (vt),y
@@ -751,11 +856,17 @@ op_add:
             sta         t0 + 3
 int_t0:
             ldy         #4                                  ; (vt = t0, the top dropped)
-:
-            lda         t0 - 1,y
+            lda         t0 + 3
             sta         (vt),y
             dey
-            bne         :-
+            lda         t0 + 2
+            sta         (vt),y
+            dey
+            lda         t0 + 1
+            sta         (vt),y
+            dey
+            lda         t0
+            sta         (vt),y
             lda         vu
             sta         vsp
             lda         vu + 1
@@ -763,8 +874,12 @@ int_t0:
             jmp         nx1
 
 op_sub:
-            jsr         two_vals
-            bcs         sub_fix
+            TWO_VT
+            lda         (vt)
+            ora         (vu)
+            beq         :+
+            jmp         sub_fix
+:
             sec
             ldy         #1
             lda         (vt),y
@@ -1078,8 +1193,10 @@ op_neg:
 
 ; Comparisons: two integers here (their order: t4 = $FF, 0, 1); else the numbers' CMP
 cmp_ints:
-            jsr         two_vals
-            bcs         @slow
+            TWO_VT
+            lda         (vt)
+            ora         (vu)
+            bne         @slow
             sec                                             ; (vt - vu, signed)
             ldy         #1
             lda         (vt),y
@@ -1131,7 +1248,7 @@ cmp_put:
             sta         t0 + 1
             sta         t0 + 2
             sta         t0 + 3
-            jsr         two_vals                            ; (vt, vu again: the slow ways' banks may change them)
+            TWO_VT                                          ; (vt, vu again: the slow ways' banks may change them)
             lda         #VT_INT
             sta         (vt)
             jmp         int_t0
@@ -1395,44 +1512,155 @@ op_fort:
             jmp         next
 
 op_forn:
-            ldy         #1                                  ; v + s, into v
+            ldy         #2                                  ; v + s, into v (v: vt; s: vu; a global's place, or a
+            lda         (ip),y                              ;   frame's slot by slot_at)
+            beq         @vframe
+            sta         vt + 1
+            dey
+            lda         (ip),y
+            sta         vt
+            bra         @vhave
+@vframe:
+            ldy         #1
             jsr         slot_at
-            MOVW        fr_v, vt
+@vhave:
+            lda         vt
+            sta         fr_v
+            lda         vt + 1
+            sta         fr_v + 1
+            ldy         #6
+            lda         (ip),y
+            beq         @sframe
+            sta         vu + 1
+            dey
+            lda         (ip),y
+            sta         vu
+            bra         @shave
+@sframe:
             ldy         #5
             jsr         slot_at
             MOVW        vu, vt
             MOVW        vt, fr_v
+@shave:
             lda         (vt)
             ora         (vu)
-            bne         @slow
-            clc
+            beq         :+
+            jmp         @slow
+:
+            clc                                             ; (In place: past 32 bits, its low bytes taken back)
             ldy         #1
             lda         (vt),y
             adc         (vu),y
-            sta         t0
+            sta         (vt),y
             iny
             lda         (vt),y
             adc         (vu),y
-            sta         t0 + 1
+            sta         (vt),y
             iny
             lda         (vt),y
             adc         (vu),y
-            sta         t0 + 2
+            sta         (vt),y
             iny
             lda         (vt),y
             adc         (vu),y
-            bvs         @slow
+            bvc         :+
+            jmp         @undo
+:
             sta         (vt),y
+            lda         (vu),y                              ; (Integers: the step's sign, l (vu), the test here)
+            sta         fr_sign
+            lda         (ip),y
+            beq         @lframe
+            sta         vu + 1
             dey
-            lda         t0 + 2
-            sta         (vt),y
+            lda         (ip),y
+            sta         vu
+            bra         @lhave
+@lframe:
+            ldy         #3
+            jsr         slot_at
+            MOVW        vu, vt
+            MOVW        vt, fr_v
+@lhave:
+            lda         (vu)
+            beq         :+
+            jmp         @test
+:
+            sec                                             ; (Up: done if l - v is below 0; down: if v - l is)
+            ldy         #1
+            bit         fr_sign
+            bmi         @down
+            lda         (vu),y
+            sbc         (vt),y
+            iny
+            lda         (vu),y
+            sbc         (vt),y
+            iny
+            lda         (vu),y
+            sbc         (vt),y
+            iny
+            lda         (vu),y
+            sbc         (vt),y
+            bra         @sign
+@down:
+            lda         (vt),y
+            sbc         (vu),y
+            iny
+            lda         (vt),y
+            sbc         (vu),y
+            iny
+            lda         (vt),y
+            sbc         (vu),y
+            iny
+            lda         (vt),y
+            sbc         (vu),y
+@sign:
+            bvc         :+
+            eor         #$80
+:
+            bpl         :+
+            jmp         @done
+:
+            bit         intr                                ; (Back to the body: Ctrl-C looked for; within the
+            bpl         :+                                  ;   code's bank, ip alone)
+            jmp         @brk
+:
+            ldy         #8
+            lda         (ip),y
+            tax
+            lsr         a
+            lsr         a
+            lsr         a
+            lsr         a
+            lsr         a
+            cmp         ipl
+            bne         @far
             dey
-            lda         t0 + 1
+            lda         (ip),y
+            sta         ip
+            txa
+            and         #$1F
+            ora         #WIN
+            sta         ip + 1
+            jmp         next
+@far:
+            ldy         #7
+            jsr         ip_a16
+            jmp         next
+@undo:
+            sec                                             ; (v's low bytes back: v + s - s)
+            ldy         #1
+            lda         (vt),y
+            sbc         (vu),y
             sta         (vt),y
-            dey
-            lda         t0
+            iny
+            lda         (vt),y
+            sbc         (vu),y
             sta         (vt),y
-            bra         @test
+            iny
+            lda         (vt),y
+            sbc         (vu),y
+            sta         (vt),y
 @slow:
             lda         #0                                  ; (VT_FIX's: here)
             jsr         fx_addsub
@@ -1455,15 +1683,15 @@ op_forn:
             bpl         :-
 @test:
             jsr         for_test
-            bcs         :+
+            bcs         @done
+@again:
             bit         intr                                ; (Back to the body: Ctrl-C looked for)
             bmi         @brk
             ldy         #7
-            jmp         jump_y
-:
-            lda         #9
-            jsr         ip_plus
+            jsr         ip_a16
             jmp         next
+@done:
+            NEXT_N      9
 @brk:
             jmp         brk_here
 
@@ -1479,12 +1707,7 @@ push_vt:
 
 ; ip = the a16 at ip + .Y (its low byte), then the next op
 jump_y:
-            iny
-            lda         (ip),y
-            tax
-            dey
-            lda         (ip),y
-            jsr         ip_set
+            jsr         ip_a16
             jmp         next
 
 ; t4 = the order of the integers at (vt) and (vu): $FF, 0, 1
