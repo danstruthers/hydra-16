@@ -16,47 +16,8 @@
 // emulator ahead of the browser's clock, or not run at --speed 1).  Only on 127.0.0.1.
 'use strict';
 const http = require('http');
-
-// The page's sound: the worklet, which plays what it's sent (Int16 samples, left then right)
-const WORKLET = `
-class HydraSound extends AudioWorkletProcessor {
-  constructor() {
-    super();
-    this.size = 96000; this.L = new Float32Array(this.size); this.R = new Float32Array(this.size);
-    this.rd = 0; this.wr = 0; this.n = 0; this.primed = false; this.target = 7200; this.ticks = 0;
-    this.port.onmessage = e => {
-      const s = new Int16Array(e.data), k = s.length >> 1;
-      for (let i = 0; i < k; i++) { this.L[this.wr] = s[2 * i] / 32768; this.R[this.wr] = s[2 * i + 1] / 32768; this.wr = (this.wr + 1) % this.size; }
-      this.n += k;
-      if (this.n > 3 * this.target) { const d = this.n - this.target; this.rd = (this.rd + d) % this.size; this.n -= d; }
-    };
-  }
-  process(inputs, outputs) {
-    const l = outputs[0][0], r = outputs[0][1] || l;
-    if (!this.primed && this.n >= this.target) this.primed = true;
-    for (let i = 0; i < l.length; i++) {
-      if (this.primed && this.n > 0) { l[i] = this.L[this.rd]; r[i] = this.R[this.rd]; this.rd = (this.rd + 1) % this.size; this.n--; }
-      else { l[i] = 0; r[i] = 0; if (this.primed) this.primed = false; }
-    }
-    if (++this.ticks % 64 === 0) this.port.postMessage(this.n);
-    return true;
-  }
-}
-registerProcessor('hydra-sound', HydraSound);
-`;
-
-// KeyboardEvent.code: the IBM PC/AT's key numbers (x16-emulator's keyboard.c)
-const KEYNUM = { Backquote: 1, Minus: 12, Equal: 13, Backspace: 15, Tab: 16, BracketLeft: 27, BracketRight: 28, Backslash: 29,
-  CapsLock: 30, Semicolon: 40, Quote: 41, Enter: 43, ShiftLeft: 44, IntlBackslash: 45, Comma: 53, Period: 54, Slash: 55,
-  IntlRo: 56, ShiftRight: 57, ControlLeft: 58, MetaLeft: 59, AltLeft: 60, Space: 61, AltRight: 62, MetaRight: 63,
-  ControlRight: 64, ContextMenu: 65, Insert: 75, Delete: 76, ArrowLeft: 79, Home: 80, End: 81, ArrowUp: 83, ArrowDown: 84,
-  PageUp: 85, PageDown: 86, ArrowRight: 89, NumLock: 90, Numpad7: 91, Numpad4: 92, Numpad1: 93, NumpadDivide: 95,
-  Numpad8: 96, Numpad5: 97, Numpad2: 98, Numpad0: 99, NumpadMultiply: 100, Numpad9: 101, Numpad6: 102, Numpad3: 103,
-  NumpadDecimal: 104, NumpadSubtract: 105, NumpadAdd: 106, NumpadEnter: 108, Escape: 110, PrintScreen: 124,
-  ScrollLock: 125, Pause: 126 };
-[...'1234567890'].forEach((c, i) => { KEYNUM['Digit' + c] = 2 + i; });
-for (const [first, keys] of [[17, 'QWERTYUIOP'], [31, 'ASDFGHJKL'], [46, 'ZXCVBNM']]) [...keys].forEach((c, i) => { KEYNUM['Key' + c] = first + i; });
-for (let i = 1; i <= 12; i++) KEYNUM['F' + i] = 111 + i;
+const { WORKLET } = require('./lib/worklet.js');         // (The page's sound: the worklet)
+const { KEYNUM } = require('./lib/keynum.js');           // (KeyboardEvent.code: the IBM PC/AT's key numbers)
 
 // The page's keyboard and mouse, for the input controller
 const INPUT = `

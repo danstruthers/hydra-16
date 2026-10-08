@@ -16,6 +16,7 @@ The code is built with **cc65** (https://cc65.github.io/), and the board is desi
 cd reborn
 node build.js                      build HydraOS (needs Node.js and cc65): bin/bios.bin, bin/prom0.bin ...
 node sim/run.js -i                 use the Hydra in your terminal, in the emulator (Ctrl-A x quits)
+node sim/web.js                    the emulator in a browser: one file, obj/web/hydra-16.html, to open
 node sim/test.js                   the regression tests
 ```
 

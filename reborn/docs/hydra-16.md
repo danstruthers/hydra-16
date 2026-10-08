@@ -84,8 +84,11 @@ node build.js            the BIOS ROM and the paged ROM's chips, into bin/
 node sim/run.js -i       the Hydra's serial console in your terminal (Ctrl-A x quits, Ctrl-A h helps)
 ```
 
-The images are in Git too (`bin/`), so `node sim/run.js -i` works without cc65.  [The tutorial](tutorial.md) is the
-first hour: the shell, files and disks, windows, the languages, sound, and a program of your own.
+The images are in Git too (`bin/`), so `node sim/run.js -i` works without cc65.  `node sim/web.js` puts the emulator
+in a web page instead: `obj/web/hydra-16.html`, one file with the images in it, to open in a browser (the serial
+console a terminal in the page, the Vera X's screen beside it, the sound, SD cards kept in the browser).  [The
+tutorial](tutorial.md) is the first hour: the shell, files and disks, windows, the languages, sound, and a program of
+your own.
 
 **On the board:**
 * Program the chips (an EPROM programmer; there's no write path on the board): `bin/bios.bin` into the BIOS ROM's socket
@@ -382,6 +385,11 @@ POST's, a driver's) are `/dev/kmesg`, its last 4K.
   card; `--pc-dir DIR` a folder as `/pc`; `--vera` a Vera X (`--vera-sd card.img` a card in its SD slot), `--view` its screen in a browser; `--sound` the sound in a
   browser, `--wav FILE` in a file; `--trace-calls`, `--break`, `--watch` for debugging.  The top of `sim/run.js` lists
   them all; [the hardware reference](hardware.md#in-the-emulator) says what's modelled.
+* **The emulator in a browser**, `node sim/web.js`: `obj/web/hydra-16.html`, one file (the page, the emulator in a Web
+  Worker, the images), that runs HydraOS in Chrome, Edge, Firefox or Safari with nothing installed and nothing sent
+  anywhere; `--serve` serves it at http://localhost:8017.  The serial console is a terminal in the page (`lib/vt.js`,
+  the VT100 the tests use), with the Vera X's screen beside it; Setup has the card, its keyboard and mouse, the clock
+  chip, the RAM modules and SD cards (a new blank one, or an image loaded; kept in the browser, saved as image files).
 * **The tests**, `node sim/test.js`: 115 of them, each booting its own image and judged on its output, its time budgets
   and its own checks, as many at a time as the PC has cores; `--dl` runs them in the danlang emulator (`sim/dl`), the
   emulator written again in danlang.
