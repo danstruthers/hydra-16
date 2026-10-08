@@ -36,6 +36,10 @@ The prompt is the current directory and `>`.  In the emulator, Ctrl-A x quits, C
 and Ctrl-A h lists the rest.  `node sim/run.js -i --vera --view` gives it a Vera X card too: its screen, which shows
 the console as the terminal does, is at http://localhost:8016.
 
+Or with no terminal at all: `node sim/web.js` makes `obj/web/hydra-16.html`, the emulator as one web page (the page,
+the emulator and the ROM images in one file).  Open it in a browser: the serial console is a terminal in the page,
+with the Vera X's screen beside it, a Sound button, and SD cards kept in the browser (its Setup).
+
 ## 2. The shell
 
 The login shell is HyForth over rc: a line whose first word is a Forth word or a number is Forth; any other line is
