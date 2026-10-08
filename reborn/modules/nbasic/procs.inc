@@ -11,13 +11,15 @@
 ; down over them (SLIDE).
 
 ARG_MAX         = 16            ; A procedure's parameters at most
+CS_MAX          = 192           ; (cs_stk's room: the calls compiled around a FUNCTION's call)
 
 .bss
 pk_buf:     .res        ARG_MAX                             ; A procedure's parameters' kinds (PK_*)
 pk_n:       .res        1                                   ;   and their count
 pr_num:     .res        1                                   ; (The procedure called or compiled, its kind
 pr_func:    .res        1                                   ;   (SPR_FUNC: 0 a SUB))
-pr_paren:   .res        1                                   ; (A call's arguments in parentheses)
+pr_paren:   .res        1                                   ; (A call's arguments in parentheses: 1; none, a
+                                                            ;   FUNCTION's name alone: 2)
 pr_elem:    .res        ARG_MAX                             ; (Each argument: 0, or 1 + its place's number (an element's))
 pr_nloc:    .res        1                                   ; (The places pushed)
 pr_argi:    .res        1                                   ; (The argument being compiled)
@@ -29,7 +31,10 @@ sc_depth:   .res        1                                   ; (arg_skip's)
 pr_mklocal: .res        1                                   ; (param_kinds: each parameter its local too)
 pr_np:      .res        1                                   ; (The procedure's parameters, as it's compiled)
 pp_suf:     .res        1                                   ; (A parameter's suffix)
+ao_kind:    .res        1                                   ; (arg_one's: its parameter's kind)
 as_fix:     .res        2                                   ; (as_type's: STRING * n's n)
+cs_stk:     .res        CS_MAX                              ; (The calls being compiled around an argument's FUNCTION
+cs_sp:      .res        1                                   ;   call: call_save's, call_load's)
 
 .segment "CODE2"
 
@@ -604,13 +609,15 @@ fn_return:
 
 ; A SUB's call statement: name [args] (CALL name [(args)]: st_call); its name current, spl its symbol's
 sub_call:
+            jsr         call_save                           ; (The procedure it's in: kept)
             lda         spl + SPR_NUM
             sta         pr_num
             jsr         call_kinds
             jsr         lex_next
             stz         pr_paren
             jsr         call_args
-            jmp         call_after
+            jsr         call_after
+            jmp         call_load
 
 ; CALL name [(args)]
 st_callkw:
@@ -631,6 +638,7 @@ st_callkw:
             ldx         #0
             jmp         c_error
 :
+            jsr         call_save                           ; (The procedure it's in: kept)
             lda         spl + SPR_NUM
             sta         pr_num
             jsr         call_kinds
@@ -643,7 +651,8 @@ st_callkw:
             jsr         lex_next
 :
             jsr         call_args
-            jmp         call_after
+            jsr         call_after
+            jmp         call_load
 
 ; A FUNCTION's call in an expression: name [(args)], its name current, spl its symbol's.  Its value's type: etype
 fcall_expr:
@@ -653,23 +662,23 @@ fcall_expr:
             ldx         #0
             jmp         c_error
 :
+            jsr         call_save                           ; (A call it's an argument of: kept)
+            lda         spl + SPR_FUNC
             sta         pr_func
             lda         spl + SPR_NUM
             sta         pr_num
             jsr         call_kinds
-            lda         pr_func                             ; (Kept: the arguments' expressions call others)
-            pha
             jsr         lex_next
-            stz         pr_paren
+            lda         #2                                  ; (No ( after it: no arguments)
+            sta         pr_paren
             lda         #'('
             jsr         is_op
             bne         :+
-            inc         pr_paren
+            lda         #1
+            sta         pr_paren
             jsr         lex_next
 :
             jsr         call_args
-            pla
-            sta         pr_func
             jsr         call_after
             stz         etype                               ; (Its value's type)
             lda         pr_func
@@ -678,6 +687,86 @@ fcall_expr:
             lda         #ET_STR
             sta         etype
 :
+            jmp         call_load
+
+; The call being compiled (if any), kept while a FUNCTION's call in its arguments is (cs_stk, cs_sp: c_begin's 0):
+; its kinds and elements, then its counts and the lexer's mark, pk_n last.  call_load: back.  Too deep: Out of stack
+; space
+call_save:
+            ldy         cs_sp
+            ldx         #0
+@each:
+            cpx         pk_n
+            beq         @fixed
+            lda         pk_buf,x
+            jsr         cv_put
+            lda         pr_elem,x
+            jsr         cv_put
+            inx
+            bra         @each
+@fixed:
+            lda         lx_save
+            jsr         cv_put
+            lda         lx_save + 1
+            jsr         cv_put
+            lda         pr_num
+            jsr         cv_put
+            lda         pr_func
+            jsr         cv_put
+            lda         pr_paren
+            jsr         cv_put
+            lda         pr_nloc
+            jsr         cv_put
+            lda         pr_argi
+            jsr         cv_put
+            lda         pk_n
+            jsr         cv_put
+            sty         cs_sp
+            rts
+cv_put:
+            sta         cs_stk,y
+            iny
+            cpy         #CS_MAX
+            bcs         :+
+            rts
+:
+            lda         #ER_STACK
+            ldx         #0
+            jmp         c_error
+
+call_load:
+            ldy         cs_sp
+            jsr         cv_get
+            sta         pk_n
+            jsr         cv_get
+            sta         pr_argi
+            jsr         cv_get
+            sta         pr_nloc
+            jsr         cv_get
+            sta         pr_paren
+            jsr         cv_get
+            sta         pr_func
+            jsr         cv_get
+            sta         pr_num
+            jsr         cv_get
+            sta         lx_save + 1
+            jsr         cv_get
+            sta         lx_save
+            ldx         pk_n
+@each:
+            dex
+            bmi         @done
+            jsr         cv_get
+            sta         pr_elem,x
+            jsr         cv_get
+            sta         pk_buf,x
+            bra         @each
+@done:
+            sty         cs_sp
+            rts
+cv_get:
+            dey
+            lda         cs_stk,y
             rts
 
 ; pk_buf, pk_n: the procedure's parameters' kinds (spl: its symbol), pr_func its kind
@@ -701,24 +790,9 @@ call_kinds:
             jmp         code_sel
 
 ; The arguments compiled (pk_buf's kinds), as many as the parameters (else Argument-count mismatch), the token after
-; them current (past the ) if pr_paren).  Then CALL p.  Recursive: what's kept is on the 6502's stack
+; them current (past the ) if pr_paren).  Then CALL p.  (A FUNCTION's call among them keeps this one's state:
+; fcall_expr's call_save)
 call_args:
-            lda         pr_num                              ; (Kept for the call: an argument's FUNCTION uses them)
-            pha
-            lda         pr_func
-            pha
-            lda         pk_n
-            pha
-            lda         pr_paren
-            pha
-            ldx         pk_n                                ; (Its kinds, kept too)
-:
-            dex
-            bmi         :+
-            lda         pk_buf,x
-            pha
-            bra         :-
-:
             jsr         lex_mark                            ; Pass 1: each element's place, pushed
             stz         pr_nloc
             stz         pr_argi
@@ -727,6 +801,14 @@ call_args:
             beq         @places
             ldx         pr_argi
             stz         pr_elem,x
+            lda         pr_argi                             ; (A record's field, for a number or a string: by place)
+            jsr         kind_of_arg
+            cmp         #PK_NARR
+            bcs         :+
+            sta         ao_kind
+            FARN        3, arg_field
+            bcc         @placed
+:
             jsr         arg_is_elem
             bcs         @skip1
             lda         pr_argi                             ; (Its parameter takes a number or a string: by place)
@@ -734,6 +816,7 @@ call_args:
             cmp         #PK_NARR
             bcs         @skip1
             jsr         elem_place
+@placed:
             inc         pr_nloc
             ldx         pr_argi
             lda         pr_nloc
@@ -782,25 +865,9 @@ count_err:
             ldx         #0
             jmp         c_error
 :
-            ldx         #0                                  ; (The kinds back)
-:
-            cpx         pk_n
-            beq         :+
-            pla
-            sta         pk_buf,x
-            inx
-            bra         :-
-:
-            pla
-            sta         pr_paren
-            pla
-            sta         pk_n
-            pla
-            sta         pr_func
-            pla
-            sta         pr_num
             lda         pr_paren
-            beq         :+
+            cmp         #1
+            bne         :+
             lda         #')'
             jsr         need_op
 :
@@ -870,6 +937,9 @@ call_after:
 
 ; Is the current token the arguments' end (Z = 1)?  ) in parentheses, else the statement's end (:, ELSE, its end)
 args_end:
+            lda         pr_paren                            ; (A FUNCTION's name alone: none)
+            cmp         #2
+            beq         @end
             lda         tk
             beq         @end
             cmp         #TK_OP
@@ -1103,7 +1173,7 @@ elem_value:
 arg_one:
             lda         pr_argi
             jsr         kind_of_arg
-            sta         t4 + 2
+            sta         ao_kind
             and         #7
             cmp         #PK_RARR                            ; (An array of records: as an array)
             beq         @array
@@ -1129,7 +1199,11 @@ arg_one:
             jsr         emit_slot
             jmp         lex_next
 @value:
+            lda         ao_kind                             ; (Its kind: kept, as a call in it uses it)
+            pha
             jsr         expr
+            pla
+            sta         ao_kind
             jmp         arg_type
 @array:
             lda         tk                                  ; An array: name()
@@ -1189,9 +1263,9 @@ arg_one:
 @syntax:
             jmp         syntax_err
 
-; A record's type (spl's) must be its parameter's (t4 + 2: PK_REC | type << 3): else Parameter type mismatch
+; A record's type (spl's) must be its parameter's (ao_kind: PK_REC | type << 3): else Parameter type mismatch
 rec_type:
-            lda         t4 + 2
+            lda         ao_kind
             lsr         a
             lsr         a
             lsr         a
@@ -1203,9 +1277,9 @@ rec_type:
 :
             rts
 
-; The argument's type (etype) must be its parameter's (t4 + 2: PK_NUM or PK_STR)
+; The argument's type (etype) must be its parameter's (ao_kind: PK_NUM or PK_STR)
 arg_type:
-            lda         t4 + 2
+            lda         ao_kind
             and         #7
             cmp         etype
             beq         :+

@@ -586,8 +586,7 @@ class_type:
 ; ---- PRINT
 
 st_print:
-            lda         #'#'                                ; PRINT #n: a file's (the third bank's)
-            jsr         is_op
+            jsr         is_hash                             ; PRINT #n: a file's (the third bank's)
             bne         :+
             FARN        3, print_file
             rts

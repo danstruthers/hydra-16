@@ -393,6 +393,15 @@ st_base:
             bcc         :+
             jmp         n_fail
 :
+            ldx         #1                                  ; (Decimal: E notation read)
+            lda         f_bstr
+            cmp         #'d'
+            bne         :+
+            lda         f_bstr + 1
+            bne         :+
+            dex
+:
+            stx         rb_ndec
             jmp         code_sel
 
 ; DIGITS n: the math functions' precision (1 to 100 significant digits)
@@ -459,6 +468,20 @@ num_field:
             stz         r4 + 1
             lda         nsb
             sta         RAM_BANK
+            ldy         #0                                  ; (Its text to NS_A + 1: a 0 before a point, &H)
+:
+            cpy         r1
+            beq         :+
+            lda         (r0),y
+            sta         NS_A + 1,y
+            iny
+            bra         :-
+:
+            jsr         amp_base
+            jsr         pt_zero
+            lda         #1                                  ; (E notation: what's after it too, to be none)
+            sta         ec_all
+            jsr         e_try
             ldy         #NPARSE_WHOLE
             NUMCALL     NUM_PARSE
             bcs         @bad
@@ -493,6 +516,331 @@ f_digits:
             lda         digits_set
             jmp         int_a_vt
 
+; E notation, QuickBASIC's (1E3, -2.5e-2, 1D2), at r0 (r1 bytes at most; the scratch bank in, if it's there): spaces,
+; a sign, digits with a point among them once at most, E or D, a sign, digits.  Written again without it at ex_buf +
+; EX_DIGITS (1000, -0.025), and if ec_all the text after it too.  OUT: C = 0, .A its length, .Y the characters it
+; took; C = 1 not one (.A 0: more than EX_DIGITS digits aren't), or too long (.A ER_OVERFLOW)
+e_conv:
+            tsx
+            stx         ec_s
+            ldy         #0
+            ldx         #EX_DIGITS                          ; (The text written: its sign first)
+:
+            jsr         ec_get
+            cmp         #' '
+            bne         :+
+            iny
+            bra         :-
+:
+            cmp         #'+'
+            beq         @sign
+            cmp         #'-'
+            bne         @mant
+            jsr         ex_put4
+@sign:
+            iny
+@mant:
+            stx         ec_x
+            ldx         #0                                  ; (Its digits: at ex_buf)
+            lda         #$FF
+            sta         ex_p
+@m:
+            jsr         ec_get
+            cmp         #'.'
+            bne         :+
+            lda         ex_p
+            cmp         #$FF
+            beq         @lb906
+            jmp         @no
+@lb906:
+            stx         ex_p
+            iny
+            bra         @m
+:
+            jsr         ec_dig
+            bcs         @e
+            cpx         #EX_DIGITS
+            bcc         @lb905
+            jmp         ec_long
+@lb905:
+            sta         ex_buf,x
+            inx
+            iny
+            bra         @m
+@e:
+            cpx         #0
+            bne         @lb904
+            jmp         @no
+@lb904:
+            and         #$DF
+            cmp         #'E'
+            beq         :+
+            cmp         #'D'
+            beq         @lb903
+            jmp         @no
+@lb903:
+:
+            stx         ex_nd
+            lda         ex_p
+            cmp         #$FF
+            bne         :+
+            stx         ex_p
+:
+            iny                                             ; (Its exponent: a sign, digits)
+            stz         ex_neg
+            jsr         ec_get
+            cmp         #'+'
+            beq         @esign
+            cmp         #'-'
+            bne         @ed
+            inc         ex_neg
+@esign:
+            iny
+@ed:
+            stz         ex_e
+            stz         ex_e + 1
+            jsr         ec_get
+            jsr         ec_dig
+            bcs         @no
+@edig:
+            jsr         ec_get
+            jsr         ec_dig
+            bcs         @have
+            sec
+            sbc         #'0'
+            pha
+            lda         ex_e                                ; (* 10, + the digit: below 768)
+            asl         a
+            sta         ec_t
+            lda         ex_e + 1
+            rol         a
+            sta         ec_t + 1
+            asl         ex_e
+            rol         ex_e + 1
+            asl         ex_e
+            rol         ex_e + 1
+            asl         ex_e
+            rol         ex_e + 1
+            clc
+            lda         ex_e
+            adc         ec_t
+            sta         ex_e
+            lda         ex_e + 1
+            adc         ec_t + 1
+            sta         ex_e + 1
+            pla
+            clc
+            adc         ex_e
+            sta         ex_e
+            bcc         :+
+            inc         ex_e + 1
+:
+            lda         ex_e + 1
+            cmp         #>768
+            bcc         @lb902
+            jmp         ec_big
+@lb902:
+            iny
+            bra         @edig
+@no:
+            lda         #0
+            sec
+            rts
+@have:
+            sty         ec_y
+            ldx         ec_x
+            sec                                             ; (The point's new place: p + e, or p - e; signed)
+            lda         ex_neg
+            bne         :+
+            clc
+            lda         ex_p
+            adc         ex_e
+            sta         ex_e
+            lda         #0
+            adc         ex_e + 1
+            sta         ex_e + 1
+            bra         @q
+:
+            lda         ex_p
+            sbc         ex_e
+            sta         ex_e
+            lda         #0
+            sbc         ex_e + 1
+            sta         ex_e + 1
+@q:
+            lda         ex_e + 1
+            bmi         @frac
+            beq         @lb901
+            jmp         ec_big
+@lb901:
+            lda         ex_e
+            beq         @frac
+            cmp         ex_nd
+            bcs         @int
+            ldy         #0                                  ; (Digits, a point, digits)
+:
+            lda         ex_buf,y
+            jsr         ex_put4
+            iny
+            cpy         ex_e
+            bne         :-
+            lda         #'.'
+            jsr         ex_put4
+:
+            lda         ex_buf,y
+            jsr         ex_put4
+            iny
+            cpy         ex_nd
+            bne         :-
+            bra         @rest
+@int:
+            ldy         #0                                  ; (Its digits, then 0s)
+:
+            lda         ex_buf,y
+            jsr         ex_put4
+            iny
+            cpy         ex_nd
+            bne         :-
+            sec
+            lda         ex_e
+            sbc         ex_nd
+            beq         @rest
+            tay
+:
+            lda         #'0'
+            jsr         ex_put4
+            dey
+            bne         :-
+            bra         @rest
+@frac:
+            lda         #'0'                                ; (0., 0s, its digits)
+            jsr         ex_put4
+            lda         #'.'
+            jsr         ex_put4
+            sec
+            lda         #0
+            sbc         ex_e
+            sta         ex_e
+            lda         #0
+            sbc         ex_e + 1
+            bne         ec_big
+            ldy         ex_e
+            beq         :++
+:
+            lda         #'0'
+            jsr         ex_put4
+            dey
+            bne         :-
+:
+            ldy         #0
+:
+            lda         ex_buf,y
+            jsr         ex_put4
+            iny
+            cpy         ex_nd
+            bne         :-
+@rest:
+            lda         ec_all                              ; (The text after it, if it's wanted)
+            beq         @done
+            ldy         ec_y
+:
+            cpy         r1
+            bcs         @done
+            lda         (r0),y
+            jsr         ex_put4
+            iny
+            bra         :-
+@done:
+            txa
+            sec
+            sbc         #EX_DIGITS
+            ldy         ec_y
+            clc
+            rts
+
+; Past EX_DIGITS digits: the rest of them, then an exponent too long (E or D: Overflow), else not E notation
+ec_long:
+            iny
+            jsr         ec_get
+            cmp         #'.'
+            beq         ec_long
+            jsr         ec_dig
+            bcc         ec_long
+            and         #$DF
+            cmp         #'E'
+            beq         ec_big
+            cmp         #'D'
+            beq         ec_big
+            lda         #0
+            sec
+            rts
+
+; .A at ex_buf + .X, .X on (EX_MAX at most: else e_conv's end, too long)
+ex_put4:
+            cpx         #EX_MAX
+            bcs         ec_big
+            sta         ex_buf,x
+            inx
+            rts
+ec_big:
+            ldx         ec_s
+            txs
+            lda         #ER_OVERFLOW
+            sec
+            rts
+
+; .A = the text's character .Y (r0, r1: 0 past its end)
+ec_get:
+            cpy         r1
+            bcs         :+
+            lda         (r0),y
+            rts
+:
+            lda         #0
+            rts
+
+; Is .A a digit?  C = 0 yes; keeps .A
+ec_dig:
+            cmp         #'9' + 1
+            bcs         :+
+            cmp         #'0'
+            bcc         @not
+            clc
+:
+            rts
+@not:
+            sec
+            rts
+
+; A number's text (r0, r1) in E notation, the base decimal: r0 and r1 at it written without (e_conv's); too long:
+; Overflow
+e_try:
+            lda         rb_ndec
+            bne         @as
+            jsr         e_conv
+            bcc         :+
+            cmp         #0
+            beq         @as
+            jsr         code_sel
+            ldx         #0
+            jmp         b_error
+:
+            sta         r1
+            stz         r1 + 1
+            LDW         r0, ex_buf + EX_DIGITS
+@as:
+            rts
+
+; The base decimal again, as the program's text is read (RUN's start)
+base_dec:
+            lda         #'d'
+            sta         f_bstr
+            stz         f_bstr + 1
+            LDW         r0, f_bstr
+            NUMCALL     NUM_SET_BASE
+            stz         rb_ndec
+            jmp         code_sel
+
 ; VAL(s$): the longest start of s$ that's a number, read in the base (none: 0)
 f_val:
             jsr         top_vt
@@ -508,13 +856,12 @@ f_val:
             MOVW        ca, sfa
             lda         sfa + 2
             sta         cal
-            LDW         cb, NS_A
+            LDW         cb, NS_A + 1
             lda         #LB_NSB
             sta         cbl
             lda         cn
             beq         @zero
             jsr         far_copy
-            LDW         r0, NS_A
             lda         sla
             sta         r1
             stz         r1 + 1
@@ -524,6 +871,9 @@ f_val:
             lda         nsb
             sta         RAM_BANK
             jsr         amp_base
+            jsr         pt_zero
+            stz         ec_all
+            jsr         e_try
             ldy         #0
             NUMCALL     NUM_PARSE
             bcs         @zero
@@ -534,13 +884,61 @@ f_val:
             lda         #0
             jmp         int_a_vt
 
-; QuickBASIC's &H, &O, &B at the text's start (NS_A, r1 bytes, its bank selected; spaces before it) made #x, #o, #b
+; A number's text at NS_A + 1 (r1 bytes, its bank selected; spaces and a sign before it) that starts with a point
+; (.5, -.5): a 0 put before the point, the text from NS_A on.  r0 at the text
+pt_zero:
+            LDW         r0, NS_A + 1
+            ldy         #0
+:
+            cpy         r1
+            bcs         @done
+            lda         NS_A + 1,y
+            cmp         #' '
+            bne         :+
+            iny
+            bra         :-
+:
+            cmp         #'-'
+            beq         :+
+            cmp         #'+'
+            bne         @point
+:
+            iny
+            cpy         r1
+            bcs         @done
+            lda         NS_A + 1,y
+@point:
+            cmp         #'.'
+            bne         @done
+            phy                                             ; (What's before the point down one, a 0 in its place)
+            ldx         #0
+:
+            tya
+            beq         :+
+            lda         NS_A + 1,x
+            sta         NS_A,x
+            inx
+            dey
+            bra         :-
+:
+            ply
+            lda         #'0'
+            sta         NS_A,y
+            dec         r0
+            inc         r1
+            bne         @done
+            inc         r1 + 1
+@done:
+            rts
+
+; QuickBASIC's &H, &O, &B at the text's start (NS_A + 1, r1 bytes, its bank selected; spaces before it) made #x, #o,
+; #b
 amp_base:
             ldy         #0
 :
             cpy         r1
             bcs         @done
-            lda         NS_A,y
+            lda         NS_A + 1,y
             cmp         #' '
             bne         :+
             iny
@@ -551,7 +949,7 @@ amp_base:
             iny
             cpy         r1
             bcs         @done
-            lda         NS_A,y
+            lda         NS_A + 1,y
             and         #$DF
             ldx         #2
 :
@@ -562,9 +960,9 @@ amp_base:
             rts
 :
             lda         amp_to,x
-            sta         NS_A,y
+            sta         NS_A + 1,y
             lda         #'#'
-            sta         NS_A - 1,y
+            sta         NS_A,y
 @done:
             rts
 amp_ch:     .byte       "HOB"

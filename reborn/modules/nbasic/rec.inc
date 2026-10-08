@@ -18,6 +18,9 @@ ty_kinds:   .res        TY_KINDS                            ; The values' kinds 
 ntypes:     .res        1
 ty_top:     .res        1                                   ; (ty_kinds' next)
 ty_open:    .res        1                                   ; <> 0: a TYPE's lines (read in pass 1, passed over in 2)
+rc_dt:      .res        1                                   ; (r_copy's: the destination's type, its first value's
+rc_doff:    .res        1                                   ;   offset, the source's)
+rc_soff:    .res        1
 ty_cur:     .res        1                                   ; (The TYPE being read: its number, its fields' place, its
 ty_place:   .res        2                                   ;   fields so far)
 ty_nf:      .res        1
@@ -575,6 +578,7 @@ e_field:
             jsr         fr_refv
             lda         #OP_FGET
             jsr         fr_op
+            jsr         fl_fix
             C2          lex_next
             clc
             rts
@@ -601,8 +605,137 @@ e_afield:
             sta         etype
             lda         #OP_AGETF
             jsr         fr_aop
+            jsr         fl_fix
             C2          lex_next
             rts
+
+; A fixed-length string's field (fl_kind 2): FIXLEN, its length (a record not written yet has "" there)
+fl_fix:
+            lda         fl_kind
+            cmp         #2
+            bne         :+
+            lda         #OP_FIXLEN
+            ldx         #3
+            C2          emit_op
+            lda         fl_info
+            ldx         fl_info + 1
+            C2          emit_w
+:
+            rts
+
+; A call's argument that's a field alone (rec.field, arr(i).field), a number's or a string's, for a parameter of
+; that kind (ao_kind; another: Type mismatch): its place compiled (REFV, [its indices, AREF n,] FREF k), the token
+; after it current; C = 0.  C = 1 not one, nothing compiled (a fixed-length string's, a record's: a copy)
+arg_field:
+            lda         tk
+            cmp         #TK_NAME
+            bne         @no
+            ldy         #0
+            C2          sc_space
+            lda         (lp),y
+            cmp         #'('
+            beq         @elem
+            C2          has_dot                             ; rec.field
+            bcs         @no
+            ldy         #0
+            C2          sc_space
+            C2          sc_ends
+            bcs         @no
+            jsr         fr_split
+            bcs         @no
+            jsr         fr_var
+            bcs         @back
+            lda         fr_type
+            jsr         fld_path
+            bcs         @back
+            jsr         af_kind
+            bcs         @back
+            jsr         fr_refv
+            lda         #OP_FREF
+            jsr         fr_op
+            C2          lex_next
+            clc
+            rts
+@back:
+            jsr         fr_back
+@no:
+            sec
+            rts
+@elem:
+            iny                                             ; arr(i).field: its path after the )
+            C2          sc_group
+            bcs         @no
+            lda         (lp),y
+            cmp         #'.'
+            bne         @no
+            iny
+            ldx         #0
+:
+            lda         (lp),y
+            C2          is_namec
+            bcs         :+
+            cpx         #NAME_MAX
+            bcs         @no
+            cmp         #'a'                                ; (In capitals, as names are kept)
+            bcc         @upper
+            cmp         #'z' + 1
+            bcs         @upper
+            and         #$DF
+@upper:
+            sta         fp_buf,x
+            inx
+            iny
+            bra         :-
+:
+            cpx         #0
+            beq         @no
+            stx         fp_len
+            C2          sc_space
+            C2          sc_ends
+            bcs         @no
+            lda         #SC_RARR                            ; (An array of records already)
+            sta         scls
+            C2          var_find
+            bcs         @no
+            MOVW        fr_slot, spl + SP_SLOT
+            lda         spl + SP_TYPE
+            jsr         fld_path
+            bcs         @no
+            jsr         af_kind
+            bcs         @no
+            jsr         fr_refv
+            C2          lex_next
+            C2          lex_next
+            lda         fl_off
+            pha
+            C2          emit_indices
+            pha
+            lda         #OP_AREF
+            ldx         #2
+            C2          emit_op
+            pla
+            C2          emit
+            pla
+            sta         fl_off
+            lda         #OP_FREF
+            jsr         fr_op
+            C2          lex_next                            ; (The . current: past its path)
+            C2          lex_next
+            clc
+            rts
+
+; The field found (fl_kind) a number's or a string's: C = 0 (ao_kind another's: Type mismatch); else C = 1
+af_kind:
+            lda         fl_kind
+            cmp         #2
+            bcs         @no
+            cmp         ao_kind
+            bne         @type
+            clc
+@no:
+            rts
+@type:
+            jmp         type3
 
 ; The field's path after a . (the . current): read, found in fr_type (fl_*); the path's token current.  None: no such
 ; field
@@ -644,6 +777,17 @@ a_field:
 :
             jsr         fr_refv
             C2          lex_next
+            lda         fl_kind                             ; (A field that's a record: copied whole)
+            cmp         #3
+            bne         :+
+            lda         fl_off
+            sta         rc_doff
+            lda         fl_info
+            sta         fr_type
+            jsr         r_copy
+            clc
+            rts
+:
             lda         #'='
             jsr         need_op3
             jsr         fl_value
@@ -681,24 +825,42 @@ fl_value:
             beq         :+
             jmp         type3
 :
+            jmp         fl_fix
+
+; The field found (fl_*) a record's: the source's offset and type (rc_soff, fr_type).  Else Type mismatch
+rc_field:
             lda         fl_kind
-            cmp         #2
-            bne         :+
-            lda         #OP_FIXLEN
-            ldx         #3
-            C2          emit_op
-            lda         fl_info
-            ldx         fl_info + 1
-            C2          emit_w
+            cmp         #3
+            beq         :+
+            jmp         type3
 :
+            lda         fl_off
+            sta         rc_soff
+            lda         fl_info
+            sta         fr_type
             rts
 
-; arr(i).field = value (st_assign: the array's REFV and its .A indices compiled, its type .X; the . current)
+; arr(i).field = value (st_assign: the array's REFV and its .A indices compiled, its type .X; the . current); a field
+; that's a record: copied whole (the element's place, AREF n)
 a_efield:
             sta         fr_n
             stx         fr_type
             jsr         fp_name
             C2          lex_next
+            lda         fl_kind
+            cmp         #3
+            bne         :+
+            lda         fl_off
+            sta         rc_doff
+            lda         fl_info
+            sta         fr_type
+            lda         #OP_AREF
+            ldx         #2
+            C2          emit_op
+            lda         fr_n
+            C2          emit
+            jmp         r_copy
+:
             lda         #'='
             jsr         need_op3
             jsr         fl_value
@@ -712,11 +874,13 @@ a_record:
             sta         fr_type
             jsr         fr_refv
             C2          lex_next
-            bra         r_copy
+            stz         rc_doff
+            jmp         r_copy
 
 ; arr(i) = record (st_assign: the array's REFV and its .A indices compiled, its type .X): the element's place
 a_erecord:
             stx         fr_type
+            stz         rc_doff
             pha
             lda         #OP_AREF
             ldx         #2
@@ -725,9 +889,13 @@ a_erecord:
             C2          emit
             ; (fall through)
 
-; = record: the source's place (a record variable, or an element of an array of records, of the type fr_type), its
-; values' count, ST_RCOPY
+; = record: the source's place (a record variable, an element of an array of records, or a field of either that's a
+; record: of the type fr_type), the offsets of the destination's first value (rc_doff) and the source's, its values'
+; count, ST_RCOPY
 r_copy:
+            lda         fr_type
+            sta         rc_dt
+            stz         rc_soff
             lda         #'='
             jsr         need_op3
             lda         tk
@@ -745,42 +913,33 @@ r_copy:
 :
             cmp         #'('
             beq         @elem
-            lda         fr_slot                             ; (A record variable: its slot)
-            pha
-            lda         fr_slot + 1
-            pha
-            lda         fr_type
-            pha
+            jsr         fr_split                            ; (rec.field: a field that's a record)
+            bcs         @var
             jsr         fr_var
+            bcs         @type
+            lda         fr_type
+            jsr         fld_path
             bcc         :+
-            jmp         type3
+            jmp         no_field
 :
-            pla
-            cmp         fr_type
-            beq         :+
-            jmp         type3
-:
+            jsr         rc_field
+            bra         @have
+@var:
+            jsr         fr_var                              ; (A record variable)
+            bcs         @type
+@have:
+            lda         fr_type
+            cmp         rc_dt
+            bne         @type
             jsr         fr_refv
-            pla
-            sta         fr_slot + 1
-            pla
-            sta         fr_slot
             C2          lex_next
             bra         @n
 @elem:
-            lda         fr_type
-            pha
             C2          arr_lookup
             lda         scls
             cmp         #SC_RARR
-            beq         :+
-            jmp         type3
-:
-            pla
-            cmp         spl + SP_TYPE
-            beq         :+
-            jmp         type3
-:
+            bne         @type
+            lda         spl + SP_TYPE
             sta         fr_type
             lda         #OP_REFV
             C2          emit_slot
@@ -793,8 +952,24 @@ r_copy:
             C2          emit_op
             pla
             C2          emit
+            lda         #'.'                                ; (arr(i).field: a field that's a record)
+            jsr         is_op3
+            bne         :+
+            jsr         fp_name
+            jsr         rc_field
+            C2          lex_next
+:
+            lda         fr_type
+            cmp         rc_dt
+            beq         @n
+@type:
+            jmp         type3
 @n:
-            ldx         fr_type                             ; (Its values: the type's)
+            lda         rc_doff                             ; (The offsets, its values: the type's)
+            jsr         emit_i8
+            lda         rc_soff
+            jsr         emit_i8
+            ldx         rc_dt
             lda         ty_n,x
             jsr         emit_i8
             lda         #ST_RCOPY

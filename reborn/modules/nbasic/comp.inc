@@ -70,7 +70,15 @@ cpass:      .res        1                                   ; 1, 2: the pass
 c_s:        .res        1                                   ; The 6502's stack as the compilation began (an error's
                                                             ;   way out)
 cline:      .res        2                                   ; The line read (from 1)
-cfile:      .res        1                                   ; Its file (0: the program's)
+inc_n:      .res        1                                   ; INCLUDE's files: those loaded (pass 1), the INCLUDE
+inc_seq:    .res        1                                   ;   lines read in this pass, the text past them, each
+inc_top:    .res        2                                   ;   file's text and path, those being read (each one's
+inc_at:     .res        INC_MAX * 2                         ;   src_pos and cline after its INCLUDE), its name, its
+inc_path:   .res        INC_MAX * 64                        ;   quote
+inc_dep:    .res        1
+inc_stk:    .res        INC_DEPTH * 4
+inc_nm:     .res        PATH_MAX + 1
+inc_q:      .res        1
 src_pos:    .res        2                                   ; The text's next line (a text region address)
 cscope:     .res        1                                   ; The scope: 0 the main program's, else a procedure's + 1
 cproc:      .res        1                                   ; (Its procedure's number)
@@ -314,6 +322,11 @@ line_next:
             bne         :+
             lda         t4 + 2                              ; (The end: after a _, the line so far)
             bne         @done
+            lda         inc_dep                             ; (An INCLUDE's file's end: on after its INCLUDE)
+            beq         @end
+            jsr         inc_pop
+            bra         @more
+@end:
             sec
             jmp         code_sel
 :
@@ -382,8 +395,180 @@ line_next:
             jmp         @more
 @done:
             LDW         lp, lbuf
+            jsr         inc_check                           ; (INCLUDE "f": f's lines next)
+            bcc         :+
+            jmp         line_next
+:
             clc
             jmp         code_sel
+
+; The INCLUDE being read done: src_pos and cline after it again
+inc_pop:
+            dec         inc_dep
+            lda         inc_dep
+            asl         a
+            asl         a
+            tax
+            lda         inc_stk,x
+            sta         src_pos
+            lda         inc_stk + 1,x
+            sta         src_pos + 1
+            lda         inc_stk + 2,x
+            sta         cline
+            lda         inc_stk + 3,x
+            sta         cline + 1
+            rts
+
+; Is lbuf an INCLUDE line: INCLUDE "f", or QuickBASIC's '$INCLUDE: 'f' (or REM $INCLUDE: 'f')?  Then f's lines are
+; read next (pass 1 loads f into the text past the program's: inc_load; pass 2 finds it there, by its order), C = 1;
+; else C = 0
+inc_check:
+            ldy         #0
+            jsr         inc_sp
+            lda         lbuf,y
+            cmp         #$27
+            beq         @rem
+            ldx         #iw_rem - iw
+            jsr         inc_word
+            bcc         @meta
+            ldx         #iw_inc - iw
+            jsr         inc_word
+            bcs         @no
+            lda         #'"'
+            bra         @name
+@rem:
+            iny
+@meta:
+            jsr         inc_sp
+            ldx         #iw_meta - iw
+            jsr         inc_word
+            bcs         @no
+            jsr         inc_sp
+            lda         lbuf,y
+            cmp         #':'
+            bne         @no
+            iny
+            lda         #$27
+@name:
+            sta         inc_q                               ; (Its name, in its quotes)
+            jsr         inc_sp
+            lda         lbuf,y
+            cmp         inc_q
+            bne         @no
+            iny
+            ldx         #0
+:
+            lda         lbuf,y
+            beq         @no
+            cmp         inc_q
+            beq         @got
+            cpx         #PATH_MAX
+            bcs         @bad
+            sta         inc_nm,x
+            inx
+            iny
+            bra         :-
+@no:
+            clc
+            rts
+@bad:
+            lda         #ER_BADNAME
+            ldx         #0
+            jmp         c_error
+@got:
+            cpx         #0
+            beq         @bad
+            stz         inc_nm,x
+            lda         cpass                               ; Pass 1: loaded
+            cmp         #1
+            bne         @find
+            lda         inc_n
+            cmp         #INC_MAX
+            bcc         :+
+            lda         #ER_TOOMANY
+            ldx         #0
+            jmp         c_error
+:
+            FARN        7, inc_load                         ; (C = 1: .A/.X the error)
+            bcc         @find
+            jmp         c_error
+@find:
+            lda         inc_dep                             ; (Where to go on after it, kept)
+            cmp         #INC_DEPTH
+            bcc         :+
+            lda         #ER_STACK
+            ldx         #0
+            jmp         c_error
+:
+            asl         a
+            asl         a
+            tax
+            lda         src_pos
+            sta         inc_stk,x
+            lda         src_pos + 1
+            sta         inc_stk + 1,x
+            lda         cline
+            sta         inc_stk + 2,x
+            lda         cline + 1
+            sta         inc_stk + 3,x
+            inc         inc_dep
+            lda         inc_seq                             ; (Its file: by the INCLUDEs' order)
+            inc         inc_seq
+            pha
+            asl         a
+            tax
+            lda         inc_at,x
+            sta         src_pos
+            lda         inc_at + 1,x
+            sta         src_pos + 1
+            pla                                             ; (Its lines: INC_LINE + its number * INC_STEP on)
+            asl         a
+            asl         a
+            asl         a
+            clc
+            adc         #>INC_LINE
+            sta         cline + 1
+            stz         cline
+            sec
+            rts
+
+; lbuf's spaces at .Y passed
+inc_sp:
+            lda         lbuf,y
+            cmp         #' '
+            beq         :+
+            cmp         #9
+            bne         @end
+:
+            iny
+            bra         inc_sp
+@end:
+            rts
+
+; The word at iw + .X (capitals, 0 after it) at lbuf + .Y, in either case?  C = 0 yes, .Y past it; C = 1 no
+inc_word:
+            phy
+@c:
+            lda         iw,x
+            beq         @yes
+            eor         lbuf,y
+            and         #$DF
+            bne         @no
+            inx
+            iny
+            bra         @c
+@yes:
+            pla
+            clc
+            rts
+@no:
+            ply
+            sec
+            rts
+iw:
+iw_rem:     .byte       "REM", 0
+iw_inc:     .byte       "INCLUDE", 0
+iw_meta:    .byte       "$INCLUDE", 0
 
 ; ---- Symbols
 
@@ -946,6 +1131,15 @@ compile_prog:
             stz         optbase
             stz         ntypes                              ; (No TYPEs yet)
             stz         ty_top
+            stz         inc_n                               ; (INCLUDE's files: past the program's text)
+            FARN        7, tx_endfind
+            clc
+            lda         tx_end
+            adc         #1
+            sta         inc_top
+            lda         tx_end + 1
+            adc         #0
+            sta         inc_top + 1
             lda         #1                                  ; Pass 1: the procedures and types
             sta         cpass
             jsr         c_lines
@@ -982,6 +1176,8 @@ c_lines:
             stz         nblk
             stz         stmt_ok
             stz         ty_open
+            stz         inc_seq
+            stz         inc_dep
             stz         defstr                              ; (DEFSTR's letters: none at its start)
             stz         defstr + 1
             stz         defstr + 2
@@ -1005,6 +1201,7 @@ c_lines:
 
 ; The compiler's state for a line or a program: the base its numbers are read in
 c_begin:
+            stz         cs_sp
             stz         nblk
             stz         cconst
             stz         lref_data

@@ -29,6 +29,25 @@ is_op:
 :
             rts
 
+; Is it a file's # (PRINT #n)?  A # number form read there (#x1, #n1: a variable's name after the #) taken back: the
+; # alone current, the name read next.  OUT: Z = 1 yes
+is_hash:
+            lda         tk
+            cmp         #TK_NUM
+            bne         :+
+            lda         (tstart)
+            cmp         #'#'
+            bne         :+
+            MOVW        lp, tstart
+            jsr         lp_inc
+            lda         #TK_OP
+            sta         tk
+            lda         #'#'
+            sta         tkv
+:
+            lda         #'#'
+            jmp         is_op
+
 ; Is it the keyword .A?  OUT: Z = 1 yes
 is_kw:
             ldx         tk
@@ -1182,8 +1201,7 @@ fn_special:
             jsr         is_op
             bne         :++
             jsr         lex_next
-            lda         #'#'
-            jsr         is_op
+            jsr         is_hash
             bne         :+
             jsr         lex_next
 :

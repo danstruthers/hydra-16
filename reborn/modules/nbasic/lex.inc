@@ -36,6 +36,18 @@ lx_save2:   .res        2
 cbase:      .res        BASE_ROOM                           ; The base the program's numbers are read in ("d")
 hexword:    .res        4                                   ; (&H's base: "x", "o", "b")
 lx_wlen:    .res        1                                   ; (A number's word: its characters)
+ex_p:       .res        1                                   ; (E notation's: the digits before the point, all its
+ex_nd:      .res        1                                   ;   digits, the exponent's sign and value, its text
+ex_neg:     .res        1                                   ;   written again)
+ex_e:       .res        2
+ex_buf:     .res        EX_MAX + 1
+ec_s:       .res        1                                   ; (e_conv's: the stack as it began, the text's place, the
+ec_x:       .res        1                                   ;   characters it took, scratch; ec_all: the text after
+ec_y:       .res        1                                   ;   the number written too)
+ec_t:       .res        2
+ec_all:     .res        1
+rb_ndec:    .res        1                                   ; The base at run time not decimal (BASE's): VAL and the
+                                                            ;   like read no E notation
 
 .enum                                                       ; The keywords (kw_tab)
 K_NONE
@@ -289,6 +301,12 @@ lex_next:
             jsr         is_letter
             bcs         :+
             jmp         lex_name
+:
+            cmp         #'#'                                ; (#xFF: the Hydra's number forms)
+            bne         :+
+            jsr         lex_hash
+            bcs         @op
+            rts
 :
             cmp         #'&'
             bne         @op
@@ -548,6 +566,11 @@ kw_find:
 ; A number: a word (letters, digits, . and _) read whole in the program's base, as a program's text (the numbers
 ; library's PARSE); a QuickBASIC suffix after it (# ! % &) dropped
 lex_number:
+            jsr         lex_exp                             ; (E notation: 1E3, 1.5E-2)
+            bcs         :+
+            ldy         lx_wlen
+            bra         @sufx
+:
             ldy         #0
 @l:
             lda         (lp),y
@@ -559,8 +582,16 @@ lex_number:
             sty         tnl
             sty         lx_wlen
             LDW         t0, cbase                           ; (In the program's base)
+            lda         (lp)                                ; (.5: a point first, read as 0.5)
+            cmp         #'.'
+            bne         :+
+            jsr         lx_point
+            bra         :++
+:
             jsr         num_word
+:
             ldy         lx_wlen
+@sufx:
             lda         (lp),y
             cmp         #'#'
             beq         @suf
@@ -579,6 +610,118 @@ lex_number:
             iny
 @done:
             jmp         lp_plus_y
+
+; A word that starts with a point (.5): 0 and the word (tnl its characters) in ex_buf, read whole in the base (t0)
+lx_point:
+            lda         tnl
+            cmp         #EX_MAX - EX_DIGITS - 1
+            bcc         :+
+            lda         #ER_OVERFLOW
+            ldx         #0
+            jmp         c_error
+:
+            lda         #'0'
+            sta         ex_buf + EX_DIGITS
+            ldy         #0
+:
+            lda         (lp),y
+            sta         ex_buf + EX_DIGITS + 1,y
+            iny
+            cpy         tnl
+            bne         :-
+            iny
+            sty         r1
+            stz         r1 + 1
+            LDW         r0, ex_buf + EX_DIGITS
+            ldy         #NPARSE_WHOLE
+            jmp         num_text_y
+
+; A number in E notation, in decimal (the program's base d): e_conv's (1E3 1000, 1.5E-2 0.015), not before a name's
+; character, read (tnum, tnl; TK_NUM; lx_wlen its characters).  OUT: C = 1 not one
+lex_exp:
+            lda         cbase
+            cmp         #'d'
+            bne         @no
+            lda         cbase + 1
+            bne         @no
+            MOVW        r0, lp
+            lda         #255
+            sta         r1
+            stz         r1 + 1
+            stz         ec_all
+            FARN        4, e_conv                           ; (C = 0: .A its text's length, .Y the characters)
+            bcc         @have
+            cmp         #0
+            bne         @big
+@no:
+            sec
+            rts
+@have:
+            sta         r1
+            lda         (lp),y                              ; (A name's character after it: not one)
+            jsr         is_namec
+            bcc         @no
+            sty         lx_wlen
+            stz         r1 + 1
+            LDW         r0, ex_buf + EX_DIGITS
+            LDW         r4, cbase
+            LDW         r2, tnum
+            LDW         r3, TNUM_MAX
+            ldy         #NPARSE_WHOLE
+            FARN        4, num_parse_ram
+            bcs         @big
+            sta         tnl
+            stx         tnl + 1
+            FARN        4, num_isint32
+            lda         #TK_NUM
+            sta         tk
+            clc
+            rts
+@big:
+            lda         #ER_OVERFLOW
+            ldx         #0
+            jmp         c_error
+
+; The Hydra's # forms: # and a base, then its digits (#xFF, #b101, #16r1F, #c+-0, #b0.1), the numbers library's own:
+; the longest start of the line that's one (a name's character not after it).  OUT: C = 0 read (TK_NUM, lp past it);
+; C = 1 not one (# an operator: PRINT #1)
+lex_hash:
+            ldy         #0                                  ; (The rest of the line: its length)
+:
+            lda         (lp),y
+            beq         :+
+            iny
+            bne         :-
+            dey
+:
+            sty         r1
+            stz         r1 + 1
+            MOVW        r0, lp
+            stz         r4
+            stz         r4 + 1
+            LDW         r2, tnum
+            LDW         r3, TNUM_MAX
+            ldy         #0
+            FARN        4, num_parse_ram
+            bcs         @no
+            sta         tnl
+            stx         tnl + 1
+            lda         r5                                  ; (#, a base, a digit at least)
+            cmp         #3
+            bcc         @no
+            tay
+            lda         (lp),y
+            jsr         is_namec
+            bcc         @no
+            jsr         lp_plus_y
+            FARN        4, num_isint32
+            lda         #TK_NUM
+            sta         tk
+            clc
+            rts
+@no:
+            sec
+            rts
 
 ; &H, &O, &B and their digits: a number in base x, o or b
 lex_based:
@@ -627,6 +770,7 @@ num_word_y:
             lda         tnl
             sta         r1
             stz         r1 + 1
+num_text_y:
             MOVW        r4, t0
             LDW         r2, tnum
             LDW         r3, TNUM_MAX

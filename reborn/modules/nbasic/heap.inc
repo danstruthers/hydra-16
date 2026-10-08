@@ -30,7 +30,11 @@ dm_cnt:     .res        2
 dm_type:    .res        1                                   ; (DIM's: an array of records' type)
 ad_tag:     .res        1                                   ; (arr_make's: the slot's tag, VT_ARR or VT_REC; a record's
 ad_type:    .res        1                                   ;   type, its values' kinds ty_kinds')
-rc_s:       .res        3                                   ; (ST_RCOPY's source)
+rc_s:       .res        3                                   ; (ST_RCOPY's source, its values' count, the source's
+rc_n:       .res        1                                   ;   first value's offset, the destination's, scratch)
+rc_so:      .res        1
+rc_do:      .res        1
+rc_t:       .res        2
 ms_s:       .res        2                                   ; (The MID$ statement's start, count, v$'s length, new$'s)
 ms_n:       .res        2
 ms_l:       .res        2
@@ -1239,15 +1243,23 @@ rec_make:
 ; ST_RCOPY: a record's values (their count taken off first) copied from the source's place (on top: a record
 ; variable's VT_REF, or an element's VT_LOC) to the destination's (under it); each made first if it isn't yet
 st_rcopy:
+            jsr         pop_int16                           ; (Its values' count, the offsets)
+            lda         t0
+            sta         rc_n
             jsr         pop_int16
             lda         t0
-            jsr         rc_k5
+            sta         rc_so
+            jsr         pop_int16
+            lda         t0
+            sta         rc_do
             lda         #1
             jsr         rc_make
             lda         #2
             jsr         rc_make
             lda         #1                                  ; (The source's first value: kept)
             jsr         rc_ca
+            lda         rc_so
+            jsr         rc_adv
             lda         ca
             sta         rc_s
             lda         ca + 1
@@ -1256,6 +1268,8 @@ st_rcopy:
             sta         rc_s + 2
             lda         #2                                  ; (The destination's: cursor B)
             jsr         rc_ca
+            lda         rc_do
+            jsr         rc_adv
             MOVW        cb, ca
             lda         cal
             sta         cbl
@@ -1265,9 +1279,41 @@ st_rcopy:
             sta         ca + 1
             lda         rc_s + 2
             sta         cal
+            lda         rc_n
+            jsr         rc_k5
             jsr         far_copy
             jsr         pop_vt
             jmp         pop_vt
+
+; Cursor A on by .A values (5 bytes each), into the banks after past the window's end
+rc_adv:
+            sta         rc_t
+            stz         rc_t + 1
+            asl         a
+            rol         rc_t + 1
+            asl         a
+            rol         rc_t + 1
+            clc
+            adc         rc_t
+            sta         rc_t
+            lda         rc_t + 1
+            adc         #0
+            sta         rc_t + 1
+            clc
+            lda         rc_t
+            adc         ca
+            sta         ca
+            lda         rc_t + 1
+            adc         ca + 1
+@wrap:
+            cmp         #WIN_END
+            bcc         :+
+            sbc         #WIN_END - WIN
+            inc         cal
+            bra         @wrap
+:
+            sta         ca + 1
+            rts
 
 ; cn = 5 * .A (its values' bytes)
 rc_k5:

@@ -370,6 +370,14 @@ st_sys:
             sta         r0,x
             dex
             bpl         :-
+            lda         sys_addr + 1                        ; (At $8000-$9FFF: BANK's bank there)
+            cmp         #$80
+            bcc         :+
+            cmp         #$A0
+            bcs         :+
+            lda         ubank
+            sta         RAM_BANK
+:
             lda         sys_a
             ldx         sys_x
             ldy         sys_y

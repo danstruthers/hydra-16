@@ -66,6 +66,8 @@ OP_FGET                                                     ; k: a record's VT_R
 OP_FPUT                                                     ; k: a value and the VT_REF: stored
 OP_AGETF                                                    ; n, k: an element's field
 OP_APUTF                                                    ; n, k
+OP_FREF                                                     ; k: a record's VT_REF (or an element's place) taken, its
+                                                            ;   field k's place (VT_LOC) pushed
 OP_ADD                                                      ; The numbers' operators: two values taken, one given
 OP_SUB
 OP_MUL
@@ -178,7 +180,7 @@ op_tab:
             .word       op_stop, op_call, op_ret, op_retf, op_popn, op_slide, op_wbk, op_fort, op_forn
             .word       op_pushi8, op_pushi32, op_pushn, op_pushs, op_pushe, op_pushnh, op_pushsh
             .word       op_ldv, op_stv, op_refv, op_dup, op_drop
-            .word       op_aget, op_aput, op_aref, op_ldloc, op_fget, op_fput, op_agetf, op_aputf
+            .word       op_aget, op_aput, op_aref, op_ldloc, op_fget, op_fput, op_agetf, op_aputf, op_fref
             .word       op_add, op_sub, op_mul, op_div, op_idiv, op_mod, op_pow, op_neg
             .word       op_eq, op_ne, op_lt, op_gt, op_le, op_ge
             .word       op_seq, op_sne, op_slt, op_sgt, op_sle, op_sge
@@ -1431,9 +1433,15 @@ arr_sub:
             lda         (vu),y
             sbc         ar_lo + 1
             sta         t0 + 1
-            ldy         #3                                  ; (Its sign, and the borrow: below the lowest?)
-            lda         (vu),y
+            ldy         #3                                  ; (Its sign less the lowest's, and the borrow: below
+            lda         (vu),y                              ;   the lowest?)
+            bit         ar_lo + 1
+            bpl         :+
+            sbc         #$FF
+            bra         :++
+:
             sbc         #0
+:
             bmi         subscript
             lda         t0                                  ; (Below the count)
             cmp         ar_cnt
@@ -2259,6 +2267,77 @@ rec_ca:
 :
             jsr         ca_plus
             jmp         ca_sel
+
+; FREF k: the record on top (its variable's VT_REF; an element's place, VT_LOC) made its field k's place: VT_LOC (the
+; record's slot, 2 + 5k: past its block's header), or the element's on by 5k
+op_fref:
+            ldy         #1
+            lda         (ip),y
+            sta         ar_k
+            jsr         top_vt
+            lda         (vt)
+            cmp         #VT_LOC
+            beq         @loc
+            ldy         #1                                  ; (Its slot)
+            lda         (vt),y
+            sta         vu
+            iny
+            lda         (vt),y
+            sta         vu + 1
+            lda         (vu)                                ; (A parameter that's an element: its place)
+            cmp         #VT_LOC
+            bne         @rec
+            ldy         #VAL_SIZE - 1
+:
+            lda         (vu),y
+            sta         (vt),y
+            dey
+            bpl         :-
+            bra         @loc
+@rec:
+            ldy         #3                                  ; (Not made yet: made now)
+            lda         (vu),y
+            cmp         #NOBANK
+            bne         :+
+            lda         vt
+            pha
+            lda         vt + 1
+            pha
+            FARN        5, rec_make
+            pla
+            sta         vt + 1
+            pla
+            sta         vt
+:
+            lda         #VT_LOC
+            sta         (vt)
+            lda         ar_k
+            jsr         k5
+            clc
+            adc         #2
+            bcc         :+
+            inx
+:
+            ldy         #3
+            sta         (vt),y
+            iny
+            txa
+            sta         (vt),y
+            jsr         code_sel
+            jmp         nx2
+@loc:
+            lda         ar_k                                ; (On by 5k)
+            jsr         k5
+            clc
+            ldy         #3
+            adc         (vt),y
+            sta         (vt),y
+            iny
+            txa
+            adc         (vt),y
+            sta         (vt),y
+            jsr         code_sel
+            jmp         nx2
 
 ; ar_k = the field ((ip),2: its first value), read while the code's bank is at $8000
 fld_k:

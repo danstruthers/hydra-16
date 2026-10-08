@@ -331,7 +331,7 @@ runs `/lib/basic/profile.bas` before its first prompt (a card's or the RAM disk'
 | `RND`, `RND(x)` | A number from 0 up to 1, of `DIGITS` digits (`RND(0)`: the last again); `RANDOMIZE [n]` seeds it (none: from the clock) |
 | `FIX(x * 100) / 100`, `FIXED(x, n)` | A number cut to n places, as a fixed decimal (`FIXED(1/3, 4)` is `0.3333`) |
 | `RATIONAL(x)`, `NUMERATOR(x)`, `DENOMINATOR(x)` | As a fraction; its parts, in lowest terms |
-| `COMPLEX(re, im)`, `RE(x)`, `IM(x)` | A complex number; its parts |
+| `COMPLEX(re, im)`, `REAL(x)`, `IMAG(x)` | A complex number; its parts |
 | `GCD(a, b)`, `FIB(n)` | The greatest common divisor; the nth Fibonacci number |
 | `SHL(x, n)`, `SHR(x, n)`, `BIT(x, n)` | Shifts; bit n (0 or 1) |
 | `VAL(s$)`, `STR$(x [, base$])` | A string's number (the longest start that is one; 0 if none); a number's text |

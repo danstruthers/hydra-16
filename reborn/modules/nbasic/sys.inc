@@ -25,8 +25,11 @@ sh_wfd:     .res        1
 sh_map:     .res        4
 sh_len:     .res        2
 sh_path:    .res        16
-tm_last:    .res        4                                   ; (TIMER's: the last second seen, the tick it was seen at)
-tm_tick:    .res        2
+tm_anch:    .res        4                                   ; (TIMER's: the clock's second at its anchor, the ticks
+tm_prev:    .res        2                                   ;   last seen, the ticks since the anchor, its ticks in
+tm_acc:     .res        4                                   ;   the second; an anchor yet)
+tm_rem:     .res        1
+tm_have:    .res        1
 tm_secs:    .res        4                                   ; (The clock's seconds since 2000; a division's divisor,
 dv_d:       .res        2                                   ;   remainder; a multiplication's)
 dv_r:       .res        2
@@ -93,6 +96,19 @@ err_say:
             LDW         t0, s_brkin
             jsr         msg_out
 :
+            lda         err_line + 1                        ; (An INCLUDE's file's line: its path)
+            cmp         #>INC_LINE
+            bcc         @prog
+            sec
+            sbc         #>INC_LINE
+            lsr         a
+            lsr         a
+            lsr         a
+            jsr         inc_pathat
+            ldx         #0
+            jsr         msg_out_ram
+            bra         @colon
+@prog:
             ldx         #0                                  ; (The program's file, or "line")
             lda         pname
             bne         :+
@@ -102,10 +118,17 @@ err_say:
 :
             LDW         t0, pname
             jsr         msg_out_ram
+@colon:
             lda         #':'
             jsr         out_byte
 @num:
             MOVW        t0, err_line
+            lda         t0 + 1                              ; (An INCLUDE's file's: its own line)
+            cmp         #>INC_LINE
+            bcc         :+
+            and         #>(INC_STEP - 1)
+            sta         t0 + 1
+:
             stz         t0 + 2
             stz         t0 + 3
             jsr         dec_out
@@ -484,43 +507,95 @@ mul8:
 ; TIMER: the seconds since midnight, to a tick (1/200): a fixed decimal of 3 places.  The ticks into the second count
 ; from when TIMER first saw it
 f_timer:
-            jsr         time_now
+            jsr         time_now                            ; (The clock's second, the ticks)
             jsr         TICKS
             sta         t4
             stx         t4 + 1
-            ldx         #3                                  ; (A second not seen before: its tick now)
+            lda         tm_have
+            bne         :+
+            jmp         @anchor
 :
-            lda         tm_secs,x
-            cmp         tm_last,x
-            bne         @new
+            sec                                             ; (The ticks since the last: on the count)
+            lda         t4
+            sbc         tm_prev
+            sta         t0
+            lda         t4 + 1
+            sbc         tm_prev + 1
+            sta         t0 + 1
+            clc
+            lda         tm_acc
+            adc         t0
+            sta         tm_acc
+            lda         tm_acc + 1
+            adc         t0 + 1
+            sta         tm_acc + 1
+            bcc         :+
+            inc         tm_acc + 2
+            bne         :+
+            inc         tm_acc + 3
+:
+            MOVW        tm_prev, t4
+            ldx         #3                                  ; (Its seconds since the anchor, its ticks in the second)
+:
+            lda         tm_acc,x
+            sta         t0,x
             dex
             bpl         :-
-            bra         @old
-@new:
+            lda         #<TICK_HZ
+            ldx         #>TICK_HZ
+            jsr         div32
+            lda         dv_r
+            sta         tm_rem
+            clc                                             ; (The second: the anchor's on)
+            ldx         #0
+            ldy         #4
+:
+            lda         t0,x
+            adc         tm_anch,x
+            sta         t0,x
+            inx
+            dey
+            bne         :-
+            sec                                             ; (The clock's less it: 0 or 1, else anchored again)
+            ldx         #0
+            ldy         #4
+:
+            lda         tm_secs,x
+            sbc         t0,x
+            sta         t4,x
+            inx
+            dey
+            bne         :-
+            lda         t4 + 1
+            ora         t4 + 2
+            ora         t4 + 3
+            bne         @anchor
+            lda         t4
+            cmp         #2
+            bcs         @anchor
+            ldx         #3
+:
+            lda         t0,x
+            sta         tm_secs,x
+            dex
+            bpl         :-
+            bra         @have
+@anchor:
             ldx         #3
 :
             lda         tm_secs,x
-            sta         tm_last,x
+            sta         tm_anch,x
+            stz         tm_acc,x
             dex
             bpl         :-
-            MOVW        tm_tick, t4
-@old:
-            sec                                             ; (Its ticks since: 199 at most)
-            lda         t4
-            sbc         tm_tick
-            pha
-            lda         t4 + 1
-            sbc         tm_tick + 1
-            beq         :+
-            pla
-            lda         #199
-            pha
-:
-            pla
-            cmp         #200
-            bcc         :+
-            lda         #199
-:
+            jsr         TICKS
+            sta         tm_prev
+            stx         tm_prev + 1
+            stz         tm_rem
+            lda         #1
+            sta         tm_have
+@have:
+            lda         tm_rem
             pha
             jsr         day_split                           ; (The second of the day: t4-t4+2)
             lda         t4
@@ -1041,6 +1116,35 @@ f_shells:
             jsr         CLOSE
             lda         sh_task
             jsr         rc_wait
+@trim:
+            lda         sh_len                              ; (Its newlines at its end dropped)
+            ora         sh_len + 1
+            beq         @trimmed
+            sec
+            lda         sh_len
+            sbc         #1
+            sta         ca
+            lda         sh_len + 1
+            sbc         #0
+            ora         #$80
+            sta         ca + 1
+            lda         #LB_TXB
+            sta         cal
+            jsr         ca_sel
+            lda         (ca)
+            jsr         code_sel
+            cmp         #LF
+            beq         :+
+            cmp         #CR
+            bne         @trimmed
+:
+            lda         sh_len
+            bne         :+
+            dec         sh_len + 1
+:
+            dec         sh_len
+            bra         @trim
+@trimmed:
             lda         sh_len                              ; (Its string: from the text bank)
             ora         sh_len + 1
             bne         :+

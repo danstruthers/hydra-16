@@ -107,6 +107,16 @@ not_yet3:
             ldx         #0
             jmp         b_error
 
+; INCLUDE "f" with more on its line, or at the prompt (comp.inc's inc_check takes one alone, in a program)
+cs_include:
+            lda         #ER_SYNTAX
+            ldx         cmode
+            beq         :+
+            lda         #ER_DIRECT
+:
+            ldx         #0
+            jmp         b_error
+
 st3_tab:
             .byte       K_DIM
             .word       cs_dim - 1
@@ -202,6 +212,8 @@ st3_tab:
             .word       cs_sound - 1
             .byte       K_PLAY
             .word       cs_play - 1
+            .byte       K_INCLUDE
+            .word       cs_include - 1
             .byte       K_SYS
             .word       cs_sys - 1
             .byte       K_RREG
@@ -242,6 +254,26 @@ is_op3:
             cmp         tkv
 :
             rts
+; is_hash's (a file's #, a # number form read there taken back), the third bank's
+is_hash3:
+            lda         tk
+            cmp         #TK_NUM
+            bne         :+
+            lda         (tstart)
+            cmp         #'#'
+            bne         :+
+            MOVW        lp, tstart
+            inc         lp
+            bne         @op
+            inc         lp + 1
+@op:
+            lda         #TK_OP
+            sta         tk
+            lda         #'#'
+            sta         tkv
+:
+            lda         #'#'
+            jmp         is_op3
 is_kw3:
             ldx         tk
             cpx         #TK_KW
@@ -1355,8 +1387,7 @@ cs_digits:
 
 ; INPUT [;] ["prompt" ; | ,] v, ...: a line typed, its fields to each v; typed again till they fit (Redo from start)
 cs_input:
-            lda         #'#'
-            jsr         is_op3
+            jsr         is_hash3
             bne         :+
             C2          cpc_get                             ; (A file's: its line, then its fields)
             sta         in_loop
@@ -1418,8 +1449,7 @@ cs_line:
             jmp         cs_gline
 :
             C2          lex_next
-            lda         #'#'
-            jsr         is_op3
+            jsr         is_hash3
             bne         :+
             jsr         file_in
             bra         @target
@@ -1610,8 +1640,7 @@ cs_sleep:
 ; WRITE [items]: each written (a string in quotes), commas between, then a new line
 cs_write:
             stz         c3_t                                ; (A file's: ST_FEND after)
-            lda         #'#'
-            jsr         is_op3
+            jsr         is_hash3
             bne         @item
             jsr         file_num
             inc         c3_t
@@ -1682,8 +1711,7 @@ open_modes: .byte       FM_INPUT, FM_OUTPUT, FM_APPEND, FM_BINARY
 
 ; A # (if it's there) read past
 opt_hash:
-            lda         #'#'
-            jsr         is_op3
+            jsr         is_hash3
             bne         :+
             C2          lex_next
 :

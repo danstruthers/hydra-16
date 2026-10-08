@@ -555,8 +555,7 @@ f_err:
             bra         push_ax
 ; ERL: its line (0: none, or the prompt's)
 f_erl:
-            lda         err_line
-            ldx         err_line + 1
+            FARN        7, erl_num
             ; (fall through)
 
 ; .A/.X (0 to 65535) pushed, an integer
@@ -1271,9 +1270,10 @@ st_open:
 
 ; ST_CLOSE: the file (its number taken off) closed
 st_close:
-            lda         #$FF
-            jsr         f_need
-            ; (fall through)
+            jsr         pop_int16                           ; (Not open: nothing to do)
+            jsr         f_find
+            bcc         f_close
+            rts
 ; The file in slot fsl closed
 f_close:
             ldx         fsl

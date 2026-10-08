@@ -225,6 +225,7 @@ prog_compile:
 ; The program run from its start: its globals as they were made, the value stack empty.  OUT: C = 1 STOPped
 prog_run:
             FARN        6, fl_closeall                      ; (A run before's files closed)
+            FARN        4, base_dec                         ; (Its numbers in decimal, as its text's are at its start)
             stz         g_win                               ; (Its WINDOW none yet: its values made again)
             stz         end_status
             lda         #1                                  ; (The program's: ON ERROR none yet)

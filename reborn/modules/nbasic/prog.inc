@@ -39,7 +39,10 @@ ls_state:   .res        1
 sp_k:       .res        1                                   ; (ls_spec's)
 sp_n:       .res        2
 ed_path:    .res        24                                  ; (EDIT's file: /ram/basicNN.bas)
-ed_args:    .res        40
+ed_args:    .res        80
+tl_at:      .res        2                                   ; (tl_read's: past the text written)
+erl_v:      .res        2                                   ; (erl_num's: the last line number, if any)
+erl_has:    .res        1
 
 .segment "CODE7"
 
@@ -100,13 +103,135 @@ text_load:
             ldx         #1                                  ; (The system's error)
             jmp         b_error
 :
+            stz         t0
+            stz         t0 + 1
+            jsr         tl_read
+            bcc         :+
+            ldx         #0
+            jmp         b_error
+:
+            jmp         code_sel
+
+; INCLUDE's file (inc_nm: a path from /, else in the program's directory, else /lib/basic) loaded into the text at
+; inc_top (tl_read): inc_at and inc_path its, inc_top past it, inc_n on.  OUT: C = 1, .A/.X the error
+inc_load:
+            lda         inc_n                               ; (Its path: inc_path + 64n)
+            jsr         inc_pathat
+            ldy         #0
+            lda         inc_nm
+            cmp         #'/'
+            beq         @name
+            ldx         #0                                  ; (The program's directory: pname to its last /)
+            stz         t4
+:
+            lda         pname,x
+            beq         :+
+            inx
+            cmp         #'/'
+            bne         :-
+            stx         t4
+            bra         :-
+:
+            cpy         t4
+            beq         @name
+            lda         pname,y
+            sta         (t0),y
+            iny
+            bra         :-
+@name:
+            jsr         @nm
+            bcs         @bad
+            jsr         @open
+            bcc         @read
+            lda         inc_nm                              ; (Else /lib/basic's)
+            cmp         #'/'
+            beq         @none
+            ldy         #0
+:
+            lda         s_libbas,y
+            beq         :+
+            sta         (t0),y
+            iny
+            bra         :-
+:
+            jsr         @nm
+            bcs         @bad
+            jsr         @open
+            bcc         @read
+@none:
+            lda         #ER_NOTFOUND
+            bra         @err
+@bad:
+            lda         #ER_BADNAME
+@err:
+            ldx         #0
+            sec
+            jmp         code_sel
+@read:
+            pha
+            lda         inc_n                               ; (Its place: inc_top)
+            asl         a
+            tax
+            lda         inc_top
+            sta         inc_at,x
+            sta         t0
+            lda         inc_top + 1
+            sta         inc_at + 1,x
+            sta         t0 + 1
+            pla
+            jsr         tl_read
+            bcs         @err
+            MOVW        inc_top, tl_at
+            inc         inc_n
+            clc
+            jmp         code_sel
+@nm:
+            ldx         #0                                  ; (inc_nm at (t0) + .Y: C = 1 too long)
+:
+            lda         inc_nm,x
+            sta         (t0),y
+            beq         :+
+            inx
+            iny
+            cpy         #64
+            bcc         :-
+            rts
+:
+            clc
+            rts
+@open:
+            MOVW        r0, t0
+            lda         #O_READ
+            jmp         OPEN
+s_libbas:   .byte       "/lib/basic/", 0
+
+; t0 = inc_path + 64 * .A (INCLUDE's file .A's path)
+inc_pathat:
+            stz         t0 + 1
+            ldx         #6
+:
+            asl         a
+            rol         t0 + 1
+            dex
+            bne         :-
+            clc
+            adc         #<inc_path
+            sta         t0
+            lda         t0 + 1
+            adc         #>inc_path
+            sta         t0 + 1
+            rts
+
+; The lines of the file open as .A into the text from t0 (each its length and its bytes; a CR before an LF dropped),
+; then a $FF; the file closed.  tl_at past the $FF.  OUT: C = 1, .A the error: a line too long (err_line its line),
+; or the text past 64K (Out of memory)
+tl_read:
             sta         fl_fd
             stz         fl_len
             stz         fl_pos
             stz         fl_line
             stz         fl_line + 1
-            stz         t0
-            stz         t0 + 1
+            MOVW        tl_at, t0
             lda         #LB_TEXT
             jsr         cb_reg7
 @line:
@@ -141,13 +266,13 @@ text_load:
             stx         t4
             jsr         cb_sel
             lda         t4
-            jsr         cb_wr
+            jsr         tl_wr
             ldy         #0
 @w:
             cpy         t4                                  ; (Its bytes)
             beq         @wd
             lda         lbuf,y
-            jsr         cb_wr
+            jsr         tl_wr
             iny
             bra         @w
 @wd:
@@ -157,15 +282,34 @@ text_load:
             jsr         CLOSE
             MOVW        err_line, fl_line
             lda         #ER_TOOLONG
-            ldx         #0
-            jmp         b_error
+            sec
+            rts
 @done:
             jsr         cb_sel
             lda         #$FF
-            jsr         cb_wr
+            jsr         tl_wr
             lda         fl_fd
             jsr         CLOSE
-            jmp         code_sel
+            clc
+            rts
+
+; .A written at cursor B, tl_at on.  Past 64K: Out of memory, out of tl_read (C = 1)
+tl_wr:
+            jsr         cb_wr
+            inc         tl_at
+            bne         :+
+            inc         tl_at + 1
+            beq         @full
+:
+            rts
+@full:
+            pla
+            pla
+            lda         fl_fd
+            jsr         CLOSE
+            lda         #ER_MEMORY
+            sec
+            rts
 
 ; The loaded file's next byte.  OUT: C = 1 at its end
 fl_getc:
@@ -1078,6 +1222,13 @@ text_delete:
 ; the last error's; back: read again and checked (compiled: its first error said)
 text_edit:
             jsr         ls_args
+            lda         ls_fk                               ; (The last error's in an INCLUDE's file: that file)
+            bne         :+
+            lda         err_line + 1
+            cmp         #>INC_LINE
+            bcc         :+
+            jmp         inc_edit
+:
             lda         #1                                  ; (Its line: the last error's, or 1)
             sta         sp_n
             stz         sp_n + 1
@@ -1175,6 +1326,18 @@ text_edit:
 :
             inx
             stz         ed_args,x
+            jsr         ed_spawn
+            jsr         text_init                           ; (Read again)
+            jsr         prog_gone
+            LDW         sv_ptr, ed_path
+            jsr         text_load
+            LDR         r0, ed_path
+            jsr         REMOVE
+            FARN        1, prog_compile                     ; (Checked: its first error said)
+            rts
+
+; edit run (ed_args its arguments: +N and the file) and waited for
+ed_spawn:
             ldx         #9                                  ; (/bin/edit)
 :
             lda         s_edit,x
@@ -1188,18 +1351,103 @@ text_edit:
             bcc         :+
             jmp         sys_err
 :
-            jsr         rc_wait
-            jsr         text_init                           ; (Read again)
-            jsr         prog_gone
-            LDW         sv_ptr, ed_path
-            jsr         text_load
-            LDR         r0, ed_path
-            jsr         REMOVE
+            jmp         rc_wait
+
+; EDIT after an error in an INCLUDE's file: that file in the editor, at its line; then the program checked again
+inc_edit:
+            lda         #'+'
+            sta         ed_args
+            lda         err_line
+            sta         tx_t
+            lda         err_line + 1
+            and         #>(INC_STEP - 1)
+            sta         tx_t + 1
+            ldx         #1
+            jsr         dec_put
+            stz         ed_args,x
+            inx
+            phx
+            lda         err_line + 1
+            sec
+            sbc         #>INC_LINE
+            lsr         a
+            lsr         a
+            lsr         a
+            jsr         inc_pathat
+            plx
+            ldy         #0
+:
+            lda         (t0),y
+            sta         ed_args,x
+            beq         :+
+            inx
+            iny
+            bra         :-
+:
+            inx
+            stz         ed_args,x
+            jsr         ed_spawn
             FARN        1, prog_compile                     ; (Checked: its first error said)
             rts
+
 s_edpath:   .byte       "/ram/basic", 0
 s_bas:      .byte       ".bas", 0
 s_edit:     .byte       "/bin/edit", 0
+
+; ERL: the error's line's number, or the nearest before it that has one (QuickBASIC's, in a program with numbers);
+; else its line in its file (an INCLUDE's in that file).  OUT: .A/.X
+erl_num:
+            lda         err_line + 1
+            cmp         #>INC_LINE
+            bcc         :+
+            and         #>(INC_STEP - 1)
+            tax
+            lda         err_line
+            rts
+:
+            lda         tx_at
+            pha
+            lda         tx_at + 1
+            pha
+            stz         tx_at
+            stz         tx_at + 1
+            MOVW        sp_n, err_line                      ; (Its lines to it, counted down)
+            stz         erl_has
+@line:
+            lda         sp_n
+            ora         sp_n + 1
+            beq         @done
+            jsr         tx_open
+            cmp         #$FF
+            beq         @done
+            jsr         tx_num
+            bcs         :+
+            MOVW        erl_v, tx_ln
+            lda         #1
+            sta         erl_has
+:
+            jsr         tx_skip
+            lda         sp_n
+            bne         :+
+            dec         sp_n + 1
+:
+            dec         sp_n
+            bra         @line
+@done:
+            pla
+            sta         tx_at + 1
+            pla
+            sta         tx_at
+            jsr         code_sel
+            lda         erl_has
+            beq         :+
+            lda         erl_v
+            ldx         erl_v + 1
+            rts
+:
+            lda         err_line
+            ldx         err_line + 1
+            rts
 
 ; .A (0-15) a hex digit's character
 hex_dig:
