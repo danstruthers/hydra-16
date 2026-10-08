@@ -2,6 +2,8 @@
 
 A plan (October 2026) for the user's request: take the number system as it is now ([NUMBERS.md](NUMBERS.md), steps 1-8, merged into `reborn` at `b6c24ed`) as the final state of what it does, find out in depth where its time goes, and make it significantly faster.  **What it does doesn't change**: every result stays the same to the digit and the byte (every kind, every base, the math functions correctly rounded), and every entry and every language keeps its form; only the time does.  The numbers library's test, the cross-checks against danlang (`numxcheck.js`, `hyxcheck.js`), BASIC's suite and the 120 regression tests are the judge of every step.
 
+**Done** (October 2026, `reborn-numspeed`): all nine steps, every result as it was; [As built](#as-built) has what was made and what it measured.
+
 ### **Contents**
 1. [How it was measured](#how-it-was-measured)
 2. [What it costs now](#what-it-costs-now)
@@ -11,6 +13,7 @@ A plan (October 2026) for the user's request: take the number system as it is no
 6. [The order of work](#the-order-of-work)
 7. [Risks](#risks)
 8. [Questions](#questions)
+9. [As built](#as-built)
 
 ---
 
@@ -250,3 +253,72 @@ Each step: the numbers library's test (its calls checked against `numref.js`), `
 3. **The tables in ROM**, about 5.5K in all, some in both libraries (step 4's quarter squares, 1K, and its division by 10 and 100, about 1.2K; step 5's exp(j/64) and atan(1/m), about 2.6K; the constants, 312 bytes; the powers of 10, about 400 bytes): fine as ROM space, or keep to code alone where the gain is smaller?
 4. **The zero page option** (step 2): a new entry (or a flag to `INIT`) by which a program tells the libraries their zero page needn't be kept, or keep saving it always (about 350 cycles a call)?
 5. **Merging**: once at the end, or after each step that's done (step 1's gains are the cheapest and among the most visible)?
+
+### **As built**
+
+October 2026, on `reborn-numspeed`: all nine steps.  The user's answers: steps 7, 8 and 9 in this plan, the work checked in at its end.  The tables went into ROM as planned, and the zero page option is a new entry, `OPTIONS`.  Every result is as it was.  These were the judge of each step:
+
+* the numbers library's test, BASIC's suite and the hylang suites;
+* differential tests that run the same random programs in a build of `b6c24ed` and in this one and compare every line: BASIC's numbers, its small decimals (each result's bytes, by `MKN$`, so a kind that changed would show), hylang's numbers, the math functions at 1-40 digits, and big integers' `div`, `mod` and `gcd` to 240 digits;
+* at the end, the whole suite (120 tests).
+
+What was built, step by step, where it differs from the plan:
+
+* **Step 0**: `sim/tools/nprof.js`, the profiler by stretch; `tests/speed/` (`numb.bas`, `small.bas`, `math.bas`, `numh.hl`); and `sim/speed.js`, which runs them and prints one table against the build before (`--base`) or a step's saved table (`--prev`).
+* **Step 1**: π, log 2 and log 10 at 824 bits from the ROM (`apigen.js`'s `numconst.inc`, made from `numref.js`), copied in by `INIT`; `m_log10x` by shifts; 10^(n-1) and 10^n kept; `m_sig`'s 10^s and 2^(b-1) kept through a rounding; the base kept parsed; `n_fix0`'s test for a 10 without a division; BASIC's `\` and `MOD` of 32-bit integers in the interpreter, and an array's index 0 not multiplied.
+* **Step 2**: each library two banks.  The second banks hold the numbers library's text and the math library's `TRIG` and `ATAN`, each with its own copies of the code it uses (assembled again, `NM_COPY`), and a call crosses by `XCALL` (`NMFAR2`).  Also:
+  * the zero page option is the entry `OPTIONS` (`$A093`), and BASIC sets it;
+  * an operand below `$7E00` is measured by its tags and copied in one pass;
+  * a result of 32 bytes or fewer goes to the caller's bank through the stack;
+  * BASIC's operands of 64 bytes or fewer are kept below `$8000`.
+* **Step 3**: `nmsmall.inc`.  `+`, `-`, `*`, `/` and the comparisons of integers of 4 bytes or fewer and of fixed decimals of 0-15 places whose digits are, in 64-bit words.  Small fractions (16-bit parts) are worked here too.
+* **Step 4**: division a byte of the quotient at a time (Knuth's algorithm D), multiplication a row at a time through four pointers into the quarter squares, division by a byte unrolled, and `r_page` inline.
+* **Step 5**:
+  * truncated products: `m_mulw` skips the columns below the precision's bytes less 3;
+  * a square's cross products made once;
+  * 10^0 to 10^24 from a table;
+  * atan(1/m) for m 2 to 15 from a table at 192 bits;
+  * the square root's Newton started from its top 16 bits' root.
+
+  Not built: `EXP`'s exp(j/64) table and the one `m_sig`.
+* **Step 6**: `PARSE` reads decimal digits two at a time, not four (×100 plus the pair, in one pass), and `DISPLAY` divides by 100 a byte at a time from tables.
+* **Step 7**: `VT_FIX` in BASIC (`basic.md`, "Values").  A fixed decimal of 0-15 places whose digits fit in 32 bits is kept in the value itself.  Its type is the stored format's tag, and its digits are signed.
+  * The compiler pushes such a literal or constant with `PUSHF`, and `result_vt` makes the library's results into such values.
+  * The interpreter works `+`, `-`, `*` and the comparisons of two of them (or one and an integer) as the library does: a sum's places are the more of the two's, a product's are both's, and the 0s at the end are dropped while there are places.  Past 31 bits it hands the work to the library.
+  * `FOR`'s step and `IF`'s test take `VT_FIX` values too.
+* **Step 8**: BASIC's interpreter.
+  * `NEXT` of integers finds its three slots once, adds the step in place, and tests by one subtraction's sign.
+  * A jump within the code's bank sets `ip` alone.
+  * `LDV` and `STV` of a global skip the slot's test, with their copies unrolled.
+  * `ADD`, `SUB` and the comparisons find their values inline.
+* **Step 9**: hylang's `PK_SNUM`.  A number past a fixnum of 7 bytes or fewer is an 8-byte cell of its own (its length, then its bytes), with no blob.  `nl_bytes` reads either kind of cell.
+
+Bugs found on the way, all in BASIC, and fixed (in the build of `b6c24ed` too, for the differential tests):
+
+* `1000 / -400` was -1: `int_sf` made a negative operand's magnitude over the first operand's bytes.
+* `FIXED(x, n)` of an integer x took x as n.
+* A number made while the heap was collected was copied from the wrong place: `result_vt` kept its place in `t4`, which `heap_room` and the collector use.  `heap_room` now keeps `t0`-`t7` over a collection.
+* `0 > -2147483648` was false: two integers 2^31 apart compared as equal.
+* `IF 0.0` was true: `num_is_zero`'s answer was lost through `FARN`.
+
+ROM: the numbers library 15.1K to 30.4K and the math library 15.9K to 30.5K (two banks each: the second's copies, the tables); BASIC 2.5K more, hylang 107 bytes.
+
+**The costs, before (`b6c24ed`) and after** (`sim/speed.js`, at 3.58 MHz):
+
+| BASIC (`numb.bas`) | Before | After | | | hylang (`numh.hl`) | Before | After | |
+| :--- | ---: | ---: | ---: | :- | :--- | ---: | ---: | ---: |
+| 2,000 integer additions | 782 ms | 542 ms | 1.4x | | 60! twenty times | 6,440 ms | 5,962 ms | 1.1x |
+| 500 additions of 0.1 | 1,395 ms | 210 ms | 6.6x | | 300 big integers' additions | 1,499 ms | 1,490 ms | 1.0x |
+| 300 of i / 7 summed | 2,725 ms | 1,710 ms | 1.6x | | 100 products of 30 digits | 1,677 ms | 1,474 ms | 1.1x |
+| 300 of * 1.5, / 1.5 | 1,862 ms | 809 ms | 2.3x | | 100 big divisions | 8,757 ms | 5,298 ms | 1.7x |
+| 2 doubled 100 times | 251 ms | 209 ms | 1.2x | | 1/1 to 1/20 summed, 10 times | 2,445 ms | 1,539 ms | 1.6x |
+| 100 `SQR` | 4,788 ms | 2,003 ms | 2.4x | | 300 of i/3 + i/7 summed | 6,522 ms | 3,694 ms | 1.8x |
+| 50 `SIN` | 3,014 ms | 1,791 ms | 1.7x | | 300 additions of 0.1 | 755 ms | 522 ms | 1.4x |
+| 50 `EXP` | 4,755 ms | 2,614 ms | 1.8x | | 200 products 1.25 * 3.5 | 865 ms | 344 ms | 2.5x |
+| 50 `LOG` | 2,461 ms | 1,472 ms | 1.7x | | 100 `to-str` of 2^100 | 1,841 ms | 1,103 ms | 1.7x |
+| 300 `STR$` | 1,953 ms | 647 ms | 3.0x | | 100 `val` of 30 digits | 2,417 ms | 806 ms | 3.0x |
+| 300 `VAL` | 1,836 ms | 699 ms | 2.6x | | | | | |
+
+A call of the math functions (BASIC's, cycles): the first `SIN` of a program 992,722 to 137,008 (7.2x), the first `EXP` 1,609,102 to 162,825 (9.9x); then `EXP` 1.7x, `SIN` 1.5x, `LOG` 2.0x, `SQR` 2.2x, `ATN` 2.4x, `I ^ 0.37` 1.6x, `SIN` at 30 digits 1.8x.  BASIC's single operations, cycles a pass of a `FOR` loop of 200: an empty pass 655 to 358, `X = A + B` of 1.5 and 2.25 10,517 to 1,541, `X = A * B` 10,429 to 2,170, `IF A < B` 7,020 to 1,796, `X = I \ G` 7,161 to 1,513, `FOR X = 0 TO 20 STEP 0.1` 15,827 to 1,517 (10.4x).  hylang's: `(+ 1.5 2.25)` 15,480 to 6,516, `(+ 1/3 1/7)` 20,090 to 10,317, `(/ i 3)` 12,387 to 7,045.
+
+The twenty benchmarks (`sim/bench.js`): BASIC's 68,580 ms to 55,095, 3.2 times hylang's time (geometric mean; 4.0 before), 7.4 times HyForth's (9.1); `digits` (numbers written out) 4,045 to 2,375.  hylang's and HyForth's are as they were (their benchmarks' numbers are fixnums and cells).

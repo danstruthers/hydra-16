@@ -863,6 +863,18 @@ larger ones).  BASIC's counting is three times as quick, its numbers exact where
 (`50`, not `49.9999993`; 2^100's 31 digits, not `1.2676506E+30`), and its math functions correctly rounded to 12
 digits, not some 9: a `SIN` some 60 ms, EhyBASIC's 7.  HyForth's core is as it was; `lib numbers` is new.
 
+**The numbers' speed** (October 2026, [NUMSPEED.md](design/plans/NUMSPEED.md), `reborn-numspeed`: its "As built").
+Nine steps, every result as it was (differential tests of random programs in both builds, every line the same):
+the libraries' constants, caches and second banks, small numbers' own way, division by bytes and multiplication by
+rows, truncated products and tables, text two digits at a time; BASIC's small decimals in the value (`VT_FIX`) and
+its interpreter's `NEXT`, loads, stores and jumps; hylang's short numbers in a cell of their own (`PK_SNUM`).  The
+same two programs, before (`b6c24ed`) and after: BASIC's 500 additions of 0.1 1,395 ms to 210, 300 of i / 7 2,725 to
+1,710, 100 `SQR` 4,788 to 2,003, 50 `SIN` 3,014 to 1,791, 50 `EXP` 4,755 to 2,614, 300 `STR$` 1,953 to 647, 300
+`VAL` 1,836 to 699, 2,000 integer additions 782 to 542; hylang's 100 big divisions 8,757 to 5,298, i/3 + i/7 6,522
+to 3,694, 1.25 * 3.5 865 to 344, `to-str` of 2^100 1,841 to 1,103, `val` of 30 digits 2,417 to 806.  A program's
+first `SIN` 992,722 cycles to 137,008, its first `EXP` 1,609,102 to 162,825.  BASIC's twenty benchmarks 68,580 ms to
+55,095 (3.2 times hylang's time, 4.0 before).  Five bugs of BASIC's found by the differential tests and fixed.
+
 **Numbers in C, assembly and at rc** (October 2026, NUMBERS.md's step 6).  `num.h`: each of the two libraries'
 entries a C function (`num_add (dst, room, a, b)` ...) on numbers' bytes in the stored format.  `printf` writes them,
 `%N`, and takes a base in braces for them and for C's integers alike (`%{x}N`, `%{#b}d`), a number of any length
@@ -971,9 +983,9 @@ footers and a bar.  W1-W7 merged into reborn (October 2026), then the Vera X's k
    step 4 (the math functions: danlang's, the library `math`, hylang's), step 5 (HyForth's `lib numbers`),
    step 6 (C's `num.h`, `printf`'s `%N`, assembly's macros, `calc`), step 7 (the new BASIC, in EhyBASIC's place:
    [BASIC](#basic)) and step 8 (the documents: BASIC's, the programmer's guide's numbers, the guide and its PDF).
-   Left: BASIC's interpreter's speed, `PRINT USING`'s `^^^^`.  Their speed, a plan (October 2026, `reborn-numspeed`):
-   [NUMSPEED.md](design/plans/NUMSPEED.md), where the time goes (measured by stretch, routine and call) and nine
-   steps to win it back, every result as it is; its questions the user's.
+   Left: `PRINT USING`'s `^^^^`.  Their speed, done (October 2026, `reborn-numspeed`, not merged yet):
+   [NUMSPEED.md](design/plans/NUMSPEED.md), where the time went and nine steps that won it back, every result as it
+   was (above: "The numbers' speed").
 2. Text windows, done (October 2026, [WINDOWS.md](design/plans/WINDOWS.md): screens in task F's RAM banks, a whole
    VT100, window groups, headers, footers and a bar, tiles and popups, two seats, the mouse).
    PCM is done (8.5: `/dev/vid/pcm`, `pcmctl`; `play`'s WAV files and a ZSM's PCM).
