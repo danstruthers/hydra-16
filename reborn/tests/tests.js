@@ -1181,7 +1181,6 @@ function hylangCard(test, files = {}) {
 const BASIC_DIR = path.join(__dirname, 'basic');
 const BSUITE_PROGS = { arith: 66, funcs: 79, logic: 64, strings: 55, arrays: 37, flow: 33, procs: 28, records: 23, data: 27,
   errors: 27, files: 24, hydra: 32 };
-const BASIC_BENCH = ['loop', 'calls', 'fib', 'sieve', 'sort', 'gcd'];   // (The benchmarks bench.bas has: the bench test's)
 const BSUITE_SCRIPTS = ['errors', 'print', 'prompt', 'input'];
 const bsuiteLine = n => (n === 'hydra' ? 'greet=hi; ' : '') + 'basic ' + n + '.bas' + (n === 'hydra' ? ' one two' : '');
 function basicCard() {
@@ -2673,7 +2672,7 @@ module.exports = {
       expect: ['/> ? 1+2\n 3 \n/> echo $window\n\n/> ', '/> echo $window\n1\n/> ? env$("window")\n1\n/> x=2: ? x*21\n 42 \n/> '],
     },
     {
-      name: 'bench', what: 'hylang\'s, HyForth\'s and BASIC\'s benchmarks (romfs/bench: bench.hl and hl/NAME.hl, bench.fs, bench.bas: BASIC\'s six; sim/bench.js times them against each other) at their quick sizes, all of hylang\'s in one hylang: each language\'s result of each the same (calls, fib, tak, ack; loop, while, dotimes, nested; gcd, collatz, hash; sieve, sort, matrix, queens; mapf, fold, each; chars, digits)',
+      name: 'bench', what: 'hylang\'s, HyForth\'s and BASIC\'s benchmarks (romfs/bench: bench.hl and hl/NAME.hl, bench.fs, bench.bas: all twenty in each; sim/bench.js times them against each other) at their quick sizes, all of hylang\'s in one hylang: each language\'s result of each the same (calls, fib, tak, ack; loop, while, dotimes, nested; gcd, collatz, hash; sieve, sort, matrix, queens; mapf, fold, each; chars, digits)',
       init: 't_rc', cycles: 360e6,
       machine: { input: '\u0101hylang /rom/bench/bench.hl 1 q\r\u0101forth /rom/bench/bench.fs 1 q\r\u0101basic /rom/bench/bench.bas 1 q\r' },
       get expect() {
@@ -2681,7 +2680,7 @@ module.exports = {
           ['nested', 450], ['gcd', 189], ['collatz', 441], ['hash', 1274], ['sieve', 97], ['sort', 404], ['matrix', 273], ['queens', 4],
           ['mapf', 9880], ['fold', 964], ['each', 700], ['chars', 7], ['digits', 790]];
         return [...['hylang', 'forth'].flatMap(l => r.map(([n, v]) => 'bench ' + l + ' ' + n + ' ' + v + ' ')), 'bench hylang done', 'bench forth done',
-          ...r.filter(([n]) => BASIC_BENCH.includes(n)).map(([n, v]) => 'bench basic ' + n + ' ' + v + ' '), 'bench basic done'];
+          ...r.map(([n, v]) => 'bench basic ' + n + ' ' + v + ' '), 'bench basic done'];
       },
     },
     {

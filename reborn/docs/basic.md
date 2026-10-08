@@ -173,19 +173,47 @@ bench `romfs/bench/bench.bas` against hylang's and HyForth's.  Writing the suite
 
 ## Against hylang and HyForth
 
-`romfs/bench/bench.bas` is six of the twenty benchmarks (`sim/bench.js`), each a `FUNCTION`: loop, calls, fib
-(recursive), sieve, sort and gcd, the same algorithms, sizes and results as hylang's and HyForth's.  At 3.58 MHz, one
-run of each (`node sim/bench.js --only loop,calls,fib,sieve,sort,gcd`, October 2026):
+`romfs/bench/bench.bas` has all twenty of the benchmarks (`sim/bench.js`), the same algorithms, sizes and results as
+hylang's (`bench.hl`) and HyForth's (`bench.fs`), each in BASIC's own way: a `FUNCTION` each, its parameters (by
+reference) and locals its own, recursion where they recurse, arrays where hylang has lists and HyForth memory, a
+`FUNCTION`'s call where they call a function given (`map`, `filter`, `foldl`; `EXECUTE`).  `basic bench.bas
+[reps [q|f [name...]]]` runs them (q: the bench test's quick sizes).  At 3.58 MHz, one run of each (`node
+sim/bench.js`, October 2026: hylang 1 rep each in a hylang of its own, HyForth 5, BASIC 1):
 
-| Benchmark | Result | HyForth ms | hylang ms | BASIC ms | BASIC/HyForth | BASIC/hylang |
-| :--- | ---: | ---: | ---: | ---: | ---: | ---: |
-| calls | 2000 | 66 | 535 | 1,955 | 29.6x | 3.7x |
-| fib | 987 | 182 | 520 | 2,880 | 15.8x | 5.5x |
-| loop | 4000 | 77 | 400 | 1,800 | 23.4x | 4.5x |
-| gcd | 880 | 353 | 475 | 2,370 | 6.7x | 5.0x |
-| sieve | 172 | 334 | 1,115 | 3,675 | 11.0x | 3.3x |
-| sort | 407 | 483 | 1,820 | 6,375 | 13.2x | 3.5x |
+| Kind | Benchmark | Result | HyForth ms | hylang ms | BASIC ms | BASIC/HyForth | BASIC/hylang |
+| :--- | :-------- | -----: | ---------: | --------: | -------: | ------------: | -----------: |
+| calls | `calls` | 2000 | 65 | 535 | 1,960 | 30.2x | 3.7x |
+| calls | `fib` | 987 | 182 | 520 | 2,875 | 15.8x | 5.5x |
+| calls | `tak` | 36 | 200 | 305 | 1,670 | 8.3x | 5.5x |
+| calls | `ack` | 168 | 116 | 260 | 1,990 | 17.2x | 7.7x |
+| loops | `loop` | 4000 | 77 | 400 | 1,805 | 23.4x | 4.5x |
+| loops | `while` | 6000 | 424 | 725 | 3,505 | 8.3x | 4.8x |
+| loops | `dotimes` | 6000 | 215 | 750 | 2,335 | 10.9x | 3.1x |
+| loops | `nested` | 1800 | 311 | 825 | 3,005 | 9.7x | 3.6x |
+| arith | `gcd` | 880 | 352 | 475 | 2,370 | 6.7x | 5.0x |
+| arith | `collatz` | 1457 | 290 | 425 | 3,230 | 11.1x | 7.6x |
+| arith | `hash` | 4072 | 673 | 715 | 2,170 | 3.2x | 3.0x |
+| bytes | `sieve` | 172 | 334 | 1,115 | 3,690 | 11.0x | 3.3x |
+| bytes | `sort` | 407 | 483 | 1,820 | 6,380 | 13.2x | 3.5x |
+| bytes | `matrix` | 1375 | 1,088 | 970 | 2,950 | 2.7x | 3.0x |
+| bytes | `queens` | 40 | 1,308 | 2,520 | 13,970 | 10.7x | 5.5x |
+| lists | `mapf` | 9880 | 208 | 1,020 | 1,310 | 6.3x | 1.3x |
+| lists | `fold` | 964 | 716 | 1,270 | 2,995 | 4.2x | 2.4x |
+| lists | `each` | 700 | 210 | 450 | 2,410 | 11.5x | 5.4x |
+| text | `chars` | 7 | 204 | 780 | 3,895 | 19.1x | 5.0x |
+| text | `digits` | 2890 | 2,143 | 1,795 | 4,830 | 2.3x | 2.7x |
+| All | | | 9,599 | 17,675 | 69,345 | 9.2x | 4.0x |
 
-The geometric means: BASIC 14.8 times HyForth's time, 4.2 times hylang's.  The first BASIC (EhyBASIC, Microsoft's
-2A, retired for this one) was 44 and 12.3 times: this one is three times as fast.  What's left is the interpreter's
-own time (a statement's ops through a table, a variable's 5 bytes, a `FOR`'s `NEXT` some 700 cycles), the next work's.
+The last row's ratios are the geometric means; by kind, BASIC/HyForth: calls 16.2x, loops 11.9x, arithmetic 6.2x,
+arrays (bytes) 8.1x, lists 6.7x, text 6.6x; BASIC/hylang 5.4x, 4.0x, 4.9x, 3.7x, 2.5x and 3.7x.  Over the six
+benchmarks the first BASIC had (calls, fib, loop, gcd, sieve, sort), 14.9 times HyForth's time and 4.2 times hylang's,
+where the first BASIC (EhyBASIC, Microsoft's 2A, retired for this one) was 44 and 12.3 times: three times as fast.
+
+BASIC is nearest where a statement does much or a call is hylang's own cost too: `mapf` (1.3 times hylang's: its
+`map` and `filter` make lists, BASIC calls a `FUNCTION` on integers), `fold` (2.4), and next to HyForth `digits`
+(2.3: a number's text is the library's in both), `matrix` (2.7) and `hash` (3.2).  It's farthest where a step is
+small: a `FOR` loop's step with a statement is some 1,600 cycles (`loop`, 23 times HyForth's `DO LOOP`), a
+`FUNCTION`'s call some 1,900 more (`calls`, 30 times a `JSR`), a recursion's call deeper (`ack` 7.7 times hylang's,
+`collatz` 7.6), and `MID$`'s new string for each character (`chars`, 19 times `C@`).  The interpreter's own time is
+the next work: `FORN` and a call's frame (its arguments by reference, its mark, its locals' defaults) are the most of
+it.

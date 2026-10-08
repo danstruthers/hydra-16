@@ -31,7 +31,8 @@ const BOOK = [
     'reborn/docs/using/hyforth.md', 'reborn/docs/using/hylang.md', 'reborn/docs/using/basic.md']],
   ['Programming', ['reborn/docs/programming/README.md', 'reborn/docs/programming/calls.md',
     'reborn/docs/programming/memory.md', 'reborn/docs/programming/tasks.md', 'reborn/docs/programming/files.md',
-    'reborn/docs/programming/servers.md', 'reborn/docs/programming/modules.md', 'reborn/docs/programming/video.md',
+    'reborn/docs/programming/servers.md', 'reborn/docs/programming/modules.md',
+    'reborn/docs/programming/numbers.md', 'reborn/docs/programming/video.md',
     'reborn/sdk/asm/README.md', 'reborn/sdk/c/README.md']],
   ['The hardware', ['reborn/docs/hardware.md', 'reborn/docs/vera-wiring.md']],
 ];

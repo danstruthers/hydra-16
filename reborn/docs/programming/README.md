@@ -17,6 +17,7 @@ is the gentler way in.  The whole system in one place is [../hydra-16.md](../hyd
 | [files.md](files.md) | Files and directories, the namespace, devices, the environment |
 | [servers.md](servers.md) | Writing a server or a driver: srvlib, requests, waiting, interrupts |
 | [modules.md](modules.md) | The HYX2 format, programs in RAM and in the ROM, modules of several banks, libraries and `XCALL` |
+| [numbers.md](numbers.md) | The Hydra's numbers: their stored format, the number libraries and calling them, bases and text, each language's |
 | [video.md](video.md) | The screen, the Vera X: `/dev/vid`'s files, the console's terminal, claiming the chip, VRAM, the registers |
 
 ## The system in one page

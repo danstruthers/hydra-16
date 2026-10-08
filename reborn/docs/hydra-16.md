@@ -52,9 +52,9 @@ one book (`node tools/docpdf.js` makes it again).
 | **Files** | Plan 9's: every device a file server; 16 fds a task; a namespace each, of binds and mounts with union directories; pipes; `/proc`, `/env` |
 | **Storage** | HydraFS on SD cards (`/sd/N`), RAM disks (`/ram`, `/sram`), and the ROM disk (`/rom`) |
 | **Shells** | HyForth over rc, the login shell; rc, Plan 9's; hylang and BASIC as shells too |
-| **Languages** | HyForth (Forth 2012), hylang (danlang, a lisp, with a bytecode machine and native code), BASIC (Microsoft's, by way of EhyBASIC) |
+| **Languages** | HyForth (Forth 2012), hylang (danlang, a lisp, with a bytecode machine and native code), BASIC (QuickBASIC's kind, compiled to a stack machine's code); one number system in all of them, and in C: exact, of any size, in any base |
 | **Programs** | In assembly (ca65 on a PC, or `as` on the Hydra) or C (cc65): modules of the paged ROM, or programs in files, read into RAM at `$0800` |
-| **Tools** | The core tools (Plan 9's way), `edit` (a screen editor), `ed`, `db` (a debugger), `as`, `play` (ZSM songs, scores, WAV files), `xmodem`; on the PC an emulator that runs the real ROMs (with the Vera X and the sound), the regression tests, and the PC tool (`/pc`, and the terminal) |
+| **Tools** | The core tools (Plan 9's way), `edit` (a screen editor), `ed`, `db` (a debugger), `as`, `play` (ZSM songs, scores, WAV files), `xmodem`, `calc`; on the PC an emulator that runs the real ROMs (with the Vera X and the sound), the regression tests, and the PC tool (`/pc`, and the terminal) |
 
 The tasks as the system starts:
 
@@ -282,10 +282,21 @@ Hydra's files, tasks, memory and devices a function away; danlang's own regressi
 machine and native code make it 1.9 times HyForth's time over twenty benchmarks.  [The guide](using/hylang.md), [its
 design](hylang.md).
 
-**BASIC** (`basic`): Microsoft BASIC 2A by way of EhyBASIC, the Hydra-16's own, as a program: files, sound and `PLAY`,
-`SYS` (machine code, or any call by name), a RAM bank, scripts and pipelines, and a shell mode.  [The
-guide](using/basic.md), [its design](basic.md).  Planned: a new BASIC for the Hydra, QuickBASIC's kind
-([BASIC.md](design/plans/BASIC.md)), on hylang's numbers in every language ([NUMBERS.md](design/plans/NUMBERS.md)).
+**BASIC** (`basic`): a structured BASIC in QuickBASIC's way, the Hydra's own: line numbers optional, labels and
+blocks, `SUB` and `FUNCTION` with variables of their own, records (`TYPE`), `INCLUDE`; every number exact (`PRINT 1
+/ 3` shows `1/3`, `2 ^ 100` all its digits), in any base; files, `PRINT USING`, `ON ERROR`; sound and `PLAY`,
+graphics on the Vera X, `SYS` (machine code, or any call by name); a prompt that keeps a program (numbered lines,
+`LIST`, `SAVE`, `EDIT` in the screen editor), scripts and pipelines, and a shell mode.  A program is compiled whole
+into a stack machine's code, then run: 9.2 times HyForth's time and 4.0 times hylang's over the twenty benchmarks (the
+first BASIC, Microsoft's by way of EhyBASIC, which it replaced, was some 44 times HyForth's).  [The
+guide](using/basic.md), [its design](basic.md).
+
+**The numbers** are one system in every language ([NUMBERS.md](design/plans/NUMBERS.md)): integers of any size, fixed
+decimals, rationals and complex numbers, all exact; the math functions exact when they can be, else correctly rounded
+to 12 significant digits (or as many as asked, to 100); read and written in any base (hylang's nineteen and more:
+`#xFF`, `#b0.1`, `0FF` in hexadecimal).  Two library modules of the paged ROM, `numbers` and `math`, work them in
+one stored format for hylang, HyForth's `lib numbers`, BASIC, C (`num.h`, `printf`'s `%N`) and assembly, and
+`calc` at rc works out an expression with them.  [Numbers](programming/numbers.md).
 
 ---
 
@@ -296,12 +307,13 @@ Every executable is a HYX2 module: a 48-byte header, then its code and data.  **
 place, its data and BSS in its task's RAM, and may span two to eight banks; **a library module** is code other modules
 call (`XCALL`).  [Modules and programs](programming/modules.md).
 
-* **Assembly**: the SDK, `sdk/asm` (`hydra.inc`, `hyx2.inc`, `macros.inc`, `toollib`, `srvlib`, `nslib`, samples), with
-  ca65 and ld65 on a PC (`node build.js prog DIR`), or **`as` on the Hydra itself**: the same language, the SDK's files
-  in `/lib/as`, the same program, byte for byte.  [The assembly SDK](../sdk/asm/README.md), [the
-  assembler](using/tools.md#the-assembler).
+* **Assembly**: the SDK, `sdk/asm` (`hydra.inc`, `hyx2.inc`, `macros.inc`, `toollib`, `srvlib`, `nslib`,
+  `numbers.inc`, samples), with ca65 and ld65 on a PC (`node build.js prog DIR`), or **`as` on the Hydra itself**: the
+  same language, the SDK's files in `/lib/as`, the same program, byte for byte.  [The assembly
+  SDK](../sdk/asm/README.md), [the assembler](using/tools.md#the-assembler).
 * **C**: cc65 with the Hydra's library under the standard one (files and stdio, the environment, `system`, `signal` over
-  notes, conio, the sound's `snd.h`, the Hydra's own calls in `hydra.h`).  [The C SDK](../sdk/c/README.md).
+  notes, conio, the sound's `snd.h`, the Hydra's own calls in `hydra.h`, its numbers in `num.h` and `printf`'s `%N`).
+  [The C SDK](../sdk/c/README.md).
 * **Debugging**: `db` on the Hydra (a program started stopped, stepped, run to breakpoints, with ld65's symbols), and
   the emulator's call traces, breaks and monitor.  [The debugger](using/tools.md#the-debugger).
 
@@ -348,7 +360,8 @@ The programs in `/bin` behave as Plan 9's do (flags first, fd 0 when given no na
 `head`, `tail`, `grep`, `sort`, `uniq`, `tee`, `xd`, `more`), the editors (`edit`, nano's way, its text in RAM banks;
 `ed`, the line editor), tasks (`ps`, `top`, `kill`, `slay`, `sleep`, `ns`), the debugger (`db`), the assembler (`as`),
 the system (`date`, `free`, `mods`, `hwtest`), the disks (`df`, `mkfs`, `fsck`, `label`), and others (`play`,
-`xmodem`).  `/pc` is a folder of the PC, through the PC tool.  [The tools](using/tools.md).
+`xmodem`, `calc`: an expression worked out exactly, in any base).  `/pc` is a folder of the PC, through the PC tool.
+[The tools](using/tools.md).
 
 ---
 
@@ -381,9 +394,12 @@ POST's, a driver's) are `/dev/kmesg`, its last 4K.
   card; `--pc-dir DIR` a folder as `/pc`; `--vera` a Vera X (`--vera-sd card.img` a card in its SD slot), `--view` its screen in a browser; `--sound` the sound in a
   browser, `--wav FILE` in a file; `--trace-calls`, `--break`, `--watch` for debugging.  The top of `sim/run.js` lists
   them all; [the hardware reference](hardware.md#in-the-emulator) says what's modelled.
-* **The tests**, `node sim/test.js`: 115 of them, each booting its own image and judged on its output, its time budgets
+* **The tests**, `node sim/test.js`: 118 of them, each booting its own image and judged on its output, its time budgets
   and its own checks, as many at a time as the PC has cores; `--dl` runs them in the danlang emulator (`sim/dl`), the
   emulator written again in danlang.
+* **The benchmarks**, `node sim/bench.js`: twenty, each in hylang, HyForth and BASIC (`romfs/bench`), the same
+  algorithms and results, timed against each other by kind ([hylang.md](hylang.md#against-hyforth),
+  [basic.md](basic.md#against-hylang-and-hyforth)).
 * **The PC tools** (`sim/tools`): `hydrapc.js` (the PC tool: the terminal, and `/pc` over the serial line; `npm install`
   in `sim/` for its serial port), `hydrafs.js` (card images), `pcfs.js` (`/pc`'s server), `hysong.js` (scores to ZSM
   songs).
@@ -396,7 +412,7 @@ POST's, a driver's) are `/dev/kmesg`, its last 4K.
 
 | Folder | What's there |
 | :----- | :----------- |
-| `spec/` | The system calls and the error codes: the one source of the jump table, `hydra.inc`, the reference |
+| `spec/` | The system calls and the error codes: the one source of the jump table, `hydra.inc`, the reference; the number libraries' entries (`numbers.def`) |
 | `include/` | `hw.inc` (the board), `layout.inc` (where the kernel's state lives) |
 | `kernel/` | The kernel: the BIOS ROM's pages |
 | `modules/` | The paged ROM's modules, a folder each, and `rom.txt` |
@@ -436,7 +452,7 @@ how HydraOS came to be: the plan it was built to
 | [hardware.md](hardware.md) | The board, the cards and the Vera X, in full |
 | [vera-wiring.md](vera-wiring.md) | The Vera X wired to the board through a bus breakout card: the glue logic, pin by pin, and bringing it up |
 | [using/](using/README.md) | The guides: [rc](using/rc.md), [the tools](using/tools.md), [HyForth](using/hyforth.md), [hylang](using/hylang.md), [BASIC](using/basic.md) |
-| [programming/](programming/README.md) | The programmer's guide: [calls](programming/calls.md), [memory](programming/memory.md), [tasks and notes](programming/tasks.md), [files and namespaces](programming/files.md), [servers and drivers](programming/servers.md), [modules](programming/modules.md), [video](programming/video.md) |
+| [programming/](programming/README.md) | The programmer's guide: [calls](programming/calls.md), [memory](programming/memory.md), [tasks and notes](programming/tasks.md), [files and namespaces](programming/files.md), [servers and drivers](programming/servers.md), [modules](programming/modules.md), [numbers](programming/numbers.md), [video](programming/video.md) |
 | [../sdk/asm/README.md](../sdk/asm/README.md), [../sdk/c/README.md](../sdk/c/README.md) | The SDKs: building and running programs in assembly and in C |
 | [conventions.md](conventions.md) | The rules every source follows |
 | [hyforth.md](hyforth.md), [hylang.md](hylang.md), [basic.md](basic.md) | The languages' designs |

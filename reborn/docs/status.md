@@ -96,7 +96,7 @@ PASS lshell  the shell /lib/shell names (the ROM's: /bin/forth -l, HyForth the l
 PASS spi     SPI and #S (storage): transactions, kept bytes, modes 0 and 3, one open at a time, the time a byte takes  (43 checks, 8.2M cycles)
 PASS disk    the disks (storage): #d, the ROM disk, SD cards (SDHC and SDSC), RAM disks, their ctl files, the time a byte takes  (67 checks, 16.0M cycles)
 PASS fs      HydraFS (#f): files and directories, create, write, holes, remove, rename, a length, format, label, check, old cards, mounts  (92 checks, 66.2M cycles)
-PASS rom     the ROM disk: /rom (#f, spec x) walked on the Hydra, every file read back against its source (romfs/romfs.txt)  (2 checks, 240.6M cycles)
+PASS rom     the ROM disk: /rom (#f, spec x) walked on the Hydra, every file read back against its source (romfs/romfs.txt)  (2 checks, 269.0M cycles)
 PASS load    SPAWN by path and the loader: modules in place (#m/bin), RAM programs from a card (arguments, fd maps), errors  (49 checks, 28.2M cycles)
 PASS env     environments: ENV_GET, ENV_PUT, ENV_DEL, ENV_NAME, a child's copy, #e (/env) as files  (62 checks, 13.2M cycles)
 PASS kmesg   the kernel's messages: KMESG (the boot's banner first, at offsets, the ring full: its last KMESG_SIZE) and /dev/kmesg (kdev's #n/kmesg) read in parts  (12 checks, 21.2M cycles)
@@ -150,7 +150,7 @@ PASS hysh    hylang as the shell (the plan's phase 12: hylang -l, login.hl, prof
 PASS hywin   hylang as a window's shell: a card's /lib/shell naming /bin/hylang -l, init's in window 0 and wstart's in a window made (Ctrl-] c: $window, cons.hl's window)  (0 checks, 86.4M cycles)
 PASS bplay   BASIC's PLAY: a line of MML on channel 0 and on another (play -m), a score file (play name.mml), its time waited for (the program goes on after); play's error (its message as BASIC's, in its line; BASIC's status 1), a channel past 23 (illegal function call); SOUND's text commands (sndctl's: a note, a level)  (3 checks, 35.4M cycles)
 PASS bawin   BASIC as a window's shell: a card's /lib/shell naming /bin/basic -l, init's in window 0 and wstart's in a window made (Ctrl-] c: $window, ENV$): the prompt, a BASIC line and an rc line in each  (0 checks, 17.6M cycles)
-PASS bench   hylang's, HyForth's and BASIC's benchmarks (romfs/bench: bench.hl and hl/NAME.hl, bench.fs, bench.bas: BASIC's six; sim/bench.js times them against each other) at their quick sizes, all of hylang's in one hylang: each language's result of each the same (calls, fib, tak, ack; loop, while, dotimes, nested; gcd, collatz, hash; sieve, sort, matrix, queens; mapf, fold, each; chars, digits)  (3 checks, 86.6M cycles)
+PASS bench   hylang's, HyForth's and BASIC's benchmarks (romfs/bench: bench.hl and hl/NAME.hl, bench.fs, bench.bas: all twenty in each; sim/bench.js times them against each other) at their quick sizes, all of hylang's in one hylang: each language's result of each the same (calls, fib, tak, ack; loop, while, dotimes, nested; gcd, collatz, hash; sieve, sort, matrix, queens; mapf, fold, each; chars, digits)  (3 checks, 145.0M cycles)
 PASS hydev   hylang's device libraries (the plan's phase 11: /lib/hylang's, loaded by use, over the devices' files), devices.hl as a script: gpio (pins, the port, ctl as a hash, CA1's edge), i2c (a memory written and read at a register, the devices, one that doesn't answer), spi (an echo device's transactions, mode 3), cons (the window, the windows, the bell), proc (a task's args, cwd, regs, memory, banks; its environment, its namespace), clock (the chip, the time set), disk (the disks, the cards: this one and one on SPI device 5; the ROM disk's room), pc (the PC tool answers; a file of its read), snd (note-of; a tune, its notes on the YM2151 in time; a channel's settings; the registers read back: a bent note's key code and fraction; a frequency, a glide, the LFO, a sensitivity, the noise; a line of MML and a chord, by play)  (3 checks, 220.4M cycles)
 PASS kcopy   spike S2: copying between tasks  (6 checks, 5.0M cycles)
 PASS irq     spike S1: 115200 received by an irq entry while tasks spin  (6 checks, 2.6M cycles)
@@ -867,7 +867,7 @@ the Hydra's numbers.  [basic.md](basic.md) is its design, [using/basic.md](using
 | Reading a program, the core, procedures (2-4) | Done | `modules/basic`, eight banks: a program compiled whole (two passes: its procedures and types, then its code; names to slots, labels to addresses, blocks linked) into a stack machine's code; values of 5 bytes (an integer of 32 bits in the value, any other number in the heap), the heap and its collector; `SUB`, `FUNCTION`, locals, `SHARED`, `STATIC`, parameters by reference (a variable, an element, a record's field), recursion; `TYPE` |
 | Errors, files, the console (5) | Done | `ON ERROR`, `RESUME`'s forms, `ERR`, `ERL`, `ERR$` and the system's errors; `OPEN`'s modes, `GET`, `PUT`, `SEEK`, directories; `PRINT USING` (QuickBASIC's pictures and the Hydra's `{}` fields); `LOCATE`, `COLOR`, `INKEY$` |
 | The Hydra and the prompt (6, 6a) | Done | `SOUND`, `PLAY`, `SHELL`, `SYS`, `BANK`, `PEEK`; the prompt's buffer (numbered lines, `LIST`, `SAVE`, `LOAD`, `EDIT` in the screen editor, `CONT`), scripts, `basic -l`; graphics on the Vera X (`SCREEN`, `LINE`, `CIRCLE`, `PAINT`, `DRAW`, `WINDOW`, `VIEW`, `SPRITE` ...) |
-| Tests, `bench.bas`, documents (7) | Done | `tests/basic`: twelve programs (495 checks) and four scripts against their output; the basic, bplay and bawin tests for it; `bench.bas` in its own style: 14.8 times HyForth's time, 4.2 times hylang's (EhyBASIC's: 44 and 12.3); `INCLUDE`, E notation in `VAL`, `READ` and `INPUT`, `SYSTEM` in a program, and the bugs the suite found fixed; EhyBASIC's module, tests and documents gone.  Left: the guide and its PDF (NUMBERS.md's step 8), `PRINT USING`'s `^^^^` |
+| Tests, `bench.bas`, documents (7) | Done | `tests/basic`: twelve programs (495 checks) and four scripts against their output; the basic, bplay and bawin tests for it; `bench.bas` in its own style, all twenty benchmarks: 9.2 times HyForth's time, 4.0 times hylang's (over the six EhyBASIC had, 14.9 and 4.2, where it was 44 and 12.3); `INCLUDE`, E notation in `VAL`, `READ` and `INPUT`, `SYSTEM` in a program, and the bugs the suite found fixed; EhyBASIC's module, tests and documents gone.  Left: the interpreter's speed, `PRINT USING`'s `^^^^` |
 
 The basic, bsuite, bawin, bplay and bench tests.
 
@@ -939,8 +939,10 @@ footers and a bar.  W1-W7 merged into reborn (October 2026), then the Vera X's k
 1. Under way (October 2026, `reborn-numbers`): one number system for every language, [NUMBERS.md](design/plans/NUMBERS.md)
    and [BASIC.md](design/plans/BASIC.md), the user's answers in both.  Done: step 1 (danlang's `base` and the stored
    format, `feature/numbers`), step 2 (the numbers library, `modules/numbers`, 33 entries), step 3 (hylang on it),
-   step 4 (the math functions: danlang's, the library `math`, hylang's), step 5 (HyForth's `lib numbers`) and
-   step 6 (C's `num.h`, `printf`'s `%N`, assembly's macros, `calc`); next, the new BASIC (step 7).
+   step 4 (the math functions: danlang's, the library `math`, hylang's), step 5 (HyForth's `lib numbers`),
+   step 6 (C's `num.h`, `printf`'s `%N`, assembly's macros, `calc`), step 7 (the new BASIC, in EhyBASIC's place:
+   [BASIC](#basic)) and step 8 (the documents: BASIC's, the programmer's guide's numbers, the guide and its PDF);
+   next, merging it into `reborn`.
 2. Text windows, done to W7 (October 2026, [WINDOWS.md](design/plans/WINDOWS.md): screens in task F's RAM banks, a
    whole VT100, window groups, headers, footers and a bar, tiles and popups); W8, seats, to come (the keyboard's in).
    PCM is done (8.5: `/dev/vid/pcm`, `pcmctl`; `play`'s WAV files and a ZSM's PCM).

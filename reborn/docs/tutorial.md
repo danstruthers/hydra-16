@@ -200,9 +200,25 @@ hylang> (ls "/rom")
 hylang> exit
 ```
 
-[using/hylang.md](using/hylang.md) is its guide.  BASIC is Microsoft's, as the PET and its cousins had it: `basic`, then
-program lines and `RUN`, or `basic prog.bas` for a file ([using/basic.md](using/basic.md)).  And rc itself, for an rc
-session: `rc` ([using/rc.md](using/rc.md)).
+[using/hylang.md](using/hylang.md) is its guide.  BASIC is QuickBASIC's kind, the Hydra's own: a line typed runs at
+once, a line with a number first goes into the program, and `RUN` runs it (or `basic prog.bas` a file, where line
+numbers are optional and `SUB`s and `FUNCTION`s have variables of their own):
+
+```
+/> basic
+> PRINT 1 / 3 + 1 / 6; 2 ^ 70; SQR(-4)
+ 1/2  1180591620717411303424  2i
+> 10 FOR i = 1 TO 3: PRINT i; i / 4: NEXT
+> RUN
+ 1  1/4
+ 2  1/2
+ 3  3/4
+> SYSTEM
+```
+
+[using/basic.md](using/basic.md) is its guide.  The numbers are the same in every language, and in C: exact, of any
+size, in any base.  `calc` works one out at rc: `calc 2/3 + 0.5` is `7/6`, `calc -b x 255` is `FF`.  And rc itself,
+for an rc session: `rc` ([using/rc.md](using/rc.md)).
 
 ## 7. Sound
 
