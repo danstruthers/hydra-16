@@ -835,6 +835,31 @@ RAM bank of the task's, its numbers in the stored format, worked by the two libr
 any of hylang's, in which cells are read and shown as well when it isn't a radix.  The core: 289 bytes of hooks.
 Its test, `fnumbers`: a file of the number words in the Forth 2012 suite's way; the whole suite, 88 tests.
 
+**The numbers' cost, before and after** (October 2026: `reborn` at `c353a68`, the same to the millisecond as
+before the numbers work at `21f94d8`, against `reborn-numbers`; at 3.58 MHz).  The twenty benchmarks, whose values stay
+small: hylang 17,730 ms before, 17,675 after; HyForth 9,572 and 9,599 (`digits` 1.2% slower); BASIC's six that
+EhyBASIC had 57,035 and 19,080, three times as fast (`fib` 5.9 times, `sort` 2.3, `sieve` 2.0).  Numbers past the
+quick ways (two small programs, the same in each build, their loops' time in both):
+
+| hylang | Before | After | | BASIC (EhyBASIC, then the new) | Before | After |
+| :--- | ---: | ---: | :- | :--- | ---: | ---: |
+| 60! twenty times | 5,295 ms | 6,265 ms | | 2,000 integer additions | 2,355 ms | 785 ms |
+| 300 big integers' additions | 1,640 ms | 2,020 ms | | 500 additions of 0.1 | 1,105 ms | 1,400 ms |
+| 100 products of 30 digits | 1,845 ms | 1,485 ms | | 300 of i / 7 summed | 665 ms | 2,725 ms |
+| 100 big divisions | 8,950 ms | 8,910 ms | | 300 of * 1.5, / 1.5 | 1,360 ms | 1,865 ms |
+| 1/1 to 1/20 summed, 10 times | 3,110 ms | 3,320 ms | | 2 doubled 100 times | 150 ms | 255 ms |
+| 300 of i/3 + i/7 summed | 5,200 ms | 7,235 ms | | 100 `SQR` | 1,525 ms | 4,795 ms |
+| 300 additions of 0.1 | 1,575 ms | 1,330 ms | | 50 `SIN` | 420 ms | 3,020 ms |
+| 200 fixed decimals' products | 1,110 ms | 1,155 ms | | 50 `EXP` | 475 ms | 4,760 ms |
+| 2^100 written, 100 times | 1,955 ms | 1,960 ms | | 50 `LOG` | 355 ms | 2,465 ms |
+| 30 digits read, 100 times | 2,760 ms | 2,540 ms | | 300 `STR$`, 300 `VAL` | 1,400, 1,150 ms | 1,960, 1,840 ms |
+
+hylang's numbers past a fixnum pay a library call each: integers a little past one and small fractions are 7 to 39%
+slower, long products, fixed decimals and reading 8 to 20% quicker (step 3's "rationals twice as quick" was of
+larger ones).  BASIC's counting is three times as quick, its numbers exact where EhyBASIC's were 40-bit floating point
+(`50`, not `49.9999993`; 2^100's 31 digits, not `1.2676506E+30`), and its math functions correctly rounded to 12
+digits, not some 9: a `SIN` some 60 ms, EhyBASIC's 7.  HyForth's core is as it was; `lib numbers` is new.
+
 **Numbers in C, assembly and at rc** (October 2026, NUMBERS.md's step 6).  `num.h`: each of the two libraries'
 entries a C function (`num_add (dst, room, a, b)` ...) on numbers' bytes in the stored format.  `printf` writes them,
 `%N`, and takes a base in braces for them and for C's integers alike (`%{x}N`, `%{#b}d`), a number of any length
