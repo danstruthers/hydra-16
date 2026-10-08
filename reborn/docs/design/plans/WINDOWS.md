@@ -136,7 +136,7 @@ In practice, that last point is most of what handling "all escape commands" mean
 | Rendition | SGR 0, 1, 2, 4, 5, 7, 8, 22, 24, 25, 27, 28, 30-37, 39, 40-47, 49, 90-97, 100-107 | 38 and 48 (`;5;n`, `;2;r;g;b`) mapped to the 16 colours |
 | Character sets | SCS for G0 and G1 (G2 and G3 too): `B` ASCII, `A` UK (`#` as £), `0` DEC Special Graphics, `1` and `2` (the alternate ROM, taken as `B` and `0`); SO, SI; the VT220's SS2, SS3, LS2, LS3 | |
 | Lines | DECDHL (top, bottom), DECDWL, DECSWL, DECALN (the screen filled with E) | The serial port shows double lines as they are.  The screen (one 8 x 8 font, no scaling for a single row) shows them single width, with a space after each character so the columns still line up |
-| Modes | DECCKM, DECANM (VT52), DECCOLM, DECSCLM, DECSCNM (reverse screen), DECOM, DECAWM, DECARM, DECINLM, LNM, IRM, KAM, DECTCEM (`?25`); DECKPAM, DECKPNM; RIS, DECSTR (soft reset) | DECCOLM: no 132 columns, so it does what xterm does without them: the screen cleared and the margins reset.  DECARM and DECINLM are kept and reported, with nothing to act on.  xterm's `?1049`, `?1047` and `?47` (the alternate screen) and `?2004` (bracketed paste, for snarf).  `?1000` and `?1006` (the mouse) come later |
+| Modes | DECCKM, DECANM (VT52), DECCOLM, DECSCLM, DECSCNM (reverse screen), DECOM, DECAWM, DECARM, DECINLM, LNM, IRM, KAM, DECTCEM (`?25`); DECKPAM, DECKPNM; RIS, DECSTR (soft reset) | DECCOLM: no 132 columns, so it does what xterm does without them: the screen cleared and the margins reset.  DECARM and DECINLM are kept and reported, with nothing to act on.  xterm's `?1049`, `?1047` and `?47` (the alternate screen) and `?2004` (bracketed paste, for snarf).  `?1000` (`?1002`, `?1003` taken as it) and `?1006`: the mouse's reports (W8) |
 | Reports | DA (as a VT102: `CSI ? 6 c`), secondary DA, DECID, DSR 5, DSR 6 (CPR, relative under DECOM), DECREQTPARM (DECREPTPARM), DECRQM, xterm's `CSI 18 t` (the window's size), ENQ | **The console answers these, never a terminal**: the answer goes into the window's keys, as a real terminal's answer would |
 | Titles and status lines | OSC 0 and 2 (the window's label); the VT320's DECSSDT and DECSASD | The program's status line becomes the window's footer ([below](#headers-footers-and-the-bar)) |
 | Kept, with nothing to act on | DECLL (the VT100's four LEDs: shown in the bar as `%L`), DECTST (no tests to run), MC (the VT102's printer: there's none, and the bytes of printer controller mode are dropped, not shown), DCS strings, DECSCUSR (the cursor's shape: the screen's cursor sprite) | Consumed whole, so nothing leaks onto the screen |
@@ -323,7 +323,7 @@ default chrome serial off
 | File | Now | Planned |
 | :--- | :-- | :------ |
 | `#cN/cons` | The window's console | As now |
-| `#cN/consctl` | `rawon`, `rawoff`, `group`, `screen`, `serial`, `both`; reads as the state | Adds `keys hydra` and `keys vt`, `terminal ...`; reads with `size C R` too |
+| `#cN/consctl` | `rawon`, `rawoff`, `group`, `screen`, `serial`, `both`, `seats`; reads as the state | Adds `keys hydra` and `keys vt`, `terminal ...`; reads with `size C R` too |
 | `#cN/wctl` | `new`, `current N` (console-wide); reads as the windows | Also the window's own, as rio's is: `new [group]`, `close`, `chrome`, `header`, `footer`, `status`, `history N`, `scroll smooth` or `jump`, `monitor`, `answerback`, `colours`, `float`, `layout`.  Console-wide: `current N`, `group N`, `bar`, `default`, `key`.  Reads as a line for each window: `N`, its group, its columns and rows, and `*` for the one shown (its label stays out, so a `*` in a title can't confuse a reader) |
 | `#cN/label` | (new) | The window's title (rio's) |
 | `#cN/text` | (new) | Its scrollback and screen, as text (rio's) |
@@ -446,7 +446,7 @@ October 2026, on `reborn-text-windows` (reborn's `docs/status.md`, "The text win
 ### **As built: W2d**
 
 * **Jump scroll is the console's setting** (`consctl`'s `scroll jump`), not DECSCLM's: programs' resets send `?4l` (jump), and a window shouldn't start skipping its output for that.  The plan's `wctl` `scroll` became `consctl`'s, beside raw mode and `keys`, as it's the window's own and needs no group.
-* **Hold** is Ctrl-] h; the keyboard's Scroll Lock comes with the input controller (W8).
+* **Hold** is Ctrl-] h; the keyboard's Scroll Lock too (8.6: the `input` program sends Ctrl-] h).
 
 ### **As built: W3a**
 
@@ -541,6 +541,21 @@ October 2026, on `reborn-text-windows` (reborn's `docs/status.md`, "The text win
 * **While one's up, nothing follows**: every pane is painted from its cells as it changes, the rows that changed, and what's under the popup around its box (each cell put at its place, skipped under the box, a CUP after the gap), so a program under a dialog goes on showing its output (the user's choice for W7: the focused live, the rest painted).
 * **Its box is DEC line drawing**, its label in the top border; `float C R` centres it on each terminal (the screen's and the serial port's may differ), and it's kept inside each, its size no more than the terminal less the box.
 * **The console's own popups**: Ctrl-] w's list (in the shown group now, so it floats over what was shown) and Ctrl-] ?'s keys, the bindings as they are (`key` lines included), both left with q.  The scrollback's view stays a whole window: it's for reading.
+
+### **As built: W8a**
+
+* **`seats`** in `consctl` (or `terminal seats`): both terminals on, each a seat: its own window shown, its own keys (the keyboard's, `#c/kbin`, are the screen's), its own note group for Ctrl-C.  `both`, `screen` or `serial` makes one seat again, the serial port's window on both.  `consctl` reads `terminal seats`; `wctl` marks both seats' windows with `*`.
+* **Sizes**: a group's windows are sized to the terminals showing it: one, or both (the smaller) while both seats show it; a group no seat shows keeps the size it had.  So the screen's group gets 80 x 57 (its chrome on) while the serial port's keeps 80 x 24.
+* **By context**: `w_in` stays "the window", but it's the window of the seat whose keys are being handed out, or of the terminal being drawn; mirrored, both are the same, and the code is as it was.  Ctrl-] and its keys (a new group, a split, the list, the scrollback's view) act in the seat they came from.
+* **A resize** paints only the terminals that show the window's group (it had painted both).
+* **cons is three banks**: its first was full, so the windows' list, the keys' popup and the chrome's renderer moved to a third, called with `FARN 3`.
+
+### **As built: W8b**
+
+* **The mouse's buttons are reports in the keys**: the `input` program sends each press, release and turn of the wheel to `#c/kbin` as xterm's SGR report (`CSI < B ; X ; Y M` or `m`), at the cell where the pointer was (vid's `#v/mouse` records, read on a fid of its own); a PC terminal on the serial port sends the same, once the console has asked it (`?1000;1006h`, while the window it shows wants the mouse).  So both seats' mice go through the console's one path, and moves aren't sent.
+* **A click focuses**: a button pressed over a window that isn't focused shows it with the keys: its tile, a popup, or the window under a popup.  Borders between tiles are no window's.
+* **Programs that ask get the reports**: `?1000` (`?1002`, `?1003` taken as it) turns them on, `?1006` makes them SGR's; the report goes into the window's raw reader's keys at its own cell (the chrome and the tile taken off), as the VT's answers do.
+* **The wheel** over the focused window, if it doesn't ask for the mouse, scrolls its scrollback's view (up opens it), as tmux's does.
 
 ### **Decisions**
 

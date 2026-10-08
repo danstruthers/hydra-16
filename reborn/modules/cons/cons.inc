@@ -2,7 +2,8 @@
 ; cons.inc - what the console driver's two objects share: cons.s (its first bank: the serial line, the keys, the
 ; line editor, the files, /pc, srvlib) and vt.s (its second: each window's screen, a VT100 in its banks, and the
 ; terminals drawn from it).  Each includes it: a name .global here is one object's, used by the other.  A routine
-; in the other bank is called through FAR1 or FAR2 (hyx2.inc); data in RAM is either's.
+; in the other bank is called through FAR1 or FAR2 (hyx2.inc), one in the third (cons.s's CODE3: the windows' list,
+; the keys' popup, the chrome's renderer) through FARN 3; data in RAM is any bank's.
 
 WIN_MAX         = 16            ; Windows (as task F's banks allow: 3 each, 6 with an alternate screen)
 INQ_SIZE        = 64            ; Each window's keys, waiting to be read
@@ -55,7 +56,9 @@ DEL             = $7F
 VM_CKM          = $40           ; A window's modes (vt.s's v_mode): the cursor keys' application mode (DECCKM) ...
 VM_KPAM         = $80           ;   the keypad's (DECKPAM) ...
 VM2_VT52        = $02           ;   and (v_mode2) VT52 mode (DECANM reset) ...
-VM2_BPM         = $04           ;   and bracketed paste (?2004: the console's, for its paste)
+VM2_BPM         = $04           ;   and bracketed paste (?2004: the console's, for its paste) ...
+VM2_MOUSE       = $08           ;   the mouse's reports (?1000, ?1002, ?1003: presses and releases, W8) ...
+VM2_SGR         = $10           ;   in SGR's form (?1006: CSI < B ; X ; Y M or m)
 
 LAY_TABS        = 0             ; A group's layout (wctl's layout): its windows one at a time ...
 LAY_ROWS        = 1             ;   tiled: one above another ...
@@ -93,14 +96,17 @@ KA_N            = 15
 .global     cr_c, cr_a, cr_f, cr_n, chr_pass, chr_render    ; A chrome row rendered (FAR1 chr_render)
 .global     w_used, w_grp, g_focus, g_lay, g_zoom            ; The windows' groups, the groups' focus and layout (W7)
 .global     g_under, kb_act, kb_ct                          ; (A group's window under its popup; the keys' bindings)
+.global     w_sh, seats, seat                               ; (W8: each terminal's window; <> 0, a seat each; the
+                                                            ;   seat whose keys are being handed out)
 .globalzp   kb_pfx
 .globalzp   hyx2_to, hyx2_a                                 ; The trampolines between the banks (hyx2.inc)
-.global     hyx2_far1, hyx2_far2
+.global     hyx2_far1, hyx2_far2, hyx2_farn, hyx2_n, hyx2_bank1, hyx2_bank2, hyx2_bank3
 
 ; ---- vt.s's, for cons.s (FAR2)
 .global     vt_init, vt_keymodes, vt_new, vt_free, vt_write, vt_put, vt_pump, vt_text, vt_resize, vt_size, vt_cursor
 .global     vt_paste, vt_lines, vt_view, vt_line, vbuf          ; (W6: the paste's mode; the scrollback's view)
 .global     vt_history                                      ; (A window's history)
+.global     vt_hit, vt_mouse, ht_x, ht_y                    ; (W8: the window under a terminal's cell; a report to it)
 .global     vt_tile, tl_t                                   ; (A window's tile, W7: win_size's)
 .global     w_fl, w_fx, w_fy, w_fc, w_fr, vt_help           ; (Each window's float, W7b: wctl's; the keys' popup)
 .global     vv_w, vv_src, vv_top, vv_cur, vv_ma, vv_mb, vv_add  ; The view's (cons.s's), vt_view's and vt_lines'

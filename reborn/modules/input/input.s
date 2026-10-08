@@ -28,6 +28,11 @@
 ;     written to /dev/vid/mousein as m DX DY B (y down; the buttons Plan 9's: 1 left, 2 middle, 4 right), one as
 ;     the buttons change and one for the rest; the wheel as button 8 (up) or 16 (down), pressed and let go.  With no
 ;     mouse, or no /dev/vid, the keys alone.
+;   * The mouse's buttons to the console's windows too (W8), as xterm reports them: after a change sent, vid's records
+;     of it read (#v/mouse, a fid of its own: each change queued with where the pointer was), each press and release
+;     to #c/kbin as CSI < B ; X ; Y M (pressed) or m (let go): B 0 left, 1 middle, 2 right, 64 and 65 the wheel up and
+;     down (pressed alone), + 4 Shift, 8 Alt, 16 Ctrl; X and Y its cell (the pixels / 8, from 1).  The console
+;     focuses the window clicked, and gives the reports to a program that asks for them (?1000).
 
 .include "hydra.inc"
 .include "hyx2.inc"
@@ -88,6 +93,12 @@ ibuf:       .res        8                                   ; A read's answer
 cmd:        .res        4                                   ; A command to the controller
 kout:       .res        KOUT_MAX                            ; The keys' bytes, for #c/kbin
 line:       .res        32                                  ; A line for /dev/vid/mousein
+fd_mrd:     .res        1                                   ; #v/mouse, read (its records: the buttons' changes; $FF none)
+rbtn:       .res        1                                   ; The buttons as the reports have them (Plan 9's) ...
+mlast:      .res        1                                   ;   and as the last line to mousein had them
+mrec:       .res        49                                  ; A record of #v/mouse's: m, x, y, the buttons, the time
+mx:         .res        1                                   ; (Its cell, from 1)
+my:         .res        1
 digits:     .res        6
 
 .code
@@ -267,6 +278,18 @@ mouse_mode:
             bcs         @none
             sta         fd_mouse
             stx         msize
+            lda         #$FF                                ; (Its records, for the console's reports: the first, as
+            sta         fd_mrd                              ;   it is now, read at once)
+            LDR         r0, s_mouse
+            lda         #O_READ | O_NONBLOCK
+            jsr         OPEN
+            bcs         :+
+            sta         fd_mrd
+            jsr         m_rec
+            jsr         m_btns
+            sta         rbtn
+            sta         mlast
+:
             lda         #R_PS2
             jmp         default
 
@@ -695,6 +718,7 @@ m_send0:
 ; m mdx mdy .A, a line, to /dev/vid/mousein
 m_line:
             pha
+            pha
             stz         ln
             lda         #'m'
             jsr         l_put
@@ -720,7 +744,171 @@ m_line:
             sta         r1
             stz         r1 + 1
             lda         fd_mouse
-            jmp         WRITE
+            jsr         WRITE
+            pla                                             ; (The buttons changed: the reports)
+            cmp         mlast
+            beq         :+
+            sta         mlast
+            jmp         m_reports
+:
+            rts
+
+; vid's records of the mouse (#v/mouse) read till there are none: each change of the buttons as reports to the
+; console's keyboard (kout: CSI < B ; X ; Y M or m)
+m_reports:
+            jsr         m_rec
+            bcs         @done
+            ldx         #1                                  ; Its cell: x / 8 + 1, y / 8 + 1
+            jsr         m_cell
+            sta         mx
+            ldx         #13
+            jsr         m_cell
+            sta         my
+            ldx         #25                                 ; Its buttons, those changed
+            jsr         m_num
+            lda         t
+            and         #$1F
+            pha
+            eor         rbtn
+            sta         u
+            pla
+            sta         rbtn
+            ldy         #0                                  ; (Each button: Plan 9's bit, xterm's number)
+@btn:
+            lda         u
+            and         m_bit,Y
+            beq         @next
+            lda         rbtn
+            and         m_bit,Y
+            beq         @up
+            lda         #'M'
+            bra         @rep
+@up:
+            cpy         #3                                  ; (The wheel's let go: nothing)
+            bcs         @next
+            lda         #'m'
+@rep:
+            pha
+            jsr         k_csi
+            lda         #'<'
+            jsr         k_put
+            jsr         m_mods
+            ora         m_code,Y
+            jsr         k_dec
+            lda         #';'
+            jsr         k_put
+            lda         mx
+            jsr         k_dec
+            lda         #';'
+            jsr         k_put
+            lda         my
+            jsr         k_dec
+            pla
+            jsr         k_put
+@next:
+            iny
+            cpy         #5
+            bcc         @btn
+            bra         m_reports
+@done:
+            rts
+
+; A record of #v/mouse's into mrec (none: C = 1)
+m_rec:
+            LDR         r0, mrec
+            LDR         r1, 49
+            lda         fd_mrd
+            bmi         :+
+            jmp         READ
+:
+            sec
+            rts
+
+; .A = the field at mrec + .X (11 columns: a number, right-aligned) / 8 + 1: a cell's column or row
+m_cell:
+            jsr         m_num
+            lsr         t + 1
+            ror         t
+            lsr         t + 1
+            ror         t
+            lsr         t + 1
+            ror         t
+            lda         t
+            inc         a
+            rts
+
+; t = the number in the field at mrec + .X (11 columns).  Modifies .A, .X, u + 1
+m_num:
+            stz         t
+            stz         t + 1
+            lda         #11
+            sta         u + 1
+@digit:
+            lda         mrec,X
+            cmp         #'0'
+            bcc         @skip
+            cmp         #'9' + 1
+            bcs         @skip
+            pha
+            asl         t                                   ; (t * 10: * 2, + * 8)
+            rol         t + 1
+            lda         t
+            ldy         t + 1
+            asl         t
+            rol         t + 1
+            asl         t
+            rol         t + 1
+            clc
+            adc         t
+            sta         t
+            tya
+            adc         t + 1
+            sta         t + 1
+            pla
+            and         #$0F
+            clc
+            adc         t
+            sta         t
+            bcc         @skip
+            inc         t + 1
+@skip:
+            inx
+            dec         u + 1
+            bne         @digit
+            rts
+
+; .A = the buttons of the record's field's last digits (the mouse_mode's first record)
+m_btns:
+            ldx         #25
+            jsr         m_num
+            lda         t
+            and         #$1F
+            rts
+
+; .A = the modifiers' bits, xterm's (4 Shift, 8 Alt, 16 Ctrl)
+m_mods:
+            lda         #0
+            sta         u + 1
+            lda         mods
+            and         #M_SHIFT
+            beq         :+
+            lda         #4
+            tsb         u + 1
+:
+            lda         mods
+            and         #M_ALT
+            beq         :+
+            lda         #8
+            tsb         u + 1
+:
+            lda         mods
+            and         #M_CTRL
+            beq         :+
+            lda         #16
+            tsb         u + 1
+:
+            lda         u + 1
+            rts
 
 ; .A into line
 l_put:
@@ -780,6 +968,9 @@ l_dec:
 s_i2c:      .byte       "#i/42", 0
 s_kbin:     .byte       "#c/kbin", 0
 s_mousein:  .byte       "#v/mousein", 0
+s_mouse:    .byte       "#v/mouse", 0
+m_bit:      .byte       1, 2, 4, 8, 16                      ; The buttons: Plan 9's bits, xterm's numbers
+m_code:     .byte       0, 1, 2, 64, 65
 s_none:     .byte       "no input controller", 0
 s_nocons:   .byte       "no console keyboard (#c/kbin)", 0
 

@@ -24,7 +24,9 @@
 ;               the line; or they go on, the terminal painted as it can, skipping what came between); group (the
 ;               window's notes go to the writer's note group); screen, serial, both (where the windows are shown:
 ;               every window's, the console's terminals: the Vera X's screen, the serial port, or both, as it
-;               starts; screen with no screen: E_NODEV; terminal screen, serial, both too); terminal size C R (the
+;               starts; screen with no screen: E_NODEV; terminal screen, serial, both too); seats (terminal seats:
+;               both on, each a seat, W8: its own window shown, its own keys, the keyboard's the screen's, its own
+;               note group; a group's windows sized to the terminals showing it); terminal size C R (the
 ;               serial port's terminal's columns and rows: 80 x 24 as it starts; terminal size alone asks it, ESC [
 ;               18 t, and its answer sets it, as the PC tool's report does, ESC [ 8 ; R ; C t, sent as its window
 ;               changes).  It reads as the state, with the window's size (size C R): the smaller of the terminals
@@ -51,7 +53,9 @@
 ;               are keys typed at the console, as the serial port's are (Ctrl-C and Ctrl-\ notes, the prefix and the
 ;               key after it the windows'), in a ring of their own (KI_SIZE), so /ser and /pc's frames never see
 ;               them; all of them, as the ring has room, the writer waiting for the rest.  The same file in every
-;               window (the console's, as ser is)
+;               window (the console's, as ser is).  Its mouse reports (CSI < B ; X ; Y M or m: the input program's,
+;               or a PC terminal's on the serial port), as the keys come, focus the window under the mouse and go
+;               to a program that asks (?1000: k_mouse)
 ;   /text       the window's scrollback and screen as text, a line a row (rio's)
 ;   /snarf      the console's cut buffer (rio's), one for all its windows: SNARF_MAX bytes at most, in a bank of
 ;               its own (taken at the first write).  A write at its start empties it first (a write replaces it);
@@ -129,7 +133,7 @@
 .include "srvlib.inc"
 .include "cons.inc"
 
-            HYX2_DRIVER "cons", init, srv_serve, irq, 0, HF_BOOT, 2
+            HYX2_DRIVER "cons", init, srv_serve, irq, 0, HF_BOOT, 3
 
 SRV_FLUSH       = flush                                     ; (srvlib: a reader's call ended by a note)
 SRV_OPENED      = opened                                    ;   (a fid made: its window)
@@ -280,6 +284,17 @@ g_lay:      .res        WIN_MAX                             ;   its layout (LAY_
 g_zoom:     .res        WIN_MAX                             ;   <> 0: zoomed (its focus alone, as tabs) ...
 g_under:    .res        WIN_MAX                             ;   and its window last shown that doesn't float (a popup
                                                             ;   of the group's over it)
+w_sh:       .res        2                                   ; Each terminal's window (0 the serial port, 1 the screen:
+                                                            ;   its seat's; both the same, one seat) ...
+seats:      .res        1                                   ;   <> 0: a seat each (consctl's seats) ...
+seat:       .res        1                                   ;   the seat w_in is (its keys being handed out; else 0)
+ki_grp:     .res        1                                   ; The note group of the keyboard's keys (Ctrl-C's: the
+                                                            ;   screen's seat's window's; win_grp, the serial port's)
+g_tm:       .res        WIN_MAX                             ; Each group's terminals, seats on (its windows' size: those
+                                                            ;   it's shown on, or was last; 0: term's)
+tm_s:       .res        3                                   ; (seat_tm's: the groups shown, a change)
+nw_seat:    .res        1                                   ; The seat that asked for a window (/wnew's)
+ws_t:       .res        1                                   ; (win_size's: the terminals)
 mk_grp:     .res        1                                   ; (w_make's: the group, $FF a new one)
 fr_w:       .res        1                                   ; (w_free's: the window)
 cr_g:       .res        1                                   ; (A group's entry, chr_render's)
@@ -287,7 +302,11 @@ fid_new:    .res        SRV_FIDS                            ; Each wctl fid: the
                                                             ;   next read's answer
 kw_st:      .res        1                                   ; The terminal's sequences the console takes: how far ...
 kw_n:       .res        1                                   ;   which number ...
-kw_p:       .res        3                                   ;   and them
+kw_p:       .res        3                                   ;   and them ...
+kw_lt:      .res        1                                   ;   <> 0: CSI <, a mouse report's (W8)
+ms_w:       .res        1                                   ; (k_mouse's: the window under it, M or m, the wheel's
+ms_m:       .res        1                                   ;   lines)
+ms_n:       .res        1
 want_new:   .res        1                                   ; <> 0: Ctrl-] c, a window wanted (for /wnew's reader)
 kb_act:     .res        128                                 ; The keys (key's): each one's action after the prefix
                                                             ;   (KA_*; ESC's: Shift-Tab's, ESC [ Z) ...
@@ -517,6 +536,7 @@ init:
             bcs         @done
             lda         #INIT_TASK
             sta         win_grp
+            sta         ki_grp
             lda         #LINE_ACIA
             jsr         IRQ_OWN
             bcs         @done
@@ -771,20 +791,26 @@ distribute:
             jsr         d_swap                              ; (The keyboard's only)
             inc         d_src
 :
-            lda         ls_w                                ; (The list, or the view, another window shown: gone)
+            lda         ls_w                                ; (The list, or the view, no seat's window: gone)
             bmi         :+
-            cmp         w_in
+            cmp         w_sh
             beq         :+
-            jsr         ls_close
+            cmp         w_sh + 1
+            beq         :+
+            FARN        3, ls_close
 :
             lda         vv_w
             bmi         @byte
-            cmp         w_in
+            cmp         w_sh
+            beq         @byte
+            cmp         w_sh + 1
             beq         @byte
             jsr         vv_close
 @byte:
             jsr         d_get
             bcc         :+
+            ldy         #0                                  ; (The serial port's seat's again)
+            jsr         seat_in
             jmp         paste_feed                          ; (Then a paste's next keys)
 :
             ldx         d_src                               ; (The keyboard's: no frames)
@@ -797,6 +823,11 @@ distribute:
             jsr         pc_rx
             bcc         @byte
 @keys:
+            ldy         seats                               ; (Seats: the key's source's, the keyboard's the
+            beq         @kseat                              ;   screen's)
+            ldy         d_src
+            jsr         seat_in
+@kseat:
             ldx         d_pfx
             bne         @command
             cmp         kb_pfx
@@ -807,12 +838,16 @@ distribute:
 @key:
             pha                                             ; (To the window, or the list's or the view's; then the
             ldx         ls_w                                ;   console's look: the window's decoder drops the
-            bmi         :+                                  ;   sequences that aren't keys)
-            jsr         ls_key
+            bmi         :+                                  ;   sequences that aren't keys; the seat's alone)
+            cpx         w_in
+            bne         :+
+            FARN        3, ls_key
             bra         @watch
 :
             ldx         vv_w
             bmi         :+
+            cpx         w_in
+            bne         :+
             jsr         vv_key
             bra         @watch
 :
@@ -890,7 +925,7 @@ distribute:
 @same:                                                      ; (No window shown anew: the keys' note group the shown
             ldx         w_in                                ;   one's still)
             lda         w_group,X
-            sta         win_grp
+            jsr         grp_set
             jmp         @byte
 
 @done:
@@ -953,6 +988,8 @@ k_none:
             rts
 
 k_new:                                                      ; A group wanted (for /wnew's reader)
+            ldy         seat
+            sty         nw_seat
             lda         #1
             sta         want_new
             inc         TASK_EVENT
@@ -972,7 +1009,8 @@ k_close:                                                    ; Its note group a h
             ldx         w_in                                ;   window before)
             cpx         ls_w
             bne         :+
-            jmp         ls_back
+            FARN        3, ls_back
+            rts
 :
             cpx         vv_w
             bne         :+
@@ -1003,6 +1041,8 @@ k_split:
 :
             lda         #0
             sta         g_zoom,Y
+            ldy         seat
+            sty         nw_seat
             lda         #2
             sta         want_new
             inc         TASK_EVENT
@@ -1572,6 +1612,11 @@ sn_put:
 @done:
             rts
 
+; ****************************************************************************
+; The third bank's (CODE3): the windows' list, the keys' popup, and the chrome's renderer.  Each is called from the
+; others with FARN 3 (cons_far3's), and calls theirs with FARN 1 and FARN 2
+.segment "CODE3"
+
 ; The windows' list (Ctrl-] w): a window of the console's own, a line a window (the one chosen marked >, then its key:
 ; its number in hex; its number, activity and label, as the bar's; its group), written while it isn't shown, then
 ; shown.  Its notes are the window's before it (Ctrl-C's).  Shown, the list's key again leaves it
@@ -1581,7 +1626,7 @@ ls_open:
             jmp         ls_back
 :
             lda         #$FF                                ; (None free: nothing)
-            jsr         w_make
+            FARN        1, w_make
             bcc         :+
             rts
 :
@@ -1594,7 +1639,7 @@ ls_open:
             lda         #1                                  ; (Its writes all taken: the serial port painted after)
             sta         w_jump,X
             txa                                             ; Its label
-            jsr         lbl_ptr
+            jsr         lbl_at
             ldy         #0
 :
             lda         s_ls_label,Y
@@ -1630,7 +1675,7 @@ ls_open:
             lda         ls_n
             adc         #3                                  ; (The heading, a blank, the list, its last line end)
             sta         w_fr,X
-            jsr         re_tile
+            FARN        1, re_tile
             jsr         ls_reset                            ; Its text: the cursor off, the heading, a line each
             lda         #<s_ls_head
             ldx         #>s_ls_head
@@ -1647,7 +1692,8 @@ ls_open:
             bra         :-
 :
             ldx         ls_w
-            jmp         w_show
+            FARN        1, w_show
+            rts
 
 ; The list's window .X a popup over the shown window's group (its own group, w_make's, gone), centred, 44 wide
 ls_float:
@@ -1672,7 +1718,7 @@ k_help:
             jmp         ls_back
 :
             lda         #$FF
-            jsr         w_make
+            FARN        1, w_make
             bcs         @none
             stx         ls_w
             lda         w_in
@@ -1684,11 +1730,12 @@ k_help:
             sta         w_fr,X
             lda         #36
             sta         w_fc,X
-            jsr         re_tile
+            FARN        1, re_tile
             ldx         ls_w
-            FAR2        vt_help
+            FARN        2, vt_help
             ldx         ls_w
-            jmp         w_show
+            FARN        1, w_show
+            rts
 @none:
             rts
 
@@ -1738,7 +1785,7 @@ ls_reset:
 ; The row built (cr_n bytes in cr_c) written to the list's window, IOBUF bytes at a time
 ls_flush:
             lda         ls_w
-            jsr         load
+            FARN        1, load
             stz         ls_i
 @part:
             ldx         #0
@@ -1758,7 +1805,7 @@ ls_flush:
             sty         ls_i
             txa
             beq         @done
-            FAR2        vt_write
+            FARN        2, vt_write
             bra         @part
 @done:
             rts
@@ -1883,9 +1930,9 @@ ls_go:
             txa
             cmp         g_focus,Y
             beq         :+
-            jsr         focus_tell
+            FARN        1, focus_tell
 :
-            jsr         w_show
+            FARN        1, w_show
             jmp         ls_close
 @done:
             rts
@@ -1895,12 +1942,116 @@ ls_back:
             ldx         ls_from
             lda         w_used,X
             beq         ls_close
-            jsr         w_show
+            FARN        1, w_show
 ls_close:
             ldx         ls_w
             lda         #$FF
             sta         ls_w
-            jmp         w_free
+            FARN        1, w_free
+            rts
+
+; m = window .A's label (lbl_ptr's, for this bank)
+lbl_at:
+            stz         m + 1
+            asl
+            asl
+            asl
+            asl
+            asl
+            rol         m + 1
+            clc
+            adc         #<lbl_buf
+            sta         m
+            lda         m + 1
+            adc         #>lbl_buf
+            sta         m + 1
+            rts
+
+; A mouse report (kw_watch's: CSI < B ; X ; Y M or m, kw_p, .A the M or m) from terminal d_src (the serial port's; the
+; keyboard's, the screen's: the input program's): a button pressed over a window that isn't focused focuses it (its tile,
+; a popup, the window under one); the window under it gets it at its own cell if it asks (?1000: vt_mouse); else the
+; wheel over the focused window scrolls its scrollback's view (up: the view, if it isn't shown)
+k_mouse:
+            sta         ms_m
+            lda         kw_p + 1                            ; (Its cell, from 0)
+            beq         @out
+            dec         a
+            sta         ht_x
+            lda         kw_p + 2
+            beq         @out
+            dec         a
+            sta         ht_y
+            ldx         d_src
+            FARN        2, vt_hit
+            bcc         :+
+@out:
+            rts
+:
+            stx         ms_w
+            lda         ms_m                                ; A button pressed (not the wheel, not a move): its
+            cmp         #'M'                                ;   window focused
+            bne         @report
+            lda         kw_p
+            and         #$63
+            cmp         #3
+            bcs         @report
+            cpx         w_in
+            beq         @report
+            FARN        1, w_show
+@report:
+            ldx         ms_w
+            lda         kw_p
+            ldy         ms_m
+            FARN        2, vt_mouse
+            bcc         @done
+            lda         kw_p                                ; Not taken: the wheel, the view
+            and         #$43
+            cmp         #$40
+            beq         @up
+            cmp         #$41
+            bne         @done
+            lda         vv_w                                ; (Down: in the view)
+            bmi         @done
+            cmp         ms_w
+            bne         @done
+            ldx         #1
+            bra         @move
+@up:
+            lda         ms_w                                ; (Up: the focused window's view, its cursor at its top)
+            cmp         vv_w
+            beq         @top
+            cmp         w_in
+            bne         @done
+            lda         vv_w
+            bpl         @done
+            FARN        1, k_view
+            lda         vv_w
+            bmi         @done
+@top:
+            stz         vv_cur
+            ldx         #0
+@move:
+            stx         ms_m
+            lda         #3
+            sta         ms_n
+:
+            ldx         ms_m
+            FARN        1, vv_move
+            dec         ms_n
+            bne         :-
+@done:
+            rts
+
+.code
+
+; The list's and the keys' popup's key actions (ka_vec's), in the third bank
+k_list:
+            FARN        3, ls_open
+            rts
+
+k_keys:
+            FARN        3, k_help
+            rts
 
 ; The shown window's group's next window (Ctrl-Tab, Ctrl-] Tab), or its previous (win_prev): shown
 win_next:
@@ -1998,6 +2149,16 @@ w_show:
             jsr         focus_tell
 :
             stx         w_in
+            txa                                             ; (The seat's window: both terminals', one seat)
+            ldy         seats
+            beq         @both
+            ldy         seat
+            sta         w_sh,Y
+            bra         @sh
+@both:
+            sta         w_sh
+            sta         w_sh + 1
+@sh:
             ldy         w_grp,X                             ; (Its group's focus; not floating, what its popups float
             txa                                             ;   over)
             sta         g_focus,Y
@@ -2008,12 +2169,95 @@ w_show:
 @flt:
             stz         w_act,X                             ; (Its activity seen)
             lda         w_group,X
-            sta         win_grp
+            jsr         grp_set
+            lda         #1                                  ; Its terminal painted (seats: the other's too if it shows
+            ldy         seats                               ;   this group)
+            beq         @all
+            ldy         seat
+            sta         ts_ser,Y
+            tya
+            eor         #1
+            tay
+            lda         w_sh,Y
+            tay
+            lda         w_grp,Y
+            cmp         w_grp,X
+            bne         @tm
             lda         #1
+@all:
             sta         ts_ser
             sta         ts_scr
+@tm:
+            phx
+            jsr         seat_tm
+            plx
             inc         TASK_EVENT                          ; (Its readers and writers, and the last one's, look
             rts                                             ;   again)
+
+; Seat .Y's (0 the serial port's, 1 the screen's): w_in its window, seat it.  Keeps .A, .X; C
+seat_in:
+            pha
+            sty         seat
+            lda         w_sh,Y
+            sta         w_in
+            pla
+            rts
+
+; .A: the note group of the seat's keys (Ctrl-C's): the serial port's (win_grp, the irq entry's) or the keyboard's
+; (ki_grp); both, one seat.  Keeps .X
+grp_set:
+            ldy         seats
+            beq         :+
+            ldy         seat
+            bne         :++
+:
+            sta         win_grp
+            ldy         seats
+            bne         :++
+:
+            sta         ki_grp
+:
+            rts
+
+; Seats: each group's terminals (g_tm: its windows' size's) as the seats show it, one or both (a group no seat shows
+; keeping its last); a change, the sizes found again (relayout).  Modifies .A, .X, .Y
+seat_tm:
+            lda         seats
+            beq         @done
+            stz         tm_s + 2
+            ldy         w_sh
+            lda         w_grp,Y
+            sta         tm_s
+            ldy         w_sh + 1
+            lda         w_grp,Y
+            sta         tm_s + 1
+            ldx         tm_s
+            lda         #TERM_SERIAL
+            jsr         @set
+            ldx         tm_s + 1
+            lda         #TERM_SCREEN
+            jsr         @set
+            lda         tm_s + 2
+            beq         @done
+            lda         n                                   ; (relayout's n: w_free's)
+            pha
+            jsr         relayout
+            pla
+            sta         n
+@done:
+            rts
+@set:                                                       ; (Group .X on terminal .A, and the other's if both show it)
+            ldy         tm_s
+            cpy         tm_s + 1
+            bne         :+
+            lda         #TERM_SERIAL | TERM_SCREEN
+:
+            cmp         g_tm,X
+            beq         :+
+            sta         g_tm,X
+            inc         tm_s + 2
+:
+            rts
 
 ; A window made: the lowest free, in group .A ($FF: a group of its own, the lowest free).  OUT: C = 0, .X = it; or
 ; C = 1, .A = E_NOMEM
@@ -2170,9 +2414,26 @@ w_free:
             jsr         relayout
             pla
             sta         n
-            lda         fr_w                                ; Shown: its group's focus now, or (gone) the next
-            cmp         w_in                                ;   group's
-            bne         @done
+            lda         seat                                ; Shown (each seat it was shown on): its group's focus
+            pha                                             ;   there now, or (gone) the next group's
+            ldy         #0
+            lda         seats
+            beq         @seat
+            iny
+@seat:
+            lda         fr_w
+            cmp         w_sh,Y
+            bne         @nseat
+            phy
+            jsr         seat_in
+            jsr         @show
+            ply
+@nseat:
+            dey
+            bpl         @seat
+            ply
+            jmp         seat_in
+@show:
             ldy         n
             lda         g_used,Y
             beq         :+
@@ -2180,8 +2441,6 @@ w_free:
             jmp         w_show
 :
             jmp         grp_next
-@done:
-            rts
 
 ; Window .A's editor state loaded (st_*, ln_buf), the one that was, back to its own place first
 load:
@@ -2576,6 +2835,7 @@ relayout:
             lda         #1
             sta         w_rsz,X
             sta         rl_chg
+            jsr         rl_mark                             ; (The terminals showing its group painted)
             bra         @next
 @same:
             plx
@@ -2584,11 +2844,26 @@ relayout:
             bpl         @win
             lda         rl_chg
             beq         @done
-            lda         #1
-            sta         ts_ser
-            sta         ts_scr
             inc         TASK_EVENT                          ; (Their raw readers look again)
 @done:
+            rts
+
+; Window .X resized: each terminal showing its group to be painted.  Keeps .X
+rl_mark:
+            ldy         w_sh
+            lda         w_grp,Y
+            cmp         w_grp,X
+            bne         :+
+            lda         #1
+            sta         ts_ser
+:
+            ldy         w_sh + 1
+            lda         w_grp,Y
+            cmp         w_grp,X
+            bne         :+
+            lda         #1
+            sta         ts_scr
+:
             rts
 
 ; lay_cols, lay_rows: window .X's size: the smaller of the terminals it's shown on (the screen's once its size is
@@ -2598,7 +2873,15 @@ win_size:
             sta         lay_cols
             lda         #WIN_ROWS
             sta         lay_rows
+            lda         term                                ; (Seats: the terminals its group's shown on)
+            ldy         seats
+            beq         :+
+            ldy         w_grp,X
+            and         g_tm,Y
+            bne         :+
             lda         term
+:
+            sta         ws_t
             and         #TERM_SERIAL
             beq         @screen
             ldy         #0
@@ -2610,7 +2893,7 @@ win_size:
             jsr         tile_dims
             jsr         @min
 @screen:
-            lda         term
+            lda         ws_t
             and         #TERM_SCREEN
             beq         @done
             lda         scr_st
@@ -2731,8 +3014,14 @@ kw_watch:
             stz         kw_p
             stz         kw_p + 1
             stz         kw_p + 2
+            stz         kw_lt
             rts
 @csi:
+            cmp         #'<'                                ; (CSI <: a mouse report, SGR's)
+            bne         :+
+            sta         kw_lt
+            rts
+:
             cmp         #';'                                ; Its numbers, three at most
             bne         :+
             ldx         kw_n
@@ -2757,6 +3046,17 @@ kw_watch:
             rts
 @final:
             stz         kw_st
+            ldx         kw_lt                               ; A mouse report: CSI < B ; X ; Y M or m
+            beq         @keys
+            cmp         #'M'
+            beq         :+
+            cmp         #'m'
+            bne         @rts
+:
+            FARN        3, k_mouse
+@rts:
+            rts
+@keys:
             cmp         #'t'
             beq         @size
             cmp         #'u'
@@ -3007,6 +3307,8 @@ h_wnew:
             jmp         again
 :
             stz         want_new
+            ldy         nw_seat                             ; (The seat that asked's)
+            jsr         seat_in
             cmp         #2                                  ; (Ctrl-] s, v: in the shown window's group; Ctrl-] c, a
             lda         #$FF                                ;   group of its own: a shell session)
             bcc         :+
@@ -3016,12 +3318,15 @@ h_wnew:
             jsr         w_make
             bcs         @done
             jsr         w_show                              ; (The user's: shown, as rio's new window is)
+            ldy         #0
+            jsr         seat_in
             txa
             jsr         num_buf                             ; ("N" and an LF)
             jmp         r_give
 
 @done:
-            rts
+            ldy         #0                                  ; (.A, C kept)
+            jmp         seat_in
 
 ; iobuf = .A in decimal and an LF; .X = their bytes
 num_buf:
@@ -3178,7 +3483,7 @@ ki_key:
             bcs         :+
             tay
             lda         w_group,Y
-            sta         win_grp
+            sta         ki_grp
 :
             txa
             bra         @store
@@ -3190,7 +3495,7 @@ ki_key:
 @kill:
             lda         #1 << (NOTE_KILL - 1)
 @note:
-            ldx         win_grp
+            ldx         ki_grp
             php
             sei
             jsr         NOTE_QUEUE
@@ -4844,7 +5149,8 @@ echo_dec:
             rts
 
 ; ****************************************************************************
-; The chrome (W4): rendered here, drawn by vt.s
+; The chrome (W4): rendered here (the third bank), drawn by vt.s
+.segment "CODE3"
 
 ; Chrome row .A (CR_BAR, CR_HEAD, CR_FOOT) of the shown window (loaded in vt.s: v_cols ...), .X cells wide (CR_MAX - 1
 ; at most), rendered from its format into cr_c, cr_a and cr_f (characters, colours, rendition), cr_n of them, all of
@@ -4871,7 +5177,7 @@ chr_render:
             dec         a                                   ; (.Y: 0 the header, 1 the footer)
             tay
             lda         w_in
-            jsr         fmt_at
+            FARN        1, fmt_at
             lda         m
             sta         p
             lda         m + 1
@@ -5079,7 +5385,7 @@ cr_prog:                                                    ; %p: its program
 
 cr_stat:                                                    ; %s: its status line
             lda         w_in
-            jsr         stat_at
+            FARN        1, stat_at
             jmp         cr_str
 
 cr_wins:                                                    ; %w: its group's windows
@@ -5231,10 +5537,10 @@ cr_date:                                                    ; %d: the date (YYYY
 cr_tm:
             sta         n
             sty         n + 1
-            jsr         tm_get
+            FARN        1, tm_get
             lda         #1
             sta         clk_on
-            jsr         nap_set
+            FARN        1, nap_set
             ldy         n + 1
 :
             lda         tm_buf,Y
@@ -5433,7 +5739,7 @@ cr_entry:
 ; Window .X's label into the row: its title, or with none its program's name
 cr_label:
             txa
-            jsr         lbl_ptr
+            jsr         lbl_at
             lda         (m)
             beq         cr_progx
             jmp         cr_str
@@ -5450,6 +5756,8 @@ cr_progx:                                                   ; Window .X's progra
             jmp         cr_strax
 @none:
             rts
+
+.code
 
 ; m = window .A's label (lbl_buf: LBL_SIZE a window)
 lbl_ptr:
@@ -6694,9 +7002,13 @@ c_group:
             ldx         z:srv_id
             lda         TASK_INBOX + RQ_GROUP
             sta         w_group,X
-            cpx         w_in
+            cpx         w_sh
             bne         :+
             sta         win_grp
+:
+            cpx         w_sh + 1
+            bne         :+
+            sta         ki_grp
 :
             clc
             rts
@@ -6779,6 +7091,10 @@ gen_consctl:
 :
             lda         #TERM_SERIAL
 :
+            ldy         seats                               ; (Seats: both on, each a seat)
+            beq         :+
+            lda         #4
+:
             asl
             tax
             lda         term_names - 2,X
@@ -6802,6 +7118,30 @@ c_serial:
             lda         #TERM_SERIAL
             bra         c_term
 
+; seats: a seat each, the screen's and the serial port's (both on): its own window shown, its own keys (the keyboard's
+; the screen's).  No screen: E_NODEV
+c_seats:
+            jsr         c_both
+            bcs         @done
+            lda         scr_st
+            cmp         #1
+            beq         :+
+            lda         #E_NODEV
+            sec
+            rts
+:
+            lda         #1
+            sta         seats
+            ldx         #WIN_MAX - 1                        ; (Every group on both, till a seat leaves it)
+            lda         #TERM_SERIAL | TERM_SCREEN
+:
+            sta         g_tm,X
+            dex
+            bpl         :-
+            clc
+@done:
+            rts
+
 c_both:
             lda         #TERM_SERIAL | TERM_SCREEN
 c_term:
@@ -6818,6 +7158,17 @@ c_term:
             rts
 
 @set:
+            lda         seats                               ; (Seats no more: one seat, the serial port's)
+            beq         :+
+            stz         seats
+            lda         w_sh
+            sta         w_sh + 1
+            tay
+            lda         w_group,Y
+            sta         ki_grp
+            lda         #1                                  ; (The screen's: the serial port's window now)
+            sta         ts_scr
+:
             lda         term                                ; Those turned on: repainted
             eor         #$FF
             and         m
@@ -6838,11 +7189,13 @@ c_term:
             clc
             rts
 
-; terminal screen, serial, both: as screen, serial, both.  terminal size C R: the serial port's terminal's size;
-; terminal size: asked of it (ESC [ 18 t: its answer, ESC [ 8 ; R ; C t, sets it)
+; terminal screen, serial, both, seats: as screen, serial, both, seats.  terminal size C R: the serial port's terminal's
+; size; terminal size: asked of it (ESC [ 18 t: its answer, ESC [ 8 ; R ; C t, sets it)
 c_terminal:
             lda         z:srv_argn
-            beq         @inval
+            bne         :+
+            jmp         @inval
+:
             lda         srv_argp
             sta         p
             lda         srv_argp + 1
@@ -6866,8 +7219,14 @@ c_terminal:
             lda         #<s_both_w
             ldx         #>s_both_w
             jsr         word_is
-            bne         @inval
+            bne         :+
             jmp         c_both
+:
+            lda         #<s_seats_w
+            ldx         #>s_seats_w
+            jsr         word_is
+            bne         @inval
+            jmp         c_seats
 @size:
             lda         z:srv_argn
             cmp         #1
@@ -7008,8 +7367,11 @@ gen_wctl:
             ldx         #0
             jsr         srv_tputdec
             ldx         cnt
-            cpx         w_in
-            bne         :+
+            cpx         w_sh
+            beq         :+
+            cpx         w_sh + 1
+            bne         :++
+:
             lda         #<s_shown
             ldx         #>s_shown
             jsr         srv_tputs
@@ -7770,6 +8132,7 @@ cons_cmds:
             .word       s_screen_w, c_screen
             .word       s_serial_w, c_serial
             .word       s_both_w, c_both
+            .word       s_seats_w, c_seats
             .word       s_terminal_w, c_terminal
             .word       0
 wctl_cmds:
@@ -7849,8 +8212,8 @@ s_view_w:   .byte       "scrollback", 0
 s_spgup_w:  .byte       "shift-pgup", 0
 ka_names:   .word       s_none_w, s_next_w, s_prev_w, s_gnext_w, s_gprev_w, s_new_w, s_list_w, s_hold_w, s_close_w
             .word       s_paste_w, s_view_w, s_split_w, s_vsplit_w, s_zoom_w, s_help_w
-ka_vec:     .word       k_none, win_next, win_prev, grp_next, grp_prev, k_new, ls_open, k_hold, k_close
-            .word       k_paste, k_view, k_split, k_vsplit, k_zoom, k_help
+ka_vec:     .word       k_none, win_next, win_prev, grp_next, grp_prev, k_new, k_list, k_hold, k_close
+            .word       k_paste, k_view, k_split, k_vsplit, k_zoom, k_keys
 .assert     * - ka_vec = KA_N * 2 .and ka_vec - ka_names = KA_N * 2, error, "ka_names and ka_vec: KA_N each"
 kb_def:     .byte       HT, KA_NEXT, ESC, KA_PREV, 'c', KA_NEW, 'n', KA_GNEXT, 'p', KA_GPREV, 'w', KA_LIST
             .byte       'h', KA_HOLD, 'x', KA_CLOSE, 'y', KA_PASTE, '[', KA_VIEW, 's', KA_SPLIT, 'v', KA_VSPLIT
@@ -7865,6 +8228,7 @@ vk_numm:    .byte       2, 3, 4, 4, 5, 5
 vv_vec:     .word       vv_up, vv_down, vv_pgup, vv_pgdn, vv_home, vv_end
 s_bp_open:  .byte       ESC, "[200~", 0                     ; (Bracketed paste's)
 s_bp_close: .byte       ESC, "[201~", 0
+.segment "RODATA3"
 s_hex:      .byte       "0123456789abcdef"
 s_ls_label: .byte       "windows", 0
 s_ls_head:  .byte       ESC, "[?25lA window's key, or the arrows and Enter; q", CR, LF
@@ -7872,15 +8236,18 @@ s_ls_head:  .byte       ESC, "[?25lA window's key, or the arrows and Enter; q", 
 s_ls_grp:   .byte       "  (group ", 0
 s_ls_end:   .byte       ")", CR, LF, 0
 s_ls_col:   .byte       ";1H", 0
+.rodata
 s_top_w:    .byte       "top", 0
 s_bottom_w: .byte       "bottom", 0
 s_on_w:     .byte       "on", 0
 s_off_w:    .byte       "off", 0
+.segment "RODATA3"
 s_m_raw:    .byte       "raw", 0
 s_m_cooked: .byte       "cooked", 0
 s_m_vt:     .byte       " vt", 0
 s_m_mods:   .byte       " mods", 0
 s_m_held:   .byte       " held", 0
+.rodata
 s_time:     .byte       "#t/time", 0
 s_tm_none:  .byte       "????-??-?? ??:??:??"
 s_bar_def:  .byte       "%[7] %G%=%t"                       ; The chrome's formats as the console starts (as
@@ -7889,6 +8256,7 @@ s_head_def: .byte       "%[1]%n %l%=%w"
             .res        FMT_SIZE - (* - s_head_def), 0
 s_foot_def: .byte       "%s"
             .res        FMT_SIZE - (* - s_foot_def), 0
+.segment "RODATA3"
 cr_codes:   .byte       "nglpswGcrmtdL=[%y"                 ; chr_render's codes, and theirs
 CRC_N       = * - cr_codes
 cr_vec:     .word       cr_num, cr_grp, cr_lbl, cr_prog, cr_stat, cr_wins, cr_groups, cr_cols, cr_rows, cr_modes
@@ -7896,13 +8264,15 @@ cr_vec:     .word       cr_num, cr_grp, cr_lbl, cr_prog, cr_stat, cr_wins, cr_gr
 cr_tens:    .byte       1, 10, 100
 sgr_on:     .byte       0, F_BOLD, F_DIM, 0, F_UL, F_BLINK, F_BLINK, F_REV, F_INVIS, 0      ; (SGR 0-9's)
 sgr_off:    .byte       $FF, $FF, <~(F_BOLD | F_DIM), $FF, <~F_UL, <~F_BLINK, $FF, <~F_REV, <~F_INVIS, $FF ; (20-29's)
+.rodata
 s_rawon_w:  .byte       "rawon", 0
 s_rawoff_w: .byte       "rawoff", 0
 s_group_w:  .byte       "group", 0
 s_screen_w: .byte       "screen", 0
 s_serial_w: .byte       "serial", 0
 s_both_w:   .byte       "both", 0
-term_names: .word       s_serial_w, s_screen_w, s_both_w    ; (term 1-3)
+s_seats_w:  .byte       "seats", 0
+term_names: .word       s_serial_w, s_screen_w, s_both_w, s_seats_w ; (term 1-3; seats)
 term_bits:  .byte       CH_ALL, CH_ALL << 4, CH_ALL | (CH_ALL << 4) ; (chrome's terminals: serial, screen, both)
 s_terminal: .byte       LF, "terminal ", 0
 s_scr:      .byte       "#v/term", 0

@@ -232,7 +232,8 @@ one running on, its output kept and shown again.  A read is a line, edited at th
 End, Ctrl-U, the lines before); `consctl` turns raw keys on; Ctrl-C (an interrupt) and Ctrl-\ (a kill) are notes to the
 shown window's group.  **The serial port** runs at 9600 at boot, and to 115200 (`/dev/serctl`), every byte paced by VIA
 timer 2.  **The screen**: with a Vera X, the shown window is on its screen too (`consctl`'s `screen`, `serial`,
-`both`).  [The tools](using/tools.md), [the screen](programming/video.md#the-consoles-terminal).
+`both`), or each terminal is a seat of its own (`seats`: its own window and keys, the keyboard's the screen's); a
+click of the mouse focuses a window, and a program that asks (`?1000`) gets the mouse's reports.  [The tools](using/tools.md), [the screen](programming/video.md#the-consoles-terminal).
 
 **Each window keeps its screen** in the console's RAM banks, written by a whole VT100 (the VT100's and VT102's
 sequences, their reports, VT52 mode, the alternate screen, double width and height), so a window shown again is
@@ -241,8 +242,8 @@ on, less their chrome (`consctl` reads with `size C R`; a raw reader gets `KEY_R
 Hydra its window's size), and the line editor wraps at it.  **Its chrome**: the bar (the windows, the time), its
 header and its footer, each a row drawn from a format (`wctl`'s `bar`, `header`, `footer`; `/lib/windows` has the
 defaults), on the screen by default and on the serial port with `chrome serial on`; its title (`/dev/label`, OSC 2)
-and its status line (`status`, or the VT320's) show there.  Window groups, Ctrl-Tab, the scrollback's view and
-snarf, tiles and the two seats come next: [WINDOWS.md](design/plans/WINDOWS.md).
+and its status line (`status`, or the VT320's) show there.  How they're built:
+[WINDOWS.md](design/plans/WINDOWS.md).
 
 ---
 

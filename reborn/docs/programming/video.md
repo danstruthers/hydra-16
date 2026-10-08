@@ -107,6 +107,9 @@ The screen shows the console's windows as the serial terminal does: the window s
 digit shows another, painted on both from its screen, which the console keeps).  A window is the smaller terminal's
 size, the serial port's 80 x 24 with both on: on the screen its rows at the top, below the chrome, the scrolling region kept to them.  The chrome is the bar (the windows and the time) and the window's header and footer, a row each, on the screen by default (none on the serial port: `wctl`'s `chrome`), so a window on the screen alone is 80 x 57.  `consctl` chooses where: `screen`, `serial` or `both` (every window's; it
 starts `both`), and reads with a line `terminal both`.  With `screen` alone, output isn't paced by the serial line.
+`seats` keeps both on but makes each a seat of its own: the screen shows its own window, with the keyboard's keys and
+Ctrl-C, and the serial port its own; a group's windows are sized to the terminals showing it (80 x 57 on the screen
+alone), and Ctrl-] and its keys act in the seat they came from.  It reads `terminal seats`; `both` is one seat again.
 
 The terminal is 80x60 (`mode 80x30` and `mode 40x30` make the characters bigger), in 16 colours: the ANSI ones, 0-15
 as conio numbers them.  A font's first 32 glyphs are the DEC Special Graphics (`tools/decfont.js` puts them in the
@@ -133,6 +136,10 @@ on the I2C bus at `$42`), the screen is a computer of its own.  The `input` prog
   gets the cursor and function keys as one code each (`KEY_*`); Ctrl-C is the window's interrupt; Ctrl-] and a digit
   shows a window.  The layout is the US one: Shift, Ctrl, Alt (an ESC first), Caps Lock; the keypad's digits with Num
   Lock on (as it starts) and its cursor keys with it off; Scroll Lock the console's hold.  The locks light their LEDs.
+* **The mouse in the console's windows**: `input` sends each press, release and turn of the wheel to `#c/kbin` too, as
+  xterm's reports (`CSI < B ; X ; Y M` or `m`, the cell where the pointer was).  A click focuses the window under it
+  (a tile, a popup); a program that turns on `?1000` (and `?1006`) gets the reports in its raw keys at its own cells;
+  the wheel over a window that doesn't scrolls its scrollback's view.
 * **The mouse** is `/dev/vid/mouse`, as Plan 9's `/dev/mouse`: a read waits for a change, then gives 49 bytes, `m`
   and four fields of 11 characters each with a space after it: x, y, the buttons and the time in milliseconds.  x and
   y are the screen's pixels (640 x 480; 640 x 240 in `mode 80x30`, 320 x 240 in `mode 40x30` or under `bitmap 320`);
