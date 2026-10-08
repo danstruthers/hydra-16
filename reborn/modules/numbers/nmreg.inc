@@ -853,12 +853,14 @@ r_mulc:
 
 ; |nrc| = |nrc| * .A (1-255), in place.  Too big: n_big
 r_mulsmall:
+            stz         n_cy
+; |nrc| = |nrc| * .A + n_cy (each 0-255), in place
+r_muladd:
             sta         n_m8
             jsr         r_c
             ldx         nrc
             lda         r_len,x
             sta         n_lc
-            stz         n_cy
             ldy         #0
 @byte:
             cpy         n_lc

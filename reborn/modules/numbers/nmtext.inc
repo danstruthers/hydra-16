@@ -40,6 +40,10 @@ t_left:     .res        2
 t_k:        .res        2
 t_i:        .res        2
 t_top:      .res        1
+t_pend:     .res        1                                   ; (p_decimal's: a digit waiting for its pair (1), it)
+t_pd:       .res        1
+t_r100:      .res        1                                   ; (d_100's remainder)
+t_q1:       .res        1
 t_chk:      .res        1                                   ; (1: a text checked, its number not made)
 t_rk:       .res        1                                   ; (A plain base's chunk: its size's power, its digits,
 t_kk:       .res        1                                   ;   its remainder, a count, a quotient)
@@ -1282,8 +1286,7 @@ np_pairs:
             stz         t_np
             stz         t_np + 1
 @pair:
-            lda         #100
-            jsr         r_divsmall
+            jsr         d_100
             sta         (nd)
             inc         nd
             bne         :+
@@ -1316,6 +1319,64 @@ np_pairs:
             dec         t_k
 @rts:
             rts
+
+; |R1| = |R1| / 100, in place (np_pairs'): a byte at a time from the top by tables, 256 r = 100 q1 + r1 (d1q, d1r
+; for the remainder r), then (r1 + the byte) / 100 (d2q, d2r: to 354).  OUT: .A = the remainder
+d_100:
+            lda         #1
+            sta         nrc
+            jsr         r_c
+            ldx         #1
+            ldy         r_len,x
+            stz         t_r100
+@byte:
+            dey
+            cpy         #$FF
+            beq         @done
+            ldx         t_r100
+            lda         d1q,x
+            sta         t_q1
+            lda         d1r,x
+            clc
+            adc         (nc),y
+            tax
+            bcs         @hi
+            lda         d2r,x
+            sta         t_r100
+            lda         d2q,x
+            bra         @q
+@hi:
+            lda         d2r + 256,x
+            sta         t_r100
+            lda         d2q + 256,x
+@q:
+            clc
+            adc         t_q1
+            sta         (nc),y
+            bra         @byte
+@done:
+            jsr         r_normc
+            lda         t_r100
+            rts
+
+            NM_RODATA
+d1q:
+.repeat 100, I
+            .byte       (I * 256) / 100
+.endrep
+d1r:
+.repeat 100, I
+            .byte       (I * 256) .mod 100
+.endrep
+d2q:
+.repeat 355, I
+            .byte       I / 100
+.endrep
+d2r:
+.repeat 355, I
+            .byte       I .mod 100
+.endrep
+            NM_CODE
 
 ; ---- Read
 
@@ -1761,10 +1822,13 @@ p_decimal:
             tax
             jsr         r_set16
             stz         t_dot
+            stz         t_pend
             ldx         t_from
             lda         t_num,x
             cmp         #'.'
-            beq         @not
+            bne         :+
+            jmp         @not
+:
 @char:
             lda         t_num,x
             cmp         #'.'
@@ -1784,22 +1848,28 @@ p_decimal:
             sta         t_d
             lda         t_chk
             bne         @counted
-            phx
-            lda         #0
-            sta         nrc
-            lda         #10
-            jsr         r_mulsmall
-            lda         #2
-            sta         nrc
+            lda         t_pend                              ; (Two at a time: R0 * 100 + the pair, in one pass)
+            bne         :+
             lda         t_d
-            ldx         #0
-            jsr         r_set16
+            sta         t_pd
+            inc         t_pend
+            bra         @counted
+:
+            stz         t_pend
+            phx
+            lda         t_pd                                ; (The pair: 10 its first + its second)
+            asl         a
+            sta         n_cy
+            asl         a
+            asl         a
+            clc
+            adc         n_cy
+            adc         t_d
+            sta         n_cy
             lda         #0
-            sta         nra
             sta         nrc
-            lda         #2
-            sta         nrb
-            jsr         r_add
+            lda         #100
+            jsr         r_muladd
             plx
 @counted:
             lda         t_dot
@@ -1811,6 +1881,15 @@ p_decimal:
             inx
             cpx         t_to
             bne         @char
+            lda         t_pend                              ; (A digit left over: R0 * 10 + it)
+            beq         :+
+            lda         t_pd
+            sta         n_cy
+            lda         #0
+            sta         nrc
+            lda         #10
+            jsr         r_muladd
+:
             clc
             rts
 @not:

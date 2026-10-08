@@ -210,7 +210,7 @@ function report(r, o) {
   const lines = [];
   const ms = c => (c / 3579.545).toFixed(0) + ' ms';
   for (const n of r.order) {
-    if (o.only && !o.only.includes(n)) continue;
+    if (o.only && o.only.length && !o.only.includes(n)) continue;
     const s = r.segs.get(n);
     lines.push('', '==== ' + n + ': ' + (s.total / 1e6).toFixed(2) + 'M cycles (' + ms(s.total) + '), other tasks ' + (100 * s.other / (s.total || 1)).toFixed(1) + '%');
     const g = new Map();
