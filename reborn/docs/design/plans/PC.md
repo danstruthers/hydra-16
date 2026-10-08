@@ -12,7 +12,7 @@ node sim/tools/hydrapc.js COM3 C:\hydra --read-only  the Hydra can read it, not 
 node sim/tools/hydrapc.js --list                    the serial ports
 ```
 
-It's a terminal like any other: what the Hydra prints shows, the keys typed go to it.  Ctrl-A is the tool's own prefix key: Ctrl-A x quits, Ctrl-A l lists the requests as they're served, Ctrl-A Ctrl-A sends a Ctrl-A.  The line runs at 9600 baud (the Hydra's at boot; `--baud` for another).
+It's a terminal like any other: what the Hydra prints shows, the keys typed go to it.  It tells the Hydra its window's size as it starts and whenever the window changes (`ESC [ 8 ; rows ; columns t`, xterm's answer to `ESC [ 18 t`, which it answers too, not showing it), so the Hydra's windows are its size (W3 of [WINDOWS.md](WINDOWS.md)); `--no-size` leaves the Hydra's alone.  `--win32-input` asks Windows Terminal for its win32-input-mode (`ESC [ ? 9001 h`) and makes each key's record into the bytes an xterm sends (`sim/lib/win32in.js`), so Ctrl-Tab and Ctrl-Shift-Tab reach the Hydra as `ESC [ 9 ; 5 u` and `ESC [ 9 ; 6 u`, its windows' keys; Windows Terminal keeps Ctrl-Tab for its own tabs till that binding (its actions' `nextTab` and `prevTab`) is taken out of its settings.  `sim/run.js -i --win32-input` does the same for the emulator.  Ctrl-A is the tool's own prefix key: Ctrl-A x quits, Ctrl-A l lists the requests as they're served, Ctrl-A Ctrl-A sends a Ctrl-A.  The line runs at 9600 baud (the Hydra's at boot; `--baud` for another).
 
 On the Hydra, `/pc` is there from boot (`/rom/lib/namespace` mounts it in the system namespace: `mount -s pc /pc`), and works as a card's directory does:
 

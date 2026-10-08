@@ -2,10 +2,11 @@
 ; play [-l] song [n] - a song (a ZSM file: the Commander X16's format, which Furnace exports) on the YM2151, through
 ; /dev/snd: to its end once; with n, its loop n more times; -l, its loop till it's stopped (Ctrl-C).  The old
 ; system's player (os_rom/sound/player.s), a program now.  A song whose name ends in .mml is a score (hysong.js's
-; language: mml.inc), compiled as it plays into the stream hysong.js would make of it; play -o score.mml song.zsm
-; writes that stream to a ZSM file instead.  play [-x] -m ch mml ... plays a line of MML on a channel (its own
-; instrument, if the line doesn't name one), play [-x] -c ch notes ... a chord (a note a channel, from ch); -x, the
-; X16's MML (FMPLAY's, FMCHORD's).  A WAV file ("RIFF") plays on the Vera X's PCM (the second bank: pcm.inc).
+; language: mml.inc; the YM2151's channels and the Vera X's PSG's), compiled as it plays into the stream hysong.js
+; would make of it; play -o score.mml song.zsm writes that stream to a ZSM file instead.  play [-x] -m ch mml ... plays a line of MML on a channel (its own
+; instrument, if the line doesn't name one; ch 8-23, the PSG's: its own waveform), play [-x] -c ch notes ... a chord
+; (a note a channel, from ch, on its chip's); -x, the X16's MML (FMPLAY's, FMCHORD's; PSGPLAY's on the PSG: I its
+; waveform register, V its volume).  A WAV file ("RIFF") plays on the Vera X's PCM (the second bank: pcm.inc).
 ;   The header (16 bytes): "zm", a version, the loop point (3 bytes: an offset in the file; 0: none, and a loop is
 ; the whole song), the PCM table's (its instruments: pcm.inc), the FM channels it uses and the PSG's (claimed:
 ; /dev/sndctl's claim),
@@ -141,8 +142,7 @@ main:
             lda         mml
             beq         :+
             jsr         mml_load
-            lda         m_mask
-            sta         hdr + H_FM
+            jsr         mml_hdr
             stz         loop + 1
             stz         loop + 2
             lda         #HDR_SIZE

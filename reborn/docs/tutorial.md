@@ -36,6 +36,10 @@ The prompt is the current directory and `>`.  In the emulator, Ctrl-A x quits, C
 and Ctrl-A h lists the rest.  `node sim/run.js -i --vera --view` gives it a Vera X card too: its screen, which shows
 the console as the terminal does, is at http://localhost:8016.
 
+Or with no terminal at all: `node sim/web.js` makes `obj/web/hydra-16.html`, the emulator as one web page (the page,
+the emulator and the ROM images in one file).  Open it in a browser: the serial console is a terminal in the page,
+with the Vera X's screen beside it, a Sound button, and SD cards kept in the browser (its Setup).
+
 ## 2. The shell
 
 The login shell is HyForth over rc: a line whose first word is a Forth word or a number is Forth; any other line is
@@ -146,9 +150,22 @@ task  state   parent     cpu group  name
 `/proc/5` has a task's state as files: `status`, `args`, `fd` (its open files), `regs`, `mem`, and `ctl`, which
 takes `stop`, `start`, `kill`.
 
-The console has windows, as rio has on Plan 9: each is a whole console with its own shell.  Ctrl-] c makes one (and
-shows it), Ctrl-] and a digit shows that window, Ctrl-] n the next.  A window that isn't shown runs on; its output is
-kept, and shown again when you come back.  `echo $window` says which one you're in.
+The console has windows, as rio has on Plan 9: each is a whole console, kept whole while it isn't shown.  Windows
+come in groups, a group a shell session: Ctrl-] c starts one (and shows it), with a shell; a program's own windows
+(`echo new >/dev/wctl`) join its window's group.  Ctrl-] and a digit shows that window, Ctrl-] n and Ctrl-] p the
+next and previous group, Ctrl-] Tab (or Ctrl-Tab, where the terminal sends it) the group's next window, and Ctrl-] x
+hangs up the window shown.  A window that isn't shown runs on; its output is kept, and shown again when you come
+back.  `echo $window` says which one you're in, and `cat /dev/wctl` lists them: number, group, size, `*` the one
+shown.  `new-window top` runs a program in a window of its own, in this group (it goes when the program ends);
+`new-window -g` starts another shell session.  Ctrl-] w lists the windows to choose from (a window's key, or the
+arrows and Enter).  The keys can be changed: `echo key prefix ctrl-a >/dev/wctl` makes Ctrl-A the prefix, as
+screen's.  `/dev/snarf` is the console's cut buffer, one for every window: `echo date >/dev/snarf`, then Ctrl-] y
+in any window types it there.  Ctrl-] [ (or Shift-PgUp) looks back through a window's scrollback: the arrows and
+PgUp move, Space marks a line, Enter copies the lines from it to the cursor into `/dev/snarf`, q goes back.
+`echo history 128 >/dev/wctl` keeps 128 more lines in that window.  Ctrl-] s (or v) splits the window: a new
+shell below it (or beside it), both shown at once; Ctrl-] and an arrow moves between them, Ctrl-] z shows one alone
+and back, and `echo layout grid >/dev/wctl` (or `rows`, `columns`, `tabs`) arranges the group's windows.  Ctrl-] ?
+lists the keys.
 
 **Tasks working together.**  The C SDK's multitasking demos start four or five copies of themselves, each in a task
 of its own, and draw what they do as they do it: memory they share (a shared segment), and semaphores to take turns

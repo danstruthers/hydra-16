@@ -294,10 +294,11 @@ error; a text one gives is in its buffer till its next.
 | `gpio` | `gpio ( pin -- level )`, `gpio! ( pin level -- )`, `gpio-in ( pin -- )`, `gpio-out`, `gpio-port ( -- byte )`, `gpio-port!`, `gpio-ddr! ( byte -- )`, `gpio-ca1! ( rise? -- )`, `gpio-ca2! ( n -- )`, `gpio-wait ( -- count )` (CA1's next edge), `gpio-state ( -- c-addr u )` |
 | `i2c` | `i2c-read`, `i2c-write ( addr reg c-addr u -- )`, `i2c-speed ( khz -- )`, `i2c-reg-size ( n -- )`, `i2c-devices`, `i2c? ( addr -- flag )` |
 | `spi` | `spi ( dev c-addr u -- )` (a transaction: what came back in the bytes' place), `spi-read ( dev c-addr u -- )`, `spi-mode ( dev mode -- )` |
-| `cons` | `window ( -- n )`, `windows ( -- c-addr u )`, `new-window`, `show-window ( n -- )` |
+| `cons` | `window ( -- n )`, `windows ( -- c-addr u )`, `new-window ( c-addr u -- )` (`s" top" new-window`: a command line run in a window made and shown; `s" "`: the shell), `new-group` (the same, in a group of its own), `show-window ( n -- )`, `window-label`, `window-status`, `window-ctl` (`( c-addr u -- )`: the window's title, status line, a `wctl` line) |
 | `proc` | `task-args`, `task-cwd`, `task-env`, `task-ns`, `task-regs ( task -- c-addr u )`, `task-mem ( task addr c-addr u -- )`, `task-ram ( task bank offset c-addr u -- )` |
 | `clock` | `set-date ( c-addr u -- )` (`s" 2026-10-04 12:00:00" set-date`), `rtc ( -- c-addr u )` (`running`, `stopped`, `none`) |
 | `disk` | `disk-ctl ( disk -- c-addr u )` (a disk by its letter: `[char] x` the ROM disk, `[char] 0` card 0), `disk-start`, `disk-stop ( disk -- )`, `cards ( -- mask )` |
+| `video` | The Vera X's screen: `bitmap ( width depth -- )`, `bitmap-off`, `pen ( c -- )`, `plot ( x y -- )`, `line`, `box`, `bar ( x0 y0 x1 y1 -- )`, `circle`, `disc ( x y r -- )`, `text ( x y c-addr u -- )`, `clear`; the turtle: `cs`, `home`, `fd`, `bk ( n -- )`, `rt`, `lt ( degrees -- )`, `pu`, `pd`, `heading`, `seth`; `vpoke ( addr bank c -- )`, `vpeek ( addr bank -- c )`, `vram!`, `vram@ ( addr bank c-addr u -- )`, `palette! ( index rgb -- )`, `sprite! ( n c-addr -- )`, `sprite-at ( n x y -- )`, `sprite-off ( n -- )`, `vsync`, `border ( c -- )`; `mouse ( -- x y buttons )`, `mouse-wait` ([../programming/video.md](../programming/video.md)) |
 | `pc` | `pc? ( -- flag )`: the PC tool answers (`/pc`'s files are files for everything else) |
 
 ```

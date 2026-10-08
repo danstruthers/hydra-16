@@ -26,8 +26,8 @@
 ; one in any bank (1-8) from any, the caller's bank set again after (.A, .X, .Y and C go in and
 ; come back; N and Z are .A's).  The trampolines are in the module's RAM (its DATA), where every bank sees them,
 ; and switch the task's own bank register ($01); HYX2_BANKS_INIT, first thing in its init or main, notes the
-; module's banks.  Such a module owns no IRQ line: its irq entry runs in its own task, and might find another bank
-; at $A000.
+; module's banks.  Such a module's irq entry runs in its own task, and might find another bank at $A000: so it
+; owns an IRQ line only with its irq entry, and what that calls, in its RAM (its DATA), as the console driver has.
 
 .import     __DATA_LOAD__, __DATA_RUN__, __DATA_SIZE__, __BSS_RUN__, __BSS_SIZE__, __RAM_LAST__
 

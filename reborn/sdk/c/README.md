@@ -11,12 +11,13 @@ The SDK is this folder; `node build.js` builds the library and also copies the S
 | File | What it is |
 |---|---|
 | `include/snd.h` | The YM2151, and the Vera X's PSG (channels 8-23), through the sound driver: channels claimed, patches, notes, volumes, bends, drums, waveforms, raw registers |
+| `include/vera.h` | The Vera X's screen: the bitmap and drawing on it (`vid_pen`, `vid_line`, `vid_circle`, `vid_text` ...), VRAM, the palette, sprites, frames, the mouse; the chip claimed and its registers (`VERA`, `vpoke`, `vpeek`); `hydra_tgi`, cc65's TGI's driver |
 | `include/hydra.h` | The Hydra's own calls (tasks and exit statuses, the namespace, the tick, RAM banks, any call by `hy_call`), and what cc65's headers leave to a target: `setenv`, `fstat`, `isatty`, conio's colours and keys |
 | `hydracalls.h` | Every system call's address, error code and constant, each with `HY_` before its name.  Made from `spec/` by the build (`obj/sdk/c/hydracalls.h`); never edit it.  `hydra.h` includes it |
 | `hydra.cfg` | The link: the header, code and data from `$0800`, the BSS after them, the heap, and the C stack (2K) down from `$7F00` |
 | `lib/hydra.lib` | The library: cc65's `none.lib`, with the modules of `lib/` in place of cc65's that a target gives (the build: `obj/sdk/c/hydra.lib`) |
 | `lib/` | Its sources: `crt0.s` (the header, the start, `exit`), the files and stdio's buffers, the environment, `system`, `signal`, `time` and `clock`, conio, errors |
-| `samples/` | `hello` (arguments), `upper` (a filter), `code` (exit statuses), `keys` (conio: the screen and raw keys), `tones` (sound: `snd.h`), `jukebox` (a song in the background: `snd_play`), `ctest` (the library's test); the multitasking demos (below): `race`, `chorus`, `philo`, `prodcons`, `round` |
+| `samples/` | `hello` (arguments), `upper` (a filter), `code` (exit statuses), `keys` (conio: the screen and raw keys), `tones` (sound: `snd.h`), `jukebox` (a song in the background: `snd_play`), `sketch` (the screen and the mouse: `vera.h`), `shapes` (cc65's TGI), `ctest` (the library's test); the multitasking demos (below): `race`, `chorus`, `philo`, `prodcons`, `round` |
 
 ## A program
 
@@ -55,7 +56,13 @@ int main (int argc, char* argv[])
   ends the program.
 * conio (`conio.h`) works the console as an ANSI terminal: `clrscr`, `gotoxy`, `textcolor`, `revers`, `cursor`;
   `cgetc` reads keys raw (no echo, each as it's typed, the cursor and function keys as one code each: `CH_*` in
-  `hydra.h`) until the program ends.
+  `hydra.h`) until the program ends.  `screensize` is the window's size (its `consctl`'s `size` line); `cgetc`
+  gives `CH_RESIZE` when it changes, and `screensize` then has the new one.  With `keys mods` written to `consctl`, a
+  key the terminal sent modified comes as `CH_MOD`, its modifiers (`HY_MOD_SHIFT`, `HY_MOD_ALT`, `HY_MOD_CTRL`), then
+  the key.
+* The window's chrome (`hydra.h`): `hy_wlabel` its title, `hy_wstatus` its status line (the footer's `%s`),
+  `hy_wctl` any line of its `wctl` (`chrome screen off` ...); `hy_wnew (flags)` a window made, not shown (`HY_WGROUP`:
+  in a group of its own), its number: its files `#cN` (`#cN/cons` ...), the window gone with its last cons closed.
 * Sound (`snd.h`): claim the channels it uses (`snd_claim`), then patches, notes, volumes, bends and drums on
   them; they're given back as it ends.  `snd_play` plays a song in the background (`play`, in a task of its own).
 * `time` is the system's clock (`/dev/time`; `hy_time`, in seconds since 2000), `clock` the ticks since the

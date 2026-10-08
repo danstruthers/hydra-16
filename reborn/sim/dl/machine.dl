@@ -1,5 +1,6 @@
 ; machine.dl - the Hydra-16 (sim/lib/machine.js, the reference): the memory map, T U V W, the IRQ lines and vectors,
-; the devices brought up to time when they're due (an event) or touched (an I/O access), and the run loop.
+; the devices brought up to time when they're due (an event) or touched (an I/O access), and the run loop.  With the
+; spec's vera-setup, a Vera X in slot 0 (vera.dl: $FF20-$FF3F, IRQ line 2).
 ;
 ; Memory.  mem, a buffer: a task's $0000-$7FFF at T * 32768 + a; its RAM bank b (installed: below modules * 16) at
 ; BANKS + (T * NB + b) * 8192; shared bank (U, b) at SHARED + (U * 16 + b - #xF0) * 8192.  A task's 32K powers up
@@ -84,7 +85,9 @@
         (set {r} (if (< ad #xFF10) (do (set {x} (via-read (- ad #xFF00) at)) (via-sched) x)
                    (if (< ad #xFF14) (do (if (and (== ad #xFF11) (< at nx-ac)) 0 (ac-sync at))    ; (*)
                                          (set {x} (acia-read (- ad #xFF10) at)) (ac-sched) x)
-                     (if (== ad #xFF41) (do (ym-sync at) (set {x} (ym-read-status at)) (ym-sched) x) 255))))
+                     (if (== ad #xFF41) (do (ym-sync at) (set {x} (ym-read-status at)) (ym-sched) x)
+                       (if (and ve-on (>= ad #xFF20) (< ad #xFF40))
+                         (do (ve-sync at) (set {x} (vera-read (- ad #xFF20) at)) (ve-sched) (if (< x 0) 255 x)) 255)))))
         (dev-due)
         (io-lim)
         r)
@@ -97,7 +100,8 @@
         (if (< ad #xFF10) (do (via-write (- ad #xFF00) v at) (via-sched))
           (if (< ad #xFF14) (do (ac-sync at) (acia-write (- ad #xFF10) v at) (ac-sched))
             (if (== ad #xFF40) (ym-select v)
-              (if (== ad #xFF41) (do (ym-sync at) (ym-write v at) (ym-sched)) 0))))
+              (if (== ad #xFF41) (do (ym-sync at) (ym-write v at) (ym-sched))
+                (if (and ve-on (>= ad #xFF20) (< ad #xFF40)) (do (ve-sync at) (vera-write (- ad #xFF20) v at) (ve-sched)) 0)))))
         (dev-due)
         (io-lim))
     (if (== ad #xFFF0) (do (set! {regt tt} v (bit-and v 15)) (remap))
@@ -117,6 +121,7 @@
   (set {n} 16)
   (if (and (acia-irq?) (< opt-acialine n)) (set {n} opt-acialine) 0)
   (if (via-irq?) (set {n} 0) 0)
+  (if (and ve-on (vera-irq?) (< 2 n)) (set {n} 2) 0)
   (if (and (ym-irq?) (< 4 n)) (set {n} 4) 0)
   (if (and (>= opt-stuckirq 0) (< opt-stuckirq n)) (set {n} opt-stuckirq) 0)
   (if (< n 16) n -1)})
@@ -126,8 +131,8 @@
 ; them), from its own cycle (via-cyc, ym-cyc, ac-cyc: they don't touch each other); the next cycle each wants and
 ; whether its IRQ line is active, found again after (via-sched, ym-sched, ac-sched); the next cycle one of them wants
 ; (devnext) and whether an IRQ line is active (irqp), from those (dev-due)
-(def {via-cyc ym-cyc ac-cyc nx-via nx-ym nx-ac devnext} 0 0 0 1 1 1 1)
-(def {irq-via irq-ym irq-ac irq-stuck} NIL NIL NIL NIL)
+(def {via-cyc ym-cyc ac-cyc ve-cyc nx-via nx-ym nx-ac nx-ve devnext} 0 0 0 0 1 1 1 INF 1)
+(def {irq-via irq-ym irq-ac irq-ve irq-stuck} NIL NIL NIL NIL NIL)
 (fun {via-sync at} {do
   (set {d} (- at via-cyc))
   (if (> d 0) (do (set! {via-cyc} at) (via-tick d) (ca1-due at)) 0)})
@@ -135,12 +140,14 @@
 (fun {ac-sync at} {do
   (set {d} (- at ac-cyc))
   (if (> d 0) (do (set! {ac-cyc} at) (acia-tick d at)) 0)})
-(fun {devsync at} {do (via-sync at) (ym-sync at) (ac-sync at)})
+(fun {ve-sync at} {if (and ve-on (> at ve-cyc)) (do (set! {ve-cyc} at) (vera-tick at)) 0})
+(fun {devsync at} {do (via-sync at) (ym-sync at) (ac-sync at) (ve-sync at)})
 (fun {via-sched} {set! {nx-via irq-via} (+ via-cyc (max 1 (min (via-next) (ca1-next)))) (via-irq?)})
 (fun {ym-sched} {set! {nx-ym irq-ym} (+ ym-cyc (max 1 (ym-next))) (ym-irq?)})
 (fun {ac-sched} {set! {nx-ac irq-ac} (+ ac-cyc (max 1 (acia-next))) (and (acia-irq?) (< opt-acialine 16))})
-(fun {dev-due} {set! {devnext irqp} (min nx-via nx-ym nx-ac) (or irq-via irq-ac irq-ym irq-stuck)})
-(fun {devsched} {do (via-sched) (ym-sched) (ac-sched) (dev-due)})
+(fun {ve-sched} {if ve-on (set! {nx-ve irq-ve} (+ ve-cyc (max 1 (vera-next ve-cyc))) (vera-irq?)) 0})
+(fun {dev-due} {set! {devnext irqp} (min nx-via nx-ym nx-ac nx-ve) (or irq-via irq-ac irq-ym irq-ve irq-stuck)})
+(fun {devsched} {do (via-sched) (ym-sched) (ac-sched) (ve-sched) (dev-due)})
 
 ; CA1's pulses (cycles, in order): low at each, high again 500 cycles on
 (def {ca1-edges ca1-n ca1-at} (hash-create) 0 0)
@@ -219,10 +226,11 @@
   (devsched)
   (set! {pc fi} (word (rd #xFFFC) (rd #xFFFD)) 4)})
 
-; The reset button (RESB): the CPU (I set, D clear, PC from the reset vector), the VIA, the ACIA and the YM2151 reset;
-; RAM, T U V W and the cards keep theirs, as on the board
+; The reset button (RESB): the CPU (I set, D clear, PC from the reset vector), the VIA, the ACIA and the YM2151 reset,
+; and the VERA configures itself again; RAM, T U V W, VRAM and the cards keep theirs, as on the board
 (fun {hw-reset} {do
   (via-reset) (acia-reset) (ym-reset)
+  (if ve-on (do (ve-sync cyc) (vera-reset cyc)) 0)
   (set! {fi fd waiting halted ck lim} 4 0 NIL NIL -1 0)
   (set! {pc} (word (rd #xFFFC) (rd #xFFFD)))
   (devsched)})

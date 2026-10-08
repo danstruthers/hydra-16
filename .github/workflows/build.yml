@@ -23,6 +23,8 @@ jobs:
           echo "CC65_HOME=$RUNNER_TEMP/cc65" >> "$GITHUB_ENV"
       - name: HydraOS, build and test
         run: node reborn/build.js && node reborn/sim/test.js
+      - name: The emulator in a browser (its page built, its worker booted in Node)
+        run: node reborn/sim/web.js --check
       - name: The old system (frozen in old/), build and test
         run: node old/build.js test
       - name: The images, if they changed (the ones in Git should be the build's)

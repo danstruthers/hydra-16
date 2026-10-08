@@ -5,7 +5,8 @@
 ; interrupts on IRQ line 2 (a second's VSYNCs, 59.5 a second; LINE at line 100, SCANLINE read at it; at line 300,
 ; IEN's bit 8); two sprites colliding (SPRCOL, ISR's collision bits); the PCM FIFO (empty, full, AFLOW's level, and
 ; its interrupt as 48828 samples a second drain it); a PSG voice (sim/test.js looks for it); the SPI port with no
-; card; CTRL's reset (no answer while the FPGA configures itself, then the registers as it starts them).
+; card; FX (the cache written 4 bytes at a time, a byte masked; filled by reads; transparent writes; the multiplier
+; and its accumulator; the line helper's pixels; the polygon's fill length); CTRL's reset (no answer while the FPGA configures itself, then the registers as it starts them).
 
 .include "hydra.inc"
 .include "hw.inc"
@@ -379,6 +380,193 @@ main:
             EXPECT_A    $FF, "SPI: $FF back (no card)"
             stz         VERA_SPI_CTRL
 
+; ---- FX (DCSEL 2-6)
+            lda         #$EE                                ; $4000-$403F: $EE, as they start
+            ldx         #0
+            jsr         fx_seek
+:
+            sta         VERA_DATA0
+            inx
+            cpx         #$40
+            bcc         :-
+            lda         #VERA_DCSEL_FX_CACHE                ; The cache: $11 $22 $33 $44
+            sta         VERA_CTRL
+            lda         #$11
+            sta         VERA_FX_CACHE_L
+            lda         #$22
+            sta         VERA_FX_CACHE_M
+            lda         #$33
+            sta         VERA_FX_CACHE_H
+            lda         #$44
+            sta         VERA_FX_CACHE_U
+            lda         #$40                                ; Cache writes
+            jsr         fx_ctrl
+            ldx         #$00
+            jsr         fx_seek4
+            stz         VERA_DATA0                          ; (Its mask 0: all four bytes)
+            lda         #%00001100                          ; (Byte 1 masked)
+            sta         VERA_DATA0
+            lda         #0
+            jsr         fx_ctrl
+            ldx         #$00
+            jsr         fx_peek4
+            EXPECT_A    0, "FX: a cache write, 4 bytes ($11 $22 $33 $44)"
+            ldx         #$04
+            jsr         fx_seek
+            lda         VERA_DATA0
+            EXPECT_A    $11, "FX: a cache write's mask: byte 0 written ..."
+            lda         VERA_DATA0
+            EXPECT_A    $EE, "  byte 1 masked ..."
+            lda         VERA_DATA0
+            EXPECT_A    $33, "  byte 2 written"
+            lda         #VERA_DCSEL_FX_CACHE                ; The cache cleared, then filled by reading $4000-$4003
+            sta         VERA_CTRL
+            stz         VERA_FX_CACHE_L
+            stz         VERA_FX_CACHE_M
+            stz         VERA_FX_CACHE_H
+            stz         VERA_FX_CACHE_U
+            lda         #$20
+            jsr         fx_ctrl
+            ldx         #$00
+            jsr         fx_seek
+            lda         VERA_DATA0
+            lda         VERA_DATA0
+            lda         VERA_DATA0
+            lda         VERA_DATA0
+            lda         #$40                                ;   and written at $4010
+            jsr         fx_ctrl
+            ldx         #$10
+            jsr         fx_seek4
+            stz         VERA_DATA0
+            lda         #0
+            jsr         fx_ctrl
+            ldx         #$10
+            jsr         fx_peek4
+            EXPECT_A    0, "FX: the cache filled by 4 reads, then written"
+            lda         #$80                                ; Transparent writes: 0 leaves the byte
+            jsr         fx_ctrl
+            ldx         #$20
+            jsr         fx_seek
+            stz         VERA_DATA0
+            lda         #5
+            sta         VERA_DATA0
+            lda         #0
+            jsr         fx_ctrl
+            ldx         #$20
+            jsr         fx_seek
+            lda         VERA_DATA0
+            EXPECT_A    $EE, "FX: a transparent write of 0, nothing ..."
+            lda         VERA_DATA0
+            EXPECT_A    5, "  of 5, written"
+            lda         #VERA_DCSEL_FX_CACHE                ; The multiplier: 7 x 6, written ...
+            sta         VERA_CTRL
+            lda         #7
+            sta         VERA_FX_CACHE_L
+            stz         VERA_FX_CACHE_M
+            lda         #6
+            sta         VERA_FX_CACHE_H
+            stz         VERA_FX_CACHE_U
+            lda         #VERA_DCSEL_FX
+            sta         VERA_CTRL
+            lda         #$90                                ; (The accumulator reset, the multiplier on)
+            sta         VERA_FX_MULT
+            lda         #$40
+            jsr         fx_ctrl
+            ldx         #$30
+            jsr         fx_seek4
+            stz         VERA_DATA0
+            lda         #VERA_DCSEL_FX                      ;   then accumulated: 42 + 42
+            sta         VERA_CTRL
+            lda         #$50
+            sta         VERA_FX_MULT
+            stz         VERA_CTRL
+            ldx         #$34
+            jsr         fx_seek4
+            stz         VERA_DATA0
+            lda         #VERA_DCSEL_FX
+            sta         VERA_CTRL
+            lda         #$80                                ;   (the multiplier off, the accumulator reset)
+            sta         VERA_FX_MULT
+            lda         #0
+            jsr         fx_ctrl
+            ldx         #$30
+            jsr         fx_seek
+            lda         VERA_DATA0
+            EXPECT_A    42, "FX: the multiplier, 7 x 6 ..."
+            lda         VERA_DATA0
+            ora         VERA_DATA0
+            ora         VERA_DATA0
+            EXPECT_A    0, "  (its other 3 bytes 0) ..."
+            lda         VERA_DATA0
+            EXPECT_A    84, "  and accumulated: 42 + 42"
+            stz         VERA_ADDR_L                         ; The line helper: from $5000, X steps a half (ADDR1
+            lda         #$50                                ;   steps 1, ADDR0's 320 when X carries)
+            sta         VERA_ADDR_M
+            lda         #VERA_INC_320
+            sta         VERA_ADDR_H
+            lda         #VERA_CTRL_ADDRSEL
+            sta         VERA_CTRL
+            stz         VERA_ADDR_L
+            lda         #$50
+            sta         VERA_ADDR_M
+            lda         #VERA_INC_1
+            sta         VERA_ADDR_H
+            lda         #1                                  ; (Line draw)
+            jsr         fx_ctrl
+            lda         #VERA_DCSEL_FX_INCR
+            sta         VERA_CTRL
+            stz         VERA_FX_X_INCR_L                    ; (0.5: 256 of 512; its high byte resets X's half)
+            lda         #1
+            sta         VERA_FX_X_INCR_H
+            stz         VERA_CTRL
+            lda         #9
+            sta         VERA_DATA1
+            sta         VERA_DATA1
+            sta         VERA_DATA1
+            sta         VERA_DATA1
+            lda         #0
+            jsr         fx_ctrl
+            lda         #$00
+            ldx         #$50
+            jsr         fx_peek
+            EXPECT_A    9, "FX: the line helper's pixels: $5000 ..."
+            lda         #$41
+            ldx         #$51
+            jsr         fx_peek
+            EXPECT_A    9, "  $5141 (a row on) ..."
+            lda         #$42
+            ldx         #$51
+            jsr         fx_peek
+            EXPECT_A    9, "  $5142 ..."
+            lda         #$83
+            ldx         #$52
+            jsr         fx_peek
+            EXPECT_A    9, "  $5283"
+            lda         #VERA_DCSEL_FX_POS                  ; The polygon's fill length: X 10, Y 30 (mode 2) ...
+            sta         VERA_CTRL
+            lda         #10
+            sta         VERA_FX_X_POS_L
+            stz         VERA_FX_X_POS_H
+            lda         #30
+            sta         VERA_FX_Y_POS_L
+            stz         VERA_FX_Y_POS_H
+            lda         #2
+            jsr         fx_ctrl
+            lda         #VERA_DCSEL_FX_INCR                 ;   (no steps)
+            sta         VERA_CTRL
+            stz         VERA_FX_X_INCR_L
+            stz         VERA_FX_X_INCR_H
+            stz         VERA_FX_Y_INCR_L
+            stz         VERA_FX_Y_INCR_H
+            stz         VERA_CTRL                           ;   (a read of DATA1 steps them: the length worked out)
+            lda         VERA_DATA1
+            lda         #VERA_DCSEL_FX_FILL
+            sta         VERA_CTRL
+            lda         VERA_FX_POLY_FILL_H
+            EXPECT_A    20 >> 3 << 1, "FX: the polygon's fill length, 20 (its high bits)"
+            lda         #0
+            jsr         fx_ctrl
+
 ; ---- CTRL's reset: the FPGA configures itself again (0.1 s): the bus floats meanwhile, then the gateware's start
             lda         #$5A
             sta         VERA_ADDR_L
@@ -448,6 +636,61 @@ irq:
             sta         aflowed
 :
             lda         #0
+            rts
+
+; FX_CTRL = .A (DCSEL 2), then DCSEL 0.  Keeps .X
+fx_ctrl:
+            pha
+            lda         #VERA_DCSEL_FX
+            sta         VERA_CTRL
+            pla
+            sta         VERA_FX_CTRL
+            stz         VERA_CTRL
+            rts
+
+; ADDR0 at $40xx (.X), increment 1 (fx_seek) or 4 (fx_seek4).  Keeps .A, .X
+fx_seek:
+            pha
+            lda         #VERA_INC_1
+            bra         :+
+fx_seek4:
+            pha
+            lda         #VERA_INC_4
+:
+            stx         VERA_ADDR_L
+            pha
+            lda         #$40
+            sta         VERA_ADDR_M
+            pla
+            sta         VERA_ADDR_H
+            pla
+            rts
+
+; VRAM $40xx-$40xx+3 (.X) the cache's first bytes ($11 $22 $33 $44)?  OUT: .A 0 yes
+fx_peek4:
+            jsr         fx_seek
+            lda         VERA_DATA0
+            eor         #$11
+            sta         n
+            lda         VERA_DATA0
+            eor         #$22
+            ora         n
+            sta         n
+            lda         VERA_DATA0
+            eor         #$33
+            ora         n
+            sta         n
+            lda         VERA_DATA0
+            eor         #$44
+            ora         n
+            rts
+
+; VRAM at .X/.A ($0xxxx: .X its middle byte, .A its low)
+fx_peek:
+            sta         VERA_ADDR_L
+            stx         VERA_ADDR_M
+            stz         VERA_ADDR_H
+            lda         VERA_DATA0
             rts
 
 .rodata

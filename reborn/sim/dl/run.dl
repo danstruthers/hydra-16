@@ -17,14 +17,16 @@
 ;   --bios FILE, --prom FILE   other images (--prom: the whole paged ROM, as sim/dl/image.js writes a test's)
 ;   --sd FILE           a card image (sim/tools/hydrafs.js makes them), SD device 0, then 1 ...: read and
 ;                       written in the file itself
+;   --vera              a Vera X in slot 0 (vera.dl: no screen or sound here, sim/run.js has them)
+;   --smc               its input controller, the X16's SMC, on the I2C bus at $42 (a mouse on it)
 ; e.g. danlang sim/dl/run.dl -i --input "\phylang\r": the console, and hylang started at the shell's first prompt
 (def {here} (substring (fst args) 0 (+ 1 (max (last-index-of (fst args) "/") (last-index-of (fst args) "\\")))))
-(each {f {"cpu.dl" "machine.dl" "devices.dl" "spi.dl" "i2c.dl" "rtc.dl"}} (load (+ here f)))
+(each {f {"cpu.dl" "machine.dl" "devices.dl" "spi.dl" "i2c.dl" "rtc.dl" "vera.dl" "smc.dl"}} (load (+ here f)))
 (def {root} (+ here "../../"))
 (def {peer-on} NIL)
 
 ; ---- the options
-(def {run-i stop-cyc run-input run-speed run-bios run-prom run-sds} NIL -1 "" 1 "" "" {})
+(def {run-i stop-cyc run-input run-speed run-bios run-prom run-sds run-vera run-smc} NIL -1 "" 1 "" "" {} NIL NIL)
 (def {argv argk} (tail args) 0)
 (fun {usage why} {do (print-to stderr (+ "run.dl: " why " (sim/dl/run.dl's head says its options)")) (exit 2)})
 (fun {next-arg} {do
@@ -45,9 +47,13 @@
     {(== a "--bios") (set! {run-bios} (next-arg))}
     {(== a "--prom") (set! {run-prom} (next-arg))}
     {(== a "--sd") (set! {run-sds} (join run-sds (list (next-arg))))}
+    {(== a "--vera") (set! {run-vera} T)}
+    {(== a "--smc") (set! {run-smc} T)}
     {T (usage (+ "what's " a "?"))})
   (set! {argk} (+ argk 1)))
 (if (< stop-cyc 0) (set! {stop-cyc} (if run-i INF 30000000)) 0)
+(if run-vera (vera-setup (list 47 0 2) -1 NIL) 0)
+(if run-smc (smc-setup T {}) 0)
 
 ; The keys to type: --input's text as codes (\r \n Return, \w a wait, \p a wait for a prompt: type-keys's 256, 257)
 (fun {input-codes s} {do

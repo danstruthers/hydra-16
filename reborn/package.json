@@ -1,0 +1,9 @@
+{
+  "name": "hydra16-reborn",
+  "private": true,
+  "description": "The rebuilt Hydra-16 system's build and tests need only Node.js; @xterm/headless (test-only, optional) checks the console's VT100 against a terminal written by others (tests/tests.js: vt)",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@xterm/headless": "^6.0.0"
+  }
+}

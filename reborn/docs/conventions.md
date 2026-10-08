@@ -172,7 +172,7 @@ bank t).  Every fixed address is in `include/layout.inc`, and nowhere else.
   and read-only data in `CODE2` and `RODATA2`, its third's in `CODE3` and `RODATA3` ..., at the same addresses as the
   first's, reached through `FAR2` (and back through `FAR1`), or from any bank to any through `FARN bank, routine`
   (the caller's bank set again after), trampolines in its RAM that switch its own bank register (`HYX2_BANKS_INIT`
-  notes its banks).  Its banks are one after the other to the CPU (the ROM image keeps them in one group of 64).  Such a module owns no IRQ line, and keeps a note handler (`NOTIFY`)
+  notes its banks).  Its banks are one after the other to the CPU (the ROM image keeps them in one group of 64).  Such a module owns an IRQ line only with its irq entry (and what it calls) in its RAM, its `DATA`, as `cons` has, and keeps a note handler (`NOTIFY`)
   in its RAM: a note may come while either bank is at `$A000`, and the kernel calls the handler with the bank that's
   there.  The header's `HX_LENGTH` is the image's length in its last bank.  Code that both banks call often can be
   in the module's `DATA` too, as the first `hylang`'s core was (its heap, objects, scopes and I/O): it runs with
@@ -219,11 +219,15 @@ bank t).  Every fixed address is in `include/layout.inc`, and nowhere else.
   `#S`'s, never both at once (`E_BUSY`).
 * **The console is windows, not job control** (Plan 9's way, rio's): each window a whole console (`#cN`), chosen
   for a shell by its namespace (`#cN` at `/dev`).  There's no foreground group and no `fg`: which program gets
-  the keys is which window is shown, and a window's interrupts go to its note group.
+  the keys is which window is shown, and a window's interrupts go to its note group.  A window's screen is cells in
+  the console driver's RAM banks (`modules/cons/vt.s`: three planes, a pool of 64 rows of 128 cells, the screen a
+  map into it and the rows before it its scrollback), written by a VT100; a terminal follows the window shown (its
+  output passed on as it's parsed), or is painted from its cells (a window shown).
 * **One driver owns the serial line** (`cons`): the console's windows (`#c`) and `/pc` (`#P`), whose frames go
   between the console's bytes.  Its irq entry knows only keys: a frame comes in with them, into the receive ring,
   and is taken out in the serve entry.  While `/dev/ser` is open for reading (`xmodem`), the line is its reader's:
-  every byte in is its (into all of the receive ring's pages: the keys use the first), and the windows' text waits.
+  every byte in is its (into all of the receive ring's pages: the keys use the first), and the windows' output goes
+  to their screens alone (the window shown painted on the serial port at its last close).
 * **Another task's memory only through `/proc`** (`mem`, `ram`; `regs` too): any task's but the kernel task's and a
   driver's, as `NOTE` lets any task note any other (one user: Plan 9's owner rule lets every task in).  The kernel's
   `TASKMEM` serves only a driver (kdev), so the files are the one way in.
@@ -237,14 +241,15 @@ bank t).  Every fixed address is in `include/layout.inc`, and nowhere else.
   again, looks at the time (`TICKS`).
 * **One driver owns the YM2151** (`snd`, `#a`), and only its task writes the chip; one owns the VERA (`vid`, `#v`).
   The calls from a driver to another are three: the console's bell (`cons` writes `#a/bell` when the shown window
-  sends a BEL) and its screen (`#v/term`, the shown window's text), and the PSG's registers (`snd` writes
+  sends a BEL) and its screen (`#v/term`, the shown window's screen), and the PSG's registers (`snd` writes
   `#v/psg`: its channels 8-23).  A driver called never calls the console, and `vid` calls nobody, so no two wait
   on each other.
   What's a task's in a driver (a claim of channels) is the task's that opened the file it came through, given back
   as that task's last file of the device closes.
 * **One driver owns the VERA** (`vid`, `#v`), and only its task writes the chip, but for a task that claims it
   (`ctl`'s `claim`): then the claimer's, its registers its to write, till it releases it or its last file of `#v`
-  closes (its end); the console's text for the screen waits in the driver meanwhile.  vid's code keeps `CTRL` at 0
+  closes (its end); any write to the terminal (`/term`) meanwhile is `E_BUSY`, and the console paints its window shown
+  again after the release.  vid's code keeps `CTRL` at 0
   (ADDR0, DCSEL 0), setting another DCSEL only with the VERA's interrupt off, as its irq entry writes `DC_VIDEO`
   (the cursor's blink).
 * `PUTC`, `PUTS` and `GETC` are a write to fd 1 and a read from fd 0; a task without them (the kernel, a driver)

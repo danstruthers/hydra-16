@@ -84,8 +84,11 @@ node build.js            the BIOS ROM and the paged ROM's chips, into bin/
 node sim/run.js -i       the Hydra's serial console in your terminal (Ctrl-A x quits, Ctrl-A h helps)
 ```
 
-The images are in Git too (`bin/`), so `node sim/run.js -i` works without cc65.  [The tutorial](tutorial.md) is the
-first hour: the shell, files and disks, windows, the languages, sound, and a program of your own.
+The images are in Git too (`bin/`), so `node sim/run.js -i` works without cc65.  `node sim/web.js` puts the emulator
+in a web page instead: `obj/web/hydra-16.html`, one file with the images in it, to open in a browser (the serial
+console a terminal in the page, the Vera X's screen beside it, the sound, SD cards kept in the browser).  [The
+tutorial](tutorial.md) is the first hour: the shell, files and disks, windows, the languages, sound, and a program of
+your own.
 
 **On the board:**
 * Program the chips (an EPROM programmer; there's no write path on the board): `bin/bios.bin` into the BIOS ROM's socket
@@ -155,7 +158,7 @@ task's side of the task calls, memory, semaphores, notes and the clock; page 2 f
 namespaces and the loader (`SPAWN`); page 4 POST and the debugger's steps; the rest is room.  Page 0 is the scarce one.
 [The kernel's pages](conventions.md#the-kernels-pages).
 
-**The paged ROM** (`bin/prom0.bin` ...: a 512K image for each chip it fills; four now, some 113 of its 256 banks).  Bank
+**The paged ROM** (`bin/prom0.bin` ...: a 512K image for each chip it fills; four now, some 124 of its 256 banks).  Bank
 0 holds the module directory and the ROM disk's partition table; bank 1 the hardware test (the old system's, unchanged);
 the modules from bank 2, each at `$A000` of its first bank (about fifty: the drivers, init, the shells, the tools, the
 languages; a module may span two to eight banks); then the ROM disk's HydraFS volume (`/rom`: the programs that run from
@@ -223,13 +226,26 @@ namespace](programming/files.md#the-namespace), [NAMESPACES.md](design/plans/NAM
 ## 8. The console: windows, the serial port, the screen
 
 The console driver (`cons`, task F) serves `#c`: **windows**, rio's way on a serial terminal: each a whole console with
-its own shell, shown one at a time (Ctrl-] and a digit shows that one, Ctrl-] c makes one, Ctrl-] n the next), a hidden
+its own shell, shown one at a time (Ctrl-] and a digit shows that one; Ctrl-] c makes a group, a shell session, and
+Ctrl-] n and p go between groups, Ctrl-] Tab or Ctrl-Tab between a group's windows, Ctrl-] w lists them, Ctrl-] [
+shows the scrollback (Space and Enter copy lines to `/dev/snarf`, the cut buffer, which Ctrl-] y pastes), Ctrl-] s
+and v split a window into tiles shown together (`wctl`'s `layout rows`, `columns`, `grid`), a window can float over
+the rest in a box (`float`), Ctrl-] ? lists the keys, and `wctl`'s `key` lines change them; `new-window` runs a program in a window of its own), a hidden
 one running on, its output kept and shown again.  A read is a line, edited at the console (Backspace, the arrows, Home,
 End, Ctrl-U, the lines before); `consctl` turns raw keys on; Ctrl-C (an interrupt) and Ctrl-\ (a kill) are notes to the
 shown window's group.  **The serial port** runs at 9600 at boot, and to 115200 (`/dev/serctl`), every byte paced by VIA
 timer 2.  **The screen**: with a Vera X, the shown window is on its screen too (`consctl`'s `screen`, `serial`,
-`both`).  [The tools](using/tools.md), [the screen](programming/video.md#the-consoles-terminal).  Text windows (screens
-in the console's RAM banks, a whole VT100, window groups, headers and a bar) are being built:
+`both`), or each terminal is a seat of its own (`seats`: its own window and keys, the keyboard's the screen's); a
+click of the mouse focuses a window, and a program that asks (`?1000`) gets the mouse's reports.  [The tools](using/tools.md), [the screen](programming/video.md#the-consoles-terminal).
+
+**Each window keeps its screen** in the console's RAM banks, written by a whole VT100 (the VT100's and VT102's
+sequences, their reports, VT52 mode, the alternate screen, double width and height), so a window shown again is
+painted exactly as it was; `/dev/text` reads it as text.  **Its size** is the smaller of the terminals it's shown
+on, less their chrome (`consctl` reads with `size C R`; a raw reader gets `KEY_RESIZE`; the PC tool tells the
+Hydra its window's size), and the line editor wraps at it.  **Its chrome**: the bar (the windows, the time), its
+header and its footer, each a row drawn from a format (`wctl`'s `bar`, `header`, `footer`; `/lib/windows` has the
+defaults), on the screen by default and on the serial port with `chrome serial on`; its title (`/dev/label`, OSC 2)
+and its status line (`status`, or the VT320's) show there.  How they're built:
 [WINDOWS.md](design/plans/WINDOWS.md).
 
 ---
@@ -237,11 +253,12 @@ in the console's RAM banks, a whole VT100, window groups, headers and a bar) are
 ## 9. Storage: disks and HydraFS
 
 The storage driver (`storage`, task E) owns the SPI bus and the disks, at `/dev/sd`: `0`-`f` the SD cards by their SPI
-device (through a cache of their blocks), `x` the ROM disk, `r` the RAM disk (each shell has its own area, `/ram`) and
-`s` the shared one (`/sram`).  HydraFS is on each, the old system's file system, ported: directories, files to 4 GB, a
+device (through a cache of their blocks), `x` the ROM disk, `r` the RAM disk (each shell has its own area, `/ram`),
+`s` the shared one (`/sram`), and `v` the Vera X's SD card (on the VERA's own SPI controller).  HydraFS is on each, the old system's file system, ported: directories, files to 4 GB, a
 card's partitions ([HYDRAFS.md](design/plans/HYDRAFS.md) is its format).  The cards are at `/sd/N`, and a card's `bin`
 and `lib` join `/bin` and `/lib`.  `df`, `mkfs`, `fsck` and `label` look after them; the PC's `sim/tools/hydrafs.js`
-makes card images.  [Disks](using/tools.md#disks), [DISKS.md](design/plans/DISKS.md).
+makes card images.  A card's writes are kept back a block at a time: close the file, or
+`echo sync >/dev/sd/N/ctl`, before taking the card out.  [Disks](using/tools.md#disks), [DISKS.md](design/plans/DISKS.md).
 
 ---
 
@@ -318,8 +335,12 @@ The Vera X's driver (`vid`, task A) finds the card as the system starts, sets it
 `/dev/vid`: `ctl` (modes 80x60, 80x30, 40x30, a bitmap under the text, the cursor, claims), `term` (an ANSI terminal,
 where the console writes), `vram`, `pal`, `sprites`, `font`, `frame` (a frame waited for), `psg`, `pcm` and `pcmctl`.  A
 program can draw by writing those files, or **claim** the chip and write its registers itself, as an X16 program does.
-In the emulator, `--vera` puts one in slot 0 and `--view` shows its screen in a browser.  The languages' graphics words,
-the keyboard (an input controller on the card) and the carrier card come next.  [The screen](programming/video.md), [the
+Its keyboard and mouse are an input controller's, the X16's SMC on the I2C bus: the `input` program types its keys
+into the console and gives the mouse to `/dev/vid/mouse` (Plan 9's), a sprite its pointer.  The driver draws on the bitmap (`/dev/vid/draw`: lines, boxes,
+circles, text), with the same words in HyForth (`lib video`, a turtle too), hylang, C (`vera.h`, and cc65's TGI).
+In the emulator, `--vera`
+puts one in slot 0, `--smc` its controller, and `--view` shows its screen in a browser, its keys and mouse the
+controller's.  The carrier card comes next.  [The screen](programming/video.md), [the
 card](hardware.md#the-vera-x-slot-0), [VIDEO.md](design/plans/VIDEO.md).
 
 ---
@@ -361,10 +382,15 @@ POST's, a driver's) are `/dev/kmesg`, its last 4K.
   W65C51N; `node build.js prog DIR` for a program of your own.
 * **The emulator**, `node sim/run.js`: the board cycle by cycle, running the real images.  `-i` is the serial console
   live (Ctrl-A x quits, r the reset button, b a monitor: steps, registers, memory, breaks, watches); `--sd card.img` a
-  card; `--pc-dir DIR` a folder as `/pc`; `--vera` a Vera X, `--view` its screen in a browser; `--sound` the sound in a
+  card; `--pc-dir DIR` a folder as `/pc`; `--vera` a Vera X (`--vera-sd card.img` a card in its SD slot), `--view` its screen in a browser; `--sound` the sound in a
   browser, `--wav FILE` in a file; `--trace-calls`, `--break`, `--watch` for debugging.  The top of `sim/run.js` lists
   them all; [the hardware reference](hardware.md#in-the-emulator) says what's modelled.
-* **The tests**, `node sim/test.js`: 86 of them, each booting its own image and judged on its output, its time budgets
+* **The emulator in a browser**, `node sim/web.js`: `obj/web/hydra-16.html`, one file (the page, the emulator in a Web
+  Worker, the images), that runs HydraOS in Chrome, Edge, Firefox or Safari with nothing installed and nothing sent
+  anywhere; `--serve` serves it at http://localhost:8017.  The serial console is a terminal in the page (`lib/vt.js`,
+  the VT100 the tests use), with the Vera X's screen beside it; Setup has the card, its keyboard and mouse, the clock
+  chip, the RAM modules and SD cards (a new blank one, or an image loaded; kept in the browser, saved as image files).
+* **The tests**, `node sim/test.js`: 115 of them, each booting its own image and judged on its output, its time budgets
   and its own checks, as many at a time as the PC has cores; `--dl` runs them in the danlang emulator (`sim/dl`), the
   emulator written again in danlang.
 * **The PC tools** (`sim/tools`): `hydrapc.js` (the PC tool: the terminal, and `/pc` over the serial line; `npm install`

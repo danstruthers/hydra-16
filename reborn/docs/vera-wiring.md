@@ -1,9 +1,10 @@
 # Wiring the Vera X to the Hydra-16 through a bus breakout card
 
 How to connect the VERA X 6.1 (Joe Burks's, the 2x13 header) to the Hydra-16 with a **HydraBusBreakoutCard** in
-**slot 0**, two glue chips on a small protoboard, and wires.  Until the carrier card (the plan's option A:
-[design/plans/VIDEO.md](design/plans/VIDEO.md); the card in [hardware.md](hardware.md#the-vera-x-slot-0)) exists,
-this is how the driver (`vid`) meets the real chip.
+**slot 0**, two glue chips on a small protoboard, and wires; and, for a keyboard and mouse, the X16's input
+controller beside them ([below](#the-keyboard-and-mouse-the-x16s-smc)).  Until the carrier card (the plan's
+option A: [design/plans/VIDEO.md](design/plans/VIDEO.md); the card in [hardware.md](hardware.md#the-vera-x-slot-0))
+exists, this is how the driver (`vid`) meets the real chip.
 
 Everything here comes from the board's own schematics (`board/`, read only): netlists exported with KiCad 9's
 `kicad-cli` from `board/HydraBusBreakoutCard/HydraBusBreakoutCard.kicad_sch` and `board/hydra-16.kicad_sch`, the
@@ -172,7 +173,9 @@ With it, the VERA's data pins go to U3's A side only, not to J2.
   10 µF and 0.1 µF across the VERA's pins 3 and 4, at the header.
 * **Never J11 pin 3** (-5 V, whatever the card says).
 * Keep the bus wires short and together; run a ground wire next to PHI2.  Plug and unplug with the power off.
-* The VERA X's SD-card header and its I2C pins stay unconnected; its VGA output goes to the monitor.
+* The VERA X's I2C pins stay unconnected; its VGA output goes to the monitor.  Its SD-card header is the VERA's own
+  SPI controller, nothing to do with the bus: a card there (wired as the VERA X's notes say, at 3.3 V) is the storage
+  driver's disk `v`, `/sd/v`.  Leave it empty and nothing's lost: `/sd/v` isn't there.
 
 ## Audio
 
@@ -192,6 +195,46 @@ Slot 0's IRQ A is its alone, with a 3.3K pull-up on the board into the 74LS148, 
 directly: low for an interrupt, high (3.3 V) or let go otherwise.  The carrier card's plan puts an open-collector
 buffer in the way, so the card only ever pulls the line low; on the bench a 74LS07 gate (VERA pin 16 to its input,
 its output to J5 pin 6) does the same, if the line misbehaves.
+
+## The keyboard and mouse: the X16's SMC
+
+The input controller is the X16's own (VIDEO.md's step 6): its SMC, an **ATtiny861** with the X16 community's
+firmware, `x16-smc` (github.com/X16Community/x16-smc), unchanged.  A PS/2 keyboard and a PS/2 mouse plug into it,
+and it talks to the Hydra over the I2C bus at address `$42`, which every slot carries and the breakout card brings
+to J10.  The `input` program reads it ([programming/video.md](programming/video.md#the-keyboard-and-the-mouse)).
+
+* **What you need**: an ATtiny861 (the 20-pin DIP) programmed with an `x16-smc` release (its HEX file and fuses, as
+  its README gives them; a TL866-class programmer does it), two 6-pin mini-DIN sockets (PS/2), a push button, a 10K
+  resistor and a 0.1 µF capacitor.
+* **Its pins** are the firmware's (`smc_pins.h`, the default build, not its `COMMUNITYX16_PINS` one; the firmware
+  numbers its pins 0-7 for PA0-PA7 and 8-15 for PB0-PB7), on the chip's DIP pins:
+
+| ATtiny861 pin | Port | The firmware's name | To |
+| :--- | :--- | :--- | :--- |
+| 1 | PB0 | `I2C_SDA_PIN` | J10 pin 1 (SDA) |
+| 3 | PB2 | `I2C_SCL_PIN` | J10 pin 2 (SCL) |
+| 18 | PA2 | `PS2_KBD_CLK` | The keyboard's socket, pin 5 (clock) |
+| 4 | PB3 | `PS2_KBD_DAT` | The keyboard's socket, pin 1 (data) |
+| 9 | PB6 | `PS2_MSE_CLK` | The mouse's socket, pin 5 |
+| 8 | PB5 | `PS2_MSE_DAT` | The mouse's socket, pin 1 |
+| 14 | PA4 | `POWER_BUTTON_PIN` | A push button to GND |
+| 17 | PA3 | `PWR_OK` | +5 V through the 10K (the X16's power supply, "good") |
+| 5, 15 | VCC, AVCC | | +5 V (J11 pin 4), the 0.1 µF to GND at the chip |
+| 6, 16 | GND, AGND | | GND (J11 pin 5) |
+| 10 | PB7 | (its RESET) | Nothing (the programmer's) |
+| 20, 19, 2, 13, 12, 7, 11 | PA0, PA1, PB1, PA5, PA6, PB4, PA7 | `RESB_PIN`, `NMIB_PIN`, `IRQB_PIN`, `PWR_ON`, `ACT_LED`, the reset and NMI buttons | Nothing: they're the X16's |
+
+The sockets' pin 3 is GND and pin 4 +5 V; pins 2 and 6 aren't used.
+
+* **The I2C bus** has its pull-ups on the main board (RN1), so the SMC needs none.  Nothing else on the board
+  answers at `$42`.  `IRQB_PIN` stays unconnected: the Hydra polls the SMC, as the X16 does, since the board's IRQ
+  lines can't be masked (VIDEO.md says why).
+* **Press the button once after switching on.**  The firmware is a power supply's controller first: its power-on,
+  which the power button starts, is what starts the keyboard and mouse (their lines' pull-ups on, each reset), and it
+  checks `PWR_OK`, held high here.  Till then it answers on I2C but has no keys.  (A build of `x16-smc` that powered
+  on as it starts would do away with the button.)
+* **Its version** is the first thing `input` reads: `ls /dev/i2c` lists `42` once the SMC's on the bus, and `ps`
+  shows `input` running (with no SMC it ends at once).
 
 ## Timing (why the strobes are made so)
 
@@ -223,7 +266,10 @@ its output to J5 pin 6) does the same, if the line misbehaves.
    a WAV file (the PCM).
 4. **No `/dev/vid`** (no card found): check +5 V, the data lines' order (VERA pin 5 is D7), A0-A4, `CS#`, `RD#` and
    `WR#` (each active low), and `RES#` (it must be high once the reset is over).  Then U3, for the 3.3 V highs.
-5. **Then 7.16 MHz**, once everything works at 3.58 (the board's faster clock, and a build with `--clock 2`).
+5. **The keyboard and mouse** (the SMC): `ls /dev/i2c` lists `42`; press its button; then keys typed on the PS/2
+   keyboard reach the shell, its Caps Lock lights, and `cat /dev/vid/mouse` prints a line each time the mouse moves,
+   the pointer following it on the screen.
+6. **Then 7.16 MHz**, once everything works at 3.58 (the board's faster clock, and a build with `--clock 2`).
 
 [programming/video.md](programming/video.md) is the programmer's side: the driver's files, claims, the PSG and the
-PCM.
+PCM, the keyboard and the mouse.

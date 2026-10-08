@@ -13,8 +13,16 @@
 //   --baud N        the line's rate (default 9600, the Hydra's at boot)
 //   --log           list the requests as they're served (opens, creates, removes, renames, errors) on stderr
 //   --list          list the serial ports, and stop
+//   --no-size       don't tell the Hydra this window's size
+//   --win32-input   Windows Terminal's win32-input-mode: each key's record made into an xterm's bytes here
+//                   (lib/win32in.js), so Ctrl-Tab and Ctrl-Shift-Tab reach the Hydra (ESC [ 9 ; 5 u, 6), its
+//                   windows' keys.  Windows Terminal keeps Ctrl-Tab for its own tabs: take that binding out of its
+//                   settings (its actions' nextTab and prevTab keys)
 // Keys: Ctrl-A is this tool's prefix: Ctrl-A x quits, Ctrl-A l turns the log on or off, Ctrl-A Ctrl-A sends a
 // Ctrl-A.  A typed $1E (Ctrl-^, /pc's frame mark) goes as $1E $1F, which the Hydra takes as the key.
+// The window's size: told to the Hydra as xterm answers ESC [ 18 t (ESC [ 8 ; rows ; columns t), as the tool starts
+// and whenever the window changes, so the Hydra's windows are its size; and the Hydra's ESC [ 18 t (its console
+// asks as it starts, and consctl's terminal size) is answered here, not shown.
 //
 // It needs the serialport package: npm install, in reborn/sim (its package.json).  It asserts RTS (and DTR) once the port
 // is open: the Hydra's ACIA sends only while its ~CTS is asserted, which is the PC's RTS (DE-9 pin 7), and serialport
@@ -23,23 +31,26 @@
 'use strict';
 const path = require('path');
 const P = require('../lib/pcproto.js');
+const W32 = require('../lib/win32in.js');
 const { createPcFs } = require('./pcfs.js');
 
 const QUIET_MS = 100;                                         // A frame that stops this long isn't one: its bytes show
 
 function usage(msg) {
   if (msg) console.error('hydrapc: ' + msg);
-  console.error('Usage: node hydrapc.js PORT FOLDER [--read-only] [--baud N] [--log]   (node hydrapc.js --list: the ports)');
+  console.error('Usage: node hydrapc.js PORT FOLDER [--read-only] [--baud N] [--log] [--no-size] [--win32-input]   (node hydrapc.js --list: the ports)');
   process.exit(1);
 }
 
-const opt = { baud: 9600, readOnly: false, log: false, list: false, args: [] };
+const opt = { baud: 9600, readOnly: false, log: false, list: false, size: true, win32: false, args: [] };
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i];
   if (a === '--read-only') opt.readOnly = true;
   else if (a === '--log') opt.log = true;
   else if (a === '--list') opt.list = true;
+  else if (a === '--no-size') opt.size = false;
+  else if (a === '--win32-input') opt.win32 = true;
   else if (a === '--baud') { opt.baud = +argv[++i]; if (!(opt.baud > 0)) usage('--baud N'); }
   else if (a.startsWith('--')) usage('unknown option ' + a);
   else opt.args.push(a);
@@ -73,8 +84,24 @@ function run(portName, folder) {
       if (e) say('RTS and DTR not set (' + e.message + '): the Hydra may not send');
       say('the Hydra on ' + portName + ' at ' + opt.baud + ' baud; /pc is ' + path.resolve(folder) + (opt.readOnly ? ' (read-only)' : '') +
         '.  Ctrl-A x quits, Ctrl-A l the log.');
+      tellSize();
     });
   });
+
+  // The window's size, told (ESC [ 8 ; rows ; columns t); the Hydra's asks (ESC [ 18 t) taken out of what's shown
+  const tellSize = () => { if (opt.size && stdout.isTTY && stdout.columns && stdout.rows && port.isOpen) port.write('\x1b[8;' + stdout.rows + ';' + stdout.columns + 't'); };
+  stdout.on('resize', tellSize);
+  const ASK = [0x1B, 0x5B, 0x31, 0x38, 0x74];
+  let askAt = 0;
+  const shown = bytes => {
+    const out = [];
+    for (const b of bytes) {
+      if (b === ASK[askAt]) { if (++askAt === ASK.length) { askAt = 0; tellSize(); } continue; }
+      if (askAt) { out.push(...ASK.slice(0, askAt)); askAt = b === ASK[0] ? 1 : 0; if (askAt) continue; }
+      out.push(b);
+    }
+    if (out.length) stdout.write(Buffer.from(out));
+  };
 
   // The Hydra's bytes: frames to the file server, the rest to the screen
   const reader = P.createReader({ types: [P.T_ATTACH, P.T_REQ],
@@ -84,9 +111,9 @@ function run(portName, folder) {
   port.on('data', buf => {
     const out = [];
     for (const b of buf) for (const c of reader.push(b)) out.push(c);
-    if (out.length) stdout.write(Buffer.from(out));
+    shown(out);
     clearTimeout(quiet);
-    if (reader.inFrame()) quiet = setTimeout(() => { const b = reader.flush(); if (b.length) stdout.write(Buffer.from(b)); }, QUIET_MS);
+    if (reader.inFrame()) quiet = setTimeout(() => shown(reader.flush()), QUIET_MS);
   });
   port.on('close', () => finish('the port closed'));
   port.on('error', e => finish(e.message));
@@ -108,7 +135,18 @@ function run(portName, folder) {
     port.write(Buffer.from(b === P.MARK ? [P.MARK, P.ESC] : [b]));
   }
   if (tty) stdin.setRawMode(true);
-  stdin.on('data', buf => { for (const b of buf) if (!(!tty && b === 0x0D)) onKey(b); });
+  const w32 = opt.win32 && tty && stdout.isTTY ? W32.createWin32Input(bytes => { for (const b of bytes) onKey(b); }) : null;
+  let w32wait = null;
+  if (w32) stdout.write(W32.ENABLE);
+  stdin.on('data', buf => {
+    if (w32) {                                                // (A record part-way: the rest soon, or it's bytes)
+      for (const b of buf) w32.push(b);
+      clearTimeout(w32wait);
+      if (w32.pending()) w32wait = setTimeout(() => w32.flush(), 50);
+      return;
+    }
+    for (const b of buf) if (!(!tty && b === 0x0D)) onKey(b);
+  });
   stdin.resume();
 
   let done = false;
@@ -117,6 +155,7 @@ function run(portName, folder) {
     done = true;
     say(why);
     fsrv.close();
+    if (w32) stdout.write(W32.DISABLE);
     if (tty) stdin.setRawMode(false);
     if (port.isOpen) port.close(() => process.exit(0)); else process.exit(0);
   }

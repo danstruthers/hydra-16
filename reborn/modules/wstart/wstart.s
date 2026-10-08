@@ -1,6 +1,6 @@
 ; ****************************************************************************
 ; wstart - a shell in the next window the user asks for, as rio's: it waits for the user's Ctrl-] c (a read of
-; #c/wnew: the window made, "N"), then starts the shell there (its arguments: the shell's program and its own, as
+; #c/wnew: the window made, "N" (0-15)), then starts the shell there (its arguments: the shell's program and its own, as
 ; init has them from /lib/shell; none, rc -l), its fds 0-2 the window's cons, $window N in the environment it copies,
 ; a note group and an empty namespace of its own (its profile sets them up), and ends.  init starts it in its own
 ; namespace, so the shell's program is found as init finds it, and starts it again (and the shell, an orphan now, is
@@ -14,6 +14,7 @@
 
 .bss
 fd:         .res        1
+digits:     .res        1                                   ; The window's number's digits
 buf:        .res        4
 name:       .res        12                                  ; "#cN/cons"
 map:        .res        4
@@ -67,22 +68,44 @@ main:
             bcc         :+
             jmp         @failed
 :
+            ldx         #0                                  ; (Its digits: one or two)
+:
+            lda         buf,X
+            cmp         #'0'
+            bcc         :+
+            inx
+            cpx         #2
+            bcc         :-
+:
+            stx         digits
             LDR         r0, s_window                        ; $window: N
             LDR         r1, buf
-            LDR         r2, 1
+            lda         digits
+            sta         r2
+            stz         r2 + 1
             stz         r3
             stz         r3 + 1
             lda         #$FF
             jsr         ENV_PUT
-            ldx         #0                                  ; "#cN/cons"
+            lda         #'#'                                ; "#cN/cons"
+            sta         name
+            lda         #'c'
+            sta         name + 1
+            ldx         #0
 :
-            lda         s_cons,X
-            sta         name,X
+            lda         buf,X
+            sta         name + 2,X
             inx
-            cpx         #8
-            bne         :-
-            lda         buf
-            sta         name + 2
+            cpx         digits
+            bcc         :-
+            ldy         #0
+:
+            lda         s_cons + 3,Y                        ; ("/cons", and its zero)
+            sta         name + 2,X
+            inx
+            iny
+            cpy         #6
+            bcc         :-
             LDR         r0, name
             lda         #O_RDWR
             jsr         OPEN

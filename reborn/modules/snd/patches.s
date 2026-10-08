@@ -32,7 +32,11 @@
 
 PATCH_SIZE      = 26
 
+.ifdef PATCHES_FAR
+.segment    "RODATA2"                                       ; (play's: in its second bank, the volume curve in its
+.else                                                       ;   first)
 .rodata
+.endif
 
 patches:
             ; 000 Acoustic Piano
@@ -544,6 +548,8 @@ drum_kc:
             .byte       $7E, $7E, $6E, $44, $25, $65, $3E, $3E, $00, $00, $00, $00, $00, $00, $00, $00
             .byte       $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
             .byte       $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+
+.rodata
 
 ; Attenuation (TL steps of 0.75 dB) for a volume of 0-127: 40 log10 (v / 127) dB, as General MIDI's volume
 volume_atten:

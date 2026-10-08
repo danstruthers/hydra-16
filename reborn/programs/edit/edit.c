@@ -9,7 +9,7 @@
 **   them; ^U paste (in any file)              M-U undo, M-E redo (typing a line, a paste, a cut: one each)
 **   the arrows (^B ^F ^P ^N), Home and End (^A ^E), PgUp and PgDn (^Y ^V), M-\ and M-/ (the text's start, end)
 **   Del (^D) deletes, Backspace rubs out, Tab is a tab (stops every 8), M-I auto-indent, M-X the help lines,
-**   ^L the screen drawn again
+**   ^L the screen drawn again (as it is when the window's size changes)
 ** A file whose lines end CR LF is read with LF and written with CR LF again.  Ctrl-C does nothing (the console's
 ** interrupt: ignored); ^C, ^\ and ^] never reach a program, so nano's keys there are Meta keys here.
 */
@@ -697,6 +697,9 @@ static unsigned char command (unsigned char k)
         break;
     case CTRL ('L'):
         s_all ();
+        break;
+    case CH_RESIZE:
+        s_resize ();
         break;
     default:
         if (k == '\t' || (k >= ' ' && k < 127)) {

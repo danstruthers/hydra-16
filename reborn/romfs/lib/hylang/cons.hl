@@ -1,7 +1,10 @@
-; cons.hl - the console's windows, by their files (#c, /dev): (use "cons").  /dev/wctl takes new (a window made, and
-; shown) and current N (window N shown), and reads as the windows, a line each (* the one shown); /dev/consctl takes
+; cons.hl - the console's windows, by their files (#c, /dev): (use "cons").  /dev/wctl takes new (a window made) and
+; current N (window N shown), and reads as the windows, a line each (* the one shown); /dev/consctl takes
 ; rawon and rawoff (raw lasts while a consctl is open: each key as it comes, unechoed); /dev/bell, a write, rings the
-; console's bell (#a's: a short beep).  $window is this shell's window.  A failure is the system's error.
+; console's bell (#a's: a short beep).  $window is this shell's window; (window-size) its size, consctl's size line
+; (the smaller of the terminals it's shown on); (window-label s), (window-status s), (window-ctl s) its chrome (W4:
+; /dev/label, wctl's status and any wctl line); (snarf), (snarf! s) the console's cut buffer (W6: /dev/snarf, all
+; the windows' one, 8K at most; Ctrl-] y pastes it).  A failure is the system's error.
 
 (use "dev")
 
@@ -10,12 +13,31 @@
 ; This one's window ($window; none: 0)
 (fun {window} {do =(w (env "window")) (if w (val w) 0)})
 
+; This window's size, {cols rows}: its consctl's size line; with no console, $COLUMNS and $LINES, else 80 and 24
+(fun {window-size} {do
+  =(l (if (exists? "/dev/consctl") (filter (fn {l} {== (fst (str-split l " ")) "size"}) (dev.lines "/dev/consctl")) NIL))
+  (if l (map val (tail (str-split (fst l) " "))) (list (cons.env "COLUMNS" 80) (cons.env "LINES" 24)))})
+(fun {cons.env n d} {do =(v (env n)) (if v (val v) d)})
+
+; This window's title (OSC 2's too): set (s; "": its program's name again), or with none, read
+(fun {window-label} {if &_ (dev.write "/dev/label" (+ (fst &_) "\n")) (dev.read "/dev/label")})
+
+; Its status line (the footer's %s), and any line of its wctl ("chrome screen off" ...)
+(fun {window-status s} {dev.write "/dev/wctl" (+ "status " s)})
+(fun {window-ctl s} {dev.write "/dev/wctl" s})
+
+; The console's cut buffer: its text, or set (a write replaces it)
+(fun {snarf} {dev.read "/dev/snarf"})
+(fun {snarf! s} {dev.write "/dev/snarf" s})
+
 ; The windows, a list of their numbers; and the one shown
 (fun {windows} {map (fn {l} {val (fst (str-split l " "))}) (dev.lines "/dev/wctl")})
 (fun {shown-window} {val (fst (str-split (fst (filter (fn {l} {elem? "*" (str-split l " ")}) (dev.lines "/dev/wctl"))) " "))})
 
-; A window made, and shown (its shell: wstart's)
-(fun {new-window} {dev.write "/dev/wctl" "new"})
+; A window made and shown, in this one's group, running the command line (rc's; none: the shell): the new-window
+; command's; new-group's window in a group of its own (a shell session)
+(fun {new-window} {if &_ (run "new-window" (fst &_)) (run "new-window")})
+(fun {new-group} {if &_ (run "new-window" "-g" (fst &_)) (run "new-window" "-g")})
 
 ; Window n shown
 (fun {show-window n} {dev.write "/dev/wctl" (format "current {}" n)})
