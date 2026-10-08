@@ -25,6 +25,7 @@ const fs = require('fs');
 const path = require('path');
 const hydrafs = require('../sim/tools/hydrafs.js');
 const { createXmodemPeer } = require('../sim/lib/xmpeer.js');
+const numtest = require('./numtest.js');
 const { VT, DEC_ASCII } = require('../sim/lib/vt.js');
 const { createWin32Input } = require('../sim/lib/win32in.js');
 
@@ -260,7 +261,7 @@ const TOOL_LINES = [
   ["sleep 30 & sleep 30 & kill $apid; slay sleep; wait; ps","task  state",true],
   ["kill 8; kill x; echo $status","kill: 8: no such task\nkill: x: invalid argument\n1"],
   ["sleep 1; echo slept","slept"],
-  ["ls /rom/bin; whatis mkfs","db\nedit\nfsck\ngrep\nlabel\nmkfs\nscom\nsort\n/bin/mkfs"],
+  ["ls /rom/bin; whatis mkfs","calc\ndb\nedit\nfsck\ngrep\nlabel\nmkfs\nscom\nsort\n/bin/mkfs"],
   ["label s; label s Shared Disk; label s","SRAM\nShared Disk"],
   ["fsck s","hydrafs label=Shared Disk\nfree 253 KB of 255 KB\ncheck: lost 0, unmarked 0, twice 0\nsegment 15"],
   ["mkfs s Fresh; ls /sram; label s; echo $status","Fresh\n"],
@@ -370,6 +371,26 @@ const C_LINES = [
     "usage: grep [-chilnsv] [-e] pattern [file ...]",
     "usage",
   ].join('\n')],
+];
+
+// The numbers in C (cnum's lines, as the C test's): num.h's test (ntest: its "ok" lines), calc at rc (rc's own
+// characters quoted: ^ * ( ) #), and the assembly sample nsum (numbers.inc's macros, numlib.s)
+const CNUM_LINES = [
+  ["/rom/sample/c/ntest","ok - num_init: the libraries",true],
+  ["calc 2/3 + 0.5; calc sqrt 2; calc -b x 255","7/6\n1.41421356237\nFF"],
+  ["calc '2^100'; calc -d 30 pi; calc -b '#b' 0.75","1267650600228229401496703205376\n3.14159265358979323846264338328\n#b0.11"],
+  ["calc '(1+2)*3'; calc 'log(e)^2'; calc 'sqrt 2^2'; calc 'gcd(12, 18)'","9\n1\n2\n6"],
+  ["calc -17 % 5; calc 'fixed(1/3, 5)'; calc '#xFF + 1'; calc sqrt -4; calc -b c 5","-2\n0.33333\n256\n2i\n--+"],
+  ["calc 1/0; echo $status; calc foo; calc 2 +; calc -b zz 5", [
+    "calc: division by zero",
+    "division by zero",
+    "calc: foo: unknown",
+    "calc: an operand is missing",
+    "calc: zz: not a base",
+  ].join('\n')],
+  ["echo 1/3+1/6 >/ram/e; echo x >>/ram/e; echo '0.1 + 0.2' >>/ram/e; calc </ram/e; echo $status","1/2\ncalc: x: unknown\n0.3\nx: unknown"],
+  ["calc 'fib 2000' | wc -c; calc -b b '2^1000' | wc -c","    419\n   1002"],
+  ["/rom/sample/nsum 1/3 0.5 2; /rom/sample/nsum 1 x; echo $status","17/6\nsqrt 1.68325082306\nnot a number"],
 ];
 
 // The console on the Vera X's screen (phase 8: cons's second terminal, vid's /term), at rc: /dev/vid; consctl's
@@ -1104,6 +1125,21 @@ function floadCard() {
   return [imageCard(0, f, 16384)];
 }
 
+// The fnumbers test's card: tester.fr and numberstest.fth (tests/forth), and nums.fs, which REQUIREs string.fl
+// (COMPARE), hydra.fl (CODE-BANKS) and numbers.fl, then INCLUDEs them
+function fnumCard() {
+  fs.mkdirSync(CARD_DIR, { recursive: true });
+  hydrafs.setNow(0x1000);
+  const f = path.join(CARD_DIR, 'fnum0.img');
+  hydrafs.mkfs(f, 8, 'FNUM', undefined, true);
+  const v = new hydrafs.Volume(f);
+  for (const n of ['tester.fr', 'numberstest.fth']) v.put(n, fs.readFileSync(path.join(__dirname, 'forth', n)));
+  v.put('nums.fs', Buffer.from('REQUIRE string.fl\nREQUIRE hydra.fl\nREQUIRE numbers.fl\nS" tester.fr" INCLUDED\n' +
+    'S" numberstest.fth" INCLUDED\n'));
+  v.close();
+  return [imageCard(0, f, 16384)];
+}
+
 // The lshell test's card: /lib/shell, HyForth as the shell (or the shell given: the hywin test's, hylang)
 function shellCard(line = '/bin/forth -l', name = 'shell0') {
   fs.mkdirSync(CARD_DIR, { recursive: true });
@@ -1138,13 +1174,14 @@ function hylangCard(test, files = {}) {
 }
 
 // BASIC's suite (the bsuite test's card): tests/basic's files, each as itself: the programs that check themselves
-// (NAME.bas: its checks counted, a FAIL line for each one wrong, then "NAME: n CHECKS, m FAILED"; BSUITE_PROGS, each
+// (NAME.bas: its checks counted, a FAIL line for each one wrong, then "NAME: n checks, m failed"; BSUITE_PROGS, each
 // one's count), the scripts piped into basic (NAME.txt) and what they print (NAME.out; BSUITE_SCRIPTS).  hydra.bas
-// reads rc's $greet (hi) and its arguments (one two); files.bas writes its files on the card
+// reads rc's $greet (hi) and its arguments (one two); files.bas and errors.bas write their files on the card;
+// procs.bas INCLUDEs inc.bas, prompt.txt LOADs lab.bas
 const BASIC_DIR = path.join(__dirname, 'basic');
-const BSUITE_PROGS = { arith: 73, funcs: 54, logic: 54, strings: 69, arrays: 30, flow: 33, data: 24, files: 31, hydra: 27 };
-const BASIC_BENCH = ['loop', 'calls', 'fib', 'sieve', 'sort', 'gcd'];   // (The benchmarks bench.bas has: the bench test's)
-const BSUITE_SCRIPTS = ['errors', 'print', 'list', 'input'];
+const BSUITE_PROGS = { arith: 66, funcs: 79, logic: 64, strings: 55, arrays: 37, flow: 33, procs: 28, records: 23, data: 27,
+  errors: 27, files: 24, hydra: 32 };
+const BSUITE_SCRIPTS = ['errors', 'print', 'prompt', 'input'];
 const bsuiteLine = n => (n === 'hydra' ? 'greet=hi; ' : '') + 'basic ' + n + '.bas' + (n === 'hydra' ? ' one two' : '');
 function basicCard() {
   fs.mkdirSync(CARD_DIR, { recursive: true });
@@ -1170,7 +1207,7 @@ const HYSUITE_PARTS = [
   { files: ['eval3'], checks: 1 },
   { files: ['eval4'], checks: 1 },
   { files: ['eval5'], checks: 3 },
-  { files: ['eval6', 'scope', 'control', 'errors', 'lists', 'strings', 'numbers', 'hashes', 'types', 'io', 'system', 'bits', 'buffers', 'library'], checks: 1145,
+  { files: ['eval6', 'scope', 'control', 'errors', 'lists', 'strings', 'numbers', 'math', 'hashes', 'types', 'io', 'system', 'bits', 'buffers', 'library'], checks: 1338,
     about: 'danlang\'s library, hylang\'s from its snapshot (globals.dl) and the ROM disk\'s /lib/hylang (dice.dl and screen.dl, where load finds a bare name, and use); files written on the card, programs run, the clock a DS1747\'s' },
 ];
 // A part's own files for the card: part.dl (run.dl with the part's list) and the pieces it names of a file that's cut
@@ -1278,7 +1315,7 @@ const HYLANG_LINES = [
   ['(list (gensym) (gensym "TMP") (to-atom "AB") (to-atom 5) (< (random 6) 6))', '{g__1 tmp__2 :ab :5 T}'],
   ['(* 99999999999 99999999999)', '9999999999800000000001'],
   ['(list (/ 7 2) (* 1.5 2) (+ 1/2 0.5) (- 0 12345678901234567890) (* (complex 0 1) (complex 0 1)))', '{7/2 3 1 -12345678901234567890 -1}'],
-  ['(list (to-str 255 "x") (to-str -7 "#m") (val "#zHYDRA") (to-fixed 2/3) (truncate -7/2) (fib 100))', '{"#xFF" "#mst" 30157606 0.6666666666 -3 354224848179261915075}'],
+  ['(list (to-str 255 "x") (to-str -7 "#m") (val "#zHYDRA") (to-fixed 2/3) (truncate -7/2) (fib 100))', '{"FF" "#mst" 30157606 0.6666666666 -3 354224848179261915075}'],
   ['(list (shl 1 40) (bit-and -1 #xffff) (hex 255 4) (bin 5) (lo -1) (word 52 18))', '{1099511627776 65535 "00FF" "101" 255 4660}'],
   ['(error-code (bit-and 1.5 1))', ':inval'], ['(< (random 100000000000000000000000) 100000000000000000000000)', 'T'],
   ['(list (str-split "a,b;;c" {"," ";"}) (str-upper "hi") (char-at "abc" 1) (str-pad-left "7" 3 "0") (code-char 66))',
@@ -1308,7 +1345,7 @@ const HYLANG_G = [
   ['(output-of (each {c "ab"} (write c ".")))', '"a.b."'], ['(try (error "x") &err)', '"x"'],
   ['(sort {3 1 2} >)', '{3 2 1}'], ['(filter (fn {x} {> x 1}) {1 2 3})', '{2 3}'], ['(foldr cons {} {1 2})', '{1 2}'],
   ['(list (subset {1 2 3} 1) (to-atom "x"))', '{{2 3} :x}'],
-  ['(list (* 99999999999 99999999999) (/ 7 2) (+ 0.5 0.25) (/ (complex 1 2) (complex 3 4)) (to-str 1/2 "#b"))', '{9999999999800000000001 7/2 0.75 11/25+2/25i "#b1/#b10"}'],
+  ['(list (* 99999999999 99999999999) (/ 7 2) (+ 0.5 0.25) (/ (complex 1 2) (complex 3 4)) (to-str 1/2 "#b"))', '{9999999999800000000001 7/2 0.75 11/25+2/25i "#b0.1"}'],
   ['(list (val "#[01]101") (fib 100) (shl -3 70) (to-fixed 1/3 5))', '{5 354224848179261915075 -3541774862152233910272 0.33333}'],
   ['(def {g} (to# {{:a "x"} {:b {1 2}} :t}))', 'NIL'],
   ['(list (g :b) (from# (hash-clone g {:c 3})) (str-split "a b" " ") (str-upper \\q))', '{{1 2} {{:a "x"} {:b {1 2}} {:c 3} :t} {"a" "b"} \\Q}'],
@@ -1418,7 +1455,7 @@ module.exports = {
         'ācat /dev/sd/s/ctl\r' + 'āecho $window\r' + 'ā\x1dc' + 'āecho $window\r' + 'āls \'#fr\'\r' + 'āls /ram\r' + 'āls /dev\r' +
         'āecho stop >>\'#d/s/ctl\'; echo still; cat /sram/x\r' }; },
       expect: ['% ls \'#fr\'\n1/\n2/\n%', '% ls /ram\nbin/\nlib/\n%',
-        '% ls /bin\ndb\nedit\nfsck\ngrep\nlabel\nmkfs\nscom\nsort\ninit\nhello\nrc\nwstart\n', 't_child\n% t_child f\n', '% ls \'#fr\'/2\nbin/\nlib/\nmark\n%',
+        '% ls /bin\ncalc\ndb\nedit\nfsck\ngrep\nlabel\nmkfs\nscom\nsort\ninit\nhello\nrc\nwstart\n', 't_child\n% t_child f\n', '% ls \'#fr\'/2\nbin/\nlib/\nmark\n%',
         'prompt=(', '% cat /dev/sd/s/ctl\nsram 512 KB 1024 blocks\nhydrafs label=SRAM\n', '% echo $window\n0\n%',
         '% echo $window\n1\n%', '% ls \'#fr\'\n1/\n2/\n4/\n%', '% ls /ram\nbin/\nlib/\n%', '\ncons\nconsctl\nwctl\nwnew\nser\nserctl\nkbdin\ntext\nlabel\nsnarf\nkbin\n%',
         '% echo stop >>\'#d/s/ctl\'; echo still; cat /sram/x\nstill\ncat: /sram/x: no such device\n%'],
@@ -1532,65 +1569,78 @@ module.exports = {
       },
     },
     {
-      name: 'basic', what: 'BASIC (EhyBASIC, Microsoft BASIC 2A: docs/basic.md) at the console: the banner, PRINT, the operators and functions, letters in either case, EhyBASIC\'s short forms (JSR, RTN, LT$, & | !) and LIST\'s full names, a program run (FOR, GOSUB, DATA, READ, INPUT, DIM, DEF FN), Ctrl-C (BREAK IN) and CONT, GET\'s key (raw), errors (direct, in a line), BYE (code 0); a pipeline into it (no banner, no OK, an error\'s line ended, its end at stdin\'s); in /ram: SAVE as text and tokenized (,B), LOAD of each, RUN "name", a file not there, the text cat; scripts (basic file, #!/bin/basic: codes 0 and 1); files: OPEN (R, W, A), PRINT#, INPUT#, GET# and EOF at the end, CLOSE, the cat; FILE OPEN, FILE NOT OPEN, a file not there; INPUT\'s REDO FROM START; sound: SOUND\'s notes (a patch, a volume, off), SLEEP between them (timed), BEEP (the bell), a line for /dev/sndctl (the volume kept; the driver\'s error), ILLEGAL QUANTITY; SYS: calls by name (GETPID, TICKS, BANKS_ALLOC; one not there) and RREG, machine code above HIMEM (SYS, USR), registers in and out; memory: a bank of its own after the task\'s RAM (FRE past 32767, an array of 32K, 301 strings and the garbage collector, an integer array), HIMEM and its errors; the shell (basic -l at rc\'s prompt): BASIC\'s lines and rc\'s by the rule, cd and the prompt, $status, %, a usage, ENV$, a program line, exit',
-      init: 't_rc', cycles: 500e6,
+      name: 'basic', what: 'BASIC (docs/using/basic.md) at the console: its prompt, PRINT, exact numbers, keywords in either case, a program typed by its line numbers (LIST, RUN; GOSUB, DATA, READ, INPUT, DIM, a FUNCTION), Ctrl-C (Break in) in a GOTO\'s loop and CONT, INKEY$\'s key, errors (at the prompt; a typed program\'s by its line\'s number), BYE (code 0); a pipeline into it (no prompt; an error\'s line ended, its end at stdin\'s); in /ram: SAVE, LOAD, RUN "name", a file not there (by its name), the text cat; scripts (basic file, #!/bin/basic: status 0 and 1, a file not there); files: OPEN\'s modes, PRINT #, INPUT #, LINE INPUT #, EOF, APPEND, CLOSE, the cat; a file not open, open, not there; INPUT\'s Redo from start; sound: SOUND\'s notes (a patch, a volume, off), SLEEP between them (timed), BEEP (the bell), a line for /dev/sndctl (the volume kept; the driver\'s error), a channel past 23, a patch past 127; SYS: calls by name (GETPID, TICKS, BANKS_ALLOC; one not there) and RREG; memory: FRE, an array of 10001, 301 strings; the shell (basic -l at rc\'s prompt): BASIC\'s lines and rc\'s by the rule, cd and the prompt, $status, %, a usage, ENV$, a program line, exit',
+      init: 't_rc', cycles: 900e6,
       machine: {
-        input: 'ābasic\rĀĀ' + 'PRINT "HELLO, WORLD"; 2+3*4; 10/4; 2^10\rĀ' + '? not 0; 5 & 3; 5 | 2; !1; lt$("abcd",2); chr$(65)\rĀ' +
-          '10 FOR I=1 TO 3: jsr 100: NEXT: ? "done"\rĀ' + '20 end\rĀ' + '100 ? i; i*i;: rtn\rĀ' + 'list\rĀ' + 'run\rĀ' +
-          'new\rĀ' + '10 data 3,"two": read a,b$: ? a;b$\rĀ' + '20 input "name";n$: ? "hi ";n$\rĀ' +
-          '30 dim x(9): x(9)=7: def fn d(z)=z*2: ? fn d(x(9))\rĀ' + 'run\rĀ' + 'Ann\rĀĀ' +
-          'new\rĀ' + '10 i=i+1: goto 10\rĀ' + 'run\rĀĀ' + '\u0003Ā' + 'cont\rĀĀ' + '\u0003Ā' + '? i>100\rĀ' +
-          'new\rĀ' + '10 get k$: if k$="" then 10\rĀ' + '20 ? "key ";k$;asc(k$)\rĀ' + 'run\rĀkĀĀ' + '? 1/0\rĀ' + 'x\rĀ' +
-          '30 ? 1/0\rĀ' + 'run 30\rĀ' + 'bye\r' + 'āecho $status\r' +
-          'ā{echo \'10 for i=1 to 3\'; echo \'20 ? i*10\'; echo \'30 next\'; echo run; echo \'? 1/0\'; echo \'? "end"\'} | basic; echo status $status\r' +
-          'ācd /ram\r' + 'ābasic\rĀĀ' + '10 for i=1 to 3: ? "line";i: next\rĀ' + '20 ? "Done": end\rĀ' + 'save "p.bas"\rĀĀ' +
-          'save "p.tok",b\rĀĀ' + 'new\rĀ' + 'load "p.bas"\rĀĀ' + 'list\rĀ' + 'new\rĀ' + 'load "p.tok"\rĀĀ' + 'run\rĀ' + 'new\rĀ' +
-          'run "p.bas"\rĀĀ' + 'load "nofile"\rĀ' + 'bye\r' + 'ācat p.bas\r' +
-          'āecho \'#!/bin/basic\' >s; echo \'10 print "script";6*7\' >>s; echo \'20 x=1/0\' >>s\r' +
-          'ābasic p.bas; echo status $status\r' + 'ā./s; echo status $status\r' + 'ābasic none.bas; echo status $status\r' +
-          'ābasic\rĀĀ' + '10 open 1,"d.txt","w": for i=1 to 3: print #1, i;",";i*i: next: print #1,"end": close 1\rĀ' +
-          '20 open 2,"d.txt": for i=1 to 3: input #2, a, b: ? a; b: next\rĀ' + '30 input #2, s$: ? s$; eof(2): get #2, c$: ? len(c$): close 2\rĀ' +
-          '40 open 3,"d.txt","A": print #3, "more": close 3\rĀ' + 'run\rĀĀ' + 'print #2, 5\rĀ' + 'open 1,"x","w": open 1,"y","w"\rĀ' +
-          'open 4,"nope"\rĀ' + 'new\rĀ' + '10 input x: ? x*2\rĀ' + 'run\rĀ' + 'abc\rĀ' + '5\rĀ' + 'bye\r' + 'ācat d.txt\r' +
-          'ābasic\rĀĀ' + 'sound "volume 150"\rĀ' + '10 sound 2,60,0,100: sleep .5: sound 2,64: sleep .1: sound 2\rĀ' + '20 beep: sound 1,67\rĀ' +
-          'run\rĀĀ' + 'sound 24,60\rĀ' + 'sound 0,60,163\rĀ' + 'sleep 200\rĀ' + 'sound "frob"\rĀ' + 'bye\r' + 'ācat /dev/sndctl\r' +
-          'ābasic\rĀĀ' + 'sys "getpid": rreg a: ? a>0\rĀ' + 'sys "Ticks": rreg l,h: ? h*256+l>0\rĀ' + 'sys "nosuch"\rĀ' +
-          'sys "banks_alloc",1: rreg b,,,p: ? p and 1\rĀ' + 'himem 40704: poke 40704,169: poke 40705,42: poke 40706,96: sys 40704: rreg r: ? r\rĀ' +
-          'poke 1285,0: poke 1286,159: poke 40704,96: ? usr(5)\rĀ' + 'sys 40704,1,2,3: rreg ,x,y: ? x;y\rĀ' + 'rreg a$\rĀ' + 'himem 50000\rĀ' + 'himem 100\rĀ' +
-          'clear: himem 40960: ? fre(0)>32767\rĀ' + 'dim x(6500): x(6500)=7: ? x(6500); fre(0)<6100\rĀ' + 'clear: dim a%(10): a%(5)=-3: a%(10)=32767: ? a%(5); a%(10)\rĀ' +
-          'dim s$(300): for i=0 to 300: s$(i)=str$(i)+"abcdefghijklmnopqrstuvwxyz": next: ? s$(300); fre(0)>27000\rĀĀ' + 'bye\r' +
-          'ābasic -l\r' + 'āprint 1+1\r' + 'āecho hello from rc\r' + 'āx=5\r' + 'ā? x*2\r' + 'āls /rom/lib/basic\r' + 'ācd /rom\r' +
-          'āecho $status\r' + 'ācd /none\r' + 'āecho s=$status\r' + 'ā%echo forced\r' + 'ābind\r' + 'ā? env$("window")="0"\r' +
-          'ā10 print "prog"\r' + 'ārun\r' + 'āexit\r' + 'āecho $status\r',
+        input: '\u0101basic\r' + '\u0101PRINT "Hello, World"; 2 + 3 * 4; 10 / 4; 2 ^ 70\r' +
+          '\u0101print not 0; 5 and 3; 5 or 2; left$("abcd", 2); chr$(65); sqr(-4)\r' +
+          '\u010110 FOR i = 1 TO 3: GOSUB 100: NEXT: PRINT "done"\r' + '\u010120 END\r' +
+          '\u0101100 PRINT i; i * i;: RETURN\r' + '\u0101LIST\r' + '\u0101RUN\r' + '\u0101NEW\r' +
+          '\u010110 DATA 3, "two": READ a, b$: PRINT a; b$\r' + '\u010120 INPUT "Name"; n$: PRINT "Hi "; n$\r' +
+          '\u010130 DIM x(9): x(9) = 7: PRINT twice(x(9))\r' +
+          '\u010140 FUNCTION twice (z): twice = z * 2: END FUNCTION\r' + '\u0101RUN\r' + '\u0100Ann\r' +
+          '\u0101NEW\r' + '\u010110 i = i + 1: GOTO 10\r' + '\u0101RUN\r\u0100\u0003' + '\u0101CONT\r\u0100\u0003' +
+          '\u0101PRINT i > 100\r' + '\u0101NEW\r' + '\u010110 DO: k$ = INKEY$: LOOP UNTIL k$ <> ""\r' +
+          '\u010120 PRINT "key "; k$; ASC(k$)\r' + '\u0101RUN\r\u0100k' + '\u0101PRINT 1 / 0\r' + '\u0101x\r' +
+          '\u0101NEW\r' + '\u010110 PRINT "a"\r' + '\u010120 PRINT 1 / 0\r' + '\u0101RUN\r' + '\u0101BYE\r' +
+          '\u0101echo $status\r' +
+          '\u0101{echo \'10 FOR i=1 TO 3\'; echo \'20 ? i*10\'; echo \'30 NEXT\'; echo RUN; echo \'? 1/0\'; echo \'? "end"\'} | basic; echo st $status\r' +
+          '\u0101cd /ram\r' + '\u0101basic\r' + '\u010110 FOR i = 1 TO 3: PRINT "line"; i: NEXT\r' +
+          '\u010120 PRINT "Done": END\r' + '\u0101SAVE "p.bas"\r' + '\u0101NEW\r' + '\u0101LOAD "p.bas"\r' +
+          '\u0101LIST\r' + '\u0101NEW\r' + '\u0101RUN "p.bas"\r' + '\u0101LOAD "nofile"\r' + '\u0101BYE\r' +
+          '\u0101cat p.bas\r' +
+          '\u0101echo \'#!/bin/basic\' >s; echo \'PRINT "script"; 6 * 7\' >>s; echo \'x = 1 / 0\' >>s\r' +
+          '\u0101basic p.bas; echo status $status\r' + '\u0101./s; echo status $status\r' +
+          '\u0101basic none.bas; echo status $status\r' + '\u0101basic\r' +
+          '\u010110 OPEN "d.txt" FOR OUTPUT AS #1: FOR i = 1 TO 3: PRINT #1, i; ","; i * i: NEXT: PRINT #1, "end": CLOSE #1\r' +
+          '\u010120 OPEN "d.txt" FOR INPUT AS #2: FOR i = 1 TO 3: INPUT #2, a, b: PRINT a; b: NEXT\r' +
+          '\u010130 LINE INPUT #2, s$: PRINT s$; EOF(2): CLOSE #2\r' +
+          '\u010140 OPEN "d.txt" FOR APPEND AS #3: PRINT #3, "more": CLOSE #3\r' + '\u0101RUN\r' +
+          '\u0101PRINT #2, 5\r' + '\u0101OPEN "x" FOR OUTPUT AS #1: OPEN "y" FOR OUTPUT AS #1\r' + '\u0101CLOSE\r' +
+          '\u0101OPEN "nope" FOR INPUT AS #4\r' + '\u0101NEW\r' + '\u010110 INPUT x: PRINT x * 2\r' + '\u0101RUN\r' +
+          '\u0100abc\r' + '\u01005\r' + '\u0101BYE\r' + '\u0101cat d.txt\r' + '\u0101basic\r' +
+          '\u0101SOUND "volume 150"\r' + '\u010110 SOUND 2, 60, 0, 100: SLEEP 0.5: SOUND 2, 64: SLEEP 0.1: SOUND 2\r' +
+          '\u010120 BEEP: SOUND 1, 67\r' + '\u0101RUN\r' + '\u0101SOUND 24, 60\r' + '\u0101SOUND 0, 60, 163\r' +
+          '\u0101SOUND "frob"\r' + '\u0101BYE\r' + '\u0101cat /dev/sndctl\r' + '\u0101basic\r' +
+          '\u0101SYS "getpid": RREG a: PRINT a > 0\r' + '\u0101SYS "Ticks": RREG l, h: PRINT h * 256 + l > 0\r' +
+          '\u0101SYS "nosuch"\r' + '\u0101SYS "banks_alloc", 1: RREG b, , , p: PRINT p AND 1\r' +
+          '\u0101PRINT FRE() > 10000\r' + '\u0101DIM x(10000): x(10000) = 7: PRINT x(10000)\r' +
+          '\u0101DIM s$(300): FOR i = 0 TO 300: s$(i) = STR$(i) + "abcdefghijklmnopqrstuvwxyz": NEXT: PRINT s$(300)\r' +
+          '\u0101BYE\r' + '\u0101basic -l\r' + '\u0101print 1 + 1\r' + '\u0101echo hello from rc\r' + '\u0101x = 5\r' +
+          '\u0101? x * 2\r' + '\u0101ls /rom/lib/basic\r' + '\u0101cd /rom\r' + '\u0101echo $status\r' +
+          '\u0101cd /none\r' + '\u0101echo s=$status\r' + '\u0101%echo forced\r' + '\u0101bind\r' +
+          '\u0101? ENV$("window") = "0"\r' + '\u010110 print "prog"\r' + '\u0101run\r' + '\u0101exit\r' +
+          '\u0101echo $status\r',
       },
-      expect: ['% basic\nEHYBASIC FOR THE HYDRA-16 (MICROSOFT BASIC 2A)\n', ' BYTES FREE\n\nOK\n',
-        'PRINT "HELLO, WORLD"; 2+3*4; 10/4; 2^10\nHELLO, WORLD 14  2.5  1024 \n\nOK\n',
-        '? not 0; 5 & 3; 5 | 2; !1; lt$("abcd",2); chr$(65)\n-1  1  7 -2 abA\n',
-        'list\n\n10 FOR I=1 TO 3: GOSUB 100: NEXT: PRINT "done"\n20 END\n100 PRINT I; I*I;: RETURN\nOK\n',
-        'run\n 1  1  2  4  3  9 done\n\nOK\n',
-        'run\n 3 two\nname? Ann\nhi Ann\n 14 \n\nOK\n',
-        '10 i=i+1: goto 10\nrun\n\nBREAK IN 10\nOK\ncont\n\nBREAK IN 10\nOK\n? i>100\n-1 \n',
-        'run\nkey k 107 \n\nOK\n', '? 1/0\n\n?DIVISION BY ZERO ERROR\nOK\n', 'x\n\n?SYNTAX ERROR\nOK\n',
-        'run 30\n\n?DIVISION BY ZERO ERROR IN 30\nOK\nbye\n', '% echo $status\n\n%',
-        '| basic; echo status $status\n 10 \n 20 \n 30 \n\n?DIVISION BY ZERO ERROR\nend\nstatus\n%',
-        'load "p.bas"\n\nOK\nlist\n\n10 FOR I=1 TO 3: PRINT "line";I: NEXT\n20 PRINT "Done": END\nOK\n',
-        'load "p.tok"\n\nOK\nrun\nline 1 \nline 2 \nline 3 \nDone\n\nOK\n', 'run "p.bas"\nline 1 \nline 2 \nline 3 \nDone\n\nOK\n',
-        'load "nofile"\n\n?NOT FOUND ERROR\nOK\n', '% cat p.bas\n10 FOR I=1 TO 3: PRINT "line";I: NEXT\n20 PRINT "Done": END\n%',
+      expect: ['% basic\n> PRINT "Hello, World"; 2 + 3 * 4; 10 / 4; 2 ^ 70\nHello, World 14  5/2  1180591620717411303424 \n> ',
+        'sqr(-4)\n-1  1  7 abA 2i \n> ',
+        '> LIST\n10 FOR i = 1 TO 3: GOSUB 100: NEXT: PRINT "done"\n20 END\n100 PRINT i; i * i;: RETURN\n> RUN\n 1  1  2  4  3  9 done\n> ',
+        '> RUN\n 3 two\nName? Ann\nHi Ann\n 14 \n> ',
+        '> 10 i = i + 1: GOTO 10\n> RUN\nBreak in line 10\n> CONT\nBreak in line 10\n> PRINT i > 100\n-1 \n> ',
+        '> RUN\nkey k 107 \n> PRINT 1 / 0\ndivision by zero\n> x\nsyntax error\n> ',
+        '> RUN\na\nline 20: division by zero\n> BYE\n',
+        '% echo $status\n\n%',
+        '| basic; echo st $status\n 10 \n 20 \n 30 \ndivision by zero\nend\nst\n%',
+        '> LOAD "p.bas"\n> LIST\n10 FOR i = 1 TO 3: PRINT "line"; i: NEXT\n20 PRINT "Done": END\n> NEW\n> RUN "p.bas"\nline 1 \nline 2 \nline 3 \nDone\n> LOAD "nofile"\nnofile: not found\n> BYE\n',
+        '% cat p.bas\n10 FOR i = 1 TO 3: PRINT "line"; i: NEXT\n20 PRINT "Done": END\n%',
         '% basic p.bas; echo status $status\nline 1 \nline 2 \nline 3 \nDone\nstatus\n%',
-        '% ./s; echo status $status\nscript 42 \n\n?DIVISION BY ZERO ERROR IN 20\nstatus 1\n%',
-        '% basic none.bas; echo status $status\n\n?NOT FOUND ERROR\nstatus 1\n%',
-        '40 open 3,"d.txt","A": print #3, "more": close 3\nrun\n 1  1 \n 2  4 \n 3  9 \nend-1 \n 0 \n\nOK\n',
-        'print #2, 5\n\n?FILE NOT OPEN ERROR\nOK\n', 'open 1,"y","w"\n\n?FILE OPEN ERROR\nOK\n', 'open 4,"nope"\n\n?NOT FOUND ERROR\nOK\n',
-        'run\n? abc\n?REDO FROM START\n? 5\n 10 \n\nOK\n', '% cat d.txt\n 1 , 1 \n 2 , 4 \n 3 , 9 \nend\nmore\n%',
-        'sound 24,60\n\n?ILLEGAL QUANTITY ERROR\nOK\n', 'sound 0,60,163\n\n?ILLEGAL QUANTITY ERROR\nOK\n', 'sleep 200\n\n?ILLEGAL QUANTITY ERROR\nOK\n',
-        'sound "frob"\n\n?INVALID ARGUMENT ERROR\nOK\n', '% cat /dev/sndctl\nvolume 150\nchannels 8\nclaimed\n%',
-        'sys "getpid": rreg a: ? a>0\n-1 \n', 'rreg l,h: ? h*256+l>0\n-1 \n', 'sys "nosuch"\n\n?NO SUCH CALL ERROR\nOK\n',
-        'rreg b,,,p: ? p and 1\n 0 \n', 'sys 40704: rreg r: ? r\n 42 \n', '? usr(5)\n 5 \n', 'rreg ,x,y: ? x;y\n 2  3 \n',
-        'rreg a$\n\n?TYPE MISMATCH ERROR\nOK\n', 'himem 50000\n\n?ILLEGAL QUANTITY ERROR\nOK\n', 'himem 100\n\n?ILLEGAL QUANTITY ERROR\nOK\n',
-        'himem 40960: ? fre(0)>32767\n-1 \n', '? x(6500); fre(0)<6100\n 7 -1 \n', '? a%(5); a%(10)\n-3  32767 \n', '? s$(300); fre(0)>27000\n 300abcdefghijklmnopqrstuvwxyz-1 \n',
-        '% basic -l\n/ram> print 1+1\n 2 \n/ram> echo hello from rc\nhello from rc\n/ram> x=5\n/ram> ? x*2\n 10 \n/ram> ls /rom/lib/basic\nprofile.bas\n/ram> cd /rom\n/rom> ',
+        '% ./s; echo status $status\nscript 42 \n./s:3: division by zero\nstatus 1\n%',
+        '% basic none.bas; echo status $status\nnone.bas: not found\nstatus 1\n%',
+        '> RUN\n 1  1 \n 2  4 \n 3  9 \nend-1 \n> PRINT #2, 5\nbad file number\n> OPEN "x" FOR OUTPUT AS #1: OPEN "y" FOR OUTPUT AS #1\nfile already open\n> CLOSE\n> OPEN "nope" FOR INPUT AS #4\nfile not found\n> ',
+        '> RUN\n? abc\n?Redo from start\n? 5\n 10 \n> BYE\n',
+        '% cat d.txt\n 1 , 1 \n 2 , 4 \n 3 , 9 \nend\nmore\n%',
+        '> SOUND 24, 60\nillegal function call\n> SOUND 0, 60, 163\nillegal function call\n> SOUND "frob"\ninvalid argument\n> BYE\n',
+        '% cat /dev/sndctl\nvolume 150\nchannels 8\nclaimed\n%',
+        'RREG a: PRINT a > 0\n-1 \n',
+        'PRINT h * 256 + l > 0\n-1 \n',
+        '> SYS "nosuch"\nno such call\n',
+        'PRINT p AND 1\n 0 \n',
+        '> PRINT FRE() > 10000\n-1 \n',
+        'PRINT x(10000)\n 7 \n',
+        'PRINT s$(300)\n 300abcdefghijklmnopqrstuvwxyz\n> BYE\n',
+        '% basic -l\n/ram> print 1 + 1\n 2 \n/ram> echo hello from rc\nhello from rc\n/ram> x = 5\n/ram> ? x * 2\n 10 \n/ram> ls /rom/lib/basic\nprofile.bas\n/ram> cd /rom\n/rom> ',
         '/rom> echo $status\n0\n/rom> cd /none\n/none: not found\n/rom> echo s=$status\ns=not found\n/rom> %echo forced\nforced\n',
-        '/rom> bind\nusage: bind [-a|-b] [-c] new old\n/rom> ? env$("window")="0"\n-1 \n/rom> 10 print "prog"\n/rom> run\nprog\n/rom> exit\n% echo $status\n1\n%'],
+        '/rom> bind\nusage: bind [-a|-b] [-c] new old\n/rom> ? ENV$("window") = "0"\n-1 \n/rom> 10 print "prog"\n/rom> run\nprog\n/rom> exit\n% echo $status\n1\n%'],
       check(m) {
         // (SOUND's notes on the YM2151, and SLEEP .5 between two: 0.5 s at 3.58 MHz; BEEP: the bell, channel 7)
         const f = [], on = ch => m.ym.keyOns.filter(k => k.startsWith('ch ' + ch + ' ')).map(k => +k.match(/at cycle (\d+)/)[1]);
@@ -1603,14 +1653,14 @@ module.exports = {
       },
     },
     {
-      name: 'bsuite', what: 'BASIC\'s suite (tests/basic, docs/basic.md), from a card: programs that check themselves, each its checks and none failed (arithmetic: precedence, literals, limits, integer variables, names; the numeric functions; relations, AND, OR, NOT, IF; strings: their functions, STR$\'s forms, VAL, 255 characters, the garbage collector; arrays: 1 to 3 dimensions, integers, strings; FOR, GOSUB, ON, IF ... THEN line; DATA, READ, RESTORE, DEF FN; files: OPEN\'s modes, PRINT#, INPUT#, GET#, EOF, four channels, SAVE in a program; the Hydra\'s: HIMEM, SYS by address and by name, RREG, USR, PEEK, POKE, WAIT, memory past 32K, SLEEP by the ticks, ENV$, ARG$, SOUND); scripts piped into basic, their output tests/basic\'s: every error message, PRINT\'s layout (zones, TAB, SPC, POS, numbers\' forms), LIST and the tokenizer (keywords anywhere, the short forms, REM, DATA, ranges), INPUT\'s answers (??, REDO FROM START, EXTRA IGNORED, an empty line, CONT)',
+      name: 'bsuite', what: 'BASIC\'s suite (tests/basic, docs/using/basic.md), from a card: programs that check themselves, each its checks and none failed (arithmetic: the operators and their order, exact numbers, complex numbers, literals: E notation, &H, the # forms, .5; suffixes; a base; the number functions: exact when they can be, else DIGITS digits, RND, fractions\' and complex numbers\' parts, GCD, FIB, shifts, VAL, STR$ in a base, MKN$; comparisons, the bitwise operators on big integers, IF\'s forms, SELECT CASE; strings: their functions, MID$ =, fixed lengths, past 255, the garbage collector; arrays: TO, dimensions, used before DIM, REDIM PRESERVE, ERASE, LBOUND, SWAP; FOR\'s exact steps, DO, WHILE, EXIT, GOTO, GOSUB, RETURN label, ON, line numbers, _; SUBs and FUNCTIONs: by reference and by value, recursion, STATIC, SHARED, CONST, a call among a call\'s arguments, one calling another, INCLUDE; TYPE: nested records, arrays of them, copies, a field by reference; DATA, READ, RESTORE, CONST, OPTION BASE, DEFSTR; ON ERROR, RESUME\'s forms, ERR, ERL, ERR$, the system\'s errors; files: OPEN\'s modes, PRINT #, WRITE #, INPUT #, LINE INPUT #, INPUT$, LOF, LOC, SEEK, GET, PUT, FREEFILE, directories; the Hydra\'s: SYS and RREG, a bank of its own, machine code, FRE, SLEEP, TIMER, DATE$, TIME$, ENV$, ARG$, COMMAND$, SHELL, SHELL$, STATUS); scripts piped into basic, their output tests/basic\'s: the errors\' messages (at the prompt, a typed program\'s by its line numbers), PRINT\'s layout (zones, TAB, SPC, POS, numbers\' forms, PRINT USING\'s pictures and {} fields, WRITE, a base), the prompt (lines typed, replaced, taken out; LIST\'s ranges, labels; DELETE, CLEAR, SAVE, LOAD, RUN "f", STOP, CONT, SYSTEM), INPUT\'s answers (Redo from start, quotes, an empty line, LINE INPUT, INPUT ;)',
       init: 't_rc', cycles: 700e6,
       get machine() {
         return { sd: basicCard(), input: 'ācd /sd/0\r' + Object.keys(BSUITE_PROGS).map(n => 'ā' + bsuiteLine(n) + '\r').join('') +
           BSUITE_SCRIPTS.map(n => 'ābasic <' + n + '.txt\r').join('') };
       },
       get expect() {
-        return [...Object.entries(BSUITE_PROGS).map(([n, c]) => '% ' + bsuiteLine(n) + '\n' + n.toUpperCase() + ': ' + c + ' CHECKS, 0 FAILED\n%'),
+        return [...Object.entries(BSUITE_PROGS).map(([n, c]) => '% ' + bsuiteLine(n) + '\n' + n + ': ' + c + ' checks, 0 failed\n%'),
           ...BSUITE_SCRIPTS.map(n => '% basic <' + n + '.txt\n' + fs.readFileSync(path.join(BASIC_DIR, n + '.out'), 'latin1') + '% ')];
       },
     },
@@ -1795,6 +1845,15 @@ module.exports = {
       expect: ['include load.fs\n15 6 5 99 255 65 35 1 1 \n', 'swap - 300 < .\n-1 \n'],
     },
     {
+      name: 'fnumbers', what: 'HyForth\'s numbers (numbers.fl, on the numbers and math libraries): numberstest.fth, each number word checked as the test suite checks (tester.fr\'s T{ ... -> ... }T): literals of every kind (and cells and doubles Forth\'s still), compiled with code banks and without, the number stack, the arithmetic, the tests, the conversions, the bits, text in the base and in others (set-base: cells read and shown by the library), the math functions, digits, the errors, nvariable, nconstant, nvalue; then n., n.base, n.s, nformat and cells in bases that aren\'t a radix, typed',
+      init: 't_rc', cycles: 150e6,
+      get machine() {
+        return { sd: fnumCard(), input: 'ācd /sd/0; forth <nums.fs; echo $status\r' };
+      },
+      expect: ['Typed: 1/3 FF #b11111111 <3> 1 2 3 \n255 is FF and #b11111111, { and } {\n<-+> -+- --+  -0+00+ \n' +
+        '#x255 -#x1 #xFFFF 255 \n0 errors in the number word tests\n\n%'],
+    },
+    {
       name: 'lshell', what: 'the shell /lib/shell names (the ROM\'s: /bin/forth -l, HyForth the login shell): init\'s in window 0, wstart\'s in a window made (Ctrl-] c: $window); send, a line typed in another window (#cN/kbdin), run there, then one longer than its keys\' queue (the write waiting for room)',
       init: 'init', cycles: 300e6,
       // (Window 1 made and shown (\x1d c), its shell sends window 0 a line, then one longer than window 0's keys' queue
@@ -1971,6 +2030,13 @@ module.exports = {
       },
     },
     {
+      name: 'cnum', what: 'the numbers in C and assembly: num.h\'s test (ntest: the number libraries from C, printf\'s and scanf\'s %N and %{base}), calc at rc (its operators, functions, bases, digits, errors, its input a line at a time, long results), the assembly sample nsum (numbers.inc, numlib.s)',
+      init: 't_rc', cycles: 150e6,
+      // (Each line typed at its prompt, as the C test's)
+      machine: { input: CNUM_LINES.map(l => 'ā' + l[0] + '\r').join('') },
+      expect: [...CNUM_LINES.map(l => '% ' + l[0] + '\n' + (l[2] ? l[1] : l[1] + '\n%')), '\nntest: 0 failed\n%'],
+    },
+    {
       name: 'race', what: 'the race sample (sdk/c/samples/race: tasks sharing a segment) at rc: four tasks each add 1 to a counter 300 times (a read, some work, a write); with nothing to keep them apart adds are lost, with a mutex none; the barrier (ready and go)',
       init: 't_rc', cycles: 200e6,
       machine: { input: 'ā/rom/sample/c/race 4 300\r' },
@@ -2100,7 +2166,7 @@ module.exports = {
         '% wc /pc/big.txt; head -3 /pc/big.txt\n   2001    4001   20004 /pc/big.txt\nline 1000\nline 1001\nline 0001\n%'],
     },
     {
-      name: 'as', what: 'as, the assembler (the module as): the SDK\'s hi from /lib/as, with its include files there, the same bytes as the build\'s (ca65 and ld65), run, its labels file (-l); t_asall (tests/ram: every opcode in each mode, directives, expressions, labels, macros, conditionals, segments, .include, .incbin) the same as the build\'s; -b with .org; errors with their files and lines; a warning',
+      name: 'as', what: 'as, the assembler (the module as): the SDK\'s hi from /lib/as, with its include files there, the same bytes as the build\'s (ca65 and ld65), run, its labels file (-l); nsum (numbers.inc\'s macros, numlib.s) the same; t_asall (tests/ram: every opcode in each mode, directives, expressions, labels, macros, conditionals, segments, .include, .incbin) the same as the build\'s; -b with .org; errors with their files and lines; a warning',
       init: 't_rc', cycles: 200e6,
       pc: {
         files: () => {
@@ -2114,11 +2180,12 @@ module.exports = {
       },
       machine: {
         input: ['echo b115200 >/dev/serctl', 'as -l /lib/as/hi.s /ram/hi; echo $status', 'cmp /ram/hi /rom/sample/hi; echo $status', '/ram/hi Ann',
-          'grep main /ram/hi.lbl', 'as /pc/t_asall.s /ram/t_asall; cmp /ram/t_asall /pc/t_asall.hyx; echo $status', 'as -b /pc/raw.s /ram/raw; xd /ram/raw',
+          'grep main /ram/hi.lbl', 'as /lib/as/nsum.s /ram/nsum; cmp /ram/nsum /rom/sample/nsum; echo $status', 'as /pc/t_asall.s /ram/t_asall; cmp /ram/t_asall /pc/t_asall.hyx; echo $status', 'as -b /pc/raw.s /ram/raw; xd /ram/raw',
           'as /pc/bad.s /ram/bad; echo $status', 'as /pc/warn.s /ram/warn; echo $status; xd /ram/warn', 'as'].map(l => 'ā' + l + '\r').join(''),
       },
       expect: ['% as -l /lib/as/hi.s /ram/hi; echo $status\n\n%', '% cmp /ram/hi /rom/sample/hi; echo $status\n\n%', '% /ram/hi Ann\nHello, Ann!\nI\'m task ',
-        '% grep main /ram/hi.lbl\nal 000830 .main\n%', '% as /pc/t_asall.s /ram/t_asall; cmp /ram/t_asall /pc/t_asall.hyx; echo $status\n\n%',
+        '% grep main /ram/hi.lbl\nal 000830 .main\n%', '% as /lib/as/nsum.s /ram/nsum; cmp /ram/nsum /rom/sample/nsum; echo $status\n\n%',
+        '% as /pc/t_asall.s /ram/t_asall; cmp /ram/t_asall /pc/t_asall.hyx; echo $status\n\n%',
         '% as -b /pc/raw.s /ram/raw; xd /ram/raw\n0000000  4c 00 c0 00 c0 05 00 ',
         '% as /pc/bad.s /ram/bad; echo $status\nas: /pc/bad.s:2: not an instruction, directive or macro: frob\nas: /pc/bad.s:3: stop\nas: /pc/bad.s:4: a bad expression\n1\n%',
         '% as /pc/warn.s /ram/warn; echo $status; xd /ram/warn\nas: /pc/warn.s:2: warning: careful\n\n0000000  60 ', '% as\nusage: as [-bl] file.s [out]\n%'],
@@ -2435,6 +2502,18 @@ module.exports = {
       init: 't_xcall', modules: ['t_lib'], cycles: 10e6,
     },
     {
+      name: 'numbers', what: 'the numbers library (modules/numbers): its calls as a card\'s file has them (tests/numtest.js), each checked against the reference (sim/tools/numfmt.js), and to keep the caller\'s bank, zero page and r0-r3',
+      init: 't_num', cycles: 3000e6,
+      get machine() { this.calls = numtest.calls(); this.file = numtest.card(this.calls); this.sd = [imageCard(0, this.file, 16384)]; return { sd: this.sd }; },
+      check() {
+        this.sd[0].save();
+        const v = new hydrafs.Volume(this.file), out = v.read(v.walk('num.out'));
+        v.close();
+        this.notes = [this.calls.length + ' calls'];
+        return numtest.check(this.calls, out);
+      },
+    },
+    {
       name: 'step', what: 'the debugger\'s steps (TASKSTEP, /proc/N/ctl): a program started stopped (SPAWN_STOPPED), each kind of instruction a step at a time (out of line, or on its frame), a JSR stepped over, a breakpoint, a program\'s own BRK; refused steps',
       init: 't_step', modules: ['t_child'], cycles: 60e6,
       get machine() { return { sd: stepCard() }; },
@@ -2563,17 +2642,17 @@ module.exports = {
         '/> (use "cons")\n=> NIL\n/> (window)\n=> 1\n/> '],
     },
     {
-      name: 'bplay', what: 'BASIC\'s PLAY: a line of MML on channel 0 and on another (play -m), a score file (play name.mml), its time waited for (the program goes on after); play\'s error (its message as BASIC\'s, in its line), a channel past 7 (ILLEGAL QUANTITY); SOUND\'s text commands (sndctl\'s: a note, a level)',
+      name: 'bplay', what: 'BASIC\'s PLAY: a line of MML on channel 0 and on another (play -m), a score file (play name.mml), its time waited for (the program goes on after); play\'s error (its message as BASIC\'s, in its line; BASIC\'s status 1), a channel past 23 (illegal function call); SOUND\'s text commands (sndctl\'s: a note, a level)',
       init: 't_rc', cycles: 160e6, ymLog: true,
       get machine() {
         return { ymLog: true, input: ['echo patch 0 0 >/dev/sndctl; echo patch 1 0 >/dev/sndctl', 'echo \'@p { gm 0 }\' >/ram/s.mml; echo \'B @p o3 g\' >>/ram/s.mml',
           'echo \'10 play "t240 o4 l16 c d e"\' >/ram/p.bas', 'echo \'20 play 2, "t240 o5 l16 c": print "on"\' >>/ram/p.bas',
           'echo \'30 play "/ram/s.mml": print "after"\' >>/ram/p.bas', 'echo \'40 play "c Z"\' >>/ram/p.bas', 'basic /ram/p.bas; echo status $status',
-          'echo \'10 play 9, "c"\' >/ram/q.bas; basic /ram/q.bas', 'echo \'10 sound "note 3 72": sound "level 3 90"\' >/ram/r.bas; basic /ram/r.bas; echo r $status'
+          'echo \'10 play 24, "c"\' >/ram/q.bas; basic /ram/q.bas', 'echo \'10 sound "note 3 72": sound "level 3 90"\' >/ram/r.bas; basic /ram/r.bas; echo r $status'
         ].map(l => '\u0101' + l + '\r').join('') };
       },
-      expect: ['basic /ram/p.bas; echo status $status\non\nafter\nplay: c Z: channel 0: what is Z\n\n?CHANNEL 0: WHAT IS Z ERROR IN 40\nstatus 1\n%',
-        'basic /ram/q.bas\n\n?ILLEGAL QUANTITY ERROR IN 10\n%', 'echo r $status\nr\n%'],
+      expect: ['basic /ram/p.bas; echo status $status\non\nafter\nplay: c Z: channel 0: what is Z\n/ram/p.bas:4: channel 0: what is Z\nstatus 1\n%',
+        'basic /ram/q.bas\n/ram/q.bas:1: illegal function call\n%', 'echo r $status\nr\n%'],
       // (The key-ons, each with its channel's key code then: C4 D4 E4 on 0 a 16th apart at 240 (12.5 ticks), C5 on
       // 2, the score's G3 on 1 (B), SOUND's C5 on 3)
       check(m) {
@@ -2593,7 +2672,7 @@ module.exports = {
       expect: ['/> ? 1+2\n 3 \n/> echo $window\n\n/> ', '/> echo $window\n1\n/> ? env$("window")\n1\n/> x=2: ? x*21\n 42 \n/> '],
     },
     {
-      name: 'bench', what: 'hylang\'s, HyForth\'s and BASIC\'s benchmarks (romfs/bench: bench.hl and hl/NAME.hl, bench.fs, bench.bas: BASIC\'s six; sim/bench.js times them against each other) at their quick sizes, all of hylang\'s in one hylang: each language\'s result of each the same (calls, fib, tak, ack; loop, while, dotimes, nested; gcd, collatz, hash; sieve, sort, matrix, queens; mapf, fold, each; chars, digits)',
+      name: 'bench', what: 'hylang\'s, HyForth\'s and BASIC\'s benchmarks (romfs/bench: bench.hl and hl/NAME.hl, bench.fs, bench.bas: all twenty in each; sim/bench.js times them against each other) at their quick sizes, all of hylang\'s in one hylang: each language\'s result of each the same (calls, fib, tak, ack; loop, while, dotimes, nested; gcd, collatz, hash; sieve, sort, matrix, queens; mapf, fold, each; chars, digits)',
       init: 't_rc', cycles: 360e6,
       machine: { input: '\u0101hylang /rom/bench/bench.hl 1 q\r\u0101forth /rom/bench/bench.fs 1 q\r\u0101basic /rom/bench/bench.bas 1 q\r' },
       get expect() {
@@ -2601,7 +2680,7 @@ module.exports = {
           ['nested', 450], ['gcd', 189], ['collatz', 441], ['hash', 1274], ['sieve', 97], ['sort', 404], ['matrix', 273], ['queens', 4],
           ['mapf', 9880], ['fold', 964], ['each', 700], ['chars', 7], ['digits', 790]];
         return [...['hylang', 'forth'].flatMap(l => r.map(([n, v]) => 'bench ' + l + ' ' + n + ' ' + v + ' ')), 'bench hylang done', 'bench forth done',
-          ...r.filter(([n]) => BASIC_BENCH.includes(n)).map(([n, v]) => 'bench basic ' + n + ' ' + v + ' '), 'bench basic done'];
+          ...r.map(([n, v]) => 'bench basic ' + n + ' ' + v + ' '), 'bench basic done'];
       },
     },
     {
@@ -3072,8 +3151,13 @@ module.exports = {
       },
       // (The pointer from the screen's middle up 160: its row 10, the window's 9 below the bar and header; its column 41)
       expect: ['/> 20 t\n\x1b[?1000;1006h27 91 60 48 59 52 49 59 57 77 27 91 60 48 59 52 49 59 57 109 \x1b[?1000l\n',
-        'cat /dev/wctl\n0 0 80 11\n1 0 80 11 *\n', 'cat /dev/wctl\n0 0 80 11 *\n1 0 80 11\n', 'F 04 01 FF 00006C cons\n/> ',
+        'cat /dev/wctl\n0 0 80 11\n1 0 80 11 *\n', 'cat /dev/wctl\n0 0 80 11 *\n1 0 80 11\n',
         '18 t\n\x1b[?1000;1006h', '27 91 60 48 59 53 59 50 77 27 91 60 48 59 53 59 50 109 \x1b[?1000l'],
+      // (/dev/snarf's line: the boot's task table's cons line, its CPU column the boot's own, then the prompt)
+      check(m) {
+        const out = m.out.replace(/\r/g, ''), line = (out.match(/^F 04 01 FF [0-9A-F]{6} cons$/m) || [])[0];
+        return line && out.includes(line + '\n/> ') ? [] : ['cat /dev/snarf: not the task table\'s cons line' + (line ? ' (' + line + ')' : '')];
+      },
     },
     {
       name: 'pcm', what: 'the Vera X\'s PCM (vid\'s /pcm and /pcmctl), at rc: its files and state; the rate (the VERA\'s nearest) and volume; raw samples from a card into the FIFO, drained; bad commands; /pcm one task\'s (another\'s pcmctl: busy); WAV files played (8 bits mono, made signed; 16 bits stereo past an odd chunk; a float one, not a song); a ZSM\'s PCM instruments (one, then one looped, stopped by the FIFO emptied: from RAM) and its claim of the PCM; one too big for RAM (from the file); the FIFO\'s bytes in order, none lost, its runs dry only at the ends',

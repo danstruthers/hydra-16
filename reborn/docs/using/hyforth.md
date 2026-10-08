@@ -118,6 +118,7 @@ the rest.
 | `bits.fl` | `tbit`, `sbit`, `cbit` |
 | `random.fl` | `random ( u -- u' )` (0 to u-1), `rand`, `rand32`, `rseed` |
 | `sound.fl` | [Sound](#sound): the YM2151's words, `note-of`, `tune` |
+| `numbers.fl` | [Numbers](#numbers): hylang's numbers (any size, exact) on a number stack: `n+`, `n.`, `nsqrt` ...; `set-base` |
 | `gpio.fs` `i2c.fs` `spi.fs` `cons.fs` `proc.fs` `clock.fs` `disk.fs` `pc.fs` | [Devices](#devices), in Forth source |
 
 Your own libraries are `.fs` files: put them where `lib` looks, or on a card's `/lib/forth` (the cards' `/lib` is
@@ -375,6 +376,58 @@ them), so a block wanted again comes from there, not the file; `flush`, and fort
 /ram> 1 load
 5 1
 ```
+
+## Numbers
+
+**`lib numbers`**: hylang's numbers in Forth, the same as hylang's and BASIC's, from the same libraries in the ROM
+(`numbers` and `math`): integers of any size, fixed decimals, rationals and complex numbers, all exact, and the math
+functions.  They have a stack of their own, the number stack (as Forth's floating-point numbers do: 64 numbers, in
+8K of a RAM bank), and the words have hylang's names, with an `n` before them where Forth has the name.  A number in
+your text that Forth doesn't read as a cell or a double goes on the number stack: `1.25`, `2/3`, `#xFF`, `#b101`,
+`#16r1F`, `2i`, `1+2i`, `100000000000000000000`, and a cell past 16 bits (`70000`, `-40000`) or a double past 32
+(`4294967296.`).  `42`, `$FF`, `#10` and `123.` are Forth's cells and doubles, as ever.
+
+```
+/> lib numbers
+/> 1/3 1/6 n+ n.
+1/2
+/> 0.1 0.2 n+ 0.3 n= .
+-1
+/> 2 s>n 100 s>n npow n.
+1267650600228229401496703205376
+/> 2 s>n nsqrt n.  npi n.
+1.41421356237 3.14159265359
+/> : harm ( n -- ) ( N: -- h ) 0 s>n 1+ 1 do 1 s>n i s>n n/ n+ loop ;  20 harm n.
+55835135/15519504
+/> 255 s>n 255 s>n 255 s>n s" {} is {x} and {#b}" nformat
+255 is FF and #b11111111
+```
+
+| What | Words (the number stack's effect after `N:`) |
+| :--- | :--- |
+| The number stack | `ndepth ( -- u )`, `ndrop`, `ndup`, `nover`, `nswap`, `nrot`, `n.s` |
+| Arithmetic | `n+`, `n-`, `n*`, `n/` (exact: `10/4` is `5/2`), `n/mod ( N: x y -- r q )` (integers'), `nnegate`, `nabs`, `ngcd`, `npow ( N: x y -- x^y )` (any real `y`) |
+| Comparisons and tests | `n=`, `n<`, `n> ( -- flag ) ( N: x y -- )`, `n0=`, `n0<`, `ncompare ( -- -1 \| 0 \| 1 )`; `int?`, `fixed?`, `rational?`, `complex? ( -- flag ) ( N: x -- )` |
+| Cells and doubles | `s>n ( n -- )`, `d>n ( d -- )`; `n>s ( -- n )`, `n>d ( -- d )`: the integer part (past a cell or a double, THROW -11) |
+| Conversions | `truncate`, `nfloor`, `nround` (a half to the even one), `to-fixed ( u -- ) ( N: x -- y )` (u places, cut short), `to-rational`, `rational.n`, `rational.d`, `complex ( N: re im -- z )`; `nrandom ( N: n -- r )` (0 to n-1; for 0, a fixed decimal from 0 to 1), `nseed ( u -- )`, `nfib` |
+| Bits (two's complement, any size) | `nand`, `nor`, `nxor ( N: x y -- z )`, `ninvert`, `nlshift`, `nrshift ( u -- ) ( N: x -- y )`, `nbit? ( u -- flag ) ( N: x -- )` |
+| The math functions | `nsqrt`, `nexp`, `nlog`, `nsin`, `ncos`, `ntan`, `natan`, `npi ( N: -- pi )`; `digits ( -- a-addr )`, their precision (1 to 100 significant digits: 12) |
+| Text | `n. ( N: x -- )`, `n.base ( c-addr u -- ) ( N: x -- )` (in that base), `n>str ( -- c-addr u ) ( N: x -- )`, `>n ( c-addr u -- flag ) ( N: -- x \| )`, `nformat ( c-addr u -- ) ( N: x1 ... xn -- )` (`{}` in the base, `{x}`, `{#b}` ... in that one, `{{` and `}}` braces) |
+| Bytes | `nbytes ( -- c-addr u ) ( N: x -- )` (the stored format's), `nfrom-bytes ( c-addr u -- ) ( N: -- x )` |
+| Variables | `nvariable name`, `n@ ( a-addr -- ) ( N: -- x )`, `n! ( a-addr -- ) ( N: x -- )`; `nconstant name`, `nvalue name` (`to name` sets it), `nliteral` |
+
+**The base**: `BASE` is the numbers' base as it is the cells': after `hex` or `16 base !`, `1.8` is `3/2` and `n.`
+shows `FF`.  `s" b" set-base` selects any of hylang's bases by its name: `s" #x"` hexadecimal with its prefix shown
+(`#xFF`), `s" c"` balanced ternary, `s" [01]"` digits of your own ...; `get-base` gives it, and `hex` or `decimal`
+puts a radix back.  `BASE` is then its digits' count, and when the base isn't a plain radix (a prefix shown, balanced,
+the least digit first, digits of its own) Forth's cells are read and shown in it too (`.`, `u.`, `.r`, `d.`, and the
+numbers you type).  A number with a `#` of its own (`#d10`, `#x1F`) is read in its own base, whatever the base; a
+bare one must start with a digit, 0-9 (`0FF`; in hexadecimal, `FF` is Forth's cell, as ever).
+
+Division by zero is THROW -10, a number past the libraries' limits -11, the number stack empty -45 or full -44, `log`
+of 0 -46, and the rest (a complex number where a real one is wanted, text that isn't a number ...) -24.  `nvariable`'s
+numbers are in `memory.fl`'s heap (loaded with `numbers.fl`).  Each word is a call of the library: about 1.7 ms for
+`1 s>n n+`, more as the numbers grow (a rational's sum, 5 ms; `nsqrt` at 12 digits, 50 ms).
 
 ## Errors and Ctrl-C
 

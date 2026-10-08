@@ -1,77 +1,139 @@
-10 REM LOGIC.BAS: RELATIONS, AND, OR, NOT,
-11 REM IF, STRING COMPARISONS
-20 N$="LOGIC"
-100 X=(1=1):E=-1:GOSUB 9000
-101 X=(1=2):E=0:GOSUB 9000
-102 X=(1<2):E=-1:GOSUB 9000
-103 X=(2<1):E=0:GOSUB 9000
-104 X=(1<=1):E=-1:GOSUB 9000
-105 X=(2>=1):E=-1:GOSUB 9000
-106 X=(1<>2):E=-1:GOSUB 9000
-107 X=(2<>2):E=0:GOSUB 9000
-108 X=(1><2):E=-1:GOSUB 9000
-109 X=(2=>1):E=-1:GOSUB 9000
-110 X=(1=<1):E=-1:GOSUB 9000
-111 X=(-1<0):E=-1:GOSUB 9000
-112 X=(1E-9>0):E=-1:GOSUB 9000
-113 X=(1+1=2):E=-1:GOSUB 9000
-114 X=(2*3>5):E=-1:GOSUB 9000
-120 X=5 AND 3:E=1:GOSUB 9000
-121 X=5 OR 3:E=7:GOSUB 9000
-122 X=NOT 0:E=-1:GOSUB 9000
-123 X=NOT -1:E=0:GOSUB 9000
-124 X=NOT 5:E=-6:GOSUB 9000
-125 X=-1 AND 255:E=255:GOSUB 9000
-126 X=1 OR 1:E=1:GOSUB 9000
-127 X=1 OR 0 AND 0:E=1:GOSUB 9000
-128 X=NOT 1=1:E=0:GOSUB 9000
-129 X=7.9 AND 3:E=3:GOSUB 9000
-130 X=32767 AND -1:E=32767:GOSUB 9000
-131 X=-32768 OR 0:E=-32768:GOSUB 9000
-132 X=12 AND 10 OR 1:E=9:GOSUB 9000
-133 X=(1<2) AND (3<4):E=-1:GOSUB 9000
-134 X=(1<2) AND (3>4):E=0:GOSUB 9000
-135 X=(1>2) OR (3<4):E=-1:GOSUB 9000
-136 X=NOT (1>2):E=-1:GOSUB 9000
-137 X=-1 OR 0:E=-1:GOSUB 9000
-138 X=255 AND 256:E=0:GOSUB 9000
-140 X=("A"<"B"):E=-1:GOSUB 9000
-141 X=("ABC"="ABC"):E=-1:GOSUB 9000
-142 X=("AB"<"ABC"):E=-1:GOSUB 9000
-143 X=("B">"ABC"):E=-1:GOSUB 9000
-144 X=(""<"A"):E=-1:GOSUB 9000
-145 X=("a">"A"):E=-1:GOSUB 9000
-146 X=("ABC"<>"ABD"):E=-1:GOSUB 9000
-147 X=("Z"<="Z"):E=-1:GOSUB 9000
-148 X=(""=""):E=-1:GOSUB 9000
-149 A$="HELLO":X=(A$="HELLO"):E=-1:GOSUB 9000
-150 X=0:IF 1 THEN X=1
-151 E=1:GOSUB 9000
-152 X=0:IF 0 THEN X=1
-153 E=0:GOSUB 9000
-154 X=0:IF 0 THEN X=1:X=2
-155 E=0:GOSUB 9000
-156 X=0:IF 5 THEN X=1:X=X+1
-157 E=2:GOSUB 9000
-158 X=0:IF -1 THEN X=3
-159 E=3:GOSUB 9000
-160 X=0:IF .1 THEN X=4
-161 E=4:GOSUB 9000
-162 X=0:IF "A"<"B" THEN X=5
-163 E=5:GOSUB 9000
-164 X=0:IF 1 THEN IF 1 THEN X=6
-165 E=6:GOSUB 9000
-166 X=0:IF 1 THEN IF 0 THEN X=7
-167 E=0:GOSUB 9000
-168 X=0:A=3:IF A>2 AND A<4 THEN X=8
-169 E=8:GOSUB 9000
-8999 GOTO 9900
-9000 T=T+1:IF X=E THEN RETURN
-9010 IF E=0 THEN 9030
-9020 IF ABS((X-E)/E)<1E-8 THEN RETURN
-9030 F=F+1:PRINT "FAIL";T;X;E
-9040 RETURN
-9100 T=T+1:IF X$=E$ THEN RETURN
-9110 F=F+1:PRINT "FAIL";T;"[";X$;"][";E$;"]"
-9120 RETURN
-9900 PRINT N$;":";T;"CHECKS,";F;"FAILED"
+' logic.bas - comparisons (numbers of every kind, strings), the bitwise operators on integers of any size, IF in its
+' forms, SELECT CASE
+DIM SHARED checks, failed
+SUB ck (got, want, what$)
+    checks = checks + 1
+    IF got <> want THEN failed = failed + 1: PRINT "FAIL "; what$; ":"; got; "not"; want
+END SUB
+
+' Comparisons: -1 or 0
+ck 1 < 2, -1, "<"
+ck 2 < 1, 0, "< false"
+ck 2 <= 2, -1, "<="
+ck 3 > 2, -1, ">"
+ck 2 >= 3, 0, ">="
+ck 2 = 2, -1, "="
+ck 2 <> 2, 0, "<>"
+ck 1 / 3 < 0.34, -1, "a fraction and a decimal"
+ck 1 = 1.0, -1, "1 = 1.0"
+ck 0.5 = 1 / 2, -1, "0.5 = 1/2"
+ck 2 ^ 100 > 2 ^ 99, -1, "big"
+ck -(2 ^ 100) < 1, -1, "big below 0"
+ck 1 + 2i = 1 + 2i, -1, "complex ="
+ck 1 + 2i < 1 + 3i, -1, "complex by the imaginary part"
+ck 2 + 0i > 1 + 5i, -1, "complex by the real part"
+ck "abc" = "abc", -1, "strings ="
+ck "abc" < "abd", -1, "strings <"
+ck "ab" < "abc", -1, "a start <"
+ck "B" < "a", -1, "by the bytes"
+ck "" < "a", -1, "empty <"
+' The bitwise operators
+ck NOT 0, -1, "NOT 0"
+ck NOT -1, 0, "NOT -1"
+ck NOT 5, -6, "NOT 5"
+ck 12 AND 10, 8, "AND"
+ck 12 OR 10, 14, "OR"
+ck 12 XOR 10, 6, "XOR"
+ck 12 EQV 10, -7, "EQV"
+ck 12 IMP 10, -5, "IMP"
+ck -1 AND 255, 255, "AND -1"
+ck (2 ^ 70 + 5) AND 7, 5, "AND big"
+ck (2 ^ 70) OR 1, 2 ^ 70 + 1, "OR big"
+ck NOT (2 ^ 70), -(2 ^ 70) - 1, "NOT big"
+ck 6.6 AND 7, 7, "a fraction rounded first"
+' Their order: comparisons, NOT, AND, OR
+ck 1 < 2 AND 3 < 4, -1, "< before AND"
+ck NOT 1 = 2, -1, "= before NOT"
+ck 0 OR -1 AND 0, 0, "AND before OR"
+ck -1 OR 0 AND 0, -1, "AND before OR 2"
+ck 1 + 1 = 2 AND 2 * 2 = 4, -1, "arithmetic first"
+' Truth: any number not 0
+t = 0
+IF 5 THEN t = 1
+ck t, 1, "5 is true"
+IF 1 / 1000 THEN t = 2
+ck t, 2, "1/1000 is true"
+IF 0 THEN t = 3
+ck t, 2, "0 is false"
+' IF on one line
+x = 5
+IF x > 3 THEN y = 1 ELSE y = 2
+ck y, 1, "IF THEN"
+IF x > 9 THEN y = 1 ELSE y = 2
+ck y, 2, "IF ELSE"
+IF x > 3 THEN y = 10: z = 20 ELSE y = 30: z = 40
+ck y + z, 30, "IF statements"
+IF x > 9 THEN y = 10: z = 20 ELSE y = 30: z = 40
+ck y + z, 70, "ELSE statements"
+IF x = 5 THEN IF y = 30 THEN w = 1 ELSE w = 2
+ck w, 1, "IF in IF"
+IF x = 5 THEN 100
+ck 0, 1, "IF THEN a line number"
+100 ck 1, 1, "IF THEN a line number"
+IF x <> 5 THEN GOTO 110 ELSE GOTO there
+110 ck 0, 1, "IF ELSE GOTO"
+there:
+ck 1, 1, "IF ELSE GOTO"
+' IF blocks
+FOR i = 1 TO 4
+    IF i = 1 THEN
+        r = 10
+    ELSEIF i = 2 THEN
+        r = 20
+    ELSEIF i = 3 THEN
+        IF x = 5 THEN
+            r = 30
+        ELSE
+            r = -30
+        END IF
+    ELSE
+        r = 40
+    END IF
+    ck r, i * 10, "IF block"
+NEXT
+IF x = 1 THEN
+    r = 0
+END IF
+ck r, 40, "IF block not taken"
+' SELECT CASE
+FUNCTION kind$ (n)
+    SELECT CASE n
+        CASE 0
+            kind$ = "zero"
+        CASE 1, 3, 5
+            kind$ = "odd small"
+        CASE 2 TO 4, 6
+            kind$ = "even small"
+        CASE IS < 0
+            kind$ = "below"
+        CASE IS >= 100
+            kind$ = "big"
+        CASE ELSE
+            kind$ = "other"
+    END SELECT
+END FUNCTION
+ck kind$(0) = "zero", -1, "CASE 0"
+ck kind$(3) = "odd small", -1, "CASE list"
+ck kind$(4) = "even small", -1, "CASE TO"
+ck kind$(6) = "even small", -1, "CASE TO, list"
+ck kind$(-5) = "below", -1, "CASE IS <"
+ck kind$(2 ^ 80) = "big", -1, "CASE IS >="
+ck kind$(50) = "other", -1, "CASE ELSE"
+ck kind$(7 / 2) = "even small", -1, "CASE TO a fraction"
+s$ = "pear": n = 0
+SELECT CASE s$
+    CASE "apple": n = 1
+    CASE "orange", "pear": n = 2
+    CASE ELSE: n = 3
+END SELECT
+ck n, 2, "CASE strings"
+SELECT CASE "m"
+    CASE "a" TO "f": n = 1
+    CASE "g" TO "z": n = 2
+END SELECT
+ck n, 2, "CASE strings TO"
+SELECT CASE 9
+    CASE 1: n = 5
+END SELECT
+ck n, 2, "no CASE"
+PRINT "logic:"; checks; "checks,"; failed; "failed"

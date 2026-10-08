@@ -2,7 +2,7 @@
 
 The programs in `/bin`.  Most are modules in the paged ROM, which run in place (`/dev/mod/NAME`, bound into `/bin`
 by `#m/bin`); a few are files on the ROM disk, read into RAM to run (`/rom/bin`: `mkfs`, `fsck`, `label`, `grep`,
-`sort`, `db`, `edit`, `scom`).  `/bin` is a union, so a program of your own in `/ram/bin`, `/sram/bin` or a card's `/bin` comes
+`sort`, `db`, `edit`, `calc`, `scom`).  `/bin` is a union, so a program of your own in `/ram/bin`, `/sram/bin` or a card's `/bin` comes
 before the ROM's of the same name.
 
 They behave as Plan 9's do:
@@ -72,8 +72,9 @@ mkfs
 
 ## The screen editor
 
-`edit [file ...]` is the screen editor, nano's way: what you type goes in at the cursor, and the Ctrl keys and the
-Meta keys (Esc then a key, or Alt with it: `M-`) are commands.  The two lines at the bottom name the commonest, and
+`edit [+N] [file ...]` is the screen editor, nano's way (`+N`: the next file at its line N; BASIC's `EDIT` uses
+it): what you type goes in at the cursor, and the Ctrl keys and the Meta keys (Esc then a key, or Alt with it:
+`M-`) are commands.  The two lines at the bottom name the commonest, and
 `^G` shows them all.  Up to 6 files are open at once, each in a buffer of its own; their text is in your task's RAM
 banks, so a file can be as big as they are (a few hundred K: `kdev.s`'s 140K reads in some 6 seconds).  A file
 whose lines end CR LF is written with CR LF again.
@@ -284,6 +285,7 @@ the card may be another).  The RAM disks' writes go at once.
 | `play [-lx] -m ch mml ...` | A line of MML (a score's channel's: below) on channel ch, the channel's own instrument if the line names none: `play -m 0 t180 o4 l8 c d e f g` |
 | `play [-lx] -c ch notes ...` | A chord: each note on the next channel from ch, the commands before each with it (`play -c 0 o4 l2 I0 c e g`); `-x`, either in the Commander X16's MML (`play -x -m 0 T120 O4 L8 CDEFG`) |
 | `xmodem -r file`, `xmodem -s [-k] file` | A file received or sent with XMODEM over the serial line, with any terminal program on the PC: `-r` receives, `-s` sends (`-k`: 1K blocks) |
+| `calc [-b base] [-d digits] [expression ...]` | An expression worked out exactly, with the Hydra's numbers (the number libraries', hylang's), its value in decimal or in the base `-b` names (hylang's base strings: `x`, `#x`, `b`, `c`, `16r` ...): `calc 2/3 + 0.5` is `7/6`, `calc sqrt 2` `1.41421356237`, `calc -b x 255` `FF`.  Numbers are read in decimal (`0.5`, `2i`), or in a base by their own prefix (`#xFF`); `+ - * /` (exactly), `%` (an integer's remainder), `^`, parentheses; `sqrt exp log sin cos tan atan` (`-d` digits: 12), `abs floor round truncate fib numerator denominator re im rational random`, `gcd(a, b)`, `pow(a, b)`, `complex(a, b)`, `fixed(a, places)`; `pi`, `e`, `i`.  rc's `^ * ( ) #` need quotes: `calc '2^100'`.  With no expression, each line of its input |
 | `forth`, `hylang`, `basic`, `rc` | The languages and the shell: [hyforth.md](hyforth.md), [hylang.md](hylang.md), [basic.md](basic.md), [rc.md](rc.md) |
 
 The sound device is `/dev/snd` (register and value pairs), `/dev/sndctl` (`claim N [P]`, `release N [P]`, `volume

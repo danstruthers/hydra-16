@@ -1,5 +1,5 @@
 /*
-** edit.c - edit [file ...]: the screen editor (phase 9), nano's way.  What's typed goes in at the cursor; the Ctrl
+** edit.c - edit [+N] [file ...]: the screen editor (phase 9), nano's way (+N: the next file at its line N).  What's typed goes in at the cursor; the Ctrl
 ** keys and the Meta keys (Esc then a key, or Alt with it: M-) are commands, the two lines at the bottom name the
 ** commonest, and ^G shows them all.  Up to 6 files open at once, each in a buffer of its own (^R opens another, M-,
 ** and M-. go between them, ^X closes one: the last, and edit ends), their text in the task's RAM banks (edit.h).
@@ -716,6 +716,7 @@ int main (int argc, char* argv[])
     struct hy_regs r;
     unsigned char i, k;
     int b;
+    unsigned go = 0;
 
     r.r[0] = (unsigned) quiet;                          /* Notes (Ctrl-C) ignored */
     hy_call (HY_NOTIFY, &r);
@@ -725,7 +726,14 @@ int main (int argc, char* argv[])
     }
     sbank = b;
     for (i = 1; i < argc; ++i) {
-        open_doc (argv[i]);
+        if (argv[i][0] == '+' && argv[i][1]) {          /* +N: the next file at its line N */
+            go = atoi (argv[i] + 1);
+            continue;
+        }
+        if (!open_doc (argv[i]) && go) {
+            t_gotoline (go - 1);
+        }
+        go = 0;
     }
     if (!ndocs && open_doc (0)) {
         s_done ();

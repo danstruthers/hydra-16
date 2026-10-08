@@ -16,7 +16,9 @@ The SDK is this folder; `node build.js` also copies it, with the generated `hydr
 | `toollib.inc`, `toollib.s` | What the system's tools share: flags, errors and exit statuses as Plan 9's, buffered output, input a file at a time, directories, paths, numbers (the comment at its top lists them) |
 | `srvlib.inc`, `srvlib.s` | A file server's library (the system's drivers use it) |
 | `nslib.s` | A task's default namespace, from the namespace file (Plan 9's `newns`) |
-| `samples/` | `hi` (arguments, task, directory, environment), `upper` (a filter on `toollib`), `tick` (a note handler), `counter` (a server: a driver, a module that runs in place, on `srvlib`) |
+| `numbers.inc` | The number libraries' calls (hylang's, HyForth's, BASIC's and C's numbers: exact integers of any size, fixed decimals, rationals, complex numbers; their arithmetic, text in every base, the math functions): each entry's address (`NUM_ADD`, `MATH_SQRT` ...), the constants, and the macros `NUMCALL` and `MATHCALL` that call them.  Made from `spec/numbers.def` by the build (`obj/sdk/numbers.inc`), whose comments say each entry's registers; never edit it |
+| `numlib.s` | `num_open`: the number libraries found and readied (a RAM bank of the program's made theirs), for `NUMCALL` and `MATHCALL` |
+| `samples/` | `hi` (arguments, task, directory, environment), `upper` (a filter on `toollib`), `tick` (a note handler), `counter` (a server: a driver, a module that runs in place, on `srvlib`), `nsum` (numbers: the sum of its arguments, and its square root) |
 
 The calls are described in `/rom/doc/api.md` on the Hydra (the build's `obj/gen/api.md`), and the rules the
 system keeps in `docs/conventions.md`.
@@ -57,6 +59,12 @@ main:                                       ; r0: the arguments
   through its namespace, as rc's do.
 * A note (Ctrl-C at its window: `NOTE_INTERRUPT`) ends it, unless it has a handler (`NOTIFY`: `tick`).
 * Its environment (`ENV_GET`, `ENV_PUT`) is a copy of rc's: rc's variables, `$window`, `$path` ...
+* Numbers: `.include "numbers.inc"` at its top and `numlib.s` at its end; `num_open` readies the libraries, then
+  `NUMCALL NUM_ADD` (`MATHCALL MATH_SQRT` for the math library's) is a call, its registers as `numbers.inc` says:
+  the operands' addresses in `r0` and `r1`, the result's place and room in `r2` and `r3`, its length back in
+  `.A`/`.X` (C = 1: `.A` an error, `NE_DIV0` ...).  A number is its bytes in the stored format (`NUM_MAX` at most);
+  `NUM_PARSE` reads one from text and `NUM_DISPLAY` writes one, in the base (`NUM_SET_BASE`).  The sample `nsum`
+  is one.
 
 ## Building it
 
@@ -91,5 +99,5 @@ node sim/tools/hydrafs.js put card.img path/to/hello/hello.hyx hello
 node sim/run.js -i --sd card.img                            # then, at the % prompt: /sd/0/hello
 ```
 
-The samples are on the ROM disk: `/rom/sample/hi Ann Bob`, `echo hi | /rom/sample/upper`, `/rom/sample/tick`
+The samples are on the ROM disk: `/rom/sample/hi Ann Bob`, `echo hi | /rom/sample/upper`, `/rom/sample/nsum 1/3 0.5 2`, `/rom/sample/tick`
 (Ctrl-C to stop it).

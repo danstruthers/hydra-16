@@ -299,11 +299,13 @@ ud_base:
 
 ; ud (the double at stack index .Y: its high cell, its low under it) = ud * BASE + .A.  Keeps .X.  Modifies tmp,
 ; tmp2, tmp3, numacc, numtmp, cnt.  A BASE under 256 (any the standard has): ud shifted and added for each of its bits, from the
-; digit (numacc: the sum; numtmp: ud, doubled each bit); else two 16 x 16 multiplies
+; digit (numacc: the sum; numtmp: ud, doubled each bit), num_ovf 1 if it passes 32 bits; else two 16 x 16 multiplies
 ud_mul_add:
             sty         cnt
             ldy         base + 1
-            bne         ud_mul_add16
+            beq         :+
+            jmp         ud_mul_add16
+:
             sty         numacc + 1
             sty         numacc + 2
             sty         numacc + 3
@@ -335,6 +337,10 @@ ud_mul_add:
             lda         numacc + 3
             adc         numtmp + 3
             sta         numacc + 3
+            bcc         @next
+@ovf:
+            lda         #1                                  ; (Past 32 bits: noted, for number)
+            sta         num_ovf
 @next:
             lda         tmp
             beq         @done
@@ -342,7 +348,8 @@ ud_mul_add:
             rol         numtmp + 1
             rol         numtmp + 2
             rol         numtmp + 3
-            bra         @bit
+            bcc         @bit
+            bra         @ovf                                ; (A bit out of ud, and more of BASE's to come)
 @done:
             lda         numacc
             sta         dlo + 1,y

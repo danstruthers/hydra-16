@@ -11,7 +11,7 @@ guides for each part:
 | [The tools](tools.md) | Every program in `/bin`: files, text, the editors, tasks, the debugger, the assembler, disks, and the rest |
 | [HyForth](hyforth.md) | The Forth, and the login shell: its words, libraries, the shell rule, files, devices, sound |
 | [hylang](hylang.md) | The lisp (danlang on the Hydra): its REPL and scripts, the system library, the Hydra's built-ins, devices |
-| [BASIC](basic.md) | Microsoft's BASIC (EhyBASIC): programs and scripts, files, sound and `PLAY`, `SYS` and the system's calls, memory, the shell |
+| [BASIC](basic.md) | The Hydra's BASIC, in QuickBASIC's way: exact numbers in any base, procedures and records, files, sound, graphics, the system's calls, the prompt and the shell |
 
 For writing programs: [../programming/README.md](../programming/README.md), the programmer's guide, and the SDKs'
 own guides, [../../sdk/asm/README.md](../../sdk/asm/README.md) (assembly) and [../../sdk/c/README.md](../../sdk/c/README.md)

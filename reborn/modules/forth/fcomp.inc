@@ -177,6 +177,27 @@ loc_call:
 :
             rts
 
+; The numbers library's routine (num_vec: numbers.fl's), .A the call: 0, the word throw_name names, which Forth
+; doesn't know: a number of the library's, pushed on its number stack or compiled (C = 0); 1, ( c-addr u -- n 1 |
+; d 2 | 0 ), the interpreter's number in its base (num_custom's); 2, ( n -- c-addr u ), n as text in it; 3, ( u --
+; c-addr u ); 4, ( d -- c-addr u ).  Nothing done (or none: a base that's a radix again): C = 1, the stack as it was
+num_call:
+            sec
+            ldy         num_vec + 1
+            beq         :+
+            jmp         (num_vec)
+:
+            rts
+
+; No numbers library: its vectors 0
+num_none:
+            stz         num_vec
+            stz         num_vec + 1
+            stz         num_custom
+            stz         num_dov
+            stz         num_dov + 1
+            rts
+
 ; The word whose header is at w, compiled: its code copied (F_INLINE, a length), or a jsr to it; EXIT's, the
 ; locals' frame let go first
 comp_hdr:
@@ -1185,6 +1206,12 @@ domarker:
             bcs         :+
             stz         blk_vec
             stz         blk_vec + 1
+:
+            lda         num_vec                             ; And the numbers library
+            ldy         num_vec + 1
+            jsr         since
+            bcs         :+
+            jsr         num_none
 :
             ldx         xsave
             rts

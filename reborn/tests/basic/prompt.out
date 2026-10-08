@@ -1,0 +1,46 @@
+10 PRINT "ten": REM as typed, Its Case Kept
+20 Print "twenty"
+30 print "thirty"
+40 GOTO 60
+50 PRINT "not this"
+60 PRINT "sixty"
+20 Print "twenty"
+20 Print "twenty"
+30 print "thirty"
+40 GOTO 60
+10 PRINT "ten": REM as typed, Its Case Kept
+20 Print "twenty"
+40 GOTO 60
+50 PRINT "not this"
+60 PRINT "sixty"
+10 PRINT "ten": REM as typed, Its Case Kept
+20 Print "twenty"
+30 PRINT "thirty again"
+40 GOTO 60
+60 PRINT "sixty"
+ten
+twenty
+thirty again
+sixty
+10 PRINT "ten": REM as typed, Its Case Kept
+40 GOTO 60
+60 PRINT "sixty"
+ 42 
+ 0 
+empty
+10 PRINT "ten": REM as typed, Its Case Kept
+40 GOTO 60
+60 PRINT "sixty"
+ten
+sixty
+start:
+    PRINT "from start"
+middle: PRINT "middle"
+done:
+from start
+middle
+done
+a
+Break in line 20
+at the prompt
+b

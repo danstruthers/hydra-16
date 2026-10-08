@@ -866,10 +866,13 @@ decimal:
             lda         #10
             bra         set_base
 
-; BASE .A (DECIMAL's; and HEX's: the Core Extension library's)
+; BASE .A (DECIMAL's; and HEX's: the Core Extension library's), the numbers library's base set from it again (as
+; its own may be one of the same radix: set-base's "<d")
 set_base:
             sta         base
             stz         base + 1
+            stz         num_base
+            stz         num_base + 1
             rts
 
             HEADER      "state", 0

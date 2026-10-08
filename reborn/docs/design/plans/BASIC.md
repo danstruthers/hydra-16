@@ -177,3 +177,22 @@ None open: the user answered them all (below).  The numbers' own questions are N
 5. **`RETURN value` in a function**, beside assigning to its name.
 6. **Every number shown exactly**: a fraction as a fraction (`1/3`), never rounded for display.
 7. **Graphics in the first version**, with the languages' graphics words, which go ahead now as anticipated.
+
+### **As built** (steps 1 to 7, October 2026)
+
+Done, on `reborn-numbers`: `modules/basic`, the new BASIC, in today's BASIC's place; [../../basic.md](../../basic.md) is its design, [../../using/basic.md](../../using/basic.md) its reference.
+
+* **The plan's way**: a program read whole and compiled (names to slots, labels to addresses, blocks linked) into the code of a stack machine, then run; a value stack of its own, a frame for each call, the heap with a compacting collector.  A value is 5 bytes, as planned, but an integer of 32 bits is the value itself (`VT_INT`, worked without the library where it can be) and any other number is in the heap, rather than the stored format in the value when it fits: the operators' quick path is the integers'.
+* **Its size**: eight banks, not the three or four guessed (the compiler alone is two), some 60K of code from 27,900 lines; the second bank, the compiler's, is 84% full, the rest under 60%.
+* **Step 7**: the suite in `tests/basic` (twelve programs, 495 checks, and four scripts against their output: the bsuite test), the basic, bplay and bawin tests for the new BASIC, `romfs/bench/bench.bas` written again in its own style, all twenty of the benchmarks (a `FUNCTION` each, recursion where hylang and HyForth recurse), and today's BASIC retired: its module, its tests, its documents.  Writing the suite found its bugs (a `SUB` that called another took its entry; `GOTO` a label never defined ran on; an exit's status was always 0 ...), fixed.
+* **Speed**: 9.2 times HyForth's time and 4.0 times hylang's over the twenty benchmarks (geometric means; [../../basic.md](../../basic.md), "Against hylang and HyForth"); over the six the first BASIC had, 14.9 and 4.2 times, where it was 44 and 12.3 (the plan's target, nearer hylang's than Microsoft's 12.3 times: met).
+* **Decided while building**, beside the reference as first written:
+  * `REAL(x)` and `IMAG(x)`, not `RE` and `IM`: `re` and `im` are a complex program's names.  `ABS` is a real number's.
+  * `INCLUDE "f"` (and QuickBASIC's `'$INCLUDE: 'f'`) is a line of its own; an error in the file says its name and line.
+  * `ERL` is a line's number in a program with line numbers (the nearest before it), as QuickBASIC's; else the line in its file.  A typed program's errors say its lines' numbers too (`line 20: ...`).
+  * In a file's statements a `#` is the file's: `PRINT #x1, ...` is the variable `x1`'s file.
+  * E notation and `.5` are read by `VAL`, `READ` and `INPUT` too, in decimal.
+  * `SYSTEM` (`BYE`) is a statement too; the prompt's other commands (`LIST`, `RUN`, `CLEAR` ...) are only the prompt's.  `RUN` starts in decimal.
+  * `TIMER` counts the ticks from the clock's second, so one less another is exact; `SHELL$` drops its output's last new lines; `CLOSE` of a file not open does nothing; `SYS` at `$8000` runs in `BANK`'s bank.
+  * Not built: `PRINT USING`'s `^^^^`, `RUN` from a line, `RUN` and `CLEAR` in a program.
+* **Left**: the interpreter's speed (a `FOR` loop's step some 1,600 cycles, a `FUNCTION`'s call some 1,900 more); `PRINT USING`'s `^^^^`.  The guide and its PDF came with NUMBERS.md's step 8.

@@ -20,7 +20,7 @@ seven prefixes (`?` if, `=` set, `:` def, `#` hash-create, `@` fn, `.` unpack, `
 key up (`(h :k)`, a method `(obj :add 3)`); extra arguments are `&1`, `&2` ... past the formals; `$name` is the
 environment's variable; every ordinary built-in gets its arguments' values, the first error stopping it.
 
-**The conformance suite is danlang's regression suite**, `tests/regress/` (1,334 checks), copied to `tests/hylang`
+**The conformance suite is danlang's regression suite**, `tests/regress/` (1,530 checks), copied to `tests/hylang`
 (its README says which phase runs which file).  It's written in danlang, so hylang runs it unchanged, from an
 emulated card (`hylang run.dl`, status 0 when every check passes).  A change to the language is made in danlang
 first, with its checks, then in hylang.  What only the Hydra has is checked by a file of its own, `hydra.dl`.
@@ -229,12 +229,12 @@ The plan has it whole; in short:
 
 * **Values** are 16-bit words: a fixnum (15 bits, bit 0 set), or a reference (bit 0 clear) counting 2-byte units:
   bits 15-12 one of 16 banks, bits 11-0 times 2 the place in the `$8000` window, so the cell heap is 128K (16,384
-  conses would have been too few: `globals.dl`, `dice.dl` and `harn.dl` take 7,300 cells once read).  Below `$0600`
-  a reference is an immediate (NIL `$0000`, T, (), exit, the characters, the built-ins).  Lists, strings and numbers
+  conses would have been too few: `globals.dl`, `dice.dl` and `harn.dl` take 7,300 cells once read).  Below `$0800`
+  a reference is an immediate (NIL `$0000`, T, (), exit, the characters, the built-ins: 512 at most, `$0400`-`$07FF`).  Lists, strings and numbers
   are immutable and shared, never copied; hashes, streams and scopes change.
 * **Memory** (`modules/hylang/heap.inc`, in the task's RAM): each 512-byte page of the cell heap holds one kind of
   cell (a 256-byte table gives a value's type); a list is its first cons, its page saying code or data; strings,
-  bignums and symbols' names are blobs in banks of their own, each owned by one cell; symbols are interned and
+  numbers past a fixnum and symbols' names are blobs in banks of their own, each owned by one cell; symbols are interned and
   hold their global value; a scope is a frame, its symbol-value pairs side by side.  Mark and sweep: a
   mark stack of 255 (a list's spine followed in place, so it costs none), every marked cell scanned again if it
   fills; a free list per kind; the blobs nothing owns dropped and the rest slid down.  Banks are taken as they're
@@ -341,15 +341,19 @@ The plan has it whole; in short:
   many arguments and taking errors are the dispatcher's (till phase 7 made the last, those not made yet answered
   `Not yet: 'name'`).
   Strings are made by capturing output (a bank of its own), as danlang's `StringBuilder`.
-* **Numbers** (`numreg.inc`, `numval.inc`, `numtext.inc`, `numbi.inc`, `numbits.inc`, in the third bank): an integer
-  is a fixnum, or a bignum (its sign and length in its cell, its bytes in a blob, least first); a fixed decimal its
-  digits and places, a rational its numerator and denominator (in lowest terms), a complex number its real parts.
-  Integers are worked in registers, pages of the reader's scratch, so a sum or a product of bignums makes nothing
-  on the heap till its value is made; a real number is worked there as a fraction, n/d, then made the kind
-  danlang's rules give; a complex number by its parts, on the root stack.  Each entry to the number code sets an
+* **Numbers** (`numlib.inc`, `numbi.inc`, `numbits.inc`, in the third bank, on the numbers library, the module
+  `numbers`: [NUMBERS.md](design/plans/NUMBERS.md)): a number is a fixnum, or a cell of one kind, `PK_NUMBER`, its
+  bytes in the stored format in a blob (an integer to 255 bytes, a fixed decimal, a rational in lowest terms, a
+  complex number), so an integer in a fixnum's range is always a fixnum.  The library works the rest: each operand
+  staged in the reader's scratch, the result made a value after; a number's text through a RAM bank of hylang's own.
+  Fixnums keep their quick ways (`+`, `-`, `*`, `/`, the comparisons, the bytecode machine's ops, the native code),
+  and while the base is plain decimal hylang reads and prints them itself.  Each entry to the number code sets an
   abort point, which a result too big goes back to from however deep.  The reader gives each word that starts
-  like a number to danlang's grammar, whole (every base: digits of its own, balanced, negative, least digit
-  first); `+`, `-` and `*` keep a fixnum's quick way.
+  like a number to the library's `PARSE`, whole, in the base (`(base)`, `(base b)`: every base danlang reads).
+  The math functions (`sqrt`, `exp`, `log`, `sin`, `cos`, `tan`, `atan`, `pi`, `pow` of any real power, `digits`)
+  are the math library's (the module `math`), as danlang's are: exact when the answer is, else correctly rounded.
+  (Till the numbers plan's step 3, hylang's own: `numreg.inc`, `numval.inc`, `numtext.inc`, integers in registers
+  of its own.)
 * **Strings and hashes** (`strs.inc`, `hashes.inc`, in the fourth bank): a string built-in reads its arguments'
   bytes where they are, two at once (a character is a string of one), and makes its value by capturing output.  A
   hash is a cell of its items: its entries, each a list `{key value tag...}` never changed in place (a change puts
@@ -474,5 +478,8 @@ hylang has too.  Buffers (`buffers.inc`, a new kind of cell, `PK_BUFFER`: a stri
 `open`'s `:update`, `clock`, `buffer-cmp` and `round` (library code: `hylib.hl` loads `globals.hl`, danlang's `globals.dl` as it
 is, then hylang's own), `key` and `key?` (the Hydra's already), and a file's read error with its line.  The rest was
 there already: values shared, not copied; an integer key and an atom's different keys; 64-bit edges.  The suite's
-1,334 checks pass (`hysuite1` to `hysuite5`).  The table of built-ins is full: 256 of 256, so danlang's next built-ins
-need library code, or a wider table.
+1,334 checks pass (`hysuite1` to `hysuite5`).  The table of built-ins was full: 256 of 256, so danlang's next built-ins
+needed library code, or a wider table.  The numbers plan's step 3 widened it: 512, the values `$0600`-`$07FF` a second
+table of ordinary built-ins in a bank (`base`, `number-bytes`, `bytes-number` the first; step 4 the math functions,
+`pow` among them: it was `globals.dl`'s, whole powers only), which the evaluator applies its own way and the
+bytecode machine calls through it; the first 256 are worked as before.  The suite: 1,530 checks.

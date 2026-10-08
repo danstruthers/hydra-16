@@ -18,9 +18,12 @@ lib/as/toollib.s    ../sdk/asm/toollib.s
 lib/as/srvlib.inc   ../sdk/asm/srvlib.inc
 lib/as/srvlib.s     ../sdk/asm/srvlib.s
 lib/as/nslib.s      ../sdk/asm/nslib.s
+lib/as/numbers.inc  ../obj/sdk/numbers.inc ;   the number libraries' (numbers.inc, numlib.s)
+lib/as/numlib.s     ../sdk/asm/numlib.s
 lib/as/hi.s         ../sdk/asm/samples/hi/hi.s ;   and its samples
 lib/as/tick.s       ../sdk/asm/samples/tick/tick.s
 lib/as/upper.s      ../sdk/asm/samples/upper/upper.s
+lib/as/nsum.s       ../sdk/asm/samples/nsum/nsum.s
 doc/api.md          ../obj/gen/api.md   ; The system calls' reference (tools/apigen.js makes it at the build)
 bench/bench.hl      bench/bench.hl      ; hylang's, HyForth's and BASIC's benchmarks, the same in each (sim/bench.js compares them)
 bench/bench.fs      bench/bench.fs
@@ -64,6 +67,7 @@ lib/forth/sound.fl  ../obj/forthlib/sound.fl    ;   the sound words (snd-note ..
 lib/forth/memory.fl ../obj/forthlib/memory.fl   ; The standard's other word sets: Memory-Allocation ...
 lib/forth/locals.fl ../obj/forthlib/locals.fl   ;   Locals
 lib/forth/block.fl  ../obj/forthlib/block.fl    ;   Block
+lib/forth/numbers.fl ../obj/forthlib/numbers.fl ; hylang's numbers: the number stack, n+ n. nsqrt ... (the libraries numbers, math)
 lib/forth/shell.fl  ../obj/forthlib/shell.fl    ; HyForth as a shell (profile.fs loads it)
 lib/forth/gpio.fs   lib/forth/gpio.fs           ; The device libraries, source over the devices' files (hylang's)
 lib/forth/i2c.fs    lib/forth/i2c.fs
@@ -103,6 +107,7 @@ bin/grep            ../obj/programs/grep.hyx    ; The tools in C (programs/grep,
 bin/sort            ../obj/programs/sort.hyx
 bin/db              ../obj/programs/db.hyx      ; The debugger (C: programs/db)
 bin/edit            ../obj/programs/edit.hyx    ; The screen editor (C: programs/edit)
+bin/calc            ../obj/programs/calc.hyx    ; The calculator: the number libraries at rc (C: programs/calc, num.h)
 bin/scom            bin/scom                    ; A song run by its name (an rc script: #!/bin/rc)
 songs/scom.zsm      songs/scom.zsm              ; Songs (play /rom/songs/test.zsm): ZSM files, the X16's
 songs/test.zsm      songs/test.zsm              ;   (the old system's test song, from os_rom/songs/test.mml)
@@ -110,6 +115,7 @@ songs/vera.mml      songs/vera.mml              ; A score for both chips (play /
 sample/hi           ../obj/samples/hi.hyx       ; The assembly SDK's samples, built (sdk/asm/samples/)
 sample/upper        ../obj/samples/upper.hyx
 sample/tick         ../obj/samples/tick.hyx
+sample/nsum         ../obj/samples/nsum.hyx
 sample/c/hello      ../obj/samples/c/hello.hyx  ; The C SDK's samples, built (sdk/c/samples/)
 sample/c/upper      ../obj/samples/c/upper.hyx
 sample/c/code       ../obj/samples/c/code.hyx
@@ -119,6 +125,7 @@ sample/c/shapes     ../obj/samples/c/shapes.hyx
 sample/c/tones      ../obj/samples/c/tones.hyx
 sample/c/jukebox    ../obj/samples/c/jukebox.hyx
 sample/c/ctest      ../obj/samples/c/ctest.hyx
+sample/c/ntest      ../obj/samples/c/ntest.hyx
 sample/c/race       ../obj/samples/c/race.hyx   ; The multitasking demos: tasks, semaphores, a shared segment
 sample/c/chorus     ../obj/samples/c/chorus.hyx
 sample/c/philo      ../obj/samples/c/philo.hyx

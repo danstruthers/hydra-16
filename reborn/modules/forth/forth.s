@@ -90,6 +90,13 @@ loc_vec:    .res        2                                   ; The locals library
                                                             ;   compiler (loc_call); 0: none
 blk_vec:    .res        2                                   ; The Block library's (block.fl's): a block source's
                                                             ;   buffer (blk_call); 0: none
+num_vec:    .res        2                                   ; The numbers library's routine (numbers.fl's, num_call):
+                                                            ;   a word Forth doesn't know that's a number; 0: none
+num_custom: .res        1                                   ; <> 0: its base isn't a radix (cells read and shown by it)
+num_base:   .res        2                                   ; BASE when its base was last set from it (0: set it again)
+num_dov:    .res        2                                   ; Its NVALUE's code (TO knows one by its jsr) and the code
+num_to:     .res        2                                   ;   TO compiles for one
+num_ovf:    .res        1                                   ; <> 0: >NUMBER's number passed 32 bits (ud_mul_add's)
 cmode:      .res        1                                   ; Code banks (fcomp.inc): CM_CODE, CM_DEF ...
 dhere:      .res        2                                   ;   the data's HERE while HERE is the code's ...
 chere:      .res        2                                   ;   the code's next byte between definitions (0: no bank) ...
@@ -237,6 +244,7 @@ main:
             stz         loc_vec + 1
             stz         blk_vec
             stz         blk_vec + 1
+            jsr         num_none                            ; No numbers library
             stz         cmode                               ; No code bank yet
             stz         chere
             stz         chere + 1

@@ -19,10 +19,10 @@
 //                          (from ../os_rom/bin/paged_rom_C02.bin) and the ROMs' checksums for it, and the ROM
 //                          disk's volume after the modules (romfs/romfs.txt: tools/romfs.js), each file read back
 //   5. the budgets         sizes, and room left (tools/budget.js)
-//   6. the SDK             bin/sdk/asm: the assembly SDK whole, to take away (sdk/asm, the generated hydra.inc, the
-//                          samples' sources); the C library, obj/sdk/c/hydra.lib (cc65's none.lib with sdk/c/lib's
-//                          modules), and bin/sdk/c: the C SDK whole (sdk/c, the generated hydracalls.h, the library,
-//                          the samples' sources)
+//   6. the SDK             bin/sdk/asm: the assembly SDK whole, to take away (sdk/asm, the generated hydra.inc and
+//                          numbers.inc, the samples' sources); the C library, obj/sdk/c/hydra.lib (cc65's none.lib
+//                          with sdk/c/lib's modules), and bin/sdk/c: the C SDK whole (sdk/c, the generated
+//                          hydracalls.h and numdefs.h, the library, the samples' sources)
 // A program's folder (programs/, tests/ram/, a sample's) with a .c in it is a C program: its .c and .s files compiled
 // (cc65 -t none) and linked with the C library and sdk/c/hydra.cfg (sdk/c/README.md); the C samples are
 // sdk/c/samples/NAME -> obj/samples/c/NAME.hyx.
@@ -177,18 +177,20 @@ function sdk() {
   for (const f of fs.readdirSync(at('sdk', 'asm')).filter(f => /\.(inc|s|cfg|md)$/.test(f)))
     fs.copyFileSync(at('sdk', 'asm', f), path.join(out, f));
   fs.copyFileSync(at('obj', 'sdk', 'hydra.inc'), path.join(out, 'hydra.inc'));
+  fs.copyFileSync(at('obj', 'sdk', 'numbers.inc'), path.join(out, 'numbers.inc'));
   for (const f of ['module.cfg', 'module2.cfg', 'module3.cfg', 'module4.cfg']) fs.copyFileSync(at('modules', f), path.join(out, f));   // (A module's links)
   for (const d of fs.readdirSync(at('sdk', 'asm', 'samples'), { withFileTypes: true }).filter(d => d.isDirectory())) {
     mkdir(path.join(out, 'samples', d.name));
     for (const f of sources(at('sdk', 'asm', 'samples', d.name))) fs.copyFileSync(f, path.join(out, 'samples', d.name, path.basename(f)));
   }
-  // bin/sdk/c: the C SDK (its README, hydra.cfg, include with the generated hydracalls.h, lib/hydra.lib, samples)
+  // bin/sdk/c: the C SDK (its README, hydra.cfg, include with the generated hydracalls.h and numdefs.h,
+  // lib/hydra.lib, samples)
   const c = at('bin', 'sdk', 'c');
   fs.rmSync(c, { recursive: true, force: true });
   for (const d of ['include', 'lib', 'samples']) mkdir(path.join(c, d));
   for (const f of ['README.md', 'hydra.cfg']) fs.copyFileSync(at('sdk', 'c', f), path.join(c, f));
   for (const f of fs.readdirSync(at('sdk', 'c', 'include'))) fs.copyFileSync(at('sdk', 'c', 'include', f), path.join(c, 'include', f));
-  fs.copyFileSync(at('obj', 'sdk', 'c', 'hydracalls.h'), path.join(c, 'include', 'hydracalls.h'));
+  for (const f of ['hydracalls.h', 'numdefs.h']) fs.copyFileSync(at('obj', 'sdk', 'c', f), path.join(c, 'include', f));
   fs.copyFileSync(at('obj', 'sdk', 'c', 'hydra.lib'), path.join(c, 'lib', 'hydra.lib'));
   for (const d of fs.readdirSync(at('sdk', 'c', 'samples'), { withFileTypes: true }).filter(d => d.isDirectory())) {
     mkdir(path.join(c, 'samples', d.name));

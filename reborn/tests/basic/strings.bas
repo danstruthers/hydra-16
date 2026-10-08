@@ -1,93 +1,103 @@
-10 REM STRINGS.BAS: STRINGS AND THEIR
-11 REM FUNCTIONS, NUMBERS AS TEXT, GARBAGE
-20 N$="STRINGS"
-100 A$="HELLO":X=LEN(A$):E=5:GOSUB 9000
-101 X$=A$+" WORLD":E$="HELLO WORLD":GOSUB 9100
-102 X$=LEFT$(A$,2):E$="HE":GOSUB 9100
-103 X$=LEFT$(A$,0):E$="":GOSUB 9100
-104 X$=LEFT$(A$,10):E$="HELLO":GOSUB 9100
-105 X$=RIGHT$(A$,3):E$="LLO":GOSUB 9100
-106 X$=RIGHT$(A$,0):E$="":GOSUB 9100
-107 X$=RIGHT$(A$,9):E$="HELLO":GOSUB 9100
-108 X$=MID$(A$,2,3):E$="ELL":GOSUB 9100
-109 X$=MID$(A$,2):E$="ELLO":GOSUB 9100
-110 X$=MID$(A$,6):E$="":GOSUB 9100
-111 X$=MID$(A$,1,0):E$="":GOSUB 9100
-112 X$=MID$(A$,5,9):E$="O":GOSUB 9100
-113 X$=MID$(A$,1):E$="HELLO":GOSUB 9100
-114 X$=MID$(A$,9,2):E$="":GOSUB 9100
-120 X=ASC("A"):E=65:GOSUB 9000
-121 X=ASC("ABC"):E=65:GOSUB 9000
-122 X$=CHR$(65):E$="A":GOSUB 9100
-123 X=LEN(CHR$(0)):E=1:GOSUB 9000
-124 X=ASC(CHR$(200)):E=200:GOSUB 9000
-125 X=LEN(""):E=0:GOSUB 9000
-126 X=ASC("a"):E=97:GOSUB 9000
-127 X=ASC(CHR$(34)):E=34:GOSUB 9000
-150 X=VAL("123"):E=123:GOSUB 9000
-151 X=VAL(" 12 "):E=12:GOSUB 9000
-152 X=VAL("1E3"):E=1000:GOSUB 9000
-153 X=VAL("-.5"):E=-.5:GOSUB 9000
-154 X=VAL("ABC"):E=0:GOSUB 9000
-155 X=VAL("12AB"):E=12:GOSUB 9000
-156 X=VAL(""):E=0:GOSUB 9000
-157 X=VAL("1 2 3"):E=123:GOSUB 9000
-158 X=VAL("+7"):E=7:GOSUB 9000
-159 X=VAL(STR$(3.25)):E=3.25:GOSUB 9000
-160 A$="":FOR I=1 TO 255:A$=A$+"X":NEXT
-161 X=LEN(A$):E=255:GOSUB 9000
-162 X$=RIGHT$(A$,1):E$="X":GOSUB 9100
-163 B$=A$:X=LEN(B$):E=255:GOSUB 9000
-164 A$="":B$="":X=(A$=B$):E=-1:GOSUB 9000
-165 X$="A"+"B"+"C"+"D":E$="ABCD":GOSUB 9100
-166 A$="PRINT":X=LEN(A$):E=5:GOSUB 9000
-167 X$=A$:E$="PRINT":GOSUB 9100
-168 A$="abc":X$=A$:E$="abc":GOSUB 9100
-169 A$="GOTO 10:REM":X=LEN(A$):E=11:GOSUB 9000
-170 C$="":FOR I=65 TO 90:C$=C$+CHR$(I):NEXT
-171 X=LEN(C$):E=26:GOSUB 9000
-172 X$=MID$(C$,13,3):E$="MNO":GOSUB 9100
-173 R$="":FOR I=LEN(C$) TO 1 STEP -1
-174 R$=R$+MID$(C$,I,1):NEXT
-175 X$=LEFT$(R$,3):E$="ZYX":GOSUB 9100
-180 FOR K=1 TO 200:G$=STR$(K)+"GARBAGE":NEXT
-181 X$=G$:E$=" 200GARBAGE":GOSUB 9100
-182 DIM S$(50):FOR I=0 TO 50
-183 S$(I)="S"+MID$(STR$(I),2):NEXT
-184 FOR K=1 TO 3:FOR I=0 TO 50
-185 S$(I)=S$(I)+"":NEXT:NEXT
-186 X$=S$(50):E$="S50":GOSUB 9100
-187 X$=S$(7)+S$(42):E$="S7S42":GOSUB 9100
-188 X=FRE(0)>0:E=-1:GOSUB 9000
-200 X$=STR$(5):E$=" 5":GOSUB 9100
-202 X$=STR$(-5):E$="-5":GOSUB 9100
-204 X$=STR$(.5):E$=" .5":GOSUB 9100
-206 X$=STR$(1E10):E$=" 1E+10":GOSUB 9100
-208 X$=STR$(123456789):E$=" 123456789":GOSUB 9100
-210 X$=STR$(1234567890):E$=" 1.23456789E+09"
-211 GOSUB 9100
-212 X$=STR$(1/3):E$=" .333333333":GOSUB 9100
-214 X$=STR$(1E-10):E$=" 1E-10":GOSUB 9100
-216 X$=STR$(.001):E$=" 1E-03":GOSUB 9100
-218 X$=STR$(.01):E$=" .01":GOSUB 9100
-220 X$=STR$(-1E-5):E$="-1E-05":GOSUB 9100
-222 X$=STR$(100):E$=" 100":GOSUB 9100
-224 X$=STR$(1E9):E$=" 1E+09":GOSUB 9100
-226 X$=STR$(999999999):E$=" 999999999":GOSUB 9100
-228 X$=STR$(0):E$=" 0":GOSUB 9100
-230 X$=STR$(-1.5):E$="-1.5":GOSUB 9100
-232 X$=STR$(2/3):E$=" .666666667":GOSUB 9100
-234 X$=STR$(1E38):E$=" 1E+38":GOSUB 9100
-236 X$=STR$(12345.678):E$=" 12345.678":GOSUB 9100
-238 X$=STR$(.123456789):E$=" .123456789"
-239 GOSUB 9100
-8999 GOTO 9900
-9000 T=T+1:IF X=E THEN RETURN
-9010 IF E=0 THEN 9030
-9020 IF ABS((X-E)/E)<1E-8 THEN RETURN
-9030 F=F+1:PRINT "FAIL";T;X;E
-9040 RETURN
-9100 T=T+1:IF X$=E$ THEN RETURN
-9110 F=F+1:PRINT "FAIL";T;"[";X$;"][";E$;"]"
-9120 RETURN
-9900 PRINT N$;":";T;"CHECKS,";F;"FAILED"
+' strings.bas - strings: joined, compared, the functions, MID$ as a statement, fixed-length strings, long ones (past
+' 255 characters), many (the garbage collector)
+DIM SHARED checks, failed
+SUB ck (got, want, what$)
+    checks = checks + 1
+    IF got <> want THEN failed = failed + 1: PRINT "FAIL "; what$; ":"; got; "not"; want
+END SUB
+SUB cks (got$, want$, what$)
+    checks = checks + 1
+    IF got$ <> want$ THEN failed = failed + 1: PRINT "FAIL "; what$; ": ["; got$; "] not ["; want$; "]"
+END SUB
+
+a$ = "Hydra": b$ = "-16"
+cks a$ + b$, "Hydra-16", "+"
+cks "" + "", "", "empty +"
+ck LEN(a$ + b$), 8, "LEN"
+ck LEN(""), 0, "LEN empty"
+' The functions
+cks LEFT$(a$, 2), "Hy", "LEFT$"
+cks LEFT$(a$, 0), "", "LEFT$ 0"
+cks LEFT$(a$, 99), "Hydra", "LEFT$ past"
+cks RIGHT$(a$, 3), "dra", "RIGHT$"
+cks RIGHT$(a$, 99), "Hydra", "RIGHT$ past"
+cks MID$(a$, 2, 3), "ydr", "MID$"
+cks MID$(a$, 3), "dra", "MID$ to the end"
+cks MID$(a$, 9, 2), "", "MID$ past"
+cks MID$(a$, 4, 99), "ra", "MID$ long"
+ck INSTR(a$, "dr"), 3, "INSTR"
+ck INSTR(a$, "x"), 0, "INSTR none"
+ck INSTR("abcabc", "bc"), 2, "INSTR first"
+ck INSTR(3, "abcabc", "bc"), 5, "INSTR from"
+ck INSTR(a$, ""), 1, "INSTR empty"
+cks UCASE$("Hydra 16!"), "HYDRA 16!", "UCASE$"
+cks LCASE$("Hydra 16!"), "hydra 16!", "LCASE$"
+cks LTRIM$("  x  "), "x  ", "LTRIM$"
+cks RTRIM$("  x  "), "  x", "RTRIM$"
+cks SPACE$(3), "   ", "SPACE$"
+cks SPACE$(0), "", "SPACE$ 0"
+cks STRING$(4, "*"), "****", "STRING$"
+cks STRING$(3, 65), "AAA", "STRING$ code"
+cks STRING$(2, "xyz"), "xx", "STRING$ first"
+cks CHR$(65) + CHR$(97), "Aa", "CHR$"
+ck ASC("A"), 65, "ASC"
+ck ASC("abc"), 97, "ASC first"
+ck ASC(CHR$(200)), 200, "ASC 200"
+cks STR$(7) + STR$(-7), " 7-7", "STR$"
+ck VAL("  12  "), 12, "VAL spaces"
+ck VAL(STR$(1 / 7)), 1 / 7, "VAL STR$"
+cks HEX$(4096), "1000", "HEX$"
+' Comparisons
+ck "a" < "b", -1, "<"
+ck "abc" > "abd", 0, ">"
+ck "Z" < "a", -1, "bytes"
+ck a$ = "Hydra", -1, "="
+ck a$ <> "hydra", -1, "case counts"
+' MID$ as a statement
+s$ = "abcdef"
+MID$(s$, 2, 3) = "XYZ"
+cks s$, "aXYZef", "MID$ ="
+MID$(s$, 5) = "123456"
+cks s$, "aXYZ12", "MID$ = past the end"
+MID$(s$, 1, 1) = "!?"
+cks s$, "!XYZ12", "MID$ = its n"
+' Fixed-length strings
+DIM f AS STRING * 5
+cks f, "     ", "STRING * 5 at the start"
+f = "ab"
+cks f, "ab   ", "padded"
+f = "abcdefgh"
+cks f, "abcde", "cut"
+ck LEN(f), 5, "its length"
+' Long strings
+l$ = STRING$(300, "x") + "end"
+ck LEN(l$), 303, "past 255"
+cks RIGHT$(l$, 4), "xend", "RIGHT$ of it"
+ck INSTR(l$, "end"), 301, "INSTR in it"
+l$ = l$ + l$ + l$ + l$
+ck LEN(l$), 1212, "longer"
+cks MID$(l$, 1210, 3), "end", "MID$ far"
+' Many: the garbage collector
+DIM w$(200)
+FOR i = 0 TO 200
+    w$(i) = STR$(i) + STRING$(20, CHR$(65 + i MOD 26))
+NEXT
+FOR k = 1 TO 20
+    FOR i = 0 TO 200 STEP 7
+        w$(i) = STR$(i) + STRING$(20 + k, CHR$(65 + i MOD 26))
+    NEXT
+NEXT
+ok = -1
+FOR i = 0 TO 200
+    want$ = STR$(i) + STRING$(20, CHR$(65 + i MOD 26))
+    IF i MOD 7 = 0 THEN want$ = STR$(i) + STRING$(40, CHR$(65 + i MOD 26))
+    IF w$(i) <> want$ THEN ok = 0
+NEXT
+ck ok, -1, "after the collector"
+t$ = ""
+FOR i = 1 TO 500
+    t$ = t$ + CHR$(48 + i MOD 10)
+NEXT
+ck LEN(t$), 500, "built up"
+cks MID$(t$, 491, 10), "1234567890", "its end"
+PRINT "strings:"; checks; "checks,"; failed; "failed"

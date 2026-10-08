@@ -1,90 +1,121 @@
-10 REM FLOW.BAS: FOR, NEXT, GOTO, GOSUB,
-11 REM RETURN, ON, IF ... THEN LINE
-20 N$="FLOW"
-100 S=0:FOR I=1 TO 10:S=S+I:NEXT
-101 X=S:E=55:GOSUB 9000
-102 X=I:E=11:GOSUB 9000
-103 S=0:FOR I=1 TO 10 STEP 2:S=S+I:NEXT
-104 X=S:E=25:GOSUB 9000
-105 S=0:FOR I=10 TO 1 STEP -3:S=S+I:NEXT
-106 X=S:E=22:GOSUB 9000
-107 C=0:FOR I=1 TO 0:C=C+1:NEXT
-108 X=C:E=1:GOSUB 9000
-109 C=0:FOR I=0 TO 1 STEP .25:C=C+1:NEXT
-110 X=C:E=5:GOSUB 9000
-111 C=0:FOR I=1 TO 3:FOR J=1 TO 3
-112 C=C+1:NEXT J,I:X=C:E=9:GOSUB 9000
-113 C=0:FOR I=1 TO 3:FOR J=1 TO I
-114 C=C+1:NEXT:NEXT:X=C:E=6:GOSUB 9000
-115 C=0:FOR I=5 TO 5:C=C+1:NEXT
-116 X=C:E=1:GOSUB 9000
-117 C=0:FOR I=1 TO 10:C=C+1:I=I+1:NEXT
-118 X=C:E=5:GOSUB 9000
-119 C=0:FOR I=1 TO 3:FOR I=1 TO 2:C=C+1
-120 NEXT I:X=C:E=2:GOSUB 9000
-121 C=0:L=3:FOR I=1 TO L:L=10:C=C+1:NEXT
-122 X=C:E=3:GOSUB 9000
-123 S=0:FOR I=-2 TO 2:S=S+I*I:NEXT
-124 X=S:E=10:GOSUB 9000
-125 C=0:FOR I=1 TO 2:FOR J=1 TO 2
-126 FOR K=1 TO 2:C=C+1:NEXT K,J,I
-127 X=C:E=8:GOSUB 9000
-130 X=0:GOSUB 9200:E=1:GOSUB 9000
-131 X=0:GOSUB 9210:E=3:GOSUB 9000
-132 D=0:N=10:GOSUB 9220:X=D:E=10:GOSUB 9000
-133 X=0:GOSUB 9200:GOSUB 9200:E=2:GOSUB 9000
-140 X=0:ON 2 GOTO 141,142,143
-141 X=1:GOTO 144
-142 X=2:GOTO 144
-143 X=3
-144 E=2:GOSUB 9000
-145 X=0:ON 0 GOTO 141,142,143
-146 E=0:GOSUB 9000
-147 X=0:ON 4 GOTO 141,142,143
-148 E=0:GOSUB 9000
-149 X=0:ON 1 GOSUB 9200,9210:E=1:GOSUB 9000
-150 X=0:ON 2 GOSUB 9200,9210:E=3:GOSUB 9000
-151 X=0:K=3:ON K-1 GOTO 152,153
-152 X=1:GOTO 154
-153 X=2
-154 E=2:GOSUB 9000
-155 X=0:ON 1.7 GOTO 156,157
-156 X=1:GOTO 158
-157 X=2
-158 E=1:GOSUB 9000
-160 X=0:IF 1 THEN 162
-161 X=1
-162 E=0:GOSUB 9000
-163 X=0:IF 0 THEN 165
-164 X=1
-165 E=1:GOSUB 9000
-166 X=0:IF 1 GOTO 168
-167 X=1
-168 E=0:GOSUB 9000
-170 X=0:GOTO 172
-171 X=1
-172 E=0:GOSUB 9000
-173 C=0
-174 C=C+1:IF C<5 THEN 174
-175 X=C:E=5:GOSUB 9000
-176 X=1:FOR I=1 TO 6:X=X*I:NEXT
-177 E=720:GOSUB 9000
-178 X=0:GOSUB 9230:E=4:GOSUB 9000
-179 FOR I=1 TO 3:GOSUB 9240:NEXT
-180 X=Z:E=3:GOSUB 9000
-8999 GOTO 9900
-9000 T=T+1:IF X=E THEN RETURN
-9010 IF E=0 THEN 9030
-9020 IF ABS((X-E)/E)<1E-8 THEN RETURN
-9030 F=F+1:PRINT "FAIL";T;X;E
-9040 RETURN
-9100 T=T+1:IF X$=E$ THEN RETURN
-9110 F=F+1:PRINT "FAIL";T;"[";X$;"][";E$;"]"
-9120 RETURN
-9200 X=X+1:RETURN
-9210 X=X+1:GOSUB 9200:GOSUB 9200:RETURN
-9220 IF N=0 THEN RETURN
-9221 D=D+1:N=N-1:GOSUB 9220:RETURN
-9230 FOR J=1 TO 4:X=X+1:NEXT:RETURN
-9240 Z=Z+1:RETURN
-9900 PRINT N$;":";T;"CHECKS,";F;"FAILED"
+' flow.bas - FOR (exact steps), DO and LOOP in their forms, WHILE, EXIT, GOTO, GOSUB and RETURN, ON ... GOTO and GOSUB,
+' labels and line numbers (in any order), a line's continuation
+DIM SHARED checks, failed
+SUB ck (got, want, what$)
+    checks = checks + 1
+    IF got <> want THEN failed = failed + 1: PRINT "FAIL "; what$; ":"; got; "not"; want
+END SUB
+
+' FOR
+n = 0: FOR i = 1 TO 10: n = n + i: NEXT
+ck n, 55, "FOR"
+ck i, 11, "past its end"
+n = 0: FOR i = 0 TO 1 STEP 0.1: n = n + 1: NEXT
+ck n, 11, "STEP 0.1: 11 times, exactly"
+n = 0: FOR i = 0 TO 1 STEP 1 / 3: n = n + 1: NEXT
+ck n, 4, "STEP 1/3"
+ck i, 4 / 3, "STEP 1/3: its end"
+n = 0: FOR i = 10 TO 1 STEP -2: n = n + i: NEXT i
+ck n, 30, "STEP -2"
+n = 0: FOR i = 5 TO 1: n = n + 1: NEXT
+ck n, 0, "none"
+n = 0: FOR i = 2 ^ 64 TO 2 ^ 64 + 2: n = n + 1: NEXT
+ck n, 3, "big"
+n = 0
+FOR i = 1 TO 3
+    FOR j = 1 TO 4
+        n = n + 1
+NEXT j, i
+ck n, 12, "NEXT j, i"
+n = 0: e = 3
+FOR i = 1 TO e: e = 10: n = n + 1: NEXT
+ck n, 3, "its end read once"
+' DO, WHILE
+n = 0: DO WHILE n < 5: n = n + 1: LOOP
+ck n, 5, "DO WHILE"
+n = 0: DO UNTIL n = 7: n = n + 1: LOOP
+ck n, 7, "DO UNTIL"
+n = 10: DO: n = n + 1: LOOP WHILE n < 5
+ck n, 11, "LOOP WHILE: once"
+n = 0: DO: n = n + 2: LOOP UNTIL n >= 9
+ck n, 10, "LOOP UNTIL"
+n = 0
+DO
+    n = n + 1
+    IF n = 6 THEN EXIT DO
+LOOP
+ck n, 6, "EXIT DO"
+n = 0: WHILE n < 4: n = n + 1: WEND
+ck n, 4, "WHILE"
+n = 0
+WHILE n < 100
+    n = n + 1
+    k = 0
+    WHILE k < n: k = k + 1: WEND
+WEND
+ck n + k, 200, "WHILE in WHILE"
+n = 0
+FOR i = 1 TO 100
+    IF i = 9 THEN EXIT FOR
+    n = n + 1
+NEXT
+ck n * 100 + i, 809, "EXIT FOR"
+n = 0
+FOR i = 1 TO 3
+    DO
+        n = n + 1
+        IF n MOD 2 = 0 THEN EXIT DO
+    LOOP
+NEXT
+ck n, 6, "EXIT DO in FOR"
+' GOTO
+n = 0
+again:
+n = n + 1
+IF n < 3 THEN GOTO again
+ck n, 3, "GOTO back"
+GOTO ahead
+ck 0, 1, "GOTO ahead"
+ahead: ck 1, 1, "GOTO ahead"
+' GOSUB
+n = 0
+GOSUB addOne: GOSUB addOne
+ck n, 2, "GOSUB"
+GOSUB twice
+ck n, 4, "GOSUB in GOSUB"
+GOSUB elsewhere
+ck 0, 1, "RETURN label"
+back: ck n, 5, "RETURN label"
+' ON
+FOR i = 0 TO 4
+    r = 0
+    ON i GOTO o1, o2, o3
+    r = -1
+    GOTO onDone
+o1: r = 1: GOTO onDone
+o2: r = 2: GOTO onDone
+o3: r = 3
+onDone:
+    IF i = 0 OR i = 4 THEN ck r, -1, "ON out of range" ELSE ck r, i, "ON GOTO"
+NEXT
+r = 0: ON 2 GOSUB s1, s2: ck r, 20, "ON GOSUB"
+' Line numbers, in any order
+GOTO 300
+200 ck 0, 1, "line 200 passed"
+300 ck 1, 1, "GOTO 300"
+GOSUB 50
+ck r, 50, "GOSUB 50"
+' A line's continuation
+x = 1 + _
+    2 + _
+    3
+ck x, 6, "_"
+PRINT "flow:"; checks; "checks,"; failed; "failed"
+END
+
+addOne: n = n + 1: RETURN
+twice: GOSUB addOne: GOSUB addOne: RETURN
+elsewhere: n = n + 1: RETURN back
+s1: r = 10: RETURN
+s2: r = 20: RETURN
+50 r = 50: RETURN
