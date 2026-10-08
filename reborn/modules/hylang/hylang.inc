@@ -81,9 +81,10 @@ PK_QCONS        = 4             ; A Q-expression's (a list's) cons
 PK_SCOPED       = 5             ; A Q-expression and the scope it was written in (NIL: the global one); an fexpr's
                                 ;   argument (an S-expression, a symbol) and its caller's scope
 PK_STRING       = 6             ; A string: its length, its blob
-PK_NUMBER       = 7             ; A number past a fixnum: its length, its blob (its bytes in the stored format, in its
-                                ;   one form: numlib.inc's, the numbers library's)
-PK_FREE8        = 8             ; (No kind: once a fixed decimal's, a rational's, a complex number's: PK_NUMBER now)
+PK_NUMBER       = 7             ; A number past a fixnum, of 8 bytes or more: its length, its blob (its bytes in the
+                                ;   stored format, in its one form: numlib.inc's, the numbers library's)
+PK_SNUM         = 8             ; A number past a fixnum, of 1-7 bytes: in the cell itself (8 bytes, no blob), its
+                                ;   length, then its bytes
 PK_FREE9        = 9
 PK_FREE10       = 10
 PK_ERROR        = 11            ; An error: its message, its code

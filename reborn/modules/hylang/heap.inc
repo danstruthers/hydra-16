@@ -1642,12 +1642,12 @@ heap_free:
 ; ---- The kinds of cell: each one's size, its words that aren't values (a bit each, words 0-3: a frame's past the
 ; fourth are all values), the word that's its blob ($FF: none), and its spine ($FF: none)
 kd_size:    .byte       0, 0, 0                             ; (PK_NONE, PK_IMM, PK_FREE)
-            .byte       4, 4, 4, 4, 4, 4, 4, 4, 4           ; (PK_SCONS to PK_ERROR)
+            .byte       4, 4, 4, 4, 4, 8, 4, 4, 4           ; (PK_SCONS to PK_ERROR)
             .byte       4, 8, 8, 16, 8, 8                   ; (PK_PARTIAL to PK_STREAM)
             .byte       8, 16, 32, 64                       ; (The frames)
             .byte       4                                   ; (PK_BUFFER)
 kd_raw:     .byte       0, 0, 0
-            .byte       %0000, %0000, %0000, %0011, %0011, %0000, %0000, %0000, %0000
+            .byte       %0000, %0000, %0000, %0011, %0011, %1111, %0000, %0000, %0000
             .byte       %0000, %1001, %1001, %1000, %1000, %1111
             .byte       %0000, %0000, %0000, %0000
             .byte       %0011
@@ -1664,7 +1664,7 @@ kd_spine:   .byte       $FF, $FF, $FF
 ; ... and, for a cell of two values (4 bytes), the collector's quickest way (0: the general): 1, the second the spine
 ; (a cons); 2, the first (a scoped list); 3, no spine
 kd_two:     .byte       0, 0, 0
-            .byte       1, 1, 2, 0, 0, 3, 3, 3, 3
+            .byte       1, 1, 2, 0, 0, 0, 3, 3, 3
             .byte       1, 0, 0, 0, 0, 0
             .byte       0, 0, 0, 0
             .byte       0
