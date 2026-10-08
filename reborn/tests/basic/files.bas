@@ -1,79 +1,106 @@
-10 REM FILES.BAS: OPEN (READ, WRITE, APPEND), CLOSE, PRINT#, INPUT#,
-11 REM GET#, EOF, FOUR CHANNELS AT ONCE, SAVE: FILES WRITTEN, READ BACK
-20 N$="FILES"
-100 OPEN 1,"F1.TXT","W":PRINT #1,"LINE ONE":PRINT #1,42
-101 PRINT #1,"A";"B";1;2:PRINT #1,"X,Y":CLOSE 1
-102 OPEN 1,"F1.TXT":INPUT #1,A$:X$=A$:E$="LINE ONE":GOSUB 9100
-103 INPUT #1,A:X=A:E=42:GOSUB 9000
-104 INPUT #1,B$:X$=B$:E$="AB 1  2 ":GOSUB 9100
-105 X=EOF(1):E=0:GOSUB 9000
-106 INPUT #1,C$,D$:X$=C$+D$:E$="XY":GOSUB 9100
-107 X=EOF(1):E=-1:GOSUB 9000
-108 CLOSE 1:X$=A$+B$:E$="LINE ONEAB 1  2 ":GOSUB 9100
-110 OPEN 2,"F1.TXT","A":PRINT #2,"APPENDED":CLOSE 2
-111 OPEN 3,"F1.TXT":N=0:L=0
-112 IF EOF(3) THEN 115
-113 GET #3,C$:N=N+1:IF C$=CHR$(10) THEN L=L+1
-114 GOTO 112
-115 X=L:E=5:GOSUB 9000
-116 X=N:E=36:GOSUB 9000
-117 GET #3,C$:X=LEN(C$):E=0:GOSUB 9000
-118 CLOSE 3
-120 OPEN 1,"F1.TXT","W":PRINT #1,"SHORT":CLOSE 1
-121 OPEN 1,"F1.TXT":N=0
-122 IF EOF(1) THEN 124
-123 GET #1,C$:N=N+1:GOTO 122
-124 CLOSE 1:X=N:E=6:GOSUB 9000
-130 OPEN 1,"F2.TXT","W":OPEN 2,"F3.TXT","W"
-131 FOR I=1 TO 50:PRINT #1,I:PRINT #2,I*I:NEXT:CLOSE
-132 OPEN 1,"F2.TXT":OPEN 2,"F3.TXT":S=0
-133 FOR I=1 TO 50:INPUT #1,A:INPUT #2,B
-134 IF B<>A*A OR A<>I THEN S=S+1
-135 NEXT:X=S:E=0:GOSUB 9000
-136 X=A*1000+B:E=52500:GOSUB 9000
-137 X=EOF(1)+EOF(2):E=-2:GOSUB 9000
-138 CLOSE
-140 FOR K=1 TO 4:OPEN K,"G"+MID$(STR$(K),2)+".TXT","W"
-141 NEXT:FOR K=4 TO 1 STEP -1:PRINT #K,"CH";K*11:NEXT:CLOSE
-142 S$="":FOR K=1 TO 4:OPEN K,"G"+MID$(STR$(K),2)+".TXT"
-143 INPUT #K,A$:S$=S$+A$+"/":NEXT:CLOSE
-144 X$=S$:E$="CH 11 /CH 22 /CH 33 /CH 44 /":GOSUB 9100
-150 L$="":FOR I=1 TO 20:L$=L$+"0123456789":NEXT
-151 OPEN 1,"F4.TXT","W":PRINT #1,L$:PRINT #1,"A";:PRINT #1,"B"
-152 PRINT #1,"C","D":PRINT #1:PRINT #1,"END":CLOSE 1
-153 OPEN 1,"F4.TXT":INPUT #1,A$:X=LEN(A$):E=200:GOSUB 9000
-154 X$=RIGHT$(A$,3):E$="789":GOSUB 9100
-155 INPUT #1,A$:X$=A$:E$="AB":GOSUB 9100
-156 INPUT #1,A$:X=LEN(A$):E=15:GOSUB 9000
-157 X$=LEFT$(A$,1)+RIGHT$(A$,1):E$="CD":GOSUB 9100
-158 GET #1,C$:X=ASC(C$):E=10:GOSUB 9000
-159 INPUT #1,A$:X$=A$:E$="END":GOSUB 9100
-160 X=EOF(1):E=-1:GOSUB 9000
-161 CLOSE 1
-170 OPEN 1,"F5.TXT","W":CLOSE 1
-171 OPEN 1,"F5.TXT":X=EOF(1):E=-1:GOSUB 9000
-172 CLOSE 1
-173 OPEN 1,"F5.TXT","W":PRINT #1,-1.5;",";1E10:CLOSE 1
-174 OPEN 1,"F5.TXT":INPUT #1,A,B:CLOSE 1
-175 X=A:E=-1.5:GOSUB 9000
-176 X=B:E=1E10:GOSUB 9000
-180 SAVE "P.BAS"
-181 OPEN 1,"P.BAS":A$=""
-182 GET #1,C$:IF C$<>CHR$(10) THEN A$=A$+C$:GOTO 182
-183 CLOSE 1:X$=LEFT$(A$,20):E$="10 REM FILES.BAS: OP":GOSUB 9100
-184 X=LEN(A$):E=68:GOSUB 9000
-185 SAVE "P.TOK",B
-186 OPEN 1,"P.TOK":A$="":FOR I=1 TO 6:GET #1,C$:A$=A$+C$:NEXT
-187 CLOSE 1:X$=LEFT$(A$,5):E$="HYBAS":GOSUB 9100
-188 X=ASC(RIGHT$(A$,1)):E=1:GOSUB 9000
-189 X=N:E=6:GOSUB 9000
-8999 GOTO 9900
-9000 T=T+1:IF X=E THEN RETURN
-9010 IF E=0 THEN 9030
-9020 IF ABS((X-E)/E)<1E-8 THEN RETURN
-9030 F=F+1:PRINT "FAIL";T;X;E
-9040 RETURN
-9100 T=T+1:IF X$=E$ THEN RETURN
-9110 F=F+1:PRINT "FAIL";T;"[";X$;"][";E$;"]"
-9120 RETURN
-9900 PRINT N$;":";T;"CHECKS,";F;"FAILED"
+' files.bas - files: OPEN FOR OUTPUT, APPEND, INPUT, BINARY; PRINT #, WRITE #, PRINT # USING; INPUT #, LINE INPUT #,
+' INPUT$; EOF, LOF, LOC, SEEK; GET and PUT; FREEFILE; several open; KILL, NAME, MKDIR, CHDIR, RMDIR, DIR$ (written on
+' the card)
+DIM SHARED checks, failed
+SUB ck (got, want, what$)
+    checks = checks + 1
+    IF got <> want THEN failed = failed + 1: PRINT "FAIL "; what$; ":"; got; "not"; want
+END SUB
+SUB cks (got$, want$, what$)
+    checks = checks + 1
+    IF got$ <> want$ THEN failed = failed + 1: PRINT "FAIL "; what$; ": ["; got$; "] not ["; want$; "]"
+END SUB
+
+' Written, read back
+OPEN "f1.txt" FOR OUTPUT AS #1
+FOR i = 1 TO 3: PRINT #1, i; i * i: NEXT
+PRINT #1, "a line, with a comma"
+WRITE #1, "quoted", 1 / 3, -2
+PRINT #1, USING "##.##"; 3.14159
+CLOSE #1
+OPEN "f1.txt" FOR INPUT AS #1
+s = 0
+FOR i = 1 TO 3: INPUT #1, a, b: s = s + a + b: NEXT
+ck s, 20, "INPUT # numbers"
+LINE INPUT #1, l$
+cks l$, "a line, with a comma", "LINE INPUT #"
+INPUT #1, q$, f, n
+cks q$, "quoted", "WRITE #'s string"
+ck f, 1 / 3, "WRITE #'s number, exact"
+ck n, -2, "WRITE #'s -2"
+LINE INPUT #1, u$
+cks u$, " 3.14", "PRINT # USING"
+ck EOF(1), -1, "EOF at the end"
+CLOSE #1
+' APPEND
+OPEN "f1.txt" FOR APPEND AS #2
+PRINT #2, "more"
+CLOSE #2
+OPEN "f1.txt" FOR INPUT AS #2
+k = 0
+DO UNTIL EOF(2): LINE INPUT #2, l$: k = k + 1: LOOP
+ck k, 7, "APPEND: a line more"
+cks l$, "more", "its last"
+CLOSE
+' INPUT$, LOF, LOC, SEEK
+OPEN "f2.txt" FOR OUTPUT AS #3
+PRINT #3, "abcdefghij";
+CLOSE #3
+OPEN "f2.txt" FOR BINARY AS #3
+ck LOF(3), 10, "LOF"
+cks INPUT$(3, #3), "abc", "INPUT$"
+ck LOC(3), 3, "LOC"
+ck SEEK(3), 4, "SEEK()"
+SEEK #3, 8
+cks INPUT$(2, #3), "hi", "SEEK #"
+' GET and PUT
+s$ = "XYZ"
+PUT #3, 1, s$
+SEEK #3, 1
+g$ = SPACE$(4)
+GET #3, , g$
+cks g$, "XYZd", "PUT a string, GET it"
+big = 2 ^ 70 + 1 / 3: PUT #3, 11, big
+GET #3, 11, back
+ck back, 2 ^ 70 + 1 / 3, "PUT a number, GET it"
+ck LOF(3), 10 + LEN(MKN$(2 ^ 70 + 1 / 3)), "its bytes: MKN$'s"
+CLOSE #3
+' FREEFILE, several open
+n1 = FREEFILE
+OPEN "f1.txt" FOR INPUT AS n1
+n2 = FREEFILE
+OPEN "f2.txt" FOR INPUT AS #n2
+ck n2 <> n1, -1, "FREEFILE: the next"
+LINE INPUT #n1, a$: LINE INPUT #n2, b$
+cks a$ + "|" + LEFT$(b$, 3), " 1  1 |XYZ", "two open"
+CLOSE n1, n2
+' Past the end
+OPEN "f2.txt" FOR INPUT AS #4
+LINE INPUT #4, a$
+ON ERROR GOTO bad
+e = 0: LINE INPUT #4, a$
+ck e, 62, "input past end of file"
+ON ERROR GOTO 0
+CLOSE #4
+' Files and directories
+MKDIR "sub"
+OPEN "sub/in.txt" FOR OUTPUT AS #1: PRINT #1, "inside": CLOSE #1
+NAME "sub/in.txt" AS "sub/moved.txt"
+cks DIR$("sub"), "moved.txt", "DIR$: NAME's"
+cks DIR$, "", "DIR$: no more"
+CHDIR "sub"
+OPEN "moved.txt" FOR INPUT AS #1: LINE INPUT #1, a$: CLOSE #1
+cks a$, "inside", "CHDIR"
+KILL "moved.txt"
+CHDIR ".."
+RMDIR "sub"
+ON ERROR GOTO bad
+e = 0: CHDIR "sub"
+ck e, 53, "RMDIR: gone"
+ON ERROR GOTO 0
+KILL "f1.txt": KILL "f2.txt"
+PRINT "files:"; checks; "checks,"; failed; "failed"
+END
+bad:
+e = ERR
+RESUME NEXT

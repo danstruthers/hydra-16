@@ -1,29 +1,32 @@
-10 INPUT A: PRINT A*2
-20 INPUT "TWO";B,C: PRINT B+C
-30 INPUT A$,B$: PRINT A$;"|";B$
-40 INPUT "Q";Q$,R$: PRINT "[";Q$;"]"
-50 INPUT N: PRINT N
-60 INPUT X,Y: PRINT X;Y
-70 INPUT S$: PRINT S$;LEN(S$)
-80 INPUT T$: PRINT T$
-90 PRINT A$;B$;Q$;S$;T$
+10 INPUT a: PRINT a * 2
+20 INPUT "Two"; b, c: PRINT b + c
+30 INPUT a$, b$: PRINT a$; "|"; b$
+40 INPUT "Q", q$: PRINT "["; q$; "]"
+50 INPUT n: PRINT n
+60 INPUT x, y: PRINT x; y
+70 LINE INPUT "Line: "; l$: PRINT "["; l$; "]"
+80 INPUT s$: PRINT s$; LEN(s$)
+90 INPUT f: PRINT f
+100 INPUT e: PRINT e
+110 INPUT ; "no new line"; z: PRINT "|"; z
 RUN
 21
 3,4
 "A,B",hello
-  spaced  ,x
+  spaced  
 abc
 5
 1
 2,3
-x:y
+  a line, "with" commas  
 "quoted: kept"
-NEW
-10 INPUT "NUMBER";A: PRINT "GOT";A
-20 PRINT "AFTER"
-RUN
+1/3
 
-PRINT "STOPPED";A
-CONT
+1E3
+NEW
+10 INPUT "Number"; a: PRINT "got"; a
+20 PRINT "after"
+RUN
+x
 7
-PRINT "LAST"
+PRINT "last"

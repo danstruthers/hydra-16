@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // ****************************************************************************
-// apigen.js - makes everything the system calls' specification implies (spec/api.def, spec/errors.def), so the
-// calls are written down once (docs/design/reimplementation-from-scratch.md, principle P9):
+// apigen.js - makes everything the system calls' specification implies (spec/api.def, spec/errors.def) and the
+// number libraries' (spec/numbers.def), so the calls are written down once (docs/design/reimplementation-from-scratch.md,
+// principle P9):
 //   obj/gen/jumptable.s   the jump table on BIOS ROM page 0 ($F800 up), a jmp per slot (spare slots: K_NOSYS)
 //   obj/gen/errors.inc    the error codes, for the kernel
 //   obj/gen/errtext.s     their texts, for ERRSTR
@@ -14,10 +15,15 @@
 //   obj/gen/forthsys.inc  HyForth's sys- words, for its Hydra library (forthlib/hydra.s)
 //   obj/gen/hylsys.inc    hylang's sys- functions, the calls' records (modules/hylang/hysys.inc), from the hl: lines
 //   obj/gen/hydra.fs      the constants and error codes for HyForth, a library on the ROM disk (/lib/forth)
-//   obj/gen/basicsys.inc  BASIC's SYS "NAME": the calls a program makes, by name (modules/basic/hyio.inc)
+//   obj/gen/basicsys.inc  BASIC's SYS "NAME": the calls a program makes, by name (modules/basic/machine.inc)
+//   obj/sdk/numbers.inc   the number libraries' entries (NUM_ADD ...), constants and call macros, for programs in
+//                         assembly
+//   obj/sdk/c/numdefs.h   their constants, for C (num.h includes it)
+//   obj/gen/numbers_jt.inc, math_jt.inc   each number library's jump table (its module includes it)
 //
 // Usage: node tools/apigen.js [ROOT]       (ROOT: the reborn folder; default: this file's parent)
-// From Node: require('./apigen.js').generate(root) gives { calls, errors, consts, groups }.
+// From Node: require('./apigen.js').generate(root) gives { calls, errors, consts, groups, numbers }; readNumbers(file)
+// reads spec/numbers.def alone.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -82,6 +88,40 @@ function readErrors(file) {
     errors.push({ name: m[1], code, text: m[3], errno: m[4] });
   });
   return errors;
+}
+
+// The number libraries (spec/numbers.def): each library's entries in its slots' order (its jump table at $A030, after
+// its header), with the prefix of their names in assembly (NUM_ADD, MATH_SQRT); and their constants
+const NUM_PREFIX = { numbers: 'NUM_', math: 'MATH_' }, NUM_TABLE = 0xA030;
+function readNumbers(file) {
+  const libs = [], entries = [], consts = [];
+  let entry = null;
+  fs.readFileSync(file, 'utf8').split(/\r?\n/).forEach((raw, i) => {
+    const line = raw.replace(/\s+$/, ''), n = i + 1;
+    if (!line.trim() || line.trim().startsWith('#')) return;
+    let m;
+    if ((m = line.match(/^library\s+(\w+)\s+"([^"]*)"$/))) {
+      if (!NUM_PREFIX[m[1]]) fail(file, n, 'library ' + m[1] + ': no prefix for its entries\' names (apigen.js, NUM_PREFIX)');
+      libs.push({ name: m[1], doc: m[2], entries: [] }); entry = null;
+    } else if ((m = line.match(/^entry\s+(\w+)\s+(\w+)\s+impl=(\w+)$/))) {
+      const lib = libs.find(l => l.name === m[2]);
+      if (!lib) fail(file, n, 'no library ' + m[2]);
+      if (lib.entries.find(e => e.name === m[1])) fail(file, n, 'entry ' + m[1] + ' twice');
+      entry = { name: m[1], lib: lib.name, impl: m[3], symbol: NUM_PREFIX[lib.name] + m[1], addr: NUM_TABLE + 3 * lib.entries.length,
+        in: [], out: [], errors: [], names: '', doc: [], line: n };
+      lib.entries.push(entry); entries.push(entry);
+    } else if ((m = line.match(/^const\s+(\w+)\s+(\$?[0-9A-Fa-f]+)(?:\s+"([^"]*)")?$/))) {
+      consts.push({ name: m[1], value: num(m[2]), text: m[2], doc: m[3] || '' }); entry = null;
+    } else if ((m = line.match(/^\s+(in|out|errors|names|doc):\s*(.*)$/))) {
+      if (!entry) fail(file, n, m[1] + ': outside an entry');
+      const v = m[2].trim();
+      if (m[1] === 'errors') { if (v !== '-') entry.errors.push(...v.split(/[\s,]+/).filter(Boolean)); }
+      else if (m[1] === 'names') entry.names = v;
+      else if (v !== '-') entry[m[1]].push(v);
+    } else fail(file, n, 'what is "' + line.trim() + '"?');
+  });
+  for (const e of entries) for (const x of e.errors) if (!consts.find(k => k.name === x)) fail(file, e.line, e.name + ': no error ' + x);
+  return { libs, entries, consts };
 }
 
 // ---- writing
@@ -167,6 +207,42 @@ function sdkInc(api, errors) {
   return s;
 }
 
+// The number libraries, for programs in assembly: each entry's address (XCALL's r15), and the constants
+function numbersInc(nums) {
+  let s = header(';', 'numbers.inc - the number libraries\' entries, constants and call macros, for programs in assembly');
+  s += '; A call (spec/numbers.def): XCALL, r15 the entry (its address here), r14 its library\'s bank (MODINFO finds it,' + CRLF;
+  s += '; by the library\'s name), r13 the libraries\' bank (a bank of the program\'s, which NUM_INIT fills); r0-r3 the' + CRLF;
+  s += '; operands, the result\'s place and its room; .A/.X the result\'s length, C = 0; or C = 1 and .A an error (NE_).' + CRLF;
+  s += '; NUMCALL NUM_ADD (an entry of the numbers library\'s) and MATHCALL MATH_SQRT (the math library\'s) make one, .A,' + CRLF;
+  s += '; .X and .Y the entry\'s, from three bytes of the program\'s: num_bank (r13), num_mod and math_mod (r14), which' + CRLF;
+  s += '; numlib.s\'s num_open sets (or the program\'s own code).' + CRLF;
+  for (const [m, mod] of [['NUMCALL', 'num_mod'], ['MATHCALL', 'math_mod']]) {
+    s += CRLF + '.macro ' + pad(m, 12) + 'entry' + CRLF;
+    for (const l of ['pha', 'lda #<(entry)', 'sta r15', 'lda #>(entry)', 'sta r15 + 1', 'lda ' + mod, 'sta r14', 'lda num_bank', 'sta r13', 'pla',
+      'jsr XCALL'])
+      s += ('            ' + pad(l.split(' ')[0], 12) + l.split(' ').slice(1).join(' ')).trimEnd() + CRLF;
+    s += '.endmacro' + CRLF;
+  }
+  for (const l of nums.libs) {
+    s += CRLF + '; ---- ' + l.name + ': ' + l.doc + CRLF;
+    for (const e of l.entries) {
+      s += pad(e.symbol, 16) + '= ' + hx(e.addr, 4) + '       ; ' + (e.in.join(' ') || '-') + CRLF;
+      if (e.out.length) s += pad('', 30) + '; -> ' + e.out.join(' ') + CRLF;
+    }
+  }
+  s += CRLF + '; ---- constants' + CRLF;
+  for (const k of nums.consts) s += pad(k.name, 16) + '= ' + pad(k.text, 12) + (k.doc ? '; ' + k.doc : '') + CRLF;
+  return s;
+}
+
+// A number library's jump table (its module includes it right after its header): a jmp to each entry's code
+function numbersJt(lib) {
+  let s = header(';', lib.name + '_jt.inc - the ' + lib.name + ' library\'s jump table, after its header');
+  s += CRLF + '.code' + CRLF + '.assert     * = ' + hx(NUM_TABLE, 4) + ', lderror, "The ' + lib.name + ' library\'s jump table isn\'t right after its header"' + CRLF;
+  for (const e of lib.entries) s += '            jmp         ' + pad(e.impl, 24) + '; ' + hx(e.addr, 4) + ' ' + e.name + CRLF;
+  return s;
+}
+
 // C: the calls (their slots: hy_call), the error codes and the constants, each name with HY_ before it
 function cHeader(api, errors) {
   const cx = v => '0x' + v.toString(16).toUpperCase();
@@ -184,6 +260,16 @@ function cHeader(api, errors) {
   for (const e of errors) s += def(e.name, cx(e.code), e.text);
   s += CRLF + '/* ---- constants */' + CRLF;
   for (const k of api.consts) s += def(k.name, k.text.startsWith('$') ? '0x' + k.text.slice(1) : k.text, k.doc);
+  s += CRLF + '#endif' + CRLF;
+  return s;
+}
+
+// C: the number libraries' constants (num.h includes them), named as in assembly
+function cNumHeader(nums) {
+  const def = (name, value, doc) => ('#define ' + pad(name, 24) + pad(value, 10) + (doc ? '/* ' + doc.replace(/\*\//g, '* /') + ' */' : '')).trimEnd() + CRLF;
+  let s = '/*' + CRLF + '** numdefs.h - the number libraries\' constants, for C (cc65).  Made by tools/apigen.js from spec/numbers.def:' + CRLF;
+  s += '** don\'t edit.  num.h includes it.' + CRLF + '*/' + CRLF + CRLF + '#ifndef _NUMDEFS_H' + CRLF + '#define _NUMDEFS_H' + CRLF + CRLF;
+  for (const k of nums.consts) s += def(k.name, k.text.startsWith('$') ? '0x' + k.text.slice(1) : k.text, k.doc);
   s += CRLF + '#endif' + CRLF;
   return s;
 }
@@ -249,9 +335,9 @@ function forthSys(api) {
 }
 
 // ---- BASIC (modules/basic): SYS "NAME" calls one by its name.  basicsys.inc: each call a program makes (forth's),
-// its name (upper case, its last character's bit 7 set: bmacros.inc's htasc) and its address; a 0 after the last
+// its name (upper case, its last character's bit 7 set: machine.inc's htasc) and its address; a 0 after the last
 function basicSys(api) {
-  let s = header(';', 'basicsys.inc - BASIC\'s SYS "NAME": the calls a program makes, by name (modules/basic/hyio.inc)');
+  let s = header(';', 'basicsys.inc - BASIC\'s SYS "NAME": the calls a program makes, by name (modules/basic/machine.inc)');
   s += 'SYS_NAMES:' + CRLF;
   for (const c of forthCalls(api)) s += '            htasc       "' + c.name + '"' + CRLF + '            .word       ' + hx(c.addr, 4) + CRLF;
   return s + '            .byte       0' + CRLF;
@@ -426,14 +512,18 @@ function generate(root) {
   write(path.join(gen, 'hylsys.inc'), hylSys(api));
   write(path.join(gen, 'hydra.fs'), forthLib(api, errors));
   write(path.join(gen, 'basicsys.inc'), basicSys(api));
+  const nums = readNumbers(path.join(root, 'spec', 'numbers.def'));
+  write(path.join(root, 'obj', 'sdk', 'numbers.inc'), numbersInc(nums));
+  write(path.join(root, 'obj', 'sdk', 'c', 'numdefs.h'), cNumHeader(nums));
+  for (const l of nums.libs) write(path.join(gen, l.name + '_jt.inc'), numbersJt(l));
   write(path.join(gen, 'api.json'), JSON.stringify({
     calls: api.calls.map(c => ({ name: c.name, addr: c.addr, group: c.group, in: c.in.join(' '), out: c.out.join(' '), errors: c.errors, blocks: c.blocks })),
     errors, consts: api.consts.map(k => ({ name: k.name, value: k.value })),
   }, null, 1) + '\n');
-  return { groups: api.groups, calls: api.calls, consts: api.consts, errors };
+  return { groups: api.groups, calls: api.calls, consts: api.consts, errors, numbers: nums };
 }
 
-module.exports = { generate };
+module.exports = { generate, readNumbers };
 
 if (require.main === module) {
   try {

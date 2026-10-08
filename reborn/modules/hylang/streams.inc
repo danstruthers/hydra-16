@@ -710,7 +710,7 @@ bi_seek:
             sta         y_v
             stx         y_v + 1
             FARN        3, n_kind
-            cmp         #NK_CPX
+            cmp         #NK_COMPLEX
             bcc         :+
             LDAX        s_seeknum
             jmp         y_error

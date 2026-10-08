@@ -1256,6 +1256,8 @@ vm_wfok:
             bcs         @cell
             cpx         #>BUILTIN0
             bcc         @no
+            cpx         #>BUILTIN2                          ; (The second table's: the evaluator's)
+            bcs         @no
             txa
             lsr
             lda         vm_wf
@@ -2703,8 +2705,8 @@ vm_head:
             lsr
             bcs         @notfn
             ldx         ex + 1
-            cpx         #IMM_PAGES
-            bcs         @cell
+            cpx         #>BUILTIN2
+            bcs         @high
             cpx         #>BUILTIN0
             bcc         @notfn
             txa                                             ; (A built-in: not a special form, nor one that takes
@@ -2714,8 +2716,13 @@ vm_head:
             tax
             lda         vb_flags,x
             and         #BF_SPECIAL | BF_ERRORS
-            bne         @eval
+            beq         @lb200
+            jmp         @eval
+@lb200:
             bra         @push
+@high:
+            cpx         #IMM_PAGES                          ; (The second table's: ordinary, CALL's)
+            bcc         @push
 @cell:
             lda         pk,x
             cmp         #PK_FUNC
@@ -3909,7 +3916,10 @@ vm_cother:
 ; runs the machine or isn't given as many arguments as it takes (the evaluator's: partially applied, or an error)
 vm_cbuiltin:
             cpx         #>BUILTIN0
-            bcs         @lb845
+            bcc         :+
+            cpx         #>BUILTIN2                          ; (The second table's: the evaluator's)
+            bcc         @lb845
+:
             jmp         vm_cout
 @lb845:
             txa
@@ -7380,6 +7390,8 @@ vc_call:
             bcs         @cell
             cpx         #>BUILTIN0
             bcc         @any
+            cpx         #>BUILTIN2                          ; (The second table's: a call as any)
+            bcs         @any
             txa                                             ; (A built-in)
             lsr
             lda         vc_v
@@ -9424,30 +9436,31 @@ vo_bin:     .byte       BIN_ADD, BIN_SUB, BIN_LT, BIN_GT, BIN_LE, BIN_GE, BIN_EQ
             .byte       BIN_ONEP, BIN_ADD, BIN_SUB, BIN_LT, BIN_GT, BIN_LE, BIN_GE, BIN_EQ
 vo_n:       .byte       2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2
 
-; The built-ins' table again (builtins.inc's), for this bank: each one's least and most arguments, flags, code; and
+; The built-ins' table again (builtins.inc's: the first 256, the machine's own; the second table's are called through the
+; evaluator), for this bank: each one's least and most arguments, flags, code; and
 ; whether it looks at its caller's scope (vb_vf: VF_SCOPE)
 vb_min:
-.repeat BI_COUNT, I
+.repeat BI_FIRST, I
             .byte       .ident(.sprintf("bi_min_%d", I))
 .endrep
 vb_max:
-.repeat BI_COUNT, I
+.repeat BI_FIRST, I
             .byte       .ident(.sprintf("bi_max_%d", I))
 .endrep
 vb_flags:
-.repeat BI_COUNT, I
+.repeat BI_FIRST, I
             .byte       .ident(.sprintf("bi_fl_%d", I))
 .endrep
 vb_lo:
-.repeat BI_COUNT, I
+.repeat BI_FIRST, I
             .byte       <.ident(.sprintf("bi_cd_%d", I))
 .endrep
 vb_hi:
-.repeat BI_COUNT, I
+.repeat BI_FIRST, I
             .byte       >.ident(.sprintf("bi_cd_%d", I))
 .endrep
 vb_vf:
-.repeat BI_COUNT, I
+.repeat BI_FIRST, I
 .if I = BIN_LIST .or I = BIN_FN .or I = BIN_FUN .or I = BIN_FEXPR .or I = BIN_HASH_CREATE .or I = BIN_HASH_PUT .or I = BIN_TO_HASH
             .byte       VF_SCOPE
 .else
@@ -9479,6 +9492,6 @@ vq_op:      .byte       VO_ADD, VO_SUB, VO_LT, VO_GT, VO_LE, VO_GE, VO_NEQ, VO_I
 vc_bits:    .byte       1, 2, 4, 8, 16, 32, 64, 128
 
 vc_bflags:
-.repeat BI_COUNT, I
+.repeat BI_FIRST, I
             .byte       .ident(.sprintf("bi_fl_%d", I))
 .endrep

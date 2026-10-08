@@ -6,15 +6,16 @@
 ; bound as it's first looked up, unbound (eval.inc's lookup: sys_lazy), to sys partially applied to the name's atom:
 ; 58 functions, and no more built-ins than sys.
 ;   What a call reads and fills (its strings, a list's, a buffer, a stat record) is put in the reader's scratch, in
-; its last SYS_ROOM bytes: past the number registers, and idle while a built-in runs (the reader's strings and
-; names, and a number's digits as it's written, aren't made meanwhile).  A failure is the system's error, about the
+; its last SYS_ROOM bytes: past where a number is staged for the numbers library (numlib.inc's NL_A, NL_B, and NL_R's
+; first bytes: a call's numbers are 32 bits), and idle while a built-in runs (the reader's strings and names aren't
+; made meanwhile).  A failure is the system's error, about the
 ; call's first string ("x: not found", y_syserr's).
 
 SYS_ROOM        = 1536          ; The room for a call's strings and buffer (TASKREAD's: ENV_SIZE)
 SYS_REC         = 96            ; (A call's record, copied: hylsys.inc's, at most)
 sy_area         = scratch + SCRATCH_SIZE - SYS_ROOM
 sy_end          = scratch + SCRATCH_SIZE
-.assert     sy_area >= ((scratch + 255) & $FF00) + NREGS * 256, error, "sys's room runs into the number registers"
+.assert     sy_area >= NL_R + 16, error, "sys's room runs into the numbers' staging"
 
 .segment "RODATA6"
 .include "hylsys.inc"

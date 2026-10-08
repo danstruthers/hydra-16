@@ -1,59 +1,97 @@
-10 REM ARRAYS.BAS: ARRAYS OF NUMBERS,
-11 REM INTEGERS AND STRINGS, DIMENSIONS
-20 N$="ARRAYS"
-100 DIM A(10):A(0)=1:A(10)=2
-101 X=A(0)+A(10):E=3:GOSUB 9000
-102 X=A(5):E=0:GOSUB 9000
-103 B(5)=7:X=B(5):E=7:GOSUB 9000
-104 B(10)=8:X=B(10):E=8:GOSUB 9000
-110 DIM C(3,4)
-111 FOR I=0 TO 3:FOR J=0 TO 4
-112 C(I,J)=I*10+J:NEXT J,I
-113 X=C(3,4):E=34:GOSUB 9000
-114 X=C(0,0):E=0:GOSUB 9000
-115 X=C(2,1):E=21:GOSUB 9000
-116 S=0:FOR I=0 TO 3:FOR J=0 TO 4
-117 S=S+C(I,J):NEXT J,I
-118 X=S:E=340:GOSUB 9000
-120 DIM D%(5):D%(5)=-2:X=D%(5):E=-2:GOSUB 9000
-121 D%(0)=32767:X=D%(0):E=32767:GOSUB 9000
-122 D%(1)=3.9:X=D%(1):E=3:GOSUB 9000
-123 X=D%(2):E=0:GOSUB 9000
-124 FOR I=0 TO 5:D%(I)=I*I:NEXT
-125 X=D%(4)+D%(5):E=41:GOSUB 9000
-130 DIM E$(3):E$(2)="X":X$=E$(2)
-131 E$="X":GOSUB 9100
-132 X=LEN(E$(1)):E=0:GOSUB 9000
-133 E$(3)="ABC":X$=E$(3)+E$(2)
-134 E$="ABCX":GOSUB 9100
-140 DIM G(2,2,2):G(1,2,1)=5
-141 X=G(1,2,1):E=5:GOSUB 9000
-142 X=G(2,2,2)+G(0,0,0):E=0:GOSUB 9000
-143 G(2,2,2)=9:X=G(2,2,2):E=9:GOSUB 9000
-150 DIM H(0):H(0)=4:X=H(0):E=4:GOSUB 9000
-151 DIM K(1000):K(1000)=1:K(500)=2
-152 X=K(1000)+K(500):E=3:GOSUB 9000
-153 A(1)=3:A(3)=9:X=A(A(1)):E=9:GOSUB 9000
-154 I=2:A(I+1)=11:X=A(3):E=11:GOSUB 9000
-155 X=A(1.9):E=3:GOSUB 9000
-160 DIM M%(2,3):M%(2,3)=-7:X=M%(2,3)
-161 E=-7:GOSUB 9000
-162 DIM N$(2,2):N$(1,1)="Q":X$=N$(1,1)
-163 E$="Q":GOSUB 9100
-164 X=A(1)+D%(4)+LEN(E$(3)):E=22:GOSUB 9000
-170 DIM P(100):FOR I=0 TO 100:P(I)=I:NEXT
-171 S=0:FOR I=0 TO 100:S=S+P(I):NEXT
-172 X=S:E=5050:GOSUB 9000
-173 Q=0:R=0:DIM Q(5),R(5):Q(5)=1:R(5)=2
-174 X=Q(5)*10+R(5):E=12:GOSUB 9000
-175 X=Q+R:E=0:GOSUB 9000
-8999 GOTO 9900
-9000 T=T+1:IF X=E THEN RETURN
-9010 IF E=0 THEN 9030
-9020 IF ABS((X-E)/E)<1E-8 THEN RETURN
-9030 F=F+1:PRINT "FAIL";T;X;E
-9040 RETURN
-9100 T=T+1:IF X$=E$ THEN RETURN
-9110 F=F+1:PRINT "FAIL";T;"[";X$;"][";E$;"]"
-9120 RETURN
-9900 PRINT N$;":";T;"CHECKS,";F;"FAILED"
+' arrays.bas - arrays: DIM's forms (TO, dimensions), one made by its use (0 to 10), numbers of every kind and strings in
+' them, REDIM (PRESERVE), ERASE, LBOUND and UBOUND, an array and a variable of one name, SWAP, a big one
+DIM SHARED checks, failed
+SUB ck (got, want, what$)
+    checks = checks + 1
+    IF got <> want THEN failed = failed + 1: PRINT "FAIL "; what$; ":"; got; "not"; want
+END SUB
+
+DIM a(10)
+FOR i = 0 TO 10: a(i) = i * i: NEXT
+ck a(0) + a(10), 100, "DIM a(10)"
+ck LBOUND(a), 0, "LBOUND"
+ck UBOUND(a), 10, "UBOUND"
+DIM b(-5 TO 5)
+b(-5) = 1: b(5) = 2
+ck b(-5) + b(5), 3, "-5 TO 5"
+ck LBOUND(b), -5, "LBOUND -5"
+DIM g(1 TO 3, 1 TO 4)
+FOR i = 1 TO 3: FOR j = 1 TO 4: g(i, j) = i * 10 + j: NEXT j, i
+ck g(2, 3), 23, "two dimensions"
+ck g(3, 4), 34, "the last"
+ck UBOUND(g, 2), 4, "UBOUND 2"
+ck LBOUND(g, 1), 1, "LBOUND 1"
+DIM c(2, 2, 2)
+c(1, 2, 1) = 7: c(2, 2, 2) = 8
+ck c(1, 2, 1) * c(2, 2, 2), 56, "three dimensions"
+ck c(0, 0, 0), 0, "0 at the start"
+' Numbers of every kind
+DIM n(3)
+n(0) = 1 / 3: n(1) = 2 ^ 100: n(2) = 1 + 2i: n(3) = 0.125
+ck n(0) * 3, 1, "a fraction"
+ck n(1) / 2 ^ 99, 2, "big"
+ck n(2) * n(2), -3 + 4i, "complex"
+ck n(3) * 8, 1, "a fixed decimal"
+n(1) = 5
+ck n(1), 5, "big replaced"
+' Strings
+DIM s$(5)
+s$(0) = "zero": s$(5) = "five"
+ck s$(0) + s$(5) = "zerofive", -1, "strings"
+ck LEN(s$(3)), 0, "empty at the start"
+DIM t(3) AS STRING
+t(1) = "as string"
+ck t(1) = "as string", -1, "AS STRING"
+' Made by its use: 0 to 10
+u(10) = 4
+ck u(10), 4, "used before DIM"
+ck UBOUND(u), 10, "0 to 10"
+v$(2) = "x"
+ck v$(2) = "x", -1, "a string array used"
+w(3, 4) = 34
+ck w(3, 4), 34, "two dimensions used"
+' A variable and an array of one name
+a = 99
+ck a + a(3), 108, "a and a()"
+' REDIM, ERASE
+REDIM r(5)
+r(5) = 1
+REDIM r(20)
+ck r(5), 0, "REDIM empties"
+ck UBOUND(r), 20, "REDIM's size"
+r(1) = 11: r(20) = 20
+REDIM PRESERVE r(30)
+ck r(1) + r(20), 31, "REDIM PRESERVE"
+ck UBOUND(r), 30, "its new size"
+REDIM PRESERVE r(2)
+ck r(1), 11, "PRESERVE smaller"
+ERASE r
+REDIM r(3)
+ck r(1), 0, "ERASE"
+' SWAP
+x = 1: y = 2: SWAP x, y
+ck x * 10 + y, 21, "SWAP"
+SWAP a(1), a(2)
+ck a(1) * 10 + a(2), 41, "SWAP elements"
+p$ = "p": q$ = "q": SWAP p$, q$
+ck p$ + q$ = "qp", -1, "SWAP strings"
+' Big
+DIM big(5000)
+FOR i = 0 TO 5000 STEP 500: big(i) = i: NEXT
+sum = 0
+FOR i = 0 TO 5000 STEP 500: sum = sum + big(i): NEXT
+ck sum, 27500, "5001 elements"
+' Out of range
+ON ERROR GOTO bad
+e = 0: z = a(11)
+ck e, 9, "a(11): subscript out of range"
+e = 0: z = g(0, 1)
+ck e, 9, "g(0, 1)"
+e = 0: z = a(1, 1)
+ck e, 9, "too many indices"
+ON ERROR GOTO 0
+PRINT "arrays:"; checks; "checks,"; failed; "failed"
+END
+bad:
+e = ERR
+RESUME NEXT

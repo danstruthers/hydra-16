@@ -28,3 +28,9 @@ They're bytes, LF line ends (`.gitattributes`: not text to Git).  The test puts 
 itself, with a `run.fs` of its own that INCLUDEs them in turn, as `runtests.fth` does (and has a line for `core.fr`'s
 ACCEPT test after it: ACCEPT reads stdin); then it runs `cd /sd/0; forth <run.fs`.  `filetest.fth` makes its files
 there too.
+
+`numberstest.fth` is HyForth's own, not the suite's: the number words (`lib numbers`: `numbers.fl`, on the numbers
+and math libraries) checked in the suite's way, with `tester.fr`'s `T{ ... -> ... }T`, each number by its text
+(`N>STR`); its last lines are typed (`N.`, `N.BASE`, `N.S`, `NFORMAT`, cells in bases that aren't a radix) and the
+count of its errors.  The `fnumbers` test puts it and `tester.fr` on a card of its own, with a `nums.fs` that
+REQUIREs `string.fl`, `hydra.fl` and `numbers.fl` and INCLUDEs them, and compares what's typed.

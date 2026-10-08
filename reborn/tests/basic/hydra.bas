@@ -1,52 +1,81 @@
-10 REM HYDRA.BAS: THE HYDRA'S OWN: HIMEM, SYS, RREG, USR, PEEK, POKE, WAIT,
-11 REM MEMORY PAST 32K, SLEEP AND THE TICKS, ENV$, ARG$, SOUND (RC'S $GREET: HI;
-12 REM ITS ARGUMENTS: ONE TWO)
-15 HIMEM 40704
-20 N$="HYDRA"
-100 X=FRE(0)>32767:E=-1:GOSUB 9000
-101 POKE 40800,123:X=PEEK(40800):E=123:GOSUB 9000
-102 POKE 40800,0:X=PEEK(40800):E=0:GOSUB 9000
-103 POKE 40801,255:WAIT 40801,128:X=1:E=1:GOSUB 9000
-110 POKE 40704,169:POKE 40705,42:POKE 40706,96
-111 SYS 40704:RREG R:X=R:E=42:GOSUB 9000
-112 POKE 40704,232:POKE 40705,200:POKE 40706,96
-113 SYS 40704,7,1,2:RREG A,X1,Y1:X=A*100+X1*10+Y1:E=723:GOSUB 9000
-114 RREG ,,Y2:X=Y2:E=3:GOSUB 9000
-115 POKE 40704,96:POKE 1285,0:POKE 1286,159
-116 X=USR(5):E=5:GOSUB 9000
-117 X=USR(-2.5)*2:E=-5:GOSUB 9000
-120 SYS "GETPID":RREG P:X=P>0 AND P<16:E=-1:GOSUB 9000
-121 SYS "getpid":RREG Q:X=Q:E=P:GOSUB 9000
-122 SYS "BANKS_ALLOC",1:RREG B,,,S:X=S AND 1:E=0:GOSUB 9000
-123 X=B>0 AND B<256:E=-1:GOSUB 9000
-130 SYS "TICKS":RREG L,H:T1=H*256+L:SLEEP .5
-131 SYS "TICKS":RREG L,H:D=H*256+L-T1:IF D<0 THEN D=D+65536
-132 X=D>=98 AND D<=103:E=-1:GOSUB 9000
-133 SYS "TICKS":RREG L,H:T1=H*256+L:SLEEP 0
-134 SYS "TICKS":RREG L,H:D=H*256+L-T1:IF D<0 THEN D=D+65536
-135 X=D<=1:E=-1:GOSUB 9000
-140 X$=ENV$("greet"):E$="hi":GOSUB 9100
-141 X$=ENV$("nosuch"):E$="":GOSUB 9100
-142 X=LEN(ENV$("greet")+ENV$("greet")):E=4:GOSUB 9000
-145 X$=ARG$(0):E$="hydra.bas":GOSUB 9100
-146 X$=ARG$(1)+"/"+ARG$(2):E$="one/two":GOSUB 9100
-147 X$=ARG$(3)+ARG$(255):E$="":GOSUB 9100
-150 F1=FRE(0):DIM K(6000):K(6000)=7:X=K(6000):E=7:GOSUB 9000
-151 X=F1-FRE(0)>30000:E=-1:GOSUB 9000
-152 S=0:FOR I=0 TO 6000 STEP 1000:K(I)=I:NEXT
-153 FOR I=0 TO 6000 STEP 1000:S=S+K(I):NEXT:X=S:E=21000:GOSUB 9000
-154 DIM M%(1000):M%(1000)=-32768:X=M%(1000):E=-32768:GOSUB 9000
-155 DIM S$(200):FOR I=0 TO 200:S$(I)=STR$(I)+"ABCDEFGHIJ":NEXT
-156 X$=S$(200)+S$(0):E$=" 200ABCDEFGHIJ 0ABCDEFGHIJ":GOSUB 9100
-160 SOUND 2,60,0,100:SLEEP .05:SOUND 2,64:SLEEP .05:SOUND 2
-161 X=1:E=1:GOSUB 9000
-8999 GOTO 9900
-9000 T=T+1:IF X=E THEN RETURN
-9010 IF E=0 THEN 9030
-9020 IF ABS((X-E)/E)<1E-8 THEN RETURN
-9030 F=F+1:PRINT "FAIL";T;X;E
-9040 RETURN
-9100 T=T+1:IF X$=E$ THEN RETURN
-9110 F=F+1:PRINT "FAIL";T;"[";X$;"][";E$;"]"
-9120 RETURN
-9900 PRINT N$;":";T;"CHECKS,";F;"FAILED"
+' hydra.bas - the Hydra's own: SYS by name and RREG; a bank of the program's own (BANK, PEEK, POKE) and machine code
+' in it (SYS, CALL ABSOLUTE); FRE; SLEEP and the ticks, TIMER, DATE$, TIME$; ENV$, ENVIRON$ and ENVIRON; ARG$ and
+' COMMAND$ (rc's $greet: hi; its arguments: one two); SHELL, SHELL$ and STATUS
+DIM SHARED checks, failed
+SUB ck (got, want, what$)
+    checks = checks + 1
+    IF got <> want THEN failed = failed + 1: PRINT "FAIL "; what$; ":"; got; "not"; want
+END SUB
+SUB cks (got$, want$, what$)
+    checks = checks + 1
+    IF got$ <> want$ THEN failed = failed + 1: PRINT "FAIL "; what$; ": ["; got$; "] not ["; want$; "]"
+END SUB
+
+' SYS by name, RREG
+SYS "GETPID": RREG p
+ck p > 0 AND p < 16, -1, "GETPID"
+SYS "getpid": RREG q
+ck q, p, "a name in either case"
+SYS "BANKS_ALLOC", 1: RREG b, , , st
+ck st AND 1, 0, "BANKS_ALLOC: done"
+ck b > 0 AND b < 256, -1, "its bank"
+' A bank of its own: BANK, PEEK, POKE; machine code in it
+BANK b
+ck BANK(), b, "BANK()"
+POKE &H8000, &HA9: POKE &H8001, 42: POKE &H8002, &H60
+ck PEEK(&H8000) * 1000 + PEEK(&H8001), 169042, "POKE, PEEK"
+SYS &H8000: RREG a
+ck a, 42, "SYS addr: LDA #42"
+POKE &H8000, &HE8: POKE &H8001, &HC8: POKE &H8002, &H60
+SYS &H8000, 7, 1, 2: RREG a, x, y
+ck a * 100 + x * 10 + y, 723, "SYS's registers in and out: INX, INY"
+RREG , , y2
+ck y2, 3, "RREG's places"
+POKE &H8000, &HEE: POKE &H8001, &H10: POKE &H8002, &H80: POKE &H8003, &H60
+POKE &H8010, 5
+CALL ABSOLUTE(&H8000)
+ck PEEK(&H8010), 6, "CALL ABSOLUTE: INC $8010"
+SYS "BANKS_FREE", b, 1: RREG , , , st
+ck st AND 1, 0, "BANKS_FREE"
+ck FRE() > 10000, -1, "FRE()"
+' The clock
+SYS "TICKS": RREG l, h: t1 = h * 256 + l
+SLEEP 0.5
+SYS "TICKS": RREG l, h: d = h * 256 + l - t1: IF d < 0 THEN d = d + 65536
+ck d >= 98 AND d <= 103, -1, "SLEEP 0.5: 100 ticks"
+t = TIMER
+SLEEP 0.25
+d = TIMER - t: IF d < 0 THEN d = d + 86400
+ck d >= 0.25 AND d <= 0.3, -1, "TIMER: a quarter of a second"
+ck DENOMINATOR(t * 200), 1, "TIMER: to a tick"
+d$ = DATE$: t$ = TIME$
+ck LEN(d$) = 10 AND MID$(d$, 5, 1) = "-" AND MID$(d$, 8, 1) = "-", -1, "DATE$: yyyy-mm-dd"
+ck LEN(t$) = 8 AND MID$(t$, 3, 1) = ":" AND MID$(t$, 6, 1) = ":", -1, "TIME$: hh:mm:ss"
+' The environment, the arguments
+cks ENV$("greet"), "hi", "ENV$"
+cks ENVIRON$("greet"), "hi", "ENVIRON$"
+cks ENV$("nosuch"), "", "ENV$ not there"
+ENVIRON "mine=yes"
+cks ENV$("mine"), "yes", "ENVIRON"
+cks ARG$(0), "hydra.bas", "ARG$(0)"
+cks ARG$(1) + "/" + ARG$(2), "one/two", "ARG$"
+cks ARG$(3) + ARG$(255), "", "ARG$ past them"
+cks COMMAND$, "one two", "COMMAND$"
+' The shell
+SHELL "echo from rc >sh.txt"
+ck STATUS, 0, "SHELL: STATUS 0"
+OPEN "sh.txt" FOR INPUT AS #1: LINE INPUT #1, a$: CLOSE #1
+cks a$, "from rc", "SHELL's output"
+SHELL "exit 3"
+ck STATUS, 3, "STATUS: exit 3"
+cks SHELL$("echo a  b"), "a b", "SHELL$"
+OPEN "st.bas" FOR OUTPUT AS #1: PRINT #1, "END 3": CLOSE #1
+SHELL "basic st.bas"
+ck STATUS, 3, "a script's END 3: its status"
+OPEN "st.bas" FOR OUTPUT AS #1: PRINT #1, "x = 1 / 0": CLOSE #1
+SHELL "basic st.bas >[2] /dev/null"
+ck STATUS, 1, "a script's error: status 1"
+KILL "st.bas"
+cks SHELL$("echo $mine"), "yes", "ENVIRON's for rc too"
+KILL "sh.txt"
+PRINT "hydra:"; checks; "checks,"; failed; "failed"

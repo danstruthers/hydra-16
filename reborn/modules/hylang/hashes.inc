@@ -458,17 +458,11 @@ h_key0:
             ldx         h_k + 1
             FARN        3, n_whole                          ; (A number: an integer, or one equal to it)
             bcs         @num
-            lda         h_k
+            lda         h_k                                 ; (2.0: the integer, 2)
             ldx         h_k + 1
-            jsr         kind_of
-            cmp         #PK_FIXED
-            bne         @ok
-            lda         h_k                                 ; (2.0: its digits, 2)
-            ldx         h_k + 1
-            ldy         #0
-            jsr         cell_get
-            sta         h_k
-            stx         h_k + 1
+            FARN        3, n_intval
+            bcs         @ok
+            MOVW        h_k, hv
 @ok:
             clc
             rts
@@ -539,9 +533,9 @@ h_keyeq:
             bne         @no
             cmp         #PK_STRING
             beq         @string
-            cmp         #PK_BIGNUM
+            cmp         #PK_NUMBER
             bne         @no
-            FARN        3, n_qcmp                           ; (Two bignums: their order 0)
+            FARN        3, n_qcmp                           ; (Two numbers past fixnums: their order 0)
             lda         q_r
             rts
 @string:

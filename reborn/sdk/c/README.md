@@ -13,11 +13,13 @@ The SDK is this folder; `node build.js` builds the library and also copies the S
 | `include/snd.h` | The YM2151, and the Vera X's PSG (channels 8-23), through the sound driver: channels claimed, patches, notes, volumes, bends, drums, waveforms, raw registers |
 | `include/vera.h` | The Vera X's screen: the bitmap and drawing on it (`vid_pen`, `vid_line`, `vid_circle`, `vid_text` ...), VRAM, the palette, sprites, frames, the mouse; the chip claimed and its registers (`VERA`, `vpoke`, `vpeek`); `hydra_tgi`, cc65's TGI's driver |
 | `include/hydra.h` | The Hydra's own calls (tasks and exit statuses, the namespace, the tick, RAM banks, any call by `hy_call`), and what cc65's headers leave to a target: `setenv`, `fstat`, `isatty`, conio's colours and keys |
+| `include/num.h` | The Hydra's numbers, the number libraries' (hylang's, HyForth's and BASIC's): exact integers of any size, fixed decimals, rationals and complex numbers; their arithmetic, conversions, text in every base, bits, and the math functions (below) |
+| `numdefs.h` | The number libraries' constants (`NUM_MAX`, the errors `NE_`, the kinds `NK_` ...).  Made from `spec/numbers.def` by the build (`obj/sdk/c/numdefs.h`); `num.h` includes it |
 | `hydracalls.h` | Every system call's address, error code and constant, each with `HY_` before its name.  Made from `spec/` by the build (`obj/sdk/c/hydracalls.h`); never edit it.  `hydra.h` includes it |
 | `hydra.cfg` | The link: the header, code and data from `$0800`, the BSS after them, the heap, and the C stack (2K) down from `$7F00` |
 | `lib/hydra.lib` | The library: cc65's `none.lib`, with the modules of `lib/` in place of cc65's that a target gives (the build: `obj/sdk/c/hydra.lib`) |
-| `lib/` | Its sources: `crt0.s` (the header, the start, `exit`), the files and stdio's buffers, the environment, `system`, `signal`, `time` and `clock`, conio, errors |
-| `samples/` | `hello` (arguments), `upper` (a filter), `code` (exit statuses), `keys` (conio: the screen and raw keys), `tones` (sound: `snd.h`), `jukebox` (a song in the background: `snd_play`), `sketch` (the screen and the mouse: `vera.h`), `shapes` (cc65's TGI), `ctest` (the library's test); the multitasking demos (below): `race`, `chorus`, `philo`, `prodcons`, `round` |
+| `lib/` | Its sources: `crt0.s` (the header, the start, `exit`), the files and stdio's buffers, the environment, `system`, `signal`, `time` and `clock`, conio, errors; `num.h`'s functions (`num.s`, and `numcall.s`, which finds the libraries); `printf`'s and `scanf`'s cores, cc65's `_printf.s` and `_scanf.c` with the Hydra's numbers added |
+| `samples/` | `hello` (arguments), `upper` (a filter), `code` (exit statuses), `keys` (conio: the screen and raw keys), `tones` (sound: `snd.h`), `jukebox` (a song in the background: `snd_play`), `sketch` (the screen and the mouse: `vera.h`), `shapes` (cc65's TGI), `ctest` (the library's test); the multitasking demos (below): `race`, `chorus`, `philo`, `prodcons`, `round`, `ntest` (`num.h`'s test: numbers, and `printf`'s and `scanf`'s) |
 
 ## A program
 
@@ -71,6 +73,50 @@ int main (int argc, char* argv[])
 * Its RAM: `$0800` to `$7F00`, for the program, its BSS, the heap (`malloc`) and the C stack (2K); its own RAM
   banks at `$8000`-`$9FFF` (`hy_banks_alloc`, `hy_bank`).  The 6502's stack is 256 bytes: deep recursion runs
   out of it.  cc65's runtime has the zero page from `$22` (26 bytes); the program's own goes after it, to `$7F`.
+
+## Numbers
+
+`num.h` gives C the numbers hylang, HyForth and BASIC have: integers of any size (to 255 bytes), fixed decimals
+(`1.25`), rationals (`2/3`) and complex numbers (`1+2i`), all exact, worked by the number libraries in the paged
+ROM.  A number is an array of bytes (`num_t`) in their stored format: `NUM_MAX` (1,040) at most, most of them a few.
+
+```
+#include <stdio.h>
+#include <num.h>
+
+int main (void)
+{
+    num_t a[32], b[32], c[64];
+
+    num_parse (a, sizeof a, "2/3", NULL, NULL);
+    num_parse (b, sizeof b, "0.5", NULL, NULL);
+    num_add (c, sizeof c, a, b);
+    printf ("%N, in binary %{b}N\n", c, c);        /* 7/6, in binary 111/110 */
+    return 0;
+}
+```
+
+* A function that makes a number takes its place and its room first, then its operands, and gives back the
+  result's length; or -1, and `num_error` says why (`NE_DIV0` ...; `num_strerror` its text).  A result may go
+  over one of its operands.  `num_size` is a number's length, from its bytes.
+* The first call readies the libraries (`num_init`): it takes two of the program's RAM banks.
+* Numbers are read and written in the base, decimal at the start; `num_set_base` changes it, with hylang's base
+  strings (`"x"` writes `FF`, `"#x"` `#xFF`; `"b"`, `"o"`, `"c"` balanced ternary, `"16r"`, `"[01]"` digits of
+  its own ...).  `num_parse` and `num_display` take a base of their own too (`NULL`: the base); `num_format` is
+  hylang's `format` (`"{} is {x}"`).
+* `num_digits` sets the math functions' precision, 12 significant digits at the start: `num_sqrt` of 2 is
+  `1.41421356237`, of `9/4` exactly `3/2`.
+* `printf` (`fprintf`, `sprintf`, `snprintf` and their `v` forms) writes a number with `%N` (a `num_t*`), in the
+  base; and with a base in braces right after the `%`, for `%N` and C's integers alike: `%{x}N`, `%{#b}d`
+  (`#b101`), `%{c}ld`, `%{16r}u`; `%{}N` the base, and `%{*}N` the base from the arguments, a string (before a `*`
+  width's).  The width, `-` and `0` pad the whole text, a `+` or a space goes before a number not below 0, and a
+  precision is passed over: a number is written whole, however long (2^1000's 302 digits; its text 8K at most).
+  Without braces, `%d` and `%x` are C's own.
+* `scanf` (`fscanf`, `sscanf`) reads them the same way: `%N` a number into a place and its room, two arguments
+  (`scanf ("%N", n, sizeof n)`), and `%{x}d` an `int` in base x.  Such a conversion reads a word: up to white
+  space, its width, or the character the format has next (`"%N,%N"` reads `1/2,3`), all of which must be a number.
+* `calc` (`programs/calc`) is a program on it; the sample `ntest` is its test.  Assembly has the same calls:
+  `sdk/asm`'s `numbers.inc` and `numlib.s`.
 
 ## Building it
 

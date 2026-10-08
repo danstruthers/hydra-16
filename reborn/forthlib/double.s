@@ -271,8 +271,13 @@ ddotr:                                                      ; ( d n -- ): right-
             jsr         spaces
             jmp         type
 
-; ( d -- addr u ): d as text, signed
+; ( d -- addr u ): d as text, signed (in the numbers library's base, if it isn't a radix)
 d_text:
+            lda         #4
+            jsr         num_textc
+            bcs         :+
+            rts
+:
             lda         dhi,x                               ; (Its sign, kept)
             pha
             jsr         dabs

@@ -1,269 +1,219 @@
-# BASIC: EhyBASIC on the system
+# BASIC: its design
 
-`basic` (`modules/basic`) is EhyBASIC, the Hydra-16's Microsoft BASIC, as a program of the system: a paged ROM module
-run in place, `/bin/basic`.  EhyBASIC is Microsoft BASIC 2A for the 6502, by way of Michael Steil's reconstruction
-(mist64/msbasic), Ben Eater's port and EhyBASIC's for the Hydra-16 (burntcouch/ehybasic): a ROM image at `$A000`,
-started from WOZMON with `A000R`, that talked to two old BIOS addresses.  In October 2026 the user asked for it to be
-converted to run on the system as it is now, starting from `C:\source\ehybasic-2` (its working tree: the build in its
-`temp/hydrabas.bin`), with these choices:
+BASIC is the Hydra-16's BASIC: a structured BASIC in QuickBASIC's way, on the Hydra's numbers.
+[using/basic.md](using/basic.md) is its reference (every statement and function), [design/plans/BASIC.md](design/plans/BASIC.md)
+the plan it was built to and why, [design/plans/NUMBERS.md](design/plans/NUMBERS.md) the numbers it shares with
+hylang, HyForth and C.  This is how it's made: `modules/basic`, a module of the paged ROM run in place (`/bin/basic`).
 
-* It lives here, on the branch `reborn-basic`, and the ehybasic folder is left as it is.
-* The keywords and error messages in full again (`GOSUB`, `RETURN`, `LEFT$`, `AND`, `?SYNTAX ERROR`), with EhyBASIC's
-  short forms still accepted (`JSR`, `RTN`, `RSTR`, `CLR`, `ST$`, `CH$`, `LT$`, `RT$`, `MD$`, `&`, `|`, `!`).
-* `SAVE` and `LOAD` with text listings by default, and a tokenized form too.
-* In the first version also: file statements, sound, `SYS` and calls, and more memory (the task's RAM banks).
-* Then a shell, as HyForth's and hylang's: `basic -l`, a BASIC line run as BASIC and any other as an rc command line.
+Contents: [The module](#the-module) · [Memory](#memory) · [Values](#values) · [Compiling](#compiling) ·
+[Running](#running) · [Numbers](#numbers) · [The heap](#the-heap) · [Input and output](#input-and-output) ·
+[The prompt and the shell](#the-prompt-and-the-shell) · [The Hydra's](#the-hydras) · [The tests](#the-tests) ·
+[Against hylang and HyForth](#against-hylang-and-hyforth)
 
-## The conversion
+## The module
 
-EhyBASIC's sources are mist64's, with conditional assembly for ten machines.  The Hydra build's choices were settled
-first (`.ifdef`s resolved as its build had them, the other machines' code taken out), and the result assembled to the
-same bytes as its last build, so what follows starts from the code that ran.  Microsoft's code is otherwise as it
-was, its labels and comments kept, but where the system wanted it changed:
+A program is compiled whole, its text read once for its procedures and types and again for its code, into the code
+of a stack machine, which the interpreter runs.  A line typed at the prompt is compiled the same way, into a region
+of its own, and run at once.
 
-| What | EhyBASIC's | Now |
-| :--- | :--- | :--- |
-| Where it runs | A ROM image at `$A000`, from WOZMON | A module run in place (`HYX2_PROGRAM "basic"`, one bank, 11K of 16K), started by rc; its data and BSS from `$0400` |
-| Zero page | `$30`-`$FA`: its variables, the input line, and CHRGET (code that held the text pointer in its own `lda abs`) | The program's `$22`-`$7F` (91 bytes, `zeropage.inc`): what it reads through (`(zp),y`), names as zero-page addresses (`ldx #FAC`) or indexes as one block (REASON's `TEMP1`-`FAC`, the floating point's `TMPEXP`-`SERLEN`), in Microsoft's order; `TXTPTR`; the rest (flags, vectors, `CURLIN`, `OLDTEXT` ...) in the BSS |
-| CHRGET | Copied to the zero page at the cold start | In ROM, reading through `TXTPTR` (`lda (TXTPTR)`: a cycle more a character) |
-| The line buffer | In the zero page after `LINNUM` (50 bytes, while lines could be 71) | A page of its own (`$0400`, `basic.cfg`'s `LINEBUF`): 240 characters.  Microsoft's code for a buffer out of the zero page back (Applesoft's and CBM2's: direct mode by the page, the line's number before it, GET's terminator, INPUT's branch, STRLIT's copy of a string in the buffer: a direct line's literal, INPUT's and GET's answers), and the new line's link made not to look like the program's end |
-| Memory | Asked for (`MEM`), and tested a byte at a time | The task's RAM from the BSS's end, and a bank of its own after it, to `$9FFF` (below: "More memory"): 38,550 bytes free |
-| Output | `MONCOUT`, a BIOS address | fd 1, buffered (a LF or a full buffer sends it); a new line is LF alone, and the column 0 after it (Microsoft's set it to 13) |
-| Input | `MONRDKEY` a key at a time, BASIC editing the line | stdin a line at a time (`INLIN`: the console's cooked lines, edited and echoed by the console, or a file's or a pipe's: LF, CR or CR LF); its end ends BASIC in direct mode |
-| Ctrl-C | The keyboard polled at each statement | A note (`NOTIFY`): the handler sets `intr`, which each statement checks (`ISCNTC`), and a wait for a line or WAIT's loop ends at; at the prompt it's a new line, in INPUT `BREAK IN n` |
-| GET | `MONRDKEY` | The console's raw mode (`/dev/consctl`'s `rawon`) and a read of `/dev/cons` that doesn't wait, as HyForth's `key?`; stdin's next byte when it isn't the console |
-| Keywords | Short forms in the table, to fit 8K | The full names, and an alias table after them (`ALIAS_MAP`): the tokenizer turns an alias's token into its keyword's, so `LIST` shows the full name.  The table is past 256 bytes now, so the tokenizer and `LIST` walk it with a pointer (`KWPTR`) rather than `.Y`.  Letters outside strings, `REM` and `DATA` are taken in either case (`UPCASE_X`) |
-| Errors | Two letters (`?SN ERROR`) | Microsoft's messages (`?SYNTAX ERROR IN 10`), through a table of their addresses (`ERRTAB`) |
-| The end | None | `BYE` (and stdin's end): `EXITS` with code 0 |
-| Not at the console | - | No banner and no `OK`, and an error's line ended: `basic <prog.bas` and pipelines give the program's output alone |
+BASIC is a module of eight banks (`HYX2_PROGRAM "basic", main, 8`; `modules/module8.cfg`), each 16K at `$A000` in
+turn.  A call between banks goes through the module's trampolines in its RAM (`FARN bank, routine`; the third bank
+calls the second's with `C2`, which passes `.A`, `.X`, `.Y` and C).
 
-Some of Microsoft's code knows where things are, and the conversion keeps it so (`token.inc` asserts it): FOR is token
-`$81` and DATA `$83`; the operators `+` to `OR` come just before `>`, `=`, `<`; `LEFT$`, `RIGHT$` and `MID$` are the
-last functions.  One trick that knew the segments' order (the tokenizer read the keyword table as `MATHTBL+29`) is
-gone, and `NAMENOTFOUND` checks both bytes of its caller's address (Microsoft's `CONFIG_SAFE_NAMENOTFOUND`).
+| Bank | Files | What | Used |
+| :--- | :--- | :--- | :--- |
+| 1 | `run.inc`, `main.inc`, `fn.inc`, nslib | The interpreter: its ops, calls and frames, errors' way to a handler; the top (the prompt's loop, a script, `RUN`, `CONT`); the statements' and functions' groups by bank; the SDK's `newns` for `basic -l` | 44% |
+| 2 | `lex.inc`, `comp.inc`, `expr.inc`, `stmt.inc`, `procs.inc` | The compiler: tokens, symbols, labels and their fixups, the line table, `INCLUDE`; expressions; statements; `SUB` and `FUNCTION`, calls and their arguments | 84% |
+| 3 | `stmt3.inc`, `rec.inc` | The compiler's other statements (`DIM`, `DATA`, `INPUT`, files, the console, `SYSTEM` ...); `TYPE`, fields and records' copies | 43% |
+| 4 | `num.inc`, `fns4.inc` | The numbers: the libraries' calls, the operators, the number functions, `VAL` (E notation), `STR$` | 32% |
+| 5 | `heap.inc`, `gc.inc`, `fns5.inc` | The heap: strings, numbers past 32 bits, arrays and records; the collector; the string functions; `DIM`, `REDIM`, `ERASE`, `MID$ =` | 34% |
+| 6 | `io.inc` | `PRINT` (zones, `TAB`, `PRINT USING`), `INPUT`, `READ`, the console's sequences and keys, files | 36% |
+| 7 | `sys.inc`, `prog.inc` | The errors' messages; the system's functions (`TIMER`, `ENV$`, `SHELL`, `PEEK` ...); the program's text: `LOAD`, `SAVE`, `LIST`, `EDIT`, `DELETE`, numbered lines typed | 44% |
+| 8 | `shell.inc`, `machine.inc`, `gfx.inc` | `basic -l`'s rule and its own commands; `SOUND`, `PLAY`, `SYS`, `RREG`; the graphics, as `/dev/vid/draw`'s commands | 55% |
 
-An alias reserves its name, as every keyword does: `ST$`, `LT$` and the like can't be variables.
+What every bank calls is in the task's RAM (`ram.inc`, the `DATA` segment): the far memory's cursors, the output's
+buffer, `b_error` (an error from any bank to the first's `err_entry`), `run_exit`.
 
-## Programs in files: LOAD, SAVE, RUN "name", scripts
+## Memory
 
-* `SAVE "name"` writes the program as text: its LIST, a line each, its number first (`10 PRINT "HI"`: LIST shows
-  line numbers without the sign's space now, so the file reads as typed).  The file is made, or emptied first.
-* `SAVE "name",B` writes it tokenized: a 10-byte header (`HYBAS`, a version, the keyword table's sum, the length),
-  then the lines as they are in memory.  Faster to load, but only by a BASIC with the same keyword table (the sum
-  says so: another's is `?BAD FILE ERROR`).
-* `LOAD "name"` takes either (the header tells them apart) in place of the program.  A text's lines come through the
-  main loop as if typed (INLIN reads the file through a buffer of its own, so stdin's lines read ahead wait), and
-  a line without a number is passed over: a `#!/bin/basic` line, or a comment.  A tokenized program is read whole,
-  and its lines linked again where they are.
-* `RUN "name"` is LOAD, then RUN.
-* `basic file [argument ...]` runs a script: the file LOADed and run, no banner, and its end is BASIC's: code 0, or 1
-  after an error or a BREAK (its message, its line ended).  A file whose first line is `#!/bin/basic` runs so by its
-  name.  `ARG$(n)` is its argument n (`TASK_ARGS`' strings: 0 the script's name, 1 the first after it; `""` past the
-  last), as HyForth's `arg` and hylang's `args`.
-* The system's errors are shown as BASIC's are, their text in capitals: `?NOT FOUND ERROR`.  An error or Ctrl-C
-  while LOAD or SAVE has a file closes it (RESTART's `IO_RESET`).
+The task's RAM (`$0400` on) holds the interpreter's state (`BSS`, 7.7K), the globals (5 bytes each) and the value
+stack (`stk_base` on: frames, `GOSUB`'s returns, `FOR`'s state and the expressions' values, 5 bytes each).
+Everything else is in the task's RAM banks, seen at `$8000`-`$9FFF` one at a time through a table of logical banks
+(`ltab`: a logical bank's physical one, taken from the system when it's first used) in regions:
 
-## Files: OPEN, CLOSE, PRINT#, INPUT#, GET#, EOF
+| Logical banks | Region |
+| :--- | :--- |
+| 0-6 | The program's code; 7, the line typed at the prompt's |
+| 8-15 | The program's text: the buffer the prompt keeps (a line: its length, its bytes; `$FF` the end), and `INCLUDE`'s files after it while it's compiled |
+| 16-19 | The symbols: names (hashed, by scope), labels and their fixups |
+| 20-21 | The line table: each statement's code address and line (an error's line, `ERL`, `Break in`) |
+| 22-23 | `DATA`'s items |
+| 24-25 | The numbers' scratch (their operands and results), a number's text |
+| 26-63 | The heap |
 
-Reviewed first, against Microsoft's own BASICs and the system: Microsoft BASIC 2A is Commodore's line, whose files
-are `OPEN lfn,device,sa,"name"`, `PRINT#`, `INPUT#`, `GET#`, `CLOSE` and the status `ST`; GW-BASIC's are `OPEN
-"name" FOR INPUT AS #n`, `PRINT #n,`, `INPUT #n,`, `LINE INPUT #n,`, `CLOSE #n` and `EOF(n)`.  This tokenizer finds
-a keyword anywhere, even in a name (Microsoft's: `SCORE` is `SC` `OR` `E`), so short new keywords (GW-BASIC's `AS`,
-`OUTPUT`) would break programs; the Hydra has paths, not device numbers.  Settled: Commodore's form with a path, and
-GW-BASIC's EOF, with two new statements and one function:
+A far address is a logical bank and an address in the window (3 bytes); in the code, text and symbol regions a
+16-bit region address (its bank in the region, then 13 bits) says the same.  `BANK n` names a bank of the program's
+own for `PEEK`, `POKE` and `SYS` at `$8000`-`$9FFF`.
 
-* `OPEN n,"name"[,"mode"]`: channel `n` (1 to 4) a file or a device (`/dev/cons`, `#n/kmesg` ...), read (`R`, as
-  with no mode), written (`W`: made, or emptied first) or added to (`A`: written at its end).  A channel open already:
-  `?FILE OPEN ERROR`; one not open: `?FILE NOT OPEN ERROR`; another number: `?ILLEGAL QUANTITY ERROR`.
-* `CLOSE n`, or `CLOSE` alone for all.  `RUN`, `NEW`, `CLEAR` and a line entered close them all too (as GW-BASIC
-  does), and an error or Ctrl-C leaves them open.
-* `PRINT #n, ...`, `INPUT #n, ...` and `GET #n, ...`: the statements with the channel first (a `#` after the keyword,
-  spaces as you like, rather than Commodore's `PRINT#` keywords).  PRINT# keeps the console's column; INPUT# has no
-  prompt, takes a line's comma-separated values as INPUT does, its end is `?END OF FILE ERROR`, and a value that
-  isn't a number is an error (no REDO from a file); GET# gives a byte at a time, `""` (or 0) at the end.  Both are
-  for programs, as INPUT and GET are (in direct mode, `?ILLEGAL DIRECT ERROR`): the line read goes in the buffer
-  that a direct line runs from.
-* `EOF(n)`: true (-1) when channel `n` has nothing more to read.
+## Values
 
-Each channel is an input source as stdin and LOAD's file are (an fd and a 128-byte buffer: `IN_BYTE`), so INPUT#
-reads through the same INLIN.  Microsoft's INPUT took its flag from `.Y`, the buffer's high byte, 0 in the zero page:
-with the buffer in RAM it gave `?SYNTAX ERROR` for a bad answer, and now it's `?REDO FROM START` again.
+A value is 5 bytes: a tag and 4 more (`basic.inc`).
 
-## Sound: SOUND, PLAY, BEEP, SLEEP
+| Tag | |
+| :--- | :--- |
+| `VT_INT` | An integer of 32 bits, in the value itself: most numbers a program uses |
+| `VT_NUM` | Any other number, in the stored format of the numbers library (spec/numbers.def), in the heap |
+| `VT_STR` | A string in the heap (bank `$FF`: `""`) |
+| `VT_ARR`, `VT_REC` | An array or a record: its heap block (bank `$FF`: not made yet) |
+| `VT_REF` | A slot given by reference (a parameter's) |
+| `VT_LOC` | An element or a field given by reference: its array's or record's slot and the value's offset in its block |
+| `VT_FRM`, `VT_GOS`, `VT_ERR` | A procedure's frame (its return, the caller's frame), `GOSUB`'s return, an error handler's mark |
 
-Reviewed against C's `snd.h` (`snd_note`, `snd_patch`, `snd_vol`, `snd_off`, `snd_claim`, `snd_volume` ...),
-HyForth's `sound.fl` and hylang's `snd-` functions (the channel first; MIDI notes, 60 middle C; patches 0-162),
-and against BASICs' (Commodore's `SOUND voice,freq,duration`, GW-BASIC's `SOUND freq,duration`, the X16's `FMNOTE`
-and the like).  Every new keyword is a name a program can't use, found even inside longer names (`PANEL` would be
-`PAN` and `EL`), so sound is one statement, not one for each of `snd_*`; and the system's units: MIDI notes,
-seconds.
+## Compiling
 
-* `SOUND ch, note [, patch [, vol]]`: on channel `ch` (0-7, the YM2151's; 8-23, a Vera X's PSG: there a patch
-  below 4 is a waveform, and with no card nothing sounds) MIDI note `note` (0-127), its patch (0-162) and its
-  volume (0-127) first if they're given: one write of the driver's commands to `/dev/snd`, so no other program's
-  comes between them.  `SOUND ch`: its note off (the release).  Drums are patches 128-162.
-* `SOUND "words"`: a line for `/dev/sndctl`, the driver's text: its own words (`"claim 255"`, `"release 255"`,
-  `"volume 150"`, `"reset"`) and every channel's command (`"pan 0 left"`, `"bend 0 -32"`, `"drum 9 38"`, `"freq 0
-  440"`, `"glide 0 64"`, `"level 0 90"`, `"wave 8 saw"`, `"lfo 200 10 20 2"`, `"sens 0 5 2"`, `"noise 9"`, `"reg
-  32 199"` ...: docs/using/tools.md), so BASIC reaches all the driver has with one keyword.  Its errors are the
-  driver's (`?INVALID ARGUMENT ERROR`; another program's channel, `?BUSY ERROR`; a PSG channel's text with no card,
-  `?NO SUCH DEVICE ERROR`).
-* `PLAY "mml"`, `PLAY ch, "mml"`: a line of MML, the score language's (docs/using/tools.md, "Scores"), on channel
-  0 or `ch` (0-7: the YM2151's), its own instrument if the line names none: `play -m`, the program, waited for
-  (the X16's `FMPLAY`).  `PLAY "song.zsm"` or `"score.mml"`: a song or a score, `play`'s.  Ctrl-C ends it (and
-  BREAK).  play's error is said by play, and is BASIC's too, in capitals: `?CHANNEL 0: WHAT IS Z ERROR IN 40`.
-* `BEEP`: the console's bell, sent at once.
-* `SLEEP s`: `s` seconds, as rc's and hylang's `sleep` (to the tick, 5 ms; up to 163 s), the output sent first;
-  Ctrl-C ends it (and the program).
+`compile_prog` reads the text twice.  Pass 1 (`c_scan`) finds each `SUB` and `FUNCTION` (its parameters' kinds, its
+entry), each `TYPE` (its fields, flattened: a record of another type's fields among them) and `DEFtype`'s letters,
+so a procedure is known wherever it's written.  Pass 2 (`c_line`) compiles each line's statements.
 
-The sound plan (docs/design/plans/SOUND_PARITY.md) chose this, few keywords and the driver's text for the rest, over a
-keyword each (a dozen names lost to programs) or the X16's `FM` and `PSG` keywords: `SOUND` and `PLAY` reach
-everything the other languages' `snd-` words do.
+* **The lexer** (`lex.inc`): keywords (a table by first letter), names (letters, digits, `_` and `.`; a suffix `$
+  % & ! #` taken), strings, and numbers read by the numbers library in the program's base (`BASE`: a bare number
+  starts with a digit), with QuickBASIC's `&H`, `&O`, `&B`, E notation in decimal (`e_conv` writes `1.5E-2` again
+  as `0.015`, so it's exact), `.5`, and the Hydra's `#` forms (`#xFF`, `#b0.1`: the longest start that's one).  In a
+  file's statements (`PRINT #`, `CLOSE #` ...) a `#` number form is taken back (`is_hash`), so `#x1` is the
+  variable `x1`.
+* **Symbols** (`comp.inc`): hashed by name and class (a number, a string, an array of each, a record, a label, a
+  constant, a procedure) and scope (the main program, or a procedure); a global is an address in the RAM, a local a
+  slot in its procedure's frame.
+* **Labels** (a name and a colon, or a line's number) are addresses; one used before it's defined leaves a fixup,
+  done at the end (`fix_all`: one never defined is `Label not defined`, at the line that named it).  At the prompt a
+  label must be the program's already.
+* **Blocks** (`IF`, `FOR`, `DO`, `WHILE`, `SELECT`, `SUB` ...) are a stack while they're compiled, each entry its
+  jumps' chains and its line, so one left open is said at its start (`FOR without NEXT` at its `FOR`).
+* **Calls** (`procs.inc`): an argument that's a variable, an array's element or a record's field goes by
+  reference: a variable as `VT_REF`; an element or a field by its place (`AREF`, `FREF`: `VT_LOC`), its value
+  loaded (`LDLOC`) and written back after the call (`WBK`).  Anything else is a copy.  A call keeps the state of the
+  call or procedure it's compiled in (`call_save`, `call_load`): a `FUNCTION`'s call among a call's arguments, a
+  `SUB`'s call in a procedure's body.
+* **`INCLUDE "f"`** (or `'$INCLUDE: 'f'`), a line of its own: `line_next` reads f's lines there.  Pass 1 loads f
+  into the text region after the program's (`inc_load`: the program's directory, else `/lib/basic`), pass 2 finds it
+  by the `INCLUDE`s' order.  Its lines are numbered `$4000 + n * $800` on, so an error in it says its file and line.
+* **Errors** at compile time go to `err_entry` with the line (`file:line: message`; a typed program's by its line's
+  number, `line 20: ...`).
 
-## Machine code and the system's calls: SYS, RREG, USR
+## Running
 
-Reviewed against Commodore's BASIC 7 (`SYS address[,a[,x[,y]]]` and `RREG`, which read the registers back), Microsoft's
-USR, and HyForth's and hylang's `sys-` words and functions (a call by its name, every call a program makes, made from
-`spec/api.def`).  Settled: BASIC 7's two statements, and SYS taking a call's name too:
+The interpreter (`run.inc`) runs the code from `ip`, an op a byte and its operands after it, by a table of ops:
+jumps (`JMP`, `JF`, `JT`; Ctrl-C looked for after each jump taken, so `CONT` goes on at its target), `GOSUB` and
+`RETURN`, `CALL` and `RET`/`RETF`, `FORT` and `FORN` (`FOR`'s test and `NEXT`, its variable, limit and step in
+slots), loads and stores (`LDV`, `STV`, `REFV`), arrays' and records' elements and fields (`AGET`, `APUT`, `AREF`,
+`FGET`, `FPUT`, `AGETF`, `APUTF`, `FREF`), the operators, and `OP_FN` and `OP_ST`: a function or a statement by its
+number, in the bank its group is in (`fn.inc`'s `F_B4` ... and `ST_B4` ...).
 
-* `SYS address [, a [, x [, y]]]`: the machine code at `address` called (`jsr`), with `.A`, `.X` and `.Y` (0 if
-  they're not given); the output is sent first.
-* `SYS "NAME" [, a [, x [, y]]]`: a system call by its name, in either case (`SYS "GETPID"`, `SYS "banks_alloc",1`):
-  `tools/apigen.js` makes the table, `obj/gen/basicsys.inc` (each name and its address in the jump table), from the
-  specification, as HyForth's and hylang's are made.  A name that isn't there: `?NO SUCH CALL ERROR`.  The call
-  registers `r0`-`r15` are bytes 2-33: POKE them just before the SYS (BASIC's own I/O uses `r0` and `r1`; SYS keeps
-  them while it sends the output), and PEEK the results there after it.
-* `RREG [a] [, x] [, y] [, p]`: the registers after the last SYS into numeric variables, any left out (`RREG ,X`);
-  for a system call, bit 0 of `p` (C) says it failed and `a` is then the error.  They're also at fixed places:
-  `PEEK(1280)` to `PEEK(1283)` (`SYSREGS`, `$0500`).
-* `USR(x)`: Microsoft's, its jump at 1284 (`$0504`): POKE its address at 1285 and 1286.  The code gets `x` in the
-  floating point accumulator and leaves its value there.  Until it's set, `?ILLEGAL QUANTITY ERROR`.
+* **A procedure's frame** (`CALL p`): its arguments (its parameters, first), the frame's mark (`VT_FRM`: the
+  return, the caller's frame), then its locals, each its kind's default (`""`, 0, an array or record not made yet).
+* **Errors** (`err_entry`): its code and line (the line table's, from the statement's code address, while code
+  runs); to the program's `ON ERROR` handler if it has one (the value stack as the failing statement began, `RESUME`'s
+  three ways from there), else said and back to the prompt (CONT's state kept), or a script's end (status 1).
+  QuickBASIC's codes, and the system's errors (256 + its code, those QuickBASIC has a code for as QuickBASIC's).
 
-Where machine code can go: above `HIMEM` (below), in BASIC's own memory: `HIMEM 40704` keeps `$9F00`-`$9FFF`.
-SYS selects BASIC's bank at `$8000` again after the code returns; USR's code must leave it as it found it.
+## Numbers
 
-## More memory: a bank of its own, HIMEM
+Every number is the numbers library's (`modules/numbers`, the stored format of spec/numbers.def), called through
+its bank of RAM (`num.inc`): an integer that fits 32 bits stays a `VT_INT` (the operators try that first), any other
+lives in the heap.  The math library (`modules/math`) gives `SQR` ... `ATN` and `^` of a power that isn't whole,
+exact when the answer is, else `DIGITS` significant digits.  `BASE` sets the library's base for `PRINT`, `STR$`,
+`VAL`, `INPUT` and `READ`, and the compiler's (`cbase`) for the program's text after it; `RUN` starts in decimal.
 
-Microsoft's BASIC has one flat memory, the program, its variables, its arrays and its strings in one piece reached by
-16-bit pointers everywhere; arrays or strings in banks would mean a bank switched at each of hundreds of places.
-The window at `$8000` is just above the task's RAM, though, so BASIC takes its RAM to `$7FFF` (`BREAK`) and a bank of
-its own (`BANKS_ALLOC`), selected there for good: one piece from the BSS's end to `$9FFF`, 38,550 bytes free (about
-30K without), and no code of Microsoft's changed.  The strings, which grow down from the top, are in the bank, and a
-program's arrays can be past 32K.  In task F (its RAM ends at `$7EFF`: the clock's registers) or with no bank to be
-had, its memory is the RAM to `$7F00`, as before.
+## The heap
 
-* `FRE(0)` is unsigned now (Microsoft's was negative past 32767).
-* `HIMEM n`: BASIC's memory's top at `n`, what's above it (to `$9FFF`) kept for machine code; the variables cleared,
-  as CLEAR does (Applesoft's `HIMEM:`).  Past the top, or less than a page past the program: `?ILLEGAL QUANTITY
-  ERROR`.
-* The window is BASIC's: a program mustn't select another bank (`POKE 0`) while it runs, and SYS selects BASIC's
-  again after its code.
+Strings, numbers past 32 bits, arrays and records are blocks in the heap (logical banks 26 on): a kind, a size, a
+forwarding address, then its contents.  An array's block holds its dimensions (each its lowest index and count),
+each element's values (a record's fields), then the values; a record's is an array's with no dimensions.  The
+collector (`gc.inc`) marks and slides (Lisp 2's way): what the globals and the value stack reach is live, each live
+block is given its new place, every value pointing at one is made to point there, and the blocks slide down.
 
-Checking memory past 32K turned up a bug of EhyBASIC's own: its sources had lost a `dex` that sizes a string array's
-elements (4 bytes, not a descriptor's 3), so the garbage collector, which steps 3 at a time, read the elements wrong
-once there were enough strings, and hung or broke the memory.  Microsoft's `dex` is back.  EhyBASIC's other changes
-to Microsoft's code are fixes (RND's and an integer limit's 4-byte constants made 5, a page boundary in
-`FRM_STACK2`, KBD BASIC's normalization limit) and stay; the same expressions give the same results in this BASIC
-and in EhyBASIC's last good build (its sources' CONFIG_2A, the binary `hydrabas021126-0307-good-inline.bin`, run on
-a bare 65C02).
+## Input and output
 
-## The shell: basic -l
+Output goes through a buffer to stdout (`ofd`), its column followed for `PRINT`'s zones, `TAB`, `POS` and wrapping;
+an error's message goes to stderr on a line of its own.  The console's sequences (`CLS`, `LOCATE`, `COLOR`) are
+VT100's, keys come raw for `INKEY$` and `INPUT$`.  Files are fds of the system's, eight open at once (`#1` to
+`#255`), each with its mode, its column and a read buffer.  `PRINT USING` reads its picture as QuickBASIC's (`#`,
+`.`, `,`, `+`, `-`, `$$`, `**`, `!`, `\ \`, `&`, `_`) and the Hydra's `{}` fields.
 
-HyForth's and hylang's rules ([hyforth.md](hyforth.md), "The shell"; [hylang.md](hylang.md), "The prompt"), with
-BASIC's idea of its own lines (`hyshell.inc`):
+## The prompt and the shell
 
-* **The rule.**  At the prompt a line is BASIC's if it's a program line (a number first), `?`, a statement's keyword
-  as its first word (or an alias of one: `JSR`), or an assignment (a name, `$` or `%` after it as it may be, then
-  `=` or a subscript's `(`); any other is an rc command line, run whole by rc (`rc -c`) and waited for.  So pipes,
-  redirections, globbing, quoting and `$x` are rc's, and BASIC isn't given a shell grammar.  The words are matched
-  whole, in either case (`printf` is rc's, `print` BASIC's); a name in both is BASIC's (`sleep`, which means the same,
-  but `wait`, `if`, `for` too), and `%` before a line makes it rc's whatever it is, at any BASIC's prompt.
-* **Statuses.**  An rc line's code is `$status` (rc's: the program's exit message, or its code); one ending in `&`
-  isn't waited for (its task `$apid`, in a note group of its own).  Ctrl-C while rc runs is rc's, and the shell goes
-  on, on a new line.  `exit` ends BASIC with the last code; `bye` with 0.
-* **What an rc line can't do.**  It runs in a task of its own, so BASIC's current directory and namespace are the
-  shell's own commands, their arguments rc's way (`'...'` quoted, `''` a quote; `$name` the environment's variable,
-  its first word): `cd [dir]` (none: `$home`), `bind [-a|-b] [-c] new old`, `mount [-a|-b] [-c] #x old [spec]`,
-  `unmount [new] old`, `newns`.  A usage that isn't right says so (`usage: bind [-a|-b] [-c] new old`), a failure
-  says the system's text (`/none: not found`), and either sets `$status`.
-* **The prompt** is HyForth's and hylang's: the directory and `> ` (`/rom/lib> `; on a card `0:/games> `), on a line of
-  its own, in place of `OK`.
-* **`basic -l`**, a login shell: its namespace made (`newns`: the SDK's nslib, its zero page BASIC's temporaries,
-  its 2.4K of buffers in a bank taken for the while), its window's console at `/dev` (not window 0's: `#c` taken off,
-  `#c$window` put after), its notes its note group's (`/dev/consctl`'s `group`) — what rc's `/lib/profile` does, done
-  in code, as a profile of BASIC's can't hold a shell command in an `IF` — then `/lib/basic/profile.bas` (the ROM
-  disk's; through the `/lib` union a card's or the RAM disk's in its place) run as typed lines, and the prompt.  A
-  card's `/lib/shell` with `/bin/basic -l` makes it a window's shell, init's and wstart's.
-* **`ENV$(name$)`**, the environment's variable (its first word; `""` if it isn't set), as hylang's `env` and
-  HyForth's `getenv`.
+The prompt keeps the program's text (the text region): a line typed with a number first goes in at its number,
+any other is compiled and run at once, with the program's procedures and variables there after a `RUN`.  `LIST`,
+`SAVE`, `LOAD`, `DELETE` and `RUN "f"` work on the text; `EDIT` writes it to `/ram/basicNN.bas`, runs `edit +N`
+on it, and reads it again.  `basic -l` (`shell.inc`) is a login shell: its namespace made (`newns`),
+`/lib/basic/profile.bas` run, then a line is BASIC's if it's a program line, `?`, a statement's keyword first, an
+assignment or a call of the program's `SUB`, else rc's (`rc -c`, waited for); `cd`, `bind`, `mount`, `unmount`
+and `newns` are its own.
 
-The module is 14.7K of its bank now (nslib 2K of it).
+## The Hydra's
 
-## The test
+* **Sound** (`machine.inc`): `SOUND` writes the sound driver's lines (`/dev/sndctl`); `PLAY` runs `play` with the
+  line or the file, and waits for it.
+* **The system**: `SYS "NAME"` finds a call in a table the build makes from the system's specification
+  (`obj/gen/basicsys.inc`), `SYS addr` and `CALL ABSOLUTE` call machine code (at `$8000`-`$9FFF` in `BANK`'s bank),
+  `RREG` reads the registers after.  `SHELL` and `SHELL$` run rc (`SHELL$` through a pipe, its last new lines
+  dropped).
+* **Graphics** (`gfx.inc`): `SCREEN`, `PSET`, `LINE`, `CIRCLE`, `PAINT`, `DRAW`, `GPRINT`, `PALETTE`, `SPRITE`,
+  `WINDOW` and `VIEW` are the Vera X driver's commands (`/dev/vid/draw`); `PAINT` and `POINT` read the bitmap in VRAM.
 
-`basic` (tests/tests.js): at the console, the banner, PRINT, the operators and functions, either case, the short
-forms and LIST's full names, a program (FOR, GOSUB, DATA, READ, INPUT, DIM, DEF FN), Ctrl-C and CONT, GET, errors,
-BYE; a pipeline into it; in `/ram`, SAVE as text and tokenized, LOAD of each, RUN "name", a file not there, the
-text's `cat`; scripts (`basic file`, `#!/bin/basic`: codes 0 and 1); files (OPEN's three modes, PRINT#, INPUT#, GET#
-and EOF at the end, CLOSE, the file's `cat`; FILE OPEN, FILE NOT OPEN, a file not there); INPUT's REDO FROM START;
-sound (SOUND's notes with a patch, a volume and off, SLEEP between two timed on the emulator's YM2151, BEEP's bell,
-`/dev/sndctl`'s volume kept and its error, ILLEGAL QUANTITY); SYS (calls by name and RREG, one not there, machine code
-above HIMEM called by SYS and by USR, registers in and out); memory (FRE past 32767, a 32K array, 301 strings and
-the garbage collector, an integer array, HIMEM and its errors); the shell (`basic -l` at rc's prompt: BASIC's lines and
-rc's by the rule, `cd` and the prompt, `$status`, `%`, a usage, ENV$, a program line, `exit`).  `bawin`: a card's
-`/lib/shell` naming `/bin/basic -l`, init's in window 0 and wstart's in a window made (`$window`, ENV$).
+## The tests
 
-`bsuite`: BASIC's suite (`tests/basic`, on a card), in two kinds, as HyForth's and hylang's are.  Programs that check
-themselves (`NAME.bas`: a check sets `X` and `E`, or `X$` and `E$`, and calls 9000 or 9100, which count it and print
-a `FAIL` line with both when they differ; the end prints `NAME: n CHECKS, m FAILED`), 395 checks in nine: `arith`
-(precedence, literals, the floating point's limits, integer variables, names' two letters), `funcs` (the numeric
-functions, RND's seed), `logic` (relations, AND, OR and NOT, IF's forms, strings compared), `strings` (LEFT$, RIGHT$
-and MID$ at their edges, STR$'s forms, VAL, 255 characters, the garbage collector with a string array), `arrays`,
-`flow` (FOR's edge cases, GOSUB's recursion, ON), `data` (DATA, READ, RESTORE, DEF FN), `files` (OPEN's modes,
-PRINT#, INPUT#, GET#, EOF, four channels at once, SAVE in a program) and `hydra` (HIMEM, SYS, RREG, USR, PEEK, POKE,
-WAIT, memory past 32K, SLEEP timed by the ticks, ENV$, ARG$, SOUND).  And scripts piped into `basic` (`NAME.txt`) with what
-they print (`NAME.out`): `errors` (every message, direct and in a line, BREAK and CONT), `print` (the zones of 14,
-TAB, SPC, POS, numbers' forms), `list` (the tokenizer: keywords anywhere, the short forms, REM, DATA and strings left
-as typed; LIST's ranges, a line deleted and one replaced) and `input` (`??`, REDO FROM START, EXTRA IGNORED, an
-empty line and CONT).
-
-The first seven programs were run on an older build of EhyBASIC's too, on a bare 65C02 (their keywords its short
-forms), so their expected values are Microsoft's.  The differences are the conversion's: FRE unsigned, and -32768 an
-integer (that build's constant for it was 4 bytes, compared as 5); and LOG(1) is 1.6E-10, not 0, as ehybasic-2's
-normalization shifts the rounding byte in too (`(MANTISSA_BYTES+1)*8`, msbasic's CONFIG_2B) where the older build
-made the result 0 (`funcs` checks it within 1E-9).  The suite found two bugs of the conversion's: PRINT alone was a
-SYNTAX ERROR (`PRINT_ST`'s test for `#` lost CHRGET's flags), and a string in the line buffer (a direct line's
-literal, INPUT's and GET's answers) was left there, not copied (STRLIT's test was for the zero page), so the next line
-overwrote it.
+`tests/basic` is BASIC's suite (the bsuite test): twelve programs that check themselves (495 checks: arithmetic,
+the number functions, logic, strings, arrays, control, procedures, records, data, errors, files, the Hydra's) and
+four scripts piped into it, checked against their output (the errors' messages, `PRINT`'s layout, the prompt,
+`INPUT`).  The basic test is BASIC at the console and as a shell; bplay `PLAY`; bawin `basic -l` in the windows;
+bench `romfs/bench/bench.bas` against hylang's and HyForth's.  Writing the suite found bugs of BASIC's, among them:
+`GOTO` a label never defined ran on (`ca_rd`'s flags), a `SUB` that called another `SUB` took its entry, a
+`FUNCTION`'s call among a call's arguments, an exit's status always 0, an array's lowest index below 0.
 
 ## Against hylang and HyForth
 
-hylang's and HyForth's benchmarks (docs/hylang.md, "Against HyForth") have a BASIC side: `romfs/bench/bench.bas`, on
-the ROM disk at `/rom/bench`: six of their twenty (the first six), with the same algorithms, sizes and results, each
-printing `bench basic NAME RESULT TICKS REPS` (`basic /rom/bench/bench.bas [reps [q|f]]`, its arguments by `ARG$`).
-Each is BASIC's own way: FOR and NEXT, a GOSUB for a call (its arguments and result in variables), Fibonacci's
-recursion by GOSUB with a stack of its own in an array (GOSUB keeps no locals), integer arrays for the bytes.  Its two
-loops are GOTOs, so that the 6502's stack is the benchmark's: fib's GOSUBs go 15 deep, 7 bytes each, and CHKMEM keeps
-80 bytes free.  `node sim/bench.js` runs the three languages (`--basic-reps`) and the `bench` test runs BASIC's at the
-quick sizes too.  In October 2026 (`reborn` at ba6cef5: hylang's native code), at 3.58 MHz, one run of each:
+`romfs/bench/bench.bas` has all twenty of the benchmarks (`sim/bench.js`), the same algorithms, sizes and results as
+hylang's (`bench.hl`) and HyForth's (`bench.fs`), each in BASIC's own way: a `FUNCTION` each, its parameters (by
+reference) and locals its own, recursion where they recurse, arrays where hylang has lists and HyForth memory, a
+`FUNCTION`'s call where they call a function given (`map`, `filter`, `foldl`; `EXECUTE`).  `basic bench.bas
+[reps [q|f [name...]]]` runs them (q: the bench test's quick sizes).  At 3.58 MHz, one run of each (`node
+sim/bench.js`, October 2026: hylang 1 rep each in a hylang of its own, HyForth 5, BASIC 1):
 
-| Benchmark | Result | BASIC | hylang | HyForth | BASIC / hylang | BASIC / HyForth |
-| :-------- | -----: | ----: | -----: | ------: | -------------: | --------------: |
-| `loop` | 4000 | 4,360 ms | 400 ms | 77 ms | 10.9x | 57x |
-| `calls` | 2000 | 5,980 ms | 540 ms | 65 ms | 11.1x | 92x |
-| `fib` | 987 | 17,040 ms | 515 ms | 182 ms | 33.1x | 94x |
-| `sieve` | 172 | 7,435 ms | 1,115 ms | 334 ms | 6.7x | 22x |
-| `sort` | 407 | 14,540 ms | 1,820 ms | 483 ms | 8.0x | 30x |
-| `gcd` | 880 | 7,680 ms | 480 ms | 352 ms | 16.0x | 22x |
-| All | | 57,035 ms | 4,870 ms | 1,493 ms | 11.7x (the ratios' geometric mean 12.3x) | 38x (44x) |
+| Kind | Benchmark | Result | HyForth ms | hylang ms | BASIC ms | BASIC/HyForth | BASIC/hylang |
+| :--- | :-------- | -----: | ---------: | --------: | -------: | ------------: | -----------: |
+| calls | `calls` | 2000 | 65 | 535 | 1,960 | 30.2x | 3.7x |
+| calls | `fib` | 987 | 182 | 520 | 2,875 | 15.8x | 5.5x |
+| calls | `tak` | 36 | 200 | 305 | 1,670 | 8.3x | 5.5x |
+| calls | `ack` | 168 | 116 | 260 | 1,990 | 17.2x | 7.7x |
+| loops | `loop` | 4000 | 77 | 400 | 1,805 | 23.4x | 4.5x |
+| loops | `while` | 6000 | 424 | 725 | 3,505 | 8.3x | 4.8x |
+| loops | `dotimes` | 6000 | 215 | 750 | 2,335 | 10.9x | 3.1x |
+| loops | `nested` | 1800 | 311 | 825 | 3,005 | 9.7x | 3.6x |
+| arith | `gcd` | 880 | 352 | 475 | 2,370 | 6.7x | 5.0x |
+| arith | `collatz` | 1457 | 290 | 425 | 3,230 | 11.1x | 7.6x |
+| arith | `hash` | 4072 | 673 | 715 | 2,170 | 3.2x | 3.0x |
+| bytes | `sieve` | 172 | 334 | 1,115 | 3,690 | 11.0x | 3.3x |
+| bytes | `sort` | 407 | 483 | 1,820 | 6,380 | 13.2x | 3.5x |
+| bytes | `matrix` | 1375 | 1,088 | 970 | 2,950 | 2.7x | 3.0x |
+| bytes | `queens` | 40 | 1,308 | 2,520 | 13,970 | 10.7x | 5.5x |
+| lists | `mapf` | 9880 | 208 | 1,020 | 1,310 | 6.3x | 1.3x |
+| lists | `fold` | 964 | 716 | 1,270 | 2,995 | 4.2x | 2.4x |
+| lists | `each` | 700 | 210 | 450 | 2,410 | 11.5x | 5.4x |
+| text | `chars` | 7 | 204 | 780 | 3,895 | 19.1x | 5.0x |
+| text | `digits` | 2890 | 2,143 | 1,795 | 4,830 | 2.3x | 2.7x |
+| All | | | 9,599 | 17,675 | 69,345 | 9.2x | 4.0x |
 
-Before hylang's native code, against its bytecode machine (9,045 ms for the six), BASIC took 6.3 times hylang's time
-(the ratios' geometric mean 6.4x).
+The last row's ratios are the geometric means; by kind, BASIC/HyForth: calls 16.2x, loops 11.9x, arithmetic 6.2x,
+arrays (bytes) 8.1x, lists 6.7x, text 6.6x; BASIC/hylang 5.4x, 4.0x, 4.9x, 3.7x, 2.5x and 3.7x.  Over the six
+benchmarks the first BASIC had (calls, fib, loop, gcd, sieve, sort), 14.9 times HyForth's time and 4.2 times hylang's,
+where the first BASIC (EhyBASIC, Microsoft's 2A, retired for this one) was 44 and 12.3 times: three times as fast.
 
-Microsoft's BASIC interprets the program's text each time it runs a line: CHRGET reads it again a character at a
-time, a constant is converted from its digits at each use (`1` in `R=R+1` too), a variable is found by a search of
-them in the order they were made, every number is a 5-byte float (a loop's counter too), and a GOTO or GOSUB to an
-earlier line searches the lines from the program's start.  So fib is its worst, each call a GOSUB back and its stack
-a float array's elements; the sieve and the sort, where hylang's buffers cost it too, its nearest.  The order the
-variables are made matters: bench.bas makes the benchmarks' first (its line 9), which took 10 to 30% off (`loop`
-5,590 ms before, `gcd` 10,500 ms).
+BASIC is nearest where a statement does much or a call is hylang's own cost too: `mapf` (1.3 times hylang's: its
+`map` and `filter` make lists, BASIC calls a `FUNCTION` on integers), `fold` (2.4), and next to HyForth `digits`
+(2.3: a number's text is the library's in both), `matrix` (2.7) and `hash` (3.2).  It's farthest where a step is
+small: a `FOR` loop's step with a statement is some 1,600 cycles (`loop`, 23 times HyForth's `DO LOOP`), a
+`FUNCTION`'s call some 1,900 more (`calls`, 30 times a `JSR`), a recursion's call deeper (`ack` 7.7 times hylang's,
+`collatz` 7.6), and `MID$`'s new string for each character (`chars`, 19 times `C@`).  The interpreter's own time is
+the next work: `FORN` and a call's frame (its arguments by reference, its mark, its locals' defaults) are the most of
+it.

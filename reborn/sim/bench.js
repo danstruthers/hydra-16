@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // ****************************************************************************
 // bench.js - hylang against HyForth: the same benchmarks in each (romfs/bench: bench.hl and hl/NAME.hl, bench.fs; on
-// the ROM disk at /rom/bench), run in the emulator, their times compared, by kind; and BASIC's too where it has the
-// benchmark (bench.bas: loop, calls, fib, sieve, sort, gcd).  Each program runs each benchmark reps times and prints
+// the ROM disk at /rom/bench), run in the emulator, their times compared, by kind; and BASIC's (bench.bas, all
+// twenty too).  Each program runs each benchmark reps times and prints
 //   bench LANGUAGE NAME RESULT TICKS REPS
 // (the ticks the reps took, 200 a second, as the machine counts them); this prints a table of the results (which
 // must be the same in both), the time of one run of each, and hylang's against HyForth's, with each kind's geometric
@@ -15,14 +15,14 @@
 //   --only NAME,...   those benchmarks alone; --kind KIND,...: those kinds' (calls, loops, arith, bytes, lists, text)
 //   --hylang-reps N   each of hylang's benchmarks run N times (default 1: each takes a second or so)
 //   --forth-reps N    HyForth's (default 5)
-//   --basic-reps N    BASIC's (default 1; its six benchmarks in one run of bench.bas)
+//   --basic-reps N    BASIC's (default 1; its benchmarks in one run of bench.bas)
 //   --together        hylang's in one hylang, one after another
 //   --vs TREE         hylang's again in another tree's build (another branch's worktree, built: its modules, these
 //                     benchmarks), a column of its, and this tree's hylang against it
 //   --json FILE       the results, as JSON, to FILE too
 //   -v                the console's output too
 // On the board: hylang /rom/bench/bench.hl [reps [q|f [name...]]], forth /rom/bench/bench.fs [reps [q|f [name...]]],
-// basic /rom/bench/bench.bas [reps [q|f]].
+// basic /rom/bench/bench.bas [reps [q|f [name...]]].
 // Build first (node build.js).  Its status: 1 if a result isn't the same in both, or a benchmark didn't finish.
 'use strict';
 const fs = require('fs');
@@ -53,7 +53,7 @@ const BENCH = [
   ['digits', 'text', 'numbers written out: to-str (HyForth: <# #S #>)'],
 ];
 const KINDS = ['calls', 'loops', 'arith', 'bytes', 'lists', 'text'];
-const BASIC = ['loop', 'calls', 'fib', 'sieve', 'sort', 'gcd'];   // (bench.bas's)
+const BASIC = BENCH.map(b => b[0]);                                // (bench.bas's: all of them)
 
 // The paged ROM of a tree's build (its modules, its ROM disk), with this tree's benchmarks on its disk
 function rom(tree) {
@@ -117,7 +117,7 @@ function main(argv) {
   const sz = opt.quick ? 'q' : 'f';
   const hyLines = opt.together ? ['hylang /rom/bench/bench.hl ' + opt.hy + ' ' + sz + names]
     : chosen.map(([n]) => 'hylang /rom/bench/bench.hl ' + opt.hy + ' ' + sz + ' ' + n);
-  const baLines = chosen.some(([n]) => BASIC.includes(n)) ? ['basic /rom/bench/bench.bas ' + opt.ba + ' ' + sz] : [];
+  const baLines = chosen.some(([n]) => BASIC.includes(n)) ? ['basic /rom/bench/bench.bas ' + opt.ba + ' ' + sz + names] : [];
   const got = run(ROOT, [...hyLines, 'forth /rom/bench/bench.fs ' + opt.fo + ' ' + sz + names, ...baLines], opt.verbose);
   const vs = opt.vs ? run(opt.vs, hyLines, opt.verbose) : null;
 
@@ -136,7 +136,7 @@ function main(argv) {
   for (const kind of KINDS) {
     const ks = chosen.filter(b => b[1] === kind);
     if (!ks.length) continue;
-    const ratios = [], vsr = [];
+    const ratios = [], vsr = [], bfr = [], bhr = [];
     for (const [name, , what] of ks) {
       const h = (got.hylang || {})[name], f = (got.forth || {})[name], v = vs && (vs.hylang || {})[name];
       const b = baLines.length && BASIC.includes(name) ? (got.basic || {})[name] || null : undefined;
@@ -145,6 +145,7 @@ function main(argv) {
       const hm = ms(h), fm = ms(f), vm = ms(v), ratio = hm / fm;
       if (isFinite(ratio) && ratio > 0) ratios.push(ratio);
       if (v && isFinite(vm / hm) && vm > 0 && hm > 0) vsr.push(vm / hm);
+      if (b && isFinite(ms(b)) && ms(b) > 0 && fm > 0 && hm > 0) { bfr.push(ms(b) / fm); bhr.push(ms(b) / hm); }
       const res = !h || !f ? '(none)' : same ? h.result : h.result + '/' + f.result + (v ? '/' + v.result : '') + '!';
       console.log(kind.padEnd(7) + name.padEnd(10) + ' ' + String(res).padEnd(7) + fmt(isFinite(hm) ? hm.toFixed(1) : '-', 10) +
         (vs ? fmt(isFinite(vm) ? vm.toFixed(1) : '-', 11) + fmt(x(vm / hm), 9) : '') +
@@ -153,7 +154,8 @@ function main(argv) {
         '  ' + what);
       rows.push({ name, kind, result: h && h.result, hylang: hm, forth: fm, vs: vs ? vm : undefined, ratio, basic: b ? ms(b) : undefined });
     }
-    console.log(''.padEnd(7) + '(' + kind + ': hylang/HyForth ' + x(geo(ratios)) + (vs ? ', vs/this ' + x(geo(vsr)) : '') + ', geometric means)');
+    console.log(''.padEnd(7) + '(' + kind + ': hylang/HyForth ' + x(geo(ratios)) + (vs ? ', vs/this ' + x(geo(vsr)) : '') +
+      (bfr.length ? ', BASIC/HyForth ' + x(geo(bfr)) + ', BASIC/hylang ' + x(geo(bhr)) : '') + ', geometric means)');
   }
   const all = rows.filter(r => isFinite(r.ratio) && r.ratio > 0);
   const sumH = all.reduce((s, r) => s + r.hylang, 0), sumF = all.reduce((s, r) => s + r.forth, 0);

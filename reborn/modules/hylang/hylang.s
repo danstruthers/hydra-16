@@ -8,8 +8,8 @@
 ; shell's rule on: shell.hl's shell-line and shell-prompt, which the REPL finds by name).
 ;   A program of five banks: the evaluator, its special forms, the dispatch and the built-ins that run it in the first
 ; (eval.inc, forms.inc, builtins.inc); the reader, the printer, the list built-ins and those that write values in the
-; second (read.inc, print.inc, lists.inc, eqcmp.inc, valout.inc); the numbers in the third (nums.inc, numreg.inc,
-; numval.inc, numtext.inc, numbi.inc, numbits.inc); the hashes and the strings in the fourth (hashes.inc, strs.inc),
+; second (read.inc, print.inc, lists.inc, eqcmp.inc, valout.inc); the numbers in the third (nums.inc, numlib.inc,
+; numbi.inc, numbits.inc: on the numbers library, the module numbers); the hashes and the strings in the fourth (hashes.inc, strs.inc),
 ; with the most of the RAM code (DATA4, hylang.cfg: copied to the RAM as hylang starts); the streams and the system
 ; library in the fifth (sys.inc, streams.inc, system.inc).  What every bank calls is in the task's RAM: the heap
 ; (heap.inc), the output (out.inc), the evaluation stack (stack.inc), and the note handler here; a bank calls another
@@ -19,6 +19,7 @@
 .include "hyx2.inc"
 .include "macros.inc"
 .include "hylang.inc"
+.include "numbers.inc"
 
             HYX2_PROGRAM "hylang", main, 8
 
@@ -37,9 +38,7 @@ HL_DATA4        = 1             ; (The RAM code in DATA4: hylang.cfg)
 .include "eqcmp.inc"
 .include "valout.inc"
 .include "nums.inc"
-.include "numreg.inc"
-.include "numval.inc"
-.include "numtext.inc"
+.include "numlib.inc"
 .include "numbi.inc"
 .include "numbits.inc"
 .include "hashes.inc"
@@ -527,8 +526,17 @@ main:
 @heap:
             lda         #1                                  ; (The capture bank, the machine)
             jsr         BANKS_ALLOC
-            bcs         @noroom
+            bcc         @lb200
+            jmp         @noroom
+@lb200:
             sta         cap_bank
+            FARN        3, nl_init                          ; (The numbers library: its bank, the text's)
+            bcc         :+
+            LDAX        s_nonum
+            jsr         out_text
+            lda         #1
+            jmp         quit
+:
             lda         #<hl_roots                          ; (The reader's levels, the machine's stack: roots)
             sta         gc_hook
             lda         #>hl_roots
@@ -1133,6 +1141,7 @@ s_bye:      .byte       "=> exit", LF, 0
 s_missingl: .byte       "=> Error: missing ", 0
 s_long:     .byte       "=> Error: Too long: an expression of more than 4096 bytes", LF, 0
 s_nomemline: .byte      "=> Error: out of memory", LF, 0
+s_nonum:    .byte       "hylang: the numbers library (the module numbers) isn't there", $0A, 0
 s_noheap:   .byte       "hylang: no room for its heap", LF, 0
 s_globals:  .byte       "hylib"                             ; (globals.hl, then hylang's own)
 s_globals_n = * - s_globals

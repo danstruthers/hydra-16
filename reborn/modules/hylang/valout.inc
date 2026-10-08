@@ -149,20 +149,48 @@ bo_format:
             stz         o_at + 1
 @byte:
             jsr         o_byte_at
-            bcs         @done
+            bcc         @lb200
+            jmp         @done
+@lb200:
             cmp         #'{'
             beq         @open
             cmp         #'}'
-            beq         @close
+            bne         @lb201
+            jmp         @close
+@lb201:
 @out:
             jsr         out_byte
-            bra         @next
+            jmp         @next
 @open:
-            jsr         o_peek                              ; ({{: a brace; {}: the next value)
-            cmp         #'{'
-            beq         @twice
+            jsr         o_peek                              ; ({{: a brace; {}: the next value; {base}: the next,
+            cmp         #'{'                                ;   a number, in that base; a { with no } after it:
+            beq         @twice                              ;   itself)
             cmp         #'}'
-            bne         @brace
+            beq         @value
+            jsr         o_spec
+            bcs         @brace
+            lda         o_i
+            cmp         cn
+            lda         o_i + 1
+            sbc         cn + 1
+            bcc         :+
+            LDAX        s_ofew
+            jmp         o_fail
+:
+            jsr         o_arg
+            FARN        3, n_fmt_base
+            bcc         :+
+            lda         o_start                             ; (Its error: ex)
+            ldx         o_start + 1
+            jsr         cap_drop
+            clc
+            rts
+:
+            inc         o_i
+            bne         @next
+            inc         o_i + 1
+            bra         @next
+@value:
             lda         o_i
             cmp         cn
             lda         o_i + 1
@@ -188,10 +216,10 @@ bo_format:
             jsr         o_skip
 @brace:
             jsr         o_byte_at
-            bra         @out
+            jmp         @out
 @next:
             jsr         o_skip
-            bra         @byte
+            jmp         @byte
 @done:
             lda         o_i                                 ; (Every value used?)
             cmp         cn
@@ -288,6 +316,50 @@ o_peek:
             bcc         :+
             lda         #0
 :
+            rts
+
+; A } after the { at o_at?  OUT: C = 0, o_at at it, and NL_S the base between (zero-terminated; NL_BASE_MAX - 1
+; bytes at most: past them, ".", none); C = 1, o_at as it was, if there's none
+o_spec:
+            lda         o_at
+            pha
+            lda         o_at + 1
+            pha
+            ldx         #0
+@byte:
+            jsr         o_skip
+            phx
+            jsr         o_byte_at
+            plx
+            bcs         @none
+            cmp         #'}'
+            beq         @found
+            cpx         #NL_BASE_MAX - 1
+            bcs         :+
+            sta         NL_S,x
+            inx
+            bra         @byte
+:
+            ldx         #NL_BASE_MAX                        ; (Too long: no base)
+            bra         @byte
+@found:
+            cpx         #NL_BASE_MAX
+            bcc         :+
+            lda         #'.'
+            sta         NL_S
+            ldx         #1
+:
+            stz         NL_S,x
+            pla
+            pla
+            clc
+            rts
+@none:
+            pla
+            sta         o_at + 1
+            pla
+            sta         o_at
+            sec
             rts
 
 ; o_at on by one
@@ -462,10 +534,8 @@ bo_to_atom:
             beq         @text
             cmp         #PK_FIXNUM
             beq         @text
-            cmp         #PK_BIGNUM
-            bcc         @not
-            cmp         #PK_COMPLEX + 1
-            bcc         @text
+            cmp         #PK_NUMBER
+            beq         @text
 @not:
             LDAX        s_otoatom
             jmp         l_error

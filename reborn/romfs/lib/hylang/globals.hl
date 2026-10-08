@@ -183,22 +183,6 @@
 
 :({+? -? 0?} positive? negative? zero?)
 
-; a to the power b, a whole number
-(fun {pow a b} ?{
-  (not (eq b (trunc b)))
-  (error "'pow' takes a whole number as its power")
-  ?((-? b)
-    (/ 1 (pow a (- b)))
-    ?((zero? b)
-      1
-      ?((even? b)
-        (* (pow a (/ b 2)) (pow a (/ b 2)))
-        (* a (pow a (1- b)))
-      )
-    )
-  )
-})
-
 (fun {minimum} .{min &1})
 (fun {maximum} .{max &1})
 

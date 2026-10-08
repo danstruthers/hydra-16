@@ -1,0 +1,417 @@
+# ****************************************************************************
+# numbers.def - the shared number libraries' calls: the numbers library (the number system: arithmetic,
+# conversions, text in every base, bits) and the math library (its functions), which every language calls
+# (docs/design/plans/NUMBERS.md).  The one source of truth for their jump tables and each language's bindings, as
+# api.def is for the system calls: tools/apigen.js reads it, and makes obj/sdk/numbers.inc (the entries' addresses,
+# NUM_ADD ..., MATH_SQRT ..., the constants, and the macros NUMCALL and MATHCALL, for programs in assembly), the
+# constants for C (obj/sdk/c/numdefs.h, which num.h includes) and each library's jump table (obj/gen/numbers_jt.inc,
+# math_jt.inc).
+#
+# The format:
+#   library NAME "what it's for"          a library module (HT_LIBRARY): its jump table after its header, 3 bytes
+#                                         an entry, in the order its entries are written here
+#   entry NAME LIBRARY impl=SYMBOL        a routine: the library's next slot; SYMBOL its code
+#     in:     the registers it takes      (indented lines, until the next entry)
+#     out:    what it gives back
+#     errors: the error codes it can give (C = 1, .A = the code: the NE_ codes below)
+#     names:  each language's name for it: hl NAME (hylang), bas NAME (BASIC), fs NAME (HyForth), c NAME (C); "-"
+#             where a language reaches it some other way (an operator, PRINT ...)
+#     doc:    what it does                (more doc: lines go on with it)
+#   const NAME VALUE "what it is"         a constant (the error codes, the kinds, the format's tags)
+#
+# A call: XCALL, r15 the entry's address, r14 the library's bank (MODINFO finds it, by the library's name).  The
+# rules, every entry's:
+#   r13      the libraries' bank: a RAM bank of the program's own (BANKS_ALLOC's), the same for the program's life,
+#            which INIT fills.  The library's registers, buffers and state (the base, the precision, the random
+#            generator's) are there, at $8000 while a call runs (the caller's own bank back as it ends).
+#   r0, r1   the operands: numbers in the stored format, at these addresses: anywhere the caller sees but its paged
+#            ROM ($A000-$DFFF, the library's while it runs): its RAM, or the bank it has at $8000 (selected for each
+#            byte as it's read)
+#   r2, r3   the result's place (the same rule) and its room (bytes)
+#   .A/.X    the result's length (low, high), C = 0; or C = 1 and .A an error (NE_), the result's place untouched
+#   $70-$7F  the libraries' own zero page in a call: saved as it starts and put back as it ends, so a program's
+#            zero page is its own (hylang's is $22-$7F)
+# r4-r11 an entry's own, when it says.  Everything else is kept (r0-r3 too).  A number given a library is checked as
+# it's read: its tags and lengths (NE_NOTNUM if they aren't a number's), not that it's in its one form (BYTES's).
+
+library numbers "The number system: danlang's and hylang's (integers of any size, fixed decimals, rationals, complex numbers), in the stored format"
+library math    "Its functions: square roots, e and logarithms, the circle's, real powers, pi, at a precision"
+
+const NUM_MAX      1040 "The longest number in the stored format (a complex number of two rationals of 255-byte integers: 1039)"
+
+const NT_POS       $80 "The format's tags: $00-$7F an integer -64 to 63; $80 + n - 1, a positive integer of n bytes (1-16)"
+const NT_NEG       $90 "A negative integer of 1-16 bytes ($90 + n - 1)"
+const NT_LONG_POS  $A0 "A positive integer of 17-255 bytes: a length byte, then its magnitude"
+const NT_LONG_NEG  $A1 "A negative one"
+const NT_FIXED     $B0 "A fixed decimal of 0-15 places ($B0 + places), then its digits: an integer"
+const NT_FIXED_LONG $C0 "A fixed decimal of 16-65535 places: the places (2 bytes), then its digits"
+const NT_RATIONAL  $C1 "A rational: its numerator, then its denominator (above 1), in lowest terms"
+const NT_COMPLEX   $C2 "A complex number: its real part, then its imaginary part (not 0)"
+const NT_NONE      $FF "Never a number: a program's own"
+
+const NE_BIG       1   "Too big: an integer past 255 bytes, a fixed decimal past 65535 places"
+const NE_DIV0      2   "Division by zero"
+const NE_NOTNUM    3   "Not a number: text that isn't one, or bytes that aren't a number in the stored format"
+const NE_ROOM      4   "No room for the result in the place given"
+const NE_DOMAIN    5   "Outside the function's domain"
+const NE_BASE      6   "Not a base: a base string that names none"
+const NE_INT       7   "An integer is needed (a number equal to one will do)"
+const NE_REAL      8   "A real number is needed, not a complex one"
+const NE_INIT      9   "The bank given (r13) isn't one INIT filled"
+const NE_FORMAT    10  "A format's placeholders and its arguments don't match"
+
+const NK_INT       0   "A kind: an integer"
+const NK_FIXED     1   "A fixed decimal"
+const NK_RATIONAL  2   "A rational"
+const NK_COMPLEX   3   "A complex number"
+
+const NPARSE_PROGRAM 1 "PARSE's .Y: the text is a program's (a bare number starts with a digit 0-9)"
+const NPARSE_WHOLE 2   "PARSE's .Y: the whole text must be the number"
+const NFMT_NUMBER  0   "FORMAT's arguments: a number's entry (its address after)"
+const NFMT_STRING  1   "A string's (zero-terminated)"
+const NFMT_END     $FF "The table's end"
+const NBIT_AND     0   "BITS's operations (.Y): and"
+const NBIT_OR      1   "Or"
+const NBIT_XOR     2   "Xor"
+const NBIT_NOT     3   "Not (x alone: -x - 1)"
+const NBIT_SHL     4   "Shift left by y"
+const NBIT_SHR     5   "Shift right by y (toward minus infinity)"
+const NBIT_TEST    6   "Bit y's test (.A = 0 or 1, no result)"
+
+# ---- numbers: the state, and text
+
+entry INIT numbers impl=nm_init
+  in:     r13 = the bank
+  out:    -
+  errors: -
+  names:  hl - | bas - | fs - | c num_init
+  doc:    The bank made the libraries': the base decimal ("d"), the precision 12 digits, the random generator seeded
+  doc:    from the clock and the ticks.  A program calls it once, as it starts; every other entry refuses a bank it
+  doc:    hasn't filled (NE_INIT).
+
+entry SET_BASE numbers impl=nm_set_base
+  in:     r0 = a base string (its bytes and a 0: "x", "#x", "#16r", "c", "<x", "=16r", "[01]" ...)
+  out:    .A = what it is: bit 0 decimal (0-9, not balanced, least digit first or negative), bit 1 its prefix written
+  errors: NE_BASE
+  names:  hl base | bas BASE | fs set-base | c num_set_base
+  doc:    The base numbers are shown and read in, everywhere: the string's # says whether a number written in it
+  doc:    shows its prefix ("#x": #xFF; "x": FF).  HyForth's BASE, hex and decimal set it too.  What it gives back lets
+  doc:    a language read and write its small integers itself while the base is decimal without its prefix.
+
+entry GET_BASE numbers impl=nm_get_base
+  in:     r2 = a place for its string; r3 = its room
+  out:    .A/.X = its length (the 0 after it not counted)
+  errors: NE_ROOM
+  names:  hl base | bas BASE$ | fs get-base | c num_get_base
+  doc:    The base, its string (as SET_BASE was given it).
+
+entry PARSE numbers impl=nm_parse
+  in:     r0 = text; r1 = its length; r4 = a base string (0: the base); .Y bit 0 = 1 if the text is a program's (a
+  in:     bare number must start with a digit 0-9 there), bit 1 = 1 if the whole text must be the number
+  out:    .A/.X = the number's length; r5 = the characters it used (from the start, spaces around it passed over)
+  errors: NE_NOTNUM NE_DIV0 NE_BIG NE_ROOM NE_BASE
+  names:  hl val | bas VAL | fs >n | c num_parse
+  doc:    A number read from text in the base, or in the base r4 names: every form danlang reads (the 19 named
+  doc:    bases, radixes, digits of one's own, the modifiers, a number with a # of its own in its own base,
+  doc:    fractions, a radix point, fixed decimals in decimal, complex numbers: 1+2i, 2i), as numref.js's parse
+  doc:    reads a whole text.  It reads the longest start of the text that's a number (of its first 255 characters)
+  doc:    and says how much, so a caller reads numbers one after another (BASIC's VAL, C's strtod).  With .Y's bit 1, the
+  doc:    whole text or nothing, as numref.js's parse has it (a word of a reader's own, val: "1/0x" isn't a number, as
+  doc:    "1/0" is a division by zero).  The first such start that's a rational of 0 below (1/0): NE_DIV0.  (BASIC's
+  doc:    exponents, 1E6, come with BASIC.)
+
+entry DISPLAY numbers impl=nm_display
+  in:     r0 = a number; r4 = a base string (0: the base)
+  out:    .A/.X = the text's length
+  errors: NE_ROOM NE_BASE NE_NOTNUM NE_BIG
+  names:  hl to-str | bas STR$ | fs n>str | c num_display
+  doc:    A number as text, exactly: in the base, or in the base r4 names, its prefix as the base string says; a
+  doc:    fraction or a fixed decimal with a radix point when it ends in that base, else as a fraction; a complex
+  doc:    number its parts (in a base whose digits have +, - or i, in decimal with #d).  hylang's print, BASIC's
+  doc:    PRINT, HyForth's n. and C's printf (%N) write numbers with it.  The text is written as it's made: with no
+  doc:    room for all of it, NE_ROOM, what there was room for written.  NE_BIG: a radix point's digits past 255 bytes
+  doc:    (n * base^k / d), or a fixed decimal of 615 places or more in a base not decimal (10^places).
+
+entry FORMAT numbers impl=nm_format
+  in:     r0 = a format string (its bytes and a 0); r4 = its arguments: a table of 3-byte entries (a kind: 0 a
+  in:     number, 1 a string with a 0 after it; then its address), one for each placeholder, then a kind of $FF
+  out:    .A/.X = the text's length
+  errors: NE_ROOM NE_BASE NE_NOTNUM NE_BIG NE_FORMAT
+  names:  hl format | bas PRINT USING | fs nformat | c num_format
+  doc:    The format string's text (danlang's format), each placeholder its argument: {} in the base (a string as it
+  doc:    is), {x}, {#b}, {c}, {16r}, {[01]} ... in that one; {{ and }} a brace; a { with no } after it, or a } alone,
+  doc:    itself.  NE_FORMAT: too few arguments or too many, or a string for a {base}.  (C's printf takes %N and
+  doc:    %{base} its own way, with DISPLAY.)
+
+# ---- numbers: the arithmetic
+
+entry ADD numbers impl=nm_add
+  in:     r0 = x; r1 = y
+  out:    .A/.X = the result's length
+  errors: NE_BIG NE_ROOM NE_NOTNUM
+  names:  hl + | bas + | fs n+ | c num_add
+  doc:    x + y, by the tower's rules: complex if either is, else rational if either is, else fixed if either is
+  doc:    (its places the more of the two's), else an integer.
+
+entry SUB numbers impl=nm_sub
+  in:     r0 = x; r1 = y
+  out:    .A/.X = the result's length
+  errors: NE_BIG NE_ROOM NE_NOTNUM
+  names:  hl - | bas - | fs n- | c num_sub
+  doc:    x - y.
+
+entry MUL numbers impl=nm_mul
+  in:     r0 = x; r1 = y
+  out:    .A/.X = the result's length
+  errors: NE_BIG NE_ROOM NE_NOTNUM
+  names:  hl * | bas * | fs n* | c num_mul
+  doc:    x * y (a fixed decimal's places the sum of the two's).
+
+entry DIV numbers impl=nm_div
+  in:     r0 = x; r1 = y
+  out:    .A/.X = the result's length
+  errors: NE_DIV0 NE_BIG NE_ROOM NE_NOTNUM
+  names:  hl / | bas / | fs n/ | c num_div
+  doc:    x / y, exactly: a rational, an integer when it's whole; complex if either is.
+
+entry NEG numbers impl=nm_neg
+  in:     r0 = x
+  out:    .A/.X = the result's length
+  errors: NE_ROOM NE_NOTNUM
+  names:  hl - | bas - | fs nnegate | c num_neg
+  doc:    -x.
+
+entry ABS numbers impl=nm_abs
+  in:     r0 = x
+  out:    .A/.X = the result's length
+  errors: NE_ROOM NE_NOTNUM NE_REAL
+  names:  hl abs | bas ABS | fs nabs | c num_abs
+  doc:    |x|, a real number's.
+
+entry CMP numbers impl=nm_cmp
+  in:     r0 = x; r1 = y
+  out:    .A = $FF, 0 or 1 (x below, equal to, above y)
+  errors: NE_NOTNUM NE_BIG
+  names:  hl cmp | bas - | fs ncompare | c num_cmp
+  doc:    The order, by value whatever the kinds (1 and 1.0 equal); complex numbers by real part, then imaginary.  (They're
+  doc:    worked as the sums are, fixed decimals' digits scaled to the same places, fractions multiplied out with a
+  doc:    rational: NE_BIG past 255 bytes.)
+
+entry KIND numbers impl=nm_kind
+  in:     r0 = x
+  out:    .A = its kind (NK_); .X = its sign ($FF, 0, 1; a complex number's real part's)
+  errors: NE_NOTNUM
+  names:  hl int? fixed? rational? complex? | bas - | fs int? fixed? rational? complex? | c num_kind
+  doc:    What kind of number it is, and its sign.
+
+entry IDIV numbers impl=nm_idiv
+  in:     r0 = x; r1 = y, integers (or numbers equal to them); r5 = a place for the remainder; r6 = its room
+  out:    .A/.X = the quotient's length (at r2); r6 = the remainder's (at r5).  No room for either: neither written
+  errors: NE_DIV0 NE_INT NE_ROOM NE_NOTNUM
+  names:  hl - | bas \ MOD | fs n/mod | c num_idiv
+  doc:    The quotient truncated toward zero, and the remainder (its sign the dividend's).
+
+entry GCD numbers impl=nm_gcd
+  in:     r0 = x; r1 = y, integers
+  out:    .A/.X = the result's length
+  errors: NE_INT NE_ROOM NE_NOTNUM
+  names:  hl - | bas - | fs ngcd | c num_gcd
+  doc:    Their greatest common divisor.
+
+entry POW numbers impl=nm_pow
+  in:     r0 = x; r1 = n, an integer
+  out:    .A/.X = the result's length
+  errors: NE_INT NE_DIV0 NE_BIG NE_ROOM NE_NOTNUM
+  names:  hl pow | bas ^ | fs npow | c num_pow
+  doc:    x to the whole power n, exactly (a negative n: 1 / x^-n; 0 to one: NE_DIV0), as numref.js has it: r = 1,
+  doc:    b = x, and for each of n's bits from its lowest, r = r * b if it's 1, b = b * b if there are more.  A power
+  doc:    that isn't whole is math's RPOW.
+
+# ---- numbers: the conversions
+
+entry TRUNCATE numbers impl=nm_truncate
+  in:     r0 = x, real
+  out:    .A/.X = the result's length
+  errors: NE_REAL NE_ROOM NE_NOTNUM
+  names:  hl truncate | bas FIX CINT CLNG | fs truncate | c num_truncate
+  doc:    Its integer part, toward zero.
+
+entry FLOOR numbers impl=nm_floor
+  in:     r0 = x, real
+  out:    .A/.X = the result's length
+  errors: NE_REAL NE_ROOM NE_NOTNUM
+  names:  hl - | bas INT | fs nfloor | c num_floor
+  doc:    The greatest integer not above it.
+
+entry ROUND numbers impl=nm_round
+  in:     r0 = x, real
+  out:    .A/.X = the result's length
+  errors: NE_REAL NE_ROOM NE_NOTNUM
+  names:  hl - | bas CINT CLNG | fs nround | c num_round
+  doc:    The nearest integer, a half to the even one.
+
+entry TO_FIXED numbers impl=nm_to_fixed
+  in:     r0 = x, real; .A/.X = places (0 to 10000; $FFFF: 10)
+  out:    .A/.X = the result's length
+  errors: NE_REAL NE_BIG NE_DOMAIN NE_ROOM NE_NOTNUM
+  names:  hl to-fixed | bas - | fs to-fixed | c num_to_fixed
+  doc:    x as a fixed decimal of that many places, cut short (not rounded): an integer of no places, a fixed decimal
+  doc:    its digits cut, a rational a digit at a time (hylang's way: NE_BIG once its digits pass 255 bytes).  Places
+  doc:    past 10000: NE_DOMAIN.
+
+entry TO_RATIONAL numbers impl=nm_to_rational
+  in:     r0 = x, real
+  out:    .A/.X = the result's length
+  errors: NE_REAL NE_ROOM NE_NOTNUM
+  names:  hl to-rational | bas - | fs to-rational | c num_to_rational
+  doc:    x as a rational (an integer when it's whole).
+
+entry NUMERATOR numbers impl=nm_numerator
+  in:     r0 = x, real
+  out:    .A/.X = the result's length
+  errors: NE_REAL NE_ROOM NE_NOTNUM
+  names:  hl rational.n | bas - | fs rational.n | c num_numerator
+  doc:    A real number's numerator, in lowest terms.
+
+entry DENOMINATOR numbers impl=nm_denominator
+  in:     r0 = x, real
+  out:    .A/.X = the result's length
+  errors: NE_REAL NE_ROOM NE_NOTNUM
+  names:  hl rational.d | bas - | fs rational.d | c num_denominator
+  doc:    A real number's denominator, in lowest terms.
+
+entry COMPLEX numbers impl=nm_complex
+  in:     r0 = re; r1 = im, real numbers
+  out:    .A/.X = the result's length
+  errors: NE_REAL NE_ROOM NE_NOTNUM
+  names:  hl complex | bas - | fs complex | c num_complex
+  doc:    The complex number re + im i (a real number when im is 0).
+
+entry PART numbers impl=nm_part
+  in:     r0 = x; .Y = 0 its real part, 1 its imaginary part
+  out:    .A/.X = the result's length
+  errors: NE_ROOM NE_NOTNUM
+  names:  hl - | bas - | fs - | c num_part
+  doc:    A complex number's part (a real number's real part is itself, its imaginary part 0).
+
+entry FROM_INT numbers impl=nm_from_int
+  in:     r0/r1 = a 32-bit integer (r0 low); .Y = 1 if it's signed
+  out:    .A/.X = the result's length
+  errors: NE_ROOM
+  names:  hl - | bas - | fs s>n d>n | c num_from_int
+  doc:    A machine integer (16 or 32 bits) as a number.
+
+entry TO_INT numbers impl=nm_to_int
+  in:     r0 = x, an integer (or equal to one)
+  out:    r4/r5 = its low 32 bits (r4 low); .A = 0 if it fits in 32 bits signed, 1 if only unsigned, 2 if neither
+  errors: NE_INT NE_NOTNUM
+  names:  hl - | bas - | fs n>s n>d | c num_to_int
+  doc:    A number as a machine integer, with whether it fits (PEEK, POKE, array sizes, cells).
+
+# ---- numbers: bits, random numbers, Fibonacci
+
+entry BITS numbers impl=nm_bits
+  in:     r0 = x; r1 = y, integers; .Y = the operation: 0 and, 1 or, 2 xor, 3 not (x alone: -x - 1), 4 shift
+  in:     left by y, 5 shift right by y (toward minus infinity), 6 bit y's test (a count below 0 the other way; past
+  in:     16 bits, -32768 or 32767)
+  out:    .A/.X = the result's length (the test: .A = 0 or 1, no result)
+  errors: NE_INT NE_BIG NE_ROOM NE_NOTNUM
+  names:  hl bit-and bit-or bit-xor bit-not shl shr bit? | bas AND OR XOR NOT SHL SHR BIT | fs nand nor nxor ninvert nlshift nrshift nbit? | c num_bits
+  doc:    The bits of integers of any size, in two's complement.  And, or and xor work a byte past the longer, so
+  doc:    an integer of 255 bytes is NE_BIG there; a shift left past 2040 bits is NE_BIG.  A bit below 0 is 0.
+
+entry RANDOM numbers impl=nm_random
+  in:     r0 = n, a positive integer, or 0 for a fixed decimal from 0 to 1
+  out:    .A/.X = the result's length
+  errors: NE_INT NE_ROOM NE_NOTNUM
+  names:  hl random | bas RND | fs nrandom | c num_random
+  doc:    hylang's random generator (a 16-bit xorshift, in the bank): an integer from 0 below n, as many bytes drawn
+  doc:    as n has, the top one masked to n's top byte's bits, drawn again while it's n or more; or a fixed decimal
+  doc:    from 0 up to 1, of the precision's digits.  SEED sets its state.
+
+entry SEED numbers impl=nm_seed
+  in:     r0 = a 16-bit seed (0: from the clock and the ticks)
+  out:    -
+  errors: -
+  names:  hl - | bas RANDOMIZE | fs nseed | c num_seed
+  doc:    The random generator seeded (its state the seed, or 1 for a seed of 0 from the clock: never 0).
+
+entry FIB numbers impl=nm_fib
+  in:     r0 = n, an integer 0 or more
+  out:    .A/.X = the result's length
+  errors: NE_INT NE_BIG NE_ROOM NE_NOTNUM
+  names:  hl fib | bas FIB | fs nfib | c num_fib
+  doc:    The nth Fibonacci number, by doubling (hylang's): NE_BIG past fib(2939) (the doubling makes fib(n + 1) too,
+  doc:    and fib(2941) is past 255 bytes).
+
+entry BYTES numbers impl=nm_bytes
+  in:     r0 = bytes; r1 = their count
+  out:    .A/.X = the number's length
+  errors: NE_NOTNUM NE_ROOM
+  names:  hl bytes-number | bas - | fs - | c num_check
+  doc:    Bytes checked: a number in the stored format, in its one form (danlang's bytes-number), copied to the
+  doc:    result's place.
+
+# ---- math: the functions (the module math: numbers's registers and tower, in the same bank of RAM, r13).  A result
+# that isn't exact is a fixed decimal of the precision's significant digits, correctly rounded (danlang's NumMath.cs:
+# the value worked in binary fixed point with a bound on its error, again with more bits till all the bound allows
+# rounds the same), so any right way of working it gives the same digits.  A real argument is needed (NE_REAL).
+
+entry DIGITS math impl=mt_digits
+  in:     .A = a precision (1 to 100 significant digits; 0: none set, the precision given back alone)
+  out:    .A = the precision (before it was set)
+  errors: NE_DOMAIN
+  names:  hl digits | bas DIGITS | fs digits | c num_digits
+  doc:    The precision of the functions' results when they aren't exact: 12 significant digits at the start.
+
+entry SQRT math impl=mt_sqrt
+  in:     r0 = x
+  out:    .A/.X = the result's length
+  errors: NE_REAL NE_ROOM NE_NOTNUM NE_BIG
+  names:  hl sqrt | bas SQR | fs nsqrt | c num_sqrt
+  doc:    The square root: exact when it is (a perfect square of an integer or a rational: 9/4 gives 3/2, 2.25 1.5,
+  doc:    x's kind), else a fixed decimal of the precision's digits; of a negative number, imaginary (sqrt -1 is i).
+
+entry EXP math impl=mt_exp
+  in:     r0 = x
+  out:    .A/.X = the result's length
+  errors: NE_REAL NE_DOMAIN NE_ROOM NE_NOTNUM NE_BIG
+  names:  hl exp | bas EXP | fs nexp | c num_exp
+  doc:    e to the x (exp 0 is 1).  NE_DOMAIN: x more than 20000 from 0.
+
+entry LOG math impl=mt_log
+  in:     r0 = x
+  out:    .A/.X = the result's length
+  errors: NE_REAL NE_DOMAIN NE_ROOM NE_NOTNUM NE_BIG
+  names:  hl log | bas LOG | fs nlog | c num_log
+  doc:    The natural logarithm (log 1 is 0; of a negative number, complex: log |x| + pi i; of 0, NE_DOMAIN).
+
+entry TRIG math impl=mt_trig
+  in:     r0 = x, in radians; .Y = 0 sine, 1 cosine, 2 tangent
+  out:    .A/.X = the result's length
+  errors: NE_REAL NE_DOMAIN NE_ROOM NE_NOTNUM NE_BIG
+  names:  hl sin cos tan | bas SIN COS TAN | fs nsin ncos ntan | c num_sin num_cos num_tan
+  doc:    The circle's functions (sin 0 is 0, cos 0 is 1).  NE_DOMAIN: another .Y.
+
+entry ATAN math impl=mt_atan
+  in:     r0 = x
+  out:    .A/.X = the result's length
+  errors: NE_REAL NE_ROOM NE_NOTNUM NE_BIG
+  names:  hl atan | bas ATN | fs natan | c num_atan
+  doc:    The arc tangent, in radians (atan 0 is 0).
+
+entry RPOW math impl=mt_pow
+  in:     r0 = x; r1 = y
+  out:    .A/.X = the result's length
+  errors: NE_REAL NE_DOMAIN NE_DIV0 NE_BIG NE_ROOM NE_NOTNUM
+  names:  hl pow | bas ^ | fs npow | c num_pow
+  doc:    x to the power y, any real y: a whole y's power exactly (numbers' POW: any x), else x real and 0 or more:
+  doc:    exact when its root is rational (4^1/2 is 2, 0.25^0.5 0.5, x's kind), else exp (y log x) at the precision.
+  doc:    NE_DOMAIN: x below 0 (y not whole), or y log x more than 20000 from 0; NE_DIV0: 0 to a power below 0.
+
+entry PI math impl=mt_pi
+  in:     -
+  out:    .A/.X = the result's length
+  errors: NE_ROOM
+  names:  hl pi | bas PI | fs npi | c num_pi
+  doc:    Pi, a fixed decimal of the precision's digits.
