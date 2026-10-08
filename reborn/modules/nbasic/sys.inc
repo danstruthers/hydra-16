@@ -138,11 +138,14 @@ brk_q:
 
 ; The error's message (err_code) written
 err_text_out:
-            lda         err_code + 1                        ; (A system error's: its text)
+            lda         err_code + 1                        ; (A system error's: its text; $FF's, esbuf's own: PLAY's)
             beq         @basic
-            lda         err_code
             LDR         r0, esbuf
+            lda         err_code
+            cmp         #$FF
+            beq         :+
             jsr         ERRSTR
+:
             LDW         t0, esbuf
             jmp         msg_out_ram
 @basic:
@@ -1201,6 +1204,11 @@ f_status:
             ldx         sh_status + 1
             jmp         push_ax7
 
+; POINT(x, y): a pixel's colour (gfx.inc's)
+f_point:
+            FARN        8, g_point_f
+            rts
+
 ; ---- PEEK, POKE, BANK
 
 ; PEEK(addr): a byte of the task's memory (at $8000-$9FFF, BANK's bank's)
@@ -1270,7 +1278,7 @@ fn_disp7:
             tax
             jmp         (fn_jt7,x)
 fn_jt7:
-            .word       f_command, f_date, f_dir, f_env, f_peek, rt_todo7, f_shells, f_status, f_time, f_timer
+            .word       f_command, f_date, f_dir, f_env, f_peek, f_point, f_shells, f_status, f_time, f_timer
             .word       f_arg, f_bank
 .assert     * - fn_jt7 = (F_END - F_B7) * 2, error, "fn_jt7 and fn.inc's F_B7 group differ"
 
@@ -1279,7 +1287,7 @@ st_disp7:
             jmp         (st_jt7,x)
 st_jt7:
             .word       st_endn, st_error, st_shell, st_environ, st_poke, st_bank
-.assert     * - st_jt7 = (ST_END - ST_B7) * 2, error, "st_jt7 and fn.inc's ST_B7 group differ"
+.assert     * - st_jt7 = (ST_B8 - ST_B7) * 2, error, "st_jt7 and fn.inc's ST_B7 group differ"
 
 rt_todo7:
             lda         #73

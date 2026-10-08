@@ -148,6 +148,30 @@ ST_SHELL                                                    ; SHELL line$ ("": r
 ST_ENVIRON                                                  ; ENVIRON "name=value"
 ST_POKE                                                     ; POKE addr, b
 ST_BANK                                                     ; BANK n
+ST_B8                                                       ; The Hydra's (machine.inc)
+ST_SOUND = ST_B8                                            ; SOUND ch, note, patch, vol (each -1: not given)
+ST_SOUNDS                                                   ; SOUND "text"
+ST_PLAYCH                                                   ; PLAY's channel (-1: none)
+ST_PLAY                                                     ; PLAY's line, or file
+ST_SYS                                                      ; SYS addr or name, a, x, y
+ST_RREGV                                                    ; RREG's register n, pushed
+ST_SCREEN                                                   ; SCREEN n (gfx.inc)
+ST_PSET                                                     ; PSET (x, y), c
+ST_PRESET                                                   ; PRESET (x, y), c
+ST_LINE                                                     ; LINE (x1, y1)-(x2, y2), c, kind (0 a line, 1 B, 2 BF)
+ST_GMOVE                                                    ; The last point the point taken off
+ST_GLX                                                      ; The last point's x pushed (STEP's)
+ST_GLY                                                      ;   its y
+ST_CIRCLE                                                   ; CIRCLE (x, y), r, c, fill
+ST_GPRINT                                                   ; GPRINT (x, y), text$
+ST_PALETTE                                                  ; PALETTE n, rgb
+ST_PAINT                                                    ; PAINT (x, y), c, border
+ST_DRAW                                                     ; DRAW s$
+ST_SPRITE                                                   ; SPRITE n, x, y
+ST_SPRITEI                                                  ; SPRITE n, x, y, image$
+ST_SPRITEOFF                                                ; SPRITE n OFF
+ST_WINDOW                                                   ; WINDOW (x1, y1)-(x2, y2), mode (0 none, 1, 2 SCREEN)
+ST_VIEW                                                     ; VIEW (x1, y1)-(x2, y2), mode (0 none, 1, 2 SCREEN)
 ST_END
 .endenum
 
@@ -193,6 +217,9 @@ st_call:
             cmp         #ST_B7
             bcc         @have
             inx
+            cmp         #ST_B8
+            bcc         @have
+            inx
 @have:
             sec
             sbc         st_first - 4,x
@@ -206,6 +233,6 @@ st_call:
             sta         hyx2_n
             pla
             jmp         hyx2_farn
-st_first:   .byte       ST_B4, ST_B5, ST_B6, ST_B7
-st_disp_lo: .byte       <st_disp4, <st_disp5, <st_disp6, <st_disp7
-st_disp_hi: .byte       >st_disp4, >st_disp5, >st_disp6, >st_disp7
+st_first:   .byte       ST_B4, ST_B5, ST_B6, ST_B7, ST_B8
+st_disp_lo: .byte       <st_disp4, <st_disp5, <st_disp6, <st_disp7, <st_disp8
+st_disp_hi: .byte       >st_disp4, >st_disp5, >st_disp6, >st_disp7, >st_disp8

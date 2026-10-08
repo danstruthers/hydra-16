@@ -879,7 +879,7 @@ lt_add:
 prog_init:
             jsr         sym_reset
             stz         nprocs
-            MOVW        gnext, gbase
+            jsr         glob_init
             stz         ltop
             stz         ltop + 1
             stz         dtop
@@ -890,6 +890,24 @@ prog_init:
             stz         defstr + 2
             stz         defstr + 3
             ; (fall through)
+
+; The globals from gbase: the reserved ones first (G_RSV of them, each 0), the program's after
+glob_init:
+            MOVW        t4, gbase
+            ldy         #G_RSV * VAL_SIZE - 1
+            lda         #0
+:
+            sta         (t4),y
+            dey
+            bpl         :-
+            clc
+            lda         gbase
+            adc         #G_RSV * VAL_SIZE
+            sta         gnext
+            lda         gbase + 1
+            adc         #0
+            sta         gnext + 1
+            rts
 
 ; DATA's items' end: a length of $FFFF after the last
 data_end:
@@ -910,7 +928,7 @@ compile_prog:
             jsr         c_begin
             jsr         sym_reset
             stz         nprocs
-            MOVW        gnext, gbase
+            jsr         glob_init
             stz         ltop
             stz         ltop + 1
             stz         dtop

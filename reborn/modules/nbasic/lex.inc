@@ -613,13 +613,16 @@ lex_based:
             sty         tnl
             sty         lx_wlen
             LDW         t0, hexword
-            jsr         num_word
+            ldy         #NPARSE_WHOLE                       ; (FF: its letters its digits)
+            jsr         num_word_y
             ldy         lx_wlen
             jmp         lp_plus_y
 
 ; The word of tnl characters at lp, a number in the base at t0 (a base string): tnum, tnl its bytes (tisint, tint);
 ; TK_NUM.  Not one: Syntax error
 num_word:
+            ldy         #NPARSE_PROGRAM | NPARSE_WHOLE
+num_word_y:
             MOVW        r0, lp
             lda         tnl
             sta         r1
@@ -627,7 +630,6 @@ num_word:
             MOVW        r4, t0
             LDW         r2, tnum
             LDW         r3, TNUM_MAX
-            ldy         #NPARSE_PROGRAM | NPARSE_WHOLE
             FARN        4, num_parse_ram
             bcc         :+
             lda         #ER_SYNTAX

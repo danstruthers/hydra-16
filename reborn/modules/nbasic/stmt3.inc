@@ -198,6 +198,36 @@ st3_tab:
             .word       cs_files - 1
             .byte       K_MID
             .word       cs_mids - 1
+            .byte       K_SOUND
+            .word       cs_sound - 1
+            .byte       K_PLAY
+            .word       cs_play - 1
+            .byte       K_SYS
+            .word       cs_sys - 1
+            .byte       K_RREG
+            .word       cs_rreg - 1
+            .byte       K_SCREEN
+            .word       cs_screen - 1
+            .byte       K_PSET
+            .word       cs_pset - 1
+            .byte       K_PRESET
+            .word       cs_preset - 1
+            .byte       K_CIRCLE
+            .word       cs_circle - 1
+            .byte       K_PAINT
+            .word       cs_paint - 1
+            .byte       K_DRAW
+            .word       cs_draw - 1
+            .byte       K_GPRINT
+            .word       cs_gprint - 1
+            .byte       K_PALETTE
+            .word       cs_palette - 1
+            .byte       K_SPRITE
+            .word       cs_sprite - 1
+            .byte       K_WINDOW
+            .word       cs_window - 1
+            .byte       K_VIEW
+            .word       cs_view - 1
             .byte       0
 
 ; ---- This bank's helpers
@@ -1334,7 +1364,7 @@ cs_line:
             lda         #K_INPUT
             jsr         is_kw3
             beq         :+
-            jmp         not_yet3
+            jmp         cs_gline
 :
             C2          lex_next
             lda         #'#'
@@ -1751,6 +1781,463 @@ cs_mids:
             jsr         need_op3
             C2          expr_str
             lda         #ST_MIDS
+            jmp         emit_st3
+
+; ---- The Hydra's: SOUND, PLAY, SYS, CALL ABSOLUTE, RREG
+
+; SOUND ch [, note [, patch [, vol]]]: a note on (SOUND ch: off); SOUND "text": the sound driver's command
+cs_sound:
+            C2          expr
+            lda         etype
+            cmp         #ET_STR
+            bne         :+
+            lda         #ST_SOUNDS
+            jmp         emit_st3
+:
+            cmp         #ET_NUM
+            beq         :+
+            jmp         type3
+:
+            lda         #3
+            jsr         opt_args
+            lda         #ST_SOUND
+            jmp         emit_st3
+
+; .A more numbers, each after a , (or -1, not given)
+opt_args:
+            sta         c3_t
+@arg:
+            lda         #','
+            jsr         is_op3
+            bne         @none
+            C2          lex_next
+            C2          expr_num
+            bra         @next
+@none:
+            lda         #$FF
+            jsr         emit_i8
+@next:
+            dec         c3_t
+            bne         @arg
+            rts
+
+; PLAY [ch,] line$: a line of the score language (on channel 0, or ch), or a file (song.zsm, score.mml), waited for
+cs_play:
+            lda         #$FF                                ; (No channel, as it begins)
+            jsr         emit_i8
+            lda         #ST_PLAYCH
+            jsr         emit_st3
+            C2          expr
+            lda         etype
+            cmp         #ET_STR
+            beq         @play
+            cmp         #ET_NUM
+            beq         :+
+            jmp         type3
+:
+            lda         #ST_PLAYCH
+            jsr         emit_st3
+            lda         #','
+            jsr         need_op3
+            C2          expr_str
+@play:
+            lda         #ST_PLAY
+            jmp         emit_st3
+
+; SYS addr | "NAME" [, a [, x [, y]]]: machine code, or a system call by its name (not given: 0)
+cs_sys:
+            C2          expr
+            lda         etype
+            cmp         #ET_REC
+            bne         :+
+            jmp         type3
+:
+            lda         #3
+            sta         c3_t
+@arg:
+            lda         #','
+            jsr         is_op3
+            bne         @zero
+            C2          lex_next
+            C2          expr_num
+            bra         @next
+@zero:
+            lda         #0
+            jsr         emit_i8
+@next:
+            dec         c3_t
+            bne         @arg
+            lda         #ST_SYS
+            jmp         emit_st3
+
+; CALL ABSOLUTE (addr) (procs.inc's CALL: ABSOLUTE current): SYS addr's
+cs_callabs:
+            C2          lex_next
+            lda         #'('
+            jsr         need_op3
+            C2          expr_num
+            lda         #')'
+            jsr         need_op3
+            ldx         #3
+:
+            phx
+            lda         #0
+            jsr         emit_i8
+            plx
+            dex
+            bne         :-
+            lda         #ST_SYS
+            jmp         emit_st3
+
+; RREG [a] [, x] [, y] [, p]: the registers after the last SYS into variables (any left out: RREG , x)
+cs_rreg:
+            stz         c3_t
+@reg:
+            jsr         at_end3
+            bcs         @done
+            lda         #','
+            jsr         is_op3
+            beq         @comma
+            C2          tgt_begin
+            lda         tgt_type
+            beq         :+
+            jmp         type3
+:
+            lda         c3_t
+            jsr         emit_i8
+            lda         #ST_RREGV
+            jsr         emit_st3
+            C2          tgt_end
+            jsr         at_end3
+            bcs         @done
+            lda         #','
+            jsr         is_op3
+            beq         @comma
+            jmp         syn3
+@comma:
+            C2          lex_next
+            inc         c3_t
+            lda         c3_t
+            cmp         #4
+            bcc         @reg
+            jmp         syn3
+@done:
+            rts
+
+; ---- Graphics (gfx.inc's statements)
+
+; [STEP] (x, y): x and y pushed (STEP: the last point's added)
+g_coord:
+            lda         #K_STEP
+            jsr         is_kw3
+            bne         @abs
+            C2          lex_next
+            lda         #'('
+            jsr         need_op3
+            C2          expr_num
+            lda         #ST_GLX
+            jsr         emit_st3
+            jsr         emit_add
+            lda         #','
+            jsr         need_op3
+            C2          expr_num
+            lda         #ST_GLY
+            jsr         emit_st3
+            jsr         emit_add
+            lda         #')'
+            jmp         need_op3
+@abs:
+            lda         #'('
+            jsr         need_op3
+            C2          expr_num
+            lda         #','
+            jsr         need_op3
+            C2          expr_num
+            lda         #')'
+            jmp         need_op3
+emit_add:
+            lda         #OP_ADD
+            ldx         #1
+            C2          emit_op
+            rts
+
+; A number, or -1 (none: a , next, or the statement's end)
+arg_or_none:
+            lda         #','
+            jsr         is_op3
+            beq         @none
+            jsr         at_end3
+            bcs         @none
+            C2          expr_num
+            rts
+@none:
+            lda         #$FF
+            jmp         emit_i8
+
+; [, number]: it, or -1
+opt_col:
+            lda         #','
+            jsr         is_op3
+            beq         :+
+            lda         #$FF
+            jmp         emit_i8
+:
+            C2          lex_next
+            jmp         arg_or_none
+
+; SCREEN n
+cs_screen:
+            C2          expr_num
+            lda         #ST_SCREEN
+            jmp         emit_st3
+
+; PSET [STEP](x, y) [, c], PRESET
+cs_pset:
+            lda         #ST_PSET
+            bra         :+
+cs_preset:
+            lda         #ST_PRESET
+:
+            pha
+            jsr         g_coord
+            jsr         opt_col
+            pla
+            jmp         emit_st3
+
+; LINE [[STEP](x1, y1)] - [STEP](x2, y2) [, [c] [, B | BF]]: a line (from the last point if the first isn't given), a
+; box (B), a filled one (BF)
+cs_gline:
+            lda         #'-'
+            jsr         is_op3
+            beq         @from
+            jsr         g_coord
+            lda         #ST_GMOVE
+            jsr         emit_st3
+@from:
+            lda         #ST_GLX
+            jsr         emit_st3
+            lda         #ST_GLY
+            jsr         emit_st3
+            lda         #'-'
+            jsr         need_op3
+            jsr         g_coord
+            lda         #','
+            jsr         is_op3
+            beq         :+
+            lda         #$FF                                ; (No colour, no kind)
+            jsr         emit_i8
+            bra         @line
+:
+            C2          lex_next
+            jsr         arg_or_none
+            lda         #','
+            jsr         is_op3
+            bne         @line
+            C2          lex_next
+            lda         tk                                  ; (B or BF)
+            cmp         #TK_NAME
+            bne         @bad
+            lda         tname
+            cmp         #'B'
+            bne         @bad
+            lda         tnl
+            cmp         #1
+            beq         @kind
+            cmp         #2
+            bne         @bad
+            lda         tname + 1
+            cmp         #'F'
+            bne         @bad
+            lda         #2
+@kind:
+            jsr         emit_i8
+            C2          lex_next
+            bra         @st
+@line:
+            lda         #0
+            jsr         emit_i8
+@st:
+            lda         #ST_LINE
+            jmp         emit_st3
+@bad:
+            jmp         syn3
+
+; CIRCLE [STEP](x, y), r [, c [, start [, end [, aspect [, F]]]]]: a circle (F: a disc); start, end and aspect read and
+; let be
+cs_circle:
+            jsr         g_coord
+            lda         #','
+            jsr         need_op3
+            C2          expr_num
+            stz         c3_lo                               ; (F: 1)
+            lda         #','
+            jsr         is_op3
+            beq         :+
+            lda         #$FF
+            jsr         emit_i8
+            bra         @fill
+:
+            C2          lex_next
+            jsr         arg_or_none
+            lda         #3
+            sta         c3_hi
+@skip:
+            lda         #','
+            jsr         is_op3
+            bne         @fill
+            C2          lex_next
+            dec         c3_hi
+            bmi         @f
+            lda         #','
+            jsr         is_op3
+            beq         @skip
+            jsr         at_end3
+            bcs         @fill
+            C2          expr_num
+            lda         #OP_DROP
+            ldx         #1
+            C2          emit_op
+            bra         @skip
+@f:
+            lda         tk
+            cmp         #TK_NAME
+            bne         @bad
+            lda         tnl
+            cmp         #1
+            bne         @bad
+            lda         tname
+            cmp         #'F'
+            bne         @bad
+            inc         c3_lo
+            C2          lex_next
+@fill:
+            lda         c3_lo
+            jsr         emit_i8
+            lda         #ST_CIRCLE
+            jmp         emit_st3
+@bad:
+            jmp         syn3
+
+; PAINT [STEP](x, y) [, c [, border]]
+cs_paint:
+            jsr         g_coord
+            jsr         opt_col
+            jsr         opt_col
+            lda         #ST_PAINT
+            jmp         emit_st3
+
+; DRAW s$
+cs_draw:
+            C2          expr_str
+            lda         #ST_DRAW
+            jmp         emit_st3
+
+; GPRINT [STEP](x, y), text$
+cs_gprint:
+            jsr         g_coord
+            lda         #','
+            jsr         need_op3
+            C2          expr_str
+            lda         #ST_GPRINT
+            jmp         emit_st3
+
+; PALETTE n, rgb
+cs_palette:
+            C2          expr_num
+            lda         #','
+            jsr         need_op3
+            C2          expr_num
+            lda         #ST_PALETTE
+            jmp         emit_st3
+
+; WINDOW [[SCREEN] (x1, y1)-(x2, y2)]: the program's coordinates (none: the pixels again)
+cs_window:
+            lda         #ST_WINDOW
+            bra         g_wv
+
+; VIEW [[SCREEN] (x1, y1)-(x2, y2) [, fill [, border]]]: a part of the bitmap (fill and border read, let be)
+cs_view:
+            lda         #ST_VIEW
+g_wv:
+            pha
+            jsr         at_end3
+            bcc         :+
+            lda         #0                                  ; (None)
+            bra         @kind
+:
+            lda         #1
+            sta         c3_lo
+            lda         #K_SCREEN
+            jsr         is_kw3
+            bne         :+
+            C2          lex_next
+            inc         c3_lo
+:
+            lda         #'('
+            jsr         need_op3
+            C2          expr_num
+            lda         #','
+            jsr         need_op3
+            C2          expr_num
+            lda         #')'
+            jsr         need_op3
+            lda         #'-'
+            jsr         need_op3
+            lda         #'('
+            jsr         need_op3
+            C2          expr_num
+            lda         #','
+            jsr         need_op3
+            C2          expr_num
+            lda         #')'
+            jsr         need_op3
+@more:
+            lda         #','                                ; (VIEW's fill and border: read, dropped)
+            jsr         is_op3
+            bne         :+
+            C2          lex_next
+            jsr         at_end3
+            bcs         :+
+            lda         #','
+            jsr         is_op3
+            beq         @more
+            C2          expr_num
+            lda         #OP_DROP
+            ldx         #1
+            C2          emit_op
+            bra         @more
+:
+            lda         c3_lo
+@kind:
+            jsr         emit_i8
+            pla
+            jmp         emit_st3
+
+; SPRITE n, x, y [, image$]; SPRITE n OFF
+cs_sprite:
+            C2          expr_num
+            lda         #K_OFF
+            jsr         is_kw3
+            bne         :+
+            C2          lex_next
+            lda         #ST_SPRITEOFF
+            jmp         emit_st3
+:
+            lda         #','
+            jsr         need_op3
+            C2          expr_num
+            lda         #','
+            jsr         need_op3
+            C2          expr_num
+            lda         #','
+            jsr         is_op3
+            beq         :+
+            lda         #ST_SPRITE
+            jmp         emit_st3
+:
+            C2          lex_next
+            C2          expr_str
+            lda         #ST_SPRITEI
             jmp         emit_st3
 
 ; ---- The system

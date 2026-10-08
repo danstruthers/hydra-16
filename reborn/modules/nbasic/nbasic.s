@@ -41,6 +41,8 @@
 .include "prog.inc"
 .segment "CODE8"                                            ; (The last bank's: build.js links eight)
 .include "shell.inc"
+.include "machine.inc"
+.include "gfx.inc"
 
 ; nslib (the SDK's: newns, basic -l's), its code in the first bank, its buffers at $8000 in a bank of their own while
 ; it runs (newns_do)

@@ -653,6 +653,10 @@ st_cls:
             lda         #'H'
             jsr         out_byte
             stz         ocol
+            lda         g_on                                ; (In a SCREEN: the bitmap cleared too)
+            beq         :+
+            FARN        8, g_cls
+:
             rts
 
 ; ST_LOCATE: the cursor at row, col (from 1; a row alone: col 1; a col alone: on this row); cursor 0 off, 1 on
@@ -737,6 +741,11 @@ lc_check:
 
 ; ST_COLOR: the text's colour and its background's (0-15, the terminal's: 0-7 its eight, 8-15 their bright ones)
 st_color:
+            lda         g_on                                ; (In a SCREEN: the pen's colour)
+            beq         :+
+            FARN        8, g_color
+            rts
+:
             jsr         pop_int16                           ; (The background)
             lda         #40
             jsr         col_set

@@ -609,6 +609,12 @@ sub_call:
 
 ; CALL name [(args)]
 st_callkw:
+            lda         #K_ABSOLUTE                         ; (CALL ABSOLUTE (addr): machine code, SYS's)
+            jsr         is_kw
+            bne         :+
+            FARN        3, cs_callabs
+            rts
+:
             lda         tk
             cmp         #TK_NAME
             beq         :+

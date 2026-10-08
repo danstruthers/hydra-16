@@ -108,6 +108,15 @@ FM_INPUT        = 1             ; A file's modes (OPEN's, a bit each)
 FM_OUTPUT       = 2
 FM_APPEND       = 4
 FM_BINARY       = 8
+G_RSV           = 8             ; Globals reserved first (gbase on): WINDOW's x1, y1, scales; the last point and the one
+G_WX1           = 0             ;   being drawn, as the program has them (graphics, gfx.inc)
+G_WY1           = 1
+G_SX            = 2
+G_SY            = 3
+G_LLX           = 4
+G_LLY           = 5
+G_PLX           = 6
+G_PLY           = 7
 
 ; .A, .X = an address (low, high)
 .macro LDAX addr
