@@ -971,7 +971,9 @@ footers and a bar.  W1-W7 merged into reborn (October 2026), then the Vera X's k
    step 4 (the math functions: danlang's, the library `math`, hylang's), step 5 (HyForth's `lib numbers`),
    step 6 (C's `num.h`, `printf`'s `%N`, assembly's macros, `calc`), step 7 (the new BASIC, in EhyBASIC's place:
    [BASIC](#basic)) and step 8 (the documents: BASIC's, the programmer's guide's numbers, the guide and its PDF).
-   Left: BASIC's interpreter's speed, `PRINT USING`'s `^^^^`.
+   Left: BASIC's interpreter's speed, `PRINT USING`'s `^^^^`.  Their speed, a plan (October 2026, `reborn-numspeed`):
+   [NUMSPEED.md](design/plans/NUMSPEED.md), where the time goes (measured by stretch, routine and call) and nine
+   steps to win it back, every result as it is; its questions the user's.
 2. Text windows, done (October 2026, [WINDOWS.md](design/plans/WINDOWS.md): screens in task F's RAM banks, a whole
    VT100, window groups, headers, footers and a bar, tiles and popups, two seats, the mouse).
    PCM is done (8.5: `/dev/vid/pcm`, `pcmctl`; `play`'s WAV files and a ZSM's PCM).
