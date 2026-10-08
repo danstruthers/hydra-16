@@ -191,9 +191,28 @@ op_end:
             clc
             bra         :+
 op_stop:
-            jsr         ip_get                              ; (Where it stopped: CONT's)
+            inc         ip                                  ; (Past it: CONT's place)
+            bne         @past
+            inc         ip + 1
+@past:
+            jsr         ip_get
             sta         cont_ip
             stx         cont_ip + 1
+            sec                                             ; ("Break in" its place, the program's: STOP's own)
+            sbc         #1
+            sta         t0
+            txa
+            sbc         #0
+            sta         t0 + 1
+            MOVW        cont_vsp, vsp
+            MOVW        cont_frp, frp
+            lda         in_prog
+            sta         cont_ok
+            lda         #ER_BREAK
+            sta         err_code
+            stz         err_code + 1
+            FARN        7, lt_find
+            FARN        7, err_say
             sec
 :
             ldx         run_s
@@ -2064,6 +2083,31 @@ err_base:
             bra         @gos
 :
             MOVW        err_vsp, vt
+            rts
+
+; CONT's state at an error's stop (the program's): Ctrl-C's op again; else the failing statement from its start
+cont_set:
+            lda         in_prog
+            beq         @done
+            lda         #1
+            sta         cont_ok
+            lda         err_code + 1
+            bne         @stmt
+            lda         err_code
+            cmp         #ER_BREAK
+            bne         @stmt
+            jsr         ip_get
+            sta         cont_ip
+            stx         cont_ip + 1
+            MOVW        cont_vsp, vsp
+            bra         @frp
+@stmt:
+            jsr         err_base
+            MOVW        cont_vsp, err_vsp
+            MOVW        cont_ip, err_ip
+@frp:
+            MOVW        cont_frp, frp
+@done:
             rts
 
 ; vt on past a value

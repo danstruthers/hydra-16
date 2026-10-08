@@ -16,7 +16,10 @@ interactive: .res       1                                   ; <> 0: stdin is the
 login:      .res        1                                   ; <> 0: basic -l
 stk_base:   .res        2                                   ; The value stack's first
 stk_lim:    .res        2                                   ;   and its last frame's
-cont_ip:    .res        2                                   ; STOP's (and an error's) place, for CONT
+cont_ip:    .res        2                                   ; STOP's (and an error's) place, for CONT, its value stack
+cont_vsp:   .res        2                                   ;   and frame; <> 0 CONT can go on (cont_ok)
+cont_frp:   .res        2
+cont_ok:    .res        1
 ibuf:       .res        IBUF_SIZE                           ; stdin's bytes read
 ilen:       .res        1
 ipos:       .res        1
@@ -77,6 +80,9 @@ main:
             adc         #>GLOB_MAX
             sta         stk_base + 1
             LDW         stk_lim, STK_TOP - STACK_SPARE
+            lda         #'d'                                ; (Numbers typed: read in decimal at the start)
+            sta         cbase
+            stz         cbase + 1
             FARN        5, heap_init
             FARN        2, prog_init
             FARN        7, text_init
@@ -154,7 +160,7 @@ prompt:
             FARN        2, compile_line
             stz         in_comp
             stz         in_prog                             ; (The prompt's line: its errors not the program's)
-            jsr         stack_reset
+            jsr         prompt_stack
             lda         #<(LB_IMM << 13)
             ldx         #>(LB_IMM << 13)
             jsr         run_code
@@ -172,6 +178,14 @@ is_digit_main:
             rts
 @no:
             sec
+            rts
+
+; The prompt's line's value stack: over a stopped program's (CONT goes on with it), else empty
+prompt_stack:
+            lda         cont_ok
+            beq         stack_reset
+            MOVW        vsp, cont_vsp
+            MOVW        frp, cont_frp
             rts
 
 ; The value stack emptied: no frame (the main program's)
@@ -200,10 +214,34 @@ prog_run:
             sta         eh_addr + 1
             stz         dptr                                ; (READ: from DATA's first item)
             stz         dptr + 1
+            stz         cont_ok
             jsr         stack_reset
             lda         #0
             tax
-            jmp         run_code
+run_go:
+            jsr         run_code
+            bcs         :+                                  ; (STOPped: as it was, for CONT)
+            FARN        6, fl_closeall                      ; (Its end: its files closed)
+            clc
+:
+            rts
+
+; CONT: the stopped program on (C = 1: STOPped again).  Nothing stopped: Cannot continue
+prog_cont:
+            lda         cont_ok
+            bne         :+
+            lda         #ER_CONT
+            ldx         #0
+            jmp         err_entry
+:
+            stz         cont_ok
+            MOVW        vsp, cont_vsp
+            MOVW        frp, cont_frp
+            lda         #1
+            sta         in_prog
+            lda         cont_ip
+            ldx         cont_ip + 1
+            bra         run_go
 
 ; ---- stdin: a line at a time
 
@@ -294,17 +332,19 @@ err_entry:
             lda         in_prog                             ; (ON ERROR's handler takes it: the program's, not in the
             beq         @say                                ;   handler already, not Ctrl-C)
             lda         eh_in
-            bne         @say
+            bne         @cont
             lda         eh_addr + 1
             cmp         #$FF
-            beq         @say
+            beq         @cont
             lda         err_code + 1
             bne         :+
             lda         err_code
             cmp         #ER_BREAK
-            beq         @say
+            beq         @cont
 :
             jmp         err_trap
+@cont:
+            jsr         cont_set                            ; (Not taken: CONT's state)
 @say:
 err_said:
             FARN        7, err_say

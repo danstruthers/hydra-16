@@ -72,8 +72,9 @@ mkfs
 
 ## The screen editor
 
-`edit [file ...]` is the screen editor, nano's way: what you type goes in at the cursor, and the Ctrl keys and the
-Meta keys (Esc then a key, or Alt with it: `M-`) are commands.  The two lines at the bottom name the commonest, and
+`edit [+N] [file ...]` is the screen editor, nano's way (`+N`: the next file at its line N; BASIC's `EDIT` uses
+it): what you type goes in at the cursor, and the Ctrl keys and the Meta keys (Esc then a key, or Alt with it:
+`M-`) are commands.  The two lines at the bottom name the commonest, and
 `^G` shows them all.  Up to 6 files are open at once, each in a buffer of its own; their text is in your task's RAM
 banks, so a file can be as big as they are (a few hundred K: `kdev.s`'s 140K reads in some 6 seconds).  A file
 whose lines end CR LF is written with CR LF again.

@@ -24,7 +24,7 @@ sh_rfd:     .res        1                                   ;   length, rc's pat
 sh_wfd:     .res        1
 sh_map:     .res        4
 sh_len:     .res        2
-sh_path:    .res        8
+sh_path:    .res        16
 tm_last:    .res        4                                   ; (TIMER's: the last second seen, the tick it was seen at)
 tm_tick:    .res        2
 tm_secs:    .res        4                                   ; (The clock's seconds since 2000; a division's divisor,
@@ -88,6 +88,11 @@ err_say:
             lda         err_line
             ora         err_line + 1
             beq         @msg
+            jsr         brk_q                               ; (Ctrl-C's, STOP's: "Break in" the place)
+            bne         :+
+            LDW         t0, s_brkin
+            jsr         msg_out
+:
             ldx         #0                                  ; (The program's file, or "line")
             lda         pname
             bne         :+
@@ -104,12 +109,15 @@ err_say:
             stz         t0 + 2
             stz         t0 + 3
             jsr         dec_out
+            jsr         brk_q
+            beq         @end
             lda         #':'
             jsr         out_byte
             lda         #' '
             jsr         out_byte
 @msg:
             jsr         err_text_out
+@end:
             lda         #LF
             jsr         out_byte
             jsr         out_flush
@@ -117,6 +125,16 @@ err_say:
             sta         ofd
             rts
 s_line:     .byte       "line ", 0
+s_brkin:    .byte       "Break in ", 0
+
+; Is the error Ctrl-C's (or STOP's)?  OUT: Z = 1 yes
+brk_q:
+            lda         err_code + 1
+            bne         :+
+            lda         err_code
+            cmp         #ER_BREAK
+:
+            rts
 
 ; The error's message (err_code) written
 err_text_out:
