@@ -20,7 +20,7 @@ seven prefixes (`?` if, `=` set, `:` def, `#` hash-create, `@` fn, `.` unpack, `
 key up (`(h :k)`, a method `(obj :add 3)`); extra arguments are `&1`, `&2` ... past the formals; `$name` is the
 environment's variable; every ordinary built-in gets its arguments' values, the first error stopping it.
 
-**The conformance suite is danlang's regression suite**, `tests/regress/` (1,424 checks), copied to `tests/hylang`
+**The conformance suite is danlang's regression suite**, `tests/regress/` (1,530 checks), copied to `tests/hylang`
 (its README says which phase runs which file).  It's written in danlang, so hylang runs it unchanged, from an
 emulated card (`hylang run.dl`, status 0 when every check passes).  A change to the language is made in danlang
 first, with its checks, then in hylang.  What only the Hydra has is checked by a file of its own, `hydra.dl`.
@@ -349,6 +349,8 @@ The plan has it whole; in short:
   and while the base is plain decimal hylang reads and prints them itself.  Each entry to the number code sets an
   abort point, which a result too big goes back to from however deep.  The reader gives each word that starts
   like a number to the library's `PARSE`, whole, in the base (`(base)`, `(base b)`: every base danlang reads).
+  The math functions (`sqrt`, `exp`, `log`, `sin`, `cos`, `tan`, `atan`, `pi`, `pow` of any real power, `digits`)
+  are the math library's (the module `math`), as danlang's are: exact when the answer is, else correctly rounded.
   (Till the numbers plan's step 3, hylang's own: `numreg.inc`, `numval.inc`, `numtext.inc`, integers in registers
   of its own.)
 * **Strings and hashes** (`strs.inc`, `hashes.inc`, in the fourth bank): a string built-in reads its arguments'
@@ -477,5 +479,6 @@ is, then hylang's own), `key` and `key?` (the Hydra's already), and a file's rea
 there already: values shared, not copied; an integer key and an atom's different keys; 64-bit edges.  The suite's
 1,334 checks pass (`hysuite1` to `hysuite5`).  The table of built-ins was full: 256 of 256, so danlang's next built-ins
 needed library code, or a wider table.  The numbers plan's step 3 widened it: 512, the values `$0600`-`$07FF` a second
-table of ordinary built-ins in a bank (`base`, `number-bytes`, `bytes-number` the first), which the evaluator applies
-its own way and the bytecode machine calls through it; the first 256 are worked as before.  The suite: 1,424 checks.
+table of ordinary built-ins in a bank (`base`, `number-bytes`, `bytes-number` the first; step 4 the math functions,
+`pow` among them: it was `globals.dl`'s, whole powers only), which the evaluator applies its own way and the
+bytecode machine calls through it; the first 256 are worked as before.  The suite: 1,530 checks.

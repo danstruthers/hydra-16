@@ -14,6 +14,7 @@ const ROOT = path.join(__dirname, '..');
 const NUMS = readNumbers(path.join(ROOT, 'spec', 'numbers.def'));
 const K = Object.fromEntries(NUMS.consts.map(k => [k.name, k.value]));
 const SLOT = Object.fromEntries(NUMS.libs.find(l => l.name === 'numbers').entries.map((e, i) => [e.name, i]));
+const MSLOT = Object.fromEntries(NUMS.libs.find(l => l.name === 'math').entries.map((e, i) => [e.name, 0x80 + i]));   // (math's: t_num's op $80 + its slot)
 const ERR = Object.fromEntries(NUMS.consts.filter(k => k.name.startsWith('NE_')).map(k => [k.value, k.name]));
 const RESULT = 1, IN_BANK = 2, SECOND = 4;                    // (A record's flags)
 const ARG_ROOM = [2560, 2560, 512, 512, 512], BANK_ARG_ROOM = [0x800, 0x800, 0x400, 0x400, 0x400];   // (r0, r1, r4-r6)
@@ -583,12 +584,67 @@ function calls(seed = 1066) {
     fmt(parts.join(rnd(2) ? ' ' : '{{}}'), args, !!(k & 1));
   }
 
+  // ---- The math library (modules/math): DIGITS, SQRT, EXP, LOG, TRIG, ATAN, RPOW, PI against numref.js (danlang's
+  // NumMath.cs): each exact when it is, else correctly rounded to the precision's digits, so the same digits
+  call('DIGITS', { a: 0 }, { a: 12, x: 0 }, 'DIGITS 0: the precision at the start, 12');
+  call('DIGITS', { a: 101 }, { err: K.NE_DOMAIN }, 'DIGITS 101: NE_DOMAIN');
+  let prec = 12;
+  const digits = d => { call('DIGITS', { a: d }, { a: prec, x: 0 }, 'DIGITS ' + d); prec = d; };
+  const N = t => numfmt.parse(t);
+  const fn1 = { SQRT: x => R.sqrt(x), EXP: x => R.exp(x), LOG: x => R.log(x), ATAN: x => R.atan(x) };
+  const math = (op, x, y, what) => {
+    const d = prec, o = { flags: RESULT | (rnd(2) ? IN_BANK : 0), room: 600, r0: where(enc(x)) };
+    let js;
+    if (op === 'TRIG') { o.y = y; js = () => R.trig(x, y); }
+    else if (op === 'RPOW') { o.r1 = where(enc(y)); js = () => R.rpow(x, y); }
+    else if (op === 'PI') { delete o.r0; js = () => R.pi(); }
+    else js = () => fn1[op](x);
+    call(op, o, want(() => { R.setDigits(d); try { return nbytesOf(js()); } catch (e) { if (e instanceof RangeError) return { err: K.NE_BIG }; throw e; } finally { R.setDigits(12); } }),
+      what || op + ' ' + (op === 'PI' ? '' : show(x)) + (op === 'TRIG' ? ' (' + ['sin', 'cos', 'tan'][y] + ')' : op === 'RPOW' ? ' ' + show(y) : '') + ' at ' + d);
+  };
+  math('PI');
+  for (const t of ['2', '3', '9/4', '2.25', '16', '0.09', '-4', '-2', '0', '1/3', '1000000000001', '0.000000000002', '1.0'].map(N)) math('SQRT', t);
+  for (const t of ['0', '1', '-1', '0.5', '1/3', '100', '-100', '2.302585', '20001'].map(N)) math('EXP', t);
+  for (const t of ['1', '2', '10', '0.5', '1000000', '1.0000001', '0.9999999', '-1', '-10', '0'].map(N)) math('LOG', t);
+  for (const t of ['1', '-1', '100', '0', '3.14159265358979', '0.001', '1000000', '1.5707963'].map(N)) for (const w of [0, 1, 2]) math('TRIG', t, w);
+  math('TRIG', N('1'), 3, 'TRIG .Y 3: NE_DOMAIN');
+  for (const t of ['1', '0.5', '2', '-5', '-1/3', '0.000001', '1000000', '0', '1/16', '15/16'].map(N)) math('ATAN', t);
+  for (const [a, b] of [['4', '1/2'], ['8', '1/3'], ['8', '-1/3'], ['27/8', '2/3'], ['0.25', '0.5'], ['9', '1.5'], ['2.25', '1.5'],
+    ['32', '0.2'], ['1000000', '1/6'], ['1', '0.37'], ['1.0', '0.5'], ['0', '0.5'], ['2', '0.5'], ['2', '1/12'], ['1/2', '1/2'], ['1.5', '2.5'],
+    ['10', '0.1'], ['2', '10'], ['2', '-2'], ['1.5', '2'], ['-8', '1/3'], ['0', '-1/2'], ['2', '3.0']].map(p => p.map(N))) math('RPOW', a, b);
+  math('RPOW', { re: 0n, im: 1n }, 2n);
+  math('RPOW', { re: 1n, im: 1n }, N('0.5'), 'RPOW 1+i 0.5: NE_REAL');
+  math('SQRT', { re: 1n, im: 1n }, undefined, 'SQRT 1+i: NE_REAL');
+  const mreal = () => {
+    const sg = rnd(3) ? 1n : -1n;
+    switch (rnd(5)) {
+      case 0: return sg * BigInt(1 + rnd(60));
+      case 1: return numfmt.norm({ fix: sg * BigInt(1 + rnd(99999999)), places: 1 + rnd(9) });
+      case 2: return numfmt.norm({ num: sg * BigInt(1 + rnd(999)), den: BigInt(2 + rnd(999)) });
+      case 3: return numfmt.norm({ fix: sg * BigInt(1 + rnd(9999)), places: rnd(3) });
+      default: return numfmt.norm({ fix: sg * BigInt(1 + rnd(999999)), places: 4 });
+    }
+  };
+  const posOf = x => R.cmp(x, 0n) < 0 ? R.neg(x) : x;
+  for (const d of [12, 3, 30, 1, 20, 12]) {
+    if (d !== prec) digits(d);
+    for (let k = 0; k < (d === 12 ? 14 : 4); k++) {
+      math('SQRT', posOf(mreal()));
+      math('EXP', mreal());
+      math('LOG', posOf(mreal()));
+      math('TRIG', mreal(), rnd(3));
+      math('ATAN', mreal());
+      math('RPOW', posOf(mreal()), rnd(2) ? mreal() : [N('1/2'), N('1/3'), N('-1/2'), N('0.25')][rnd(4)]);
+    }
+    math('PI');
+  }
+
   return list;
 }
 
 // num.in: the calls' records (tests/mod/t_num/t_num.s), then $FF
 function record(c) {
-  const b = [SLOT[c.op], c.flags, c.a | 0, c.x | 0, c.y | 0, c.room & 255, c.room >> 8];
+  const b = [c.op in SLOT ? SLOT[c.op] : MSLOT[c.op], c.flags, c.a | 0, c.x | 0, c.y | 0, c.room & 255, c.room >> 8];
   [c.r0, c.r1, c.r4, c.r5, c.r6].forEach((g, i) => {
     if (g === undefined || typeof g === 'number') b.push(0, (g | 0) & 255, ((g | 0) >> 8) & 255);
     else if (g.place2) b.push(3);

@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // numxcheck.js: numref.js (the number system's reference) against danlang, expression by expression: the tower's
 // arithmetic and order, the conversions, the bits, numbers written in every base and read back, texts that may not
-// be numbers, format's placeholders, fib; some 11,000 cases from a fixed seed, run by danlang in one program.
+// be numbers, format's placeholders, fib, the math functions at precisions from 1 to 35 digits; some 12,000 cases
+// from a fixed seed, run by danlang in one program.
 //
 // Usage: node sim/tools/numxcheck.js [DANLANG]     danlang's program (default: $DANLANG, or the Release build of
 //                                                 ../danlang); its branch with the numbers (feature/numbers on)
@@ -87,6 +88,34 @@ for (let k = 0; k < 300; k++) {
   cases.push([dlStr('(format "<{' + b + '}|{}>" ' + a + ' ' + a + ')'), () => js(() => '<' + R.display(N(a), R.NumberFormat.of(b)) + '|' + S(N(a)) + '>')]);
 }
 for (let n = 0; n < 120; n += 7) cases.push([dlStr('(to-str (fib ' + n + '))'), () => S(R.fib(BigInt(n)))]);
+// the math functions, at a precision (its digits set first in each: (digits n), R.setDigits)
+const MATH = { sqrt: x => R.sqrt(x), exp: x => R.exp(x), log: x => R.log(x), sin: x => R.trig(x, 0), cos: x => R.trig(x, 1),
+  tan: x => R.trig(x, 2), atan: x => R.atan(x) };
+function mreal() {
+  switch (rnd(6)) {
+    case 0: return sgn() + String(rnd(60));
+    case 1: return sgn() + '0.' + '0'.repeat(rnd(6)) + digits(8);
+    case 2: return sgn() + digits(3) + '/' + digits(3);
+    case 3: return pick(['3.14159265358979', '1.5707963267949', '0.99999999', '1.00000001', '6.28318530717959', '-3.1415926535898']);
+    default: return sgn() + digits(rnd(2) ? 2 : 6) + '.' + digits(6);
+  }
+}
+const mathCase = (dl, js) => {
+  const d = pick([1, 3, 12, 12, 12, 20, 35]);
+  cases.push(['(do (digits ' + d + ') ' + dlStr('(to-str ' + dl + ')') + ')', () => { R.setDigits(d); try { return js(); } finally { R.setDigits(12); } }]);
+};
+for (let k = 0; k < 1200; k++) {
+  const fn = pick([...Object.keys(MATH), 'pow', 'pow', 'pi']);
+  if (fn === 'pi') { mathCase('(pi)', () => S(R.pi())); continue; }
+  if (fn === 'pow') {
+    const a = rnd(4) ? mreal().replace(/^-/, '') : mreal(), b = pick([mreal(), '1/2', '1/3', '2/3', '-1/2', '0.25', '1.5', String(rnd(9) - 4)]);
+    mathCase('(pow ' + a + ' ' + b + ')', () => js(() => S(R.rpow(N(a), N(b)))));
+    continue;
+  }
+  const a = fn === 'exp' ? pick([mreal(), String(rnd(400) - 200) + '.' + digits(4)]) : mreal();
+  mathCase('(' + fn + ' ' + a + ')', () => js(() => S(MATH[fn](N(a)))));
+}
+for (const t of ['9/4', '2.25', '16', '0.09', '1.0', '1/9', '0.0001', '123456789/100']) mathCase('(sqrt ' + t + ')', () => S(R.sqrt(N(t))));
 
 const prog = cases.map(c => '(print ' + c[0] + ')').join('\n') + '\n';
 const f = path.join(dir, 'xref.dl');

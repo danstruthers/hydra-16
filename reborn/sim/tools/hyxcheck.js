@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 // hyxcheck.js: hylang against danlang, expression by expression: random number expressions (the tower's arithmetic
 // and order, past a fixnum and back, the conversions, the bits, numbers written in every base and read back, texts
-// that may not be numbers, format's placeholders, fib, powers, the stored format), each printed as a line by both,
-// the lines compared byte for byte.  danlang runs them as one program; hylang runs the same file in the emulator,
-// from a card (the reborn image as built: node build.js), its console's output kept.
+// that may not be numbers, format's placeholders, fib, powers, the stored format, the math functions at precisions
+// from 1 to 30), each printed as a line by both, the lines compared byte for byte.  danlang runs them as one
+// program; hylang runs the same file in the emulator, from a card (the reborn image as built: node build.js), its
+// console's output kept.
 //
 // Usage: node sim/tools/hyxcheck.js [-n N] [--seed S] [--keep DIR] [DANLANG]
 //   -n N       N expressions (default 2500)
@@ -80,6 +81,13 @@ const kinds = [
   [3, () => S('(pow ' + real() + ' ' + rnd(12) + ')')],
   [3, () => T('(to-str (number-bytes ' + num() + '))')],
   [2, () => S('(bytes-number (number-bytes ' + num() + '))')],
+  [12, () => {                                              // (the math functions, at a precision set first)
+    const d = pick([1, 3, 12, 12, 12, 20, 30]), fn = pick(['sqrt', 'exp', 'log', 'sin', 'cos', 'tan', 'atan', 'pow', 'pow', 'pi']);
+    const m = () => pick([String(rnd(60)), sgn() + '0.' + digits(8), digits(2) + '/' + digits(3), '-' + digits(2) + '.' + digits(4), '3.14159265358979']);
+    const call = fn === 'pi' ? '(pi)' : fn === 'pow' ? '(pow ' + m() + ' ' + pick([m(), '1/2', '-1/3', '0.25', '2.5']) + ')'
+      : '(' + fn + ' ' + (fn === 'exp' ? sgn() + rnd(50) + '.' + digits(3) : m()) + ')';
+    return T('(do (digits ' + d + ') (to-str ' + call + '))');
+  }],
 ];
 const total = kinds.reduce((a, k) => a + k[0], 0);
 const exprs = [];

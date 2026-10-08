@@ -28,6 +28,11 @@ bi_n2:      .res        1                                   ; (<> 0: ev_toomany'
 bi_t2:      .res        1                                   ; (bi_bind's table; ev_toomany's, and its most and least)
 bi_tmax:    .res        1
 bi_tmin:    .res        1
+bx_min:     .res        1                                   ; (The second table's built-in's entry: bi_xinfo's)
+bx_max:     .res        1
+bx_flags:   .res        1
+bx_lo:      .res        1
+bx_hi:      .res        1
 fx_a:       .res        2                                   ; (fx_op's: its values, how many, its built-in, scratch;
 fx_b:       .res        2                                   ;   ev_quick's: the call, its arguments as written)
 fx_k:       .res        1
@@ -910,7 +915,10 @@ ev_pcall:
             jmp         ev_toomany
 @max2:
             sty         bi_n2
-            cmp         bi_max + 256,x
+            pha
+            jsr         ev_xinfo
+            pla
+            cmp         bx_max
             bra         @maxed
 :
             stz         bi_n2
@@ -1169,6 +1177,11 @@ ev_bpartial:
 bi_jump:
             jmp         (ev_jv)
 
+; bx_min ... = the second table's built-in .X's entry (builtins.inc's bi_xinfo, in the second bank).  Keeps .A, .X, .Y
+ev_xinfo:
+            FARN        2, bi_xinfo
+            rts
+
 ; A built-in of the second table (cf: BUILTIN2 and up; .A its high byte) applied to its values: ev_bapply's way, for
 ; an ordinary one in a bank
 ev_bapply2:
@@ -1177,14 +1190,15 @@ ev_bapply2:
             ror
             sta         bi_n
             tax
+            jsr         ev_xinfo                            ; (Its entry: the second bank's)
             lda         cn + 1
             bne         @many
             lda         cn
-            cmp         bi_min + 256,x
+            cmp         bx_min
             bcs         :+
             jmp         ev_bpartial
 :
-            cmp         bi_max + 256,x
+            cmp         bx_max
             beq         @call
             bcc         @call
 @many:
@@ -1198,11 +1212,11 @@ ev_bapply2:
             jmp         ev_error_args
 :
             ldx         bi_n
-            lda         bi_lo + 256,x
+            lda         bx_lo
             sta         ev_jv
-            lda         bi_hi + 256,x
+            lda         bx_hi
             sta         ev_jv + 1
-            lda         bi_flags + 256,x
+            lda         bx_flags
             and         #BF_BANK
             jmp         ev_bfar
 
@@ -2523,9 +2537,10 @@ ev_toomany:
             lda         bi_min,x
             bra         :++
 :
-            lda         bi_max + 256,x
+            jsr         ev_xinfo
+            lda         bx_max
             sta         bi_tmax
-            lda         bi_min + 256,x
+            lda         bx_min
 :
             sta         bi_tmin
             jsr         err_begin

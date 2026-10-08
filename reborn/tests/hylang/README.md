@@ -10,10 +10,10 @@ nearly all of the suite's time in its tail loops, is cut into pieces on the test
 `HYSUITE_PARTS`, `HYSUITE_CUTS`).  The files here stay as danlang has them.
 
 The old hylang (phase 7 as first built, to commit `a0973eb`) is gone: hylang was written again from scratch, to the
-plan "danlang: review and 65C02 plan" (`docs/hylang.md` has its design), and passes the whole suite (1,424 checks
-since the numbers plan's step 3, its `numbers.dl` and `run.dl` danlang's `feature/numbers`: the base, the stored
-format).  Each phase ran the files it made pass, from an emulated card, and none that passed failed after; the phase each
-first ran from:
+plan "danlang: review and 65C02 plan" (`docs/hylang.md` has its design), and passes the whole suite (1,530 checks
+since the numbers plan's step 4, its `numbers.dl`, `math.dl`, `run.dl` and `library.dl` danlang's `feature/numbers`:
+the base, the stored format, the math functions).  Each phase ran the files it made pass, from an emulated card,
+and none that passed failed after; the phase each first ran from:
 
 | File | What | Runs from |
 | :--- | :--- | :--- |
@@ -28,6 +28,7 @@ first ran from:
 | `types.dl` | `type-of`, the type tests, symbols and atoms | 4 (its numbers, a hash and a stream: 5, 6, 7) |
 | `library.dl` | The library's built-ins and `globals.dl`'s functions | 4 (its numbers: 5) |
 | `numbers.dl` | The tower, every base, the conversions | 5 |
+| `math.dl` | `sqrt`, `exp`, `log`, the circle's, `pi`, `pow`, `digits`: exact or correctly rounded | the numbers plan's step 4 |
 | `bits.dl` | Bits and bytes | 5 (its streams: 7) |
 | `buffers.dl` | Buffers: made, read, written, filled, copied, from a stream and to one; equal, ordered | danlang's `feature/speed` (to `744d4db`), with `clock`, `round` and `:update` |
 | `strings.dl` | Strings and characters | 6 |

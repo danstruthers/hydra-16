@@ -23,6 +23,7 @@
 .include "nmstate.inc"
 .include "nmarith.inc"
 .include "nmconv.inc"
+.include "nmpow.inc"
 .include "nmbits.inc"
 .include "nmrand.inc"
 .include "nmtext.inc"

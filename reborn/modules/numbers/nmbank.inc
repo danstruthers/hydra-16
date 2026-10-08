@@ -12,11 +12,15 @@
 
 NUMBERS_MAGIC   = $4E                           ; (The state's first byte once INIT has run: "N")
 NREGS           = 8                             ; Registers R0-R7: a page each, a number's bytes least first
+NRALL           = 32                            ; (Registers' lengths and signs: R0-R7, and R24-R31, the digits'
+                                                ;   pages, which the math library works in too: math.s)
 NR_DIGS         = 8                             ; Pages for a number's digits as it's written (2048: a
                                                 ;   255-byte integer in base 2 is 2040, in base -2 2042)
 BASE_MAX        = 96                            ; A base string at most, its 0 too ("#<=-[" and 80 digits and "]")
 DIGITS_START    = 12                            ; The math functions' precision at the start (significant digits)
 NSTACK          = 16                            ; The complex numbers' machine: values on its stack at most
+NCONST          = 3                             ; The math library's constants kept between calls (pi, log 2, log 10) ...
+CONST_BYTES     = 104                           ;   each at 832 bits at most
 ARENA_END       = $A000
 DIGS            = ARENA_END - NR_DIGS * 256     ; (The digits' pages)
 
@@ -43,6 +47,8 @@ st_magic:   .res        1                       ; NUMBERS_MAGIC once INIT has ru
 st_base:    .res        BASE_MAX                ; The base: its string, zero-terminated ("d" at the start)
 st_digits:  .res        1                       ; The math functions' precision (significant digits: 12)
 st_rand:    .res        2                       ; The random generator's state (not 0)
+st_cbits:   .res        2 * NCONST              ; The math library's constants, cached: each's bits (0: none yet; INIT
+st_const:   .res        NCONST * CONST_BYTES    ;   clears them) and its magnitude's bytes (pi, log 2, log 10)
 
 ; ---- A call's
 v_zp:       .res        16                      ; The caller's $70-$7F, put back as the call ends

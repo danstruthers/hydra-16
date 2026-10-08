@@ -1,12 +1,12 @@
 ; ****************************************************************************
-; t_num - the numbers library (modules/numbers), run as init: its calls as a card's file has them (#f/0/num.in, made
+; t_num - the numbers library (modules/numbers) and the math library (modules/math), run as init: its calls as a card's file has them (#f/0/num.in, made
 ; by tests.js with sim/tools/numref.js), what each gave back written to another (#f/0/num.out), which the test's
 ; check compares with numref.js's answers.  Each call is made as a program makes it (XCALL, the library's bank from
 ; MODINFO, r13 a bank of this task's), and checked to keep what the rules say it keeps: the caller's bank at $8000,
 ; its zero page $70-$7F, r0-r3.
 ;
 ; num.in: records, each
-;   op              the entry (its slot: 0 INIT, 1 SET_BASE ...); $FF: the end
+;   op              the entry (its slot: 0 INIT, 1 SET_BASE ...; $80 + a slot, the math library's); $FF: the end
 ;   flags           bit 0: the result is .A/.X bytes at r2; bit 1: r2 in the bank at $8000 (this task's other bank,
 ;                   selected as every call's made), else in this task's RAM; bit 2: a second result, r6 bytes at r5
 ;                   (IDIV's remainder)
@@ -40,6 +40,7 @@ CANARY          = $78                                       ; ($78-$7F: the libr
 
 .zeropage
 lib:        .res        1                                   ; The library's bank (paged ROM)
+mlib:       .res        1                                   ; The math library's
 data:       .res        1                                   ; This task's bank at $8000 for the calls
 entry:      .res        1
 op:         .res        1
@@ -104,6 +105,30 @@ main:
             jmp         @done
 
 @found:
+            stz         entry                               ; math, likewise
+@mfind:
+            LDR         r0, me
+            lda         entry
+            jsr         MODINFO
+            bcs         @mnone
+            ldx         #0
+:
+            lda         me + ME_NAME,x
+            cmp         s_mlib,x
+            bne         @mnext
+            inx
+            cmp         #0
+            bne         :-
+            lda         me + ME_BANK
+            sta         mlib
+            bra         @banks
+@mnext:
+            inc         entry
+            bra         @mfind
+@mnone:
+            NOTOK       "math: in the module directory"
+            jmp         @done
+@banks:
             lda         #2                                  ; Two banks: the library's, and one for the calls' data
             jsr         BANKS_ALLOC
             EXPECT_OK   "BANKS_ALLOC 2"
@@ -189,7 +214,14 @@ main:
             bpl         :-
             lda         lib
             sta         r14
-            lda         op                                  ; (r15: the entry, $A030 + 3 * op)
+            lda         op                                  ; (r15: the entry, $A030 + 3 * op; math's: $80 + op)
+            bpl         :+
+            and         #$7F
+            sta         op
+            lda         mlib
+            sta         r14
+            lda         op
+:
             asl         a
             adc         op
             adc         #<NUM_INIT
@@ -476,6 +508,7 @@ flush:
 
 .rodata
 s_lib:      .byte       "numbers", 0
+s_mlib:     .byte       "math", 0
 s_in:       .byte       "#f/0/num.in", 0
 s_out:      .byte       "#f/0/num.out", 0
 ram_lo:     .byte       <arg0, 0, <arg1, 0, <arg4, 0, <arg4, 0, <arg4

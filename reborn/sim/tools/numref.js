@@ -8,6 +8,7 @@
 //   bits:          bits (and, or, xor, not, shl, shr, bit?)
 //   others:        fib, the random generator (hylang's: a 16-bit xorshift, 7 9 8)
 //   text:          NumberFormat.of(spec), display(x, format, prefix), parse(text, format, source): every base
+//   math:          sqrt, exp, log, trig (sin, cos, tan), atan, pi, rpow; getDigits, setDigits (danlang's NumMath.cs)
 // A failure is a NumError with its code (the library's NE_ name: BIG, DIV0, NOTNUM, DOMAIN, BASE, INT, REAL).
 //
 // Usage: node numref.js EXPRESSION        a small calculator for trying it: numbers and + - * / in danlang's
@@ -215,6 +216,247 @@ class Random {
       if (v < n) return v;
     }
   }
+}
+
+// ---- The math functions (danlang's NumMath.cs): exact when the answer is, else a fixed decimal of DIGITS significant
+// digits, correctly rounded: worked in binary fixed point with a bound on its error, again with more bits till all the
+// bound allows rounds the same (Ziv's way), so any right way of working it (the math library's) gives these digits
+
+let DIGITS = 12;
+const MAX_DIGITS = 100, EXP_MOST = 20000n;
+const getDigits = () => DIGITS;
+function setDigits(n) { if (n < 1 || n > MAX_DIGITS) throw new NumError('DOMAIN', 'digits: 1 to ' + MAX_DIGITS); DIGITS = n; }
+
+const bitLen = v => { v = babs(v); return v === 0n ? 0 : v.toString(2).length; };
+function isqrt(n) {
+  if (n <= 0n) return 0n;
+  let x = 1n << BigInt((bitLen(n) + 1) >> 1);
+  for (;;) { const y = (x + n / x) >> 1n; if (y >= x) return x; x = y; }
+}
+function iroot(n, k) {                                     // (the floor of n's kth root; k a BigInt, 1 or more)
+  if (n <= 0n) return 0n;
+  if (k === 1n) return n;
+  if (k >= BigInt(bitLen(n))) return 1n;
+  const kk = Number(k);
+  let x = 1n << BigInt(Math.ceil(bitLen(n) / kk));
+  for (;;) { const y = (BigInt(kk - 1) * x + n / x ** BigInt(kk - 1)) / k; if (y >= x) return x; x = y; }
+}
+const floorDiv = (a, b) => { const q = a / b; return (a % b !== 0n && (a < 0n) !== (b < 0n)) ? q - 1n : q; };
+const fixedAt = (f, b) => (f.n << BigInt(b)) / f.d;        // (a fraction { n, d } at b bits, cut toward 0)
+
+function atanInv(m, b) {
+  let t = (1n << BigInt(b)) / BigInt(m), sum = 0n;
+  const m2 = BigInt(m * m);
+  for (let k = 0; t !== 0n; k++) { const term = t / BigInt(2 * k + 1); sum = (k & 1) ? sum - term : sum + term; t /= m2; }
+  return sum;
+}
+function atanhInv(m, b) {
+  let t = (1n << BigInt(b)) / BigInt(m), sum = 0n;
+  const m2 = BigInt(m * m);
+  for (let k = 0; t !== 0n; k++) { sum += t / BigInt(2 * k + 1); t /= m2; }
+  return sum;
+}
+const guard = b => bitLen(BigInt(b)) + 10;
+function piFixed(b) { const g = guard(b); return (16n * atanInv(5, b + g) - 4n * atanInv(239, b + g)) >> BigInt(g); }
+function ln2Fixed(b) { const g = guard(b); return (2n * atanhInv(3, b + g)) >> BigInt(g); }
+function ln10Fixed(b) { const g = guard(b); return (6n * atanhInv(3, b + g) + 2n * atanhInv(9, b + g)) >> BigInt(g); }
+
+function roundScaled(x, b, s) {
+  let num = x, den = 1n << BigInt(b);
+  if (s >= 0) num *= pow10(s); else den *= pow10(-s);
+  return (2n * num + den) / (2n * den);
+}
+function sig(x, b, k10, n) {
+  let p = n - 1 - (Math.floor((bitLen(x) - 1 - b) * 0.30102999566398120) + k10);
+  const low = pow10(n - 1), high = low * 10n;
+  for (;;) {
+    const R = roundScaled(x, b, k10 + p);
+    if (R >= high) p--; else if (R < low) p++; else return [R, p];
+  }
+}
+// The number in [(A - E) / 2^b, (A + E) / 2^b] times 10^k10, rounded to n significant digits, if all of it rounds
+// the same; else null
+function roundSig(A, E, b, k10, n) {
+  const neg = A < 0n, a = babs(A);
+  if (a - E <= 0n) return null;
+  const [r1, p1] = sig(a - E, b, k10, n), [r2, p2] = sig(a + E, b, k10, n);
+  if (r1 !== r2 || p1 !== p2) return null;
+  const r = neg ? -r1 : r1;
+  return norm(p1 >= 0 ? { fix: r, places: p1 } : { fix: r * pow10(-p1), places: 0 });
+}
+function ziv(f, n = DIGITS) {
+  const need = Math.floor(n * 3.33) + 16;
+  let b = need + 8;
+  for (;;) {
+    const x = f(b), r = roundSig(x.A, x.E, x.B, x.K, n);
+    if (r !== null) return r;
+    b += Math.max(b >> 1, need - (bitLen(x.A) - bitLen(x.E)) + 8);
+  }
+}
+
+// exp z, z within Ez / 2^bz of Z / 2^bz (bz at least b + 48): 10^k exp r, r = z - k log 10
+function expCore(Z, Ez, bz, b) {
+  if (babs(Z) > (EXP_MOST << BigInt(bz))) throw new NumError('DOMAIN', 'out of range');
+  const w = b + 40, W = BigInt(w);
+  const k = floorDiv(Z, ln10Fixed(bz));
+  const kb = bitLen(k) + 4;
+  const R = ((Z << BigInt(kb)) - k * ln10Fixed(bz + kb)) >> BigInt(kb + bz - w);
+  const s = 12, t = R >> BigInt(s), one = 1n << W;
+  let sum = one, term = one, n = 0;
+  for (let i = 1n; term !== 0n; i++) { term = ((term * t) >> W) / i; sum += term; n++; }
+  for (let i = 0; i < s; i++) sum = (sum * sum) >> W;
+  let Ew = BigInt(10 * (3 * n + 6)) << BigInt(s + 1);
+  Ew += ((sum * Ez) >> BigInt(bz - 4)) + 1n;
+  return { A: sum >> BigInt(w - b), E: (Ew >> BigInt(w - b)) + 2n, B: b, K: Number(k) };
+}
+const scale2 = (f, t) => t >= 0 ? { n: f.n << BigInt(t), d: f.d } : { n: f.n, d: f.d << BigInt(-t) };
+const fcmp = (f, g) => { const c = f.n * g.d - g.n * f.d; return c < 0n ? -1 : c > 0n ? 1 : 0; };
+// log x (x above 0, not 1): t log 2 + 2 atanh((f - 1) / (f + 1)), x = 2^t f, f from 3/4 to 3/2
+function logCore(x, b) {
+  const w = b + 24, W = BigInt(w);
+  let t = bitLen(x.n) - bitLen(x.d), f = scale2(x, -t);
+  if (fcmp(f, { n: 3n, d: 4n }) < 0) { t--; f = scale2(x, -t); }
+  else if (fcmp(f, { n: 3n, d: 2n }) >= 0) { t++; f = scale2(x, -t); }
+  const zneg = f.n < f.d;
+  const Z = fixedAt({ n: babs(f.n - f.d), d: f.n + f.d }, w), Z2 = (Z * Z) >> W;
+  let sum = 0n, term = Z, n = 0;
+  for (let k = 0n; term !== 0n; k++) { sum += term / (2n * k + 1n); term = (term * Z2) >> W; n++; }
+  sum *= zneg ? -2n : 2n;
+  const tb = bitLen(BigInt(t)) + 2;
+  sum += (BigInt(t) * ln2Fixed(w + tb)) >> BigInt(tb);
+  return { A: sum >> BigInt(w - b), E: (BigInt(4 * n + 8) >> BigInt(w - b)) + 2n, B: b, K: 0 };
+}
+// sin, cos or tan (which 0, 1, 2) of x (not 0): r = x - k pi/2
+function trigCore(x, which, b) {
+  const w = b + 16, W = BigInt(w);
+  const xb = Math.max(bitLen(x.n) - bitLen(x.d), 0);
+  const p0 = piFixed(xb + 64);
+  const k = floorDiv(2n * fixedAt(x, xb + 64) + (p0 >> 1n), p0);
+  const kb = bitLen(k) + 4;
+  const R = (fixedAt(x, w + kb) - ((k * piFixed(w + kb)) >> 1n)) >> BigInt(kb), R2 = (R * R) >> W;
+  let s = R, c = 1n << W, ts = R, tc = c, n = 0;
+  for (let i = 1n; ts !== 0n || tc !== 0n; i++) {
+    ts = -((ts * R2) >> W) / ((2n * i) * (2n * i + 1n));
+    tc = -((tc * R2) >> W) / ((2n * i - 1n) * (2n * i));
+    s += ts; c += tc; n++;
+  }
+  const Es = BigInt(3 * n + 6), sh = BigInt(w - b);
+  switch (Number(((k % 4n) + 4n) % 4n)) {
+    case 1: [s, c] = [c, -s]; break;
+    case 2: [s, c] = [-s, -c]; break;
+    case 3: [s, c] = [-c, s]; break;
+  }
+  if (which === 0) return { A: s >> sh, E: (Es >> sh) + 2n, B: b, K: 0 };
+  if (which === 1) return { A: c >> sh, E: (Es >> sh) + 2n, B: b, K: 0 };
+  const ca = babs(c);
+  if (ca <= Es) return { A: 0n, E: 1n << BigInt(b), B: b, K: 0 };
+  const T = (s << W) / c;
+  const Et = (((2n * Es + ((babs(T) * 2n * Es) >> W)) << W) / (ca - Es)) + 2n;
+  return { A: T >> sh, E: (Et >> sh) + 2n, B: b, K: 0 };
+}
+// atan x (x not 0): three halvings, then the series; past 1, pi/2 - atan 1/x
+function atanCore(x, b) {
+  const w = b + 20, W = BigInt(w);
+  const neg = x.n < 0n;
+  let y = { n: babs(x.n), d: x.d };
+  const inv = y.n > y.d;
+  if (inv) y = { n: y.d, d: y.n };
+  const one = 1n << W;
+  let Y = fixedAt(y, w);
+  for (let i = 0; i < 3; i++) Y = (Y << W) / (one + isqrt((one << W) + Y * Y));
+  const Y2 = (Y * Y) >> W;
+  let sum = 0n, term = Y, n = 0;
+  for (let k = 0n; term !== 0n; k++) { const q = term / (2n * k + 1n); sum = (k & 1n) ? sum - q : sum + q; term = (term * Y2) >> W; n++; }
+  sum <<= 3n;
+  if (inv) sum = (piFixed(w) >> 1n) - sum;
+  if (neg) sum = -sum;
+  return { A: sum >> BigInt(w - b), E: (BigInt(8 * (2 * n + 8) + 4) >> BigInt(w - b)) + 2n, B: b, K: 0 };
+}
+
+function realOf(x) { if (isCpx(x)) throw new NumError('REAL', 'a real number is needed'); return frac(x); }
+// v (a fraction, exact) as x's kind: an integer's an integer, a fixed decimal's a fixed decimal, a rational's a rational
+function kindOf(x, v) {
+  if (isFix(x)) {
+    let places = 0;
+    while (pow10(places) % v.d !== 0n) places++;
+    return norm({ fix: v.n * (pow10(places) / v.d), places });
+  }
+  return ratOf(v.n, v.d);
+}
+function log10Floor(v) {
+  const c10 = e => e >= 0 ? (v.n - v.d * pow10(e)) : (v.n * pow10(-e) - v.d);
+  let e = Math.floor((bitLen(v.n) - bitLen(v.d)) * 0.30102999566398120);
+  for (;;) { if (c10(e) < 0n) { e--; continue; } if (c10(e + 1) >= 0n) { e++; continue; } return e; }
+}
+
+const mpi = () => ziv(b => ({ A: piFixed(b), E: 2n, B: b, K: 0 }));
+function msqrt(x) {
+  const v = realOf(x);
+  if (v.n < 0n) return norm({ re: 0n, im: msqrt(kindOf(x, { n: -v.n, d: v.d })) });
+  if (v.n === 0n) return x;
+  const ra = isqrt(v.n), rb = isqrt(v.d);
+  if (ra * ra === v.n && rb * rb === v.d) return kindOf(x, { n: ra, d: rb });
+  const n = DIGITS, e = log10Floor(v);
+  let p = n - 1 - Math.floor(e / 2);
+  for (;;) {
+    let P = v.n, Q = v.d;
+    if (p >= 0) P *= pow10(2 * p); else Q *= pow10(-2 * p);
+    const R = (isqrt(4n * P * Q) + Q) / (2n * Q);
+    if (R >= pow10(n)) { p--; continue; }
+    if (R < pow10(n - 1)) { p++; continue; }
+    return norm(p >= 0 ? { fix: R, places: p } : { fix: R * pow10(-p), places: 0 });
+  }
+}
+function mexp(x) {
+  const v = realOf(x);
+  if (v.n === 0n) return 1n;
+  return ziv(b => expCore(fixedAt(v, b + 48), 1n, b + 48, b));
+}
+function mlog(x) {
+  const v = realOf(x);
+  if (v.n === 0n) throw new NumError('DOMAIN', 'the logarithm of 0');
+  if (v.n < 0n) {
+    const a = { n: -v.n, d: v.d };
+    const re = a.n === a.d ? 0n : ziv(b => logCore(a, b));
+    return norm({ re, im: mpi() });
+  }
+  if (v.n === v.d) return 0n;
+  return ziv(b => logCore(v, b));
+}
+function mtrig(x, which) {
+  if (which < 0 || which > 2) throw new NumError('DOMAIN', 'sin, cos or tan');
+  const v = realOf(x);
+  if (v.n === 0n) return which === 1 ? 1n : 0n;
+  return ziv(b => trigCore(v, which, b));
+}
+function matan(x) {
+  const v = realOf(x);
+  if (v.n === 0n) return 0n;
+  return ziv(b => atanCore(v, b));
+}
+function perfectRoot(a, q) {                               // (a above 0: its qth root if it's a perfect qth power, else null)
+  const r = iroot(a, q);
+  if (r === 1n) return a === 1n ? r : null;
+  return r ** q === a ? r : null;
+}
+// x to the power y: a whole y exact (any x); else x real and 0 or more: exact when its root is rational, else exp (y log x)
+function rpow(x, y) {
+  if (isCpx(y)) throw new NumError('REAL', 'a real power is needed');
+  const yr = frac(y);
+  if (yr.d === 1n) return pow(x, yr.n);
+  if (isCpx(x)) throw new NumError('REAL', 'a real number is needed');
+  const v = frac(x);
+  if (v.n < 0n) throw new NumError('DOMAIN', 'a negative number to a power that isn\'t whole');
+  if (v.n === 0n) { if (yr.n < 0n) throw new NumError('DIV0', 'Division by zero.'); return 0n; }
+  const ra = perfectRoot(v.n, yr.d), rb = ra === null ? null : perfectRoot(v.d, yr.d);
+  if (ra !== null && rb !== null) return pow(kindOf(x, { n: ra, d: rb }), yr.n);
+  return ziv(b => {
+    const yb = Math.max(bitLen(yr.n) - bitLen(yr.d), 0) + 1, bl = b + 52 + yb;
+    const L = logCore(v, bl);
+    const Z = (L.A * yr.n) / yr.d;
+    const Ez = ((babs(L.E * yr.n) + yr.d - 1n) / yr.d) + 1n;
+    return expCore(Z, Ez, bl, b);
+  });
 }
 
 // ---- Text: bases (danlang's NumberParser)
@@ -488,4 +730,5 @@ module.exports = {
   add, sub, mul, div, neg, abs, cmp, sign, idiv, gcd, pow,
   truncate, floor, round, toFixed, toRational, numerator, denominator, complex, part, fromInt, toInt,
   bits, fib, Random, NumberFormat, DECIMAL, display, parse,
+  MAX_DIGITS, getDigits, setDigits, sqrt: msqrt, exp: mexp, log: mlog, trig: mtrig, atan: matan, pi: mpi, rpow,
 };

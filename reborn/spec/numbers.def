@@ -338,58 +338,62 @@ entry BYTES numbers impl=nm_bytes
   doc:    Bytes checked: a number in the stored format, in its one form (danlang's bytes-number), copied to the
   doc:    result's place.
 
-# ---- math: the functions
+# ---- math: the functions (the module math: numbers's registers and tower, in the same bank of RAM, r13).  A result
+# that isn't exact is a fixed decimal of the precision's significant digits, correctly rounded (danlang's NumMath.cs:
+# the value worked in binary fixed point with a bound on its error, again with more bits till all the bound allows
+# rounds the same), so any right way of working it gives the same digits.  A real argument is needed (NE_REAL).
 
 entry DIGITS math impl=mt_digits
-  in:     .A = a precision (1 to 255 significant digits; 0: none set, the precision given back alone)
+  in:     .A = a precision (1 to 100 significant digits; 0: none set, the precision given back alone)
   out:    .A = the precision (before it was set)
-  errors: -
+  errors: NE_DOMAIN
   names:  hl digits | bas DIGITS | fs digits | c num_digits
   doc:    The precision of the functions' results when they aren't exact: 12 significant digits at the start.
 
 entry SQRT math impl=mt_sqrt
   in:     r0 = x
   out:    .A/.X = the result's length
-  errors: NE_ROOM NE_NOTNUM NE_BIG
+  errors: NE_REAL NE_ROOM NE_NOTNUM NE_BIG
   names:  hl sqrt | bas SQR | fs nsqrt | c num_sqrt
-  doc:    The square root: exact when it is (a perfect square of an integer or a rational: 9/4 gives 3/2), else a
-  doc:    fixed decimal of the precision's digits, rounded; of a negative number, imaginary (sqrt -1 is i).
+  doc:    The square root: exact when it is (a perfect square of an integer or a rational: 9/4 gives 3/2, 2.25 1.5,
+  doc:    x's kind), else a fixed decimal of the precision's digits; of a negative number, imaginary (sqrt -1 is i).
 
 entry EXP math impl=mt_exp
   in:     r0 = x
   out:    .A/.X = the result's length
-  errors: NE_ROOM NE_NOTNUM NE_BIG
+  errors: NE_REAL NE_DOMAIN NE_ROOM NE_NOTNUM NE_BIG
   names:  hl exp | bas EXP | fs nexp | c num_exp
-  doc:    e to the x (exp 0 is 1).
+  doc:    e to the x (exp 0 is 1).  NE_DOMAIN: x more than 20000 from 0.
 
 entry LOG math impl=mt_log
   in:     r0 = x
   out:    .A/.X = the result's length
-  errors: NE_DOMAIN NE_ROOM NE_NOTNUM
+  errors: NE_REAL NE_DOMAIN NE_ROOM NE_NOTNUM NE_BIG
   names:  hl log | bas LOG | fs nlog | c num_log
-  doc:    The natural logarithm (log 1 is 0; of a negative number, complex; of 0, NE_DOMAIN).
+  doc:    The natural logarithm (log 1 is 0; of a negative number, complex: log |x| + pi i; of 0, NE_DOMAIN).
 
 entry TRIG math impl=mt_trig
   in:     r0 = x, in radians; .Y = 0 sine, 1 cosine, 2 tangent
   out:    .A/.X = the result's length
-  errors: NE_DOMAIN NE_ROOM NE_NOTNUM NE_REAL
+  errors: NE_REAL NE_DOMAIN NE_ROOM NE_NOTNUM NE_BIG
   names:  hl sin cos tan | bas SIN COS TAN | fs nsin ncos ntan | c num_sin num_cos num_tan
-  doc:    The circle's functions (sin 0 is 0, cos 0 is 1).
+  doc:    The circle's functions (sin 0 is 0, cos 0 is 1).  NE_DOMAIN: another .Y.
 
 entry ATAN math impl=mt_atan
   in:     r0 = x
   out:    .A/.X = the result's length
-  errors: NE_ROOM NE_NOTNUM NE_REAL
+  errors: NE_REAL NE_ROOM NE_NOTNUM NE_BIG
   names:  hl atan | bas ATN | fs natan | c num_atan
   doc:    The arc tangent, in radians (atan 0 is 0).
 
 entry RPOW math impl=mt_pow
   in:     r0 = x; r1 = y
   out:    .A/.X = the result's length
-  errors: NE_DOMAIN NE_BIG NE_ROOM NE_NOTNUM
+  errors: NE_REAL NE_DOMAIN NE_DIV0 NE_BIG NE_ROOM NE_NOTNUM
   names:  hl pow | bas ^ | fs npow | c num_pow
-  doc:    x to the power y, any real y: exact when y is whole (numbers' POW), or when it is (4^1/2 is 2), else
-  doc:    exp (y log x) at the precision.
+  doc:    x to the power y, any real y: a whole y's power exactly (numbers' POW: any x), else x real and 0 or more:
+  doc:    exact when its root is rational (4^1/2 is 2, 0.25^0.5 0.5, x's kind), else exp (y log x) at the precision.
+  doc:    NE_DOMAIN: x below 0 (y not whole), or y log x more than 20000 from 0; NE_DIV0: 0 to a power below 0.
 
 entry PI math impl=mt_pi
   in:     -

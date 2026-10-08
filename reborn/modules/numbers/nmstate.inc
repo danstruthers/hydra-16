@@ -10,6 +10,11 @@ nm_init:
             stz         st_base + 1
             lda         #DIGITS_START
             sta         st_digits
+            ldx         #2 * NCONST - 1                     ; (No constants cached: the math library's)
+:
+            stz         st_cbits,x
+            dex
+            bpl         :-
             jsr         rn_clock
             lda         #NUMBERS_MAGIC
             sta         st_magic

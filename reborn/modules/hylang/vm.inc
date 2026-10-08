@@ -9436,30 +9436,31 @@ vo_bin:     .byte       BIN_ADD, BIN_SUB, BIN_LT, BIN_GT, BIN_LE, BIN_GE, BIN_EQ
             .byte       BIN_ONEP, BIN_ADD, BIN_SUB, BIN_LT, BIN_GT, BIN_LE, BIN_GE, BIN_EQ
 vo_n:       .byte       2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2
 
-; The built-ins' table again (builtins.inc's), for this bank: each one's least and most arguments, flags, code; and
+; The built-ins' table again (builtins.inc's: the first 256, the machine's own; the second table's are called through the
+; evaluator), for this bank: each one's least and most arguments, flags, code; and
 ; whether it looks at its caller's scope (vb_vf: VF_SCOPE)
 vb_min:
-.repeat BI_COUNT, I
+.repeat BI_FIRST, I
             .byte       .ident(.sprintf("bi_min_%d", I))
 .endrep
 vb_max:
-.repeat BI_COUNT, I
+.repeat BI_FIRST, I
             .byte       .ident(.sprintf("bi_max_%d", I))
 .endrep
 vb_flags:
-.repeat BI_COUNT, I
+.repeat BI_FIRST, I
             .byte       .ident(.sprintf("bi_fl_%d", I))
 .endrep
 vb_lo:
-.repeat BI_COUNT, I
+.repeat BI_FIRST, I
             .byte       <.ident(.sprintf("bi_cd_%d", I))
 .endrep
 vb_hi:
-.repeat BI_COUNT, I
+.repeat BI_FIRST, I
             .byte       >.ident(.sprintf("bi_cd_%d", I))
 .endrep
 vb_vf:
-.repeat BI_COUNT, I
+.repeat BI_FIRST, I
 .if I = BIN_LIST .or I = BIN_FN .or I = BIN_FUN .or I = BIN_FEXPR .or I = BIN_HASH_CREATE .or I = BIN_HASH_PUT .or I = BIN_TO_HASH
             .byte       VF_SCOPE
 .else
@@ -9491,6 +9492,6 @@ vq_op:      .byte       VO_ADD, VO_SUB, VO_LT, VO_GT, VO_LE, VO_GE, VO_NEQ, VO_I
 vc_bits:    .byte       1, 2, 4, 8, 16, 32, 64, 128
 
 vc_bflags:
-.repeat BI_COUNT, I
+.repeat BI_FIRST, I
             .byte       .ident(.sprintf("bi_fl_%d", I))
 .endrep

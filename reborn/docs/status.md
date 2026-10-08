@@ -782,6 +782,16 @@ suite, its `numbers.dl` and `run.dl` from `feature/numbers`: 1,424 checks, all p
 benchmarks as before (17,690 ms); rationals twice as quick and fixed decimals nine times, integers a little past a
 fixnum a quarter to two-thirds slower (a library call each).  The third bank: 9,928 bytes, 14,088 before.
 
+**The math functions** (October 2026, NUMBERS.md's step 4).  `sqrt`, `exp`, `log`, `sin`, `cos`, `tan`, `atan`, `pi`
+and `pow` of any real power, and `digits` (the precision, 12 at the start): exact when the answer is, else a fixed
+decimal of the precision's significant digits, correctly rounded (Ziv's way: a bound on the error, more bits till the
+rounding is sure), so danlang (first: `NumMath.cs`, `math.dl`), the JavaScript reference and the Hydra agree to the
+last digit.  The Hydra's are a library module of their own, `math`, which shares `numbers`'s RAM bank and assembles
+its registers and tower in its own bank; a byte's product by quarter squares (both libraries', 2.5 times quicker)
+and the constants kept between calls make a 12-digit `sin` 220,000 cycles, `exp` 280,000.  hylang has the ten as
+built-ins of its second table (`pow` was library code, whole powers only).  The suite: 1,530 checks; the `numbers`
+test 5,525 calls; 5,131 random math calls and 6,500 random expressions more, none different.
+
 | Step | | Notes |
 |---|---|---|
 | 7.0 The language's specification | Done | `docs/hylang.md`: hylang 1 is danlang (`C:\source\danlang`, its `master`), readied for the port in C# first (lexical scope, tail calls, fexprs, `try`, loops, the missing basics, its number bugs fixed, and a system library a PC has too: files, programs and the shell, the environment, the clock, bits and bytes, the system's errors as codes), with its regression suite (965 checks) run unchanged on both; where the two may differ (8-bit strings, the call depth, `/lib/hylang`, Ctrl-C an error); and what makes it the Hydra's, in four layers: the system library, the Hydra's built-ins (notes, namespaces, tasks, memory and banks, keys), device libraries in hylang over the devices' files (console, GPIO, I2C, SPI, sound, disks, `/proc`, the clock's chip, `/pc`), and a `sys-` function for every call.  Decided: the extension `.hl`; `$name` an environment variable; danlang's GPLv3 license taken off by the user, so hylang is in the system's ROM (the plan's §22, questions 3 and 4) |
@@ -842,9 +852,9 @@ compatibility in the system).  Some of it is there already: `play -x` plays the 
 
 1. Under way (October 2026, `reborn-numbers`): one number system for every language, [NUMBERS.md](design/plans/NUMBERS.md)
    and [BASIC.md](design/plans/BASIC.md), the user's answers in both.  Done: step 1 (danlang's `base` and the stored
-   format, `feature/numbers`), step 2 (the numbers library, `modules/numbers`, 33 entries) and step 3 (hylang on it);
-   next, step 4 (`math`: `sqrt` ... `pi`, danlang first), then HyForth's `lib numbers`, C's `num.h` and `calc`, and
-   the new BASIC.
+   format, `feature/numbers`), step 2 (the numbers library, `modules/numbers`, 33 entries), step 3 (hylang on it)
+   and step 4 (the math functions: danlang's, the library `math`, hylang's); next, HyForth's `lib numbers` (step 5),
+   C's `num.h` and `calc`, and the new BASIC.
 2. Under way (October 2026, another session): text windows ([WINDOWS.md](design/plans/WINDOWS.md): screens in
    task F's RAM banks, a whole VT100, window groups, headers, footers and a bar; the user has answered its
    questions).  PCM is done (8.5: `/dev/vid/pcm`, `pcmctl`; `play`'s WAV files and a ZSM's PCM).

@@ -337,6 +337,16 @@ BI_N        .set 256        ; (The second table: ordinary built-ins in a bank, B
             BI          "base", 0, 1, B3, bi_base              ; (The numbers': numbi.inc's)
             BI          "number-bytes", 1, 1, B3, bi_number_bytes
             BI          "bytes-number", 1, 1, B3, bi_bytes_number
+            BI          "sqrt", 1, 1, B3, bi_sqrt               ; (The math functions: numbi.inc's, the math library's)
+            BI          "exp", 1, 1, B3, bi_exp
+            BI          "log", 1, 1, B3, bi_log
+            BI          "sin", 1, 1, B3, bi_sin
+            BI          "cos", 1, 1, B3, bi_cos
+            BI          "tan", 1, 1, B3, bi_tan
+            BI          "atan", 1, 1, B3, bi_atan
+            BI          "pi", 0, 0, B3, bi_pi
+            BI          "digits", 0, 1, B3, bi_digits
+            BI          "pow", 2, 2, B3, bi_pow
 
 BI_COUNT        = BI_N
 .repeat 256, I                                              ; (The first table's unused entries: none)
@@ -349,31 +359,60 @@ BI_COUNT        = BI_N
 .endif
 .endrep
 .assert     BI_COUNT <= 512, error, "builtins.inc: 512 built-ins at most (BUILTIN0 + 2 * n, below IMM_PAGES)"
+.if BI_COUNT > 256
+BI_FIRST        = 256           ; (The first table's: its entries here, and in the bytecode machine's bank; the second's
+.else                           ;   in the second bank, bi_xinfo's)
+BI_FIRST        = BI_COUNT
+.endif
 
 .rodata
-; The table: each built-in's least and most arguments, flags, code
+; The table: each built-in's least and most arguments, flags, code (the first 256's: the second table's in the second
+; bank, bi_xinfo's)
 bi_min:
-.repeat BI_COUNT, I
+.repeat BI_FIRST, I
             .byte       .ident(.sprintf("bi_min_%d", I))
 .endrep
 bi_max:
-.repeat BI_COUNT, I
+.repeat BI_FIRST, I
             .byte       .ident(.sprintf("bi_max_%d", I))
 .endrep
 bi_flags:
-.repeat BI_COUNT, I
+.repeat BI_FIRST, I
             .byte       .ident(.sprintf("bi_fl_%d", I))
 .endrep
 bi_lo:
-.repeat BI_COUNT, I
+.repeat BI_FIRST, I
             .byte       <.ident(.sprintf("bi_cd_%d", I))
 .endrep
 bi_hi:
-.repeat BI_COUNT, I
+.repeat BI_FIRST, I
             .byte       >.ident(.sprintf("bi_cd_%d", I))
 .endrep
 
 .segment "RODATA2"
+; The second table's: built-in 256 + I's least and most arguments, flags, code
+.if BI_COUNT > 256
+bi_xmin:
+.repeat BI_COUNT - 256, I
+            .byte       .ident(.sprintf("bi_min_%d", 256 + I))
+.endrep
+bi_xmax:
+.repeat BI_COUNT - 256, I
+            .byte       .ident(.sprintf("bi_max_%d", 256 + I))
+.endrep
+bi_xflags:
+.repeat BI_COUNT - 256, I
+            .byte       .ident(.sprintf("bi_fl_%d", 256 + I))
+.endrep
+bi_xlo:
+.repeat BI_COUNT - 256, I
+            .byte       <.ident(.sprintf("bi_cd_%d", 256 + I))
+.endrep
+bi_xhi:
+.repeat BI_COUNT - 256, I
+            .byte       >.ident(.sprintf("bi_cd_%d", 256 + I))
+.endrep
+.endif
 ; Their names
 bi_names_lo:
 .repeat BI_COUNT, I
@@ -470,6 +509,22 @@ bi_bind:
             bne         @one
             clc
 @rts:
+            rts
+
+; The second table's built-in .X (the built-in 256 + .X): bx_min, bx_max, bx_flags, bx_lo, bx_hi its entry.  Keeps .X
+bi_xinfo:
+.if BI_COUNT > 256
+            lda         bi_xmin,x
+            sta         bx_min
+            lda         bi_xmax,x
+            sta         bx_max
+            lda         bi_xflags,x
+            sta         bx_flags
+            lda         bi_xlo,x
+            sta         bx_lo
+            lda         bi_xhi,x
+            sta         bx_hi
+.endif
             rts
 
 ; Built-in .X's name out.  Keeps .X

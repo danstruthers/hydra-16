@@ -1048,6 +1048,252 @@ bi_bytes_number:
             LDAX        s_bnbyte
             jmp         n_error
 
+; ---- The math functions: the math library's (the module math; NUMBERS.md, step 4): exact when the answer is, else a
+; fixed decimal of (digits) significant digits, correctly rounded, as danlang's are
+
+MF_SQRT         = 0             ; (Each function's number: its entry, its .Y, its name)
+MF_EXP          = 1
+MF_LOG          = 2
+MF_ATAN         = 3
+MF_SIN          = 4
+MF_COS          = 5
+MF_TAN          = 6
+MF_PI           = 7
+MF_POW          = 8
+MF_DIGITS       = 9
+
+; (sqrt x), (exp x), (log x), (atan x), (sin x), (cos x), (tan x): x a real number
+bi_sqrt:
+            lda         #MF_SQRT
+            bra         nm_math1
+bi_exp:
+            lda         #MF_EXP
+            bra         nm_math1
+bi_log:
+            lda         #MF_LOG
+            bra         nm_math1
+bi_atan:
+            lda         #MF_ATAN
+            bra         nm_math1
+bi_sin:
+            lda         #MF_SIN
+            bra         nm_math1
+bi_cos:
+            lda         #MF_COS
+            bra         nm_math1
+bi_tan:
+            lda         #MF_TAN
+nm_math1:
+            sta         n_mf
+            jsr         n_enter
+            jsr         n_arg0
+            lda         ex
+            ldx         ex + 1
+            jsr         n_kind
+            cmp         #NK_NOT
+            bne         :+
+            LDAX        s_mexpects                          ; ("'sqrt' expects a number")
+            jmp         nm_mtext
+:
+            lda         ex
+            ldx         ex + 1
+            jsr         nl_one
+            LDR         r3, NL_ROOM
+; The math library's entry for n_mf called (r0 ... set): its result the value (at NL_R)
+nm_mcall:
+            lda         nl_math                             ; (The library there?)
+            bne         :+
+            LDAX        s_nomath
+            jmp         nm_mtext
+:
+            ldx         n_mf
+            lda         mf_lo,x
+            sta         r15
+            lda         mf_hi,x
+            sta         r15 + 1
+            ldy         mf_y,x
+            jsr         nl_mcall
+            bcs         nm_merr
+            jsr         nl_result
+            jmp         n_leave
+; Its error (.A, NE_*): danlang's message
+nm_merr:
+            cmp         #NE_REAL
+            bne         :+
+            LDAX        s_mreal                             ; ("'sqrt' expects a real number")
+            jmp         nm_mtext
+:
+            cmp         #NE_DOMAIN
+            bne         @other
+            ldx         n_mf
+            cpx         #MF_LOG
+            bne         :+
+            LDAX        s_mlog0
+            jsr         n_error
+            jmp         n_fail
+:
+            LDAX        s_mrange                            ; ("'exp': out of range")
+            jmp         nm_mtext
+@other:
+            cmp         #NE_NOTNUM
+            bne         :+
+            LDAX        s_mexpects
+            jmp         nm_mtext
+:
+            jsr         nl_error
+            jmp         n_fail
+
+; An error: "'", the function's name, then the text at .A, .X
+nm_mtext:
+            sta         n_mt
+            stx         n_mt + 1
+            jsr         nu_begin
+            lda         #$27
+            jsr         out_byte
+            ldx         n_mf
+            lda         mf_name_hi,x
+            tay
+            lda         mf_name_lo,x
+            tax
+            tya
+            pha
+            txa
+            plx
+            jsr         out_text
+            lda         n_mt
+            ldx         n_mt + 1
+            jsr         out_text
+            jsr         nu_end
+            jmp         n_fail
+
+; (pi)
+bi_pi:
+            lda         #MF_PI
+            sta         n_mf
+            jsr         n_enter
+            LDR         r2, NL_R
+            LDR         r3, NL_ROOM
+            jmp         nm_mcall
+
+; (pow x y): x to the power y.  A whole y's power exact (any x); else x real and 0 or more: exact when its root is
+; rational, else a fixed decimal of (digits) significant digits
+bi_pow:
+            lda         #MF_POW
+            sta         n_mf
+            jsr         n_enter
+            jsr         n_arg0
+            lda         ex
+            ldx         ex + 1
+            jsr         n_kind
+            cmp         #NK_NOT
+            beq         @nums
+            ldy         #2
+            jsr         nm_argv2
+            lda         nl_w
+            ldx         nl_w + 1
+            jsr         n_kind
+            cmp         #NK_NOT
+            bne         :+
+@nums:
+            LDAX        s_mnums                             ; ("'pow' expects numbers")
+            jmp         nm_mtext
+:
+            cmp         #NK_COMPLEX
+            bne         :+
+            LDAX        s_mpower                            ; ("'pow' expects a real power")
+            jmp         nm_mtext
+:
+            lda         nl_math
+            bne         :+
+            LDAX        s_nomath
+            jmp         nm_mtext
+:
+            lda         ex
+            ldx         ex + 1
+            jsr         nl_two                              ; (x at NL_A, y at NL_B; the result at NL_A)
+            LDR         r15, MATH_RPOW
+            jsr         nl_mcall
+            bcs         @err
+            clc
+            jsr         nl_result_a
+            jmp         n_leave
+@err:
+            cmp         #NE_REAL                            ; (x complex, y not whole)
+            bne         :+
+            LDAX        s_mpowreal
+            jmp         nm_mtext
+:
+            cmp         #NE_DOMAIN                          ; (x below 0, y not whole; or y log x too far)
+            bne         @other
+            jsr         n_arg0
+            lda         ex
+            ldx         ex + 1
+            jsr         n_sign3
+            cmp         #0
+            bne         :+
+            LDAX        s_mpowneg
+            jmp         nm_mtext
+:
+            LDAX        s_mrange
+            jmp         nm_mtext
+@other:
+            jsr         nl_error
+            jmp         n_fail
+
+; nl_w = argument .Y / 2's value (argp's)
+nm_argv2:
+            lda         (argp),y
+            sta         nl_w
+            iny
+            lda         (argp),y
+            sta         nl_w + 1
+            rts
+
+; (digits): the precision of the math functions' results when they aren't exact (12 at the start); (digits n): it set
+; to n (a whole number from 1 to 100), the one before given back
+bi_digits:
+            lda         #MF_DIGITS
+            sta         n_mf
+            jsr         n_enter
+            lda         nl_math
+            bne         :+
+            LDAX        s_nomath
+            jmp         nm_mtext
+:
+            lda         #0
+            ldx         cn
+            beq         @call
+            jsr         n_arg0                              ; (A whole number from 1 to 100: 12.0 too)
+            lda         ex
+            ldx         ex + 1
+            jsr         n_whole
+            bcs         @bad
+            cpx         #0
+            bne         @bad
+            cmp         #0
+            beq         @bad
+            cmp         #101
+            bcs         @bad
+@call:
+            pha
+            lda         nl_bank
+            sta         r13
+            lda         nl_math
+            sta         r14
+            LDR         r15, MATH_DIGITS
+            pla
+            jsr         XCALL
+            ldx         #0
+            jsr         fix_ax
+            sta         ex
+            stx         ex + 1
+            clc
+            jmp         n_leave
+@bad:
+            LDAX        s_mdigits
+            jsr         n_error
+            jmp         n_fail
+
 ; ---- What the other banks call
 
 ; IN: .A, .X = a value.  OUT: C = 0 and .A, .X = it if it's a whole number (an integer, or a fixed decimal of no
@@ -1583,6 +1829,8 @@ n_ticks:
             rts
 
 .bss
+n_mf:       .res        1                                   ; (A math function's number: MF_*)
+n_mt:       .res        2                                   ; (Its error's text)
 n_entry:    .res        2                                   ; (nm_general's entry)
 n_w32:      .res        4                                   ; (n_u32's and n_to_u32's four bytes, least first)
 n_sgn:      .res        1                                   ; (n_to_i32's: bit 7, a negative one taken)
@@ -1593,6 +1841,31 @@ n_c:        .res        1                                   ; (A byte; range's d
 n_xl:       .res        2                                   ; (range's x: its bytes' count)
 
 .segment "RODATA3"
+mf_lo:      .lobytes    MATH_SQRT, MATH_EXP, MATH_LOG, MATH_ATAN, MATH_TRIG, MATH_TRIG, MATH_TRIG, MATH_PI, MATH_RPOW, MATH_DIGITS
+mf_hi:      .hibytes    MATH_SQRT, MATH_EXP, MATH_LOG, MATH_ATAN, MATH_TRIG, MATH_TRIG, MATH_TRIG, MATH_PI, MATH_RPOW, MATH_DIGITS
+mf_y:       .byte       0, 0, 0, 0, 0, 1, 2, 0, 0, 0
+mf_name_lo: .lobytes    s_fsqrt, s_fexp, s_flog, s_fatan, s_fsin, s_fcos, s_ftan, s_fpi, s_fpow, s_fdigits
+mf_name_hi: .hibytes    s_fsqrt, s_fexp, s_flog, s_fatan, s_fsin, s_fcos, s_ftan, s_fpi, s_fpow, s_fdigits
+s_fsqrt:    .byte       "sqrt", 0
+s_fexp:     .byte       "exp", 0
+s_flog:     .byte       "log", 0
+s_fatan:    .byte       "atan", 0
+s_fsin:     .byte       "sin", 0
+s_fcos:     .byte       "cos", 0
+s_ftan:     .byte       "tan", 0
+s_fpi:      .byte       "pi", 0
+s_fpow:     .byte       "pow", 0
+s_fdigits:  .byte       "digits", 0
+s_mexpects: .byte       "' expects a number", 0
+s_mreal:    .byte       "' expects a real number", 0
+s_mrange:   .byte       "': out of range", 0
+s_mlog0:    .byte       "'log': the logarithm of 0", 0
+s_mnums:    .byte       "' expects numbers", 0
+s_mpower:   .byte       "' expects a real power", 0
+s_mpowreal: .byte       "' expects a real number when its power isn't whole", 0
+s_mpowneg:  .byte       "': a negative number to a power that isn't whole", 0
+s_mdigits:  .byte       "'digits' takes a whole number from 1 to 100", 0
+s_nomath:   .byte       "': the math library (the module math) isn't there", 0
 nm_ops:     .byte       "+-*/"
 nm_entry_lo: .lobytes   NUM_ADD, NUM_SUB, NUM_MUL, NUM_DIV
 nm_entry_hi: .hibytes   NUM_ADD, NUM_SUB, NUM_MUL, NUM_DIV

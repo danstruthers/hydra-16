@@ -31,6 +31,7 @@ NL_S:       .res        NL_BASE_MAX                         ; A base's string (D
 NL_T:       .res        NL_BASE_MAX                         ; (Another: base's, the one before)
 nl_regs:    .res        32                                  ; (The call registers r0-r15 kept: nl_rsave's)
 nl_mod:     .res        1                                   ; The library's module's bank (the paged ROM's)
+nl_math:    .res        1                                   ; The math library's (0: there's none)
 nl_bank:    .res        1                                   ; Its RAM bank (r13)
 nl_tbank:   .res        1                                   ; hylang's bank for a number's text
 nl_dec:     .res        1                                   ; 1: the base decimal, its prefix not written (fixnums
@@ -91,12 +92,37 @@ nl_init:
             lda         #1
             sta         nl_dec
             sta         nl_flags
+            stz         nl_math                             ; (The math library: its bank, or 0)
+            stz         nl_i
+@math:
+            LDR         r0, NL_A
+            lda         nl_i
+            jsr         MODINFO
+            bcs         @done
+            ldx         #0
+:
+            lda         NL_A + ME_NAME,x
+            cmp         s_math,x
+            bne         @mnext
+            inx
+            cmp         #0
+            bne         :-
+            lda         NL_A + ME_TYPE
+            cmp         #HT_LIBRARY
+            bne         @mnext
+            lda         NL_A + ME_BANK
+            sta         nl_math
+            bra         @done
+@mnext:
+            inc         nl_i
+            bra         @math
+@done:
             clc
 @rts:
             rts
 @next:
             inc         nl_i
-            bra         @find
+            jmp         @find
 
 ; The library's entry r15 called (XCALL): r13 its bank, r14 its module's; .A, .X, .Y and r0-r12 pass both ways, C
 ; and .A its answer
@@ -105,6 +131,16 @@ nl_call:
             lda         nl_bank
             sta         r13
             lda         nl_mod
+            sta         r14
+            pla
+            jmp         XCALL
+
+; The math library's entry r15 called (XCALL): r13 the libraries' bank, r14 its module's
+nl_mcall:
+            pha
+            lda         nl_bank
+            sta         r13
+            lda         nl_math
             sta         r14
             pla
             jmp         XCALL
@@ -863,6 +899,7 @@ nl_fixword:
 nl_spc:     .res        1                                   ; (nl_display's: 1, the base at NL_S)
 
 .segment "RODATA3"
+s_math:     .byte       "math", 0
 s_numbers:  .byte       "numbers", 0
 s_decimal:  .byte       "d", 0
 s_toobig:   .byte       "Too big: an integer past 255 bytes", 0

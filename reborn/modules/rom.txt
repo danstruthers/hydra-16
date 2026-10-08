@@ -50,3 +50,4 @@ module      basic
 module      hylang
 module      hysnap      ; (hylang's snapshot: its heap with its library loaded, made by tools/hysnap.js at the build)
 module      numbers     ; (the number libraries: spec/numbers.def)
+module      math        ; (its math functions, in the same bank of RAM: numbers's registers)

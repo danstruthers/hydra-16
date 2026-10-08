@@ -9,8 +9,8 @@
 NR_DIG          = >(DIGS - $8000)               ; (A number's digits as it's written: their pages, as registers')
 
 .segment "NUMBANK"
-r_len:      .res        NREGS                               ; Each register's length (bytes; 0: zero) ...
-r_neg:      .res        NREGS                               ;   and sign ($FF: negative)
+r_len:      .res        NRALL                               ; Each register's length (bytes; 0: zero) ...
+r_neg:      .res        NRALL                               ;   and sign ($FF: negative)
 nra:        .res        1                                   ; (An operation's registers: its operands, its result,
 nrb:        .res        1                                   ;   and divmod's quotient and remainder)
 nrc:        .res        1
@@ -24,6 +24,7 @@ n_lc:       .res        1
 n_cy:       .res        1
 n_m8:       .res        1
 n_x8:       .res        1
+n_sy8:      .res        1
 n_phi:      .res        1
 n_d8:       .res        1
 n_q8:       .res        1
@@ -543,24 +544,55 @@ r_swap:
             stx         nra
             rts
 
-; .A * n_m8: .A = the product's low byte, n_phi its high.  Keeps .Y
+; .A * n_m8: .A = the product's low byte, n_phi its high.  Keeps .Y.  By quarter squares: a b = f(a + b) - f(|a - b|),
+; f(n) = n^2 / 4 rounded down (sq_lo, sq_hi: f's 512, 0 to 510)
 mul8:
             sta         n_x8
-            lda         #0
-            ldx         #8
-            lsr         n_x8
-@bit:
-            bcc         :+
+            sty         n_sy8
+            sec                                             ; (|a - b|: .Y)
+            sbc         n_m8
+            bcs         :+
+            eor         #$FF
+            adc         #1
+:
+            tay
+            lda         n_x8                                ; (a + b: .X, past 255 the tables' second half)
             clc
             adc         n_m8
-:
-            ror
-            ror         n_x8
-            dex
-            bne         @bit
+            tax
+            bcs         @high
+            lda         sq_lo,x
+            sec
+            sbc         sq_lo,y
+            sta         n_x8
+            lda         sq_hi,x
+            sbc         sq_hi,y
             sta         n_phi
+            ldy         n_sy8
             lda         n_x8
             rts
+@high:
+            lda         sq_lo + 256,x
+            sec
+            sbc         sq_lo,y
+            sta         n_x8
+            lda         sq_hi + 256,x
+            sbc         sq_hi,y
+            sta         n_phi
+            ldy         n_sy8
+            lda         n_x8
+            rts
+
+.rodata
+sq_lo:                                                      ; (f(n) = n^2 / 4 rounded down: its low bytes, its high)
+.repeat 512, I
+            .byte       <((I * I) / 4)
+.endrep
+sq_hi:
+.repeat 512, I
+            .byte       >((I * I) / 4)
+.endrep
+.code
 
 ; nrc = nra * nrb (nrc another register).  Too big: n_big
 r_mul:
