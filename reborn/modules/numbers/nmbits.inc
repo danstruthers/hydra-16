@@ -115,7 +115,7 @@ nm_bits:
             lda         r_len,x
             beq         @bit
             lda         #0
-            jsr         r_page
+            RPAGE
             sta         na + 1
             stz         na
             lda         (na)

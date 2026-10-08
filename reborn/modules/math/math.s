@@ -14,7 +14,7 @@
 .include "numbers.inc"
 .include "numbers/nmbank.inc"
 
-            HYX2_LIBRARY "math", "HEADER", "ROM"
+            HYX2_LIBRARY "math", "HEADER", "ROM2", 2
 .include "math_jt.inc"
 
 .code
@@ -22,8 +22,32 @@
 .include "numbers/nmreg.inc"
 .include "numbers/nmval.inc"
 .include "numbers/nmpow.inc"
+.include "mtmac.inc"
 .include "mtcore.inc"
+.include "mtargs.inc"
 .include "mtfun.inc"
+
+; ---- TRIG and ATAN, in the second bank (docs/design/plans/NUMSPEED.md, step 4: the first's room), with their own
+; copies of what they use (their variables the first's: NM_COPY)
+.segment "CODE2"
+.scope b2
+NM_COPY         = 1
+.include "numbers/nmcall.inc"
+.include "numbers/nmreg.inc"
+.include "numbers/nmval.inc"
+.include "mtcore.inc"
+.include "mtargs.inc"
+.include "mttrig.inc"
+.endscope
+
+; Their entries, from the first bank: NMFAR2 into the second
+.code
+mt_trig:
+            NMFAR2      b2::mt_trig
+            rts
+mt_atan:
+            NMFAR2      b2::mt_atan
+            rts
 
 ; ---- The arena: the rest of the bank (each call's own: math's variables aren't numbers')
 .segment "NUMBANK"

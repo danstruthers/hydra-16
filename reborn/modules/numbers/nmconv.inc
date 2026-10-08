@@ -201,7 +201,7 @@ nm_whole:
             bra         @up
 @half:
             lda         #2                                  ; (A half: to the even one)
-            jsr         r_page
+            RPAGE
             sta         na + 1
             stz         na
             ldx         #2

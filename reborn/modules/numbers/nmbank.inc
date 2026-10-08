@@ -35,6 +35,10 @@ DIGS            = ARENA_END - NR_DIGS * 256     ; (The digits' pages)
 ; there, .ifndef NM_COPY).  NM_CODE and NM_RODATA: the segment for the code and read-only data, the first bank's or
 ; the second's.  NMFAR2: the routine in the second bank called from the first (by XCALL: .A, .X, .Y and r0-r13 pass,
 ; r14 and r15 are XCALL's)
+.macro RPAGE                                    ; .A = register .A's page (or the digits' page .A): r_page's,
+            clc                                 ;   inline
+            adc         #>regs
+.endmacro
 .macro NM_CODE
 .ifdef NM_COPY
 .segment "CODE2"

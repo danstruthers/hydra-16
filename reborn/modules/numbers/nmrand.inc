@@ -67,7 +67,7 @@ rn_below:
             bne         @byte
             dey
             lda         #0
-            jsr         r_page
+            RPAGE
             sta         na + 1
             stz         na
             lda         (na),y                              ; (R0's top byte: the bits it has)
