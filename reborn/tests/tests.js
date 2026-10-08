@@ -3059,6 +3059,23 @@ module.exports = {
       },
     },
     {
+      name: 'winmouse', what: 'the mouse in the windows (W8b): the input program\'s reports (CSI < B ; X ; Y M and m) to a program that asks for them (?1000, ?1006: HyForth\'s ekey, keys vt), at its own cell; a click in a tile not focused (Ctrl-] s\'s rows: window 0\'s, above) focuses it; the wheel over a window that doesn\'t ask, its scrollback\'s view (Enter: its cursor\'s line into /dev/snarf, the view left); the PC terminal\'s reports from the serial port (the console\'s ?1000 and ?1006 sent it as its window asks), its tile\'s cell (row 3, its header row 1: the window\'s 2)',
+      init: 'init', cycles: 600e6,
+      get machine() {
+        const P = '\u0100', W = P + P + P, M = '\u0400';
+        return { vera: true, smc: { moves: [[0, -160, 0], [0, 0, 1], [0, 0, 0], [0, 0, 1], [0, 0, 0], [0, 0, 0, -1]] },
+          input: 'ārequire facility.fl\r' + 'ā: t s" /dev/consctl" w/o open-file throw >r s" keys vt" r@ write-file throw\r' +
+            W + '  27 emit ." [?1000h" 27 emit ." [?1006h" 0 do ekey . loop\r' + W + '  27 emit ." [?1000l" r> close-file throw ;\r' +
+            W + '20 t\r' + W + '\u0102' + M + P + M + P + M + P + '\u0103' + W + '\x1ds' + W + W + W + W + 'cat /dev/wctl\r' + W +
+            '\u0102' + M + P + M + P + '\u0103' + W + 'cat /dev/wctl\r' + W + '\u0102' + M + P + '\u0103' + W + '\r' + W +
+            'cat /dev/snarf\r' + W + '18 t\r' + W + '\x1b[<0;5;3M\x1b[<0;5;3m' + W };
+      },
+      // (The pointer from the screen's middle up 160: its row 10, the window's 9 below the bar and header; its column 41)
+      expect: ['/> 20 t\n\x1b[?1000;1006h27 91 60 48 59 52 49 59 57 77 27 91 60 48 59 52 49 59 57 109 \x1b[?1000l\n',
+        'cat /dev/wctl\n0 0 80 11\n1 0 80 11 *\n', 'cat /dev/wctl\n0 0 80 11 *\n1 0 80 11\n', 'F 04 01 FF 00006C cons\n/> ',
+        '18 t\n\x1b[?1000;1006h', '27 91 60 48 59 53 59 50 77 27 91 60 48 59 53 59 50 109 \x1b[?1000l'],
+    },
+    {
       name: 'pcm', what: 'the Vera X\'s PCM (vid\'s /pcm and /pcmctl), at rc: its files and state; the rate (the VERA\'s nearest) and volume; raw samples from a card into the FIFO, drained; bad commands; /pcm one task\'s (another\'s pcmctl: busy); WAV files played (8 bits mono, made signed; 16 bits stereo past an odd chunk; a float one, not a song); a ZSM\'s PCM instruments (one, then one looped, stopped by the FIFO emptied: from RAM) and its claim of the PCM; one too big for RAM (from the file); the FIFO\'s bytes in order, none lost, its runs dry only at the ends',
       init: 't_rc', cycles: 150e6,
       get machine() { return { input: typed(PCM_LINES), vera: { pcmLog: true }, sd: pcmCard() }; },

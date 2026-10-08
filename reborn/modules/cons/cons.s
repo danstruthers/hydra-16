@@ -24,7 +24,9 @@
 ;               the line; or they go on, the terminal painted as it can, skipping what came between); group (the
 ;               window's notes go to the writer's note group); screen, serial, both (where the windows are shown:
 ;               every window's, the console's terminals: the Vera X's screen, the serial port, or both, as it
-;               starts; screen with no screen: E_NODEV; terminal screen, serial, both too); terminal size C R (the
+;               starts; screen with no screen: E_NODEV; terminal screen, serial, both too); seats (terminal seats:
+;               both on, each a seat, W8: its own window shown, its own keys, the keyboard's the screen's, its own
+;               note group; a group's windows sized to the terminals showing it); terminal size C R (the
 ;               serial port's terminal's columns and rows: 80 x 24 as it starts; terminal size alone asks it, ESC [
 ;               18 t, and its answer sets it, as the PC tool's report does, ESC [ 8 ; R ; C t, sent as its window
 ;               changes).  It reads as the state, with the window's size (size C R): the smaller of the terminals
@@ -51,7 +53,9 @@
 ;               are keys typed at the console, as the serial port's are (Ctrl-C and Ctrl-\ notes, the prefix and the
 ;               key after it the windows'), in a ring of their own (KI_SIZE), so /ser and /pc's frames never see
 ;               them; all of them, as the ring has room, the writer waiting for the rest.  The same file in every
-;               window (the console's, as ser is)
+;               window (the console's, as ser is).  Its mouse reports (CSI < B ; X ; Y M or m: the input program's,
+;               or a PC terminal's on the serial port), as the keys come, focus the window under the mouse and go
+;               to a program that asks (?1000: k_mouse)
 ;   /text       the window's scrollback and screen as text, a line a row (rio's)
 ;   /snarf      the console's cut buffer (rio's), one for all its windows: SNARF_MAX bytes at most, in a bank of
 ;               its own (taken at the first write).  A write at its start empties it first (a write replaces it);
@@ -298,7 +302,11 @@ fid_new:    .res        SRV_FIDS                            ; Each wctl fid: the
                                                             ;   next read's answer
 kw_st:      .res        1                                   ; The terminal's sequences the console takes: how far ...
 kw_n:       .res        1                                   ;   which number ...
-kw_p:       .res        3                                   ;   and them
+kw_p:       .res        3                                   ;   and them ...
+kw_lt:      .res        1                                   ;   <> 0: CSI <, a mouse report's (W8)
+ms_w:       .res        1                                   ; (k_mouse's: the window under it, M or m, the wheel's
+ms_m:       .res        1                                   ;   lines)
+ms_n:       .res        1
 want_new:   .res        1                                   ; <> 0: Ctrl-] c, a window wanted (for /wnew's reader)
 kb_act:     .res        128                                 ; The keys (key's): each one's action after the prefix
                                                             ;   (KA_*; ESC's: Shift-Tab's, ESC [ Z) ...
@@ -1959,6 +1967,81 @@ lbl_at:
             sta         m + 1
             rts
 
+; A mouse report (kw_watch's: CSI < B ; X ; Y M or m, kw_p, .A the M or m) from terminal d_src (the serial port's; the
+; keyboard's, the screen's: the input program's): a button pressed over a window that isn't focused focuses it (its tile,
+; a popup, the window under one); the window under it gets it at its own cell if it asks (?1000: vt_mouse); else the
+; wheel over the focused window scrolls its scrollback's view (up: the view, if it isn't shown)
+k_mouse:
+            sta         ms_m
+            lda         kw_p + 1                            ; (Its cell, from 0)
+            beq         @out
+            dec         a
+            sta         ht_x
+            lda         kw_p + 2
+            beq         @out
+            dec         a
+            sta         ht_y
+            ldx         d_src
+            FARN        2, vt_hit
+            bcc         :+
+@out:
+            rts
+:
+            stx         ms_w
+            lda         ms_m                                ; A button pressed (not the wheel, not a move): its
+            cmp         #'M'                                ;   window focused
+            bne         @report
+            lda         kw_p
+            and         #$63
+            cmp         #3
+            bcs         @report
+            cpx         w_in
+            beq         @report
+            FARN        1, w_show
+@report:
+            ldx         ms_w
+            lda         kw_p
+            ldy         ms_m
+            FARN        2, vt_mouse
+            bcc         @done
+            lda         kw_p                                ; Not taken: the wheel, the view
+            and         #$43
+            cmp         #$40
+            beq         @up
+            cmp         #$41
+            bne         @done
+            lda         vv_w                                ; (Down: in the view)
+            bmi         @done
+            cmp         ms_w
+            bne         @done
+            ldx         #1
+            bra         @move
+@up:
+            lda         ms_w                                ; (Up: the focused window's view, its cursor at its top)
+            cmp         vv_w
+            beq         @top
+            cmp         w_in
+            bne         @done
+            lda         vv_w
+            bpl         @done
+            FARN        1, k_view
+            lda         vv_w
+            bmi         @done
+@top:
+            stz         vv_cur
+            ldx         #0
+@move:
+            stx         ms_m
+            lda         #3
+            sta         ms_n
+:
+            ldx         ms_m
+            FARN        1, vv_move
+            dec         ms_n
+            bne         :-
+@done:
+            rts
+
 .code
 
 ; The list's and the keys' popup's key actions (ka_vec's), in the third bank
@@ -2931,8 +3014,14 @@ kw_watch:
             stz         kw_p
             stz         kw_p + 1
             stz         kw_p + 2
+            stz         kw_lt
             rts
 @csi:
+            cmp         #'<'                                ; (CSI <: a mouse report, SGR's)
+            bne         :+
+            sta         kw_lt
+            rts
+:
             cmp         #';'                                ; Its numbers, three at most
             bne         :+
             ldx         kw_n
@@ -2957,6 +3046,17 @@ kw_watch:
             rts
 @final:
             stz         kw_st
+            ldx         kw_lt                               ; A mouse report: CSI < B ; X ; Y M or m
+            beq         @keys
+            cmp         #'M'
+            beq         :+
+            cmp         #'m'
+            bne         @rts
+:
+            FARN        3, k_mouse
+@rts:
+            rts
+@keys:
             cmp         #'t'
             beq         @size
             cmp         #'u'

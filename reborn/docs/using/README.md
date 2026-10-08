@@ -29,5 +29,6 @@ programs.  The console is windows, rio's way on a serial terminal: each window i
 time, in groups (a group a shell session: Ctrl-] c; Ctrl-] n and p between groups, Ctrl-] Tab between its windows,
 Ctrl-] and a digit to one, Ctrl-] w a list of them; Ctrl-] s and v split one into tiles shown together; Ctrl-] [ the
 scrollback, Ctrl-] y a paste of `/dev/snarf`, Ctrl-] ? the keys).  With a Vera X, they're on its screen too, and its
-keyboard types into them as the serial terminal does.  The login shell is HyForth over rc (`forth -l`): a line is Forth if its
+keyboard types into them as the serial terminal does (`echo seats >/dev/consctl` gives each its own window), and a
+click of its mouse focuses one.  The login shell is HyForth over rc (`forth -l`): a line is Forth if its
 first word is a Forth word or a number, else an rc command line.

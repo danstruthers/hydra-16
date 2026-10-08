@@ -188,6 +188,8 @@ sp_f:       .res        1
 sp_dec:     .res        1                                   ;   <> 0: its G0 is the DEC graphics ...
 sp_cy:      .res        1                                   ;   its cursor's row ...
 sp_cx:      .res        1                                   ;   its cursor's column ...
+ser_ms:     .res        1                                   ; The serial port's terminal's mouse: its reports on
+                                                            ;   (VM2_MOUSE) or not
 ser_tcem:   .res        1                                   ; The serial port's cursor: shown (VM_TCEM) or not
 sp_again:   .res        1                                   ;   <> 0: the window written to as it was painted (scroll
                                                             ;   jump): painted again after ...
@@ -265,6 +267,15 @@ hp_m:       .res        1
 hp_s:       .res        1
 hp_w:       .res        1
 ctx_t:      .res        1                                   ; The terminal being drawn (t_in's: w_in its window)
+ht_x:       .res        1                                   ; vt_hit's cell (a terminal's; then the window's) ...
+ht_y:       .res        1
+ht_k:       .res        1                                   ;   the pane looked at ...
+ht_t:       .res        1                                   ;   and the pane's rows and columns, the box's or its chrome's
+ht_b:       .res        1                                   ;   with them
+ht_l:       .res        1
+ht_r:       .res        1
+ms_b:       .res        1                                   ; (vt_mouse's: the button's code, M or m)
+ms_f:       .res        1
 sw_any:     .res        1                                   ; (vis_any's window)
 tl_t:       .res        1                                   ; Tiles (W7): the terminal (0 the serial port, 1 the screen)
 tg:         .res        1                                   ; tile_of's: the window's group, its tiles, its tile, its
@@ -2331,6 +2342,25 @@ x_dec:
             jsr         mode2_bit
             bra         @next
 :
+            cmp         #>1000                              ; (1000, 1002, 1003: the mouse's presses and releases
+            bne         @alt                                ;   reported; 1006 in SGR's form: the console's, the
+            lda         v_parl,X                            ;   serial port's terminal's as its window's)
+            ldy         #VM2_MOUSE
+            cmp         #<1000
+            beq         @ms
+            cmp         #<1002
+            beq         @ms
+            cmp         #<1003
+            beq         @ms
+            ldy         #VM2_SGR
+            cmp         #<1006
+            bne         @next
+@ms:
+            tya
+            jsr         mode2_bit
+            jsr         ms_ser
+            bra         @next
+@alt:
             cmp         #>1047                              ; (1047 and 1049: the alternate screen)
             bne         @next
             lda         v_parl,X
@@ -4971,6 +5001,7 @@ sp_cell:
 ; origin mode (each homes the cursor), the cursor (past the last column: its cell again, so the terminal has the flag
 ; too), the modes, the character sets, the rendition, the cursor shown or not
 ser_state:
+            jsr         ms_put                              ; (Its mouse's reports, as the window asks)
             lda         sp_dec
             beq         :+
             jsr         out_g0b
@@ -6068,6 +6099,207 @@ vt_tile:
             ldy         vt_ty
             rts
 
+; ****************************************************************************
+; The mouse (W8)
+
+; The window under terminal .X's cell ht_x, ht_y (from 0), as the terminal shows it: a popup's box, a tile (its header
+; too), the window under a popup, or the window alone.  OUT: C = 0, .X it, ht_x and ht_y its cell (ht_y $FF: its
+; header, footer or box, or the chrome's, not a cell of its); C = 1, none (a border between tiles)
+vt_hit:
+            stx         out_t
+            jsr         t_in
+            lda         w_in
+            jsr         vt_load
+            jsr         chr_geom
+            jsr         panes
+            lda         pn
+            bne         @panes
+            ldx         out_t                               ; The window alone (the terminal all its): its rows
+            lda         tr_off,X                            ;   below its chrome's
+            sta         pg_y
+            stz         pg_x
+            lda         v_rows
+            sta         pg_r
+            lda         v_cols
+            sta         pg_c
+            lda         w_in
+            sta         tj_w
+            bra         @in
+@panes:
+            sta         ht_k
+@pane:                                                      ; Each pane, the last (a popup) first
+            dec         ht_k
+            bpl         :+
+            jmp         @none
+:
+            lda         ht_k
+            jsr         pane_set
+            bcs         @pane
+            lda         pg_y                                ; (Its rows and columns ...
+            sta         ht_t
+            clc
+            adc         pg_r
+            dec         a
+            sta         ht_b
+            lda         pg_x
+            sta         ht_l
+            clc
+            adc         pg_c
+            dec         a
+            sta         ht_r
+            lda         pg_box                              ;   its box's, or its header's and footer's, too)
+            beq         :+
+            dec         ht_t
+            inc         ht_b
+            dec         ht_l
+            inc         ht_r
+            bra         @hit
+:
+            lda         pg_h
+            cmp         #$FF
+            beq         :+
+            sta         ht_t
+:
+            lda         pg_f
+            cmp         #$FF
+            beq         @hit
+            sta         ht_b
+@hit:
+            lda         ht_y
+            cmp         ht_t
+            bcc         @pane
+            lda         ht_b
+            cmp         ht_y
+            bcc         @pane
+            lda         ht_x
+            cmp         ht_l
+            bcc         @pane
+            lda         ht_r
+            cmp         ht_x
+            bcc         @pane
+@in:                                                        ; Its cell, if it's one of its own
+            sec
+            lda         ht_y
+            sbc         pg_y
+            bcc         @chrome
+            cmp         pg_r
+            bcs         @chrome
+            sta         ht_y
+            sec
+            lda         ht_x
+            sbc         pg_x
+            bcc         @chrome
+            cmp         pg_c
+            bcs         @chrome
+            sta         ht_x
+            bra         @found
+@chrome:
+            lda         #$FF
+            sta         ht_y
+@found:
+            ldx         tj_w
+            clc
+            jmp         t_rest
+@none:
+            sec
+            jmp         t_rest
+
+; A mouse report for window .X: .A its button's code (xterm's: 0-2 the buttons, 64 and 65 the wheel, + 4 Shift, 8 Alt,
+; 16 Ctrl), .Y M (pressed) or m (let go), at its cell ht_x, ht_y: into its answers (its raw reader's keys) if it asks
+; for them (?1000) and the cell's its own: CSI < B ; X ; Y M or m with ?1006, else CSI M and three bytes (32 + B, 33 + X,
+; 33 + Y; a release's B 3).  OUT: C = 0, taken (if there wasn't room, dropped)
+vt_mouse:
+            sta         ms_b
+            sty         ms_f
+            txa
+            jsr         vt_load
+            lda         v_mode2
+            and         #VM2_MOUSE
+            beq         @no
+            lda         ht_y
+            cmp         #$FF
+            beq         @no
+            ldx         vt_w
+            lda         ans_n,X
+            cmp         #ANS_SIZE - 14
+            bcs         @yes
+            lda         #ESC
+            jsr         vt_key
+            lda         #'['
+            jsr         vt_key
+            lda         v_mode2
+            and         #VM2_SGR
+            beq         @x10
+            lda         #'<'
+            jsr         vt_key
+            lda         ms_b
+            jsr         key_dec
+            lda         #';'
+            jsr         vt_key
+            lda         ht_x
+            inc         a
+            jsr         key_dec
+            lda         #';'
+            jsr         vt_key
+            lda         ht_y
+            inc         a
+            jsr         key_dec
+            lda         ms_f
+            jsr         vt_key
+            bra         @yes
+@x10:
+            lda         #'M'
+            jsr         vt_key
+            lda         ms_b
+            ldx         ms_f                                ; (A release: B 3, its modifiers kept)
+            cpx         #'m'
+            bne         :+
+            ora         #3
+:
+            clc
+            adc         #32
+            jsr         vt_key
+            lda         ht_x
+            clc
+            adc         #33
+            jsr         vt_key
+            lda         ht_y
+            clc
+            adc         #33
+            jsr         vt_key
+@yes:
+            clc
+            rts
+@no:
+            sec
+            rts
+
+; The serial port's terminal's mouse as the loaded window asks (its reports on, ?1000, always in SGR's form, ?1006:
+; the console makes them the window's own), if it's following it (ms_ser), or as it's painted (ms_put): sent only as
+; it changes (ser_ms).  Modifies .A, .X, .Y
+ms_ser:
+            lda         fw_ser
+            bne         ms_put
+            rts
+ms_put:
+            lda         v_mode2
+            and         #VM2_MOUSE
+            cmp         ser_ms
+            beq         @done
+            sta         ser_ms
+            ldx         #s_ms_off - s_ms
+            cmp         #0
+            beq         :+
+            ldx         #0
+:
+            lda         s_ms,X
+            beq         @done
+            jsr         tx_put
+            inx
+            bra         :-
+@done:
+            rts
+
 ; A terminal, its window's group tiled or a popup shown (vt_pump's: the serial port's, tp_ser, and the screen's, tp_scr):
 ; painted (tile_paint) as tj_start finds it's wanted
 tp_ser:
@@ -6504,6 +6736,10 @@ tj_state:                                                   ; (Then the shown wi
             lda         #$FF
             sta         scr_y
 @end:
+            lda         out_t                               ; (The serial port's mouse, as its window asks)
+            bne         :+
+            jsr         ms_put
+:
             ldx         out_t
             stz         ts_ser,X
             stz         tj_ph,X
@@ -8223,6 +8459,8 @@ s_kh_spg:   .byte       " S-PgUp", 0
 vh_ctl:     .byte       <s_kh_ct, <s_kh_cst, <s_kh_spg
 vh_cth:     .byte       >s_kh_ct, >s_kh_cst, >s_kh_spg
 s_kh_end:   .byte       " q", HT, "leave", 0
+s_ms:       .byte       ESC, "[?1000;1006h", 0              ; (The serial port's terminal's mouse: on, in SGR's form; off)
+s_ms_off:   .byte       ESC, "[?1000l", 0
 state_vec:  .word       0, st_esc, st_esci, st_csi, st_csii, st_csix, st_osc, st_stre, st_str, st_stre, st_y1, st_y2
 ESC_N       = 10
 esc_final:  .byte       "78DEHMZc=>"
