@@ -2851,6 +2851,48 @@ module.exports = {
         'wc -l /dev/text\n60\n     64 /dev/text\n', 'history 200 >/dev/wctl\necho: write error: invalid argument', 'echo done\ndone\n%'],
     },
     {
+      name: 'tiles', what: 'tiles (W7a: wctl\'s layout): three windows of a group in rows (80 x 7 each on the serial port\'s 80 x 24, a header row each), columns (26 x 23, a border between), a grid (40 x 11, 39 x 11, the third 80 x 11), zoomed and back (Ctrl-] z: the focus alone, 80 x 24, the others keeping theirs), tabs; then rows again, the focus moved by Ctrl-] and the arrows and Ctrl-] Shift-Tab (back to window 0); the screen at the end: the three tiles, their headers (the focused one\'s reversed), each window\'s text in its tile',
+      init: 't_rc', cycles: 300e6,
+      // (Windows 1 and 2 held open by sleeps, a line written to each.  The sizes read from each window's consctl.  The
+      // waits are a time's, not the prompt's: a tile painted again ends with its blanks)
+      get machine() {
+        const L = '\u0100', W = L + L + L;
+        const size = 'grep size /dev/consctl; grep size \'#c1/consctl\'; grep size \'#c2/consctl\'\r';
+        return { input: 'āecho b115200 >/dev/serctl\r' + 'āecho new >/dev/wctl; echo new >/dev/wctl\r' + 'āsleep 1000 >\'#c1/cons\' &\r' + 'āsleep 1000 >\'#c2/cons\' &\r' +
+          'āecho one >\'#c1/cons\'; echo two >\'#c2/cons\'\r' + 'āecho layout rows >/dev/wctl\r' + W + size + W +
+          'echo layout columns >/dev/wctl\r' + W + size + W + 'echo layout grid >/dev/wctl\r' + W + size + W +
+          '\x1dz' + W + 'grep size /dev/consctl\r' + W + '\x1dz' + W + 'echo layout tabs >/dev/wctl\r' + W + 'grep size /dev/consctl\r' + W +
+          'echo layout rows >/dev/wctl\r' + W + '\x1d\x1b[B' + W + '\x1d\x1b[Z' + W + '\x1d\x1b[C' + W + '\x1d\x1b[D' + W +
+          'echo done\r' + W };
+      },
+      expect: ['size 80 7\n', 'size 26 23', 'size 40 11', 'size 39 11', 'size 80 11', 'done\n%'],
+      check(m) {
+        const f = [], out = m.out;
+        const sizes = [...new Set(out.replace(/\x1b\[[0-9;]*[A-Za-z]/g, '\n').match(/size \d+ \d+/g) || [])];
+        const want = ['size 80 7', 'size 26 23', 'size 40 11', 'size 39 11', 'size 80 11', 'size 80 24'];
+        if (sizes.join(',') !== want.join(',')) f.push('the sizes read (each the first time): ' + sizes.join(', ') + '; not ' + want.join(', '));
+        const t = new VT({ cols: 80, rows: 24 }).write(out);
+        const lines = t.lines();
+        const rev = r => t.screen[r][0].f & 16;
+        if (!/^0 rc/.test(lines[0]) || !/^1/.test(lines[8]) || !/^2/.test(lines[16])) f.push('the headers at rows 1, 9, 17: ' + [lines[0], lines[8], lines[16]].join(' | '));
+        if (!rev(0) || rev(8) || rev(16)) f.push('the focused tile\'s header (window 0\'s) reversed, the others not');
+        if (!lines.slice(9, 16).some(l => l.startsWith('one'))) f.push('window 1\'s line (one) in its tile, rows 10-16');
+        if (!lines.slice(17, 24).some(l => l.startsWith('two'))) f.push('window 2\'s line (two) in its tile, rows 18-24');
+        if (!lines.slice(1, 8).some(l => l === 'done')) f.push('window 0\'s last line (done) in its tile, rows 2-8');
+        return f;
+      },
+    },
+    {
+      name: 'tilesplit', what: 'splits (W7a): Ctrl-] s, a window with a shell (wstart\'s, HyForth) below in the group, rows; a Forth line there; Ctrl-] Up back to window 0, its wctl (two windows, each 80 x 11: the serial port\'s tiles, the smaller); Ctrl-] v, a third; the Vera X\'s screen read back: the bar, then window 0\'s tile\'s header',
+      init: 'init', cycles: 600e6, jsOnly: 'the danlang emulator has no VERA yet',
+      get machine() {
+        const L = '\u0100', W = L + L + L + L + L;
+        return { vera: true, input: 'ā\x1ds' + W + W + '2 3 + .\r' + W + '\x1d\x1b[A' + W + 'cat /dev/wctl\r' + W + '\x1dv' + W + W +
+          '\x1d\x1b[A\x1d\x1b[A' + W + 'head -2 /dev/vid/term | tail -1\r' + W };
+      },
+      expect: ['2 3 + .\n5 ', 'cat /dev/wctl\n0 0 80 11 *\n1 0 80 11\n', 'tail -1\n0 forth'],
+    },
+    {
       name: 'pcm', what: 'the Vera X\'s PCM (vid\'s /pcm and /pcmctl), at rc: its files and state; the rate (the VERA\'s nearest) and volume; raw samples from a card into the FIFO, drained; bad commands; /pcm one task\'s (another\'s pcmctl: busy); WAV files played (8 bits mono, made signed; 16 bits stereo past an odd chunk; a float one, not a song); a ZSM\'s PCM instruments (one, then one looped, stopped by the FIFO emptied: from RAM) and its claim of the PCM; one too big for RAM (from the file); the FIFO\'s bytes in order, none lost, its runs dry only at the ends',
       init: 't_rc', cycles: 150e6, jsOnly: 'the danlang emulator has no VERA yet',
       get machine() { return { input: typed(PCM_LINES), vera: { pcmLog: true }, sd: pcmCard() }; },

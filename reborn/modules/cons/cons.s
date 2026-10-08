@@ -35,7 +35,7 @@
 ;               default footer FORMAT, default chrome ... (new windows', and those still as the defaults were); history
 ;               N (the window's rows past its scrollback's, 64 at a time, 128 at most; emptied); key KEY ACTION, key
 ;               prefix KEY (the keys: below; console-wide).  It reads as the windows, a line each (*
-;               the shown one)
+;               the shown one); layout tabs|rows|columns|grid (the writer's window's group's: its windows one at a time, or tiled)
 ;   /label      the window's title (OSC 0 and 2 write it too), read and written whole; empty: its program's name
 ;   /wnew       a read waits for the user's Ctrl-] c, then makes a window, shown, and gives its number (init's: it
 ;               starts a shell there)
@@ -75,7 +75,9 @@
 ; Escape, CR or LF); key KEY ACTION, KEY after the prefix a character (not a digit: Ctrl-] and a digit is always that
 ; window), ^X or ctrl-X, tab or shift-tab; key ctrl-tab ACTION, key ctrl-shift-tab ACTION; ACTION next, previous (the group's windows),
 ; next-group, previous-group, new (a group: Ctrl-] c's), list, hold, close, paste (Ctrl-] y), scrollback (Ctrl-]
-; [) or none; key shift-pgup ACTION too (scrollback: the view a page up).  The list (Ctrl-] w) is a window
+; [), split, vsplit (Ctrl-] s, v: a window with a shell in the group, tiled below or beside), zoom (Ctrl-] z: a
+; tiled group's focus alone, or tiled again) or none; key shift-pgup ACTION too (scrollback: the view a page up).
+; Ctrl-] and an arrow: the group's previous (up, left) or next window (down, right).  The list (Ctrl-] w) is a window
 ; of the console's own, shown till a window's key (its number in hex), or the arrows and Enter, shows that one; q,
 ; Escape twice, or the list's key again shows the one before.
 ;
@@ -153,8 +155,11 @@ KA_LIST         = 6             ;   the windows' list ...
 KA_HOLD         = 7             ;   the window shown held, or not ...
 KA_CLOSE        = 8             ;   its note group a hangup ...
 KA_PASTE        = 9             ;   the snarf buffer pasted ...
-KA_VIEW         = 10            ;   the scrollback's view
-KA_N            = 11
+KA_VIEW         = 10            ;   the scrollback's view ...
+KA_SPLIT        = 11            ;   a window in the group, the layout rows (if it was tabs) ...
+KA_VSPLIT       = 12            ;   columns ...
+KA_ZOOM         = 13            ;   the tiled group's focus alone, or tiled again
+KA_N            = 14
 SNARF_MAX       = 8192          ; /snarf's bytes, at most: its bank's
 LS_ROW          = 3             ; The list's first window's row
 RATE_BOOT       = 5             ; 9600: the kernel's bring-up console's
@@ -277,7 +282,9 @@ w_hfmt:     .res        WIN_MAX * FMT_SIZE                  ;   its header's for
 w_ffmt:     .res        WIN_MAX * FMT_SIZE
 w_stat:     .res        WIN_MAX * STAT_SIZE                 ;   and its status line (vt.s's DECSASD, status)
 g_used:     .res        WIN_MAX                             ; Each group: <> 0, it's there ...
-g_focus:    .res        WIN_MAX                             ;   its window focused (shown with the group)
+g_focus:    .res        WIN_MAX                             ;   its window focused (shown with the group) ...
+g_lay:      .res        WIN_MAX                             ;   its layout (LAY_*: tabs, rows, columns, grid) ...
+g_zoom:     .res        WIN_MAX                             ;   and <> 0: zoomed (its focus alone, as tabs)
 mk_grp:     .res        1                                   ; (w_make's: the group, $FF a new one)
 fr_w:       .res        1                                   ; (w_free's: the window)
 cr_g:       .res        1                                   ; (A group's entry, chr_render's)
@@ -814,9 +821,10 @@ distribute:
             stz         d_pfx
             cmp         kb_pfx                              ; (The prefix again: itself)
             beq         @key
-            cmp         #ESC                                ; ESC: Shift-Tab's, ESC [ Z
+            cmp         #ESC                                ; ESC: Shift-Tab's, ESC [ Z, an arrow's (d_pfx 2: [ next)
             bne         :+
-            inc         d_pfx
+            lda         #2
+            sta         d_pfx
             jmp         @byte
 :
             cmp         #'0'                                ; A digit: that window
@@ -845,9 +853,24 @@ distribute:
             inc         d_pfx
             jmp         @byte
 :
-            stz         d_pfx                               ; (The prefix, ESC [: Z, Shift-Tab, ESC's binding)
-            cmp         #'Z'
+            stz         d_pfx                               ; (The prefix, ESC [: Z, Shift-Tab, ESC's binding; an
+            cmp         #'Z'                                ;   arrow, the group's previous window (up, left) or
+            beq         @stab                               ;   next (down, right))
+            cmp         #'A'
+            beq         @prev
+            cmp         #'D'
+            beq         @prev
+            cmp         #'B'
+            beq         @nextw
+            cmp         #'C'
             bne         @off
+@nextw:
+            jsr         win_next
+            bra         @same
+@prev:
+            jsr         win_prev
+            bra         @same
+@stab:
             lda         kb_act + ESC
             jsr         k_do
             bra         @same
@@ -904,6 +927,53 @@ k_close:                                                    ; Its note group a h
             ora         #NOTE_GROUP
             ldx         #NOTE_HANGUP
             jmp         NOTE_POST
+
+; Ctrl-] s, Ctrl-] v: a window in the window shown's group (for /wnew's reader: wstart's shell), the group's layout rows
+; or columns if it was tabs (as it is if it's tiled), not zoomed
+k_vsplit:
+            lda         #LAY_COLS
+            bra         :+
+k_split:
+            lda         #LAY_ROWS
+:
+            ldx         w_in
+            cpx         ls_w                                ; (Not the list's or the view's)
+            beq         @none
+            cpx         vv_w
+            beq         @none
+            ldy         w_grp,X
+            ldx         g_lay,Y
+            bne         :+
+            sta         g_lay,Y
+:
+            lda         #0
+            sta         g_zoom,Y
+            lda         #2
+            sta         want_new
+            inc         TASK_EVENT
+@none:
+            rts
+
+; Ctrl-] z: the tiled group shown, its focus alone (zoomed), or tiled again
+k_zoom:
+            ldx         w_in
+            ldy         w_grp,X
+            lda         g_lay,Y
+            beq         @none
+            lda         g_zoom,Y
+            eor         #1
+            sta         g_zoom,Y
+            jmp         re_tile
+@none:
+            rts
+
+; The sizes found again, and the terminals painted (a layout changed)
+re_tile:
+            jsr         relayout
+            lda         #1
+            sta         ts_ser
+            sta         ts_scr
+            rts
 
 ; Ctrl-] y: the snarf buffer pasted into the window shown as its keys (paste_feed's), bracketed if its program asked
 ; (?2004).  A paste going on is ended first; the list's window takes none
@@ -1865,12 +1935,18 @@ w_make:
             sta         w_grp,X
             lda         #1
             sta         g_used,Y
+            lda         #LAY_TABS
+            sta         g_lay,Y
+            sta         g_zoom,Y
             txa
             sta         g_focus,Y
             clc
             rts
 @in:
             sta         w_grp,X
+            phx                                             ; (Its group's tiles: the sizes found again)
+            jsr         relayout
+            plx
             clc
 @done:
             rts
@@ -1978,6 +2054,11 @@ w_free:
             txa
             sta         g_focus,Y
 @shown:
+            lda         n                                   ; (Its group's tiles: the sizes found again)
+            pha
+            jsr         relayout
+            pla
+            sta         n
             lda         fr_w                                ; Shown: its group's focus now, or (gone) the next
             cmp         w_in                                ;   group's
             bne         @done
@@ -2412,8 +2493,10 @@ win_size:
             ldy         #0
             jsr         chr_rows
             sta         n
+            stz         tl_t
             lda         ser_rows
             ldy         ser_cols
+            jsr         tile_dims
             jsr         @min
 @screen:
             lda         term
@@ -2427,8 +2510,11 @@ win_size:
             ldy         #1
             jsr         chr_rows
             sta         n
+            lda         #1
+            sta         tl_t
             lda         scr_rows
             ldy         scr_cols
+            jsr         tile_dims
             jsr         @min
 @done:
             rts
@@ -2449,6 +2535,18 @@ win_size:
             cmp         lay_rows
             bcs         :+
             sta         lay_rows
+:
+            rts
+
+; (win_size's) .A, .Y: window .X's tile's rows and columns on terminal tl_t, its group tiled (n: its header's row);
+; else as they came.  Keeps .X
+tile_dims:
+            FAR2        vt_tile
+            bcs         :+
+            pha
+            lda         #1
+            sta         n
+            pla
 :
             rts
 
@@ -2798,7 +2896,12 @@ h_wnew:
             jmp         again
 :
             stz         want_new
-            lda         #$FF                                ; (A group of its own: a shell session)
+            cmp         #2                                  ; (Ctrl-] s, v: in the shown window's group; Ctrl-] c, a
+            lda         #$FF                                ;   group of its own: a shell session)
+            bcc         :+
+            ldx         w_in
+            lda         w_grp,X
+:
             jsr         w_make
             bcs         @done
             jsr         w_show                              ; (The user's: shown, as rio's new window is)
@@ -6215,6 +6318,45 @@ key_spec:
             sec
             rts
 
+; layout tabs|rows|columns|grid: the writer's window's group's layout (its windows one at a time, or tiled), not zoomed
+c_layout:
+            lda         z:srv_argn
+            cmp         #1
+            bne         @inval
+            lda         srv_argp
+            sta         p
+            lda         srv_argp + 1
+            sta         p + 1
+            ldx         #LAY_N - 1
+@name:
+            phx
+            txa
+            asl
+            tay
+            lda         lay_names,Y
+            pha
+            lda         lay_names + 1,Y
+            tax
+            pla
+            jsr         word_is
+            beq         :+
+            plx
+            dex
+            bpl         @name
+@inval:
+            lda         #E_INVAL
+            sec
+            rts
+:
+            pla
+            ldy         z:srv_id
+            ldx         w_grp,Y
+            sta         g_lay,X
+            stz         g_zoom,X
+            jsr         re_tile
+            clc
+            rts
+
 ; history N: the window's history, N rows past its scrollback's (64 at a time: N rounded up; 128 at most; 0 none),
 ; empty (vt.s's vt_history)
 c_history:
@@ -7383,6 +7525,7 @@ wctl_cmds:
             .word       s_monitor_w, c_monitor
             .word       s_key_w, c_key
             .word       s_history_w, c_history
+            .word       s_layout_w, c_layout
             .word       0
 ser_cmds:
             .word       s_b300, c_b300
@@ -7414,6 +7557,16 @@ s_status_w: .byte       "status", 0
 s_monitor_w: .byte      "monitor", 0
 s_key_w:    .byte       "key", 0
 s_history_w: .byte      "history", 0
+s_layout_w: .byte       "layout", 0
+s_tabs_w:   .byte       "tabs", 0
+s_rows_w:   .byte       "rows", 0
+s_columns_w: .byte      "columns", 0
+s_grid_w:   .byte       "grid", 0
+lay_names:  .word       s_tabs_w, s_rows_w, s_columns_w, s_grid_w
+.assert     * - lay_names = LAY_N * 2, error, "lay_names: LAY_N"
+s_split_w:  .byte       "split", 0
+s_vsplit_w: .byte       "vsplit", 0
+s_zoom_w:   .byte       "zoom", 0
 s_prefix_w: .byte       "prefix", 0
 s_ctab_w:   .byte       "ctrl-tab", 0
 s_cstab_w:  .byte       "ctrl-shift-tab", 0
@@ -7432,12 +7585,13 @@ s_paste_w:  .byte       "paste", 0
 s_view_w:   .byte       "scrollback", 0
 s_spgup_w:  .byte       "shift-pgup", 0
 ka_names:   .word       s_none_w, s_next_w, s_prev_w, s_gnext_w, s_gprev_w, s_new_w, s_list_w, s_hold_w, s_close_w
-            .word       s_paste_w, s_view_w
+            .word       s_paste_w, s_view_w, s_split_w, s_vsplit_w, s_zoom_w
 ka_vec:     .word       k_none, win_next, win_prev, grp_next, grp_prev, k_new, ls_open, k_hold, k_close
-            .word       k_paste, k_view
+            .word       k_paste, k_view, k_split, k_vsplit, k_zoom
 .assert     * - ka_vec = KA_N * 2 .and ka_vec - ka_names = KA_N * 2, error, "ka_names and ka_vec: KA_N each"
 kb_def:     .byte       HT, KA_NEXT, ESC, KA_PREV, 'c', KA_NEW, 'n', KA_GNEXT, 'p', KA_GPREV, 'w', KA_LIST
-            .byte       'h', KA_HOLD, 'x', KA_CLOSE, 'y', KA_PASTE, '[', KA_VIEW, 0     ; (The keys after the prefix,
+            .byte       'h', KA_HOLD, 'x', KA_CLOSE, 'y', KA_PASTE, '[', KA_VIEW, 's', KA_SPLIT, 'v', KA_VSPLIT
+            .byte       'z', KA_ZOOM, 0                     ; (The keys after the prefix,
                                                             ;   as it starts)
 s_vv_label: .byte       "scrollback", 0                     ; The view's label and footer
 s_vv_foot:  .byte       "%[7] %y  Space: mark, Enter: copy, q: leave%=", 0

@@ -39,6 +39,10 @@
 ; that isn't blank (SGR as it changes; DEC graphics in ESC ( 0, on the screen as ASCII), then the margins, the modes,
 ; the cursor.  The serial port's as the send ring has room, at each request's end (the shown window's writers
 ; waiting meanwhile: cons.s), the screen's all at once.
+;   Tiles (W7): the shown group tiled (its layout rows, columns or grid), its windows are shown together, each in its
+; tile (tile_of, tile_rect), its header the tile's first row; the focused one follows if its tile's the terminal's
+; width (its rows offset, as chrome's: chr_geom), and the rest are painted again from their cells as they're written
+; to (tl_dty: tile_paint, as the send ring has room).
 
 .include "hydra.inc"
 .include "hw.inc"
@@ -48,6 +52,7 @@
 
 POOL            = WIN_ROWS      ; A window's rows: a plane's (128 cells each)
 HIST_MAX        = 128           ; A window's history's rows, at most (two sets of 64: its lines then fit a byte)
+VLINE           = $19           ; DEC Special Graphics' vertical line (x), as a cell has it: tiles' borders
 VT_NPAR         = 16            ; A sequence's numbers, at most
 VT_RAW          = 40            ; A sequence's bytes kept, to pass it on as it came
 VS_PAGE         = 256           ; A window's state in vt_save
@@ -258,6 +263,53 @@ hp_n:       .res        1                                   ;   (text_row's), it
 hp_m:       .res        1
 hp_s:       .res        1
 hp_w:       .res        1
+tl_t:       .res        1                                   ; Tiles (W7): the terminal (0 the serial port, 1 the screen)
+tg:         .res        1                                   ; tile_of's: the window's group, its tiles, its tile, its
+tn:         .res        1                                   ;   place among the group's windows, it
+tk:         .res        1
+trk:        .res        1
+tme:        .res        1
+tl_x:       .res        1                                   ; tile_rect's: its tile on terminal tl_t, its column, row,
+tl_y:       .res        1                                   ;   columns and rows (its header's one of them)
+tl_c:       .res        1
+tl_r:       .res        1
+ta_w:       .res        1                                   ; (The terminal less the bar: its columns, rows, first)
+ta_h:       .res        1
+ta_y:       .res        1
+spl_n:      .res        1                                   ; (split's: the ways, the part, its size and offset, the
+spl_k:      .res        1                                   ;   quotient, the rest)
+spl_sz:     .res        1
+spl_off:    .res        1
+spl_q:      .res        1
+spl_rm:     .res        1
+sw_k:       .res        1                                   ; (slot_win's)
+sw_f:       .res        1
+sw_n:       .res        1
+sw_me:      .res        1
+vt_ta:      .res        1                                   ; (vt_tile's .A and .Y as they came)
+vt_ty:      .res        1
+tl_dty:     .res        2                                   ; Each terminal's tiles to paint again (a bit a tile)
+tj_m:       .res        2                                   ; Each terminal's paint (tiled): the tiles left ...
+tj_clr:     .res        2                                   ;   <> 0: all of it (cleared, the bar, the borders) ...
+tj_ph:      .res        2                                   ;   its part (tj_vec's) ...
+tj_k:       .res        2                                   ;   the tile, its row (0: its header) and next cell
+tj_r:       .res        2
+tj_c:       .res        2
+tj_w:       .res        1                                   ; (The tile's window ...
+tj_x:       .res        1                                   ;   a row's place, width, cells and end ...
+tj_y:       .res        1
+tj_wd:      .res        1
+tj_n:       .res        1
+tj_e:       .res        1
+tj_kind:    .res        1                                   ;   the chrome row's (CR_*), reversed (F_REV) or not)
+tj_rev:     .res        1
+tj_fr:      .res        1                                   ; (tj_room's: the send ring's room)
+tj_end:     .res        2                                   ; Each terminal's paint: its tile's rows' end
+dr_lo:      .res        WIN_MAX * 2                         ; Each window's rows changed, on each terminal (the serial
+dr_hi:      .res        WIN_MAX * 2                         ;   port's, then the screen's): the first ($FF: none), last
+dr_on:      .res        1                                   ; <> 0: the loaded window's kept (shown in a tile)
+dr_y0:      .res        1                                   ; (Its cursor's row before a byte)
+dr_a:       .res        1
 
 .segment "CODE2"
 ; ****************************************************************************
@@ -265,6 +317,13 @@ hp_w:       .res        1
 
 ; The driver's start: no window loaded; the serial port following (it shows the boot), the screen to be painted
 vt_init:
+            ldx         #WIN_MAX * 2 - 1                    ; (No rows changed)
+:
+            lda         #$FF
+            sta         dr_lo,X
+            stz         dr_hi,X
+            dex
+            bpl         :-
             lda         #$FF
             sta         vt_w
             sta         tc_w
@@ -757,17 +816,22 @@ vt_free:
 ; The cnt bytes in iobuf, the output of window lw: as many as there's room for (the shown window, its terminal
 ; following on the serial port: VT_ROOM a byte in the send ring).  OUT: .A = the bytes taken
 vt_write:
-            ldx         lw                                  ; (Not shown, monitor on: marked, +)
+            ldx         lw                                  ; (Not shown, monitor on: marked, +; but shown in a tile)
             cpx         w_in
             beq         :+
             lda         w_mon,X
             beq         :+
+            txa
+            jsr         tile_vis
+            bcc         :+
+            ldx         lw
             lda         #ACT_OUT
             jsr         act_mark
 :
             lda         lw
             jsr         vt_load
             jsr         fw_setup
+            jsr         dr_setup
             jsr         jump_again
             stz         vw_k
 @byte:
@@ -786,11 +850,21 @@ vt_write:
 :
             ldx         vw_k
             lda         iobuf,X
+            ldy         dr_on
+            bne         :+
             jsr         vt_byte
+            inc         vw_k
+            bra         @byte
+:
+            ldy         v_y                                 ; (A tile's: its rows changed kept)
+            sty         dr_y0
+            jsr         vt_byte
+            jsr         dr_cur
             inc         vw_k
             bra         @byte
 
 @done:
+            jsr         tile_mark
             lda         vw_k
             rts
 
@@ -817,13 +891,23 @@ vt_put:
             lda         lw
             jsr         vt_load
             jsr         fw_setup
+            jsr         dr_setup
+            lda         v_y
+            sta         dr_y0
             pla
-            jmp         vt_byte
+            jsr         vt_byte
+            jsr         dr_cur
+            jmp         tile_mark
 
 ; After each request: the terminals painted (the serial port's as the send ring has room), the screen's cursor
 ; where the window's is, and its bytes to #v/term.  (cons.s has opened #v/term if the screen's on, and leaves the
 ; line /ser's alone)
 vt_pump:
+            ldx         w_in                                ; (The shown group tiled: its tiles')
+            jsr         tile_of
+            bcs         :+
+            jmp         tile_pump
+:
             lda         ser_rd
             bne         @screen
             lda         term
@@ -1326,6 +1410,9 @@ fw_setup:
             bne         @screen
             lda         ts_ser
             bne         @screen
+            ldx         #0                                  ; (Tiled: if its tile's the terminal's width)
+            jsr         tile_wide
+            bcs         @screen
             inc         fw_ser
 @screen:
             lda         term
@@ -1336,6 +1423,9 @@ fw_setup:
             bne         @done
             lda         ts_scr
             bne         @done
+            ldx         #1
+            jsr         tile_wide
+            bcs         @done
             inc         fw_scr
 @done:
             rts
@@ -2029,6 +2119,7 @@ e_decid:                                                    ; DECID: as DA
             jmp         answer_da
 
 e_ris:
+            jsr         dr_all
             jsr         reset
             jsr         scr_dirty
             jsr         sc_paint                            ; (The serial port with chrome: painted)
@@ -2221,7 +2312,8 @@ d_ckm:                                                      ; ?1: the console's 
             jmp         mode_bit
 
 d_colm:                                                     ; ?3: no 132 columns; the screen cleared, the margins
-            jsr         full_margins                        ;   reset, the cursor home (as xterm does)
+            jsr         dr_all                              ;   reset, the cursor home (as xterm does)
+            jsr         full_margins
             jsr         m_home
             lda         #2
             jsr         m_ed
@@ -2269,7 +2361,8 @@ d_anm:                                                      ; ?2: reset, VT52 mo
             rts
 
 d_alt:                                                      ; ?47, ?1047: the alternate screen (cleared), or the main
-            lda         vd_set                              ;   one; painted (not passed on: the console's)
+            jsr         dr_all                              ;   one; painted (not passed on: the console's)
+            lda         vd_set
             beq         :+
             jsr         alt_on
             bra         alt_paint
@@ -2280,7 +2373,8 @@ alt_paint:
             jmp         scr_dirty
 
 d_alt49:                                                    ; ?1049: as ?1047, the cursor saved first (DECSC), and
-            lda         vd_set                              ;   restored after
+            jsr         dr_all                              ;   restored after
+            lda         vd_set
             beq         :+
             jsr         m_save
             jsr         alt_on
@@ -2522,6 +2616,7 @@ x_cbt:                                                      ; CBT: n back
 
 ; ED, EL (DECSED, DECSEL: as them, W1); ED 3, the scrollback alone
 x_ed:
+            jsr         dr_all
             lda         v_parl
             ldx         v_parh
             bne         @done
@@ -3640,6 +3735,7 @@ count_rest:
 
 ; DECALN: every cell E, the margins reset, the cursor home
 m_align:
+            jsr         dr_all
             jsr         full_margins
             stz         vt_i
 @row:
@@ -3944,6 +4040,7 @@ scroll_up:
             jsr         blank_row
             dec         su_n
             bne         @one
+            jsr         dr_region
             jmp         cur_row
 
 ; Rows .A to .X down .Y rows: a blank one in at the top, the bottom one out
@@ -3986,6 +4083,7 @@ scroll_down:
             jsr         blank_row
             dec         su_n
             bne         @one
+            jsr         dr_region
             jmp         cur_row
 
 ; The screen in use from rz_o rows to rz_n, .A its cursor's row (OUT: .A, that row's place now): growing, the
@@ -5295,6 +5393,8 @@ chr_geom:
             dec         a
             sta         tr_bar,X
 @head:
+            jsr         geom_tile                           ; (Tiled: its tile's header, its rows below it)
+            bcc         @next
             lda         chr_k
             and         #CH_HEAD
             beq         @foot
@@ -5322,6 +5422,1083 @@ chr_geom:
 :
             inc         ser_chr
 @none:
+            rts
+
+; (chr_geom's) The shown window tiled on terminal .X: its header its tile's first row, its rows the rest, no footer.
+; OUT: C = 1, it isn't tiled.  Keeps .X
+geom_tile:
+            stx         tl_t
+            phx
+            ldx         w_in
+            jsr         tile_of
+            bcs         @no
+            jsr         tile_rect
+            plx
+            lda         tl_y
+            sta         tr_head,X
+            inc         a
+            sta         tr_off,X
+            clc
+            rts
+@no:
+            plx
+            sec
+            rts
+
+; ****************************************************************************
+; Tiles (W7)
+
+; tg, tn, tk: window .X's group, its tiles, the window's tile (the group's windows in order; TILE_MAX - 1 at most: those
+; past share the last); trk its place among them.  OUT: C = 1, its group isn't tiled (tabs, or its only window), or
+; it's zoomed and this its focus (the others keep their tiles, hidden).  Keeps .X
+tile_of:
+            lda         w_grp,X
+            sta         tg
+            tay
+            lda         g_lay,Y
+            beq         @no
+            lda         g_zoom,Y
+            beq         :+
+            txa
+            cmp         g_focus,Y
+            beq         @no
+:
+            stx         tme
+            stz         tn
+            stz         trk
+            ldy         #0
+@w:
+            lda         w_used,Y
+            beq         @nx
+            lda         w_grp,Y
+            cmp         tg
+            bne         @nx
+            inc         tn
+            cpy         tme
+            bcs         @nx
+            inc         trk
+@nx:
+            iny
+            cpy         #WIN_MAX
+            bcc         @w
+            lda         tn
+            cmp         #2
+            bcc         @no
+            cmp         #TILE_MAX + 1
+            bcc         :+
+            lda         #TILE_MAX
+            sta         tn
+:
+            lda         trk
+            cmp         #TILE_MAX
+            bcc         :+
+            lda         #TILE_MAX - 1
+:
+            sta         tk
+            clc
+            rts
+@no:
+            sec
+            rts
+
+; tl_x, tl_y, tl_c, tl_r: window .X's tile on terminal tl_t (tile_of's first): the terminal less the bar (as the
+; window's chrome has it there), split as its group's layout has it, a border's column between tiles side by side.
+; Keeps .X
+tile_rect:
+            phx
+            jsr         tile_rect0
+            plx
+            rts
+tile_rect0:
+            ldy         tl_t
+            lda         ser_cols
+            sta         ta_w
+            lda         ser_rows
+            sta         ta_h
+            lda         w_chr,X
+            cpy         #0
+            beq         :+
+            lda         scr_cols
+            sta         ta_w
+            lda         scr_rows
+            sta         ta_h
+            lda         w_chr,X
+            lsr
+            lsr
+            lsr
+            lsr
+:
+            stz         ta_y
+            and         #CH_BAR
+            beq         @split
+            lda         bar_pos
+            beq         @split
+            dec         ta_h
+            cmp         #BAR_TOP
+            bne         @split
+            inc         ta_y
+@split:
+            ldy         tg
+            lda         g_lay,Y
+            cmp         #LAY_ROWS
+            beq         @rows
+            cmp         #LAY_COLS
+            beq         @tocols
+            lda         tn                                  ; (A grid: two rows of two, three tiles the last the
+            cmp         #3                                  ;   width; two: side by side)
+            bcs         @grid
+@tocols:
+            jmp         @cols
+@grid:
+            lda         tk                                  ; Its row
+            lsr
+            sta         spl_k
+            lda         #2
+            sta         spl_n
+            lda         ta_h
+            jsr         split
+            clc
+            lda         spl_off
+            adc         ta_y
+            sta         tl_y
+            lda         spl_sz
+            sta         tl_r
+            lda         tn                                  ; Its column
+            cmp         #3
+            bne         :+
+            lda         tk
+            cmp         #2
+            bne         :+
+            stz         tl_x
+            lda         ta_w
+            sta         tl_c
+            rts
+:
+            lda         tk
+            and         #1
+            sta         spl_k
+            lda         #2
+            sta         spl_n
+            lda         ta_w
+            dec         a
+            jsr         split
+            clc
+            lda         spl_off
+            adc         spl_k
+            sta         tl_x
+            lda         spl_sz
+            sta         tl_c
+            rts
+@rows:
+            lda         tk
+            sta         spl_k
+            lda         tn
+            sta         spl_n
+            lda         ta_h
+            jsr         split
+            clc
+            lda         spl_off
+            adc         ta_y
+            sta         tl_y
+            lda         spl_sz
+            sta         tl_r
+            stz         tl_x
+            lda         ta_w
+            sta         tl_c
+            rts
+@cols:
+            lda         tk
+            sta         spl_k
+            lda         tn
+            sta         spl_n
+            sec                                             ; (The width less a border between each two)
+            lda         ta_w
+            sbc         tn
+            inc         a
+            jsr         split
+            clc
+            lda         spl_off
+            adc         spl_k
+            sta         tl_x
+            lda         spl_sz
+            sta         tl_c
+            lda         ta_y
+            sta         tl_y
+            lda         ta_h
+            sta         tl_r
+            rts
+
+; spl_sz, spl_off: part spl_k of .A split spl_n ways, the first (.A mod spl_n) parts one larger.  Modifies .X
+split:
+            ldx         #0
+:
+            cmp         spl_n
+            bcc         :+
+            sbc         spl_n
+            inx
+            bra         :-
+:
+            sta         spl_rm
+            stx         spl_q
+            lda         spl_k                               ; Its size
+            cmp         spl_rm
+            lda         spl_q
+            bcs         :+
+            inc         a
+:
+            sta         spl_sz
+            lda         spl_k                               ; Its offset: spl_q each part before it, and the larger
+            cmp         spl_rm                              ;   ones' more
+            bcc         :+
+            lda         spl_rm
+:
+            ldx         spl_k
+:
+            dex
+            bmi         :+
+            clc
+            adc         spl_q
+            bra         :-
+:
+            sta         spl_off
+            rts
+
+; .X = the window in tile .A of group tg (tile_of's): the group's .A'th window; the last tile, the group's focus if
+; it's past the others.  OUT: C = 1, none
+slot_win:
+            sta         sw_k
+            cmp         #TILE_MAX - 1
+            bne         @nth
+            ldy         tg
+            lda         g_focus,Y
+            sta         sw_f
+            stz         sw_n
+            ldx         #0
+:
+            cpx         sw_f
+            beq         :+
+            lda         w_used,X
+            beq         @fn
+            lda         w_grp,X
+            cmp         tg
+            bne         @fn
+            inc         sw_n
+@fn:
+            inx
+            bra         :-
+:
+            lda         sw_n
+            cmp         #TILE_MAX - 1
+            bcc         @nth
+            ldx         sw_f
+            clc
+            rts
+@nth:
+            stz         sw_n
+            ldx         #0
+@w:
+            lda         w_used,X
+            beq         @nx
+            lda         w_grp,X
+            cmp         tg
+            bne         @nx
+            lda         sw_n
+            cmp         sw_k
+            beq         @found
+            inc         sw_n
+@nx:
+            inx
+            cpx         #WIN_MAX
+            bcc         @w
+            sec
+            rts
+@found:
+            clc
+            rts
+
+; Is window .A shown in a tile (the shown group's, tiled)?  OUT: C = 0 yes, tk its tile
+tile_vis:
+            tax
+            jsr         tile_of
+            bcs         @no
+            ldy         w_in
+            lda         w_grp,Y
+            cmp         tg
+            bne         @no
+            stx         sw_me
+            lda         tk
+            jsr         slot_win
+            bcs         @no
+            cpx         sw_me
+            bne         @no
+            clc
+            rts
+@no:
+            sec
+            rts
+
+; May the shown window follow on terminal .X?  Yes untiled, or its tile the terminal's width.  OUT: C = 0 yes
+tile_wide:
+            stx         tl_t
+            ldx         w_in
+            jsr         tile_of
+            bcs         @yes
+            jsr         tile_rect
+            ldy         tl_t
+            lda         ser_cols
+            cpy         #0
+            beq         :+
+            lda         scr_cols
+:
+            cmp         tl_c
+            beq         @yes
+            bcs         @no
+@yes:
+            clc
+            rts
+@no:
+            sec
+            rts
+
+; The loaded window written to: shown in a tile, and a terminal not following it, its tile to paint again there
+tile_mark:
+            lda         vt_w
+            jsr         tile_vis
+            bcs         @done
+            ldx         tk
+            lda         bits,X
+            ldx         fw_ser
+            bne         :+
+            tsb         tl_dty
+:
+            ldx         fw_scr
+            bne         @done
+            tsb         tl_dty + 1
+@done:
+            rts
+
+; dr_on: is the loaded window shown in a tile (its rows changed kept, for its tile painted again)?
+dr_setup:
+            stz         dr_on
+            lda         vt_w
+            jsr         tile_vis
+            bcs         :+
+            inc         dr_on
+:
+            rts
+
+; The rows from the cursor's before a byte (dr_y0) to its now changed (dr_mark); a scroll's region (dr_region); all of
+; them (dr_all)
+dr_cur:
+            lda         dr_on
+            beq         dr_none
+            lda         dr_y0
+            ldx         v_y
+            cpx         dr_y0
+            bcs         dr_mark
+            ldx         dr_y0
+            lda         v_y
+            bra         dr_mark
+dr_region:
+            lda         su_t
+            ldx         su_b
+            bra         dr_mark
+dr_all:
+            lda         #0
+            ldx         v_rows
+            dex
+; Rows .A to .X of the loaded window changed, if it's kept (dr_on): each terminal's range to them too
+dr_mark:
+            ldy         dr_on
+            beq         dr_none
+            sta         dr_a
+            ldy         vt_w
+            jsr         @one
+            tya
+            clc
+            adc         #WIN_MAX
+            tay
+@one:
+            lda         dr_a
+            cmp         dr_lo,Y
+            bcs         :+
+            sta         dr_lo,Y
+:
+            txa
+            cmp         dr_hi,Y
+            bcc         dr_none
+            sta         dr_hi,Y
+dr_none:
+            rts
+
+; (A tile painted again) Window tj_w's rows changed on terminal out_t: tj_r the first's row in its tile, tj_end past the
+; last's; none now.  OUT: C = 1, none
+dr_take:
+            jsr         dr_at
+            lda         dr_lo,Y
+            cmp         #$FF
+            beq         @none
+            ldx         out_t
+            inc         a
+            sta         tj_r,X
+            lda         dr_hi,Y
+            clc
+            adc         #2
+            sta         tj_end,X
+            jsr         dr_clr
+            clc
+            rts
+@none:
+            sec
+            rts
+
+; (A whole paint) Window tj_w's rows changed on terminal out_t: none
+dr_clear:
+            jsr         dr_at
+dr_clr:
+            lda         #$FF
+            sta         dr_lo,Y
+            lda         #0
+            sta         dr_hi,Y
+            rts
+
+dr_at:                                                      ; (.Y: its place in dr_lo, dr_hi)
+            lda         out_t
+            beq         :+
+            lda         #WIN_MAX
+:
+            clc
+            adc         tj_w
+            tay
+            rts
+
+; (cons.s's win_size) Window .X's tile on terminal tl_t, if its group's tiled.  OUT: C = 0, .A its rows (its header
+; one of them), .Y its columns; C = 1, .A and .Y as they came.  Keeps .X
+vt_tile:
+            sta         vt_ta
+            sty         vt_ty
+            jsr         tile_of
+            bcs         @no
+            jsr         tile_rect
+            lda         tl_r
+            ldy         tl_c
+            clc
+            rts
+@no:
+            lda         vt_ta
+            ldy         vt_ty
+            rts
+
+; The terminals, the shown group tiled (vt_pump's): each painted (tile_paint) as tj_start finds it's wanted
+tile_pump:
+            lda         ser_rd
+            bne         @screen
+            lda         term
+            and         #TERM_SERIAL
+            beq         @screen
+            stz         out_t
+            jsr         tj_start
+            lda         ts_ser
+            beq         @screen
+            jsr         tile_paint
+@screen:
+            lda         term
+            and         #TERM_SCREEN
+            beq         @done
+            lda         scr_st
+            cmp         #1
+            bne         @done
+            lda         #1
+            sta         out_t
+            stz         scr_fail
+            jsr         tj_start
+            lda         ts_scr
+            beq         @flush
+            jsr         tile_paint
+            lda         scr_fail                            ; (Refused: claimed; painted after)
+            beq         @flush
+            lda         #1
+            sta         ts_scr
+@flush:
+            jmp         scr_flush
+@done:
+            rts
+
+; Terminal out_t's paint begun, if it's wanted: all of it (ts 1, or its chrome changed), else its tiles written to
+tj_start:
+            ldx         out_t
+            lda         bits,X                              ; (Its chrome changed: all of it)
+            and         chr_dirty
+            beq         :+
+            trb         chr_dirty
+            lda         #1
+            sta         ts_ser,X
+:
+            lda         ts_ser,X
+            cmp         #1
+            beq         @all
+            cmp         #0
+            bne         @done                               ; (Being painted)
+            lda         tl_dty,X
+            beq         @done
+            sta         tj_m,X
+            stz         tl_dty,X
+            stz         tj_clr,X
+            bra         @go
+@all:
+            ldx         w_in
+            jsr         tile_of
+            ldx         out_t
+            ldy         tn                                  ; (Its tiles, a bit each)
+            lda         #0
+:
+            sec
+            rol
+            dey
+            bne         :-
+            sta         tj_m,X
+            lda         #1
+            sta         tj_clr,X
+            stz         tl_dty,X
+@go:
+            stz         tj_ph,X
+            stz         tj_k,X
+            stz         tj_r,X
+            stz         tj_c,X
+            lda         #2
+            sta         ts_ser,X
+@done:
+            rts
+
+; Terminal out_t painted, the shown group tiled: cleared (all of it), its bar, its tiles (tj_m), their borders (all of
+; it), then the shown window's state.  The serial port's as the send ring has room (on at the next request's end),
+; the screen's all at once
+tile_paint:
+            ldx         out_t
+            lda         tj_ph,X
+            asl
+            tax
+            jmp         (tj_vec,X)
+
+tj_clear:                                                   ; (Cleared: what the terminal has known)
+            ldx         out_t
+            lda         tj_clr,X
+            beq         @part
+            lda         #96
+            jsr         tj_rooma
+            bcs         @wait
+            lda         out_t
+            bne         @scr
+            ldx         #<s_ser_clear
+            ldy         #>s_ser_clear
+            jsr         out_str
+            stz         sp_cy
+            stz         sp_cx
+            stz         sp_full
+            lda         #COL_DEF
+            sta         sp_c
+            stz         sp_f
+            stz         sp_dec
+            bra         @next
+@scr:
+            ldx         #<s_scr_sgr0
+            ldy         #>s_scr_sgr0
+            jsr         out_str
+            ldx         #<s_scr_clear
+            ldy         #>s_scr_clear
+            jsr         out_str
+            lda         #COL_DEF
+            sta         scr_c
+            stz         scr_f
+            stz         scr_dec
+            bra         @next
+@part:                                                      ; (Some tiles: the terminal's rendition not known, its
+            lda         #16                                 ;   characters ASCII's)
+            jsr         tj_rooma
+            bcs         @wait
+            jsr         out_g0b
+            lda         #SI
+            jsr         out
+            lda         #$FF
+            ldx         out_t
+            bne         :+
+            sta         sp_c
+            sta         sp_cy
+            stz         sp_dec
+            bra         @next
+:
+            sta         scr_c
+            stz         scr_dec
+@next:
+            ldx         out_t
+            inc         tj_ph,X
+            jmp         tile_paint
+@wait:
+            rts
+
+tj_bar:                                                     ; (The bar: all of it's)
+            ldx         out_t
+            lda         tj_clr,X
+            beq         @next
+            lda         w_in
+            jsr         vt_load
+            jsr         chr_geom
+            ldx         out_t
+            lda         tr_bar,X
+            cmp         #$FF
+            beq         @next
+            sta         tj_y
+            stz         tj_x
+            lda         ser_cols
+            cpx         #0
+            beq         :+
+            lda         scr_cols
+:
+            sta         tj_wd
+            lda         #CR_BAR
+            sta         tj_kind
+            stz         tj_rev
+            jsr         tj_crow
+            bcs         @wait
+@next:
+            ldx         out_t
+            inc         tj_ph,X
+            stz         tj_c,X
+            jmp         tile_paint
+@wait:
+            rts
+
+tj_tiles:                                                   ; (Each tile of tj_m's: its header, its rows)
+@tile:
+            ldx         out_t
+            lda         tj_m,X
+            bne         :+
+            inc         tj_ph,X
+            stz         tj_k,X
+            stz         tj_r,X
+            stz         tj_c,X
+            jmp         tile_paint
+:
+            ldy         #0                                  ; (Its lowest: the tile)
+:
+            lsr
+            bcs         :+
+            iny
+            bra         :-
+:
+            tya
+            sta         tj_k,X
+            ldx         w_in
+            jsr         tile_of
+            ldx         out_t
+            lda         tj_k,X
+            jsr         slot_win
+            bcc         :+
+            jmp         @end
+:
+            stx         tj_w
+            txa
+            jsr         vt_load
+            lda         out_t
+            sta         tl_t
+            ldx         tj_w
+            jsr         tile_of
+            jsr         tile_rect
+            ldx         out_t
+            lda         tj_r,X
+            bne         @rows
+            lda         tj_clr,X
+            bne         @head
+            jsr         dr_take                             ; (Painted again: its rows changed alone)
+            bcs         @end
+            bra         @rows
+@head:
+            jsr         dr_clear
+            ldx         out_t
+            lda         tl_r
+            sta         tj_end,X
+            lda         tl_y                                ; Its header (the focused one's reversed), rendered as
+            sta         tj_y                                ;   its window's
+            lda         tl_x
+            sta         tj_x
+            lda         tl_c
+            sta         tj_wd
+            lda         #CR_HEAD
+            sta         tj_kind
+            lda         #0
+            ldy         tj_w
+            cpy         w_in
+            bne         :+
+            lda         #F_REV
+:
+            sta         tj_rev
+            lda         w_in
+            pha
+            lda         tj_w
+            sta         w_in
+            jsr         tj_crow
+            pla
+            sta         w_in
+            bcs         @wait
+            ldx         out_t
+            inc         tj_r,X
+            stz         tj_c,X
+@rows:
+            ldx         out_t                               ; Its rows
+            lda         tj_r,X
+            cmp         tj_end,X
+            bcs         @end
+            cmp         tl_r
+            bcs         @end
+            jsr         tj_wrow
+            bcs         @wait
+            ldx         out_t
+            inc         tj_r,X
+            stz         tj_c,X
+            bra         @rows
+@end:
+            ldx         out_t
+            ldy         tj_k,X
+            lda         bits,Y
+            eor         #$FF
+            and         tj_m,X
+            sta         tj_m,X
+            stz         tj_r,X
+            stz         tj_c,X
+            jmp         @tile
+@wait:
+            rts
+
+tj_seps:                                                    ; (The borders between tiles side by side: all of it's)
+            ldx         out_t
+            lda         tj_clr,X
+            bne         @slot
+@next:
+            ldx         out_t
+            inc         tj_ph,X
+            jmp         tile_paint
+@slot:
+            ldx         w_in
+            jsr         tile_of
+            ldx         out_t
+            lda         tj_k,X
+            cmp         tn
+            bcs         @next
+            jsr         slot_win
+            bcs         @nexts
+            lda         out_t
+            sta         tl_t
+            jsr         tile_of
+            jsr         tile_rect
+            clc
+            lda         tl_x
+            adc         tl_c
+            sta         tj_x
+            ldy         out_t
+            lda         ser_cols
+            cpy         #0
+            beq         :+
+            lda         scr_cols
+:
+            cmp         tj_x
+            beq         @nexts
+            bcc         @nexts
+@row:
+            ldx         out_t
+            lda         tj_r,X
+            cmp         tl_r
+            bcs         @nexts
+            jsr         tj_room
+            bcs         @wait
+            clc
+            lda         tl_y
+            ldx         out_t
+            adc         tj_r,X
+            ldx         tj_x
+            jsr         out_cup_abs
+            lda         #VLINE
+            sta         cell_c
+            lda         #COL_DEF
+            sta         cell_a
+            stz         cell_f
+            jsr         tj_cell
+            ldx         out_t
+            inc         tj_r,X
+            bra         @row
+@nexts:
+            ldx         out_t
+            inc         tj_k,X
+            stz         tj_r,X
+            jmp         @slot
+@wait:
+            rts
+
+tj_state:                                                   ; (Then the shown window's state: following, as a paint
+            lda         #160                                ;   leaves it; else its cursor in its tile)
+            jsr         tj_rooma
+            bcs         @wait
+            lda         w_in
+            jsr         vt_load
+            jsr         chr_geom
+            ldx         out_t
+            jsr         tile_wide
+            bcs         @cursor
+            lda         out_t
+            bne         @scr
+            lda         #$FF
+            sta         sp_cy
+            jsr         ser_state
+            bra         @end
+@scr:
+            jsr         out_region_all
+            lda         v_y
+            ldx         v_x
+            jsr         out_cup
+            lda         v_y
+            sta         scr_y
+            lda         v_x
+            sta         scr_x
+            stz         scr_sync
+            jsr         fc_sgr
+            lda         #1
+            sta         fw_scr
+            jsr         fc_tcem
+            stz         fw_scr
+            bra         @end
+@cursor:
+            ldx         w_in
+            lda         out_t
+            sta         tl_t
+            jsr         tile_of
+            jsr         tile_rect
+            sec
+            lda         tl_y
+            adc         v_y
+            pha
+            clc
+            lda         tl_x
+            adc         v_x
+            tax
+            pla
+            jsr         out_cup_abs
+            lda         #$FF
+            sta         scr_y
+@end:
+            ldx         out_t
+            stz         ts_ser,X
+            stz         tj_ph,X
+            inc         TASK_EVENT                          ; (The writers waiting look again)
+@wait:
+            rts
+
+; A chrome row (tj_kind, CR_*) rendered at the width tj_wd, out at tj_y, tj_x from its cell tj_c on (each cell's
+; rendition xor tj_rev).  OUT: C = 1, no room yet
+tj_crow:
+            lda         tj_kind
+            ldx         tj_wd
+            FAR1        chr_render
+            ldx         out_t
+            lda         tj_c,X
+            bne         @cell
+            jsr         tj_room
+            bcs         @out
+            lda         tj_y
+            ldx         tj_x
+            jsr         out_cup_abs
+@cell:
+            ldx         out_t
+            ldy         tj_c,X
+            cpy         cr_n
+            bcs         @done
+            jsr         tj_room
+            bcs         @out
+            ldx         out_t
+            ldy         tj_c,X
+            lda         cr_c,Y
+            sta         cell_c
+            lda         cr_a,Y
+            sta         cell_a
+            lda         cr_f,Y
+            eor         tj_rev
+            sta         cell_f
+            jsr         tj_cell
+            ldx         out_t
+            inc         tj_c,X
+            bra         @cell
+@done:
+            clc
+@out:
+            rts
+
+; Tile row tj_r of window tj_w (loaded; tl_*: its tile), from cell tj_c on: all of it, its cells to its last that
+; isn't blank; else them all, and blanks past the window's columns and rows to the tile's.  OUT: C = 1, no room yet
+tj_wrow:
+            ldx         out_t
+            lda         tj_c,X
+            bne         :+
+            jsr         tj_room
+            bcc         @cup
+            rts
+@cup:
+            clc
+            lda         tl_y
+            ldx         out_t
+            adc         tj_r,X
+            ldx         tl_x
+            jsr         out_cup_abs
+:
+            ldx         out_t                               ; (tj_n: its cells, tj_e: and blanks to there; vq the row)
+            lda         tj_r,X
+            dec         a
+            cmp         v_rows
+            bcs         @none
+            jsr         row_ptr
+            ldx         out_t
+            lda         tj_clr,X
+            beq         @all
+            jsr         row_last
+            cmp         tl_c
+            bcc         :+
+            lda         tl_c
+:
+            sta         tj_n
+            sta         tj_e
+            bra         @cell
+@all:
+            lda         v_cols
+            cmp         tl_c
+            bcc         :+
+            lda         tl_c
+:
+            sta         tj_n
+            lda         tl_c
+            sta         tj_e
+            bra         @cell
+@none:
+            stz         tj_n
+            stz         tj_e
+            ldx         out_t
+            lda         tj_clr,X
+            bne         @cell
+            lda         tl_c
+            sta         tj_e
+@cell:
+            ldx         out_t
+            lda         tj_c,X
+            cmp         tj_e
+            bcs         @done
+            jsr         tj_room
+            bcs         @out
+            ldx         out_t
+            ldy         tj_c,X
+            cpy         tj_n
+            bcs         @blank
+            jsr         cell_get
+            bra         @emit
+@blank:
+            clc                                             ; (The tile to the terminal's right edge: the rest an EL)
+            lda         tl_x
+            adc         tl_c
+            ldy         out_t
+            bne         @edge1
+            cmp         ser_cols
+            bra         @edge
+@edge1:
+            cmp         scr_cols
+@edge:
+            bne         @space
+            jsr         tj_eol
+            ldx         out_t
+            lda         tj_e
+            sta         tj_c,X
+            bra         @cell
+@space:
+            lda         #' '
+            sta         cell_c
+            lda         #COL_DEF
+            sta         cell_a
+            stz         cell_f
+@emit:
+            jsr         tj_cell
+            ldx         out_t
+            inc         tj_c,X
+            bra         @cell
+@done:
+            clc
+@out:
+            rts
+
+; EL on terminal out_t, in the default colours (the rendition first, if it isn't)
+tj_eol:
+            lda         #COL_DEF
+            ldx         #0
+            ldy         out_t
+            bne         @scr
+            cmp         sp_c
+            bne         :+
+            cpx         sp_f
+            beq         @el
+:
+            sta         sp_c
+            stx         sp_f
+            jsr         out_sgr
+            bra         @el
+@scr:
+            cmp         scr_c
+            bne         :+
+            cpx         scr_f
+            beq         @el
+:
+            sta         scr_c
+            stx         scr_f
+            jsr         out_sgr
+@el:
+            lda         #ESC
+            jsr         out
+            lda         #'['
+            jsr         out
+            lda         #'K'
+            jmp         out
+
+; cell_c, cell_a, cell_f to terminal out_t: its rendition if it's changed, its character (a DEC graphic its way)
+tj_cell:
+            lda         out_t
+            bne         :+
+            jmp         sp_cell
+:
+            lda         cell_a
+            ldx         cell_f
+            cmp         scr_c
+            bne         :+
+            cpx         scr_f
+            beq         @glyph
+:
+            sta         scr_c
+            stx         scr_f
+            jsr         out_sgr
+@glyph:
+            lda         cell_c
+            jmp         scr_glyph
+
+; Room for a cell (VT_ROOM), or .A bytes (tj_rooma), on terminal out_t: the serial port's send ring's (the screen's
+; always).  OUT: C = 1, not yet
+tj_room:
+            lda         #VT_ROOM
+tj_rooma:
+            ldx         out_t
+            bne         @yes
+            pha
+            jsr         tx_free
+            sta         tj_fr                               ; (tx_free: .A the room)
+            pla
+            cmp         tj_fr
+            beq         @yes
+            bcs         @no
+@yes:
+            clc
+            rts
+@no:
+            sec
             rts
 
 ; Terminal .X's chrome rows (the shown window's, loaded; tr_*: chr_geom's), each rendered (cons.s) and written: its
@@ -6140,6 +7317,7 @@ vt_key:
             rts
 
 .assert     ANS_SIZE = 32 .and LBL_SIZE = 32 .and WIN_MAX <= 16, error, "vt_key and lbl_at: 32 bytes a window"
+.assert     TILE_MAX <= 8, error, "Tiles: a bit each in a byte"
 
 .segment "RODATA2"
 ; ****************************************************************************
@@ -6150,6 +7328,7 @@ v52_final:  .byte       "ABCDHJKIFGYZ=><"
 v52_vec:    .word       v52_csi, v52_csi, v52_csi, v52_csi, v52_csi, v52_csi, v52_csi, v52_ri, v52_gfx, v52_ascii
             .word       v52_y, v52_id, e_deckpam, e_deckpnm, v52_ansi
 .assert     * - v52_vec = V52_N * 2, error, "v52_final and v52_vec don't match"
+tj_vec:     .word       tj_clear, tj_bar, tj_tiles, tj_seps, tj_state   ; (tile_paint's parts)
 state_vec:  .word       0, st_esc, st_esci, st_csi, st_csii, st_csix, st_osc, st_stre, st_str, st_stre, st_y1, st_y2
 ESC_N       = 10
 esc_final:  .byte       "78DEHMZc=>"

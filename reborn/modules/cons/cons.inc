@@ -56,6 +56,13 @@ VM_KPAM         = $80           ;   the keypad's (DECKPAM) ...
 VM2_VT52        = $02           ;   and (v_mode2) VT52 mode (DECANM reset) ...
 VM2_BPM         = $04           ;   and bracketed paste (?2004: the console's, for its paste)
 
+LAY_TABS        = 0             ; A group's layout (wctl's layout): its windows one at a time ...
+LAY_ROWS        = 1             ;   tiled: one above another ...
+LAY_COLS        = 2             ;   side by side ...
+LAY_GRID        = 3             ;   or two by two
+LAY_N           = 4
+TILE_MAX        = 4             ; A tiled group's tiles, at most (its windows past them share the last)
+
 ; ---- cons.s's, for vt.s
 .globalzp   tx_head, tx_tail, w_in, ser_rd, cnt, lw
 .global     tx_buf, iobuf, term, scr_st, scr_fd, bell, inq, w_iqh, w_iqt, w_jump
@@ -67,6 +74,7 @@ VM2_BPM         = $04           ;   and bracketed paste (?2004: the console's, f
                                                             ;   the serial port, 1 the screen), activity, the status
                                                             ;   lines
 .global     cr_c, cr_a, cr_f, cr_n, chr_pass, chr_render    ; A chrome row rendered (FAR1 chr_render)
+.global     w_used, w_grp, g_focus, g_lay, g_zoom            ; The windows' groups, the groups' focus and layout (W7)
 .globalzp   hyx2_to, hyx2_a                                 ; The trampolines between the banks (hyx2.inc)
 .global     hyx2_far1, hyx2_far2
 
@@ -74,6 +82,7 @@ VM2_BPM         = $04           ;   and bracketed paste (?2004: the console's, f
 .global     vt_init, vt_keymodes, vt_new, vt_free, vt_write, vt_put, vt_pump, vt_text, vt_resize, vt_size, vt_cursor
 .global     vt_paste, vt_lines, vt_view, vt_line, vbuf          ; (W6: the paste's mode; the scrollback's view)
 .global     vt_history                                      ; (A window's history)
+.global     vt_tile, tl_t                                   ; (A window's tile, W7: win_size's)
 .global     vv_w, vv_src, vv_top, vv_cur, vv_ma, vv_mb, vv_add  ; The view's (cons.s's), vt_view's and vt_lines'
 .global     v_cols, v_rows, v_leds                          ; (The loaded window's: chr_render's %c, %r, %L)
 .global     ans_n, ans_r, ans_buf, lbl_buf                 ; Each window's answers, its label

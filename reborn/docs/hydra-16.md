@@ -225,8 +225,9 @@ namespace](programming/files.md#the-namespace), [NAMESPACES.md](design/plans/NAM
 The console driver (`cons`, task F) serves `#c`: **windows**, rio's way on a serial terminal: each a whole console with
 its own shell, shown one at a time (Ctrl-] and a digit shows that one; Ctrl-] c makes a group, a shell session, and
 Ctrl-] n and p go between groups, Ctrl-] Tab or Ctrl-Tab between a group's windows, Ctrl-] w lists them, Ctrl-] [
-shows the scrollback (Space and Enter copy lines to `/dev/snarf`, the cut buffer, which Ctrl-] y pastes), and
-`wctl`'s `key` lines change these keys; `new-window` runs a program in a window of its own), a hidden
+shows the scrollback (Space and Enter copy lines to `/dev/snarf`, the cut buffer, which Ctrl-] y pastes), Ctrl-] s
+and v split a window into tiles shown together (`wctl`'s `layout rows`, `columns`, `grid`), and `wctl`'s `key` lines
+change these keys; `new-window` runs a program in a window of its own), a hidden
 one running on, its output kept and shown again.  A read is a line, edited at the console (Backspace, the arrows, Home,
 End, Ctrl-U, the lines before); `consctl` turns raw keys on; Ctrl-C (an interrupt) and Ctrl-\ (a kill) are notes to the
 shown window's group.  **The serial port** runs at 9600 at boot, and to 115200 (`/dev/serctl`), every byte paced by VIA

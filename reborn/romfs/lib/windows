@@ -5,8 +5,10 @@
 #   FORMAT: %n window, %l label, %p program, %s status, %w windows, %G groups, %c %r size, %m modes, %t time,
 #   %d date, %L LEDs, %y the scrollback's view's place, %= the rest at the right, %[7] SGR's rendition (%[1;33;44],
 #   %[0]), %% a %
+#   layout tabs | rows | columns | grid: window 0's group's windows one at a time, or tiled
 #   key prefix ctrl-X, key KEY ACTION (KEY after the prefix: a character, ctrl-X, tab, shift-tab), key ctrl-tab ACTION:
-#   ACTION next, previous, next-group, previous-group, new, list, hold, close, paste, scrollback, none (the console's
+#   ACTION next, previous, next-group, previous-group, new, list, hold, close, paste, scrollback, split, vsplit, zoom,
+#   none (the console's
 #   keys, console-wide); key ctrl-shift-tab ACTION, key shift-pgup ACTION
 bar top
 bar %[7] %G%=%t

@@ -525,6 +525,16 @@ October 2026, on `reborn-text-windows` (reborn's `docs/status.md`, "The text win
 * **128 rows at most** (two sets): a window's lines, history, scrollback and screen, then fit a byte, as the view counts them; and two sets are six banks, which two RAM modules can spare for a window or two.
 * **`history N` empties it** each time (a smaller or larger ring is a new one); the alternate screen shows none, as it has no scrollback either.
 
+### **As built: W7a**
+
+* **The focused tile follows; the rest are painted again** (the user's choice, 2026-10-07, over every tile following).  A tile that's the terminal's width follows as a window under chrome does: its rows offset (`chr_geom`'s `tr_off`, the tile's header above), its scrolls kept in its rows by DECSTBM.  Every other tile shown, and a focused one narrower than the terminal, is painted from its cells as it's written to: a resumable paint (both terminals, `tile_paint`), the serial port's as the send ring has room, the screen's at once.
+* **Only the rows that changed are painted again**: each window keeps a range of them for each terminal while it's shown in a tile (the cursor's rows as each byte goes, a scroll's region, all of them for ED, RIS, the alternate screen, DECALN, DECCOLM).  A key typed in a narrow tile costs its row, not the tile; a scroll costs the tile.
+* **A tile's header is its border**, the window's own header format at the tile's width; between tiles side by side, a column of DEC line drawing.  A row's blank rest is an EL where the tile reaches the terminal's right edge, else blanks.
+* **Four tiles at most** (the group's first windows; any past them share the fourth, which shows the focus when it's one of them).  A grid is two by two, three tiles the last the width.  An 80 x 24 terminal has room for two or three.
+* **Zoom keeps the others' sizes**, as tmux's does: the focus takes the whole terminal, the hidden tiles keep theirs, so their programs aren't resized twice.
+* **A split starts a shell**: Ctrl-] s and v ask `/wnew`'s reader (wstart) for a window in the focused window's group, as Ctrl-] c does for one of its own.
+* **Tests wait by time, not for the prompt**, in tiled layouts: a tile painted again ends with its blanks, not the prompt.
+
 ### **Decisions**
 
 The user's answers to the plan's questions, 2026-10-07:
