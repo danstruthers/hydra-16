@@ -27,6 +27,16 @@ id_d:       .res        4                                   ; (idiv32's: the div
 id_sa:      .res        1                                   ;   the quotient's, its bits to go)
 id_sq:      .res        1
 id_n:       .res        1
+fx_m:       .res        12                                  ; (The decimals': x's digits, y's, the result's (4 bytes
+fx_q:       .res        4                                   ;   each, signed), a quotient, a temporary, their places,
+fx_t:       .res        4                                   ;   the result's, the op, a count, a sign)
+fx_pa:      .res        1
+fx_pb:      .res        1
+fx_pr:      .res        1
+fx_op:      .res        1
+fx_k:       .res        1
+fx_s:       .res        1
+fx_r        = fx_m + 8
 
 .enum
 OP_END                                                      ; The end (the program's, a line's at the prompt)
@@ -105,6 +115,7 @@ OP_ST                                                       ; s: a statement's r
 OP_SWAP                                                     ; The values at two places (VT_REF, VT_LOC) exchanged
 OP_ONERR                                                    ; a16: ON ERROR GOTO's handler ($FFFF: none)
 OP_RESUME                                                   ; n [a16]: 0 the statement again, 1 the next, 2 a16
+OP_PUSHF                                                    ; t, b4: a VT_FIX (its type, its digits)
 OP_COUNT
 .endenum
 
@@ -191,7 +202,7 @@ op_tab:
             .word       op_eq, op_ne, op_lt, op_gt, op_le, op_ge
             .word       op_seq, op_sne, op_slt, op_sgt, op_sle, op_sge
             .word       op_not, op_and, op_or, op_xor, op_eqv, op_imp
-            .word       op_cat, op_fixlen, op_fn, op_st, op_swap, op_onerr, op_resume
+            .word       op_cat, op_fixlen, op_fn, op_st, op_swap, op_onerr, op_resume, op_pushf
 .assert     * - op_tab = OP_COUNT * 2, error, "op_tab and the ops' enum differ"
 
 ; ---- The end, STOP, the banks
@@ -274,7 +285,10 @@ brk_here:
 pop_zero:
             jsr         pop_vt
             lda         (vt)
-            bne         @slow                               ; (Not an integer: the numbers')
+            beq         :+
+            cmp         #VT_FIX                             ; (A VT_FIX: its digits; not an integer: the numbers')
+            bcc         @slow
+:
             ldy         #4
             lda         (vt),y
             dey
@@ -492,6 +506,18 @@ op_pushi32:
             jsr         ip_plus
             jmp         next
 
+op_pushf:
+            ldy         #5
+:
+            lda         (ip),y
+            dey
+            sta         (vsp),y
+            bne         :-
+            jsr         vsp_up
+            lda         #6
+            jsr         ip_plus
+            jmp         next
+
 ; A value of tag .A whose far address is ip's + t0 (its length's two bytes, then its bytes): the code's own
 push_code:
             sta         (vsp)
@@ -684,9 +710,27 @@ num_slow:
             FARN        4, num_op
             jmp         nx1
 
+; ADD, SUB of two values not both integers: VT_FIX's here (fx_addsub), else the numbers'
+add_fix:
+            lda         #0
+            bra         :+
+sub_fix:
+            lda         #1
+:
+            jsr         fx_addsub
+            bcs         num_slow
+; The result (fx_r, fx_pr) a VT_FIX in vt's place, the top dropped
+fx_done:
+            jsr         fx_store
+            lda         vu
+            sta         vsp
+            lda         vu + 1
+            sta         vsp + 1
+            jmp         nx1
+
 op_add:
             jsr         two_vals
-            bcs         num_slow
+            bcs         add_fix
             clc
             ldy         #1
             lda         (vt),y
@@ -720,7 +764,7 @@ int_t0:
 
 op_sub:
             jsr         two_vals
-            bcs         num_slow
+            bcs         sub_fix
             sec
             ldy         #1
             lda         (vt),y
@@ -737,20 +781,28 @@ op_sub:
             iny
             lda         (vt),y
             sbc         (vu),y
-            bvs         num_slow
+            bvc         :+
+            jmp         num_slow
+:
             sta         t0 + 3
             bra         int_t0
 
 ; MUL: two integers each of 16 bits (signed), their product here; else the numbers'
 op_mul:
             jsr         two_vals
-            bcs         num_slow
+            bcs         @fix
             jsr         small2
             bcc         @lb900
             jmp         num_slow
 @lb900:
             FARN        4, mul16
             jmp         nx1
+@fix:
+            jsr         fx_mul
+            bcs         :+
+            jmp         fx_done
+:
+            jmp         num_slow
 
 ; Are vt's and vu's integers both of 16 bits, signed?  C = 0 yes
 small2:
@@ -1047,7 +1099,8 @@ cmp_ints:
             lda         (vt),y
             sbc         (vu),y
             bvc         :+
-            eor         #$80
+            eor         #$80                                ; (Past 32 bits: its sign the other way, and not 0)
+            ora         #1
 :
             bmi         @below
             ora         t0
@@ -1063,7 +1116,10 @@ cmp_ints:
             sta         t4
             rts
 @slow:
+            jsr         fx_cmp                              ; (VT_FIX's here)
+            bcc         :+
             FARN        4, num_cmp2                         ; (t4: the order)
+:
             rts
 
 ; The comparison's truth (C = 1 true) put in the second value's place (-1 or 0), the top dropped
@@ -1282,10 +1338,13 @@ slot_at:
 ; C = 1 if the loop is done: v past l, as the step's sign says (above it for a step of 0 or more, below it for one
 ; below 0)
 for_test:
-            ldy         #5                                  ; (The step's sign)
+            ldy         #5                                  ; (The step's sign: an integer's or a VT_FIX's top byte)
             jsr         slot_at
             lda         (vt)
-            bne         @ssign
+            beq         :+
+            cmp         #VT_FIX
+            bcc         @ssign
+:
             ldy         #4
             lda         (vt),y
             bra         :+
@@ -1304,6 +1363,8 @@ for_test:
             jsr         cmp_vv
             bra         :+
 @slow:
+            jsr         fx_cmp
+            bcc         :+
             FARN        4, num_cmp2
 :
             lda         fr_sign
@@ -1373,6 +1434,12 @@ op_forn:
             sta         (vt),y
             bra         @test
 @slow:
+            lda         #0                                  ; (VT_FIX's: here)
+            jsr         fx_addsub
+            bcs         @lib
+            jsr         fx_store
+            bra         @test
+@lib:
             jsr         push_vt                             ; (v and s pushed, added, the sum taken back to v)
             MOVW        vt, vu
             jsr         push_vt
@@ -1441,7 +1508,8 @@ cmp_vv:
             lda         (vt),y
             sbc         (vu),y
             bvc         :+
-            eor         #$80
+            eor         #$80                                ; (Past 32 bits: its sign the other way, and not 0)
+            ora         #1
 :
             bmi         @below
             ora         t0
@@ -1455,6 +1523,372 @@ cmp_vv:
             lda         #0
 @have:
             sta         t4
+            rts
+
+; ---- Small fixed decimals here (VT_FIX), as the numbers library works them: + - * and the order of two values, each a
+; VT_FIX or an integer (a fixed decimal of no places); a sum's places the more of the two's, a product's both's (16
+; or more: the library's), the 0s at the result's digits' end dropped while it has places.  Past 31 bits on the way,
+; or a product's factor past 16 bits: C = 1, the library's way (its results the same)
+
+; vt's and vu's values as decimals: fx_m (x's digits, then y's), fx_pa, fx_pb (their places).  C = 1 if either isn't
+; an integer or a VT_FIX
+fx_load:
+            lda         (vt)
+            jsr         fx_places
+            bcs         @rts
+            sta         fx_pa
+            lda         (vu)
+            jsr         fx_places
+            bcs         @rts
+            sta         fx_pb
+            ldy         #4
+:
+            lda         (vt),y
+            sta         fx_m - 1,y
+            lda         (vu),y
+            sta         fx_m + 3,y
+            dey
+            bne         :-
+            clc
+@rts:
+            rts
+
+; .A = the places of a value of type .A (an integer's: 0): C = 0; C = 1 if it's neither
+fx_places:
+            cmp         #VT_FIX
+            bcs         @fix
+            cmp         #VT_INT                             ; (C = 1)
+            bne         @rts
+            clc
+@rts:
+            rts
+@fix:
+            and         #$0F
+            clc
+            rts
+
+; x and y at the same places (the more of the two's: fx_pr), the other's digits times 10s: C = 1 if past 31 bits
+fx_align:
+            lda         fx_pa
+            sec
+            sbc         fx_pb
+            beq         @same
+            bcc         @x
+            sta         fx_k                                ; (y has fewer)
+            lda         fx_pa
+            sta         fx_pr
+            ldx         #4
+            bra         @ten
+@x:
+            eor         #$FF
+            inc         a
+            sta         fx_k
+            lda         fx_pb
+            sta         fx_pr
+            ldx         #0
+@ten:
+            jsr         fx_x10
+            bcs         @rts
+            dec         fx_k
+            bne         @ten
+            rts
+@same:
+            lda         fx_pa
+            sta         fx_pr
+            clc
+@rts:
+            rts
+
+; fx_m,x (4 bytes, signed) times 10 (.X kept): C = 1 if it might pass 31 bits (its top byte past $0B, or below $F4)
+fx_x10:
+            lda         fx_m + 3,x
+            clc
+            adc         #$0C
+            cmp         #$18
+            bcs         @rts
+            asl         fx_m,x                              ; (* 2, kept)
+            rol         fx_m + 1,x
+            rol         fx_m + 2,x
+            rol         fx_m + 3,x
+            lda         fx_m,x
+            sta         fx_t
+            lda         fx_m + 1,x
+            sta         fx_t + 1
+            lda         fx_m + 2,x
+            sta         fx_t + 2
+            lda         fx_m + 3,x
+            sta         fx_t + 3
+            asl         fx_m,x                              ; (* 8, the * 2 added)
+            rol         fx_m + 1,x
+            rol         fx_m + 2,x
+            rol         fx_m + 3,x
+            asl         fx_m,x
+            rol         fx_m + 1,x
+            rol         fx_m + 2,x
+            rol         fx_m + 3,x
+            clc
+            lda         fx_m,x
+            adc         fx_t
+            sta         fx_m,x
+            lda         fx_m + 1,x
+            adc         fx_t + 1
+            sta         fx_m + 1,x
+            lda         fx_m + 2,x
+            adc         fx_t + 2
+            sta         fx_m + 2,x
+            lda         fx_m + 3,x
+            adc         fx_t + 3
+            sta         fx_m + 3,x
+            clc
+@rts:
+            rts
+
+; fx_m,x (4 bytes) = -it
+fx_neg:
+            sec
+            ldy         #4
+:
+            lda         #0
+            sbc         fx_m,x
+            sta         fx_m,x
+            inx
+            dey
+            bne         :-
+            rts
+
+; fx_r = vt's + vu's (.A = 0) or vt's - vu's (.A = 1) as decimals: C = 0; C = 1 not here
+fx_addsub:
+            sta         fx_op
+            jsr         fx_load
+            bcs         @rts
+            jsr         fx_align
+            bcs         @rts
+            lda         fx_op
+            bne         @sub
+            clc
+            lda         fx_m
+            adc         fx_m + 4
+            sta         fx_r
+            lda         fx_m + 1
+            adc         fx_m + 5
+            sta         fx_r + 1
+            lda         fx_m + 2
+            adc         fx_m + 6
+            sta         fx_r + 2
+            lda         fx_m + 3
+            adc         fx_m + 7
+            sta         fx_r + 3
+            bvc         fx_trim
+            sec
+            rts
+@sub:
+            sec
+            lda         fx_m
+            sbc         fx_m + 4
+            sta         fx_r
+            lda         fx_m + 1
+            sbc         fx_m + 5
+            sta         fx_r + 1
+            lda         fx_m + 2
+            sbc         fx_m + 6
+            sta         fx_r + 2
+            lda         fx_m + 3
+            sbc         fx_m + 7
+            sta         fx_r + 3
+            bvc         fx_trim
+            sec
+@rts:
+            rts
+
+; fx_r's 0s at its end dropped while it has places (fx_pr): C = 0
+fx_trim:
+            lda         fx_pr
+            beq         @done
+            lda         fx_r                                ; (Odd: none)
+            lsr         a
+            bcs         @done
+            lda         fx_r + 3                            ; (Its magnitude's, its sign kept)
+            sta         fx_s
+            bpl         @try
+            ldx         #8
+            jsr         fx_neg
+@try:
+            jsr         fx_div10
+            bne         @end
+            ldx         #3
+:
+            lda         fx_q,x
+            sta         fx_r,x
+            dex
+            bpl         :-
+            dec         fx_pr
+            beq         @end
+            lda         fx_r
+            lsr         a
+            bcc         @try
+@end:
+            lda         fx_s
+            bpl         @done
+            ldx         #8
+            jsr         fx_neg
+@done:
+            clc
+            rts
+
+; fx_q = fx_r / 10 (its magnitude): .A the remainder (Z = 1: 0).  A byte at a time from the top: with r the
+; remainder so far and b the byte, 256 r + b = 10 (25 r) + (6 r + b), (6 r + b) / 10 from the tables (6 r + b to 309)
+fx_div10:
+            stz         fx_k
+            ldy         #3
+@byte:
+            ldx         fx_k
+            lda         fx_25,x
+            sta         fx_t
+            lda         fx_6,x
+            clc
+            adc         fx_r,y
+            tax
+            bcs         @hi
+            lda         fx_d10r,x
+            sta         fx_k
+            lda         fx_d10q,x
+            bra         @q
+@hi:
+            lda         fx_d10r + 256,x
+            sta         fx_k
+            lda         fx_d10q + 256,x
+@q:
+            clc
+            adc         fx_t
+            sta         fx_q,y
+            dey
+            bpl         @byte
+            lda         fx_k
+            rts
+fx_25:      .byte       0, 25, 50, 75, 100, 125, 150, 175, 200, 225
+fx_6:       .byte       0, 6, 12, 18, 24, 30, 36, 42, 48, 54
+fx_d10q:
+.repeat 310, I
+            .byte       I / 10
+.endrep
+fx_d10r:
+.repeat 310, I
+            .byte       I .mod 10
+.endrep
+
+; fx_r = vt's * vu's as decimals: C = 0; C = 1 not here
+fx_mul:
+            jsr         fx_load
+            bcs         @rts
+            lda         fx_pa
+            clc
+            adc         fx_pb
+            cmp         #16
+            bcs         @rts
+            sta         fx_pr
+            lda         fx_m + 3                            ; (Its sign: the two's; their magnitudes)
+            eor         fx_m + 7
+            sta         fx_s
+            lda         fx_m + 3
+            bpl         :+
+            ldx         #0
+            jsr         fx_neg
+:
+            lda         fx_m + 7
+            bpl         :+
+            ldx         #4
+            jsr         fx_neg
+:
+            lda         fx_m + 2                            ; (Each 16 bits at most)
+            ora         fx_m + 3
+            ora         fx_m + 6
+            ora         fx_m + 7
+            bne         @no
+            stz         fx_r + 2
+            stz         fx_r + 3
+            ldx         #16
+@bit:
+            lsr         fx_m + 1
+            ror         fx_m
+            bcc         :+
+            clc
+            lda         fx_r + 2
+            adc         fx_m + 4
+            sta         fx_r + 2
+            lda         fx_r + 3
+            adc         fx_m + 5
+            sta         fx_r + 3
+:
+            ror         fx_r + 3
+            ror         fx_r + 2
+            ror         fx_r + 1
+            ror         fx_r
+            dex
+            bne         @bit
+            lda         fx_r + 3                            ; (Past 31 bits: the library's)
+            bmi         @no
+            lda         fx_s
+            bpl         :+
+            ldx         #8
+            jsr         fx_neg
+:
+            jmp         fx_trim
+@no:
+            sec
+@rts:
+            rts
+
+; t4 = the order of vt's and vu's values as decimals ($FF, 0, 1): C = 0; C = 1 not here
+fx_cmp:
+            jsr         fx_load
+            bcs         @rts
+            jsr         fx_align
+            bcs         @rts
+            sec                                             ; (x - y, signed)
+            lda         fx_m
+            sbc         fx_m + 4
+            sta         t0
+            lda         fx_m + 1
+            sbc         fx_m + 5
+            ora         t0
+            sta         t0
+            lda         fx_m + 2
+            sbc         fx_m + 6
+            ora         t0
+            sta         t0
+            lda         fx_m + 3
+            sbc         fx_m + 7
+            bvc         :+
+            eor         #$80                                ; (Past 32 bits: its sign the other way, and not 0)
+            ora         #1
+:
+            bmi         @below
+            ora         t0
+            beq         @equal
+            lda         #1
+            bra         @have
+@below:
+            lda         #$FF
+            bra         @have
+@equal:
+            lda         #0
+@have:
+            sta         t4
+            clc
+@rts:
+            rts
+
+; vt's value = fx_r, a VT_FIX of fx_pr places
+fx_store:
+            lda         fx_pr
+            ora         #VT_FIX
+            sta         (vt)
+            ldy         #4
+:
+            lda         fx_r - 1,y
+            sta         (vt),y
+            dey
+            bne         :-
             rts
 
 ; ---- Arrays: AGET n (n indices and an array's VT_REF: its element), APUT n (and a value: stored), AREF n (its place)

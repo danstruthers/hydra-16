@@ -1112,18 +1112,11 @@ f_bases:
 ; MKN$(x): its bytes in the stored format, as a string
 f_mkn:
             jsr         one_op                              ; (r0: its bytes, in nia, nba or NS_A)
-            jsr         top_vt                              ; (Their length: an integer's from int_sf, a number's
-            lda         (vt)                                ;   from its value's)
-            bne         @num
-            LDW         np, nia
-            jsr         top_vt
-            ldy         #4
-:
-            lda         (vt),y
-            sta         t0 - 1,y
-            dey
-            bne         :-
-            jsr         int_sf
+            jsr         top_vt                              ; (Their length: an integer's or a VT_FIX's operand's, a
+            lda         (vt)                                ;   number's from its value's)
+            cmp         #VT_NUM
+            beq         @num
+            lda         nolen
             sta         t0
             stz         t0 + 1
             bra         @have

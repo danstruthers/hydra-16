@@ -873,6 +873,11 @@ cs_const:
             beq         @typed
             jmp         type3
 @typed:
+            lda         (vt)                                ; (A VT_FIX: a VT_NUM, its bytes kept)
+            cmp         #VT_FIX
+            bcc         :+
+            FARN        4, fix_heap
+:
             C2          spl_clear
             lda         #SC_CONST
             sta         scls
