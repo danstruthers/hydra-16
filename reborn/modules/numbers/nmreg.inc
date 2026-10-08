@@ -8,6 +8,7 @@
 
 NR_DIG          = >(DIGS - $8000)               ; (A number's digits as it's written: their pages, as registers')
 
+.ifndef NM_COPY
 .segment "NUMBANK"
 r_len:      .res        NRALL                               ; Each register's length (bytes; 0: zero) ...
 r_neg:      .res        NRALL                               ;   and sign ($FF: negative)
@@ -40,7 +41,8 @@ n_z:        .res        1
 n_cnt:      .res        2
 n_k:        .res        2                                   ; (A shift's count)
 
-.code
+.endif
+            NM_CODE
 
 ; ---- Too big
 
@@ -583,7 +585,7 @@ mul8:
             lda         n_x8
             rts
 
-.rodata
+            NM_RODATA
 sq_lo:                                                      ; (f(n) = n^2 / 4 rounded down: its low bytes, its high)
 .repeat 512, I
             .byte       <((I * I) / 4)
@@ -592,7 +594,7 @@ sq_hi:
 .repeat 512, I
             .byte       >((I * I) / 4)
 .endrep
-.code
+            NM_CODE
 
 ; nrc = nra * nrb (nrc another register).  Too big: n_big
 r_mul:

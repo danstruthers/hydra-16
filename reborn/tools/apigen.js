@@ -20,6 +20,8 @@
 //                         assembly
 //   obj/sdk/c/numdefs.h   their constants, for C (num.h includes it)
 //   obj/gen/numbers_jt.inc, math_jt.inc   each number library's jump table (its module includes it)
+//   obj/gen/numconst.inc  the math library's constants (pi, log 2, log 10) at NC_BITS bits, from sim/tools/numref.js:
+//                         the numbers library's INIT puts them in the state's cache (docs/design/plans/NUMSPEED.md)
 //
 // Usage: node tools/apigen.js [ROOT]       (ROOT: the reborn folder; default: this file's parent)
 // From Node: require('./apigen.js').generate(root) gives { calls, errors, consts, groups, numbers }; readNumbers(file)
@@ -236,6 +238,24 @@ function numbersInc(nums) {
 }
 
 // A number library's jump table (its module includes it right after its header): a jmp to each entry's code
+// The constants the math library caches (st_const: pi, log 2, log 10, numbers/nmbank.inc's order), each at NC_BITS
+// bits (cut toward 0, within an ulp): CONST_BYTES bytes each, least first
+const NC_BITS = 824, CONST_BYTES = 104;
+function numConst() {
+  const R = require('../sim/tools/numref.js');
+  let s = header(';', 'numconst.inc - the math library\'s constants, pi, log 2 and log 10, at NC_BITS bits (sim/tools/numref.js\'s)');
+  s += 'NC_BITS         = ' + NC_BITS + CRLF + '.rodata' + CRLF + 'nm_consts:' + CRLF;
+  for (const [name, v] of [['pi', R.piFixed(NC_BITS)], ['log 2', R.ln2Fixed(NC_BITS)], ['log 10', R.ln10Fixed(NC_BITS)]]) {
+    const b = [];
+    for (let x = v, k = 0; k < CONST_BYTES; k++, x >>= 8n) b.push(Number(x & 255n));
+    if (v >> BigInt(8 * CONST_BYTES)) throw new Error('numconst: ' + name + ' past ' + CONST_BYTES + ' bytes');
+    s += '; ' + name + CRLF;
+    for (let k = 0; k < CONST_BYTES; k += 16) s += '            .byte       ' + b.slice(k, k + 16).map(x => hx(x, 2)).join(', ') + CRLF;
+  }
+  s += '.code' + CRLF;
+  return s;
+}
+
 function numbersJt(lib) {
   let s = header(';', lib.name + '_jt.inc - the ' + lib.name + ' library\'s jump table, after its header');
   s += CRLF + '.code' + CRLF + '.assert     * = ' + hx(NUM_TABLE, 4) + ', lderror, "The ' + lib.name + ' library\'s jump table isn\'t right after its header"' + CRLF;
@@ -516,6 +536,7 @@ function generate(root) {
   write(path.join(root, 'obj', 'sdk', 'numbers.inc'), numbersInc(nums));
   write(path.join(root, 'obj', 'sdk', 'c', 'numdefs.h'), cNumHeader(nums));
   for (const l of nums.libs) write(path.join(gen, l.name + '_jt.inc'), numbersJt(l));
+  write(path.join(gen, 'numconst.inc'), numConst());
   write(path.join(gen, 'api.json'), JSON.stringify({
     calls: api.calls.map(c => ({ name: c.name, addr: c.addr, group: c.group, in: c.in.join(' '), out: c.out.join(' '), errors: c.errors, blocks: c.blocks })),
     errors, consts: api.consts.map(k => ({ name: k.name, value: k.value })),

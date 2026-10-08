@@ -5,10 +5,11 @@
 // (cycles a pass of a loop of 200), the math functions (cycles a call), hylang's number work (ms) and single
 // operations (cycles a pass).  Every stretch's time is the machine's, all tasks' (the program's and the system's).
 //
-// Usage: node sim/speed.js [--build TREE] [--vs TREE | --base FILE] [--save FILE] [--only NAME,...]
+// Usage: node sim/speed.js [--build TREE] [--vs TREE | --base FILE] [--prev FILE] [--save FILE] [--only NAME,...]
 //   --build TREE   that tree's build (its reborn folder), not this one's
 //   --vs TREE      another tree's build beside it (the baseline), and the ratio of the two
 //   --base FILE    a table saved before (--save) as the baseline
+//   --prev FILE    another table saved before (the step before), its ratio too
 //   --save FILE    this table saved (JSON)
 //   --only         those programs alone (numb, small, math, numh)
 'use strict';
@@ -59,16 +60,19 @@ if (require.main === module) {
   const t0 = Date.now();
   const cur = measure(tree, only);
   const vs = opt('--vs') ? measure(path.resolve(opt('--vs')), only) : opt('--base') ? JSON.parse(fs.readFileSync(opt('--base'), 'utf8')) : null;
+  const prev = opt('--prev') ? JSON.parse(fs.readFileSync(opt('--prev'), 'utf8')) : null;
   if (opt('--save')) fs.writeFileSync(opt('--save'), JSON.stringify(cur, null, 1));
   const unit = k => { const [pn, sn] = k.split(': '); const p = PROGS.find(q => q.name === pn), s = p && p.segs.find(x => x[0] === sn); return !s ? '' : s[1] === 'ms' ? 'ms' : p.name === 'math' || sn === 'sin' ? 'cycles a call' : 'cycles a pass'; };
   let prog = '';
   for (const k of Object.keys(cur)) {
     const [pn, sn] = k.split(': ');
     if (sn === '(output)') continue;
-    if (pn !== prog) { prog = pn; console.log('\n' + pn + (vs ? '                                   before        now   speed-up' : '')); }
-    const a = vs ? vs[k] : null, b = cur[k];
+    if (pn !== prog) { prog = pn; console.log('\n' + pn.padEnd(34) + (vs ? '  original' : '') + (prev ? '      prev' : '') + '        now' + (vs ? '  vs orig.' : '') + (prev ? '  vs prev' : '')); }
+    const a = vs ? vs[k] : null, p = prev ? prev[k] : null, b = cur[k];
     const f = v => v === null || v === undefined ? '-' : v.toLocaleString('en-US');
-    console.log('  ' + sn.padEnd(32) + (vs ? f(a).padStart(10) : '') + f(b).padStart(11) + (vs && a && b ? (a / b).toFixed(2).padStart(9) + 'x' : '') + '  ' + unit(k));
+    const x = (u, w) => u && w ? (u / w).toFixed(2) + 'x' : '-';
+    console.log('  ' + sn.padEnd(32) + (vs ? f(a).padStart(10) : '') + (prev ? f(p).padStart(10) : '') + f(b).padStart(11) + (vs ? x(a, b).padStart(10) : '') +
+      (prev ? x(p, b).padStart(9) : '') + '  ' + unit(k));
   }
   for (const k of Object.keys(cur).filter(k => k.endsWith('(output)'))) if (vs && vs[k] !== undefined && vs[k] !== cur[k]) console.log('OUTPUT DIFFERS ' + k + ': ' + vs[k] + ' / ' + cur[k]);
   console.log('\n(' + ((Date.now() - t0) / 1000).toFixed(0) + ' s)');

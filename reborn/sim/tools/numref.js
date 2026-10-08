@@ -731,4 +731,5 @@ module.exports = {
   truncate, floor, round, toFixed, toRational, numerator, denominator, complex, part, fromInt, toInt,
   bits, fib, Random, NumberFormat, DECIMAL, display, parse,
   MAX_DIGITS, getDigits, setDigits, sqrt: msqrt, exp: mexp, log: mlog, trig: mtrig, atan: matan, pi: mpi, rpow,
+  piFixed, ln2Fixed, ln10Fixed,
 };

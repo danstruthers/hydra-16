@@ -9,6 +9,8 @@ hp:         .res        3                                   ; The heap's next bl
 hres:       .res        3                                   ; A block's contents (heap_alloc's)
 hsize:      .res        2                                   ; (heap_alloc's: all of it)
 hkind:      .res        1
+hgc_t:      .res        8                                   ; (heap_room's: t0-t7 kept over a collection, and its own)
+hr_t:       .res        1
 sla:        .res        2                                   ; (Strings' lengths)
 slb:        .res        2
 sfa:        .res        3                                   ; (A string's far address)
@@ -121,7 +123,19 @@ heap_room:
             jsr         hp_end                              ; (.A: the logical bank its end would be in)
             cmp         hlim
             bcc         @done
+            ldx         #7                                  ; (t0-t7 kept: the collector's are its own, and a caller
+:                                                           ;   may hold something there over its allocation)
+            lda         t0,x
+            sta         hgc_t,x
+            dex
+            bpl         :-
             jsr         gc_collect
+            ldx         #7
+:
+            lda         hgc_t,x
+            sta         t0,x
+            dex
+            bpl         :-
             jsr         hp_end
             cmp         hlim
             bcc         @half
@@ -132,11 +146,11 @@ heap_room:
             sec
             sbc         #LB_HEAP - 1
             asl         a
-            sta         t4
+            sta         hr_t
             lda         hlim
             sec
             sbc         #LB_HEAP
-            cmp         t4
+            cmp         hr_t
             bcs         @cap
             lda         hp + 2
             sec

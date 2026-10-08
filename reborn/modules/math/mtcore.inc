@@ -54,6 +54,9 @@ mt_bt:      .res        1
 mt_cid:     .res        1                                   ; (m_const's constant: 0 pi, 1 log 2, 2 log 10)
 mt_cq:      .res        2                                   ; (The bits asked for, and made at)
 mt_cm:      .res        2
+mt_s6:      .res        2                                   ; (m_round's: the power of 10 R6 holds (m_sig's 10^|s|),
+mt_s6ok:    .res        1                                   ;   if it holds one, and whether R31 is 2^(b - 1))
+mt_b31ok:   .res        1
 
 .code
 
@@ -599,11 +602,18 @@ m_log10x:
             sta         mt_u + 1
 :
             sty         mt_g
-            stz         mt_e                                ; (mt_e.mt_e+1.mt_v = mt_u * 77, 24 bits)
-            stz         mt_e + 1
+            stz         mt_e                                ; (mt_e.mt_e+1.mt_v = mt_u * 77, 24 bits: 77's 7 bits,
+            stz         mt_e + 1                            ;   the top first, a shift and an add each)
             stz         mt_v
-            ldx         #77
-@add:
+            lda         #77 << 1
+            sta         mt_q8
+            ldx         #7
+@bit:
+            asl         mt_v
+            rol         mt_e
+            rol         mt_e + 1
+            asl         mt_q8
+            bcc         @next
             clc
             lda         mt_v
             adc         mt_u
@@ -611,11 +621,11 @@ m_log10x:
             lda         mt_e
             adc         mt_u + 1
             sta         mt_e
-            bcc         :+
+            bcc         @next
             inc         mt_e + 1
-:
+@next:
             dex
-            bne         @add
+            bne         @bit
             lda         mt_g                                ; (Its high 16 bits the floor; below 0, up if any's left)
             beq         @rts
             lda         mt_v
@@ -662,16 +672,16 @@ m_sig:
             SUBVV       mt_p, mt_p, mt_e
 @try:
             ADDVV       mt_t, mt_k10, mt_p                  ; (s = k10 + p)
-            SUBVV       mt_q, mt_b, mt_one16                ; (2^(b - 1): R31)
+            lda         mt_b31ok                            ; (2^(b - 1): R31, unless it's there)
+            bne         :+
+            SUBVV       mt_q, mt_b, mt_one16
             ldy         #31
             jsr         m_pow2
+            inc         mt_b31ok
+:
             lda         mt_t + 1
             bmi         @down
-            lda         #6                                  ; (s 0 or more: (x 10^s + 2^(b - 1)) / 2^b)
-            sta         nrc
-            lda         mt_t
-            ldx         mt_t + 1
-            jsr         r_pow10
+            jsr         m_p10s                              ; (s 0 or more: (x 10^s + 2^(b - 1)) / 2^b; 10^s R6)
             lda         mt_sx
             sta         nra
             lda         #6
@@ -688,17 +698,7 @@ m_sig:
             jsr         r_copy
             bra         @check
 @down:
-            sec                                             ; (Below 0: ((x + 2^(b - 1) 10^-s) / 2^b) / 10^-s)
-            lda         #0
-            sbc         mt_t
-            pha
-            lda         #0
-            sbc         mt_t + 1
-            tax
-            lda         #6
-            sta         nrc
-            pla
-            jsr         r_pow10
+            jsr         m_p10s                              ; (Below 0: ((x + 2^(b - 1) 10^-s) / 2^b) / 10^-s; 10^-s R6)
             RMUL        7, 31, 6
             lda         mt_sx
             sta         nra
@@ -744,10 +744,44 @@ m_sig:
 @rts:
             rts
 
-; hv = MA / 2^mt_b times 10^mt_k10, within ME, rounded to mt_n digits: C = 0.  C = 1 if what ME allows doesn't
-; round the same.  Uses R0-R7, R30, R31
-m_round:
-            lda         #4                                  ; (10^(n - 1), 10^n)
+; R6 = 10^|s| (s: mt_t), unless it holds it already (mt_s6ok, mt_s6: a rounding's own)
+m_p10s:
+            lda         mt_s6ok
+            beq         @make
+            lda         mt_t
+            cmp         mt_s6
+            bne         @make
+            lda         mt_t + 1
+            cmp         mt_s6 + 1
+            beq         @rts
+@make:
+            lda         mt_t
+            ldx         mt_t + 1
+            bpl         :+
+            sec
+            lda         #0
+            sbc         mt_t
+            pha
+            lda         #0
+            sbc         mt_t + 1
+            tax
+            pla
+:
+            ldy         #6
+            sty         nrc
+            jsr         r_pow10
+            MOVR        mt_s6, mt_t
+            lda         #1
+            sta         mt_s6ok
+@rts:
+            rts
+
+; R4 = 10^(n - 1), R5 = 10^n (n: mt_n): from the state if they're kept for n, else made and kept
+m_p10:
+            lda         mt_n
+            cmp         st_p10n
+            beq         @copy
+            lda         #4
             sta         nrc
             lda         mt_n
             dec         a
@@ -758,6 +792,48 @@ m_round:
             lda         mt_n
             ldx         #0
             jsr         r_pow10
+            ldx         #4                                  ; (Kept: their lengths and bytes)
+            lda         r_len,x
+            sta         st_p10l
+            ldx         #5
+            lda         r_len,x
+            sta         st_p10l + 1
+            ldy         #P10_BYTES - 1
+:
+            lda         regs + 4 * 256,y
+            sta         st_p10,y
+            lda         regs + 5 * 256,y
+            sta         st_p10 + P10_BYTES,y
+            dey
+            bpl         :-
+            lda         mt_n
+            sta         st_p10n
+            rts
+@copy:
+            ldy         #P10_BYTES - 1
+:
+            lda         st_p10,y
+            sta         regs + 4 * 256,y
+            lda         st_p10 + P10_BYTES,y
+            sta         regs + 5 * 256,y
+            dey
+            bpl         :-
+            ldx         #4
+            lda         st_p10l
+            sta         r_len,x
+            stz         r_neg,x
+            ldx         #5
+            lda         st_p10l + 1
+            sta         r_len,x
+            stz         r_neg,x
+            rts
+
+; hv = MA / 2^mt_b times 10^mt_k10, within ME, rounded to mt_n digits: C = 0.  C = 1 if what ME allows doesn't
+; round the same.  Uses R0-R7, R30, R31
+m_round:
+            stz         mt_s6ok                             ; (R6 and R31 not m_sig's yet)
+            stz         mt_b31ok
+            jsr         m_p10                               ; (10^(n - 1), 10^n: R4, R5)
             ldx         #MA
             lda         r_neg,x
             sta         mt_rs                               ; (Its sign)

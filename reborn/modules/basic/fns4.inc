@@ -257,9 +257,16 @@ f_fixed:
             jsr         two_vals                            ; (n: an integer)
             MOVW        vt, vu
             jsr         pop_int16
-            jsr         one_op
+            lda         t0 + 1                              ; (n kept: an integer x is made its bytes in t0)
+            pha
             lda         t0
-            ldx         t0 + 1
+            pha
+            jsr         one_op
+            pla
+            tay
+            pla
+            tax
+            tya
             NUMCALL     NUM_TO_FIXED
             jmp         n_result1
 
@@ -1104,9 +1111,10 @@ f_bases:
 
 ; MKN$(x): its bytes in the stored format, as a string
 f_mkn:
-            jsr         one_op                              ; (r0: its bytes, in nia or NS_A)
-            lda         r0 + 1                              ; (Their length: an integer's from int_sf, a number's
-            bmi         @num                                ;   from its value's)
+            jsr         one_op                              ; (r0: its bytes, in nia, nba or NS_A)
+            jsr         top_vt                              ; (Their length: an integer's from int_sf, a number's
+            lda         (vt)                                ;   from its value's)
+            bne         @num
             LDW         np, nia
             jsr         top_vt
             ldy         #4

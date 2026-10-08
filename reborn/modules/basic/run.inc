@@ -23,6 +23,10 @@ rf_val:     .res        5                                   ; (RETF's: the resul
 rf_ret:     .res        2
 sw_v:       .res        2 * VAL_SIZE                        ; (SWAP's: the two values)
 sw_dir:     .res        1
+id_d:       .res        4                                   ; (idiv32's: the divisor's magnitude, the dividend's sign,
+id_sa:      .res        1                                   ;   the quotient's, its bits to go)
+id_sq:      .res        1
+id_n:       .res        1
 
 .enum
 OP_END                                                      ; The end (the program's, a line's at the prompt)
@@ -781,10 +785,209 @@ small1:
             rts
 
 op_div:
-op_idiv:
-op_mod:
 op_pow:
             jmp         num_slow
+
+; \ and MOD of two integers here (32 bits: the quotient toward 0, the remainder the dividend's sign); 0 for a
+; divisor, or -2^31 \ -1 (2^31: past 32 bits), the numbers' way
+op_idiv:
+            jsr         two_vals
+            bcs         @slow
+            jsr         idiv32
+            bcs         @slow
+            jmp         int_t0
+@slow:
+            jmp         num_slow
+op_mod:
+            jsr         two_vals
+            bcs         @slow
+            jsr         idiv32
+            bcs         @slow
+            ldx         #3
+:
+            lda         t4,x
+            sta         t0,x
+            dex
+            bpl         :-
+            jmp         int_t0
+@slow:
+            jmp         num_slow
+
+; t0 = (vt) \ (vu), t4 = (vt) MOD (vu), two integers of 32 bits: C = 0; C = 1 if not here (a divisor of 0, a
+; quotient of 2^31)
+idiv32:
+            ldy         #4                                  ; (The signs: the remainder's the dividend's, the
+            lda         (vt),y                              ;   quotient's the two's)
+            sta         id_sa
+            eor         (vu),y
+            sta         id_sq
+            lda         (vu),y                              ; (The divisor's magnitude: id_d)
+            bmi         @dneg
+            ldy         #1
+            ldx         #0
+:
+            lda         (vu),y
+            sta         id_d,x
+            iny
+            inx
+            cpx         #4
+            bne         :-
+            bra         @dmag
+@dneg:
+            ldy         #1
+            ldx         #0
+            sec
+:
+            lda         #0
+            sbc         (vu),y
+            sta         id_d,x
+            iny
+            inx
+            tya                                             ; (Not cpx: the borrow kept)
+            eor         #5
+            bne         :-
+@dmag:
+            lda         id_d
+            ora         id_d + 1
+            ora         id_d + 2
+            ora         id_d + 3
+            bne         :+
+            sec                                             ; (0: the numbers' way, its error)
+            rts
+:
+            lda         id_sa                               ; (The dividend's magnitude: t0)
+            bmi         @aneg
+            ldy         #4
+:
+            lda         (vt),y
+            sta         t0 - 1,y
+            dey
+            bne         :-
+            bra         @amag
+@aneg:
+            ldy         #1
+            ldx         #0
+            sec
+:
+            lda         #0
+            sbc         (vt),y
+            sta         t0,x
+            iny
+            inx
+            tya                                             ; (Not cpx: the borrow kept)
+            eor         #5
+            bne         :-
+@amag:
+            lda         id_d + 1                            ; (A divisor below 256: a byte at a time, the
+            ora         id_d + 2                            ;   remainder in .A)
+            ora         id_d + 3
+            bne         @wide
+            lda         #0
+            ldx         #3
+@byte:
+            ldy         t0,x                                ; (A 0 with no remainder: a 0)
+            bne         :+
+            cmp         #0
+            beq         @nextb
+:
+            ldy         #8
+@bit:
+            asl         t0,x
+            rol         a
+            bcs         @take
+            cmp         id_d
+            bcc         @keep
+@take:
+            sbc         id_d
+            inc         t0,x
+@keep:
+            dey
+            bne         @bit
+@nextb:
+            dex
+            bpl         @byte
+            sta         t4
+            stz         t4 + 1
+            stz         t4 + 2
+            stz         t4 + 3
+            bra         @signs
+@wide:
+            stz         t4                                  ; (Wider: a bit at a time, 32 of them)
+            stz         t4 + 1
+            stz         t4 + 2
+            stz         t4 + 3
+            lda         #32
+            sta         id_n
+@wbit:
+            asl         t0
+            rol         t0 + 1
+            rol         t0 + 2
+            rol         t0 + 3
+            rol         t4
+            rol         t4 + 1
+            rol         t4 + 2
+            rol         t4 + 3
+            sec
+            lda         t4
+            sbc         id_d
+            pha
+            lda         t4 + 1
+            sbc         id_d + 1
+            pha
+            lda         t4 + 2
+            sbc         id_d + 2
+            tax
+            lda         t4 + 3
+            sbc         id_d + 3
+            bcc         @wno
+            sta         t4 + 3
+            stx         t4 + 2
+            pla
+            sta         t4 + 1
+            pla
+            sta         t4
+            inc         t0
+            bra         @wnext
+@wno:
+            pla
+            pla
+@wnext:
+            dec         id_n
+            bne         @wbit
+@signs:
+            lda         id_sq                               ; (The quotient's sign; 2^31 positive, past 32 bits)
+            bmi         @qneg
+            lda         t0 + 3
+            bpl         @rem
+            sec
+            rts
+@qneg:
+            sec
+            ldx         #0
+            ldy         #4
+:
+            lda         #0
+            sbc         t0,x
+            sta         t0,x
+            inx
+            dey
+            bne         :-
+@rem:
+            lda         id_sa                               ; (The remainder's)
+            bpl         @done
+            sec
+            ldx         #0
+            ldy         #4
+:
+            lda         #0
+            sbc         t4,x
+            sta         t4,x
+            inx
+            dey
+            bne         :-
+@done:
+            clc
+            rts
 
 op_neg:
             jsr         top_vt
@@ -1342,9 +1545,14 @@ arr_index:
             plx
             phx
             jsr         arr_sub                             ; (Index x's: t0 = it less the lowest, checked)
-            lda         ar_idx                              ; (ar_idx = ar_idx * count + t0)
+            lda         ar_idx                              ; (ar_idx = ar_idx * count + t0: none to make of 0)
             ldx         ar_idx + 1
+            bne         :+
+            cmp         #0
+            beq         :++
+:
             jsr         mul_cnt
+:
             clc
             adc         t0
             sta         ar_idx

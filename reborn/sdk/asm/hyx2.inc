@@ -99,9 +99,10 @@ HYX2_BANKS      = banks
             HYX2_HEADER name, HT_DRIVER, flags, init, serve, irq, stop, 0, banks
 .endmacro
 
-; A library module's header: its code and read-only data in the memory area mem (a bank's, at $A000), linked with
-; the program it's part of, which calls it in place; no data, BSS or entries of its own (the program's RAM is its)
-.macro HYX2_LIBRARY name, seg, mem
+; A library module's header: its code and read-only data in the memory area mem (its last bank's, at $A000), linked
+; with the program it's part of, which calls it in place; no data, BSS or entries of its own (the program's RAM is
+; its).  banks: its banks (one if none's given)
+.macro HYX2_LIBRARY name, seg, mem, banks
 .assert     .strlen(name) < HYX2_NAME_LEN, error, "A module's name is 11 characters at most"
 .import     .ident(.sprintf("__%s_LAST__", mem))
 .pushseg
@@ -117,7 +118,11 @@ HYX2_BANKS      = banks
             .word       0, 0, 0                             ; HX_BSS, HX_BSS_LEN, HX_TOP
             .word       0, 0, 0, 0                          ; HX_MAIN, HX_SERVE, HX_IRQ, HX_STOP
             .byte       0                                   ; HX_DEVICE
+.ifblank banks
             .byte       1                                   ; HX_BANKS
+.else
+            .byte       banks
+.endif
             .word       1                                   ; HX_VERSION
             .byte       name                                ; HX_NAME
             .res        HYX2_NAME_LEN - .strlen(name), 0

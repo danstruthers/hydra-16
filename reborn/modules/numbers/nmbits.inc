@@ -2,11 +2,13 @@
 ; nmbits.inc - BITS: the bits of integers of any size, in two's complement (hylang's numbits.inc, as danlang's
 ; bit-and, bit-or, bit-xor, bit-not, shl, shr and bit?).
 
+.ifndef NM_COPY
 .segment "NUMBANK"
 n_bop:      .res        1                                   ; (The operation: .Y as BITS was called)
 n_dir:      .res        1                                   ; (A shift's way: 0 left, $FF right)
 
-.code
+.endif
+            NM_CODE
 
 ; BITS: r0 = x, r1 = y, integers; .Y = the operation: 0 and, 1 or, 2 xor, 3 not (x alone: -x - 1), 4 x shifted left
 ; y bits, 5 right (toward minus infinity; a negative count either way the other way; a count past 16 bits -32768 or

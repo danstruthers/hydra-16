@@ -11,6 +11,7 @@ NS_B            = $8410         ;   another ...
 NS_R            = $8820         ;   the result (NUM_MAX each)
 TX_NUM          = $9BE0         ; The text bank: a number to be written (NUM_MAX + 2: to $9FF2) ...
 TX_ROOM         = TX_NUM - $8000 ;   and its text, from $8000
+NB_ROOM         = 64            ; An operand's bytes below $8000 (nba, nbb), if it's this long or less
 
 
 .bss
@@ -21,11 +22,16 @@ nsb:        .res        1                                   ; The scratch bank a
 txb:        .res        1
 nia:        .res        6                                   ; An integer's bytes, as an operand: the first ...
 nib:        .res        6                                   ;   and the second
+nba:        .res        NB_ROOM                             ; A VT_NUM's bytes as an operand, the first's and the
+nbb:        .res        NB_ROOM                             ;   second's, if they fit (else NS_A, NS_B)
+nmag:       .res        5                                   ; (int_sf's: a negative integer's magnitude, from nmag + 1)
 n_op:        .res        1                                   ; (num_op's op)
 nlen:       .res        2                                   ; (A result's length)
 nsign:      .res        1                                   ; (A number's sign: $FF, 0, 1)
 digits_set: .res        1                                   ; (The math library's precision, as set: DIGITS's)
 mi_buf:     .res        ME_SIZE                             ; (num_init's: a module's entry)
+rr3:        .res        2                                   ; (round_r0's: r3 kept)
+rsrc:       .res        2                                   ; (result_vt's: the result's place)
 nt_base:    .res        2                                   ; num_text's base (0: the base)
 
 .segment "CODE4"
@@ -66,6 +72,8 @@ num_init:
             bcs         @none
             sta         num_bank
             NUMCALL     NUM_INIT
+            lda         #1                                  ; ($70-$7F not BASIC's: not kept over a call)
+            NUMCALL     NUM_OPTIONS
             lda         #12
             sta         digits_set
             ldx         #LB_NSB                             ; (The scratch and text banks: taken now)
@@ -256,26 +264,26 @@ int_sf:
             inc         a
             rts
 @neg:
-            sec                                             ; (The magnitude: -t0, in t4 + 1 ... (t0 kept))
+            sec                                             ; (The magnitude: -t0 (t0 kept), from nmag + 1)
             ldx         #0
             ldy         #4
             lda         #0
             sbc         t0
-            sta         nia + 1                             ; (A copy, negated, from nia + 1)
+            sta         nmag + 1
             lda         #0
             sbc         t0 + 1
-            sta         nia + 2
+            sta         nmag + 2
             lda         #0
             sbc         t0 + 2
-            sta         nia + 3
+            sta         nmag + 3
             lda         #0
             sbc         t0 + 3
-            sta         nia + 4
+            sta         nmag + 4
             lda         #$90
             sta         t4
             ldy         #1
 :
-            lda         nia,y
+            lda         nmag,y
             sta         (np),y
             iny
             cpy         #5
@@ -324,11 +332,22 @@ operand:
             sta         cn
             jsr         ca_rd
             sta         cn + 1
+            lda         cn + 1                              ; (Below $8000 if it fits: nba, nbb)
+            bne         @bank
+            lda         cn
+            cmp         #NB_ROOM + 1
+            bcs         @bank
+            LDW         cb, nba
+            ldx         t4 + 3
+            beq         @to
+            LDW         cb, nbb
+            bra         @to
+@bank:
             LDW         cb, NS_A
             ldx         t4 + 3
-            beq         :+
+            beq         @to
             LDW         cb, NS_B
-:
+@to:
             lda         #LB_NSB
             sta         cbl
             MOVW        t4, cb
@@ -505,13 +524,21 @@ round_ops:
             rts
 round_one:
 round_r0:
-            lda         r0 + 1                              ; (In the RAM: an integer already)
-            bpl         @done
+            lda         (r0)                                ; (An integer already: as it is; its bank's selected)
+            cmp         #NT_FIXED
+            bcc         @done
             MOVW        t4 + 2, r2
+            MOVW        rr3, r3
             MOVW        r2, r0
+            LDW         r3, NB_ROOM                         ; (Over itself: its room, below $8000 or in the bank)
+            lda         r0 + 1
+            bpl         :+
+            LDW         r3, NUM_MAX
+:
             NUMCALL     NUM_ROUND
             bcs         n_fail
             MOVW        r2, t4 + 2
+            MOVW        r3, rr3
 @done:
             rts
 
@@ -560,7 +587,8 @@ result_vt:
             bne         :-
             rts
 @heap:
-            MOVW        t4, r2                              ; (The heap's room for it: then copied)
+            MOVW        rsrc, r2                            ; (The heap's room for it: then copied; not t4, which a
+                                                            ;   collection changes)
             lda         vt
             pha
             lda         vt + 1
@@ -599,7 +627,7 @@ result_vt:
             sta         cb + 1
             inc         cbl
 :
-            MOVW        ca, t4
+            MOVW        ca, rsrc
             lda         #LB_NSB
             sta         cal
             MOVW        cn, nlen
