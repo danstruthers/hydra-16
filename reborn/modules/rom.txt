@@ -49,6 +49,7 @@ module      play
 module      xmodem
 module      forth
 module      basic
+module      nbasic      ; (The new BASIC, while it's built: docs/design/plans/BASIC.md)
 module      hylang
 module      hysnap      ; (hylang's snapshot: its heap with its library loaded, made by tools/hysnap.js at the build)
 module      numbers     ; (the number libraries: spec/numbers.def)
