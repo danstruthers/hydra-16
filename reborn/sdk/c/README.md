@@ -35,7 +35,7 @@ int main (int argc, char* argv[])
 }
 ```
 
-* `argv[0]` is its name: its file's (`/rom/sample/c/hello`'s is `hello`); its arguments are rc's words.
+* `argv[0]` is its name: its file's (`/sd/0/sample/c/hello`'s is `hello`); its arguments are rc's words.
 * `main`'s value, or `exit`'s, is its exit code (0 is success); `hy_exits ("why")` ends it with a message and
   code 1, as Plan 9's `exits` does.  rc's `$status` is the message if there is one, else the code.
 * Its fds 0, 1 and 2 are stdin, stdout and stderr: its window's console, or what rc gave it (`<`, `>`, `|`).
@@ -139,8 +139,8 @@ ld65 -C sdk/c/hydra.cfg -o hello.hyx hello.o sdk/c/lib/hydra.lib
 ## Running it
 
 As an assembly program is run (`sdk/asm/README.md`): copy it to a card or the RAM disk, and type its path, or its
-name if it's in `.` or a `bin`.  The samples are on the ROM disk: `/rom/sample/c/hello you`,
-`echo hi | /rom/sample/c/upper`, `/rom/sample/c/keys`, `/rom/sample/c/tones`; `cd /ram; /rom/sample/c/ctest a 'b c'` runs the
+name if it's in `.` or a `bin`.  The samples are on the SD card (`bin/sdcard.img`): `/sd/0/sample/c/hello you`,
+`echo hi | /sd/0/sample/c/upper`, `/sd/0/sample/c/keys`, `/sd/0/sample/c/tones`; `cd /ram; /sd/0/sample/c/ctest a 'b c'` runs the
 library's test.
 
 ## The multitasking demos
@@ -148,7 +148,7 @@ library's test.
 Five samples show tasks working together.  Each is one program that starts copies of itself as its workers (each in
 a task of its own, given what it needs as arguments: a shared segment's number, semaphores' numbers), draws what
 they do as they do it, and says how it went.  They find themselves as `/bin/NAME`, `./NAME` or
-`/rom/sample/c/NAME`, so after `bind -a /rom/sample/c /bin` (at rc, or HyForth's `bind`) they run by name.  Each
+`/sd/0/sample/c/NAME`, so after `bind -a /sd/0/sample/c /bin` (at rc, or HyForth's `bind`) they run by name.  Each
 needs four or five tasks free besides its own; Ctrl-C ends them all, and the program says how far it got.
 
 | Sample | What it shows |

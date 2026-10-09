@@ -1,24 +1,26 @@
 #!/usr/bin/env node
 // ****************************************************************************
-// build.js - builds everything (docs/design/reimplementation-from-scratch.md, phase 0):
-//   1. tools/apigen.js     spec/ -> the jump table, the error codes and texts, the SDK's hydra.inc, the reference
-//   2. the kernel          kernel/*.s and the generated sources -> bin/bios.bin (the 128K BIOS ROM), with its map
-//                          and labels in obj/kernel/
+// build.js - builds HydraOS (docs/design/reimplementation-from-scratch.md, phase 0) on the base (../base: the kernel,
+// the system calls, the parts every system on it shares; docs/design/plans/BASE.md):
+//   1. the base            ../base/build.js: the jump table, the error codes, hydra.inc (../base/obj), and the kernel,
+//                          ../base/bin/bios.bin, copied to bin/bios.bin (the same BIOS ROM, byte for byte)
+//   2. tools/apigen.js     the languages' bindings to the calls, the reference, the libraries' (spec/numbers.def,
+//                          asm.def)
 //   3. the modules         modules/NAME/*.s -> obj/modules/NAME.bin; tests/mod/NAME/*.s -> obj/tests/NAME.bin;
 //                          the test RAM programs, tests/ram/NAME/*.s -> obj/tests/NAME.hyx (sdk/asm/hyx2.cfg); the
 //                          ROM disk's programs (its bin), programs/NAME/*.s -> obj/programs/NAME.hyx; the SDK's
 //                          samples (its sample), sdk/asm/samples/NAME/*.s -> obj/samples/NAME.hyx (a driver's,
 //                          NAME.bin: a module, for a test's ROM); each checked:
-//                          only the kernel writes T, V and W (tools/check.js); and HyForth's libraries,
+//                          only the kernel writes T, V and W (../base/tools/check.js); and HyForth's libraries,
 //                          forthlib/NAME.s -> obj/forthlib/NAME.fl (tools/forthlib.js: the core's id patched into
 //                          obj/modules/forth.bin first), for the ROM disk's /lib/forth; and hylang's snapshot,
 //                          obj/modules/hysnap.bin (tools/hysnap.js: hylang's id patched into obj/modules/hylang.bin,
 //                          then its heap with its library loaded, taken in the emulator), if rom.txt has it
-//   4. the paged ROM       modules/rom.txt -> bin/prom0.bin, prom1.bin ... (tools/romimg.js): a 512K image for
+//   4. the paged ROM       modules/rom.txt -> bin/prom0.bin, prom1.bin ... (../base/tools/romimg.js): a 512K image for
 //                          each socket it fills, in order, as many as it needs; with the hardware test in bank 1
 //                          (from ../os_rom/bin/paged_rom_C02.bin) and the ROMs' checksums for it, and the ROM
 //                          disk's volume after the modules (romfs/romfs.txt: tools/romfs.js), each file read back
-//   5. the budgets         sizes, and room left (tools/budget.js)
+//   5. the budgets         sizes, and room left (../base/tools/budget.js)
 //   6. the SDK             bin/sdk/asm: the assembly SDK whole, to take away (sdk/asm, the generated hydra.inc and
 //                          numbers.inc, asmlib.inc, the samples' sources); the C library, obj/sdk/c/hydra.lib (cc65's none.lib
 //                          with sdk/c/lib's modules), and bin/sdk/c: the C SDK whole (sdk/c, the generated
@@ -41,16 +43,19 @@
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
+const base = require('../base/build.js');
 const apigen = require('./tools/apigen.js');
 const romimg = require('./tools/romimg.js');
 const romfs = require('./tools/romfs.js');
+const sdcard = require('./tools/sdcard.js');
 const forthlib = require('./tools/forthlib.js');
 const hysnap = require('./tools/hysnap.js');
-const budget = require('./tools/budget.js');
-const check = require('./tools/check.js');
+const budget = require('../base/tools/budget.js');
+const check = require('../base/tools/check.js');
 
 const ROOT = __dirname;
 const at = (...p) => path.join(ROOT, ...p);
+const atBase = (...p) => path.join(base.ROOT, ...p);
 
 function tool(name) {
   for (const dir of [process.env.CC65_BIN, process.env.CC65_HOME && path.join(process.env.CC65_HOME, 'bin'), 'C:/source/cc65/win64_snapshot/bin']) {
@@ -90,31 +95,15 @@ function assemble(files, objdir, includes, defines) {
   });
 }
 
-// A module: the .s files in dir, linked with modules/module.cfg (moduleN.cfg, for N banks), or with dir's own
-// NAME.cfg if it has one, whose files %O.LIBRARY are library modules of its own (hylang's: put in libs, by name); or
-// a RAM program (ram: assembled with HYX2_RAM, linked with sdk/asm/hyx2.cfg, NAME.hyx).  Its includes: the SDK's,
-// the system's, its own, and what apigen makes (forth's sys- words: obj/gen/forthsys.inc).  OUT: its image (a
-// Buffer)
+// HydraOS's includes, then the base's (its hydra.inc, the SDK's core, the hardware's, errors.inc): a module's, a
+// program's; a test module's, the base's testlib.inc too
+const INCLUDES = [at('obj', 'sdk'), at('sdk', 'asm'), ...base.INCLUDES, at('obj', 'gen'), atBase('tests', 'mod')];
+
+// A module or a RAM program (the base's buildModule: ../base/modules/moduleN.cfg, ../base/sdk/asm/hyx2.cfg), with
+// HydraOS's includes and the base's, and what apigen makes (forth's sys- words: obj/gen/forthsys.inc); a test RAM
+// program's, tests/mod's too (testlib.inc).  OUT: its image (a Buffer)
 function buildModule(dir, objdir, defines, ram = false, libs = {}) {
-  const name = path.basename(dir), od = path.join(objdir, name);
-  const objs = assemble(sources(dir), od, [at('obj', 'sdk'), at('sdk', 'asm'), at('include'), at('obj', 'gen'), dir, path.dirname(dir),
-    ...(ram ? [at('tests', 'mod')] : [])], ram ? [...defines, 'HYX2_RAM'] : defines);
-  const bin = path.join(objdir, name + (ram ? '.hyx' : '.bin'));
-  const banks = Math.max(1, ...sources(dir).map(f => Math.max(0, ...[...fs.readFileSync(f, 'latin1').matchAll(/\.segment\s+"CODE([2-8])"/gi)]
-    .map(m => +m[1]))));                                      // (Its last bank's CODEn: moduleN.cfg)
-  const own = path.join(dir, name + '.cfg');
-  const cfg = ram ? at('sdk', 'asm', 'hyx2.cfg') : fs.existsSync(own) ? own
-    : at('modules', banks > 1 ? 'module' + banks + '.cfg' : 'module.cfg');
-  run(LD65, ['-C', cfg, '-o', bin, '-m', path.join(od, name + '.map'), '-Ln', path.join(od, name + '.lbl'), ...objs]);
-  const data = fs.readFileSync(bin);
-  check.checkModule(name, data, ram ? 0x0800 : 0xA000);       // (Only the kernel writes T, V and W)
-  if (cfg === own) for (const [, lib] of fs.readFileSync(own, 'latin1').matchAll(/"%O\.(\w+)"/g)) {
-    const file = path.join(objdir, lib + '.bin');               // (A library module of its own: NAME.bin, as any module)
-    fs.renameSync(bin + '.' + lib, file);
-    libs[lib] = fs.readFileSync(file);
-    check.checkModule(lib, libs[lib], 0xA000);
-  }
-  return data;
+  return base.buildModule(dir, objdir, defines, ram, libs, ram ? [...INCLUDES, at('tests', 'mod')] : INCLUDES);
 }
 
 // ---- The C target (sdk/c): cc65 -t none, and the library obj/sdk/c/hydra.lib
@@ -122,7 +111,7 @@ function cflags() {
   const home = cc65Home(), own = d => fs.existsSync(path.join(home, d)) ? ['-I', path.join(home, d)] : [];
   return {
     cc: ['-g', '-t', 'none', '--cpu', '65C02', '-O', '-I', at('sdk', 'c', 'include'), '-I', at('obj', 'sdk', 'c'), ...own('include')],
-    as: ['-g', '--cpu', '65C02', '-I', at('obj', 'sdk'), '-I', at('obj', 'sdk', 'c'), ...own('asminc')],
+    as: ['-g', '--cpu', '65C02', '-I', at('obj', 'sdk'), '-I', atBase('obj', 'sdk'), '-I', at('obj', 'sdk', 'c'), ...own('asminc')],
   };
 }
 
@@ -174,12 +163,12 @@ function sdk() {
   const out = at('bin', 'sdk', 'asm');
   fs.rmSync(out, { recursive: true, force: true });
   mkdir(path.join(out, 'samples'));
-  for (const f of fs.readdirSync(at('sdk', 'asm')).filter(f => /\.(inc|s|cfg|md)$/.test(f)))
-    fs.copyFileSync(at('sdk', 'asm', f), path.join(out, f));
-  fs.copyFileSync(at('obj', 'sdk', 'hydra.inc'), path.join(out, 'hydra.inc'));
+  for (const d of [atBase('sdk', 'asm'), at('sdk', 'asm')])     // (The base's core, then HydraOS's)
+    for (const f of fs.readdirSync(d).filter(f => /\.(inc|s|cfg|md)$/.test(f))) fs.copyFileSync(path.join(d, f), path.join(out, f));
+  fs.copyFileSync(atBase('obj', 'sdk', 'hydra.inc'), path.join(out, 'hydra.inc'));
   fs.copyFileSync(at('obj', 'sdk', 'numbers.inc'), path.join(out, 'numbers.inc'));
   fs.copyFileSync(at('obj', 'sdk', 'asmlib.inc'), path.join(out, 'asmlib.inc'));
-  for (const f of ['module.cfg', 'module2.cfg', 'module3.cfg', 'module4.cfg']) fs.copyFileSync(at('modules', f), path.join(out, f));   // (A module's links)
+  for (const f of ['module.cfg', 'module2.cfg', 'module3.cfg', 'module4.cfg']) fs.copyFileSync(atBase('modules', f), path.join(out, f));   // (A module's links)
   for (const d of fs.readdirSync(at('sdk', 'asm', 'samples'), { withFileTypes: true }).filter(d => d.isDirectory())) {
     mkdir(path.join(out, 'samples', d.name));
     for (const f of sources(at('sdk', 'asm', 'samples', d.name))) fs.copyFileSync(f, path.join(out, 'samples', d.name, path.basename(f)));
@@ -210,53 +199,35 @@ function prog(dir) {
     cprog(dir, od, bin, (process.env.HYC_CFLAGS || '').split(/\s+/).filter(Boolean));
     return bin;
   }
-  const objs = assemble(sources(dir), od, [at('obj', 'sdk'), at('sdk', 'asm'), dir], ['HYX2_RAM']);
-  run(LD65, ['-C', at('sdk', 'asm', 'hyx2.cfg'), '-o', bin, '-m', path.join(od, name + '.map'), ...objs]);
+  const objs = assemble(sources(dir), od, [at('obj', 'sdk'), at('sdk', 'asm'), base.INCLUDES[0], base.INCLUDES[1], dir], ['HYX2_RAM']);
+  run(LD65, ['-C', atBase('sdk', 'asm', 'hyx2.cfg'), '-o', bin, '-m', path.join(od, name + '.map'), ...objs]);
   check.checkModule(name, fs.readFileSync(bin), 0x0800);
   return bin;
 }
 
-// The hardware test: bank 1 of the old system's paged ROM image (os_rom/bin, in Git), or null without it
-const HWTEST_IMAGE = path.join(ROOT, '..', 'old', 'os_rom', 'bin', 'paged_rom_C02.bin');
-function hwtest() {
-  return fs.existsSync(HWTEST_IMAGE) ? fs.readFileSync(HWTEST_IMAGE) : null;
-}
-
-// modules/rom.txt: { init, modules: [names] }
-function readManifest(file) {
-  const m = { init: null, modules: [] };
-  fs.readFileSync(file, 'latin1').split(/\r?\n/).forEach((raw, i) => {
-    const line = raw.replace(/;.*/, '').trim();
-    if (!line) return;
-    const [what, name] = line.split(/\s+/);
-    if (what === 'init') m.init = name;
-    else if (what === 'module') m.modules.push(name);
-    else throw new Error(file + ':' + (i + 1) + ': "init NAME" or "module NAME"');
-  });
-  return m;
-}
+// The hardware test (bank 1 of the old system's paged ROM image) and a rom.txt's list: the base's
+const { hwtest, readManifest, HWTEST_IMAGE } = base;
 
 function build(opt = {}) {
   const say = opt.quiet ? () => {} : s => console.log(s);
-  const defines = [];
-  if (opt.clock) defines.push('CPU_CLOCK_MULT=' + opt.clock);
-  if (opt.acia) defines.push('ACIA_CHIP=' + (opt.acia === 'wdc' ? 1 : 0));
+  const defines = base.definesOf(opt);
 
+  // The base: the kernel (../base/bin/bios.bin), its BIOS ROM ours too
+  const baseBuilt = base.build(Object.assign({}, opt, { noReport: true }));
   apigen.generate(ROOT);
   mkdir(at('bin'));
-
-  // The kernel
-  const kobj = at('obj', 'kernel');
-  const kfiles = [...sources(at('kernel')), at('obj', 'gen', 'jumptable.s'), at('obj', 'gen', 'errtext.s')];
-  const objs = assemble(kfiles, kobj, [at('include'), at('obj', 'gen'), at('kernel')], defines);
-  run(LD65, ['-C', at('kernel', 'bios.cfg'), '-o', at('bin', 'bios.bin'), '-m', path.join(kobj, 'bios.map'), '-Ln', path.join(kobj, 'bios.lbl'),
-    '--dbgfile', path.join(kobj, 'bios.dbg'), ...objs]);
+  fs.copyFileSync(atBase('bin', 'bios.bin'), at('bin', 'bios.bin'));
 
   // The C library (the C programs need it), the modules, the test modules and the test RAM programs
   clib();
   const ram = (dir, objdir) => isC(dir) ? cprog(dir, path.join(objdir, path.basename(dir)), path.join(objdir, path.basename(dir) + '.hyx'))
     : buildModule(dir, objdir, defines, true);
   const modules = {}, tests = {}, progs = {}, programs = {}, samples = {};
+  mkdir(at('obj', 'modules'));                          // The base's modules (kdev, ser, wozmon) as HydraOS's too: in
+  for (const [n, data] of Object.entries(baseBuilt.modules)) {  //   obj/modules with its own, for the tools that read them there
+    modules[n] = data;
+    fs.writeFileSync(at('obj', 'modules', n + '.bin'), data);
+  }
   for (const d of fs.readdirSync(at('modules'), { withFileTypes: true }).filter(d => d.isDirectory()))
     modules[d.name] = buildModule(at('modules', d.name), at('obj', 'modules'), defines, false, modules);
   if (fs.existsSync(at('tests', 'mod')))
@@ -278,6 +249,7 @@ function build(opt = {}) {
   for (const d of fs.readdirSync(at('sdk', 'c', 'samples'), { withFileTypes: true }).filter(d => d.isDirectory()))
     samples['c/' + d.name] = ram(at('sdk', 'c', 'samples', d.name), at('obj', 'samples', 'c'));
   sdk();
+  const card = sdcard.build(ROOT);                          // The SD card's image (bin/sdcard.img): the samples, the songs, the benchmarks
   forthlib.build({ root: ROOT, modules, assemble: (files, od, inc) => assemble(files, od, inc, defines), ld65: args => run(LD65, args) });
 
   // hylang's snapshot (the module hysnap: its heap with its library loaded, taken in the emulator), then the paged ROM
@@ -296,13 +268,14 @@ function build(opt = {}) {
   for (let k = 0; k < chips; k++) fs.writeFileSync(at('bin', 'prom' + k + '.bin'), image.subarray(k * romimg.CHIP, (k + 1) * romimg.CHIP));
   fs.writeFileSync(at('obj', 'build.json'), JSON.stringify({ clock: opt.clock || 1, acia: opt.acia || 'rockwell' }) + '\n');
 
-  const report = budget.report(ROOT, { modules, tests, progs, programs, samples, entries });
+  const report = budget.report(base.ROOT, { modules, tests, progs, programs, samples, entries });
   say(report.text);
   if (disk) {
     const bytes = disk.files.reduce((n, f) => n + f.size, 0), used = disk.volume.length / 512, first = disk.start / 32;
     say('ROM disk: ' + disk.files.length + ' files, ' + bytes + ' bytes; its volume uses ' + used + ' of ' + disk.blocks + ' blocks (paged ROM banks ' +
       first + '-' + (first + disk.blocks / 32 - 1) + ', in socket order); every file read back as its source');
   }
+  say('SD card: ' + card.files.length + ' files, ' + card.bytes + ' bytes (the samples, the songs, the benchmarks): bin/sdcard.img, ' + card.size / 1048576 + ' MB');
   say('Paged ROM: ' + banks + ' banks of 256, ' + chips + ' chip' + (chips === 1 ? '' : 's') + ' of 512K: ' +
     [...Array(chips)].map((_, k) => 'bin/prom' + k + '.bin').join(', '));
   return { modules, tests, progs, programs, samples, manifest, report };

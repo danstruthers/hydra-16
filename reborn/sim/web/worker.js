@@ -19,7 +19,7 @@
 //   status { cyc, rate, clock } (twice a second: the cycle, and the cycles a second lately), card { slot, bytes },
 //   written { slot } (a card was written: its image has changed since it was last asked for), halted { why }.
 'use strict';
-const { createMachine } = require('../lib/machine.js');
+const { createMachine } = require('../../../base/sim/lib/machine.js');
 
 const CLOCK = 3.579545;
 const now = () => performance.now() / 1000;

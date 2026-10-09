@@ -1,6 +1,6 @@
 # The Hydra-16: hardware reference
 
-This is the Hydra-16 main board (V1) as its schematic describes it (`board/hydra-16.kicad_sch` and its sheets), with the two companion cards in `board/`, and the Vera X video card that goes in slot 0.  Reference designators (U25, J18, ...) are the schematic's.  How HydraOS uses the hardware is [the guide](hydra-16.md)'s and [the programmer's guide](programming/README.md)'s; the registers' names are `include/hw.inc`'s (made from this document).
+This is the Hydra-16 main board (V1) as its schematic describes it (`board/hydra-16.kicad_sch` and its sheets), with the two companion cards in `board/`, and the Vera X video card that goes in slot 0.  Reference designators (U25, J18, ...) are the schematic's.  How HydraOS uses the hardware is [the guide](hydra-16.md)'s and [the programmer's guide](programming/README.md)'s; the registers' names are `base/include/hw.inc`'s (made from this document).
 
 To test a board, run the hardware test: `hwtest` at the shell, or a `T` typed during POST.  It's the old system's, kept unchanged in paged ROM bank 1 ([its guide](../../old/docs/using/wozmon.md#the-hardware-test)), with the checksums of HydraOS's images.
 
@@ -167,8 +167,8 @@ Eight SST39SF040 (512K each, U30-U37) give 4 MB, seen as 256 banks of 16K.  The 
 | 6 | U35 | `$C0-$DF` |
 | 7 | U37 | `$E0-$FF` |
 
-* **The halves are swapped.** CPU A13 goes to the chips' A13 unchanged, but in the window `$A000-$BFFF` has A13 = 1 and `$C000-$DFFF` has A13 = 0.  So CPU `$A000` reads chip offset `$2000` of the bank, and `$C000` reads offset `$0000`.  HydraOS's build writes the chips' view (`tools/romimg.js`), a 512K image for each chip it fills: `bin/prom0.bin` for U31 (chip select 0), `prom1.bin` for U32, `prom2.bin` for U34, `prom3.bin` for U36; burn each whole, at offset 0.
-* **V1: bits 2 and 3, and 6 and 7, trade places.**  On the V1 board `ROMB2`/`ROMB3` and `ROMB6`/`ROMB7` are swapped on their way to the chips (as are the RAM bank bits; the schematic shows the board as built), so the bank the CPU selects as `b` is the chips' bank `swap(b)`.  Banks whose two bits match (`$00-$03`, `$0C-$0F`, ...) aren't affected.  The build writes the image in the chips' order (`tools/romimg.js`), and the emulator reads it that way (`sim/lib/machine.js`).
+* **The halves are swapped.** CPU A13 goes to the chips' A13 unchanged, but in the window `$A000-$BFFF` has A13 = 1 and `$C000-$DFFF` has A13 = 0.  So CPU `$A000` reads chip offset `$2000` of the bank, and `$C000` reads offset `$0000`.  HydraOS's build writes the chips' view (`base/tools/romimg.js`), a 512K image for each chip it fills: `bin/prom0.bin` for U31 (chip select 0), `prom1.bin` for U32, `prom2.bin` for U34, `prom3.bin` for U36; burn each whole, at offset 0.
+* **V1: bits 2 and 3, and 6 and 7, trade places.**  On the V1 board `ROMB2`/`ROMB3` and `ROMB6`/`ROMB7` are swapped on their way to the chips (as are the RAM bank bits; the schematic shows the board as built), so the bank the CPU selects as `b` is the chips' bank `swap(b)`.  Banks whose two bits match (`$00-$03`, `$0C-$0F`, ...) aren't affected.  The build writes the image in the chips' order (`base/tools/romimg.js`), and the emulator reads it that way (`base/sim/lib/machine.js`).
 * **`nBROMD`** (a slot pin, pulled up) disables the whole paged ROM when a card pulls it low, so the card can answer `$A000-$DFFF` itself.
 * The chips' ~OE is the inverted R/W; there's no write path in circuit (program the chips in a programmer).
 
@@ -183,7 +183,7 @@ An SST39SF0x0 in a 32-pin socket: the '010 (128K, 16 pages), '020 (256K, 32 page
 * It's selected for `$E000-$FEFF` and for `$FFFA-$FFFD` (the NMI and RESET vectors).  I/O space and the vector RAM take the rest of `$FF00-$FFFF`.
 * HydraOS's build makes `bin/bios.bin`, 128K: 16 pages, for the '010.
 
-**Changing `W` changes the code being run.**  The next instruction is fetched from the new page, at the same address.  The software handles this by keeping identical code at the same address on every page: the COMMON block at `$FD00` (the IRQ entry and exit, the kernel's far call), and the reset stub at `$E000` (`kernel/bios.cfg`; [the kernel's pages](conventions.md#the-kernels-pages)).  Because `W` isn't reset, **every page must start with the reset code**: the RESET vector on every page points to `$E000`, which sets `W` to 0.
+**Changing `W` changes the code being run.**  The next instruction is fetched from the new page, at the same address.  The software handles this by keeping identical code at the same address on every page: the COMMON block at `$FD00` (the IRQ entry and exit, the kernel's far call), and the reset stub at `$E000` (`base/kernel/bios.cfg`; [the kernel's pages](conventions.md#the-kernels-pages)).  Because `W` isn't reset, **every page must start with the reset code**: the RESET vector on every page points to `$E000`, which sets `W` to 0.
 
 ---
 
@@ -240,9 +240,9 @@ Sixteen active-low IRQ lines, `nIRQ0-nIRQ15`, each pulled up (RN2, RN3).  Line 0
   * otherwise it's `V0-V3`.
 * The index addresses the **vector RAM**, four 74LS219 (IC5-IC8), a 16-entry table of 16-bit vectors.  The CPU reads its IRQ/BRK vector from `$FFFE/$FFFF`, so it gets the entry for the active line, and each line has its own handler.
 
-**The index is the line number XOR 7.**  The '148s encode active-low inputs with the highest-priority input as 7, so line n gives index `n ^ 7`: line 0 is entry 7, line 7 entry 0, line 8 entry 15, line 15 entry 8.  `include/hw.inc`'s `IRQ_INDEX(line)` is `line ^ 7` for this reason.
+**The index is the line number XOR 7.**  The '148s encode active-low inputs with the highest-priority input as 7, so line n gives index `n ^ 7`: line 0 is entry 7, line 7 entry 0, line 8 entry 15, line 15 entry 8.  `base/include/hw.inc`'s `IRQ_INDEX(line)` is `line ^ 7` for this reason.
 
-**Writing vectors.**  A write to `$FFFE` / `$FFFF` stores the low / high byte of entry `q`.  That's `V0-V3` when no IRQ line is active.  So set `V` to the entry wanted, then write the vector, with no IRQ pending.  HydraOS's boot does this once, with interrupts off (`kernel/reset.s`): every line's entry is the kernel's one IRQ path.
+**Writing vectors.**  A write to `$FFFE` / `$FFFF` stores the low / high byte of entry `q`.  That's `V0-V3` when no IRQ line is active.  So set `V` to the entry wanted, then write the vector, with no IRQ pending.  HydraOS's boot does this once, with interrupts off (`base/kernel/reset.s`): every line's entry is the kernel's one IRQ path.
 
 **BRK.**  `BRK` also reads `$FFFE/$FFFF`.  With no IRQ line active, that's entry `V0-V3`.  HydraOS sets `V` to line 15's entry (`IRQ_INDEX(15)`: line 15 has no hardware) as it starts and leaves it, so a `BRK` comes to the kernel by that vector: a program's stray `BRK` is a note to it, and the debugger's breakpoints are `BRK`s.
 
@@ -509,7 +509,7 @@ its own: *The Commander X16 Programmer's Reference*, chapters 9 and 10.
 
 | | |
 | :-- | :-- |
-| **Registers** | The VERA's 32, at slot 0's ports 2 and 3, `$FF20-$FF3F` (the card answers either select): `VERA_*` in `include/hw.inc` |
+| **Registers** | The VERA's 32, at slot 0's ports 2 and 3, `$FF20-$FF3F` (the card answers either select): `VERA_*` in `base/include/hw.inc` |
 | **Interrupt** | Its `IRQ#` on slot 0's IRQ A, **line 2**: the highest priority after the VIA and the ACIA |
 | **Audio** | Its DAC's left and right into slot 0's audio pair (`SND_CL0`, `SND_CR0`), mixed with the YM2151's on the board |
 | **Reset** | `RESB` to its `RES#`: a reset reloads the FPGA from its flash, and it doesn't answer till that's done (`vid` looks for it for 0.3 s; the emulator takes 0.1 s) |
@@ -556,7 +556,7 @@ voices, and `/dev/vid/pcm` its PCM ([programming/video.md](programming/video.md)
   * In the bank registers (sheet `ZPMirrorRAM`), data bit 2 drives `RAMB3`, and bit 3 drives `RAMB2`: IC1 for the RAM bank, IC3 for the ROM bank.
   * So a bank ID's bits 2 and 3 trade places before they reach the hardware.  For example, shared bank IDs `$F4-$F7` are on U28 and `$F8-$FB` on U27, module 4 and module 8 trade places, and so do paged ROM banks `$04-$07` and `$08-$0B`.
   * IDs whose bits 2 and 3 are equal aren't affected, and the software never needs to care: an ID always reaches the same memory.  It matters when you map a bank ID to a chip, for example to act on a POST report.
-  * **Bits 6 and 7** are crossed too, on the V1 board as built (`RAMB6`/`RAMB7`, `ROMB6`/`ROMB7`).  HydraOS's build (`tools/romimg.js`) and the emulator (`sim/lib/machine.js`) assume both swaps for the paged ROM.
+  * **Bits 6 and 7** are crossed too, on the V1 board as built (`RAMB6`/`RAMB7`, `ROMB6`/`ROMB7`).  HydraOS's build (`base/tools/romimg.js`) and the emulator (`base/sim/lib/machine.js`) assume both swaps for the paged ROM.
 * **No wait states.**  RDY only has a pull-up, so slow devices can't stretch a bus cycle.  This is why the YM2151 can't be used above 3.58 MHz.  Board V2 is planned to have programmable RDY wait states (see [design/plans/IDEAS.md](design/plans/IDEAS.md)).
 * **Audio jack channels.**  J26 has the right channel on the tip and the left on the ring, per the schematic; the usual convention is the reverse, so left and right may come out swapped.
 * **ACIA clock.**  The ACIA runs from 1.790 MHz instead of 1.8432 MHz, so its baud rates are 2.9% slow (see [ACIA](#acia-65c51-u3-port-1-irq-line-1)).
@@ -587,7 +587,7 @@ voices, and `/dev/vid/pcm` its PCM ([programming/video.md](programming/video.md)
 
 ## In the emulator
 
-`sim/lib/machine.js` is this board, cycle by cycle, for `sim/run.js` and the tests: the W65C02S; `T`, `U`, `V` and
+`base/sim/lib/machine.js` is this board, cycle by cycle, for `sim/run.js` and the tests: the W65C02S; `T`, `U`, `V` and
 `W`, random at power-up as the latches are; each task's `$00`/`$01` and RAM; the RAM window's task banks (only the
 modules installed: `--modules N`, 2 by default, 3 as built; the rest float) and the shared banks; the paged ROM with its
 halves swapped and the V1 board's bank bits; the BIOS ROM's pages; the I/O ports and the system port; the interrupt

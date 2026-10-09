@@ -7,7 +7,7 @@
 ** task that wants the counter while another has it waits (using no CPU) till it's given back, and none are lost.
 ** Each task's adds are drawn as they go: this task draws, the others only count.
 **   race [TASKS [ADDS]]   (TASKS 1-5, 4 by default; ADDS 1-5000, 500 by default)
-**   % /rom/sample/c/race
+**   % /sd/0/sample/c/race
 */
 
 #include <stdio.h>
@@ -68,11 +68,11 @@ static const char* prog;                    /* This program's file, for the work
 static unsigned char seg, ready, go, tasks, row;
 static unsigned adds;
 
-/* This program's own file, to start its workers from (argv[0] is its name): /bin/NAME (bind -a /rom/sample/c /bin
-** puts the samples there), ./NAME, or /rom/sample/c/NAME */
+/* This program's own file, to start its workers from (argv[0] is its name): /bin/NAME (bind -a /sd/0/sample/c /bin
+** puts the samples there), ./NAME, or /sd/0/sample/c/NAME */
 static const char* self (const char* name)
 {
-    static const char* const dirs[] = { "/bin/", "./", "/rom/sample/c/" };
+    static const char* const dirs[] = { "/bin/", "./", "/sd/0/sample/c/" };
     static char path[48];
     struct stat st;
     unsigned char i;
@@ -202,7 +202,7 @@ int main (int argc, char* argv[])
         hy_exits ("usage");
     }
     if ((prog = self (argv[0])) == 0) {
-        fprintf (stderr, "race: can't find myself (/bin/%s, ./%s, /rom/sample/c/%s)\n", argv[0], argv[0], argv[0]);
+        fprintf (stderr, "race: can't find myself (/bin/%s, ./%s, /sd/0/sample/c/%s)\n", argv[0], argv[0], argv[0]);
         hy_exits ("no workers");
     }
     seg = hy_seg_create (1);

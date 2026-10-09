@@ -80,14 +80,15 @@
   <p>This is HydraOS on an emulated Hydra-16 (the V1 board, cycle by cycle), running in this page: nothing is sent anywhere.
   Click the terminal and type. HyForth is the login shell; <code>rc</code> starts the Plan 9 shell, <code>hylang</code>, <code>basic</code> and
   <code>edit</code> the others, and <code>ps</code> lists the tasks.</p>
-  <p>The multitasking demos: <code>bind -a /rom/sample/c /bin</code>, then <code>race</code>, <code>chorus</code>, <code>philo 4</code>
+  <p>The multitasking demos: <code>bind -a /sd/0/sample/c /bin</code>, then <code>race</code>, <code>chorus</code>, <code>philo 4</code>
   (<code>philo -d 4</code> to see a deadlock), <code>prodcons</code> and <code>round</code> (turn the Sound on first). Ctrl-C stops one.
   (With the Vera X, its driver has a task: five philosophers want one more than are free.)
   <code>ls /rom</code> shows what else is on the ROM disk.</p>
   <p>Keys: Ctrl+Shift+C copies the screen, Ctrl+Shift+V pastes; the browser keeps Ctrl+W, Ctrl+T and Ctrl+N. The mouse wheel
   scrolls back through the terminal's lines. With the Vera X and its keyboard on (Setup), click its screen to type there
   and use its mouse; click elsewhere to give them back.</p>
-  <p>SD cards (Setup): a new card is a blank HydraFS card, seen as <code>/sd/0</code> (the Vera X's as <code>/sd/v</code>). Cards are kept in
+  <p>SD cards (Setup): card 0 starts as HydraOS's SD card, the samples, songs and benchmarks (<code>ls /sd/0</code>; Samples puts it back); a new
+  card is a blank HydraFS card, seen as <code>/sd/0</code> (the Vera X's as <code>/sd/v</code>). Cards are kept in
   this browser, and Save card downloads one as an image file, which <code>sim/tools/hydrafs.js</code> reads and a disk imager can write.</p>
   <p id="build"></p>
 </details>
@@ -104,7 +105,7 @@
     <label>A new card (New): a blank HydraFS card of <select id="o-cardmb"><option>4</option><option>16</option><option selected>32</option>
       <option>64</option><option>128</option></select> MB</label>
     <div class="card" data-slot="sd0"><span class="what"></span>
-      <button type="button" data-act="new">New</button><button type="button" data-act="load">Load…</button>
+      <button type="button" data-act="new">New</button><button type="button" data-act="samples">Samples</button><button type="button" data-act="load">Load…</button>
       <button type="button" data-act="save">Save card</button><button type="button" data-act="remove">Remove</button></div>
     <div class="card" data-slot="verasd"><span class="what"></span>
       <button type="button" data-act="new">New</button><button type="button" data-act="load">Load…</button>

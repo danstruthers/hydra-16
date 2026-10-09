@@ -5,7 +5,7 @@
 ** segments, isatty, the window's chrome (hy_wlabel, hy_wstatus, hy_wctl), windows made (hy_wnew).
 ** Each check prints "ok - " or "not ok - " and its name; the last line is "ctest: N failed", and its exit status
 ** is the count.  Run it as ctest a 'b c', in a directory it can write in (/ram), with the C samples in
-** /rom/sample/c.
+** /sd/0/sample/c.
 */
 
 #include <stdio.h>
@@ -20,7 +20,7 @@
 #include <sys/stat.h>
 #include <hydra.h>
 
-#define CODE    "/rom/sample/c/code"
+#define CODE    "/sd/0/sample/c/code"
 
 static int failed;
 static volatile unsigned char got;
@@ -178,10 +178,10 @@ int main (int argc, char* argv[])
     getcwd (cwd, sizeof cwd);
     strcat (cwd, "/ctu");
     check (mkdir ("ctu", 0) == 0, "(a mount point)");
-    check (hy_bind ("/rom/sample/c", cwd, HY_MREPL) == 0 && stat ("ctu/code", &st) == 0, "hy_bind");
-    check (hy_bind ("/rom/sample", cwd, HY_MAFTER) == 0 && stat ("ctu/hi", &st) == 0 && stat ("ctu/code", &st) == 0,
+    check (hy_bind ("/sd/0/sample/c", cwd, HY_MREPL) == 0 && stat ("ctu/code", &st) == 0, "hy_bind");
+    check (hy_bind ("/sd/0/sample", cwd, HY_MAFTER) == 0 && stat ("ctu/hi", &st) == 0 && stat ("ctu/code", &st) == 0,
            "hy_bind: a union");
-    check (hy_unmount ("/rom/sample", cwd) == 0 && stat ("ctu/hi", &st) != 0 && stat ("ctu/code", &st) == 0,
+    check (hy_unmount ("/sd/0/sample", cwd) == 0 && stat ("ctu/hi", &st) != 0 && stat ("ctu/code", &st) == 0,
            "hy_unmount: a member");
     check (hy_unmount (0, cwd) == 0 && stat ("ctu/code", &st) != 0, "hy_unmount: all of it");
     fd = -1;

@@ -8,12 +8,12 @@ the rules as built.
 ## Calling the system
 
 * A program calls the system with `jsr` to the call's slot in the jump table (`$F800` up, on BIOS ROM page 0),
-  by name from `hydra.inc`.  The slots come from `spec/api.def` and never move: a call is only ever added to the
+  by name from `hydra.inc`.  The slots come from `base/spec/api.def` and never move: a call is only ever added to the
   end of its group, and a withdrawn call keeps its slot and answers `E_NOSYS`.
 * Arguments and results: `.A`, `.X`, `.Y` and the call registers `r0`-`r15` (`$02`-`$21`).  A 16-bit value is
   `.A` (low) and `.X` (high), or a call register.
 * **C = 0 is success; C = 1 is failure, with the error code in `.A`.  Always**, for every call, with the codes of
-  `spec/errors.def` (each with its text, and the C library's `errno` for it).
+  `base/spec/errors.def` (each with its text, and the C library's `errno` for it).
 * A call may change `.A`, `.X`, `.Y`, `r0`-`r15` and the flags; it never touches `$22`-`$7F`.
 * Everything outside the kernel runs with `W = 0` (BIOS ROM page 0 at `$E000`).
 * Never edit what's made from `spec/` (`obj/gen/*`, `obj/sdk/hydra.inc`, `obj/sdk/c/hydracalls.h` and
@@ -35,7 +35,7 @@ Every task has its own `$0000`-`$7FFF` (the `T` register selects it) and its own
 
 The kernel task (task 0) keeps the kernel's state: its program zero page (`K0_*`), its RAM from `$0400` (`K_*`
 tables), and its own RAM banks: each task's environment is one of them (8K, the first good RAM module's banks, task t's
-bank t).  Every fixed address is in `include/layout.inc`, and nowhere else.
+bank t).  Every fixed address is in `base/include/layout.inc`, and nowhere else.
 
 ## Tasks
 
@@ -52,14 +52,14 @@ bank t).  Every fixed address is in `include/layout.inc`, and nowhere else.
 * **Programs** take the lowest free task (init is task 1); **drivers** the highest (task F first).
 * A task's **exit record** (its code and message) waits for its parent's `WAIT`, and the task isn't used again
   till then; a parent that ends first leaves its children and their records to init.
-* **Semaphores** (`SEM_*`, `kernel/sem.s`) are the kernel task's, every task's by number: a wait is the task's bit
+* **Semaphores** (`SEM_*`, `base/kernel/sem.s`) are the kernel task's, every task's by number: a wait is the task's bit
   among a semaphore's waiters and `PAUSE`, and a release wakes them all to look again.  A task's end frees the ones
   it made and gives back the mutexes it holds, as it detaches its shared segments.
 
 ## Reaching other tasks
 
 * **Quick looks**: a moment in another task's memory with `T` switched, IRQs off and no stack use (the stack page
-  changes with `T`), then `T` back (`QL_GET`, `QL_PUT`, `K0_GET`, `K0_PUT` in `kernel/kdefs.inc`).  `T` is
+  changes with `T`), then `T` back (`QL_GET`, `QL_PUT`, `K0_GET`, `K0_PUT` in `base/kernel/kdefs.inc`).  `T` is
   written only by quick looks, the IRQ path, the scheduler, SCALL and kcopy.
 * **SCALL** runs a task's serve entry in that task (its zero page, stack and banks); **KCALL** runs a kernel
   routine (on any page) in the kernel task, the routine named in the caller's own zero page.  A task serves one
@@ -77,7 +77,7 @@ bank t).  Every fixed address is in `include/layout.inc`, and nowhere else.
   calls that wait); page 1 the kernel task's side of the task calls (the KCALLs, setting a task up, the boot),
   memory, TASKINFO; page 2 files; page 3 namespaces; page 4 POST.  Page 0 is the scarce one.
 * The kernel calls a routine on another page with `FARCALL` (the COMMON block's `K_FAR`: `.A`, `.X`, `.Y` and C
-  both ways).  A system call on another page is marked `far` in `spec/api.def`: its jump table slot goes to a
+  both ways).  A system call on another page is marked `far` in `base/spec/api.def`: its jump table slot goes to a
   6-byte stub on page 0.
 * A system call that waits ends through `K_NOTE_CHECK` (or `K_NOTE_RETURN` with `E_INTR`), at the program's
   return address, so a note that came is taken on the way out.  A far call's stub ends through `K_NOTE_CHECK`
@@ -120,7 +120,7 @@ bank t).  Every fixed address is in `include/layout.inc`, and nowhere else.
   one after the last); returning is `EXITS` with code 0.
   `HYX2_DRIVER "name", init, serve, irq, stop, flags`: `init` (C = 1 and `.A` = an error ends it), then `serve`
   for its calls (`.Y` = the caller) and `irq` for its lines; `HF_BOOT` starts it at boot.
-* The module directory (paged ROM bank 0 at `$A200`, written by `tools/romimg.js`) lists each module's bank, type,
+* The module directory (paged ROM bank 0 at `$A200`, written by `base/tools/romimg.js`) lists each module's bank, type,
   flags and name, 127 modules at most; `#m/NAME` reads as a module's image, and `#m/bin` lists the programs (bound
   at `/bin`).  A module's data is copied and its BSS cleared by its own task as it starts (`K_TASK_DATA`).
 * `SPAWN` takes a path, through the caller's namespace (`/bin/NAME`, `#m/NAME`), and reads the file's HYX2
@@ -139,7 +139,7 @@ bank t).  Every fixed address is in `include/layout.inc`, and nowhere else.
   `sdk/asm/hyx2.cfg`: its header, code, read-only data and data one image from `$0800`, its BSS after them.  The
   test RAM programs are `tests/ram/NAME/`, built into `obj/tests/NAME.hyx`; the ROM disk's programs (`/rom/bin`,
   listed in `romfs/romfs.txt`) are `programs/NAME/`, built into `obj/programs/NAME.hyx`; the SDK's samples are
-  `sdk/asm/samples/NAME/` (`/rom/sample`); and a program of one's own, anywhere, `node build.js prog DIR`
+  `sdk/asm/samples/NAME/` (on the SD card: `/sd/0/sample`); and a program of one's own, anywhere, `node build.js prog DIR`
   (`sdk/asm/README.md`).
 * A script is a file that starts with `#!` and its interpreter's path (Plan 9's: `#!/bin/rc`): rc runs that
   program with the script's path and arguments when the file isn't a program (`/rom/bin/scom`).
@@ -152,7 +152,7 @@ bank t).  Every fixed address is in `include/layout.inc`, and nowhere else.
   is the core's, headerless, and the library's header is a `jmp` to it.  A library is for the core it was built
   with (its id); the build makes both together.  New words go in a library unless the core can't work without them.
 * A C program is a folder of `.c` files (and `.s` files, if it has any) in the same places (`sdk/c/samples/NAME/`
-  for `/rom/sample/c`), compiled by cc65 for its target `none` and linked by `sdk/c/hydra.cfg` with the C library,
+  for `/sd/0/sample/c`), compiled by cc65 for its target `none` and linked by `sdk/c/hydra.cfg` with the C library,
   `obj/sdk/c/hydra.lib`: cc65's `none.lib` with `sdk/c/lib`'s modules in place of cc65's, each named as the module
   it replaces (a cc65 module whose functions the library has under another name is dropped: `build.js`'s
   `CC65_DROPPED`).  cc65's runtime has the zero page from `$22` (26 bytes).  A library routine that C calls may
@@ -260,7 +260,7 @@ bank t).  Every fixed address is in `include/layout.inc`, and nowhere else.
 * A name is made whole and clean before it's looked up: a relative one after the current directory (`TA_CWD`),
   then `.`, `..` and empty elements gone.  A `#x` name is device `x`'s own, in no namespace; what follows the
   letter, up to the `/`, is its spec, as in Plan 9 (`#c2/cons`: the console's window 2).
-* A namespace is a table of mount entries in the kernel task (`kernel/ns.s`); tasks share one till one of them
+* A namespace is a table of mount entries in the kernel task (`base/kernel/ns.s`); tasks share one till one of them
   changes it, which copies it first.  An entry is one member of the union at a mount point: a device, a spec and
   a path in that device.  Binds are resolved when they're made, as in Plan 9: binding a mount point binds all its
   members; anything else binds the first of its candidates that's there.
@@ -283,7 +283,7 @@ bank t).  Every fixed address is in `include/layout.inc`, and nowhere else.
   comment saying what it does, its `IN:`, `OUT:` and what it changes.  Comments are sentences.
 * `; ---- ` marks the steps of a long routine, and a switch of `T` (`; ---- The new task`, `; ---- Back`).
 * A macro defines no labels but unnamed ones (`:`), so the cheap locals of the routine using it keep their scope;
-  a test's strings follow its `jsr` (`tests/mod/testlib.inc`).
+  a test's strings follow its `jsr` (`base/tests/mod/testlib.inc`).
 * Names: `UPPER_SNAKE` for constants, calls and kernel routines; a call `NAME` is implemented by `K_NAME`, and
   its kernel-task half (a KCALL) by `K_NAME_K`; cheap locals (`@name`) inside a routine.  Prefixes: `TK_` (OS
   zero page), `TA_` (OS area), `K_` (kernel task's tables, or call scratch), `K0_` (kernel task's zero page),

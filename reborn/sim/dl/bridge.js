@@ -13,7 +13,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawn, spawnSync } = require('child_process');
-const { createVera } = require('../lib/vera.js');
+const { createVera } = require('../../../base/sim/lib/vera.js');
 
 const ROOT = path.join(__dirname, '..', '..');
 const HYDRA_DL = process.env.HYDRA_DL || path.join(__dirname, 'hydra.dl');

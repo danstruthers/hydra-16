@@ -249,5 +249,5 @@ BOOT_DONE:                                                  ; (The tests' IRQs-o
 .segment "KRODATA"
 K_STR_KERNEL:   .byte   "kernel", 0
 K_STR_KERNEL_END:
-K_STR_BANNER:   .byte   CR, LF, "HydraOS 1.0 for the Hydra-16: kernel 0.1, ABI 1", 0
+K_STR_BANNER:   .byte   CR, LF, "Hydra-16: kernel 0.1, ABI 1", 0
 K_STR_MODULES:  .byte   "RAM modules: ", 0

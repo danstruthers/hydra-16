@@ -11,7 +11,7 @@
 //      start; R_CREATE of a file that's there empties it, and with DM_DIR makes a directory; R_REMOVE takes a file
 //      or an empty directory; R_WSTAT renames in the directory (a name whose first byte isn't 0), sets a file's
 //      length ($FFFFFFFF keeps it) and the mode (no w bits: read-only; $FFFF keeps it); R_DUP is the same fid again; the errors are reborn's
-//      (reborn/spec/errors.def).
+//      (base/spec/errors.def).
 // Nothing outside the folder is reached: a name's elements may not be "." or "..", or hold a '\' or a ':'.
 //
 // createPcFs({ root, readOnly, log }) gives { request(tag, payload) -> reply payload, attach(payload) -> reply
@@ -34,7 +34,7 @@ const ERR2 = { NOT_FOUND: 0x20, BAD_FD: 0x25, MODE: 0x23, NO_FDS: 0x27, NAME: 0x
   TOO_LONG: 0x0A };
 const STAT_SIZE = 48, NAME_MAX = 31, DISK_PC = 11;           // (The stat record's disk byte: /pc's)
 const EPOCH_2000 = 946684800;
-// Version 2's requests and their fields (reborn/spec/api.def)
+// Version 2's requests and their fields (base/spec/api.def)
 const R_OPEN = 1, R_CREATE = 2, R_READ = 3, R_WRITE = 4, R_CLUNK = 5, R_STAT = 6, R_WSTAT = 7, R_REMOVE = 8, R_DUP = 10;
 const O_RW_MASK = 3, O_READ = 0, O_TRUNC = 0x10;
 const SR_SIZE = 64, QT_DIR = 0x80, DM_DIR = 0x80, DEV_PC = 0x50;  // (The stat record's device letter: P)

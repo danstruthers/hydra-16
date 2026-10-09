@@ -150,7 +150,7 @@ offset (`main+14`); a count is decimal.
 | `q` | Quit: a program `db` started is killed; a task it stopped runs on |
 
 ```
-/> db /rom/sample/hi Ann Bob
+/> db /sd/0/sample/hi Ann Bob
 task 4
 PC=0830 A=30 X=FF Y=48 S=FD P=nv--dizc W=0 U=0 RAM=00 ROM=00
 0830  A5 02     lda $02
@@ -227,7 +227,7 @@ once they're mended.  `hi.s`, with `hydra.inc` (some 47K of source), takes about
 `toollib.s` too (83K), about 9.
 
 ```
-/> as -l /lib/as/hi.s /ram/hi
+/> as -l /sd/0/sample/as/hi.s /ram/hi
 /> /ram/hi Ann
 Hello, Ann!
 I'm task 4, in /, in window 0.
@@ -256,8 +256,8 @@ with `-o addr` raw bytes from addr (as `as -b` makes them).
   RAM banks whole); `-w`, the SDK's sources' columns.
 
 ```
-/> dis /rom/sample/tick
-; /rom/sample/tick, as dis read it: as assembles this to its bytes again
+/> dis /sd/0/sample/tick
+; /sd/0/sample/tick, as dis read it: as assembles this to its bytes again
 .include "hydra.inc"
 
 .include "hyx2.inc"
@@ -387,7 +387,7 @@ N as the instrument.  The PSG's channels (I-X, with a Vera X) take the same note
 `noise`, or 0-3; a pulse's width 0-63, 63 a square) and `env A D S R`: A ticks rising from silence to the note's
 volume, D falling by S (the PSG's 0.5 dB steps, 0-63) to what it holds till its key off, then R falling to silence
 (all 0, none: a note on, then off).  `I N` there is waveform N, `y` the PSG's registers (0-63), and `v` the next
-note's volume; `x`, `M`, `L` and `N` are the YM2151's alone.  `/rom/songs/vera.mml` uses both chips.  A score is
+note's volume; `x`, `M`, `L` and `N` are the YM2151's alone.  `/sd/0/songs/vera.mml` uses both chips.  A score is
 read whole into memory (some 17K at most); a mistake in it is said with its channel (`play: x.mml: channel 2: no
 such drum`).  A line (`-m`) or a chord (`-c`) is the same language, and `t N`
 sets its tempo, before its first note; on a PSG channel (`play -m 8 c d e`) a line plays the channel's own waveform,

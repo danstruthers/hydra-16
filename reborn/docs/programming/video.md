@@ -96,7 +96,7 @@ hylang's keeps its place in rationals, so it never drifts.  The palette's entrie
 then `tgi_init ()`: 320 x 240 in 256 colours (TGI's colour n the palette's entry its palette gives), lines, bars,
 circles, ellipses and arcs, text in the console's font (or TGI's vector fonts), `tgi_getpixel`.  The driver is
 `sdk/c/lib/tgihydra.s`, over `/dev/vid/draw`.  The samples: `shapes` (TGI) and `sketch` (`vera.h` and the
-mouse: `/rom/sample/c/sketch`).
+mouse: `/sd/0/sample/c/sketch`).
 
 A game paces itself by `frame`: a read waits for the next VSYNC.  In C, `fread` a line from it; in HyForth,
 `read-line`.
@@ -232,18 +232,18 @@ raster effects polls `VERA_ISR` or `SCANLINE`, or waits on `frame`; one that use
 (it's on as the claim starts).  As on the X16, keep interrupt code on data port 1 and a program's on port 0, and never
 leave CTRL's DCSEL other than 0 long.
 
-**The registers** are `include/hw.inc`'s, the X16's names at the Hydra's base: `VERA_BASE` `$FF20`, `VERA_ADDR_L`,
+**The registers** are `base/include/hw.inc`'s, the X16's names at the Hydra's base: `VERA_BASE` `$FF20`, `VERA_ADDR_L`,
 `VERA_ADDR_M`, `VERA_ADDR_H`, `VERA_DATA0`, `VERA_DATA1`, `VERA_CTRL`, `VERA_IEN`, `VERA_ISR`, `VERA_IRQ_LINE_L`,
 `VERA_DC_VIDEO` ... `VERA_SPI_CTRL`, and `VERA_PSG_BASE`, `VERA_PALETTE_BASE`, `VERA_SPRITES_BASE`.  X16 code ports
 with the base changed.
 
 ## In the emulator
 
-`node sim/run.js --vera` puts a Vera X in slot 0 (`sim/lib/vera.js`: the registers, VRAM, the layers, sprites and
+`node sim/run.js --vera` puts a Vera X in slot 0 (`base/sim/lib/vera.js`: the registers, VRAM, the layers, sprites and
 their collisions, the scan's timing and interrupts, the PCM FIFO, the PSG's registers; not FX).  `--screen` prints
 the text layer after the report, `--frame-png FILE` saves the screen, and with `-i`, `--view` shows it live in a
 browser (http://localhost:8016) while the terminal stays the serial console; Ctrl-A v prints it, Ctrl-A p saves it.
-Its sound, the PSG's and the PCM's, is made with the YM2151's (`sim/lib/audio.js`) when it's asked for: `-i
+Its sound, the PSG's and the PCM's, is made with the YM2151's (`base/sim/lib/audio.js`) when it's asked for: `-i
 --sound` plays it in the browser (the same page as `--view`'s, its Sound button) and `--wav FILE` keeps it.  Tests
 set `machine: { vera: true }`; `m.vera.text()` is the screen's text, `m.vera.psg` the PSG's registers and
 `m.vera.psgOns` its voices' starts; with `vera: { pcmLog: true }`, `m.vera.pcmLog` is the bytes the FIFO took, and

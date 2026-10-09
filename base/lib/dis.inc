@@ -1,9 +1,20 @@
 ; ****************************************************************************
-; dis.inc - the asm library's disassembler (spec/asm.def's DIS): an instruction as as writes it, from w65c02.inc's
-; table.  Lower case; an operand's address in hex ($nn on the zero page, $nnnn else) or the name the caller gives
-; for it; a: before an absolute address under $100 where the name has a zero page form (as would take that); an
-; opcode the W65C02S doesn't define, its bytes as .byte.  So a line's text, assembled, is its bytes again.  Its
-; scratch is the call registers (r5-r9), so it needs no RAM of its own.
+; dis.inc - the disassembler, the base's monitor's (modules/wozmon) and HydraOS's asm library's (spec/asm.def's
+; DIS): an instruction as as writes it, from w65c02.inc's table.  Lower case; an operand's address in hex ($nn on the
+; zero page, $nnnn else) or the name the caller gives for it; a: before an absolute address under $100 where the name
+; has a zero page form (as would take that); an opcode the W65C02S doesn't define, its bytes as .byte.  So a line's
+; text, assembled, is its bytes again.  Its scratch is the call registers (r5-r9), so it needs no RAM of its own.
+
+; Its flags and kinds (spec/asm.def's, HydraOS's: its asmlib.inc defines them first; the base's monitor, without it,
+; these)
+.ifndef DF_PAD
+DF_PAD          = $01          ; Its name padded to 12 columns, else one space
+DK_ADDR         = $01          ; Kinds: its operand is an address (r4) ...
+DK_GO           = $02          ;   it goes there (a jump, jsr, a branch) ...
+DK_CALL         = $04          ;   a jsr ...
+DK_END          = $08          ;   nothing after it is reached by going on from it ...
+DK_UNDEF        = $10          ;   an opcode the W65C02S doesn't define
+.endif
 
 d_flags         = r5            ; The flags (DF_)
 d_op            = r5 + 1        ; The opcode ...

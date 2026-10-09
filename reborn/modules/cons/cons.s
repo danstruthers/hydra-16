@@ -132,6 +132,7 @@
 .include "macros.inc"
 .include "srvlib.inc"
 .include "cons.inc"
+.include "serial.inc"                                       ; (The serial port's layer: the base's, ser's too)
 
             HYX2_DRIVER "cons", init, srv_serve, irq, 0, HF_BOOT, 3
 
@@ -159,7 +160,6 @@ CTRL_BSL        = $1C           ; (Ctrl-\)
 CTRL_RB         = $1D           ; (Ctrl-]: the windows' key, as it starts: key prefix's)
 SNARF_MAX       = 8192          ; /snarf's bytes, at most: its bank's
 LS_ROW          = 3             ; The list's first window's row
-RATE_BOOT       = 5             ; 9600: the kernel's bring-up console's
 ENT_CONSCTL     = 2             ; srv_tree's consctl (its fids counted)
 PC_MARK         = $1E           ; /pc's frames: one starts (from the PC, PC_MARK then PC_ESC is a typed $1E, Ctrl-^)
 PC_ESC          = $1F           ;   the next byte ^ $20 is the byte
@@ -543,14 +543,7 @@ init:
             lda         #LINE_VIA_T2
             jsr         IRQ_OWN
             bcs         @done
-            ldx         #RATE_BOOT                          ; (The ACIA is at it already: the kernel set it)
-            jsr         rate_t2
-            sei
-            lda         #ACIA_CMD_DTR | ACIA_CMD_TX_ON      ; Its receive interrupt on (its transmit one stays off)
-            sta         ACIA_CMD
-            lda         ACIA_STATUS
-            lda         ACIA_DATA
-            cli
+            SER_ON                                          ; (serial.inc's: 9600, the ACIA's receive interrupt on)
             ldx         #0                                  ; The terminal asked its size: ESC [ 18 t (its answer,
 :                                                           ;   or the PC tool's, sets the serial port's)
             lda         s_ask,X
@@ -662,28 +655,10 @@ irq:
             bra         @put
 
 ; Timer 2 ran out: the next byte (a character's time since the last went), or nothing more to send (and /pc's reply
-; awaited: its wait, PC_NAP rounds of about 65,000 cycles, the rounds a slow rate's are)
-t2_next:
-            dec         t2_left                             ; (A slow rate, or /pc's wait: another round)
-            bne         @round
-            ldy         tx_tail
-            cpy         tx_head
-            beq         @idle
-            lda         tx_buf,Y
-            sta         ACIA_DATA
-            iny
-            sty         tx_tail
-            lda         t2_rounds
-            sta         t2_left
-@round:
-            lda         t2_lo
-            sta         VIA_T2CL
-            lda         t2_hi
-            sta         VIA_T2CH                            ; (It starts, and its interrupt's cleared)
-            lda         #0
-            rts
+; awaited: its wait, PC_NAP rounds of about 65,000 cycles, the rounds a slow rate's are): serial.inc's, then here
+            SER_T2_NEXT
 
-@idle:
+t2_idle:
             stz         tx_busy
             inc         TASK_EVENT                          ; (The writers waiting for room look again; /pc's
             lda         #PC_NAP                             ;   client looks at the time, and an Escape's reader)
@@ -710,47 +685,8 @@ t2_next:
 ; ****************************************************************************
 ; The send and receive rings
 
-; Timer 2 started, if nothing's going and there's something to send: it sends the first byte a character's time
-; from now, and the rest after it.  (Not at once: the kernel's bring-up console may have sent a byte just now; and
-; the status register isn't for reading here, which would lose a receive interrupt.)  Modifies .A, .Y
-tx_start:
-            php
-            sei
-            lda         tx_busy
-            bne         @done
-            ldy         tx_tail
-            cpy         tx_head
-            beq         @done
-            inc         tx_busy
-            stz         t2_nap
-            ldy         rate                                ; (A character's time: /pc's wait may have had timer 2)
-            lda         rate_hi,Y
-            sta         t2_hi
-            lda         t2_rounds
-            sta         t2_left
-            lda         t2_lo
-            sta         VIA_T2CL
-            lda         t2_hi
-            sta         VIA_T2CH
-@done:
-            plp
-            rts
-
-; .A into the send ring (the caller has made sure of the room).  Keeps .A, .X
-tx_put:
-            ldy         tx_head
-            sta         tx_buf,Y
-            iny
-            sty         tx_head
-            rts
-
-; .A = the room in the send ring
-tx_free:
-            sec
-            lda         tx_tail
-            sbc         tx_head
-            dec         a
-            rts
+; Timer 2 started, if nothing's going and there's something to send; .A into the send ring; its room (serial.inc's)
+            SER_TX
 
 ; The receive ring emptied, on its first page (the keys' ring; /ser's goes on from it to the others).  Modifies .A
 rx_reset:
@@ -763,20 +699,9 @@ rx_reset:
             plp
             rts
 
-; A byte from the receive ring (the keys': its first page; not while the line is /ser's).  OUT: C = 0, .A = it; or
-; C = 1: none.  Modifies .Y
-rx_get:
-            ldy         rx_tail
-            cpy         rx_head
-            beq         @none
-            lda         rx_buf,Y
-            inc         rx_tail
-            clc
-            rts
-
-@none:
-            sec
-            rts
+; A byte from the receive ring (the keys': its first page; not while the line is /ser's: serial.inc's).  OUT: C = 0,
+; .A = it; or C = 1: none.  Modifies .Y
+            SER_RX_GET
 
 ; ****************************************************************************
 ; The windows
@@ -7407,20 +7332,7 @@ c_rate:                                                     ; Rate .X, once noth
             beq         :+
             jmp         again
 :
-            stx         rate
-            lda         #ACIA_CTRL_BRG | ACIA_CTRL_8N1
-            ora         rate_code,X
-            sta         ACIA_CTRL
-rate_t2:                                                    ; Timer 2 for rate .X's characters
-            stx         rate
-            lda         rate_lo,X
-            sta         t2_lo
-            lda         rate_hi,X
-            sta         t2_hi
-            lda         rate_rounds,X
-            sta         t2_rounds
-            clc
-            rts
+            SER_RATE_SET                                    ; (serial.inc's: the ACIA, and rate_t2)
 
 ; serctl's state: "bN"
 gen_serctl:
@@ -8064,36 +7976,10 @@ edit_vec:   .word       ed_cr, ed_lf, ed_eof, ed_bs, ed_bs, ed_del, ed_left, ed_
 s_bell:     .byte       "#a/bell", 0
 
 ; ****************************************************************************
-; The rates: the ACIA's code, and timer 2 for a character (10 bits, and the idle bits after it: 2 at 115200 on
-; the Rockwell, 1 otherwise), in rounds of at most 65000 cycles.  A bit is 32 cycles at 115200 (the CPU's clock
-; is the ACIA's * 2, times CPU_CLOCK_MULT).  RATE i, div, gap: T2C_i the cycles, T2R_i the rounds, T2P_i a round's
-; count (less the 2 the timer adds).  (Symbols, not .define functions: ca65 loses nested ones' values)
-.macro RATE i, div, gap
-            .ident(.sprintf("T2C_%d", i)) = (10 + (gap)) * 32 * (div) * CPU_CLOCK_MULT
-            .ident(.sprintf("T2R_%d", i)) = (.ident(.sprintf("T2C_%d", i)) + 64999) / 65000
-            .ident(.sprintf("T2P_%d", i)) = .ident(.sprintf("T2C_%d", i)) / .ident(.sprintf("T2R_%d", i)) - 2
-.endmacro
-GAP         = 1
-.if ACIA_CHIP = ACIA_WDC
-GAP_FAST    = 1
-.else
-GAP_FAST    = 2
-.endif
-            RATE        0, 384, GAP                         ; 300
-            RATE        1, 192, GAP                         ; 600
-            RATE        2, 96, GAP                          ; 1200
-            RATE        3, 48, GAP                          ; 2400
-            RATE        4, 24, GAP                          ; 4800
-            RATE        5, 12, GAP                          ; 9600
-            RATE        6, 6, GAP                           ; 19200
-            RATE        7, 1, GAP_FAST                      ; 115200
-rate_code:  .byte       $06, $07, $08, $0A, $0C, ACIA_RATE_9600, ACIA_RATE_19200, ACIA_RATE_115200
-rate_lo:    .byte       <T2P_0, <T2P_1, <T2P_2, <T2P_3, <T2P_4, <T2P_5, <T2P_6, <T2P_7
-rate_hi:    .byte       >T2P_0, >T2P_1, >T2P_2, >T2P_3, >T2P_4, >T2P_5, >T2P_6, >T2P_7
-rate_rounds: .byte      T2R_0, T2R_1, T2R_2, T2R_3, T2R_4, T2R_5, T2R_6, T2R_7
+; The rates (serial.inc's), and their names (serctl's)
+            SER_RATES
 rate_name_lo: .byte     <s_300, <s_600, <s_1200, <s_2400, <s_4800, <s_9600, <s_19200, <s_115200
 rate_name_hi: .byte     >s_300, >s_600, >s_1200, >s_2400, >s_4800, >s_9600, >s_19200, >s_115200
-.assert     ACIA_RATE_9600 = $0E .and ACIA_RATE_19200 = $0F, error, "The rates' codes"
 
 ; ****************************************************************************
 ; The devices

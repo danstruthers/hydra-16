@@ -45,7 +45,7 @@ function profile(o) {
   const romimg = require(path.join(tree, 'tools', 'romimg.js'));
   const romfs = require(path.join(tree, 'tools', 'romfs.js'));
   const { readManifest, hwtest } = require(path.join(tree, 'build.js'));
-  const { romBank } = require(path.join(tree, 'sim', 'lib', 'machine.js'));
+  const { romBank } = require(path.join(tree, '..', 'base', 'sim', 'lib', 'machine.js'));
 
   // The image: the system's modules and t_rc as init (the tests' image), each module's banks noted
   const bin = (d, n) => fs.readFileSync(path.join(tree, 'obj', d, n + '.bin'));
@@ -68,7 +68,7 @@ function profile(o) {
     const srcs = fs.readdirSync(md).filter(f => /\.(s|inc)$/.test(f)).map(f => fs.readFileSync(path.join(md, f), 'latin1'));
     const banks = Math.max(1, ...srcs.map(s => Math.max(0, ...[...s.matchAll(/\.segment\s+"CODE([2-8])"/gi)].map(m => +m[1]))));
     const own = path.join(md, name + '.cfg');
-    const cfg = fs.existsSync(own) ? own : path.join(tree, 'modules', banks > 1 ? 'module' + banks + '.cfg' : 'module.cfg');
+    const cfg = fs.existsSync(own) ? own : path.join(tree, '..', 'base', 'modules', banks > 1 ? 'module' + banks + '.cfg' : 'module.cfg');
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'nprof'));
     let t;
     try {
