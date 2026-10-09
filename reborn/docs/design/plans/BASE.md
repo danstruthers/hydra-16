@@ -21,6 +21,7 @@ base.
 11. [Risks](#risks)
 12. [Questions](#questions)
 13. [Answers](#answers-the-users-9-october-2026)
+14. [As built](#as-built)
 
 ---
 
@@ -240,3 +241,37 @@ question 4): nobody merges across the renames.
 3. **The monitor**: Woz's commands and the disassembler (`L`, on HydraOS's own `dis.inc` and `w65c02.inc`, which
    move to `base/lib/asm`).  No hex loads, no other task's memory.
 4. **When**: the other sessions' outstanding merges first, then the move.
+
+### **As built**
+
+Steps 1-8 (branch `reborn-base`):
+
+1. **The banner** (9bf1bd6): the kernel's is `Hydra-16: kernel 0.1, ABI 1`; HydraOS's init says `HydraOS 1.0 for the Hydra-16`.
+2. **The move** (a00c428): `git mv` of the kernel, `include/`, `spec/api.def` and `errors.def`, the SDK's core, the
+   modules' links and `check.js`, `budget.js`, `romimg.js`; `apigen.js` split (the base's: the jump table, the
+   errors, `hydra.inc`, `api.json`; HydraOS's: the languages' bindings, the reference, the libraries');
+   `romimg.js` takes the ROM disk's builder as `romfsLib` (HydraOS's `tools/romimg.js` gives it).  Every image byte
+   for byte as before.
+3. **The emulator** (4dabbbe): `sim/lib`'s devices, `run.js` and `view.js` to `base/sim`; `run.js` any system's
+   (`opt.root`, `main(argv, { root, createPcHost })`); HydraOS's `run.js` gives its folder and `/pc`'s host.  The
+   danlang emulator stays HydraOS's.
+4. **The serial layer** (2304686): `base/lib/serial.inc` (macros: the rates, timer 2's pacing, the send ring, `rx_get`,
+   a rate set, the ACIA on); `cons` built on it, byte for byte the same.  (The receive side's irq entry is each
+   driver's own: `cons`'s has the windows' prefix, `/ser` and `/pc` in it.)
+5. **`ser`** (78da141): 3.2K, a bank; HydraOS's init, HyForth and rc run on it in `cons`'s place (the test `ser`).
+6. **`wozmon`** (8e01c18): Woz's commands; `L` and `K` switch the examines to instructions and back, as V1.8C's
+   monitor did (not `XXXXL`); `R` runs the last address shown; a note's handler sets the task's frame's PC to the
+   monitor's restart, so Ctrl-C (or a `BRK`) brings back the prompt.  `dis.inc` and `w65c02.inc` are in
+   `base/lib` (not `base/lib/asm`), with defaults for the flags HydraOS's `asmlib.inc` defines.  The base's
+   `rom.txt` and `bin/prom0.bin`.
+7. **The tests** (cba35cf, 9b10ba1): the runner in `base/sim/test.js` (`setup`: a system's image, PC folders, danlang
+   run, build); the base's tests (`base`, `wozmon`, `wozpolled`).  **`kdev` is the base's** (the user's choice,
+   9 October: without it the base's `SPAWN` of a module, pipes and `/proc` have no server), task E; with it, 12 of
+   the kernel's tests run on the base's image (`note`, `file`, `ns`, `proc`, `env`, `kmesg`, `mem`, `sem`,
+   `xcall`, `banks`, `banks3`, `kcopy`, their modules and `testlib.inc` in `base/tests/mod`).  125 tests: the
+   base's 15, HydraOS's 110.
+8. **The documents**: `base/README.md`, `base/docs/monitor.md`, `base/docs/os.md`; the guide's parts 2, 4, 17 and
+   18; the moved paths in the documents in use; the repository's README; the CI builds and tests the base first.
+
+Not done: the kernel's own parts of HydraOS's documents (the conventions, the programmer's guide) stay in
+`reborn/docs`, the base's documents pointing there; the danlang emulator stays HydraOS's.

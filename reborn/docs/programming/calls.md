@@ -4,7 +4,7 @@
 
 A program calls the system with `jsr` to the call's slot in the jump table, on BIOS ROM page 0 from `$F800`:
 `jsr OPEN`.  The slots' addresses are in `hydra.inc` (the assembly SDK) and `hydracalls.h` (C), both made from
-`spec/api.def` by the build; a slot never moves once it's published (a call is only ever added to the end of its
+`base/spec/api.def` by the build; a slot never moves once it's published (a call is only ever added to the end of its
 group, and a withdrawn one answers `E_NOSYS`), so a program built today runs on later ROMs.
 
 The calls come in groups: **system** (`SYSINFO`, `ERRSTR`, `KMESG`, `REBOOT`, `XCALL`), **task** (`SPAWN`, `EXITS`,
@@ -24,7 +24,7 @@ whether it waits.
 | `$22`-`$7F` | The program's own zero page: no call touches it |
 
 A call may change `.A`, `.X`, `.Y`, `r0`-`r15` and the flags; keep what you need in `$22`-`$7F` or your RAM.  The
-error codes (`E_NOENT` "not found", `E_INTR` "interrupted" ...) are `spec/errors.def`'s; `ERRSTR` gives one's text.
+error codes (`E_NOENT` "not found", `E_INTR` "interrupted" ...) are `base/spec/errors.def`'s; `ERRSTR` gives one's text.
 
 ## The SDK's macros
 

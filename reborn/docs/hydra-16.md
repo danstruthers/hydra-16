@@ -90,6 +90,9 @@ console a terminal in the page, the Vera X's screen beside it, the sound, SD car
 tutorial](tutorial.md) is the first hour: the shell, files and disks, windows, the languages, sound, and a program of
 your own.
 
+**The base alone**, from `base/`: `node build.js`, then `node sim/run.js -i`, boots the kernel with the base's three
+modules (`ser`, `kdev`, and Woz's monitor as init), and nothing of HydraOS's ([the base](../../base/README.md)).
+
 **On the board:**
 * Program the chips (an EPROM programmer; there's no write path on the board): `bin/bios.bin` into the BIOS ROM's socket
   (U6, an SST39SF010 or bigger), and `bin/prom0.bin`, `prom1.bin`, `prom2.bin`, `prom3.bin` into U31, U32, U34 and U36,
@@ -143,7 +146,7 @@ Vera X](hardware.md#the-vera-x-slot-0)): till then it's wired through the breako
 
 **The schematics** are KiCad 9's, in `../../board/`: the main board's sheets (`AddressDecode`, `BankedROM`, `Buffers`,
 `Clocks`, `Connectors`, `FFF_Registers`, `IRQ_P_E`, `Mixer`, `SharedMem`, `Sound`, `ZPMirrorRAM`), the memory daughter
-card's and the bus breakout card's.  `include/hw.inc` is the board as the software sees it, its names made from the
+card's and the bus breakout card's.  `base/include/hw.inc` is the board as the software sees it, its names made from the
 reference.
 
 ---
@@ -164,6 +167,12 @@ the modules from bank 2, each at `$A000` of its first bank (about fifty: the dri
 languages; a module may span two to eight banks); then the ROM disk's HydraFS volume (`/rom`: the programs that run from
 RAM, the languages' libraries, songs, the SDK's samples and include files, the calls' reference, some 480K).
 `modules/rom.txt` lists the modules, `romfs/romfs.txt` the ROM disk's files.  [Modules](programming/modules.md).
+
+**The base and HydraOS.**  The BIOS ROM, its system calls, the console driver `ser`, the kernel's devices `kdev` and Woz's
+monitor `wozmon` are the base (`base/` in the repository), which boots on its own: task F `ser`, task E `kdev`, task 1 the
+monitor (examine, store, run, disassemble: [the monitor](../../base/docs/monitor.md)).  HydraOS is built on it: the
+same BIOS ROM, byte for byte, and its own paged ROM, with `cons` (the windows, on `ser`'s serial layer) in task F and
+init in task 1.  Another system can be: [writing an OS on the base](../../base/docs/os.md).
 
 ---
 
@@ -197,7 +206,7 @@ a driver's `irq` entry runs in its own task too.  [Reaching other tasks](convent
 
 A program calls the system with `jsr` to the call's slot in the jump table (`$F800` up, on BIOS ROM page 0), its
 arguments in `.A`, `.X`, `.Y` and the call registers `r0`-`r15` (`$02-$21` of its zero page), its error in carry and
-`.A`.  The calls are written down once, in `spec/api.def`, and the build makes from it the jump table, `hydra.inc`, C's
+`.A`.  The calls are written down once, in `base/spec/api.def`, and the build makes from it the jump table, `hydra.inc`, C's
 `hydracalls.h`, HyForth's `sys-` words, hylang's `sys-` functions, BASIC's `SYS "NAME"`, and the reference,
 `/rom/doc/api.md` on the Hydra.  [Calling the system](programming/calls.md).
 
@@ -405,7 +414,10 @@ POST's, a driver's) are `/dev/kmesg`, its last 4K.
   anywhere; `--serve` serves it at http://localhost:8017.  The serial console is a terminal in the page (`lib/vt.js`,
   the VT100 the tests use), with the Vera X's screen beside it; Setup has the card, its keyboard and mouse, the clock
   chip, the RAM modules and SD cards (a new blank one, or an image loaded; kept in the browser, saved as image files).
-* **The tests**, `node sim/test.js`: 120 of them, each booting its own image and judged on its output, its time budgets
+* **The base**, `node ../base/build.js` and `node ../base/sim/test.js`: the kernel, `ser`, `kdev` and the monitor, built and
+  tested on their own (HydraOS's build and tests run them first).
+* **The tests**, `node sim/test.js`: the base's and HydraOS's, 125 of them, each booting its own image and judged on
+  its output, its time budgets
   and its own checks, as many at a time as the PC has cores; `--dl` runs them in the danlang emulator (`sim/dl`), the
   emulator written again in danlang.
 * **The benchmarks**, `node sim/bench.js`: twenty, each in hylang, HyForth, BASIC and BASIC's inline assembly
@@ -423,9 +435,8 @@ POST's, a driver's) are `/dev/kmesg`, its last 4K.
 
 | Folder | What's there |
 | :----- | :----------- |
-| `spec/` | The system calls and the error codes: the one source of the jump table, `hydra.inc`, the reference; the number libraries' entries (`numbers.def`) |
-| `include/` | `hw.inc` (the board), `layout.inc` (where the kernel's state lives) |
-| `kernel/` | The kernel: the BIOS ROM's pages |
+| `../base/` | The base: the kernel (`kernel/`: the BIOS ROM's pages), `include/` (`hw.inc`, the board; `layout.inc`, where the kernel's state lives), `spec/` (the system calls and the error codes), `ser`, `kdev` and `wozmon`, the board's emulator and the tests' runner |
+| `spec/` | The number libraries' entries (`numbers.def`) and the asm library's (`asm.def`) |
 | `modules/` | The paged ROM's modules, a folder each, and `rom.txt` |
 | `forthlib/` | HyForth's libraries |
 | `programs/` | The ROM disk's programs (`/rom/bin`) |

@@ -9,7 +9,7 @@ The SDK is this folder; `node build.js` also copies it, with the generated `hydr
 
 | File | What it is |
 |---|---|
-| `hydra.inc` | The system calls (their addresses in the jump table), the error codes and the constants.  Made from `spec/api.def` by the build (`obj/sdk/hydra.inc`); never edit it |
+| `hydra.inc` | The system calls (their addresses in the jump table), the error codes and the constants.  Made from `base/spec/api.def` by the build (`obj/sdk/hydra.inc`); never edit it |
 | `hyx2.inc` | The header: `HYX2_PROGRAM "name", main` |
 | `hyx2.cfg` | The link for a program in a file: header, code and data from `$0800`, the BSS after them |
 | `macros.inc` | `CALL name` (a system call), `CHECK label` (on to label if the call failed), `LDR reg, value` (a call register = a 16-bit value), `MOVR to, from` (one register = another), `PRINT label` or `PRINT "text"` (a string to fd 1); `CR`, `LF`, `TAB` |

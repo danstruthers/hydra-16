@@ -21,7 +21,9 @@ jobs:
           git -C "$RUNNER_TEMP/cc65" checkout -q FETCH_HEAD
           make -C "$RUNNER_TEMP/cc65" -j4
           echo "CC65_HOME=$RUNNER_TEMP/cc65" >> "$GITHUB_ENV"
-      - name: HydraOS, build and test (its build builds the base first)
+      - name: The base (the kernel, ser, kdev, the monitor), build and test
+        run: node base/build.js && node base/sim/test.js
+      - name: HydraOS, build and test (its build builds the base first; its tests are the base's and its own)
         run: node reborn/build.js && node reborn/sim/test.js
       - name: The emulator in a browser (its page built, its worker booted in Node)
         run: node reborn/sim/web.js --check

@@ -61,7 +61,7 @@ writing commands to its `ctl`), and hylang's reach comes in four layers, from th
 The first is part of danlang parity (phase 7); the others come after it, as library modules beside the core (the
 Hydra built-ins and the `sys-` functions) and `.hl` files (the device libraries).  A failure anywhere is the
 system's error: its text (`ERRSTR`'s, after the name it's about: `x: not found`) and its code as an atom
-(`error-code`: `:noent`, `:exist`, `:notempty`, `:intr` ... the names of `spec/errors.def`, lower case, without
+(`error-code`: `:noent`, `:exist`, `:notempty`, `:intr` ... the names of `base/spec/errors.def`, lower case, without
 `E_`).  danlang gives the same for a PC's failures, so the checks are the same on both.
 
 ### 1. The system library (built in; danlang too)
@@ -111,11 +111,11 @@ an I2C or SPI transaction is one) and closed after, a failure's file closed too.
 
 ### 4. Every system call (`sys-`)
 
-Each call a program makes (`spec/api.def`'s, but the servers', the debugging calls and `NOTIFY`, as forth's `sys-`
+Each call a program makes (`base/spec/api.def`'s, but the servers', the debugging calls and `NOTIFY`, as forth's `sys-`
 words) is a function, `sys-` and its name in lower case (`sys-open`, `sys-sleep-until`): `(sys-open "x" 0)` is
 `(sys :open "x" 0)`, `sys` being the built-in that makes any of them by name.  A `sys-` name is bound as it's first
 looked up, to `sys` partially applied to the name's atom (`<function>(sys :open)`), so every call's function
-costs one built-in.  The arguments are the registers the call takes, in the order of its `hl:` line in `spec/api.def`, and
+costs one built-in.  The arguments are the registers the call takes, in the order of its `hl:` line in `base/spec/api.def`, and
 its value is what it gives (one, or a list of them; NIL for none):
 
 * a register: a whole number (a character, its code), at most the register's size (`SEEK`'s offset may be
@@ -369,7 +369,7 @@ The plan has it whole; in short:
   share it, and `stdout` is the output itself, so `output-of` has what's printed to it.  A file's line is read a
   chunk at a time, what's past it given back (`SEEK`).  Each built-in is the system's calls; its failure is the
   system's error, `name: text` (`ERRSTR`'s) and its code an atom (the names `tools/apigen.js` makes from
-  `spec/errors.def`: `obj/gen/errnames.inc`).  `sh` and `sh-out` run `rc -c`, their input and output through
+  `base/spec/errors.def`: `obj/gen/errnames.inc`).  `sh` and `sh-out` run `rc -c`, their input and output through
   pipes; `date`, `date-parts` and `seconds-of` work the calendar on 32-bit seconds.  `hylang file args...` runs
   the file (`args`: its path and the args), its status 0, 1 after an error (on stderr), or `(exit n)`'s.
 * **The module**: hylang is one program of eight banks (a module's most): the evaluator, its
@@ -462,7 +462,7 @@ Then the Hydra layers (the plan's phases 9 to 12: its section "The Hydra layers"
    checks pass, and the built-ins that make values with a collection before every allocation too (the `hyhydra`
    test, which also types raw keys and gives Ctrl-C to an `on-note` function).  248 built-ins of 256.
 10. **Every system call** (`sys-`).  Done: `hysys.inc` in the sixth bank, `sys` and the `sys-` functions bound as
-   they're first looked up, from `spec/api.def`'s `hl:` lines (`obj/gen/hylsys.inc`, apigen's).
+   they're first looked up, from `base/spec/api.def`'s `hl:` lines (`obj/gen/hylsys.inc`, apigen's).
    `tests/hyhydra/hydra.hl`'s 125 checks (a call of each group, and the errors) pass, and with a collection before
    every allocation too.  249 built-ins of 256.
 11. **The device libraries**.  Done: `/lib/hylang`'s `gpio`, `i2c`, `spi`, `cons`, `proc`, `clock`, `disk`, `pc` and

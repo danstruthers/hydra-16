@@ -34,6 +34,7 @@ const BOOK = [
     'reborn/docs/programming/servers.md', 'reborn/docs/programming/modules.md',
     'reborn/docs/programming/numbers.md', 'reborn/docs/programming/video.md',
     'reborn/sdk/asm/README.md', 'reborn/sdk/c/README.md']],
+  ['The base', ['base/README.md', 'base/docs/monitor.md', 'base/docs/os.md']],
   ['The hardware', ['reborn/docs/hardware.md', 'reborn/docs/vera-wiring.md']],
 ];
 

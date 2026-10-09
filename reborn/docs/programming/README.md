@@ -3,7 +3,7 @@
 How to write programs for the rebuilt Hydra-16 (`reborn/`): what the system gives a program, how it's called, and how
 the parts fit.  It's for someone who knows 65C02 assembly or C and wants to write for this system; the SDKs' guides
 ([../../sdk/asm/README.md](../../sdk/asm/README.md), [../../sdk/c/README.md](../../sdk/c/README.md)) cover building
-and running, and `/rom/doc/api.md` on the Hydra (the build's `obj/gen/api.md`, made from `spec/api.def`) is every
+and running, and `/rom/doc/api.md` on the Hydra (the build's `obj/gen/api.md`, made from `base/spec/api.def`) is every
 call's reference.  The rules every part of the system keeps are [../conventions.md](../conventions.md); this guide
 is the gentler way in.  The whole system in one place is [../hydra-16.md](../hydra-16.md), and the board in full
 [../hardware.md](../hardware.md).
