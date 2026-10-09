@@ -10,7 +10,7 @@
 ** Each time, the tasks are started, wait at a barrier (each gives a "ready" semaphore one, and this task takes
 ** them all), then are let go together (this task gives "go" one for each).
 **   chorus
-**   % /rom/sample/c/chorus
+**   % /sd/0/sample/c/chorus
 */
 
 #include <stdio.h>
@@ -67,11 +67,11 @@ static int worker (char* argv[])
 static const char* prog;
 static unsigned char ready, go, lock, baton[VOICES], voices = VOICES;
 
-/* This program's own file, to start its workers from (argv[0] is its name): /bin/NAME (bind -a /rom/sample/c /bin
-** puts the samples there), ./NAME, or /rom/sample/c/NAME */
+/* This program's own file, to start its workers from (argv[0] is its name): /bin/NAME (bind -a /sd/0/sample/c /bin
+** puts the samples there), ./NAME, or /sd/0/sample/c/NAME */
 static const char* self (const char* name)
 {
-    static const char* const dirs[] = { "/bin/", "./", "/rom/sample/c/" };
+    static const char* const dirs[] = { "/bin/", "./", "/sd/0/sample/c/" };
     static char path[48];
     struct stat st;
     unsigned char i;
@@ -142,7 +142,7 @@ int main (int argc, char* argv[])
         return worker (argv);
     }
     if ((prog = self (argv[0])) == 0) {
-        fprintf (stderr, "chorus: can't find myself (/bin/%s, ./%s, /rom/sample/c/%s)\n", argv[0], argv[0], argv[0]);
+        fprintf (stderr, "chorus: can't find myself (/bin/%s, ./%s, /sd/0/sample/c/%s)\n", argv[0], argv[0], argv[0]);
         hy_exits ("no workers");
     }
     ready = hy_sem_new (0, 0);

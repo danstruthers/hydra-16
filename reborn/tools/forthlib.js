@@ -155,7 +155,8 @@ function build({ root, modules, assemble, ld65 }) {
   fs.writeFileSync(at('obj', 'gen', 'forthcore.inc'), inc);
   const out = at('obj', 'forthlib'), libs = {};
   fs.mkdirSync(out, { recursive: true });
-  const includes = [at('obj', 'sdk'), at('sdk', 'asm'), at('include'), at('obj', 'gen'), at('modules', 'forth'), src];
+  const B = (...p) => path.join(root, '..', 'base', ...p);   // (The base's: hydra.inc, the SDK's core, the hardware's)
+  const includes = [at('obj', 'sdk'), at('sdk', 'asm'), B('obj', 'sdk'), B('sdk', 'asm'), B('include'), at('obj', 'gen'), at('modules', 'forth'), src];
   for (const f of fs.readdirSync(src).filter(f => f.endsWith('.s')).sort()) {
     const name = path.basename(f, '.s'), od = path.join(out, name);
     const objs = assemble([path.join(src, f)], od, includes);

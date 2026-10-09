@@ -90,6 +90,9 @@ console a terminal in the page, the Vera X's screen beside it, the sound, SD car
 tutorial](tutorial.md) is the first hour: the shell, files and disks, windows, the languages, sound, and a program of
 your own.
 
+**The base alone**, from `base/`: `node build.js`, then `node sim/run.js -i`, boots the kernel with the base's three
+modules (`ser`, `kdev`, and Woz's monitor as init), and nothing of HydraOS's ([the base](../../base/README.md)).
+
 **On the board:**
 * Program the chips (an EPROM programmer; there's no write path on the board): `bin/bios.bin` into the BIOS ROM's socket
   (U6, an SST39SF010 or bigger), and `bin/prom0.bin`, `prom1.bin`, `prom2.bin`, `prom3.bin` into U31, U32, U34 and U36,
@@ -100,7 +103,8 @@ your own.
 * A terminal on the DE-9 (J3), 9600 baud, 8 bits, no parity, 1 stop bit, RTS/CTS, through a straight-through cable ([the
   ACIA](hardware.md#acia-65c51-u3-port-1-irq-line-1)).  The PC tool (`sim/tools/hydrapc.js`) is a terminal that also
   serves a folder of the PC as `/pc`.
-* An SD card adapter on J18 (SPI device 0), if you have one: the card is `/sd/0`.
+* An SD card adapter on J18 (SPI device 0), if you have one: the card is `/sd/0`.  HydraOS's card (`bin/sdcard.img`: the
+  samples and songs) goes onto one with `node sim/tools/sdwrite.js bin/sdcard.img DISK` (`--list` shows the PC's disks).
 
 The boot prints POST's lines, the drivers starting, and HyForth's prompt, `/>`.
 
@@ -143,7 +147,7 @@ Vera X](hardware.md#the-vera-x-slot-0)): till then it's wired through the breako
 
 **The schematics** are KiCad 9's, in `../../board/`: the main board's sheets (`AddressDecode`, `BankedROM`, `Buffers`,
 `Clocks`, `Connectors`, `FFF_Registers`, `IRQ_P_E`, `Mixer`, `SharedMem`, `Sound`, `ZPMirrorRAM`), the memory daughter
-card's and the bus breakout card's.  `include/hw.inc` is the board as the software sees it, its names made from the
+card's and the bus breakout card's.  `base/include/hw.inc` is the board as the software sees it, its names made from the
 reference.
 
 ---
@@ -158,12 +162,23 @@ task's side of the task calls, memory, semaphores, notes and the clock; page 2 f
 namespaces and the loader (`SPAWN`); page 4 POST and the debugger's steps; the rest is room.  Page 0 is the scarce one.
 [The kernel's pages](conventions.md#the-kernels-pages).
 
-**The paged ROM** (`bin/prom0.bin` ...: a 512K image for each chip it fills; four now, some 124 of its 256 banks).  Bank
+**The paged ROM** (`bin/prom0.bin` ...: a 512K image for each chip it fills; four now, some 123 of its 256 banks).  Bank
 0 holds the module directory and the ROM disk's partition table; bank 1 the hardware test (the old system's, unchanged);
 the modules from bank 2, each at `$A000` of its first bank (about fifty: the drivers, init, the shells, the tools, the
 languages; a module may span two to eight banks); then the ROM disk's HydraFS volume (`/rom`: the programs that run from
-RAM, the languages' libraries, songs, the SDK's samples and include files, the calls' reference, some 480K).
+RAM, the languages' libraries, a song, the SDK's include files, the calls' reference, some 500K).
 `modules/rom.txt` lists the modules, `romfs/romfs.txt` the ROM disk's files.  [Modules](programming/modules.md).
+
+**HydraOS's SD card** (`bin/sdcard.img`: a 16 MB HydraFS in a partition) holds what isn't the system's: the SDK's
+samples, built and as sources (`/sd/0/sample`, `/sd/0/sample/c`, `/sd/0/sample/as`), the sample songs
+(`/sd/0/songs`) and the benchmarks (`/sd/0/bench`: `sim/bench.js`'s).  `sdcard/sdcard.txt` lists its files; the build makes it, the tests that run a sample have it in SD
+device 0, the browser emulator starts with it, and `sim/tools/sdwrite.js` writes it to a card on the PC.
+
+**The base and HydraOS.**  The BIOS ROM, its system calls, the console driver `ser`, the kernel's devices `kdev` and Woz's
+monitor `wozmon` are the base (`base/` in the repository), which boots on its own: task F `ser`, task E `kdev`, task 1 the
+monitor (examine, store, run, disassemble: [the monitor](../../base/docs/monitor.md)).  HydraOS is built on it: the
+same BIOS ROM, byte for byte, and its own paged ROM, with `cons` (the windows, on `ser`'s serial layer) in task F and
+init in task 1.  Another system can be: [writing an OS on the base](../../base/docs/os.md).
 
 ---
 
@@ -197,7 +212,7 @@ a driver's `irq` entry runs in its own task too.  [Reaching other tasks](convent
 
 A program calls the system with `jsr` to the call's slot in the jump table (`$F800` up, on BIOS ROM page 0), its
 arguments in `.A`, `.X`, `.Y` and the call registers `r0`-`r15` (`$02-$21` of its zero page), its error in carry and
-`.A`.  The calls are written down once, in `spec/api.def`, and the build makes from it the jump table, `hydra.inc`, C's
+`.A`.  The calls are written down once, in `base/spec/api.def`, and the build makes from it the jump table, `hydra.inc`, C's
 `hydracalls.h`, HyForth's `sys-` words, hylang's `sys-` functions, BASIC's `SYS "NAME"`, and the reference,
 `/rom/doc/api.md` on the Hydra.  [Calling the system](programming/calls.md).
 
@@ -323,7 +338,7 @@ call (`XCALL`).  [Modules and programs](programming/modules.md).
 * **Debugging**: `db` on the Hydra (a program started stopped, stepped, run to breakpoints, with ld65's symbols), and
   the emulator's call traces, breaks and monitor.  [The debugger](using/tools.md#the-debugger).
 
-The samples are on the ROM disk (`/rom/sample`; `bind -a /rom/sample/c /bin` runs the C ones by name), the C SDK's
+The samples are on the SD card (`bin/sdcard.img`: `/sd/0/sample`; `bind -a /sd/0/sample/c /bin` runs the C ones by name), the C SDK's
 multitasking demos among them.  [The programmer's guide](programming/README.md) is the way in.
 
 ---
@@ -405,14 +420,19 @@ POST's, a driver's) are `/dev/kmesg`, its last 4K.
   anywhere; `--serve` serves it at http://localhost:8017.  The serial console is a terminal in the page (`lib/vt.js`,
   the VT100 the tests use), with the Vera X's screen beside it; Setup has the card, its keyboard and mouse, the clock
   chip, the RAM modules and SD cards (a new blank one, or an image loaded; kept in the browser, saved as image files).
-* **The tests**, `node sim/test.js`: 120 of them, each booting its own image and judged on its output, its time budgets
+* **The base**, `node ../base/build.js` and `node ../base/sim/test.js`: the kernel, `ser`, `kdev` and the monitor, built and
+  tested on their own (HydraOS's build and tests run them first).
+* **The tests**, `node sim/test.js`: the base's and HydraOS's, 125 of them, each booting its own image and judged on
+  its output, its time budgets
   and its own checks, as many at a time as the PC has cores; `--dl` runs them in the danlang emulator (`sim/dl`), the
   emulator written again in danlang.
 * **The benchmarks**, `node sim/bench.js`: twenty, each in hylang, HyForth, BASIC and BASIC's inline assembly
-  (`romfs/bench`), the same algorithms and results, timed against each other by kind ([hylang.md](hylang.md#against-hyforth),
+  (`sdcard/bench`), the same algorithms and results, timed against each other by kind ([hylang.md](hylang.md#against-hyforth),
   [basic.md](basic.md#against-hylang-and-hyforth)).
 * **The PC tools** (`sim/tools`): `hydrapc.js` (the PC tool: the terminal, and `/pc` over the serial line; `npm install`
-  in `sim/` for its serial port), `hydrafs.js` (card images), `pcfs.js` (`/pc`'s server), `hysong.js` (scores to ZSM
+  in `sim/` for its serial port), `hydrafs.js` (card images), `sdwrite.js` (an image onto a card in the PC's reader:
+  `node sim/tools/sdwrite.js --list`, then `node sim/tools/sdwrite.js bin/sdcard.img NUMBER`; it refuses the system's disk and,
+  without `--force`, one that isn't removable, and reads the card back), `pcfs.js` (`/pc`'s server), `hysong.js` (scores to ZSM
   songs).
 
 [The README](../README.md) has every command.
@@ -423,18 +443,18 @@ POST's, a driver's) are `/dev/kmesg`, its last 4K.
 
 | Folder | What's there |
 | :----- | :----------- |
-| `spec/` | The system calls and the error codes: the one source of the jump table, `hydra.inc`, the reference; the number libraries' entries (`numbers.def`) |
-| `include/` | `hw.inc` (the board), `layout.inc` (where the kernel's state lives) |
-| `kernel/` | The kernel: the BIOS ROM's pages |
+| `../base/` | The base: the kernel (`kernel/`: the BIOS ROM's pages), `include/` (`hw.inc`, the board; `layout.inc`, where the kernel's state lives), `spec/` (the system calls and the error codes), `ser`, `kdev` and `wozmon`, the board's emulator and the tests' runner |
+| `spec/` | The number libraries' entries (`numbers.def`) and the asm library's (`asm.def`) |
 | `modules/` | The paged ROM's modules, a folder each, and `rom.txt` |
 | `forthlib/` | HyForth's libraries |
 | `programs/` | The ROM disk's programs (`/rom/bin`) |
 | `romfs/` | The ROM disk's files, and `romfs.txt` |
+| `sdcard/` | The SD card's files (the sample songs), and `sdcard.txt` (the samples come from the build) |
 | `sdk/` | The assembly and C SDKs |
 | `tools/` | The build's tools: the specification's outputs, the ROM images, the ROM disk, the budgets, hylang's snapshot |
 | `sim/` | The emulator, the tests' runner, the browser view, the sound, the danlang emulator (`dl/`), the PC tools (`tools/`) |
 | `tests/` | The tests, their modules and programs, and the Forth, hylang and BASIC suites |
-| `bin/` | The ROM images (in Git), and the SDKs the build copies out |
+| `bin/` | The ROM images and the SD card's image (in Git), and the SDKs the build copies out |
 | `docs/` | These documents |
 
 [The tree](../README.md#the-tree) in full.  Beside `reborn/`: `../../board/` (the KiCad files) and `../../old/` (the old

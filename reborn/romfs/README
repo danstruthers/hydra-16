@@ -25,7 +25,7 @@ the modules (the disk x: mount '#f' /rom x).
                   grep and sort (in C); scom, a song (an rc script); bound
                   at /bin after the RAM disks'
   songs           songs for play: ZSM files, the Commander X16's (play
-                  /rom/songs/test.zsm)
+                  /sd/0/songs/test.zsm)
   sample          the SDKs' samples: hi, upper and tick in assembly; in
                   sample/c, hello, upper, code, keys, tones, jukebox and
                   ctest in C

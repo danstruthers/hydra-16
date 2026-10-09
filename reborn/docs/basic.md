@@ -179,13 +179,13 @@ and `newns` are its own.
 the number functions, logic, strings, arrays, control, procedures, records, data, errors, files, the Hydra's, inline
 assembly) and five scripts piped into it, checked against their output (the errors' messages, `PRINT`'s layout, the
 prompt, `INPUT`, `ASM`'s errors).  The basic test is BASIC at the console and as a shell; bplay `PLAY`; bawin `basic -l`
-in the windows; bench `romfs/bench/bench.bas` against hylang's and HyForth's.  Writing the suite found bugs of BASIC's,
+in the windows; bench `sdcard/bench/bench.bas` against hylang's and HyForth's.  Writing the suite found bugs of BASIC's,
 among them: `GOTO` a label never defined ran on (`ca_rd`'s flags), a `SUB` that called another `SUB` took its entry, a
 `FUNCTION`'s call among a call's arguments, an exit's status always 0, an array's lowest index below 0.
 
 ## Against hylang and HyForth
 
-`romfs/bench/bench.bas` has all twenty of the benchmarks (`sim/bench.js`), the same algorithms, sizes and results as
+`sdcard/bench/bench.bas` has all twenty of the benchmarks (`sim/bench.js`), the same algorithms, sizes and results as
 hylang's (`bench.hl`) and HyForth's (`bench.fs`), each in BASIC's own way: a `FUNCTION` each, its parameters (by
 reference) and locals its own, recursion where they recurse, arrays where hylang has lists and HyForth memory, a
 `FUNCTION`'s call where they call a function given (`map`, `filter`, `foldl`; `EXECUTE`).  `basic bench.bas
@@ -232,7 +232,7 @@ is the most of the interpreter's own time now.
 
 ### And in its inline assembly
 
-`romfs/bench/benchasm.bas` has the twenty again in BASIC's inline assembly
+`sdcard/bench/benchasm.bas` has the twenty again in BASIC's inline assembly
 ([using/basic.md](using/basic.md#inline-assembly)): the same algorithms, sizes and results, each benchmark's work a
 routine in an `ASM` block that `CALL ASM` calls, in 16 bits (every value of these sizes fits), with recursion where the
 others recurse (on the 6502's stack), a subroutine called where they call a function, a multiplication by shifts and

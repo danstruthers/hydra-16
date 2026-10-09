@@ -2,7 +2,8 @@
 // ****************************************************************************
 // web.js - the emulator in a browser: one HTML file, the whole of it (the page, web/page.html and web/page.js; the
 // machine, sim/lib, in a Web Worker, web/worker.js; the ROM images, bin/bios.bin and bin/prom*.bin, gzipped), that
-// runs HydraOS with nothing installed and nothing sent anywhere.  Open the file in a browser (Chrome, Edge, Firefox,
+// runs HydraOS with nothing installed and nothing sent anywhere; and bin/sdcard.img, HydraOS's SD card (the samples, the
+// songs), SD card 0 as it starts.  Open the file in a browser (Chrome, Edge, Firefox,
 // Safari), or serve it.  The serial console is a terminal in the page; the Vera X's screen, keyboard and mouse, the
 // sound, the clock chip, the RAM modules and SD cards (kept in the browser) are the page's Setup.
 //
@@ -12,15 +13,16 @@
 //   --check         then run the page's worker (the bundle, as the page starts it) in Node: boot HydraOS in it, type at
 //                   its console, and see the answer; and hold web/mkfs.js's new card against sim/tools/hydrafs.js's
 // Build first (node build.js): the images are bin/'s.
-//   The scripts are bundled as CommonJS modules (each require('./x.js') a path relative to its file, under sim/):
-// lib/machine.js and what it needs, lib/vt.js, lib/keynum.js, lib/worklet.js, none of which uses Node.js.
+//   The scripts are bundled as CommonJS modules (each require('./x.js') a path relative to its file, named by its
+// path from the repository's root): the board's emulator, base/sim/lib/machine.js and what it needs, and
+// base/sim/lib's vt.js, keynum.js and worklet.js, none of which uses Node.js.
 'use strict';
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
 const { execSync } = require('child_process');
 
-const SIM = __dirname, ROOT = path.join(SIM, '..');
+const SIM = __dirname, ROOT = path.join(SIM, '..'), REPO = path.join(ROOT, '..');
 
 // The modules entry needs (it and its requires', and theirs ...), as one script that runs entry: each module a
 // function of (require, module, exports), by its path under sim/
@@ -28,7 +30,7 @@ function bundle(entry) {
   const mods = new Map();
   const add = rel => {
     if (mods.has(rel)) return;
-    const src = fs.readFileSync(path.join(SIM, rel), 'utf8').replace(/\r\n/g, '\n');
+    const src = fs.readFileSync(path.join(REPO, rel), 'utf8').replace(/\r\n/g, '\n');
     mods.set(rel, src);
     for (const m of src.matchAll(/require\('(\.{1,2}\/[^']+)'\)/g)) add(path.posix.normalize(path.posix.join(path.posix.dirname(rel), m[1])));
   };
@@ -60,7 +62,8 @@ function images() {
   const bios = fs.readFileSync(path.join(ROOT, 'bin', 'bios.bin')), proms = [];
   for (let k = 0; fs.existsSync(path.join(ROOT, 'bin', 'prom' + k + '.bin')); k++) proms.push(fs.readFileSync(path.join(ROOT, 'bin', 'prom' + k + '.bin')));
   if (!proms.length) throw new Error('no bin/prom0.bin: node build.js');
-  return { bios, prom: Buffer.concat(proms) };
+  const card = path.join(ROOT, 'bin', 'sdcard.img');            // (HydraOS's SD card: the samples, the songs, the benchmarks)
+  return { bios, prom: Buffer.concat(proms), card: fs.existsSync(card) ? fs.readFileSync(card) : null };
 }
 
 // What the page says it was built from: the commit, and whether the tree had changes
@@ -79,12 +82,13 @@ const inScript = s => s.replace(/<\/(script)/gi, '<\\/$1').replace(/<!--/g, '<\\
 const attr = s => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 
 function build(out) {
-  const img = images(), worker = bundle('web/worker.js'), page = bundle('web/page.js');
+  const img = images(), worker = bundle('reborn/sim/web/worker.js'), page = bundle('reborn/sim/web/page.js');
   const roms = zlib.gzipSync(Buffer.concat([img.bios, img.prom]), { level: 9 }).toString('base64');
   let html = fs.readFileSync(path.join(SIM, 'web', 'page.html'), 'utf8').replace(/\r\n/g, '\n');
   const put = (mark, text) => { if (!html.includes(mark)) throw new Error('page.html: no ' + mark); html = html.replace(mark, () => text); };
   put('<!--WORKER-->', '<script id="worker-src" type="text/plain">\n' + inScript(worker.code) + '</script>');
-  put('<!--ROMS-->', '<script id="roms" type="text/plain" data-bios="' + img.bios.length + '" data-build="' + attr(buildInfo()) + '">\n' + roms + '\n</script>');
+  put('<!--ROMS-->', '<script id="roms" type="text/plain" data-bios="' + img.bios.length + '" data-build="' + attr(buildInfo()) + '">\n' + roms + '\n</script>' +
+    (img.card ? '\n<script id="sdcard" type="text/plain">\n' + zlib.gzipSync(img.card, { level: 9 }).toString('base64') + '\n</script>' : ''));
   put('<!--PAGE-->', '<script>\n' + inScript(page.code) + '</script>');
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, html);

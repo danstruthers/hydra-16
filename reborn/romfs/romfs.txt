@@ -10,46 +10,19 @@ lib/profile         lib/profile         ; What each shell runs as it starts (rc'
 lib/shell           lib/shell           ; The shell init and wstart start in each window: HyForth's (forth -l)
 lib/windows         lib/windows         ; The windows' chrome (W4): init writes its lines to #c/wctl
 lib/edit/help       lib/edit/help       ; edit's keys (its ^G)
-lib/as/hydra.inc    ../obj/sdk/hydra.inc ; as's include files (/lib/as: .include finds them there): the SDK's ...
-lib/as/hyx2.inc     ../sdk/asm/hyx2.inc
-lib/as/macros.inc   ../sdk/asm/macros.inc
+lib/as/hydra.inc    ../../base/obj/sdk/hydra.inc ; as's include files (/lib/as: .include finds them there): the SDK's ...
+lib/as/hyx2.inc     ../../base/sdk/asm/hyx2.inc
+lib/as/macros.inc   ../../base/sdk/asm/macros.inc
 lib/as/toollib.inc  ../sdk/asm/toollib.inc
 lib/as/toollib.s    ../sdk/asm/toollib.s
-lib/as/srvlib.inc   ../sdk/asm/srvlib.inc
-lib/as/srvlib.s     ../sdk/asm/srvlib.s
+lib/as/srvlib.inc   ../../base/sdk/asm/srvlib.inc
+lib/as/srvlib.s     ../../base/sdk/asm/srvlib.s
 lib/as/nslib.s      ../sdk/asm/nslib.s
 lib/as/numbers.inc  ../obj/sdk/numbers.inc ;   the number libraries' (numbers.inc, numlib.s)
 lib/as/numlib.s     ../sdk/asm/numlib.s
-lib/as/asmlib.inc   ../obj/sdk/asmlib.inc ;   the asm library's (asmlib.inc: its instructions as as writes them)
-lib/as/hi.s         ../sdk/asm/samples/hi/hi.s ;   and its samples
-lib/as/tick.s       ../sdk/asm/samples/tick/tick.s
-lib/as/upper.s      ../sdk/asm/samples/upper/upper.s
-lib/as/nsum.s       ../sdk/asm/samples/nsum/nsum.s
+lib/as/asmlib.inc   ../obj/sdk/asmlib.inc ;   the asm library's (asmlib.inc: its instructions as as writes them); the samples'
+                                         ;   sources are on the SD card (sdcard/sdcard.txt: /sd/0/sample/as)
 doc/api.md          ../obj/gen/api.md   ; The system calls' reference (tools/apigen.js makes it at the build)
-bench/bench.hl      bench/bench.hl      ; hylang's, HyForth's and BASIC's benchmarks, the same in each (sim/bench.js compares them)
-bench/bench.fs      bench/bench.fs
-bench/bench.bas     bench/bench.bas
-bench/benchasm.bas  bench/benchasm.bas  ; BASIC's inline assembly's: bench.bas's twenty, each one's work in an ASM block
-bench/hl/calls.hl   bench/hl/calls.hl
-bench/hl/fib.hl     bench/hl/fib.hl
-bench/hl/tak.hl     bench/hl/tak.hl
-bench/hl/ack.hl     bench/hl/ack.hl
-bench/hl/loop.hl    bench/hl/loop.hl
-bench/hl/while.hl   bench/hl/while.hl
-bench/hl/dotimes.hl bench/hl/dotimes.hl
-bench/hl/nested.hl  bench/hl/nested.hl
-bench/hl/gcd.hl     bench/hl/gcd.hl
-bench/hl/collatz.hl bench/hl/collatz.hl
-bench/hl/hash.hl    bench/hl/hash.hl
-bench/hl/sieve.hl   bench/hl/sieve.hl
-bench/hl/sort.hl    bench/hl/sort.hl
-bench/hl/matrix.hl  bench/hl/matrix.hl
-bench/hl/queens.hl  bench/hl/queens.hl
-bench/hl/mapf.hl    bench/hl/mapf.hl
-bench/hl/fold.hl    bench/hl/fold.hl
-bench/hl/each.hl    bench/hl/each.hl
-bench/hl/chars.hl   bench/hl/chars.hl
-bench/hl/digits.hl  bench/hl/digits.hl
 lib/forth/hydra.fs  ../obj/gen/hydra.fs ; HyForth's constants and error codes (tools/apigen.js makes it too)
 lib/forth/startup.fs lib/forth/startup.fs ; What HyForth loads as it starts
 lib/forth/profile.fs lib/forth/profile.fs ; What forth -l (HyForth as a login shell) runs after it
@@ -112,25 +85,4 @@ bin/dis             ../obj/programs/dis.hyx     ; The disassembler (C: programs/
 bin/edit            ../obj/programs/edit.hyx    ; The screen editor (C: programs/edit)
 bin/calc            ../obj/programs/calc.hyx    ; The calculator: the number libraries at rc (C: programs/calc, num.h)
 bin/scom            bin/scom                    ; A song run by its name (an rc script: #!/bin/rc)
-songs/scom.zsm      songs/scom.zsm              ; Songs (play /rom/songs/test.zsm): ZSM files, the X16's
-songs/test.zsm      songs/test.zsm              ;   (the old system's test song, from os_rom/songs/test.mml)
-songs/vera.mml      songs/vera.mml              ; A score for both chips (play /rom/songs/vera.mml: the PSG's with a Vera X)
-sample/hi           ../obj/samples/hi.hyx       ; The assembly SDK's samples, built (sdk/asm/samples/)
-sample/upper        ../obj/samples/upper.hyx
-sample/tick         ../obj/samples/tick.hyx
-sample/nsum         ../obj/samples/nsum.hyx
-sample/c/hello      ../obj/samples/c/hello.hyx  ; The C SDK's samples, built (sdk/c/samples/)
-sample/c/upper      ../obj/samples/c/upper.hyx
-sample/c/code       ../obj/samples/c/code.hyx
-sample/c/keys       ../obj/samples/c/keys.hyx
-sample/c/sketch     ../obj/samples/c/sketch.hyx
-sample/c/shapes     ../obj/samples/c/shapes.hyx
-sample/c/tones      ../obj/samples/c/tones.hyx
-sample/c/jukebox    ../obj/samples/c/jukebox.hyx
-sample/c/ctest      ../obj/samples/c/ctest.hyx
-sample/c/ntest      ../obj/samples/c/ntest.hyx
-sample/c/race       ../obj/samples/c/race.hyx   ; The multitasking demos: tasks, semaphores, a shared segment
-sample/c/chorus     ../obj/samples/c/chorus.hyx
-sample/c/philo      ../obj/samples/c/philo.hyx
-sample/c/prodcons   ../obj/samples/c/prodcons.hyx
-sample/c/round      ../obj/samples/c/round.hyx
+songs/scom.zsm      songs/scom.zsm              ; A song (scom, or play /rom/songs/scom.zsm: ZSM); the others are the SD card's

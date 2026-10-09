@@ -487,7 +487,7 @@ notes:
 
 .rodata
 s_cons:     .byte       "#c/cons", 0
-s_up:       .byte       "init: up in task ", 0
+s_up:       .byte       "HydraOS 1.0 for the Hydra-16", CR, LF, "init: up in task ", 0   ; (The kernel's banner is the base's)
 s_hello:    .byte       "#m/hello", 0
 s_args:     .byte       "from init", 0, 0
 s_ended:    .byte       "init: hello ended: code $", 0

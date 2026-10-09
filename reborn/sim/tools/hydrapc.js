@@ -31,7 +31,7 @@
 'use strict';
 const path = require('path');
 const P = require('../lib/pcproto.js');
-const W32 = require('../lib/win32in.js');
+const W32 = require('../../../base/sim/lib/win32in.js');
 const { createPcFs } = require('./pcfs.js');
 
 const QUIET_MS = 100;                                         // A frame that stops this long isn't one: its bytes show

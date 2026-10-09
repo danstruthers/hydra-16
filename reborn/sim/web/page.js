@@ -11,9 +11,9 @@
 // (/sd/v); kept in this browser's IndexedDB as the Hydra writes them, and saved as image files on asking.
 //   The setup and the terminal's size are kept in localStorage.
 'use strict';
-const { VT } = require('../lib/vt.js');
-const { KEYNUM } = require('../lib/keynum.js');
-const { WORKLET } = require('../lib/worklet.js');
+const { VT } = require('../../../base/sim/lib/vt.js');
+const { KEYNUM } = require('../../../base/sim/lib/keynum.js');
+const { WORKLET } = require('../../../base/sim/lib/worklet.js');
 const { mkfs } = require('./mkfs.js');
 
 const $ = id => document.getElementById(id);
@@ -59,6 +59,13 @@ const worker = new Worker(URL.createObjectURL(new Blob([$('worker-src').textCont
 const wantCard = {};                                          // (Each slot's card asked for: its promise's resolve)
 let saveTimer = null;
 const written = new Set();
+
+// HydraOS's SD card (bin/sdcard.img: the samples, the songs, the benchmarks), gzipped in the page
+const SAMPLES = 'HydraOS\'s samples card';
+async function samplesCard() {
+  const raw = Uint8Array.from(atob($('sdcard').textContent.trim()), c => c.charCodeAt(0));
+  return new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+}
 
 async function roms() {
   const el = $('roms'), raw = Uint8Array.from(atob(el.textContent.trim()), c => c.charCodeAt(0));
@@ -452,6 +459,10 @@ dlg.addEventListener('click', async e => {
     const mb = +$('o-cardmb').value;
     cards[slot] = { name: 'a new ' + mb + ' MB card', bytes: mkfs(mb, '') };
     await idb.put(slot, cards[slot]);
+  } else if (act === 'samples') {
+    if (!$('sdcard')) return;
+    cards[slot] = { name: SAMPLES, bytes: await samplesCard() };
+    await idb.put(slot, cards[slot]);
   } else if (act === 'load') { loadSlot = slot; $('cardfile').value = ''; $('cardfile').click(); return; }
   else if (act === 'save') {
     await syncCards();
@@ -495,6 +506,10 @@ $('build').textContent = $('roms').dataset.build || '';
   for (const slot of await idb.keys()) {
     const c = await idb.get(slot);
     if (c && c.bytes) cards[slot] = c;
+  }
+  if (!cards.sd0 && $('sdcard')) {                            // (None kept: HydraOS's card, the samples, songs and benchmarks)
+    cards.sd0 = { name: SAMPLES, bytes: await samplesCard() };
+    await idb.put('sd0', cards.sd0);
   }
   await power();
   term.cv.focus();

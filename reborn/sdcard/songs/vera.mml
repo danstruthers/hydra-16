@@ -1,5 +1,5 @@
 ; vera.mml - a score for both chips: the YM2151's bass and drums, and the Vera X's PSG (channels I-X) with each of
-; its waveforms and envelopes.  play /rom/songs/vera.mml plays it (with a Vera X: without one, its PSG part is
+; its waveforms and envelopes.  play /sd/0/songs/vera.mml plays it (with a Vera X: without one, its PSG part is
 ; silent); sim/tools/hysong.js compiles it on the PC, to the same ZSM as play -o.
 #tempo 128
 #title Vera
