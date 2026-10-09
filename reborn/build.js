@@ -95,8 +95,8 @@ function assemble(files, objdir, includes, defines) {
 }
 
 // HydraOS's includes, then the base's (its hydra.inc, the SDK's core, the hardware's, errors.inc): a module's, a
-// program's
-const INCLUDES = [at('obj', 'sdk'), at('sdk', 'asm'), ...base.INCLUDES, at('obj', 'gen')];
+// program's; a test module's, the base's testlib.inc too
+const INCLUDES = [at('obj', 'sdk'), at('sdk', 'asm'), ...base.INCLUDES, at('obj', 'gen'), atBase('tests', 'mod')];
 
 // A module or a RAM program (the base's buildModule: ../base/modules/moduleN.cfg, ../base/sdk/asm/hyx2.cfg), with
 // HydraOS's includes and the base's, and what apigen makes (forth's sys- words: obj/gen/forthsys.inc); a test RAM
@@ -212,7 +212,7 @@ function build(opt = {}) {
   const defines = base.definesOf(opt);
 
   // The base: the kernel (../base/bin/bios.bin), its BIOS ROM ours too
-  base.build(Object.assign({}, opt, { noReport: true }));
+  const baseBuilt = base.build(Object.assign({}, opt, { noReport: true }));
   apigen.generate(ROOT);
   mkdir(at('bin'));
   fs.copyFileSync(atBase('bin', 'bios.bin'), at('bin', 'bios.bin'));
@@ -222,6 +222,11 @@ function build(opt = {}) {
   const ram = (dir, objdir) => isC(dir) ? cprog(dir, path.join(objdir, path.basename(dir)), path.join(objdir, path.basename(dir) + '.hyx'))
     : buildModule(dir, objdir, defines, true);
   const modules = {}, tests = {}, progs = {}, programs = {}, samples = {};
+  mkdir(at('obj', 'modules'));                          // The base's modules (kdev, ser, wozmon) as HydraOS's too: in
+  for (const [n, data] of Object.entries(baseBuilt.modules)) {  //   obj/modules with its own, for the tools that read them there
+    modules[n] = data;
+    fs.writeFileSync(at('obj', 'modules', n + '.bin'), data);
+  }
   for (const d of fs.readdirSync(at('modules'), { withFileTypes: true }).filter(d => d.isDirectory()))
     modules[d.name] = buildModule(at('modules', d.name), at('obj', 'modules'), defines, false, modules);
   if (fs.existsSync(at('tests', 'mod')))

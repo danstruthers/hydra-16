@@ -3,4 +3,5 @@
 ; reborn/modules/rom.txt.
 init        wozmon
 module      ser         ; (task F: the console's driver)
+module      kdev        ; (task E: the kernel's devices: #m, #n, #p, #|, #e, #s, #t, #r)
 module      wozmon      ; (task 1: the monitor)

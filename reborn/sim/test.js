@@ -23,9 +23,11 @@ function image(t) {
   const sys = readManifest(path.join(ROOT, 'modules', 'rom.txt')).modules.filter(n => !(t.without || []).includes(n));
   const own = [...(t.modules || [])];
   if (!sys.includes(t.init) && !own.includes(t.init)) own.unshift(t.init);
-  const own_ = n => {                                     // (A test's, the SDK's, HydraOS's, or the base's: ../base/obj/modules)
-    const d = ['tests', 'samples', 'modules'].find(d => fs.existsSync(path.join(ROOT, 'obj', d, n + '.bin')));
-    return d ? bin(d, n) : fs.readFileSync(path.join(ROOT, '..', 'base', 'obj', 'modules', n + '.bin'));
+  const own_ = n => {                                     // (A test's, the SDK's, HydraOS's; or the base's: a test
+    const d = ['tests', 'samples', 'modules'].find(d => fs.existsSync(path.join(ROOT, 'obj', d, n + '.bin')));   //   module, a module
+    if (d) return bin(d, n);
+    const b = ['tests', 'modules'].find(d => fs.existsSync(path.join(ROOT, '..', 'base', 'obj', d, n + '.bin')));
+    return fs.readFileSync(path.join(ROOT, '..', 'base', 'obj', b || 'modules', n + '.bin'));
   };
   const mods = [...sys.map(n => ({ file: n, data: bin('modules', n) })), ...own.map(n => ({ file: n, data: own_(n) }))];
   return romimg.build({ modules: mods, init: t.init, hwtest: hwtest(), bios: fs.readFileSync(path.join(ROOT, 'bin', 'bios.bin')),

@@ -6,8 +6,9 @@
 //                          hydra.inc, api.json (obj/gen, obj/sdk)
 //   2. the kernel          kernel/*.s and the generated sources -> bin/bios.bin (the 128K BIOS ROM), with its map,
 //                          labels and debug information in obj/kernel/
-//   3. the modules         modules/NAME/*.s -> obj/modules/NAME.bin: ser (the console's driver, task F), wozmon
-//                          (the monitor, init: task 1)
+//   3. the modules         modules/NAME/*.s -> obj/modules/NAME.bin: ser (the console's driver, task F), kdev (the
+//                          kernel's devices, task E), wozmon (the monitor, init: task 1); and the test modules,
+//                          tests/mod/NAME/*.s -> obj/tests/NAME.bin
 //   4. the paged ROM       modules/rom.txt -> bin/prom0.bin (tools/romimg.js): the module directory, the hardware
 //                          test in bank 1, the modules (one 512K chip, as few banks as it needs; the rest $FF)
 //   5. the budgets         the BIOS ROM's pages, the modules: used, and room left (tools/budget.js)
@@ -136,7 +137,11 @@ function build(opt = {}) {
   const modules = {};
   for (const d of fs.readdirSync(at('modules'), { withFileTypes: true }).filter(d => d.isDirectory()))
     modules[d.name] = buildModule(at('modules', d.name), at('obj', 'modules'), defines, false, modules);
-  if (opt.modulesOnly) return { bios: fs.readFileSync(at('bin', 'bios.bin')), defines, modules };
+  // Its test modules (tests/mod/NAME: obj/tests/NAME.bin; testlib.inc theirs, and HydraOS's test modules')
+  const tests = {};
+  for (const d of fs.readdirSync(at('tests', 'mod'), { withFileTypes: true }).filter(d => d.isDirectory()))
+    tests[d.name] = buildModule(at('tests', 'mod', d.name), at('obj', 'tests'), defines);
+  if (opt.modulesOnly) return { bios: fs.readFileSync(at('bin', 'bios.bin')), defines, modules, tests };
 
   // The base's paged ROM: its rom.txt's modules, its init
   const manifest = readManifest(at('modules', 'rom.txt'));
@@ -147,10 +152,10 @@ function build(opt = {}) {
   for (const f of fs.readdirSync(at('bin')).filter(f => /^prom\d*\.bin$/.test(f))) fs.rmSync(at('bin', f));   // (The last build's)
   for (let k = 0; k < chips; k++) fs.writeFileSync(at('bin', 'prom' + k + '.bin'), image.subarray(k * romimg.CHIP, (k + 1) * romimg.CHIP));
   if (!opt.noReport) {
-    say(budget.report(ROOT, { modules }).text);
+    say(budget.report(ROOT, { modules, tests }).text);
     say('Paged ROM: ' + manifest.modules.join(', ') + ' (init ' + manifest.init + '): bin/prom0.bin');
   }
-  return { bios, defines, modules, manifest };
+  return { bios, defines, modules, tests, manifest };
 }
 
 if (require.main === module) {

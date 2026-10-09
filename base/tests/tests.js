@@ -49,7 +49,57 @@ module.exports = {
         return { input: 'āFFFC.FFFD\r' + 'ā1000: 11 22 33\r' + 'ā1000.1002\r' + 'ā1040: A9 48 20 ' + call('PUTC') + ' 60\r' + 'ā1040R\r' + 'ā' };
       },
       expect: ['task 1: wozmon', 'T1 00> FFFC.FFFD\nFFFC: 00 E0\n', '1000.1002\n1000: 11 22 33\n', '1040R\n1040: A9H\nT1 00> '],
-      check: (m, out) => out.includes('task F') ? ['a console driver started'] : [],
+      check: (m, out) => out.includes(': ser') ? ['ser started'] : [],
+    },
+    // ---- The kernel's (HydraOS's until the base had its own: a test module as init, kdev and ser around it)
+    {
+      name: 'note', what: 'notes: the defaults, handlers, a note to oneself, WAIT ended by one, note groups',
+      init: 't_note', modules: ['t_child'], cycles: 40e6,
+    },
+    {
+      name: 'file', what: 'files and servers: OPEN, READ, WRITE, SEEK, STAT, DUP; text, ctl, data, directories; waiting',
+      init: 't_file', modules: ['t_child', 't_srv'], cycles: 40e6,
+    },
+    {
+      name: 'ns', what: 'namespaces: BIND, MOUNT, UNMOUNT, unions and union directories, CHDIR, clean names, inheritance',
+      init: 't_ns', modules: ['t_child', 't_srv'], cycles: 40e6,
+    },
+    {
+      name: 'proc', what: '/proc/N\'s mem (its RAM, bank, ROMs, the I/O area), ram (its banks), regs, env, note and fd (FD2PATH, TR_FD); ctl\'s stop and start; the kernel task\'s and a driver\'s refused',
+      init: 't_proc', modules: ['t_child'], cycles: 40e6,
+    },
+    {
+      name: 'env', what: 'environments: ENV_GET, ENV_PUT, ENV_DEL, ENV_NAME, a child\'s copy, #e (/env) as files',
+      init: 't_env', modules: ['t_child'], cycles: 40e6,
+    },
+    {
+      name: 'kmesg', what: 'the kernel\'s messages: KMESG (the boot\'s banner first, at offsets, the ring full: its last KMESG_SIZE) and /dev/kmesg (kdev\'s #n/kmesg) read in parts',
+      init: 't_kmesg', cycles: 60e6,
+    },
+    {
+      name: 'mem', what: 'memory: BREAK, pages, banks, a shared segment between tasks (and kcopy from it); #r (raw RAM, init\'s); #s (a segment by name)',
+      init: 't_mem', modules: ['t_child'], cycles: 30e6,
+    },
+    {
+      name: 'sem', what: 'semaphores: counts and mutexes, waits ended by a release, a free and a note, a task\'s end; GETPPID',
+      init: 't_sem', cycles: 30e6,
+    },
+    {
+      name: 'xcall', what: 'XCALL: a library module\'s routines (t_lib), registers and flags both ways, its bank and back, a system call from it',
+      init: 't_xcall', modules: ['t_lib'], cycles: 10e6,
+    },
+    {
+      name: 'banks', what: 'a module of two banks: calls between them (FAR2, FAR1), registers and C, each bank\'s data',
+      init: 't_bank2', cycles: 10e6,
+    },
+    {
+      name: 'banks3', what: 'a module of three banks: calls from any bank to any (FARN), registers and C, each bank\'s data, each bank set again',
+      init: 't_bank3', cycles: 10e6,
+    },
+    {
+      name: 'kcopy', what: 'spike S2: copying between tasks',
+      init: 't_kcopy', cycles: 40e6,
+      budgets: [{ what: 'kcopy, 4096 bytes (DBG_KCOPY)', from: '<kc', to: 'kc>', per: 4096, max: 40 }],
     },
   ],
 };
