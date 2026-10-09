@@ -39,9 +39,9 @@ main:
             KMESG_      16, 0
             EXPECT_OK   "KMESG"
             lda         buf + 2
-            EXPECT_A    'H', "the boot's banner first: CR LF HydraOS ..."
+            EXPECT_A    'H', "the boot's banner first: CR LF Hydra-16: ..."
             lda         buf + 8
-            EXPECT_A    'S', "  (its HydraOS)"
+            EXPECT_A    '1', "  (its Hydra-16)"
             lda         held                                ; The last byte held
             sec
             sbc         #1

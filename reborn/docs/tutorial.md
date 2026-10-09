@@ -22,10 +22,11 @@ the paged ROM's, and a terminal at 9600 baud is the console.)  The boot shows PO
 the shell's prompt:
 
 ```
-HydraOS 1.0 for the Hydra-16: kernel 0.1, ABI 1
+Hydra-16: kernel 0.1, ABI 1
 POST ZP:0 ST:0 OS:0 HI:0 SH:S W:0
 ...
 task 1: init
+HydraOS 1.0 for the Hydra-16
 init: up in task 01
 ...
 HyForth (Forth 2012), bye to end
