@@ -38,7 +38,7 @@ the PATH):
 
 ```
 node build.js            the kernel (bin/bios.bin), the modules (ser, kdev, wozmon), the paged ROM (bin/prom0.bin),
-                         the assembly SDK's hydra.inc (obj/sdk), the budgets
+                         the assembly SDK's hydra.inc (sdk/asm), the budgets
 node sim/run.js -i       the base in the emulator, its serial console in your terminal (Ctrl-A x quits, Ctrl-A h helps)
 node sim/test.js         the base's tests (the boot, the monitor, the kernel's own tests)
 ```
@@ -57,7 +57,7 @@ first, then HydraOS on it.
 | `spec/` | `api.def` (the system calls: the jump table, `hydra.inc` and the reference are made from it) and `errors.def` (the error codes and their texts) |
 | `modules/` | The base's modules, a folder each: `ser`, `kdev`, `wozmon`; `rom.txt`, the paged ROM's list and its init; `module.cfg` ... `module8.cfg`, a module's link (one bank to eight) |
 | `lib/` | Sources shared with HydraOS's modules: `serial.inc` (the serial port's layer: `ser`'s and `cons`'s), `dis.inc` and `w65c02.inc` (the disassembler and the W65C02S's instructions: `wozmon`'s and HydraOS's asm library's) |
-| `sdk/asm/` | The assembly SDK's core: `hyx2.inc` and `hyx2.cfg` (a module's or a RAM program's header and link), `macros.inc`, `srvlib.inc` and `srvlib.s` (the server library a driver is built on); the build adds `obj/sdk/hydra.inc` |
+| `sdk/asm/` | The assembly SDK's core: `hyx2.inc` and `hyx2.cfg` (a module's or a RAM program's header and link), `macros.inc`, `srvlib.inc` and `srvlib.s` (the server library a driver is built on), and `hydra.inc` (the calls, the error codes and the constants: made from `spec/` by the build, and in Git, so a program can be built against it without one) |
 | `tools/` | `apigen.js` (the spec into the jump table, the error texts, `hydra.inc`, `api.json`), `romimg.js` (a paged ROM image: the module directory, the hardware test, the modules), `check.js` (only the kernel writes `T`, `V`, `W`), `budget.js` |
 | `sim/` | The board's emulator, cycle by cycle (`lib/`: the W65C02S, `T`/`U`/`V`/`W`, the ACIA, the VIA, the YM2151, the DS1747, a Vera X card, SD cards), `run.js` (any system's images, live or for a while; the monitor, breaks, the call trace), `view.js` (the screen and sound in a browser), `test.js` (the tests' runner, HydraOS's too) |
 | `tests/` | `tests.js`, the base's tests; `mod/`, their modules (and `testlib.inc`, HydraOS's test modules' too) |

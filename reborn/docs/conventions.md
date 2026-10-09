@@ -16,7 +16,7 @@ the rules as built.
   `base/spec/errors.def` (each with its text, and the C library's `errno` for it).
 * A call may change `.A`, `.X`, `.Y`, `r0`-`r15` and the flags; it never touches `$22`-`$7F`.
 * Everything outside the kernel runs with `W = 0` (BIOS ROM page 0 at `$E000`).
-* Never edit what's made from `spec/` (`obj/gen/*`, `obj/sdk/hydra.inc`, `obj/sdk/c/hydracalls.h` and
+* Never edit what's made from `spec/` (`obj/gen/*`; and the SDK's, in Git: `base/sdk/asm/hydra.inc`, `sdk/asm/numbers.inc` and `asmlib.inc`, `sdk/c/include/hydracalls.h` and
   `oserrmap.inc`): change the specification and build.
 
 ## Memory

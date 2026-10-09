@@ -1,6 +1,6 @@
 ; ****************************************************************************
 ; oserror.s - int __fastcall__ __osmaperrno (unsigned char oserror): the kernel's error codes as errno's (the map:
-; obj/sdk/c/oserrmap.inc, made from spec/errors.def's last column; EUNKNOWN for a code it hasn't).  _oserror keeps
+; oserrmap.inc (beside this: made from spec/errors.def's last column); EUNKNOWN for a code it hasn't).  _oserror keeps
 ; the code itself (hydra.h: HY_E_*).
 
             .export     ___osmaperrno

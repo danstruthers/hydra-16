@@ -9,16 +9,16 @@ The SDK is this folder; `node build.js` also copies it, with the generated `hydr
 
 | File | What it is |
 |---|---|
-| `hydra.inc` | The system calls (their addresses in the jump table), the error codes and the constants.  Made from `base/spec/api.def` by the build (`obj/sdk/hydra.inc`); never edit it |
+| `hydra.inc` | The system calls (their addresses in the jump table), the error codes and the constants.  In the base (`base/sdk/asm/hydra.inc`), made from `base/spec/api.def` by the build and kept in Git; never edit it |
 | `hyx2.inc` | The header: `HYX2_PROGRAM "name", main` |
 | `hyx2.cfg` | The link for a program in a file: header, code and data from `$0800`, the BSS after them |
 | `macros.inc` | `CALL name` (a system call), `CHECK label` (on to label if the call failed), `LDR reg, value` (a call register = a 16-bit value), `MOVR to, from` (one register = another), `PRINT label` or `PRINT "text"` (a string to fd 1); `CR`, `LF`, `TAB` |
 | `toollib.inc`, `toollib.s` | What the system's tools share: flags, errors and exit statuses as Plan 9's, buffered output, input a file at a time, directories, paths, numbers (the comment at its top lists them) |
 | `srvlib.inc`, `srvlib.s` | A file server's library (the system's drivers use it) |
 | `nslib.s` | A task's default namespace, from the namespace file (Plan 9's `newns`) |
-| `numbers.inc` | The number libraries' calls (hylang's, HyForth's, BASIC's and C's numbers: exact integers of any size, fixed decimals, rationals, complex numbers; their arithmetic, text in every base, the math functions): each entry's address (`NUM_ADD`, `MATH_SQRT` ...), the constants, and the macros `NUMCALL` and `MATHCALL` that call them.  Made from `spec/numbers.def` by the build (`obj/sdk/numbers.inc`), whose comments say each entry's registers; never edit it |
+| `numbers.inc` | The number libraries' calls (hylang's, HyForth's, BASIC's and C's numbers: exact integers of any size, fixed decimals, rationals, complex numbers; their arithmetic, text in every base, the math functions): each entry's address (`NUM_ADD`, `MATH_SQRT` ...), the constants, and the macros `NUMCALL` and `MATHCALL` that call them.  Made from `spec/numbers.def` by the build (`sdk/asm/numbers.inc`, kept in Git), whose comments say each entry's registers; never edit it |
 | `numlib.s` | `num_open`: the number libraries found and readied (a RAM bank of the program's made theirs), for `NUMCALL` and `MATHCALL` |
-| `asmlib.inc` | The asm library's calls (the W65C02S's instructions as `as` writes them: `ASM_DIS`, one disassembled; `ASM_FILE`, a source assembled as `as` does it; `ASM_BEGIN` ... `ASM_DONE`, a source a line at a time), its constants (`DIS_MAX`, `DF_PAD`, the kinds `DK_`, `ASM_RAM`, the flags `AF_`) and the macro `ASMCALL` (`r14` from `asm_mod`, the library's bank: `MODINFO` finds the module `asm`).  Made from `spec/asm.def` by the build (`obj/sdk/asmlib.inc`) |
+| `asmlib.inc` | The asm library's calls (the W65C02S's instructions as `as` writes them: `ASM_DIS`, one disassembled; `ASM_FILE`, a source assembled as `as` does it; `ASM_BEGIN` ... `ASM_DONE`, a source a line at a time), its constants (`DIS_MAX`, `DF_PAD`, the kinds `DK_`, `ASM_RAM`, the flags `AF_`) and the macro `ASMCALL` (`r14` from `asm_mod`, the library's bank: `MODINFO` finds the module `asm`).  Made from `spec/asm.def` by the build (`sdk/asm/asmlib.inc`, kept in Git) |
 | `samples/` | `hi` (arguments, task, directory, environment), `upper` (a filter on `toollib`), `tick` (a note handler), `counter` (a server: a driver, a module that runs in place, on `srvlib`), `nsum` (numbers: the sum of its arguments, and its square root) |
 
 The calls are described in `/rom/doc/api.md` on the Hydra (the build's `obj/gen/api.md`), and the rules the

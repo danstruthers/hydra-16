@@ -6,7 +6,9 @@
 //   obj/gen/jumptable.s   the jump table on BIOS ROM page 0 ($F800 up), a jmp per slot (spare slots: K_NOSYS)
 //   obj/gen/errors.inc    the error codes, for the kernel
 //   obj/gen/errtext.s     their texts, for ERRSTR
-//   obj/sdk/hydra.inc     the calls' addresses, the error codes and the constants, for programs in assembly
+//   sdk/asm/hydra.inc     the calls' addresses, the error codes and the constants, for programs in assembly (the
+//                         SDK's: in Git, so a program, a module or an OS can be built against it without a build;
+//                         the build makes it again, the same unless spec/ changed)
 //   obj/gen/api.json      the calls and errors as data (the emulator names calls with it: sim/run.js --trace-calls)
 // HydraOS's tools/apigen.js (reborn/) reads the same spec with readApi and readErrors and makes the rest: the languages'
 // bindings (HyForth's, hylang's, BASIC's, C's) and the reference, api.md.
@@ -162,7 +164,7 @@ function generate(root) {
   write(path.join(gen, 'jumptable.s'), jumptable(api));
   write(path.join(gen, 'errors.inc'), errorsInc(errors));
   write(path.join(gen, 'errtext.s'), errText(errors));
-  write(path.join(root, 'obj', 'sdk', 'hydra.inc'), sdkInc(api, errors));
+  write(path.join(root, 'sdk', 'asm', 'hydra.inc'), sdkInc(api, errors));
   write(path.join(gen, 'api.json'), JSON.stringify({
     calls: api.calls.map(c => ({ name: c.name, addr: c.addr, group: c.group, in: c.in.join(' '), out: c.out.join(' '), errors: c.errors, blocks: c.blocks })),
     errors, consts: api.consts.map(k => ({ name: k.name, value: k.value })),

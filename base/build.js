@@ -2,8 +2,8 @@
 // ****************************************************************************
 // build.js - builds the base (docs/design/plans/BASE.md, in reborn/docs): the Hydra-16's kernel, the system calls
 // and the parts every system on it shares:
-//   1. tools/apigen.js     spec/api.def, errors.def -> the jump table, the error codes and texts, the assembly SDK's
-//                          hydra.inc, api.json (obj/gen, obj/sdk)
+//   1. tools/apigen.js     spec/api.def, errors.def -> the jump table, the error codes and texts, api.json (obj/gen),
+//                          and the assembly SDK's hydra.inc (sdk/asm: in Git)
 //   2. the kernel          kernel/*.s and the generated sources -> bin/bios.bin (the 128K BIOS ROM), with its map,
 //                          labels and debug information in obj/kernel/
 //   3. the modules         modules/NAME/*.s -> obj/modules/NAME.bin: ser (the console's driver, task F), kdev (the
@@ -13,7 +13,7 @@
 //                          test in bank 1, the modules (one 512K chip, as few banks as it needs; the rest $FF)
 //   5. the budgets         the BIOS ROM's pages, the modules: used, and room left (tools/budget.js)
 // HydraOS (../reborn/build.js) runs this first, and builds its modules, its paged ROM and its SDKs with what this
-// gives: buildModule (a module, or a RAM program, with the base's includes: obj/sdk, sdk/asm, include, obj/gen),
+// gives: buildModule (a module, or a RAM program, with the base's includes: sdk/asm, include, obj/gen, lib),
 // assemble, the cc65 tools, the hardware test, readManifest (a rom.txt).
 // The cc65 tools: $CC65_BIN, else $CC65_HOME/bin (as the repository's CI sets it), else
 // C:/source/cc65/win64_snapshot/bin, else the PATH.
@@ -60,9 +60,9 @@ function assemble(files, objdir, includes, defines) {
   });
 }
 
-// The base's includes, for a module or a program: the generated hydra.inc, the SDK's core, the hardware's, the
-// generated errors.inc, and the sources the base's modules share with HydraOS's (lib: serial.inc ...)
-const INCLUDES = [at('obj', 'sdk'), at('sdk', 'asm'), at('include'), at('obj', 'gen'), at('lib')];
+// The base's includes, for a module or a program: the SDK's (hydra.inc, made from spec/, and its core), the
+// hardware's, the generated errors.inc, and the sources the base's modules share with HydraOS's (lib: serial.inc ...)
+const INCLUDES = [at('sdk', 'asm'), at('include'), at('obj', 'gen'), at('lib')];
 
 // A module's link: modules/module.cfg, or moduleN.cfg for N banks
 const moduleCfg = banks => at('modules', banks > 1 ? 'module' + banks + '.cfg' : 'module.cfg');
