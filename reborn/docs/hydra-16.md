@@ -54,7 +54,7 @@ one book (`node tools/docpdf.js` makes it again).
 | **Shells** | HyForth over rc, the login shell; rc, Plan 9's; hylang and BASIC as shells too |
 | **Languages** | HyForth (Forth 2012), hylang (danlang, a lisp, with a bytecode machine and native code), BASIC (QuickBASIC's kind, compiled to a stack machine's code); one number system in all of them, and in C: exact, of any size, in any base |
 | **Programs** | In assembly (ca65 on a PC, or `as` on the Hydra) or C (cc65): modules of the paged ROM, or programs in files, read into RAM at `$0800` |
-| **Tools** | The core tools (Plan 9's way), `edit` (a screen editor), `ed`, `db` (a debugger), `as`, `play` (ZSM songs, scores, WAV files), `xmodem`, `calc`; on the PC an emulator that runs the real ROMs (with the Vera X and the sound), the regression tests, and the PC tool (`/pc`, and the terminal) |
+| **Tools** | The core tools (Plan 9's way), `edit` (a screen editor), `ed`, `db` (a debugger), `as` and `dis` (an assembler and its inverse), `play` (ZSM songs, scores, WAV files), `xmodem`, `calc`; on the PC an emulator that runs the real ROMs (with the Vera X and the sound), the regression tests, and the PC tool (`/pc`, and the terminal) |
 
 The tasks as the system starts:
 

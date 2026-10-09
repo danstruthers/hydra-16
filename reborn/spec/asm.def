@@ -1,0 +1,36 @@
+# ****************************************************************************
+# asm.def - the asm library's calls: the W65C02S's instructions as the assembler as writes them (ca65's language),
+# one table of them for every tool that reads or writes them: db's d, HyForth's disasm, dis (the disassembler at
+# rc), and as.  tools/apigen.js reads it, as it reads numbers.def, and makes obj/sdk/asmlib.inc (the entries'
+# addresses, ASM_DIS ..., the constants, and the macro ASMCALL, for programs in assembly), the constants for C
+# (obj/sdk/c/asmdefs.h, which asm.h includes) and the library's jump table (obj/gen/asm_jt.inc).  The format is
+# numbers.def's.
+#
+# A call: XCALL, r15 the entry's address, r14 the library's bank (MODINFO finds it, by the name "asm").  The library
+# has no RAM of its own, nor a bank: what it reads and writes is the caller's, at the addresses it's given (anywhere
+# the caller sees but its paged ROM, $A000-$DFFF, the library's while it runs).  An entry may change r4-r9 (r4 an
+# answer, when it says); everything else is kept, r0-r3 too.
+
+library asm "The W65C02S's instructions, as as writes them: one disassembled"
+
+const DIS_MAX       64  "The room for DIS's text: an instruction as as writes it, its 0 too"
+const DF_PAD        $01 "DIS's flags: its name padded to 12 columns (the SDK's sources' way), else one space"
+const DK_ADDR       $01 "DIS's kinds: its operand is an address (r4: the zero page's or not), read or written"
+const DK_GO         $02 "  it goes to the address r4 (a jump, jsr, a branch: bbr's and bbs's too)"
+const DK_CALL       $04 "  a jsr (DK_GO too)"
+const DK_END        $08 "  nothing after it is reached by going on from it (brk, rti, rts, stp, jmp, bra)"
+const DK_UNDEF      $10 "  an opcode the W65C02S doesn't define (the NOP it runs: .byte and its bytes)"
+
+entry DIS asm impl=as_dis
+  in:     r0 = the instruction's bytes (its opcode and the two after it); r1 = its address; r2 = the text's place
+  in:     (DIS_MAX bytes); r3 = a name for the address its operand names (0: none); .A = the flags (DF_)
+  out:    .A = its length (1-3); .X = its kind (DK_); .Y = the text's length (a 0 after it); r4 = the address its
+  out:    operand names (a branch's: where it goes)
+  errors: -
+  names:  hl - | bas - | fs disasm | c dis_insn
+  doc:    One instruction as as writes it, so its text assembled is its bytes again: its name in lower case (RMB,
+  doc:    SMB, BBR and BBS with their bit), then its operand, an address in hex ($nn on the zero page, $nnnn) or as
+  doc:    the name r3 gives (a label's, a symbol's: the address of a branch or jump, of the zero page's or an
+  doc:    absolute operand; bbr's and bbs's where they go), with a: before an absolute address under $100 where the
+  doc:    instruction has a zero page form; a branch's where it goes as an address.  An opcode the W65C02S doesn't
+  doc:    define is the NOP it runs: .byte and its bytes (1, 2 or 3).

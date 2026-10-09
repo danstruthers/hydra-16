@@ -20,6 +20,7 @@ lib/as/srvlib.s     ../sdk/asm/srvlib.s
 lib/as/nslib.s      ../sdk/asm/nslib.s
 lib/as/numbers.inc  ../obj/sdk/numbers.inc ;   the number libraries' (numbers.inc, numlib.s)
 lib/as/numlib.s     ../sdk/asm/numlib.s
+lib/as/asmlib.inc   ../obj/sdk/asmlib.inc ;   the asm library's (asmlib.inc: its instructions as as writes them)
 lib/as/hi.s         ../sdk/asm/samples/hi/hi.s ;   and its samples
 lib/as/tick.s       ../sdk/asm/samples/tick/tick.s
 lib/as/upper.s      ../sdk/asm/samples/upper/upper.s
@@ -106,6 +107,7 @@ bin/label           ../obj/programs/label.hyx
 bin/grep            ../obj/programs/grep.hyx    ; The tools in C (programs/grep, programs/sort)
 bin/sort            ../obj/programs/sort.hyx
 bin/db              ../obj/programs/db.hyx      ; The debugger (C: programs/db)
+bin/dis             ../obj/programs/dis.hyx     ; The disassembler (C: programs/dis): as's inverse
 bin/edit            ../obj/programs/edit.hyx    ; The screen editor (C: programs/edit)
 bin/calc            ../obj/programs/calc.hyx    ; The calculator: the number libraries at rc (C: programs/calc, num.h)
 bin/scom            bin/scom                    ; A song run by its name (an rc script: #!/bin/rc)
