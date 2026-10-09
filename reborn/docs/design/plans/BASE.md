@@ -20,6 +20,7 @@ base.
 10. [The order of work](#the-order-of-work)
 11. [Risks](#risks)
 12. [Questions](#questions)
+13. [Answers](#answers-the-users-9-october-2026)
 
 ---
 
@@ -115,8 +116,13 @@ calls, not code in the BIOS ROM.  Its fds 0-2 are `#c/cons` (raw), or the polled
 * **Ctrl-C** (with `ser`): a program run with `R` that doesn't come back is stopped by its note, and the monitor's
   prompt comes back.
 
-The extras the V1.8C monitor had (its disassembler, a task's memory, hex loads) are question 3: the bare plan has
-none of them.
+* **The disassembler** (V1.8C's `D` mode; question 3): `XXXXL` lists 20 instructions from `XXXX` (`L` again, or
+  Enter on an empty line after one, the next 20), each `XXXX: AA BB CC  lda $1234,x`, as `as` writes them.  It is
+  HydraOS's own disassembler, not a second one: `dis.inc` and `w65c02.inc` (the W65C02S's one table, 500 lines, no
+  RAM of their own) move from `reborn/modules/asm` to `base/lib/asm`, and both `wozmon` and HydraOS's asm library
+  (`as`, `dis`, `db`, HyForth's `disasm`) include them.
+
+V1.8C's other extras (another task's memory, hex loads) aren't in it.
 
 ### **The folders**
 
@@ -129,6 +135,8 @@ base/
   include/                 hw.inc, layout.inc
   spec/                    api.def, errors.def
   modules/                 rom.txt; ser/ (serial.inc, shared with reborn's cons), wozmon/
+  lib/asm/                 dis.inc, w65c02.inc: the disassembler and the instruction table (from reborn/modules/asm;
+                           wozmon's, and reborn's asm library's)
   sdk/asm/                 hydra.inc (made), hyx2.inc, hyx2.cfg, macros.inc, srvlib.*
   tools/                   apigen.js, romimg.js, check.js, budget.js
   hwtest/                  bank1.bin: the old hardware test's bank (16K, from old/os_rom's image)
@@ -192,13 +200,14 @@ Each step leaves both builds, all the tests and the images as they were (but whe
 4. **The serial layer**: `cons`'s port code into `serial.inc`, included back; `cons` byte-different but its tests
    all passing.
 5. **`ser`** on `serial.inc`, with its tests (on a test image: `ser` in task F, a test module as init).
-6. **`wozmon`**, `base/modules/rom.txt`, `base/bin/prom0.bin`; its tests; the base boots on its own.
+6. **`wozmon`**, `base/modules/rom.txt`, `base/bin/prom0.bin`; its tests; the base boots on its own.  Then its
+   disassembler: `dis.inc` and `w65c02.inc` to `base/lib/asm` (the asm library including them from there, its
+   tests unchanged), and `L`.
 7. **The kernel's tests** to `base/tests`, on the base's image.
 8. **The documents**, the CI, the PDF.
 
-Steps 2 and 3 move many files: they should come when no other branch has unmerged work in `reborn/kernel`,
-`reborn/sim` or `build.js`, or straight after the others merge (`git mv`'s renames merge cleanly into a branch
-that only edits those files, but not one that adds files there).
+Steps 2 and 3 move many files, so they come once the other sessions' outstanding work is merged (the answer to
+question 4): nobody merges across the renames.
 
 ### **Risks**
 
@@ -223,3 +232,11 @@ that only edits those files, but not one that adds files there).
    disassembler, examining another task's memory, loading Intel hex or S-records over the serial port)?
 4. **When**: the move touches the kernel's and the emulator's paths for every branch; do it now (the Numbers session's
    `reborn-numspeed` and any others merged or told first), or after the branches in flight land?
+
+### **Answers (the user's, 9 October 2026)**
+
+1. **Task F**: `ser`, a small driver, its serial layer shared with `cons` (B).
+2. **The emulator**: to `base/sim`; the base builds and tests on its own.
+3. **The monitor**: Woz's commands and the disassembler (`L`, on HydraOS's own `dis.inc` and `w65c02.inc`, which
+   move to `base/lib/asm`).  No hex loads, no other task's memory.
+4. **When**: the other sessions' outstanding merges first, then the move.
