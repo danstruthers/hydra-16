@@ -8,8 +8,8 @@
 ** the table as it goes (the philosophers write what they're doing in a shared segment), sees a deadlock if one
 ** comes, and ends them (a kill note: the end of a task gives back the mutexes it holds).
 **   philo [-d] [-n MEALS] [PHILOSOPHERS]   (2-5, 5 by default; MEALS each, then the end; none: till Ctrl-C)
-**   % /rom/sample/c/philo
-**   % /rom/sample/c/philo -d
+**   % /sd/0/sample/c/philo
+**   % /sd/0/sample/c/philo -d
 */
 
 #include <stdio.h>
@@ -105,11 +105,11 @@ static const char* const names[MAX] = { "Plato", "Confucius", "Socrates", "Volta
 static const char* const doings[] = { "thinking", "hungry", "eating", "done" };
 static volatile unsigned char stop;
 
-/* This program's own file, to start its workers from (argv[0] is its name): /bin/NAME (bind -a /rom/sample/c /bin
-** puts the samples there), ./NAME, or /rom/sample/c/NAME */
+/* This program's own file, to start its workers from (argv[0] is its name): /bin/NAME (bind -a /sd/0/sample/c /bin
+** puts the samples there), ./NAME, or /sd/0/sample/c/NAME */
 static const char* self (const char* name)
 {
-    static const char* const dirs[] = { "/bin/", "./", "/rom/sample/c/" };
+    static const char* const dirs[] = { "/bin/", "./", "/sd/0/sample/c/" };
     static char path[48];
     struct stat st;
     unsigned char i;
@@ -169,7 +169,7 @@ int main (int argc, char* argv[])
         usage ();
     }
     if ((prog = self (argv[0])) == 0) {
-        fprintf (stderr, "philo: can't find myself (/bin/%s, ./%s, /rom/sample/c/%s)\n", argv[0], argv[0], argv[0]);
+        fprintf (stderr, "philo: can't find myself (/bin/%s, ./%s, /sd/0/sample/c/%s)\n", argv[0], argv[0], argv[0]);
         hy_exits ("no workers");
     }
     seg = hy_seg_create (1);

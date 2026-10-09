@@ -43,6 +43,18 @@ const DISK_CARDS = [card(0, 2048, false, (n, i) => n * 7 + i), card(1, 4096, tru
 // An SD card on SPI device dev from an image file, claiming blocks (those past the file's end read as zeros); its
 // writes kept, and save() puts them in the file (for the PC tool to look at)
 const CARD_DIR = path.join(__dirname, '..', 'obj', 'cards'), OLD_CARDS = path.join(__dirname, '..', '..', 'old', 'sim', 'cards');
+// The SD card's image (bin/sdcard.img: the samples, the songs: tools/sdcard.js), for the tests that run a sample
+// (sdcard: true): in SD device 0, its writes kept apart (imageCard's), so the image stays as it was built
+const SDCARD = path.join(__dirname, '..', 'bin', 'sdcard.img');
+function sdcardOf(t) {
+  const d = Object.getOwnPropertyDescriptor(t, 'machine');
+  Object.defineProperty(t, 'machine', { configurable: true, enumerable: true, get() {
+    const m = d ? (d.get ? d.get.call(this) : d.value) : {};
+    if ((m.sd || []).some(c => c.dev === 0)) throw new Error(t.name + ': its own card in SD device 0, and sdcard');
+    return Object.assign({}, m, { sd: [imageCard(0, SDCARD, fs.statSync(SDCARD).size / 512), ...(m.sd || [])] });
+  } });
+}
+
 function imageCard(dev, file, blocks) {
   const base = fs.readFileSync(file), written = new Map();
   return { dev, blocks, file,
@@ -218,7 +230,7 @@ const TOOL_LINES = [
   ["rm -f /nothing; echo $status",""],
   ["ls -x; echo $status","usage: ls [-ld] [name ...]\nusage"],
   ["du /ram/u; du -a /ram/u/a","0\t/ram/u/a\n0\t/ram/u/b/c\n0\t/ram/u/b\n2\t/ram/u\n0\t/ram/u/a/g\n0\t/ram/u/a"],
-  ["df","disk  kind   size        free        label\nx     rom    ",true],
+  ["df","disk  kind   size        free        label\n0     sdhc   16380 KB    ",true],
   ["cat /proc/$task/args; cd /ram/u; cat /proc/$task/cwd; cd","-l\n/ram/u"],
   ["ns", [
     "bind '#/' /",
@@ -303,8 +315,8 @@ const TOOL_LINES = [
     "cmp: end of /ram/t1",
     "/ram/w /ram/t1 differ: byte 1",
   ].join('\n')],
-  ["/rom/sample/hi Ann Bob","Hello, Ann!\nHello, Bob!\nI'm task 3, in /, in window 0."],
-  ["echo Hello there | /rom/sample/upper","HELLO THERE"],
+  ["/sd/0/sample/hi Ann Bob","Hello, Ann!\nHello, Bob!\nI'm task 3, in /, in window 0."],
+  ["echo Hello there | /sd/0/sample/upper","HELLO THERE"],
   ["cat '#k/count'; echo add 5 >'#k/ctl'; echo add 2 >'#k/ctl'; cat '#k/count' '#k/ctl'; echo reset >'#k/ctl'; cat '#k/ctl'", [
     "0",
     "7",
@@ -325,11 +337,11 @@ const CHORUS = ['Row, row, row your boat,', 'Gently down the stream.', 'Merrily,
 const ROUND_LENS = [3, 3, 2, 1, 3, 2, 1, 2, 1, 6, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 2, 1, 6];
 
 const C_LINES = [
-  ["/rom/sample/c/hello world","hello from C, world"],
-  ["echo hello there | /rom/sample/c/upper","HELLO THERE"],
-  ["/rom/sample/c/code 3; echo $status","3"],
-  ["/rom/sample/c/code oops; echo $status","oops"],
-  ["cd /ram; /rom/sample/c/ctest a 'b c'","ok - arguments",true],
+  ["/sd/0/sample/c/hello world","hello from C, world"],
+  ["echo hello there | /sd/0/sample/c/upper","HELLO THERE"],
+  ["/sd/0/sample/c/code 3; echo $status","3"],
+  ["/sd/0/sample/c/code oops; echo $status","oops"],
+  ["cd /ram; /sd/0/sample/c/ctest a 'b c'","ok - arguments",true],
   ["for(w in pear apple fig Apple banana 10 9 07) echo $w >>/ram/s; sort /ram/s", [
     "07",
     "10",
@@ -376,7 +388,7 @@ const C_LINES = [
 // The numbers in C (cnum's lines, as the C test's): num.h's test (ntest: its "ok" lines), calc at rc (rc's own
 // characters quoted: ^ * ( ) #), and the assembly sample nsum (numbers.inc's macros, numlib.s)
 const CNUM_LINES = [
-  ["/rom/sample/c/ntest","ok - num_init: the libraries",true],
+  ["/sd/0/sample/c/ntest","ok - num_init: the libraries",true],
   ["calc 2/3 + 0.5; calc sqrt 2; calc -b x 255","7/6\n1.41421356237\nFF"],
   ["calc '2^100'; calc -d 30 pi; calc -b '#b' 0.75","1267650600228229401496703205376\n3.14159265358979323846264338328\n#b0.11"],
   ["calc '(1+2)*3'; calc 'log(e)^2'; calc 'sqrt 2^2'; calc 'gcd(12, 18)'","9\n1\n2\n6"],
@@ -390,7 +402,7 @@ const CNUM_LINES = [
   ].join('\n')],
   ["echo 1/3+1/6 >/ram/e; echo x >>/ram/e; echo '0.1 + 0.2' >>/ram/e; calc </ram/e; echo $status","1/2\ncalc: x: unknown\n0.3\nx: unknown"],
   ["calc 'fib 2000' | wc -c; calc -b b '2^1000' | wc -c","    419\n   1002"],
-  ["/rom/sample/nsum 1/3 0.5 2; /rom/sample/nsum 1 x; echo $status","17/6\nsqrt 1.68325082306\nnot a number"],
+  ["/sd/0/sample/nsum 1/3 0.5 2; /sd/0/sample/nsum 1 x; echo $status","17/6\nsqrt 1.68325082306\nnot a number"],
 ];
 
 // The console on the Vera X's screen (phase 8: cons's second terminal, vid's /term), at rc: /dev/vid; consctl's
@@ -644,7 +656,7 @@ const SND_LINES = [
     "echo: write error: invalid argument",
   ].join('\n')],
   ["wc -c /dev/snd","    256 /dev/snd"],
-  ["/rom/sample/c/tones 0 & sleep 1; echo claim 1 >/dev/sndctl; echo note 0 60 >/dev/sndctl; wait",
+  ["/sd/0/sample/c/tones 0 & sleep 1; echo claim 1 >/dev/sndctl; echo note 0 60 >/dev/sndctl; wait",
     "echo: write error: busy\necho: write error: busy\ntones: patch 0, $20 C4, $28 4C, C#4 61, the tune played, 1000 Hz 5D, mml 0, chord 0"],
   ["echo x >/dev/bell",null],
   // (The channel commands as text: channel 4 a note bent down half a semitone, on the left; 5 a drum on the right;
@@ -745,7 +757,7 @@ function ramwCard() {
 // songs/vera.mml (both chips, each waveform and envelope) as v.mml and vpc.zsm, tests/scores/edges.mml and edges2.mml
 // as e and f; and scores that are wrong (an instrument on the other chip's channel, both ways; x on the PSG; y past
 // its registers; three instruments it can't read; a note before an instrument on channel 23)
-const PSG_SCORES = { v: path.join(__dirname, '..', 'romfs', 'songs', 'vera.mml'), e: path.join(__dirname, 'scores', 'edges.mml'), f: path.join(__dirname, 'scores', 'edges2.mml') };
+const PSG_SCORES = { v: path.join(__dirname, '..', 'sdcard', 'songs', 'vera.mml'), e: path.join(__dirname, 'scores', 'edges.mml'), f: path.join(__dirname, 'scores', 'edges2.mml') };
 const PSG_BAD = ['@w { wave saw }\nA @w c\n', '@g { gm 0 }\nI @g c\n', '@w { wave saw }\nI @w x36\n', '@w { wave saw }\nJ @w y 64,1 c\n',
   '@w { wave square }\nI @w c\n', '@w { env 1 2 64 3 }\nI @w c\n', '@w { wave saw alg 3 }\nI @w c\n', '@w { wave saw }\nX c\n'];
 function psgScoreCard() {
@@ -887,7 +899,7 @@ const PLAY_LINES = [
     "claimed",
   ].join('\n')],
   ["scom & sleep 1; cat /dev/sndctl; slay play; wait; cat /dev/sndctl","volume 100\nchannels 8\nclaimed 0 1\nvolume 100\nchannels 8\nclaimed"],
-  ["/rom/sample/c/jukebox /rom/songs/scom.zsm 2","2\n1\nstopped: 137"],
+  ["/sd/0/sample/c/jukebox /rom/songs/scom.zsm 2","2\n1\nstopped: 137"],
 ];
 // The play test's song: 60 Hz, six FM channels (a voice each, set up in tick 0), then a note every 2 ticks, round
 // the channels, 240 of them (as dense as the X16's tunes: songs come from cards); and its card, SD device 0
@@ -915,6 +927,8 @@ function playCard() {
   hydrafs.mkfs(f, 8, 'SONGS', undefined, true);
   const v = new hydrafs.Volume(f);
   v.put('t.zsm', PLAY_SONG());
+  v.mkdir('sample/c');                                        // (jukebox, as the SD card has it: bin/sdcard.img's)
+  v.put('sample/c/jukebox', fs.readFileSync(path.join(__dirname, '..', 'obj', 'samples', 'c', 'jukebox.hyx')));
   v.close();
   return [imageCard(0, f, 16384)];
 }
@@ -1990,13 +2004,14 @@ module.exports = {
       // Ctrl-C: its handler's, not the default)
       get machine() {
         return { input: TOOL_LINES.map(l => 'ā' + l[0] + '\r').join('') + 'ātop\rĀĀĀĀ\x03' +
-          'āecho $status\r' + 'ācat /ram/n /ram/n /ram/n | more\rĀĀ\r' + 'ā/rom/sample/tick\rĀĀĀĀĀ\x03' + 'āecho $status\r' };
+          'āecho $status\r' + 'ācat /ram/n /ram/n /ram/n | more\rĀĀ\r' + 'ā/sd/0/sample/tick\rĀĀĀĀĀ\x03' + 'āecho $status\r' };
       },
       get expect() {
         return [...TOOL_LINES.map(l => '% ' + l[0] + '\n' + (l[2] ? l[1] : (l[1] === null ? '' : l[1] + '\n') + '%')),
           '\x1b[H\x1b[2Jtask  state    cpu  name\n', '% echo $status\ninterrupt\n%',
-          '\n9\n10\n--more--\n11\n12\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n%', '% /rom/sample/tick\n.', ' seconds\n\n% echo $status\n\n%'];
+          '\n9\n10\n--more--\n11\n12\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n%', '% /sd/0/sample/tick\n.', ' seconds\n\n% echo $status\n\n%'];
       },
+      sdcard: true
     },
     {
       name: 'c', what: 'the C target (cc65): its samples at rc, the library\'s test (ctest), conio\'s raw keys (an Escape alone too; and raw ended with the program)',
@@ -2004,13 +2019,14 @@ module.exports = {
       // (Each line typed at its prompt, as the tools test's.  Then keys: three keys and q; and again, ended by Ctrl-C,
       // its window cooked again for rc)
       get machine() {
-        return { input: C_LINES.map(l => 'ā' + l[0] + '\r').join('') + 'ā/rom/sample/c/keys\rĀĀab\x1b[A\x1bĀq' +
-          'ā/rom/sample/c/keys\rĀĀ\x03' + 'āecho $status\r' };
+        return { input: C_LINES.map(l => 'ā' + l[0] + '\r').join('') + 'ā/sd/0/sample/c/keys\rĀĀab\x1b[A\x1bĀq' +
+          'ā/sd/0/sample/c/keys\rĀĀ\x03' + 'āecho $status\r' };
       },
       get expect() {
         return [...C_LINES.map(l => '% ' + l[0] + '\n' + (l[2] ? l[1] : (l[1] === null ? '' : l[1] + '\n') + '%')),
           '\nctest: 0 failed\n%', 'codes:\x1b[27m 61 62 80 1B\nended at 18,2\n%', '% echo $status\ninterrupt\n%'];
       },
+      sdcard: true
     },
     {
       name: 'cnum', what: 'the numbers in C and assembly: num.h\'s test (ntest: the number libraries from C, printf\'s and scanf\'s %N and %{base}), calc at rc (its operators, functions, bases, digits, errors, its input a line at a time, long results), the assembly sample nsum (numbers.inc, numlib.s)',
@@ -2018,11 +2034,12 @@ module.exports = {
       // (Each line typed at its prompt, as the C test's)
       machine: { input: CNUM_LINES.map(l => 'ā' + l[0] + '\r').join('') },
       expect: [...CNUM_LINES.map(l => '% ' + l[0] + '\n' + (l[2] ? l[1] : l[1] + '\n%')), '\nntest: 0 failed\n%'],
+      sdcard: true
     },
     {
       name: 'race', what: 'the race sample (sdk/c/samples/race: tasks sharing a segment) at rc: four tasks each add 1 to a counter 300 times (a read, some work, a write); with nothing to keep them apart adds are lost, with a mutex none; the barrier (ready and go)',
       init: 't_rc', cycles: 200e6,
-      machine: { input: 'ā/rom/sample/c/race 4 300\r' },
+      machine: { input: 'ā/sd/0/sample/c/race 4 300\r' },
       expect: ['the counter: 1200 of 1200: none lost', 'wait for it, using no CPU.\n'],
       check(m, out) {
         const f = [], lost = out.match(/the counter: (\d+) of 1200: (\d+) adds lost/);
@@ -2032,11 +2049,12 @@ module.exports = {
         this.notes = lost ? ['without a lock: ' + lost[2] + ' adds of 1200 lost'] : [];
         return f;
       },
+      sdcard: true
     },
     {
       name: 'chorus', what: 'the chorus sample (sdk/c/samples/chorus: the console shared) at rc: four tasks sing a line each, a letter at a time; with nothing between them the letters tangle; with a mutex each line is whole (in the order they took it); with a baton (a semaphore each, passed round) whole and in turn',
       init: 't_rc', cycles: 200e6,
-      machine: { input: 'ā/rom/sample/c/chorus\r' },
+      machine: { input: 'ā/sd/0/sample/c/chorus\r' },
       expect: ['With a baton passed round, a semaphore each (wait for yours, sing, pass it on):\n' + CHORUS.join('\n') + '\n'],
       check(m, out) {
         const f = [], a = out.indexOf('With a mutex, held for a whole line:\n'), b = out.indexOf('\n\nWith a baton');
@@ -2047,23 +2065,25 @@ module.exports = {
         this.notes = ['with a mutex, in the order ' + mutex.map(l => CHORUS.indexOf(l) + 1).join(' ')];
         return f;
       },
+      sdcard: true
     },
     {
       name: 'philo', what: 'the philo sample (sdk/c/samples/philo: the dining philosophers, each fork a mutex, a shared segment) at rc: five tasks eat three meals each, the lower-numbered fork first, none in two hands at once; then -d, each its left fork first: a deadlock, seen, and ended (the tasks killed, their mutexes given back); then under rc -c, Ctrl-C: philo\'s handler ends it, rc -c waiting for it (then ending, before its next command)',
       init: 't_rc', cycles: 400e6,
-      machine: { input: 'ā/rom/sample/c/philo -n 3\rā/rom/sample/c/philo -d; echo $status\r' +
-        'ārc -c \'/rom/sample/c/philo; echo after\'\rĀĀĀĀĀĀ\x03āecho $status\r' },
+      machine: { input: 'ā/sd/0/sample/c/philo -n 3\rā/sd/0/sample/c/philo -d; echo $status\r' +
+        'ārc -c \'/sd/0/sample/c/philo; echo after\'\r' + 'Ā'.repeat(12) + '\x03āecho $status\r' },   // (Read from the card: a moment more)
       expect: ['5 philosophers ate 15 meals (3 to 3 each); a fork was in two hands 0 times.\n',
         'Deadlock: each holds their left fork and waits for their right one', 'a fork was in two hands 0 times.\ndeadlock\n',
         'a fork was in two hands 0 times.\n\n% echo $status\ninterrupted\n%'],
       check(m, out) {
-        return out.slice(out.lastIndexOf('rc -c \'/rom/sample/c/philo')).includes('\nafter') ? ['rc -c went on after Ctrl-C'] : [];
+        return out.slice(out.lastIndexOf('rc -c \'/sd/0/sample/c/philo')).includes('\nafter') ? ['rc -c went on after Ctrl-C'] : [];
       },
+      sdcard: true
     },
     {
       name: 'prodcons', what: 'the prodcons sample (sdk/c/samples/prodcons: counting semaphores and a mutex, a ring in a shared segment) at rc: two producers make 20 items each, two consumers use them, each once; the producers waited for room, and the consumers for items',
       init: 't_rc', cycles: 300e6,
-      machine: { input: 'ā/rom/sample/c/prodcons -n 20\r' },
+      machine: { input: 'ā/sd/0/sample/c/prodcons -n 20\r' },
       expect: ['Made 40 items (their sum 60420), used 40 (their sum 60420): each once.\n', ' times.\n%'],
       check(m, out) {
         const w = out.match(/The producers waited for room (\d+) times; the consumers for an item (\d+) times/);
@@ -2071,11 +2091,12 @@ module.exports = {
         this.notes = ['the producers waited ' + w[1] + ' times, the consumers ' + w[2]];
         return +w[1] && +w[2] ? [] : ['the ' + (+w[1] ? 'consumers' : 'producers') + ' never waited'];
       },
+      sdcard: true
     },
     {
       name: 'round', what: 'the round sample (sdk/c/samples/round: a barrier, then each task its own time) at rc: four tasks sing a round on YM2151 channels 0-3, an eighth 12 ticks; each voice\'s 27 notes in time (hy_sleep_until: within 5 ticks), each voice two bars after the one before',
       init: 't_rc', cycles: 200e6,
-      machine: { input: 'ā/rom/sample/c/round 1 12\r' },
+      machine: { input: 'ā/sd/0/sample/c/round 1 12\r' },
       expect: ['Each voice sang it 1 time, its latest note late by', ' ticks.\n%'],
       check(m, out) {
         // (Each channel's key-ons against the tune's: its note lengths, an eighth 12 ticks, from voice 0's first,
@@ -2097,6 +2118,7 @@ module.exports = {
         this.notes = ['the notes within ' + worst.toFixed(1) + ' ticks of their times'];
         return f.slice(0, 5);
       },
+      sdcard: true
     },
     {
       name: 'ed', what: 'ed, the line editor: a file made, printed, changed and written; its errors; q twice; Ctrl-C at its prompt; w name',
@@ -2162,16 +2184,17 @@ module.exports = {
         },
       },
       machine: {
-        input: ['echo b115200 >/dev/serctl', 'as -l /lib/as/hi.s /ram/hi; echo $status', 'cmp /ram/hi /rom/sample/hi; echo $status', '/ram/hi Ann',
-          'grep main /ram/hi.lbl', 'as /lib/as/nsum.s /ram/nsum; cmp /ram/nsum /rom/sample/nsum; echo $status', 'as /pc/t_asall.s /ram/t_asall; cmp /ram/t_asall /pc/t_asall.hyx; echo $status', 'as -b /pc/raw.s /ram/raw; xd /ram/raw',
+        input: ['echo b115200 >/dev/serctl', 'as -l /sd/0/sample/as/hi.s /ram/hi; echo $status', 'cmp /ram/hi /sd/0/sample/hi; echo $status', '/ram/hi Ann',
+          'grep main /ram/hi.lbl', 'as /sd/0/sample/as/nsum.s /ram/nsum; cmp /ram/nsum /sd/0/sample/nsum; echo $status', 'as /pc/t_asall.s /ram/t_asall; cmp /ram/t_asall /pc/t_asall.hyx; echo $status', 'as -b /pc/raw.s /ram/raw; xd /ram/raw',
           'as /pc/bad.s /ram/bad; echo $status', 'as /pc/warn.s /ram/warn; echo $status; xd /ram/warn', 'as'].map(l => 'ā' + l + '\r').join(''),
       },
-      expect: ['% as -l /lib/as/hi.s /ram/hi; echo $status\n\n%', '% cmp /ram/hi /rom/sample/hi; echo $status\n\n%', '% /ram/hi Ann\nHello, Ann!\nI\'m task ',
-        '% grep main /ram/hi.lbl\nal 000830 .main\n%', '% as /lib/as/nsum.s /ram/nsum; cmp /ram/nsum /rom/sample/nsum; echo $status\n\n%',
+      expect: ['% as -l /sd/0/sample/as/hi.s /ram/hi; echo $status\n\n%', '% cmp /ram/hi /sd/0/sample/hi; echo $status\n\n%', '% /ram/hi Ann\nHello, Ann!\nI\'m task ',
+        '% grep main /ram/hi.lbl\nal 000830 .main\n%', '% as /sd/0/sample/as/nsum.s /ram/nsum; cmp /ram/nsum /sd/0/sample/nsum; echo $status\n\n%',
         '% as /pc/t_asall.s /ram/t_asall; cmp /ram/t_asall /pc/t_asall.hyx; echo $status\n\n%',
         '% as -b /pc/raw.s /ram/raw; xd /ram/raw\n0000000  4c 00 c0 00 c0 05 00 ',
         '% as /pc/bad.s /ram/bad; echo $status\nas: /pc/bad.s:2: not an instruction, directive or macro: frob\nas: /pc/bad.s:3: stop\nas: /pc/bad.s:4: a bad expression\n1\n%',
         '% as /pc/warn.s /ram/warn; echo $status; xd /ram/warn\nas: /pc/warn.s:2: warning: careful\n\n0000000  60 ', '% as\nusage: as [-bl] file.s [out]\n%'],
+      sdcard: true
     },
     {
       name: 'dis', what: 'dis, the disassembler (/rom/bin/dis: as\'s inverse, the asm library\'s instructions): the SDK\'s tick as as\'s source (its code followed from main, its labels, hydra.inc\'s calls and registers, its data and BSS); sources that as assembles to the same bytes: hi with its labels (as -l), upper in the SDK\'s columns (-w), db (C, 20K) with ld65\'s labels, every opcode (three operands each) raw from an address (-c -o); its usage and a file not a program',
@@ -2184,17 +2207,17 @@ module.exports = {
         },
       },
       machine: {
-        input: ['dis /rom/sample/tick', 'as -l /lib/as/hi.s /ram/hi; dis -l /ram/hi.lbl /ram/hi >/ram/h.s',
-          'as /ram/h.s /ram/h2; cmp /ram/hi /ram/h2; echo $status', "dis -w /rom/sample/upper >/ram/u.s; grep -c '^            jsr ' /ram/u.s",
-          'as /ram/u.s /ram/u2; cmp /rom/sample/upper /ram/u2; echo $status', 'dis -l /pc/db.lbl /rom/bin/db >/ram/db.s; grep -c _exit /ram/db.s',
+        input: ['dis /sd/0/sample/tick', 'as -l /sd/0/sample/as/hi.s /ram/hi; dis -l /ram/hi.lbl /ram/hi >/ram/h.s',
+          'as /ram/h.s /ram/h2; cmp /ram/hi /ram/h2; echo $status', "dis -w /sd/0/sample/upper >/ram/u.s; grep -c '^            jsr ' /ram/u.s",
+          'as /ram/u.s /ram/u2; cmp /sd/0/sample/upper /ram/u2; echo $status', 'dis -l /pc/db.lbl /rom/bin/db >/ram/db.s; grep -c _exit /ram/db.s',
           'as /ram/db.s /ram/db2; cmp /rom/bin/db /ram/db2; echo $status', 'dis -c -o 1000 /pc/ops.bin >/ram/o.s; as -b /ram/o.s /ram/o2',
           'cmp /pc/ops.bin /ram/o2; echo $status', 'dis', 'dis /rom/doc/api.md'].map(l => 'ā' + l + '\r').join(''),
       },
-      expect: ['% dis /rom/sample/tick\n; /rom/sample/tick, as dis read it: as assembles this to its bytes again\n.include "hydra.inc"\n\n' +
+      expect: ['% dis /sd/0/sample/tick\n; /sd/0/sample/tick, as dis read it: as assembles this to its bytes again\n.include "hydra.inc"\n\n' +
         '.include "hyx2.inc"\n\n\tHYX2_PROGRAM "tick", main\n.code\nmain:\n\tstz B0895\n\tstz B0896\n\tlda #$86\n\tsta r0\n\tlda #$08\n\tsta r0+1\n' +
         '\tjsr NOTIFY\nL0841:\n\tlda #$C8\n\tldx #$00\n\tjsr SLEEP\n\tlda B0895\n\tbne L0857\n',
         '\tora #$30\n\tjsr PUTC\n', '\trts\n\t.byte $8D, $95, $08, $18, "` seconds", $0A, $00\n.bss\nB0895:\n\t.res 1\nB0896:\n\t.res 1\n%',
-        '% as /ram/h.s /ram/h2; cmp /ram/hi /ram/h2; echo $status\n\n%', '% as /ram/u.s /ram/u2; cmp /rom/sample/upper /ram/u2; echo $status\n\n%',
+        '% as /ram/h.s /ram/h2; cmp /ram/hi /ram/h2; echo $status\n\n%', '% as /ram/u.s /ram/u2; cmp /sd/0/sample/upper /ram/u2; echo $status\n\n%',
         '% as /ram/db.s /ram/db2; cmp /rom/bin/db /ram/db2; echo $status\n\n%', '% cmp /pc/ops.bin /ram/o2; echo $status\n\n%',
         '% dis\nusage: dis [-cnw] [-l labels] [-o addr] file\n%', '% dis /rom/doc/api.md\ndis: /rom/doc/api.md: not a HYX2 RAM program (-o addr: raw bytes from addr)\n%'],
       check(m, out) {
@@ -2203,6 +2226,7 @@ module.exports = {
         if (!k || +k[1] < 1) f.push('dis -l: db\'s _exit not named');
         return f;
       },
+      sdcard: true
     },
     {
       name: 'sound', what: 'the simulator\'s sound (sim/lib/audio.js: run.js --sound, --wav), at rc: the YM2151\'s (opm.js, ymfm\'s) A4 on channel 4, then the Vera X\'s PSG\'s A5 on a sawtooth (channel 8), each heard at its pitch; the stream 48,000 samples a second of the Hydra\'s time',
@@ -2261,6 +2285,7 @@ module.exports = {
         this.notes = ['the YM2151: ' + m.ym.keyOns.length + ' key-ons'];
         return f;
       },
+      sdcard: true
     },
     {
       name: 'mml', what: 'scores (play\'s, modules/play/mml.inc: hysong.js\'s language compiled as it plays): play -o\'s ZSM of the old test song (every channel, algorithm and LFO waveform, noise, slides, legato, drums, repeats, the timers) and of scom, each the same as hysong.js\'s byte for byte; scom played as a score and as hysong.js\'s ZSM, the chip\'s writes the same, in the same order, and in time; play -m (a line on a channel, its own instrument), -c (a chord, a note a channel), -x (the X16\'s MML: T, upper-case notes, S0 legato, K), I (a patch by number); a score\'s errors, the lines\'',
@@ -2525,11 +2550,11 @@ module.exports = {
       init: 't_rc', cycles: 300e6,
       pc: { files: () => ({ 'hi.lbl': fs.readFileSync(path.join(__dirname, '..', 'obj', 'samples', 'hi', 'hi.lbl')) }) },
       machine: {
-        input: ['db /rom/sample/hi Ann Bob', 'l /pc/hi.lbl', 'l /lib/as/hydra.inc', 'r', 's 3', 'd main 6', 'b main+14', 'b', 'c', 'n 4', 'u main+2C', 'c',
+        input: ['db /sd/0/sample/hi Ann Bob', 'l /pc/hi.lbl', 'l /lib/as/hydra.inc', 'r', 's 3', 'd main 6', 'b main+14', 'b', 'c', 'n 4', 'u main+2C', 'c',
           'm s_you 4', 'w s_you 59 4F 55', 'm s_you 4', 'x', 'c', 'echo $status'].map(l => 'ā' + l + '\r').join(''),
       },
       // (Its registers as the loader left them aren't checked: A, X and Y at its entry point)
-      expect: ['% db /rom/sample/hi Ann Bob\ntask ', '\n0830  A5 02     lda $02\ndb> l /pc/hi.lbl\n8 symbols\ndb> l /lib/as/hydra.inc\n',
+      expect: ['% db /sd/0/sample/hi Ann Bob\ntask ', '\n0830  A5 02     lda $02\ndb> l /pc/hi.lbl\n8 symbols\ndb> l /lib/as/hydra.inc\n',
         ' symbols\ndb> r\nPC=0830 ', '\n0830  A5 02     lda r0                   ; main\n',
         'db> s 3\n0832  85 22     sta arg                  ; main+2\n0834  A5 03     lda r0+1                 ; main+4\nPC=0836 A=03 ',
         '0838  B2 22     lda (arg)                ; main+8\n083A  D0 08     bne main+14              ; main+A\ndb> b main+14\n',
@@ -2537,6 +2562,7 @@ module.exports = {
         '084C  20 53 F9  jsr PUTS                 ; main+1C\ndb> u main+2C\nHello, PC=085C ', 'db> c\nAnn!\nbreakpoint 1\nPC=0844 A=42 ',
         'db> m s_you 4\n0934  79 6F 75 00              you.\ndb> w s_you 59 4F 55\ndb> m s_you 4\n0934  59 4F 55 00              YOU.\n',
         'db> x\ndb> c\nHello, Bob!\nI\'m task ', ' ended: code 0\n% echo $status\n\n% '],
+      sdcard: true
     },
     {
       name: 'scall', what: 'spike S3: calls into a driver\'s task, its errors, a busy driver, the round trip',
@@ -2882,7 +2908,7 @@ module.exports = {
         return { input: 'āecho terminal size 100 30 >/dev/consctl; grep size /dev/consctl\r' +
           'āforth\rĀĀ' + 'lib facility form . . k-resize .\rĀ' + 'bye\r' +
           'āhylang\rĀĀ' + '(use "cons")\r' + 'ā(window-size)\r' + 'ā(exit)\r' +
-          'ā/rom/sample/c/keys\rĀĀ' + '\x1b[8;40;120t' + 'Ā' + 'q' + 'āgrep size /dev/consctl\r' +
+          'ā/sd/0/sample/c/keys\rĀĀ' + '\x1b[8;40;120t' + 'Ā' + 'q' + 'āgrep size /dev/consctl\r' +
           'āedit /ram/w\rĀĀ' + '\x1b[8;30;100t' + 'ĀĀ' + '\x18' + 'āecho terminal size 80 24 >/dev/consctl\r' + 'āecho done\r' };
       },
       expect: ['/dev/consctl\nsize 100 30\n%', 'k-resize .\n100 30 150  ok', '(window-size)\n=> {100 30}', 'keys: a 100x30 screen', ' 96\nended at',
@@ -2893,6 +2919,7 @@ module.exports = {
         const ed = out.slice(a, b), r = ed.indexOf('\x1b[0m\x1b(B\x1b)B');            // (The resize's paint)
         return ed.lastIndexOf('\x1b[30;1H') > r && r > 0 ? [] : ['the editor: not drawn again at 100 x 30 (no help line on row 30 after the resize\'s paint)'];
       },
+      sdcard: true
     },
     {
       name: 'winchrome', what: 'the chrome on the screen (W4): its label (#c0/label, OSC 2, empty: its program\'s name), its status line (wctl\'s status, and DECSASD\'s, after DECSSDT 2), the header\'s and footer\'s formats (%p, %l, %n, %s, %c, %r, %m, %[7], %=), the bar (its defaults: the windows, the time; at the bottom; off), a window\'s chrome rows turned off (its size grows by each), activity in a window not shown (monitor on: +; a bell: !); read back from vid\'s screen',
@@ -3225,11 +3252,11 @@ module.exports = {
         const W = '\u0101', M = '\u0400', P = '\u0100';
         return { vera: true, smc: { moves: [[-400, -400, 0], [50, 5, 0], [0, 0, 1], [0, 0, 0], [100, 115, 0], [0, 0, 1], [20, 0, 1], [0, 20, 1], [0, 0, 0]] },
           input: DRAW_FORTH.map(l => W + l[0] + '\r').join('') + W + 'hylang\r' + DRAW_HY.map(l => W + l[0] + '\r').join('') + W + 'exit\r' +
-            W + '/rom/sample/c/shapes\r' + W + '/rom/sample/c/sketch\r' + '\u0102' + P + P + (M + P).repeat(9) + 'x\u0103' + W + 'echo $status\r' };
+            W + '/sd/0/sample/c/shapes\r' + W + '/sd/0/sample/c/sketch\r' + '\u0102' + P + P + (M + P).repeat(9) + 'x\u0103' + W + 'echo $status\r' };
       },
       get expect() {
         return [DRAW_FORTH.map(l => '/> ' + l[0] + '\n' + (l[1] ? l[1] + '\n' : '')).join('') + '/> hylang\n',
-          DRAW_HY.map(l => 'hylang> ' + l[0] + '\n=> ' + l[1] + '\n').join(''), '/> /rom/sample/c/shapes\n320x240, 256 colours: 4 4 2 14 11, text 165 dots\n/> /rom/sample/c/sketch\n/> echo $status\n0\n'];
+          DRAW_HY.map(l => 'hylang> ' + l[0] + '\n=> ' + l[1] + '\n').join(''), '/> /sd/0/sample/c/shapes\n320x240, 256 colours: 4 4 2 14 11, text 165 dots\n/> /sd/0/sample/c/sketch\n/> echo $status\n0\n'];
       },
       check(m) {
         const v = m.vera.vram, f = [];
@@ -3242,6 +3269,7 @@ module.exports = {
         if (m.smc.lost || m.smc.mouseLost) f.push('codes lost on the SMC');
         return f;
       },
+      sdcard: true
     },
     {
       name: 'ramw', what: 'small writes (HydraFS on a RAM disk writes back only the part of a block a write changed; a card\'s block is kept back): a file of 70 writes, written over in its first block, across a block\'s end and at its end, on /ram, /sram and a card, read back; 100 writes of 16 bytes to /ram and to a card, a write\'s time; a card\'s block kept back (its file open: not on the card) and synced (on it)',
@@ -3356,3 +3384,6 @@ module.exports = {
     },
   ],
 };
+
+// The tests that run a sample, or play a song of the SD card's: its image in SD device 0
+for (const t of module.exports.tests) if (t.sdcard) sdcardOf(t);

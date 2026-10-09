@@ -9,7 +9,7 @@
 ** late its latest note was (in ticks: a 200th of a second each).
 **   round [TIMES [TICKS]]   (each voice sings it TIMES times, 2 by default; an eighth note TICKS ticks, 36 by
 **                            default)
-**   % /rom/sample/c/round
+**   % /sd/0/sample/c/round
 ** In the emulator, sim/run.js -i --sound plays the sound in a browser.
 */
 
@@ -112,11 +112,11 @@ static int voice (char* argv[])
 
 static volatile unsigned char stop;
 
-/* This program's own file, to start its workers from (argv[0] is its name): /bin/NAME (bind -a /rom/sample/c /bin
-** puts the samples there), ./NAME, or /rom/sample/c/NAME */
+/* This program's own file, to start its workers from (argv[0] is its name): /bin/NAME (bind -a /sd/0/sample/c /bin
+** puts the samples there), ./NAME, or /sd/0/sample/c/NAME */
 static const char* self (const char* name)
 {
-    static const char* const dirs[] = { "/bin/", "./", "/rom/sample/c/" };
+    static const char* const dirs[] = { "/bin/", "./", "/sd/0/sample/c/" };
     static char path[48];
     struct stat st;
     unsigned char i;
@@ -175,7 +175,7 @@ int main (int argc, char* argv[])
         hy_exits ("usage");
     }
     if ((prog = self (argv[0])) == 0) {
-        fprintf (stderr, "round: can't find myself (/bin/%s, ./%s, /rom/sample/c/%s)\n", argv[0], argv[0], argv[0]);
+        fprintf (stderr, "round: can't find myself (/bin/%s, ./%s, /sd/0/sample/c/%s)\n", argv[0], argv[0], argv[0]);
         hy_exits ("no workers");
     }
     seg = hy_seg_create (1);

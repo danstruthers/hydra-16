@@ -1,7 +1,7 @@
 /*
 ** jukebox.c - a song in the background (snd_play: the player, play) while the program counts, then stopped (a
 ** kill note), or waited for (hy_wait).  jukebox SONG [SECONDS] (none: to the song's end)
-**   % jukebox /rom/songs/test.zsm 5
+**   % jukebox /sd/0/songs/test.zsm 5
 */
 
 #include <stdio.h>

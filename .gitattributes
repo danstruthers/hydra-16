@@ -7,11 +7,18 @@ old/os_rom/romfs/boot.hys text eol=crlf
 old/os_rom/romfs/namespace text eol=crlf
 # HydraOS's ROM images (reborn/bin), kept for programming the chips: bytes
 reborn/bin/*.bin binary
+# The base's images (base/bin), and HydraOS's SD card's image (reborn/bin/sdcard.img): bytes
+base/bin/*.bin binary
+reborn/bin/*.img binary
 # The ROM disk's files (reborn/romfs): bytes for the Hydra (LF line ends), the same on every checkout
 reborn/romfs/** -text
+# The SD card's files (reborn/sdcard): bytes too, as the card has them
+reborn/sdcard/** -text
 # The assembly SDK (reborn/sdk/asm): CR LF on every checkout, as on Windows, where reborn/bin's images are made.  The
 # ROM disk copies its sources into /lib/as byte for byte, so a checkout with LF line ends (Linux's) made other images
 reborn/sdk/asm/** text eol=crlf
+# The SDK's core (base/sdk/asm: hyx2.inc, macros.inc, srvlib), on the ROM disk too: the same
+base/sdk/asm/** text eol=crlf
 # The Forth 2012 test suite (reborn/tests/forth): as it came, byte for byte
 reborn/tests/forth/** -text
 # danlang's regression suite (reborn/tests/hylang): its files as danlang's master has them, byte for byte

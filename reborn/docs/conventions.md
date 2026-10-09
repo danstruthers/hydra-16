@@ -139,7 +139,7 @@ bank t).  Every fixed address is in `base/include/layout.inc`, and nowhere else.
   `sdk/asm/hyx2.cfg`: its header, code, read-only data and data one image from `$0800`, its BSS after them.  The
   test RAM programs are `tests/ram/NAME/`, built into `obj/tests/NAME.hyx`; the ROM disk's programs (`/rom/bin`,
   listed in `romfs/romfs.txt`) are `programs/NAME/`, built into `obj/programs/NAME.hyx`; the SDK's samples are
-  `sdk/asm/samples/NAME/` (`/rom/sample`); and a program of one's own, anywhere, `node build.js prog DIR`
+  `sdk/asm/samples/NAME/` (on the SD card: `/sd/0/sample`); and a program of one's own, anywhere, `node build.js prog DIR`
   (`sdk/asm/README.md`).
 * A script is a file that starts with `#!` and its interpreter's path (Plan 9's: `#!/bin/rc`): rc runs that
   program with the script's path and arguments when the file isn't a program (`/rom/bin/scom`).
@@ -152,7 +152,7 @@ bank t).  Every fixed address is in `base/include/layout.inc`, and nowhere else.
   is the core's, headerless, and the library's header is a `jmp` to it.  A library is for the core it was built
   with (its id); the build makes both together.  New words go in a library unless the core can't work without them.
 * A C program is a folder of `.c` files (and `.s` files, if it has any) in the same places (`sdk/c/samples/NAME/`
-  for `/rom/sample/c`), compiled by cc65 for its target `none` and linked by `sdk/c/hydra.cfg` with the C library,
+  for `/sd/0/sample/c`), compiled by cc65 for its target `none` and linked by `sdk/c/hydra.cfg` with the C library,
   `obj/sdk/c/hydra.lib`: cc65's `none.lib` with `sdk/c/lib`'s modules in place of cc65's, each named as the module
   it replaces (a cc65 module whose functions the library has under another name is dropped: `build.js`'s
   `CC65_DROPPED`).  cc65's runtime has the zero page from `$22` (26 bytes).  A library routine that C calls may

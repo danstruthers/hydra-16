@@ -161,12 +161,17 @@ task's side of the task calls, memory, semaphores, notes and the clock; page 2 f
 namespaces and the loader (`SPAWN`); page 4 POST and the debugger's steps; the rest is room.  Page 0 is the scarce one.
 [The kernel's pages](conventions.md#the-kernels-pages).
 
-**The paged ROM** (`bin/prom0.bin` ...: a 512K image for each chip it fills; four now, some 124 of its 256 banks).  Bank
+**The paged ROM** (`bin/prom0.bin` ...: a 512K image for each chip it fills; five now, some 132 of its 256 banks).  Bank
 0 holds the module directory and the ROM disk's partition table; bank 1 the hardware test (the old system's, unchanged);
 the modules from bank 2, each at `$A000` of its first bank (about fifty: the drivers, init, the shells, the tools, the
 languages; a module may span two to eight banks); then the ROM disk's HydraFS volume (`/rom`: the programs that run from
-RAM, the languages' libraries, songs, the SDK's samples and include files, the calls' reference, some 480K).
+RAM, the languages' libraries, a song, the SDK's include files, the calls' reference, some 500K).
 `modules/rom.txt` lists the modules, `romfs/romfs.txt` the ROM disk's files.  [Modules](programming/modules.md).
+
+**HydraOS's SD card** (`bin/sdcard.img`: a 16 MB HydraFS in a partition) holds what isn't the system's: the SDK's
+samples, built and as sources (`/sd/0/sample`, `/sd/0/sample/c`, `/sd/0/sample/as`), and the sample songs
+(`/sd/0/songs`).  `sdcard/sdcard.txt` lists its files; the build makes it, the tests that run a sample have it in SD
+device 0, the browser emulator starts with it, and `sim/tools/sdwrite.js` writes it to a card on the PC.
 
 **The base and HydraOS.**  The BIOS ROM, its system calls, the console driver `ser`, the kernel's devices `kdev` and Woz's
 monitor `wozmon` are the base (`base/` in the repository), which boots on its own: task F `ser`, task E `kdev`, task 1 the
@@ -332,7 +337,7 @@ call (`XCALL`).  [Modules and programs](programming/modules.md).
 * **Debugging**: `db` on the Hydra (a program started stopped, stepped, run to breakpoints, with ld65's symbols), and
   the emulator's call traces, breaks and monitor.  [The debugger](using/tools.md#the-debugger).
 
-The samples are on the ROM disk (`/rom/sample`; `bind -a /rom/sample/c /bin` runs the C ones by name), the C SDK's
+The samples are on the SD card (`bin/sdcard.img`: `/sd/0/sample`; `bind -a /sd/0/sample/c /bin` runs the C ones by name), the C SDK's
 multitasking demos among them.  [The programmer's guide](programming/README.md) is the way in.
 
 ---
@@ -441,11 +446,12 @@ POST's, a driver's) are `/dev/kmesg`, its last 4K.
 | `forthlib/` | HyForth's libraries |
 | `programs/` | The ROM disk's programs (`/rom/bin`) |
 | `romfs/` | The ROM disk's files, and `romfs.txt` |
+| `sdcard/` | The SD card's files (the sample songs), and `sdcard.txt` (the samples come from the build) |
 | `sdk/` | The assembly and C SDKs |
 | `tools/` | The build's tools: the specification's outputs, the ROM images, the ROM disk, the budgets, hylang's snapshot |
 | `sim/` | The emulator, the tests' runner, the browser view, the sound, the danlang emulator (`dl/`), the PC tools (`tools/`) |
 | `tests/` | The tests, their modules and programs, and the Forth, hylang and BASIC suites |
-| `bin/` | The ROM images (in Git), and the SDKs the build copies out |
+| `bin/` | The ROM images and the SD card's image (in Git), and the SDKs the build copies out |
 | `docs/` | These documents |
 
 [The tree](../README.md#the-tree) in full.  Beside `reborn/`: `../../board/` (the KiCad files) and `../../old/` (the old

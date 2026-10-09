@@ -1,6 +1,7 @@
-# The build's: node build.js makes them.  Its ROM images are kept (for programming the chips without a toolchain):
+# The build's: node build.js makes them.  Its ROM images and its SD card's image are kept (for programming the chips without a toolchain):
 # rebuild and commit them with a change to what's in them
 /obj/
 /bin/*
 !/bin/bios.bin
 !/bin/prom*.bin
+!/bin/sdcard.img

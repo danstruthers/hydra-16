@@ -96,7 +96,7 @@ hylang's keeps its place in rationals, so it never drifts.  The palette's entrie
 then `tgi_init ()`: 320 x 240 in 256 colours (TGI's colour n the palette's entry its palette gives), lines, bars,
 circles, ellipses and arcs, text in the console's font (or TGI's vector fonts), `tgi_getpixel`.  The driver is
 `sdk/c/lib/tgihydra.s`, over `/dev/vid/draw`.  The samples: `shapes` (TGI) and `sketch` (`vera.h` and the
-mouse: `/rom/sample/c/sketch`).
+mouse: `/sd/0/sample/c/sketch`).
 
 A game paces itself by `frame`: a read waits for the next VSYNC.  In C, `fread` a line from it; in HyForth,
 `read-line`.

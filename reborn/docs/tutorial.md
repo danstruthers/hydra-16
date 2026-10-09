@@ -173,7 +173,7 @@ of its own, and draw what they do as they do it: memory they share (a shared seg
 and wait for each other.  Put them in `/bin` first, then run them one at a time (each needs the tasks):
 
 ```
-/> bind -a /rom/sample/c /bin
+/> bind -a /sd/0/sample/c /bin
 /> race                lost updates on a shared counter, then none with a mutex
 /> chorus              four tasks print on one console: tangled, then whole lines, then in turn
 /> philo               the dining philosophers (Ctrl-C ends it); philo -d deadlocks, and says so
@@ -229,7 +229,7 @@ for an rc session: `rc` ([using/rc.md](using/rc.md)).
 
 `scom` plays a short song on the YM2151 (in the emulator, hear it with `node sim/run.js -i --sound`, then the
 Sound button at http://localhost:8016): `play
-/rom/songs/test.zsm` plays a ZSM file, the format the Commander X16's tools (and Furnace) export.  `play -m 0 't180 o4
+/sd/0/songs/test.zsm` plays a ZSM file, the format the Commander X16's tools (and Furnace) export.  `play -m 0 't180 o4
 l8 c d e f g'` plays a line of the score language (its notes, lengths and octaves: [using/tools.md](using/tools.md),
 "Scores"), and `echo note 0 60 >/dev/sndctl` a note (`echo off 0 >/dev/sndctl` ends it).  With a Vera X, channels
 8-23 are its PSG's voices (`echo note 8 69 >/dev/sndctl`), and `play` plays a WAV file on its PCM.
@@ -263,7 +263,7 @@ I'm task 5, in /, in window 0.
 ```
 
 `/ram/bin` is the first member of `/bin`'s union, so a program there runs by its name.  The Hydra assembles one itself
-too: `as /lib/as/hi.s /ram/bin/hi` makes the same program (the SDK's include files and three of its samples are in
+too: `as /sd/0/sample/as/hi.s /ram/bin/hi` makes the same program (the SDK's include files and three of its samples are in
 `/lib/as`; [using/tools.md](using/tools.md#the-assembler)), and `edit` is there for a source of your own.  A C program
 is the same: a folder of `.c` files (`cp sdk/c/samples/hello/hello.c myc/`, then `node build.js prog myc`):
 

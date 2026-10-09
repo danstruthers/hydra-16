@@ -37,7 +37,9 @@
 // task running's); b [SPEC] a break (none: the list); d N the Nth break gone; w ADDR[:T] a write watch; x quit
 //   --bios FILE, --prom FILE   other images (--prom: the whole paged ROM, its sockets' images one after another)
 //   --sd FILE           a card image (sim/tools/hydrafs.js makes them), SD device 0, then 1 ...: read and
-//                       written in the file itself, as the Hydra reads and writes it
+//                       written in the file itself, as the Hydra reads and writes it.  With none, the system's own
+//                       card if it has one (HydraOS's: bin/sdcard.img, the samples and songs), its writes kept in
+//                       memory (the file as it was); --no-sd: no card
 //   --pc-dir DIR        /pc (HydraOS's: reborn/sim/run.js): the PC tool's part (sim/tools/hydrapc.js) is played here, serving the folder DIR:
 //                       the frames the Hydra sends for /pc are answered, at the line's rate (reborn/sim/lib/pchost.js)
 //   --pc-read-only      /pc can't be changed: its writes, creates, removes and renames are refused
@@ -71,6 +73,7 @@ const { createWin32Input, ENABLE: W32_ENABLE, DISABLE: W32_DISABLE } = require('
 const BASE = path.join(__dirname, '..');                     // The base's folder: the kernel's labels, the calls
 let ROOT = BASE;                                              // The system's: its images, its modules' labels (main's)
 let createPcHost = null;                                      // (/pc's host: HydraOS's, main's caller gives it)
+let defaultCard = null;                                       // (The system's card image, if no --sd: main's caller's)
 const hx = (v, n = 2) => v.toString(16).toUpperCase().padStart(n, '0');
 const CLOCK = 3.579545;
 const STATES = ['free', 'ready', 'wait', 'call', 'idle', 'new', 'sleep', 'block', 'event'];
@@ -362,6 +365,14 @@ function interactive(m, opt) {
 }
 
 // A card from an image file, SD device dev: its blocks read and written in the file
+// A card from an image file, its writes kept in memory (the file as it was)
+function cardCopy(dev, file) {
+  const base = fs.readFileSync(file), written = new Map();
+  return { dev, blocks: Math.floor(base.length / 512), file,
+    read: n => written.get(n) || Buffer.from(base.subarray(n * 512, n * 512 + 512)),
+    write: (n, b) => { written.set(n, Buffer.from(b)); } };
+}
+
 function cardFile(dev, file) {
   const fd = fs.openSync(file, 'r+'), blocks = Math.floor(fs.fstatSync(fd).size / 512);
   return { dev, blocks, file,
@@ -391,6 +402,7 @@ function wavFile(file, rate) {
 function main(argv, env = {}) {
   if (env.root) ROOT = env.root;
   if (env.createPcHost) createPcHost = env.createPcHost;
+  if (env.card) defaultCard = env.card;
   const opt = { cycles: 30000000, speed: 1, clock: CLOCK, pcWatches: [], watches: [], readWatches: [], breaks: [] }, lbl = labels();
   const breakArgs = [];
   opt.lbl = lbl;
@@ -413,6 +425,7 @@ function main(argv, env = {}) {
     else if (a === '--bios') opt.bios = next();
     else if (a === '--prom') opt.prom = next();
     else if (a === '--sd') { opt.sd = opt.sd || []; opt.sd.push(cardFile(opt.sd.length, next())); }
+    else if (a === '--no-sd') opt.noSd = true;
     else if (a === '--pc-dir') opt.pcDir = next();
     else if (a === '--pc-read-only') opt.pcReadOnly = true;
     else if (a === '--pc-log') opt.pcLog = true;
@@ -446,6 +459,7 @@ function main(argv, env = {}) {
   if (opt.pcDir && !createPcHost) { console.error('--pc-dir: /pc is HydraOS\'s (reborn/sim/run.js)'); process.exit(2); }
   if (opt.pcDir) opt.pcHost = createPcHost({ dir: opt.pcDir, readOnly: !!opt.pcReadOnly, damage: opt.pcDamage,
     log: opt.pcLog ? t => (opt.interactive ? process.stdout.write('\r\n[pc] ' + t + '\r\n') : console.log('[pc] ' + t)) : undefined });
+  if (!opt.sd && !opt.noSd && defaultCard && fs.existsSync(defaultCard)) opt.sd = [cardCopy(0, defaultCard)];
   if (opt.kbd) opt.input = (opt.input || '') + '\u0102' + opt.kbd + '\u0103';   // (acia.js: typed at the keyboard)
   opt.promImage = opt.prom ? fs.readFileSync(opt.prom) : chips();
   if (opt.veraSd) { if (!opt.vera) { console.error('--vera-sd: with --vera'); process.exit(2); } opt.vera.sd = cardFile(0, opt.veraSd); }

@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // ****************************************************************************
 // run.js - HydraOS in the emulator: the base's run.js (../../base/sim/run.js: the board, its options, the monitor;
-// the top of it lists them all) with this folder's images (bin/: node build.js), its modules' labels (obj/), and /pc
-// (--pc-dir: the PC tool's part, sim/lib/pchost.js).
+// the top of it lists them all) with this folder's images (bin/: node build.js), its modules' labels (obj/), /pc
+// (--pc-dir: the PC tool's part, sim/lib/pchost.js), and its SD card (bin/sdcard.img: the samples and songs, in SD
+// device 0 unless --sd or --no-sd says otherwise; its writes kept in memory).
 //
 // Usage: node sim/run.js [options]      (as the base's: -i, --vera, --sound, --pc-dir DIR, --trace-calls, --break ...)
 // From Node: boot(opt) gives the machine, HydraOS's images booted; labels() the kernel's labels; state(m), report(m).
@@ -15,4 +16,4 @@ const ROOT = path.join(__dirname, '..');
 
 module.exports = Object.assign({}, run, { boot: (opt = {}) => run.boot(Object.assign({ root: ROOT }, opt)), ROOT });
 
-if (require.main === module) run.main(process.argv.slice(2), { root: ROOT, createPcHost });
+if (require.main === module) run.main(process.argv.slice(2), { root: ROOT, createPcHost, card: path.join(ROOT, 'bin', 'sdcard.img') });

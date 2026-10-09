@@ -100,5 +100,5 @@ node sim/tools/hydrafs.js put card.img path/to/hello/hello.hyx hello
 node sim/run.js -i --sd card.img                            # then, at the % prompt: /sd/0/hello
 ```
 
-The samples are on the ROM disk: `/rom/sample/hi Ann Bob`, `echo hi | /rom/sample/upper`, `/rom/sample/nsum 1/3 0.5 2`, `/rom/sample/tick`
+The samples are on the SD card (`bin/sdcard.img`, in SD device 0): `/sd/0/sample/hi Ann Bob`, `echo hi | /sd/0/sample/upper`, `/sd/0/sample/nsum 1/3 0.5 2`, `/sd/0/sample/tick`
 (Ctrl-C to stop it).

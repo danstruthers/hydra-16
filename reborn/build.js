@@ -47,6 +47,7 @@ const base = require('../base/build.js');
 const apigen = require('./tools/apigen.js');
 const romimg = require('./tools/romimg.js');
 const romfs = require('./tools/romfs.js');
+const sdcard = require('./tools/sdcard.js');
 const forthlib = require('./tools/forthlib.js');
 const hysnap = require('./tools/hysnap.js');
 const budget = require('../base/tools/budget.js');
@@ -248,6 +249,7 @@ function build(opt = {}) {
   for (const d of fs.readdirSync(at('sdk', 'c', 'samples'), { withFileTypes: true }).filter(d => d.isDirectory()))
     samples['c/' + d.name] = ram(at('sdk', 'c', 'samples', d.name), at('obj', 'samples', 'c'));
   sdk();
+  const card = sdcard.build(ROOT);                          // The SD card's image (bin/sdcard.img): the samples, the songs
   forthlib.build({ root: ROOT, modules, assemble: (files, od, inc) => assemble(files, od, inc, defines), ld65: args => run(LD65, args) });
 
   // hylang's snapshot (the module hysnap: its heap with its library loaded, taken in the emulator), then the paged ROM
@@ -273,6 +275,7 @@ function build(opt = {}) {
     say('ROM disk: ' + disk.files.length + ' files, ' + bytes + ' bytes; its volume uses ' + used + ' of ' + disk.blocks + ' blocks (paged ROM banks ' +
       first + '-' + (first + disk.blocks / 32 - 1) + ', in socket order); every file read back as its source');
   }
+  say('SD card: ' + card.files.length + ' files, ' + card.bytes + ' bytes (the samples, the songs): bin/sdcard.img, ' + card.size / 1048576 + ' MB');
   say('Paged ROM: ' + banks + ' banks of 256, ' + chips + ' chip' + (chips === 1 ? '' : 's') + ' of 512K: ' +
     [...Array(chips)].map((_, k) => 'bin/prom' + k + '.bin').join(', '));
   return { modules, tests, progs, programs, samples, manifest, report };

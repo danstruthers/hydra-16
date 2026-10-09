@@ -2,7 +2,8 @@
 // ****************************************************************************
 // web.js - the emulator in a browser: one HTML file, the whole of it (the page, web/page.html and web/page.js; the
 // machine, sim/lib, in a Web Worker, web/worker.js; the ROM images, bin/bios.bin and bin/prom*.bin, gzipped), that
-// runs HydraOS with nothing installed and nothing sent anywhere.  Open the file in a browser (Chrome, Edge, Firefox,
+// runs HydraOS with nothing installed and nothing sent anywhere; and bin/sdcard.img, HydraOS's SD card (the samples, the
+// songs), SD card 0 as it starts.  Open the file in a browser (Chrome, Edge, Firefox,
 // Safari), or serve it.  The serial console is a terminal in the page; the Vera X's screen, keyboard and mouse, the
 // sound, the clock chip, the RAM modules and SD cards (kept in the browser) are the page's Setup.
 //
@@ -61,7 +62,8 @@ function images() {
   const bios = fs.readFileSync(path.join(ROOT, 'bin', 'bios.bin')), proms = [];
   for (let k = 0; fs.existsSync(path.join(ROOT, 'bin', 'prom' + k + '.bin')); k++) proms.push(fs.readFileSync(path.join(ROOT, 'bin', 'prom' + k + '.bin')));
   if (!proms.length) throw new Error('no bin/prom0.bin: node build.js');
-  return { bios, prom: Buffer.concat(proms) };
+  const card = path.join(ROOT, 'bin', 'sdcard.img');            // (HydraOS's SD card: the samples, the songs)
+  return { bios, prom: Buffer.concat(proms), card: fs.existsSync(card) ? fs.readFileSync(card) : null };
 }
 
 // What the page says it was built from: the commit, and whether the tree had changes
@@ -85,7 +87,8 @@ function build(out) {
   let html = fs.readFileSync(path.join(SIM, 'web', 'page.html'), 'utf8').replace(/\r\n/g, '\n');
   const put = (mark, text) => { if (!html.includes(mark)) throw new Error('page.html: no ' + mark); html = html.replace(mark, () => text); };
   put('<!--WORKER-->', '<script id="worker-src" type="text/plain">\n' + inScript(worker.code) + '</script>');
-  put('<!--ROMS-->', '<script id="roms" type="text/plain" data-bios="' + img.bios.length + '" data-build="' + attr(buildInfo()) + '">\n' + roms + '\n</script>');
+  put('<!--ROMS-->', '<script id="roms" type="text/plain" data-bios="' + img.bios.length + '" data-build="' + attr(buildInfo()) + '">\n' + roms + '\n</script>' +
+    (img.card ? '\n<script id="sdcard" type="text/plain">\n' + zlib.gzipSync(img.card, { level: 9 }).toString('base64') + '\n</script>' : ''));
   put('<!--PAGE-->', '<script>\n' + inScript(page.code) + '</script>');
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, html);
