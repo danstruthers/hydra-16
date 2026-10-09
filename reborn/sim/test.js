@@ -38,7 +38,10 @@ function image(t) {
   const sys = readManifest(path.join(ROOT, 'modules', 'rom.txt')).modules.filter(n => !(t.without || []).includes(n));
   const own = [...(t.modules || [])];
   if (!sys.includes(t.init) && !own.includes(t.init)) own.unshift(t.init);
-  const own_ = n => bin(['tests', 'samples'].find(d => fs.existsSync(path.join(ROOT, 'obj', d, n + '.bin'))) || 'modules', n);   // (Or the SDK's)
+  const own_ = n => {                                     // (A test's, the SDK's, HydraOS's, or the base's: ../base/obj/modules)
+    const d = ['tests', 'samples', 'modules'].find(d => fs.existsSync(path.join(ROOT, 'obj', d, n + '.bin')));
+    return d ? bin(d, n) : fs.readFileSync(path.join(ROOT, '..', 'base', 'obj', 'modules', n + '.bin'));
+  };
   const mods = [...sys.map(n => ({ file: n, data: bin('modules', n) })), ...own.map(n => ({ file: n, data: own_(n) }))];
   return romimg.build({ modules: mods, init: t.init, hwtest: hwtest(), bios: fs.readFileSync(path.join(ROOT, 'bin', 'bios.bin')),
     romfs: romfs.manifest(path.join(ROOT, 'romfs', 'romfs.txt')) }).image;

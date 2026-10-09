@@ -6,7 +6,8 @@
 //                          hydra.inc, api.json (obj/gen, obj/sdk)
 //   2. the kernel          kernel/*.s and the generated sources -> bin/bios.bin (the 128K BIOS ROM), with its map,
 //                          labels and debug information in obj/kernel/
-//   3. the budgets         the BIOS ROM's pages: used, and room left (tools/budget.js)
+//   3. the modules         modules/NAME/*.s -> obj/modules/NAME.bin: ser (the console's driver, task F)
+//   4. the budgets         the BIOS ROM's pages, the modules: used, and room left (tools/budget.js)
 // HydraOS (../reborn/build.js) runs this first, and builds its modules, its paged ROM and its SDKs with what this
 // gives: buildModule (a module, or a RAM program, with the base's includes: obj/sdk, sdk/asm, include, obj/gen),
 // assemble, the cc65 tools, the hardware test, readManifest (a rom.txt).
@@ -126,8 +127,13 @@ function build(opt = {}) {
   run(LD65, ['-C', at('kernel', 'bios.cfg'), '-o', at('bin', 'bios.bin'), '-m', path.join(kobj, 'bios.map'), '-Ln', path.join(kobj, 'bios.lbl'),
     '--dbgfile', path.join(kobj, 'bios.dbg'), ...objs]);
   fs.writeFileSync(at('obj', 'build.json'), JSON.stringify({ clock: opt.clock || 1, acia: opt.acia || 'rockwell' }) + '\n');
-  if (!opt.noReport) say(budget.report(ROOT).text);
-  return { bios: fs.readFileSync(at('bin', 'bios.bin')), defines };
+
+  // The base's modules (modules/NAME/*.s: obj/modules/NAME.bin)
+  const modules = {};
+  for (const d of fs.readdirSync(at('modules'), { withFileTypes: true }).filter(d => d.isDirectory()))
+    modules[d.name] = buildModule(at('modules', d.name), at('obj', 'modules'), defines, false, modules);
+  if (!opt.noReport) say(budget.report(ROOT, { modules }).text);
+  return { bios: fs.readFileSync(at('bin', 'bios.bin')), defines, modules };
 }
 
 if (require.main === module) {

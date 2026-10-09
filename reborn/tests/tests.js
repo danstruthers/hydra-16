@@ -1446,6 +1446,13 @@ module.exports = {
         'task F: cons', 'task 1: init', 'init: up in task 01', 'hello, from init', 'init: hello ended: code $07 (bye)'],
     },
     {
+      name: 'ser', what: 'the base\'s console driver (../base/modules/ser) in cons\'s place: init\'s console; rc\'s lines on it, cooked (Backspace, Enter; Ctrl-D the end of cat\'s input); Ctrl-C a note to the console\'s group; consctl\'s and serctl\'s states; /ser written: what a program written for the base sees is a part of cons\'s',
+      init: 'init', without: ['cons'], modules: ['ser'], cycles: 200e6,
+      // (ā: wait for a prompt; Ā: 2M cycles, sleep running; \b twice takes xo back)
+      machine: { input: 'ārc\r' + 'āsleep 30\rĀ\x03' + 'āecxo\b\bho edited\r' + 'ācat\rline one\r\x04' + 'ācat /dev/consctl /dev/serctl\r' + 'āecho to ser >/dev/ser\r' },
+      expect: ['hello, from init', '% sleep 30\n', '\nedited\n%', '% cat\nline one\nline one\n%', '\nrawoff\ngroup 2\nb9600\n%', '\nto ser\n%'],
+    },
+    {
       name: 'init', what: 'init from files (rc the shell, a card\'s /lib/shell naming it): the RAM disks started, the namespace file run, each shell\'s own namespace and /ram (a window\'s too); the shared RAM disk stopped, /bin\'s union still there',
       init: 'init', modules: ['t_child'], cycles: 250e6,
       // (ā: wait for a prompt; '#fr' quoted, as # starts a comment; \x1d c: Ctrl-] c, a window made, wstart's rc
