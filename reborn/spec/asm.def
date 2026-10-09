@@ -1,0 +1,120 @@
+# ****************************************************************************
+# asm.def - the asm library's calls: the W65C02S's instructions as the assembler as writes them (ca65's language),
+# one table of them for every tool that reads or writes them: db's d, HyForth's disasm, dis (the disassembler at
+# rc), and as.  tools/apigen.js reads it, as it reads numbers.def, and makes obj/sdk/asmlib.inc (the entries'
+# addresses, ASM_DIS ..., the constants, and the macro ASMCALL, for programs in assembly), the constants for C
+# (obj/sdk/c/asmdefs.h, which asm.h includes) and the library's jump table (obj/gen/asm_jt.inc).  The format is
+# numbers.def's.
+#
+# A call: XCALL, r15 the entry's address, r14 the library's bank (MODINFO finds it, by the name "asm").  The library
+# has no RAM of its own, nor a bank: what it reads and writes is the caller's, at the addresses it's given (anywhere
+# the caller sees but its paged ROM, $A000-$DFFF, the library's while it runs).  An entry may change r4-r9 (r4 an
+# answer, when it says); everything else is kept, r0-r3 too.  The assembler's entries (FILE ...) have their state in
+# RAM the caller lends them while they run, ASM_RAM to ASM_RAM_END (nothing of the caller's there is kept), and its
+# zero page from $22 (kept and put back), and take RAM banks of the caller's while they run (given back as they end).
+
+library asm "The W65C02S's instructions, as as writes them: one disassembled; a source assembled"
+
+const ASM_RAM       $5000 "The assembler's state: the caller's RAM it takes while it runs, from here ..."
+const ASM_RAM_END   $7E00 "  to here (not this)"
+const AF_RAW        $01 "FILE's flags: the bytes alone from .org's address (as -b), not a RAM program"
+const AF_LABELS     $02 "  a labels file too, the output's name and .lbl (as -l: ld65's -Ln form)"
+const AF_QUIET      $04 "BEGIN's flags: messages kept for ERROR, not said"
+const DIS_MAX       64  "The room for DIS's text: an instruction as as writes it, its 0 too"
+const DF_PAD        $01 "DIS's flags: its name padded to 12 columns (the SDK's sources' way), else one space"
+const DK_ADDR       $01 "DIS's kinds: its operand is an address (r4: the zero page's or not), read or written"
+const DK_GO         $02 "  it goes to the address r4 (a jump, jsr, a branch: bbr's and bbs's too)"
+const DK_CALL       $04 "  a jsr (DK_GO too)"
+const DK_END        $08 "  nothing after it is reached by going on from it (brk, rti, rts, stp, jmp, bra)"
+const DK_UNDEF      $10 "  an opcode the W65C02S doesn't define (the NOP it runs: .byte and its bytes)"
+
+entry DIS asm impl=as_dis
+  in:     r0 = the instruction's bytes (its opcode and the two after it); r1 = its address; r2 = the text's place
+  in:     (DIS_MAX bytes); r3 = a name for the address its operand names (0: none); .A = the flags (DF_)
+  out:    .A = its length (1-3); .X = its kind (DK_); .Y = the text's length (a 0 after it); r4 = the address its
+  out:    operand names (a branch's: where it goes)
+  errors: -
+  names:  hl - | bas - | fs disasm | c dis_insn
+  doc:    One instruction as as writes it, so its text assembled is its bytes again: its name in lower case (RMB,
+  doc:    SMB, BBR and BBS with their bit), then its operand, an address in hex ($nn on the zero page, $nnnn) or as
+  doc:    the name r3 gives (a label's, a symbol's: the address of a branch or jump, of the zero page's or an
+  doc:    absolute operand; bbr's and bbs's where they go), with a: before an absolute address under $100 where the
+  doc:    instruction has a zero page form; a branch's where it goes as an address.  An opcode the W65C02S doesn't
+  doc:    define is the NOP it runs: .byte and its bytes (1, 2 or 3).
+
+entry FILE asm impl=asm_file
+  in:     r0 = the source's name; r1 = the output's; .A = the flags (AF_)
+  out:    .A = the status (0, or 1 after an error); C = 1 if it's 1
+  errors: -
+  names:  hl - | bas - | fs - | c -
+  doc:    A source in as's language (ca65's) assembled, as the as program does it (as [-bl] file.s out): a RAM program
+  doc:    (HYX2) at the output's name, or with AF_RAW the bytes alone from .org's address; with AF_LABELS its labels
+  doc:    too (name.lbl).  Each error is said on fd 2 ("as: file:line: what"), and an error's pass is the last.
+
+entry BEGIN asm impl=asm_begin
+  in:     r0 = the origin (the image's first address); r1 = the source's name (its messages'); .A = the flags (AF_QUIET)
+  out:    C = 1 if there's no room (RAM banks)
+  errors: -
+  names:  hl - | bas ASM | fs - | c -
+  doc:    A session for a source given a line at a time (BASIC's ASM blocks): for each pass (1, 2, 3) PASS, the
+  doc:    caller's symbols (DEFINE), its lines (LINE) and END; then SYMBOL for its labels, IMAGE for its bytes (from the
+  doc:    origin: the bytes alone, as AF_RAW's), DONE.  A message is "name:line: what" (its line's, or an .include's
+  doc:    file's), said on fd 2 or with AF_QUIET kept for ERROR.  The session's state is in ASM_RAM to ASM_RAM_END from
+  doc:    BEGIN to DONE.
+
+entry PASS asm impl=asm_pass
+  in:     .A = the pass (1, 2, 3)
+  out:    -
+  errors: -
+  names:  hl - | bas - | fs - | c -
+  doc:    A pass's start: the segments from the origin, no input yet.
+
+entry DEFINE asm impl=asm_define
+  in:     r0 = a name (32 characters at most); r1/r2 = its value (32 bits)
+  out:    C = 1 if there's no room, or the name's too long
+  errors: -
+  names:  hl - | bas - | fs - | c -
+  doc:    A symbol of the caller's (a BASIC program's variable's address, a constant), in this pass: after each PASS.
+
+entry LINE asm impl=asm_line
+  in:     r0 = a line (zero-terminated, 255 bytes at most); r1 = its number
+  out:    C = 1 if it had an error
+  errors: -
+  names:  hl - | bas - | fs - | c -
+  doc:    A line of the source assembled in this pass, and what it starts (an .include's file, a macro's use) to its end.
+
+entry END asm impl=asm_end
+  in:     -
+  out:    C = 1 if the pass had an error
+  errors: -
+  names:  hl - | bas - | fs - | c -
+  doc:    A pass's end (an .if or .macro not ended is an error).
+
+entry SYMBOL asm impl=asm_symbol
+  in:     r0 = a name
+  out:    C = 0 and r1/r2 = its value (32 bits); C = 1 if there's no such symbol
+  errors: -
+  names:  hl - | bas CALL ASM | fs - | c -
+  doc:    A symbol's value: a label's address, after the passes.
+
+entry IMAGE asm impl=asm_image
+  in:     -
+  out:    .A = the image's first bank (its first 8K: the origin's bytes at $8000 in it); r0 = its length; r1 = its
+  out:    BSS's end (the first address past it)
+  errors: -
+  names:  hl - | bas - | fs - | c -
+  doc:    Where the bytes are: the session's image, in RAM banks of the caller's from the origin on.
+
+entry DONE asm impl=asm_done
+  in:     .A = 1 to keep the image's first bank (the caller's from now on), else 0
+  out:    -
+  errors: -
+  names:  hl - | bas - | fs - | c -
+  doc:    The session's end: its RAM banks given back (but the image's first, if it's kept).
+
+entry ERROR asm impl=asm_error
+  in:     -
+  out:    r0 = the first message since BEGIN (AF_QUIET's), zero-terminated ("" if there's none)
+  errors: -
+  names:  hl - | bas - | fs - | c -
+  doc:    The message an error made (AF_QUIET), in ASM_RAM: read it before the next session.

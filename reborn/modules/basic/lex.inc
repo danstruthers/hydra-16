@@ -252,6 +252,7 @@ K_WIDTH
 K_WINDOW
 K_WRITE
 K_XOR
+K_ASM
 K_COUNT
 .endenum
 
@@ -811,6 +812,7 @@ kw_a:
             KW          "ARG$", K_ARG
             KW          "AS", K_AS
             KW          "ASC", K_ASC
+            KW          "ASM", K_ASM
             KW          "ATN", K_ATN
             .byte       0
 kw_b:

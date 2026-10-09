@@ -24,31 +24,9 @@ ML_NEXT         = 0             ; A macro's line: the next one's ref ...
 ML_LEN          = 2             ;   its length ...
 ML_TEXT         = 3             ;   and its bytes
 
-; Modes (the opcode tables' op_mode): the same as db's
-M_IMP           = 0
-M_ACC           = 1
-M_IMM           = 2
-M_ZP            = 3
-M_ZPX           = 4
-M_ZPY           = 5
-M_IZX           = 6
-M_IZY           = 7
-M_IZP           = 8
-M_ABS           = 9
-M_ABX           = 10
-M_ABY           = 11
-M_IND           = 12
-M_IAX           = 13
-M_REL           = 14
-M_ZPR           = 15
-MODES           = 16
-NAMES           = 71            ; The instructions' names (names: 3 letters each)
-
-N_RMB           = 5             ; (The names' indexes of the instructions with a bit in their names)
-N_BBR           = 7
-N_SMB           = 40
-N_BBS           = 43
-N_NONE          = 2             ; (???: none)
+; The W65C02S's instructions: their names, each opcode's name and mode, each mode's length (M_*, NAMES, N_*;
+; names, op_name, op_mode, modelen): the one table, the asm library's (its disassembler reads it as it is)
+.include "w65c02.inc"
 
 .zeropage
 opp:        .res        2                                   ; A row of optab
@@ -294,13 +272,21 @@ label:
 @done:
             rts
 
-; C = 1 (said): the symbol at hp is defined already in this pass, or is a macro
+; C = 1 (said): the symbol at hp is defined already in this pass, or is a macro.  One of as's own or its caller's
+; (SF_LINK: DEFINE's, a BASIC program's names) is the source's from now on
 redef:
             ldy         #SY_FLAGS
             lda         (hp),Y
             and         #SF_MACRO
             bne         @twice
             lda         (hp),Y
+            bit         #SF_LINK
+            beq         :+
+            and         #$FF ^ SF_LINK
+            sta         (hp),Y
+            clc
+            rts
+:
             and         #SF_PASS
             cmp         pass
             beq         @twice
@@ -2415,49 +2401,3 @@ rowh:
             .byte       >(optab + I * NAMES)
 .endrepeat
 
-; Each mode's length (the opcode's and its operand's)
-modelen:    .byte       1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 2, 3
-
-; The W65C02S's instructions' names (the opcode tables' indexes: ??? has none), 3 letters each
-names:      .byte       "brkora???tsbaslrmbphpbbrbpltrbclcincjsrandbitrol"
-            .byte       "plpbmisecdecrtieorlsrphajmpbvccliphyrtsadcstzror"
-            .byte       "plabvsseiplybrastastystxsmbdeytxabbsbcctyatxsldy"
-            .byte       "ldaldxtaytaxbcsclvtsxcpycmpinydexwaibnecldphxstp"
-            .byte       "cpxsbcinxnopbeqsedplx"
-.assert     * - names = NAMES * 3, error, "NAMES: the names' count"
-
-; Each opcode's name (its index in names) and mode (M_*: 16 and up, none)
-op_name:
-            .byte        0,  1,  2,  2,  3,  1,  4,  5,  6,  1,  4,  2,  3,  1,  4,  7
-            .byte        8,  1,  1,  2,  9,  1,  4,  5, 10,  1, 11,  2,  9,  1,  4,  7
-            .byte       12, 13,  2,  2, 14, 13, 15,  5, 16, 13, 15,  2, 14, 13, 15,  7
-            .byte       17, 13, 13,  2, 14, 13, 15,  5, 18, 13, 19,  2, 14, 13, 15,  7
-            .byte       20, 21,  2,  2,  2, 21, 22,  5, 23, 21, 22,  2, 24, 21, 22,  7
-            .byte       25, 21, 21,  2,  2, 21, 22,  5, 26, 21, 27,  2,  2, 21, 22,  7
-            .byte       28, 29,  2,  2, 30, 29, 31,  5, 32, 29, 31,  2, 24, 29, 31,  7
-            .byte       33, 29, 29,  2, 30, 29, 31,  5, 34, 29, 35,  2, 24, 29, 31,  7
-            .byte       36, 37,  2,  2, 38, 37, 39, 40, 41, 14, 42,  2, 38, 37, 39, 43
-            .byte       44, 37, 37,  2, 38, 37, 39, 40, 45, 37, 46,  2, 30, 37, 30, 43
-            .byte       47, 48, 49,  2, 47, 48, 49, 40, 50, 48, 51,  2, 47, 48, 49, 43
-            .byte       52, 48, 48,  2, 47, 48, 49, 40, 53, 48, 54,  2, 47, 48, 49, 43
-            .byte       55, 56,  2,  2, 55, 56, 19, 40, 57, 56, 58, 59, 55, 56, 19, 43
-            .byte       60, 56, 56,  2,  2, 56, 19, 40, 61, 56, 62, 63,  2, 56, 19, 43
-            .byte       64, 65,  2,  2, 64, 65, 11, 40, 66, 65, 67,  2, 64, 65, 11, 43
-            .byte       68, 65, 65,  2,  2, 65, 11, 40, 69, 65, 70,  2,  2, 65, 11, 43
-op_mode:
-            .byte        0,  6, 17, 16,  3,  3,  3,  3,  0,  2,  1, 16,  9,  9,  9, 15
-            .byte       14,  7,  8, 16,  3,  4,  4,  3,  0, 11,  1, 16,  9, 10, 10, 15
-            .byte        9,  6, 17, 16,  3,  3,  3,  3,  0,  2,  1, 16,  9,  9,  9, 15
-            .byte       14,  7,  8, 16,  4,  4,  4,  3,  0, 11,  1, 16, 10, 10, 10, 15
-            .byte        0,  6, 17, 16, 17,  3,  3,  3,  0,  2,  1, 16,  9,  9,  9, 15
-            .byte       14,  7,  8, 16, 17,  4,  4,  3,  0, 11,  0, 16, 18, 10, 10, 15
-            .byte        0,  6, 17, 16,  3,  3,  3,  3,  0,  2,  1, 16, 12,  9,  9, 15
-            .byte       14,  7,  8, 16,  4,  4,  4,  3,  0, 11,  0, 16, 13, 10, 10, 15
-            .byte       14,  6, 17, 16,  3,  3,  3,  3,  0,  2,  0, 16,  9,  9,  9, 15
-            .byte       14,  7,  8, 16,  4,  4,  5,  3,  0, 11,  0, 16,  9, 10, 10, 15
-            .byte        2,  6,  2, 16,  3,  3,  3,  3,  0,  2,  0, 16,  9,  9,  9, 15
-            .byte       14,  7,  8, 16,  4,  4,  5,  3,  0, 11,  0, 16, 10, 10, 11, 15
-            .byte        2,  6, 17, 16,  3,  3,  3,  3,  0,  2,  0,  0,  9,  9,  9, 15
-            .byte       14,  7,  8, 16, 17,  4,  4,  3,  0, 11,  0,  0, 18, 10, 10, 15
-            .byte        2,  6, 17, 16,  3,  3,  3,  3,  0,  2,  0, 16,  9,  9,  9, 15
-            .byte       14,  7,  8, 16, 17,  4,  4,  3,  0, 11,  0, 16, 18, 10, 10, 15

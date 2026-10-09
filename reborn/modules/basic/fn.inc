@@ -174,6 +174,7 @@ ST_SPRITEI                                                  ; SPRITE n, x, y, im
 ST_SPRITEOFF                                                ; SPRITE n OFF
 ST_WINDOW                                                   ; WINDOW (x1, y1)-(x2, y2), mode (0 none, 1, 2 SCREEN)
 ST_VIEW                                                     ; VIEW (x1, y1)-(x2, y2), mode (0 none, 1, 2 SCREEN)
+ST_ASMCALL                                                  ; CALL ASM: its label's number, a, x, y (asm.inc)
 ST_END
 .endenum
 

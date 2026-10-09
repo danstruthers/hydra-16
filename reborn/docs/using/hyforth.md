@@ -114,7 +114,7 @@ the rest.
 | `block.fl` | [Block](#memory-locals-and-blocks): `block`, `buffer`, `update`, `flush`, `load`, `list`, `thru` ... |
 | `hydra.fl` | [The Hydra's words](#the-hydras-words): the sys- words, `sh`, `run`, banks, directories, notes, `argc`, `arg`, `sys`, `ctl` |
 | `hydra.fs` | The system's constants and error codes (`O_RDWR`, `E_NOENT` ...), in a word list of their own, `hydra` |
-| `disasm.fl` | `disasm`; with it, `see` of an assembly word shows its instructions |
+| `disasm.fl` | `disasm`; with it, `see` of an assembly word shows its instructions (as `as` writes them: the asm library's, `db`'s and `dis`'s way) |
 | `bits.fl` | `tbit`, `sbit`, `cbit` |
 | `random.fl` | `random ( u -- u' )` (0 to u-1), `rand`, `rand32`, `rseed` |
 | `sound.fl` | [Sound](#sound): the YM2151's words, `note-of`, `tune` |
@@ -334,7 +334,8 @@ or Forth (yours).
 ```
 
 `see name` shows a definition; with `lib disasm`, an assembly word's instructions, and `disasm ( addr n -- )`
-any code's.  `dump ( addr u -- )` shows memory, `.s` the stack, `? ( addr -- )` a cell.
+any code's, each as `as` writes it (the asm library's: [tools.md](tools.md#the-disassembler)), a `jsr` or `jmp` to a word
+with the word's name after it.  `dump ( addr u -- )` shows memory, `.s` the stack, `? ( addr -- )` a cell.
 
 ```
 /> lib disasm

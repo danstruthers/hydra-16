@@ -2,7 +2,8 @@
 ** db.c - db [-p task | program [arg ...]]: the debugger (phase 9).  A program started stopped at its entry point
 ** (in a task and note group of its own, so Ctrl-C reaches db, which stops it), or a task it attaches to (stopped
 ** where it is); then stepped an instruction at a time, run to a breakpoint or an address, its registers and memory
-** shown and its memory changed, with symbols from ld65's label files (-Ln: "al 000830 .main").  All through
+** shown and its memory changed, with symbols from ld65's label files (-Ln: "al 000830 .main") and hydra.inc's
+** calls; an instruction as the assembler as writes it (the asm library's: asm.h, the same as dis's).  All through
 ** /proc/N: ctl (stop, start, step, next, break, nobreak, kill) and mem; and the kernel's TASKREAD (its frame) and
 ** TASKINFO (its flags: stopped).
 **   Its commands, a line each.  An address is hex ($ before it, or not) or a symbol, then + or - a hex offset; a
@@ -17,7 +18,7 @@
 **     d [addr] [n]   n instructions (12) from addr (its PC; then on from the last)
 **     m [addr] [n]   n bytes (64) from addr (then on from the last), hex and text
 **     w addr byte..  bytes (hex) written at addr
-**     l file         symbols from an ld65 label file
+**     l file         symbols from an ld65 label file (or hydra.inc: the calls' names)
 **     q              quit: a program db started is killed; a task it attached to runs on
 **   While it's stopped db's breakpoints are out of its memory (d and m show its own bytes); they go in as it runs
 ** (c, u, and n over a JSR).  A step stops where the kernel can't step (in a call: E_BUSY): c runs it on.
@@ -32,63 +33,10 @@
 #include <unistd.h>
 #include <signal.h>
 #include <hydra.h>
+#include <asm.h>
 
 #define BP_MAX      16          /* Breakpoints, at most */
-#define SYM_GROW    64          /* The symbols' table grows this many at a time */
 #define NEAR        0x100       /* A symbol names an address up to this far past it */
-
-/* The modes (op_mode): implied, A, #, zp, zp,X, zp,Y, (zp,X), (zp),Y, (zp), abs, abs,X, abs,Y, (abs), (abs,X),
-** rel, zp,rel (BBR, BBS); and the opcodes the W65C02S doesn't define: NOPs of 1, 2 and 3 bytes */
-enum { M_IMP, M_ACC, M_IMM, M_ZP, M_ZPX, M_ZPY, M_IZX, M_IZY, M_IZP, M_ABS, M_ABX, M_ABY, M_IND, M_IAX, M_REL,
-       M_ZPR, M_N1, M_N2, M_N3 };
-static const unsigned char mode_len[] = { 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 2, 3, 1, 2, 3 };
-
-/* The mnemonics, 3 letters each (RMB, SMB, BBR and BBS: their bit after them, from the opcode) */
-static const char names[] =
-    "BRKORA???TSBASLRMBPHPBBRBPLTRBCLCINCJSRANDBITROL"
-    "PLPBMISECDECRTIEORLSRPHAJMPBVCCLIPHYRTSADCSTZROR"
-    "PLABVSSEIPLYBRASTASTYSTXSMBDEYTXABBSBCCTYATXSLDY"
-    "LDALDXTAYTAXBCSCLVTSXCPYCMPINYDEXWAIBNECLDPHXSTP"
-    "CPXSBCINXNOPBEQSEDPLX";
-
-/* Each opcode's mnemonic (its index in names) and mode (M_*) */
-static const unsigned char op_name[256] = {
-     0,  1,  2,  2,  3,  1,  4,  5,  6,  1,  4,  2,  3,  1,  4,  7,
-     8,  1,  1,  2,  9,  1,  4,  5, 10,  1, 11,  2,  9,  1,  4,  7,
-    12, 13,  2,  2, 14, 13, 15,  5, 16, 13, 15,  2, 14, 13, 15,  7,
-    17, 13, 13,  2, 14, 13, 15,  5, 18, 13, 19,  2, 14, 13, 15,  7,
-    20, 21,  2,  2,  2, 21, 22,  5, 23, 21, 22,  2, 24, 21, 22,  7,
-    25, 21, 21,  2,  2, 21, 22,  5, 26, 21, 27,  2,  2, 21, 22,  7,
-    28, 29,  2,  2, 30, 29, 31,  5, 32, 29, 31,  2, 24, 29, 31,  7,
-    33, 29, 29,  2, 30, 29, 31,  5, 34, 29, 35,  2, 24, 29, 31,  7,
-    36, 37,  2,  2, 38, 37, 39, 40, 41, 14, 42,  2, 38, 37, 39, 43,
-    44, 37, 37,  2, 38, 37, 39, 40, 45, 37, 46,  2, 30, 37, 30, 43,
-    47, 48, 49,  2, 47, 48, 49, 40, 50, 48, 51,  2, 47, 48, 49, 43,
-    52, 48, 48,  2, 47, 48, 49, 40, 53, 48, 54,  2, 47, 48, 49, 43,
-    55, 56,  2,  2, 55, 56, 19, 40, 57, 56, 58, 59, 55, 56, 19, 43,
-    60, 56, 56,  2,  2, 56, 19, 40, 61, 56, 62, 63,  2, 56, 19, 43,
-    64, 65,  2,  2, 64, 65, 11, 40, 66, 65, 67,  2, 64, 65, 11, 43,
-    68, 65, 65,  2,  2, 65, 11, 40, 69, 65, 70,  2,  2, 65, 11, 43
-};
-
-static const unsigned char op_mode[256] = {
-     0,  6, 17, 16,  3,  3,  3,  3,  0,  2,  1, 16,  9,  9,  9, 15,
-    14,  7,  8, 16,  3,  4,  4,  3,  0, 11,  1, 16,  9, 10, 10, 15,
-     9,  6, 17, 16,  3,  3,  3,  3,  0,  2,  1, 16,  9,  9,  9, 15,
-    14,  7,  8, 16,  4,  4,  4,  3,  0, 11,  1, 16, 10, 10, 10, 15,
-     0,  6, 17, 16, 17,  3,  3,  3,  0,  2,  1, 16,  9,  9,  9, 15,
-    14,  7,  8, 16, 17,  4,  4,  3,  0, 11,  0, 16, 18, 10, 10, 15,
-     0,  6, 17, 16,  3,  3,  3,  3,  0,  2,  1, 16, 12,  9,  9, 15,
-    14,  7,  8, 16,  4,  4,  4,  3,  0, 11,  0, 16, 13, 10, 10, 15,
-    14,  6, 17, 16,  3,  3,  3,  3,  0,  2,  0, 16,  9,  9,  9, 15,
-    14,  7,  8, 16,  4,  4,  5,  3,  0, 11,  0, 16,  9, 10, 10, 15,
-     2,  6,  2, 16,  3,  3,  3,  3,  0,  2,  0, 16,  9,  9,  9, 15,
-    14,  7,  8, 16,  4,  4,  5,  3,  0, 11,  0, 16, 10, 10, 11, 15,
-     2,  6, 17, 16,  3,  3,  3,  3,  0,  2,  0,  0,  9,  9,  9, 15,
-    14,  7,  8, 16, 17,  4,  4,  3,  0, 11,  0,  0, 18, 10, 10, 15,
-     2,  6, 17, 16,  3,  3,  3,  3,  0,  2,  0, 16,  9,  9,  9, 15,
-    14,  7,  8, 16, 17,  4,  4,  3,  0, 11,  0, 16, 18, 10, 10, 15
-};
 
 #define OP_BRK      0x00
 #define OP_JSR      0x20
@@ -97,11 +45,6 @@ struct bp {
     unsigned        addr;
     unsigned char   byte;               /* Its own byte there, while the BRK's in */
     unsigned char   in;                 /* The BRK's in its memory */
-};
-
-struct sym {
-    unsigned        addr;
-    char*           name;
 };
 
 static unsigned char task;              /* The task debugged ... */
@@ -113,11 +56,8 @@ static struct hy_regs r;
 static volatile unsigned char interrupted;
 static struct bp bps[BP_MAX];
 static unsigned char nbp;
-static struct sym* syms;
-static unsigned nsym, symroom;
 static unsigned dnext, mnext;           /* Where d and m go on from */
 static char line[128];
-static char text[48];                   /* An instruction's text, or a symbol's */
 static unsigned char buf[16];
 
 static void onint (int sig)
@@ -182,135 +122,31 @@ static int poke (unsigned a, unsigned char v)
     return 0;
 }
 
-/* ---- Symbols */
-
-/* The symbol for address a: "name" or "name+off" (the nearest at or below it, NEAR at most), or 0 */
-static const char* symname (unsigned a)
-{
-    unsigned i, best = 0xFFFF, d;
-    struct sym* s = 0;
-
-    for (i = 0; i < nsym; ++i) {
-        if (syms[i].addr <= a && (d = a - syms[i].addr) < NEAR && d < best) {
-            best = d;
-            s = &syms[i];
-        }
-    }
-    if (!s) {
-        return 0;
-    }
-    if (best == 0) {
-        return s->name;
-    }
-    sprintf (text, "%.36s+%X", s->name, best);
-    return text;
-}
-
-/* An ld65 label file's symbols ("al 000830 .main"): the count taken, or -1 */
-static int loadsyms (const char* file)
-{
-    static char lb[80];
-    FILE* f = fopen (file, "r");
-    char* p;
-    char* e;
-    unsigned n = 0;
-
-    if (!f) {
-        return -1;
-    }
-    while (fgets (lb, sizeof lb, f)) {
-        if (lb[0] != 'a' || lb[1] != 'l' || lb[2] != ' ') {
-            continue;
-        }
-        p = strchr (lb + 3, ' ');
-        if (!p || p[1] != '.' || p[2] == '@' || p[2] == '_') {
-            continue;
-        }
-        for (e = p; *e && *e != '\r' && *e != '\n'; ++e) {
-        }
-        *e = 0;
-        if (nsym == symroom) {
-            syms = realloc (syms, (symroom + SYM_GROW) * sizeof (struct sym));
-            if (!syms) {
-                fputs ("db: out of memory\n", stderr);
-                exit (1);
-            }
-            symroom += SYM_GROW;
-        }
-        syms[nsym].addr = (unsigned) strtoul (lb + 3, 0, 16);
-        if ((syms[nsym].name = strdup (p + 2)) == 0) {
-            break;
-        }
-        ++nsym;
-        ++n;
-    }
-    fclose (f);
-    return n;
-}
-
-/* ---- Disassembly */
-
-/* The instruction at a (its bytes in b) as text (in text: mnemonic and operand); its length */
-static unsigned char disasm (unsigned a, const unsigned char* b)
-{
-    unsigned char op = b[0], mode = op_mode[op];
-    unsigned w = b[1] | b[2] << 8;
-    const char* nm = names + 3 * op_name[op];
-    char* t = text;
-
-    t[0] = nm[0];
-    t[1] = nm[1];
-    t[2] = nm[2];
-    t += 3;
-    if ((op & 7) == 7) {                                /* RMB, SMB, BBR, BBS: their bit */
-        *t++ = '0' + (op >> 4 & 7);
-    }
-    *t++ = ' ';
-    switch (mode) {
-    case M_ACC: strcpy (t, "A"); break;
-    case M_IMM: sprintf (t, "#$%02X", b[1]); break;
-    case M_ZP:  sprintf (t, "$%02X", b[1]); break;
-    case M_ZPX: sprintf (t, "$%02X,X", b[1]); break;
-    case M_ZPY: sprintf (t, "$%02X,Y", b[1]); break;
-    case M_IZX: sprintf (t, "($%02X,X)", b[1]); break;
-    case M_IZY: sprintf (t, "($%02X),Y", b[1]); break;
-    case M_IZP: sprintf (t, "($%02X)", b[1]); break;
-    case M_ABS: sprintf (t, "$%04X", w); break;
-    case M_ABX: sprintf (t, "$%04X,X", w); break;
-    case M_ABY: sprintf (t, "$%04X,Y", w); break;
-    case M_IND: sprintf (t, "($%04X)", w); break;
-    case M_IAX: sprintf (t, "($%04X,X)", w); break;
-    case M_REL: sprintf (t, "$%04X", a + 2 + (signed char) b[1]); break;
-    case M_ZPR: sprintf (t, "$%02X,$%04X", b[1], a + 3 + (signed char) b[2]); break;
-    default:    t[-1] = 0; break;
-    }
-    return mode_len[mode];
-}
-
-/* Where the instruction at a (its bytes in b) goes, if it names a place (JMP, JSR, a branch): its address, or 0 */
-static unsigned target (unsigned a, const unsigned char* b)
-{
-    switch (op_mode[b[0]]) {
-    case M_ABS: return (b[0] == 0x4C || b[0] == OP_JSR) ? (b[1] | b[2] << 8) : 0;
-    case M_REL: return a + 2 + (signed char) b[1];
-    case M_ZPR: return a + 3 + (signed char) b[2];
-    }
-    return 0;
-}
-
-/* A line for the instruction at a: its address, bytes, text, and the symbols of where it is and where it goes.
-** Its length */
+/* A line for the instruction at a: its address, its bytes, it as as writes it (a symbol for the address its
+** operand names, if there's one near), and the symbol of where it is.  Its length */
 static unsigned char showop (unsigned a)
 {
-    static char ins[24];
+    static struct dis d;
+    static char opname[48];
     unsigned char n, i;
-    unsigned to;
     const char* s;
 
     memset (buf, 0, 3);
     peek (a, buf, 3);
-    n = disasm (a, buf);
-    strcpy (ins, text);
+    d.at = a;
+    d.bytes = buf;
+    d.name = 0;
+    d.flags = 0;
+    if (!dis_insn (&d)) {
+        puts ("db: no asm library");
+        return 1;
+    }
+    if ((d.kind & (DK_ADDR | DK_GO)) && (s = lbl_near (d.addr, NEAR)) != 0) {
+        strcpy (opname, s);
+        d.name = opname;
+        dis_insn (&d);
+    }
+    n = d.len;
     printf ("%04X  ", a);
     for (i = 0; i < 3; ++i) {
         if (i < n) {
@@ -319,14 +155,11 @@ static unsigned char showop (unsigned a)
             fputs ("   ", stdout);
         }
     }
-    printf (" %-16s", ins);
-    if ((s = symname (a)) != 0) {
-        printf (" %s", s);
+    if ((s = lbl_near (a, NEAR)) != 0) {
+        printf (" %-24s ; %s\n", d.text, s);
+    } else {
+        printf (" %s\n", d.text);
     }
-    if ((to = target (a, buf)) != 0 && (s = symname (to)) != 0) {
-        printf (" -> %s", s);
-    }
-    putchar ('\n');
     return n;
 }
 
@@ -544,13 +377,7 @@ static unsigned char addr (const char* s, unsigned* a)
     }
     memcpy (name, s, len);
     name[len] = 0;
-    i = nsym;
-    if (!dollar) {
-        for (i = 0; i < nsym && strcmp (syms[i].name, name); ++i) {
-        }
-    }
-    if (i < nsym) {
-        *a = syms[i].addr;
+    if (!dollar && lbl_addr (name, a) == 0) {
     } else {
         *a = (unsigned) strtoul (name, &e, 16);
         if (*e) {
@@ -725,7 +552,7 @@ static unsigned char command (char* s)
     case 'l':
         if (!a1) {
             puts ("l file");
-        } else if ((k = loadsyms (a1)) < 0) {
+        } else if ((k = lbl_load (a1)) < 0) {
             printf ("db: %s: %s\n", a1, why ());
         } else {
             printf ("%d symbols\n", k);

@@ -261,7 +261,7 @@ const TOOL_LINES = [
   ["sleep 30 & sleep 30 & kill $apid; slay sleep; wait; ps","task  state",true],
   ["kill 8; kill x; echo $status","kill: 8: no such task\nkill: x: invalid argument\n1"],
   ["sleep 1; echo slept","slept"],
-  ["ls /rom/bin; whatis mkfs","calc\ndb\nedit\nfsck\ngrep\nlabel\nmkfs\nscom\nsort\n/bin/mkfs"],
+  ["ls /rom/bin; whatis mkfs","calc\ndb\ndis\nedit\nfsck\ngrep\nlabel\nmkfs\nscom\nsort\n/bin/mkfs"],
   ["label s; label s Shared Disk; label s","SRAM\nShared Disk"],
   ["fsck s","hydrafs label=Shared Disk\nfree 253 KB of 255 KB\ncheck: lost 0, unmarked 0, twice 0\nsegment 15"],
   ["mkfs s Fresh; ls /sram; label s; echo $status","Fresh\n"],
@@ -1177,11 +1177,11 @@ function hylangCard(test, files = {}) {
 // (NAME.bas: its checks counted, a FAIL line for each one wrong, then "NAME: n checks, m failed"; BSUITE_PROGS, each
 // one's count), the scripts piped into basic (NAME.txt) and what they print (NAME.out; BSUITE_SCRIPTS).  hydra.bas
 // reads rc's $greet (hi) and its arguments (one two); files.bas and errors.bas write their files on the card;
-// procs.bas INCLUDEs inc.bas, prompt.txt LOADs lab.bas
+// procs.bas INCLUDEs inc.bas, prompt.txt LOADs lab.bas; asm.bas's ASM blocks .include /lib/as's hydra.inc
 const BASIC_DIR = path.join(__dirname, 'basic');
 const BSUITE_PROGS = { arith: 66, funcs: 79, logic: 64, strings: 55, arrays: 37, flow: 33, procs: 28, records: 23, data: 27,
-  errors: 27, files: 24, hydra: 32 };
-const BSUITE_SCRIPTS = ['errors', 'print', 'prompt', 'input'];
+  errors: 27, files: 24, hydra: 32, asm: 23 };
+const BSUITE_SCRIPTS = ['errors', 'print', 'prompt', 'input', 'asm'];
 const bsuiteLine = n => (n === 'hydra' ? 'greet=hi; ' : '') + 'basic ' + n + '.bas' + (n === 'hydra' ? ' one two' : '');
 function basicCard() {
   fs.mkdirSync(CARD_DIR, { recursive: true });
@@ -1455,7 +1455,7 @@ module.exports = {
         'ācat /dev/sd/s/ctl\r' + 'āecho $window\r' + 'ā\x1dc' + 'āecho $window\r' + 'āls \'#fr\'\r' + 'āls /ram\r' + 'āls /dev\r' +
         'āecho stop >>\'#d/s/ctl\'; echo still; cat /sram/x\r' }; },
       expect: ['% ls \'#fr\'\n1/\n2/\n%', '% ls /ram\nbin/\nlib/\n%',
-        '% ls /bin\ncalc\ndb\nedit\nfsck\ngrep\nlabel\nmkfs\nscom\nsort\ninit\nhello\nrc\nwstart\n', 't_child\n% t_child f\n', '% ls \'#fr\'/2\nbin/\nlib/\nmark\n%',
+        '% ls /bin\ncalc\ndb\ndis\nedit\nfsck\ngrep\nlabel\nmkfs\nscom\nsort\ninit\nhello\nrc\nwstart\n', 't_child\n% t_child f\n', '% ls \'#fr\'/2\nbin/\nlib/\nmark\n%',
         'prompt=(', '% cat /dev/sd/s/ctl\nsram 512 KB 1024 blocks\nhydrafs label=SRAM\n', '% echo $window\n0\n%',
         '% echo $window\n1\n%', '% ls \'#fr\'\n1/\n2/\n4/\n%', '% ls /ram\nbin/\nlib/\n%', '\ncons\nconsctl\nwctl\nwnew\nser\nserctl\nkbdin\ntext\nlabel\nsnarf\nkbin\n%',
         '% echo stop >>\'#d/s/ctl\'; echo still; cat /sram/x\nstill\ncat: /sram/x: no such device\n%'],
@@ -1653,7 +1653,7 @@ module.exports = {
       },
     },
     {
-      name: 'bsuite', what: 'BASIC\'s suite (tests/basic, docs/using/basic.md), from a card: programs that check themselves, each its checks and none failed (arithmetic: the operators and their order, exact numbers, complex numbers, literals: E notation, &H, the # forms, .5; suffixes; a base; the number functions: exact when they can be, else DIGITS digits, RND, fractions\' and complex numbers\' parts, GCD, FIB, shifts, VAL, STR$ in a base, MKN$; comparisons, the bitwise operators on big integers, IF\'s forms, SELECT CASE; strings: their functions, MID$ =, fixed lengths, past 255, the garbage collector; arrays: TO, dimensions, used before DIM, REDIM PRESERVE, ERASE, LBOUND, SWAP; FOR\'s exact steps, DO, WHILE, EXIT, GOTO, GOSUB, RETURN label, ON, line numbers, _; SUBs and FUNCTIONs: by reference and by value, recursion, STATIC, SHARED, CONST, a call among a call\'s arguments, one calling another, INCLUDE; TYPE: nested records, arrays of them, copies, a field by reference; DATA, READ, RESTORE, CONST, OPTION BASE, DEFSTR; ON ERROR, RESUME\'s forms, ERR, ERL, ERR$, the system\'s errors; files: OPEN\'s modes, PRINT #, WRITE #, INPUT #, LINE INPUT #, INPUT$, LOF, LOC, SEEK, GET, PUT, FREEFILE, directories; the Hydra\'s: SYS and RREG, a bank of its own, machine code, FRE, SLEEP, TIMER, DATE$, TIME$, ENV$, ARG$, COMMAND$, SHELL, SHELL$, STATUS); scripts piped into basic, their output tests/basic\'s: the errors\' messages (at the prompt, a typed program\'s by its line numbers), PRINT\'s layout (zones, TAB, SPC, POS, numbers\' forms, PRINT USING\'s pictures and {} fields, WRITE, a base), the prompt (lines typed, replaced, taken out; LIST\'s ranges, labels; DELETE, CLEAR, SAVE, LOAD, RUN "f", STOP, CONT, SYSTEM), INPUT\'s answers (Redo from start, quotes, an empty line, LINE INPUT, INPUT ;)',
+      name: 'bsuite', what: 'BASIC\'s suite (tests/basic, docs/using/basic.md), from a card: programs that check themselves, each its checks and none failed (arithmetic: the operators and their order, exact numbers, complex numbers, literals: E notation, &H, the # forms, .5; suffixes; a base; the number functions: exact when they can be, else DIGITS digits, RND, fractions\' and complex numbers\' parts, GCD, FIB, shifts, VAL, STR$ in a base, MKN$; comparisons, the bitwise operators on big integers, IF\'s forms, SELECT CASE; strings: their functions, MID$ =, fixed lengths, past 255, the garbage collector; arrays: TO, dimensions, used before DIM, REDIM PRESERVE, ERASE, LBOUND, SWAP; FOR\'s exact steps, DO, WHILE, EXIT, GOTO, GOSUB, RETURN label, ON, line numbers, _; SUBs and FUNCTIONs: by reference and by value, recursion, STATIC, SHARED, CONST, a call among a call\'s arguments, one calling another, INCLUDE; TYPE: nested records, arrays of them, copies, a field by reference; DATA, READ, RESTORE, CONST, OPTION BASE, DEFSTR; ON ERROR, RESUME\'s forms, ERR, ERL, ERR$, the system\'s errors; files: OPEN\'s modes, PRINT #, WRITE #, INPUT #, LINE INPUT #, INPUT$, LOF, LOC, SEEK, GET, PUT, FREEFILE, directories; the Hydra\'s: SYS and RREG, a bank of its own, machine code, FRE, SLEEP, TIMER, DATE$, TIME$, ENV$, ARG$, COMMAND$, SHELL, SHELL$, STATUS; inline assembly: ASM blocks, CALL ASM\'s labels and registers, the program\'s variables and CONSTs by name, data, a block in a SUB, a later block\'s label, a macro, .if, cheap and unnamed labels, .include and a system call, the blocks\' own bank and .bss); scripts piped into basic, their output tests/basic\'s: the errors\' messages (at the prompt, a typed program\'s by its line numbers; ASM\'s: the assembler\'s at its line, a label not there, a block not ended, past 8K, ASM at the prompt; CALL ASM at the prompt), PRINT\'s layout (zones, TAB, SPC, POS, numbers\' forms, PRINT USING\'s pictures and {} fields, WRITE, a base), the prompt (lines typed, replaced, taken out; LIST\'s ranges, labels; DELETE, CLEAR, SAVE, LOAD, RUN "f", STOP, CONT, SYSTEM), INPUT\'s answers (Redo from start, quotes, an empty line, LINE INPUT, INPUT ;)',
       init: 't_rc', cycles: 700e6,
       get machine() {
         return { sd: basicCard(), input: 'ācd /sd/0\r' + Object.keys(BSUITE_PROGS).map(n => 'ā' + bsuiteLine(n) + '\r').join('') +
@@ -1707,7 +1707,7 @@ module.exports = {
       check(m, out) {
         const f = [], first = out.split('libs\n')[0], last = out.slice(out.lastIndexOf('lib greet words'));
         // (disasm: a Rockwell branch to itself, the indirect and indexed modes, a jsr to a word; see of a code word)
-        if (!/^ ([0-9A-F]{4})  0F 12 FD  bbr0 \$12, \$\1\n [0-9A-F]{4}  B2 22     lda \(\$22\)\n [0-9A-F]{4}  7C 34 12  jmp \(\$1234,x\)\n [0-9A-F]{4}  B1 10     lda \(\$10\),y\n [0-9A-F]{4}  A1 10     lda \(\$10,x\)\n [0-9A-F]{4}  BE 00 80  ldx \$8000,y\n [0-9A-F]{4}  B6 10     ldx \$10,y\n [0-9A-F]{4}  87 20     smb0 \$20\n [0-9A-F]{4}  0A        asl\n [0-9A-F]{4}  CB        wai\n [0-9A-F]{4}  20 [0-9A-F]{2} [0-9A-F]{2}  jsr \$[0-9A-F]{4}  \\ dup \n/m.test(out))
+        if (!/^ ([0-9A-F]{4})  0F 12 FD  bbr0 \$12, \$\1\n [0-9A-F]{4}  B2 22     lda \(\$22\)\n [0-9A-F]{4}  7C 34 12  jmp \(\$1234,x\)\n [0-9A-F]{4}  B1 10     lda \(\$10\),y\n [0-9A-F]{4}  A1 10     lda \(\$10,x\)\n [0-9A-F]{4}  BE 00 80  ldx \$8000,y\n [0-9A-F]{4}  B6 10     ldx \$10,y\n [0-9A-F]{4}  87 20     smb0 \$20\n [0-9A-F]{4}  0A        asl a\n [0-9A-F]{4}  CB        wai\n [0-9A-F]{4}  20 [0-9A-F]{2} [0-9A-F]{2}  jsr \$[0-9A-F]{4}  \\ dup \n/m.test(out))
           f.push('disasm: not as it should be');
         if (!/lib disasm see 2drop\ncode 2drop \n [0-9A-F]{4}  E8        inx\n [0-9A-F]{4}  E8        inx\n [0-9A-F]{4}  60        rts\nend-code\n/.test(out))
           f.push('see of a code word (with disasm.fl): not as it should be');
@@ -2191,6 +2191,37 @@ module.exports = {
         '% as /pc/warn.s /ram/warn; echo $status; xd /ram/warn\nas: /pc/warn.s:2: warning: careful\n\n0000000  60 ', '% as\nusage: as [-bl] file.s [out]\n%'],
     },
     {
+      name: 'dis', what: 'dis, the disassembler (/rom/bin/dis: as\'s inverse, the asm library\'s instructions): the SDK\'s tick as as\'s source (its code followed from main, its labels, hydra.inc\'s calls and registers, its data and BSS); sources that as assembles to the same bytes: hi with its labels (as -l), upper in the SDK\'s columns (-w), db (C, 20K) with ld65\'s labels, every opcode (three operands each) raw from an address (-c -o); its usage and a file not a program',
+      init: 't_rc', cycles: 2500e6,
+      pc: {
+        files: () => {
+          const ops = [];
+          for (const [x, y] of [[0x12, 0x34], [0x12, 0x00], [0xFE, 0x7F]]) for (let op = 0; op < 256; op++) ops.push(op, x, y);
+          return { 'db.lbl': fs.readFileSync(path.join(__dirname, '..', 'obj', 'programs', 'db', 'db.lbl')), 'ops.bin': Buffer.from(ops) };
+        },
+      },
+      machine: {
+        input: ['dis /rom/sample/tick', 'as -l /lib/as/hi.s /ram/hi; dis -l /ram/hi.lbl /ram/hi >/ram/h.s',
+          'as /ram/h.s /ram/h2; cmp /ram/hi /ram/h2; echo $status', "dis -w /rom/sample/upper >/ram/u.s; grep -c '^            jsr ' /ram/u.s",
+          'as /ram/u.s /ram/u2; cmp /rom/sample/upper /ram/u2; echo $status', 'dis -l /pc/db.lbl /rom/bin/db >/ram/db.s; grep -c _exit /ram/db.s',
+          'as /ram/db.s /ram/db2; cmp /rom/bin/db /ram/db2; echo $status', 'dis -c -o 1000 /pc/ops.bin >/ram/o.s; as -b /ram/o.s /ram/o2',
+          'cmp /pc/ops.bin /ram/o2; echo $status', 'dis', 'dis /rom/doc/api.md'].map(l => 'ā' + l + '\r').join(''),
+      },
+      expect: ['% dis /rom/sample/tick\n; /rom/sample/tick, as dis read it: as assembles this to its bytes again\n.include "hydra.inc"\n\n' +
+        '.include "hyx2.inc"\n\n\tHYX2_PROGRAM "tick", main\n.code\nmain:\n\tstz B0895\n\tstz B0896\n\tlda #$86\n\tsta r0\n\tlda #$08\n\tsta r0+1\n' +
+        '\tjsr NOTIFY\nL0841:\n\tlda #$C8\n\tldx #$00\n\tjsr SLEEP\n\tlda B0895\n\tbne L0857\n',
+        '\tora #$30\n\tjsr PUTC\n', '\trts\n\t.byte $8D, $95, $08, $18, "` seconds", $0A, $00\n.bss\nB0895:\n\t.res 1\nB0896:\n\t.res 1\n%',
+        '% as /ram/h.s /ram/h2; cmp /ram/hi /ram/h2; echo $status\n\n%', '% as /ram/u.s /ram/u2; cmp /rom/sample/upper /ram/u2; echo $status\n\n%',
+        '% as /ram/db.s /ram/db2; cmp /rom/bin/db /ram/db2; echo $status\n\n%', '% cmp /pc/ops.bin /ram/o2; echo $status\n\n%',
+        '% dis\nusage: dis [-cnw] [-l labels] [-o addr] file\n%', '% dis /rom/doc/api.md\ndis: /rom/doc/api.md: not a HYX2 RAM program (-o addr: raw bytes from addr)\n%'],
+      check(m, out) {
+        const f = [], n = out.match(/grep -c '\^            jsr ' \/ram\/u\.s\n(\d+)\n/), k = out.match(/grep -c _exit \/ram\/db\.s\n(\d+)\n/);
+        if (!n || +n[1] < 20) f.push('dis -w: upper\'s jsr lines not in the SDK\'s columns (' + (n && n[1]) + ')');
+        if (!k || +k[1] < 1) f.push('dis -l: db\'s _exit not named');
+        return f;
+      },
+    },
+    {
       name: 'sound', what: 'the simulator\'s sound (sim/lib/audio.js: run.js --sound, --wav), at rc: the YM2151\'s (opm.js, ymfm\'s) A4 on channel 4, then the Vera X\'s PSG\'s A5 on a sawtooth (channel 8), each heard at its pitch; the stream 48,000 samples a second of the Hydra\'s time',
       init: 't_rc', cycles: 60e6, jsOnly: 'the danlang emulator has no sound',
       machine: {
@@ -2519,19 +2550,20 @@ module.exports = {
       get machine() { return { sd: stepCard() }; },
     },
     {
-      name: 'db', what: 'the debugger at rc (/rom/bin/db): the SDK\'s hi started stopped, its labels from /pc (ld65\'s), registers, steps, a disassembly, a breakpoint hit twice, a JSR to the kernel stepped over, until, memory read and written, and on to its end',
+      name: 'db', what: 'the debugger at rc (/rom/bin/db): the SDK\'s hi started stopped, its labels from /pc (ld65\'s) and hydra.inc\'s calls and registers, registers, steps, a disassembly (as as writes it: the asm library\'s, symbols in the operands), a breakpoint hit twice, a JSR to the kernel stepped over, until, memory read and written, and on to its end',
       init: 't_rc', cycles: 300e6,
       pc: { files: () => ({ 'hi.lbl': fs.readFileSync(path.join(__dirname, '..', 'obj', 'samples', 'hi', 'hi.lbl')) }) },
       machine: {
-        input: ['db /rom/sample/hi Ann Bob', 'l /pc/hi.lbl', 'r', 's 3', 'd main 6', 'b main+14', 'b', 'c', 'n 4', 'u main+2C', 'c',
+        input: ['db /rom/sample/hi Ann Bob', 'l /pc/hi.lbl', 'l /lib/as/hydra.inc', 'r', 's 3', 'd main 6', 'b main+14', 'b', 'c', 'n 4', 'u main+2C', 'c',
           'm s_you 4', 'w s_you 59 4F 55', 'm s_you 4', 'x', 'c', 'echo $status'].map(l => 'ā' + l + '\r').join(''),
       },
       // (Its registers as the loader left them aren't checked: A, X and Y at its entry point)
-      expect: ['% db /rom/sample/hi Ann Bob\ntask ', '\n0830  A5 02     LDA $02         \ndb> l /pc/hi.lbl\n8 symbols\n',
-        'db> s 3\n0832  85 22     STA $22          main+2\n0834  A5 03     LDA $03          main+4\nPC=0836 A=03 ',
-        '0838  B2 22     LDA ($22)        main+8\n083A  D0 08     BNE $0844        main+A -> main+14\ndb> b main+14\n',
-        'db> b\n1 0844  A9 52     LDA #$52         main+14\ndb> c\nbreakpoint 1\nPC=0844 ',
-        '084C  20 53 F9  JSR $F953        main+1C\ndb> u main+2C\nHello, PC=085C ', 'db> c\nAnn!\nbreakpoint 1\nPC=0844 A=42 ',
+      expect: ['% db /rom/sample/hi Ann Bob\ntask ', '\n0830  A5 02     lda $02\ndb> l /pc/hi.lbl\n8 symbols\ndb> l /lib/as/hydra.inc\n',
+        ' symbols\ndb> r\nPC=0830 ', '\n0830  A5 02     lda r0                   ; main\n',
+        'db> s 3\n0832  85 22     sta arg                  ; main+2\n0834  A5 03     lda r0+1                 ; main+4\nPC=0836 A=03 ',
+        '0838  B2 22     lda (arg)                ; main+8\n083A  D0 08     bne main+14              ; main+A\ndb> b main+14\n',
+        'db> b\n1 0844  A9 52     lda #$52                 ; main+14\ndb> c\nbreakpoint 1\nPC=0844 ',
+        '084C  20 53 F9  jsr PUTS                 ; main+1C\ndb> u main+2C\nHello, PC=085C ', 'db> c\nAnn!\nbreakpoint 1\nPC=0844 A=42 ',
         'db> m s_you 4\n0934  79 6F 75 00              you.\ndb> w s_you 59 4F 55\ndb> m s_you 4\n0934  59 4F 55 00              YOU.\n',
         'db> x\ndb> c\nHello, Bob!\nI\'m task ', ' ended: code 0\n% echo $status\n\n% '],
     },

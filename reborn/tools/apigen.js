@@ -19,6 +19,8 @@
 //   obj/sdk/numbers.inc   the number libraries' entries (NUM_ADD ...), constants and call macros, for programs in
 //                         assembly
 //   obj/sdk/c/numdefs.h   their constants, for C (num.h includes it)
+//   obj/sdk/asmlib.inc, obj/sdk/c/asmdefs.h, obj/gen/asm_jt.inc   the same for the asm library (spec/asm.def: the
+//                         W65C02S's instructions as as writes them; asm.h includes asmdefs.h)
 //   obj/gen/numbers_jt.inc, math_jt.inc   each number library's jump table (its module includes it)
 //   obj/gen/pow10.inc     the powers of 10 to 10^24 the registers' r_pow10 copies (nmreg.inc)
 //   obj/gen/atantab.inc   atan(1/m) for m 2 to 15 at 192 bits, the math library's ATAN's (mttrig.inc)
@@ -26,8 +28,8 @@
 //                         the numbers library's INIT puts them in the state's cache (docs/design/plans/NUMSPEED.md)
 //
 // Usage: node tools/apigen.js [ROOT]       (ROOT: the reborn folder; default: this file's parent)
-// From Node: require('./apigen.js').generate(root) gives { calls, errors, consts, groups, numbers }; readNumbers(file)
-// reads spec/numbers.def alone.
+// From Node: require('./apigen.js').generate(root) gives { calls, errors, consts, groups, numbers, asm }; readNumbers(file)
+// reads spec/numbers.def (or asm.def) alone.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -96,7 +98,7 @@ function readErrors(file) {
 
 // The number libraries (spec/numbers.def): each library's entries in its slots' order (its jump table at $A030, after
 // its header), with the prefix of their names in assembly (NUM_ADD, MATH_SQRT); and their constants
-const NUM_PREFIX = { numbers: 'NUM_', math: 'MATH_' }, NUM_TABLE = 0xA030;
+const NUM_PREFIX = { numbers: 'NUM_', math: 'MATH_', asm: 'ASM_' }, NUM_TABLE = 0xA030;
 function readNumbers(file) {
   const libs = [], entries = [], consts = [];
   let entry = null;
@@ -321,6 +323,39 @@ function cHeader(api, errors) {
   for (const e of errors) s += def(e.name, cx(e.code), e.text);
   s += CRLF + '/* ---- constants */' + CRLF;
   for (const k of api.consts) s += def(k.name, k.text.startsWith('$') ? '0x' + k.text.slice(1) : k.text, k.doc);
+  s += CRLF + '#endif' + CRLF;
+  return s;
+}
+
+// The asm library, for programs in assembly: its entries' addresses, its constants and its call macro
+function asmInc(lib) {
+  let s = header(';', 'asmlib.inc - the asm library\'s entries, constants and call macro, for programs in assembly');
+  s += '; A call (spec/asm.def): XCALL, r15 the entry (its address here), r14 the library\'s bank (MODINFO finds it, by' + CRLF;
+  s += '; the name "asm").  ASMCALL ASM_DIS makes one, .A, .X and .Y the entry\'s, r14 from a byte of the program\'s,' + CRLF;
+  s += '; asm_mod.' + CRLF;
+  s += CRLF + '.macro ' + pad('ASMCALL', 12) + 'entry' + CRLF;
+  for (const l of ['pha', 'lda #<(entry)', 'sta r15', 'lda #>(entry)', 'sta r15 + 1', 'lda asm_mod', 'sta r14', 'pla', 'jsr XCALL'])
+    s += ('            ' + pad(l.split(' ')[0], 12) + l.split(' ').slice(1).join(' ')).trimEnd() + CRLF;
+  s += '.endmacro' + CRLF;
+  for (const l of lib.libs) {
+    s += CRLF + '; ---- ' + l.name + ': ' + l.doc + CRLF;
+    for (const e of l.entries) {
+      s += pad(e.symbol, 16) + '= ' + hx(e.addr, 4) + '       ; ' + (e.in.join(' ') || '-') + CRLF;
+      if (e.out.length) s += pad('', 30) + '; -> ' + e.out.join(' ') + CRLF;
+    }
+  }
+  s += CRLF + '; ---- constants' + CRLF;
+  for (const k of lib.consts) s += pad(k.name, 16) + '= ' + pad(k.text, 12) + (k.doc ? '; ' + k.doc : '') + CRLF;
+  return s;
+}
+
+// C: a library's constants (num.h, asm.h include them), named as in assembly
+function cLibHeader(nums, file, what, from, by) {
+  const def = (name, value, doc) => ('#define ' + pad(name, 24) + pad(value, 10) + (doc ? '/* ' + doc.replace(/\*\//g, '* /') + ' */' : '')).trimEnd() + CRLF;
+  const guard = '_' + file.toUpperCase().replace('.', '_');
+  let s = '/*' + CRLF + '** ' + file + ' - ' + what + ', for C (cc65).  Made by tools/apigen.js from spec/' + from + ':' + CRLF;
+  s += '** don\'t edit.  ' + by + ' includes it.' + CRLF + '*/' + CRLF + CRLF + '#ifndef ' + guard + CRLF + '#define ' + guard + CRLF + CRLF;
+  for (const k of nums.consts) s += def(k.name, k.text.startsWith('$') ? '0x' + k.text.slice(1) : k.text, k.doc);
   s += CRLF + '#endif' + CRLF;
   return s;
 }
@@ -577,6 +612,10 @@ function generate(root) {
   write(path.join(root, 'obj', 'sdk', 'numbers.inc'), numbersInc(nums));
   write(path.join(root, 'obj', 'sdk', 'c', 'numdefs.h'), cNumHeader(nums));
   for (const l of nums.libs) write(path.join(gen, l.name + '_jt.inc'), numbersJt(l));
+  const asm = readNumbers(path.join(root, 'spec', 'asm.def'));
+  write(path.join(root, 'obj', 'sdk', 'asmlib.inc'), asmInc(asm));
+  write(path.join(root, 'obj', 'sdk', 'c', 'asmdefs.h'), cLibHeader(asm, 'asmdefs.h', 'the asm library\'s constants', 'asm.def', 'asm.h'));
+  for (const l of asm.libs) write(path.join(gen, l.name + '_jt.inc'), numbersJt(l));
   write(path.join(gen, 'numconst.inc'), numConst());
   write(path.join(gen, 'pow10.inc'), pow10Inc());
   write(path.join(gen, 'atantab.inc'), atanTab());
@@ -584,7 +623,7 @@ function generate(root) {
     calls: api.calls.map(c => ({ name: c.name, addr: c.addr, group: c.group, in: c.in.join(' '), out: c.out.join(' '), errors: c.errors, blocks: c.blocks })),
     errors, consts: api.consts.map(k => ({ name: k.name, value: k.value })),
   }, null, 1) + '\n');
-  return { groups: api.groups, calls: api.calls, consts: api.consts, errors, numbers: nums };
+  return { groups: api.groups, calls: api.calls, consts: api.consts, errors, numbers: nums, asm };
 }
 
 module.exports = { generate, readNumbers };
