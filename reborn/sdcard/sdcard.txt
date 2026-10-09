@@ -1,5 +1,5 @@
-; sdcard.txt - the files of HydraOS's SD card (bin/sdcard.img, tools/sdcard.js makes it at the build): the samples
-; and the sample songs, which aren't the system's, so they're not in the ROM.  Each line: a path on the card, then
+; sdcard.txt - the files of HydraOS's SD card (bin/sdcard.img, tools/sdcard.js makes it at the build): the samples,
+; the sample songs and the benchmarks, which aren't the system's, so they're not in the ROM.  Each line: a path on the card, then
 ; its source (from this folder).  In SD device 0 the card is /sd/0: /sd/0/sample/c/race.  sim/tools/sdwrite.js writes
 ; the image to a card on the PC; the tests that run a sample have the image as their card.
 sample/hi           ../obj/samples/hi.hyx       ; The assembly SDK's samples, built (sdk/asm/samples/)
@@ -28,3 +28,27 @@ sample/c/round      ../obj/samples/c/round.hyx
 songs/test.zsm      songs/test.zsm              ; Songs (play /sd/0/songs/test.zsm): the old system's test song
 songs/vera.mml      songs/vera.mml              ;   (os_rom/songs/test.mml), and a score for both chips (the PSG's
                                                 ;   with a Vera X); scom.zsm stays in the ROM (/rom/songs)
+bench/bench.hl      bench/bench.hl      ; hylang's, HyForth's and BASIC's benchmarks (sim/bench.js compares them)
+bench/bench.fs      bench/bench.fs
+bench/bench.bas     bench/bench.bas
+bench/benchasm.bas  bench/benchasm.bas  ; BASIC's inline assembly's: bench.bas's twenty, each one's work in an ASM block
+bench/hl/calls.hl   bench/hl/calls.hl
+bench/hl/fib.hl     bench/hl/fib.hl
+bench/hl/tak.hl     bench/hl/tak.hl
+bench/hl/ack.hl     bench/hl/ack.hl
+bench/hl/loop.hl    bench/hl/loop.hl
+bench/hl/while.hl   bench/hl/while.hl
+bench/hl/dotimes.hl bench/hl/dotimes.hl
+bench/hl/nested.hl  bench/hl/nested.hl
+bench/hl/gcd.hl     bench/hl/gcd.hl
+bench/hl/collatz.hl bench/hl/collatz.hl
+bench/hl/hash.hl    bench/hl/hash.hl
+bench/hl/sieve.hl   bench/hl/sieve.hl
+bench/hl/sort.hl    bench/hl/sort.hl
+bench/hl/matrix.hl  bench/hl/matrix.hl
+bench/hl/queens.hl  bench/hl/queens.hl
+bench/hl/mapf.hl    bench/hl/mapf.hl
+bench/hl/fold.hl    bench/hl/fold.hl
+bench/hl/each.hl    bench/hl/each.hl
+bench/hl/chars.hl   bench/hl/chars.hl
+bench/hl/digits.hl  bench/hl/digits.hl

@@ -163,13 +163,13 @@ when it's bound.
 
 ## Against HyForth
 
-Twenty benchmarks are written in each language, on the ROM disk at `/rom/bench`: `bench.hl` (which loads each
+Twenty benchmarks are written in each language, on the ROM disk at `/sd/0/bench`: `bench.hl` (which loads each
 benchmark's own file, `hl/NAME.hl`) and `bench.fs`.  They have the same algorithms, sizes and results, each written
 the language's own way (a tail call, `while`, `dotimes` or `each` in hylang, `DO LOOP` or `BEGIN WHILE REPEAT` in
 HyForth; lists, `map`, `filter` and `foldl` in hylang where HyForth loops over an array and `EXECUTE`s a word), every
 value under 16,384 (hylang's fixnums, a cell that doesn't overflow), as deep as HyForth's data stack (32 cells)
-takes.  Each prints a line a benchmark, `bench LANGUAGE NAME RESULT TICKS REPS` (`hylang /rom/bench/bench.hl [reps
-[q|f [name...]]]`, `forth /rom/bench/bench.fs [reps [q|f [name...]]]`, on the board too).  `node sim/bench.js` runs
+takes.  Each prints a line a benchmark, `bench LANGUAGE NAME RESULT TICKS REPS` (`hylang /sd/0/bench/bench.hl [reps
+[q|f [name...]]]`, `forth /sd/0/bench/bench.fs [reps [q|f [name...]]]`, on the board too).  `node sim/bench.js` runs
 both in the emulator and prints them by kind (calls, loops, arithmetic, bytes, lists, text), with each kind's
 geometric mean: `--quick` (the small sizes), `--only` and `--kind` (some of them), `--hylang-reps` and
 `--forth-reps` (1 and 5), `--together`, `--vs TREE` (another tree's build beside this one's, the same benchmarks

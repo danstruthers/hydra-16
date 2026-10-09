@@ -43,7 +43,7 @@ const DISK_CARDS = [card(0, 2048, false, (n, i) => n * 7 + i), card(1, 4096, tru
 // An SD card on SPI device dev from an image file, claiming blocks (those past the file's end read as zeros); its
 // writes kept, and save() puts them in the file (for the PC tool to look at)
 const CARD_DIR = path.join(__dirname, '..', 'obj', 'cards'), OLD_CARDS = path.join(__dirname, '..', '..', 'old', 'sim', 'cards');
-// The SD card's image (bin/sdcard.img: the samples, the songs: tools/sdcard.js), for the tests that run a sample
+// The SD card's image (bin/sdcard.img: the samples, the songs, the benchmarks: tools/sdcard.js), for the tests that run a sample
 // (sdcard: true): in SD device 0, its writes kept apart (imageCard's), so the image stays as it was built
 const SDCARD = path.join(__dirname, '..', 'bin', 'sdcard.img');
 function sdcardOf(t) {
@@ -2693,10 +2693,10 @@ module.exports = {
       expect: ['/> ? 1+2\n 3 \n/> echo $window\n\n/> ', '/> echo $window\n1\n/> ? env$("window")\n1\n/> x=2: ? x*21\n 42 \n/> '],
     },
     {
-      name: 'bench', what: 'hylang\'s, HyForth\'s and BASIC\'s benchmarks (romfs/bench: bench.hl and hl/NAME.hl, bench.fs, bench.bas, and benchasm.bas, BASIC\'s inline assembly: all twenty in each; sim/bench.js times them against each other) at their quick sizes, all of hylang\'s in one hylang: each language\'s result of each the same (calls, fib, tak, ack; loop, while, dotimes, nested; gcd, collatz, hash; sieve, sort, matrix, queens; mapf, fold, each; chars, digits)',
+      name: 'bench', what: 'hylang\'s, HyForth\'s and BASIC\'s benchmarks (sdcard/bench, on the SD card: bench.hl and hl/NAME.hl, bench.fs, bench.bas, and benchasm.bas, BASIC\'s inline assembly: all twenty in each; sim/bench.js times them against each other) at their quick sizes, all of hylang\'s in one hylang: each language\'s result of each the same (calls, fib, tak, ack; loop, while, dotimes, nested; gcd, collatz, hash; sieve, sort, matrix, queens; mapf, fold, each; chars, digits)',
       init: 't_rc', cycles: 360e6,
-      machine: { input: '\u0101hylang /rom/bench/bench.hl 1 q\r\u0101forth /rom/bench/bench.fs 1 q\r\u0101basic /rom/bench/bench.bas 1 q\r' +
-        '\u0101basic /rom/bench/benchasm.bas 1 q\r' },
+      machine: { input: '\u0101hylang /sd/0/bench/bench.hl 1 q\r\u0101forth /sd/0/bench/bench.fs 1 q\r\u0101basic /sd/0/bench/bench.bas 1 q\r' +
+        '\u0101basic /sd/0/bench/benchasm.bas 1 q\r' },
       get expect() {
         const r = [['calls', 500], ['fib', 144], ['tak', 12], ['ack', 42], ['loop', 1000], ['while', 1500], ['dotimes', 1500],
           ['nested', 450], ['gcd', 189], ['collatz', 441], ['hash', 1274], ['sieve', 97], ['sort', 404], ['matrix', 273], ['queens', 4],
@@ -2705,6 +2705,7 @@ module.exports = {
           ...r.map(([n, v]) => 'bench basic ' + n + ' ' + v + ' '), 'bench basic done', ...r.map(([n, v]) => 'bench basm ' + n + ' ' + v + ' '),
           'bench basm done'];
       },
+      sdcard: true
     },
     {
       name: 'hydev', what: 'hylang\'s device libraries (the plan\'s phase 11: /lib/hylang\'s, loaded by use, over the devices\' files), devices.hl as a script: gpio (pins, the port, ctl as a hash, CA1\'s edge), i2c (a memory written and read at a register, the devices, one that doesn\'t answer), spi (an echo device\'s transactions, mode 3), cons (the window, the windows, the bell), proc (a task\'s args, cwd, regs, memory, banks; its environment, its namespace), clock (the chip, the time set), disk (the disks, the cards: this one and one on SPI device 5; the ROM disk\'s room), pc (the PC tool answers; a file of its read), snd (note-of; a tune, its notes on the YM2151 in time; a channel\'s settings; the registers read back: a bent note\'s key code and fraction; a frequency, a glide, the LFO, a sensitivity, the noise; a line of MML and a chord, by play)',

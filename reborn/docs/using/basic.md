@@ -315,7 +315,7 @@ END ASM
 An error in a block is the assembler's, at its line (`line 50: ASM: undefined: nowhere`); a label no block has, at
 the `CALL ASM` that first names it; an `ASM` without its `END ASM`, at the `ASM`.  The blocks add the assembler's
 time to the program's compiling: a quarter of a second for a few, some 3 seconds with `hydra.inc`.  The assembler is
-the asm library's, the one `as` runs.  A longer example is `/rom/bench/benchasm.bas`: the twenty benchmarks of
+the asm library's, the one `as` runs.  A longer example is `/sd/0/bench/benchasm.bas`: the twenty benchmarks of
 `bench.bas`, each in assembly ([../basic.md](../basic.md#against-hylang-and-hyforth)).
 
 ## Graphics

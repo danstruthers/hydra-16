@@ -60,7 +60,7 @@ const wantCard = {};                                          // (Each slot's ca
 let saveTimer = null;
 const written = new Set();
 
-// HydraOS's SD card (bin/sdcard.img: the samples, the songs), gzipped in the page
+// HydraOS's SD card (bin/sdcard.img: the samples, the songs, the benchmarks), gzipped in the page
 const SAMPLES = 'HydraOS\'s samples card';
 async function samplesCard() {
   const raw = Uint8Array.from(atob($('sdcard').textContent.trim()), c => c.charCodeAt(0));
@@ -507,7 +507,7 @@ $('build').textContent = $('roms').dataset.build || '';
     const c = await idb.get(slot);
     if (c && c.bytes) cards[slot] = c;
   }
-  if (!cards.sd0 && $('sdcard')) {                            // (None kept: HydraOS's card, the samples and songs)
+  if (!cards.sd0 && $('sdcard')) {                            // (None kept: HydraOS's card, the samples, songs and benchmarks)
     cards.sd0 = { name: SAMPLES, bytes: await samplesCard() };
     await idb.put('sd0', cards.sd0);
   }

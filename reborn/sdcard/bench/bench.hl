@@ -1,6 +1,6 @@
 ; bench.hl - hylang's side of the hylang/HyForth benchmarks (bench.fs is HyForth's: the same algorithms, the same
 ; sizes, the same results).  hylang bench.hl [reps [q|f [name...]]]: each benchmark named (all of them, bench.names,
-; if none is) loaded from /rom/bench/hl (its functions, then its run) and run reps times (1); a line for each,
+; if none is) loaded from /sd/0/bench/hl (its functions, then its run) and run reps times (1); a line for each,
 ;   bench hylang NAME RESULT TICKS REPS
 ; its value, and the ticks the reps took (200 a second).  q: smaller sizes (the regression test's).  Each is written
 ; the language's own way: a tail call, while, dotimes or each in hylang, DO LOOP or BEGIN WHILE REPEAT in HyForth;
@@ -22,5 +22,5 @@
   (print (format "bench hylang {} {} {} {}" name r dt bench.reps))})
 (fun {bench.run f n r} {if (zero? n) r (bench.run f (- n 1) (f))})
 
-(each {name bench.only} (load (format "/rom/bench/hl/{}.hl" name)))
+(each {name bench.only} (load (format "/sd/0/bench/hl/{}.hl" name)))
 (print "bench hylang done")

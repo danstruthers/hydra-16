@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // ****************************************************************************
-// bench.js - hylang against HyForth: the same benchmarks in each (romfs/bench: bench.hl and hl/NAME.hl, bench.fs; on
-// the ROM disk at /rom/bench), run in the emulator, their times compared, by kind; and BASIC's (bench.bas, all
+// bench.js - hylang against HyForth: the same benchmarks in each (sdcard/bench: bench.hl and hl/NAME.hl, bench.fs; on
+// HydraOS's SD card, bin/sdcard.img, at /sd/0/bench), run in the emulator, their times compared, by kind; and BASIC's (bench.bas, all
 // twenty too), and BASIC's inline assembly's (benchasm.bas: each one's work in an ASM block).  Each program runs each
 // benchmark reps times and prints
 //   bench LANGUAGE NAME RESULT TICKS REPS
@@ -24,8 +24,8 @@
 //                     benchmarks), a column of its, and this tree's hylang against it
 //   --json FILE       the results, as JSON, to FILE too
 //   -v                the console's output too
-// On the board: hylang /rom/bench/bench.hl [reps [q|f [name...]]], forth /rom/bench/bench.fs [reps [q|f [name...]]],
-// basic /rom/bench/bench.bas [reps [q|f [name...]]], basic /rom/bench/benchasm.bas [reps [q|f [name...]]].
+// On the board: hylang /sd/0/bench/bench.hl [reps [q|f [name...]]], forth /sd/0/bench/bench.fs [reps [q|f [name...]]],
+// basic /sd/0/bench/bench.bas [reps [q|f [name...]]], basic /sd/0/bench/benchasm.bas [reps [q|f [name...]]].
 // Build first (node build.js).  Its status: 1 if a result isn't the same in both, or a benchmark didn't finish.
 'use strict';
 const fs = require('fs');
@@ -58,26 +58,29 @@ const BENCH = [
 const KINDS = ['calls', 'loops', 'arith', 'bytes', 'lists', 'text'];
 const BASIC = BENCH.map(b => b[0]);                                // (bench.bas's and benchasm.bas's: all of them)
 
-// The paged ROM of a tree's build (its modules, its ROM disk), with this tree's benchmarks on its disk
+// The paged ROM of a tree's build (its modules, its ROM disk); the benchmarks are this tree's SD card's (card())
 function rom(tree) {
   const romimg = require(path.join(tree, 'tools', 'romimg.js')), romfs = require(path.join(tree, 'tools', 'romfs.js'));
   const { readManifest, hwtest } = require(path.join(tree, 'build.js'));
   const bin = (d, n) => fs.readFileSync(path.join(tree, 'obj', d, n + '.bin'));
   const sys = readManifest(path.join(tree, 'modules', 'rom.txt')).modules;
   const mods = [...sys.map(n => ({ file: n, data: bin('modules', n) })), { file: 't_rc', data: bin('tests', 't_rc') }];
-  let files = romfs.manifest(path.join(tree, 'romfs', 'romfs.txt'));
-  if (tree !== ROOT) {
-    const ours = require(path.join(ROOT, 'tools', 'romfs.js')).manifest(path.join(ROOT, 'romfs', 'romfs.txt')).filter(f => f.path.startsWith('/bench/'));
-    files = [...files.filter(f => !f.path.startsWith('/bench/')), ...ours];
-  }
+  const files = romfs.manifest(path.join(tree, 'romfs', 'romfs.txt'));
   return romimg.build({ modules: mods, init: 't_rc', hwtest: hwtest(), bios: fs.readFileSync(path.join(tree, 'bin', 'bios.bin')),
     romfs: files }).image;
 }
 
 // The lines a run types (rc's), and its output's results: { LANGUAGE: { NAME: { result, ticks, reps } } }
+// This tree's SD card (bin/sdcard.img: the benchmarks, in SD device 0), its writes kept in memory, for every tree run
+function card() {
+  const img = fs.readFileSync(path.join(ROOT, 'bin', 'sdcard.img')), written = new Map();
+  return { dev: 0, blocks: img.length / 512, read: n => written.get(n) || Buffer.from(img.subarray(n * 512, n * 512 + 512)),
+    write: (n, b) => written.set(n, Buffer.from(b)) };
+}
+
 function run(tree, lines, verbose) {
   const { boot } = require(path.join(tree, 'sim', 'run.js'));
-  const m = boot({ seed: 1, prom: rom(tree), input: [...lines, 'echo %%END%%'].map(l => 'ā' + l + '\r').join('') });
+  const m = boot({ seed: 1, prom: rom(tree), sd: [card()], input: [...lines, 'echo %%END%%'].map(l => 'ā' + l + '\r').join('') });
   let shown = 0;
   while (m.cpu.cyc < 2e11) {
     m.run(m.cpu.cyc + 50e6);
@@ -120,11 +123,11 @@ function main(argv) {
   if (!chosen.length) { console.error('bench.js: no benchmark chosen'); process.exit(2); }
   const names = chosen.length === BENCH.length ? '' : ' ' + chosen.map(b => b[0]).join(' ');
   const sz = opt.quick ? 'q' : 'f';
-  const hyLines = opt.together ? ['hylang /rom/bench/bench.hl ' + opt.hy + ' ' + sz + names]
-    : chosen.map(([n]) => 'hylang /rom/bench/bench.hl ' + opt.hy + ' ' + sz + ' ' + n);
-  const baLines = chosen.some(([n]) => BASIC.includes(n)) ? ['basic /rom/bench/bench.bas ' + opt.ba + ' ' + sz + names] : [];
-  const asLines = baLines.length && opt.asm ? ['basic /rom/bench/benchasm.bas ' + opt.as + ' ' + sz + names] : [];
-  const got = run(ROOT, [...hyLines, 'forth /rom/bench/bench.fs ' + opt.fo + ' ' + sz + names, ...baLines, ...asLines], opt.verbose);
+  const hyLines = opt.together ? ['hylang /sd/0/bench/bench.hl ' + opt.hy + ' ' + sz + names]
+    : chosen.map(([n]) => 'hylang /sd/0/bench/bench.hl ' + opt.hy + ' ' + sz + ' ' + n);
+  const baLines = chosen.some(([n]) => BASIC.includes(n)) ? ['basic /sd/0/bench/bench.bas ' + opt.ba + ' ' + sz + names] : [];
+  const asLines = baLines.length && opt.asm ? ['basic /sd/0/bench/benchasm.bas ' + opt.as + ' ' + sz + names] : [];
+  const got = run(ROOT, [...hyLines, 'forth /sd/0/bench/bench.fs ' + opt.fo + ' ' + sz + names, ...baLines, ...asLines], opt.verbose);
   const vs = opt.vs ? run(opt.vs, hyLines, opt.verbose) : null;
 
   const mult = (() => { try { return JSON.parse(fs.readFileSync(path.join(ROOT, 'obj', 'build.json'), 'utf8')).clock || 1; } catch (e) { return 1; } })();

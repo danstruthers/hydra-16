@@ -162,7 +162,7 @@ task's side of the task calls, memory, semaphores, notes and the clock; page 2 f
 namespaces and the loader (`SPAWN`); page 4 POST and the debugger's steps; the rest is room.  Page 0 is the scarce one.
 [The kernel's pages](conventions.md#the-kernels-pages).
 
-**The paged ROM** (`bin/prom0.bin` ...: a 512K image for each chip it fills; five now, some 132 of its 256 banks).  Bank
+**The paged ROM** (`bin/prom0.bin` ...: a 512K image for each chip it fills; four now, some 123 of its 256 banks).  Bank
 0 holds the module directory and the ROM disk's partition table; bank 1 the hardware test (the old system's, unchanged);
 the modules from bank 2, each at `$A000` of its first bank (about fifty: the drivers, init, the shells, the tools, the
 languages; a module may span two to eight banks); then the ROM disk's HydraFS volume (`/rom`: the programs that run from
@@ -170,8 +170,8 @@ RAM, the languages' libraries, a song, the SDK's include files, the calls' refer
 `modules/rom.txt` lists the modules, `romfs/romfs.txt` the ROM disk's files.  [Modules](programming/modules.md).
 
 **HydraOS's SD card** (`bin/sdcard.img`: a 16 MB HydraFS in a partition) holds what isn't the system's: the SDK's
-samples, built and as sources (`/sd/0/sample`, `/sd/0/sample/c`, `/sd/0/sample/as`), and the sample songs
-(`/sd/0/songs`).  `sdcard/sdcard.txt` lists its files; the build makes it, the tests that run a sample have it in SD
+samples, built and as sources (`/sd/0/sample`, `/sd/0/sample/c`, `/sd/0/sample/as`), the sample songs
+(`/sd/0/songs`) and the benchmarks (`/sd/0/bench`: `sim/bench.js`'s).  `sdcard/sdcard.txt` lists its files; the build makes it, the tests that run a sample have it in SD
 device 0, the browser emulator starts with it, and `sim/tools/sdwrite.js` writes it to a card on the PC.
 
 **The base and HydraOS.**  The BIOS ROM, its system calls, the console driver `ser`, the kernel's devices `kdev` and Woz's
@@ -427,7 +427,7 @@ POST's, a driver's) are `/dev/kmesg`, its last 4K.
   and its own checks, as many at a time as the PC has cores; `--dl` runs them in the danlang emulator (`sim/dl`), the
   emulator written again in danlang.
 * **The benchmarks**, `node sim/bench.js`: twenty, each in hylang, HyForth, BASIC and BASIC's inline assembly
-  (`romfs/bench`), the same algorithms and results, timed against each other by kind ([hylang.md](hylang.md#against-hyforth),
+  (`sdcard/bench`), the same algorithms and results, timed against each other by kind ([hylang.md](hylang.md#against-hyforth),
   [basic.md](basic.md#against-hylang-and-hyforth)).
 * **The PC tools** (`sim/tools`): `hydrapc.js` (the PC tool: the terminal, and `/pc` over the serial line; `npm install`
   in `sim/` for its serial port), `hydrafs.js` (card images), `sdwrite.js` (an image onto a card in the PC's reader:

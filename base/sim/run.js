@@ -38,7 +38,7 @@
 //   --bios FILE, --prom FILE   other images (--prom: the whole paged ROM, its sockets' images one after another)
 //   --sd FILE           a card image (sim/tools/hydrafs.js makes them), SD device 0, then 1 ...: read and
 //                       written in the file itself, as the Hydra reads and writes it.  With none, the system's own
-//                       card if it has one (HydraOS's: bin/sdcard.img, the samples and songs), its writes kept in
+//                       card if it has one (HydraOS's: bin/sdcard.img, the samples, songs and benchmarks), its writes kept in
 //                       memory (the file as it was); --no-sd: no card
 //   --pc-dir DIR        /pc (HydraOS's: reborn/sim/run.js): the PC tool's part (sim/tools/hydrapc.js) is played here, serving the folder DIR:
 //                       the frames the Hydra sends for /pc are answered, at the line's rate (reborn/sim/lib/pchost.js)

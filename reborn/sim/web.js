@@ -62,7 +62,7 @@ function images() {
   const bios = fs.readFileSync(path.join(ROOT, 'bin', 'bios.bin')), proms = [];
   for (let k = 0; fs.existsSync(path.join(ROOT, 'bin', 'prom' + k + '.bin')); k++) proms.push(fs.readFileSync(path.join(ROOT, 'bin', 'prom' + k + '.bin')));
   if (!proms.length) throw new Error('no bin/prom0.bin: node build.js');
-  const card = path.join(ROOT, 'bin', 'sdcard.img');            // (HydraOS's SD card: the samples, the songs)
+  const card = path.join(ROOT, 'bin', 'sdcard.img');            // (HydraOS's SD card: the samples, the songs, the benchmarks)
   return { bios, prom: Buffer.concat(proms), card: fs.existsSync(card) ? fs.readFileSync(card) : null };
 }
 

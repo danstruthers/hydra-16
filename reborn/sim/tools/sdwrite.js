@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // ****************************************************************************
-// sdwrite.js - an SD card image onto a card in the PC's reader: HydraOS's (bin/sdcard.img: the samples and songs), or
+// sdwrite.js - an SD card image onto a card in the PC's reader: HydraOS's (bin/sdcard.img: the samples, songs and benchmarks), or
 // any (sim/tools/hydrafs.js makes them; one read from a card, the run.js --sd file a test left).  It writes the image
 // to the card's first blocks, raw, as a disk imager would, then reads them back and compares.  For the card's own
 // files, without writing it whole, hydrafs.js puts and gets them in an image.
