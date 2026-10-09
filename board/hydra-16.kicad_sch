@@ -6,12 +6,135 @@
 	(paper "USLetter")
 	(title_block
 		(title "CPU, VIA, ACIA, O/S ROM, Task RAM and Banked RAM Header")
-		(date "2025-10-27")
-		(rev "1.8C")
+		(date "2026-10-09")
+		(rev "1.8D")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
+		(comment 2 "1.8D: reliability changes only; runs 1.8C's software unchanged")
 	)
 	(lib_symbols
+		(symbol "Connector_Generic:Conn_01x03"
+			(pin_names (offset 1.016) (hide yes))
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "J"
+				(at 0 5.08 0)
+				(effects
+					(font (size 1.27 1.27))
+				)
+			)
+			(property "Value" "Conn_01x03"
+				(at 0 -5.08 0)
+				(effects
+					(font (size 1.27 1.27))
+				)
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(effects
+					(font (size 1.27 1.27))
+					(hide yes)
+				)
+			)
+			(property "Datasheet" "~"
+				(at 0 0 0)
+				(effects
+					(font (size 1.27 1.27))
+					(hide yes)
+				)
+			)
+			(property "Description" "Generic connector, single row, 01x03, script generated (kicad-library-utils/schlib/autogen/connector/)"
+				(at 0 0 0)
+				(effects
+					(font (size 1.27 1.27))
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "connector"
+				(at 0 0 0)
+				(effects
+					(font (size 1.27 1.27))
+					(hide yes)
+				)
+			)
+			(property "ki_fp_filters" "Connector*:*_1x??_*"
+				(at 0 0 0)
+				(effects
+					(font (size 1.27 1.27))
+					(hide yes)
+				)
+			)
+			(symbol "Conn_01x03_1_1"
+				(rectangle
+					(start -1.27 3.81)
+					(end 1.27 -3.81)
+					(stroke (width 0.254) (type default))
+					(fill (type background))
+				)
+				(rectangle
+					(start -1.27 2.667)
+					(end 0 2.413)
+					(stroke (width 0.1524) (type default))
+					(fill (type none))
+				)
+				(rectangle
+					(start -1.27 0.127)
+					(end 0 -0.127)
+					(stroke (width 0.1524) (type default))
+					(fill (type none))
+				)
+				(rectangle
+					(start -1.27 -2.413)
+					(end 0 -2.667)
+					(stroke (width 0.1524) (type default))
+					(fill (type none))
+				)
+				(pin passive line
+					(at -5.08 2.54 0)
+					(length 3.81)
+					(name "Pin_1"
+						(effects
+							(font (size 1.27 1.27))
+						)
+					)
+					(number "1"
+						(effects
+							(font (size 1.27 1.27))
+						)
+					)
+				)
+				(pin passive line
+					(at -5.08 0 0)
+					(length 3.81)
+					(name "Pin_2"
+						(effects
+							(font (size 1.27 1.27))
+						)
+					)
+					(number "2"
+						(effects
+							(font (size 1.27 1.27))
+						)
+					)
+				)
+				(pin passive line
+					(at -5.08 -2.54 0)
+					(length 3.81)
+					(name "Pin_3"
+						(effects
+							(font (size 1.27 1.27))
+						)
+					)
+					(number "3"
+						(effects
+							(font (size 1.27 1.27))
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "65XX:6522"
 			(exclude_from_sim no)
 			(in_bom yes)
@@ -12204,16 +12327,6 @@
 	)
 	(wire
 		(pts
-			(xy 128.27 50.8) (xy 129.54 50.8)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "69aa8473-0394-47bd-8ccb-7a8ad34c420c")
-	)
-	(wire
-		(pts
 			(xy 106.68 147.32) (xy 113.03 147.32)
 		)
 		(stroke
@@ -12871,16 +12984,6 @@
 			(type default)
 		)
 		(uuid "88f8880c-7049-444f-9ce2-a0c9dc2f2d60")
-	)
-	(wire
-		(pts
-			(xy 128.27 52.07) (xy 128.27 50.8)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "8907007d-ebd8-4d94-876f-173a2fc32393")
 	)
 	(wire
 		(pts
@@ -22474,8 +22577,8 @@
 		)
 	)
 	(sheet
-		(at 228.5029 83.82)
-		(size 20.417 6.35)
+		(at 228.6 83.82)
+		(size 21.59 6.35)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
@@ -22490,7 +22593,7 @@
 		)
 		(uuid "0b66303c-ed46-41df-a285-d041c923c3ce")
 		(property "Sheetname" "SharedMemory"
-			(at 228.5029 83.1084 0)
+			(at 228.6 83.1084 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -22499,7 +22602,7 @@
 			)
 		)
 		(property "Sheetfile" "SharedMem.kicad_sch"
-			(at 228.5029 90.7546 0)
+			(at 228.6 90.7546 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -22517,7 +22620,7 @@
 	)
 	(sheet
 		(at 207.01 163.83)
-		(size 12.7 3.81)
+		(size 21.59 6.35)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
@@ -22541,7 +22644,7 @@
 			)
 		)
 		(property "Sheetfile" "Sound.kicad_sch"
-			(at 207.01 168.2246 0)
+			(at 207.01 170.7646 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -22559,7 +22662,7 @@
 	)
 	(sheet
 		(at 127 181.61)
-		(size 16.51 6.35)
+		(size 21.59 6.35)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
@@ -22600,8 +22703,8 @@
 		)
 	)
 	(sheet
-		(at 228.4924 106.6799)
-		(size 20.32 5.742)
+		(at 228.6 106.68)
+		(size 21.59 6.35)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
@@ -22616,7 +22719,7 @@
 		)
 		(uuid "9c3f9893-75ea-4823-afb7-35bb324a2c9f")
 		(property "Sheetname" "FFF_Registers"
-			(at 228.4924 105.9683 0)
+			(at 228.6 105.9684 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -22625,7 +22728,7 @@
 			)
 		)
 		(property "Sheetfile" "FFF_Registers.kicad_sch"
-			(at 228.4924 113.0065 0)
+			(at 228.6 113.6146 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -22643,7 +22746,7 @@
 	)
 	(sheet
 		(at 228.6 132.08)
-		(size 20.32 6.35)
+		(size 21.59 6.35)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
@@ -22685,7 +22788,7 @@
 	)
 	(sheet
 		(at 228.6 119.38)
-		(size 20.32 6.35)
+		(size 21.59 6.35)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
@@ -22726,8 +22829,8 @@
 		)
 	)
 	(sheet
-		(at 100.33 184.15)
-		(size 15.24 3.81)
+		(at 100.33 181.61)
+		(size 21.59 6.35)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
@@ -22742,7 +22845,7 @@
 		)
 		(uuid "be1fd2da-2765-4044-ae46-297533c36c50")
 		(property "Sheetname" "Buffers"
-			(at 100.33 183.4384 0)
+			(at 100.33 180.8984 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -22852,8 +22955,8 @@
 		)
 	)
 	(sheet
-		(at 127 169.545)
-		(size 15.24 5.08)
+		(at 127 168.91)
+		(size 21.59 6.35)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
@@ -22868,7 +22971,7 @@
 		)
 		(uuid "fe0e8ec7-a78c-48fc-a3b0-2611c8b506ac")
 		(property "Sheetname" "IRQ_Priorty_Encoder"
-			(at 127 168.8334 0)
+			(at 127 168.1984 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -22877,7 +22980,7 @@
 			)
 		)
 		(property "Sheetfile" "IRQ_P_E.kicad_sch"
-			(at 127 175.2096 0)
+			(at 127 175.8446 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -22892,6 +22995,169 @@
 				)
 			)
 		)
+	)
+	(label "CTS_SEL"
+		(at 128.27 52.07 180)
+		(fields_autoplaced yes)
+		(effects
+			(font (size 1.27 1.27))
+			(justify right bottom)
+		)
+		(uuid "1d01bafd-03d8-4e13-91be-30b0f21d7a01")
+	)
+	(label "CTS_232"
+		(at 129.54 50.8 180)
+		(fields_autoplaced yes)
+		(effects
+			(font (size 1.27 1.27))
+			(justify right bottom)
+		)
+		(uuid "a9196650-fd79-415d-bd1a-dc8bee6e10b0")
+	)
+	(symbol
+		(lib_id "Connector_Generic:Conn_01x03")
+		(at 190.5 160.02 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "f476c9f0-b22d-45fc-8315-56fc797012df")
+		(property "Reference" "J30"
+			(at 176.53 153.67 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify left)
+			)
+		)
+		(property "Value" "CTS"
+			(at 181.61 153.67 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify left)
+			)
+		)
+		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical"
+			(at 190.5 160.02 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Datasheet" ""
+			(at 190.5 160.02 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Description" "The ACIA's CTS (1.8D): 1-2 the RS-232 line's (as 1.8C), 2-3 always clear (a 3-wire cable)"
+			(at 190.5 160.02 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(pin "1" (uuid "4f4e0d08-d5c7-4be3-bfeb-583938543e3b"))
+		(pin "2" (uuid "06b3e71e-7dfe-451f-b353-b70cf943c9a2"))
+		(pin "3" (uuid "402f50e1-aa00-4d3e-86af-9ace9511f670"))
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c"
+					(reference "J30")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts (xy 185.42 157.48) (xy 182.88 157.48))
+		(stroke (width 0) (type default))
+		(uuid "dd6f3447-6208-40af-b5cb-c21099797019")
+	)
+	(label "CTS_232"
+		(at 182.88 157.48 180)
+		(fields_autoplaced yes)
+		(effects
+			(font (size 1.27 1.27))
+			(justify right bottom)
+		)
+		(uuid "ab39da0a-3b87-403c-8a06-43abf3c4b0b8")
+	)
+	(wire
+		(pts (xy 185.42 160.02) (xy 182.88 160.02))
+		(stroke (width 0) (type default))
+		(uuid "9508bcb9-5ea2-4b68-9ac9-847ef309755e")
+	)
+	(label "CTS_SEL"
+		(at 182.88 160.02 180)
+		(fields_autoplaced yes)
+		(effects
+			(font (size 1.27 1.27))
+			(justify right bottom)
+		)
+		(uuid "21cc0881-5f22-4fc9-addf-aec6bb122c4e")
+	)
+	(wire
+		(pts (xy 185.42 162.56) (xy 182.88 162.56))
+		(stroke (width 0) (type default))
+		(uuid "229a276b-b9f1-4862-a6b2-bcb630c8c9d4")
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 182.88 162.56 270)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "f51ea5b5-e73f-4709-ba67-30d2ec46fdb0")
+		(property "Reference" "#PWR0110"
+			(at 182.88 162.56 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Value" "GND"
+			(at 179.07 162.56 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Footprint" ""
+			(at 182.88 162.56 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Datasheet" ""
+			(at 182.88 162.56 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(pin "1" (uuid "fb6a6e4c-16d5-411b-8065-a75f0c6513b5"))
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c"
+					(reference "#PWR0110")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(text "J30 (1.8D): ACIA CTS\n1-2 RS-232, 2-3 on"
+		(exclude_from_sim no)
+		(at 149.86 164.59 0)
+		(effects
+			(font (size 1.27 1.27))
+			(justify left top)
+		)
+		(uuid "fc15e22e-ee70-41d4-a281-181e6a9518ab")
 	)
 	(sheet_instances
 		(path "/"

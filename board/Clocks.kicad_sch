@@ -6,12 +6,92 @@
 	(paper "USLetter")
 	(title_block
 		(title "Sound, Clocks, and Power")
-		(date "2025-10-27")
-		(rev "1.8C")
+		(date "2026-10-09")
+		(rev "1.8D")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
 	(lib_symbols
+		(symbol "power:-5V"
+			(power)
+			(pin_numbers (hide yes))
+			(pin_names (offset 0) (hide yes))
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "#PWR"
+				(at 0 -3.81 0)
+				(effects
+					(font (size 1.27 1.27))
+					(hide yes)
+				)
+			)
+			(property "Value" "-5V"
+				(at 0 3.556 0)
+				(effects
+					(font (size 1.27 1.27))
+				)
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(effects
+					(font (size 1.27 1.27))
+					(hide yes)
+				)
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(effects
+					(font (size 1.27 1.27))
+					(hide yes)
+				)
+			)
+			(property "Description" "Power symbol creates a global label with name \"-5V\""
+				(at 0 0 0)
+				(effects
+					(font (size 1.27 1.27))
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "global power"
+				(at 0 0 0)
+				(effects
+					(font (size 1.27 1.27))
+					(hide yes)
+				)
+			)
+			(symbol "-5V_0_0"
+				(pin power_in line
+					(at 0 0 90)
+					(length 0)
+					(name "~"
+						(effects
+							(font (size 1.27 1.27))
+						)
+					)
+					(number "1"
+						(effects
+							(font (size 1.27 1.27))
+						)
+					)
+				)
+			)
+			(symbol "-5V_0_1"
+				(polyline
+					(pts
+						(xy 0 0)
+						(xy 0 1.27)
+						(xy 0.762 1.27)
+						(xy 0 2.54)
+						(xy -0.762 1.27)
+						(xy 0 1.27)
+					)
+					(stroke (width 0) (type default))
+					(fill (type outline))
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "74xx:74HC14"
 			(pin_names
 				(offset 1.016)
@@ -1075,11 +1155,10 @@
 						)
 					)
 				)
-				(pin no_connect line
+				(pin power_out line
 					(at -10.16 0 0)
 					(length 2.54)
-					(hide yes)
-					(name "NC"
+					(name "-5V"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -4383,16 +4462,6 @@
 	)
 	(wire
 		(pts
-			(xy 66.04 140.97) (xy 66.04 149.86)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "3d8029cc-6891-4573-8557-14958b0565d2")
-	)
-	(wire
-		(pts
 			(xy 127 67.31) (xy 120.65 67.31)
 		)
 		(stroke
@@ -5371,7 +5440,7 @@
 		)
 		(uuid "fcdf4350-7500-4cfb-8a98-ba1a79471743")
 	)
-	(global_label "SND_CLK"
+	(global_label "SND_CLK_SRC"
 		(shape output)
 		(at 129.54 83.82 0)
 		(fields_autoplaced yes)
@@ -5393,7 +5462,7 @@
 			)
 		)
 	)
-	(global_label "PHI2"
+	(global_label "PHI2_SRC"
 		(shape output)
 		(at 115.57 59.69 180)
 		(fields_autoplaced yes)
@@ -5415,7 +5484,7 @@
 			)
 		)
 	)
-	(global_label "HS_CLK"
+	(global_label "HS_CLK_SRC"
 		(shape output)
 		(at 88.9 134.62 0)
 		(fields_autoplaced yes)
@@ -5437,7 +5506,7 @@
 			)
 		)
 	)
-	(global_label "SER_CLK"
+	(global_label "SER_CLK_SRC"
 		(shape output)
 		(at 129.54 96.52 0)
 		(fields_autoplaced yes)
@@ -8965,4 +9034,1307 @@
 			)
 		)
 	)
+	(symbol
+		(lib_id "Device:R")
+		(at 66.04 144.78 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "7790260a-6ed8-4a61-aa0d-0a2e81fad270")
+		(property "Reference" "R22"
+			(at 68.58 143.51 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify left)
+			)
+		)
+		(property "Value" "331"
+			(at 68.58 146.05 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify left)
+			)
+		)
+		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
+			(at 66.04 144.78 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 66.04 144.78 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Description" "The crystal's drive limited (1.8D): 330 ohms between U39A's output and the crystal and C48"
+			(at 66.04 144.78 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(pin "1" (uuid "b622a131-99b2-4889-b429-93a89f8f6f60"))
+		(pin "2" (uuid "bcc8305c-3213-4dc1-a392-30fbba57ed02"))
+		(instances
+			(project ""
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9a593a77-f18f-43cb-9fdd-893618b7b90a"
+					(reference "R22")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts (xy 66.04 148.59) (xy 66.04 149.86))
+		(stroke (width 0) (type default))
+		(uuid "2ef7a0ad-def0-4f11-bd08-1305445fe34f")
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 106.68 152.4 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "17c040ae-7ff3-4035-8e58-1698d0939520")
+		(property "Reference" "R23"
+			(at 106.68 149.86 90)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Value" "220"
+			(at 106.68 154.94 90)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
+			(at 106.68 152.4 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 106.68 152.4 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Description" "Series termination (1.8D): HS_CLK from its driver (HS_CLK_SRC)"
+			(at 106.68 152.4 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(pin "1" (uuid "5a745435-28ae-4c6b-9302-f8a1c6f5be5c"))
+		(pin "2" (uuid "378363ad-950c-46b0-beb5-adfcf4b03f8a"))
+		(instances
+			(project ""
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9a593a77-f18f-43cb-9fdd-893618b7b90a"
+					(reference "R23")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts (xy 102.87 152.4) (xy 100.33 152.4))
+		(stroke (width 0) (type default))
+		(uuid "f6855760-cddc-4ca1-bea9-139c84c6d1ec")
+	)
+	(global_label "HS_CLK_SRC"
+		(shape input)
+		(at 100.33 152.4 180)
+		(fields_autoplaced yes)
+		(effects
+			(font (size 1.27 1.27))
+			(justify right)
+		)
+		(uuid "702c7bbd-a1ff-4a01-a954-6b57e381d22e")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 100.33 152.4 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify right)
+				hide
+			)
+		)
+	)
+	(wire
+		(pts (xy 110.49 152.4) (xy 113.03 152.4))
+		(stroke (width 0) (type default))
+		(uuid "9c9bb0c6-ad64-4116-8df3-e72ef57a3a38")
+	)
+	(global_label "HS_CLK"
+		(shape input)
+		(at 113.03 152.4 0)
+		(fields_autoplaced yes)
+		(effects
+			(font (size 1.27 1.27))
+			(justify left)
+		)
+		(uuid "d0ea527c-afcd-45c7-8243-bd3b791e484b")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 113.03 152.4 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify left)
+				hide
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 106.68 160.02 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "2fba2170-cf7a-4b3b-9fb2-abd5d327c2e1")
+		(property "Reference" "R24"
+			(at 106.68 157.48 90)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Value" "220"
+			(at 106.68 162.56 90)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
+			(at 106.68 160.02 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 106.68 160.02 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Description" "Series termination (1.8D): SND_CLK from its driver (SND_CLK_SRC)"
+			(at 106.68 160.02 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(pin "1" (uuid "57452830-3217-4a37-9390-bbc33d8bda89"))
+		(pin "2" (uuid "0648242a-f9f7-4175-9e98-e901cdf4dde4"))
+		(instances
+			(project ""
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9a593a77-f18f-43cb-9fdd-893618b7b90a"
+					(reference "R24")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts (xy 102.87 160.02) (xy 100.33 160.02))
+		(stroke (width 0) (type default))
+		(uuid "1e805a60-931a-4207-a8da-353f941e3027")
+	)
+	(global_label "SND_CLK_SRC"
+		(shape input)
+		(at 100.33 160.02 180)
+		(fields_autoplaced yes)
+		(effects
+			(font (size 1.27 1.27))
+			(justify right)
+		)
+		(uuid "24373feb-87e2-4eea-abc2-b111690849f2")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 100.33 160.02 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify right)
+				hide
+			)
+		)
+	)
+	(wire
+		(pts (xy 110.49 160.02) (xy 113.03 160.02))
+		(stroke (width 0) (type default))
+		(uuid "81479b9b-8b52-4908-a7fd-71629571ba2a")
+	)
+	(global_label "SND_CLK"
+		(shape input)
+		(at 113.03 160.02 0)
+		(fields_autoplaced yes)
+		(effects
+			(font (size 1.27 1.27))
+			(justify left)
+		)
+		(uuid "a1facf3c-5fbe-431b-b99c-a1cbe0d82ea4")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 113.03 160.02 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify left)
+				hide
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 106.68 167.64 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "36396815-526a-42fc-b288-3d2e5a6c6564")
+		(property "Reference" "R25"
+			(at 106.68 165.1 90)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Value" "220"
+			(at 106.68 170.18 90)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
+			(at 106.68 167.64 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 106.68 167.64 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Description" "Series termination (1.8D): SER_CLK from its driver (SER_CLK_SRC)"
+			(at 106.68 167.64 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(pin "1" (uuid "b3abe937-b9e8-4327-b645-26a1fe39d262"))
+		(pin "2" (uuid "89e51e46-cb49-49e3-b2b7-65c423e1d7fd"))
+		(instances
+			(project ""
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9a593a77-f18f-43cb-9fdd-893618b7b90a"
+					(reference "R25")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts (xy 102.87 167.64) (xy 100.33 167.64))
+		(stroke (width 0) (type default))
+		(uuid "acfbdd8b-afd4-4d71-9608-2e557dce2c18")
+	)
+	(global_label "SER_CLK_SRC"
+		(shape input)
+		(at 100.33 167.64 180)
+		(fields_autoplaced yes)
+		(effects
+			(font (size 1.27 1.27))
+			(justify right)
+		)
+		(uuid "05122ba5-8d18-4529-8af3-ded3451124c9")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 100.33 167.64 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify right)
+				hide
+			)
+		)
+	)
+	(wire
+		(pts (xy 110.49 167.64) (xy 113.03 167.64))
+		(stroke (width 0) (type default))
+		(uuid "e4ee6337-fc43-4d51-9693-27b06dff4428")
+	)
+	(global_label "SER_CLK"
+		(shape input)
+		(at 113.03 167.64 0)
+		(fields_autoplaced yes)
+		(effects
+			(font (size 1.27 1.27))
+			(justify left)
+		)
+		(uuid "fdfdb741-ae16-41a4-a521-7509c0b9cf13")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 113.03 167.64 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify left)
+				hide
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 106.68 175.26 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "c0fe0973-7235-47ac-ae65-f8d8890ccdb6")
+		(property "Reference" "R26"
+			(at 106.68 172.72 90)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Value" "220"
+			(at 106.68 177.8 90)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
+			(at 106.68 175.26 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 106.68 175.26 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Description" "Series termination (1.8D): PHI2 from its driver (PHI2_SRC)"
+			(at 106.68 175.26 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(pin "1" (uuid "a3c645f0-c9e4-4314-9050-5f982adb762c"))
+		(pin "2" (uuid "786e178c-829c-46ae-ad7b-1b7756fb854a"))
+		(instances
+			(project ""
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9a593a77-f18f-43cb-9fdd-893618b7b90a"
+					(reference "R26")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts (xy 102.87 175.26) (xy 100.33 175.26))
+		(stroke (width 0) (type default))
+		(uuid "694b4d2b-a925-4640-aa4f-d1e95ee0886e")
+	)
+	(global_label "PHI2_SRC"
+		(shape input)
+		(at 100.33 175.26 180)
+		(fields_autoplaced yes)
+		(effects
+			(font (size 1.27 1.27))
+			(justify right)
+		)
+		(uuid "33663fe1-8d81-4320-b664-f24e23a907e1")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 100.33 175.26 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify right)
+				hide
+			)
+		)
+	)
+	(wire
+		(pts (xy 110.49 175.26) (xy 113.03 175.26))
+		(stroke (width 0) (type default))
+		(uuid "140fac12-7684-4801-bfc3-12ae11338ad5")
+	)
+	(global_label "PHI2"
+		(shape input)
+		(at 113.03 175.26 0)
+		(fields_autoplaced yes)
+		(effects
+			(font (size 1.27 1.27))
+			(justify left)
+		)
+		(uuid "db0602f9-a190-45ce-8056-fd856c8a1394")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 113.03 175.26 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify left)
+				hide
+			)
+		)
+	)
+	(text "Series terminations (1.8D): 22 ohms at each clock's source; X_SRC is the\ndriver's side, X the net the slots and the board see"
+		(exclude_from_sim no)
+		(at 93.98 140.97 0)
+		(effects
+			(font (size 1.27 1.27))
+			(justify left top)
+		)
+		(uuid "f48a5c81-b137-4597-bad8-52df0a1edf20")
+	)
+	(wire
+		(pts (xy 162.56 92.71) (xy 160.02 92.71))
+		(stroke (width 0) (type default))
+		(uuid "09df2d16-c835-49ee-8042-bcbb4614cab4")
+	)
+	(symbol
+		(lib_id "power:-5V")
+		(at 160.02 92.71 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "7000b5cf-6a9c-4c52-97d0-be6c8f5e86b0")
+		(property "Reference" "#PWR078"
+			(at 160.02 92.71 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Value" "-5V"
+			(at 156.21 92.71 0)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Footprint" ""
+			(at 160.02 92.71 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Datasheet" ""
+			(at 160.02 92.71 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(pin "1" (uuid "be527e82-fd87-4db2-a787-5f3c764084f2"))
+		(instances
+			(project ""
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9a593a77-f18f-43cb-9fdd-893618b7b90a"
+					(reference "#PWR078")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C_Polarized_Small_US")
+		(at 172.72 147.32 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "ecb557af-3c87-4c19-9b5b-f0365a81084d")
+		(property "Reference" "C86"
+			(at 173.99 143.51 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify left)
+			)
+		)
+		(property "Value" "476"
+			(at 173.99 151.13 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_THT:CP_Radial_D6.3mm_P2.50mm"
+			(at 172.72 147.32 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 172.72 147.32 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Description" "Bulk capacitance on +5 V (1.8D): spread over the board, by the slots, the ROM bank and the decode logic"
+			(at 172.72 147.32 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(pin "1" (uuid "43bedc2e-aca9-4129-a6ac-9c08012bc929"))
+		(pin "2" (uuid "2fcfadbd-25dc-441c-994a-658e94179dac"))
+		(instances
+			(project ""
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9a593a77-f18f-43cb-9fdd-893618b7b90a"
+					(reference "C86")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts (xy 172.72 144.78) (xy 172.72 142.24))
+		(stroke (width 0) (type default))
+		(uuid "cf6b2e5c-9f29-4ca2-b266-5428edb4c78b")
+	)
+	(symbol
+		(lib_id "power:+5V")
+		(at 172.72 142.24 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "4ede1116-bb02-4a0a-9288-663efd707763")
+		(property "Reference" "#PWR079"
+			(at 172.72 142.24 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Value" "+5V"
+			(at 172.72 137.16 0)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Footprint" ""
+			(at 172.72 142.24 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Datasheet" ""
+			(at 172.72 142.24 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(pin "1" (uuid "6a91f3e6-06e5-4a34-83b3-ec49d952fc2b"))
+		(instances
+			(project ""
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9a593a77-f18f-43cb-9fdd-893618b7b90a"
+					(reference "#PWR079")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts (xy 172.72 149.86) (xy 172.72 152.4))
+		(stroke (width 0) (type default))
+		(uuid "c678ee78-3c2b-4f2a-95d0-cfeed70c36b7")
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 172.72 152.4 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "3ce71e72-200f-4ae6-891d-80f10b4bcaa1")
+		(property "Reference" "#PWR080"
+			(at 172.72 152.4 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Value" "GND"
+			(at 172.72 157.48 0)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Footprint" ""
+			(at 172.72 152.4 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Datasheet" ""
+			(at 172.72 152.4 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(pin "1" (uuid "37f25d73-68d9-4487-8c77-c8f7a9e1dc6f"))
+		(instances
+			(project ""
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9a593a77-f18f-43cb-9fdd-893618b7b90a"
+					(reference "#PWR080")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C_Polarized_Small_US")
+		(at 180.34 147.32 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "407f911d-0c7f-451f-8648-e273077ccb0f")
+		(property "Reference" "C87"
+			(at 181.61 143.51 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify left)
+			)
+		)
+		(property "Value" "476"
+			(at 181.61 151.13 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_THT:CP_Radial_D6.3mm_P2.50mm"
+			(at 180.34 147.32 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 180.34 147.32 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Description" "Bulk capacitance on +5 V (1.8D): spread over the board, by the slots, the ROM bank and the decode logic"
+			(at 180.34 147.32 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(pin "1" (uuid "a351d226-74d4-4601-8ebc-a148210be3e2"))
+		(pin "2" (uuid "117e881e-92eb-4680-88de-866004932908"))
+		(instances
+			(project ""
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9a593a77-f18f-43cb-9fdd-893618b7b90a"
+					(reference "C87")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts (xy 180.34 144.78) (xy 180.34 142.24))
+		(stroke (width 0) (type default))
+		(uuid "037a3b92-05d1-41ed-bf39-ac9afe1a0a24")
+	)
+	(symbol
+		(lib_id "power:+5V")
+		(at 180.34 142.24 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "c73d3841-e026-4b1a-ab0b-5199ef08ac70")
+		(property "Reference" "#PWR081"
+			(at 180.34 142.24 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Value" "+5V"
+			(at 180.34 137.16 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Footprint" ""
+			(at 180.34 142.24 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Datasheet" ""
+			(at 180.34 142.24 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(pin "1" (uuid "1561957e-4c35-495f-bd16-f13b9d8a003b"))
+		(instances
+			(project ""
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9a593a77-f18f-43cb-9fdd-893618b7b90a"
+					(reference "#PWR081")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts (xy 180.34 149.86) (xy 180.34 152.4))
+		(stroke (width 0) (type default))
+		(uuid "9ddc0094-f4be-49bb-a87a-655834a02035")
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 180.34 152.4 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "2f236e3d-69bc-467e-bc11-1d9615e9e266")
+		(property "Reference" "#PWR082"
+			(at 180.34 152.4 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Value" "GND"
+			(at 180.34 157.48 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Footprint" ""
+			(at 180.34 152.4 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Datasheet" ""
+			(at 180.34 152.4 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(pin "1" (uuid "51ed659a-5fe7-45e4-a82d-5fbb96c867b0"))
+		(instances
+			(project ""
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9a593a77-f18f-43cb-9fdd-893618b7b90a"
+					(reference "#PWR082")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C_Polarized_Small_US")
+		(at 187.96 147.32 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "ebd7f8d3-d4c7-49a7-b989-a32a7353d094")
+		(property "Reference" "C88"
+			(at 189.23 143.51 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify left)
+			)
+		)
+		(property "Value" "476"
+			(at 189.23 151.13 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_THT:CP_Radial_D6.3mm_P2.50mm"
+			(at 187.96 147.32 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 187.96 147.32 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Description" "Bulk capacitance on +5 V (1.8D): spread over the board, by the slots, the ROM bank and the decode logic"
+			(at 187.96 147.32 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(pin "1" (uuid "3873ea0f-b2e8-4e88-93b1-a666e0f31482"))
+		(pin "2" (uuid "c67dcd92-4ad3-40e0-9f84-ffa504867228"))
+		(instances
+			(project ""
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9a593a77-f18f-43cb-9fdd-893618b7b90a"
+					(reference "C88")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts (xy 187.96 144.78) (xy 187.96 142.24))
+		(stroke (width 0) (type default))
+		(uuid "456a3453-99dd-4e15-b8ff-34efdab901a8")
+	)
+	(symbol
+		(lib_id "power:+5V")
+		(at 187.96 142.24 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "d3a7ac6d-ea07-403e-919a-2d7fd4b96e89")
+		(property "Reference" "#PWR083"
+			(at 187.96 142.24 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Value" "+5V"
+			(at 187.96 137.16 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Footprint" ""
+			(at 187.96 142.24 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Datasheet" ""
+			(at 187.96 142.24 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(pin "1" (uuid "7219c063-1563-4881-8581-31a0bd3d680c"))
+		(instances
+			(project ""
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9a593a77-f18f-43cb-9fdd-893618b7b90a"
+					(reference "#PWR083")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts (xy 187.96 149.86) (xy 187.96 152.4))
+		(stroke (width 0) (type default))
+		(uuid "0378f6f2-2c33-46df-9887-06efc42f1950")
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 187.96 152.4 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "ac6b7de7-dea1-4f51-9344-0099f1ef5b81")
+		(property "Reference" "#PWR084"
+			(at 187.96 152.4 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Value" "GND"
+			(at 187.96 157.48 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Footprint" ""
+			(at 187.96 152.4 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Datasheet" ""
+			(at 187.96 152.4 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(pin "1" (uuid "4a0f707c-dac0-440f-a91d-25f11694777e"))
+		(instances
+			(project ""
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9a593a77-f18f-43cb-9fdd-893618b7b90a"
+					(reference "#PWR084")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C_Polarized_Small_US")
+		(at 195.58 147.32 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "e754b114-7c16-48c8-b83c-70091fa369cc")
+		(property "Reference" "C89"
+			(at 196.85 143.51 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify left)
+			)
+		)
+		(property "Value" "476"
+			(at 196.85 151.13 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_THT:CP_Radial_D6.3mm_P2.50mm"
+			(at 195.58 147.32 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 195.58 147.32 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Description" "Bulk capacitance on +5 V (1.8D): spread over the board, by the slots, the ROM bank and the decode logic"
+			(at 195.58 147.32 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(pin "1" (uuid "17a20822-c2e1-4012-aab1-39beff303fec"))
+		(pin "2" (uuid "425fe645-7705-4d1e-b877-ff1cb8b4c7bc"))
+		(instances
+			(project ""
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9a593a77-f18f-43cb-9fdd-893618b7b90a"
+					(reference "C89")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts (xy 195.58 144.78) (xy 195.58 142.24))
+		(stroke (width 0) (type default))
+		(uuid "5ca37460-3b70-413d-8d42-ef4dd4930184")
+	)
+	(symbol
+		(lib_id "power:+5V")
+		(at 195.58 142.24 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "dc01ec0e-d0aa-4276-b786-219c8f176e6e")
+		(property "Reference" "#PWR085"
+			(at 195.58 142.24 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Value" "+5V"
+			(at 195.58 137.16 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Footprint" ""
+			(at 195.58 142.24 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Datasheet" ""
+			(at 195.58 142.24 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(pin "1" (uuid "5bff5395-e607-44db-b9f4-a2f71e494748"))
+		(instances
+			(project ""
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9a593a77-f18f-43cb-9fdd-893618b7b90a"
+					(reference "#PWR085")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts (xy 195.58 149.86) (xy 195.58 152.4))
+		(stroke (width 0) (type default))
+		(uuid "dd2f01e9-732d-4f2d-bc4d-fcb74cff9a0b")
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 195.58 152.4 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "87c6f691-fa40-427c-be89-bcac6bc79f83")
+		(property "Reference" "#PWR086"
+			(at 195.58 152.4 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Value" "GND"
+			(at 195.58 157.48 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Footprint" ""
+			(at 195.58 152.4 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Datasheet" ""
+			(at 195.58 152.4 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(pin "1" (uuid "39a8ecb4-e9a1-492b-8859-ca7e77372cb4"))
+		(instances
+			(project ""
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9a593a77-f18f-43cb-9fdd-893618b7b90a"
+					(reference "#PWR086")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(text "Bulk on +5 V (1.8D): C86-C89, 47 uF each, placed apart:\nby the slots, the ROM bank and the decode logic"
+		(exclude_from_sim no)
+		(at 167.64 128.27 0)
+		(effects
+			(font (size 1.27 1.27))
+			(justify left top)
+		)
+		(uuid "d92dd485-7f61-481c-9910-8a89bf95e75a")
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 210.82 147.32 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "44ac7d76-ca65-4f28-98fa-94cfabc34b63")
+		(property "Reference" "R28"
+			(at 213.36 146.05 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify left)
+			)
+		)
+		(property "Value" "103"
+			(at 213.36 148.59 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify left)
+			)
+		)
+		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
+			(at 210.82 147.32 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 210.82 147.32 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Description" "RDY pulled up whether J4 is fitted or not (1.8D)"
+			(at 210.82 147.32 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(pin "1" (uuid "23c18404-d089-436d-84f6-c43b147c68d1"))
+		(pin "2" (uuid "4ca20ea0-a351-4509-a2b2-158368e55335"))
+		(instances
+			(project ""
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9a593a77-f18f-43cb-9fdd-893618b7b90a"
+					(reference "R28")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts (xy 210.82 143.51) (xy 210.82 140.97))
+		(stroke (width 0) (type default))
+		(uuid "a8ee5249-801f-4af3-96c5-0c44d610fda0")
+	)
+	(symbol
+		(lib_id "power:+5V")
+		(at 210.82 140.97 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "2312a191-1076-44b3-8a48-06bc7f4ed28d")
+		(property "Reference" "#PWR087"
+			(at 210.82 140.97 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Value" "+5V"
+			(at 210.82 135.89 0)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Footprint" ""
+			(at 210.82 140.97 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Datasheet" ""
+			(at 210.82 140.97 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(pin "1" (uuid "b12d17c2-8760-4594-9f6c-91aede258532"))
+		(instances
+			(project ""
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9a593a77-f18f-43cb-9fdd-893618b7b90a"
+					(reference "#PWR087")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts (xy 210.82 151.13) (xy 210.82 153.67))
+		(stroke (width 0) (type default))
+		(uuid "21aaccaa-cc1d-4d4d-9212-584ec394a599")
+	)
+	(global_label "RDY"
+		(shape input)
+		(at 210.82 153.67 270)
+		(fields_autoplaced yes)
+		(effects
+			(font (size 1.27 1.27))
+			(justify right)
+		)
+		(uuid "c04dbc04-01b5-4a14-ac3d-beb4f886a504")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 210.82 153.67 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify right)
+				hide
+			)
+		)
+	)
+	(text "R28 (1.8D): RDY never floats\n(J4 off, or WAI)"
+		(exclude_from_sim no)
+		(at 205.74 163.83 0)
+		(effects
+			(font (size 1.27 1.27))
+			(justify left top)
+		)
+		(uuid "185dbf3f-a49b-4b90-bd93-f88cda436b8b")
+	)
+	(no_connect (at 92.71 93.98) (uuid "07b85f39-ee35-4f03-ae0d-3073bd4e147e"))
+	(no_connect (at 92.71 99.06) (uuid "3d83cb0c-1503-4163-addc-85299f925354"))
+	(no_connect (at 167.64 59.69) (uuid "fba70924-5251-43af-8c22-5bbd6f1a73e6"))
+	(no_connect (at 180.34 59.69) (uuid "e46a1070-a368-4abc-8422-c68adf4694bb"))
+	(no_connect (at 167.64 62.23) (uuid "e4ae0723-7325-444f-ad5d-ca41c9255c65"))
+	(no_connect (at 180.34 62.23) (uuid "149ca16a-0c9a-4549-a30b-23ae93c7dea1"))
 )

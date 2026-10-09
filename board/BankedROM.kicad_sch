@@ -6,8 +6,8 @@
 	(paper "USLetter")
 	(title_block
 		(title "Shared ROM Banks")
-		(date "2025-10-27")
-		(rev "1.8C")
+		(date "2026-10-09")
+		(rev "1.8D")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
@@ -3621,16 +3621,6 @@
 			(type default)
 		)
 		(uuid "130abcef-f55e-49b7-9f44-1f74a473488d")
-	)
-	(wire
-		(pts
-			(xy 34.29 124.46) (xy 34.29 123.19)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "131c401a-7ae8-43a8-a277-0e0c3023a7ef")
 	)
 	(bus
 		(pts

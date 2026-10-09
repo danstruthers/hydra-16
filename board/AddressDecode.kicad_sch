@@ -6,12 +6,105 @@
 	(paper "USLetter")
 	(title_block
 		(title "Address Decode Logic")
-		(date "2025-10-27")
-		(rev "1.8C")
+		(date "2026-10-09")
+		(rev "1.8D")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
 	(lib_symbols
+		(symbol "Device:R"
+			(pin_numbers (hide yes))
+			(pin_names (offset 0))
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "R"
+				(at 2.032 0 90)
+				(effects
+					(font (size 1.27 1.27))
+				)
+			)
+			(property "Value" "R"
+				(at 0 0 90)
+				(effects
+					(font (size 1.27 1.27))
+				)
+			)
+			(property "Footprint" ""
+				(at -1.778 0 90)
+				(effects
+					(font (size 1.27 1.27))
+					(hide yes)
+				)
+			)
+			(property "Datasheet" "~"
+				(at 0 0 0)
+				(effects
+					(font (size 1.27 1.27))
+					(hide yes)
+				)
+			)
+			(property "Description" "Resistor"
+				(at 0 0 0)
+				(effects
+					(font (size 1.27 1.27))
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "R res resistor"
+				(at 0 0 0)
+				(effects
+					(font (size 1.27 1.27))
+					(hide yes)
+				)
+			)
+			(property "ki_fp_filters" "R_*"
+				(at 0 0 0)
+				(effects
+					(font (size 1.27 1.27))
+					(hide yes)
+				)
+			)
+			(symbol "R_0_1"
+				(rectangle
+					(start -1.016 -2.54)
+					(end 1.016 2.54)
+					(stroke (width 0.254) (type default))
+					(fill (type none))
+				)
+			)
+			(symbol "R_1_1"
+				(pin passive line
+					(at 0 3.81 270)
+					(length 1.27)
+					(name "~"
+						(effects
+							(font (size 1.27 1.27))
+						)
+					)
+					(number "1"
+						(effects
+							(font (size 1.27 1.27))
+						)
+					)
+				)
+				(pin passive line
+					(at 0 -3.81 90)
+					(length 1.27)
+					(name "~"
+						(effects
+							(font (size 1.27 1.27))
+						)
+					)
+					(number "2"
+						(effects
+							(font (size 1.27 1.27))
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "74LS260_1"
 			(pin_names
 				(offset 1.016)
@@ -18296,7 +18389,7 @@
 			)
 		)
 	)
-	(global_label "PHI1"
+	(global_label "PHI1_SRC"
 		(shape output)
 		(at 213.36 118.11 0)
 		(fields_autoplaced yes)
@@ -18606,7 +18699,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "74F240"
+		(property "Value" "74ACT240"
 			(at 200.2633 107.95 0)
 			(effects
 				(font
@@ -18996,7 +19089,7 @@
 				)
 			)
 		)
-		(property "Value" "74F08"
+		(property "Value" "74ACT08"
 			(at 231.14 75.946 0)
 			(effects
 				(font
@@ -19384,7 +19477,7 @@
 				)
 			)
 		)
-		(property "Value" "74F08"
+		(property "Value" "74ACT08"
 			(at 67.31 101.092 0)
 			(effects
 				(font
@@ -19586,7 +19679,7 @@
 				)
 			)
 		)
-		(property "Value" "74F08"
+		(property "Value" "74ACT08"
 			(at 40.64 185.928 0)
 			(effects
 				(font
@@ -20621,7 +20714,7 @@
 				)
 			)
 		)
-		(property "Value" "74F08"
+		(property "Value" "74ACT08"
 			(at 81.2717 185.928 0)
 			(effects
 				(font
@@ -22315,7 +22408,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "74F08"
+		(property "Value" "74ACT08"
 			(at 38.354 148.082 0)
 			(effects
 				(font
@@ -23329,5 +23422,209 @@
 				)
 			)
 		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 185.42 123.19 270)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "1c880c10-7d17-447f-b3d8-60367970fa29")
+		(property "Reference" "#PWR088"
+			(at 185.42 123.19 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Value" "GND"
+			(at 181.61 123.19 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Footprint" ""
+			(at 185.42 123.19 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Datasheet" ""
+			(at 185.42 123.19 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(pin "1" (uuid "9c16c6a6-1fcb-4d86-a1fc-316329ba7c0a"))
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/e447d2ea-fe27-4cfd-bb5f-eaf105a9519f"
+					(reference "#PWR088")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 185.42 128.27 270)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "caf2b122-be5c-46c4-b29d-af373ffb52c7")
+		(property "Reference" "#PWR089"
+			(at 185.42 128.27 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Value" "GND"
+			(at 181.61 128.27 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Footprint" ""
+			(at 185.42 128.27 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Datasheet" ""
+			(at 185.42 128.27 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(pin "1" (uuid "174a197f-fdc3-4af8-bd6b-9cc86ebe0331"))
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/e447d2ea-fe27-4cfd-bb5f-eaf105a9519f"
+					(reference "#PWR089")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(no_connect (at 210.82 123.19) (uuid "4409fd2c-cd6e-42f0-a08a-8dfb8458535a"))
+	(no_connect (at 210.82 128.27) (uuid "df64cf12-1191-48da-b195-d067e61b222a"))
+	(symbol
+		(lib_id "Device:R")
+		(at 236.22 170.18 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "1ba8499f-627a-4e7f-aa56-55e57bd60d6b")
+		(property "Reference" "R27"
+			(at 236.22 167.64 90)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Value" "220"
+			(at 236.22 172.72 90)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Footprint" "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal"
+			(at 236.22 170.18 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 236.22 170.18 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Description" "Series termination (1.8D): PHI1 from U22 (PHI1_SRC)"
+			(at 236.22 170.18 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(pin "1" (uuid "a00d8adc-08f0-4b2c-aff8-50de39f1f416"))
+		(pin "2" (uuid "312b0479-f981-4352-9516-98de3e668240"))
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/e447d2ea-fe27-4cfd-bb5f-eaf105a9519f"
+					(reference "R27")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts (xy 232.41 170.18) (xy 229.87 170.18))
+		(stroke (width 0) (type default))
+		(uuid "5c8dc254-c6fa-4b30-9a94-c363aeacf19f")
+	)
+	(global_label "PHI1_SRC"
+		(shape input)
+		(at 229.87 170.18 180)
+		(fields_autoplaced yes)
+		(effects
+			(font (size 1.27 1.27))
+			(justify right)
+		)
+		(uuid "d12a8684-1dbd-4c04-8f17-e00c5fc315a0")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 229.87 170.18 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify right)
+				hide
+			)
+		)
+	)
+	(wire
+		(pts (xy 240.03 170.18) (xy 242.57 170.18))
+		(stroke (width 0) (type default))
+		(uuid "fee7b806-2e83-440b-83f9-1b737c8ba455")
+	)
+	(global_label "PHI1"
+		(shape input)
+		(at 242.57 170.18 0)
+		(fields_autoplaced yes)
+		(effects
+			(font (size 1.27 1.27))
+			(justify left)
+		)
+		(uuid "62ebb066-247b-425f-826e-17b79e25fce6")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 242.57 170.18 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify left)
+				hide
+			)
+		)
+	)
+	(text "1.8D: U11 and U22 are 74ACT (CMOS highs on the\nCPU's clock and IRQB); U22's spare inputs tied\nlow; R27, 22 ohms in PHI1"
+		(exclude_from_sim no)
+		(at 196.85 161.29 0)
+		(effects
+			(font (size 1.27 1.27))
+			(justify left top)
+		)
+		(uuid "67bca137-d69f-467a-a1d8-961fa4cf8da6")
 	)
 )

@@ -6,8 +6,8 @@
 	(paper "USLetter")
 	(title_block
 		(title "Card-edge and SPI Device Connectors")
-		(date "2025-10-27")
-		(rev "1.8C")
+		(date "2026-10-09")
+		(rev "1.8D")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
@@ -26338,4 +26338,5 @@
 			)
 		)
 	)
+	(no_connect (at 247.65 157.48) (uuid "b16ea615-960b-43c9-a638-0c54b99fd9a8"))
 )

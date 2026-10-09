@@ -6,8 +6,8 @@
 	(paper "USLetter")
 	(title_block
 		(title "Shared RAM Banks")
-		(date "2025-10-27")
-		(rev "1.8C")
+		(date "2026-10-09")
+		(rev "1.8D")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
@@ -3296,16 +3296,6 @@
 	)
 	(wire
 		(pts
-			(xy 130.81 74.93) (xy 130.81 72.39)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "5ba35a7d-98e5-4084-b4be-11fc74e3ecd0")
-	)
-	(wire
-		(pts
 			(xy 223.52 72.39) (xy 219.71 72.39)
 		)
 		(stroke
@@ -3603,16 +3593,6 @@
 			(type default)
 		)
 		(uuid "7b25ca4e-2e16-4733-8605-0f2126c33583")
-	)
-	(wire
-		(pts
-			(xy 26.67 74.93) (xy 26.67 72.39)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "7bcd28bb-0fa2-4be7-ad91-08223f4b7669")
 	)
 	(bus
 		(pts
@@ -4826,16 +4806,6 @@
 	)
 	(wire
 		(pts
-			(xy 26.67 72.39) (xy 26.67 69.85)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "e416c8b9-2ab3-4c93-ba76-a84a0affc499")
-	)
-	(wire
-		(pts
 			(xy 115.57 62.23) (xy 124.46 62.23)
 		)
 		(stroke
@@ -5083,16 +5053,6 @@
 			(type default)
 		)
 		(uuid "fdbeaece-2a95-4a5b-9dc1-c6df42cbf09c")
-	)
-	(wire
-		(pts
-			(xy 130.81 72.39) (xy 130.81 69.85)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "fe076b3d-c18a-4972-9805-6509c24a4183")
 	)
 	(label "RAMB_M0"
 		(at 68.58 90.17 0)
@@ -8278,5 +8238,337 @@
 				)
 			)
 		)
+	)
+	(symbol
+		(lib_id "74xx_IEEE:74LS139")
+		(at 116.84 171.45 90)
+		(unit 2)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "a0749031-1d10-49dc-9360-3fe0a4f5ba52")
+		(property "Reference" "U26"
+			(at 149.86 162.56 90)
+			(effects
+				(font (size 1.27 1.27))
+				(justify left)
+			)
+		)
+		(property "Value" "74F139"
+			(at 149.86 165.1 90)
+			(effects
+				(font (size 1.27 1.27))
+				(justify left)
+			)
+		)
+		(property "Footprint" "Package_DIP:DIP-16_W7.62mm_Socket_LongPads"
+			(at 116.84 171.45 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "http://www.ti.com/lit/ds/symlink/sn74ls139a.pdf"
+			(at 116.84 171.45 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Description" "Dual Decoder 1 of 4, Active low outputs"
+			(at 116.84 171.45 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(pin "16" (uuid "d51f22fe-2ae7-4f28-ae98-938ae590cec2"))
+		(pin "8" (uuid "0b476f1d-b9ef-4bf3-8fd6-631915e38ed2"))
+		(pin "14" (uuid "8b9b6465-df1a-4d5a-9f88-81b5801ff1fb"))
+		(pin "13" (uuid "b8dce074-8976-4eb6-8970-fcdb6be4234c"))
+		(pin "15" (uuid "e3ec8910-01bd-441b-b148-667eb89ab9d7"))
+		(pin "12" (uuid "9a57ae4a-14af-446a-8285-2826d23a4aaa"))
+		(pin "11" (uuid "0bff04ba-16a8-47f9-a9d4-03a930662968"))
+		(pin "10" (uuid "aecb398d-18f5-4c64-ae05-56eb1043e781"))
+		(pin "9" (uuid "fdc26d77-c52f-496c-88b5-a3bbcb3efdeb"))
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/0b66303c-ed46-41df-a285-d041c923c3ce"
+					(reference "U26")
+					(unit 2)
+				)
+			)
+		)
+	)
+	(wire
+		(pts (xy 104.14 191.77) (xy 104.14 194.31))
+		(stroke (width 0) (type default))
+		(uuid "3a25bae1-3b84-48bd-88da-9d3db21a764b")
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 104.14 194.31 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "2e831ac2-9353-4365-8b5b-77a18c991b5c")
+		(property "Reference" "#PWR0105"
+			(at 104.14 194.31 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Value" "GND"
+			(at 104.14 199.39 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Footprint" ""
+			(at 104.14 194.31 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Datasheet" ""
+			(at 104.14 194.31 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(pin "1" (uuid "0184cc05-2c8b-4653-9bf8-47e4fcb3df2b"))
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/0b66303c-ed46-41df-a285-d041c923c3ce"
+					(reference "#PWR0105")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts (xy 111.76 191.77) (xy 111.76 194.31))
+		(stroke (width 0) (type default))
+		(uuid "b383a153-525b-467a-9a77-4d00d35d01b1")
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 111.76 194.31 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "43da2bb0-0ad7-4fad-a7dc-75fd8766887a")
+		(property "Reference" "#PWR0106"
+			(at 111.76 194.31 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Value" "GND"
+			(at 111.76 199.39 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Footprint" ""
+			(at 111.76 194.31 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Datasheet" ""
+			(at 111.76 194.31 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(pin "1" (uuid "18f73cac-2f51-439c-82aa-f081a176da53"))
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/0b66303c-ed46-41df-a285-d041c923c3ce"
+					(reference "#PWR0106")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts (xy 129.54 191.77) (xy 129.54 194.31))
+		(stroke (width 0) (type default))
+		(uuid "b398cb1d-0a4a-4339-a0e7-2186c04c7386")
+	)
+	(symbol
+		(lib_id "power:+5V")
+		(at 129.54 194.31 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "35a9b662-7ddb-4e0c-b46e-f7eb2c37f0f6")
+		(property "Reference" "#PWR0107"
+			(at 129.54 194.31 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Value" "+5V"
+			(at 129.54 199.39 0)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Footprint" ""
+			(at 129.54 194.31 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Datasheet" ""
+			(at 129.54 194.31 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(pin "1" (uuid "68b88dc3-e5e8-4471-801d-b2d3ca8a2583"))
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/0b66303c-ed46-41df-a285-d041c923c3ce"
+					(reference "#PWR0107")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(no_connect (at 104.14 151.13) (uuid "087489c1-4f5d-4208-a0ec-4ffe2905d5ac"))
+	(no_connect (at 111.76 151.13) (uuid "e1b15990-8d3b-40c4-9cf5-d7b6621d5c3a"))
+	(no_connect (at 121.92 151.13) (uuid "bafd21f6-3e04-4b81-9bed-b10409fcb0df"))
+	(no_connect (at 129.54 151.13) (uuid "b6436343-04de-4996-bb80-2feaa95cfcc1"))
+	(wire
+		(pts (xy 91.44 171.45) (xy 88.9 171.45))
+		(stroke (width 0) (type default))
+		(uuid "9a359512-639c-4da9-95ee-e7448fade0e2")
+	)
+	(symbol
+		(lib_id "power:+5V")
+		(at 88.9 171.45 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "cbd2a86d-7d87-4076-bc44-5fccbe2031de")
+		(property "Reference" "#PWR0108"
+			(at 88.9 171.45 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Value" "+5V"
+			(at 85.09 171.45 0)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Footprint" ""
+			(at 88.9 171.45 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Datasheet" ""
+			(at 88.9 171.45 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(pin "1" (uuid "e7ece8f6-740d-4a52-8549-1924b492386a"))
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/0b66303c-ed46-41df-a285-d041c923c3ce"
+					(reference "#PWR0108")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts (xy 142.24 171.45) (xy 144.78 171.45))
+		(stroke (width 0) (type default))
+		(uuid "17b994b7-4ab3-4a02-9541-2edf8aa65880")
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 144.78 171.45 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "ba03e228-4aaa-483a-8274-16109777bc15")
+		(property "Reference" "#PWR0109"
+			(at 144.78 171.45 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Value" "GND"
+			(at 148.59 171.45 0)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Footprint" ""
+			(at 144.78 171.45 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Datasheet" ""
+			(at 144.78 171.45 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(pin "1" (uuid "1f0df40f-c447-4b22-bb82-e33b8c0628f7"))
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/0b66303c-ed46-41df-a285-d041c923c3ce"
+					(reference "#PWR0109")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(text "U26B (1.8D): the spare\nhalf, disabled"
+		(exclude_from_sim no)
+		(at 71.12 166.37 0)
+		(effects
+			(font (size 1.27 1.27))
+			(justify left top)
+		)
+		(uuid "85070705-bae0-413b-90b0-6337b8a366fb")
 	)
 )
