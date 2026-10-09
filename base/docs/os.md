@@ -7,7 +7,7 @@ all modules on this kernel); this page is how to make another.
 ### **What the kernel gives**
 
 The kernel is the BIOS ROM (`bin/bios.bin`), the same for every system.  A program calls it with `jsr` to a slot of the
-jump table at `$F800` (the addresses are `hydra.inc`'s, made from `spec/api.def` by the build: `obj/sdk/hydra.inc`):
+jump table at `$F800` (the addresses are `hydra.inc`'s, made from `spec/api.def` by the build: `sdk/asm/hydra.inc`, in Git):
 arguments in `.A`, `.X`, `.Y` and the call registers `r0`-`r15` (`$02-$21`), `C = 0` for success, `C = 1` with an error
 code in `.A`.  The groups:
 
@@ -78,7 +78,7 @@ main:
 * **A library** (`HYX2_LIBRARY`) is code another task calls in its own task with `XCALL`.
 
 Build one with the base's: put it in a folder, `modules/NAME/NAME.s`, and `node build.js` assembles it with the base's
-includes (`obj/sdk`, `sdk/asm`, `include`, `obj/gen`, `lib`) and links it with `modules/module.cfg` (`moduleN.cfg` for N
+includes (`sdk/asm`, `include`, `obj/gen`, `lib`) and links it with `modules/module.cfg` (`moduleN.cfg` for N
 banks: a `.segment "CODE2"` ... in its source); then name it in `rom.txt`.  Or, in a tree of your own beside this one, do
 what HydraOS's `build.js` does: `require('../base/build.js')`, its `build()` for the kernel and the base's modules, its
 `buildModule()` for yours, its `tools/romimg.js` for your paged ROM.

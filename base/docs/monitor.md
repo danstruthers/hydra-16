@@ -39,8 +39,8 @@ T1 00> 1000R
 T1 00>
 ```
 
-(`$F950` is `PUTC`: the program prints `H`.  The calls' addresses are in `hydra.inc`, made by the build in
-`../obj/sdk/hydra.inc`.)
+(`$F950` is `PUTC`: the program prints `H`.  The calls' addresses are in `hydra.inc`, made from `spec/api.def`:
+`../sdk/asm/hydra.inc`.)
 
 ### **What it sees**
 

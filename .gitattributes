@@ -19,6 +19,12 @@ reborn/sdcard/** -text
 reborn/sdk/asm/** text eol=crlf
 # The SDK's core (base/sdk/asm: hyx2.inc, macros.inc, srvlib), on the ROM disk too: the same
 base/sdk/asm/** text eol=crlf
+# The C SDK's files the build makes from the specs (hydracalls.h, numdefs.h, asmdefs.h, oserrmap.inc): CR LF, as made,
+# so a checkout and a build agree
+reborn/sdk/c/include/hydracalls.h text eol=crlf
+reborn/sdk/c/include/numdefs.h text eol=crlf
+reborn/sdk/c/include/asmdefs.h text eol=crlf
+reborn/sdk/c/lib/oserrmap.inc text eol=crlf
 # The Forth 2012 test suite (reborn/tests/forth): as it came, byte for byte
 reborn/tests/forth/** -text
 # danlang's regression suite (reborn/tests/hylang): its files as danlang's master has them, byte for byte

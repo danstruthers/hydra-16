@@ -29,5 +29,5 @@ jobs:
         run: node reborn/sim/web.js --check
       - name: The old system (frozen in old/), build and test
         run: node old/build.js test
-      - name: The images, if they changed (the ones in Git should be the build's)
-        run: git status --short -- base/bin reborn/bin old/os_rom/bin old/programs
+      - name: The images and the SDK's generated files, if they changed (the ones in Git should be the build's)
+        run: git status --short -- base/bin base/sdk reborn/bin reborn/sdk old/os_rom/bin old/programs
