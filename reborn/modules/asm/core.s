@@ -453,9 +453,16 @@ asm_symbol:
             jmp         leave
 
 ; IMAGE: OUT: .A = the image's first bank (the origin's bytes at $8000 in it: its first 8K), r0 = its length (from the
-; origin to its data's end)
+; origin to its data's end), r1 = its BSS's end (the first address past it)
 asm_image:
             jsr         enter
+            clc
+            lda         sbasel + SEG_BSS
+            adc         ssizel + SEG_BSS
+            sta         r1
+            lda         sbaseh + SEG_BSS
+            adc         ssizeh + SEG_BSS
+            sta         r1 + 1
             clc
             lda         sbasel + SEG_DATA
             adc         ssizel + SEG_DATA

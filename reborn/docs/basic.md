@@ -23,8 +23,8 @@ calls the second's with `C2`, which passes `.A`, `.X`, `.Y` and C).
 | Bank | Files | What | Used |
 | :--- | :--- | :--- | :--- |
 | 1 | `run.inc`, `main.inc`, `fn.inc`, nslib | The interpreter: its ops, calls and frames, errors' way to a handler; the top (the prompt's loop, a script, `RUN`, `CONT`); the statements' and functions' groups by bank; the SDK's `newns` for `basic -l` | 44% |
-| 2 | `lex.inc`, `comp.inc`, `expr.inc`, `stmt.inc`, `procs.inc` | The compiler: tokens, symbols, labels and their fixups, the line table, `INCLUDE`; expressions; statements; `SUB` and `FUNCTION`, calls and their arguments | 84% |
-| 3 | `stmt3.inc`, `rec.inc` | The compiler's other statements (`DIM`, `DATA`, `INPUT`, files, the console, `SYSTEM` ...); `TYPE`, fields and records' copies | 43% |
+| 2 | `lex.inc`, `comp.inc`, `expr.inc`, `stmt.inc`, `procs.inc` | The compiler: tokens, symbols, labels and their fixups, the line table, `INCLUDE`; expressions; statements; `SUB` and `FUNCTION`, calls and their arguments | 85% |
+| 3 | `stmt3.inc`, `rec.inc`, `asm.inc` | The compiler's other statements (`DIM`, `DATA`, `INPUT`, files, the console, `SYSTEM` ...); `TYPE`, fields and records' copies; `ASM`'s blocks (the asm library's assembler) and `CALL ASM` | 52% |
 | 4 | `num.inc`, `fns4.inc` | The numbers: the libraries' calls, the operators, the number functions, `VAL` (E notation), `STR$` | 32% |
 | 5 | `heap.inc`, `gc.inc`, `fns5.inc` | The heap: strings, numbers past 32 bits, arrays and records; the collector; the string functions; `DIM`, `REDIM`, `ERASE`, `MID$ =` | 34% |
 | 6 | `io.inc` | `PRINT` (zones, `TAB`, `PRINT USING`), `INPUT`, `READ`, the console's sequences and keys, files | 36% |
@@ -36,7 +36,7 @@ buffer, `b_error` (an error from any bank to the first's `err_entry`), `run_exit
 
 ## Memory
 
-The task's RAM (`$0400` on) holds the interpreter's state (`BSS`, 7.7K), the globals (5 bytes each) and the value
+The task's RAM (`$0400` on) holds the interpreter's state (`BSS`, 8.0K), the globals (5 bytes each) and the value
 stack (`stk_base` on: frames, `GOSUB`'s returns, `FOR`'s state and the expressions' values, 5 bytes each).
 Everything else is in the task's RAM banks, seen at `$8000`-`$9FFF` one at a time through a table of logical banks
 (`ltab`: a logical bank's physical one, taken from the system when it's first used) in regions:
@@ -98,6 +98,15 @@ so a procedure is known wherever it's written.  Pass 2 (`c_line`) compiles each 
 * **`INCLUDE "f"`** (or `'$INCLUDE: 'f'`), a line of its own: `line_next` reads f's lines there.  Pass 1 loads f
   into the text region after the program's (`inc_load`: the program's directory, else `/lib/basic`), pass 2 finds it
   by the `INCLUDE`s' order.  Its lines are numbered `$4000 + n * $800` on, so an error in it says its file and line.
+* **`ASM` ... `END ASM`** (`asm.inc`, the third bank): both passes pass a block's lines by (`asm_skip`).  After the
+  code, `asm_build` gives them to the asm library a line at a time (`spec/asm.def`'s `BEGIN`, then for each of its
+  three passes `PASS`, `DEFINE`, `LINE` and `END`; `IMAGE`, `SYMBOL`, `DONE`), each pass's symbols first: each
+  global number variable's value's address and each integer `CONST`, in capitals and in lower case (the symbol
+  table's buckets walked).  The image's first bank becomes the program's (`asm_bank`, given back at the next
+  compile), and each label a `CALL ASM` named (a symbol of its own class, `M`: its number, its line) is looked up
+  into `asm_tab`; `ST_ASMCALL` calls it as `SYS` calls an address.  The library's state is in `$5000`-`$7DFF` while
+  it runs (the value stack's top, which nothing holds while a program's compiled), its zero page BASIC's, kept and
+  put back by each call; its messages come back as `ER_ASM`'s text (`asm_msg`).
 * **Errors** at compile time go to `err_entry` with the line (`file:line: message`; a typed program's by its line's
   number, `line 20: ...`).
 
@@ -159,19 +168,19 @@ and `newns` are its own.
   line or the file, and waits for it.
 * **The system**: `SYS "NAME"` finds a call in a table the build makes from the system's specification
   (`obj/gen/basicsys.inc`), `SYS addr` and `CALL ABSOLUTE` call machine code (at `$8000`-`$9FFF` in `BANK`'s bank),
-  `RREG` reads the registers after.  `SHELL` and `SHELL$` run rc (`SHELL$` through a pipe, its last new lines
-  dropped).
+  `CALL ASM` an `ASM` block's label (in the blocks' own bank), `RREG` reads the registers after.  `SHELL` and `SHELL$`
+  run rc (`SHELL$` through a pipe, its last new lines dropped).
 * **Graphics** (`gfx.inc`): `SCREEN`, `PSET`, `LINE`, `CIRCLE`, `PAINT`, `DRAW`, `GPRINT`, `PALETTE`, `SPRITE`,
   `WINDOW` and `VIEW` are the Vera X driver's commands (`/dev/vid/draw`); `PAINT` and `POINT` read the bitmap in VRAM.
 
 ## The tests
 
-`tests/basic` is BASIC's suite (the bsuite test): twelve programs that check themselves (495 checks: arithmetic,
-the number functions, logic, strings, arrays, control, procedures, records, data, errors, files, the Hydra's) and
-four scripts piped into it, checked against their output (the errors' messages, `PRINT`'s layout, the prompt,
-`INPUT`).  The basic test is BASIC at the console and as a shell; bplay `PLAY`; bawin `basic -l` in the windows;
-bench `romfs/bench/bench.bas` against hylang's and HyForth's.  Writing the suite found bugs of BASIC's, among them:
-`GOTO` a label never defined ran on (`ca_rd`'s flags), a `SUB` that called another `SUB` took its entry, a
+`tests/basic` is BASIC's suite (the bsuite test): thirteen programs that check themselves (518 checks: arithmetic,
+the number functions, logic, strings, arrays, control, procedures, records, data, errors, files, the Hydra's, inline
+assembly) and five scripts piped into it, checked against their output (the errors' messages, `PRINT`'s layout, the
+prompt, `INPUT`, `ASM`'s errors).  The basic test is BASIC at the console and as a shell; bplay `PLAY`; bawin `basic -l`
+in the windows; bench `romfs/bench/bench.bas` against hylang's and HyForth's.  Writing the suite found bugs of BASIC's,
+among them: `GOTO` a label never defined ran on (`ca_rd`'s flags), a `SUB` that called another `SUB` took its entry, a
 `FUNCTION`'s call among a call's arguments, an exit's status always 0, an array's lowest index below 0.
 
 ## Against hylang and HyForth

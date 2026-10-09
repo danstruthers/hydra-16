@@ -215,6 +215,12 @@ err_text_out:
 @found:
             jsr         t0_inc
             lda         err_code                            ; (Syntax error, an expected word after it)
+            cmp         #ER_ASM
+            bne         :+
+            jsr         msg_out                             ; (ASM's: the assembler's text after it)
+            LDW         t0, asm_msg
+            jmp         msg_out_ram
+:
             cmp         #ER_EXPECT
             bne         msg_out
             jsr         msg_out
@@ -337,6 +343,7 @@ err_msgs:
             .byte       ER_CONST, "not a constant", 0
             .byte       ER_FIELD, "no such field", 0
             .byte       ER_PROMPT, "only at the prompt", 0
+            .byte       ER_ASM, "ASM: ", 0
             .byte       0
 
 ; ---- The system's errors

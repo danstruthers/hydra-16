@@ -5,10 +5,11 @@
 ; rc's prompt starts it (its prompt: a line run at once, or a line of the program with its number first); `basic
 ; file args` runs a file.
 ;   A module of eight banks: the interpreter and the top (run.inc, main.inc, fn.inc) in the first; the compiler in the
-; second (lex.inc, comp.inc, expr.inc, stmt.inc) and the third (stmt3.inc); the numbers in the fourth (num.inc); the
-; heap and strings in the fifth (heap.inc); input and output in the sixth (io.inc); the system, the errors' messages
-; and the program's text in the seventh (sys.inc, prog.inc); the shell (basic -l) in the eighth (shell.inc), nslib's
-; newns in the first.  What every bank calls is in the task's RAM (ram.inc).
+; second (lex.inc, comp.inc, expr.inc, stmt.inc) and the third (stmt3.inc; ASM's blocks, asm.inc: the asm library's
+; assembler); the numbers in the fourth (num.inc); the heap and strings in the fifth (heap.inc); input and output in
+; the sixth (io.inc); the system, the errors' messages and the program's text in the seventh (sys.inc, prog.inc); the
+; shell (basic -l) in the eighth (shell.inc), nslib's newns in the first.  What every bank calls is in the task's RAM
+; (ram.inc).
 
 .setcpu "65C02"
 
@@ -16,6 +17,7 @@
 .include "hyx2.inc"
 .include "macros.inc"
 .include "numbers.inc"
+.include "asmlib.inc"
 .include "basic.inc"
 .include "zp.inc"
 
@@ -32,6 +34,7 @@
 .include "procs.inc"
 .include "stmt3.inc"
 .include "rec.inc"
+.include "asm.inc"
 .include "num.inc"
 .include "fns4.inc"
 .include "heap.inc"

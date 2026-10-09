@@ -99,7 +99,8 @@ entry SYMBOL asm impl=asm_symbol
 
 entry IMAGE asm impl=asm_image
   in:     -
-  out:    .A = the image's first bank (its first 8K: the origin's bytes at $8000 in it); r0 = its length
+  out:    .A = the image's first bank (its first 8K: the origin's bytes at $8000 in it); r0 = its length; r1 = its
+  out:    BSS's end (the first address past it)
   errors: -
   names:  hl - | bas - | fs - | c -
   doc:    Where the bytes are: the session's image, in RAM banks of the caller's from the origin on.

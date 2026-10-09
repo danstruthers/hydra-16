@@ -1,7 +1,8 @@
 ; ****************************************************************************
 ; machine.inc - the Hydra's (the eighth bank): SOUND (the sound driver's commands on /dev/snd, its text ones on
 ; /dev/sndctl, as C's snd.h has them), PLAY (play, the program: a line of the score language, or a file), SYS and
-; CALL ABSOLUTE (machine code, or a system call by its name: basicsys.inc's table), RREG (the registers after).
+; CALL ABSOLUTE (machine code, or a system call by its name: basicsys.inc's table), CALL ASM (an ASM block's label:
+; asm.inc), RREG (the registers after).
 
 .bss
 snd_fd:     .res        1                                   ; /dev/snd's fd + 1 (0: not open yet) ...
@@ -11,7 +12,8 @@ snd_h:      .res        4
 snd_len:    .res        1                                   ; (Its commands' bytes)
 snd_buf:    .res        12
 pl_ch:      .res        1                                   ; PLAY's channel ($FF: none)
-sys_addr:   .res        2                                   ; SYS's address, its .A, .X, .Y in ...
+sys_addr:   .res        2                                   ; SYS's address (at $8000-$9FFF: sys_bank's), its .A,
+sys_bank:   .res        1                                   ;   .X, .Y in ...
 sys_a:      .res        1
 sys_x:      .res        1
 sys_y:      .res        1
@@ -27,7 +29,7 @@ st_disp8:
 st_jt8:
             .word       st_sound, st_sounds, st_playch, st_play, st_sys, st_rregv, st_screen, st_pset, st_preset
             .word       st_line, st_gmove, st_glx, st_gly, st_circle, st_gprint, st_palette, st_paint, st_draw
-            .word       st_sprite, st_spritei, st_spriteoff, st_window, st_view
+            .word       st_sprite, st_spritei, st_spriteoff, st_window, st_view, st_asmcall
 .assert     * - st_jt8 = (ST_END - ST_B8) * 2, error, "st_jt8 and fn.inc's ST_B8 group differ"
 
 ; ---- SOUND
@@ -323,15 +325,7 @@ s_mplay:    .byte       "#m/play", 0
 ; the code called with them (jsr), the output written first (r0 and r1 kept over it: a program's POKEs); .A, .X, .Y
 ; and the flags after RREG's.  A name not there: the system's E_NOSYS
 st_sys:
-            ldx         #2                                  ; (.Y, .X, .A: the last pushed first)
-:
-            phx
-            jsr         pop_int16
-            plx
-            lda         t0
-            sta         sys_a,x
-            dex
-            bpl         :-
+            jsr         sys_args
             jsr         top_vt
             lda         (vt)
             cmp         #VT_STR
@@ -357,6 +351,9 @@ st_sys:
 :
             jsr         sys_lookup
 @call:
+            lda         ubank
+sys_go:
+            sta         sys_bank
             ldx         #3                                  ; (The output out first, r0 and r1 kept)
 :
             lda         r0,x
@@ -370,12 +367,12 @@ st_sys:
             sta         r0,x
             dex
             bpl         :-
-            lda         sys_addr + 1                        ; (At $8000-$9FFF: BANK's bank there)
+            lda         sys_addr + 1                        ; (At $8000-$9FFF: BANK's bank there, or ASM's)
             cmp         #$80
             bcc         :+
             cmp         #$A0
             bcs         :+
-            lda         ubank
+            lda         sys_bank
             sta         RAM_BANK
 :
             lda         sys_a
@@ -391,6 +388,40 @@ st_sys:
             jmp         code_sel
 @go:
             jmp         (sys_addr)
+
+; .Y, .X, .A taken off (the last pushed first) into sys_a, sys_x, sys_y
+sys_args:
+            ldx         #2
+:
+            phx
+            jsr         pop_int16
+            plx
+            lda         t0
+            sta         sys_a,x
+            dex
+            bpl         :-
+            rts
+
+; ST_ASMCALL: an ASM block's label's number, then .A, .X and .Y, taken off: its code called, as SYS's (the blocks'
+; bank at $8000-$9FFF)
+st_asmcall:
+            jsr         sys_args
+            jsr         pop_int16
+            lda         asm_have                            ; (No code: the program's not compiled with it)
+            bne         :+
+            lda         #ER_FUNC
+            ldx         #0
+            jmp         b_error
+:
+            lda         t0
+            asl         a
+            tax
+            lda         asm_tab,x
+            sta         sys_addr
+            lda         asm_tab + 1,x
+            sta         sys_addr + 1
+            lda         asm_bank
+            jmp         sys_go
 
 ; sys_addr = the address of the call lbuf names (in capitals), from basicsys.inc's table; not there: E_NOSYS
 sys_lookup:

@@ -272,13 +272,21 @@ label:
 @done:
             rts
 
-; C = 1 (said): the symbol at hp is defined already in this pass, or is a macro
+; C = 1 (said): the symbol at hp is defined already in this pass, or is a macro.  One of as's own or its caller's
+; (SF_LINK: DEFINE's, a BASIC program's names) is the source's from now on
 redef:
             ldy         #SY_FLAGS
             lda         (hp),Y
             and         #SF_MACRO
             bne         @twice
             lda         (hp),Y
+            bit         #SF_LINK
+            beq         :+
+            and         #$FF ^ SF_LINK
+            sta         (hp),Y
+            clc
+            rts
+:
             and         #SF_PASS
             cmp         pass
             beq         @twice

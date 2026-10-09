@@ -289,11 +289,11 @@ design](hylang.md).
 **BASIC** (`basic`): a structured BASIC in QuickBASIC's way, the Hydra's own: line numbers optional, labels and
 blocks, `SUB` and `FUNCTION` with variables of their own, records (`TYPE`), `INCLUDE`; every number exact (`PRINT 1
 / 3` shows `1/3`, `2 ^ 100` all its digits), in any base; files, `PRINT USING`, `ON ERROR`; sound and `PLAY`,
-graphics on the Vera X, `SYS` (machine code, or any call by name); a prompt that keeps a program (numbered lines,
-`LIST`, `SAVE`, `EDIT` in the screen editor), scripts and pipelines, and a shell mode.  A program is compiled whole
-into a stack machine's code, then run: 7.4 times HyForth's time and 3.2 times hylang's over the twenty benchmarks (the
-first BASIC, Microsoft's by way of EhyBASIC, which it replaced, was some 44 times HyForth's).  [The
-guide](using/basic.md), [its design](basic.md).
+graphics on the Vera X, `SYS` (machine code, or any call by name), assembly of its own (`ASM` blocks in `as`'s language,
+a label called with `CALL ASM`); a prompt that keeps a program (numbered lines, `LIST`, `SAVE`, `EDIT` in the screen
+editor), scripts and pipelines, and a shell mode.  A program is compiled whole into a stack machine's code, then run:
+7.4 times HyForth's time and 3.2 times hylang's over the twenty benchmarks (the first BASIC, Microsoft's by way of
+EhyBASIC, which it replaced, was some 44 times HyForth's).  [The guide](using/basic.md), [its design](basic.md).
 
 **The numbers** are one system in every language ([NUMBERS.md](design/plans/NUMBERS.md)): integers of any size, fixed
 decimals, rationals and complex numbers, all exact; the math functions exact when they can be, else correctly rounded
@@ -313,7 +313,9 @@ call (`XCALL`).  [Modules and programs](programming/modules.md).
 
 * **Assembly**: the SDK, `sdk/asm` (`hydra.inc`, `hyx2.inc`, `macros.inc`, `toollib`, `srvlib`, `nslib`,
   `numbers.inc`, samples), with ca65 and ld65 on a PC (`node build.js prog DIR`), or **`as` on the Hydra itself**: the
-  same language, the SDK's files in `/lib/as`, the same program, byte for byte.  [The assembly
+  same language, the SDK's files in `/lib/as`, the same program, byte for byte; `dis` writes a program back as
+  `as`'s source.  The assembler and the disassembler are a library (`asm`), which `db`, HyForth's `disasm` and
+  BASIC's `ASM` blocks share.  [The assembly
   SDK](../sdk/asm/README.md), [the assembler](using/tools.md#the-assembler).
 * **C**: cc65 with the Hydra's library under the standard one (files and stdio, the environment, `system`, `signal` over
   notes, conio, the sound's `snd.h`, the Hydra's own calls in `hydra.h`, its numbers in `num.h` and `printf`'s `%N`).
@@ -362,10 +364,10 @@ card](hardware.md#the-vera-x-slot-0), [VIDEO.md](design/plans/VIDEO.md).
 The programs in `/bin` behave as Plan 9's do (flags first, fd 0 when given no names, errors as `tool: name: why`,
 `$status`): files (`ls`, `cat`, `cp`, `mv`, `rm`, `mkdir`, `rmdir`, `touch`, `du`, `pwd`, `cmp`), text (`echo`, `wc`,
 `head`, `tail`, `grep`, `sort`, `uniq`, `tee`, `xd`, `more`), the editors (`edit`, nano's way, its text in RAM banks;
-`ed`, the line editor), tasks (`ps`, `top`, `kill`, `slay`, `sleep`, `ns`), the debugger (`db`), the assembler (`as`),
-the system (`date`, `free`, `mods`, `hwtest`), the disks (`df`, `mkfs`, `fsck`, `label`), and others (`play`,
-`xmodem`, `calc`: an expression worked out exactly, in any base).  `/pc` is a folder of the PC, through the PC tool.
-[The tools](using/tools.md).
+`ed`, the line editor), tasks (`ps`, `top`, `kill`, `slay`, `sleep`, `ns`), the debugger (`db`), the assembler (`as`)
+and the disassembler (`dis`), the system (`date`, `free`, `mods`, `hwtest`), the disks (`df`, `mkfs`, `fsck`, `label`),
+and others (`play`, `xmodem`, `calc`: an expression worked out exactly, in any base).  `/pc` is a folder of the PC,
+through the PC tool.  [The tools](using/tools.md).
 
 ---
 

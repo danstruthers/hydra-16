@@ -217,6 +217,9 @@ taken), and objects to link: one source file and what it includes make one progr
 `RODATA`, `DATA` and `BSS`, to `$8000` at most, with ld65's names for them (`__DATA_LOAD__`, `__BSS_RUN__`,
 `__BSS_SIZE__`, `__RAM_LAST__` ...) and `HYX2_RAM` defined, as `hyx2.inc` needs.
 
+The assembler is the **asm library**'s (`modules/asm`, `spec/asm.def`: below); `as` is its command line.  BASIC's
+`ASM` blocks are assembled by the same code, a line at a time ([basic.md](basic.md#inline-assembly)).
+
 An error is said as `as: file:line: what`, and `as` ends with status 1; a warning is said, and the program made.  It
 reads its source three times (the segments' sizes, then each symbol's value, then the bytes), each file read from
 the disk once and kept in the task's RAM banks; a pass that finds errors is the last, so another pass's errors show
@@ -274,11 +277,17 @@ L0841:
 ```
 
 The instructions are the **asm library**'s (`modules/asm`, `spec/asm.def`), which `db`'s `d` and HyForth's `disasm`
-use too, so the three write them alike, and `as` makes its encoding from the same table (`modules/asm/w65c02.inc`):
+use too, so the three write them alike, and its assembler makes its encoding from the same table (`w65c02.inc`):
 lower case, an address in hex or its name, `a:` before an absolute address under `$100` where the instruction has a
 zero page form (`as` would take that one), an opcode the W65C02S doesn't define as the NOP it runs (`.byte` and its
 bytes).  C has it as `dis_insn` (`asm.h`, with the symbol files' `lbl_load` ...), assembly as `ASMCALL ASM_DIS`
 (`asmlib.inc`).
+
+The library is two banks of the paged ROM: the assembler in the first (`FILE`, `as`'s whole run; and a source
+given a line at a time, BASIC's way: `BEGIN`, then for each pass `PASS`, the caller's symbols with `DEFINE`, the
+lines with `LINE`, and `END`; then `SYMBOL`, `IMAGE` and `DONE`), the disassembler in the second (`DIS`).  It has
+no RAM of its own: the assembler's state is in RAM its caller lends it while it runs (`ASM_RAM`, `$5000`-`$7DFF`),
+and its zero page (`$22` on) is the caller's, put back as each call ends.
 
 ## The system
 

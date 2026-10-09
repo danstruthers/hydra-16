@@ -287,6 +287,8 @@ st3_tab:
             .word       cs_window - 1
             .byte       K_VIEW
             .word       cs_view - 1
+            .byte       K_ASM
+            .word       cs_asm - 1
             .byte       0
 
 ; ---- This bank's helpers

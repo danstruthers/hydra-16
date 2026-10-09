@@ -8,8 +8,9 @@ function.  [../basic.md](../basic.md) is its design; [the plan](../design/plans/
 Contents: [Starting it](#starting-it) · [A program](#a-program) · [Numbers](#numbers) · [Strings](#strings) ·
 [Names, arrays and records](#names-arrays-and-records) · [Expressions](#expressions) · [Control](#control) ·
 [Procedures](#procedures) · [Data](#data) · [The console](#the-console) · [Files](#files) · [Errors](#errors) ·
-[Sound](#sound) · [The system](#the-system) · [Graphics](#graphics) · [At the prompt](#at-the-prompt) ·
-[The shell](#the-shell) · [Functions, all of them](#functions-all-of-them) · [From other BASICs](#from-other-basics)
+[Sound](#sound) · [The system](#the-system) · [Inline assembly](#inline-assembly) · [Graphics](#graphics) ·
+[At the prompt](#at-the-prompt) · [The shell](#the-shell) · [Functions, all of them](#functions-all-of-them) ·
+[From other BASICs](#from-other-basics)
 
 ## Starting it
 
@@ -271,8 +272,50 @@ each waits till it's played.  `BEEP` rings the bell.
 | `TIMER`, `DATE$`, `TIME$` | Seconds since midnight, by the ticks (1/200): one `TIMER` less another is exact; `"2026-10-08"`, `"14:05:09"` |
 | `SYS "NAME" [, a [, x [, y]]]`, `RREG a, x, y, p` | A system call by its name (`/rom/doc/api.md`): `r0`-`r15` from bytes 2-33 (`POKE` them first); the registers after (`p` bit 0: it failed, `a` the error) |
 | `SYS addr`, `CALL ABSOLUTE (addr)` | Machine code (at `$8000`-`$9FFF`: in `BANK`'s bank) |
+| `CALL ASM label [, a [, x [, y]]]` | An `ASM` block's label: [Inline assembly](#inline-assembly) |
 | `PEEK(addr)`, `POKE addr, b`, `BANK n`, `BANK()` | A byte of the task's memory; the RAM bank at `$8000` (BASIC's own data lives in banks too: leave theirs alone) |
 | `FRE()` | The memory free, in bytes |
+
+## Inline assembly
+
+`ASM` and `END ASM`, each alone on its line, hold assembly in `as`'s language (ca65's:
+[tools.md](tools.md#the-assembler)), anywhere in a program (in a `SUB` too) but not at the prompt.  The blocks are
+assembled as the program is compiled, after its code, as one source in their order (a label in one is known in the
+others), into a RAM bank of their own, seen at `$8000`-`$9FFF` while their code runs: 8K for their code, their data
+and their `.bss`, each block starting in `.code`.  `CALL ASM label [, a [, x [, y]]]` calls one of their labels as
+`SYS` calls machine code (`.A`, `.X` and `.Y` from the numbers, 0 if they're left out; `RREG` reads them after).
+The label is written as the block writes it (the assembler tells capitals from lower case), a keyword's spelling
+too (`double`).  At the prompt, `CALL ASM` calls a label the program's own `CALL ASM`s name.
+
+The program's names are symbols in the blocks: a global number variable (not a procedure's own) is its value's
+address, 5 bytes: its kind (0 for an integer of 32 bits), then an integer's 4 bytes, lowest first (code that writes
+one writes its kind too); an integer `CONST` is its value.  Each is there in capitals and in lower case (`COUNT`
+and `count`), but `A`, `X` and `Y`, the registers' names; a block's own label of the same name is the block's.
+`.include "hydra.inc"` (from `/lib/as`) gives the system calls by name and `r0`-`r15`.  The code may use
+`r0`-`r15`, keeps BASIC's zero page (`$22`-`$7F`: no `.zeropage`), and ends with `rts`.
+
+```
+CONST K = 3
+total = 0
+FOR i = 1 TO 4: CALL ASM addk: NEXT
+CALL ASM double, 21: RREG a
+PRINT total; a                    ' 12  42
+
+ASM
+addk:   lda total + 1           ; total: its kind (0, an integer), then its 4 bytes
+        clc
+        adc #K
+        sta total + 1
+        rts
+double: asl a
+        rts
+END ASM
+```
+
+An error in a block is the assembler's, at its line (`line 50: ASM: undefined: nowhere`); a label no block has, at
+the `CALL ASM` that first names it; an `ASM` without its `END ASM`, at the `ASM`.  The blocks add the assembler's
+time to the program's compiling: a quarter of a second for a few, some 3 seconds with `hydra.inc`.  The assembler is
+the asm library's, the one `as` runs.
 
 ## Graphics
 

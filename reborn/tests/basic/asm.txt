@@ -1,0 +1,43 @@
+PRINT "at the prompt";: ASM
+END ASM
+NEW
+10 PRINT "an error"
+20 ASM
+30 add1: clc
+40       adc #1
+50       bogus #2
+60       rts
+70 END ASM
+RUN
+NEW
+10 ASM
+20 x1: jmp nowhere
+30 END ASM
+RUN
+NEW
+10 CALL ASM missing
+20 ASM
+30 there: rts
+40 END ASM
+RUN
+NEW
+10 ASM
+20 lda #1
+RUN
+NEW
+10 ASM
+20 .res 8200
+30 END ASM
+RUN
+NEW
+10 ASM
+20 inc3: clc
+30       adc #3
+40       rts
+50 END ASM
+60 CALL ASM inc3, 4: RREG a: PRINT a
+RUN
+CALL ASM inc3, 10: RREG a: PRINT a
+CALL ASM other
+CALL ASM, 1
+PRINT "end"

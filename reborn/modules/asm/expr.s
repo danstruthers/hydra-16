@@ -1936,7 +1936,8 @@ sym_set:
             sta         (hp),Y
             rts
 
-; One of as's own symbols (__DATA_LOAD__, HYX2_RAM ...): the name at r0 = val, defined.  C = 1: no room
+; One of as's own symbols (__DATA_LOAD__, HYX2_RAM ...) or its caller's (DEFINE's): the name at r0 = val, defined,
+; unless the source has defined it itself (a label of that name: redef).  C = 1: no room
 sym_link:
             ldy         #0
 :
@@ -1949,9 +1950,17 @@ sym_link:
             sty         tlen
             jsr         sym_def
             bcs         :+
+            ldy         #SY_FLAGS                           ; (The source's own already, a pass before: kept)
+            lda         (hp),Y
+            bit         #SF_LINK
+            bne         @set
+            and         #SF_PASS | SF_MACRO
+            bne         @kept
+@set:
             lda         #SF_LINK
             ldx         #$FF
             jsr         sym_set
+@kept:
             clc
 :
             rts
