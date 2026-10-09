@@ -1,0 +1,6 @@
+; rom.txt - the base's paged ROM: its modules, in its order (each a folder in modules/), and the one started as init
+; (build.js reads it; tools/romimg.js puts them in banks 2 on, the hardware test in bank 1).  HydraOS's is
+; reborn/modules/rom.txt.
+init        wozmon
+module      ser         ; (task F: the console's driver)
+module      wozmon      ; (task 1: the monitor)

@@ -1,9 +1,10 @@
 ; ****************************************************************************
 ; w65c02.inc - the W65C02S's instructions, the one table: each opcode's name and addressing mode, each mode's length.
-; The asm library's disassembler reads it as it is (dis.inc); the assembler makes its encoding table from it
-; (modules/as/stmt.s's op_init: each name's opcode in each mode).  A name's index is its place in names (3 letters
-; each); RMB, SMB, BBR and BBS have their bit after them, from the opcode (its bits 4-6).  The opcodes the W65C02S
-; doesn't define are NOPs of 1, 2 or 3 bytes (M_N1, M_N2, M_N3: written as .byte).
+; The disassembler reads it as it is (dis.inc: the base's monitor's, and HydraOS's asm library's); HydraOS's
+; assembler makes its encoding table from it (reborn/modules/as/stmt.s's op_init: each name's opcode in each mode).
+; A name's index is its place in names (3 letters each); RMB, SMB, BBR and BBS have their bit after them, from the
+; opcode (its bits 4-6).  The opcodes the W65C02S doesn't define are NOPs of 1, 2 or 3 bytes (M_N1, M_N2, M_N3:
+; written as .byte).
 
 ; The modes (op_mode)
 M_IMP           = 0             ; (none)

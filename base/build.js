@@ -6,8 +6,11 @@
 //                          hydra.inc, api.json (obj/gen, obj/sdk)
 //   2. the kernel          kernel/*.s and the generated sources -> bin/bios.bin (the 128K BIOS ROM), with its map,
 //                          labels and debug information in obj/kernel/
-//   3. the modules         modules/NAME/*.s -> obj/modules/NAME.bin: ser (the console's driver, task F)
-//   4. the budgets         the BIOS ROM's pages, the modules: used, and room left (tools/budget.js)
+//   3. the modules         modules/NAME/*.s -> obj/modules/NAME.bin: ser (the console's driver, task F), wozmon
+//                          (the monitor, init: task 1)
+//   4. the paged ROM       modules/rom.txt -> bin/prom0.bin (tools/romimg.js): the module directory, the hardware
+//                          test in bank 1, the modules (one 512K chip, as few banks as it needs; the rest $FF)
+//   5. the budgets         the BIOS ROM's pages, the modules: used, and room left (tools/budget.js)
 // HydraOS (../reborn/build.js) runs this first, and builds its modules, its paged ROM and its SDKs with what this
 // gives: buildModule (a module, or a RAM program, with the base's includes: obj/sdk, sdk/asm, include, obj/gen),
 // assemble, the cc65 tools, the hardware test, readManifest (a rom.txt).
@@ -24,6 +27,7 @@ const { execFileSync } = require('child_process');
 const apigen = require('./tools/apigen.js');
 const budget = require('./tools/budget.js');
 const check = require('./tools/check.js');
+const romimg = require('./tools/romimg.js');
 
 const ROOT = __dirname;
 const at = (...p) => path.join(ROOT, ...p);
@@ -132,8 +136,21 @@ function build(opt = {}) {
   const modules = {};
   for (const d of fs.readdirSync(at('modules'), { withFileTypes: true }).filter(d => d.isDirectory()))
     modules[d.name] = buildModule(at('modules', d.name), at('obj', 'modules'), defines, false, modules);
-  if (!opt.noReport) say(budget.report(ROOT, { modules }).text);
-  return { bios: fs.readFileSync(at('bin', 'bios.bin')), defines, modules };
+  if (opt.modulesOnly) return { bios: fs.readFileSync(at('bin', 'bios.bin')), defines, modules };
+
+  // The base's paged ROM: its rom.txt's modules, its init
+  const manifest = readManifest(at('modules', 'rom.txt'));
+  for (const n of manifest.modules) if (!modules[n]) throw new Error('modules/rom.txt: no module ' + n);
+  const bios = fs.readFileSync(at('bin', 'bios.bin'));
+  const { image, chips } = romimg.build({ modules: manifest.modules.map(n => ({ file: n, data: modules[n] })), init: manifest.init,
+    hwtest: hwtest(), bios });
+  for (const f of fs.readdirSync(at('bin')).filter(f => /^prom\d*\.bin$/.test(f))) fs.rmSync(at('bin', f));   // (The last build's)
+  for (let k = 0; k < chips; k++) fs.writeFileSync(at('bin', 'prom' + k + '.bin'), image.subarray(k * romimg.CHIP, (k + 1) * romimg.CHIP));
+  if (!opt.noReport) {
+    say(budget.report(ROOT, { modules }).text);
+    say('Paged ROM: ' + manifest.modules.join(', ') + ' (init ' + manifest.init + '): bin/prom0.bin');
+  }
+  return { bios, defines, modules, manifest };
 }
 
 if (require.main === module) {
