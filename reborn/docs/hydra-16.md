@@ -408,8 +408,8 @@ POST's, a driver's) are `/dev/kmesg`, its last 4K.
 * **The tests**, `node sim/test.js`: 120 of them, each booting its own image and judged on its output, its time budgets
   and its own checks, as many at a time as the PC has cores; `--dl` runs them in the danlang emulator (`sim/dl`), the
   emulator written again in danlang.
-* **The benchmarks**, `node sim/bench.js`: twenty, each in hylang, HyForth and BASIC (`romfs/bench`), the same
-  algorithms and results, timed against each other by kind ([hylang.md](hylang.md#against-hyforth),
+* **The benchmarks**, `node sim/bench.js`: twenty, each in hylang, HyForth, BASIC and BASIC's inline assembly
+  (`romfs/bench`), the same algorithms and results, timed against each other by kind ([hylang.md](hylang.md#against-hyforth),
   [basic.md](basic.md#against-hylang-and-hyforth)).
 * **The PC tools** (`sim/tools`): `hydrapc.js` (the PC tool: the terminal, and `/pc` over the serial line; `npm install`
   in `sim/` for its serial port), `hydrafs.js` (card images), `pcfs.js` (`/pc`'s server), `hysong.js` (scores to ZSM

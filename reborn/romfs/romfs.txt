@@ -29,6 +29,7 @@ doc/api.md          ../obj/gen/api.md   ; The system calls' reference (tools/api
 bench/bench.hl      bench/bench.hl      ; hylang's, HyForth's and BASIC's benchmarks, the same in each (sim/bench.js compares them)
 bench/bench.fs      bench/bench.fs
 bench/bench.bas     bench/bench.bas
+bench/benchasm.bas  bench/benchasm.bas  ; BASIC's inline assembly's: bench.bas's twenty, each one's work in an ASM block
 bench/hl/calls.hl   bench/hl/calls.hl
 bench/hl/fib.hl     bench/hl/fib.hl
 bench/hl/tak.hl     bench/hl/tak.hl
