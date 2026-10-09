@@ -10,9 +10,10 @@ const path = require('path');
 
 const IRQ_OFF_MAX = 200;                                      // The longest IRQs-off stretch after the boot, in cycles
 
-// A call's address, from the SDK's hydra.inc (the build's), as hex digits (lo hi): for a program typed into wozmon
+// A call's address, from the SDK's hydra.inc (sdk/asm: made from spec/), as hex digits (lo hi): for a program typed
+// into wozmon
 function call(name) {
-  const inc = fs.readFileSync(path.join(__dirname, '..', 'obj', 'sdk', 'hydra.inc'), 'latin1');
+  const inc = fs.readFileSync(path.join(__dirname, '..', 'sdk', 'asm', 'hydra.inc'), 'latin1');
   const m = inc.match(new RegExp('^' + name + '\\s+= \\$([0-9A-F]{4})', 'm'));
   if (!m) throw new Error('hydra.inc: no ' + name);
   return m[1].slice(2) + ' ' + m[1].slice(0, 2);

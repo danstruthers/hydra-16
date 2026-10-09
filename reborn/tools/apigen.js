@@ -6,18 +6,20 @@
 // and the asm library's (spec/asm.def) imply, so the calls are written down once
 // (docs/design/reimplementation-from-scratch.md, principle P9):
 //   obj/gen/errnames.inc  the error codes' names, lower case without E_ (hylang's error codes: :noent ...), a table's macro
-//   obj/sdk/c/hydracalls.h   the calls' addresses, the error codes and the constants, for C (HY_ before each name:
+// The SDK's files (sdk/asm, sdk/c: in Git, as the base's hydra.inc is, so a program can be built against them
+// without a build; made again by each, the same unless spec/ changed); the rest the build's own (obj/gen):
+//   sdk/c/include/hydracalls.h   the calls' addresses, the error codes and the constants, for C (HY_ before each name:
 //                         cc65's headers have some of them)
-//   obj/sdk/c/oserrmap.inc   the C library's map from the error codes to errno (errors.def's last column)
+//   sdk/c/lib/oserrmap.inc   the C library's map from the error codes to errno (errors.def's last column)
 //   obj/gen/api.md        the reference: every call, its registers, its errors (and its HyForth word)
 //   obj/gen/forthsys.inc  HyForth's sys- words, for its Hydra library (forthlib/hydra.s)
 //   obj/gen/hylsys.inc    hylang's sys- functions, the calls' records (modules/hylang/hysys.inc), from the hl: lines
 //   obj/gen/hydra.fs      the constants and error codes for HyForth, a library on the ROM disk (/lib/forth)
 //   obj/gen/basicsys.inc  BASIC's SYS "NAME": the calls a program makes, by name (modules/basic/machine.inc)
-//   obj/sdk/numbers.inc   the number libraries' entries (NUM_ADD ...), constants and call macros, for programs in
+//   sdk/asm/numbers.inc   the number libraries' entries (NUM_ADD ...), constants and call macros, for programs in
 //                         assembly
-//   obj/sdk/c/numdefs.h   their constants, for C (num.h includes it)
-//   obj/sdk/asmlib.inc, obj/sdk/c/asmdefs.h, obj/gen/asm_jt.inc   the same for the asm library (spec/asm.def: the
+//   sdk/c/include/numdefs.h   their constants, for C (num.h includes it)
+//   sdk/asm/asmlib.inc, sdk/c/include/asmdefs.h, obj/gen/asm_jt.inc   the same for the asm library (spec/asm.def: the
 //                         W65C02S's instructions as as writes them; asm.h includes asmdefs.h)
 //   obj/gen/numbers_jt.inc, math_jt.inc   each number library's jump table (its module includes it)
 //   obj/gen/pow10.inc     the powers of 10 to 10^24 the registers' r_pow10 copies (nmreg.inc)
@@ -462,20 +464,20 @@ function generate(root) {
   }
   const gen = path.join(root, 'obj', 'gen');
   write(path.join(gen, 'errnames.inc'), errNames(errors));
-  write(path.join(root, 'obj', 'sdk', 'c', 'hydracalls.h'), cHeader(api, errors));
-  write(path.join(root, 'obj', 'sdk', 'c', 'oserrmap.inc'), oserrMap(errors));
+  write(path.join(root, 'sdk', 'c', 'include', 'hydracalls.h'), cHeader(api, errors));
+  write(path.join(root, 'sdk', 'c', 'lib', 'oserrmap.inc'), oserrMap(errors));
   write(path.join(gen, 'api.md'), apiMd(api, errors));
   write(path.join(gen, 'forthsys.inc'), forthSys(api));
   write(path.join(gen, 'hylsys.inc'), hylSys(api));
   write(path.join(gen, 'hydra.fs'), forthLib(api, errors));
   write(path.join(gen, 'basicsys.inc'), basicSys(api));
   const nums = readNumbers(path.join(root, 'spec', 'numbers.def'));
-  write(path.join(root, 'obj', 'sdk', 'numbers.inc'), numbersInc(nums));
-  write(path.join(root, 'obj', 'sdk', 'c', 'numdefs.h'), cNumHeader(nums));
+  write(path.join(root, 'sdk', 'asm', 'numbers.inc'), numbersInc(nums));
+  write(path.join(root, 'sdk', 'c', 'include', 'numdefs.h'), cNumHeader(nums));
   for (const l of nums.libs) write(path.join(gen, l.name + '_jt.inc'), numbersJt(l));
   const asm = readNumbers(path.join(root, 'spec', 'asm.def'));
-  write(path.join(root, 'obj', 'sdk', 'asmlib.inc'), asmInc(asm));
-  write(path.join(root, 'obj', 'sdk', 'c', 'asmdefs.h'), cLibHeader(asm, 'asmdefs.h', 'the asm library\'s constants', 'asm.def', 'asm.h'));
+  write(path.join(root, 'sdk', 'asm', 'asmlib.inc'), asmInc(asm));
+  write(path.join(root, 'sdk', 'c', 'include', 'asmdefs.h'), cLibHeader(asm, 'asmdefs.h', 'the asm library\'s constants', 'asm.def', 'asm.h'));
   for (const l of asm.libs) write(path.join(gen, l.name + '_jt.inc'), numbersJt(l));
   write(path.join(gen, 'numconst.inc'), numConst());
   write(path.join(gen, 'pow10.inc'), pow10Inc());

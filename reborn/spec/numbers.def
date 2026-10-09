@@ -2,9 +2,9 @@
 # numbers.def - the shared number libraries' calls: the numbers library (the number system: arithmetic,
 # conversions, text in every base, bits) and the math library (its functions), which every language calls
 # (docs/design/plans/NUMBERS.md).  The one source of truth for their jump tables and each language's bindings, as
-# api.def is for the system calls: tools/apigen.js reads it, and makes obj/sdk/numbers.inc (the entries' addresses,
+# api.def is for the system calls: tools/apigen.js reads it, and makes sdk/asm/numbers.inc (the entries' addresses,
 # NUM_ADD ..., MATH_SQRT ..., the constants, and the macros NUMCALL and MATHCALL, for programs in assembly), the
-# constants for C (obj/sdk/c/numdefs.h, which num.h includes) and each library's jump table (obj/gen/numbers_jt.inc,
+# constants for C (sdk/c/include/numdefs.h, which num.h includes) and each library's jump table (obj/gen/numbers_jt.inc,
 # math_jt.inc).
 #
 # The format:

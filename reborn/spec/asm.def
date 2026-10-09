@@ -1,9 +1,9 @@
 # ****************************************************************************
 # asm.def - the asm library's calls: the W65C02S's instructions as the assembler as writes them (ca65's language),
 # one table of them for every tool that reads or writes them: db's d, HyForth's disasm, dis (the disassembler at
-# rc), and as.  tools/apigen.js reads it, as it reads numbers.def, and makes obj/sdk/asmlib.inc (the entries'
+# rc), and as.  tools/apigen.js reads it, as it reads numbers.def, and makes sdk/asm/asmlib.inc (the entries'
 # addresses, ASM_DIS ..., the constants, and the macro ASMCALL, for programs in assembly), the constants for C
-# (obj/sdk/c/asmdefs.h, which asm.h includes) and the library's jump table (obj/gen/asm_jt.inc).  The format is
+# (sdk/c/include/asmdefs.h, which asm.h includes) and the library's jump table (obj/gen/asm_jt.inc).  The format is
 # numbers.def's.
 #
 # A call: XCALL, r15 the entry's address, r14 the library's bank (MODINFO finds it, by the name "asm").  The library

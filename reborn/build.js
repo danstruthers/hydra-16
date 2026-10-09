@@ -97,7 +97,7 @@ function assemble(files, objdir, includes, defines) {
 
 // HydraOS's includes, then the base's (its hydra.inc, the SDK's core, the hardware's, errors.inc): a module's, a
 // program's; a test module's, the base's testlib.inc too
-const INCLUDES = [at('obj', 'sdk'), at('sdk', 'asm'), ...base.INCLUDES, at('obj', 'gen'), atBase('tests', 'mod')];
+const INCLUDES = [at('sdk', 'asm'), ...base.INCLUDES, at('obj', 'gen'), atBase('tests', 'mod')];
 
 // A module or a RAM program (the base's buildModule: ../base/modules/moduleN.cfg, ../base/sdk/asm/hyx2.cfg), with
 // HydraOS's includes and the base's, and what apigen makes (forth's sys- words: obj/gen/forthsys.inc); a test RAM
@@ -110,8 +110,8 @@ function buildModule(dir, objdir, defines, ram = false, libs = {}) {
 function cflags() {
   const home = cc65Home(), own = d => fs.existsSync(path.join(home, d)) ? ['-I', path.join(home, d)] : [];
   return {
-    cc: ['-g', '-t', 'none', '--cpu', '65C02', '-O', '-I', at('sdk', 'c', 'include'), '-I', at('obj', 'sdk', 'c'), ...own('include')],
-    as: ['-g', '--cpu', '65C02', '-I', at('obj', 'sdk'), '-I', atBase('obj', 'sdk'), '-I', at('obj', 'sdk', 'c'), ...own('asminc')],
+    cc: ['-g', '-t', 'none', '--cpu', '65C02', '-O', '-I', at('sdk', 'c', 'include'), ...own('include')],
+    as: ['-g', '--cpu', '65C02', '-I', at('sdk', 'asm'), '-I', atBase('sdk', 'asm'), '-I', at('sdk', 'c', 'lib'), '-I', at('sdk', 'c', 'include'), ...own('asminc')],
   };
 }
 
@@ -163,11 +163,8 @@ function sdk() {
   const out = at('bin', 'sdk', 'asm');
   fs.rmSync(out, { recursive: true, force: true });
   mkdir(path.join(out, 'samples'));
-  for (const d of [atBase('sdk', 'asm'), at('sdk', 'asm')])     // (The base's core, then HydraOS's)
+  for (const d of [atBase('sdk', 'asm'), at('sdk', 'asm')])     // (The base's, hydra.inc with it, then HydraOS's)
     for (const f of fs.readdirSync(d).filter(f => /\.(inc|s|cfg|md)$/.test(f))) fs.copyFileSync(path.join(d, f), path.join(out, f));
-  fs.copyFileSync(atBase('obj', 'sdk', 'hydra.inc'), path.join(out, 'hydra.inc'));
-  fs.copyFileSync(at('obj', 'sdk', 'numbers.inc'), path.join(out, 'numbers.inc'));
-  fs.copyFileSync(at('obj', 'sdk', 'asmlib.inc'), path.join(out, 'asmlib.inc'));
   for (const f of ['module.cfg', 'module2.cfg', 'module3.cfg', 'module4.cfg']) fs.copyFileSync(atBase('modules', f), path.join(out, f));   // (A module's links)
   for (const d of fs.readdirSync(at('sdk', 'asm', 'samples'), { withFileTypes: true }).filter(d => d.isDirectory())) {
     mkdir(path.join(out, 'samples', d.name));
@@ -180,7 +177,6 @@ function sdk() {
   for (const d of ['include', 'lib', 'samples']) mkdir(path.join(c, d));
   for (const f of ['README.md', 'hydra.cfg']) fs.copyFileSync(at('sdk', 'c', f), path.join(c, f));
   for (const f of fs.readdirSync(at('sdk', 'c', 'include'))) fs.copyFileSync(at('sdk', 'c', 'include', f), path.join(c, 'include', f));
-  for (const f of ['hydracalls.h', 'numdefs.h', 'asmdefs.h']) fs.copyFileSync(at('obj', 'sdk', 'c', f), path.join(c, 'include', f));
   fs.copyFileSync(at('obj', 'sdk', 'c', 'hydra.lib'), path.join(c, 'lib', 'hydra.lib'));
   for (const d of fs.readdirSync(at('sdk', 'c', 'samples'), { withFileTypes: true }).filter(d => d.isDirectory())) {
     mkdir(path.join(c, 'samples', d.name));
@@ -199,7 +195,7 @@ function prog(dir) {
     cprog(dir, od, bin, (process.env.HYC_CFLAGS || '').split(/\s+/).filter(Boolean));
     return bin;
   }
-  const objs = assemble(sources(dir), od, [at('obj', 'sdk'), at('sdk', 'asm'), base.INCLUDES[0], base.INCLUDES[1], dir], ['HYX2_RAM']);
+  const objs = assemble(sources(dir), od, [at('sdk', 'asm'), ...base.INCLUDES, dir], ['HYX2_RAM']);
   run(LD65, ['-C', atBase('sdk', 'asm', 'hyx2.cfg'), '-o', bin, '-m', path.join(od, name + '.map'), ...objs]);
   check.checkModule(name, fs.readFileSync(bin), 0x0800);
   return bin;
