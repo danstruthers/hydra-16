@@ -51,7 +51,11 @@ own.  A program finds a library's bank in the module directory (`MODINFO`: entry
 ```
 
 A library keeps a jump table at its start, after its header, so its routines' addresses don't move as it changes:
-`tests/mod/t_lib/t_lib.s` is one, and `t_xcall` calls it.
+`tests/mod/t_lib/t_lib.s` is one, and `t_xcall` calls it.  The system's are `numbers` and `math` (the number system:
+`spec/numbers.def`, [numbers.md](numbers.md)) and `asm` (the W65C02S's instructions as `as` writes them: `DIS` a
+disassembler, `FILE` and the line entries the assembler that `as` and BASIC's `ASM` blocks share: `spec/asm.def`), each
+specification made into the library's jump table and each language's binding by `tools/apigen.js`: for assembly
+`numbers.inc` and `asmlib.inc` (`NUMCALL`, `ASMCALL ASM_DIS`), for C `num.h` and `asm.h` (`dis_insn`).
 
 ## Debugging
 

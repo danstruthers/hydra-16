@@ -143,30 +143,32 @@ offset (`main+14`); a count is decimal.
 | `u addr` | Steps (as `n`) till its PC is addr |
 | `b [addr]` | A breakpoint at addr (in RAM: a `BRK` written there while it runs), or the list |
 | `x [addr]` | The breakpoint at addr gone, or all of them |
-| `d [addr] [n]` | n instructions (12) from addr (its PC; then on from the last), disassembled |
+| `d [addr] [n]` | n instructions (12) from addr (its PC; then on from the last), disassembled as `as` writes them (the asm library's, as `dis`'s): a symbol for the address an operand names, where each is after a `;` |
 | `m [addr] [n]` | n bytes (64) from addr, in hex and as text |
 | `w addr byte ...` | Bytes (hex) written at addr |
-| `l file` | Symbols from an ld65 label file (`ld65 -Ln`: the build makes one for each program, `obj/.../NAME.lbl`) |
+| `l file` | Symbols from an ld65 label file (`ld65 -Ln`: the build makes one for each program, `obj/.../NAME.lbl`; `as -l`'s), or `/lib/as/hydra.inc`'s: the system calls' names and r0-r15 |
 | `q` | Quit: a program `db` started is killed; a task it stopped runs on |
 
 ```
 /> db /rom/sample/hi Ann Bob
 task 4
 PC=0830 A=30 X=FF Y=48 S=FD P=nv--dizc W=0 U=0 RAM=00 ROM=00
-0830  A5 02     LDA $02
+0830  A5 02     lda $02
 db> l /pc/hi.lbl
 8 symbols
+db> l /lib/as/hydra.inc
+105 symbols
 db> b main+14
 db> c
 breakpoint 1
 PC=0844 A=41 X=FF Y=48 S=FD P=nv--dizc W=0 U=0 RAM=00 ROM=00
-0844  A9 52     LDA #$52         main+14
+0844  A9 52     lda #$52                 ; main+14
 db> n 4
-0846  85 02     STA $02          main+16
-0848  A9 08     LDA #$08         main+18
-084A  85 03     STA $03          main+1A
+0846  85 02     sta r0                   ; main+16
+0848  A9 08     lda #$08                 ; main+18
+084A  85 03     sta r0+1                 ; main+1A
 PC=084C A=08 X=FF Y=48 S=FD P=nv--dizc W=0 U=0 RAM=00 ROM=00
-084C  20 53 F9  JSR $F953        main+1C
+084C  20 53 F9  jsr PUTS                 ; main+1C
 db> x
 db> c
 Hello, Ann!
@@ -215,6 +217,9 @@ taken), and objects to link: one source file and what it includes make one progr
 `RODATA`, `DATA` and `BSS`, to `$8000` at most, with ld65's names for them (`__DATA_LOAD__`, `__BSS_RUN__`,
 `__BSS_SIZE__`, `__RAM_LAST__` ...) and `HYX2_RAM` defined, as `hyx2.inc` needs.
 
+The assembler is the **asm library**'s (`modules/asm`, `spec/asm.def`: below); `as` is its command line.  BASIC's
+`ASM` blocks are assembled by the same code, a line at a time ([basic.md](basic.md#inline-assembly)).
+
 An error is said as `as: file:line: what`, and `as` ends with status 1; a warning is said, and the program made.  It
 reads its source three times (the segments' sizes, then each symbol's value, then the bytes), each file read from
 the disk once and kept in the task's RAM banks; a pass that finds errors is the last, so another pass's errors show
@@ -231,6 +236,58 @@ I'm task 4, in /, in window 0.
 db> l /ram/hi.lbl
 8 symbols
 ```
+
+## The disassembler
+
+`dis [-cnw] [-l labels] [-o addr] file` is `as`'s inverse: a program written out as a source in `as`'s language, on
+stdout, which `as` assembles to the same bytes.  `file` is a RAM program (HYX2, as `as` and the build make them), or
+with `-o addr` raw bytes from addr (as `as -b` makes them).
+
+* **Its code** is found by following it from where it starts (a program's `main`, or addr): each instruction to the
+  next, and to where it jumps, branches or calls, till one that goes no further (`rts`, `jmp` ...).  What isn't
+  reached is data: `.byte`, its text in quotes.  `-c`: every byte from the start is an instruction, in turn.
+* **Its labels**: each place an instruction names in it, its symbol's name from `-l`'s label file (`as -l`'s, the
+  build's `obj/.../NAME.lbl`) when one names just that place, else `Lnnnn` (`main` at a program's entry); a place
+  just past a symbol is the symbol and an offset (`buf+1`).  Symbols outside it are defined first (`arg = $22`), its
+  BSS's are labels in `.bss`, and the system calls and `r0`-`r15` are `hydra.inc`'s (`/lib/as/hydra.inc`; `-n`: not).
+* **A program's header** is `HYX2_PROGRAM "name", main` when that makes the same bytes (`as`'s programs'), else its 48
+  bytes; its data goes in `.data`, its BSS in `.bss`.
+* **Its lines** are compact, a tab then the instruction (a 20K program's source is some 100K, which `as` reads into
+  RAM banks whole); `-w`, the SDK's sources' columns.
+
+```
+/> dis /rom/sample/tick
+; /rom/sample/tick, as dis read it: as assembles this to its bytes again
+.include "hydra.inc"
+
+.include "hyx2.inc"
+
+        HYX2_PROGRAM "tick", main
+.code
+main:
+        stz B0895
+        ...
+        jsr NOTIFY
+L0841:
+        lda #$C8
+        ldx #$00
+        jsr SLEEP
+...
+/> dis -l /pc/db.lbl /rom/bin/db >/ram/db.s; as /ram/db.s /ram/db2; cmp /rom/bin/db /ram/db2
+```
+
+The instructions are the **asm library**'s (`modules/asm`, `spec/asm.def`), which `db`'s `d` and HyForth's `disasm`
+use too, so the three write them alike, and its assembler makes its encoding from the same table (`w65c02.inc`):
+lower case, an address in hex or its name, `a:` before an absolute address under `$100` where the instruction has a
+zero page form (`as` would take that one), an opcode the W65C02S doesn't define as the NOP it runs (`.byte` and its
+bytes).  C has it as `dis_insn` (`asm.h`, with the symbol files' `lbl_load` ...), assembly as `ASMCALL ASM_DIS`
+(`asmlib.inc`).
+
+The library is two banks of the paged ROM: the assembler in the first (`FILE`, `as`'s whole run; and a source
+given a line at a time, BASIC's way: `BEGIN`, then for each pass `PASS`, the caller's symbols with `DEFINE`, the
+lines with `LINE`, and `END`; then `SYMBOL`, `IMAGE` and `DONE`), the disassembler in the second (`DIS`).  It has
+no RAM of its own: the assembler's state is in RAM its caller lends it while it runs (`ASM_RAM`, `$5000`-`$7DFF`),
+and its zero page (`$22` on) is the caller's, put back as each call ends.
 
 ## The system
 

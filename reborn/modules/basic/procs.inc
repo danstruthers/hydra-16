@@ -627,6 +627,12 @@ st_callkw:
             FARN        3, cs_callabs
             rts
 :
+            lda         #K_ASM                              ; (CALL ASM label: an ASM block's, asm.inc)
+            jsr         is_kw
+            bne         :+
+            FARN        3, cs_callasm
+            rts
+:
             lda         tk
             cmp         #TK_NAME
             beq         :+

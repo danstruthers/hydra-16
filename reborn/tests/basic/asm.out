@@ -1,0 +1,12 @@
+illegal in direct mode
+block without its start or end
+line 50: ASM: not an instruction, directive or macro: bogus
+line 20: ASM: undefined: nowhere
+line 10: ASM: missing: no such label in an ASM block
+line 10: block without its start or end
+line 10: ASM: the blocks past 8K
+ 7 
+ 13 
+label not defined
+syntax error
+end

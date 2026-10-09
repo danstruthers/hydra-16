@@ -1138,13 +1138,14 @@ data_end:
             jsr         ca_wr
             jmp         code_sel
 
-; The program compiled (the text region's lines), from its first line; its globals made.  An error: err_entry's
-; (with its line); C = 0 done
+; The program compiled (the text region's lines), from its first line; its globals made; its ASM blocks assembled
+; (asm.inc).  An error: err_entry's (with its line); C = 0 done
 compile_prog:
             tsx
             stx         c_s
             stz         cmode
             jsr         c_begin
+            FARN        3, asm_free                         ; (ASM's code before: given back)
             jsr         sym_reset
             stz         nprocs
             jsr         glob_init
@@ -1191,6 +1192,11 @@ compile_prog:
             jsr         emit_op
             jsr         fix_all
             jsr         data_end
+            lda         nasm                                ; (ASM's blocks assembled, CALL ASM's labels found)
+            ora         asm_nlbl
+            beq         :+
+            FARN        3, asm_build
+:
             clc
             rts
 
@@ -1204,6 +1210,7 @@ c_lines:
             stz         nblk
             stz         stmt_ok
             stz         ty_open
+            stz         asm_open
             stz         inc_seq
             stz         inc_dep
             stz         defstr                              ; (DEFSTR's letters: none at its start)
@@ -1225,11 +1232,20 @@ c_lines:
             jsr         c_scan
             bra         @line
 @done:
+            lda         asm_open                            ; (ASM without END ASM: said at its start)
+            beq         :+
+            stz         asm_open
+            MOVW        cline, asm_l0
+            lda         #ER_BLOCK
+            ldx         #0
+            jmp         c_error
+:
             rts
 
 ; The compiler's state for a line or a program: the base its numbers are read in
 c_begin:
             stz         cs_sp
+            stz         asm_open
             stz         nblk
             stz         cconst
             stz         lref_data
@@ -1263,6 +1279,11 @@ compile_line:
 
 ; A line of the program compiled (pass 2): its label or number, then its statements (stmt.inc)
 c_line:
+            lda         asm_open                            ; (An ASM block's lines: passed over, to END ASM)
+            beq         :+
+            FARN        3, asm_skip
+            rts
+:
             lda         ty_open                             ; (A TYPE's lines: passed over)
             beq         :+
             FARN        3, ty_skip
@@ -1328,8 +1349,14 @@ num_label:
             stz         tsuf
             rts
 
-; A line in pass 1: SUB and FUNCTION (their names and parameters), TYPE (its fields), DEFSTR (its letters)
+; A line in pass 1: SUB and FUNCTION (their names and parameters), TYPE (its fields), DEFSTR (its letters), ASM (its
+; block's lines passed over)
 c_scan:
+            lda         asm_open                            ; (An ASM block's lines: passed over, to END ASM)
+            beq         :+
+            FARN        3, asm_skip
+            rts
+:
             lda         ty_open                             ; (A TYPE's fields: the third bank's)
             beq         :+
             FARN        3, scan_field
@@ -1345,6 +1372,11 @@ c_scan:
             cmp         #TK_KW
             bne         @done
             lda         tkv
+            cmp         #K_ASM                              ; (ASM: its block's lines passed over)
+            bne         @declare
+            FARN        3, asm_scan
+            rts
+@declare:
             cmp         #K_DECLARE                          ; (DECLARE SUB ...: as SUB)
             bne         :+
             jsr         lex_next
