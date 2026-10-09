@@ -229,3 +229,52 @@ small: an empty `FOR` loop's pass is some 360 cycles (`loop`, 19 times HyForth's
 (`calls`, 27 times a `JSR`), a recursion's call deeper (`ack` 7.1 times hylang's), and `MID$`'s new string for
 each character (`chars`, 18 times `C@`).  A call's frame (its arguments by reference, its mark, its locals' defaults)
 is the most of the interpreter's own time now.
+
+### And in its inline assembly
+
+`romfs/bench/benchasm.bas` has the twenty again in BASIC's inline assembly
+([using/basic.md](using/basic.md#inline-assembly)): the same algorithms, sizes and results, each benchmark's work a
+routine in an `ASM` block that `CALL ASM` calls, in 16 bits (every value of these sizes fits), with recursion where the
+others recurse (on the 6502's stack), a subroutine called where they call a function, a multiplication by shifts and
+adds, and the arrays bytes in the blocks' `.bss`.  Each benchmark's reps are a loop of their own around its `CALL ASM`.
+`sim/bench.js` runs it with the others, 50 reps each (`--asm-reps N`; `--no-asm` leaves it out), and the bench test
+checks its results at the quick sizes.  One run of each (October 2026, the same run's HyForth and BASIC):
+
+| Kind | Benchmark | Result | HyForth ms | BASIC ms | ASM ms | ASM/HyForth | BASIC/ASM |
+| :--- | :-------- | -----: | ---------: | -------: | -----: | ----------: | --------: |
+| calls | `calls` | 2000 | 65 | 1,755 | 35.9 | 0.55x | 49x |
+| calls | `fib` | 987 | 182 | 2,690 | 41.6 | 0.23x | 65x |
+| calls | `tak` | 36 | 201 | 1,570 | 25.1 | 0.12x | 63x |
+| calls | `ack` | 168 | 116 | 1,855 | 13.1 | 0.11x | 142x |
+| loops | `loop` | 4000 | 77 | 1,450 | 36.5 | 0.47x | 40x |
+| loops | `while` | 6000 | 423 | 3,135 | 46.2 | 0.11x | 68x |
+| loops | `dotimes` | 6000 | 214 | 1,935 | 55.7 | 0.26x | 35x |
+| loops | `nested` | 1800 | 312 | 2,560 | 27.2 | 0.09x | 94x |
+| arith | `gcd` | 880 | 353 | 2,070 | 22.1 | 0.06x | 94x |
+| arith | `collatz` | 1457 | 291 | 1,595 | 21.0 | 0.07x | 76x |
+| arith | `hash` | 4072 | 673 | 1,960 | 127.2 | 0.19x | 15x |
+| bytes | `sieve` | 172 | 334 | 2,695 | 66.4 | 0.20x | 41x |
+| bytes | `sort` | 407 | 484 | 4,865 | 25.1 | 0.05x | 194x |
+| bytes | `matrix` | 1375 | 1,088 | 2,410 | 75.0 | 0.07x | 32x |
+| bytes | `queens` | 40 | 1,308 | 10,730 | 54.1 | 0.04x | 198x |
+| lists | `mapf` | 9880 | 208 | 1,205 | 31.0 | 0.15x | 39x |
+| lists | `fold` | 964 | 716 | 2,775 | 61.1 | 0.09x | 45x |
+| lists | `each` | 700 | 210 | 1,825 | 16.4 | 0.08x | 111x |
+| text | `chars` | 7 | 204 | 3,625 | 13.6 | 0.07x | 267x |
+| text | `digits` | 2890 | 2,143 | 2,375 | 355.6 | 0.17x | 7x |
+| All | | | 9,602 | 55,080 | 1,150 | 0.12x | 61x |
+
+The last row's ratios are the geometric means: the assembly takes 0.12 of HyForth's time (8.2 times as fast), 0.053 of
+hylang's (19 times) and a 61st of BASIC's.  By kind, ASM/HyForth: calls 0.21x, loops 0.19x, arithmetic 0.095x, arrays
+0.074x, lists 0.10x, text 0.11x; BASIC/ASM 73x, 55x, 48x, 84x, 58x and 42x.
+
+It's nearest HyForth where HyForth's own code is nearly the machine's, a `JSR` for each word and some words inline:
+`calls` (0.55: a call is a `JSR` in both), `loop` (0.47: a `DO LOOP`'s step against a 16-bit count), `dotimes` (0.26)
+and `fib` (0.23).  It's farthest where a step is many words: `queens` (0.04), `sort` (0.05), `gcd` and `collatz` (0.06,
+0.07).  Against BASIC it gains least where BASIC's time was the numbers library's, native already: `digits` (7 times:
+`STR$`) and `hash` (15: its multiplication BASIC's own, the assembly's a loop of shifts and adds); most where BASIC does
+much for each small step: `chars` (267 times: `MID$`'s string for each character), `queens` (198: three arrays' elements
+found for each square, a call for each queen placed) and `sort` (194: an element found for each read and write).  A
+`CALL ASM` itself takes some 1,500 cycles (0.41 ms: its arguments pushed and taken off the value stack, the statement's
+way to the eighth bank), about 1% of the shortest of these, so a routine called often should do a few thousand cycles'
+work for each call.
