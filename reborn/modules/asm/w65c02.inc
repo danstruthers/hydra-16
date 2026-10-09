@@ -35,7 +35,11 @@ N_BBS           = 43
 N_NONE          = 2             ; (???: an undefined opcode's)
 
 .pushseg
+.ifdef W65_BANK2                                            ; (A copy in a second bank: its RODATA2)
+.segment "RODATA2"
+.else
 .rodata
+.endif
 
 ; Each mode's length (the opcode's and its operand's)
 modelen:    .byte       1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 2, 3, 1, 2, 3

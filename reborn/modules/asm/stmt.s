@@ -26,7 +26,7 @@ ML_TEXT         = 3             ;   and its bytes
 
 ; The W65C02S's instructions: their names, each opcode's name and mode, each mode's length (M_*, NAMES, N_*;
 ; names, op_name, op_mode, modelen): the one table, the asm library's (its disassembler reads it as it is)
-.include "asm/w65c02.inc"
+.include "w65c02.inc"
 
 .zeropage
 opp:        .res        2                                   ; A row of optab

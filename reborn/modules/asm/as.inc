@@ -1,7 +1,8 @@
 ; ****************************************************************************
-; as.inc - as's constants, and what its parts share (as.s: the program, its input and output; expr.s: the scanner,
-; expressions, the symbol table and the heap; stmt.s: statements, instructions, directives, macros and segments).
-; Each includes it: a name .global here is one part's, used by the others.  See as.s.
+; as.inc - the assembler's constants, and what its parts share (core.s: the entries, the input and the output; expr.s:
+; the scanner, expressions, the symbol table and the heap; stmt.s: statements, instructions, directives, macros and
+; segments), the asm library's (modules/asm).  Each includes it: a name .global here is one part's, used by the
+; others.  See core.s.
 
 .include "hydra.inc"
 .include "macros.inc"
@@ -18,6 +19,8 @@ CONDS           = 16            ; .if inside .if, at most
 SEGSTACK        = 8             ; .pushseg, at most
 MAX_ERRORS      = 30
 MAX_PARAMS      = 9             ; A macro's parameters, at most
+ZP_FIRST        = $22           ; The library's zero page (the caller's, kept in a call: core.s's zsave) ...
+ZP_LIB          = 16            ;   its bytes (asm.cfg's ZP)
 
 ; Segments, as sdk/asm/hyx2.cfg lays them out
 SEG_ZP          = 0             ; ZEROPAGE: from $22
@@ -51,12 +54,12 @@ CS_OUTER        = $04           ;   and the level it's in assembling
 
 .globalzp   hp, p1, p2, p3
 
-; as.s
+; core.s
 .global     pass, fraw, line, li, nerrors, err, errtok, warn, push_file, find_include, new_frame, frame_buf
 .global     frames, ftype, fnextl, fnexth, fdefl, fdefh, fbuf, imgbase, emit_at
 ; expr.s
 .global     skipws, atend, getid, tok, tlen, sbuf, slen, getstr, expr, val, eu, ef, scope, tokis, isname, here_val
-.global     sym_find, sym_def, sym_set, sym_get, sym_link, sym_each, sref, halloc, hsel, heap_init, sym_init, un_def
+.global     sym_find, sym_def, sym_set, sym_get, sym_link, sym_each, sref, halloc, hsel, heap_init, heap_free, sym_init, un_def
 .global     lower, peek, eat, expect, number_ok, val_zp, defined, tfind
 ; stmt.s
 .global     statement, stmt_init, cdepth, mcol, cseg, soffl, soffh, sbasel, sbaseh, ssizel, ssizeh, seg_end, mline

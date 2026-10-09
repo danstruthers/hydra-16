@@ -57,6 +57,7 @@ lhs:        .res        4                                   ;   (an operator's l
 eu:         .res        1                                   ;   a name in it undefined ...
 ef:         .res        1                                   ;   and defined later in this pass
 scope:      .res        2                                   ; Cheap locals' scope: the normal labels so far
+uhave:      .res        1                                   ; (1: ubank is taken)
 hbank:      .res        HEAP_BANKS                          ; The heap's banks ...
 hbanks:     .res        1                                   ;   how many ...
 hidx:       .res        1                                   ;   the one being filled ...
@@ -1688,6 +1689,7 @@ heap_init:
             jsr         BANKS_ALLOC                         ; The unnamed labels'
             bcs         @done
             sta         ubank
+            inc         uhave
             stz         utotal
             stz         utotal + 1
             ldx         #0
@@ -1698,6 +1700,30 @@ heap_init:
             bne         :-
             clc
 @done:
+            rts
+
+; The heap's banks, and the unnamed labels', given back
+heap_free:
+            ldx         #0
+:
+            cpx         hbanks
+            bcs         :+
+            phx
+            lda         hbank,X
+            ldx         #1
+            jsr         BANKS_FREE
+            plx
+            inx
+            bra         :-
+:
+            stz         hbanks
+            lda         uhave
+            beq         :+
+            lda         ubank
+            ldx         #1
+            jsr         BANKS_FREE
+            stz         uhave
+:
             rts
 
 ; Another bank for the heap.  C = 1: none
