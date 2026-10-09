@@ -50,6 +50,7 @@
 .include "hyx2.inc"
 .include "macros.inc"
 .include "cons.inc"
+.include "serial.inc"                                       ; (The serial port's layer: tx_put and tx_free here too)
 
 POOL            = WIN_ROWS      ; A window's rows: a plane's (128 cells each)
 HIST_MAX        = 128           ; A window's history's rows, at most (two sets of 64: its lines then fit a byte)
@@ -4595,21 +4596,8 @@ fs_raw:
 @long:
             jmp         ser_dirty
 
-; .A into the send ring (the room's been made sure of).  Keeps .A, .X
-tx_put:
-            ldy         tx_head
-            sta         tx_buf,Y
-            iny
-            sty         tx_head
-            rts
-
-; .A = the room in the send ring
-tx_free:
-            sec
-            lda         tx_tail
-            sbc         tx_head
-            dec         a
-            rts
+; .A into the send ring; its room (serial.inc's: this bank sends too)
+            SER_TX_RING
 
 ; The serial port painted, as there's room: the shown window's screen, then its state (ts_ser 1: from the start; 2:
 ; going on).  The rows go as a stream of lines, as they came (a CR and an LF a row; a row an autowrap continued

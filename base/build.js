@@ -54,9 +54,9 @@ function assemble(files, objdir, includes, defines) {
   });
 }
 
-// The base's includes, for a module or a program: the generated hydra.inc, the SDK's core, the hardware's, and the
-// generated errors.inc
-const INCLUDES = [at('obj', 'sdk'), at('sdk', 'asm'), at('include'), at('obj', 'gen')];
+// The base's includes, for a module or a program: the generated hydra.inc, the SDK's core, the hardware's, the
+// generated errors.inc, and the sources the base's modules share with HydraOS's (lib: serial.inc ...)
+const INCLUDES = [at('obj', 'sdk'), at('sdk', 'asm'), at('include'), at('obj', 'gen'), at('lib')];
 
 // A module's link: modules/module.cfg, or moduleN.cfg for N banks
 const moduleCfg = banks => at('modules', banks > 1 ? 'module' + banks + '.cfg' : 'module.cfg');
