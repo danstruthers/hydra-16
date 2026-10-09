@@ -22474,8 +22474,8 @@
 		)
 	)
 	(sheet
-		(at 228.5029 83.7322)
-		(size 16.51 6.35)
+		(at 228.5029 83.82)
+		(size 20.417 6.35)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
@@ -22490,7 +22490,7 @@
 		)
 		(uuid "0b66303c-ed46-41df-a285-d041c923c3ce")
 		(property "Sheetname" "SharedMemory"
-			(at 228.5029 83.0206 0)
+			(at 228.5029 83.1084 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -22499,7 +22499,7 @@
 			)
 		)
 		(property "Sheetfile" "SharedMem.kicad_sch"
-			(at 228.5029 90.6668 0)
+			(at 228.5029 90.7546 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -22600,8 +22600,8 @@
 		)
 	)
 	(sheet
-		(at 228.4924 106.0719)
-		(size 20.32 7.62)
+		(at 228.4924 106.6799)
+		(size 20.32 5.742)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
@@ -22616,7 +22616,7 @@
 		)
 		(uuid "9c3f9893-75ea-4823-afb7-35bb324a2c9f")
 		(property "Sheetname" "FFF_Registers"
-			(at 228.4924 105.3603 0)
+			(at 228.4924 105.9683 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -22625,7 +22625,7 @@
 			)
 		)
 		(property "Sheetfile" "FFF_Registers.kicad_sch"
-			(at 228.4924 114.2765 0)
+			(at 228.4924 113.0065 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -22685,7 +22685,7 @@
 	)
 	(sheet
 		(at 228.6 119.38)
-		(size 16.51 6.35)
+		(size 20.32 6.35)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
@@ -22769,7 +22769,7 @@
 	)
 	(sheet
 		(at 195.58 132.08)
-		(size 16.002 6.35)
+		(size 21.59 6.35)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
@@ -22811,7 +22811,7 @@
 	)
 	(sheet
 		(at 195.58 119.38)
-		(size 14.732 6.35)
+		(size 21.59 6.35)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
