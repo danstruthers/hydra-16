@@ -10,13 +10,13 @@ lib/profile         lib/profile         ; What each shell runs as it starts (rc'
 lib/shell           lib/shell           ; The shell init and wstart start in each window: HyForth's (forth -l)
 lib/windows         lib/windows         ; The windows' chrome (W4): init writes its lines to #c/wctl
 lib/edit/help       lib/edit/help       ; edit's keys (its ^G)
-lib/as/hydra.inc    ../obj/sdk/hydra.inc ; as's include files (/lib/as: .include finds them there): the SDK's ...
-lib/as/hyx2.inc     ../sdk/asm/hyx2.inc
-lib/as/macros.inc   ../sdk/asm/macros.inc
+lib/as/hydra.inc    ../../base/obj/sdk/hydra.inc ; as's include files (/lib/as: .include finds them there): the SDK's ...
+lib/as/hyx2.inc     ../../base/sdk/asm/hyx2.inc
+lib/as/macros.inc   ../../base/sdk/asm/macros.inc
 lib/as/toollib.inc  ../sdk/asm/toollib.inc
 lib/as/toollib.s    ../sdk/asm/toollib.s
-lib/as/srvlib.inc   ../sdk/asm/srvlib.inc
-lib/as/srvlib.s     ../sdk/asm/srvlib.s
+lib/as/srvlib.inc   ../../base/sdk/asm/srvlib.inc
+lib/as/srvlib.s     ../../base/sdk/asm/srvlib.s
 lib/as/nslib.s      ../sdk/asm/nslib.s
 lib/as/numbers.inc  ../obj/sdk/numbers.inc ;   the number libraries' (numbers.inc, numlib.s)
 lib/as/numlib.s     ../sdk/asm/numlib.s

@@ -74,9 +74,9 @@ const STATES = ['free', 'ready', 'wait', 'call', 'idle', 'new', 'sleep', 'block'
 // The OS zero page (include/layout.inc): what the report reads in each task
 const TK = { SP: 0x80, STATE: 0x81, FLAGS: 0x82, PREEMPT: 0x83, BUSY: 0x85 }, TA_NAME = 0x0230;
 
-// The kernel's labels, by BIOS ROM page (obj/kernel/bios.dbg: each label's segment, and each segment's place in
+// The kernel's labels, by BIOS ROM page (../base/obj/kernel/bios.dbg: each label's segment, and each segment's place in
 // the image): { byName: Map (address), pageOf: Map (page), at(pc, page) -> "NAME+n" }
-function labels(file = path.join(ROOT, 'obj', 'kernel', 'bios.dbg')) {
+function labels(file = path.join(ROOT, '..', 'base', 'obj', 'kernel', 'bios.dbg')) {
   const byName = new Map(), pageOf = new Map(), lists = [...Array(16)].map(() => []), segPage = new Map();
   if (fs.existsSync(file)) {
     const text = fs.readFileSync(file, 'latin1').split(/\r?\n/);
@@ -151,9 +151,10 @@ function report(m, lbl) {
     console.log('   ' + hx(w, 1) + ':' + hx(pc, 4) + ' ' + lbl.at(pc, w).padEnd(24) + ' T' + hx(t, 1) + ' A=' + hx(a) + ' X=' + hx(x) + ' Y=' + hx(y) + ' S=' + hx(s) + ' P=' + hx(p));
 }
 
-// The calls' names by their jump table slots, and the errors' by their codes (obj/gen/api.json: tools/apigen.js)
+// The calls' names by their jump table slots, and the errors' by their codes (../base/obj/gen/api.json: the base's
+// tools/apigen.js)
 function api() {
-  const f = path.join(ROOT, 'obj', 'gen', 'api.json');
+  const f = path.join(ROOT, '..', 'base', 'obj', 'gen', 'api.json');
   const a = fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : { calls: [], errors: [] };
   return { calls: new Map(a.calls.map(c => [c.addr, c.name])), errNames: new Map(a.errors.map(e => [e.code, e.name])) };
 }

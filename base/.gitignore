@@ -1,0 +1,6 @@
+# The build's: node build.js makes them.  The BIOS ROM image is kept (for programming the chip without a toolchain):
+# rebuild and commit it with a change to the kernel
+/obj/
+/bin/*
+!/bin/bios.bin
+!/bin/prom*.bin

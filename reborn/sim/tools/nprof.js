@@ -68,7 +68,7 @@ function profile(o) {
     const srcs = fs.readdirSync(md).filter(f => /\.(s|inc)$/.test(f)).map(f => fs.readFileSync(path.join(md, f), 'latin1'));
     const banks = Math.max(1, ...srcs.map(s => Math.max(0, ...[...s.matchAll(/\.segment\s+"CODE([2-8])"/gi)].map(m => +m[1]))));
     const own = path.join(md, name + '.cfg');
-    const cfg = fs.existsSync(own) ? own : path.join(tree, 'modules', banks > 1 ? 'module' + banks + '.cfg' : 'module.cfg');
+    const cfg = fs.existsSync(own) ? own : path.join(tree, '..', 'base', 'modules', banks > 1 ? 'module' + banks + '.cfg' : 'module.cfg');
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'nprof'));
     let t;
     try {
