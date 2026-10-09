@@ -32,6 +32,9 @@ ACT parts are a few ns slower than F parts and have faster edges: check the timi
 
 * U22's spare inputs (pins 11, 15) are tied to GND, and its spare outputs are marked unconnected.
 * ATX pin 20 (-5 V on ATX 1.x supplies; not connected on newer ones) feeds the slots' -5V, which nothing fed before.
+* The power LED (front panel J10 pin 12, through R2's 470 ohms) is lit from +5 V, not from the ATX supply's
+  PWR_OK. PWR_OK is a logic signal, specified to source little current, so an LED loaded it. The main +5 V rail is
+  up only while the supply is on, so the LED still means "on". PWR_OK is now unconnected.
 * Four wires that went nowhere are removed: two drawn over buses on SharedMemory, and one each on BankedROM and
   ZPMirrorRAM.
 * No-connect marks are added on the unused pins: U40's RC and TC, U18's EO, J28 pin 10, and front-panel J10's
@@ -40,8 +43,6 @@ ACT parts are a few ns slower than F parts and have faster edges: check the timi
 
 ## Not changed
 
-* **PWR_OK through R2 to the front panel's pin 12.** If that pin is the power LED, PWR_OK is a logic signal and
-  not meant to light it. The front panel's wiring isn't in the schematic, so it's left as it was.
 * **J1 pin 4** (the banked RAM header) is still unconnected.
 * **The PCB** (`hydra-16.kicad_pcb`) isn't updated. In KiCad, *Tools > Update PCB from Schematic* brings the new
   parts in, to be placed and routed.

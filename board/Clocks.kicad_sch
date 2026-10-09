@@ -5072,16 +5072,6 @@
 	)
 	(wire
 		(pts
-			(xy 185.42 82.55) (xy 187.96 82.55)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "a675ff21-5dfa-4c3b-b105-3b37e6fcaf09")
-	)
-	(wire
-		(pts
 			(xy 99.06 109.22) (xy 104.14 109.22)
 		)
 		(stroke
@@ -10337,4 +10327,60 @@
 	(no_connect (at 180.34 59.69) (uuid "e46a1070-a368-4abc-8422-c68adf4694bb"))
 	(no_connect (at 167.64 62.23) (uuid "e4ae0723-7325-444f-ad5d-ca41c9255c65"))
 	(no_connect (at 180.34 62.23) (uuid "149ca16a-0c9a-4549-a30b-23ae93c7dea1"))
+	(symbol
+		(lib_id "power:+5V")
+		(at 187.96 82.55 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "e3868659-4800-47f7-9d24-c29bff7631f9")
+		(property "Reference" "#PWR0111"
+			(at 187.96 82.55 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Value" "+5V"
+			(at 187.96 87.63 0)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Footprint" ""
+			(at 187.96 82.55 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Datasheet" ""
+			(at 187.96 82.55 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(pin "1" (uuid "b3252e0b-7919-45bc-bc9b-64fe8efae981"))
+		(instances
+			(project ""
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/9a593a77-f18f-43cb-9fdd-893618b7b90a"
+					(reference "#PWR0111")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(no_connect (at 185.42 82.55) (uuid "f0f58914-2874-47d4-be41-ab543934266e"))
+	(text "1.8D: the power LED (J10 pin 12, R2) from +5 V;\nPWR_OK is a logic signal, not an LED driver"
+		(exclude_from_sim no)
+		(at 205.74 116.84 0)
+		(effects
+			(font (size 1.27 1.27))
+			(justify left top)
+		)
+		(uuid "fef12c03-0ab7-4258-953a-42376ebed072")
+	)
 )
