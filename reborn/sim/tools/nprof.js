@@ -45,7 +45,7 @@ function profile(o) {
   const romimg = require(path.join(tree, 'tools', 'romimg.js'));
   const romfs = require(path.join(tree, 'tools', 'romfs.js'));
   const { readManifest, hwtest } = require(path.join(tree, 'build.js'));
-  const { romBank } = require(path.join(tree, 'sim', 'lib', 'machine.js'));
+  const { romBank } = require(path.join(tree, '..', 'base', 'sim', 'lib', 'machine.js'));
 
   // The image: the system's modules and t_rc as init (the tests' image), each module's banks noted
   const bin = (d, n) => fs.readFileSync(path.join(tree, 'obj', d, n + '.bin'));

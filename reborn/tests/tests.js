@@ -26,8 +26,8 @@ const path = require('path');
 const hydrafs = require('../sim/tools/hydrafs.js');
 const { createXmodemPeer } = require('../sim/lib/xmpeer.js');
 const numtest = require('./numtest.js');
-const { VT, DEC_ASCII } = require('../sim/lib/vt.js');
-const { createWin32Input } = require('../sim/lib/win32in.js');
+const { VT, DEC_ASCII } = require('../../base/sim/lib/vt.js');
+const { createWin32Input } = require('../../base/sim/lib/win32in.js');
 
 const IRQ_OFF_MAX = 200;                                      // (docs/design/reimplementation-from-scratch.md, §8: 115200)
 const S1_BYTES = 2000;

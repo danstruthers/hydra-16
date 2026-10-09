@@ -11,9 +11,9 @@
 // (/sd/v); kept in this browser's IndexedDB as the Hydra writes them, and saved as image files on asking.
 //   The setup and the terminal's size are kept in localStorage.
 'use strict';
-const { VT } = require('../lib/vt.js');
-const { KEYNUM } = require('../lib/keynum.js');
-const { WORKLET } = require('../lib/worklet.js');
+const { VT } = require('../../../base/sim/lib/vt.js');
+const { KEYNUM } = require('../../../base/sim/lib/keynum.js');
+const { WORKLET } = require('../../../base/sim/lib/worklet.js');
 const { mkfs } = require('./mkfs.js');
 
 const $ = id => document.getElementById(id);
