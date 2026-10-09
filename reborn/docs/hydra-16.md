@@ -103,7 +103,8 @@ modules (`ser`, `kdev`, and Woz's monitor as init), and nothing of HydraOS's ([t
 * A terminal on the DE-9 (J3), 9600 baud, 8 bits, no parity, 1 stop bit, RTS/CTS, through a straight-through cable ([the
   ACIA](hardware.md#acia-65c51-u3-port-1-irq-line-1)).  The PC tool (`sim/tools/hydrapc.js`) is a terminal that also
   serves a folder of the PC as `/pc`.
-* An SD card adapter on J18 (SPI device 0), if you have one: the card is `/sd/0`.
+* An SD card adapter on J18 (SPI device 0), if you have one: the card is `/sd/0`.  HydraOS's card (`bin/sdcard.img`: the
+  samples and songs) goes onto one with `node sim/tools/sdwrite.js bin/sdcard.img DISK` (`--list` shows the PC's disks).
 
 The boot prints POST's lines, the drivers starting, and HyForth's prompt, `/>`.
 
@@ -429,7 +430,9 @@ POST's, a driver's) are `/dev/kmesg`, its last 4K.
   (`romfs/bench`), the same algorithms and results, timed against each other by kind ([hylang.md](hylang.md#against-hyforth),
   [basic.md](basic.md#against-hylang-and-hyforth)).
 * **The PC tools** (`sim/tools`): `hydrapc.js` (the PC tool: the terminal, and `/pc` over the serial line; `npm install`
-  in `sim/` for its serial port), `hydrafs.js` (card images), `pcfs.js` (`/pc`'s server), `hysong.js` (scores to ZSM
+  in `sim/` for its serial port), `hydrafs.js` (card images), `sdwrite.js` (an image onto a card in the PC's reader:
+  `node sim/tools/sdwrite.js --list`, then `node sim/tools/sdwrite.js bin/sdcard.img NUMBER`; it refuses the system's disk and,
+  without `--force`, one that isn't removable, and reads the card back), `pcfs.js` (`/pc`'s server), `hysong.js` (scores to ZSM
   songs).
 
 [The README](../README.md) has every command.
