@@ -3293,6 +3293,10 @@
 		(color 0 0 0 0)
 		(uuid "f6a8887c-99e6-4aec-bc4f-32670d1e6ce1")
 	)
+	(no_connect
+		(at 118.11 49.53)
+		(uuid "9cafbca3-0093-4967-a39d-9fe427a9b112")
+	)
 	(bus_entry
 		(at 77.47 148.59)
 		(size -2.54 2.54)
@@ -10337,5 +10341,4 @@
 			)
 		)
 	)
-	(no_connect (at 118.11 49.53) (uuid "9cafbca3-0093-4967-a39d-9fe427a9b112"))
 )

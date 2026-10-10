@@ -3288,6 +3288,17 @@
 			(embedded_fonts no)
 		)
 	)
+	(text "Decoupling (1.8D): C80 at the YM2151, C81 at the YM3012, C82/C83 at U42's\n+12 V/-12 V, C84/C85 at IC9's. R29 (0 ohms, or a ferrite bead) joins GNDA\nto GND here, beside the YM3012: before, they met only inside the supply."
+		(exclude_from_sim no)
+		(at 110.49 130.81 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left top)
+		)
+		(uuid "9d2e852f-5648-4470-89d9-a1b9c4961128")
+	)
 	(junction
 		(at 177.8 80.01)
 		(diameter 0)
@@ -3720,6 +3731,16 @@
 	)
 	(wire
 		(pts
+			(xy 144.78 147.32) (xy 144.78 144.78)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "0e9ffd6d-d1e6-40e2-810f-b9aed68a7e19")
+	)
+	(wire
+		(pts
 			(xy 49.53 109.22) (xy 53.34 109.22)
 		)
 		(stroke
@@ -3790,6 +3811,16 @@
 	)
 	(wire
 		(pts
+			(xy 165.1 147.32) (xy 165.1 144.78)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "18be3354-abc7-4f40-b0a9-383ba8b6b93d")
+	)
+	(wire
+		(pts
 			(xy 124.46 114.3) (xy 138.43 114.3)
 		)
 		(stroke
@@ -3807,6 +3838,16 @@
 			(type default)
 		)
 		(uuid "19f53fa0-c679-402f-a931-2e946717804d")
+	)
+	(wire
+		(pts
+			(xy 144.78 152.4) (xy 144.78 154.94)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1bd5b3e8-f93c-4e66-a110-5ddbce58ca2a")
 	)
 	(wire
 		(pts
@@ -4070,6 +4111,16 @@
 	)
 	(wire
 		(pts
+			(xy 114.3 147.32) (xy 114.3 144.78)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "3f747f86-b3d8-4f9f-aa74-5caf6cd3cfdc")
+	)
+	(wire
+		(pts
 			(xy 222.25 59.69) (xy 224.79 59.69)
 		)
 		(stroke
@@ -4097,6 +4148,16 @@
 			(type default)
 		)
 		(uuid "425ca909-a5aa-4e55-a409-9f014fa0d55d")
+	)
+	(wire
+		(pts
+			(xy 134.62 152.4) (xy 134.62 154.94)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "42c03d4a-b6c2-4ba5-8d6e-e0382ebf8706")
 	)
 	(wire
 		(pts
@@ -4157,6 +4218,16 @@
 			(type default)
 		)
 		(uuid "4cbe3134-5e16-4ee0-897d-5d51f221085c")
+	)
+	(wire
+		(pts
+			(xy 124.46 147.32) (xy 124.46 144.78)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4dd6f468-9b42-46cd-bdee-ec15ffc7579a")
 	)
 	(wire
 		(pts
@@ -4550,6 +4621,16 @@
 	)
 	(wire
 		(pts
+			(xy 114.3 152.4) (xy 114.3 154.94)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7ecad5cd-ed60-45ad-8b8c-13ea69e00684")
+	)
+	(wire
+		(pts
 			(xy 254 39.37) (xy 254 64.77)
 		)
 		(stroke
@@ -4717,6 +4798,16 @@
 			(type default)
 		)
 		(uuid "90deb0cc-f78a-4f04-9646-41b394004da2")
+	)
+	(wire
+		(pts
+			(xy 154.94 152.4) (xy 154.94 154.94)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9427dc22-0ca9-4eea-bc87-37f861924249")
 	)
 	(wire
 		(pts
@@ -4990,6 +5081,16 @@
 	)
 	(wire
 		(pts
+			(xy 134.62 147.32) (xy 134.62 144.78)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ae906bbc-2d7d-4239-915a-ff3a9da330d5")
+	)
+	(wire
+		(pts
 			(xy 217.17 67.31) (xy 222.25 67.31)
 		)
 		(stroke
@@ -5080,6 +5181,16 @@
 	)
 	(wire
 		(pts
+			(xy 165.1 152.4) (xy 165.1 154.94)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b9937ade-52a0-409c-8a98-18c2e2f5baac")
+	)
+	(wire
+		(pts
 			(xy 254 69.85) (xy 257.81 69.85)
 		)
 		(stroke
@@ -5097,6 +5208,16 @@
 			(type default)
 		)
 		(uuid "bb0198e8-1e80-49c5-b0f9-1540d54286fb")
+	)
+	(wire
+		(pts
+			(xy 124.46 152.4) (xy 124.46 154.94)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "bbca4bdb-4fea-47c3-a4a8-67a25c5b83b8")
 	)
 	(bus
 		(pts
@@ -5320,6 +5441,16 @@
 	)
 	(wire
 		(pts
+			(xy 177.8 153.67) (xy 177.8 156.21)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e1159378-b028-44b9-8ad8-c3a2c092ddae")
+	)
+	(wire
+		(pts
 			(xy 132.08 85.09) (xy 167.64 85.09)
 		)
 		(stroke
@@ -5520,6 +5651,16 @@
 	)
 	(wire
 		(pts
+			(xy 154.94 147.32) (xy 154.94 144.78)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f72ac0ba-0747-41a0-9fec-59c789cc4eaf")
+	)
+	(wire
+		(pts
 			(xy 217.17 59.69) (xy 217.17 62.23)
 		)
 		(stroke
@@ -5557,6 +5698,16 @@
 			(type default)
 		)
 		(uuid "fb53f3bd-0172-4d1d-88a3-f31e5c399510")
+	)
+	(wire
+		(pts
+			(xy 177.8 146.05) (xy 177.8 143.51)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "fdd0fcea-83c6-4d7d-ad7d-6e34fd6540d1")
 	)
 	(wire
 		(pts
@@ -6222,6 +6373,70 @@
 		)
 	)
 	(symbol
+		(lib_id "power:+5V")
+		(at 114.3 144.78 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "08e49ad5-956a-444e-bcf0-cf50e42b60c5")
+		(property "Reference" "#PWR091"
+			(at 114.3 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "+5V"
+			(at 114.3 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 114.3 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 114.3 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 114.3 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "c12bf5a7-365d-4b4a-9cf8-836fb5e3e390")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR091")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "dk_Linear-Amplifiers-Instrumentation-OP-Amps-Buffer-Amps:TL074CN")
 		(at 177.8 88.9 0)
 		(unit 4)
@@ -6435,6 +6650,70 @@
 		)
 	)
 	(symbol
+		(lib_id "power:GND")
+		(at 177.8 156.21 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "0bac86ce-dff8-4e25-b48e-7947a131e848")
+		(property "Reference" "#PWR0104"
+			(at 177.8 156.21 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 177.8 161.29 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 177.8 156.21 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 177.8 156.21 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 177.8 156.21 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "f17ba1c9-b606-46a4-8914-b19224faec11")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR0104")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Device:R")
 		(at 146.05 81.28 90)
 		(unit 1)
@@ -6496,6 +6775,70 @@
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
 					(reference "R3")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GNDA")
+		(at 154.94 154.94 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "12579f8d-4963-464c-86fa-fa5904c9f5ea")
+		(property "Reference" "#PWR0100"
+			(at 154.94 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GNDA"
+			(at 154.94 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 154.94 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 154.94 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 154.94 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "7af322ea-5e64-4544-9483-94d86d78df41")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR0100")
 					(unit 1)
 				)
 			)
@@ -6633,6 +6976,203 @@
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
 					(reference "IC9")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:-12V")
+		(at 165.1 154.94 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "27100ae4-6de5-4179-9868-dff44e1e8614")
+		(property "Reference" "#PWR0102"
+			(at 165.1 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "-12V"
+			(at 165.1 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 165.1 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 165.1 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 165.1 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "623ac84e-b56a-477b-b444-ce6c70dbc4bc")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR0102")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:+12V")
+		(at 154.94 144.78 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "2948900f-85ee-4eeb-adfb-91473e2ee66c")
+		(property "Reference" "#PWR099"
+			(at 154.94 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "+12V"
+			(at 154.94 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 154.94 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 154.94 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 154.94 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "14d86e95-3b33-4142-b653-b26b3723e21b")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR099")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C_Small")
+		(at 165.1 149.86 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "2e8c35f4-1d98-414c-8b3e-019acd2e1f69")
+		(property "Reference" "C85"
+			(at 166.37 148.59 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "104"
+			(at 166.37 151.13 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
+			(at 165.1 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 165.1 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Decoupling (1.8D) at IC9 (LF353), -12 V"
+			(at 165.1 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "94109478-23d7-4688-aaba-fa6e5f0bd296")
+		)
+		(pin "2"
+			(uuid "007bcd4e-f0d9-4a45-9011-bb88234b4468")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "C85")
 					(unit 1)
 				)
 			)
@@ -6911,6 +7451,70 @@
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
 					(reference "U42")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 114.3 154.94 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "3ac4aac4-cb0d-4ad6-83a5-3a384f28ee80")
+		(property "Reference" "#PWR092"
+			(at 114.3 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 114.3 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 114.3 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 114.3 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 114.3 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "1b883859-eb7e-48e1-a6bd-8a86b6441bce")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR092")
 					(unit 1)
 				)
 			)
@@ -7370,6 +7974,70 @@
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
 					(reference "R16")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GNDA")
+		(at 165.1 144.78 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "56ea6e21-d909-4dad-82f2-e02ec94440c0")
+		(property "Reference" "#PWR0101"
+			(at 165.1 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GNDA"
+			(at 165.1 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 165.1 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 165.1 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 165.1 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "3e1e26f5-f8f9-4d45-b6ca-bcad8fbedd6f")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR0101")
 					(unit 1)
 				)
 			)
@@ -7841,6 +8509,139 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:C_Small")
+		(at 154.94 149.86 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "83308762-e670-4383-8051-43e03581860b")
+		(property "Reference" "C84"
+			(at 156.21 148.59 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "104"
+			(at 156.21 151.13 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
+			(at 154.94 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 154.94 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Decoupling (1.8D) at IC9 (LF353), +12 V"
+			(at 154.94 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "2655ce20-e429-49c3-8961-bfe1289d42a1")
+		)
+		(pin "2"
+			(uuid "dcf9dbad-43d7-48c8-8ea1-4cd20cbec5de")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "C84")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GNDA")
+		(at 134.62 154.94 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "857c6ce0-eaf5-4ed8-a1c2-97411b63649e")
+		(property "Reference" "#PWR096"
+			(at 134.62 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GNDA"
+			(at 134.62 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 134.62 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 134.62 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 134.62 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "b1cf9f4c-81ea-4695-8f05-c22fcb8a01e2")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR096")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Device:R")
 		(at 209.55 57.15 90)
 		(unit 1)
@@ -8269,6 +9070,70 @@
 		)
 	)
 	(symbol
+		(lib_id "power:-12V")
+		(at 144.78 154.94 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "9c896828-a1c9-4208-9aa5-abd4d3460f80")
+		(property "Reference" "#PWR098"
+			(at 144.78 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "-12V"
+			(at 144.78 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 144.78 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 144.78 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 144.78 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "4f4f5603-fe7d-4dcb-926e-5a1f5b13d738")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR098")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_name "R_2")
 		(lib_id "Device:R")
 		(at 222.25 63.5 0)
@@ -8398,6 +9263,70 @@
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
 					(reference "R7")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GNDA")
+		(at 177.8 143.51 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "a8a7b3f7-7b7e-475a-9616-eae54f7ad6ac")
+		(property "Reference" "#PWR0103"
+			(at 177.8 143.51 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GNDA"
+			(at 177.8 138.43 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 177.8 143.51 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 177.8 143.51 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 177.8 143.51 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "6190e9ad-5ce2-4353-9a74-d4f7a85a1aa7")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR0103")
 					(unit 1)
 				)
 			)
@@ -8673,6 +9602,70 @@
 		)
 	)
 	(symbol
+		(lib_id "power:GND")
+		(at 124.46 154.94 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "bd99a6d0-4e00-4469-b732-32779dfb5581")
+		(property "Reference" "#PWR094"
+			(at 124.46 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 124.46 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 124.46 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 124.46 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 124.46 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "87037255-6f6c-4124-9397-a5345d4e8c30")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR094")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Device:R")
 		(at 209.55 62.23 90)
 		(unit 1)
@@ -8734,6 +9727,75 @@
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
 					(reference "R10")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C_Small")
+		(at 114.3 149.86 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "be460c1c-779d-45b8-924e-d884490acc4e")
+		(property "Reference" "C80"
+			(at 115.57 148.59 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "104"
+			(at 115.57 151.13 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
+			(at 114.3 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 114.3 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Decoupling (1.8D) at U38 (YM2151)"
+			(at 114.3 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "d9533a05-452c-43eb-bcf9-a92a60176f48")
+		)
+		(pin "2"
+			(uuid "cad837b8-0fc8-40ed-8590-f2d5a54ca691")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "C80")
 					(unit 1)
 				)
 			)
@@ -8868,6 +9930,75 @@
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
 					(reference "R9")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C_Small")
+		(at 124.46 149.86 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "c6aff8d6-36d5-4ede-9cd0-07cc04ceac16")
+		(property "Reference" "C81"
+			(at 125.73 148.59 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "104"
+			(at 125.73 151.13 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
+			(at 124.46 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 124.46 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Decoupling (1.8D) at U41 (YM3012)"
+			(at 124.46 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "8cbe000b-14c5-43af-9d70-a951387bf33d")
+		)
+		(pin "2"
+			(uuid "ed525b34-8d43-43c6-93f7-a933d4f1a2ce")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "C81")
 					(unit 1)
 				)
 			)
@@ -9010,6 +10141,75 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:R")
+		(at 177.8 149.86 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "cdbe1acd-d4a5-4490-9e4a-722929eaccc2")
+		(property "Reference" "R29"
+			(at 180.34 148.59 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "0"
+			(at 180.34 151.13 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal"
+			(at 177.8 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 177.8 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "GNDA joined to GND once, by the YM3012 (1.8D): before, only inside the power supply"
+			(at 177.8 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "5aeeeadb-5971-4543-bbfa-8aba5d034383")
+		)
+		(pin "2"
+			(uuid "05000dbf-4be4-4c1c-adfc-6d8d95e4943e")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "R29")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Yamaha 2151-3012:YM2151")
 		(at 54.61 191.77 0)
 		(unit 2)
@@ -9140,6 +10340,203 @@
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
 					(reference "U38")
 					(unit 2)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:+5V")
+		(at 124.46 144.78 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "d570eefe-caa6-4001-a0ff-9543e058d2da")
+		(property "Reference" "#PWR093"
+			(at 124.46 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "+5V"
+			(at 124.46 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 124.46 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 124.46 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 124.46 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "2c4277dd-0f95-42bc-8ed3-d59ad7b111fc")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR093")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C_Small")
+		(at 134.62 149.86 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "e5c7f175-13a2-4099-8125-043ebcec163e")
+		(property "Reference" "C82"
+			(at 135.89 148.59 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "104"
+			(at 135.89 151.13 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
+			(at 134.62 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 134.62 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Decoupling (1.8D) at U42 (TL074), +12 V"
+			(at 134.62 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "2a58e768-5ab2-45ed-8e57-5117f1ab4d21")
+		)
+		(pin "2"
+			(uuid "cb84076e-d7e3-448f-8771-7d747bb5614b")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "C82")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:+12V")
+		(at 134.62 144.78 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "e5d068ec-42e4-4f20-960d-6451054edc5e")
+		(property "Reference" "#PWR095"
+			(at 134.62 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "+12V"
+			(at 134.62 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 134.62 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 134.62 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 134.62 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "8c2ab4d7-5c29-42f9-bba8-ccfd49f2fe9f")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR095")
+					(unit 1)
 				)
 			)
 		)
@@ -9358,6 +10755,75 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:C_Small")
+		(at 144.78 149.86 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "eee81596-8c37-4060-a9e0-6f72add274c2")
+		(property "Reference" "C83"
+			(at 146.05 148.59 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "104"
+			(at 146.05 151.13 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
+			(at 144.78 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 144.78 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Decoupling (1.8D) at U42 (TL074), -12 V"
+			(at 144.78 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "655da1d7-6d20-4114-a361-510f9b5abc22")
+		)
+		(pin "2"
+			(uuid "3d47776c-cfdc-4266-a144-59fcaef42468")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "C83")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "dk_Rectangular-Connectors-Headers-Male-Pins:22-23-2021")
 		(at 195.58 45.72 180)
 		(unit 1)
@@ -9519,6 +10985,70 @@
 		)
 	)
 	(symbol
+		(lib_id "power:GNDA")
+		(at 144.78 144.78 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "feaaef81-fa8a-4121-9415-006f7f1bd1c0")
+		(property "Reference" "#PWR097"
+			(at 144.78 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GNDA"
+			(at 144.78 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 144.78 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 144.78 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 144.78 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "ace3672d-a206-47ac-86f6-bed3a8e28292")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR097")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Device:R")
 		(at 209.55 105.41 90)
 		(unit 1)
@@ -9651,1113 +11181,5 @@
 				)
 			)
 		)
-	)
-	(symbol
-		(lib_id "Device:C_Small")
-		(at 114.3 149.86 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "be460c1c-779d-45b8-924e-d884490acc4e")
-		(property "Reference" "C80"
-			(at 115.57 148.59 0)
-			(effects
-				(font (size 1.27 1.27))
-				(justify left)
-			)
-		)
-		(property "Value" "104"
-			(at 115.57 151.13 0)
-			(effects
-				(font (size 1.27 1.27))
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
-			(at 114.3 149.86 0)
-			(effects
-				(font (size 1.27 1.27))
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 114.3 149.86 0)
-			(effects
-				(font (size 1.27 1.27))
-				(hide yes)
-			)
-		)
-		(property "Description" "Decoupling (1.8D) at U38 (YM2151)"
-			(at 114.3 149.86 0)
-			(effects
-				(font (size 1.27 1.27))
-				(hide yes)
-			)
-		)
-		(pin "1" (uuid "d9533a05-452c-43eb-bcf9-a92a60176f48"))
-		(pin "2" (uuid "cad837b8-0fc8-40ed-8590-f2d5a54ca691"))
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "C80")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(wire
-		(pts (xy 114.3 147.32) (xy 114.3 144.78))
-		(stroke (width 0) (type default))
-		(uuid "3f747f86-b3d8-4f9f-aa74-5caf6cd3cfdc")
-	)
-	(symbol
-		(lib_id "power:+5V")
-		(at 114.3 144.78 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "08e49ad5-956a-444e-bcf0-cf50e42b60c5")
-		(property "Reference" "#PWR091"
-			(at 114.3 144.78 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(property "Value" "+5V"
-			(at 114.3 139.7 0)
-			(effects
-				(font (size 1.27 1.27))
-			)
-		)
-		(property "Footprint" ""
-			(at 114.3 144.78 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(property "Datasheet" ""
-			(at 114.3 144.78 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(pin "1" (uuid "c12bf5a7-365d-4b4a-9cf8-836fb5e3e390"))
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "#PWR091")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(wire
-		(pts (xy 114.3 152.4) (xy 114.3 154.94))
-		(stroke (width 0) (type default))
-		(uuid "7ecad5cd-ed60-45ad-8b8c-13ea69e00684")
-	)
-	(symbol
-		(lib_id "power:GND")
-		(at 114.3 154.94 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "3ac4aac4-cb0d-4ad6-83a5-3a384f28ee80")
-		(property "Reference" "#PWR092"
-			(at 114.3 154.94 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(property "Value" "GND"
-			(at 114.3 160.02 0)
-			(effects
-				(font (size 1.27 1.27))
-			)
-		)
-		(property "Footprint" ""
-			(at 114.3 154.94 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(property "Datasheet" ""
-			(at 114.3 154.94 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(pin "1" (uuid "1b883859-eb7e-48e1-a6bd-8a86b6441bce"))
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "#PWR092")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:C_Small")
-		(at 124.46 149.86 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "c6aff8d6-36d5-4ede-9cd0-07cc04ceac16")
-		(property "Reference" "C81"
-			(at 125.73 148.59 0)
-			(effects
-				(font (size 1.27 1.27))
-				(justify left)
-			)
-		)
-		(property "Value" "104"
-			(at 125.73 151.13 0)
-			(effects
-				(font (size 1.27 1.27))
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
-			(at 124.46 149.86 0)
-			(effects
-				(font (size 1.27 1.27))
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 124.46 149.86 0)
-			(effects
-				(font (size 1.27 1.27))
-				(hide yes)
-			)
-		)
-		(property "Description" "Decoupling (1.8D) at U41 (YM3012)"
-			(at 124.46 149.86 0)
-			(effects
-				(font (size 1.27 1.27))
-				(hide yes)
-			)
-		)
-		(pin "1" (uuid "8cbe000b-14c5-43af-9d70-a951387bf33d"))
-		(pin "2" (uuid "ed525b34-8d43-43c6-93f7-a933d4f1a2ce"))
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "C81")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(wire
-		(pts (xy 124.46 147.32) (xy 124.46 144.78))
-		(stroke (width 0) (type default))
-		(uuid "4dd6f468-9b42-46cd-bdee-ec15ffc7579a")
-	)
-	(symbol
-		(lib_id "power:+5V")
-		(at 124.46 144.78 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "d570eefe-caa6-4001-a0ff-9543e058d2da")
-		(property "Reference" "#PWR093"
-			(at 124.46 144.78 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(property "Value" "+5V"
-			(at 124.46 139.7 0)
-			(effects
-				(font (size 1.27 1.27))
-			)
-		)
-		(property "Footprint" ""
-			(at 124.46 144.78 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(property "Datasheet" ""
-			(at 124.46 144.78 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(pin "1" (uuid "2c4277dd-0f95-42bc-8ed3-d59ad7b111fc"))
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "#PWR093")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(wire
-		(pts (xy 124.46 152.4) (xy 124.46 154.94))
-		(stroke (width 0) (type default))
-		(uuid "bbca4bdb-4fea-47c3-a4a8-67a25c5b83b8")
-	)
-	(symbol
-		(lib_id "power:GND")
-		(at 124.46 154.94 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "bd99a6d0-4e00-4469-b732-32779dfb5581")
-		(property "Reference" "#PWR094"
-			(at 124.46 154.94 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(property "Value" "GND"
-			(at 124.46 160.02 0)
-			(effects
-				(font (size 1.27 1.27))
-			)
-		)
-		(property "Footprint" ""
-			(at 124.46 154.94 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(property "Datasheet" ""
-			(at 124.46 154.94 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(pin "1" (uuid "87037255-6f6c-4124-9397-a5345d4e8c30"))
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "#PWR094")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:C_Small")
-		(at 134.62 149.86 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "e5c7f175-13a2-4099-8125-043ebcec163e")
-		(property "Reference" "C82"
-			(at 135.89 148.59 0)
-			(effects
-				(font (size 1.27 1.27))
-				(justify left)
-			)
-		)
-		(property "Value" "104"
-			(at 135.89 151.13 0)
-			(effects
-				(font (size 1.27 1.27))
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
-			(at 134.62 149.86 0)
-			(effects
-				(font (size 1.27 1.27))
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 134.62 149.86 0)
-			(effects
-				(font (size 1.27 1.27))
-				(hide yes)
-			)
-		)
-		(property "Description" "Decoupling (1.8D) at U42 (TL074), +12 V"
-			(at 134.62 149.86 0)
-			(effects
-				(font (size 1.27 1.27))
-				(hide yes)
-			)
-		)
-		(pin "1" (uuid "2a58e768-5ab2-45ed-8e57-5117f1ab4d21"))
-		(pin "2" (uuid "cb84076e-d7e3-448f-8771-7d747bb5614b"))
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "C82")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(wire
-		(pts (xy 134.62 147.32) (xy 134.62 144.78))
-		(stroke (width 0) (type default))
-		(uuid "ae906bbc-2d7d-4239-915a-ff3a9da330d5")
-	)
-	(symbol
-		(lib_id "power:+12V")
-		(at 134.62 144.78 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "e5d068ec-42e4-4f20-960d-6451054edc5e")
-		(property "Reference" "#PWR095"
-			(at 134.62 144.78 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(property "Value" "+12V"
-			(at 134.62 139.7 0)
-			(effects
-				(font (size 1.27 1.27))
-			)
-		)
-		(property "Footprint" ""
-			(at 134.62 144.78 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(property "Datasheet" ""
-			(at 134.62 144.78 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(pin "1" (uuid "8c2ab4d7-5c29-42f9-bba8-ccfd49f2fe9f"))
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "#PWR095")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(wire
-		(pts (xy 134.62 152.4) (xy 134.62 154.94))
-		(stroke (width 0) (type default))
-		(uuid "42c03d4a-b6c2-4ba5-8d6e-e0382ebf8706")
-	)
-	(symbol
-		(lib_id "power:GNDA")
-		(at 134.62 154.94 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "857c6ce0-eaf5-4ed8-a1c2-97411b63649e")
-		(property "Reference" "#PWR096"
-			(at 134.62 154.94 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(property "Value" "GNDA"
-			(at 134.62 160.02 0)
-			(effects
-				(font (size 1.27 1.27))
-			)
-		)
-		(property "Footprint" ""
-			(at 134.62 154.94 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(property "Datasheet" ""
-			(at 134.62 154.94 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(pin "1" (uuid "b1cf9f4c-81ea-4695-8f05-c22fcb8a01e2"))
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "#PWR096")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:C_Small")
-		(at 144.78 149.86 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "eee81596-8c37-4060-a9e0-6f72add274c2")
-		(property "Reference" "C83"
-			(at 146.05 148.59 0)
-			(effects
-				(font (size 1.27 1.27))
-				(justify left)
-			)
-		)
-		(property "Value" "104"
-			(at 146.05 151.13 0)
-			(effects
-				(font (size 1.27 1.27))
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
-			(at 144.78 149.86 0)
-			(effects
-				(font (size 1.27 1.27))
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 144.78 149.86 0)
-			(effects
-				(font (size 1.27 1.27))
-				(hide yes)
-			)
-		)
-		(property "Description" "Decoupling (1.8D) at U42 (TL074), -12 V"
-			(at 144.78 149.86 0)
-			(effects
-				(font (size 1.27 1.27))
-				(hide yes)
-			)
-		)
-		(pin "1" (uuid "655da1d7-6d20-4114-a361-510f9b5abc22"))
-		(pin "2" (uuid "3d47776c-cfdc-4266-a144-59fcaef42468"))
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "C83")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(wire
-		(pts (xy 144.78 147.32) (xy 144.78 144.78))
-		(stroke (width 0) (type default))
-		(uuid "0e9ffd6d-d1e6-40e2-810f-b9aed68a7e19")
-	)
-	(symbol
-		(lib_id "power:GNDA")
-		(at 144.78 144.78 180)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "feaaef81-fa8a-4121-9415-006f7f1bd1c0")
-		(property "Reference" "#PWR097"
-			(at 144.78 144.78 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(property "Value" "GNDA"
-			(at 144.78 139.7 0)
-			(effects
-				(font (size 1.27 1.27))
-			)
-		)
-		(property "Footprint" ""
-			(at 144.78 144.78 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(property "Datasheet" ""
-			(at 144.78 144.78 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(pin "1" (uuid "ace3672d-a206-47ac-86f6-bed3a8e28292"))
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "#PWR097")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(wire
-		(pts (xy 144.78 152.4) (xy 144.78 154.94))
-		(stroke (width 0) (type default))
-		(uuid "1bd5b3e8-f93c-4e66-a110-5ddbce58ca2a")
-	)
-	(symbol
-		(lib_id "power:-12V")
-		(at 144.78 154.94 180)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "9c896828-a1c9-4208-9aa5-abd4d3460f80")
-		(property "Reference" "#PWR098"
-			(at 144.78 154.94 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(property "Value" "-12V"
-			(at 144.78 160.02 0)
-			(effects
-				(font (size 1.27 1.27))
-			)
-		)
-		(property "Footprint" ""
-			(at 144.78 154.94 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(property "Datasheet" ""
-			(at 144.78 154.94 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(pin "1" (uuid "4f4f5603-fe7d-4dcb-926e-5a1f5b13d738"))
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "#PWR098")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:C_Small")
-		(at 154.94 149.86 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "83308762-e670-4383-8051-43e03581860b")
-		(property "Reference" "C84"
-			(at 156.21 148.59 0)
-			(effects
-				(font (size 1.27 1.27))
-				(justify left)
-			)
-		)
-		(property "Value" "104"
-			(at 156.21 151.13 0)
-			(effects
-				(font (size 1.27 1.27))
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
-			(at 154.94 149.86 0)
-			(effects
-				(font (size 1.27 1.27))
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 154.94 149.86 0)
-			(effects
-				(font (size 1.27 1.27))
-				(hide yes)
-			)
-		)
-		(property "Description" "Decoupling (1.8D) at IC9 (LF353), +12 V"
-			(at 154.94 149.86 0)
-			(effects
-				(font (size 1.27 1.27))
-				(hide yes)
-			)
-		)
-		(pin "1" (uuid "2655ce20-e429-49c3-8961-bfe1289d42a1"))
-		(pin "2" (uuid "dcf9dbad-43d7-48c8-8ea1-4cd20cbec5de"))
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "C84")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(wire
-		(pts (xy 154.94 147.32) (xy 154.94 144.78))
-		(stroke (width 0) (type default))
-		(uuid "f72ac0ba-0747-41a0-9fec-59c789cc4eaf")
-	)
-	(symbol
-		(lib_id "power:+12V")
-		(at 154.94 144.78 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "2948900f-85ee-4eeb-adfb-91473e2ee66c")
-		(property "Reference" "#PWR099"
-			(at 154.94 144.78 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(property "Value" "+12V"
-			(at 154.94 139.7 0)
-			(effects
-				(font (size 1.27 1.27))
-			)
-		)
-		(property "Footprint" ""
-			(at 154.94 144.78 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(property "Datasheet" ""
-			(at 154.94 144.78 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(pin "1" (uuid "14d86e95-3b33-4142-b653-b26b3723e21b"))
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "#PWR099")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(wire
-		(pts (xy 154.94 152.4) (xy 154.94 154.94))
-		(stroke (width 0) (type default))
-		(uuid "9427dc22-0ca9-4eea-bc87-37f861924249")
-	)
-	(symbol
-		(lib_id "power:GNDA")
-		(at 154.94 154.94 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "12579f8d-4963-464c-86fa-fa5904c9f5ea")
-		(property "Reference" "#PWR0100"
-			(at 154.94 154.94 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(property "Value" "GNDA"
-			(at 154.94 160.02 0)
-			(effects
-				(font (size 1.27 1.27))
-			)
-		)
-		(property "Footprint" ""
-			(at 154.94 154.94 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(property "Datasheet" ""
-			(at 154.94 154.94 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(pin "1" (uuid "7af322ea-5e64-4544-9483-94d86d78df41"))
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "#PWR0100")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:C_Small")
-		(at 165.1 149.86 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "2e8c35f4-1d98-414c-8b3e-019acd2e1f69")
-		(property "Reference" "C85"
-			(at 166.37 148.59 0)
-			(effects
-				(font (size 1.27 1.27))
-				(justify left)
-			)
-		)
-		(property "Value" "104"
-			(at 166.37 151.13 0)
-			(effects
-				(font (size 1.27 1.27))
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
-			(at 165.1 149.86 0)
-			(effects
-				(font (size 1.27 1.27))
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 165.1 149.86 0)
-			(effects
-				(font (size 1.27 1.27))
-				(hide yes)
-			)
-		)
-		(property "Description" "Decoupling (1.8D) at IC9 (LF353), -12 V"
-			(at 165.1 149.86 0)
-			(effects
-				(font (size 1.27 1.27))
-				(hide yes)
-			)
-		)
-		(pin "1" (uuid "94109478-23d7-4688-aaba-fa6e5f0bd296"))
-		(pin "2" (uuid "007bcd4e-f0d9-4a45-9011-bb88234b4468"))
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "C85")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(wire
-		(pts (xy 165.1 147.32) (xy 165.1 144.78))
-		(stroke (width 0) (type default))
-		(uuid "18be3354-abc7-4f40-b0a9-383ba8b6b93d")
-	)
-	(symbol
-		(lib_id "power:GNDA")
-		(at 165.1 144.78 180)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "56ea6e21-d909-4dad-82f2-e02ec94440c0")
-		(property "Reference" "#PWR0101"
-			(at 165.1 144.78 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(property "Value" "GNDA"
-			(at 165.1 139.7 0)
-			(effects
-				(font (size 1.27 1.27))
-			)
-		)
-		(property "Footprint" ""
-			(at 165.1 144.78 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(property "Datasheet" ""
-			(at 165.1 144.78 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(pin "1" (uuid "3e1e26f5-f8f9-4d45-b6ca-bcad8fbedd6f"))
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "#PWR0101")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(wire
-		(pts (xy 165.1 152.4) (xy 165.1 154.94))
-		(stroke (width 0) (type default))
-		(uuid "b9937ade-52a0-409c-8a98-18c2e2f5baac")
-	)
-	(symbol
-		(lib_id "power:-12V")
-		(at 165.1 154.94 180)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "27100ae4-6de5-4179-9868-dff44e1e8614")
-		(property "Reference" "#PWR0102"
-			(at 165.1 154.94 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(property "Value" "-12V"
-			(at 165.1 160.02 0)
-			(effects
-				(font (size 1.27 1.27))
-			)
-		)
-		(property "Footprint" ""
-			(at 165.1 154.94 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(property "Datasheet" ""
-			(at 165.1 154.94 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(pin "1" (uuid "623ac84e-b56a-477b-b444-ce6c70dbc4bc"))
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "#PWR0102")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:R")
-		(at 177.8 149.86 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "cdbe1acd-d4a5-4490-9e4a-722929eaccc2")
-		(property "Reference" "R29"
-			(at 180.34 148.59 0)
-			(effects
-				(font (size 1.27 1.27))
-				(justify left)
-			)
-		)
-		(property "Value" "0"
-			(at 180.34 151.13 0)
-			(effects
-				(font (size 1.27 1.27))
-				(justify left)
-			)
-		)
-		(property "Footprint" "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal"
-			(at 177.8 149.86 0)
-			(effects
-				(font (size 1.27 1.27))
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 177.8 149.86 0)
-			(effects
-				(font (size 1.27 1.27))
-				(hide yes)
-			)
-		)
-		(property "Description" "GNDA joined to GND once, by the YM3012 (1.8D): before, only inside the power supply"
-			(at 177.8 149.86 0)
-			(effects
-				(font (size 1.27 1.27))
-				(hide yes)
-			)
-		)
-		(pin "1" (uuid "5aeeeadb-5971-4543-bbfa-8aba5d034383"))
-		(pin "2" (uuid "05000dbf-4be4-4c1c-adfc-6d8d95e4943e"))
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "R29")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(wire
-		(pts (xy 177.8 146.05) (xy 177.8 143.51))
-		(stroke (width 0) (type default))
-		(uuid "fdd0fcea-83c6-4d7d-ad7d-6e34fd6540d1")
-	)
-	(symbol
-		(lib_id "power:GNDA")
-		(at 177.8 143.51 180)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "a8a7b3f7-7b7e-475a-9616-eae54f7ad6ac")
-		(property "Reference" "#PWR0103"
-			(at 177.8 143.51 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(property "Value" "GNDA"
-			(at 177.8 138.43 0)
-			(effects
-				(font (size 1.27 1.27))
-			)
-		)
-		(property "Footprint" ""
-			(at 177.8 143.51 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(property "Datasheet" ""
-			(at 177.8 143.51 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(pin "1" (uuid "6190e9ad-5ce2-4353-9a74-d4f7a85a1aa7"))
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "#PWR0103")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(wire
-		(pts (xy 177.8 153.67) (xy 177.8 156.21))
-		(stroke (width 0) (type default))
-		(uuid "e1159378-b028-44b9-8ad8-c3a2c092ddae")
-	)
-	(symbol
-		(lib_id "power:GND")
-		(at 177.8 156.21 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "0bac86ce-dff8-4e25-b48e-7947a131e848")
-		(property "Reference" "#PWR0104"
-			(at 177.8 156.21 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(property "Value" "GND"
-			(at 177.8 161.29 0)
-			(effects
-				(font (size 1.27 1.27))
-			)
-		)
-		(property "Footprint" ""
-			(at 177.8 156.21 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(property "Datasheet" ""
-			(at 177.8 156.21 0)
-			(effects
-				(font (size 1.27 1.27))
-				hide
-			)
-		)
-		(pin "1" (uuid "f17ba1c9-b606-46a4-8914-b19224faec11"))
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "#PWR0104")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(text "Decoupling (1.8D): C80 at the YM2151, C81 at the YM3012, C82/C83 at U42's\n+12 V/-12 V, C84/C85 at IC9's. R29 (0 ohms, or a ferrite bead) joins GNDA\nto GND here, beside the YM3012: before, they met only inside the supply."
-		(exclude_from_sim no)
-		(at 110.49 130.81 0)
-		(effects
-			(font (size 1.27 1.27))
-			(justify left top)
-		)
-		(uuid "9d2e852f-5648-4470-89d9-a1b9c4961128")
 	)
 )
