@@ -11,6 +11,117 @@
 		(comment 1 "Hydra 16")
 	)
 	(lib_symbols
+		(symbol "Device:C_Polarized_Small_US"
+			(pin_numbers (hide yes))
+			(pin_names (offset 0.254) (hide yes))
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "C"
+				(at 0.254 1.778 0)
+				(effects
+					(font (size 1.27 1.27))
+					(justify left)
+				)
+			)
+			(property "Value" "C_Polarized_Small_US"
+				(at 0.254 -2.032 0)
+				(effects
+					(font (size 1.27 1.27))
+					(justify left)
+				)
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(effects
+					(font (size 1.27 1.27))
+					(hide yes)
+				)
+			)
+			(property "Datasheet" "~"
+				(at 0 0 0)
+				(effects
+					(font (size 1.27 1.27))
+					(hide yes)
+				)
+			)
+			(property "Description" "Polarized capacitor, small US symbol"
+				(at 0 0 0)
+				(effects
+					(font (size 1.27 1.27))
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "cap capacitor"
+				(at 0 0 0)
+				(effects
+					(font (size 1.27 1.27))
+					(hide yes)
+				)
+			)
+			(property "ki_fp_filters" "CP_*"
+				(at 0 0 0)
+				(effects
+					(font (size 1.27 1.27))
+					(hide yes)
+				)
+			)
+			(symbol "C_Polarized_Small_US_0_1"
+				(polyline
+					(pts (xy -1.524 0.508) (xy 1.524 0.508))
+					(stroke (width 0.3048) (type default))
+					(fill (type none))
+				)
+				(polyline
+					(pts (xy -1.27 1.524) (xy -0.762 1.524))
+					(stroke (width 0) (type default))
+					(fill (type none))
+				)
+				(polyline
+					(pts (xy -1.016 1.27) (xy -1.016 1.778))
+					(stroke (width 0) (type default))
+					(fill (type none))
+				)
+				(arc
+					(start -1.524 -0.762)
+					(mid 0 -0.3734)
+					(end 1.524 -0.762)
+					(stroke (width 0.3048) (type default))
+					(fill (type none))
+				)
+			)
+			(symbol "C_Polarized_Small_US_1_1"
+				(pin passive line
+					(at 0 2.54 270)
+					(length 2.032)
+					(name "~"
+						(effects
+							(font (size 1.27 1.27))
+						)
+					)
+					(number "1"
+						(effects
+							(font (size 1.27 1.27))
+						)
+					)
+				)
+				(pin passive line
+					(at 0 -2.54 90)
+					(length 2.032)
+					(name "~"
+						(effects
+							(font (size 1.27 1.27))
+						)
+					)
+					(number "2"
+						(effects
+							(font (size 1.27 1.27))
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "22-23-2021_1"
 			(pin_names
 				(offset 1.016)
@@ -3681,16 +3792,6 @@
 	)
 	(wire
 		(pts
-			(xy 190.5 69.85) (xy 205.74 69.85)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "091c4220-2794-4703-8451-3bb261e59874")
-	)
-	(wire
-		(pts
 			(xy 45.72 90.17) (xy 53.34 90.17)
 		)
 		(stroke
@@ -5421,16 +5522,6 @@
 	)
 	(wire
 		(pts
-			(xy 190.5 105.41) (xy 205.74 105.41)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "e01559f3-5dc0-4969-ba43-32c52317fa5d")
-	)
-	(wire
-		(pts
 			(xy 224.79 54.61) (xy 224.79 59.69)
 		)
 		(stroke
@@ -6039,7 +6130,7 @@
 			)
 		)
 	)
-	(global_label "AUDIO_L"
+	(global_label "AUDIO_L_AMP"
 		(shape output)
 		(at 262.89 54.61 0)
 		(fields_autoplaced yes)
@@ -6127,7 +6218,7 @@
 			)
 		)
 	)
-	(global_label "AUDIO_R"
+	(global_label "AUDIO_R_AMP"
 		(shape output)
 		(at 262.89 67.31 0)
 		(fields_autoplaced yes)
@@ -6861,7 +6952,7 @@
 				)
 			)
 		)
-		(property "Value" "LF353P"
+		(property "Value" "NJM4556AD"
 			(at 240.03 60.452 0)
 			(effects
 				(font
@@ -11181,5 +11272,666 @@
 				)
 			)
 		)
+	)
+	(symbol
+		(lib_id "Device:C_Polarized_Small_US")
+		(at 193.04 69.85 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "a2104240-0888-4d01-9dbb-e06a2fd1c180")
+		(property "Reference" "C90"
+			(at 193.04 66.04 90)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Value" "106"
+			(at 193.04 73.66 90)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Footprint" "Capacitor_THT:CP_Radial_D5.0mm_P2.50mm"
+			(at 193.04 69.85 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 193.04 69.85 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Description" "The YM3012's DC (its COM, about 2.5 V) kept out of the summer (1.8D), in series with R5"
+			(at 193.04 69.85 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(pin "1" (uuid "94ad6651-579c-4800-8965-dbbd5cfe3412"))
+		(pin "2" (uuid "3c7d8549-7af6-46ba-aac9-7c99ba5a768b"))
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "C90")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts (xy 195.58 69.85) (xy 205.74 69.85))
+		(stroke (width 0) (type default))
+		(uuid "91fe4a0b-7db4-4e99-8e27-ee5b01ee99b1")
+	)
+	(symbol
+		(lib_id "Device:C_Polarized_Small_US")
+		(at 193.04 105.41 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "934f4ee3-d80e-4af2-8de4-c203390e6978")
+		(property "Reference" "C91"
+			(at 193.04 109.22 90)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Value" "106"
+			(at 193.04 111.76 90)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Footprint" "Capacitor_THT:CP_Radial_D5.0mm_P2.50mm"
+			(at 193.04 105.41 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 193.04 105.41 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Description" "The YM3012's DC (its COM, about 2.5 V) kept out of the summer (1.8D), in series with R4"
+			(at 193.04 105.41 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(pin "1" (uuid "61bcc133-71af-4046-910d-15a754eeb62c"))
+		(pin "2" (uuid "28776321-73f8-4a74-923b-dd95158f635d"))
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "C91")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts (xy 195.58 105.41) (xy 205.74 105.41))
+		(stroke (width 0) (type default))
+		(uuid "509e501a-b737-4680-a573-9dc4297a802f")
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 207.01 124.46 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "30ca106c-c860-473b-952c-b23ba28aac10")
+		(property "Reference" "R30"
+			(at 207.01 121.92 90)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Value" "330"
+			(at 207.01 127 90)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Footprint" "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal"
+			(at 207.01 124.46 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 207.01 124.46 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Description" "The left output's series resistor (1.8D): the op-amp kept stable into a cable, and safe from a shorted plug"
+			(at 207.01 124.46 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(pin "1" (uuid "ee682adc-62c7-48bd-9c58-59d767e15780"))
+		(pin "2" (uuid "31ad580b-89c5-449b-8e1e-11310cd3accb"))
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "R30")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts (xy 203.2 124.46) (xy 200.66 124.46))
+		(stroke (width 0) (type default))
+		(uuid "ec7e02d5-1e36-4de4-9f16-5689f75565bd")
+	)
+	(global_label "AUDIO_L_AMP"
+		(shape input)
+		(at 200.66 124.46 180)
+		(fields_autoplaced yes)
+		(effects
+			(font (size 1.27 1.27))
+			(justify right)
+		)
+		(uuid "ba544c77-1867-4a03-8013-69deb2c37fd2")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 200.66 124.46 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify right)
+				hide
+			)
+		)
+	)
+	(wire
+		(pts (xy 210.82 124.46) (xy 215.9 124.46))
+		(stroke (width 0) (type default))
+		(uuid "574d3c62-14d6-4703-b531-1516f6eccb0e")
+	)
+	(symbol
+		(lib_id "Device:C_Small")
+		(at 218.44 124.46 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "86a663b8-2f27-48db-bb87-a57525a50d29")
+		(property "Reference" "C92"
+			(at 218.44 121.92 90)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Value" "227 NP"
+			(at 218.44 127 90)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Footprint" "Capacitor_THT:CP_Radial_D8.0mm_P3.50mm"
+			(at 218.44 124.46 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 218.44 124.46 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Description" "The left output's coupling capacitor (1.8D): 220 uF, non-polarised (bipolar electrolytic)"
+			(at 218.44 124.46 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(pin "1" (uuid "fe56e1bf-3c31-4b1a-8d7a-2751feb9cf14"))
+		(pin "2" (uuid "cf2aacce-eb05-4248-a86e-2d4f7b57070b"))
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "C92")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts (xy 220.98 124.46) (xy 226.06 124.46))
+		(stroke (width 0) (type default))
+		(uuid "dac22ffb-ad37-410d-ade2-d722c7a4110b")
+	)
+	(wire
+		(pts (xy 226.06 124.46) (xy 231.14 124.46))
+		(stroke (width 0) (type default))
+		(uuid "02b5b656-03a2-49ea-984c-258e485909df")
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 226.06 128.27 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "c10c0ea1-8efa-483e-90fd-e6b486b5bc8a")
+		(property "Reference" "R32"
+			(at 228.6 128.27 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify left)
+			)
+		)
+		(property "Value" "103"
+			(at 228.6 130.81 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify left)
+			)
+		)
+		(property "Footprint" "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal"
+			(at 226.06 128.27 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 226.06 128.27 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Description" "Holds the jack's side of C92 at 0 V (no click as a plug goes in) (1.8D)"
+			(at 226.06 128.27 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(pin "1" (uuid "6218808b-b704-4bb3-993a-afa59c156ba1"))
+		(pin "2" (uuid "fc7162a4-cdd2-4e8f-9020-cf4c529634f5"))
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "R32")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts (xy 226.06 132.08) (xy 226.06 134.62))
+		(stroke (width 0) (type default))
+		(uuid "96c2a8f3-3eb1-4ba1-86cb-8e267bb13c68")
+	)
+	(symbol
+		(lib_id "power:GNDA")
+		(at 226.06 134.62 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "6776804f-367f-43d0-af8b-d7ac80bd9182")
+		(property "Reference" "#PWR0112"
+			(at 226.06 134.62 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Value" "GNDA"
+			(at 226.06 139.7 0)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Footprint" ""
+			(at 226.06 134.62 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Datasheet" ""
+			(at 226.06 134.62 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(pin "1" (uuid "bd8b6fbb-3f25-4850-b742-446da76e21dd"))
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR0112")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(global_label "AUDIO_L"
+		(shape input)
+		(at 231.14 124.46 0)
+		(fields_autoplaced yes)
+		(effects
+			(font (size 1.27 1.27))
+			(justify left)
+		)
+		(uuid "592edd45-113d-41dc-9f39-6fe3ad3ce2b1")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 231.14 124.46 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify left)
+				hide
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 207.01 142.24 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "4ed9328a-569e-447b-9815-38031508a20b")
+		(property "Reference" "R31"
+			(at 207.01 139.7 90)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Value" "330"
+			(at 207.01 144.78 90)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Footprint" "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal"
+			(at 207.01 142.24 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 207.01 142.24 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Description" "The right output's series resistor (1.8D): the op-amp kept stable into a cable, and safe from a shorted plug"
+			(at 207.01 142.24 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(pin "1" (uuid "f5520ec9-105f-4945-8c05-f7e0bd950793"))
+		(pin "2" (uuid "1da3f680-104b-4491-bd03-2b2b36cd6fa0"))
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "R31")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts (xy 203.2 142.24) (xy 200.66 142.24))
+		(stroke (width 0) (type default))
+		(uuid "5f80e74d-584a-4354-83e3-7da697cf6d40")
+	)
+	(global_label "AUDIO_R_AMP"
+		(shape input)
+		(at 200.66 142.24 180)
+		(fields_autoplaced yes)
+		(effects
+			(font (size 1.27 1.27))
+			(justify right)
+		)
+		(uuid "492d8425-cfe3-4462-9d49-61b3944a2d1b")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 200.66 142.24 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify right)
+				hide
+			)
+		)
+	)
+	(wire
+		(pts (xy 210.82 142.24) (xy 215.9 142.24))
+		(stroke (width 0) (type default))
+		(uuid "0abd51cb-1656-45ab-9ff7-e6cc79748ac7")
+	)
+	(symbol
+		(lib_id "Device:C_Small")
+		(at 218.44 142.24 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "24147d9d-093e-41e6-803c-ad00b690f536")
+		(property "Reference" "C93"
+			(at 218.44 139.7 90)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Value" "227 NP"
+			(at 218.44 144.78 90)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Footprint" "Capacitor_THT:CP_Radial_D8.0mm_P3.50mm"
+			(at 218.44 142.24 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 218.44 142.24 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Description" "The right output's coupling capacitor (1.8D): 220 uF, non-polarised (bipolar electrolytic)"
+			(at 218.44 142.24 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(pin "1" (uuid "b016542b-096e-4aea-8ec2-a78392bfdd64"))
+		(pin "2" (uuid "85685854-c885-4ffb-9a42-4b7074bf491d"))
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "C93")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts (xy 220.98 142.24) (xy 226.06 142.24))
+		(stroke (width 0) (type default))
+		(uuid "6578d7a6-e9d4-46b9-ab95-7f64645daae9")
+	)
+	(wire
+		(pts (xy 226.06 142.24) (xy 231.14 142.24))
+		(stroke (width 0) (type default))
+		(uuid "c62ced79-4c95-450e-aee4-156f73073d03")
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 226.06 146.05 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "b59fe402-89db-4726-9a7a-1c40e84e10ff")
+		(property "Reference" "R33"
+			(at 228.6 146.05 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify left)
+			)
+		)
+		(property "Value" "103"
+			(at 228.6 148.59 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify left)
+			)
+		)
+		(property "Footprint" "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal"
+			(at 226.06 146.05 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 226.06 146.05 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(property "Description" "Holds the jack's side of C93 at 0 V (no click as a plug goes in) (1.8D)"
+			(at 226.06 146.05 0)
+			(effects
+				(font (size 1.27 1.27))
+				(hide yes)
+			)
+		)
+		(pin "1" (uuid "cee558db-1bdb-4c21-ad07-642241512c22"))
+		(pin "2" (uuid "c1adb379-151a-4527-9e63-3f39dde7c988"))
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "R33")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts (xy 226.06 149.86) (xy 226.06 152.4))
+		(stroke (width 0) (type default))
+		(uuid "75e572f3-97e1-4a1b-becb-1004f5846c25")
+	)
+	(symbol
+		(lib_id "power:GNDA")
+		(at 226.06 152.4 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "3c9b9b17-da48-4fef-ab88-fec332f38bf1")
+		(property "Reference" "#PWR0113"
+			(at 226.06 152.4 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Value" "GNDA"
+			(at 226.06 157.48 0)
+			(effects
+				(font (size 1.27 1.27))
+			)
+		)
+		(property "Footprint" ""
+			(at 226.06 152.4 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(property "Datasheet" ""
+			(at 226.06 152.4 0)
+			(effects
+				(font (size 1.27 1.27))
+				hide
+			)
+		)
+		(pin "1" (uuid "bdd3f25c-9bde-4b60-9a20-46d9eaa99313"))
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR0113")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(global_label "AUDIO_R"
+		(shape input)
+		(at 231.14 142.24 0)
+		(fields_autoplaced yes)
+		(effects
+			(font (size 1.27 1.27))
+			(justify left)
+		)
+		(uuid "9759d59d-a28d-4cf1-96b2-6b0b9b533c4f")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 231.14 142.24 0)
+			(effects
+				(font (size 1.27 1.27))
+				(justify left)
+				hide
+			)
+		)
+	)
+	(text "1.8D: the mixer. IC9 an NJM4556A (the LF353's pinout; it drives headphones: the\nLF353 needs 2K or more). C90/C91 keep the YM3012's 2.5 V of DC out of the summer.\nEach output: 33 ohms (stable into a cable), 220 uF non-polar, a 10K pull-down."
+		(exclude_from_sim no)
+		(at 20.32 170.18 0)
+		(effects
+			(font (size 1.27 1.27))
+			(justify left top)
+		)
+		(uuid "e3b0307e-8190-4e12-9b41-343f29ffcce2")
 	)
 )
