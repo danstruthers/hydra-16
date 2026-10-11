@@ -485,7 +485,7 @@ function generate(root) {
   return { groups: api.groups, calls: api.calls, consts: api.consts, errors, numbers: nums, asm };
 }
 
-module.exports = { generate, readNumbers };
+module.exports = { generate, readNumbers, forthCalls, forthName, forthEffect, hlName };
 
 if (require.main === module) {
   try {
