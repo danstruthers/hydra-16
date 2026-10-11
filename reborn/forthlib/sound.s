@@ -1,6 +1,6 @@
 ; ****************************************************************************
 ; sound.s - HyForth's sound library (/lib/forth/sound.fl: lib sound), the old HyForth's sound words with the names and
-; order C's snd.h and hylang's snd library have (docs/hyforth.md): the YM2151 through the sound driver.  /dev/snd
+; order C's snd.h and hylang's snd library have (docs/design/hyforth.md): the YM2151 through the sound driver.  /dev/snd
 ; takes register/value pairs (the registers the chip doesn't have are the driver's commands for a channel: SND_R_*);
 ; /dev/sndctl takes the words that claim and release channels, set the master volume and clear the chip.  Each is
 ; opened the first time it's wanted, and stays open (a task's claimed channels go back as its last one closes, at

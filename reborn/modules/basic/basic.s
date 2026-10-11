@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; basic - the Hydra's BASIC (docs/basic.md; the plan, docs/design/plans/BASIC.md): a structured BASIC in
+; basic - the Hydra's BASIC (docs/design/basic.md; the plan, docs/design/plans/BASIC.md): a structured BASIC in
 ; QuickBASIC's way, on the Hydra's numbers.  A program is compiled whole (its text read, its names made slots, its
 ; labels addresses, its blocks linked) into the code of a stack machine, then run by the interpreter.  `basic` at
 ; rc's prompt starts it (its prompt: a line run at once, or a line of the program with its number first); `basic

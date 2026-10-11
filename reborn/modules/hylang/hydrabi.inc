@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; hydrabi.inc - hylang's Hydra built-ins (docs/hylang.md, "Made for the Hydra", 2; the plan's phase 9), in its fifth
+; hydrabi.inc - hylang's Hydra built-ins (docs/design/hylang.md, "Made for the Hydra", 2; the plan's phase 9), in its fifth
 ; bank beside the system library, whose helpers they share (sys.inc): the system (sysinfo, mods, errstr), the tasks
 ; (ps, task-info, yield, sleep-until), memory (peek, poke and their words, the task's banks, shared segments, free),
 ; namespaces (bind, mount, unmount, ns; newns is a special form: forms.inc), notes (note, note-group, on-note: the evaluator calls its function,

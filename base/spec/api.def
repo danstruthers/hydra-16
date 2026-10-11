@@ -14,11 +14,11 @@
 #     hl:     hylang's sys- function            (a call a program makes: not a server's, nor dbg's, nor NOTIFY)
 #   const NAME VALUE "what it is"              a constant for programs (hydra.inc)
 #
-# The rules (docs/conventions.md): .A, .X, .Y and r0-r15 in and out; 16-bit results in .A (low) and .X (high);
+# The rules (docs/design/conventions.md): .A, .X, .Y and r0-r15 in and out; 16-bit results in .A (low) and .X (high);
 # C = 0 success, C = 1 failure with the code in .A, always.  Calls are only ever appended to a group: a slot
 # never moves, and a withdrawn call keeps its slot and gives E_NOSYS.
 #
-# An hl: line (docs/hylang.md, "Every system call"): the registers the call takes, in the order of its sys-
+# An hl: line (docs/design/hylang.md, "Every system call"): the registers the call takes, in the order of its sys-
 # function's arguments, each REG=KIND; then -> and what it gives, a value each (one: the value; more: a list of
 # them; none: NIL).  REG is .A, .X, .Y, .A/.X, rN or rN/rM (32 bits), as in: and out: name them.  A KIND:
 #   n         a whole number (or a character: its code), the register's size; n? the same, or NIL or left out: 0

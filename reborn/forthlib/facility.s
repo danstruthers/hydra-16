@@ -1,7 +1,7 @@
 ; ****************************************************************************
 ; facility.s - HyForth's Facility library (/lib/forth/facility.fl): key?, ms, time&date, at-xy and page (the
 ; terminal's ANSI sequences), the structures (begin-structure ... +field), and the Facility Extension's keys (ekey,
-; k-up ...); and the terminal's other sequences, as docs/hyforth.md has them (clear-line, the cursor's, form, colours
+; k-up ...); and the terminal's other sequences, as docs/design/hyforth.md has them (clear-line, the cursor's, form, colours
 ; and attributes, beep).  key? reads the console's cons non-blocking, in raw mode (till a line's read: the core's
 ; raw_off), and leaves its key for key (key_pend).
 
@@ -272,7 +272,7 @@ dec_out:
             sta         base
             rts
 
-; ---- The terminal's other sequences (docs/hyforth.md: hylang's screen.hl's names, conio's colours)
+; ---- The terminal's other sequences (docs/design/hyforth.md: hylang's screen.hl's names, conio's colours)
 
             HEADER      "clear-line", 0
 clearline:                                                  ; ( -- ): the rest of the line cleared (CSI K)

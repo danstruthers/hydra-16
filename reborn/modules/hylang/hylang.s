@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; hylang - danlang on the Hydra-16 (docs/hylang.md), written again from scratch.  As yet (phase 7) all of danlang but
+; hylang - danlang on the Hydra-16 (docs/design/hylang.md), written again from scratch.  As yet (phase 7) all of danlang but
 ; its library: a line read (with the lines that go on with it, while a bracket or a here string is open), evaluated,
 ; its value printed as danlang's REPL prints it; or, hylang file args..., the file run (args: its path and the args),
 ; its status 0, 1 after an error (on stderr), or (exit n)'s.  hylang -g collects before every allocation (a test of

@@ -22,9 +22,9 @@ The SDK is this folder; `node build.js` also copies it, with the generated `hydr
 | `samples/` | `hi` (arguments, task, directory, environment), `upper` (a filter on `toollib`), `tick` (a note handler), `counter` (a server: a driver, a module that runs in place, on `srvlib`), `nsum` (numbers: the sum of its arguments, and its square root) |
 
 The calls are described in `/rom/doc/api.md` on the Hydra (the build's `obj/gen/api.md`), and the rules the
-system keeps in `docs/conventions.md`.
+system keeps in `docs/design/conventions.md`.
 
-The Hydra assembles the same sources itself: `as file.s` (`docs/using/tools.md`, "The assembler"), with this
+The Hydra assembles the same sources itself: `as file.s` (`docs/07-tools.md`, "The assembler"), with this
 folder's `.inc` and `.s` files in `/lib/as`, makes the same program ca65 and ld65 make with `hyx2.cfg`.
 
 ## A program
@@ -87,7 +87,7 @@ with `module.cfg` (`module2.cfg` to `module8.cfg` for one of two to eight banks)
 `modules/rom.txt`.  A server is one: a
 driver, `HYX2_DRIVER`, which registers a device letter and answers its clients' requests through `srvlib`.  The
 sample `counter` is one; the build makes it a module, and the tools test puts it in its ROM.  A module may have
-library modules of its own, `HYX2_LIBRARY`, linked by its own config: `docs/conventions.md`.)
+library modules of its own, `HYX2_LIBRARY`, linked by its own config: `docs/design/conventions.md`.)
 
 ## Running it
 

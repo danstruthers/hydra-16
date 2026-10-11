@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; heap.inc - hylang's heap and its collector (docs/hylang.md, "The design"; phase 1), in the task's RAM (the module's
+; heap.inc - hylang's heap and its collector (docs/design/hylang.md, "The design"; phase 1), in the task's RAM (the module's
 ; DATA and BSS), where each of its banks calls it.  With hylang.inc: the values' and the kinds' names.
 ;   A value is a word.  Bit 0 set: a fixnum, n * 2 + 1 (n from -16384 to 16383).  Clear: a reference r.  Below
 ; IMM_PAGES * 256, r is an immediate, with no memory behind it (NIL $0000, T, (), exit, the characters, the

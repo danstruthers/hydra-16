@@ -52,7 +52,8 @@ ends with an hour's tour of the running system, in the emulator, with no hardwar
    2. [C](09-programming/c.md): the C SDK, cc65, the library, how C reaches the system calls.
    3. [Servers and drivers](09-programming/servers.md): serving files, owning interrupts.
    4. [Libraries](09-programming/libraries.md): the number and asm libraries, `XCALL`.
-   5. [The system call reference](09-programming/calls-reference.md): every call, generated from the specification.
+   5. [An operating system of your own](09-programming/your-own-os.md): a system of your own on the base.
+   6. [The system call reference](09-programming/calls-reference.md): every call, generated from the specification.
 
 The design notes, the plans each part was built from, and the project's status are in [design/](design/README.md):
 they're history, and not needed to use the system.

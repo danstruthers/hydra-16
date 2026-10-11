@@ -14,7 +14,8 @@ servers that make devices of their own, and with the system's libraries.  It bui
    the ROM.
 4. [Libraries](libraries.md): library modules and `XCALL`, the number libraries and their stored format, the asm
    library.
-5. [The system call reference](calls-reference.md): every call, generated from the specification.
+5. [An operating system of your own](your-own-os.md): what boots, init, and a system of your own on the base.
+6. [The system call reference](calls-reference.md): every call, generated from the specification.
 
 ---
 

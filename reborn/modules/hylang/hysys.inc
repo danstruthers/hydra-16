@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; hysys.inc - hylang's system calls (docs/hylang.md, "Made for the Hydra", 4; the plan's phase 10), in its sixth
+; hysys.inc - hylang's system calls (docs/design/hylang.md, "Made for the Hydra", 4; the plan's phase 10), in its sixth
 ; bank: (sys name arg...) makes any call a program makes (spec/api.def's, as forth's sys- words), its arguments and
 ; its value as the call's hl: line has them (obj/gen/hylsys.inc: tools/apigen.js makes the calls' records from
 ; them).  Each is a function too, sys- and the call's name: (sys-open "x" 0) is (sys :open "x" 0).  A sys- name is

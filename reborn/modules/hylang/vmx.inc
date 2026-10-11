@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; vmx.inc - hylang's native code (docs/hylang.md, "The bytecode machine"), in its eighth bank: a function's bytecode,
+; vmx.inc - hylang's native code (docs/design/hylang.md, "The bytecode machine"), in its eighth bank: a function's bytecode,
 ; as vm_compile made it in its scratch bank (vm_sb, from $8000), made the 65C02's own code in the arena (vm_xlate).
 ; Each op is a stub that points vm_ip at its data, the op as it was in the bytecode (EXT left out), and jumps to
 ; its code in the machine (vm.inc's), whose next is jmp (vm_ip): the op's data past, the next op's stub.  The usual
