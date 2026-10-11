@@ -176,7 +176,7 @@ common.
 | 1 | 3.57955MHz | header 2x01, 2.54 mm |  | J7 |
 | 1 | 7.15909MHz | header 2x01, 2.54 mm |  | J8 |
 | 1 | ATX-24 | Molex Mini-Fit Jr 5566-24A2 2x12 P4.20mm Vertical |  | J11 |
-| 1 | Audio In 6 | header 2x01, 2.54 mm |  | J29 |
+| 1 | Audio In | header 2x01, 2.54 mm |  | J29 |
 | 1 | Audio Jack | Jack 3.5mm CUI SJ1-3525N Horizontal |  | J26 |
 | 1 | CTS | header 1x03, 2.54 mm |  | J30 |
 | 1 | Conn_01x24 | socket 1x24, 2.54 mm |  | J2 |
