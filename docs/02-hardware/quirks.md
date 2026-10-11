@@ -160,7 +160,6 @@ couple them through a capacitor.
 Things in the KiCad files that don't match what's on the board, or look wrong but aren't:
 
 * **J28 is a chip**, the SP720 ESD array, drawn with a DIP-16 socket's symbol.
-* **U43's description** says "current source"; it's the DM1813 reset supervisor.
 * **The bus breakout card's labels** disagree with the main board's slot on two pins: J11 pin 3, "+5VA", is **-5 V**,
   and J7 pin 5, "!RWB", is **`DMAB`** ([the cards](cards.md#the-bus-breakout-card)).
 * **J1 pin 4**, on the memory card connector, isn't connected.
