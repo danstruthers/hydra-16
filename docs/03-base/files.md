@@ -138,7 +138,7 @@ A bind is resolved when it's made, as in Plan 9: `bind /rom/bin /bin` binds what
 `/bin`, mount a card) without changing anyone else's.
 
 In the base, the monitor needs no namespace: it opens `#c/cons` by its device name.  HydraOS's init builds the
-system's namespace from a file, `/rom/lib/namespace`, and so does each new shell ([rc](../05-rc.md#namespaces)):
+system's namespace from a file, `/rom/lib/namespace`, and so does each new shell ([rc](../05-rc.md#namespaces-from-the-shell)):
 
 ```
 bind '#/' /
