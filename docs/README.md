@@ -35,10 +35,10 @@ ends with an hour's tour of the running system, in the emulator, with no hardwar
    5. [The monitor](03-base/monitor.md): Woz's monitor, the base's own init.
 4. **[The drivers](04-drivers/README.md)**: the devices as files.
    1. [The serial console](04-drivers/serial.md): `ser` and `cons`, the windows, the PC tool's `/pc`.
-   2. [The kernel's devices](04-drivers/kdev.md): `kdev`: the modules, `/proc`, pipes, the environment.
+   2. [The kernel's devices](04-drivers/kdev.md): `kdev`: the modules, `/proc`, pipes, the environment, the clock.
    3. [Storage](04-drivers/storage.md): SD cards, the RAM disks, the ROM disk, HydraFS.
    4. [Sound](04-drivers/sound.md): the YM2151, the Vera X's PSG and PCM, `/dev/snd`.
-   5. [GPIO, I2C, SPI and the clock](04-drivers/gpio.md).
+   5. [GPIO, I2C and SPI](04-drivers/gpio.md): the VIA's port A, the I2C bus, the SPI devices.
    6. [Video](04-drivers/video.md): the Vera X: `vid`, its screen, graphics and sprites, and `input`, its keyboard and
       mouse.
 5. **[The shell: rc](05-rc.md)**: commands, pipes, variables, scripts, namespaces and windows.
