@@ -63,7 +63,7 @@ a clock that keeps time ([the devices](devices.md#the-clock-chip)).
 PLCC-32 for the BIOS ROM.  Both are current.  Buy only as many SST39SF040 as the system needs: HydraOS uses four (U31,
 U32, U34, U36), the base alone one (U31).
 
-**The reset supervisor** (U43, DM1813 in TO-92): the DS1813-10 (Dallas, now Analog Devices).  (The schematic's description, "current source", is wrong.)
+**The reset supervisor** (U43, DM1813 in TO-92): the DS1813-10 (Dallas, now Analog Devices).
 
 **The mixer's op-amp** (IC9, NJM4556A): a dual op-amp that drives headphones.  An LF353 fits the socket but distorts
 into headphones (it's what 1.8C had).
@@ -158,7 +158,7 @@ common.
 | --: | :--- | :------ | :----- | :--------- |
 | 1 | 0 (a link) | axial resistor |  | R29 |
 | 1 | 101 (100 Ω) | axial resistor |  | R3 |
-| 10 | 103 (10K) | axial resistor |  | R4, R6, R7, R13, R19-R21, R28, R32, R33 |
+| 11 | 103 (10K) | axial resistor |  | R4-R7, R13, R19-R21, R28, R32, R33 |
 | 1 | 103 (10K) | SIP-9 network |  | RN4 |
 | 1 | 105 (1M) | axial resistor |  | R1 |
 | 5 | 220 (22 Ω) | axial resistor |  | R23-R27 |
@@ -203,7 +203,7 @@ common.
 | 1 | DIP-8 (0.3") |
 | 1 | PLCC-32 |
 
-215 parts on the main board, from `board/hydra-16.kicad_sch`.
+216 parts on the main board, from `board/hydra-16.kicad_sch`.
 
 <!-- parts:main:end -->
 
