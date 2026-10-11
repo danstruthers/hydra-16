@@ -1,6 +1,6 @@
 /*
 ** vera.h - the Vera X's screen: its driver's files (vid: #v, at /dev/vid), and the chip itself for a program that
-** claims it.  (The programmer's chapter: docs/programming/video.md.)
+** claims it.  (The programmer's chapter: docs/04-drivers/video.md.)
 **
 ** Drawing, with the console still on the screen: vid_bitmap puts a bitmap under the console's text (layer 0: 320 or
 ** 640 pixels across, 1, 2, 4 or 8 bits a pixel; 640's 1 or 2), and the vid_ calls draw on it, the driver doing the

@@ -1,4 +1,4 @@
-; devices.hl - hylang's device libraries (docs/hylang.md, "Made for the Hydra", 3), each checked against the
+; devices.hl - hylang's device libraries (docs/design/hylang.md, "Made for the Hydra", 3), each checked against the
 ; emulated device: the pins (the port's inputs $A5), CA1's edges, two I2C memories (at $50, 256 bytes; at $68, 16),
 ; an SPI echo device (3), a card (on SPI device 5), the DS1747, the PC tool's folder, the YM2151.  Run as a script on
 ; the hydev test's machine (danlang's harness.dl beside it on the card): the count, its status 1 if a check failed

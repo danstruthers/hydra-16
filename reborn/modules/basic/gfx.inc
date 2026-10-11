@@ -1,6 +1,6 @@
 ; ****************************************************************************
 ; gfx.inc - graphics (the eighth bank): QuickBASIC's statements on the Vera X's bitmap, through vid's /dev/vid/draw
-; (its text commands: the driver draws, the console's text stays over it; docs/programming/video.md): SCREEN, PSET,
+; (its text commands: the driver draws, the console's text stays over it; docs/04-drivers/video.md): SCREEN, PSET,
 ; PRESET, LINE, CIRCLE, PAINT (a scanline fill, the bitmap's rows read from /dev/vid/vram), DRAW (QuickBASIC's turtle
 ; language), GPRINT, PALETTE, POINT, SPRITE; COLOR's pen and CLS's clear in a SCREEN.  Coordinates are pixels,
 ; rounded; the last point referenced (LINE's, PSET's ...) is where STEP and LINE -(x, y) start.

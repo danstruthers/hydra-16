@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; layout.inc - the kernel's layout: where state lives (docs/conventions.md, "Where state lives").  Every fixed
+; layout.inc - the kernel's layout: where state lives (docs/design/conventions.md, "Where state lives").  Every fixed
 ; address the kernel uses is defined here, and nowhere else.
 ;
 ;   A task's zero page:  $00-$01 its bank registers, $02-$21 r0-r15 (the call registers), $22-$7F the
@@ -154,7 +154,7 @@ FR_PCL          = 7
 FR_PCH          = 8
 
 ; ---- A task's OS area ($0200-$03FF)
-TA_INBOX        = $0200         ; (32) A server's request block (docs/conventions.md)
+TA_INBOX        = $0200         ; (32) A server's request block (docs/design/conventions.md)
 TA_IRQVEC       = $0220         ; (2) Its interrupt handler (for the lines it owns)
 TA_SERVEVEC     = $0222         ; (2) Its serve entry (SCALL)
 TA_ENTRY        = $0224         ; (2) Where it starts: main, or a driver's init
@@ -484,7 +484,7 @@ MAFTER          = 2             ;   a union, this last ...
 MORDER          = 3
 MCREATE         = 4             ;   and a CREATE in the union comes here
 
-; ---- The executable and module header, HYX2 (docs/conventions.md): 48 bytes, programs and modules alike
+; ---- The executable and module header, HYX2 (docs/design/conventions.md): 48 bytes, programs and modules alike
 HX_MAGIC        = 0             ; "HYX2"
 HX_HSIZE        = 4             ; The header's size (48)
 HX_TYPE         = 5             ; HT_*

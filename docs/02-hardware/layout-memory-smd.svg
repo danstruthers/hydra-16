@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 -2 92.90 71.31" width="372" height="285" font-family="Helvetica, Arial, sans-serif">
+<style>.board{fill:#1f5f3a;stroke:#0b2b18;stroke-width:0.6}.ic{fill:#2b2b2b;stroke:#0d0d0d;stroke-width:0.2}.conn{fill:#c9c9c9;stroke:#555;stroke-width:0.2}.passive{fill:#d9c07a;stroke:#6b5a2a;stroke-width:0.15}.other{fill:#8aa7c9;stroke:#3d5470;stroke-width:0.2}.back{fill-opacity:0.35;stroke-dasharray:0.8 0.6}.ref{fill:#fff;text-anchor:middle;dominant-baseline:central}.refd{fill:#111;text-anchor:middle;dominant-baseline:central}.label{fill:#fffbe0;font-weight:bold;text-anchor:middle;stroke:#0b2b18;stroke-width:0.7;paint-order:stroke}</style>
+<rect class="board" x="0" y="0" width="88.90" height="67.31" rx="2"/>
+<rect class="ic" x="24.31" y="39.44" width="15.70" height="21.45"><title>IC6 HM628512LFP-7</title></rect>
+<rect class="ic" x="69.28" y="17.85" width="15.70" height="21.45"><title>IC4 HM628512LFP-7</title></rect>
+<rect class="ic" x="5.26" y="39.44" width="15.70" height="21.45"><title>IC5 HM628512LFP-7</title></rect>
+<rect class="passive" x="42.38" y="58.19" width="7.10" height="3.00"><title>C2 .1uF</title></rect>
+<rect class="conn" x="4.16" y="0.85" width="82.35" height="3.60"><title>J1 Conn_01x32</title></rect>
+<rect class="ic" x="5.26" y="17.85" width="15.70" height="21.45"><title>IC1 HM628512LFP-7</title></rect>
+<rect class="ic" x="24.31" y="17.85" width="15.70" height="21.45"><title>IC2 HM628512LFP-7</title></rect>
+<rect class="ic" x="50.22" y="39.44" width="15.70" height="21.45"><title>IC7 HM628512LFP-7</title></rect>
+<rect class="passive" x="42.38" y="36.60" width="7.10" height="3.00"><title>C3 .1uF</title></rect>
+<rect class="conn" x="2.95" y="4.92" width="39.15" height="2.80"><title>J4 Conn_01x15_Pin</title></rect>
+<rect class="conn" x="2.95" y="7.77" width="39.15" height="5.85"><title>J3 Conn_02x15_Odd_Even</title></rect>
+<rect class="conn" x="14.39" y="62.33" width="62.00" height="3.60"><title>J2 Conn_01x24</title></rect>
+<rect class="passive" x="1.97" y="53.64" width="3.00" height="7.10"><title>C1 .1uF</title></rect>
+<rect class="ic" x="50.23" y="17.85" width="15.70" height="21.45"><title>IC3 HM628512LFP-7</title></rect>
+<rect class="ic" x="69.27" y="39.44" width="15.70" height="21.45"><title>IC8 HM628512LFP-7</title></rect>
+<rect class="ic" x="48.29" y="5.39" width="20.85" height="9.80"><title>U1 74LS139</title></rect>
+<rect class="passive" x="44.78" y="5.46" width="3.00" height="7.10"><title>C5 .1uF</title></rect>
+<rect class="passive" x="1.97" y="32.05" width="3.00" height="7.10"><title>C4 .1uF</title></rect>
+<text class="ref" x="32.16" y="50.16" font-size="3.20">IC6</text>
+<text class="ref" x="77.13" y="28.58" font-size="3.20">IC4</text>
+<text class="ref" x="13.11" y="50.16" font-size="3.20">IC5</text>
+<text class="refd" x="45.93" y="59.69" font-size="1.65">C2</text>
+<text class="refd" x="45.33" y="2.65" font-size="1.98">J1</text>
+<text class="ref" x="13.11" y="28.58" font-size="3.20">IC1</text>
+<text class="ref" x="32.16" y="28.58" font-size="3.20">IC2</text>
+<text class="ref" x="58.07" y="50.16" font-size="3.20">IC7</text>
+<text class="refd" x="45.93" y="38.10" font-size="1.65">C3</text>
+<text class="refd" x="22.52" y="6.32" font-size="1.54">J4</text>
+<text class="refd" x="22.52" y="10.70" font-size="3.20">J3</text>
+<text class="refd" x="45.39" y="64.13" font-size="1.98">J2</text>
+<text class="refd" x="3.47" y="57.19" font-size="1.65">C1</text>
+<text class="ref" x="58.08" y="28.58" font-size="3.20">IC3</text>
+<text class="ref" x="77.12" y="50.16" font-size="3.20">IC8</text>
+<text class="ref" x="58.71" y="10.29" font-size="3.20">U1</text>
+<text class="refd" x="46.28" y="9.01" font-size="1.65">C5</text>
+<text class="refd" x="3.47" y="35.60" font-size="1.65">C4</text>
+</svg>

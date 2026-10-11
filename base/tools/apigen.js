@@ -138,7 +138,7 @@ function errText(errors) {
 
 function sdkInc(api, errors) {
   let s = header(';', 'hydra.inc - the Hydra-16\'s system calls, error codes and constants, for programs in assembly');
-  s += '; The rules (reborn/docs/conventions.md): call with jsr; .A, .X, .Y and r0-r15 in and out; 16-bit results' + CRLF;
+  s += '; The rules (docs/design/conventions.md): call with jsr; .A, .X, .Y and r0-r15 in and out; 16-bit results' + CRLF;
   s += '; in .A (low) and .X (high); C = 0 success, C = 1 failure with the error code in .A.  Calls change .A, .X, .Y,' + CRLF;
   s += '; r0-r15 and the flags; never $22-$7F (the program\'s zero page).' + CRLF;
   for (const g of api.groups) {

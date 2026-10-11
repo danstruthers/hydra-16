@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; shell.inc - basic -l, BASIC as a shell (the eighth bank): HyForth's and hylang's rule (docs/using/basic.md, "The
+; shell.inc - basic -l, BASIC as a shell (the eighth bank): HyForth's and hylang's rule (docs/06-languages/hybasic.md, "The
 ; shell").  A line is BASIC's if it's a line of the program (a number first), ?, a keyword first, an assignment (a
 ; name, then = or a subscript's '('), or a call of one of the program's SUBs; any other is an rc command line, run
 ; whole by rc (rc -c) and waited for ($status its status), or, ending in &, not waited for ($apid its task, in a note

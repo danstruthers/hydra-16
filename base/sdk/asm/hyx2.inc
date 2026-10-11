@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; hyx2.inc - a module's HYX2 header (docs/conventions.md, "Modules"), for programs and drivers in assembly.  Use
+; hyx2.inc - a module's HYX2 header (docs/design/conventions.md, "Modules"), for programs and drivers in assembly.  Use
 ; it with hydra.inc (the calls and constants: made by tools/apigen.js) and modules/module.cfg (the link: code at
 ; $A000 in the module's own paged ROM bank, run in place; data and BSS in its task's RAM, from $0400).  Or, for a
 ; RAM program (a program in a file, which SPAWN's loader reads into its task's RAM), assemble with -D HYX2_RAM and

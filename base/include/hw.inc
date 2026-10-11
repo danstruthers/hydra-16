@@ -1,7 +1,7 @@
 ; ****************************************************************************
 ; hw.inc - the Hydra-16 V1 board, as the software sees it: the pseudo-registers, the bank registers, the I/O
 ; ports and their chips, the IRQ lines, the clock.  Facts only: no OS layout here (that's kernel.inc).
-; Source: docs/hardware.md.
+; Source: docs/02-hardware/architecture.md.
 
 ; ---- The CPU clock: a build-time setting on V1 (no clock register).  1 = 3.58 MHz (jumper J7), 2 = 7.16 MHz
 .ifndef CPU_CLOCK_MULT

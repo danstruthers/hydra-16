@@ -3,7 +3,7 @@
 The base is the part of the Hydra-16's software that every system on the board shares: the kernel in the BIOS ROM and
 its system calls, the IRQ handling, a serial console driver, the kernel's device server, and a monitor.  It is the
 base HydraOS 1.0 runs on (`../reborn`, which builds on this folder), and it is enough to write an operating system of
-your own on: [writing an OS on the base](docs/os.md).
+your own on: [writing an OS on the base](../docs/09-programming/your-own-os.md).
 
 Booted on its own, it is three tasks and a monitor:
 
@@ -12,7 +12,7 @@ Booted on its own, it is three tasks and a monitor:
 | 0 | the kernel | The BIOS ROM (`bin/bios.bin`, `kernel/`): the boot and POST, the scheduler and the tick, tasks, memory and banks, semaphores, shared segments, notes, the clock, files and the server protocol, namespaces, the loader; 192 system call slots at `$F800` |
 | F | `ser` | The console driver: the serial port (`#c`: `cons`, `consctl`, `ser`, `serctl`), on the serial layer HydraOS's console shares (`lib/serial.inc`) |
 | E | `kdev` | The kernel's devices: the modules (`#m`, which `SPAWN` reads), null and the kernel's messages (`#n`), the tasks (`#p`), pipes (`#|`), the environment (`#e`), named shared segments (`#s`), the ticks (`#t`), raw RAM (`#r`) |
-| 1 | `wozmon` | The monitor, as init: [Woz's Apple 1 monitor](docs/monitor.md), with a disassembler |
+| 1 | `wozmon` | The monitor, as init: [Woz's Apple 1 monitor](../docs/03-base/monitor.md), with a disassembler |
 
 The rest of the tasks, 2 to D, are free for whatever runs on it.
 
@@ -62,10 +62,11 @@ first, then HydraOS on it.
 | `sim/` | The board's emulator, cycle by cycle (`lib/`: the W65C02S, `T`/`U`/`V`/`W`, the ACIA, the VIA, the YM2151, the DS1747, a Vera X card, SD cards), `run.js` (any system's images, live or for a while; the monitor, breaks, the call trace), `view.js` (the screen and sound in a browser), `test.js` (the tests' runner, HydraOS's too) |
 | `tests/` | `tests.js`, the base's tests; `mod/`, their modules (and `testlib.inc`, HydraOS's test modules' too) |
 | `bin/` | The images (in Git): `bios.bin`, `prom0.bin` |
-| `docs/` | [The monitor](docs/monitor.md); [writing an OS on the base](docs/os.md) |
 
 The bank-1 hardware test is the old system's, unchanged (`../old/os_rom/bin/paged_rom_C02.bin`'s bank 1); POST starts
-it if T is typed during the boot.  The kernel's design and its calls are documented with HydraOS: [the
-conventions](../reborn/docs/conventions.md), [calling the system](../reborn/docs/programming/calls.md), [modules and
-servers](../reborn/docs/programming/modules.md), [the hardware reference](../reborn/docs/hardware.md); the plan for
-this folder is [BASE.md](../reborn/docs/design/plans/BASE.md).
+it if T is typed during the boot.
+
+**The documentation** is the book's ([docs/README.md](../docs/README.md)): [chapter 3, the base](../docs/03-base/README.md)
+(the boot, the kernel, files, the system calls, [the monitor](../docs/03-base/monitor.md)), [the call
+reference](../docs/09-programming/calls-reference.md), [an OS of your own](../docs/09-programming/your-own-os.md), and
+[the hardware](../docs/02-hardware/README.md).  The plan for this folder is [BASE.md](../docs/design/plans/BASE.md).

@@ -438,7 +438,7 @@ function forthLib(api, errors) {
 
 function apiMd(api, errors) {
   let s = '## **The system calls**' + CRLF + CRLF;
-  s += 'Made by `tools/apigen.js` from `spec/api.def` and `spec/errors.def`: don\'t edit.  The rules for every call are in [conventions.md](../../docs/conventions.md#the-abi): `.A`, `.X`, `.Y` and `r0-r15` in and out, 16-bit results in `.A`/`.X`, and C = 1 with the error code in `.A` on failure.' + CRLF;
+  s += 'Made by `tools/apigen.js` from `spec/api.def` and `spec/errors.def`: don\'t edit.  The rules for every call are in the Hydra-16 book (docs/03-base/calls.md in the repository): `.A`, `.X`, `.Y` and `r0-r15` in and out, 16-bit results in `.A`/`.X`, and C = 1 with the error code in `.A` on failure.' + CRLF;
   for (const g of api.groups) {
     s += CRLF + '### **' + g.name + '** (`' + hx(g.base, 4) + '`, ' + g.slots + ' slots)' + CRLF + CRLF + g.doc + '.' + CRLF;
     if (!g.calls.length) { s += CRLF + '(No calls yet.)' + CRLF; continue; }
@@ -485,7 +485,7 @@ function generate(root) {
   return { groups: api.groups, calls: api.calls, consts: api.consts, errors, numbers: nums, asm };
 }
 
-module.exports = { generate, readNumbers };
+module.exports = { generate, readNumbers, forthCalls, forthName, forthEffect, hlName };
 
 if (require.main === module) {
   try {
