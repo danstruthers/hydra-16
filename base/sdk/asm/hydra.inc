@@ -36,7 +36,7 @@ TASKINFO        = $F84E       ; .A = a task (0-15); r0 = a buffer (TI_SIZE bytes
 NOTIFY          = $F851       ; r0 = the note handler, or 0 for none
 NOTE            = $F854       ; .A = a task, or NOTE_GROUP | a note group; .X = the note (1-31: NOTE_*)
 MODINFO         = $F857       ; .A = an entry of the module directory (0 on); r0 = a buffer (ME_SIZE bytes)
-                              ; -> the buffer: ME_BANK, ME_BANKS, ME_TYPE (HT_*), ME_FLAGS (HF_*), ME_NAME (12, zero-padded)
+                              ; -> the buffer: ME_BANK, ME_BANKS, ME_TYPE (HT_*), ME_FLAGS (HF_*), ME_NAME (11, zero-padded), ME_PAGE
 ENV_GET         = $F85A       ; .A = a task ($FF: this one); r0 = a variable's name; r1 = a buffer; r2 = its size; r3 = an offset in the value
                               ; -> .A/.X = the value's length from the offset (0 at its end or past it); as much of it as fits, in the buffer
 ENV_PUT         = $F85D       ; .A = a task ($FF: this one); r0 = a variable's name; r1 = bytes; r2 = their count; r3 = where in its value they go (the value cut there first: 0 for a new value; its length at most)
@@ -236,7 +236,8 @@ ME_BANK         = 0           ; MODINFO's answer (ME_SIZE bytes): the module's f
 ME_BANKS        = 1           ; MODINFO: the banks it spans
 ME_TYPE         = 2           ; MODINFO: its type (HT_*)
 ME_FLAGS        = 3           ; MODINFO: its flags (HF_*)
-ME_NAME         = 4           ; MODINFO: its name (12 bytes, zero-padded)
+ME_NAME         = 4           ; MODINFO: its name (11 bytes, zero-padded: 10 characters at most)
+ME_PAGE         = 15          ; MODINFO: its header's page in its first bank, 0-63 ($A000 + 256 * it: a module of a bank, packed with others)
 ME_SIZE         = 16          
 TI_STATE        = 0           ; TASKINFO's answer: the task's state (0: free, 1 ready, 2 wait, 3 call, 4 idle, 5 new, 6 sleep, 7 blocked, 8 event)
 TI_FLAGS        = 1           ; TASKINFO: its flags (TF_DRIVER, TF_STOPPED)

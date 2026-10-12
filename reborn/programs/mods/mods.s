@@ -1,6 +1,7 @@
 ; ****************************************************************************
 ; mods - the paged ROM's modules (the module directory, by MODINFO), a line each under a heading: its bank (or
-; banks), its type (program, driver, library; "boot": a driver the kernel starts) and its name.
+; banks; "4+33", a module of a bank sharing it with others, its header at $A000 + $3300: its page), its type
+; (program, driver, library; "boot": a driver the kernel starts) and its name.
 
 .include "hydra.inc"
 .include "hyx2.inc"
@@ -24,15 +25,16 @@ main:
             LDR         r0, me
             lda         entry
             jsr         MODINFO
-            bcs         @end
+            bcc         :+
+            jmp         tl_end                              ; (Past the last)
+:
             lda         me + ME_BANK                        ; Its bank, or banks: "8-9"
             jsr         tl_setnum
             lda         #3
             jsr         tl_dec
-            ldx         #3                                  ; (The column: 6 wide)
             lda         me + ME_BANKS
             cmp         #2
-            bcc         :+
+            bcc         @one
             lda         #'-'
             jsr         tl_putc
             lda         me + ME_BANK
@@ -42,11 +44,22 @@ main:
             jsr         tl_setnum
             lda         #2
             jsr         tl_dec
+            bra         @col
+
+@one:                                                       ; A bank shared: "4+33", its page ($A000 + $3300)
+            ldx         #3                                  ; (The column: 6 wide)
+            lda         me + ME_PAGE
+            beq         @spaces
+            lda         #'+'
+            jsr         tl_putc
+            lda         me + ME_PAGE
+            jsr         hex2
+@col:
             ldx         #0
-:
+@spaces:
             jsr         tl_space
             dex
-            bpl         :-
+            bpl         @spaces
             lda         me + ME_TYPE                        ; Its type
             cmp         #HT_LIBRARY + 1
             bcc         :+
@@ -78,8 +91,23 @@ main:
             inc         entry
             jmp         @entry
 
-@end:
-            jmp         tl_end
+; .A as two hex digits
+hex2:
+            pha
+            lsr
+            lsr
+            lsr
+            lsr
+            jsr         @digit
+            pla
+            and         #$0F
+@digit:
+            cmp         #10
+            bcc         :+
+            adc         #'A' - '0' - 10 - 1                 ; (C = 1)
+:
+            adc         #'0'
+            jmp         tl_putc
 
 .rodata
 types:      .word       s_other, s_program, s_driver, s_library

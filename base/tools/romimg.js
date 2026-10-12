@@ -1,18 +1,22 @@
 #!/usr/bin/env node
 // ****************************************************************************
-// romimg.js - the paged ROM image: the module directory in bank 0, each module in banks of its own, run in place
+// romimg.js - the paged ROM image: the module directory in bank 0, the modules, run in place
 // (docs/design/reimplementation-from-scratch.md, §11), and a ROM disk's volume after them, if the system has one
 // (HydraOS's: its tools/romfs.js, given as romfsLib; reborn/tools/romimg.js gives it).
 //
 //   bank 0, $A000-$A1FF   block 0: a signature line, and the ROM disk's partition table (romfs.js)
-//   bank 0, $A200-$A9FF   the module directory (include/layout.inc: MD_*, ME_*): "HYMD", its version, the count,
+//   bank 0, $A200-$A9FF   the module directory (include/layout.inc: MD_*, ME_*): "HYMD", its version (2), the count,
 //                         init's entry, whether bank 1 has the hardware test, then 16 bytes a module: its bank,
-//                         banks, type, flags and name
+//                         banks, type, flags, name (10 characters at most) and page
 //   bank 1                the hardware test (os_rom/hwtest, unchanged: its $A000-$DEFF copied from the old
 //                         system's paged ROM image), with the ROMs' checksums at $DF00 (as os_rom/tools/romsum.js
 //                         makes them: a CRC-16 of each BIOS ROM page and paged ROM bank, here of reborn's images)
-//   banks 2 ...           the modules, each at $A000 of its first bank (its HYX2 header first)
+//   banks 2 ...           the modules (place): one of two banks or more at $A000 of its first, its banks in a row;
+//                         one of a bank at $A000 + 256 * its page (where it's linked: its header's load address),
+//                         in bank 0 after the directory, the free top of another's bank, or a bank of its own
 //   the banks after them  the ROM disk's HydraFS volume (/rom), as big as its files need (whole banks)
+// A small module isn't a bank's: plan() finds each one that's linked at $A000 (and may move) the first bank with room,
+// at the lowest page there, and the build links it at that page; build() then places it there again (the same way).
 // Banks in socket order: the Nth bank used is the CPU's bank N with bits 6 and 7 swapped (socketBank), so what's
 // there fills the sockets (512K chips, 32 banks each) in turn, and the storage driver reads the ROM disk the same way
 // (rom_read).  A module of two banks doesn't straddle the 64th: its banks are N and N + 1 to the CPU too.
@@ -33,7 +37,8 @@ const fs = require('fs');
 const path = require('path');
 
 const BANK = 0x4000, WINDOW = 0xA000, PAGE = 0x2000;
-const MD_BASE = 0xA200, MD_VERSION = 1, MD_MAX = 127, ME_SIZE = 16, NAME_LEN = 12;
+const MD_BASE = 0xA200, MD_VERSION = 2, MD_MAX = 127, ME_SIZE = 16, NAME_LEN = 12, ME_PAGE = 15, DIR_NAME_MAX = 10;
+const PAGES = 64, MD_PAGES = Math.ceil((MD_BASE + 8 + MD_MAX * ME_SIZE - 0xA000) / 256);   // (A bank's 256-byte pages; bank 0's the directory's)
 const HX = { MAGIC: 0, HSIZE: 4, TYPE: 5, FLAGS: 6, ABI: 7, LOAD: 8, LENGTH: 10, BANKS: 33, NAME: 36, SIZE: 48 };
 const TYPES = { 1: 'program', 2: 'driver', 3: 'library' };
 const SIGNATURE = 'Hydra-16 reborn paged ROM: block 0 this and the ROM disk\'s partition table, then the module directory; ' +
@@ -53,21 +58,71 @@ function crc16(get, n) {
   return c;
 }
 
-// A module's header, checked.  OUT: { name, type, flags, banks, data }
+// A module's header, checked.  OUT: { name, type, flags, banks, length (its last bank's), page, data }
 function readHeader(data, what) {
   const fail = msg => { throw new Error(what + ': ' + msg); };
   if (data.length < HX.SIZE || data.toString('latin1', 0, 4) !== 'HYX2') fail('not a HYX2 module');
   if (data[HX.HSIZE] !== HX.SIZE) fail('a header of ' + data[HX.HSIZE] + ' bytes (48 expected)');
   if (!TYPES[data[HX.TYPE]]) fail('type ' + data[HX.TYPE] + '?');
-  if (data.readUInt16LE(HX.LOAD) !== WINDOW) fail('not built to run in place (load address $' + data.readUInt16LE(HX.LOAD).toString(16) + ')');
-  const banks = data[HX.BANKS], length = data.readUInt16LE(HX.LENGTH);   // (Its length in its last bank)
+  const banks = data[HX.BANKS], length = data.readUInt16LE(HX.LENGTH), load = data.readUInt16LE(HX.LOAD);   // (Its length in its last bank)
   if (banks < 1 || banks > 8) fail(banks + ' banks: one to eight');
   if (length < 1 || length > BANK || (banks - 1) * BANK + length !== data.length)
     fail('its header says ' + banks + ' banks, the last ' + length + ' bytes long; the file has ' + data.length);
+  const page = (load - WINDOW) / 256;                         // (A module of a bank may be linked at a page of one)
+  if (load !== WINDOW && (banks > 1 || !Number.isInteger(page) || page < 0 || page * 256 + length > BANK))
+    fail('not built to run in place (load address $' + load.toString(16) + ')');
   const raw = data.subarray(HX.NAME, HX.NAME + NAME_LEN), end = raw.indexOf(0);
   if (end < 1) fail('no name');
+  if (end > DIR_NAME_MAX) fail('a name of ' + end + ' characters: the module directory\'s are ' + DIR_NAME_MAX + ' at most');
   const name = raw.toString('latin1', 0, end);
-  return { name, type: data[HX.TYPE], flags: data[HX.FLAGS], banks, data };
+  return { name, type: data[HX.TYPE], flags: data[HX.FLAGS], banks, length, page, data };
+}
+
+// Where each module goes: e.bank (the CPU's: socketBank of its place in socket order) and e.page (its header's page
+// there).  The modules of two banks or more first, in turn from bank 2, each at $A000 of its first (its banks not
+// straddling the 64th); then the modules of a bank, the biggest first, each in the first bank with room at its page:
+// bank 0 after the directory, one of those before it (the top of a module's last bank, or of a module of a bank's),
+// or a new one.  plan: a module with e.pack gets the lowest page with room, in the first bank that has it (so, linked
+// there, it's placed there again).  Only the room after each module's end is used: a module's banks before its last
+// are filled out to 16K by the link, and their ends can't be told.  OUT: the banks used (socket order)
+function place(entries, plan = false) {
+  const banks = [];                                           // Each bank's pages in use: { n (socket order), used }
+  const open = n => { const b = { n, used: new Uint8Array(PAGES) }; banks.push(b); return b; };
+  const take = (b, page, pages) => b.used.fill(1, page, page + pages);
+  const fits = (b, page, pages) => page + pages <= PAGES && !b.used.subarray(page, page + pages).some(x => x);
+  take(open(0), 0, MD_PAGES);
+  let next = FIRST_MODULE_BANK;
+  for (const e of entries.filter(e => e.banks > 1)) {
+    if (next % 64 + e.banks > 64) next += 64 - next % 64;    // (Banks N, N + 1 ... to the CPU as well: in a 64)
+    e.bank = socketBank(next);
+    if (e.page) throw new Error(e.name + ': a module of ' + e.banks + ' banks is at $A000');
+    take(open(next + e.banks - 1), 0, Math.ceil(e.length / 256));
+    next += e.banks;
+  }
+  const small = entries.filter(e => e.banks === 1).sort((a, b) => b.length - a.length || (a.name < b.name ? -1 : 1));
+  for (const e of small) {
+    const pages = Math.ceil(e.length / 256);
+    let to = null;
+    for (const b of banks) {
+      if (plan && e.pack) {
+        for (let p = 0; !to && p + pages <= PAGES; p++) if (fits(b, p, pages)) { to = b; e.page = p; }
+      } else if (fits(b, e.page, pages)) to = b;
+      if (to) break;
+    }
+    if (!to) { to = open(next++); if (plan && e.pack) e.page = 0; }
+    take(to, e.page, pages);
+    e.bank = socketBank(to.n);
+  }
+  return next;
+}
+
+// The pages the modules of a bank that may move are to be linked at (each with pack set: build.js's), for a paged
+// ROM of these modules, in this order.  OUT: { name: page }
+function plan(modules) {
+  const entries = modules.map((m, i) => Object.assign(readHeader(m.data, m.file || 'module ' + i), { pack: !!m.pack }));
+  for (const e of entries) if (e.pack) { if (e.banks !== 1) throw new Error(e.name + ': only a module of a bank moves'); e.page = 0; }
+  place(entries, true);
+  return Object.fromEntries(entries.filter(e => e.pack).map(e => [e.name, e.page]));
 }
 
 // Write bytes at a CPU address in a bank, the chips' way
@@ -89,13 +144,8 @@ function build({ modules, init, hwtest, bios, romfs: files, romfsLib: romfs }) {
   let initIndex = 0xFF;
   if (init) { initIndex = entries.findIndex(e => e.name === init); if (initIndex < 0) throw new Error('no module ' + init + ' for init'); }
   if (initIndex !== 0xFF && entries[initIndex].type !== 1) throw new Error(init + ' is not a program');
-  let bank = FIRST_MODULE_BANK;                               // (In socket order: the CPU's socketBank(bank))
-  for (const e of entries) {
-    if (bank % 64 + e.banks > 64) bank += 64 - bank % 64;    // (Banks N, N + 1 ... to the CPU as well: in a 64)
-    e.bank = socketBank(bank);
-    bank += e.banks;
-  }
-  let disk = null;                                            // The ROM disk: its volume in the banks after them,
+  let bank = place(entries);                                  // (The banks used, in socket order)
+  let disk = null;                                           // The ROM disk: its volume in the banks after them,
   if (files && bank < ROM_BANKS) {                            //   whole banks, as many as its files need
     const start = bank * BLOCKS_PER_BANK, most = ROM_BANKS * BLOCKS_PER_BANK - start;   // (From the blocks written: a
     let blocks = Math.ceil(romfs.volume(files, most).length / BANK) * BLOCKS_PER_BANK, volume = null;  //   file's last
@@ -120,9 +170,10 @@ function build({ modules, init, hwtest, bios, romfs: files, romfsLib: romfs }) {
     const o = 8 + i * ME_SIZE;
     md[o] = e.bank; md[o + 1] = e.banks; md[o + 2] = e.type; md[o + 3] = e.flags;
     md.write(e.name, o + 4, 'latin1');
+    md[o + ME_PAGE] = e.page;
   });
   put(image, 0, MD_BASE, md);
-  for (const e of entries) put(image, e.bank, WINDOW, e.data);
+  for (const e of entries) put(image, e.bank, WINDOW + e.page * 256, e.data);
   if (disk)                                                   // (A bank at a time: socket order)
     for (let i = 0; i * BANK < disk.volume.length; i++)
       put(image, socketBank(disk.start / BLOCKS_PER_BANK + i), WINDOW, disk.volume.subarray(i * BANK, (i + 1) * BANK));
@@ -181,7 +232,7 @@ function main(argv) {
     romfs: files && romfs.manifest(files), romfsLib: romfs });
   fs.writeFileSync(out, image);
   if (list) for (const e of entries)
-    console.log('bank ' + e.bank.toString(16).padStart(2, '0') + '  ' + TYPES[e.type].padEnd(8) + e.name.padEnd(12) + e.data.length + ' bytes' + (e.name === init ? '  (init)' : ''));
+    console.log('bank ' + e.bank.toString(16).padStart(2, '0') + (e.page ? ' +$' + (e.page * 256).toString(16).toUpperCase().padStart(4, '0') : '       ') + '  ' + TYPES[e.type].padEnd(8) + e.name.padEnd(12) + e.data.length + ' bytes' + (e.name === init ? '  (init)' : ''));
   if (list && disk) for (const f of disk.files)
     console.log('/rom' + f.path.padEnd(24) + String(f.size).padStart(7) + ' bytes, banks ' + f.banks.map(b => b.toString(16).padStart(2, '0')).join(','));
 }
@@ -189,4 +240,4 @@ function main(argv) {
 if (require.main === module) {
   try { main(process.argv.slice(2)); } catch (e) { console.error('romimg: ' + e.message); process.exit(1); }
 }
-module.exports = { build, read, readHeader, romBank, socketBank, sums, crc16, CHIP };
+module.exports = { build, plan, place, read, readHeader, romBank, socketBank, sums, crc16, CHIP };

@@ -98,6 +98,32 @@ function buildModule(dir, objdir, defines, ram = false, libs = {}, includes = IN
   return data;
 }
 
+// May the module in dir move (be packed in a bank with others: romimg.js's plan)?  A program or a driver of a bank,
+// linked by modules/module.cfg (not a library, nor one with a link of its own)
+function packable(dir, data) {
+  return data[33] === 1 && (data[5] === 1 || data[5] === 2) && !fs.existsSync(path.join(dir, path.basename(dir) + '.cfg'));
+}
+
+// The module in dir (buildModule's objects in objdir) linked again at page `page` of its bank ($A000 + 256 * page:
+// romimg.js's plan), its image, map and labels into outdir.  OUT: its image (as long as it was: the same code, at
+// another address)
+function relinkModule(dir, objdir, outdir, page, length) {
+  const name = path.basename(dir), od = path.join(objdir, name), out = path.join(outdir, name);
+  const objs = sources(dir).map(f => path.join(od, path.basename(f).replace(/\.s$/, '.o')));
+  mkdir(out);
+  const base = fs.readFileSync(moduleCfg(1), 'latin1'), start = 0xA000 + page * 256;
+  const text = base.replace(/(ROM:\s+start = )\$A000, size = \$4000/, '$1$' + start.toString(16).toUpperCase() + ', size = $' +
+    (0x4000 - page * 256).toString(16).toUpperCase());
+  if (text === base) throw new Error('modules/module.cfg: no ROM at $A000 to move');
+  const cfg = path.join(out, name + '.cfg'), bin = path.join(outdir, name + '.bin'), dbg = path.join(out, name + '.dbg');
+  fs.writeFileSync(cfg, text);
+  run(LD65, ['-C', cfg, '-o', bin, '-m', path.join(out, name + '.map'), '-Ln', path.join(out, name + '.lbl'), '--dbgfile', dbg, ...objs]);
+  const data = fs.readFileSync(bin);
+  if (data.length !== length) throw new Error(name + ': ' + data.length + ' bytes linked at $' + start.toString(16) + ', ' + length + ' at $A000');
+  check.checkModule(name, data, start);
+  return data;
+}
+
 // The hardware test: bank 1 of the old system's paged ROM image (old/os_rom/bin, in Git), or null without it
 const HWTEST_IMAGE = path.join(ROOT, '..', 'old', 'os_rom', 'bin', 'paged_rom_C02.bin');
 function hwtest() {
@@ -175,4 +201,4 @@ if (require.main === module) {
   }
   try { build(opt); } catch (e) { console.error('build: ' + e.message); process.exit(1); }
 }
-module.exports = { build, buildModule, assemble, run, tool, sources, readManifest, hwtest, definesOf, moduleCfg, INCLUDES, CA65, LD65, ROOT, HWTEST_IMAGE };
+module.exports = { build, buildModule, packable, relinkModule, assemble, run, tool, sources, readManifest, hwtest, definesOf, moduleCfg, INCLUDES, CA65, LD65, ROOT, HWTEST_IMAGE };

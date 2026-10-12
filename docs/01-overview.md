@@ -108,11 +108,11 @@ writes.  The operating system hands out banks so programs don't have to agree am
 The second window, `$A000-$DFFF`, shows 16K of the **paged ROM**: 4 MB of flash in eight chips, 256 banks of 16K.
 Each task chooses its own ROM bank with its **ROM bank register**, a byte written at address `$0001`.
 
-This is where the operating system lives.  Almost all of HydraOS (the drivers, the shell, the languages, the tools) is
-**modules** in the paged ROM, each starting at `$A000` of a bank of its own, and each **runs in place**: a task that
-runs the shell sets its ROM bank register to the shell's bank and jumps to it.  Nothing is copied into RAM, so a task
-keeps nearly all of its 32K for its data, and sixteen tasks can run the same module at once.  The rest of the paged ROM
-is a small read-only disk, `/rom`, with files the system needs.
+This is where the operating system lives.  The drivers, the shell and the languages are **modules** in the paged ROM,
+each in banks of its own or, if it's small, sharing a bank with others, and each **runs in place**: a task that runs
+the shell sets its ROM bank register to the shell's bank and jumps to it.  Nothing is copied into RAM, so a task keeps
+nearly all of its 32K for its data, and sixteen tasks can run the same module at once.  The rest of the paged ROM is a
+small read-only disk, `/rom`, with the tools (programs read into RAM to run) and files the system needs.
 
 ### The BIOS ROM and its pages
 

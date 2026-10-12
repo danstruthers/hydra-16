@@ -157,7 +157,9 @@ entry), so a card pulled out loses at most what was being written, not the file 
 HydraFS is the Hydra's own file system, designed for the 65C02 and Plan 9's file model.  Its full format is in
 `docs/design/plans/HYDRAFS.md`; in short:
 
-* **Blocks** are the card's 512-byte sectors; space is given out in **clusters of 8 blocks** (4K).
+* **Blocks** are the card's 512-byte sectors; space is given out in **clusters of 8 blocks** (4K) on a card.  The
+  superblock says a volume's own size, 1K to 4K: a RAM disk's are 1K, and so are the ROM disk's (its many small files
+  wasted half a cluster each at 4K: 14 banks of the paged ROM).
 * **Block 0** is the superblock: the magic `HYDRAFS1`, the sizes, the free map's place, the root directory's entry, the
   label.  Then the **free map**, a bit a cluster, then the **data area**.
 * **A directory** is a file of 64-byte entries, and **the entry is the file's metadata**: its name (31 bytes, any byte but
