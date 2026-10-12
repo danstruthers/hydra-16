@@ -1,0 +1,8 @@
+#!/bin/rc
+# note - a notebook.  note words ... adds a line, with the date; note alone shows them all
+book=/sd/0/work/notebook
+if(~ $#* 0) {
+	cat $book
+	exit
+}
+echo `{date} $* >>$book

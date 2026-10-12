@@ -1,0 +1,36 @@
+/* The Student Companion: a workbook's extra furniture (added to manual/book.css) */
+
+/* Lines to write on: <div class="write l3"></div> is three lines */
+div.write { height: 24pt; margin: 2pt 0 8pt; break-inside: avoid;
+  background: repeating-linear-gradient(to bottom, transparent 0, transparent 23.2pt, #999 23.2pt, #999 24pt); }
+div.write.l2 { height: 48pt; }
+div.write.l3 { height: 72pt; }
+div.write.l4 { height: 96pt; }
+div.write.l5 { height: 120pt; }
+div.write.l6 { height: 144pt; }
+div.write.l8 { height: 192pt; }
+/* A box to draw or stick something in: <div class="space s2"></div> */
+div.space { height: 1in; margin: 4pt 0 10pt; border: 0.8pt solid #999; break-inside: avoid; }
+div.space.s2 { height: 2in; }
+div.space.s3 { height: 3in; }
+/* A table's empty cells are for writing in: give them room */
+td:empty { height: 20pt; min-width: 0.6in; }
+td { vertical-align: middle; }
+/* Name and date at the top of a sheet: <p class="fields">Name <span></span> Date <span class="short"></span></p> */
+p.fields { margin: 0 0 10pt; font: 9pt Arial, sans-serif; color: #444; display: flex; gap: 8pt; align-items: flex-end; }
+p.fields span { flex: 3; border-bottom: 0.8pt solid #999; height: 16pt; }
+p.fields span.short { flex: 1; }
+/* A sheet's facts: > **THIS LAB:** ...   > **THIS PROJECT:** ...   > **THIS STAGE:** ... */
+blockquote.this-lab, blockquote.this-project, blockquote.this-stage { border: 0; border-top: 2.2pt solid #111; border-bottom: 0.8pt solid #111;
+  background: #fff; padding: 6pt 2pt; margin: 4pt 0 12pt; }
+blockquote.this-lab > p:first-child > strong:first-child, blockquote.this-project > p:first-child > strong:first-child,
+blockquote.this-stage > p:first-child > strong:first-child { color: #111; }
+/* A challenge, and a signature box */
+blockquote.challenge { border-color: #b8860b; background: #fffbea; }
+blockquote.challenge > p:first-child > strong:first-child { color: #8a6500; }
+blockquote.signed { border-color: #555; background: #fff; }
+/* Steps with room: a sheet's numbered list */
+body.book-companion ol > li { margin-bottom: 5pt; }
+body.book-companion h3 { margin-top: 12pt; }
+/* The reference cards: tight, two columns of table where they fit */
+section.chapter table { break-inside: auto; }

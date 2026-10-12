@@ -132,8 +132,11 @@ function main() {
   const argv = process.argv.slice(2);
   const fix = argv.includes('--fix'), list = argv.includes('--list');
   let files = argv.filter(a => !a.startsWith('--'));
-  if (!files.length) files = fs.readFileSync(path.join(BOOK, 'book.txt'), 'utf8').split('\n')
-    .map(l => l.trim()).filter(l => l && !l.startsWith('#') && l.endsWith('.md'));
+  // A book's files, from its book.txt: the manual's ("."), or another book's folder ("companion", "educator")
+  const bookOf = dir => fs.readFileSync(path.join(BOOK, dir, 'book.txt'), 'utf8').split('\n')
+    .map(l => l.trim()).filter(l => l && !l.startsWith('#') && l.endsWith('.md')).map(f => (dir === '.' ? f : dir + '/' + f));
+  if (!files.length) files = bookOf('.');
+  files = [].concat(...files.map(f => (fs.existsSync(path.join(BOOK, f, 'book.txt')) ? bookOf(f) : [f])));
   let bad = 0, n = 0;
   for (const spec of files) {
     const [f, at] = spec.split(':');

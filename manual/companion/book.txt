@@ -1,0 +1,59 @@
+# The Hydra-16 Student Companion: its files, in order (node manual/build.js companion)
+#! title: The Hydra-16 Student Companion
+#! running: STUDENT COMPANION
+#! out: hydra-16-companion
+#! index: no
+00-about.md
+part1.md
+u01-ready.md
+u02-board.md
+u03-chips.md
+u04-memory.md
+u05-switch-on.md
+part2.md
+lab01.md
+lab02.md
+lab03.md
+lab04.md
+lab05.md
+lab06.md
+lab07.md
+lab08.md
+lab09.md
+lab10.md
+lab11.md
+lab12.md
+lab13.md
+lab14.md
+lab15.md
+lab16.md
+lab17.md
+lab18.md
+lab19.md
+lab20.md
+lab21.md
+lab22.md
+lab23.md
+lab24.md
+lab25.md
+lab26.md
+part3.md
+proj1.md
+proj2.md
+proj3.md
+proj4.md
+proj5.md
+proj6.md
+proj7.md
+part4.md
+card1.md
+card2.md
+card3.md
+card4.md
+card5.md
+card6.md
+card7.md
+card8.md
+part5.md
+z1-logbook.md
+z2-passport.md

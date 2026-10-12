@@ -1,10 +1,18 @@
 #!/usr/bin/env node
-// build.js - the Hydra-16 User's and Builder's Manual: its chapters (book.txt lists them, in order) into one book,
-// manual/hydra-16-manual.html and manual/hydra-16-manual.pdf.  The PDF is printed by Edge or Chrome (headless): set
-// $BROWSER to its path if it isn't found.  Its contents pages get their page numbers from a first printing (read
-// back with pdftotext, from poppler; without it, the contents have no page numbers).
+// build.js - the Hydra-16's books: a book's chapters (its book.txt lists them, in order) into one HTML file and one
+// PDF.  The PDF is printed by Edge or Chrome (headless): set $BROWSER to its path if it isn't found.  Its contents
+// pages get their page numbers from a first printing (read back with pdftotext, from poppler; without it, the
+// contents have no page numbers).
 //
-// Usage: node manual/build.js [--html]       (--html: only the HTML, no PDF)
+// Usage: node manual/build.js [BOOK] [--html]     (--html: only the HTML, no PDF)
+//   BOOK   none: the User's and Builder's Manual (manual/, hydra-16-manual.pdf); or a folder of manual/ with a
+//          book.txt of its own: companion (the Student Companion), educator (the Educator's Course Guide)
+// A book has its own book.txt, title.html and (if it likes) index.txt and book.css (added to manual/book.css); the
+// figures, the samples and the tools are the manual's.  Lines of book.txt that start "#!" set the book up:
+//   #! title: The Hydra-16 Student Companion     (the HTML's title)
+//   #! running: STUDENT COMPANION                (the words at the top right of each page)
+//   #! out: hydra-16-companion                   (the files' name: .html and .pdf, in the book's folder)
+//   #! index: no                                 (no index at the back)
 'use strict';
 const fs = require('fs');
 const os = require('os');
@@ -13,8 +21,14 @@ const { execFileSync } = require('child_process');
 const md = require('./tools/md.js');
 
 const DIR = __dirname;
-const OUT_HTML = path.join(DIR, 'hydra-16-manual.html');
-const OUT_PDF = path.join(DIR, 'hydra-16-manual.pdf');
+// The book being built: its folder, and what its book.txt's "#!" lines say
+const BOOK = process.argv.slice(2).find(a => !a.startsWith('--')) || '';
+const BOOKDIR = path.join(DIR, BOOK);
+if (!fs.existsSync(path.join(BOOKDIR, 'book.txt'))) { console.error('build.js: no book.txt in ' + BOOKDIR); process.exit(2); }
+const SET = { title: "The Hydra-16 User's and Builder's Manual", running: 'HYDRA-16 MANUAL', out: 'hydra-16-manual', index: 'yes' };
+for (const m of fs.readFileSync(path.join(BOOKDIR, 'book.txt'), 'utf8').matchAll(/^#!\s*(\w+):\s*(.*?)\s*$/gm)) SET[m[1]] = m[2];
+const OUT_HTML = path.join(BOOKDIR, SET.out + '.html');
+const OUT_PDF = path.join(BOOKDIR, SET.out + '.pdf');
 
 function browser() {
   const tries = [process.env.BROWSER,
@@ -27,7 +41,7 @@ function browser() {
 
 // ---- The book's parts, from book.txt: a file a line (# comments)
 function files() {
-  return fs.readFileSync(path.join(DIR, 'book.txt'), 'utf8').split(/\r?\n/).map(l => l.replace(/#.*/, '').trim()).filter(Boolean);
+  return fs.readFileSync(path.join(BOOKDIR, 'book.txt'), 'utf8').split(/\r?\n/).map(l => l.replace(/#.*/, '').trim()).filter(Boolean);
 }
 
 // A file's kind, from its first heading: "Part One. Title", "Chapter 3. Title", "Appendix A. Title", "Appendices" (a
@@ -36,8 +50,8 @@ function kindOf(h) {
   if (/^Appendices$/.test(h)) return { kind: 'part', num: '', title: h };
   let m = /^Part\s+(\w+)[.:]\s*(.*)$/.exec(h);
   if (m) return { kind: 'part', num: m[1], title: m[2] };
-  m = /^Chapter\s+(\d+)[.:]\s*(.*)$/.exec(h);
-  if (m) return { kind: 'chapter', num: m[1], title: m[2] };
+  m = /^(Chapter|Unit|Lab|Project|Card|Lesson|Course)\s+(\d+)[.:]\s*(.*)$/.exec(h);      // (The other books' chapters)
+  if (m) return { kind: 'chapter', word: m[1], num: m[2], title: m[3] };
   m = /^Appendix\s+([A-Z])[.:]\s*(.*)$/.exec(h);
   if (m) return { kind: 'appendix', num: m[1], title: m[2] };
   return { kind: 'front', num: '', title: h };
@@ -126,7 +140,7 @@ function book(pages) {
   };
   let mark = 0;
   for (const f of files()) {
-    const src = fs.readFileSync(path.join(DIR, f), 'utf8');
+    const src = fs.readFileSync(path.join(BOOKDIR, f), 'utf8');
     const first = /^#\s+(.*)$/m.exec(src);
     const k = kindOf(first ? first[1].replace(/\s*\{#[^}]*\}\s*$/, '') : f);
     const r = md.render(src, { ids, link: l => /^[a-z0-9-]+\.md(#.*)?$/.test(l) ? l.replace(/^[^#]*\.md/, '') || '#' : l });
@@ -140,7 +154,7 @@ function book(pages) {
       html = '<div class="part-page"><div class="stripes"><i></i><i></i><i></i><i></i><i></i></div><p class="part-num">' + (k.num ? 'Part ' + md.esc(k.num) : 'Reference') + '</p>' +
         html.replace(/^<h1 id="([^"]+)">(?:<span class="mk">[^<]*<\/span>)?[^<]*<\/h1>/, (m0, id) => '<h1 id="' + id + '">' + (pages ? '' : m0.match(/<span class="mk">[^<]*<\/span>/)?.[0] || '') + md.esc(k.title) + '</h1>') + '</div>';
     } else if (k.kind === 'chapter' || k.kind === 'appendix') {
-      const label = k.kind === 'chapter' ? 'Chapter ' + k.num : 'Appendix ' + k.num;
+      const label = k.kind === 'chapter' ? k.word + ' ' + k.num : 'Appendix ' + k.num;
       for (const h of r.headings) {
         if (h.level === 1) toc.push({ kind: k.kind, text: label + '. ' + k.title, num: k.num, title: k.title, id: h.id, mark: entry(h) });
         else if (h.level === 2) {
@@ -187,7 +201,7 @@ function book(pages) {
     sections.push('<section class="' + k.kind + '" style="page: ' + (k.kind === 'chapter' || k.kind === 'appendix' ? name : k.kind) + '">' + html + '</section>');
   }
   // The index's everyday words (index.txt: "term: 6.6, 9.2"): each at the page its section starts on
-  const extra = path.join(DIR, 'index.txt');
+  const extra = path.join(BOOKDIR, 'index.txt');
   if (fs.existsSync(extra)) {
     for (const line of fs.readFileSync(extra, 'utf8').split(/\r?\n/)) {
       const m = /^([^#:][^:]*):\s*(.+)$/.exec(line.trim());
@@ -201,7 +215,7 @@ function book(pages) {
     }
   }
   // The index, last
-  {
+  if (SET.index !== 'no') {
     const n = mark++;
     toc.push({ kind: 'front', text: 'Index', id: 'index', mark: n });
     sections.push('<section class="front index-section" style="page: index"><h1 class="index-title" id="index">' + (pages ? '' : MARK(n)) + 'Index</h1>' +
@@ -216,13 +230,17 @@ function book(pages) {
     if (e.kind === 'section') return '<p class="toc-sec"><a href="#' + e.id + '">' + md.inline(e.text) + '</a><span class="dots"></span><span class="pg">' + pg(e) + '</span></p>';
     return '<p class="toc-front"><a href="#' + e.id + '">' + md.esc(e.text) + '</a><span class="dots"></span><span class="pg">' + pg(e) + '</span></p>';
   }).join('\n') + '</div></section>';
-  const title = fs.readFileSync(path.join(DIR, 'title.html'), 'utf8');
-  const css = fs.readFileSync(path.join(DIR, 'book.css'), 'utf8') + '\n' + runCss.join('\n');
+  const title = fs.readFileSync(path.join(BOOKDIR, 'title.html'), 'utf8');
+  const own = BOOK && fs.existsSync(path.join(BOOKDIR, 'book.css')) ? fs.readFileSync(path.join(BOOKDIR, 'book.css'), 'utf8') : '';
+  const css = fs.readFileSync(path.join(DIR, 'book.css'), 'utf8') + '\n' + own + '\n' +
+    '@page { @top-right { content: "' + SET.running.replace(/["\\]/g, '') + '"; } }\n' +
+    '@page :first { @top-right { content: none; } }\n@page front { @top-right { content: none; } }\n@page part { @top-right { content: none; } }\n' +
+    runCss.join('\n');
   // (The contents go after the front matter's first file, the preface)
   const firstChapter = sections.findIndex(s => /^<section class="(part|chapter)"/.test(s));
   const body = [title, ...sections.slice(0, firstChapter), contents, ...sections.slice(firstChapter)].join('\n');
-  return '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><title>The Hydra-16 User\'s and Builder\'s Manual</title>\n<base href="' +
-    'file:///' + DIR.replace(/\\/g, '/') + '/">\n<style>\n' + css + '\n</style></head><body>\n' + body + '\n</body></html>\n';
+  return '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><title>' + md.esc(SET.title) + '</title>\n<base href="' +
+    'file:///' + DIR.replace(/\\/g, '/') + '/">\n<style>\n' + css + '\n</style></head><body class="book-' + (BOOK || 'manual') + '">\n' + body + '\n</body></html>\n';
 }
 
 function printPdf(htmlFile, pdfFile) {
@@ -260,7 +278,7 @@ function main() {
   const htmlOnly = process.argv.includes('--html');
   if (htmlOnly) { fs.writeFileSync(OUT_HTML, book({})); console.log('wrote', path.relative(process.cwd(), OUT_HTML)); return; }
   // Pass 1: marks in, the contents' numbers "000"; read back where each mark landed
-  const tmp = path.join(os.tmpdir(), 'hydra-manual-pass1.pdf');
+  const tmp = path.join(os.tmpdir(), SET.out + '-pass1.pdf');
   fs.writeFileSync(OUT_HTML, book(null));
   printPdf(OUT_HTML, tmp);
   const pages = markPages(tmp);

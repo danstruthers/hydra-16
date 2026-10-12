@@ -69,16 +69,16 @@ explain a word.
 
 ## Phase 3. The Student Companion
 
-- [ ] **3.1 `build.js` builds any of the three books** (`node manual/build.js companion`), with shared style,
+- [x] **3.1 `build.js` builds any of the three books** (`node manual/build.js companion`), with shared style,
   figures and tools; a workbook's own page furniture (tick boxes, write-in lines, tables to fill).
-- [ ] **3.2 The build log.** A checklist for every step of Chapters 3 to 5, with the parts and joint counts of each
+- [x] **3.2 The build log.** A checklist for every step of Chapters 3 to 5, with the parts and joint counts of each
   stage, inspection sign-offs, the first power-on's readings, and a fault-finding chart.
-- [ ] **3.3 Lab sheets**, one or more for each chapter of the manual: the aim, what you need, the steps, questions
+- [x] **3.3 Lab sheets**, one or more for each chapter of the manual: the aim, what you need, the steps, questions
   with room for answers, a "check yourself" list and a challenge.
-- [ ] **3.4 Projects.** Type-in programs that grow: a guessing game, a quiz, turtle pictures, a tune, a light on the
+- [x] **3.4 Projects.** Type-in programs that grow: a guessing game, a quiz, turtle pictures, a tune, a light on the
   I/O header, two tasks that talk, a machine-language routine called from BASIC.
-- [ ] **3.5 Quick-reference cards**: the keys, the commands, each language on two pages, the 65C02 on two.
-- [ ] **3.6 A logbook and a skills passport** ("I can ...").
+- [x] **3.5 Quick-reference cards**: the keys, the commands, each language on two pages, the 65C02 on two.
+- [x] **3.6 A logbook and a skills passport** ("I can ...").
 
 ## Phase 4. The Educator's Course Guide
 
@@ -112,4 +112,5 @@ explain a word.
    * the bugs found while writing: HyBASIC's second `RUN` of a program with a `SUB` ("duplicate definition");
      HyForth's `.` on an empty stack printing `{R1` before its message; `2/3` and `#xFF` at the HyForth prompt going
      to rc; the Vera X's boot message cut into another line; the console dropping keys when a window's queue fills;
-     db's `c` after an interrupted `n`.
+     db's `c` after an interrupted `n`; a pipeline of four programs (`rc: too many fds`, and rc's pipes are then
+     broken until it's restarted).

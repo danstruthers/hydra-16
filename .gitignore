@@ -8,3 +8,5 @@ node_modules/
 
 # The manual's HTML (manual/build.js: the PDF's source, made again with it)
 manual/hydra-16-manual.html
+manual/companion/hydra-16-companion.html
+manual/educator/hydra-16-course-guide.html

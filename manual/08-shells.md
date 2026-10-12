@@ -211,8 +211,12 @@ output becomes the second one's input. `wc -l` counts lines, so this counts the 
       5
 ```
 
-Pipes can be as long as you like: `ls /rom/bin | sort | head`. And `|[2]` pipes standard error instead of standard
-output.
+A line can pipe three programs together: `ls /rom/bin | sort | head`. And `|[2]` pipes standard error instead of
+standard output.
+
+> **NOTE:** In HydraOS 1.0, three is the limit. A line with four programs piped together stops with `rc: too many
+> fds`, and if you typed it at rc's own `%` prompt, rc may then refuse even short pipes: leave it with `exit`, and
+> start it again. For a longer job, put the half-way result in a file in `/ram`, and carry on from there.
 
 ## 8.8 A command's output as words
 
