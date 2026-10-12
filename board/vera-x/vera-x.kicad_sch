@@ -9,7 +9,7 @@
 		(date "2026-10-08")
 		(rev "1")
 		(company "Hydra-16")
-		(comment 1 "From reborn/docs/vera-wiring.md (slot 0; U3 optional, DNP)")
+		(comment 1 "From docs/02-hardware/cards.md (slot 0; U3 optional, DNP)")
 	)
 	(lib_symbols
 		(symbol "Connector_Generic:Conn_01x08"
@@ -10121,7 +10121,7 @@
 			)
 		)
 	)
-	(text "Never use breakout J11 pin 3: slot 0 carries -5 V there (the card labels it +5VA).\nBreakout J7 pin 5 is /DMAB (slot pin 23), not an inverted R/W: the strobes use RWB (J7 pin 4).\nKeep the bus wires short (15 cm or less); a ground wire beside PHI2. Plug and unplug with the power off.\nThe wiring guide: reborn/docs/vera-wiring.md (timing, bring-up, the SMC's firmware)."
+	(text "Never use breakout J11 pin 3: slot 0 carries -5 V there (the card labels it +5VA).\nBreakout J7 pin 5 is /DMAB (slot pin 23), not an inverted R/W: the strobes use RWB (J7 pin 4).\nKeep the bus wires short (15 cm or less); a ground wire beside PHI2. Plug and unplug with the power off.\nThe wiring guide: docs/02-hardware/cards.md, the glue board (timing, bring-up, the SMC's firmware)."
 		(exclude_from_sim no)
 		(at 302.26 203.2 0)
 		(effects

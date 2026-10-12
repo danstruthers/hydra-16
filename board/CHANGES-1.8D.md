@@ -21,7 +21,7 @@ ACT parts are a few ns slower than F parts and have faster edges: check the timi
 | R22 | 330 | Clocks | Between U39A's output and the crystal and C48: limits the crystal's drive. |
 | R23-R26 | 22 | Clocks | Series terminations at the source of HS_CLK, SND_CLK, SER_CLK and PHI2. Each driver's net is now X_SRC. |
 | R27 | 22 | AddressDecode | The same for PHI1 (U22's output, PHI1_SRC). |
-| R28 | 10K | Clocks | A fixed pull-up on RDY, whether J4 is fitted or not. |
+| R28 | 10K | Clocks | A fixed pull-up on RDY, in place of jumper J4. |
 | C86-C89 | 47 uF | Clocks | Bulk capacitance on +5 V. Place them apart: by the slots, the ROM bank and the decode logic. |
 | C80-C85 | 100 nF | Sound | Decoupling. C80 at the YM2151, C81 at the YM3012, C82/C83 at U42's +12 V/-12 V, C84/C85 at IC9's. |
 | R29 | 0 (or a ferrite bead) | Sound | Joins GNDA to GND once, beside the YM3012. In 1.8C they met only inside the power supply. |
@@ -46,8 +46,10 @@ ACT parts are a few ns slower than F parts and have faster edges: check the timi
   pins 1-4.
 * The root sheet's sheet boxes are on the 1.27 mm grid, all the same size.
 * The headphone jack (J26) has left on its tip and right on its ring, the usual way. They were swapped.
-* The slots' audio inputs are still DC-coupled into the mixer: a card with DC on its outputs should AC-couple
-  them itself, or add a capacitor in series with its resistor (R6-R19).
+* Only slot 0's audio is mixed: slots 1-5's inputs (their 10K resistors) are removed, and their SND_CL/SND_CR pins
+  go nowhere (no-connect marks on Connectors).  Slot 0's inputs (R7, R13) are still DC-coupled into the mixer: a card with DC on its outputs should
+  AC-couple them itself.
+* J4, the RDY jumper, is removed: R28 pulls RDY up.
 
 ## Not changed
 

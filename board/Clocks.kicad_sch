@@ -2584,7 +2584,7 @@
 					(hide yes)
 				)
 			)
-			(property "Description" "IC CURRENT SOURCE 3% TO92-3"
+			(property "Description" "Reset supervisor (DS1813-10): RESB held low at power-up and below 4.35 V"
 				(at 0 0 0)
 				(effects
 					(font
@@ -2653,7 +2653,7 @@
 					(hide yes)
 				)
 			)
-			(property "Description_1" "IC CURRENT SOURCE 3% TO92-3"
+			(property "Description_1" "Reset supervisor (DS1813-10): RESB held low at power-up and below 4.35 V"
 				(at 5.08 25.4 0)
 				(effects
 					(font
@@ -3893,7 +3893,7 @@
 			(embedded_fonts no)
 		)
 	)
-	(text "R28 (1.8D): RDY never floats\n(J4 off, or WAI)"
+	(text "R28 (1.8D): RDY's pull-up, in place of\n1.8C's jumper J4 (WAI pulls RDY low)"
 		(exclude_from_sim no)
 		(at 205.74 163.83 0)
 		(effects
@@ -3944,7 +3944,7 @@
 		(uuid "0b75e4ad-6b76-4f8d-b95f-479d68dd8610")
 	)
 	(junction
-		(at 232.41 102.87)
+		(at 218.44 102.87)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "1c92fb22-9f61-4a47-874d-3f00929391bd")
@@ -4865,7 +4865,7 @@
 	)
 	(wire
 		(pts
-			(xy 167.64 110.49) (xy 232.41 110.49)
+			(xy 167.64 110.49) (xy 218.44 110.49)
 		)
 		(stroke
 			(width 0)
@@ -5115,7 +5115,7 @@
 	)
 	(wire
 		(pts
-			(xy 210.82 102.87) (xy 227.33 102.87)
+			(xy 210.82 102.87) (xy 213.36 102.87)
 		)
 		(stroke
 			(width 0)
@@ -5145,7 +5145,7 @@
 	)
 	(wire
 		(pts
-			(xy 214.63 99.06) (xy 232.41 99.06)
+			(xy 214.63 99.06) (xy 218.44 99.06)
 		)
 		(stroke
 			(width 0)
@@ -5405,7 +5405,7 @@
 	)
 	(wire
 		(pts
-			(xy 232.41 110.49) (xy 232.41 102.87)
+			(xy 218.44 110.49) (xy 218.44 102.87)
 		)
 		(stroke
 			(width 0)
@@ -5455,7 +5455,7 @@
 	)
 	(wire
 		(pts
-			(xy 232.41 99.06) (xy 232.41 102.87)
+			(xy 218.44 99.06) (xy 218.44 102.87)
 		)
 		(stroke
 			(width 0)
@@ -7982,7 +7982,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "RDY pulled up whether J4 is fitted or not (1.8D)"
+		(property "Description" "RDY pulled up (1.8D: in place of 1.8C's jumper J4)"
 			(at 210.82 147.32 0)
 			(effects
 				(font
@@ -8722,7 +8722,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "IC CURRENT SOURCE 3% TO92-3"
+		(property "Description" "Reset supervisor (DS1813-10): RESB held low at power-up and below 4.35 V"
 			(at 233.68 67.31 0)
 			(effects
 				(font
@@ -8791,7 +8791,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description_1" "IC CURRENT SOURCE 3% TO92-3"
+		(property "Description_1" "Reset supervisor (DS1813-10): RESB held low at power-up and below 4.35 V"
 			(at 238.76 41.91 0)
 			(effects
 				(font
@@ -9671,7 +9671,7 @@
 	)
 	(symbol
 		(lib_id "Device:C_Polarized_Small_US")
-		(at 229.87 102.87 270)
+		(at 215.9 102.87 270)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -9679,7 +9679,7 @@
 		(dnp no)
 		(uuid "b68392a1-574f-4d04-bcea-4905817f9c4c")
 		(property "Reference" "C56"
-			(at 227.838 107.95 90)
+			(at 213.868 107.95 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9688,7 +9688,7 @@
 			)
 		)
 		(property "Value" "107"
-			(at 227.838 105.918 90)
+			(at 213.868 105.918 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9697,7 +9697,7 @@
 			)
 		)
 		(property "Footprint" "Capacitor_THT:CP_Radial_D6.3mm_P2.50mm"
-			(at 229.87 102.87 0)
+			(at 215.9 102.87 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9706,7 +9706,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 229.87 102.87 0)
+			(at 215.9 102.87 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9715,7 +9715,7 @@
 			)
 		)
 		(property "Description" "Polarized capacitor, small US symbol"
-			(at 229.87 102.87 0)
+			(at 215.9 102.87 0)
 			(effects
 				(font
 					(size 1.27 1.27)
