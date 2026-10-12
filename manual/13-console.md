@@ -5,6 +5,11 @@ looks after the serial port and the console's windows (Chapter 10), and serves `
 of its files, and the **escape sequences** that programs use to move the cursor, clear the screen and change
 colours.
 
+> **IN THIS CHAPTER:** You'll learn the console's files, how a program reads lines or single keys, the escape
+> sequences that move the cursor and set colours, the serial port's settings, and `/pc`. **You need:** Chapter 12. The
+> examples are single lines of rc and HyForth that you can type just as they are: you don't need to know either
+> language yet.
+
 ## 13.1 The console's files
 
 `cons` is device `#c`. Each window has its own set of files (window *n*'s are `#c`*n*), and a shell finds its own

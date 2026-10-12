@@ -25,31 +25,31 @@ Rules that keep the three in step:
 
 ## Phase 1. The manual: put right what is wrong
 
-- [ ] **1.1 Errors.** The review's list: the joint counts and hours (Chapter 3's opening, section 4.1); "most chips
+- [x] **1.1 Errors.** The review's list: the joint counts and hours (Chapter 3's opening, section 4.1); "most chips
   are CMOS" (3.3); 4.3's pointer for the power wiring; "up to 15 cards" (1.3); the boot's one module against `free`'s
   three (5.3, 5.4); the stale task table in the boot's step 7; sixteen or fifteen interrupt lines; `free`'s 1024 KB
   of shared memory against the board's 2 MB; 16.1's pointer for I²C; "the monitor ... Part Five" (2.4); `hi.s`'s
   comment about window 0; the `TIP` box missing from the preface.
-- [ ] **1.2 The book's Hydra.** One box that says which Hydra the examples were typed into (three RAM modules, the
+- [x] **1.2 The book's Hydra.** One box that says which Hydra the examples were typed into (three RAM modules, the
   sample SD card, no Vera X, no clock chip), how the web emulator differs as it comes, what a reader will see
   instead, and how to make it match. "All you need is a web browser" becomes true: say where `hydra-16.html` comes
   from.
-- [ ] **1.3 A first chapter for everyone.** A new **Chapter 6, First Steps**, opens Part Two: the prompt, typing and
+- [x] **1.3 A first chapter for everyone.** A new **Chapter 6, First Steps**, opens Part Two: the prompt, typing and
   fixing a line, the first commands, what a mistake looks like and how to get out of one, looking around, making a
   file with `edit`, where work is kept, the sample card's programs, a taste of each language, and where to find
   help. Chapters 6 to 27 become 7 to 28. Chapter 5 keeps only what needs the real board.
-- [ ] **1.4 Chapter openings.** Every chapter starts by saying what the reader will be able to do at its end and
+- [x] **1.4 Chapter openings.** Every chapter starts by saying what the reader will be able to do at its end and
   what it expects them to know (the preface promises this).
-- [ ] **1.5 Signposts.** The boot chapter says what to skim on a first reading. Part Three says that its Forth
+- [x] **1.5 Signposts.** The boot chapter says what to skim on a first reading. Part Three says that its Forth
   one-liners need no Forth. Part Four opens with "which language first?".
-- [ ] **1.6 An honest build.** The real number of joints and hours; safety that a school needs (fumes, lead, burns,
+- [x] **1.6 An honest build.** The real number of joints and hours; safety that a school needs (fumes, lead, burns,
   eye protection, washing hands); the SD card reader as something nearly everyone wants; the address decoders in
   the fault-finding list; where the Vera X's own instructions are.
-- [ ] **1.7 Machine language.** `stars` before the 70-line `hi.s`; the debugger's second listing shown as its
+- [x] **1.7 Machine language.** `stars` before the 70-line `hi.s`; the debugger's second listing shown as its
   three changed lines.
-- [ ] **1.8 Looking things up.** The glossary's missing words (baud, DIP, PLCC, FPGA, MIDI, MML, ZSM, CMOS, RS-232,
-  LED, cluster ...); the index's missing everyday words (loop, save, copy, prompt, LED ...) and the languages' words.
-- [ ] **1.9 Tools.** `tools/xref.js`: every "Chapter N", "section N.M", "Figure N-M" and "Appendix X" in the three
+- [x] **1.8 Looking things up.** The glossary's missing words (baud, DIP, PLCC, FPGA, MIDI, MML, ZSM, CMOS, RS-232,
+  LED, cluster ...); the index's missing everyday words (loop, save, copy, prompt, LED ...), from `index.txt`.
+- [x] **1.9 Tools.** `tools/xref.js`: every "Chapter N", "section N.M", "Figure N-M" and "Appendix X" in the three
   books points at something that exists. `tools/renumber.js`: moves chapters, and everything that names them.
 
 ## Phase 2. The languages: teach more, look up more
@@ -62,7 +62,7 @@ explain a word.
   HyForth: what an unknown word and an unfinished definition look like. hylang: the prefix table after the reader
   has used three prefixes; `T` and `NIL`. HyBASIC: the example that can be `RUN` twice.
 - [ ] **2.2 The three references** (Appendices A, B and C): every word with its arguments, what it does, and a
-  checked example; grouped by job, with an alphabetical finder.
+  checked example; grouped by job; and every word in the index, so that a word met in an example can be found.
 - [ ] **2.3 The same program in three languages**, side by side, at the end of Part Four.
 - [ ] **2.4 The sample card.** A section for the programs on the SD card (`sketch`, `shapes`, `tones`, `jukebox`,
   `race`, `philo` ...): what each shows, and how to run and read it.

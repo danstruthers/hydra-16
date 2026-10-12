@@ -4,6 +4,10 @@ Everything the Hydra keeps, it keeps in **files**: programs, songs, your notes, 
 like files. This chapter shows how the files are arranged, where they live, and how HydraOS builds the "tree" of
 names that you see, which it calls a **namespace**.
 
+> **IN THIS CHAPTER:** You'll learn paths, the disks, how devices appear as files, and how each task gets a tree of
+> names of its own: binding, unions, and a namespace that you arrange yourself. **You need:** Chapter 6, and a little
+> rc (sections 8.1 to 8.6).
+
 ## 9.1 Files and directories
 
 A **file** is a named collection of bytes: a program, a picture, a story. A **directory** is a file that holds other

@@ -4,6 +4,9 @@ With a **Vera X** card, the Hydra has a screen of its own, a keyboard and a mous
 This chapter shows how to use them, and describes the files of the two drivers that look after them: `vid`, for the
 screen, and `input`, for the keyboard and mouse.
 
+> **IN THIS CHAPTER:** You'll put the console on a screen of its own, draw on it, and read its keyboard and mouse,
+> through the files of the `vid` and `input` drivers. **You need:** Chapter 12, and a Vera X: the emulator has one.
+
 ## 16.1 The Vera X
 
 The **VERA** (Video Embedded Retro Adapter) is the graphics chip of the Commander X16, a modern 8-bit computer. It's
@@ -22,7 +25,11 @@ card, as I/O ports 2 and 3 ($FF20 to $FF3F), with interrupt line 2. A PS/2 keybo
 Commander X16's **SMC**, a little microcontroller that reads them, which talks to the Hydra on the I²C bus, at
 address $42. (The wiring is in the Vera X's schematic, in the `board/vera-x` folder.)
 
-The emulator has a Vera X too (Chapter 2): in the web emulator, turn it on in Setup.
+The emulator has a Vera X too (Chapter 2). In the web emulator it's there unless you turn it off in Setup; in the
+terminal emulator, add `--vera`.
+
+> **NOTE:** The Vera X isn't part of the Hydra-16 kit, and this book doesn't show how to build one or wire it up. If
+> you don't have one, use the emulator's: everything in this chapter works there.
 
 ## 16.2 The console on the screen
 

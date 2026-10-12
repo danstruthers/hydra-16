@@ -3,6 +3,9 @@
 This chapter is a guide to every program on the Hydra, in alphabetical order, followed by the shell's built-in
 commands. Each entry shows how to type the command, what its options mean, and an example of it at work.
 
+> **IN THIS CHAPTER:** This is a chapter for looking things up: every program and every shell command, with its
+> options and an example. **You need:** Chapter 6. Don't read it through; dip into it.
+
 **How to read the usage lines.** Each entry starts with a line like this one:
 
 ```text

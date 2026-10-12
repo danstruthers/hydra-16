@@ -5,6 +5,10 @@ program is really doing, as opposed to what you meant it to do. A **debugger** s
 instruction at a time, or up to a place you choose, and lets you look at its registers and memory, and change them,
 on the way. The Hydra's debugger is `db`.
 
+> **IN THIS CHAPTER:** You'll run a program an instruction at a time, set breakpoints, look at its registers and
+> memory and change them, and hunt down a real bug. **You need:** Chapters 25 and 26: it uses their programs `stars`
+> and `show`.
+
 ```text
 db program [arg ...]
 db -p task
@@ -269,7 +273,7 @@ can change memory, but not the registers.)
 ## 28.8 Finding a bug
 
 Here's a real bug. Chapter 26's `show` was first written without its `pha` and `pla`. That first version is
-`show1.s` (section 28.12 lists it). It worked, except when the file wasn't there:
+`show1.s` (section 28.12 shows how to make it). It worked, except when the file wasn't there:
 
 <!-- session
 cd /ram
@@ -389,61 +393,33 @@ work. And HydraOS keeps a stopped task's registers where `db` can read them.
 So `db` is an ordinary program, with no special powers: it only uses files that any program can. That's the Plan 9
 way of doing things, which HydraOS follows (Chapter 9).
 
-## 28.12 The listing of show1.s
+## 28.12 Making show1.s
 
-<!-- listing samples/show1.s -->
+`show1.s` is `show.s` (section 26.14) with three small changes, so you don't need to type it all again. Copy
+`show.s` to `show1.s`, and open the copy in `edit`:
+
+1. In the first line's comment, and in the `HYX2_PROGRAM` line, change `show` to `show1`:
 
 ```text
 ; show1 file - show.s, as it was first written (it has a mistake)
-.include "hydra.inc"
-.include "hyx2.inc"
-.include "macros.inc"
-
-            HYX2_PROGRAM "show1", main
-
-.zeropage
-fd:         .res 1              ; The file, open
-
-.bss
-buf:        .res 256            ; A piece of it
-msg:        .res 32             ; An error's text
-
-.code
-main:       lda (r0)            ; The file's name: r0's first argument
-            bne @open
-            PRINT "usage: show file"
-            lda #LF
-            jsr PUTC
-            rts
-@open:      lda #O_READ         ; Open it, to read
-            jsr OPEN
-            bcs @fail           ; (C = 1: it failed, .A the error)
-            sta fd
-@read:      LDR r0, buf         ; 256 bytes of it at most
-            LDR r1, 256
-            lda fd
-            jsr READ
-            bcs @fail
-            sta r1              ; The count read: .A (low), .X (high)
-            stx r1 + 1
-            ora r1 + 1
-            beq @done           ; (0: the file's end)
-            LDR r0, buf         ; Those bytes, to fd 1: the screen
-            lda #1
-            jsr WRITE
-            bcs @fail
-            bra @read
-@done:      lda fd
-            jsr CLOSE
-            rts
-@fail:      LDR r0, msg         ; The error's text
-            jsr ERRSTR
-            PRINT "show: "
-            PRINT msg
-            lda #LF
-            jsr PUTC
-            lda #1              ; The end, with code 1
-            stz r0
-            stz r0 + 1
-            jmp EXITS
 ```
+
+```text
+            HYX2_PROGRAM "show1", main
+```
+
+2. Near the end, find the three lines that start at `@fail`:
+
+```text
+@fail:      pha                 ; The error's text (LDR changes .A: kept)
+            LDR r0, msg
+            pla
+```
+
+and make them one, without the `pha` and the `pla`:
+
+```text
+@fail:      LDR r0, msg         ; The error's text
+```
+
+That missing pair is the bug that section 28.8 hunts down.

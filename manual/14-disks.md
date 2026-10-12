@@ -4,6 +4,9 @@ The **storage** driver, in task E, looks after everything that keeps files: the 
 disk, and HydraFS, the way files are arranged on them. This chapter explains them all, and the files that control
 them.
 
+> **IN THIS CHAPTER:** You'll connect an SD card reader, get a card ready and check it, use the RAM disks and the ROM
+> disk, learn how HydraFS arranges a disk, and move files to and from a PC. **You need:** Chapters 9 and 12.
+
 ## 14.1 Three devices
 
 `storage` serves three devices, one inside the other:

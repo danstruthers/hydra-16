@@ -5,6 +5,10 @@ many 1980s arcade games and keyboards. With a Vera X card, it has a second sound
 sixteen simple voices, and **PCM**, which plays recorded sounds. This chapter shows how to play notes, songs and
 sounds, and describes the sound driver's files.
 
+> **IN THIS CHAPTER:** You'll play notes, chords, drums and whole songs on the YM2151 (and on a Vera X's sound chips),
+> write music as text, and learn the sound driver's files. **You need:** Chapter 12, and headphones or a speaker (in
+> the emulator, the **Sound** button).
+
 ## 15.1 The sound hardware
 
 The **YM2151** (U38) makes sound by **FM synthesis**. It has 8 **channels**, so it can play 8 notes at once. Each

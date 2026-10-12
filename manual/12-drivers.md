@@ -4,6 +4,10 @@ Every device on the Hydra is looked after by a **driver**: a program that knows 
 Other programs never touch the chips themselves. Instead, the driver makes the device look like a few files, and
 programs read and write those. This chapter explains how that works, and how to use any device from the shell.
 
+> **IN THIS CHAPTER:** You'll learn how a driver turns a device into files, how to command any device by writing to
+> its control file, what the `#` device names mean, and what happens when a device is busy. **You need:** Chapter 6,
+> and section 9.4.
+
 ## 12.1 Devices are files
 
 Think about what a program wants from the serial port: to send some bytes, and to receive some. That's exactly

@@ -45,7 +45,7 @@ function kindOf(h) {
 
 const MARK = n => '<span class="mk">QQM' + n + 'QQ</span>';
 
-// ---- The index: each term a chapter or appendix defines in bold (**term**, in its text: not in a table, a heading,
+/// ---- The index: index.txt's everyday words, by section; each term a chapter or appendix defines in bold (**term**, in its text: not in a table, a heading,
 // a code block or a caption; not a run-in heading, which ends with a stop), and each command of Chapter 11, with the
 // pages it's on (each place a mark, as the contents' entries have)
 const plain = s => s.replace(/<[^>]*>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
@@ -160,6 +160,20 @@ function book(pages) {
     }
     sections.push('<section class="' + k.kind + '" style="page: ' + (k.kind === 'chapter' || k.kind === 'appendix' ? name : k.kind) + '">' + html + '</section>');
   }
+  // The index's everyday words (index.txt: "term: 6.6, 9.2"): each at the page its section starts on
+  const extra = path.join(DIR, 'index.txt');
+  if (fs.existsSync(extra)) {
+    for (const line of fs.readFileSync(extra, 'utf8').split(/\r?\n/)) {
+      const m = /^([^#:][^:]*):\s*(.+)$/.exec(line.trim());
+      if (!m) continue;
+      for (const sec of m[2].split(/,\s*/)) {
+        const s = sec.trim();                                 // ("3": the chapter's first page)
+        const e = toc.find(t => (t.kind === 'section' && t.text.startsWith(s + ' ')) || (t.kind === 'chapter' && t.num === s));
+        if (!e) throw new Error('index.txt: no section ' + s + ' (for "' + m[1] + '")');
+        addIndex(md.inline(m[1].trim()), e.mark);
+      }
+    }
+  }
   // The index, last
   {
     const n = mark++;
@@ -187,10 +201,21 @@ function book(pages) {
 
 function printPdf(htmlFile, pdfFile) {
   const prof = fs.mkdtempSync(path.join(os.tmpdir(), 'hydra-manual-'));
+  fs.rmSync(pdfFile, { force: true });                        // (So an old PDF can't pass for a new one)
   try {
     execFileSync(browser(), ['--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check', '--user-data-dir=' + prof,
       '--no-pdf-header-footer', '--run-all-compositor-stages-before-draw', '--virtual-time-budget=20000',
       '--print-to-pdf=' + pdfFile, 'file:///' + htmlFile.replace(/\\/g, '/')], { stdio: 'ignore', timeout: 600000 });
+    // The browser's launcher can return before its PDF is written: wait till the file is there and has stopped
+    // growing (ten minutes at most)
+    const nap = ms => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+    let size = -1, same = 0;
+    for (let waited = 0; waited < 600000 && same < 3; waited += 1000) {
+      nap(1000);
+      const now = fs.existsSync(pdfFile) ? fs.statSync(pdfFile).size : -1;
+      same = now > 0 && now === size ? same + 1 : 0;
+      size = now;
+    }
   } finally { try { fs.rmSync(prof, { recursive: true, force: true }); } catch (e) {} }
   if (!fs.existsSync(pdfFile)) throw new Error('the browser made no PDF');
 }

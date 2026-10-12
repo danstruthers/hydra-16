@@ -4,6 +4,11 @@ This chapter covers the rest of the Hydra's devices: the I/O header and its pins
 clock, and the kernel's own devices, which show the tasks, the environment, the shared memory and the ROM's modules
 as files.
 
+> **IN THIS CHAPTER:** You'll read switches and light LEDs on the I/O header, talk to I²C and SPI chips, set the
+> clock, and look at the system through the kernel's own files: the tasks, the environment, shared memory and the
+> ROM's modules. **You need:** Chapter 12; and for sections 17.1 to 17.4 on a real Hydra, a few parts (an LED, some
+> resistors and wire).
+
 ## 17.1 The I/O header, J27
 
 J27 brings eight of the VIA's pins out to a header, for your own experiments: switches, lights, sensors and small
@@ -25,7 +30,7 @@ reaching the VIA. Even so, keep everything you connect between 0 and 5 volts.
 > LED properly. To light an LED, connect it the other way round: from +5 V, through a 2.2K resistor and the LED, to
 > the pin. Then a 0 on the pin lights it. For anything bigger, like a motor or a relay, use a transistor.
 
-PA0 and PA1 are also the **I²C bus** (section 17.2): while a program is using the I²C bus, they're the bus's, and
+PA0 and PA1 are also the **I²C bus** (section 17.3): while a program is using the I²C bus, they're the bus's, and
 `/dev/gpio`'s commands for them don't work.
 
 ## 17.2 /dev/gpio: the pins

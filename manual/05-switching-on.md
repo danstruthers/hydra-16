@@ -2,6 +2,10 @@
 
 Your Hydra is built. In this chapter you'll connect it to a PC, switch it on, watch it start, and check that it's all there. If something doesn't work, the last part of the chapter will help you find out why.
 
+> **IN THIS CHAPTER:** You'll connect the Hydra to a PC, set up a terminal program, switch on, read the start-up
+> messages, and find the fault if there is one. **You need:** a built Hydra (Chapter 4), a PC, and a USB to RS-232
+> adapter. If you're using the emulator, skip to Chapter 6.
+
 ## 5.1 Talking to the Hydra
 
 The Hydra doesn't need a screen and keyboard of its own. It talks to you through its **serial port**, J3: a
@@ -236,7 +240,11 @@ the fun, and you'll learn a lot about how the Hydra works. **Always switch off b
 7. Check the chips the Hydra needs to start: U1 (the processor), U6 (the kernel ROM), U3 and U5 (the serial port),
    U39 and U40 (the clock) and U43 (the reset chip). Are they in the right sockets, the right way round, with no
    legs bent under?
-8. Check the joints on the back of the board around those chips, and around J3.
+8. Then check the **address decoder**: U4, U8 to U16 and U19 to U22 (Appendix I). These small logic chips work out
+   which chip answers each address, so one of them in the wrong socket, or backwards, can keep the ROM or the serial
+   chip from ever being heard. Many of them look alike: read the number printed on each, and compare it with the
+   number printed on the board beside its socket.
+9. Check the joints on the back of the board around those chips, and around J3.
 
 ### Letters appear, but they're nonsense
 

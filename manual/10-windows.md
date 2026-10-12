@@ -4,6 +4,9 @@ The Hydra can run sixteen programs at once, but you have only one terminal. How 
 them? With **windows**. The console can keep up to sixteen windows, each with its own shell and its own screen,
 and show you any of them, or several side by side.
 
+> **IN THIS CHAPTER:** You'll open, switch, split, scroll and label the console's windows, and learn the files that
+> control them. **You need:** Chapter 6, and the window key: <kbd>CTRL</kbd>-<kbd>]</kbd>.
+
 ## 10.1 Windows on a terminal
 
 Each window is like a separate terminal: it has its own screen, its own line being typed, its own history, and its

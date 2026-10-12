@@ -4,6 +4,10 @@ Chapter 19 taught the Forth language. This chapter shows how to use HyForth to w
 terminal, the devices, sound, the screen and the big numbers. Most of it comes from **libraries**: sets of words that
 HyForth loads when you ask for them.
 
+> **IN THIS CHAPTER:** You'll use HyForth's libraries to work the Hydra's files, terminal, devices, sound and screen,
+> and its big numbers. **You need:** Chapter 19. Each section leans on the chapter about its device (Chapters 13 to
+> 17), which you can read alongside.
+
 ## 20.1 Libraries
 
 HyForth's core is small: just the standard's Core words. Everything else is in libraries on the ROM disk, in

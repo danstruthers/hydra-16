@@ -4,6 +4,10 @@ A **shell** is the program that reads your commands and carries them out. It's c
 outside of the system: the part you touch. This chapter shows how HydraOS's shells work, and teaches you **rc**, the
 Hydra's command language.
 
+> **IN THIS CHAPTER:** You'll learn how HyForth and rc share the keyboard, and all of rc's language: variables,
+> quotes, sending input and output to files, pipes, patterns, tests, loops, functions and scripts. **You need:**
+> Chapter 6.
+
 ## 8.1 Two shells in one
 
 When the Hydra starts, its shell is **HyForth**. HyForth is a programming language (Part Four teaches it), but it's

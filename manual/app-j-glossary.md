@@ -13,6 +13,8 @@ explained in full.
 
 **Argument.** A word given to a command after its name: in `ls -l /rom`, `-l` and `/rom` are arguments (8.2).
 
+**Array.** A numbered row of values under one name: `SCORES(3)` is the fourth of `SCORES` (23.10).
+
 **ASCII.** The standard code for characters, from 0 to 127: `A` is 65 (Appendix E).
 
 **Assembler.** A program that turns assembly language into machine code. The Hydra's is `as` (Chapter 26).
@@ -27,6 +29,8 @@ $8000, a 16K ROM bank at $A000 (7.2).
 
 **Base string.** The text that names a base in HydraOS's languages: `x` for hex, `b` for binary, `7r` for base 7
 (18.3).
+
+**Baud.** A serial line's speed, in bits a second. At 9600 baud, about 960 characters go by each second (5.2, 5.5).
 
 **Binary.** Numbers written in base 2, with only the digits 0 and 1 (1.6).
 
@@ -70,6 +74,10 @@ $8000, a 16K ROM bank at $A000 (7.2).
 **Clock.** The signal whose ticks pace the processor: 3.58 million a second (7.1). Also the clock chip, which keeps
 the date and time (17.5).
 
+**Cluster.** The piece of a disk that HydraFS hands out to files: a few blocks together (14.5).
+
+**CMOS.** A way of making chips that uses very little power, but that static electricity can damage (3.3).
+
 **Command.** A line typed for the shell to do; or a program it runs (8.2).
 
 **Comment.** Text in a program for people to read, which the computer skips.
@@ -85,8 +93,12 @@ the date and time (17.5).
 
 **Cooked mode.** The console's usual mode, in which a program gets a whole line at a time (13.2).
 
+**Crystal.** A sliver of quartz that vibrates at an exact rate. The Hydra's, Y1, gives the beat for its clocks (1.4).
+
 **Current directory.** The directory a program is "in": a file name that doesn't start with `/` is found there
 (9.1).
+
+**Cursor.** The mark on the screen that shows where the next character you type will go (6.3).
 
 **Cycle.** One tick of the processor's clock (25.12).
 
@@ -99,6 +111,8 @@ the date and time (17.5).
 
 **Dictionary.** In HyForth, the list of all the words it knows (19.5).
 
+**DIP.** Dual in-line package: a chip with two rows of legs, the kind that fits a socket (3.4).
+
 **Directive.** An instruction to the assembler itself, starting with a dot: `.byte` (26.4).
 
 **Directory.** A file that holds other files: a folder (9.1).
@@ -106,6 +120,9 @@ the date and time (17.5).
 **Disassembler.** A program that turns machine code back into assembly language: `dis` (Chapter 27).
 
 **Driver.** A program that looks after a device, and gives other programs files to use it with (Chapter 12).
+
+**Editor.** A program for typing and changing text. The Hydra has two: `edit`, which uses the whole screen (6.6), and
+`ed`, which works a line at a time.
 
 **Emulator.** A program that imitates a computer. The Hydra emulator runs HydraOS on a PC (Chapter 2).
 
@@ -127,13 +144,20 @@ value (19.7). And an option, like `-l`.
 
 **Flash ROM.** ROM that can be erased and programmed again electrically (4.4).
 
+**Flux.** The cleaner inside solder (and in flux pens) that lets melted solder stick to metal (3.5).
+
 **FM synthesis.** Making sounds by changing one wave's frequency with another wave: the YM2151's way (15.1).
 
 **Font.** The pictures of the characters, 8 dots by 8 on the Vera X (Appendix E).
 
+**FPGA.** Field-programmable gate array: a chip that becomes whatever circuit is loaded into it. The Vera X is one
+(16.1).
+
 **Function.** A named piece of a program that can be given values (its arguments) and gives one back.
 
 **Gateware.** The configuration that makes an FPGA chip, like the Vera X's, into a particular circuit.
+
+**Hash.** In hylang, a table that finds a value by its name (its key) (21.12).
 
 **Header.** A row of metal pins on a board (3.4). Also the first 48 bytes of a program file, which describe it (26.8).
 
@@ -161,17 +185,31 @@ value (19.7). And an option, like `-l`.
 
 **Label.** A name for a place in an assembly language program (26.5).
 
+**LED.** Light-emitting diode: a small coloured light. It lights only one way round (4.8, 17.1).
+
 **Library.** A collection of words, functions or routines that programs can use.
+
+**List.** In hylang, values in order, written in braces or parentheses: the language's main way to keep things
+together (21.6).
 
 **Little-endian.** Keeping a 16-bit number with its low byte first, as the 65C02 does (25.2).
 
 **Login shell.** The shell each window starts with (8.16).
+
+**Loop.** A part of a program that's done again and again: until a count runs out, or while something stays true
+(19.9, 21.9, 23.8).
 
 **Machine code.** A program as the processor reads it: bytes (25.1).
 
 **Macro.** A named piece of source that is put in wherever its name is used (26.11).
 
 **Memory card.** The board that holds the Hydra's extra RAM, plugged into J1 and J2 (4.7).
+
+**MIDI.** Musical Instrument Digital Interface: the standard that electronic instruments use. The Hydra borrows its
+note numbers (60 is middle C) and its lists of instruments and drums (15.2, 15.4).
+
+**MML.** Music Macro Language: a tune written as text, like `cdefg`. `play` and all three languages can play it
+(15.6).
 
 **Mnemonic.** An instruction's short name, like `LDA` (25.1).
 
@@ -181,6 +219,9 @@ value (19.7). And an option, like `-l`.
 **Monitor.** The emulator's own command line, for looking inside the processor (2.4).
 
 **Mount.** To attach a device's files to the namespace (9.5).
+
+**Multitasking.** Running several programs at once, by giving each a short turn at the processor, many times a second
+(7.3).
 
 **Namespace.** The tree of names a task sees, made by binds and mounts (9.5).
 
@@ -209,13 +250,21 @@ get a note together (26.16).
 
 **Path.** A file's name with its directories: `/sd/0/sample/hi` (9.1).
 
+**PCM.** Pulse-code modulation: recorded sound, kept as a long row of numbers. The Vera X plays it (15.8).
+
 **Pipe.** A connection that carries one program's output into another's input: `|` (8.7).
+
+**PLCC.** Plastic leaded chip carrier: a square chip with legs on all four sides, like the kernel ROM, U6 (3.4).
 
 **Pointer.** An address kept in memory, which points at something else (25.6).
 
 **Port.** A group of 16 addresses for a chip (7.2); or a connector.
 
+**POST.** Power-on self test: the checks of its memory that the Hydra makes each time it starts (7.4).
+
 **Processor.** The chip that runs programs: the W65C02S (Chapter 25).
+
+**Program.** A list of instructions for a computer (1.1). On the Hydra, a file you can run by typing its name (6.8).
 
 **Prompt.** What a program prints when it's waiting for you to type, like `/>`.
 
@@ -239,6 +288,10 @@ Hydra's own T, U, V and W (7.2).
 **ROM.** Read-only memory, which keeps what's in it without power.
 
 **ROM disk.** The files kept in the paged ROM: `/rom` (14.3).
+
+**Root.** The directory at the top of the tree of files, written `/` (6.5, 9.1).
+
+**RS-232.** The standard for serial ports like the Hydra's J3: its plug, and its voltages (5.1).
 
 **Scheduler.** The part of the kernel that decides which task runs next (7.3).
 
@@ -278,11 +331,17 @@ does Forth (19.2).
 
 **Subroutine.** A piece of code that's called with `JSR` and returns with `RTS` (25.10).
 
+**Surface-mount.** A part soldered onto pads on the board's surface, with no holes. The Hydra's shared RAM chips are
+(3.7).
+
 **System call.** A request from a program to HydraOS: open a file, start a program, wait (26.13).
 
 **Task.** One of the sixteen programs the Hydra can run at once, each with its own 32K of memory (7.3).
 
 **Terminal.** A screen and keyboard for a computer; or a program that acts as one (5.2).
+
+**Through-hole.** A part whose legs go through holes in the board and are soldered on the other side. Nearly all the
+Hydra's parts are (3.5).
 
 **Tick.** One of HydraOS's timer interrupts: 200 a second (7.3).
 
@@ -290,7 +349,13 @@ does Forth (19.2).
 
 **Union directory.** A directory made of several, which are looked in in turn (9.7).
 
+**Usage.** A line that shows how to type a command: its options, and its arguments, with the ones you can leave out in
+square brackets (6.10).
+
 **Variable.** A name for a value that can change.
+
+**Vector.** An address, kept at a known place in memory, that tells the processor where to go: when it's reset (7.1),
+or for an interrupt (25.11).
 
 **VERA.** The video chip on the Vera X card (16.1).
 
@@ -301,5 +366,9 @@ windows (Chapter 10).
 
 **Word.** In Forth, a named command (19.1). Also a 16-bit value.
 
+**YM2151.** The Hydra's sound chip: a Yamaha FM synthesizer with eight voices (15.1).
+
 **Zero page.** The first 256 bytes of memory, $0000 to $00FF, which the 65C02 reaches with shorter, quicker
 instructions (25.5).
+
+**ZSM.** The kind of song file that `play` plays: the sound chips' settings, moment by moment (15.7).

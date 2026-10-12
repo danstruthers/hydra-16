@@ -6,6 +6,10 @@ to base 80 and beyond. The same numbers work in hylang, in HyBASIC, in HyForth (
 `calc` command, and in assembly language. This chapter explains them, using `calc` for the examples, since it works
 at the shell; each language's own chapter shows how it writes them.
 
+> **IN THIS CHAPTER:** You'll meet the Hydra's four kinds of number (whole numbers of any size, exact fractions,
+> decimals and complex numbers), and learn to write and print them in any base. **You need:** Chapter 6, and section
+> 1.6. If you're in a hurry to program, read sections 18.1 to 18.3, and come back for the rest when you need it.
+
 ## 18.1 Four kinds of number
 
 The Hydra has four kinds of number.

@@ -5,18 +5,23 @@ exactly like a Hydra-16: it imitates every chip on the board, one clock beat at 
 HydraOS that lives in a real Hydra's ROM chips. Programs you write in the emulator run unchanged on a real Hydra,
 and the other way round.
 
+> **IN THIS CHAPTER:** You'll run a Hydra on a PC, in a web browser and in a terminal window, choose its hardware,
+> share files with your PC, and make SD card images. **You need:** a PC with a web browser; and for sections 2.3 to
+> 2.7, permission to install Node.js on it.
+
 This chapter shows you two ways to run the emulator: in a **web browser**, the easiest way, with nothing to
 install; and in a **terminal window** on your PC, which gives you extra tools for exploring. At the end you'll see
 how to share files between your PC and the Hydra.
 
-> **FOR TEACHERS:** The web emulator is a single file. Copy it to every computer in the room (or put it on a
-> shared drive), and each student can run a complete Hydra with no installation and no network. Everything the
-> students save stays inside their own browser.
+> **FOR TEACHERS:** The web emulator is a single file. Make it once, on one computer (section 2.3), then copy it to
+> every computer in the room (or put it on a shared drive), and each student can run a complete Hydra with no
+> installation and no network. Everything the students save stays inside their own browser, on that computer: a
+> student who moves to another computer needs **Save card** and **Load…** to take their work along.
 
 ## 2.1 The emulator in a web browser
 
 The web emulator is one file called **hydra-16.html**. Your teacher may give it to you, or you can make it
-yourself (section 2.3 shows how). To start it, open the file in a web browser: Chrome, Edge, Firefox or Safari
+yourself: section 2.3 shows how, and it takes one command. To start it, open the file in a web browser: Chrome, Edge, Firefox or Safari
 all work. Double-clicking the file is usually enough.
 
 The Hydra switches on at once. Within a few seconds the **serial console** fills with the Hydra's start-up
@@ -243,8 +248,9 @@ a time. Its commands are:
 | `w` *ADDR* | Stop when anything writes to address *ADDR* |
 | `x` | Quit the emulator |
 
-You won't need the monitor until Part Five, but it's fun to peek inside: stop the Hydra while it's waiting at the
-prompt, type `r` to see the registers, and `c` to carry on.
+Nothing in this book needs the monitor (Part Five uses the Hydra's own debugger, `db`, which works on a real Hydra
+too). But it's fun to peek inside: stop the Hydra while it's waiting at the prompt, type `r` to see the registers,
+and `c` to carry on.
 
 ### Running without a terminal
 

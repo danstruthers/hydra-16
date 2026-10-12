@@ -5,6 +5,9 @@ fast and simple enough to fit in a tiny computer, which made it popular on the h
 is the Hydra's Forth: it follows the 2012 standard for the language, and adds words for the Hydra's own features.
 This chapter teaches you Forth from the beginning. You've met HyForth already: it's the shell you type at.
 
+> **IN THIS CHAPTER:** You'll learn Forth from the beginning: the stack, making new words, decisions, loops,
+> variables, strings and memory. **You need:** Chapter 6. You don't need to have programmed before.
+
 ## 19.1 Talking to HyForth
 
 At the `/>` prompt, any line that starts with a Forth word, or a number, is Forth (section 8.1); everything else is a

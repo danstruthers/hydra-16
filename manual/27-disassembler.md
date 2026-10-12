@@ -5,6 +5,9 @@ It's how you look inside a program you don't have the source of, check what the 
 how the Hydra's own tools work. The Hydra has three: the `dis` command, HyForth's `disasm`, and the debugger's `d`
 command. All three use the same part of the asm library, so they all write instructions exactly as `as` reads them.
 
+> **IN THIS CHAPTER:** You'll take programs apart with `dis`, tell code from data, put a program back together, and
+> read the Hydra's own tools. **You need:** Chapters 25 and 26.
+
 ```text
 dis [-cnw] [-l labels] [-o addr] file
 ```
@@ -59,7 +62,7 @@ L0844:
         rts
 ```
 
-Compare it with `stars.s` (section 26.3). The instructions are all there, but much has gone, because it was never in
+Compare it with `stars.s` (section 26.1). The instructions are all there, but much has gone, because it was never in
 the program: the comments, the constant `ROWS` (just `#$06` is left, `ROWS + 1`), the names of the variables (just
 their addresses, $22 and $23) and of the labels. `dis` makes up a name for each place an instruction jumps or
 branches to: `L` and its address, so `L0842` is the routine at $0842, `line`. It knows the system calls' names

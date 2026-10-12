@@ -5,6 +5,9 @@ languages there is (it was invented in 1958). In Lisp, a program is made of list
 own programs as easily as on any other list. hylang has the Hydra's whole number system, strings, lists and hashes,
 and functions for the Hydra's files, devices and programs. This chapter teaches you the language.
 
+> **IN THIS CHAPTER:** You'll learn hylang from the beginning: expressions in parentheses, values, names, functions,
+> lists, decisions, loops, strings and hashes. **You need:** Chapter 6. You don't need to have programmed before.
+
 ## 21.1 Starting hylang
 
 Type `hylang`. It says hello, and shows its prompt, `hylang>`. Type an **expression**, and hylang works out its

@@ -3,6 +3,10 @@
 This chapter shows how HyBASIC works the Hydra: its files, the terminal, other programs, sound, graphics, the numbers,
 and machine code. Everything here is built into HyBASIC: there are no libraries to load.
 
+> **IN THIS CHAPTER:** You'll use HyBASIC to work the Hydra's files, terminal, programs, sound and graphics, and to
+> call machine code. **You need:** Chapter 23. Each section leans on the chapter about its device (Chapters 13 to 17),
+> which you can read alongside.
+
 ## 24.1 Files
 
 A file is opened with a **file number**, and then read or written by that number:

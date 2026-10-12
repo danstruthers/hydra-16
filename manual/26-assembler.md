@@ -5,6 +5,10 @@ An **assembler** turns assembly language into machine code. The Hydra's is calle
 run like any other command. Its language is the one of **ca65**, the assembler of the cc65 package that's used for
 6502 programs on PCs, so programs (and books about ca65) work on both.
 
+> **IN THIS CHAPTER:** You'll write, assemble and run programs in assembly language, learn the whole of `as`'s
+> language, call HydraOS's system calls, and put machine code inside HyBASIC and HyForth programs. **You need:**
+> Chapter 25, and the screen editor (section 6.6).
+
 ```text
 as [-bl] file.s [out]
 ```
@@ -17,8 +21,95 @@ as [-bl] file.s [out]
 
 ## 26.1 Your first program
 
-The SD card has some sample programs, with their sources, in `/sd/0/sample/as`. Copy `hi.s` into `/ram`, assemble it,
-and run it:
+Here's a whole program in assembly language: about twenty instructions that print a triangle of stars. Go to `/ram`
+(`cd /ram`), start `edit stars.s`, and type it in. The columns don't have to line up as neatly as these do: one
+space is as good as ten.
+
+<!-- listing samples/stars.s -->
+
+```text
+; stars - a triangle of stars
+.include "hydra.inc"
+.include "hyx2.inc"
+.include "macros.inc"
+
+            HYX2_PROGRAM "stars", main
+
+ROWS        = 5                 ; How many rows
+
+.zeropage
+row:        .res 1              ; The row it's on: 1 to ROWS
+count:      .res 1              ; The stars still to print on it
+
+.code
+main:       lda #1              ; The first row
+            sta row
+@row:       lda row             ; As many stars as the row's number
+            jsr line
+            inc row             ; The next row, till the last is done
+            lda row
+            cmp #ROWS + 1
+            bne @row
+            rts
+
+; A line of stars: .A of them (1 or more)
+line:       sta count
+@star:      lda #'*'
+            jsr PUTC
+            dec count
+            bne @star
+            lda #LF             ; The line's end
+            jsr PUTC
+            rts
+```
+
+Save it (<kbd>CTRL</kbd>-<kbd>O</kbd>, then <kbd>RETURN</kbd>), leave `edit` (<kbd>CTRL</kbd>-<kbd>X</kbd>), and
+assemble and run it:
+
+<!-- session
+cd /ram
+!file samples/stars.s
+-->
+
+```session
+/ram> as stars.s
+/ram> ./stars
+*
+**
+***
+****
+*****
+```
+
+`as stars.s` said nothing, which means it worked: it made the program `stars`. `./stars` runs the `stars` in this
+directory. Now look at it in pieces:
+
+* A `;` starts a **comment**: everything after it on the line is for people, and `as` skips it.
+* `.include "hydra.inc"` reads in another file of source: `hydra.inc` gives the names of HydraOS's system calls and
+  constants, such as `PUTC`; `hyx2.inc` has `HYX2_PROGRAM`; and `macros.inc` has `LF`, and the macros that the
+  next section's program uses. They're all in `/lib/as`.
+* `HYX2_PROGRAM "stars", main` makes the program's **header**: its name is `stars`, and it starts at `main`.
+* `ROWS = 5` makes a **constant**: from then on, `ROWS` means 5.
+* `.zeropage` and `.code` say which **segment** the lines after them go into (section 26.8): the variables on the
+  zero page, and the code. `row` and `count` are the variables: `.res 1` **reserves** a byte for each.
+* `main:`, `line:` and `@row:` are **labels**: names for places in the program (section 26.5).
+* `main` puts 1 in `row`, then goes round a loop: it calls the subroutine `line` with the row's number in A, adds 1
+  to `row`, and goes round again (`bne @row`) until `row` is `ROWS + 1`.
+* `line` prints A stars. `jsr PUTC` is a **system call**: it asks HydraOS to do something, here to print the
+  character in A (section 26.13). A system call may change A, X and Y, so `line` keeps its count in `count`, not in
+  X. `dec count` takes 1 from it and sets Z when it reaches 0, so `bne @star` goes round again until it does.
+* `LF` is the code of a new line, 10.
+* A program ends when its `main` returns: the last `rts`.
+
+If you make a mistake, `as` tells you where (section 26.18). Fix it in `edit`, and assemble again.
+
+> **TRY THIS:** Change `ROWS` to 10, assemble again, and run it. Then change the `'*'` to another character. Can
+> you make the triangle point the other way, with the longest row first? (Start `row` at `ROWS`, and count down.)
+
+## 26.2 A bigger program: hi.s
+
+The SD card has some sample programs, with their sources, in `/sd/0/sample/as`. Copy `hi.s` into `/ram`, assemble
+it, and run it:
 
 ```session
 /> cd /ram
@@ -33,13 +124,13 @@ Hello, you!
 I'm task 4, in /ram.
 ```
 
-`as hi.s` said nothing, which means it worked: it made the program `hi`. Run with names, `hi` greets each one;
-without, it greets you. Then it says which task it's running in, and its current directory (and its window, when it
-has one). `./hi` runs the `hi` in this directory: just `hi` would look for it in `/bin`.
+Run with names, `hi` greets each one; without, it greets you. Then it says which task it's running in, and its
+current directory. (`./hi` runs the `hi` in this directory: just `hi` would look for it in `/bin` too.)
 
-## 26.2 Inside hi.s
+## 26.3 Inside hi.s
 
-Here is `hi.s`. Don't worry if it looks strange: the rest of this chapter explains every part of it.
+Here is `hi.s`. It's longer than `stars.s`, and it uses more of what `as` can do. Don't worry if parts of it look
+strange: the rest of this chapter explains every one.
 
 <!-- listing ../reborn/sdk/asm/samples/hi/hi.s -->
 
@@ -130,93 +221,18 @@ s_window:   .byte       "window", 0
 s_end:      .byte       ".", LF, 0
 ```
 
-Look at it in pieces:
+What's new here:
 
-* A `;` starts a **comment**: everything after it on the line is for people, and `as` skips it.
-* `.include "hydra.inc"` reads in another file of source: `hydra.inc` gives the names of HydraOS's system calls and
-  constants, such as `PUTS` and `PATH_MAX`; `hyx2.inc` has `HYX2_PROGRAM`; and `macros.inc` has the **macros**
-  `LDR`, `MOVR`, `PRINT`, `CALL` and `CHECK` (section 26.11). They're all in `/lib/as`.
-* `HYX2_PROGRAM "hi", main` makes the program's **header**: its name is `hi`, and it starts at `main`.
-* `.zeropage`, `.bss`, `.code` and `.rodata` say which **segment** the lines after them go into (section 26.8): the
-  zero page variable `arg`, the BSS's buffers `cwd` and `window`, the code, and the read-only data (the strings).
-* `main:` and `@name:` are **labels**: names for places in the program (section 26.5). A label alone on a line, `:`,
-  has no name: `:+` means the next one, and `:--` the one two back.
-* A program starts with its arguments in r0, and ends when `main` returns.
-* `CALL PUTS` (the same as `jsr PUTS`) makes a **system call**: it asks HydraOS to do something, here to print the
-  string at r0 (section 26.13).
-
-## 26.3 A program of your own
-
-Now write one. Start `edit stars.s` in `/ram`, and type this in:
-
-<!-- listing samples/stars.s -->
-
-```text
-; stars - a triangle of stars
-.include "hydra.inc"
-.include "hyx2.inc"
-.include "macros.inc"
-
-            HYX2_PROGRAM "stars", main
-
-ROWS        = 5                 ; How many rows
-
-.zeropage
-row:        .res 1              ; The row it's on: 1 to ROWS
-count:      .res 1              ; The stars still to print on it
-
-.code
-main:       lda #1              ; The first row
-            sta row
-@row:       lda row             ; As many stars as the row's number
-            jsr line
-            inc row             ; The next row, till the last is done
-            lda row
-            cmp #ROWS + 1
-            bne @row
-            rts
-
-; A line of stars: .A of them (1 or more)
-line:       sta count
-@star:      lda #'*'
-            jsr PUTC
-            dec count
-            bne @star
-            lda #LF             ; The line's end
-            jsr PUTC
-            rts
-```
-
-Save it (<kbd>CTRL</kbd>-<kbd>S</kbd>), leave `edit` (<kbd>CTRL</kbd>-<kbd>X</kbd>), and assemble and run it:
-
-<!-- session
-cd /ram
-!file samples/stars.s
--->
-
-```session
-/ram> as stars.s
-/ram> ./stars
-*
-**
-***
-****
-*****
-```
-
-How it works:
-
-* `ROWS = 5` makes a **constant**: from then on, `ROWS` means 5. Change it to 10, assemble again, and the triangle
-  has ten rows.
-* `row` and `count` are variables on the zero page: `.res 1` **reserves** a byte for each.
-* `main` puts 1 in `row`, then goes round a loop: it calls the subroutine `line` with the row's number in A, adds 1
-  to `row`, and goes round again (`bne @row`) until `row` is `ROWS + 1`.
-* `line` prints A stars. It keeps the count in `count`, not in X, because a system call (here `PUTC`, which prints
-  the character in A) may change A, X and Y. `dec count` takes 1 from it and sets Z when it reaches 0, so `bne @star`
-  goes round again until it does.
-* `LF` (from `macros.inc`) is the code of a new line, 10.
-
-If you make a mistake, `as` tells you where (section 26.18). Fix it in `edit`, and assemble again.
+* `macros.inc`'s **macros** `LDR`, `MOVR`, `PRINT`, `CALL` and `CHECK` (section 26.11). A macro is a name for
+  several instructions: `PRINT "Hello, "` is the instructions that print that string.
+* `.bss` and `.rodata` are two more segments (section 26.8): the BSS's buffers `cwd` and `window`, and the
+  read-only data (the strings).
+* A label alone on a line, `:`, has no name: `:+` means the next one, and `:--` the one two back.
+* A program starts with its arguments in r0: `main` walks along them, greeting each.
+* `CALL PUTS` (the same as `jsr PUTS`) is another system call: it prints the string at r0.
+* The comment at the top shows a run that ends `in window 0`. `hi` prints that part only when its environment has
+  a variable called `window`, and looks for it with the system call `ENV_GET`. In the run above there was none, so
+  `CHECK @end` skipped the last two `PRINT`s.
 
 ## 26.4 What's on a line
 

@@ -6,6 +6,10 @@ the first language of millions of people. **HyBASIC** is the Hydra's BASIC, in t
 it has line numbers if you want them, but also named procedures, records and structured loops, so programs can be
 written clearly. And it has the Hydra's numbers.
 
+> **IN THIS CHAPTER:** You'll learn HyBASIC from the beginning: `PRINT`, variables, programs, `INPUT`, decisions,
+> loops, strings, arrays, and procedures of your own. **You need:** Chapter 6. You don't need to have programmed
+> before: this is the gentlest of the three languages.
+
 ## 23.1 Starting HyBASIC
 
 Type `basic`. HyBASIC's prompt is `>`. A line typed without a number is done at once (**direct mode**); `SYSTEM` (or

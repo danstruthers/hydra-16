@@ -3,6 +3,10 @@
 hylang was made for the Hydra: files, programs, the clock, memory and the system are built into the language, and
 libraries add the devices, sound and the screen. This chapter shows them.
 
+> **IN THIS CHAPTER:** You'll use hylang to work the Hydra's files, programs, clock, memory, devices, sound and
+> screen. **You need:** Chapter 21. Each section leans on the chapter about its device (Chapters 13 to 17), which you
+> can read alongside.
+
 ## 22.1 Libraries
 
 hylang starts with its own library (`globals`) already loaded. The others are on the ROM disk, in `/lib/hylang`:

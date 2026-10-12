@@ -1,8 +1,15 @@
 # Chapter 7. How the Hydra Starts
 
-In Chapter 5 you watched the Hydra start, in about a second. In that second, a lot happens. This chapter follows it
+Every time it's switched on, the Hydra takes about a second to start (section 5.3 shows what it prints as it does).
+In that second, a lot happens. This chapter follows it
 step by step, from the moment the power comes on to the prompt. On the way, you'll meet the most important ideas in
 HydraOS: memory and its banks, tasks, the kernel, drivers and the shell.
+
+> **IN THIS CHAPTER:** You'll learn how the 65C02 reaches megabytes of memory through "windows", what tasks, the
+> kernel, drivers and init are, and what every line of the start-up messages means. **You need:** Chapter 6, and
+> hexadecimal (section 1.6). This is the deepest chapter in Part Two. On a first reading, sections 7.1 to 7.3 and 7.5
+> are enough: come back to section 7.4 when you want to know what a start-up message means, or when you reach Part
+> Five.
 
 ## 7.1 Waking up
 
@@ -209,7 +216,7 @@ task 1: init
 ### Step 4: Interrupts
 
 An **interrupt** is a signal from a chip that says "I need attention now": a key has arrived at the serial port, a
-timer has run out, the sound chip has finished a note. The Hydra has sixteen interrupt lines, numbered 0 to 15. When
+timer has run out, the sound chip has finished a note. The Hydra has fifteen interrupt lines, numbered 0 to 14. When
 one is active, a chip on the board (U17 and U18 find the most urgent line) makes the 65C02 read the interrupt's own
 address from the vector RAM, so each line goes straight to its own code. The lower the number, the more urgent:
 
@@ -268,12 +275,12 @@ init does everything needed to make the Hydra ready for you:
 ```text
 init: up in task 01
 T ST FL PA CPU    NAME
-0 01 00 FF 00004D kernel
-1 01 00 FF 000017 init
+0 01 00 FF 00004E kernel
+1 01 00 FF 00001B init
 B 04 01 FF 000003 gpio
 C 04 01 FF 000003 snd
-D 04 01 FF 00000E kdev
-E 04 01 FF 000077 storage
+D 04 01 FF 00000C kdev
+E 04 01 FF 000076 storage
 F 04 01 FF 00004C cons
 ```
 
