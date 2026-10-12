@@ -860,7 +860,8 @@ for (const k of ['lt', 'gt', 'le', 'ge', 'eq'])
 const lines = ['; ****************************************************************************',
   '; vmxt.inc - the native code\'s templates (vmx.inc\'s), made by tools/hyvmxt.js: each its length, its flags (TF_STUB: its',
   '; op\'s stub after it, its slow way; TF_NOR: not for an op with VM_R), its patches (each its offset, its kind: TPK_B',
-  '; a data byte, TPK_U one untagged, TPK_T a target\'s native place, TPK_N the next op\'s; and the data byte), its code', ''];
+  '; a data byte, TPK_U one untagged, TPK_T a target\'s native place, TPK_N the next op\'s; and the data byte), its code.',
+  '; (Copied into RAM and run there with the VM\'s bank in place, so their calls are its: bankcheck: copied)', ''];
 const kinds = { W: 'TPK_W', B: 'TPK_B', U: 'TPK_U', T: 'TPK_T', N: 'TPK_N', D: 'TPK_D', M: 'TPK_M', C: 'TPK_C', RL: 'TPK_RL', RH: 'TPK_RH', S: 'TPK_S', DL: 'TPK_DL', DH: 'TPK_DH' };
 // The long templates (their stub out of a branch's reach): each branch to @s an inverted one past a jmp {S}
 const FAR = new Set([]);

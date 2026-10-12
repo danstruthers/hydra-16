@@ -406,7 +406,7 @@ s_mousein:  .byte       "#v/mousein", 0
 s_mousectl: .byte       "#v/mousectl", 0
 s_ctl:      .byte       "#v/ctl", 0
 s_sprites:  .byte       "#v/sprites", 0
-s_input:    .byte       "#m/input", 0
+s_input:    .byte       "#fx/bin/input", 0
 s_mc0:      .byte       "pointer on", LF, "swap off", LF, 0
 s_m0:       .byte       "m        320         240           0           0 ", 0
 s_m1:       .byte       "m        330         235           1 ", 0

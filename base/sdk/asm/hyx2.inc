@@ -35,8 +35,10 @@
 HYX2_LOAD       = $0800                                     ; (A RAM program: read there by SPAWN)
 HYX2_INPLACE    = 0
 .else
-.import     __ROM_LAST__
-HYX2_LOAD       = $A000                                     ; (A module of the paged ROM: run in place)
+.import     __ROM_LAST__, __ROM_START__
+HYX2_LOAD       = __ROM_START__                             ; (A module of the paged ROM: run in place, at $A000; or
+                                                            ;   a small one at a page of a bank it shares: the
+                                                            ;   build links it there, romimg.js's plan)
 HYX2_INPLACE    = HF_INPLACE
 .endif
 HYX2_NAME_LEN   = 12

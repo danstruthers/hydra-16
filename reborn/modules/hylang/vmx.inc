@@ -1148,7 +1148,8 @@ vx_patch:
 
 .segment "RODATA8"
 
-; The ops' code (vm_ops' again, for this bank), the rare ones' (EXT's: vm_xops')
+; The ops' code (vm_ops' again, for this bank), the rare ones' (EXT's: vm_xops'): addresses in the VM's bank, which the
+; native code calls with it in place (bankcheck: far VM_OPS)
 vx_ops:
             VM_OPS
 vx_xops:    .word       op_eval, op_setbg, op_defg, op_tryv, op_tryh, op_tryf

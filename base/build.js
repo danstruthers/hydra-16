@@ -28,6 +28,7 @@ const { execFileSync } = require('child_process');
 const apigen = require('./tools/apigen.js');
 const budget = require('./tools/budget.js');
 const check = require('./tools/check.js');
+const bankcheck = require('./tools/bankcheck.js');
 const romimg = require('./tools/romimg.js');
 
 const ROOT = __dirname;
@@ -79,15 +80,47 @@ function buildModule(dir, objdir, defines, ram = false, libs = {}, includes = IN
     .map(m => +m[1]))));                                      // (Its last bank's CODEn: moduleN.cfg)
   const own = path.join(dir, name + '.cfg');
   const cfg = ram ? at('sdk', 'asm', 'hyx2.cfg') : fs.existsSync(own) ? own : moduleCfg(banks);
-  run(LD65, ['-C', cfg, '-o', bin, '-m', path.join(od, name + '.map'), '-Ln', path.join(od, name + '.lbl'), ...objs]);
+  const dbg = path.join(od, name + '.dbg');
+  run(LD65, ['-C', cfg, '-o', bin, '-m', path.join(od, name + '.map'), '-Ln', path.join(od, name + '.lbl'), ...(ram ? [] : ['--dbgfile', dbg]), ...objs]);
   const data = fs.readFileSync(bin);
   check.checkModule(name, data, ram ? 0x0800 : 0xA000);       // (Only the kernel writes T, V and W)
+  if (!ram) {                                                   // (A module of banks: none uses another's directly)
+    const bad = bankcheck.check(fs.readFileSync(dbg, 'latin1'));
+    if (bad.length) throw new Error(name + ': an instruction in one bank uses a label in another (tools/bankcheck.js):\n' +
+      bad.map(b => '  ' + path.relative(ROOT, b.file) + ':' + b.line + ': bank ' + b.from + ', ' + b.label + ' bank ' + b.to + ': ' + b.text).join('\n'));
+  }
   if (cfg === own) for (const [, lib] of fs.readFileSync(own, 'latin1').matchAll(/"%O\.(\w+)"/g)) {
     const file = path.join(objdir, lib + '.bin');               // (A library module of its own: NAME.bin, as any module)
     fs.renameSync(bin + '.' + lib, file);
     libs[lib] = fs.readFileSync(file);
     check.checkModule(lib, libs[lib], 0xA000);
   }
+  return data;
+}
+
+// May the module in dir move (be packed in a bank with others: romimg.js's plan)?  A program or a driver of a bank,
+// linked by modules/module.cfg (not a library, nor one with a link of its own)
+function packable(dir, data) {
+  return data[33] === 1 && (data[5] === 1 || data[5] === 2) && !fs.existsSync(path.join(dir, path.basename(dir) + '.cfg'));
+}
+
+// The module in dir (buildModule's objects in objdir) linked again at page `page` of its bank ($A000 + 256 * page:
+// romimg.js's plan), its image, map and labels into outdir.  OUT: its image (as long as it was: the same code, at
+// another address)
+function relinkModule(dir, objdir, outdir, page, length) {
+  const name = path.basename(dir), od = path.join(objdir, name), out = path.join(outdir, name);
+  const objs = sources(dir).map(f => path.join(od, path.basename(f).replace(/\.s$/, '.o')));
+  mkdir(out);
+  const base = fs.readFileSync(moduleCfg(1), 'latin1'), start = 0xA000 + page * 256;
+  const text = base.replace(/(ROM:\s+start = )\$A000, size = \$4000/, '$1$' + start.toString(16).toUpperCase() + ', size = $' +
+    (0x4000 - page * 256).toString(16).toUpperCase());
+  if (text === base) throw new Error('modules/module.cfg: no ROM at $A000 to move');
+  const cfg = path.join(out, name + '.cfg'), bin = path.join(outdir, name + '.bin'), dbg = path.join(out, name + '.dbg');
+  fs.writeFileSync(cfg, text);
+  run(LD65, ['-C', cfg, '-o', bin, '-m', path.join(out, name + '.map'), '-Ln', path.join(out, name + '.lbl'), '--dbgfile', dbg, ...objs]);
+  const data = fs.readFileSync(bin);
+  if (data.length !== length) throw new Error(name + ': ' + data.length + ' bytes linked at $' + start.toString(16) + ', ' + length + ' at $A000');
+  check.checkModule(name, data, start);
   return data;
 }
 
@@ -168,4 +201,4 @@ if (require.main === module) {
   }
   try { build(opt); } catch (e) { console.error('build: ' + e.message); process.exit(1); }
 }
-module.exports = { build, buildModule, assemble, run, tool, sources, readManifest, hwtest, definesOf, moduleCfg, INCLUDES, CA65, LD65, ROOT, HWTEST_IMAGE };
+module.exports = { build, buildModule, packable, relinkModule, assemble, run, tool, sources, readManifest, hwtest, definesOf, moduleCfg, INCLUDES, CA65, LD65, ROOT, HWTEST_IMAGE };

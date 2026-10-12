@@ -1145,8 +1145,9 @@ aput:
             rts
 
 @big:
-            LDR         r0, s_args
-            jmp         rc_error
+            lda         #<s_args
+            ldx         #>s_args
+            jmp         rc_error_ax
 
 ; The child .A waited for: $status its exit (a note ending the wait: waited for again)
 wait_child:
@@ -1362,8 +1363,9 @@ aput0:
             rts
 
 @big:
-            LDR         r0, s_args
-            jmp         rc_error
+            lda         #<s_args
+            ldx         #>s_args
+            jmp         rc_error_ax
 
 ; C_PIPE: each stage started (left to right, each's output the next one's input), then each waited for:
 ; $status the last one's
@@ -1621,8 +1623,9 @@ call_fn:
             lda         fn_depth
             cmp         #FN_DEPTH_MAX
             bcc         :+
-            LDR         r0, s_deep
-            jmp         rc_error
+            lda         #<s_deep
+            ldx         #>s_deep
+            jmp         rc_error_ax
 :
             inc         fn_depth
             ldy         #3                                  ; Its text: p0 (its length, then it)
@@ -1861,8 +1864,9 @@ save_fd:
             rts
 
 @many:
-            LDR         r0, s_fds
-            jmp         rc_error
+            lda         #<s_fds
+            ldx         #>s_fds
+            jmp         rc_error_ax
 
 ; Fd .A noted as closed (a redirection opened it there): for redir_restore, which closes it again
 save_closed:
@@ -1876,8 +1880,9 @@ save_closed:
             rts
 
 @many:
-            LDR         r0, s_fds
-            jmp         rc_error
+            lda         #<s_fds
+            ldx         #>s_fds
+            jmp         rc_error_ax
 
 ; The redirections back to depth .A: each fd as it was
 redir_restore:
@@ -1925,8 +1930,9 @@ high_fd:
             inx
             cpx         #FD_MAX
             bne         :-
-            LDR         r0, s_fds
-            jmp         rc_error
+            lda         #<s_fds
+            ldx         #>s_fds
+            jmp         rc_error_ax
 :
             inc         high_used,X
             phx
@@ -2044,15 +2050,10 @@ FN_DEPTH_MAX = 8
 .rodata
 run_vec:    .word       c_simple, c_brace, c_seq, c_bg, c_and, c_or, c_not, c_pipe, c_if, c_ifnot, c_for
             .word       c_while, c_switch, c_case, c_match, c_fn, c_fndel
-s_star:     .byte       "*"
-s_path:     .byte       "path"
-s_status:   .byte       "status"
 s_apid:     .byte       "apid"
 s_one:      .byte       "1"
 empty:      .byte       LIST_END
-s_colon:    .byte       ": ", 0
 s_rcpath:   .byte       "#m/rc", 0
 s_args:     .byte       "arguments too long", 0
 s_fds:      .byte       "too many fds", 0
 s_redir:    .byte       "bad redirection", 0
-s_deep:     .byte       "too deep", 0

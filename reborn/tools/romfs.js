@@ -24,6 +24,8 @@ const path = require('path');
 const hydrafs = require('../sim/tools/hydrafs.js');
 
 const BLOCK = 512, LABEL = 'ROM', PART_SYSTEM = 0xDA;
+const CLUSTER_SHIFT = 1;                                      // Its clusters: 1K (a card's 4K left half of each file's last
+                                                              //   one empty on average: 14 banks of the paged ROM)
 
 // The manifest: [{ path, data, src }], from its "path source" lines (the source relative to the manifest's folder)
 function manifest(file) {
@@ -49,13 +51,15 @@ function volume(files, blocks) {
   const tmp = path.join(os.tmpdir(), 'reborn-romfs-' + process.pid + '.img');
   try {
     hydrafs.setNow(0);
-    hydrafs.mkfs(tmp, 0, LABEL, blocks);
+    hydrafs.mkfs(tmp, 0, LABEL, blocks, false, -1, CLUSTER_SHIFT);
     const v = new hydrafs.Volume(tmp);
-    for (const f of [...files].sort((a, b) => (a.path < b.path ? -1 : 1))) {
-      const dir = f.path.split('/').slice(0, -1).join('/');
-      if (dir) v.mkdir(dir);
-      v.put(f.path, f.data);
+    const sorted = [...files].sort((a, b) => (a.path < b.path ? -1 : 1));
+    for (const f of sorted) {                                 // Every entry first, empty, so each directory's
+      const dir = f.path.split('/').slice(0, -1).join('/');   //   clusters are in a row (a directory read in
+      if (dir) v.mkdir(dir);                                  //   pieces, with an extent block, made ls /bin a
+      v.put(f.path, Buffer.alloc(0));                         //   third slower); then the files' data
     }
+    for (const f of sorted) v.put(f.path, f.data);
     v.close();
     const img = fs.readFileSync(tmp);
     let used = img.length / BLOCK;

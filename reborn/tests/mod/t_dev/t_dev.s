@@ -144,22 +144,22 @@ main:
             lda         fd
             jsr         CLOSE
             lda         buf + 2 * SR_SIZE + SR_NAME
-            EXPECT_A    'w', "#m/bin: the programs alone (init, rc, then wstart: not cons, storage, kdev)"
-            OPEN_       s_modws, O_READ
+            EXPECT_A    'p', "#m/bin: the programs alone (init, rc, then play: not cons, storage, kdev)"
+            OPEN_       s_modinit, O_READ
             sta         fd
-            EXPECT_OK   "OPEN #m/wstart"
+            EXPECT_OK   "OPEN #m/init"
             READ_       fd, 64
             pha
             lda         fd
             jsr         CLOSE
             pla
-            EXPECT_A    64, "#m/wstart: 64 bytes read"
+            EXPECT_A    64, "#m/init: 64 bytes read"
             lda         buf + HX_MAGIC
-            EXPECT_A    'H', "#m/wstart: its image, its header first (HYX2)"
+            EXPECT_A    'H', "#m/init: its image, its header first (HYX2)"
             lda         buf + HX_FLAGS
             and         #HF_INPLACE
-            EXPECT_A    HF_INPLACE, "#m/wstart: run in place"
-            LDR         r0, s_mbinws
+            EXPECT_A    HF_INPLACE, "#m/init: run in place"
+            LDR         r0, s_mbininit
             LDR         r1, buf + 256
             jsr         STAT
             lda         buf + 256 + SR_LENGTH
@@ -168,7 +168,7 @@ main:
             lda         buf + 256 + SR_LENGTH + 1
             eor         buf + HX_LENGTH + 1
             ora         diffs
-            EXPECT_A    0, "STAT #m/bin/wstart: its length, its header's"
+            EXPECT_A    0, "STAT #m/bin/init: its length, its header's"
             OPEN_       s_modself, O_READ                   ; This module's file: its code at $A000?
             sta         fd
             stz         total
@@ -423,9 +423,9 @@ s_zero:     .byte       "#n/zero", 0
 s_hnull:    .byte       "#n", 0
 s_ticks:    .byte       "#t/ticks", 0
 s_hmod:     .byte       "#m", 0
-s_modws:    .byte       "#m/wstart", 0
+s_modinit:  .byte       "#m/init", 0
 s_mbin:     .byte       "#m/bin", 0
-s_mbinws:   .byte      "#m/bin/wstart", 0
+s_mbininit: .byte       "#m/bin/init", 0
 s_modself:  .byte       "#m/t_dev", 0
 s_status:   .byte       "#p/1/status", 0
 s_pre:      .byte       "#p/"

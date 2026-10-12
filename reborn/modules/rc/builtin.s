@@ -175,8 +175,9 @@ b_dot:
             lda         (bw)
             cmp         #LIST_END
             bne         :+
-            LDR         r0, s_dotuse
-            jmp         rc_error
+            lda         #<s_dotuse
+            ldx         #>s_dotuse
+            jmp         rc_error_ax
 :
             jsr         word_c
             LDR         r0, bbuf
@@ -619,16 +620,18 @@ b_mount:
             jmp         ok
 
 @usage:
-            LDR         r0, s_mountuse
-            jmp         rc_error
+            lda         #<s_mountuse
+            ldx         #>s_mountuse
+            jmp         rc_error_ax
 
 ; ---- unmount [new] old
 b_unmount:
             lda         (bw)
             cmp         #LIST_END
             bne         :+
-            LDR         r0, s_unmountuse
-            jmp         rc_error
+            lda         #<s_unmountuse
+            ldx         #>s_unmountuse
+            jmp         rc_error_ax
 :
             lda         bw                                  ; One word: old; two: new old
             ldx         bw + 1
@@ -721,8 +724,9 @@ need2:
             rts
 
 @usage:
-            LDR         r0, s_twowords
-            jmp         rc_error
+            lda         #<s_twowords
+            ldx         #>s_twowords
+            jmp         rc_error_ax
 
 ; bw on to its next word
 next_word:
@@ -803,9 +807,6 @@ s_root:     .byte       "/", 0
 ; (put_word's: a word with one of these is quoted)
 s_special:  .byte       "`^#*[]=|", $5C, "?${}()", $27, "<>&;"
 s_special_end:
-s_star:     .byte       "*"
-s_status:   .byte       "status"
-s_path:     .byte       "path"
 s_fn:       .byte       "fn ", 0
 s_brace:    .byte       " {", 0
 s_builtin:  .byte       "builtin ", 0

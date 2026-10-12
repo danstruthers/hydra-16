@@ -25,7 +25,7 @@ IMM_PAGES       = 8             ; (The pages below this one are the immediates':
 .endif
 .endmacro
 
-; A collection (gc_collect), from any bank or the RAM
+; A collection (gc_collect), from any bank or the RAM (a far call: bankcheck: far GC_CALL)
 .macro GC_CALL
 .ifdef HL_DATA4
             FARN        6, gc_collect

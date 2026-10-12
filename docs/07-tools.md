@@ -2,8 +2,8 @@
 
 The programs in `/bin`: the core tools in Plan 9's way, the editors, the task tools, the debugger, the assembler and
 disassembler, and the system's.  They're RAM programs on the ROM disk (`/rom/bin`), each read into its task's RAM as
-it starts (about 50 ms for one of 2.4K): a module of the paged ROM, run in place, has a 16K bank of its own, and most
-of the tools are near 2K.  The paged ROM keeps what must run in place (the drivers, rc, the languages, `play`;
+it starts (about 50 ms for one of 2.4K): most are near 2K, and the ROM disk keeps them in 1K clusters, where a module
+of the paged ROM took a bank.  The paged ROM keeps what must run in place (the drivers, init, rc, the languages, `play`;
 `/dev/mod/NAME`, bound into `/bin` by `#m/bin`).  `/bin` is a union, so a program of your own in `/ram/bin`,
 `/sram/bin` or a card's `/bin` comes before the ROM's of the same name.
 
@@ -324,7 +324,7 @@ and its zero page (`$22` on) is the caller's, put back as each call ends.
 | :--- | :----------- |
 | `date [-n]` | The clock (`2026-10-03 15:04:05`), or `-n` seconds since 2000-01-01.  Set it with `echo 2026-10-03 15:04:05 >/dev/time`, which sets the DS1747 too if there's one |
 | `free` | RAM: each task's own banks (16 for each RAM module, 8K each), and the shared RAM: what segments have, what's free |
-| `mods` | The paged ROM's modules: bank(s), type (program, driver, library; `boot` a driver started at boot), name |
+| `mods` | The paged ROM's modules: bank(s) (`4+33`: a small module sharing bank 4, its header at `$A000 + $3300`), type (program, driver, library; `boot` a driver started at boot), name |
 | `hwtest` | The system starts again into the hardware test (as a T typed during POST does); the reset button ends it |
 
 The kernel's messages (the boot's, POST's, a driver's) are `/dev/kmesg`, its last 4K.

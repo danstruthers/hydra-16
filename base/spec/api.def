@@ -223,11 +223,12 @@ call NOTE task impl=K_NOTE
 
 call MODINFO task impl=K_MODINFO far
   in:     .A = an entry of the module directory (0 on); r0 = a buffer (ME_SIZE bytes)
-  out:    the buffer: ME_BANK, ME_BANKS, ME_TYPE (HT_*), ME_FLAGS (HF_*), ME_NAME (12, zero-padded)
+  out:    the buffer: ME_BANK, ME_BANKS, ME_TYPE (HT_*), ME_FLAGS (HF_*), ME_NAME (11, zero-padded), ME_PAGE
   errors: E_NOENT (past the last)
   blocks: no
   hl:     .A=n r0=buf(ME_SIZE) -> buf
-  doc:    A module in the paged ROM (SPAWN's #m/NAME), as the module directory has it.
+  doc:    A module in the paged ROM (SPAWN's #m/NAME), as the module directory has it.  A module of a bank may share
+  doc:    it with others: its header is at $A000 + 256 * ME_PAGE there (0 for a module of banks).
 
 call ENV_GET task impl=K_ENV_GET far
   in:     .A = a task ($FF: this one); r0 = a variable's name; r1 = a buffer; r2 = its size; r3 = an offset in the
@@ -927,7 +928,8 @@ const ME_BANK         0        "MODINFO's answer (ME_SIZE bytes): the module's f
 const ME_BANKS        1        "MODINFO: the banks it spans"
 const ME_TYPE         2        "MODINFO: its type (HT_*)"
 const ME_FLAGS        3        "MODINFO: its flags (HF_*)"
-const ME_NAME         4        "MODINFO: its name (12 bytes, zero-padded)"
+const ME_NAME         4        "MODINFO: its name (11 bytes, zero-padded: 10 characters at most)"
+const ME_PAGE         15       "MODINFO: its header's page in its first bank, 0-63 ($A000 + 256 * it: a module of a bank, packed with others)"
 const ME_SIZE         16
 const TI_STATE        0        "TASKINFO's answer: the task's state (0: free, 1 ready, 2 wait, 3 call, 4 idle, 5 new, 6 sleep, 7 blocked, 8 event)"
 const TI_FLAGS        1        "TASKINFO: its flags (TF_DRIVER, TF_STOPPED)"

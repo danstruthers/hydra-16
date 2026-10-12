@@ -82,7 +82,7 @@ Every task has its own `$0000-$7FFF`, laid out the same way:
 | `$0200-$03FF` | The OS area (`TA_*`): a server's request being served (`TASK_INBOX`), its entries (serve, irq, note handler), its name, its copy of the interrupt lines' owners, its page and bank maps, the request it's making, its fds, its current directory, its arguments (`TASK_ARGS`, `$0350`) |
 | `$0400-$7FFF` | **The program's**: its data and BSS, its break, and pages given out from the top down.  A RAM program loads at `$0800` |
 | `$8000-$9FFF` | The RAM bank `$00` selects: one of the task's own, or a shared one |
-| `$A000-$DFFF` | The paged ROM bank `$01` selects: a module running in place has its own bank here |
+| `$A000-$DFFF` | The paged ROM bank `$01` selects: a module running in place has its bank here (its header at `$A000`, or at its page of a bank it shares) |
 | `$E000-$FFFF` | The BIOS ROM, page 0: the jump table at `$F800`; the I/O at `$FF00` |
 
 In task F, the top of RAM is `$7EFF`: the DS1747's clock registers may be at `$7FF8-$7FFF`.  The **kernel task** (task 0)

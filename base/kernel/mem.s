@@ -18,15 +18,20 @@
 
 ; ****************************************************************************
 ; A task's start (from K_TASK_START and K_DRIVER_MAIN, in the new task): its break at its module's top (a RAM
-; program's: set as it loaded, load.s), nothing given out.  Modifies .A, .X
+; program's: set as it loaded, load.s), nothing given out.  Modifies .A, .X, .Y, r3
 K_MEM_START:
             lda         TA_MODBANK
             inc         a
             beq         :+
-            lda         PROM_WINDOW + HX_TOP                ; (Its module's header, at $A000)
+            stz         r3                                  ; (Its module's header, at its page: TA_MODBASE)
+            lda         TA_MODBASE
+            sta         r3 + 1
+            ldy         #HX_TOP
+            lda         (r3),Y
             sta         TA_BRK
             sta         TA_BRKMIN
-            lda         PROM_WINDOW + HX_TOP + 1
+            iny
+            lda         (r3),Y
             sta         TA_BRK + 1
             sta         TA_BRKMIN + 1
 :

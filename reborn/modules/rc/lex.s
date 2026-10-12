@@ -4,7 +4,7 @@
 ; text being parsed (tok_start: for a function's body, a subshell's command).  tok_adj <> 0: no space before it (so
 ; a word's pieces join: $x.c is $x^.c).  A word's unquoted * ? [ are glob markers (G_*); tok_quoted <> 0: some of
 ; it was quoted; tok_kw: the keyword it is (T_IF ...: the parser takes it as one where a command starts), or 0.
-; In rc's second bank, with parse.s (a character from the source, and errors, by FAR1).
+; (In rc's one bank, as all of rc is: a second bank's, with parse.s, till October 2026.)
 ;   Words: anything but white space and ; & | ^ $ ` ' { } ( ) < > = and a new line; '...' quotes ('' a quote in
 ;   it); # starts a comment where a token would; \ and a new line are a space.  $name: letters, digits, _ and *.
 
@@ -30,7 +30,7 @@ peeked:     .res        1                                   ; <> 0: the token is
 spaced:     .res        1                                   ; A space since the last token
 tok_text:   .res        TOK_MAX + 1
 
-.segment "CODE2"
+.code
 
 ; Nothing read ahead (a new command, a new source)
 lex_init:
@@ -123,8 +123,7 @@ getc:
             clc
             rts
 :
-            FAR1        src_getc
-            rts
+            jmp         src_getc
 
 ; .A put back (where it was: src_at)
 ungetc:
@@ -471,8 +470,9 @@ word:
             jmp         @end
 
 @unended:
-            LDR         r0, s_quote
-            FAR1        rc_error                            ; (It doesn't come back)
+            lda         #<s_quote
+            ldx         #>s_quote
+            jsr         rc_error_ax                         ; (It doesn't come back)
 
 ; A word's character: .A into tok_text (TOK_MAX at most: an error past them)
 put:
@@ -483,8 +483,9 @@ put:
             inc         tok_len
             rts
 :
-            LDR         r0, s_long
-            FAR1        rc_error                            ; (It doesn't come back)
+            lda         #<s_wlong
+            ldx         #>s_wlong
+            jsr         rc_error_ax                         ; (It doesn't come back)
 
 ; C = 1 if .A ends a word: a space, a new line, or a special character.  Keeps .A
 special:
@@ -501,7 +502,7 @@ special:
             sec
             rts
 
-.segment "RODATA2"
+.rodata
 singles:    .byte       LF, ';', '^', '{', '}', '(', ')', '=', '`'
 NSINGLE     = * - singles
 single_toks: .byte      T_NL, T_SEMI, T_CARET, T_LBRACE, T_RBRACE, T_LPAREN, T_RPAREN, T_EQ, T_BQ
@@ -511,6 +512,5 @@ keywords:   .byte       "if", 0, T_IF, "not", 0, T_NOT, "for", 0, T_FOR, "in", 0
             .byte       "switch", 0, T_SWITCH, "case", 0, T_CASE, "fn", 0, T_FN, "~", 0, T_TWIDDLE
             .byte       "!", 0, T_BANG, 0
 
-.rodata                                                     ; (The first bank's: rc_error reads them there)
+.rodata
 s_quote:    .byte       "eof in quotes", 0
-s_long:     .byte       "word too long", 0
