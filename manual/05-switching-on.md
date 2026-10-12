@@ -166,7 +166,7 @@ Type `date` and press <kbd>RETURN</kbd>:
 
 ```session
 /> date
-2000-01-01 00:00:03
+2000-01-01 00:00:04
 ```
 
 The Hydra keeps the time, but without a clock chip (section 4.5) it doesn't know the date, so its clock starts at

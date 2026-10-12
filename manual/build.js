@@ -30,8 +30,10 @@ function files() {
   return fs.readFileSync(path.join(DIR, 'book.txt'), 'utf8').split(/\r?\n/).map(l => l.replace(/#.*/, '').trim()).filter(Boolean);
 }
 
-// A file's kind, from its first heading: "Part One. Title", "Chapter 3. Title", "Appendix A. Title", or front matter
+// A file's kind, from its first heading: "Part One. Title", "Chapter 3. Title", "Appendix A. Title", "Appendices" (a
+// part page with no number), or front matter
 function kindOf(h) {
+  if (/^Appendices$/.test(h)) return { kind: 'part', num: '', title: h };
   let m = /^Part\s+(\w+)[.:]\s*(.*)$/.exec(h);
   if (m) return { kind: 'part', num: m[1], title: m[2] };
   m = /^Chapter\s+(\d+)[.:]\s*(.*)$/.exec(h);
@@ -43,10 +45,75 @@ function kindOf(h) {
 
 const MARK = n => '<span class="mk">QQM' + n + 'QQ</span>';
 
+// ---- The index: each term a chapter or appendix defines in bold (**term**, in its text: not in a table, a heading,
+// a code block or a caption; not a run-in heading, which ends with a stop), and each command of Chapter 10, with the
+// pages it's on (each place a mark, as the contents' entries have)
+const plain = s => s.replace(/<[^>]*>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+// (Words in bold that aren't terms: buttons, steps' names, run-in phrases, rc's keywords)
+const NOT_TERMS = new Set(['*', 'about fifty commands', 'and', 'both', 'chapter 2', 'copy text', 'definitions and control', 'first',
+  'follows instructions', 'four times', 'from assembly language', 'from the languages', 'inspect', 'logic and comparisons',
+  'looking inside', 'new', 'one', 'one byte', 'part two', 'paste', 'pause', 'power cycle', 'power cycle with these', 'read it',
+  'write a command to it', 'real time', 'remove', 'remove the solder', 'renamed', 'samples', 'save card', 'sound',
+  'tack the opposite corner', 'text and numbers', 'three programming languages', 'wash your hands', 'shown', 'size', 'long',
+  'holds', 'zooms', 'wide', 'order', 'threw', "kernel's", 'or', 'not', 'for', 'if', 'if not', 'while', 'switch', 'no', 'normal',
+  'clip the leads', 'good joint', 'too little solder', 'too much solder', 'you type', 'bold', 'input', 'output', 'memory',
+  'processing', 'reset', 'setup…', 'load…', 'code', 'download zip', 'end', 'step', 'next', 'continue', 'until', 'disassemble',
+  'write', 'quit', 'name', 'groups', 'number', 'program', 'actions', 'message', 'entries', 'requests', 'storage', 'files',
+  'windows', 'shells', 'programs', 'the appendices', 'appendices', 'the tasks', 'the pc', 'the disks', 'the clock', 'the pins',
+  'the windows', 'the terminal', 'the i²c bus', 'the pin headers', 'the pin sockets', 'the ram disks', 'the rom disk', 'odd',
+  'cold joint', 'bridge', 'lifted pad', 'functions', 'variables', 'teachers', 'students aged 12 and up', 'part one, meet the hydra']);
+function indexTerm(t) {
+  t = t.replace(/\s+/g, ' ');
+  const p = plain(t).trim();
+  if (p.length < 2 || p.length > 40 || /[.:!?,;…]$/.test(p) || /,/.test(p) || /^[$0-9(]/.test(p) || p.split(/\s+/).length > 4) return null;
+  if (NOT_TERMS.has(p.toLowerCase())) return null;
+  t = t.replace(/^(The|the|A|a|An|an) /, '');
+  return NOT_TERMS.has(plain(t).toLowerCase()) ? null : t;
+}
+// The places in html not to look in: its tables, code blocks, headings, captions and openers
+function skipRanges(html) {
+  const out = [];
+  for (const re of [/<table[\s\S]*?<\/table>/g, /<pre[\s\S]*?<\/pre>/g, /<h[1-6][\s\S]*?<\/h[1-6]>/g, /<figcaption[\s\S]*?<\/figcaption>/g, /<header[\s\S]*?<\/header>/g]) {
+    for (const m of html.matchAll(re)) out.push([m.index, m.index + m[0].length]);
+  }
+  return out;
+}
+function indexHtml(index, pages) {
+  // Plurals into their singular, where both are there ("tasks" into "task")
+  for (const [key, e] of [...index]) {
+    const one = key.endsWith('s') && index.get(key.slice(0, -1));
+    if (one) { one.marks.push(...e.marks); for (const [f, n] of e.forms) one.forms.set(f.replace(/s$/, ''), (one.forms.get(f.replace(/s$/, '')) || 0) + n); index.delete(key); }
+  }
+  const rows = [...index].map(([key, e]) => {
+    let form = [...e.forms].sort((a, b) => b[1] - a[1])[0][0];
+    // (A term set in capitals only for starting a run-in label: "Ceramic capacitors" as "ceramic capacitors")
+    if (/^(Arithmetic|Card-edge|Ceramic|Complex|Conditional|Desoldering|Electrolytic|Fixed|Indexing|Indirect|Integers|Pin|Rationals|Page|Slot|Task)\b/.test(form)) form = form[0].toLowerCase() + form.slice(1);
+    const sortKey = plain(form).toLowerCase().replace(/^[^a-z0-9]+/, '');
+    // (Pass 1: room for the numbers; no numbers known (--html): the terms alone)
+    const pgs = !pages ? ['000'] : Object.keys(pages).length ? [...new Set(e.marks.map(m => pages[m]).filter(Boolean))].sort((a, b) => a - b) : [''];
+    return { sortKey, form, pgs };
+  }).filter(r => r.pgs.length).sort((a, b) => a.sortKey < b.sortKey ? -1 : a.sortKey > b.sortKey ? 1 : 0);
+  let html = '', letter = '';
+  for (const r of rows) {
+    const l = /^[a-z]/.test(r.sortKey) ? r.sortKey[0].toUpperCase() : '#';
+    if (l !== letter) { letter = l; html += '<h3 class="ix-letter">' + l + '</h3>\n'; }
+    html += '<p class="ix">' + r.form + '<span class="ix-pg">' + r.pgs.join(', ') + '</span></p>\n';
+  }
+  return html;
+}
+
 // The whole book's HTML.  pages: page numbers of the contents' entries (by mark number), or null (pass 1)
 function book(pages) {
   const ids = new Set();
   const sections = [], toc = [], runCss = [];
+  const index = new Map();                                    // A term's key: { forms (as written: how often), marks }
+  const addIndex = (form, n) => {
+    const key = plain(form).toLowerCase();
+    if (!index.has(key)) index.set(key, { forms: new Map(), marks: [] });
+    const e = index.get(key);
+    e.forms.set(form, (e.forms.get(form) || 0) + 1);
+    e.marks.push(n);
+  };
   let mark = 0;
   for (const f of files()) {
     const src = fs.readFileSync(path.join(DIR, f), 'utf8');
@@ -59,15 +126,30 @@ function book(pages) {
     const entry = h => { const n = mark++; html = html.replace('<h' + h.level + ' id="' + h.id + '">', '<h' + h.level + ' id="' + h.id + '">' + (pages ? '' : MARK(n))); return n; };
     if (k.kind === 'part') {
       const h = r.headings[0];
-      toc.push({ kind: 'part', text: 'Part ' + k.num + ': ' + k.title, id: h.id, mark: entry(h) });
-      html = '<div class="part-page"><div class="stripes"><i></i><i></i><i></i><i></i><i></i></div><p class="part-num">Part ' + md.esc(k.num) + '</p>' +
+      toc.push({ kind: 'part', text: k.num ? 'Part ' + k.num + ': ' + k.title : k.title, id: h.id, mark: entry(h) });
+      html = '<div class="part-page"><div class="stripes"><i></i><i></i><i></i><i></i><i></i></div><p class="part-num">' + (k.num ? 'Part ' + md.esc(k.num) : 'Reference') + '</p>' +
         html.replace(/^<h1 id="([^"]+)">(?:<span class="mk">[^<]*<\/span>)?[^<]*<\/h1>/, (m0, id) => '<h1 id="' + id + '">' + (pages ? '' : m0.match(/<span class="mk">[^<]*<\/span>/)?.[0] || '') + md.esc(k.title) + '</h1>') + '</div>';
     } else if (k.kind === 'chapter' || k.kind === 'appendix') {
       const label = k.kind === 'chapter' ? 'Chapter ' + k.num : 'Appendix ' + k.num;
       for (const h of r.headings) {
         if (h.level === 1) toc.push({ kind: k.kind, text: label + '. ' + k.title, num: k.num, title: k.title, id: h.id, mark: entry(h) });
-        else if (h.level === 2) toc.push({ kind: 'section', text: h.text, id: h.id, mark: entry(h) });
+        else if (h.level === 2) {
+          const n = entry(h);
+          toc.push({ kind: 'section', text: h.text, id: h.id, mark: n });
+          const cm = /^([a-z][a-z0-9-]*): /.exec(h.text);       // (Chapter 10's commands: "ls: list files")
+          if (k.kind === 'chapter' && k.num === '10' && cm) addIndex('<code>' + cm[1] + '</code> command', n);
+        }
       }
+      // The index's terms: a mark before each
+      const skip = skipRanges(html);
+      html = html.replace(/<strong>([^<]{2,60}|<code>[^<]{1,40}<\/code>)<\/strong>/g, (m0, t, at) => {
+        if (skip.some(([a, b]) => at >= a && at < b)) return m0;
+        const term = indexTerm(t);
+        if (!term) return m0;
+        const n = mark++;
+        addIndex(term, n);
+        return (pages ? '' : MARK(n)) + m0;
+      });
       // The opener: "CHAPTER 3" over the title
       html = html.replace(/^<h1 id="([^"]+)">((?:<span class="mk">[^<]*<\/span>)?)[^<]*<\/h1>/, (m0, id, mk) =>
         '<header class="opener"><div class="stripes"><i></i><i></i><i></i><i></i><i></i></div><p class="label">' + label.toUpperCase().replace(/ (\S+)$/, ' <span class="num">$1</span>') +
@@ -77,6 +159,14 @@ function book(pages) {
       for (const h of r.headings) if (h.level === 1) toc.push({ kind: 'front', text: h.text, id: h.id, mark: entry(h) });
     }
     sections.push('<section class="' + k.kind + '" style="page: ' + (k.kind === 'chapter' || k.kind === 'appendix' ? name : k.kind) + '">' + html + '</section>');
+  }
+  // The index, last
+  {
+    const n = mark++;
+    toc.push({ kind: 'front', text: 'Index', id: 'index', mark: n });
+    sections.push('<section class="front index-section" style="page: index"><h1 class="index-title" id="index">' + (pages ? '' : MARK(n)) + 'Index</h1>' +
+      '<div class="index">' + indexHtml(index, pages) + '</div></section>');
+    runCss.push('@page index { @top-left { content: "Index"; } }');
   }
   // The contents
   const pg = e => pages && pages[e.mark] ? String(pages[e.mark]) : (pages ? '' : '000');

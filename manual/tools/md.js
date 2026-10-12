@@ -172,11 +172,16 @@ function blocks(lines, ctx) {
     if (t.startsWith('|') && i + 1 < lines.length && /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(lines[i + 1])) {
       flush();
       const row = l => { let s = l.trim(); if (s.startsWith('|')) s = s.slice(1); if (s.endsWith('|') && !s.endsWith('\\|')) s = s.slice(0, -1);
-        const cells = []; let cur = '', inCode = false;
+        const cells = []; let cur = '';
         for (let k = 0; k < s.length; k++) {
           if (s[k] === '\\' && s[k + 1] === '|') { cur += '|'; k++; continue; }
-          if (s[k] === '`') inCode = !inCode;
-          if (s[k] === '|' && !inCode) { cells.push(cur.trim()); cur = ''; } else cur += s[k];
+          if (s[k] === '`') {                                   // (A code span, its | not a cell's end: `` ` `` too)
+            let n = 0; while (s[k + n] === '`') n++;
+            const end = s.indexOf('`'.repeat(n), k + n);
+            const to = end > 0 ? end + n : k + n;
+            cur += s.slice(k, to); k = to - 1; continue;
+          }
+          if (s[k] === '|') { cells.push(cur.trim()); cur = ''; } else cur += s[k];
         }
         cells.push(cur.trim()); return cells; };
       const head = row(line), aligns = row(lines[i + 1]).map(c => /^:-+:$/.test(c) ? 'center' : /-:$/.test(c) ? 'right' : /^:-/.test(c) ? 'left' : '');
@@ -278,12 +283,15 @@ function list(lines, start, ctx) {
   return { html: '<' + tag + (ordered && startNum !== 1 ? ' start="' + startNum + '"' : '') + '>' + html + '</' + tag + '>', next: i };
 }
 
-// Code blocks: ```session shows what's typed (after a prompt) in bold; ```text, ```forth ... plain
+// Code blocks: ```session shows what's typed (after a prompt) in bold; ```text, ```forth ... plain.  A session's fence
+// can name more prompts; "indented" says its lines that start with 8 spaces are output, not the second prompt's
 const PROMPTS = [/^(\/[^ ]*> )/, /^(% )/, /^(> )/, /^(hylang> )/, /^(\]\s?)/, /^(\* )/, /^(db> )/, /^(OK\s*$)/, /^( {8})(?=\S)/];
 function codeBlock(code, info, extra, ctx) {
   const cls = info ? ' class="' + escAttr(info) + '"' : '';
   if (info === 'session') {
-    const prompts = (extra ? extra.split(/\s+/).map(p => new RegExp('^(' + p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/_/g, ' ') + ')')) : []).concat(PROMPTS);
+    const words = extra ? extra.split(/\s+/).filter(Boolean) : [];
+    const prompts = words.filter(p => p !== 'indented').map(p => new RegExp('^(' + p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/_/g, ' ') + ')'))
+      .concat(words.includes('indented') ? PROMPTS.slice(0, -1) : PROMPTS);
     const html = code.split('\n').map(l => {
       if (l.startsWith('\u00ab') && l.endsWith('\u00bb')) return '<span class="note">' + esc(l.slice(1, -1)) + '</span>';
       if (l.startsWith('\u00bb ')) return '<b>' + esc(l.slice(2)) + '</b>';       // (A line typed with no prompt before it)

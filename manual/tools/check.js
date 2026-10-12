@@ -12,8 +12,11 @@
 //     line ...                        being the transcript from its start (or, with --boot, the boot's)
 //     -->
 //   A line "!end TEXT" in the comment ends the block at the line with TEXT in it (the rest isn't the book's).
-//   A block's fence can name more prompts (```session * for ed's); a «...» line is a note, not output; a line
+//   A block's fence can name more prompts (```session * for ed's), and "indented" (```session indented) makes its
+//   lines that start with 8 spaces output, not HyForth's second prompt; a «...» line is a note, not output; a line
 //   "» text" is typed with no prompt before it (the lines ed is given to add, a program's input).
+//   A code block just after "<!-- listing PATH -->" must be the book's file PATH (manual/PATH), line for line: a
+//   sample's source, which a session's setup types into the Hydra ("!file PATH").
 //   --list shows each block's script, without running it.
 'use strict';
 const fs = require('fs');
@@ -33,7 +36,9 @@ function blocks(text) {
     let j = i + 1;
     while (j < L.length && L[j] !== '```') j++;
     const b = { start: i, end: j, lines: L.slice(i + 1, j), opts: '', setup: [], script: null };
-    b.prompts = (m[1] ? m[1].split(/\s+/).map(p => new RegExp('^(' + p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/_/g, ' ') + ')')) : []).concat(PROMPTS);
+    const words = m[1] ? m[1].split(/\s+/).filter(Boolean) : [];
+    b.prompts = words.filter(p => p !== 'indented').map(p => new RegExp('^(' + p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/_/g, ' ') + ')'))
+      .concat(words.includes('indented') ? PROMPTS.slice(0, -1) : PROMPTS);   // ("indented": 8 spaces is output)
     // The comment before it (straight before, or a blank line between)
     let k = i - 1;
     if (k >= 0 && !L[k].trim()) k--;
@@ -51,6 +56,24 @@ function blocks(text) {
     }
     out.push(b);
     i = j;
+  }
+  return out;
+}
+
+// The listings in a chapter: a code block just after "<!-- listing PATH -->" (a blank line between, or not) is the
+// book's file PATH (manual/PATH: samples/stars.s, which a block's setup types in with !file): { start, end, file }
+function listings(text) {
+  const L = text.replace(/\r\n?/g, '\n').split('\n'), out = [];
+  for (let i = 0; i < L.length; i++) {
+    const m = /^<!--\s*listing\s+(\S+)\s*-->$/.exec(L[i].trim());
+    if (!m) continue;
+    let s = i + 1;
+    if (s < L.length && !L[s].trim()) s++;
+    if (!/^```/.test(L[s] || '')) continue;
+    let e = s + 1;
+    while (e < L.length && L[e] !== '```') e++;
+    out.push({ start: s, end: e, file: m[1] });
+    i = e;
   }
   return out;
 }
@@ -118,7 +141,20 @@ function main() {
     let text = fs.readFileSync(file, 'utf8');
     const bs = blocks(text).filter(b => !at || b.start + 1 <= +at && +at <= b.end + 1);
     const fixes = [];
-    for (const b of bs) {
+    // Each listing held against its file (--fix: made it), the last first (so a fix leaves the others' lines where
+    // they were)
+    for (const g of at ? [] : listings(text).reverse()) {
+      n++;
+      const where = path.basename(file) + ':' + (g.start + 1);
+      if (list) { console.log(where + '  listing ' + g.file); continue; }
+      const L = text.replace(/\r\n?/g, '\n').split('\n');
+      const want = fs.readFileSync(path.join(BOOK, g.file), 'utf8').replace(/\r\n?/g, '\n').replace(/\n$/, '').split('\n');
+      if (L.slice(g.start + 1, g.end).join('\n') === want.join('\n')) { console.log(where + '  ok (' + g.file + ')'); continue; }
+      bad++;
+      console.log(where + '  DIFFERS from ' + g.file);
+      if (fix) { L.splice(g.start + 1, g.end - g.start - 1, ...want); text = L.join('\n'); fs.writeFileSync(file, text); console.log('fixed the listing'); }
+    }
+    for (const b of (at ? bs : blocks(text))) {
       n++;
       const where = path.basename(file) + ':' + (b.start + 1);
       if (list) { console.log(where + '  ' + (b.opts || '') + '\n  ' + (b.script || b.setup.concat(typed(b))).join('\n  ')); continue; }

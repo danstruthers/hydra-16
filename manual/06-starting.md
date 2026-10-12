@@ -326,7 +326,7 @@ The `ps` command lists the tasks, in a friendlier form than init's table, with t
 ```session
 /> ps
 task  state   parent     cpu group  name
-   0  ready   -          1.0     0  kernel
+   0  ready   -          1.6     0  kernel
    1  wait    -          0.1     1  init
    2  wait     1         0.2     2  forth
    3  event    1         0.0     1  wstart

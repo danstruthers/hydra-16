@@ -39,8 +39,9 @@ the Hydra handles numbers.
 **Part Five, Machine Language**, goes all the way down to the 65C02 chip at the heart of the Hydra, with the
 assembler, disassembler and debugger that let you program it directly.
 
-**The appendices** hold the complete language references, the character codes, the memory and I/O map, error
-messages, the emulator's options, the parts list and board diagrams, and a glossary of computer words.
+**The appendices** hold the complete language references, the 65C02's instructions, the character codes, the memory
+and I/O map, error messages, the emulator's options, the parts list and board diagrams, a glossary of computer words,
+and every system call. The index, at the very end, finds the page where a word is explained.
 
 You can read the book from front to back, and if you are building a Hydra you should read Part One that way. After
 that, feel free to jump to whatever interests you most. Each chapter tells you what it expects you to know already.

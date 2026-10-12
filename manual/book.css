@@ -117,6 +117,19 @@ h1.contents-title { font: 30pt "Arial Black", Arial, sans-serif; border-bottom: 
 .toc-sec { font-size: 9.2pt; padding-left: 2.1em; color: #333; }
 .toc-front { font: bold 10.5pt Arial, sans-serif; margin-top: 6pt !important; }
 
+/* ---- The index */
+h1.index-title { font: 30pt "Arial Black", Arial, sans-serif; border-bottom: 3pt solid #1d1d1d; padding-bottom: 6pt; }
+.index { column-count: 3; column-gap: 14pt; font-size: 8.4pt; line-height: 1.25; }
+.index .ix-letter { font: 12pt "Arial Black", Arial, sans-serif; margin: 8pt 0 2pt; break-after: avoid; }
+.index .ix { margin: 0 0 1pt; padding-left: 1.2em; text-indent: -1.2em; break-inside: avoid; }
+.index .ix-pg { margin-left: 0.5em; color: #555; }
+
+/* ---- Appendix D's table of the opcodes: 16 columns */
+.opmatrix table { font-size: 6.2pt; table-layout: fixed; }
+.opmatrix th, .opmatrix td { padding: 1.5pt 1pt; text-align: center; letter-spacing: 0; }
+.opmatrix th { text-transform: none; }
+.opmatrix td:first-child, .opmatrix th:first-child { width: 4%; }
+
 /* ---- Small things */
 .small { font-size: 9pt; }
 .center { text-align: center; }

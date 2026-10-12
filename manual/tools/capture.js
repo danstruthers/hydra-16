@@ -8,7 +8,9 @@
 //               A line "#! OPTIONS" sets options (as below); "## comment" is skipped; a line starting "!raw " is
 //               typed at once, without waiting for a prompt; "!wait N" runs N million cycles; "!quiet" waits for
 //               the output to stop; "!line TEXT" types TEXT and Return once the output stops; "!snap NAME" takes a
-//               picture of the screen ("!png NAME": of the Vera X's screen, figures/NAME.png).  A prompt is what a program waiting for a line shows: output stopped part-way
+//               picture of the screen ("!png NAME": of the Vera X's screen, figures/NAME.png); "!file PATH [NAME]"
+//               types the book's file PATH (manual/PATH: samples/stars.s) into the Hydra's file NAME (its own name),
+//               with cat.  A prompt is what a program waiting for a line shows: output stopped part-way
 //               along a line, and still a while.  In a line, \e is ESC, \r Return, \t Tab, \xHH a byte, ^X a control
 //               key (^] is Ctrl-]), \\ a backslash, \^ a caret.
 //   --boot      the boot's messages too (otherwise the transcript starts at the first prompt)
@@ -177,6 +179,14 @@ function capture(script, o) {
       continue;
     }
     if (raw.startsWith('##')) continue;
+    if (raw.startsWith('!file ')) {                           // (A file of the book's typed in: cat >NAME, its lines, ^D)
+      const [src, name] = raw.slice(6).trim().split(/\s+/);
+      const text = fs.readFileSync(path.join(__dirname, '..', src), 'utf8').replace(/\r\n?/g, '\n').replace(/\n$/, '');
+      items.push('!line cat >' + (name || path.basename(src)));
+      for (const l of text.split('\n')) items.push('!line ' + l.split('\\').join('\\\\').split('^').join('\\^'));
+      items.push('!raw ^D', '!quiet');
+      continue;
+    }
     items.push(raw);
   }
   while (items.length && !items[items.length - 1].trim()) items.pop();
