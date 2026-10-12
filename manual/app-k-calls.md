@@ -62,7 +62,7 @@ in small letters, with `-` for `_`:
 
 **`NOTE`** ($F854). Send a note to a task, or to a note group. *In:* A = a task, or NOTE_GROUP | a note group; X = the note (1-31: NOTE_*). *Errors:* E_INVAL, E_SRCH, E_PERM.
 
-**`MODINFO`** ($F857). An entry of the paged ROM's module directory: a module's bank, type and name. *In:* A = an entry of the module directory (0 on); r0 = a buffer (ME_SIZE bytes). *Out:* the buffer: ME_BANK, ME_BANKS, ME_TYPE (HT_*), ME_FLAGS (HF_*), ME_NAME (12, zero-padded). *Errors:* E_NOENT.
+**`MODINFO`** ($F857). An entry of the paged ROM's module directory: a module's banks, its page in its first bank (where its header is, for a small module that shares the bank), its type and its name. *In:* A = an entry of the module directory (0 on); r0 = a buffer (ME_SIZE bytes). *Out:* the buffer: ME_BANK, ME_BANKS, ME_TYPE (HT_*), ME_FLAGS (HF_*), ME_NAME (11, zero-padded), ME_PAGE. *Errors:* E_NOENT.
 
 **`ENV_GET`** ($F85A). Read an environment variable, of this task or another. *In:* A = a task ($FF: this one); r0 = a variable's name; r1 = a buffer; r2 = its size; r3 = an offset in the value. *Out:* A/X = the value's length from the offset (0 at its end or past it); as much of it as fits, in the buffer. *Errors:* E_NOENT, E_SRCH, E_INVAL, E_NAMETOOLONG.
 

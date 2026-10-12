@@ -146,8 +146,8 @@ ROM disk. Here's how it works.
 A disk is a row of **blocks**, of 512 bytes each. The first block of the HydraFS (block 0 of the card, or of its
 partition) is the **superblock**. It starts with the word `HYDRAFS1`, and says where everything else is: the **free
 map**, which has one bit for each **cluster** of the disk, saying whether it's in use; and the **data area**, where
-the files and directories are. Space is given to files a cluster at a time: 4K (8 blocks) on a card, or 1K on a RAM
-disk, so a disk with lots of small files wastes less.
+the files and directories are. Space is given to files a cluster at a time: 4K (8 blocks) on a card, or 1K (2 blocks)
+on the RAM disks and the ROM disk, so a disk with lots of small files wastes less.
 
 A **directory** is a file of **entries**, 64 bytes each. An entry holds a file's:
 

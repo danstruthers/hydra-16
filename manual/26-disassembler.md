@@ -366,7 +366,7 @@ lib disasm
 /> hex f800 4 disasm decimal
  F800  4C 77 EB  jmp $EB77
  F803  4C B0 EB  jmp $EBB0
- F806  4C 7B EE  jmp $EE7B
+ F806  4C 88 EE  jmp $EE88
  F809  4C 2B EB  jmp $EB2B
 /> hex f950 2 disasm decimal
  F950  4C 5C E2  jmp $E25C

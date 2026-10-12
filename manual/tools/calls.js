@@ -31,7 +31,7 @@ const WHAT = {
   TASKINFO: 'What the kernel knows about a task: its state, parent, time used, name (as `ps` shows).',
   NOTIFY: 'Set this task\'s note handler (section 25.16), or take it away.',
   NOTE: 'Send a note to a task, or to a note group.',
-  MODINFO: 'An entry of the paged ROM\'s module directory: a module\'s bank, type and name.',
+  MODINFO: 'An entry of the paged ROM\'s module directory: a module\'s banks, its page in its first bank (where its header is, for a small module that shares the bank), its type and its name.',
   ENV_GET: 'Read an environment variable, of this task or another.',
   ENV_PUT: 'Set an environment variable (or part of its value).',
   ENV_DEL: 'Remove an environment variable.',

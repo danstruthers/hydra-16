@@ -241,7 +241,8 @@ from the highest down, and prints each one's name:
 | A | `vid` | The Vera X's screen. With no Vera X, it finds nothing to do and ends |
 
 Like most of HydraOS, the drivers live in the paged ROM, in **modules**. A module runs *in place*: its task's ROM
-bank register shows its bank at $A000, so its code never needs copying into RAM.
+bank register shows its bank at $A000-$DFFF, so its code never needs copying into RAM. A big module has a bank (or
+several) of its own; small ones share a bank, each in its own part of it.
 
 Chapter 11 explains how drivers work, and Part Three describes each one.
 
@@ -326,15 +327,15 @@ The `ps` command lists the tasks, in a friendlier form than init's table, with t
 ```session
 /> ps
 task  state   parent     cpu group  name
-   0  ready   -          1.6     0  kernel
-   1  wait    -          0.1     1  init
-   2  wait     1         0.2     2  forth
+   0  ready   -          1.5     0  kernel
+   1  wait    -          0.2     1  init
+   2  wait     1         0.3     2  forth
    3  event    1         0.0     1  wstart
    4  ready    2         0.0     2  ps
   11  idle    -          0.0    11  gpio
   12  idle    -          0.0    12  snd
   13  idle    -          0.1    13  kdev
-  14  idle    -          1.5    14  storage
+  14  idle    -          1.6    14  storage
   15  idle    -          0.5    15  cons
 ```
 

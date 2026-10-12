@@ -209,7 +209,7 @@ Lists the disks that have started, with each one's kind, size, free space and la
 /> df
 disk  kind   size        free        label
 0     sdhc   16380 KB    15956 KB    HYDRA-16
-x     rom    828 KB      4 KB        ROM
+x     rom    623 KB      10 KB       ROM
 r     ram    255 KB      252 KB      RAM
 s     sram   511 KB      510 KB      SRAM
 ```
@@ -240,13 +240,13 @@ the current directory.
 
 ```session
 /> du /rom/lib
-172     /rom/lib/as
+173     /rom/lib/as
 1       /rom/lib/basic
 2       /rom/lib/edit
 4       /rom/lib/font
 83      /rom/lib/forth
 58      /rom/lib/hylang
-326     /rom/lib
+327     /rom/lib
 ```
 
 ## echo: print words
@@ -616,7 +616,7 @@ card before you use it with the Hydra (Chapter 13). The words after the disk's n
 /> df
 disk  kind   size        free        label
 0     sdhc   16380 KB    15956 KB    HYDRA-16
-x     rom    828 KB      4 KB        ROM
+x     rom    623 KB      10 KB       ROM
 r     ram    255 KB      252 KB      RAM
 s     sram   511 KB      511 KB
 ```
@@ -627,32 +627,30 @@ s     sram   511 KB      511 KB
 mods
 ```
 
-Lists the **modules** in the paged ROM: for each, the banks it's in, its kind, and its name. A `boot` module is a
-driver the kernel starts as the Hydra starts; a `library` is code that programs share.
+Lists the **modules** in the paged ROM: for each, the banks it's in, its kind, and its name. A small module shares a
+bank with others: `4+33` means bank 4, starting $33 pages (256 bytes each) into it. A `boot` module is a driver the
+kernel starts as the Hydra starts; a `library` is code that programs share. (The tools, like `ls`, aren't modules:
+they're programs in files, on the ROM disk in `/rom/bin`.)
 
 ```session
 /> mods
 bank   type     name
-  2    program  init
-  3- 5 boot     cons
-  6- 7 boot     storage
-  8    boot     kdev
-  9    boot     snd
- 10    boot     gpio
- 11    boot     vid
- 12-13 program  rc
- 14    program  wstart
- 15    program  new-window
- 16    program  input
- 17    program  hwtest
- 18-19 program  play
- 20    program  forth
- 21-25 program  basic
- 26-33 program  hylang
- 34-35 library  hysnap
- 36-37 library  numbers
- 38-39 library  math
- 40    library  asm
+  4+33 program  init
+  2- 4 boot     cons
+  5- 6 boot     storage
+  4+0A boot     kdev
+ 23+0D boot     snd
+  8+1B boot     gpio
+  0+0A boot     vid
+ 28    program  rc
+  7- 8 program  play
+ 30    program  forth
+  9-13 program  basic
+ 14-21 program  hylang
+ 22-23 library  hysnap
+ 24-25 library  numbers
+ 26-27 library  math
+ 29    library  asm
 ```
 
 ## more: a screen at a time
@@ -754,15 +752,15 @@ note group, and its program.
 ```session
 /> ps -a
 task  state   parent     cpu group  name
-   0  ready   -          1.6     0  kernel
-   1  wait    -          0.1     1  init
+   0  ready   -          1.5     0  kernel
+   1  wait    -          0.2     1  init
    2  wait     1         0.3     2  forth -l
    3  event    1         0.0     1  wstart /bin/forth -l
    4  ready    2         0.0     2  ps -a
   11  idle    -          0.0    11  gpio
   12  idle    -          0.0    12  snd
   13  idle    -          0.1    13  kdev
-  14  idle    -          1.5    14  storage
+  14  idle    -          1.6    14  storage
   15  idle    -          0.5    15  cons
 ```
 
@@ -936,7 +934,7 @@ the middle of a pipeline, to keep a copy of what's passing through.
 
 ```session
 /> ls /rom/bin | tee /ram/progs | wc -l
-     43
+     47
 /> head -2 /ram/progs
 as
 calc

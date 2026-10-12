@@ -46,7 +46,8 @@ banks with `BANKS_ALLOC` (and for shared ones, through **segments**, with `SEG_C
 
 The ROM bank register chooses one of 256 banks of 16K: 4 MB in eight sockets, U30 to U37, of 512K (32 banks) each.
 HydraOS's three chips (in U31, U32 and U34, section 4.4) hold its modules (the drivers, the shells, the languages,
-the libraries) and then the ROM disk. `mods` lists the modules and their banks.
+the libraries) and then the ROM disk. A big module has banks of its own; a small one shares a bank with others, each
+in its own part of it. `mods` lists the modules and their banks (Chapter 10).
 
 ## F.5 The I/O ports
 
@@ -150,5 +151,6 @@ same places, so the kernel can switch pages and carry on:
 | $FFFA-$FFFD | The NMI and reset vectors, on every page |
 
 Page 0 has the kernel's core, page 1 its tasks and memory, page 2 its files, page 3 its namespaces, and page 4 the
-power-on test. In the paged ROM, a module's (or library's) header is the first 48 bytes of its first bank, at
-$A000.
+power-on test. In the paged ROM, a module's (or library's) header is its first 48 bytes: at $A000 in its first bank,
+or, for a small module that shares a bank, at $A000 plus 256 times its **page** (`mods` shows bank 4, page $33, as
+`4+33`: its header is at $D300).
