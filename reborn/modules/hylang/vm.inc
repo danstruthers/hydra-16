@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; vm.inc - hylang's bytecode machine (docs/hylang.md, "The bytecode machine"), in its seventh bank: a function's body
+; vm.inc - hylang's bytecode machine (docs/design/hylang.md, "The bytecode machine"), in its seventh bank: a function's body
 ; compiled at its second call (vm_compile) to the code of a small machine, which runs it with its arguments where
 ; they're pushed, in the evaluation stack, not bound in a scope on the heap.  The evaluator's own way is the rest:
 ; what the compiler doesn't do (most special forms, an fexpr's call) is handed to it, and it calls the functions

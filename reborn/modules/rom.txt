@@ -1,8 +1,9 @@
 ; rom.txt - the paged ROM's modules, in its order (each a folder in modules/), and the one started as init.
-; build.js reads it; tools/romimg.js puts them in banks 1 on.
+; build.js reads it; tools/romimg.js puts them in banks 1 on.  Only what must run in place is here: the drivers and
+; what starts at boot, rc (a new one for each line typed at HyForth's prompt), the languages, the libraries and
+; the hardware test; the tools are RAM programs on the ROM disk (programs/, romfs/romfs.txt: /rom/bin).
 init        init
 module      init
-module      hello
 module      cons
 module      storage
 module      kdev
@@ -13,40 +14,8 @@ module      rc
 module      wstart
 module      newwin
 module      input
-module      echo
-module      cat
-module      ls
-module      ps
-module      pwd
-module      mkdir
-module      rmdir
-module      rm
-module      touch
-module      cp
-module      mv
-module      du
-module      df
-module      kill
-module      slay
-module      sleep
-module      mods
-module      free
-module      date
-module      ns
-module      top
-module      wc
-module      head
-module      tail
-module      tee
-module      uniq
-module      xd
-module      cmp
-module      more
-module      ed
-module      as
 module      hwtest
 module      play
-module      xmodem
 module      forth
 module      basic
 module      hylang

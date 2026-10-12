@@ -85,7 +85,7 @@ main:
             stz         cbase + 1
             FARN        5, heap_init
             FARN        2, prog_init
-            FARN        7, text_init
+            FARN        5, text_init
             LDR         r0, sr_buf                          ; (stdin the console?)
             lda         #0
             jsr         FSTAT
@@ -97,7 +97,7 @@ main:
 :
             lda         login                               ; (basic -l: the login, the profile opened)
             beq         :+
-            FARN        8, sh_login
+            FARN        4, sh_login
 :
             lda         argp                                ; A script: basic file args
             ora         argp + 1
@@ -107,11 +107,11 @@ main:
             inc         script
             tsx
             stx         top_s
-            FARN        7, script_load
+            FARN        5, script_load
             jsr         prog_compile
             jsr         prog_run
             jsr         out_flush
-            FARN        6, con_cooked
+            FARN        3, con_cooked
             LDR         r0, 0
             lda         end_status
             jmp         EXITS
@@ -126,14 +126,14 @@ prompt:
             jsr         code_sel
             lda         sh_src                              ; (The profile's lines first)
             beq         @console
-            FARN        8, sh_getline
+            FARN        4, sh_getline
             bcc         @have
 @console:
             lda         interactive
             beq         @read
             lda         login                               ; (The shell's: its directory first)
             beq         :+
-            FARN        8, sh_prompt
+            FARN        4, sh_prompt
             bra         @read
 :
             lda         #'>'
@@ -142,7 +142,7 @@ prompt:
             jsr         out_byte
 @read:
             jsr         out_flush
-            FARN        6, con_cooked                       ; (The console's lines cooked: a line read)
+            FARN        3, con_cooked                       ; (The console's lines cooked: a line read)
             jsr         read_line
             bcc         @have
             jsr         out_flush
@@ -150,7 +150,7 @@ prompt:
             lda         #0
             jmp         EXITS
 @have:
-            FARN        8, sh_line                          ; (rc's, or the shell's own: run already)
+            FARN        4, sh_line                          ; (rc's, or the shell's own: run already)
             bcc         @lb903
             jmp         @line
 @lb903:
@@ -168,10 +168,10 @@ prompt:
 :
             jsr         is_digit_main
             bcs         @now
-            FARN        7, text_line                        ; (A line with a number first: into the program)
+            FARN        5, text_line                        ; (A line with a number first: into the program)
             jmp         @line
 @now:
-            FARN        7, prompt_cmd                       ; (RUN, LIST ...: C = 0 done)
+            FARN        5, prompt_cmd                       ; (RUN, LIST ...: C = 0 done)
             bcs         @lb901
             jmp         @line
 @lb901:
@@ -224,7 +224,7 @@ prog_compile:
 
 ; The program run from its start: its globals as they were made, the value stack empty.  OUT: C = 1 STOPped
 prog_run:
-            FARN        6, fl_closeall                      ; (A run before's files closed)
+            FARN        3, fl_closeall                      ; (A run before's files closed)
             FARN        4, base_dec                         ; (Its numbers in decimal, as its text's are at its start)
             stz         g_win                               ; (Its WINDOW none yet: its values made again)
             stz         end_status
@@ -243,7 +243,7 @@ prog_run:
 run_go:
             jsr         run_code
             bcs         :+                                  ; (STOPped: as it was, for CONT)
-            FARN        6, fl_closeall                      ; (Its end: its files closed)
+            FARN        3, fl_closeall                      ; (Its end: its files closed)
             clc
 :
             rts
@@ -352,7 +352,7 @@ err_entry:
             jsr         ip_get                              ; Running: its statement's line (the program's code)
             sta         t0
             stx         t0 + 1
-            FARN        7, lt_find
+            FARN        5, lt_find
             lda         in_prog                             ; (ON ERROR's handler takes it: the program's, not in the
             beq         @say                                ;   handler already, not Ctrl-C)
             lda         eh_in
@@ -372,7 +372,7 @@ err_entry:
 @say:
 err_said:
             stz         running
-            FARN        7, err_say
+            FARN        5, err_say
             ; (fall through)
 
 ; Back to the top after an error: the prompt, or a script's end (status 1)
@@ -380,7 +380,7 @@ top_error:
             ldx         top_s
             txs
             jsr         out_flush
-            FARN        6, con_cooked
+            FARN        3, con_cooked
             lda         script
             beq         :+
             LDR         r0, 0

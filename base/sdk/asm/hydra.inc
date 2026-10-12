@@ -1,5 +1,5 @@
 ; hydra.inc - the Hydra-16's system calls, error codes and constants, for programs in assembly.  Made by tools/apigen.js from spec/: don't edit
-; The rules (reborn/docs/conventions.md): call with jsr; .A, .X, .Y and r0-r15 in and out; 16-bit results
+; The rules (docs/design/conventions.md): call with jsr; .A, .X, .Y and r0-r15 in and out; 16-bit results
 ; in .A (low) and .X (high); C = 0 success, C = 1 failure with the error code in .A.  Calls change .A, .X, .Y,
 ; r0-r15 and the flags; never $22-$7F (the program's zero page).
 
@@ -53,6 +53,8 @@ SEM_ACQUIRE     = $F86F       ; .A = a semaphore
 SEM_TRY         = $F872       ; .A = a semaphore
 SEM_RELEASE     = $F875       ; .A = a semaphore
 SEM_FREE        = $F878       ; .A = a semaphore
+EXEC            = $F87B       ; r0 = the program's path (as SPAWN's); r1 = its arguments (as SPAWN's: 176 bytes at most), or 0
+                              ; -> (doesn't return, once the program is found: it runs in this task's place)
 
 ; ---- memory: Memory: the break, pages, banks, shared segments (phase 1.8)
 BREAK           = $F890       ; r0 = the new end of the program's data (the first byte past it), or 0 to ask

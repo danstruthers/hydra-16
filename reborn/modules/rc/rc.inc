@@ -132,7 +132,7 @@ VF_GONE         = $04           ; Removed: to go from the environment too
 .global     list_copy_heap, list_alloc_word, list_end, list_start, list_append_word, arena_base, heap_base
 ; lex.s
 .global     tok, tok_len, tok_fd, tok_fd2, tok_rtype, tok_quoted, tok_adj, tok_start, tok_kw
-.global     lex, tok_text, lex_init, lex_peek, lex_next, lex_flush, lex_pos
+.global     lex, tok_text, lex_init, lex_peek, lex_next, lex_flush, lex_pos, lex_at_end
 ; parse.s
 .global     parse_line, parse_text
 ; word.s
@@ -140,7 +140,7 @@ VF_GONE         = $04           ; Removed: to go from the environment too
 .global     expand, expand_list, expand_raw_list, expand_one, expand_one_list, match, glob_strip, list_flat, list_dup
 ; exec.s
 .globalzp   xw
-.global     xf
+.global     xf, xexec, exec_now, exec_this, exec_src
 .global     exec_init, run_cmd, run_capture, spawn_path, wait_child, wait_bg, run_bg_reap, rc_exits
 .global     redir_restore_all, status_word, status_error, high_fd, high_close
 ; var.s

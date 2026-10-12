@@ -143,6 +143,12 @@ function BIN_COUNT() {
   return mods.length + disk.length + 1;
 }
 
+// The ROM disk's bin (/rom/bin): its programs' names, as ls lists them
+function ROM_BIN() {
+  return fs.readFileSync(path.join(__dirname, '..', 'romfs', 'romfs.txt'), 'latin1').split(/\r?\n/).filter(l => /^bin\//.test(l))
+    .map(l => l.split(/\s+/)[0].slice(4)).sort();
+}
+
 // The rc test's lines, and what each says
 const RC_LINES = [
   ["echo hello","hello"],
@@ -264,16 +270,16 @@ const TOOL_LINES = [
   ["mods", [
     "bank   type     name",
     "  2    program  init",
-    "  3    program  hello",
-    "  4- 6 boot     cons",
-    "  7- 8 boot     storage",
+    "  3- 5 boot     cons",
+    "  6- 7 boot     storage",
+    "  8    boot     kdev",
     "",
   ].join('\n'), true],
   ["free","ram     256 KB a task (2 modules)\nshared  1024 KB, 256 KB in segments (1), 768 KB free"],
   ["sleep 30 & sleep 30 & kill $apid; slay sleep; wait; ps","task  state",true],
   ["kill 8; kill x; echo $status","kill: 8: no such task\nkill: x: invalid argument\n1"],
   ["sleep 1; echo slept","slept"],
-  ["ls /rom/bin; whatis mkfs","calc\ndb\ndis\nedit\nfsck\ngrep\nlabel\nmkfs\nscom\nsort\n/bin/mkfs"],
+  ["ls /rom/bin; whatis mkfs", [...ROM_BIN(), '/bin/mkfs'].join('\n')],
   ["label s; label s Shared Disk; label s","SRAM\nShared Disk"],
   ["fsck s","hydrafs label=Shared Disk\nfree 253 KB of 255 KB\ncheck: lost 0, unmarked 0, twice 0\nsegment 15"],
   ["mkfs s Fresh; ls /sram; label s; echo $status","Fresh\n"],
@@ -1476,7 +1482,7 @@ module.exports = {
         'ācat /dev/sd/s/ctl\r' + 'āecho $window\r' + 'ā\x1dc' + 'āecho $window\r' + 'āls \'#fr\'\r' + 'āls /ram\r' + 'āls /dev\r' +
         'āecho stop >>\'#d/s/ctl\'; echo still; cat /sram/x\r' }; },
       expect: ['% ls \'#fr\'\n1/\n2/\n%', '% ls /ram\nbin/\nlib/\n%',
-        '% ls /bin\ncalc\ndb\ndis\nedit\nfsck\ngrep\nlabel\nmkfs\nscom\nsort\ninit\nhello\nrc\nwstart\n', 't_child\n% t_child f\n', '% ls \'#fr\'/2\nbin/\nlib/\nmark\n%',
+        '% ls /bin\n' + ROM_BIN().join('\n') + '\ninit\nrc\nwstart\n', 't_child\n% t_child f\n', '% ls \'#fr\'/2\nbin/\nlib/\nmark\n%',
         'prompt=(', '% cat /dev/sd/s/ctl\nsram 512 KB 1024 blocks\nhydrafs label=SRAM\n', '% echo $window\n0\n%',
         '% echo $window\n1\n%', '% ls \'#fr\'\n1/\n2/\n4/\n%', '% ls /ram\nbin/\nlib/\n%', '\ncons\nconsctl\nwctl\nwnew\nser\nserctl\nkbdin\ntext\nlabel\nsnarf\nkbin\n%',
         '% echo stop >>\'#d/s/ctl\'; echo still; cat /sram/x\nstill\ncat: /sram/x: no such device\n%'],
@@ -1574,7 +1580,7 @@ module.exports = {
       },
     },
     {
-      name: 'basic', what: 'BASIC (docs/using/basic.md) at the console: its prompt, PRINT, exact numbers, keywords in either case, a program typed by its line numbers (LIST, RUN; GOSUB, DATA, READ, INPUT, DIM, a FUNCTION), Ctrl-C (Break in) in a GOTO\'s loop and CONT, INKEY$\'s key, errors (at the prompt; a typed program\'s by its line\'s number), BYE (code 0); a pipeline into it (no prompt; an error\'s line ended, its end at stdin\'s); in /ram: SAVE, LOAD, RUN "name", a file not there (by its name), the text cat; scripts (basic file, #!/bin/basic: status 0 and 1, a file not there); files: OPEN\'s modes, PRINT #, INPUT #, LINE INPUT #, EOF, APPEND, CLOSE, the cat; a file not open, open, not there; INPUT\'s Redo from start; sound: SOUND\'s notes (a patch, a volume, off), SLEEP between them (timed), BEEP (the bell), a line for /dev/sndctl (the volume kept; the driver\'s error), a channel past 23, a patch past 127; SYS: calls by name (GETPID, TICKS, BANKS_ALLOC; one not there) and RREG; memory: FRE, an array of 10001, 301 strings; the shell (basic -l at rc\'s prompt): BASIC\'s lines and rc\'s by the rule, cd and the prompt, $status, %, a usage, ENV$, a program line, exit',
+      name: 'basic', what: 'BASIC (docs/06-languages/hybasic.md) at the console: its prompt, PRINT, exact numbers, keywords in either case, a program typed by its line numbers (LIST, RUN; GOSUB, DATA, READ, INPUT, DIM, a FUNCTION), Ctrl-C (Break in) in a GOTO\'s loop and CONT, INKEY$\'s key, errors (at the prompt; a typed program\'s by its line\'s number), BYE (code 0); a pipeline into it (no prompt; an error\'s line ended, its end at stdin\'s); in /ram: SAVE, LOAD, RUN "name", a file not there (by its name), the text cat; scripts (basic file, #!/bin/basic: status 0 and 1, a file not there); files: OPEN\'s modes, PRINT #, INPUT #, LINE INPUT #, EOF, APPEND, CLOSE, the cat; a file not open, open, not there; INPUT\'s Redo from start; sound: SOUND\'s notes (a patch, a volume, off), SLEEP between them (timed), BEEP (the bell), a line for /dev/sndctl (the volume kept; the driver\'s error), a channel past 23, a patch past 127; SYS: calls by name (GETPID, TICKS, BANKS_ALLOC; one not there) and RREG; memory: FRE, an array of 10001, 301 strings; the shell (basic -l at rc\'s prompt): BASIC\'s lines and rc\'s by the rule, cd and the prompt, $status, %, a usage, ENV$, a program line, exit',
       init: 't_rc', cycles: 900e6,
       machine: {
         input: '\u0101basic\r' + '\u0101PRINT "Hello, World"; 2 + 3 * 4; 10 / 4; 2 ^ 70\r' +
@@ -1658,7 +1664,7 @@ module.exports = {
       },
     },
     {
-      name: 'bsuite', what: 'BASIC\'s suite (tests/basic, docs/using/basic.md), from a card: programs that check themselves, each its checks and none failed (arithmetic: the operators and their order, exact numbers, complex numbers, literals: E notation, &H, the # forms, .5; suffixes; a base; the number functions: exact when they can be, else DIGITS digits, RND, fractions\' and complex numbers\' parts, GCD, FIB, shifts, VAL, STR$ in a base, MKN$; comparisons, the bitwise operators on big integers, IF\'s forms, SELECT CASE; strings: their functions, MID$ =, fixed lengths, past 255, the garbage collector; arrays: TO, dimensions, used before DIM, REDIM PRESERVE, ERASE, LBOUND, SWAP; FOR\'s exact steps, DO, WHILE, EXIT, GOTO, GOSUB, RETURN label, ON, line numbers, _; SUBs and FUNCTIONs: by reference and by value, recursion, STATIC, SHARED, CONST, a call among a call\'s arguments, one calling another, INCLUDE; TYPE: nested records, arrays of them, copies, a field by reference; DATA, READ, RESTORE, CONST, OPTION BASE, DEFSTR; ON ERROR, RESUME\'s forms, ERR, ERL, ERR$, the system\'s errors; files: OPEN\'s modes, PRINT #, WRITE #, INPUT #, LINE INPUT #, INPUT$, LOF, LOC, SEEK, GET, PUT, FREEFILE, directories; the Hydra\'s: SYS and RREG, a bank of its own, machine code, FRE, SLEEP, TIMER, DATE$, TIME$, ENV$, ARG$, COMMAND$, SHELL, SHELL$, STATUS; inline assembly: ASM blocks, CALL ASM\'s labels and registers, the program\'s variables and CONSTs by name, data, a block in a SUB, a later block\'s label, a macro, .if, cheap and unnamed labels, .include and a system call, the blocks\' own bank and .bss); scripts piped into basic, their output tests/basic\'s: the errors\' messages (at the prompt, a typed program\'s by its line numbers; ASM\'s: the assembler\'s at its line, a label not there, a block not ended, past 8K, ASM at the prompt; CALL ASM at the prompt), PRINT\'s layout (zones, TAB, SPC, POS, numbers\' forms, PRINT USING\'s pictures and {} fields, WRITE, a base), the prompt (lines typed, replaced, taken out; LIST\'s ranges, labels; DELETE, CLEAR, SAVE, LOAD, RUN "f", STOP, CONT, SYSTEM), INPUT\'s answers (Redo from start, quotes, an empty line, LINE INPUT, INPUT ;)',
+      name: 'bsuite', what: 'BASIC\'s suite (tests/basic, docs/06-languages/hybasic.md), from a card: programs that check themselves, each its checks and none failed (arithmetic: the operators and their order, exact numbers, complex numbers, literals: E notation, &H, the # forms, .5; suffixes; a base; the number functions: exact when they can be, else DIGITS digits, RND, fractions\' and complex numbers\' parts, GCD, FIB, shifts, VAL, STR$ in a base, MKN$; comparisons, the bitwise operators on big integers, IF\'s forms, SELECT CASE; strings: their functions, MID$ =, fixed lengths, past 255, the garbage collector; arrays: TO, dimensions, used before DIM, REDIM PRESERVE, ERASE, LBOUND, SWAP; FOR\'s exact steps, DO, WHILE, EXIT, GOTO, GOSUB, RETURN label, ON, line numbers, _; SUBs and FUNCTIONs: by reference and by value, recursion, STATIC, SHARED, CONST, a call among a call\'s arguments, one calling another, INCLUDE; TYPE: nested records, arrays of them, copies, a field by reference; DATA, READ, RESTORE, CONST, OPTION BASE, DEFSTR; ON ERROR, RESUME\'s forms, ERR, ERL, ERR$, the system\'s errors; files: OPEN\'s modes, PRINT #, WRITE #, INPUT #, LINE INPUT #, INPUT$, LOF, LOC, SEEK, GET, PUT, FREEFILE, directories; the Hydra\'s: SYS and RREG, a bank of its own, machine code, FRE, SLEEP, TIMER, DATE$, TIME$, ENV$, ARG$, COMMAND$, SHELL, SHELL$, STATUS; inline assembly: ASM blocks, CALL ASM\'s labels and registers, the program\'s variables and CONSTs by name, data, a block in a SUB, a later block\'s label, a macro, .if, cheap and unnamed labels, .include and a system call, the blocks\' own bank and .bss); scripts piped into basic, their output tests/basic\'s: the errors\' messages (at the prompt, a typed program\'s by its line numbers; ASM\'s: the assembler\'s at its line, a label not there, a block not ended, past 8K, ASM at the prompt; CALL ASM at the prompt), PRINT\'s layout (zones, TAB, SPC, POS, numbers\' forms, PRINT USING\'s pictures and {} fields, WRITE, a base), the prompt (lines typed, replaced, taken out; LIST\'s ranges, labels; DELETE, CLEAR, SAVE, LOAD, RUN "f", STOP, CONT, SYSTEM), INPUT\'s answers (Redo from start, quotes, an empty line, LINE INPUT, INPUT ;)',
       init: 't_rc', cycles: 700e6,
       get machine() {
         return { sd: basicCard(), input: 'ācd /sd/0\r' + Object.keys(BSUITE_PROGS).map(n => 'ā' + bsuiteLine(n) + '\r').join('') +
@@ -1670,7 +1676,7 @@ module.exports = {
       },
     },
     {
-      name: 'hyforth', what: 'HyForth\'s additions (docs/hyforth.md): names in lower case; words (each word\'s xt, and whether it\'s a literal, immediate, assembly or Forth); the libraries loaded (libs), one not searched (-lib) and searched again (lib, where it was), the one with lib refused, a .fs one, one a MARKER takes out; disasm (the modes, the Rockwell opcodes, a jsr to a word), see of a code word (with disasm.fl, and without), sys, the bit words, random\'s numbers; the terminal\'s sequences, form, ekey and the keys (an arrow key, a character); the sound words (notes on the YM2151, a claim, the volume; a channel\'s level, its old name; the registers read back: a note\'s key code and fraction; a song by play, its error; a note by its frequency, a glide, the LFO, a channel\'s sensitivity, the noise; a line of MML and a chord, by play); ctl (and its error); compile-only words typed (THROW -14: >r, if, .", a synonym of one, a library\'s) and compiled',
+      name: 'hyforth', what: 'HyForth\'s additions (docs/design/hyforth.md): names in lower case; words (each word\'s xt, and whether it\'s a literal, immediate, assembly or Forth); the libraries loaded (libs), one not searched (-lib) and searched again (lib, where it was), the one with lib refused, a .fs one, one a MARKER takes out; disasm (the modes, the Rockwell opcodes, a jsr to a word), see of a code word (with disasm.fl, and without), sys, the bit words, random\'s numbers; the terminal\'s sequences, form, ekey and the keys (an arrow key, a character); the sound words (notes on the YM2151, a claim, the volume; a channel\'s level, its old name; the registers read back: a note\'s key code and fraction; a song by play, its error; a note by its frequency, a glide, the LFO, a channel\'s sensitivity, the noise; a line of MML and a chord, by play); ctl (and its error); compile-only words typed (THROW -14: >r, if, .", a synonym of one, a library\'s) and compiled',
       init: 't_rc', cycles: 180e6,
       // (At 115200, so words's thousands of characters are out before the next line comes: the keys typed meanwhile
       // wait in the window's queue, which has room for a line or two.  greet.fs, in /ram, the current directory: lib
@@ -1993,7 +1999,7 @@ module.exports = {
         const n = BIN_COUNT();
         return [{ what: 'rc -c \'x=1\': SPAWN to its end', from: '<rc', to: 'rc>', minus: ['<b0', 'b0>'], per: 1, max: 145000 },
           { what: 'ls /bin (the caches, /rom/bin, #m/bin: ' + n + ' programs): SPAWN to its end, a program', from: '<ls', to: 'ls>',
-            minus: ['<b0', 'b0>'], per: n, max: 25000 }];
+            minus: ['<b0', 'b0>'], per: n, max: 27000 }];   // (Most from the ROM disk's bin: a little more each)
       },
     },
     {

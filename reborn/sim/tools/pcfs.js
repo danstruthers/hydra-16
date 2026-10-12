@@ -2,7 +2,7 @@
 // them (docs/design/plans/PC.md; the frames: lib/pcproto.js).  The emulators (hydrasim.js --pc-dir, reborn/sim/run.js
 // --pc-dir) and the PC tool (hydrapc.js) all use it.  It speaks both versions of what the frames carry, the attach
 // naming the Hydra's:
-//   1  the old system's H9 requests, answered the way its HydraFS does (docs/programming/io.md, "The files on a
+//   1  the old system's H9 requests, answered the way its HydraFS does (old/docs/programming/io.md, "The files on a
 //      card"): a directory reads as "name size" lines (or "name/"), or as 48-byte stat records when opened with
 //      IO_MODE_STAT; IO_CREATE of a file that's there empties it; IO_REMOVE takes a file or an empty directory;
 //      IO_WSTAT renames in the directory and sets the read-only bit.

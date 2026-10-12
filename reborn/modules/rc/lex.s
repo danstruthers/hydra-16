@@ -57,6 +57,21 @@ lex_next:
             stz         peeked
             rts
 
+; Has the source's end been read?  (The token read ahead is its end: rc -c's line just parsed is its last.)
+; OUT: C = 1: yes
+lex_at_end:
+            lda         peeked
+            beq         @no
+            lda         tok
+            cmp         #T_EOF
+            bne         @no
+            sec
+            rts
+
+@no:
+            clc
+            rts
+
 ; The rest of the line skipped (an error's): to its new line
 lex_flush:
             stz         peeked                              ; (The last token, read ahead or taken: a new line,

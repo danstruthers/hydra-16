@@ -1,7 +1,8 @@
 ; ****************************************************************************
 ; fn.inc - the built-in functions' and the statements' routines (OP_FN f, OP_ST s), numbered in groups by the bank
-; their code is in: the numbers' (the fourth), the strings' (the fifth), input and output's (the sixth), the
-; system's (the seventh).  op_fn and op_st (run.inc) find the bank by the number, and call that bank's dispatcher
+; their code is in: the numbers' (the fourth bank), the strings' (the fifth), input and output's (the third), the
+; system's (the fifth); the machine's and graphics' statements (the fourth).  op_fn and op_st (run.inc) find the
+; group by the number, its bank (fn_banks, st_banks), and call that group's dispatcher
 ; (fn_disp4 ...: a jump table) with the number less its group's first.  A routine takes its arguments from the value
 ; stack and leaves its result there (a function), ip as it was (op_fn and op_st go past their 2 bytes).
 
@@ -201,6 +202,8 @@ fn_call:
             sta         hyx2_to
             lda         fn_disp_hi - 4,x
             sta         hyx2_to + 1
+            lda         fn_banks - 4,x                      ; (Its bank)
+            tax
             lda         hyx2_bank1 - 1,x
             sta         hyx2_n
             pla
@@ -208,6 +211,7 @@ fn_call:
 fn_first:   .byte       F_B4, F_B5, F_B6, F_B7
 fn_disp_lo: .byte       <fn_disp4, <fn_disp5, <fn_disp6, <fn_disp7
 fn_disp_hi: .byte       >fn_disp4, >fn_disp5, >fn_disp6, >fn_disp7
+fn_banks:   .byte       4, 5, 3, 5                          ; (num.inc, heap.inc, io.inc, sys.inc)
 
 st_call:
             ldx         #4
@@ -232,6 +236,8 @@ st_call:
             sta         hyx2_to
             lda         st_disp_hi - 4,x
             sta         hyx2_to + 1
+            lda         st_banks - 4,x                      ; (Its bank)
+            tax
             lda         hyx2_bank1 - 1,x
             sta         hyx2_n
             pla
@@ -239,3 +245,4 @@ st_call:
 st_first:   .byte       ST_B4, ST_B5, ST_B6, ST_B7, ST_B8
 st_disp_lo: .byte       <st_disp4, <st_disp5, <st_disp6, <st_disp7, <st_disp8
 st_disp_hi: .byte       >st_disp4, >st_disp5, >st_disp6, >st_disp7, >st_disp8
+st_banks:   .byte       4, 5, 3, 5, 4                       ; (fns4.inc, heap.inc, io.inc, sys.inc, machine.inc)

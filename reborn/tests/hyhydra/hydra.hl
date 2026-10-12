@@ -1,4 +1,4 @@
-; hydra.hl - hylang's own checks of what only the Hydra has (docs/hylang.md, "Made for the Hydra"): the Hydra's
+; hydra.hl - hylang's own checks of what only the Hydra has (docs/design/hylang.md, "Made for the Hydra"): the Hydra's
 ; built-ins (the system, tasks, memory, namespaces, notes, hold) and the sys- functions.  Run as a script, as run.dl is (hylang hydra.hl,
 ; with danlang's harness.dl beside it on the card): the count, its status 1 if a check failed
 (def {hydra-dir} (do

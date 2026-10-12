@@ -505,7 +505,7 @@ inc_check:
             ldx         #0
             jmp         c_error
 :
-            FARN        7, inc_load                         ; (C = 1: .A/.X the error)
+            FARN        5, inc_load                         ; (C = 1: .A/.X the error)
             bcc         @find
             jmp         c_error
 @find:
@@ -1161,7 +1161,7 @@ compile_prog:
             stz         ntypes                              ; (No TYPEs yet)
             stz         ty_top
             stz         inc_n                               ; (INCLUDE's files: past the program's text)
-            FARN        7, tx_endfind
+            FARN        5, tx_endfind
             clc
             lda         tx_end
             adc         #1

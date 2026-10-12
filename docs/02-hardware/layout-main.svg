@@ -1,0 +1,493 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 -2 308.78 247.84" width="1235" height="991" font-family="Helvetica, Arial, sans-serif">
+<style>.board{fill:#1f5f3a;stroke:#0b2b18;stroke-width:0.6}.ic{fill:#2b2b2b;stroke:#0d0d0d;stroke-width:0.2}.conn{fill:#c9c9c9;stroke:#555;stroke-width:0.2}.passive{fill:#d9c07a;stroke:#6b5a2a;stroke-width:0.15}.other{fill:#8aa7c9;stroke:#3d5470;stroke-width:0.2}.back{fill-opacity:0.35;stroke-dasharray:0.8 0.6}.ref{fill:#fff;text-anchor:middle;dominant-baseline:central}.refd{fill:#111;text-anchor:middle;dominant-baseline:central}.label{fill:#fffbe0;font-weight:bold;text-anchor:middle;stroke:#0b2b18;stroke-width:0.7;paint-order:stroke}</style>
+<rect class="board" x="0" y="0" width="304.78" height="243.84" rx="2"/>
+<rect class="ic" x="255.02" y="77.16" width="10.66" height="18.41"><title>U13 74F32</title></rect>
+<rect class="ic" x="145.74" y="97.54" width="18.41" height="10.66"><title>U57 74F02</title></rect>
+<rect class="passive" x="189.00" y="136.36" width="3.00" height="7.10"><title>C68 104</title></rect>
+<rect class="ic" x="161.04" y="110.18" width="10.66" height="26.02"><title>U52 74F573</title></rect>
+<rect class="ic" x="22.51" y="140.45" width="21.00" height="10.70"><title>IC2 74LS219</title></rect>
+<rect class="ic" x="233.38" y="129.21" width="18.35" height="51.45"><title>U2 R65C22-P2</title></rect>
+<rect class="passive" x="236.44" y="5.78" width="2.10" height="6.98"><title>R19 103</title></rect>
+<rect class="ic" x="22.51" y="152.12" width="21.00" height="10.70"><title>IC1 74LS219</title></rect>
+<rect class="ic" x="74.50" y="200.95" width="15.66" height="21.00"><title>U29 HM628512LP-5</title></rect>
+<rect class="ic" x="173.74" y="110.18" width="10.66" height="26.02"><title>U55 74F541</title></rect>
+<rect class="ic" x="238.44" y="25.15" width="18.41" height="10.66"><title>U42 TL074</title></rect>
+<rect class="other" x="140.95" y="10.16" width="4.25" height="0.00"><title>H10 MountingHole_Pad</title></rect>
+<rect class="ic" x="203.96" y="113.66" width="19.06" height="21.60"><title>U6 SST39SF0x0A</title></rect>
+<rect class="ic" x="126.75" y="148.29" width="10.66" height="18.41"><title>U44 74F00</title></rect>
+<rect class="passive" x="190.27" y="166.88" width="3.00" height="7.10"><title>C61 104</title></rect>
+<rect class="conn" x="283.93" y="62.99" width="16.25" height="3.55"><title>J22 SPI Device 4</title></rect>
+<rect class="conn" x="230.64" y="10.04" width="3.54" height="6.09"><title>J29 Audio In</title></rect>
+<rect class="ic" x="172.39" y="46.73" width="18.45" height="10.70"><title>U39 74ACT14</title></rect>
+<rect class="passive" x="173.79" y="136.36" width="3.00" height="7.10"><title>C71 104</title></rect>
+<rect class="ic" x="216.92" y="84.78" width="10.66" height="18.41"><title>U16 74F32</title></rect>
+<rect class="passive" x="192.09" y="183.18" width="7.10" height="3.00"><title>C44 104</title></rect>
+<rect class="ic" x="126.75" y="108.91" width="10.66" height="26.02"><title>U50 74F573</title></rect>
+<rect class="ic" x="200.41" y="77.16" width="10.66" height="18.41"><title>U15 74F00</title></rect>
+<rect class="ic" x="246.10" y="186.36" width="18.35" height="41.30"><title>U35 SST39SF040</title></rect>
+<rect class="passive" x="208.05" y="69.73" width="3.00" height="7.10"><title>C21 104</title></rect>
+<rect class="conn" x="102.91" y="20.58" width="9.85" height="85.84"><title>J12 SLOT 0</title></rect>
+<rect class="passive" x="164.87" y="166.88" width="3.00" height="7.10"><title>C58 104</title></rect>
+<rect class="other" x="140.95" y="139.70" width="4.25" height="0.00"><title>H3 MountingHole_Pad</title></rect>
+<rect class="ic" x="50.53" y="173.65" width="10.70" height="21.00"><title>U26 74F139</title></rect>
+<rect class="conn" x="234.83" y="57.79" width="3.54" height="6.09"><title>J9 SND CT1/2</title></rect>
+<rect class="passive" x="166.38" y="97.56" width="7.10" height="3.00"><title>C20 104</title></rect>
+<rect class="passive" x="225.29" y="152.16" width="7.10" height="3.00"><title>C38 104</title></rect>
+<rect class="conn" x="283.93" y="101.25" width="16.25" height="3.55"><title>J19 SPI Device 1</title></rect>
+<rect class="passive" x="285.73" y="177.78" width="0.00" height="3.40"><title>C56 107</title></rect>
+<rect class="ic" x="242.26" y="6.10" width="10.78" height="10.66"><title>IC9 NJM4556AD</title></rect>
+<rect class="passive" x="164.47" y="105.18" width="7.10" height="3.00"><title>C14 104</title></rect>
+<rect class="passive" x="235.25" y="183.16" width="7.10" height="3.00"><title>C72 104</title></rect>
+<rect class="passive" x="175.59" y="61.02" width="6.98" height="2.10"><title>R1 105</title></rect>
+<rect class="passive" x="251.99" y="129.80" width="3.00" height="7.10"><title>C2 104</title></rect>
+<rect class="passive" x="239.49" y="13.40" width="2.10" height="6.98"><title>R20 103</title></rect>
+<rect class="conn" x="192.61" y="-6.65" width="33.37" height="19.90"><title>J3 DSUB_9</title></rect>
+<rect class="passive" x="224.56" y="77.48" width="3.00" height="7.10"><title>C18 104</title></rect>
+<rect class="passive" x="43.85" y="159.78" width="7.10" height="3.00"><title>C28 104</title></rect>
+<rect class="passive" x="170.44" y="183.16" width="7.10" height="3.00"><title>C42 104</title></rect>
+<rect class="ic" x="152.13" y="145.71" width="10.70" height="21.00"><title>IC5 74LS219</title></rect>
+<rect class="passive" x="211.55" y="62.55" width="2.10" height="6.98"><title>R27 220</title></rect>
+<rect class="conn" x="182.35" y="37.56" width="3.60" height="6.15"><title>J6 1.78977MHz</title></rect>
+<rect class="passive" x="63.42" y="172.49" width="7.10" height="3.00"><title>C79 104</title></rect>
+<rect class="passive" x="148.90" y="183.16" width="7.10" height="3.00"><title>C41 104</title></rect>
+<rect class="ic" x="239.77" y="40.33" width="18.30" height="31.11"><title>U38 YM2151</title></rect>
+<rect class="passive" x="239.49" y="5.78" width="2.10" height="6.98"><title>R21 103</title></rect>
+<rect class="passive" x="43.69" y="148.11" width="7.10" height="3.00"><title>C29 104</title></rect>
+<rect class="passive" x="46.06" y="194.84" width="7.10" height="3.00"><title>C35 104</title></rect>
+<rect class="passive" x="41.47" y="112.65" width="23.75" height="3.30"><title>RN2 332</title></rect>
+<rect class="ic" x="159.74" y="186.36" width="18.35" height="41.30"><title>U34 SST39SF040</title></rect>
+<rect class="passive" x="228.41" y="21.05" width="6.98" height="2.10"><title>R5 103</title></rect>
+<rect class="ic" x="204.12" y="144.49" width="21.00" height="10.70"><title>IC3 74LS219</title></rect>
+<rect class="passive" x="111.53" y="135.13" width="3.00" height="7.10"><title>C74 104</title></rect>
+<rect class="passive" x="267.81" y="13.21" width="4.25" height="0.00"><title>C92 227 NP</title></rect>
+<rect class="passive" x="177.57" y="166.88" width="3.00" height="7.10"><title>C60 104</title></rect>
+<rect class="ic" x="111.51" y="108.91" width="10.66" height="26.02"><title>U51 74F541</title></rect>
+<rect class="ic" x="190.24" y="145.70" width="10.70" height="21.00"><title>IC8 74LS219</title></rect>
+<rect class="ic" x="204.12" y="157.20" width="21.00" height="10.70"><title>IC4 74LS219</title></rect>
+<rect class="ic" x="202.92" y="186.36" width="18.35" height="41.30"><title>U30 SST39SF040</title></rect>
+<rect class="passive" x="285.75" y="140.04" width="0.00" height="3.40"><title>C51 107</title></rect>
+<rect class="conn" x="21.63" y="20.58" width="9.85" height="85.84"><title>J16 SLOT 4</title></rect>
+<rect class="conn" x="283.93" y="113.82" width="16.25" height="3.55"><title>J18 SPI Device 0</title></rect>
+<rect class="conn" x="176.00" y="37.56" width="3.60" height="6.15"><title>J7 3.57955MHz</title></rect>
+<rect class="ic" x="293.50" y="189.78" width="7.10" height="4.74"><title>U43 DM1813-10</title></rect>
+<rect class="passive" x="229.64" y="95.72" width="3.00" height="7.10"><title>C75 104</title></rect>
+<rect class="passive" x="16.05" y="197.50" width="7.10" height="3.00"><title>C3 104</title></rect>
+<rect class="passive" x="159.07" y="42.76" width="6.98" height="2.10"><title>R25 220</title></rect>
+<rect class="passive" x="245.41" y="16.91" width="7.10" height="3.00"><title>C85 104</title></rect>
+<rect class="ic" x="124.14" y="95.00" width="18.41" height="10.66"><title>U8 74LS260</title></rect>
+<rect class="passive" x="121.69" y="52.58" width="3.00" height="7.10"><title>C78 104</title></rect>
+<rect class="passive" x="118.51" y="85.35" width="3.00" height="7.10"><title>C76 104</title></rect>
+<rect class="passive" x="196.87" y="169.96" width="7.10" height="3.00"><title>C32 104</title></rect>
+<rect class="passive" x="211.10" y="40.77" width="3.00" height="7.10"><title>C12 104</title></rect>
+<rect class="passive" x="231.65" y="26.67" width="2.75" height="0.00"><title>C90 106</title></rect>
+<rect class="passive" x="200.60" y="101.73" width="3.40" height="0.00"><title>C87 476</title></rect>
+<rect class="passive" x="260.01" y="29.49" width="5.50" height="3.00"><title>C52 332</title></rect>
+<rect class="ic" x="173.67" y="97.54" width="18.41" height="10.66"><title>U9 74LS260</title></rect>
+<rect class="ic" x="164.84" y="145.71" width="10.70" height="21.00"><title>IC6 74LS219</title></rect>
+<rect class="passive" x="73.22" y="112.65" width="23.75" height="3.30"><title>RN3 332</title></rect>
+<rect class="passive" x="236.44" y="13.40" width="2.10" height="6.98"><title>R6 103</title></rect>
+<rect class="passive" x="246.61" y="36.62" width="7.10" height="3.00"><title>C82 104</title></rect>
+<rect class="passive" x="255.34" y="8.09" width="6.98" height="2.10"><title>R31 330</title></rect>
+<rect class="passive" x="169.95" y="16.52" width="3.00" height="7.10"><title>C64 104</title></rect>
+<rect class="conn" x="169.65" y="37.56" width="3.60" height="6.15"><title>J8 7.15909MHz</title></rect>
+<rect class="passive" x="258.34" y="45.95" width="3.00" height="7.10"><title>C80 104</title></rect>
+<rect class="ic" x="270.24" y="56.81" width="10.70" height="21.00"><title>U4 74F138</title></rect>
+<rect class="ic" x="96.15" y="145.75" width="10.66" height="26.02"><title>U49 74F541</title></rect>
+<rect class="passive" x="270.27" y="78.16" width="3.00" height="7.10"><title>C6 104</title></rect>
+<rect class="passive" x="242.70" y="21.87" width="7.10" height="3.00"><title>C83 104</title></rect>
+<rect class="ic" x="138.14" y="17.45" width="18.35" height="51.45"><title>U1 WDC65C02S</title></rect>
+<rect class="conn" x="62.27" y="20.58" width="9.85" height="85.84"><title>J14 SLOT 2</title></rect>
+<rect class="other" x="95.23" y="10.16" width="4.25" height="0.00"><title>H6 MountingHole_Pad</title></rect>
+<rect class="passive" x="127.26" y="183.16" width="7.10" height="3.00"><title>C39 104</title></rect>
+<rect class="passive" x="159.07" y="37.18" width="6.98" height="2.10"><title>R24 220</title></rect>
+<rect class="conn" x="6.30" y="166.84" width="82.35" height="3.55"><title>J1 Conn_01x32</title></rect>
+<rect class="passive" x="165.42" y="65.63" width="6.98" height="2.10"><title>R22 331</title></rect>
+<rect class="passive" x="278.10" y="26.10" width="2.10" height="6.98"><title>R29 0</title></rect>
+<rect class="passive" x="126.77" y="135.13" width="3.00" height="7.10"><title>C67 104</title></rect>
+<rect class="passive" x="193.64" y="43.75" width="2.10" height="6.98"><title>R26 220</title></rect>
+<rect class="passive" x="242.78" y="2.95" width="7.10" height="3.00"><title>C84 104</title></rect>
+<rect class="passive" x="152.17" y="166.88" width="3.00" height="7.10"><title>C57 104</title></rect>
+<rect class="passive" x="83.53" y="159.79" width="7.10" height="3.00"><title>C24 104</title></rect>
+<rect class="ic" x="229.62" y="106.36" width="10.66" height="18.41"><title>U12 74F86</title></rect>
+<rect class="passive" x="285.75" y="128.70" width="0.00" height="3.40"><title>C53 107</title></rect>
+<rect class="passive" x="55.95" y="10.16" width="3.40" height="0.00"><title>C86 476</title></rect>
+<rect class="ic" x="7.72" y="200.95" width="15.66" height="21.00"><title>U25 HM628512LP-5</title></rect>
+<rect class="ic" x="267.67" y="186.36" width="18.35" height="41.30"><title>U37 SST39SF040</title></rect>
+<rect class="other" x="276.84" y="139.70" width="4.25" height="0.00"><title>H2 MountingHole</title></rect>
+<rect class="passive" x="163.01" y="54.83" width="6.98" height="2.10"><title>R23 220</title></rect>
+<rect class="passive" x="173.08" y="63.84" width="11.90" height="5.60"><title>Y1 14.31818MHz</title></rect>
+<rect class="passive" x="38.15" y="197.51" width="7.10" height="3.00"><title>C37 104</title></rect>
+<rect class="passive" x="285.73" y="162.95" width="0.00" height="3.40"><title>C54 107</title></rect>
+<rect class="passive" x="221.40" y="23.02" width="3.00" height="5.50"><title>C9 105</title></rect>
+<rect class="ic" x="229.62" y="77.16" width="10.66" height="18.41"><title>U56 74F32</title></rect>
+<rect class="ic" x="138.15" y="186.36" width="18.35" height="41.30"><title>U32 SST39SF040</title></rect>
+<rect class="passive" x="255.34" y="16.22" width="6.98" height="2.10"><title>R4 103</title></rect>
+<rect class="passive" x="255.04" y="95.77" width="3.00" height="7.10"><title>C15 104</title></rect>
+<rect class="passive" x="157.25" y="81.67" width="3.00" height="7.10"><title>C77 104</title></rect>
+<rect class="passive" x="274.09" y="42.55" width="3.00" height="7.10"><title>C81 104</title></rect>
+<rect class="ic" x="46.68" y="116.59" width="20.94" height="10.66"><title>U17 74LS148</title></rect>
+<rect class="passive" x="260.01" y="26.31" width="5.50" height="3.00"><title>C50 332</title></rect>
+<rect class="passive" x="139.47" y="166.88" width="3.00" height="7.10"><title>C63 104</title></rect>
+<rect class="passive" x="98.26" y="47.31" width="2.10" height="6.98"><title>R7 103</title></rect>
+<rect class="passive" x="213.66" y="183.16" width="7.10" height="3.00"><title>C30 104</title></rect>
+<rect class="passive" x="258.00" y="32.73" width="6.98" height="2.10"><title>R3 101</title></rect>
+<rect class="ic" x="197.87" y="41.60" width="10.66" height="26.02"><title>U22 74ACT240</title></rect>
+<rect class="passive" x="297.93" y="7.38" width="0.00" height="4.25"><title>C93 227 NP</title></rect>
+<rect class="ic" x="145.80" y="110.18" width="10.66" height="26.02"><title>U53 74F541</title></rect>
+<rect class="conn" x="82.59" y="20.58" width="9.85" height="85.84"><title>J13 SLOT 1</title></rect>
+<rect class="ic" x="200.07" y="20.18" width="21.00" height="10.70"><title>U5 MAX232</title></rect>
+<rect class="ic" x="111.52" y="145.75" width="10.66" height="26.02"><title>U48 74F573</title></rect>
+<rect class="other" x="140.95" y="237.49" width="4.25" height="0.00"><title>H7 MountingHole_Pad</title></rect>
+<rect class="passive" x="277.39" y="39.16" width="3.00" height="5.50"><title>C49 475</title></rect>
+<rect class="passive" x="60.50" y="197.51" width="7.10" height="3.00"><title>C34 104</title></rect>
+<rect class="passive" x="214.30" y="16.93" width="5.50" height="3.00"><title>C4 105</title></rect>
+<rect class="passive" x="157.06" y="58.74" width="2.10" height="6.98"><title>R28 103</title></rect>
+<rect class="conn" x="1.31" y="20.58" width="9.85" height="85.84"><title>J17 SLOT 5</title></rect>
+<rect class="passive" x="272.38" y="3.86" width="2.10" height="6.98"><title>R32 103</title></rect>
+<rect class="conn" x="41.95" y="20.58" width="9.85" height="85.84"><title>J15 SLOT 3</title></rect>
+<rect class="passive" x="161.06" y="136.40" width="3.00" height="7.10"><title>C73 104</title></rect>
+<rect class="other" x="16.49" y="10.16" width="4.25" height="0.00"><title>H11 MountingHole_Pad</title></rect>
+<rect class="ic" x="7.28" y="112.74" width="31.15" height="18.35"><title>U19 74LS154</title></rect>
+<rect class="conn" x="283.93" y="50.29" width="16.25" height="3.55"><title>J23 SPI Device 5</title></rect>
+<rect class="ic" x="29.82" y="200.95" width="15.66" height="21.00"><title>U27 HM628512LP-5</title></rect>
+<rect class="passive" x="126.77" y="166.88" width="3.00" height="7.10"><title>C62 104</title></rect>
+<rect class="other" x="16.49" y="237.49" width="4.25" height="0.00"><title>H4 MountingHole_Pad</title></rect>
+<rect class="conn" x="271.24" y="155.66" width="6.15" height="16.30"><title>J27 VIA Port A</title></rect>
+<rect class="ic" x="57.35" y="152.15" width="26.02" height="10.66"><title>U21 74F541</title></rect>
+<rect class="ic" x="163.51" y="78.49" width="18.41" height="10.66"><title>U11 74ACT08</title></rect>
+<rect class="passive" x="111.53" y="172.03" width="3.00" height="7.10"><title>C66 104</title></rect>
+<rect class="ic" x="224.51" y="186.36" width="18.35" height="41.30"><title>U33 SST39SF040</title></rect>
+<rect class="other" x="16.49" y="139.70" width="4.25" height="0.00"><title>H5 MountingHole_Pad</title></rect>
+<rect class="conn" x="283.93" y="88.42" width="16.25" height="3.55"><title>J20 SPI Device 2</title></rect>
+<rect class="passive" x="290.42" y="3.85" width="2.10" height="6.98"><title>R33 103</title></rect>
+<rect class="conn" x="283.93" y="24.90" width="16.25" height="3.55"><title>J25 SPI Device 7</title></rect>
+<rect class="ic" x="242.30" y="77.13" width="10.70" height="21.00"><title>U20 74F138</title></rect>
+<rect class="passive" x="165.11" y="46.77" width="7.10" height="3.00"><title>C46 104</title></rect>
+<rect class="passive" x="39.38" y="116.61" width="7.10" height="3.00"><title>C19 104</title></rect>
+<rect class="ic" x="139.45" y="145.75" width="10.66" height="20.94"><title>U45 74F157</title></rect>
+<rect class="passive" x="215.47" y="31.15" width="5.50" height="3.00"><title>C10 105</title></rect>
+<rect class="passive" x="292.40" y="219.93" width="6.98" height="2.10"><title>R2 471</title></rect>
+<rect class="ic" x="116.54" y="186.36" width="18.35" height="41.30"><title>U31 SST39SF040</title></rect>
+<rect class="ic" x="134.31" y="70.87" width="26.02" height="10.66"><title>U60 74F541</title></rect>
+<rect class="passive" x="285.73" y="151.52" width="0.00" height="3.40"><title>C55 107</title></rect>
+<rect class="conn" x="283.93" y="75.69" width="16.25" height="3.55"><title>J21 SPI Device 3</title></rect>
+<rect class="passive" x="258.44" y="19.18" width="0.00" height="2.75"><title>C91 106</title></rect>
+<rect class="passive" x="103.71" y="8.51" width="23.75" height="3.30"><title>RN1 332</title></rect>
+<rect class="passive" x="105.80" y="183.16" width="7.10" height="3.00"><title>C5 104</title></rect>
+<rect class="passive" x="156.62" y="48.52" width="3.00" height="7.10"><title>C1 104</title></rect>
+<rect class="passive" x="202.77" y="16.93" width="5.50" height="3.00"><title>C7 105</title></rect>
+<rect class="ic" x="70.81" y="185.17" width="18.41" height="10.66"><title>U14 74F30</title></rect>
+<rect class="passive" x="256.80" y="183.03" width="7.10" height="3.00"><title>C43 104</title></rect>
+<rect class="passive" x="82.83" y="197.51" width="7.10" height="3.00"><title>C33 104</title></rect>
+<rect class="conn" x="209.69" y="52.46" width="3.54" height="8.62"><title>J30 CTS</title></rect>
+<rect class="ic" x="14.09" y="172.43" width="31.15" height="18.35"><title>U23 74LS154</title></rect>
+<rect class="ic" x="94.99" y="186.37" width="18.30" height="41.28"><title>U7 HM628512LP-5</title></rect>
+<rect class="passive" x="96.17" y="171.97" width="3.00" height="7.10"><title>C69 104</title></rect>
+<rect class="ic" x="214.34" y="37.71" width="18.35" height="36.25"><title>U3 R65C51-P2</title></rect>
+<rect class="passive" x="71.70" y="139.70" width="3.40" height="0.00"><title>C89 476</title></rect>
+<rect class="passive" x="161.48" y="237.36" width="3.40" height="0.00"><title>C88 476</title></rect>
+<rect class="ic" x="169.85" y="23.87" width="21.00" height="10.70"><title>U40 74F191</title></rect>
+<rect class="passive" x="164.09" y="75.34" width="7.10" height="3.00"><title>C17 104</title></rect>
+<rect class="passive" x="255.34" y="12.16" width="6.98" height="2.10"><title>R30 330</title></rect>
+<rect class="ic" x="52.17" y="200.95" width="15.66" height="21.00"><title>U28 HM628512LP-5</title></rect>
+<rect class="other" x="298.43" y="237.49" width="4.25" height="0.00"><title>H9 MountingHole_Pad</title></rect>
+<rect class="passive" x="100.68" y="47.31" width="2.10" height="6.98"><title>R13 103</title></rect>
+<rect class="passive" x="237.26" y="99.07" width="3.00" height="7.10"><title>C22 104</title></rect>
+<rect class="passive" x="192.81" y="63.51" width="3.00" height="7.10"><title>C13 104</title></rect>
+<rect class="conn" x="276.20" y="-1.66" width="12.50" height="14.50"><title>J26 Audio Jack</title></rect>
+<rect class="ic" x="181.33" y="186.36" width="18.35" height="41.30"><title>U36 SST39SF040</title></rect>
+<rect class="conn" x="256.27" y="150.77" width="10.70" height="21.00"><title>J28 SP720APP</title></rect>
+<rect class="ic" x="177.53" y="145.70" width="10.70" height="21.00"><title>IC7 74LS219</title></rect>
+<rect class="passive" x="205.51" y="34.17" width="3.00" height="7.10"><title>C36 104</title></rect>
+<rect class="passive" x="225.30" y="164.87" width="7.10" height="3.00"><title>C27 104</title></rect>
+<rect class="passive" x="182.66" y="60.57" width="5.50" height="3.00"><title>C48 330</title></rect>
+<rect class="conn" x="283.93" y="37.60" width="16.25" height="3.55"><title>J24 SPI Device 6</title></rect>
+<rect class="passive" x="208.35" y="16.93" width="5.50" height="3.00"><title>C8 105</title></rect>
+<rect class="conn" x="16.49" y="228.57" width="62.00" height="3.55"><title>J2 Conn_01x24</title></rect>
+<rect class="passive" x="120.93" y="95.46" width="3.00" height="7.10"><title>C26 104</title></rect>
+<rect class="passive" x="63.38" y="185.19" width="7.10" height="3.00"><title>C16 104</title></rect>
+<rect class="passive" x="278.44" y="183.16" width="7.10" height="3.00"><title>C45 104</title></rect>
+<rect class="ic" x="188.98" y="110.18" width="10.66" height="26.02"><title>U54 74F573</title></rect>
+<rect class="conn" x="290.64" y="125.28" width="12.00" height="59.60"><title>J11 ATX-24</title></rect>
+<rect class="passive" x="139.66" y="110.29" width="3.12" height="23.52"><title>RN4 103</title></rect>
+<rect class="conn" x="188.70" y="37.56" width="3.60" height="6.15"><title>J5 0.89489MHz</title></rect>
+<rect class="passive" x="38.61" y="128.04" width="7.10" height="3.00"><title>C23 104</title></rect>
+<rect class="ic" x="204.14" y="169.92" width="21.00" height="10.70"><title>U24 74F138</title></rect>
+<rect class="passive" x="242.34" y="98.30" width="3.00" height="7.10"><title>C25 104</title></rect>
+<rect class="ic" x="78.40" y="116.57" width="21.00" height="10.70"><title>U18 74LS148</title></rect>
+<rect class="ic" x="266.45" y="21.28" width="10.66" height="20.94"><title>U41 YM3012</title></rect>
+<rect class="other" x="298.43" y="33.02" width="4.25" height="0.00"><title>H8 MountingHole_Pad</title></rect>
+<rect class="passive" x="145.82" y="136.40" width="3.00" height="7.10"><title>C70 104</title></rect>
+<rect class="ic" x="121.67" y="66.96" width="10.66" height="26.02"><title>U58 74F541</title></rect>
+<rect class="ic" x="70.81" y="172.47" width="18.41" height="10.66"><title>U61 74F125</title></rect>
+<rect class="passive" x="223.42" y="113.29" width="3.00" height="7.10"><title>C31 104</title></rect>
+<rect class="other" x="95.23" y="139.70" width="4.25" height="0.00"><title>H1 MountingHole_Pad</title></rect>
+<rect class="ic" x="121.67" y="26.36" width="10.66" height="26.02"><title>U59 74ACT245</title></rect>
+<rect class="passive" x="71.13" y="116.61" width="7.10" height="3.00"><title>C59 104</title></rect>
+<rect class="passive" x="37.60" y="191.02" width="7.10" height="3.00"><title>C40 104</title></rect>
+<rect class="conn" x="294.09" y="201.40" width="6.15" height="16.30"><title>J10 Front Panel</title></rect>
+<rect class="passive" x="170.00" y="60.57" width="5.50" height="3.00"><title>C47 330</title></rect>
+<rect class="ic" x="185.17" y="70.81" width="10.66" height="18.41"><title>U10 74F20</title></rect>
+<text class="label" x="169.67" y="8.13" font-size="3.2">Hydra 16</text>
+<text class="label" x="213.11" y="104.97" font-size="3.2">O/S ROM</text>
+<text class="label" x="213.11" y="108.97" font-size="3.2">($E000-$FEFF)</text>
+<text class="label" x="213.11" y="112.97" font-size="3.2">($FFFA-$FFFD)</text>
+<text class="label" x="48.77" y="225.81" font-size="3.2">Shared RAM ($8000-$9FFF) Banks $F0-$FF</text>
+<text class="label" x="47.37" y="165.23" font-size="3.2">Banked Task RAM ($8000-$9FFF) Banks $00-$EF</text>
+<text class="label" x="212.09" y="205.01" font-size="3.2"> Banks</text>
+<text class="label" x="212.09" y="209.01" font-size="3.2">$80-$9F</text>
+<text class="label" x="276.85" y="205.01" font-size="3.2"> Banks</text>
+<text class="label" x="276.85" y="209.01" font-size="3.2">$E0-$FF</text>
+<text class="label" x="176.54" y="174.40" font-size="3.2">IRQ Vector RAM</text>
+<text class="label" x="176.54" y="178.40" font-size="3.2">($FFFE &amp; $FFFF)</text>
+<text class="label" x="158.76" y="123.12" font-size="3.2">V Register ($FFF2)</text>
+<text class="label" x="104.01" y="230.41" font-size="3.2">Task RAM</text>
+<text class="label" x="104.01" y="234.41" font-size="3.2">($00-$7FFF)</text>
+<text class="label" x="125.72" y="205.01" font-size="3.2"> Banks</text>
+<text class="label" x="125.72" y="209.01" font-size="3.2">$00-$1F</text>
+<text class="label" x="233.69" y="205.01" font-size="3.2"> Banks</text>
+<text class="label" x="233.69" y="209.01" font-size="3.2">$A0-$BF</text>
+<text class="label" x="109.10" y="158.76" font-size="3.2">T Register ($FFF0)</text>
+<text class="label" x="255.26" y="205.01" font-size="3.2"> Banks</text>
+<text class="label" x="255.26" y="209.01" font-size="3.2">$C0-$DF</text>
+<text class="label" x="201.28" y="232.28" font-size="3.2">Banked ROM ($A000-$DFFF)</text>
+<text class="label" x="168.92" y="205.01" font-size="3.2"> Banks</text>
+<text class="label" x="168.92" y="209.01" font-size="3.2">$40-$5F</text>
+<text class="label" x="147.32" y="205.01" font-size="3.2"> Banks</text>
+<text class="label" x="147.32" y="209.01" font-size="3.2">$20-$3F</text>
+<text class="label" x="186.69" y="123.82" font-size="3.2">W Register ($FFF3)</text>
+<text class="label" x="190.50" y="205.01" font-size="3.2"> Banks</text>
+<text class="label" x="190.50" y="209.01" font-size="3.2">$60-$7F</text>
+<text class="label" x="33.02" y="137.69" font-size="3.2">RAM Bank Selector</text>
+<text class="label" x="33.02" y="141.69" font-size="3.2"> Mirror RAM ($00)</text>
+<text class="label" x="214.76" y="139.60" font-size="3.2">ROM Bank Selector</text>
+<text class="label" x="214.76" y="143.60" font-size="3.2"> Mirror RAM ($01)</text>
+<text class="label" x="124.58" y="121.92" font-size="3.2">U Register ($FFF1)</text>
+<text class="ref" x="260.35" y="86.37" font-size="3.20">U13</text>
+<text class="ref" x="154.94" y="102.87" font-size="3.20">U57</text>
+<text class="refd" x="190.50" y="139.91" font-size="1.61">C68</text>
+<text class="ref" x="166.37" y="113.38" font-size="3.20">U52</text>
+<text class="ref" x="33.01" y="145.80" font-size="3.20">IC2</text>
+<text class="ref" x="242.56" y="154.94" font-size="3.20">U2</text>
+<text class="refd" x="237.49" y="9.27" font-size="1.13">R19</text>
+<text class="ref" x="33.01" y="157.47" font-size="3.20">IC1</text>
+<text class="ref" x="82.33" y="211.45" font-size="3.20">U29</text>
+<text class="ref" x="179.07" y="113.38" font-size="3.20">U55</text>
+<text class="ref" x="247.65" y="30.48" font-size="3.20">U42</text>
+<text class="refd" x="143.08" y="10.16" font-size="1.00">H10</text>
+<text class="ref" x="213.49" y="124.46" font-size="3.20">U6</text>
+<text class="ref" x="132.08" y="157.49" font-size="3.20">U44</text>
+<text class="refd" x="191.77" y="170.43" font-size="1.61">C61</text>
+<text class="refd" x="292.06" y="64.77" font-size="1.95">J22</text>
+<text class="refd" x="232.41" y="13.08" font-size="1.90">J29</text>
+<text class="ref" x="181.62" y="52.08" font-size="3.20">U39</text>
+<text class="refd" x="175.29" y="139.91" font-size="1.61">C71</text>
+<text class="ref" x="222.25" y="93.98" font-size="3.20">U16</text>
+<text class="refd" x="195.64" y="184.68" font-size="1.65">C44</text>
+<text class="ref" x="132.08" y="112.10" font-size="3.20">U50</text>
+<text class="ref" x="205.74" y="86.36" font-size="3.20">U15</text>
+<text class="ref" x="255.28" y="189.56" font-size="3.20">U35</text>
+<text class="refd" x="209.55" y="73.28" font-size="1.61">C21</text>
+<text class="refd" x="107.84" y="63.50" font-size="3.20">J12</text>
+<text class="refd" x="166.37" y="170.43" font-size="1.61">C58</text>
+<text class="refd" x="143.08" y="139.70" font-size="1.00">H3</text>
+<text class="ref" x="55.88" y="184.15" font-size="3.20">U26</text>
+<text class="refd" x="236.60" y="60.83" font-size="1.95">J9</text>
+<text class="refd" x="169.93" y="99.06" font-size="1.65">C20</text>
+<text class="refd" x="228.84" y="153.66" font-size="1.65">C38</text>
+<text class="refd" x="292.06" y="103.02" font-size="1.95">J19</text>
+<text class="refd" x="285.73" y="179.48" font-size="1.00">C56</text>
+<text class="ref" x="247.65" y="11.43" font-size="3.20">IC9</text>
+<text class="refd" x="168.02" y="106.68" font-size="1.65">C14</text>
+<text class="refd" x="238.80" y="184.66" font-size="1.65">C72</text>
+<text class="refd" x="179.08" y="62.07" font-size="1.16">R1</text>
+<text class="refd" x="253.49" y="133.35" font-size="1.65">C2</text>
+<text class="refd" x="240.54" y="16.89" font-size="1.13">R20</text>
+<text class="refd" x="209.30" y="3.30" font-size="3.20">J3</text>
+<text class="refd" x="226.06" y="81.03" font-size="1.61">C18</text>
+<text class="refd" x="47.40" y="161.28" font-size="1.65">C28</text>
+<text class="refd" x="173.99" y="184.66" font-size="1.65">C42</text>
+<text class="ref" x="157.48" y="156.21" font-size="3.20">IC5</text>
+<text class="refd" x="212.60" y="66.04" font-size="1.13">R27</text>
+<text class="refd" x="184.15" y="40.63" font-size="1.98">J6</text>
+<text class="refd" x="66.97" y="173.99" font-size="1.65">C79</text>
+<text class="refd" x="152.45" y="184.66" font-size="1.65">C41</text>
+<text class="ref" x="248.92" y="55.88" font-size="3.20">U38</text>
+<text class="refd" x="240.54" y="9.27" font-size="1.13">R21</text>
+<text class="refd" x="47.24" y="149.61" font-size="1.65">C29</text>
+<text class="refd" x="49.61" y="196.34" font-size="1.65">C35</text>
+<text class="refd" x="53.34" y="114.30" font-size="1.82">RN2</text>
+<text class="ref" x="168.91" y="189.56" font-size="3.20">U34</text>
+<text class="refd" x="231.90" y="22.10" font-size="1.16">R5</text>
+<text class="ref" x="214.62" y="149.84" font-size="3.20">IC3</text>
+<text class="refd" x="113.03" y="138.68" font-size="1.61">C74</text>
+<text class="refd" x="269.94" y="13.21" font-size="1.00">C92</text>
+<text class="refd" x="179.07" y="170.43" font-size="1.61">C60</text>
+<text class="ref" x="116.84" y="112.11" font-size="3.20">U51</text>
+<text class="ref" x="195.59" y="156.20" font-size="3.20">IC8</text>
+<text class="ref" x="214.62" y="162.55" font-size="3.20">IC4</text>
+<text class="ref" x="212.09" y="189.56" font-size="3.20">U30</text>
+<text class="refd" x="285.75" y="141.74" font-size="1.00">C51</text>
+<text class="refd" x="26.56" y="63.50" font-size="3.20">J16</text>
+<text class="refd" x="292.06" y="115.59" font-size="1.95">J18</text>
+<text class="refd" x="177.80" y="40.64" font-size="1.98">J7</text>
+<text class="ref" x="297.05" y="192.15" font-size="2.61">U43</text>
+<text class="refd" x="231.14" y="99.27" font-size="1.61">C75</text>
+<text class="refd" x="19.60" y="199.00" font-size="1.65">C3</text>
+<text class="refd" x="162.56" y="43.82" font-size="1.16">R25</text>
+<text class="refd" x="248.96" y="18.41" font-size="1.65">C85</text>
+<text class="ref" x="133.35" y="100.33" font-size="3.20">U8</text>
+<text class="refd" x="123.19" y="56.13" font-size="1.61">C78</text>
+<text class="refd" x="120.01" y="88.90" font-size="1.61">C76</text>
+<text class="refd" x="200.42" y="171.46" font-size="1.65">C32</text>
+<text class="refd" x="212.60" y="44.32" font-size="1.61">C12</text>
+<text class="refd" x="233.02" y="26.67" font-size="1.00">C90</text>
+<text class="refd" x="202.30" y="101.73" font-size="1.00">C87</text>
+<text class="refd" x="262.76" y="30.99" font-size="1.65">C52</text>
+<text class="ref" x="182.88" y="102.87" font-size="3.20">U9</text>
+<text class="ref" x="170.19" y="156.21" font-size="3.20">IC6</text>
+<text class="refd" x="85.09" y="114.30" font-size="1.82">RN3</text>
+<text class="refd" x="237.49" y="16.89" font-size="1.16">R6</text>
+<text class="refd" x="250.16" y="38.12" font-size="1.65">C82</text>
+<text class="refd" x="258.83" y="9.14" font-size="1.15">R31</text>
+<text class="refd" x="171.45" y="20.07" font-size="1.61">C64</text>
+<text class="refd" x="171.45" y="40.63" font-size="1.98">J8</text>
+<text class="refd" x="259.84" y="49.50" font-size="1.61">C80</text>
+<text class="ref" x="275.59" y="67.31" font-size="3.20">U4</text>
+<text class="ref" x="101.48" y="148.95" font-size="3.20">U49</text>
+<text class="refd" x="271.77" y="81.71" font-size="1.65">C6</text>
+<text class="refd" x="246.25" y="23.37" font-size="1.65">C83</text>
+<text class="ref" x="147.32" y="43.18" font-size="3.20">U1</text>
+<text class="refd" x="67.20" y="63.50" font-size="3.20">J14</text>
+<text class="refd" x="97.36" y="10.16" font-size="1.00">H6</text>
+<text class="refd" x="130.81" y="184.66" font-size="1.65">C39</text>
+<text class="refd" x="162.56" y="38.23" font-size="1.16">R24</text>
+<text class="refd" x="47.48" y="168.61" font-size="1.95">J1</text>
+<text class="refd" x="168.91" y="66.68" font-size="1.15">R22</text>
+<text class="refd" x="279.15" y="29.59" font-size="1.13">R29</text>
+<text class="refd" x="128.27" y="138.68" font-size="1.61">C67</text>
+<text class="refd" x="194.69" y="47.24" font-size="1.13">R26</text>
+<text class="refd" x="246.33" y="4.45" font-size="1.65">C84</text>
+<text class="refd" x="153.67" y="170.43" font-size="1.61">C57</text>
+<text class="refd" x="87.08" y="161.29" font-size="1.65">C24</text>
+<text class="ref" x="234.95" y="115.57" font-size="3.20">U12</text>
+<text class="refd" x="285.75" y="130.40" font-size="1.00">C53</text>
+<text class="refd" x="57.65" y="10.16" font-size="1.00">C86</text>
+<text class="ref" x="15.55" y="211.45" font-size="3.20">U25</text>
+<text class="ref" x="276.85" y="189.56" font-size="3.20">U37</text>
+<text class="refd" x="278.97" y="139.70" font-size="1.00">H2</text>
+<text class="refd" x="166.50" y="55.88" font-size="1.16">R23</text>
+<text class="refd" x="179.03" y="66.64" font-size="3.08">Y1</text>
+<text class="refd" x="41.70" y="199.01" font-size="1.65">C37</text>
+<text class="refd" x="285.73" y="164.65" font-size="1.00">C54</text>
+<text class="refd" x="222.90" y="25.77" font-size="1.65">C9</text>
+<text class="ref" x="234.95" y="86.37" font-size="3.20">U56</text>
+<text class="ref" x="147.32" y="189.56" font-size="3.20">U32</text>
+<text class="refd" x="258.83" y="17.27" font-size="1.16">R4</text>
+<text class="refd" x="256.54" y="99.32" font-size="1.61">C15</text>
+<text class="refd" x="158.75" y="85.22" font-size="1.61">C77</text>
+<text class="refd" x="275.59" y="46.10" font-size="1.61">C81</text>
+<text class="ref" x="57.15" y="121.92" font-size="3.20">U17</text>
+<text class="refd" x="262.76" y="27.81" font-size="1.65">C50</text>
+<text class="refd" x="140.97" y="170.43" font-size="1.61">C63</text>
+<text class="refd" x="99.31" y="50.80" font-size="1.16">R7</text>
+<text class="refd" x="217.21" y="184.66" font-size="1.65">C30</text>
+<text class="refd" x="261.49" y="33.78" font-size="1.16">R3</text>
+<text class="ref" x="203.20" y="54.61" font-size="3.20">U22</text>
+<text class="refd" x="297.93" y="9.50" font-size="1.00">C93</text>
+<text class="ref" x="151.13" y="113.38" font-size="3.20">U53</text>
+<text class="refd" x="87.52" y="63.50" font-size="3.20">J13</text>
+<text class="ref" x="210.57" y="25.53" font-size="3.20">U5</text>
+<text class="ref" x="116.85" y="148.95" font-size="3.20">U48</text>
+<text class="refd" x="143.08" y="237.49" font-size="1.00">H7</text>
+<text class="refd" x="278.89" y="41.91" font-size="1.61">C49</text>
+<text class="refd" x="64.05" y="199.01" font-size="1.65">C34</text>
+<text class="refd" x="217.05" y="18.43" font-size="1.65">C4</text>
+<text class="refd" x="158.12" y="62.23" font-size="1.13">R28</text>
+<text class="refd" x="6.24" y="63.50" font-size="3.20">J17</text>
+<text class="refd" x="273.43" y="7.35" font-size="1.13">R32</text>
+<text class="refd" x="46.88" y="63.50" font-size="3.20">J15</text>
+<text class="refd" x="162.56" y="139.95" font-size="1.61">C73</text>
+<text class="refd" x="18.62" y="10.16" font-size="1.00">H11</text>
+<text class="ref" x="22.86" y="121.92" font-size="3.20">U19</text>
+<text class="refd" x="292.06" y="52.07" font-size="1.95">J23</text>
+<text class="ref" x="37.65" y="211.45" font-size="3.20">U27</text>
+<text class="refd" x="128.27" y="170.43" font-size="1.61">C62</text>
+<text class="refd" x="18.62" y="237.49" font-size="1.00">H4</text>
+<text class="refd" x="274.32" y="163.81" font-size="3.20">J27</text>
+<text class="ref" x="70.36" y="157.48" font-size="3.20">U21</text>
+<text class="ref" x="172.72" y="83.82" font-size="3.20">U11</text>
+<text class="refd" x="113.03" y="175.58" font-size="1.61">C66</text>
+<text class="ref" x="233.69" y="189.56" font-size="3.20">U33</text>
+<text class="refd" x="18.62" y="139.70" font-size="1.00">H5</text>
+<text class="refd" x="292.06" y="90.19" font-size="1.95">J20</text>
+<text class="refd" x="291.47" y="7.34" font-size="1.13">R33</text>
+<text class="refd" x="292.06" y="26.67" font-size="1.95">J25</text>
+<text class="ref" x="247.65" y="87.63" font-size="3.20">U20</text>
+<text class="refd" x="168.66" y="48.27" font-size="1.65">C46</text>
+<text class="refd" x="42.93" y="118.11" font-size="1.65">C19</text>
+<text class="ref" x="144.78" y="156.22" font-size="3.20">U45</text>
+<text class="refd" x="218.22" y="32.65" font-size="1.65">C10</text>
+<text class="refd" x="295.89" y="220.98" font-size="1.16">R2</text>
+<text class="ref" x="125.72" y="189.56" font-size="3.20">U31</text>
+<text class="ref" x="147.32" y="76.20" font-size="3.20">U60</text>
+<text class="refd" x="285.73" y="153.22" font-size="1.00">C55</text>
+<text class="refd" x="292.06" y="77.47" font-size="1.95">J21</text>
+<text class="refd" x="258.44" y="20.55" font-size="1.00">C91</text>
+<text class="refd" x="115.59" y="10.16" font-size="1.81">RN1</text>
+<text class="refd" x="109.35" y="184.66" font-size="1.65">C5</text>
+<text class="refd" x="158.12" y="52.07" font-size="1.65">C1</text>
+<text class="refd" x="205.52" y="18.43" font-size="1.65">C7</text>
+<text class="ref" x="80.01" y="190.50" font-size="3.20">U14</text>
+<text class="refd" x="260.35" y="184.53" font-size="1.65">C43</text>
+<text class="refd" x="86.38" y="199.01" font-size="1.65">C33</text>
+<text class="refd" x="211.45" y="56.77" font-size="1.90">J30</text>
+<text class="ref" x="29.67" y="181.61" font-size="3.20">U23</text>
+<text class="ref" x="104.14" y="207.01" font-size="3.20">U7</text>
+<text class="refd" x="97.67" y="175.52" font-size="1.61">C69</text>
+<text class="ref" x="223.52" y="55.83" font-size="3.20">U3</text>
+<text class="refd" x="73.40" y="139.70" font-size="1.00">C89</text>
+<text class="refd" x="163.18" y="237.36" font-size="1.00">C88</text>
+<text class="ref" x="180.35" y="29.22" font-size="3.20">U40</text>
+<text class="refd" x="167.64" y="76.84" font-size="1.65">C17</text>
+<text class="refd" x="258.83" y="13.21" font-size="1.15">R30</text>
+<text class="ref" x="60.00" y="211.45" font-size="3.20">U28</text>
+<text class="refd" x="300.56" y="237.49" font-size="1.00">H9</text>
+<text class="refd" x="101.73" y="50.80" font-size="1.13">R13</text>
+<text class="refd" x="238.76" y="102.62" font-size="1.61">C22</text>
+<text class="refd" x="194.31" y="67.06" font-size="1.61">C13</text>
+<text class="refd" x="282.45" y="5.59" font-size="3.20">J26</text>
+<text class="ref" x="190.50" y="189.56" font-size="3.20">U36</text>
+<text class="refd" x="261.62" y="161.27" font-size="3.20">J28</text>
+<text class="ref" x="182.88" y="156.20" font-size="3.20">IC7</text>
+<text class="refd" x="207.01" y="37.72" font-size="1.61">C36</text>
+<text class="refd" x="228.85" y="166.37" font-size="1.65">C27</text>
+<text class="refd" x="185.41" y="62.07" font-size="1.65">C48</text>
+<text class="refd" x="292.06" y="39.37" font-size="1.95">J24</text>
+<text class="refd" x="211.10" y="18.43" font-size="1.65">C8</text>
+<text class="refd" x="47.49" y="230.35" font-size="1.95">J2</text>
+<text class="refd" x="122.43" y="99.01" font-size="1.61">C26</text>
+<text class="refd" x="66.93" y="186.69" font-size="1.65">C16</text>
+<text class="refd" x="281.99" y="184.66" font-size="1.65">C45</text>
+<text class="ref" x="194.31" y="113.38" font-size="3.20">U54</text>
+<text class="refd" x="296.64" y="155.08" font-size="3.20">J11</text>
+<text class="refd" x="141.22" y="111.96" font-size="1.68">RN4</text>
+<text class="refd" x="190.50" y="40.64" font-size="1.98">J5</text>
+<text class="refd" x="42.16" y="129.54" font-size="1.65">C23</text>
+<text class="ref" x="214.64" y="175.27" font-size="3.20">U24</text>
+<text class="refd" x="243.84" y="101.85" font-size="1.61">C25</text>
+<text class="ref" x="88.90" y="121.92" font-size="3.20">U18</text>
+<text class="ref" x="271.78" y="31.75" font-size="3.20">U41</text>
+<text class="refd" x="300.56" y="33.02" font-size="1.00">H8</text>
+<text class="refd" x="147.32" y="139.95" font-size="1.61">C70</text>
+<text class="ref" x="127.00" y="79.97" font-size="3.20">U58</text>
+<text class="ref" x="80.01" y="177.80" font-size="3.20">U61</text>
+<text class="refd" x="224.92" y="116.84" font-size="1.61">C31</text>
+<text class="refd" x="97.36" y="139.70" font-size="1.00">H1</text>
+<text class="ref" x="127.00" y="39.37" font-size="3.20">U59</text>
+<text class="refd" x="74.68" y="118.11" font-size="1.65">C59</text>
+<text class="refd" x="41.15" y="192.52" font-size="1.65">C40</text>
+<text class="refd" x="297.17" y="209.55" font-size="3.20">J10</text>
+<text class="refd" x="172.75" y="62.07" font-size="1.65">C47</text>
+<text class="ref" x="190.50" y="80.01" font-size="3.20">U10</text>
+</svg>

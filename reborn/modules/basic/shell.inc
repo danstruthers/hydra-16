@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; shell.inc - basic -l, BASIC as a shell (the eighth bank): HyForth's and hylang's rule (docs/using/basic.md, "The
+; shell.inc - basic -l, BASIC as a shell (the fourth bank): HyForth's and hylang's rule (docs/06-languages/hybasic.md, "The
 ; shell").  A line is BASIC's if it's a line of the program (a number first), ?, a keyword first, an assignment (a
 ; name, then = or a subscript's '('), or a call of one of the program's SUBs; any other is an rc command line, run
 ; whole by rc (rc -c) and waited for ($status its status), or, ending in &, not waited for ($apid its task, in a note
@@ -35,7 +35,7 @@ sh_cwd:     .res        PATH_MAX + 1                        ; (The prompt's dire
 sh_argb:    .res        SH_ARGS                             ; rc's arguments: -c, the line
 sh_numb:    .res        8                                   ; (A number's text, for the environment)
 
-.segment "CODE8"
+.segment "CODE4"
 
 ; ---- The prompt
 
@@ -291,14 +291,14 @@ rc_line:
             sta         sh_argb,y
             sta         sh_argb + 1,y
             jsr         out_flush
-            FARN        6, con_cooked
+            FARN        3, con_cooked
             LDW         sh_args, sh_argb
             lda         #0
             ldx         sh_bg
             beq         :+
             lda         #SPAWN_NEWGROUP
 :
-            FARN        7, rc_spawn
+            FARN        5, rc_spawn
             bcc         :+
             jmp         sh_fail0
 :
@@ -312,7 +312,7 @@ rc_line:
             jmp         set_status
 @wait:
             stz         esbuf
-            FARN        7, rc_wait
+            FARN        5, rc_wait
             lda         sh_status
             sta         sh_code
             bit         intr                                ; (Ctrl-C ended it: the shell goes on, on a new line)
@@ -651,7 +651,7 @@ sh_newns:
 ; exit: BASIC's end, its status the last rc line's
 sh_exit:
             jsr         out_flush
-            FARN        6, con_cooked
+            FARN        3, con_cooked
             LDR         r0, 0
             lda         sh_code
             jmp         EXITS

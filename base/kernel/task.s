@@ -849,8 +849,133 @@ K_SPAWN_K:
 @noexec:
             FAIL        E_NOEXEC
 
+; In the kernel task (KCALL from EXEC, load.s: K_EXEC_PREP).  IN: .Y = the caller.  .A = 0: find the module its
+; TA_SCRATCH + SP_NAME names, a program (OUT: C = 0, .A = its bank; or C = 1, .A = E_NOENT, E_NOEXEC); SPAWN_LOAD: a
+; RAM program (OUT: C = 0, .A = $FF).  .A = 1: the caller's old program gone, as at a task's end (K_EXIT_K) but
+; for what's still the task's: its IRQ lines, shared segments, semaphores and device letters; its bank .X and
+; its type, a program, the kernel's (OUT: C = 0)
+K_EXEC_K:
+            cmp         #1
+            beq         @release
+            tax
+            bmi         @ram
+            lda         #<K_NAMEBUF                         ; Its name, from the caller
+            sta         K_PTR
+            lda         #>K_NAMEBUF
+            sta         K_PTR + 1
+            lda         #<(TA_SCRATCH + SP_NAME)
+            sta         K_PTR2
+            lda         #>(TA_SCRATCH + SP_NAME)
+            sta         K_PTR2 + 1
+            lda         #HX_NAME_MAX + 1
+            sta         K_CNT
+            stz         K_CNT + 1
+            tya
+            sec
+            FARCALL     K_KCOPY
+            jsr         K_MD_FIND                           ; The directory's module of its name: a program
+            bcs         @done
+            ldy         #ME_TYPE
+            lda         (K0_PTR),Y
+            cmp         #HT_PROGRAM
+            bne         @noexec
+            ldy         #ME_BANK
+            lda         (K0_PTR),Y
+            clc
+@done:
+            rts
+
+@ram:
+            lda         #$FF
+            clc
+            rts
+
+@noexec:
+            FAIL        E_NOEXEC
+
+@release:
+            stx         K0_NEWBANK
+            sty         K0_TMP
+            FARCALL     IRQ_RELEASE_ALL                     ; Its lines
+            ldy         K0_TMP
+            FARCALL     K_SEG_EXIT                          ; Its shared segments (mem.s)
+            ldy         K0_TMP
+            FARCALL     K_SEM_EXIT                          ; Its semaphores, and the mutexes it holds (sem.s)
+            ldy         K0_TMP
+            FARCALL     K_FILE_EXIT                         ; Its device letters; the channels it served (file.s)
+            ldy         K0_TMP
+            lda         K0_NEWBANK
+            sta         K_TASK_BANK,Y
+            lda         #HT_PROGRAM
+            sta         K_TASK_TYPE,Y
+            clc
+            rts
+
 ; ****************************************************************************
 .segment "KCODE"
+
+; EXEC: run the program at r0 in this task, in place of this one, with the arguments at r1 (or none: 0).  OUT:
+; doesn't return; or C = 1, .A = the error (E_NOENT, E_NOEXEC, E_TOOBIG, E_PERM, OPEN's and READ's), and the
+; caller goes on.  Its half on page 3 (load.s: K_EXEC_PREP) finds the program and lets the old one go; this one, on
+; page 0, starts the new one: a fresh stack, its bank at $A000, what the task kept from the old one cleared, and
+; then the program's first instructions, as SPAWN's are (K_TASK_MAIN, or K_TASK_LOAD for a RAM program)
+K_EXEC:
+            lda         TK_FLAGS                            ; (A driver serves calls: it can't be replaced)
+            and         #TF_DRIVER
+            beq         :+
+            lda         #E_PERM
+            sec
+            rts
+:
+            FARCALL     K_EXEC_PREP
+            bcc         @go
+            jmp         K_NOTE_CHECK                        ; (Its error; a note pending: taken on the way out)
+
+@go:                                                        ; (IRQs on: it owns no lines now, and a note waits
+            ldx         #$FF                                ;   for the new program's own code) ---- The new
+                                                            ;   program: the old one's frames gone
+            txs
+            sta         TA_MODBANK
+            cmp         #$FF                                ; Its bank at $A000 (a RAM program: bank 0's)
+            bne         :+
+            lda         #0
+:
+            sta         ROM_BANK
+            stz         RAM_BANK
+            lda         TK_FLAGS                            ; Nothing of the old program's: its note handler, its
+            and         #TF_STOPPED                         ;   hold on the CPU, its steps and breakpoints
+            sta         TK_FLAGS
+            stz         TK_PREEMPT
+            stz         TK_DUE
+            stz         TK_INNOTE
+            stz         TK_STEPHIT
+            stz         TA_NOTIFY
+            stz         TA_NOTIFY + 1
+            stz         TA_SERVEVEC                         ; (A program: no calls served, no interrupts)
+            stz         TA_SERVEVEC + 1
+            stz         TA_IRQVEC
+            stz         TA_IRQVEC + 1
+            lda         #BUSY_NOSERVE
+            sta         TK_BUSY
+            ldx         #HX_NAME_MAX                        ; Its name
+:
+            lda         TA_SCRATCH + SP_NAME,X
+            sta         TA_NAME,X
+            dex
+            bpl         :-
+            lda         TA_MODBANK
+            cmp         #$FF
+            beq         @ram
+            lda         PROM_WINDOW + HX_MAIN               ; A module: its entry, from its header
+            sta         TA_ENTRY
+            lda         PROM_WINDOW + HX_MAIN + 1
+            sta         TA_ENTRY + 1
+            jmp         K_TASK_MAIN
+
+@ram:
+            stz         TA_ENTRY                            ; A RAM program: it loads itself (its file, fd LOAD_FD)
+            stz         TA_ENTRY + 1
+            jmp         K_TASK_LOAD
 
 ; EXITS: end this task.  IN: .A = the exit code; r0 = a message (31 characters at most), or 0.  Doesn't return
 K_EXITS:

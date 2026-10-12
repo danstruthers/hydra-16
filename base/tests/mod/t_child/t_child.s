@@ -20,6 +20,11 @@
 ;   "j"         claim console window 1's notes ("group" to #c1/consctl), then as "i"
 ;   "f"         create /ram/mark (its namespace's): end with code 0 ($E0 + the error, if one)
 ;   "v"         its environment's x: end with its first byte ($EE: none), after setting x to "C" (its own copy)
+;   "x"         EXEC #m/nosuch (it must fail: E_NOENT, and this goes on), then EXEC t_child "eZ": the new program
+;               ends with code "Z", message "eZ" (if an EXEC goes wrong: $E1, or $E0 + EXEC's error)
+;   "X"         EXEC t_child "w": the new program writes "W" to fd 1, this one's
+;   "q"         a note handler (keep), then EXEC t_child "p": the new program pauses with no handler (a note's
+;               default ends it)
 ;   anything else: end with code $EE
 
 .include "hydra.inc"
@@ -331,11 +336,41 @@ op_v:
             lda         #$EE
             jmp         end
 
+op_x:
+            LDR         r0, s_nosuch                        ; Not there: E_NOENT, and on
+            stz         r1
+            stz         r1 + 1
+            jsr         EXEC
+            bcc         @wrong
+            cmp         #E_NOENT
+            bne         @wrong
+            LDR         r1, s_ez
+            bra         exec_child
+
+@wrong:
+            lda         #$E1
+            jmp         end
+
+op_xx:
+            LDR         r1, s_wonly
+            bra         exec_child
+
+op_q:
+            LDR         r0, keep
+            jsr         NOTIFY
+            LDR         r1, s_ponly
+; EXEC t_child, its arguments r1 (doesn't come back; if it does, end with $E0 + the error)
+exec_child:
+            LDR         r0, s_child
+            jsr         EXEC
+            ora         #$E0
+            jmp         end
+
 .rodata
-ops:        .byte       "esykpocgndtbrwihmjfv"
+ops:        .byte       "esykpocgndtbrwihmjfvxXq"
 OPS         = * - ops
 op_vec:     .word       op_e, op_s, op_y, op_k, op_p, op_o, op_c, op_g, op_n, op_d, op_t, op_b, op_r, op_w, op_i
-            .word       op_h, op_m, op_j, op_f, op_v
+            .word       op_h, op_m, op_j, op_f, op_v, op_x, op_xx, op_q
 s_x:        .byte       "x", 0
 s_cc:       .byte       "C"
 s_c1ctl:    .byte       "#c1/consctl", 0
@@ -349,3 +384,7 @@ s_child:    .byte       "#m/t_child", 0
 s_e9:       .byte       "e9", 0, 0
 s_wait:     .byte       "#T/wait", 0
 s_w:        .byte       "W"
+s_nosuch:   .byte       "#m/nosuch", 0
+s_ez:       .byte       "eZ", 0, 0
+s_wonly:    .byte       "w", 0, 0
+s_ponly:    .byte       "p", 0, 0

@@ -20,32 +20,10 @@
 K_SPAWN:
             and         #<~SPAWN_LOAD                       ; (The kernel's own)
             sta         L_FLAGS
-            lda         r1
-            sta         L_ARGS
-            lda         r1 + 1
-            sta         L_ARGS + 1
-            stz         L_ARGLEN                            ; Its arguments' length: each string and its 0, and
-            ora         r1                                  ;   the empty one that ends them (checked first)
-            beq         @map
-            ldy         #0
-@arg:
-            lda         (r1),Y                              ; (Empty: the end)
-            beq         @end
-@char:
-            iny
-            cpy         #TA_ARGS_MAX
-            bcs         @toobig
-            lda         (r1),Y
-            bne         @char
-            iny
-            bra         @arg
+            jsr         l_args
+            bcc         @map
+            rts
 
-@toobig:
-            FAIL        E_TOOBIG
-
-@end:
-            iny
-            sty         L_ARGLEN
 @map:                                                       ; The fd map, into TA_SCRATCH + SP_MAP
             ldx         #FD_MAX - 1
             lda         #$FF
@@ -104,19 +82,7 @@ K_SPAWN:
             dex
             bpl         :--
 @mapped:
-            ldx         #HX_NAME_MAX                        ; Its name, for the kernel task (and ended)
-            stz         TA_SCRATCH + SP_NAME,X
-:
-            dex
-            bmi         :+
-            lda         TA_PATH + HX_NAME,X
-            sta         TA_SCRATCH + SP_NAME,X
-            bra         :-
-:
-            lda         TA_PATH + HX_NAME                   ; None in its header (a C program's: crt0 is the
-            bne         :+                                  ;   library's): its file's, the path's last part
-            jsr         l_name
-:
+            jsr         l_spname                            ; Its name, for the kernel task
             lda         TA_PATH + HX_FLAGS
             and         #HF_INPLACE
             bne         @start
@@ -173,6 +139,120 @@ K_SPAWN:
             lda         L_TASK
             FARCALL     K_TASK_GO
             clc
+            rts
+
+; The arguments at r1 (or none: 0): L_ARGS, and their length, L_ARGLEN (each string and its 0, and the empty one
+; that ends them; 0: none).  OUT: C = 0; or C = 1, .A = E_TOOBIG.  Modifies .Y
+l_args:
+            lda         r1
+            sta         L_ARGS
+            lda         r1 + 1
+            sta         L_ARGS + 1
+            stz         L_ARGLEN
+            ora         r1
+            beq         @none
+            ldy         #0
+@arg:
+            lda         (r1),Y                              ; (Empty: the end)
+            beq         @end
+@char:
+            iny
+            cpy         #TA_ARGS_MAX
+            bcs         @toobig
+            lda         (r1),Y
+            bne         @char
+            iny
+            bra         @arg
+
+@toobig:
+            FAIL        E_TOOBIG
+
+@end:
+            iny
+            sty         L_ARGLEN
+@none:
+            clc
+            rts
+
+; The program's name (its header's, in TA_PATH; none there, a C program's: its file's, the path's last part) into
+; TA_SCRATCH + SP_NAME, zero-padded and ended
+l_spname:
+            ldx         #HX_NAME_MAX
+            stz         TA_SCRATCH + SP_NAME,X
+:
+            dex
+            bmi         :+
+            lda         TA_PATH + HX_NAME,X
+            sta         TA_SCRATCH + SP_NAME,X
+            bra         :-
+:
+            lda         TA_PATH + HX_NAME
+            bne         :+
+            jmp         l_name
+:
+            rts
+
+; EXEC's half on this page (task.s: K_EXEC): the program at r0 found and checked as SPAWN's is, its arguments (r1)
+; into TA_ARGS, its name into TA_SCRATCH + SP_NAME, a RAM program's file at fd LOAD_FD, and what was the old
+; program's released (task.s: K_EXEC_K).  OUT: C = 0, .A = its module's bank ($FF: a RAM program), the old program
+; gone from here on; or C = 1, .A = the error, and nothing changed (the file closed)
+K_EXEC_PREP:
+            stz         L_FLAGS
+            jsr         l_args
+            bcc         :+
+            rts
+:
+            lda         r0
+            sta         L_PATH
+            lda         r0 + 1
+            sta         L_PATH + 1
+            jsr         l_header                            ; The file (L_FD), its header in TA_PATH
+            bcc         :+
+            rts
+:
+            jsr         l_spname
+            lda         TA_PATH + HX_FLAGS
+            and         #HF_INPLACE
+            bne         :+
+            lda         #SPAWN_LOAD                         ; (A RAM program)
+            sta         L_FLAGS
+:
+            lda         L_FLAGS                             ; Its bank (a module's, the directory's), or $FF
+            KCALL_FAR   K_EXEC_K
+            bcc         :+
+            jmp         l_close
+:
+            sta         L_TASK                              ; ---- From here on, the old program is going
+            ldy         #0                                  ; Its arguments, into TA_ARGS (forward: they may be
+            ldx         L_ARGLEN                            ;   there already, never below it)
+            beq         @noargs
+:
+            lda         (L_ARGS),Y
+            sta         TA_ARGS,Y
+            iny
+            dex
+            bne         :-
+            bra         @file
+
+@noargs:
+            stz         TA_ARGS
+@file:
+            lda         L_FLAGS                             ; A RAM program's file: fd LOAD_FD (K_TASK_LOAD's)
+            beq         @close
+            lda         L_FD
+            cmp         #LOAD_FD
+            beq         @release
+            ldx         #LOAD_FD
+            FARCALL     K_DUP2
+@close:
+            jsr         l_close
+@release:
+            lda         #1                                  ; Its lines, segments, semaphores and device letters
+            ldx         L_TASK                              ;   released; its bank and type the kernel's
+            KCALL_FAR   K_EXEC_K
+            lda         L_TASK
+            clc
+@done:
             rts
 
 ; The file at r0 opened for reading (L_FD), its header read into TA_PATH and checked (l_check).  OUT: C = 0; or

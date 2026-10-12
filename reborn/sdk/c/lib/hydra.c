@@ -54,12 +54,14 @@ unsigned char hy_task (void)
     return r.a;
 }
 
-int __fastcall__ hy_spawn (const char* path, char* const* argv, unsigned char flags)
+/* SPAWN's and EXEC's path and arguments into r (argv: a list, argv[0], the name, left out), stdio's buffers out
+** first.  OUT: -1 if they're too long (errno EINVAL), else 0 */
+static int __fastcall__ hy_args (const char* path, char* const* argv)
 {
     static char args[HY_ARGS_MAX];
     unsigned n = 0, k;
 
-    if (argv && *argv) {                                /* Its arguments: a list (argv[0], the name, left out) */
+    if (argv && *argv) {
         while (*++argv) {
             k = strlen (*argv) + 1;
             if (n + k + 1 > HY_ARGS_MAX) {
@@ -73,8 +75,25 @@ int __fastcall__ hy_spawn (const char* path, char* const* argv, unsigned char fl
     fflush (0);                                         /* (What's waiting in stdio's buffers: out first) */
     r.r[0] = (unsigned) path;
     r.r[1] = (unsigned) args;
+    return 0;
+}
+
+int __fastcall__ hy_spawn (const char* path, char* const* argv, unsigned char flags)
+{
+    if (hy_args (path, argv)) {
+        return -1;
+    }
     r.a = flags & ~HY_SPAWN_FDMAP;                      /* (Its fds: this one's 0, 1 and 2) */
     return hy_call (HY_SPAWN, &r) ? -1 : r.a;
+}
+
+int __fastcall__ hy_exec (const char* path, char* const* argv)
+{
+    if (hy_args (path, argv)) {
+        return -1;
+    }
+    hy_call (HY_EXEC, &r);                              /* (Back only if it failed) */
+    return -1;
 }
 
 int __fastcall__ hy_wait (int task, char* msg)

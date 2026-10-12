@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; basic.inc - BASIC's values, memory and codes (docs/basic.md, "The design").
+; basic.inc - BASIC's values, memory and codes (docs/design/basic.md, "The design").
 ;
 ; Memory.  The task's RAM holds the interpreter's state, the globals (5 bytes each) and the value stack (frames,
 ; GOSUB's returns and the expressions' values, 5 bytes each); everything else is in the task's RAM banks, each seen

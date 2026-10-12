@@ -13,6 +13,7 @@
 ;   mount [-abc] '#x' old [spec] MOUNT of device x
 ;   unmount [new] old           UNMOUNT
 ;   newns                       the default namespace (nslib.s: Plan 9's newns)
+;   exec [cmd args]             cmd's program run in rc's place (EXEC: Plan 9's exec); rc goes on only if it can't be
 
 .include "rc.inc"
 
@@ -79,6 +80,23 @@ builtin_run:
             asl
             tax
             jmp         (b_vec,X)
+
+; ---- exec [command]: the command's program run in rc's place (EXEC: Plan 9's exec); none: nothing.  Only if it
+; fails does rc go on (its status the error)
+b_exec:
+            lda         (bw)
+            cmp         #LIST_END
+            bne         :+
+            jmp         ok
+:
+            lda         #1
+            sta         xexec
+            lda         bw
+            ldx         bw + 1
+            stz         xf
+            jsr         spawn_path
+            stz         xexec
+            jmp         status_error
 
 ; ---- cd [dir]
 b_cd:
@@ -777,9 +795,9 @@ failed_word:
 
 .rodata
 b_names:    .byte       "cd", 0, "exit", 0, "wait", 0, "eval", 0, ".", 0, "builtin", 0, "whatis", 0, "shift", 0
-            .byte       "bind", 0, "mount", 0, "unmount", 0, "newns", 0, 0
+            .byte       "bind", 0, "mount", 0, "unmount", 0, "newns", 0, "exec", 0, 0
 b_vec:      .word       b_cd, b_exit, b_wait, b_eval, b_dot, b_builtin, b_whatis, b_shift, b_bind, b_mount
-            .word       b_unmount, b_newns
+            .word       b_unmount, b_newns, b_exec
 s_home:     .byte       "home"
 s_root:     .byte       "/", 0
 ; (put_word's: a word with one of these is quoted)

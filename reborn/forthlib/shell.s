@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; shell.s - HyForth as a shell (/lib/forth/shell.fl: lib shell; forth -l's profile.fs loads it), docs/hyforth.md.
+; shell.s - HyForth as a shell (/lib/forth/shell.fl: lib shell; forth -l's profile.fs loads it), docs/design/hyforth.md.
 ; At the console's prompt a line is Forth if its first word is a word (found in the search order) or a number, and
 ; an rc command line otherwise, run whole by rc (rc -c) and waited for, its code status; one ending in & isn't
 ; waited for (its task: $apid).  So pipes, redirections, globbing, quoting and $x are rc's.  Only a line typed at

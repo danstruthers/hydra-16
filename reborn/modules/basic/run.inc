@@ -263,8 +263,8 @@ op_stop:
             lda         #ER_BREAK
             sta         err_code
             stz         err_code + 1
-            FARN        7, lt_find
-            FARN        7, err_say
+            FARN        5, lt_find
+            FARN        5, err_say
             sec
 :
             stz         running
