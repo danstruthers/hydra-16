@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 470" font-family="Arial, Helvetica, sans-serif" font-size="13">
+  <rect width="720" height="470" fill="#fff"/>
+  <!-- The root -->
+  <rect x="20" y="214" width="44" height="34" rx="6" fill="#333"/>
+  <text x="42" y="237" fill="#fff" text-anchor="middle" font-weight="bold" font-size="18">/</text>
+  <path d="M 64 231 L 90 231" stroke="#555" stroke-width="2"/>
+  <path d="M 90 30 L 90 446" stroke="#555" stroke-width="2"/>
+  <g stroke="#555" stroke-width="2">
+    <line x1="90" y1="30" x2="110" y2="30"/><line x1="90" y1="68" x2="110" y2="68"/><line x1="90" y1="106" x2="110" y2="106"/>
+    <line x1="90" y1="144" x2="110" y2="144"/><line x1="90" y1="182" x2="110" y2="182"/><line x1="90" y1="220" x2="110" y2="220"/>
+    <line x1="90" y1="258" x2="110" y2="258"/><line x1="90" y1="296" x2="110" y2="296"/><line x1="90" y1="334" x2="110" y2="334"/>
+    <line x1="90" y1="372" x2="110" y2="372"/><line x1="90" y1="410" x2="110" y2="410"/><line x1="90" y1="446" x2="110" y2="446"/>
+  </g>
+  <!-- The directories: name box, then what it is -->
+  <g font-family="Courier New, monospace" font-weight="bold" font-size="15">
+    <rect x="110" y="16" width="80" height="28" rx="4" fill="#cfe2f3" stroke="#2a62b8"/><text x="122" y="35">/bin</text>
+    <rect x="110" y="54" width="80" height="28" rx="4" fill="#fce5cd" stroke="#b45f06"/><text x="122" y="73">/dev</text>
+    <rect x="110" y="92" width="80" height="28" rx="4" fill="#fce5cd" stroke="#b45f06"/><text x="122" y="111">/env</text>
+    <rect x="110" y="130" width="80" height="28" rx="4" fill="#cfe2f3" stroke="#2a62b8"/><text x="122" y="149">/lib</text>
+    <rect x="110" y="168" width="80" height="28" rx="4" fill="#eeeeee" stroke="#777"/><text x="122" y="187">/mnt</text>
+    <rect x="110" y="206" width="80" height="28" rx="4" fill="#d9ead3" stroke="#38761d"/><text x="122" y="225">/pc</text>
+    <rect x="110" y="244" width="80" height="28" rx="4" fill="#fce5cd" stroke="#b45f06"/><text x="122" y="263">/proc</text>
+    <rect x="110" y="282" width="80" height="28" rx="4" fill="#d9ead3" stroke="#38761d"/><text x="122" y="301">/ram</text>
+    <rect x="110" y="320" width="80" height="28" rx="4" fill="#d9ead3" stroke="#38761d"/><text x="122" y="339">/rom</text>
+    <rect x="110" y="358" width="80" height="28" rx="4" fill="#d9ead3" stroke="#38761d"/><text x="122" y="377">/sd</text>
+    <rect x="110" y="396" width="80" height="28" rx="4" fill="#d9ead3" stroke="#38761d"/><text x="122" y="415">/sram</text>
+    <rect x="110" y="432" width="80" height="28" rx="4" fill="#eeeeee" stroke="#777"/><text x="122" y="451">/tmp</text>
+  </g>
+  <g>
+    <text x="205" y="28" font-weight="bold">Programs</text>
+    <text x="205" y="43" font-size="12">a union of /ram/bin, /sram/bin, the SD card's bin, /rom/bin and the ROM's modules</text>
+    <text x="205" y="66" font-weight="bold">Devices</text>
+    <text x="205" y="81" font-size="12">the console (cons, ctl ...), null, time, snd, and directories: gpio i2c mod sd seg spi vid</text>
+    <text x="205" y="104" font-weight="bold">The environment</text>
+    <text x="205" y="119" font-size="12">a file for each variable</text>
+    <text x="205" y="142" font-weight="bold">Libraries and settings</text>
+    <text x="205" y="157" font-size="12">a union of /ram/lib, /sram/lib, the SD card's lib and /rom/lib</text>
+    <text x="205" y="180" font-weight="bold">Empty</text>
+    <text x="205" y="195" font-size="12">a place to bind or mount things yourself</text>
+    <text x="205" y="218" font-weight="bold">A folder on your PC</text>
+    <text x="205" y="233" font-size="12">through the serial port and the PC tool</text>
+    <text x="205" y="256" font-weight="bold">The tasks</text>
+    <text x="205" y="271" font-size="12">a directory for each task running: its status, its files, its memory ...</text>
+    <text x="205" y="294" font-weight="bold">Your RAM disk</text>
+    <text x="205" y="309" font-size="12">this shell's own area of RAM disk r: emptied at every start</text>
+    <text x="205" y="332" font-weight="bold">The ROM disk</text>
+    <text x="205" y="347" font-size="12">read only: programs, libraries, songs</text>
+    <text x="205" y="370" font-weight="bold">The SD cards</text>
+    <text x="205" y="385" font-size="12">/sd/0 to /sd/f, one for each SPI device with a card; /sd/v, the Vera X's card</text>
+    <text x="205" y="408" font-weight="bold">The shared RAM disk</text>
+    <text x="205" y="423" font-size="12">RAM disk s, the same for every task: emptied at every start</text>
+    <text x="205" y="444" font-weight="bold">Empty</text>
+    <text x="205" y="459" font-size="12">another place for your own binds and mounts</text>
+  </g>
+</svg>

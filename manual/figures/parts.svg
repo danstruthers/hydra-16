@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 470" font-family="Arial, Helvetica, sans-serif" font-size="13">
+  <rect width="720" height="470" fill="#fff"/>
+  <!-- 1. Resistor -->
+  <g transform="translate(20,20)">
+    <rect x="0" y="0" width="220" height="200" rx="8" fill="#fbfaf5" stroke="#999"/>
+    <line x1="20" y1="80" x2="70" y2="80" stroke="#777" stroke-width="3"/>
+    <line x1="150" y1="80" x2="200" y2="80" stroke="#777" stroke-width="3"/>
+    <rect x="68" y="62" width="84" height="36" rx="16" fill="#e8d3a8" stroke="#333" stroke-width="1.5"/>
+    <rect x="80" y="62" width="8" height="36" fill="#7a4a1e"/>
+    <rect x="94" y="62" width="8" height="36" fill="#111"/>
+    <rect x="108" y="62" width="8" height="36" fill="#f08a24"/>
+    <rect x="134" y="62" width="6" height="36" fill="#c9a227"/>
+    <text x="110" y="128" text-anchor="middle" font-weight="bold">RESISTOR (R)</text>
+    <text x="110" y="148" text-anchor="middle">brown, black, orange = 10 kΩ</text>
+    <text x="110" y="166" text-anchor="middle">Either way round</text>
+  </g>
+  <!-- 2. Resistor network -->
+  <g transform="translate(250,20)">
+    <rect x="0" y="0" width="220" height="200" rx="8" fill="#fbfaf5" stroke="#999"/>
+    <rect x="30" y="50" width="160" height="40" rx="4" fill="#2f4f8f" stroke="#111" stroke-width="1.5"/>
+    <circle cx="42" cy="70" r="5" fill="#fff"/>
+    <text x="118" y="75" fill="#fff" font-size="13" text-anchor="middle">332</text>
+    <g stroke="#777" stroke-width="3">
+      <line x1="38" y1="90" x2="38" y2="112"/><line x1="56" y1="90" x2="56" y2="112"/><line x1="74" y1="90" x2="74" y2="112"/>
+      <line x1="92" y1="90" x2="92" y2="112"/><line x1="110" y1="90" x2="110" y2="112"/><line x1="128" y1="90" x2="128" y2="112"/>
+      <line x1="146" y1="90" x2="146" y2="112"/><line x1="164" y1="90" x2="164" y2="112"/><line x1="182" y1="90" x2="182" y2="112"/>
+    </g>
+    <text x="38" y="127" font-size="11" text-anchor="middle">1</text>
+    <text x="110" y="150" text-anchor="middle" font-weight="bold">RESISTOR NETWORK (RN)</text>
+    <text x="110" y="168" text-anchor="middle">The dot (pin 1) goes in</text>
+    <text x="110" y="184" text-anchor="middle">the square pad</text>
+  </g>
+  <!-- 3. Ceramic capacitor -->
+  <g transform="translate(480,20)">
+    <rect x="0" y="0" width="220" height="200" rx="8" fill="#fbfaf5" stroke="#999"/>
+    <line x1="98" y1="96" x2="98" y2="128" stroke="#777" stroke-width="3"/>
+    <line x1="122" y1="96" x2="122" y2="128" stroke="#777" stroke-width="3"/>
+    <ellipse cx="110" cy="70" rx="38" ry="34" fill="#f2c12e" stroke="#333" stroke-width="1.5"/>
+    <text x="110" y="76" text-anchor="middle" font-weight="bold" font-size="16">104</text>
+    <text x="110" y="150" text-anchor="middle" font-weight="bold">CERAMIC CAPACITOR (C)</text>
+    <text x="110" y="168" text-anchor="middle">104 = 100 nF</text>
+    <text x="110" y="184" text-anchor="middle">Either way round</text>
+  </g>
+  <!-- 4. Electrolytic capacitor -->
+  <g transform="translate(20,240)">
+    <rect x="0" y="0" width="220" height="210" rx="8" fill="#fbfaf5" stroke="#999"/>
+    <rect x="80" y="20" width="60" height="90" rx="8" fill="#1d2f5a" stroke="#111" stroke-width="1.5"/>
+    <rect x="122" y="20" width="14" height="90" fill="#cfd8ea"/>
+    <text x="129" y="45" text-anchor="middle" font-weight="bold" font-size="15" fill="#1d2f5a">−</text>
+    <text x="129" y="75" text-anchor="middle" font-weight="bold" font-size="15" fill="#1d2f5a">−</text>
+    <line x1="96" y1="110" x2="96" y2="150" stroke="#777" stroke-width="3"/>
+    <line x1="124" y1="110" x2="124" y2="132" stroke="#777" stroke-width="3"/>
+    <text x="80" y="150" text-anchor="end" font-weight="bold">+</text>
+    <text x="110" y="172" text-anchor="middle" font-weight="bold">ELECTROLYTIC CAPACITOR</text>
+    <text x="110" y="189" text-anchor="middle">Stripe = minus; long leg = plus.</text>
+    <text x="110" y="204" text-anchor="middle">It must go the right way round!</text>
+  </g>
+  <!-- 5. DIP chip -->
+  <g transform="translate(250,240)">
+    <rect x="0" y="0" width="220" height="210" rx="8" fill="#fbfaf5" stroke="#999"/>
+    <g stroke="#9a9a9a" stroke-width="5">
+      <line x1="45" y1="34" x2="45" y2="20"/><line x1="70" y1="34" x2="70" y2="20"/><line x1="95" y1="34" x2="95" y2="20"/><line x1="120" y1="34" x2="120" y2="20"/><line x1="145" y1="34" x2="145" y2="20"/><line x1="170" y1="34" x2="170" y2="20"/>
+      <line x1="45" y1="100" x2="45" y2="114"/><line x1="70" y1="100" x2="70" y2="114"/><line x1="95" y1="100" x2="95" y2="114"/><line x1="120" y1="100" x2="120" y2="114"/><line x1="145" y1="100" x2="145" y2="114"/><line x1="170" y1="100" x2="170" y2="114"/>
+    </g>
+    <rect x="30" y="34" width="160" height="66" rx="3" fill="#222" stroke="#000"/>
+    <path d="M 30 56 A 11 11 0 0 1 30 78" fill="#fbfaf5" stroke="#000"/>
+    <circle cx="48" cy="88" r="4" fill="#ccc"/>
+    <text x="118" y="72" fill="#eee" text-anchor="middle" font-size="12">74F541</text>
+    <text x="45" y="130" text-anchor="middle" font-size="11">pin 1</text>
+    <text x="110" y="156" text-anchor="middle" font-weight="bold">CHIP (U, IC)</text>
+    <text x="110" y="173" text-anchor="middle">The notch and the dot mark pin 1;</text>
+    <text x="110" y="190" text-anchor="middle">match the notch on the board</text>
+  </g>
+  <!-- 6. TO-92, from above -->
+  <g transform="translate(480,240)">
+    <rect x="0" y="0" width="220" height="210" rx="8" fill="#fbfaf5" stroke="#999"/>
+    <path d="M 60 96 L 160 96 L 160 86 A 50 50 0 0 0 60 86 Z" fill="#222" stroke="#000"/>
+    <text x="110" y="70" fill="#ddd" text-anchor="middle" font-size="12">DS1813</text>
+    <circle cx="85" cy="88" r="4" fill="#bbb"/><circle cx="110" cy="88" r="4" fill="#bbb"/><circle cx="135" cy="88" r="4" fill="#bbb"/>
+    <text x="110" y="114" text-anchor="middle" font-size="11">flat side</text>
+    <text x="110" y="146" text-anchor="middle" font-weight="bold">RESET CHIP (U43)</text>
+    <text x="110" y="163" text-anchor="middle">Seen from above it's a D shape:</text>
+    <text x="110" y="180" text-anchor="middle">match its flat side to the flat</text>
+    <text x="110" y="197" text-anchor="middle">side drawn on the board</text>
+  </g>
+</svg>

@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 250" font-family="Arial, Helvetica, sans-serif" font-size="13">
+  <rect width="720" height="250" fill="#fff"/>
+  <!-- The Hydra's board edge, with J3 -->
+  <rect x="20" y="40" width="170" height="150" rx="4" fill="#3b7a3e" stroke="#1f4a21"/>
+  <text x="95" y="72" fill="#fff" font-weight="bold" font-size="15" text-anchor="middle">HYDRA-16</text>
+  <g fill="#d8d8d8" stroke="#555">
+    <rect x="150" y="96" width="40" height="64" fill="#bfc4c9"/>
+    <path d="M 190 100 L 214 106 L 214 150 L 190 156 Z"/>
+  </g>
+  <g fill="#333">
+    <circle cx="198" cy="110" r="2.2"/><circle cx="198" cy="119" r="2.2"/><circle cx="198" cy="128" r="2.2"/><circle cx="198" cy="137" r="2.2"/><circle cx="198" cy="146" r="2.2"/>
+    <circle cx="207" cy="114" r="2.2"/><circle cx="207" cy="123" r="2.2"/><circle cx="207" cy="132" r="2.2"/><circle cx="207" cy="141" r="2.2"/>
+  </g>
+  <text x="95" y="215" text-anchor="middle" font-weight="bold">J3: serial socket</text>
+  <text x="95" y="232" text-anchor="middle">(9 holes, female)</text>
+
+  <!-- The adapter -->
+  <g stroke="#555">
+    <path d="M 230 106 L 254 100 L 254 156 L 230 150 Z" fill="#c9c9c9"/>
+    <rect x="254" y="94" width="46" height="68" rx="4" fill="#4a4f57"/>
+  </g>
+  <g stroke="#777" stroke-width="2">
+    <line x1="230" y1="110" x2="222" y2="110"/><line x1="230" y1="119" x2="222" y2="119"/><line x1="230" y1="128" x2="222" y2="128"/>
+    <line x1="230" y1="137" x2="222" y2="137"/><line x1="230" y1="146" x2="222" y2="146"/>
+  </g>
+  <path d="M 300 128 C 360 128 360 180 420 180 C 470 180 470 128 500 128" fill="none" stroke="#333" stroke-width="5"/>
+  <rect x="500" y="118" width="30" height="20" rx="3" fill="#4a4f57"/>
+  <rect x="530" y="121" width="22" height="14" fill="#c9c9c9" stroke="#555"/>
+  <text x="390" y="72" text-anchor="middle" font-weight="bold">USB to RS-232 adapter</text>
+  <text x="390" y="89" text-anchor="middle">(9 pins, male)</text>
+
+  <!-- The PC -->
+  <g transform="translate(560,60)">
+    <rect x="10" y="0" width="130" height="86" rx="5" fill="#2b2b2b"/>
+    <rect x="18" y="8" width="114" height="70" fill="#101820"/>
+    <text x="24" y="26" fill="#7cf08a" font-family="Courier New, monospace" font-size="11">POST ok</text>
+    <text x="24" y="40" fill="#7cf08a" font-family="Courier New, monospace" font-size="11">RAM modules: 01</text>
+    <text x="24" y="54" fill="#7cf08a" font-family="Courier New, monospace" font-size="11">/&gt; _</text>
+    <path d="M 0 92 L 150 92 L 140 104 L 10 104 Z" fill="#555"/>
+  </g>
+  <text x="635" y="190" text-anchor="middle" font-weight="bold">Your PC</text>
+  <text x="635" y="207" text-anchor="middle">a terminal program,</text>
+  <text x="635" y="224" text-anchor="middle">9600 baud, 8N1</text>
+</svg>

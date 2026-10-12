@@ -1,0 +1,21 @@
+# The Hydra-16 User's and Builder's Manual: its files, in order (build.js reads this)
+00-preface.md
+part1.md
+01-welcome.md
+02-emulator.md
+03-soldering.md
+04-building.md
+05-switching-on.md
+part2.md
+06-starting.md
+07-shells.md
+08-files.md
+09-windows.md
+10-commands.md
+part3.md
+11-drivers.md
+12-console.md
+13-disks.md
+14-sound.md
+15-vera.md
+16-other.md

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 696 432" font-family="Courier New, monospace" font-size="14">
+<rect width="696" height="432" rx="8" fill="#14181c"/>
+<text x="12.0" y="25" fill="#d9d9d9" xml:space="preserve">edit: the keys (^ is Ctrl; M- is Esc then the key, or Alt with it)              </text>
+<text x="12.0" y="59" fill="#d9d9d9" xml:space="preserve">^G         this help                  ^L          the screen drawn again        </text>
+<text x="12.0" y="76" fill="#d9d9d9" xml:space="preserve">^O         save, asking the name      ^S          save                          </text>
+<text x="12.0" y="93" fill="#d9d9d9" xml:space="preserve">^R         open a file                M-,  M-.    the file before, after        </text>
+<text x="12.0" y="110" fill="#d9d9d9" xml:space="preserve">^X         close the file (the last one: edit ends)                             </text>
+<text x="12.0" y="127" fill="#d9d9d9" xml:space="preserve">^W         find                       M-W  M-Q    find again, backwards         </text>
+<text x="12.0" y="144" fill="#d9d9d9" xml:space="preserve">M-R        replace (y, n, a: all)     M-G         go to a line ($: the last)    </text>
+<text x="12.0" y="161" fill="#d9d9d9" xml:space="preserve">M-A        mark: a block's start      M-6         copy the line, or block       </text>
+<text x="12.0" y="178" fill="#d9d9d9" xml:space="preserve">^K         cut the line, or block     ^U          paste what was cut            </text>
+<text x="12.0" y="195" fill="#d9d9d9" xml:space="preserve">M-U        undo                       M-E         redo                          </text>
+<text x="12.0" y="212" fill="#d9d9d9" xml:space="preserve">arrows  ^B ^F ^P ^N   move            Home End  ^A ^E   a line's start, end     </text>
+<text x="12.0" y="229" fill="#d9d9d9" xml:space="preserve">PgUp PgDn  ^Y ^V      a page          M-\  M-/    the text's start, end         </text>
+<text x="12.0" y="246" fill="#d9d9d9" xml:space="preserve">Del  ^D    delete                     Backspace   rub out                       </text>
+<text x="12.0" y="263" fill="#d9d9d9" xml:space="preserve">Tab        a tab (stops every 8)      M-I         auto-indent on, off           </text>
+<text x="12.0" y="280" fill="#d9d9d9" xml:space="preserve">M-X        the help lines on, off                                               </text>
+<text x="12.0" y="314" fill="#d9d9d9" xml:space="preserve">^K again and again cuts lines into the cut buffer together.  A file whose       </text>
+<text x="12.0" y="331" fill="#d9d9d9" xml:space="preserve">lines end CR LF keeps them so.  Ctrl-C does nothing here.                       </text>
+<text x="12.0" y="365" fill="#d9d9d9" xml:space="preserve">A key, to go on.                                                                </text>
+<rect x="12.0" y="382" width="8.4" height="3" fill="#d9d9d9"/>
+</svg>

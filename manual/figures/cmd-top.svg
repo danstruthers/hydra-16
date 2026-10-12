@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 696 432" font-family="Courier New, monospace" font-size="14">
+<rect width="696" height="432" rx="8" fill="#14181c"/>
+<text x="12.0" y="25" fill="#d9d9d9" xml:space="preserve">task  state    cpu  name                                                        </text>
+<text x="12.0" y="42" fill="#d9d9d9" xml:space="preserve">   0  ready    93%  kernel                                                      </text>
+<text x="12.0" y="59" fill="#d9d9d9" xml:space="preserve">   1  wait      0%  init                                                        </text>
+<text x="12.0" y="76" fill="#d9d9d9" xml:space="preserve">   2  wait      0%  forth                                                       </text>
+<text x="12.0" y="93" fill="#d9d9d9" xml:space="preserve">   3  event     0%  wstart                                                      </text>
+<text x="12.0" y="110" fill="#d9d9d9" xml:space="preserve">   4  ready     2%  top                                                         </text>
+<text x="12.0" y="127" fill="#d9d9d9" xml:space="preserve">  11  idle      0%  gpio                                                        </text>
+<text x="12.0" y="144" fill="#d9d9d9" xml:space="preserve">  12  idle      0%  snd                                                         </text>
+<text x="12.0" y="161" fill="#d9d9d9" xml:space="preserve">  13  idle      0%  kdev                                                        </text>
+<text x="12.0" y="178" fill="#d9d9d9" xml:space="preserve">  14  idle      0%  storage                                                     </text>
+<text x="12.0" y="195" fill="#d9d9d9" xml:space="preserve">  15  idle      4%  cons                                                        </text>
+<rect x="12.0" y="212" width="8.4" height="3" fill="#d9d9d9"/>
+</svg>

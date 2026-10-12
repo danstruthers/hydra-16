@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 300" font-family="Arial, Helvetica, sans-serif" font-size="13">
+  <rect width="720" height="300" fill="#fff"/>
+  <g transform="translate(0,60)">
+  <defs>
+    <g id="board">
+      <rect x="0" y="120" width="160" height="22" fill="#3b7a3e" stroke="#1f4a21"/>
+      <rect x="62" y="114" width="36" height="6" fill="#c98b3b"/>
+      <rect x="62" y="142" width="36" height="6" fill="#c98b3b"/>
+      <rect x="74" y="114" width="12" height="34" fill="#fff"/>
+      <rect x="77" y="60" width="6" height="110" fill="#9a9a9a"/>
+    </g>
+    <g id="iron">
+      <path d="M 0 0 L 70 -55 L 80 -45 L 12 10 Z" fill="#555" stroke="#222"/>
+      <path d="M 0 0 L 12 10 L -4 14 Z" fill="#999" stroke="#222"/>
+    </g>
+  </defs>
+  <!-- 1 heat -->
+  <g transform="translate(10,10)">
+    <use href="#board"/>
+    <use href="#iron" transform="translate(52,112) scale(-1,1) rotate(-10)"/>
+    <text x="80" y="185" text-anchor="middle" font-weight="bold">1. HEAT</text>
+    <text x="80" y="203" text-anchor="middle">Touch pad and lead</text>
+    <text x="80" y="219" text-anchor="middle">together, 1 second</text>
+  </g>
+  <!-- 2 feed -->
+  <g transform="translate(190,10)">
+    <use href="#board"/>
+    <use href="#iron" transform="translate(52,112) scale(-1,1) rotate(-10)"/>
+    <path d="M 160 60 Q 120 80 102 108" fill="none" stroke="#bbb" stroke-width="5" stroke-linecap="round"/>
+    <path d="M 72 114 Q 80 96 88 114 Z" fill="#cfcfcf" stroke="#888"/>
+    <text x="80" y="185" text-anchor="middle" font-weight="bold">2. FEED SOLDER</text>
+    <text x="80" y="203" text-anchor="middle">to the joint, not</text>
+    <text x="80" y="219" text-anchor="middle">to the iron</text>
+  </g>
+  <!-- 3 remove solder -->
+  <g transform="translate(370,10)">
+    <use href="#board"/>
+    <use href="#iron" transform="translate(52,112) scale(-1,1) rotate(-10)"/>
+    <path d="M 168 40 Q 140 52 126 70" fill="none" stroke="#bbb" stroke-width="5" stroke-linecap="round"/>
+    <path d="M 64 114 Q 80 78 96 114 Z" fill="#cfcfcf" stroke="#888"/>
+    <text x="80" y="185" text-anchor="middle" font-weight="bold">3. REMOVE SOLDER</text>
+    <text x="80" y="203" text-anchor="middle">when the hole is filled</text>
+    <text x="80" y="219" text-anchor="middle">and a cone has formed</text>
+  </g>
+  <!-- 4 remove iron -->
+  <g transform="translate(550,10)">
+    <use href="#board"/>
+    <use href="#iron" transform="translate(30,60) scale(-1,1) rotate(-10)"/>
+    <path d="M 62 114 Q 80 76 98 114 Z" fill="#d9d9d9" stroke="#777"/>
+    <text x="80" y="185" text-anchor="middle" font-weight="bold">4. REMOVE IRON</text>
+    <text x="80" y="203" text-anchor="middle">and hold still for</text>
+    <text x="80" y="219" text-anchor="middle">two seconds</text>
+  </g>
+  </g>
+</svg>

@@ -1,0 +1,32 @@
+## Chapter 10's pictures: more, top and edit (node manual/tools/capture.js manual/tools/cap-commands.txt)
+#! --rtc
+ls /rom/bin | more
+!snap cmd-more
+!raw q\r
+top
+!wait 30
+!snap cmd-top
+!raw ^C
+edit /ram/story.txt
+!snap cmd-edit1
+!raw Once upon a time, a Hydra woke up.\r
+!quiet
+!raw It had sixteen heads, and each one\r
+!quiet
+!raw wanted to run a different program.\r
+!snap cmd-edit2
+!raw ^W
+!quiet
+!raw heads\r
+!snap cmd-edit3
+!raw ^G
+!snap cmd-edit4
+!raw q
+!quiet
+!raw ^X
+!snap cmd-edit5
+!raw y
+!quiet
+!raw \r
+!quiet
+cat /ram/story.txt
