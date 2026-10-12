@@ -1,11 +1,11 @@
 /*
 ** ctest.c - the C library's test (tests/tests.js's c runs it at rc): its arguments and name, files (stdio and the
 ** calls under it), errors, directories, the heap, the time, the environment, stat, commands and their exit
-** statuses (system, hy_spawn, hy_wait: with the sample code), the namespace, a note as a signal, RAM banks, shared
+** statuses (system, hy_spawn, hy_wait, hy_exec: with the sample code), the namespace, a note as a signal, RAM banks, shared
 ** segments, isatty, the window's chrome (hy_wlabel, hy_wstatus, hy_wctl), windows made (hy_wnew).
 ** Each check prints "ok - " or "not ok - " and its name; the last line is "ctest: N failed", and its exit status
 ** is the count.  Run it as ctest a 'b c', in a directory it can write in (/ram), with the C samples in
-** /sd/0/sample/c.
+** /sd/0/sample/c.  (ctest exec: its hy_exec check's child, which runs code in its place.)
 */
 
 #include <stdio.h>
@@ -21,6 +21,7 @@
 #include <hydra.h>
 
 #define CODE    "/sd/0/sample/c/code"
+#define CTEST   "/sd/0/sample/c/ctest"
 
 static int failed;
 static volatile unsigned char got;
@@ -55,6 +56,12 @@ int main (int argc, char* argv[])
     struct dirent* de;
     unsigned char seen;
     clock_t c;
+
+    if (argc == 2 && strcmp (argv[1], "exec") == 0) {     /* (hy_exec's check: code in this one's place) */
+        static char* eargs[] = { "code", "eek", 0 };
+        hy_exec (CODE, eargs);
+        return 99;
+    }
 
     check (argc == 3 && strcmp (argv[1], "a") == 0 && strcmp (argv[2], "b c") == 0, "arguments");
     check (strcmp (argv[0], "ctest") == 0, "argv[0]: its name (its file's)");
@@ -162,6 +169,12 @@ int main (int argc, char* argv[])
     i = hy_spawn (CODE, args, 0);
     check (i > 0 && hy_wait (i, msg) == 1 && strcmp (msg, "oops") == 0, "hy_spawn, hy_wait: a message");
     check (hy_spawn ("/nosuch", args, 0) < 0 && errno == ENOENT, "hy_spawn: no such program");
+    check (hy_exec ("/nosuch", args) < 0 && errno == ENOENT, "hy_exec: no such program (and this one goes on)");
+    {
+        static char* xargs[] = { "ctest", "exec", 0 };
+        i = hy_spawn (CTEST, xargs, 0);
+        check (i > 0 && hy_wait (i, msg) == 1 && strcmp (msg, "eek") == 0, "hy_exec: code in a child's place");
+    }
     check (hy_parent () < 16 && hy_parent () != hy_task (), "hy_parent: the shell's task");
 
     /* semaphores */
