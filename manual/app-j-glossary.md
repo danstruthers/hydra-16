@@ -3,13 +3,13 @@
 The words this book uses, and what they mean. The number in brackets after a word is the section where it's
 explained in full.
 
-**Accumulator.** The 65C02's A register, where its arithmetic and logic are done (25.3).
+**Accumulator.** The 65C02's A register, where its arithmetic and logic are done (26.3).
 
 **ACIA.** Asynchronous Communications Interface Adapter: the 65C51 chip, U3, that runs the serial port (7.2).
 
 **Address.** The number of a byte in memory. The 65C02's addresses go from $0000 to $FFFF (7.2).
 
-**Addressing mode.** The way an instruction says which byte it works on: `#$41`, `$22,x`, `($22),y` ... (25.6).
+**Addressing mode.** The way an instruction says which byte it works on: `#$41`, `$22,x`, `($22),y` ... (26.6).
 
 **Argument.** A word given to a command after its name: in `ls -l /rom`, `-l` and `/rom` are arguments (8.2).
 
@@ -17,10 +17,10 @@ explained in full.
 
 **ASCII.** The standard code for characters, from 0 to 127: `A` is 65 (Appendix E).
 
-**Assembler.** A program that turns assembly language into machine code. The Hydra's is `as` (Chapter 26).
+**Assembler.** A program that turns assembly language into machine code. The Hydra's is `as` (Chapter 27).
 
 **Assembly language.** A program written with the processor's instruction names, like `LDA`, instead of numbers
-(25.1).
+(26.1).
 
 **Bank.** A piece of a bigger memory that can be shown through a window in the 65C02's 64K: an 8K RAM bank at
 $8000, a 16K ROM bank at $A000 (7.2).
@@ -45,11 +45,11 @@ $8000, a 16K ROM bank at $A000 (7.2).
 
 **Boot.** Starting the computer: everything from the reset to the first prompt (Chapter 7).
 
-**Breakpoint.** A place in a program where the debugger stops it (28.5).
+**Breakpoint.** A place in a program where the debugger stops it (29.5).
 
-**BSS.** The part of a program for variables that start as zero. It isn't stored in the program's file (26.8).
+**BSS.** The part of a program for variables that start as zero. It isn't stored in the program's file (27.8).
 
-**Bug.** A mistake in a program. Finding bugs is **debugging** (Chapter 28).
+**Bug.** A mistake in a program. Finding bugs is **debugging** (Chapter 29).
 
 **Bus.** The wires that carry addresses, data and control signals between the processor and the other chips (1.2).
 
@@ -63,7 +63,7 @@ $8000, a 16K ROM bank at $A000 (7.2).
 
 **Card.** A board that plugs into one of the Hydra's slots, like the Vera X; or an SD card.
 
-**Carry.** The C flag: the bit carried out of an addition, or shifted out of a byte (25.8).
+**Carry.** The C flag: the bit carried out of an addition, or shifted out of a byte (26.8).
 
 **Cell.** In HyForth, one item on the stack: 16 bits (19.2).
 
@@ -100,9 +100,9 @@ the date and time (17.5).
 
 **Cursor.** The mark on the screen that shows where the next character you type will go (6.3).
 
-**Cycle.** One tick of the processor's clock (25.12).
+**Cycle.** One tick of the processor's clock (26.12).
 
-**Debugger.** A program that runs another one step by step, to find its bugs: `db` (Chapter 28).
+**Debugger.** A program that runs another one step by step, to find its bugs: `db` (Chapter 29).
 
 **Decimal.** Base 10, the usual way of writing numbers.
 
@@ -113,11 +113,11 @@ the date and time (17.5).
 
 **DIP.** Dual in-line package: a chip with two rows of legs, the kind that fits a socket (3.4).
 
-**Directive.** An instruction to the assembler itself, starting with a dot: `.byte` (26.4).
+**Directive.** An instruction to the assembler itself, starting with a dot: `.byte` (27.4).
 
 **Directory.** A file that holds other files: a folder (9.1).
 
-**Disassembler.** A program that turns machine code back into assembly language: `dis` (Chapter 27).
+**Disassembler.** A program that turns machine code back into assembly language: `dis` (Chapter 28).
 
 **Driver.** A program that looks after a device, and gives other programs files to use it with (Chapter 12).
 
@@ -137,9 +137,9 @@ so on (13.7).
 
 **File.** A named piece of data on a disk. In HydraOS, devices are files too (Chapter 9).
 
-**File descriptor (fd).** A small number that stands for a file a program has open (26.13).
+**File descriptor (fd).** A small number that stands for a file a program has open (27.13).
 
-**Flag.** A bit that says yes or no, like the 65C02's N, V, D, I, Z and C flags (25.3). In Forth, a true or false
+**Flag.** A bit that says yes or no, like the 65C02's N, V, D, I, Z and C flags (26.3). In Forth, a true or false
 value (19.7). And an option, like `-l`.
 
 **Flash ROM.** ROM that can be erased and programmed again electrically (4.4).
@@ -159,7 +159,7 @@ value (19.7). And an option, like `-l`.
 
 **Hash.** In hylang, a table that finds a value by its name (its key) (21.12).
 
-**Header.** A row of metal pins on a board (3.4). Also the first 48 bytes of a program file, which describe it (26.8).
+**Header.** A row of metal pins on a board (3.4). Also the first 48 bytes of a program file, which describe it (27.8).
 
 **Hexadecimal (hex).** Base 16: the digits 0 to 9 and A to F. $FF is 255 (1.6).
 
@@ -171,19 +171,19 @@ value (19.7). And an option, like `-l`.
 
 **I²C.** A bus of two wires for talking to small chips, on the I/O header (17.3).
 
-**Index register.** X or Y: registers for counting, and for stepping through tables (25.3).
+**Index register.** X or Y: registers for counting, and for stepping through tables (26.3).
 
-**Instruction.** One step the processor can do (25.1).
+**Instruction.** One step the processor can do (26.1).
 
 **Integer.** A whole number (18.1).
 
-**Interrupt.** A signal from a chip that makes the processor stop what it's doing to deal with it (25.11).
+**Interrupt.** A signal from a chip that makes the processor stop what it's doing to deal with it (26.11).
 
 **Jumper.** A small cap that connects two pins of a header (4.6).
 
 **Kernel.** The heart of HydraOS, which runs the tasks, the files and the namespaces (7.1).
 
-**Label.** A name for a place in an assembly language program (26.5).
+**Label.** A name for a place in an assembly language program (27.5).
 
 **LED.** Light-emitting diode: a small coloured light. It lights only one way round (4.8, 17.1).
 
@@ -192,16 +192,16 @@ value (19.7). And an option, like `-l`.
 **List.** In hylang, values in order, written in braces or parentheses: the language's main way to keep things
 together (21.6).
 
-**Little-endian.** Keeping a 16-bit number with its low byte first, as the 65C02 does (25.2).
+**Little-endian.** Keeping a 16-bit number with its low byte first, as the 65C02 does (26.2).
 
 **Login shell.** The shell each window starts with (8.16).
 
 **Loop.** A part of a program that's done again and again: until a count runs out, or while something stays true
 (19.9, 21.9, 23.8).
 
-**Machine code.** A program as the processor reads it: bytes (25.1).
+**Machine code.** A program as the processor reads it: bytes (26.1).
 
-**Macro.** A named piece of source that is put in wherever its name is used (26.11).
+**Macro.** A named piece of source that is put in wherever its name is used (27.11).
 
 **Memory card.** The board that holds the Hydra's extra RAM, plugged into J1 and J2 (4.7).
 
@@ -211,7 +211,7 @@ note numbers (60 is middle C) and its lists of instruments and drums (15.2, 15.4
 **MML.** Music Macro Language: a tune written as text, like `cdefg`. `play` and all three languages can play it
 (15.6).
 
-**Mnemonic.** An instruction's short name, like `LDA` (25.1).
+**Mnemonic.** An instruction's short name, like `LDA` (26.1).
 
 **Module.** A program or driver kept in the paged ROM (7.4). Also a **RAM module**: 2 MB of RAM on a memory card
 (4.7).
@@ -226,17 +226,17 @@ note numbers (60 is middle C) and its lists of instruments and drums (15.2, 15.4
 **Namespace.** The tree of names a task sees, made by binds and mounts (9.5).
 
 **Note.** A message to a task, like `interrupt` (<kbd>CTRL</kbd>-<kbd>C</kbd>). A **note group** is the tasks that
-get a note together (26.16).
+get a note together (27.16).
 
-**Opcode.** The number of an instruction (25.1).
+**Opcode.** The number of an instruction (26.1).
 
-**Operand.** What an instruction works on: a number, or an address (25.1).
+**Operand.** What an instruction works on: a number, or an address (26.1).
 
 **Operating system.** The program that runs a computer, and the other programs on it (1.5).
 
 **Option.** A word starting with `-` that changes what a command does: the `-l` in `ls -l` (8.2).
 
-**Page.** 256 bytes of memory, from $xx00 to $xxFF (25.5). Also one 8K page of the kernel's ROM (7.2).
+**Page.** 256 bytes of memory, from $xx00 to $xxFF (26.5). Also one 8K page of the kernel's ROM (7.2).
 
 **Paged ROM.** The Hydra's ROM of up to 4 MB, seen 16K at a time at $A000 (7.2).
 
@@ -256,13 +256,13 @@ get a note together (26.16).
 
 **PLCC.** Plastic leaded chip carrier: a square chip with legs on all four sides, like the kernel ROM, U6 (3.4).
 
-**Pointer.** An address kept in memory, which points at something else (25.6).
+**Pointer.** An address kept in memory, which points at something else (26.6).
 
 **Port.** A group of 16 addresses for a chip (7.2); or a connector.
 
 **POST.** Power-on self test: the checks of its memory that the Hydra makes each time it starts (7.4).
 
-**Processor.** The chip that runs programs: the W65C02S (Chapter 25).
+**Processor.** The chip that runs programs: the W65C02S (Chapter 26).
 
 **Program.** A list of instructions for a computer (1.1). On the Hydra, a file you can run by typing its name (6.8).
 
@@ -299,7 +299,7 @@ Hydra's own T, U, V and W (7.2).
 
 **SD card.** The small memory card the Hydra uses as a disk (14.2).
 
-**Segment.** A part of an assembly language program: `CODE`, `DATA`, `BSS` ... (26.8). Also a shared memory segment
+**Segment.** A part of an assembly language program: `CODE`, `DATA`, `BSS` ... (27.8). Also a shared memory segment
 (17.9).
 
 **Serial port.** The connector J3, which sends and receives data one bit at a time: the Hydra's console (13.6).
@@ -320,21 +320,21 @@ Hydra's own T, U, V and W (7.2).
 
 **Sprite.** A small picture that can move over the screen without changing what's under it (16.5).
 
-**Stack.** A pile of values where the last one put on is the first taken off. The 65C02 has one (25.10), and so
+**Stack.** A pile of values where the last one put on is the first taken off. The 65C02 has one (26.10), and so
 does Forth (19.2).
 
-**Standard input, output and error.** A program's fds 0, 1 and 2: usually the keyboard and the screen (26.13).
+**Standard input, output and error.** A program's fds 0, 1 and 2: usually the keyboard and the screen (27.13).
 
 **Status.** What a program said when it ended: nothing for success, or a message (8.9).
 
 **String.** Text, as a value in a program.
 
-**Subroutine.** A piece of code that's called with `JSR` and returns with `RTS` (25.10).
+**Subroutine.** A piece of code that's called with `JSR` and returns with `RTS` (26.10).
 
 **Surface-mount.** A part soldered onto pads on the board's surface, with no holes. The Hydra's shared RAM chips are
 (3.7).
 
-**System call.** A request from a program to HydraOS: open a file, start a program, wait (26.13).
+**System call.** A request from a program to HydraOS: open a file, start a program, wait (27.13).
 
 **Task.** One of the sixteen programs the Hydra can run at once, each with its own 32K of memory (7.3).
 
@@ -345,7 +345,7 @@ Hydra's parts are (3.5).
 
 **Tick.** One of HydraOS's timer interrupts: 200 a second (7.3).
 
-**Two's complement.** The way a byte holds a negative number: $FF is -1 (25.2).
+**Two's complement.** The way a byte holds a negative number: $FF is -1 (26.2).
 
 **Union directory.** A directory made of several, which are looked in in turn (9.7).
 
@@ -355,7 +355,7 @@ square brackets (6.10).
 **Variable.** A name for a value that can change.
 
 **Vector.** An address, kept at a known place in memory, that tells the processor where to go: when it's reset (7.1),
-or for an interrupt (25.11).
+or for an interrupt (26.11).
 
 **VERA.** The video chip on the Vera X card (16.1).
 
@@ -369,6 +369,6 @@ windows (Chapter 10).
 **YM2151.** The Hydra's sound chip: a Yamaha FM synthesizer with eight voices (15.1).
 
 **Zero page.** The first 256 bytes of memory, $0000 to $00FF, which the 65C02 reaches with shorter, quicker
-instructions (25.5).
+instructions (26.5).
 
 **ZSM.** The kind of song file that `play` plays: the sound chips' settings, moment by moment (15.7).

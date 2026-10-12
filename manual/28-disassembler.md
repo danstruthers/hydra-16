@@ -1,4 +1,4 @@
-# Chapter 27. The Disassembler
+# Chapter 28. The Disassembler
 
 A **disassembler** does an assembler's job backwards: it reads machine code and writes it out as assembly language.
 It's how you look inside a program you don't have the source of, check what the assembler really made, or find out
@@ -6,7 +6,7 @@ how the Hydra's own tools work. The Hydra has three: the `dis` command, HyForth'
 command. All three use the same part of the asm library, so they all write instructions exactly as `as` reads them.
 
 > **IN THIS CHAPTER:** You'll take programs apart with `dis`, tell code from data, put a program back together, and
-> read the Hydra's own tools. **You need:** Chapters 25 and 26.
+> read the Hydra's own tools. **You need:** Chapters 26 and 26.
 
 ```text
 dis [-cnw] [-l labels] [-o addr] file
@@ -14,15 +14,15 @@ dis [-cnw] [-l labels] [-o addr] file
 
 | Option | What it does |
 |---|---|
-| `-l` *labels* | Use the names in a labels file (`as -l`'s, section 26.17) |
+| `-l` *labels* | Use the names in a labels file (`as -l`'s, section 27.17) |
 | `-n` | No names for the system calls and r0 to r15: just their addresses |
 | `-w` | Wide: the instructions in the SDK's columns, as its sources are written |
 | `-c` | Every byte as code: none taken for data |
 | `-o` *addr* | The file is raw bytes (`as -b`'s), to be loaded at *addr* (in hex) |
 
-## 27.1 Taking a program apart
+## 28.1 Taking a program apart
 
-Here is Chapter 26's `stars`, taken apart:
+Here is Chapter 27's `stars`, taken apart:
 
 <!-- session
 cd /ram
@@ -62,13 +62,13 @@ L0844:
         rts
 ```
 
-Compare it with `stars.s` (section 26.1). The instructions are all there, but much has gone, because it was never in
+Compare it with `stars.s` (section 27.1). The instructions are all there, but much has gone, because it was never in
 the program: the comments, the constant `ROWS` (just `#$06` is left, `ROWS + 1`), the names of the variables (just
 their addresses, $22 and $23) and of the labels. `dis` makes up a name for each place an instruction jumps or
 branches to: `L` and its address, so `L0842` is the routine at $0842, `line`. It knows the system calls' names
 (`PUTC`), and `main`, where the program starts. Numbers are in hex, and characters as their codes (`#$2A` is `'*'`).
 
-## 27.2 Names from a labels file
+## 28.2 Names from a labels file
 
 With the labels file `as -l` wrote, `dis` has the names back:
 
@@ -115,7 +115,7 @@ L0844:
 Names for places outside the program, like the zero page's, become constants at the top (`row = $22`). The two
 cheap local labels, `@row` and `@star`, weren't in the labels file, so they're still `L0834` and `L0844`.
 
-## 27.3 And back again
+## 28.3 And back again
 
 The first line says it: `as` assembles what `dis` writes back into the same bytes. So you can take a program apart,
 change it, and put it back together, even without its source:
@@ -136,7 +136,7 @@ the same
 `cmp` compares two files, and says nothing if they're the same. Edit `stars2.s` (change `#$2A` to `#$2B`, say),
 assemble it again, and `stars2` prints a triangle of plus signs.
 
-## 27.4 Code and data
+## 28.4 Code and data
 
 A program file has data in it as well as code: strings, tables, numbers. A byte doesn't say which it is, so `dis` has
 to work it out. It starts where the program starts, at `main`, and follows the code: each instruction leads to the
@@ -144,7 +144,7 @@ next one, and a branch, jump or `jsr` leads to another place too. It stops follo
 go on to the next: `rts`, `rti`, `jmp`, `bra`, `brk` or `stp`. Every byte it reached is code; the rest is data, which
 it writes as `.byte` lines, with any text in quotes.
 
-Look at `hi` from Chapter 26. Its `PRINT "Hello, "` keeps the text in the code, with a jump over it, and `dis` sees
+Look at `hi` from Chapter 27. Its `PRINT "Hello, "` keeps the text in the code, with a jump over it, and `dis` sees
 that:
 
 <!-- session
@@ -220,7 +220,7 @@ Following the code can miss some: code that's only reached through a table of ad
 like data. `-c` takes every byte as code, from the start to the end, which shows it (and shows data as nonsense
 instructions, so use it with care).
 
-## 27.5 The other options
+## 28.5 The other options
 
 `-w` writes the SDK's columns, which are easier to read:
 
@@ -269,7 +269,7 @@ L1004:
         rts
 ```
 
-## 27.6 Inside the Hydra's tools
+## 28.6 Inside the Hydra's tools
 
 The Hydra's own tools are programs too, on the ROM disk in `/rom/bin`, and `dis` can take any of them apart. Here is
 the start of `echo`:
@@ -327,7 +327,7 @@ variable at $0A40, which is whether to print a new line at the end, and moves on
 Then, at `L085B`, it prints each argument (`L08A0` puts a character into its output), with a space ($20) before
 each but the first.
 
-## 27.7 Disassembling in HyForth
+## 28.7 Disassembling in HyForth
 
 HyForth's `lib disasm` has `disasm` ( *addr u* -- ), which disassembles *u* instructions from *addr*, in any
 memory the task can see. And while it's loaded, `see` shows a **code word** (a word written in machine code, as
@@ -379,7 +379,7 @@ lib disasm
 Each system call's address holds a `jmp` to the code that does it, in the kernel's ROM. Programs call the jump
 table, not the code, so a new HydraOS can move its code about and every program still works.
 
-## 27.8 In the debugger
+## 28.8 In the debugger
 
 The debugger's `d` command disassembles a running program's memory, with names from its labels file and
-`hydra.inc`. Chapter 28 has it.
+`hydra.inc`. Chapter 29 has it.

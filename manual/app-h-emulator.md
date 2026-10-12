@@ -104,7 +104,7 @@ and takes commands:
 | `w` ADDR[:T] | Stop when ADDR is written (by task T) |
 | `x` | Quit the emulator |
 
-The debugger, `db` (Chapter 28), is for debugging a program; the monitor is for when it's HydraOS itself you need to
+The debugger, `db` (Chapter 29), is for debugging a program; the monitor is for when it's HydraOS itself you need to
 watch.
 
 ## H.4 The web emulator

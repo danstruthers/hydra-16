@@ -46,7 +46,7 @@ forth coreext exception file tools shell hydra
 | `sound` | Sound (section 20.6) |
 | `bits` | `tbit`, `sbit`, `cbit`: testing, setting and clearing bits |
 | `random` | Random numbers: `rand`, `random`, `rseed` |
-| `disasm` | The disassembler: `disasm` (Chapter 27) |
+| `disasm` | The disassembler: `disasm` (Chapter 28) |
 | `gpio`, `i2c`, `spi`, `clock`, `disk`, `cons`, `proc`, `pc`, `video` | The devices, in Forth (sections 20.5 to 20.7) |
 
 `-lib` *name* hides a library's words again (its code stays, for words that use it), and `require` *file* loads any
@@ -375,7 +375,7 @@ in RAM banks of its own, so a word that changes the bank must be compiled with `
 note group, and `on-note` ( *xt* -- ) gives a word to handle the notes that come to HyForth.
 
 **Machine code.** `sys` ( *addr a x y* -- *a x y p* ) calls machine code at *addr*, with the processor's A, X and Y
-registers set, and gives back the registers, and its flags, after it (Chapter 26).
+registers set, and gives back the registers, and its flags, after it (Chapter 27).
 
 **Odds and ends.** `ctl` ( *c-addr1 u1 c-addr2 u2* -- ) writes the text *c-addr2 u2* to the file *c-addr1 u1*, as
 `echo` does (`s" /dev/sd/0/ctl" s" sync" ctl`); `pause` ( -- ) lets the other tasks have a turn; and `ior>text` (

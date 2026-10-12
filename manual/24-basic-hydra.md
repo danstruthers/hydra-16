@@ -242,7 +242,7 @@ HyBASIC's numbers are Chapter 18's. A number in a program can be written in any 
 | `SYS addr [, a [, x [, y]]]` | Call machine code at *addr*, with the processor's A, X and Y registers set |
 | `SYS "NAME" [, a [, x [, y]]]` | Make a system call by its name (Appendix K) |
 | `RREG a, x, y, p` | The registers after the last `SYS` |
-| `ASM` ... `END ASM` | Assembly language, inside the program (Chapter 26) |
+| `ASM` ... `END ASM` | Assembly language, inside the program (Chapter 27) |
 | `CALL ASM label`, `CALL ABSOLUTE (addr)` | Call an `ASM` block's code, or machine code |
 
 ## 24.9 HyBASIC as your shell

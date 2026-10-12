@@ -40,7 +40,7 @@ Most of the examples use a few small files. To make them, type:
 as [-bl] file.s [out]
 ```
 
-Turns a program written in 65C02 **assembly language** into a program the Hydra can run. Chapter 26 is all about it.
+Turns a program written in 65C02 **assembly language** into a program the Hydra can run. Chapter 27 is all about it.
 
 ## basic: HyBASIC
 
@@ -198,7 +198,7 @@ setting), or `none`.
 db [-p task | program [arg ...]]
 ```
 
-Runs a program one instruction at a time, so you can watch what it does. Chapter 28 is all about it.
+Runs a program one instruction at a time, so you can watch what it does. Chapter 29 is all about it.
 
 ## df: free disk space
 
@@ -226,7 +226,7 @@ disks).
 dis [options] file
 ```
 
-Turns a program back into assembly language, so you can read it. Chapter 27 is all about it.
+Turns a program back into assembly language, so you can read it. Chapter 28 is all about it.
 
 ## du: disk usage
 

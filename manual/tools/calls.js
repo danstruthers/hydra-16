@@ -29,7 +29,7 @@ const WHAT = {
   PREEMPT_OFF: 'Keep the processor: no other task runs until `PREEMPT_ON`. Use it only for a moment.',
   PREEMPT_ON: 'Let the other tasks run again, after `PREEMPT_OFF`.',
   TASKINFO: 'What the kernel knows about a task: its state, parent, time used, name (as `ps` shows).',
-  NOTIFY: 'Set this task\'s note handler (section 26.16), or take it away.',
+  NOTIFY: 'Set this task\'s note handler (section 27.16), or take it away.',
   NOTE: 'Send a note to a task, or to a note group.',
   MODINFO: 'An entry of the paged ROM\'s module directory: a module\'s banks, its page in its first bank (where its header is, for a small module that shares the bank), its type and its name.',
   ENV_GET: 'Read an environment variable, of this task or another.',

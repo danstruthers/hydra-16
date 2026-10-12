@@ -203,7 +203,7 @@ and it's waiting for *its* kind of line:
 | `>` | HyBASIC (Chapter 23) | Type `SYSTEM` |
 | `hylang>` | hylang (Chapter 21) | Type `(exit)` |
 | `*` | `ed`, the line editor (Chapter 11) | Type `q` |
-| `db>` | `db`, the debugger (Chapter 28) | Type `q` |
+| `db>` | `db`, the debugger (Chapter 29) | Type `q` |
 
 And three programs take over the whole screen: `edit` (leave it with <kbd>CTRL</kbd>-<kbd>X</kbd>), `more` and `top`
 (leave them with <kbd>Q</kbd>).
@@ -390,7 +390,7 @@ Here are the samples that are fun to watch. <kbd>CTRL</kbd>-<kbd>C</kbd> stops a
 | `c/sketch` | A drawing program for the Vera X's mouse (it needs the Vera X's keyboard and mouse) |
 
 The first four were written in assembly language, and their sources are there to read, in `/sd/0/sample/as` (Chapter
-26). The others were written in C, on a PC. The ones with four or five programs at once show off what the Hydra is
+27). The others were written in C, on a PC. The ones with four or five programs at once show off what the Hydra is
 named for: **multitasking** (Chapter 7).
 
 And there's music. `play` plays a song file (in the emulator, press the **Sound** button first):
@@ -459,7 +459,8 @@ hylang> (exit)
 Which should you learn first? If you've never programmed before, start with **HyBASIC** (Chapter 23): it reads
 almost like English, and it's the gentlest. **HyForth** (Chapter 19) is the one you'll meet all through this book,
 because it's the shell. **hylang** (Chapter 21) suits people who like mathematics and lists. And when you want to
-know what the processor itself is doing, Part Five is waiting.
+know what the processor itself is doing, Part Five is waiting. Chapter 25 writes one game in all three languages,
+side by side, if you'd like to compare them before you choose.
 
 ## 6.10 Finding help
 

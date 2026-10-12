@@ -1,4 +1,4 @@
-# Chapter 26. The Assembler
+# Chapter 27. The Assembler
 
 An **assembler** turns assembly language into machine code. The Hydra's is called `as`. It reads a **source file**
 (a text file of instructions, usually with a name ending in `.s`) and writes a **program**: a file that the Hydra can
@@ -7,7 +7,7 @@ run like any other command. Its language is the one of **ca65**, the assembler o
 
 > **IN THIS CHAPTER:** You'll write, assemble and run programs in assembly language, learn the whole of `as`'s
 > language, call HydraOS's system calls, and put machine code inside HyBASIC and HyForth programs. **You need:**
-> Chapter 25, and the screen editor (section 6.6).
+> Chapter 26, and the screen editor (section 6.6).
 
 ```text
 as [-bl] file.s [out]
@@ -15,11 +15,11 @@ as [-bl] file.s [out]
 
 | Option | What it does |
 |---|---|
-| `-l` | Write a **labels file** too, *out*`.lbl`, for the debugger and the disassembler (section 26.17) |
-| `-b` | Write only the bytes, without a program's header (section 26.17) |
+| `-l` | Write a **labels file** too, *out*`.lbl`, for the debugger and the disassembler (section 27.17) |
+| `-b` | Write only the bytes, without a program's header (section 27.17) |
 | *out* | The program's name (without it: *file.s*'s name without its `.s`) |
 
-## 26.1 Your first program
+## 27.1 Your first program
 
 Here's a whole program in assembly language: about twenty instructions that print a triangle of stars. Go to `/ram`
 (`cd /ram`), start `edit stars.s`, and type it in. The columns don't have to line up as neatly as these do: one
@@ -90,23 +90,23 @@ directory. Now look at it in pieces:
   next section's program uses. They're all in `/lib/as`.
 * `HYX2_PROGRAM "stars", main` makes the program's **header**: its name is `stars`, and it starts at `main`.
 * `ROWS = 5` makes a **constant**: from then on, `ROWS` means 5.
-* `.zeropage` and `.code` say which **segment** the lines after them go into (section 26.8): the variables on the
+* `.zeropage` and `.code` say which **segment** the lines after them go into (section 27.8): the variables on the
   zero page, and the code. `row` and `count` are the variables: `.res 1` **reserves** a byte for each.
-* `main:`, `line:` and `@row:` are **labels**: names for places in the program (section 26.5).
+* `main:`, `line:` and `@row:` are **labels**: names for places in the program (section 27.5).
 * `main` puts 1 in `row`, then goes round a loop: it calls the subroutine `line` with the row's number in A, adds 1
   to `row`, and goes round again (`bne @row`) until `row` is `ROWS + 1`.
 * `line` prints A stars. `jsr PUTC` is a **system call**: it asks HydraOS to do something, here to print the
-  character in A (section 26.13). A system call may change A, X and Y, so `line` keeps its count in `count`, not in
+  character in A (section 27.13). A system call may change A, X and Y, so `line` keeps its count in `count`, not in
   X. `dec count` takes 1 from it and sets Z when it reaches 0, so `bne @star` goes round again until it does.
 * `LF` is the code of a new line, 10.
 * A program ends when its `main` returns: the last `rts`.
 
-If you make a mistake, `as` tells you where (section 26.18). Fix it in `edit`, and assemble again.
+If you make a mistake, `as` tells you where (section 27.18). Fix it in `edit`, and assemble again.
 
 > **TRY THIS:** Change `ROWS` to 10, assemble again, and run it. Then change the `'*'` to another character. Can
 > you make the triangle point the other way, with the longest row first? (Start `row` at `ROWS`, and count down.)
 
-## 26.2 A bigger program: hi.s
+## 27.2 A bigger program: hi.s
 
 The SD card has some sample programs, with their sources, in `/sd/0/sample/as`. Copy `hi.s` into `/ram`, assemble
 it, and run it:
@@ -127,7 +127,7 @@ I'm task 4, in /ram.
 Run with names, `hi` greets each one; without, it greets you. Then it says which task it's running in, and its
 current directory. (`./hi` runs the `hi` in this directory: just `hi` would look for it in `/bin` too.)
 
-## 26.3 Inside hi.s
+## 27.3 Inside hi.s
 
 Here is `hi.s`. It's longer than `stars.s`, and it uses more of what `as` can do. Don't worry if parts of it look
 strange: the rest of this chapter explains every one.
@@ -223,9 +223,9 @@ s_end:      .byte       ".", LF, 0
 
 What's new here:
 
-* `macros.inc`'s **macros** `LDR`, `MOVR`, `PRINT`, `CALL` and `CHECK` (section 26.11). A macro is a name for
+* `macros.inc`'s **macros** `LDR`, `MOVR`, `PRINT`, `CALL` and `CHECK` (section 27.11). A macro is a name for
   several instructions: `PRINT "Hello, "` is the instructions that print that string.
-* `.bss` and `.rodata` are two more segments (section 26.8): the BSS's buffers `cwd` and `window`, and the
+* `.bss` and `.rodata` are two more segments (section 27.8): the BSS's buffers `cwd` and `window`, and the
   read-only data (the strings).
 * A label alone on a line, `:`, has no name: `:+` means the next one, and `:--` the one two back.
 * A program starts with its arguments in r0: `main` walks along them, greeting each.
@@ -234,7 +234,7 @@ What's new here:
   a variable called `window`, and looks for it with the system call `ENV_GET`. In the run above there was none, so
   `CHECK @end` skipped the last two `PRINT`s.
 
-## 26.4 What's on a line
+## 27.4 What's on a line
 
 Each line of a source can have, in this order, any of:
 
@@ -247,11 +247,11 @@ Spaces and tabs separate the parts; how many doesn't matter, so line your column
 and directives can be written in capitals or small letters (`LDA`, `lda`). Names are different: `Count` and `count`
 are two different names. A line can be 255 characters long.
 
-Instructions are written as in section 25.6: `lda #$41`, `sta $22,x`, `lda (r0),y`, `jmp ($1234,x)`, `asl a`. When
+Instructions are written as in section 26.6: `lda #$41`, `sta $22,x`, `lda (r0),y`, `jmp ($1234,x)`, `asl a`. When
 an address is under $100, `as` uses the shorter zero page form. To force the 3-byte form, write `a:` before it
 (`lda a:$12`); to insist on the zero page form, `z:`.
 
-## 26.5 Labels
+## 27.5 Labels
 
 A label names the place it's at. There are three kinds:
 
@@ -274,7 +274,7 @@ labels are for little hops of a line or two:
 A name is letters, digits and `_` (and a cheap local's `@` in front), starting with a letter or `_`, and up to 32
 characters long.
 
-## 26.6 Numbers and expressions
+## 27.6 Numbers and expressions
 
 Numbers can be written in four ways:
 
@@ -318,7 +318,7 @@ instead of the signs.
 | `.blank(x)` | 1 if nothing's in the brackets (for macros) |
 | `.match(a, b)` | 1 if *a* and *b* are the same kinds of thing (for macros) |
 
-## 26.7 Constants
+## 27.7 Constants
 
 `name = expression` makes a **constant**: a name for a number. `name := expression` is the same. Constants make
 programs easier to read and to change:
@@ -332,7 +332,7 @@ MIDDLE      = SCREEN_W / 2
 A constant isn't stored in the program: `as` puts its value wherever its name is used. `hydra.inc` is mostly
 constants: `PUTC = $F950` is the address of the `PUTC` system call.
 
-## 26.8 Segments: where everything goes
+## 27.8 Segments: where everything goes
 
 A program has several parts, called **segments**. `as` keeps each one's lines together, wherever they are in the
 source, and puts the segments in order when it writes the program:
@@ -358,7 +358,7 @@ bytes more, isn't in it.)
 
 A program can be 30K at most: from $0800 to $7FFF, its BSS included. It has 94 bytes of zero page ($22 to $7F).
 
-## 26.9 Data
+## 27.9 Data
 
 | Directive | What it puts in the program |
 |---|---|
@@ -381,7 +381,7 @@ buffer:     .res 256                ; 256 bytes, cleared as it starts
 A string in HydraOS ends with a 0 byte: that's how `PUTS` knows where it stops. A string can't have a `"` in it;
 use its code, `34`, in a `.byte` instead.
 
-## 26.10 Including files
+## 27.10 Including files
 
 `.include "file"` reads another source file in, as if its lines were in this one. `as` looks for the file as it's
 named, then in the directory of the file that includes it, and then in `/lib/as`, which has the **SDK**'s files (the
@@ -392,8 +392,8 @@ software development kit's: the files for writing programs):
 | `hydra.inc` | Every system call's address, every error code, and HydraOS's constants (Appendix K) |
 | `hyx2.inc` | The header macros: `HYX2_PROGRAM` for a program, `HYX2_DRIVER` for a driver, `HYX2_LIBRARY` |
 | `macros.inc` | `LDR`, `MOVR`, `PRINT`, `CALL`, `CHECK`; and `CR`, `LF`, `TAB` |
-| `toollib.inc`, `toollib.s` | The tools' library: flags, files, output (section 26.16) |
-| `numbers.inc`, `numlib.s` | The numbers and math libraries (section 26.16) |
+| `toollib.inc`, `toollib.s` | The tools' library: flags, files, output (section 27.16) |
+| `numbers.inc`, `numlib.s` | The numbers and math libraries (section 27.16) |
 | `asmlib.inc` | The assembler library itself, for programs that assemble or disassemble |
 | `srvlib.inc`, `srvlib.s` | For writing a **server**: a driver with files of its own |
 | `nslib.s` | Building a namespace from a namespace file, as init does |
@@ -401,7 +401,7 @@ software development kit's: the files for writing programs):
 A `.s` file of the SDK is included at the **end** of a program's source (its code is put after the program's own),
 and its `.inc` at the top.
 
-## 26.11 Macros
+## 27.11 Macros
 
 A **macro** is a piece of source with a name. Using the name puts the piece in, as if you'd typed it. Macros can
 have **parameters**: names that are replaced by what's written after the macro's name when it's used.
@@ -447,7 +447,7 @@ Hooooo!!!
 ```
 
 `.macro NAME param, ...` starts one (up to 9 parameters), and `.endmacro` ends it. `.exitmacro` leaves it early (in
-an `.if`, section 26.12). An unnamed label inside a macro is fine, as here; but a normal label would be defined twice
+an `.if`, section 27.12). An unnamed label inside a macro is fine, as here; but a normal label would be defined twice
 if the macro were used twice.
 
 The SDK's macros, in `macros.inc`, make the commonest jobs shorter:
@@ -463,7 +463,7 @@ The SDK's macros, in `macros.inc`, make the commonest jobs shorter:
 
 Note that `LDR`, `MOVR` and `PRINT` change A (and `PRINT` changes Y and r0 too).
 
-## 26.12 Conditions and checks
+## 27.12 Conditions and checks
 
 **Conditional assembly** assembles some lines only if something's so:
 
@@ -498,7 +498,7 @@ Note that `LDR`, `MOVR` and `PRINT` change A (and `PRINT` changes Y and r0 too).
 directives that don't matter here (`.setcpu`, `.import`, `.export`, `.global`, `.macpack`, `.feature`, `.list`,
 `.case`, `.smart` and others), so ca65's sources assemble.
 
-## 26.13 System calls
+## 27.13 System calls
 
 A **system call** asks HydraOS to do something: print, open a file, start a program, wait. Each has an address in
 HydraOS's **jump table**, from $F800 up, and a program calls it with `jsr`. The rules are the same for all of them:
@@ -532,7 +532,7 @@ after the other, with an empty string (a lone 0) after the last. `hi.s` shows ho
 **Ending.** When `main` returns (`rts`), the program ends with exit code 0, which means success. To end with
 another code, and a message, put them in A and r0 and `jmp EXITS`. rc's `$status` shows the message (section 8.9).
 
-## 26.14 Reading a file
+## 27.14 Reading a file
 
 `show.s` is a little `cat`: it prints the file it's given. It opens the file, then reads 256 bytes at a time and
 writes them to fd 1 until a read gives 0 bytes, which means the end. If any call fails, it prints the error's
@@ -616,10 +616,10 @@ usage: show file
 ```
 
 Look at the start of `@fail`. `LDR` uses A, so the error code in A would be lost: `pha` keeps it on the stack, and
-`pla` brings it back for `ERRSTR`. Mistakes like this are easy to make, and the debugger (Chapter 28) is how you find
+`pla` brings it back for `ERRSTR`. Mistakes like this are easy to make, and the debugger (Chapter 29) is how you find
 them.
 
-## 26.15 More memory: RAM banks
+## 27.15 More memory: RAM banks
 
 A program's 30K isn't much. But each task also has its own **RAM banks**, 8K each: 16 on each RAM module of the
 memory card (48 on the book's Hydra). A program asks HydraOS for banks with `BANKS_ALLOC`, and writes a bank's number
@@ -679,7 +679,7 @@ Only one bank is at $8000 at a time; to use another, write its number to $00. Th
 task has. For more memory in the program's own 32K, `BREAK` moves the program's **break** (the end of its memory,
 after its BSS) further up.
 
-## 26.16 The SDK's libraries
+## 27.16 The SDK's libraries
 
 The SDK has libraries that save writing everything yourself. Each sample on the SD card shows one:
 
@@ -717,7 +717,7 @@ sqrt 1.68325082306
 **note handler**, set with the `NOTIFY` call. The `tick` sample prints a dot a second until you press
 <kbd>CTRL</kbd>-<kbd>C</kbd>, and then, instead of just stopping, says how many seconds it ran.
 
-## 26.17 as's options and the labels file
+## 27.17 as's options and the labels file
 
 **The program's name.** `as stars.s` makes `stars`; `as stars.s /bin/stars` puts it straight in `/bin` (in fact in
 `/ram/bin`, where new files in `/bin` go: section 9.7), so the shell finds it as plain `stars`, from any directory. A
@@ -772,7 +772,7 @@ cd /ram
 
 The five bytes are `asl a` ($0A), `bcc` ($90) and its distance (1: past one byte), `inx` ($E8) and `rts` ($60).
 
-## 26.18 When as finds a mistake
+## 27.18 When as finds a mistake
 
 `as` says each mistake as *file*`:`*line*`:` *what*, and makes no program:
 
@@ -816,7 +816,7 @@ cd /ram
 as: bad.s:8: not a byte
 ```
 
-Line 8 is `lda #300`: a byte only goes up to 255. `as` reads a source three times (section 26.19), and it stops
+Line 8 is `lda #300`: a byte only goes up to 255. `as` reads a source three times (section 27.19), and it stops
 after the first reading that finds a mistake, so a mistake can hide another until it's fixed. The messages you'll
 see most:
 
@@ -836,10 +836,10 @@ see most:
 | `data in BSS or the zero page` | Only `.res` can go in those segments |
 | `too big: past $8000` | The program (with its BSS) is bigger than 30K |
 | `the zero page's $5E bytes overrun` | More zero page variables than fit in $22 to $7F |
-| `a segment's size changed between passes` | A size that depends on a name defined later (section 26.19) |
+| `a segment's size changed between passes` | A size that depends on a name defined later (section 27.19) |
 | `an assertion failed` | An `.assert` (`HYX2_PROGRAM`'s, say: a name longer than 11 characters) |
 
-## 26.19 How as works
+## 27.19 How as works
 
 `as` reads the source three times, called **passes**:
 
@@ -862,10 +862,10 @@ It has some limits: lines of 255 characters, names of 32, files and macros 16 in
 9 parameters to a macro, and 30 errors (then it stops).
 
 `as` is a small program; the assembler itself is the **asm library**, a module in the ROM. HyBASIC uses the same
-library for its `ASM` blocks (section 26.20), and the disassembler and debugger use its other half to show
+library for its `ASM` blocks (section 27.20), and the disassembler and debugger use its other half to show
 instructions, so all of them write instructions exactly the same way.
 
-## 26.20 Assembly language in HyBASIC
+## 27.20 Assembly language in HyBASIC
 
 HyBASIC can have assembly language inside a program. The lines between `ASM` and `END ASM` (each alone on its
 line) are given to the assembler when the program runs, and `CALL ASM label` calls the code at one of their labels:
@@ -915,11 +915,11 @@ twice 21 is 42
 
 `SYS address [, a [, x [, y]]]` calls machine code anywhere in memory, as `CALL ASM` does.
 
-## 26.21 Machine code from HyForth
+## 27.21 Machine code from HyForth
 
 HyForth's `sys` ( *addr a x y* -- *a x y p* ) calls machine code at *addr* with A, X and Y set, and gives back the
 registers and the flags after it (`lib hydra` has it). The machine code can be anywhere: here it's made with `c,`
-right in the dictionary, a byte at a time, and `disasm` (Chapter 27) shows it:
+right in the dictionary, a byte at a time, and `disasm` (Chapter 28) shows it:
 
 ```session
 /> lib hydra
@@ -942,7 +942,7 @@ The bytes are `lda #'H'`, `jsr PUTC`, `lda #'i'`, `jsr PUTC` and `rts`. After it
 X and A (105, the code of `i`, which it was left holding).
 
 A file made with `as -b` can be read into memory with HyForth's file words, and called the same way. Here is
-`raw.s`'s routine from section 26.17, which doubles A (its carry going into X), given 200:
+`raw.s`'s routine from section 27.17, which doubles A (its carry going into X), given 200:
 
 <!-- session
 cd /ram

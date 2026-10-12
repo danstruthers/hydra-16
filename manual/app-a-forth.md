@@ -405,7 +405,7 @@ The number stack's words; `N:` shows it. Any number Forth's cells can't hold goe
 | `rand`, `rand32` | ( -- *u* ), ( -- *ud* ) | A random number (`random`) |
 | `random` | ( *u1* -- *u2* ) | One from 0 to *u1* - 1 |
 | `rseed` | ( *ud* -- ) | Start the random numbers |
-| `disasm` | ( *addr u* -- ) | Disassemble *u* instructions from *addr* (`disasm`: Chapter 27) |
+| `disasm` | ( *addr u* -- ) | Disassemble *u* instructions from *addr* (`disasm`: Chapter 28) |
 
 ## A.17 The device libraries
 

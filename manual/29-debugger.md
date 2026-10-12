@@ -1,4 +1,4 @@
-# Chapter 28. The Debugger
+# Chapter 29. The Debugger
 
 A **bug** is a mistake in a program, and **debugging** is finding it. The hardest part is usually seeing what the
 program is really doing, as opposed to what you meant it to do. A **debugger** shows you: it runs a program an
@@ -6,7 +6,7 @@ instruction at a time, or up to a place you choose, and lets you look at its reg
 on the way. The Hydra's debugger is `db`.
 
 > **IN THIS CHAPTER:** You'll run a program an instruction at a time, set breakpoints, look at its registers and
-> memory and change them, and hunt down a real bug. **You need:** Chapters 25 and 26: it uses their programs `stars`
+> memory and change them, and hunt down a real bug. **You need:** Chapters 26 and 27: it uses their programs `stars`
 > and `show`.
 
 ```text
@@ -18,7 +18,7 @@ db -p task
 with no `/` in it is looked for in `/bin`, so a program in this directory is `./name`. `db -p task` stops a task that's
 already running, wherever it is, and debugs that.
 
-## 28.1 The commands
+## 29.1 The commands
 
 `db` shows the registers, then waits at its prompt, `db>`, for a command:
 
@@ -42,9 +42,9 @@ Any other line shows a short list of the commands.
 An **address** is a number in hex (with a `$` in front, or not), or a name from a labels file, with `+` or `-` and a
 distance in hex after it if you like: `0842`, `$0842`, `line`, `main+9`. A count, *n*, is in decimal.
 
-## 28.2 Starting
+## 29.2 Starting
 
-This chapter debugs Chapter 26's `stars`. Assemble it with `-l`, so there's a labels file, and start it in `db`:
+This chapter debugs Chapter 27's `stars`. Assemble it with `-l`, so there's a labels file, and start it in `db`:
 
 <!-- session
 cd /ram
@@ -70,7 +70,7 @@ db> l stars.lbl
 | `PC=0830` | The program counter: the next instruction is at $0830 |
 | `A=30 X=FF Y=00` | The registers A, X and Y |
 | `S=FD` | The stack pointer |
-| `P=nv--dizc` | The flags: a capital letter for a flag that's 1, a small one for 0 (section 25.3) |
+| `P=nv--dizc` | The flags: a capital letter for a flag that's 1, a small one for 0 (section 26.3) |
 | `W=0 U=0` | The Hydra's W and U registers, as the task sees them |
 | `RAM=00 ROM=00` | The task's RAM bank and ROM bank registers ($00 and $01) |
 
@@ -79,7 +79,7 @@ Under it is the next instruction: its address, its bytes, and what it is.
 `l` loads names. `/lib/as/hydra.inc` has the system calls' and the call registers' names, and `stars.lbl` the
 program's own labels, so `db` can write `jsr PUTC` and `sta row` instead of `jsr $F950` and `sta $22`.
 
-## 28.3 Looking at the program
+## 29.3 Looking at the program
 
 `d` disassembles. Here is all of `stars`:
 
@@ -118,7 +118,7 @@ db> d main 19
 After each instruction, `db` says where it is, by the nearest label before it. The last two lines aren't code: `d`
 doesn't know where the program ends, and the bytes after the last `rts` make nonsense instructions.
 
-## 28.4 Stepping
+## 29.4 Stepping
 
 `s` runs one instruction, and shows the registers after it:
 
@@ -153,7 +153,7 @@ PC=0844 A=01 X=FF Y=00 S=FB P=nv--dizc W=0 U=0 RAM=00 ROM=00
 * `s 3` ran three instructions, showing each one as it went: `lda row`, the `jsr`, and, inside `line`, `sta count`.
   S went from $FD to $FB: the `jsr` pushed its return address, two bytes, on the stack.
 
-## 28.5 Breakpoints
+## 29.5 Breakpoints
 
 Stepping through a whole program would take forever. A **breakpoint** stops the program when it gets to a place:
 
@@ -185,7 +185,7 @@ printing its star, and stopped when it called `line` again, for the second row. 
 row. You can have 16 breakpoints, but only in RAM: `db` makes one by putting a `BRK` instruction in the program while it
 runs, and taking it out again when it stops, so it can't make one in ROM.
 
-## 28.6 Until, and next
+## 29.6 Until, and next
 
 `u` runs (a step at a time) until the program reaches an address. `u main+9` runs to the instruction after
 `jsr line`, which finishes this call of `line`:
@@ -235,7 +235,7 @@ PC=0839 A=0A X=FF Y=00 S=FD P=nv--dizc W=0 U=0 RAM=00 ROM=00
 `u` steps as `n` does, so it only stops at an address in the same subroutine, or one it returns to: `u line` from
 `main` would run straight past, because `n` runs `line` whole.
 
-## 28.7 Changing the program
+## 29.7 Changing the program
 
 `w` writes bytes into the program's memory, while it's stopped. The star is the operand of `lda #$2A`, the byte at
 $0845. Write $23, the code of `#`, there, and let it run on:
@@ -270,10 +270,10 @@ The last two rows are made of `#`. The program ended, and so did `db`. The chang
 `stars` is just as it was. So when you've found a fix this way, put it in the source, and assemble it again. (`db`
 can change memory, but not the registers.)
 
-## 28.8 Finding a bug
+## 29.8 Finding a bug
 
-Here's a real bug. Chapter 26's `show` was first written without its `pha` and `pla`. That first version is
-`show1.s` (section 28.12 shows how to make it). It worked, except when the file wasn't there:
+Here's a real bug. Chapter 27's `show` was first written without its `pha` and `pla`. That first version is
+`show1.s` (section 29.12 shows how to make it). It worked, except when the file wasn't there:
 
 <!-- session
 cd /ram
@@ -332,7 +332,7 @@ db> q
 The fix keeps A safe on the stack while `LDR` works: `pha` before it, and `pla` after, as `show.s` has. Most bugs
 are like this: something changed that you didn't expect to change. The debugger shows you exactly where.
 
-## 28.9 Stopping a running program
+## 29.9 Stopping a running program
 
 `c` runs until something stops the program. If it never stops, <kbd>CTRL</kbd>-<kbd>C</kbd> does: it goes to `db`
 (the program runs in a note group of its own, so the note doesn't reach it), and `db` stops the program wherever it
@@ -364,7 +364,7 @@ After eight dots, <kbd>CTRL</kbd>-<kbd>C</kbd> stopped it. `(in a call: its stat
 call, `SLEEP` (state 6 is sleeping): the PC, $EB1B, is in HydraOS's kernel. You can't step there, but `c` runs it on,
 and `q` ends it.
 
-## 28.10 Debugging a running task
+## 29.10 Debugging a running task
 
 `db -p` stops a task that's already running, to look at it. Here a `sleep` runs in the background (it's task 4, as
 `ps` would say):
@@ -383,7 +383,7 @@ db> q
 
 `q` lets a task `db` stopped run on, as if nothing had happened.
 
-## 28.11 How db works
+## 29.11 How db works
 
 `db` uses the files of `/proc` (section 17.8). `/proc/5/ctl` takes the commands `stop`, `start`, `step`, `next`,
 `break` and `nobreak` (and `kill`, which `q` uses), and `/proc/5/mem` is task 5's memory, which `db` reads and writes
@@ -393,9 +393,9 @@ work. And HydraOS keeps a stopped task's registers where `db` can read them.
 So `db` is an ordinary program, with no special powers: it only uses files that any program can. That's the Plan 9
 way of doing things, which HydraOS follows (Chapter 9).
 
-## 28.12 Making show1.s
+## 29.12 Making show1.s
 
-`show1.s` is `show.s` (section 26.14) with three small changes, so you don't need to type it all again. Copy
+`show1.s` is `show.s` (section 27.14) with three small changes, so you don't need to type it all again. Copy
 `show.s` to `show1.s`, and open the copy in `edit`:
 
 1. In the first line's comment, and in the `HYX2_PROGRAM` line, change `show` to `show1`:
@@ -422,4 +422,4 @@ and make them one, without the `pha` and the `pla`:
 @fail:      LDR r0, msg         ; The error's text
 ```
 
-That missing pair is the bug that section 28.8 hunts down.
+That missing pair is the bug that section 29.8 hunts down.

@@ -28,11 +28,12 @@ part4.md
 22-hylang-hydra.md
 23-basic.md
 24-basic-hydra.md
+25-three-languages.md
 part5.md
-25-65c02.md
-26-assembler.md
-27-disassembler.md
-28-debugger.md
+26-65c02.md
+27-assembler.md
+28-disassembler.md
+29-debugger.md
 appendices.md
 app-a-forth.md
 app-b-hylang.md

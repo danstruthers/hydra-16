@@ -29,7 +29,7 @@ choices. *n* and *x* are numbers, *s$* a string, *v* a variable, *f* a file numb
 | `ARG$` | `ARG$(n)` | A program's argument *n* (0: its file's name) |
 | `AS` | | In `DIM`, `OPEN`, `NAME` and `TYPE` |
 | `ASC` | `ASC(s$)` | The code of the first character |
-| `ASM` | `ASM` ... `END ASM` | Assembly language in the program (Chapter 26); `CALL ASM` *label* calls it |
+| `ASM` | `ASM` ... `END ASM` | Assembly language in the program (Chapter 27); `CALL ASM` *label* calls it |
 | `ATN` | `ATN(x)` | The arctangent |
 | `BANK` | `BANK n`, `BANK()` | Which RAM bank `PEEK` and `POKE` see at $8000 |
 | `BASE` | `BASE b$`; `OPTION BASE 0` \| `1` | The base numbers are read and shown in; arrays' lowest index |

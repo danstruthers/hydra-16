@@ -53,7 +53,7 @@ Each language shows these errors in its own way:
 | Where | How an error shows |
 |---|---|
 | rc | The program's message; `$status` holds it (section 8.9) |
-| Assembly language | C = 1 after the call, and the code in A; `ERRSTR` gives the message (section 26.13) |
+| Assembly language | C = 1 after the call, and the code in A; `ERRSTR` gives the message (section 27.13) |
 | HyForth | An **ior** of -512 less the code (so `not found`, $20, is -544), which `throw` reports with its message; `ior>text` gives the message |
 | hylang | An error whose message is "*name*: *message*", and whose code (`&code`, `(error-code e)`) is the name in small letters without its `E_`: `:noent` |
 | HyBASIC | Error number 256 plus the code (so `not found` is 288), with its message (`ERR`, `ERR$`, `ERL`) |

@@ -236,7 +236,7 @@ PC=EA8A A=00 X=04 Y=02 S=E7 P=37 W=00 U=00 RAM=00 ROM=1E
 | `note` *n* | Send it note *n* |
 | `stop` | Stop it: it isn't given any more turns until it's started again |
 | `start` | Start it again |
-| `step`, `next`, `break`, `nobreak` | For the debugger, `db` (Chapter 28) |
+| `step`, `next`, `break`, `nobreak` | For the debugger, `db` (Chapter 29) |
 
 `ps` and `top` read `/proc`; so does the debugger, which reads and writes a program's memory through `mem`.
 
