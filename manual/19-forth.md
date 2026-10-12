@@ -73,7 +73,30 @@ the order of the words says what's done first:
 14
 ```
 
-The first adds 2 and 3, then multiplies by 4. The second multiplies 3 by 4, then adds 2.
+The first adds 2 and 3, then multiplies by 4. The second multiplies 3 by 4, then adds 2. When a line of Forth
+puzzles you, do what Forth does: go along it a word at a time, and keep track of the stack. Here's the first line,
+that way:
+
+| The word | What it does | The stack afterwards |
+|---|---|---|
+| `2` | Goes on the stack | 2 |
+| `3` | Goes on the stack | 2 3 |
+| `+` | Takes 2 and 3, puts back 5 | 5 |
+| `4` | Goes on the stack | 5 4 |
+| `*` | Takes 5 and 4, puts back 20 | 20 |
+| `.` | Takes 20, and prints it | (empty) |
+
+To turn a sum from school into Forth, work from the inside out: do the parts in parentheses first. For (3 + 4) ×
+(5 − 2), make the 7, then make the 3, then multiply them:
+
+```session
+/> 3 4 + 5 2 - * .
+21
+```
+
+> **TRY THIS:** Work these out in your head, then ask HyForth: `10 2 3 + * .` and `10 2 * 3 + .` Now write (8 − 2) ×
+> (1 + 1) in Forth. (It should print 12.) If a line goes wrong half way, `.s` shows what's left on the stack, and
+> a few `drop`s clear it.
 
 > **NOTE:** Each number on Forth's stack is a **cell**: 16 bits, so it holds -32,768 to 32,767 (or 0 to 65,535). A
 > sum that goes past them wraps round: `32767 1 + .` prints `-32768`. Section 20.8 shows how HyForth's numbers library
@@ -146,6 +169,24 @@ A Forth program is just a collection of words, each built from the ones before, 
 job. Give your words names that say what they do, and keep each one short: a line or two. If you define a word again,
 the new definition is used from then on, but the words already made with the old one keep using it.
 
+**A definition on several lines.** A definition doesn't have to fit on one line. Until its `;`, HyForth is still
+**compiling** it: adding each word you type to the new word, not doing it. To show that, the prompt changes to a
+row of spaces:
+
+```session
+/> : half
+        2 /
+        ;
+/> 10 half .
+5
+```
+
+So if the prompt ever turns into spaces when you didn't expect it, you've left out a `;`. Type one, and the normal
+prompt comes back. (A line can be 127 characters long, at most; a long definition *has* to be on several lines.)
+
+> **TRY THIS:** Define `double` ( *n* -- *2n* ), and then `quadruple`, using `double` twice. Check them: `5 quadruple
+> .` should print 20. Then ask `see quadruple`.
+
 ## 19.6 Printing
 
 | Word | Stack | What it does |
@@ -205,7 +246,12 @@ not negative
 ```
 
 `then` is where the paths join up again: "if this, do that, *then* carry on". `if`, `else` and `then` only work
-inside definitions.
+inside definitions, and so do the loops of the next section. Typed at the prompt, they get this answer:
+
+```session
+/> if
+if: compile only
+```
 
 To choose between several cases, use `case`:
 
@@ -254,6 +300,13 @@ And `begin` ... `while` ... `repeat` tests at the start of each time round: it g
 | `begin` ... *flag* `while` ... `repeat` | Repeats while the flag is true |
 | `begin` ... `again` | Repeats for ever (press <kbd>CTRL</kbd>-<kbd>C</kbd>) |
 | `leave` | Leaves a `do` loop at once |
+
+A `do` loop always goes round at least once, and if its start and its end are the same, it goes round 65,536 times:
+all the way round the numbers, and back to where it began. `?do` is `do` with a check: it skips the loop when
+they're the same. Use `?do` whenever the count might be 0.
+
+> **TRY THIS:** `+loop` can count down: `: threes 0 30 do i . -3 +loop cr ;` prints 30 27 24 ... 0. (Counting down,
+> the loop *does* reach its end.) Write `countdown-by` ( *n* -- ), which counts down from 100 in steps of *n*.
 
 ## 19.10 Variables and constants
 
@@ -392,7 +445,24 @@ Other mistakes give a message, and HyForth empties its stack and carries on with
 ```session
 /> 1 0 / .
 division by zero
+/> drop
+stack underflow
 ```
+
+**Stack underflow** means a word wanted more numbers than the stack had. Nothing is harmed.
+
+Here are the mistakes everyone makes when they start, and what to do about each:
+
+| What you see | What happened | What to do |
+|---|---|---|
+| `3+ ?` | No space: `3+` was read as one word | Put a space between every two words |
+| `rc: sqare: not found` | The line's first word wasn't Forth's, so the whole line went to rc as a command (section 8.1) | Check the first word's spelling |
+| A prompt of spaces | You're inside a definition: there was a `:` with no `;` | Type `;` (then define the word again, properly) |
+| `if: compile only` | `if`, a loop or `."` typed outside a definition | Put it in a definition |
+| `stack underflow` | A word needed more numbers than there were | Count what each word takes: write its stack diagram |
+| A wrong answer, with no message | Numbers left on the stack by an earlier line got used | Type `.s` to look, and `drop` what shouldn't be there |
+| `-32768` after `32767 1 +` | The number went past the end of a 16-bit cell | Use the big numbers (section 20.8) |
+| A loop that prints for ever | `do` with equal start and end, or a `begin` loop whose flag never comes true | Press <kbd>CTRL</kbd>-<kbd>C</kbd>; use `?do` |
 
 A program can catch errors itself. `catch` runs a word (given by its **execution token**, which `'` or `[']` gives),
 and leaves 0 if it worked, or the error's number if it **threw** one:
@@ -429,5 +499,109 @@ A file of Forth can also be run as a program, a **script**, with `forth file.fs`
 first line can be `#!/bin/forth`, and then it runs by its name, like any program. In a script, `argc` and `arg` give
 its arguments (section 20.9), and `bye` (or reaching the end) ends it.
 
-Put your Forth files on an SD card, so they're there next time. Chapter 20 shows how to use HyForth to work the
-Hydra's devices, and Appendix A lists every word.
+Put your Forth files on an SD card, so they're there next time.
+
+## 19.17 Whole programs
+
+Here are three small programs that use what this chapter has taught. Type them in, run them, and then change them:
+that's how a language is learned.
+
+### A times table
+
+`.r` prints a number at the right-hand end of a column: `4 .r` uses four characters, so the columns line up.
+`table` prints one row, and `tables` uses it for nine:
+
+```session
+/> : table ( n -- ) 11 1 do dup i * 4 .r loop drop cr ;
+/> 7 table
+   7  14  21  28  35  42  49  56  63  70
+/> : tables ( -- ) 10 1 do i table loop ;
+/> tables
+   1   2   3   4   5   6   7   8   9  10
+   2   4   6   8  10  12  14  16  18  20
+   3   6   9  12  15  18  21  24  27  30
+   4   8  12  16  20  24  28  32  36  40
+   5  10  15  20  25  30  35  40  45  50
+   6  12  18  24  30  36  42  48  54  60
+   7  14  21  28  35  42  49  56  63  70
+   8  16  24  32  40  48  56  64  72  80
+   9  18  27  36  45  54  63  72  81  90
+```
+
+Look at how `table` treats its stack. Its diagram, ( *n* -- ), promises to take one number and leave none. Inside
+the loop, `dup i *` makes a copy of *n* to multiply, so *n* itself is still there for the next time round. After
+the loop, *n* is no longer wanted, and `drop` keeps the promise. A word that leaves the stack different from what
+its diagram says is the commonest bug in Forth.
+
+### Dice
+
+The `random` library has `random` ( *n* -- *r* ), which gives a number from 0 to *n* − 1, chosen by chance. A die
+has six faces, numbered from 1:
+
+```session
+/> lib random
+/> : die ( -- n ) 6 random 1+ ;
+/> : roll ( -- ) die die 2dup . . + ." makes " . cr ;
+/> roll
+2 5 makes 7
+/> roll
+5 3 makes 8
+```
+
+(Yours will fall differently: the library shakes its dice with the clock as it loads.) `roll` throws two dice,
+copies them both with `2dup`, prints the copies, and then adds the two that are left.
+
+### FizzBuzz, in a file
+
+In the game of FizzBuzz, you count aloud, but say "Fizz" instead of every number that 3 goes into, "Buzz" for
+those that 5 goes into, and "FizzBuzz" for both. This program is long enough to belong in a file. Go to `/ram`,
+start `edit fizz.fs`, and type:
+
+<!-- listing samples/fizz.fs -->
+
+```text
+\ fizz.fs - the game of FizzBuzz: count, but say Fizz for the threes,
+\ Buzz for the fives, and FizzBuzz for both
+
+: fizz? ( n -- flag ) 3 mod 0= ;
+: buzz? ( n -- flag ) 5 mod 0= ;
+
+: say ( n -- )
+  dup fizz? over buzz? and if drop ." FizzBuzz " exit then
+  dup fizz? if drop ." Fizz " exit then
+  dup buzz? if drop ." Buzz " exit then
+  . ;
+
+: fizzbuzz ( n -- ) 1+ 1 do i say loop cr ;
+```
+
+Save it, leave the editor, and `include` it:
+
+<!-- session
+cd /ram
+!file samples/fizz.fs
+-->
+
+```session
+/ram> include fizz.fs
+/ram> 15 fizzbuzz
+1 2 Fizz 4 Buzz Fizz 7 8 Fizz Buzz 11 Fizz 13 14 FizzBuzz
+/ram> 6 say
+Fizz
+```
+
+The program is built the Forth way, from the bottom up:
+
+* `fizz?` and `buzz?` are tests: each takes a number, and leaves a flag. (A `?` at the end of a name is the custom
+  for words that ask a question.)
+* `say` says one number. It tries the three special cases in turn; in each, `drop` throws the number away, the
+  word is printed, and `exit` leaves `say` at once. Only if none of them fits does it reach the `.` at the end.
+* `fizzbuzz` is the loop. `1+ 1 do` counts from 1 up to the number it was given.
+
+Because each word does one small job, each can be tried alone, as `6 say` was. When a Forth program doesn't work,
+test its smallest words first.
+
+> **TRY THIS:** Change `fizz.fs` so that numbers 7 goes into say "Whizz". (You'll need a `whizz?`, and one more
+> line in `say`. What should 21 say? And 35?) After each change, `include fizz.fs` again.
+
+Chapter 20 shows how to use HyForth to work the Hydra's devices, and Appendix A lists every word.

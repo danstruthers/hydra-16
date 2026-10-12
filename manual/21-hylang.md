@@ -41,6 +41,20 @@ Because the function always comes first, there's never any doubt about the order
 take as many arguments as you like: `(+ 1 2 3 4)` is 10. hylang has all of Chapter 18's numbers, so `(/ 10 4)` is
 exactly 5/2.
 
+To turn a sum from school into hylang, find the last thing you'd do, and write that first. In (3 + 4) × (5 − 2),
+the last thing is the multiplying, so the `*` goes on the outside, with the two parts as its arguments:
+
+```session
+hylang> (* (+ 3 4) (- 5 2))
+=> 21
+```
+
+Count the parentheses: every `(` needs its `)`. If you press <kbd>RETURN</kbd> before they're all closed, hylang
+doesn't complain. It waits for the rest, with a prompt of spaces, until you type the missing `)`.
+
+> **TRY THIS:** Work these out in your head, then ask hylang: `(- 10 (* 2 3))` and `(* (- 10 2) 3)`. Then write
+> (8 − 2) × (1 + 1) in hylang. (It should say 12.) What does `(/ 1 3)` give? And `(+ (/ 1 3) (/ 1 6))`?
+
 ## 21.3 Values
 
 Every expression has a **value**. The kinds of value are:
@@ -56,7 +70,7 @@ Every expression has a **value**. The kinds of value are:
 | Hashes | `#({{:name "Sam"}})` | `:hash` |
 | Functions | `square`, `(fn {x} {* x x})` | `:function` |
 | True | `T` | `:t` |
-| False, and nothing | `NIL` | |
+| False, and nothing | `NIL` | `:list` (it's the empty list) |
 | Errors | `(error "oops")` | `:error` |
 
 A **string** is text in double quotes. Inside it, `\n` is a new line, `\t` a tab, `\"` a double quote and `\\` a
@@ -66,7 +80,15 @@ An **atom** is a name that stands for itself: `:red` is just `:red`. Atoms are u
 keys of a hash.
 
 `T` means true and `NIL` means false: every test gives one or the other, and anything that isn't `NIL` counts as true.
-`NIL` also means "nothing", or an empty list.
+`NIL` also means "nothing", or an empty list. hylang always prints these two in capitals, so that they stand out;
+you can type them either way.
+
+```session
+hylang> (> 5 3)
+=> T
+hylang> (> 3 5)
+=> NIL
+```
 
 ## 21.4 Names
 
@@ -81,8 +103,12 @@ hylang> (* x x)
 => 100
 ```
 
-`def` makes **global** names, which can be used anywhere. A **prefix** is a shorter way to write some calls: a
-character right against a parenthesis. `:(y 20)` means the same as `(def {y} 20)`:
+`def` makes **global** names, which can be used anywhere. A name is in small letters (hylang turns capitals into
+small letters as it reads them), and it can have digits, and signs like `-` and `?`, in it: `high-score`, `even?`.
+
+`def` is used so often that there's a shorter way to write it: `:(y 20)` means exactly the same as `(def {y} 20)`.
+The `:` right against the parenthesis is a **prefix**. There are a few more prefixes, for other things that are
+used a lot. You'll meet them as you go, and section 21.15 lists them all.
 
 <!-- session
 (def {x} 10)
@@ -95,19 +121,17 @@ hylang> (+ x y)
 => 30
 ```
 
-| Prefix | Means | Example |
-|---|---|---|
-| `:(`*name value*`)` | `(def {`*name*`}` *value*`)` | `:(lives 3)` |
-| `=(`*name value*`)` | `(set {`*name*`}` *value*`)`: a name in this function only | `=(total 0)` |
-| `?(`*test then else*`)` | `(if` *test then else*`)` | `?((> x 5) "big" "small")` |
-| `@(`*formals body*`)` | `(fn` *formals body*`)`: a function | `@({n} {* n 2})` |
-| `#(`*entries*`)` | `(hash-create` *entries*`)`: a hash | `#({{:a 1}})` |
-| `.(`*f list*`)` | `(unpack` *f list*`)`: *f* called with the list's items | `.(+ {1 2 3})` |
-| `~(`*text values*`)` | `(format` *text values*`)` | `~("{} and {}" 1 2)` |
-| `[`*a b*`]` | `(list` *a b*`)` | `[1 (+ 1 1) 3]` |
-| `$`*name* | `(env "`*name*`")`: an environment variable | `$path` |
+A name that hasn't been given a value is an error. This is the message you'll see most often while you're
+learning, usually because of a slip of the finger:
 
-Names are in small letters: hylang turns capitals into small letters as it reads them.
+<!-- session
+(def {x} 10)
+-->
+
+```session
+hylang> (+ x z)
+=> Error: Unbound Symbol 'z'
+```
 
 ## 21.5 Functions
 
@@ -158,6 +182,25 @@ hylang> (fun {add-all} {sum &_})
 hylang> (add-all 1 2 3)
 => 6
 ```
+
+**Too many, and too few.** Give a function more arguments than it has formals, and hylang says so. Give it fewer,
+and something more interesting happens: you get back a *new function*, which is waiting for the rest.
+
+<!-- session
+(fun {square n} {* n n})
+-->
+
+```session
+hylang> (square 1 2)
+=> Error: The function takes 1 argument, not 2
+hylang> (square)
+=> <function>(fn {n} {* n n})
+```
+
+So if an answer comes back as `<function>` when you expected a number, count your arguments.
+
+> **TRY THIS:** Write `(fun {double n} ...)`, and then `quadruple`, which uses `double` twice. Then write `average`,
+> which takes two numbers and gives the number half way between them. `(average 3 4)` should be 7/2.
 
 ## 21.6 Lists, and code as lists
 
@@ -371,6 +414,19 @@ hylang> (try (/ 1 0) (+ "oops: " &err))
 `try` works out its first argument; if that's an error, it works out its second instead, with `&err` the error's
 message (and `&code` its code). `(error "message")` makes an error of your own.
 
+Here are the mistakes everyone makes when they start, and what to do about each:
+
+| What you see | What happened | What to do |
+|---|---|---|
+| `Error: Unbound Symbol 'squre'` | A name hylang doesn't know: nearly always a slip of the finger | Check the spelling |
+| A prompt of spaces | A `(`, a `{` or a `"` hasn't been closed yet | Type what's missing |
+| `<function>(fn ...)` where you expected an answer | The function was given too few arguments | Count them |
+| `Error: The function takes 1 argument, not 2` | It was given too many | Count them |
+| `Error: Unbound Symbol 'n'`, as you define a function | The body is in parentheses, so hylang tried to work it out at once | Put the body in braces: `{* n n}` |
+| `Error: '+' adds numbers, or joins values to a string` | `(+ 1 "a")`: a number first, then a string | To join, put a string first: `(+ "" 1 "a")` |
+| `Error: 'head' expects a QExpr` | A list was wanted (a "QExpr" is a Q-expression: a list in braces) | Give it a list |
+| A changed name that changes back | `=(` made a new name inside a loop or a function | Use `set!` (section 21.10) |
+
 ## 21.14 Files of hylang
 
 Write longer programs in a file (with `edit`), with a name ending in `.hl`, and run it with `hylang` and the file's
@@ -384,5 +440,128 @@ args are {"/ram/a.hl" "one" "two"}
 
 At the prompt, `(load "file")` runs a file's expressions, keeping its definitions. A file's first line can be
 `#!/bin/hylang`, to run it by its name. Comments start with `;`.
+
+## 21.15 Prefixes: writing less
+
+A **prefix** is a character right against an opening parenthesis, which stands for a function that's used a lot.
+You've met `:(`, `=(`, `?(`, `@(` and `#(`. Here they all are:
+
+| Prefix | Means | Example |
+|---|---|---|
+| `:(`*name value*`)` | `(def {`*name*`}` *value*`)` | `:(lives 3)` |
+| `=(`*name value*`)` | `(set {`*name*`}` *value*`)`: a name in this function only | `=(total 0)` |
+| `?(`*test then else*`)` | `(if` *test then else*`)` | `?((> x 5) "big" "small")` |
+| `@(`*formals body*`)` | `(fn` *formals body*`)`: a function | `@({n} {* n 2})` |
+| `#(`*entries*`)` | `(hash-create` *entries*`)`: a hash | `#({{:a 1}})` |
+| `.(`*f list*`)` | `(unpack` *f list*`)`: *f* called with the list's items | `.(+ {1 2 3})` |
+| `~(`*text values*`)` | `(format` *text values*`)` | `~("{} and {}" 1 2)` |
+| `[`*a b*`]` | `(list` *a b*`)` | `[1 (+ 1 1) 3]` |
+| `$`*name* | `(env "`*name*`")`: an environment variable | `$path` |
+
+```session
+hylang> .(+ {1 2 3})
+=> 6
+hylang> ~("{} and {}" 1 2)
+=> "1 and 2"
+hylang> $path
+=> {"." "/bin"}
+```
+
+Prefixes are only a shorter spelling. While you're learning, the long names say more clearly what's going on, and
+you can always use them instead.
+
+## 21.16 Whole programs
+
+Here are three small programs that use what this chapter has taught. Type them in, run them, and then change
+them.
+
+### A times table
+
+`range` makes the numbers 1 to 10, and `map` multiplies each of them by *n*: a whole row of the table at once,
+with no loop in sight. Then `each` prints a row for each *n*:
+
+```session
+hylang> (fun {table n} {map (fn {i} {* n i}) (range 1 11)})
+=> NIL
+hylang> (table 7)
+=> {7 14 21 28 35 42 49 56 63 70}
+hylang> (each {n (range 1 4)} (print (table n)))
+{1 2 3 4 5 6 7 8 9 10}
+{2 4 6 8 10 12 14 16 18 20}
+{3 6 9 12 15 18 21 24 27 30}
+=> NIL
+```
+
+`table` doesn't *print* a row: it *gives* one, as a list, which is more useful. You could add its numbers up with
+`(sum (table 7))`, or ask for `(nth 3 (table 7))`. In hylang, try to write functions that give values, and leave
+the printing to whoever calls them.
+
+### Dice
+
+`(random n)` gives a whole number from 0 to *n* − 1, chosen by chance:
+
+```session
+hylang> (fun {die} {+ 1 (random 6)})
+=> NIL
+hylang> (fun {roll} {do =(a (die)) =(b (die)) (print a b "makes" (+ a b))})
+=> NIL
+hylang> (roll)
+1 5 makes 6
+=> NIL
+hylang> (roll)
+6 6 makes 12
+=> NIL
+```
+
+(Yours will fall differently.) `roll` has to remember each die, to print it and then to add it, so it gives them
+the names `a` and `b`, with `=(`. A function's body is one expression; `do` makes one out of several.
+
+### FizzBuzz, in a file
+
+In the game of FizzBuzz, you count aloud, but say "Fizz" instead of every number that 3 goes into, "Buzz" for
+those that 5 goes into, and "FizzBuzz" for both. Go to `/ram`, start `edit fizz.hl`, and type:
+
+<!-- listing samples/fizz.hl -->
+
+```text
+; fizz.hl - the game of FizzBuzz: count, but say Fizz for the threes,
+; Buzz for the fives, and FizzBuzz for both
+
+(fun {fizz n} {cond
+  {(== 0 (mod n 15)) "FizzBuzz"}
+  {(== 0 (mod n 3)) "Fizz"}
+  {(== 0 (mod n 5)) "Buzz"}
+  {T n}})
+
+(fun {fizzbuzz n} {do
+  (each {i (range 1 (+ n 1))} (write (fizz i) " "))
+  (print)})
+
+(fizzbuzz 15)
+```
+
+Save it, leave the editor, and run it:
+
+<!-- session
+cd /ram
+!file samples/fizz.hl
+-->
+
+```session
+/ram> hylang fizz.hl
+1 2 Fizz 4 Buzz Fizz 7 8 Fizz Buzz 11 Fizz 13 14 FizzBuzz
+```
+
+* `cond` chooses between several cases. Each case is a test and a value, in braces; the first test that's true
+  wins. The last case's test is `T`, which is always true: it catches everything the others didn't.
+* `mod` gives a remainder. If the remainder of *n* divided by 15 is 0, then both 3 and 5 go into *n*. That test has
+  to come first. (Why?)
+* `fizz` gives a string or a number. It doesn't print anything, so it can be tried alone at the prompt:
+  `(load "fizz.hl")`, then `(fizz 9)`.
+* `fizzbuzz` does the printing. `write` prints like `print`, but doesn't start a new line; the `(print)` at the
+  end does.
+
+> **TRY THIS:** Change `fizz.hl` so that numbers 7 goes into say "Whizz". What should 21 say? And 35? And 105?
+> Then, at the `hylang>` prompt, try `(map fizz (range 1 16))`: the whole game as a list.
 
 Chapter 22 shows how to use hylang to work the Hydra, and Appendix B lists every function.

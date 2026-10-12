@@ -85,6 +85,14 @@ for (const i of order) {
 // book.txt
 const listFile = path.join(x.MANUAL, 'book.txt');
 fs.writeFileSync(listFile, fs.readFileSync(listFile, 'utf8').replace(/^(\d\d)(-.*\.md)$/gm, (m0, n, rest) => pad(move(+n)) + rest));
+// index.txt: "term: 6.6, 9.2, 3" (sections, and chapters)
+const indexFile = path.join(x.MANUAL, 'index.txt');
+if (fs.existsSync(indexFile)) {
+  fs.writeFileSync(indexFile, fs.readFileSync(indexFile, 'utf8').split('\n').map(line => {
+    const m = /^([^#:][^:]*:)(.*)$/.exec(line);
+    return m ? m[1] + m[2].replace(/\d+(\.\d+)?/g, moved) : line;
+  }).join('\n'));
+}
 // The tools' comments and strings
 for (const f of others) {
   const text = fs.readFileSync(f, 'utf8');

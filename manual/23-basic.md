@@ -24,7 +24,11 @@ Hello, world!
 ```
 
 You can type keywords in capitals or small letters: HyBASIC turns them into capitals. `?` is a short way to type
-`PRINT`.
+`PRINT`. This book prints HyBASIC in capitals, as the books of the 1980s did, but `print 2 + 3` works just as
+well.
+
+> **TRY THIS:** Use HyBASIC as a calculator. What's `PRINT 365 * 24`: the hours in a year? How many seconds is
+> that? And what does `PRINT 1 / 3 + 1 / 6` give? (HyBASIC keeps fractions exact: Chapter 18.)
 
 ## 23.2 PRINT
 
@@ -94,8 +98,75 @@ number between theirs. That's why lines are usually numbered in tens. `RUN` runs
 | `EDIT` | Edit the program in the screen editor (Chapter 11) |
 | `CONT` | Carry on after a `STOP`, or <kbd>CTRL</kbd>-<kbd>C</kbd> |
 
-To change a line, type it again with the same number. To remove one, type just its number. Program files usually
-have names ending in `.bas`, and a program in a file runs with `basic` and the file's name.
+To change a line, type it again with the same number. To put a line between two others, give it a number between
+theirs. To remove one, type just its number:
+
+```session
+> 10 PRINT "one"
+> 20 PRINT "two"
+> 15 PRINT "one and a half"
+> LIST
+10 PRINT "one"
+15 PRINT "one and a half"
+20 PRINT "two"
+> 20
+> LIST
+10 PRINT "one"
+15 PRINT "one and a half"
+```
+
+A program in memory is gone when you leave HyBASIC, or type `NEW`. `SAVE` keeps it in a file, and `LOAD`
+brings it back:
+
+<!-- session
+10 PRINT "one"
+15 PRINT "one and a half"
+-->
+
+```session
+> SAVE "/ram/count.bas"
+> NEW
+> LIST
+> LOAD "/ram/count.bas"
+> RUN
+one
+one and a half
+```
+
+(Remember section 6.7: `/ram` forgets. Save the programs you want to keep on the SD card, as
+`"/sd/0/work/count.bas"`.) Program files usually have names ending in `.bas`.
+
+**Programs without line numbers.** Line numbers are only needed for typing a program in at the `>` prompt. A
+program in a file doesn't need them, and is easier to read without them. Write it with the screen editor, and run it
+from the shell with `basic` and the file's name:
+
+```text
+/> edit /ram/dice.bas
+```
+
+<!-- listing samples/dice.bas -->
+
+```text
+' dice.bas - throw two dice
+RANDOMIZE TIMER
+A = INT(RND * 6) + 1
+B = INT(RND * 6) + 1
+PRINT A; B; "makes"; A + B
+```
+
+<!-- session
+cd /ram
+!file samples/dice.bas
+-->
+
+```session
+/ram> basic dice.bas
+ 5  6 makes 11
+```
+
+A line that starts with `'` (or `REM`) is a **comment**: a note for people, which HyBASIC skips. `RND` gives a
+number between 0 and 1, chosen by chance, so `INT(RND * 6) + 1` is a whole number from 1 to 6: a die. And
+`RANDOMIZE TIMER` shakes the dice with the clock, so that they don't fall the same way every time.
 
 > **TIP:** For longer programs, `EDIT` is much easier than typing numbered lines: it opens the program in the screen
 > editor, and when you close the editor, HyBASIC takes the program back. In the editor, you don't need line numbers
@@ -281,6 +352,11 @@ A FUNCTION's value is what's given to its name. The variables in a SUB or FUNCTI
 main program's variables of the same names. (`SHARED` lets it use them, and `STATIC` keeps its own between calls.)
 `GOSUB` and `RETURN`, the older way, jump to a line and back.
 
+> **NOTE:** In HydraOS 1.0, HyBASIC remembers a `SUB` or a `FUNCTION` once a program has defined it, and won't
+> let it be defined again: `RUN` the program above a second time, and it stops with `duplicate definition`. Until
+> that's put right, keep a program that has `SUB`s or `FUNCTION`s in a file, and run it from the shell, with
+> `basic` and its name. That works every time.
+
 ## 23.13 Errors
 
 When something goes wrong, HyBASIC stops the program, and says where. A program can catch its errors with `ON ERROR
@@ -298,6 +374,131 @@ after the statement that failed:
 error 11 division by zero
 after
 ```
+
+Here are the mistakes everyone makes when they start, and what to do about each:
+
+```session
+> PRNT 5
+syntax error
+> PRINT "five" + 5
+type mismatch
+> GOTO 999
+label not defined
+> NEXT
+NEXT without FOR
+```
+
+| What you see | What happened | What to do |
+|---|---|---|
+| `syntax error` | HyBASIC couldn't make sense of the line: a keyword spelled wrong, a missing quote or parenthesis | Read the line again, a word at a time |
+| `type mismatch` | A string where a number should be, or the other way round | A string's name ends in `$`; `VAL` and `STR$` change one into the other |
+| `label not defined` | A `GOTO` or `GOSUB` to a line that isn't there | `LIST` the program, and check the number |
+| `NEXT without FOR` | A `NEXT` with no `FOR` before it, or loops that cross each other | Each `FOR` needs its own `NEXT`, inside any loop it's in |
+| `?Redo from start` | `INPUT` wanted a number, and you typed something else | Type a number |
+| `duplicate definition` | A `SUB` or `FUNCTION` defined twice (see section 23.12's note) | Run the program from the shell |
+| `0`, or an empty line, where you expected a value | A variable's name spelled two ways: `SCORE` and `SCROE` are two variables, and the new one is 0 | Check the names |
+| A program that never stops | A loop whose test never comes true | Press <kbd>CTRL</kbd>-<kbd>C</kbd>; then `CONT` carries on, or `LIST` shows the program |
+
+When a program stops with an error, HyBASIC says which line it was in. `LIST` that line, and look at it hard.
+
+## 23.14 Whole programs
+
+Here are three small programs that use what this chapter has taught. Type them in, run them, and then change
+them.
+
+### A times table
+
+A loop inside a loop: for each row `T`, the inner loop prints ten numbers. `PRINT USING "####"` prints each number
+in a column four characters wide, so the columns line up, and the `;` at the end keeps them on one line. The
+`PRINT` at line 50 ends each row:
+
+```session
+> 10 FOR T = 1 TO 9
+> 20   FOR I = 1 TO 10
+> 30     PRINT USING "####"; T * I;
+> 40   NEXT I
+> 50   PRINT
+> 60 NEXT T
+> RUN
+   1   2   3   4   5   6   7   8   9  10
+   2   4   6   8  10  12  14  16  18  20
+   3   6   9  12  15  18  21  24  27  30
+   4   8  12  16  20  24  28  32  36  40
+   5  10  15  20  25  30  35  40  45  50
+   6  12  18  24  30  36  42  48  54  60
+   7  14  21  28  35  42  49  56  63  70
+   8  16  24  32  40  48  56  64  72  80
+   9  18  27  36  45  54  63  72  81  90
+```
+
+> **TRY THIS:** Change the program to ask which table you want (`INPUT "Which table"; T`), and print only that
+> one, as "7 times 3 is 21", a line for each.
+
+### Dice with a score
+
+`dice.bas` threw two dice. This version throws them until they make a double, and counts the throws. It uses a
+`DO` loop, because nobody knows how many times it will go round:
+
+```session
+> 10 RANDOMIZE TIMER
+> 20 THROWS = 0
+> 30 DO
+> 40   A = INT(RND * 6) + 1 : B = INT(RND * 6) + 1
+> 50   THROWS = THROWS + 1
+> 60   PRINT A; B
+> 70 LOOP UNTIL A = B
+> 80 PRINT "A double, after"; THROWS; "throws."
+> RUN
+ 1  2
+ 1  3
+ 4  4
+A double, after 3 throws.
+```
+
+(Yours will fall differently.)
+
+### FizzBuzz, in a file
+
+In the game of FizzBuzz, you count aloud, but say "Fizz" instead of every number that 3 goes into, "Buzz" for
+those that 5 goes into, and "FizzBuzz" for both. Go to `/ram`, start `edit fizz.bas`, and type:
+
+<!-- listing samples/fizz.bas -->
+
+```text
+' fizz.bas - the game of FizzBuzz: count, but say Fizz for the threes,
+' Buzz for the fives, and FizzBuzz for both
+FOR N = 1 TO 15
+  IF N MOD 15 = 0 THEN
+    PRINT "FizzBuzz ";
+  ELSEIF N MOD 3 = 0 THEN
+    PRINT "Fizz ";
+  ELSEIF N MOD 5 = 0 THEN
+    PRINT "Buzz ";
+  ELSE
+    PRINT N;
+  END IF
+NEXT N
+PRINT
+```
+
+Save it, leave the editor, and run it:
+
+<!-- session
+cd /ram
+!file samples/fizz.bas
+-->
+
+```session
+/ram> basic fizz.bas
+ 1  2 Fizz  4 Buzz Fizz  7  8 Fizz Buzz  11 Fizz  13  14 FizzBuzz
+```
+
+`N MOD 3` is the remainder when `N` is divided by 3: if it's 0, then 3 goes into `N`. The test for 15 has to come
+first. (Why?) The lines inside the loop and inside the `IF` are moved in by two spaces. HyBASIC doesn't mind
+either way, but **indenting** like this shows at a glance which lines belong to which loop or test.
+
+> **TRY THIS:** Change `fizz.bas` so that numbers 7 goes into say "Whizz". What should 21 say? And 35? Then make it
+> ask how far to count, with `INPUT`.
 
 Chapter 24 shows how to use HyBASIC to work the Hydra: files, the terminal, sound and graphics. Appendix C lists every
 keyword.
