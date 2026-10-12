@@ -57,14 +57,14 @@ Rules that keep the three in step:
 The review's hardest words were for Part Four: eight pages do not teach a language, and a one-line entry does not
 explain a word.
 
-- [ ] **2.1 The three "Learning" chapters** grow into short courses: each idea with an example to type and one to
+- [x] **2.1 The three "Learning" chapters** grow into short courses: each idea with an example to type and one to
   change, the mistakes a beginner makes and what the Hydra says, and a whole small program built up at the end.
   HyForth: what an unknown word and an unfinished definition look like. hylang: the prefix table after the reader
   has used three prefixes; `T` and `NIL`. HyBASIC: the example that can be `RUN` twice.
-- [ ] **2.2 The three references** (Appendices A, B and C): every word with its arguments, what it does, and a
+- [x] **2.2 The three references** (Appendices A, B and C): every word with its arguments, what it does, and a
   checked example; grouped by job; and every word in the index, so that a word met in an example can be found.
-- [ ] **2.3 The same program in three languages**, side by side, at the end of Part Four.
-- [ ] **2.4 The sample card.** A section for the programs on the SD card (`sketch`, `shapes`, `tones`, `jukebox`,
+- [x] **2.3 The same program in three languages**, side by side, at the end of Part Four.
+- [x] **2.4 The sample card.** A section for the programs on the SD card (`sketch`, `shapes`, `tones`, `jukebox`,
   `race`, `philo` ...): what each shows, and how to run and read it.
 
 ## Phase 3. The Student Companion

@@ -198,7 +198,155 @@ choices. *n* and *x* are numbers, *s$* a string, *v* a variable, *f* a file numb
 | `WRITE` | `WRITE [#f,] items` | Items, strings in quotes, commas between |
 | `XOR` | *a* `XOR` *b* | True if one is, not both |
 
-## C.3 Errors
+## C.3 Examples
+
+Each of these was typed into HyBASIC, as it is here. The ones with line numbers are programs, run with `RUN`.
+
+### Numbers and printing
+
+```session
+> PRINT 7 / 2; 7 \ 2; 7 MOD 2
+ 7/2  3  1
+> PRINT 2 ^ 100
+ 1267650600228229401496703205376
+> PRINT FIXED(22 / 7, 4), RATIONAL(0.75)
+ 3.1428        3/4
+> PRINT INT(-2.5); FIX(-2.5); CINT(2.5); SGN(-9); ABS(-9)
+-3 -2  2 -1  9
+> PRINT SQR(16); SQR(-16); GCD(12, 18); FIB(30)
+ 4  4i  6  832040
+> PRINT HEX$(255); " "; OCT$(8); " "; STR$(255, "b")
+FF 10 11111111
+> PRINT USING "###.##"; 3.14159
+  3.14
+> PRINT "A"; TAB(10); "B"; SPC(3); "C"
+A        B   C
+> WRITE "Sam", 12
+"Sam",12
+```
+
+### Strings
+
+```session
+> A$ = "Hydra-16"
+> PRINT LEN(A$); LEFT$(A$, 5); " "; RIGHT$(A$, 2); " "; MID$(A$, 2, 3)
+ 8 Hydra 16 ydr
+> PRINT INSTR(A$, "-"); UCASE$(A$); " "; LCASE$(A$)
+ 6 HYDRA-16 hydra-16
+> PRINT ASC("A"); CHR$(66); VAL("42 apples") + 1; STR$(7) + "!"
+ 65 B 43  7!
+> PRINT STRING$(5, "*"); SPACE$(2); LTRIM$("   x")
+*****  x
+```
+
+### Decisions and loops
+
+```session
+> 10 FOR I = 10 TO 1 STEP -3 : PRINT I; : NEXT : PRINT
+> 20 N = 1 : DO WHILE N < 50 : N = N * 2 : LOOP : PRINT N
+> 30 SELECT CASE N
+> 40   CASE 1 TO 9 : PRINT "small"
+> 50   CASE IS > 60 : PRINT "big"
+> 60   CASE ELSE : PRINT "middling"
+> 70 END SELECT
+> 80 ON 2 GOSUB 100, 200 : END
+> 100 PRINT "first" : RETURN
+> 200 PRINT "second" : RETURN
+> RUN
+ 10  7  4  1
+ 64
+big
+second
+```
+
+### Arrays, data and records
+
+```session
+> 10 DIM A(4)
+> 20 FOR I = 0 TO 4 : READ A(I) : NEXT
+> 30 DATA 5, 3, 8, 1, 9
+> 40 IF A(0) > A(1) THEN SWAP A(0), A(1)
+> 50 PRINT A(0); A(1); LBOUND(A); UBOUND(A)
+> 60 TYPE PET
+> 70   KIND AS STRING
+> 80   LEGS AS INTEGER
+> 90 END TYPE
+> 100 DIM P AS PET
+> 110 P.KIND = "dog" : P.LEGS = 4
+> 120 PRINT "A "; P.KIND; " has"; P.LEGS; "legs"
+> RUN
+ 3  5  0  4
+A dog has 4 legs
+```
+
+### Procedures
+
+```session
+> 10 PRINT TWICE(21)
+> 20 SHOUT "hello"
+> 30 END
+> 40 FUNCTION TWICE(N)
+> 50   TWICE = N * 2
+> 60 END FUNCTION
+> 70 SUB SHOUT(S$)
+> 80   PRINT UCASE$(S$); "!"
+> 90 END SUB
+> RUN
+ 42
+HELLO!
+```
+
+### Files
+
+```session
+> OPEN "/ram/pets.txt" FOR OUTPUT AS #1
+> PRINT #1, "Rex" : PRINT #1, "Max"
+> CLOSE #1
+> OPEN "/ram/pets.txt" FOR INPUT AS #1
+> LINE INPUT #1, A$ : PRINT A$; EOF(1)
+Rex 0
+> LINE INPUT #1, A$ : PRINT A$; EOF(1)
+Max-1
+> CLOSE
+> FILES "/ram"
+bin/            lib/            pets.txt
+> KILL "/ram/pets.txt"
+```
+
+### Catching errors
+
+```session
+> 10 ON ERROR GOTO 100
+> 20 PRINT 1 / 0
+> 30 PRINT "carried on"
+> 40 END
+> 100 PRINT "error"; ERR; "in line"; ERL; ": "; ERR$
+> 110 RESUME NEXT
+> RUN
+error 11 in line 20 : division by zero
+carried on
+```
+
+### The system, and bits
+
+```session
+> PRINT DATE$; " "; TIME$
+2000-01-01 00:00:05
+> SHELL "echo hello from the shell"
+hello from the shell
+> PRINT STATUS
+ 0
+> A$ = SHELL$("date") : PRINT LEFT$(A$, 10)
+2000-01-01
+> ENVIRON "colour=blue" : PRINT ENV$("colour")
+blue
+> PRINT HEX$(PEEK(65533)); FRE(0) > 0
+E0-1
+> PRINT BIT(5, 0); SHL(1, 4); 12 AND 10; 12 OR 10; 12 XOR 10
+ 1  16  8  14  6
+```
+
+## C.4 Errors
 
 HyBASIC's error messages name what went wrong; `ERR` gives its number, `ERR$` its message, and `ERL` its line. A
 system error's number is 256 plus its code from Appendix G.

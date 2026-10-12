@@ -126,6 +126,7 @@ h1.index-title { font: 30pt "Arial Black", Arial, sans-serif; border-bottom: 3pt
 .index .ix-letter { font: 12pt "Arial Black", Arial, sans-serif; margin: 8pt 0 2pt; break-after: avoid; }
 .index .ix { margin: 0 0 1pt; padding-left: 1.2em; text-indent: -1.2em; break-inside: avoid; }
 .index .ix-pg { margin-left: 0.5em; color: #555; }
+.index .ix-lang { font-size: 7pt; color: #666; }
 
 /* ---- Appendix D's table of the opcodes: 16 columns */
 .opmatrix table { font-size: 6.2pt; table-layout: fixed; }

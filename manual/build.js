@@ -61,7 +61,8 @@ const NOT_TERMS = new Set(['*', 'about fifty commands', 'and', 'both', 'chapter 
   'write', 'quit', 'name', 'groups', 'number', 'program', 'actions', 'message', 'entries', 'requests', 'storage', 'files',
   'windows', 'shells', 'programs', 'the appendices', 'appendices', 'the tasks', 'the pc', 'the disks', 'the clock', 'the pins',
   'the windows', 'the terminal', 'the i²c bus', 'the pin headers', 'the pin sockets', 'the ram disks', 'the rom disk', 'odd',
-  'cold joint', 'bridge', 'lifted pad', 'functions', 'variables', 'teachers', 'students aged 12 and up', 'part one, meet the hydra']);
+  'cold joint', 'bridge', 'lifted pad', 'functions', 'variables', 'teachers', 'students aged 12 and up', 'part one, meet the hydra',
+  'chapter 7', 'chapter 8', 'part four', 'fifteen to twenty hours', 'if you burn yourself', 'ram disk forgets', 'the ram disk forgets']);
 function indexTerm(t) {
   t = t.replace(/\s+/g, ' ');
   const p = plain(t).trim();
@@ -69,6 +70,15 @@ function indexTerm(t) {
   if (NOT_TERMS.has(p.toLowerCase())) return null;
   t = t.replace(/^(The|the|A|a|An|an) /, '');
   return NOT_TERMS.has(plain(t).toLowerCase()) ? null : t;
+}
+// The word a reference table's entry is for: "(len l)" is len, "LEFT$(s$, n)" is LEFT$, "dup" is dup; nothing for
+// a piece of syntax ("{a b ...}", a closing quote, an example in a later column's style)
+function languageWord(code) {
+  let w = code.trim();
+  if (w.startsWith('(') && w.length > 1) w = w.slice(1);       // (A call: its function)
+  w = w.split(/[\s()]/)[0];
+  if (!w || w.length > 24 || /^["')}\]]+$/.test(w) || /^[{[]/.test(w) || /\.\.\.$/.test(w) || w === '|') return null;
+  return w;
 }
 // The places in html not to look in: its tables, code blocks, headings, captions and openers
 function skipRanges(html) {
@@ -87,7 +97,7 @@ function indexHtml(index, pages) {
   const rows = [...index].map(([key, e]) => {
     let form = [...e.forms].sort((a, b) => b[1] - a[1])[0][0];
     // (A term set in capitals only for starting a run-in label: "Ceramic capacitors" as "ceramic capacitors")
-    if (/^(Arithmetic|Card-edge|Ceramic|Complex|Conditional|Desoldering|Electrolytic|Fixed|Indexing|Indirect|Integers|Pin|Rationals|Page|Slot|Task)\b/.test(form)) form = form[0].toLowerCase() + form.slice(1);
+    if (/^(Arithmetic|Card-edge|Ceramic|Complex|Conditional|Desoldering|Electrolytic|Fixed|Indexing|Indirect|Integers|Lead-free|Pin|Rationals|Page|Slot|Stack|Task)\b/.test(form)) form = form[0].toLowerCase() + form.slice(1);
     const sortKey = plain(form).toLowerCase().replace(/^[^a-z0-9]+/, '');
     // (Pass 1: room for the numbers; no numbers known (--html): the terms alone)
     const pgs = !pages ? ['000'] : Object.keys(pages).length ? [...new Set(e.marks.map(m => pages[m]).filter(Boolean))].sort((a, b) => a - b) : [''];
@@ -139,6 +149,22 @@ function book(pages) {
           const cm = /^([a-z][a-z0-9-]*): /.exec(h.text);       // (the commands' chapter: "ls: list files")
           if (k.kind === 'chapter' && /^Commands\b/.test(k.title) && cm) addIndex('<code>' + cm[1] + '</code> command', n);
         }
+      }
+      // A language's reference ("HyForth Reference"): each word its tables list, in the index, with its
+      // language after it ("dup HyForth"), at the page its row is on
+      const lang = k.kind === 'appendix' && /^(\S+) Reference$/.exec(k.title);
+      if (lang) {
+        html = html.replace(/<tr><td>([\s\S]*?)<\/td>/g, (m0, cell) => {
+          const words = [];
+          for (const c of cell.matchAll(/<code>([^<]+)<\/code>/g)) {
+            const w = languageWord(plain(c[1]));
+            if (w && !words.includes(w)) words.push(w);
+          }
+          if (!words.length) return m0;
+          const n = mark++;
+          for (const w of words) addIndex('<code>' + md.esc(w) + '</code> <i class="ix-lang">' + lang[1] + '</i>', n);
+          return '<tr><td>' + (pages ? '' : MARK(n)) + cell + '</td>';
+        });
       }
       // The index's terms: a mark before each
       const skip = skipRanges(html);
