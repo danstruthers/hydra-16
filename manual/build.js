@@ -50,7 +50,7 @@ function kindOf(h) {
   if (/^Appendices$/.test(h)) return { kind: 'part', num: '', title: h };
   let m = /^Part\s+(\w+)[.:]\s*(.*)$/.exec(h);
   if (m) return { kind: 'part', num: m[1], title: m[2] };
-  m = /^(Chapter|Unit|Lab|Project|Card|Lesson|Course)\s+(\d+)[.:]\s*(.*)$/.exec(h);      // (The other books' chapters)
+  m = /^(Chapter|Unit|Lab|Project|Card|Topic)\s+(\d+)[.:]\s*(.*)$/.exec(h);      // (The other books' chapters)
   if (m) return { kind: 'chapter', word: m[1], num: m[2], title: m[3] };
   m = /^Appendix\s+([A-Z])[.:]\s*(.*)$/.exec(h);
   if (m) return { kind: 'appendix', num: m[1], title: m[2] };

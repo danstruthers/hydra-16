@@ -94,4 +94,4 @@
 
 > **CHALLENGE:** ★ Which letter do the most programs in `/rom/bin` start with? Work it out with the Hydra, not
 > by counting on your fingers. (Patterns from Lab 5 will help: `ls /rom/bin/s* | wc -l`. Can a `for` loop from
-> Lab 6 try every letter for you?)
+> Lab 6 try every letter for you? To join a variable to a `*`, rc needs a `^` between them: `$l^*`.)

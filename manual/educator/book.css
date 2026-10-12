@@ -1,0 +1,8 @@
+/* The Educator's Course Guide: its extra furniture (added to manual/book.css) */
+blockquote.this-lesson, blockquote.answer-note { border: 0; border-top: 2.2pt solid #111; border-bottom: 0.8pt solid #111; background: #fff; padding: 6pt 2pt; margin: 4pt 0 12pt; }
+blockquote.watch-for { border-color: #e23d28; background: #fdf3f1; }
+blockquote.watch-for > p:first-child > strong:first-child { color: #c0301f; }
+blockquote.say-it { border-color: #3fa046; background: #f4faf3; }
+blockquote.say-it > p:first-child > strong:first-child { color: #2e7d33; }
+body.book-educator h3 { margin-top: 12pt; }
+td:empty { height: 18pt; }
