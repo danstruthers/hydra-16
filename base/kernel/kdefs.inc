@@ -23,9 +23,9 @@
 .global     K_SCALL, K_KCALL, K_KDISPATCH, K_KCOPY, K_ROMREAD
 ; ---- task.s: tasks and modules
 .global     K_EXITS, K_WAIT, K_GETPID, K_GETPPID,K_TASK_BOOT, K_TASK_BOOT_INIT, K_BOOT_STARTED, K_TASK_RESERVE
-.global     K_MD_VALID, K_STR_CRLF, K_MODINFO, K_SPAWN_K, K_TASK_GO, K_TASK_LOAD
+.global     K_MD_VALID, K_STR_CRLF, K_MODINFO, K_SPAWN_K, K_TASK_GO, K_TASK_LOAD, K_EXEC, K_EXEC_K
 ; ---- load.s: SPAWN and the loader (page 3)
-.global     K_SPAWN, K_LOAD
+.global     K_SPAWN, K_LOAD, K_EXEC_PREP
 ; ---- cons.s: the bring-up console (polled)
 .global     K_CONS_INIT, K_PUTC, K_PUTS, K_GETC, K_PUTHEX, K_PUTNIB, K_PUTSTR
 ; ---- sys.s: the small calls

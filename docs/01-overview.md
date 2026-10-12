@@ -394,8 +394,7 @@ task  state   parent     cpu group  name
    1  wait    -          0.1     1  init
    2  wait     1         0.4     2  forth
    3  event    1         0.0     1  wstart
-   4  wait     2         0.0     2  rc
-   5  ready    4         0.0     2  ps
+   4  ready    2         0.0     2  ps
   11  idle    -          0.0    11  gpio
   12  idle    -          0.0    12  snd
   13  idle    -          0.2    13  kdev
@@ -403,7 +402,8 @@ task  state   parent     cpu group  name
   15  idle    -          0.9    15  cons
 ```
 
-`sleep 100 &` runs a program in the background; `kill 6` ends task 6; `/proc/6/status` is its state as a file.
+`ps` itself is task 4, started by the shell (task 2).  `sleep 100 &` runs a program in the background (`ps` shows its
+task, say 5); `kill 5` ends it; `/proc/5/status` is its state as a file.
 
 The console has **windows**, as Plan 9's rio has: each one a whole console with its own shell, one shown at a time on
 your terminal.  The windows' keys start with **Ctrl-]**: Ctrl-] c starts a new window with a shell, Ctrl-] and a digit

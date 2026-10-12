@@ -41,10 +41,9 @@ with no input controller.
 task  state   parent     cpu group  name
    0  ready   -          2.9     0  kernel
    1  wait    -          0.1     1  init
-   2  wait     1         0.3     2  forth
+   2  wait     1         0.2     2  forth
    3  event    1         0.0     1  wstart
-   4  wait     2         0.0     2  rc
-   5  ready    4         0.0     2  ps
+   4  ready    2         0.0     2  ps
   11  idle    -          0.0    11  gpio
   12  idle    -          0.0    12  snd
   13  idle    -          0.1    13  kdev

@@ -53,6 +53,8 @@ SEM_ACQUIRE     = $F86F       ; .A = a semaphore
 SEM_TRY         = $F872       ; .A = a semaphore
 SEM_RELEASE     = $F875       ; .A = a semaphore
 SEM_FREE        = $F878       ; .A = a semaphore
+EXEC            = $F87B       ; r0 = the program's path (as SPAWN's); r1 = its arguments (as SPAWN's: 176 bytes at most), or 0
+                              ; -> (doesn't return, once the program is found: it runs in this task's place)
 
 ; ---- memory: Memory: the break, pages, banks, shared segments (phase 1.8)
 BREAK           = $F890       ; r0 = the new end of the program's data (the first byte past it), or 0 to ask

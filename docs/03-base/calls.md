@@ -80,7 +80,7 @@ The table is in groups, each with room to grow:
 | Group | Slots | What's there |
 | :---- | :---- | :----------- |
 | **system** | `$F800`, 16 | `SYSINFO` (the ABI, the memory cards, the free tasks), `ERRSTR`, `KMESG` (the kernel's messages), `REBOOT`, `XCALL` (call a library in another bank) |
-| **task** | `$F830`, 32 | `SPAWN`, `EXITS`, `WAIT`, `GETPID`, `GETPPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`/`ON`, `TASKINFO`, `TASKREAD`, `NOTIFY`, `NOTE`, `MODINFO`, the environment (`ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`), semaphores (`SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`) |
+| **task** | `$F830`, 32 | `SPAWN`, `EXEC`, `EXITS`, `WAIT`, `GETPID`, `GETPPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`/`ON`, `TASKINFO`, `TASKREAD`, `NOTIFY`, `NOTE`, `MODINFO`, the environment (`ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`), semaphores (`SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`) |
 | **memory** | `$F890`, 16 | `BREAK`, `PAGES_ALLOC`/`FREE`, `BANKS`, `BANKS_ALLOC`/`FREE`/`ALLOC_IN`, shared segments (`SEG_CREATE`, `SEG_ATTACH`, `SEG_DETACH`, `SEG_MAP`, `SEGINFO`, `SEG_CREATE_IN`) |
 | **file** | `$F8C0`, 32 | `OPEN`, `CREATE`, `CLOSE`, `READ`, `WRITE`, `SEEK`, `STAT`, `FSTAT`, `WSTAT`, `FWSTAT`, `REMOVE`, `DUP`, `DUP2`, `CHDIR`, `GETCWD`, `PIPE`, `FD2PATH` |
 | **name** | `$F920`, 16 | `BIND`, `MOUNT`, `UNMOUNT`, `NSINFO` |
