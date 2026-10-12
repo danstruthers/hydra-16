@@ -1,4 +1,4 @@
-# Chapter 22. Learning HyBASIC
+# Chapter 23. Learning HyBASIC
 
 **BASIC** (Beginner's All-purpose Symbolic Instruction Code) was invented in 1964, at Dartmouth College, to let
 students who weren't scientists use a computer. In the 1980s nearly every home computer had a BASIC built in: it was
@@ -6,7 +6,7 @@ the first language of millions of people. **HyBASIC** is the Hydra's BASIC, in t
 it has line numbers if you want them, but also named procedures, records and structured loops, so programs can be
 written clearly. And it has the Hydra's numbers.
 
-## 22.1 Starting HyBASIC
+## 23.1 Starting HyBASIC
 
 Type `basic`. HyBASIC's prompt is `>`. A line typed without a number is done at once (**direct mode**); `SYSTEM` (or
 `BYE`) leaves HyBASIC.
@@ -22,7 +22,7 @@ Hello, world!
 You can type keywords in capitals or small letters: HyBASIC turns them into capitals. `?` is a short way to type
 `PRINT`.
 
-## 22.2 PRINT
+## 23.2 PRINT
 
 `PRINT` shows its items. A number is shown with a space in front (where a minus sign would go). Items separated by
 `;` are shown one after another; items separated by `,` are shown in **zones**, 14 characters wide, like a table's
@@ -41,9 +41,9 @@ columns. A `;` at the end of a `PRINT` keeps the next `PRINT` on the same line.
  5             10
 ```
 
-HyBASIC uses Chapter 17's numbers, so 2 to the 64th is exact, and 10 / 4 is exactly 5/2.
+HyBASIC uses Chapter 18's numbers, so 2 to the 64th is exact, and 10 / 4 is exactly 5/2.
 
-## 22.3 Variables
+## 23.3 Variables
 
 A **variable** is a name for a value. A name is letters and digits (and `_` or `.`), starting with a letter. A name
 that ends in `$` holds a **string**: text, in double quotes. Any other holds a number.
@@ -57,7 +57,7 @@ Hello, Sam
 (`LET NAME$ = "Sam"` means the same: `LET` is optional, as in all modern BASICs.) A number variable that hasn't been
 given a value is 0, and a string one is `""`, the empty string.
 
-## 22.4 Programs
+## 23.4 Programs
 
 A line typed with a **line number** in front isn't done at once: it's kept, as part of the **program**. The lines are
 kept in order of their numbers, so you can type them in any order, and put a line between two others by giving it a
@@ -87,7 +87,7 @@ number between theirs. That's why lines are usually numbered in tens. `RUN` runs
 | `SAVE "`*file*`"` | Keep it in a file |
 | `LOAD "`*file*`"` | Bring one back |
 | `DELETE` *from*`-`*to* | Remove lines |
-| `EDIT` | Edit the program in the screen editor (Chapter 10) |
+| `EDIT` | Edit the program in the screen editor (Chapter 11) |
 | `CONT` | Carry on after a `STOP`, or <kbd>CTRL</kbd>-<kbd>C</kbd> |
 
 To change a line, type it again with the same number. To remove one, type just its number. Program files usually
@@ -97,7 +97,7 @@ have names ending in `.bas`, and a program in a file runs with `basic` and the f
 > editor, and when you close the editor, HyBASIC takes the program back. In the editor, you don't need line numbers
 > at all.
 
-## 22.5 INPUT
+## 23.5 INPUT
 
 `INPUT` asks a question, and waits for the answer. The answer goes into the variable:
 
@@ -111,7 +111,7 @@ Hello, Sam!
 
 `LINE INPUT` takes a whole line, commas and all.
 
-## 22.6 Arithmetic
+## 23.6 Arithmetic
 
 | Operator | Means | Operator | Means |
 |---|---|---|---|
@@ -134,7 +134,7 @@ The **order** follows school mathematics: `^` first, then `*` and `/`, then `+` 
 
 A comparison gives -1 for true and 0 for false.
 
-## 22.7 Decisions
+## 23.7 Decisions
 
 `IF` ... `THEN` does something only if a test is true, and `ELSE` gives something to do if it's false. On one line:
 
@@ -177,9 +177,9 @@ END IF
 
 A `CASE` can be a list of values, a range (`CASE 1 TO 5`), or a test (`CASE IS > 100`).
 
-## 22.8 Loops
+## 23.8 Loops
 
-`FOR` ... `NEXT` counts, as in section 22.4; `STEP` gives the size of each step (`FOR I = 10 TO 0 STEP -2`).
+`FOR` ... `NEXT` counts, as in section 23.4; `STEP` gives the size of each step (`FOR I = 10 TO 0 STEP -2`).
 `DO` ... `LOOP` repeats while (or until) a test is true; the test can be at the start or the end:
 
 ```session
@@ -199,7 +199,7 @@ A `CASE` can be a list of values, a range (`CASE 1 TO 5`), or a test (`CASE IS >
 | `WHILE` *test* ... `WEND` | While it's true (the old way) |
 | `EXIT FOR`, `EXIT DO` | Leave the loop at once |
 
-## 22.9 Strings
+## 23.9 Strings
 
 | Function | Gives |
 |---|---|
@@ -222,7 +222,7 @@ A 65
 
 `+` joins strings: `"Hydra" + "-16"` is `"Hydra-16"`.
 
-## 22.10 Arrays
+## 23.10 Arrays
 
 An **array** is a numbered list of values, under one name. `DIM` makes one, giving its highest number:
 
@@ -236,7 +236,7 @@ An **array** is a numbered list of values, under one name. `DIM` makes one, givi
 `DIM SCORES(5)` makes `SCORES(0)` to `SCORES(5)`. Arrays can have more than one dimension, like a grid: `DIM
 BOARD(8, 8)`. `REDIM` changes an array's size (`REDIM PRESERVE` keeps what's in it).
 
-## 22.11 DATA and READ
+## 23.11 DATA and READ
 
 `DATA` lines hold values inside the program; `READ` takes them, one by one:
 
@@ -253,7 +253,7 @@ Ana is 13
 
 `GOTO` jumps to a line, and `END` ends the program. (`RESTORE` starts the `DATA` again from the beginning.)
 
-## 22.12 SUBs and FUNCTIONs
+## 23.12 SUBs and FUNCTIONs
 
 Big programs are easier to write, and to read, in pieces. A **SUB** is a named piece of program; a **FUNCTION** is
 one that gives back a value. Each has **parameters**: names for the values it's given.
@@ -277,7 +277,7 @@ A FUNCTION's value is what's given to its name. The variables in a SUB or FUNCTI
 main program's variables of the same names. (`SHARED` lets it use them, and `STATIC` keeps its own between calls.)
 `GOSUB` and `RETURN`, the older way, jump to a line and back.
 
-## 22.13 Errors
+## 23.13 Errors
 
 When something goes wrong, HyBASIC stops the program, and says where. A program can catch its errors with `ON ERROR
 GOTO`: the error jumps to a **handler**, where `ERR` is its number and `ERR$` its message, and `RESUME NEXT` carries on
@@ -295,5 +295,5 @@ error 11 division by zero
 after
 ```
 
-Chapter 23 shows how to use HyBASIC to work the Hydra: files, the terminal, sound and graphics. Appendix C lists every
+Chapter 24 shows how to use HyBASIC to work the Hydra: files, the terminal, sound and graphics. Appendix C lists every
 keyword.

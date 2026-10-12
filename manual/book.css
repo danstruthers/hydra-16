@@ -83,6 +83,9 @@ blockquote.for-teachers > p:first-child > strong:first-child { color: #6a3aa0; }
 blockquote.tip, blockquote.hint { border-color: #f08a24; background: #fff8ef; }
 blockquote.tip > p:first-child > strong:first-child, blockquote.hint > p:first-child > strong:first-child { color: #c76a10; }
 blockquote.how-it-works, blockquote.under-the-hood { border-color: #555; background: #f4f4f4; }
+/* (A chapter's opening: what it's for, and what it needs) */
+blockquote.in-this-chapter { border: 0; border-top: 2.2pt solid #111; border-bottom: 0.8pt solid #111; background: #fff; padding: 6pt 2pt; margin: 4pt 0 12pt; }
+blockquote.in-this-chapter > p:first-child > strong:first-child { color: #111; }
 
 /* ---- Lists, tables, definitions */
 ul, ol { margin: 0 0 8pt; padding-left: 20pt; }

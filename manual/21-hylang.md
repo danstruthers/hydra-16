@@ -1,11 +1,11 @@
-# Chapter 20. Learning hylang
+# Chapter 21. Learning hylang
 
 **hylang** is the Hydra's version of **danlang**, a language in the family of **Lisp**, one of the oldest programming
 languages there is (it was invented in 1958). In Lisp, a program is made of lists, and the language can work on its
 own programs as easily as on any other list. hylang has the Hydra's whole number system, strings, lists and hashes,
 and functions for the Hydra's files, devices and programs. This chapter teaches you the language.
 
-## 20.1 Starting hylang
+## 21.1 Starting hylang
 
 Type `hylang`. It says hello, and shows its prompt, `hylang>`. Type an **expression**, and hylang works out its
 value, and shows it after `=>`:
@@ -21,7 +21,7 @@ hylang> (+ 1 2)
 
 `(exit)` leaves hylang. (`(exit 3)` leaves it with the status 3, for a shell to see.)
 
-## 20.2 Expressions
+## 21.2 Expressions
 
 In hylang, a **call** is written in parentheses: the function first, then its **arguments**, separated by spaces. So
 `(+ 1 2)` calls the function `+` with the arguments 1 and 2. Calls can be **nested**: each argument can be a call of
@@ -35,10 +35,10 @@ hylang> (/ 10 4)
 ```
 
 Because the function always comes first, there's never any doubt about the order things are done in, and `+` can
-take as many arguments as you like: `(+ 1 2 3 4)` is 10. hylang has all of Chapter 17's numbers, so `(/ 10 4)` is
+take as many arguments as you like: `(+ 1 2 3 4)` is 10. hylang has all of Chapter 18's numbers, so `(/ 10 4)` is
 exactly 5/2.
 
-## 20.3 Values
+## 21.3 Values
 
 Every expression has a **value**. The kinds of value are:
 
@@ -65,9 +65,9 @@ keys of a hash.
 `T` means true and `NIL` means false: every test gives one or the other, and anything that isn't `NIL` counts as true.
 `NIL` also means "nothing", or an empty list.
 
-## 20.4 Names
+## 21.4 Names
 
-`def` gives a value a **name**. The name is written in braces (section 20.6 says why):
+`def` gives a value a **name**. The name is written in braces (section 21.6 says why):
 
 ```session
 hylang> (def {x} 10)
@@ -106,7 +106,7 @@ hylang> (+ x y)
 
 Names are in small letters: hylang turns capitals into small letters as it reads them.
 
-## 20.5 Functions
+## 21.5 Functions
 
 `fun` makes a new function. Its first argument is a list of the function's name and its **formals** (the names its
 arguments will have); the second is its **body**: what it does.
@@ -156,7 +156,7 @@ hylang> (add-all 1 2 3)
 => 6
 ```
 
-## 20.6 Lists, and code as lists
+## 21.6 Lists, and code as lists
 
 A list in braces, `{1 2 3}`, is a **Q-expression**: a list that's left as it is, not worked out. A list in
 parentheses is an **S-expression**: a call, which is worked out. That's why names and bodies are written in braces:
@@ -201,7 +201,7 @@ So a hylang program can build code as a list, and then run it. Lisp programmers 
 | `(sort l)` | In order |
 | `(elem? x l)` | Is *x* in the list? |
 
-## 20.7 Doing something to every item
+## 21.7 Doing something to every item
 
 Lisp's great strength is working on whole lists at once. `map` calls a function for each item, and makes a list of
 the answers; `filter` keeps the items a test is true for; and `foldl` combines them all, from the left:
@@ -224,7 +224,7 @@ hylang> (sum (range 101))
 That last one adds up the numbers from 0 to 100, which the mathematician Gauss is said to have done in his head when
 he was a schoolboy.
 
-## 20.8 Decisions
+## 21.8 Decisions
 
 `if` takes a test, a value for when it's true, and (if you like) one for when it's false:
 
@@ -247,7 +247,7 @@ hylang> (<=> (cmp 3 7) {< "less"} {= "same"} {> "more"})
 => "less"
 ```
 
-## 20.9 Loops
+## 21.9 Loops
 
 | Loop | What it does |
 |---|---|
@@ -278,7 +278,7 @@ hylang> (fact 20)
 => 2432902008176640000
 ```
 
-## 20.10 Names inside functions
+## 21.10 Names inside functions
 
 A function's formals are its own: they don't change any global name. For more names of its own, a function uses `=(`
 (that's `set`): a name in the function's own **scope**, which is gone when it ends. `let` makes a scope of its own
@@ -299,7 +299,7 @@ hylang> (counter)
 => 10
 ```
 
-## 20.11 Strings and characters
+## 21.11 Strings and characters
 
 | Function | What it does |
 |---|---|
@@ -323,7 +323,7 @@ hylang> (format "{} plus {} is {}" 2 3 (+ 2 3))
 => "2 plus 3 is 5"
 ```
 
-## 20.12 Hashes
+## 21.12 Hashes
 
 A **hash** is a set of **entries**, each a **key** and its **value**, like a dictionary: look up a word, and find its
 meaning. The keys are usually atoms. `#(` makes one, from a list of entries, and the hash can be called like a
@@ -353,7 +353,7 @@ Rex says woof
 => NIL
 ```
 
-## 20.13 Errors
+## 21.13 Errors
 
 An error is a value too. When something goes wrong, the error goes back through every call, until something catches
 it, or it reaches the prompt:
@@ -368,7 +368,7 @@ hylang> (try (/ 1 0) (+ "oops: " &err))
 `try` works out its first argument; if that's an error, it works out its second instead, with `&err` the error's
 message (and `&code` its code). `(error "message")` makes an error of your own.
 
-## 20.14 Files of hylang
+## 21.14 Files of hylang
 
 Write longer programs in a file (with `edit`), with a name ending in `.hl`, and run it with `hylang` and the file's
 name, and any arguments: in the program, `args` is a list of the file's name and its arguments.
@@ -382,4 +382,4 @@ args are {"/ram/a.hl" "one" "two"}
 At the prompt, `(load "file")` runs a file's expressions, keeping its definitions. A file's first line can be
 `#!/bin/hylang`, to run it by its name. Comments start with `;`.
 
-Chapter 21 shows how to use hylang to work the Hydra, and Appendix B lists every function.
+Chapter 22 shows how to use hylang to work the Hydra, and Appendix B lists every function.

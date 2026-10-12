@@ -1,11 +1,11 @@
-# Chapter 12. The Console and the Terminal
+# Chapter 13. The Console and the Terminal
 
 The **console** is how you and your programs talk: your keys in, and text out to your screen. Its driver, `cons`,
-looks after the serial port and the console's windows (Chapter 9), and serves `/pc` too. This chapter describes all
+looks after the serial port and the console's windows (Chapter 10), and serves `/pc` too. This chapter describes all
 of its files, and the **escape sequences** that programs use to move the cursor, clear the screen and change
 colours.
 
-## 12.1 The console's files
+## 13.1 The console's files
 
 `cons` is device `#c`. Each window has its own set of files (window *n*'s are `#c`*n*), and a shell finds its own
 window's at `/dev`. A few files are the whole console's, the same in every window.
@@ -13,29 +13,29 @@ window's at `/dev`. A few files are the whole console's, the same in every windo
 | File | Whose | What it is |
 |---|---|---|
 | `cons` | The window's | Read: your typing. Write: text for the window's screen |
-| `consctl` | The window's | The window's settings: raw mode, keys, where it's shown (section 12.4) |
-| `wctl` | The window's | The windows: new ones, layouts, the chrome, the keys (section 12.5) |
+| `consctl` | The window's | The window's settings: raw mode, keys, where it's shown (section 13.4) |
+| `wctl` | The window's | The windows: new ones, layouts, the chrome, the keys (section 13.5) |
 | `label` | The window's | The window's name |
 | `text` | The window's | The window's scrollback and screen, as text |
 | `kbdin` | The window's | Bytes written here are typed into the window |
 | `wnew` | The window's | A read waits for <kbd>CTRL</kbd>-<kbd>]</kbd> <kbd>C</kbd>, and gives the new window's number |
 | `snarf` | The console's | The snarf buffer: the console's clipboard |
-| `ser` | The console's | The serial port itself, byte by byte (section 12.6) |
+| `ser` | The console's | The serial port itself, byte by byte (section 13.6) |
 | `serctl` | The console's | The serial port's speed |
-| `kbin` | The console's | The Vera X keyboard's keys, from the `input` program (Chapter 15) |
+| `kbin` | The console's | The Vera X keyboard's keys, from the `input` program (Chapter 16) |
 
-## 12.2 Reading lines
+## 13.2 Reading lines
 
 Normally, the console is in **cooked mode**: a program that reads `cons` gets a whole line at a time, after you've
 typed it and pressed <kbd>RETURN</kbd>. Until then, the console itself lets you edit the line, with the keys in
-section 5.5, and keeps the last four lines you typed for <kbd>↑</kbd> and <kbd>↓</kbd> to bring back. A line can be
+section 6.3, and keeps the last four lines you typed for <kbd>↑</kbd> and <kbd>↓</kbd> to bring back. A line can be
 up to 127 characters long; a line longer than the window is wide goes on to the next rows.
 
 <kbd>CTRL</kbd>-<kbd>D</kbd>, typed at the start of a line, is the **end of the input**: the program's read gets
 nothing, which tells it there's no more. `cat`, typed alone, copies what you type to the screen until you press
 <kbd>CTRL</kbd>-<kbd>D</kbd>.
 
-## 12.3 Raw mode and keys
+## 13.3 Raw mode and keys
 
 A program like the screen editor needs each key as it's pressed, without waiting for <kbd>RETURN</kbd>. It writes
 `rawon` to `consctl`, and the console goes into **raw mode**: each read gets the keys typed so far, as they are, and
@@ -70,11 +70,11 @@ with `consctl`'s `keys` command:
 An <kbd>ESC</kbd> key on its own reaches the program a tenth of a second after it's pressed, once the console is
 sure it isn't the start of a longer sequence.
 
-## 12.4 consctl: the window's settings
+## 13.4 consctl: the window's settings
 
 | Command | What it does |
 |---|---|
-| `rawon` | Raw mode: each key as it comes (section 12.3) |
+| `rawon` | Raw mode: each key as it comes (section 13.3) |
 | `rawoff` | Cooked mode: a line at a time |
 | `keys hydra` | Raw mode's special keys as one byte each |
 | `keys vt` | Raw mode's special keys as a VT100 sends them |
@@ -85,7 +85,7 @@ sure it isn't the start of a longer sequence.
 | `serial` | Show the windows on the serial terminal |
 | `screen` | Show the windows on the Vera X's screen |
 | `both` | Show the windows on both |
-| `seats` | Both terminals, each a **seat** of its own: its own window shown, and its own keys (Chapter 15) |
+| `seats` | Both terminals, each a **seat** of its own: its own window shown, and its own keys (Chapter 16) |
 | `terminal size` *c r* | Tell the console the serial terminal's size: *c* columns, *r* rows |
 | `terminal size` | Ask the serial terminal its size (with the sequence <kbd>ESC</kbd> `[18t`) |
 
@@ -106,19 +106,19 @@ The console starts with an 80 by 24 terminal, and asks the terminal for its real
 (xterm, Windows Terminal, the PC tool) get windows that fit; the PC tool tells the Hydra each time you resize its
 window, too. A window is never more than 127 columns by 64 rows.
 
-## 12.5 wctl: the windows
+## 13.5 wctl: the windows
 
 | Command | What it does |
 |---|---|
 | `new` | Make a window in the writer's group; a read of the same file then gives its number |
 | `new group` | Make a window in a new group |
 | `current` *n* | Show window *n* |
-| `layout tabs` \| `rows` \| `columns` \| `grid` | The group's windows one at a time, or tiled (section 9.4) |
+| `layout tabs` \| `rows` \| `columns` \| `grid` | The group's windows one at a time, or tiled (section 10.4) |
 | `float` *x y c r* | Show the window as a pop-up box, *c* by *r*, at column *x*, row *y* |
 | `float` *c r* | The same, in the middle of the screen |
 | `float off` | The window isn't a pop-up any more |
 | `bar top` \| `bottom` \| `off` | Where the bar is (or none) |
-| `bar` *format* | What the bar shows (section 9.7) |
+| `bar` *format* | What the bar shows (section 10.7) |
 | `header` *format*, `footer` *format* | What the window's header and footer show |
 | `header on` \| `off`, `footer on` \| `off` | The window's header and footer on or off |
 | `chrome screen` \| `serial` \| `both on` \| `off` [`bar`] [`header`] [`footer`] | The chrome on or off, on a terminal (all of it, or the parts named) |
@@ -140,9 +140,9 @@ is a character, `ctrl-X`, `tab` or `shift-tab`; and `key ctrl-tab` *action*, `ke
 ```
 
 Reading `wctl` lists the windows, one a line: each one's number, group, columns and rows, with a `*` after the one
-with the keys (section 9.8).
+with the keys (section 10.8).
 
-## 12.6 The serial port
+## 13.6 The serial port
 
 The console normally owns the serial port, sending each window's text to your terminal. Two files give programs the
 port itself:
@@ -164,10 +164,10 @@ port itself:
 | `b19200` | 19200 baud | 18,644 |
 | `b115200` | 115200 baud | 111,861 |
 
-(The serial chip's clock is a little slower than the speeds' names assume, section 5.6.) The port always sends 8
+(The serial chip's clock is a little slower than the speeds' names assume, section 5.5.) The port always sends 8
 data bits, no parity and 1 stop bit.
 
-## 12.7 The terminal
+## 13.7 The terminal
 
 When a program writes to the console, most bytes are characters to show. But some are **control characters**, and
 some start **escape sequences**: commands to the terminal, to move the cursor, clear the screen, or change colours.
@@ -179,7 +179,7 @@ Escape sequences start with the <kbd>ESC</kbd> character (27, or $1B). Most of t
 sequences: <kbd>ESC</kbd> and `[`, then some numbers separated by `;`, then a letter that says what to do. In the
 tables, *n*, *r* and *c* stand for numbers; most can be left out, and then they're 1 (or 0, for `J`, `K` and `m`).
 
-Here are the colours from HyForth (Chapter 18 explains the Forth):
+Here are the colours from HyForth (Chapter 19 explains the Forth):
 
 ```text
 : esc 27 emit ;
@@ -193,7 +193,7 @@ cls rainbow hello styles colours
 
 <figure>
 <img src="figures/term-colours.svg" alt="Coloured blocks, bold yellow on blue, reverse video, underlining, and coloured words">
-<figcaption>Figure 12-1. Colours and styles from escape sequences.</figcaption>
+<figcaption>Figure 13-1. Colours and styles from escape sequences.</figcaption>
 </figure>
 
 ### Control characters
@@ -292,7 +292,7 @@ modes.
 | ?25 | The cursor is shown (set as it starts) |
 | ?47, ?1047 | The **alternate screen**: a second screen, without scrollback, for full-screen programs |
 | ?1049 | As ?1047, saving the cursor first (and back, when reset) |
-| ?1000 | Report the mouse's buttons to the program (Chapter 15) |
+| ?1000 | Report the mouse's buttons to the program (Chapter 16) |
 | ?2004 | Bracketed paste: a paste comes between `ESC [200~` and `ESC [201~` |
 
 `ESC =` and `ESC >` set the keypad's application and numeric modes; `ESC [?2l` switches to the VT52's older
@@ -336,9 +336,9 @@ A program can ask the terminal things; the console answers into the program's ke
 | `ESC c` | Reset the terminal completely, and clear the screen |
 | `ESC [!p` | A soft reset: the modes, the margins and the rendition as they start, without clearing |
 
-## 12.8 /pc
+## 13.8 /pc
 
-`cons` also serves `/pc`, device `#P`, a folder on the PC (section 8.9). Its requests and the PC tool's replies go
+`cons` also serves `/pc`, device `#P`, a folder on the PC (section 9.9). Its requests and the PC tool's replies go
 over the serial port as **frames**, mixed in with the text; each frame starts with the byte $1E, and has a check
 number (a CRC) at its end, so a damaged frame is sent again. The PC tool takes the frames out, so you never see
 them.

@@ -104,7 +104,7 @@ and takes commands:
 | `w` ADDR[:T] | Stop when ADDR is written (by task T) |
 | `x` | Quit the emulator |
 
-The debugger, `db` (Chapter 27), is for debugging a program; the monitor is for when it's HydraOS itself you need to
+The debugger, `db` (Chapter 28), is for debugging a program; the monitor is for when it's HydraOS itself you need to
 watch.
 
 ## H.4 The web emulator
@@ -174,7 +174,7 @@ Its keys: <kbd>CTRL</kbd>-<kbd>A</kbd> <kbd>X</kbd> quits, <kbd>CTRL</kbd>-<kbd>
 on or off, and <kbd>CTRL</kbd>-<kbd>A</kbd> <kbd>CTRL</kbd>-<kbd>A</kbd> sends a <kbd>CTRL</kbd>-<kbd>A</kbd>. It needs
 the `serialport` package: run `npm install` in `reborn/sim` once.
 
-**hysong.js** turns a score (section 14.6) into a ZSM song on the PC, as `play -o` does on the Hydra, and can make a
+**hysong.js** turns a score (section 15.6) into a ZSM song on the PC, as `play -o` does on the Hydra, and can make a
 VGM file too, to hear it on the PC:
 
 ```text

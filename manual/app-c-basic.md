@@ -10,7 +10,7 @@ choices. *n* and *x* are numbers, *s$* a string, *v* a variable, *f* a file numb
   without, it's done at once. A label (a name and a `:`) can mark a line instead of a number, for `GOTO` and `GOSUB`.
 * **Names.** Letters, digits, `_` and `.`, a letter first; capitals and small letters are the same. A name ending in
   `$` is a string's; any other a number's (the endings `%`, `&`, `!` and `#` are allowed, and mean a number).
-* **Numbers.** Chapter 17's, in any of its forms, and `&H`, `&O`, `&B` and `E` notation. Every number variable can hold
+* **Numbers.** Chapter 18's, in any of its forms, and `&H`, `&O`, `&B` and `E` notation. Every number variable can hold
   any kind of number: `INTEGER`, `LONG`, `SINGLE`, `DOUBLE` and `NUMBER` all mean "a number".
 * **Strings.** In double quotes. `+` joins them.
 * **Comments.** `REM`, or `'`, to the end of the line.
@@ -29,7 +29,7 @@ choices. *n* and *x* are numbers, *s$* a string, *v* a variable, *f* a file numb
 | `ARG$` | `ARG$(n)` | A program's argument *n* (0: its file's name) |
 | `AS` | | In `DIM`, `OPEN`, `NAME` and `TYPE` |
 | `ASC` | `ASC(s$)` | The code of the first character |
-| `ASM` | `ASM` ... `END ASM` | Assembly language in the program (Chapter 25); `CALL ASM` *label* calls it |
+| `ASM` | `ASM` ... `END ASM` | Assembly language in the program (Chapter 26); `CALL ASM` *label* calls it |
 | `ATN` | `ATN(x)` | The arctangent |
 | `BANK` | `BANK n`, `BANK()` | Which RAM bank `PEEK` and `POKE` see at $8000 |
 | `BASE` | `BASE b$`; `OPTION BASE 0` \| `1` | The base numbers are read and shown in; arrays' lowest index |
@@ -66,7 +66,7 @@ choices. *n* and *x* are numbers, *s$* a string, *v* a variable, *f* a file numb
 | `DIM` | `DIM [SHARED]` *name*[`(`*bounds*`)`] [`AS` *type*], ... | Arrays, and variables of a type |
 | `DIR$` | `DIR$(path$)`, `DIR$` | A directory's first name; the next |
 | `DO` | `DO [WHILE` \| `UNTIL` *c*`]` ... `LOOP [WHILE` \| `UNTIL` *c*`]` | A loop |
-| `DRAW` | `DRAW s$` | Draw with moves (section 23.6) |
+| `DRAW` | `DRAW s$` | Draw with moves (section 24.6) |
 | `EDIT` | `EDIT [label]` | Edit the program in the screen editor |
 | `ELSE`, `ELSEIF` | | In `IF` |
 | `END` | `END`; `END IF` \| `SELECT` \| `SUB` \| `FUNCTION` \| `TYPE` | End the program; end a block |
@@ -157,7 +157,7 @@ choices. *n* and *x* are numbers, *s$* a string, *v* a variable, *f* a file numb
 | `RREG` | `RREG [a] [, x] [, y] [, p]` | The registers after the last `SYS` |
 | `RUN` | `RUN` | Run the program |
 | `SAVE` | `SAVE "file"` | Keep the program |
-| `SCREEN` | `SCREEN n` | A graphics mode: 0, 1, 2, 7, 12 or 13 (section 23.6) |
+| `SCREEN` | `SCREEN n` | A graphics mode: 0, 1, 2, 7, 12 or 13 (section 24.6) |
 | `SEEK` | `SEEK [#]f, pos`; `SEEK(f)` | The place in a file |
 | `SELECT` | `SELECT CASE` *x* | (`CASE`) |
 | `SGN` | `SGN(x)` | -1, 0 or 1 |

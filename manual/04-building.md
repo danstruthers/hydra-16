@@ -324,7 +324,7 @@ first.
 three wires (send, receive and ground), move the jumper to pins 2 and 3.
 
 **J9 and J29: no jumpers.** J9 brings out two spare outputs of the sound chip, called CT1 and CT2, for your own
-experiments. J29, *Audio In*, lets you mix sound from another device into the Hydra's sound (Chapter 14 shows how).
+experiments. J29, *Audio In*, lets you mix sound from another device into the Hydra's sound (Chapter 15 shows how).
 Never put a jumper on either of them.
 
 ## 4.7 The memory card

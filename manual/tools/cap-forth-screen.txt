@@ -1,4 +1,4 @@
-## Chapter 19's picture: the Facility words on the terminal (node manual/tools/capture.js manual/tools/cap-forth-screen.txt)
+## Chapter 20's picture: the Facility words on the terminal (node manual/tools/capture.js manual/tools/cap-forth-screen.txt)
 lib facility
 : at ( col row -- ) at-xy ;
 : banner ( -- )

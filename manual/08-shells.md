@@ -1,10 +1,10 @@
-# Chapter 7. The Shells
+# Chapter 8. The Shells
 
 A **shell** is the program that reads your commands and carries them out. It's called a shell because it's the
 outside of the system: the part you touch. This chapter shows how HydraOS's shells work, and teaches you **rc**, the
 Hydra's command language.
 
-## 7.1 Two shells in one
+## 8.1 Two shells in one
 
 When the Hydra starts, its shell is **HyForth**. HyForth is a programming language (Part Four teaches it), but it's
 also a shell, because it hands every line that isn't Forth to a second shell, **rc**. The rule is simple:
@@ -43,7 +43,7 @@ hello
 The rest of this chapter's rc examples are typed at rc's `%` prompt, but they work just the same at HyForth's `/>`
 prompt.
 
-## 7.2 Commands
+## 8.2 Commands
 
 A command is a **program's name**, then its **arguments**: words that tell it what to do. The words are separated
 by spaces:
@@ -54,7 +54,7 @@ one two three
 ```
 
 Many programs take **options**: arguments starting with `-`, which change what they do. `ls -l` asks `ls` for a
-long listing, with the files' sizes. Chapter 10 lists every program and its options.
+long listing, with the files' sizes. Chapter 11 lists every program and its options.
 
 **Where programs come from.** When you type a program's name, rc looks for it in the directories listed in the
 variable `$path`:
@@ -65,12 +65,12 @@ variable `$path`:
 ```
 
 `.` is the directory you're in, and `/bin` is where the Hydra's programs are. (`/bin` is really several directories
-joined together: the ROM's programs, the ROM disk's, the SD card's and the RAM disks'. Chapter 8 explains how.) A name
+joined together: the ROM's programs, the ROM disk's, the SD card's and the RAM disks'. Chapter 9 explains how.) A name
 with a `/` in it, like `/ram/myprog`, is found by its path, not by `$path`.
 
 **Stopping a program.** <kbd>CTRL</kbd>-<kbd>C</kbd> stops the program that's running, and brings back the prompt.
 
-## 7.3 rc: words and quotes
+## 8.3 rc: words and quotes
 
 rc splits a line into words at spaces and tabs. Some characters have special jobs, and end a word too:
 
@@ -97,7 +97,7 @@ it's quoted: $x | ;
 
 A `\` at the very end of a line joins the next line to it, so a long command can be typed on two lines.
 
-## 7.4 Variables
+## 8.4 Variables
 
 A **variable** is a name for some words. Set it with `=` (no spaces around the `=`), and use its value with `$`:
 
@@ -138,11 +138,11 @@ special jobs:
 | `$status` | How the last command ended: empty or `0` for success; anything else is a failure |
 | `$task` | This shell's task number |
 | `$apid` | The task number of the last command run in the background |
-| `$window` | The number of this shell's window (Chapter 9) |
+| `$window` | The number of this shell's window (Chapter 10) |
 | `$home` | Where `cd` goes with no directory |
 | `$*` | A script's or function's arguments; `$1`, `$2` ... are each one, and `$0` is the script's name |
 
-## 7.5 Joining words
+## 8.5 Joining words
 
 `^` joins two words into one. If either side is a list, it joins each word in turn:
 
@@ -158,7 +158,7 @@ When a variable is right next to other text, rc puts in the `^` for you: `$y.txt
 > **NOTE:** Joining with an empty list is an error: if `$z` is empty, `$z^.txt` makes rc say
 > `null list in concatenation`.
 
-## 7.6 Input and output
+## 8.6 Input and output
 
 Every program has three **standard files**, numbered 0, 1 and 2:
 
@@ -197,7 +197,7 @@ ls: /nothing: not found
 % ls /nothing >[2]/dev/null
 ```
 
-## 7.7 Pipes
+## 8.7 Pipes
 
 A **pipe**, `|`, connects one program's standard output to the next one's standard input, so the first program's
 output becomes the second one's input. `wc -l` counts lines, so this counts the files on the ROM disk:
@@ -210,7 +210,7 @@ output becomes the second one's input. `wc -l` counts lines, so this counts the 
 Pipes can be as long as you like: `ls /rom/bin | sort | head`. And `|[2]` pipes standard error instead of standard
 output.
 
-## 7.8 A command's output as words
+## 8.8 A command's output as words
 
 `` `{command} `` runs the command, and puts its output into the line as words:
 
@@ -219,7 +219,7 @@ output.
 today is 2000-01-01 00:00:05
 ```
 
-## 7.9 Success and failure
+## 8.9 Success and failure
 
 Every program ends with a **status**: success, or a number that says what went wrong. rc keeps it in `$status`:
 
@@ -243,7 +243,7 @@ Commands can be joined by what happened:
 not there
 ```
 
-## 7.10 Patterns
+## 8.10 Patterns
 
 In a word that isn't quoted, `*`, `?` and `[` make a **pattern**, which rc replaces with the names of the files that
 match it:
@@ -267,7 +267,7 @@ If no file matches, the word is left as it was.
 The `~` command matches words against patterns, without looking at files: `~ word patterns` succeeds if the word
 matches any of the patterns.
 
-## 7.11 Decisions and loops
+## 8.11 Decisions and loops
 
 **if** runs a command if another succeeds. **if not** runs a command if the last `if`'s test failed:
 
@@ -291,7 +291,7 @@ number 3
 ```
 
 **while** runs a command as long as a test succeeds. `{ }` groups several commands into one. (`calc` is the
-Hydra's calculator, Chapter 10.)
+Hydra's calculator, Chapter 11.)
 
 ```session
 % i=3; while(! ~ $i 0) { echo $i; i=`{calc $i - 1} }
@@ -311,7 +311,7 @@ y=hello
 starts with h
 ```
 
-## 7.12 Functions
+## 8.12 Functions
 
 A **function** is a command you make yourself, from other commands. Inside it, `$*` is its arguments, and `$1`,
 `$2` ... are each one:
@@ -343,7 +343,7 @@ x=(apple banana cherry)
 
 `fn greet`, with no `{ }`, removes the function again.
 
-## 7.13 Scripts
+## 8.13 Scripts
 
 A **script** is a file of commands. Its first line can be `#!/bin/rc`, which tells HydraOS to run the file with rc,
 so you can run the script by its name, like a program. Here's a two-line script, made with `echo`:
@@ -363,7 +363,7 @@ You can run a script three ways:
 | `file args` | The same, if the file's first line is `#!/bin/rc` |
 | `. file args` | This rc runs the file's commands itself, so the variables and functions the file sets stay set |
 
-## 7.14 rc's built-in commands
+## 8.14 rc's built-in commands
 
 A few commands change the shell itself (its directory, its variables, its namespace), so they can't be programs:
 they're built into rc.
@@ -378,10 +378,10 @@ they're built into rc.
 | `builtin cmd args` | Run *cmd* as a built-in or a program, even if there's a function called *cmd* |
 | `whatis names` | Say what each name is |
 | `shift [n]` | Remove the first *n* (or 1) words from `$*` |
-| `bind [-a|-b] [-c] new old` | Add a directory to the namespace (Chapter 8) |
-| `mount [-a|-b] [-c] '#x' old [spec]` | Add a device's files to the namespace (Chapter 8) |
-| `unmount [new] old` | Take something back out of the namespace (Chapter 8) |
-| `newns` | Build the namespace again, as it was when the shell started (Chapter 8) |
+| `bind [-a|-b] [-c] new old` | Add a directory to the namespace (Chapter 9) |
+| `mount [-a|-b] [-c] '#x' old [spec]` | Add a device's files to the namespace (Chapter 9) |
+| `unmount [new] old` | Take something back out of the namespace (Chapter 9) |
+| `newns` | Build the namespace again, as it was when the shell started (Chapter 9) |
 | `exec cmd args` | Run *cmd* in the shell's place: the shell ends, and the program takes over its task |
 
 rc itself can be started with options:
@@ -394,7 +394,7 @@ rc itself can be started with options:
 | `rc -l` | A **login shell**: builds the namespace and runs `/rom/lib/profile` first |
 | `rc -i` | Reads commands with a prompt, even from a file |
 
-## 7.15 HyForth's shell words
+## 8.15 HyForth's shell words
 
 A command that rc runs, runs in a task of its own, so it can't change HyForth's own directory or namespace. So
 HyForth has its own words for those jobs, and a few more:
@@ -403,7 +403,7 @@ HyForth has its own words for those jobs, and a few more:
 |---|---|
 | `% command` | The rest of the line is rc's |
 | `cd dir` | Go to a directory (with none: `$home`) |
-| `bind`, `mount`, `unmount`, `newns` | The same as rc's (section 7.14) |
+| `bind`, `mount`, `unmount`, `newns` | The same as rc's (section 8.14) |
 | `status` ( -- n ) | The status of the last command (0: success) |
 | `exit` | At the prompt: leave HyForth (in a definition, it's Forth's `EXIT`) |
 | `exits` ( n -- ) | Leave HyForth with status *n* |
@@ -421,7 +421,7 @@ HyForth has its own words for those jobs, and a few more:
 | `prompt2` ( c-addr u -- ) | Set the second prompt, shown while you're typing a definition |
 
 (The words in parentheses, like `( c-addr u -- )`, show what each word takes from Forth's stack, and leaves there.
-Chapter 18 explains them.)
+Chapter 19 explains them.)
 
 ```session
 /> ls /nothing
@@ -458,7 +458,7 @@ The usual format is `%v%d> `, which shows `/rom/lib> ` in `/rom/lib`, and `0:/ga
 /rom/lib>
 ```
 
-## 7.16 Choosing your shell
+## 8.16 Choosing your shell
 
 Three of the Hydra's languages can be your shell, and each follows the same idea: a line in the language is the
 language's, and any other line is rc's.
@@ -487,6 +487,6 @@ The shell init starts in each window is named in the file `/lib/shell`. On the R
 ```
 
 To choose another, put a file called `shell` in the `lib` directory of your SD card (`/sd/0/lib/shell`), with one
-line: `/bin/hylang -l`, say, or `rc -l`. Because `/lib` is a union (Chapter 8), the card's file is found before the
+line: `/bin/hylang -l`, say, or `rc -l`. Because `/lib` is a union (Chapter 9), the card's file is found before the
 ROM disk's. init reads the file again each time it starts a shell, so the simplest way to make the change is to
 reset the Hydra.

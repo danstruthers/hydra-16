@@ -1,10 +1,10 @@
-# Chapter 8. Files and Namespaces
+# Chapter 9. Files and Namespaces
 
 Everything the Hydra keeps, it keeps in **files**: programs, songs, your notes, its settings. Even its devices look
 like files. This chapter shows how the files are arranged, where they live, and how HydraOS builds the "tree" of
 names that you see, which it calls a **namespace**.
 
-## 8.1 Files and directories
+## 9.1 Files and directories
 
 A **file** is a named collection of bytes: a program, a picture, a story. A **directory** is a file that holds other
 files (it's like a folder on a PC). Directories can hold directories, which hold more files and directories, and so
@@ -41,7 +41,7 @@ cd /rom/lib/forth
 scom.zsm
 ```
 
-## 8.2 Looking at files
+## 9.2 Looking at files
 
 `ls` lists a directory's files, with a `/` after each directory. `ls -l` gives a **long** listing:
 
@@ -68,7 +68,7 @@ Each line has five parts:
 > on many other systems. HydraOS doesn't have separate users, so all three groups are the same.
 
 To see what's in a file, `cat` it. `more` shows a long file a screenful at a time, and `xd` shows a file's bytes as
-hex. Chapter 10 has all the commands for files: `cp` copies a file, `mv` moves or renames one, `rm` removes one,
+hex. Chapter 11 has all the commands for files: `cp` copies a file, `mv` moves or renames one, `rm` removes one,
 `mkdir` makes a directory, and so on.
 
 ```session
@@ -79,7 +79,7 @@ hex. Chapter 10 has all the commands for files: `cp` copies a file, `mv` moves o
 --rw-rw-rw- fr       18 2000-01-01 00:00 list
 ```
 
-## 8.3 The disks
+## 9.3 The disks
 
 The Hydra's files are kept on several **disks**. (A disk here means any place that keeps a file system, even if it
 isn't round!) Each one is part of the tree:
@@ -91,7 +91,7 @@ isn't round!) Each one is part of the tree:
 | `/sd/v` | `v` | The SD card in a Vera X |
 | `/ram` | `r` | Your **RAM disk**: an area of RAM disk `r` that's only this shell's |
 | `/sram` | `s` | The **shared RAM disk**: the same for every task |
-| `/pc` | | A folder on your PC, while the PC tool is running (section 8.9) |
+| `/pc` | | A folder on your PC, while the PC tool is running (section 9.9) |
 
 `df` lists the disks, and how much space each one has free:
 
@@ -108,9 +108,9 @@ The **RAM disks** are made of memory, so they're very fast, but they're emptied 
 for work in progress, and keep what matters on an SD card.
 
 All of these disks use the Hydra's own way of arranging files on a disk, called **HydraFS**. To use a new SD card,
-you make an empty HydraFS on it with `mkfs` (Chapter 10). Chapter 13 tells you more about the disks and HydraFS.
+you make an empty HydraFS on it with `mkfs` (Chapter 11). Chapter 14 tells you more about the disks and HydraFS.
 
-## 8.4 Devices as files
+## 9.4 Devices as files
 
 On the Hydra, devices look like files too. The console, the sound chip, the SD cards' raw blocks, the clock, the
 tasks: each has a directory of files, and you use the device by reading and writing them. For example, the file
@@ -146,7 +146,7 @@ HydraFS. Here are the Hydra's devices:
 
 Part Three describes each device's files.
 
-## 8.5 Namespaces
+## 9.5 Namespaces
 
 So far the tree looks like one big tree. But it's really put together from pieces, and each task has its own. The
 tree a task sees is its **namespace**. HydraOS builds namespaces the way the Plan 9 operating system does, with two
@@ -191,15 +191,15 @@ windows
 />
 ```
 
-HyForth has its own `bind`, `mount` and `unmount` words, for changing its own namespace (Chapter 7).
+HyForth has its own `bind`, `mount` and `unmount` words, for changing its own namespace (Chapter 8).
 
-## 8.6 The Hydra's tree
+## 9.6 The Hydra's tree
 
-When a shell starts, it builds its namespace from the file `/rom/lib/namespace`. Figure 8-1 shows the tree it makes.
+When a shell starts, it builds its namespace from the file `/rom/lib/namespace`. Figure 9-1 shows the tree it makes.
 
 <figure>
 <img src="figures/tree.svg" alt="The top of the Hydra's file tree, and what each directory holds">
-<figcaption>Figure 8-1. The Hydra's file tree.</figcaption>
+<figcaption>Figure 9-1. The Hydra's file tree.</figcaption>
 </figure>
 
 Here is the namespace file. Each line is a `bind` or a `mount` (and `#` starts a comment):
@@ -246,7 +246,7 @@ mount '#P' /pc              # a folder on the PC, through the serial port
 line: each shell's `/ram` is its own directory of RAM disk `r`, named after its task. Your RAM disk is yours alone,
 and no other shell's files get in its way.
 
-## 8.7 Unions
+## 9.7 Unions
 
 Look at the `/bin` lines. The first binds `/ram/bin` at `/bin`; each of the others adds (`-a`, for "after") another
 directory to it. Now `/bin` is a **union directory**: a directory made of several. When you look for a file in
@@ -280,7 +280,7 @@ The options for `bind` and `mount` are:
 | `-b` | Add before what's there: looked at first |
 | `-c` | New files made in the union go here |
 
-## 8.8 Your own namespace
+## 9.8 Your own namespace
 
 You can change the namespace of any shell with `bind`, `mount` and `unmount`. To start again with the standard
 one, type `newns`. And `ns` shows your shell's namespace, as the binds and mounts that would make it:
@@ -332,7 +332,7 @@ bind -a /sd/0/games /bin
 
 makes every shell look for programs in the card's `games` directory too.
 
-## 8.9 /pc: a folder on your PC
+## 9.9 /pc: a folder on your PC
 
 When the Hydra is connected to a PC running the PC tool (section 5.2), the folder you gave the tool appears on the
 Hydra at `/pc`. You can copy files to and from it, and run programs from it, just like any other disk:
@@ -343,7 +343,7 @@ Hydra at `/pc`. You can copy files to and from it, and run programs from it, jus
 ```
 
 The files travel over the serial port, mixed in with the console's text (the PC tool takes them out, so you won't
-see them). They go no faster than the serial port allows, so switch to 115200 baud (section 5.6) before you copy
+see them). They go no faster than the serial port allows, so switch to 115200 baud (section 5.5) before you copy
 big files. The PC tool's `--read-only` option stops the Hydra changing the folder's files.
 
 Without the PC tool, the Hydra waits a second for an answer from the PC, then gives up:

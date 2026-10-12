@@ -1,10 +1,10 @@
-# Chapter 15. The Vera X: Screen, Keyboard and Mouse
+# Chapter 16. The Vera X: Screen, Keyboard and Mouse
 
 With a **Vera X** card, the Hydra has a screen of its own, a keyboard and a mouse, more sound, and another SD card.
 This chapter shows how to use them, and describes the files of the two drivers that look after them: `vid`, for the
 screen, and `input`, for the keyboard and mouse.
 
-## 15.1 The Vera X
+## 16.1 The Vera X
 
 The **VERA** (Video Embedded Retro Adapter) is the graphics chip of the Commander X16, a modern 8-bit computer. It's
 built in an **FPGA**, a chip that can be programmed to be any kind of circuit, and it does a lot:
@@ -14,7 +14,7 @@ built in an **FPGA**, a chip that can be programmed to be any kind of circuit, a
 * two **layers**, each a screen of text (tiles) or a **bitmap** (a picture made of dots), one over the other;
 * 128 **sprites**: small pictures that can be moved around the screen on their own;
 * a **palette** of 256 colours, chosen from 4,096;
-* the **PSG**, with 16 voices, and **PCM**, for recorded sound (Chapter 14);
+* the **PSG**, with 16 voices, and **PCM**, for recorded sound (Chapter 15);
 * an SD card socket.
 
 The **Vera X** is a VERA on a small card of its own. On the Hydra, it's wired to **slot 0**, through the bus breakout
@@ -24,7 +24,7 @@ address $42. (The wiring is in the Vera X's schematic, in the `board/vera-x` fol
 
 The emulator has a Vera X too (Chapter 2): in the web emulator, turn it on in Setup.
 
-## 15.2 The console on the screen
+## 16.2 The console on the screen
 
 When the Hydra starts with a Vera X, the console's windows are shown on its screen as well as on the serial
 terminal. The screen shows 80 columns and 60 rows of text, and the chrome: the bar at the top, with the groups and
@@ -32,7 +32,7 @@ the time, and the window's header:
 
 <figure>
 <img src="figures/vera-console.png" alt="The Vera X's screen: the bar, the header, and HyForth's start-up messages">
-<figcaption>Figure 15-1. The console on the Vera X's screen, in its 80 by 60 mode.</figcaption>
+<figcaption>Figure 16-1. The console on the Vera X's screen, in its 80 by 60 mode.</figcaption>
 </figure>
 
 With a keyboard, you can type at the screen just as at the terminal. `consctl` chooses where the windows are shown:
@@ -42,9 +42,9 @@ With a keyboard, you can type at the screen just as at the terminal. `consctl` c
 | `echo screen >/dev/consctl` | Only on the Vera X's screen |
 | `echo serial >/dev/consctl` | Only on the serial terminal |
 | `echo both >/dev/consctl` | On both (as the Hydra starts) |
-| `echo seats >/dev/consctl` | On both, each a **seat** of its own (section 15.9) |
+| `echo seats >/dev/consctl` | On both, each a **seat** of its own (section 16.9) |
 
-## 15.3 /dev/vid/ctl: the screen's settings
+## 16.3 /dev/vid/ctl: the screen's settings
 
 | Command | What it does |
 |---|---|
@@ -59,7 +59,7 @@ With a keyboard, you can type at the screen just as at the terminal. `consctl` c
 | `output vga` | The picture for a VGA monitor (as it starts) |
 | `output ntsc` [`mono`] [`240p`] | For a TV: `mono` without colour, `240p` without interlace |
 | `output rgb` [`240p`] | For an RGB monitor |
-| `claim` | Take the chip for this program alone (section 15.6) |
+| `claim` | Take the chip for this program alone (section 16.6) |
 | `claim all` | The same, and all of VRAM too, even the console's text and font |
 | `release` | Give the chip back |
 | `reset` | Set the chip up again for the console, and clear the screen |
@@ -81,9 +81,9 @@ claimed
 ```
 
 The first line is the version of the VERA's FPGA program (its **gateware**). The last line, `claimed`, names the
-program that has the chip, if one has (section 15.6).
+program that has the chip, if one has (section 16.6).
 
-## 15.4 Drawing
+## 16.4 Drawing
 
 `/dev/vid/draw` draws on the bitmap, under the text. Turn a bitmap on with `ctl`'s `bitmap` command, then write
 commands to `draw`:
@@ -121,14 +121,14 @@ The dots are numbered from 0, with *x* across from the left and *y* down from th
 
 <figure>
 <img src="figures/vera-draw.png" alt="A green box with two yellow diagonals, a blue circle, a cyan disc, and Hello, Hydra! below">
-<figcaption>Figure 15-2. Drawing on the bitmap (the text screen cleared first).</figcaption>
+<figcaption>Figure 16-2. Drawing on the bitmap (the text screen cleared first).</figcaption>
 </figure>
 
-The colours are the palette's: 0 to 15 are the console's 16 colours (in the order of section 12.7's colours, then
+The colours are the palette's: 0 to 15 are the console's 16 colours (in the order of section 13.7's colours, then
 their bright versions: 8 grey, 9 bright red, 10 bright green, 11 bright yellow, 12 bright blue, 13 bright magenta, 14
 bright cyan, 15 white), and 16 to 255 the VERA's own.
 
-## 15.5 The screen's other files
+## 16.5 The screen's other files
 
 | File | What it is |
 |---|---|
@@ -138,10 +138,10 @@ bright cyan, 15 white), and 16 to 255 the VERA's own.
 | `sprites` | The 128 sprites' settings, 8 bytes each. Sprite 0 is the console's cursor, and sprite 1 the mouse's pointer |
 | `font` | The console's font: 256 characters, 8 bytes each, a byte a row of dots |
 | `frame` | A read waits for the next **frame** (the screen is drawn 59.5 times a second), then gives the number of frames so far |
-| `psg` | The PSG's registers (the sound driver uses it: section 14.5) |
-| `pcm`, `pcmctl` | Recorded sound (section 15.7) |
-| `mouse`, `mousein`, `mousectl` | The mouse (section 15.8) |
-| `draw` | Drawing on the bitmap (section 15.4) |
+| `psg` | The PSG's registers (the sound driver uses it: section 15.5) |
+| `pcm`, `pcmctl` | Recorded sound (section 16.7) |
+| `mouse`, `mousein`, `mousectl` | The mouse (section 16.8) |
+| `draw` | Drawing on the bitmap (section 16.4) |
 
 The console's font is ISO-8859-15: ASCII, and the letters of Western European languages. The ROM disk has the PC's
 font too, with its line-drawing characters; to use it:
@@ -151,7 +151,7 @@ font too, with its line-drawing characters; to use it:
 ```
 
 **The screen's terminal.** The console draws its windows on the screen through `term`, which understands this part
-of the terminal's language (section 12.7): the printable characters, CR, LF, BS, TAB and FF; `ESC 7`, `ESC 8`, `ESC
+of the terminal's language (section 13.7): the printable characters, CR, LF, BS, TAB and FF; `ESC 7`, `ESC 8`, `ESC
 c`, `ESC D`, `ESC E` and `ESC M`; the scrolling region (`ESC [`*t*`;`*b*`r`); the character sets (`ESC (` and `ESC )`
 with `0` or `B`, SO and SI); the cursor moves (`ESC [` with `A` to `H`, `d` and `f`); erasing (`J` and `K`); the
 colours (`m`: 0, 1, 7, 22, 27, 30-37, 39, 40-47, 49, 90-97, 100-107); saving the cursor (`s`, `u`); and showing or
@@ -169,16 +169,16 @@ hiding the cursor (`?25h`, `?25l`). Anything else is ignored.
 | $1FA00-$1FBFF | The palette |
 | $1FC00-$1FFFF | The sprites' settings |
 
-## 15.6 Taking over the chip
+## 16.6 Taking over the chip
 
 A program that wants to drive the VERA itself, the way an X16 program does (for a game, perhaps), writes `claim` to
 `/dev/vid/ctl`. While it has the chip, the driver leaves it alone, and the console stops drawing on the screen; the
 program can write the VERA's registers at $FF20 to $FF3F directly. `claim all` lets it use all of the video RAM too.
 When the program writes `release` (or ends), the driver sets the chip up for the console again, and the console
 draws its window again. The VERA's registers have the same names and meanings as on the Commander X16, so the X16's
-documentation (its *Programmer's Reference*, chapter 9) describes them; only their address is different.
+documentation (its *Programmer's Reference*, chapter 10) describes them; only their address is different.
 
-## 15.7 Recorded sound: pcm and pcmctl
+## 16.7 Recorded sound: pcm and pcmctl
 
 The VERA's PCM plays samples from a **FIFO**: a 4K queue that it empties at the sample rate. A program writes its
 samples to `pcm`; the driver puts them in the FIFO as it has room, and the program waits when it's full. Only one
@@ -193,9 +193,9 @@ program at a time can have `pcm` open.
 | `reset` | Empty the FIFO |
 | `drain` | Wait until the FIFO has played out |
 
-Reading `pcmctl` shows the settings, and who has `pcm`. `play` plays WAV files this way (Chapter 14).
+Reading `pcmctl` shows the settings, and who has `pcm`. `play` plays WAV files this way (Chapter 15).
 
-## 15.8 The mouse
+## 16.8 The mouse
 
 The `input` program reads the mouse and writes its moves to `/dev/vid/mousein`. The driver moves the **pointer**,
 sprite 1, and keeps the mouse's state in `/dev/vid/mouse`, which works like Plan 9's: a read waits until the mouse
@@ -212,9 +212,9 @@ Writing `m` *x y* to `mouse` moves the pointer. `mousectl` has two commands: `po
 shown once the mouse has moved), and `swap on` or `off` (swap the left and right buttons).
 
 The mouse works in the console too: clicking a tiled window gives it the keys, and a program that asks (with
-`ESC [?1000h`, section 12.7) gets each click as a report, as xterm sends them.
+`ESC [?1000h`, section 13.7) gets each click as a report, as xterm sends them.
 
-## 15.9 The keyboard
+## 16.9 The keyboard
 
 The `input` program also reads the keyboard, and writes each key to the console's keyboard file, `/dev/kbin`, as
 the bytes a PC's terminal would send for it. So everything works the same from the keyboard as from the serial

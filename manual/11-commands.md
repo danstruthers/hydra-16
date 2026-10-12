@@ -1,4 +1,4 @@
-# Chapter 10. Commands from A to Z
+# Chapter 11. Commands from A to Z
 
 This chapter is a guide to every program on the Hydra, in alphabetical order, followed by the shell's built-in
 commands. Each entry shows how to type the command, what its options mean, and an example of it at work.
@@ -20,7 +20,7 @@ brackets, `[ ]`, mark something you can leave out, and `...` means "as many as y
 ls: /nothing: not found
 ```
 
-and ends with a **status** that isn't success, so a shell can tell (section 7.9).
+and ends with a **status** that isn't success, so a shell can tell (section 8.9).
 
 Most of the examples use a few small files. To make them, type:
 
@@ -37,7 +37,7 @@ Most of the examples use a few small files. To make them, type:
 as [-bl] file.s [out]
 ```
 
-Turns a program written in 65C02 **assembly language** into a program the Hydra can run. Chapter 25 is all about it.
+Turns a program written in 65C02 **assembly language** into a program the Hydra can run. Chapter 26 is all about it.
 
 ## basic: HyBASIC
 
@@ -45,7 +45,7 @@ Turns a program written in 65C02 **assembly language** into a program the Hydra 
 basic [-l] [file]
 ```
 
-Starts HyBASIC, the Hydra's BASIC. Chapters 22 and 23, and Appendix C, are all about it.
+Starts HyBASIC, the Hydra's BASIC. Chapters 23 and 24, and Appendix C, are all about it.
 
 ## calc: the calculator
 
@@ -58,10 +58,10 @@ Works out an **expression**, exactly, and prints the answer. The expression is t
 
 | Option | What it does |
 |---|---|
-| `-b` *base* | Print the answer in another base: `x` for hex, `b` binary, `o` octal, and more (Chapter 17) |
+| `-b` *base* | Print the answer in another base: `x` for hex, `b` binary, `o` octal, and more (Chapter 18) |
 | `-d` *digits* | How many digits to work out for answers like square roots, which never end (12 unless you say) |
 
-`calc` knows the Hydra's whole number system, which Chapter 17 explains: fractions stay exact, whole numbers can be
+`calc` knows the Hydra's whole number system, which Chapter 18 explains: fractions stay exact, whole numbers can be
 as big as you like, and numbers can be written in any base. It has:
 
 * the operators `+` `-` `*` `/`, `%` (the remainder after dividing whole numbers), `^` (a power), and parentheses;
@@ -195,7 +195,7 @@ setting), or `none`.
 db [-p task | program [arg ...]]
 ```
 
-Runs a program one instruction at a time, so you can watch what it does. Chapter 27 is all about it.
+Runs a program one instruction at a time, so you can watch what it does. Chapter 28 is all about it.
 
 ## df: free disk space
 
@@ -223,7 +223,7 @@ disks).
 dis [options] file
 ```
 
-Turns a program back into assembly language, so you can read it. Chapter 26 is all about it.
+Turns a program back into assembly language, so you can read it. Chapter 27 is all about it.
 
 ## du: disk usage
 
@@ -330,7 +330,7 @@ type where the cursor is, as in a word processor. It works like the `nano` edito
 
 <figure>
 <img src="figures/cmd-edit2.svg" alt="The editor, with three lines of a story typed, and its keys listed at the bottom">
-<figcaption>Figure 10-1. The screen editor.</figcaption>
+<figcaption>Figure 11-1. The screen editor.</figcaption>
 </figure>
 
 The top line shows the file's name (with a `*` if it has changes you haven't saved), and where the cursor is. The
@@ -363,7 +363,7 @@ When you close a file with changes, `edit` asks whether to save them:
 
 <figure>
 <img src="figures/cmd-edit5.svg" alt="The editor asking: Save the changes? (y)es (n)o">
-<figcaption>Figure 10-2. Closing a changed file.</figcaption>
+<figcaption>Figure 11-2. Closing a changed file.</figcaption>
 </figure>
 
 Press <kbd>Y</kbd>, then <kbd>RETURN</kbd> to keep the file's name (or type another).
@@ -377,8 +377,8 @@ Press <kbd>Y</kbd>, then <kbd>RETURN</kbd> to keep the file's name (or type anot
 forth [-l] [file [arg ...]]
 ```
 
-Starts HyForth. With a file, it runs the file as a Forth program. `-l` makes it a login shell (section 7.16).
-Chapters 18 and 19, and Appendix A, are all about it.
+Starts HyForth. With a file, it runs the file as a Forth program. `-l` makes it a login shell (section 8.16).
+Chapters 19 and 20, and Appendix A, are all about it.
 
 ## free: memory
 
@@ -419,7 +419,7 @@ segment 15
 ```
 
 `lost` counts space that's marked as used but belongs to no file; `unmarked`, space a file uses that isn't marked
-as used; and `twice`, space that two files think is theirs. All three should be 0. Chapter 13 explains more.
+as used; and `twice`, space that two files think is theirs. All three should be 0. Chapter 14 explains more.
 
 ## grep: find lines
 
@@ -511,7 +511,7 @@ hello, there
 hwtest
 ```
 
-Starts the Hydra again, into the hardware test (section 5.8). Everything running stops.
+Starts the Hydra again, into the hardware test (section 5.7). Everything running stops.
 
 ## hylang
 
@@ -519,7 +519,7 @@ Starts the Hydra again, into the hardware test (section 5.8). Everything running
 hylang [-l] [file]
 ```
 
-Starts hylang, the Hydra's Lisp-like language. Chapters 20 and 21, and Appendix B, are all about it.
+Starts hylang, the Hydra's Lisp-like language. Chapters 21 and 22, and Appendix B, are all about it.
 
 ## kill: stop a task
 
@@ -565,7 +565,7 @@ the current directory.
 
 | Option | What it does |
 |---|---|
-| `-l` | A long listing: each file's mode, device, length and time (section 8.2) |
+| `-l` | A long listing: each file's mode, device, length and time (section 9.2) |
 | `-d` | A directory itself, not its files |
 
 ```session
@@ -604,7 +604,7 @@ mkfs [-fp] disk [label ...]
 ```
 
 Makes a new, empty HydraFS on a disk, ready for files. Everything that was on the disk is lost! Use it on a new SD
-card before you use it with the Hydra (Chapter 13). The words after the disk's name are its label.
+card before you use it with the Hydra (Chapter 14). The words after the disk's name are its label.
 
 | Option | What it does |
 |---|---|
@@ -664,7 +664,7 @@ Shows each file (or its standard input) 22 lines at a time. After each screenful
 
 <figure>
 <img src="figures/cmd-more.svg" alt="The first 22 programs in /rom/bin, then --more--">
-<figcaption>Figure 10-3. <code>ls /rom/bin | more</code></figcaption>
+<figcaption>Figure 11-3. <code>ls /rom/bin | more</code></figcaption>
 </figure>
 
 ## mv: move or rename
@@ -690,7 +690,7 @@ hello
 new-window [-g] [command ...]
 ```
 
-Makes a new window in this window's group (Chapter 9), shows it, and runs the command in it (or, with no command, a
+Makes a new window in this window's group (Chapter 10), shows it, and runs the command in it (or, with no command, a
 shell). The window goes away when the command ends.
 
 | Option | What it does |
@@ -707,7 +707,7 @@ shell). The window goes away when the command ends.
 ns [task]
 ```
 
-Shows a task's namespace (or this shell's), as the `bind` and `mount` commands that would build it (section 8.8).
+Shows a task's namespace (or this shell's), as the `bind` and `mount` commands that would build it (section 9.8).
 
 ## play: play a song
 
@@ -734,7 +734,7 @@ programs like Furnace can make), a score in MML, the Hydra's music language, or 
 /> play /rom/songs/scom.zsm
 ```
 
-Chapter 14 tells you all about the Hydra's sound, and MML.
+Chapter 15 tells you all about the Hydra's sound, and MML.
 
 ## ps: the tasks
 
@@ -798,7 +798,7 @@ Prints the current directory.
 rc [-l] [-i] [-c command | file [arg ...]]
 ```
 
-Starts the rc shell. Chapter 7 is all about it.
+Starts the rc shell. Chapter 8 is all about it.
 
 ## rm: remove files
 
@@ -951,7 +951,7 @@ Shows the tasks every second, with how much of the processor each one used in th
 
 <figure>
 <img src="figures/cmd-top.svg" alt="top's list of the tasks, with each one's share of the processor">
-<figcaption>Figure 10-4. <code>top</code>. The kernel's share is mostly the idle task: time when nothing needed the processor.</figcaption>
+<figcaption>Figure 11-4. <code>top</code>. The kernel's share is mostly the idle task: time when nothing needed the processor.</figcaption>
 </figure>
 
 ## touch: make a file, or change its time
@@ -1066,7 +1066,7 @@ Term and minicom do, for example.
 | `-k` | Send in 1K blocks, which is faster (your terminal program must allow it) |
 
 `xmodem` waits a minute for the PC to start, and says how many bytes it sent or received when it's done. With the
-PC tool, it's simpler to copy files through `/pc` (section 8.9).
+PC tool, it's simpler to copy files through `/pc` (section 9.9).
 
 ## The system's own programs
 
@@ -1074,13 +1074,13 @@ These programs are started by the system itself, and you won't often type them:
 
 | Program | What it does |
 |---|---|
-| `init` | The first program: sets up the system, and starts the shells (section 6.4) |
+| `init` | The first program: sets up the system, and starts the shells (section 7.4) |
 | `wstart` | Waits for <kbd>CTRL</kbd>-<kbd>]</kbd> <kbd>C</kbd>, and starts a shell in the new window |
-| `input` | The driver for a Vera X's keyboard and mouse (Chapter 15) |
+| `input` | The driver for a Vera X's keyboard and mouse (Chapter 16) |
 
 ## The shell's own commands
 
-These commands are built into rc (section 7.14). Each one changes the shell itself, which is why it can't be a
+These commands are built into rc (section 8.14). Each one changes the shell itself, which is why it can't be a
 program.
 
 ### cd: change directory
@@ -1172,12 +1172,12 @@ whatis name ...
 ```
 
 Says what each name is to rc: a variable (with its value), a function (with its body), a built-in, or the program
-that would run (section 7.12).
+that would run (section 8.12).
 
 ### builtin, ., bind, mount, unmount and newns
 
 | Command | What it does |
 |---|---|
 | `builtin command [arg ...]` | Runs a built-in or a program, even when a function has the same name |
-| `. file [arg ...]` | Runs the file's commands in this shell (section 7.13) |
-| `bind`, `mount`, `unmount`, `newns` | Change the namespace (sections 8.5 to 8.8) |
+| `. file [arg ...]` | Runs the file's commands in this shell (section 8.13) |
+| `bind`, `mount`, `unmount`, `newns` | Change the namespace (sections 9.5 to 9.8) |

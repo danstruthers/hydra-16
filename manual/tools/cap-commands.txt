@@ -1,4 +1,4 @@
-## Chapter 10's pictures: more, top and edit (node manual/tools/capture.js manual/tools/cap-commands.txt)
+## Chapter 11's pictures: more, top and edit (node manual/tools/capture.js manual/tools/cap-commands.txt)
 #! --rtc
 ls /rom/bin | more
 !snap cmd-more

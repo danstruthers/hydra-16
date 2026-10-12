@@ -1,4 +1,4 @@
-# Chapter 17. Numbers and Bases
+# Chapter 18. Numbers and Bases
 
 Most small computers can only count to 255, or 65,535, and get fractions slightly wrong. The Hydra's numbers are
 different: they can be as big as you like, fractions are exact, and they can be written in any **base**, from binary
@@ -6,7 +6,7 @@ to base 80 and beyond. The same numbers work in hylang, in HyBASIC, in HyForth (
 `calc` command, and in assembly language. This chapter explains them, using `calc` for the examples, since it works
 at the shell; each language's own chapter shows how it writes them.
 
-## 17.1 Four kinds of number
+## 18.1 Four kinds of number
 
 The Hydra has four kinds of number.
 
@@ -60,7 +60,7 @@ When numbers of different kinds meet, the answer is the simplest kind that can h
 an integer is a rational, unless it comes out whole; a rational and a decimal make a rational (`1/3 + 0.5` is `5/6`);
 and anything with a complex number is complex, unless its imaginary part turns out to be 0.
 
-## 17.2 Functions and precision
+## 18.2 Functions and precision
 
 Some numbers can't be written exactly in any of these ways: the square root of 2, or pi, has digits that go on for
 ever. For these, the **math library**'s functions (square roots, powers, logarithms, sines ...) work to a
@@ -76,9 +76,9 @@ ever. For these, the **math library**'s functions (square roots, powers, logarit
 ```
 
 The answers are fixed decimals, rounded at the last place. Each language has its own way to set the precision (up to
-100 digits): Chapters 18, 20 and 22 show how.
+100 digits): Chapters 19, 21 and 23 show how.
 
-## 17.3 Bases
+## 18.3 Bases
 
 When we write a number like 365, each digit's place means something: 3 hundreds, 6 tens and 5 ones. Each place is
 worth ten times the place to its right. That's **base 10**, or **decimal**, and we use it because we have ten
@@ -109,7 +109,7 @@ and so on:
 FF
 ```
 
-## 17.4 The named bases
+## 18.4 The named bases
 
 The Hydra has nineteen **named bases**, each named by a letter (capital or small: `X` and `x` are the same):
 
@@ -179,7 +179,7 @@ base is negative, the places alternate between positive and negative. Base `m` i
 letters as its digits: `D` `a` `n` `i` `e` `l` are -6 to -1, `S` is 0, and `t` `p` `h` `r` `u` `s` are 1 to 6.
 Capital and small letters are different digits here, as `S` and `s` both appear.
 
-## 17.5 Radixes and digits of your own
+## 18.5 Radixes and digits of your own
 
 Besides the named bases, a base string can name a **radix**, or a set of **digits of your own**.
 
@@ -211,7 +211,7 @@ BCD
 (With the digits A to J for 0 to 9, 123 is BCD.) If no two of the digits differ only in being capital or small,
 then capital and small letters are read as the same.
 
-## 17.6 The modifiers
+## 18.6 The modifiers
 
 A base string can start with **modifiers**, which change how the base works:
 
@@ -248,7 +248,7 @@ So one base can have several names, which all mean the same:
 | Base 36 | `z`, `36r` |
 | Balanced ternary | `c` (least first, with `-` `0` `+`), `>c` (most first), `=3r` (most first, with `0` `1` `2` for -1, 0 and +1) |
 
-## 17.7 Writing a number in a base
+## 18.7 Writing a number in a base
 
 Inside a program (or a `calc` expression), a number can say its own base: a `#`, the base string, and the digits.
 
@@ -271,9 +271,9 @@ Inside a program (or a `calc` expression), a number can say its own base: a `#`,
 ```
 
 Numbers can have `_`s in them, to make them easier to read: `1_000_000` is a million. And decimal numbers can be
-written in all the forms of section 17.1: `-42`, `3.14`, `2/3`, `2i`, `1+2i`.
+written in all the forms of section 18.1: `-42`, `3.14`, `2/3`, `2i`, `1+2i`.
 
-## 17.8 Fractions in other bases
+## 18.8 Fractions in other bases
 
 A fraction can be written with a point in any base: in binary, `0.1` is a half, and `0.01` a quarter.
 
@@ -294,7 +294,7 @@ a fraction, with the base's digits:
 
 (1 over 11: 1 over three, in binary.)
 
-## 17.9 The base setting
+## 18.9 The base setting
 
 Each program has a **base setting**: the base it reads numbers in, and writes them in, when they don't say their
 own. It starts as decimal. Every language can change it, and when it does, every number the program reads or writes
@@ -324,7 +324,7 @@ hylang> (base "d")
 
 In hex, 9 + 1 is A. Setting the base gives back the one before, so a program can put it back when it's done.
 
-## 17.10 Bits
+## 18.10 Bits
 
 Integers can be treated as rows of **bits** (binary digits), however big they are. Each language has the operations
 **and**, **or**, **xor**, **not**, and **shifts**, which move the bits left (multiplying by 2 each place) or right
@@ -338,7 +338,7 @@ computers.
 | xor | The bits differ |
 | not | The bit is 0 (and so not *x* is -*x* - 1) |
 
-## 17.11 When numbers go wrong
+## 18.11 When numbers go wrong
 
 | Message | Means |
 |---|---|

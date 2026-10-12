@@ -10,7 +10,7 @@ in square brackets can be left out; `...` means as many as you like.
 | `(f a b ...)` | An **S-expression**: a call of *f* with the values of *a*, *b* ... |
 | `{a b ...}` | A **Q-expression**: a list, not worked out (code to run later, or names) |
 | `[a b ...]` | `(list a b ...)`: a list of the values |
-| `42`, `-3`, `2/3`, `1.25`, `2i`, `1+2i`, `1_000`, `#xFF` ... | Numbers, in any of Chapter 17's forms; read in the current base |
+| `42`, `-3`, `2/3`, `1.25`, `2i`, `1+2i`, `1_000`, `#xFF` ... | Numbers, in any of Chapter 18's forms; read in the current base |
 | `"text"` | A string; escapes `\n` `\t` `\r` `\0` `\a` `\b` `\f` `\v` `\e` `\\` `\"` and `\x`*HH* |
 | `"""text"""` | A here string: the text as it is (as many quotes close it as opened it) |
 | `\a`, `\space`, `\newline`, `\tab` | Characters: one, or one by its name |
@@ -234,5 +234,5 @@ hylang's library (`globals`, loaded as it starts) adds:
 | `(use "name")` | Load a library once |
 | `(buffer-cmp ...)` | (B.10) |
 
-And the libraries loaded with `use` (Chapter 21): `gpio`, `i2c`, `spi`, `clock`, `disk`, `cons`, `proc`, `pc`, `snd`,
+And the libraries loaded with `use` (Chapter 22): `gpio`, `i2c`, `spi`, `clock`, `disk`, `cons`, `proc`, `pc`, `snd`,
 `video`, `screen`, `dev`; and `dice` (with `load`): `(d6)`, `(d20)`, `(dice n sides)`, and more for games.

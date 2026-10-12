@@ -1,10 +1,10 @@
-# Chapter 6. How the Hydra Starts
+# Chapter 7. How the Hydra Starts
 
 In Chapter 5 you watched the Hydra start, in about a second. In that second, a lot happens. This chapter follows it
 step by step, from the moment the power comes on to the prompt. On the way, you'll meet the most important ideas in
 HydraOS: memory and its banks, tasks, the kernel, drivers and the shell.
 
-## 6.1 Waking up
+## 7.1 Waking up
 
 When the power comes on, the Hydra's memory chips are full of random numbers, and the processor knows nothing at
 all, except one thing: where to find its first instruction.
@@ -18,7 +18,7 @@ It holds the processor's *reset* pin down until the power is steady, and then fo
 second) more. The reset button works through it too: while the button is pressed, the processor waits, and 150
 milliseconds after it's let go, the processor starts again from the reset vector.
 
-## 6.2 The memory map
+## 7.2 The memory map
 
 The 65C02 can only see 65,536 bytes of memory at once (that's 64K, or $10000 in hex). Each byte has an **address**,
 from $0000 to $FFFF. But the Hydra has far more memory than that: 512K of task RAM, 2 MB of shared RAM, 2 MB more
@@ -31,7 +31,7 @@ at once, but you can slide the scroll to see any part.
 
 <figure>
 <img src="figures/memmap.svg" alt="The 65C02's 64K: zero page, stack, OS area, program, RAM bank, paged ROM bank, kernel ROM page, I/O, registers; and the bigger memories behind the windows">
-<figcaption>Figure 6-1. The Hydra's memory map: what the 65C02 sees, and the bigger memories behind its windows.</figcaption>
+<figcaption>Figure 7-1. The Hydra's memory map: what the 65C02 sees, and the bigger memories behind its windows.</figcaption>
 </figure>
 
 | Addresses | What's there | Chosen by |
@@ -72,7 +72,7 @@ The I/O ports are the chips that do the Hydra's input and output:
 | 5-9 | $FF50-$FF9F | Slots 1 to 5 | Expansion cards (select A) |
 | 10-14 | $FFA0-$FFEF | Slots 1 to 5 | Expansion cards (select B) |
 
-## 6.3 Tasks: sixteen computers in one
+## 7.3 Tasks: sixteen computers in one
 
 The Hydra can run sixteen programs at once. Each program runs in a **task**, and each task has its own 32K of
 memory at $0000-$7FFF, chosen by the T register. Each task has its own zero page, its own stack, its own bank
@@ -104,7 +104,7 @@ A task's 32K is laid out like this:
 | $0200-$03FF | HydraOS's area for this task: its open files, its name, and more |
 | $0400-$7FFF | The program's memory: its code (unless it runs from ROM) and its data |
 
-## 6.4 Step by step
+## 7.4 Step by step
 
 Here is everything the Hydra does, from the reset to the prompt.
 
@@ -182,7 +182,7 @@ RAM modules: 01
 ```
 
 If a <kbd>T</kbd> was typed while POST ran, the Hydra starts the **hardware test** now, instead of HydraOS (section
-5.8).
+5.7).
 
 The kernel keeps a copy of everything it prints from here on. Any time later, you can read it again:
 
@@ -244,7 +244,7 @@ Like most of HydraOS, the drivers live in the paged ROM, in **modules**. A modul
 bank register shows its bank at $A000-$DFFF, so its code never needs copying into RAM. A big module has a bank (or
 several) of its own; small ones share a bank, each in its own part of it.
 
-Chapter 11 explains how drivers work, and Part Three describes each one.
+Chapter 12 explains how drivers work, and Part Three describes each one.
 
 ### Step 6: The tick, and init
 
@@ -261,8 +261,8 @@ init does everything needed to make the Hydra ready for you:
 2. It starts the two **RAM disks**: `r`, 256K of RAM banks on the memory cards, and `s`, 512K of the shared RAM.
    (With less memory, it makes them smaller.)
 3. It builds its **namespace**, its tree of files, from the file `/rom/lib/namespace` (and from `/lib/namespace` on
-   an SD card, if there is one). Chapter 8 explains namespaces.
-4. It sets up the console's **windows** from `/lib/windows` (Chapter 9).
+   an SD card, if there is one). Chapter 9 explains namespaces.
+4. It sets up the console's **windows** from `/lib/windows` (Chapter 10).
 5. It prints `HydraOS 1.0 for the Hydra-16`, and which task it's in, and lists the tasks:
 
 ```text
@@ -300,7 +300,7 @@ init: hello ended: code $07 (bye)
 
 7. It starts the **shell** in window 0. Which shell? The one named in `/lib/shell`. On the ROM disk, that file
    says `/bin/forth -l`: HyForth, as a login shell.
-8. It starts **wstart**, which waits for you to ask for a new window (Chapter 9), and **input**, the driver for a Vera
+8. It starts **wstart**, which waits for you to ask for a new window (Chapter 10), and **input**, the driver for a Vera
    X's keyboard and mouse (which ends at once if there isn't one).
 
 Then init waits. If the shell or wstart ever ends, init starts it again, so there's always a shell to type at.
@@ -308,7 +308,7 @@ Then init waits. If the shell or wstart ever ends, init starts it again, so ther
 ### Step 8: The shell starts
 
 HyForth starts, and loads its start-up file, `/lib/forth/startup.fs`, which adds four sets of words to its
-**dictionary**: the Core Extension, Exception, File Access and Programming-Tools word sets (Chapter 18). Because it
+**dictionary**: the Core Extension, Exception, File Access and Programming-Tools word sets (Chapter 19). Because it
 was started with `-l`, as a **login shell**, it then reads `/lib/forth/profile.fs`, which turns HyForth into a
 shell: it loads `shell.fl`, the words that let it run commands, and sets up the window. Then it says hello, and
 prints its prompt:
@@ -320,7 +320,7 @@ HyForth (Forth 2012), bye to end
 
 The prompt shows where you are in the file tree: `/` is the top. The Hydra is ready.
 
-## 6.5 What's running now
+## 7.5 What's running now
 
 The `ps` command lists the tasks, in a friendlier form than init's table, with the task numbers in decimal:
 
@@ -340,7 +340,7 @@ task  state   parent     cpu group  name
 ```
 
 You can see init (task 1), the shell, `forth` (task 2), wstart (task 3), `ps` itself (task 4: the shell started
-it, so its parent is 2), and the five drivers in tasks 11 to 15 (B to F). The `cpu` column is in seconds. Chapter 10
+it, so its parent is 2), and the five drivers in tasks 11 to 15 (B to F). The `cpu` column is in seconds. Chapter 11
 explains the `group` column.
 
 > **TRY THIS:** Run `ps` again. Has anything changed? Which task do you think did most of the work while the Hydra

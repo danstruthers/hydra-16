@@ -1,13 +1,13 @@
-# Chapter 18. Learning HyForth
+# Chapter 19. Learning HyForth
 
 **Forth** is a programming language invented by Charles Moore around 1970, to control radio telescopes. It's small,
 fast and simple enough to fit in a tiny computer, which made it popular on the home computers of the 1980s. **HyForth**
 is the Hydra's Forth: it follows the 2012 standard for the language, and adds words for the Hydra's own features.
 This chapter teaches you Forth from the beginning. You've met HyForth already: it's the shell you type at.
 
-## 18.1 Talking to HyForth
+## 19.1 Talking to HyForth
 
-At the `/>` prompt, any line that starts with a Forth word, or a number, is Forth (section 7.1); everything else is a
+At the `/>` prompt, any line that starts with a Forth word, or a number, is Forth (section 8.1); everything else is a
 command for rc. If you'd rather every line was Forth, type `forth` to start a plain HyForth, which says `ok` after
 each line it has done; type `bye` to leave it.
 
@@ -15,7 +15,7 @@ Forth reads a line as **words**, separated by spaces, and does each one in turn,
 group of characters without a space: `+`, `dup`, `."` and `2/` are all words. Capital and small letters are the same,
 so `DUP` and `dup` are the same word. And a word that's a number puts that number on the **stack**.
 
-## 18.2 The stack
+## 19.2 The stack
 
 The **stack** is the heart of Forth. It's a pile of numbers: each number you type goes on the top, and most words take
 their numbers off the top, and put their answers back there. `.s` shows the whole stack, without changing it; the
@@ -34,7 +34,7 @@ and prints it:
 The numbers come off in the opposite order to the one they went on: the last one on is the first one off. Think of a
 pile of plates: you put plates on the top, and take them off the top.
 
-## 18.3 Arithmetic
+## 19.3 Arithmetic
 
 Since the numbers are on the stack, a word like `+` doesn't need anything after it: it takes two numbers off the
 stack, adds them, and puts the answer back. So in Forth, you write the numbers first, and then what to do with them:
@@ -73,10 +73,10 @@ the order of the words says what's done first:
 The first adds 2 and 3, then multiplies by 4. The second multiplies 3 by 4, then adds 2.
 
 > **NOTE:** Each number on Forth's stack is a **cell**: 16 bits, so it holds -32,768 to 32,767 (or 0 to 65,535). A
-> sum that goes past them wraps round: `32767 1 + .` prints `-32768`. Section 19.8 shows how HyForth's numbers library
+> sum that goes past them wraps round: `32767 1 + .` prints `-32768`. Section 20.8 shows how HyForth's numbers library
 > works with the Hydra's big numbers, fractions and decimals instead.
 
-## 18.4 Moving things on the stack
+## 19.4 Moving things on the stack
 
 These words rearrange the stack. Each comes with a **stack diagram**, in parentheses: what it takes from the stack,
 `--`, then what it leaves, with the top on the right.
@@ -101,7 +101,7 @@ These words rearrange the stack. Each comes with a **stack diagram**, in parenth
 <3> 2 3 1
 ```
 
-## 18.5 Making new words
+## 19.5 Making new words
 
 This is where Forth comes alive. You can make new words out of old ones, and use them just like the built-in ones. A
 **definition** starts with `:` and the new word's name, and ends with `;`:
@@ -143,7 +143,7 @@ A Forth program is just a collection of words, each built from the ones before, 
 job. Give your words names that say what they do, and keep each one short: a line or two. If you define a word again,
 the new definition is used from then on, but the words already made with the old one keep using it.
 
-## 18.6 Printing
+## 19.6 Printing
 
 | Word | Stack | What it does |
 |---|---|---|
@@ -154,7 +154,7 @@ the new definition is used from then on, but the words already made with the old
 | `emit` | ( *char* -- ) | Print the character whose code is *char* |
 | `space` | ( -- ) | Print a space |
 | `spaces` | ( *n* -- ) | Print *n* spaces |
-| `type` | ( *c-addr u* -- ) | Print a string (section 18.11) |
+| `type` | ( *c-addr u* -- ) | Print a string (section 19.11) |
 
 ```session
 /> : hello ." Hello, world!" cr ;
@@ -164,7 +164,7 @@ Hello, world!
 
 The space after `."` isn't part of the text: it just separates the word from the text.
 
-## 18.7 True and false
+## 19.7 True and false
 
 A **comparison** takes two numbers, and leaves a **flag**: -1 for true, or 0 for false.
 
@@ -188,7 +188,7 @@ A **comparison** takes two numbers, and leaves a **flag**: -1 for true, or 0 for
 
 `and`, `or` and `xor` combine flags (they work on each bit of the numbers), and `0=` turns true into false and back.
 
-## 18.8 Making decisions
+## 19.8 Making decisions
 
 In a definition, `if` takes a flag from the stack. If it's true (anything but 0), the words up to `then` are done;
 if it's false, they're skipped. With an `else`, the words between `else` and `then` are done when it's false:
@@ -215,7 +215,7 @@ To choose between several cases, use `case`:
   endcase cr ;
 ```
 
-## 18.9 Loops
+## 19.9 Loops
 
 `do` ... `loop` counts. It takes two numbers: the end, and the start. `i` puts the count on the stack each time round:
 
@@ -252,7 +252,7 @@ And `begin` ... `while` ... `repeat` tests at the start of each time round: it g
 | `begin` ... `again` | Repeats for ever (press <kbd>CTRL</kbd>-<kbd>C</kbd>) |
 | `leave` | Leaves a `do` loop at once |
 
-## 18.10 Variables and constants
+## 19.10 Variables and constants
 
 A **variable** is a named place in memory that holds a number. `variable score` makes one. Saying its name puts its
 **address** (where it is) on the stack; `!` ("store") puts a number there, and `@` ("fetch") gets it back:
@@ -286,7 +286,7 @@ A **value** is between the two: its name gives its value, like a constant, but `
 3
 ```
 
-## 18.11 Characters and strings
+## 19.11 Characters and strings
 
 Every character has a number, its **code** (Appendix E has them all). `char` gives a character's code, and `emit`
 prints the character for a code:
@@ -317,7 +317,7 @@ hello
 Hello, Sam!
 ```
 
-## 18.12 Memory
+## 19.12 Memory
 
 A variable is one cell of memory. For more, `create` makes a name for the place where the next things go, and `,`
 ("comma") puts a number there, in the next cell:
@@ -344,7 +344,7 @@ the fourth prime. Counting starts at 0, so that's item number 3.
 | `move` | ( *from to u* -- ) | Copy *u* bytes |
 | `dump` | ( *addr u* -- ) | Show memory, in hex |
 
-## 18.13 Numbers in other bases
+## 19.13 Numbers in other bases
 
 HyForth reads and prints numbers in the base in the variable `base`, usually 10. `hex` sets it to 16, and `decimal`
 back to 10:
@@ -362,9 +362,9 @@ is its code:
 255 10 99 65
 ```
 
-(With the numbers library, section 19.8, HyForth reads all of Chapter 17's numbers too.)
+(With the numbers library, section 20.8, HyForth reads all of Chapter 18's numbers too.)
 
-## 18.14 Words that call themselves
+## 19.14 Words that call themselves
 
 A word can use itself, with `recurse`. The **factorial** of a number is it times every number below it: 5 × 4 × 3 ×
 2 × 1. Or, put another way, the factorial of *n* is *n* times the factorial of *n* - 1:
@@ -375,7 +375,7 @@ A word can use itself, with `recurse`. The **factorial** of a number is it times
 120
 ```
 
-## 18.15 When things go wrong
+## 19.15 When things go wrong
 
 When HyForth doesn't know a word, it prints the word and a `?`:
 
@@ -405,10 +405,10 @@ can't divide
 `throw` ( *n* -- ) throws error *n* (unless it's 0). The standard's errors are -1 to -255, and HyForth's
 system errors -512 and below, so give your own errors positive numbers.
 
-## 18.16 Keeping your words
+## 19.16 Keeping your words
 
 Words you type at the prompt are gone when HyForth ends. To keep them, write them in a file (with `edit`, Chapter
-10), and **include** it:
+11), and **include** it:
 
 ```session
 /> echo ': twice ( n -- 2n ) 2 * ;' >/ram/my.fs
@@ -424,7 +424,7 @@ already isn't read again.
 
 A file of Forth can also be run as a program, a **script**, with `forth file.fs`, followed by any arguments. Its
 first line can be `#!/bin/forth`, and then it runs by its name, like any program. In a script, `argc` and `arg` give
-its arguments (section 19.9), and `bye` (or reaching the end) ends it.
+its arguments (section 20.9), and `bye` (or reaching the end) ends it.
 
-Put your Forth files on an SD card, so they're there next time. Chapter 19 shows how to use HyForth to work the
+Put your Forth files on an SD card, so they're there next time. Chapter 20 shows how to use HyForth to work the
 Hydra's devices, and Appendix A lists every word.

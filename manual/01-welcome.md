@@ -147,7 +147,7 @@ They hold the rest of HydraOS: its drivers, shells, languages and tools, and a w
 **The registers and mirrors.** The rows of smaller chips in the middle of the board are the Hydra's special trick.
 Four of them, labelled **T**, **U**, **V** and **W Register**, choose which task's memory the processor sees, which
 shared memory, which interrupt, and which page of the kernel ROM. Others, the **mirror RAMs**, remember which bank
-of memory each task has chosen. Chapter 6 tells you how they work together.
+of memory each task has chosen. Chapter 7 tells you how they work together.
 
 **The VIA (U2).** The R65C22 *Versatile Interface Adapter* has two timers and two 8-bit ports. One timer ticks the
 Hydra's clock for multitasking. One port runs the **SPI bus**, which talks to SD cards and other gadgets through
@@ -219,7 +219,7 @@ The Hydra's addresses go from **$0000** to **$FFFF**: four hex digits, or 65,536
 as on many computers of the 1980s, a **$** in front of a number means it's hexadecimal. So **$10** is sixteen, not
 ten, and **$FF20** is the address 65,312.
 
-> **TRY THIS:** Can you work out what $20 is in decimal? (Each step in the second hex digit is worth 16.) Chapter 17
+> **TRY THIS:** Can you work out what $20 is in decimal? (Each step in the second hex digit is worth 16.) Chapter 18
 > has much more about numbers, and the Hydra's languages can convert between bases for you. In HyForth, type
 > `hex 20 decimal .` to see the answer.
 

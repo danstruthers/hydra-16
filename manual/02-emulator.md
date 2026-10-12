@@ -48,7 +48,7 @@ sram/
 tmp/
 ```
 
-The first command added two and three (Chapter 18 explains why the `+` comes after the numbers). The second listed
+The first command added two and three (Chapter 19 explains why the `+` comes after the numbers). The second listed
 the folders at the top of the Hydra's file tree. Congratulations: you are using a Hydra.
 
 ### The buttons
@@ -87,7 +87,7 @@ You can also scroll back through old lines with the mouse wheel, and drag across
 
 Below the console is the screen of the **Vera X**, the Hydra's optional video card. When the Vera X is plugged in
 (it is, in the emulator, unless you turn it off), HydraOS shows its windows on this screen as well as on the serial
-console. Programs can also draw pictures, move sprites and play sounds through the Vera X; Chapter 15 shows you how.
+console. Programs can also draw pictures, move sprites and play sounds through the Vera X; Chapter 16 shows you how.
 If you turn on the Vera X's keyboard and mouse in Setup, click on the screen and you can type and use the mouse
 there, just as on a real Hydra with a keyboard and mouse plugged in.
 

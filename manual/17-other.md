@@ -1,10 +1,10 @@
-# Chapter 16. The Other Devices
+# Chapter 17. The Other Devices
 
 This chapter covers the rest of the Hydra's devices: the I/O header and its pins, the I²C bus, the SPI devices, the
 clock, and the kernel's own devices, which show the tasks, the environment, the shared memory and the ROM's modules
 as files.
 
-## 16.1 The I/O header, J27
+## 17.1 The I/O header, J27
 
 J27 brings eight of the VIA's pins out to a header, for your own experiments: switches, lights, sensors and small
 circuits. They're the VIA's **port A**, PA0 to PA7, and its two **handshake** lines, CA1 and CA2.
@@ -25,10 +25,10 @@ reaching the VIA. Even so, keep everything you connect between 0 and 5 volts.
 > LED properly. To light an LED, connect it the other way round: from +5 V, through a 2.2K resistor and the LED, to
 > the pin. Then a 0 on the pin lights it. For anything bigger, like a motor or a relay, use a transistor.
 
-PA0 and PA1 are also the **I²C bus** (section 16.2): while a program is using the I²C bus, they're the bus's, and
+PA0 and PA1 are also the **I²C bus** (section 17.2): while a program is using the I²C bus, they're the bus's, and
 `/dev/gpio`'s commands for them don't work.
 
-## 16.2 /dev/gpio: the pins
+## 17.2 /dev/gpio: the pins
 
 The `gpio` driver, in task B, serves the pins as `#g`, at `/dev/gpio`:
 
@@ -85,7 +85,7 @@ ground (pin 1), and a 10K resistor from CA1 to +5 V (pin 2). Then each press mak
 (Press <kbd>CTRL</kbd>-<kbd>C</kbd> to stop it.) A button's contacts bounce when it's pressed, so one press may count
 as several.
 
-## 16.3 /dev/i2c: the I²C bus
+## 17.3 /dev/i2c: the I²C bus
 
 **I²C** (say "eye-squared-see") is a way of connecting small chips with just two wires, a clock (SCL) and data
 (SDA), as well as power and ground. Each chip on the bus has an **address**, a number from $08 to $77, so many chips
@@ -118,10 +118,10 @@ file's offset is the register to read or write.
 
 A chip that doesn't answer gives `i/o error`.
 
-## 16.4 /dev/spi: the SPI devices
+## 17.4 /dev/spi: the SPI devices
 
 The storage driver serves the SPI bus itself as `#S`, at `/dev/spi`: a directory for each of the sixteen SPI devices
-(0 to 7 on the headers J18 to J25, section 13.2; 8 to f on the slots' cards), each with two files:
+(0 to 7 on the headers J18 to J25, section 14.2; 8 to f on the slots' cards), each with two files:
 
 | File | What it is |
 |---|---|
@@ -133,7 +133,7 @@ at a time can have a device's `data` open, and not while it's an SD card the sto
 
 > **NOTE:** Don't `cat` a `data` file: it never ends, as a read always clocks in more bytes.
 
-## 16.5 The clock
+## 17.5 The clock
 
 The kernel counts **ticks**, 200 a second, and keeps the time. Three files, from `#t`, show them:
 
@@ -147,15 +147,15 @@ A **DS1747**, fitted in U7's socket in place of the task RAM chip, is task RAM a
 keeps the clock running while the Hydra is off. With one, the Hydra sets its clock from the chip as it starts, and
 setting `/dev/time` sets the chip too.
 
-## 16.6 null, zero and kmesg
+## 17.6 null, zero and kmesg
 
 | File | What it is |
 |---|---|
 | `/dev/null` | Swallows whatever is written to it; reads as empty |
 | `/dev/zero` | Reads as zeros, for ever; swallows writes |
-| `/dev/kmesg` | The kernel's messages, from the start: the boot's, and anything else the kernel has had to say (section 6.4) |
+| `/dev/kmesg` | The kernel's messages, from the start: the boot's, and anything else the kernel has had to say (section 7.4) |
 
-## 16.7 /env: the environment
+## 17.7 /env: the environment
 
 Each task has an **environment**: a set of variables, which programs can read. A task starts with a copy of its
 parent's, so it's how a shell passes settings like `$path` to the programs it runs. `#e`, at `/env`, shows the
@@ -178,7 +178,7 @@ A variable is a list of words, with a zero byte after each one:
 Writing a file sets the variable, and making a file makes a new variable, in the writer's own environment. A
 program that sets a variable doesn't change its parent's.
 
-## 16.8 /proc: the tasks
+## 17.8 /proc: the tasks
 
 `#p`, at `/proc`, has a directory for each task in use, named by its number:
 
@@ -231,11 +231,11 @@ PC=EA8A A=00 X=04 Y=02 S=E7 P=37 W=00 U=00 RAM=00 ROM=1E
 | `note` *n* | Send it note *n* |
 | `stop` | Stop it: it isn't given any more turns until it's started again |
 | `start` | Start it again |
-| `step`, `next`, `break`, `nobreak` | For the debugger, `db` (Chapter 27) |
+| `step`, `next`, `break`, `nobreak` | For the debugger, `db` (Chapter 28) |
 
 `ps` and `top` read `/proc`; so does the debugger, which reads and writes a program's memory through `mem`.
 
-## 16.9 /dev/seg: shared memory segments
+## 17.9 /dev/seg: shared memory segments
 
 The shared RAM can be divided into **segments**: pieces that several tasks can use together. A program makes one with
 a system call, and gets its number. `#s`, at `/dev/seg`, lets a segment have a **name**, so other programs can find
@@ -259,12 +259,12 @@ disk-s
 
 (Segment 15 is the shared RAM disk: 64 banks, 512K.)
 
-## 16.10 /dev/mod: the ROM's modules
+## 17.10 /dev/mod: the ROM's modules
 
 `#m`, at `/dev/mod`, has a file for each module in the paged ROM, holding its program, and a directory, `bin`, of
-the modules that are programs (which the namespace adds to `/bin`). `mods` lists them in more detail (Chapter 10).
+the modules that are programs (which the namespace adds to `/bin`). `mods` lists them in more detail (Chapter 11).
 
-## 16.11 Pipes, and raw memory
+## 17.11 Pipes, and raw memory
 
 `#|` makes **pipes**: each time it's opened, a new pipe, 512 bytes long, whose two ends are two files. What's written
 to one end can be read from the other. The shell makes one for each `|` in a command line. There can be 8 at once.

@@ -1,9 +1,9 @@
-# Chapter 23. Programming the Hydra in HyBASIC
+# Chapter 24. Programming the Hydra in HyBASIC
 
 This chapter shows how HyBASIC works the Hydra: its files, the terminal, other programs, sound, graphics, the numbers,
 and machine code. Everything here is built into HyBASIC: there are no libraries to load.
 
-## 23.1 Files
+## 24.1 Files
 
 A file is opened with a **file number**, and then read or written by that number:
 
@@ -53,7 +53,7 @@ as/             basic/          edit/           font/           forth/
 hylang/         namespace       profile         shell           windows
 ```
 
-## 23.2 The terminal
+## 24.2 The terminal
 
 | Statement or function | What it does |
 |---|---|
@@ -78,7 +78,7 @@ and `$$` a dollar sign:
 Total:  $1,234.50
 ```
 
-## 23.3 Other programs
+## 24.3 Other programs
 
 | Statement or function | What it does |
 |---|---|
@@ -110,7 +110,7 @@ args:red blue
 `INCLUDE "file"` puts another file's lines into the program, so procedures can be kept in a file of their own and
 shared between programs.
 
-## 23.4 Records
+## 24.4 Records
 
 `TYPE` makes a new kind of variable, a **record**, with named **fields**:
 
@@ -129,14 +129,14 @@ Sam      42
 `STRING * 8` is a string of exactly 8 characters. Records are useful for files of fixed-size entries, with `GET` and
 `PUT`, and arrays of them: `DIM TEAM(10) AS PLAYER`.
 
-## 23.5 Sound
+## 24.5 Sound
 
 | Statement | What it does |
 |---|---|
 | `SOUND ch, note [, patch [, vol]]` | Play a note (a MIDI number: 60 is middle C) on channel *ch* |
 | `SOUND ch` | Let it go |
-| `SOUND "text"` | Send the sound driver a command, as `sndctl` takes them (section 14.3) |
-| `PLAY [ch,] mml$` | Play a line of MML (section 14.6) on channel 0 (or *ch*), and wait for it to finish |
+| `SOUND "text"` | Send the sound driver a command, as `sndctl` takes them (section 15.3) |
+| `PLAY [ch,] mml$` | Play a line of MML (section 15.6) on channel 0 (or *ch*), and wait for it to finish |
 | `PLAY "file"` | Play a song file: a ZSM file or a score |
 
 ```text
@@ -147,7 +147,7 @@ PLAY "o4 l8 c d e f g a b > c"
 PLAY "/rom/songs/scom.zsm"
 ```
 
-## 23.6 Graphics
+## 24.6 Graphics
 
 With a Vera X, HyBASIC has QuickBASIC's graphics statements, drawn on the bitmap under the text. `SCREEN` chooses a
 mode first:
@@ -195,12 +195,12 @@ GPRINT (96, 216), "HyBASIC graphics"
 
 <figure>
 <img src="figures/basic-gfx.png" alt="Ten circles of many colours inside a cyan box, with a yellow diagonal, and the words HyBASIC graphics">
-<figcaption>Figure 23-1. HyBASIC's graphics, in SCREEN 13.</figcaption>
+<figcaption>Figure 24-1. HyBASIC's graphics, in SCREEN 13.</figcaption>
 </figure>
 
-## 23.7 Numbers
+## 24.7 Numbers
 
-HyBASIC's numbers are Chapter 17's. A number in a program can be written in any of its forms (`2/3`, `1.5`, `2i`,
+HyBASIC's numbers are Chapter 18's. A number in a program can be written in any of its forms (`2/3`, `1.5`, `2i`,
 `1_000`, `#xFF`), and also QuickBASIC's way: `&HFF` (hex), `&O17` (octal) and `&B101` (binary), and `1E3` (1000).
 
 | Statement or function | What it does |
@@ -229,7 +229,7 @@ HyBASIC's numbers are Chapter 17's. A number in a program can be written in any 
  1.41421356237309504880168872421
 ```
 
-## 23.8 Memory and machine code
+## 24.8 Memory and machine code
 
 | Statement or function | What it does |
 |---|---|
@@ -238,12 +238,12 @@ HyBASIC's numbers are Chapter 17's. A number in a program can be written in any 
 | `SYS addr [, a [, x [, y]]]` | Call machine code at *addr*, with the processor's A, X and Y registers set |
 | `SYS "NAME" [, a [, x [, y]]]` | Make a system call by its name (Appendix K) |
 | `RREG a, x, y, p` | The registers after the last `SYS` |
-| `ASM` ... `END ASM` | Assembly language, inside the program (Chapter 25) |
+| `ASM` ... `END ASM` | Assembly language, inside the program (Chapter 26) |
 | `CALL ASM label`, `CALL ABSOLUTE (addr)` | Call an `ASM` block's code, or machine code |
 
-## 23.9 HyBASIC as your shell
+## 24.9 HyBASIC as your shell
 
-`basic -l` makes HyBASIC a login shell (section 7.16). A line is BASIC's if it starts with a line number, `?`, a
+`basic -l` makes HyBASIC a login shell (section 8.16). A line is BASIC's if it starts with a line number, `?`, a
 keyword, an assignment, or the name of one of the program's SUBs; any other line is a command for rc, and `%` at the
 start makes any line rc's. The prompt shows where you are. Put `/bin/basic -l` in `/sd/0/lib/shell` to make it yours,
 and your own settings in `/sd/0/lib/basic/profile.bas`.

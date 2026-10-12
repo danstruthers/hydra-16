@@ -303,7 +303,7 @@ double-cell (32-bit) versions of the cell words.
 |---|---|---|
 | `%` | ( "line" -- ) | The rest of the line is rc's |
 | `cd` | ( "dir" -- ) | Change directory |
-| `bind`, `mount`, `unmount`, `newns` | ( "args" -- ) | The namespace, as rc's (section 7.14) |
+| `bind`, `mount`, `unmount`, `newns` | ( "args" -- ) | The namespace, as rc's (section 8.14) |
 | `prompt`, `prompt2` | ( *c-addr u* -- ) | The prompt's format; the second prompt's |
 | `status` | ( -- *n* ) | The last command's status |
 | `exit` (I) | | At the prompt: leave HyForth; in a definition, the standard's `exit` |
@@ -380,7 +380,7 @@ The number stack's words; `N:` shows it. Any number Forth's cells can't hold goe
 | `n>str` | ( -- *c-addr u* ) N: ( *x* -- ) | As a string |
 | `n.s` | ( -- ) | Show the number stack |
 | `>n` | ( *c-addr u* -- *flag* ) N: ( -- *x* \| ) | Read a number from a string |
-| `set-base`, `get-base` | ( *c-addr u* -- ), ( -- *c-addr u* ) | The base (any of Chapter 17's) |
+| `set-base`, `get-base` | ( *c-addr u* -- ), ( -- *c-addr u* ) | The base (any of Chapter 18's) |
 | `nformat` | ( *c-addr u* -- ) N: ( *x1 ... xn* -- ) | Print a format, each `{}` a number |
 | `nsqrt` `nexp` `nlog` `nsin` `ncos` `ntan` `natan` `npi` | N: | The math functions |
 | `digits` | ( -- *addr* ) | The variable holding their precision (12) |
@@ -394,7 +394,7 @@ The number stack's words; `N:` shows it. Any number Forth's cells can't hold goe
 `snd-sens` ( *ch pms ams* -- ), `snd-noise` ( *n* -- ), `snd-wave` ( *ch w width* -- ), `snd-lfo` ( *rate pmd amd wave*
 -- ), `snd-regs` ( *c-addr* -- ), `snd-play` ( *c-addr u times* -- *status* ), `snd-mml` ( *ch c-addr u* -- *status* ),
 `snd-chord` ( *ch c-addr u* -- *status* ), `note-of` ( *c-addr u* -- *n* ), `tune` ( *c-addr u ch tempo* -- ): section
-19.6.
+20.6.
 
 ## A.16 Bits, random numbers and the disassembler
 
@@ -405,11 +405,11 @@ The number stack's words; `N:` shows it. Any number Forth's cells can't hold goe
 | `rand`, `rand32` | ( -- *u* ), ( -- *ud* ) | A random number (`random`) |
 | `random` | ( *u1* -- *u2* ) | One from 0 to *u1* - 1 |
 | `rseed` | ( *ud* -- ) | Start the random numbers |
-| `disasm` | ( *addr u* -- ) | Disassemble *u* instructions from *addr* (`disasm`: Chapter 26) |
+| `disasm` | ( *addr u* -- ) | Disassemble *u* instructions from *addr* (`disasm`: Chapter 27) |
 
 ## A.17 The device libraries
 
-These are Forth source files, in `/lib/forth`. Their words are described in Chapter 19:
+These are Forth source files, in `/lib/forth`. Their words are described in Chapter 20:
 
 | Library | Words |
 |---|---|

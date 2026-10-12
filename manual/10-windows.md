@@ -1,10 +1,10 @@
-# Chapter 9. The Console and Its Windows
+# Chapter 10. The Console and Its Windows
 
 The Hydra can run sixteen programs at once, but you have only one terminal. How do you talk to more than one of
 them? With **windows**. The console can keep up to sixteen windows, each with its own shell and its own screen,
 and show you any of them, or several side by side.
 
-## 9.1 Windows on a terminal
+## 10.1 Windows on a terminal
 
 Each window is like a separate terminal: it has its own screen, its own line being typed, its own history, and its
 own programs. One window at a time is **shown**, and gets your keys. The others carry on working, out of sight:
@@ -17,12 +17,12 @@ the **window key**, <kbd>CTRL</kbd>-<kbd>]</kbd>, and then one more key. For exa
 
 <figure>
 <img src="figures/win-help.svg" alt="The window keys' help, in a box over the screen">
-<figcaption>Figure 9-1. <kbd>CTRL</kbd>-<kbd>]</kbd> <kbd>?</kbd>: the window keys.</figcaption>
+<figcaption>Figure 10-1. <kbd>CTRL</kbd>-<kbd>]</kbd> <kbd>?</kbd>: the window keys.</figcaption>
 </figure>
 
 Press <kbd>Q</kbd> to put it away.
 
-## 9.2 A new window
+## 10.2 A new window
 
 <kbd>CTRL</kbd>-<kbd>]</kbd> <kbd>C</kbd> makes a new window with a new shell in it, and shows it. The screen
 clears, and the new shell says hello:
@@ -40,21 +40,21 @@ To see all the windows, press <kbd>CTRL</kbd>-<kbd>]</kbd> <kbd>W</kbd>:
 
 <figure>
 <img src="figures/win-list.svg" alt="The window list: windows 0 and 1, each running forth">
-<figcaption>Figure 9-2. <kbd>CTRL</kbd>-<kbd>]</kbd> <kbd>W</kbd>: the window list.</figcaption>
+<figcaption>Figure 10-2. <kbd>CTRL</kbd>-<kbd>]</kbd> <kbd>W</kbd>: the window list.</figcaption>
 </figure>
 
-The list shows each window's number, its group (section 9.3), and the program running in it. The `>` marks the
+The list shows each window's number, its group (section 10.3), and the program running in it. The `>` marks the
 window that was shown. Press a window's number to show it, or move with the arrow keys and press
 <kbd>RETURN</kbd>; <kbd>Q</kbd> leaves the list.
 
 When a window's shell ends (type `bye` in HyForth, or `exit` in rc), the window goes away. Window 0 is special: it
 never goes away, and init starts a new shell in it.
 
-## 9.3 Groups
+## 10.3 Groups
 
 Windows belong to **groups**. A group is like a desk you're working at: one shell session, with all the windows it
 has opened. <kbd>CTRL</kbd>-<kbd>]</kbd> <kbd>C</kbd> starts a new group, with a new shell. A program can open more
-windows in its own group, with the command `new-window` (Chapter 10).
+windows in its own group, with the command `new-window` (Chapter 11).
 
 | Keys | What they do |
 |---|---|
@@ -73,7 +73,7 @@ windows in its own group, with the command `new-window` (Chapter 10).
 <kbd>CTRL</kbd>-<kbd>TAB</kbd> and <kbd>CTRL</kbd>-<kbd>SHIFT</kbd>-<kbd>TAB</kbd> also move to the group's next and
 previous windows, if your terminal sends them. (With Windows Terminal, start the PC tool with `--win32-input`.)
 
-## 9.4 Side by side
+## 10.4 Side by side
 
 A group's windows can be shown together, **tiled**, each in its own part of the screen.
 <kbd>CTRL</kbd>-<kbd>]</kbd> <kbd>S</kbd> makes a new window with a shell, below the one shown, and
@@ -82,7 +82,7 @@ program at the left, and the group's windows at the right, the one with the keys
 
 <figure>
 <img src="figures/win-split.svg" alt="Two windows, one above the other, each with a heading">
-<figcaption>Figure 9-3. <kbd>CTRL</kbd>-<kbd>]</kbd> <kbd>S</kbd>: a window below.</figcaption>
+<figcaption>Figure 10-3. <kbd>CTRL</kbd>-<kbd>]</kbd> <kbd>S</kbd>: a window below.</figcaption>
 </figure>
 
 The keys go to one window at a time: move between them with <kbd>CTRL</kbd>-<kbd>]</kbd> and the arrow keys.
@@ -98,7 +98,7 @@ The group's **layout** can be changed by writing to its `wctl` file:
 | `echo layout columns >/dev/wctl` | Side by side |
 | `echo layout grid >/dev/wctl` | In a grid |
 
-## 9.5 Scrolling back
+## 10.5 Scrolling back
 
 Each window remembers some of the lines that have scrolled off the top of its screen. To look back at them, press
 <kbd>CTRL</kbd>-<kbd>]</kbd> <kbd>[</kbd> (or <kbd>SHIFT</kbd>-<kbd>PAGE UP</kbd>). The program in the window carries
@@ -115,12 +115,12 @@ The **snarf buffer**, `/dev/snarf`, is the console's clipboard. <kbd>CTRL</kbd>-
 whatever is in it into the window shown, as if you'd typed it. So you can copy a command or a result from one window,
 and paste it into another. Programs can read and write `/dev/snarf` too.
 
-## 9.6 Holding the output
+## 10.6 Holding the output
 
 When a program prints faster than you can read, <kbd>CTRL</kbd>-<kbd>]</kbd> <kbd>H</kbd> **holds** the window: its
 program waits, mid-line, until you press <kbd>CTRL</kbd>-<kbd>]</kbd> <kbd>H</kbd> again.
 
-## 9.7 Bars, headings and footers
+## 10.7 Bars, headings and footers
 
 The console can show extra lines around the windows, which it calls the **chrome**:
 
@@ -137,12 +137,12 @@ possible, but you can turn them on for a window:
 
 <figure>
 <img src="figures/win-chrome.svg" alt="The screen with the bar at the top and window 0's header below it">
-<figcaption>Figure 9-4. The bar and the header, on the serial terminal.</figcaption>
+<figcaption>Figure 10-4. The bar and the header, on the serial terminal.</figcaption>
 </figure>
 
 The bar shows the groups (the one shown is in a different colour) and the time; the header shows the window's
 number and program, and the group's windows. What each line shows is set by a **format**, as HyForth's prompt is
-(section 7.15). The ROM disk's `/lib/windows` sets them up as the Hydra starts:
+(section 8.15). The ROM disk's `/lib/windows` sets them up as the Hydra starts:
 
 ```text
 bar top
@@ -169,21 +169,21 @@ The codes in a format are:
 | `%L` | The keyboard's lights |
 | `%y` | Where the scrollback view is |
 | `%=` | Everything after this goes at the right-hand end |
-| `%[...]` | A change of colour or style, as in a terminal's SGR sequence (Chapter 12): `%[7]` is reverse, `%[1;33;44]` bold yellow on blue, `%[0]` normal |
+| `%[...]` | A change of colour or style, as in a terminal's SGR sequence (Chapter 13): `%[7]` is reverse, `%[1;33;44]` bold yellow on blue, `%[0]` normal |
 | `%%` | A `%` |
 
 To use your own, put a file called `windows` in the `lib` directory of your SD card: it's read before the ROM
 disk's.
 
-## 9.8 A window's files
+## 10.8 A window's files
 
 Each window has its own console files. A program running in a window finds them at `/dev`:
 
 | File | What it is |
 |---|---|
 | `cons` | The window's console: read your typing from it, write to its screen |
-| `consctl` | Control: raw mode, the keys' codes, where it's shown, and more (Chapter 12) |
-| `wctl` | The windows' control: new windows, layouts, the chrome, the keys (Chapter 12) |
+| `consctl` | Control: raw mode, the keys' codes, where it's shown, and more (Chapter 13) |
+| `wctl` | The windows' control: new windows, layouts, the chrome, the keys (Chapter 13) |
 | `label` | The window's name: read it, or write a new one |
 | `text` | Everything in the window's scrollback and screen, as text |
 | `wnew` | Reading it waits for <kbd>CTRL</kbd>-<kbd>]</kbd> <kbd>C</kbd>, then makes the new window (wstart uses it) |

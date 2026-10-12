@@ -1,10 +1,10 @@
-# Chapter 19. Programming the Hydra in HyForth
+# Chapter 20. Programming the Hydra in HyForth
 
-Chapter 18 taught the Forth language. This chapter shows how to use HyForth to work the Hydra: its files, the
+Chapter 19 taught the Forth language. This chapter shows how to use HyForth to work the Hydra: its files, the
 terminal, the devices, sound, the screen and the big numbers. Most of it comes from **libraries**: sets of words that
 HyForth loads when you ask for them.
 
-## 19.1 Libraries
+## 20.1 Libraries
 
 HyForth's core is small: just the standard's Core words. Everything else is in libraries on the ROM disk, in
 `/lib/forth`. As it starts, HyForth loads four of them (from `/lib/forth/startup.fs`): the Core Extension,
@@ -28,28 +28,28 @@ forth coreext exception file tools shell hydra
 |---|---|
 | `coreext` | The Core Extension word set: `nip`, `tuck`, `?do`, `case`, `value`, `defer`, `:noname`, `pick` ... |
 | `exception` | `catch` and `throw` |
-| `file` | The File Access word set: files (section 19.3) |
+| `file` | The File Access word set: files (section 20.3) |
 | `tools` | The Programming-Tools word set: `.s`, `?`, `dump`, `see`, `words`, `[if]` ..., and `lib`, `libs`, `-lib` |
-| `facility` | The terminal: the cursor, colours, keys, the time; structures (section 19.4) |
+| `facility` | The terminal: the cursor, colours, keys, the time; structures (section 20.4) |
 | `string` | Strings: `compare`, `search`, `/string`, `-trailing`, `substitute` ... |
 | `search` | Word lists and the search order |
 | `double` | Double-cell (32-bit) numbers: `d+`, `d.`, `2constant` ... |
 | `memory` | `allocate`, `free`, `resize` |
 | `locals` | Local variables: `{: a b -- c :}` |
-| `block` | Forth's blocks (section 19.10) |
-| `hydra` | The Hydra's own words: system calls, commands, directories, banks, notes (section 19.9) |
-| `numbers` | The Hydra's numbers: any size, fractions, decimals, complex (section 19.8) |
-| `sound` | Sound (section 19.6) |
+| `block` | Forth's blocks (section 20.10) |
+| `hydra` | The Hydra's own words: system calls, commands, directories, banks, notes (section 20.9) |
+| `numbers` | The Hydra's numbers: any size, fractions, decimals, complex (section 20.8) |
+| `sound` | Sound (section 20.6) |
 | `bits` | `tbit`, `sbit`, `cbit`: testing, setting and clearing bits |
 | `random` | Random numbers: `rand`, `random`, `rseed` |
-| `disasm` | The disassembler: `disasm` (Chapter 26) |
-| `gpio`, `i2c`, `spi`, `clock`, `disk`, `cons`, `proc`, `pc`, `video` | The devices, in Forth (sections 19.5 to 19.7) |
+| `disasm` | The disassembler: `disasm` (Chapter 27) |
+| `gpio`, `i2c`, `spi`, `clock`, `disk`, `cons`, `proc`, `pc`, `video` | The devices, in Forth (sections 20.5 to 20.7) |
 
 `-lib` *name* hides a library's words again (its code stays, for words that use it), and `require` *file* loads any
 file of Forth just once. To have a library loaded every time HyForth starts, put your own `startup.fs` (a copy of
 the ROM disk's, with more `require` lines) in `/sd/0/lib/forth`.
 
-## 19.2 Running commands
+## 20.2 Running commands
 
 The `hydra` library has words that run commands, and other programs, from Forth:
 
@@ -58,7 +58,7 @@ The `hydra` library has words that run commands, and other programs, from Forth:
 | `sh` | ( *c-addr u* -- *status* ) | Runs a command line with rc, and waits: its status (0 for success) |
 | `run` | ( *c-addr u* -- *status* ) | Runs a program and its arguments (without rc), and waits |
 
-And the shell library has more (section 7.15):
+And the shell library has more (section 8.15):
 
 | Word | Stack | What it does |
 |---|---|---|
@@ -79,7 +79,7 @@ ls: /nothing: not found
 hi there
 ```
 
-## 19.3 Files
+## 20.3 Files
 
 The File Access words work on any file: on a disk, a device, or `/pc`. A file is opened with a **file access
 method**, `r/o` (read only), `w/o` (write only) or `r/w` (both), and gives a **file id** for the other words to use.
@@ -130,10 +130,10 @@ The `hydra` library adds words for directories: `open-dir` ( *c-addr u* -- *diri
 dirid* -- *u2 flag ior* ), which reads a directory's next name, and `close-dir` ( *dirid* -- *ior* ); and `=mkdir`,
 `get-dir` and `set-dir`.
 
-## 19.4 The terminal
+## 20.4 The terminal
 
 The `facility` library has the words for the terminal's screen and keys (they send the escape sequences of section
-12.7 for you):
+13.7 for you):
 
 | Word | Stack | What it does |
 |---|---|---|
@@ -168,15 +168,15 @@ page banner bars 0 17 at-xy
 
 <figure>
 <img src="figures/forth-screen.svg" alt="A yellow-on-blue banner, and seven coloured bars below it">
-<figcaption>Figure 19-1. The <code>facility</code> library's colours and cursor moves.</figcaption>
+<figcaption>Figure 20-1. The <code>facility</code> library's colours and cursor moves.</figcaption>
 </figure>
 
-## 19.5 The devices
+## 20.5 The devices
 
 The device libraries work the devices of Part Three through their files, so you don't need to remember the files'
 names or commands.
 
-**The pins: `lib gpio`** (section 16.2).
+**The pins: `lib gpio`** (section 17.2).
 
 | Word | Stack | What it does |
 |---|---|---|
@@ -191,7 +191,7 @@ names or commands.
 | `gpio-wait` | ( -- *count* ) | Wait for CA1's next change: the changes so far |
 | `gpio-state` | ( -- *c-addr u* ) | The `ctl` file's text |
 
-With an LED on pin 2 (section 16.1), this flashes it ten times:
+With an LED on pin 2 (section 17.1), this flashes it ten times:
 
 ```text
 lib gpio  lib facility
@@ -201,12 +201,12 @@ flash
 
 (0 lights the LED, if it's wired from +5 V to the pin.)
 
-**The I²C bus: `lib i2c`** (section 16.3): `i2c-read` ( *addr reg c-addr u* -- ) and `i2c-write` ( *addr reg c-addr
+**The I²C bus: `lib i2c`** (section 17.3): `i2c-read` ( *addr reg c-addr u* -- ) and `i2c-write` ( *addr reg c-addr
 u* -- ) read and write a chip's registers; `i2c-reg-size` ( *n* -- ) sets how many bytes a register's number has (0,
 1 or 2); `i2c-speed` ( *khz* -- ); `i2c?` ( *addr* -- *flag* ) asks whether a chip is there; and `i2c-devices` lists
 the chips that answer.
 
-**SPI: `lib spi`** (section 16.4): `spi` ( *dev c-addr u* -- ) sends the bytes to SPI device *dev* and puts what it
+**SPI: `lib spi`** (section 17.4): `spi` ( *dev c-addr u* -- ) sends the bytes to SPI device *dev* and puts what it
 sent back in their place; `spi-read` ( *dev c-addr u* -- ) reads bytes; `spi-mode` ( *dev mode* -- ) sets mode 0 or 3.
 
 **The clock: `lib clock`**: `set-date` ( *c-addr u* -- ) sets the date and time, given as text like `2026-10-12
@@ -228,9 +228,9 @@ offset c-addr u* -- ) its RAM banks.
 
 **The PC: `lib pc`**: `pc?` ( -- *flag* ) is true if the PC tool is there to serve `/pc`.
 
-## 19.6 Sound
+## 20.6 Sound
 
-`lib sound` has words for each of the sound driver's commands (section 14.3), and for playing tunes:
+`lib sound` has words for each of the sound driver's commands (section 15.3), and for playing tunes:
 
 | Word | Stack | What it does |
 |---|---|---|
@@ -249,7 +249,7 @@ offset c-addr u* -- ) its RAM banks.
 | `snd-reset` | ( -- ) | Silence everything |
 | `note-of` | ( *c-addr u* -- *n* ) | A note's number from its name: `s" A4" note-of` is 69 |
 | `tune` | ( *c-addr u ch tempo* -- ) | Play a tune: note names and their beats |
-| `snd-mml` | ( *ch c-addr u* -- *status* ) | Play a line of MML (section 14.6) |
+| `snd-mml` | ( *ch c-addr u* -- *status* ) | Play a line of MML (section 15.6) |
 | `snd-chord` | ( *ch c-addr u* -- *status* ) | Play a chord |
 | `snd-play` | ( *c-addr u times* -- *status* ) | Play a song file *times* times (0: until <kbd>CTRL</kbd>-<kbd>C</kbd>) |
 
@@ -264,9 +264,9 @@ offset c-addr u* -- ) its RAM banks.
 A tune is note names and beats: `C4 1` is middle C for one beat, and a `-` is a rest. `0 120` plays it on channel 0
 at 120 beats a minute.
 
-## 19.7 The screen
+## 20.7 The screen
 
-With a Vera X, `lib video` draws on the screen (section 15.4):
+With a Vera X, `lib video` draws on the screen (section 16.4):
 
 | Word | Stack | What it does |
 |---|---|---|
@@ -296,7 +296,7 @@ cs flower
 
 <figure>
 <img src="figures/forth-flower.png" alt="Thirty-six squares in many colours, each turned ten degrees from the last, making a flower">
-<figcaption>Figure 19-2. Turtle graphics: thirty-six squares make a flower.</figcaption>
+<figcaption>Figure 20-2. Turtle graphics: thirty-six squares make a flower.</figcaption>
 </figure>
 
 For programs that need more, `lib video` reaches the VERA itself: `vpoke` ( *addr bank c* -- ) and `vpeek` ( *addr
@@ -305,9 +305,9 @@ c-addr u* -- ) move several, `palette!` ( *index rgb* -- ) sets a colour (as $RG
 c-addr* -- ), `sprite-at` ( *n x y* -- ) and `sprite-off` ( *n* -- ) work the sprites, `vsync` ( -- ) waits for the
 next frame, and `mouse` and `mouse-wait` ( -- *x y buttons* ) read the mouse.
 
-## 19.8 Big numbers
+## 20.8 Big numbers
 
-Forth's own numbers are 16-bit cells. `lib numbers` brings in all of Chapter 17's numbers: integers of any size,
+Forth's own numbers are 16-bit cells. `lib numbers` brings in all of Chapter 18's numbers: integers of any size,
 fixed decimals, fractions and complex numbers. They live on a stack of their own, the **number stack**, and the words
 that work on them have an `n` in front of Forth's name: `n+`, `n*`, `n.`, `ndup`. In the stack diagrams, `N:` shows
 the number stack.
@@ -340,10 +340,10 @@ variable `digits`, 12 unless you change it:
 1.4142135623730950488016887242096980785696718753769
 ```
 
-`set-base` ( *c-addr u* -- ) sets the base for all numbers, with any base string from Chapter 17: `s" b" set-base`
+`set-base` ( *c-addr u* -- ) sets the base for all numbers, with any base string from Chapter 18: `s" b" set-base`
 works in binary. Appendix A lists all the library's words.
 
-## 19.9 The Hydra library
+## 20.9 The Hydra library
 
 `lib hydra` has HyForth's words for the Hydra's system.
 
@@ -360,7 +360,7 @@ file name is given as a zero-terminated string: `>z` ( *c-addr u* -- *z-addr* ) 
 
 (This shell is task 2.)
 
-**Arguments.** In a script (section 18.16), `argc` ( -- *n* ) is how many arguments it was given, counting its own
+**Arguments.** In a script (section 19.16), `argc` ( -- *n* ) is how many arguments it was given, counting its own
 name, and `arg` ( *n* -- *c-addr u* ) is one of them: `0 arg` is the script's name.
 
 **Banks.** `bank!` ( *bank* -- ) puts one of the task's RAM banks at `bank-window` ($8000), and `bank@` ( -- *bank* )
@@ -371,13 +371,13 @@ in RAM banks of its own, so a word that changes the bank must be compiled with `
 note group, and `on-note` ( *xt* -- ) gives a word to handle the notes that come to HyForth.
 
 **Machine code.** `sys` ( *addr a x y* -- *a x y p* ) calls machine code at *addr*, with the processor's A, X and Y
-registers set, and gives back the registers, and its flags, after it (Chapter 25).
+registers set, and gives back the registers, and its flags, after it (Chapter 26).
 
 **Odds and ends.** `ctl` ( *c-addr1 u1 c-addr2 u2* -- ) writes the text *c-addr2 u2* to the file *c-addr1 u1*, as
 `echo` does (`s" /dev/sd/0/ctl" s" sync" ctl`); `pause` ( -- ) lets the other tasks have a turn; and `ior>text` (
 *ior* -- *c-addr u* ) gives an error's message.
 
-## 19.10 Blocks
+## 20.10 Blocks
 
 Forth's oldest way of keeping programs is the **block**: a numbered 1K piece of a disk, shown as 16 lines of 64
 characters. `lib block` brings it back: `s" /sd/0/my.blk" open-blocks` chooses a file of blocks, `list` ( *u* -- )

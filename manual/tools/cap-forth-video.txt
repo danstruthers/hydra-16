@@ -1,4 +1,4 @@
-## Chapter 19's picture: turtle graphics from HyForth (node manual/tools/capture.js manual/tools/cap-forth-video.txt)
+## Chapter 20's picture: turtle graphics from HyForth (node manual/tools/capture.js manual/tools/cap-forth-video.txt)
 #! --vera --rtc
 lib video
 320 8 bitmap

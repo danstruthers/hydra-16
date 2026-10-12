@@ -1,9 +1,9 @@
-# Chapter 21. Programming the Hydra in hylang
+# Chapter 22. Programming the Hydra in hylang
 
 hylang was made for the Hydra: files, programs, the clock, memory and the system are built into the language, and
 libraries add the devices, sound and the screen. This chapter shows them.
 
-## 21.1 Libraries
+## 22.1 Libraries
 
 hylang starts with its own library (`globals`) already loaded. The others are on the ROM disk, in `/lib/hylang`:
 `(use "name")` loads one (once: using it again does nothing), and `(load "name")` loads a file every time it's
@@ -11,15 +11,15 @@ asked.
 
 | Library | What it has |
 |---|---|
-| `gpio`, `i2c`, `spi` | The I/O header's pins, the I²C bus, the SPI devices (section 21.5) |
+| `gpio`, `i2c`, `spi` | The I/O header's pins, the I²C bus, the SPI devices (section 22.5) |
 | `clock`, `disk`, `cons`, `proc`, `pc` | The clock chip, the disks, the windows, the tasks, `/pc` |
-| `snd` | Sound (section 21.6) |
-| `video` | The Vera X's screen: drawing and turtle graphics (section 21.7) |
+| `snd` | Sound (section 22.6) |
+| `video` | The Vera X's screen: drawing and turtle graphics (section 22.7) |
 | `screen` | The terminal's screen: clearing, the cursor, colours |
 | `dice` | Dice for games: `(d6)`, `(dice 3 6)` ... |
 | `dev` | What the device libraries share |
 
-## 21.2 Files and directories
+## 22.2 Files and directories
 
 These are built in:
 
@@ -72,7 +72,7 @@ hylang> (read-line r)
 
 `read-line`, `read-byte` and `read-all` with no stream read the standard input: your typing.
 
-## 21.3 Programs
+## 22.3 Programs
 
 | Function | What it does |
 |---|---|
@@ -95,7 +95,7 @@ hylang> (env "path")
 => {"." "/bin"}
 ```
 
-## 21.4 Time, memory and the system
+## 22.4 Time, memory and the system
 
 | Function | What it does |
 |---|---|
@@ -133,9 +133,9 @@ hylang> (sys :ticks)
 => 1197
 ```
 
-## 21.5 The devices
+## 22.5 The devices
 
-**The pins: `(use "gpio")`** (section 16.2): `(gpio pin)` reads a pin, `(gpio! pin level)` sets one (making it an
+**The pins: `(use "gpio")`** (section 17.2): `(gpio pin)` reads a pin, `(gpio! pin level)` sets one (making it an
 output), `(gpio-in pin)` and `(gpio-out pin)` set its direction, `(gpio-port)` and `(gpio-port! byte)` read and set all
 eight, `(gpio-ddr! byte)` sets all their directions, `(gpio-ca1! edge)` and `(gpio-ca2! v)` set the handshake lines,
 `(gpio-wait)` waits for CA1, and `(gpio-state)` reads the `ctl` file.
@@ -177,9 +177,9 @@ is `T` if the PC tool is there.
 text's colour (0 to 15), `(bold)` and `(plain)` change the style, and `(clear-line)`, `(cursor-off)` and `(cursor-on)`
 do what they say.
 
-## 21.6 Sound
+## 22.6 Sound
 
-`(use "snd")` has the same words as HyForth's sound library (section 19.6): `snd-patch`, `snd-note`, `snd-off`,
+`(use "snd")` has the same words as HyForth's sound library (section 20.6): `snd-patch`, `snd-note`, `snd-off`,
 `snd-level`, `snd-pan`, `snd-bend`, `snd-drum`, `snd-freq`, `snd-glide`, `snd-wave`, `snd-lfo`, `snd-sens`,
 `snd-noise`, `snd-reg`, `snd-volume`, `snd-claim`, `snd-release`, `snd-reset`, `note-of`, `snd-mml`, `snd-chord` and
 `play` (a song file). `tune` plays a list of notes, each a name (or a number, or `NIL` for a rest) and its beats,
@@ -194,9 +194,9 @@ hylang> (tune {{"C4" 1} {"E4" 1} {"G4" 2}})
 => NIL
 ```
 
-## 21.7 Drawing
+## 22.7 Drawing
 
-`(use "video")` has the same drawing words as HyForth's (section 19.7): `bitmap`, `bitmap-off`, `pen`, `plot`,
+`(use "video")` has the same drawing words as HyForth's (section 20.7): `bitmap`, `bitmap-off`, `pen`, `plot`,
 `line`, `box`, `bar`, `circle`, `disc`, `clear`, `text`, `border`; the turtle's `cs`, `home`, `fd`, `bk`, `rt`, `lt`,
 `pu`, `pd`, `heading` and `seth`; and `vpoke`, `vpeek`, `vram!`, `vram@`, `palette!`, `sprite!`, `sprite-at`,
 `sprite-off`, `vsync`, `mouse` and `mouse-wait`.
@@ -213,12 +213,12 @@ hylang> (tune {{"C4" 1} {"E4" 1} {"G4" 2}})
 
 <figure>
 <img src="figures/hylang-spiral.png" alt="A square spiral in many colours, each side a little longer and turned 91 degrees">
-<figcaption>Figure 21-1. A spiral from hylang: turning 91 degrees, not 90, makes the squares twist.</figcaption>
+<figcaption>Figure 22-1. A spiral from hylang: turning 91 degrees, not 90, makes the squares twist.</figcaption>
 </figure>
 
-## 21.8 Numbers
+## 22.8 Numbers
 
-hylang's numbers are Chapter 17's, written as Chapter 17 writes them. `(base)` and `(base "x")` read and set the base;
+hylang's numbers are Chapter 18's, written as Chapter 18 writes them. `(base)` and `(base "x")` read and set the base;
 `(digits)` and `(digits n)` the precision of `sqrt`, `exp`, `log`, `sin`, `cos`, `tan`, `atan`, `pi` and `pow`:
 
 ```session
@@ -232,8 +232,8 @@ hylang> (sqrt 2)
 and `bit?`; `(hex n)` and `(bin n [width])` write a number's digits; and `lo`, `hi`, `word`, `bytes` and `from-bytes`
 work with bytes.
 
-## 21.9 hylang as your shell
+## 22.9 hylang as your shell
 
-`hylang -l` makes hylang a login shell (section 7.16): any line that doesn't start with `(`, `{` or `[` (or a prefix)
+`hylang -l` makes hylang a login shell (section 8.16): any line that doesn't start with `(`, `{` or `[` (or a prefix)
 is a command for rc, and the prompt shows where you are, like HyForth's. Put `/bin/hylang -l` in `/sd/0/lib/shell` to
 make it yours, and your own settings in `/sd/0/lib/hylang/profile.hl`.

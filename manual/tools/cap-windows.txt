@@ -1,4 +1,4 @@
-## Chapter 9's pictures of the console's windows (node manual/tools/capture.js manual/tools/cap-windows.txt)
+## Chapter 10's pictures of the console's windows (node manual/tools/capture.js manual/tools/cap-windows.txt)
 #! --rtc
 ls /rom
 !raw ^]?

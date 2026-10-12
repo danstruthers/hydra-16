@@ -46,7 +46,7 @@ function kindOf(h) {
 const MARK = n => '<span class="mk">QQM' + n + 'QQ</span>';
 
 // ---- The index: each term a chapter or appendix defines in bold (**term**, in its text: not in a table, a heading,
-// a code block or a caption; not a run-in heading, which ends with a stop), and each command of Chapter 10, with the
+// a code block or a caption; not a run-in heading, which ends with a stop), and each command of Chapter 11, with the
 // pages it's on (each place a mark, as the contents' entries have)
 const plain = s => s.replace(/<[^>]*>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
 // (Words in bold that aren't terms: buttons, steps' names, run-in phrases, rc's keywords)
@@ -136,8 +136,8 @@ function book(pages) {
         else if (h.level === 2) {
           const n = entry(h);
           toc.push({ kind: 'section', text: h.text, id: h.id, mark: n });
-          const cm = /^([a-z][a-z0-9-]*): /.exec(h.text);       // (Chapter 10's commands: "ls: list files")
-          if (k.kind === 'chapter' && k.num === '10' && cm) addIndex('<code>' + cm[1] + '</code> command', n);
+          const cm = /^([a-z][a-z0-9-]*): /.exec(h.text);       // (the commands' chapter: "ls: list files")
+          if (k.kind === 'chapter' && /^Commands\b/.test(k.title) && cm) addIndex('<code>' + cm[1] + '</code> command', n);
         }
       }
       // The index's terms: a mark before each

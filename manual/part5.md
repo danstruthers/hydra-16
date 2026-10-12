@@ -7,7 +7,7 @@ instructions into machine code; the **disassembler**, which turns machine code b
 and the **debugger**, which runs a program one instruction at a time while you watch. Appendix D lists every
 instruction.
 
-* Chapter 24. The 65C02
-* Chapter 25. The Assembler
-* Chapter 26. The Disassembler
-* Chapter 27. The Debugger
+* Chapter 25. The 65C02
+* Chapter 26. The Assembler
+* Chapter 27. The Disassembler
+* Chapter 28. The Debugger

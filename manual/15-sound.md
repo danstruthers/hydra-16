@@ -1,11 +1,11 @@
-# Chapter 14. Sound
+# Chapter 15. Sound
 
 The Hydra has a real music synthesizer chip on its board: the **Yamaha YM2151**, the chip that played the music in
 many 1980s arcade games and keyboards. With a Vera X card, it has a second sound chip too: the Vera X's **PSG**, with
 sixteen simple voices, and **PCM**, which plays recorded sounds. This chapter shows how to play notes, songs and
 sounds, and describes the sound driver's files.
 
-## 14.1 The sound hardware
+## 15.1 The sound hardware
 
 The **YM2151** (U38) makes sound by **FM synthesis**. It has 8 **channels**, so it can play 8 notes at once. Each
 channel has 4 **operators**: little oscillators, each making a tone, which change each other's sound as they're
@@ -28,7 +28,7 @@ The sound driver, `snd` (task C), calls these all **channels**:
 | 0 to 7 | The YM2151 |
 | 8 to 23 | The Vera X's PSG voices 0 to 15 (only with a Vera X) |
 
-## 14.2 Playing notes from the shell
+## 15.2 Playing notes from the shell
 
 The simplest way to make a sound is to write commands to `/dev/sndctl`. Choose an instrument, play a note, and stop
 it:
@@ -53,7 +53,7 @@ number is a **semitone** (one key on a piano, black or white) higher than the on
 Note 60 is middle C, and note 69 is the A above it, which sounds at 440 vibrations a second (440 Hz): the note an
 orchestra tunes to.
 
-It's quicker to play a tune with `play -m`, which takes a line of **MML** (section 14.6):
+It's quicker to play a tune with `play -m`, which takes a line of **MML** (section 15.6):
 
 ```text
 /> play -m 0 'o4 l8 c d e f g a b > c'
@@ -67,17 +67,17 @@ The first plays a scale of C on channel 0. The second plays "Twinkle, Twinkle, L
 /> play -c 0 c e g
 ```
 
-## 14.3 /dev/sndctl: the sound driver's commands
+## 15.3 /dev/sndctl: the sound driver's commands
 
 | Command | What it does |
 |---|---|
-| `patch` *ch p* | Give channel *ch* patch *p* (section 14.4) |
+| `patch` *ch p* | Give channel *ch* patch *p* (section 15.4) |
 | `note` *ch n* | Play note *n* on channel *ch* |
 | `off` *ch* | Let channel *ch*'s note go |
 | `level` *ch v* | Channel *ch*'s volume, 0 to 127 |
 | `pan` *ch* `left` \| `right` \| `both` | Which speakers channel *ch* plays in (or 0 to 3: none, left, right, both) |
 | `bend` *ch b* | Bend channel *ch*'s pitch, -128 to 127: 64 is a semitone up |
-| `drum` *ch n* | Play General MIDI drum *n* on channel *ch* (section 14.4) |
+| `drum` *ch n* | Play General MIDI drum *n* on channel *ch* (section 15.4) |
 | `freq` *ch hz* | Play a tone of *hz* vibrations a second on channel *ch* (0: stop) |
 | `glide` *ch n* | Change channel *ch*'s note to *n* smoothly, without playing it again (**legato**) |
 | `wave` *ch* `pulse` \| `saw` \| `triangle` \| `noise` [*width*] | A PSG channel's wave (or 0 to 3); a pulse's width, 0 to 63 (63: a square wave) |
@@ -107,7 +107,7 @@ that's playing a song claims the channels it uses; while they're claimed, other 
 ignored. A claim belongs to the program that made it, and ends when it releases the channels, or closes its last
 sound file. So a claim made with `echo` ends straight away, when `echo` ends!
 
-## 14.4 Patches and drums
+## 15.4 Patches and drums
 
 The sound driver has 163 patches, the same as the Commander X16's. Patches 0 to 127 are the instruments of **General
 MIDI**, a standard list used by electronic instruments everywhere:
@@ -180,7 +180,7 @@ most useful are:
 | 44 | Pedal hi-hat | 69 | Cabasa |
 | 46 | Open hi-hat | 70 | Maracas |
 
-## 14.5 The other sound files
+## 15.5 The other sound files
 
 **/dev/snd** is the YM2151 itself. Each pair of bytes written to it is a **register** number and a value: the chip
 has 256 registers, and every setting of every operator is in one. The driver keeps a copy of what was written, which
@@ -223,7 +223,7 @@ the chip doesn't have, from $02 to $0E (but $08, key on), are the driver's own c
 **/dev/bell** rings the bell: a short beep on channel 7, unless a program has claimed channel 7. The console writes
 it when a program prints the BEL character (7).
 
-## 14.6 MML: writing music
+## 15.6 MML: writing music
 
 **MML**, the **music macro language**, is a short way of writing a tune as text. Each letter is a note, and numbers
 say how long. `play -m` plays a line of it, and a **score** file holds a whole song.
@@ -269,7 +269,7 @@ A **score** is a text file whose name ends in `.mml`. Each line is one of these:
 
 An instrument is either `gm` *n*, one of the patches, or the YM2151 settings themselves: `alg` *a* `fb` *f* `pms`
 *p* `ams` *a*, then for each operator, `m1`, `m2`, `c1` and `c2`, its `mul`, `dt1`, `dt2`, `tl`, `ks`, `ar`, `d1r`,
-`d2r`, `d1l`, `rr` and `am` (the registers' fields, as in section 14.5). A PSG instrument is `wave` *w* [*width*]
+`d2r`, `d1l`, `rr` and `am` (the registers' fields, as in section 15.5). A PSG instrument is `wave` *w* [*width*]
 and `env` *a d s r*, a volume **envelope**: *a* ticks rising to the note's volume, *d* ticks falling by *s* steps,
 held till the note is let go, then *r* ticks falling to silence.
 
@@ -291,7 +291,7 @@ Save it as `/ram/tune.mml` (with `edit`), and play it:
 /> play /ram/tune.mml
 ```
 
-## 14.7 play
+## 15.7 play
 
 `play` plays scores, and **ZSM** files: the song format of the Commander X16, which Furnace, a free music program for
 PCs, can write. A ZSM file is a song already turned into register writes, so it takes less work to play.
@@ -328,13 +328,13 @@ with HydraOS has more songs, in `/sd/0/songs`.
 > **TIP:** On a PC, the `hysong.js` tool in `reborn/sim/tools` turns a score into a ZSM file too, and into a VGM file
 > you can listen to on the PC.
 
-## 14.8 Recorded sound
+## 15.8 Recorded sound
 
 A Vera X can play **samples**: recorded sound, as numbers. `play` plays a WAV file, of 8 or 16 bits, mono or stereo,
 at up to 48,828 samples a second. Programs can play samples themselves through the Vera X's `pcm` and `pcmctl` files
-(Chapter 15).
+(Chapter 16).
 
-## 14.9 Audio In
+## 15.9 Audio In
 
 J29, **Audio In**, mixes sound from another device into the Hydra's: pin 1 is one channel, and pin 2 the other. Each
 goes into the mixer through a 10K resistor, as the YM2151's and slot 0's sound do. The other device's ground must be
