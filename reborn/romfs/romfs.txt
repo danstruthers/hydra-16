@@ -108,6 +108,10 @@ bin/ed              ../obj/programs/ed.hyx
 bin/as              ../obj/programs/as.hyx
 bin/xmodem          ../obj/programs/xmodem.hyx
 bin/hello           ../obj/programs/hello.hyx   ; init runs it as it starts (hello, from init)
+bin/wstart          ../obj/programs/wstart.hyx  ; What init starts (wstart, input), and new-window: as the
+bin/input           ../obj/programs/input.hyx   ;   tools are
+bin/new-window      ../obj/programs/newwin.hyx
+bin/hwtest          ../obj/programs/hwtest.hyx  ; (The hardware test itself is paged ROM bank 1's)
 bin/mkfs            ../obj/programs/mkfs.hyx    ; The disk tools: RAM programs (programs/), loaded from here
 bin/fsck            ../obj/programs/fsck.hyx
 bin/label           ../obj/programs/label.hyx

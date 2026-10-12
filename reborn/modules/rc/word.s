@@ -382,8 +382,9 @@ subscript:
             jmp         list_append_word
 
 @bad:
-            LDR         r0, s_sub
-            jmp         rc_error
+            lda         #<s_sub
+            ldx         #>s_sub
+            jmp         rc_error_ax
 
 @done:
             rts
@@ -475,8 +476,9 @@ wput:
 
 ; A word too long: the command ended (rc_error)
 long:
-            LDR         r0, s_long
-            jmp         rc_error
+            lda         #<s_wlong
+            ldx         #>s_wlong
+            jmp         rc_error_ax
 
 ; The lists wa and wb joined (^).  OUT: .A/.X
 concat:
@@ -503,12 +505,14 @@ concat:
             lda         mj
             cmp         #1
             beq         @right1
-            LDR         r0, s_mismatch
-            jmp         rc_error
+            lda         #<s_mismatch
+            ldx         #>s_mismatch
+            jmp         rc_error_ax
 
 @null:
-            LDR         r0, s_null
-            jmp         rc_error
+            lda         #<s_null
+            ldx         #>s_null
+            jmp         rc_error_ax
 
 @pairs:                                                     ; Each with its pair
             MOVR        we, wb
@@ -1325,8 +1329,9 @@ klass:
             rts
 
 @bad:
-            LDR         r0, s_class
-            jmp         rc_error
+            lda         #<s_class
+            ldx         #>s_class
+            jmp         rc_error_ax
 
 ; ****************************************************************************
 ; `{cmd}'s output (wa: num bytes) split at spaces, tabs and new lines: a list.  OUT: .A/.X
@@ -1430,8 +1435,7 @@ grec:       .res        SR_SIZE
 
 .rodata
 exp_vec:    .word       x_lit, x_var, x_count, x_flat, x_cat, x_list, x_bq
-s_star:     .byte       "*"
-s_long:     .byte       "word too long", 0
+s_wlong:    .byte       "word too long", 0
 s_null:     .byte       "null list in concatenation", 0
 s_mismatch: .byte       "mismatched lists in concatenation", 0
 s_sub:      .byte       "bad subscript", 0

@@ -28,6 +28,7 @@ const { execFileSync } = require('child_process');
 const apigen = require('./tools/apigen.js');
 const budget = require('./tools/budget.js');
 const check = require('./tools/check.js');
+const bankcheck = require('./tools/bankcheck.js');
 const romimg = require('./tools/romimg.js');
 
 const ROOT = __dirname;
@@ -79,9 +80,15 @@ function buildModule(dir, objdir, defines, ram = false, libs = {}, includes = IN
     .map(m => +m[1]))));                                      // (Its last bank's CODEn: moduleN.cfg)
   const own = path.join(dir, name + '.cfg');
   const cfg = ram ? at('sdk', 'asm', 'hyx2.cfg') : fs.existsSync(own) ? own : moduleCfg(banks);
-  run(LD65, ['-C', cfg, '-o', bin, '-m', path.join(od, name + '.map'), '-Ln', path.join(od, name + '.lbl'), ...objs]);
+  const dbg = path.join(od, name + '.dbg');
+  run(LD65, ['-C', cfg, '-o', bin, '-m', path.join(od, name + '.map'), '-Ln', path.join(od, name + '.lbl'), ...(ram ? [] : ['--dbgfile', dbg]), ...objs]);
   const data = fs.readFileSync(bin);
   check.checkModule(name, data, ram ? 0x0800 : 0xA000);       // (Only the kernel writes T, V and W)
+  if (!ram) {                                                   // (A module of banks: none uses another's directly)
+    const bad = bankcheck.check(fs.readFileSync(dbg, 'latin1'));
+    if (bad.length) throw new Error(name + ': an instruction in one bank uses a label in another (tools/bankcheck.js):\n' +
+      bad.map(b => '  ' + path.relative(ROOT, b.file) + ':' + b.line + ': bank ' + b.from + ', ' + b.label + ' bank ' + b.to + ': ' + b.text).join('\n'));
+  }
   if (cfg === own) for (const [, lib] of fs.readFileSync(own, 'latin1').matchAll(/"%O\.(\w+)"/g)) {
     const file = path.join(objdir, lib + '.bin');               // (A library module of its own: NAME.bin, as any module)
     fs.renameSync(bin + '.' + lib, file);

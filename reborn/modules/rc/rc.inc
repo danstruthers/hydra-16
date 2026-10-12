@@ -118,14 +118,11 @@ VF_GONE         = $04           ; Removed: to go from the environment too
             sta         var
 .endmacro
 
-; ---- What each object gives (lex.s and parse.s: the second bank's: called by FAR2, and they call the first's by
-; FAR1)
-; rc.s (and its header's trampolines between the banks: hyx2.inc)
-.globalzp   hyx2_to, hyx2_a
-.global     hyx2_far1, hyx2_far2
+; ---- What each object gives
+; rc.s (and the strings every object says: s_colon ...)
 .globalzp   ap, ctop, src_at, p0, p1, p2, p3
 .global     src, t0, t1, num
-.global     rc_error, rc_say, rc_say2, say_error, rc_abort, rc_true, rc_number, out2, out2s, interrupted, s_rc_colon
+.global     rc_error, rc_error_ax, s_colon, s_deep, s_path, s_status, s_star, s_wlong, rc_say, rc_say2, say_error, rc_abort, rc_true, rc_number, out2, out2s, interrupted, s_rc_colon
 .global     src_getc, run_text, run_file
 ; mem.s
 .global     arena_alloc, arena_mark, arena_release, heap_alloc, heap_free, mem_init, str_len, list_count, list_next

@@ -1,7 +1,7 @@
 ; rom.txt - the paged ROM's modules, in its order (each a folder in modules/), and the one started as init.
 ; build.js reads it; tools/romimg.js puts them in banks 1 on.  Only what must run in place is here: the drivers and
-; what starts at boot, rc (a new one for each line typed at HyForth's prompt), the languages, the libraries and
-; the hardware test; the tools are RAM programs on the ROM disk (programs/, romfs/romfs.txt: /rom/bin).
+; what starts at boot, rc (a new one for each line typed at HyForth's prompt), the languages and the libraries;
+; the tools are RAM programs on the ROM disk (programs/, romfs/romfs.txt: /rom/bin).
 init        init
 module      init
 module      cons
@@ -11,10 +11,6 @@ module      snd
 module      gpio
 module      vid
 module      rc
-module      wstart
-module      newwin
-module      input
-module      hwtest
 module      play
 module      forth
 module      basic
