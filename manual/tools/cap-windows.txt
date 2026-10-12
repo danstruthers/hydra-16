@@ -1,0 +1,17 @@
+## Chapter 9's pictures of the console's windows (node manual/tools/capture.js manual/tools/cap-windows.txt)
+#! --rtc
+ls /rom
+!raw ^]?
+!snap win-help
+!raw q
+!raw ^]c
+echo I am in window 1
+!raw ^]w
+!snap win-list
+!raw q
+!raw ^]s
+echo hello from window 2
+!snap win-split
+!raw ^]0
+echo chrome serial on >/dev/wctl
+!snap win-chrome

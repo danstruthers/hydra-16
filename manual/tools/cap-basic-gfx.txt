@@ -1,0 +1,11 @@
+## Chapter 23's picture: HyBASIC's graphics (node manual/tools/capture.js manual/tools/cap-basic-gfx.txt)
+#! --vera --rtc
+basic
+SCREEN 13
+CLS
+FOR R = 10 TO 100 STEP 10 : CIRCLE (160, 110), R, R / 10 + 1 : NEXT
+LINE (20, 20)-(300, 200), 14, B
+LINE (20, 200)-(300, 20), 11
+GPRINT (96, 216), "HyBASIC graphics"
+PRINT CHR$(27); "[2J";
+!png basic-gfx

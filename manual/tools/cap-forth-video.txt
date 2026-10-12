@@ -1,0 +1,10 @@
+## Chapter 19's picture: turtle graphics from HyForth (node manual/tools/capture.js manual/tools/cap-forth-video.txt)
+#! --vera --rtc
+lib video
+320 8 bitmap
+: square ( n -- ) 4 0 do dup fd 90 rt loop drop ;
+: flower 36 0 do i 16 mod 1+ pen 60 square 10 rt loop ;
+cs flower
+: cls 27 emit ." [2J" 27 emit ." [H" ;
+cls
+!png forth-flower

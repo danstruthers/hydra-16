@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 500" font-family="Arial, Helvetica, sans-serif" font-size="12">
+  <rect width="720" height="500" fill="#fff"/>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 Z" fill="#444"/>
+    </marker>
+  </defs>
+  <!-- The 64K the processor sees -->
+  <text x="185" y="12" text-anchor="middle" font-weight="bold" font-size="13">WHAT THE 65C02 SEES</text>
+  <g stroke="#333" stroke-width="1">
+    <rect x="110" y="20" width="150" height="30" fill="#b9b9b9"/>
+    <rect x="110" y="50" width="150" height="30" fill="#f6b26b"/>
+    <rect x="110" y="80" width="150" height="60" fill="#5e9e5e"/>
+    <rect x="110" y="140" width="150" height="100" fill="#93c47d"/>
+    <rect x="110" y="240" width="150" height="60" fill="#6fa8dc"/>
+    <rect x="110" y="300" width="150" height="130" fill="#cfe2f3"/>
+    <rect x="110" y="430" width="150" height="20" fill="#e6eef7"/>
+    <rect x="110" y="450" width="150" height="20" fill="#e6eef7"/>
+    <rect x="110" y="470" width="150" height="20" fill="#e6eef7"/>
+  </g>
+  <g text-anchor="middle">
+    <text x="185" y="39">T U V W, vectors</text>
+    <text x="185" y="69">I/O ports</text>
+    <text x="185" y="106" font-weight="bold" fill="#fff">KERNEL ROM</text>
+    <text x="185" y="121" fill="#fff">one 8K page</text>
+    <text x="185" y="185" font-weight="bold">PAGED ROM</text>
+    <text x="185" y="200">one 16K bank</text>
+    <text x="185" y="266" font-weight="bold">RAM</text>
+    <text x="185" y="281">one 8K bank</text>
+    <text x="185" y="360" font-weight="bold">PROGRAM</text>
+    <text x="185" y="375">memory</text>
+    <text x="185" y="444" font-size="11">OS area</text>
+    <text x="185" y="464" font-size="11">stack</text>
+    <text x="185" y="484" font-size="11">zero page</text>
+  </g>
+  <g text-anchor="end" font-family="Courier New, monospace" font-size="12">
+    <text x="104" y="39">$FFF0-$FFFF</text>
+    <text x="104" y="69">$FF00-$FFEF</text>
+    <text x="104" y="114">$E000-$FEFF</text>
+    <text x="104" y="194">$A000-$DFFF</text>
+    <text x="104" y="274">$8000-$9FFF</text>
+    <text x="104" y="369">$0400-$7FFF</text>
+    <text x="104" y="444">$0200-$03FF</text>
+    <text x="104" y="464">$0100-$01FF</text>
+    <text x="104" y="484">$0000-$00FF</text>
+  </g>
+  <!-- The task's own 32K -->
+  <path d="M 266 300 L 274 300 L 274 490 L 266 490" fill="none" stroke="#2a62b8" stroke-width="2"/>
+
+  <!-- Behind the windows -->
+  <g stroke="#444" stroke-width="1.5" fill="none" marker-end="url(#ah)">
+    <line x1="262" y1="110" x2="368" y2="100"/>
+    <line x1="262" y1="190" x2="368" y2="190"/>
+    <line x1="262" y1="270" x2="368" y2="282"/>
+    <line x1="276" y1="395" x2="368" y2="395"/>
+  </g>
+  <g stroke="#333">
+    <rect x="370" y="62" width="335" height="72" rx="6" fill="#e3f0e3"/>
+    <rect x="370" y="150" width="335" height="80" rx="6" fill="#eef6e9"/>
+    <rect x="370" y="244" width="335" height="96" rx="6" fill="#e7f0fa"/>
+    <rect x="370" y="356" width="335" height="80" rx="6" fill="#eef4fb"/>
+  </g>
+  <g>
+    <text x="382" y="82" font-weight="bold">KERNEL ROM (U6): 128K</text>
+    <text x="382" y="100">16 pages of 8K. The W register chooses</text>
+    <text x="382" y="116">which page the 65C02 sees.</text>
+
+    <text x="382" y="170" font-weight="bold">PAGED ROM (U30 to U37): up to 4 MB</text>
+    <text x="382" y="188">256 banks of 16K. The ROM bank register,</text>
+    <text x="382" y="204">at address $01, chooses which one the 65C02</text>
+    <text x="382" y="220">sees. Each task has its own.</text>
+
+    <text x="382" y="264" font-weight="bold">RAM BANKS: 8K each</text>
+    <text x="382" y="282">Banks $00 to $EF: the task's own, on the memory</text>
+    <text x="382" y="298">cards. Banks $F0 to $FF: the 2 MB shared RAM,</text>
+    <text x="382" y="314">16 at a time (U chooses which 16). The RAM bank</text>
+    <text x="382" y="330">register, at address $00, chooses. Each task has its own.</text>
+
+    <text x="382" y="376" font-weight="bold">TASK RAM (U7): 512K</text>
+    <text x="382" y="394">16 tasks of 32K. The T register chooses</text>
+    <text x="382" y="410">which task's 32K is at $0000 to $7FFF:</text>
+    <text x="382" y="426">its zero page, stack and program.</text>
+  </g>
+</svg>

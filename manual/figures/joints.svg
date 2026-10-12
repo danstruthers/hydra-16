@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 200" font-family="Arial, Helvetica, sans-serif" font-size="13">
+  <rect width="720" height="200" fill="#fff"/>
+  <defs>
+    <g id="b">
+      <rect x="0" y="100" width="130" height="20" fill="#3b7a3e" stroke="#1f4a21"/>
+      <rect x="45" y="95" width="40" height="5" fill="#c98b3b"/>
+      <rect x="59" y="95" width="12" height="25" fill="#fff"/>
+    </g>
+  </defs>
+  <!-- good -->
+  <g transform="translate(10,10)">
+    <use href="#b"/>
+    <path d="M 44 95 Q 60 88 62 60 L 68 60 Q 70 88 86 95 Z" fill="#d6d6d6" stroke="#666"/>
+    <rect x="62" y="30" width="6" height="90" fill="#9a9a9a"/>
+    <text x="65" y="150" text-anchor="middle" font-weight="bold" fill="#2e7d33">GOOD</text>
+    <text x="65" y="168" text-anchor="middle">Shiny, smooth cone;</text>
+    <text x="65" y="184" text-anchor="middle">flows onto the pad</text>
+  </g>
+  <!-- too little -->
+  <g transform="translate(150,10)">
+    <use href="#b"/>
+    <path d="M 58 95 Q 62 92 62 86 L 68 86 Q 68 92 72 95 Z" fill="#d6d6d6" stroke="#666"/>
+    <rect x="62" y="30" width="6" height="90" fill="#9a9a9a"/>
+    <text x="65" y="150" text-anchor="middle" font-weight="bold" fill="#c0301f">TOO LITTLE</text>
+    <text x="65" y="168" text-anchor="middle">Hole not filled;</text>
+    <text x="65" y="184" text-anchor="middle">add more solder</text>
+  </g>
+  <!-- too much -->
+  <g transform="translate(290,10)">
+    <use href="#b"/>
+    <rect x="62" y="30" width="6" height="90" fill="#9a9a9a"/>
+    <ellipse cx="65" cy="70" rx="30" ry="28" fill="#d6d6d6" stroke="#666"/>
+    <text x="65" y="150" text-anchor="middle" font-weight="bold" fill="#c0301f">TOO MUCH</text>
+    <text x="65" y="168" text-anchor="middle">A ball hides the lead;</text>
+    <text x="65" y="184" text-anchor="middle">remove some with braid</text>
+  </g>
+  <!-- cold -->
+  <g transform="translate(430,10)">
+    <use href="#b"/>
+    <rect x="62" y="30" width="6" height="90" fill="#9a9a9a"/>
+    <path d="M 50 92 Q 44 70 60 64 Q 74 58 82 72 Q 88 86 78 92 Z" fill="#a9a9a9" stroke="#555" stroke-dasharray="3 2"/>
+    <text x="65" y="150" text-anchor="middle" font-weight="bold" fill="#c0301f">COLD</text>
+    <text x="65" y="168" text-anchor="middle">Dull, lumpy, doesn't</text>
+    <text x="65" y="184" text-anchor="middle">wet the pad; reheat</text>
+  </g>
+  <!-- bridge -->
+  <g transform="translate(570,10)">
+    <rect x="0" y="100" width="140" height="20" fill="#3b7a3e" stroke="#1f4a21"/>
+    <rect x="16" y="95" width="36" height="5" fill="#c98b3b"/><rect x="88" y="95" width="36" height="5" fill="#c98b3b"/>
+    <rect x="31" y="40" width="6" height="80" fill="#9a9a9a"/><rect x="103" y="40" width="6" height="80" fill="#9a9a9a"/>
+    <path d="M 16 95 Q 30 72 34 70 Q 70 74 106 70 Q 112 72 124 95 Z" fill="#d6d6d6" stroke="#666"/>
+    <text x="70" y="150" text-anchor="middle" font-weight="bold" fill="#c0301f">BRIDGE</text>
+    <text x="70" y="168" text-anchor="middle">Two pads joined;</text>
+    <text x="70" y="184" text-anchor="middle">separate them</text>
+  </g>
+</svg>

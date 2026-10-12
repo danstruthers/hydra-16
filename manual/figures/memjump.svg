@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 420" font-family="Arial, Helvetica, sans-serif" font-size="13">
+  <rect width="720" height="420" fill="#fff"/>
+  <defs>
+    <g id="pin"><rect x="-5" y="-5" width="10" height="10" fill="#555"/></g>
+    <g id="row">
+      <use href="#pin" x="60"/><use href="#pin" x="94"/><use href="#pin" x="128"/><use href="#pin" x="162"/><use href="#pin" x="196"/>
+      <use href="#pin" x="230"/><use href="#pin" x="264"/><use href="#pin" x="298"/><use href="#pin" x="332"/><use href="#pin" x="366"/>
+      <use href="#pin" x="400"/><use href="#pin" x="434"/><use href="#pin" x="468"/><use href="#pin" x="502"/><use href="#pin" x="536"/>
+    </g>
+    <g id="labels" font-size="12" fill="#777" text-anchor="middle">
+      <text x="60">E</text><text x="94">D</text><text x="128">C</text><text x="162">B</text><text x="196">A</text>
+      <text x="230">9</text><text x="264">8</text><text x="298">7</text><text x="332">6</text><text x="366">5</text>
+      <text x="400">4</text><text x="434">3</text><text x="468">2</text><text x="502">1</text><text x="536">0</text>
+    </g>
+  </defs>
+
+  <!-- The through-hole card's J3 -->
+  <text x="20" y="28" font-weight="bold" font-size="15">THE THROUGH-HOLE CARD: J3</text>
+  <text x="20" y="64" font-size="12" fill="#777">Module:</text>
+  <use href="#labels" x="36" y="64"/>
+  <rect x="80" y="76" width="508" height="64" rx="3" fill="#2b2b2b"/>
+  <use href="#row" x="36" y="92"/>
+  <use href="#row" x="36" y="124"/>
+  <rect x="560" y="80" width="24" height="56" rx="5" fill="#e23d28" fill-opacity="0.85" stroke="#7a1a10"/>
+  <text x="602" y="96">pin 1</text>
+  <text x="602" y="128">pin 2</text>
+  <text x="20" y="166">The jumper in column 0 (pins 1 and 2) makes the card module 0. Column 1 (pins 3 and 4)</text>
+  <text x="20" y="184">would make it module 1, and so on, up to column E (pins 29 and 30) for module 14.</text>
+
+  <!-- The surface-mount card's J4 and J3 -->
+  <text x="20" y="232" font-weight="bold" font-size="15">THE SURFACE-MOUNT CARD: J4 AND J3</text>
+  <text x="20" y="266" font-size="12" fill="#777">Module:</text>
+  <use href="#labels" x="36" y="266"/>
+  <rect x="80" y="278" width="508" height="32" rx="3" fill="#2b2b2b"/>
+  <rect x="80" y="312" width="508" height="64" rx="3" fill="#2b2b2b"/>
+  <text x="14" y="299" font-weight="bold">J4</text>
+  <text x="14" y="349" font-weight="bold">J3</text>
+  <use href="#row" x="36" y="294"/>
+  <use href="#row" x="36" y="328"/>
+  <use href="#row" x="36" y="360"/>
+  <rect x="526" y="282" width="24" height="58" rx="5" fill="#2a62b8" fill-opacity="0.85" stroke="#123a75"/>
+  <rect x="560" y="316" width="24" height="56" rx="5" fill="#e23d28" fill-opacity="0.85" stroke="#7a1a10"/>
+  <text x="602" y="298" fill="#2a62b8" font-weight="bold">IC5 to IC8:</text>
+  <text x="602" y="314" fill="#2a62b8" font-weight="bold">module 1</text>
+  <text x="602" y="350" fill="#c0301f" font-weight="bold">IC1 to IC4:</text>
+  <text x="602" y="366" fill="#c0301f" font-weight="bold">module 0</text>
+  <text x="20" y="402">The red jumper (J3 to J3) sets IC1 to IC4's module; the blue jumper (J4 to J3) sets IC5 to IC8's.</text>
+</svg>

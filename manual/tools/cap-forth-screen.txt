@@ -1,0 +1,12 @@
+## Chapter 19's picture: the Facility words on the terminal (node manual/tools/capture.js manual/tools/cap-forth-screen.txt)
+lib facility
+: at ( col row -- ) at-xy ;
+: banner ( -- )
+yellow color blue bgcolor bold
+10 4 at ."  +--------------------+ "
+10 5 at ."  |   Hydra-16 Forth   | "
+10 6 at ."  +--------------------+ "
+plain ;
+: bars ( -- ) 8 1 do i bgcolor 12 i 8 + at-xy 20 spaces loop plain ;
+page banner bars 0 17 at-xy
+!snap forth-screen

@@ -1,0 +1,9 @@
+## Chapter 12's picture: the terminal's colours, from HyForth (node manual/tools/capture.js manual/tools/cap-terminal.txt)
+: esc 27 emit ;
+: cls esc ." [2J" esc ." [H" ;
+: rainbow 8 1 do esc ." [4" i 48 + emit ." m     " loop esc ." [0m" cr ;
+: hello esc ." [1;33;44m Hello, Hydra! " esc ." [0m" cr ;
+: styles esc ." [7m reversed " esc ." [0m " esc ." [4munderlined" esc ." [0m" cr ;
+: colours esc ." [31mred " esc ." [32mgreen " esc ." [34mblue " esc ." [91mbright red" esc ." [0m" cr ;
+cls rainbow hello styles colours
+!snap term-colours

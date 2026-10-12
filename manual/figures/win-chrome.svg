@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 696 432" font-family="Courier New, monospace" font-size="14">
+<rect width="696" height="432" rx="8" fill="#14181c"/>
+<rect x="12.0" y="12" width="8.4" height="17" fill="#d9d9d9"/>
+<text x="20.4" y="25" fill="#d9d9d9" xml:space="preserve">0 forth</text>
+<rect x="79.2" y="12" width="604.8" height="17" fill="#d9d9d9"/>
+<text x="79.2" y="25" fill="#14181c" xml:space="preserve"> 1 forth                                                           09:41</text>
+<text x="12.0" y="42" fill="#ffffff" font-weight="bold" xml:space="preserve">0 forth                                                                  </text>
+<rect x="625.2" y="29" width="58.8" height="17" fill="#d9d9d9"/>
+<text x="625.2" y="42" fill="#6b6b6b" font-weight="bold" xml:space="preserve">0 forth</text>
+<text x="12.0" y="59" fill="#d9d9d9" xml:space="preserve">HydraOS 1.0 for the Hydra-16                                                    </text>
+<text x="12.0" y="76" fill="#d9d9d9" xml:space="preserve">init: up in task 01                                                             </text>
+<text x="12.0" y="93" fill="#d9d9d9" xml:space="preserve">T ST FL PA CPU    NAME                                                          </text>
+<text x="12.0" y="110" fill="#d9d9d9" xml:space="preserve">0 01 00 FF 00004A kernel                                                        </text>
+<text x="12.0" y="127" fill="#d9d9d9" xml:space="preserve">1 01 00 FF 000016 init                                                          </text>
+<text x="12.0" y="144" fill="#d9d9d9" xml:space="preserve">B 04 01 FF 000003 gpio                                                          </text>
+<text x="12.0" y="161" fill="#d9d9d9" xml:space="preserve">C 04 01 FF 000003 snd                                                           </text>
+<text x="12.0" y="178" fill="#d9d9d9" xml:space="preserve">D 04 01 FF 000010 kdev                                                          </text>
+<text x="12.0" y="195" fill="#d9d9d9" xml:space="preserve">E 04 01 FF 000078 storage                                                       </text>
+<text x="12.0" y="212" fill="#d9d9d9" xml:space="preserve">F 04 01 FF 00004E cons                                                          </text>
+<text x="12.0" y="229" fill="#d9d9d9" xml:space="preserve">hello, from init                                                                </text>
+<text x="12.0" y="246" fill="#d9d9d9" xml:space="preserve">init: hello ended: code $07 (bye)                                               </text>
+<text x="12.0" y="263" fill="#d9d9d9" xml:space="preserve">HyForth (Forth 2012), bye to end                                                </text>
+<text x="12.0" y="280" fill="#d9d9d9" xml:space="preserve">/&gt; ls /rom                                                                      </text>
+<text x="12.0" y="297" fill="#d9d9d9" xml:space="preserve">README                                                                          </text>
+<text x="12.0" y="314" fill="#d9d9d9" xml:space="preserve">bin/                                                                            </text>
+<text x="12.0" y="331" fill="#d9d9d9" xml:space="preserve">doc/                                                                            </text>
+<text x="12.0" y="348" fill="#d9d9d9" xml:space="preserve">lib/                                                                            </text>
+<text x="12.0" y="365" fill="#d9d9d9" xml:space="preserve">songs/                                                                          </text>
+<text x="12.0" y="382" fill="#d9d9d9" xml:space="preserve">/&gt; echo chrome serial on &gt;/dev/wctl                                             </text>
+<text x="12.0" y="399" fill="#d9d9d9" xml:space="preserve">/&gt;                                                                              </text>
+<rect x="37.2" y="399" width="8.4" height="3" fill="#d9d9d9"/>
+</svg>
