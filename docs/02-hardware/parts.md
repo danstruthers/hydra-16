@@ -50,6 +50,9 @@ WDC's W65C22N and W65C51N are current:
 **The sound chips** (U38 YM2151, U41 YM3012).  These are only available used, pulled from old equipment, and
 fakes are common: buy from a seller with a good record, and test them (the hardware test checks the YM2151's busy
 flag and timers).  The board works without them; leave U38 and U41 out and the system just has no FM sound.
+A modern alternative is the **OPM2151** (an FPGA re-implementation of the YM2151, pin-compatible and cycle-accurate,
+sold on Tindie by Joe's Retro Sto'), with an optional I2S DAC board that fits U41's socket in place of a YM3012:
+close the OPM2151's solder jumper JP2 ("I2S Mode") for that.  Untested on the Hydra at the time of writing.
 
 **The 74LS219s** (IC1-IC8): 16 x 4-bit RAMs, the bank registers and the vector RAM.  They're out of production, but
 easy to find as surplus.  The **74LS189** is the same chip with inverted outputs, and **won't** do.

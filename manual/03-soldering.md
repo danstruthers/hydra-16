@@ -82,8 +82,8 @@ When you walk across a carpet and get a shock from a doorknob, that's static ele
 volts. You can feel a spark of about 3,000 volts. A spark too small to feel can still destroy a chip. The Hydra's
 processor, its memory chips and its input and output chips are made with **CMOS** technology (the "C" in 65C02),
 which uses very little power but is easily damaged by static. Most of the small logic chips (the ones whose names
-start with 74F or 74LS) are an older, tougher kind, but it's simplest, and safest, to treat every chip the same
-careful way.
+start with 74F or 74LS) are an older, tougher kind (the few marked 74ACT are CMOS too), but it's simplest, and
+safest, to treat every chip the same careful way.
 
 To protect the chips:
 
@@ -241,7 +241,7 @@ electrically. The **flux** inside the solder cleans the metal as it melts, so th
 
 To solder a lead:
 
-1. **Prepare.** Set the iron to about 330 °C (360 °C for lead-free solder). Wipe its tip on the sponge, and melt a
+1. **Prepare.** Set the iron to about 330 °C (370 °C for lead-free solder). Wipe its tip on the sponge, and melt a
    little solder onto the tip so it's shiny. This is called *tinning* the tip.
 2. **Heat.** Touch the tip so it touches **both** the copper pad **and** the lead at the same time. Hold it there for
    about one second.
@@ -314,3 +314,31 @@ toothbrush dipped in isopropyl alcohol, and let it dry completely. A clean board
 won't collect dust.
 
 Now you know your tools and your parts. In the next chapter you'll put them all together.
+
+## 3.9 Getting a board and the parts
+
+A Hydra-16 kit is planned. Until there is one, you can build a Hydra from the design itself, and this section says
+where everything comes from.
+
+**The boards.** The circuit boards are designed with KiCad (version 9), and the designs are in the `board` folder of
+the Hydra's files (section 2.3): `hydra-16.kicad_pro` is the main board, `MemoryDaughterCard` holds the two memory
+cards (through-hole, and surface-mount), and `HydraBusBreakoutCard` the breakout card that a Vera X plugs into.
+Boards are made to order from those designs: open a project in KiCad, plot its **Gerber** files, and send them to
+any circuit-board maker.
+
+**The parts.** Appendix I lists every part by its place, value and package. The reference book's parts list,
+`docs/02-hardware/parts.md`, has the same list with the part numbers to order, the sockets to buy, and a section on
+buying: read it before you order. A few parts need care:
+
+| Part | What to know |
+|---|---|
+| The processor, U1 | Buy WDC's current part, the W65C02S6TPG-14: it's still made |
+| The VIA and the serial chip, U2 and U3 | The Rockwell R65C22 and R65C51 are long out of production. WDC's W65C22N is a drop-in replacement for the VIA; its W65C51N works for the serial chip, but HydraOS must be built for it (section 4.5) |
+| The RAM chips | Hitachi's HM628512 is surplus now; Alliance's AS6C4008 is current and fits the same socket |
+| The 74LS219s, IC1 to IC8 | Out of production, but easy to find as surplus. The 74LS189 looks the same and **won't** do |
+| The sound chips, U38 and U41 | Fake YM2151s are common: buy from a seller with a record, and let the hardware test check them (section 5.7). Or fit an **OPM2151**, a modern pin-compatible replacement, with its own DAC board in U41's socket |
+| The logic chips | Buy the families Appendix I names (74F, 74LS, 74ACT); don't substitute 74HC or 74HCT parts, which are slower |
+| The ROM chips | Three SST39SF040 and one SST39SF010A, all current; and a programmer with a PLCC-32 adapter (section 4.4) |
+
+The Hydra works without its sound chips, without an SD card reader and without a Vera X: if a part is hard to find,
+build without it and add it later.

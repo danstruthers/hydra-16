@@ -119,7 +119,7 @@ output sent back to back loses characters.  So the serial driver sends each byte
 ACIA's "transmitter empty" interrupt: a character's time and two idle bits at 115200, one at the other rates.  Every
 build does this, on either chip.
 
-**The DE-9 connector** (J3, male) is driven by a MAX232 (U5), and wired like a modem (DCE):
+**The DE-9 connector** (J3, a female socket) is driven by a MAX232 (U5), and wired like a modem (DCE):
 
 | DE-9 pin | Signal | Direction |
 | :------- | :----- | :-------- |
@@ -130,8 +130,8 @@ build does this, on either chip.
 | 8 | ACIA ~RTS, to the terminal's CTS | out |
 | 1, 4, 6, 9 | Not connected | |
 
-**The cable** is a **straight-through** one with two female ends (pin 2 to pin 2, 3 to 3, and so on), not a null-modem
-cable, to a PC's serial port or a USB serial adapter.
+**The cable.** A USB serial adapter's male plug goes straight into J3. An extension between them is a
+**straight-through** male-to-female cable (pin 2 to pin 2, 3 to 3, and so on), not a null-modem cable.
 
 **J30, the CTS jumper** (1.8D).  The ACIA only transmits while its ~CTS is low:
 

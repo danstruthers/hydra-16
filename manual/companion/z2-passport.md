@@ -1,8 +1,8 @@
 # The Skills Passport
 
 Tick a skill when you can do it without looking it up, and get it signed by someone who watched you do it: a
-teacher, or a friend who can already do it. The best way to be sure you can do something is to show someone else
-how.
+teacher, or a friend who can already do it (working alone? sign it yourself, honestly). The best way to be sure you
+can do something is to show someone else how.
 
 ## Building
 

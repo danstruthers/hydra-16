@@ -64,6 +64,10 @@ You don't have to read the parts in order. After Chapter 6, every reader knows e
 Each chapter opens with a box, **IN THIS CHAPTER**, that says what you'll be able to do by the end of it, and what
 it expects you to know already.
 
+**When you want every detail**, the Hydra's **reference book** has it: the folder `docs` in the Hydra's files (start
+at `docs/README.md`) describes the architecture, every driver's files and commands, the expansion cards and the
+quirks. This book explains; that one specifies.
+
 ## How to read the examples
 
 Most chapters have examples you can try. In the examples, what **you type** is printed in **bold**, and what the
@@ -94,7 +98,7 @@ It was always the same Hydra:
 
 | | This book's Hydra has |
 |---|---|
-| Memory | A memory card with three RAM modules (so `free` shows 384 KB for each task) |
+| Memory | Three RAM modules, on one or two memory cards (so `free` shows 384 KB for each task) |
 | SD card | HydraOS's sample card, in the first reader: `/sd/0` |
 | Clock chip | None. Its clock starts at midnight on January 1, 2000 each time it's switched on |
 | Vera X video card | None, except in Chapter 16 and where an example says it has one |

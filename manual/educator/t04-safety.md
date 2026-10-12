@@ -12,7 +12,7 @@ school workshops every day. But it has to be managed on purpose.
 
 | Hazard | How it hurts | What to do |
 |---|---|---|
-| **The iron's tip**, about 350 °C | Burns, in an instant | A stand at every station, used every time. Irons carried nowhere: they stay at the bench. Never passed hand to hand. Cables routed away from elbows. Off, and five minutes to cool, before anyone packs up |
+| **The iron's tip**, 350 °C with leaded solder and 370 °C with lead-free | Burns, in an instant | A stand at every station, used every time. Irons carried nowhere: they stay at the bench. Never passed hand to hand. Cables routed away from elbows. Off, and five minutes to cool, before anyone packs up |
 | **Molten solder** | Flicks and splashes: burns, and the eyes | Safety glasses on everyone at a bench, and on anyone watching. Never shake or flick an iron. Wet sponges kept damp, not dripping: water on a hot tip spits |
 | **Clipped leads** | They fly | Glasses again. Hold the lead while cutting it, or cut into a cupped hand or a box |
 | **Flux fumes** | Irritate eyes and lungs; can sensitize, and are a known trigger for asthma | Extraction at each bench, or strong cross-ventilation. Heads to the side of the work, not over it. Ask about asthma before the first session |

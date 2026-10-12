@@ -125,8 +125,9 @@ second.)
 
 **Watch for:**
 
-* Tabs and braces in the script. rc wants the `{` on the same line as the `for`, and the `}` on a line of its
-  own. The editor's auto-indent helps.
+* Tabs and braces in the script. The manual's scripts put the `{` on the `for`'s line and the `}` on a line of its
+  own; rc accepts other layouts, but keep to that one and the shape stays easy to see. The editor's auto-indent
+  helps.
 * Step 5's question has a sting: the script copied to `/bin` is really in `/ram/bin`, and is gone at the next
   reset. Let them find that out next lesson, and then teach `/sd/0/bin`. (A directory made there joins `/bin`
   the next time the namespace is built: after a reset, or `newns`.)

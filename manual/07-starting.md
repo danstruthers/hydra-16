@@ -216,8 +216,9 @@ task 1: init
 ### Step 4: Interrupts
 
 An **interrupt** is a signal from a chip that says "I need attention now": a key has arrived at the serial port, a
-timer has run out, the sound chip has finished a note. The Hydra has fifteen interrupt lines, numbered 0 to 14. When
-one is active, a chip on the board (U17 and U18 find the most urgent line) makes the 65C02 read the interrupt's own
+timer has run out, the sound chip has finished a note. The Hydra has sixteen interrupt lines, numbered 0 to 15;
+nothing is wired to line 15, so the kernel uses its entry for `BRK`. When one is active, a chip on the board (U17 and
+U18 find the most urgent line) makes the 65C02 read the interrupt's own
 address from the vector RAM, so each line goes straight to its own code. The lower the number, the more urgent:
 
 | Line | Comes from |

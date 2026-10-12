@@ -48,6 +48,13 @@ SD card reader, connecting: 14.2
 serial cable: 5.1
 troubleshooting: 5.7
 
+buying the parts: 3.9
+circuit boards, having them made: 3.9
+OPM2151 (a YM2151 replacement): 3.9
+reference book (the `docs` folder): 2.3
+C, programs in: 27.16
+pasting into the Hydra: 2.1, 6.7
+
 # Programming: the same idea in each language
 arithmetic, in HyForth: 19.3
 arithmetic, in hylang: 21.2

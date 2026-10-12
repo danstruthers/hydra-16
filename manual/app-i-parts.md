@@ -35,8 +35,8 @@ fits them, with a box to tick as each one goes in. Then it says what each chip d
 | ☐ | Place | Socket | Chip |
 |---|---|---|---|
 | ☐ | U1 | 40 pins, wide | W65C02S |
-| ☐ | U2 | 40 pins, wide | R65C22 |
-| ☐ | U3 | 28 pins, wide | R65C51 |
+| ☐ | U2 | 40 pins, wide | R65C22 (or a W65C22N) |
+| ☐ | U3 | 28 pins, wide | R65C51 (or a W65C51N: section 4.5) |
 | ☐ | U4, U20, U24 | 16 pins | 74F138 |
 | ☐ | U5 | 16 pins | MAX232 |
 | ☐ | U6 | PLCC-32 | SST39SF010A |
@@ -86,7 +86,7 @@ fits them, with a box to tick as each one goes in. Then it says what each chip d
 | ☐ | C86, C87, C88, C89 | 47 µF electrolytic (476) |
 | ☐ | C51, C53, C54, C55, C56 | 100 µF electrolytic (107) |
 | ☐ | C92, C93 | 220 µF non-polarized electrolytic (227 NP) |
-| ☐ | J3 | 9-pin D connector (male): the serial port |
+| ☐ | J3 | 9-pin D socket (female): the serial port |
 | ☐ | J26 | 3.5 mm stereo audio jack |
 | ☐ | J12 to J17 | 62-pin card edge connectors: slots 0 to 5 |
 | ☐ | J11 | 24-pin ATX power connector |

@@ -364,7 +364,9 @@ task
 ./bin/>
 ```
 
-`/env/prompt` holds the two prompts: the usual one, and the one shown when a command goes on to another line.
+(`cat` printed `/env/path`'s value with the next prompt stuck to its end: the value has no new line of its own, and
+`cat /env/path; echo` adds one.) `/env/prompt` holds the two prompts: the usual one, and the one shown when a
+command goes on to another line.
 
 **8.** `none`, on a Hydra with no clock chip: it will have forgotten by tomorrow, and start again at the year
 2000.
