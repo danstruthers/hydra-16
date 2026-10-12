@@ -155,7 +155,8 @@ clock.fs
 rc: foo: not found
 ```
 
-Each rc line is an rc of its own, so a variable it sets ends with it ([at HyForth's prompt](../05-rc.md#at-hyforths-prompt)).
+Each rc line is an rc of its own, so a variable it sets ends with it, and rc runs the line's last command in its own
+place (`EXEC`), so a plain command takes one task ([at HyForth's prompt](../05-rc.md#at-hyforths-prompt)).
 
 **The shell's own words.**  An rc line runs in a task of its own, which can't change forth's directory or namespace, so
 these are Forth words that read their arguments as rc does: `cd [dir]`, `bind [-a|-b] [-c] new old`, `mount`,

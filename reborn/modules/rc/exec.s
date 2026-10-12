@@ -11,6 +11,9 @@
 ;   A pipeline's stages, a background command and `{}'s command run as programs: a simple command's program
 ;   itself, anything else (a built-in, a function, a { }, an if ...) rc -c with its text.
 ;   Background tasks are kept (their records waited for as they end: run_bg_reap, before each prompt).
+;   rc -c's last command, if it's a simple command whose first word is a program, runs in rc's place (EXEC, Plan 9's
+; exec): its task is rc's, so its status is rc's parent's to WAIT for, and no task is spent on an rc that only
+; waits.  So does the exec built-in's.  rc's own fds (CHILD_FDS up) are closed first, as a program gets none of them.
 
 .include "rc.inc"
 
@@ -23,6 +26,10 @@ xs:         .res        2                                   ; A text's start ...
 xe:         .res        2                                   ;   and end
 xt:         .res        1                                   ; A task
 xf:         .res        1                                   ; SPAWN's flags
+xexec:      .res        1                                   ; <> 0: spawn_r EXECs, in rc's place
+exec_now:   .res        1                                   ; <> 0: the line parsed is rc -c's last (rc.s: exec_check) ...
+exec_this:  .res        1                                   ;   and a simple command's claim of it (c_simple)
+exec_src:   .res        1                                   ; The source rc -c's text is (src), or $FF
 xin:        .res        1                                   ; A pipeline stage's input fd ($FF: rc's own) ...
 xout:       .res        1                                   ;   its output fd ...
 xoutn:      .res        1                                   ;   and which of its fds that is
@@ -50,6 +57,11 @@ bang:       .res        BANG_MAX + 1                        ; A script's first l
 
 ; The map, and nothing saved or running in the background (rc.s, as it starts)
 exec_init:
+            lda         #$FF                                ; (No rc -c yet)
+            sta         exec_src
+            stz         exec_now
+            stz         exec_this
+            stz         xexec
             ldx         #CHILD_FDS - 1
 :
             txa
@@ -81,6 +93,12 @@ run_cmd:
             jmp         rc_abort
 :
             lda         (xn)
+            cmp         #C_SIMPLE                           ; (rc -c's last line: only a simple command runs
+            beq         :+                                  ;   in rc's place, its sequence's last, not one
+            cmp         #C_SEQ                              ;   inside another)
+            beq         :+
+            stz         exec_now
+:
             asl
             tax
             jmp         (run_vec - 2,X)
@@ -100,8 +118,20 @@ field:
 
 ; C_SEQ: each in turn
 c_seq:
+            lda         exec_now                            ; (rc -c's last line: for its last command)
+            stz         exec_now
+            pha
             PUSHW       xn
 @cmd:
+            FIELD       3                                   ; The last?  rc -c's last line's runs in rc's place
+            cpx         #0
+            bne         :+
+            cmp         #0
+            bne         :+
+            tsx
+            lda         $0103,X
+            sta         exec_now
+:
             FIELD       1
             jsr         run_cmd
             tsx                                             ; (The node: under us)
@@ -119,6 +149,7 @@ c_seq:
             sta         $0101,X
             ora         xn
             bne         @cmd
+            pla
             pla
             pla
             rts
@@ -611,6 +642,9 @@ c_bg:
 ; C_SIMPLE: its words expanded; none: its assignments made (and its redirections done); else, its assignments for
 ; it alone, its redirections, then the function, built-in or program its first word names
 c_simple:
+            lda         exec_now                            ; (rc -c's last: this one's, not its words')
+            sta         exec_this
+            stz         exec_now
             jsr         arena_mark
             pha
             phx
@@ -686,10 +720,14 @@ run_words:
             bcs         :+
             jmp         builtin_run
 :
+            lda         exec_this                           ; (rc -c's last: in rc's place)
+            sta         xexec
+            stz         exec_this
             lda         xw
             ldx         xw + 1
             stz         xf
             jsr         spawn_path
+            stz         xexec
             bcs         status_error2
             jmp         wait_child
 
@@ -927,12 +965,43 @@ spawn_it:
 @done:
             rts
 
-; SPAWN of r0, its arguments r1, xf's flags and the map.  OUT: as SPAWN
+; SPAWN of r0, its arguments r1, xf's flags and the map; or with xexec, EXEC (exec_r).  OUT: as SPAWN
 spawn_r:
+            lda         xexec
+            bne         exec_r
             LDR         r2, fdmap
             lda         xf
             ora         #SPAWN_FDMAP
             jmp         SPAWN
+
+; EXEC of r0, its arguments r1, in rc's place: rc's own fds (CHILD_FDS up) closed first.  OUT: only if it fails, as
+; EXEC's
+exec_r:
+            lda         r0                                  ; (r0, r1 kept round the closes)
+            pha
+            lda         r0 + 1
+            pha
+            lda         r1
+            pha
+            lda         r1 + 1
+            pha
+            lda         #CHILD_FDS
+:
+            pha
+            jsr         CLOSE
+            pla
+            inc         a
+            cmp         #FD_MAX
+            bne         :-
+            pla
+            sta         r1 + 1
+            pla
+            sta         r1
+            pla
+            sta         r0 + 1
+            pla
+            sta         r0
+            jmp         EXEC
 
 ; Pathbuf, which isn't a program: a script if it starts with #! (Plan 9's), the program named after it (up to a
 ; space or the line's end) run with pathbuf and p2's arguments after it.  OUT: as SPAWN (E_NOEXEC: not a script)

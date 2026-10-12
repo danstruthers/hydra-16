@@ -145,6 +145,11 @@ waiting.
   calls (requests) and interrupts.
 * **The child gets** the caller's fds 0, 1 and 2 (or a map of them), its current directory, its namespace (shared, or
   empty), its note group (or a new one), and a copy of its environment.  Its parent is the caller.
+* **`EXEC`** runs another program **in the calling task**, in place of the one that calls it (Plan 9's `exec`).  The
+  program is found as `SPAWN` finds it; the task keeps its number, its parent, its note group, every fd, its
+  directory, its namespace and its environment; what was the old program's goes as at its end (its interrupt lines,
+  segments, semaphores, served devices, note handler, pages and banks).  The parent's `WAIT` gets the new program's
+  status.  rc uses it for the last command of `rc -c`, so a command typed at HyForth's prompt takes one task, not two.
 * **`EXITS`** ends a task with a status: a code (0 for success) and a message (31 characters).  Returning from a
   program's entry point is `EXITS` with 0.  Everything the task had is given back: its fds, pages, banks, segments,
   semaphores, interrupt lines.

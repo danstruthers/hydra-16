@@ -58,6 +58,10 @@ module.exports = {
       init: 't_note', modules: ['t_child'], cycles: 40e6,
     },
     {
+      name: 'exec', what: 'EXEC: its errors (the caller goes on), a program replaced in its task (its parent\'s WAIT gets the new one\'s status), the fds kept, the old note handler gone',
+      init: 't_exec', modules: ['t_child'], cycles: 30e6,
+    },
+    {
       name: 'file', what: 'files and servers: OPEN, READ, WRITE, SEEK, STAT, DUP; text, ctl, data, directories; waiting',
       init: 't_file', modules: ['t_child', 't_srv'], cycles: 40e6,
     },

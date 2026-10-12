@@ -20,7 +20,7 @@ function gives.
 
 <!-- calls:begin -->
 
-Made from `base/spec/api.def` and `base/spec/errors.def` by `node docs/build/callref.js`: 89 calls in 9 groups.
+Made from `base/spec/api.def` and `base/spec/errors.def` by `node docs/build/callref.js`: 90 calls in 9 groups.
 
 **The groups:** [system](#system-f800), [task](#task-f830), [memory](#memory-f890), [file](#file-f8c0), [name](#name-f920), [cons](#cons-f950), [time](#time-f980), [server](#server-f9b0), [dbg](#dbg-fa10); [the error codes](#the-error-codes); [the constants](#the-constants).
 
@@ -115,7 +115,7 @@ Call a routine in another bank of the paged ROM (a library module's: HT_LIBRARY,
 
 ## task (`$F830`)
 
-Tasks: starting and ending them, waiting, scheduling, ticks: 32 slots from `$F830`, 25 used.
+Tasks: starting and ending them, waiting, scheduling, ticks: 32 slots from `$F830`, 26 used.
 
 | Call | Address | What it does |
 | :--- | :------ | :----------- |
@@ -144,6 +144,7 @@ Tasks: starting and ending them, waiting, scheduling, ticks: 32 slots from `$F83
 | [`SEM_TRY`](#sem_try) | `$F872` | SEM_ACQUIRE without the wait. |
 | [`SEM_RELEASE`](#sem_release) | `$F875` | Give one back to a semaphore's count, and wake the tasks waiting for it. |
 | [`SEM_FREE`](#sem_free) | `$F878` | Free a semaphore (any task may). |
+| [`EXEC`](#exec) | `$F87B` | Run a program in this task, in place of the one that calls it (Plan 9's exec). |
 
 ### EXITS
 
@@ -517,6 +518,21 @@ Give one back to a semaphore's count, and wake the tasks waiting for it: the fir
 | **hylang** | `sys-sem-free .A=n ->` |
 
 Free a semaphore (any task may): its number can be made again, and the tasks waiting for it wake with E_INVAL.  The end of the task that made it frees it too, and a task's end gives back the mutexes it holds.
+
+### EXEC
+
+`$F87B`.
+
+| | |
+| :-- | :-- |
+| **In** | r0 = the program's path (as SPAWN's); r1 = its arguments (as SPAWN's: 176 bytes at most), or 0 |
+| **Out** | (doesn't return, once the program is found: it runs in this task's place) |
+| **Errors** | E_NOENT (no such file), E_NOEXEC (not a program this kernel runs), E_TOOBIG (the arguments), E_PERM (a driver), E_INTR (and what else OPEN and READ give) |
+| **Waits** | yes |
+| **HyForth** | `sys-exec ( r0 r1 -- ior )` |
+| **hylang** | `sys-exec r0=s r1=args? ->` |
+
+Run a program in this task, in place of the one that calls it (Plan 9's exec): the program is found as SPAWN finds it (a module of the paged ROM runs in place; any other is read into this task's RAM at its load address), and starts at its entry point with r0 pointing to its arguments, its name the header's.  The task keeps what isn't the old program's: its number, its parent (whose WAIT gets the new program's exit status), its note group, every fd (a RAM program's file takes fd 15 as it loads), its current directory, its namespace and its environment, and its CPU time.  What was the old program's goes as at its end: its IRQ lines, shared segments, semaphores (and the mutexes it holds), and the device letters it served; its note handler; its pages and banks.  A note that comes meanwhile waits for the new program.  If the program can't be found or isn't one, EXEC returns the error and the caller goes on; if it's found but can't be read (a RAM program's file cut short), the task ends with the error as its code.  rc runs the last command of rc -c this way, and its exec built-in.
 
 ---
 

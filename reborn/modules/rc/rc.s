@@ -187,6 +187,9 @@ main:
             MOVR        p1, flag_c
             MOVR        p0, flag_c
             jsr         str_len
+            ldy         src                                 ; (Its source: the next on the stack, whose last
+            iny                                             ;   command runs in rc's place: exec_check)
+            sty         exec_src
             ldx         #0
             jsr         run_text
             jmp         rc_exits
@@ -353,6 +356,7 @@ lines:
 @line:
             FAR2        parse_line
             bcs         @end
+            jsr         exec_check
             jsr         run_cmd
             tsx                                             ; (Back to the marks)
             lda         $0104,X
@@ -373,6 +377,23 @@ lines:
             plx
             pla
             jmp         arena_release
+
+; rc -c's last command (the line just parsed is its text's last): exec_now, so a simple command's program runs in
+; rc's place (EXEC: exec.s).  Keeps .A, .X (the line's tree)
+exec_check:
+            stz         exec_now
+            ldy         src
+            cpy         exec_src
+            bne         @done
+            pha
+            phx
+            FAR2        lex_at_end
+            plx
+            pla
+            bcc         @done
+            inc         exec_now
+@done:
+            rts
 
 ; A source: fd .A (its buffer from the heap; moved above the children's fds, unless it's 0)
 src_push_fd:
