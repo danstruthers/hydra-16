@@ -178,7 +178,8 @@ hylang> (cards)
 is `T` if the PC tool is there.
 
 **The terminal: `(use "screen")`**: `(cls)` clears the screen, `(at col row)` moves the cursor, `(color fg)` sets the
-text's colour (0 to 15), `(bold)` and `(plain)` change the style, and `(clear-line)`, `(cursor-off)` and `(cursor-on)`
+text's colour, by its name (`:black`, `:red`, `:green`, `:yellow`, `:blue`, `:magenta`, `:cyan` or `:white`), and
+`(color fg bg)` the background's too; `(bold)` and `(plain)` change the style; and `(clear-line)`, `(cursor-off)` and `(cursor-on)`
 do what they say.
 
 ## 22.6 Sound

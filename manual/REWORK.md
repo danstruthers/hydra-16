@@ -4,6 +4,23 @@ This plan answers the review of the first edition (October 2026), read once as a
 teacher. It is worked from top to bottom; each item is ticked when it is done, checked in the emulator, and in the
 PDF. The branch is `reborn-manual-rework`.
 
+## Where it stands
+
+All five phases are done (12 October 2026). The three books:
+
+| Book | Build | PDF |
+|---|---|---|
+| The User's and Builder's Manual | `node manual/build.js` | `manual/hydra-16-manual.pdf`: 29 chapters, appendices A to K |
+| The Student Companion | `node manual/build.js companion` | `manual/companion/hydra-16-companion.pdf`: a build log, 26 labs, 7 projects, 8 cards |
+| The Educator's Course Guide | `node manual/build.js educator` | `manual/educator/hydra-16-course-guide.pdf`: 16 topics, with the answers |
+
+To check them: `node manual/tools/check.js . companion educator` replays every transcript (about 450, and three
+quarters of an hour; give it one book, or one file, at a time), and `node manual/tools/xref.js` checks every
+cross-reference. Chapter numbers changed twice on the way (a new Chapter 6, First Steps, and a new Chapter 25, One
+Program, Three Languages): `tools/renumber.js` did it, and will again.
+
+What is left is in "Decisions that are yours", at the end.
+
 ## Three books, not one
 
 The first edition tries to be a tutorial, a reference and a course at once, and the course is the part it does
@@ -82,34 +99,36 @@ explain a word.
 
 ## Phase 4. The Educator's Course Guide
 
-- [ ] **4.1 Course shapes**: a one-week camp, a nine-week unit, a semester and a year; a club; emulator only, one
+- [x] **4.1 Course shapes**: a one-week camp, a nine-week unit, a semester and a year; a club; emulator only, one
   shared Hydra, or a Hydra for each group; and a university outline (architecture and operating systems).
-- [ ] **4.2 Scope and sequence**: lessons with aims, timings, the manual's sections, the companion's labs, what to
+- [x] **4.2 Scope and sequence**: lessons with aims, timings, the manual's sections, the companion's labs, what to
   demonstrate and what goes wrong.
-- [ ] **4.3 The room**: giving out the emulator, students' SD images, a soldering station's tools and rules, a
+- [x] **4.3 The room**: giving out the emulator, students' SD images, a soldering station's tools and rules, a
   safety policy, the build as a group project, parts and spares.
-- [ ] **4.4 Assessment**: rubrics, quizzes, project marking, and the answers to everything in the companion.
-- [ ] **4.5 Reaching everyone**: younger and older students, students who race ahead, students who can't solder.
+- [x] **4.4 Assessment**: rubrics, quizzes, project marking, and the answers to everything in the companion.
+- [x] **4.5 Reaching everyone**: younger and older students, students who race ahead, students who can't solder.
 
 ## Phase 5. Finish
 
-- [ ] Three PDFs built; all transcripts checked; all cross-references checked; the review read again against all three.
+- [x] Three PDFs built; all transcripts checked; all cross-references checked; the review read again against all three.
 
 ## Decisions that are yours
 
-1. **Three books or one.** This plan assumes three. Phases 1 and 2 are needed either way.
+1. **Three books or one.** The work was done as three. Folding the Companion and the Guide back into the manual is
+   possible (they're separate folders), but the manual would pass 600 pages, with the answers in it.
 2. **The order of the parts.** Devices stay before languages, as you asked, with signposts. The other choice is to
    move Part Four in front of Part Three.
 3. **Photographs.** The books have drawings only. Photographs of a built board, a good and a bad joint, and each
    building stage would help a 12-year-old more than any drawing; they need a camera and a real board.
 4. **What a kit is.** Where a board, the parts and the programmed ROMs come from, and what they cost, is not in the
-   repository. The manual and the guide leave a marked place for it.
+   repository. The Course Guide says so, and lists what a kit is made of (its Topic 3) so that it can be priced.
 5. **Changes outside the manual** that would remove whole paragraphs of explanation (not done here):
    * a `help` command on the Hydra (there is none: `help` answers `rc: help: not found`);
    * the emulators starting as the same Hydra (the web page: a Vera X, a clock chip, three modules; the terminal:
      none, none, two);
    * `hydra-16.html` kept ready-made in the repository, beside the ROM images;
-   * the bugs found while writing: HyBASIC's second `RUN` of a program with a `SUB` ("duplicate definition");
+   * the bugs found while writing: HyBASIC's second `RUN` of a program with a `SUB` or a `FUNCTION` ("duplicate
+     definition": even after `NEW` and `LOAD`, until HyBASIC is started again);
      HyForth's `.` on an empty stack printing `{R1` before its message; `2/3` and `#xFF` at the HyForth prompt going
      to rc; the Vera X's boot message cut into another line; the console dropping keys when a window's queue fills;
      db's `c` after an interrupted `n`; a pipeline of four programs (`rc: too many fds`, and rc's pipes are then
