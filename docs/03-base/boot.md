@@ -125,7 +125,7 @@ The paged ROM's bank 0 holds the **module directory**, at `$A200` (written by `b
 * how many modules there are (127 at most), and which is init;
 * whether bank 1 holds the hardware test;
 * 16 bytes for each module: its first bank, how many banks it spans, its type (program, driver, library), its flags,
-  and its name (12 characters).
+  its name (10 characters at most), and its **page**: where its header is in its first bank, `$A000 + 256 * page`.
 
 `MODINFO` reads an entry, and kdev serves the directory as files: `#m/NAME` is a module's image, which `SPAWN` reads;
 `#m/bin` lists the programs, and is bound at `/bin`.
@@ -140,7 +140,12 @@ module      wozmon      ; (task 1: the monitor)
 ```
 
 Bank 0's first 512 bytes hold a signature line and the ROM disk's partition table (HydraOS's `/rom`); bank 1 is the
-hardware test with the checksums of every ROM; the modules start at bank 2, each at `$A000` of its own bank.
+hardware test with the checksums of every ROM; the modules start at bank 2.  A module of two banks or more is at
+`$A000` of its first, its banks in a row.  A module of one bank is **packed**: the build links it at the page
+where `romimg.js` finds room for it (in bank 0 after the directory, in the free top of another module's last bank,
+or in a bank of its own), so several small ones share a bank.  The kernel reads a module's header at its page, and
+sets its task's ROM bank register to its bank as for any other.  In HydraOS, `vid` shares bank 0 with the
+directory, and `kdev` and `init` share the console driver's last bank.
 
 ---
 

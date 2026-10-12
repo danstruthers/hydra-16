@@ -488,7 +488,7 @@ notes:
 .rodata
 s_cons:     .byte       "#c/cons", 0
 s_up:       .byte       "HydraOS 1.0 for the Hydra-16", CR, LF, "init: up in task ", 0   ; (The kernel's banner is the base's)
-s_hello:    .byte       "/bin/hello", 0
+s_hello:    .byte       "#fx/bin/hello", 0
 s_args:     .byte       "from init", 0, 0
 s_ended:    .byte       "init: hello ended: code $", 0
 s_open:     .byte       " (", 0
@@ -502,8 +502,8 @@ S_RCL_LEN   = * - s_rcl
 s_lshell:   .byte       "/lib/shell", 0
 s_windows:  .byte       "/lib/windows", 0
 s_wctl:     .byte       "#c/wctl", 0
-s_wstart:   .byte       "#m/wstart", 0
-s_input:    .byte       "#m/input", 0
+s_wstart:   .byte       "#fx/bin/wstart", 0
+s_input:    .byte       "#fx/bin/input", 0
 s_builtin:  .byte       "init: no /rom/lib/namespace: the one built in", CR, LF, 0
 s_ctlr:     .byte       "#d/r/ctl", 0
 s_ctls:     .byte       "#d/s/ctl", 0

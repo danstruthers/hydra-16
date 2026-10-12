@@ -26,8 +26,8 @@ is (a program, a driver or a library), where it loads, its entry points, and its
 
 | | A program in a file | A module of the paged ROM |
 | :- | :------------------ | :------------------------ |
-| Where it lives | A card, a RAM disk, `/pc`, the ROM disk | The paged ROM, in banks of its own |
-| How it runs | `SPAWN` gives the new task the file, and it **reads itself into RAM at `$0800`** as it starts | **Runs in place**: the task's `$01` selects its bank, so its code is at `$A000`; only its data is copied into RAM |
+| Where it lives | A card, a RAM disk, `/pc`, the ROM disk | The paged ROM: banks of its own, or a page of a bank it shares (a small one) |
+| How it runs | `SPAWN` gives the new task the file, and it **reads itself into RAM at `$0800`** as it starts | **Runs in place**: the task's `$01` selects its bank, so its code is at `$A000-$DFFF`; only its data is copied into RAM |
 | Its size | Up to `$7FFF`, less its data | 16K a bank, up to 8 banks |
 | Built with | `-D HYX2_RAM`, linked by `hyx2.cfg` | Linked by `module.cfg` (`module2.cfg` ... `module8.cfg`), listed in `rom.txt` |
 | For | Your programs | The system's programs and drivers, or yours in a ROM of your own |

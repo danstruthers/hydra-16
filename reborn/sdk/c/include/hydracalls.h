@@ -195,7 +195,8 @@
 #define HY_ME_BANKS             1         /* MODINFO: the banks it spans */
 #define HY_ME_TYPE              2         /* MODINFO: its type (HT_*) */
 #define HY_ME_FLAGS             3         /* MODINFO: its flags (HF_*) */
-#define HY_ME_NAME              4         /* MODINFO: its name (12 bytes, zero-padded) */
+#define HY_ME_NAME              4         /* MODINFO: its name (11 bytes, zero-padded: 10 characters at most) */
+#define HY_ME_PAGE              15        /* MODINFO: its header's page in its first bank, 0-63 ($A000 + 256 * it: a module of a bank, packed with others) */
 #define HY_ME_SIZE              16
 #define HY_TI_STATE             0         /* TASKINFO's answer: the task's state (0: free, 1 ready, 2 wait, 3 call, 4 idle, 5 new, 6 sleep, 7 blocked, 8 event) */
 #define HY_TI_FLAGS             1         /* TASKINFO: its flags (TF_DRIVER, TF_STOPPED) */

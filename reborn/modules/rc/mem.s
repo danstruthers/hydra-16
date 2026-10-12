@@ -91,8 +91,9 @@ arena_alloc:
             rts
 
 @full:
-            LDR         r0, s_full
-            jmp         rc_error
+            lda         #<s_full
+            ldx         #>s_full
+            jmp         rc_error_ax
 
 ; .A/.X = the arena's top now (a mark)
 arena_mark:
@@ -223,8 +224,9 @@ heap_alloc:
             jmp         @block
 
 @full:
-            LDR         r0, s_full
-            jmp         rc_error
+            lda         #<s_full
+            ldx         #>s_full
+            jmp         rc_error_ax
 
 ; The heap's block .A/.X (from heap_alloc) free again
 heap_free:

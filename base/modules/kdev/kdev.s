@@ -1081,7 +1081,13 @@ md_init:
             lda         mcount
             jsr         MODINFO
             bcs         @done
-            LDR         r0, PROM_WINDOW + HX_LENGTH         ; Its length
+            lda         #<(PROM_WINDOW + HX_LENGTH)         ; Its length (its header at its page: ME_PAGE)
+            sta         r0
+            ldy         #ME_PAGE
+            lda         (mp),Y
+            clc
+            adc         #>PROM_WINDOW
+            sta         r0 + 1
             LDR         r1, n
             LDR         r2, 2
             ldy         #ME_BANK
@@ -1256,8 +1262,10 @@ img_part:
             sta         r0                                  ;   its first)
             lda         pt + 1
             and         #$3F
-            ora         #>PROM_WINDOW
-            sta         r0 + 1
+            clc
+            adc         #>PROM_WINDOW
+            adc         me + ME_PAGE                        ; (A module packed with others: from its page; one
+            sta         r0 + 1                              ;   bank, so pt is in it)
             LDR         r1, chunk
             lda         pt + 1
             rol

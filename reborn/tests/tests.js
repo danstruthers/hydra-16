@@ -269,10 +269,10 @@ const TOOL_LINES = [
   ["ps -a","task  state   parent     cpu group  name\n   0  ready   -",true],
   ["mods", [
     "bank   type     name",
-    "  2    program  init",
-    "  3- 5 boot     cons",
-    "  6- 7 boot     storage",
-    "  8    boot     kdev",
+    "  4+33 program  init",
+    "  2- 4 boot     cons",
+    "  5- 6 boot     storage",
+    "  4+0A boot     kdev",
     "",
   ].join('\n'), true],
   ["free","ram     256 KB a task (2 modules)\nshared  1024 KB, 256 KB in segments (1), 768 KB free"],
@@ -1482,7 +1482,7 @@ module.exports = {
         'ācat /dev/sd/s/ctl\r' + 'āecho $window\r' + 'ā\x1dc' + 'āecho $window\r' + 'āls \'#fr\'\r' + 'āls /ram\r' + 'āls /dev\r' +
         'āecho stop >>\'#d/s/ctl\'; echo still; cat /sram/x\r' }; },
       expect: ['% ls \'#fr\'\n1/\n2/\n%', '% ls /ram\nbin/\nlib/\n%',
-        '% ls /bin\n' + ROM_BIN().join('\n') + '\ninit\nrc\nwstart\n', 't_child\n% t_child f\n', '% ls \'#fr\'/2\nbin/\nlib/\nmark\n%',
+        '% ls /bin\n' + ROM_BIN().join('\n') + '\ninit\nrc\nplay\n', 't_child\n% t_child f\n', '% ls \'#fr\'/2\nbin/\nlib/\nmark\n%',
         'prompt=(', '% cat /dev/sd/s/ctl\nsram 512 KB 1024 blocks\nhydrafs label=SRAM\n', '% echo $window\n0\n%',
         '% echo $window\n1\n%', '% ls \'#fr\'\n1/\n2/\n4/\n%', '% ls /ram\nbin/\nlib/\n%', '\ncons\nconsctl\nwctl\nwnew\nser\nserctl\nkbdin\ntext\nlabel\nsnarf\nkbin\n%',
         '% echo stop >>\'#d/s/ctl\'; echo still; cat /sram/x\nstill\ncat: /sram/x: no such device\n%'],

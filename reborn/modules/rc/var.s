@@ -316,8 +316,9 @@ var_local_save:
             ldx         ls_depth
             cpx         #LS_MAX
             bcc         :+
-            LDR         r0, s_deep
-            jmp         rc_error
+            lda         #<s_deep
+            ldx         #>s_deep
+            jmp         rc_error_ax
 :
             lda         vr
             sta         ls_recl,X
@@ -720,6 +721,5 @@ ls_flags:   .res        LS_MAX                              ;   and its flags
 ls_depth:   .res        1
 
 .rodata
-s_deep:     .byte       "too deep", 0
 empty_list: .byte       LIST_END
 s_env:      .byte       "rc: env ", 0

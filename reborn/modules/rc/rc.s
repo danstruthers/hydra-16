@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; rc - the shell (docs/design/reimplementation-from-scratch.md, §15.2): Plan 9's rc, small, in assembly, run in place.
+; rc - the shell (docs/design/reimplementation-from-scratch.md, ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ§15.2): Plan 9's rc, small, in assembly, run in place.
 ;   rc [-l] [-i] [-c command | file [args]]
 ;   -c command   the command run, and rc ends with its status
 ;   file args    the file's commands ($0 the file, $* its args), then the end
@@ -19,7 +19,7 @@
 
 .include "rc.inc"
 
-            HYX2_PROGRAM "rc", main, 2
+            HYX2_PROGRAM "rc", main
 
 .zeropage
 ap:         .res        2                                   ; The arena's top (mem.s)
@@ -64,7 +64,6 @@ SRC_TEXT        = 2
 
 ; ****************************************************************************
 main:
-            HYX2_BANKS_INIT
             MOVR        args, r0
             lda         #$FF
             sta         src
@@ -98,7 +97,7 @@ main:
             sta         text_end
             jsr         BREAK
             jsr         exec_init
-            FAR2        lex_init
+            jsr         lex_init
             tsx                                             ; (An error before the loop: rc ends)
             stx         abort_sp
             lda         #$FF
@@ -287,8 +286,8 @@ profile:
 :
             rts
 
-; The note handler: a note ends what's running (its tasks get it too), not rc.  In RAM: a note may come while either
-; bank is at $A000 (the second parses a line), and the kernel calls the handler with the bank that's there
+; The note handler: a note ends what's running (its tasks get it too), not rc.  In RAM (from when rc was two banks: a
+; note could come while either was at $A000)
 .pushseg
 .segment "DATA"
 notes:
@@ -324,7 +323,7 @@ run_file_top_loop:
             MOVR        ctop, text_base
             lda         #1
             sta         prompt1
-            FAR2        parse_line
+            jsr         parse_line
             bcs         @end
             jsr         run_cmd
             bra         @loop
@@ -354,7 +353,7 @@ lines:
             lda         ctop + 1
             pha
 @line:
-            FAR2        parse_line
+            jsr         parse_line
             bcs         @end
             jsr         exec_check
             jsr         run_cmd
@@ -387,7 +386,7 @@ exec_check:
             bne         @done
             pha
             phx
-            FAR2        lex_at_end
+            jsr         lex_at_end
             plx
             pla
             bcc         @done
@@ -419,7 +418,7 @@ src_push_fd:
             sta         src_endl,Y
             sta         src_posh,Y
             sta         src_endh,Y
-            FAR2        lex_init
+            jsr         lex_init
             rts
 
 ; A source: .A/.X bytes at p1
@@ -442,7 +441,7 @@ src_push_text:
             lda         t0
             adc         p1 + 1
             sta         src_endh,X
-            FAR2        lex_init
+            jsr         lex_init
             rts
 
 ; A new source on the stack: .X = it (src)
@@ -451,8 +450,9 @@ src_new:
             inx
             cpx         #SRC_MAX
             bcc         :+
-            LDR         r0, s_deep
-            jmp         rc_error
+            lda         #<s_deep
+            ldx         #>s_deep
+            jmp         rc_error_ax
 :
             stx         src
             rts
@@ -476,7 +476,7 @@ src_pop:
             jsr         high_close
 @off:
             dec         src
-            FAR2        lex_init
+            jsr         lex_init
 @done:
             rts
 
@@ -534,8 +534,9 @@ src_getc:
             sbc         text_end + 1
             bcc         :+
             pla
-            LDR         r0, s_long
-            jmp         rc_error
+            lda         #<s_long
+            ldx         #>s_long
+            jmp         rc_error_ax
 :
             pla
             sta         (ctop)
@@ -647,6 +648,10 @@ prompt:
 ; Errors
 
 ; Error r0 (a message): said ("rc: it"), $status it, and the command ended (rc_abort)
+; The same, the message in .A, .X (low, high)
+rc_error_ax:
+            sta         r0
+            stx         r0 + 1
 rc_error:
             MOVR        p0, r0
             jsr         rc_say
@@ -682,7 +687,7 @@ rc_abort:
             beq         :+
             lda         abort_src
             bmi         :+
-            FAR2        lex_init
+            jsr         lex_init
             jmp         run_file_top_again
 :
             jmp         rc_exits

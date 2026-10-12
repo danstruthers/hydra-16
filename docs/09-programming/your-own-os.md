@@ -50,7 +50,8 @@ module      ...         ; your programs and drivers
 
 ## A module
 
-A module is a program, a driver or a library in the paged ROM, run in place in its own banks (one to eight), with a
+A module is a program, a driver or a library in the paged ROM, run in place in its banks (one to eight; a small one
+shares its bank with others, at a page of it), with a
 48-byte header first (`base/sdk/asm/hyx2.inc`):
 
 ```

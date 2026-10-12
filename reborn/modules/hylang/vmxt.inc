@@ -1,7 +1,8 @@
 ; ****************************************************************************
 ; vmxt.inc - the native code's templates (vmx.inc's), made by tools/hyvmxt.js: each its length, its flags (TF_STUB: its
 ; op's stub after it, its slow way; TF_NOR: not for an op with VM_R), its patches (each its offset, its kind: TPK_B
-; a data byte, TPK_U one untagged, TPK_T a target's native place, TPK_N the next op's; and the data byte), its code
+; a data byte, TPK_U one untagged, TPK_T a target's native place, TPK_N the next op's; and the data byte), its code.
+; (Copied into RAM and run there with the VM's bank in place, so their calls are its: bankcheck: copied)
 
 vxt_const:  .byte       vxt_const_e - vxt_const_c, 0, 2
             .byte       vxt_const_p0 - vxt_const_c, TPK_B, 1
