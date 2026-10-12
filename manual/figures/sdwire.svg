@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 300" font-family="Arial, Helvetica, sans-serif" font-size="13">
+  <rect width="720" height="300" fill="#fff"/>
+  <!-- The Hydra's header J18 -->
+  <text x="110" y="28" text-anchor="middle" font-weight="bold">HYDRA: J18 (SPI DEVICE 0)</text>
+  <rect x="80" y="40" width="60" height="226" rx="4" fill="#2b2b2b"/>
+  <g fill="#c9a227">
+    <rect x="102" y="54" width="16" height="16"/><rect x="102" y="92" width="16" height="16"/><rect x="102" y="130" width="16" height="16"/>
+    <rect x="102" y="168" width="16" height="16"/><rect x="102" y="206" width="16" height="16"/><rect x="102" y="244" width="16" height="16"/>
+  </g>
+  <g text-anchor="end" font-size="12">
+    <text x="72" y="66">1  CS</text><text x="72" y="104">2  CLK</text><text x="72" y="142">3  MOSI</text>
+    <text x="72" y="180">4  MISO</text><text x="72" y="218">5  +5V</text><text x="72" y="256">6  GND</text>
+  </g>
+  <!-- The wires -->
+  <g fill="none" stroke-width="4" stroke-linecap="round">
+    <path d="M 118 62 C 300 62 360 252 520 252" stroke="#e23d28"/>
+    <path d="M 118 100 C 300 100 360 214 520 214" stroke="#f08a24"/>
+    <path d="M 118 138 C 300 138 360 176 520 176" stroke="#d6b43a"/>
+    <path d="M 118 176 C 300 176 360 138 520 138" stroke="#3fa046"/>
+    <path d="M 118 214 C 300 214 360 100 520 100" stroke="#b02020"/>
+    <path d="M 118 252 C 300 252 360 62 520 62" stroke="#222"/>
+  </g>
+  <!-- The module -->
+  <text x="600" y="28" text-anchor="middle" font-weight="bold">SD CARD MODULE</text>
+  <rect x="520" y="40" width="160" height="226" rx="6" fill="#2f5f9f"/>
+  <rect x="606" y="110" width="66" height="90" rx="4" fill="#c9c9c9" stroke="#555"/>
+  <text x="639" y="152" text-anchor="middle" font-size="12">SD</text><text x="639" y="168" text-anchor="middle" font-size="12">card</text>
+  <g fill="#c9a227">
+    <rect x="528" y="54" width="16" height="16"/><rect x="528" y="92" width="16" height="16"/><rect x="528" y="130" width="16" height="16"/>
+    <rect x="528" y="168" width="16" height="16"/><rect x="528" y="206" width="16" height="16"/><rect x="528" y="244" width="16" height="16"/>
+  </g>
+  <g fill="#fff" font-size="12">
+    <text x="550" y="66">GND</text><text x="550" y="104">VCC</text><text x="550" y="142">MISO</text>
+    <text x="550" y="180">MOSI</text><text x="550" y="218">SCK</text><text x="550" y="256">CS</text>
+  </g>
+  <text x="360" y="292" text-anchor="middle" font-size="12" fill="#555">Connect each pin to the pin with the same job. The module's pins may be in another order: follow their labels.</text>
+</svg>

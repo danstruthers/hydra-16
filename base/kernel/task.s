@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; task.s - starting and ending tasks, and the module directory (docs/design/reimplementation-from-scratch.md, §10.6, §11).
+; task.s - starting and ending tasks, and the module directory (docs/design/reimplementation-from-scratch.md, Â§10.6, Â§11).
 ;
 ; A module (HYX2: layout.inc) in the paged ROM runs in place: its task's ROM bank register selects its bank, so
 ; its code is at $A000 in that task alone; its initialised data is copied into the task's RAM, and its BSS
@@ -162,11 +162,16 @@ K_START_MODULE:
             ldy         #ME_BANK
             lda         (K0_PTR),Y
             sta         K0_NEWBANK
+            ldy         #ME_PAGE                            ; (Its header: $A000 + 256 * its page)
+            lda         (K0_PTR),Y
+            clc
+            adc         #>PROM_WINDOW
+            sta         K0_NEWBASE
             ldy         #ME_TYPE
             lda         (K0_PTR),Y
 
-; The same for a module of type .A in bank K0_NEWBANK; or for a RAM program (K0_NEWBANK $FF, its name in
-; K_NAMEBUF), which loads itself as it starts (K_TASK_LOAD)
+; The same for a module of type .A in bank K0_NEWBANK (its header at page K0_NEWBASE); or for a RAM program
+; (K0_NEWBANK $FF, its name in K_NAMEBUF), which loads itself as it starts (K_TASK_LOAD)
 K_START_TASK:
             sta         K0_NEWTYPE
             cmp         #HT_PROGRAM
@@ -270,19 +275,24 @@ K_TASK_RESERVE:
             sec
             rts
 
-; Set task K0_NEW up to run the module in bank K0_NEWBANK, a K0_NEWTYPE: its banks, its entries and its name (from
-; the module's header), its OS zero page, its data copied, its BSS cleared, its first frame.  A RAM program
-; (K0_NEWBANK $FF) has no header yet: its name is K_NAMEBUF, and the rest is its own, as it loads (K_TASK_LOAD).
-; In the kernel task; keeps the I flag (the boot's are off).  It's in the new task's memory in short steps, with
-; IRQs off for each and a moment between.  OUT: C = 0; or C = 1, .A = E_NOEXEC (not a module this kernel can
-; run).  Modifies .A, .X, .Y
+; Set task K0_NEW up to run the module in bank K0_NEWBANK, its header at page K0_NEWBASE of it, a K0_NEWTYPE: its
+; banks, its entries and its name (from the module's header), its OS zero page, its data copied, its BSS cleared, its
+; first frame.  A RAM program (K0_NEWBANK $FF) has no header yet: its name is K_NAMEBUF, and the rest is its own, as
+; it loads (K_TASK_LOAD).  In the kernel task; keeps the I flag (the boot's are off).  It's in the new task's memory
+; in short steps, with IRQs off for each and a moment between; the header is read there through the new task's r0
+; (the kernel's zero page isn't there), its own till it runs.  OUT: C = 0; or C = 1, .A = E_NOEXEC (not a module
+; this kernel can run).  Modifies .A, .X, .Y
 K_TASK_SETUP:
             ldx         K0_NEW
+            ldy         K0_NEWBASE
             lda         K0_NEWBANK
             php
             sei
             stx         T_REGISTER                          ; ---- The new task (not its stack: no jsr, no pha)
-            sta         TA_MODBANK                          ; Its module, at $A000
+            sta         TA_MODBANK                          ; Its module, its header at TA_MODBASE's page
+            sty         TA_MODBASE
+            stz         r0
+            sty         r0 + 1
             stz         RAM_BANK
             cmp         #$FF
             bne         :+
@@ -292,12 +302,13 @@ K_TASK_SETUP:
             sta         ROM_BANK
             ldy         #3
 :
-            lda         PROM_WINDOW + HX_MAGIC,Y
+            lda         (r0),Y                              ; (HX_MAGIC)
             cmp         K_STR_HYX2,Y
             bne         @bad
             dey
             bpl         :-
-            lda         PROM_WINDOW + HX_ABI
+            ldy         #HX_ABI
+            lda         (r0),Y
             beq         @bad
             cmp         #ABI_VERSION + 1
             bcc         @header                             ; (Not built for a later kernel)
@@ -354,38 +365,44 @@ K_TASK_SETUP:
             php
             sei
             stx         T_REGISTER                          ; ---- The new task
-            lda         PROM_WINDOW + HX_MAIN               ; Its entries
+            ldy         #HX_MAIN                            ; Its entries (main or init, serve, irq: in a row)
+            lda         (r0),Y
             sta         TA_ENTRY
-            lda         PROM_WINDOW + HX_MAIN + 1
+            iny
+            lda         (r0),Y
             sta         TA_ENTRY + 1
-            lda         PROM_WINDOW + HX_SERVE
+            iny
+            lda         (r0),Y
             sta         TA_SERVEVEC
-            lda         PROM_WINDOW + HX_SERVE + 1
+            iny
+            lda         (r0),Y
             sta         TA_SERVEVEC + 1
-            lda         PROM_WINDOW + HX_IRQ
+            iny
+            lda         (r0),Y
             sta         TA_IRQVEC
-            lda         PROM_WINDOW + HX_IRQ + 1
+            iny
+            lda         (r0),Y
             sta         TA_IRQVEC + 1
-            lda         PROM_WINDOW + HX_SERVE + 1          ; No serve entry: it serves no calls
+            lda         TA_SERVEVEC + 1                     ; No serve entry: it serves no calls
             bne         :+
             lda         #BUSY_NOSERVE
             sta         TK_BUSY
 :
             stz         T_REGISTER                          ; ---- Back (a moment)
             plp
-            ldy         #0                                  ; Its name, 4 bytes at a time
+            ldy         #HX_NAME                            ; Its name, 4 bytes at a time
 @name:
             php
             sei
             stx         T_REGISTER                          ; ---- The new task
             .repeat     4
-            lda         PROM_WINDOW + HX_NAME,Y
-            sta         TA_NAME,Y
+            lda         (r0),Y
+            sta         TA_NAME - HX_NAME,Y
             iny
             .endrepeat
             stz         T_REGISTER                          ; ---- Back (a moment)
             plp
-            cpy         #HX_NAME_MAX + 1
+            cpy         #HX_NAME + HX_NAME_MAX + 1
             bne         @name                               ; (Its data and BSS: its own, as it starts)
 @first:
             ldx         K0_NEW                              ; Its first frame: where it starts (and a driver's flags)
@@ -467,20 +484,24 @@ K_TASK_SETUP:
             jmp         @first
 
 ; A module's task, as it starts (from K_TASK_MAIN and K_DRIVER_MAIN, in the task itself, IRQs on): its data
-; copied from its module and its BSS cleared, as its header has them (its first bank is at $A000).  So the kernel
-; task doesn't do it a byte at a time from outside, with IRQs off for each (rc's 4.3K of BSS: 257,000 cycles that
-; way, 39,000 this).  Modifies .A, .X, .Y, r0, r1
+; copied from its module and its BSS cleared, as its header has them (its first bank is at $A000, the header at its
+; page there: TA_MODBASE).  So the kernel task doesn't do it a byte at a time from outside, with IRQs off for each
+; (rc's 4.3K of BSS: 257,000 cycles that way, 39,000 this).  Modifies .A, .X, .Y, r0, r1, r2, r3 (the header)
 K_TASK_DATA:
-            lda         PROM_WINDOW + HX_DATA_LOAD          ; Its data: r0 from, r1 to
-            sta         r0
-            lda         PROM_WINDOW + HX_DATA_LOAD + 1
-            sta         r0 + 1
-            lda         PROM_WINDOW + HX_DATA_RUN
-            sta         r1
-            lda         PROM_WINDOW + HX_DATA_RUN + 1
-            sta         r1 + 1
+            stz         r3                                  ; r3: its header
+            lda         TA_MODBASE
+            sta         r3 + 1
+            ldy         #HX_DATA_LOAD                       ; Its data: r0 from, r1 to, r2 its length (in a row)
+            ldx         #0
+:
+            lda         (r3),Y
+            sta         r0,X
+            iny
+            inx
+            cpx         #6
+            bne         :-
             ldy         #0
-            ldx         PROM_WINDOW + HX_DATA_LEN + 1       ; Its whole pages ...
+            ldx         r2 + 1                              ; Its whole pages ...
             beq         @part
 @page:
             lda         (r0),Y
@@ -492,7 +513,7 @@ K_TASK_DATA:
             dex
             bne         @page
 @part:
-            ldx         PROM_WINDOW + HX_DATA_LEN           ; ... and the rest
+            ldx         r2                                  ; ... and the rest
             beq         @bss
 :
             lda         (r0),Y
@@ -501,13 +522,18 @@ K_TASK_DATA:
             dex
             bne         :-
 @bss:
-            lda         PROM_WINDOW + HX_BSS                ; Its BSS: r1, 4 bytes at a time in whole pages
-            sta         r1
-            lda         PROM_WINDOW + HX_BSS + 1
-            sta         r1 + 1
+            ldy         #HX_BSS                             ; Its BSS: r1, r2 its length (in a row), 4 bytes at a
+            ldx         #r1 - r0                            ;   time in whole pages
+:
+            lda         (r3),Y
+            sta         r0,X
+            iny
+            inx
+            cpx         #r1 - r0 + 4
+            bne         :-
             lda         #0
             tay
-            ldx         PROM_WINDOW + HX_BSS_LEN + 1
+            ldx         r2 + 1
             beq         @bpart
 @bpage:
             .repeat     4
@@ -519,7 +545,7 @@ K_TASK_DATA:
             dex
             bne         @bpage
 @bpart:
-            ldx         PROM_WINDOW + HX_BSS_LEN
+            ldx         r2
             beq         @done
 :
             sta         (r1),Y
@@ -528,6 +554,9 @@ K_TASK_DATA:
             bne         :-
 @done:
             rts
+
+.assert     HX_DATA_RUN = HX_DATA_LOAD + 2 .and HX_DATA_LEN = HX_DATA_LOAD + 4 .and HX_BSS_LEN = HX_BSS + 2, error, "K_TASK_DATA: the header's fields in a row"
+.assert     r1 = r0 + 2 .and r2 = r0 + 4 .and HX_SERVE = HX_MAIN + 2 .and HX_IRQ = HX_MAIN + 4, error, "K_TASK_DATA, K_TASK_SETUP: in a row"
 
 .segment "KCODE"
 
@@ -936,6 +965,8 @@ K_EXEC:
                                                             ;   program: the old one's frames gone
             txs
             sta         TA_MODBANK
+            ldx         L_AT                                ; (Its header's page: K_EXEC_PREP's)
+            stx         TA_MODBASE
             cmp         #$FF                                ; Its bank at $A000 (a RAM program: bank 0's)
             bne         :+
             lda         #0
@@ -966,9 +997,14 @@ K_EXEC:
             lda         TA_MODBANK
             cmp         #$FF
             beq         @ram
-            lda         PROM_WINDOW + HX_MAIN               ; A module: its entry, from its header
+            stz         r0                                  ; A module: its entry, from its header (at its page)
+            lda         TA_MODBASE
+            sta         r0 + 1
+            ldy         #HX_MAIN
+            lda         (r0),Y
             sta         TA_ENTRY
-            lda         PROM_WINDOW + HX_MAIN + 1
+            iny
+            lda         (r0),Y
             sta         TA_ENTRY + 1
             jmp         K_TASK_MAIN
 

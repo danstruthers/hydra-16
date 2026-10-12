@@ -209,9 +209,13 @@ and `tl_usage`.
 
 ## Modules of the paged ROM
 
-Without `-D HYX2_RAM`, `hyx2.inc` makes a **module**: linked by `modules/module.cfg` to run in place at `$A000` in its own
-bank, its data copied into its task's RAM (from `$0400`) and its BSS cleared as it starts.  The system's programs and
-drivers are modules: they cost no load (a `SPAWN` of one takes about 14 ms) and leave the task nearly all its RAM.
+Without `-D HYX2_RAM`, `hyx2.inc` makes a **module**: linked by `modules/module.cfg` to run in place in the paged ROM,
+its data copied into its task's RAM (from `$0400`) and its BSS cleared as it starts.  The system's drivers, shells and
+languages are modules: they cost no load (a `SPAWN` of one takes about 14 ms) and leave the task nearly all its RAM.
+A module of one bank is linked first at `$A000`; then the build finds it a place (`romimg.js`'s plan: bank 0 after
+the directory, the free top of another module's bank, or a bank of its own) and links it again at that page, `$A000 +
+256 * page`, so small modules share banks.  Its header's `HX_LOAD` says where (`HYX2_LOAD`, the link's
+`__ROM_START__`).  A module's code mustn't assume `$A000`: its own labels are where it is.
 
 * **To put one in a ROM**: a folder in `modules/` (`modules/NAME/*.s`), listed in `modules/rom.txt`, and `node build.js`
   builds it with the rest.  `#m/NAME` is then its file, and `#m/bin` (bound at `/bin`) runs it by name.
@@ -220,8 +224,8 @@ drivers are modules: they cost no load (a `SPAWN` of one takes about 14 ms) and 
   ([servers and drivers](servers.md)).
 * **A library**: `HYX2_LIBRARY` ([libraries](libraries.md)).
 
-The module directory (bank 0) lists each module's bank, type, flags and name, 127 modules at most
-([the boot](../03-base/boot.md#the-module-directory)).
+The module directory (bank 0) lists each module's bank, type, flags, name (10 characters at most) and page, 127
+modules at most ([the boot](../03-base/boot.md#the-module-directory)).
 
 ---
 
@@ -239,8 +243,14 @@ A module bigger than a bank (16K) spans two to eight, one after another:
 * **Its note handler, and its interrupt entry** (and what that calls) must be in its RAM (its `DATA`): a note or an
   interrupt may come while any of its banks is at `$A000`.
 * Code that every bank calls often can be in `DATA` too, if it calls nothing of any bank's.
+* **The build checks it** (`base/tools/bankcheck.js`, from the link's debug information): an instruction in one bank
+  that uses a label in another directly (`jsr`, `jmp`, `lda label`) stops the build, as it would run what its own
+  bank has at that address.  A directive (`.word label`), an immediate (`#<label`, `LDR`) and the far calls are fine.
+  A comment `bankcheck: far NAME` names a macro of the module's own that only takes an address or calls far, and
+  `bankcheck: copied` marks a file whose code is copied to RAM and run with another bank in place.
 
-rc, `play` and the storage driver are two banks each, the console driver three, HyBASIC five and hylang eight.
+`play` and the storage driver are two banks each, the console driver three, HyBASIC five and hylang eight (rc was
+two, its lexer and parser the second, till they fit in one).
 
 ---
 

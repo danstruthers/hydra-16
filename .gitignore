@@ -5,3 +5,6 @@ fp-info-cache
 
 # The build's work files (os_rom/.gitignore, programs/.gitignore have the rest)
 node_modules/
+
+# The manual's HTML (manual/build.js: the PDF's source, made again with it)
+manual/hydra-16-manual.html

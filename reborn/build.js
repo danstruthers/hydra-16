@@ -257,6 +257,16 @@ function build(opt = {}) {
       s.id.toString(16).toUpperCase().padStart(4, '0'));
   }
   for (const n of manifest.modules) if (!modules[n]) throw new Error('modules/rom.txt: no module ' + n);
+  // The small modules packed (after the snapshot, so its banks are known too): each program or driver of a bank
+  // linked again at the page romimg.js's plan finds it room at (bank 0's, the top of another module's bank, or a
+  // bank of its own), into obj/modules (a base module's too: kdev's)
+  const dirOf = n => fs.existsSync(at('modules', n)) ? { dir: at('modules', n), objdir: at('obj', 'modules') }
+    : { dir: atBase('modules', n), objdir: atBase('obj', 'modules') };
+  const pages = romimg.plan(manifest.modules.map(n => ({ file: n, data: modules[n], pack: base.packable(dirOf(n).dir, modules[n]) })));
+  for (const [n, page] of Object.entries(pages)) if (page) {
+    const { dir, objdir } = dirOf(n);
+    modules[n] = base.relinkModule(dir, objdir, at('obj', 'modules'), page, modules[n].length);
+  }
   if (!hwt) say('(no ' + path.relative(ROOT, HWTEST_IMAGE) + ': the paged ROM has no hardware test)');
   const { image, entries, disk, banks, chips } = romimg.build({ modules: manifest.modules.map(n => ({ file: n, data: modules[n] })), init: manifest.init,
     hwtest: hwt, bios, romfs: romfs.manifest(at('romfs', 'romfs.txt')) });

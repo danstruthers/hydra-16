@@ -31,7 +31,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const BLOCK = 512, CLUSTER_SHIFT = 3, CLUSTER_BLOCKS = 1 << CLUSTER_SHIFT, CLUSTER = BLOCK * CLUSTER_BLOCKS;
+const BLOCK = 512, CLUSTER_SHIFT = 3;                        // (A card's clusters: 4K.  A volume's own are its superblock's, 1K-4K)
 const ENTRY = 64, NAME_MAX = 31, MAP_BITS = BLOCK * 8, EXT_PER_BLOCK = 84, EXT_MAX = 0xFFFF;
 const MAGIC = 'HYDRAFS1', VERSION_FULL = 1, VERSION = 2, ROOT_LOC = { block: 0, off: 64 };
 const MODE_DIR = 0x80, MODE_APPEND = 0x40, MODE_RO = 0x01;
@@ -92,7 +92,9 @@ class Entry {
 // Make an empty HydraFS image: MB megabytes (or blocks, if given), with a label.  quick: as the Hydra's quick
 // format: version 2, with none of the free map written (it reads as all free until it's used).  fatMb >= 0:
 // in a partition, after a FAT one of fatMb megabytes (0: none) from block PART_ALIGN (unformatted)
-function mkfs(file, mb, label = '', blocks = Math.floor(mb * 1024 * 1024 / BLOCK), quick = false, fatMb = -1) {
+function mkfs(file, mb, label = '', blocks = Math.floor(mb * 1024 * 1024 / BLOCK), quick = false, fatMb = -1, shift = CLUSTER_SHIFT) {
+  if (shift < 1 || shift > 3) throw new Error('clusters of 1 to 4K (a shift of 1 to 3)');
+  const CLUSTER_BLOCKS = 1 << shift;
   if (label.length > NAME_MAX) throw new Error('the label is longer than ' + NAME_MAX + ' characters');
   const mapBlocks = Math.ceil(Math.floor((blocks - 1) / CLUSTER_BLOCKS) / MAP_BITS);
   const dataStart = 1 + mapBlocks, clusters = Math.floor((blocks - dataStart) / CLUSTER_BLOCKS);
@@ -109,7 +111,7 @@ function mkfs(file, mb, label = '', blocks = Math.floor(mb * 1024 * 1024 / BLOCK
   fs.ftruncateSync(fd, (base + blocks) * BLOCK);
   const sb = Buffer.alloc(BLOCK);
   sb.write(MAGIC, 0, 'latin1');
-  sb[8] = quick ? VERSION : VERSION_FULL; sb[9] = CLUSTER_SHIFT;
+  sb[8] = quick ? VERSION : VERSION_FULL; sb[9] = shift;
   sb.writeUInt32LE(clusters, 12); sb.writeUInt32LE(1, 16); sb.writeUInt32LE(mapBlocks, 20);
   sb.writeUInt32LE(dataStart, 24); sb.writeUInt32LE(clusters, 28); sb.writeUInt32LE(0, 32);
   sb.writeUInt32LE(2, 36); sb.writeUInt32LE(hydraNow(), 40);        // Next qid (the root has 1), the latest stamp
@@ -130,7 +132,8 @@ class Volume {
     const part = this.sb.toString('latin1', 0, 8) !== MAGIC && (mbrParts(this.sb) || []).find(p => p.type === PART_TYPE);
     if (part) { this.base = part.start; this.sb = this.readBlock(0); }
     if (this.sb.toString('latin1', 0, 8) !== MAGIC) throw new Error(file + ' isn\'t a HydraFS image');
-    if (this.sb[8] < VERSION_FULL || this.sb[8] > VERSION || this.sb[9] !== CLUSTER_SHIFT) throw new Error('HydraFS version ' + this.sb[8] + ' isn\'t supported');
+    if (this.sb[8] < VERSION_FULL || this.sb[8] > VERSION || this.sb[9] < 1 || this.sb[9] > 3) throw new Error('HydraFS version ' + this.sb[8] + ' isn\'t supported');
+    this.cblocks = 1 << this.sb[9]; this.cluster = BLOCK * this.cblocks;   // (Its clusters: blocks, bytes)
     this.map = new Map();                                            // Free map blocks read so far
   }
   close() { this.flush(); fs.closeSync(this.fd); }
@@ -201,7 +204,7 @@ class Volume {
     for (let c = start; c < start + len; c++) { if (!this.used(c)) throw new Error('cluster ' + c + ' was free already'); this.setUsed(c, false); }
     this.freeCount += len;
   }
-  clusterBlock(c) { return this.dataStart + c * CLUSTER_BLOCKS; }
+  clusterBlock(c) { return this.dataStart + c * this.cblocks; }
 
   // Entries
   get root() { if (!this._root) this._root = new Entry(Buffer.from(this.sb.subarray(64, 128)), ROOT_LOC); return this._root; }
@@ -236,7 +239,7 @@ class Volume {
   // Store a file's extents: the first two in the entry, the rest in a chain of extent blocks (a cluster
   // each, its first block)
   setExtents(e, list) {
-    for (const b of this.extentBlocks(e)) this.release((b - this.dataStart) / CLUSTER_BLOCKS, 1);
+    for (const b of this.extentBlocks(e)) this.release((b - this.dataStart) / this.cblocks, 1);
     e.setExt(0, list[0]); e.setExt(1, list[1]); e.extBlock = 0;
     const rest = list.slice(2), blocks = [];
     for (let i = 0; i < rest.length; i += EXT_PER_BLOCK) blocks.push(this.clusterBlock(this.alloc(1).start));
@@ -250,9 +253,9 @@ class Volume {
   }
   // The block holding byte `pos` of a file (-1: it's in a hole)
   fileBlock(e, pos, list = this.extents(e)) {
-    let c = Math.floor(pos / CLUSTER);
+    let c = Math.floor(pos / this.cluster);
     for (const x of list) {
-      if (c < x.len) return isHole(x) ? -1 : this.clusterBlock(x.start + c) + Math.floor((pos % CLUSTER) / BLOCK);
+      if (c < x.len) return isHole(x) ? -1 : this.clusterBlock(x.start + c) + Math.floor((pos % this.cluster) / BLOCK);
       c -= x.len;
     }
     throw new Error('offset ' + pos + ' is past the file\'s clusters');
@@ -273,7 +276,7 @@ class Volume {
   write(e, pos, data) {
     if (pos > e.size) { data = Buffer.concat([Buffer.alloc(pos - e.size), data]); pos = e.size; }
     const end = pos + data.length, list = this.extents(e);
-    let have = list.reduce((s, x) => s + x.len, 0), need = Math.ceil(end / CLUSTER);
+    let have = list.reduce((s, x) => s + x.len, 0), need = Math.ceil(end / this.cluster);
     while (have < need) {
       const last = list[list.length - 1];
       const got = this.alloc(need - have, last && !isHole(last) ? last.start + last.len : -1);
@@ -386,9 +389,9 @@ class Volume {
     };
     const visit = (e, p) => {
       for (const x of this.extents(e)) if (!isHole(x)) for (let c = x.start; c < x.start + x.len; c++) claim(c, p);
-      for (const b of this.extentBlocks(e)) claim((b - this.dataStart) / CLUSTER_BLOCKS, p + ' (extents)');
+      for (const b of this.extentBlocks(e)) claim((b - this.dataStart) / this.cblocks, p + ' (extents)');
       const clusters = this.extents(e).reduce((s, x) => s + x.len, 0);
-      if (clusters * CLUSTER < e.size) problems.push(p + ': ' + e.size + ' bytes in ' + clusters + ' clusters');
+      if (clusters * this.cluster < e.size) problems.push(p + ': ' + e.size + ' bytes in ' + clusters + ' clusters');
       if (e.isDir) for (const x of this.entries(e)) if (!x.free) visit(x, (p === '/' ? '' : p) + '/' + x.name);
     };
     visit(this.root, '/');
@@ -426,8 +429,8 @@ function main(argv) {
   try {
     switch (cmd) {
       case 'info':
-        console.log((v.base ? 'partition at block ' + v.base + ', ' : '') + 'label "' + v.label + '", ' + v.clusters + ' clusters of ' + CLUSTER + ' bytes (' +
-          (v.clusters * CLUSTER / 1048576).toFixed(1) + ' MB), ' + v.freeCount + ' free (' + (v.freeCount * CLUSTER / 1048576).toFixed(1) + ' MB); version ' + v.version + ', free map ' +
+        console.log((v.base ? 'partition at block ' + v.base + ', ' : '') + 'label "' + v.label + '", ' + v.clusters + ' clusters of ' + v.cluster + ' bytes (' +
+          (v.clusters * v.cluster / 1048576).toFixed(1) + ' MB), ' + v.freeCount + ' free (' + (v.freeCount * v.cluster / 1048576).toFixed(1) + ' MB); version ' + v.version + ', free map ' +
           v.mapInit + ' of ' + v.mapBlocks + ' blocks written');
         break;
       case 'ls': { const l = args[0] === '-l', p = args[l ? 1 : 0]; process.stdout.write(v.list(v.walk(p || '/'), l)); break; }

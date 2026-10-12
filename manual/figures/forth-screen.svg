@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 696 432" font-family="Courier New, monospace" font-size="14">
+<rect width="696" height="432" rx="8" fill="#14181c"/>
+<rect x="96.0" y="80" width="201.6" height="17" fill="#3d74c9"/>
+<text x="96.0" y="93" fill="#f2d65c" font-weight="bold" xml:space="preserve"> +--------------------+ </text>
+<rect x="96.0" y="97" width="201.6" height="17" fill="#3d74c9"/>
+<text x="96.0" y="110" fill="#f2d65c" font-weight="bold" xml:space="preserve"> |   Hydra-16 Forth   | </text>
+<rect x="96.0" y="114" width="201.6" height="17" fill="#3d74c9"/>
+<text x="96.0" y="127" fill="#f2d65c" font-weight="bold" xml:space="preserve"> +--------------------+ </text>
+<rect x="112.8" y="165" width="168.0" height="17" fill="#d0453a"/>
+<rect x="112.8" y="182" width="168.0" height="17" fill="#3fae5a"/>
+<rect x="112.8" y="199" width="168.0" height="17" fill="#d6b43a"/>
+<rect x="112.8" y="216" width="168.0" height="17" fill="#3d74c9"/>
+<rect x="112.8" y="233" width="168.0" height="17" fill="#b65cc6"/>
+<rect x="112.8" y="250" width="168.0" height="17" fill="#3aaec4"/>
+<rect x="112.8" y="267" width="168.0" height="17" fill="#d9d9d9"/>
+<text x="12.0" y="331" fill="#d9d9d9" xml:space="preserve">/&gt;                                                                              </text>
+<rect x="37.2" y="331" width="8.4" height="3" fill="#d9d9d9"/>
+</svg>

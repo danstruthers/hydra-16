@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 230" font-family="Arial, Helvetica, sans-serif" font-size="13">
+  <rect width="720" height="230" fill="#fff"/>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#333"/></marker>
+  </defs>
+  <g stroke="#333" stroke-width="1.5">
+    <rect x="20" y="60" width="150" height="90" rx="8" fill="#cfe2f3"/>
+    <rect x="215" y="60" width="130" height="90" rx="8" fill="#eeeeee"/>
+    <rect x="390" y="60" width="150" height="90" rx="8" fill="#fce5cd"/>
+    <rect x="585" y="60" width="115" height="90" rx="8" fill="#d9ead3"/>
+  </g>
+  <g text-anchor="middle">
+    <text x="95" y="88" font-weight="bold">YOUR PROGRAM</text>
+    <text x="95" y="106">task 4</text>
+    <text x="95" y="130" font-family="Courier New, monospace" font-size="12">READ fd, buf, 100</text>
+    <text x="280" y="88" font-weight="bold">THE KERNEL</text>
+    <text x="280" y="106">task 0</text>
+    <text x="280" y="130" font-size="12">passes it on</text>
+    <text x="465" y="88" font-weight="bold">THE DRIVER</text>
+    <text x="465" y="106">task F: cons</text>
+    <text x="465" y="130" font-size="12">does the work</text>
+    <text x="642" y="88" font-weight="bold">THE CHIP</text>
+    <text x="642" y="106">U3: the ACIA</text>
+    <text x="642" y="130" font-size="12">the serial port</text>
+  </g>
+  <g stroke="#333" stroke-width="1.5" marker-end="url(#a)" fill="none">
+    <path d="M 170 82 L 213 82"/>
+    <path d="M 345 82 L 388 82"/>
+    <path d="M 540 82 L 583 82"/>
+    <path d="M 583 128 L 542 128"/>
+    <path d="M 388 128 L 347 128"/>
+    <path d="M 213 128 L 172 128"/>
+  </g>
+  <g font-size="12" text-anchor="middle" fill="#2a62b8">
+    <text x="192" y="45">1. the call</text>
+    <text x="367" y="45">2. a request</text>
+    <text x="562" y="45">3. registers</text>
+    <text x="562" y="180">4. a byte</text>
+    <text x="367" y="180">5. the reply</text>
+    <text x="192" y="180">6. the bytes</text>
+  </g>
+  <text x="360" y="215" text-anchor="middle" font-size="12" fill="#555">The program waits, using no processor time, until the reply comes back.</text>
+</svg>

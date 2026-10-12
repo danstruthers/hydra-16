@@ -1,0 +1,11 @@
+## Chapter 21's picture: a spiral from hylang (node manual/tools/capture.js manual/tools/cap-hylang-video.txt)
+#! --vera --rtc
+hylang
+(use "video")
+(use "screen")
+(bitmap 320 8)
+(cs)
+(fun {spiral n} {dotimes {i n} (do (pen (+ 1 (mod i 15))) (fd (* i 2)) (rt 91))})
+(spiral 100)
+(cls)
+!png hylang-spiral

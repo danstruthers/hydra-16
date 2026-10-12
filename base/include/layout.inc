@@ -163,6 +163,7 @@ TA_PUTC         = $0227         ; PUTC's and GETC's byte (to and from fds 1 and 
 TA_BRK          = $0228         ; (2) The end of its data area (BREAK) ...
 TA_BRKMIN       = $022A         ; (2)   and the lowest it may go: its module's HX_TOP
 TA_NOTIFY       = $022C         ; (2) Its note handler (NOTIFY), or 0
+TA_MODBASE      = $022E         ; Its module's header's page in its bank ($A0-$DF: a module packed with others)
 TA_NAME         = $0230         ; (16) Its name, zero-terminated
 TA_OWNERS       = $0240         ; (18: IRQ_LINES) Each IRQ line's owner task ($FF: none): a copy in every task, so
                                 ;   the IRQ dispatcher reads it where it is (IRQ_OWN writes them all)
@@ -191,6 +192,7 @@ K0_PTR2         = $34           ; (2)
 K0_TMP          = $36
 K0_TMP2         = $37
 K0_TMP3         = $38
+K0_NEWBASE      = $39           ; A task being set up: its module's header's page ($A0-$DF) ...
 K0_NEW          = $3A           ; A task being set up (task.s) ...
 K0_NEWBANK      = $3B           ;   its module's bank ...
 K0_NEWTYPE      = $3C           ;   and type (HT_*)
@@ -531,6 +533,8 @@ ME_BANK         = 0             ;   its first bank
 ME_BANKS        = 1             ;   banks it spans
 ME_TYPE         = 2             ;   HT_*
 ME_FLAGS        = 3             ;   HF_*
-ME_NAME         = 4             ;   (12) its name, zero-padded
+ME_NAME         = 4             ;   (11) its name, zero-padded (10 characters at most) ...
+ME_PAGE         = 15            ;   and its header's page in its first bank, 0-63: $A000 + 256 * it (several small
+                                ;   modules share a bank; version 1's 0, the name's last zero)
 ME_SIZE         = 16
 MD_MAX          = 127           ; ($A200-$A9FF: 31 till phase 4.3, when the tools needed more)

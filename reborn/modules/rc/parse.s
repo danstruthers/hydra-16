@@ -12,8 +12,8 @@
 ;   simple:   name=word ... then words and redirections, in any order
 ;   word:     piece { ^ piece }  (pieces next to each other join: a ^ between them)
 ;   piece:    text | $name | $name(words) | $#name | $"name | `{ body } | ( words )
-; Errors: rc_error ("syntax error"), which doesn't return.  In rc's second bank, with lex.s (the arena, errors: FAR1;
-; rc.s calls parse_line and lex_init by FAR2).
+; Errors: rc_error ("syntax error"), which doesn't return.  (A second bank's, with lex.s, till October 2026: rc is one
+; bank now.)
 
 .include "rc.inc"
 
@@ -23,7 +23,7 @@ pr:         .res        2
 pq:         .res        2
 pn:         .res        2                                   ; A new node
 
-.segment "CODE2"
+.code
 
 ; ****************************************************************************
 ; A command from the input: what to run, to the end of a line.  OUT: C = 0, .A/.X = its tree (0: an empty line);
@@ -1050,8 +1050,9 @@ piece:
 varname:
             lda         tok_len
             bne         lit
-            LDR         r0, s_dollar
-            FAR1        rc_error                            ; (It doesn't come back)
+            lda         #<s_dollar
+            ldx         #>s_dollar
+            jsr         rc_error_ax                         ; (It doesn't come back)
 
 ; The token's text: a W_LIT node.  OUT: pn = it (.A/.X too)
 lit:
@@ -1066,7 +1067,7 @@ litp1:
             bcc         :+
             inx
 :
-            FAR1        arena_alloc
+            jsr         arena_alloc
             sta         p0
             stx         p0 + 1
             lda         #W_LIT
@@ -1141,7 +1142,7 @@ isname:
 ; .A bytes from the arena: p0 = them
 node:
             ldx         #0
-            FAR1        arena_alloc
+            jsr         arena_alloc
             sta         p0
             stx         p0 + 1
             rts
@@ -1202,8 +1203,9 @@ expect:
 ; A syntax error: the rest of the line dropped, and the command ended (rc_error)
 syntax:
             jsr         lex_flush
-            LDR         r0, s_syntax
-            FAR1        rc_error                            ; (It doesn't come back)
+            lda         #<s_syntax
+            ldx         #>s_syntax
+            jsr         rc_error_ax                         ; (It doesn't come back)
 
 ; ****************************************************************************
 ; The text of a function, or a subshell's: parsed as a body (to its end), from the source rc.s has pushed.
@@ -1224,7 +1226,7 @@ mode:       .res        1                                   ; seq's: 0 a line, 1
 stop_eq:    .res        1                                   ; word's: <> 0: = ends it (an assignment's name)
 bq_end:     .res        2
 
-.segment "RODATA2"
+.rodata
 key_toks:   .byte       T_IF, T_FOR, T_WHILE, T_SWITCH, T_CASE, T_TWIDDLE, T_FN
 NKEYS       = * - key_toks
 key_vec:    .word       k_if, k_for, k_while, k_switch, k_case, k_twiddle, k_fn
@@ -1232,6 +1234,6 @@ wstarts:    .byte       T_WORD, T_DOLLAR, T_COUNT, T_FLAT, T_BQ, T_LPAREN, T_EQ
 NWSTART     = * - wstarts
 s_eq:       .byte       "="
 
-.rodata                                                     ; (The first bank's: rc_error reads them there)
+.rodata
 s_syntax:   .byte       "syntax error", 0
 s_dollar:   .byte       "bad $", 0
