@@ -21,7 +21,7 @@ const path = require('path');
 const { capture } = require('./capture.js');
 
 const BOOK = path.join(__dirname, '..');
-const PROMPTS = [/^(\/[^ ]*> )/, /^(% )/, /^(> )/, /^(hylang> )/, /^(\]\s?)/, /^(\* )/, /^(db> )/];
+const PROMPTS = [/^(\/[^ ]*> )/, /^(% )/, /^(> )/, /^(hylang> )/, /^(\]\s?)/, /^(\* )/, /^(db> )/, /^( {8})(?=\S)/];   // (8 spaces: the tab, HyForth's and rc's second prompt)
 const BARE = /^(\/[^ ]*>|%|>|hylang>|\]|\*|db>)\s*$/;           // A prompt alone: the session's end
 
 // The blocks in a chapter: { start, end (the fence lines), lines, prompts, opts, setup, script }

@@ -19,3 +19,7 @@ part3.md
 14-sound.md
 15-vera.md
 16-other.md
+part4.md
+17-numbers.md
+18-forth.md
+19-forth-hydra.md

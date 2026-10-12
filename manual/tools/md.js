@@ -279,7 +279,7 @@ function list(lines, start, ctx) {
 }
 
 // Code blocks: ```session shows what's typed (after a prompt) in bold; ```text, ```forth ... plain
-const PROMPTS = [/^(\/[^ ]*> )/, /^(% )/, /^(> )/, /^(hylang> )/, /^(\]\s?)/, /^(\* )/, /^(db> )/, /^(OK\s*$)/];
+const PROMPTS = [/^(\/[^ ]*> )/, /^(% )/, /^(> )/, /^(hylang> )/, /^(\]\s?)/, /^(\* )/, /^(db> )/, /^(OK\s*$)/, /^( {8})(?=\S)/];
 function codeBlock(code, info, extra, ctx) {
   const cls = info ? ' class="' + escAttr(info) + '"' : '';
   if (info === 'session') {
