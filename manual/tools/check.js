@@ -81,6 +81,10 @@ function run(b) {
   const o = { boot: false, vera: false, smc: false, rtc: false, modules: 3, sd: true, cycles: 4000, raw: false, file: '-' };
   // A block typed at rc's prompt starts rc first (unless its setup does)
   if (!b.script && b.lines.length && b.lines[0].startsWith('% ') && !b.setup.some(l => /^rc\b/.test(l))) b.setup = ['rc'].concat(b.setup);
+  // (and one typed at hylang's, hylang)
+  if (!b.script && b.lines.length && b.lines[0].startsWith('hylang> ') && !b.setup.some(l => /^hylang\b/.test(l))) b.setup = ['hylang'].concat(b.setup);
+  // (and one typed at BASIC's, basic)
+  if (!b.script && b.lines.length && b.lines[0].startsWith('> ') && !b.setup.some(l => /^basic\b/.test(l))) b.setup = ['basic'].concat(b.setup);
   const script = ['#! ' + b.opts].concat(b.script || b.setup.concat(typed(b))).join('\n');
   let lines = capture(script, Object.assign({}, o)).split('\n');
   while (lines.length && !lines[0].trim()) lines.shift();

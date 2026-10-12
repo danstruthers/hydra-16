@@ -23,3 +23,7 @@ part4.md
 17-numbers.md
 18-forth.md
 19-forth-hydra.md
+20-hylang.md
+21-hylang-hydra.md
+22-basic.md
+23-basic-hydra.md
