@@ -66,6 +66,12 @@ int __fastcall__ hy_spawn (const char* path, char* const* argv, unsigned char fl
                                                             **   in a new task, argv its arguments (NULL-ended;
                                                             **   argv[0] isn't one: the name), flags HY_SPAWN_*:
                                                             **   its task (then hy_wait), or -1 */
+int __fastcall__ hy_exec (const char* path, char* const* argv);
+                                                            /* A program run in this task, in this one's place
+                                                            **   (Plan 9's exec), argv as hy_spawn's: its fds, its
+                                                            **   directory, namespace and environment are this
+                                                            **   one's, and its status is what this one's parent
+                                                            **   waits for.  Back only if it fails: -1 */
 int __fastcall__ hy_wait (int task, char* msg);             /* Wait for a task this one started to end (-1: any):
                                                             **   its exit code (0-255), its message into msg
                                                             **   (HY_EXIT_MSG_MAX + 1 bytes; NULL: not wanted) */

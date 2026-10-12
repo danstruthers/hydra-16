@@ -48,7 +48,8 @@ int main (int argc, char* argv[])
   code, `HY_E_NOENT` ...; `_stroserror` and `hy_errstr` give its text, the kernel's).
 * Its environment is a copy of rc's variables: `getenv`, `setenv`, `putenv`, `unsetenv`.
 * `system ("cmd")` runs a command line with rc (`rc -c`): its value is the command's exit code.  `hy_spawn`
-  starts a program in a task of its own, `hy_wait` waits for it and takes its code and message; `hy_parent` is
+  starts a program in a task of its own, `hy_wait` waits for it and takes its code and message; `hy_exec` runs a
+  program in this one's place, in its task (Plan 9's `exec`: back only if it fails); `hy_parent` is
   the task that started this one.
 * Semaphores, for tasks that share something: `hy_sem_new` (a count, or `HY_SEM_MUTEX`), `hy_sem_acquire` (it
   waits), `hy_sem_try`, `hy_sem_release`, `hy_sem_free`.  Every task's, by number; the program's end frees those
