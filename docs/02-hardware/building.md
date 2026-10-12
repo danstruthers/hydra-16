@@ -88,7 +88,7 @@ The ROM images are already built, in the repository:
 
 | System | BIOS ROM (U6, SST39SF010A) | Paged ROM (SST39SF040) |
 | :----- | :------------------------- | :--------------------- |
-| **HydraOS** (`reborn/bin/`) | `bios.bin` | `prom0.bin` in **U31**, `prom1.bin` in **U32**, `prom2.bin` in **U34**, `prom3.bin` in **U36** |
+| **HydraOS** (`reborn/bin/`) | `bios.bin` | `prom0.bin` in **U31**, `prom1.bin` in **U32**, `prom2.bin` in **U34** |
 | **The base alone** (`base/bin/`) | `bios.bin` | `prom0.bin` in **U31** |
 
 * Burn each file whole, from offset 0, and verify it.  Each is exactly one chip (128K or 512K).

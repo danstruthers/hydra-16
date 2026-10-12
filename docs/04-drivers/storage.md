@@ -48,8 +48,8 @@ The disks' file systems are mounted by the default namespace ([namespaces](../03
 
 * **`/sd/N`** is card N's, `/sd/0` the usual one.  A card's `bin` and `lib`, if it has them, join `/bin` and `/lib`, so a
   card can carry programs and libraries of your own.
-* **`/rom`** is the ROM disk: the programs that run from RAM (`/rom/bin`: `mkfs`, `fsck`, `label`, `grep`, `sort`, `db`, `dis`,
-  `edit`, `calc`, `scom`), the languages' libraries (`/rom/lib/forth`, `/rom/lib/hylang`, `/rom/lib/basic`), the
+* **`/rom`** is the ROM disk: the tools, which run from RAM (`/rom/bin`: `ls`, `cat`, `cp`, `ed`, `as`, `mkfs`, `grep`,
+  `db`, `edit`, `calc` ...: [the tools](../07-tools.md)), the languages' libraries (`/rom/lib/forth`, `/rom/lib/hylang`, `/rom/lib/basic`), the
   assembler's include files (`/rom/lib/as`), the system's files (`/rom/lib/namespace`, `profile`, `shell`, `windows`),
   a song, and the call reference (`/rom/doc/api.md`).
 * **`/ram`** is the shell's own area of the RAM disk (`r/N`, N its task): fast and private, gone when the power goes.

@@ -240,7 +240,7 @@ A module bigger than a bank (16K) spans two to eight, one after another:
   interrupt may come while any of its banks is at `$A000`.
 * Code that every bank calls often can be in `DATA` too, if it calls nothing of any bank's.
 
-rc, `play` and the console driver are two banks each, the storage driver two, hylang and HyBASIC eight.
+rc, `play` and the storage driver are two banks each, the console driver three, HyBASIC five and hylang eight.
 
 ---
 

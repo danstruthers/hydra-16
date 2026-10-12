@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; gfx.inc - graphics (the eighth bank): QuickBASIC's statements on the Vera X's bitmap, through vid's /dev/vid/draw
+; gfx.inc - graphics (the fourth bank): QuickBASIC's statements on the Vera X's bitmap, through vid's /dev/vid/draw
 ; (its text commands: the driver draws, the console's text stays over it; docs/04-drivers/video.md): SCREEN, PSET,
 ; PRESET, LINE, CIRCLE, PAINT (a scanline fill, the bitmap's rows read from /dev/vid/vram), DRAW (QuickBASIC's turtle
 ; language), GPRINT, PALETTE, POINT, SPRITE; COLOR's pen and CLS's clear in a SCREEN.  Coordinates are pixels,
@@ -50,7 +50,7 @@ dr_len:     .res        1
 dr_v:       .res        2
 dr_neg:     .res        1
 
-.segment "CODE8"
+.segment "CODE4"
 
 ; ---- Commands to the driver
 
@@ -146,7 +146,7 @@ g_send:
             bcs         g_err
             rts
 g_err:
-            FARN        7, sys_err
+            FARN        5, sys_err
 
 ; A command: the word at .A/.X and the points g_x, g_y (and g_x2, g_y2: g_k 4), written
 g_cmd2:
@@ -370,7 +370,7 @@ g_pushdepth:
 
 ; .A/.X pushed (signed: 16 bits)
 g_pushint:
-            FARN        6, push_ax
+            FARN        3, push_ax
             txa
             bpl         :+
             jsr         top_vt
@@ -759,7 +759,7 @@ st_circle:
 ; ST_GPRINT: (x, y), text$: the text on the bitmap in the console's font (its first 40 characters), the pen's colour
 st_gprint:
             jsr         g_need
-            FARN        7, str_lbuf
+            FARN        5, str_lbuf
             cmp         #40
             bcc         :+
             lda         #40
@@ -1009,11 +1009,11 @@ g_point_f:
             ldx         g_x + 1
             jsr         g_pix
             ldx         #0
-            FARN        6, push_ax
+            FARN        3, push_ax
             rts
 @off:
             lda         #$FF
-            FARN        6, push_int_a
+            FARN        3, push_int_a
             rts
 
 ; Is (g_x, g_y) on the bitmap?  OUT: C = 0 yes
@@ -1239,7 +1239,7 @@ g_stop:
 ; (the colour), S n (n / 4 pixels a unit; 4 at the start), A n (n * 90 degrees, anticlockwise), TA n (n degrees)
 st_draw:
             jsr         g_need
-            FARN        7, str_lbuf
+            FARN        5, str_lbuf
             sta         dr_len
             stz         dr_i
             lda         dr_s
@@ -1673,7 +1673,7 @@ dr_mul:
             sta         t0 + 3
             lda         #<10000
             ldx         #>10000
-            FARN        7, div32
+            FARN        5, div32
             lda         t0
             sta         g_t
             lda         t0 + 1

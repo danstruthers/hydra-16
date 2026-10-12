@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; sys.inc - the seventh bank: an error's message and where it was (err_say), END's status, and the system's
+; sys.inc - the fifth bank's: an error's message and where it was (err_say), END's status, and the system's
 ; functions and statements (fn.inc's F_B7 and ST_B7 groups).
 
 .bss
@@ -44,7 +44,7 @@ dt_days:    .res        2
 dir_fd:     .res        1                                   ; (DIR$'s directory: 0 none)
 sh_args:    .res        2
 
-.segment "CODE7"
+.segment "CODE5"
 
 ; ERR$'s text: the message (err_code's) in eo_buf, eo_len bytes
 err_text_cap:
@@ -398,9 +398,9 @@ str_lbuf:
             tya
             rts
 
-; The .A bytes at rs_ptr pushed, a string (ram_str's, the sixth bank's)
+; The .A bytes at rs_ptr pushed, a string (ram_str's, input and output's)
 str_push:
-            FARN        6, ram_str
+            FARN        3, ram_str
             rts
 
 ; The .A bytes at eo_buf pushed, a string
@@ -412,7 +412,7 @@ eo_push:
 
 ; .A/.X (0-65535) pushed, an integer
 push_ax7:
-            FARN        6, push_ax
+            FARN        3, push_ax
             rts
 
 ; ---- The clock: TIMER, DATE$, TIME$
@@ -1214,7 +1214,7 @@ sh_begin:
             jsr         str_lbuf
             pha
             jsr         out_flush
-            FARN        6, con_cooked
+            FARN        3, con_cooked
             pla
             bne         :+
             stz         sh_args                             ; (None: rc alone)
@@ -1347,7 +1347,7 @@ f_status:
 
 ; POINT(x, y): a pixel's colour (gfx.inc's)
 f_point:
-            FARN        8, g_point_f
+            FARN        4, g_point_f
             rts
 
 ; ---- PEEK, POKE, BANK
@@ -1412,9 +1412,9 @@ st_system:
             jsr         pop_int16
             lda         t0
             sta         end_status
-            FARN        6, fl_closeall
+            FARN        3, fl_closeall
             jsr         out_flush
-            FARN        6, con_cooked
+            FARN        3, con_cooked
             LDR         r0, 0
             lda         end_status
             jmp         EXITS
@@ -1426,7 +1426,7 @@ st_endn:
             sta         end_status
             jmp         run_exit
 
-; ---- The seventh bank's functions and statements (fn.inc)
+; ---- The system's functions and statements (fn.inc: F_B7, ST_B7)
 fn_disp7:
             tax
             jmp         (fn_jt7,x)

@@ -16,20 +16,18 @@ A program is compiled whole, its text read once for its procedures and types and
 of a stack machine, which the interpreter runs.  A line typed at the prompt is compiled the same way, into a region
 of its own, and run at once.
 
-BASIC is a module of eight banks (`HYX2_PROGRAM "basic", main, 8`; `modules/module8.cfg`), each 16K at `$A000` in
-turn.  A call between banks goes through the module's trampolines in its RAM (`FARN bank, routine`; the third bank
+BASIC is a module of five banks (`HYX2_PROGRAM "basic", main, 5`; `modules/module5.cfg`), each 16K at `$A000` in
+turn.  (It was eight, half full on average; as a bank's code calls another's only by `FARN`, whole banks were
+merged, and `fn_call` and `st_call` find a group's bank in a table, `fn_banks` and `st_banks`.)  A call between banks goes through the module's trampolines in its RAM (`FARN bank, routine`; the third bank
 calls the second's with `C2`, which passes `.A`, `.X`, `.Y` and C).
 
 | Bank | Files | What | Used |
 | :--- | :--- | :--- | :--- |
-| 1 | `run.inc`, `main.inc`, `fn.inc`, nslib | The interpreter: its ops, calls and frames, errors' way to a handler; the top (the prompt's loop, a script, `RUN`, `CONT`); the statements' and functions' groups by bank; the SDK's `newns` for `basic -l` | 44% |
+| 1 | `run.inc`, `main.inc`, `fn.inc`, nslib | The interpreter: its ops, calls and frames, errors' way to a handler; the top (the prompt's loop, a script, `RUN`, `CONT`); the statements' and functions' groups and their banks; the SDK's `newns` for `basic -l` | 62% |
 | 2 | `lex.inc`, `comp.inc`, `expr.inc`, `stmt.inc`, `procs.inc` | The compiler: tokens, symbols, labels and their fixups, the line table, `INCLUDE`; expressions; statements; `SUB` and `FUNCTION`, calls and their arguments | 85% |
-| 3 | `stmt3.inc`, `rec.inc`, `asm.inc` | The compiler's other statements (`DIM`, `DATA`, `INPUT`, files, the console, `SYSTEM` ...); `TYPE`, fields and records' copies; `ASM`'s blocks (the asm library's assembler) and `CALL ASM` | 52% |
-| 4 | `num.inc`, `fns4.inc` | The numbers: the libraries' calls, the operators, the number functions, `VAL` (E notation), `STR$` | 32% |
-| 5 | `heap.inc`, `gc.inc`, `fns5.inc` | The heap: strings, numbers past 32 bits, arrays and records; the collector; the string functions; `DIM`, `REDIM`, `ERASE`, `MID$ =` | 34% |
-| 6 | `io.inc` | `PRINT` (zones, `TAB`, `PRINT USING`), `INPUT`, `READ`, the console's sequences and keys, files | 36% |
-| 7 | `sys.inc`, `prog.inc` | The errors' messages; the system's functions (`TIMER`, `ENV$`, `SHELL`, `PEEK` ...); the program's text: `LOAD`, `SAVE`, `LIST`, `EDIT`, `DELETE`, numbered lines typed | 44% |
-| 8 | `shell.inc`, `machine.inc`, `gfx.inc` | `basic -l`'s rule and its own commands; `SOUND`, `PLAY`, `SYS`, `RREG`; the graphics, as `/dev/vid/draw`'s commands | 55% |
+| 3 | `stmt3.inc`, `rec.inc`, `asm.inc`, `io.inc` | The compiler's other statements (`DIM`, `DATA`, `INPUT`, files, the console, `SYSTEM` ...); `TYPE`, fields and records' copies; `ASM`'s blocks (the asm library's assembler) and `CALL ASM`; `PRINT` (zones, `TAB`, `PRINT USING`), `INPUT`, `READ`, the console's sequences and keys, files | 88% |
+| 4 | `num.inc`, `fns4.inc`, `shell.inc`, `machine.inc`, `gfx.inc` | The numbers: the libraries' calls, the operators, the number functions, `VAL` (E notation), `STR$`; `basic -l`'s rule and its own commands; `SOUND`, `PLAY`, `SYS`, `RREG`; the graphics, as `/dev/vid/draw`'s commands | 89% |
+| 5 | `heap.inc`, `gc.inc`, `fns5.inc`, `sys.inc`, `prog.inc` | The heap: strings, numbers past 32 bits, arrays and records; the collector; the string functions; `DIM`, `REDIM`, `ERASE`, `MID$ =`; the errors' messages; the system's functions (`TIMER`, `ENV$`, `SHELL`, `PEEK` ...); the program's text: `LOAD`, `SAVE`, `LIST`, `EDIT`, `DELETE`, numbered lines typed | 78% |
 
 What every bank calls is in the task's RAM (`ram.inc`, the `DATA` segment): the far memory's cursors, the output's
 buffer, `b_error` (an error from any bank to the first's `err_entry`), `run_exit`.

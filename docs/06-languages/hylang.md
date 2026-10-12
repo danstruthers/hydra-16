@@ -181,7 +181,7 @@ hylang> (read-file "/ram/x.txt")
 hylang> ((stat "/ram/x.txt") :length)
 => 10
 hylang> (sh-out "ls /rom/bin | wc -l")
-=> "     10\n"
+=> "     43\n"
 hylang> (run "ls" "/rom")
 README
 bin/

@@ -1,10 +1,11 @@
 # 7. The tools
 
 The programs in `/bin`: the core tools in Plan 9's way, the editors, the task tools, the debugger, the assembler and
-disassembler, and the system's.  Most are modules of the paged ROM, run in place (`/dev/mod/NAME`, bound into `/bin` by
-`#m/bin`); a few are RAM programs on the ROM disk, read into RAM to run (`/rom/bin`: `mkfs`, `fsck`, `label`, `grep`,
-`sort`, `db`, `dis`, `edit`, `calc`, `scom`).  `/bin` is a union, so a program of your own in `/ram/bin`, `/sram/bin` or
-a card's `/bin` comes before the ROM's of the same name.
+disassembler, and the system's.  They're RAM programs on the ROM disk (`/rom/bin`), each read into its task's RAM as
+it starts (about 50 ms for one of 2.4K): a module of the paged ROM, run in place, has a 16K bank of its own, and most
+of the tools are near 2K.  The paged ROM keeps what must run in place (the drivers, rc, the languages, `play`;
+`/dev/mod/NAME`, bound into `/bin` by `#m/bin`).  `/bin` is a union, so a program of your own in `/ram/bin`,
+`/sram/bin` or a card's `/bin` comes before the ROM's of the same name.
 
 ## How they behave
 
@@ -78,9 +79,9 @@ The disks' tools (`df`, `mkfs`, `fsck`, `label`) are in [storage](04-drivers/sto
 
 ```
 /> ls /rom/bin | sort -r | head -3
-sort
-scom
-mkfs
+xmodem
+xd
+wc
 /> grep -n Hydra /rom/README
 1:The Hydra-16's ROM disk
 5:machine.  It's a HydraFS volume, as a card's is, in the paged ROM's banks after
@@ -309,9 +310,9 @@ zero page form (`as` would take that one), an opcode the W65C02S doesn't define 
 bytes).  C has it as `dis_insn` (`asm.h`, with the symbol files' `lbl_load` ...), assembly as `ASMCALL ASM_DIS`
 (`asmlib.inc`).
 
-The library is two banks of the paged ROM: the assembler in the first (`FILE`, `as`'s whole run; and a source
+The library is one bank of the paged ROM: the assembler (`FILE`, `as`'s whole run; and a source
 given a line at a time, BASIC's way: `BEGIN`, then for each pass `PASS`, the caller's symbols with `DEFINE`, the
-lines with `LINE`, and `END`; then `SYMBOL`, `IMAGE` and `DONE`), the disassembler in the second (`DIS`).  It has
+lines with `LINE`, and `END`; then `SYMBOL`, `IMAGE` and `DONE`), and the disassembler (`DIS`).  It has
 no RAM of its own: the assembler's state is in RAM its caller lends it while it runs (`ASM_RAM`, `$5000`-`$7DFF`),
 and its zero page (`$22` on) is the caller's, put back as each call ends.
 

@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; io.inc - input and output (the sixth bank): PRINT's values (a string's bytes; a number's text, DISPLAY's, in the
+; io.inc - input and output (the third bank): PRINT's values (a string's bytes; a number's text, DISPLAY's, in the
 ; base, a space before it if it isn't below 0 and one after, QuickBASIC's), its zones (14 columns), TAB and SPC; the
 ; column the output's at (ocol, for them and POS).
 
@@ -65,7 +65,7 @@ us_ilen:    .res        1
 us_m3:      .res        1
 us_bstr:    .res        32                                  ; ({x}'s base, zero-terminated)
 
-.segment "CODE6"
+.segment "CODE3"
 
 ; .A out, the column followed (a new line: 0).  Keeps .A, .X, .Y
 pr_ch:
@@ -559,7 +559,7 @@ f_err:
             bra         push_ax
 ; ERL: its line (0: none, or the prompt's)
 f_erl:
-            FARN        7, erl_num
+            FARN        5, erl_num
             ; (fall through)
 
 ; .A/.X (0 to 65535) pushed, an integer
@@ -582,7 +582,7 @@ push_ax:
 
 ; ERR$: its message
 f_errs:
-            FARN        7, err_text_cap
+            FARN        5, err_text_cap
             LDW         rs_ptr, eo_buf
             lda         eo_len
             jmp         ram_str
@@ -658,7 +658,7 @@ st_cls:
             stz         ocol
             lda         g_on                                ; (In a SCREEN: the bitmap cleared too)
             beq         :+
-            FARN        8, g_cls
+            FARN        4, g_cls
 :
             rts
 
@@ -746,7 +746,7 @@ lc_check:
 st_color:
             lda         g_on                                ; (In a SCREEN: the pen's colour)
             beq         :+
-            FARN        8, g_color
+            FARN        4, g_color
             rts
 :
             jsr         pop_int16                           ; (The background)
@@ -1174,7 +1174,7 @@ f_need:
 
 ; A system error (.A) said (sys_err's)
 f_syserr:
-            FARN        7, sys_err
+            FARN        5, sys_err
 
 ; ST_OPEN: its path, its number and its mode (FM_*) taken off the stack: opened (OUTPUT a file made or emptied;
 ; APPEND at its end, made if it isn't there; BINARY read and written, made if it isn't there).  Open already: File
@@ -1210,7 +1210,7 @@ st_open:
             jmp         b_error
 :
             stx         fsl
-            FARN        7, str_lbuf
+            FARN        5, str_lbuf
             lda         fo_mode
             ldx         #O_READ
             cmp         #FM_INPUT
@@ -1938,7 +1938,7 @@ st_put:
 ; ST_KILL, ST_RMDIR: the file (or the empty directory) removed
 st_kill:
 st_rmdir:
-            FARN        7, str_lbuf
+            FARN        5, str_lbuf
             LDR         r0, lbuf
             jsr         REMOVE
             bcc         :+
@@ -1948,7 +1948,7 @@ st_rmdir:
 
 ; ST_MKDIR: a directory made
 st_mkdir:
-            FARN        7, str_lbuf
+            FARN        5, str_lbuf
             LDR         r0, lbuf
             lda         #O_READ
             ldx         #DM_DIR
@@ -1960,7 +1960,7 @@ st_mkdir:
 
 ; ST_CHDIR: the current directory
 st_chdir:
-            FARN        7, str_lbuf
+            FARN        5, str_lbuf
             LDR         r0, lbuf
             jsr         CHDIR
             bcc         :+
@@ -1970,7 +1970,7 @@ st_chdir:
 
 ; ST_NAME: the file (old, under new on the stack) renamed: its name new's last part (a stat record: all else $FF)
 st_name:
-            FARN        7, str_lbuf                         ; (new)
+            FARN        5, str_lbuf                         ; (new)
             ldx         #SR_SIZE - 1
             lda         #$FF
 :
@@ -2001,7 +2001,7 @@ st_name:
             lda         #0
             sta         sr_buf + SR_NAME,y
 :
-            FARN        7, str_lbuf                         ; (old)
+            FARN        5, str_lbuf                         ; (old)
             LDR         r0, lbuf
             LDR         r1, sr_buf
             jsr         WSTAT
@@ -2012,7 +2012,7 @@ st_name:
 
 ; ST_FILES: a directory's names (the string taken off; "": the current one), PRINT's zones apart (a directory's with /)
 st_files:
-            FARN        7, str_lbuf
+            FARN        5, str_lbuf
             cmp         #0
             bne         :+
             lda         #'.'
@@ -2086,7 +2086,7 @@ US_OUT          = lbuf          ; (Its field's text)
 
 ; ST_USTART: the format (the string taken off) kept, from its start
 st_ustart:
-            FARN        7, str_lbuf
+            FARN        5, str_lbuf
             sta         us_len
             tax
             beq         :++
@@ -2709,7 +2709,7 @@ us_pair:
 :
             rts
 
-; ---- The sixth bank's functions and statements (fn.inc)
+; ---- Input and output's functions and statements (fn.inc: F_B6, ST_B6)
 fn_disp6:
             tax
             jmp         (fn_jt6,x)

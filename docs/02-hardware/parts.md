@@ -60,8 +60,8 @@ footprint, 11.3 mm wide).  U7 can be a **DS1747** instead, for
 a clock that keeps time ([the devices](devices.md#the-clock-chip)).
 
 **The flash ROMs.**  Microchip's SST39SF040 (512K, DIP-32, 70 ns) for the paged ROM, and the SST39SF010A (128K) in
-PLCC-32 for the BIOS ROM.  Both are current.  Buy only as many SST39SF040 as the system needs: HydraOS uses four (U31,
-U32, U34, U36), the base alone one (U31).
+PLCC-32 for the BIOS ROM.  Both are current.  Buy only as many SST39SF040 as the system needs: HydraOS uses three (U31,
+U32, U34), the base alone one (U31).
 
 **The reset supervisor** (U43, DM1813 in TO-92): the DS1813-10 (Dallas, now Analog Devices).
 

@@ -184,7 +184,7 @@ task's `$01`:
 | 0 | U31 | `bin/prom0.bin` |
 | 1 | U32 | `bin/prom1.bin` |
 | 2 | U34 | `bin/prom2.bin` |
-| 3 | U36 | `bin/prom3.bin` |
+| 3 | U36 | |
 | 4 | U30 | |
 | 5 | U33 | |
 | 6 | U35 | |
@@ -195,7 +195,7 @@ task's `$01`:
   bank number's bits 2 and 3, and 6 and 7, are crossed.  The build allows for both (`base/tools/romimg.js`), so you burn
   each `promN.bin` whole, at offset 0, in the socket the table gives, and never think about it.  [The
   quirks](quirks.md#the-paged-roms-swapped-halves) explain.
-* **Only the sockets that are used need chips.**  HydraOS fills four (U31, U32, U34, U36); the base alone fills one
+* **Only the sockets that are used need chips.**  HydraOS fills three (U31, U32, U34); the base alone fills one
   (U31).  The others can stay empty.
 * **A card can take the window over.**  `nBROMD`, a slot pin pulled up on the board, disables the whole paged ROM when
   a card pulls it low, so the card can answer `$A000-$DFFF` itself.
