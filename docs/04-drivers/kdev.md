@@ -70,16 +70,16 @@ Without a DS1747 the clock starts at 2000-01-01 each boot.
 ## The modules
 
 `#m`, bound at `/dev/mod`: a file for each module of the paged ROM, its image (a module's header first, which `SPAWN`
-reads).  `#m/bin` lists the programs alone, and is bound into `/bin`, so `ls` runs the ROM's `ls`.
+reads).  `#m/bin` lists the programs alone, and is bound into `/bin`, so `rc` runs the ROM's `rc`.
 
 ```
 /> ls /dev/mod | head -6
 bin/
 init
-hello
 cons
 storage
 kdev
+snd
 ```
 
 `mods` lists the modules with their banks and types.

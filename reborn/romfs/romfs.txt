@@ -75,6 +75,39 @@ lib/hylang/login.hl lib/hylang/login.hl     ; hylang -l, a login shell: login.hl
 lib/hylang/profile.hl lib/hylang/profile.hl ;   the shell's rule: an rc command line at the prompt)
 lib/basic/profile.bas lib/basic/profile.bas ; basic -l, a login shell: run as typed after its namespace and window
 lib/hylang/shell.hl lib/hylang/shell.hl
+bin/echo            ../obj/programs/echo.hyx    ; The tools: RAM programs (programs/), loaded as each runs (as modules,
+bin/cat             ../obj/programs/cat.hyx     ;   each left most of its 16K bank empty)
+bin/ls              ../obj/programs/ls.hyx
+bin/ps              ../obj/programs/ps.hyx
+bin/pwd             ../obj/programs/pwd.hyx
+bin/mkdir           ../obj/programs/mkdir.hyx
+bin/rmdir           ../obj/programs/rmdir.hyx
+bin/rm              ../obj/programs/rm.hyx
+bin/touch           ../obj/programs/touch.hyx
+bin/cp              ../obj/programs/cp.hyx
+bin/mv              ../obj/programs/mv.hyx
+bin/du              ../obj/programs/du.hyx
+bin/df              ../obj/programs/df.hyx
+bin/kill            ../obj/programs/kill.hyx
+bin/slay            ../obj/programs/slay.hyx
+bin/sleep           ../obj/programs/sleep.hyx
+bin/mods            ../obj/programs/mods.hyx
+bin/free            ../obj/programs/free.hyx
+bin/date            ../obj/programs/date.hyx
+bin/ns              ../obj/programs/ns.hyx
+bin/top             ../obj/programs/top.hyx
+bin/wc              ../obj/programs/wc.hyx
+bin/head            ../obj/programs/head.hyx
+bin/tail            ../obj/programs/tail.hyx
+bin/tee             ../obj/programs/tee.hyx
+bin/uniq            ../obj/programs/uniq.hyx
+bin/xd              ../obj/programs/xd.hyx
+bin/cmp             ../obj/programs/cmp.hyx
+bin/more            ../obj/programs/more.hyx
+bin/ed              ../obj/programs/ed.hyx
+bin/as              ../obj/programs/as.hyx
+bin/xmodem          ../obj/programs/xmodem.hyx
+bin/hello           ../obj/programs/hello.hyx   ; init runs it as it starts (hello, from init)
 bin/mkfs            ../obj/programs/mkfs.hyx    ; The disk tools: RAM programs (programs/), loaded from here
 bin/fsck            ../obj/programs/fsck.hyx
 bin/label           ../obj/programs/label.hyx

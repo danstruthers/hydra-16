@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; machine.inc - the Hydra's (the eighth bank): SOUND (the sound driver's commands on /dev/snd, its text ones on
+; machine.inc - the Hydra's (the fourth bank): SOUND (the sound driver's commands on /dev/snd, its text ones on
 ; /dev/sndctl, as C's snd.h has them), PLAY (play, the program: a line of the score language, or a file), SYS and
 ; CALL ABSOLUTE (machine code, or a system call by its name: basicsys.inc's table), CALL ASM (an ASM block's label:
 ; asm.inc), RREG (the registers after).
@@ -20,9 +20,9 @@ sys_y:      .res        1
 sys_regs:   .res        4                                   ;   and .A, .X, .Y and the flags after (RREG's)
 sys_r:      .res        4                                   ; (r0 and r1 kept over the output's WRITE)
 
-.segment "CODE8"
+.segment "CODE4"
 
-; ---- The eighth bank's statements (fn.inc: ST_B8 on)
+; ---- The machine's and graphics' statements (fn.inc: ST_B8 on)
 st_disp8:
             tax
             jmp         (st_jt8,x)
@@ -112,7 +112,7 @@ st_sound:
             ldx         #0
             jmp         b_error
 @err:
-            FARN        7, sys_err
+            FARN        5, sys_err
 
 ; snd_buf on: the channel's command, then command .A with .X
 snd_pair:
@@ -134,7 +134,7 @@ snd_pair:
 
 ; ST_SOUNDS: SOUND "text": a line for /dev/sndctl (the string taken off: "pan 0 left", "volume 150" ...)
 st_sounds:
-            FARN        7, str_lbuf
+            FARN        5, str_lbuf
             pha
             lda         snd_cfd
             bne         :+
@@ -156,7 +156,7 @@ st_sounds:
             bcs         @err
             rts
 @err:
-            FARN        7, sys_err
+            FARN        5, sys_err
 
 s_snd:      .byte       "/dev/snd", 0
 s_sndctl:   .byte       "/dev/sndctl", 0
@@ -186,7 +186,7 @@ st_playch:
 ; at its end: play name), else a line of the score language (play -m ch line; channel 0 if none was given).  Its
 ; failure: its message, BASIC's error
 st_play:
-            FARN        7, str_lbuf
+            FARN        5, str_lbuf
             cmp         #SH_ARGS - 8
             bcc         :+
             lda         #ER_STRING
@@ -274,7 +274,7 @@ st_play:
             lda         #$FF                                ; (The next PLAY's channel: none, as it begins)
             sta         pl_ch
             jsr         out_flush
-            FARN        6, con_cooked
+            FARN        3, con_cooked
             ldx         #9                                  ; (play: /bin/play, else the ROM's)
 :
             lda         s_binplay,x
@@ -294,10 +294,10 @@ st_play:
             jsr         pl_spawn
             bcc         @started
 @err:
-            FARN        7, sys_err
+            FARN        5, sys_err
 @started:
             stz         esbuf
-            FARN        7, rc_wait
+            FARN        5, rc_wait
             lda         sh_status
             ora         sh_status + 1
             bne         :+
@@ -334,7 +334,7 @@ st_sys:
             MOVW        sys_addr, t0
             bra         @call
 @name:
-            FARN        7, str_lbuf                         ; (Its name in capitals, looked for)
+            FARN        5, str_lbuf                         ; (Its name in capitals, looked for)
             ldy         #0
 :
             lda         lbuf,y
@@ -430,7 +430,7 @@ sys_lookup:
             lda         (t4)
             bne         :+
             lda         #E_NOSYS
-            FARN        7, sys_err
+            FARN        5, sys_err
 :
             ldy         #0
 @char:
@@ -475,7 +475,7 @@ st_rregv:
             tax
             lda         sys_regs,x
             ldx         #0
-            FARN        6, push_ax
+            FARN        3, push_ax
             rts
 
 ; (basicsys.inc's names: their last character's bit 7 set)

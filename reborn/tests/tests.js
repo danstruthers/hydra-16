@@ -143,6 +143,12 @@ function BIN_COUNT() {
   return mods.length + disk.length + 1;
 }
 
+// The ROM disk's bin (/rom/bin): its programs' names, as ls lists them
+function ROM_BIN() {
+  return fs.readFileSync(path.join(__dirname, '..', 'romfs', 'romfs.txt'), 'latin1').split(/\r?\n/).filter(l => /^bin\//.test(l))
+    .map(l => l.split(/\s+/)[0].slice(4)).sort();
+}
+
 // The rc test's lines, and what each says
 const RC_LINES = [
   ["echo hello","hello"],
@@ -264,16 +270,16 @@ const TOOL_LINES = [
   ["mods", [
     "bank   type     name",
     "  2    program  init",
-    "  3    program  hello",
-    "  4- 6 boot     cons",
-    "  7- 8 boot     storage",
+    "  3- 5 boot     cons",
+    "  6- 7 boot     storage",
+    "  8    boot     kdev",
     "",
   ].join('\n'), true],
   ["free","ram     256 KB a task (2 modules)\nshared  1024 KB, 256 KB in segments (1), 768 KB free"],
   ["sleep 30 & sleep 30 & kill $apid; slay sleep; wait; ps","task  state",true],
   ["kill 8; kill x; echo $status","kill: 8: no such task\nkill: x: invalid argument\n1"],
   ["sleep 1; echo slept","slept"],
-  ["ls /rom/bin; whatis mkfs","calc\ndb\ndis\nedit\nfsck\ngrep\nlabel\nmkfs\nscom\nsort\n/bin/mkfs"],
+  ["ls /rom/bin; whatis mkfs", [...ROM_BIN(), '/bin/mkfs'].join('\n')],
   ["label s; label s Shared Disk; label s","SRAM\nShared Disk"],
   ["fsck s","hydrafs label=Shared Disk\nfree 253 KB of 255 KB\ncheck: lost 0, unmarked 0, twice 0\nsegment 15"],
   ["mkfs s Fresh; ls /sram; label s; echo $status","Fresh\n"],
@@ -1476,7 +1482,7 @@ module.exports = {
         'ācat /dev/sd/s/ctl\r' + 'āecho $window\r' + 'ā\x1dc' + 'āecho $window\r' + 'āls \'#fr\'\r' + 'āls /ram\r' + 'āls /dev\r' +
         'āecho stop >>\'#d/s/ctl\'; echo still; cat /sram/x\r' }; },
       expect: ['% ls \'#fr\'\n1/\n2/\n%', '% ls /ram\nbin/\nlib/\n%',
-        '% ls /bin\ncalc\ndb\ndis\nedit\nfsck\ngrep\nlabel\nmkfs\nscom\nsort\ninit\nhello\nrc\nwstart\n', 't_child\n% t_child f\n', '% ls \'#fr\'/2\nbin/\nlib/\nmark\n%',
+        '% ls /bin\n' + ROM_BIN().join('\n') + '\ninit\nrc\nwstart\n', 't_child\n% t_child f\n', '% ls \'#fr\'/2\nbin/\nlib/\nmark\n%',
         'prompt=(', '% cat /dev/sd/s/ctl\nsram 512 KB 1024 blocks\nhydrafs label=SRAM\n', '% echo $window\n0\n%',
         '% echo $window\n1\n%', '% ls \'#fr\'\n1/\n2/\n4/\n%', '% ls /ram\nbin/\nlib/\n%', '\ncons\nconsctl\nwctl\nwnew\nser\nserctl\nkbdin\ntext\nlabel\nsnarf\nkbin\n%',
         '% echo stop >>\'#d/s/ctl\'; echo still; cat /sram/x\nstill\ncat: /sram/x: no such device\n%'],
@@ -1993,7 +1999,7 @@ module.exports = {
         const n = BIN_COUNT();
         return [{ what: 'rc -c \'x=1\': SPAWN to its end', from: '<rc', to: 'rc>', minus: ['<b0', 'b0>'], per: 1, max: 145000 },
           { what: 'ls /bin (the caches, /rom/bin, #m/bin: ' + n + ' programs): SPAWN to its end, a program', from: '<ls', to: 'ls>',
-            minus: ['<b0', 'b0>'], per: n, max: 25000 }];
+            minus: ['<b0', 'b0>'], per: n, max: 27000 }];   // (Most from the ROM disk's bin: a little more each)
       },
     },
     {

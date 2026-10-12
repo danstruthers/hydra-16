@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; prog.inc - the program's text (the seventh bank): the text region's lines, each its length and its bytes, a length
+; prog.inc - the program's text (the fifth bank): the text region's lines, each its length and its bytes, a length
 ; of $FF after the last; a file loaded into it (LOAD, a script), LIST, NEW, the lines typed with a number first; the
 ; prompt's commands; and the line table's look-up for an error's line.
 
@@ -44,7 +44,7 @@ tl_at:      .res        2                                   ; (tl_read's: past t
 erl_v:      .res        2                                   ; (erl_num's: the last line number, if any)
 erl_has:    .res        1
 
-.segment "CODE7"
+.segment "CODE5"
 
 ; The text emptied
 text_init:
@@ -448,7 +448,7 @@ prompt_cmd:
             rts
 @clear:
             stz         cont_ok
-            FARN        6, fl_closeall
+            FARN        3, fl_closeall
             FARN        1, prog_compile                     ; (Its variables made again)
             clc
             rts
@@ -464,7 +464,7 @@ prompt_cmd:
 ; The program's compiled state gone (NEW, LOAD): its symbols and variables, CONT, its files
 prog_gone:
             stz         cont_ok
-            FARN        6, fl_closeall
+            FARN        3, fl_closeall
             FARN        2, prog_init
             rts
 
@@ -547,7 +547,7 @@ tx_print:
             jmp         out_byte
 pc_bye:
             jsr         out_flush
-            FARN        6, con_cooked
+            FARN        3, con_cooked
             LDR         r0, 0
             lda         #0
             jmp         EXITS

@@ -175,7 +175,7 @@ named bases.
 
 **`asm`** (`reborn/modules/asm`, `reborn/spec/asm.def`) is the W65C02S's instructions as the assembler `as` writes them,
 one table for every tool that reads or writes them: `db`'s `d`, HyForth's `disasm`, `dis`, `as`, and HyBASIC's `ASM`
-blocks.  It's two banks: the assembler in the first, the disassembler in the second.
+blocks.  It's one bank: the assembler and the disassembler.
 
 | Entry | What it does |
 | :---- | :----------- |

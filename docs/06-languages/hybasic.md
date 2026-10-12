@@ -4,7 +4,7 @@ HyBASIC (`basic`) is the Hydra-16's BASIC: a structured BASIC in QuickBASIC's wa
 to go to, `SUB`s and `FUNCTION`s with their own variables, records, files, sound, graphics and inline assembly, on the
 Hydra's numbers: **every number exact** (`PRINT 1 / 3` shows `1/3`, `2 ^ 100` all its digits), in any base.  A
 program is compiled whole into a stack machine's code, then run.  It keeps a program at its prompt, as BASICs always
-have, and it's a shell too (`basic -l`).  It's written in 65C02 assembly (`reborn/modules/basic/`), eight banks of
+have, and it's a shell too (`basic -l`).  It's written in 65C02 assembly (`reborn/modules/basic/`), five banks of
 the paged ROM.
 
 This chapter is its reference: every statement and function.
@@ -492,8 +492,9 @@ runs `/lib/basic/profile.bas` before its first prompt (a card's or the RAM disk'
 * **Compiled, then run.**  A program is read twice, once for its procedures and types and again for its code, and
   compiled into the code of a **stack machine**: an op a byte, its operands after it.  The interpreter runs that code.
   A line typed at the prompt is compiled the same way, into a region of its own, and run at once.
-* **Eight banks** of the paged ROM: the interpreter; the compiler (two banks); the numbers; the heap and the strings;
-  input and output; the errors, the system's functions and the program's text; the shell, sound, `SYS` and graphics.
+* **Five banks** of the paged ROM: the interpreter; the compiler; the rest of the compiler, with input and output; the
+  numbers, with the shell, sound, `SYS` and graphics; the heap and the strings, with the errors, the system's
+  functions and the program's text.
   A call between banks goes through trampolines in its RAM.
 * **Values** are 5 bytes: a tag and 4 more, so a number up to 32 bits is held whole, and anything bigger (a big
   integer, a fraction, a string, an array, a record) is in the **heap**, in the task's RAM banks, with a collector.
