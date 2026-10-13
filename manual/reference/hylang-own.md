@@ -667,7 +667,8 @@ A special form: evaluates an expression, and catches an error.
 
 If its value is an error, *handler* is evaluated and its value is the result; with no handler, the result is
 `NIL`. While the handler is evaluated, `&err` is bound to the error's message, as a string, and `&code` to the
-system's error code, a number, if the error came from the system, and to `NIL` if it did not.
+error's code, an atom: the system's name for the error if it came from the system (`:noent`), or the code the
+program gave to `error`. It is `NIL` for an error that has none.
 
 #### Example
 
