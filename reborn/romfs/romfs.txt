@@ -7,7 +7,7 @@
 README              README
 lib/namespace       lib/namespace       ; The default namespace (the plan's appendix E): init runs it
 lib/profile         lib/profile         ; What each shell runs as it starts (rc's: phase 4)
-lib/shell           lib/shell           ; The shell init and wstart start in each window: HyForth's (forth -l)
+lib/shell           lib/shell           ; The shell init becomes in each window: HyForth's (forth -l)
 lib/windows         lib/windows         ; The windows' chrome (W4): init writes its lines to #c/wctl
 lib/edit/help       lib/edit/help       ; edit's keys (its ^G)
 lib/as/hydra.inc    ../../base/sdk/asm/hydra.inc ; as's include files (/lib/as: .include finds them there): the SDK's ...
@@ -108,8 +108,6 @@ bin/ed              ../obj/programs/ed.hyx
 bin/as              ../obj/programs/as.hyx
 bin/xmodem          ../obj/programs/xmodem.hyx
 bin/hello           ../obj/programs/hello.hyx   ; init runs it as it starts (hello, from init)
-bin/wstart          ../obj/programs/wstart.hyx  ; What init starts (wstart, input), and new-window: as the
-bin/input           ../obj/programs/input.hyx   ;   tools are
 bin/new-window      ../obj/programs/newwin.hyx
 bin/hwtest          ../obj/programs/hwtest.hyx  ; (The hardware test itself is paged ROM bank 1's)
 bin/mkfs            ../obj/programs/mkfs.hyx    ; The disk tools: RAM programs (programs/), loaded from here

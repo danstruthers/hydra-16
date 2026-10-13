@@ -651,6 +651,55 @@ K_DRIVER_MAIN:
 @entry:
             jmp         (TA_ENTRY)
 
+; SRV_NAP: a driver's init that doesn't end (a driver with work of its own to do, between its calls: a device to
+; look at now and then) waits here .A/.X ticks; or, with 0 ticks, till its own event count (TASK_EVENT: its irq
+; entry's, its calls') isn't .Y, the count it last saw.  Meanwhile it serves its calls, as a driver that's started
+; does; back, it's busy again (a call to it waits), till its next nap, or its init's end.  OUT: C = 0
+K_SRV_NAP:
+            pha
+            php
+            sei
+            lda         TK_BUSY                             ; (Its calls served: the callers blocked on it can run)
+            and         #BUSY_NOSERVE
+            sta         TK_BUSY
+            plp
+            pla
+            bne         @ticks
+            cpx         #0
+            bne         @ticks
+            tya                                             ; Till its own event count changes
+            tax
+            lda         T_REGISTER
+            and         #TASKS - 1
+            jsr         K_EVWAIT
+            bra         @back
+@ticks:
+            jsr         K_SLEEP
+@back:
+            php
+            sei
+            inc         TK_BUSY                             ; (No call's in it: it runs.  Busy, as it was)
+            plp
+            clc
+            rts
+
+; INIT_RUN: init started again in a task of its own, .A (0-15) its argument: asked of the kernel task, which starts
+; it as it next runs (K_INIT_AGAIN).  From a task or an irq entry.  OUT: C = 0
+K_INIT_RUN:
+            and         #TASKS - 1
+            tax
+            php
+            sei
+            ldy         T_REGISTER
+            stz         T_REGISTER                          ; ---- The kernel task's
+            lda         #1
+            sta         K_INIT_WANT,X
+            sta         K0_NQ_ANY                           ; (The scheduler runs it: its idle loop looks)
+            sty         T_REGISTER                          ; ---- Back
+            plp
+            clc
+            rts
+
 ; ****************************************************************************
 .segment "KCODE_P1"
 
@@ -712,6 +761,8 @@ K_BOOT_STARTED:
             cmp         #ST_IDLE
             beq         :+
             cmp         #ST_FREE
+            beq         :+
+            QL_GET      TK_BUSY                             ; (Or one whose init goes on, between its turns: SRV_NAP)
             bne         @starting
 :
             plp
@@ -730,15 +781,45 @@ K_BOOT_STARTED:
             bcc         @look
             rts
 
-; Init: the directory's MD_INIT, started, with an empty namespace of its own (it builds it)
+; Init: the directory's MD_INIT, started, with an empty namespace of its own (it builds it) and no arguments.  It's
+; the task init's 0 is in (K_INIT_TASK): if it EXECs (a shell in its place) and that ends, init is started again
+; (K_EXEC_K, K_EXIT_K, K_INIT_AGAIN); an init that ends itself isn't
 K_TASK_BOOT_INIT:
-            jsr         K_MD_VALID
+            ldx         #TASKS - 1                          ; (None wanted again yet)
+:
+            stz         K_INIT_WANT,X
+            dex
+            bpl         :-
+            lda         #$FF
+            sta         K_INIT_TASK
+            stz         K_INIT_EXEC
+            jsr         init_entry
             bcs         @noinit
+            ldx         #INIT_TASK                          ; (Before it can run: the kernel task isn't preempted)
+            stx         K_INIT_TASK
+            FARCALL     K_NS_FRESH
+            ldy         T_REGISTER                          ; Its arguments: none
+            php
+            sei
+            lda         #0
+            QL_PUT      TA_ARGS
+            QL_PUT      TA_ARGS + 1
+            plp
+            jmp         boot_start
+
+@noinit:
+            TPRINT      T_S_NOINIT
+            rts
+
+; K0_PTR = init's entry in the module directory: MD_ENTRIES + 16 * MD_INIT.  OUT: C = 0; or C = 1: there's none
+init_entry:
+            jsr         K_MD_VALID
+            bcs         @done
             lda         MD_INIT
             cmp         MD_COUNT
-            bcs         @noinit
-            stz         K0_PTR + 1                          ; Its entry: MD_ENTRIES + 16 * MD_INIT (past entry 15,
-            .repeat     4                                   ;   over 8 bits)
+            bcs         @done
+            stz         K0_PTR + 1                          ; (Past entry 15, over 8 bits)
+            .repeat     4
             asl
             rol         K0_PTR + 1
             .endrepeat
@@ -748,12 +829,78 @@ K_TASK_BOOT_INIT:
             lda         K0_PTR + 1
             adc         #>MD_ENTRIES
             sta         K0_PTR + 1
-            ldx         #INIT_TASK                          ; (Before it can run: the kernel task isn't preempted)
-            FARCALL     K_NS_FRESH
-            jmp         boot_start
+            clc
+@done:
+            rts
 
-@noinit:
-            TPRINT      T_S_NOINIT
+; Init again (FARCALL from the kernel task's idle loop, IRQs on): for each n wanted (K_INIT_WANT: INIT_RUN's, or 0's
+; as the task it was in ends), init started in a task of its own, as the boot starts it (no parent, no fds, an
+; empty namespace and environment of its own, a note group of its own), its argument n in decimal.  With no task
+; free, 0's stays wanted (tried again as a task ends); another's is dropped
+K_INIT_AGAIN:
+            ldx         #TASKS - 1
+@want:
+            lda         K_INIT_WANT,X
+            beq         @next
+            phx
+            jsr         init_one
+            plx
+@next:
+            dex
+            bpl         @want
+            rts
+
+; Init started with .X as its argument (K_INIT_AGAIN's)
+init_one:
+            phx
+            jsr         init_entry
+            bcs         @none
+            jsr         K_START_MODULE
+            bcc         @started
+@none:
+            plx
+            beq         :+                                  ; (0's: still wanted)
+            stz         K_INIT_WANT,X
+:
+            rts
+
+@started:
+            plx
+            stz         K_INIT_WANT,X
+            cpx         #0
+            bne         :+
+            sta         K_INIT_TASK
+            stz         K_INIT_EXEC
+:
+            txa                                             ; Its argument: n, a digit or two, and the empty one after
+            ldx         K0_NEW
+            ldy         T_REGISTER
+            php
+            sei
+            cmp         #10
+            bcc         @one
+            sbc         #10
+            pha
+            lda         #'1'
+            QL_PUT      TA_ARGS
+            pla
+            ora         #'0'
+            QL_PUT      TA_ARGS + 1
+            lda         #0
+            QL_PUT      TA_ARGS + 2
+            QL_PUT      TA_ARGS + 3
+            bra         @go
+@one:
+            ora         #'0'
+            QL_PUT      TA_ARGS
+            lda         #0
+            QL_PUT      TA_ARGS + 1
+            QL_PUT      TA_ARGS + 2
+@go:
+            plp
+            FARCALL     K_NS_FRESH                          ; (Keeps .X)
+            txa
+            FARCALL     K_TASK_GO
             rts
 
 ; Start the module at K0_PTR, and say so
@@ -933,6 +1080,11 @@ K_EXEC_K:
             ldy         K0_TMP
             FARCALL     K_FILE_EXIT                         ; Its device letters; the channels it served (file.s)
             ldy         K0_TMP
+            cpy         K_INIT_TASK                         ; (Init's 0, a shell in its place now: K_EXIT_K)
+            bne         :+
+            lda         #1
+            sta         K_INIT_EXEC
+:
             lda         K0_NEWBANK
             sta         K_TASK_BANK,Y
             lda         #HT_PROGRAM
@@ -1035,7 +1187,7 @@ K_EXITS:
             lda         #0
             sta         TA_SCRATCH,Y
             lda         K_A
-            KCALL       K_EXIT_K                            ; Its lines, its exit record; its children init's; its
+            KCALL       K_EXIT_K                            ; Its lines, its exit record; its children nobody's; its
                                                             ;   parent woken
             sei
             stz         TK_STATE                            ; (ST_FREE: never run again)
@@ -1049,8 +1201,7 @@ K_EXITS:
 .segment "KCODE_P1"
 
 ; In the kernel task (KCALL): task .Y has ended with code .A, its message in its TA_SCRATCH.  Its IRQ lines,
-; nobody's; its record, for its parent (none if it has none); its children and their records, init's (nobody's,
-; if it's init)
+; nobody's; its record, for its parent (none if it has none); its children nobody's, and their records gone
 K_EXIT_K:
             sta         K_EXIT_CODE,Y
             sty         K0_TMP
@@ -1061,13 +1212,9 @@ K_EXIT_K:
             ldy         K0_TMP
             FARCALL     K_FILE_EXIT                         ; Its device letters; the channels it served (file.s)
             FARCALL     K_NS_EXIT                           ; Its namespace (ns.s)
-            stz         K0_TMP3                             ; (Records moved to init: it's woken too)
-            lda         #INIT_TASK                          ; Its children's new parent
-            cpy         #INIT_TASK
-            bne         :+
-            lda         #$FF
-:
-            sta         K0_TMP2
+            stz         K0_TMP3
+            lda         #$FF                                ; Its children's new parent: nobody (no task is kept
+            sta         K0_TMP2                             ;   just to wait for them)
             lda         K_PARENT,Y
             sta         K_EXIT_PARENT,Y
             bmi         @orphans                            ; (No parent: no record)
@@ -1126,6 +1273,19 @@ K_EXIT_K:
             sta         K_TASK_BANK,Y
             lda         #0
             sta         K_TASK_TYPE,Y
+            cpy         K_INIT_TASK                         ; The task init's 0 was in: if it had EXECed (the login
+            bne         :+                                  ;   shell, in init's place), init is started again
+            lda         #$FF                                ;   (K_INIT_AGAIN); an init that ends itself is left ended
+            sta         K_INIT_TASK
+            lda         K_INIT_EXEC
+            beq         :+
+            lda         #1
+            sta         K_INIT_WANT
+:
+            lda         K_INIT_WANT                         ; (Wanted: the kernel task looks, now a task is free)
+            beq         :+
+            sta         K0_NQ_ANY
+:
             clc
             rts
 

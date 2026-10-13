@@ -52,7 +52,7 @@ window that was shown. Press a window's number to show it, or move with the arro
 <kbd>RETURN</kbd>; <kbd>Q</kbd> leaves the list.
 
 When a window's shell ends (type `bye` in HyForth, or `exit` in rc), the window goes away. Window 0 is special: it
-never goes away, and init starts a new shell in it.
+never goes away: the kernel starts init again, and init becomes a new shell in it.
 
 ## 10.3 Groups
 
@@ -191,7 +191,7 @@ Each window has its own console files. A program running in a window finds them 
 | `wctl` | The windows' control: new windows, layouts, the chrome, the keys (Chapter 13) |
 | `label` | The window's name: read it, or write a new one |
 | `text` | Everything in the window's scrollback and screen, as text |
-| `wnew` | Reading it waits for <kbd>CTRL</kbd>-<kbd>]</kbd> <kbd>C</kbd>, then makes the new window (wstart uses it) |
+| `wnew` | Reading it waits for <kbd>CTRL</kbd>-<kbd>]</kbd> <kbd>C</kbd>, then makes the new window: for a program that wants to start the windows' shells itself. With nobody reading it, the console makes the window and the kernel starts init in it |
 | `kbdin` | What's written here is typed into the window, as if from the keyboard |
 
 And these are the same in every window: `snarf` (the snarf buffer), `ser` and `serctl` (the serial port itself),

@@ -362,11 +362,11 @@ sample programs:
 ```session
 /> /sd/0/sample/hi
 Hello, you!
-I'm task 4, in /.
+I'm task 2, in /.
 /> /sd/0/sample/hi Ann Bob
 Hello, Ann!
 Hello, Bob!
-I'm task 4, in /.
+I'm task 2, in /.
 ```
 
 Or go to the program's directory first. The shell looks for a program where you are, and then in `/bin`:

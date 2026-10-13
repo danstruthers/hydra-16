@@ -103,8 +103,8 @@ isn't round!) Each one is part of the tree:
 /> df
 disk  kind   size        free        label
 0     sdhc   16380 KB    15956 KB    HYDRA-16
-x     rom    623 KB      10 KB       ROM
-r     ram    255 KB      252 KB      RAM
+x     rom    623 KB      13 KB       ROM
+r     ram    255 KB      253 KB      RAM
 s     sram   511 KB      510 KB      SRAM
 ```
 
@@ -308,19 +308,19 @@ bind '#p' /proc
 bind '#f' /sd
 mount '#f' /rom x
 mount '#f' /sram s
-mount -c '#f' /ram r/2
-bind -c '#fr/2/bin' /bin
+mount -c '#f' /ram r/1
+bind -c '#fr/1/bin' /bin
 bind -a '#fs/bin' /bin
 bind -a '#fx/bin' /bin
 bind -a '#m/bin' /bin
-bind -c '#fr/2/lib' /lib
+bind -c '#fr/1/lib' /lib
 bind -a '#fs/lib' /lib
 bind -a '#fx/lib' /lib
 bind '#P' /pc
 ```
 
 It looks a little different from the namespace file: `ns` shows each part of the tree by its device's own name,
-like `'#fr/2/bin'` (directory `2/bin` of HydraFS disk `r`). The SD card's lines aren't there, because this card
+like `'#fr/1/bin'` (directory `1/bin` of HydraFS disk `r`). The SD card's lines aren't there, because this card
 has no `bin` or `lib` directory. And the `/dev` directory starts with `#/dev`, which gives it its subdirectories:
 `gpio`, `i2c`, `mod`, `sd`, `seg`, `spi` and `vid`.
 

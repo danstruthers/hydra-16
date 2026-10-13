@@ -109,7 +109,7 @@ The **Setup…** button opens the setup panel, where you choose the Hydra's hard
 
 * **A Vera X card in slot 0** adds the video card: its screen, its sound chips and its own SD card.
 * **The Vera X's keyboard and mouse** adds the card's input controller, so the screen takes keys and the mouse.
-  The program that reads them, `input`, uses one of the Hydra's sixteen tasks.
+  (The `kdev` driver reads them, between its other jobs.)
 * **The clock chip** fits a DS1747 clock chip in place of the task RAM chip U7. It keeps the date and time, which
   the emulator sets from your PC's clock.
 * **RAM modules** chooses how many memory cards are plugged in: one, two or three.

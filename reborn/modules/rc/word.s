@@ -1439,4 +1439,4 @@ s_wlong:    .byte       "word too long", 0
 s_null:     .byte       "null list", 0
 s_mismatch: .byte       "mismatched lists", 0
 s_sub:      .byte       "bad subscript", 0
-s_class:    .byte       "bad [ in a pattern", 0
+s_class:    .byte       "bad [ pattern", 0

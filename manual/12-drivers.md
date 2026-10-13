@@ -47,8 +47,9 @@ and gives back the bytes. The kernel copies them into the program's memory, and 
 </figure>
 
 Because a driver is just a program serving files, a driver doesn't have to be in the ROM, or started as the
-Hydra starts. `input`, the Vera X keyboard's driver, is an ordinary program that init starts; and the PC tool,
-which serves `/pc`, is a program on your PC.
+Hydra starts: the PC tool, which serves `/pc`, is a program on your PC. And a small job doesn't need a driver, or
+a task, of its own. The Hydra has only sixteen tasks, so one driver often does several jobs: `kdev` serves the
+kernel's devices and the I/O header's pins, and between those requests it looks at a Vera X's keyboard and mouse.
 
 > **HOW IT WORKS:** A driver also owns its device's **interrupt line**. When the device needs attention (a byte
 > arrived, a timer ran out), the kernel runs the driver's **interrupt entry**: a few instructions that collect the

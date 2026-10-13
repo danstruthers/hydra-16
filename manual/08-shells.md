@@ -228,7 +228,7 @@ sleep
 And `|[2]` pipes standard error instead of standard output.
 
 > **NOTE:** Each program in a pipeline is a task, and the Hydra has sixteen tasks for everything (`ps` shows
-> them). On the book's Hydra that leaves room for six programs in one pipeline. A seventh isn't started: rc says
+> them). On the book's Hydra that leaves room for nine programs in one pipeline. A tenth isn't started: rc says
 > `no free task` for it, and the others run without it. For a longer job, put the half-way result in a file in
 > `/ram`, and carry on from there.
 
@@ -454,7 +454,7 @@ ls: /nothing: not found
 /> status .
 1
 /> s" date" sh-out type
-2000-01-01 00:00:06
+2000-01-01 00:00:05
 /> : hi ." Hello" cr ." there" cr ;
 /> ' hi | wc -l
       2
@@ -476,10 +476,10 @@ green
 
 The usual format is `%v%d> `, which shows `/rom/lib> ` in `/rom/lib`, and `0:/games> ` in `/sd/0/games`:
 
-```session 2_/rom/lib>_
+```session 1_/rom/lib>_
 /> cd /rom/lib
 /rom/lib> s" %t %p> " prompt
-2 /rom/lib> s" %v%d> " prompt
+1 /rom/lib> s" %v%d> " prompt
 /rom/lib>
 ```
 
@@ -505,7 +505,7 @@ for it to run as it starts. Each has its own:
 | HyBASIC | `/lib/basic/profile.bas` |
 | rc | `/rom/lib/profile` |
 
-The shell init starts in each window is named in the file `/lib/shell`. On the ROM disk it says:
+The shell init becomes in each window is named in the file `/lib/shell`. On the ROM disk it says:
 
 ```text
 /bin/forth -l

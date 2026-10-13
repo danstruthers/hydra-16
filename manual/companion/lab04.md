@@ -42,7 +42,7 @@
 ```text
 /> sleep 60 &
 /> ps
-/> kill 4
+/> kill 2
 /> ps
 ```
 
@@ -77,7 +77,7 @@
 
 <div class="write l2"></div>
 
-5. ✎ What does `init` do if the shell ends? Why is that a good idea?
+5. ✎ What happens if the shell in window 0 ends? Why is that a good idea?
 
 <div class="write l2"></div>
 

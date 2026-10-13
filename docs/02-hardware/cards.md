@@ -128,7 +128,7 @@ The VERA's own documentation is the X16's: *The Commander X16 Programmer's Refer
 
 The software: `vid` finds the card as the system starts (by its version register), shows the console on the screen,
 and serves the card as `/dev/vid`; the sound driver's channels 8-23 are the PSG's voices and `/dev/vid/pcm` the PCM; and
-`input` reads the keyboard and mouse ([video](../04-drivers/video.md)).  The emulator has the whole card
+`kdev` reads the keyboard and mouse ([video](../04-drivers/video.md#the-keyboard-and-the-mouse)).  The emulator has the whole card
 (`node sim/run.js --vera --smc`).
 
 **As built** (October 2026): the VERA X module alone, wired to a bus breakout card in slot 0 through the **glue board**
@@ -331,8 +331,9 @@ The PS/2 sockets' pin 3 is GND and pin 4 +5 V; pins 2 and 6 aren't used.
   ([the quirks](quirks.md#interrupts-xor-7-and-no-masks)).
 * **Press SW1 once after switching on.**  The firmware is a power supply's controller first: its power-on, which the
   button starts, is what starts the keyboard and mouse.  Until then it answers on I2C but has no keys.
-* **To check it:** `ls /dev/i2c` lists `42` once the SMC is on the bus, and `ps` shows `input` running (with no SMC it
-  ends at once).
+* **To check it:** `ls /dev/i2c` lists `42` once the SMC is on the bus, and `ps` shows `kdev` in the state `sleep`
+  (between its looks at the controller) and not `idle`.  The controller is looked for as the system starts (three
+  times, in its first three seconds): fit it, then reset.
 
 ---
 

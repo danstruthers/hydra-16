@@ -511,6 +511,39 @@ K_NS_MOUNT_K:
             bcs         ns_done
             jmp         ns_bind
 
+; KCALL: UNMOUNT of everything: the caller (.Y) has an empty namespace of its own.  One it shares with other tasks
+; stays theirs as it is (as a BIND in a shared one makes the binder a copy first); its own alone is emptied in place.
+; OUT: C = 0
+K_NS_CLEAR_K:
+            lda         K_TASK_NS,Y
+            cmp         #NS_MAX
+            bcs         @fresh
+            tax
+            lda         K_NS_REFS,X
+            cmp         #2
+            bcc         @mine
+            dec         K_NS_REFS,X                         ; (Shared: one user fewer)
+@fresh:
+            tya
+            tax
+            jsr         K_NS_FRESH
+            clc
+            rts
+@mine:
+            stx         K0_NR
+            ldx         #MT_MAX - 1
+@entry:
+            lda         K_MT_NS,X
+            cmp         K0_NR
+            bne         :+
+            jsr         mt_free
+:
+            dex
+            cpx         #$FF
+            bne         @entry
+            clc
+            rts
+
 ; KCALL: UNMOUNT.  The caller's TA_PATH = old.  IN: .X = 0: all of the union there; 1: the members that are its
 ; last candidate (K_CAND).  OUT: C = 0; or C = 1, .A = E_NOENT (none of them there), E_INVAL, E_NSFULL
 K_NS_UNMOUNT_K:

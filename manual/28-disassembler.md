@@ -370,10 +370,10 @@ lib disasm
 
 ```session indented
 /> hex f800 4 disasm decimal
- F800  4C 7C EB  jmp $EB7C
- F803  4C B5 EB  jmp $EBB5
- F806  4C 8D EE  jmp $EE8D
- F809  4C 30 EB  jmp $EB30
+ F800  4C 8D EB  jmp $EB8D
+ F803  4C C6 EB  jmp $EBC6
+ F806  4C DD EE  jmp $EEDD
+ F809  4C 41 EB  jmp $EB41
 /> hex f950 2 disasm decimal
  F950  4C 61 E2  jmp $E261
  F953  4C 06 E3  jmp $E306
