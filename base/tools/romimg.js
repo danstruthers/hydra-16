@@ -17,13 +17,14 @@
 //   the banks after them  the ROM disk's HydraFS volume (/rom), as big as its files need (whole banks)
 // A small module isn't a bank's: plan() finds each one that's linked at $A000 (and may move) the first bank with room,
 // at the lowest page there, and the build links it at that page; build() then places it there again (the same way).
-// Banks in socket order: the Nth bank used is the CPU's bank N with bits 6 and 7 swapped (socketBank), so what's
-// there fills the sockets (512K chips, 32 banks each) in turn, and the storage driver reads the ROM disk the same way
-// (rom_read).  A module of two banks doesn't straddle the 64th: its banks are N and N + 1 to the CPU too.
+// Banks in socket order: the Nth bank used is the CPU's bank N (socketBank, once a swap of bits 6 and 7 that the
+// board turned out not to make), so what's there fills the sockets (512K chips, 32 banks each) in turn, and the
+// storage driver reads the ROM disk the same way (rom_read).
 //
 // The image is the chips' view, not the CPU's: the board swaps A13 (each bank's $C000 half comes first), and on
-// the V1 board a bank number's bits 2 and 3, and 6 and 7, trade places before they reach the chips, so bank b
-// sits at bank swap(b)'s place (sim/lib/machine.js: romBank).  It's whole chips, as many as what's there needs: chip k
+// the V1 board a bank number's bits 2 and 3 trade places before they reach the chips (bits 6 and 7 reach the
+// chip select straight: measured on the board, 2026-10-13), so bank b sits at bank swap(b)'s place
+// (sim/lib/machine.js: romBank).  It's whole chips, as many as what's there needs: chip k
 // is its 512K from k * 512K (build.js writes each to bin/promK.bin).
 //
 // Usage: node tools/romimg.js OUT.bin --init NAME [--hwtest OLD_PAGED_ROM.bin --bios BIOS.bin] [--romfs MANIFEST
@@ -45,8 +46,8 @@ const SIGNATURE = 'Hydra-16 reborn paged ROM: block 0 this and the ROM disk\'s p
   'bank 1 the hardware test; the modules from bank 2, then the ROM disk\'s volume\r\n';
 const BLOCKS_PER_BANK = BANK / 512, ROM_BANKS = 256, CHIP = 32 * BANK, CPU_SUMMED = 64;
 const HWT_BANK = 1, HWT_SUMS = 0xDF00, HWT_SUMS_SIZE = 256, FIRST_MODULE_BANK = 2;
-const romBank = b => (b & 0x33) | ((b & 0x04) << 1) | ((b & 0x08) >> 1) | ((b & 0x40) << 1) | ((b & 0x80) >> 1);
-const socketBank = n => (n & 0x3F) | ((n & 0x40) << 1) | ((n & 0x80) >> 1);   // (The Nth bank in socket order)
+const romBank = b => (b & 0xF3) | ((b & 0x04) << 1) | ((b & 0x08) >> 1);     // (Bank b's place in the chips: bits 2 and 3 crossed)
+const socketBank = n => n;                                  // (The Nth bank in socket order is the CPU's bank N: bits 6 and 7 go straight)
 
 // CRC-16/CCITT-FALSE (polynomial $1021, from $FFFF), of n bytes from get(i): the hardware test's (hwt_rom.s)
 function crc16(get, n) {

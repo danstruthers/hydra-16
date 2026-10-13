@@ -25,21 +25,25 @@ design a card.
 
 ## The crossed bank bits
 
-On the board as built, two pairs of bank bits trade places between the bank registers and the memory, in **both**
-bank registers (`$00` for RAM, `$01` for ROM):
+On the board as built, one pair of bank bits trades places between the bank registers and the memory, in **both**
+bank registers (`$00` for RAM, `$01` for ROM): **bits 2 and 3**.  Data bit 2 drives `RAMB3`/`ROMB3`, and bit 3 drives
+`RAMB2`/`ROMB2` (IC1 and IC3, the registers' low nibbles).  Bits 4 to 7 reach the memory straight: on the drawing
+the high nibbles' chips (IC2 and IC4) have data bits 7 and 6 crossed into their inputs *and* their outputs labelled
+`RAMB6`/`RAMB7` the other way round, two crossings that cancel.  So a bank number's bit 5 is chip-select bit 0, bit 6
+is bit 1 and bit 7 is bit 2, and chip k in the decoder's order holds banks 32k to 32k + 31.  (Bits 6 and 7 were
+thought crossed too, until 2026-10-13, when the first ROM to put files in a third chip read an empty socket on
+the board: bank `$40` reaches U34, bank `$80` nothing.)
 
-* **Bits 2 and 3**: data bit 2 drives `RAMB3`/`ROMB3`, and bit 3 drives `RAMB2`/`ROMB2` (IC1 and IC3).
-* **Bits 6 and 7**: the same for `RAMB6`/`RAMB7` and `ROMB6`/`ROMB7`.
-
-So the bank a program selects as `b` is the hardware's bank `swap(b)`.  It's always the same memory for the same `b`, so
-**the software never needs to care**, with two exceptions:
+So the bank a program selects as `b` is the hardware's bank `swap(b)`, with bits 2 and 3 exchanged.  It's always the
+same memory for the same `b`, so **the software never needs to care**, with two exceptions:
 
 * **Tracing a fault to a chip.**  Shared bank IDs `$F4-$F7` are on **U28**, and `$F8-$FB` on **U27** (not the other way
-  round); memory card 4 answers module number 8 and card 8 module 4.  IDs whose bits 2 and 3 are equal (`$F0-$F3`,
-  `$FC-$FF`) aren't affected.
-* **Building a ROM image.**  Paged ROM bank `b` sits at bank `swap(b)` in the chips.  The build (`base/tools/romimg.js`)
-  writes the chips' view, and the emulator (`base/sim/lib/machine.js`) reads it the same way, so a `promN.bin` is
-  burned as it is.
+  round).  IDs whose bits 2 and 3 are equal (`$F0-$F3`, `$FC-$FF`) aren't affected, and a memory card answers the
+  module number it's jumpered as (bits 4 to 7 are straight).
+* **Building a ROM image.**  Paged ROM bank `b` sits at bank `swap(b)` in the chips: within a chip, banks 4-7 and 8-11
+  change places.  The build (`base/tools/romimg.js`) writes the chips' view, and the emulator (`base/sim/lib/machine.js`)
+  reads it the same way, so a `promN.bin` is burned as it is, and chip k (U31, U32, U34 ... in the architecture's
+  table) holds banks 32k to 32k + 31.
 
 The schematic shows the board as built; don't "fix" it, or every ROM image would have to change.
 
