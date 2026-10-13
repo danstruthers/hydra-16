@@ -11,4 +11,6 @@ name that isn't there) has HyBASIC's own number where there is one that fits (53
 256 plus the system's code (Appendix G).
 
 A number is an integer of any length, a rational, a decimal or a complex number, and arithmetic on them is exact
-(Chapter 18). A string is a sequence of bytes, each 0 to 255, up to 64K of them.
+(Chapter 18). A string is a sequence of bytes, each 0 to 255, up to 64K of them. A string written in a program is enclosed in
+double quotes and can hold any character but the double quote itself: there is no doubled form for one inside a
+string. `CHR$(34)` is the way to make one.
