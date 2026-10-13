@@ -88,33 +88,43 @@ The answers are fixed decimals, rounded at the last place. Each language has its
 
 ## 18.3 Bases
 
-When we write a number like 365, each digit's place means something: 3 hundreds, 6 tens and 5 ones. Each place is
-worth ten times the place to its right. That's **base 10**, or **decimal**, and we use it because we have ten
-fingers. But any number can be the base:
+Section 1.6 showed three ways to write a number. In **decimal** (base 10) each place is worth ten times the one to
+its right. In **binary** (base 2) each is worth twice. In **hexadecimal** (base 16) each is worth sixteen times,
+and the digits run on from 9 through A to F. If any of that is hazy, read section 1.6 again before going on.
 
-* In **base 2**, **binary**, each place is worth twice the one to its right: ones, twos, fours, eights ... and the
-  only digits are 0 and 1. 1010 in binary is one eight, no fours, one two and no ones: ten. Computers work in
-  binary inside, because a wire can be off (0) or on (1).
-* In **base 16**, **hexadecimal** (or **hex**), each place is worth sixteen times the one to its right, so it needs
-  sixteen digits: 0 to 9, then A to F for ten to fifteen. FF is fifteen sixteens and fifteen ones: 255. Programmers
-  use hex because each hex digit is exactly four binary digits, so it's a short way to write binary.
+Nothing limits the idea to those three. Any whole number from 2 up can be a base: a base needs that many digits,
+and each place is worth that many times the one to its right.
 
-| Decimal | Binary | Hex |
-|---|---|---|
-| 5 | 101 | 5 |
-| 10 | 1010 | A |
-| 15 | 1111 | F |
-| 16 | 10000 | 10 |
-| 255 | 11111111 | FF |
+* **Base 8**, **octal**, has the digits 0 to 7, and its places are worth 1, 8, 64, 512 and so on. One octal digit
+  is exactly three bits, as one hex digit is four, and some older computers used octal where the Hydra uses hex.
+* **Base 3** has the digits 0, 1 and 2, and its places are worth 1, 3, 9, 27, 81 and so on.
+* **Base 36** uses every digit and every letter: 0 to 9, then A to Z for ten to thirty-five.
+
+Here is one number, a hundred, in six bases:
+
+| Base | Its name | A hundred | Because |
+|---|---|---|---|
+| 2 | Binary | 1100100 | 64 + 32 + 4 |
+| 3 | | 10201 | 81 + 2 × 9 + 1 |
+| 8 | Octal | 144 | 64 + 4 × 8 + 4 |
+| 10 | Decimal | 100 | 100 |
+| 16 | Hexadecimal | 64 | 6 × 16 + 4 |
+| 36 | | 2S | 2 × 36 + 28 (S is the digit for 28) |
 
 `calc -b` shows its answer in another base. The base is named by a **base string**: `b` for binary, `x` for hex,
-and so on:
+`o` for octal and more (the next section lists them), or a number and `r` for any base at all (section 18.5):
 
 ```session
-/> calc -b b 10
-1010
-/> calc -b x 255
-FF
+/> calc -b b 100
+1100100
+/> calc -b x 100
+64
+/> calc -b o 100
+144
+/> calc -b 3r 100
+10201
+/> calc -b 36r 100
+2S
 ```
 
 ## 18.4 The named bases
