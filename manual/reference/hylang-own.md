@@ -28,14 +28,21 @@ The result is another function, which takes the rest: `((add 1) 5)` is `(add 1 5
 has, it is an error, unless the function uses `&_`, which is the list of the extra ones. A function made with
 no formals refers to its arguments as `&1`, `&2` and so on.
 
+The built-in functions follow the same rule. `(cons 1)` is not an error but a function, waiting for its
+list, and so is a built-in function called with no arguments at all: `(join)` is `join` itself. One given
+more arguments than it takes is an error that says so: `'len' takes 1 argument, not 2`. And a call whose
+first item is not a function is the error `S-Expression starts with incorrect type. Got Number, Expected
+Function.` The entries do not repeat these for every function.
+
 **Errors.** An error is a value, printed as `Error: ` and a message. A function that is given an error as an
 argument does not run: the error is its result. So an error travels outward through every expression that
 contains it until `try` catches it or it reaches the prompt. `(error "text")` makes one.
 
 **Numbers** are those of Chapter 18: integers of any length, exact fractions, decimals, complex numbers.
 
-Each entry says what kind of thing it describes: a special form, a function, or a function of the library,
-which is written in hylang itself and loaded as hylang starts.
+Each entry says what kind of thing it describes: a special form, a function, a function of the library,
+which is written in hylang itself and loaded as hylang starts, or one of the Hydra's libraries, which a
+program loads with `use` (the entries named "gpio library", "snd library" and so on).
 
 ## and, or
 
