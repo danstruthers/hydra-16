@@ -1,0 +1,774 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>The Hydra-16 Technical Reference</title>
+<base href="file:///C:/Users/dsstr/AppData/Local/Temp/claude/c--source-hydra-2/09452e21-a6de-4b34-897a-8ab9e265bd24/scratchpad/manual/manual/">
+<style>
+/* The Hydra-16 User's and Builder's Manual: the printed book's look (build.js puts this in the HTML) */
+
+@page {
+  size: 8.5in 11in;
+  margin: 0.9in 0.85in 0.85in 0.85in;
+  @top-left { content: ""; font: italic 8.5pt Georgia, serif; color: #555; vertical-align: bottom; padding-bottom: 6pt; }
+  @top-right { content: "HYDRA-16 MANUAL"; font: 7.5pt "Arial Black", Arial, sans-serif; letter-spacing: 1.5pt; color: #888; vertical-align: bottom; padding-bottom: 6pt; }
+  @bottom-center { content: counter(page); font: bold 9pt Georgia, serif; color: #333; }
+}
+@page :first { @top-right { content: none; } @bottom-center { content: none; } }
+@page front { @top-right { content: none; } }
+@page part { @top-right { content: none; } @bottom-center { content: none; } }
+
+html { font-size: 10.5pt; }
+body { font-family: Georgia, "Times New Roman", serif; line-height: 1.45; color: #161616; margin: 0; }
+section { break-before: page; }
+.mk { position: absolute; font-size: 1px; color: #fff; }
+
+/* ---- The title page */
+.title-page { height: 9.1in; display: flex; flex-direction: column; justify-content: space-between; }
+.title-page .top { text-align: left; }
+.title-page .brand { font: 11pt "Arial Black", Arial, sans-serif; letter-spacing: 4pt; color: #333; margin: 0; }
+.title-page h1.book { font: 64pt/0.95 "Arial Black", Arial, sans-serif; letter-spacing: -1pt; margin: 0.25in 0 0.05in; color: #111; }
+.title-page .sub { font: italic 22pt Georgia, serif; margin: 0 0 0.3in; color: #222; }
+.title-page .art { align-self: center; width: 5.6in; }
+.title-page .bottom { display: flex; justify-content: space-between; align-items: flex-end; font: 10pt Georgia, serif; color: #333; }
+.title-page .bottom .os { font: 12pt "Arial Black", Arial, sans-serif; letter-spacing: 1pt; }
+
+.stripes { display: flex; flex-direction: column; gap: 3pt; margin: 0 0 14pt; }
+.stripes i { display: block; height: 5pt; }
+.stripes i:nth-child(1) { background: #e23d28; }
+.stripes i:nth-child(2) { background: #f08a24; }
+.stripes i:nth-child(3) { background: #f2c12e; }
+.stripes i:nth-child(4) { background: #3fa046; }
+.stripes i:nth-child(5) { background: #2a62b8; }
+.title-page .stripes i { height: 9pt; }
+
+/* ---- Part pages */
+.part-page { height: 9in; display: flex; flex-direction: column; justify-content: center; }
+.part-page .part-num { font: 14pt "Arial Black", Arial, sans-serif; letter-spacing: 6pt; text-transform: uppercase; color: #555; margin: 18pt 0 4pt; }
+.part-page h1 { font: 40pt/1.05 "Arial Black", Arial, sans-serif; margin: 0 0 24pt; }
+.part-page p { font-size: 12pt; max-width: 5.2in; }
+.part-page .stripes i { height: 12pt; }
+
+/* ---- Chapter openers */
+header.opener { margin: 0.1in 0 26pt; }
+header.opener .label { font: 11pt "Arial Black", Arial, sans-serif; letter-spacing: 5pt; color: #444; margin: 10pt 0 2pt; }
+header.opener .label .num { display: inline-block; font-size: 22pt; letter-spacing: 0; color: #fff; background: #1d1d1d; border-radius: 7pt; padding: 0 9pt; margin-left: 6pt; vertical-align: middle; }
+header.opener h1 { font: 30pt/1.1 "Arial Black", Arial, sans-serif; margin: 6pt 0 0; letter-spacing: -0.5pt; border-bottom: 3pt solid #1d1d1d; padding-bottom: 8pt; }
+
+/* ---- Headings */
+h1 { font: 26pt/1.1 "Arial Black", Arial, sans-serif; margin: 0 0 18pt; }
+h2 { font: 15pt/1.2 "Arial Black", Arial, sans-serif; margin: 22pt 0 8pt; padding-bottom: 3pt; border-bottom: 1.2pt solid #1d1d1d; break-after: avoid; }
+h3 { font: bold 12pt/1.25 Arial, Helvetica, sans-serif; margin: 16pt 0 5pt; break-after: avoid; }
+h4 { font: bold italic 10.5pt Georgia, serif; margin: 12pt 0 4pt; break-after: avoid; }
+h5, h6 { font: bold 10pt Arial, sans-serif; margin: 10pt 0 3pt; break-after: avoid; }
+p { margin: 0 0 7pt; orphans: 3; widows: 3; }
+a { color: inherit; text-decoration: none; }
+strong { font-weight: bold; }
+
+/* ---- Listings: typed (bold) and the Hydra's answers */
+code { font-family: "Courier New", Courier, monospace; font-size: 0.95em; }
+pre { font: 8.8pt/1.32 "Courier New", Courier, monospace; background: #f5f2e9; border-left: 3pt solid #3a3a3a; padding: 6pt 9pt; margin: 6pt 0 9pt;
+  white-space: pre-wrap; word-break: break-word; break-inside: avoid; }
+pre code { font-size: 1em; }
+pre.session { background: #f1f4ee; border-left-color: #3fa046; }
+pre.session b { font-weight: bold; color: #000; }
+pre .note { font-style: italic; font-family: Georgia, serif; color: #2a62b8; }
+pre.long { break-inside: auto; }
+
+/* ---- Boxes: > **NOTE:** ... */
+blockquote { margin: 9pt 0; padding: 6pt 10pt; border-left: 3pt solid #999; background: #f7f7f7; break-inside: avoid; }
+blockquote.box { border: 1.3pt solid #333; border-left-width: 6pt; background: #fff; }
+blockquote.box > p:first-child > strong:first-child { font: 9pt "Arial Black", Arial, sans-serif; letter-spacing: 1pt; margin-right: 4pt; }
+blockquote.note { border-color: #2a62b8; }
+blockquote.note > p:first-child > strong:first-child { color: #2a62b8; }
+blockquote.try-this, blockquote.try-it { border-color: #3fa046; background: #f4faf3; }
+blockquote.try-this > p:first-child > strong:first-child, blockquote.try-it > p:first-child > strong:first-child { color: #2e7d33; }
+blockquote.caution, blockquote.warning, blockquote.danger { border-color: #e23d28; background: #fdf3f1; }
+blockquote.caution > p:first-child > strong:first-child, blockquote.warning > p:first-child > strong:first-child, blockquote.danger > p:first-child > strong:first-child { color: #c0301f; }
+blockquote.for-teachers, blockquote.teachers { border-color: #7a4bb0; background: #f8f4fc; }
+blockquote.for-teachers > p:first-child > strong:first-child { color: #6a3aa0; }
+blockquote.tip, blockquote.hint { border-color: #f08a24; background: #fff8ef; }
+blockquote.tip > p:first-child > strong:first-child, blockquote.hint > p:first-child > strong:first-child { color: #c76a10; }
+blockquote.how-it-works, blockquote.under-the-hood { border-color: #555; background: #f4f4f4; }
+/* (A chapter's opening: what it's for, and what it needs) */
+blockquote.in-this-chapter { border: 0; border-top: 2.2pt solid #111; border-bottom: 0.8pt solid #111; background: #fff; padding: 6pt 2pt; margin: 4pt 0 12pt; }
+blockquote.in-this-chapter > p:first-child > strong:first-child { color: #111; }
+
+/* ---- Lists, tables, definitions */
+ul, ol { margin: 0 0 8pt; padding-left: 20pt; }
+li { margin: 0 0 3pt; }
+li > p { margin: 0 0 4pt; }
+table { border-collapse: collapse; margin: 6pt 0 10pt; font-size: 9.3pt; width: 100%; break-inside: auto; }
+thead { display: table-header-group; }
+tr { break-inside: avoid; }
+th { font: bold 8.5pt Arial, Helvetica, sans-serif; text-transform: uppercase; letter-spacing: 0.5pt; text-align: left; background: #e9e4d6; border-top: 1.5pt solid #1d1d1d; border-bottom: 1pt solid #1d1d1d; padding: 4pt 6pt; }
+td { border-bottom: 0.5pt solid #b8b2a2; padding: 3.5pt 6pt; vertical-align: top; }
+td code { font-size: 0.92em; }
+dl { margin: 4pt 0 10pt; }
+dt { font: bold 9.6pt "Courier New", Courier, monospace; margin: 8pt 0 1pt; break-after: avoid; }
+dd { margin: 0 0 4pt 22pt; }
+hr { border: 0; border-top: 1pt solid #999; margin: 14pt 0; }
+img { max-width: 100%; }
+figure { margin: 10pt 0 12pt; text-align: center; break-inside: avoid; }
+figure img, figure svg { max-width: 100%; }
+figcaption { font: italic 9pt Georgia, serif; color: #333; margin-top: 4pt; }
+kbd { font: bold 8.5pt Arial, sans-serif; border: 0.8pt solid #555; border-radius: 3pt; padding: 0 3pt; background: #fafafa; box-shadow: 0 1pt 0 #777; white-space: nowrap; }
+
+/* ---- Contents */
+h1.contents-title { font: 30pt "Arial Black", Arial, sans-serif; border-bottom: 3pt solid #1d1d1d; padding-bottom: 6pt; }
+.toc p { margin: 0; display: flex; align-items: baseline; }
+.toc a { flex: 0 1 auto; }
+.toc .dots { flex: 1 1 auto; border-bottom: 1pt dotted #888; margin: 0 4pt; transform: translateY(-3pt); }
+.toc .pg { flex: 0 0 auto; min-width: 2.2em; text-align: right; }
+.toc-part { font: 11pt "Arial Black", Arial, sans-serif; letter-spacing: 1pt; text-transform: uppercase; margin-top: 14pt !important; border-bottom: 1pt solid #1d1d1d; padding-bottom: 2pt; }
+.toc-part .pg { display: none; }
+.toc-ch { font: bold 10.5pt Arial, Helvetica, sans-serif; margin-top: 7pt !important; break-after: avoid; }
+.toc-ch .tnum { display: inline-block; min-width: 2.1em; }
+.toc-sec { font-size: 9.2pt; padding-left: 2.1em; color: #333; }
+.toc-front { font: bold 10.5pt Arial, sans-serif; margin-top: 6pt !important; }
+
+/* ---- The index */
+h1.index-title { font: 30pt "Arial Black", Arial, sans-serif; border-bottom: 3pt solid #1d1d1d; padding-bottom: 6pt; }
+.index { column-count: 3; column-gap: 14pt; font-size: 8.4pt; line-height: 1.25; }
+.index .ix-letter { font: 12pt "Arial Black", Arial, sans-serif; margin: 8pt 0 2pt; break-after: avoid; }
+.index .ix { margin: 0 0 1pt; padding-left: 1.2em; text-indent: -1.2em; break-inside: avoid; }
+.index .ix-pg { margin-left: 0.5em; color: #555; }
+.index .ix-lang { font-size: 7pt; color: #666; }
+
+/* ---- Appendix D's table of the opcodes: 16 columns */
+.opmatrix table { font-size: 6.2pt; table-layout: fixed; }
+.opmatrix th, .opmatrix td { padding: 1.5pt 1pt; text-align: center; letter-spacing: 0; }
+.opmatrix th { text-transform: none; }
+.opmatrix td:first-child, .opmatrix th:first-child { width: 4%; }
+
+/* ---- Small things */
+.small { font-size: 9pt; }
+.center { text-align: center; }
+.keys { white-space: nowrap; }
+.screen { font: 9pt/1.25 "Courier New", monospace; background: #1e2a1e; color: #d8f3c8; padding: 8pt 10pt; border-radius: 6pt; white-space: pre; break-inside: avoid; }
+.two-col { columns: 2; column-gap: 18pt; }
+.two-col dt { break-after: avoid; }
+.pagebreak { break-before: page; }
+
+/* ---- On screen (the HTML read in a browser): pages as a column */
+@media screen {
+  body { width: 6.8in; margin: 0.4in auto; background: #fff; }
+  section { border-top: 3px dashed #ccc; padding-top: 0.3in; margin-top: 0.4in; }
+  .title-page, .part-page { height: auto; min-height: 7in; }
+}
+
+/* The Technical Reference: its extra furniture (added to manual/book.css).  An entry is a ## heading: its name in
+   the code face, a rule above it; its parts' labels (#### Syntax, #### Errors ...) are small capitals */
+body.book-reference h2 { font-family: "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace; font-size: 15pt; border-top: 2.2pt solid #111;
+  padding-top: 5pt; margin-top: 22pt; break-after: avoid; }
+body.book-reference h2 code { font-size: inherit; background: none; padding: 0; }
+body.book-reference h4 { font: bold 8.5pt "Segoe UI", Helvetica, Arial, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #333;
+  margin: 10pt 0 3pt; break-after: avoid; }
+body.book-reference dl { margin: 4pt 0 4pt 0; }
+body.book-reference dt { font-weight: 600; margin-top: 3pt; }
+body.book-reference dd { margin-left: 16pt; }
+body.book-reference table { break-inside: avoid; }
+
+@page { @top-right { content: "TECHNICAL REFERENCE"; } }
+@page :first { @top-right { content: none; } }
+@page front { @top-right { content: none; } }
+@page part { @top-right { content: none; } }
+@page p1 { @top-left { content: "Chapter 1 \00B7  HyBASIC Keywords"; } }
+@page p2 { @top-left { content: "Chapter 2 \00B7  Commands"; } }
+@page p3 { @top-left { content: "Chapter 3 \00B7  System Calls"; } }
+@page p4 { @top-left { content: "Chapter 4 \00B7  HyForth Words"; } }
+@page p5 { @top-left { content: "Chapter 5 \00B7  hylang Forms"; } }
+</style></head><body class="book-reference">
+<section class="title-page" style="page: front">
+  <div class="top">
+    <div class="stripes"><i></i><i></i><i></i><i></i><i></i></div>
+    <p class="brand">THE HYDRA PROJECT</p>
+    <h1 class="book">HYDRA-16</h1>
+    <p class="sub">Technical Reference</p>
+  </div>
+  <img class="art" src="figures/cover.svg" alt="The Hydra-16 computer">
+  <div class="bottom">
+    <div>Every keyword, word, form, command and system call:<br>its syntax, its exact behaviour, its limits and its errors</div>
+    <div class="os">HydraOS 1.0 &middot; preview</div>
+  </div>
+</section>
+
+<section class="front" style="page: front"><h1 id="about-this-reference">About This Reference</h1>
+<p>This is a <strong>preview</strong> of the <em>Hydra-16 Technical Reference</em>: ten entries, at least one from each kind of thing the
+finished book will cover, written to settle its depth and its tone before the rest is done.</p>
+<p>The <em>User's and Builder's Manual</em> teaches the Hydra, and its appendices list what each language has in a line
+apiece. This book is where to look when a line isn't enough: when the question is what a keyword does with an
+empty string, which errors a call can return, or what is left in a variable after a loop ends. It doesn't teach.
+It assumes the manual has been read, and it says the same thing about every entry, in the same order.</p>
+<h2 id="what-it-will-hold">What it will hold</h2>
+<table><thead><tr><th>Chapter</th><th>Entries</th><th>In this preview</th></tr></thead><tbody><tr><td>1. HyBASIC keywords</td><td>Every statement, function and operator</td><td><code>ABS</code>, <code>ASC</code>, <code>FOR</code>...<code>NEXT</code>, <code>INPUT</code>, <code>OPEN</code></td></tr>
+<tr><td>2. Commands</td><td>The shell's own commands, and the programs in <code>/bin</code></td><td><code>cp</code></td></tr>
+<tr><td>3. System calls</td><td>Every call a program can make</td><td><code>OPEN</code>, <code>READ</code></td></tr>
+<tr><td>4. HyForth words</td><td>The core and every library</td><td><code>&gt;number</code></td></tr>
+<tr><td>5. hylang forms</td><td>The special forms and the functions</td><td><code>let</code></td></tr></tbody></table>
+<p>The other reference appendices of the manual (the 65C02's instructions, the character sets, the memory map, the
+errors) will follow in the same way.</p>
+<h2 id="how-to-read-an-entry">How to read an entry</h2>
+<p>Every entry has the same parts, in this order. A part with nothing to say is left out.</p>
+<dl><dt>Syntax</dt><dd>Each form the thing can take. Words in <code>CAPITALS</code> (or, for a command or a HyForth word, as printed) are typed
+as they are; <em>italic</em> names stand for what you supply; <code>[ ]</code> encloses what can be left out; <code>{ | }</code> is a choice
+of one; <code>...</code> means the last item can repeat.</dd>
+<dt>Arguments</dt><dd>Each one: its type, its range, and what it means. For a system call, the registers in.</dd>
+<dt>Result</dt><dd>What a function returns, a word leaves on the stack, or a call leaves in the registers.</dd>
+<dt>Description</dt><dd>What happens, in the order it happens: what is evaluated and when, what is changed, where it stops.</dd>
+<dt>Errors</dt><dd>Each error it can raise, with its number and its message as the Hydra prints it, and what causes it.</dd>
+<dt>Notes</dt><dd>Limits, edge cases, and behaviour that differs from what another system's user would expect.</dd>
+<dt>See also</dt><dd>Related entries.</dd>
+<dt>Example</dt><dd>A transcript, taken from the Hydra. Every one in this book is replayed in the emulator when the book is built,
+so what is printed here is what the ROM does.</dd></dl>
+<h2 id="how-it-was-written">How it was written</h2>
+<p>Each entry was written from the interpreter's, the program's or the kernel's source, and each statement of
+behaviour in it was then tried on the system. Where the source and the trial disagreed with what one would expect
+of the language elsewhere (QuickBASIC, the Forth standard), the entry says what the Hydra does.</p>
+<p>Section and chapter numbers such as "section 13.2" and "Appendix G" are the <em>User's and Builder's Manual</em>'s.</p></section>
+<section class="front contents" style="page: front"><h1 class="contents-title">Contents</h1><div class="toc"><p class="toc-front"><a href="#about-this-reference">About This Reference</a><span class="dots"></span><span class="pg">2</span></p>
+<p class="toc-ch"><a href="#chapter-1-hybasic-keywords"><span class="tnum">1</span>HyBASIC Keywords</a><span class="dots"></span><span class="pg">5</span></p>
+<p class="toc-sec"><a href="#abs">ABS</a><span class="dots"></span><span class="pg">5</span></p>
+<p class="toc-sec"><a href="#asc">ASC</a><span class="dots"></span><span class="pg">6</span></p>
+<p class="toc-sec"><a href="#for-next">FOR ... NEXT</a><span class="dots"></span><span class="pg">7</span></p>
+<p class="toc-sec"><a href="#input">INPUT</a><span class="dots"></span><span class="pg">8</span></p>
+<p class="toc-sec"><a href="#open">OPEN</a><span class="dots"></span><span class="pg">11</span></p>
+<p class="toc-ch"><a href="#chapter-2-commands"><span class="tnum">2</span>Commands</a><span class="dots"></span><span class="pg">13</span></p>
+<p class="toc-sec"><a href="#cp">cp</a><span class="dots"></span><span class="pg">13</span></p>
+<p class="toc-ch"><a href="#chapter-3-system-calls"><span class="tnum">3</span>System Calls</a><span class="dots"></span><span class="pg">16</span></p>
+<p class="toc-sec"><a href="#open-2">OPEN</a><span class="dots"></span><span class="pg">16</span></p>
+<p class="toc-sec"><a href="#read">READ</a><span class="dots"></span><span class="pg">18</span></p>
+<p class="toc-ch"><a href="#chapter-4-hyforth-words"><span class="tnum">4</span>HyForth Words</a><span class="dots"></span><span class="pg">21</span></p>
+<p class="toc-sec"><a href="#number">&gt;number</a><span class="dots"></span><span class="pg">21</span></p>
+<p class="toc-ch"><a href="#chapter-5-hylang-forms"><span class="tnum">5</span>hylang Forms</a><span class="dots"></span><span class="pg">23</span></p>
+<p class="toc-sec"><a href="#let">let</a><span class="dots"></span><span class="pg">23</span></p></div></section>
+<section class="chapter" style="page: p1"><header class="opener"><div class="stripes"><i></i><i></i><i></i><i></i><i></i></div><p class="label">CHAPTER <span class="num">1</span></p><h1 id="chapter-1-hybasic-keywords">HyBASIC Keywords</h1></header>
+<p>HyBASIC compiles a program whole before it runs it: every line is read, every name resolved and every block
+matched, and only then does the first statement execute. An error the compiler finds (a <code>FOR</code> with no <code>NEXT</code>, a
+label that isn't there) is therefore reported before anything has run, with the line it was found on. A line typed
+at the prompt without a number is compiled and run the same way, as a program of one line.</p>
+<p>An error is reported as its message, in small letters. <code>ERR</code> then holds its number, <code>ERR$</code> the message and <code>ERL</code>
+the line; the numbers given in each entry are <code>ERR</code>'s. A failure reported by the system (a disk that is full, a
+name that isn't there) has HyBASIC's own number where there is one that fits (53, file not found), and otherwise
+256 plus the system's code (Appendix G).</p>
+<p>A number is an integer of any length, a rational, a decimal or a complex number, and arithmetic on them is exact
+(Chapter 18). A string is a sequence of bytes, each 0 to 255, up to 64K of them.</p>
+<h2 id="abs">ABS</h2>
+<p>A numeric function: the absolute value of a real number.</p>
+<h4 id="syntax">Syntax</h4>
+<pre class="text"><code>ABS(x)</code></pre>
+<h4 id="arguments">Arguments</h4>
+<dl><dt><em>x</em></dt><dd>A numeric expression whose value is real: an integer, a rational or a decimal.</dd></dl>
+<h4 id="result">Result</h4>
+<p><em>x</em> if <em>x</em> is zero or more, and −<em>x</em> if it is less. The result is the same kind of number as <em>x</em>, and exact: an
+integer gives an integer, of whatever length; a rational gives a rational in lowest terms; a decimal gives a
+decimal with the same digits. There is no largest value and no overflow.</p>
+<h4 id="errors">Errors</h4>
+<table><thead><tr><th><code>ERR</code></th><th>Message</th><th>Cause</th></tr></thead><tbody><tr><td>5</td><td><code>illegal function call</code></td><td><em>x</em> is complex. A complex number has no sign, and <code>ABS</code> does not give its modulus</td></tr>
+<tr><td>13</td><td><code>type mismatch</code></td><td><em>x</em> is a string</td></tr>
+<tr><td>2</td><td><code>syntax error</code></td><td>No argument, or more than one</td></tr></tbody></table>
+<h4 id="notes">Notes</h4>
+<p>For the modulus of a complex number <em>z</em>, use <code>SQR(REAL(z) ^ 2 + IMAG(z) ^ 2)</code>.</p>
+<h4 id="see-also">See also</h4>
+<p><code>SGN</code>, <code>INT</code>, <code>FIX</code>, <code>REAL</code>, <code>IMAG</code>.</p>
+<h4 id="example">Example</h4>
+<pre class="session"><code>&gt; <b>PRINT ABS(-7); ABS(7); ABS(-7/2); ABS(-2.5)</b>
+ 7  7  7/2  2.5
+&gt; <b>PRINT ABS(-2 ^ 100)</b>
+ 1267650600228229401496703205376
+&gt; <b>PRINT ABS(3+4i)</b>
+illegal function call
+&gt; <b>PRINT ERR; SQR(REAL(3+4i) ^ 2 + IMAG(3+4i) ^ 2)</b>
+ 5  5</code></pre>
+<h2 id="asc">ASC</h2>
+<p>A numeric function: the code of a string's first byte.</p>
+<h4 id="syntax-2">Syntax</h4>
+<pre class="text"><code>ASC(s$)</code></pre>
+<h4 id="arguments-2">Arguments</h4>
+<dl><dt><em>s$</em></dt><dd>A string expression of one byte or more.</dd></dl>
+<h4 id="result-2">Result</h4>
+<p>An integer from 0 to 255: the value of the first byte of <em>s$</em>. The rest of the string is not looked at. A string
+holds bytes, not characters of any one set, so the result is the byte itself; which character the console draws
+for it depends on the character set in use (Appendix E). The codes 32 to 126 are ASCII's.</p>
+<h4 id="errors-2">Errors</h4>
+<table><thead><tr><th><code>ERR</code></th><th>Message</th><th>Cause</th></tr></thead><tbody><tr><td>5</td><td><code>illegal function call</code></td><td><em>s$</em> is the empty string</td></tr>
+<tr><td>13</td><td><code>type mismatch</code></td><td>The argument is a number</td></tr></tbody></table>
+<h4 id="notes-2">Notes</h4>
+<p><code>ASC</code> is the inverse of <code>CHR$</code> for one byte: <code>ASC(CHR$(n))</code> is <em>n</em> for every <em>n</em> from 0 to 255, including 0 (a
+zero byte doesn't end a string). To test a string that may be empty, test <code>LEN(s$)</code> first.</p>
+<h4 id="see-also-2">See also</h4>
+<p><code>CHR$</code>, <code>LEN</code>, <code>MID$</code>, <code>VAL</code>.</p>
+<h4 id="example-2">Example</h4>
+<pre class="session"><code>&gt; <b>PRINT ASC("A"); ASC("Abc"); ASC(" "); ASC(CHR$(0) + "x"); ASC(CHR$(255))</b>
+ 65  65  32  0  255
+&gt; <b>PRINT ASC("")</b>
+illegal function call</code></pre>
+<h2 id="for-next">FOR ... NEXT</h2>
+<p>A statement block: a loop that counts a variable from one value to another.</p>
+<h4 id="syntax-3">Syntax</h4>
+<pre class="text"><code>FOR v = start TO limit [STEP step]
+    [statements]
+NEXT [v [, v] ...]</code></pre>
+<h4 id="arguments-3">Arguments</h4>
+<dl><dt><em>v</em></dt><dd>The loop's counter: a simple numeric variable. An array's element can't be one.</dd>
+<dt><em>start</em>, <em>limit</em>, <em>step</em></dt><dd>Numeric expressions. <em>step</em> is 1 if <code>STEP</code> is left out.</dd></dl>
+<h4 id="description">Description</h4>
+<ol><li><em>start</em> is assigned to <em>v</em>, and <em>limit</em> and <em>step</em> are evaluated and kept. They are evaluated this once only:
+a variable they were worked out from can change inside the loop without changing them.</li>
+<li>The test: if <em>step</em> is zero or more and <em>v</em> is greater than <em>limit</em>, or <em>step</em> is negative and <em>v</em> is less than
+<em>limit</em>, the loop ends, and the program goes on after its <code>NEXT</code>. The test is made before the first pass too,
+so the statements may not run at all; <em>v</em> then keeps the value <em>start</em>.</li>
+<li>Otherwise the statements run.</li>
+<li>At <code>NEXT</code>, <em>step</em> is added to <em>v</em>, and the loop goes back to the test at step 2.</li></ol>
+<p>When the loop ends at the test, <em>v</em> holds the first value that failed it: after <code>FOR I = 1 TO 3</code>, <code>I</code> is 4.</p>
+<p>The addition is exact. A loop with a fractional step, <code>STEP 0.1</code> or <code>STEP 1/3</code>, reaches its limit on the last
+pass, where a binary floating-point BASIC may stop one short.</p>
+<p>The statements may assign to <em>v</em>; <code>NEXT</code> adds <em>step</em> to whatever it then holds.</p>
+<p><code>EXIT FOR</code> leaves the innermost loop at once, with <em>v</em> as it is.</p>
+<p><code>NEXT</code> with no variable closes the innermost open loop. <code>NEXT v</code> does the same, and the compiler checks that <em>v</em>
+is that loop's counter. <code>NEXT j, i</code> is <code>NEXT j : NEXT i</code>.</p>
+<h4 id="errors-3">Errors</h4>
+<table><thead><tr><th><code>ERR</code></th><th>Message</th><th>Cause</th></tr></thead><tbody><tr><td>26</td><td><code>FOR without NEXT</code></td><td>A <code>FOR</code> whose <code>NEXT</code> isn't there. Found when the program is compiled: nothing has run</td></tr>
+<tr><td>1</td><td><code>NEXT without FOR</code></td><td>A <code>NEXT</code> with no loop open, or naming a variable that isn't the innermost loop's counter</td></tr>
+<tr><td>80</td><td><code>block without its start or end</code></td><td>The loop and another block overlap: a <code>NEXT</code> inside a one-line <code>IF</code>, say</td></tr>
+<tr><td>13</td><td><code>type mismatch</code></td><td><em>v</em> is a string variable, or <em>start</em>, <em>limit</em> or <em>step</em> a string</td></tr>
+<tr><td>2</td><td><code>syntax error</code></td><td><em>v</em> is not a simple variable</td></tr></tbody></table>
+<h4 id="notes-3">Notes</h4>
+<p>With a <em>step</em> of 0 the counter never changes and the loop doesn't end by itself: only <code>EXIT FOR</code>, an error or
+<kbd>CTRL</kbd>-<kbd>C</kbd> ends it.</p>
+<p>At the prompt, a line is compiled alone, so a loop typed there must be whole on its line: <code>FOR I = 1 TO 3</code> by
+itself is <code>FOR without NEXT</code>.</p>
+<h4 id="see-also-3">See also</h4>
+<p><code>EXIT</code>, <code>DO</code>...<code>LOOP</code>, <code>WHILE</code>...<code>WEND</code>.</p>
+<h4 id="example-3">Example</h4>
+<pre class="session"><code>&gt; <b>FOR I = 1 TO 3 : PRINT I; : NEXT : PRINT "then"; I</b>
+ 1  2  3 then 4
+&gt; <b>FOR I = 5 TO 1 : PRINT I; : NEXT : PRINT "then"; I</b>
+then 5
+&gt; <b>FOR X = 0 TO 1 STEP 1/3 : PRINT X; : NEXT : PRINT</b>
+ 0  1/3  2/3  1
+&gt; <b>N = 3 : FOR I = 1 TO N : N = 10 : PRINT I; : NEXT : PRINT</b>
+ 1  2  3
+&gt; <b>FOR I = 1 TO 2 : FOR J = 1 TO 2 : PRINT I; J; : NEXT J, I : PRINT</b>
+ 1  1  1  2  2  1  2  2
+&gt; <b>FOR I = 1 TO 2 : FOR J = 1 TO 2 : NEXT I</b>
+NEXT without FOR</code></pre>
+<h2 id="input">INPUT</h2>
+<p>A statement: reads a line and assigns its fields to variables. The line comes from the console, or from a file.</p>
+<h4 id="syntax-4">Syntax</h4>
+<pre class="text"><code>INPUT [;] ["prompt" {; | ,}] v [, v] ...
+INPUT #f, v [, v] ...</code></pre>
+<h4 id="arguments-4">Arguments</h4>
+<dl><dt><em>prompt</em></dt><dd>A string in quotes, written before the line is read. It must be a literal: a string variable there is a syntax
+error. After it, <code>;</code> adds a question mark and a space, and <code>,</code> adds nothing. With no prompt at all, <code>? </code> is
+written.</dd>
+<dt><em>v</em></dt><dd>A numeric or string variable, or an array's element. Each takes one field of the line.</dd>
+<dt><em>f</em></dt><dd>The number of a file opened <code>FOR INPUT</code> or <code>FOR BINARY</code>.</dd></dl>
+<h4 id="description-2">Description</h4>
+<p><strong>From the console.</strong> The prompt is written and one line is read, with the console's line editing (section 13.2).
+Only its first 255 bytes are used. The line is split into fields at its commas, and each variable takes a field,
+in order:</p>
+<ul><li>A numeric variable's field is read as a number, in any form a program's own numbers may take: <code>12</code>, <code>-7/2</code>,
+<code>2.5</code>, <code>1e3</code>, <code>&amp;HFF</code>. An empty field is 0.</li>
+<li>A string variable's field is the text up to the next comma, with the spaces before and after it dropped. A
+field that starts with a double quote runs to the closing quote instead, and can hold commas and spaces.</li></ul>
+<p>If the line has fewer fields than there are variables, or more, or a numeric field that isn't a number, HyBASIC
+writes <code>?Redo from start</code> and the statement starts again from its prompt. It is never an error.</p>
+<p><strong>From a file.</strong> One line of file <em>f</em> is read, and split and assigned in the same way, with three differences.
+There is no prompt and nothing is asked again: a numeric field that isn't a number is 0. If the line runs out of
+fields before the variables do, the next line is read and its fields carry on. Fields left on the line after the
+last variable is filled are dropped: the next <code>INPUT #</code> starts at the next line.</p>
+<p><strong>The semicolon after <code>INPUT</code></strong> matters only when input doesn't come from the console (<code>basic prog &lt;answers</code>).
+The console echoes the Return that ends a line; a file doesn't, so HyBASIC writes a new line itself after reading
+one. <code>INPUT ;</code> leaves it out, and what is printed next follows the prompt on the same line.</p>
+<h4 id="errors-4">Errors</h4>
+<table><thead><tr><th><code>ERR</code></th><th>Message</th><th>Cause</th></tr></thead><tbody><tr><td>62</td><td><code>input past end of file</code></td><td>No line is left: in file <em>f</em>, or in standard input when it isn't the console</td></tr>
+<tr><td>52</td><td><code>bad file number</code></td><td>File <em>f</em> isn't open</td></tr>
+<tr><td>54</td><td><code>bad file mode</code></td><td>File <em>f</em> is open <code>FOR OUTPUT</code> or <code>FOR APPEND</code></td></tr>
+<tr><td>2</td><td><code>syntax error</code></td><td>The prompt isn't a string literal</td></tr></tbody></table>
+<p><kbd>CTRL</kbd>-<kbd>C</kbd> at the prompt stops the program, as it does anywhere else (<code>Break</code>).</p>
+<h4 id="notes-4">Notes</h4>
+<p>To read a whole line, commas and all, into one string, use <code>LINE INPUT</code>. To read keys without waiting for
+Return, use <code>INKEY$</code> or <code>INPUT$</code>.</p>
+<h4 id="see-also-4">See also</h4>
+<p><code>LINE INPUT</code>, <code>INPUT$</code>, <code>INKEY$</code>, <code>OPEN</code>, <code>EOF</code>, <code>READ</code>.</p>
+<h4 id="example-4">Example</h4>
+<pre class="session"><code>&gt; <b>10 INPUT "Two numbers"; A, B</b>
+&gt; <b>20 PRINT A + B</b>
+&gt; <b>30 INPUT "Name, age: ", N$, G</b>
+&gt; <b>40 PRINT "["; N$; "]"; G</b>
+&gt; <b>50 INPUT X, Y$</b>
+&gt; <b>60 PRINT X; "["; Y$; "]"</b>
+&gt; <b>RUN</b>
+Two numbers? <b>3</b>
+?Redo from start
+Two numbers? <b>1/2, 2.5</b>
+ 3
+Name, age: <b>Sam Smith , 12</b>
+[Sam Smith] 12
+? <b>, "x, y"</b>
+ 0 [x, y]</code></pre>
+<p>Fields that carry on from one line of a file to the next:</p>
+<pre class="session"><code>&gt; <b>10 OPEN "/ram/n.txt" FOR OUTPUT AS #1</b>
+&gt; <b>20 PRINT #1, "1" : PRINT #1, "2, 3" : PRINT #1, "4"</b>
+&gt; <b>30 CLOSE #1 : OPEN "/ram/n.txt" FOR INPUT AS #1</b>
+&gt; <b>40 INPUT #1, A, B : PRINT A; B</b>
+&gt; <b>50 INPUT #1, C : PRINT C</b>
+&gt; <b>60 INPUT #1, D</b>
+&gt; <b>RUN</b>
+ 1  2
+ 4
+line 60: input past end of file</code></pre>
+<h2 id="open">OPEN</h2>
+<p>A statement: opens a file, and gives it a number for the statements that read and write it.</p>
+<h4 id="syntax-5">Syntax</h4>
+<pre class="text"><code>OPEN path$ FOR {INPUT | OUTPUT | APPEND | BINARY} AS [#]f [LEN = n]</code></pre>
+<h4 id="arguments-5">Arguments</h4>
+<dl><dt><em>path$</em></dt><dd>A string expression: the file's name. A name that doesn't start with <code>/</code> is taken from the current directory
+(<code>CHDIR</code>). It can be any name in the program's namespace: a file on a disk, or a device such as <code>/dev/cons</code>.</dd>
+<dt><em>f</em></dt><dd>A numeric expression from 1 to 255: the number the file is known by until it is closed. The <code>#</code> is optional.</dd>
+<dt><em>n</em></dt><dd>Accepted, evaluated and ignored. QuickBASIC's record length has no meaning here: <code>GET</code> and <code>PUT</code> take a
+position in bytes.</dd></dl>
+<h4 id="description-3">Description</h4>
+<p>The mode decides how the file is opened, and which statements may then use it:</p>
+<table><thead><tr><th>Mode</th><th>A file that exists</th><th>A file that doesn't</th><th>Starts at</th><th>May then be used by</th></tr></thead><tbody><tr><td><code>INPUT</code></td><td>Opened for reading</td><td>Error 53</td><td>Its first byte</td><td><code>INPUT #</code>, <code>LINE INPUT #</code>, <code>INPUT$</code>, <code>EOF</code>, <code>LOF</code>, <code>LOC</code>, <code>SEEK</code></td></tr>
+<tr><td><code>OUTPUT</code></td><td>Emptied, and opened for writing</td><td>Made</td><td>Its first byte</td><td><code>PRINT #</code>, <code>WRITE #</code>, <code>LOF</code>, <code>LOC</code>, <code>SEEK</code></td></tr>
+<tr><td><code>APPEND</code></td><td>Opened for writing, its contents kept</td><td>Made</td><td>Its end</td><td><code>PRINT #</code>, <code>WRITE #</code>, <code>LOF</code>, <code>LOC</code>, <code>SEEK</code></td></tr>
+<tr><td><code>BINARY</code></td><td>Opened for reading and writing</td><td>Made</td><td>Its first byte</td><td>All of the above, and <code>GET</code> and <code>PUT</code></td></tr></tbody></table>
+<p>Up to 8 files can be open at once. A file stays open until <code>CLOSE</code> names it, <code>CLOSE</code> with no number closes them
+all, or a <code>RUN</code> starts (which closes every file first). Leaving HyBASIC closes them too.</p>
+<p><code>EOF(f)</code> is always true (−1) for a file opened <code>FOR OUTPUT</code> or <code>FOR APPEND</code>.</p>
+<h4 id="errors-5">Errors</h4>
+<table><thead><tr><th><code>ERR</code></th><th>Message</th><th>Cause</th></tr></thead><tbody><tr><td>52</td><td><code>bad file number</code></td><td><em>f</em> is less than 1 or more than 255</td></tr>
+<tr><td>55</td><td><code>file already open</code></td><td>Number <em>f</em> is in use</td></tr>
+<tr><td>67</td><td><code>too many files</code></td><td>8 files are open already</td></tr>
+<tr><td>53</td><td><code>file not found</code></td><td><code>FOR INPUT</code>: there's no such file. Any mode: a directory in the path isn't there</td></tr>
+<tr><td>70</td><td><code>permission denied</code></td><td>The file, or its disk (<code>/rom</code>), can't be written</td></tr>
+<tr><td>13</td><td><code>type mismatch</code></td><td><em>path$</em> is a number, or <em>f</em> a string</td></tr></tbody></table>
+<p>The system's other refusals come through as its own errors (a full disk is 61, <code>disk full</code>).</p>
+<h4 id="notes-5">Notes</h4>
+<p>The limit of 8 is HyBASIC's own. Each open file also takes one of the task's 16 file descriptors, three of which
+are the console's.</p>
+<p>One file can be open under two numbers at once, each with its own position: opening it <code>FOR INPUT</code> as <code>#2</code> while
+it is open <code>FOR OUTPUT</code> as <code>#1</code> is allowed, and reads what has been written so far.</p>
+<p>A file written with <code>PRINT #</code> holds exactly the bytes <code>PRINT</code> would have sent to the screen, each line ended by a
+line feed (byte 10).</p>
+<h4 id="see-also-5">See also</h4>
+<p><code>CLOSE</code>, <code>PRINT</code>, <code>WRITE</code>, <code>INPUT</code>, <code>LINE INPUT</code>, <code>GET</code>, <code>PUT</code>, <code>SEEK</code>, <code>EOF</code>, <code>LOF</code>, <code>LOC</code>, <code>KILL</code>, <code>NAME</code>.</p>
+<h4 id="example-5">Example</h4>
+<pre class="session"><code>&gt; <b>OPEN "/ram/log.txt" FOR OUTPUT AS #1 : PRINT #1, "one" : PRINT LOF(1); EOF(1) : CLOSE #1</b>
+ 4 -1
+&gt; <b>OPEN "/ram/log.txt" FOR APPEND AS #1 : PRINT #1, "two" : PRINT LOF(1) : CLOSE #1</b>
+ 8
+&gt; <b>OPEN "/ram/log.txt" FOR INPUT AS #1 : LINE INPUT #1, L$ : PRINT L$; EOF(1)</b>
+one 0
+&gt; <b>PRINT #1, "three"</b>
+bad file mode
+&gt; <b>OPEN "/ram/other.txt" FOR OUTPUT AS #1</b>
+file already open
+&gt; <b>CLOSE : OPEN "/ram/nothere.txt" FOR INPUT AS #1</b>
+file not found
+&gt; <b>PRINT ERR</b>
+ 53</code></pre></section>
+<section class="chapter" style="page: p2"><header class="opener"><div class="stripes"><i></i><i></i><i></i><i></i><i></i></div><p class="label">CHAPTER <span class="num">2</span></p><h1 id="chapter-2-commands">Commands</h1></header>
+<p>A command is a program in <code>/bin</code>, or one of the shell's own. Each ends with an <strong>exit status</strong>, which rc keeps in
+<code>$status</code>: empty for success, and a short text for failure. Most commands fail with the status <code>1</code>, and with
+<code>usage</code> when their arguments make no sense. A command's messages go to standard error, as <code>name: what: why</code>, so
+they aren't mixed into a pipe's data.</p>
+<p>A path in an argument can be at most 63 characters long once it has been made absolute.</p>
+<h2 id="cp">cp</h2>
+<p>A program (<code>/bin/cp</code>): copies files, and with <code>-r</code> directories.</p>
+<h4 id="syntax-6">Syntax</h4>
+<pre class="text"><code>cp [-r] from to
+cp [-r] from ... dir</code></pre>
+<h4 id="arguments-6">Arguments</h4>
+<dl><dt><code>-r</code></dt><dd>Copy directories too: each one's whole tree.</dd>
+<dt><em>from</em></dt><dd>A file to copy, or with <code>-r</code> a directory. There can be several if the last name is a directory.</dd>
+<dt><em>to</em></dt><dd>The copy's name. If it is an existing directory, the copy goes into it under <em>from</em>'s own name.</dd>
+<dt><em>dir</em></dt><dd>An existing directory. Each <em>from</em> is copied into it under its own name.</dd></dl>
+<h4 id="description-4">Description</h4>
+<p>Each <em>from</em> is handled in turn, and one that fails doesn't stop the rest.</p>
+<p>A file is copied by opening it for reading, creating the destination, and reading and writing 512 bytes at a
+time until a read returns nothing. Creating the destination empties a file that is already there. The copy is a
+new file: it has its own date, the time of copying, and is not read-only even if the original is.</p>
+<p>Before copying, <code>cp</code> compares the two files' device, disk and file identifier. If they are the same file, by
+whatever two names, it refuses to copy it onto itself, which would otherwise empty it.</p>
+<p>Anything that can be opened and read can be a <em>from</em>, a device included: <code>cp /dev/time now</code> copies what one read
+of the clock gives.</p>
+<p>Without <code>-r</code>, a <em>from</em> that is a directory is reported and skipped. With <code>-r</code>, the directory is made at the
+destination (one already there is used as it is), and then everything in it is copied in the same way, down to
+16 directories deep.</p>
+<h4 id="exit-status">Exit status</h4>
+<p>Empty if every file was copied. <code>1</code> if any was not. <code>usage</code>, after a line saying how <code>cp</code> is used, if there are
+fewer than two names or an option other than <code>-r</code>.</p>
+<h4 id="errors-6">Errors</h4>
+<p>Each is printed as <code>cp: name: reason</code>, where <em>name</em> is the file that could not be read or written.</p>
+<table><thead><tr><th>Reason</th><th>Cause</th></tr></thead><tbody><tr><td><code>not found</code></td><td><em>from</em> isn't there, or a directory in <em>to</em>'s path isn't</td></tr>
+<tr><td><code>is a directory</code></td><td><em>from</em> is a directory, and there's no <code>-r</code></td></tr>
+<tr><td><code>not a directory</code></td><td>Several <em>from</em>s, and the last name isn't a directory</td></tr>
+<tr><td><code>the same file</code></td><td><em>from</em> and <em>to</em> are one file</td></tr>
+<tr><td><code>read-only</code></td><td>The destination's disk can't be written (<code>/rom</code>)</td></tr>
+<tr><td><code>name too long</code></td><td>The destination's path would pass 63 characters</td></tr></tbody></table>
+<p>Any other reason is the system's own error message for what failed (Appendix G): a full disk, for one.</p>
+<h4 id="notes-6">Notes</h4>
+<p>If a read or a write fails part-way, the destination is left holding what was written up to then.</p>
+<p><code>cp</code> doesn't ask before it overwrites.</p>
+<h4 id="see-also-6">See also</h4>
+<p><code>mv</code>, <code>rm</code>, <code>mkdir</code>, <code>cat</code>, <code>cmp</code>.</p>
+<h4 id="example-6">Example</h4>
+<!-- session
+rc
+cd /ram
+-->
+<pre class="session"><code>% <b>echo hello &gt;a.txt</b>
+% <b>cp a.txt b.txt; cat b.txt</b>
+hello
+% <b>mkdir d; cp a.txt b.txt d; ls d</b>
+a.txt
+b.txt
+% <b>cp d e; echo $status</b>
+cp: d: is a directory
+1
+% <b>cp -r d e; ls e</b>
+a.txt
+b.txt
+% <b>cp a.txt a.txt</b>
+cp: a.txt: the same file
+% <b>cp a.txt /rom/x</b>
+cp: /rom/x: read-only
+% <b>cp a.txt; echo $status</b>
+usage: cp [-r] from to, or cp [-r] from ... dir
+usage</code></pre></section>
+<section class="chapter" style="page: p3"><header class="opener"><div class="stripes"><i></i><i></i><i></i><i></i><i></i></div><p class="label">CHAPTER <span class="num">3</span></p><h1 id="chapter-3-system-calls">System Calls</h1></header>
+<p>A system call is a <code>jsr</code> to a fixed address in the jump table at $F800. Its arguments go in A, X, Y and the call
+registers r0 to r15 (two bytes each, in the zero page from $02); its results come back in the same places, a
+16-bit result in A (low byte) and X (high byte). On return, C = 0 means success. C = 1 means failure, and A
+holds an error code (Appendix G). A call may change A, X, Y, the flags and r0 to r15, including registers it
+doesn't use for a result; it never changes the program's own zero page, $22 to $7F.</p>
+<p>A call that <em>can wait</em> may suspend the task until something happens elsewhere: a key, a disk, another task. A
+note delivered to the task ends such a wait, and the call returns <code>E_INTR</code>.</p>
+<p>Each call's name is defined in <code>hydra.inc</code> (<code>/lib/as</code>), with the constants and error codes used here.</p>
+<h2 id="open-2">OPEN</h2>
+<p>System call $F8C0: opens a file that exists, and returns a file descriptor for it. It can wait.</p>
+<h4 id="syntax-7">Syntax</h4>
+<pre class="text"><code>            LDR r0, path        ; r0 = the address of the path
+            lda #mode
+            jsr OPEN
+            bcs failed          ; A = the error code
+            sta fd              ; A = the file descriptor</code></pre>
+<h4 id="arguments-7">Arguments</h4>
+<dl><dt>r0</dt><dd>The address of the path: its bytes, then a zero byte.</dd>
+<dt>A</dt><dd>The mode: one of <code>O_READ</code> (0), <code>O_WRITE</code> (1) or <code>O_RDWR</code> (2), to which can be added <code>O_TRUNC</code> ($10), to empty
+the file as it is opened, and <code>O_NONBLOCK</code> ($40), to make reads and writes of this descriptor return <code>E_AGAIN</code>
+where they would otherwise wait.</dd></dl>
+<h4 id="result-3">Result</h4>
+<p>C = 0, and A = the file descriptor: a number from 0 to 15, the lowest one the task has free.</p>
+<h4 id="description-5">Description</h4>
+<ol><li>The path is made absolute and clean. One that doesn't start with <code>/</code> (or with <code>#</code>, a device's own name) has
+the task's current directory put before it; then <code>.</code> elements and doubled slashes are removed, and each <code>..</code>
+removes the element before it. The result may be at most 63 bytes (<code>PATH_MAX</code>).</li>
+<li>The path is looked up in the task's namespace (section 9.5). Where a directory is a union of several (section 9.7), each
+member is tried in turn, and the first that has the name is the one opened. A member whose device has gone is
+passed over as if it didn't have the name.</li>
+<li>The device's driver is asked to open the file in the mode given. If it refuses, its error is the call's.</li>
+<li>The descriptor is set to the file, at offset 0.</li></ol>
+<p>A descriptor has an offset of its own, which <code>READ</code>, <code>WRITE</code> and <code>SEEK</code> move. Descriptors made from it by <code>DUP</code>,
+and those a child task is given by <code>SPAWN</code>, share that offset; a second <code>OPEN</code> of the same file does not.</p>
+<p>Opening a directory with <code>O_READ</code> succeeds: it reads as a sequence of 64-byte stat records, one for each file in
+it. When the directory is a union, the records of all its members follow one another.</p>
+<p><code>OPEN</code> never makes a file. <code>CREATE</code> does, and opens it.</p>
+<h4 id="errors-7">Errors</h4>
+<table><thead><tr><th>Code</th><th>Name</th><th>Cause</th></tr></thead><tbody><tr><td>$20</td><td><code>E_NOENT</code></td><td>No such file, in any member of a union</td></tr>
+<tr><td>$2B</td><td><code>E_NODEV</code></td><td>The path names a device that isn't there</td></tr>
+<tr><td>$0A</td><td><code>E_NAMETOOLONG</code></td><td>The path, made absolute, is longer than 63 bytes</td></tr>
+<tr><td>$26</td><td><code>E_MFILE</code></td><td>The task has all 16 of its descriptors in use</td></tr>
+<tr><td>$27</td><td><code>E_NFILE</code></td><td>All 48 of the system's channels are in use (every open file in every task takes one; <code>DUP</code>s share)</td></tr>
+<tr><td>$05</td><td><code>E_INTR</code></td><td>A note arrived while the call was waiting for the driver</td></tr></tbody></table>
+<p>A driver adds its own: <code>E_ROFS</code> ($29) for a write mode on a read-only disk, and <code>E_ISDIR</code> ($23) for a write mode on
+a directory.</p>
+<h4 id="notes-7">Notes</h4>
+<p>Descriptors 0, 1 and 2 are standard input, output and error, already open when a program starts. A task that
+closes one of them will get that number from its next <code>OPEN</code>.</p>
+<p>A descriptor that isn't closed is closed when the task ends.</p>
+<h4 id="from-the-languages">From the languages</h4>
+<table><thead><tr><th>Language</th><th>Form</th></tr></thead><tbody><tr><td>HyForth (<code>lib hydra</code>)</td><td><code>sys-open</code> ( <em>z-addr mode</em> -- <em>fd ior</em> ), the path zero-terminated (<code>&gt;z</code> makes one)</td></tr>
+<tr><td>hylang</td><td><code>(sys-open path [mode])</code>: the descriptor. A failure is an error, its text the path and the system's message</td></tr>
+<tr><td>HyBASIC</td><td><code>SYS "OPEN"</code>; or, for most purposes, the <code>OPEN</code> statement (Chapter 1)</td></tr></tbody></table>
+<h4 id="see-also-7">See also</h4>
+<p><code>CREATE</code>, <code>CLOSE</code>, <code>READ</code>, <code>WRITE</code>, <code>SEEK</code>, <code>DUP</code>, <code>FSTAT</code>.</p>
+<h4 id="example-7">Example</h4>
+<p>From hylang. Descriptors 0 to 2 are in use, so the first file opened is 3:</p>
+<pre class="session"><code>hylang&gt; <b>(sys-open "/dev/time" 0)</b>
+=&gt; 3
+hylang&gt; <b>(sys-open "/dev/nothing" 0)</b>
+=&gt; Error: /dev/nothing: not found
+hylang&gt; <b>(sys-open "/rom/bin/ls" 1)</b>
+=&gt; Error: /rom/bin/ls: read-only
+hylang&gt; <b>(sys-open "/ram" 1)</b>
+=&gt; Error: /ram: is a directory
+hylang&gt; <b>(sys-open "#q/x" 0)</b>
+=&gt; Error: #q/x: no such device</code></pre>
+<h2 id="read">READ</h2>
+<p>System call $F8C9: reads bytes from an open file into memory. It can wait.</p>
+<h4 id="syntax-8">Syntax</h4>
+<pre class="text"><code>            LDR r0, buf         ; r0 = where the bytes go
+            LDR r1, count       ; r1 = how many, at most
+            lda fd
+            jsr READ
+            bcs failed          ; A = the error code
+                                ; A/X = how many were read; 0 is the end of the file</code></pre>
+<h4 id="arguments-8">Arguments</h4>
+<dl><dt>A</dt><dd>A file descriptor, open with <code>O_READ</code> or <code>O_RDWR</code>.</dd>
+<dt>r0</dt><dd>The address of a buffer in the task's memory.</dd>
+<dt>r1</dt><dd>The most bytes to read: 0 to 65,535. The buffer must have room for them.</dd></dl>
+<h4 id="result-4">Result</h4>
+<p>C = 0, and A/X = the number of bytes read, which were put in the buffer from its start. The descriptor's offset
+has moved on by that many.</p>
+<h4 id="description-6">Description</h4>
+<p>The kernel asks the file's driver for the bytes at the descriptor's offset, at most 512 at a time (<code>IO_UNIT</code>),
+and repeats until one of three things happens:</p>
+<ul><li><strong>The count is reached.</strong> The result equals r1.</li>
+<li><strong>The file ends.</strong> The result is what there was before the end; a read that starts at the end returns 0. A
+result of 0 is how the end of a file is recognised, and it is not an error.</li>
+<li><strong>The driver returns fewer bytes than it was asked for.</strong> The kernel stops there and returns them. This is how a
+device says "that is all for now": the console returns one line, however large the buffer.</li></ul>
+<p>A result smaller than r1 therefore does not by itself mean the end of the file. A program that needs exactly <em>n</em>
+bytes must call <code>READ</code> again for the remainder until it has them or gets 0.</p>
+<p>When the driver has nothing yet (no key typed, an empty pipe), the task waits. With <code>O_NONBLOCK</code> set on the
+descriptor, the call returns <code>E_AGAIN</code> instead.</p>
+<p>A directory reads as 64-byte stat records (<code>SR_SIZE</code>), one for each file in it: ask for a multiple of 64.</p>
+<h4 id="errors-8">Errors</h4>
+<table><thead><tr><th>Code</th><th>Name</th><th>Cause</th></tr></thead><tbody><tr><td>$25</td><td><code>E_BADF</code></td><td>A isn't an open descriptor, or it was opened with <code>O_WRITE</code></td></tr>
+<tr><td>$04</td><td><code>E_AGAIN</code></td><td>Nothing to read yet, and the descriptor is non-blocking</td></tr>
+<tr><td>$05</td><td><code>E_INTR</code></td><td>A note arrived while the call was waiting</td></tr></tbody></table>
+<p>A driver adds its own: a disk that fails answers <code>E_IO</code> ($2A).</p>
+<h4 id="from-the-languages-2">From the languages</h4>
+<table><thead><tr><th>Language</th><th>Form</th></tr></thead><tbody><tr><td>HyForth (<code>lib hydra</code>)</td><td><code>sys-read</code> ( <em>fd c-addr u</em> -- <em>u2 ior</em> ): <em>u2</em> bytes were read</td></tr>
+<tr><td>hylang</td><td><code>(sys-read fd count)</code>: the bytes read, as a string</td></tr>
+<tr><td>HyBASIC</td><td><code>SYS "READ"</code>; or <code>INPUT #</code>, <code>LINE INPUT #</code>, <code>INPUT$</code> and <code>GET</code></td></tr></tbody></table>
+<h4 id="see-also-8">See also</h4>
+<p><code>OPEN</code>, <code>WRITE</code>, <code>SEEK</code>, <code>CLOSE</code>, <code>PIPE</code>.</p>
+<h4 id="example-8">Example</h4>
+<p>The offset moving on, a count cut short by the end of the file, and 0 at the end:</p>
+<!-- session
+echo hello world >/ram/t
+hylang
+-->
+<pre class="session"><code>hylang&gt; <b>(set {fd} (sys-open "/ram/t" 0))</b>
+=&gt; NIL
+hylang&gt; <b>(sys-read fd 5)</b>
+=&gt; "hello"
+hylang&gt; <b>(sys-read fd 100)</b>
+=&gt; " world\n"
+hylang&gt; <b>(sys-read fd 100)</b>
+=&gt; ""
+hylang&gt; <b>(sys-close fd)</b>
+=&gt; NIL</code></pre></section>
+<section class="chapter" style="page: p4"><header class="opener"><div class="stripes"><i></i><i></i><i></i><i></i><i></i></div><p class="label">CHAPTER <span class="num">4</span></p><h1 id="chapter-4-hyforth-words">HyForth Words</h1></header>
+<p>A cell is 16 bits. A double is two cells, 32 bits, its high cell on top of the stack. A flag is 0 for false and
+−1 (all bits set) for true. <em>ior</em> is 0 for success and a non-zero error code otherwise. Stack pictures follow the
+Forth standard's notation: <em>n</em> signed, <em>u</em> unsigned, <em>d</em> and <em>ud</em> doubles, <em>c-addr u</em> the address and length of
+a string.</p>
+<p>Each entry says which word set a word belongs to, and whether it is in the ROM core or needs a library loaded
+with <code>lib</code> first. Where a word is the standard's, the entry describes what HyForth does in the cases the
+standard leaves open.</p>
+<h2 id="number">&gt;number</h2>
+<p>Core word set, in the ROM core. Converts the digits at the start of a string, adding them to a double.</p>
+<h4 id="syntax-9">Syntax</h4>
+<pre class="text"><code>&gt;number  ( ud1 c-addr1 u1 -- ud2 c-addr2 u2 )</code></pre>
+<h4 id="arguments-9">Arguments</h4>
+<dl><dt><em>ud1</em></dt><dd>The number so far: 0 to start a new one.</dd>
+<dt><em>c-addr1 u1</em></dt><dd>The text to convert.</dd></dl>
+<h4 id="result-5">Result</h4>
+<dl><dt><em>ud2</em></dt><dd><em>ud1</em> with each converted digit added: for every digit, <em>ud</em> × <code>base</code> + the digit's value.</dd>
+<dt><em>c-addr2 u2</em></dt><dd>What was not converted: the address of the first character that isn't a digit and the number of characters
+from there to the end. <em>u2</em> is 0 if the whole string was digits, and <em>c-addr2</em> is then the address just past
+it.</dd></dl>
+<h4 id="description-7">Description</h4>
+<p>Characters are taken from the left for as long as each is a digit in the current <code>base</code>. The digits are <code>0</code> to
+<code>9</code>, then the letters <code>A</code> to <code>Z</code> for 10 to 35; small letters count as capitals. A character whose value is not
+less than <code>base</code> is not a digit, and conversion stops at it: in decimal <code>a</code> stops it, in hex <code>g</code> does.</p>
+<p>Nothing else is understood. A sign, a prefix (<code>$</code>, <code>#</code> or <code>%</code>) and a decimal point all stop the conversion like
+any other non-digit; an empty string converts nothing and returns <em>ud1</em> unchanged. Signs and prefixes are the
+text interpreter's business: it deals with them itself, and calls this word's code for the digits.</p>
+<h4 id="errors-9">Errors</h4>
+<p>None. A string with no digits is not an error: <em>ud2</em> = <em>ud1</em> and <em>u2</em> = <em>u1</em>.</p>
+<h4 id="notes-8">Notes</h4>
+<p>A value that passes 32 bits wraps: only its low 32 bits are kept, and no error is raised. (The standard calls
+this an ambiguous condition.) To read a number of any length, use the numbers library (<code>lib numbers</code>).</p>
+<p><code>base</code> can be 2 to 36.</p>
+<h4 id="see-also-9">See also</h4>
+<p><code>base</code>, <code>decimal</code>, <code>hex</code>, <code>s&gt;d</code>, <code>evaluate</code>.</p>
+<h4 id="example-9">Example</h4>
+<p><code>nip</code> drops the address, leaving the double (its low cell first, as <code>.s</code> shows it) and the count of characters
+not converted:</p>
+<pre class="session"><code>/&gt; <b>0 0 s" 123abc" &gt;number nip .s</b>
+&lt;3&gt; 123 0 3
+/&gt; <b>drop 2drop</b>
+/&gt; <b>hex 0 0 s" ff zz" &gt;number nip .s decimal</b>
+&lt;3&gt; FF 0 3
+/&gt; <b>drop 2drop</b>
+/&gt; <b>0 0 s" -5" &gt;number nip .s</b>
+&lt;3&gt; 0 0 2
+/&gt; <b>drop 2drop</b>
+/&gt; <b>0 0 s" 99999999999" &gt;number nip .s</b>
+&lt;3&gt; 2839 -20518 0</code></pre></section>
+<section class="chapter" style="page: p5"><header class="opener"><div class="stripes"><i></i><i></i><i></i><i></i><i></i></div><p class="label">CHAPTER <span class="num">5</span></p><h1 id="chapter-5-hylang-forms">hylang Forms</h1></header>
+<p>An expression in parentheses is evaluated: its first element names a function or a special form, and the rest
+are its arguments. A function's arguments are evaluated before it is called, left to right. A <strong>special form</strong>
+receives its arguments as they were written, and decides for itself which to evaluate and when; each entry for
+one says exactly that. An expression in braces, a Q-expression, is data: it is not evaluated until something
+runs it.</p>
+<p>A name is looked up in the current <strong>scope</strong>, then in the scope that encloses it, and so on out to the global
+scope. Each call of a function has a scope of its own, enclosed by the scope the function was made in.</p>
+<p>An error is a value: <code>Error: </code> and a message. An expression that is given an error as an argument returns it at
+once, so an error passes outward through whatever contains it until something catches it or it reaches the
+prompt.</p>
+<h2 id="let">let</h2>
+<p>A special form: evaluates expressions in a new scope, with names bound in it first.</p>
+<h4 id="syntax-10">Syntax</h4>
+<pre class="text"><code>(let {{name [value]} ...} body ...)
+(let body)</code></pre>
+<h4 id="arguments-10">Arguments</h4>
+<dl><dt><em>name</em></dt><dd>A symbol.</dd>
+<dt><em>value</em></dt><dd>An expression: what the name is bound to. If it is left out, the name is bound to <code>NIL</code>.</dd>
+<dt><em>body</em></dt><dd>An expression. It can also be written as a Q-expression, <code>{print x}</code>, which is then run as code.</dd></dl>
+<h4 id="result-6">Result</h4>
+<p>The value of the last <em>body</em> expression.</p>
+<h4 id="description-8">Description</h4>
+<ol><li>A new scope is made, enclosed by the scope the <code>let</code> is in.</li>
+<li>The bindings are taken in order. For each, <em>value</em> is evaluated <strong>in the new scope</strong>, and <em>name</em> is bound to
+the result there. A value can therefore use the names bound before it in the same <code>let</code>; a name bound twice
+keeps its last value.</li>
+<li>The <em>body</em> expressions are evaluated in order, in the new scope. The values of all but the last are discarded.</li>
+<li>The new scope is dropped, unless something made in it still refers to it: a function made by <code>fn</code> in the body
+keeps the scope, and can go on using its names after the <code>let</code> has returned (a closure).</li></ol>
+<p>A name bound by <code>let</code> hides one of the same name outside it for as long as the body runs, and the outer one is
+unchanged afterwards.</p>
+<p>Inside the body, <code>set</code> binds or changes a name in the <code>let</code>'s own scope; <code>set!</code> changes a name in whichever
+scope it was made, which may be outside; and <code>def</code> always binds globally.</p>
+<p>The last body expression is evaluated in tail position: a function whose body ends in a <code>let</code> that ends in a
+call to itself runs in constant stack, however many times it repeats.</p>
+<p>With one argument only, that argument is the body: <code>(let body)</code> evaluates it in a new, empty scope. This means
+<code>(let {{a 1}})</code> does not bind anything; its one argument is run as code, and the result is the list <code>{a 1}</code>.</p>
+<h4 id="errors-10">Errors</h4>
+<table><thead><tr><th>Message</th><th>Cause</th></tr></thead><tbody><tr><td><code>A 'let' binding is {name value}</code></td><td>A binding that isn't a list, whose first element isn't a symbol, or that has more than two elements</td></tr>
+<tr><td><code>'let' supplied too few parameters</code></td><td>No arguments at all</td></tr></tbody></table>
+<p>An error from evaluating a <em>value</em> or a <em>body</em> expression ends the <code>let</code> at once, and is its result.</p>
+<h4 id="see-also-10">See also</h4>
+<p><code>def</code>, <code>set</code>, <code>set!</code>, <code>fn</code>, <code>do</code>.</p>
+<h4 id="example-10">Example</h4>
+<pre class="session"><code>hylang&gt; <b>(let {{x 2} {y (+ x 1)}} (list x y))</b>
+=&gt; {2 3}
+hylang&gt; <b>(def {x} 10)</b>
+=&gt; NIL
+hylang&gt; <b>(let {{x 1}} (set {x} 5) x)</b>
+=&gt; 5
+hylang&gt; <b>x</b>
+=&gt; 10
+hylang&gt; <b>(def {add5} (let {{n 5}} (fn {a} {+ a n})))</b>
+=&gt; NIL
+hylang&gt; <b>(add5 1)</b>
+=&gt; 6
+hylang&gt; <b>n</b>
+=&gt; Error: Unbound Symbol 'n'
+hylang&gt; <b>(let {a 1} a)</b>
+=&gt; Error: A 'let' binding is {name value}</code></pre></section>
+</body></html>

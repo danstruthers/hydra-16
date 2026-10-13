@@ -1,0 +1,11 @@
+# The Hydra-16 Technical Reference: its files, in order (node manual/build.js reference)
+#! title: The Hydra-16 Technical Reference
+#! running: TECHNICAL REFERENCE
+#! out: hydra-16-reference
+#! index: no
+00-about.md
+r1-basic.md
+r2-commands.md
+r3-calls.md
+r4-forth.md
+r5-hylang.md
