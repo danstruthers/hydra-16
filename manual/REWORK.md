@@ -133,7 +133,7 @@ explain a word.
 ## The bugs found while writing: fixed
 
 The first editions of the three books worked round these faults in HydraOS. They're fixed now, each with a
-regression test (`node reborn/sim/test.js`: 130 tests), and the books' notes about them are gone.
+regression test (`node reborn/sim/test.js`: 132 tests), and the books' notes about them are gone.
 
 | The fault | The fix | Its test |
 |---|---|---|
@@ -152,8 +152,27 @@ One more turned up while the fixes were checked, and is the most serious of them
 |---|---|---|
 | The kernel: a program reading `/dev/kmesg` while a shell started another program could kill the Hydra (kdev, then init and the shells: only the other drivers left). Seen as `cat /dev/kmesg \| head -6`, the first command after the boot, printing an empty line and hanging: a matter of a few cycles' timing | A copy between two tasks' memory now holds the CPU till it's done (interrupts go on), so two copies never overlap. The kernel's message copy trusted the kernel task not to start a copy of its own meanwhile, and another task's `SPAWN` made it start one (`base/kernel/call.s`) | `kcopy2` |
 
-What's left of the console's type-ahead is a limit, not a fault: HydraOS doesn't tell a terminal to wait (its
-console driver sends no XON/XOFF, and doesn't use RTS), so a paste of more than about 300 keys into a program that
-isn't reading yet loses its end. HyBASIC's line entry itself keeps up with 9600 baud (1,300 keys pasted at its
-prompt arrive whole). Flow control to the sender would remove the limit; it's a decision for the console driver
-and the PC tool, not made here.
+## Flow control
+
+What was left of the console's type-ahead was a limit: about 300 keys that nothing had read, and then a paste
+lost its end. The console now tells the terminal to wait (branch `reborn-flow`):
+
+* **XON/XOFF**, the receiving side's: XOFF with 96 bytes unread in the receive ring, XON at 32. `/dev/serctl` takes
+  `x1` (as it starts) and `x0`, Plan 9's names, and reads as both its settings (`base/lib/serial.inc`,
+  `reborn/modules/cons/cons.s`). `/pc`'s frames stuff the two bytes.
+* **Not RTS/CTS**, though the board wires both to the DE-9: the R65C51 turns its transmitter off, at once, while it
+  holds RTS high (its data sheet's note to the command register), so the Hydra could hold the PC back only while
+  it sent nothing itself, not even an echo; and each byte it then sent would let one in.
+* **A terminal told to stop is let go after five seconds** if nothing has been read: a stopped terminal holds its
+  <kbd>CTRL</kbd>-<kbd>C</kbd> back too, and the program that isn't reading may be the one to stop.
+* **The emulators' terminal** honours XON and XOFF (both of them: `--flow none`, or a test's `flow: 'none'`, for
+  one that doesn't), and **the PC tool** does: its keys wait from XOFF to XON, a paste goes a few bytes at a time,
+  and <kbd>CTRL</kbd>-<kbd>C</kbd> goes at once.
+* Tests: `flow` (3,400 keys pasted at the line's rate, every line whole; a file of XONs and XOFFs through `/pc`),
+  `flowlet` (the five seconds), `pasteahead` (with `x0`: the old limit, the newest keys lost).
+* The books: 5.2 (set the terminal to XON/XOFF), 13.2 and 13.6, the glossary and the index.
+
+Not tried on a real board: the emulators' terminal is a model. Two things to look at there: the receive
+interrupt's high-mark path is as long as a <kbd>CTRL</kbd>-<kbd>C</kbd>'s (the 200-cycle budget's edge, as that
+was), and at 115200 baud a terminal that takes more than about 150 characters to obey an XOFF will still overrun
+the ring (the PC tool sends 2,000 keys a second at most, so it can't).

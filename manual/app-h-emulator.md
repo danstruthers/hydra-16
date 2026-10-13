@@ -19,6 +19,7 @@ node reborn/sim/run.js [options]
 | `--cycles N` | Stop at cycle N (without `-i`: 30,000,000, about 8.4 seconds of the Hydra's time) |
 | `--input TEXT` | Keys to type: `\r` or `\n` is <kbd>RETURN</kbd>, `\w` waits 2 million cycles. One key every 20,000 cycles, from cycle 200,000 |
 | `--paste` | Type `--input`'s keys as fast as the serial line takes them (a key that arrives before the last is read is lost, as on a real Hydra) |
+| `--flow none` | The emulator's terminal ignores the Hydra's XON and XOFF (section 13.6). Without this it obeys them, as a terminal set to XON/XOFF does |
 | `--win32-input` | With `-i` in Windows Terminal: lets <kbd>CTRL</kbd>-<kbd>TAB</kbd> and <kbd>CTRL</kbd>-<kbd>SHIFT</kbd>-<kbd>TAB</kbd> reach the Hydra (after you remove Windows Terminal's own use of them from its settings) |
 
 **The hardware:**

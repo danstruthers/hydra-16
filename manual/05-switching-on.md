@@ -96,13 +96,19 @@ Any terminal program that can use a serial port works too: **PuTTY** or **Tera T
 | Data bits | 8 |
 | Parity | None |
 | Stop bits | 1 |
-| Flow control | None |
+| Flow control | **XON/XOFF** |
 | Terminal type | VT100 or xterm |
 
 The first four are often written **9600 8N1**. In PuTTY, choose *Serial* as the connection type, type the port's
-name (like `COM3`) and the speed, and check *Connection → Serial → Flow control* is *None*. On macOS or Linux,
-`screen /dev/ttyUSB0 9600` starts `screen` on the port (to leave it, press <kbd>CTRL</kbd>-<kbd>A</kbd>, then
+name (like `COM3`) and the speed, and set *Connection → Serial → Flow control* to *XON/XOFF*. On macOS or Linux,
+`screen /dev/ttyUSB0 9600,ixon` starts `screen` on the port (to leave it, press <kbd>CTRL</kbd>-<kbd>A</kbd>, then
 <kbd>K</kbd>, then <kbd>Y</kbd>).
+
+> **HOW IT WORKS:** **Flow control** is how the Hydra says "wait!" when keys come faster than it can take them,
+> as they do when you paste a page of text. It sends one byte, called **XOFF**, to ask the terminal to stop, and
+> another, **XON**, when it's ready for more. A terminal set to *XON/XOFF* obeys them, and nothing you paste is
+> lost. With flow control set to *None* everything else still works, but a long paste may lose its end (section
+> 13.6). The PC tool obeys XON and XOFF without being told.
 
 > **HOW IT WORKS:** The Hydra's serial chip sends only while its *CTS* ("clear to send") line is on, and that line
 > comes from the PC's *RTS* ("request to send"). The PC tool and most terminal programs turn RTS on as they open the
@@ -132,11 +138,11 @@ task 1: init
 HydraOS 1.0 for the Hydra-16
 init: up in task 01
 T ST FL PA CPU    NAME
-0 01 00 FF 000052 kernel
+0 01 00 FF 000053 kernel
 1 01 00 FF 000013 init
 B 04 01 FF 000003 gpio
 C 04 01 FF 000004 snd
-D 04 01 FF 00000D kdev
+D 04 01 FF 00000C kdev
 E 04 01 FF 000075 storage
 F 04 01 FF 000050 cons
 hello, from init

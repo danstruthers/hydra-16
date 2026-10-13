@@ -101,14 +101,15 @@ works in two directions:
 * **Write a command to it**, as a line of text, to tell the driver to do something or change a setting.
 * **Read it**, to see the driver's settings, as lines of text.
 
-For example, the serial port's control file sets the speed:
+For example, the serial port's control file sets its speed and its flow control (section 13.6):
 
 ```session
 /> cat /dev/serctl
 b9600
+x1
 ```
 
-and `echo b115200 >/dev/serctl` would change it. Because commands are plain text, any program can send them, and
+and `echo b115200 >/dev/serctl` would change the speed. Because commands are plain text, any program can send them, and
 you can try them out at the shell before you use them in a program. A command the driver doesn't understand gives
 the error `invalid argument`:
 

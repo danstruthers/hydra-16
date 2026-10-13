@@ -757,13 +757,13 @@ note group, and its program.
 task  state   parent     cpu group  name
    0  ready   -          1.6     0  kernel
    1  wait    -          0.1     1  init
-   2  wait     1         0.2     2  forth -l
+   2  wait     1         0.3     2  forth -l
    3  event    1         0.0     1  wstart /bin/forth -l
    4  ready    2         0.0     2  ps -a
   11  idle    -          0.0    11  gpio
   12  idle    -          0.0    12  snd
-  13  idle    -          0.1    13  kdev
-  14  idle    -          1.6    14  storage
+  13  idle    -          0.0    13  kdev
+  14  idle    -          1.5    14  storage
   15  idle    -          0.5    15  cons
 ```
 
