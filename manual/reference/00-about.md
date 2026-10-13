@@ -1,25 +1,32 @@
 # About This Reference
 
-This is the *Hydra-16 Technical Reference*, **in progress**. Its first four chapters are complete: HyBASIC's keywords,
-the commands, the system calls and HyForth's words. hylang's chapter has one entry so far, to show what it will be.
+This is the *Hydra-16 Technical Reference*. Its five chapters cover HyBASIC's keywords, the commands, the system
+calls, HyForth's words and hylang's forms: every one has an entry.
+
+The chapters are not all made in the same way. HyBASIC's keywords and the commands were each written out by
+hand. The system calls are made from the kernel's own specification. For HyForth and hylang, the parts where a
+language's exact behaviour most needs saying were written by hand (what the Forth standard leaves to the
+system; the word families with several stack pictures; hylang's special forms), and the entries for the rest,
+the standard's words and the plain functions, give the word's or the function's form and what it does in a
+sentence, from the manual's tables.
 
 The *User's and Builder's Manual* teaches the Hydra, and its appendices list what each language has in a line
 apiece. This book is where to look when a line isn't enough: when the question is what a keyword does with an
 empty string, which errors a call can return, or what is left in a variable after a loop ends. It doesn't teach.
 It assumes the manual has been read, and it says the same thing about every entry, in the same order.
 
-## What it will hold
+## What it holds
 
-| Chapter | Entries | Written so far |
-|---|---|---|
-| 1. HyBASIC keywords | Every statement, function and operator | `ABS` to `XOR`: every keyword |
-| 2. Commands | The programs in `/bin`, and the shell's own commands | Every one |
-| 3. System calls | Every call, with the constants and the error codes | Every one |
-| 4. HyForth words | The core and every library | Every word |
-| 5. hylang forms | The special forms and the functions | `let` |
+| Chapter | Entries |
+|---|---|
+| 1. HyBASIC keywords | Every statement, function and operator: 175 |
+| 2. Commands | Every program in `/bin`, the system's own, and the shell's built-in commands |
+| 3. System calls | All 90, with every constant and error code |
+| 4. HyForth words | The core and every library: 300 entries |
+| 5. hylang forms | The special forms and the functions: 145 entries |
 
-The other reference appendices of the manual (the 65C02's instructions, the character sets, the memory map, the
-errors) will follow in the same way.
+The manual's other reference appendices (the 65C02's instructions, the character sets, the memory map) are
+not repeated here.
 
 ## How to read an entry
 
