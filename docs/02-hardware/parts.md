@@ -47,6 +47,10 @@ WDC's W65C22N and W65C51N are current:
 * **The W65C51N** has a known fault: its transmitter's status bit is stuck "empty" and it gives no transmitter
   interrupt.  The software allows for it: build with `node build.js --acia wdc` ([building it](building.md#programming-the-roms)).
 
+Both WDC chips have run on a 1.8D (2026-10-13: a W65C22 in U2 with no change, a W65C51N in U3 with the `--acia wdc`
+build).  U2's IRQ pin is the priority encoder's own input (`nIRQ0`), not a shared line, so the push-pull W65C22S works
+there as well as the open-drain N.
+
 **The sound chips** (U38 YM2151, U41 YM3012).  These are only available used, pulled from old equipment, and
 fakes are common: buy from a seller with a good record, and test them (the hardware test checks the YM2151's busy
 flag and timers).  The board works without them; leave U38 and U41 out and the system just has no FM sound.
