@@ -27,9 +27,10 @@ design a card.
 
 On the board as built, one pair of bank bits trades places between the bank registers and the memory, in **both**
 bank registers (`$00` for RAM, `$01` for ROM): **bits 2 and 3**.  Data bit 2 drives `RAMB3`/`ROMB3`, and bit 3 drives
-`RAMB2`/`ROMB2` (IC1 and IC3, the registers' low nibbles).  Bits 4 to 7 reach the memory straight: whatever the
-drawing calls the nets between IC4 and the ROM decoder (U24), a bank number's bit 5 is chip-select bit 0, bit 6 is
-bit 1 and bit 7 is bit 2, so chip k in the decoder's order holds banks 32k to 32k + 31.  (Bits 6 and 7 were
+`RAMB2`/`ROMB2` (IC1 and IC3, the registers' low nibbles).  Bits 4 to 7 reach the memory straight: on the drawing
+the high nibbles' chips (IC2 and IC4) have data bits 7 and 6 crossed into their inputs *and* their outputs labelled
+`RAMB6`/`RAMB7` the other way round, two crossings that cancel.  So a bank number's bit 5 is chip-select bit 0, bit 6
+is bit 1 and bit 7 is bit 2, and chip k in the decoder's order holds banks 32k to 32k + 31.  (Bits 6 and 7 were
 thought crossed too, until 2026-10-13, when the first ROM to put files in a third chip read an empty socket on
 the board: bank `$40` reaches U34, bank `$80` nothing.)
 
