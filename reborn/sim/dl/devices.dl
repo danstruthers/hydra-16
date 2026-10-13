@@ -7,8 +7,11 @@
 
 ; ---- the ACIA (port 1): a Rockwell R65C51 (TDRE and the TX interrupt), or a WDC W65C51N (ac-wdc: TDRE always 1, no
 ; TX interrupt).  Keys come from rxq (codes; 256: wait 2M cycles; 257: wait for a prompt; 258 to 259: typed at the
-; keyboard instead, the SMC's, one each KBD-DELAY cycles), the PC's own bytes from pcq
+; keyboard instead, the SMC's, one each KBD-DELAY cycles), the PC's own bytes from pcq.  The terminal's flow control
+; (ac-flow: acia.js's env.flow): the XOFF and XON the Hydra sends aren't shown nor passed on; an XOFF heard (its
+; character's time over) holds the serial port's keys back, after 2 more, till an XON
 (def {ac-wdc ac-paste ac-kbd KBD-DELAY} NIL NIL NIL 150000)
+(def {ac-flow ac-held ac-lag ac-flowbyte ac-xoffs ac-xons} T NIL 0 0 0 0)
 (def {ac-cmd ac-ctrl ac-tdre ac-txtimer ac-irq ac-rdrf ac-rx ac-overruns} 0 0 1 0 0 0 0 0)
 (def {ac-txend ac-txsent ac-gapmin ac-charcyc} (- INF) 0 INF 0)
 (def {rxq rxh rxn rxdelay rxlost typedat typedlast} (hash-create) 0 0 200000 0 -1 -1)
@@ -47,8 +50,8 @@
   (do (if (> ac-txtimer 0) (set! {ac-overruns} (+ ac-overruns 1)) 0)
       (set! {ac-txsent} (+ ac-txsent 1))
       (if (> ac-txsent 8) (set! {ac-gapmin} (min ac-gapmin (if (> ac-txtimer 0) 0 (/ (* (- at ac-txend) (baud)) (* clock-mhz 1000000))))) 0)
-      (if peer-on 0 (acia-shown v at))
-      (on-tx v at)
+      (if (and ac-flow (or (== v 17) (== v 19))) (set! {ac-flowbyte} v)
+        (do (if peer-on 0 (acia-shown v at)) (on-tx v at)))
       (set! {ac-tdre ac-txtimer} 0 ac-charcyc))
   (if (== r 1) (set! {ac-cmd ac-irq} (bit-and ac-cmd #xE0) 0)
     (if (== r 2) (set! {ac-cmd ac-charcyc} v (do (set! {ac-cmd} v) (char-cycles)))
@@ -71,8 +74,17 @@
 (fun {acia-tick d at} {do
   (if (> ac-txtimer 0) (do (set! {ac-txtimer} (- ac-txtimer d))
     (if (<= ac-txtimer 0) (do (set! {ac-txend ac-txtimer ac-tdre} (+ at ac-txtimer) 0 1)
-      (if (and (not ac-wdc) (== (bit-and ac-cmd 12) 4)) (set! {ac-irq} 1) 0)) 0)) 0)
+      (if (and (not ac-wdc) (== (bit-and ac-cmd 12) 4)) (set! {ac-irq} 1) 0)
+      (acia-flow)) 0)) 0)
   (if (< pcqh pcqt) (acia-pc d at) (acia-keys d at))})
+
+; Flow control's byte, heard (its time over): XOFF holds the keys, after 2 more; XON lets them go
+(fun {acia-flow} {do
+  (if (== ac-flowbyte 19) (do (set! {ac-xoffs} (+ ac-xoffs 1)) (if ac-held 0 (set! {ac-held ac-lag} T 2)))
+    (if (== ac-flowbyte 17) (set! {ac-xons ac-held} (+ ac-xons 1) NIL) 0))
+  (set! {ac-flowbyte} 0)})
+; The next key is held back by an XOFF (the serial port's: not a wait, nor the keyboard's)
+(fun {key-held?} {and ac-held (not ac-kbd) (< rxh rxn) (< (rxq rxh) 256) (<= ac-lag 0)})
 
 ; The PC's own bytes: back to back, the keys waiting
 (fun {acia-pc d at} {do
@@ -93,8 +105,10 @@
 (fun {acia-keys d at} {if (< rxh rxn)
   (if (== (rxq rxh) 257)
     (if (prompted at) (do (rx-shift) (set! {promptfrom rxdelay} -1 20000) (if (>= rxh rxn) (set! {typedlast} at) 0) (key-head)) 0)
+    (if (key-held?) (set! {rxdelay} (max 1 (- rxdelay d)))
     (do (set! {rxdelay} (- rxdelay d))
         (if (and (<= rxdelay 0) (or (zero? ac-rdrf) ac-paste ac-kbd (== (rxq rxh) 258))) (do
+          (if (and ac-held (not ac-kbd) (< (rxq rxh) 256)) (set! {ac-lag} (- ac-lag 1)) 0)
           (set {c} (rxq rxh))
           (rx-shift)
           (if (>= rxh rxn) (set! {typedlast} at) 0)
@@ -105,7 +119,7 @@
               (do (if (< typedat 0) (do (set! {typedat} at) (ioff-start)) 0)
                   (acia-in c at)
                   (set! {rxdelay} (if ac-paste ac-charcyc 20000)))))))
-          (key-head)) 0))) 0})
+          (key-head)) 0)))) 0})
 
 (fun {acia-irq?} {and (pos? ac-irq) (or (and (not ac-wdc) (== (bit-and ac-cmd 12) 4) (pos? ac-tdre)) (and (zero? (bit-and ac-cmd 2)) (pos? ac-rdrf)))})
 (fun {acia-next} {do
@@ -114,7 +128,8 @@
     (if (< rxh rxn)
       (if (== (rxq rxh) 257)
         (if (and (> ac-sent promptfrom) (prompt-tail?)) (min n (max 1 (- (+ ac-sentat 300000) ac-cyc))) n)
-        (if (> rxdelay 0) (min n rxdelay) (if (or (zero? ac-rdrf) ac-paste ac-kbd (== (rxq rxh) 258)) 1 n)))
+        (if (key-held?) n
+          (if (> rxdelay 0) (min n rxdelay) (if (or (zero? ac-rdrf) ac-paste ac-kbd (== (rxq rxh) 258)) 1 n))))
       n))})
 (fun {acia-reset} {set! {ac-cmd ac-ctrl ac-tdre ac-txtimer ac-irq ac-rdrf} 0 0 1 0 0 0})
 

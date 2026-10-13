@@ -15,6 +15,23 @@
 ;                   it (rate_t2 alone: the ACIA left as it is)
 ;   SER_ON          the rate the kernel's bring-up console left (RATE_BOOT, 9600), and the ACIA's receive interrupt on
 ;                   (its transmit one stays off: timer 2 paces the sending)
+;   SER_FLOW        the sender held back, for a driver that declares fl_send (below): rx_marks, fl_run, fl_put
+;
+; Flow control (a driver that declares fl_send and rx_mark on its zero page, and fl_x, has it: HydraOS's console; the
+; base's has none).  It is XON/XOFF, the receiving side's: with FL_HI bytes unread in the receive ring the driver
+; sends XOFF, and the terminal (one that's set to honour it) sends no more; when the ring is down to FL_LO it sends
+; XON.  Above FL_HI there's room for what the terminal sends before it has heard (255 - FL_HI bytes).
+;   Not RTS and CTS, though the board wires both to the DE-9: the R65C51 turns its transmitter off, at once, while
+; its ~RTS is high (command bits 3-2 = 00: its data sheet's note), so the Hydra could hold the PC back only while it
+; sent nothing itself, not even a key's echo; and each byte it then sent would let one in.
+;   fl_x is the setting (x1: <> 0; x0).  The irq entry checks the ring against one byte, rx_mark: the tail (the ring
+; is full there: a byte is dropped), or with x1, and the sender not told to stop, the tail + FL_HI.  There the irq
+; entry makes the mark the tail, and asks for XOFF in fl_send; timer 2 sends fl_send's byte before the ring's next
+; (t2_flow).  rx_get moves the mark with the tail (rx_marks), and at FL_LO leaves XON.  So "told to stop" is: x1,
+; and the mark at the tail.
+;   The irq entry has few cycles for this (the kernel's budget for IRQs off: its high-mark path is as long as a
+; Ctrl-C's): what it leaves in fl_send is FL_POKE, which it also writes to timer 2's count's high byte, starting
+; the timer whether a byte's going or not.  t2_flow sends XON for XON, and XOFF for anything else.
 ; Sending is paced, at every rate, on both chips: the WDC W65C51N's TDRE doesn't work, and on the board the
 ; Rockwell's sending back to back at 115200 loses characters (2 idle bits then; 1 otherwise).  Receiving is each
 ; driver's own irq entry: a byte into the ring (rx_buf at rx_head), and TASK_EVENT counted.
@@ -26,6 +43,22 @@
 
 RATE_BOOT       = 5             ; 9600: the kernel's bring-up console's
 RATE_N          = 8             ; 300, 600, 1200, 2400, 4800, 9600, 19200, 115200
+
+XON             = $11           ; Flow control's bytes: go on (DC1, Ctrl-Q) ...
+XOFF            = $13           ;   and stop (DC3, Ctrl-S)
+FL_HI           = 96            ; The unread bytes at which the sender's told to stop (159 more fit) ...
+FL_LO           = 32            ;   and to go on
+; The irq entry's count for timer 2 (its high byte), XOFF wanted: timer 2 runs out that soon, and XOFF goes.  A
+; byte may be going: the count is 9600's character and a little, so at 9600 and above its time isn't cut short (the
+; ring's next byte is only late).  Below 9600 it may be: the R65C51 keeps XOFF in its transmitter data register
+; till the byte's out.  The W65C51N has none to trust (a byte written over one going garbles both): its count is
+; long enough for 2400 and up.  (Under $80: it's the irq entry's answer too, no task switch.  And not XON)
+.if ACIA_CHIP = ACIA_WDC
+FL_POKE         = $7F
+.else
+FL_POKE         = T2C_5 / 256 + 2
+.endif
+.assert     FL_POKE < $80 .and FL_POKE <> XON .and FL_POKE * 256 >= T2C_5, error, "FL_POKE: timer 2's count for an XOFF"
 
 ; The rates: the ACIA's code, and timer 2 for a character (10 bits, and the idle bits after it: 2 at 115200 on
 ; the Rockwell, 1 otherwise), in rounds of at most 65000 cycles.  A bit is 32 cycles at 115200 (the CPU's clock
@@ -63,6 +96,10 @@ rate_rounds: .byte      T2R_0, T2R_1, T2R_2, T2R_3, T2R_4, T2R_5, T2R_6, T2R_7
 ; send: the driver's t2_idle, next
 .macro SER_T2_NEXT
 t2_next:
+.ifdef fl_send
+            lda         fl_send                             ; (Flow control's byte goes first: t2_flow)
+            bne         t2_flow
+.endif
             dec         t2_left                             ; (A slow rate, or a driver's wait: another round)
             bne         t2_round
             ldy         tx_tail
@@ -72,15 +109,33 @@ t2_next:
             sta         ACIA_DATA
             iny
             sty         tx_tail
+t2_sent:
             lda         t2_rounds
             sta         t2_left
 t2_round:
-            lda         t2_lo
-            sta         VIA_T2CL
-            lda         t2_hi
-            sta         VIA_T2CH                            ; (It starts, and its interrupt's cleared)
+            lda         t2_hi                               ; It starts, and its interrupt's cleared.  (The count's
+            sta         VIA_T2CH                            ;   low byte is the VIA's latch still: tx_start's)
             lda         #0
             rts
+.ifdef fl_send
+
+; Flow control's byte (.A: XON, or XOFF's request: XOFF, or the irq entry's FL_POKE): at once if nothing's going
+; (timer 2 was started for it, or was napping: the last byte has had its time); else in the ring's next byte's
+; place, when the one that's going has had its
+t2_flow:
+            ldx         tx_busy
+            beq         :+
+            dec         t2_left
+            bne         t2_round
+:
+            cmp         #XON
+            beq         :+
+            lda         #XOFF
+:
+            sta         ACIA_DATA
+            stz         fl_send
+            bra         t2_sent
+.endif
 .endmacro
 
 ; Timer 2 started, if nothing's going and there's something to send: it sends the first byte a character's time
@@ -133,19 +188,107 @@ tx_free:
             rts
 .endmacro
 
-; A byte from the receive ring (its first page).  OUT: C = 0, .A = it; or C = 1: none.  Modifies .Y
+; A byte from the receive ring (its first page).  OUT: C = 0, .A = it; or C = 1: none.  Modifies .Y.  (With flow
+; control the tail and the irq entry's mark move as one: IRQs off)
 .macro SER_RX_GET
 rx_get:
+.ifdef fl_send
+            php
+            sei
+.endif
             ldy         rx_tail
             cpy         rx_head
             beq         @none
             lda         rx_buf,Y
             inc         rx_tail
+.ifdef fl_send
+            jsr         rx_marks
+            plp
+.endif
             clc
             rts
 
 @none:
+.ifdef fl_send
+            plp
+.endif
             sec
+            rts
+.endmacro
+
+; Flow control's routines (a driver with fl_send): each with IRQs off
+.macro SER_FLOW
+; The irq entry's mark after a byte's taken (the tail one on).  x0: the tail.  x1: the tail + FL_HI; or, the sender
+; told to stop (the mark was the tail), the tail still, till the ring is down to FL_LO: then XON, and the high mark.
+; Keeps .A, .X
+rx_marks:
+            pha
+            lda         fl_x
+            beq         @tail
+            lda         rx_tail
+            dec         a
+            cmp         rx_mark
+            bne         @high
+            sec
+            lda         rx_head
+            sbc         rx_tail
+            cmp         #FL_LO + 1
+            bcs         @tail
+            lda         #XON
+            jsr         fl_put
+@high:
+            clc
+            lda         rx_tail
+            adc         #FL_HI
+            bra         @set
+
+@tail:
+            lda         rx_tail
+@set:
+            sta         rx_mark
+            pla
+            rts
+
+; The mark from here, as fl_x says (the setting changed, or the ring emptied).  x0: the tail.  x1: the tail + FL_HI,
+; the sender told to go on (XON) if the mark was at the tail (it had been told to stop; or this is x1's start: a
+; terminal this Hydra told to stop before its reset is let go); or, with FL_HI in the ring already, to stop.
+; Modifies .A
+fl_run:
+            lda         fl_x
+            beq         @tail
+            sec
+            lda         rx_head
+            sbc         rx_tail
+            cmp         #FL_HI
+            bcs         @stop
+            lda         rx_mark
+            cmp         rx_tail
+            bne         :+
+            lda         #XON
+            jsr         fl_put
+:
+            clc
+            lda         rx_tail
+            adc         #FL_HI
+            bra         @set
+
+@stop:
+            lda         #XOFF
+            jsr         fl_put
+@tail:
+            lda         rx_tail
+@set:
+            sta         rx_mark
+            rts
+
+; .A (XOFF or XON) for timer 2 to send before the ring's next byte; timer 2 started for it if nothing's going (a
+; count of its low latch alone: at once).  Modifies .A
+fl_put:
+            sta         fl_send
+            lda         tx_busy
+            bne         :+
+            stz         VIA_T2CH
+:
             rts
 .endmacro
 
