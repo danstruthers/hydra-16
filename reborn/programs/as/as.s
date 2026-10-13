@@ -1,8 +1,9 @@
 ; ****************************************************************************
-; as [-bl] file.s [out] - the assembler (phase 9): a program for the W65C02S from ca65's language, as the SDK's
+; as [-bl] file.s|- [out|-] - the assembler (phase 9): a program for the W65C02S from ca65's language, as the SDK's
 ; sources are written (sdk/asm), into a RAM program (HYX2: SPAWN reads it at $0800) at out (else file.s's name
 ; without its .s).  -l: a labels file too, out.lbl (ld65's -Ln form: db's l and dis's -l read it); -b: the bytes
-; alone (no header), from .org's address ($0800 if there's none).
+; alone (no header), from .org's address ($0800 if there's none).  A source - is standard input (and the output is
+; - too, unless it's named); an output - is standard output (dis prog | as - copy): -l needs a named output.
 ;   The assembler is the asm library's (modules/asm: its entry FILE, spec/asm.def), which BASIC's ASM blocks use too;
 ; this is its command: the arguments, the output's name, the library found (MODINFO), the call, the status.  The
 ; library takes this task's RAM from ASM_RAM to ASM_RAM_END while it runs: this program's own is below it.
@@ -30,13 +31,13 @@ midx:       .res        1
 main:
             jsr         tl_start
             sta         flags                               ; (b: bit 0, AF_RAW; l: bit 1, AF_LABELS)
-            lda         (tl_arg)                            ; file.s
+            lda         (tl_arg)                            ; file.s, or -
             bne         :+
             jmp         tl_badusage
 :
             LDR         r1, srcname
             jsr         argcpy
-            jsr         tl_next                             ; [out]
+            jsr         tl_next                             ; [out], or -
             beq         @derive
             LDR         r1, outname
             jsr         argcpy
@@ -44,6 +45,15 @@ main:
             beq         @go
             jmp         tl_badusage
 @derive:
+            lda         srcname + 1                         ; A source -: the output - too
+            bne         @dots
+            lda         srcname
+            cmp         #'-'
+            bne         @dots
+            sta         outname
+            stz         outname + 1
+            bra         @go
+@dots:
             ldy         #0                                  ; out: file.s less its .s
 :
             lda         srcname,Y
@@ -64,6 +74,15 @@ main:
             lda         #0
             sta         outname - 2,Y
 @go:
+            lda         flags                               ; -l with an output -: no file for the labels
+            and         #AF_LABELS
+            beq         @lib
+            lda         outname + 1
+            bne         @lib
+            lda         outname
+            cmp         #'-'
+            beq         @nolbl
+@lib:
             jsr         find
             bcs         @nolib
             LDR         r0, srcname
@@ -74,10 +93,13 @@ main:
             jmp         tl_end
 @noname:
             LDR         r0, s_noname
-            bra         :+
+            bra         @warn
+@nolbl:
+            LDR         r0, s_nolbl
+            bra         @warn
 @nolib:
             LDR         r0, s_nolib
-:
+@warn:
             jsr         tl_warn
             jmp         tl_end
 
@@ -125,8 +147,9 @@ find:
 .rodata
 tl_name:    .byte       "as", 0
 tl_flagset: .byte       "bl", 0
-tl_usage:   .byte       "as [-bl] file.s [out]", 0
+tl_usage:   .byte       "as [-bl] file.s|- [out|-]", 0
 s_noname:   .byte       "file.s's name doesn't end .s: give the output's (as file.s out)", 0
+s_nolbl:    .byte       "-l needs the output's name (as -l - out): - is stdout", 0
 s_nolib:    .byte       "no asm library", 0
 s_asm:      .byte       "asm", 0
 
