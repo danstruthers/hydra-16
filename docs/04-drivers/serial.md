@@ -34,7 +34,11 @@ Both are built on the same serial layer (`base/lib/serial.inc`: the rates, the s
   (`x1`, `x0`), then two lines of counts for chasing an unreliable line: `/pc`'s requests, and how many of their
   replies were cut short, unanswered or damaged, how many requests the PC had damaged (its NAK), and how often the PC
   was given up; and the ACIA's receive **overruns** (the system was late taking a byte: another came first) and
-  **framing errors** (noise, or a rate the terminal doesn't match).  The PC tool's Ctrl-A s has the PC's side.
+  **framing errors** (noise, or a rate the terminal doesn't match), and the bytes **dropped** because the receive ring
+  was full (nothing was reading, and the terminal didn't stop).  The PC tool's Ctrl-A s has the PC's side: the
+  frames from the Hydra that came damaged or stopped part-way, and the replies it was asked for again.  An
+  `unanswered` here with a reply `asked for again` there is a reply that was lost or late on its way to the Hydra;
+  with a frame `stopped part-way` there, a request cut short on its way to the PC.
 * **Every byte sent is paced** by VIA timer 2: a character's time and a margin (two idle bits at 115200, one at the
   other rates), so the board's slightly slow clock and the MAX232's edges never lose a character.
 * **Bytes received** go into a 256-byte ring as they come (the ACIA's interrupt).  A byte that arrives when the ring is

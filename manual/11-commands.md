@@ -758,11 +758,11 @@ note group, and its program.
 /> ps -a
 task  state   parent     cpu group  name
    0  ready   -          1.6     0  kernel
-   1  wait    -          0.5     1  forth -l
+   1  wait    -          0.4     1  forth -l
    2  ready    1         0.0     1  ps -a
   12  idle    -          0.0    12  snd
   13  idle    -          0.1    13  kdev
-  14  idle    -          1.6    14  storage
+  14  idle    -          1.5    14  storage
   15  event   -          0.5    15  cons
 ```
 
