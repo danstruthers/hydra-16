@@ -582,6 +582,7 @@ lex_number:
 @end:
             sty         tnl
             sty         lx_wlen
+            jsr         lx_frac                             ; (A fraction before i, 1/2i: one number)
             LDW         t0, cbase                           ; (In the program's base)
             lda         (lp)                                ; (.5: a point first, read as 0.5)
             cmp         #'.'
@@ -611,6 +612,43 @@ lex_number:
             iny
 @done:
             jmp         lp_plus_y
+
+; The word (tnl characters at lp) all digits, with /, digits and i right after it (1/2i): the number is the whole of
+; that, a fraction before i (half of i, as hylang reads the word; 1/(2i) divides).  OUT: tnl, lx_wlen past it, if so.
+; Modifies .A, .Y
+lx_frac:
+            ldy         #0
+@digits:
+            cpy         tnl
+            beq         @slash
+            lda         (lp),y
+            jsr         is_digit
+            bcs         @no
+            iny
+            bra         @digits
+@slash:
+            lda         (lp),y
+            cmp         #'/'
+            bne         @no
+            iny
+            lda         (lp),y                              ; (A digit at least after it)
+            jsr         is_digit
+            bcs         @no
+@more:
+            iny
+            lda         (lp),y
+            jsr         is_digit
+            bcc         @more
+            cmp         #'i'                                ; (Then i, and nothing of a name after it)
+            bne         @no
+            iny
+            lda         (lp),y
+            jsr         is_namec
+            bcc         @no
+            sty         tnl
+            sty         lx_wlen
+@no:
+            rts
 
 ; A word that starts with a point (.5): 0 and the word (tnl its characters) in ex_buf, read whole in the base (t0)
 lx_point:
