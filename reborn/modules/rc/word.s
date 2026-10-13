@@ -1436,7 +1436,7 @@ grec:       .res        SR_SIZE
 .rodata
 exp_vec:    .word       x_lit, x_var, x_count, x_flat, x_cat, x_list, x_bq
 s_wlong:    .byte       "word too long", 0
-s_null:     .byte       "null list in concatenation", 0
-s_mismatch: .byte       "mismatched lists in concatenation", 0
+s_null:     .byte       "null list", 0
+s_mismatch: .byte       "mismatched lists", 0
 s_sub:      .byte       "bad subscript", 0
 s_class:    .byte       "bad [ in a pattern", 0

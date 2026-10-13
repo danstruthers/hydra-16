@@ -169,8 +169,10 @@ library's test.
 
 Five samples show tasks working together.  Each is one program that starts copies of itself as its workers (each in
 a task of its own, given what it needs as arguments: a shared segment's number, semaphores' numbers), draws what
-they do as they do it, and says how it went.  They find themselves as `/bin/NAME`, `./NAME` or
-`/sd/0/sample/c/NAME`, so after `bind -a /sd/0/sample/c /bin` (at rc, or HyForth's `bind`) they run by name.  Each
+they do as they do it, and says how it went.  They find themselves by `$prog`, the path rc started them from
+(`getenv ("prog")`: so a copy runs from anywhere, `/ram/round`), else as `/bin/NAME`, `./NAME` or
+`/sd/0/sample/c/NAME` (a file, not a directory of that name), so after `bind -a /sd/0/sample/c /bin` (at rc, or
+HyForth's `bind`) they run by name.  Each
 needs four or five tasks free besides its own; Ctrl-C ends them all, and the program says how far it got.
 
 | Sample | What it shows |

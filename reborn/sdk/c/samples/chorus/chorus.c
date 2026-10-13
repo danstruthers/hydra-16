@@ -67,7 +67,7 @@ static int worker (char* argv[])
 static const char* prog;
 static unsigned char ready, go, lock, baton[VOICES], voices = VOICES;
 
-/* This program's own file, to start its workers from (argv[0] is its name): /bin/NAME (bind -a /sd/0/sample/c /bin
+/* This program's own file, to start its workers from (argv[0] is its name): $prog (the path rc started it from), else /bin/NAME (bind -a /sd/0/sample/c /bin
 ** puts the samples there), ./NAME, or /sd/0/sample/c/NAME */
 static const char* self (const char* name)
 {
@@ -75,11 +75,16 @@ static const char* self (const char* name)
     static char path[48];
     struct stat st;
     unsigned char i;
+    const char* prog = getenv ("prog");          /* (rc's: the path it started this program from) */
 
+    if (prog && strlen (prog) < sizeof path && stat (prog, &st) == 0 && !S_ISDIR (st.st_mode)) {
+        strcpy (path, prog);
+        return path;
+    }
     for (i = 0; i < 3; ++i) {
         strcpy (path, dirs[i]);
         strcat (path, name);
-        if (stat (path, &st) == 0) {
+        if (stat (path, &st) == 0 && !S_ISDIR (st.st_mode)) {
             return path;
         }
     }
@@ -142,7 +147,7 @@ int main (int argc, char* argv[])
         return worker (argv);
     }
     if ((prog = self (argv[0])) == 0) {
-        fprintf (stderr, "chorus: can't find myself (/bin/%s, ./%s, /sd/0/sample/c/%s)\n", argv[0], argv[0], argv[0]);
+        fprintf (stderr, "chorus: can't find myself ($prog, /bin/%s, ./%s, /sd/0/sample/c/%s)\n", argv[0], argv[0], argv[0]);
         hy_exits ("no workers");
     }
     ready = hy_sem_new (0, 0);
