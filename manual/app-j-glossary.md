@@ -25,7 +25,7 @@ explained in full.
 **Bank.** A piece of a bigger memory that can be shown through a window in the 65C02's 64K: an 8K RAM bank at
 $8000, a 16K ROM bank at $A000 (7.2).
 
-**Base.** How many digits a way of writing numbers uses: 10 for decimal, 2 for binary, 16 for hex (18.3).
+**Base.** How many digits a way of writing numbers uses: 10 for decimal, 2 for binary, 16 for hex (1.6, 18.3).
 
 **Base string.** The text that names a base in HydraOS's languages: `x` for hex, `b` for binary, `7r` for base 7
 (18.3).
@@ -104,7 +104,7 @@ the date and time (17.5).
 
 **Debugger.** A program that runs another one step by step, to find its bugs: `db` (Chapter 29).
 
-**Decimal.** Base 10, the usual way of writing numbers.
+**Decimal.** Base 10, the usual way of writing numbers (1.6).
 
 **Device.** A part of the Hydra that does input or output: the serial port, the sound chips, the SD card (Chapter
 12).
@@ -229,6 +229,8 @@ note numbers (60 is middle C) and its lists of instruments and drums (15.2, 15.4
 
 **Note.** A message to a task, like `interrupt` (<kbd>CTRL</kbd>-<kbd>C</kbd>). A **note group** is the tasks that
 get a note together (27.16).
+
+**Octal.** Base 8: the digits 0 to 7 (18.3).
 
 **Opcode.** The number of an instruction (26.1).
 

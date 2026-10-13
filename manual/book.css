@@ -28,7 +28,7 @@
 html { font-size: 10.5pt; }
 body { font-family: "Book Digits", Georgia, "Times New Roman", serif; line-height: 1.45; color: #161616; margin: 0; }
 section { break-before: page; }
-.mk { position: absolute; font-size: 1px; color: #fff; }
+.mk { position: absolute; font: 1px Arial, sans-serif; letter-spacing: 0; word-spacing: 0; text-transform: none; color: #fff; }   /* (A page mark, read back from the PDF: one face and no spacing of a heading's, so its letters and digits come back in order) */
 
 /* ---- The title page */
 .title-page { height: 9.1in; display: flex; flex-direction: column; justify-content: space-between; }
