@@ -316,9 +316,7 @@ var_local_save:
             ldx         ls_depth
             cpx         #LS_MAX
             bcc         :+
-            lda         #<s_deep
-            ldx         #>s_deep
-            jmp         rc_error_ax
+            jmp         deep_error
 :
             lda         vr
             sta         ls_recl,X

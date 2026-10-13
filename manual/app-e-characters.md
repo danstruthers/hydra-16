@@ -13,7 +13,7 @@ HyBASIC, `ASC("A")` and `CHR$(65)`.
 The codes from 0 to 31, and 127, aren't printed: they're **control characters**, which tell a terminal to do
 something. Each can be typed by holding <kbd>CTRL</kbd> and pressing the key in the **Key** column (so
 <kbd>CTRL</kbd>-<kbd>C</kbd> is code 3). The last column says what the Hydra's console does with each when a program
-prints it (Chapter 12), or, for the keys, what it does when you type it.
+prints it (Chapter 13), or, for the keys, what it does when you type it.
 
 | Dec | Hex | Name | Key | What the console does |
 |---|---|---|---|---|
@@ -44,14 +44,14 @@ prints it (Chapter 12), or, for the keys, what it does when you type it.
 | 24 | $18 | CAN | <kbd>CTRL</kbd>-<kbd>X</kbd> | Cancels an escape sequence |
 | 25 | $19 | EM | <kbd>CTRL</kbd>-<kbd>Y</kbd> | |
 | 26 | $1A | SUB | <kbd>CTRL</kbd>-<kbd>Z</kbd> | Cancels an escape sequence |
-| 27 | $1B | ESC | <kbd>CTRL</kbd>-<kbd>[</kbd>, <kbd>ESC</kbd> | Starts an escape sequence (section 12.7) |
+| 27 | $1B | ESC | <kbd>CTRL</kbd>-<kbd>[</kbd>, <kbd>ESC</kbd> | Starts an escape sequence (section 13.7) |
 | 28 | $1C | FS | <kbd>CTRL</kbd>-<kbd>\\</kbd> | |
 | 29 | $1D | GS | <kbd>CTRL</kbd>-<kbd>]</kbd> | |
 | 30 | $1E | RS | <kbd>CTRL</kbd>-<kbd>^</kbd> | |
 | 31 | $1F | US | <kbd>CTRL</kbd>-<kbd>_</kbd> | |
 | 127 | $7F | DEL | <kbd>BACKSPACE</kbd> (on some keyboards) | Typed: rubs out the character before the cursor |
 
-Programs that read keys one at a time (in raw mode, section 12.3) get every code as it's typed, and decide for
+Programs that read keys one at a time (in raw mode, section 13.3) get every code as it's typed, and decide for
 themselves what to do with it: `edit`, for one, uses many of them.
 
 ## E.2 ASCII
@@ -132,7 +132,7 @@ it. Codes 164, 166, 168, 180, 184, 188, 189 and 190 are the ones where ISO-8859-
 
 ## E.4 The DEC Special Graphics
 
-`ESC (0` switches the console to the **DEC Special Graphics** (section 12.7), and `ESC (B` back to ASCII. In it, the
+`ESC (0` switches the console to the **DEC Special Graphics** (section 13.7), and `ESC (B` back to ASCII. In it, the
 codes from 95 to 126 draw these instead:
 
 | Code | Typed | Draws | Code | Typed | Draws | Code | Typed | Draws | Code | Typed | Draws |
@@ -160,7 +160,7 @@ ISO-8859-15's characters, with the DEC Special Graphics in the places of the con
 </figure>
 
 The ROM disk has a second font, the PC's (**CP437**, the IBM PC's characters), with more lines and blocks for
-drawing, Greek letters and math signs. `cat /lib/font/cp437 >/dev/vid/font` loads it (section 15.5), and
+drawing, Greek letters and math signs. `cat /lib/font/cp437 >/dev/vid/font` loads it (section 16.5), and
 `cat /lib/font/iso8859-15 >/dev/vid/font` puts the console's back.
 
 <figure>

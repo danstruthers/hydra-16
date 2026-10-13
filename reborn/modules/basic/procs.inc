@@ -93,6 +93,11 @@ scan_proc:
             lda         nprocs
             sta         spl + SPR_NUM
             inc         nprocs
+            sta         pr_num                              ; Its procs entry: not defined yet (pass 2's SUB or FUNCTION
+            jsr         proc_entry                          ;   sets that, and a second of the name is Duplicate: the
+            ldy         #6                                  ;   entry may be an earlier program's, or this one's, run before)
+            lda         #0
+            sta         (t4),y
             lda         pr_func
             sta         spl + SPR_FUNC
             lda         pk_n

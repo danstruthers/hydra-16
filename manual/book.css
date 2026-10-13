@@ -83,6 +83,9 @@ blockquote.for-teachers > p:first-child > strong:first-child { color: #6a3aa0; }
 blockquote.tip, blockquote.hint { border-color: #f08a24; background: #fff8ef; }
 blockquote.tip > p:first-child > strong:first-child, blockquote.hint > p:first-child > strong:first-child { color: #c76a10; }
 blockquote.how-it-works, blockquote.under-the-hood { border-color: #555; background: #f4f4f4; }
+/* (A chapter's opening: what it's for, and what it needs) */
+blockquote.in-this-chapter { border: 0; border-top: 2.2pt solid #111; border-bottom: 0.8pt solid #111; background: #fff; padding: 6pt 2pt; margin: 4pt 0 12pt; }
+blockquote.in-this-chapter > p:first-child > strong:first-child { color: #111; }
 
 /* ---- Lists, tables, definitions */
 ul, ol { margin: 0 0 8pt; padding-left: 20pt; }
@@ -123,6 +126,7 @@ h1.index-title { font: 30pt "Arial Black", Arial, sans-serif; border-bottom: 3pt
 .index .ix-letter { font: 12pt "Arial Black", Arial, sans-serif; margin: 8pt 0 2pt; break-after: avoid; }
 .index .ix { margin: 0 0 1pt; padding-left: 1.2em; text-indent: -1.2em; break-inside: avoid; }
 .index .ix-pg { margin-left: 0.5em; color: #555; }
+.index .ix-lang { font-size: 7pt; color: #666; }
 
 /* ---- Appendix D's table of the opcodes: 16 columns */
 .opmatrix table { font-size: 6.2pt; table-layout: fixed; }

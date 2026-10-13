@@ -5,18 +5,23 @@ exactly like a Hydra-16: it imitates every chip on the board, one clock beat at 
 HydraOS that lives in a real Hydra's ROM chips. Programs you write in the emulator run unchanged on a real Hydra,
 and the other way round.
 
+> **IN THIS CHAPTER:** You'll run a Hydra on a PC, in a web browser and in a terminal window, choose its hardware,
+> share files with your PC, and make SD card images. **You need:** a PC with a web browser; and for sections 2.3 to
+> 2.7, permission to install Node.js on it.
+
 This chapter shows you two ways to run the emulator: in a **web browser**, the easiest way, with nothing to
 install; and in a **terminal window** on your PC, which gives you extra tools for exploring. At the end you'll see
 how to share files between your PC and the Hydra.
 
-> **FOR TEACHERS:** The web emulator is a single file. Copy it to every computer in the room (or put it on a
-> shared drive), and each student can run a complete Hydra with no installation and no network. Everything the
-> students save stays inside their own browser.
+> **FOR TEACHERS:** The web emulator is a single file. Make it once, on one computer (section 2.3), then copy it to
+> every computer in the room (or put it on a shared drive), and each student can run a complete Hydra with no
+> installation and no network. Everything the students save stays inside their own browser, on that computer: a
+> student who moves to another computer needs **Save card** and **Load…** to take their work along.
 
 ## 2.1 The emulator in a web browser
 
 The web emulator is one file called **hydra-16.html**. Your teacher may give it to you, or you can make it
-yourself (section 2.3 shows how). To start it, open the file in a web browser: Chrome, Edge, Firefox or Safari
+yourself: section 2.3 shows how, and it takes one command. To start it, open the file in a web browser: Chrome, Edge, Firefox or Safari
 all work. Double-clicking the file is usually enough.
 
 The Hydra switches on at once. Within a few seconds the **serial console** fills with the Hydra's start-up
@@ -48,7 +53,7 @@ sram/
 tmp/
 ```
 
-The first command added two and three (Chapter 18 explains why the `+` comes after the numbers). The second listed
+The first command added two and three (Chapter 19 explains why the `+` comes after the numbers). The second listed
 the folders at the top of the Hydra's file tree. Congratulations: you are using a Hydra.
 
 ### The buttons
@@ -78,8 +83,10 @@ Above the console:
   windows to the new size.
 * **Copy text** copies everything in the console, including the lines that have scrolled away, so you can paste it
   into a document.
-* **Paste** types whatever is on your PC's clipboard into the Hydra, as if you typed it. This is handy for
-  programs: write them on your PC, then paste them in. (<kbd>CTRL</kbd>-<kbd>SHIFT</kbd>-<kbd>V</kbd> does the same.)
+* **Paste** types whatever is on your PC's clipboard into the Hydra, as if you typed it. The Hydra asks the page to
+  wait whenever it falls behind (XON/XOFF, section 13.6), so a whole program arrives whole. For programs you'll
+  change often, `/pc` (section 2.5) is handier still. (<kbd>CTRL</kbd>-<kbd>SHIFT</kbd>-<kbd>V</kbd> does the
+  same.)
 
 You can also scroll back through old lines with the mouse wheel, and drag across text to select and copy it.
 
@@ -87,7 +94,7 @@ You can also scroll back through old lines with the mouse wheel, and drag across
 
 Below the console is the screen of the **Vera X**, the Hydra's optional video card. When the Vera X is plugged in
 (it is, in the emulator, unless you turn it off), HydraOS shows its windows on this screen as well as on the serial
-console. Programs can also draw pictures, move sprites and play sounds through the Vera X; Chapter 15 shows you how.
+console. Programs can also draw pictures, move sprites and play sounds through the Vera X; Chapter 16 shows you how.
 If you turn on the Vera X's keyboard and mouse in Setup, click on the screen and you can type and use the mouse
 there, just as on a real Hydra with a keyboard and mouse plugged in.
 
@@ -156,6 +163,8 @@ The project's folder holds these folders:
 | `reborn` | The rest of HydraOS: its drivers, shells, languages and tools; its ROM images; and its emulator |
 | `board` | The Hydra-16's circuit board design, for the KiCad design program |
 | `manual` | This book |
+| `docs` | The reference book: the architecture, every driver's files and commands, the expansion cards, the quirks |
+| `old` | The first HydraOS, kept for the record; nothing in this book needs it |
 
 Everything you need to *run* the emulator is already there, including the ROM images in `reborn/bin`. You do not
 need to build anything.
@@ -243,8 +252,9 @@ a time. Its commands are:
 | `w` *ADDR* | Stop when anything writes to address *ADDR* |
 | `x` | Quit the emulator |
 
-You won't need the monitor until Part Five, but it's fun to peek inside: stop the Hydra while it's waiting at the
-prompt, type `r` to see the registers, and `c` to carry on.
+Nothing in this book needs the monitor (Part Five uses the Hydra's own debugger, `db`, which works on a real Hydra
+too). But it's fun to peek inside: stop the Hydra while it's waiting at the prompt, type `r` to see the registers,
+and `c` to carry on.
 
 ### Running without a terminal
 
@@ -252,12 +262,13 @@ The emulator can also run by itself, type a few things, and print what happened.
 keys to type with `--input`:
 
 ```text
-node reborn/sim/run.js --input "2 3 + .\r" --cycles 40000000
+node reborn/sim/run.js --input "\w\w2 3 + .\r" --cycles 40000000
 ```
 
-`\r` stands for the <kbd>RETURN</kbd> key, and `--cycles` says how long to run (40 million clock beats is a little
-over 11 seconds of the Hydra's time). At the end the emulator prints everything the Hydra printed, followed by a
-report on its tasks. This is how HydraOS's own tests check that everything works.
+`\w` waits two million clock beats, and two of them first give HydraOS time to start: keys that arrive before its
+console is running are lost. `\r` stands for the <kbd>RETURN</kbd> key, and `--cycles` says how long to run (40
+million clock beats is a little over 11 seconds of the Hydra's time). At the end the emulator prints everything the
+Hydra printed, followed by a report on its tasks. This is how HydraOS's own tests check that everything works.
 
 ## 2.5 Sharing files with your PC
 
@@ -318,7 +329,8 @@ asks you to confirm, before it writes anything.
 
 You never *need* to build HydraOS, because the ROM images come ready-made. But if you want to change HydraOS itself,
 or to build programs in C, you'll need the **cc65** compiler and assembler (from **cc65.github.io**). Install it,
-then in the project's folder type:
+put its `bin` folder on your PATH (or set `CC65_HOME` to the folder you unpacked it in), then in the project's
+folder type:
 
 ```text
 node reborn/build.js

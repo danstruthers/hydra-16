@@ -17,6 +17,8 @@
 //   --cycles N          stop at cycle N (default 30000000: 8.4 s at 3.58 MHz; interactive: never)
 //   --input TEXT        keys to type (\r, \n: Return; \w: wait 2M cycles), one every 20000 cycles from cycle 200000
 //   --paste             type them as fast as the line goes (a byte arriving while the last is unread is lost)
+//   --flow none         the terminal has no flow control: the Hydra's XOFF and XON come out with its other bytes,
+//                       and the keys go on (otherwise it honours them, as a terminal set to XON/XOFF: lib/acia.js)
 //   --speed N           interactive: N times real time (0: as fast as it goes)
 //   --clock MHz         the CPU clock (3.579545; 7.15909 with jumper J8: build with --clock 2 too)
 //   --acia wdc          a WDC W65C51N in the serial port (build with --acia wdc too)
@@ -416,6 +418,7 @@ function main(argv, env = {}) {
     else if (a === '--smc') opt.smc = true;
     else if (a === '--kbd') { opt.smc = true; opt.kbd = unescape(next()).replace(/\\e/g, '\x1b').replace(/\\b/g, '\b'); }
     else if (a === '--paste') opt.paste = true;
+    else if (a === '--flow') opt.flow = next();
     else if (a === '--speed') opt.speed = +next();
     else if (a === '--clock') opt.clock = +next();
     else if (a === '--acia') opt.acia = next();

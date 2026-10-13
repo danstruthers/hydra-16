@@ -229,11 +229,23 @@ shline:                                                     ; ( -- flag ): the l
             lda         dlo,x
             ora         dhi,x
             beq         @forth2                             ; (Nothing: forth's)
+            lda         dlo + 1,x                           ; (The word: the numbers library's question's)
+            sta         throw_name
+            lda         dhi + 1,x
+            sta         throw_name + 1
+            lda         dlo,x
+            sta         throw_nlen
             jsr         find_name
             bcc         @forth2
             jsr         number                              ; ( c-addr u -- n 1 | d 2 | 0 )
             lda         dlo,x
-            beq         @rc
+            bne         :+
+            inx                                             ; (Not Forth's number: the numbers library's, if it's
+            lda         #5                                  ;   loaded (2/3, 1.5, 100000): then the line is Forth)
+            jsr         num_call
+            bcc         @forth
+            bra         @rc2
+:
             cmp         #1                                  ; (A number: n 1, or d 2, dropped)
             beq         :+
             inx
@@ -253,6 +265,7 @@ shline:                                                     ; ( -- flag ): the l
             jmp         zero_tos
 @rc:
             inx
+@rc2:
             pla                                             ; (>IN as it was: the line from its start)
             sta         to_in
             pla

@@ -8,6 +8,8 @@
 // From the PC, MARK then ESC (where the type would be) is a MARK typed on the console (Ctrl-^); and the PC stuffs
 // Ctrl-C, Ctrl-\ and Ctrl-] too, the keys reborn's console acts on as they come in, so its frames never have one (a
 // reader takes any byte after ESC as the byte ^ $20, so both versions of the Hydra take them).
+// HydraOS's console stuffs XON and XOFF ($11, $13) in its frames too: a bare one, in a frame or between two, is its
+// flow control's (the base's serial.inc), which a reader with onFlow takes out and hands over.
 //
 // Two versions of what the frames carry, the attach's payload naming the Hydra's: 1, the old system's (a request's
 // first REQ_HDR bytes of its H9 block, a reply's REPLY_HDR bytes: status, value, count); 2, reborn's (the whole
@@ -16,6 +18,7 @@
 'use strict';
 
 const MARK = 0x1E, ESC = 0x1F;
+const XON = 0x11, XOFF = 0x13;                             // (The Hydra's flow control: stop, and go on)
 const STUFFED = new Set([MARK, ESC, 0x03, 0x1C, 0x1D]);    // (Ctrl-C, Ctrl-\, Ctrl-]: the PC's frames only)
 const T_ATTACH = 0x41, T_REQ = 0x51;                       // 'A', 'Q': the Hydra's
 const T_REPLY = 0x52, T_NAK = 0x4E;                        // 'R', 'N': the PC's
@@ -47,14 +50,16 @@ function encode(type, tag, payload = []) {
 // MARK starts a frame, held until it's whole and its CRC is right (then onFrame({ type, tag, payload })), or
 // until it can't be one (a type the reader doesn't take, a length beyond max, or flush()): then its bytes as they
 // came are the stream's.  A frame whose CRC is wrong but looked right otherwise is dropped, and goes to
-// onBad({ type, tag }) (the PC asks for it again).
-function createReader({ types, max = MAX_PAYLOAD, onFrame, onBad = () => {} }) {
+// onBad({ type, tag }) (the PC asks for it again).  With onFlow, an XON or an XOFF is neither a frame's byte nor the
+// stream's: onFlow(byte)
+function createReader({ types, max = MAX_PAYLOAD, onFrame, onBad = () => {}, onFlow = null }) {
   let raw = null, body = null, esc = false;
   const r = {};
   const giveUp = () => { const out = raw; raw = null; body = null; esc = false; return out; };
   r.inFrame = () => raw !== null;
   r.flush = () => raw ? giveUp() : [];
   r.push = b => {
+    if (onFlow && (b === XON || b === XOFF)) { onFlow(b); return []; }
     if (b === MARK) { const out = raw ? giveUp() : []; raw = [b]; body = []; return out; }
     if (!raw) return [b];
     raw.push(b);
@@ -76,5 +81,5 @@ function createReader({ types, max = MAX_PAYLOAD, onFrame, onBad = () => {} }) {
   return r;
 }
 
-module.exports = { MARK, ESC, T_ATTACH, T_REQ, T_REPLY, T_NAK, REQ_HDR, REPLY_HDR, REQ_HDR2, REPLY_HDR2, MAX_PAYLOAD, MAX_REPLY, crc16, encode,
+module.exports = { MARK, ESC, XON, XOFF, T_ATTACH, T_REQ, T_REPLY, T_NAK, REQ_HDR, REPLY_HDR, REQ_HDR2, REPLY_HDR2, MAX_PAYLOAD, MAX_REPLY, crc16, encode,
   createReader };

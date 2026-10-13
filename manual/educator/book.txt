@@ -1,0 +1,25 @@
+# The Hydra-16 Educator's Course Guide: its files, in order (node manual/build.js educator)
+#! title: The Hydra-16 Educator's Course Guide
+#! running: COURSE GUIDE
+#! out: hydra-16-course-guide
+#! index: no
+00-about.md
+part1.md
+t01-teaches.md
+t02-shapes.md
+t03-room.md
+t04-safety.md
+part2.md
+t05-lessons.md
+t06-build.md
+t07-assessment.md
+t08-everyone.md
+t09-trouble.md
+part3.md
+t10-build-answers.md
+t11-lab-answers-1.md
+t12-lab-answers-2.md
+t13-lab-answers-3.md
+t14-lab-answers-4.md
+t15-projects.md
+t16-quiz.md

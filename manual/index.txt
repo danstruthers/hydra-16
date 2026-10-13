@@ -1,0 +1,94 @@
+# index.txt - the index's everyday words: the things a reader looks for by a name the text doesn't set in bold.
+# Each line: the entry as the index prints it (Markdown: `code`), a colon, and the sections that explain it.
+# build.js gives each the page its section starts on; a section that isn't there stops the build.
+
+# Using the Hydra
+arguments: 6.2, 8.2
+backing up your work: 6.7, 14.7
+capital letters in names: 6.4, 9.1
+copying a file: 6.6
+`CTRL`-`C` (stopping a program): 6.3, 6.4
+`CTRL`-`D` (the end of your typing): 6.4
+date and time, setting: 17.5
+flow control (XON/XOFF): 5.2, 13.6
+pasting text into the Hydra: 2.1, 13.2, 13.6
+deleting a file: 6.6
+directories, making: 6.6
+editing a file: 6.6
+editing a line: 6.3
+errors, when you type: 6.4
+files, making: 6.6
+help: 6.10
+keeping your work: 6.7
+leaving a program: 6.4
+mistakes, typing: 6.4
+moving a file: 6.6
+programs, running: 6.8
+prompt: 6.1, 6.4
+renaming a file: 6.6
+reset button: 5.6, 6.4
+sample programs: 6.8
+saving a file: 6.6, 6.7
+switching off: 5.6, 6.11
+stopping a program: 6.3, 6.4
+typing a line: 6.3
+web emulator: 2.1
+which language first: 6.9
+
+# Building
+address decoder: 5.7
+burns: 3.1
+fault finding: 5.7
+hours to build: 3
+joints, how many: 3
+lead in solder: 3.1
+LED: 4.8, 17.1
+power light: 4.8
+power switch: 4.8
+safety: 3.1
+SD card reader, connecting: 14.2
+serial cable: 5.1
+troubleshooting: 5.7
+
+buying the parts: 3.9
+circuit boards, having them made: 3.9
+OPM2151 (a YM2151 replacement): 3.9
+reference book (the `docs` folder): 2.3
+C, programs in: 27.16
+pasting into the Hydra: 2.1, 6.7
+
+# Programming: the same idea in each language
+arithmetic, in HyForth: 19.3
+arithmetic, in hylang: 21.2
+arithmetic, in HyBASIC: 23.6
+arrays, in HyBASIC: 23.10
+decisions, in rc: 8.11
+decisions, in HyForth: 19.8
+decisions, in hylang: 21.8
+decisions, in HyBASIC: 23.7
+files, in HyForth: 20.3
+files, in hylang: 22.2
+files, in HyBASIC: 24.1
+functions, in rc: 8.12
+functions, in hylang: 21.5
+functions, in HyBASIC: 23.12
+graphics, in HyForth: 20.7
+graphics, in hylang: 22.7
+graphics, in HyBASIC: 24.6
+loops, in rc: 8.11
+loops, in HyForth: 19.9
+loops, in hylang: 21.9
+loops, in HyBASIC: 23.8
+`PRINT`: 23.2
+`INPUT`: 23.5
+printing, in HyForth: 19.6
+sound, in HyForth: 20.6
+sound, in hylang: 22.6
+sound, in HyBASIC: 24.5
+strings, in HyForth: 19.11
+strings, in hylang: 21.11
+strings, in HyBASIC: 23.9
+variables, in rc: 8.4
+variables, in HyForth: 19.10
+variables, in hylang: 21.4
+variables, in HyBASIC: 23.3

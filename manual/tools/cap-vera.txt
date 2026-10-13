@@ -1,4 +1,4 @@
-## Chapter 15's pictures of the Vera X's screen (node manual/tools/capture.js manual/tools/cap-vera.txt)
+## Chapter 16's pictures of the Vera X's screen (node manual/tools/capture.js manual/tools/cap-vera.txt)
 #! --vera --rtc
 ls /rom
 !png vera-console

@@ -17,8 +17,9 @@ node reborn/sim/run.js [options]
 | `-i`, `--interactive` | The terminal is the Hydra's serial console, in real time. Without it, the emulator runs for a while, then prints a report (section 2.4) |
 | `--speed N` | With `-i`: run N times faster than real time (0: as fast as it can) |
 | `--cycles N` | Stop at cycle N (without `-i`: 30,000,000, about 8.4 seconds of the Hydra's time) |
-| `--input TEXT` | Keys to type: `\r` or `\n` is <kbd>RETURN</kbd>, `\w` waits 2 million cycles. One key every 20,000 cycles, from cycle 200,000 |
+| `--input TEXT` | Keys to type: `\r` or `\n` is <kbd>RETURN</kbd>, `\w` waits 2 million cycles. One key every 20,000 cycles, from cycle 200,000. Put a `\w` or two before the first key, so that HydraOS's console is running. The emulator's terminal obeys the Hydra's XON and XOFF, so a long input arrives whole. `manual/tools/capture.js` types a script a line at a time, waiting for each prompt |
 | `--paste` | Type `--input`'s keys as fast as the serial line takes them (a key that arrives before the last is read is lost, as on a real Hydra) |
+| `--flow none` | The emulator's terminal ignores the Hydra's XON and XOFF (section 13.6). Without this it obeys them, as a terminal set to XON/XOFF does |
 | `--win32-input` | With `-i` in Windows Terminal: lets <kbd>CTRL</kbd>-<kbd>TAB</kbd> and <kbd>CTRL</kbd>-<kbd>SHIFT</kbd>-<kbd>TAB</kbd> reach the Hydra (after you remove Windows Terminal's own use of them from its settings) |
 
 **The hardware:**
@@ -104,7 +105,7 @@ and takes commands:
 | `w` ADDR[:T] | Stop when ADDR is written (by task T) |
 | `x` | Quit the emulator |
 
-The debugger, `db` (Chapter 27), is for debugging a program; the monitor is for when it's HydraOS itself you need to
+The debugger, `db` (Chapter 29), is for debugging a program; the monitor is for when it's HydraOS itself you need to
 watch.
 
 ## H.4 The web emulator
@@ -174,7 +175,7 @@ Its keys: <kbd>CTRL</kbd>-<kbd>A</kbd> <kbd>X</kbd> quits, <kbd>CTRL</kbd>-<kbd>
 on or off, and <kbd>CTRL</kbd>-<kbd>A</kbd> <kbd>CTRL</kbd>-<kbd>A</kbd> sends a <kbd>CTRL</kbd>-<kbd>A</kbd>. It needs
 the `serialport` package: run `npm install` in `reborn/sim` once.
 
-**hysong.js** turns a score (section 14.6) into a ZSM song on the PC, as `play -o` does on the Hydra, and can make a
+**hysong.js** turns a score (section 15.6) into a ZSM song on the PC, as `play -o` does on the Hydra, and can make a
 VGM file too, to hear it on the PC:
 
 ```text

@@ -1,7 +1,7 @@
 # Appendix D. The 65C02's Instructions
 
 This appendix lists every instruction of the W65C02S, as the assembler `as` writes it: what it does, the flags it
-changes, and its opcode and cycles in each of its addressing modes. Chapter 24 explains them; WDC's data sheet for the
+changes, and its opcode and cycles in each of its addressing modes. Chapter 26 explains them; WDC's data sheet for the
 W65C02S has the chip's own tables.
 
 ## D.1 The addressing modes
@@ -29,7 +29,7 @@ The tables write each mode short, like this:
 
 ## D.2 The flags and the cycles
 
-The **Flags** column lists the flags an instruction changes (section 24.3): **N** negative, **V** overflow, **B**
+The **Flags** column lists the flags an instruction changes (section 26.3): **N** negative, **V** overflow, **B**
 break, **D** decimal, **I** interrupt disable, **Z** zero, **C** carry. A `-` means it changes none.
 
 The number in brackets after each opcode is how many **cycles** it takes (at 3.58 MHz, a cycle is about 0.28
@@ -42,7 +42,7 @@ millionths of a second). Some take more:
 
 ## D.3 The instructions
 
-In the table, *M* is the byte the instruction works on (its operand: section 24.6).
+In the table, *M* is the byte the instruction works on (its operand: section 26.6).
 
 <!-- generated: tools/opcodes.js -->
 

@@ -1,0 +1,19 @@
+; guess.hl - guess the number, in hylang
+
+(def {secret} (+ 1 (random 100)))
+(def {tries} 0)
+
+(fun {ask} {do
+  (write "Your guess? ")
+  (val (read-line))})
+
+(fun {play} {do
+  =(guess (ask))
+  (set! {tries} (+ tries 1))
+  (cond
+    {(< guess secret) (do (print "Too small.") (play))}
+    {(> guess secret) (do (print "Too big.") (play))}
+    {T (print "Right! You took" tries "guesses.")})})
+
+(print "I'm thinking of a number from 1 to 100.")
+(play)

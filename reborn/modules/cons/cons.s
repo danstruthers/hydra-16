@@ -45,7 +45,9 @@
 ;   /ser        the serial port, raw: bytes in and out as they are.  While it's open for reading, the line is its
 ;               (xmodem's): every byte in is its, Ctrl-C and the rest too, and the windows' text (and /pc's frames)
 ;               wait, kept as a hidden window's is, till its last close repaints the window shown
-;   /serctl     the rate: b300, b600, b1200, b2400, b4800, b9600, b19200, b115200.  It reads as it
+;   /serctl     the rate: b300, b600, b1200, b2400, b4800, b9600, b19200, b115200; and flow control (Plan 9's
+;               eiactl's x): x1, XON/XOFF (as it starts: with 96 bytes unread it tells the terminal to stop, XOFF,
+;               and at 32 to go on, XON: serial.inc), or x0, none.  It reads as it
 ;   /kbdin      a write's bytes are the window's keys, as if typed (rio's kbdin: a line sent to another window's
 ;               shell, forth's send); all of them, as its keys' queue has room, the writer waiting for the rest
 ;   /kbin       the console's keyboard (the Vera X's, its input controller's: the input program writes it, what a PC
@@ -183,6 +185,8 @@ ESC_NAP         = 2             ;   and an Escape alone (ESC_TICKS: then it's a 
 ESC_TICKS       = TICK_HZ / 10
 FMT_SIZE        = 64            ; A chrome format, its characters with their zero
 CLK_NAP         = 110           ; Timer 2's rounds (about 2 s) between looks at the time, the chrome showing it
+FL_NAP          = 28            ;   and (about half a second) a terminal told to stop: fl_watch
+FL_TICKS        = 5 * TICK_HZ   ; A terminal told to stop is told to go on after this long, whatever the ring holds
 TM_LEN          = 19            ; The time's text: "2026-10-07 20:41:05"
 PS_ATTACH       = 1             ; pc_step: the attach is out ...
 PS_REQ          = 2             ;   the request is out
@@ -190,14 +194,15 @@ PS_REQ          = 2             ;   the request is out
 .zeropage
 rx_head:    .res        1                                   ; The receive ring: the irq entry's end ...
 rx_tail:    .res        1                                   ;   and the serve entry's (in their pages: /ser's)
+rx_mark:    .res        1                                   ; The irq entry's check: the tail (full), or x1's high
+                                                            ;   mark (serial.inc's flow control: fl_x) ...
+fl_send:    .res        1                                   ;   and XOFF or XON for timer 2 to send next, or 0
 rx_hp:      .res        2                                   ; /ser's: the head's page (rx_buf + 256 * n) ...
 rx_tp:      .res        2                                   ;   and the tail's
 tx_head:    .res        1                                   ; The send ring: the serve entry's end ...
 tx_tail:    .res        1                                   ;   and timer 2's
 tx_busy:    .res        1                                   ; <> 0: a byte is going (timer 2 runs)
 t2_nap:     .res        1                                   ; <> 0: timer 2 runs on with nothing to send (its rounds)
-esc_wait:   .res        1                                   ; <> 0: an Escape alone awaited (key_next), timer 2's
-                                                            ;   rounds bringing its reader back to look at the time
 t2_lo:      .res        1                                   ; Timer 2 for a character: a round's count ...
 t2_hi:      .res        1
 t2_rounds:  .res        1                                   ;   the rounds (more than 1 at slow rates) ...
@@ -377,7 +382,19 @@ w_iqh:      .res        WIN_MAX                             ;   and its keys: th
 w_iqt:      .res        WIN_MAX
 eg_c:       .res        1                                   ; ed_goto's: the column it goes to ...
 eg_x:       .res        1                                   ;   <> 0: the character before written again
-kbd_wait:   .res        1                                   ; <> 0: a /kbdin writer waits for a queue's room
+esc_wait:   .res        1                                   ; <> 0: an Escape alone awaited (key_next), timer 2's
+                                                            ;   rounds bringing its reader back to look at the time
+fl_x:       .res        1                                   ; Flow control's setting: x1 (<> 0: XON/XOFF), x0
+fl_hold:    .res        1                                   ; A terminal told to stop: 1, timed (fl_due: when it's
+fl_due:     .res        2                                   ;   let go); 2, let go (the ring not read down yet)
+kbd_wait:   .res        1                                   ; <> 0: a /kbdin writer waits for a queue's room (or
+                                                            ;   the serial port's keys do: d_hold)
+d_held:     .res        1                                   ; <> 0: the serial port's keys are held this round (a
+                                                            ;   key of its with no room in its window's queue) ...
+hold_ok:    .res        1                                   ;   <> 0: no Ctrl-] among the keys held, when the ring's
+hold_head:  .res        1                                   ;   head was here (looked at again when it has moved)
+hold_have:  .res        1                                   ;   <> 0: the key held, taken from the ring: the next
+hold_key:   .res        1                                   ;   of the serial port's (d_get)
 d_src:      .res        1                                   ; Whose keys distribute hands out now (0 the serial
                                                             ;   port's, 1 the keyboard's) ...
 d_pfx2:     .res        1                                   ;   and the other's d_pfx (d_swap)
@@ -553,6 +570,21 @@ init:
             bra         :-
 :
             jsr         tx_start
+            inc         fl_x                                ; x1: XON as it starts (a terminal this Hydra told to
+            php                                             ;   stop before its reset is let go)
+            sei
+            jsr         fl_run
+            plp
+            ldx         #0                                  ; It's gone before init ends: the boot's next line is
+            ldy         #0                                  ;   the kernel's own, straight to the port, and would
+:                                                           ;   be mixed with it.  (Counted: no wait for good for
+            lda         tx_busy                             ;   a timer 2 that doesn't run)
+            beq         :+
+            dex
+            bne         :-
+            dey
+            bne         :-
+:
             lda         #'c'
             jsr         SRV_REGISTER
             bcs         @done
@@ -568,6 +600,34 @@ init:
 ; (its DATA, beside the trampolines), as an interrupt may come while either bank is at $A000: so a module of two
 ; banks owns its lines
 .segment "DATA"
+; Timer 2 ran out: the next byte (a character's time since the last went), or nothing more to send (and /pc's reply
+; awaited: its wait, PC_NAP rounds of about 65,000 cycles, the rounds a slow rate's are): serial.inc's, then here
+            SER_T2_NEXT
+
+t2_idle:
+            stz         tx_busy
+            inc         TASK_EVENT                          ; (The writers waiting for room look again; /pc's
+            lda         #PC_NAP                             ;   client looks at the time, and an Escape's reader)
+            ldy         pc_step
+            bne         @nap
+            lda         t2_napr                             ; (An Escape alone, the chrome's time: nap_set's)
+            beq         @stop
+@nap:                                                       ; A /pc reply awaited, or an Escape alone: timer 2 runs
+            sta         t2_left                             ;   on, its rounds $FFxx cycles (tx_start puts the
+            lda         #$FF                                ;   rate's back)
+            sta         t2_hi
+            sta         VIA_T2CH
+            sta         t2_nap
+            lda         #0
+            rts
+
+@stop:
+            stz         t2_nap
+            lda         VIA_T2CL                            ; (Its interrupt cleared)
+            lda         #0
+            rts
+
+; The irq entry (the comment above)
 irq:
             cmp         #LINE_VIA_T2
             beq         t2_next
@@ -588,12 +648,23 @@ irq:
             ldy         rx_head                             ; Into the ring
             sta         rx_buf,Y
             iny
-            cpy         rx_tail
-            beq         @none                               ; (Full: the byte's dropped)
+            cpy         rx_mark                             ; (The tail: full; or x1's high mark)
+            beq         @mark
             sty         rx_head
             inc         TASK_EVENT                          ; (The clients waiting look again)
 @none:
             lda         #0
+            rts
+
+@mark:                                                      ; Full: the byte's dropped.  Or x1's high mark: the
+            ldx         rx_tail                             ;   byte's kept, the mark is the tail from here, and
+            cpx         rx_mark                             ;   XOFF is asked of timer 2, started to run out soon
+            beq         @none                               ;   (serial.inc's FL_POKE: its count, the request, and
+            stx         rx_mark                             ;   this entry's answer, no task switch).  No
+            sty         rx_head                             ;   TASK_EVENT, to keep this as short as a Ctrl-C's
+            lda         #FL_POKE                            ;   path: timer 2's idle counts one
+            sta         fl_send
+            sta         VIA_T2CH
             rts
 
 @after:                                                     ; (pfx $FF: /ser's, the bytes as they are)
@@ -654,32 +725,6 @@ irq:
             sta         rx_hp + 1
             bra         @put
 
-; Timer 2 ran out: the next byte (a character's time since the last went), or nothing more to send (and /pc's reply
-; awaited: its wait, PC_NAP rounds of about 65,000 cycles, the rounds a slow rate's are): serial.inc's, then here
-            SER_T2_NEXT
-
-t2_idle:
-            stz         tx_busy
-            inc         TASK_EVENT                          ; (The writers waiting for room look again; /pc's
-            lda         #PC_NAP                             ;   client looks at the time, and an Escape's reader)
-            ldy         pc_step
-            bne         @nap
-            lda         t2_napr                             ; (An Escape alone, the chrome's time: nap_set's)
-            beq         @stop
-@nap:                                                       ; A /pc reply awaited, or an Escape alone: timer 2 runs
-            sta         t2_left                             ;   on, its rounds $FFxx cycles (tx_start puts the
-            lda         #$FF                                ;   rate's back)
-            sta         t2_hi
-            sta         VIA_T2CH
-            sta         t2_nap
-            lda         #0
-            rts
-
-@stop:
-            stz         t2_nap
-            lda         VIA_T2CL                            ; (Its interrupt cleared)
-            lda         #0
-            rts
 .code
 
 ; ****************************************************************************
@@ -692,12 +737,22 @@ t2_idle:
 rx_reset:
             php
             sei
+            stz         hold_ok
+            stz         hold_have
+            sec                                             ; (The irq entry's mark as far from the tail as it
+            lda         rx_mark                             ;   was: at it, x0's, or the sender told to stop)
+            sbc         rx_tail
+            sta         rx_mark
             stz         rx_head
             stz         rx_tail
             LDR         rx_hp, rx_buf
             LDR         rx_tp, rx_buf
+            jsr         fl_run                              ; (x1: its high mark, and XON if it was told to stop)
             plp
             rts
+
+; Flow control's routines (serial.inc's): rx_marks, fl_run, fl_put
+            SER_FLOW
 
 ; A byte from the receive ring (the keys': its first page; not while the line is /ser's: serial.inc's).  OUT: C = 0,
 ; .A = it; or C = 1: none.  Modifies .Y
@@ -708,9 +763,14 @@ rx_reset:
 
 ; Before each request: the keys come in, each to the window shown (its queue), Ctrl-] and the key after it acted on;
 ; /pc's frames taken out (pc_rx).  The serial port's, then the keyboard's (/kbin's ring: d_get); while /ser is open
-; for reading only the keyboard's, the line's bytes its
+; for reading only the keyboard's, the line's bytes its.  A key of the serial port's with no room in its window's
+; queue is kept, and those behind it stay in the receive ring, till the window's reader has taken one (d_hold): text
+; pasted at the terminal faster than a program reads it isn't cut at the queue's 63 keys, but at the ring's 255 more
+; (and then it's the newest that are lost, the irq entry's: what came first is whole)
 distribute:
             stz         d_src
+            stz         d_held
+            jsr         fl_watch
             lda         ser_rd
             beq         :+
             jsr         d_swap                              ; (The keyboard's only)
@@ -777,10 +837,18 @@ distribute:
             bra         @watch
 :
             ldx         w_in
+            jsr         d_hold
+            bcs         @held
+            pla                                             ; (The key again)
+            pha
             jsr         iq_put
 @watch:
             pla
             jsr         kw_watch
+            jmp         @byte
+
+@held:                                                      ; (Its source's keys left: on to the keyboard's)
+            pla
             jmp         @byte
 
 @command:                                                   ; The key after the prefix (d_pfx 1), or its ESC, [ (2, 3)
@@ -861,6 +929,15 @@ distribute:
 d_get:
             lda         d_src
             bne         @kb
+            lda         d_held                              ; (The serial port's held: none of its)
+            bne         :++
+            lda         hold_have                           ; (The key held, before the ring's)
+            beq         :+
+            stz         hold_have
+            lda         hold_key
+            clc
+            rts
+:
             jsr         rx_get
             bcs         :+
             rts
@@ -900,6 +977,108 @@ d_swap:
             ldx         d_pfx2
             sta         d_pfx2
             stx         d_pfx
+            rts
+
+; Flow control's watch on a terminal told to stop (x1, the irq entry's mark at the tail).  It isn't left so for good:
+; the program that doesn't read may be the one the user wants to stop, and a terminal that has stopped sending holds
+; its Ctrl-C back too.  FL_TICKS after it's first seen here, the ring not read down to FL_LO since (rx_marks lets
+; it go then), it's told to go on (XON): what it sends may find the ring full, and be lost, but its Ctrl-C and
+; Ctrl-\ are acted on as they come (the irq entry).  Timer 2 naps meanwhile (nap_set: FL_NAP), so a request that's
+; waiting (wstart's, for one) brings the driver back to look at the time; with none waiting nothing does, and the
+; terminal waits for the reader.  Modifies .A, .X, .Y
+fl_watch:
+            lda         fl_x
+            beq         @not
+            php
+            sei
+            lda         rx_mark
+            cmp         rx_tail
+            beq         @told
+            plp
+@not:
+            lda         fl_hold                             ; Not told (or let go by rx_marks): no watch
+            beq         @done
+            stz         fl_hold
+            jmp         nap_set
+
+@told:
+            plp
+            lda         fl_hold
+            bne         @timed
+            inc         fl_hold                             ; Seen now: timed from here, timer 2 napping
+            jsr         TICKS
+            clc
+            adc         #<FL_TICKS
+            sta         fl_due
+            txa
+            adc         #>FL_TICKS
+            sta         fl_due + 1
+            jsr         nap_set
+            jmp         esc_nap
+
+@timed:
+            cmp         #1
+            bne         @done                               ; (Let go already)
+            jsr         TICKS
+            cmp         fl_due
+            txa
+            sbc         fl_due + 1
+            bmi         @done                               ; (Not yet)
+            inc         fl_hold
+            jsr         nap_set
+            php
+            sei
+            lda         #XON
+            jsr         fl_put
+            plp
+@done:
+            rts
+
+; Key .A for window .X's queue, just taken (d_get): held, if the queue's full?  Only the serial port's (the
+; keyboard's are typed, not pasted), with no /pc request out (its reply would wait behind the key) and no Ctrl-]
+; among the keys behind it (the windows' keys must work with a program that reads nothing: then the key's dropped,
+; as iq_put drops it, and those up to the Ctrl-]).  Held: the key's kept (hold_key: d_get's next; not put back in
+; the ring, which may have filled meanwhile: with it full, the irq entry drops what comes, the newest), no more of
+; the serial port's are taken this round (d_held), and the request that takes a key from a queue has the waiting
+; ones look again (kbd_wait: iq_get).
+; OUT: C = 0: iq_put (room, or dropped); C = 1: held.  Keeps .X
+d_hold:
+            sta         hold_key
+            lda         w_iqh,X
+            inc         a
+            and         #INQ_SIZE - 1
+            cmp         w_iqt,X
+            bne         @put
+            lda         d_src
+            ora         pc_step
+            bne         @put
+            lda         rx_head                             ; The keys behind it, if more have come since they
+            ldy         hold_ok                             ;   were last looked at
+            beq         :+
+            cmp         hold_head
+            beq         @hold
+:
+            sta         hold_head
+            stz         hold_ok
+            ldy         rx_tail
+:
+            cpy         hold_head
+            beq         :+
+            lda         rx_buf,Y
+            iny
+            cmp         kb_pfx
+            bne         :-
+@put:
+            clc
+            rts
+:
+            inc         hold_ok
+@hold:
+            lda         #1
+            sta         hold_have
+            sta         d_held
+            sta         kbd_wait
+            sec
             rts
 
 ; The keys' action .A (KA_*: a binding's)
@@ -3216,7 +3395,23 @@ h_ser:
 @open:
             inc         ser_rd
             lda         #$FF                                ; The line's /ser's: the irq entry stores every byte
-            sta         pfx                                 ;   as it is (Ctrl-C, Ctrl-\, Ctrl-] too)
+            sta         pfx                                 ;   as it is (Ctrl-C, Ctrl-\, Ctrl-] too), with no
+            lda         fl_x                                ;   flow control.  A terminal that was told to stop
+            beq         :++                                 ;   is let go now (XON), before the bytes that are
+            php                                             ;   /ser's start (and not by fl_watch, among them)
+            sei
+            lda         rx_mark
+            cmp         rx_tail
+            bne         :+
+            lda         #XON
+            jsr         fl_put
+            clc
+            lda         rx_tail
+            adc         #FL_HI
+            sta         rx_mark
+:
+            plp
+:
             clc
             rts
 
@@ -4450,13 +4645,19 @@ key_raw:
             clc
             rts
 
-; t2_napr: the rounds timer 2 naps when it's idle (t2_next): an Escape alone awaited's (ESC_NAP), else the chrome's
-; time's (CLK_NAP), else none.  Keeps .A, .X, .Y
+; t2_napr: the rounds timer 2 naps when it's idle (t2_next): an Escape alone awaited's (ESC_NAP), else a terminal
+; told to stop's (FL_NAP: fl_watch), else the chrome's time's (CLK_NAP), else none.  Keeps .A, .X, .Y
 nap_set:
             pha
             lda         esc_wait
             beq         :+
             lda         #ESC_NAP
+            bra         @set
+:
+            lda         fl_hold
+            cmp         #1
+            bne         :+
+            lda         #FL_NAP
             bra         @set
 :
             lda         clk_on
@@ -7334,7 +7535,34 @@ c_rate:                                                     ; Rate .X, once noth
 :
             SER_RATE_SET                                    ; (serial.inc's: the ACIA, and rate_t2)
 
-; serctl's state: "bN"
+; serctl's flow control: x1 (XON/XOFF), x0 (none).  A sender that was told to stop is let go, and with x1 told
+; again if the ring's still that full (fl_run)
+c_x1:
+            lda         #1
+            bra         :+
+c_x0:
+            lda         #0
+:
+            php
+            sei
+            ldx         fl_x
+            sta         fl_x
+            cmp         #0
+            bne         :+
+            txa                                             ; x0 from x1: a sender that was told to stop (the
+            beq         :+                                  ;   mark at the tail) is let go
+            lda         rx_mark
+            cmp         rx_tail
+            bne         :+
+            lda         #XON
+            jsr         fl_put
+:
+            jsr         fl_run
+            plp
+            clc
+            rts
+
+; serctl's state: "bN", and "x1" or "x0"
 gen_serctl:
             lda         #'b'
             jsr         srv_tputc
@@ -7345,6 +7573,13 @@ gen_serctl:
             tax
             pla
             jsr         srv_tputs
+            lda         #LF
+            jsr         srv_tputc
+            lda         #'x'
+            jsr         srv_tputc
+            lda         fl_x
+            ora         #'0'
+            jsr         srv_tputc
             lda         #LF
             jsr         srv_tputc
             clc
@@ -7721,7 +7956,8 @@ pc_cap:
             rts
 
 ; pump's: the frame going out (pc_txbuf, pc_len bytes, from pc_txi), into the send ring as it has room: PC_MARK
-; first, then its bytes, PC_MARK and PC_ESC stuffed (PC_ESC, then the byte ^ $20).  OUT: C = 1: not all of it yet
+; first, then its bytes, PC_MARK, PC_ESC, XON and XOFF stuffed (PC_ESC, then the byte ^ $20).  OUT: C = 1: not all
+; of it yet
 ; (the windows' text waits).  Modifies .A, .X, .Y
 pc_pump:
             lda         pc_txe                              ; A byte as it is first (PC_MARK, or an escaped one's
@@ -7740,6 +7976,10 @@ pc_pump:
             inc         pc_txi
             lda         pc_txbuf,X
             cmp         #PC_MARK
+            beq         :+
+            cmp         #XON                                ; (Flow control's bytes too: one in the stream is the
+            beq         :+                                  ;   driver's own, never a frame's)
+            cmp         #XOFF
             beq         :+
             cmp         #PC_ESC
             bne         @put
@@ -8045,6 +8285,8 @@ ser_cmds:
             .word       s_b9600, c_b9600
             .word       s_b19200, c_b19200
             .word       s_b115200, c_b115200
+            .word       s_x1, c_x1
+            .word       s_x0, c_x0
             .word       0
 s_root:     .byte       "/", 0
 s_cons:     .byte       "cons", 0
@@ -8203,5 +8445,7 @@ s_b19200:   .byte       "b"
 s_19200:    .byte       "19200", 0
 s_b115200:  .byte       "b"
 s_115200:   .byte       "115200", 0
+s_x1:       .byte       "x1", 0
+s_x0:       .byte       "x0", 0
 
 .include "srvlib.s"

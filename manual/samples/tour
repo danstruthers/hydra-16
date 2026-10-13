@@ -1,0 +1,6 @@
+#!/bin/rc
+# tour - say what's on each disk
+for(d in /rom /ram /sd/0) {
+	echo In $d there are:
+	ls $d
+}

@@ -22,7 +22,7 @@
 (each {f {"cpu.dl" "machine.dl" "devices.dl" "spi.dl" "i2c.dl" "rtc.dl" "vera.dl" "smc.dl"}} (load (+ here f)))
 
 (def {spec-bios spec-prom spec-cycles spec-init spec-expect spec-marks spec-keys spec-send-after spec-send spec-boot-done
-  spec-out spec-peer spec-paste} "" "" 30000000 "" NIL {} {} "" {} -1 "." NIL NIL)
+  spec-out spec-peer spec-paste spec-flow} "" "" 30000000 "" NIL {} {} "" {} -1 "." NIL NIL T)
 (load (nth 1 args))
 
 ; ---- the console's output: in pieces (a string grows by copying), its tail for the marks, the result's search window
@@ -66,7 +66,7 @@
 ; ---- the machine, as the spec says
 (set! {init-pass init-fail} (+ "\n" spec-init ": PASS") (+ "\n" spec-init ": FAIL"))
 (load-roms (read-file spec-bios) (read-file spec-prom))
-(set! {ac-paste} spec-paste)
+(set! {ac-paste ac-flow} spec-paste spec-flow)
 (set! {ac-charcyc} (char-cycles))
 (power-up)
 (type-keys spec-keys)
@@ -106,7 +106,7 @@
   "\"via\":{\"ier\":" via-ier ",\"pcr\":" (vr 12) "},"
   "\"rtc\":" (if rtc-on (js-list (rtc-dump)) "null") ","
   "\"acia\":{\"gapMin\":" (if (>= ac-gapmin INF) "null" (to-fixed ac-gapmin 4)) ",\"overruns\":" ac-overruns ",\"wdc\":" (if ac-wdc "true" "false")
-    ",\"pcLost\":" pclost ",\"charCycles\":" ac-charcyc ",\"rxLost\":" rxlost
+    ",\"pcLost\":" pclost ",\"charCycles\":" ac-charcyc ",\"rxLost\":" rxlost ",\"xoffs\":" ac-xoffs ",\"xons\":" ac-xons
     ",\"rxLat\":{\"min\":" (if (>= lat-min INF) "null" lat-min) ",\"max\":" lat-max ",\"sum\":" lat-sum ",\"n\":" lat-n "}},"
   "\"vera\":" (if ve-on (+ "{\"frames\":" ve-frames ",\"pcmIn\":" ve-pcmin ",\"pcmOut\":" ve-pcmout ",\"pcmLost\":" ve-pcmlost
     ",\"pcmUnderruns\":" ve-under ",\"pcmLog\":" (if ve-logon ve-nlog "null") ",\"ready\":" (if (>= ve-curt ve-ready) "true" "false")

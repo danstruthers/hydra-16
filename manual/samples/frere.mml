@@ -1,0 +1,5 @@
+; frere.mml - Frere Jacques, as a round for two voices
+#tempo 120
+#title Frere Jacques
+A I73 o4 l4 [c d e c]2 [e f g2]2 [g8 a8 g8 f8 e c]2 [c <g> c2]2
+B I71 o4 l4 r1 r1 [c d e c]2 [e f g2]2 [g8 a8 g8 f8 e c]2 [c <g> c2]2

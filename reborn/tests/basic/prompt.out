@@ -44,3 +44,9 @@ a
 Break in line 20
 at the prompt
 b
+ 42 
+AGAIN!
+ 42 
+AGAIN!
+line 100: duplicate definition
+line 20: subprogram not defined

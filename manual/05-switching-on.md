@@ -1,7 +1,10 @@
 # Chapter 5. Switching On
 
-Your Hydra is built. In this chapter you'll connect it to a PC, switch it on, watch it start, and type your first
-commands. If something doesn't work, the last part of the chapter will help you find out why.
+Your Hydra is built. In this chapter you'll connect it to a PC, switch it on, watch it start, and check that it's all there. If something doesn't work, the last part of the chapter will help you find out why.
+
+> **IN THIS CHAPTER:** You'll connect the Hydra to a PC, set up a terminal program, switch on, read the start-up
+> messages, and find the fault if there is one. **You need:** a built Hydra (Chapter 4), a PC, and a USB to RS-232
+> adapter. If you're using the emulator, skip to Chapter 6.
 
 ## 5.1 Talking to the Hydra
 
@@ -10,7 +13,7 @@ connector that sends and receives letters one *bit* at a time, down a cable, to 
 program** shows what the Hydra sends, and sends the Hydra what you type. The PC becomes the Hydra's screen and
 keyboard.
 
-(With a Vera X card in slot 0, the Hydra can have a screen and a keyboard of its own too. Chapter 15 shows how.)
+(With a Vera X card in slot 0, the Hydra can have a screen and a keyboard of its own too. Chapter 16 shows how.)
 
 <figure>
 <img src="figures/serial.svg" alt="The Hydra's serial socket J3, a USB to RS-232 adapter, and a PC">
@@ -44,7 +47,7 @@ You can use the Hydra's own **PC tool**, or almost any terminal program.
 ### The Hydra PC tool
 
 The PC tool comes with HydraOS. It's a terminal, and it does one more thing: it lets the Hydra use a folder on
-your PC as if it were one of its own disks, called `/pc` (Chapter 8). It needs Node.js, which you installed in
+your PC as if it were one of its own disks, called `/pc` (Chapter 9). It needs Node.js, which you installed in
 Chapter 2. The first time, install the part it uses to talk to serial ports:
 
 ```text
@@ -93,13 +96,19 @@ Any terminal program that can use a serial port works too: **PuTTY** or **Tera T
 | Data bits | 8 |
 | Parity | None |
 | Stop bits | 1 |
-| Flow control | None |
+| Flow control | **XON/XOFF** |
 | Terminal type | VT100 or xterm |
 
 The first four are often written **9600 8N1**. In PuTTY, choose *Serial* as the connection type, type the port's
-name (like `COM3`) and the speed, and check *Connection → Serial → Flow control* is *None*. On macOS or Linux,
-`screen /dev/ttyUSB0 9600` starts `screen` on the port (to leave it, press <kbd>CTRL</kbd>-<kbd>A</kbd>, then
+name (like `COM3`) and the speed, and set *Connection → Serial → Flow control* to *XON/XOFF*. On macOS or Linux,
+`screen /dev/ttyUSB0 9600,ixon` starts `screen` on the port (to leave it, press <kbd>CTRL</kbd>-<kbd>A</kbd>, then
 <kbd>K</kbd>, then <kbd>Y</kbd>).
+
+> **HOW IT WORKS:** **Flow control** is how the Hydra says "wait!" when keys come faster than it can take them,
+> as they do when you paste a page of text. It sends one byte, called **XOFF**, to ask the terminal to stop, and
+> another, **XON**, when it's ready for more. A terminal set to *XON/XOFF* obeys them, and nothing you paste is
+> lost. With flow control set to *None* everything else still works, but a long paste may lose its end (section
+> 13.6). The PC tool obeys XON and XOFF without being told.
 
 > **HOW IT WORKS:** The Hydra's serial chip sends only while its *CTS* ("clear to send") line is on, and that line
 > comes from the PC's *RTS* ("request to send"). The PC tool and most terminal programs turn RTS on as they open the
@@ -110,15 +119,15 @@ name (like `COM3`) and the speed, and check *Connection → Serial → Flow cont
 Start the terminal program first, and then switch on the Hydra. The power light comes on, and in about a second
 the Hydra starts to talk:
 
-<!-- session --boot --modules 1
+<!-- session --boot
 -->
 
 ```session
 Hydra-16: kernel 0.1, ABI 1
 POST ZP:0 ST:0 OS:0 HI:0 SH:S W:0
-RAM U:0 F0:0/00/0000 F4:0/00/0000 F8:0/00/0000 FC:0/00/0000 00:0/00/0000
+RAM U:0 F0:0/00/0000 F4:0/00/0000 F8:0/00/0000 FC:0/00/0000 00:0/00/0000 10:0/00/0000 20:0/00/0000
 POST ok
-RAM modules: 01
+RAM modules: 03
 task F: cons
 task E: storage
 task D: kdev
@@ -129,28 +138,28 @@ task 1: init
 HydraOS 1.0 for the Hydra-16
 init: up in task 01
 T ST FL PA CPU    NAME
-0 01 00 FF 000050 kernel
-1 01 00 FF 00001A init
+0 01 00 FF 000053 kernel
+1 01 00 FF 000013 init
 B 04 01 FF 000003 gpio
-C 04 01 FF 000003 snd
+C 04 01 FF 000004 snd
 D 04 01 FF 00000C kdev
-E 04 01 FF 000078 storage
-F 04 01 FF 00004A cons
+E 04 01 FF 000075 storage
+F 04 01 FF 000050 cons
 hello, from init
 init: hello ended: code $07 (bye)
 HyForth (Forth 2012), bye to end
 />
 ```
 
-Congratulations: you've built a computer! Here's what the messages mean (Chapter 6 tells the whole story):
+Congratulations: you've built a computer! Here's what the messages mean (Chapter 7 tells the whole story):
 
 | Message | What it means |
 |---|---|
 | `Hydra-16: kernel 0.1, ABI 1` | The **kernel**, the heart of HydraOS, has started. |
 | `POST ...` and `RAM ...` | The **power-on self test** has checked the Hydra's memory. A `0` everywhere means all is well... |
 | `POST ok` | ...and so does this. |
-| `RAM modules: 01` | It found one RAM module, on the memory card. |
-| `task F: cons` ... `task A: vid` | The **drivers** have started: the programs that look after the Hydra's devices. |
+| `RAM modules: 03` | It found three RAM modules, on the memory card. (Yours may have one or two.) |
+| `task F: cons` ... `task A: vid` | The **drivers** have started: the programs that look after the Hydra's devices. (`vid` looks for a Vera X card and, finding none, ends at once, which is why task A isn't in the list below: section 7.4.) |
 | `task 1: init` | The first program, **init**, has started. It sets up the system. |
 | `HydraOS 1.0 for the Hydra-16` | HydraOS is running. |
 | The table and `hello, from init` | A little program called **hello** says hello, and shows the tasks running. |
@@ -160,9 +169,9 @@ Congratulations: you've built a computer! Here's what the messages mean (Chapter
 > **NOTE:** The numbers in the `CPU` column may be a little different on your Hydra. They count how much work each
 > task has done so far.
 
-## 5.4 Your first commands
+## 5.4 Is it all there?
 
-Type `date` and press <kbd>RETURN</kbd>:
+Type `date` and press <kbd>RETURN</kbd>. If the Hydra answers, its keyboard side works too:
 
 ```session
 /> date
@@ -170,45 +179,10 @@ Type `date` and press <kbd>RETURN</kbd>:
 ```
 
 The Hydra keeps the time, but without a clock chip (section 4.5) it doesn't know the date, so its clock starts at
-midnight on January 1, 2000, each time you switch on. Chapter 10 shows how to set it.
+midnight on January 1, 2000, each time you switch on. Chapter 11 shows how to set it.
 
-Now try `ls`, which lists files. Typed alone, it lists the files at the top of the Hydra's "tree" of files (Chapter
-8 explains them all):
-
-```session
-/> ls
-bin/
-dev/
-env/
-lib/
-mnt/
-pc/
-proc/
-ram/
-rom/
-sd/
-sram/
-tmp/
-```
-
-The `/` after each name means it's a **directory**: a folder, holding more files.
-
-The shell is HyForth, which is a programming language too. Ask it to add two numbers. In Forth, the numbers come
-first, then what to do with them, and `.` ("dot") prints the answer:
-
-```session
-/> 2 3 + .
-5
-```
-
-And `echo` prints whatever you give it:
-
-```session
-/> echo Hello, Hydra!
-Hello, Hydra!
-```
-
-`free` shows how much memory there is (here, with three RAM modules):
+Now ask it how much memory it found. `free` shows the memory each task can have, and the memory they share. This
+Hydra has a memory card with three RAM modules:
 
 ```session
 /> free
@@ -216,34 +190,17 @@ ram     384 KB a task (3 modules)
 shared  1024 KB, 512 KB in segments (1), 512 KB free
 ```
 
-> **TRY THIS:** Type `ls /rom/bin` to see the programs on the Hydra's ROM disk. Then try some of them: `ps` (the
-> tasks running), `pwd` (where you are), and `hello`.
+Each RAM module gives every task 128 KB, so one module shows `128 KB a task (1 module)`, and two show 256 KB. If
+the number of modules is less than the number you fitted, see section 5.7.
 
-## 5.5 Typing and fixing a line
+> **NOTE:** The board has 2 MB of shared RAM, but `free` shows 1024 KB. That's the half HydraOS hands out to
+> programs, in pieces called *segments* (section 17.9). One segment is in use already: the RAM disk `/sram`, of 512 KB.
+> HydraOS 1.0 keeps the other half of the shared RAM in reserve.
 
-Until you press <kbd>RETURN</kbd>, you can change the line you're typing:
+Your Hydra works. **Chapter 6, First Steps**, is where you learn to use it: turn there now. The rest of this chapter
+is about the serial line's speed, switching off, and what to do when something isn't right.
 
-| Keys | What they do |
-|---|---|
-| <kbd>BACKSPACE</kbd> or <kbd>DELETE</kbd> | Rub out the letter before the cursor |
-| <kbd>←</kbd> and <kbd>→</kbd> | Move along the line |
-| <kbd>HOME</kbd> or <kbd>CTRL</kbd>-<kbd>A</kbd> | Go to the start of the line |
-| <kbd>END</kbd> or <kbd>CTRL</kbd>-<kbd>E</kbd> | Go to the end of the line |
-| <kbd>CTRL</kbd>-<kbd>U</kbd> | Rub out the whole line |
-| <kbd>↑</kbd> and <kbd>↓</kbd> | Bring back the lines you typed before (the last four) |
-| <kbd>RETURN</kbd> | Send the line to the Hydra |
-
-And two more keys work at any time:
-
-| Keys | What they do |
-|---|---|
-| <kbd>CTRL</kbd>-<kbd>C</kbd> | Stop the program that's running |
-| <kbd>CTRL</kbd>-<kbd>]</kbd> | The **window key**: the start of the console's own commands (Chapter 9) |
-
-> **TIP:** With the PC tool, <kbd>CTRL</kbd>-<kbd>A</kbd> is the tool's own key, so press it twice to go to the start
-> of a line, or use <kbd>HOME</kbd>.
-
-## 5.6 A faster line
+## 5.5 A faster line
 
 At 9600 baud, the serial port sends about 900 letters a second: a screenful takes two seconds. It can go more than
 ten times faster. Type:
@@ -254,25 +211,25 @@ ten times faster. Type:
 
 Then switch your terminal program to 115200 baud too. (In the PC tool, quit with <kbd>CTRL</kbd>-<kbd>A</kbd>
 <kbd>X</kbd> and start it again with `--baud 115200`.) The Hydra always starts at 9600, so you'll need to do this
-each time you switch on. Chapter 12 shows the other speeds.
+each time you switch on. Chapter 13 shows the other speeds.
 
 > **HOW IT WORKS:** The serial chip's speeds come from a clock of 1.79 MHz, and its speeds are about 3% slower than
 > their names: "9600" is really 9,322 bits a second. That's close enough for a PC's serial port, which allows for
 > small differences like this.
 
-## 5.7 Switching off
+## 5.6 Switching off
 
 You can switch the Hydra off at any time, but first:
 
 * **Save your work, and finish with the files you're changing.** If you're in an editor, save and quit. A program
   writing to an SD card finishes the job as it closes the file.
-* **Copy anything you want to keep off the RAM disks**, `/ram` and `/sram` (Chapter 8). They're made of memory, and
+* **Copy anything you want to keep off the RAM disks**, `/ram` and `/sram` (Chapter 9). They're made of memory, and
   they're empty again each time the Hydra starts.
 
 The **reset button** starts the Hydra again without switching it off: it's the button to press when a program has
 gone wrong and won't stop. A reset empties the RAM disks too.
 
-## 5.8 When something goes wrong
+## 5.7 When something goes wrong
 
 Don't worry if your Hydra doesn't work the first time: most home-built computers don't! Finding out why is part of
 the fun, and you'll learn a lot about how the Hydra works. **Always switch off before you touch the board.**
@@ -289,7 +246,11 @@ the fun, and you'll learn a lot about how the Hydra works. **Always switch off b
 7. Check the chips the Hydra needs to start: U1 (the processor), U6 (the kernel ROM), U3 and U5 (the serial port),
    U39 and U40 (the clock) and U43 (the reset chip). Are they in the right sockets, the right way round, with no
    legs bent under?
-8. Check the joints on the back of the board around those chips, and around J3.
+8. Then check the **address decoder**: U8 to U16 and U19 to U24 (Appendix I). These small logic chips work out
+   which chip answers each address, so one of them in the wrong socket, or backwards, can keep the ROM or the serial
+   chip from ever being heard. Many of them look alike: read the number printed on each, and compare it with the
+   number printed on the board beside its socket.
+9. Check the joints on the back of the board around those chips, and around J3.
 
 ### Letters appear, but they're nonsense
 
@@ -305,7 +266,7 @@ POST found faults: shared RAM
 ```
 
 The Hydra goes on starting if it can, leaving any bad memory unused, but you should find the fault. The numbers on
-the `POST` and `RAM` lines point to it. Each one that isn't `0` is a fault (Chapter 6 explains them all):
+the `POST` and `RAM` lines point to it. Each one that isn't `0` is a fault (Chapter 7 explains them all):
 
 | Part of the line | It tests | If it isn't 0, check |
 |---|---|---|

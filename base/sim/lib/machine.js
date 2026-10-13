@@ -66,7 +66,7 @@ function createMachine(opt) {
   let T = regT & 15, U = regU & 15, W = regW & 15;
   const m = { out: '' };                                      // The serial output (the ACIA's)
   const smc = opt.smc ? createSmc(Object.assign({ log }, opt.smc === true ? {} : opt.smc)) : null;
-  const acia = createAcia({ clock: opt.clock, wdc: opt.acia === 'wdc', paste: opt.paste, input: opt.input, consoleOnly: !!opt.pcHost,
+  const acia = createAcia({ clock: opt.clock, wdc: opt.acia === 'wdc', paste: opt.paste, flow: opt.flow, flowLag: opt.flowLag, input: opt.input, consoleOnly: !!opt.pcHost,
     keyboard: smc ? c => smc.type(c) : null,
     onTx: (v, t) => { for (const b of opt.pcHost ? opt.pcHost.push(v, t) : [v]) out(b, t); } });
   function out(v, t) { if (opt.pcHost) acia.shown(v, t); m.out += String.fromCharCode(v); for (const k of opt.marks || []) if (m.out.endsWith(k)) log('mark: ' + JSON.stringify(k) + ' at cycle ' + t); }

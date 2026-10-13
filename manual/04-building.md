@@ -4,6 +4,10 @@ This is the chapter where your Hydra comes to life. You'll fit the parts in a ca
 any chips go in, program the ROM chips, put the chips in their sockets, build the memory card, and connect the
 power. Read the whole chapter once before you start, then come back and follow it step by step.
 
+> **IN THIS CHAPTER:** You'll solder the main board in eight steps, test its power, program the ROM chips, fit the
+> chips, set the jumpers, build a memory card, and wire the power. **You need:** all of Chapter 3; the kit and the
+> tools; and fifteen to twenty hours, a little at a time.
+
 > **CAUTION:** Never solder, insert chips, or change jumpers while the power supply is plugged in. Unplug it first,
 > every time.
 
@@ -185,7 +189,8 @@ ohms; the reading may slowly climb as the capacitors charge from the meter. A re
 circuit between +5 V and ground: look for a solder bridge, or an electrolytic capacitor in backwards, before going
 on.
 
-**Connect the power supply and a switch.** See section 4.7 for how to connect the ATX power supply and a power switch.
+**Connect the power supply and a switch.** Section 4.8 shows how: turn to it now, plug the ATX power supply into J11,
+connect a power switch to J10, and come back here.
 
 **Measure the voltages.** Switch on. Set the multimeter to DC volts, hold the black probe on pin 21 of the U1 socket
 (ground), and touch the red probe to each of these socket pins in turn:
@@ -291,6 +296,9 @@ Put each chip in the socket with its reference:
 > **NOTE:** U3, the serial chip, should be a Rockwell **R65C51**. A WDC **W65C51N** fits too, but it has a fault in
 > the way it reports that it's ready to send, and HydraOS must be built to work around it:
 > `node reborn/build.js --acia wdc` (Chapter 2 shows how to build HydraOS).
+>
+> U2, the VIA, is a Rockwell **R65C22** on the schematic. It's out of production too, and WDC's **W65C22N** is a
+> drop-in replacement that needs no change to HydraOS.
 
 > **CAUTION:** Read each chip's markings carefully: some chips look alike. A 74F08 isn't a 74ACT08, and a 74LS139
 > isn't a 74F139, even though they have the same number of pins. The letters between the "74" and the number tell
@@ -324,7 +332,7 @@ first.
 three wires (send, receive and ground), move the jumper to pins 2 and 3.
 
 **J9 and J29: no jumpers.** J9 brings out two spare outputs of the sound chip, called CT1 and CT2, for your own
-experiments. J29, *Audio In*, lets you mix sound from another device into the Hydra's sound (Chapter 14 shows how).
+experiments. J29, *Audio In*, lets you mix sound from another device into the Hydra's sound (Chapter 15 shows how).
 Never put a jumper on either of them.
 
 ## 4.7 The memory card
@@ -461,5 +469,9 @@ Before you switch on for the first time, check:
 * One clock jumper is on J7, and the J30 jumper is on pins 1 and 2.
 * The memory card is plugged in, with its module jumper set.
 * The power supply is plugged into J11, and the power switch into J10.
+
+**The SD card reader.** If you have an SD card module, this is the time to connect it: six wires, to the SPI header
+J18. Section 14.2 has the wiring, and shows how to get a new card ready. To start with HydraOS's sample card (its
+example programs and songs), write its image, `reborn/bin/sdcard.img`, onto a card with your PC first (section 2.6).
 
 Now turn to Chapter 5, connect the Hydra to your PC, and switch it on!

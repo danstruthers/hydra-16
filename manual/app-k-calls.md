@@ -2,7 +2,7 @@
 
 A **system call** asks HydraOS to do something for a program. This appendix lists all of them, group by group.
 
-**From assembly language** (section 25.13), a call is a `jsr` to its address. Its inputs go in A, X, Y and the call
+**From assembly language** (section 27.13), a call is a `jsr` to its address. Its inputs go in A, X, Y and the call
 registers r0 to r15; its answers come back in the same places, a 16-bit one in A (its low byte) and X (its high
 byte). C = 0 means it worked; C = 1 means it failed, with the error code (Appendix G) in A. A call may change A, X,
 Y, r0 to r15 and the flags, but never the program's zero page, $22 to $7F. `hydra.inc` (in `/lib/as`) names every
@@ -13,9 +13,9 @@ in small letters, with `-` for `_`:
 
 | Language | `OPEN` is | Section |
 |---|---|---|
-| HyForth (`lib hydra`) | `sys-open` ( *inputs* -- *outputs* *ior* ) | 19.9 |
-| hylang | `(sys-open ...)`, or `(sys :open ...)` | 21.4 |
-| HyBASIC | `SYS "OPEN"`, with `RREG` for the registers after | 23.8 |
+| HyForth (`lib hydra`) | `sys-open` ( *inputs* -- *outputs* *ior* ) | 20.9 |
+| hylang | `(sys-open ...)`, or `(sys :open ...)` | 22.4 |
+| HyBASIC | `SYS "OPEN"`, with `RREG` for the registers after | 24.8 |
 
 *It can wait* means the call can make the program wait: for a key, a disk, another task, or time to pass.
 
@@ -58,7 +58,7 @@ in small letters, with `-` for `_`:
 
 **`TASKINFO`** ($F84E). What the kernel knows about a task: its state, parent, time used, name (as `ps` shows). *In:* A = a task (0-15); r0 = a buffer (TI_SIZE bytes). *Out:* the buffer: TI_STATE, TI_FLAGS, TI_PARENT, TI_CPU (3 bytes: ticks), TI_BANK, TI_TYPE, TI_NAME (16). *Errors:* E_SRCH.
 
-**`NOTIFY`** ($F851). Set this task's note handler (section 25.16), or take it away. *In:* r0 = the note handler, or 0 for none. *(Not in the languages.)*
+**`NOTIFY`** ($F851). Set this task's note handler (section 27.16), or take it away. *In:* r0 = the note handler, or 0 for none. *(Not in the languages.)*
 
 **`NOTE`** ($F854). Send a note to a task, or to a note group. *In:* A = a task, or NOTE_GROUP | a note group; X = the note (1-31: NOTE_*). *Errors:* E_INVAL, E_SRCH, E_PERM.
 
@@ -157,7 +157,7 @@ in small letters, with `-` for `_`:
 
 ## K.5 Namespaces
 
-**`BIND`** ($F920). Bind a name to another place in the namespace (section 8.5). *In:* r0 = new (a path); r1 = old (a path: absolute); A = MREPL, MBEFORE or MAFTER, and MCREATE. *Errors:* E_NOENT, E_INVAL, E_NSFULL, E_NODEV, E_NAMETOOLONG. *It can wait.*
+**`BIND`** ($F920). Bind a name to another place in the namespace (section 9.5). *In:* r0 = new (a path); r1 = old (a path: absolute); A = MREPL, MBEFORE or MAFTER, and MCREATE. *Errors:* E_NOENT, E_INVAL, E_NSFULL, E_NODEV, E_NAMETOOLONG. *It can wait.*
 
 **`MOUNT`** ($F923). Mount a device's files in the namespace. *In:* X = a device letter; r0 = its spec (a string, 8 characters at most), or 0; r1 = old; A = BIND's flags. *Errors:* E_NODEV, E_NOENT, E_INVAL, E_NSFULL, E_NAMETOOLONG. *It can wait.*
 

@@ -139,7 +139,7 @@ VF_GONE         = $04           ; Removed: to go from the environment too
 .globalzp   xw
 .global     xf, xexec, exec_now, exec_this, exec_src
 .global     exec_init, run_cmd, run_capture, spawn_path, wait_child, wait_bg, run_bg_reap, rc_exits
-.global     redir_restore_all, status_word, status_error, high_fd, high_close
+.global     redir_restore_all, status_word, status_error, high_fd, high_close, pipe_reap, deep_error
 ; var.s
 .globalzp   vr
 .global     var_find, var_fn, var_get, var_set, var_set_word, fn_set, fn_del, var_export, var_import

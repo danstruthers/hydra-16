@@ -4,6 +4,9 @@ Before you pick up a soldering iron or type your first command, let's look at wh
 particular computer you are about to meet. By the end of this chapter you will know the names of the Hydra's main
 parts, what each one does, and how to read the strange numbers, like `$FF20`, that computer people love.
 
+> **IN THIS CHAPTER:** You'll learn what a computer is made of, meet the Hydra-16's parts and its software, and learn
+> to read binary and hexadecimal numbers. **You need:** nothing. This is where everybody starts.
+
 ## 1.1 What is a computer?
 
 A computer is a machine that **follows instructions**. That's all. A list of instructions is called a **program**,
@@ -82,7 +85,8 @@ as the many thin lines running in parallel between the chips.
 The Hydra-16 is a computer you build yourself. It is a single large circuit board, about the size of a sheet of
 paper, covered in chips that you put in their places one by one. Its name comes from the Hydra of Greek legend, a
 monster with many heads. The Hydra-16 has sixteen "heads": it can run up to **sixteen programs at the same time**,
-each in its own private part of the memory, without any of them getting in the others' way.
+each in its own private part of the memory, without any of them getting in the others' way. (Four of the sixteen
+are HydraOS's own, so twelve are yours.)
 
 That ability, called **multitasking**, is something the home computers of the 1980s could not do. A Commodore 64
 or an Apple II ran one program at a time. The Hydra is built from the same kind of chips as those machines, but it
@@ -95,7 +99,7 @@ Here is what's inside:
 |---|---|
 | Processor | One W65C02S, at 3.58 MHz (or 7.16, 1.79 or 0.89 MHz) |
 | Programs at once | Up to 16 *tasks*, each with its own 32K of memory |
-| RAM | 512K for the tasks, 2 MB shared between them, and 2 MB more on each memory card you add (up to 15 cards) |
+| RAM | 512K for the tasks, 2 MB shared between them, and 2 MB more for each RAM module on the memory cards (up to 15 modules) |
 | ROM | 128K for the kernel (the heart of HydraOS), and up to 4 MB for the rest of the system |
 | Serial port | A DE-9 connector for a PC or terminal: the Hydra's keyboard and screen |
 | Sound | A Yamaha YM2151 FM sound chip, with a stereo headphone/line output |
@@ -135,8 +139,8 @@ task. When the Hydra switches from one program to another, it simply switches wh
 **The shared RAM (U25, U27, U28, U29).** Four small surface-mounted RAM chips along the bottom edge hold 2 MB that
 any program can use, a piece at a time.
 
-**The memory cards (J1, J2).** Two long sockets on the left take the **memory cards**. Each card holds another 2 MB
-of RAM, which gives every task 128K more memory of its own.
+**The memory cards (J1, J2).** Two long sockets on the left take the **memory cards**. A card holds one or two
+**RAM modules** of 2 MB each, and every module gives every task 128K more memory of its own.
 
 **The kernel ROM (U6).** The square chip in the middle of the board, in a socket with pins on all four sides, holds
 the **kernel**: the heart of HydraOS, the part that runs the other programs.
@@ -147,7 +151,7 @@ They hold the rest of HydraOS: its drivers, shells, languages and tools, and a w
 **The registers and mirrors.** The rows of smaller chips in the middle of the board are the Hydra's special trick.
 Four of them, labelled **T**, **U**, **V** and **W Register**, choose which task's memory the processor sees, which
 shared memory, which interrupt, and which page of the kernel ROM. Others, the **mirror RAMs**, remember which bank
-of memory each task has chosen. Chapter 6 tells you how they work together.
+of memory each task has chosen. Chapter 7 tells you how they work together.
 
 **The VIA (U2).** The R65C22 *Versatile Interface Adapter* has two timers and two 8-bit ports. One timer ticks the
 Hydra's clock for multitasking. One port runs the **SPI bus**, which talks to SD cards and other gadgets through
@@ -219,17 +223,20 @@ The Hydra's addresses go from **$0000** to **$FFFF**: four hex digits, or 65,536
 as on many computers of the 1980s, a **$** in front of a number means it's hexadecimal. So **$10** is sixteen, not
 ten, and **$FF20** is the address 65,312.
 
-> **TRY THIS:** Can you work out what $20 is in decimal? (Each step in the second hex digit is worth 16.) Chapter 17
+> **TRY THIS:** Can you work out what $20 is in decimal? (Each step in the second hex digit is worth 16.) Chapter 18
 > has much more about numbers, and the Hydra's languages can convert between bases for you. In HyForth, type
 > `hex 20 decimal .` to see the answer.
 
 ## 1.7 What you need
 
-**To use the Hydra on a PC**, all you need is a web browser. Chapter 2 shows you how.
+**To use the Hydra on a PC**, all you need is a web browser and one file: the emulator's page, `hydra-16.html`
+(someone may give it to you; or section 2.3 shows how to make it yourself, in a minute).
+Chapter 2 shows you where it comes from, and how to use it.
 
 **To build and use a real Hydra-16**, you will need:
 
-* The Hydra-16 kit: the main circuit board, its parts, and at least one memory card.
+* The Hydra-16 kit: the main circuit board, its parts, and at least one memory card. (A kit is planned; until there
+  is one, section 3.9 says how to get a board and the parts.)
 * A soldering iron and a few other tools (Chapter 3 lists them).
 * An **ATX power supply**, the kind used in desktop PCs, with a 24-pin connector.
 * A **power switch** (a toggle switch that stays on), and if you like, a reset button and a power light.
@@ -237,7 +244,9 @@ ten, and **$FF20** is the address 65,312.
   the kind with a 9-pin connector, not a bare "TTL" cable.
 * A programmer for flash ROM chips (such as a TL866 or T48), to put HydraOS into the ROM chips, unless your kit
   came with them already programmed.
-* Optional: an SD card reader module for the SPI headers, headphones or speakers, and the Vera X video card.
+* An **SD card reader module** for the SPI headers, and an SD card. A Hydra works without one, but it's where your
+  files are kept: without it, you can only save your work on your PC, through the serial cable.
+* Optional: headphones or speakers, and the Vera X video card.
 
 ## 1.8 Where to go next
 

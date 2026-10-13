@@ -1,7 +1,7 @@
 # Appendix F. The Memory and I/O Map
 
 This appendix collects the Hydra's addresses in one place: what the 65C02 sees, what's behind its windows, and the
-registers of each chip. Chapter 6 explains how it all fits together.
+registers of each chip. Chapter 7 explains how it all fits together.
 
 ## F.1 The 64K the 65C02 sees
 
@@ -47,7 +47,7 @@ banks with `BANKS_ALLOC` (and for shared ones, through **segments**, with `SEG_C
 The ROM bank register chooses one of 256 banks of 16K: 4 MB in eight sockets, U30 to U37, of 512K (32 banks) each.
 HydraOS's three chips (in U31, U32 and U34, section 4.4) hold its modules (the drivers, the shells, the languages,
 the libraries) and then the ROM disk. A big module has banks of its own; a small one shares a bank with others, each
-in its own part of it. `mods` lists the modules and their banks (Chapter 10).
+in its own part of it. `mods` lists the modules and their banks (Chapter 11).
 
 ## F.5 The I/O ports
 
@@ -87,7 +87,7 @@ in its own part of it. `mods` lists the modules and their banks (Chapter 10).
 | $FF12 | Command |
 | $FF13 | Control: the speed, and the bits of each byte |
 
-The ACIA's clock on this board is 1.790 MHz, so every speed is 2.9% slow (section 12.6).
+The ACIA's clock on this board is 1.790 MHz, so every speed is 2.9% slow (section 13.6).
 
 **The YM2151** (port 4):
 
@@ -108,7 +108,7 @@ on the Commander X16 (where they're at $9F20), so the X16's documentation descri
 | $FF28 | IRQLINE_L, SCANLINE_L | $FF3D | AUDIO_DATA |
 | $FF29-$FF2C | DC_VIDEO ... (chosen by CTRL's DCSEL) | $FF3E, $FF3F | SPI_DATA, SPI_CTRL: the SD card |
 
-The Vera X's keyboard and mouse controller isn't on these ports: it's on the I²C bus, at address $42 (section 15.9).
+The Vera X's keyboard and mouse controller isn't on these ports: it's on the I²C bus, at address $42 (section 16.9).
 
 **The Hydra's registers:**
 

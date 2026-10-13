@@ -51,6 +51,7 @@ function writeSpec(t, m, opt, dir, extra) {
   set('spec-out', dlPath(dir));
   set('spec-peer', extra.peer ? 'T' : 'NIL');
   set('spec-paste', m.paste ? 'T' : 'NIL');
+  set('spec-flow', m.flow === 'none' ? 'NIL' : 'T');
   set('opt-seed', opt.seed === undefined ? 1 : opt.seed);
   if (m.modules !== undefined) set('opt-modules', m.modules);
   if (m.sharedU !== undefined) set('opt-sharedu', m.sharedU);
@@ -164,7 +165,7 @@ async function runDl(t, machine, opt, extra) {
     rtc: r.rtc ? { regs: () => r.rtc.slice() } : null,
     acia: { gapMin: r.acia.gapMin === null ? Infinity : r.acia.gapMin, overruns: r.acia.overruns, wdc: r.acia.wdc, pcLost: r.acia.pcLost,
       rxLat: Object.assign({}, r.acia.rxLat, { min: r.acia.rxLat.min === null ? Infinity : r.acia.rxLat.min }),
-      charCycles: () => r.acia.charCycles, rxLost: r.acia.rxLost },
+      charCycles: () => r.acia.charCycles, rxLost: r.acia.rxLost, xoffs: r.acia.xoffs, xons: r.acia.xons },
     dl: { errText },
   };
   if (r.vera) {                                             // The Vera X: a JS one, as danlang's left it (for frame, cells, text)
