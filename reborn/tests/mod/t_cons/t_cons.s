@@ -429,7 +429,7 @@ main:
             sta         ser
             EXPECT_OK   "OPEN #c/serctl"
             READ_       ser, 64
-            EXPECT_A    9, "serctl reads as the rate and the flow control: b9600, x1 (9 bytes)"
+            EXPECT_A    64, "serctl reads as the rate, the flow control and the counts (64 of its bytes read)"
             WRITE_      ser, s_b115200, 7
             EXPECT_OK   "serctl: b115200"
             SAY         "at 115200: 0123456789 abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789"

@@ -5,6 +5,8 @@
 ; `.scope HWTEST` (see all.s).  It takes the machine over: the OS is gone (IRQs off; no BIOS routines are
 ; called: its own polled serial I/O at 9600 8N1), and it tests as much of the hardware as it can, from a
 ; menu.  The memory tests overwrite everything, so it ends by resetting the machine (R).
+;   The serial chip may be a Rockwell R65C51 or a WDC W65C51N (whose TDRE always reads 1): the entry finds out
+; which (HWT_WDC), so one image serves both, whatever the system's ROM was built for.
 ;   Entered from BIOS ROM code with _M_HWT_ENTER (include/hwtest.inc): HyForth's hwtest, or a T typed
 ; during POST.  Every task's paged ROM bank is then this bank, so it can switch T as it runs.
 ;
@@ -50,6 +52,7 @@ HWT_MODS            = $65       ; The RAM modules found (2: bit m = module m)
 HWT_IRQ_N           = $67       ; Interrupts taken (hwt_dev.s's handler)
 HWT_IRQ_E           = $68       ;   the last one's vector RAM entry
 HWT_IRQ_P           = $69       ;   and the P it pushed
+HWT_WDC             = $6A       ; <> 0: the ACIA is a WDC 65C51 (its TDRE always set): a character's time after each byte
 HWT_KEEP            = $70       ; ($70-$7F: kept by a test across its calls)
 ; Zero page scratch, in whichever task a test runs in (T switched)
 HWT_SP              = $F0       ; A pointer (2)
@@ -75,6 +78,14 @@ HWT_ENTRY:
             txs
             stz         U_REGISTER
             jsr         HWT_QUIET
+            lda         #ASCII_CR                           ; Which 65C51?  Two bytes at once: the second waits in a
+            sta         ACIA_R_DATA                         ;   Rockwell's TDR (TDRE 0 for a character's time); a
+            sta         ACIA_R_DATA                         ;   WDC's TDRE never clears
+            lda         ACIA_R_STATUS
+            and         #ACIA_STATUS_BIT_TDRE
+            sta         HWT_WDC
+            jsr         HWT_TX_IDLE                         ; (Both sent before the banner)
+            jsr         HWT_TX_IDLE
             stz         HWT_MODE
             stz         HWT_COL
             jsr         HWT_PRINT
@@ -355,8 +366,8 @@ HWT_MEMERR:
 ; ****************************************************************************
 ; Serial I/O: the ACIA, polled
 
-; .A out.  (Rockwell 65C51: wait for TDRE, with a timeout, in case CTS is off; WDC 65C51: its TDRE always
-; says empty, so wait a character's time after the byte.)  Counts the column.  Preserves .A, .X, .Y
+; .A out.  (Rockwell 65C51: wait for TDRE, with a timeout, in case CTS is off; WDC 65C51 (HWT_WDC): its TDRE
+; always says empty, so wait a character's time after the byte.)  Counts the column.  Preserves .A, .X, .Y
 HWT_PUTC:
             phx
             phy
@@ -364,7 +375,8 @@ HWT_PUTC:
             jsr         HWT_TDRE_WAIT
             pla
             sta         ACIA_R_DATA
-.if ::SER_ACIA = ::SER_ACIA_WDC
+            ldx         HWT_WDC
+            beq         @sent
             ldx         #(SER_CHAR_CYCLES + 1279) / 1280
             ldy         #0
 :
@@ -372,7 +384,7 @@ HWT_PUTC:
             bne         :-
             dex
             bne         :-
-.endif
+@sent:
             inc         HWT_COL
             cmp         #ASCII_CR
             bne         :+

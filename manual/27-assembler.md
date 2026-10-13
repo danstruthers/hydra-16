@@ -10,7 +10,7 @@ run like any other command. Its language is the one of **ca65**, the assembler o
 > Chapter 26, and the screen editor (section 6.6).
 
 ```text
-as [-bl] file.s [out]
+as [-bl] file.s|- [out|-]
 ```
 
 | Option | What it does |
@@ -18,6 +18,7 @@ as [-bl] file.s [out]
 | `-l` | Write a **labels file** too, *out*`.lbl`, for the debugger and the disassembler (section 27.17) |
 | `-b` | Write only the bytes, without a program's header (section 27.17) |
 | *out* | The program's name (without it: *file.s*'s name without its `.s`) |
+| `-` | In place of *file.s*: read the source from standard input, a pipe or a `<` file. In place of *out*: write the program to standard output (section 27.17) |
 
 ## 27.1 Your first program
 
@@ -726,6 +727,11 @@ way. Its `README.md` says how.
 **The program's name.** `as stars.s` makes `stars`; `as stars.s /bin/stars` puts it straight in `/bin` (in fact in
 `/ram/bin`, where new files in `/bin` go: section 9.7), so the shell finds it as plain `stars`, from any directory. A
 source whose name doesn't end with `.s` needs the output's name given.
+
+**Pipes.** A `-` in place of the source reads it from standard input, so `as` can take the end of a pipe: `dis stars |
+as - stars2` makes `stars2` from `stars`'s disassembly (Chapter 28), without a source file in between. With a source
+`-` the program goes to standard output unless you name it, and a `-` in place of *out* sends it there anyway:
+`as stars.s - > stars`. `-l` needs a named output, since the labels file takes its name from it.
 
 **-l: the labels file.** `as -l stars.s` also writes `stars.lbl`, listing the address of every label:
 

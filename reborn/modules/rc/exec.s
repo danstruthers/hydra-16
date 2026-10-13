@@ -7,7 +7,8 @@
 ;   A program's name without a / is looked for in each of $path's directories: SPAWN of dir/name, the next one on
 ;   E_NOENT.  A file that isn't a program but starts with #! is a script, Plan 9's way: the program named after the
 ;   #! runs it, with its path and its arguments (#!/bin/rc).  Before it starts, the variables go to the environment
-;   (var.s).
+;   (var.s); and prog, the environment's own (not a variable of rc's): the path it's started from (dir/name, or the
+;   name as typed), so a program that starts itself again (the C samples) finds its own file.
 ;   A pipeline's stages, a background command and `{}'s command run as programs: a simple command's program
 ;   itself, anything else (a built-in, a function, a { }, an if ...) rc -c with its text.
 ;   Background tasks are kept (their records waited for as they end: run_bg_reap, before each prompt).
@@ -912,6 +913,7 @@ spawn_path:
             jsr         pput
             jsr         name_put
             bcs         @next
+            jsr         prog_set                            ; (prog: the path, in its environment)
             jsr         spawn_it
             bcc         @done
             cmp         #E_NOENT
@@ -928,6 +930,7 @@ spawn_path:
             ldx         #0
             jsr         name_put
             bcs         @noent
+            jsr         prog_set
             jmp         spawn_it
 
 @noent:
@@ -936,6 +939,18 @@ spawn_path:
             sec
 @done:
             rts
+
+; prog = pathbuf (.X bytes) in the environment (the program's copy of rc's): the path it's started from.  (Not a
+; variable of rc's: the bank has no room for that.)  A full environment: not said
+prog_set:
+            LDR         r0, s_prog
+            LDR         r1, pathbuf
+            stx         r2
+            stz         r2 + 1
+            stz         r3
+            stz         r3 + 1
+            lda         #$FF
+            jmp         ENV_PUT
 
 ; The name (xw's first word) into pathbuf from .X, ended.  OUT: C = 1: too long
 name_put:
@@ -2112,6 +2127,7 @@ FN_DEPTH_MAX = 8
 run_vec:    .word       c_simple, c_brace, c_seq, c_bg, c_and, c_or, c_not, c_pipe, c_if, c_ifnot, c_for
             .word       c_while, c_switch, c_case, c_match, c_fn, c_fndel
 s_apid:     .byte       "apid"
+s_prog:     .byte       "prog", 0
 s_one:      .byte       "1"
 empty:      .byte       LIST_END
 s_rcpath:   .byte       "#m/rc", 0
