@@ -385,7 +385,7 @@ A program can ask the terminal things; the console answers into the program's ke
 
 ## 13.8 /pc
 
-`cons` also serves `/pc`, device `#P`, a folder on the PC (section 9.9). Its requests and the PC tool's replies go
-over the serial port as **frames**, mixed in with the text; each frame starts with the byte $1E, and has a check
-number (a CRC) at its end, so a damaged frame is sent again. The PC tool takes the frames out, so you never see
-them.
+`cons` also serves `/pc`, device `#P`, a folder on the PC, or a card's image there (section 9.9). Its requests and
+the PC tool's replies go over the serial port as **frames**, mixed in with the text; each frame starts with the
+byte $1E, and has a check number (a CRC) at its end, so a damaged frame is sent again. The PC tool takes the frames
+out, so you never see them.

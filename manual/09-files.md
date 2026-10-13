@@ -350,6 +350,10 @@ The files travel over the serial port, mixed in with the console's text (the PC 
 see them). They go no faster than the serial port allows, so switch to 115200 baud (section 5.5) before you copy
 big files. The PC tool's `--read-only` option stops the Hydra changing the folder's files.
 
+The PC tool can be given an SD card's image file in place of a folder (section 5.2). Then `/pc` is the card in the
+image, and everything works the same way, except that a directory's files are listed in the card's own order, as
+they are on `/sd`, and not sorted by name.
+
 Without the PC tool, the Hydra waits a second for an answer from the PC, then gives up:
 
 ```text

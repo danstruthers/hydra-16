@@ -1060,6 +1060,77 @@ const PC_LINES = [
   ["rmdir /pc/d; rm /pc/sub/x; cat /pc/nope; rm /pc/nope","cat: /pc/nope: not found\nrm: /pc/nope: not found"],
   ["ls /pc /pc/sub","bin/\nhello.txt\nnew.txt\nrr\nsub/\ndeep/"],
 ];
+// The pc-img test's lines: /pc a HydraFS image on the PC, not a folder (the card's own order in a directory, and
+// its stamps: the test's, for what's written too)
+const PC_IMG_LINES = [
+  ["echo b115200 >/dev/serctl",null],
+  ["ls /pc","big\nhello.txt\nsub/\nbin/"],
+  ["cat /pc/hello.txt","Hello from the PC\nline two"],
+  ["ls -l /pc/sub","--rw-rw-rw- P-        1 2026-10-03 15:04 x\nd-rw-rw-rw- P-        0 2026-10-03 15:04 deep"],
+  ["echo hi >/pc/new.txt; cat /pc/new.txt; ls -l /pc/new.txt","hi\n--rw-rw-rw- P-        3 2026-10-03 15:04 /pc/new.txt"],
+  ["{cp /rom/README /pc/r} </pc/hello.txt; cmp /rom/README /pc/r; echo $status",""],
+  ["cp /pc/big /pc/copy; cmp /pc/big /pc/copy; echo $status",""],
+  ["mkdir /pc/d; mv /pc/r /pc/rr; ls /pc","big\nhello.txt\nsub/\nbin/\nnew.txt\nrr\ncopy\nd/"],
+  ["/pc/bin/hi Ann","Hello, Ann!",true],
+  ["echo shorter >/pc/copy; cat /pc/copy; ls -l /pc/copy","shorter\n--rw-rw-rw- P-        8 2026-10-03 15:04 /pc/copy"],
+  ["echo more >>/pc/hello.txt; cat /pc/hello.txt | wc -l","      3"],
+  ["mkdir /pc/d; echo no >/pc/sub; cat /pc/hello.txt/x","mkdir: /pc/d: already exists\nrc: /pc/sub: is a directory\ncat: /pc/hello.txt/x: not a directory"],
+  ["rmdir /pc/sub; rmdir /pc/d; rm /pc/sub/x; cat /pc/nope; rm /pc/nope","rmdir: /pc/sub: directory not empty\ncat: /pc/nope: not found\nrm: /pc/nope: not found"],
+  ["ls /pc /pc/sub","big\nhello.txt\nsub/\nbin/\nnew.txt\nrr\ncopy\ndeep/"],
+];
+// hydrafs.js's Volume, what serving an image needs of it beyond what the Hydra's commands ask in pc-img: a file's
+// length set (longer: zeros; cut: its clusters given back, mid-cluster and to nothing), a write into a hole (the
+// hole's part gets clusters, the rest stays one), a rename (and one refused: the name taken), the read-only bit;
+// its errors' codes; and the free map right after all of it.  OUT: what's wrong
+function hfsVolumeChecks(dir) {
+  const f = [], img = path.join(dir, 'vol.img');
+  fs.mkdirSync(dir, { recursive: true });
+  hydrafs.mkfs(img, 1, 'VOL', undefined, true);
+  const v = new hydrafs.Volume(img, { now: 0x2000 });
+  const code = fn => { try { fn(); return 'none'; } catch (e) { return e.code || e.message; } };
+  try {
+    const C = v.cluster, a = v.create(v.root, 'a', 0);
+    v.write(a, 0, Buffer.alloc(C + 100, 0x41));
+    v.resize(v.lookup(v.root, 'a'), 3 * C + 7);                           // Longer: zeros
+    let e = v.lookup(v.root, 'a'), d = v.read(e);
+    if (e.size !== 3 * C + 7 || d[C + 99] !== 0x41 || d[C + 100] !== 0 || d[3 * C + 6] !== 0) f.push('a made longer: ' + e.size + ' bytes, or not zeros past its old end');
+    v.resize(e, C + 50);                                                 // Cut, in a cluster
+    e = v.lookup(v.root, 'a'); d = v.read(e);
+    if (e.size !== C + 50 || d.length !== C + 50 || d[C + 49] !== 0x41 || v.extents(e).reduce((s, x) => s + x.len, 0) !== 2) f.push('a cut to a cluster and 50 bytes: ' + e.size + ' bytes in ' + v.extents(e).reduce((s, x) => s + x.len, 0) + ' clusters');
+    v.resize(e, 2 * C); d = v.read(v.lookup(v.root, 'a'));               // Longer again: zeros where its cut bytes were
+    if (d[C + 49] !== 0x41 || d[C + 50] !== 0 || d[C + 99] !== 0) f.push('a longer again: its cut bytes are back');
+    v.resize(v.lookup(v.root, 'a'), 0);
+    if (v.extents(v.lookup(v.root, 'a')).length) f.push('a cut to nothing still has clusters');
+    // A hole: h's second to fourth clusters (as the Hydra's HydraFS leaves one), then a write into the third
+    const h = v.create(v.root, 'h', 0);
+    v.write(h, 0, Buffer.alloc(C, 0x42));
+    const x0 = v.extents(v.lookup(v.root, 'h'))[0];
+    let he = v.lookup(v.root, 'h');
+    v.setExtents(he, [x0, { start: hydrafs.HOLE, len: 3 }]); he.size = 4 * C; v.writeEntry(he);
+    v.write(v.lookup(v.root, 'h'), 2 * C + 10, Buffer.from('in the hole'));
+    he = v.lookup(v.root, 'h'); d = v.read(he);
+    const kinds = v.extents(he).map(x => (x.start === hydrafs.HOLE ? 'hole' : 'clusters') + ' ' + x.len).join(', ');
+    if (kinds !== 'clusters 1, hole 1, clusters 1, hole 1') f.push('h\'s extents after a write into its hole: ' + kinds);
+    if (d.length !== 4 * C || d[C - 1] !== 0x42 || d[C] !== 0 || d.toString('latin1', 2 * C + 10, 2 * C + 21) !== 'in the hole' || d[2 * C + 9] !== 0 || d[3 * C] !== 0) f.push('h read back after the write into its hole isn\'t right');
+    v.resize(v.lookup(v.root, 'h'), 2 * C + 5);                           // Cut in its written cluster: the hole after it goes
+    // Names
+    v.rename(v.root, v.lookup(v.root, 'h'), 'hole.bin');
+    if (!v.lookup(v.root, 'hole.bin') || v.lookup(v.root, 'h')) f.push('h renamed hole.bin: not so');
+    const errs = [code(() => v.rename(v.root, v.lookup(v.root, 'a'), 'hole.bin')), code(() => v.rename(v.root, v.lookup(v.root, 'a'), 'x'.repeat(32))),
+      code(() => v.create(v.root, 'a', 0)), code(() => v.walk('nope')), code(() => v.walk('a/b')), code(() => v.remove('/')),
+      code(() => { v.mkdir('dd'); v.put('dd/f', Buffer.from('f')); v.remove('dd'); })].join(' ');
+    if (errs !== 'EEXIST ENAMETOOLONG EEXIST ENOENT ENOTDIR EPERM ENOTEMPTY') f.push('the errors\' codes: ' + errs);
+    v.setReadOnly(v.lookup(v.root, 'a'), true);
+    if (!(v.lookup(v.root, 'a').mode & hydrafs.MODE_RO)) f.push('a read-only: its bit isn\'t set');
+    v.setReadOnly(v.lookup(v.root, 'a'), false);
+    if (v.lookup(v.root, 'a').mode & hydrafs.MODE_RO) f.push('a not read-only: its bit is set');
+    if (v.lookup(v.root, 'hole.bin').stamp !== 0x2000) f.push('the volume\'s own stamp (now) isn\'t on its files');
+    v.flush();
+    const problems = v.check();
+    if (problems.length) f.push('the free map after it all: ' + problems.slice(0, 3).join('; '));
+  } catch (e) { f.push('hydrafs.js\'s Volume: ' + e.message); } finally { v.close(); }
+  return f;
+}
 // The pc-ro test's lines: the folder served read-only
 const PC_RO_LINES = [
   ["cat /pc/hello.txt","Hello"],
@@ -2442,6 +2513,31 @@ module.exports = {
       },
     },
     {
+      name: 'pc-img', what: '/pc a HydraFS image file on the PC (the PC tool\'s folder can be an image: sim/tools/pcfs.js, hydrafs.js\'s Volume): its files read, a program run from it; files made, written, added to, made again shorter, copied (17K: several clusters), renamed, removed, a directory made and removed; its errors; then the image on the PC: the files as the Hydra left them, and its free map right (hydrafs.js check).  And the Volume\'s own: a length set, a write into a hole, a rename, the read-only bit, its errors\' codes',
+      init: 't_rc', cycles: 400e6,
+      pc: { image: { mb: 1, label: 'PCIMG' }, files: () => Object.assign({ big: Buffer.concat([PC_BIG(), PC_BIG(), PC_BIG(), PC_BIG()]) }, PC_FILES()) },
+      get machine() { return { input: typed(PC_IMG_LINES) }; },
+      get expect() { return expected(PC_IMG_LINES); },
+      check(m) {
+        const f = pcReport(m, 1, 0, 0), v = new hydrafs.Volume(m.pc.image, { readOnly: true });
+        try {
+          const bytes = n => { const e = v.tryWalk(n); return e && !e.isDir ? v.read(e) : Buffer.from('(no such file)'); };
+          const text = n => bytes(n).toString('latin1'), big = Buffer.concat([PC_BIG(), PC_BIG(), PC_BIG(), PC_BIG()]);
+          if (text('new.txt') !== 'hi\n') f.push('new.txt in the image: ' + JSON.stringify(text('new.txt')));
+          if (text('copy') !== 'shorter\n') f.push('copy in the image: ' + JSON.stringify(text('copy').slice(0, 40)));
+          if (text('hello.txt') !== 'Hello from the PC\nline two\nmore\n') f.push('hello.txt in the image: ' + JSON.stringify(text('hello.txt')));
+          if (!bytes('big').equals(big)) f.push('big in the image isn\'t as it was');
+          if (!bytes('rr').equals(fs.readFileSync(path.join(__dirname, '..', 'romfs', 'README')))) f.push('rr in the image isn\'t /rom/README');
+          for (const n of ['d', 'r', 'sub/x']) if (v.tryWalk(n)) f.push(n + ' is still in the image');
+          const problems = v.check();
+          if (problems.length) f.push('the image\'s free map: ' + problems.slice(0, 3).join('; '));
+          this.notes = [v.freeCount + ' of ' + v.clusters + ' clusters free'];
+        } finally { v.close(); }
+        f.push(...hfsVolumeChecks(path.join(path.dirname(m.pc.image), 'pc-img-vol')));
+        return f;
+      },
+    },
+    {
       name: 'pc-two', what: '/pc from two tasks at once (a pipeline: one reads a file, the other writes its copy): one request at a time, the other waiting its turn',
       init: 't_rc', cycles: 400e6, pc: { files: { big: PC_BIG } },
       machine: { input: 'ācat /pc/big | cat >/pc/copy; cmp /pc/big /pc/copy; echo $status\r' },
@@ -2644,6 +2740,7 @@ module.exports = {
       check(m) {
         const f = [];
         if (m.acia.xoffs < 5 || m.acia.xons < 5) f.push('the console told the terminal to stop ' + m.acia.xoffs + ' times, and to go on ' + m.acia.xons + ' (5 each at least, for 3,400 keys)');
+        if (String(m.pc.host.attach) !== '2,1') f.push('/pc\'s attach: ' + m.pc.host.attach + ' (2, the version, and 1: its frames stuff XON and XOFF)');
         if (m.acia.rxLost) f.push(m.acia.rxLost + ' bytes came while the last was unread');
         this.notes = ['XOFF ' + m.acia.xoffs + ' times, XON ' + m.acia.xons];
         return f;

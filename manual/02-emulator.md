@@ -229,7 +229,7 @@ The most useful options are:
 | `--modules N` | Plugs in N memory cards (the emulator's normal number is 2) |
 | `--clock 7.15909` | Runs the processor at 7.16 MHz: the emulator can, the board's parts can't (section 4.6) |
 | `--sd FILE` | Puts an SD card image file in the next SD reader |
-| `--pc-dir FOLDER` | Lets the Hydra see a folder on your PC as `/pc` (section 2.5) |
+| `--pc-dir FOLDER` | Lets the Hydra see a folder on your PC (or an SD card image file) as `/pc` (section 2.5) |
 | `--speed N` | Runs N times faster than real time (0: as fast as possible) |
 
 Appendix H lists every option the emulator has.
@@ -283,6 +283,9 @@ On the Hydra, `ls /pc` lists the files in that folder, and you can read them, ru
 change them. It's the easiest way to move programs between the Hydra and your PC: write a program in your favourite
 PC editor, save it in the folder, and run it on the Hydra. Add `--pc-read-only` if you want the Hydra to be able to
 read the folder but not change it.
+
+`--pc-dir` takes an SD card image file (section 2.6) in place of a folder, too. Then `/pc` is the card in that
+image, and what the Hydra writes there goes into the image.
 
 A real Hydra can do the same through its serial cable, with the PC tool. Chapter 5 shows you how.
 

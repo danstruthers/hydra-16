@@ -170,6 +170,9 @@ PC_T_REQ        = 'Q'           ;   a request: the request block, then its data
 PC_T_REPLY      = 'R'           ; The PC's: status, fid, count (2), qid type (the attach's: the version), then data
 PC_T_NAK        = 'N'           ;   the request came damaged: send it again
 PC_VERSION      = 2             ; (The old system's: 1)
+PC_STUFFS       = 1             ; The attach's second byte: this console stuffs XON and XOFF in its frames (so a
+                                ;   bare one inside a frame is its flow control's, to take out: a PC tool that knows
+                                ;   of it does, for a Hydra that says so; one that doesn't asks for the frame again)
 PC_REPLY_HDR    = 5
 PC_DATA         = 128           ; A frame's data at most (a read's, a write's)
 PC_RX_MAX       = PC_REPLY_HDR + PC_DATA ; A reply's payload at most (a longer frame isn't one of ours)
@@ -7719,7 +7722,9 @@ pc_serve:
             sta         pc_txbuf
             lda         #PC_VERSION
             sta         pc_txbuf + 4
-            lda         #1
+            lda         #PC_STUFFS
+            sta         pc_txbuf + 5
+            lda         #2
             jsr         pc_frame
             lda         #<PC_WAIT_ATTACH
             ldx         #>PC_WAIT_ATTACH

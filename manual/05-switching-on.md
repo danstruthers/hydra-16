@@ -67,6 +67,17 @@ and to start it, give it the port and a folder on your PC for the Hydra to use:
 node tools/hydrapc.js COM3 C:\hydra-files
 ```
 
+In place of the folder you can give it an SD card **image file** (section 2.6):
+
+```text
+node tools/hydrapc.js COM3 C:\hydra-files\mycard.img
+```
+
+Then `/pc` is that card: the Hydra sees the files in the image, and what it writes there goes into the image. It's
+a way to look at, or fill, a card's image from a real Hydra with no card reader on the PC, and to keep a set of
+work in one file. The image is complete on your PC whenever the Hydra isn't writing to it, so you can copy it, or
+write it to a real card (Appendix H). Don't open the same image in an emulator at the same time.
+
 Everything you type now goes to the Hydra. The PC tool's own keys start with <kbd>CTRL</kbd>-<kbd>A</kbd>:
 
 | Keys | What they do |
@@ -80,7 +91,7 @@ It can also take these options, after the folder:
 
 | Option | What it does |
 |---|---|
-| `--read-only` | The Hydra can read the folder's files, but not change them |
+| `--read-only` | The Hydra can read the folder's files (or the image's), but not change them |
 | `--baud N` | The serial port's speed (9600 unless you say) |
 | `--log` | Start with the log on (it lists what the Hydra asks for, and any frame that came damaged) |
 | `--no-size` | Don't tell the Hydra the size of the window |
@@ -143,9 +154,9 @@ T ST FL PA CPU    NAME
 1 01 00 FF 000013 init
 B 04 01 FF 000003 gpio
 C 04 01 FF 000004 snd
-D 04 01 FF 00000C kdev
+D 04 01 FF 00000D kdev
 E 04 01 FF 000075 storage
-F 04 01 FF 000050 cons
+F 04 01 FF 00004F cons
 hello, from init
 init: hello ended: code $07 (bye)
 HyForth (Forth 2012), bye to end

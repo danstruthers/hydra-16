@@ -224,7 +224,7 @@ RAM modules: 03
 ```session
 /> ps
 task  state   parent     cpu group  name
-   0  ready   -          1.6     0  kernel
+   0  ready   -          1.5     0  kernel
    1  wait    -          0.1     1  init
    2  wait     1         0.3     2  forth
    3  event    1         0.0     1  wstart
@@ -261,7 +261,7 @@ ps
 /> sleep 60 &
 /> ps
 task  state   parent     cpu group  name
-   0  ready   -          2.1     0  kernel
+   0  ready   -          2.0     0  kernel
    1  wait    -          0.1     1  init
    2  wait     1         0.3     2  forth
    3  event    1         0.0     1  wstart
@@ -270,14 +270,14 @@ task  state   parent     cpu group  name
   11  idle    -          0.0    11  gpio
   12  idle    -          0.0    12  snd
   13  idle    -          0.1    13  kdev
-  14  idle    -          1.6    14  storage
-  15  idle    -          0.5    15  cons
+  14  idle    -          1.7    14  storage
+  15  idle    -          0.6    15  cons
 /> kill 4
 /> ps
 task  state   parent     cpu group  name
-   0  ready   -          3.7     0  kernel
+   0  ready   -          3.6     0  kernel
    1  wait    -          0.1     1  init
-   2  wait     1         0.3     2  forth
+   2  wait     1         0.4     2  forth
    3  event    1         0.0     1  wstart
    5  ready    2         0.0     2  ps
   11  idle    -          0.0    11  gpio

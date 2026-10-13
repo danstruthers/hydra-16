@@ -11,6 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const runner = require('../../base/sim/test.js');
 const { createPcHost } = require('./lib/pchost.js');
+const hydrafs = require('./tools/hydrafs.js');
 const romimg = require('../tools/romimg.js');
 const romfs = require('../tools/romfs.js');
 const { readManifest, hwtest } = require('../build.js');
@@ -37,11 +38,30 @@ function image(t) {
 // A test's PC folder (t.pc: { files: { name: text or bytes (or a function giving them), 'dir/': '' } (or a function
 // giving that), readOnly, damage }), made afresh in
 // obj/pc/NAME, its files stamped 2026-10-03 15:04:05; and the PC tool for it (sim/lib/pchost.js).  OUT: { dir, host }
+// With t.pc.image ({ mb, label }): the files in a HydraFS image instead, obj/pc/NAME.img, which the PC tool serves
+// as it does a folder (sim/tools/pcfs.js); what's written to it in the test is stamped the same.  OUT: { dir: the
+// image file, image: the same, host }
 function pcFolder(t, opt) {
   const dir = path.join(ROOT, 'obj', 'pc', t.name), when = new Date(2026, 9, 3, 15, 4, 5);
   fs.rmSync(dir, { recursive: true, force: true });
-  fs.mkdirSync(dir, { recursive: true });
   const files = typeof t.pc.files === 'function' ? t.pc.files() : t.pc.files || {};
+  if (t.pc.image) {
+    const img = dir + '.img';
+    fs.mkdirSync(path.dirname(img), { recursive: true });
+    const now = Date.UTC(2026, 9, 3, 15, 4, 5) / 1000 - Date.UTC(2000, 0, 1) / 1000;
+    hydrafs.setNow(now);
+    hydrafs.mkfs(img, t.pc.image.mb || 1, t.pc.image.label || '', undefined, true);
+    const v = new hydrafs.Volume(img);
+    for (const [n, data] of Object.entries(files)) {
+      if (n.endsWith('/')) v.mkdir(n);
+      else { if (n.includes('/')) v.mkdir(path.posix.dirname(n)); v.put(n, Buffer.from(typeof data === 'function' ? data() : data)); }
+    }
+    v.close();
+    const host = createPcHost({ dir: img, readOnly: !!t.pc.readOnly, damage: t.pc.damage || [], now,
+      log: opt.verbose ? s => console.log('  [pc] ' + s) : undefined });
+    return { dir: img, image: img, host };
+  }
+  fs.mkdirSync(dir, { recursive: true });
   for (const [n, data] of Object.entries(files)) {
     const f = path.join(dir, n);
     if (n.endsWith('/')) fs.mkdirSync(f, { recursive: true });
