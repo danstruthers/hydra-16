@@ -153,9 +153,9 @@ T ST FL PA CPU    NAME
 1 01 00 FF 000013 init
 B 04 01 FF 000003 gpio
 C 04 01 FF 000004 snd
-D 04 01 FF 00000C kdev
+D 04 01 FF 00000D kdev
 E 04 01 FF 000075 storage
-F 04 01 FF 000050 cons
+F 04 01 FF 00004F cons
 hello, from init
 init: hello ended: code $07 (bye)
 HyForth (Forth 2012), bye to end

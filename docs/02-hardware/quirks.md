@@ -25,21 +25,25 @@ design a card.
 
 ## The crossed bank bits
 
-On the board as built, two pairs of bank bits trade places between the bank registers and the memory, in **both**
-bank registers (`$00` for RAM, `$01` for ROM):
+On the board as built, one pair of bank bits trades places between the bank registers and the memory, in **both**
+bank registers (`$00` for RAM, `$01` for ROM): **bits 2 and 3**.  Data bit 2 drives `RAMB3`/`ROMB3`, and bit 3 drives
+`RAMB2`/`ROMB2` (IC1 and IC3, the registers' low nibbles).  Bits 4 to 7 reach the memory straight: on the drawing
+the high nibbles' chips (IC2 and IC4) have data bits 7 and 6 crossed into their inputs *and* their outputs labelled
+`RAMB6`/`RAMB7` the other way round, two crossings that cancel.  So a bank number's bit 5 is chip-select bit 0, bit 6
+is bit 1 and bit 7 is bit 2, and chip k in the decoder's order holds banks 32k to 32k + 31.  (Bits 6 and 7 were
+thought crossed too, until 2026-10-13, when the first ROM to put files in a third chip read an empty socket on
+the board: bank `$40` reaches U34, bank `$80` nothing.)
 
-* **Bits 2 and 3**: data bit 2 drives `RAMB3`/`ROMB3`, and bit 3 drives `RAMB2`/`ROMB2` (IC1 and IC3).
-* **Bits 6 and 7**: the same for `RAMB6`/`RAMB7` and `ROMB6`/`ROMB7`.
-
-So the bank a program selects as `b` is the hardware's bank `swap(b)`.  It's always the same memory for the same `b`, so
-**the software never needs to care**, with two exceptions:
+So the bank a program selects as `b` is the hardware's bank `swap(b)`, with bits 2 and 3 exchanged.  It's always the
+same memory for the same `b`, so **the software never needs to care**, with two exceptions:
 
 * **Tracing a fault to a chip.**  Shared bank IDs `$F4-$F7` are on **U28**, and `$F8-$FB` on **U27** (not the other way
-  round); memory card 4 answers module number 8 and card 8 module 4.  IDs whose bits 2 and 3 are equal (`$F0-$F3`,
-  `$FC-$FF`) aren't affected.
-* **Building a ROM image.**  Paged ROM bank `b` sits at bank `swap(b)` in the chips.  The build (`base/tools/romimg.js`)
-  writes the chips' view, and the emulator (`base/sim/lib/machine.js`) reads it the same way, so a `promN.bin` is
-  burned as it is.
+  round).  IDs whose bits 2 and 3 are equal (`$F0-$F3`, `$FC-$FF`) aren't affected, and a memory card answers the
+  module number it's jumpered as (bits 4 to 7 are straight).
+* **Building a ROM image.**  Paged ROM bank `b` sits at bank `swap(b)` in the chips: within a chip, banks 4-7 and 8-11
+  change places.  The build (`base/tools/romimg.js`) writes the chips' view, and the emulator (`base/sim/lib/machine.js`)
+  reads it the same way, so a `promN.bin` is burned as it is, and chip k (U31, U32, U34 ... in the architecture's
+  table) holds banks 32k to 32k + 31.
 
 The schematic shows the board as built; don't "fix" it, or every ROM image would have to change.
 
@@ -99,7 +103,9 @@ kernel](../03-base/kernel.md)).
 ## No wait states
 
 `RDY` has only a pull-up: nothing on the board stretches a bus cycle.  Every device must answer within the CPU's cycle,
-and at 7.16 MHz the YM2151 can't (its access time is too long): at that speed, don't touch it.  A card in a slot can pull
+and at 7.16 MHz neither the YM2151 nor the RAM path (the bank registers, the decoders, the RAMs) can: **with the stated
+parts, 3.58 MHz is the fastest valid speed** (at J8's 7.16 MHz the power-on self test fails nearly every RAM test:
+measured on 1.8D, 2026-10-13).  A card in a slot can pull
 RDY low to add wait states of its own, but RDY must never be driven high (the W65C02S pulls it low during `WAI`): use an
 open-collector output.
 
@@ -213,4 +219,5 @@ Things in the KiCad files that don't match what's on the board, or look wrong bu
 **What software sees:** only that a read of an empty slot or an unused I/O port gives `$FF` every time, instead of
 whatever the bus last held.  Nothing relied on that.
 
-**At 7.16 MHz**, ACT parts are a few ns slower than F parts: the faster clock is untested on 1.8D.
+**At 7.16 MHz**, ACT parts are a few ns slower than F parts; the faster clock fails on 1.8D with the stated parts
+(POST's RAM tests): 3.58 MHz is the fastest valid speed.

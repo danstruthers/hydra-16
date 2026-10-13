@@ -29,7 +29,7 @@ system.  You don't need a board for any of it: the emulator runs the same ROM im
 
 | | |
 | :-- | :-- |
-| **CPU** | WDC W65C02S at 3.58 MHz (a jumper gives 7.16 MHz) |
+| **CPU** | WDC W65C02S at 3.58 MHz (jumpers for 1.79 and 0.89 MHz too; with the stated parts, 3.58 MHz is the fastest valid speed) |
 | **Tasks** | 16, each with its own 32K of RAM (zero page and stack included) and its own bank selections, kept apart by the hardware |
 | **RAM** | 512K of task RAM (32K for each task); 2 MB of shared RAM on the board; up to 15 memory cards of 2 MB each, all seen through an 8K window |
 | **ROM** | 4 MB of paged ROM in 16K banks (the operating system's modules and its ROM disk); a 128K BIOS ROM in 8K pages (the kernel) |

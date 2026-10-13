@@ -41,9 +41,11 @@ const { createAudio } = require('./audio.js');
 
 const hx = (v, n = 2) => v.toString(16).toUpperCase().padStart(n, '0');
 const LINES = 16;                                             // The IRQ lines (0 the highest priority)
-// The paged ROM bank $01 selects, as the V1 board wires it: bits 2 and 3, and 6 and 7, trade places before they
-// reach the chips (so the image holds bank b at bank swap(b)'s place: sim/tools/mkromdisk.js, os_rom/tools/romsum.js)
-const romBank = b => (b & 0x33) | ((b & 0x04) << 1) | ((b & 0x08) >> 1) | ((b & 0x40) << 1) | ((b & 0x80) >> 1);
+// The paged ROM bank $01 selects, as the V1 board wires it: bits 2 and 3 trade places before they reach the chips
+// (so the image holds bank b at bank swap(b)'s place: base/tools/romimg.js).  Bits 5 to 7 reach the chip select
+// straight (measured on the board, 2026-10-13: bank $40 reads the third chip, U34); the model swapped 6 and 7 too
+// until then, and the first ROM to use a third chip read an empty socket.
+const romBank = b => (b & 0xF3) | ((b & 0x04) << 1) | ((b & 0x08) >> 1);
 
 function createMachine(opt) {
   const log = opt.log || (() => {});
