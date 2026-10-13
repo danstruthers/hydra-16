@@ -115,12 +115,12 @@ b_cd:
             bra         @go
 
 @dir:
-            jsr         word_c                              ; (bbuf)
-            LDR         r0, bbuf
+            jsr         word_c                              ; (bbuf: r0)
 @go:
             jsr         CHDIR
-            bcc         ok
-            jmp         failed_word
+b_done:                                                     ; A built-in's call's end: ok, or (.A) "rc: name: its
+            bcc         ok                                  ;   text", $status it
+            jmp         status_error
 
 ; $status true (none)
 ok:
@@ -180,11 +180,10 @@ b_dot:
             jmp         rc_error_ax
 :
             jsr         word_c
-            LDR         r0, bbuf
             lda         #O_READ
             jsr         OPEN
             bcc         :+
-            jmp         failed_word
+            jmp         status_error
 :
             pha                                             ; (The fd)
             jsr         var_local_mark
@@ -576,22 +575,23 @@ b_shift:
 b_bind:
             jsr         flags
             jsr         need2
-            jsr         word_c                              ; new, old
+            bcc         :+
+            lda         #<s_twowords
+            ldx         #>s_twowords
+            jmp         rc_error_ax
+:
+            jsr         word_c                              ; new, old (r0, r1)
             jsr         next_word
             jsr         word_c2
-            LDR         r0, bbuf
-            LDR         r1, bbuf2
             lda         bfl
             jsr         BIND
-            bcc         :+
-            jmp         failed_word
-:
-            jmp         ok
+            jmp         b_done
 
 ; ---- mount [-abc] '#x' old [spec]
 b_mount:
             jsr         flags
             jsr         need2
+            bcs         @usage
             ldy         #1                                  ; '#x': x
             lda         (bw),Y
             cmp         #'#'
@@ -607,17 +607,12 @@ b_mount:
             lda         (bw)
             cmp         #LIST_END
             beq         :+
-            jsr         word_c                              ; spec
-            LDR         r0, bbuf
+            jsr         word_c                              ; spec (r0; old r1 still)
 :
-            LDR         r1, bbuf2
             plx
             lda         bfl
             jsr         MOUNT
-            bcc         :+
-            jmp         failed_word
-:
-            jmp         ok
+            jmp         b_done
 
 @usage:
             lda         #<s_mountuse
@@ -641,10 +636,9 @@ b_unmount:
             lda         (p0)
             cmp         #LIST_END
             beq         @one
-            jsr         word_c
+            jsr         word_c                              ; (r0)
             jsr         next_word
-            jsr         word_c2
-            LDR         r0, bbuf
+            jsr         word_c2                             ; (r1)
             bra         @go
 
 @one:
@@ -652,12 +646,8 @@ b_unmount:
             stz         r0
             stz         r0 + 1
 @go:
-            LDR         r1, bbuf2
             jsr         UNMOUNT
-            bcc         :+
-            jmp         failed_word
-:
-            jmp         ok
+            jmp         b_done
 
 ; ---- newns
 b_newns:
@@ -708,11 +698,12 @@ flags:
 @done:
             rts
 
-; Two words at least at bw (else: a usage error)
+; Two words at least at bw?  OUT: C = 1 if there aren't (the caller's usage error: LIST_END is $FF, so the
+; compare's carry says it)
 need2:
             lda         (bw)
             cmp         #LIST_END
-            beq         @usage
+            beq         :+
             lda         bw
             ldx         bw + 1
             jsr         list_next
@@ -720,13 +711,9 @@ need2:
             stx         p0 + 1
             lda         (p0)
             cmp         #LIST_END
-            beq         @usage
+:
             rts
-
-@usage:
-            lda         #<s_twowords
-            ldx         #>s_twowords
-            jmp         rc_error_ax
+.assert LIST_END = $FF, error, "need2: its carry"
 
 ; bw on to its next word
 next_word:
@@ -737,14 +724,21 @@ next_word:
             stx         bw + 1
             rts
 
-; Word bw into bbuf (or bbuf2: word_c2), zero-terminated (PATH_MAX at most)
+; Word bw into bbuf (or bbuf2: word_c2), zero-terminated (PATH_MAX at most), and r0 (word_c2: r1) the buffer, for
+; the call it's a name of (the other register kept)
 word_c:
             LDR         p0, bbuf
+            ldx         #0
             bra         wc
 
 word_c2:
             LDR         p0, bbuf2
+            ldx         #r1 - r0
 wc:
+            lda         p0
+            sta         r0,X
+            lda         p0 + 1
+            sta         r0 + 1,X
             lda         (bw)
             cmp         #PATH_MAX + 1
             bcc         :+
@@ -792,10 +786,6 @@ word_num:
 :
             lda         t0
             rts
-
-; A built-in's call failed (.A): "rc: name: its text", $status it
-failed_word:
-            jmp         status_error
 
 .rodata
 b_names:    .byte       "cd", 0, "exit", 0, "wait", 0, "eval", 0, ".", 0, "builtin", 0, "whatis", 0, "shift", 0

@@ -194,38 +194,183 @@ HydraOS gives you:
 
 Part Two of this book is all about using HydraOS. Part Four teaches the languages.
 
-## 1.6 Bits, bytes and hexadecimal
+## 1.6 Decimal, binary and hexadecimal
 
-Computers count with only two digits, **0** and **1**. Each 0 or 1 is called a **bit** (short for "binary digit").
-A byte is eight bits in a row, like `01000001`. Just as the digits of an ordinary number stand for ones, tens and
-hundreds, the bits of a byte stand for 1, 2, 4, 8, 16, 32, 64 and 128, from right to left:
+Sooner or later every computer book shows you a number like **$FF20** or `01000001`. These are ordinary numbers,
+written in a different way. This section shows you how to read them. Take it slowly: the rest of the book leans on
+it, and it is much easier than it looks.
 
-| Bit value | 128 | 64 | 32 | 16 | 8 | 4 | 2 | 1 |
+### Decimal: the way you already count
+
+Take the number 3,405. You read it without thinking, but look at what each digit is doing:
+
+| Place | Thousands | Hundreds | Tens | Ones |
+|---|---|---|---|---|
+| Worth | 1,000 | 100 | 10 | 1 |
+| Digit | 3 | 4 | 0 | 5 |
+
+Three thousands, four hundreds, no tens and five ones: 3,000 + 400 + 0 + 5. A digit's **place** says what it's
+worth, and each place is worth *ten times* the one to its right.
+
+That's why there are ten digits, 0 to 9. When you've counted up to 9 in a place you've run out of digits, so you
+put that place back to 0 and add 1 to the place on its left. That's how 9 is followed by 10, and 99 by 100.
+
+This way of writing numbers is called **decimal**, or **base 10**. There's nothing special about ten, except that
+people have ten fingers. Any number can be the base, and computers use two others all the time.
+
+### Binary: counting with two digits
+
+Everything inside a computer is kept in millions of tiny switches, and a switch can only be *off* or *on*. So a
+computer has just two digits to count with: **0** for off, and **1** for on. Counting with two digits is called
+**binary**, or **base 2**.
+
+It works exactly like decimal, except that you run out of digits much sooner. After 0 comes 1, and then you've
+run out already: so back to 0, and add 1 to the place on the left. That gives `10`, which is two. Then `11`, three;
+and now both places have run out, so the next number is `100`, four.
+
+| Decimal | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+|---|---|---|---|---|---|---|---|---|---|
+| Binary | `0` | `1` | `10` | `11` | `100` | `101` | `110` | `111` | `1000` |
+
+In decimal each place is worth ten times the one to its right. In binary each place is worth *twice* the one to
+its right: 1, 2, 4, 8, 16, 32, 64, 128, and so on.
+
+One binary digit is called a **bit** (short for "binary digit"). Eight bits in a row make a **byte**, and a byte is
+the size of thing the Hydra's processor works with.
+
+**To read a binary number**, write the place values over its bits, and add up the ones with a 1 under them:
+
+| Worth | 128 | 64 | 32 | 16 | 8 | 4 | 2 | 1 |
 |---|---|---|---|---|---|---|---|---|
 | `01000001` | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 1 |
 
-Add up the values where there's a 1: 64 + 1 = 65. So the byte `01000001` is the number 65, which also happens to
-be the code for the letter **A**.
+64 + 1 = 65. So the byte `01000001` is the number 65. (It is also the code for the letter **A**: a computer keeps
+letters as numbers too. Appendix E has the whole list.)
 
-Long strings of 0s and 1s are hard for people to read, so programmers use **hexadecimal** ("hex" for short), which
-counts in sixteens. Hex needs sixteen digits, so after 0 to 9 it uses the letters A to F:
+**To write a number in binary**, go the other way. Start at the biggest place value, and at each one ask: does it
+fit into what's left? If it does, write a 1 and take it away. If it doesn't, write a 0. Here is 200:
+
+| Worth | 128 | 64 | 32 | 16 | 8 | 4 | 2 | 1 |
+|---|---|---|---|---|---|---|---|---|
+| Does it fit? | yes | yes | no | no | yes | no | no | no |
+| What's left | 72 | 8 | 8 | 8 | 0 | 0 | 0 | 0 |
+| Bit | 1 | 1 | 0 | 0 | 1 | 0 | 0 | 0 |
+
+128 fits into 200, leaving 72. 64 fits into 72, leaving 8. 32 and 16 don't fit into 8. 8 fits, leaving nothing. So
+200 is `11001000`.
+
+The smallest byte is `00000000`, which is 0. The biggest is `11111111`, which is 128 + 64 + 32 + 16 + 8 + 4 + 2 + 1
+= 255. So a byte can hold any whole number from 0 to 255, which is 256 different values. Each bit you add doubles
+that:
+
+| Bits | How many values | The biggest number |
+|---|---|---|
+| 1 | 2 | 1 |
+| 4 | 16 | 15 |
+| 8 (one byte) | 256 | 255 |
+| 16 (two bytes) | 65,536 | 65,535 |
+
+### Hexadecimal: binary made shorter
+
+Binary is what the computer uses, but it's hard on people. `1111111100100000` is easy to copy wrongly and
+impossible to say aloud. So programmers write binary numbers in a shorter way, called **hexadecimal**, or **hex**.
+Hex is **base 16**: each place is worth *sixteen times* the one to its right.
+
+Base 16 needs sixteen digits, and there are only ten. So after 9, hex carries on with letters: **A** is ten, **B**
+eleven, **C** twelve, **D** thirteen, **E** fourteen and **F** fifteen.
 
 | Decimal | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | Hex | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | A | B | C | D | E | F |
-| Binary | 0000 | 0001 | 0010 | 0011 | 0100 | 0101 | 0110 | 0111 | 1000 | 1001 | 1010 | 1011 | 1100 | 1101 | 1110 | 1111 |
+| Binary | `0000` | `0001` | `0010` | `0011` | `0100` | `0101` | `0110` | `0111` | `1000` | `1001` | `1010` | `1011` | `1100` | `1101` | `1110` | `1111` |
 
-Each hex digit stands for exactly four bits, so one byte is always two hex digits. The byte `01000001` splits into
-`0100` and `0001`, which are hex `4` and `1`: so 65 is **$41** in hex. The biggest byte, `11111111`, is **$FF**,
-which is 255.
+Look at the bottom row. Four bits make sixteen different patterns, and there are sixteen hex digits, so **each hex
+digit stands for exactly four bits**. That's the whole reason hex is used. To turn binary into hex, split it into
+groups of four bits from the right, and write each group's digit:
 
-The Hydra's addresses go from **$0000** to **$FFFF**: four hex digits, or 65,536 different addresses. In this book,
-as on many computers of the 1980s, a **$** in front of a number means it's hexadecimal. So **$10** is sixteen, not
-ten, and **$FF20** is the address 65,312.
+| Binary | `1100` | `1000` |
+|---|---|---|
+| Hex | C | 8 |
 
-> **TRY THIS:** Can you work out what $20 is in decimal? (Each step in the second hex digit is worth 16.) Chapter 18
-> has much more about numbers, and the Hydra's languages can convert between bases for you. In HyForth, type
-> `hex 20 decimal .` to see the answer.
+So `11001000` is **$C8**. To turn hex into binary, do the opposite: write the four bits for each digit. A byte is
+always exactly two hex digits, from **$00** to **$FF**.
+
+**To read a hex number** as decimal, use the place values again. In a two-digit number the left digit counts
+sixteens and the right one counts ones:
+
+| Hex | Worked out | Decimal |
+|---|---|---|
+| $C8 | 12 × 16 + 8 | 200 (the same 200 as before) |
+| $FF | 15 × 16 + 15 | 255 |
+| $10 | 1 × 16 + 0 | 16 (not ten!) |
+
+With four digits, the places are worth 4,096, 256, 16 and 1:
+
+| Worth | 4,096 | 256 | 16 | 1 |
+|---|---|---|---|---|
+| $FF20 | F (15) | F (15) | 2 | 0 |
+
+15 × 4,096 + 15 × 256 + 2 × 16 + 0 = 61,440 + 3,840 + 32 = 65,312.
+
+**To write a number in hex**, divide it by 16. The answer is the left digit and the remainder is the right one:
+200 ÷ 16 is 12, remainder 8, and 12 is C, so 200 is $C8.
+
+You will rarely need to do these sums. What matters is to recognise hex when you see it, to know that two hex
+digits are one byte, and to remember a handful of sizes.
+
+### How this book writes numbers
+
+* A plain number, like 200, is decimal.
+* A number with a **$** in front, like **$C8**, is hexadecimal, as it was on many computers of the 1980s. So
+  **$10** is sixteen, not ten.
+* A binary number is written out as its bits, like `11001000`, and the words around it say that it's binary.
+
+Each of the Hydra's languages has its own way to write a hex or a binary number in a program. Their chapters
+explain them; here they are side by side, for the number 200:
+
+| Where | Hex | Binary |
+|---|---|---|
+| The assembler and HyForth | `$C8` | `%11001000` |
+| HyBASIC | `&HC8` | `&B11001000` |
+| hylang and `calc` | `#xC8` | `#b11001000` |
+
+### Sizes worth knowing
+
+| Decimal | Hex | What it is |
+|---|---|---|
+| 255 | $FF | The biggest number in a byte |
+| 256 | $100 | How many values a byte can have |
+| 1,024 | $400 | 1K: a kilobyte of memory |
+| 8,192 | $2000 | 8K: one of the Hydra's RAM banks |
+| 65,535 | $FFFF | The biggest number in 16 bits |
+| 65,536 | $10000 | 64K: all the memory the processor can see at once |
+
+The Hydra numbers each byte of its memory, and that number is the byte's **address**. An address is 16 bits long,
+so addresses run from **$0000** to **$FFFF**: always four hex digits.
+
+### Let the Hydra do it
+
+Once you have a Hydra running (or the emulator, in the next chapter), the `calc` command converts for you. `-b b`
+asks for the answer in binary, and `-b x` in hex. A hex number is typed with `#x` in front and a binary one with
+`#b`, inside single quotes:
+
+```session
+/> calc -b b 200
+11001000
+/> calc -b x 200
+C8
+/> calc '#xFF20'
+65312
+/> calc '#b01000001'
+65
+```
+
+> **TRY THIS:** Work these out on paper. What is `00101010` in decimal? What is 100 in binary? What is $20 in
+> decimal? What is $7F in binary? Then check your answers with `calc` when your Hydra is running. (They are 42,
+> `01100100`, 32 and `01111111`.)
+
+Chapter 18 has much more about the Hydra's numbers: other bases, fractions, and numbers too big for any
+calculator.
 
 ## 1.7 What you need
 

@@ -103,7 +103,7 @@ isn't round!) Each one is part of the tree:
 /> df
 disk  kind   size        free        label
 0     sdhc   16380 KB    15956 KB    HYDRA-16
-x     rom    623 KB      13 KB       ROM
+x     rom    623 KB      11 KB       ROM
 r     ram    255 KB      253 KB      RAM
 s     sram   511 KB      510 KB      SRAM
 ```
@@ -135,8 +135,8 @@ HydraFS. Here are the Hydra's devices:
 | `#n` | kdev | `null`, `zero` and `kmesg` | `/dev` |
 | `#t` | kdev | `ticks`, `time` and `rtc`: the clock | `/dev` |
 | `#a` | snd | The sound chips: `snd`, `sndctl`, `bell`, `psg` | `/dev` |
-| `#g` | gpio | The I/O header J27's pins | `/dev/gpio` |
-| `#i` | gpio | The I²C bus's devices | `/dev/i2c` |
+| `#g` | kdev | The I/O header J27's pins | `/dev/gpio` |
+| `#i` | kdev | The I²C bus's devices | `/dev/i2c` |
 | `#v` | vid | The Vera X's screen | `/dev/vid` |
 | `#d` | storage | The disks' raw data, and their control files | `/dev/sd` |
 | `#S` | storage | The SPI devices | `/dev/spi` |

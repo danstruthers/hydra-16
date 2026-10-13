@@ -39,9 +39,14 @@ function browser() {
   throw new Error('no browser to print with: set $BROWSER to Edge or Chrome');
 }
 
-// ---- The book's parts, from book.txt: a file a line (# comments)
+// ---- The book's parts, from book.txt: a file a line (# comments).  A line "+ file" goes on with the chapter of the
+// line before it: the two (or more) are one chapter, joined (a long chapter kept in several files)
 function files() {
-  return fs.readFileSync(path.join(BOOKDIR, 'book.txt'), 'utf8').split(/\r?\n/).map(l => l.replace(/#.*/, '').trim()).filter(Boolean);
+  const out = [];
+  for (const l of fs.readFileSync(path.join(BOOKDIR, 'book.txt'), 'utf8').split(/\r?\n/).map(l => l.replace(/#.*/, '').trim()).filter(Boolean)) {
+    if (l.startsWith('+ ') && out.length) out[out.length - 1].push(l.slice(2).trim()); else out.push([l]);
+  }
+  return out;
 }
 
 // A file's kind, from its first heading: "Part One. Title", "Chapter 3. Title", "Appendix A. Title", "Appendices" (a
@@ -139,8 +144,9 @@ function book(pages) {
     e.marks.push(n);
   };
   let mark = 0;
-  for (const f of files()) {
-    const src = fs.readFileSync(path.join(BOOKDIR, f), 'utf8');
+  for (const fl of files()) {
+    const f = fl[0];
+    const src = fl.map(x => fs.readFileSync(path.join(BOOKDIR, x), 'utf8').replace(/\s+$/, '')).join('\n\n') + '\n';
     const first = /^#\s+(.*)$/m.exec(src);
     const k = kindOf(first ? first[1].replace(/\s*\{#[^}]*\}\s*$/, '') : f);
     const r = md.render(src, { ids, link: l => /^[a-z0-9-]+\.md(#.*)?$/.test(l) ? l.replace(/^[^#]*\.md/, '') || '#' : l });

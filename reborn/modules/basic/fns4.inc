@@ -308,10 +308,11 @@ f_rnd:
 @lb900:
             cmp         #1
             beq         @drop
-            jsr         top_vt                              ; (Below 0: a seed of its low 16 bits)
-            jsr         pop_int_any
-            MOVW        r0, t0
+            jsr         top_vt                              ; (Below 0: a seed of its low 16 bits; x taken off as
+            jsr         pop_int_any                         ;   it's read, so not dropped again: what's under it is
+            MOVW        r0, t0                              ;   the expression's)
             NUMCALL     NUM_SEED
+            bra         @next
 @drop:
             jsr         pop_vt
 @next:

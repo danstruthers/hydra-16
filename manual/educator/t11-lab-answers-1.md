@@ -84,7 +84,7 @@ are on a browser that clears its storage.)
 **5.** As it comes: a Vera X card in slot 0, without its keyboard and mouse; a clock chip; three RAM modules; the
 sample SD card in reader 0, and no card in the Vera X's own slot.
 
-**6.** With the Vera X, `ps` has one more line: task 10, `vid`, the screen's driver. Without a Vera X, `vid` starts,
+**6.** With the Vera X, `ps` has one more line: task 11, `vid`, the screen's driver. Without a Vera X, `vid` starts,
 finds nothing to drive, and ends.
 
 **Questions.**
@@ -229,7 +229,7 @@ task  state   parent     cpu group  name
    2  ready    1         0.0     1  ps
   12  idle    -          0.0    12  snd
   13  idle    -          0.1    13  kdev
-  14  idle    -          1.5    14  storage
+  14  idle    -          1.4    14  storage
   15  event   -          0.5    15  cons
 ```
 
@@ -257,26 +257,26 @@ ps
 /> ps
 task  state   parent     cpu group  name
    0  ready   -          2.1     0  kernel
-   1  wait    -          0.5     1  forth
+   1  wait    -          0.4     1  forth
    2  sleep    1         0.0     2  sleep
    3  ready    1         0.0     1  ps
   12  idle    -          0.0    12  snd
   13  idle    -          0.1    13  kdev
-  14  idle    -          1.6    14  storage
+  14  idle    -          1.5    14  storage
   15  event   -          0.5    15  cons
 /> kill 2
 /> ps
 task  state   parent     cpu group  name
-   0  ready   -          3.8     0  kernel
-   1  wait    -          0.5     1  forth
+   0  ready   -          3.9     0  kernel
+   1  wait    -          0.4     1  forth
    3  ready    1         0.0     1  ps
   12  idle    -          0.0    12  snd
   13  idle    -          0.1    13  kdev
-  14  idle    -          1.8    14  storage
+  14  idle    -          1.6    14  storage
   15  event   -          0.6    15  cons
 ```
 
-`sleep` was in the state `sleep`, with the shell (task 2) as its parent. After `kill`, it's gone from the list.
+`sleep` was in the state `sleep`, with the shell (task 1) as its parent. After `kill`, it's gone from the list.
 
 **5.** 384 KB for each task, on the manual's Hydra: three RAM modules, at 128 KB each.
 
@@ -367,7 +367,7 @@ two
 
 ```session
 % echo today is `{date}
-today is 2000-01-01 00:00:05
+today is 2000-01-01 00:00:04
 % now=`{date}
 % echo $#now
 2
@@ -574,7 +574,7 @@ d-r--r--r-- fx        0 2000-01-01 00:00 songs
 /> df
 disk  kind   size        free        label
 0     sdhc   16380 KB    15956 KB    HYDRA-16
-x     rom    623 KB      13 KB       ROM
+x     rom    623 KB      11 KB       ROM
 r     ram    255 KB      253 KB      RAM
 s     sram   511 KB      510 KB      SRAM
 ```

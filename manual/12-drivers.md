@@ -34,8 +34,8 @@ any language, and from the shell, with nothing but `cat` and `echo`:
 
 ## 12.2 Drivers are servers
 
-Each driver runs in a task of its own (the boot drivers are in tasks F, E, D, C, B and A). A driver is a **file
-server**: it waits for **requests**, and answers them.
+Each driver runs in a task of its own (the boot drivers are in tasks F, E, D and C, and with a Vera X, B). A driver
+is a **file server**: it waits for **requests**, and answers them.
 
 When a program calls `READ` on a device's file, the kernel turns the call into a request, and hands it to the
 driver's task: "read 100 bytes of file 3, from offset 0". The driver does the work, perhaps waiting for the device,
@@ -83,8 +83,8 @@ bound at `/dev`, so its `time` file is `/dev/time`.
 | `#f` | storage | `/sd`, `/rom`, `/ram`, `/sram` | 14 |
 | `#a` | snd | `/dev`: `snd`, `sndctl`, `psg`, `bell` | 15 |
 | `#v` | vid | `/dev/vid` | 16 |
-| `#g` | gpio | `/dev/gpio` | 17 |
-| `#i` | gpio | `/dev/i2c` | 17 |
+| `#g` | kdev | `/dev/gpio` | 17 |
+| `#i` | kdev | `/dev/i2c` | 17 |
 | `#/` | kdev | `/` | 9 |
 | `#n` | kdev | `/dev`: `null`, `zero`, `kmesg` | 17 |
 | `#t` | kdev | `/dev`: `ticks`, `time`, `rtc` | 17 |

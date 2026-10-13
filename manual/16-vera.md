@@ -2,10 +2,10 @@
 
 With a **Vera X** card, the Hydra has a screen of its own, a keyboard and a mouse, more sound, and another SD card.
 This chapter shows how to use them, and describes the files of the two drivers that look after them: `vid`, for the
-screen, and `input`, for the keyboard and mouse.
+screen, and `kdev`, for the keyboard and mouse.
 
 > **IN THIS CHAPTER:** You'll put the console on a screen of its own, draw on it, and read its keyboard and mouse,
-> through the files of the `vid` and `input` drivers. **You need:** Chapter 12, and a Vera X: the emulator has one.
+> through the files of the `vid` and `kdev` drivers. **You need:** Chapter 12, and a Vera X: the emulator has one.
 
 ## 16.1 The Vera X
 
@@ -238,7 +238,8 @@ terminal: <kbd>CTRL</kbd>-<kbd>C</kbd>, the window keys, the arrows, the functio
 | The keypad | Digits with <kbd>NUM LOCK</kbd> on, the cursor keys with it off |
 | <kbd>SCROLL LOCK</kbd> | Holds the window (as <kbd>CTRL</kbd>-<kbd>]</kbd> <kbd>H</kbd>) |
 
-The keyboard's lights follow its lock keys. Without a keyboard controller, `input` ends at once, and does nothing.
+The keyboard's lights follow its lock keys. `kdev` looks for the keyboard controller as the Hydra
+starts (three times, a second apart); finding none, it reads no keys, and doesn't look again.
 
 **Seats.** Normally the screen and the serial terminal show the same window, and keys from either go to it. With
 `echo seats >/dev/consctl`, they become two **seats**: each shows its own window, and has its own keys (the

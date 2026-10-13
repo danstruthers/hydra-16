@@ -149,12 +149,12 @@ task 1: init
 HydraOS 1.0 for the Hydra-16
 init: up in task 01
 T ST FL PA CPU    NAME
-0 01 00 FF 00004E kernel
-1 01 00 FF 000019 init
+0 01 00 FF 000055 kernel
+1 01 00 FF 000010 init
 C 04 01 FF 000003 snd
-D 06 01 FF 00000B kdev
+D 06 01 FF 00000E kdev
 E 04 01 FF 000078 storage
-F 08 01 FF 000047 cons
+F 08 01 FF 000044 cons
 hello, from init
 init: hello ended: code $07 (bye)
 HyForth (Forth 2012), bye to end
@@ -169,7 +169,7 @@ Congratulations: you've built a computer! Here's what the messages mean (Chapter
 | `POST ...` and `RAM ...` | The **power-on self test** has checked the Hydra's memory. A `0` everywhere means all is well... |
 | `POST ok` | ...and so does this. |
 | `RAM modules: 03` | It found three RAM modules, on the memory card. (Yours may have one or two.) |
-| `task F: cons` ... `task A: vid` | The **drivers** have started: the programs that look after the Hydra's devices. (`vid` looks for a Vera X card and, finding none, ends at once, which is why task A isn't in the list below: section 7.4.) |
+| `task F: cons` ... `task B: vid` | The **drivers** have started: the programs that look after the Hydra's devices. (`vid` looks for a Vera X card and, finding none, ends at once, which is why task B isn't in the list below: section 7.4.) |
 | `task 1: init` | The first program, **init**, has started. It sets up the system. |
 | `HydraOS 1.0 for the Hydra-16` | HydraOS is running. |
 | The table and `hello, from init` | A little program called **hello** says hello, and shows the tasks running. |

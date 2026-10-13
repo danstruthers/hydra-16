@@ -106,7 +106,7 @@ free 15956 KB of 16380 KB
 rom 4 MB 8192 blocks
 hydrafs label=ROM
 partition at block 1024
-free 13 KB of 623 KB
+free 11 KB of 623 KB
 /> cat /dev/sd/r/ctl
 ram 256 KB 512 blocks
 hydrafs label=RAM
@@ -140,7 +140,7 @@ rc: /rom/test: read-only
 /> df
 disk  kind   size        free        label
 0     sdhc   16380 KB    15956 KB    HYDRA-16
-x     rom    623 KB      13 KB       ROM
+x     rom    623 KB      11 KB       ROM
 r     ram    255 KB      253 KB      RAM
 s     sram   511 KB      510 KB      SRAM
 /> echo x >/sd/0/tiny
@@ -149,7 +149,7 @@ s     sram   511 KB      510 KB      SRAM
 /> df
 disk  kind   size        free        label
 0     sdhc   16380 KB    15952 KB    HYDRA-16
-x     rom    623 KB      13 KB       ROM
+x     rom    623 KB      11 KB       ROM
 r     ram    255 KB      253 KB      RAM
 s     sram   511 KB      510 KB      SRAM
 ```
@@ -203,7 +203,7 @@ shared  1024 KB, 0 KB in segments (0), 1024 KB free
 /> df
 disk  kind   size        free        label
 0     sdhc   16380 KB    15956 KB    HYDRA-16
-x     rom    623 KB      13 KB       ROM
+x     rom    623 KB      11 KB       ROM
 r     ram    255 KB      253 KB      RAM
 s     sram   127 KB      127 KB      SRAM
 /> free
@@ -344,12 +344,12 @@ wired this way round because a VIA pin can take in much more current than it can
 
 ```session
 /> cat /proc/1/status
-forth wait - 100 1
+forth wait - 89 1
 /> cat /proc/1/fd
 /
-0 rw #c 368 #c/cons
-1 rw #c 368 #c/cons
-2 rw #c 368 #c/cons
+0 rw #c 367 #c/cons
+1 rw #c 367 #c/cons
+2 rw #c 367 #c/cons
 ```
 
 `status` is the task's name, its state, its parent, the processor time it's had (in ticks), and its note
@@ -406,12 +406,12 @@ Without a real Hydra, the task names:
 
 ```session
 % for(t in /proc/*) cat $t/status
-kernel ready - 473 0
-forth wait - 98 1
+kernel ready - 480 0
+forth wait - 87 1
 snd idle - 4 12
-kdev ready - 39 13
-storage idle - 332 14
-cons event - 107 15
+kdev ready - 42 13
+storage idle - 296 14
+cons event - 103 15
 rc wait 1 30 1
 ```
 

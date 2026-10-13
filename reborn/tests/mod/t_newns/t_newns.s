@@ -119,6 +119,30 @@ main:
             EXPECT_OK   "/mnt/null: the last line ran, after the bad ones"
             lda         fd
             jsr         CLOSE
+; ---- The whole namespace (the ROM's file), built twice: the area isn't /ram the first time, and is emptied; it is
+; the second (a shell's newns, the shell init EXECs), this task's own, and what's in it is kept
+            jsr         ns_default
+            EXPECT_OK   "ns_default: the ROM's namespace file run"
+            LDR         r1, s_made
+            jsr         area_name
+            LDR         r0, name
+            LDR         r1, rec
+            jsr         STAT
+            EXPECT_ERR  E_NOENT, "#fr/T/made is gone: the area wasn't /ram yet, and was emptied"
+            LDR         r0, s_kept
+            lda         #O_WRITE
+            ldx         #0
+            jsr         CREATE
+            sta         fd
+            EXPECT_OK   "CREATE /ram/kept"
+            lda         fd
+            jsr         CLOSE
+            jsr         ns_default
+            EXPECT_OK   "ns_default again: a shell's newns"
+            LDR         r0, s_kept
+            LDR         r1, rec
+            jsr         STAT
+            EXPECT_OK   "/ram/kept is still there: the area was /ram, this task's own, and kept"
             DONE        "t_newns"
 
 ; name = "#fr/T" (T: this task, in decimal) and the text at r1 after it
@@ -197,6 +221,7 @@ readall:
 
 .rodata
 s_ctlr:     .byte       "#d/r/ctl", 0
+s_kept:     .byte       "/ram/kept", 0
 s_start:    .byte       "start 4"
 s_area:     .byte       "#fr/", 0
 s_none:     .byte       0

@@ -353,7 +353,7 @@ hylang> (counter)
 | `(len s)` | Its length |
 | `(substring s i [n])` | *n* characters from position *i* (counting from 0) |
 | `(char-at s i)` | The character at *i* |
-| `(index-of s sub)` | Where *sub* first appears (or `NIL`) |
+| `(index-of s sub)` | Where *sub* first appears (or -1) |
 | `(str-upper s)`, `(str-lower s)`, `(str-trim s)` | Capitals, small letters, spaces trimmed off |
 | `(str-split s sep)`, `(str-join l sep)` | A string to a list, and back |
 | `(str-replace s old new)` | Every *old* replaced by *new* |
@@ -506,10 +506,10 @@ hylang> (fun {die} {+ 1 (random 6)})
 hylang> (fun {roll} {do =(a (die)) =(b (die)) (print a b "makes" (+ a b))})
 => NIL
 hylang> (roll)
-3 4 makes 7
+5 2 makes 7
 => NIL
 hylang> (roll)
-6 6 makes 12
+2 3 makes 5
 => NIL
 ```
 

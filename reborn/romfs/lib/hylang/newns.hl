@@ -1,5 +1,6 @@
 ; newns.hl - (newns): the default namespace built again in hylang's own, as sdk/asm/nslib.s builds a task's (init's,
-; rc's newns): its area of the RAM disk, #fr/N (N its task), emptied and made, with bin and lib in it; then the
+; rc's newns): its area of the RAM disk, #fr/N (N its task), made, with bin and lib in it (emptied first, if a task
+; before it with its number left it: not if it's hylang's /ram already, its own, and its files its user's); then the
 ; namespace file's lines, /rom/lib/namespace's, and a card's (/sd/0/lib/namespace) if it has one: from an empty
 ; namespace, as nslib's (so a shell init EXECs, or one started from another, doesn't have each union twice).  A line is a bind
 ; or a mount, its words separated by spaces or tabs ('...' a word quoted, '' in it a '; # at a word's start a
@@ -16,9 +17,10 @@
       (if (dir? (+ p "/" n)) (ns-empty (+ p "/" n) (+ d 1)))
       (try (remove (+ p "/" n)) NIL))})
 
-; The task's area: emptied (one a task before it with its number left), made, with bin and lib in it
-(fun {ns-area p} {do
-  (if (dir? p) (ns-empty p 0))
+; The task's area: emptied (one a task before it with its number left: not its own, mine), made, with bin and lib
+; in it
+(fun {ns-area p mine} {do
+  (if (and (dir? p) (not mine)) (ns-empty p 0))
   (try (mkdir p) NIL)
   (try (mkdir (+ p "/bin")) NIL)
   (try (mkdir (+ p "/lib")) NIL)})
@@ -48,9 +50,11 @@
           (try (eval (cons cmd (join args fl)))
             (if (elem? &code {:noent :nodev :notfs}) NIL (print (+ "newns: " line ": " &err)))))))})
 
-(let {{tn (to-str (pid))}}
+; (Its own area already: /ram, as it is before the namespace is emptied, and the area are the same file, by their
+; stat records: nslib's test)
+(let {{tn (to-str (pid))} {mine (try (== (stat "/ram") (stat (+ "#fr/" (to-str (pid))))) NIL)}}
   (try (sys-unmount NIL NIL) NIL)   ; From an empty namespace (UNMOUNT of everything), as nslib's: built twice, the same
-  (ns-area (+ "#fr/" tn))
+  (ns-area (+ "#fr/" tn) mine)
   (if (exists? "#fx/lib/namespace") (each {l (read-lines "#fx/lib/namespace")} (ns-line l tn)))
   (if (exists? "/sd/0/lib/namespace") (each {l (read-lines "/sd/0/lib/namespace")} (ns-line l tn)))
   NIL)
