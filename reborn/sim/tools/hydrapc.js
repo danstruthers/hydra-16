@@ -6,10 +6,16 @@
 // bytes, and don't show.  The folder's files are served as tools/pcfs.js says; nothing outside it is reached.  It
 // serves either system: the old one (the protocol's version 1) or HydraOS (version 2), as the Hydra's attach says.
 //
-// Usage: node hydrapc.js PORT FOLDER [options]
+// Usage: node hydrapc.js PORT FOLDER|IMAGE [options]
 //          PORT     the serial port (COM3, /dev/ttyUSB0 ...); node hydrapc.js --list shows them
 //          FOLDER   the folder the Hydra sees at /pc
-//   --read-only     the Hydra can't change the folder: its writes, creates, removes and renames are refused
+//          IMAGE    or a HydraFS image file (a card's image, or one hydrafs.js mkfs made: bin/sdcard.img, say): the
+//                   Hydra sees its files at /pc, and what it writes there goes into the image (tools/pcfs.js).
+//                   The image is whole on the PC after each request, so it can be copied whenever the Hydra isn't
+//                   writing; don't give it to an emulator as a card (--sd) at the same time.  A file that can't be
+//                   written is served read-only
+//   --read-only     the Hydra can't change the folder (or the image): its writes, creates, removes and renames are
+//                   refused
 //   --baud N        the line's rate (default 9600, the Hydra's at boot)
 //   --log           list the requests as they're served (opens, creates, removes, renames, errors) on stderr
 //   --list          list the serial ports, and stop
@@ -49,7 +55,8 @@ const HELD_MS = 10000;                                        // After an XOFF w
 
 function usage(msg) {
   if (msg) console.error('hydrapc: ' + msg);
-  console.error('Usage: node hydrapc.js PORT FOLDER [--read-only] [--baud N] [--log] [--no-size] [--win32-input]   (node hydrapc.js --list: the ports)');
+  console.error('Usage: node hydrapc.js PORT FOLDER|IMAGE [--read-only] [--baud N] [--log] [--no-size] [--win32-input]   (node hydrapc.js --list: the ports)');
+  console.error('       FOLDER: a folder on this PC; IMAGE: a HydraFS image file (a card\'s image): the Hydra sees either at /pc');
   process.exit(1);
 }
 
@@ -93,7 +100,7 @@ function run(portName, folder) {
     if (err) { console.error('hydrapc: ' + portName + ': ' + err.message); process.exit(1); }
     port.set({ rts: true, dtr: true }, e => {                  // (The Hydra sends only while its CTS, our RTS, is on)
       if (e) say('RTS and DTR not set (' + e.message + '): the Hydra may not send');
-      say('the Hydra on ' + portName + ' at ' + opt.baud + ' baud; /pc is ' + path.resolve(folder) + (opt.readOnly ? ' (read-only)' : '') +
+      say('the Hydra on ' + portName + ' at ' + opt.baud + ' baud; /pc is ' + fsrv.what + (fsrv.readOnly ? ' (read-only)' : '') +
         '.  Ctrl-A x quits, Ctrl-A l the log.');
       tellSize();
     });
@@ -131,9 +138,14 @@ function run(portName, folder) {
     else pumpKeys();
   };
 
-  // The Hydra's bytes: frames to the file server, its XOFF and XON to the keys' queue, the rest to the screen
+  // The Hydra's bytes: frames to the file server, its XOFF and XON to the keys' queue, the rest to the screen.  (An
+  // attach says whether this Hydra stuffs XON and XOFF in its frames: only then is a bare one inside a frame its flow
+  // control's.  An older ROM's frames, and the old system's, have them as data)
   const reader = P.createReader({ types: [P.T_ATTACH, P.T_REQ], onFlow: flow,
-    onFrame: f => port.write(Buffer.from(P.encode(P.T_REPLY, f.tag, f.type === P.T_ATTACH ? fsrv.attach(f.payload) : fsrv.request(f.tag, f.payload)))),
+    onFrame: f => {
+      if (f.type === P.T_ATTACH) reader.flowIn(f.payload.length > 1 && (f.payload[1] & P.STUFFS));
+      port.write(Buffer.from(P.encode(P.T_REPLY, f.tag, f.type === P.T_ATTACH ? fsrv.attach(f.payload) : fsrv.request(f.tag, f.payload))));
+    },
     onBad: f => port.write(Buffer.from(P.encode(P.T_NAK, f.tag))) });
   let quiet = null;
   port.on('data', buf => {

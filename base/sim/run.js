@@ -43,7 +43,8 @@
 //                       card if it has one (HydraOS's: bin/sdcard.img, the samples, songs and benchmarks), its writes kept in
 //                       memory (the file as it was); --no-sd: no card
 //   --pc-dir DIR        /pc (HydraOS's: reborn/sim/run.js): the PC tool's part (sim/tools/hydrapc.js) is played here, serving the folder DIR:
-//                       the frames the Hydra sends for /pc are answered, at the line's rate (reborn/sim/lib/pchost.js)
+//                       the frames the Hydra sends for /pc are answered, at the line's rate (reborn/sim/lib/pchost.js).  DIR can be a
+//                       HydraFS image file instead (a card's image): then /pc is the card in it, and its writes go into the file
 //   --pc-read-only      /pc can't be changed: its writes, creates, removes and renames are refused
 //   --pc-log            list /pc's requests as they're served (opens, creates, removes, renames, errors)
 //   --pc-damage F[,F...]  damage /pc's frames on the line, to try the resends: qN the Nth frame the Hydra sends, rN
