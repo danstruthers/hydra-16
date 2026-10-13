@@ -28,8 +28,9 @@ address $42. (The wiring is in the Vera X's schematic, in the `board/vera-x` fol
 The emulator has a Vera X too (Chapter 2). In the web emulator it's there unless you turn it off in Setup; in the
 terminal emulator, add `--vera`.
 
-> **NOTE:** The Vera X isn't part of the Hydra-16 kit, and this book doesn't show how to build one or wire it up. If
-> you don't have one, use the emulator's: everything in this chapter works there.
+> **NOTE:** The Vera X isn't part of the Hydra-16 kit, and this book doesn't show how to build one or wire it up: the
+> reference book does (`docs/02-hardware/cards.md` has the breakout card's wiring, pin by pin, and how to bring the
+> card up). If you don't have one, use the emulator's: everything in this chapter works there.
 
 ## 16.2 The console on the screen
 
@@ -183,7 +184,7 @@ A program that wants to drive the VERA itself, the way an X16 program does (for 
 program can write the VERA's registers at $FF20 to $FF3F directly. `claim all` lets it use all of the video RAM too.
 When the program writes `release` (or ends), the driver sets the chip up for the console again, and the console
 draws its window again. The VERA's registers have the same names and meanings as on the Commander X16, so the X16's
-documentation (its *Programmer's Reference*, chapter 10) describes them; only their address is different.
+documentation (its *Programmer's Reference*, in its VERA chapter) describes them; only their address is different.
 
 ## 16.7 Recorded sound: pcm and pcmctl
 

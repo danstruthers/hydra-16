@@ -6,7 +6,7 @@ how the Hydra's own tools work. The Hydra has three: the `dis` command, HyForth'
 command. All three use the same part of the asm library, so they all write instructions exactly as `as` reads them.
 
 > **IN THIS CHAPTER:** You'll take programs apart with `dis`, tell code from data, put a program back together, and
-> read the Hydra's own tools. **You need:** Chapters 26 and 26.
+> read the Hydra's own tools. **You need:** Chapters 26 and 27.
 
 ```text
 dis [-cnw] [-l labels] [-o addr] file

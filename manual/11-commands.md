@@ -15,6 +15,8 @@ ls [-ld] [name ...]
 Words in `this type` are typed as they are. Words in *italics*, like *name*, stand for something you choose. Square
 brackets, `[ ]`, mark something you can leave out, and `...` means "as many as you like". So `ls`, `ls /rom`,
 `ls -l /rom /ram` and `ls -ld /rom` are all ways to use `ls`. Options can be joined: `-ld` is the same as `-l -d`.
+A program typed with no arguments, or with ones it doesn't understand, prints its usage line, so you never need to
+remember one.
 
 **When things go wrong.** A program that can't do what you asked says why, with its own name first:
 
@@ -223,7 +225,7 @@ disks).
 ## dis: the disassembler
 
 ```text
-dis [options] file
+dis [-cnw] [-l labels] [-o addr] file
 ```
 
 Turns a program back into assembly language, so you can read it. Chapter 28 is all about it.
@@ -483,10 +485,10 @@ Put patterns in quotes, so the shell leaves their special characters alone.
 ## head: the first lines
 
 ```text
-head [-n] [file ...]
+head [-N] [file ...]
 ```
 
-Prints the first 10 lines of each file (or of its standard input), or the first *n*.
+Prints the first 10 lines of each file (or of its standard input), or the first *N* (`head -3`).
 
 ```session
 /> ls /rom/bin | head -3
@@ -904,10 +906,10 @@ dictionary.
 ## tail: the last lines
 
 ```text
-tail [-n] [file]
+tail [-N] [file]
 ```
 
-Prints the last 10 lines of the file (or of its standard input), or the last *n*.
+Prints the last 10 lines of the file (or of its standard input), or the last *N* (`tail -20`).
 
 <!-- session
 echo apple >/ram/fruits

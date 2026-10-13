@@ -85,7 +85,8 @@ as the many thin lines running in parallel between the chips.
 The Hydra-16 is a computer you build yourself. It is a single large circuit board, about the size of a sheet of
 paper, covered in chips that you put in their places one by one. Its name comes from the Hydra of Greek legend, a
 monster with many heads. The Hydra-16 has sixteen "heads": it can run up to **sixteen programs at the same time**,
-each in its own private part of the memory, without any of them getting in the others' way.
+each in its own private part of the memory, without any of them getting in the others' way. (Four of the sixteen
+are HydraOS's own, so twelve are yours.)
 
 That ability, called **multitasking**, is something the home computers of the 1980s could not do. A Commodore 64
 or an Apple II ran one program at a time. The Hydra is built from the same kind of chips as those machines, but it
@@ -138,8 +139,8 @@ task. When the Hydra switches from one program to another, it simply switches wh
 **The shared RAM (U25, U27, U28, U29).** Four small surface-mounted RAM chips along the bottom edge hold 2 MB that
 any program can use, a piece at a time.
 
-**The memory cards (J1, J2).** Two long sockets on the left take the **memory cards**. Each card holds another 2 MB
-of RAM, which gives every task 128K more memory of its own.
+**The memory cards (J1, J2).** Two long sockets on the left take the **memory cards**. A card holds one or two
+**RAM modules** of 2 MB each, and every module gives every task 128K more memory of its own.
 
 **The kernel ROM (U6).** The square chip in the middle of the board, in a socket with pins on all four sides, holds
 the **kernel**: the heart of HydraOS, the part that runs the other programs.
@@ -228,12 +229,14 @@ ten, and **$FF20** is the address 65,312.
 
 ## 1.7 What you need
 
-**To use the Hydra on a PC**, all you need is a web browser and one file: the emulator's page, `hydra-16.html`.
+**To use the Hydra on a PC**, all you need is a web browser and one file: the emulator's page, `hydra-16.html`
+(someone may give it to you; or section 2.3 shows how to make it yourself, in a minute).
 Chapter 2 shows you where it comes from, and how to use it.
 
 **To build and use a real Hydra-16**, you will need:
 
-* The Hydra-16 kit: the main circuit board, its parts, and at least one memory card.
+* The Hydra-16 kit: the main circuit board, its parts, and at least one memory card. (A kit is planned; until there
+  is one, section 3.9 says how to get a board and the parts.)
 * A soldering iron and a few other tools (Chapter 3 lists them).
 * An **ATX power supply**, the kind used in desktop PCs, with a 24-pin connector.
 * A **power switch** (a toggle switch that stays on), and if you like, a reset button and a power light.

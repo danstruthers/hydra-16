@@ -159,7 +159,7 @@ Congratulations: you've built a computer! Here's what the messages mean (Chapter
 | `POST ...` and `RAM ...` | The **power-on self test** has checked the Hydra's memory. A `0` everywhere means all is well... |
 | `POST ok` | ...and so does this. |
 | `RAM modules: 03` | It found three RAM modules, on the memory card. (Yours may have one or two.) |
-| `task F: cons` ... `task A: vid` | The **drivers** have started: the programs that look after the Hydra's devices. |
+| `task F: cons` ... `task A: vid` | The **drivers** have started: the programs that look after the Hydra's devices. (`vid` looks for a Vera X card and, finding none, ends at once, which is why task A isn't in the list below: section 7.4.) |
 | `task 1: init` | The first program, **init**, has started. It sets up the system. |
 | `HydraOS 1.0 for the Hydra-16` | HydraOS is running. |
 | The table and `hello, from init` | A little program called **hello** says hello, and shows the tasks running. |
@@ -246,7 +246,7 @@ the fun, and you'll learn a lot about how the Hydra works. **Always switch off b
 7. Check the chips the Hydra needs to start: U1 (the processor), U6 (the kernel ROM), U3 and U5 (the serial port),
    U39 and U40 (the clock) and U43 (the reset chip). Are they in the right sockets, the right way round, with no
    legs bent under?
-8. Then check the **address decoder**: U4, U8 to U16 and U19 to U22 (Appendix I). These small logic chips work out
+8. Then check the **address decoder**: U8 to U16 and U19 to U24 (Appendix I). These small logic chips work out
    which chip answers each address, so one of them in the wrong socket, or backwards, can keep the ROM or the serial
    chip from ever being heard. Many of them look alike: read the number printed on each, and compare it with the
    number printed on the board beside its socket.

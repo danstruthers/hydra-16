@@ -27,7 +27,8 @@ Press <kbd>Q</kbd> to put it away.
 
 ## 10.2 A new window
 
-<kbd>CTRL</kbd>-<kbd>]</kbd> <kbd>C</kbd> makes a new window with a new shell in it, and shows it. The screen
+<kbd>CTRL</kbd>-<kbd>]</kbd> <kbd>C</kbd> makes a new window (in a group of its own: section 10.3) with a new shell in
+it, and shows it. The screen
 clears, and the new shell says hello:
 
 ```text
@@ -164,6 +165,7 @@ The codes in a format are:
 | `%l` | The window's **label**: its name (normally its program's name) |
 | `%p` | Its program's name |
 | `%s` | Its status line |
+| `%g` | The group's number |
 | `%w` | The group's windows |
 | `%G` | The groups |
 | `%c` `%r` | Its size: columns and rows |

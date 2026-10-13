@@ -42,8 +42,8 @@ Skip this if your ROM chips came programmed and labelled (section 4.4).
 | ☐ | ☐ | ☐ | `prom1.bin` | SST39SF040 | U32 |
 | ☐ | ☐ | ☐ | `prom2.bin` | SST39SF040 | U34 |
 
-✎ Which programmer did you use, and on what date were the ROM images built? (You'll want to know this when you
-program them again.)
+✎ Which programmer did you use, on what date were the ROM images built, and from which version of HydraOS? (You'll
+want to know this when you program them again.)
 
 <div class="write l2"></div>
 

@@ -86,6 +86,6 @@
 | ☐ | set the precision of a function like `sqrt` |
 
 > **CHALLENGE:** ★ How many digits has 2 to the power 1000? (`calc '2^1000'` will show you the number. Counting
-> them by eye isn't the best way: `wc -c` counts characters.) Then read about **balanced ternary** in section
+> them by eye isn't the best way: `wc -c` counts characters, the line's end included.) Then read about **balanced ternary** in section
 > 18.4, where the digits are minus one, zero and plus one. Write 5, 6 and 7 in it by hand, and check with
 > `calc -b c`.

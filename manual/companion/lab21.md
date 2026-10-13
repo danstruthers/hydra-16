@@ -56,7 +56,7 @@ PRINT "The average is"; TOTAL / 5
 DATA 7, 9, 4, 8, 10
 ```
 
-   ✎ What does it print? Is that what you'd expect from a calculator? Change it to print a decimal, to two places
+   ✎ What does it print? Is that what you'd expect from a calculator? Change it to print a decimal instead
    (`FIXED`, in Appendix C).
 
 <div class="write l2"></div>

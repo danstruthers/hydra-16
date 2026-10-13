@@ -83,8 +83,10 @@ Above the console:
   windows to the new size.
 * **Copy text** copies everything in the console, including the lines that have scrolled away, so you can paste it
   into a document.
-* **Paste** types whatever is on your PC's clipboard into the Hydra, as if you typed it. This is handy for
-  programs: write them on your PC, then paste them in. (<kbd>CTRL</kbd>-<kbd>SHIFT</kbd>-<kbd>V</kbd> does the same.)
+* **Paste** types whatever is on your PC's clipboard into the Hydra, as if you typed it. The Hydra asks the page to
+  wait whenever it falls behind (XON/XOFF, section 13.6), so a whole program arrives whole. For programs you'll
+  change often, `/pc` (section 2.5) is handier still. (<kbd>CTRL</kbd>-<kbd>SHIFT</kbd>-<kbd>V</kbd> does the
+  same.)
 
 You can also scroll back through old lines with the mouse wheel, and drag across text to select and copy it.
 
@@ -161,6 +163,8 @@ The project's folder holds these folders:
 | `reborn` | The rest of HydraOS: its drivers, shells, languages and tools; its ROM images; and its emulator |
 | `board` | The Hydra-16's circuit board design, for the KiCad design program |
 | `manual` | This book |
+| `docs` | The reference book: the architecture, every driver's files and commands, the expansion cards, the quirks |
+| `old` | The first HydraOS, kept for the record; nothing in this book needs it |
 
 Everything you need to *run* the emulator is already there, including the ROM images in `reborn/bin`. You do not
 need to build anything.
@@ -258,12 +262,13 @@ The emulator can also run by itself, type a few things, and print what happened.
 keys to type with `--input`:
 
 ```text
-node reborn/sim/run.js --input "2 3 + .\r" --cycles 40000000
+node reborn/sim/run.js --input "\w\w2 3 + .\r" --cycles 40000000
 ```
 
-`\r` stands for the <kbd>RETURN</kbd> key, and `--cycles` says how long to run (40 million clock beats is a little
-over 11 seconds of the Hydra's time). At the end the emulator prints everything the Hydra printed, followed by a
-report on its tasks. This is how HydraOS's own tests check that everything works.
+`\w` waits two million clock beats, and two of them first give HydraOS time to start: keys that arrive before its
+console is running are lost. `\r` stands for the <kbd>RETURN</kbd> key, and `--cycles` says how long to run (40
+million clock beats is a little over 11 seconds of the Hydra's time). At the end the emulator prints everything the
+Hydra printed, followed by a report on its tasks. This is how HydraOS's own tests check that everything works.
 
 ## 2.5 Sharing files with your PC
 
@@ -324,7 +329,8 @@ asks you to confirm, before it writes anything.
 
 You never *need* to build HydraOS, because the ROM images come ready-made. But if you want to change HydraOS itself,
 or to build programs in C, you'll need the **cc65** compiler and assembler (from **cc65.github.io**). Install it,
-then in the project's folder type:
+put its `bin` folder on your PATH (or set `CC65_HOME` to the folder you unpacked it in), then in the project's
+folder type:
 
 ```text
 node reborn/build.js

@@ -59,8 +59,8 @@ every task is doing, and is the best single picture of multitasking there is.
 
 ## The kit
 
-What one Hydra is made of. Price it from the manual's Appendix I, which lists every part with its value and its
-package.
+A kit is planned. Until there is one, this is what one Hydra is made of: price it from the manual's Appendix I,
+which lists every part with its value and its package, and section 3.9, which says where the parts come from.
 
 | What | How many | Notes |
 |---|---|---|

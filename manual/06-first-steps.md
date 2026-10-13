@@ -201,7 +201,7 @@ and it's waiting for *its* kind of line:
 | Eight spaces, and no `>` | HyForth, in the middle of a definition you began with `:` | Type `;` |
 | `%` | rc, the command shell (Chapter 8) | Type `exit` |
 | `>` | HyBASIC (Chapter 23) | Type `SYSTEM` |
-| `hylang>` | hylang (Chapter 21) | Type `(exit)` |
+| `hylang>` | hylang (Chapter 21) | Type `exit` or `(exit)` |
 | `*` | `ed`, the line editor (Chapter 11) | Type `q` |
 | `db>` | `db`, the debugger (Chapter 29) | Type `q` |
 
@@ -346,6 +346,12 @@ Where the SD card really is depends on your Hydra:
 
 > **CAUTION:** Before you switch off, reset, or close the emulator, ask yourself: is everything I want in `/sd/0` (or
 > `/pc`)? If it's only in `/ram`, it's about to disappear.
+
+**Working from your PC.** If you'd rather write your programs in an editor on your PC, let the Hydra see a folder of
+yours as `/pc`: the PC tool does it for a real Hydra (section 5.2), and `--pc-dir` for the terminal emulator (section
+2.5). Then you run and copy its files like any others. Pasting a program into the Hydra works too, as long as your
+terminal program's flow control is set to XON/XOFF (section 5.2), so that the Hydra can ask it to wait. With no
+flow control, paste a few lines at a time: keys beyond about 300 that the Hydra hasn't read yet are lost.
 
 ## 6.8 Running programs
 

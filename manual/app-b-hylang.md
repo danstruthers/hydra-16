@@ -531,6 +531,9 @@ hylang's library (`globals`, loaded as it starts) adds:
 | `(use "name")` | Load a library once |
 | `(buffer-cmp ...)` | (B.10) |
 
+The device libraries (`gpio`, `i2c`, `spi`, `clock`, `disk`, `cons`, `proc`, `pc`, `screen`, `snd` and `video`) and `dice`
+are loaded with `(use "name")`; their functions are in sections 22.5 to 22.7.
+
 For example:
 
 ```session
