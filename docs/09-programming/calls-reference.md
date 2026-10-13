@@ -20,7 +20,7 @@ function gives.
 
 <!-- calls:begin -->
 
-Made from `base/spec/api.def` and `base/spec/errors.def` by `node docs/build/callref.js`: 90 calls in 9 groups.
+Made from `base/spec/api.def` and `base/spec/errors.def` by `node docs/build/callref.js`: 92 calls in 9 groups.
 
 **The groups:** [system](#system-f800), [task](#task-f830), [memory](#memory-f890), [file](#file-f8c0), [name](#name-f920), [cons](#cons-f950), [time](#time-f980), [server](#server-f9b0), [dbg](#dbg-fa10); [the error codes](#the-error-codes); [the constants](#the-constants).
 
@@ -1081,14 +1081,14 @@ Mount a device's server, with a spec (which of its file trees: '#f' with x is th
 
 | | |
 | :-- | :-- |
-| **In** | r0 = new, or 0; r1 = old |
+| **In** | r0 = new, or 0; r1 = old, or 0 |
 | **Out** | - |
 | **Errors** | E_NOENT, E_INVAL, E_NSFULL, E_NAMETOOLONG |
 | **Waits** | yes |
 | **HyForth** | `sys-unmount ( r0 r1 -- ior )` |
-| **hylang** | `sys-unmount r0=s? r1=s ->` |
+| **hylang** | `sys-unmount r0=s? r1=s? ->` |
 
-Undo a bind or a mount at old: all of what's there (r0 = 0), or new's member (as BIND finds new).
+Undo a bind or a mount at old: all of what's there (r0 = 0), or new's member (as BIND finds new).  With no old either (r1 = 0), everything: the caller has an empty namespace of its own (the tasks it shared one with keep theirs): what Plan 9's newns starts from, and nslib's ns_default does first.
 
 ### NSINFO
 
@@ -1239,7 +1239,7 @@ The DS1747 in U7, its registers a byte at a time (task F's $7FF8-$7FFF): read wi
 
 ## server (`$F9B0`)
 
-Servers and drivers: 32 slots from `$F9B0`, 15 used.
+Servers and drivers: 32 slots from `$F9B0`, 17 used.
 
 | Call | Address | What it does |
 | :--- | :------ | :----------- |
@@ -1258,6 +1258,8 @@ Servers and drivers: 32 slots from `$F9B0`, 15 used.
 | [`TASKMEM`](#taskmem) | `$F9D4` | Bytes from a task's memory into the buffer, or from the buffer into it. |
 | [`TASKSTOP`](#taskstop) | `$F9D7` | Stop a task where it is (the scheduler passes it by: its waits go on, and end, but it doesn't run), or start it again. |
 | [`TASKSTEP`](#taskstep) | `$F9DA` | The debugger's step (/proc's ctl: kdev). |
+| [`SRV_NAP`](#srv_nap) | `$F9DD` | For a driver with work of its own between its calls (a device to look at now and then). |
+| [`INIT_RUN`](#init_run) | `$F9E0` | Start init (the module the directory names) again, in a task of its own, with the number in decimal as its argument. |
 
 ### IRQ_OWN
 
@@ -1453,6 +1455,32 @@ Stop a task where it is (the scheduler passes it by: its waits go on, and end, b
 | **Waits** | no |
 
 The debugger's step (/proc's ctl: kdev).  TS_STEP: a stopped task runs its next instruction and stops again (TI_FLAGS: TF_STOPPED once it has).  JMP, JSR, RTS and RTI are done at once, on its frame; others run out of line, in its zero page, a BRK after them.  TS_NEXT: the same, but a JSR runs its subroutine whole, as a JSR to the kernel's jump table always does (a subroutine that reads bytes after its JSR can't be stepped over).  TS_BREAKS: from now any BRK stops the task, its PC back on the BRK (the debugger's breakpoints, BRKs it writes into the program); TS_NOBREAKS: a BRK is the program's own again (NOTE_BRK).  SPAWN_STOPPED starts a program stopped at its entry point.
+
+### SRV_NAP
+
+`$F9DD`.
+
+| | |
+| :-- | :-- |
+| **In** | .A/.X = ticks (1-32767); or 0, and .Y = the driver's event count (TASK_EVENT) as it last saw it |
+| **Out** | - |
+| **Errors** | - |
+| **Waits** | yes |
+
+For a driver with work of its own between its calls (a device to look at now and then): its init doesn't return, but waits here between its turns.  While it waits it serves its calls, as a driver that has started does (the boot goes on); when the time has come it runs again, busy (a call to it waits) till its next SRV_NAP, or till its init returns (it's an ordinary driver from then).  With 0 ticks it waits till its own event count isn't .Y any more (its irq entry adds to it, or one of its calls): for work that follows what happens, not the clock.  ps shows it asleep, or waiting for an event.
+
+### INIT_RUN
+
+`$F9E0`.
+
+| | |
+| :-- | :-- |
+| **In** | .A = a number, 0-15 |
+| **Out** | - |
+| **Errors** | - |
+| **Waits** | no |
+
+Start init (the module the directory names) again, in a task of its own, with the number in decimal as its argument: as the boot starts it (no parent, no fds, an empty namespace and environment, a note group of its own), but the boot's has no argument.  The kernel task starts it as it next runs; with no task free it isn't started (but 0's, which waits for one).  The kernel itself asks for 0's when the task init was last started in for 0 (or by the boot) has EXECed and then ends: so an init that EXECs the login shell is started again when that shell ends (an init that ends itself is left ended).  HydraOS's console asks for n's when the user makes window n.  From a task or an irq entry.
 
 ---
 

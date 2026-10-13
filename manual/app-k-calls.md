@@ -161,7 +161,7 @@ in small letters, with `-` for `_`:
 
 **`MOUNT`** ($F923). Mount a device's files in the namespace. *In:* X = a device letter; r0 = its spec (a string, 8 characters at most), or 0; r1 = old; A = BIND's flags. *Errors:* E_NODEV, E_NOENT, E_INVAL, E_NSFULL, E_NAMETOOLONG. *It can wait.*
 
-**`UNMOUNT`** ($F926). Undo a bind or a mount. *In:* r0 = new, or 0; r1 = old. *Errors:* E_NOENT, E_INVAL, E_NSFULL, E_NAMETOOLONG. *It can wait.*
+**`UNMOUNT`** ($F926). Undo a bind or a mount; or, with no old, all of them: an empty namespace of the task's own. *In:* r0 = new, or 0; r1 = old, or 0. *Errors:* E_NOENT, E_INVAL, E_NSFULL, E_NAMETOOLONG. *It can wait.*
 
 **`NSINFO`** ($F929). An entry of a task's namespace: what's bound or mounted where (as `ns` shows). *In:* A = a task ($FF: this one); X = which entry of its namespace (0 on); r0 = a buffer (NI_SIZE bytes). *Out:* the entry in the buffer (NI_*): its mount point, its device letter and spec, the path in that device, its flags (MCREATE) and its place among the union's members. *Errors:* E_RANGE, E_SRCH.
 
@@ -217,6 +217,10 @@ in small letters, with `-` for `_`:
 **`TASKSTOP`** ($F9D7). A driver: stop a task where it is, or start it again. *In:* A = a task; X = 1 to stop it, 0 to start it again. *Errors:* E_PERM, E_SRCH. *(Not in the languages.)*
 
 **`TASKSTEP`** ($F9DA). A driver: the debugger's step. *In:* A = a task; X = TS_STEP, TS_NEXT, TS_BREAKS or TS_NOBREAKS. *Errors:* E_PERM, E_SRCH, E_INVAL, E_BUSY. *(Not in the languages.)*
+
+**`SRV_NAP`** ($F9DD). A driver with work of its own between its requests: wait a while (its requests are served meanwhile), then go on. *In:* A/X = ticks (1-32767); or 0, and Y = the driver's event count (TASK_EVENT) as it last saw it. *It can wait.* *(Not in the languages.)*
+
+**`INIT_RUN`** ($F9E0). Start init again in a task of its own, with a number as its argument (the console: a new window's shell). *In:* A = a number, 0-15. *(Not in the languages.)*
 
 
 ## K.9 Debugging HydraOS

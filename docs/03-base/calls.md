@@ -83,10 +83,10 @@ The table is in groups, each with room to grow:
 | **task** | `$F830`, 32 | `SPAWN`, `EXEC`, `EXITS`, `WAIT`, `GETPID`, `GETPPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`/`ON`, `TASKINFO`, `TASKREAD`, `NOTIFY`, `NOTE`, `MODINFO`, the environment (`ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`), semaphores (`SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`) |
 | **memory** | `$F890`, 16 | `BREAK`, `PAGES_ALLOC`/`FREE`, `BANKS`, `BANKS_ALLOC`/`FREE`/`ALLOC_IN`, shared segments (`SEG_CREATE`, `SEG_ATTACH`, `SEG_DETACH`, `SEG_MAP`, `SEGINFO`, `SEG_CREATE_IN`) |
 | **file** | `$F8C0`, 32 | `OPEN`, `CREATE`, `CLOSE`, `READ`, `WRITE`, `SEEK`, `STAT`, `FSTAT`, `WSTAT`, `FWSTAT`, `REMOVE`, `DUP`, `DUP2`, `CHDIR`, `GETCWD`, `PIPE`, `FD2PATH` |
-| **name** | `$F920`, 16 | `BIND`, `MOUNT`, `UNMOUNT`, `NSINFO` |
+| **name** | `$F920`, 16 | `BIND`, `MOUNT`, `UNMOUNT` (of one thing, or of everything: an empty namespace), `NSINFO` |
 | **cons** | `$F950`, 16 | `PUTC`, `PUTS`, `GETC`, `PUTHEX`: a byte or a string to fd 1, a byte from fd 0 |
 | **time** | `$F980`, 16 | `TIME`, `TIME_SET`, `RTC` |
-| **server** | `$F9B0`, 32 | For drivers: `SRV_REGISTER`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_READ`, `CLIENT_WRITE`, `IRQ_OWN`, `IRQ_RELEASE`, `WAKE`, `PAUSE`, `NOTE_POST`, `NOTE_QUEUE`, `ROMREAD`, `TASKMEM`, `TASKSTOP`, `TASKSTEP` |
+| **server** | `$F9B0`, 32 | For drivers: `SRV_REGISTER`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_READ`, `CLIENT_WRITE`, `IRQ_OWN`, `IRQ_RELEASE`, `WAKE`, `PAUSE`, `NOTE_POST`, `NOTE_QUEUE`, `ROMREAD`, `TASKMEM`, `TASKSTOP`, `TASKSTEP`, `SRV_NAP` (a driver's wait between turns of its own work), `INIT_RUN` (init started again) |
 | **dbg** | `$FA10`, 16 | Debugging and tests: unstable, may change in any version |
 
 The [kernel](kernel.md) and [files](files.md) pages explain what the calls do; the reference has each one's registers.

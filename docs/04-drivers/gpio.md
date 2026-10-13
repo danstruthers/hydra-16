@@ -1,8 +1,9 @@
 # GPIO, I2C and SPI
 
-**gpio** (`reborn/modules/gpio/gpio.s`, task B) serves the VIA's port A on header J27: its eight pins and its handshake
-lines as `#g`, and the I2C bus on two of them as `#i`.  One driver for both, so their changes to port A never meet.  The
-SPI devices are the storage driver's ([storage](storage.md#spi-devices-as-files)), since SD cards share the bus.
+**kdev** serves the VIA's port A on header J27 (`reborn/modules/kdev/gpio.inc`, in HydraOS's `kdev`: it was a driver
+of its own, `gpio`, and took a task): its eight pins and its handshake lines as `#g`, and the I2C bus on two of them
+as `#i`.  One driver for both, so their changes to port A never meet.  The SPI devices are the storage driver's
+([storage](storage.md#spi-devices-as-files)), since SD cards share the bus.
 
 ## Contents
 
@@ -44,7 +45,7 @@ much more; use a transistor for anything bigger.
 
 A read of `/dev/gpio/ca1` **waits** for CA1's next active edge (`ca1 fall` or `ca1 rise` in `ctl`) since that fd last read
 it, then gives the count of edges so far.  A non-blocking fd gets `E_AGAIN` instead.  CA1's interrupt is on only while a
-`ca1` file is open (it's the kernel's line 17, owned then by `gpio`), so a floating CA1 can't flood the system.  A
+`ca1` file is open (it's the kernel's line 17, owned then by `kdev`), so a floating CA1 can't flood the system.  A
 switch's bounce counts as edges too: debounce in hardware, or by time.
 
 ```
@@ -78,7 +79,9 @@ ctl
 % echo subaddress 1 >/dev/i2c/ctl
 ```
 
-`$42` is the Vera X's input controller; `input` reads it.  Nothing else on the board uses the bus.
+`$42` is the Vera X's input controller, which `kdev` itself reads ([video](video.md#the-keyboard-and-the-mouse)).
+Nothing else on the board uses the bus.  As the system starts `kdev` looks for the controller three times, a second
+apart; with none, PA0 and PA1 aren't touched again unless something uses `/dev/i2c`.
 
 ---
 

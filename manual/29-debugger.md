@@ -54,16 +54,16 @@ cd /ram
 ```session
 /ram> as -l stars.s
 /ram> db ./stars
-task 5
+task 3
 PC=0830 A=30 X=FF Y=00 S=FD P=nv--dizc W=0 U=0 RAM=00 ROM=00
 0830  A9 01     lda #$01
 db> l /lib/as/hydra.inc
-106 symbols
+108 symbols
 db> l stars.lbl
 4 symbols
 ```
 
-`stars` is running in task 5, stopped before its first instruction. The line of registers shows:
+`stars` is running in task 3, stopped before its first instruction. The line of registers shows:
 
 | Part | What it is |
 |---|---|
@@ -111,8 +111,8 @@ db> d main 19
 084D  A9 0A     lda #$0A                 ; line+B
 084F  20 50 F9  jsr PUTC                 ; line+D
 0852  60        rts                      ; line+10
-0853  8A        txa                      ; line+11
-0854  46 58     lsr count+35             ; line+12
+0853  07 AF     rmb0 count+8C            ; line+11
+0855  85 F6     sta count+D3             ; line+13
 ```
 
 After each instruction, `db` says where it is, by the nearest label before it. The last two lines aren't code: `d`
@@ -139,7 +139,7 @@ db> s
 PC=0834 A=01 X=FF Y=00 S=FD P=nv--dizc W=0 U=0 RAM=00 ROM=00
 0834  A5 22     lda row                  ; main+4
 db> m row 2
-0022  01 51                    .Q
+0022  01 F6                    ..
 db> s 3
 0836  20 42 08  jsr line                 ; main+6
 0842  85 23     sta count                ; line
@@ -263,7 +263,7 @@ db> w 0845 23
 db> c
 ####
 #####
-task 5 ended: code 0
+task 3 ended: code 0
 ```
 
 The last two rows are made of `#`. The program ended, and so did `db`. The change was only in memory: the file
@@ -297,11 +297,11 @@ as -l show1.s
 
 ```session
 /ram> db ./show1 nothing
-task 5
+task 3
 PC=0830 A=30 X=FF Y=20 S=FD P=nv--dizc W=0 U=0 RAM=00 ROM=00
 0830  B2 02     lda ($02)
 db> l /lib/as/hydra.inc
-106 symbols
+108 symbols
 db> l show1.lbl
 4 symbols
 db> d main+29 3
@@ -311,13 +311,13 @@ db> d main+29 3
 db> b main+68
 db> c
 breakpoint 1
-PC=0898 A=20 X=2D Y=05 S=FD P=nv--dizC W=0 U=0 RAM=00 ROM=00
+PC=0898 A=20 X=2E Y=03 S=FD P=nv--dizC W=0 U=0 RAM=00 ROM=00
 0898  A9 D1     lda #$D1                 ; main+68
 db> s 4
 089A  85 02     sta r0                   ; main+6A
 089C  A9 09     lda #$09                 ; main+6C
 089E  85 03     sta r0+1                 ; main+6E
-PC=08A0 A=09 X=2D Y=05 S=FD P=nv--dizC W=0 U=0 RAM=00 ROM=00
+PC=08A0 A=09 X=2E Y=03 S=FD P=nv--dizC W=0 U=0 RAM=00 ROM=00
 08A0  20 03 F8  jsr ERRSTR               ; main+70
 db> q
 ```
@@ -349,12 +349,12 @@ is. The `tick` sample prints a dot a second, for ever:
 
 ```session
 /> db /sd/0/sample/tick
-task 5
+task 3
 PC=0830 A=30 X=FF Y=02 S=FD P=nv--dizc W=0 U=0 RAM=00 ROM=00
 0830  9C 95 08  stz $0895
 db> c
-........PC=EB20 A=06 X=0F Y=05 S=FA P=nv--dIzc W=0 U=0 RAM=00 ROM=00 (in a call: its state 6)
-EB20  A5 A2     lda $A2
+........PC=EB31 A=06 X=0E Y=03 S=FA P=nv--dIzc W=0 U=0 RAM=00 ROM=00 (in a call: its state 6)
+EB31  A5 A2     lda $A2
 db> q
 
 />
@@ -371,7 +371,7 @@ finish and stops after it, and `c` runs on.
 
 ## 29.10 Debugging a running task
 
-`db -p` stops a task that's already running, to look at it. Here a `sleep` runs in the background (it's task 4, as
+`db -p` stops a task that's already running, to look at it. Here a `sleep` runs in the background (it's task 2, as
 `ps` would say):
 
 <!-- session
@@ -379,10 +379,10 @@ finish and stops after it, and `c` runs on.
 
 ```session
 /> sleep 100 &
-/> db -p 4
-task 4
-PC=EB20 A=06 X=51 Y=04 S=F9 P=nv--dIzc W=0 U=0 RAM=00 ROM=00 (in a call: its state 6)
-EB20  A5 A2     lda $A2
+/> db -p 2
+task 2
+PC=EB31 A=06 X=51 Y=02 S=F9 P=nv--dIzc W=0 U=0 RAM=00 ROM=00 (in a call: its state 6)
+EB31  A5 A2     lda $A2
 db> q
 ```
 
@@ -390,8 +390,8 @@ db> q
 
 ## 29.11 How db works
 
-`db` uses the files of `/proc` (section 17.8). `/proc/5/ctl` takes the commands `stop`, `start`, `step`, `next`,
-`break` and `nobreak` (and `kill`, which `q` uses), and `/proc/5/mem` is task 5's memory, which `db` reads and writes
+`db` uses the files of `/proc` (section 17.8). `/proc/3/ctl` takes the commands `stop`, `start`, `step`, `next`,
+`break` and `nobreak` (and `kill`, which `q` uses), and `/proc/3/mem` is task 3's memory, which `db` reads and writes
 like a file. While it's debugged, a task's `BRK` instructions stop it, instead of ending it, which is how breakpoints
 work. And HydraOS keeps a stopped task's registers where `db` can read them.
 

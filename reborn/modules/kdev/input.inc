@@ -1,10 +1,13 @@
 ; ****************************************************************************
-; input - the Vera X's input controller's driver (docs/design/plans/VIDEO.md, step 6): a program, a user-level driver
-; as 9front's nusb/kb is (srvlib's servers run only when a request comes, and this polls).  The controller is the
+; input.inc - the Vera X's input controller's driver (docs/design/plans/VIDEO.md, step 6), in kdev (kdevx.inc includes
+; this, in a scope of its own, input: it was a program, and took a task).  srvlib's servers run only when a request
+; comes, and this polls: so it's the end of kdev's init, which doesn't return while there's a controller, but waits
+; between its looks with SRV_NAP (kdev serves its calls meanwhile, and is busy during a look).  The controller is the
 ; X16's SMC (an ATtiny861 with the X16 community's firmware, x16-smc; a PS/2 keyboard and mouse on it) on the I2C
-; bus at $42, read through gpio's #i/42 (/dev/i2c/42: its files are opened by their devices' names, so any namespace
-; has them).  init starts it as the shells start, in a note group of its own, so a Ctrl-C at the keyboard can't reach
-; it; with no controller it ends at once ("no input controller", code 1).
+; bus at $42, reached by gpio.inc's i2c_put and i2c_get (not #i/42: a request to kdev itself).  It's looked for half
+; a second after kdev starts (the console's and the screen's drivers have started by then), and twice more, a
+; second apart; with no controller kdev's init ends then, and kdev is a driver as any other (and PA0 and PA1 are
+; #g's to use: nothing touches them again).
 ;   The controller: a write of a register alone ($30: its version; $22: the mouse's mode) makes it the next read's;
 ; a register and a value are a command ($40 V: the default request; $20 V: the mouse's mode asked for; $1A $ED V:
 ; the keyboard's LEDs).  A read that names no register gets the default request's answer: $41, a key code; $43, a
@@ -12,10 +15,8 @@
 ; so a look that finds nothing costs an address byte.  Its key codes are the IBM PC/AT's key numbers (bit 7: a
 ; release), its packets the PS/2 mouse's.
 ;   Every POLL ticks (67 times a second) it's read till it has nothing (DRAIN reads at most); after QUIET looks with
-; nothing (2 s), every POLL_IDLE (10 times a second), till something comes.  A look that finds nothing costs some
-; 5,000 cycles (gpio's request, the bus, the scheduler): 10% of the CPU at 67 a second, 1.8% at 10, so the first key
-; after a quiet spell waits a tenth of a second at most.  Its reads and commands want /dev/i2c's subaddress 0, as
-; the system starts.  Then:
+; nothing (2 s), every POLL_IDLE (10 times a second), till something comes, so the first key after a quiet spell
+; waits a tenth of a second at most.  A look that finds nothing costs an address byte on the bus.  Then:
 ;   * The keys go to the console's keyboard, #c/kbin, as a PC terminal (xterm) sends them: the characters (the US
 ;     layout: km_plain, km_shift), with Shift and Caps Lock; Ctrl (a letter's control character; Ctrl-Space and
 ;     Ctrl-2 NUL, Ctrl-3 to Ctrl-7 ESC to US, Ctrl-8 and Ctrl-? DEL, Ctrl-/ US); Alt, either, an ESC first; Enter CR,
@@ -34,12 +35,9 @@
 ;     down (pressed alone), + 4 Shift, 8 Alt, 16 Ctrl; X and Y its cell (the pixels / 8, from 1).  The console
 ;     focuses the window clicked, and gives the reports to a program that asks for them (?1000).
 
-.include "hydra.inc"
-.include "hyx2.inc"
-.include "macros.inc"
-
-            HYX2_PROGRAM "input", main
-
+SMC_ADDR        = $42           ; The controller's address on the I2C bus
+LOOKS           = 3             ; Times the controller is looked for as kdev starts, before it's taken as not there
+                                ;   (half a second, 1.5 and 2.5 seconds on: done before the first prompt)
 POLL            = 3             ; Ticks between looks (67 a second) ...
 POLL_IDLE       = 20            ;   and after QUIET of them with nothing (10 a second)
 QUIET           = 134           ; (2 s of looks)
@@ -69,8 +67,7 @@ DEL             = $7F
 CTRL_RB         = $1D           ; Ctrl-]: the console's windows' key
 
 .zeropage
-fd_i2c:     .res        1                                   ; /dev/i2c/42 ...
-fd_kbd:     .res        1                                   ;   #c/kbin ...
+fd_kbd:     .res        1                                   ; #c/kbin ...
 fd_mouse:   .res        1                                   ;   /dev/vid/mousein ($FF: none)
 msize:      .res        1                                   ; The mouse's packet: 3 or 4 bytes (0: no mouse)
 mid:        .res        1                                   ;   its mode (0, 3, 4)
@@ -103,23 +100,34 @@ digits:     .res        6
 
 .code
 main:
-            ldx         #ln - fd_i2c                        ; (Its zero page: all 0)
+            ldx         #ln - fd_kbd                        ; (Its zero page: all 0)
 :
-            stz         fd_i2c,X
+            stz         fd_kbd,X
             dex
             bpl         :-
-            LDR         r0, s_i2c                           ; The controller: there?
-            lda         #O_RDWR
-            jsr         OPEN
-            bcs         @none
-            sta         fd_i2c
+            lda         #LOOKS                              ; The controller: there?  Looked for LOOKS times, the
+            sta         drains                              ;   first half a second on (the other drivers have
+            lda         #<(TICK_HZ / 2)                     ;   started: kdev serves its calls meanwhile), then a
+            ldx         #>(TICK_HZ / 2)                     ;   second apart: one slow to start is found
+@look:
+            jsr         SRV_NAP
+            jsr         @there
+            bcc         @found
+            dec         drains
+            beq         @none
+            lda         #<TICK_HZ
+            ldx         #>TICK_HZ
+            bra         @look
+@there:
             lda         #R_VERSION                          ; (Its version: the register alone, then a read)
             sta         cmd
             lda         #1
             jsr         command
-            bcs         @none
+            bcs         :+
             jsr         read1
-            bcs         @none
+:
+            rts
+@found:
             LDR         r0, s_kbin                          ; The console's keyboard
             lda         #O_WRITE
             jsr         OPEN
@@ -150,18 +158,13 @@ main:
             lda         #POLL_IDLE
 :
             ldx         #0
-            jsr         SLEEP
+            jsr         SRV_NAP
             bra         @loop
 
-@none:
-            LDR         r0, s_none
-            bra         @end
-
-@nocons:
-            LDR         r0, s_nocons
-@end:
-            lda         #1
-            jmp         EXITS
+@none:                                                      ; No controller, or no console's keyboard (#c/kbin): kdev's
+@nocons:                                                    ;   init ends
+            clc
+            rts
 
 ; ****************************************************************************
 ; The controller
@@ -207,28 +210,44 @@ look:
 ; OUT: C = 0; or C = 1: nothing (the controller didn't answer)
 fetch:
             stz         ibuf + 1
-            LDR         r0, ibuf
-            lda         msize
-            inc         a
-            sta         r1
-            stz         r1 + 1
-            lda         fd_i2c
-            jmp         READ
+            ldy         msize
+            iny
+            bra         get
 
 ; A byte read from the controller (a register's, written alone before), into ibuf.  OUT: C = 0; or C = 1
 read1:
-            LDR         r0, ibuf
-            LDR         r1, 1
-            lda         fd_i2c
-            jmp         READ
+            ldy         #1
 
-; cmd's first .A bytes written to the controller.  OUT: C = 0; or C = 1
+; .Y bytes read from the controller into ibuf (gpio.inc's i2c_get, and its iobuf).  OUT: C = 0; or C = 1
+get:
+            phy
+            lda         #SMC_ADDR
+            jsr         gpio::i2c_get
+            ply
+            bcs         @done
+:
+            dey
+            lda         gpio::iobuf,Y
+            sta         ibuf,Y
+            tya
+            bne         :-
+            clc
+@done:
+            rts
+
+; cmd's first .A bytes written to the controller (gpio.inc's i2c_put).  OUT: C = 0; or C = 1
 command:
-            sta         r1
-            stz         r1 + 1
-            LDR         r0, cmd
-            lda         fd_i2c
-            jmp         WRITE
+            tay
+            pha
+:
+            dey
+            lda         cmd,Y
+            sta         gpio::iobuf,Y
+            tya
+            bne         :-
+            ply
+            lda         #SMC_ADDR
+            jmp         gpio::i2c_put
 
 ; The default request .A
 default:
@@ -965,14 +984,11 @@ l_dec:
             rts
 
 .rodata
-s_i2c:      .byte       "#i/42", 0
 s_kbin:     .byte       "#c/kbin", 0
 s_mousein:  .byte       "#v/mousein", 0
 s_mouse:    .byte       "#v/mouse", 0
 m_bit:      .byte       1, 2, 4, 8, 16                      ; The buttons: Plan 9's bits, xterm's numbers
 m_code:     .byte       0, 1, 2, 64, 65
-s_none:     .byte       "no input controller", 0
-s_nocons:   .byte       "no console keyboard (#c/kbin)", 0
 
 ; The cursor and function keys (KEY_UP to KEY_F12), as xterm sends them: [ or O, a number (0: none), the final
 sp_lead:    .byte       "[[[[[[[[[[OOOO[[[[[[[["

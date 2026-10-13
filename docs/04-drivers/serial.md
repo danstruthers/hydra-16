@@ -58,7 +58,7 @@ Both are built on the same serial layer (`base/lib/serial.inc`: the rates, the s
 | `label` | | yes | The window's title |
 | `wnew` | | yes | A read waits for Ctrl-] c, makes a window, and gives its number (init's) |
 | `kbdin` | | yes | A write is typed into the window as keys |
-| `kbin` | | yes | The console's keyboard: the Vera X's keys, written by `input` |
+| `kbin` | | yes | The console's keyboard: the Vera X's keys, written by `kdev` |
 | `text` | | yes | The window's scrollback and screen, as text |
 | `snarf` | | yes | The cut buffer, shared by all the windows |
 
@@ -219,7 +219,7 @@ and can be set: `echo terminal size 132 43 >/dev/consctl`.  The PC tool tells th
 ## Two terminals: the serial port and the screen
 
 With a Vera X, the console has a second terminal, the screen (`vid`'s `#v/term`), and keys from its keyboard
-(`#c/kbin`, written by `input`).  `consctl` chooses how they're used:
+(`#c/kbin`, written by `kdev`).  `consctl` chooses how they're used:
 
 | Command | What it does |
 | :------ | :----------- |

@@ -1,7 +1,7 @@
 ; ****************************************************************************
 ; nslib.s - a task's default namespace, as Plan 9's newns makes it: included at the end of a program's source (as
 ; srvlib.s is), for init and the shells.  ns_default builds it in the calling task's own namespace (its children
-; share it, as SPAWN gives it them):
+; share it, as SPAWN gives it them), emptied first (UNMOUNT of everything), so it's the same however often it's built:
 ;   1. its own area of the RAM disk, r/N (N: its task, in decimal), made, and emptied if a task before it with that
 ;      number left one there (#fr/N: the RAM disk's own name), with bin and lib in it (its caches)
 ;   2. the namespace file, /rom/lib/namespace (read from the ROM disk: #fx/lib/namespace), then a card's
@@ -63,6 +63,11 @@ ns_msg      = ns_rec + SR_SIZE
 ; This task's default namespace: its RAM disk area, then the ROM's namespace file and a card's.  OUT: C = 0; or
 ; C = 1, .A = the error opening /rom/lib/namespace (none run: the caller's fallback)
 ns_default:
+            stz         r0                                  ; From an empty one (UNMOUNT of everything): built twice,
+            stz         r0 + 1                              ;   it's the same, and a shell init EXECs starts from its
+            stz         r1
+            stz         r1 + 1
+            jsr         UNMOUNT
             jsr         GETPID
             sta         ns_task
             jsr         ns_area

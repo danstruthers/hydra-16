@@ -1,6 +1,7 @@
 ; newns.hl - (newns): the default namespace built again in hylang's own, as sdk/asm/nslib.s builds a task's (init's,
 ; rc's newns): its area of the RAM disk, #fr/N (N its task), emptied and made, with bin and lib in it; then the
-; namespace file's lines, /rom/lib/namespace's, and a card's (/sd/0/lib/namespace) if it has one.  A line is a bind
+; namespace file's lines, /rom/lib/namespace's, and a card's (/sd/0/lib/namespace) if it has one: from an empty
+; namespace, as nslib's (so a shell init EXECs, or one started from another, doesn't have each union twice).  A line is a bind
 ; or a mount, its words separated by spaces or tabs ('...' a word quoted, '' in it a '; # at a word's start a
 ; comment; $task in a word this task's number):
 ;   bind [-a | -b] [-c] new old
@@ -48,6 +49,7 @@
             (if (elem? &code {:noent :nodev :notfs}) NIL (print (+ "newns: " line ": " &err)))))))})
 
 (let {{tn (to-str (pid))}}
+  (try (sys-unmount NIL NIL) NIL)   ; From an empty namespace (UNMOUNT of everything), as nslib's: built twice, the same
   (ns-area (+ "#fr/" tn))
   (if (exists? "#fx/lib/namespace") (each {l (read-lines "#fx/lib/namespace")} (ns-line l tn)))
   (if (exists? "/sd/0/lib/namespace") (each {l (read-lines "/sd/0/lib/namespace")} (ns-line l tn)))

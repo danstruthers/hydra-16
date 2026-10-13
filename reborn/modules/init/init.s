@@ -1,16 +1,22 @@
 ; ****************************************************************************
-; init - the first program (task 1): its fds 0-2 on the console (#c/cons, the console driver's window 0; or, without
-; it, none, and the bring-up console's); the RAM disks started (r: 256K, s: 512K, each halved till it fits); its
-; namespace from the namespace file (nslib.s's ns_default: its own area of the RAM disk, /rom/lib/namespace, a card's
-; /lib/namespace; with no /rom/lib/namespace, the one built in here: the devices at their places); the windows' chrome
-; (/lib/windows's lines written to #c/wctl, a card's before the ROM's); the tasks listed;
-; hello run and waited for; then window 0's shell (rc -l, a namespace of its own: it builds it, newns, and its
-; profile puts its window at /dev) and the windows' starter (wstart: the shell in the next window the user asks for,
-; Ctrl-] c), each started again when it ends; and the input controller's driver (input: the Vera X's keyboard and
-; mouse, a note group of its own), once (with no controller it ends at once).  The shell is /lib/shell's line, if there is one (its program and
-; arguments: /bin/forth -l, HyForth as a shell; a card's /lib/shell, or the shared RAM disk's, /sram/lib/shell), read
-; each time one's started, else rc -l; wstart is given it as its arguments.  It waits for every task left to it (the
-; windows' shells are).  Its note handler keeps it going.
+; init - the first program (the kernel starts it as the boot ends, in task 1, with no argument), and each window's
+; first: the kernel starts it again, in a task of its own, with a window's number as its argument (INIT_RUN: the
+; console asks for window N's when the user makes one, Ctrl-] c; and the kernel for 0's when the task init was in for
+; window 0 ends).  It sets a shell up and becomes it (EXEC), so no task is spent on an init that only waits:
+;   * its fds 0-2 on its window's console (#c/cons, the console driver's window 0; #cN/cons; without a console
+;     driver none, and the bring-up console's), and, with an argument, $window N in its environment;
+;   * the boot's only: the RAM disks started (r: 256K, s: 512K, each halved till it fits);
+;   * its namespace from the namespace file (nslib.s's ns_default: its own area of the RAM disk, /rom/lib/namespace,
+;     a card's /lib/namespace; with no /rom/lib/namespace, the one built in here: the devices at their places);
+;   * the boot's only: the windows' chrome (/lib/windows's lines written to #c/wctl, a card's before the ROM's), the
+;     tasks listed, and hello run and waited for;
+;   * then the shell, in its place (EXEC: the task, its fds, its namespace, its environment and its note group
+;     are the shell's): /lib/shell's line, if there is one (its program and arguments: /bin/forth -l, HyForth as a
+;     shell; a card's /lib/shell, or the shared RAM disk's, /sram/lib/shell), else rc -l.  The shell's -l builds its
+;     namespace again, from an empty one, and its profile puts its window at /dev and its notes in its group.
+; A shell that can't be started is said, rc -l tried in its place, and a second later init tries again (window 0's)
+; or ends (another window's).  When window 0's shell ends, the kernel starts init again (it does for a task init
+; EXECed in).  Nothing waits for a task whose parent has ended: the kernel lets it go as it ends.
 
 .include "hydra.inc"
 .include "hyx2.inc"
@@ -20,14 +26,14 @@
 
 .zeropage
 child:      .res        1
-sh0:        .res        1                                   ; Window 0's shell ...
-sw:         .res        1                                   ;   and the windows' starter
 fd:         .res        1
 banks:      .res        1                                   ; A RAM disk's size, in 8K banks
 wfd:        .res        1                                   ; /lib/windows: #c/wctl's fd ...
 wn:         .res        1                                   ;   wbuf's bytes ...
 wi:         .res        1                                   ;   a line's start, its end
 wj:         .res        1
+boot:       .res        1                                   ; <> 0: the boot's (no argument)
+argn:       .res        1                                   ; Its argument's digits (0: none)
 
 SH_MAX      = 64                                            ; /lib/shell's bytes read, at most
 
@@ -38,12 +44,62 @@ shline:     .res        SH_MAX + 2                          ;   its line's words
 shargs:     .res        2                                   ;   arguments (shargs: where), SPAWN's way (each one
                                                             ;   zero-terminated, an empty one after the last)
 wbuf:       .res        256                                 ; /lib/windows, a part at a time
+arg:        .res        3                                   ; Its argument: the window, a digit or two
+cname:      .res        12                                  ; "#cN/cons"
 
 .code
 main:
+            ldy         #0                                  ; Its argument: a window's number, or none (the boot's)
+:
+            lda         (r0),Y
+            cmp         #'0'
+            bcc         :+
+            cmp         #'9' + 1
+            bcs         :+
+            sta         arg,Y
+            iny
+            cpy         #2
+            bcc         :-
+:
+            sty         argn
+            stz         boot
+            tya
+            bne         :+
+            inc         boot
+:
             LDR         r0, notes                           ; (Notes don't end it)
             jsr         NOTIFY
-            LDR         r0, s_cons                          ; Fds 0-2: the console
+            lda         #'#'                                ; Fds 0-2: its window's console, "#cN/cons" ("#c/cons":
+            sta         cname                               ;   window 0's)
+            lda         #'c'
+            sta         cname + 1
+            ldx         #2
+            ldy         argn
+            beq         @cons
+            lda         arg
+            cpy         #2
+            beq         :+
+            cmp         #'0'
+            beq         @cons
+:
+            ldy         #0
+:
+            lda         arg,Y
+            sta         cname,X
+            inx
+            iny
+            cpy         argn
+            bcc         :-
+@cons:
+            ldy         #0
+:
+            lda         s_cons,Y                            ; ("/cons", and its zero)
+            sta         cname,X
+            inx
+            iny
+            cpy         #6
+            bcc         :-
+            LDR         r0, cname
             lda         #O_RDWR
             jsr         OPEN
             bcs         :+                                  ; (No console driver: the bring-up console's)
@@ -52,11 +108,29 @@ main:
             lda         #0
             jsr         DUP
 :
+            lda         argn                                ; $window: its argument
+            beq         :+
+            sta         r2
+            stz         r2 + 1
+            stz         r3
+            stz         r3 + 1
+            LDR         r0, s_window
+            LDR         r1, arg
+            lda         #$FF
+            jsr         ENV_PUT
+:
+            lda         boot
+            beq         :+
             jsr         ramdisks
+:
             jsr         ns_default                          ; Its namespace: the file's
             bcc         :+
             PRINT       s_builtin                           ; (None: the one built in)
             jsr         namespace
+:
+            lda         boot
+            bne         :+
+            jmp         shell
 :
             jsr         windows                             ; The windows' chrome: /lib/windows
             PRINT       s_up
@@ -81,77 +155,41 @@ main:
             PRINT       s_open
             PRINT       msg
             PRINT       s_close
-            bra         shells
+            bra         shell
 
 @failed:
             jsr         error
 
 ; ****************************************************************************
-; The shells: window 0's and the windows' starter, started again when they end; the rest just waited for
-shells:
-            jsr         shell0
-            jsr         starter
-            LDR         r0, s_input                         ; The keyboard's and mouse's driver, once
-            stz         r1
-            stz         r1 + 1
-            lda         #SPAWN_NEWGROUP
-            jsr         SPAWN
-@wait:
-            stz         r0
-            stz         r0 + 1
-            lda         #$FF
-            jsr         WAIT
-            bcc         @ended
-            cmp         #E_CHILD                            ; (None: a moment, then try again)
-            bne         @wait
-            lda         #TICK_HZ
-            ldx         #0
-            jsr         SLEEP
-            jsr         shell0
-            jsr         starter
-            bra         @wait
-
-@ended:
-            cmp         sh0
-            bne         :+
-            jsr         shell0
-            bra         @wait
-:
-            cmp         sw
-            bne         @wait
-            jsr         starter
-            bra         @wait
-
-; Window 0's shell (a note group of its own: its window's notes are its), or the windows' starter (in init's
-; namespace, so the shell's program is found as here; the shell given it as its arguments), started
-shell0:
+; The shell, in init's place: /lib/shell's, or rc -l; if neither starts, init ends, a second on
+shell:
             jsr         shell_line
             LDR         r0, shline
             lda         shargs
             sta         r1
             lda         shargs + 1
             sta         r1 + 1
-            lda         #SPAWN_NEWGROUP | SPAWN_NEWNS
-            jsr         SPAWN
-            sta         sh0
-            bcc         :+
-            lda         #$FF
-            sta         sh0
+            jsr         EXEC
+            jsr         error                               ; (Back: it couldn't be started)
+            LDR         r0, s_rcl
+            LDR         r1, s_rcl + S_RC_LEN
+            jsr         EXEC
+            jsr         error
+            lda         #<TICK_HZ
+            ldx         #>TICK_HZ
+            jsr         SLEEP
+            lda         argn                                ; (Window 0's, or the boot's: again, till there is one)
+            beq         shell
+            cmp         #1
+            bne         :+
+            lda         arg
+            cmp         #'0'
+            beq         shell
 :
-            rts
-
-starter:
-            jsr         shell_line
-            LDR         r0, s_wstart
-            LDR         r1, shline
-            lda         #0
-            jsr         SPAWN
-            sta         sw
-            bcc         :+
-            lda         #$FF
-            sta         sw
-:
-            rts
+            stz         r0
+            stz         r0 + 1
+            lda         #1
+            jmp         EXITS
 
 ; The shell (shline, shargs): /lib/shell's first line's words, or, with no /lib/shell or none in it, rc -l
 shell_line:
@@ -486,7 +524,8 @@ notes:
             rts
 
 .rodata
-s_cons:     .byte       "#c/cons", 0
+s_cons:     .byte       "/cons", 0
+s_window:   .byte       "window", 0
 s_up:       .byte       "HydraOS 1.0 for the Hydra-16", CR, LF, "init: up in task ", 0   ; (The kernel's banner is the base's)
 s_hello:    .byte       "#fx/bin/hello", 0
 s_args:     .byte       "from init", 0, 0
@@ -502,8 +541,6 @@ S_RCL_LEN   = * - s_rcl
 s_lshell:   .byte       "/lib/shell", 0
 s_windows:  .byte       "/lib/windows", 0
 s_wctl:     .byte       "#c/wctl", 0
-s_wstart:   .byte       "#fx/bin/wstart", 0
-s_input:    .byte       "#fx/bin/input", 0
 s_builtin:  .byte       "init: no /rom/lib/namespace: the one built in", CR, LF, 0
 s_ctlr:     .byte       "#d/r/ctl", 0
 s_ctls:     .byte       "#d/s/ctl", 0

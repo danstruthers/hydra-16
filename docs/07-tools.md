@@ -129,7 +129,6 @@ the line editor ([text](#text)), for scripts and a terminal without a screen.
 | `sleep seconds` | Nothing for that long; Ctrl-C ends it |
 | `ns [task]` | A task's namespace (none: this one's) as the binds and mounts that make it |
 | `new-window [-g] [command ...]` | A window made and shown, in this one's group (`-g`: a group of its own, another shell session), running the command (rc's: `new-window 'ls -l; sleep 5'`), or with none the shell (`/lib/shell`'s, as Ctrl-] c starts); `$window` is its number.  It isn't waited for, and the window goes when its program ends |
-| `input` | The Vera X's keyboard and mouse (its input controller, the X16's SMC): their keys into the console, as the serial terminal's, and the mouse into `/dev/vid/mouse`.  init starts it; with no controller it ends at once |
 
 The tasks' own files are under `/proc/N`: `status`, `args`, `cwd`, `env`, `ns`, `fd` (its open files: `0 rw #c 291
 #c/cons`), `regs`, `mem` and `ram` (its memory), `note` (write `interrupt`, `kill`, `hangup` or a number to send

@@ -358,10 +358,10 @@ file name is given as a zero-terminated string: `>z` ( *c-addr u* -- *z-addr* ) 
 ```session
 /> lib hydra
 /> sys-getpid .
-2
+1
 ```
 
-(This shell is task 2.)
+(This shell is task 1.)
 
 **Arguments.** In a script (section 19.16), `argc` ( -- *n* ) is how many arguments it was given, counting its own
 name, and `arg` ( *n* -- *c-addr u* ) is one of them: `0 arg` is the script's name.

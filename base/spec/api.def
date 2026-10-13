@@ -640,12 +640,14 @@ call MOUNT name impl=K_MOUNT far
   doc:    as BIND does.
 
 call UNMOUNT name impl=K_UNMOUNT far
-  in:     r0 = new, or 0; r1 = old
+  in:     r0 = new, or 0; r1 = old, or 0
   out:    -
   errors: E_NOENT, E_INVAL, E_NSFULL, E_NAMETOOLONG
   blocks: yes
-  hl:     r0=s? r1=s ->
-  doc:    Undo a bind or a mount at old: all of what's there (r0 = 0), or new's member (as BIND finds new).
+  hl:     r0=s? r1=s? ->
+  doc:    Undo a bind or a mount at old: all of what's there (r0 = 0), or new's member (as BIND finds new).  With
+  doc:    no old either (r1 = 0), everything: the caller has an empty namespace of its own (the tasks it shared
+  doc:    one with keep theirs): what Plan 9's newns starts from, and nslib's ns_default does first.
 
 call NSINFO name impl=K_NSINFO far
   in:     .A = a task ($FF: this one); .X = which entry of its namespace (0 on); r0 = a buffer (NI_SIZE bytes)
@@ -857,6 +859,31 @@ call TASKSTEP server impl=K_TASKSTEP far
   doc:    can't be stepped over).  TS_BREAKS: from now any BRK stops the task, its PC back on the BRK (the
   doc:    debugger's breakpoints, BRKs it writes into the program); TS_NOBREAKS: a BRK is the program's own again
   doc:    (NOTE_BRK).  SPAWN_STOPPED starts a program stopped at its entry point.
+
+call SRV_NAP server impl=K_SRV_NAP
+  in:     .A/.X = ticks (1-32767); or 0, and .Y = the driver's event count (TASK_EVENT) as it last saw it
+  out:    -
+  errors: -
+  blocks: yes
+  doc:    For a driver with work of its own between its calls (a device to look at now and then): its init doesn't
+  doc:    return, but waits here between its turns.  While it waits it serves its calls, as a driver that has
+  doc:    started does (the boot goes on); when the time has come it runs again, busy (a call to it waits) till its
+  doc:    next SRV_NAP, or till its init returns (it's an ordinary driver from then).  With 0 ticks it waits till
+  doc:    its own event count isn't .Y any more (its irq entry adds to it, or one of its calls): for work that
+  doc:    follows what happens, not the clock.  ps shows it asleep, or waiting for an event.
+
+call INIT_RUN server impl=K_INIT_RUN
+  in:     .A = a number, 0-15
+  out:    -
+  errors: -
+  blocks: no
+  doc:    Start init (the module the directory names) again, in a task of its own, with the number in decimal as
+  doc:    its argument: as the boot starts it (no parent, no fds, an empty namespace and environment, a note group
+  doc:    of its own), but the boot's has no argument.  The kernel task starts it as it next runs; with no task
+  doc:    free it isn't started (but 0's, which waits for one).  The kernel itself asks for 0's when the task init
+  doc:    was last started in for 0 (or by the boot) has EXECed and then ends: so an init that EXECs the login shell
+  doc:    is started again when that shell ends (an init that ends itself is left ended).  HydraOS's console asks
+  doc:    for n's when the user makes window n.  From a task or an irq entry.
 
 # ---- dbg (for the tests and the debugger: unstable)
 

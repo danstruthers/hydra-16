@@ -132,9 +132,9 @@ them, and giving its output (a list, if it has several). `(sys :name ...)` does 
 
 ```session
 hylang> (sys-getpid)
-=> 4
+=> 2
 hylang> (sys :ticks)
-=> 1212
+=> 1186
 ```
 
 ## 22.5 The devices

@@ -87,8 +87,8 @@ Establish at once that an error message is information, not a telling-off.
 **Open with** the terminal emulator at the projector, and <kbd>CTRL</kbd>-<kbd>A</kbd> <kbd>S</kbd>: every task and
 what it's doing, live. Or with `top` on any Hydra.
 
-**Watch for** the task numbers in step 4. The lab says `kill 4`, but the number is whatever *their* `ps` shows,
-and killing the wrong one is instructive: kill the shell (task 2), and `init` starts another. Let it happen, then
+**Watch for** the task numbers in step 4. The lab says `kill 2`, but the number is whatever *their* `ps` shows,
+and killing the wrong one is instructive: kill the shell (task 1), and another starts (the kernel starts `init` again, which becomes it). Let it happen, then
 ask why.
 
 The reading (Chapter 7) is the hardest in Part Two. Don't set section 7.4 for everyone: the lab and its questions
@@ -111,8 +111,8 @@ second.)
 * Spaces around `=`. `pets = (cat dog)` isn't an assignment.
 * The backquote in `` `{date} ``. It's the key at the top left of most keyboards, and half the class will type
   an apostrophe.
-* **The six-program limit** on pipes (the manual's section 8.7). Each program in a pipeline is a task, and there
-  are sixteen tasks for everything, so a seventh program gets `no free task`. Nothing breaks: the rest of the
+* **The nine-program limit** on pipes (the manual's section 8.7). Each program in a pipeline is a task, and there
+  are sixteen tasks for everything, so a tenth program gets `no free task`. Nothing breaks: the rest of the
   line runs without it, and the answer is wrong or missing. It's a good moment to run `ps` and count.
 
 **Close with** "what's the difference between `>` and `|`?" (One sends output to a file; the other to a program.)

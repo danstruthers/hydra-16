@@ -235,12 +235,14 @@ BOOT_DONE:                                                  ; (The tests' IRQs-o
             FARCALL     K_TASK_BOOT_INIT
 
 ; The idle task: whatever can run runs; when nothing can, the CPU sleeps until an interrupt.  And the notes irq
-; entries queued for groups, posted (the scheduler runs this then: notes.s)
+; entries queued for groups, posted (the scheduler runs this then: notes.s), and init started again (INIT_RUN, or
+; as its task ends)
 @idle:
             jsr         K_YIELD
             lda         K0_NQ_ANY
             beq         :+
             jsr         K_NOTE_QUEUED
+            FARCALL     K_INIT_AGAIN                        ; (And init, started again where it's wanted: task.s)
             bra         @idle
 :
             wai

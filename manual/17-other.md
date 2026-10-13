@@ -35,7 +35,7 @@ PA0 and PA1 are also the **I²C bus** (section 17.3): while a program is using t
 
 ## 17.2 /dev/gpio: the pins
 
-The `gpio` driver, in task B, serves the pins as `#g`, at `/dev/gpio`:
+The `kdev` driver serves the pins as `#g`, at `/dev/gpio`:
 
 | File | What it is |
 |---|---|
@@ -98,7 +98,7 @@ can share the two wires. Memory chips, clocks, temperature sensors, small displa
 controller all use it. The Hydra's I²C bus is on J27: SCL on pin 3, SDA on pin 4, with the pull-up resistors already
 on the board.
 
-The `gpio` driver serves the bus as `#i`, at `/dev/i2c`. Its directory lists a file for each chip that answers,
+`kdev` serves the bus as `#i`, at `/dev/i2c`. Its directory lists a file for each chip that answers,
 named by its address in hex, and `ctl`:
 
 <!-- session --smc
@@ -194,9 +194,6 @@ program that sets a variable doesn't change its parent's.
 0/
 1/
 2/
-3/
-4/
-11/
 12/
 13/
 14/
@@ -220,15 +217,15 @@ In each are these files:
 | `note` | Writing a note's name (`interrupt`, `kill`, `hangup`, `alarm`) or number sends it the note |
 
 ```session
-/> cat /proc/2/status
-forth wait 1 64 2
-/> cat /proc/2/fd
+/> cat /proc/1/status
+forth wait - 107 1
+/> cat /proc/1/fd
 /
-0 rw #c 391 #c/cons
-1 rw #c 391 #c/cons
-2 rw #c 391 #c/cons
-/> cat /proc/2/regs
-PC=EA8F A=00 X=04 Y=02 S=E7 P=37 W=00 U=00 RAM=00 ROM=1E
+0 rw #c 368 #c/cons
+1 rw #c 368 #c/cons
+2 rw #c 368 #c/cons
+/> cat /proc/1/regs
+PC=EAA0 A=00 X=02 Y=01 S=E7 P=37 W=00 U=00 RAM=00 ROM=1E
 ```
 
 | `ctl` command | What it does |

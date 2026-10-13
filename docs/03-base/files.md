@@ -240,6 +240,6 @@ The base's devices are kdev's and the console's.  HydraOS adds the rest ([chapte
 | `#d` | The disks | `storage` | `/dev/sd` |
 | `#f` | HydraFS, a disk's file system | `storage` | `/sd`, `/rom`, `/ram`, `/sram` |
 | `#S` | The SPI devices | `storage` | `/dev/spi` |
-| `#g`, `#i` | GPIO, I2C | `gpio` | `/dev/gpio`, `/dev/i2c` |
+| `#g`, `#i` | GPIO, I2C | `kdev` (HydraOS's) | `/dev/gpio`, `/dev/i2c` |
 | `#a` | Sound | `snd` | `/dev` |
 | `#v` | The Vera X | `vid` | `/dev/vid` |

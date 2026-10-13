@@ -274,17 +274,13 @@ main:
             lda         sum
             EXPECT_A    13, "each woken, each waited for"
 
-; ---- An orphan: init (this task) inherits it
+; ---- An orphan: nobody's (no task is kept to wait for it: the kernel lets it go as it ends)
             CHILD       s_o
             WAITFOR     #$FF
-            stx         sum
-            WAITFOR     #$FF
             txa
-            clc
-            adc         sum
-            EXPECT_A    <('o' + '9'), "a child's orphan comes to init: both waited for"
+            EXPECT_A    <'o', "a child that leaves a child of its own: waited for"
             WAITFOR     #$FF
-            EXPECT_ERR  E_CHILD, "and no more"
+            EXPECT_ERR  E_CHILD, "its orphan is nobody's: no more to wait for"
 
             DONE        "t_task"
 

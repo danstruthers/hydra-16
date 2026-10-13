@@ -171,6 +171,23 @@ clients may be waiting for has happened: a byte in, room to send.
   its event count change now and then (from an interrupt it owns), and the client, asking again, looks at the time.
 * A server serves one request at a time; a second client waits until it's free.
 
+**A driver with work of its own** between its requests (a device to look at now and then, something to do whenever a
+key comes) needs no second task for it.  Its `init` doesn't return: it loops, waiting in **`SRV_NAP`** between its
+turns, for a number of ticks (`.A`/`.X`) or, with 0 ticks, till its own event count isn't the one it last saw (`.Y`).
+While it waits there the driver serves its requests as any other; when it runs again it's busy, and a request waits,
+till its next `SRV_NAP`: so its loop and its requests never meet in its data.  The boot counts it as started at its
+first `SRV_NAP`.  In the loop it may make requests of other drivers (not of itself: call its own routines).  If its
+`init` does return later, it's an ordinary driver from then on.
+
+```
+init:       ...                                             ; (Its letters, its lines, its hardware)
+@turn:      lda         #<(TICK_HZ / 10)                    ; Ten times a second
+            ldx         #>(TICK_HZ / 10)
+            jsr         SRV_NAP
+            jsr         look                                ; (Its own work: the device read, what it has passed on)
+            bra         @turn
+```
+
 ---
 
 ## Interrupts

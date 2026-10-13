@@ -190,12 +190,11 @@ scratch in 2026, hence the name).  It uses the same BIOS ROM, byte for byte, and
 | Task | Module | What it does |
 | :--- | :----- | :----------- |
 | 0 | the kernel | The scheduler, interrupts, system calls, memory, files and namespaces |
-| 1 | `init` | Sets up the RAM disks and the namespace, starts the shell in window 0, and restarts it if it ends |
-| 2 and up | programs | The shells, the tools, the languages, your programs |
-| A (10) | `vid` | The Vera X video card (it ends at once if there's no card) |
-| B (11) | `gpio` | The GPIO header and the I2C bus |
+| 1 | `init`, then the shell | `init` sets up the RAM disks and the namespace, then becomes window 0's shell (`EXEC`): no task is kept just to wait.  The kernel starts `init` again when that shell ends, and once for each window made |
+| 2 and up | programs | The other windows' shells, the tools, the languages, your programs |
+| B (11) | `vid` | The Vera X video card (it ends at once if there's no card) |
 | C (12) | `snd` | Sound: the YM2151, and the Vera X's synthesizer and PCM |
-| D (13) | `kdev` | The kernel's devices (the base's) |
+| D (13) | `kdev` | The kernel's devices (the base's), and with them the GPIO header, the I2C bus and the Vera X's keyboard and mouse |
 | E (14) | `storage` | SD cards, the RAM disks, the ROM disk, and the HydraFS file system |
 | F (15) | `cons` | The console: the serial port, windows, the PC tool's `/pc` folder |
 
@@ -390,20 +389,18 @@ Every program runs in a task of its own.  `ps` lists them:
 ```
 /> ps
 task  state   parent     cpu group  name
-   0  ready   -          2.4     0  kernel
-   1  wait    -          0.1     1  init
-   2  wait     1         0.4     2  forth
-   3  event    1         0.0     1  wstart
-   4  ready    2         0.0     2  ps
-  11  idle    -          0.0    11  gpio
+   0  ready   -          1.0     0  kernel
+   1  wait    -          0.4     1  forth
+   2  ready    1         0.0     1  ps
   12  idle    -          0.0    12  snd
-  13  idle    -          0.2    13  kdev
-  14  idle    -          1.7    14  storage
-  15  idle    -          0.9    15  cons
+  13  idle    -          0.1    13  kdev
+  14  idle    -          1.5    14  storage
+  15  event   -          0.5    15  cons
 ```
 
-`ps` itself is task 4, started by the shell (task 2).  `sleep 100 &` runs a program in the background (`ps` shows its
-task, say 5); `kill 5` ends it; `/proc/5/status` is its state as a file.
+`ps` itself is task 2, started by the shell (task 1).  Only six of the sixteen tasks are in use with a shell at its
+prompt (seven with a Vera X): the rest are for your programs and more windows.  `sleep 100 &` runs a program in the
+background (`ps` shows its task, say 3); `kill 3` ends it; `/proc/3/status` is its state as a file.
 
 The console has **windows**, as Plan 9's rio has: each one a whole console with its own shell, one shown at a time on
 your terminal.  The windows' keys start with **Ctrl-]**: Ctrl-] c starts a new window with a shell, Ctrl-] and a digit

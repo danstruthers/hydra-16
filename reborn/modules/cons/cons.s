@@ -40,7 +40,9 @@
 ;               the shown one); float X Y C R, float C R (centred), float off (the window a popup: over its
 ;               group's, boxed, C x R its size); layout tabs|rows|columns|grid (the writer's window's group's: its windows one at a time, or tiled)
 ;   /label      the window's title (OSC 0 and 2 write it too), read and written whole; empty: its program's name
-;   /wnew       a read waits for the user's Ctrl-] c, then makes a window, shown, and gives its number (init's: it
+;   /wnew       a read waits for the user's Ctrl-] c, then makes a window, shown, and gives its number (a window
+;               manager's own starter: with nobody reading it, the window is made and the kernel asked to start
+;               init in it, INIT_RUN, which becomes its shell; once init's own: it
 ;               starts a shell there)
 ;   /ser        the serial port, raw: bytes in and out as they are.  While it's open for reading, the line is its
 ;               (xmodem's): every byte in is its, Ctrl-C and the rest too, and the windows' text (and /pc's frames)
@@ -163,6 +165,7 @@ CTRL_RB         = $1D           ; (Ctrl-]: the windows' key, as it starts: key p
 SNARF_MAX       = 8192          ; /snarf's bytes, at most: its bank's
 LS_ROW          = 3             ; The list's first window's row
 ENT_CONSCTL     = 2             ; srv_tree's consctl (its fids counted)
+ENT_WNEW        = 4             ;   and wnew (its readers counted: with none, init starts a new window's shell)
 PC_MARK         = $1E           ; /pc's frames: one starts (from the PC, PC_MARK then PC_ESC is a typed $1E, Ctrl-^)
 PC_ESC          = $1F           ;   the next byte ^ $20 is the byte
 PC_T_ATTACH     = 'A'           ; The Hydra's: a new session (the PC forgets its fids); its payload: PC_VERSION
@@ -315,7 +318,9 @@ kw_lt:      .res        1                                   ;   <> 0: CSI <, a m
 ms_w:       .res        1                                   ; (k_mouse's: the window under it, M or m, the wheel's
 ms_m:       .res        1                                   ;   lines)
 ms_n:       .res        1
-want_new:   .res        1                                   ; <> 0: Ctrl-] c, a window wanted (for /wnew's reader)
+want_new:   .res        1                                   ; <> 0: Ctrl-] c, a window wanted (for /wnew's reader, or init)
+wnew_n:     .res        1                                   ; /wnew's fids open
+ev_seen:    .res        1                                   ; Its event count, as its init's loop last saw it
 kb_act:     .res        128                                 ; The keys (key's): each one's action after the prefix
                                                             ;   (KA_*; ESC's: Shift-Tab's, ESC [ Z) ...
 kb_ct:      .res        3                                   ;   and Ctrl-Tab's, Ctrl-Shift-Tab's and Shift-PgUp's
@@ -491,6 +496,7 @@ init:
             stz         pc_first,X
             dex
             bpl         :-
+            stz         wnew_n
             ldx         #rx_fe + 2 - pc_n_req - 1           ; (The counts serctl shows: 0)
 :
             stz         pc_n_req,X
@@ -605,7 +611,22 @@ init:
             jsr         SRV_REGISTER
             bcs         @done
             lda         #'P'
-            jmp         SRV_REGISTER                        ; (Its error is init's)
+            jsr         SRV_REGISTER                        ; (Its error is init's)
+            bcs         @done
+; Its init doesn't end.  Between its calls, whenever something has happened (its event count: a key in, a timer's
+; turn), the keys are handed to the windows and the terminals painted, as before and after each call: so that goes
+; on with no program asking (a window wanted, Ctrl-] c, while the shell waits for a program; flow control's watch;
+; the chrome's clock).  SRV_NAP: its calls are served meanwhile
+@idle:
+            ldy         ev_seen
+            lda         #0
+            tax
+            jsr         SRV_NAP
+            lda         TASK_EVENT
+            sta         ev_seen
+            jsr         distribute
+            jsr         pump
+            bra         @idle
 
 @done:
             rts
@@ -2773,6 +2794,7 @@ pump:
             beq         :+
             jmp         tx_start
 :
+            jsr         new_init                            ; (A window wanted: made, and init's shell asked for)
             lda         pc_step
             beq         :+
             lda         #PC_STALE
@@ -3277,6 +3299,10 @@ opened:
             sta         srv_fid_aux,X
 @ok:
             lda         z:srv_e
+            cmp         #ENT_WNEW
+            bne         :+
+            inc         wnew_n
+:
             cmp         #ENT_CONSCTL
             bne         :+
             ldy         srv_fid_aux,X
@@ -3333,6 +3359,13 @@ clunked:
             lda         #$FF
             sta         fid_new,X
             lda         z:srv_e
+            cmp         #ENT_WNEW
+            bne         :+
+            lda         wnew_n
+            beq         @done
+            dec         wnew_n
+            bra         @done
+:
             cmp         #ENT_CONSCTL
             bne         @done
             ldy         z:srv_id
@@ -3463,6 +3496,17 @@ h_wnew:
             bne         :+
             jmp         again
 :
+            jsr         new_window
+            bcs         :+
+            txa
+            jsr         num_buf                             ; ("N" and an LF)
+            jmp         r_give
+:
+            rts
+
+; The window wanted (want_new) made, and shown.  OUT: C = 0, .X = it; or C = 1, .A = the error
+new_window:
+            lda         want_new
             stz         want_new
             ldy         nw_seat                             ; (The seat that asked's)
             jsr         seat_in
@@ -3477,13 +3521,26 @@ h_wnew:
             jsr         w_show                              ; (The user's: shown, as rio's new window is)
             ldy         #0
             jsr         seat_in
-            txa
-            jsr         num_buf                             ; ("N" and an LF)
-            jmp         r_give
+            clc
+            rts
 
 @done:
             ldy         #0                                  ; (.A, C kept)
             jmp         seat_in
+
+; A window wanted, and nobody reading /wnew: it's made, and init started in it (INIT_RUN: the kernel starts init
+; with the window's number as its argument, and init becomes its shell)
+new_init:
+            lda         want_new
+            beq         @done
+            lda         wnew_n
+            bne         @done
+            jsr         new_window
+            bcs         @done
+            txa
+            jsr         INIT_RUN
+@done:
+            rts
 
 ; iobuf = .A in decimal and an LF; .X = their bytes
 num_buf:

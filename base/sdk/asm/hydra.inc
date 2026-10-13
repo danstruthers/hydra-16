@@ -113,7 +113,7 @@ FD2PATH         = $F8F0       ; .A = an fd; r0 = a buffer (PATH_MAX + 1 bytes)
 ; ---- name: Namespaces (phase 2)
 BIND            = $F920       ; r0 = new (a path); r1 = old (a path: absolute); .A = MREPL, MBEFORE or MAFTER, and MCREATE
 MOUNT           = $F923       ; .X = a device letter; r0 = its spec (a string, 8 characters at most), or 0; r1 = old; .A = BIND's flags
-UNMOUNT         = $F926       ; r0 = new, or 0; r1 = old
+UNMOUNT         = $F926       ; r0 = new, or 0; r1 = old, or 0
 NSINFO          = $F929       ; .A = a task ($FF: this one); .X = which entry of its namespace (0 on); r0 = a buffer (NI_SIZE bytes)
                               ; -> the entry in the buffer (NI_*): its mount point, its device letter and spec, the path in that device, its flags (MCREATE) and its place among the union's members
 
@@ -150,6 +150,8 @@ ROMREAD         = $F9D1       ; .A = a paged ROM bank; r0 = where in it ($A000-$
 TASKMEM         = $F9D4       ; .A = a task; .X = TM_READ or TM_WRITE, | TM_BANK; r0 = a buffer; r1 = an address in the task's view, $0000-$DFFF (with TM_BANK: $8000-$9FFF, in its RAM bank r3); r2 = a count (the range ends at $E000, or with TM_BANK at $A000, at most)
 TASKSTOP        = $F9D7       ; .A = a task; .X = 1 to stop it, 0 to start it again
 TASKSTEP        = $F9DA       ; .A = a task; .X = TS_STEP, TS_NEXT, TS_BREAKS or TS_NOBREAKS
+SRV_NAP         = $F9DD       ; .A/.X = ticks (1-32767); or 0, and .Y = the driver's event count (TASK_EVENT) as it last saw it
+INIT_RUN        = $F9E0       ; .A = a number, 0-15
 
 ; ---- dbg: Debugging and tests: unstable, may change in any version
 DBG_SCALL       = $FA10       ; .Y = a driver task; .A, .X = what its serve entry gets
