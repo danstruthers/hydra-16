@@ -754,19 +754,23 @@ Sections 9.9 and 14.7.
 
 ## The system's own programs
 
-Three programs are started by the system and are not meant to be typed.
+One program is started by the system itself, and is not meant to be typed.
 
 `init`
-: The first program: it sets the system up and starts the shells, and waits for the tasks that have no other
-  parent (section 7.4).
+: The first program, and the first program of every window. The kernel starts it as the system comes up; again
+  for each window the user opens (<kbd>CTRL</kbd>-<kbd>]</kbd> <kbd>C</kbd>), with the window's number as its
+  argument; and again whenever the first window's shell ends. It puts its standard input, output and error on
+  its window's console, builds its namespace, and then becomes the shell: it runs the shell in its own task, in
+  its own place, as `exec` does, so that no task is left behind only to wait for the shell. The shell is the one
+  `/lib/shell` names (`/bin/forth -l` in the ROM's), or `rc -l` with no such file. The first time, as the system
+  starts, it also starts the RAM disks, sets the windows up from `/lib/windows`, lists the tasks and runs `hello`
+  (section 7.4).
 
-`wstart`
-: Waits for the user to ask for a new window (<kbd>CTRL</kbd>-<kbd>]</kbd> <kbd>C</kbd>), starts a shell in
-  it, and ends; `init` starts it again for the next.
+Because no task waits for a shell, a task whose parent has ended is simply let go by the kernel when it ends
+itself: there is nothing for it to be handed to.
 
-`input`
-: The driver for the keyboard and mouse of a Vera X card's input controller. With no controller it says so and
-  ends.
+The keyboard and mouse of a Vera X card, the pins and the I²C bus are all served by `kdev`, the kernel's own
+device driver, and are not programs or tasks of their own.
 
 ## The shell's own commands
 

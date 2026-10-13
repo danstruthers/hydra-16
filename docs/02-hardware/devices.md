@@ -45,7 +45,7 @@ Every pin of J27, and the SPI bus's clock and data lines, pass through **J28**, 
 chip in a DIP-16 socket, though the schematic calls it a connector).  It clamps static from fingers and cables to the
 supply rails.  The board works without it, but fit it if anything's ever plugged into J27.
 
-HydraOS's GPIO driver serves the pins as files: `/dev/gpio/0` to `/dev/gpio/7`, the whole port as `port`, `ctl` to
+HydraOS serves the pins as files (in `kdev`): `/dev/gpio/0` to `/dev/gpio/7`, the whole port as `port`, `ctl` to
 set each pin's direction, and `ca1`, which can interrupt ([GPIO, I2C, SPI and the clock](../04-drivers/gpio.md)).
 PA0 and PA1 belong to the I2C bus, so don't use them as GPIO.
 
@@ -89,7 +89,7 @@ place.  The storage driver serves a card on any device as `/dev/sd/N` (N the dev
 *VIA PA0 (SCL) and PA1 (SDA), bit-banged; pull-ups in RN1.*
 
 The I2C bus goes to J27 (pins 3 and 4) and to every slot (pins 28 and 30), with its pull-ups on the board, so a device
-on a card needs none of its own.  The GPIO driver serves it as `/dev/i2c`: its `ctl`, and a file for each device that
+on a card needs none of its own.  HydraOS serves it as `/dev/i2c`: its `ctl`, and a file for each device that
 answers.  The Vera X's input controller (the keyboard and mouse) is on it at `$42`.
 
 Being bit-banged, it's slow (some tens of kHz), and an I2C device can't be given an interrupt line: the board's lines

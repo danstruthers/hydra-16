@@ -284,7 +284,8 @@ const TOOL_LINES = [
     "  4+33 program  init",
     "  2- 4 boot     cons",
     "  5- 6 boot     storage",
-    "  4+0A boot     kdev",
+    " 31    boot     kdev",
+    "  4+0A boot     snd",
     "",
   ].join('\n'), true],
   ["free","ram     256 KB a task (2 modules)\nshared  1024 KB, 256 KB in segments (1), 768 KB free"],
@@ -1554,21 +1555,22 @@ module.exports = {
       init: 'init', without: ['cons'], modules: ['ser'], cycles: 200e6,
       // (ā: wait for a prompt; Ā: 2M cycles, sleep running; \b twice takes xo back)
       machine: { input: 'ārc\r' + 'āsleep 30\rĀ\x03' + 'āecxo\b\bho edited\r' + 'ācat\rline one\r\x04' + 'ācat /dev/consctl /dev/serctl\r' + 'āecho to ser >/dev/ser\r' },
-      expect: ['hello, from init', '% sleep 30\n', '\nedited\n%', '% cat\nline one\nline one\n%', '\nrawoff\ngroup 2\nb9600\n%', '\nto ser\n%'],
+      expect: ['hello, from init', '% sleep 30\n', '\nedited\n%', '% cat\nline one\nline one\n%', '\nrawoff\ngroup 1\nb9600\n%', '\nto ser\n%'],
     },
     {
       name: 'init', what: 'init from files (rc the shell, a card\'s /lib/shell naming it): the RAM disks started, the namespace file run, each shell\'s own namespace and /ram (a window\'s too); the shared RAM disk stopped, /bin\'s union still there',
       init: 'init', modules: ['t_child'], cycles: 250e6,
-      // (ā: wait for a prompt; '#fr' quoted, as # starts a comment; \x1d c: Ctrl-] c, a window made, wstart's rc
-      // started there.  /bin: the RAM disks' caches (empty), then #m/bin, whose t_child runs by its name.  t_child f
-      // makes /ram/mark: in window 0's rc's area, 2, and not in window 1's rc's, 4 (wstart, 3, has none))
-      get machine() { return { sd: shellCard('/bin/rc -l', 'shellrc'), input: 'āls \'#fr\'\r' + 'āls /ram\r' + 'āls /bin\r' + 'āt_child f\r' + 'āls \'#fr\'/2\r' + 'ācat /rom/lib/profile\r' +
+      // (ā: wait for a prompt; '#fr' quoted, as # starts a comment; \x1d c: Ctrl-] c, a window made, init started
+      // there by the kernel (INIT_RUN) and rc in its place.  /bin: the RAM disks' caches (empty), then #m/bin, whose
+      // t_child runs by its name.  t_child f makes /ram/mark: in window 0's rc's area, 1 (init's task: rc is in its
+      // place), and not in window 1's rc's, 2)
+      get machine() { return { sd: shellCard('/bin/rc -l', 'shellrc'), input: 'āls \'#fr\'\r' + 'āls /ram\r' + 'āls /bin\r' + 'āt_child f\r' + 'āls \'#fr\'/1\r' + 'ācat /rom/lib/profile\r' +
         'ācat /dev/sd/s/ctl\r' + 'āecho $window\r' + 'ā\x1dc' + 'āecho $window\r' + 'āls \'#fr\'\r' + 'āls /ram\r' + 'āls /dev\r' +
         'āecho stop >>\'#d/s/ctl\'; echo still; cat /sram/x\r' }; },
-      expect: ['% ls \'#fr\'\n1/\n2/\n%', '% ls /ram\nbin/\nlib/\n%',
-        '% ls /bin\n' + ROM_BIN().join('\n') + '\ninit\nrc\nplay\n', 't_child\n% t_child f\n', '% ls \'#fr\'/2\nbin/\nlib/\nmark\n%',
+      expect: ['% ls \'#fr\'\n1/\n%', '% ls /ram\nbin/\nlib/\n%',
+        '% ls /bin\n' + ROM_BIN().join('\n') + '\ninit\nrc\nplay\n', 't_child\n% t_child f\n', '% ls \'#fr\'/1\nbin/\nlib/\nmark\n%',
         'prompt=(', '% cat /dev/sd/s/ctl\nsram 512 KB 1024 blocks\nhydrafs label=SRAM\n', '% echo $window\n0\n%',
-        '% echo $window\n1\n%', '% ls \'#fr\'\n1/\n2/\n4/\n%', '% ls /ram\nbin/\nlib/\n%', '\ncons\nconsctl\nwctl\nwnew\nser\nserctl\nkbdin\ntext\nlabel\nsnarf\nkbin\n%',
+        '% echo $window\n1\n%', '% ls \'#fr\'\n1/\n2/\n%', '% ls /ram\nbin/\nlib/\n%', '\ncons\nconsctl\nwctl\nwnew\nser\nserctl\nkbdin\ntext\nlabel\nsnarf\nkbin\n%',
         '% echo stop >>\'#d/s/ctl\'; echo still; cat /sram/x\nstill\ncat: /sram/x: no such device\n%'],
     },
     {
@@ -1614,7 +1616,7 @@ module.exports = {
     },
     {
       name: 'task', what: 'tasks and the scheduler: SPAWN, EXITS, WAIT, SLEEP, preemption, PAUSE and WAKE, orphans',
-      init: 't_task', modules: ['t_child'], without: ['cons', 'storage', 'snd', 'gpio', 'vid'], cycles: 60e6,
+      init: 't_task', modules: ['t_child'], without: ['cons', 'storage', 'snd', 'vid'], cycles: 60e6,
     },
     {
       name: 'dev', what: 'the kernel\'s devices (kdev): #/, #n, #t, #m, #p; pipes; a union keeping what was there',
@@ -1956,7 +1958,23 @@ module.exports = {
         '#x255 -#x1 #xFFFF 255 \n0 errors in the number word tests\n\n%'],
     },
     {
-      name: 'lshell', what: 'the shell /lib/shell names (the ROM\'s: /bin/forth -l, HyForth the login shell): init\'s in window 0, wstart\'s in a window made (Ctrl-] c: $window); send, a line typed in another window (#cN/kbdin), run there, then one longer than its keys\' queue (the write waiting for room)',
+      name: 'standing', what: 'the tasks kept standing: at the login shell\'s prompt the kernel, the shell in init\'s task (init EXECs it) and the drivers, no init, no window starter, no input program, no gpio driver; the console waiting for its own events (its init\'s loop); a program left behind when its shell ends is nobody\'s; the login shell ended is started again by the kernel, in task 1, window 0\'s; a window made while the shell waits for a program (Ctrl-] c: the console\'s own loop makes it, the kernel starts init there); newns twice, the namespace the same',
+      init: 'init', cycles: 520e6,
+      machine: { input: 'āps\r' + 'āns | wc -l\r' + 'ānewns\r' + 'āns | wc -l\r' + 'āsleep 200 &\r' + 'ābye\r' + 'āps\r' + 'āecho $window\r' + 'āsleep 8\rĀĀ\x1dc' + 'āecho $window\r' + 'āps\r' + 'āecho all done\r' },
+      expect: ['\nall done\n', '/> ns | wc -l\n     26\n/> newns\n/> ns | wc -l\n     26\n', '/> bye\nHyForth (Forth 2012), bye to end\n/> ps\n', '/> echo $window\n0\n', '/> echo $window\n1\n'],
+      check(m, out) {
+        const f = [], text = out.replace(/\r/g, ''), lists = text.split('task  state   parent     cpu group  name\n').slice(1).map(t => t.split('\n/> ')[0].split('\n').map(l => l.trim().split(/\s+/)));
+        const names = l => l.map(r => r[0] + ':' + r[5] + ':' + r[2]).join(' ');
+        if (lists.length !== 3) return ['ps listed the tasks ' + lists.length + ' times, not 3'];
+        if (names(lists[0]) !== '0:kernel:- 1:forth:- 2:ps:1 12:snd:- 13:kdev:- 14:storage:- 15:cons:-') f.push('at the first prompt: ' + names(lists[0]));
+        if (lists[0].find(r => r[5] === 'cons')[1] !== 'event') f.push('cons isn\'t waiting for its events: ' + lists[0].find(r => r[5] === 'cons')[1]);
+        if (names(lists[1]) !== '0:kernel:- 1:forth:- 2:sleep:- 3:ps:1 12:snd:- 13:kdev:- 14:storage:- 15:cons:-') f.push('after the login shell ended: ' + names(lists[1]));
+        if (!/ 1:forth:- 2:sleep:- 3:sleep:1 4:forth:- 5:ps:4 /.test(' ' + names(lists[2]) + ' ')) f.push('in the window made: ' + names(lists[2]));
+        return f;
+      },
+    },
+    {
+      name: 'lshell', what: 'the shell /lib/shell names (the ROM\'s: /bin/forth -l, HyForth the login shell): init\'s in window 0, and in a window made (Ctrl-] c: the kernel starts init there, $window); send, a line typed in another window (#cN/kbdin), run there, then one longer than its keys\' queue (the write waiting for room)',
       init: 'init', cycles: 300e6,
       // (Window 1 made and shown (\x1d c), its shell sends window 0 a line, then one longer than window 0's keys' queue
       // (63), as the first still runs there: its write waits for room; window 0 shown again (\x1d 0): its text, the
@@ -2778,7 +2796,7 @@ module.exports = {
     },
     {
       name: 'scall', what: 'spike S3: calls into a driver\'s task, its errors, a busy driver, the round trip',
-      init: 't_scall', modules: ['t_child', 't_drv'], without: ['cons', 'storage', 'snd', 'gpio', 'vid'], cycles: 40e6,
+      init: 't_scall', modules: ['t_child', 't_drv'], without: ['cons', 'storage', 'snd', 'vid'], cycles: 40e6,
       budgets: [{ what: 'SCALL round trip (DBG_SCALL, less the same loop calling the code in place)', from: '<scall', to: 'scall>',
         minus: ['<base', 'base>'], per: 1000, max: 200 }],
     },
@@ -2865,7 +2883,7 @@ module.exports = {
       },
     },
     {
-      name: 'hywin', what: 'hylang as a window\'s shell: a card\'s /lib/shell naming /bin/hylang -l, init\'s in window 0 and wstart\'s in a window made (Ctrl-] c: $window, cons.hl\'s window)',
+      name: 'hywin', what: 'hylang as a window\'s shell: a card\'s /lib/shell naming /bin/hylang -l, init\'s in window 0 and in a window made (Ctrl-] c: $window, cons.hl\'s window)',
       init: 'init', cycles: 200e6,
       get machine() {
         return { sd: shellCard('/bin/hylang -l', 'shellhy'), input: '\u0101(+ 1 2)\r' + '\u0101echo $window\r' + '\u0101\x1dc' +
@@ -2896,7 +2914,7 @@ module.exports = {
       },
     },
     {
-      name: 'bawin', what: 'BASIC as a window\'s shell: a card\'s /lib/shell naming /bin/basic -l, init\'s in window 0 and wstart\'s in a window made (Ctrl-] c: $window, ENV$): the prompt, a BASIC line and an rc line in each',
+      name: 'bawin', what: 'BASIC as a window\'s shell: a card\'s /lib/shell naming /bin/basic -l, init\'s in window 0 and in a window made (Ctrl-] c: $window, ENV$): the prompt, a BASIC line and an rc line in each',
       init: 'init', cycles: 200e6,
       get machine() {
         return { sd: shellCard('/bin/basic -l', 'shellbas'), input: '\u0101? 1+2\r' + '\u0101echo $window\r' + '\u0101\x1dc' +
@@ -2941,7 +2959,7 @@ module.exports = {
     },
     {
       name: 'irq', what: 'spike S1: 115200 received by an irq entry while tasks spin',
-      init: 't_irq', modules: ['t_child'], without: ['cons', 'storage', 'snd', 'gpio', 'vid'], cycles: 30e6,
+      init: 't_irq', modules: ['t_child'], without: ['cons', 'storage', 'snd', 'vid'], cycles: 30e6,
       send: { after: 'ready>', bytes: Array.from({ length: S1_BYTES }, (_, i) => (3 + 7 * i) & 0xFF) },
       check(m) {
         const f = [], l = m.acia.rxLat, char = m.acia.charCycles();
@@ -3319,7 +3337,7 @@ module.exports = {
       },
     },
     {
-      name: 'tilesplit', what: 'splits (W7a): Ctrl-] s, a window with a shell (wstart\'s, HyForth) below in the group, rows; a Forth line there; Ctrl-] Up back to window 0, its wctl (two windows, each 80 x 11: the serial port\'s tiles, the smaller); Ctrl-] v, a third; the Vera X\'s screen read back: the bar, then window 0\'s tile\'s header',
+      name: 'tilesplit', what: 'splits (W7a): Ctrl-] s, a window with a shell (init\'s, HyForth) below in the group, rows; a Forth line there; Ctrl-] Up back to window 0, its wctl (two windows, each 80 x 11: the serial port\'s tiles, the smaller); Ctrl-] v, a third; the Vera X\'s screen read back: the bar, then window 0\'s tile\'s header',
       init: 'init', cycles: 600e6,
       get machine() {
         const L = '\u0100', W = L + L + L + L + L;
@@ -3355,7 +3373,7 @@ module.exports = {
       },
     },
     {
-      name: 'seats', what: 'seats (W8a: consctl\'s seats): the screen and the serial port each a seat; Ctrl-] c at the keyboard, a group of its own (wstart\'s shell) shown on the screen alone, sized to it, the serial port still showing window 0 (both marked in wctl); the keyboard\'s keys to it (its text read back from the serial port), its Ctrl-C a note to its shell, not window 0\'s; consctl reads terminal seats; both, one seat again (the screen showing window 0)',
+      name: 'seats', what: 'seats (W8a: consctl\'s seats): the screen and the serial port each a seat; Ctrl-] c at the keyboard, a group of its own (init\'s shell) shown on the screen alone, sized to it, the serial port still showing window 0 (both marked in wctl); the keyboard\'s keys to it (its text read back from the serial port), its Ctrl-C a note to its shell, not window 0\'s; consctl reads terminal seats; both, one seat again (the screen showing window 0)',
       init: 'init', cycles: 400e6,
       get machine() {
         const P = '\u0100', W = P + P + P, CRB = '\u033A\u021C\u03BA';   // (Ctrl down, ], Ctrl up: Ctrl-] at the keyboard)
@@ -3372,7 +3390,7 @@ module.exports = {
       },
     },
     {
-      name: 'winmouse', what: 'the mouse in the windows (W8b): the input program\'s reports (CSI < B ; X ; Y M and m) to a program that asks for them (?1000, ?1006: HyForth\'s ekey, keys vt), at its own cell; a click in a tile not focused (Ctrl-] s\'s rows: window 0\'s, above) focuses it; the wheel over a window that doesn\'t ask, its scrollback\'s view (Enter: its cursor\'s line into /dev/snarf, the view left); the PC terminal\'s reports from the serial port (the console\'s ?1000 and ?1006 sent it as its window asks), its tile\'s cell (row 3, its header row 1: the window\'s 2)',
+      name: 'winmouse', what: 'the mouse in the windows (W8b): the input controller\'s reports (kdev\'s) (CSI < B ; X ; Y M and m) to a program that asks for them (?1000, ?1006: HyForth\'s ekey, keys vt), at its own cell; a click in a tile not focused (Ctrl-] s\'s rows: window 0\'s, above) focuses it; the wheel over a window that doesn\'t ask, its scrollback\'s view (Enter: its cursor\'s line into /dev/snarf, the view left); the PC terminal\'s reports from the serial port (the console\'s ?1000 and ?1006 sent it as its window asks), its tile\'s cell (row 3, its header row 1: the window\'s 2)',
       init: 'init', cycles: 600e6,
       get machine() {
         const P = '\u0100', W = P + P + P, M = '\u0400';
@@ -3387,9 +3405,10 @@ module.exports = {
       expect: ['/> 20 t\n\x1b[?1000;1006h27 91 60 48 59 52 49 59 57 77 27 91 60 48 59 52 49 59 57 109 \x1b[?1000l\n',
         'cat /dev/wctl\n0 0 80 11\n1 0 80 11 *\n', 'cat /dev/wctl\n0 0 80 11 *\n1 0 80 11\n',
         '18 t\n\x1b[?1000;1006h', '27 91 60 48 59 53 59 50 77 27 91 60 48 59 53 59 50 109 \x1b[?1000l'],
-      // (/dev/snarf's line: the boot's task table's cons line, its CPU column the boot's own, then the prompt)
+      // (/dev/snarf's line: the boot's task table's cons line (its state 08: waiting for its own events, its
+      // init's loop), its CPU column the boot's own, then the prompt)
       check(m) {
-        const out = m.out.replace(/\r/g, ''), line = (out.match(/^F 04 01 FF [0-9A-F]{6} cons$/m) || [])[0];
+        const out = m.out.replace(/\r/g, ''), line = (out.match(/^F 08 01 FF [0-9A-F]{6} cons$/m) || [])[0];
         return line && out.includes(line + '\n/> ') ? [] : ['cat /dev/snarf: not the task table\'s cons line' + (line ? ' (' + line + ')' : '')];
       },
     },
@@ -3424,10 +3443,10 @@ module.exports = {
       },
     },
     {
-      name: 'mouse', what: 'the mouse (VIDEO.md step 6): vid\'s /mouse, /mousein and /mousectl (its state; /mouse\'s first read at once, Plan 9\'s 49 bytes; a non-blocking read\'s E_AGAIN; moves, the pointer\'s sprite at them, kept on the screen; swap; the buttons\' changes queued and read in turn; the pointer off and on; a write to /mouse; bad lines; a claim and its release; mode 40x30\'s size), then the input program on the emulator\'s SMC: a move, a click and the wheel from its PS/2 packets',
+      name: 'mouse', what: 'the mouse (VIDEO.md step 6): vid\'s /mouse, /mousein and /mousectl (its state; /mouse\'s first read at once, Plan 9\'s 49 bytes; a non-blocking read\'s E_AGAIN; moves, the pointer\'s sprite at them, kept on the screen; swap; the buttons\' changes queued and read in turn; the pointer off and on; a write to /mouse; bad lines; a claim and its release; mode 40x30\'s size), then the input controller (kdev\'s, on the emulator\'s SMC): a move, a click and the wheel from its PS/2 packets',
       init: 't_mouse', cycles: 45e6,
       // (The SMC's mouse: a move, then the left button pressed and let go, then the wheel up, each 2M cycles apart,
-      // from 12M cycles on: by then the input program has asked for the mouse's mode and read it)
+      // from 12M cycles on: by then kdev has asked for the mouse's mode and read it)
       machine: { vera: true, smc: { moves: [[30, 20, 0], [0, 0, 1], [0, 0, 0], [0, 0, 0, -1]] },
         input: '\u0102' + '\u0100'.repeat(6) + '\u0400\u0100\u0400\u0100\u0400\u0100\u0400\u0103' },
       check(m) {
@@ -3439,7 +3458,7 @@ module.exports = {
       },
     },
     {
-      name: 'kbd', what: 'the keyboard (VIDEO.md step 6): init\'s input program, the emulator\'s SMC typed at, the keys into the console (#c/kbin) as a PC terminal sends them, at the login shell (HyForth): Shift and punctuation; Left to edit a line; Up, its history; Caps Lock; the keypad\'s digits, and its cursor keys with Num Lock off; Ctrl-C, a note to the window\'s shell; the keyboard\'s LEDs following the locks',
+      name: 'kbd', what: 'the keyboard (VIDEO.md step 6): the input controller (kdev\'s), the emulator\'s SMC typed at, the keys into the console (#c/kbin) as a PC terminal sends them, at the login shell (HyForth): Shift and punctuation; Left to edit a line; Up, its history; Caps Lock; the keypad\'s digits, and its cursor keys with Num Lock off; Ctrl-C, a note to the window\'s shell; the keyboard\'s LEDs following the locks',
       init: 'init', cycles: 120e6,
       get machine() {
         const tap = n => String.fromCharCode(0x200 + n), W = '\u0101';  // (smc.js's key n pressed and let go; a prompt)

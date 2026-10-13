@@ -82,7 +82,7 @@ own.
 
 ## 14.3 The RAM disks and the ROM disk
 
-**The RAM disks** keep files in memory. init starts both as the Hydra starts:
+**The RAM disks** keep files in memory. init starts both as the Hydra starts (section 7.4):
 
 | Disk | Size | Kept in | At |
 |---|---|---|---|

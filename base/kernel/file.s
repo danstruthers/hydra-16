@@ -1123,9 +1123,16 @@ K_MOUNT:
 @fail:
             jmp         f_fail2
 
-; UNMOUNT: what's at old gone: all of it (r0 = 0), or new's member there (r0 = new).  IN: r0 = new, or 0; r1 = old.
-; OUT: C = 0; or C = 1, .A = E_NOENT (not there), E_INVAL, E_NSFULL
+; UNMOUNT: what's at old gone: all of it (r0 = 0), or new's member there (r0 = new).  IN: r0 = new, or 0; r1 = old,
+; or 0: everything, an empty namespace of the caller's own (Plan 9's newns starts from one).  OUT: C = 0; or C = 1, .A = E_NOENT (not
+; there), E_INVAL, E_NSFULL
 K_UNMOUNT:
+            lda         r1
+            ora         r1 + 1
+            bne         :+
+            KCALL_FAR   K_NS_CLEAR_K
+            rts
+:
             lda         r1                                  ; (Old)
             pha
             lda         r1 + 1

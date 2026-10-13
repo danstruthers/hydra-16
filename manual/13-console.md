@@ -27,7 +27,7 @@ window's at `/dev`. A few files are the whole console's, the same in every windo
 | `snarf` | The console's | The snarf buffer: the console's clipboard |
 | `ser` | The console's | The serial port itself, byte by byte (section 13.6) |
 | `serctl` | The console's | The serial port's speed |
-| `kbin` | The console's | The Vera X keyboard's keys, from the `input` program (Chapter 16) |
+| `kbin` | The console's | The Vera X keyboard's keys, from the `kdev` driver (Chapter 16) |
 
 ## 13.2 Reading lines
 
@@ -107,7 +107,7 @@ Reading `consctl` shows the window's settings, its number and its size:
 rawoff
 keys hydra
 scroll smooth
-group 2
+group 1
 window 0
 size 80 24
 terminal serial

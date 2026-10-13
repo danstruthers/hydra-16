@@ -142,7 +142,11 @@ waiting.
   * **any other program is a RAM program**: the new task gets the file as an fd and loads itself, at `$0800`, as it
     starts, so `SPAWN` doesn't wait for the load.
 * **Drivers** take the **highest** free task, task F first.  A driver runs its `init`, then is `IDLE`, running only for
-  calls (requests) and interrupts.
+  calls (requests) and interrupts.  A driver with work of its own between its calls (a device to look at now and
+  then, things to do when a key comes) doesn't return from its `init`: it waits in **`SRV_NAP`**, for a time or till
+  its own event count changes.  While it waits there it serves its calls as any driver does; when it runs again it's
+  busy (a call waits) till its next `SRV_NAP`.  So such work takes no task of its own: HydraOS's `kdev` looks at the
+  Vera X's keyboard this way, and its `cons` hands keys to the windows with no program asking.
 * **The child gets** the caller's fds 0, 1 and 2 (or a map of them), its current directory, its namespace (shared, or
   empty), its note group (or a new one), and a copy of its environment.  Its parent is the caller.
 * **`EXEC`** runs another program **in the calling task**, in place of the one that calls it (Plan 9's `exec`).  The
@@ -154,7 +158,11 @@ waiting.
   program's entry point is `EXITS` with 0.  Everything the task had is given back: its fds, pages, banks, segments,
   semaphores, interrupt lines.
 * **`WAIT`** takes a child's status.  The status of a child that ended first waits for its parent's `WAIT`, and its task
-  isn't reused until then; a parent that ends first leaves its children to init.
+  isn't reused until then.  A parent that ends first leaves its children **nobody's**: each is let go as it ends, its
+  task free at once.  (They used to go to init, which had to stay to wait for them.)
+* **Init again.**  `INIT_RUN` asks the kernel task to start init again in a task of its own, with a number as its
+  argument (HydraOS's console: the window the user made); and the kernel does it itself, with `0`, when the task init
+  was in has `EXEC`ed and then ends ([the boot](boot.md#step-5-the-tick-init-and-the-idle-loop)).
 
 ---
 
@@ -193,7 +201,7 @@ There's **one path for every interrupt line**:
 | 5-14 | Free | The other slots |
 | 15 | (none) | No hardware: the vector entry `BRK` uses |
 | 16 | The serial driver | **VIA timer 2**, a line of its own: owning it is owning the timer (the serial port's paced sending) |
-| 17 | `gpio` (HydraOS), while `/dev/gpio/ca1` is open | **VIA CA1**, a line of its own |
+| 17 | `kdev` (HydraOS), while `/dev/gpio/ca1` is open | **VIA CA1**, a line of its own |
 
 **`BRK`** comes through the same path as line 15's: a `BRK` in a program is the note `NOTE_BRK` to that program (or,
 under the debugger, a breakpoint).

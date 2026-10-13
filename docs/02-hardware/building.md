@@ -144,8 +144,7 @@ task F: cons
 task E: storage
 task D: kdev
 task C: snd
-task B: gpio
-task A: vid
+task B: vid
 task 1: init
 HydraOS 1.0 for the Hydra-16
 init: up in task 01

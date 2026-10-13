@@ -3663,7 +3663,7 @@ byte: `>z` ( *c-addr u* -- *z-addr* ) makes one from an ordinary string.
 ```session
 /> lib hydra
 /> sys-getpid .
-2
+1
 ```
 
 ## tbit

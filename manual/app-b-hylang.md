@@ -502,7 +502,7 @@ hylang> (platform)
 hylang> (hex (peek-word 65532) 4)
 => "E000"
 hylang> (sys-getpid)
-=> 4
+=> 2
 ```
 
 ## B.12 The library

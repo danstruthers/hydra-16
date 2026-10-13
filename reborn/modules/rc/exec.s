@@ -2131,6 +2131,6 @@ s_prog:     .byte       "prog", 0
 s_one:      .byte       "1"
 empty:      .byte       LIST_END
 s_rcpath:   .byte       "#m/rc", 0
-s_args:     .byte       "arguments too long", 0
+s_args:     .byte       "args too long", 0
 s_fds:      .byte       "too many fds", 0
 s_redir:    .byte       "bad redirection", 0

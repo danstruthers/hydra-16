@@ -420,11 +420,11 @@ worked.
 
 #### Example
 
-`GETPID` returns the task's number in A. Here HyBASIC is task 4:
+`GETPID` returns the task's number in A. Here HyBASIC is task 2:
 
 ```session
 > SYS "GETPID" : RREG A, X, Y, P : PRINT A; BIT(P, 0)
- 4  0
+ 2  0
 ```
 
 ## RUN
@@ -1591,7 +1591,7 @@ For code of the program's own, an `ASM` block is easier than `POKE`s: it is asse
 
 ```session
 > SYS "getpid" : RREG A : PRINT A
- 4
+ 2
 > SYS "NOSUCH"
 no such call
 ```

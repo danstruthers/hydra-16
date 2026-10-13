@@ -8,7 +8,6 @@ module      cons
 module      storage
 module      kdev
 module      snd
-module      gpio
 module      vid
 module      rc
 module      play

@@ -2,10 +2,10 @@
 
 With a **Vera X** card, the Hydra has a screen of its own, a keyboard and a mouse, more sound, and another SD card.
 This chapter shows how to use them, and describes the files of the two drivers that look after them: `vid`, for the
-screen, and `input`, for the keyboard and mouse.
+screen, and `kdev`, for the keyboard and mouse.
 
 > **IN THIS CHAPTER:** You'll put the console on a screen of its own, draw on it, and read its keyboard and mouse,
-> through the files of the `vid` and `input` drivers. **You need:** Chapter 12, and a Vera X: the emulator has one.
+> through the files of the `vid` and `kdev` drivers. **You need:** Chapter 12, and a Vera X: the emulator has one.
 
 ## 16.1 The Vera X
 
@@ -205,8 +205,8 @@ Reading `pcmctl` shows the settings, and who has `pcm`. `play` plays WAV files t
 
 ## 16.8 The mouse
 
-The `input` program reads the mouse and writes its moves to `/dev/vid/mousein`. The driver moves the **pointer**,
-sprite 1, and keeps the mouse's state in `/dev/vid/mouse`, which works like Plan 9's: a read waits until the mouse
+The `kdev` driver reads the mouse (it's on the I²C bus, which is `kdev`'s) and writes its moves to
+`/dev/vid/mousein`. The video driver moves the **pointer**, sprite 1, and keeps the mouse's state in `/dev/vid/mouse`, which works like Plan 9's: a read waits until the mouse
 changes, then gives five numbers, each 11 characters wide:
 
 | Number | What it is |
@@ -224,7 +224,7 @@ The mouse works in the console too: clicking a tiled window gives it the keys, a
 
 ## 16.9 The keyboard
 
-The `input` program also reads the keyboard, and writes each key to the console's keyboard file, `/dev/kbin`, as
+`kdev` also reads the keyboard, and writes each key to the console's keyboard file, `/dev/kbin`, as
 the bytes a PC's terminal would send for it. So everything works the same from the keyboard as from the serial
 terminal: <kbd>CTRL</kbd>-<kbd>C</kbd>, the window keys, the arrows, the function keys.
 
@@ -238,7 +238,8 @@ terminal: <kbd>CTRL</kbd>-<kbd>C</kbd>, the window keys, the arrows, the functio
 | The keypad | Digits with <kbd>NUM LOCK</kbd> on, the cursor keys with it off |
 | <kbd>SCROLL LOCK</kbd> | Holds the window (as <kbd>CTRL</kbd>-<kbd>]</kbd> <kbd>H</kbd>) |
 
-The keyboard's lights follow its lock keys. Without a keyboard controller, `input` ends at once, and does nothing.
+The keyboard's lights follow its lock keys. `kdev` looks for the keyboard controller as the Hydra
+starts (three times, a second apart); finding none, it reads no keys, and doesn't look again.
 
 **Seats.** Normally the screen and the serial terminal show the same window, and keys from either go to it. With
 `echo seats >/dev/consctl`, they become two **seats**: each shows its own window, and has its own keys (the

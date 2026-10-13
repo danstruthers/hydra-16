@@ -215,8 +215,8 @@ Lists the disks that have started, with each one's kind, size, free space and la
 /> df
 disk  kind   size        free        label
 0     sdhc   16380 KB    15956 KB    HYDRA-16
-x     rom    623 KB      10 KB       ROM
-r     ram    255 KB      252 KB      RAM
+x     rom    623 KB      13 KB       ROM
+r     ram    255 KB      253 KB      RAM
 s     sram   511 KB      510 KB      SRAM
 ```
 
@@ -622,8 +622,8 @@ card before you use it with the Hydra (Chapter 14). The words after the disk's n
 /> df
 disk  kind   size        free        label
 0     sdhc   16380 KB    15956 KB    HYDRA-16
-x     rom    623 KB      10 KB       ROM
-r     ram    255 KB      252 KB      RAM
+x     rom    623 KB      13 KB       ROM
+r     ram    255 KB      253 KB      RAM
 s     sram   511 KB      511 KB
 ```
 
@@ -644,9 +644,8 @@ bank   type     name
   4+33 program  init
   2- 4 boot     cons
   5- 6 boot     storage
-  4+0A boot     kdev
- 23+0D boot     snd
-  8+1B boot     gpio
+ 31    boot     kdev
+  4+0A boot     snd
   0+0A boot     vid
  28    program  rc
   7- 8 program  play
@@ -759,15 +758,12 @@ note group, and its program.
 /> ps -a
 task  state   parent     cpu group  name
    0  ready   -          1.6     0  kernel
-   1  wait    -          0.2     1  init
-   2  wait     1         0.3     2  forth -l
-   3  event    1         0.0     1  wstart /bin/forth -l
-   4  ready    2         0.0     2  ps -a
-  11  idle    -          0.0    11  gpio
+   1  wait    -          0.5     1  forth -l
+   2  ready    1         0.0     1  ps -a
   12  idle    -          0.0    12  snd
   13  idle    -          0.1    13  kdev
   14  idle    -          1.6    14  storage
-  15  idle    -          0.5    15  cons
+  15  event   -          0.5    15  cons
 ```
 
 | State | Means |
@@ -940,7 +936,7 @@ the middle of a pipeline, to keep a copy of what's passing through.
 
 ```session
 /> ls /rom/bin | tee /ram/progs | wc -l
-     47
+     45
 /> head -2 /ram/progs
 as
 calc
@@ -1076,13 +1072,11 @@ PC tool, it's simpler to copy files through `/pc` (section 9.9).
 
 ## The system's own programs
 
-These programs are started by the system itself, and you won't often type them:
+This program is started by the system itself, and you won't type it:
 
 | Program | What it does |
 |---|---|
-| `init` | The first program: sets up the system, and starts the shells (section 7.4) |
-| `wstart` | Waits for <kbd>CTRL</kbd>-<kbd>]</kbd> <kbd>C</kbd>, and starts a shell in the new window |
-| `input` | The driver for a Vera X's keyboard and mouse (Chapter 16) |
+| `init` | The first program: sets up the system, and becomes the shell; the kernel starts it again for each new window (section 7.4) |
 
 ## The shell's own commands
 

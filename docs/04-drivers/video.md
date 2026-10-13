@@ -3,11 +3,12 @@
 The Hydra's screen, keyboard and mouse come from the **Vera X** card in slot 0 ([the
 card](../02-hardware/cards.md#the-vera-x)): the Commander X16's VERA, with VGA at 640 x 480, two layers of text, tiles or
 bitmaps, 128 sprites, a 256-colour palette, a 16-voice PSG and PCM audio, and the X16's input controller for a PS/2
-keyboard and mouse.  Two programs drive it:
+keyboard and mouse.  Two drivers have it:
 
 * **vid** (`reborn/modules/vid/`, task A), the driver: it owns the chip, finds the card as the system starts, sets it up
   for the console, and serves it as files, `#v` at `/dev/vid`.  With no card it ends, and `/dev/vid` is empty.
-* **input** (`reborn/modules/input/`), a program init starts: it reads the keyboard and mouse and passes them on.
+* **kdev** (`reborn/modules/kdev/input.inc`) reads the keyboard and mouse, on the I2C bus it serves, and passes them
+  on.  (It was a program, `input`, which init started and which took a task.)
 
 The VERA's own documentation is the X16's: *The Commander X16 Programmer's Reference*, chapter 9 (the registers, VRAM,
 layers, sprites, the PSG and PCM) and chapter 10 (FX).
@@ -56,7 +57,7 @@ From the easiest:
 | `psg` | The PSG's 64 registers as written | Register/value pairs: the sound driver's (its channels 8-23) |
 | `pcm`, `pcmctl` | `pcmctl`: the PCM's state | Samples, and their format ([below](#pcm)) |
 | `mouse` | The mouse, after a change, as Plan 9's `/dev/mouse` | `m X Y`: move it there |
-| `mousein` | | The mouse's moves, as `input` has them: `m DX DY B` |
+| `mousein` | | The mouse's moves, as `kdev` has them from the controller: `m DX DY B` |
 | `mousectl` | `pointer on`, `swap off` | `pointer on`, `pointer off`, `swap on`, `swap off` |
 
 **Modes**: `mode 80x60` (the screen's 640 x 480 in 8 x 8 characters, as it starts), `mode 80x30` and `mode 40x30` (the
@@ -157,15 +158,16 @@ terminals](serial.md#two-terminals-the-serial-port-and-the-screen)).  The consol
 ## The keyboard and the mouse
 
 With the card's **input controller**, the X16's SMC (an ATtiny861 running the X16's firmware, a PS/2 keyboard and
-mouse on it, on the I2C bus at `$42`), the screen is a computer of its own.  The **`input`** program, which init starts,
-reads it 67 times a second while keys or the mouse are coming, and 10 times a second after 2 s of nothing (each look
-costs some 5,000 cycles: 1.8% of the CPU when quiet).  With no controller it ends at once.
+mouse on it, on the I2C bus at `$42`), the screen is a computer of its own.  **`kdev`** reads it, between its calls
+(`SRV_NAP`: [the kernel](../03-base/kernel.md#tasks)): 67 times a second while keys or the mouse are coming, and 10
+times a second after 2 s of nothing (a look that finds nothing is one byte on the bus).  The controller is looked for
+as the system starts, three times a second apart; with none, `kdev` is an ordinary driver, `idle` in `ps`.
 
-* **The keys go to the console**, as the serial terminal's do: `input` writes them to `#c/kbin` as a PC terminal (xterm)
+* **The keys go to the console**, as the serial terminal's do: `kdev` writes them to `#c/kbin` as a PC terminal (xterm)
   sends them, so a program can't tell which keyboard they came from.  Ctrl-C is the window's interrupt; Ctrl-] and a
   digit shows a window.  The layout is the US one: Shift, Ctrl, Alt, Caps Lock; the keypad's digits with Num Lock on,
   its cursor keys with it off; Scroll Lock the console's hold.  The locks light their LEDs.
-* **The mouse in the console's windows**: `input` sends each press, release and turn of the wheel to `#c/kbin` too, as
+* **The mouse in the console's windows**: `kdev` sends each press, release and turn of the wheel to `#c/kbin` too, as
   xterm's reports.  A click focuses the window under it; a program that turns on `?1000` (and `?1006`) gets the reports
   in its raw keys; the wheel over a window scrolls its scrollback.
 * **`/dev/vid/mouse`** is the mouse, as Plan 9's `/dev/mouse`: a read waits for a change, then gives 49 bytes: `m` and
@@ -174,7 +176,7 @@ costs some 5,000 cycles: 1.8% of the CPU when quiet).  With no controller it end
   wheel.  Button changes are queued (8 of them), so a click between two reads isn't lost.  Writing `m X Y` moves it.
 * **The pointer** is sprite 1, an arrow, shown once the mouse has moved.  `mousectl`: `pointer off`, `pointer on`, and
   `swap on` (the left and right buttons swapped).
-* **`/dev/vid/mousein`** is where the moves come in: `input` writes `m DX DY B`, a line a change.  Anything else that
+* **`/dev/vid/mousein`** is where the moves come in: `kdev` writes `m DX DY B`, a line a change.  Anything else that
   reads a mouse can write it too.
 
 ```

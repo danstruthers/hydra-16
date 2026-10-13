@@ -38,6 +38,8 @@ chapters.
 * [PC.md](plans/PC.md): `/pc`, a folder on the PC served over the serial port by the PC tool, which is the terminal
   too: its protocol.
 * [DISKS.md](plans/DISKS.md): RAM and ROM disks as HydraFS volumes, with program caches.
+* [TASKS.md](plans/TASKS.md): fewer standing tasks: init becomes the shell, the kernel starts init for each window,
+  a driver's own work between its calls (`SRV_NAP`), and GPIO, I2C and the input controller in `kdev`.
 * [NAMESPACES.md](plans/NAMESPACES.md): the Plan 9 way: union directories put together with binds and mounts, a
   default namespace, and `/bin` and `/lib` in place of search paths.
 * [PROC.md](plans/PROC.md): `/proc`, the tasks as files.

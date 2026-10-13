@@ -41,7 +41,7 @@ can be made from each language:
 | Namespaces | $F920 | `BIND` `MOUNT` `UNMOUNT` `NSINFO` |
 | The console | $F950 | `PUTC` `PUTS` `GETC` `PUTHEX` |
 | The clock | $F980 | `TIME` `TIME_SET` `RTC` |
-| Drivers | $F9B0 | `IRQ_OWN` `IRQ_RELEASE` `WAKE` `PAUSE` `NOTE_POST` `SRV_REGISTER` `SRV_TAKE` `SRV_REPLY` `CLIENT_READ` `CLIENT_WRITE` `NOTE_QUEUE` `ROMREAD` `TASKMEM` `TASKSTOP` `TASKSTEP` |
+| Drivers | $F9B0 | `IRQ_OWN` `IRQ_RELEASE` `WAKE` `PAUSE` `NOTE_POST` `SRV_REGISTER` `SRV_TAKE` `SRV_REPLY` `CLIENT_READ` `CLIENT_WRITE` `NOTE_QUEUE` `ROMREAD` `TASKMEM` `TASKSTOP` `TASKSTEP` `SRV_NAP` `INIT_RUN` |
 | Debugging | $FA10 | `DBG_SCALL` `DBG_KCOPY` `DBG_PS` |
 
 ## BANKS
@@ -337,7 +337,7 @@ Not in the languages: it is a call for drivers, or for the debugger.
 
 #### See also
 
-The other calls for drivers: `IRQ_OWN`, `IRQ_RELEASE`, `WAKE`, `PAUSE`, `NOTE_POST`, `SRV_REGISTER`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_WRITE`, `NOTE_QUEUE`, `ROMREAD`, `TASKMEM`, `TASKSTOP`, `TASKSTEP`.
+The other calls for drivers: `IRQ_OWN`, `IRQ_RELEASE`, `WAKE`, `PAUSE`, `NOTE_POST`, `SRV_REGISTER`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_WRITE`, `NOTE_QUEUE`, `ROMREAD`, `TASKMEM`, `TASKSTOP`, `TASKSTEP`, `SRV_NAP`, `INIT_RUN`.
 
 ## CLIENT_WRITE
 
@@ -372,7 +372,7 @@ Not in the languages: it is a call for drivers, or for the debugger.
 
 #### See also
 
-The other calls for drivers: `IRQ_OWN`, `IRQ_RELEASE`, `WAKE`, `PAUSE`, `NOTE_POST`, `SRV_REGISTER`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_READ`, `NOTE_QUEUE`, `ROMREAD`, `TASKMEM`, `TASKSTOP`, `TASKSTEP`.
+The other calls for drivers: `IRQ_OWN`, `IRQ_RELEASE`, `WAKE`, `PAUSE`, `NOTE_POST`, `SRV_REGISTER`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_READ`, `NOTE_QUEUE`, `ROMREAD`, `TASKMEM`, `TASKSTOP`, `TASKSTEP`, `SRV_NAP`, `INIT_RUN`.
 
 ## CLOSE
 
@@ -1160,6 +1160,35 @@ HyForth: `sys-getppid`. HyBASIC: `SYS "GETPPID"`.
 
 The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`.
 
+## INIT_RUN
+
+System call $F9E0, one of those for drivers. It never waits.
+
+#### Arguments
+
+A
+: A number, 0-15.
+
+#### Result
+
+Nothing, but the carry: C = 0 for success.
+
+#### Description
+
+Start init (the module the directory names) again, in a task of its own, with the number in decimal as its argument: as the boot starts it (no parent, no fds, an empty namespace and environment, a note group of its own), but the boot's has no argument. The kernel task starts it as it next runs; with no task free it isn't started (but 0's, which waits for one). The kernel itself asks for 0's when the task init was last started in for 0 (or by the boot) has EXECed and then ends: so an init that EXECs the login shell is started again when that shell ends (an init that ends itself is left ended). HydraOS's console asks for n's when the user makes window n. From a task or an irq entry.
+
+#### Errors
+
+None: the call always succeeds.
+
+#### From the languages
+
+Not in the languages: it is a call for drivers, or for the debugger.
+
+#### See also
+
+The other calls for drivers: `IRQ_OWN`, `IRQ_RELEASE`, `WAKE`, `PAUSE`, `NOTE_POST`, `SRV_REGISTER`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_READ`, `CLIENT_WRITE`, `NOTE_QUEUE`, `ROMREAD`, `TASKMEM`, `TASKSTOP`, `TASKSTEP`, `SRV_NAP`.
+
 ## IRQ_OWN
 
 System call $F9B0, one of those for drivers. It never waits.
@@ -1191,7 +1220,7 @@ Not in the languages: it is a call for drivers, or for the debugger.
 
 #### See also
 
-The other calls for drivers: `IRQ_RELEASE`, `WAKE`, `PAUSE`, `NOTE_POST`, `SRV_REGISTER`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_READ`, `CLIENT_WRITE`, `NOTE_QUEUE`, `ROMREAD`, `TASKMEM`, `TASKSTOP`, `TASKSTEP`.
+The other calls for drivers: `IRQ_RELEASE`, `WAKE`, `PAUSE`, `NOTE_POST`, `SRV_REGISTER`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_READ`, `CLIENT_WRITE`, `NOTE_QUEUE`, `ROMREAD`, `TASKMEM`, `TASKSTOP`, `TASKSTEP`, `SRV_NAP`, `INIT_RUN`.
 
 ## IRQ_RELEASE
 
@@ -1223,7 +1252,7 @@ Not in the languages: it is a call for drivers, or for the debugger.
 
 #### See also
 
-The other calls for drivers: `IRQ_OWN`, `WAKE`, `PAUSE`, `NOTE_POST`, `SRV_REGISTER`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_READ`, `CLIENT_WRITE`, `NOTE_QUEUE`, `ROMREAD`, `TASKMEM`, `TASKSTOP`, `TASKSTEP`.
+The other calls for drivers: `IRQ_OWN`, `WAKE`, `PAUSE`, `NOTE_POST`, `SRV_REGISTER`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_READ`, `CLIENT_WRITE`, `NOTE_QUEUE`, `ROMREAD`, `TASKMEM`, `TASKSTOP`, `TASKSTEP`, `SRV_NAP`, `INIT_RUN`.
 
 ## KMESG
 
@@ -1419,7 +1448,7 @@ Not in the languages: it is a call for drivers, or for the debugger.
 
 #### See also
 
-The other calls for drivers: `IRQ_OWN`, `IRQ_RELEASE`, `WAKE`, `PAUSE`, `SRV_REGISTER`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_READ`, `CLIENT_WRITE`, `NOTE_QUEUE`, `ROMREAD`, `TASKMEM`, `TASKSTOP`, `TASKSTEP`.
+The other calls for drivers: `IRQ_OWN`, `IRQ_RELEASE`, `WAKE`, `PAUSE`, `SRV_REGISTER`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_READ`, `CLIENT_WRITE`, `NOTE_QUEUE`, `ROMREAD`, `TASKMEM`, `TASKSTOP`, `TASKSTEP`, `SRV_NAP`, `INIT_RUN`.
 
 ## NOTE_QUEUE
 
@@ -1453,7 +1482,7 @@ Not in the languages: it is a call for drivers, or for the debugger.
 
 #### See also
 
-The other calls for drivers: `IRQ_OWN`, `IRQ_RELEASE`, `WAKE`, `PAUSE`, `NOTE_POST`, `SRV_REGISTER`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_READ`, `CLIENT_WRITE`, `ROMREAD`, `TASKMEM`, `TASKSTOP`, `TASKSTEP`.
+The other calls for drivers: `IRQ_OWN`, `IRQ_RELEASE`, `WAKE`, `PAUSE`, `NOTE_POST`, `SRV_REGISTER`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_READ`, `CLIENT_WRITE`, `ROMREAD`, `TASKMEM`, `TASKSTOP`, `TASKSTEP`, `SRV_NAP`, `INIT_RUN`.
 
 ## NOTIFY
 
@@ -1721,7 +1750,7 @@ Not in the languages: it is a call for drivers, or for the debugger.
 
 #### See also
 
-The other calls for drivers: `IRQ_OWN`, `IRQ_RELEASE`, `WAKE`, `NOTE_POST`, `SRV_REGISTER`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_READ`, `CLIENT_WRITE`, `NOTE_QUEUE`, `ROMREAD`, `TASKMEM`, `TASKSTOP`, `TASKSTEP`.
+The other calls for drivers: `IRQ_OWN`, `IRQ_RELEASE`, `WAKE`, `NOTE_POST`, `SRV_REGISTER`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_READ`, `CLIENT_WRITE`, `NOTE_QUEUE`, `ROMREAD`, `TASKMEM`, `TASKSTOP`, `TASKSTEP`, `SRV_NAP`, `INIT_RUN`.
 
 ## PIPE
 
@@ -2117,7 +2146,7 @@ Not in the languages: it is a call for drivers, or for the debugger.
 
 #### See also
 
-The other calls for drivers: `IRQ_OWN`, `IRQ_RELEASE`, `WAKE`, `PAUSE`, `NOTE_POST`, `SRV_REGISTER`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_READ`, `CLIENT_WRITE`, `NOTE_QUEUE`, `TASKMEM`, `TASKSTOP`, `TASKSTEP`.
+The other calls for drivers: `IRQ_OWN`, `IRQ_RELEASE`, `WAKE`, `PAUSE`, `NOTE_POST`, `SRV_REGISTER`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_READ`, `CLIENT_WRITE`, `NOTE_QUEUE`, `TASKMEM`, `TASKSTOP`, `TASKSTEP`, `SRV_NAP`, `INIT_RUN`.
 
 ## RTC
 
@@ -2708,6 +2737,37 @@ HyForth: `sys-spawn`. HyBASIC: `SYS "SPAWN"`.
 
 The other calls for tasks: `EXITS`, `WAIT`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`.
 
+## SRV_NAP
+
+System call $F9DD, one of those for drivers. It can wait.
+
+#### Arguments
+
+A/X
+: Ticks (1-32767)
+
+Or 0, and Y = the driver's event count (`TASK_EVENT`) as it last saw it.
+
+#### Result
+
+Nothing, but the carry: C = 0 for success.
+
+#### Description
+
+For a driver with work of its own between its calls (a device to look at now and then): its init doesn't return, but waits here between its turns. While it waits it serves its calls, as a driver that has started does (the boot goes on); when the time has come it runs again, busy (a call to it waits) till its next `SRV_NAP`, or till its init returns (it's an ordinary driver from then). With 0 ticks it waits till its own event count isn't Y any more (its irq entry adds to it, or one of its calls): for work that follows what happens, not the clock. ps shows it asleep, or waiting for an event.
+
+#### Errors
+
+None: the call always succeeds.
+
+#### From the languages
+
+Not in the languages: it is a call for drivers, or for the debugger.
+
+#### See also
+
+The other calls for drivers: `IRQ_OWN`, `IRQ_RELEASE`, `WAKE`, `PAUSE`, `NOTE_POST`, `SRV_REGISTER`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_READ`, `CLIENT_WRITE`, `NOTE_QUEUE`, `ROMREAD`, `TASKMEM`, `TASKSTOP`, `TASKSTEP`, `INIT_RUN`.
+
 ## SRV_REGISTER
 
 System call $F9BF, one of those for drivers. It never waits.
@@ -2739,7 +2799,7 @@ Not in the languages: it is a call for drivers, or for the debugger.
 
 #### See also
 
-The other calls for drivers: `IRQ_OWN`, `IRQ_RELEASE`, `WAKE`, `PAUSE`, `NOTE_POST`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_READ`, `CLIENT_WRITE`, `NOTE_QUEUE`, `ROMREAD`, `TASKMEM`, `TASKSTOP`, `TASKSTEP`.
+The other calls for drivers: `IRQ_OWN`, `IRQ_RELEASE`, `WAKE`, `PAUSE`, `NOTE_POST`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_READ`, `CLIENT_WRITE`, `NOTE_QUEUE`, `ROMREAD`, `TASKMEM`, `TASKSTOP`, `TASKSTEP`, `SRV_NAP`, `INIT_RUN`.
 
 ## SRV_REPLY
 
@@ -2767,7 +2827,7 @@ Not in the languages: it is a call for drivers, or for the debugger.
 
 #### See also
 
-The other calls for drivers: `IRQ_OWN`, `IRQ_RELEASE`, `WAKE`, `PAUSE`, `NOTE_POST`, `SRV_REGISTER`, `SRV_TAKE`, `CLIENT_READ`, `CLIENT_WRITE`, `NOTE_QUEUE`, `ROMREAD`, `TASKMEM`, `TASKSTOP`, `TASKSTEP`.
+The other calls for drivers: `IRQ_OWN`, `IRQ_RELEASE`, `WAKE`, `PAUSE`, `NOTE_POST`, `SRV_REGISTER`, `SRV_TAKE`, `CLIENT_READ`, `CLIENT_WRITE`, `NOTE_QUEUE`, `ROMREAD`, `TASKMEM`, `TASKSTOP`, `TASKSTEP`, `SRV_NAP`, `INIT_RUN`.
 
 ## SRV_TAKE
 
@@ -2801,7 +2861,7 @@ Not in the languages: it is a call for drivers, or for the debugger.
 
 #### See also
 
-The other calls for drivers: `IRQ_OWN`, `IRQ_RELEASE`, `WAKE`, `PAUSE`, `NOTE_POST`, `SRV_REGISTER`, `SRV_REPLY`, `CLIENT_READ`, `CLIENT_WRITE`, `NOTE_QUEUE`, `ROMREAD`, `TASKMEM`, `TASKSTOP`, `TASKSTEP`.
+The other calls for drivers: `IRQ_OWN`, `IRQ_RELEASE`, `WAKE`, `PAUSE`, `NOTE_POST`, `SRV_REGISTER`, `SRV_REPLY`, `CLIENT_READ`, `CLIENT_WRITE`, `NOTE_QUEUE`, `ROMREAD`, `TASKMEM`, `TASKSTOP`, `TASKSTEP`, `SRV_NAP`, `INIT_RUN`.
 
 ## STAT
 
@@ -2959,7 +3019,7 @@ Not in the languages: it is a call for drivers, or for the debugger.
 
 #### See also
 
-The other calls for drivers: `IRQ_OWN`, `IRQ_RELEASE`, `WAKE`, `PAUSE`, `NOTE_POST`, `SRV_REGISTER`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_READ`, `CLIENT_WRITE`, `NOTE_QUEUE`, `ROMREAD`, `TASKSTOP`, `TASKSTEP`.
+The other calls for drivers: `IRQ_OWN`, `IRQ_RELEASE`, `WAKE`, `PAUSE`, `NOTE_POST`, `SRV_REGISTER`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_READ`, `CLIENT_WRITE`, `NOTE_QUEUE`, `ROMREAD`, `TASKSTOP`, `TASKSTEP`, `SRV_NAP`, `INIT_RUN`.
 
 ## TASKREAD
 
@@ -3048,7 +3108,7 @@ Not in the languages: it is a call for drivers, or for the debugger.
 
 #### See also
 
-The other calls for drivers: `IRQ_OWN`, `IRQ_RELEASE`, `WAKE`, `PAUSE`, `NOTE_POST`, `SRV_REGISTER`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_READ`, `CLIENT_WRITE`, `NOTE_QUEUE`, `ROMREAD`, `TASKMEM`, `TASKSTOP`.
+The other calls for drivers: `IRQ_OWN`, `IRQ_RELEASE`, `WAKE`, `PAUSE`, `NOTE_POST`, `SRV_REGISTER`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_READ`, `CLIENT_WRITE`, `NOTE_QUEUE`, `ROMREAD`, `TASKMEM`, `TASKSTOP`, `SRV_NAP`, `INIT_RUN`.
 
 ## TASKSTOP
 
@@ -3083,7 +3143,7 @@ Not in the languages: it is a call for drivers, or for the debugger.
 
 #### See also
 
-The other calls for drivers: `IRQ_OWN`, `IRQ_RELEASE`, `WAKE`, `PAUSE`, `NOTE_POST`, `SRV_REGISTER`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_READ`, `CLIENT_WRITE`, `NOTE_QUEUE`, `ROMREAD`, `TASKMEM`, `TASKSTEP`.
+The other calls for drivers: `IRQ_OWN`, `IRQ_RELEASE`, `WAKE`, `PAUSE`, `NOTE_POST`, `SRV_REGISTER`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_READ`, `CLIENT_WRITE`, `NOTE_QUEUE`, `ROMREAD`, `TASKMEM`, `TASKSTEP`, `SRV_NAP`, `INIT_RUN`.
 
 ## TICKS
 
@@ -3188,7 +3248,7 @@ r0
 : New, or 0.
 
 r1
-: Old.
+: Old, or 0.
 
 #### Result
 
@@ -3196,7 +3256,7 @@ Nothing, but the carry: C = 0 for success.
 
 #### Description
 
-Undo a bind or a mount at old: all of what's there (r0 = 0), or new's member (as `BIND` finds new).
+Undo a bind or a mount at old: all of what's there (r0 = 0), or new's member (as `BIND` finds new). With no old either (r1 = 0), everything: the caller has an empty namespace of its own (the tasks it shared one with keep theirs): what Plan 9's newns starts from, and nslib's ns_default does first.
 
 #### Errors
 
@@ -3209,7 +3269,7 @@ Undo a bind or a mount at old: all of what's there (r0 = 0), or new's member (as
 
 #### From the languages
 
-hylang: `(sys-unmount r0 r1)`, where *r0* is a string, or `NIL`; *r1* is a string. It returns `NIL`.
+hylang: `(sys-unmount r0 r1)`, where *r0* is a string, or `NIL`; *r1* is a string, or `NIL`. It returns `NIL`.
 
 HyForth: `sys-unmount`. HyBASIC: `SYS "UNMOUNT"`.
 
@@ -3287,7 +3347,7 @@ Not in the languages: it is a call for drivers, or for the debugger.
 
 #### See also
 
-The other calls for drivers: `IRQ_OWN`, `IRQ_RELEASE`, `PAUSE`, `NOTE_POST`, `SRV_REGISTER`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_READ`, `CLIENT_WRITE`, `NOTE_QUEUE`, `ROMREAD`, `TASKMEM`, `TASKSTOP`, `TASKSTEP`.
+The other calls for drivers: `IRQ_OWN`, `IRQ_RELEASE`, `PAUSE`, `NOTE_POST`, `SRV_REGISTER`, `SRV_TAKE`, `SRV_REPLY`, `CLIENT_READ`, `CLIENT_WRITE`, `NOTE_QUEUE`, `ROMREAD`, `TASKMEM`, `TASKSTOP`, `TASKSTEP`, `SRV_NAP`, `INIT_RUN`.
 
 ## WRITE
 

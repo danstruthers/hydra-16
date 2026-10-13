@@ -119,10 +119,10 @@ it, and run it:
 /ram> ./hi Ann Bob
 Hello, Ann!
 Hello, Bob!
-I'm task 4, in /ram.
+I'm task 2, in /ram.
 /ram> ./hi
 Hello, you!
-I'm task 4, in /ram.
+I'm task 2, in /ram.
 ```
 
 Run with names, `hi` greets each one; without, it greets you. Then it says which task it's running in, and its

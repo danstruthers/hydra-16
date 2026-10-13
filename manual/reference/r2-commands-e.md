@@ -174,7 +174,7 @@ All three are 0 on a sound disk. `-f` puts the free map right, which cures the f
 ```session
 /> fsck r
 hydrafs label=RAM
-free 252 KB of 255 KB
+free 253 KB of 255 KB
 check: lost 0, unmarked 0, twice 0
 banks $00-$1f
 ```

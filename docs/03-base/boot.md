@@ -91,8 +91,8 @@ and down.  Each is set up as `SPAWN` would set it up: its bank at `$A000`, its d
 cleared, and its first instruction its `init` entry.  None runs yet: interrupts are still off, and the kernel task
 holds the CPU.
 
-The base's directory has two boot drivers: `ser` (task F) and `kdev` (task E).  HydraOS's has six: `cons` (F),
-`storage` (E), `kdev` (D), `snd` (C), `gpio` (B), `vid` (A).  Each prints a line as it's set up: `task F: ser`.
+The base's directory has two boot drivers: `ser` (task F) and `kdev` (task E).  HydraOS's has five: `cons` (F),
+`storage` (E), `kdev` (D), `snd` (C), `vid` (B).  Each prints a line as it's set up: `task F: ser`.
 
 ---
 
@@ -103,11 +103,16 @@ The base's directory has two boot drivers: `ser` (task F) and `kdev` (task E).  
   device letters, `SRV_REGISTER`, and owning its interrupt lines, `IRQ_OWN`), then waits for requests.  While a driver's
   init runs, it's busy: a request to it waits.
 * **The boot waits** for every boot driver's init to end, two seconds at most.  A driver whose init fails (it returns
-  C = 1) ends; the system goes on without it.
+  C = 1) ends; the system goes on without it.  A driver whose init doesn't end, because it has work of its own to do
+  between its calls, counts as started at its first `SRV_NAP` ([the kernel](kernel.md#tasks)).
 * **Init**: the module the directory names as init starts in **task 1**, as a program, with an empty namespace of its
   own and no fds.  It builds both: it opens the console (fds 0, 1 and 2) and binds what the system's namespace needs.
   **Init is the system**: in the base it's `wozmon`, the monitor; in HydraOS it's `init`, which reads the namespace file,
-  starts the windows and the login shell.
+  sets the windows up and becomes the login shell (`EXEC`).
+* **Init again**: the kernel starts init again, in a task of its own with a number as its argument, when it's asked
+  to (`INIT_RUN`: HydraOS's console asks for window n's when the user makes one), and by itself with `0` when the
+  task the boot's init was in has `EXEC`ed and then ends: a login shell that ends is started again, with no task
+  kept waiting for that.  An init that ends without an `EXEC` (the base's monitor, a test) is left ended.
 * **The idle loop**: task 0 becomes the idle task.  It runs only when no other task can, and then waits for an interrupt
   with `WAI`, which stops the CPU's clock until one comes.  It also takes a turn when an interrupt handler has queued
   notes to a note group for it to send.

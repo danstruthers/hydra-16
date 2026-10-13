@@ -3,7 +3,9 @@
 **kdev** (`base/modules/kdev/kdev.s`) serves the kernel's own devices: the root of the file tree, `null` and the
 kernel's messages, the clock, the paged ROM's modules, the tasks (`/proc`), pipes, the environment, shared segments'
 names, and raw RAM.  It's a boot driver like any other (task E in the base, task D in HydraOS), not the kernel: the
-kernel keeps the tables, and kdev turns them into files.  [Files, servers and
+kernel keeps the tables, and kdev turns them into files.  HydraOS's kdev (`reborn/modules/kdev`: the base's source,
+with its own added) also serves [GPIO and I2C](gpio.md) and reads [the Vera X's keyboard and
+mouse](video.md#the-keyboard-and-the-mouse), so that those take no tasks of their own.  [Files, servers and
 namespaces](../03-base/files.md#the-kernels-own-devices) lists its devices; this page is how to use them.
 
 ## Contents
