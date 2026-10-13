@@ -4,19 +4,33 @@
 <style>
 /* The Hydra-16 User's and Builder's Manual: the printed book's look (build.js puts this in the HTML) */
 
+/* Numbers.  Georgia's figures are old-style: its 0 is an o's size and shape, its 1 a small capital I, and a number in
+   the text (a count, an address) reads as letters.  So the digits, and only they, come from a face with lining
+   figures: Cambria where it's installed, else the nearest there is.  "Book Digits" goes before Georgia wherever the
+   text face is named.  (A hex number in running text, $F8C0, is put in the code face by the build: tools/md.js) */
+@font-face { font-family: "Book Digits"; src: local("Cambria"), local("Times New Roman"), local("Liberation Serif"), local("DejaVu Serif");
+  unicode-range: U+0030-0039; size-adjust: 104%; }
+@font-face { font-family: "Book Digits"; font-weight: bold; src: local("Cambria Bold"), local("Times New Roman Bold"), local("Liberation Serif Bold"), local("DejaVu Serif Bold");
+  unicode-range: U+0030-0039; size-adjust: 104%; }
+@font-face { font-family: "Book Digits"; font-style: italic; src: local("Cambria Italic"), local("Times New Roman Italic"), local("Liberation Serif Italic"), local("DejaVu Serif Italic");
+  unicode-range: U+0030-0039; size-adjust: 104%; }
+@font-face { font-family: "Book Digits"; font-weight: bold; font-style: italic;
+  src: local("Cambria Bold Italic"), local("Times New Roman Bold Italic"), local("Liberation Serif Bold Italic"), local("DejaVu Serif Bold Italic");
+  unicode-range: U+0030-0039; size-adjust: 104%; }
+
 @page {
   size: 8.5in 11in;
   margin: 0.9in 0.85in 0.85in 0.85in;
-  @top-left { content: ""; font: italic 8.5pt Georgia, serif; color: #555; vertical-align: bottom; padding-bottom: 6pt; }
+  @top-left { content: ""; font: italic 8.5pt "Book Digits", Georgia, serif; color: #555; vertical-align: bottom; padding-bottom: 6pt; }
   @top-right { content: "HYDRA-16 MANUAL"; font: 7.5pt "Arial Black", Arial, sans-serif; letter-spacing: 1.5pt; color: #888; vertical-align: bottom; padding-bottom: 6pt; }
-  @bottom-center { content: counter(page); font: bold 9pt Georgia, serif; color: #333; }
+  @bottom-center { content: counter(page); font: bold 9pt "Book Digits", Georgia, serif; color: #333; }
 }
 @page :first { @top-right { content: none; } @bottom-center { content: none; } }
 @page front { @top-right { content: none; } }
 @page part { @top-right { content: none; } @bottom-center { content: none; } }
 
 html { font-size: 10.5pt; }
-body { font-family: Georgia, "Times New Roman", serif; line-height: 1.45; color: #161616; margin: 0; }
+body { font-family: "Book Digits", Georgia, "Times New Roman", serif; line-height: 1.45; color: #161616; margin: 0; }
 section { break-before: page; }
 .mk { position: absolute; font-size: 1px; color: #fff; }
 
@@ -25,9 +39,9 @@ section { break-before: page; }
 .title-page .top { text-align: left; }
 .title-page .brand { font: 11pt "Arial Black", Arial, sans-serif; letter-spacing: 4pt; color: #333; margin: 0; }
 .title-page h1.book { font: 64pt/0.95 "Arial Black", Arial, sans-serif; letter-spacing: -1pt; margin: 0.25in 0 0.05in; color: #111; }
-.title-page .sub { font: italic 22pt Georgia, serif; margin: 0 0 0.3in; color: #222; }
+.title-page .sub { font: italic 22pt "Book Digits", Georgia, serif; margin: 0 0 0.3in; color: #222; }
 .title-page .art { align-self: center; width: 5.6in; }
-.title-page .bottom { display: flex; justify-content: space-between; align-items: flex-end; font: 10pt Georgia, serif; color: #333; }
+.title-page .bottom { display: flex; justify-content: space-between; align-items: flex-end; font: 10pt "Book Digits", Georgia, serif; color: #333; }
 .title-page .bottom .os { font: 12pt "Arial Black", Arial, sans-serif; letter-spacing: 1pt; }
 
 .stripes { display: flex; flex-direction: column; gap: 3pt; margin: 0 0 14pt; }
@@ -56,7 +70,7 @@ header.opener h1 { font: 30pt/1.1 "Arial Black", Arial, sans-serif; margin: 6pt 
 h1 { font: 26pt/1.1 "Arial Black", Arial, sans-serif; margin: 0 0 18pt; }
 h2 { font: 15pt/1.2 "Arial Black", Arial, sans-serif; margin: 22pt 0 8pt; padding-bottom: 3pt; border-bottom: 1.2pt solid #1d1d1d; break-after: avoid; }
 h3 { font: bold 12pt/1.25 Arial, Helvetica, sans-serif; margin: 16pt 0 5pt; break-after: avoid; }
-h4 { font: bold italic 10.5pt Georgia, serif; margin: 12pt 0 4pt; break-after: avoid; }
+h4 { font: bold italic 10.5pt "Book Digits", Georgia, serif; margin: 12pt 0 4pt; break-after: avoid; }
 h5, h6 { font: bold 10pt Arial, sans-serif; margin: 10pt 0 3pt; break-after: avoid; }
 p { margin: 0 0 7pt; orphans: 3; widows: 3; }
 a { color: inherit; text-decoration: none; }
@@ -64,12 +78,13 @@ strong { font-weight: bold; }
 
 /* ---- Listings: typed (bold) and the Hydra's answers */
 code { font-family: "Courier New", Courier, monospace; font-size: 0.95em; }
+code.hex { white-space: nowrap; }                              /* (A hex number in the text: md.js) */
 pre { font: 8.8pt/1.32 "Courier New", Courier, monospace; background: #f5f2e9; border-left: 3pt solid #3a3a3a; padding: 6pt 9pt; margin: 6pt 0 9pt;
   white-space: pre-wrap; word-break: break-word; break-inside: avoid; }
 pre code { font-size: 1em; }
 pre.session { background: #f1f4ee; border-left-color: #3fa046; }
 pre.session b { font-weight: bold; color: #000; }
-pre .note { font-style: italic; font-family: Georgia, serif; color: #2a62b8; }
+pre .note { font-style: italic; font-family: "Book Digits", Georgia, serif; color: #2a62b8; }
 pre.long { break-inside: auto; }
 
 /* ---- Boxes: > **NOTE:** ... */
@@ -108,7 +123,7 @@ hr { border: 0; border-top: 1pt solid #999; margin: 14pt 0; }
 img { max-width: 100%; }
 figure { margin: 10pt 0 12pt; text-align: center; break-inside: avoid; }
 figure img, figure svg { max-width: 100%; }
-figcaption { font: italic 9pt Georgia, serif; color: #333; margin-top: 4pt; }
+figcaption { font: italic 9pt "Book Digits", Georgia, serif; color: #333; margin-top: 4pt; }
 kbd { font: bold 8.5pt Arial, sans-serif; border: 0.8pt solid #555; border-radius: 3pt; padding: 0 3pt; background: #fafafa; box-shadow: 0 1pt 0 #777; white-space: nowrap; }
 
 /* ---- Contents */
@@ -537,16 +552,16 @@ cp: /rom/x: read-only
 usage: cp [-r] from to, or cp [-r] from ... dir
 usage</code></pre></section>
 <section class="chapter" style="page: p3"><header class="opener"><div class="stripes"><i></i><i></i><i></i><i></i><i></i></div><p class="label">CHAPTER <span class="num">3</span></p><h1 id="chapter-3-system-calls">System Calls</h1></header>
-<p>A system call is a <code>jsr</code> to a fixed address in the jump table at $F800. Its arguments go in A, X, Y and the call
-registers r0 to r15 (two bytes each, in the zero page from $02); its results come back in the same places, a
+<p>A system call is a <code>jsr</code> to a fixed address in the jump table at <code class="hex">$F800</code>. Its arguments go in A, X, Y and the call
+registers r0 to r15 (two bytes each, in the zero page from <code class="hex">$02</code>); its results come back in the same places, a
 16-bit result in A (low byte) and X (high byte). On return, C = 0 means success. C = 1 means failure, and A
 holds an error code (Appendix G). A call may change A, X, Y, the flags and r0 to r15, including registers it
-doesn't use for a result; it never changes the program's own zero page, $22 to $7F.</p>
+doesn't use for a result; it never changes the program's own zero page, <code class="hex">$22</code> to <code class="hex">$7F</code>.</p>
 <p>A call that <em>can wait</em> may suspend the task until something happens elsewhere: a key, a disk, another task. A
 note delivered to the task ends such a wait, and the call returns <code>E_INTR</code>.</p>
 <p>Each call's name is defined in <code>hydra.inc</code> (<code>/lib/as</code>), with the constants and error codes used here.</p>
 <h2 id="open-2">OPEN</h2>
-<p>System call $F8C0: opens a file that exists, and returns a file descriptor for it. It can wait.</p>
+<p>System call <code class="hex">$F8C0</code>: opens a file that exists, and returns a file descriptor for it. It can wait.</p>
 <h4 id="syntax-7">Syntax</h4>
 <pre class="text"><code>            LDR r0, path        ; r0 = the address of the path
             lda #mode
@@ -555,8 +570,8 @@ note delivered to the task ends such a wait, and the call returns <code>E_INTR</
             sta fd              ; A = the file descriptor</code></pre>
 <h4 id="arguments-7">Arguments</h4>
 <dl><dt>r0</dt><dd>The address of the path: its bytes, then a zero byte.</dd>
-<dt>A</dt><dd>The mode: one of <code>O_READ</code> (0), <code>O_WRITE</code> (1) or <code>O_RDWR</code> (2), to which can be added <code>O_TRUNC</code> ($10), to empty
-the file as it is opened, and <code>O_NONBLOCK</code> ($40), to make reads and writes of this descriptor return <code>E_AGAIN</code>
+<dt>A</dt><dd>The mode: one of <code>O_READ</code> (0), <code>O_WRITE</code> (1) or <code>O_RDWR</code> (2), to which can be added <code>O_TRUNC</code> (<code class="hex">$10</code>), to empty
+the file as it is opened, and <code>O_NONBLOCK</code> (<code class="hex">$40</code>), to make reads and writes of this descriptor return <code>E_AGAIN</code>
 where they would otherwise wait.</dd></dl>
 <h4 id="result-3">Result</h4>
 <p>C = 0, and A = the file descriptor: a number from 0 to 15, the lowest one the task has free.</p>
@@ -575,13 +590,13 @@ and those a child task is given by <code>SPAWN</code>, share that offset; a seco
 it. When the directory is a union, the records of all its members follow one another.</p>
 <p><code>OPEN</code> never makes a file. <code>CREATE</code> does, and opens it.</p>
 <h4 id="errors-7">Errors</h4>
-<table><thead><tr><th>Code</th><th>Name</th><th>Cause</th></tr></thead><tbody><tr><td>$20</td><td><code>E_NOENT</code></td><td>No such file, in any member of a union</td></tr>
-<tr><td>$2B</td><td><code>E_NODEV</code></td><td>The path names a device that isn't there</td></tr>
-<tr><td>$0A</td><td><code>E_NAMETOOLONG</code></td><td>The path, made absolute, is longer than 63 bytes</td></tr>
-<tr><td>$26</td><td><code>E_MFILE</code></td><td>The task has all 16 of its descriptors in use</td></tr>
-<tr><td>$27</td><td><code>E_NFILE</code></td><td>All 48 of the system's channels are in use (every open file in every task takes one; <code>DUP</code>s share)</td></tr>
-<tr><td>$05</td><td><code>E_INTR</code></td><td>A note arrived while the call was waiting for the driver</td></tr></tbody></table>
-<p>A driver adds its own: <code>E_ROFS</code> ($29) for a write mode on a read-only disk, and <code>E_ISDIR</code> ($23) for a write mode on
+<table><thead><tr><th>Code</th><th>Name</th><th>Cause</th></tr></thead><tbody><tr><td><code class="hex">$20</code></td><td><code>E_NOENT</code></td><td>No such file, in any member of a union</td></tr>
+<tr><td><code class="hex">$2B</code></td><td><code>E_NODEV</code></td><td>The path names a device that isn't there</td></tr>
+<tr><td><code class="hex">$0A</code></td><td><code>E_NAMETOOLONG</code></td><td>The path, made absolute, is longer than 63 bytes</td></tr>
+<tr><td><code class="hex">$26</code></td><td><code>E_MFILE</code></td><td>The task has all 16 of its descriptors in use</td></tr>
+<tr><td><code class="hex">$27</code></td><td><code>E_NFILE</code></td><td>All 48 of the system's channels are in use (every open file in every task takes one; <code>DUP</code>s share)</td></tr>
+<tr><td><code class="hex">$05</code></td><td><code>E_INTR</code></td><td>A note arrived while the call was waiting for the driver</td></tr></tbody></table>
+<p>A driver adds its own: <code>E_ROFS</code> (<code class="hex">$29</code>) for a write mode on a read-only disk, and <code>E_ISDIR</code> (<code class="hex">$23</code>) for a write mode on
 a directory.</p>
 <h4 id="notes-7">Notes</h4>
 <p>Descriptors 0, 1 and 2 are standard input, output and error, already open when a program starts. A task that
@@ -606,7 +621,7 @@ hylang&gt; <b>(sys-open "/ram" 1)</b>
 hylang&gt; <b>(sys-open "#q/x" 0)</b>
 =&gt; Error: #q/x: no such device</code></pre>
 <h2 id="read">READ</h2>
-<p>System call $F8C9: reads bytes from an open file into memory. It can wait.</p>
+<p>System call <code class="hex">$F8C9</code>: reads bytes from an open file into memory. It can wait.</p>
 <h4 id="syntax-8">Syntax</h4>
 <pre class="text"><code>            LDR r0, buf         ; r0 = where the bytes go
             LDR r1, count       ; r1 = how many, at most
@@ -635,10 +650,10 @@ bytes must call <code>READ</code> again for the remainder until it has them or g
 descriptor, the call returns <code>E_AGAIN</code> instead.</p>
 <p>A directory reads as 64-byte stat records (<code>SR_SIZE</code>), one for each file in it: ask for a multiple of 64.</p>
 <h4 id="errors-8">Errors</h4>
-<table><thead><tr><th>Code</th><th>Name</th><th>Cause</th></tr></thead><tbody><tr><td>$25</td><td><code>E_BADF</code></td><td>A isn't an open descriptor, or it was opened with <code>O_WRITE</code></td></tr>
-<tr><td>$04</td><td><code>E_AGAIN</code></td><td>Nothing to read yet, and the descriptor is non-blocking</td></tr>
-<tr><td>$05</td><td><code>E_INTR</code></td><td>A note arrived while the call was waiting</td></tr></tbody></table>
-<p>A driver adds its own: a disk that fails answers <code>E_IO</code> ($2A).</p>
+<table><thead><tr><th>Code</th><th>Name</th><th>Cause</th></tr></thead><tbody><tr><td><code class="hex">$25</code></td><td><code>E_BADF</code></td><td>A isn't an open descriptor, or it was opened with <code>O_WRITE</code></td></tr>
+<tr><td><code class="hex">$04</code></td><td><code>E_AGAIN</code></td><td>Nothing to read yet, and the descriptor is non-blocking</td></tr>
+<tr><td><code class="hex">$05</code></td><td><code>E_INTR</code></td><td>A note arrived while the call was waiting</td></tr></tbody></table>
+<p>A driver adds its own: a disk that fails answers <code>E_IO</code> (<code class="hex">$2A</code>).</p>
 <h4 id="from-the-languages-2">From the languages</h4>
 <table><thead><tr><th>Language</th><th>Form</th></tr></thead><tbody><tr><td>HyForth (<code>lib hydra</code>)</td><td><code>sys-read</code> ( <em>fd c-addr u</em> -- <em>u2 ior</em> ): <em>u2</em> bytes were read</td></tr>
 <tr><td>hylang</td><td><code>(sys-read fd count)</code>: the bytes read, as a string</td></tr>
