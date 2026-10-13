@@ -349,8 +349,9 @@ Where the SD card really is depends on your Hydra:
 
 **Working from your PC.** If you'd rather write your programs in an editor on your PC, let the Hydra see a folder of
 yours as `/pc`: the PC tool does it for a real Hydra (section 5.2), and `--pc-dir` for the terminal emulator (section
-2.5). Then you run and copy its files like any others. That's better than pasting a program into the Hydra, which
-can lose characters that arrive faster than it reads them; if you must paste, paste a few lines at a time.
+2.5). Then you run and copy its files like any others. Pasting a program into the Hydra works too, as long as your
+terminal program's flow control is set to XON/XOFF (section 5.2), so that the Hydra can ask it to wait. With no
+flow control, paste a few lines at a time: keys beyond about 300 that the Hydra hasn't read yet are lost.
 
 ## 6.8 Running programs
 

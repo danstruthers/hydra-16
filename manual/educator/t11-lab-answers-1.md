@@ -226,7 +226,7 @@ RAM modules: 03
 task  state   parent     cpu group  name
    0  ready   -          1.6     0  kernel
    1  wait    -          0.1     1  init
-   2  wait     1         0.2     2  forth
+   2  wait     1         0.3     2  forth
    3  event    1         0.0     1  wstart
    4  ready    2         0.0     2  ps
   11  idle    -          0.0    11  gpio
@@ -263,19 +263,19 @@ ps
 task  state   parent     cpu group  name
    0  ready   -          2.1     0  kernel
    1  wait    -          0.1     1  init
-   2  wait     1         0.2     2  forth
+   2  wait     1         0.3     2  forth
    3  event    1         0.0     1  wstart
    4  sleep    2         0.0     4  sleep
    5  ready    2         0.0     2  ps
   11  idle    -          0.0    11  gpio
   12  idle    -          0.0    12  snd
   13  idle    -          0.1    13  kdev
-  14  idle    -          1.7    14  storage
-  15  idle    -          0.6    15  cons
+  14  idle    -          1.6    14  storage
+  15  idle    -          0.5    15  cons
 /> kill 4
 /> ps
 task  state   parent     cpu group  name
-   0  ready   -          3.8     0  kernel
+   0  ready   -          3.7     0  kernel
    1  wait    -          0.1     1  init
    2  wait     1         0.3     2  forth
    3  event    1         0.0     1  wstart
@@ -284,7 +284,7 @@ task  state   parent     cpu group  name
   12  idle    -          0.0    12  snd
   13  idle    -          0.1    13  kdev
   14  idle    -          1.8    14  storage
-  15  idle    -          0.8    15  cons
+  15  idle    -          0.9    15  cons
 ```
 
 `sleep` was in the state `sleep`, with the shell (task 2) as its parent. After `kill`, it's gone from the list.

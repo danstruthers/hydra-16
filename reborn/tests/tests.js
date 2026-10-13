@@ -2501,7 +2501,8 @@ module.exports = {
           { trigger: 'xmodem -r /ram/w\r\n', role: 'send', data: XM_DATA(), k: true },
           { trigger: 'xmodem -s -k /ram/w\r\n', role: 'receive', crc: true },
         ]);
-        return { pcHost: this.peer, input: 'āxmodem -r /ram/x\r' + 'āxmodem -s /ram/x\rĀ\x15' + 'āxmodem -s -k /ram/x\rĀC' +
+        // (flow 'none': the PC's end takes every byte, XON and XOFF too, as a terminal does in a binary transfer)
+        return { pcHost: this.peer, flow: 'none', input: 'āxmodem -r /ram/x\r' + 'āxmodem -s /ram/x\rĀ\x15' + 'āxmodem -s -k /ram/x\rĀC' +
           'āxmodem -r /ram/z\rĀ\x03' + 'āxmodem -r /ram/y\r' + 'āecho $status; xmodem /ram/x\r' +
           'āecho b115200 >/dev/serctl; xmodem -r /ram/w\r' + 'āxmodem -s -k /ram/w\rĀC' };
       },
@@ -2601,13 +2602,53 @@ module.exports = {
       expect: ['% cat /dev/kmesg | head -2\n\nHydra-16: kernel ', '% echo still here\nstill here\n% '],
     },
     {
-      name: 'pasteahead', what: 'seven lines (399 keys) pasted at the line\'s rate while ps writes four times and nothing reads: more than the window\'s queue and the receive ring hold (63 + 255); the newest are lost (the irq entry\'s, with the ring full), and what came first is whole: the first five lines read and run in their turn',
+      name: 'pasteahead', what: 'with no flow control (serctl\'s x0), seven lines (399 keys) pasted at the line\'s rate while ps writes four times and nothing reads: more than the window\'s queue and the receive ring hold (63 + 255); the newest are lost (the irq entry\'s, with the ring full), and what came first is whole: the first five lines read and run in their turn',
       init: 't_rc', cycles: 200e6,
       machine: {
         paste: true,
-        input: 'āps; ps; ps; ps; sleep 1\r' + [1, 2, 3, 4, 5, 6, 7].map(i => 'echo ' + i + ' ' + 'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\r').join(''),
+        input: 'āecho x0 >/dev/serctl; cat /dev/serctl\r' + 'āps; ps; ps; ps; sleep 1\r' + [1, 2, 3, 4, 5, 6, 7].map(i => 'echo ' + i + ' ' + 'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\r').join(''),
       },
-      expect: ['\n% ' + [1, 2, 3, 4, 5].map(i => 'echo ' + i + ' abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\n' + i + ' abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\n% ').join('')],
+      expect: ['% echo x0 >/dev/serctl; cat /dev/serctl\nb9600\nx0\n% ',
+        '\n% ' + [1, 2, 3, 4, 5].map(i => 'echo ' + i + ' abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\n' + i + ' abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\n% ').join('')],
+    },
+    {
+      name: 'flow', what: 'flow control (XON/XOFF: serctl\'s x1, as the console starts): sixty lines (3,400 keys) pasted at the line\'s rate while ps writes and nothing reads, ten times what the queue and the ring hold: the console tells the terminal to stop (XOFF, with 96 unread) and to go on (XON, at 32), and every line is read and run whole, in its turn; then a file of XONs and XOFFs copied through /pc, its frames\' bytes of them stuffed; x0 and x1 again',
+      init: 't_rc', cycles: 900e6,
+      pc: { files: () => ({ 'xs': Buffer.from(Array.from({ length: 600 }, (_, i) => [0x11, 0x13, 0x1E, 0x1F, 0x41 + i % 26][i % 5])) }) },
+      machine: {
+        paste: true,
+        // (Two seconds with nothing read: less than the watch's five, after which the terminal is let go: flowlet)
+        input: 'ācat /dev/serctl\r' + 'āps; ps; sleep 1\r' +
+          Array.from({ length: 60 }, (_, i) => 'echo ' + (i + 1) + ' ' + 'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\r').join('') +
+          'echo pasted\r' + 'ācp /pc/xs /pc/xs2; cmp /pc/xs /pc/xs2; echo copied $status\r' + 'āecho x0 >/dev/serctl; echo x1 >/dev/serctl; cat /dev/serctl\r' + 'āecho the end\r',
+      },
+      expect: ['% cat /dev/serctl\nb9600\nx1\n% ',
+        '\n% ' + Array.from({ length: 60 }, (_, i) => 'echo ' + (i + 1) + ' abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\n' + (i + 1) + ' abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\n% ').join(''),
+        '; echo copied $status\ncopied\n% ', '; cat /dev/serctl\nb9600\nx1\n% echo the end\nthe end\n% '],
+      check(m) {
+        const f = [];
+        if (m.acia.xoffs < 5 || m.acia.xons < 5) f.push('the console told the terminal to stop ' + m.acia.xoffs + ' times, and to go on ' + m.acia.xons + ' (5 each at least, for 3,400 keys)');
+        if (m.acia.rxLost) f.push(m.acia.rxLost + ' bytes came while the last was unread');
+        this.notes = ['XOFF ' + m.acia.xoffs + ' times, XON ' + m.acia.xons];
+        return f;
+      },
+    },
+    {
+      name: 'flowlet', what: 'flow control\'s watch: eight lines (456 keys) pasted while sleep 30 runs and nothing reads; the console tells the terminal to stop (XOFF), and the terminal holds the rest, and the Ctrl-C typed after them; five seconds on the console lets it go (XON), though nothing has been read: the rest comes (the ring fills, the newest lost), then the Ctrl-C, which ends sleep; the first five lines are read whole.  (HydraOS as it boots: wstart\'s waiting read brings the driver back to look at the time)',
+      init: 'init', cycles: 80e6,
+      machine: {
+        paste: true,
+        input: 'āsleep 30\r' + [1, 2, 3, 4, 5, 6, 7, 8].map(i => 'echo ' + i + ' ' + 'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\r').join('') + '\x03' + 'ĀĀĀ' + '\recho back\r',
+      },
+      expect: ['/> sleep 30\n', ...[1, 2, 3, 4, 5].map(i => '/> echo ' + i + ' abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\n' + i + ' abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\n'),
+        '/> echo back\nback\n/> '],
+      check(m) {
+        const f = [];
+        if (m.acia.xoffs < 1) f.push('the console never told the terminal to stop');
+        if (m.acia.xons < 2) f.push('the console told the terminal to go on ' + m.acia.xons + ' times (2 at least: as it starts, and its watch)');
+        this.notes = ['XOFF ' + m.acia.xoffs + ' times, XON ' + m.acia.xons];
+        return f;
+      },
     },
     {
       name: 'dbover', what: 'the debugger\'s steps over a subroutine (n): a breakpoint in the subroutine stepped over, then a step and a continue from it (no step of the kernel\'s is out); a subroutine that calls itself stepped over at its second level, and returned from (u); Ctrl-C in a call of the kernel\'s stepped over, then continue runs on past the call\'s end; and stopped in the next, a step is refused',

@@ -8,7 +8,14 @@
 // controller's: smc.js), a key every KBD_DELAY cycles), a key every 20000 cycles from cycle 200000, or as fast as the line goes (env.paste: then a byte
 // arriving while the last is unread is lost, as on the chip).  send(bytes): what the PC sends on its own (a /pc reply: hydrasim.js
 // --pc-dir), back to back at the line's rate, ahead of the keys (a byte arriving while the last is unread is lost, and counted).
+//   The terminal's flow control (env.flow: 'xon' unless it's 'none'): it honours the XOFF and XON the Hydra sends
+// (serial.inc's: HydraOS's console, x1).  They aren't shown, nor passed on (env.onTx); an XOFF heard (its character's
+// time over) holds the keys back, after env.flowLag more (2: what a terminal has on its way out), till an XON.  The
+// PC's own bytes (send: /pc's replies) and the keyboard's keys aren't held.  With 'none' the terminal knows nothing
+// of them: they come out with the rest, as bytes a terminal doesn't show, and the keys go on.
 'use strict';
+
+const XON = 0x11, XOFF = 0x13;
 
 // The rates (the control register's low 4 bits: 0 = the external clock / 16), named for 1.8432 MHz; the ACIA's
 // clock (SER_CLK) is the board's 14.318 MHz crystal / 8, 1.790 MHz, so every rate is 2.9% slow, as on the board
@@ -19,6 +26,7 @@ const KBD_DELAY = 150000;                                    // (A key at the ke
 
 function createAcia(env) {
   const wdc = !!env.wdc, paste = !!env.paste, clock = env.clock;
+  const flow = env.flow !== 'none', flowLag = env.flowLag === undefined ? 2 : env.flowLag;
   const a = {
     cmd: 0, ctrl: 0, tdre: 1, txTimer: 0, irq: 0, rdrf: 0, rx: 0, overruns: 0,
     // The line's idle time between characters sent: when the last one ended, and the shortest gap (in bits, at
@@ -27,6 +35,7 @@ function createAcia(env) {
     txEnd: -Infinity, txSent: 0, gapMin: Infinity,
     rxQueue: [...(env.input || '')], rxDelay: 200000, rxLost: 0, typedAt: -1, typedLast: -1, wdc, kbd: false,
     pcQueue: [], pcDelay: 0, pcLost: 0,                       // (What the PC sends on its own: send)
+    held: false, lag: 0, flowByte: 0, xoffs: 0, xons: 0,      // (Flow control: the keys held, those still to come, the byte going, counts)
     sent: 0, tail: '', sentAt: 0, promptFrom: -1,             // (Bytes sent, the last two, when: for a wait for a prompt)
     rxAt: 0, rxLat: { min: Infinity, max: 0, sum: 0, n: 0 },  // (Each byte received: the cycles till the CPU read it)
   };
@@ -51,8 +60,9 @@ function createAcia(env) {
     if (r === 0) {
       if (a.txTimer > 0) a.overruns++;
       if (++a.txSent > 8) a.gapMin = Math.min(a.gapMin, a.txTimer > 0 ? 0 : (t - a.txEnd) * ACIA_BAUD[a.ctrl & 15] / (clock * 1e6));
-      if (!env.consoleOnly) a.shown(v, t);
-      env.onTx(v, t); a.tdre = 0; a.txTimer = a.charCycles();
+      if (flow && (v === XON || v === XOFF)) a.flowByte = v;  // (The terminal's own: heard at its time's end)
+      else { if (!env.consoleOnly) a.shown(v, t); env.onTx(v, t); }
+      a.tdre = 0; a.txTimer = a.charCycles();
     } else if (r === 1) { a.cmd &= 0xE0; a.irq = 0; }       // Programmed reset
     else if (r === 2) a.cmd = v;                              // (The TX interrupt comes as TDRE goes on, as on the
                                                               //   board: turning it on with TDRE on is nothing)
@@ -62,6 +72,9 @@ function createAcia(env) {
   a.tick = (d, t) => {
     if (a.txTimer > 0 && (a.txTimer -= d) <= 0) {             // (A character's time)
       a.txEnd = t + a.txTimer; a.txTimer = 0; a.tdre = 1; if (!wdc && (a.cmd & 0x0C) === 0x04) a.irq = 1;
+      if (a.flowByte === XOFF) { a.xoffs++; if (!a.held) { a.held = true; a.lag = flowLag; } }
+      else if (a.flowByte === XON) { a.xons++; a.held = false; }
+      a.flowByte = 0;
     }
     if (a.pcQueue.length) {                                   // The PC's own bytes: back to back, the keys wait
       if ((a.pcDelay -= d) > 0) return;
@@ -77,7 +90,11 @@ function createAcia(env) {
       if (!prompted(t)) return;
       a.rxQueue.shift(); a.promptFrom = -1; a.rxDelay = 20000; if (!a.rxQueue.length) a.typedLast = t;
     }
+    // (Held back by an XOFF: the serial port's keys, once what was on its way has gone; not a wait, nor the keyboard's)
+    const stopped = a.held && !a.kbd && a.rxQueue.length && a.rxQueue[0] < '\u0100' && a.lag <= 0;
+    if (stopped) { if (a.rxDelay - d <= 0) a.rxDelay = 1; else a.rxDelay -= d; return; }
     if (a.rxQueue.length && (a.rxDelay -= d) <= 0 && (!a.rdrf || paste || a.kbd || a.rxQueue[0] === '\u0102')) {
+      if (a.held && !a.kbd && a.rxQueue[0] < '\u0100') a.lag--;
       const c = a.rxQueue.shift();
       if (!a.rxQueue.length) a.typedLast = t;                  // (The input's end: --stop-after-input counts from here)
       if (c === '\u0102' || c === '\u0103') { a.kbd = c === '\u0102' && !!env.keyboard; a.rxDelay = a.kbd ? KBD_DELAY : 20000; }
@@ -92,7 +109,8 @@ function createAcia(env) {
     let n = Infinity;
     if (a.txTimer > 0) n = Math.min(n, a.txTimer);
     if (a.pcQueue.length) n = Math.min(n, Math.max(1, a.pcDelay));
-    if (a.rxQueue.length && a.rxQueue[0] !== '\u0101') n = Math.min(n, Math.max(1, a.rxDelay));   // (A wait for a prompt: the output wakes it)
+    // (A wait for a prompt: the output wakes it.  Keys held back by an XOFF: the XON's time does)
+    if (a.rxQueue.length && a.rxQueue[0] !== '\u0101' && !(a.held && !a.kbd && a.rxQueue[0] < '\u0100' && a.lag <= 0)) n = Math.min(n, Math.max(1, a.rxDelay));
     return n;
   };
   // A byte of the console's output (for a wait for a prompt): every byte sent, or with env.consoleOnly (a /pc host

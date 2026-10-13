@@ -42,10 +42,9 @@ nothing, which tells it there's no more. `cat`, typed alone, copies what you typ
 
 You don't have to wait for a prompt before you type. The console keeps the keys that come while a program is busy
 (about 300 of them from a terminal, 60 from the Vera X's keyboard), and hands them over when the program next
-reads: so you can type the next command while one is still running, or paste several lines at once from your PC.
-(Paste much more than that while nothing is reading, and it's the end of what you pasted that's lost: what came
-first is kept whole. A program that's waiting for a line, as HyBASIC is at its prompt, reads as fast as a terminal
-sends, so a long paste into it arrives whole.)
+reads: so you can type the next command while one is still running, or paste a whole program from your PC. When
+it's holding about half of what it can, it asks the terminal to wait (section 13.6), so a paste of any length
+arrives whole, as long as your terminal's flow control is set to XON/XOFF (section 5.2).
 
 ## 13.3 Raw mode and keys
 
@@ -162,8 +161,8 @@ port itself:
 * `ser` is the serial port, byte by byte, exactly as the bytes come and go. While a program has `ser` open for
   reading, every byte that arrives is its, even <kbd>CTRL</kbd>-<kbd>C</kbd>, and the windows wait. `xmodem` works
   this way.
-* `serctl` sets the port's speed. Writing a speed changes it at once (so change your terminal's speed too); reading
-  shows it.
+* `serctl` sets the port's speed and its flow control. Writing a speed changes it at once (so change your
+  terminal's speed too); reading shows both settings, a line each.
 
 | Command | Speed | Really |
 |---|---|---|
@@ -178,6 +177,38 @@ port itself:
 
 (The serial chip's clock is a little slower than the speeds' names assume, section 5.5.) The port always sends 8
 data bits, no parity and 1 stop bit.
+
+**Flow control** keeps a fast sender from getting ahead of the Hydra. The console can hold about 300 keys that no
+program has read yet. With `x1`, which is how it starts, it sends the terminal an **XOFF** (the byte $13) when 96
+bytes are waiting in its receive buffer, and an **XON** ($11) when a program has read them down to 32. A terminal
+that's set to *XON/XOFF* stops sending between the two, so nothing is lost, however much you paste.
+
+| Command | Flow control |
+|---|---|
+| `x1` | XON/XOFF (as the Hydra starts) |
+| `x0` | None: the console never asks the terminal to wait |
+
+```session
+/> cat /dev/serctl
+b9600
+x1
+```
+
+Three things to know about it:
+
+* **A terminal that isn't set to XON/XOFF** takes no notice (it doesn't show the two bytes either), and then a
+  long paste into a busy program loses its end, after the 300 keys the console can hold. What came first is kept.
+* **A stopped terminal holds everything back**, even <kbd>CTRL</kbd>-<kbd>C</kbd>. So the console never leaves a
+  terminal stopped for more than five seconds: if no program has read anything by then, it sends XON anyway, your
+  <kbd>CTRL</kbd>-<kbd>C</kbd> arrives, and what was pasted behind it may be lost. (The PC tool sends
+  <kbd>CTRL</kbd>-<kbd>C</kbd> at once, stopped or not.)
+* **`xmodem` and `ser`** send and receive every byte as it is, with no XON or XOFF added. Turn your terminal's
+  flow control off for a file transfer if it doesn't do so itself: the file's own $11 and $13 bytes are data.
+
+> **HOW IT WORKS:** Many computers use two more wires for this, called RTS and CTS, and the Hydra's serial socket
+> has both. But the Hydra's serial chip, the R65C51, turns its own transmitter off whenever it raises RTS to say
+> "wait", so the Hydra could say nothing at all while it held the PC back: not even the echo of your keys. XON
+> and XOFF are ordinary bytes sent on the ordinary wire, and have no such trouble.
 
 ## 13.7 The terminal
 

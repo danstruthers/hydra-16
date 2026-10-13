@@ -12,6 +12,7 @@ I²C bus, the SPI devices, the disks and the Vera X's screen.
 ```session
 /> cat /dev/serctl
 b9600
+x1
 /> cat /dev/consctl
 rawoff
 keys hydra
@@ -341,7 +342,7 @@ wired this way round because a VIA pin can take in much more current than it can
 
 ```session
 /> cat /proc/2/status
-forth wait 1 56 2
+forth wait 1 66 2
 /> cat /proc/2/fd
 /
 0 rw #c 391 #c/cons
@@ -403,14 +404,14 @@ Without a real Hydra, the task names:
 ```session
 % for(t in /proc/*) cat $t/status
 kernel ready - 469 0
-init wait - 31 1
+init wait - 33 1
 gpio idle - 4 11
 snd idle - 5 12
-kdev ready - 47 13
-storage idle - 334 14
-cons idle - 124 15
-forth wait 1 53 2
-wstart event 1 3 1
+kdev ready - 43 13
+storage idle - 328 14
+cons idle - 116 15
+forth wait 1 64 2
+wstart event 1 4 1
 rc wait 2 28 2
 ```
 

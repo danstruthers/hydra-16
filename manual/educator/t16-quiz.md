@@ -92,6 +92,6 @@ The answers are models. Any answer that shows the same understanding is right.
 | 5 | Which parts must go in the right way round? | Electrolytic capacitors, chips and their sockets, resistor networks, the reset chip, LEDs. |
 | 6 | What does a good solder joint look like? | A small, shiny cone that has flowed onto both the pad and the lead. |
 | 7 | Why is the power tested before any chip goes in? | A power fault found then harms nothing; with the chips in, it could destroy them. |
-| 8 | What are the terminal's settings for a Hydra? | 9600 baud, 8 data bits, no parity, 1 stop bit, no flow control. |
+| 8 | What are the terminal's settings for a Hydra? | 9600 baud, 8 data bits, no parity, 1 stop bit, flow control XON/XOFF. |
 | 9 | The power light is on, and nothing appears on the terminal. Name the first three things to check. | The port and the speed; the cable (RS-232, not TTL; not null-modem); press reset. Then the jumpers and the chips. |
 | 10 | Why change only one thing at a time when finding a fault? | So that you know which change made the difference. Change two things, and whatever happens, you've learned nothing. |

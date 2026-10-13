@@ -83,10 +83,10 @@ Above the console:
   windows to the new size.
 * **Copy text** copies everything in the console, including the lines that have scrolled away, so you can paste it
   into a document.
-* **Paste** types whatever is on your PC's clipboard into the Hydra, as if you typed it: handy for a line or two.
-  For a whole program, the Hydra can lose characters that arrive faster than it reads them, so keep programs on
-  your PC and bring them in through `/pc` (section 2.5), or paste a few lines at a time.
-  (<kbd>CTRL</kbd>-<kbd>SHIFT</kbd>-<kbd>V</kbd> does the same.)
+* **Paste** types whatever is on your PC's clipboard into the Hydra, as if you typed it. The Hydra asks the page to
+  wait whenever it falls behind (XON/XOFF, section 13.6), so a whole program arrives whole. For programs you'll
+  change often, `/pc` (section 2.5) is handier still. (<kbd>CTRL</kbd>-<kbd>SHIFT</kbd>-<kbd>V</kbd> does the
+  same.)
 
 You can also scroll back through old lines with the mouse wheel, and drag across text to select and copy it.
 
@@ -265,10 +265,10 @@ keys to type with `--input`:
 node reborn/sim/run.js --input "\w\w2 3 + .\r" --cycles 40000000
 ```
 
-`\w` waits two million clock beats, and two of them first give HydraOS time to start: keys that arrive while the
-Hydra is busy are lost. `\r` stands for the <kbd>RETURN</kbd> key, and `--cycles` says how long to run (40 million
-clock beats is a little over 11 seconds of the Hydra's time). At the end the emulator prints everything the Hydra printed, followed by a
-report on its tasks. This is how HydraOS's own tests check that everything works.
+`\w` waits two million clock beats, and two of them first give HydraOS time to start: keys that arrive before its
+console is running are lost. `\r` stands for the <kbd>RETURN</kbd> key, and `--cycles` says how long to run (40
+million clock beats is a little over 11 seconds of the Hydra's time). At the end the emulator prints everything the
+Hydra printed, followed by a report on its tasks. This is how HydraOS's own tests check that everything works.
 
 ## 2.5 Sharing files with your PC
 

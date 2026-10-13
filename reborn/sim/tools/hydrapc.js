@@ -24,9 +24,18 @@
 // and whenever the window changes, so the Hydra's windows are its size; and the Hydra's ESC [ 18 t (its console
 // asks as it starts, and consctl's terminal size) is answered here, not shown.
 //
+// Flow control: HydraOS's console sends XOFF when it has more keys than it can keep, and XON when it has read them
+// (serctl's x1: XON/XOFF).  They aren't shown: after an XOFF the keys typed or pasted here wait for the XON (the
+// /pc replies go on: the Hydra is waiting for those).  A paste goes out a few bytes at a time (CHUNK, then the
+// port's drain and a pause: 2,000 keys a second at most, more than the Hydra reads), so few are on their way when the
+// XOFF comes.  If no XON comes in HELD_MS the keys go on: an XOFF in a program's own output (a binary file shown)
+// mustn't lock the keyboard for good.  Ctrl-C and Ctrl-\ never wait: the Hydra acts on them as they come, and the
+// program they stop may be the one that isn't reading.
+//
 // It needs the serialport package: npm install, in reborn/sim (its package.json).  It asserts RTS (and DTR) once the port
 // is open: the Hydra's ACIA sends only while its ~CTS is asserted, which is the PC's RTS (DE-9 pin 7), and serialport
-// leaves RTS off without hardware flow control.  (It doesn't wait on CTS itself: the Hydra can't hold the PC back.)
+// leaves RTS off without hardware flow control.  (It doesn't wait on CTS itself: the Hydra's ACIA can't raise its RTS
+// without turning its own transmitter off, so its flow control is XON/XOFF.)
 // ****************************************************************************
 'use strict';
 const path = require('path');
@@ -35,6 +44,8 @@ const W32 = require('../../../base/sim/lib/win32in.js');
 const { createPcFs } = require('./pcfs.js');
 
 const QUIET_MS = 100;                                         // A frame that stops this long isn't one: its bytes show
+const CHUNK = 16, CHUNK_MS = 8;                               // The keys' way out: this many, then a pause (a paste)
+const HELD_MS = 10000;                                        // After an XOFF with no XON this long, the keys go on
 
 function usage(msg) {
   if (msg) console.error('hydrapc: ' + msg);
@@ -103,8 +114,25 @@ function run(portName, folder) {
     if (out.length) stdout.write(Buffer.from(out));
   };
 
-  // The Hydra's bytes: frames to the file server, the rest to the screen
-  const reader = P.createReader({ types: [P.T_ATTACH, P.T_REQ],
+  // The keys' way to the Hydra: a queue, a chunk at a time, held from the Hydra's XOFF to its XON
+  const keyQ = [];
+  let sending = false, held = false, heldTimer = null;
+  function pumpKeys() {
+    if (sending || held || !keyQ.length || !port.isOpen) return;
+    sending = true;
+    port.write(Buffer.from(keyQ.splice(0, CHUNK)));
+    port.drain(() => setTimeout(() => { sending = false; pumpKeys(); }, keyQ.length ? CHUNK_MS : 0));
+  }
+  const sendKeys = bytes => { keyQ.push(...bytes); pumpKeys(); };
+  const flow = b => {
+    clearTimeout(heldTimer);
+    held = b === P.XOFF;
+    if (held) heldTimer = setTimeout(() => { held = false; pumpKeys(); }, HELD_MS);
+    else pumpKeys();
+  };
+
+  // The Hydra's bytes: frames to the file server, its XOFF and XON to the keys' queue, the rest to the screen
+  const reader = P.createReader({ types: [P.T_ATTACH, P.T_REQ], onFlow: flow,
     onFrame: f => port.write(Buffer.from(P.encode(P.T_REPLY, f.tag, f.type === P.T_ATTACH ? fsrv.attach(f.payload) : fsrv.request(f.tag, f.payload)))),
     onBad: f => port.write(Buffer.from(P.encode(P.T_NAK, f.tag))) });
   let quiet = null;
@@ -124,15 +152,16 @@ function run(portName, folder) {
     if (prefix) {
       prefix = false;
       const k = String.fromCharCode(b).toLowerCase();
-      if (b === 1) port.write(Buffer.from([1]));
+      if (b === 1) sendKeys([1]);
       else if (k === 'x' || k === 'q') finish('quit');
       else if (k === 'l') { logOn = !logOn; say('log ' + (logOn ? 'on' : 'off')); }
       else say('Ctrl-A then: x quit, l the log on or off, Ctrl-A a Ctrl-A');
       return;
     }
     if (b === 1) { prefix = true; return; }
+    if (b === 0x03 || b === 0x1C) { port.write(Buffer.from([b])); return; }   // (Ctrl-C, Ctrl-\: at once, ahead of the keys waiting)
     if (!tty && b === 0x0A) b = 0x0D;                           // (Piped text: a line ends in CR, as Enter sends)
-    port.write(Buffer.from(b === P.MARK ? [P.MARK, P.ESC] : [b]));
+    sendKeys(b === P.MARK ? [P.MARK, P.ESC] : [b]);
   }
   if (tty) stdin.setRawMode(true);
   const w32 = opt.win32 && tty && stdout.isTTY ? W32.createWin32Input(bytes => { for (const b of bytes) onKey(b); }) : null;

@@ -30,6 +30,7 @@ faults in a board you've built are the manual's section 5.7 and Topic 6; this to
 | "The screen is a mess" | A program printed binary, or two tasks wrote at once | <kbd>CTRL</kbd>-<kbd>L</kbd> redraws the editor. Otherwise open a new window (<kbd>CTRL</kbd>-<kbd>]</kbd> <kbd>C</kbd>), or reset: a reset cures everything |
 | "It says `no free task`" | All sixteen tasks are in use: a pipeline of seven programs (the manual's section 8.7), or programs left running in other windows | `ps` shows them. Use fewer programs in the line, or end what's still running (`kill`) |
 | "It says `duplicate definition`" | A HyBASIC program with two `SUB`s or `FUNCTION`s of one name (section 23.13) | `LIST`, find the two, and rename one |
+| "I pasted my program and bits of it are missing" | The terminal program's flow control isn't XON/XOFF, so it didn't wait when the Hydra asked (the manual's sections 5.2 and 13.6) | Set it to XON/XOFF. Or paste a screenful at a time; or bring the file over with `/pc` |
 | "The date is wrong" | No clock chip: it's the year 2000 | `echo` the date into `/dev/time` (Lab 14), or ignore it |
 | "It's stuck for ever" | A loop that doesn't end | <kbd>CTRL</kbd>-<kbd>C</kbd>. Then ask them which line was supposed to stop it |
 

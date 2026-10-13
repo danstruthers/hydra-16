@@ -21,7 +21,7 @@
 |---|---|
 | ☐ | The adapter says RS-232, and has a 9-pin plug. It isn't a "TTL" adapter, and there's no null-modem cable. |
 | ☐ | I know the port's name on my PC. |
-| ☐ | The terminal program is set to 9600 baud, 8 data bits, no parity, 1 stop bit, no flow control. |
+| ☐ | The terminal program is set to 9600 baud, 8 data bits, no parity, 1 stop bit, flow control XON/XOFF. |
 | ☐ | The terminal program is running *before* I switch on. |
 
 ✎ The port's name, and the terminal program you're using:

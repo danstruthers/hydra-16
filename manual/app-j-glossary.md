@@ -144,6 +144,8 @@ value (19.7). And an option, like `-l`.
 
 **Flash ROM.** ROM that can be erased and programmed again electrically (4.4).
 
+**Flow control.** A way for a receiver to tell a sender to wait: the Hydra's is XON/XOFF (13.6).
+
 **Flux.** The cleaner inside solder (and in flux pens) that lets melted solder stick to metal (3.5).
 
 **FM synthesis.** Making sounds by changing one wave's frequency with another wave: the YM2151's way (15.1).
@@ -365,6 +367,9 @@ or for an interrupt (26.11).
 windows (Chapter 10).
 
 **Word.** In Forth, a named command (19.1). Also a 16-bit value.
+
+**XON and XOFF.** The two bytes of the serial port's flow control: XOFF ($13) asks the terminal to stop sending,
+and XON ($11) to go on (13.6).
 
 **YM2151.** The Hydra's sound chip: a Yamaha FM synthesizer with eight voices (15.1).
 
