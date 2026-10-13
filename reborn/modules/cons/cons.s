@@ -321,6 +321,7 @@ ms_n:       .res        1
 want_new:   .res        1                                   ; <> 0: Ctrl-] c, a window wanted (for /wnew's reader, or init)
 wnew_n:     .res        1                                   ; /wnew's fids open
 ev_seen:    .res        1                                   ; Its event count, as its init's loop last saw it
+live:       .res        1                                   ; <> 0: a console file has been opened (the boot's lines are out)
 kb_act:     .res        128                                 ; The keys (key's): each one's action after the prefix
                                                             ;   (KA_*; ESC's: Shift-Tab's, ESC [ Z) ...
 kb_ct:      .res        3                                   ;   and Ctrl-Tab's, Ctrl-Shift-Tab's and Shift-PgUp's
@@ -497,6 +498,7 @@ init:
             dex
             bpl         :-
             stz         wnew_n
+            stz         live
             ldx         #rx_fe + 2 - pc_n_req - 1           ; (The counts serctl shows: 0)
 :
             stz         pc_n_req,X
@@ -616,7 +618,10 @@ init:
 ; Its init doesn't end.  Between its calls, whenever something has happened (its event count: a key in, a timer's
 ; turn), the keys are handed to the windows and the terminals painted, as before and after each call: so that goes
 ; on with no program asking (a window wanted, Ctrl-] c, while the shell waits for a program; flow control's watch;
-; the chrome's clock).  SRV_NAP: its calls are served meanwhile
+; the chrome's clock).  SRV_NAP: its calls are served meanwhile.  Not till a console file has been opened (live):
+; till init runs, the port is the kernel's, which prints the boot's last lines straight to it, and the terminal's
+; answer to the size asked above comes just then: painted for at once, it went out through the kernel's line (bytes
+; of both lost on the chip: the screen homed but not cleared)
 @idle:
             ldy         ev_seen
             lda         #0
@@ -624,6 +629,8 @@ init:
             jsr         SRV_NAP
             lda         TASK_EVENT
             sta         ev_seen
+            lda         live
+            beq         @idle
             jsr         distribute
             jsr         pump
             bra         @idle
@@ -3282,6 +3289,8 @@ kw_watch:
 ; A fid made (srvlib): its window, from the spec (none: window 0); a window that isn't there: E_NOENT.  (R_DUP's
 ; keeps its old fid's.)  A consctl's counted.  IN: .X = the fid.  Keeps .X
 opened:
+            lda         #1                                  ; (The boot's over: its init's loop may paint)
+            sta         live
             lda         #$FF                                ; (Its wctl new's answer: none)
             sta         fid_new,X
             lda         z:srv_rq

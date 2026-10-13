@@ -54,7 +54,10 @@ never meet.  The boot counts it as started once it's not busy.  Two drivers use 
 * `kdev` looks at the Vera X's input controller: what `input` did, with `SRV_NAP` for its `SLEEP`.
 * `cons` hands the keys to the windows and paints the terminals whenever its event count changes, as it does before
   and after each request.  So Ctrl-] c makes a window while the shell waits for a program, and flow control's watch
-  runs with nothing reading.
+  runs with nothing reading.  Not before a console file has first been opened, though: till init runs the port is
+  the kernel's, which prints the boot's last line straight to it just as the terminal's answer to the size asked
+  comes in, and a repaint sent then went out through that line, bytes of both lost (on the board: the screen homed
+  but not cleared).
 
 **4. GPIO and I2C in kdev.**  `gpio` was a quarter of a bank and 600 bytes of RAM in a task of its own.  It's part of
 HydraOS's `kdev` now: `reborn/modules/kdev/kdev.s` is the base's `kdev.s` with `KDEV_X` defined, which includes

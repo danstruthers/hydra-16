@@ -1958,6 +1958,13 @@ module.exports = {
         '#x255 -#x1 #xFFFF 255 \n0 errors in the number word tests\n\n%'],
     },
     {
+      name: 'bootsize', what: 'the boot with a terminal that answers the size asked at once (ESC [ 18 t: the PC tool does), not 80 x 24: the console\'s repaint for it waits till init has the console (the kernel\'s own "task 1: init" is still going out when the answer comes), so no byte is written over another on the serial chip, the kernel\'s line is whole, and the screen is cleared before HydraOS\'s first line',
+      init: 'init', cycles: 60e6,
+      machine: { termSize: [30, 100], input: 'āecho booted\r' },
+      expect: ['\x1b[18ttask 1: init\n', '\x1b[H\x1b[2JHydraOS 1.0 for the Hydra-16\n', '\nbooted\n'],
+      check(m) { return m.acia.overruns || m.acia.txLost ? [m.acia.overruns + ' bytes written while another was still being sent (' + m.acia.txLost + ' lost on a WDC chip)'] : []; },
+    },
+    {
       name: 'standing', what: 'the tasks kept standing: at the login shell\'s prompt the kernel, the shell in init\'s task (init EXECs it) and the drivers, no init, no window starter, no input program, no gpio driver; the console waiting for its own events (its init\'s loop); a program left behind when its shell ends is nobody\'s; the login shell ended is started again by the kernel, in task 1, window 0\'s; a window made while the shell waits for a program (Ctrl-] c: the console\'s own loop makes it, the kernel starts init there); newns twice, the namespace the same',
       init: 'init', cycles: 520e6,
       machine: { input: 'āps\r' + 'āns | wc -l\r' + 'ānewns\r' + 'āns | wc -l\r' + 'āsleep 200 &\r' + 'ābye\r' + 'āps\r' + 'āecho $window\r' + 'āsleep 8\rĀĀ\x1dc' + 'āecho $window\r' + 'āps\r' + 'āecho all done\r' },
