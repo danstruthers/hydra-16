@@ -1747,6 +1747,13 @@ module.exports = {
       },
     },
     {
+      name: 'flib', what: 'HyForth\'s lib and require after trouble: a bare name is tried in the current directory, then /lib/forth: with a directory of that name in the way (and in /pc with no PC tool) lib facility still loads; a library that fails to load (a bad .fl) is un-noted, so lib says so again rather than nothing; require of a file that isn\'t there, again',
+      init: 't_rc', cycles: 160e6,
+      machine: { input: 'āforth -l\r' + 'ācd /ram\r' + 'āmkdir facility.fl\r' + 'ālib facility\r' + 'ālibs\r' + 'āecho HYFLxx >bad.fl\r' + 'ālib bad\r' + 'ālib bad\r' + 'ārequire none.fs\r' + 'ārequire none.fs\r' + 'ācd /pc\r' + 'ālib string\r' + 'ālibs\r' + 'ābye\r' },
+      expect: ['/ram> lib facility\n/ram> libs\nforth coreext exception file tools shell facility\n/ram> echo HYFLxx >bad.fl\n/ram> lib bad\nnot this forth\'s library\n/ram> lib bad\nnot this forth\'s library\n/ram> require none.fs\nnone.fs: not found\n/ram> require none.fs\nnone.fs: not found\n/ram> cd /pc\n',
+        '/pc: i/o error\n/ram> lib string\n/ram> libs\nforth coreext exception file tools shell facility string\n/ram> bye\n'],
+    },
+    {
       name: 'fshell', what: 'HyForth as a shell (forth -l, shell.fl): its namespace and profile; a line Forth\'s or rc\'s by its first word (a number, one of the numbers library\'s, a word, a pipeline, a redirection); . on an empty stack, or rc\'s by % (a program a word shadows); cd and the prompt (its format); a definition over lines (the second prompt); status and $status; & ($apid) and wait; programs as values: sh-out, output-of, a word\'s output a program\'s input (|, piped: one that ends first, Ctrl-C), spawn; Ctrl-C ending a program; errors, a usage; -lib shell and lib shell; exit',
       init: 't_rc', cycles: 400e6,
       // (Each line typed at the shell's prompt (ā: "> " or "% "), but those it has none for: a definition's second line

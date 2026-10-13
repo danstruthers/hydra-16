@@ -108,7 +108,9 @@ forth coreext exception file tools shell hydra (random)
 
 `libs` lists the core, then each library; `(random)` is one `-lib` took out of the search (its code stays, so what was
 compiled with it still runs), and `lib random` puts it back.  `lib name` loads `name.fl`, else `name.fs`, from the
-current directory or `/lib/forth`.  A `marker` made before a library takes it out with the rest.
+current directory or `/lib/forth` (the current directory's trouble, a directory of that name or an `i/o error` on
+`/pc` say, is said only if `/lib/forth` has no such file either).  A file that can't be opened or loaded isn't noted as included, so `lib` and
+`require` can try it again.  A `marker` made before a library takes it out with the rest.
 
 | Library | Words |
 | :--- | :--- |
