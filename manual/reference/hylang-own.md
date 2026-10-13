@@ -332,6 +332,11 @@ the list of the arguments beyond the formals. With no formals at all, the argume
 
 A function prints as `<function>` and its definition.
 
+A function with no formals needs nothing more before it can run, and the prompt treats it so: when the value
+of a line typed there is such a function, the prompt calls it, and shows what it returns. So the name of a
+function of no formals, typed alone, runs it, with or without parentheses. Inside a larger expression the
+function is an ordinary value: `(list f)` is a list holding the function.
+
 #### Errors
 
 | Message | Cause |

@@ -64,7 +64,7 @@ function entry(r) {
   s += '#### Description' + NL + NL + stop(r.does) + NL;
   return s;
 }
-for (const k of [...by.keys()]) if (!own.has(k) && taken.has(k)) by.delete(k);
+for (const [k, r] of [...by]) if (!own.has(k) && r.names.some(n => taken.has(n))) by.delete(k);
 const keys = new Set([...by.keys(), ...own.keys()]);
 let out = intro + NL, n = 0, hand = 0;
 for (const k of [...keys].sort((a, b) => sortKey(a) < sortKey(b) ? -1 : 1)) {
