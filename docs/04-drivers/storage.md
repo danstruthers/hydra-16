@@ -79,7 +79,9 @@ assembler's sources in `/sd/0/sample/as`), the sample songs (`/sd/0/songs`) and 
 `#d`, bound at `/dev/sd`: a directory for each disk started, each with two files.
 
 * **`data`**: the disk as a file of bytes (its first 4 GB), at the fd's offset.  `cat /dev/sd/0/data` reads the raw card.
-* **`ctl`**: reads as the disk and its file system; takes commands.
+* **`ctl`**: reads as the disk and its file system, and, once a card has refused a command or a block's data or
+  stayed busy after a write, an `errors` line counting each (the cards', all of them: a bad SPI contact or a bad card
+  shows here); takes commands.
 
 ```
 /> cat /dev/sd/0/ctl

@@ -30,7 +30,11 @@ Both are built on the same serial layer (`base/lib/serial.inc`: the rates, the s
 
 * **9600 baud, 8 data bits, no parity, 1 stop bit**, with RTS/CTS, as the system starts.  The rates are 300, 600, 1200,
   2400, 4800, 9600, 19200 and 115200 ([the ACIA](../02-hardware/devices.md#the-acia-65c51-and-the-serial-port)):
-  `echo b115200 >/dev/serctl`, then set the terminal to match.  `cat /dev/serctl` says the rate.
+  `echo b115200 >/dev/serctl`, then set the terminal to match.  `cat /dev/serctl` says the rate and the flow control
+  (`x1`, `x0`), then two lines of counts for chasing an unreliable line: `/pc`'s requests, and how many of their
+  replies were cut short, unanswered or damaged, how many requests the PC had damaged (its NAK), and how often the PC
+  was given up; and the ACIA's receive **overruns** (the system was late taking a byte: another came first) and
+  **framing errors** (noise, or a rate the terminal doesn't match).  The PC tool's Ctrl-A s has the PC's side.
 * **Every byte sent is paced** by VIA timer 2: a character's time and a margin (two idle bits at 115200, one at the
   other rates), so the board's slightly slow clock and the MAX232's edges never lose a character.
 * **Bytes received** go into a 256-byte ring as they come (the ACIA's interrupt).  A byte that arrives when the ring is
@@ -49,7 +53,7 @@ Both are built on the same serial layer (`base/lib/serial.inc`: the rates, the s
 | `cons` | yes | yes | The console: a read gets a line (or keys, raw), a write goes to the terminal |
 | `consctl` | yes | yes | Its mode: `rawon`, `rawoff`, `group`; `cons` adds the key modes, scrolling, the terminals, the size |
 | `ser` | yes | yes | The serial port, raw: bytes in and out as they are |
-| `serctl` | yes | yes | The rate: `b300` ... `b115200` |
+| `serctl` | yes | yes | The rate: `b300` ... `b115200`; the flow control: `x1`, `x0`.  Reads as both, and the counts (above) |
 | `wctl` | | yes | The windows: new ones, which is shown, their chrome, layouts, the keys |
 | `label` | | yes | The window's title |
 | `wnew` | | yes | A read waits for Ctrl-] c, makes a window, and gives its number (init's) |
