@@ -64,6 +64,10 @@ When numbers of different kinds meet, the answer is the simplest kind that can h
 an integer is a rational, unless it comes out whole; a rational and a decimal make a rational (`1/3 + 0.5` is `5/6`);
 and anything with a complex number is complex, unless its imaginary part turns out to be 0.
 
+Each part of a complex number can be any real kind, and the two needn't match: `4/3+3.7i`, `3.9+1/2i`. Where `/`
+divides, in `calc` and HyBASIC, a fraction written right before `i` is still one number: `1/2i` is half of `i`, and
+`1/(2i)` divides.
+
 ## 18.2 Functions and precision
 
 Some numbers can't be written exactly in any of these ways: the square root of 2, or pi, has digits that go on for
