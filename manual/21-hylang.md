@@ -22,7 +22,7 @@ hylang> (+ 1 2)
 => 3
 ```
 
-`(exit)` leaves hylang. (`(exit 3)` leaves it with the status 3, for a shell to see.)
+`exit`, or `(exit)`, leaves hylang. (`(exit 3)` leaves it with the status 3, for a shell to see.)
 
 ## 21.2 Expressions
 

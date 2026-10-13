@@ -296,6 +296,9 @@ Put each chip in the socket with its reference:
 > **NOTE:** U3, the serial chip, should be a Rockwell **R65C51**. A WDC **W65C51N** fits too, but it has a fault in
 > the way it reports that it's ready to send, and HydraOS must be built to work around it:
 > `node reborn/build.js --acia wdc` (Chapter 2 shows how to build HydraOS).
+>
+> U2, the VIA, is a Rockwell **R65C22** on the schematic. It's out of production too, and WDC's **W65C22N** is a
+> drop-in replacement that needs no change to HydraOS.
 
 > **CAUTION:** Read each chip's markings carefully: some chips look alike. A 74F08 isn't a 74ACT08, and a 74LS139
 > isn't a 74F139, even though they have the same number of pins. The letters between the "74" and the number tell

@@ -13,9 +13,9 @@ in small letters, with `-` for `_`:
 
 | Language | `OPEN` is | Section |
 |---|---|---|
-| HyForth (`lib hydra`) | `sys-open` ( *inputs* -- *outputs* *ior* ) | 19.9 |
-| hylang | `(sys-open ...)`, or `(sys :open ...)` | 21.4 |
-| HyBASIC | `SYS "OPEN"`, with `RREG` for the registers after | 23.8 |
+| HyForth (`lib hydra`) | `sys-open` ( *inputs* -- *outputs* *ior* ) | 20.9 |
+| hylang | `(sys-open ...)`, or `(sys :open ...)` | 22.4 |
+| HyBASIC | `SYS "OPEN"`, with `RREG` for the registers after | 24.8 |
 
 *It can wait* means the call can make the program wait: for a key, a disk, another task, or time to pass.
 

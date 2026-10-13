@@ -21,7 +21,7 @@ Read section 3.1. Then tick each rule, to say that you understand it and will ke
 | ☐ | If I burn myself: cool running water for ten minutes, and I tell an adult. |
 
 > **SIGNED:** I've read the manual's section 3.1, and I'll work by these rules. &nbsp; Builder: ________________ &nbsp;
-> Adult or teacher: ________________ &nbsp; Date: __________
+> Adult, teacher or second builder: ________________ &nbsp; Date: __________
 
 ✎ Which solder are you using: lead-free, or solder with lead? What does that change about how you work?
 

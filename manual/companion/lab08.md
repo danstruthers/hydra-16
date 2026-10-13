@@ -51,7 +51,7 @@
 
 ```text
 /> echo my window >/dev/label
-/> cat /dev/label
+/> cat /dev/label; echo
 ```
 
    ✎ Where on the screen did the name appear?

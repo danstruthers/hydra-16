@@ -717,6 +717,10 @@ sqrt 1.68325082306
 **note handler**, set with the `NOTIFY` call. The `tick` sample prints a dot a second until you press
 <kbd>CTRL</kbd>-<kbd>C</kbd>, and then, instead of just stopping, says how many seconds it ran.
 
+**Programs in C.** The SDK has a C side too: with the cc65 compiler on your PC (section 2.7), `reborn/sdk/c` builds C
+programs for the Hydra, and the samples in `/sd/0/sample/c` (`chorus`, `race`, `jukebox` and the rest) were made that
+way. Its `README.md` says how.
+
 ## 27.17 as's options and the labels file
 
 **The program's name.** `as stars.s` makes `stars`; `as stars.s /bin/stars` puts it straight in `/bin` (in fact in

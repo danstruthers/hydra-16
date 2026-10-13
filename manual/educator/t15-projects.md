@@ -120,9 +120,10 @@ C p c I0 o3 l4 r1 r1 r1 r1 [c d e c]2 [e f g2]2 [g8 a8 g8 f8 e c]2 [c <g> c2]2
 **Look for** a first comment that says how to use the command; behaviour that's sensible when the notebook
 doesn't exist yet; and a usage message.
 
-**Expect** one particular trap: the usage message itself. In rc, `[` begins a pattern, so
-`echo usage: note [-n]` stops with `bad [ in a pattern`. The message has to be in quotes. It's a good moment to
-ask what else rc has been doing to their words all along.
+**Expect** the usage message to want quotes. In rc, `[` and `]` make a pattern, and `[-n]` would be replaced by the
+name of any file in the current directory that it matched (when nothing matches, rc leaves the word alone, so the
+mistake hides until it bites). Keep the message in quotes. It's a good moment to ask what else rc has been doing to
+their words all along.
 
 **A worked solution**, with three options and a usage line:
 

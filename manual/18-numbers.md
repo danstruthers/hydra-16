@@ -139,6 +139,9 @@ The Hydra has nineteen **named bases**, each named by a letter (capital or small
 | `y` | 53 | `zyx`...`a` `0` `ABC`...`Z` | Balanced base 53 |
 | `m` | -13 | `DanielStphrus` | Balanced base -13, least digit first |
 
+(Base `m` is a joke with a point: its thirteen digits are the letters of the Hydra's designer's name, and it shows
+that a base can be negative.)
+
 ```session
 /> calc -b t 10
 101

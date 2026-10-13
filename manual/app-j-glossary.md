@@ -278,7 +278,7 @@ get a note together (27.16).
 
 **Recursion.** A function (or word) that calls itself (19.14).
 
-**Register.** A small memory inside the processor (A, X, Y ...: 24.3), or a chip's control location, or one of the
+**Register.** A small memory inside the processor (A, X, Y ...: 26.3), or a chip's control location, or one of the
 Hydra's own T, U, V and W (7.2).
 
 **Reset.** Starting the processor again from the beginning: the RESET button (7.1).
