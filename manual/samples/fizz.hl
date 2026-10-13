@@ -1,0 +1,14 @@
+; fizz.hl - the game of FizzBuzz: count, but say Fizz for the threes,
+; Buzz for the fives, and FizzBuzz for both
+
+(fun {fizz n} {cond
+  {(== 0 (mod n 15)) "FizzBuzz"}
+  {(== 0 (mod n 3)) "Fizz"}
+  {(== 0 (mod n 5)) "Buzz"}
+  {T n}})
+
+(fun {fizzbuzz n} {do
+  (each {i (range 1 (+ n 1))} (write (fizz i) " "))
+  (print)})
+
+(fizzbuzz 15)

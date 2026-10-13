@@ -1,0 +1,6 @@
+#!/bin/rc
+# ticker - write the time into a file every five seconds, until it's stopped
+while(~ 1 1) {
+	date >>/ram/ticker.log
+	sleep 5
+}

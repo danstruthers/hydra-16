@@ -63,6 +63,7 @@ t_len:      .res        2
 v_at:       .res        2                                   ; n!'s variable, its block, its number's length
 v_old:      .res        2
 n_t:        .res        2                                   ; (A length)
+n_test:     .res        1                                   ; (nh_lit: <> 0, the number only looked for, not pushed)
 d_len:      .res        2                                   ; (nst_del's)
 d_idx:      .res        1
 n_cnt:      .res        1                                   ; (A count)
@@ -1990,6 +1991,8 @@ nw_store:                                                   ; ( a-addr -- ) ( N:
 ; ---- The core's (num_vec: num_call's): .A the call
 
 nw_hook:
+            cmp         #5
+            beq         nh_test
             cmp         #1
             bcs         :+
             jmp         nh_lit
@@ -1998,6 +2001,14 @@ nw_hook:
             jmp         nh_read
 :
             jmp         nh_text
+
+; 5: is the word throw_name names a number of the library's?  C = 0: it is (nothing pushed: the shell's question
+; of a line's first word, shell.fl); C = 1, not one
+nh_test:
+            inc         n_test
+            jsr         nh_lit
+            stz         n_test
+            rts
 
 ; 0: the word throw_name names, a number in the base (a program's text: a bare one starts with a digit), pushed or
 ; compiled: C = 0; not one, C = 1.  A double Forth read past 32 bits (num_ovf: 4294967296.), its integer
@@ -2047,7 +2058,10 @@ nh_lit:
             lda         state
             ora         state + 1
             bne         @comp
+            lda         n_test                              ; (Only looked for: not pushed)
+            bne         :+
             jsr         nst_push
+:
             jsr         nst_back
             clc
             rts

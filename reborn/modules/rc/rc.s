@@ -450,9 +450,7 @@ src_new:
             inx
             cpx         #SRC_MAX
             bcc         :+
-            lda         #<s_deep
-            ldx         #>s_deep
-            jmp         rc_error_ax
+            jmp         deep_error
 :
             stx         src
             rts
@@ -648,7 +646,10 @@ prompt:
 ; Errors
 
 ; Error r0 (a message): said ("rc: it"), $status it, and the command ended (rc_abort)
-; The same, the message in .A, .X (low, high)
+; The same, the message in .A, .X (low, high); deep_error: "too deep" (sources, functions, saved values)
+deep_error:
+            lda         #<s_deep
+            ldx         #>s_deep
 rc_error_ax:
             sta         r0
             stx         r0 + 1
@@ -674,6 +675,7 @@ rc_abort:
             ldx         abort_sp
             txs
             jsr         redir_restore_all
+            jsr         pipe_reap                           ; (A pipeline cut short: its pipes closed, its stages waited for)
             lda         #0
             jsr         var_local_restore
 @pop:

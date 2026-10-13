@@ -52,8 +52,8 @@ Each language shows these errors in its own way:
 
 | Where | How an error shows |
 |---|---|
-| rc | The program's message; `$status` holds it (section 7.9) |
-| Assembly language | C = 1 after the call, and the code in A; `ERRSTR` gives the message (section 25.13) |
+| rc | The program's message; `$status` holds it (section 8.9) |
+| Assembly language | C = 1 after the call, and the code in A; `ERRSTR` gives the message (section 27.13) |
 | HyForth | An **ior** of -512 less the code (so `not found`, $20, is -544), which `throw` reports with its message; `ior>text` gives the message |
 | hylang | An error whose message is "*name*: *message*", and whose code (`&code`, `(error-code e)`) is the name in small letters without its `E_`: `:noent` |
 | HyBASIC | Error number 256 plus the code (so `not found` is 288), with its message (`ERR`, `ERR$`, `ERL`) |
@@ -64,7 +64,7 @@ hylang's (Appendix B).
 
 ## G.3 The numbers library's errors
 
-The numbers library (Chapter 17) has its own codes, which the languages show as their own errors:
+The numbers library (Chapter 18) has its own codes, which the languages show as their own errors:
 
 | Code | What it means |
 |---|---|
@@ -73,7 +73,7 @@ The numbers library (Chapter 17) has its own codes, which the languages show as 
 | 3 | Not a number |
 | 4 | No room for the result |
 | 5 | Outside the function's domain (like the square root of a negative number, for a real result) |
-| 6 | Not a base: a base string that names none (section 17.3) |
+| 6 | Not a base: a base string that names none (section 18.3) |
 | 7 | An integer is needed |
 | 8 | A real number is needed, not a complex one |
 | 9 | The library wasn't set up (in assembly language: `NUM_INIT` first) |

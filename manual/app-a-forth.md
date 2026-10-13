@@ -44,6 +44,23 @@ be used inside a definition. Words load with their library: the core is always t
 | `depth` | ( -- *u* ) | How many cells are on the stack |
 | `>r`, `r>`, `r@` (C) | ( *x* -- ) R: ( -- *x* ), ( -- *x* ) R: ( *x* -- ), ( -- *x* ) | To, from, a copy of, the return stack |
 
+For example:
+
+```session
+/> 1 2 3 .s
+<3> 1 2 3
+/> rot .s
+<3> 2 3 1
+/> over .s
+<4> 2 3 1 3
+/> 2drop 2drop depth .
+0
+/> 5 ?dup .s
+<2> 5 5
+/> 2drop 0 ?dup .s
+<1> 0
+```
+
 **Arithmetic**
 
 | Word | Stack | Does |
@@ -58,6 +75,21 @@ be used inside a definition. Words load with their library: the core is always t
 | `um/mod`, `fm/mod`, `sm/rem` | ( *ud u1* -- *u2 u3* ), ( *d n1* -- *n2 n3* ) | Divide a double by a cell: unsigned, floored, symmetric |
 | `s>d` | ( *n* -- *d* ) | A cell to a double |
 
+For example:
+
+```session
+/> 7 2 /mod . .
+3 1
+/> 100 7 3 */ .
+233
+/> -5 abs . 3 9 max . 3 9 min .
+5 9 3
+/> 5 negate . 7 2* . 7 2/ .
+-5 14 3
+/> 17 5 mod . 17 5 / .
+2 3
+```
+
 **Logic and comparisons**
 
 | Word | Stack | Does |
@@ -67,6 +99,19 @@ be used inside a definition. Words load with their library: the core is always t
 | `lshift`, `rshift` | ( *x1 u* -- *x2* ) | Shift the bits *u* places left, right |
 | `=`, `<`, `>`, `u<` | ( *x1 x2* -- *flag* ) | Equal; less, more (signed); less (unsigned) |
 | `0=`, `0<` | ( *x* -- *flag* ) | Zero; below zero |
+
+For example:
+
+```session
+/> 12 10 and . 12 10 or . 12 10 xor .
+8 14 6
+/> 1 4 lshift . 255 4 rshift .
+16 15
+/> 3 5 < . 5 5 = . -1 0< . 0 0= .
+-1 -1 -1 -1
+/> hex ff invert u. decimal
+FF00
+```
 
 **Memory**
 
@@ -84,6 +129,20 @@ be used inside a definition. Words load with their library: the core is always t
 | `here` | ( -- *addr* ) | The dictionary's next free byte |
 | `allot` | ( *n* -- ) | Reserve *n* bytes there |
 | `,`, `c,` | ( *x* -- ), ( *char* -- ) | Put a cell, a byte, there |
+
+For example:
+
+```session
+/> variable n  7 n !  n @ .
+7
+/> 3 n +!  n @ .
+10
+/> create row 10 , 20 , 30 ,
+/> row cell+ @ .
+20
+/> create buf 8 allot  buf 8 char * fill  buf 8 type
+********
+```
 
 **Text and numbers**
 
@@ -106,6 +165,23 @@ be used inside a definition. Words load with their library: the core is always t
 | `(` | ( "text)" -- ) | A comment, to `)` |
 | `\` | ( "text" -- ) | A comment, to the end of the line |
 | `word`, `source`, `>in` | | The input: a word of it; the line; the place in it |
+
+For example:
+
+```session
+/> char A . bl .
+65 32
+/> 65 emit space 66 emit cr
+A B
+/> s" Hydra" type cr
+Hydra
+/> : .hex ( u -- ) base @ swap hex u. base ! ;
+/> 255 .hex
+FF
+/> : .money ( n -- ) 0 <# # # [char] . hold #s [char] $ hold #> type ;
+/> 1234 .money
+$12.34
+```
 
 **Definitions and control**
 
@@ -140,6 +216,30 @@ be used inside a definition. Words load with their library: the core is always t
 | `included`, `include` | ( *c-addr u* -- ), ( "file" -- ) | Run a file of Forth |
 | `required`, `require` | ( *c-addr u* -- ), ( "file" -- ) | The same, once only |
 
+For example:
+
+```session
+/> : sign ( n -- ) dup 0< if drop ." negative" exit then 0= if ." zero" else ." positive" then ;
+/> -3 sign
+negative
+/> 0 sign
+zero
+/> : squares ( n -- ) 1+ 1 do i dup * . loop ;
+/> 5 squares
+1 4 9 16 25
+/> : halve ( n -- ) begin dup . 2/ dup 0= until drop ;
+/> 40 halve
+40 20 10 5 2 1
+/> : adder ( n "name" -- ) create , does> @ + ;
+/> 10 adder ten+
+/> 5 ten+ .
+15
+/> 7 ' dup execute * .
+49
+/> s" 2 3 + ." evaluate
+5
+```
+
 ## A.3 Core Extension (`coreext`)
 
 | Word | Stack | Does |
@@ -173,12 +273,51 @@ be used inside a definition. Words load with their library: the core is always t
 | `c"` (I C) | ( "text"" -- *c-addr* ) | A counted string |
 | `s\"` (I) | ( "text"" -- *c-addr u* ) | A string with escapes: `\n`, `\t`, `\"` ... |
 
+For example:
+
+```session
+/> 1 2 nip .
+2
+/> 10 20 30 2 pick .s
+<4> 10 20 30 10
+/> 5 0 10 within . 15 0 10 within .
+-1 0
+/> 0 value lives
+/> 3 to lives lives .
+3
+/> : medal ( n -- ) case 1 of ." gold" endof 2 of ." silver" endof ." thanks for coming" endcase ;
+/> 1 medal
+gold
+/> 7 medal
+thanks for coming
+/> 42 6 .r
+    42
+/> defer greet
+/> : hi ." hi" ;
+/> ' hi is greet
+/> greet
+hi
+```
+
 ## A.4 Exception (`exception`)
 
 | Word | Stack | Does |
 |---|---|---|
 | `catch` | ( *i*x xt* -- *j*x* 0 \| *i*x n* ) | Run *xt*; 0 if it worked, or the error it threw |
 | `throw` | ( *k*x n* -- *k*x* \| *i*x n* ) | Throw error *n* (nothing if it's 0) |
+
+For example:
+
+```session
+/> : risky ( n -- ) dup 0= if 99 throw then 100 swap / . ;
+/> 5 risky
+20
+/> : try ( n -- ) ['] risky catch ?dup if ." error " . drop then ;
+/> 5 try
+20
+/> 0 try
+error 99
+```
 
 ## A.5 File Access (`file`)
 
@@ -197,6 +336,19 @@ be used inside a definition. Words load with their library: the core is always t
 | `flush-file` | ( *fileid* -- *ior* ) | Write what's waiting |
 | `delete-file`, `rename-file` | ( *c-addr u* -- *ior* ), ( *c-addr1 u1 c-addr2 u2* -- *ior* ) | Remove; rename |
 | `include-file` | ( *fileid* -- ) | Run an open file as Forth |
+
+For example, a file written and read back:
+
+```session
+/> s" /ram/t.txt" w/o create-file throw constant f
+/> s" first line" f write-line throw
+/> f close-file throw
+/> s" /ram/t.txt" r/o open-file throw constant g
+/> pad 80 g read-line throw drop pad swap type cr
+first line
+/> g close-file throw
+/> s" /ram/t.txt" delete-file throw
+```
 
 An ior from HyForth's file words is 0, or -512 less the system's error code (Appendix G), so `throw` reports it.
 
@@ -219,6 +371,23 @@ An ior from HyForth's file words is 0, or -512 less the system's error code (App
 | `synonym` | ( "new" "old" -- ) | Another name for a word |
 | `traverse-wordlist` | ( *i*x xt wid* -- *j*x* ) | Run *xt* for each word of a word list |
 | `name>string`, `name>interpret`, `name>compile` | ( *nt* -- ... ) | A word's name, and how it runs |
+
+For example:
+
+```session
+/> 1 2 3 .s
+<3> 1 2 3
+/> : sq dup * ;
+/> see sq
+: sq dup * ;
+/> [defined] sq .
+-1
+/> synonym squared sq
+/> 4 squared .
+16
+/> libs
+forth coreext exception file tools shell
+```
 
 ## A.7 Facility (`facility`)
 
@@ -248,6 +417,24 @@ An ior from HyForth's file words is 0, or -512 less the system's error code (App
 | `begin-structure`, `end-structure` | ( "name" -- *addr* 0 ), ( *addr n* -- ) | A structure's start and end |
 | `+field`, `field:`, `cfield:` | ( *n1 n2* "name" -- *n3* ), ( *n1* "name" -- *n2* ) | Its fields |
 
+For example:
+
+```session
+/> lib facility
+/> form . .
+80 24
+/> time&date . . . . . .
+2000 1 1 0 0 5
+/> : colours ( -- ) red color ." red " green bright color ." bright green " plain cr ;
+/> colours
+red bright green
+/> begin-structure point field: p.x field: p.y end-structure
+/> create spot point allot
+/> 3 spot p.x ! 4 spot p.y !
+/> spot p.x @ . spot p.y @ . point .
+3 4 4
+```
+
 ## A.8 String (`string`)
 
 | Word | Stack | Does |
@@ -260,6 +447,20 @@ An ior from HyForth's file words is 0, or -512 less the system's error code (App
 | `search` | ( *c-addr1 u1 c-addr2 u2* -- *c-addr3 u3 flag* ) | Find the second string in the first |
 | `sliteral` (I C) | ( *c-addr u* -- ) | Compile a string |
 | `replaces`, `substitute`, `unescape` | | Fill in `%name%`s in a string |
+
+For example:
+
+```session
+/> lib string
+/> s" hello   " -trailing type char | emit cr
+hello|
+/> s" hello world" 6 /string type cr
+world
+/> s" apple" s" banana" compare .
+-1
+/> s" hello world" s" wor" search . type cr
+-1 world
+```
 
 ## A.9 Search-Order (`search`)
 
@@ -281,6 +482,18 @@ An ior from HyForth's file words is 0, or -512 less the system's error code (App
 `d2/`, `d=`, `d<`, `du<`, `dmax`, `dmin`, `d>s`, `d.`, `d.r`, `m*/` and `2rot`, as the standard has them: the
 double-cell (32-bit) versions of the cell words.
 
+For example:
+
+```session
+/> lib double
+/> 1000 1000 um* d.
+1000000
+/> 1000 1000 um* 2dup d+ d.
+2000000
+/> 123456. d.
+123456
+```
+
 ## A.11 Memory-Allocation, Locals and Block
 
 | Word | Stack | Does |
@@ -297,13 +510,26 @@ double-cell (32-bit) versions of the cell words.
 | `list` | ( *u* -- ) | Show a block |
 | `open-blocks` | ( *c-addr u* -- ) | Use a file of blocks |
 
+For example:
+
+```session
+/> lib locals
+/> : hyp2 {: a b -- c :} a a * b b * + ;
+/> 3 4 hyp2 .
+25
+/> lib memory
+/> 100 allocate throw constant room
+/> room 100 erase
+/> room free throw
+```
+
 ## A.12 The shell (`shell`)
 
 | Word | Stack | Does |
 |---|---|---|
 | `%` | ( "line" -- ) | The rest of the line is rc's |
 | `cd` | ( "dir" -- ) | Change directory |
-| `bind`, `mount`, `unmount`, `newns` | ( "args" -- ) | The namespace, as rc's (section 7.14) |
+| `bind`, `mount`, `unmount`, `newns` | ( "args" -- ) | The namespace, as rc's (section 8.14) |
 | `prompt`, `prompt2` | ( *c-addr u* -- ) | The prompt's format; the second prompt's |
 | `status` | ( -- *n* ) | The last command's status |
 | `exit` (I) | | At the prompt: leave HyForth; in a definition, the standard's `exit` |
@@ -316,6 +542,22 @@ double-cell (32-bit) versions of the cell words.
 | `|` | ( *xt* "line" -- ) | What a word prints, into a command |
 | `piped` | ( *xt c-addr u* -- ) | The same, the command a string |
 | `send` | ( "n line" -- ) | Type a line into window *n* |
+
+For example:
+
+```session
+/> s" date" sh-out type
+2000-01-01 00:00:04
+/> s" colour" s" blue" setenv
+/> s" colour" getenv type cr
+blue
+/> status .
+0
+/> : hello ." Hello from Forth" cr ;
+/> ' hello | wc
+      1       3      17
+/> cd /rom
+```
 
 ## A.13 The Hydra (`hydra`)
 
@@ -339,6 +581,22 @@ double-cell (32-bit) versions of the cell words.
 | `ior>text` | ( *ior* -- *c-addr u* ) | An error's message |
 | `sys` | ( *addr a x y* -- *a x y p* ) | Call machine code, with registers |
 | `sys-`*name* | | Each system call (Appendix K): its inputs, in order, the first deepest; its outputs, and an ior if it can fail |
+
+For example:
+
+```session
+/> lib hydra
+/> s" echo hi" sh .
+hi
+0
+/> s" echo one two" run .
+one two
+0
+/> sys-getpid .
+2
+/> -514 ior>text type cr
+invalid argument
+```
 
 The `sys-` words are: `sys-sysinfo` `sys-errstr` `sys-kmesg` `sys-reboot` `sys-exits` `sys-wait` `sys-spawn`
 `sys-getpid` `sys-yield` `sys-sleep` `sys-sleep-until` `sys-ticks` `sys-preempt-off` `sys-preempt-on` `sys-taskinfo`
@@ -380,11 +638,34 @@ The number stack's words; `N:` shows it. Any number Forth's cells can't hold goe
 | `n>str` | ( -- *c-addr u* ) N: ( *x* -- ) | As a string |
 | `n.s` | ( -- ) | Show the number stack |
 | `>n` | ( *c-addr u* -- *flag* ) N: ( -- *x* \| ) | Read a number from a string |
-| `set-base`, `get-base` | ( *c-addr u* -- ), ( -- *c-addr u* ) | The base (any of Chapter 17's) |
+| `set-base`, `get-base` | ( *c-addr u* -- ), ( -- *c-addr u* ) | The base (any of Chapter 18's) |
 | `nformat` | ( *c-addr u* -- ) N: ( *x1 ... xn* -- ) | Print a format, each `{}` a number |
 | `nsqrt` `nexp` `nlog` `nsin` `ncos` `ntan` `natan` `npi` | N: | The math functions |
 | `digits` | ( -- *addr* ) | The variable holding their precision (12) |
 | `nliteral` (I C), `nconstant`, `nvariable`, `nvalue`, `n@`, `n!` | | Numbers in definitions, constants, variables |
+
+For example:
+
+```session
+/> lib numbers
+/> 1000000 ndup n* n.
+1000000000000
+/> 2/3 1 s>n n+ n.
+5/3
+/> 1.25 2 s>n n* n.
+2.5
+/> 1 s>n 3 s>n n/ 4 to-fixed n.
+0.3333
+/> 30 s>n nfib n.
+832040
+/> 2 s>n nsqrt n.
+1.41421356237
+/> 255 s>n s" x" n.base
+FF
+```
+
+Once the library's loaded, a line at the shell's prompt can start with any of its numbers, as `1000000` and `2/3`
+do here (section 20.8).
 
 ## A.15 Sound (`sound`)
 
@@ -394,7 +675,7 @@ The number stack's words; `N:` shows it. Any number Forth's cells can't hold goe
 `snd-sens` ( *ch pms ams* -- ), `snd-noise` ( *n* -- ), `snd-wave` ( *ch w width* -- ), `snd-lfo` ( *rate pmd amd wave*
 -- ), `snd-regs` ( *c-addr* -- ), `snd-play` ( *c-addr u times* -- *status* ), `snd-mml` ( *ch c-addr u* -- *status* ),
 `snd-chord` ( *ch c-addr u* -- *status* ), `note-of` ( *c-addr u* -- *n* ), `tune` ( *c-addr u ch tempo* -- ): section
-19.6.
+20.6.
 
 ## A.16 Bits, random numbers and the disassembler
 
@@ -405,11 +686,26 @@ The number stack's words; `N:` shows it. Any number Forth's cells can't hold goe
 | `rand`, `rand32` | ( -- *u* ), ( -- *ud* ) | A random number (`random`) |
 | `random` | ( *u1* -- *u2* ) | One from 0 to *u1* - 1 |
 | `rseed` | ( *ud* -- ) | Start the random numbers |
-| `disasm` | ( *addr u* -- ) | Disassemble *u* instructions from *addr* (`disasm`: Chapter 26) |
+| `disasm` | ( *addr u* -- ) | Disassemble *u* instructions from *addr* (`disasm`: Chapter 28) |
+
+For example:
+
+```session
+/> lib bits
+/> 5 0 tbit . .
+-1 5
+/> 0 3 sbit .
+8
+/> lib random
+/> 6 random 1+ .
+3
+/> 6 random 1+ .
+5
+```
 
 ## A.17 The device libraries
 
-These are Forth source files, in `/lib/forth`. Their words are described in Chapter 19:
+These are Forth source files, in `/lib/forth`. Their words are described in Chapter 20:
 
 | Library | Words |
 |---|---|

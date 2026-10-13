@@ -1,13 +1,35 @@
 # Chapter 3. Tools, Parts and Soldering
 
-Building a Hydra means soldering about a thousand connections, one at a time. That sounds like a lot, but each one
-takes only a few seconds, and after the first fifty or so your hands will know what to do. This chapter gets you
-ready: the tools you need, how to stay safe, how to recognize every kind of part in the kit, and how to make a good
-solder joint, and fix a bad one.
+Building a Hydra means soldering about 2,200 connections on the main board, and 240 more on a memory card, one at a
+time. That sounds like a lot, and it is: this is a big project, not an afternoon's. But each joint takes only a few
+seconds, more than half of them are in neat rows along the chip sockets, and after the first fifty or so your hands
+will know what to do. This chapter gets you ready: the tools you need, how to stay safe, how to recognize every kind
+of part in the kit, and how to make a good solder joint, and fix a bad one.
 
-> **FOR TEACHERS:** Plan on 8 to 12 hours of soldering for a first-time builder, best spread over several sessions
-> of an hour or two. Before students touch the Hydra's board, have each one practise on a scrap circuit board or an
-> inexpensive "learn to solder" kit until their joints look like the good one in Figure 3-3.
+> **IN THIS CHAPTER:** You'll learn the tools, the safety rules, how to recognize each kind of part and read its
+> value, and how to make, judge and repair a solder joint. **You need:** nothing yet. Read this chapter before you
+> buy tools or open the kit.
+
+**How long will it take?** At a careful beginner's pace, the soldering alone is eight to ten hours. Fitting the parts,
+checking your work and cleaning up take about as long again. So plan on **fifteen to twenty hours**, in sessions of
+an hour or two, and don't hurry: a joint made in a rush is the one you'll be hunting for later.
+
+| Stage (Chapter 4) | Parts | Joints |
+|---|---|---|
+| Step 1: the surface-mount RAM chips (often done for you) | 4 | 128 |
+| Step 2: the resistors and resistor networks | 27 | 82 |
+| Step 3: the ceramic capacitors | 78 | 156 |
+| Step 4: the chip sockets | 64 | 1,282 |
+| Step 5: the crystal, the reset chip, the pin headers and sockets | 21 | 148 |
+| Step 6: the electrolytic capacitors | 13 | 26 |
+| Step 7: the connectors | 9 | 412 |
+| **The main board** | **216** | **2,234** |
+| A memory card (section 4.7) | 13 | 240 |
+
+> **FOR TEACHERS:** A Hydra is a term's project for a small group, not a lesson's. Before students touch the Hydra's
+> board, have each one practise on a scrap circuit board or an inexpensive "learn to solder" kit until their joints
+> look like the good one in Figure 3-3. The *Educator's Course Guide* has a plan for sharing the build among a
+> group, and a safety policy to adapt; the *Student Companion* has a build log with a box to tick for every part.
 
 ## 3.1 Safety first
 
@@ -23,9 +45,17 @@ Follow these rules every time you solder:
   use a small fan or a fume extractor to move the smoke away from your face.
 * **Wash your hands** when you finish, and don't eat or drink while you solder. This matters most if your solder
   contains lead.
+* **Choose your solder with care.** Solder with lead in it ("63/37" or "60/40") flows more easily, but lead is a
+  poison if it gets into your body. **Lead-free** solder is the safer choice, and the right one for a school or
+  for a young builder. It needs a slightly hotter iron (about 370 °C) and a little more patience.
 * **Keep your workspace clear.** Use a heat-proof mat, keep cables away from the hot iron, and keep a damp sponge or
-  brass tip cleaner ready.
+  brass tip cleaner ready. Tie back long hair, and roll up loose sleeves.
+* **Never catch a falling iron.** Step back and let it fall. A mark on the floor is better than a burn on your hand.
 * **The power supply stays off and unplugged** whenever you are soldering, inserting chips or changing jumpers.
+
+**If you burn yourself**, put the burn under cool running water straight away, and keep it there for at least ten
+minutes. Don't use ice, and don't put cream or butter on it. Tell an adult. A burn bigger than a coin, or one that
+blisters, needs a doctor or a nurse to look at it.
 
 ## 3.2 The tools you need
 
@@ -49,9 +79,11 @@ Follow these rules every time you solder:
 ## 3.3 Static electricity
 
 When you walk across a carpet and get a shock from a doorknob, that's static electricity: a spark of thousands of
-volts. You can feel a spark of about 3,000 volts. A spark too small to feel can still destroy a chip. Most of the
-Hydra's chips are made with **CMOS** technology (the "C" in 65C02), which uses very little power but is easily
-damaged by static.
+volts. You can feel a spark of about 3,000 volts. A spark too small to feel can still destroy a chip. The Hydra's
+processor, its memory chips and its input and output chips are made with **CMOS** technology (the "C" in 65C02),
+which uses very little power but is easily damaged by static. Most of the small logic chips (the ones whose names
+start with 74F or 74LS) are an older, tougher kind, but it's simplest, and safest, to treat every chip the same
+careful way.
 
 To protect the chips:
 

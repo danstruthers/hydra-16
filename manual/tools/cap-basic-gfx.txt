@@ -1,4 +1,4 @@
-## Chapter 23's picture: HyBASIC's graphics (node manual/tools/capture.js manual/tools/cap-basic-gfx.txt)
+## Chapter 24's picture: HyBASIC's graphics (node manual/tools/capture.js manual/tools/cap-basic-gfx.txt)
 #! --vera --rtc
 basic
 SCREEN 13

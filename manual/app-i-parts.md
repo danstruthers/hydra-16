@@ -98,7 +98,7 @@ fits them, with a box to tick as each one goes in. Then it says what each chip d
 
 | Chips | Part | Its job |
 |---|---|---|
-| U1 | W65C02S | The processor (Chapter 24) |
+| U1 | W65C02S | The processor (Chapter 26) |
 | U2 | 65C22 VIA | The tick (its timer), the SPI bus, and the I/O header J27 |
 | U3 | 65C51 ACIA | The serial port |
 | U5 | MAX232 | Turns the ACIA's 5-volt signals into the serial cable's RS-232 ones, and back |

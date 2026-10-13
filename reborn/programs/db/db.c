@@ -22,6 +22,10 @@
 **     q              quit: a program db started is killed; a task it attached to runs on
 **   While it's stopped db's breakpoints are out of its memory (d and m show its own bytes); they go in as it runs
 ** (c, u, and n over a JSR).  A step stops where the kernel can't step (in a call: E_BUSY): c runs it on.
+**   n runs a subroutine of the program's own in place (a BRK of db's where it returns to), so it can be stepped,
+** or run on, wherever it stops in it (Ctrl-C, a breakpoint).  The kernel runs a call of its own whole (and a
+** subroutine called from a ROM, where db can write no BRK): stopped in that, the step is still out; s or n runs it
+** on to its end, and c past it.
 */
 
 #include <stdio.h>
@@ -37,6 +41,9 @@
 
 #define BP_MAX      16          /* Breakpoints, at most */
 #define NEAR        0x100       /* A symbol names an address up to this far past it */
+
+#define RAM_END     0xA000      /* A BRK can be written below here: RAM */
+#define KERNEL      0xE0        /* A JSR here or above (its address's high byte) is a call of the kernel's */
 
 #define OP_BRK      0x00
 #define OP_JSR      0x20
@@ -56,6 +63,8 @@ static struct hy_regs r;
 static volatile unsigned char interrupted;
 static struct bp bps[BP_MAX];
 static unsigned char nbp;
+static unsigned char out;               /* A step over the kernel ran is still out (it was stopped before its end) ... */
+static unsigned over;                   /*   and where it goes on to */
 static unsigned dnext, mnext;           /* Where d and m go on from */
 static char line[128];
 static unsigned char buf[16];
@@ -244,9 +253,11 @@ static void ended (void)
     exit (0);
 }
 
-/* Wait for it to stop (Ctrl-C stops it), and take its frame; if it ends, db does */
-static void waitstop (void)
+/* Wait for it to stop (Ctrl-C stops it), and take its frame; if it ends, db does.  1: Ctrl-C stopped it */
+static unsigned char waitstop (void)
 {
+    unsigned char sent = 0;
+
     for (;;) {
         r.a = task;
         r.r[0] = (unsigned) info;
@@ -258,11 +269,30 @@ static void waitstop (void)
         }
         if (interrupted) {
             interrupted = 0;
+            sent = 1;
             cmd ("stop\n");
         }
         hy_yield ();
     }
     getframe ();
+    return sent;
+}
+
+/* It's started, its breakpoints in but at its PC, and waited for; then they're out.  1: Ctrl-C stopped it; -1:
+** not started (said) */
+static int run (void)
+{
+    int k;
+
+    bp_in (pc ());
+    if (cmd ("start\n") < 0) {
+        printf ("db: %s\n", why ());
+        k = -1;
+    } else {
+        k = waitstop ();
+    }
+    bp_out ();
+    return k;
 }
 
 /* Why a step was refused */
@@ -277,25 +307,76 @@ static void refused (void)
     }
 }
 
-/* One step ("step\n" or "next\n"): its breakpoints in over a JSR's subroutine.  0, or -1 (refused: said) */
+/* One step ("step\n" or "next\n").  0; 1: stopped before the step's end (Ctrl-C, a breakpoint, a BRK of its own);
+** -1: refused (said).
+**   A JSR's subroutine run whole (next's; a call of the kernel's always is), where db can write a BRK after the
+** JSR and the subroutine is the program's own: the JSR stepped (the kernel's step: into it), a BRK where it
+** returns to, and it's started, its breakpoints in.  It's done when it stops there with its stack as it was (a
+** subroutine that calls itself comes back there with more on it: that instruction's stepped, and on).  No step of
+** the kernel's is out meanwhile, so it can be stepped or run on wherever it stops in the subroutine.
+**   Else the kernel's step runs it whole, out of line: stopped before its end, that step stays out (out; the
+** kernel steps nothing till it ends).  A step then runs it on to its end, where it goes on to (over) */
 static int step (const char* how)
 {
-    unsigned char op = 0;
+    unsigned char op[3];
+    unsigned char s, whole, tmp, tin;
+    unsigned at, ret;
     int k;
 
-    peek (pc (), &op, 1);
-    if (op == OP_JSR && how[0] == 'n') {
-        bp_in (pc ());
+    if (out) {                                          /* The step over that's out: on, to its end */
+        if ((k = run ()) != 0 || pc () != over) {
+            return k < 0 ? -1 : 1;
+        }
+        out = 0;
+        return 0;
     }
-    k = cmd (how);
-    if (k == 0) {
-        waitstop ();
+    at = pc ();
+    ret = at + 3;
+    s = frame[HY_TF_S];
+    op[0] = 0;
+    peek (at, op, 3);
+    whole = op[0] == OP_JSR && (how[0] == 'n' || op[2] >= KERNEL);
+    if (!whole || op[2] >= KERNEL || ret >= RAM_END) {  /* The kernel's step */
+        if (whole) {
+            bp_in (at);
+        }
+        if (cmd (how) < 0) {
+            bp_out ();
+            refused ();
+            return -1;
+        }
+        k = waitstop ();
+        bp_out ();
+        if (whole && (pc () != ret || frame[HY_TF_S] != s)) {
+            out = 1;
+            over = ret;
+        }
+        return k | out;
     }
-    bp_out ();
-    if (k < 0) {
+    if (cmd ("step\n") < 0) {                           /* Into its subroutine */
         refused ();
+        return -1;
     }
-    return k;
+    waitstop ();
+    for (;;) {
+        if (bpat (pc ()) >= 0) {                        /* (A breakpoint where it is now) */
+            return 1;
+        }
+        tin = bpat (ret) < 0 && peek (ret, &tmp, 1) == 1 && poke (ret, OP_BRK) == 0;
+        k = run ();
+        if (tin) {
+            poke (ret, tmp);
+        }
+        if (k != 0 || pc () != ret) {
+            return k < 0 ? -1 : 1;
+        }
+        if (frame[HY_TF_S] >= s) {
+            return 0;
+        }
+        if (!tin || (k = step ("step\n")) != 0) {       /* (Deeper: a breakpoint of db's there; or on) */
+            return k ? k : 1;
+        }
+    }
 }
 
 /* Stopped after it ran: where, and why */
@@ -313,12 +394,17 @@ static void stopped (void)
     regs ();
 }
 
-/* c: on till it stops.  At a breakpoint, a step first (its own byte there); at a BRK of its own, its note */
+/* c: on till it stops.  At a breakpoint, a step first (its own byte there); at a BRK of its own, its note.  A
+** step over that's out ends where it goes on to, stopped: it's run on from there */
 static void cont (void)
 {
     unsigned char op = 1;
+    int k;
 
-    if (bpat (pc ()) >= 0 && step ("step\n") < 0) {
+    if (bpat (pc ()) >= 0 && (k = step ("step\n")) != 0) {
+        if (k > 0) {
+            stopped ();
+        }
         return;
     }
     peek (pc (), &op, 1);
@@ -327,12 +413,16 @@ static void cont (void)
     }
     bp_in (0xFFFF);
     interrupted = 0;
-    if (cmd ("start\n") < 0) {
-        printf ("db: %s\n", why ());
-        bp_out ();
-        return;
+    for (;;) {
+        if (cmd ("start\n") < 0) {
+            printf ("db: %s\n", why ());
+            break;
+        }
+        if (waitstop () || !out || pc () != over) {
+            break;
+        }
+        out = 0;
     }
-    waitstop ();
     if (op == OP_BRK) {
         cmd ("break\n");
     }
@@ -440,7 +530,7 @@ static unsigned char command (char* s)
     char* a1 = strtok (0, " \t\n");
     char* a2 = strtok (0, " \t\n");
     unsigned a, n, i;
-    int k;
+    int k, j;
 
     interrupted = 0;
     if (!c) {
@@ -455,11 +545,14 @@ static unsigned char command (char* s)
     case 'n':
         n = count (a1, 1);
         while (n-- && !interrupted) {
-            if (step (*c == 's' ? "step\n" : "next\n") < 0) {
+            if ((k = step (*c == 's' ? "step\n" : "next\n")) < 0) {
                 break;
             }
-            if ((k = bpat (pc ())) >= 0) {
-                printf ("breakpoint %d\n", k + 1);
+            if ((j = bpat (pc ())) >= 0) {
+                printf ("breakpoint %d\n", j + 1);
+                break;
+            }
+            if (k) {
                 break;
             }
             if (n) {
@@ -479,7 +572,7 @@ static unsigned char command (char* s)
             break;
         }
         while (pc () != a && !interrupted) {
-            if (step ("next\n") < 0 || bpat (pc ()) >= 0) {
+            if (step ("next\n") != 0 || bpat (pc ()) >= 0) {
                 break;
             }
         }
@@ -498,7 +591,7 @@ static unsigned char command (char* s)
             puts ("there's one there");
         } else if (nbp == BP_MAX) {
             puts ("no more breakpoints");
-        } else if (a >= 0xA000) {
+        } else if (a >= RAM_END) {
             puts ("not in RAM: no breakpoint");
         } else {
             bps[nbp].addr = a;

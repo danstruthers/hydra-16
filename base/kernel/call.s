@@ -14,7 +14,8 @@
 ;
 ; kcopy moves bytes between this task's memory and another's, each side as that task sees it (its own RAM, its
 ; RAM bank, its paged ROM bank): with T = the source for a byte's read and T = the destination for its write,
-; each task's pointer in its own zero page (KC_PTR).  IRQs are off for a burst of 4 bytes at most.
+; each task's pointer in its own zero page (KC_PTR).  IRQs are off for a burst of 4 bytes at most; and there's no
+; task switch till the copy is done, so no two copies overlap (each end has one KC_PTR and one KC_PARTNER).
 ;
 ; ROMREAD copies from any paged ROM bank, for a module run in place, whose own bank is at $A000 meanwhile.
 
@@ -151,10 +152,17 @@ K_KDISPATCH:
 ; to here.  IN: IRQs on; task .A not running, nor in a kcopy of its own.  OUT: C = 0.  Modifies .A, .X, .Y,
 ; K_TMP, K_TMP2, K_TASK, K_CNT.  (Both tasks' U is the one in effect now: a buffer in a shared bank works when
 ; they agree.)
+;   It holds the CPU (PREEMPT_OFF's count: interrupts go on) till it's done.  Each end's KC_PTR and KC_PARTNER
+; are this copy's from its start to its end, and a task that isn't running can still become an end of another
+; copy before this one is done: the kernel task is the far end of KMESG's (in its caller's task: kdev's, for
+; /dev/kmesg), and the near end of every KCALL's own (SPAWN's path, say) for whoever asks next.  Switched out
+; between two bursts, KMESG's copy came back to find SPAWN's partner in the kernel task's zero page, and went on
+; in a third task's zero page and stack.
 ;   Bursts of 4 bytes, unrolled (each byte: T to one task, then the other; .X = the task to switch to, read from
 ; the zero page we're in); then the 0-3 left, a byte at a time.  .Y indexes both ends; at its wrap, both ends'
 ; pointers move on a page.
 K_KCOPY:
+            inc         TK_PREEMPT                          ; (No task switch till @done.  Keeps C)
             sta         K_TASK
             lda         #0
             rol
@@ -269,6 +277,7 @@ K_KCOPY:
             bra         @rest
 
 @done:
+            jsr         K_PREEMPT_ON                        ; (A switch that came due meanwhile: now)
             clc
             rts
 

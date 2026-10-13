@@ -1,0 +1,20 @@
+## Chapter 6's pictures: a first file in the screen editor (node manual/tools/capture.js manual/tools/cap-first.txt)
+edit /ram/poem.txt
+!snap first-edit1
+!raw Roses are red,\r
+!quiet
+!raw Violets are blue,\r
+!quiet
+!raw The Hydra has sixteen heads,\r
+!quiet
+!raw And one of them's for you.
+!snap first-edit2
+!raw ^O
+!quiet
+!snap first-edit3
+!raw \r
+!quiet
+!snap first-edit4
+!raw ^X
+!quiet
+cat /ram/poem.txt

@@ -10,7 +10,7 @@ choices. *n* and *x* are numbers, *s$* a string, *v* a variable, *f* a file numb
   without, it's done at once. A label (a name and a `:`) can mark a line instead of a number, for `GOTO` and `GOSUB`.
 * **Names.** Letters, digits, `_` and `.`, a letter first; capitals and small letters are the same. A name ending in
   `$` is a string's; any other a number's (the endings `%`, `&`, `!` and `#` are allowed, and mean a number).
-* **Numbers.** Chapter 17's, in any of its forms, and `&H`, `&O`, `&B` and `E` notation. Every number variable can hold
+* **Numbers.** Chapter 18's, in any of its forms, and `&H`, `&O`, `&B` and `E` notation. Every number variable can hold
   any kind of number: `INTEGER`, `LONG`, `SINGLE`, `DOUBLE` and `NUMBER` all mean "a number".
 * **Strings.** In double quotes. `+` joins them.
 * **Comments.** `REM`, or `'`, to the end of the line.
@@ -29,7 +29,7 @@ choices. *n* and *x* are numbers, *s$* a string, *v* a variable, *f* a file numb
 | `ARG$` | `ARG$(n)` | A program's argument *n* (0: its file's name) |
 | `AS` | | In `DIM`, `OPEN`, `NAME` and `TYPE` |
 | `ASC` | `ASC(s$)` | The code of the first character |
-| `ASM` | `ASM` ... `END ASM` | Assembly language in the program (Chapter 25); `CALL ASM` *label* calls it |
+| `ASM` | `ASM` ... `END ASM` | Assembly language in the program (Chapter 27); `CALL ASM` *label* calls it |
 | `ATN` | `ATN(x)` | The arctangent |
 | `BANK` | `BANK n`, `BANK()` | Which RAM bank `PEEK` and `POKE` see at $8000 |
 | `BASE` | `BASE b$`; `OPTION BASE 0` \| `1` | The base numbers are read and shown in; arrays' lowest index |
@@ -66,7 +66,7 @@ choices. *n* and *x* are numbers, *s$* a string, *v* a variable, *f* a file numb
 | `DIM` | `DIM [SHARED]` *name*[`(`*bounds*`)`] [`AS` *type*], ... | Arrays, and variables of a type |
 | `DIR$` | `DIR$(path$)`, `DIR$` | A directory's first name; the next |
 | `DO` | `DO [WHILE` \| `UNTIL` *c*`]` ... `LOOP [WHILE` \| `UNTIL` *c*`]` | A loop |
-| `DRAW` | `DRAW s$` | Draw with moves (section 23.6) |
+| `DRAW` | `DRAW s$` | Draw with moves (section 24.6) |
 | `EDIT` | `EDIT [label]` | Edit the program in the screen editor |
 | `ELSE`, `ELSEIF` | | In `IF` |
 | `END` | `END`; `END IF` \| `SELECT` \| `SUB` \| `FUNCTION` \| `TYPE` | End the program; end a block |
@@ -157,7 +157,7 @@ choices. *n* and *x* are numbers, *s$* a string, *v* a variable, *f* a file numb
 | `RREG` | `RREG [a] [, x] [, y] [, p]` | The registers after the last `SYS` |
 | `RUN` | `RUN` | Run the program |
 | `SAVE` | `SAVE "file"` | Keep the program |
-| `SCREEN` | `SCREEN n` | A graphics mode: 0, 1, 2, 7, 12 or 13 (section 23.6) |
+| `SCREEN` | `SCREEN n` | A graphics mode: 0, 1, 2, 7, 12 or 13 (section 24.6) |
 | `SEEK` | `SEEK [#]f, pos`; `SEEK(f)` | The place in a file |
 | `SELECT` | `SELECT CASE` *x* | (`CASE`) |
 | `SGN` | `SGN(x)` | -1, 0 or 1 |
@@ -198,7 +198,155 @@ choices. *n* and *x* are numbers, *s$* a string, *v* a variable, *f* a file numb
 | `WRITE` | `WRITE [#f,] items` | Items, strings in quotes, commas between |
 | `XOR` | *a* `XOR` *b* | True if one is, not both |
 
-## C.3 Errors
+## C.3 Examples
+
+Each of these was typed into HyBASIC, as it is here. The ones with line numbers are programs, run with `RUN`.
+
+### Numbers and printing
+
+```session
+> PRINT 7 / 2; 7 \ 2; 7 MOD 2
+ 7/2  3  1
+> PRINT 2 ^ 100
+ 1267650600228229401496703205376
+> PRINT FIXED(22 / 7, 4), RATIONAL(0.75)
+ 3.1428        3/4
+> PRINT INT(-2.5); FIX(-2.5); CINT(2.5); SGN(-9); ABS(-9)
+-3 -2  2 -1  9
+> PRINT SQR(16); SQR(-16); GCD(12, 18); FIB(30)
+ 4  4i  6  832040
+> PRINT HEX$(255); " "; OCT$(8); " "; STR$(255, "b")
+FF 10 11111111
+> PRINT USING "###.##"; 3.14159
+  3.14
+> PRINT "A"; TAB(10); "B"; SPC(3); "C"
+A        B   C
+> WRITE "Sam", 12
+"Sam",12
+```
+
+### Strings
+
+```session
+> A$ = "Hydra-16"
+> PRINT LEN(A$); LEFT$(A$, 5); " "; RIGHT$(A$, 2); " "; MID$(A$, 2, 3)
+ 8 Hydra 16 ydr
+> PRINT INSTR(A$, "-"); UCASE$(A$); " "; LCASE$(A$)
+ 6 HYDRA-16 hydra-16
+> PRINT ASC("A"); CHR$(66); VAL("42 apples") + 1; STR$(7) + "!"
+ 65 B 43  7!
+> PRINT STRING$(5, "*"); SPACE$(2); LTRIM$("   x")
+*****  x
+```
+
+### Decisions and loops
+
+```session
+> 10 FOR I = 10 TO 1 STEP -3 : PRINT I; : NEXT : PRINT
+> 20 N = 1 : DO WHILE N < 50 : N = N * 2 : LOOP : PRINT N
+> 30 SELECT CASE N
+> 40   CASE 1 TO 9 : PRINT "small"
+> 50   CASE IS > 60 : PRINT "big"
+> 60   CASE ELSE : PRINT "middling"
+> 70 END SELECT
+> 80 ON 2 GOSUB 100, 200 : END
+> 100 PRINT "first" : RETURN
+> 200 PRINT "second" : RETURN
+> RUN
+ 10  7  4  1
+ 64
+big
+second
+```
+
+### Arrays, data and records
+
+```session
+> 10 DIM A(4)
+> 20 FOR I = 0 TO 4 : READ A(I) : NEXT
+> 30 DATA 5, 3, 8, 1, 9
+> 40 IF A(0) > A(1) THEN SWAP A(0), A(1)
+> 50 PRINT A(0); A(1); LBOUND(A); UBOUND(A)
+> 60 TYPE PET
+> 70   KIND AS STRING
+> 80   LEGS AS INTEGER
+> 90 END TYPE
+> 100 DIM P AS PET
+> 110 P.KIND = "dog" : P.LEGS = 4
+> 120 PRINT "A "; P.KIND; " has"; P.LEGS; "legs"
+> RUN
+ 3  5  0  4
+A dog has 4 legs
+```
+
+### Procedures
+
+```session
+> 10 PRINT TWICE(21)
+> 20 SHOUT "hello"
+> 30 END
+> 40 FUNCTION TWICE(N)
+> 50   TWICE = N * 2
+> 60 END FUNCTION
+> 70 SUB SHOUT(S$)
+> 80   PRINT UCASE$(S$); "!"
+> 90 END SUB
+> RUN
+ 42
+HELLO!
+```
+
+### Files
+
+```session
+> OPEN "/ram/pets.txt" FOR OUTPUT AS #1
+> PRINT #1, "Rex" : PRINT #1, "Max"
+> CLOSE #1
+> OPEN "/ram/pets.txt" FOR INPUT AS #1
+> LINE INPUT #1, A$ : PRINT A$; EOF(1)
+Rex 0
+> LINE INPUT #1, A$ : PRINT A$; EOF(1)
+Max-1
+> CLOSE
+> FILES "/ram"
+bin/            lib/            pets.txt
+> KILL "/ram/pets.txt"
+```
+
+### Catching errors
+
+```session
+> 10 ON ERROR GOTO 100
+> 20 PRINT 1 / 0
+> 30 PRINT "carried on"
+> 40 END
+> 100 PRINT "error"; ERR; "in line"; ERL; ": "; ERR$
+> 110 RESUME NEXT
+> RUN
+error 11 in line 20 : division by zero
+carried on
+```
+
+### The system, and bits
+
+```session
+> PRINT DATE$; " "; TIME$
+2000-01-01 00:00:05
+> SHELL "echo hello from the shell"
+hello from the shell
+> PRINT STATUS
+ 0
+> A$ = SHELL$("date") : PRINT LEFT$(A$, 10)
+2000-01-01
+> ENVIRON "colour=blue" : PRINT ENV$("colour")
+blue
+> PRINT HEX$(PEEK(65533)); FRE(0) > 0
+E0-1
+> PRINT BIT(5, 0); SHL(1, 4); 12 AND 10; 12 OR 10; 12 XOR 10
+ 1  16  8  14  6
+```
+
+## C.4 Errors
 
 HyBASIC's error messages name what went wrong; `ERR` gives its number, `ERR$` its message, and `ERL` its line. A
 system error's number is 256 plus its code from Appendix G.

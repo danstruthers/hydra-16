@@ -77,14 +77,31 @@ type_w:
 @done:
             rts
 
+; A word that prints is given what it needs before it starts (one cell, or two): else it would print what lies
+; past the stack's end (the scratch pointers: a number of their bytes, in digits they're changing) before the
+; interpreter saw the stack underflow
+need2:
+            cpx         #DS_N - 1
+            bcs         need_no
+need1:
+            cpx         #DS_N
+            bcc         need_ok
+need_no:
+            lda         #<-4
+            jmp         throw_a
+need_ok:
+            rts
+
             HEADER      "emit", 0
 emit:
+            jsr         need1
             lda         dlo,x
             inx
             jmp         emit_a
 
             HEADER      "type", 0
 type:                                                       ; ( addr u -- )
+            jsr         need2
             lda         dlo + 1,x
             sta         w
             lda         dhi + 1,x
@@ -145,6 +162,7 @@ hdr_out:
 
             HEADER      "spaces", 0
 spaces:                                                     ; ( n -- ): none if n < 1
+            jsr         need1
             lda         dhi,x
             bmi         @done
 :
@@ -902,12 +920,14 @@ num_textc:
 
             HEADER      ".", 0
 dot:
+            jsr         need1
             jsr         n_text
             jsr         type
             jmp         space
 
             HEADER      "u.", 0
 udot:
+            jsr         need1
             jsr         u_text
             jsr         type
             jmp         space

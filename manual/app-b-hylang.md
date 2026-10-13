@@ -10,7 +10,7 @@ in square brackets can be left out; `...` means as many as you like.
 | `(f a b ...)` | An **S-expression**: a call of *f* with the values of *a*, *b* ... |
 | `{a b ...}` | A **Q-expression**: a list, not worked out (code to run later, or names) |
 | `[a b ...]` | `(list a b ...)`: a list of the values |
-| `42`, `-3`, `2/3`, `1.25`, `2i`, `1+2i`, `1_000`, `#xFF` ... | Numbers, in any of Chapter 17's forms; read in the current base |
+| `42`, `-3`, `2/3`, `1.25`, `2i`, `1+2i`, `1_000`, `#xFF` ... | Numbers, in any of Chapter 18's forms; read in the current base |
 | `"text"` | A string; escapes `\n` `\t` `\r` `\0` `\a` `\b` `\f` `\v` `\e` `\\` `\"` and `\x`*HH* |
 | `"""text"""` | A here string: the text as it is (as many quotes close it as opened it) |
 | `\a`, `\space`, `\newline`, `\tab` | Characters: one, or one by its name |
@@ -22,6 +22,27 @@ in square brackets can be left out; `...` means as many as you like.
 | `&_` | In a function: its arguments beyond its formals, as a list |
 | `&1`, `&2` ... | In a function made with no formals: its arguments, by position |
 | `&0` | In a method: the hash |
+
+For example:
+
+```session
+hylang> (+ 1 2)
+=> 3
+hylang> {+ 1 2}
+=> {+ 1 2}
+hylang> [1 (+ 1 1) "three"]
+=> {1 2 "three"}
+hylang> (len "Hydra")
+=> 5
+hylang> \a
+=> \a
+hylang> :(lives 3)
+=> NIL
+hylang> ?((> lives 0) "playing" "game over")
+=> "playing"
+hylang> ((fn {} {+ &1 &2}) 3 4)
+=> 7
+```
 
 A prefix before `{` instead of `(` makes a Q-expression of the call: `?{a b c}` is `{if a b c}`.
 
@@ -54,6 +75,35 @@ These get their arguments as they're written, and decide themselves what to work
 | `(newns)` | Build the namespace again |
 | `(exit [n])` | Leave hylang, with status *n* |
 
+For example:
+
+```session
+hylang> (def {x y} 3 4)
+=> NIL
+hylang> (let {{a 10} {b 20}} (* a b))
+=> 200
+hylang> (fun {hyp2 a b} {+ (* a a) (* b b)})
+=> NIL
+hylang> (hyp2 x y)
+=> 25
+hylang> (if (> x y) "x is bigger" "y is bigger")
+=> "y is bigger"
+hylang> (and (> x 0) (> y 0))
+=> T
+hylang> (do (print "one") (print "two") 3)
+one
+two
+=> 3
+hylang> (try (/ 1 0) (+ "caught: " &err))
+=> "caught: Division by zero."
+hylang> (eval {+ 1 2})
+=> 3
+hylang> (output-of (print "hello"))
+=> "hello\n"
+hylang> (defined? {x})
+=> T
+```
+
 ## B.3 Lists
 
 | Function | Gives |
@@ -79,6 +129,49 @@ These get their arguments as they're written, and decide themselves what to work
 | `(find f l)`, `(count f l)` | The first item *f* is true of; how many |
 | `(sum l)`, `(product l)` | All the items added; multiplied |
 | `(min x ...)`, `(max x ...)` | The smallest; the largest |
+
+For example:
+
+```session
+hylang> (def {l} {5 3 8 1})
+=> NIL
+hylang> (len l)
+=> 4
+hylang> (fst l)
+=> 5
+hylang> (nth 2 l)
+=> 8
+hylang> (tail l)
+=> {3 8 1}
+hylang> (cons 9 l)
+=> {9 5 3 8 1}
+hylang> (join l {7 7})
+=> {5 3 8 1 7 7}
+hylang> (take 2 l)
+=> {5 3}
+hylang> (reverse l)
+=> {1 8 3 5}
+hylang> (sort l)
+=> {1 3 5 8}
+hylang> (range 2 11 3)
+=> {2 5 8}
+hylang> (map (fn {n} {* n n}) l)
+=> {25 9 64 1}
+hylang> (filter (fn {n} {> n 2}) l)
+=> {5 3 8}
+hylang> (foldl + 0 l)
+=> 17
+hylang> (any? (fn {n} {> n 7}) l)
+=> T
+hylang> (count (fn {n} {> n 2}) l)
+=> 3
+hylang> (sum l)
+=> 17
+hylang> (max 5 3 8 1)
+=> 8
+hylang> (elem? 8 l)
+=> T
+```
 
 ## B.4 Numbers
 
@@ -106,6 +199,39 @@ These get their arguments as they're written, and decide themselves what to work
 | `(lo n)`, `(hi n)`, `(word lo hi)` | Its low byte, its next; two bytes made a word |
 | `(bytes s)`, `(from-bytes l)` | A string's bytes; a string from bytes |
 
+For example:
+
+```session
+hylang> (/ 22 7)
+=> 22/7
+hylang> (to-fixed (/ 22 7) 4)
+=> 3.1428
+hylang> (truncate 22/7)
+=> 3
+hylang> (* 1.5 4)
+=> 6
+hylang> (pow 2 100)
+=> 1267650600228229401496703205376
+hylang> (sqrt -4)
+=> 2i
+hylang> (fib 40)
+=> 102334155
+hylang> (cmp 3 7)
+=> -1
+hylang> (bit-and 12 10)
+=> 8
+hylang> (shl 1 10)
+=> 1024
+hylang> (hex 255)
+=> "FF"
+hylang> (bin 10 8)
+=> "00001010"
+hylang> (word 52 18)
+=> 4660
+hylang> (val "2/3")
+=> 2/3
+```
+
 ## B.5 Strings and characters
 
 | Function | Gives |
@@ -125,11 +251,63 @@ These get their arguments as they're written, and decide themselves what to work
 | `(read text)` | The expressions in the text, not worked out |
 | `(gensym [prefix])` | A new symbol, unlike any other |
 
+For example:
+
+```session
+hylang> (+ "Hydra" "-" 16)
+=> "Hydra-16"
+hylang> (substring "Hydra-16" 0 5)
+=> "Hydra"
+hylang> (index-of "Hydra-16" "-")
+=> 5
+hylang> (str-split "one two three" " ")
+=> {"one" "two" "three"}
+hylang> (str-join {"a" "b" "c"} "-")
+=> "a-b-c"
+hylang> (str-upper "Hydra")
+=> "HYDRA"
+hylang> (str-replace "a-b-c" "-" "+")
+=> "a+b+c"
+hylang> (str-repeat "ab" 3)
+=> "ababab"
+hylang> (str-pad-left "7" 3 "0")
+=> "007"
+hylang> (format "{} is {} years old" "Sam" 12)
+=> "Sam is 12 years old"
+hylang> (char-code \A)
+=> 65
+hylang> (code-char 66)
+=> \B
+hylang> (to-str 255 "x")
+=> "FF"
+hylang> (read "(+ 1 2)")
+=> {(+ 1 2)}
+```
+
 ## B.6 Types
 
 `(type-of x)` gives `:number`, `:string`, `:char`, `:atom`, `:symbol`, `:function`, `:error`, `:t`, `:list`, `:sexpr`
 or `:hash`. And each kind has a test: `t?`, `nil?`, `num?`, `int?`, `fixed?`, `rational?`, `complex?`, `atom?`,
 `symbol?`, `string?`, `char?`, `function?`, `error?`, `qexpr?`, `sexpr?`.
+
+For example:
+
+```session
+hylang> (type-of 42)
+=> :number
+hylang> (type-of "42")
+=> :string
+hylang> (type-of {4 2})
+=> :list
+hylang> (num? 42)
+=> T
+hylang> (rational? 2/3)
+=> T
+hylang> (string? 42)
+=> NIL
+hylang> (nil? {})
+=> T
+```
 
 ## B.7 Hashes
 
@@ -147,6 +325,33 @@ or `:hash`. And each kind has a test: `t?`, `nil?`, `num?`, `int?`, `fixed?`, `r
 | `(hash-lock h [key ...])`, `(hash-make-const ...)`, `(hash-make-private ...)`, `(hash-make-not-nil ...)` | Protect the hash, or entries |
 | `(hash-locked? h [key])`, `(hash-private? ...)`, `(hash-const? ...)` | Are they? |
 
+For example:
+
+```session
+hylang> (def {pet} #({{:name "Rex"} {:legs 4}}))
+=> NIL
+hylang> (pet :name)
+=> "Rex"
+hylang> (hash-put pet {:legs 3} {:colour "brown"})
+=> {4 NIL}
+hylang> (hash-keys pet)
+=> {:name :legs :colour}
+hylang> (hash-key? pet :wings)
+=> NIL
+hylang> (hash-remove pet :colour)
+=> "brown"
+hylang> (from# pet)
+=> {{:name "Rex"} {:legs 3}}
+hylang> (def {twin} (hash-clone pet))
+=> NIL
+hylang> (hash-put twin {:name "Max"})
+=> "Rex"
+hylang> (twin :name)
+=> "Max"
+hylang> (pet :name)
+=> "Rex"
+```
+
 ## B.8 Errors, output and input
 
 | Function | What it does |
@@ -158,6 +363,25 @@ or `:hash`. And each kind has a test: `t?`, `nil?`, `num?`, `int?`, `fixed?`, `r
 | `(save x [path mode ...])` | Print *x* as it reads back, or write it to a file |
 | `(read-line [s])`, `(read-byte [s])`, `(read-all [s])` | Read a line, a byte, the rest (from the keyboard, or a stream) |
 | `(key)`, `(key?)` | The next key, as it's pressed; is one waiting? |
+
+For example:
+
+```session
+hylang> (def {e} (error "out of cheese" :cheese))
+=> NIL
+hylang> (error-message e)
+=> "out of cheese"
+hylang> (error-code e)
+=> :cheese
+hylang> (print "one" 2 {3})
+one 2 {3}
+=> NIL
+hylang> (write "no new line")
+no new line=> NIL
+hylang> (save "a string")
+"a string"
+=> NIL
+```
 
 ## B.9 Files and streams
 
@@ -175,6 +399,35 @@ or `:hash`. And each kind has a test: `t?`, `nil?`, `num?`, `int?`, `fixed?`, `r
 | `(mkdir p)`, `(remove p)`, `(rename p q)`, `(copy-file p q)` | Directories and files |
 | `(cd [p])`, `(cwd)` | The current directory |
 
+For example:
+
+```session
+hylang> (write-file "/ram/pets.txt" "Rex\nMax")
+=> NIL
+hylang> (append-file "/ram/pets.txt" "\nTiddles")
+=> NIL
+hylang> (read-lines "/ram/pets.txt")
+=> {"Rex" "Max" "Tiddles"}
+hylang> (exists? "/ram/pets.txt")
+=> T
+hylang> ((stat "/ram/pets.txt") :length)
+=> 15
+hylang> (def {s} (open "/ram/pets.txt"))
+=> NIL
+hylang> (read-line s)
+=> "Rex"
+hylang> (tell s)
+=> 4
+hylang> (close s)
+=> NIL
+hylang> (rename "/ram/pets.txt" "/ram/cats.txt")
+=> NIL
+hylang> (ls "/ram")
+=> {"bin" "cats.txt" "lib"}
+hylang> (remove "/ram/cats.txt")
+=> NIL
+```
+
 ## B.10 Buffers
 
 A **buffer** is a block of bytes, which can be called with an index for a byte: `(b 3)`.
@@ -187,6 +440,23 @@ A **buffer** is a block of bytes, which can be called with an index for a byte: 
 | `(buffer-fill b byte [i [n]])`, `(buffer-copy to at from [i [n]])` | Fill; copy |
 | `(read-buffer s b [at [n]])` | Read a stream into it |
 | `(buffer-cmp b at x [i [n]])` | Compare with another buffer or string |
+
+For example:
+
+```session
+hylang> (def {b} (buffer 4 0))
+=> NIL
+hylang> (buffer-put b 0 65)
+=> 0
+hylang> (buffer-put b 1 66)
+=> 0
+hylang> (b 0)
+=> 65
+hylang> (buffer-get b 1)
+=> 66
+hylang> (buffer? b)
+=> T
+```
 
 ## B.11 Programs, time and the system
 
@@ -207,6 +477,33 @@ A **buffer** is a block of bytes, which can be called with an index for a byte: 
 | `(bind new old ...)`, `(mount dev old ...)`, `(unmount old [new])`, `(ns)` | The namespace (`:before`, `:after`, `:create`) |
 | `(note task n)`, `(note-group g n)`, `(on-note f)` | Notes |
 | `(sys name x ...)`, `(sys-`*name* `x ...)` | A system call (Appendix K) |
+
+For example:
+
+```session
+hylang> (run "echo" "hello" "from" "hylang")
+hello from hylang
+=> 0
+hylang> (sh-out "echo hi")
+=> "hi\n"
+hylang> (sh "ls /nowhere")
+ls: /nowhere: not found
+=> 1
+hylang> (setenv "colour" "blue")
+=> NIL
+hylang> (env "colour")
+=> "blue"
+hylang> (date)
+=> "2000-01-01 00:00:09"
+hylang> (tick-rate)
+=> 200
+hylang> (platform)
+=> :hydra
+hylang> (hex (peek-word 65532) 4)
+=> "E000"
+hylang> (sys-getpid)
+=> 4
+```
 
 ## B.12 The library
 
@@ -234,5 +531,34 @@ hylang's library (`globals`, loaded as it starts) adds:
 | `(use "name")` | Load a library once |
 | `(buffer-cmp ...)` | (B.10) |
 
-And the libraries loaded with `use` (Chapter 21): `gpio`, `i2c`, `spi`, `clock`, `disk`, `cons`, `proc`, `pc`, `snd`,
+For example:
+
+```session
+hylang> (square 12)
+=> 144
+hylang> (round 7/2)
+=> 4
+hylang> (mod 17 5)
+=> 2
+hylang> (even? 10)
+=> T
+hylang> (third {10 20 30})
+=> 30
+hylang> (zip {1 2 3} {"a" "b" "c"})
+=> {{1 "a"} {2 "b"} {3 "c"}}
+hylang> (distinct {1 2 2 3 1})
+=> {1 2 3}
+hylang> (avg {1 2 3 4})
+=> 5/2
+hylang> (contains? "Hydra-16" "dra")
+=> T
+hylang> (cond {(> 1 2) "no"} {T "yes"})
+=> "yes"
+hylang> (case 2 {1 "one"} {2 "two"})
+=> "two"
+hylang> (?? NIL NIL 7)
+=> 7
+```
+
+And the libraries loaded with `use` (Chapter 22): `gpio`, `i2c`, `spi`, `clock`, `disk`, `cons`, `proc`, `pc`, `snd`,
 `video`, `screen`, `dev`; and `dice` (with `load`): `(d6)`, `(d20)`, `(dice n sides)`, and more for games.

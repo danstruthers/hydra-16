@@ -1,4 +1,4 @@
-## Chapter 21's picture: a spiral from hylang (node manual/tools/capture.js manual/tools/cap-hylang-video.txt)
+## Chapter 22's picture: a spiral from hylang (node manual/tools/capture.js manual/tools/cap-hylang-video.txt)
 #! --vera --rtc
 hylang
 (use "video")
