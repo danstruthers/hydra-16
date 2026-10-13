@@ -103,7 +103,9 @@ kernel](../03-base/kernel.md)).
 ## No wait states
 
 `RDY` has only a pull-up: nothing on the board stretches a bus cycle.  Every device must answer within the CPU's cycle,
-and at 7.16 MHz the YM2151 can't (its access time is too long): at that speed, don't touch it.  A card in a slot can pull
+and at 7.16 MHz neither the YM2151 nor the RAM path (the bank registers, the decoders, the RAMs) can: **with the stated
+parts, 3.58 MHz is the fastest valid speed** (at J8's 7.16 MHz the power-on self test fails nearly every RAM test:
+measured on 1.8D, 2026-10-13).  A card in a slot can pull
 RDY low to add wait states of its own, but RDY must never be driven high (the W65C02S pulls it low during `WAI`): use an
 open-collector output.
 
@@ -217,4 +219,5 @@ Things in the KiCad files that don't match what's on the board, or look wrong bu
 **What software sees:** only that a read of an empty slot or an unused I/O port gives `$FF` every time, instead of
 whatever the bus last held.  Nothing relied on that.
 
-**At 7.16 MHz**, ACT parts are a few ns slower than F parts: the faster clock is untested on 1.8D.
+**At 7.16 MHz**, ACT parts are a few ns slower than F parts; the faster clock fails on 1.8D with the stated parts
+(POST's RAM tests): 3.58 MHz is the fastest valid speed.

@@ -77,7 +77,7 @@ window changes.
 | `--speed N` | With `-i`: N times real time (0: as fast as it goes) |
 | `--cycles N` | Stop at cycle N (default 30,000,000; with `-i`, never) |
 | `--input TEXT` | Keys to type (`\r` Enter, `\w` a wait), one every 20,000 cycles from cycle 200,000; `--paste` as fast as the line goes |
-| `--clock MHz` | The CPU's clock (3.579545; `7.15909` for J8, with a `build.js --clock 2` build) |
+| `--clock MHz` | The CPU's clock (3.579545; `7.15909` for a J8 board with faster parts than the stated ones, with a `build.js --clock 2` build: the stated parts run at 3.58 MHz or lower) |
 | `--acia wdc` | A WDC W65C51N in the serial port (with a `build.js --acia wdc` build) |
 | `--modules N` | Memory cards installed (default 2) |
 | `--seed N` | The power-up's random RAM and registers, repeatable |
@@ -201,7 +201,7 @@ the PATH.
 | Command | What it builds |
 | :------ | :------------- |
 | `node build.js` | Everything, for a 3.58 MHz board with a Rockwell ACIA |
-| `node build.js --clock 2` | For a 7.16 MHz board (jumper J8) |
+| `node build.js --clock 2` | For a 7.16 MHz board (jumper J8): one with faster parts than the stated ones, which run at 3.58 MHz or lower |
 | `node build.js --acia wdc` | For a WDC W65C51N in the serial port |
 | `node build.js prog DIR` | A program of your own: `DIR/*.s` (or `*.c`) into `DIR/NAME.hyx` ([programming](09-programming/README.md)) |
 | `node ../base/build.js` | The base alone (from `reborn/`), or `node build.js` in `base/` |

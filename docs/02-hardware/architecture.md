@@ -25,7 +25,7 @@ under each heading is the schematic sheet to look at (`board/NAME.kicad_sch`).
 
 | | |
 | :-- | :-- |
-| **CPU** | WDC W65C02S (U1), 3.58 MHz as built (a jumper chooses 0.89, 1.79, 3.58 or 7.16 MHz) |
+| **CPU** | WDC W65C02S (U1), 3.58 MHz as built (J5-J7 choose 0.89, 1.79 or 3.58 MHz; J8's 7.16 MHz is beyond the stated parts) |
 | **Task RAM** | 512K (U7, HM628512, or a DS1747 for a clock that keeps time): 32K at `$0000-$7FFF` for each of 16 tasks |
 | **The RAM window** | 8K at `$8000-$9FFF`.  **Task banks:** up to 15 memory cards of 2 MB, each giving every task 16 banks of its own.  **Shared banks:** 2 MB on the board (U25, U27-U29), the same for every task: 256 banks, 16 at a time |
 | **Paged ROM** | 4 MB (U30-U37, eight SST39SF040), seen in 16K banks at `$A000-$DFFF` |
@@ -320,10 +320,12 @@ A 14.31818 MHz crystal (Y1) with a 74ACT14 (U39) oscillator, divided by a 74F191
 | Q3 | 0.895 MHz | CPU clock jumper J5 |
 
 * **The CPU clock** (`PHI2`) is whichever of J5-J8 is fitted: fit exactly one.  The software is built for **J7,
-  3.58 MHz**, unless you build it for 7.16 MHz (`node build.js --clock 2`, with J8).  0.89 and 1.79 MHz work
-  electrically, but the software's timing (the tick, the serial port) isn't built for them.
-* **At 7.16 MHz the YM2151 is too slow for the bus**, and the board has no wait states: don't use the sound chip at
-  that speed.
+  3.58 MHz**.  0.89 and 1.79 MHz work electrically, but the software's timing (the tick, the serial port) isn't
+  built for them.
+* **With the stated parts, 3.58 MHz is the fastest valid speed.**  At J8's 7.16 MHz the bank registers, the decoders
+  and the RAMs don't make the shorter cycle (there are no wait states), and the power-on self test fails nearly
+  every RAM test (measured on 1.8D, 2026-10-13); the YM2151 is too slow for that bus too.  J8, and the software's
+  `node build.js --clock 2`, are for a board with faster parts.
 * **DMA stops the clock.**  The CPU's PHI0 input is `PHI2` gated by `DMAB` (U11), so a card pulling `DMAB` low
   stops the CPU (the W65C02S is fully static).
 * **`PHI1`**, the inverse of `PHI2` (U22), qualifies the address decoding: every select is only active while PHI2 is
