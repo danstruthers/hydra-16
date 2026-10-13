@@ -60,11 +60,20 @@ const sortKey = w => w.toLowerCase().replace(/^[^a-z0-9]+/, '') + '\u0001' + w;
 const ownText = read('manual/reference/forth-own.md');
 const firstOwn = ownText.search(/^## /m);
 const intro = (firstOwn < 0 ? ownText : ownText.slice(0, firstOwn)).replace(/\s+$/, '') + NL;
-const own = new Map();
-if (firstOwn >= 0) for (const part of ownText.slice(firstOwn).split(/^(?=## )/m)) {
-  const m = /^## (.*)$/m.exec(part);
-  if (m) own.set(m[1].split(',')[0].trim(), part.replace(/\s+$/, '') + NL);
-}
+// The entries written by hand: forth-own.md's, and those of the files beside it (forth-own-core.md ...: a word set
+// or a library each).  An entry's every word (its heading's, a comma and a space between them) takes the made entry
+// that has it out, so a row of the manual's tables can be written as several entries
+const own = new Map(), taken = new Set();
+const ownFiles = fs.readdirSync(path.join(ROOT, 'manual/reference')).filter(f => /^forth-own-.*\.md$/.test(f)).sort();
+for (const text of [firstOwn < 0 ? '' : ownText.slice(firstOwn), ...ownFiles.map(f => read('manual/reference/' + f))])
+  for (const part of text.split(/^(?=## )/m)) {
+    const m = /^## (.*)$/m.exec(part);
+    if (!m) continue;
+    const words = m[1].split(', ').map(s => s.trim());
+    if (own.has(words[0])) throw new Error('two entries for ' + words[0]);
+    own.set(words[0], part.replace(/\s+$/, '') + NL);
+    for (const w of words) taken.add(w);
+  }
 const stop = s => /[.!?)]$/.test(s) ? s : s + '.';
 function entry(r) {
   let s = '## ' + r.words.join(', ') + NL + NL;
@@ -74,6 +83,7 @@ function entry(r) {
   s += '#### Description' + NL + NL + stop(r.does) + NL;
   return s;
 }
+for (const [k, r] of [...by]) if (!own.has(k) && r.words.some(w => taken.has(w))) by.delete(k);
 const keys = new Set([...by.keys(), ...own.keys()]);
 const weak = [];
 let out = intro + NL, n = 0, hand = 0;
