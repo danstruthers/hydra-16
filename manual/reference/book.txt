@@ -9,6 +9,7 @@ r1-basic.md
 + r1-basic-d.md
 + r1-basic-g.md
 + r1-basic-m.md
++ r1-basic-r.md
 r2-commands.md
 r3-calls.md
 r4-forth.md
