@@ -41,11 +41,20 @@ const sortKey = w => w.toLowerCase().replace(/^[^a-z0-9]+/, '') + ' ' + w;
 const ownText = read('manual/reference/hylang-own.md');
 const firstOwn = ownText.search(/^## /m);
 const intro = (firstOwn < 0 ? ownText : ownText.slice(0, firstOwn)).replace(/\s+$/, '') + NL;
-const own = new Map();
-if (firstOwn >= 0) for (const part of ownText.slice(firstOwn).split(/^(?=## )/m)) {
-  const m = /^## (.*)$/m.exec(part);
-  if (m) own.set(m[1].split(',')[0].trim(), part.replace(/\s+$/, '') + NL);
-}
+// The entries written by hand: hylang-own.md's, and those of the files beside it (hylang-own-lists.md ...: a kind
+// of function each).  An entry's every name (its heading's, between commas) takes the made entry of that first name
+// out, so a row of the appendix can be written as several entries
+const own = new Map(), taken = new Set();
+const ownFiles = fs.readdirSync(path.join(ROOT, 'manual/reference')).filter(f => /^hylang-own-.*\.md$/.test(f)).sort();
+for (const text of [firstOwn < 0 ? '' : ownText.slice(firstOwn), ...ownFiles.map(f => read('manual/reference/' + f))])
+  for (const part of text.split(/^(?=## )/m)) {
+    const m = /^## (.*)$/m.exec(part);
+    if (!m) continue;
+    const names = m[1].split(', ').map(s => s.trim());
+    if (own.has(names[0])) throw new Error('two entries for ' + names[0]);
+    own.set(names[0], part.replace(/\s+$/, '') + NL);
+    for (const n of names) taken.add(n);
+  }
 const KIND = { 'Special forms': 'A special form', 'The library': 'A function of the library, written in hylang' };
 const stop = s => /[.!?)]$/.test(s) ? s : s + '.';
 function entry(r) {
@@ -55,6 +64,7 @@ function entry(r) {
   s += '#### Description' + NL + NL + stop(r.does) + NL;
   return s;
 }
+for (const k of [...by.keys()]) if (!own.has(k) && taken.has(k)) by.delete(k);
 const keys = new Set([...by.keys(), ...own.keys()]);
 let out = intro + NL, n = 0, hand = 0;
 for (const k of [...keys].sort((a, b) => sortKey(a) < sortKey(b) ? -1 : 1)) {

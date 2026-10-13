@@ -37,7 +37,7 @@ which is written in hylang itself and loaded as hylang starts.
 
 ## +, -, *, /
 
-A function: numbers.
+Functions: arithmetic. `+` also joins values to a string.
 
 #### Syntax
 
@@ -46,15 +46,77 @@ A function: numbers.
 (- x ...)
 (* x ...)
 (/ x ...)
+(+ s x ...)
 ```
+
+#### Arguments
+
+*x*
+: Numbers of any kind: integers, fractions, decimals, complex numbers. There may be any number of them.
+
+*s*
+: A string. When `+`'s first argument is a string, the rest may be any values.
+
+#### Result
+
+With two or more numbers, the sum, the difference, the product or the quotient, worked from the left:
+`(- 10 3 2)` is 10 - 3 - 2. With one number, `+` and `*` give it back, `-` gives its negative, and `/` gives its
+reciprocal, 1 over it. `(+)` is 0.
 
 #### Description
 
-Sum, difference, product, quotient (exact)
+The arithmetic is exact (Chapter 18). An integer has as many digits as it needs. A division that does not come
+out whole gives a fraction in its lowest terms, never a rounded decimal, and decimals add and multiply without
+error: `(+ 0.1 0.2)` is exactly 0.3. A result is given in the simplest kind that holds it: a fraction and a
+decimal make a fraction, and a result with no fractional part is an integer, so `(* 1.5 2)` is 3.
+
+**Joining to a string.** If `+`'s first argument is a string, every other argument is turned to text, as
+`print` would show it, and joined on: the result is a string. This is the usual way to build a message. Only
+the *first* argument decides: a number first and a string later is an error.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `Division by zero.` | `/` with a divisor of 0 |
+| `'+' adds numbers, or joins values to a string` | `+` with a first argument that is a number, and a later one that is not |
+| `All parameters to operator '-' must be numbers.` | `-`, `*` or `/` (each with its own sign in the message) given anything but numbers |
+
+#### Notes
+
+An imaginary number is written with digits before its `i`: `2i`, `1+1i`. `1+i` is read as a symbol, and is an
+error unless something has that name.
+
+#### See also
+
+`1+`, `sum`, `product`, `div`, `mod`, `pow`, `format`, `str-join`.
+
+#### Example
+
+```session
+hylang> (+ 1 2 3)
+=> 6
+hylang> (- 5)
+=> -5
+hylang> (/ 1 3)
+=> 1/3
+hylang> (/ 6 4)
+=> 3/2
+hylang> (+ 0.1 0.2)
+=> 0.3
+hylang> (* 99999999999 99999999999)
+=> 9999999999800000000001
+hylang> (* 2i 2i)
+=> -4
+hylang> (+ "n = " 1/2 " and " {1 2})
+=> "n = 1/2 and {1 2}"
+hylang> (+ 1 "a")
+=> Error: '+' adds numbers, or joins values to a string
+```
 
 ## <, >, <=, >=, cmp
 
-A function: numbers.
+Functions: compare two values.
 
 #### Syntax
 
@@ -66,9 +128,56 @@ A function: numbers.
 (cmp x y)
 ```
 
+#### Arguments
+
+*x*, *y*
+: Any two values.
+
+#### Result
+
+`<`, `>`, `<=` and `>=` give `T` or `NIL`: is *x* before *y*, after it, not after it, not before it? `cmp`
+gives -1 if *x* comes before *y*, 0 if they are equal, and 1 if it comes after.
+
 #### Description
 
-Comparisons; -1, 0 or 1.
+Any two values can be compared: there is no error for values of different kinds. The order is by kind first:
+numbers, then characters, strings, atoms, symbols, Q-expressions, S-expressions, `T`, functions, hashes,
+buffers, streams and errors. Within a kind:
+
+| Kind | Order |
+|---|---|
+| Numbers | By value, whatever their form |
+| Strings | Character by character, by character code: capitals come before small letters |
+| Atoms, symbols | By name |
+| Lists | Item by item. A list that is the start of another comes first |
+
+This is the order `sort`, `min` and `max` use.
+
+Each takes exactly two arguments: `(< 1 2 3)` is an error. To test a range, use `and`, or the library's
+`between?`.
+
+#### See also
+
+`==`, `sort`, `min`, `<=>`, `between?`.
+
+#### Example
+
+```session
+hylang> (< 1 2)
+=> T
+hylang> (<= 1 1)
+=> T
+hylang> (< 1/3 0.5)
+=> T
+hylang> (< "apple" "pear")
+=> T
+hylang> (cmp 2 1)
+=> 1
+hylang> (cmp {1 2} {1 3})
+=> -1
+hylang> (< 1 "a")
+=> T
+```
 
 ## <=>
 
@@ -110,7 +219,7 @@ hylang> (<=> 0 {< "negative"} {>= "not negative"})
 
 ## ==, eq, neq
 
-A function: numbers.
+Functions: are two values equal, or not?
 
 #### Syntax
 
@@ -120,9 +229,50 @@ A function: numbers.
 (neq x y)
 ```
 
+#### Arguments
+
+*x*, *y*
+: Any two values.
+
+#### Result
+
+`==` and `eq`, which are the same function, give `T` if the values are equal and `NIL` if not. `neq` gives the
+opposite. The library adds two more names for `neq`: `<>` and `!=`.
+
 #### Description
 
-Equal; not equal.
+Two values of different kinds are never equal: the number 1 is not the string `"1"`. Within a kind:
+
+| Kind | Equal when |
+|---|---|
+| Numbers | They have the same value, whatever their form: 1, 1.0 and 2/2 are equal, and so are 1/2 and 0.5 |
+| Strings, characters | They have the same characters. Capitals and small letters differ |
+| Atoms, symbols | They have the same name |
+| Lists | They have the same length, and each item equals the other's. `NIL` equals `{}` |
+| Functions | They have the same formals and the same body |
+
+Each takes exactly two arguments.
+
+#### See also
+
+`cmp`, `<`, `elem?`.
+
+#### Example
+
+```session
+hylang> (== 1 1.0)
+=> T
+hylang> (== 1/2 0.5)
+=> T
+hylang> (== "a" "A")
+=> NIL
+hylang> (== {1 2} {1 2})
+=> T
+hylang> (== 1 "1")
+=> NIL
+hylang> (neq 1 2)
+=> T
+```
 
 ## ??
 
@@ -161,7 +311,7 @@ Comparisons with 0 and 1.
 
 ## 1+, 1-, abs
 
-A function: numbers.
+Functions: a number plus one; minus one; and without its sign.
 
 #### Syntax
 
@@ -171,13 +321,48 @@ A function: numbers.
 (abs x)
 ```
 
-#### Description
+#### Arguments
 
-Plus one; minus one; its size.
+*x*
+: A number.
+
+#### Result
+
+`1+` gives *x* + 1 and `1-` gives *x* - 1, for any kind of number. `abs` gives *x* if it is 0 or more, and its
+negative if it is below 0.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `Cannot perform 'abs' on non-number` | `abs` of something that is not a number |
+| `All parameters to operator '-' must be numbers.` | `1-` of something that is not a number |
+
+#### Notes
+
+`1+` is `+` with a 1, so `(1+ "a")` is not an error: it is the string `"a1"`.
+
+`abs` does not give a complex number's size. It treats one as it treats any number, by its order: a complex
+number whose real part is negative comes back with both its signs changed, and any other comes back as it is.
+
+#### Example
+
+```session
+hylang> (1+ 5)
+=> 6
+hylang> (1- 5)
+=> 4
+hylang> (1+ 1/2)
+=> 3/2
+hylang> (abs -5)
+=> 5
+hylang> (abs -2.5)
+=> 2.5
+```
 
 ## alpha?, digit?, space?, upper?, lower?
 
-A function: strings and characters.
+Functions: tests of a character's kind.
 
 #### Syntax
 
@@ -189,9 +374,46 @@ A function: strings and characters.
 (lower? c)
 ```
 
-#### Description
+#### Arguments
 
-Its kind.
+*c*
+: A character, or a string.
+
+#### Result
+
+`T` or `NIL`:
+
+| Function | `T` for |
+|---|---|
+| `alpha?` | A letter, A to Z or a to z |
+| `digit?` | A digit, 0 to 9 |
+| `space?` | A space, a tab, a line feed, a carriage return or a form feed |
+| `upper?` | A capital letter |
+| `lower?` | A small letter |
+
+For a string, the test must pass for every character of it: `(digit? "12")` is `T` and `(alpha? "a1")` is
+`NIL`. An empty string gives `NIL`.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'alpha?' expects a String` | *c* is neither a character nor a string (each function with its own name) |
+
+#### Example
+
+```session
+hylang> (alpha? \a)
+=> T
+hylang> (digit? \a)
+=> NIL
+hylang> (digit? "12")
+=> T
+hylang> (upper? "Ab")
+=> NIL
+hylang> (filter digit? (str-chars "a1b22"))
+=> {\1 \2 \2}
+```
 
 ## and, or
 
@@ -228,7 +450,7 @@ hylang> (list (and) (or))
 
 ## any?, all?
 
-A function: lists.
+Functions: does a test pass for any item of a list, or for every item?
 
 #### Syntax
 
@@ -237,9 +459,49 @@ A function: lists.
 (all? f l)
 ```
 
+#### Arguments
+
+*f*
+: A function of one argument: the test.
+
+*l*
+: A list.
+
+#### Result
+
+`any?` gives `T` if *f* returns a true value for at least one item, and `NIL` if not. `all?` gives `T` if *f*
+returns a true value for every item, and `NIL` if not. The result is always `T` or `NIL`, whatever *f* itself
+returned.
+
+For an empty list `any?` is `NIL` (there is no item that passes) and `all?` is `T` (there is none that fails).
+
 #### Description
 
-Is *f* true of any item? Of every one?
+The items are tested in order, and the testing stops as soon as the answer is known: at the first item that
+passes for `any?`, and at the first that fails for `all?`. *f* is not called for the items after it.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'any?' expects a function and a list` | *l* is not a list (and `'all?'` for `all?`) |
+
+#### See also
+
+`find`, `count`, `filter`, `elem?`.
+
+#### Example
+
+```session
+hylang> (any? odd? {2 4 5})
+=> T
+hylang> (any? odd? {2 4})
+=> NIL
+hylang> (all? odd? {1 3})
+=> T
+hylang> (all? odd? {})
+=> T
+```
 
 ## banks, bank-alloc, bank-free, bank-read, bank-write
 
@@ -261,7 +523,7 @@ RAM banks.
 
 ## base
 
-A function: numbers.
+A function: the base that numbers are read and written in.
 
 #### Syntax
 
@@ -270,9 +532,51 @@ A function: numbers.
 (base b)
 ```
 
+#### Arguments
+
+*b*
+: A base, as a string: one of Chapter 18's base names, such as `"d"` (decimal), `"x"` (hex), `"b"` (binary) or
+  `"o"` (octal), or a radix such as `"#16r"`.
+
+#### Result
+
+`(base)` gives the current base, as a string. `(base b)` sets it, and gives the base that was in force before,
+so that a program can put it back.
+
 #### Description
 
-The base; set it (giving the one before)
+The base setting belongs to this run of hylang, and starts as decimal. While it is something else, every
+number without a prefix of its own is *read* in that base, and every number is *written* in it. That includes
+the numbers in the lines typed afterward: in base `"x"`, `10` is sixteen, and in base `"b"` a `5` is not a
+number at all.
+
+A number written with a prefix (`#xFF`, `#b101`) is read in its own base whatever the setting.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'base' expects a string: a base ("x", "#16r", "c" ...)` | *b* is not a string. `(base 16)` is this error: write `(base "x")` |
+| `'base': Invalid base specifier zz` | The string names no base |
+
+#### See also
+
+`hex`, `bin`, `to-str`, `val`; sections 18.3 to 18.9.
+
+#### Example
+
+```session
+hylang> (base "x")
+=> "d"
+hylang> (+ 9 1)
+=> A
+hylang> (+ 8 8)
+=> 10
+hylang> (base "d")
+=> "x"
+hylang> (base)
+=> "d"
+```
 
 ## between?, ><?, not-between?
 
@@ -309,7 +613,7 @@ The namespace (`:before`, `:after`, `:create`)
 
 ## bit-and, bit-or, bit-xor, bit-not
 
-A function: numbers.
+Functions: the bitwise operations.
 
 #### Syntax
 
@@ -320,9 +624,47 @@ A function: numbers.
 (bit-not n)
 ```
 
+#### Arguments
+
+*n*
+: An integer. `bit-and`, `bit-or` and `bit-xor` take any number of them.
+
+#### Result
+
+An integer. Each bit of the result is worked out from the same bit of the arguments: `bit-and` gives a 1
+where all have a 1, `bit-or` where any has, and `bit-xor` where an odd number have. `bit-not` turns every bit
+over.
+
 #### Description
 
-Bits.
+Integers have no fixed width, so a negative number is treated as two's complement with its sign bit going on
+for ever: -1 is all ones. That is why `(bit-not 0)` is -1 and `(bit-not 5)` is -6, and why
+`(bit-and -1 255)` is 255. To keep a result to one byte or one word, `bit-and` it with 255 or 65535.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'bit-and''s argument must be an integer` | An argument is a fraction, a decimal, or not a number (each function with its own name) |
+
+#### See also
+
+`shl`, `shr`, `bit?`, `lo`, `hi`, `hex`, `bin`; section 18.10.
+
+#### Example
+
+```session
+hylang> (bit-and 12 10)
+=> 8
+hylang> (bit-or 12 10)
+=> 14
+hylang> (bit-xor 12 10)
+=> 6
+hylang> (bit-not 5)
+=> -6
+hylang> (bin (bit-and #b1100 #b1010))
+=> "1000"
+```
 
 ## buffer
 
@@ -400,7 +742,7 @@ Is it one?
 
 ## bytes, from-bytes
 
-A function: numbers.
+Functions: a string's bytes as a list of numbers; and a string from such a list.
 
 #### Syntax
 
@@ -409,9 +751,40 @@ A function: numbers.
 (from-bytes l)
 ```
 
-#### Description
+#### Arguments
 
-A string's bytes; a string from bytes.
+*s*
+: A string.
+
+*l*
+: A list of whole numbers from 0 to 255.
+
+#### Result
+
+`bytes` gives a list of the character codes of *s*, one number for each byte, in order: `NIL` for the empty
+string. `from-bytes` gives the string made of those bytes: the empty string for an empty list.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'bytes' expects a String` | *s* is not a string |
+| `256 isn't a byte` | An item of *l* is not a whole number from 0 to 255 |
+
+#### See also
+
+`char-code`, `code-char`, `str-chars`, `buffer`.
+
+#### Example
+
+```session
+hylang> (bytes "AB")
+=> {65 66}
+hylang> (from-bytes {72 105})
+=> "Hi"
+hylang> (from-bytes (map 1+ (bytes "HAL")))
+=> "IBM"
+```
 
 ## cd, cwd
 
@@ -430,7 +803,7 @@ The current directory.
 
 ## char-code, code-char
 
-A function: strings and characters.
+Functions: a character's code; and the character with a code.
 
 #### Syntax
 
@@ -439,9 +812,45 @@ A function: strings and characters.
 (code-char n)
 ```
 
-#### Description
+#### Arguments
 
-A character's code; the character for a code.
+*c*
+: A character, or a string of exactly one character.
+
+*n*
+: A whole number from 0 to 255.
+
+#### Result
+
+`char-code` gives the character's code, 0 to 255 (Appendix E of the manual lists them). `code-char` gives the
+character. The prompt shows a character with a backslash, and shows the ones that can't be printed by name:
+`\space`, `\lf` for code 10, `\null` for 0.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'char-code' expects one character` | *c* is a string that is empty, or longer than one character |
+| `'char-code' expects a String` | *c* is neither a string nor a character |
+| `'code-char': 256 isn't a character's code (0-255)` | *n* is out of range |
+| `'code-char': a number must be a whole number, not 1.5` | *n* is not a whole number |
+
+#### See also
+
+`bytes`, `from-bytes`, `alpha?`.
+
+#### Example
+
+```session
+hylang> (char-code \a)
+=> 97
+hylang> (char-code "A")
+=> 65
+hylang> (code-char 65)
+=> \A
+hylang> (code-char 32)
+=> \space
+```
 
 ## close
 
@@ -459,7 +868,7 @@ Close it.
 
 ## complex
 
-A function: numbers.
+A function: a complex number from its two parts.
 
 #### Syntax
 
@@ -467,9 +876,35 @@ A function: numbers.
 (complex re im)
 ```
 
-#### Description
+#### Arguments
 
-A complex number.
+*re*
+: The real part: a real number.
+
+*im*
+: The imaginary part: a real number.
+
+#### Result
+
+The number *re* + *im*i. Each part keeps its own kind, and the two need not match. If *im* is 0 the result is
+the real number *re*.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `One or more parameters passed to 'complex' is not a Number` | A part is not a number |
+
+#### Example
+
+```session
+hylang> (complex 1 2)
+=> 1+2i
+hylang> (complex 1/2 0.5)
+=> 1/2+0.5i
+hylang> (complex 1 0)
+=> 1
+```
 
 ## cond, case
 
@@ -488,7 +923,7 @@ Choices.
 
 ## cons
 
-A function: lists.
+A function: a list with one more item at its front.
 
 #### Syntax
 
@@ -496,9 +931,45 @@ A function: lists.
 (cons x l)
 ```
 
+#### Arguments
+
+*x*
+: Any value: the new first item.
+
+*l*
+: A list. `NIL`, the empty list, is one.
+
+#### Result
+
+A list whose first item is *x* and whose remaining items are *l*'s. *l* itself is not changed.
+
 #### Description
 
-*x* in front of *l*.
+*x* goes in as one item, whatever it is: a list given as *x* becomes a list inside the result. To put two lists
+end to end, use `join`.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'cons' expects a list second` | *l* is not a list |
+
+#### See also
+
+`join`, `list`.
+
+#### Example
+
+```session
+hylang> (cons 1 {2 3})
+=> {1 2 3}
+hylang> (cons {1} {2 3})
+=> {{1} 2 3}
+hylang> (cons 1 {})
+=> {1}
+hylang> (cons 1 2)
+=> Error: 'cons' expects a list second
+```
 
 ## def
 
@@ -577,7 +1048,7 @@ the test is for.
 
 ## digits
 
-A function: numbers.
+A function: the precision of the math functions.
 
 #### Syntax
 
@@ -586,9 +1057,39 @@ A function: numbers.
 (digits n)
 ```
 
+#### Arguments
+
+*n*
+: A whole number from 1 to 100.
+
+#### Result
+
+`(digits)` gives the current precision. `(digits n)` sets it, and gives the one that was in force before.
+
 #### Description
 
-The math functions' precision; set it.
+`sqrt`, `exp`, `log`, `sin`, `cos`, `tan`, `atan`, `pi` and `pow` give an exact answer when there is one, and
+otherwise a decimal of this many significant digits. The setting starts as 12. It has no effect on `+`, `-`,
+`*` and `/`, which are always exact.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'digits' takes a whole number from 1 to 100` | *n* is out of range, or not a whole number |
+
+#### Example
+
+```session
+hylang> (sqrt 2)
+=> 1.41421356237
+hylang> (digits 30)
+=> 12
+hylang> (sqrt 2)
+=> 1.41421356237309504880168872421
+hylang> (digits 12)
+=> 30
+```
 
 ## div, mod, divmod, fdiv
 
@@ -688,7 +1189,7 @@ b
 
 ## elem?, in?
 
-A function: lists.
+Functions: is a value one of a list's items?
 
 #### Syntax
 
@@ -697,9 +1198,49 @@ A function: lists.
 (in? x l)
 ```
 
+#### Arguments
+
+*x*
+: Any value.
+
+*l*
+: A list.
+
+#### Result
+
+`T` if an item of *l* is equal to *x*, and `NIL` if none is. The two names are the same function.
+
 #### Description
 
-Is *x* in *l*?
+Items are compared as `==` compares: numbers by value, so 1.0 is found in a list holding 1; strings exactly,
+capitals and small letters being different; lists item by item.
+
+Only the list's own items are looked at, not the items of lists inside it.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'elem?' expects a list` | *l* is not a list. To look for a character or a piece of text in a string, use `index-of` or `contains?` |
+
+#### See also
+
+`find`, `index-of`, `any?`.
+
+#### Example
+
+```session
+hylang> (elem? 2 {1 2 3})
+=> T
+hylang> (elem? 5 {1 2 3})
+=> NIL
+hylang> (elem? 1.0 {1 2})
+=> T
+hylang> (elem? {1} {{1} {2}})
+=> T
+hylang> (elem? "A" {"a"})
+=> NIL
+```
 
 ## env, setenv, unsetenv
 
@@ -838,7 +1379,7 @@ hi
 
 ## fib
 
-A function: numbers.
+A function: a Fibonacci number.
 
 #### Syntax
 
@@ -846,13 +1387,35 @@ A function: numbers.
 (fib n)
 ```
 
-#### Description
+#### Arguments
 
-The *n*th Fibonacci number.
+*n*
+: A whole number, 0 or more.
+
+#### Result
+
+The *n*th number of the series 0, 1, 1, 2, 3, 5, 8 ..., in which each is the sum of the two before it:
+`(fib 0)` is 0 and `(fib 1)` is 1. The result is exact however long it is.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'fib' parameter 'n' cannot be negative` | *n* is below 0 |
+| `'fib': n must be a whole number, not 1.5` | *n* is not a whole number |
+
+#### Example
+
+```session
+hylang> (fib 10)
+=> 55
+hylang> (fib 100)
+=> 354224848179261915075
+```
 
 ## filter
 
-A function: lists.
+A function: the items of a list that pass a test.
 
 #### Syntax
 
@@ -860,13 +1423,49 @@ A function: lists.
 (filter f l)
 ```
 
+#### Arguments
+
+*f*
+: A function of one argument: the test.
+
+*l*
+: A list.
+
+#### Result
+
+A list of the items for which *f* returned a true value (anything but `NIL`), in their original order. If none
+passes, `NIL`.
+
 #### Description
 
-The items *f* is true of.
+*f* is called with each item in turn. If a call's result is an error, `filter` stops, and the error is its
+result.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'filter' expects a function and a list` | *l* is not a list |
+| `S-Expression starts with incorrect type. Got Number, Expected Function.` | *f* is not a function |
+
+#### See also
+
+`map`, `find`, `count`, `remove-all`.
+
+#### Example
+
+```session
+hylang> (filter odd? {1 2 3 4 5})
+=> {1 3 5}
+hylang> (filter (fn {x} {> x 2}) {1 2 3 4})
+=> {3 4}
+hylang> (filter odd? {2 4})
+=> NIL
+```
 
 ## find, count
 
-A function: lists.
+Functions: the first item of a list that passes a test; and how many pass.
 
 #### Syntax
 
@@ -875,9 +1474,48 @@ A function: lists.
 (count f l)
 ```
 
+#### Arguments
+
+*f*
+: A function of one argument: the test.
+
+*l*
+: A list.
+
+#### Result
+
+`find` gives the first item for which *f* returns a true value, and `NIL` if there is none. `count` gives the
+number of items for which it does: 0 if there are none.
+
 #### Description
 
-The first item *f* is true of; how many.
+`find` stops at the first item that passes, and *f* is not called for the items after it. `count` tests every
+item.
+
+`find` gives the item, not its position. Its `NIL` cannot tell "nothing was found" from "the item found was
+`NIL`": where that matters, use `any?`.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'count' expects a function and a list` | *l* is not a list (and `'find'` for `find`) |
+| `S-Expression starts with incorrect type. Got Number, Expected Function.` | *f* is not a function |
+
+#### See also
+
+`filter`, `any?`, `elem?`.
+
+#### Example
+
+```session
+hylang> (find odd? {2 3 4 5})
+=> 3
+hylang> (find odd? {2 4})
+=> NIL
+hylang> (count odd? {1 2 3})
+=> 2
+```
 
 ## first, tenth
 
@@ -994,7 +1632,7 @@ hylang> ((fn {} {* &1 &2}) 6 7)
 
 ## foldl, foldr
 
-A function: lists.
+Functions: combine all the items of a list into one value.
 
 #### Syntax
 
@@ -1003,23 +1641,118 @@ A function: lists.
 (foldr f init l)
 ```
 
+#### Arguments
+
+*f*
+: A function of two arguments.
+
+*init*
+: The value to start from. It is the result for an empty list.
+
+*l*
+: A list.
+
+#### Result
+
+The value that is left when every item has been combined.
+
 #### Description
 
-Combine the items, from the left, from the right.
+`foldl` works from the left. It calls *f* with the value so far and the next item, `(f acc x)`, and the result
+is the value so far for the next call: for a list `{a b c}` the result is `(f (f (f init a) b) c)`.
+
+`foldr` works from the right, and calls *f* with the item first, `(f x acc)`: the result is
+`(f a (f b (f c init)))`.
+
+For a function such as `+` the two give the same answer. For one such as `-` or `cons`, where the order of the
+arguments matters, they do not.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'foldl' expects a function, a value and a list` | *l* is not a list (and `'foldr'` for `foldr`) |
+
+An error from *f* is the result.
+
+#### See also
+
+`sum`, `product`, `map`.
+
+#### Example
+
+```session
+hylang> (foldl + 0 {1 2 3})
+=> 6
+hylang> (foldl - 0 {1 2 3})
+=> -6
+hylang> (foldr - 0 {1 2 3})
+=> 2
+hylang> (foldr cons {} {1 2 3})
+=> {1 2 3}
+hylang> (foldl max 0 {3 9 2})
+=> 9
+```
 
 ## format
 
-A function: strings and characters.
+A function: a string with values set into it.
 
 #### Syntax
 
 ```text
 (format text x ...)
+~(text x ...)
 ```
+
+#### Arguments
+
+*text*
+: A string. Each `{}` in it is a place for a value.
+
+*x*
+: The values: one for each place, in order.
+
+#### Result
+
+The text, with each `{}` replaced by the next value, as `print` shows it: a string without its quotes, a
+number in the current base.
 
 #### Description
 
-The text, each `{}` the next value.
+A pair of braces with a base name between them, such as `{x}` or `{b}`, is a place for a number, which is
+written in that base whatever the base setting is. The names are Chapter 18's, and a radix such as `{#16r}`
+is one too. The braces cannot hold anything else: there are no widths and no positions. To set a value to a
+width, pad it first with `str-pad-left`.
+
+The count must match: a value for every place, and no values over.
+
+`~(text x ...)` is another way to write the call.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'format' has too few arguments for its {}s` | There are more places than values |
+| `'format' has more arguments than {}s` | There are more values than places |
+| `'format's {x} is a base, for a number` | The value for a base's place is not a number |
+| `Invalid base specifier :5` | The braces hold something that is not a base |
+| `'format' expects a String` | *text* is not a string |
+
+#### See also
+
+`+`, `str-join`, `to-str`, `print`.
+
+#### Example
+
+```session
+hylang> (format "{} + {} = {}" 1 2 3)
+=> "1 + 2 = 3"
+hylang> (format "{} is {x} in hex" 255 255)
+=> "255 is FF in hex"
+hylang> (format "{} and {}" 1)
+=> Error: 'format' has too few arguments for its {}s
+```
 
 ## from#
 
@@ -1037,7 +1770,7 @@ A hash as a list of entries.
 
 ## fst, snd, thd, last, nth
 
-A function: lists.
+Functions: one item of a list.
 
 #### Syntax
 
@@ -1049,9 +1782,51 @@ A function: lists.
 (nth n l)
 ```
 
+#### Arguments
+
+*l*
+: A list.
+
+*n*
+: Which item, counting from 0: a whole number from 0 to one less than the list's length.
+
+#### Result
+
+The item itself: `fst` the first, `snd` the second, `thd` the third, `last` the last, `nth` item *n*.
+
 #### Description
 
-An item (from 0)
+The item is given as it is in the list, and is not evaluated. An item of a Q-expression that was written as
+code is still code: `(fst {(+ 1 2) x})` is the expression `(+ 1 2)`, not 3.
+
+The library names ten more, `first` to `tenth`, which are `nth` with its number already given.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'nth': the list has no such item` | The list is too short, or *n* is negative. `fst`, `snd`, `thd` and `last` give this message too, with `nth`'s name |
+| `'nth' expects a list` | *l* is not a list (a string is not one) |
+| `'nth': an index must be a whole number, not 1.5` | *n* is not a whole number |
+
+#### See also
+
+`item-at`, `head`, `end`, `first`.
+
+#### Example
+
+```session
+hylang> (fst {1 2 3})
+=> 1
+hylang> (last {1 2 3})
+=> 3
+hylang> (nth 2 {1 2 3})
+=> 3
+hylang> (fst {(+ 1 2) x})
+=> (+ 1 2)
+hylang> (nth 3 {1 2 3})
+=> Error: 'nth': the list has no such item
+```
 
 ## fun
 
@@ -1082,7 +1857,7 @@ hylang> (count-down 2000)
 
 ## gensym
 
-A function: strings and characters.
+A function: a new symbol that no program has written.
 
 #### Syntax
 
@@ -1090,9 +1865,37 @@ A function: strings and characters.
 (gensym [prefix])
 ```
 
+#### Arguments
+
+*prefix*
+: A string to begin the name with. Without it, `g`.
+
+#### Result
+
+A symbol named by the prefix, two underscores and a number that goes up by one each time `gensym` is called:
+`g__1`, `g__2`, `tmp__3`. The same name is not given twice in a run of hylang.
+
 #### Description
 
-A new symbol, unlike any other.
+A `fexpr`, or any code that builds code, uses `gensym` for the names it needs, so that they cannot be the
+same as a name in the code it is given.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'gensym' expects a String` | *prefix* is not a string |
+
+#### Example
+
+The numbers depend on how many have been made:
+
+```text
+hylang> (gensym)
+=> g__1
+hylang> (gensym "tmp")
+=> tmp__2
+```
 
 ## h, hash-get
 
@@ -1247,7 +2050,7 @@ Take an entry out.
 
 ## head, tail
 
-A function: lists.
+Functions: the first item of a list, as a list; and the rest of the list.
 
 #### Syntax
 
@@ -1256,13 +2059,52 @@ A function: lists.
 (tail l)
 ```
 
+#### Arguments
+
+*l*
+: A list with at least one item.
+
+#### Result
+
+`head` gives a list of one item, the first. `tail` gives the list without its first item; for a list of one
+item that is `NIL`.
+
 #### Description
 
-A list of the first item; all but the first.
+`head` keeps the item inside a list so that it can be run: `(eval (head l))` evaluates the first item of a list
+of code. For the item itself, use `fst`.
+
+Neither works on a string: for that there are `substring` and `char-at`.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'head' passed an empty list` | *l* is `NIL` (and `'tail'` for `tail`) |
+| `'head' expects a QExpr` | *l* is not a list |
+
+#### See also
+
+`fst`, `init`, `take`, `drop`.
+
+#### Example
+
+```session
+hylang> (head {1 2 3})
+=> {1}
+hylang> (tail {1 2 3})
+=> {2 3}
+hylang> (tail {1})
+=> NIL
+hylang> (eval (head {(+ 1 2) 3}))
+=> 3
+hylang> (head {})
+=> Error: 'head' passed an empty list
+```
 
 ## hex, bin
 
-A function: numbers.
+Functions: an integer's digits in hexadecimal, or in binary, as a string.
 
 #### Syntax
 
@@ -1271,9 +2113,51 @@ A function: numbers.
 (bin n [width])
 ```
 
+#### Arguments
+
+*n*
+: An integer.
+
+*width*
+: The least number of digits: the string is filled out with zeros on the left to this length. A number that
+  needs more digits has them all.
+
+#### Result
+
+A string of the digits, with no prefix. Hex digits above 9 are capitals. A negative number is a `-` and the
+digits of its size: `(hex -1)` is `"-1"`, not a row of F's. For the byte or word a negative number would be in
+memory, `bit-and` it first: `(hex (bit-and -1 255))` is `"FF"`.
+
 #### Description
 
-Its digits, in hex or binary.
+These give text, whatever the base setting is. To have every number written in another base, set `base`; to
+turn one number to text in any base, use `to-str` with a base.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'hex''s number must be an integer` | *n* is not an integer (and `'bin'`) |
+| `A width must be an integer` | *width* is not an integer |
+
+#### See also
+
+`to-str`, `base`, `val`.
+
+#### Example
+
+```session
+hylang> (hex 255)
+=> "FF"
+hylang> (hex 255 4)
+=> "00FF"
+hylang> (bin 5)
+=> "101"
+hylang> (bin 5 8)
+=> "00000101"
+hylang> (hex (bit-and -1 255))
+=> "FF"
+```
 
 ## hold
 
@@ -1326,7 +2210,7 @@ hylang> (if NIL 1)
 
 ## index-of, last-index-of
 
-A function: strings and characters.
+Functions: where a piece of text is in a string, or an item in a list.
 
 #### Syntax
 
@@ -1335,13 +2219,53 @@ A function: strings and characters.
 (last-index-of s sub)
 ```
 
+#### Arguments
+
+*s*
+: A string, or a list.
+
+*sub*
+: What to look for. In a string: a string or a character. In a list: any value, which is compared with each
+  item as `==` compares.
+
+#### Result
+
+The position, from 0, of the first place (`index-of`) or the last place (`last-index-of`) where *sub* is found.
+If it isn't found, the result is -1. An empty *sub* is found at 0.
+
 #### Description
 
-Where *sub* first, last, is (or `NIL`)
+The result -1 is a number, and so is true: test it with `>=0`, or `(< i 0)`, not with `if` alone. The
+library's `contains?`, `starts-with?` and `ends-with?` do that for strings.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'index-of' expects a String and a String` | *s* is a string and *sub* is neither a string nor a character |
+
+#### See also
+
+`contains?`, `substring`, `elem?`, `find`.
+
+#### Example
+
+```session
+hylang> (index-of "hello" "l")
+=> 2
+hylang> (last-index-of "hello" "l")
+=> 3
+hylang> (index-of "hello" "z")
+=> -1
+hylang> (index-of {"a" "b"} "b")
+=> 1
+hylang> (substring "a.b.c" (1+ (last-index-of "a.b.c" ".")))
+=> "c"
+```
 
 ## init, end
 
-A function: lists.
+Functions: a list without its last item; and its last item, as a list.
 
 #### Syntax
 
@@ -1350,13 +2274,41 @@ A function: lists.
 (end l)
 ```
 
-#### Description
+#### Arguments
 
-All but the last; a list of the last.
+*l*
+: A list with at least one item.
+
+#### Result
+
+`init` gives the list without its last item (`NIL` for a list of one). `end` gives a list of one item, the last.
+They are `tail` and `head` seen from the other end.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'init' passed an empty list` | *l* is `NIL` (and `'end'` for `end`) |
+| `'init' expects a QExpr` | *l* is not a list |
+
+#### See also
+
+`head`, `tail`, `last`.
+
+#### Example
+
+```session
+hylang> (init {1 2 3})
+=> {1 2}
+hylang> (end {1 2 3})
+=> {3}
+hylang> (init {1})
+=> NIL
+```
 
 ## item-at
 
-A function: lists.
+A function: one item of a list, by its position.
 
 #### Syntax
 
@@ -1364,13 +2316,45 @@ A function: lists.
 (item-at l i)
 ```
 
+#### Arguments
+
+*l*
+: A list.
+
+*i*
+: The item's position, from 0.
+
+#### Result
+
+Item *i*, as it is in the list, not evaluated.
+
 #### Description
 
-Item *i*, as it's written.
+`item-at` is `nth` with its arguments the other way round, and with messages that name the position.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'item-at': the list has no item 2` | *i* is the list's length or more, or negative |
+| `First 'item-at' parameter must be a QExpr` | *l* is not a list |
+
+#### See also
+
+`nth`, `subset`.
+
+#### Example
+
+```session
+hylang> (item-at {a (+ 1 2) c} 1)
+=> (+ 1 2)
+hylang> (item-at {a b} 2)
+=> Error: 'item-at': the list has no item 2
+```
 
 ## join
 
-A function: lists.
+A function: lists put end to end.
 
 #### Syntax
 
@@ -1378,9 +2362,41 @@ A function: lists.
 (join l ...)
 ```
 
+#### Arguments
+
+*l*
+: A list. There may be any number of them, and an empty one adds nothing.
+
+#### Result
+
+One list, of the first list's items, then the second's, and so on.
+
 #### Description
 
-The lists joined.
+Only the outer lists are opened: a list that is an item of one of them is still a list in the result.
+
+`join` is for lists. Strings are joined with `+`, or with `str-join`.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `Invalid parameter passed to 'join'.  Expected QExpr.` | An argument is not a list |
+
+#### See also
+
+`cons`, `list`, `flatten`.
+
+#### Example
+
+```session
+hylang> (join {1 2} {3} {} {4 5})
+=> {1 2 3 4 5}
+hylang> (join {1} {{2}})
+=> {1 {2}}
+hylang> (join {1} 2)
+=> Error: Invalid parameter passed to 'join'.  Expected QExpr.
+```
 
 ## key, key?
 
@@ -1399,17 +2415,44 @@ The next key, as it's pressed; is one waiting?
 
 ## len
 
-A function: lists.
+A function: the length of a list, a string, a hash or a buffer.
 
 #### Syntax
 
 ```text
-(len l)
+(len x)
 ```
 
-#### Description
+#### Arguments
 
-Its length (a string's too)
+*x*
+: A list, a string, a hash or a buffer.
+
+#### Result
+
+A whole number: a list's items (a list inside it counts as one), a string's characters, a hash's entries, a
+buffer's bytes. The empty list and the empty string have length 0.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'len' requires parameter of type string, list, hash or buffer` | *x* is a number, an atom, or anything else that has no length |
+
+#### Example
+
+```session
+hylang> (len {1 2 3})
+=> 3
+hylang> (len {a {b c} d})
+=> 3
+hylang> (len "hello")
+=> 5
+hylang> (len {})
+=> 0
+hylang> (len 5)
+=> Error: 'len' requires parameter of type string, list, hash or buffer
+```
 
 ## let
 
@@ -1495,21 +2538,52 @@ hylang> (let {a 1} a)
 
 ## list
 
-A function: lists.
+A function: makes a list of its arguments' values.
 
 #### Syntax
 
 ```text
 (list x ...)
+[x ...]
 ```
+
+#### Arguments
+
+*x*
+: Any value. There may be any number of them.
+
+#### Result
+
+A list of the values, in order. With no arguments, `NIL`, which is the empty list.
 
 #### Description
 
-A list of the values.
+`list` is how a list is made from values that have to be worked out. A Q-expression, `{a b}`, is a list of what
+was written, with nothing evaluated; `(list a b)` is a list of what `a` and `b` evaluate to. Square brackets are
+another way to write the call: `[a b]` is read as `(list a b)`.
+
+An argument that is itself a list becomes one item of the result: `list` nests, where `join` flattens.
+
+#### See also
+
+`cons`, `join`, `range`.
+
+#### Example
+
+```session
+hylang> (list 1 (+ 1 1) "three")
+=> {1 2 "three"}
+hylang> [1 (+ 1 1)]
+=> {1 2}
+hylang> (list (+ 1 2) {+ 1 2})
+=> {3 {+ 1 2}}
+hylang> (list)
+=> NIL
+```
 
 ## lo, hi, word
 
-A function: numbers.
+Functions: the two bytes of a 16-bit word; and a word from two bytes.
 
 #### Syntax
 
@@ -1519,9 +2593,45 @@ A function: numbers.
 (word lo hi)
 ```
 
-#### Description
+#### Arguments
 
-Its low byte, its next; two bytes made a word.
+*n*
+: An integer.
+
+*lo*, *hi*
+: Integers: the low byte and the high byte.
+
+#### Result
+
+`lo` gives the low byte of *n*, bits 0 to 7, and `hi` the next byte, bits 8 to 15: each a number from 0 to
+255. Bits above 15 are ignored, and a negative number is taken as two's complement, so `(lo -1)` is 255.
+
+`word` puts two bytes together: *lo* + 256 × *hi*. It is the opposite of `lo` and `hi`, and is how an address
+read from memory a byte at a time is made whole (the 65C02 keeps the low byte first).
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'lo''s number must be an integer` | *n* is not an integer (and `'hi'`) |
+| `A low byte must be an integer` | `word`'s *lo* is not an integer |
+
+#### See also
+
+`peek`, `peek-word`, `bit-and`, `shr`.
+
+#### Example
+
+```session
+hylang> (lo #x1234)
+=> 52
+hylang> (hi #x1234)
+=> 18
+hylang> (hex (word #x34 #x12))
+=> "1234"
+hylang> (lo -1)
+=> 255
+```
 
 ## load
 
@@ -1566,7 +2676,7 @@ Names; their details; one's; those matching.
 
 ## map
 
-A function: lists.
+A function: a list of a function's results, one for each item of a list.
 
 #### Syntax
 
@@ -1574,9 +2684,49 @@ A function: lists.
 (map f l)
 ```
 
+#### Arguments
+
+*f*
+: A function of one argument.
+
+*l*
+: A list.
+
+#### Result
+
+A list as long as *l*: *f* of its first item, *f* of its second, and so on. For `NIL` the result is `NIL`.
+
 #### Description
 
-*f* of each item.
+*f* is called with each item in turn, from the first. If a call's result is an error, `map` stops there, and
+the error is `map`'s result.
+
+`map` takes exactly one list. To walk two lists together, `zip` them first.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'map' expects a function and a list` | *l* is not a list (a string is not one) |
+| `S-Expression starts with incorrect type. Got Number, Expected Function.` | *f* is not a function |
+| `'map' takes 2 arguments, not 3` | More than one list was given |
+
+#### See also
+
+`each`, `filter`, `foldl`, `zip`.
+
+#### Example
+
+```session
+hylang> (map 1+ {1 2 3})
+=> {2 3 4}
+hylang> (map (fn {x} {* x x}) {1 2 3})
+=> {1 4 9}
+hylang> (map len {"a" "bb" {1 2 3}})
+=> {1 2 3}
+hylang> (map (fn {x} {/ 1 x}) {1 0 2})
+=> Error: Division by zero.
+```
 
 ## math.pi, math.e, math.phi, math.gamma
 
@@ -1597,7 +2747,7 @@ Constants, to many places.
 
 ## min, max
 
-A function: lists.
+Functions: the least of their arguments; and the greatest.
 
 #### Syntax
 
@@ -1606,9 +2756,42 @@ A function: lists.
 (max x ...)
 ```
 
+#### Arguments
+
+*x*
+: Any values: at least one.
+
+#### Result
+
+The argument that comes first in order (`min`) or last (`max`).
+
 #### Description
 
-The smallest; the largest.
+The arguments are compared as `<` and `>` compare, which is `cmp`'s order: numbers by value whatever their
+form, strings character by character, and values of different kinds by kind, numbers before strings before
+atoms. So the arguments need not all be numbers.
+
+These compare their *arguments*. Given one list, they have one argument, and return it: `(min {3 1 2})` is
+`{3 1 2}`. For the least item of a list, use the library's `minimum` and `maximum`.
+
+#### See also
+
+`minimum`, `maximum`, `sort`, `cmp`.
+
+#### Example
+
+```session
+hylang> (min 3 1 2)
+=> 1
+hylang> (max 3 1 2)
+=> 3
+hylang> (min 1/2 0.3)
+=> 0.3
+hylang> (min "b" "a")
+=> "a"
+hylang> (min {3 1 2})
+=> {3 1 2}
+```
 
 ## minimum, maximum, sort-desc, best-of, worst-of
 
@@ -1647,7 +2830,7 @@ Directories and files.
 
 ## neg?, pos?, zero?, one?, not
 
-A function: numbers.
+Functions: tests of a number's sign and value; and the opposite of a truth value.
 
 #### Syntax
 
@@ -1659,9 +2842,50 @@ A function: numbers.
 (not x)
 ```
 
+#### Arguments
+
+*x*
+: Any value.
+
+#### Result
+
+`T` or `NIL`:
+
+| Function | `T` when |
+|---|---|
+| `neg?` | *x* is a number below 0 |
+| `pos?` | *x* is a number above 0 |
+| `zero?` | *x* is equal to 0 (0.0 is) |
+| `one?` | *x* is equal to 1 |
+| `not` | *x* is `NIL`, or the empty list, which is the same |
+
 #### Description
 
-Tests.
+The four number tests are comparisons with 0 or 1, and since any two values can be compared, they give no
+error for something that is not a number: `(zero? "a")` is simply `NIL`. The library's `positive?` and
+`negative?` are the strict ones, which give an error for a non-number.
+
+`not` follows hylang's rule of truth: only `NIL` is false. `(not 0)` and `(not "")` are `NIL`, because 0 and
+the empty string are true.
+
+#### See also
+
+`positive?`, `negative?`, `odd?`, `even?`, `=0`, `and`, `or`.
+
+#### Example
+
+```session
+hylang> (neg? -1)
+=> T
+hylang> (pos? 0)
+=> NIL
+hylang> (zero? 0.0)
+=> T
+hylang> (not NIL)
+=> T
+hylang> (not 0)
+=> NIL
+```
 
 ## newns
 
@@ -1694,9 +2918,72 @@ A function: programs, time and the system.
 
 Notes.
 
+## num?, int?, fixed?, rational?, complex?
+
+Functions: is a value a number, and of which kind?
+
+#### Syntax
+
+```text
+(num? x)
+(int? x)
+(fixed? x)
+(rational? x)
+(complex? x)
+```
+
+#### Arguments
+
+*x*
+: Any value.
+
+#### Result
+
+`T` or `NIL`:
+
+| Function | `T` when *x* is |
+|---|---|
+| `num?` | A number of any kind |
+| `int?` | An integer |
+| `fixed?` | A decimal, such as 1.5. 1.0 is one, though its value is whole |
+| `rational?` | A fraction, such as 1/2 |
+| `complex?` | A complex number, with an imaginary part that isn't 0 |
+
+#### Description
+
+The four kinds go by the form the number is in, not by its value: 1.0 is `fixed?` and not `int?`, and 0.5 is
+not `rational?`, though it equals 1/2. Arithmetic gives each result in the simplest form that holds it (see
+`+`), so `(/ 4 2)` is an integer and `(/ 1 4)` is a fraction, and a complex number whose imaginary part comes
+to 0 is real.
+
+Nothing here is an error: a value that is not a number gives `NIL`.
+
+#### See also
+
+`type-of`, `zero?`, `positive?`, `to-fixed`, `to-rational`.
+
+#### Example
+
+```session
+hylang> (num? 42)
+=> T
+hylang> (num? "42")
+=> NIL
+hylang> (int? 1.0)
+=> NIL
+hylang> (fixed? 1.0)
+=> T
+hylang> (rational? (/ 1 4))
+=> T
+hylang> (complex? 2i)
+=> T
+hylang> (filter num? {1 "a" 2/3 :b})
+=> {1 2/3}
+```
+
 ## number-bytes, bytes-number
 
-A function: numbers.
+Functions: a number as the bytes it is stored in; and back.
 
 #### Syntax
 
@@ -1705,9 +2992,48 @@ A function: numbers.
 (bytes-number b)
 ```
 
+#### Arguments
+
+*n*
+: A number of any kind.
+
+*b*
+: A list of bytes (whole numbers from 0 to 255), or a buffer, holding one number in the stored format.
+
+#### Result
+
+`number-bytes` gives a list of bytes: the number in the Hydra's compact stored format, which every language
+shares (HyBASIC's `MKN$` and `CVN` write and read the same bytes). `bytes-number` gives the number back,
+exactly, in the kind it had.
+
 #### Description
 
-A number as bytes, and back.
+These are for keeping numbers in a file or a buffer, or passing them to a program in another language, without
+turning them to text. The format has a different length for different numbers: the integers from -64 to 63
+take one byte, and a long integer takes as many as it needs.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'bytes-number': not a number in the stored format` | The bytes are not a whole stored number |
+
+#### See also
+
+`bytes`, `write-bytes`, `buffer`.
+
+#### Example
+
+```session
+hylang> (number-bytes 0)
+=> {0}
+hylang> (number-bytes 258)
+=> {129 2 1}
+hylang> (bytes-number (number-bytes 258))
+=> 258
+hylang> (bytes-number (number-bytes 1/2))
+=> 1/2
+```
 
 ## odd?, even?, positive?, negative?
 
@@ -1838,9 +3164,68 @@ A function: files and streams.
 
 Write to it.
 
+## qexpr?, sexpr?, function?, error?
+
+Functions: is a value a list, an unevaluated call, a function, or an error?
+
+#### Syntax
+
+```text
+(qexpr? x)
+(sexpr? x)
+(function? x)
+(error? x)
+```
+
+#### Arguments
+
+*x*
+: Any value.
+
+#### Result
+
+`T` or `NIL`:
+
+| Function | `T` when *x* is |
+|---|---|
+| `qexpr?` | A list, the empty one too |
+| `sexpr?` | An S-expression that has not been evaluated: a call, as data |
+| `function?` | A function: one made with `fn` or `fun`, a built-in one, or a special form |
+| `error?` | An error |
+
+#### Description
+
+`error?` can be given an error: it answers `T`, where another function would not run, and would pass the
+error on. With `try` it is one of the two ways to deal with an error.
+
+An S-expression is only seen as one when it comes out of a list unevaluated, or from `read`.
+
+There is a test for buffers too, `buffer?`.
+
+#### See also
+
+`type-of`, `try`, `error`, `eval`.
+
+#### Example
+
+```session
+hylang> (qexpr? {1})
+=> T
+hylang> (qexpr? "a")
+=> NIL
+hylang> (sexpr? (fst {(+ 1 2)}))
+=> T
+hylang> (function? len)
+=> T
+hylang> (error? (error "x"))
+=> T
+hylang> (error? 5)
+=> NIL
+```
+
 ## random
 
-A function: numbers.
+A function: a random whole number.
 
 #### Syntax
 
@@ -1848,13 +3233,37 @@ A function: numbers.
 (random n)
 ```
 
-#### Description
+#### Arguments
 
-A random whole number from 0 to *n* - 1.
+*n*
+: A whole number, 1 or more. It may be as large as any integer.
+
+#### Result
+
+A whole number from 0 to *n* - 1, chosen at random. `(random 6)` is one of 0 to 5: add 1 for the
+throw of a die.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'random' expects a number above 0` | *n* is 0 or negative |
+| `'random' expects an integer` | *n* is not a whole number |
+
+#### Example
+
+The answers differ from run to run:
+
+```text
+hylang> (random 6)
+=> 2
+hylang> (1+ (random 6))
+=> 4
+```
 
 ## range
 
-A function: lists.
+A function: a list of evenly spaced numbers.
 
 #### Syntax
 
@@ -1863,13 +3272,58 @@ A function: lists.
 (range from to [step])
 ```
 
+#### Arguments
+
+*from*
+: The first number. With one argument, 0.
+
+*to*
+: Where to stop. *to* itself is never in the list.
+
+*step*
+: The difference between one number and the next: 1 if it isn't given. It may be negative, to count down, and
+  it may be a fraction or a decimal, as *from* and *to* may be.
+
+#### Result
+
+A list of *from*, *from* + *step*, and so on, for as long as the number is before *to*: less than it for a
+positive step, greater for a negative one. If the first number is already at or past *to*, the result is `NIL`.
+
 #### Description
 
-Numbers, up to (not including) *to*.
+`(range n)` is the numbers 0 to *n* - 1: *n* of them, which are also the positions of a list of *n* items. The
+arithmetic is exact, so a fractional step never drifts.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'range' step cannot be 0` | *step* is 0 |
+| `'range' expects Numbers` | An argument is not a number |
+| `'range' takes at most 3 arguments, not 4` | Too many arguments |
+
+#### See also
+
+`dotimes`, `map`.
+
+#### Example
+
+```session
+hylang> (range 5)
+=> {0 1 2 3 4}
+hylang> (range 2 6)
+=> {2 3 4 5}
+hylang> (range 5 0 -2)
+=> {5 3 1}
+hylang> (range 0 1 1/4)
+=> {0 1/4 1/2 3/4}
+hylang> (range 5 0)
+=> NIL
+```
 
 ## rational.n, rational.d
 
-A function: numbers.
+Functions: the top and the bottom of a fraction.
 
 #### Syntax
 
@@ -1878,13 +3332,39 @@ A function: numbers.
 (rational.d x)
 ```
 
-#### Description
+#### Arguments
 
-Its top; its bottom.
+*x*
+: A real number.
+
+#### Result
+
+`rational.n` gives the numerator and `rational.d` the denominator of *x* written as a fraction in its lowest
+terms. The sign is the numerator's. An integer's denominator is 1, and a decimal is turned to a fraction
+first: 0.75 gives 3 and 4.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'rational.n' expects a real number` | *x* is complex, or not a number (and `'rational.d'`) |
+
+#### Example
+
+```session
+hylang> (rational.n 3/4)
+=> 3
+hylang> (rational.d 3/4)
+=> 4
+hylang> (rational.d 5)
+=> 1
+hylang> (rational.n 0.75)
+=> 3
+```
 
 ## read
 
-A function: strings and characters.
+A function: the expressions that a string of text holds.
 
 #### Syntax
 
@@ -1892,9 +3372,45 @@ A function: strings and characters.
 (read text)
 ```
 
+#### Arguments
+
+*text*
+: A string of hylang source.
+
+#### Result
+
+A list of the expressions in the text, in order, as the reader makes them and with nothing evaluated: a call
+written in parentheses is an S-expression in the list. Empty text gives `NIL`.
+
 #### Description
 
-The expressions in the text, not worked out.
+`read` is the reader on its own: the first half of what `load` and the prompt do. `eval` is the second half.
+Given the list, `eval` runs the expressions in turn and gives the last one's value; given one item of it,
+`eval` runs that one.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'read': missing )` | The text ends inside an expression (the message names what is missing) |
+| `'read' expects a String` | *text* is not a string |
+
+#### See also
+
+`eval`, `load`, `val`, `repr`.
+
+#### Example
+
+```session
+hylang> (read "(+ 1 2)")
+=> {(+ 1 2)}
+hylang> (read "1 2 3")
+=> {1 2 3}
+hylang> (eval (read "(+ 1 2)"))
+=> 3
+hylang> (read "(+ 1")
+=> Error: 'read': missing )
+```
 
 ## read-buffer
 
@@ -1990,17 +3506,40 @@ A list of *d*'s value *n* times.
 
 ## reverse
 
-A function: lists.
+A function: a list, or a string, backwards.
 
 #### Syntax
 
 ```text
-(reverse l)
+(reverse x)
 ```
 
-#### Description
+#### Arguments
 
-Backwards (a string's too)
+*x*
+: A list or a string.
+
+#### Result
+
+A list of the same items in the opposite order, or a string of the same characters in the opposite order. Only
+the outer list is reversed: a list inside it keeps its own order.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'reverse' expects a QExpr or a String` | *x* is neither |
+
+#### Example
+
+```session
+hylang> (reverse {1 2 3})
+=> {3 2 1}
+hylang> (reverse {1 {2 3} 4})
+=> {4 {2 3} 1}
+hylang> (reverse "hello")
+=> "olleh"
+```
 
 ## run, spawn, wait, kill
 
@@ -2152,7 +3691,7 @@ Command lines (their status; their output)
 
 ## shl, shr, bit?
 
-A function: numbers.
+Functions: shift an integer's bits left or right; and test one bit.
 
 #### Syntax
 
@@ -2162,9 +3701,45 @@ A function: numbers.
 (bit? n k)
 ```
 
-#### Description
+#### Arguments
 
-Shifts; a bit.
+*n*
+: An integer.
+
+*k*
+: For the shifts, how many places: an integer. For `bit?`, which bit, bit 0 being the lowest.
+
+#### Result
+
+`shl` gives *n* shifted left *k* places, which is *n* times 2 to the power *k*; nothing is lost off the top,
+because integers grow. `shr` gives *n* shifted right *k* places, which is *n* divided by 2 to the power *k*,
+rounded down (toward minus infinity, so the sign is kept). A negative *k* shifts the other way.
+
+`bit?` gives `T` if bit *k* of *n* is 1, and `NIL` if it is 0. A negative number is two's complement, with
+all the bits above its top one set.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'shr''s count must be an integer` | *k* is not an integer (each function with its own name) |
+
+#### Example
+
+```session
+hylang> (shl 1 4)
+=> 16
+hylang> (shr 256 4)
+=> 16
+hylang> (shr -8 1)
+=> -4
+hylang> (shl 1 100)
+=> 1267650600228229401496703205376
+hylang> (bit? 5 0)
+=> T
+hylang> (bit? 5 1)
+=> NIL
+```
 
 ## sleep, sleep-until, yield
 
@@ -2184,7 +3759,7 @@ Wait.
 
 ## sort
 
-A function: lists.
+A function: a list in order.
 
 #### Syntax
 
@@ -2192,9 +3767,54 @@ A function: lists.
 (sort l [less])
 ```
 
+#### Arguments
+
+*l*
+: A list.
+
+*less*
+: A function of two items, which returns a true value when the first must come before the second. Without it,
+  the items are put in `cmp`'s order.
+
+#### Result
+
+A new list of the same items in order. *l* is not changed.
+
 #### Description
 
-In order (by `cmp`, or by *less*)
+Without *less* the order is that of `cmp`: by kind first (numbers before characters, then strings, atoms,
+symbols and lists), then by value. Numbers are compared by value whatever their form, strings character by
+character, and lists item by item, a list that is the start of another coming first. So a list of mixed kinds
+sorts without an error.
+
+The sort is a merge sort, and it is stable: items that *less* does not put in order keep the order they had.
+To sort records by one field, give a *less* that compares that field.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'sort' expects a QExpr` | *l* is not a list (a string is not one) |
+| `Second 'sort' parameter must be a function` | *less* is not a function |
+
+#### See also
+
+`cmp`, `min`, `max`, `sort-desc`.
+
+#### Example
+
+```session
+hylang> (sort {3 1 2})
+=> {1 2 3}
+hylang> (sort {3 1 2} >)
+=> {3 2 1}
+hylang> (sort {"pear" "apple" "fig"})
+=> {"apple" "fig" "pear"}
+hylang> (sort {3 "a" 1})
+=> {1 3 "a"}
+hylang> (sort {{2 "b"} {1 "a"}} (fn {a b} {< (fst a) (fst b)}))
+=> {{1 "a"} {2 "b"}}
+```
 
 ## split, zip, flatten, distinct, avg
 
@@ -2216,7 +3836,7 @@ Lists.
 
 ## sqrt, exp, log, sin, cos, tan, atan, pi, pow
 
-A function: numbers.
+Functions: square root, exponential, natural logarithm, the trigonometric functions, pi, and powers.
 
 #### Syntax
 
@@ -2232,9 +3852,76 @@ A function: numbers.
 (pow x y)
 ```
 
+#### Arguments
+
+*x*
+: A real number. For `sin`, `cos` and `tan` it is an angle in radians. For `pow` with a whole *y* it may be
+  any number, complex too.
+
+*y*
+: The power: any real number.
+
+#### Result
+
+| Function | Result |
+|---|---|
+| `sqrt` | The square root. Of a negative number, an imaginary one: `(sqrt -4)` is `2i` |
+| `exp` | *e* to the power *x* |
+| `log` | The natural logarithm (base *e*). Of a negative number, a complex one |
+| `sin`, `cos`, `tan` | The sine, cosine and tangent of the angle *x* |
+| `atan` | The angle, in radians, whose tangent is *x* |
+| `pi` | Pi, to the precision in force. It is a function, called with no arguments |
+| `pow` | *x* to the power *y* |
+
 #### Description
 
-The math functions.
+Where the answer is exact, it is given exactly: `(sqrt 16)` is 4, `(sqrt 1/4)` is 1/2, `(sqrt 2.25)` is 1.5,
+and `pow` with a whole power is exact for any *x*, so `(pow 2 100)` has all its digits and `(pow 2 -1)` is
+1/2. A power that is a fraction is exact when the root is, as in `(pow 4 1/2)`.
+
+Otherwise the answer is a decimal with the number of significant digits that `digits` has set, 12 to begin
+with. Such an answer is rounded, so results that should be 0 can come out as a very small number:
+`(sin (pi))` is not exactly 0.
+
+Each function takes exactly the arguments shown: `log` has no second argument for a base (divide two
+logarithms), and `atan` has no two-argument form.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'sqrt' expects a number` | The argument is not a number (each function with its own name) |
+| `'sqrt' expects a real number` | The argument is complex |
+| `'log': the logarithm of 0` | `(log 0)` |
+| `'pow': a negative number to a power that isn't whole` | A negative *x* with a fractional *y* |
+| `Division by zero.` | 0 to a negative power |
+
+#### See also
+
+`digits`, `square`, `cube`, `math.pi`.
+
+#### Example
+
+```session
+hylang> (sqrt 16)
+=> 4
+hylang> (sqrt 2)
+=> 1.41421356237
+hylang> (sqrt -4)
+=> 2i
+hylang> (pow 2 10)
+=> 1024
+hylang> (pow 2 1/2)
+=> 1.41421356237
+hylang> (exp 1)
+=> 2.71828182846
+hylang> (log 10)
+=> 2.30258509299
+hylang> (* 4 (atan 1))
+=> 3.141592653588
+hylang> (pi)
+=> 3.14159265359
+```
 
 ## square, cube, recip, inverse
 
@@ -2271,7 +3958,7 @@ Strings.
 
 ## str-pad-left, str-pad-right
 
-A function: strings and characters.
+Functions: a string filled out to a length.
 
 #### Syntax
 
@@ -2280,13 +3967,52 @@ A function: strings and characters.
 (str-pad-right s n [c])
 ```
 
-#### Description
+#### Arguments
 
-Padded to *n* characters.
+*s*
+: A string. A number must be made one first, with `to-str`.
+
+*n*
+: The length wanted: a whole number, 0 or more.
+
+*c*
+: What to fill with: a character, or a string of one character. Without it, a space.
+
+#### Result
+
+A string of at least *n* characters. `str-pad-left` puts the filling before *s*, which sets it to the right of
+a column, as numbers are set; `str-pad-right` puts it after. A string already *n* long or longer is returned
+whole: it is never cut.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'str-pad-left' expects a String` | *s* is not a string (and `'str-pad-right'`) |
+| `'str-pad-left' pads with one character` | *c* is a string of more than one character |
+| `'str-pad-left' length cannot be negative` | *n* is below 0 |
+| `'str-pad-left': a number must be a whole number, not 1.5` | *n* is not a whole number |
+
+#### See also
+
+`format`, `to-str`, `hex`.
+
+#### Example
+
+```session
+hylang> (str-pad-left (to-str 42) 6)
+=> "    42"
+hylang> (str-pad-left "7" 3 "0")
+=> "007"
+hylang> (str-pad-right "ab" 5 "*")
+=> "ab***"
+hylang> (str-pad-left "1234" 3)
+=> "1234"
+```
 
 ## str-replace, str-repeat
 
-A function: strings and characters.
+Functions: a string with every copy of some text replaced; and a string repeated.
 
 #### Syntax
 
@@ -2295,13 +4021,53 @@ A function: strings and characters.
 (str-repeat s n)
 ```
 
-#### Description
+#### Arguments
 
-Replaced; repeated.
+*s*
+: A string. For `str-repeat` it may be a character.
+
+*old*
+: The text to look for: a string that is not empty, or a character.
+
+*new*
+: The text to put in its place: a string, which may be empty, or a character.
+
+*n*
+: How many times: a whole number, 0 or more.
+
+#### Result
+
+`str-replace` gives *s* with every place where *old* is found replaced by *new*. The string is gone through
+once, from the left, and what has been put in is not looked at again: replacing `"a"` by `"aa"` in `"aaa"`
+gives six a's and stops. If *old* is not found, the result is *s*.
+
+`str-repeat` gives *n* copies of *s*, one after another: the empty string for 0.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'str-replace' cannot replace an empty String` | *old* is `""` |
+| `'str-replace' expects a String` | An argument is not a string or a character |
+| `'str-repeat' count cannot be negative` | *n* is below 0 |
+| `'str-repeat': a number must be a whole number, not 1.5` | *n* is not a whole number |
+
+#### Example
+
+```session
+hylang> (str-replace "a-b-c" "-" "+")
+=> "a+b+c"
+hylang> (str-replace "abc" "b" "")
+=> "ac"
+hylang> (str-replace "aaa" "a" "aa")
+=> "aaaaaa"
+hylang> (str-repeat "ab" 3)
+=> "ababab"
+```
 
 ## str-split, str-join, str-chars
 
-A function: strings and characters.
+Functions: a string cut into a list of strings; a list joined into a string; and a string's characters.
 
 #### Syntax
 
@@ -2311,13 +4077,64 @@ A function: strings and characters.
 (str-chars s)
 ```
 
-#### Description
+#### Arguments
 
-Split; join; its characters.
+*s*
+: A string.
+
+*sep*
+: For `str-split`, the text to cut at: a string, or a list of strings, any of which cuts. Without it, a space.
+  For `str-join`, the text to put between the items: without it, nothing.
+
+*l*
+: A list. Its items need not be strings: each is turned to text as `print` shows it.
+
+#### Result
+
+`str-split` gives a list of the pieces of *s* between the separators, without the separators. Two separators
+together have an empty string between them, and the list always has at least one item: a string with no
+separator in it gives a list of itself.
+
+`str-join` gives one string: the items, with *sep* between each two. An empty list gives the empty string.
+
+`str-chars` gives a list of the string's characters (`NIL` for the empty string). They are characters, not
+strings of one character.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `First 'str-split' parameter must be a string` | *s* is not a string |
+| `Second 'str-split' parameter must be a list of strings or a single string` | *sep* is something else: a character is not accepted |
+| `'str-join' expects a QExpr` | *l* is not a list |
+| `'str-chars' expects a String` | *s* is not a string |
+
+#### See also
+
+`read-lines`, `format`, `bytes`, `+`.
+
+#### Example
+
+```session
+hylang> (str-split "one two three")
+=> {"one" "two" "three"}
+hylang> (str-split "a,b,,c" ",")
+=> {"a" "b" "" "c"}
+hylang> (str-split "a,b;c" {"," ";"})
+=> {"a" "b" "c"}
+hylang> (str-join {"a" "b" "c"} ", ")
+=> "a, b, c"
+hylang> (str-join {1 2 3} "-")
+=> "1-2-3"
+hylang> (str-chars "abc")
+=> {\a \b \c}
+hylang> (str-join (reverse (str-split "a b c")) " ")
+=> "c b a"
+```
 
 ## str-upper, str-lower, str-trim
 
-A function: strings and characters.
+Functions: a string in capitals; in small letters; and without the blank space at its ends.
 
 #### Syntax
 
@@ -2327,13 +4144,93 @@ A function: strings and characters.
 (str-trim s)
 ```
 
+#### Arguments
+
+*s*
+: A string. `str-upper` and `str-lower` also take a character, and give a character.
+
+#### Result
+
+A new string. `str-upper` and `str-lower` change the letters A to Z and leave every other character as it is.
+`str-trim` removes the spaces, tabs and line ends from the start and the end, and leaves those in the middle.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'str-upper' expects a String` | *s* is neither a string nor a character (each function with its own name) |
+
+#### Example
+
+```session
+hylang> (str-upper "Hello 1")
+=> "HELLO 1"
+hylang> (str-lower "Hello 1")
+=> "hello 1"
+hylang> (str-trim "  hi  ")
+=> "hi"
+hylang> (str-upper \a)
+=> \A
+```
+
+## string?, char?, atom?, symbol?
+
+Functions: is a value a string, a character, an atom, or a symbol?
+
+#### Syntax
+
+```text
+(string? x)
+(char? x)
+(atom? x)
+(symbol? x)
+```
+
+#### Arguments
+
+*x*
+: Any value.
+
+#### Result
+
+`T` or `NIL`:
+
+| Function | `T` when *x* is |
+|---|---|
+| `string?` | A string. A character is not a string, even a string of one character |
+| `char?` | A character, such as `\a` |
+| `atom?` | An atom, such as `:name` |
+| `symbol?` | A symbol that has not been evaluated |
+
 #### Description
 
-Capitals; small letters; trimmed.
+A symbol written as an argument is evaluated before the function sees it, so `symbol?` is only `T` for a
+symbol taken out of a list, made by `to-sym` or `gensym`, or read by `read`.
+
+#### See also
+
+`type-of`, `to-sym`, `to-atom`, `alpha?`.
+
+#### Example
+
+```session
+hylang> (string? "a")
+=> T
+hylang> (string? \a)
+=> NIL
+hylang> (char? \a)
+=> T
+hylang> (atom? :a)
+=> T
+hylang> (symbol? (fst {a}))
+=> T
+hylang> (symbol? :a)
+=> NIL
+```
 
 ## subset
 
-A function: lists.
+A function: part of a list.
 
 #### Syntax
 
@@ -2341,13 +4238,48 @@ A function: lists.
 (subset l i [n])
 ```
 
-#### Description
+#### Arguments
 
-*n* items from *i*.
+*l*
+: A list.
+
+*i*
+: Where the part starts, from 0. It may be the list's length, which gives `NIL`.
+
+*n*
+: How many items. Without it, or if it is more than there are, all the items from *i* to the end.
+
+#### Result
+
+A new list of the items.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'subset': the list has no item 6` | *i* is more than the list's length, or negative |
+| `First 'subset' parameter must be a QExpr` | *l* is not a list. For part of a string, use `substring` |
+
+#### See also
+
+`take`, `drop`, `substring`.
+
+#### Example
+
+```session
+hylang> (subset {1 2 3 4 5} 1 3)
+=> {2 3 4}
+hylang> (subset {1 2 3 4 5} 3)
+=> {4 5}
+hylang> (subset {1 2 3 4 5} 2 99)
+=> {3 4 5}
+hylang> (subset {1 2 3 4 5} 5)
+=> NIL
+```
 
 ## substring, char-at
 
-A function: strings and characters.
+Functions: part of a string; and one character of it.
 
 #### Syntax
 
@@ -2356,13 +4288,56 @@ A function: strings and characters.
 (char-at s i)
 ```
 
-#### Description
+#### Arguments
 
-Part of a string; a character.
+*s*
+: A string.
+
+*i*
+: A position in the string, from 0. For `substring` it may be the string's length, which gives the empty
+  string; for `char-at` it must be less.
+
+*n*
+: How many characters. Without it, or if it is more than there are, all the characters from *i* to the end.
+
+#### Result
+
+`substring` gives a string. `char-at` gives a character, which is a different kind of value from a string of
+one character: `(char-at "abc" 0)` is `\a`, and is not equal to `"a"`. `to-str`, or `+` after a string, makes
+a character a string.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'substring': index 6 is outside the string` | *i* is negative, or past the end (and `'char-at'`) |
+| `'substring': a count can't be negative` | *n* is below 0 |
+| `'substring': an index must be a whole number, not 1.5` | *i* or *n* is not a whole number |
+| `First 'substring' parameter must be a String` | *s* is not a string. For part of a list, use `subset` |
+| `'char-at' expects a String` | `char-at`'s *s* is not a string |
+
+#### See also
+
+`index-of`, `str-chars`, `subset`, `nth`.
+
+#### Example
+
+```session
+hylang> (substring "hello" 1 3)
+=> "ell"
+hylang> (substring "hello" 1)
+=> "ello"
+hylang> (substring "hello" 5)
+=> ""
+hylang> (char-at "hello" 1)
+=> \e
+hylang> (substring "hello" 6)
+=> Error: 'substring': index 6 is outside the string
+```
 
 ## sum, product
 
-A function: lists.
+Functions: all the numbers of a list added together; and multiplied together.
 
 #### Syntax
 
@@ -2371,9 +4346,40 @@ A function: lists.
 (product l)
 ```
 
-#### Description
+#### Arguments
 
-All the items added; multiplied.
+*l*
+: A list of numbers.
+
+#### Result
+
+The total, or the product, exact as all of hylang's arithmetic is. For an empty list `sum` is 0 and `product`
+is 1.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'sum' expects a list` | *l* is not a list (and `'product'` for `product`) |
+| `'+' adds numbers, or joins values to a string` | `sum`: an item is not a number |
+| `All parameters to operator '*' must be numbers.` | `product`: an item is not a number |
+
+#### See also
+
+`+`, `*`, `foldl`, `avg`.
+
+#### Example
+
+```session
+hylang> (sum {1 2 3})
+=> 6
+hylang> (sum {1/2 1/3})
+=> 5/6
+hylang> (product {2 3 4})
+=> 24
+hylang> (sum {})
+=> 0
+```
 
 ## sys, sys-, x
 
@@ -2410,9 +4416,51 @@ A function: programs, time and the system.
 
 The system.
 
+## t?, nil?
+
+Functions: is a value `T`, or `NIL`?
+
+#### Syntax
+
+```text
+(t? x)
+(nil? x)
+```
+
+#### Arguments
+
+*x*
+: Any value.
+
+#### Result
+
+`t?` gives `T` only for `T` itself: other values that count as true, such as 1, are not `T`.
+
+`nil?` gives `T` for `NIL` and for the empty list, which are the same value. 0 and the empty string are not
+`NIL`. `nil?` does the same as `not`.
+
+#### See also
+
+`not`, `and`, `or`, `if`.
+
+#### Example
+
+```session
+hylang> (t? T)
+=> T
+hylang> (t? 1)
+=> NIL
+hylang> (nil? {})
+=> T
+hylang> (nil? 0)
+=> NIL
+hylang> (nil? "")
+=> NIL
+```
+
 ## take, drop
 
-A function: lists.
+Functions: the first items of a list; and the list without them.
 
 #### Syntax
 
@@ -2421,9 +4469,45 @@ A function: lists.
 (drop n l)
 ```
 
-#### Description
+#### Arguments
 
-The first *n*; all but them.
+*n*
+: A count: a whole number, 0 or more.
+
+*l*
+: A list.
+
+#### Result
+
+`take` gives a list of the first *n* items, and `drop` the list without them. A count greater than the list's
+length is not an error: `take` then gives the whole list, and `drop` gives `NIL`.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'take': a count can't be negative` | *n* is less than 0 |
+| `'take': a count must be a whole number, not 1.5` | *n* is not a whole number |
+| `'take' expects a list` | *l* is not a list |
+
+`drop`'s messages are the same, with its own name.
+
+#### See also
+
+`subset`, `head`, `tail`, `split`.
+
+#### Example
+
+```session
+hylang> (take 2 {1 2 3})
+=> {1 2}
+hylang> (drop 2 {1 2 3})
+=> {3}
+hylang> (take 5 {1 2 3})
+=> {1 2 3}
+hylang> (drop 5 {1 2 3})
+=> NIL
+```
 
 ## ticks, tick-rate, clock
 
@@ -2460,7 +4544,7 @@ The clock.
 
 ## to-fixed, to-rational
 
-A function: numbers.
+Functions: a number as a decimal; and as a fraction.
 
 #### Syntax
 
@@ -2469,13 +4553,56 @@ A function: numbers.
 (to-rational x)
 ```
 
+#### Arguments
+
+*x*
+: A real number.
+
+*places*
+: How many digits to keep after the point: 0 to 10,000. Without it, 10.
+
+#### Result
+
+`to-fixed` gives *x* as a decimal with at most *places* digits after the point. Digits beyond that are cut
+off, not rounded: `(to-fixed 2/3 2)` is 0.66. A number that needs fewer places is not padded with zeros, and a
+whole number stays an integer.
+
+`to-rational` gives *x* as a fraction in its lowest terms, exactly. A whole number stays an integer.
+
 #### Description
 
-As a fixed decimal; as a fraction.
+A fraction such as 1/3 has no exact decimal, so `to-fixed` is where exactness is given up, and it is the usual
+last step before a number is shown to a person. `to-rational` loses nothing.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'to-fixed' expects a real number` | *x* is complex, or not a number (and `'to-rational'` for `to-rational`) |
+| `'to-fixed': -1 places is outside 0 to 10000` | *places* is out of range |
+
+#### See also
+
+`round`, `fdiv`, `to-str`, `format`.
+
+#### Example
+
+```session
+hylang> (to-fixed 1/3)
+=> 0.3333333333
+hylang> (to-fixed 2/3 2)
+=> 0.66
+hylang> (to-fixed 1.23456 2)
+=> 1.23
+hylang> (to-rational 0.25)
+=> 1/4
+hylang> (to-rational 1.5)
+=> 3/2
+```
 
 ## to-str, repr
 
-A function: strings and characters.
+Functions: a value as text.
 
 #### Syntax
 
@@ -2484,13 +4611,57 @@ A function: strings and characters.
 (repr x)
 ```
 
-#### Description
+#### Arguments
 
-As `print` shows it; as the prompt shows it.
+*x*
+: Any value.
+
+*base*
+: For a number: the base to write it in, as a string (`"x"`, `"b"`, a radix). Without it, the current base.
+
+#### Result
+
+A string.
+
+`to-str` gives the text that `print` would show: a string is itself, a character is the one character, and a
+number is its digits.
+
+`repr` gives the text as the prompt shows it, which is the text that reads back as the same value: a string
+has its quotes, and its special characters are written as escapes; a character has its backslash.
+
+For a number, a list, an atom, `T` or `NIL` the two are the same. A string inside a list is shown with its
+quotes by both.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `Second 'to-str' parameter must be a String` | *base* is not a string: write `"x"`, not 16 |
+
+#### See also
+
+`val`, `read`, `format`, `hex`, `save`.
+
+#### Example
+
+```session
+hylang> (to-str 42)
+=> "42"
+hylang> (to-str 255 "x")
+=> "FF"
+hylang> (to-str "a")
+=> "a"
+hylang> (repr "a")
+=> "\"a\""
+hylang> (to-str {1 "a"})
+=> "{1 \"a\"}"
+hylang> (len (to-str 1/3))
+=> 3
+```
 
 ## to-sym, to-atom
 
-A function: strings and characters.
+Functions: a symbol, or an atom, with a given name.
 
 #### Syntax
 
@@ -2499,13 +4670,47 @@ A function: strings and characters.
 (to-atom x)
 ```
 
+#### Arguments
+
+*x*
+: For `to-sym`, a string or an atom. For `to-atom`, a string, a symbol or a number.
+
+#### Result
+
+`to-sym` gives the symbol whose name is the string's text, or the atom's name without its colon. `to-atom`
+gives the atom of that name.
+
 #### Description
 
-A symbol; an atom.
+A symbol made this way is a value like any other until it is evaluated; `eval` then looks it up, as it would
+a name written in the program. This is how a program reaches a function, or a variable, whose name it has
+only as text.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `Only atoms and strings can be converted into symbols` | `to-sym` of anything else |
+| `Only symbols, strings and numbers can be converted to atoms` | `to-atom` of anything else |
+
+#### See also
+
+`gensym`, `eval`, `def`.
+
+#### Example
+
+```session
+hylang> (to-sym "abc")
+=> abc
+hylang> (to-atom "abc")
+=> :abc
+hylang> ((eval (to-sym "len")) "hello")
+=> 5
+```
 
 ## truncate
 
-A function: numbers.
+A function: the whole part of a number.
 
 #### Syntax
 
@@ -2513,9 +4718,37 @@ A function: numbers.
 (truncate x)
 ```
 
-#### Description
+#### Arguments
 
-The whole part (toward zero)
+*x*
+: A real number: an integer, a fraction or a decimal.
+
+#### Result
+
+An integer: *x* with whatever follows the point taken away. The result is the nearest whole number toward
+zero, so a negative number moves up: `(truncate -2.7)` is -2.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'truncate' expects a real number` | *x* is complex, or not a number |
+
+#### See also
+
+`floor`, `ceil` and `round` in the library, which round down, up and to the nearest; `trunc`, which is another
+name for `truncate`.
+
+#### Example
+
+```session
+hylang> (truncate 2.7)
+=> 2
+hylang> (truncate -2.7)
+=> -2
+hylang> (truncate 7/2)
+=> 3
+```
 
 ## try
 
@@ -2546,6 +4779,72 @@ hylang> (try (error "mine"))
 => NIL
 ```
 
+## type-of
+
+A function: the kind of a value.
+
+#### Syntax
+
+```text
+(type-of x)
+```
+
+#### Arguments
+
+*x*
+: Any value.
+
+#### Result
+
+An atom:
+
+| Atom | The value is |
+|---|---|
+| `:number` | A number of any kind: an integer, a fraction, a decimal or a complex number |
+| `:string` | A string |
+| `:char` | A character |
+| `:atom` | An atom |
+| `:symbol` | A symbol that has not been evaluated |
+| `:list` | A Q-expression: a list. `NIL`, the empty list, is one |
+| `:sexpr` | An S-expression that has not been evaluated: a call, as data |
+| `:t` | `T` |
+| `:function` | A function: one made with `fn` or `fun`, a built-in one, or a special form |
+| `:hash` | A hash |
+| `:buffer` | A buffer |
+| `:stream` | A stream |
+| `:error` | An error |
+
+#### Description
+
+`type-of` is one of the few functions that can be given an error without the error becoming its result: it
+answers `:error`. A symbol or an S-expression is only seen as one when it comes out of a list unevaluated, as
+`(fst {a})` does; written as an argument, it is evaluated first, and `type-of` sees its value.
+
+To tell the kinds of number apart, use `int?`, `fixed?`, `rational?` and `complex?`.
+
+#### See also
+
+`num?` and the other tests; `==`.
+
+#### Example
+
+```session
+hylang> (type-of 42)
+=> :number
+hylang> (type-of "42")
+=> :string
+hylang> (type-of {4 2})
+=> :list
+hylang> (type-of NIL)
+=> :list
+hylang> (type-of len)
+=> :function
+hylang> (type-of (fst {a}))
+=> :symbol
+hylang> (type-of (error "x"))
+=> :error
+```
+
 ## use
 
 A function of the library, written in hylang.
@@ -2562,7 +4861,7 @@ Load a library once.
 
 ## val
 
-A function: numbers.
+A function: the number that a string spells.
 
 #### Syntax
 
@@ -2570,9 +4869,48 @@ A function: numbers.
 (val s)
 ```
 
+#### Arguments
+
+*s*
+: A string holding one number, written as hylang itself reads numbers. Spaces before and after it are allowed.
+
+#### Result
+
+The number. Any form that can be typed can be read: an integer, a fraction, a decimal, a complex number, or a
+number with a base prefix. A number with no prefix is read in the current base.
+
 #### Description
 
-The number a string holds.
+`val` is how text from a person, or from a file, becomes a number. The whole string must be the number: text
+after it is an error, not ignored, so a program can tell a bad entry from a good one with `try`.
+
+#### Errors
+
+| Message | Cause |
+|---|---|
+| `'val': "abc" isn't a number` | The string is not a number, is empty, or has something after the number |
+| `'val' expects a String` | *s* is not a string |
+
+#### See also
+
+`to-str`, `read`, `base`.
+
+#### Example
+
+```session
+hylang> (val "42")
+=> 42
+hylang> (val "2/3")
+=> 2/3
+hylang> (val " 12 ")
+=> 12
+hylang> (val "#xFF")
+=> 255
+hylang> (val "12abc")
+=> Error: 'val': "12abc" isn't a number
+hylang> (try (val "abc") 0)
+=> 0
+```
 
 ## while
 
