@@ -364,7 +364,8 @@ The PS/2 sockets' pin 3 is GND and pin 4 +5 V; pins 2 and 6 aren't used.
    `WR#` (each active low), and `RES#` (high once the reset is over).  Then try U3 for the 3.3 V highs.
 5. **The keyboard and mouse**: `ls /dev/i2c` lists `42`; press SW1; then keys typed on the PS/2 keyboard reach the shell,
    and `cat /dev/vid/mouse` prints a line each time the mouse moves, the pointer following it on the screen.
-6. **Then 7.16 MHz**, once everything works at 3.58 MHz (J8, and a build with `--clock 2`).
+6. (7.16 MHz, J8 and a build with `--clock 2`, is for a board with faster parts than the stated ones: with these,
+   3.58 MHz is the fastest valid speed.)
 
 ### The carrier card to come
 
