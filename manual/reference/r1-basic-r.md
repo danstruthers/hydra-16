@@ -1808,7 +1808,7 @@ WIDTH n
 #### Description
 
 The width decides how many print zones fit on a line: `PRINT a, b, c` moves to a new line when the next zone
-would pass it. It is HyBASIC's idea of the line, used for its own layout.
+would start beyond it. It is HyBASIC's idea of the line, used for its own layout.
 
 It does not change the terminal or the screen, and it does not break long text: a string longer than the width
 is written whole, and the terminal wraps it wherever its own edge is.

@@ -818,8 +818,8 @@ rational is written with a `/`, and a decimal with its point and every digit it 
 exponent form: a very large or very small number is written out in full.
 
 **Between items.** A semicolon writes nothing: the next item follows at once. A comma moves to the next print
-zone: the zones are 14 columns wide, starting at columns 1, 15, 29 and so on, and if there is no whole zone
-left on the line the item starts a new line. Two commas skip a zone.
+zone: the zones are 14 columns wide, starting at columns 1, 15, 29 and so on, and if the next zone would start
+past the width of the line the item starts a new line instead. Two commas skip a zone.
 
 **At the end.** `PRINT` ends the line, by writing a line feed, unless the statement ends with a semicolon or a
 comma: then the next `PRINT` carries on from there. `PRINT` with no items writes an empty line.
