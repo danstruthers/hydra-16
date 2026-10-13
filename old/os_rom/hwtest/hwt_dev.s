@@ -288,14 +288,15 @@ HWT_T_IRQS:
             ldx         #0
             jsr         HWT_IRQ_CHECK
             jsr         HWT_VIA_OFF
-.if ::SER_ACIA = ::SER_ACIA_ROCKWELL                        ; (The WDC 65C51's transmitter can't interrupt)
+            lda         HWT_WDC                             ; (A WDC 65C51's transmitter can't interrupt)
+            bne         @no_acia1
             jsr         HWT_IRQ_NONE                        ; (Nothing asking before it's asked)
             jsr         HWT_IRQ_ACIA
             lda         #IRQ_NUMBER_ONBOARD_SERIAL
             ldx         #2
             jsr         HWT_IRQ_CHECK
             jsr         HWT_ACIA_OFF
-.endif
+@no_acia1:
             jsr         HWT_IRQ_NONE
             jsr         HWT_IRQ_YM
             lda         #IRQ_NUMBER_ONBOARD_SOUND
@@ -305,9 +306,10 @@ HWT_T_IRQS:
 
             inc         HWT_T6                              ; All at once: the lowest line first
             jsr         HWT_IRQ_VIA
-.if ::SER_ACIA = ::SER_ACIA_ROCKWELL
+            lda         HWT_WDC
+            bne         @no_acia2
             jsr         HWT_IRQ_ACIA
-.endif
+@no_acia2:
             jsr         HWT_IRQ_YM
             ldx         #(2 * SER_CHAR_CYCLES + 1279) / 1280  ; (Till they're all asking: the ACIA's space
             ldy         #0                                  ;   can take a character's time, twice as
@@ -321,12 +323,13 @@ HWT_T_IRQS:
             ldx         #0
             jsr         HWT_IRQ_CHECK
             jsr         HWT_VIA_OFF
-.if ::SER_ACIA = ::SER_ACIA_ROCKWELL
+            lda         HWT_WDC
+            bne         @no_acia3
             lda         #IRQ_NUMBER_ONBOARD_SERIAL
             ldx         #2
             jsr         HWT_IRQ_CHECK
             jsr         HWT_ACIA_OFF
-.endif
+@no_acia3:
             lda         #IRQ_NUMBER_ONBOARD_SOUND
             ldx         #4
             jsr         HWT_IRQ_CHECK
@@ -832,7 +835,12 @@ HWT_T_ACIA:
             tya
             jsr         HWT_HEX2
 :
-.if ::SER_ACIA = ::SER_ACIA_ROCKWELL
+            lda         HWT_WDC                             ; A WDC 65C51: its TDRE never clears, so there's no
+            beq         @time                               ;   character's time to measure
+            jsr         HWT_PRINT
+            .byte       "WDC 65C51 (TDRE always set) ", 0
+            rts
+@time:
             lda         #' '                                ; A character's time: two out (the first goes
             jsr         HWT_PUTC                            ;   straight to the transmitter, the second waits
             lda         #' '                                ;   for it), then a third when the second's
@@ -878,7 +886,6 @@ HWT_T_ACIA:
 @stuck:
             jsr         HWT_FAIL
             .byte       "TDRE stays 0 (CTS off?)", 0
-.endif
             rts
 
 HWT_CHAR_CYCLES     = 3840 * CPU_CLOCK_MULT     ; 9600 8N1: 10 x 16 x 12 ACIA clocks (SER_CLK: the CPU's / 2)
