@@ -136,6 +136,9 @@ the same
 `cmp` compares two files, and says nothing if they're the same. Edit `stars2.s` (change `#$2A` to `#$2B`, say),
 assemble it again, and `stars2` prints a triangle of plus signs.
 
+When you don't need the source file in between, a pipe does it in one line: `dis stars | as - stars2`. The `-` tells
+`as` to read its source from standard input (section 27.17).
+
 ## 28.4 Code and data
 
 A program file has data in it as well as code: strings, tables, numbers. A byte doesn't say which it is, so `dis` has

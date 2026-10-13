@@ -211,10 +211,12 @@ after its `JSR` (its arguments) can't be stepped over with `n`; step into it wit
 
 ## as: the assembler
 
-`as [-bl] file.s [out]` assembles a program for the 65C02 on the Hydra itself, from the same source ca65 takes on a
-PC: a RAM program, `out` (`file` without its `.s`, if there's no `out`), that runs as any program does.  `-l`
+`as [-bl] file.s|- [out|-]` assembles a program for the 65C02 on the Hydra itself, from the same source ca65 takes on
+a PC: a RAM program, `out` (`file` without its `.s`, if there's no `out`), that runs as any program does.  `-l`
 writes its labels too, `out.lbl` (ld65's `-Ln` form, which `db`'s `l` reads); `-b` writes the bytes alone,
-no header, from `.org`'s address (`$0800` if there's none): a ROM's image, say.
+no header, from `.org`'s address (`$0800` if there's none): a ROM's image, say.  A source `-` is standard input (a
+pipe, or `< file`), and then the output is `-` too unless it's named; an output `-` is standard output: `dis prog |
+as - copy` makes a program from its own disassembly in one line.  `-l` needs a named output.
 
 The SDK's files are in `/lib/as`: `hydra.inc`, `hyx2.inc`, `macros.inc`, `toollib.inc` and `toollib.s`,
 `srvlib.inc` and `srvlib.s`, `nslib.s`, and three of its samples, `hi.s`, `tick.s` and `upper.s`.  `.include`
@@ -267,8 +269,8 @@ db> l /ram/hi.lbl
 ## dis: the disassembler
 
 `dis [-cnw] [-l labels] [-o addr] file` is `as`'s inverse: a program written out as a source in `as`'s language, on
-stdout, which `as` assembles to the same bytes.  `file` is a RAM program (HYX2, as `as` and the build make them), or
-with `-o addr` raw bytes from addr (as `as -b` makes them).
+stdout, which `as` assembles to the same bytes (`dis prog | as - copy`, in one line).  `file` is a RAM program (HYX2,
+as `as` and the build make them), or with `-o addr` raw bytes from addr (as `as -b` makes them).
 
 * **Its code** is found by following it from where it starts (a program's `main`, or addr): each instruction to the
   next, and to where it jumps, branches or calls, till one that goes no further (`rts`, `jmp` ...).  What isn't

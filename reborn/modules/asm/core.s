@@ -102,6 +102,8 @@ msg:        .res        160                                 ; An error's text ..
 mlen:       .res        1                                   ;   its length
 nbuf:       .res        5                                   ; (A number's digits)
 ofd:        .res        1                                   ; An output's fd
+cstd:       .res        1                                   ; 1: the file being loaded is - (fd 0: as it is, not closed)
+ostd:       .res        1                                   ; 1: the output is - (fd 1: as it is, not closed)
 ooff:       .res        2                                   ; (write_out's: the offset in the image ...
 oleft:      .res        2                                   ;   what's left of it ...
 olen:       .res        2                                   ;   and a write's)
@@ -112,8 +114,8 @@ lbuf:       .res        TOK_MAX + 12                        ; A line of the labe
 ; ---- The entries: each keeps its caller's zero page (the library's, $22 on: zsave) and its RAM bank (bsave), and
 ; gives them back as it ends
 
-; FILE: r0 = the source's name, r1 = the output's, .A = the flags (AF_RAW, AF_LABELS).  OUT: .A = the status (0, or
-; 1 after an error, each said on fd 2), C = 1 if it's 1
+; FILE: r0 = the source's name (-: fd 0, read as it is), r1 = the output's (-: fd 1; no labels file then), .A = the
+; flags (AF_RAW, AF_LABELS).  OUT: .A = the status (0, or 1 after an error, each said on fd 2), C = 1 if it's 1
 asm_file:
             jsr         enter
             pha
@@ -920,8 +922,19 @@ trypath:
 @done:
             rts
 
-; path opened to read.  OUT: C = 0, .A = the fd; C = 1: not there.  Keeps r0
+; path opened to read (-: fd 0, as it is; cstd = 1).  OUT: C = 0, .A = the fd; C = 1: not there.  Keeps r0
 openpath:
+            stz         cstd
+            lda         path + 1
+            bne         @open
+            lda         path
+            cmp         #'-'
+            bne         @open
+            inc         cstd
+            lda         #0                                  ; (fd 0)
+            clc
+            rts
+@open:
             lda         r0
             pha
             lda         r0 + 1
@@ -1043,8 +1056,11 @@ cload:
             clc
             rts
 @close:
+            lda         cstd                                ; (fd 0: left as it is)
+            bne         @keep
             lda         cfd
             jsr         CLOSE
+@keep:
             lda         cr0
             sta         r0
             lda         cr0 + 1
@@ -1538,13 +1554,23 @@ emit_at:
             LDR         r0, s_outside
             jmp         err
 
-; The image, from its start to DATA's end, into out (made if it's not there)
+; The image, from its start to DATA's end, into out (made if it's not there; -: fd 1, as it is)
 write_out:
+            stz         ostd
+            lda         outname + 1
+            bne         @make
+            lda         outname
+            cmp         #'-'
+            bne         @make
+            inc         ostd
+            lda         #1                                  ; (fd 1)
+            bra         @have
+@make:
             LDR         r0, outname
             jsr         create
-            bcc         :+
+            bcc         @have
             jmp         @fail
-:
+@have:
             sta         ofd
             clc                                             ; Its length
             lda         sbasel + SEG_DATA
@@ -1566,8 +1592,7 @@ write_out:
             lda         oleft                               ; A bank's part at a time
             ora         oleft + 1
             bne         :+
-            lda         ofd
-            jmp         CLOSE
+            jmp         oclose
 :
             lda         ooff + 1                            ; Its bank
             lsr         a
@@ -1634,8 +1659,7 @@ write_out:
             jmp         @chunk
 @wfail:
             pha
-            lda         ofd
-            jsr         CLOSE
+            jsr         oclose
             pla
 @fail:
             ldx         #<outname
@@ -1643,6 +1667,15 @@ write_out:
             ldx         #>outname
             stx         r0 + 1
             jmp         lib_err
+
+; The output closed (fd 1: left as it is)
+oclose:
+            lda         ostd
+            bne         @std
+            lda         ofd
+            jmp         CLOSE
+@std:
+            rts
 
 ; The file named at r0 opened to write, emptied (made if it's not there).  OUT: C = 0, .A = its fd; or C = 1, .A =
 ; the error
@@ -1669,8 +1702,12 @@ create:
 :
             rts
 
-; out.lbl: each label, "al 00XXXX .name" (ld65's -Ln form; not cheap locals)
+; out.lbl: each label, "al 00XXXX .name" (ld65's -Ln form; not cheap locals).  An output - has none
 write_labels:
+            lda         ostd
+            beq         :+
+            rts
+:
             ldy         #0                                  ; Its name
 :
             lda         outname,Y

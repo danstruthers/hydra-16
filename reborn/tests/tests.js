@@ -2189,8 +2189,8 @@ module.exports = {
         '% wc /pc/big.txt; head -3 /pc/big.txt\n   2001    4001   20004 /pc/big.txt\nline 1000\nline 1001\nline 0001\n%'],
     },
     {
-      name: 'as', what: 'as, the assembler (the module as): the SDK\'s hi from /lib/as, with its include files there, the same bytes as the build\'s (ca65 and ld65), run, its labels file (-l); nsum (numbers.inc\'s macros, numlib.s) the same; t_asall (tests/ram: every opcode in each mode, directives, expressions, labels, macros, conditionals, segments, .include, .incbin) the same as the build\'s; -b with .org; errors with their files and lines; a warning',
-      init: 't_rc', cycles: 200e6,
+      name: 'as', what: 'as, the assembler (the module as): the SDK\'s hi from /lib/as, with its include files there, the same bytes as the build\'s (ca65 and ld65), run, its labels file (-l); nsum (numbers.inc\'s macros, numlib.s) the same; t_asall (tests/ram: every opcode in each mode, directives, expressions, labels, macros, conditionals, segments, .include, .incbin) the same as the build\'s; -b with .org; errors with their files and lines; a warning; - for the source (a pipe, a < file; the output - too unless named) and for the output (stdout); -l with - refused',
+      init: 't_rc', cycles: 300e6,
       pc: {
         files: () => {
           const t = n => fs.readFileSync(path.join(__dirname, 'ram', 't_asall', n));
@@ -2204,14 +2204,20 @@ module.exports = {
       machine: {
         input: ['echo b115200 >/dev/serctl', 'as -l /sd/0/sample/as/hi.s /ram/hi; echo $status', 'cmp /ram/hi /sd/0/sample/hi; echo $status', '/ram/hi Ann',
           'grep main /ram/hi.lbl', 'as /sd/0/sample/as/nsum.s /ram/nsum; cmp /ram/nsum /sd/0/sample/nsum; echo $status', 'as /pc/t_asall.s /ram/t_asall; cmp /ram/t_asall /pc/t_asall.hyx; echo $status', 'as -b /pc/raw.s /ram/raw; xd /ram/raw',
-          'as /pc/bad.s /ram/bad; echo $status', 'as /pc/warn.s /ram/warn; echo $status; xd /ram/warn', 'as'].map(l => 'ā' + l + '\r').join(''),
+          'as /pc/bad.s /ram/bad; echo $status', 'as /pc/warn.s /ram/warn; echo $status; xd /ram/warn',
+          'cat /sd/0/sample/as/hi.s | as - /ram/hi2; cmp /ram/hi2 /ram/hi; echo $status', 'as /sd/0/sample/as/hi.s - >/ram/hi3; cmp /ram/hi3 /ram/hi; echo $status',
+          'dis /ram/hi | as - >/ram/hi4; cmp /ram/hi4 /ram/hi; echo $status', 'as -l - /ram/hi5 </sd/0/sample/as/hi.s; cmp /ram/hi5 /ram/hi; echo $status; grep main /ram/hi5.lbl',
+          'as -l - </sd/0/sample/as/hi.s; echo $status', 'as'].map(l => 'ā' + l + '\r').join(''),
       },
       expect: ['% as -l /sd/0/sample/as/hi.s /ram/hi; echo $status\n\n%', '% cmp /ram/hi /sd/0/sample/hi; echo $status\n\n%', '% /ram/hi Ann\nHello, Ann!\nI\'m task ',
         '% grep main /ram/hi.lbl\nal 000830 .main\n%', '% as /sd/0/sample/as/nsum.s /ram/nsum; cmp /ram/nsum /sd/0/sample/nsum; echo $status\n\n%',
         '% as /pc/t_asall.s /ram/t_asall; cmp /ram/t_asall /pc/t_asall.hyx; echo $status\n\n%',
         '% as -b /pc/raw.s /ram/raw; xd /ram/raw\n0000000  4c 00 c0 00 c0 05 00 ',
         '% as /pc/bad.s /ram/bad; echo $status\nas: /pc/bad.s:2: not an instruction, directive or macro: frob\nas: /pc/bad.s:3: stop\nas: /pc/bad.s:4: a bad expression\n1\n%',
-        '% as /pc/warn.s /ram/warn; echo $status; xd /ram/warn\nas: /pc/warn.s:2: warning: careful\n\n0000000  60 ', '% as\nusage: as [-bl] file.s [out]\n%'],
+        '% as /pc/warn.s /ram/warn; echo $status; xd /ram/warn\nas: /pc/warn.s:2: warning: careful\n\n0000000  60 ',
+        '% cat /sd/0/sample/as/hi.s | as - /ram/hi2; cmp /ram/hi2 /ram/hi; echo $status\n\n%', '% as /sd/0/sample/as/hi.s - >/ram/hi3; cmp /ram/hi3 /ram/hi; echo $status\n\n%',
+        '% dis /ram/hi | as - >/ram/hi4; cmp /ram/hi4 /ram/hi; echo $status\n\n%', '% as -l - /ram/hi5 </sd/0/sample/as/hi.s; cmp /ram/hi5 /ram/hi; echo $status; grep main /ram/hi5.lbl\n\nal 000830 .main\n%',
+        '% as -l - </sd/0/sample/as/hi.s; echo $status\nas: -l needs the output\'s name (as -l - out): - is stdout\n1\n%', '% as\nusage: as [-bl] file.s|- [out|-]\n%'],
       sdcard: true
     },
     {
