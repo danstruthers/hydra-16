@@ -303,7 +303,7 @@ The commands `df`, `fsck` and `label`; Chapter 14.
 rom 4 MB 8192 blocks
 hydrafs label=ROM
 partition at block 1024
-free 13 KB of 623 KB
+free 11 KB of 623 KB
 /> cards .
 1
 ```

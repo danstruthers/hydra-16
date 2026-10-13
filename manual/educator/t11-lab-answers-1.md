@@ -229,7 +229,7 @@ task  state   parent     cpu group  name
    2  ready    1         0.0     1  ps
   12  idle    -          0.0    12  snd
   13  idle    -          0.1    13  kdev
-  14  idle    -          1.5    14  storage
+  14  idle    -          1.4    14  storage
   15  event   -          0.5    15  cons
 ```
 
@@ -257,22 +257,22 @@ ps
 /> ps
 task  state   parent     cpu group  name
    0  ready   -          2.1     0  kernel
-   1  wait    -          0.5     1  forth
+   1  wait    -          0.4     1  forth
    2  sleep    1         0.0     2  sleep
    3  ready    1         0.0     1  ps
   12  idle    -          0.0    12  snd
   13  idle    -          0.1    13  kdev
-  14  idle    -          1.6    14  storage
+  14  idle    -          1.5    14  storage
   15  event   -          0.5    15  cons
 /> kill 2
 /> ps
 task  state   parent     cpu group  name
-   0  ready   -          3.8     0  kernel
-   1  wait    -          0.5     1  forth
+   0  ready   -          3.9     0  kernel
+   1  wait    -          0.4     1  forth
    3  ready    1         0.0     1  ps
   12  idle    -          0.0    12  snd
   13  idle    -          0.1    13  kdev
-  14  idle    -          1.8    14  storage
+  14  idle    -          1.6    14  storage
   15  event   -          0.6    15  cons
 ```
 
@@ -367,7 +367,7 @@ two
 
 ```session
 % echo today is `{date}
-today is 2000-01-01 00:00:05
+today is 2000-01-01 00:00:04
 % now=`{date}
 % echo $#now
 2
@@ -525,8 +525,7 @@ for(d in $dirs) {
    anything you want to keep.
 2. The shell. It replaces the pattern with the list of matching names *before* `for` or any command sees it.
 3. It's lost, with the rest of the RAM disk. A script to keep goes in `/sd/0/bin` (make the directory; it joins
-   `/bin` the next time the namespace is built: after a reset, or the command `newns`, which also empties
-   `/ram`).
+   `/bin` the next time the namespace is built: after a reset, or the command `newns`).
 4. "While it is not true that `$i` matches `0`": `~` tests a match, `!` turns success into failure and back. So:
    carry on until `$i` is 0.
 
@@ -575,7 +574,7 @@ d-r--r--r-- fx        0 2000-01-01 00:00 songs
 /> df
 disk  kind   size        free        label
 0     sdhc   16380 KB    15956 KB    HYDRA-16
-x     rom    623 KB      13 KB       ROM
+x     rom    623 KB      11 KB       ROM
 r     ram    255 KB      253 KB      RAM
 s     sram   511 KB      510 KB      SRAM
 ```

@@ -814,8 +814,8 @@ again.
 They are Forth words because a command run by rc would change only the namespace of that command's task.
 Commands started afterward see the namespace as these leave it.
 
-`newns` gives HyForth's `/ram` a fresh start too. In a HyForth that is a window's first shell, that removes
-every file in `/ram`: copy what is wanted somewhere else first.
+A HyForth that is a window's first shell keeps the files in its `/ram` through a `newns`. One started from
+another shell shares that shell's `/ram` until its first `newns`, which gives it an empty one of its own.
 
 #### See also
 

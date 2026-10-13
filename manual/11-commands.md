@@ -182,7 +182,7 @@ Shows the date and time. With `-n`, it shows the time as the number of seconds s
 /> date
 2000-01-01 00:00:04
 /> date -n
-5
+4
 ```
 
 To set the clock, write the date and time to `/dev/time`, in the same form:
@@ -215,7 +215,7 @@ Lists the disks that have started, with each one's kind, size, free space and la
 /> df
 disk  kind   size        free        label
 0     sdhc   16380 KB    15956 KB    HYDRA-16
-x     rom    623 KB      13 KB       ROM
+x     rom    623 KB      11 KB       ROM
 r     ram    255 KB      253 KB      RAM
 s     sram   511 KB      510 KB      SRAM
 ```
@@ -246,13 +246,13 @@ the current directory.
 
 ```session
 /> du /rom/lib
-173     /rom/lib/as
+174     /rom/lib/as
 1       /rom/lib/basic
 2       /rom/lib/edit
 4       /rom/lib/font
 83      /rom/lib/forth
-58      /rom/lib/hylang
-327     /rom/lib
+59      /rom/lib/hylang
+329     /rom/lib
 ```
 
 ## echo: print words
@@ -622,7 +622,7 @@ card before you use it with the Hydra (Chapter 14). The words after the disk's n
 /> df
 disk  kind   size        free        label
 0     sdhc   16380 KB    15956 KB    HYDRA-16
-x     rom    623 KB      13 KB       ROM
+x     rom    623 KB      11 KB       ROM
 r     ram    255 KB      253 KB      RAM
 s     sram   511 KB      511 KB
 ```
@@ -762,7 +762,7 @@ task  state   parent     cpu group  name
    2  ready    1         0.0     1  ps -a
   12  idle    -          0.0    12  snd
   13  idle    -          0.1    13  kdev
-  14  idle    -          1.5    14  storage
+  14  idle    -          1.4    14  storage
   15  event   -          0.5    15  cons
 ```
 

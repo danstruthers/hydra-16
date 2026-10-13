@@ -68,8 +68,7 @@ for(d in /rom /ram /sd/0) {
 
    ✎ `/bin` is a union of several directories (section 9.7). Which real directory did your script go into? (Look
    with `ls /ram/bin`. The sample card has no `bin` directory yet: `mkdir /sd/0/bin` makes one, and it joins `/bin`
-   the next time the Hydra starts. `newns` would join it at once, but it also empties your `/ram`, your script
-   with it: section 9.8.)
+   the next time the Hydra starts, or at once with `newns`.)
 
 <div class="write"></div>
 

@@ -1446,8 +1446,8 @@ again.
 They are Forth words because a command run by rc would change only the namespace of that command's task.
 Commands started afterward see the namespace as these leave it.
 
-`newns` gives HyForth's `/ram` a fresh start too. In a HyForth that is a window's first shell, that removes
-every file in `/ram`: copy what is wanted somewhere else first.
+A HyForth that is a window's first shell keeps the files in its `/ram` through a `newns`. One started from
+another shell shares that shell's `/ram` until its first `newns`, which gives it an empty one of its own.
 
 #### See also
 
@@ -1628,7 +1628,6 @@ is not there; `open-blocks` names another.
 ```session
 /> lib block
 /> s" /ram/work.fb" open-blocks
-/> 0 block 1024 bl fill update flush
 /> 1 block 1024 bl fill
 /> s" .( block one ) 5 6 + ." 1 block swap move update flush
 /> 1 load
@@ -2873,7 +2872,7 @@ The commands `df`, `fsck` and `label`; Chapter 14.
 rom 4 MB 8192 blocks
 hydrafs label=ROM
 partition at block 1024
-free 13 KB of 623 KB
+free 11 KB of 623 KB
 /> cards .
 1
 ```
@@ -3454,6 +3453,9 @@ reposition-file   ( ud fileid -- ior )
 A file's place is where its next read or write will happen, counted in bytes from its start. `file-position`
 leaves it, and `reposition-file` sets it. The place is a double number, because a file can be longer than
 65,535 bytes: write `0.` for the start.
+
+The place may be set past the end of the file. Reading there finds the end; writing there makes the file
+that long, and the bytes between, which were never written, read as zeros.
 
 #### See also
 
@@ -4825,9 +4827,9 @@ Block 0 can't be loaded: by custom it holds a description of the file. `0 load` 
 ```session
 /> lib block
 /> s" /ram/two.fb" open-blocks
-/> 0 block 1024 bl fill update flush
-/> 1 block 1024 bl fill  s" .( one ) " 1 block swap move update flush
-/> 2 block 1024 bl fill  s" .( two ) " 2 block swap move update flush
+/> 1 block 1024 bl fill  s" .( one ) " 1 block swap move update
+/> 2 block 1024 bl fill  s" .( two ) " 2 block swap move update
+/> flush
 /> 1 2 thru
 one two
 ```
@@ -8780,10 +8782,8 @@ Changed blocks are also written when HyForth ends.
 
 #### Notes
 
-A block file grows a block at a time. A block can be written only if every block before it is in the file:
-in a new file, write block 0 first, then 1, and so on, with a `flush` after each, since several changed
-blocks are not always written in their order. Writing block 4 to a file of three blocks is the error
-`end of file`.
+Blocks can be written in any order. Writing one beyond the end of the block file makes the file that long;
+the blocks before it that were never written take no room on the disk, and read as zero bytes.
 
 #### See also
 

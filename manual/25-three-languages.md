@@ -115,13 +115,11 @@ Too small.
 Your guess? 75
 Too small.
 Your guess? 88
-Too big.
-Your guess? 81
 Too small.
-Your guess? 84
+Your guess? 94
 Too big.
-Your guess? 83
-Right! You took 6 guesses.
+Your guess? 91
+Right! You took 5 guesses.
 ```
 
 hylang's version is made of **functions**. `ask` prints the question, reads a line, and gives back its value as a
@@ -170,19 +168,17 @@ cd /ram
 /ram> forth guess.fs
 I'm thinking of a number from 1 to 100.
 Your guess? 50
-Too big.
-Your guess? 25
 Too small.
-Your guess? 37
-Too big.
-Your guess? 31
-Too big.
-Your guess? 28
-Too big.
-Your guess? 26
+Your guess? 75
 Too small.
-Your guess? 27
-Right! You took 7 guesses.
+Your guess? 88
+Too small.
+Your guess? 94
+Too big.
+Your guess? 91
+Too small.
+Your guess? 92
+Right! You took 6 guesses.
 ```
 
 HyForth's version is made of small **words**, each built on the ones before, and each passing its values to the
@@ -247,7 +243,7 @@ hylang> (def {t0} (clock))
 hylang> (count-up 10000)
 => 10000
 hylang> (- (clock) t0)
-=> 2.435
+=> 2.365
 ```
 
 And HyForth's `sys-ticks`, from the `hydra` library, counts the Hydra's **ticks**: there are 200 in a second.

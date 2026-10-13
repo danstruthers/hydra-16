@@ -134,7 +134,7 @@ them, and giving its output (a list, if it has several). `(sys :name ...)` does 
 hylang> (sys-getpid)
 => 2
 hylang> (sys :ticks)
-=> 1186
+=> 1144
 ```
 
 ## 22.5 The devices

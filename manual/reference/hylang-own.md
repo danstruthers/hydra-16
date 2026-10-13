@@ -568,10 +568,11 @@ A special form: rebuilds the namespace.
 hylang's namespace is thrown away and the default one built again from `/lib/namespace`, as a login shell
 does when it starts and as rc's `newns` does. Every `bind` and `mount` the program has made is undone.
 
-The default namespace gives the task a `/ram` of its own, an area of the RAM disk named for its task number,
-and that area starts empty. A hylang started from a shell had been using the shell's `/ram`: after `(newns)`
-those files are still the shell's, but they are no longer at hylang's `/ram`. A hylang that is itself a
-window's first shell already had its own area, and `(newns)` removes the files in it.
+The default namespace gives the task a `/ram` of its own, an area of the RAM disk named for its task number.
+A hylang started from a shell had been using the shell's `/ram`: after its first `(newns)` it has its own,
+which starts empty, and the shell's files are still the shell's, though no longer at hylang's `/ram`. Once
+hylang has its own area, as it also has when it is itself a window's first shell, `(newns)` leaves the
+files in it alone.
 
 ## output-of
 

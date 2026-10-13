@@ -218,12 +218,12 @@ In each are these files:
 
 ```session
 /> cat /proc/1/status
-forth wait - 100 1
+forth wait - 89 1
 /> cat /proc/1/fd
 /
-0 rw #c 368 #c/cons
-1 rw #c 368 #c/cons
-2 rw #c 368 #c/cons
+0 rw #c 367 #c/cons
+1 rw #c 367 #c/cons
+2 rw #c 367 #c/cons
 /> cat /proc/1/regs
 PC=EAA0 A=00 X=02 Y=01 S=E7 P=37 W=00 U=00 RAM=00 ROM=1E
 ```

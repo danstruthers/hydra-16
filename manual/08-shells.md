@@ -238,7 +238,7 @@ And `|[2]` pipes standard error instead of standard output.
 
 ```session
 % echo today is `{date}
-today is 2000-01-01 00:00:05
+today is 2000-01-01 00:00:04
 ```
 
 ## 8.9 Success and failure

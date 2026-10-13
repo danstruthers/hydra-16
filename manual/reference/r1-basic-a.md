@@ -851,11 +851,6 @@ A radius of 0 draws the centre's one dot.
 | 258 | `invalid argument` | The driver refused it: a negative radius, or a centre far off the bitmap |
 | 13 | `type mismatch` | An argument is a string |
 
-#### Notes
-
-In HydraOS 1.0, a circle drawn while a `WINDOW` is in force is filled whether or not `F` is given. This is a
-fault, not a feature.
-
 #### See also
 
 `SCREEN`, `COLOR`, `PSET`, `LINE`, `PAINT`, `WINDOW`, `POINT`.

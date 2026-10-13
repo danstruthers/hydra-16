@@ -573,7 +573,7 @@ The mode numbers are QuickBASIC's for the nearest thing each mode is.
 | `ERR` | Message | Cause |
 |---|---|---|
 | 5 | `illegal function call` | *n* is not one of the six modes |
-| 53 | `file not found` | There is no Vera X card: the screen driver's files are not there |
+| 53 | `file not found` | `SCREEN` with a graphics mode, and no Vera X card: the screen driver's files are not there. (`SCREEN 0` without a card is not an error: there is no bitmap to take away) |
 
 #### Notes
 

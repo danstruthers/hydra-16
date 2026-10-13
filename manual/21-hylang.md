@@ -506,10 +506,10 @@ hylang> (fun {die} {+ 1 (random 6)})
 hylang> (fun {roll} {do =(a (die)) =(b (die)) (print a b "makes" (+ a b))})
 => NIL
 hylang> (roll)
-3 4 makes 7
+5 2 makes 7
 => NIL
 hylang> (roll)
-6 6 makes 12
+2 3 makes 5
 => NIL
 ```
 

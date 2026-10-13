@@ -103,7 +103,7 @@ isn't round!) Each one is part of the tree:
 /> df
 disk  kind   size        free        label
 0     sdhc   16380 KB    15956 KB    HYDRA-16
-x     rom    623 KB      13 KB       ROM
+x     rom    623 KB      11 KB       ROM
 r     ram    255 KB      253 KB      RAM
 s     sram   511 KB      510 KB      SRAM
 ```
@@ -288,10 +288,6 @@ The options for `bind` and `mount` are:
 
 You can change the namespace of any shell with `bind`, `mount` and `unmount`. To start again with the standard
 one, type `newns`. And `ns` shows your shell's namespace, as the binds and mounts that would make it:
-
-> **CAUTION:** `newns` starts your `/ram` again too. In the shell a window starts with, that empties it:
-> every file you have made in `/ram`, and in `/ram/bin`, is removed. Copy what you want to keep to `/sram` or
-> to an SD card first.
 
 ```session
 /> ns

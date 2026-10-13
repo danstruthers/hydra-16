@@ -698,9 +698,9 @@ For example:
 8
 /> lib random
 /> 6 random 1+ .
-6
+2
 /> 6 random 1+ .
-6
+4
 ```
 
 ## A.17 The device libraries

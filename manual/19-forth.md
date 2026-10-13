@@ -543,9 +543,9 @@ has six faces, numbered from 1:
 /> : die ( -- n ) 6 random 1+ ;
 /> : roll ( -- ) die die 2dup . . + ." makes " . cr ;
 /> roll
-6 2 makes 8
+2 3 makes 5
 /> roll
-3 6 makes 9
+5 3 makes 8
 ```
 
 (Yours will fall differently: the library shakes its dice with the clock as it loads.) `roll` throws two dice,
