@@ -2592,6 +2592,15 @@ module.exports = {
         '\n% echo ' + '0987654321'.repeat(7) + '\n' + '0987654321'.repeat(7) + '\n% echo ' + 'jihgfedcba'.repeat(7) + '\n' + 'jihgfedcba'.repeat(7) + '\n% echo after two\nafter two\n% '],
     },
     {
+      name: 'kcopy2', what: 'two copies between tasks at once, with the kernel task the far end of both: a loop reads /dev/kmesg (kdev copies from the kernel task\'s memory) while the shell starts thirty programs (SPAWN\'s path and arguments: the kernel task\'s own copies); a copy holds the CPU till it\'s done, so neither finds the other\'s partner at its far end (kdev did, switched out between two bursts: it went on in another task\'s stack, and ended with a BRK\'s note; init and the shells after it)',
+      init: 't_rc', cycles: 600e6,
+      machine: {
+        input: ['rc -c \'while() cat /dev/kmesg >/dev/null\' &', 'for(i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30) calc $i + 100 >/dev/null',
+          'cat /dev/kmesg | head -2', 'echo still here'].map(l => 'ā' + l + '\r').join(''),
+      },
+      expect: ['% cat /dev/kmesg | head -2\n\nHydra-16: kernel ', '% echo still here\nstill here\n% '],
+    },
+    {
       name: 'pasteahead', what: 'seven lines (399 keys) pasted at the line\'s rate while ps writes four times and nothing reads: more than the window\'s queue and the receive ring hold (63 + 255); the newest are lost (the irq entry\'s, with the ring full), and what came first is whole: the first five lines read and run in their turn',
       init: 't_rc', cycles: 200e6,
       machine: {

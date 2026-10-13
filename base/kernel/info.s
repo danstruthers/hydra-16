@@ -595,8 +595,8 @@ ps_putstr:
 ; KMESG_SIZE in the kernel task's RAM), the part from r2 on.  IN: r0 = a buffer; r1 = its size; r2 = an offset in
 ; the bytes held (0: the oldest).  OUT: .A/.X = the bytes held; as many of them from r2 as fit, in the buffer.  The
 ; ring's head and length by quick looks, its bytes by kcopy from the kernel task (not running, so in no kcopy of its
-; own): r3 the head, r4 the bytes held, r5 where r2 is in the ring, r6 the room to its end, r7 what's left after
-; it.  Modifies r3-r8
+; own; nor will it be till this one's done: kcopy holds the CPU): r3 the head, r4 the bytes held, r5 where r2 is in
+; the ring, r6 the room to its end, r7 what's left after it.  Modifies r3-r8
 K_KMESG:
             ldy         T_REGISTER
             php
