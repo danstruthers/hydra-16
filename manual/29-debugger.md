@@ -353,15 +353,15 @@ task 5
 PC=0830 A=30 X=FF Y=02 S=FD P=nv--dizc W=0 U=0 RAM=00 ROM=00
 0830  9C 95 08  stz $0895
 db> c
-........PC=EB1B A=06 X=0E Y=05 S=FA P=nv--dIzc W=0 U=0 RAM=00 ROM=00 (in a call: its state 6)
-EB1B  A5 A2     lda $A2
+........PC=EB20 A=06 X=0E Y=05 S=FA P=nv--dIzc W=0 U=0 RAM=00 ROM=00 (in a call: its state 6)
+EB20  A5 A2     lda $A2
 db> q
 
 />
 ```
 
 After eight dots, <kbd>CTRL</kbd>-<kbd>C</kbd> stopped it. `(in a call: its state 6)` means it was inside a system
-call, `SLEEP` (state 6 is sleeping): the PC, $EB1B, is in HydraOS's kernel. You can't step there, but `c` runs it on,
+call, `SLEEP` (state 6 is sleeping): the PC, $EB20, is in HydraOS's kernel. You can't step there, but `c` runs it on,
 and `q` ends it.
 
 <kbd>CTRL</kbd>-<kbd>C</kbd> stops an `n` or a `u` that's taking too long, too, and so does a breakpoint inside a
@@ -381,8 +381,8 @@ finish and stops after it, and `c` runs on.
 /> sleep 100 &
 /> db -p 4
 task 4
-PC=EB1B A=06 X=51 Y=04 S=F9 P=nv--dIzc W=0 U=0 RAM=00 ROM=00 (in a call: its state 6)
-EB1B  A5 A2     lda $A2
+PC=EB20 A=06 X=51 Y=04 S=F9 P=nv--dIzc W=0 U=0 RAM=00 ROM=00 (in a call: its state 6)
+EB20  A5 A2     lda $A2
 db> q
 ```
 

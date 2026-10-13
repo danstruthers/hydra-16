@@ -367,13 +367,13 @@ lib disasm
 
 ```session indented
 /> hex f800 4 disasm decimal
- F800  4C 77 EB  jmp $EB77
- F803  4C B0 EB  jmp $EBB0
- F806  4C 88 EE  jmp $EE88
- F809  4C 2B EB  jmp $EB2B
+ F800  4C 7C EB  jmp $EB7C
+ F803  4C B5 EB  jmp $EBB5
+ F806  4C 8D EE  jmp $EE8D
+ F809  4C 30 EB  jmp $EB30
 /> hex f950 2 disasm decimal
- F950  4C 5C E2  jmp $E25C
- F953  4C 01 E3  jmp $E301
+ F950  4C 61 E2  jmp $E261
+ F953  4C 06 E3  jmp $E306
 ```
 
 Each system call's address holds a `jmp` to the code that does it, in the kernel's ROM. Programs call the jump

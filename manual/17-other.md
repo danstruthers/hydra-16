@@ -219,14 +219,14 @@ In each are these files:
 
 ```session
 /> cat /proc/2/status
-forth wait 1 60 2
+forth wait 1 56 2
 /> cat /proc/2/fd
 /
 0 rw #c 391 #c/cons
 1 rw #c 391 #c/cons
 2 rw #c 391 #c/cons
 /> cat /proc/2/regs
-PC=EA8A A=00 X=04 Y=02 S=E7 P=37 W=00 U=00 RAM=00 ROM=1E
+PC=EA8F A=00 X=04 Y=02 S=E7 P=37 W=00 U=00 RAM=00 ROM=1E
 ```
 
 | `ctl` command | What it does |

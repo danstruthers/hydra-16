@@ -113,14 +113,14 @@ I'm thinking of a number from 1 to 100.
 Your guess? 50
 Too small.
 Your guess? 75
-Too small.
-Your guess? 88
-Too small.
-Your guess? 94
-Too small.
-Your guess? 97
 Too big.
-Your guess? 95
+Your guess? 62
+Too small.
+Your guess? 68
+Too big.
+Your guess? 65
+Too small.
+Your guess? 66
 Right! You took 6 guesses.
 ```
 
@@ -170,19 +170,15 @@ cd /ram
 /ram> forth guess.fs
 I'm thinking of a number from 1 to 100.
 Your guess? 50
+Too big.
+Your guess? 25
 Too small.
-Your guess? 75
-Too big.
-Your guess? 62
-Too big.
-Your guess? 56
-Too big.
-Your guess? 53
-Too big.
-Your guess? 51
+Your guess? 37
 Too small.
-Your guess? 52
-Right! You took 7 guesses.
+Your guess? 43
+Too big.
+Your guess? 40
+Right! You took 5 guesses.
 ```
 
 HyForth's version is made of small **words**, each built on the ones before, and each passing its values to the

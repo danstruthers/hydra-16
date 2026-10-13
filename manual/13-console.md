@@ -43,7 +43,9 @@ nothing, which tells it there's no more. `cat`, typed alone, copies what you typ
 You don't have to wait for a prompt before you type. The console keeps the keys that come while a program is busy
 (about 300 of them from a terminal, 60 from the Vera X's keyboard), and hands them over when the program next
 reads: so you can type the next command while one is still running, or paste several lines at once from your PC.
-(Paste much more than that into a program that's slow to read, and the keys that don't fit are lost.)
+(Paste much more than that while nothing is reading, and it's the end of what you pasted that's lost: what came
+first is kept whole. A program that's waiting for a line, as HyBASIC is at its prompt, reads as fast as a terminal
+sends, so a long paste into it arrives whole.)
 
 ## 13.3 Raw mode and keys
 

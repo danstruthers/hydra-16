@@ -45,7 +45,7 @@ cd /ram
 
 ```session
 /ram> basic fast.bas
-HyBASIC counted to 10000 in 2.725 seconds
+HyBASIC counted to 10000 in 2.73 seconds
 Machine code counted to 10000 in 0.055 seconds
 ```
 

@@ -133,7 +133,7 @@ explain a word.
 ## The bugs found while writing: fixed
 
 The first editions of the three books worked round these faults in HydraOS. They're fixed now, each with a
-regression test (`node reborn/sim/test.js`: 128 tests), and the books' notes about them are gone.
+regression test (`node reborn/sim/test.js`: 130 tests), and the books' notes about them are gone.
 
 | The fault | The fix | Its test |
 |---|---|---|
@@ -144,4 +144,16 @@ regression test (`node reborn/sim/test.js`: 128 tests), and the books' notes abo
 | HyForth as the shell: a line that started with `2/3`, `100000` or `#xFF` went to rc | The shell asks the numbers library, if it's loaded, whether the first word is one of its numbers (`forthlib/shell.s`, `forthlib/numbers.s`) | `fshell` |
 | db: after <kbd>CTRL</kbd>-<kbd>C</kbd> in an `n`, `c` stopped again, saying nothing, where the step would have ended. And a breakpoint inside a subroutine that `n` was running left `s`, `n` and `c` all refused | `n` runs a subroutine of the program's own in place, with a `BRK` of db's where it returns to, so no step of the kernel's is left unfinished; a system call's unfinished step is finished by `s` or `n`, and passed by `c` (`programs/db/db.c`) | `dbover` |
 | The console: the Vera X's boot message was cut into the next line (`[a1s8kt 1: init`) | The console driver waits for its question to the terminal to be sent before its start-up ends (`modules/cons/cons.s`) | `screen` |
-| The console: keys typed or pasted ahead of a program were dropped after the 63rd | A key with no room in its window's queue stays in the receive ring, with those behind it, till the program has read some: 255 more (`modules/cons/cons.s`) | `typeahead` |
+| The console: keys typed or pasted ahead of a program were dropped after the 63rd | A key with no room in its window's queue is kept, and those behind it stay in the receive ring, till the program has read some: 255 more. Past that the newest keys are lost, and what came first is whole (`modules/cons/cons.s`) | `typeahead`, `pasteahead` |
+
+One more turned up while the fixes were checked, and is the most serious of them:
+
+| The fault | The fix | Its test |
+|---|---|---|
+| The kernel: a program reading `/dev/kmesg` while a shell started another program could kill the Hydra (kdev, then init and the shells: only the other drivers left). Seen as `cat /dev/kmesg \| head -6`, the first command after the boot, printing an empty line and hanging: a matter of a few cycles' timing | A copy between two tasks' memory now holds the CPU till it's done (interrupts go on), so two copies never overlap. The kernel's message copy trusted the kernel task not to start a copy of its own meanwhile, and another task's `SPAWN` made it start one (`base/kernel/call.s`) | `kcopy2` |
+
+What's left of the console's type-ahead is a limit, not a fault: HydraOS doesn't tell a terminal to wait (its
+console driver sends no XON/XOFF, and doesn't use RTS), so a paste of more than about 300 keys into a program that
+isn't reading yet loses its end. HyBASIC's line entry itself keeps up with 9600 baud (1,300 keys pasted at its
+prompt arrive whole). Flow control to the sender would remove the limit; it's a decision for the console driver
+and the PC tool, not made here.
