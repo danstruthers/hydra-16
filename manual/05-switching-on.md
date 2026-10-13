@@ -149,12 +149,12 @@ task 1: init
 HydraOS 1.0 for the Hydra-16
 init: up in task 01
 T ST FL PA CPU    NAME
-0 01 00 FF 000053 kernel
-1 01 00 FF 000019 init
+0 01 00 FF 000052 kernel
+1 01 00 FF 000012 init
 C 04 01 FF 000003 snd
-D 06 01 FF 000010 kdev
-E 04 01 FF 000073 storage
-F 08 01 FF 00003F cons
+D 06 01 FF 00000B kdev
+E 04 01 FF 00007B storage
+F 08 01 FF 000047 cons
 hello, from init
 init: hello ended: code $07 (bye)
 HyForth (Forth 2012), bye to end
