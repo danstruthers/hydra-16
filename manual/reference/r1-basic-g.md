@@ -202,6 +202,44 @@ lines are not known to it (`label not defined`).
 
 `GOSUB`, `ON`, `IF`, `DO`, `EXIT`.
 
+## GPRINT
+
+A statement: writes text on the bitmap.
+
+#### Syntax
+
+```text
+GPRINT [STEP] (x, y), text$
+```
+
+#### Arguments
+
+*x*, *y*
+: Numeric expressions: where the top left corner of the first character goes. With `STEP`, an offset from the
+  last point referenced.
+
+*text$*
+: A string expression. Its first 40 characters are drawn.
+
+#### Description
+
+Needs a graphics mode. The characters are drawn as dots, in the console's font and the pen's colour.
+
+This is text that is part of the picture. It is not the console's text, which `PRINT` writes and which lies
+over the bitmap in its own layer; `CLS` clears both.
+
+#### Errors
+
+| `ERR` | Message | Cause |
+|---|---|---|
+| 5 | `illegal function call` | No graphics mode is set |
+| 258 | `invalid argument` | The point is far off the bitmap |
+| 13 | `type mismatch` | *text$* is a number |
+
+#### See also
+
+`PRINT`, `LOCATE`, `COLOR`, `SCREEN`.
+
 ## HEX$
 
 A string function: a number written in hexadecimal.
@@ -1027,6 +1065,66 @@ number.
  0
 > LET N = 2 ^ 100 / 3 : PRINT N
  1267650600228229401496703205376/3
+```
+
+## LINE
+
+A statement: draws a line, a box, or a filled box. (`LINE INPUT`, which reads a line of text, is the next
+entry.)
+
+#### Syntax
+
+```text
+LINE [[STEP] (x1, y1)] - [STEP] (x2, y2) [, [c] [, {B | BF}]]
+```
+
+#### Arguments
+
+*x1*, *y1*
+: Numeric expressions: where the line starts. If the first point is left out, the line starts at the last point
+  referenced: `LINE -(x, y)` carries on from where the last statement stopped.
+
+*x2*, *y2*
+: Numeric expressions: where it ends.
+
+`STEP`
+: Before either point: its coordinates are offsets from the last point referenced. For the second point, that is
+  the first point.
+
+*c*
+: A numeric expression, 0 to 255: the colour. The pen's colour if it is left out.
+
+`B`, `BF`
+: `B` draws the box that has the two points as opposite corners, in outline. `BF` draws it filled.
+
+#### Description
+
+Needs a graphics mode. Both end points are drawn. The second point becomes the last point referenced, so a
+chain of `LINE -(x, y)` statements draws a connected path.
+
+A line that goes off the bitmap is drawn as far as the edge.
+
+#### Errors
+
+| `ERR` | Message | Cause |
+|---|---|---|
+| 5 | `illegal function call` | No graphics mode is set; or *c* is not 0 to 255 |
+| 13 | `type mismatch` | An argument is a string |
+
+#### See also
+
+`PSET`, `CIRCLE`, `DRAW`, `PAINT`, `COLOR`, `SCREEN`.
+
+#### Example
+
+```text
+> SCREEN 13 : LINE (0, 0)-(10, 0), 3 : LINE -(10, 10), 4 : PRINT POINT(5, 0); POINT(10, 5)
+ 3  4
+> LINE (30, 30)-(40, 40), 6, B : PRINT POINT(30, 35); POINT(35, 35)
+ 6  0
+> LINE (50, 50)-(60, 60), 7, BF : PRINT POINT(55, 55)
+ 7
+> SCREEN 0
 ```
 
 ## LINE INPUT

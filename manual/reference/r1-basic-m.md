@@ -591,6 +591,108 @@ tightly than `AND` and more tightly than `XOR`.
 A mode of `OPEN`: `OPEN path$ FOR OUTPUT AS #f` makes a file, or empties one, and opens it for writing. See
 `OPEN`.
 
+## PAINT
+
+A statement: fills an area of the bitmap with a colour.
+
+#### Syntax
+
+```text
+PAINT [STEP] (x, y) [, c [, border]]
+```
+
+#### Arguments
+
+*x*, *y*
+: Numeric expressions: a point inside the area.
+
+*c*
+: A numeric expression, 0 to 255: the colour to fill with. The pen's colour if it is left out.
+
+*border*
+: A numeric expression, 0 to 255: the colour that bounds the area. If it is left out, it is *c*.
+
+#### Description
+
+Needs a graphics mode. Starting from the point, the fill spreads to every pixel it can reach by moving up,
+down, left and right without crossing a pixel of the *border* colour, or one that is already colour *c*. It
+stops at the edges of the bitmap. If the starting pixel is itself the border's colour or *c*, nothing is
+filled.
+
+The outline must be closed. A gap of a single pixel lets the colour out, and it fills everything outside too.
+
+#### Errors
+
+| `ERR` | Message | Cause |
+|---|---|---|
+| 5 | `illegal function call` | No graphics mode is set; or a colour is not 0 to 255 |
+| 13 | `type mismatch` | An argument is a string |
+
+#### Notes
+
+The fill is done by HyBASIC, a row at a time, reading the bitmap back from the screen's memory. A large or
+intricate area takes a noticeable time. A box is filled far faster by `LINE` with `BF`, and a disc by `CIRCLE`
+with `F`.
+
+A starting point off the bitmap fills nothing, without an error.
+
+#### See also
+
+`LINE`, `CIRCLE`, `DRAW`, `COLOR`, `SCREEN`.
+
+#### Example
+
+A box outlined in colour 6, filled with colour 2 up to that border:
+
+```text
+> SCREEN 13 : LINE (30, 30)-(40, 40), 6, B : PAINT (35, 35), 2, 6
+> PRINT POINT(35, 35); POINT(31, 31); POINT(30, 30); POINT(45, 45)
+ 2  2  6  0
+> SCREEN 0
+```
+
+## PALETTE
+
+A statement: sets what colour one of the colour numbers shows.
+
+#### Syntax
+
+```text
+PALETTE n, rgb
+```
+
+#### Arguments
+
+*n*
+: A numeric expression, 0 to 255: a colour number.
+
+*rgb*
+: A numeric expression, 0 to 4095: the colour, as three hex digits, one each for red, green and blue. `&HF00` is
+  the brightest red, `&HFFF` white and `&H000` black.
+
+#### Description
+
+A pixel holds a colour number, and the palette says what colour each number is shown as. `PALETTE` changes one
+entry. Everything on the screen that has that number changes colour at once, without being drawn again: the
+text as well as the bitmap, since they share the one palette.
+
+It does not need a graphics mode, only a Vera X card.
+
+#### Errors
+
+| `ERR` | Message | Cause |
+|---|---|---|
+| 5 | `illegal function call` | *n* is not 0 to 255, or *rgb* is not 0 to 4095 |
+| 13 | `type mismatch` | An argument is a string |
+
+#### Notes
+
+The palette is the screen's, not HyBASIC's: a change stays after the program ends, and after HyBASIC does.
+
+#### See also
+
+`COLOR`, `SCREEN`.
+
 ## PEEK, POKE
 
 A function and a statement: read, and write, one byte of memory.
@@ -738,6 +840,40 @@ channel 0: what is z
  511
 ```
 
+## POINT
+
+A numeric function: the colour of a pixel.
+
+#### Syntax
+
+```text
+POINT(x, y)
+```
+
+#### Arguments
+
+*x*, *y*
+: Numeric expressions: the pixel, in the coordinates the drawing statements use, with the `WINDOW` and `VIEW`
+  that are in force.
+
+#### Result
+
+The pixel's colour number. −1 if the point is off the bitmap, or if no graphics mode is set.
+
+#### Errors
+
+| `ERR` | Message | Cause |
+|---|---|---|
+| 13 | `type mismatch` | An argument is a string |
+
+#### Notes
+
+The result is what is in the bitmap. Sprites and the console's text, which are shown over it, are not seen.
+
+#### See also
+
+`PSET`, `SCREEN`, `WINDOW`, `VIEW`.
+
 ## POS
 
 A numeric function: the column the next character will be printed in.
@@ -782,6 +918,53 @@ terminal.
 ## PRESERVE
 
 Part of `REDIM`: `REDIM PRESERVE` changes an array's size and keeps what is in it. See `REDIM`.
+
+## PRESET, PSET
+
+Statements: set one pixel.
+
+#### Syntax
+
+```text
+PSET [STEP] (x, y) [, c]
+PRESET [STEP] (x, y) [, c]
+```
+
+#### Arguments
+
+*x*, *y*
+: Numeric expressions: the pixel. With `STEP`, an offset from the last point referenced.
+
+*c*
+: A numeric expression, 0 to 255: the colour. A mode with fewer colours uses the number's low bits.
+
+#### Description
+
+Needs a graphics mode. The two differ only when no colour is given: `PSET` then uses the pen's colour, and
+`PRESET` uses colour 0, the background, which rubs the pixel out.
+
+The point becomes the last point referenced. A point off the bitmap sets nothing, and is not an error.
+
+#### Errors
+
+| `ERR` | Message | Cause |
+|---|---|---|
+| 5 | `illegal function call` | No graphics mode is set; or *c* is not 0 to 255 |
+| 13 | `type mismatch` | An argument is a string |
+
+#### See also
+
+`POINT`, `LINE`, `COLOR`, `SCREEN`.
+
+#### Example
+
+```text
+> SCREEN 13 : PSET (10, 10), 5 : PSET (20, 20) : PRINT POINT(10, 10); POINT(20, 20); POINT(11, 10)
+ 5  15  0
+> PRESET (20, 20) : PSET STEP (5, 0), 9 : PRINT POINT(20, 20); POINT(25, 20)
+ 0  9
+> SCREEN 0
+```
 
 ## PRINT
 

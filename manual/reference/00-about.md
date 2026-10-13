@@ -12,7 +12,7 @@ It assumes the manual has been read, and it says the same thing about every entr
 
 | Chapter | Entries | Written so far |
 |---|---|---|
-| 1. HyBASIC keywords | Every statement, function and operator | `ABS` to `XOR`: every keyword but the graphics ones, which will be written together with `SCREEN` |
+| 1. HyBASIC keywords | Every statement, function and operator | `ABS` to `XOR`: every keyword |
 | 2. Commands | The shell's own commands, and the programs in `/bin` | `cp` |
 | 3. System calls | Every call a program can make | `OPEN`, `READ` |
 | 4. HyForth words | The core and every library | `>number` |

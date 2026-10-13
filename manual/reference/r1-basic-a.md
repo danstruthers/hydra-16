@@ -808,7 +808,7 @@ QuickBASIC's `CINT` overflows beyond 32,767.
 
 ## CIRCLE
 
-A statement: draws a circle, or a filled disc, on the graphics screen.
+A statement: draws a circle, or a filled disc, on the bitmap.
 
 #### Syntax
 
@@ -819,14 +819,15 @@ CIRCLE [STEP] (x, y), r [, c [, start [, end [, aspect [, F]]]]]
 #### Arguments
 
 *x*, *y*
-: Numeric expressions: the centre. With `STEP`, they are an offset from the last point referenced.
+: Numeric expressions: the centre (see `SCREEN` for coordinates). With `STEP`, they are an offset from the last
+  point referenced.
 
 *r*
 : A numeric expression, 0 or more: the radius.
 
 *c*
-: A numeric expression, 0 to 255: the colour. A mode with fewer colours uses the number's low bits: `SCREEN 1`
-  has four colours, so 5 draws in colour 1. If it is left out, the pen's colour, which `COLOR` sets.
+: A numeric expression, 0 to 255: the colour. A mode with fewer colours uses the number's low bits. If it is left
+  out, the pen's colour.
 
 *start*, *end*, *aspect*
 : Accepted, evaluated and ignored. QuickBASIC draws arcs and ellipses with them; HyBASIC always draws a whole
@@ -837,9 +838,8 @@ CIRCLE [STEP] (x, y), r [, c [, start [, end [, aspect [, F]]]]]
 
 #### Description
 
-Needs a graphics mode (`SCREEN` 1 or more). The coordinates and the radius are in pixels, each rounded to the
-nearest, unless `WINDOW` has set coordinates of the program's own; then the radius is in the window's x units.
-The centre becomes the last point referenced, where a following `STEP` or `LINE -(x, y)` starts from.
+Needs a graphics mode. The radius is in pixels, rounded to the nearest; with a `WINDOW` in force it is in the
+window's x units. The centre becomes the last point referenced.
 
 A radius of 0 draws the centre's one dot.
 
@@ -851,14 +851,19 @@ A radius of 0 draws the centre's one dot.
 | 258 | `invalid argument` | The driver refused it: a negative radius, or a centre far off the bitmap |
 | 13 | `type mismatch` | An argument is a string |
 
+#### Notes
+
+In HydraOS 1.0, a circle drawn while a `WINDOW` is in force is filled whether or not `F` is given. This is a
+fault, not a feature.
+
 #### See also
 
 `SCREEN`, `COLOR`, `PSET`, `LINE`, `PAINT`, `WINDOW`, `POINT`.
 
 #### Example
 
-With a Vera X card. (`SCREEN` clears the console, so this one is shown as it was typed, not as a replayed
-transcript.)
+With a Vera X card. (`SCREEN` clears the console, so the graphics examples are shown as they were typed, not as
+replayed transcripts.)
 
 ```text
 > SCREEN 13 : CIRCLE (100, 100), 20, 200

@@ -488,6 +488,80 @@ At the prompt a loop must be whole on its line, since each line typed is compile
  6
 ```
 
+## DRAW
+
+A statement: draws with a string of pen movements, QuickBASIC's turtle language.
+
+#### Syntax
+
+```text
+DRAW commands$
+```
+
+#### Arguments
+
+*commands$*
+: A string expression: movement commands, one after another. Spaces between them are optional, and capitals and
+  small letters are the same.
+
+#### Description
+
+Needs a graphics mode. Drawing starts at the last point referenced, and each move draws a line from where the
+pen is to where it goes, in the pen's colour, and leaves the pen there.
+
+| Command | Moves the pen |
+|---|---|
+| `U` *n*, `D` *n*, `L` *n*, `R` *n* | Up, down, left, right by *n* units |
+| `E` *n*, `F` *n*, `G` *n*, `H` *n* | Diagonally: up and right, down and right, down and left, up and left, *n* units each way |
+| `M` *x*`,`*y* | To the point (*x*, *y*) |
+| `M` `+`*x*`,`*y* or `M` `-`*x*`,`*y* | By that much from where it is: a sign on the first number makes both numbers offsets |
+
+*n* is 1 if it is left out. A unit is one pixel to begin with.
+
+| Before a move | Effect |
+|---|---|
+| `B` | Move without drawing |
+| `N` | Draw, then put the pen back where it started |
+
+| Setting | Effect |
+|---|---|
+| `C` *n* | The colour to draw in. It becomes the pen's colour, and stays so after the `DRAW` |
+| `S` *n* | The scale: a unit is *n* / 4 pixels. 4 to begin with |
+| `A` *n* | Turn every direction by *n* × 90 degrees, anticlockwise: *n* is 0 to 3 |
+| `TA` *n* | Turn every direction by *n* degrees, anticlockwise |
+
+The scale and the turn stay in force for the `DRAW` statements that follow, until they are set again. A line
+that runs off the bitmap is drawn up to its edge.
+
+#### Errors
+
+| `ERR` | Message | Cause |
+|---|---|---|
+| 5 | `illegal function call` | No graphics mode is set; or a letter in the string that is not a command |
+| 13 | `type mismatch` | The argument is a number |
+
+#### Notes
+
+QuickBASIC's `X`, which runs another string, and `P`, which paints, are not here. Join strings with `+`, and use
+`PAINT`.
+
+#### See also
+
+`LINE`, `PSET`, `COLOR`, `PAINT`, `SCREEN`.
+
+#### Example
+
+A square of side 10, and a line at 45 degrees:
+
+```text
+> SCREEN 13 : DRAW "BM150,100 C5 R10 D10 L10 U10"
+> PRINT POINT(155, 100); POINT(160, 105); POINT(150, 105); POINT(155, 105)
+ 5  5  5  0
+> DRAW "BM150,150 C7 TA45 R10" : PRINT POINT(157, 143)
+ 7
+> SCREEN 0
+```
+
 ## EDIT
 
 A command of the prompt: opens the program in the screen editor.

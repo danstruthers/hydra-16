@@ -482,7 +482,7 @@ running 0
 running 0
 ```
 
-
+## SAVE
 
 A command of the prompt: writes the program to a file.
 
@@ -521,6 +521,69 @@ PC (`/pc`).
 #### See also
 
 `LOAD`, `LIST`, `NEW`.
+
+## SCREEN
+
+A statement: chooses a graphics mode, or returns to text alone.
+
+#### Syntax
+
+```text
+SCREEN n
+```
+
+#### Arguments
+
+*n*
+: A numeric expression: the mode.
+
+| *n* | Bitmap | Colours | The pen starts as |
+|---|---|---|---|
+| 0 | None: text alone | | |
+| 1 | 320 × 240 | 4 | 3 |
+| 2 | 640 × 480 | 2 | 1 |
+| 7 | 320 × 240 | 16 | 15 |
+| 12 | 640 × 480 | 4 | 3 |
+| 13 | 320 × 240 | 256 | 15 |
+
+#### Description
+
+Graphics need a Vera X card (Chapter 16). In a graphics mode the screen has a **bitmap**, a grid of pixels
+each holding a colour number, with the console's text shown over it. The drawing statements change the bitmap,
+and `PRINT` goes on writing text as before.
+
+`SCREEN n` sets the mode, clears the bitmap to colour 0, sets the **pen** (the colour used when a drawing
+statement is given none) to the mode's brightest, up to 15, and puts the **last point referenced** at the
+middle of the bitmap. Any `WINDOW` and `VIEW` are cancelled. `SCREEN 0` takes the bitmap away.
+
+**Coordinates.** A point is written `(x, y)`. Unless `WINDOW` says otherwise, *x* counts pixels from the left
+edge, starting at 0, and *y* counts them down from the top: in a 320 × 240 mode the corners are (0, 0) and
+(319, 239). A coordinate that isn't an integer is rounded to the nearest, a half going to the even one.
+
+**The last point referenced** is where the most recent drawing statement finished. `STEP (dx, dy)` means the
+point that far from it, and `LINE -(x, y)` starts from it.
+
+**Colours.** A colour is a number from 0 to 255. A mode with fewer colours uses as many low bits as it has, so
+in a 4-colour mode 5 is colour 1. What colour a number looks like is the palette's business: see `PALETTE`.
+
+The mode numbers are QuickBASIC's for the nearest thing each mode is.
+
+#### Errors
+
+| `ERR` | Message | Cause |
+|---|---|---|
+| 5 | `illegal function call` | *n* is not one of the six modes |
+| 53 | `file not found` | There is no Vera X card: the screen driver's files are not there |
+
+#### Notes
+
+The drawing is done by the screen's driver, to which HyBASIC writes commands (`/dev/vid/draw`, section 16.4).
+A program in another language, or the shell, can draw on the same bitmap by the same route.
+
+#### See also
+
+`PSET`, `LINE`, `CIRCLE`, `PAINT`, `DRAW`, `GPRINT`, `POINT`, `COLOR`, `PALETTE`, `WINDOW`, `VIEW`, `SPRITE`,
+`CLS`.
 
 ## SEEK
 
@@ -1083,6 +1146,59 @@ A string of *n* spaces; the empty string if *n* is 0.
 ## SPC
 
 Used in `PRINT`: `SPC(n)` writes *n* spaces. See `PRINT`.
+
+## SPRITE
+
+A statement: shows, moves or hides a sprite.
+
+#### Syntax
+
+```text
+SPRITE n, x, y [, image$]
+SPRITE n OFF
+```
+
+#### Arguments
+
+*n*
+: A numeric expression, 1 to 127: which sprite.
+
+*x*, *y*
+: Numeric expressions: where on the screen the sprite's top left corner goes, in pixels.
+
+*image$*
+: A string expression of exactly 64 or 256 bytes: the sprite's picture, one byte to a pixel, each byte a colour
+  number, row by row from the top left. 64 bytes make a sprite 8 pixels square; 256 make one 16 square. A pixel
+  of colour 0 is transparent.
+
+#### Description
+
+A sprite is a small picture that the screen shows over everything else, wherever it is told to, without
+anything being drawn into the bitmap. Moving one is instant and leaves the bitmap as it was underneath.
+
+`SPRITE n, x, y, image$` gives sprite *n* its picture and shows it at the point. `SPRITE n, x, y`, without a
+picture, moves it there with the picture it has. `SPRITE n OFF` hides it; its picture is kept.
+
+Sprites need a Vera X card but no graphics mode: they show over text too.
+
+#### Errors
+
+| `ERR` | Message | Cause |
+|---|---|---|
+| 5 | `illegal function call` | *n* is not 1 to 127; or *image$* is not 64 or 256 bytes long |
+| 13 | `type mismatch` | A number where the picture should be, or a string where a number should be |
+
+#### Notes
+
+A picture is most easily built from `CHR$` and `STRING$`, or read from `DATA`. `STRING$(64, CHR$(7))` is a solid
+square of colour 7.
+
+Sprites are the screen's, not HyBASIC's. One left showing stays on the screen after the program ends: hide it
+first.
+
+#### See also
+
+`SCREEN`, `PALETTE`, `CHR$`, `STRING$`.
 
 ## SQR
 
@@ -1745,6 +1861,63 @@ itself.
  12 -350  1/3  255  12  0  0
 ```
 
+## VIEW
+
+A statement: moves the origin of the drawing coordinates to a rectangle of the bitmap.
+
+#### Syntax
+
+```text
+VIEW [[SCREEN] (x1, y1)-(x2, y2) [, fill [, border]]]
+```
+
+#### Arguments
+
+*x1*, *y1*, *x2*, *y2*
+: Numeric expressions: two opposite corners of a rectangle, the **viewport**, in pixels of the bitmap.
+
+*fill*, *border*
+: Accepted, evaluated and ignored.
+
+#### Description
+
+After `VIEW (x1, y1)-(x2, y2)`, the drawing statements' coordinates are measured from the viewport's top left
+corner: the point (0, 0) is the pixel (x1, y1). A drawing can be moved about the screen by changing one
+statement.
+
+With `SCREEN`, the coordinates stay the bitmap's own, and the viewport matters only to a `WINDOW`.
+
+A `WINDOW` set afterwards spreads its coordinates over the viewport instead of over the whole bitmap, which is
+the usual reason for a viewport: a graph in one corner of the screen.
+
+`VIEW` alone makes the viewport the whole bitmap again.
+
+#### Errors
+
+| `ERR` | Message | Cause |
+|---|---|---|
+| 5 | `illegal function call` | No graphics mode is set |
+| 13 | `type mismatch` | An argument is a string |
+
+#### Notes
+
+Unlike QuickBASIC's, the viewport does not clip. A point outside it is still drawn, as long as it is on the
+bitmap, and the viewport is neither cleared nor outlined.
+
+#### See also
+
+`WINDOW`, `SCREEN`, `POINT`.
+
+#### Example
+
+```text
+> SCREEN 13 : VIEW (100, 100)-(200, 200) : PSET (0, 0), 13 : PRINT POINT(0, 0)
+ 13
+> VIEW : PRINT POINT(100, 100); POINT(0, 0)
+ 13  0
+> SCREEN 0
+```
+
 ## WHILE ... WEND
 
 A statement block: a loop that repeats while a condition holds.
@@ -1829,6 +2002,59 @@ is written whole, and the terminal wraps it wherever its own edge is.
 > WIDTH 40 : PRINT 1, 2, 3, 4 : WIDTH 80
  1             2             3
  4
+```
+
+## WINDOW
+
+A statement: gives the drawing statements coordinates of the program's own choosing.
+
+#### Syntax
+
+```text
+WINDOW [[SCREEN] (x1, y1)-(x2, y2)]
+```
+
+#### Arguments
+
+*x1*, *y1*, *x2*, *y2*
+: Numeric expressions: the coordinates that the left edge, one horizontal edge, the right edge and the other
+  horizontal edge of the drawing area are to have.
+
+#### Description
+
+After `WINDOW (x1, y1)-(x2, y2)`, a point's *x* runs from *x1* at the left edge of the bitmap to *x2* at the
+right, and its *y* from *y1* at the **bottom** to *y2* at the top, as a graph is drawn on paper. Each point a
+statement is given is worked out exactly in those coordinates and then rounded to a pixel. `WINDOW (-1, -1)-(1,
+1)` puts (0, 0) at the middle of the screen.
+
+With `SCREEN`, *y* runs the screen's way instead: *y1* is at the top and *y2* at the bottom.
+
+The window covers the viewport, if `VIEW` has set one, and the whole bitmap otherwise. Every statement that
+takes a point follows it, `POINT` included; a `CIRCLE`'s radius is in the window's x units.
+
+`WINDOW` alone returns to pixels.
+
+#### Errors
+
+| `ERR` | Message | Cause |
+|---|---|---|
+| 5 | `illegal function call` | No graphics mode is set |
+| 13 | `type mismatch` | An argument is a string |
+
+#### See also
+
+`VIEW`, `SCREEN`, `POINT`, `CIRCLE`.
+
+#### Example
+
+The point (50, 50) of a window 100 units each way is the pixel in the middle of the bitmap:
+
+```text
+> SCREEN 13 : WINDOW (0, 0)-(100, 100) : PSET (50, 50), 12 : PRINT POINT(50, 50)
+ 12
+> WINDOW : PRINT POINT(160, 120)
+ 12
+> SCREEN 0
 ```
 
 ## WRITE
