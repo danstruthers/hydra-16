@@ -109,6 +109,7 @@ static num_t* number (void)
     const char* q = p;
     char* end;
     unsigned char n = 0;
+    unsigned char plain = 1;
     num_t* a;
 
     if (*p == '#') {
@@ -121,7 +122,24 @@ static num_t* number (void)
         return a;
     }
     while (isalnum (*q) || *q == '.' || *q == '_') {
+        if (!isdigit (*q)) {
+            plain = 0;
+        }
         word[n++] = *q++;
+    }
+    /* An integer, then /, digits and i: a fraction before i is one number (1/2i is half of i; 1/(2i) divides) */
+    if (plain && n > 0 && *q == '/' && isdigit (q[1])) {
+        const char* r = q + 1;
+
+        while (isdigit (*r)) {
+            ++r;
+        }
+        if (*r == 'i' && !isalnum (r[1]) && r[1] != '.' && r[1] != '_') {
+            ++r;
+            while (q < r) {
+                word[n++] = *q++;
+            }
+        }
     }
     word[n] = '\0';
     p = q;

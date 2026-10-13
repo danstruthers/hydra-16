@@ -410,6 +410,7 @@ const CNUM_LINES = [
   ["calc '2^100'; calc -d 30 pi; calc -b '#b' 0.75","1267650600228229401496703205376\n3.14159265358979323846264338328\n#b0.11"],
   ["calc '(1+2)*3'; calc 'log(e)^2'; calc 'sqrt 2^2'; calc 'gcd(12, 18)'","9\n1\n2\n6"],
   ["calc -17 % 5; calc 'fixed(1/3, 5)'; calc '#xFF + 1'; calc sqrt -4; calc -b c 5","-2\n0.33333\n256\n2i\n--+"],
+  ["calc '4/3 - 8/3i'; calc '3.9 + 1/2i'; calc 1/2i; calc '1/(2i)'; calc '4/3+3.7i'","4/3-8/3i\n3.9+1/2i\n1/2i\n-1/2i\n4/3+3.7i"],
   ["calc 1/0; echo $status; calc foo; calc 2 +; calc -b zz 5", [
     "calc: division by zero",
     "division by zero",
