@@ -53,7 +53,7 @@ node reborn/sim/run.js [options]
 
 | Option | What it does |
 |---|---|
-| `--pc-dir FOLDER` | The Hydra sees FOLDER, on your PC, as `/pc` |
+| `--pc-dir FOLDER` | The Hydra sees FOLDER, on your PC, as `/pc`. FOLDER can be an SD card image file instead: then `/pc` is the card in it |
 | `--pc-read-only` | The Hydra can read `/pc`, but not change it |
 | `--pc-log` | List what the Hydra does with `/pc` as it happens |
 | `--pc-damage F,...` | Damage some of `/pc`'s messages on the serial line, to test that they're sent again: `qN` the Nth message from the Hydra, `rN` the Nth reply |
@@ -160,12 +160,18 @@ smaller than the image.
 
 ```text
 node reborn/sim/tools/hydrapc.js PORT FOLDER [options]
+node reborn/sim/tools/hydrapc.js PORT IMAGE [options]
 ```
+
+With an IMAGE (an SD card image file, as `hydrafs.js mkfs` makes and `sdwrite.js` writes to a card), `/pc` is the
+card in the image: its files, in the card's own order, with the card's own dates. What the Hydra writes goes into
+the image, which is complete on the PC after every change. An image file that can't be written is served read-only.
+Don't give the same image to an emulator (`--sd`) while the PC tool has it.
 
 | Option | What it does |
 |---|---|
 | `--list` | List the PC's serial ports |
-| `--read-only` | The Hydra can read the folder, but not change it |
+| `--read-only` | The Hydra can read the folder (or the image), but not change it |
 | `--baud N` | The serial line's speed (9600, the Hydra's when it starts) |
 | `--log` | List the Hydra's requests for `/pc` as they're served |
 | `--no-size` | Don't tell the Hydra the window's size |
