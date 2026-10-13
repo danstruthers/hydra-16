@@ -202,6 +202,8 @@ const RC_LINES = [
   ["echo (a","rc: syntax error"],
   ["whatis echo x; q=('it''s' '' a.b); whatis q","/bin/echo\nx=(a b c)\nq=('it''s' '' a.b)"],
   ["bind '#n' /mnt; ls /mnt","null\nzero\nkmesg"],
+  ["{mount /mnt}","rc: usage: mount [-abc] '#x' old [spec]"],
+  ["{bind /mnt}","rc: usage: bind [-abc] new old"],
   ["ls /rom/lib","as/\nbasic/\nedit/\nfont/\nforth/\nhylang/\nnamespace\nprofile\nshell\nwindows"],
   ["cat /bin/echo >/ram/hi; cd /ram; hi from dot; cd","from dot"],
   ["cat /nothing >[2]/ram/e; cat /ram/e","cat: /nothing: not found"],
@@ -759,6 +761,7 @@ const RAMW_LINES = ['variable fd', ': w ( a u -- ) w/o create-file throw fd ! ;'
   ': t ( a u -- ) w 70 0 do s" 0123456789" p loop 5 at s" abc" p 508 at s" XYZWV" p 699 at s" !+" p c ;',
   ': n ( -- ) 100 0 do s" 0123456789abcdef" p loop ;',
   's" /ram/w" t', 's" /sram/w" t', 's" /sd/0/w" t', 'cat /ram/w; echo; cat /sram/w; echo; cat /sd/0/w; echo',
+  ': h ( a u -- ) w s" ab" p 3000 at s" Z" p c ;', 's" /ram/h" h s" /sram/h" h s" /sd/0/h" h', 'ls -l /ram/h /sram/h /sd/0/h',
   's" /ram/n" w', '91 emit .( b0 A])', '91 emit .( b0 B])', '91 emit .( rw A])', 'n', '91 emit .( rw B])', 'c',
   's" /sd/0/n" w', '91 emit .( cw A])', 'n', '91 emit .( cw B])', 'c', 'ls -l /ram/n /sd/0/n',
   's" /sd/0/k" w s" first part, written. " p s" then synced" p', 'echo sync >/dev/sd/0/ctl',
@@ -1284,8 +1287,8 @@ function hylangCard(test, files = {}) {
 // reads rc's $greet (hi) and its arguments (one two); files.bas and errors.bas write their files on the card;
 // procs.bas INCLUDEs inc.bas, prompt.txt LOADs lab.bas; asm.bas's ASM blocks .include /lib/as's hydra.inc
 const BASIC_DIR = path.join(__dirname, 'basic');
-const BSUITE_PROGS = { arith: 66, funcs: 79, logic: 64, strings: 55, arrays: 37, flow: 33, procs: 28, records: 23, data: 27,
-  errors: 27, files: 24, hydra: 32, asm: 23 };
+const BSUITE_PROGS = { arith: 66, funcs: 82, logic: 64, strings: 55, arrays: 37, flow: 33, procs: 28, records: 23, data: 27,
+  errors: 30, files: 24, hydra: 32, asm: 23 };
 const BSUITE_SCRIPTS = ['errors', 'print', 'prompt', 'input', 'asm'];
 const bsuiteLine = n => (n === 'hydra' ? 'greet=hi; ' : '') + 'basic ' + n + '.bas' + (n === 'hydra' ? ' one two' : '');
 function basicCard() {
@@ -1574,7 +1577,7 @@ module.exports = {
         '% echo stop >>\'#d/s/ctl\'; echo still; cat /sram/x\nstill\ncat: /sram/x: no such device\n%'],
     },
     {
-      name: 'newns', what: 'the default namespace\'s library (nslib): an old area emptied, a namespace file run (quotes, comments, $task, flags, bad lines)',
+      name: 'newns', what: 'the default namespace\'s library (nslib): an old area emptied, a namespace file run (quotes, comments, $task, flags, bad lines); the whole namespace built twice: the area emptied while it isn\'t /ram, kept once it is (a shell\'s newns lost its /ram\'s files)',
       init: 't_newns', cycles: 60e6,
       check(m, out) {
         const f = [];
@@ -1760,6 +1763,12 @@ module.exports = {
         return [...Object.entries(BSUITE_PROGS).map(([n, c]) => '% ' + bsuiteLine(n) + '\n' + n + ': ' + c + ' checks, 0 failed\n%'),
           ...BSUITE_SCRIPTS.map(n => '% basic <' + n + '.txt\n' + fs.readFileSync(path.join(BASIC_DIR, n + '.out'), 'latin1') + '% ')];
       },
+    },
+    {
+      name: 'bgfx', what: 'BASIC\'s graphics on a Vera X (tests/basic/gfx.bas, from a card: it checks itself, by POINT): SCREEN 13, PSET, LINE (a line, B a box, BF a filled one), CIRCLE (and F a disc); the same through a WINDOW, which kept none of their kinds (every LINE a filled box, every CIRCLE a disc: the scale\'s slot took the statement\'s scratch), and GPRINT\'s whole text through one (4 characters of it)',
+      init: 't_rc', cycles: 400e6,
+      get machine() { return { vera: true, sd: basicCard(), input: 'ācd /sd/0\r' + 'ābasic gfx.bas\r' }; },
+      expect: ['gfx: 21 checks, 0 failed'],
     },
     {
       name: 'hyforth', what: 'HyForth\'s additions (docs/design/hyforth.md): names in lower case; words (each word\'s xt, and whether it\'s a literal, immediate, assembly or Forth); the libraries loaded (libs), one not searched (-lib) and searched again (lib, where it was), the one with lib refused, a .fs one, one a MARKER takes out; disasm (the modes, the Rockwell opcodes, a jsr to a word), see of a code word (with disasm.fl, and without), sys, the bit words, random\'s numbers; the terminal\'s sequences, form, ekey and the keys (an arrow key, a character); the sound words (notes on the YM2151, a claim, the volume; a channel\'s level, its old name; the registers read back: a note\'s key code and fraction; a song by play, its error; a note by its frequency, a glide, the LFO, a channel\'s sensitivity, the noise; a line of MML and a chord, by play); ctl (and its error); compile-only words typed (THROW -14: >r, if, .", a synonym of one, a library\'s) and compiled',
@@ -1965,10 +1974,10 @@ module.exports = {
       check(m) { return m.acia.overruns || m.acia.txLost ? [m.acia.overruns + ' bytes written while another was still being sent (' + m.acia.txLost + ' lost on a WDC chip)'] : []; },
     },
     {
-      name: 'standing', what: 'the tasks kept standing: at the login shell\'s prompt the kernel, the shell in init\'s task (init EXECs it) and the drivers, no init, no window starter, no input program, no gpio driver; the console waiting for its own events (its init\'s loop); a program left behind when its shell ends is nobody\'s; the login shell ended is started again by the kernel, in task 1, window 0\'s; a window made while the shell waits for a program (Ctrl-] c: the console\'s own loop makes it, the kernel starts init there); newns twice, the namespace the same',
+      name: 'standing', what: 'the tasks kept standing: at the login shell\'s prompt the kernel, the shell in init\'s task (init EXECs it) and the drivers, no init, no window starter, no input program, no gpio driver; the console waiting for its own events (its init\'s loop); a program left behind when its shell ends is nobody\'s; the login shell ended is started again by the kernel, in task 1, window 0\'s; a window made while the shell waits for a program (Ctrl-] c: the console\'s own loop makes it, the kernel starts init there); newns twice, the namespace the same, and a file in /ram still there after it',
       init: 'init', cycles: 520e6,
-      machine: { input: 'āps\r' + 'āns | wc -l\r' + 'ānewns\r' + 'āns | wc -l\r' + 'āsleep 200 &\r' + 'ābye\r' + 'āps\r' + 'āecho $window\r' + 'āsleep 8\rĀĀ\x1dc' + 'āecho $window\r' + 'āps\r' + 'āecho all done\r' },
-      expect: ['\nall done\n', '/> ns | wc -l\n     26\n/> newns\n/> ns | wc -l\n     26\n', '/> bye\nHyForth (Forth 2012), bye to end\n/> ps\n', '/> echo $window\n0\n', '/> echo $window\n1\n'],
+      machine: { input: 'āps\r' + 'āecho mine >/ram/kept\r' + 'āns | wc -l\r' + 'ānewns\r' + 'āns | wc -l\r' + 'ācat /ram/kept\r' + 'āsleep 200 &\r' + 'ābye\r' + 'āps\r' + 'āecho $window\r' + 'āsleep 8\rĀĀ\x1dc' + 'āecho $window\r' + 'āps\r' + 'āecho all done\r' },
+      expect: ['\nall done\n', '/> ns | wc -l\n     26\n/> newns\n/> ns | wc -l\n     26\n/> cat /ram/kept\nmine\n', '/> bye\nHyForth (Forth 2012), bye to end\n/> ps\n', '/> echo $window\n0\n', '/> echo $window\n1\n'],
       check(m, out) {
         const f = [], text = out.replace(/\r/g, ''), lists = text.split('task  state   parent     cpu group  name\n').slice(1).map(t => t.split('\n/> ')[0].split('\n').map(l => l.trim().split(/\s+/)));
         const names = l => l.map(r => r[0] + ':' + r[5] + ':' + r[2]).join(' ');
@@ -3529,6 +3538,9 @@ module.exports = {
         const f = [], n = out.split(RAMW_TEXT).length - 1;
         if (n !== 3) f.push('the file as written, read back ' + n + ' times (3 wanted: /ram, /sram, the card)');
         for (const p of ['/ram/n', '/sd/0/n']) if (!new RegExp('-rw\\S*\\s.*\\b1600\\b.*' + p).test(out.replace(/\r/g, ''))) f.push(p + ' isn\'t 1600 bytes long');
+        // (A write past a file's end: the file that long, with a hole.  A RAM disk's clusters aren't a card's 4K: its
+        // file came out too long, and the write failed, end of file)
+        for (const p of ['/ram/h', '/sram/h', '/sd/0/h']) if (!new RegExp('-rw\\S*\\s.*\\b3001\\b.*' + p).test(out.replace(/\r/g, ''))) f.push(p + ', written at 3000 past its 2 bytes, isn\'t 3001 bytes long');
         this.card.save();
         const raw = fs.readFileSync(this.card.file, 'latin1');
         if (!raw.includes('then synced')) f.push('the card: a block synced, not on it');

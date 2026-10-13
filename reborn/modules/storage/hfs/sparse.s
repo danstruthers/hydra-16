@@ -132,11 +132,12 @@ HFS_EXTEND:
             sbc         #0
             sta         HFS_WK + 3
             lda         HFS_XNEW + 4                        ; SD_POS on past them, to the file's end: their
-            sta         HFS_CL                              ;   clusters * 4096 (* 16, a byte up)
-            lda         HFS_XNEW + 5
-            sta         HFS_CL + 1
-            stz         HFS_CL + 2
-            ldx         #4
+            sta         HFS_CL                              ;   clusters' bytes (a cluster's 512 << HFS_SHIFT:
+            lda         HFS_XNEW + 5                        ;   the count << HFS_SHIFT + 1, a byte up; it was
+            sta         HFS_CL + 1                          ;   << 4 for every volume, 4K clusters', and a
+            stz         HFS_CL + 2                          ;   RAM disk's file came out too long, its write
+            ldx         HFS_SHIFT                           ;   past its clusters: E_EOF)
+            inx
 :
             asl         HFS_CL
             rol         HFS_CL + 1
