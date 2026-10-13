@@ -111,17 +111,15 @@ cd /ram
 /ram> hylang guess.hl
 I'm thinking of a number from 1 to 100.
 Your guess? 50
-Too small.
-Your guess? 75
 Too big.
-Your guess? 62
-Too small.
-Your guess? 68
+Your guess? 25
 Too big.
-Your guess? 65
+Your guess? 12
 Too small.
-Your guess? 66
-Right! You took 6 guesses.
+Your guess? 18
+Too small.
+Your guess? 21
+Right! You took 5 guesses.
 ```
 
 hylang's version is made of **functions**. `ask` prints the question, reads a line, and gives back its value as a
@@ -172,13 +170,17 @@ I'm thinking of a number from 1 to 100.
 Your guess? 50
 Too big.
 Your guess? 25
-Too small.
-Your guess? 37
-Too small.
-Your guess? 43
 Too big.
-Your guess? 40
-Right! You took 5 guesses.
+Your guess? 12
+Too small.
+Your guess? 18
+Too big.
+Your guess? 15
+Too big.
+Your guess? 13
+Too small.
+Your guess? 14
+Right! You took 7 guesses.
 ```
 
 HyForth's version is made of small **words**, each built on the ones before, and each passing its values to the

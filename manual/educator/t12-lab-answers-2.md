@@ -13,6 +13,8 @@ I²C bus, the SPI devices, the disks and the Vera X's screen.
 /> cat /dev/serctl
 b9600
 x1
+pc 0 req, 0 cut short, 0 unanswered, 0 damaged, 0 nak, 0 gone
+line 0 overruns, 0 framing errors
 /> cat /dev/consctl
 rawoff
 keys hydra
@@ -167,8 +169,8 @@ segment 15
 ```session
 /> du /sd/0/sample
 14      /sd/0/sample/as
-186     /sd/0/sample/c
-206     /sd/0/sample
+188     /sd/0/sample/c
+208     /sd/0/sample
 /> du /rom/bin
 228     /rom/bin
 ```
@@ -342,7 +344,7 @@ wired this way round because a VIA pin can take in much more current than it can
 
 ```session
 /> cat /proc/2/status
-forth wait 1 68 2
+forth wait 1 64 2
 /> cat /proc/2/fd
 /
 0 rw #c 391 #c/cons
@@ -361,6 +363,7 @@ keyboard and screen, as files 0, 1 and 2.
 prompt
 path
 task
+prog
 /> cat /env/path
 ./bin/>
 ```
@@ -403,16 +406,16 @@ Without a real Hydra, the task names:
 
 ```session
 % for(t in /proc/*) cat $t/status
-kernel ready - 456 0
-init wait - 31 1
-gpio idle - 5 11
+kernel ready - 473 0
+init wait - 46 1
+gpio idle - 3 11
 snd idle - 4 12
-kdev ready - 47 13
-storage idle - 336 14
-cons idle - 117 15
-forth wait 1 66 2
+kdev ready - 42 13
+storage idle - 334 14
+cons idle - 121 15
+forth wait 1 62 2
 wstart event 1 4 1
-rc wait 2 28 2
+rc wait 2 32 2
 ```
 
 ## Lab 15. Numbers and Bases
