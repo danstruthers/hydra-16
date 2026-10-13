@@ -12,7 +12,7 @@ It assumes the manual has been read, and it says the same thing about every entr
 
 | Chapter | Entries | Written so far |
 |---|---|---|
-| 1. HyBASIC keywords | Every statement, function and operator | `ABS` to `CVN` (all of A to C); `FOR`...`NEXT`, `INPUT`, `OPEN` |
+| 1. HyBASIC keywords | Every statement, function and operator | `ABS` to `FUNCTION` (all of A to F, but `DRAW`, which waits for the graphics keywords); `INPUT`, `OPEN` |
 | 2. Commands | The shell's own commands, and the programs in `/bin` | `cp` |
 | 3. System calls | Every call a program can make | `OPEN`, `READ` |
 | 4. HyForth words | The core and every library | `>number` |
