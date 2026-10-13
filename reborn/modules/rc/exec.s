@@ -33,12 +33,13 @@ exec_src:   .res        1                                   ; The source rc -c's
 xin:        .res        1                                   ; A pipeline stage's input fd ($FF: rc's own) ...
 xout:       .res        1                                   ;   its output fd ...
 xoutn:      .res        1                                   ;   and which of its fds that is
+xpn:        .res        1                                   ; A pipeline's last stage's fd for a pipe made as it starts ($FF: none)
 if_failed:  .res        1                                   ; <> 0: the last if's condition was false (if not)
 fn_depth:   .res        1
 fd_save_fd: .res        SAVE_MAX                            ; Redirections' saved fds: each fd ...
 fd_save_to: .res        SAVE_MAX                            ;   and where it went ($FF: it was closed)
 fd_save_depth: .res     1
-high_used:  .res        16                                  ; rc's fds from RC_FD_HIGH: <> 0 in use
+high_used:  .res        16                                  ; rc's fds from RC_FD_HIGH: <> 0 in use (2: a pipe's end)
 pipe_tasks: .res        16                                  ; A pipeline's stages' tasks
 pipe_n:     .res        1
 bg_tasks:   .res        16                                  ; Background tasks not yet waited for ($FF: none)
@@ -213,9 +214,8 @@ c_brace:
 c_if:
             PUSHW       xn
             FIELD       1
-            jsr         run_cmd
+            jsr         run_cond
             PULLW       xn
-            jsr         rc_true
             lda         #1
             sta         if_failed
             bcs         @done
@@ -224,6 +224,25 @@ c_if:
             jsr         run_cmd
             stz         if_failed
 @done:
+            rts
+
+; A condition run (its node .A/.X).  OUT: C = 0: true.  None is true: if(), and while(), which goes round for ever,
+; as Plan 9's rc has it (a note still ends that, even with nothing in its body)
+run_cond:
+            sta         t0
+            txa
+            ora         t0
+            beq         @none
+            lda         t0
+            jsr         run_cmd
+            jmp         rc_true
+
+@none:
+            lda         interrupted
+            beq         :+
+            jmp         rc_abort
+:
+            clc
             rts
 
 ; C_IFNOT: the command, if the last if's condition was false
@@ -249,8 +268,7 @@ c_while:
             lda         $0101,X
             sta         xn + 1
             FIELD       1
-            jsr         run_cmd
-            jsr         rc_true
+            jsr         run_cond
             bcs         @done
             tsx
             lda         $0102,X
@@ -1151,14 +1169,8 @@ aput:
 
 ; The child .A waited for: $status its exit (a note ending the wait: waited for again)
 wait_child:
-            sta         xt
-@wait:
-            LDR         r0, msgbuf
-            lda         xt
-            jsr         WAIT
+            jsr         wait_task
             bcc         :+
-            cmp         #E_INTR
-            beq         @wait
             jmp         status_error
 :
             lda         msgbuf                              ; Its message, or its code
@@ -1176,6 +1188,20 @@ wait_child:
             LDR         p1, msgbuf
             jsr         rc_number
             jmp         status_word
+
+; Task .A waited for (again, if a note cut the wait short).  OUT: WAIT's (msgbuf its message; C = 1: an error)
+wait_task:
+            sta         xt
+@wait:
+            LDR         r0, msgbuf
+            lda         xt
+            jsr         WAIT
+            bcc         @done
+            cmp         #E_INTR
+            beq         @wait
+            sec
+@done:
+            rts
 
 ; $status = the word .A bytes at p1 (none: .A = 0: the empty list)
 status_word:
@@ -1368,12 +1394,13 @@ aput0:
             jmp         rc_error_ax
 
 ; C_PIPE: each stage started (left to right, each's output the next one's input), then each waited for:
-; $status the last one's
+; $status the last one's.  A pipe is made only as the stage that writes it starts, and its ends are closed as soon
+; as the stages that use them have them: so rc holds three pipe ends at most, however many stages there are
 c_pipe:
             stz         pipe_n
             lda         #$FF
             sta         xin
-            sta         xout
+            sta         xpn
             lda         xn
             ldx         xn + 1
             jsr         pipe_start
@@ -1389,75 +1416,114 @@ c_pipe:
             bra         @wait
 
 @done:
+            stz         pipe_n
             rts
 
-; The pipe node .A/.X's stages started: its input xin, its output xout (as its fd xoutn)
+; The pipe node .A/.X's stages started.  Their input is xin (a pipe's read end, or $FF: rc's own), which becomes
+; the next stage's as each starts; the last one's output is a pipe made for it, as its fd xpn, or rc's own (xpn $FF)
 pipe_start:
             sta         xn
             stx         xn + 1
             lda         (xn)
             cmp         #C_PIPE
-            beq         @pipe
-            jmp         stage                               ; (Not a pipe: the text was set by the caller)
-
-@pipe:
-            jsr         PIPE                                ; A pipe: its ends kept above the children's fds
-            bcc         :+
-            jmp         status_error
-:
-            phx
-            jsr         high_fd                             ; (.A: its read end, moved)
-            sta         t1
-            pla
-            jsr         high_fd
-            pha                                             ; (The write end)
-            lda         t1
-            pha                                             ; (The read end)
+            bne         @stage
             PUSHW       xn
-            lda         xout                                ; (The right's output: this one's)
+            lda         xpn                                 ; (The right's output: this one's)
             pha
-            lda         xoutn
-            pha
-            lda         xin                                 ; The left: our input, into the write end (as its fd)
-            pha
-            tsx
-            lda         $0107,X                             ; (The write end)
-            sta         xout
-            ldy         #5
+            ldy         #5                                  ; The left: into a pipe (as its fd)
             lda         (xn),Y
-            sta         xoutn
-            FIELD       6                                   ; (Its text)
-            sta         xs
-            stx         xs + 1
-            FIELD       8
-            sta         xe
-            stx         xe + 1
+            sta         xpn
+            ldy         #6                                  ; (Its text)
+            jsr         stage_text
             FIELD       1
             jsr         pipe_start
-            pla                                             ; (xin back)
-            sta         xin
-            tsx                                             ; The write end closed (the left has it)
-            lda         $0106,X
-            jsr         high_close
-            pla                                             ; The right: from the read end, into our output
-            sta         xoutn
             pla
-            sta         xout
+            sta         xpn
             PULLW       xn
-            pla                                             ; (The read end)
-            sta         xin
-            pha
-            FIELD       10
-            sta         xs
-            stx         xs + 1
-            FIELD       12
-            sta         xe
-            stx         xe + 1
+            ldy         #10                                 ; The right: from that pipe, into our output
+            jsr         stage_text
             FIELD       3
-            jsr         pipe_start
+            bra         pipe_start
+
+@stage:
+            lda         xin                                 ; One stage (its text was set by the caller): its input,
+            pha                                             ;   closed once it has it
+            lda         #$FF
+            pha                                             ; (Its pipe's read end, the next stage's input: none yet)
+            pha                                             ; (and its write end)
+            sta         xout
+            lda         xpn
+            sta         xoutn
+            bmi         @run
+            jsr         PIPE                                ; Its output a pipe: its ends kept above the children's fds
+            bcc         :+
+            jsr         status_error
+            jmp         rc_abort                            ; (No pipe: the stages started are waited for there)
+:
+            phx
+            jsr         high_tmp
+            tsx
+            sta         $0103,X                             ; (The read end)
             pla
-            jsr         high_close                          ; (The read end: the right has it)
-            pla                                             ; (The write end: closed above)
+            jsr         high_tmp
+            tsx
+            sta         $0101,X                             ; (The write end)
+            sta         xout
+@run:
+            jsr         stage
+            pla                                             ; The write end closed: the stage has it
+            jsr         pipe_close
+            pla                                             ; The read end: the next stage's input
+            tax
+            pla                                             ; The input it had closed: the stage has that too
+            stx         xin
+pipe_close:
+            cmp         #$FF
+            beq         :+
+            jmp         high_close
+:
+            rts
+
+; xs, xe = the text of a stage: the four bytes at xn's field .Y
+stage_text:
+            lda         (xn),Y
+            sta         xs
+            iny
+            lda         (xn),Y
+            sta         xs + 1
+            iny
+            lda         (xn),Y
+            sta         xe
+            iny
+            lda         (xn),Y
+            sta         xe + 1
+            rts
+
+; A pipeline cut short (rc_abort's): its pipes' ends closed, so the stages that started see their ends, and those
+; stages waited for (their statuses dropped), so no task is left for good
+pipe_reap:
+            ldx         #RC_FD_HIGH
+@fd:
+            lda         high_used,X
+            cmp         #2
+            bne         :+
+            phx
+            txa
+            jsr         high_close
+            plx
+:
+            inx
+            cpx         #FD_MAX
+            bne         @fd
+@task:
+            ldx         pipe_n
+            beq         @done
+            dec         pipe_n
+            lda         pipe_tasks - 1,X
+            jsr         wait_task
+            bra         @task
+
+@done:
             rts
 
 ; One stage (xn) started: rc's fd 0 its input xin, its fd xoutn its output xout, for the moment
@@ -1506,21 +1572,17 @@ stage:
 run_capture:
             sta         xn
             stx         xn + 1
-            FIELD       3
-            sta         xs
-            stx         xs + 1
-            FIELD       5
-            sta         xe
-            stx         xe + 1
+            ldy         #3
+            jsr         stage_text
             jsr         PIPE
             bcc         :+
             jmp         status_error
 :
             phx
-            jsr         high_fd
+            jsr         high_tmp
             sta         t1
             pla
-            jsr         high_fd                             ; (The write end)
+            jsr         high_tmp                            ; (The write end)
             pha
             lda         t1
             pha
@@ -1623,9 +1685,7 @@ call_fn:
             lda         fn_depth
             cmp         #FN_DEPTH_MAX
             bcc         :+
-            lda         #<s_deep
-            ldx         #>s_deep
-            jmp         rc_error_ax
+            jmp         deep_error
 :
             inc         fn_depth
             ldy         #3                                  ; Its text: p0 (its length, then it)
@@ -1844,7 +1904,7 @@ redir_dup:
 save_fd:
             ldx         fd_save_depth
             cpx         #SAVE_MAX
-            bcs         @many
+            bcs         fds_error
             sta         fd_save_fd,X
             pha
             jsr         DUP                                 ; (A copy: kept up high)
@@ -1863,7 +1923,8 @@ save_fd:
             pla
             rts
 
-@many:
+; (No room for another of rc's own fds, or to note one)
+fds_error:
             lda         #<s_fds
             ldx         #>s_fds
             jmp         rc_error_ax
@@ -1872,17 +1933,12 @@ save_fd:
 save_closed:
             ldx         fd_save_depth
             cpx         #SAVE_MAX
-            bcs         @many
+            bcs         fds_error
             sta         fd_save_fd,X
             lda         #$FF
             sta         fd_save_to,X
             inc         fd_save_depth
             rts
-
-@many:
-            lda         #<s_fds
-            ldx         #>s_fds
-            jmp         rc_error_ax
 
 ; The redirections back to depth .A: each fd as it was
 redir_restore:
@@ -1930,9 +1986,7 @@ high_fd:
             inx
             cpx         #FD_MAX
             bne         :-
-            lda         #<s_fds
-            ldx         #>s_fds
-            jmp         rc_error_ax
+            jmp         fds_error
 :
             inc         high_used,X
             phx
@@ -1941,6 +1995,13 @@ high_fd:
             lda         hf_fd
             jsr         CLOSE
             pla
+            rts
+
+; The same, for a pipe's end: marked, so that a pipeline cut short can close it (pipe_reap)
+high_tmp:
+            jsr         high_fd
+            tax
+            inc         high_used,X
             rts
 
 ; rc's high fd .A closed (its slot free)

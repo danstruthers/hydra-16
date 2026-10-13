@@ -118,6 +118,14 @@ function loadCard() {
   v.close();
   return [imageCard(0, f, 16384)];
 }
+// The debugger's step-over test's program (dbover): a subroutine that calls itself, then a call of the kernel's
+// that takes two seconds, for ever
+const DBOVER_S = ['.include "hydra.inc"', '.include "hyx2.inc"', '', '            HYX2_PROGRAM "over", main', '', '.code',
+  'main:       lda #3', '            jsr down', "            lda #'!'", '            jsr PUTC', '@nap:       lda #<(TICK_HZ * 2)',
+  '            ldx #>(TICK_HZ * 2)', '            jsr SLEEP', "            lda #'.'", '            jsr PUTC', '            bra @nap', '',
+  'down:       pha', "            ora #'0'", '            jsr PUTC', '            pla', '            dec a', '            beq @end',
+  '            jsr down', '@end:       rts', ''].join('\n');
+
 // The step test's card: in bin, t_steppee (tests/ram), the program t_step steps
 function stepCard() {
   fs.mkdirSync(CARD_DIR, { recursive: true });
@@ -164,6 +172,9 @@ const RC_LINES = [
   ["{echo b >[1=3]} >[3]/ram/y >/dev/null; cat /ram/y","b"],
   ["echo piped | cat","piped"],
   ["echo a b | cat | cat","a b"],
+  ["echo a b c d | cat | cat | cat | wc -w","      4"],
+  ["rc -c 'i=(); while() {i=($i x); echo $#i; ~ $#i 3 && exit}'","1\n2\n3"],
+  ["if() echo always","always"],
   ["if(~ a a) echo yes; if not echo no","yes"],
   ["if(~ a b) echo yes; if not echo no","no"],
   ["for(i in 1 2 3) echo $i","1\n2\n3"],
@@ -1665,7 +1676,7 @@ module.exports = {
     },
     {
       name: 'bsuite', what: 'BASIC\'s suite (tests/basic, docs/06-languages/hybasic.md), from a card: programs that check themselves, each its checks and none failed (arithmetic: the operators and their order, exact numbers, complex numbers, literals: E notation, &H, the # forms, .5; suffixes; a base; the number functions: exact when they can be, else DIGITS digits, RND, fractions\' and complex numbers\' parts, GCD, FIB, shifts, VAL, STR$ in a base, MKN$; comparisons, the bitwise operators on big integers, IF\'s forms, SELECT CASE; strings: their functions, MID$ =, fixed lengths, past 255, the garbage collector; arrays: TO, dimensions, used before DIM, REDIM PRESERVE, ERASE, LBOUND, SWAP; FOR\'s exact steps, DO, WHILE, EXIT, GOTO, GOSUB, RETURN label, ON, line numbers, _; SUBs and FUNCTIONs: by reference and by value, recursion, STATIC, SHARED, CONST, a call among a call\'s arguments, one calling another, INCLUDE; TYPE: nested records, arrays of them, copies, a field by reference; DATA, READ, RESTORE, CONST, OPTION BASE, DEFSTR; ON ERROR, RESUME\'s forms, ERR, ERL, ERR$, the system\'s errors; files: OPEN\'s modes, PRINT #, WRITE #, INPUT #, LINE INPUT #, INPUT$, LOF, LOC, SEEK, GET, PUT, FREEFILE, directories; the Hydra\'s: SYS and RREG, a bank of its own, machine code, FRE, SLEEP, TIMER, DATE$, TIME$, ENV$, ARG$, COMMAND$, SHELL, SHELL$, STATUS; inline assembly: ASM blocks, CALL ASM\'s labels and registers, the program\'s variables and CONSTs by name, data, a block in a SUB, a later block\'s label, a macro, .if, cheap and unnamed labels, .include and a system call, the blocks\' own bank and .bss); scripts piped into basic, their output tests/basic\'s: the errors\' messages (at the prompt, a typed program\'s by its line numbers; ASM\'s: the assembler\'s at its line, a label not there, a block not ended, past 8K, ASM at the prompt; CALL ASM at the prompt), PRINT\'s layout (zones, TAB, SPC, POS, numbers\' forms, PRINT USING\'s pictures and {} fields, WRITE, a base), the prompt (lines typed, replaced, taken out; LIST\'s ranges, labels; DELETE, CLEAR, SAVE, LOAD, RUN "f", STOP, CONT, SYSTEM), INPUT\'s answers (Redo from start, quotes, an empty line, LINE INPUT, INPUT ;)',
-      init: 't_rc', cycles: 700e6,
+      init: 't_rc', cycles: 780e6,
       get machine() {
         return { sd: basicCard(), input: 'ācd /sd/0\r' + Object.keys(BSUITE_PROGS).map(n => 'ā' + bsuiteLine(n) + '\r').join('') +
           BSUITE_SCRIPTS.map(n => 'ābasic <' + n + '.txt\r').join('') };
@@ -1734,14 +1745,14 @@ module.exports = {
       },
     },
     {
-      name: 'fshell', what: 'HyForth as a shell (forth -l, shell.fl): its namespace and profile; a line Forth\'s or rc\'s by its first word (a number, a word, a pipeline, a redirection), or rc\'s by % (a program a word shadows); cd and the prompt (its format); a definition over lines (the second prompt); status and $status; & ($apid) and wait; programs as values: sh-out, output-of, a word\'s output a program\'s input (|, piped: one that ends first, Ctrl-C), spawn; Ctrl-C ending a program; errors, a usage; -lib shell and lib shell; exit',
+      name: 'fshell', what: 'HyForth as a shell (forth -l, shell.fl): its namespace and profile; a line Forth\'s or rc\'s by its first word (a number, one of the numbers library\'s, a word, a pipeline, a redirection); . on an empty stack, or rc\'s by % (a program a word shadows); cd and the prompt (its format); a definition over lines (the second prompt); status and $status; & ($apid) and wait; programs as values: sh-out, output-of, a word\'s output a program\'s input (|, piped: one that ends first, Ctrl-C), spawn; Ctrl-C ending a program; errors, a usage; -lib shell and lib shell; exit',
       init: 't_rc', cycles: 400e6,
       // (Each line typed at the shell's prompt (ā: "> " or "% "), but those it has none for: a definition's second line
       // (its prompt a tab), and the lines after -lib shell, a moment after the one before (Ā).  cat, waiting for input,
       // stopped by Ctrl-C; and a word that loops, its output into cat, stopped by Ctrl-C.  head -c: a usage, so head
       // ends before the word's output has: forth goes on)
       machine: {
-        input: 'āecho b115200 >/dev/serctl\r' + 'āforth -l\r' + 'ā2 3 + .\r' + 'āls /ram\r' + 'ācd /rom/lib/forth\r' + 'āpwd\r' +
+        input: 'āecho b115200 >/dev/serctl\r' + 'āforth -l\r' + 'ā2 3 + .\r' + 'ā.\r' + 'ālib numbers\r' + 'ā2/3 1/6 n+ n. ndepth .\r' + 'āls /ram\r' + 'ācd /rom/lib/forth\r' + 'āpwd\r' +
           'āls startup.fs profile.fs | wc -l\r' + 'ā: twice\rĀ2 * ;\r' + 'ā3 twice .\r' + 'ācmp startup.fs profile.fs >/dev/null\r' +
           'āstatus .\r' + 'āecho $status\r' + 'ās" [%p] %% " prompt\r' + 'āsleep 1 &\r' + 'ās" apid" getenv evaluate wait status .\r' +
           'ā: free 1 ;\r' + 'āfree .\r' + 'ā% free\r' + 'ās" ls startup.fs" sh-out type status .\r' + 'ās" exit 3" sh-out nip . status .\r' +
@@ -1751,7 +1762,7 @@ module.exports = {
           'ācat\rĀ\x03' + 'āecho $status\r' + 'ācd /none\r' + 'ābind -x a b\r' + 'ānosuch\r' + 'ā-lib shell\rĀ' + 'ls\rĀ' +
           'lib shell\r' + 'āecho back\r' + 'āexit\r' + 'āecho $status\r',
       },
-      expect: ['% forth -l\nHyForth (Forth 2012), bye to end\n/> 2 3 + .\n5 \n/> ls /ram\nbin/\nlib/\n/> cd /rom/lib/forth\n' +
+      expect: ['% forth -l\nHyForth (Forth 2012), bye to end\n/> 2 3 + .\n5 \n/> .\nstack underflow\n/> lib numbers\n/> 2/3 1/6 n+ n. ndepth .\n5/6 0 \n/> ls /ram\nbin/\nlib/\n/> cd /rom/lib/forth\n' +
         '/rom/lib/forth> pwd\n/rom/lib/forth\n/rom/lib/forth> ls startup.fs profile.fs | wc -l\n      2\n' +
         '/rom/lib/forth> : twice\n\t2 * ;\n/rom/lib/forth> 3 twice .\n6 \n/rom/lib/forth> cmp startup.fs profile.fs >/dev/null\n' +
         '/rom/lib/forth> status .\n1 \n/rom/lib/forth> echo $status\n1\n/rom/lib/forth> s" [%p] %% " prompt\n[/rom/lib/forth] % sleep 1 &\n' +
@@ -2571,6 +2582,29 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'typeahead', what: 'keys typed ahead of a program that reads nothing (three lines, 190 keys, while sleep runs; then again while ls writes): none dropped at the window\'s queue of 63 (the serial port\'s keys held in the receive ring till the reader has taken some), each line read whole in its turn',
+      init: 't_rc', cycles: 200e6,
+      machine: {
+        input: 'āsleep 1\r' + 'echo ' + '1234567890'.repeat(7) + '\recho ' + 'abcdefghij'.repeat(7) + '\recho after one\r' +
+          'āls /rom/bin; sleep 1\r' + 'echo ' + '0987654321'.repeat(7) + '\recho ' + 'jihgfedcba'.repeat(7) + '\recho after two\r',
+      },
+      expect: ['% sleep 1\n% echo ' + '1234567890'.repeat(7) + '\n' + '1234567890'.repeat(7) + '\n% echo ' + 'abcdefghij'.repeat(7) + '\n' + 'abcdefghij'.repeat(7) + '\n% echo after one\nafter one\n% ',
+        '\n% echo ' + '0987654321'.repeat(7) + '\n' + '0987654321'.repeat(7) + '\n% echo ' + 'jihgfedcba'.repeat(7) + '\n' + 'jihgfedcba'.repeat(7) + '\n% echo after two\nafter two\n% '],
+    },
+    {
+      name: 'dbover', what: 'the debugger\'s steps over a subroutine (n): a breakpoint in the subroutine stepped over, then a step and a continue from it (no step of the kernel\'s is out); a subroutine that calls itself stepped over at its second level, and returned from (u); Ctrl-C in a call of the kernel\'s stepped over, then continue runs on past the call\'s end; and stopped in the next, a step is refused',
+      init: 't_rc', cycles: 400e6,
+      pc: { files: () => ({ 'over.s': DBOVER_S }) },
+      machine: {
+        input: ['as /pc/over.s /ram/over', 'db /ram/over', 'b 084E', 'n 2', 's', 'c', 'x', 'u 0852', 'n', 'u 0835', 'u 083E'].map(l => 'ā' + l + '\r').join('') +
+          'ān\rĀ\x03' + 'āc\rĀĀĀĀĀ\x03' + 'ās\r' + 'āq\r' + 'āecho $status\r',
+      },
+      expect: ['db> n 2\n0832  20 48 08  jsr $0848\n3breakpoint 1\nPC=084E A=33 ', 'db> s\nPC=084F A=03 ', 'db> c\n2breakpoint 1\nPC=084E A=32 ',
+        'db> u 0852\nPC=0852 A=01 ', 'db> n\n1PC=0855 A=00 ', 'db> u 0835\nPC=0835 A=00 ', 'db> u 083E\n!PC=083E A=90 X=01 ',
+        'db> n\nPC=E', 'db> c\n.PC=E', 'db> s\nit can\'t be stepped here: in a call, or a step over still running (c runs it on)\n',
+        'db> q\n\n% echo $status\n\n% '],
+    },
+    {
       name: 'scall', what: 'spike S3: calls into a driver\'s task, its errors, a busy driver, the round trip',
       init: 't_scall', modules: ['t_child', 't_drv'], without: ['cons', 'storage', 'snd', 'gpio', 'vid'], cycles: 40e6,
       budgets: [{ what: 'SCALL round trip (DBG_SCALL, less the same loop calling the code in place)', from: '<scall', to: 'scall>',
@@ -2767,13 +2801,15 @@ module.exports = {
       init: 't_vid', cycles: 30e6, expect: ['ok - no card: #v isn\'t there (E_NODEV)', 't_vid: PASS'],
     },
     {
-      name: 'screen', what: 'the console on the Vera X\'s screen (cons\'s second terminal: vid\'s /term), at rc: /dev/vid; consctl\'s terminal both, serial (the screen left as it was), both again (repainted); a font written to /dev/vid/font; ctl\'s output (NTSC, mono, 240p; VGA has neither); colours from a file (SGR, in the cells); DECSCNM (every cell reversed); the DEC graphics (ESC ( 0) as the font\'s glyphs; what rc shows, on the screen as on the serial port',
+      name: 'screen', what: 'the console on the Vera X\'s screen (cons\'s second terminal: vid\'s /term), at rc: /dev/vid; consctl\'s terminal both, serial (the screen left as it was), both again (repainted); the boot\'s lines whole (the console\'s ESC [ 18 t not mixed into the kernel\'s next); a font written to /dev/vid/font; ctl\'s output (NTSC, mono, 240p; VGA has neither); colours from a file (SGR, in the cells); DECSCNM (every cell reversed); the DEC graphics (ESC ( 0) as the font\'s glyphs; what rc shows, on the screen as on the serial port',
       init: 't_rc', cycles: 150e6, pc: { files: { colours: SCREEN_COLOURS, box: '\x1b(0lqk\x1b(B\n', reverse: '\x1b[?5h' } },
       get machine() { return { input: typed(SCREEN_LINES), vera: true }; },
       get expect() { return expected(SCREEN_LINES); },
-      check(m) {
+      check(m, out) {
         const f = [], c = m.vera.cells(), text = m.vera.text();
         if (!c) return ['no text layer on the screen'];
+        // (The console's question to the terminal, ESC [ 18 t, sent whole before the kernel's next line: cons's init waits for it)
+        if (!out.includes('\x1b[18ttask 1: t_rc')) f.push('the boot\'s "task 1: t_rc" isn\'t whole after the console\'s ESC [ 18 t');
         // (The window shown is the smaller terminal's size, the serial port's 80 x 24: its rows below the screen's
         // chrome, the bar and its header, then its footer: W4; rc's line looked for one its last 24 rows still have)
         if (!text.some(l => l.startsWith('% echo flash >/dev/vid/ctl'))) f.push('the screen lacks rc\'s line "% echo flash >/dev/vid/ctl"');

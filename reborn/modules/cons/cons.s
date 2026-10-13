@@ -377,7 +377,12 @@ w_iqh:      .res        WIN_MAX                             ;   and its keys: th
 w_iqt:      .res        WIN_MAX
 eg_c:       .res        1                                   ; ed_goto's: the column it goes to ...
 eg_x:       .res        1                                   ;   <> 0: the character before written again
-kbd_wait:   .res        1                                   ; <> 0: a /kbdin writer waits for a queue's room
+kbd_wait:   .res        1                                   ; <> 0: a /kbdin writer waits for a queue's room (or
+                                                            ;   the serial port's keys do: d_hold)
+d_held:     .res        1                                   ; <> 0: the serial port's keys are held this round (a
+                                                            ;   key of its with no room in its window's queue) ...
+hold_ok:    .res        1                                   ;   <> 0: no Ctrl-] among the keys held, when the ring's
+hold_head:  .res        1                                   ;   head was here (looked at again when it has moved)
 d_src:      .res        1                                   ; Whose keys distribute hands out now (0 the serial
                                                             ;   port's, 1 the keyboard's) ...
 d_pfx2:     .res        1                                   ;   and the other's d_pfx (d_swap)
@@ -553,6 +558,16 @@ init:
             bra         :-
 :
             jsr         tx_start
+            ldx         #0                                  ; It's gone before init ends: the boot's next line is
+            ldy         #0                                  ;   the kernel's own, straight to the port, and would
+:                                                           ;   be mixed with it.  (Counted: no wait for good for
+            lda         tx_busy                             ;   a timer 2 that doesn't run)
+            beq         :+
+            dex
+            bne         :-
+            dey
+            bne         :-
+:
             lda         #'c'
             jsr         SRV_REGISTER
             bcs         @done
@@ -692,6 +707,7 @@ t2_idle:
 rx_reset:
             php
             sei
+            stz         hold_ok
             stz         rx_head
             stz         rx_tail
             LDR         rx_hp, rx_buf
@@ -708,9 +724,12 @@ rx_reset:
 
 ; Before each request: the keys come in, each to the window shown (its queue), Ctrl-] and the key after it acted on;
 ; /pc's frames taken out (pc_rx).  The serial port's, then the keyboard's (/kbin's ring: d_get); while /ser is open
-; for reading only the keyboard's, the line's bytes its
+; for reading only the keyboard's, the line's bytes its.  A key of the serial port's with no room in its window's
+; queue stays in the receive ring, with those behind it, till the window's reader has taken one (d_hold): text
+; pasted at the terminal faster than a program reads it isn't cut at the queue's 63 keys, but at the ring's 255 more
 distribute:
             stz         d_src
+            stz         d_held
             lda         ser_rd
             beq         :+
             jsr         d_swap                              ; (The keyboard's only)
@@ -777,10 +796,18 @@ distribute:
             bra         @watch
 :
             ldx         w_in
+            jsr         d_hold
+            bcs         @held
+            pla                                             ; (The key again)
+            pha
             jsr         iq_put
 @watch:
             pla
             jsr         kw_watch
+            jmp         @byte
+
+@held:                                                      ; (Its source's keys left: on to the keyboard's)
+            pla
             jmp         @byte
 
 @command:                                                   ; The key after the prefix (d_pfx 1), or its ESC, [ (2, 3)
@@ -861,6 +888,8 @@ distribute:
 d_get:
             lda         d_src
             bne         @kb
+            lda         d_held                              ; (The serial port's held: none of its)
+            bne         :+
             jsr         rx_get
             bcs         :+
             rts
@@ -900,6 +929,62 @@ d_swap:
             ldx         d_pfx2
             sta         d_pfx2
             stx         d_pfx
+            rts
+
+; A key for window .X's queue, just taken from its ring (d_get): held, if the queue's full?  Only the serial port's
+; (the keyboard's are typed, not pasted), with no /pc request out (its reply would wait behind the key) and no
+; Ctrl-] among the keys behind it (the windows' keys must work with a program that reads nothing: then the key's
+; dropped, as iq_put drops it, and those up to the Ctrl-]).  Held: the key's in the ring again (unless the ring
+; filled meanwhile, over its place), no more of the serial port's are taken this round (d_held), and the request
+; that takes a key from a queue has the waiting ones look again (kbd_wait: iq_get).
+; OUT: C = 0: iq_put (room, or dropped); C = 1: held.  Keeps .X
+d_hold:
+            lda         w_iqh,X
+            inc         a
+            and         #INQ_SIZE - 1
+            cmp         w_iqt,X
+            bne         @put
+            lda         d_src
+            ora         pc_step
+            bne         @put
+            lda         rx_head                             ; The keys behind it, if more have come since they
+            ldy         hold_ok                             ;   were last looked at
+            beq         :+
+            cmp         hold_head
+            beq         @hold
+:
+            sta         hold_head
+            stz         hold_ok
+            ldy         rx_tail
+:
+            cpy         hold_head
+            beq         :+
+            lda         rx_buf,Y
+            iny
+            cmp         kb_pfx
+            bne         :-
+@put:
+            clc
+            rts
+:
+            inc         hold_ok
+@hold:
+            php
+            sei
+            lda         rx_tail                             ; Back in the ring
+            dec         a
+            cmp         rx_head
+            beq         :+
+            sta         rx_tail
+            plp
+            lda         #1
+            sta         d_held
+            sta         kbd_wait
+            sec
+            rts
+:
+            plp
+            clc
             rts
 
 ; The keys' action .A (KA_*: a binding's)
