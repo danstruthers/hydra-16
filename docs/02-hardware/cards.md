@@ -45,9 +45,9 @@ m**: pins 1-2 for module 0, 3-4 for module 1, and so on.  On the surface-mount c
 select, beside J3's odd row: a shunt from J4's pin m+1 to J3's pin 2m+1 makes the second module m.
 
 * Give every module a different number.  Start at 0 and count up.
-* Because of [the crossed bank bits](quirks.md#the-crossed-bank-bits), a module jumpered as 4 answers module number 8,
-  and the other way round.  The system finds the modules wherever they are, so this only matters when you read a POST
-  report: `40:...` is the card jumpered as 8.
+* A module answers the number it's jumpered as: [the crossed bank bits](quirks.md#the-crossed-bank-bits) are 2 and 3,
+  inside a module's sixteen banks, not the module number's.  (Until 2026-10-13 this page said a module jumpered as 4
+  answered as 8; it doesn't.)
 * POST finds the modules that are there and tests each one: `RAM modules: 03` is three found.  A module with a bad line
   is left unused.
 
@@ -364,7 +364,8 @@ The PS/2 sockets' pin 3 is GND and pin 4 +5 V; pins 2 and 6 aren't used.
    `WR#` (each active low), and `RES#` (high once the reset is over).  Then try U3 for the 3.3 V highs.
 5. **The keyboard and mouse**: `ls /dev/i2c` lists `42`; press SW1; then keys typed on the PS/2 keyboard reach the shell,
    and `cat /dev/vid/mouse` prints a line each time the mouse moves, the pointer following it on the screen.
-6. **Then 7.16 MHz**, once everything works at 3.58 MHz (J8, and a build with `--clock 2`).
+6. (7.16 MHz, J8 and a build with `--clock 2`, is for a board with faster parts than the stated ones: with these,
+   3.58 MHz is the fastest valid speed.)
 
 ### The carrier card to come
 

@@ -319,14 +319,16 @@ A **jumper** is a tiny plastic cap with a metal clip inside. Pushed onto two pin
 | J5 | 0.89 MHz | Very slow: for testing |
 | J6 | 1.79 MHz | Slow: for testing |
 | **J7** | **3.58 MHz** | **Normal** |
-| J8 | 7.16 MHz | Fast: needs a special build of HydraOS (below) |
+| J8 | 7.16 MHz | Not with these parts: see below |
 
 > **CAUTION:** Fit only **one** clock jumper at a time. Two jumpers would connect two different clocks together.
 
-The kernel needs to know how fast the processor runs, to keep time and run the serial port. To run at 7.16 MHz,
-build HydraOS with `node reborn/build.js --clock 2` and program the new ROM images. At 7.16 MHz the Hydra does
-everything twice as fast, but a few slow chips or long wires can stop it working; get your Hydra working at 3.58 MHz
-first.
+The kernel needs to know how fast the processor runs, to keep time and run the serial port, and the ROM images are
+built for 3.58 MHz. **With the parts in Appendix I, 3.58 MHz is the fastest speed the Hydra works at.** At J8's
+7.16 MHz the memory chips and the bank registers can't answer within the processor's shorter cycle, and the self test
+fails nearly every RAM test. J8 is there for a future board with faster parts, which would also need HydraOS built
+for it (`node reborn/build.js --clock 2`). The two slower speeds, J5 and J6, work, but the clock and the serial port
+then run slow (section 5.7).
 
 **J30, the serial port's CTS.** Fit a jumper on pins **1 and 2** (the normal setting). If your serial cable has only
 three wires (send, receive and ground), move the jumper to pins 2 and 3.

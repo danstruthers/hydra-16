@@ -96,7 +96,9 @@ The ROM images are already built, in the repository:
 * Mark each chip with its file and socket before it leaves the programmer: the four paged ROMs look alike.
 * The images are built for **3.58 MHz** (J7) and a **Rockwell R65C51**.  For anything else, build them again
   (it needs cc65; [the emulator and the PC tools](../08-emulator.md) say how):
-  * `node build.js --clock 2` for 7.16 MHz (J8; the YM2151 can't be used at that speed);
+  * `node build.js --clock 2` for 7.16 MHz (J8), for a board with faster parts than the stated ones: with the
+    stated parts, 3.58 MHz is the fastest valid speed (the RAM path doesn't make the cycle, and the YM2151 never
+    could);
   * `node build.js --acia wdc` for a WDC W65C51N in U3.
 * The paged ROM's images already allow for the board's swapped bank halves and crossed bank bits: burn them as they
   are.

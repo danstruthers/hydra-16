@@ -292,7 +292,7 @@ silkscreen with a square pad.
 | :-- | :--- | :------- |
 | J1, J2 | The memory card connectors (1 x 32, 1 x 24 sockets) | [The cards](cards.md#the-memory-daughter-card) |
 | J3 | The serial port, a DE-9 male | [The devices](devices.md#the-acia-65c51-and-the-serial-port) |
-| J5-J8 | The CPU clock jumpers: 0.89, 1.79, **3.58** (fit), 7.16 MHz | [The architecture](architecture.md#clocks) |
+| J5-J8 | The CPU clock jumpers: 0.89, 1.79, **3.58** (fit) MHz; J8's 7.16 MHz is beyond the stated parts | [The architecture](architecture.md#clocks) |
 | J9 | The YM2151's CT1 and CT2 outputs | [The devices](devices.md#the-ym2151-and-the-audio-path) |
 | J10 | The front panel: reset, power switch, power LED | [The architecture](architecture.md#reset-power-and-the-bus) |
 | J11 | ATX-24 power | The ATX standard's |

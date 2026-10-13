@@ -97,7 +97,7 @@ Here is what's inside:
 
 | Part | The Hydra-16 has |
 |---|---|
-| Processor | One W65C02S, at 3.58 MHz (or 7.16, 1.79 or 0.89 MHz) |
+| Processor | One W65C02S, at 3.58 MHz (or 1.79 or 0.89 MHz) |
 | Programs at once | Up to 16 *tasks*, each with its own 32K of memory |
 | RAM | 512K for the tasks, 2 MB shared between them, and 2 MB more for each RAM module on the memory cards (up to 15 modules) |
 | ROM | 128K for the kernel (the heart of HydraOS), and up to 4 MB for the rest of the system |

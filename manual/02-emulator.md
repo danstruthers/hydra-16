@@ -227,7 +227,7 @@ The most useful options are:
 | `--view` | Shows the Vera X's screen in a web browser, at http://localhost:8016 |
 | `--sound` | Plays the Hydra's sound through a web browser page |
 | `--modules N` | Plugs in N memory cards (the emulator's normal number is 2) |
-| `--clock 7.15909` | Runs the processor at 7.16 MHz (see Chapter 4) |
+| `--clock 7.15909` | Runs the processor at 7.16 MHz: the emulator can, the board's parts can't (section 4.6) |
 | `--sd FILE` | Puts an SD card image file in the next SD reader |
 | `--pc-dir FOLDER` | Lets the Hydra see a folder on your PC as `/pc` (section 2.5) |
 | `--speed N` | Runs N times faster than real time (0: as fast as possible) |
