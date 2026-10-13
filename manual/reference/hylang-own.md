@@ -14,7 +14,9 @@ they were written and decides for itself which to evaluate, and when: `if` evalu
 Everything else in this chapter is a function, and its arguments are values.
 
 **Truth.** `NIL` is false, and so is the empty list, which is the same thing. Everything else is true,
-including 0 and the empty string. `T` is the usual value for true.
+including 0 and the empty string. `T` is the usual value for true. The two may be written in small letters
+too, `t` and `nil`, and for that reason neither can be the name of a variable or of a function's formal:
+`(fn {t} ...)` is an error.
 
 **Scopes.** A name is looked up in the current scope, then in the one that encloses it, and so on out to the
 global scope. A call of a function has a scope of its own, enclosed by the scope the function was made in, not

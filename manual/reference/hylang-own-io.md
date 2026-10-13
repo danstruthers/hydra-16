@@ -31,7 +31,7 @@ The few forms that do accept an error are `try`; `def`, `set` and `set!`, so tha
 variable; `error?`, `type-of`, `error-message` and `error-code`; and `print`.
 
 The errors that the system's calls give have codes too. Each is the name of the system's error code (Chapter
-3 lists them) in small letters, without its `E_`: `:noent` for `E_NOENT`, a file that is not found.
+3 of this book lists them) in small letters, without its `E_`: `:noent` for `E_NOENT`, a file that is not found.
 
 #### Errors
 
@@ -426,7 +426,7 @@ time, `read-file`, `read-lines` and `write-file` open and close it themselves.
 | `'open' mode must be :read, :write, :append or :update` | The mode is not an atom |
 | `'open' expects a String` | *path* is not a string |
 
-Other failures give the system's message after the path (Chapter 3 lists them), and its code as the error's.
+Other failures give the system's message after the path (Chapter 3 of this book lists them), and its code as the error's.
 
 #### See also
 
