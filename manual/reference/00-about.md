@@ -12,7 +12,7 @@ It assumes the manual has been read, and it says the same thing about every entr
 
 | Chapter | Entries | Written so far |
 |---|---|---|
-| 1. HyBASIC keywords | Every statement, function and operator | `ABS` to `LTRIM$` (all of A to L, but the graphics keywords `DRAW`, `GPRINT` and `LINE`, which wait for `SCREEN`); `OPEN` |
+| 1. HyBASIC keywords | Every statement, function and operator | `ABS` to `PUT` (all of A to P, but the graphics keywords, which will be written together with `SCREEN`) |
 | 2. Commands | The shell's own commands, and the programs in `/bin` | `cp` |
 | 3. System calls | Every call a program can make | `OPEN`, `READ` |
 | 4. HyForth words | The core and every library | `>number` |
