@@ -160,6 +160,7 @@ function ROM_BIN() {
 // The rc test's lines, and what each says
 const RC_LINES = [
   ["echo hello","hello"],
+  ["cat /env/prog; echo","/bin/cat"],
   ["x=(a b c); echo $x $#x $x(2)","a b c 3 b"],
   ["echo 'a  b' 'it''s'","a  b it's"],
   ["echo $\"x","a b c"],
@@ -2112,9 +2113,10 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'round', what: 'the round sample (sdk/c/samples/round: a barrier, then each task its own time) at rc: four tasks sing a round on YM2151 channels 0-3, an eighth 12 ticks; each voice\'s 27 notes in time (hy_sleep_until: within 5 ticks), each voice two bars after the one before',
-      init: 't_rc', cycles: 200e6,
-      machine: { input: 'ā/sd/0/sample/c/round 1 12\r' },
+      name: 'round', what: 'the round sample (sdk/c/samples/round: a barrier, then each task its own time) at rc, as a copy named /ram/rnd (the build\'s, through /pc: only $prog can find it): four tasks sing a round on YM2151 channels 0-3, an eighth 12 ticks; each voice\'s 27 notes in time (hy_sleep_until: within 5 ticks), each voice two bars after the one before',
+      init: 't_rc', cycles: 220e6,
+      pc: { files: () => ({ 'round.hyx': fs.readFileSync(path.join(__dirname, '..', 'obj', 'samples', 'c', 'round.hyx')) }) },
+      machine: { input: 'ācp /pc/round.hyx /ram/rnd; /ram/rnd 1 12\r' },
       expect: ['Each voice sang it 1 time, its latest note late by', ' ticks.\n%'],
       check(m, out) {
         // (Each channel's key-ons against the tune's: its note lengths, an eighth 12 ticks, from voice 0's first,

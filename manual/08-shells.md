@@ -143,6 +143,10 @@ special jobs:
 | `$task` | This shell's task number |
 | `$apid` | The task number of the last command run in the background |
 | `$window` | The number of this shell's window (Chapter 10) |
+
+One more goes to each program rc starts, in its environment (`/env/prog`, or `getenv` in C), though it isn't a
+variable of rc's own: `prog`, the path the program was started from (`/bin/ls`, `/ram/round`). A program that
+starts copies of itself finds its own file by it.
 | `$home` | Where `cd` goes with no directory |
 | `$*` | A script's or function's arguments; `$1`, `$2` ... are each one, and `$0` is the script's name |
 
@@ -160,7 +164,7 @@ a1 a2 a3
 When a variable is right next to other text, rc puts in the `^` for you: `$y.txt` means the same as `$y^.txt`.
 
 > **NOTE:** Joining with an empty list is an error: if `$z` is empty, `$z^.txt` makes rc say
-> `null list in concatenation`.
+> `null list`.
 
 ## 8.6 Input and output
 
