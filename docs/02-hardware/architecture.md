@@ -116,7 +116,7 @@ task has its own pair of registers.
   task RAM, which holds the same value.  So a program can read its own bank selections back.
 * The chips' outputs are always on, so the bank lines follow `T` at once: a task switch brings the new task's RAM bank
   and ROM bank in with no further writes.
-* On this board, two pairs of bank bits are crossed on their way to the memory.  The software never notices, but it
+* On this board, bank bits 2 and 3 are crossed on their way to the memory.  The software never notices, but it
   matters when you trace a fault to a chip: see [the quirks](quirks.md#the-crossed-bank-bits).
 
 ---
@@ -192,7 +192,7 @@ task's `$01`:
 
 * **The images are the chips' view, not the CPU's.**  Two things on the board shuffle the banks: each bank's two 8K
   halves are swapped (CPU `$A000` reads the chip's offset `$2000` in the bank, and `$C000` its offset `$0000`), and the
-  bank number's bits 2 and 3, and 6 and 7, are crossed.  The build allows for both (`base/tools/romimg.js`), so you burn
+  bank number's bits 2 and 3 are crossed.  The build allows for both (`base/tools/romimg.js`), so you burn
   each `promN.bin` whole, at offset 0, in the socket the table gives, and never think about it.  [The
   quirks](quirks.md#the-paged-roms-swapped-halves) explain.
 * **Only the sockets that are used need chips.**  HydraOS fills three (U31, U32, U34); the base alone fills one
