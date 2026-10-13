@@ -144,7 +144,9 @@ rl_n:       .res        2
 rl_len:     .res        2
 cond_lvl:   .res        1                                   ; [IF]'s skipping: how deep, and whether [ELSE] ends it
 cond_else:  .res        1
-incn_len:   .res        2                                   ; The files INCLUDED (REQUIRED's): their bytes in incn
+incn_len:   .res        2                                   ; The files INCLUDED (REQUIRED's): their bytes in incn ...
+inc_mark:   .res        2                                   ;   and before INCLUDED's last (un-noted if it can't be opened or loaded)
+inc_ior:    .res        2                                   ; INCLUDED's: the current directory's error for a bare name (said if /lib/forth has none either)
 raw:        .res        1                                   ; <> 0: the console in raw mode (KEY, KEY?)
 key_pend:   .res        1                                   ; <> 0: KEY? has a key (key_char) for KEY
 key_char:   .res        1
