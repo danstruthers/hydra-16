@@ -39,7 +39,7 @@ ends with an hour's tour of the running system, in the emulator, with no hardwar
    3. [Storage](04-drivers/storage.md): SD cards, the RAM disks, the ROM disk, HydraFS.
    4. [Sound](04-drivers/sound.md): the YM2151, the Vera X's PSG and PCM, `/dev/snd`.
    5. [GPIO, I2C and SPI](04-drivers/gpio.md): the VIA's port A, the I2C bus, the SPI devices.
-   6. [Video](04-drivers/video.md): the Vera X: `vid`, its screen, graphics and sprites, and `input`, its keyboard and
+   6. [Video](04-drivers/video.md): the Vera X: `vid`, its screen, graphics and sprites, and its keyboard and
       mouse.
 5. **[The shell: rc](05-rc.md)**: commands, pipes, variables, scripts, namespaces and windows.
 6. **[The languages](06-languages/README.md)**: [HyForth](06-languages/hyforth.md), [hylang](06-languages/hylang.md)

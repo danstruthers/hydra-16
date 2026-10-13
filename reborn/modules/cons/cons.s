@@ -40,7 +40,9 @@
 ;               the shown one); float X Y C R, float C R (centred), float off (the window a popup: over its
 ;               group's, boxed, C x R its size); layout tabs|rows|columns|grid (the writer's window's group's: its windows one at a time, or tiled)
 ;   /label      the window's title (OSC 0 and 2 write it too), read and written whole; empty: its program's name
-;   /wnew       a read waits for the user's Ctrl-] c, then makes a window, shown, and gives its number (init's: it
+;   /wnew       a read waits for the user's Ctrl-] c, then makes a window, shown, and gives its number (a window
+;               manager's own starter: with nobody reading it, the window is made and the kernel asked to start
+;               init in it, INIT_RUN, which becomes its shell; once init's own: it
 ;               starts a shell there)
 ;   /ser        the serial port, raw: bytes in and out as they are.  While it's open for reading, the line is its
 ;               (xmodem's): every byte in is its, Ctrl-C and the rest too, and the windows' text (and /pc's frames)
@@ -163,6 +165,7 @@ CTRL_RB         = $1D           ; (Ctrl-]: the windows' key, as it starts: key p
 SNARF_MAX       = 8192          ; /snarf's bytes, at most: its bank's
 LS_ROW          = 3             ; The list's first window's row
 ENT_CONSCTL     = 2             ; srv_tree's consctl (its fids counted)
+ENT_WNEW        = 4             ;   and wnew (its readers counted: with none, init starts a new window's shell)
 PC_MARK         = $1E           ; /pc's frames: one starts (from the PC, PC_MARK then PC_ESC is a typed $1E, Ctrl-^)
 PC_ESC          = $1F           ;   the next byte ^ $20 is the byte
 PC_T_ATTACH     = 'A'           ; The Hydra's: a new session (the PC forgets its fids); its payload: PC_VERSION
@@ -170,6 +173,9 @@ PC_T_REQ        = 'Q'           ;   a request: the request block, then its data
 PC_T_REPLY      = 'R'           ; The PC's: status, fid, count (2), qid type (the attach's: the version), then data
 PC_T_NAK        = 'N'           ;   the request came damaged: send it again
 PC_VERSION      = 2             ; (The old system's: 1)
+PC_STUFFS       = 1             ; The attach's second byte: this console stuffs XON and XOFF in its frames (so a
+                                ;   bare one inside a frame is its flow control's, to take out: a PC tool that knows
+                                ;   of it does, for a Hydra that says so; one that doesn't asks for the frame again)
 PC_REPLY_HDR    = 5
 PC_DATA         = 128           ; A frame's data at most (a read's, a write's)
 PC_RX_MAX       = PC_REPLY_HDR + PC_DATA ; A reply's payload at most (a longer frame isn't one of ours)
@@ -312,7 +318,10 @@ kw_lt:      .res        1                                   ;   <> 0: CSI <, a m
 ms_w:       .res        1                                   ; (k_mouse's: the window under it, M or m, the wheel's
 ms_m:       .res        1                                   ;   lines)
 ms_n:       .res        1
-want_new:   .res        1                                   ; <> 0: Ctrl-] c, a window wanted (for /wnew's reader)
+want_new:   .res        1                                   ; <> 0: Ctrl-] c, a window wanted (for /wnew's reader, or init)
+wnew_n:     .res        1                                   ; /wnew's fids open
+ev_seen:    .res        1                                   ; Its event count, as its init's loop last saw it
+live:       .res        1                                   ; <> 0: a console file has been opened (the boot's lines are out)
 kb_act:     .res        128                                 ; The keys (key's): each one's action after the prefix
                                                             ;   (KA_*; ESC's: Shift-Tab's, ESC [ Z) ...
 kb_ct:      .res        3                                   ;   and Ctrl-Tab's, Ctrl-Shift-Tab's and Shift-PgUp's
@@ -450,6 +459,7 @@ pc_n_bad:   .res        1                                   ;   that came damage
 pc_n_nak:   .res        1                                   ;   requests the PC had damaged (its NAK) ...
 pc_n_gone:  .res        1                                   ;   and times the PC was given up (E_IO)
 rx_ovr:     .res        2                                   ; The ACIA's receive overruns (the irq entry late: a byte lost) ...
+rx_drop:    .res        2                                   ;   bytes dropped, the receive ring full (nothing was reading) ...
 rx_fe:      .res        2                                   ;   and framing (or parity) errors (the line, or the rate)
 pc_k:       .res        1
 pc_crc:     .res        2                                   ;   a CRC
@@ -488,7 +498,9 @@ init:
             stz         pc_first,X
             dex
             bpl         :-
-            ldx         #rx_fe + 2 - pc_n_req - 1           ; (The counts serctl shows: 0)
+            stz         wnew_n
+            stz         live
+            ldx         #rx_fe + 2 - pc_n_req - 1           ; (The counts serctl shows: 0; rx_drop's among them)
 :
             stz         pc_n_req,X
             dex
@@ -602,7 +614,27 @@ init:
             jsr         SRV_REGISTER
             bcs         @done
             lda         #'P'
-            jmp         SRV_REGISTER                        ; (Its error is init's)
+            jsr         SRV_REGISTER                        ; (Its error is init's)
+            bcs         @done
+; Its init doesn't end.  Between its calls, whenever something has happened (its event count: a key in, a timer's
+; turn), the keys are handed to the windows and the terminals painted, as before and after each call: so that goes
+; on with no program asking (a window wanted, Ctrl-] c, while the shell waits for a program; flow control's watch;
+; the chrome's clock).  SRV_NAP: its calls are served meanwhile.  Not till a console file has been opened (live):
+; till init runs, the port is the kernel's, which prints the boot's last lines straight to it, and the terminal's
+; answer to the size asked above comes just then: painted for at once, it went out through the kernel's line (bytes
+; of both lost on the chip: the screen homed but not cleared)
+@idle:
+            ldy         ev_seen
+            lda         #0
+            tax
+            jsr         SRV_NAP
+            lda         TASK_EVENT
+            sta         ev_seen
+            lda         live
+            beq         @idle
+            jsr         distribute
+            jsr         pump
+            bra         @idle
 
 @done:
             rts
@@ -671,6 +703,14 @@ irq:
             lda         #0
             rts
 
+@drop:
+            inc         rx_drop
+            bne         :+
+            inc         rx_drop + 1
+:
+            lda         #0
+            rts
+
 @odd:                                                       ; No byte, or an error with or without one: counted (an
             tax                                             ;   overrun, else a framing or parity error), and the
             beq         @none                               ;   byte, if there is one, taken
@@ -690,10 +730,10 @@ irq:
             beq         @none
             bra         @byte
 
-@mark:                                                      ; Full: the byte's dropped.  Or x1's high mark: the
-            ldx         rx_tail                             ;   byte's kept, the mark is the tail from here, and
+@mark:                                                      ; Full: the byte's dropped (counted).  Or x1's high mark:
+            ldx         rx_tail                             ;   the byte's kept, the mark is the tail from here, and
             cpx         rx_mark                             ;   XOFF is asked of timer 2, started to run out soon
-            beq         @none                               ;   (serial.inc's FL_POKE: its count, the request, and
+            beq         @drop                               ;   (serial.inc's FL_POKE: its count, the request, and
             stx         rx_mark                             ;   this entry's answer, no task switch).  No
             sty         rx_head                             ;   TASK_EVENT, to keep this as short as a Ctrl-C's
             lda         #FL_POKE                            ;   path: timer 2's idle counts one
@@ -2770,6 +2810,7 @@ pump:
             beq         :+
             jmp         tx_start
 :
+            jsr         new_init                            ; (A window wanted: made, and init's shell asked for)
             lda         pc_step
             beq         :+
             lda         #PC_STALE
@@ -3257,6 +3298,8 @@ kw_watch:
 ; A fid made (srvlib): its window, from the spec (none: window 0); a window that isn't there: E_NOENT.  (R_DUP's
 ; keeps its old fid's.)  A consctl's counted.  IN: .X = the fid.  Keeps .X
 opened:
+            lda         #1                                  ; (The boot's over: its init's loop may paint)
+            sta         live
             lda         #$FF                                ; (Its wctl new's answer: none)
             sta         fid_new,X
             lda         z:srv_rq
@@ -3274,6 +3317,10 @@ opened:
             sta         srv_fid_aux,X
 @ok:
             lda         z:srv_e
+            cmp         #ENT_WNEW
+            bne         :+
+            inc         wnew_n
+:
             cmp         #ENT_CONSCTL
             bne         :+
             ldy         srv_fid_aux,X
@@ -3330,6 +3377,13 @@ clunked:
             lda         #$FF
             sta         fid_new,X
             lda         z:srv_e
+            cmp         #ENT_WNEW
+            bne         :+
+            lda         wnew_n
+            beq         @done
+            dec         wnew_n
+            bra         @done
+:
             cmp         #ENT_CONSCTL
             bne         @done
             ldy         z:srv_id
@@ -3460,6 +3514,17 @@ h_wnew:
             bne         :+
             jmp         again
 :
+            jsr         new_window
+            bcs         :+
+            txa
+            jsr         num_buf                             ; ("N" and an LF)
+            jmp         r_give
+:
+            rts
+
+; The window wanted (want_new) made, and shown.  OUT: C = 0, .X = it; or C = 1, .A = the error
+new_window:
+            lda         want_new
             stz         want_new
             ldy         nw_seat                             ; (The seat that asked's)
             jsr         seat_in
@@ -3474,13 +3539,26 @@ h_wnew:
             jsr         w_show                              ; (The user's: shown, as rio's new window is)
             ldy         #0
             jsr         seat_in
-            txa
-            jsr         num_buf                             ; ("N" and an LF)
-            jmp         r_give
+            clc
+            rts
 
 @done:
             ldy         #0                                  ; (.A, C kept)
             jmp         seat_in
+
+; A window wanted, and nobody reading /wnew: it's made, and init started in it (INIT_RUN: the kernel starts init
+; with the window's number as its argument, and init becomes its shell)
+new_init:
+            lda         want_new
+            beq         @done
+            lda         wnew_n
+            bne         @done
+            jsr         new_window
+            bcs         @done
+            txa
+            jsr         INIT_RUN
+@done:
+            rts
 
 ; iobuf = .A in decimal and an LF; .X = their bytes
 num_buf:
@@ -7618,7 +7696,7 @@ gen_serctl:
             jsr         srv_tputc
             lda         #<s_pcn                             ; Then the counts, for chasing a bad line: "pc N req, N cut
             ldx         #>s_pcn                             ;   short, N unanswered, N damaged, N nak, N gone" and "line
-            jsr         srv_tputs                           ;   N overruns, N framing errors"
+            jsr         srv_tputs                           ;   N overruns, N framing errors, N dropped"
             lda         pc_n_req
             ldx         pc_n_req + 1
             jsr         srv_tputdec
@@ -7656,6 +7734,12 @@ gen_serctl:
             jsr         srv_tputdec
             lda         #<s_fe
             ldx         #>s_fe
+            jsr         srv_tputs
+            lda         rx_drop
+            ldx         rx_drop + 1
+            jsr         srv_tputdec
+            lda         #<s_drop
+            ldx         #>s_drop
             jsr         srv_tputs
             clc
             rts
@@ -7719,7 +7803,9 @@ pc_serve:
             sta         pc_txbuf
             lda         #PC_VERSION
             sta         pc_txbuf + 4
-            lda         #1
+            lda         #PC_STUFFS
+            sta         pc_txbuf + 5
+            lda         #2
             jsr         pc_frame
             lda         #<PC_WAIT_ATTACH
             ldx         #>PC_WAIT_ATTACH
@@ -8418,7 +8504,8 @@ s_damaged:  .byte       " damaged, ", 0
 s_nak:      .byte       " nak, ", 0
 s_gone:     .byte       " gone", LF, "line ", 0
 s_ovr:      .byte       " overruns, ", 0
-s_fe:       .byte       " framing errors", LF, 0
+s_fe:       .byte       " framing errors, ", 0
+s_drop:     .byte       " dropped", LF, 0
 s_kbdin:    .byte       "kbdin", 0
 s_text:     .byte       "text", 0
 s_label:    .byte       "label", 0

@@ -6,7 +6,7 @@
 ; BANKS + (T * NB + b) * 8192; shared bank (U, b) at SHARED + (U * 16 + b - #xF0) * 8192.  A task's 32K powers up
 ; junk (pu: the same each time, from the seed); banks 0.  rom, a buffer: the BIOS ROM's 16 pages of 8K, then the paged
 ; ROM's 256 banks of 16K, each as the CPU sees it at $A000-$DFFF (the board's swap of A13, and of the bank number's bits
-; 2 and 3, 6 and 7, undone here once).  The bases (remap: when T, U, W or a task's $00 or $01 change): tbz, tbs, tbl
+; 2 and 3, undone here once).  The bases (remap: when T, U, W or a task's $00 or $01 change): tbz, tbs, tbl
 ; (the zero page's, the stack's and the rest's base in mem), bkon and bkb (the bank window: installed, its base), pbase
 ; and wbase (the paged ROM's and the BIOS ROM's place in rom, less the window's address).
 
@@ -197,7 +197,8 @@
   NIL})
 
 ; ---- power-up
-(fun {romBank b} {+ (bit-and b #x33) (shl (bit-and b 4) 1) (shr (bit-and b 8) 1) (shl (bit-and b #x40) 1) (shr (bit-and b #x80) 1)})
+; (Bank b's place in the chips: bits 2 and 3 crossed; bits 6 and 7 go straight, as base/sim/lib/machine.js has them)
+(fun {romBank b} {+ (bit-and b #xF3) (shl (bit-and b 4) 1) (shr (bit-and b 8) 1)})
 ; rom from the images (strings): the BIOS ROM (128K), then each paged ROM bank as the CPU sees it (halves swapped: A13)
 (fun {load-roms bios prom} {do
   (set {ff} (str-repeat (code-char 255) 16384))

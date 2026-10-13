@@ -60,6 +60,10 @@ END SUB
 e = 0: risky v
 ck e, 11, "in a SUB"
 ck v, 11, "RESUME NEXT in the SUB"
+' SCREEN with no Vera X: its error, and no bitmap taken as on after it
+e = 0: SCREEN 13: ck e, 53, "SCREEN 13 with no Vera X: file not found"
+e = 0: PSET (1, 1): ck e, 5, "PSET after it: no bitmap, illegal function call"
+e = 0: SCREEN 0: ck e, 0, "SCREEN 0 with no Vera X: nothing, and no error"
 ' Numbered lines: ERL their number
 100 e = 0
 110 x = 1 / 0

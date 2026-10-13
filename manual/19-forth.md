@@ -493,7 +493,7 @@ Words you type at the prompt are gone when HyForth ends. To keep them, write the
 ```
 
 `include` reads the file as if you'd typed it. `require` does the same, but only once: a file that's been included
-already isn't read again.
+already isn't read again (one that couldn't be opened doesn't count, so you can fix the problem and `require` it again).
 
 A file of Forth can also be run as a program, a **script**, with `forth file.fs`, followed by any arguments. Its
 first line can be `#!/bin/forth`, and then it runs by its name, like any program. In a script, `argc` and `arg` give
@@ -543,7 +543,7 @@ has six faces, numbered from 1:
 /> : die ( -- n ) 6 random 1+ ;
 /> : roll ( -- ) die die 2dup . . + ." makes " . cr ;
 /> roll
-2 5 makes 7
+2 3 makes 5
 /> roll
 5 3 makes 8
 ```

@@ -26,6 +26,10 @@
 //
 // As a module: require('./hydrafs.js') gives { mkfs, Volume }, e.g. for the tests' cards; setNow(s) stamps
 // everything with s (seconds since 2000) instead of the PC's time, for an image that builds the same each time.
+// A Volume also serves an image to a Hydra as /pc (pcfs.js: the PC tool's FOLDER can be an image): for that it
+// reads and writes at any offset (into a hole too), sets a file's length, renames, and sets the read-only bit;
+// what it can't do it says with a Node.js error's code (ENOENT, ENOTDIR, EEXIST, ENOTEMPTY, ENOSPC, EINVAL,
+// ENAMETOOLONG, EPERM), which pcfs.js makes the Hydra's error.
 // ****************************************************************************
 'use strict';
 const fs = require('fs');
@@ -45,6 +49,8 @@ const EPOCH = Date.UTC(2000, 0, 1) / 1000;
 let fixedNow = null;                                           // (setNow: a fixed time, for images that must build the same)
 const hydraNow = () => fixedNow !== null ? fixedNow : Math.max(0, Math.floor(Date.now() / 1000 - new Date().getTimezoneOffset() * 60 - EPOCH));
 const setNow = s => { fixedNow = s; };
+// An error with a Node.js error's code, for a caller that answers by it (pcfs.js)
+const fail = (msg, code) => Object.assign(new Error(msg), { code });
 const stampText = s => new Date((s + EPOCH) * 1000).toISOString().slice(0, 19).replace('T', ' ');
 
 // A partition table in block 0 (a Buffer), as the Hydra reads one: $55 $AA, and each entry's status $00 or
@@ -125,8 +131,12 @@ function mkfs(file, mb, label = '', blocks = Math.floor(mb * 1024 * 1024 / BLOCK
 }
 
 class Volume {
-  constructor(file) {
-    this.fd = fs.openSync(file, 'r+');
+  // readOnly: the image opened for reading only (nothing's written to it: no flush as it's closed).  now: this
+  // volume's stamps (seconds since 2000), whatever setNow says: a test's /pc image, built before the ROM disk is
+  constructor(file, { readOnly = false, now } = {}) {
+    this.readOnly = readOnly;
+    this.now = now;
+    this.fd = fs.openSync(file, readOnly ? 'r' : 'r+');
     this.base = 0;                                                   // (Its first block: its partition's)
     this.sb = this.readBlock(0);
     const part = this.sb.toString('latin1', 0, 8) !== MAGIC && (mbrParts(this.sb) || []).find(p => p.type === PART_TYPE);
@@ -136,7 +146,7 @@ class Volume {
     this.cblocks = 1 << this.sb[9]; this.cluster = BLOCK * this.cblocks;   // (Its clusters: blocks, bytes)
     this.map = new Map();                                            // Free map blocks read so far
   }
-  close() { this.flush(); fs.closeSync(this.fd); }
+  close() { if (!this.readOnly) this.flush(); fs.closeSync(this.fd); }
 
   readBlock(b) { const buf = Buffer.alloc(BLOCK); fs.readSync(this.fd, buf, 0, BLOCK, (this.base + b) * BLOCK); return buf; }
   writeBlock(b, buf) { fs.writeSync(this.fd, buf, 0, BLOCK, (this.base + b) * BLOCK); }
@@ -154,7 +164,7 @@ class Volume {
   get hint() { return this.sb.readUInt32LE(32); } set hint(v) { this.sb.writeUInt32LE(v >>> 0, 32); }
   get label() { const n = this.sb.indexOf(0, 128); return this.sb.toString('latin1', 128, Math.min(n, 160)); }
   nextQid() { const q = this.sb.readUInt32LE(36); this.sb.writeUInt32LE(q + 1, 36); return q; }
-  nextStamp() { const s = hydraNow(); this.sb.writeUInt32LE(s, 40); return s; }   // (The superblock keeps the latest)
+  nextStamp() { const s = this.now !== undefined ? this.now : hydraNow(); this.sb.writeUInt32LE(s, 40); return s; }   // (The superblock keeps the latest)
   flush() {
     for (const [b, buf] of this.map) if (buf.dirty) { this.writeBlock(b, buf); buf.dirty = false; }
     this.sb.set(this.root.buf, 64);
@@ -194,7 +204,7 @@ class Volume {
       const c = (this.hint + i) % this.clusters;
       if (!this.used(c)) start = c;
     }
-    if (start < 0) throw new Error('the card is full');
+    if (start < 0) throw fail('the card is full', 'ENOSPC');
     let len = 0;
     while (len < n && len < EXT_MAX && start + len < this.clusters && !this.used(start + len)) this.setUsed(start + len++, true);
     this.freeCount -= len; this.hint = (start + len) % this.clusters;
@@ -271,11 +281,34 @@ class Volume {
     }
     return out;
   }
+  // A file's extents with no hole among its clusters c0 to c1 - 1 (those written next): a hole's part there
+  // becomes clusters of the card's, zeros in them, the rest of it a hole still
+  unhole(list, c0, c1) {
+    const out = [], zero = Buffer.alloc(BLOCK);
+    let c = 0;
+    for (const x of list) {
+      const a = Math.max(c0, c), b = Math.min(c1, c + x.len);
+      if (!isHole(x) || a >= b) out.push(x);
+      else {
+        if (a > c) out.push({ start: HOLE, len: a - c });
+        for (let need = b - a; need > 0; ) {
+          const got = this.alloc(need);
+          for (let k = 0; k < got.len * this.cblocks; k++) this.writeBlock(this.clusterBlock(got.start) + k, zero);
+          out.push(got);
+          need -= got.len;
+        }
+        if (b < c + x.len) out.push({ start: HOLE, len: c + x.len - b });
+      }
+      c += x.len;
+    }
+    return out;
+  }
   // Write data at pos (growing the file: its last extent if the next cluster is free, else new extents; past
-  // the end, zeros before it, written: this tool makes no holes, nor writes into them)
+  // the end, zeros before it, written: this tool makes no holes; one it writes into gets its clusters)
   write(e, pos, data) {
     if (pos > e.size) { data = Buffer.concat([Buffer.alloc(pos - e.size), data]); pos = e.size; }
-    const end = pos + data.length, list = this.extents(e);
+    const end = pos + data.length;
+    const list = this.unhole(this.extents(e), Math.floor(pos / this.cluster), Math.ceil(end / this.cluster));
     let have = list.reduce((s, x) => s + x.len, 0), need = Math.ceil(end / this.cluster);
     while (have < need) {
       const last = list[list.length - 1];
@@ -305,6 +338,39 @@ class Volume {
     this.touch(e);
     this.writeEntry(e);
   }
+  // A file's length set: cut (the clusters past its new end given back), or longer (zeros written to its new end,
+  // 64K at a time)
+  resize(e, len) {
+    while (e.size < len) this.write(e, e.size, Buffer.alloc(Math.min(len - e.size, 65536)));
+    if (len >= e.size) return;
+    const keep = Math.ceil(len / this.cluster), list = [];
+    let have = 0;
+    for (const x of this.extents(e)) {
+      const n = Math.min(x.len, keep - have);
+      if (n < x.len && !isHole(x)) this.release(x.start + n, x.len - n);
+      if (n > 0) list.push({ start: x.start, len: n });
+      have += n;
+    }
+    this.setExtents(e, list);
+    e.size = len;
+    this.touch(e);
+    this.writeEntry(e);
+  }
+  // A file or directory renamed, in its directory (its stamp kept; the directory's is new)
+  rename(dir, e, name) {
+    if (name.length > NAME_MAX) throw fail('the name is longer than ' + NAME_MAX + ' characters: "' + name + '"', 'ENAMETOOLONG');
+    if (!name.length || name.includes('/')) throw fail('bad name: "' + name + '"', 'EINVAL');
+    const there = this.lookup(dir, name);
+    if (there && (there.loc.block !== e.loc.block || there.loc.off !== e.loc.off)) throw fail('there\'s a ' + name + ' already', 'EEXIST');
+    e.name = name;
+    this.writeEntry(e);
+    this.touch(dir); this.writeEntry(dir);
+  }
+  // A file read-only, or not
+  setReadOnly(e, ro) {
+    e.mode = ro ? e.mode | MODE_RO : e.mode & ~MODE_RO;
+    this.writeEntry(e);
+  }
 
   // Directories: arrays of 64-byte entries
   entries(dir) {
@@ -319,16 +385,18 @@ class Volume {
   walk(p) {
     let e = this.root;
     for (const name of parts(p)) {
-      if (!e.isDir) throw new Error(e.name + ' isn\'t a directory');
+      if (!e.isDir) throw fail(e.name + ' isn\'t a directory', 'ENOTDIR');
       e = this.lookup(e, name);
-      if (!e) throw new Error('not found: ' + p);
+      if (!e) throw fail('not found: ' + p, 'ENOENT');
     }
     return e;
   }
   // A new entry in a directory (a free one, or at its end)
   create(dir, name, mode) {
-    if (!name.length || name.length > NAME_MAX || name.includes('/')) throw new Error('bad name: "' + name + '"');
-    if (this.lookup(dir, name)) throw new Error('there\'s a ' + name + ' already');
+    if (name.length > NAME_MAX) throw fail('the name is longer than ' + NAME_MAX + ' characters: "' + name + '"', 'ENAMETOOLONG');
+    if (!name.length || name.includes('/')) throw fail('bad name: "' + name + '"', 'EINVAL');
+    if (!dir.isDir) throw fail(dir.name + ' isn\'t a directory', 'ENOTDIR');
+    if (this.lookup(dir, name)) throw fail('there\'s a ' + name + ' already', 'EEXIST');
     let e = this.entries(dir).find(x => x.free);
     if (!e) {
       const pos = dir.size;
@@ -343,10 +411,12 @@ class Volume {
   }
   remove(p) {
     const ps = parts(p);
-    if (!ps.length) throw new Error('the root can\'t be removed');
-    const dir = this.walk(ps.slice(0, -1).join('/')), e = this.lookup(dir, ps[ps.length - 1]);
-    if (!e) throw new Error('not found: ' + p);
-    if (e.isDir && this.entries(e).some(x => !x.free)) throw new Error(p + ' isn\'t empty');
+    if (!ps.length) throw fail('the root can\'t be removed', 'EPERM');
+    const dir = this.walk(ps.slice(0, -1).join('/'));
+    if (!dir.isDir) throw fail(dir.name + ' isn\'t a directory', 'ENOTDIR');
+    const e = this.lookup(dir, ps[ps.length - 1]);
+    if (!e) throw fail('not found: ' + p, 'ENOENT');
+    if (e.isDir && this.entries(e).some(x => !x.free)) throw fail(p + ' isn\'t empty', 'ENOTEMPTY');
     this.truncate(e);
     e.buf.fill(0);
     this.writeEntry(e);
@@ -356,7 +426,7 @@ class Volume {
     let e = this.root;
     for (const name of parts(p)) {
       const next = this.lookup(e, name);
-      if (next && !next.isDir) throw new Error(name + ' isn\'t a directory');
+      if (next && !next.isDir) throw fail(name + ' isn\'t a directory', 'ENOTDIR');
       e = next || this.create(e, name, MODE_DIR);
     }
     return e;

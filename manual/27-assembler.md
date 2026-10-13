@@ -119,10 +119,10 @@ it, and run it:
 /ram> ./hi Ann Bob
 Hello, Ann!
 Hello, Bob!
-I'm task 4, in /ram.
+I'm task 2, in /ram.
 /ram> ./hi
 Hello, you!
-I'm task 4, in /ram.
+I'm task 2, in /ram.
 ```
 
 Run with names, `hi` greets each one; without, it greets you. Then it says which task it's running in, and its
@@ -941,11 +941,11 @@ right in the dictionary, a byte at a time, and `disasm` (Chapter 28) shows it:
 Hi48 0 0 105
 /> lib disasm
 /> hi 5 disasm
- 4654  A9 48     lda #$48
- 4656  20 50 F9  jsr $F950
- 4659  A9 69     lda #$69
- 465B  20 50 F9  jsr $F950
- 465E  60        rts
+ 4658  A9 48     lda #$48
+ 465A  20 50 F9  jsr $F950
+ 465D  A9 69     lda #$69
+ 465F  20 50 F9  jsr $F950
+ 4662  60        rts
 ```
 
 The bytes are `lda #'H'`, `jsr PUTC`, `lda #'i'`, `jsr PUTC` and `rts`. After it ran, `.` printed the flags (48), Y,

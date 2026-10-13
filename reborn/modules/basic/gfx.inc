@@ -299,13 +299,14 @@ g_last:
 @done:
             rts
 
-; vt = the reserved global .A's place (gbase + .A * 5)
+; vt = the reserved global .A's place (gbase + .A * 5).  (Its scratch is vt itself: g_k is a statement's kind or
+; length, kept across the points it takes, which a WINDOW scales through here)
 g_slot:
-            sta         g_k
+            sta         vt
             asl         a
             asl         a
             clc
-            adc         g_k
+            adc         vt
             clc
             adc         gbase
             sta         vt
@@ -612,13 +613,20 @@ scr_w:      .byte       0, 0, 1, 0, 1, 0                    ; (1: 640 across)
 scr_d:      .byte       0, 2, 1, 4, 2, 8
 scr_pen:    .byte       1, 3, 3, 15, 15, 15, 15, 15         ; (By the depth: 1 a pixel, 2, -, 4, -, -, -, 8)
 
-; The command in g_buf written to /dev/vid/ctl (opened and closed)
+; The command in g_buf written to /dev/vid/ctl (opened and closed).  No such file (no Vera X): no bitmap, whatever
+; was asked (g_on 0, so CLS and COLOR are the console's again); SCREEN 0's (g_on 0 already) nothing more, SCREEN
+; n's its error
 g_ctl:
             LDR         r0, s_ctl
             jsr         ram_path
             lda         #O_WRITE
             jsr         OPEN
             bcc         @lb907
+            ldx         g_on
+            stz         g_on
+            bne         :+                                  ; (.X's: stz keeps the flags)
+            rts
+:
             jmp         g_err
 @lb907:
             pha

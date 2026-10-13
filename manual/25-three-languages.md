@@ -113,15 +113,13 @@ I'm thinking of a number from 1 to 100.
 Your guess? 50
 Too small.
 Your guess? 75
-Too big.
-Your guess? 62
 Too small.
-Your guess? 68
-Too big.
-Your guess? 65
+Your guess? 88
 Too small.
-Your guess? 66
-Right! You took 6 guesses.
+Your guess? 94
+Too big.
+Your guess? 91
+Right! You took 5 guesses.
 ```
 
 hylang's version is made of **functions**. `ask` prints the question, reads a line, and gives back its value as a
@@ -170,15 +168,17 @@ cd /ram
 /ram> forth guess.fs
 I'm thinking of a number from 1 to 100.
 Your guess? 50
-Too big.
-Your guess? 25
 Too small.
-Your guess? 37
+Your guess? 75
 Too small.
-Your guess? 43
+Your guess? 88
+Too small.
+Your guess? 94
 Too big.
-Your guess? 40
-Right! You took 5 guesses.
+Your guess? 91
+Too small.
+Your guess? 92
+Right! You took 6 guesses.
 ```
 
 HyForth's version is made of small **words**, each built on the ones before, and each passing its values to the
@@ -230,7 +230,7 @@ HyBASIC's `TIMER` is the number of seconds since midnight:
 > 40 NEXT I
 > 50 PRINT C; "in"; TIMER - T; "seconds"
 > RUN
- 10000 in 2.725 seconds
+ 10000 in 2.73 seconds
 ```
 
 hylang's `(clock)` is the number of seconds since hylang started:
@@ -243,7 +243,7 @@ hylang> (def {t0} (clock))
 hylang> (count-up 10000)
 => 10000
 hylang> (- (clock) t0)
-=> 2.435
+=> 2.365
 ```
 
 And HyForth's `sys-ticks`, from the `hydra` library, counts the Hydra's **ticks**: there are 200 in a second.

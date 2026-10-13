@@ -93,6 +93,12 @@ function inline(s, ctx) {
     }
     // hard break: two spaces at the end of a line
     if (c === ' ' && s.startsWith('  \n', i)) { out += '<br>\n'; i += 3; continue; }
+    // a hex number in running text ($F8C0, $20): in the code face, where its digits and letters are a number's (the
+    // text face's capitals and digits together read as a word)
+    if (c === '$' && !/[A-Za-z0-9$]/.test(s[i - 1] || ' ')) {
+      const xm = /^\$[0-9A-F]{2,}(?![0-9A-Za-z])/.exec(s.slice(i));
+      if (xm) { out += '<code class="hex">' + xm[0] + '</code>'; i += xm[0].length; continue; }
+    }
     if (c === '&') { const em = /^&(#\d+|#x[0-9a-f]+|[a-z]+);/i.exec(s.slice(i)); if (em) { out += em[0]; i += em[0].length; continue; } }
     out += esc(c); i++;
   }

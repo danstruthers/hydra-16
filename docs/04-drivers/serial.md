@@ -34,7 +34,11 @@ Both are built on the same serial layer (`base/lib/serial.inc`: the rates, the s
   (`x1`, `x0`), then two lines of counts for chasing an unreliable line: `/pc`'s requests, and how many of their
   replies were cut short, unanswered or damaged, how many requests the PC had damaged (its NAK), and how often the PC
   was given up; and the ACIA's receive **overruns** (the system was late taking a byte: another came first) and
-  **framing errors** (noise, or a rate the terminal doesn't match).  The PC tool's Ctrl-A s has the PC's side.
+  **framing errors** (noise, or a rate the terminal doesn't match), and the bytes **dropped** because the receive ring
+  was full (nothing was reading, and the terminal didn't stop).  The PC tool's Ctrl-A s has the PC's side: the
+  frames from the Hydra that came damaged or stopped part-way, and the replies it was asked for again.  An
+  `unanswered` here with a reply `asked for again` there is a reply that was lost or late on its way to the Hydra;
+  with a frame `stopped part-way` there, a request cut short on its way to the PC.
 * **Every byte sent is paced** by VIA timer 2: a character's time and a margin (two idle bits at 115200, one at the
   other rates), so the board's slightly slow clock and the MAX232's edges never lose a character.
 * **Bytes received** go into a 256-byte ring as they come (the ACIA's interrupt).  A byte that arrives when the ring is
@@ -58,7 +62,7 @@ Both are built on the same serial layer (`base/lib/serial.inc`: the rates, the s
 | `label` | | yes | The window's title |
 | `wnew` | | yes | A read waits for Ctrl-] c, makes a window, and gives its number (init's) |
 | `kbdin` | | yes | A write is typed into the window as keys |
-| `kbin` | | yes | The console's keyboard: the Vera X's keys, written by `input` |
+| `kbin` | | yes | The console's keyboard: the Vera X's keys, written by `kdev` |
 | `text` | | yes | The window's scrollback and screen, as text |
 | `snarf` | | yes | The cut buffer, shared by all the windows |
 
@@ -219,7 +223,7 @@ and can be set: `echo terminal size 132 43 >/dev/consctl`.  The PC tool tells th
 ## Two terminals: the serial port and the screen
 
 With a Vera X, the console has a second terminal, the screen (`vid`'s `#v/term`), and keys from its keyboard
-(`#c/kbin`, written by `input`).  `consctl` chooses how they're used:
+(`#c/kbin`, written by `kdev`).  `consctl` chooses how they're used:
 
 | Command | What it does |
 | :------ | :----------- |

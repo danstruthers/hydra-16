@@ -202,6 +202,8 @@ const RC_LINES = [
   ["echo (a","rc: syntax error"],
   ["whatis echo x; q=('it''s' '' a.b); whatis q","/bin/echo\nx=(a b c)\nq=('it''s' '' a.b)"],
   ["bind '#n' /mnt; ls /mnt","null\nzero\nkmesg"],
+  ["{mount /mnt}","rc: usage: mount [-abc] '#x' old [spec]"],
+  ["{bind /mnt}","rc: usage: bind [-abc] new old"],
   ["ls /rom/lib","as/\nbasic/\nedit/\nfont/\nforth/\nhylang/\nnamespace\nprofile\nshell\nwindows"],
   ["cat /bin/echo >/ram/hi; cd /ram; hi from dot; cd","from dot"],
   ["cat /nothing >[2]/ram/e; cat /ram/e","cat: /nothing: not found"],
@@ -284,7 +286,8 @@ const TOOL_LINES = [
     "  4+33 program  init",
     "  2- 4 boot     cons",
     "  5- 6 boot     storage",
-    "  4+0A boot     kdev",
+    " 31    boot     kdev",
+    "  4+0A boot     snd",
     "",
   ].join('\n'), true],
   ["free","ram     256 KB a task (2 modules)\nshared  1024 KB, 256 KB in segments (1), 768 KB free"],
@@ -758,6 +761,7 @@ const RAMW_LINES = ['variable fd', ': w ( a u -- ) w/o create-file throw fd ! ;'
   ': t ( a u -- ) w 70 0 do s" 0123456789" p loop 5 at s" abc" p 508 at s" XYZWV" p 699 at s" !+" p c ;',
   ': n ( -- ) 100 0 do s" 0123456789abcdef" p loop ;',
   's" /ram/w" t', 's" /sram/w" t', 's" /sd/0/w" t', 'cat /ram/w; echo; cat /sram/w; echo; cat /sd/0/w; echo',
+  ': h ( a u -- ) w s" ab" p 3000 at s" Z" p c ;', 's" /ram/h" h s" /sram/h" h s" /sd/0/h" h', 'ls -l /ram/h /sram/h /sd/0/h',
   's" /ram/n" w', '91 emit .( b0 A])', '91 emit .( b0 B])', '91 emit .( rw A])', 'n', '91 emit .( rw B])', 'c',
   's" /sd/0/n" w', '91 emit .( cw A])', 'n', '91 emit .( cw B])', 'c', 'ls -l /ram/n /sd/0/n',
   's" /sd/0/k" w s" first part, written. " p s" then synced" p', 'echo sync >/dev/sd/0/ctl',
@@ -1060,6 +1064,77 @@ const PC_LINES = [
   ["rmdir /pc/d; rm /pc/sub/x; cat /pc/nope; rm /pc/nope","cat: /pc/nope: not found\nrm: /pc/nope: not found"],
   ["ls /pc /pc/sub","bin/\nhello.txt\nnew.txt\nrr\nsub/\ndeep/"],
 ];
+// The pc-img test's lines: /pc a HydraFS image on the PC, not a folder (the card's own order in a directory, and
+// its stamps: the test's, for what's written too)
+const PC_IMG_LINES = [
+  ["echo b115200 >/dev/serctl",null],
+  ["ls /pc","big\nhello.txt\nsub/\nbin/"],
+  ["cat /pc/hello.txt","Hello from the PC\nline two"],
+  ["ls -l /pc/sub","--rw-rw-rw- P-        1 2026-10-03 15:04 x\nd-rw-rw-rw- P-        0 2026-10-03 15:04 deep"],
+  ["echo hi >/pc/new.txt; cat /pc/new.txt; ls -l /pc/new.txt","hi\n--rw-rw-rw- P-        3 2026-10-03 15:04 /pc/new.txt"],
+  ["{cp /rom/README /pc/r} </pc/hello.txt; cmp /rom/README /pc/r; echo $status",""],
+  ["cp /pc/big /pc/copy; cmp /pc/big /pc/copy; echo $status",""],
+  ["mkdir /pc/d; mv /pc/r /pc/rr; ls /pc","big\nhello.txt\nsub/\nbin/\nnew.txt\nrr\ncopy\nd/"],
+  ["/pc/bin/hi Ann","Hello, Ann!",true],
+  ["echo shorter >/pc/copy; cat /pc/copy; ls -l /pc/copy","shorter\n--rw-rw-rw- P-        8 2026-10-03 15:04 /pc/copy"],
+  ["echo more >>/pc/hello.txt; cat /pc/hello.txt | wc -l","      3"],
+  ["mkdir /pc/d; echo no >/pc/sub; cat /pc/hello.txt/x","mkdir: /pc/d: already exists\nrc: /pc/sub: is a directory\ncat: /pc/hello.txt/x: not a directory"],
+  ["rmdir /pc/sub; rmdir /pc/d; rm /pc/sub/x; cat /pc/nope; rm /pc/nope","rmdir: /pc/sub: directory not empty\ncat: /pc/nope: not found\nrm: /pc/nope: not found"],
+  ["ls /pc /pc/sub","big\nhello.txt\nsub/\nbin/\nnew.txt\nrr\ncopy\ndeep/"],
+];
+// hydrafs.js's Volume, what serving an image needs of it beyond what the Hydra's commands ask in pc-img: a file's
+// length set (longer: zeros; cut: its clusters given back, mid-cluster and to nothing), a write into a hole (the
+// hole's part gets clusters, the rest stays one), a rename (and one refused: the name taken), the read-only bit;
+// its errors' codes; and the free map right after all of it.  OUT: what's wrong
+function hfsVolumeChecks(dir) {
+  const f = [], img = path.join(dir, 'vol.img');
+  fs.mkdirSync(dir, { recursive: true });
+  hydrafs.mkfs(img, 1, 'VOL', undefined, true);
+  const v = new hydrafs.Volume(img, { now: 0x2000 });
+  const code = fn => { try { fn(); return 'none'; } catch (e) { return e.code || e.message; } };
+  try {
+    const C = v.cluster, a = v.create(v.root, 'a', 0);
+    v.write(a, 0, Buffer.alloc(C + 100, 0x41));
+    v.resize(v.lookup(v.root, 'a'), 3 * C + 7);                           // Longer: zeros
+    let e = v.lookup(v.root, 'a'), d = v.read(e);
+    if (e.size !== 3 * C + 7 || d[C + 99] !== 0x41 || d[C + 100] !== 0 || d[3 * C + 6] !== 0) f.push('a made longer: ' + e.size + ' bytes, or not zeros past its old end');
+    v.resize(e, C + 50);                                                 // Cut, in a cluster
+    e = v.lookup(v.root, 'a'); d = v.read(e);
+    if (e.size !== C + 50 || d.length !== C + 50 || d[C + 49] !== 0x41 || v.extents(e).reduce((s, x) => s + x.len, 0) !== 2) f.push('a cut to a cluster and 50 bytes: ' + e.size + ' bytes in ' + v.extents(e).reduce((s, x) => s + x.len, 0) + ' clusters');
+    v.resize(e, 2 * C); d = v.read(v.lookup(v.root, 'a'));               // Longer again: zeros where its cut bytes were
+    if (d[C + 49] !== 0x41 || d[C + 50] !== 0 || d[C + 99] !== 0) f.push('a longer again: its cut bytes are back');
+    v.resize(v.lookup(v.root, 'a'), 0);
+    if (v.extents(v.lookup(v.root, 'a')).length) f.push('a cut to nothing still has clusters');
+    // A hole: h's second to fourth clusters (as the Hydra's HydraFS leaves one), then a write into the third
+    const h = v.create(v.root, 'h', 0);
+    v.write(h, 0, Buffer.alloc(C, 0x42));
+    const x0 = v.extents(v.lookup(v.root, 'h'))[0];
+    let he = v.lookup(v.root, 'h');
+    v.setExtents(he, [x0, { start: hydrafs.HOLE, len: 3 }]); he.size = 4 * C; v.writeEntry(he);
+    v.write(v.lookup(v.root, 'h'), 2 * C + 10, Buffer.from('in the hole'));
+    he = v.lookup(v.root, 'h'); d = v.read(he);
+    const kinds = v.extents(he).map(x => (x.start === hydrafs.HOLE ? 'hole' : 'clusters') + ' ' + x.len).join(', ');
+    if (kinds !== 'clusters 1, hole 1, clusters 1, hole 1') f.push('h\'s extents after a write into its hole: ' + kinds);
+    if (d.length !== 4 * C || d[C - 1] !== 0x42 || d[C] !== 0 || d.toString('latin1', 2 * C + 10, 2 * C + 21) !== 'in the hole' || d[2 * C + 9] !== 0 || d[3 * C] !== 0) f.push('h read back after the write into its hole isn\'t right');
+    v.resize(v.lookup(v.root, 'h'), 2 * C + 5);                           // Cut in its written cluster: the hole after it goes
+    // Names
+    v.rename(v.root, v.lookup(v.root, 'h'), 'hole.bin');
+    if (!v.lookup(v.root, 'hole.bin') || v.lookup(v.root, 'h')) f.push('h renamed hole.bin: not so');
+    const errs = [code(() => v.rename(v.root, v.lookup(v.root, 'a'), 'hole.bin')), code(() => v.rename(v.root, v.lookup(v.root, 'a'), 'x'.repeat(32))),
+      code(() => v.create(v.root, 'a', 0)), code(() => v.walk('nope')), code(() => v.walk('a/b')), code(() => v.remove('/')),
+      code(() => { v.mkdir('dd'); v.put('dd/f', Buffer.from('f')); v.remove('dd'); })].join(' ');
+    if (errs !== 'EEXIST ENAMETOOLONG EEXIST ENOENT ENOTDIR EPERM ENOTEMPTY') f.push('the errors\' codes: ' + errs);
+    v.setReadOnly(v.lookup(v.root, 'a'), true);
+    if (!(v.lookup(v.root, 'a').mode & hydrafs.MODE_RO)) f.push('a read-only: its bit isn\'t set');
+    v.setReadOnly(v.lookup(v.root, 'a'), false);
+    if (v.lookup(v.root, 'a').mode & hydrafs.MODE_RO) f.push('a not read-only: its bit is set');
+    if (v.lookup(v.root, 'hole.bin').stamp !== 0x2000) f.push('the volume\'s own stamp (now) isn\'t on its files');
+    v.flush();
+    const problems = v.check();
+    if (problems.length) f.push('the free map after it all: ' + problems.slice(0, 3).join('; '));
+  } catch (e) { f.push('hydrafs.js\'s Volume: ' + e.message); } finally { v.close(); }
+  return f;
+}
 // The pc-ro test's lines: the folder served read-only
 const PC_RO_LINES = [
   ["cat /pc/hello.txt","Hello"],
@@ -1212,8 +1287,8 @@ function hylangCard(test, files = {}) {
 // reads rc's $greet (hi) and its arguments (one two); files.bas and errors.bas write their files on the card;
 // procs.bas INCLUDEs inc.bas, prompt.txt LOADs lab.bas; asm.bas's ASM blocks .include /lib/as's hydra.inc
 const BASIC_DIR = path.join(__dirname, 'basic');
-const BSUITE_PROGS = { arith: 66, funcs: 79, logic: 64, strings: 55, arrays: 37, flow: 33, procs: 28, records: 23, data: 27,
-  errors: 27, files: 24, hydra: 32, asm: 23 };
+const BSUITE_PROGS = { arith: 66, funcs: 82, logic: 64, strings: 55, arrays: 37, flow: 33, procs: 28, records: 23, data: 27,
+  errors: 30, files: 24, hydra: 32, asm: 23 };
 const BSUITE_SCRIPTS = ['errors', 'print', 'prompt', 'input', 'asm'];
 const bsuiteLine = n => (n === 'hydra' ? 'greet=hi; ' : '') + 'basic ' + n + '.bas' + (n === 'hydra' ? ' one two' : '');
 function basicCard() {
@@ -1483,25 +1558,26 @@ module.exports = {
       init: 'init', without: ['cons'], modules: ['ser'], cycles: 200e6,
       // (ā: wait for a prompt; Ā: 2M cycles, sleep running; \b twice takes xo back)
       machine: { input: 'ārc\r' + 'āsleep 30\rĀ\x03' + 'āecxo\b\bho edited\r' + 'ācat\rline one\r\x04' + 'ācat /dev/consctl /dev/serctl\r' + 'āecho to ser >/dev/ser\r' },
-      expect: ['hello, from init', '% sleep 30\n', '\nedited\n%', '% cat\nline one\nline one\n%', '\nrawoff\ngroup 2\nb9600\n%', '\nto ser\n%'],
+      expect: ['hello, from init', '% sleep 30\n', '\nedited\n%', '% cat\nline one\nline one\n%', '\nrawoff\ngroup 1\nb9600\n%', '\nto ser\n%'],
     },
     {
       name: 'init', what: 'init from files (rc the shell, a card\'s /lib/shell naming it): the RAM disks started, the namespace file run, each shell\'s own namespace and /ram (a window\'s too); the shared RAM disk stopped, /bin\'s union still there',
       init: 'init', modules: ['t_child'], cycles: 250e6,
-      // (ā: wait for a prompt; '#fr' quoted, as # starts a comment; \x1d c: Ctrl-] c, a window made, wstart's rc
-      // started there.  /bin: the RAM disks' caches (empty), then #m/bin, whose t_child runs by its name.  t_child f
-      // makes /ram/mark: in window 0's rc's area, 2, and not in window 1's rc's, 4 (wstart, 3, has none))
-      get machine() { return { sd: shellCard('/bin/rc -l', 'shellrc'), input: 'āls \'#fr\'\r' + 'āls /ram\r' + 'āls /bin\r' + 'āt_child f\r' + 'āls \'#fr\'/2\r' + 'ācat /rom/lib/profile\r' +
+      // (ā: wait for a prompt; '#fr' quoted, as # starts a comment; \x1d c: Ctrl-] c, a window made, init started
+      // there by the kernel (INIT_RUN) and rc in its place.  /bin: the RAM disks' caches (empty), then #m/bin, whose
+      // t_child runs by its name.  t_child f makes /ram/mark: in window 0's rc's area, 1 (init's task: rc is in its
+      // place), and not in window 1's rc's, 2)
+      get machine() { return { sd: shellCard('/bin/rc -l', 'shellrc'), input: 'āls \'#fr\'\r' + 'āls /ram\r' + 'āls /bin\r' + 'āt_child f\r' + 'āls \'#fr\'/1\r' + 'ācat /rom/lib/profile\r' +
         'ācat /dev/sd/s/ctl\r' + 'āecho $window\r' + 'ā\x1dc' + 'āecho $window\r' + 'āls \'#fr\'\r' + 'āls /ram\r' + 'āls /dev\r' +
         'āecho stop >>\'#d/s/ctl\'; echo still; cat /sram/x\r' }; },
-      expect: ['% ls \'#fr\'\n1/\n2/\n%', '% ls /ram\nbin/\nlib/\n%',
-        '% ls /bin\n' + ROM_BIN().join('\n') + '\ninit\nrc\nplay\n', 't_child\n% t_child f\n', '% ls \'#fr\'/2\nbin/\nlib/\nmark\n%',
+      expect: ['% ls \'#fr\'\n1/\n%', '% ls /ram\nbin/\nlib/\n%',
+        '% ls /bin\n' + ROM_BIN().join('\n') + '\ninit\nrc\nplay\n', 't_child\n% t_child f\n', '% ls \'#fr\'/1\nbin/\nlib/\nmark\n%',
         'prompt=(', '% cat /dev/sd/s/ctl\nsram 512 KB 1024 blocks\nhydrafs label=SRAM\n', '% echo $window\n0\n%',
-        '% echo $window\n1\n%', '% ls \'#fr\'\n1/\n2/\n4/\n%', '% ls /ram\nbin/\nlib/\n%', '\ncons\nconsctl\nwctl\nwnew\nser\nserctl\nkbdin\ntext\nlabel\nsnarf\nkbin\n%',
+        '% echo $window\n1\n%', '% ls \'#fr\'\n1/\n2/\n%', '% ls /ram\nbin/\nlib/\n%', '\ncons\nconsctl\nwctl\nwnew\nser\nserctl\nkbdin\ntext\nlabel\nsnarf\nkbin\n%',
         '% echo stop >>\'#d/s/ctl\'; echo still; cat /sram/x\nstill\ncat: /sram/x: no such device\n%'],
     },
     {
-      name: 'newns', what: 'the default namespace\'s library (nslib): an old area emptied, a namespace file run (quotes, comments, $task, flags, bad lines)',
+      name: 'newns', what: 'the default namespace\'s library (nslib): an old area emptied, a namespace file run (quotes, comments, $task, flags, bad lines); the whole namespace built twice: the area emptied while it isn\'t /ram, kept once it is (a shell\'s newns lost its /ram\'s files)',
       init: 't_newns', cycles: 60e6,
       check(m, out) {
         const f = [];
@@ -1543,7 +1619,7 @@ module.exports = {
     },
     {
       name: 'task', what: 'tasks and the scheduler: SPAWN, EXITS, WAIT, SLEEP, preemption, PAUSE and WAKE, orphans',
-      init: 't_task', modules: ['t_child'], without: ['cons', 'storage', 'snd', 'gpio', 'vid'], cycles: 60e6,
+      init: 't_task', modules: ['t_child'], without: ['cons', 'storage', 'snd', 'vid'], cycles: 60e6,
     },
     {
       name: 'dev', what: 'the kernel\'s devices (kdev): #/, #n, #t, #m, #p; pipes; a union keeping what was there',
@@ -1689,6 +1765,12 @@ module.exports = {
       },
     },
     {
+      name: 'bgfx', what: 'BASIC\'s graphics on a Vera X (tests/basic/gfx.bas, from a card: it checks itself, by POINT): SCREEN 13, PSET, LINE (a line, B a box, BF a filled one), CIRCLE (and F a disc); the same through a WINDOW, which kept none of their kinds (every LINE a filled box, every CIRCLE a disc: the scale\'s slot took the statement\'s scratch), and GPRINT\'s whole text through one (4 characters of it)',
+      init: 't_rc', cycles: 400e6,
+      get machine() { return { vera: true, sd: basicCard(), input: 'ācd /sd/0\r' + 'ābasic gfx.bas\r' }; },
+      expect: ['gfx: 21 checks, 0 failed'],
+    },
+    {
       name: 'hyforth', what: 'HyForth\'s additions (docs/design/hyforth.md): names in lower case; words (each word\'s xt, and whether it\'s a literal, immediate, assembly or Forth); the libraries loaded (libs), one not searched (-lib) and searched again (lib, where it was), the one with lib refused, a .fs one, one a MARKER takes out; disasm (the modes, the Rockwell opcodes, a jsr to a word), see of a code word (with disasm.fl, and without), sys, the bit words, random\'s numbers; the terminal\'s sequences, form, ekey and the keys (an arrow key, a character); the sound words (notes on the YM2151, a claim, the volume; a channel\'s level, its old name; the registers read back: a note\'s key code and fraction; a song by play, its error; a note by its frequency, a glide, the LFO, a channel\'s sensitivity, the noise; a line of MML and a chord, by play); ctl (and its error); compile-only words typed (THROW -14: >r, if, .", a synonym of one, a library\'s) and compiled',
       init: 't_rc', cycles: 180e6,
       // (At 115200, so words's thousands of characters are out before the next line comes: the keys typed meanwhile
@@ -1745,6 +1827,13 @@ module.exports = {
         if (/[A-Z]{2}/.test(first.replace(/\b[0-9A-F]{4}\b/g, '').split('words\n')[1] || '')) f.push('words: a name not in lower case');
         return f;
       },
+    },
+    {
+      name: 'flib', what: 'HyForth\'s lib and require after trouble: a bare name is tried in the current directory, then /lib/forth: with a directory of that name in the way (and in /pc with no PC tool) lib facility still loads; a library that fails to load (a bad .fl) is un-noted, so lib says so again rather than nothing; require of a file that isn\'t there, again',
+      init: 't_rc', cycles: 160e6,
+      machine: { input: 'āforth -l\r' + 'ācd /ram\r' + 'āmkdir facility.fl\r' + 'ālib facility\r' + 'ālibs\r' + 'āecho HYFLxx >bad.fl\r' + 'ālib bad\r' + 'ālib bad\r' + 'ārequire none.fs\r' + 'ārequire none.fs\r' + 'ācd /pc\r' + 'ālib string\r' + 'ālibs\r' + 'ābye\r' },
+      expect: ['/ram> lib facility\n/ram> libs\nforth coreext exception file tools shell facility\n/ram> echo HYFLxx >bad.fl\n/ram> lib bad\nnot this forth\'s library\n/ram> lib bad\nnot this forth\'s library\n/ram> require none.fs\nnone.fs: not found\n/ram> require none.fs\nnone.fs: not found\n/ram> cd /pc\n',
+        '/pc: i/o error\n/ram> lib string\n/ram> libs\nforth coreext exception file tools shell facility string\n/ram> bye\n'],
     },
     {
       name: 'fshell', what: 'HyForth as a shell (forth -l, shell.fl): its namespace and profile; a line Forth\'s or rc\'s by its first word (a number, one of the numbers library\'s, a word, a pipeline, a redirection); . on an empty stack, or rc\'s by % (a program a word shadows); cd and the prompt (its format); a definition over lines (the second prompt); status and $status; & ($apid) and wait; programs as values: sh-out, output-of, a word\'s output a program\'s input (|, piped: one that ends first, Ctrl-C), spawn; Ctrl-C ending a program; errors, a usage; -lib shell and lib shell; exit',
@@ -1878,7 +1967,30 @@ module.exports = {
         '#x255 -#x1 #xFFFF 255 \n0 errors in the number word tests\n\n%'],
     },
     {
-      name: 'lshell', what: 'the shell /lib/shell names (the ROM\'s: /bin/forth -l, HyForth the login shell): init\'s in window 0, wstart\'s in a window made (Ctrl-] c: $window); send, a line typed in another window (#cN/kbdin), run there, then one longer than its keys\' queue (the write waiting for room)',
+      name: 'bootsize', what: 'the boot with a terminal that answers the size asked at once (ESC [ 18 t: the PC tool does), not 80 x 24: the console\'s repaint for it waits till init has the console (the kernel\'s own "task 1: init" is still going out when the answer comes), so no byte is written over another on the serial chip, the kernel\'s line is whole, and the screen is cleared before HydraOS\'s first line',
+      init: 'init', cycles: 60e6,
+      machine: { termSize: [30, 100], input: 'āecho booted\r' },
+      expect: ['\x1b[18ttask 1: init\n', '\x1b[H\x1b[2JHydraOS 1.0 for the Hydra-16\n', '\nbooted\n'],
+      check(m) { return m.acia.overruns || m.acia.txLost ? [m.acia.overruns + ' bytes written while another was still being sent (' + m.acia.txLost + ' lost on a WDC chip)'] : []; },
+    },
+    {
+      name: 'standing', what: 'the tasks kept standing: at the login shell\'s prompt the kernel, the shell in init\'s task (init EXECs it) and the drivers, no init, no window starter, no input program, no gpio driver; the console waiting for its own events (its init\'s loop); a program left behind when its shell ends is nobody\'s; the login shell ended is started again by the kernel, in task 1, window 0\'s; a window made while the shell waits for a program (Ctrl-] c: the console\'s own loop makes it, the kernel starts init there); newns twice, the namespace the same, and a file in /ram still there after it',
+      init: 'init', cycles: 520e6,
+      machine: { input: 'āps\r' + 'āecho mine >/ram/kept\r' + 'āns | wc -l\r' + 'ānewns\r' + 'āns | wc -l\r' + 'ācat /ram/kept\r' + 'āsleep 200 &\r' + 'ābye\r' + 'āps\r' + 'āecho $window\r' + 'āsleep 8\rĀĀ\x1dc' + 'āecho $window\r' + 'āps\r' + 'āecho all done\r' },
+      expect: ['\nall done\n', '/> ns | wc -l\n     26\n/> newns\n/> ns | wc -l\n     26\n/> cat /ram/kept\nmine\n', '/> bye\nHyForth (Forth 2012), bye to end\n/> ps\n', '/> echo $window\n0\n', '/> echo $window\n1\n'],
+      check(m, out) {
+        const f = [], text = out.replace(/\r/g, ''), lists = text.split('task  state   parent     cpu group  name\n').slice(1).map(t => t.split('\n/> ')[0].split('\n').map(l => l.trim().split(/\s+/)));
+        const names = l => l.map(r => r[0] + ':' + r[5] + ':' + r[2]).join(' ');
+        if (lists.length !== 3) return ['ps listed the tasks ' + lists.length + ' times, not 3'];
+        if (names(lists[0]) !== '0:kernel:- 1:forth:- 2:ps:1 12:snd:- 13:kdev:- 14:storage:- 15:cons:-') f.push('at the first prompt: ' + names(lists[0]));
+        if (lists[0].find(r => r[5] === 'cons')[1] !== 'event') f.push('cons isn\'t waiting for its events: ' + lists[0].find(r => r[5] === 'cons')[1]);
+        if (names(lists[1]) !== '0:kernel:- 1:forth:- 2:sleep:- 3:ps:1 12:snd:- 13:kdev:- 14:storage:- 15:cons:-') f.push('after the login shell ended: ' + names(lists[1]));
+        if (!/ 1:forth:- 2:sleep:- 3:sleep:1 4:forth:- 5:ps:4 /.test(' ' + names(lists[2]) + ' ')) f.push('in the window made: ' + names(lists[2]));
+        return f;
+      },
+    },
+    {
+      name: 'lshell', what: 'the shell /lib/shell names (the ROM\'s: /bin/forth -l, HyForth the login shell): init\'s in window 0, and in a window made (Ctrl-] c: the kernel starts init there, $window); send, a line typed in another window (#cN/kbdin), run there, then one longer than its keys\' queue (the write waiting for room)',
       init: 'init', cycles: 300e6,
       // (Window 1 made and shown (\x1d c), its shell sends window 0 a line, then one longer than window 0's keys' queue
       // (63), as the first still runs there: its write waits for room; window 0 shown again (\x1d 0): its text, the
@@ -2435,6 +2547,31 @@ module.exports = {
       },
     },
     {
+      name: 'pc-img', what: '/pc a HydraFS image file on the PC (the PC tool\'s folder can be an image: sim/tools/pcfs.js, hydrafs.js\'s Volume): its files read, a program run from it; files made, written, added to, made again shorter, copied (17K: several clusters), renamed, removed, a directory made and removed; its errors; then the image on the PC: the files as the Hydra left them, and its free map right (hydrafs.js check).  And the Volume\'s own: a length set, a write into a hole, a rename, the read-only bit, its errors\' codes',
+      init: 't_rc', cycles: 400e6,
+      pc: { image: { mb: 1, label: 'PCIMG' }, files: () => Object.assign({ big: Buffer.concat([PC_BIG(), PC_BIG(), PC_BIG(), PC_BIG()]) }, PC_FILES()) },
+      get machine() { return { input: typed(PC_IMG_LINES) }; },
+      get expect() { return expected(PC_IMG_LINES); },
+      check(m) {
+        const f = pcReport(m, 1, 0, 0), v = new hydrafs.Volume(m.pc.image, { readOnly: true });
+        try {
+          const bytes = n => { const e = v.tryWalk(n); return e && !e.isDir ? v.read(e) : Buffer.from('(no such file)'); };
+          const text = n => bytes(n).toString('latin1'), big = Buffer.concat([PC_BIG(), PC_BIG(), PC_BIG(), PC_BIG()]);
+          if (text('new.txt') !== 'hi\n') f.push('new.txt in the image: ' + JSON.stringify(text('new.txt')));
+          if (text('copy') !== 'shorter\n') f.push('copy in the image: ' + JSON.stringify(text('copy').slice(0, 40)));
+          if (text('hello.txt') !== 'Hello from the PC\nline two\nmore\n') f.push('hello.txt in the image: ' + JSON.stringify(text('hello.txt')));
+          if (!bytes('big').equals(big)) f.push('big in the image isn\'t as it was');
+          if (!bytes('rr').equals(fs.readFileSync(path.join(__dirname, '..', 'romfs', 'README')))) f.push('rr in the image isn\'t /rom/README');
+          for (const n of ['d', 'r', 'sub/x']) if (v.tryWalk(n)) f.push(n + ' is still in the image');
+          const problems = v.check();
+          if (problems.length) f.push('the image\'s free map: ' + problems.slice(0, 3).join('; '));
+          this.notes = [v.freeCount + ' of ' + v.clusters + ' clusters free'];
+        } finally { v.close(); }
+        f.push(...hfsVolumeChecks(path.join(path.dirname(m.pc.image), 'pc-img-vol')));
+        return f;
+      },
+    },
+    {
       name: 'pc-two', what: '/pc from two tasks at once (a pipeline: one reads a file, the other writes its copy): one request at a time, the other waiting its turn',
       init: 't_rc', cycles: 400e6, pc: { files: { big: PC_BIG } },
       machine: { input: 'ācat /pc/big | cat >/pc/copy; cmp /pc/big /pc/copy; echo $status\r' },
@@ -2493,7 +2630,7 @@ module.exports = {
       name: 'pc-damage', what: '/pc\'s frames damaged on the line: requests (the PC tool asks for them again: its NAK), a reply (the Hydra asks again, and the PC tool answers from its last reply); the answers right, nothing damaged shown; serctl counts them (2 nak, 1 damaged)',
       init: 't_rc', cycles: 140e6, pc: { files: { 'hello.txt': 'Hello from the PC\n' }, damage: ['q3', 'r4', 'q6'] },
       machine: { input: 'āls /pc\rācat /pc/hello.txt\rācat /pc/hello.txt\rācat /dev/serctl\r' },
-      expect: ['% ls /pc\nhello.txt\n%', '% cat /pc/hello.txt\nHello from the PC\n% cat /pc/hello.txt\nHello from the PC\n%', ' req, 0 cut short, 0 unanswered, 1 damaged, 2 nak, 0 gone\nline 0 overruns, 0 framing errors\n%'],
+      expect: ['% ls /pc\nhello.txt\n%', '% cat /pc/hello.txt\nHello from the PC\n% cat /pc/hello.txt\nHello from the PC\n%', ' req, 0 cut short, 0 unanswered, 1 damaged, 2 nak, 0 gone\nline 0 overruns, 0 framing errors, 0 dropped\n%'],
       check: m => pcReport(m, 1, 2, 1),
     },
     {
@@ -2611,13 +2748,15 @@ module.exports = {
       expect: ['% cat /dev/kmesg | head -2\n\nHydra-16: kernel ', '% echo still here\nstill here\n% '],
     },
     {
-      name: 'pasteahead', what: 'with no flow control (serctl\'s x0), seven lines (399 keys) pasted at the line\'s rate while ps writes four times and nothing reads: more than the window\'s queue and the receive ring hold (63 + 255); the newest are lost (the irq entry\'s, with the ring full), and what came first is whole: the first five lines read and run in their turn',
-      init: 't_rc', cycles: 200e6,
+      name: 'pasteahead', what: 'with no flow control (serctl\'s x0), seven lines (399 keys) pasted at the line\'s rate while ps writes four times and nothing reads: more than the window\'s queue and the receive ring hold (63 + 255); the newest are lost (the irq entry\'s, with the ring full: serctl counts them, dropped), and what came first is whole: the first five lines read and run in their turn',
+      init: 't_rc', cycles: 260e6,
       machine: {
         paste: true,
-        input: 'āecho x0 >/dev/serctl; cat /dev/serctl\r' + 'āps; ps; ps; ps; sleep 1\r' + [1, 2, 3, 4, 5, 6, 7].map(i => 'echo ' + i + ' ' + 'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\r').join(''),
+        input: 'āecho x0 >/dev/serctl; cat /dev/serctl\r' + 'āps; ps; ps; ps; sleep 1\r' + [1, 2, 3, 4, 5, 6, 7].map(i => 'echo ' + i + ' ' + 'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\r').join('') +
+          'Ā'.repeat(14) + '\r' + 'ĀĀ' + 'grep dropped /dev/serctl; echo counted\r',   // (Once the lines kept have run: what's left of the line cut short, run; then serctl's count of the lost)
       },
-      expect: ['% echo x0 >/dev/serctl; cat /dev/serctl\nb9600\nx0\npc 0 req, 0 cut short, 0 unanswered, 0 damaged, 0 nak, 0 gone\nline 0 overruns, 0 framing errors\n% ',
+      check(m, out) { return /\nline 0 overruns, 0 framing errors, [1-9]\d* dropped\n/.test(out) ? [] : ['serctl doesn\'t count the bytes dropped with the ring full: ' + JSON.stringify((out.match(/\nline .*\n/g) || []).pop())]; },
+      expect: ['\ncounted\n', '% echo x0 >/dev/serctl; cat /dev/serctl\nb9600\nx0\npc 0 req, 0 cut short, 0 unanswered, 0 damaged, 0 nak, 0 gone\nline 0 overruns, 0 framing errors, 0 dropped\n% ',
         '\n% ' + [1, 2, 3, 4, 5].map(i => 'echo ' + i + ' abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\n' + i + ' abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\n% ').join('')],
     },
     {
@@ -2631,12 +2770,13 @@ module.exports = {
           Array.from({ length: 60 }, (_, i) => 'echo ' + (i + 1) + ' ' + 'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\r').join('') +
           'echo pasted\r' + 'ācp /pc/xs /pc/xs2; cmp /pc/xs /pc/xs2; echo copied $status\r' + 'āecho x0 >/dev/serctl; echo x1 >/dev/serctl; cat /dev/serctl\r' + 'āecho the end\r',
       },
-      expect: ['% cat /dev/serctl\nb9600\nx1\npc 0 req, 0 cut short, 0 unanswered, 0 damaged, 0 nak, 0 gone\nline 0 overruns, 0 framing errors\n% ',
+      expect: ['% cat /dev/serctl\nb9600\nx1\npc 0 req, 0 cut short, 0 unanswered, 0 damaged, 0 nak, 0 gone\nline 0 overruns, 0 framing errors, 0 dropped\n% ',
         '\n% ' + Array.from({ length: 60 }, (_, i) => 'echo ' + (i + 1) + ' abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\n' + (i + 1) + ' abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\n% ').join(''),
-        '; echo copied $status\ncopied\n% ', '; cat /dev/serctl\nb9600\nx1\npc ', ' req, 0 cut short, 0 unanswered, 0 damaged, 0 nak, 0 gone\nline 0 overruns, 0 framing errors\n% echo the end\nthe end\n% '],
+        '; echo copied $status\ncopied\n% ', '; cat /dev/serctl\nb9600\nx1\npc ', ' req, 0 cut short, 0 unanswered, 0 damaged, 0 nak, 0 gone\nline 0 overruns, 0 framing errors, 0 dropped\n% echo the end\nthe end\n% '],
       check(m) {
         const f = [];
         if (m.acia.xoffs < 5 || m.acia.xons < 5) f.push('the console told the terminal to stop ' + m.acia.xoffs + ' times, and to go on ' + m.acia.xons + ' (5 each at least, for 3,400 keys)');
+        if (String(m.pc.host.attach) !== '2,1') f.push('/pc\'s attach: ' + m.pc.host.attach + ' (2, the version, and 1: its frames stuff XON and XOFF)');
         if (m.acia.rxLost) f.push(m.acia.rxLost + ' bytes came while the last was unread');
         this.notes = ['XOFF ' + m.acia.xoffs + ' times, XON ' + m.acia.xons];
         return f;
@@ -2674,7 +2814,7 @@ module.exports = {
     },
     {
       name: 'scall', what: 'spike S3: calls into a driver\'s task, its errors, a busy driver, the round trip',
-      init: 't_scall', modules: ['t_child', 't_drv'], without: ['cons', 'storage', 'snd', 'gpio', 'vid'], cycles: 40e6,
+      init: 't_scall', modules: ['t_child', 't_drv'], without: ['cons', 'storage', 'snd', 'vid'], cycles: 40e6,
       budgets: [{ what: 'SCALL round trip (DBG_SCALL, less the same loop calling the code in place)', from: '<scall', to: 'scall>',
         minus: ['<base', 'base>'], per: 1000, max: 200 }],
     },
@@ -2761,7 +2901,7 @@ module.exports = {
       },
     },
     {
-      name: 'hywin', what: 'hylang as a window\'s shell: a card\'s /lib/shell naming /bin/hylang -l, init\'s in window 0 and wstart\'s in a window made (Ctrl-] c: $window, cons.hl\'s window)',
+      name: 'hywin', what: 'hylang as a window\'s shell: a card\'s /lib/shell naming /bin/hylang -l, init\'s in window 0 and in a window made (Ctrl-] c: $window, cons.hl\'s window)',
       init: 'init', cycles: 200e6,
       get machine() {
         return { sd: shellCard('/bin/hylang -l', 'shellhy'), input: '\u0101(+ 1 2)\r' + '\u0101echo $window\r' + '\u0101\x1dc' +
@@ -2792,7 +2932,7 @@ module.exports = {
       },
     },
     {
-      name: 'bawin', what: 'BASIC as a window\'s shell: a card\'s /lib/shell naming /bin/basic -l, init\'s in window 0 and wstart\'s in a window made (Ctrl-] c: $window, ENV$): the prompt, a BASIC line and an rc line in each',
+      name: 'bawin', what: 'BASIC as a window\'s shell: a card\'s /lib/shell naming /bin/basic -l, init\'s in window 0 and in a window made (Ctrl-] c: $window, ENV$): the prompt, a BASIC line and an rc line in each',
       init: 'init', cycles: 200e6,
       get machine() {
         return { sd: shellCard('/bin/basic -l', 'shellbas'), input: '\u0101? 1+2\r' + '\u0101echo $window\r' + '\u0101\x1dc' +
@@ -2837,7 +2977,7 @@ module.exports = {
     },
     {
       name: 'irq', what: 'spike S1: 115200 received by an irq entry while tasks spin',
-      init: 't_irq', modules: ['t_child'], without: ['cons', 'storage', 'snd', 'gpio', 'vid'], cycles: 30e6,
+      init: 't_irq', modules: ['t_child'], without: ['cons', 'storage', 'snd', 'vid'], cycles: 30e6,
       send: { after: 'ready>', bytes: Array.from({ length: S1_BYTES }, (_, i) => (3 + 7 * i) & 0xFF) },
       check(m) {
         const f = [], l = m.acia.rxLat, char = m.acia.charCycles();
@@ -3215,7 +3355,7 @@ module.exports = {
       },
     },
     {
-      name: 'tilesplit', what: 'splits (W7a): Ctrl-] s, a window with a shell (wstart\'s, HyForth) below in the group, rows; a Forth line there; Ctrl-] Up back to window 0, its wctl (two windows, each 80 x 11: the serial port\'s tiles, the smaller); Ctrl-] v, a third; the Vera X\'s screen read back: the bar, then window 0\'s tile\'s header',
+      name: 'tilesplit', what: 'splits (W7a): Ctrl-] s, a window with a shell (init\'s, HyForth) below in the group, rows; a Forth line there; Ctrl-] Up back to window 0, its wctl (two windows, each 80 x 11: the serial port\'s tiles, the smaller); Ctrl-] v, a third; the Vera X\'s screen read back: the bar, then window 0\'s tile\'s header',
       init: 'init', cycles: 600e6,
       get machine() {
         const L = '\u0100', W = L + L + L + L + L;
@@ -3251,7 +3391,7 @@ module.exports = {
       },
     },
     {
-      name: 'seats', what: 'seats (W8a: consctl\'s seats): the screen and the serial port each a seat; Ctrl-] c at the keyboard, a group of its own (wstart\'s shell) shown on the screen alone, sized to it, the serial port still showing window 0 (both marked in wctl); the keyboard\'s keys to it (its text read back from the serial port), its Ctrl-C a note to its shell, not window 0\'s; consctl reads terminal seats; both, one seat again (the screen showing window 0)',
+      name: 'seats', what: 'seats (W8a: consctl\'s seats): the screen and the serial port each a seat; Ctrl-] c at the keyboard, a group of its own (init\'s shell) shown on the screen alone, sized to it, the serial port still showing window 0 (both marked in wctl); the keyboard\'s keys to it (its text read back from the serial port), its Ctrl-C a note to its shell, not window 0\'s; consctl reads terminal seats; both, one seat again (the screen showing window 0)',
       init: 'init', cycles: 400e6,
       get machine() {
         const P = '\u0100', W = P + P + P, CRB = '\u033A\u021C\u03BA';   // (Ctrl down, ], Ctrl up: Ctrl-] at the keyboard)
@@ -3268,7 +3408,7 @@ module.exports = {
       },
     },
     {
-      name: 'winmouse', what: 'the mouse in the windows (W8b): the input program\'s reports (CSI < B ; X ; Y M and m) to a program that asks for them (?1000, ?1006: HyForth\'s ekey, keys vt), at its own cell; a click in a tile not focused (Ctrl-] s\'s rows: window 0\'s, above) focuses it; the wheel over a window that doesn\'t ask, its scrollback\'s view (Enter: its cursor\'s line into /dev/snarf, the view left); the PC terminal\'s reports from the serial port (the console\'s ?1000 and ?1006 sent it as its window asks), its tile\'s cell (row 3, its header row 1: the window\'s 2)',
+      name: 'winmouse', what: 'the mouse in the windows (W8b): the input controller\'s reports (kdev\'s) (CSI < B ; X ; Y M and m) to a program that asks for them (?1000, ?1006: HyForth\'s ekey, keys vt), at its own cell; a click in a tile not focused (Ctrl-] s\'s rows: window 0\'s, above) focuses it; the wheel over a window that doesn\'t ask, its scrollback\'s view (Enter: its cursor\'s line into /dev/snarf, the view left); the PC terminal\'s reports from the serial port (the console\'s ?1000 and ?1006 sent it as its window asks), its tile\'s cell (row 3, its header row 1: the window\'s 2)',
       init: 'init', cycles: 600e6,
       get machine() {
         const P = '\u0100', W = P + P + P, M = '\u0400';
@@ -3283,9 +3423,10 @@ module.exports = {
       expect: ['/> 20 t\n\x1b[?1000;1006h27 91 60 48 59 52 49 59 57 77 27 91 60 48 59 52 49 59 57 109 \x1b[?1000l\n',
         'cat /dev/wctl\n0 0 80 11\n1 0 80 11 *\n', 'cat /dev/wctl\n0 0 80 11 *\n1 0 80 11\n',
         '18 t\n\x1b[?1000;1006h', '27 91 60 48 59 53 59 50 77 27 91 60 48 59 53 59 50 109 \x1b[?1000l'],
-      // (/dev/snarf's line: the boot's task table's cons line, its CPU column the boot's own, then the prompt)
+      // (/dev/snarf's line: the boot's task table's cons line (its state 08: waiting for its own events, its
+      // init's loop), its CPU column the boot's own, then the prompt)
       check(m) {
-        const out = m.out.replace(/\r/g, ''), line = (out.match(/^F 04 01 FF [0-9A-F]{6} cons$/m) || [])[0];
+        const out = m.out.replace(/\r/g, ''), line = (out.match(/^F 08 01 FF [0-9A-F]{6} cons$/m) || [])[0];
         return line && out.includes(line + '\n/> ') ? [] : ['cat /dev/snarf: not the task table\'s cons line' + (line ? ' (' + line + ')' : '')];
       },
     },
@@ -3320,10 +3461,10 @@ module.exports = {
       },
     },
     {
-      name: 'mouse', what: 'the mouse (VIDEO.md step 6): vid\'s /mouse, /mousein and /mousectl (its state; /mouse\'s first read at once, Plan 9\'s 49 bytes; a non-blocking read\'s E_AGAIN; moves, the pointer\'s sprite at them, kept on the screen; swap; the buttons\' changes queued and read in turn; the pointer off and on; a write to /mouse; bad lines; a claim and its release; mode 40x30\'s size), then the input program on the emulator\'s SMC: a move, a click and the wheel from its PS/2 packets',
+      name: 'mouse', what: 'the mouse (VIDEO.md step 6): vid\'s /mouse, /mousein and /mousectl (its state; /mouse\'s first read at once, Plan 9\'s 49 bytes; a non-blocking read\'s E_AGAIN; moves, the pointer\'s sprite at them, kept on the screen; swap; the buttons\' changes queued and read in turn; the pointer off and on; a write to /mouse; bad lines; a claim and its release; mode 40x30\'s size), then the input controller (kdev\'s, on the emulator\'s SMC): a move, a click and the wheel from its PS/2 packets',
       init: 't_mouse', cycles: 45e6,
       // (The SMC's mouse: a move, then the left button pressed and let go, then the wheel up, each 2M cycles apart,
-      // from 12M cycles on: by then the input program has asked for the mouse's mode and read it)
+      // from 12M cycles on: by then kdev has asked for the mouse's mode and read it)
       machine: { vera: true, smc: { moves: [[30, 20, 0], [0, 0, 1], [0, 0, 0], [0, 0, 0, -1]] },
         input: '\u0102' + '\u0100'.repeat(6) + '\u0400\u0100\u0400\u0100\u0400\u0100\u0400\u0103' },
       check(m) {
@@ -3335,7 +3476,7 @@ module.exports = {
       },
     },
     {
-      name: 'kbd', what: 'the keyboard (VIDEO.md step 6): init\'s input program, the emulator\'s SMC typed at, the keys into the console (#c/kbin) as a PC terminal sends them, at the login shell (HyForth): Shift and punctuation; Left to edit a line; Up, its history; Caps Lock; the keypad\'s digits, and its cursor keys with Num Lock off; Ctrl-C, a note to the window\'s shell; the keyboard\'s LEDs following the locks',
+      name: 'kbd', what: 'the keyboard (VIDEO.md step 6): the input controller (kdev\'s), the emulator\'s SMC typed at, the keys into the console (#c/kbin) as a PC terminal sends them, at the login shell (HyForth): Shift and punctuation; Left to edit a line; Up, its history; Caps Lock; the keypad\'s digits, and its cursor keys with Num Lock off; Ctrl-C, a note to the window\'s shell; the keyboard\'s LEDs following the locks',
       init: 'init', cycles: 120e6,
       get machine() {
         const tap = n => String.fromCharCode(0x200 + n), W = '\u0101';  // (smc.js's key n pressed and let go; a prompt)
@@ -3397,6 +3538,9 @@ module.exports = {
         const f = [], n = out.split(RAMW_TEXT).length - 1;
         if (n !== 3) f.push('the file as written, read back ' + n + ' times (3 wanted: /ram, /sram, the card)');
         for (const p of ['/ram/n', '/sd/0/n']) if (!new RegExp('-rw\\S*\\s.*\\b1600\\b.*' + p).test(out.replace(/\r/g, ''))) f.push(p + ' isn\'t 1600 bytes long');
+        // (A write past a file's end: the file that long, with a hole.  A RAM disk's clusters aren't a card's 4K: its
+        // file came out too long, and the write failed, end of file)
+        for (const p of ['/ram/h', '/sram/h', '/sd/0/h']) if (!new RegExp('-rw\\S*\\s.*\\b3001\\b.*' + p).test(out.replace(/\r/g, ''))) f.push(p + ', written at 3000 past its 2 bytes, isn\'t 3001 bytes long');
         this.card.save();
         const raw = fs.readFileSync(this.card.file, 'latin1');
         if (!raw.includes('then synced')) f.push('the card: a block synced, not on it');

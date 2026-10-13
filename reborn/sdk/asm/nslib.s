@@ -1,9 +1,11 @@
 ; ****************************************************************************
 ; nslib.s - a task's default namespace, as Plan 9's newns makes it: included at the end of a program's source (as
 ; srvlib.s is), for init and the shells.  ns_default builds it in the calling task's own namespace (its children
-; share it, as SPAWN gives it them):
+; share it, as SPAWN gives it them), emptied first (UNMOUNT of everything), so it's the same however often it's built:
 ;   1. its own area of the RAM disk, r/N (N: its task, in decimal), made, and emptied if a task before it with that
-;      number left one there (#fr/N: the RAM disk's own name), with bin and lib in it (its caches)
+;      number left one there (#fr/N: the RAM disk's own name), with bin and lib in it (its caches).  An area that's
+;      the task's /ram already (the namespace built again: a shell's newns, the shell init EXECs) is its own, and
+;      kept: /ram, as it was before the namespace was emptied, and #fr/N are the same file (their stat records)
 ;   2. the namespace file, /rom/lib/namespace (read from the ROM disk: #fx/lib/namespace), then a card's
 ;      (/sd/0/lib/namespace), if it has one: with $task as N, its own area is its /ram
 ; A namespace file: a line a command, its words separated by spaces or tabs; '...' quotes a word ('' in it: a ');
@@ -63,6 +65,17 @@ ns_msg      = ns_rec + SR_SIZE
 ; This task's default namespace: its RAM disk area, then the ROM's namespace file and a card's.  OUT: C = 0; or
 ; C = 1, .A = the error opening /rom/lib/namespace (none run: the caller's fallback)
 ns_default:
+            LDR         r0, ns_s_ram                        ; What's at /ram now, its stat record kept (ns_wbuf: no
+            LDR         r1, ns_wbuf                         ;   line's words yet) for ns_area: none, no device
+            jsr         STAT
+            bcc         :+
+            stz         ns_wbuf + SR_DEV
+:
+            stz         r0                                  ; From an empty one (UNMOUNT of everything): built twice,
+            stz         r0 + 1                              ;   it's the same, and a shell init EXECs starts from its
+            stz         r1
+            stz         r1 + 1
+            jsr         UNMOUNT
             jsr         GETPID
             sta         ns_task
             jsr         ns_area
@@ -235,13 +248,9 @@ ns_word:
             lda         #0
             jmp         ns_put
 
-; .A = the byte at ns_p, Z = 1 at the line's end (an LF, a CR, a 0, or the file's).  Keeps .X, .Y
+; .A = the byte at ns_p, Z = 1 at the line's end (an LF, a CR, a 0, or the file's: the 0 ns_file put after it,
+; which ns_p never passes).  Keeps .X, .Y
 ns_peek:
-            lda         ns_p
-            cmp         ns_end
-            lda         ns_p + 1
-            sbc         ns_end + 1
-            bcs         @eol
             lda         (ns_p)
             beq         @eol
             cmp         #LF
@@ -463,8 +472,10 @@ ns_said:
             jmp         PUTS
 
 ; ****************************************************************************
-; This task's own area of the RAM disk: #fr/N made, emptied first if a task before it with that number left it.
-; No RAM disk (or no room): no area, and nothing said (the namespace's /ram is then nothing)
+; This task's own area of the RAM disk: #fr/N made, emptied first if a task before it with that number left it:
+; not if it's what ns_default found at /ram (ns_wbuf: the same qid, mode, length, time, device and instance), this
+; task's own already, its files its user's.  No RAM disk (or no room): no area, and nothing said (the namespace's
+; /ram is then nothing)
 ns_area:
             ldx         #0                                  ; ns_path = "#fr/N"
 :
@@ -491,7 +502,22 @@ ns_area:
             stz         ns_path,X
             stx         ns_len
             stz         ns_d
+            jsr         ns_r0                               ; The area as it is: /ram's file (ns_default saw it
+            LDR         r1, ns_rec                          ;   there)?  This task's own: kept
+            jsr         STAT
+            bcs         @empty
+            ldy         #SR_INST - SR_QTYPE
+:
+            lda         ns_rec + SR_QTYPE,Y
+            cmp         ns_wbuf + SR_QTYPE,Y
+            bne         @empty
+            dey
+            bpl         :-
+            bra         @made
+
+@empty:
             jsr         ns_empty                            ; (One left there: emptied)
+@made:
             jsr         ns_mkdir                            ; Made (there already: as it is) ...
             ldx         #0                                  ;   and its bin and lib
             jsr         @in
@@ -512,9 +538,14 @@ ns_area:
             stz         ns_path,X
             rts
 
+; r0 = ns_path.  Modifies: .A
+ns_r0:
+            LDR         r0, ns_path
+            rts
+
 ; Make the directory ns_path (there already: as it is).  Modifies: .A, .X, .Y, r0
 ns_mkdir:
-            LDR         r0, ns_path
+            jsr         ns_r0
             lda         #O_READ
             ldx         #DM_DIR
             jsr         CREATE
@@ -527,7 +558,7 @@ ns_mkdir:
 ; file removed, a directory emptied then removed.  An error, or too deep: it stops
 ns_empty:
 @entry:
-            LDR         r0, ns_path
+            jsr         ns_r0
             lda         #O_READ
             jsr         OPEN
             bcs         @done                               ; (Not there: nothing to empty)
@@ -574,7 +605,7 @@ ns_empty:
             sta         ns_len
             dec         ns_d
 @remove:
-            LDR         r0, ns_path
+            jsr         ns_r0
             jsr         REMOVE
             php
             ldx         ns_len                              ; (ns_path as it was)
@@ -593,6 +624,7 @@ ns_empty:
 ns_s_rom:   .byte       "#fx/lib/namespace", 0
 ns_s_card:  .byte       "/sd/0/lib/namespace", 0
 ns_s_area:  .byte       "#fr/", 0
+ns_s_ram:   .byte       "/ram", 0
 ns_s_task:  .byte       "task"
 ns_s_bin:   .byte       "bin", 0
 ns_s_lib:   .byte       "lib", 0

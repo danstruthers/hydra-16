@@ -103,8 +103,8 @@ isn't round!) Each one is part of the tree:
 /> df
 disk  kind   size        free        label
 0     sdhc   16380 KB    15956 KB    HYDRA-16
-x     rom    623 KB      10 KB       ROM
-r     ram    255 KB      252 KB      RAM
+x     rom    623 KB      11 KB       ROM
+r     ram    255 KB      253 KB      RAM
 s     sram   511 KB      510 KB      SRAM
 ```
 
@@ -135,8 +135,8 @@ HydraFS. Here are the Hydra's devices:
 | `#n` | kdev | `null`, `zero` and `kmesg` | `/dev` |
 | `#t` | kdev | `ticks`, `time` and `rtc`: the clock | `/dev` |
 | `#a` | snd | The sound chips: `snd`, `sndctl`, `bell`, `psg` | `/dev` |
-| `#g` | gpio | The I/O header J27's pins | `/dev/gpio` |
-| `#i` | gpio | The I²C bus's devices | `/dev/i2c` |
+| `#g` | kdev | The I/O header J27's pins | `/dev/gpio` |
+| `#i` | kdev | The I²C bus's devices | `/dev/i2c` |
 | `#v` | vid | The Vera X's screen | `/dev/vid` |
 | `#d` | storage | The disks' raw data, and their control files | `/dev/sd` |
 | `#S` | storage | The SPI devices | `/dev/spi` |
@@ -308,19 +308,19 @@ bind '#p' /proc
 bind '#f' /sd
 mount '#f' /rom x
 mount '#f' /sram s
-mount -c '#f' /ram r/2
-bind -c '#fr/2/bin' /bin
+mount -c '#f' /ram r/1
+bind -c '#fr/1/bin' /bin
 bind -a '#fs/bin' /bin
 bind -a '#fx/bin' /bin
 bind -a '#m/bin' /bin
-bind -c '#fr/2/lib' /lib
+bind -c '#fr/1/lib' /lib
 bind -a '#fs/lib' /lib
 bind -a '#fx/lib' /lib
 bind '#P' /pc
 ```
 
 It looks a little different from the namespace file: `ns` shows each part of the tree by its device's own name,
-like `'#fr/2/bin'` (directory `2/bin` of HydraFS disk `r`). The SD card's lines aren't there, because this card
+like `'#fr/1/bin'` (directory `1/bin` of HydraFS disk `r`). The SD card's lines aren't there, because this card
 has no `bin` or `lib` directory. And the `/dev` directory starts with `#/dev`, which gives it its subdirectories:
 `gpio`, `i2c`, `mod`, `sd`, `seg`, `spi` and `vid`.
 
@@ -349,6 +349,10 @@ Hydra at `/pc`. You can copy files to and from it, and run programs from it, jus
 The files travel over the serial port, mixed in with the console's text (the PC tool takes them out, so you won't
 see them). They go no faster than the serial port allows, so switch to 115200 baud (section 5.5) before you copy
 big files. The PC tool's `--read-only` option stops the Hydra changing the folder's files.
+
+The PC tool can be given an SD card's image file in place of a folder (section 5.2). Then `/pc` is the card in the
+image, and everything works the same way, except that a directory's files are listed in the card's own order, as
+they are on `/sd`, and not sorted by name.
 
 Without the PC tool, the Hydra waits a second for an answer from the PC, then gives up:
 

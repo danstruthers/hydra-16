@@ -27,7 +27,7 @@ window's at `/dev`. A few files are the whole console's, the same in every windo
 | `snarf` | The console's | The snarf buffer: the console's clipboard |
 | `ser` | The console's | The serial port itself, byte by byte (section 13.6) |
 | `serctl` | The console's | The serial port's speed |
-| `kbin` | The console's | The Vera X keyboard's keys, from the `input` program (Chapter 16) |
+| `kbin` | The console's | The Vera X keyboard's keys, from the `kdev` driver (Chapter 16) |
 
 ## 13.2 Reading lines
 
@@ -107,7 +107,7 @@ Reading `consctl` shows the window's settings, its number and its size:
 rawoff
 keys hydra
 scroll smooth
-group 2
+group 1
 window 0
 size 80 24
 terminal serial
@@ -164,7 +164,8 @@ port itself:
 * `serctl` sets the port's speed and its flow control. Writing a speed changes it at once (so change your
   terminal's speed too); reading shows both settings, a line each, and then two lines of counts that help when the
   line is unreliable: `/pc`'s requests and how many had to be asked again (and why), and the serial chip's overruns
-  (a byte came before the last was taken) and framing errors (noise, or a speed that doesn't match).
+  (a byte came before the last was taken), framing errors (noise, or a speed that doesn't match) and bytes dropped
+  (they came when 255 were already waiting to be read).
 
 | Command | Speed | Really |
 |---|---|---|
@@ -195,7 +196,7 @@ that's set to *XON/XOFF* stops sending between the two, so nothing is lost, howe
 b9600
 x1
 pc 0 req, 0 cut short, 0 unanswered, 0 damaged, 0 nak, 0 gone
-line 0 overruns, 0 framing errors
+line 0 overruns, 0 framing errors, 0 dropped
 ```
 
 Three things to know about it:
@@ -385,7 +386,7 @@ A program can ask the terminal things; the console answers into the program's ke
 
 ## 13.8 /pc
 
-`cons` also serves `/pc`, device `#P`, a folder on the PC (section 9.9). Its requests and the PC tool's replies go
-over the serial port as **frames**, mixed in with the text; each frame starts with the byte $1E, and has a check
-number (a CRC) at its end, so a damaged frame is sent again. The PC tool takes the frames out, so you never see
-them.
+`cons` also serves `/pc`, device `#P`, a folder on the PC, or a card's image there (section 9.9). Its requests and
+the PC tool's replies go over the serial port as **frames**, mixed in with the text; each frame starts with the
+byte $1E, and has a check number (a CRC) at its end, so a damaged frame is sent again. The PC tool takes the frames
+out, so you never see them.

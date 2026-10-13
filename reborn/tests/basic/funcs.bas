@@ -62,6 +62,9 @@ ck RND(0), r, "RND(0) the last"
 RANDOMIZE 7: a = RND: b = RND
 RANDOMIZE 7: ck RND, a, "RANDOMIZE again"
 ck RND, b, "RANDOMIZE's next"
+ck 1 + RND(-5) > 1, -1, "RND(-n) in an expression: what's before it kept"
+ck RND(-5) = RND(-5), -1, "RND(-n) twice: the same seed, the same number"
+ck 2 = RND(-5), 0, "a number = RND(-n)"
 ' Fractions, fixed decimals
 ck FIXED(1 / 3, 4), 0.3333, "FIXED"
 ck RATIONAL(0.75), 3 / 4, "RATIONAL"

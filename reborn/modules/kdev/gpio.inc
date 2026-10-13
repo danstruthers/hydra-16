@@ -1,7 +1,9 @@
 ; ****************************************************************************
-; gpio - the VIA's port A on header J27 (docs/design/reimplementation-from-scratch.md, §14.3 and §14.5), on srvlib: its pins
-; and handshake lines as #g, and the I2C bus on two of them (PA0 SCL, PA1 SDA, pulled up on the board) as #i.  One
-; driver for both, so their changes to port A never meet (a boot driver: task B).
+; gpio.inc - the VIA's port A on header J27 (docs/design/reimplementation-from-scratch.md, §14.3 and §14.5), on srvlib: its
+; pins and handshake lines as #g, and the I2C bus on two of them (PA0 SCL, PA1 SDA, pulled up on the board) as #i.  One
+; driver for both, so their changes to port A never meet: kdev (kdevx.inc includes this, in a scope of its own, gpio:
+; it was a driver of its own, and took a task).  The input controller on the bus (input.inc) uses i2c_put and
+; i2c_get here, not #i's files.
 ; #g (at /dev/gpio):
 ;   /0 ... /7   a pin: reads as 0 or 1 (its level) and an LF; a write of 0 or 1 sets it, the pin an output
 ;   /port       all 8 pins, a byte (offset 0); a write of a byte sets the outputs' levels (the inputs keep theirs)
@@ -24,18 +26,6 @@
 ;               1 or 2).  It reads as them
 ; Each change to port A's registers is a read-modify-write in this task alone; the kernel's IRQ path reads the
 ; VIA's IFR and IER but never port A.
-
-.include "hydra.inc"
-.include "hw.inc"
-.include "hyx2.inc"
-.include "macros.inc"
-.include "srvlib.inc"
-
-            HYX2_DRIVER "gpio", init, srv_serve, irq, 0, HF_BOOT
-
-SRV_OPENED      = opened                                    ; (srvlib: a fid made: a /ca1's counted ...
-SRV_CLUNKED     = clunked                                   ;   and forgotten)
-SRV_STAT        = stat                                      ;   (/port's length: 1)
 
 SCL             = $01           ; PA0
 SDA             = $02           ; PA1
@@ -68,32 +58,19 @@ iobuf:      .res        IOBUF
 
 .code
 
-; Its init: CA1 falling, CA2 an input; the I2C bus at about 40 kHz, no subaddress; its two device letters
+; Its init: CA1 falling, CA2 an input; the I2C bus at about 40 kHz, no subaddress (its two device letters: kdev's
+; init's, with its own).  OUT: C = 0
 init:
             stz         edges                               ; (Its zero page isn't cleared: its BSS is)
             stz         edges + 1
+            stz         ca1_fids
             lda         VIA_PCR                             ; (CB1, CB2: the upper half, left as they are)
             and         #$F0
             sta         VIA_PCR
             lda         #40
             jsr         speed_set
             stz         subw
-            ldx         #0
-@letter:
-            lda         SRV_TREES,X
-            beq         @done
-            phx
-            jsr         SRV_REGISTER
-            plx
-            bcs         @failed
-            inx
-            inx
-            inx
-            bra         @letter
-
-@done:
             clc
-@failed:
             rts
 
 ; The irq entry: CA1's active edge (LINE_VIA_CA1): its flag cleared, the edge counted, the readers waiting told.
@@ -815,6 +792,79 @@ h_dev:
             clc
             rts
 
+; iobuf's first .Y bytes written to the device at address .A, no register first (the input controller's commands).
+; OUT: C = 0; or C = 1, .A = E_IO (it didn't answer)
+i2c_put:
+            sta         addr
+            sty         cnt
+            jsr         bus_ready
+            bcs         @io
+            jsr         start
+            bcs         @io
+            lda         addr
+            asl
+            jsr         send
+            bcs         @fail
+            ldy         #0
+:
+            cpy         cnt
+            beq         :+
+            lda         iobuf,Y
+            phy
+            jsr         send
+            ply
+            bcs         @fail
+            iny
+            bra         :-
+:
+            jsr         stop
+            clc
+            rts
+
+@fail:
+            pha
+            jsr         stop
+            pla
+@io:
+            sec
+            rts
+
+; .Y bytes (1 or more) read from the device at address .A into iobuf, no register first.  OUT: as i2c_put's
+i2c_get:
+            sta         addr
+            sty         cnt
+            jsr         bus_ready
+            bcs         @io
+            jsr         start
+            bcs         @io
+            lda         addr
+            asl
+            ora         #1
+            jsr         send
+            bcs         @fail
+            ldy         #0
+:
+            phy
+            iny
+            cpy         cnt                                 ; (C = 1: the last)
+            jsr         receive
+            ply
+            sta         iobuf,Y
+            iny
+            cpy         cnt
+            bne         :-
+            jsr         stop
+            clc
+            rts
+
+@fail:
+            pha
+            jsr         stop
+            pla
+@io:
+            sec
+            rts
+
 ; cnt: the request's bytes, IOBUF at most
 part:
             lda         #IOBUF
@@ -1115,12 +1165,6 @@ gen_i2c:
 bit_of:     .byte       $01, $02, $04, $08, $10, $20, $40, $80
 hex:        .byte       "0123456789abcdef"
 
-SRV_TREES:
-            .byte       'g'
-            .word       tree_gpio
-            .byte       'i'
-            .word       tree_i2c
-            .byte       0
 tree_gpio:
             SRV_ENTRY   s_slash,   $FF, SK_DIR,  0,         SM_READ,            0      ; 0
             SRV_ENTRY   s_0,       0,   SK_DATA, h_pin,     SM_READ | SM_WRITE, 0      ; 1 (E_PIN): 0
@@ -1178,4 +1222,3 @@ s_subaddr:  .byte       "subaddress ", 0
 s_ca1_st:   .byte       "ca1 ", 0
 s_ca2_st:   .byte       "ca2 ", 0
 
-.include "srvlib.s"

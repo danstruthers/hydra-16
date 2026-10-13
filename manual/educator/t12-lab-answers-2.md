@@ -13,11 +13,13 @@ I²C bus, the SPI devices, the disks and the Vera X's screen.
 /> cat /dev/serctl
 b9600
 x1
+pc 0 req, 0 cut short, 0 unanswered, 0 damaged, 0 nak, 0 gone
+line 0 overruns, 0 framing errors, 0 dropped
 /> cat /dev/consctl
 rawoff
 keys hydra
 scroll smooth
-group 2
+group 1
 window 0
 size 80 24
 terminal serial
@@ -103,12 +105,12 @@ free 15956 KB of 16380 KB
 /> cat /dev/sd/x/ctl
 rom 4 MB 8192 blocks
 hydrafs label=ROM
-partition at block 992
-free 10 KB of 623 KB
+partition at block 1024
+free 11 KB of 623 KB
 /> cat /dev/sd/r/ctl
 ram 256 KB 512 blocks
 hydrafs label=RAM
-free 252 KB of 255 KB
+free 253 KB of 255 KB
 banks $00-$1f
 /> cat /dev/sd/s/ctl
 sram 512 KB 1024 blocks
@@ -138,8 +140,8 @@ rc: /rom/test: read-only
 /> df
 disk  kind   size        free        label
 0     sdhc   16380 KB    15956 KB    HYDRA-16
-x     rom    623 KB      10 KB       ROM
-r     ram    255 KB      252 KB      RAM
+x     rom    623 KB      11 KB       ROM
+r     ram    255 KB      253 KB      RAM
 s     sram   511 KB      510 KB      SRAM
 /> echo x >/sd/0/tiny
 /> ls -l /sd/0/tiny
@@ -147,8 +149,8 @@ s     sram   511 KB      510 KB      SRAM
 /> df
 disk  kind   size        free        label
 0     sdhc   16380 KB    15952 KB    HYDRA-16
-x     rom    623 KB      10 KB       ROM
-r     ram    255 KB      252 KB      RAM
+x     rom    623 KB      11 KB       ROM
+r     ram    255 KB      253 KB      RAM
 s     sram   511 KB      510 KB      SRAM
 ```
 
@@ -167,10 +169,10 @@ segment 15
 ```session
 /> du /sd/0/sample
 14      /sd/0/sample/as
-186     /sd/0/sample/c
-206     /sd/0/sample
+188     /sd/0/sample/c
+208     /sd/0/sample
 /> du /rom/bin
-228     /rom/bin
+224     /rom/bin
 ```
 
 **6.** `HYDRA-16`, on the sample card.
@@ -201,8 +203,8 @@ shared  1024 KB, 0 KB in segments (0), 1024 KB free
 /> df
 disk  kind   size        free        label
 0     sdhc   16380 KB    15956 KB    HYDRA-16
-x     rom    623 KB      10 KB       ROM
-r     ram    255 KB      252 KB      RAM
+x     rom    623 KB      11 KB       ROM
+r     ram    255 KB      253 KB      RAM
 s     sram   127 KB      127 KB      SRAM
 /> free
 ram     384 KB a task (3 modules)
@@ -341,13 +343,13 @@ wired this way round because a VIA pin can take in much more current than it can
 **6.** On the manual's Hydra:
 
 ```session
-/> cat /proc/2/status
-forth wait 1 66 2
-/> cat /proc/2/fd
+/> cat /proc/1/status
+forth wait - 89 1
+/> cat /proc/1/fd
 /
-0 rw #c 391 #c/cons
-1 rw #c 391 #c/cons
-2 rw #c 391 #c/cons
+0 rw #c 367 #c/cons
+1 rw #c 367 #c/cons
+2 rw #c 367 #c/cons
 ```
 
 `status` is the task's name, its state, its parent, the processor time it's had (in ticks), and its note
@@ -361,6 +363,7 @@ keyboard and screen, as files 0, 1 and 2.
 prompt
 path
 task
+prog
 /> cat /env/path
 ./bin/>
 ```
@@ -403,16 +406,13 @@ Without a real Hydra, the task names:
 
 ```session
 % for(t in /proc/*) cat $t/status
-kernel ready - 469 0
-init wait - 33 1
-gpio idle - 4 11
-snd idle - 5 12
-kdev ready - 43 13
-storage idle - 328 14
-cons idle - 116 15
-forth wait 1 64 2
-wstart event 1 4 1
-rc wait 2 28 2
+kernel ready - 480 0
+forth wait - 87 1
+snd idle - 4 12
+kdev ready - 42 13
+storage idle - 296 14
+cons event - 103 15
+rc wait 1 30 1
 ```
 
 ## Lab 15. Numbers and Bases

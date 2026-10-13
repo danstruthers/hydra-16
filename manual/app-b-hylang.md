@@ -238,7 +238,7 @@ hylang> (val "2/3")
 |---|---|
 | `(+ s x ...)` | The values joined, as `print` shows them |
 | `(substring s i [n])`, `(char-at s i)` | Part of a string; a character |
-| `(index-of s sub)`, `(last-index-of s sub)` | Where *sub* first, last, is (or `NIL`) |
+| `(index-of s sub)`, `(last-index-of s sub)` | Where *sub* first, last, is (or -1) |
 | `(str-split s [sep])`, `(str-join l [sep])`, `(str-chars s)` | Split; join; its characters |
 | `(str-upper s)`, `(str-lower s)`, `(str-trim s)` | Capitals; small letters; trimmed |
 | `(str-replace s old new)`, `(str-repeat s n)` | Replaced; repeated |
@@ -286,8 +286,8 @@ hylang> (read "(+ 1 2)")
 
 ## B.6 Types
 
-`(type-of x)` gives `:number`, `:string`, `:char`, `:atom`, `:symbol`, `:function`, `:error`, `:t`, `:list`, `:sexpr`
-or `:hash`. And each kind has a test: `t?`, `nil?`, `num?`, `int?`, `fixed?`, `rational?`, `complex?`, `atom?`,
+`(type-of x)` gives `:number`, `:string`, `:char`, `:atom`, `:symbol`, `:function`, `:error`, `:t`, `:list`, `:sexpr`,
+`:hash`, `:buffer` or `:stream`. And each kind has a test: `t?`, `nil?`, `num?`, `int?`, `fixed?`, `rational?`, `complex?`, `atom?`,
 `symbol?`, `string?`, `char?`, `function?`, `error?`, `qexpr?`, `sexpr?`.
 
 For example:
@@ -502,7 +502,7 @@ hylang> (platform)
 hylang> (hex (peek-word 65532) 4)
 => "E000"
 hylang> (sys-getpid)
-=> 4
+=> 2
 ```
 
 ## B.12 The library

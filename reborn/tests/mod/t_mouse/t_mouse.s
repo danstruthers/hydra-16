@@ -232,13 +232,7 @@ main:
             TO          vc, "mode 80x60"
             TO          mi, "m 0 0 0"
             jsr         read_ms
-            lda         #0                                  ; ---- The input program, on the SMC's mouse
-            LDR         r0, s_input
-            stz         r1
-            stz         r1 + 1
-            lda         #SPAWN_NEWGROUP
-            jsr         SPAWN
-            EXPECT_OK   "the input program started"
+                                                            ; ---- The input controller (kdev's), on the SMC's mouse
             lda         #'0'                                ; (The script's: a move of 30, 20, a click, the wheel up;
             sta         seen_last                           ;   the last read's buttons 0)
             ldx         #0
@@ -406,7 +400,6 @@ s_mousein:  .byte       "#v/mousein", 0
 s_mousectl: .byte       "#v/mousectl", 0
 s_ctl:      .byte       "#v/ctl", 0
 s_sprites:  .byte       "#v/sprites", 0
-s_input:    .byte       "#fx/bin/input", 0
 s_mc0:      .byte       "pointer on", LF, "swap off", LF, 0
 s_m0:       .byte       "m        320         240           0           0 ", 0
 s_m1:       .byte       "m        330         235           1 ", 0

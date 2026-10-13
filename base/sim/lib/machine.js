@@ -71,7 +71,12 @@ function createMachine(opt) {
   const acia = createAcia({ clock: opt.clock, wdc: opt.acia === 'wdc', paste: opt.paste, flow: opt.flow, flowLag: opt.flowLag, input: opt.input, consoleOnly: !!opt.pcHost,
     keyboard: smc ? c => smc.type(c) : null,
     onTx: (v, t) => { for (const b of opt.pcHost ? opt.pcHost.push(v, t) : [v]) out(b, t); } });
-  function out(v, t) { if (opt.pcHost) acia.shown(v, t); m.out += String.fromCharCode(v); for (const k of opt.marks || []) if (m.out.endsWith(k)) log('mark: ' + JSON.stringify(k) + ' at cycle ' + t); }
+  function out(v, t) {
+    if (opt.pcHost) acia.shown(v, t); m.out += String.fromCharCode(v); for (const k of opt.marks || []) if (m.out.endsWith(k)) log('mark: ' + JSON.stringify(k) + ' at cycle ' + t);
+    // (opt.termSize: [rows, columns]: the terminal answers the size asked, ESC [ 18 t, at once and at the line's rate,
+    // as the PC tool does: ESC [ 8 ; rows ; columns t)
+    if (opt.termSize && v === 0x74 && m.out.endsWith('\x1b[18t')) acia.send([...('\x1b[8;' + opt.termSize[0] + ';' + opt.termSize[1] + 't')].map(c => c.charCodeAt(0)));
+  }
   if (opt.pcHost) opt.pcHost.send = bytes => acia.send(bytes);   // (The PC's replies: on the line, at its rate)
   const spi = createSpi(opt.sd || [], opt.spiEcho || []);
   const i2c = opt.i2c || smc ? createI2c({ devices: Object.assign({}, opt.i2c, smc ? { 0x42: smc } : {}) }) : null;   // (opt.i2c: { address: size }, memories)

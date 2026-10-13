@@ -447,10 +447,13 @@ in a column four characters wide, so the columns line up, and the `;` at the end
 > 70 LOOP UNTIL A = B
 > 80 PRINT "A double, after"; THROWS; "throws."
 > RUN
- 1  2
- 1  3
- 4  4
-A double, after 3 throws.
+ 2  4
+ 4  3
+ 4  1
+ 6  1
+ 1  5
+ 2  2
+A double, after 6 throws.
 ```
 
 (Yours will fall differently.)

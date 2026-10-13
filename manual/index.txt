@@ -11,6 +11,7 @@ copying a file: 6.6
 `CTRL`-`D` (the end of your typing): 6.4
 date and time, setting: 17.5
 flow control (XON/XOFF): 5.2, 13.6
+image file as `/pc`: 2.5, 5.2
 pasting text into the Hydra: 2.1, 13.2, 13.6
 deleting a file: 6.6
 directories, making: 6.6

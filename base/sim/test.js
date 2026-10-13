@@ -125,6 +125,7 @@ function judge(t, m, marks, pc, status) {
   const ioff = m.iOffTop[0];
   if (ioff) budgets.push({ what: 'longest IRQs-off stretch (' + ioff[1] + ' - ' + ioff[2] + ')', value: ioff[0], max: env.IRQ_OFF_MAX, total: true });
   if (ioff && ioff[0] > env.IRQ_OFF_MAX) failures.push('IRQs off for ' + ioff[0] + ' cycles at ' + ioff[1] + ' - ' + ioff[2] + ' (budget ' + env.IRQ_OFF_MAX + ')');
+  if (m.acia.txLost) failures.push(m.acia.txLost + ' byte(s) lost on the WDC ACIA: written while one was going and another waiting (two writers, or the pacing)');
   if (t.check) failures.push(...t.check(m, out));
   const notes = [...(t.notes || []), ...(pc ? [pc.host.report() + '; ' + m.acia.pcLost + ' reply byte(s) lost'] : [])];
   return { m, out, lines, failures, budgets, notes };

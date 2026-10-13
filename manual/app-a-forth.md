@@ -593,7 +593,7 @@ hi
 one two
 0
 /> sys-getpid .
-2
+1
 /> -514 ior>text type cr
 invalid argument
 ```
@@ -698,9 +698,9 @@ For example:
 8
 /> lib random
 /> 6 random 1+ .
-3
+2
 /> 6 random 1+ .
-5
+4
 ```
 
 ## A.17 The device libraries

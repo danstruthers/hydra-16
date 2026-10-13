@@ -53,8 +53,8 @@
 
 ```text
 /> ps
-/> cat /proc/2/status
-/> cat /proc/2/fd
+/> cat /proc/1/status
+/> cat /proc/1/fd
 ```
 
    ✎ What does `status` tell you? What are the files your shell has open (`fd`)?

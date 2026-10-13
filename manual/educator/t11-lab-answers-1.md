@@ -84,7 +84,7 @@ are on a browser that clears its storage.)
 **5.** As it comes: a Vera X card in slot 0, without its keyboard and mouse; a clock chip; three RAM modules; the
 sample SD card in reader 0, and no card in the Vera X's own slot.
 
-**6.** With the Vera X, `ps` has one more line: task 10, `vid`, the screen's driver. Without a Vera X, `vid` starts,
+**6.** With the Vera X, `ps` has one more line: task 11, `vid`, the screen's driver. Without a Vera X, `vid` starts,
 finds nothing to drive, and ends.
 
 **Questions.**
@@ -225,25 +225,20 @@ RAM modules: 03
 /> ps
 task  state   parent     cpu group  name
    0  ready   -          1.6     0  kernel
-   1  wait    -          0.1     1  init
-   2  wait     1         0.3     2  forth
-   3  event    1         0.0     1  wstart
-   4  ready    2         0.0     2  ps
-  11  idle    -          0.0    11  gpio
+   1  wait    -          0.4     1  forth
+   2  ready    1         0.0     1  ps
   12  idle    -          0.0    12  snd
   13  idle    -          0.1    13  kdev
-  14  idle    -          1.6    14  storage
-  15  idle    -          0.5    15  cons
+  14  idle    -          1.4    14  storage
+  15  event   -          0.5    15  cons
 ```
 
 | Task | Name | What it's for |
 |---|---|---|
 | 0 | `kernel` | The kernel's own task: it also runs when nothing else can |
-| 1 | `init` | Set the system up, and now keeps the shell running |
-| 2 | `forth` | The shell you're typing at |
-| 3 | `wstart` | Waits to open a new window when you ask |
-| 4 | `ps` | The command itself |
-| 11 to 15 | `gpio`, `snd`, `kdev`, `storage`, `cons` | The drivers: the pins, the sound, the kernel's devices, the disks, the console |
+| 1 | `forth` | The shell you're typing at. (`init` set the system up in this task, then became the shell: no task is kept only to wait) |
+| 2 | `ps` | The command itself |
+| 12 to 15 | `snd`, `kdev`, `storage`, `cons` | The drivers: the sound, the kernel's devices (and the pins), the disks, the console |
 
 **3.** `ps` is a program, so while it runs, it's a task: it lists itself. When it finishes, its task is free
 again, for the next program that starts.
@@ -253,7 +248,7 @@ again, for the next program that starts.
 <!-- session-script
 sleep 60 &
 ps
-kill 4
+kill 2
 ps
 -->
 
@@ -262,32 +257,26 @@ ps
 /> ps
 task  state   parent     cpu group  name
    0  ready   -          2.1     0  kernel
-   1  wait    -          0.1     1  init
-   2  wait     1         0.3     2  forth
-   3  event    1         0.0     1  wstart
-   4  sleep    2         0.0     4  sleep
-   5  ready    2         0.0     2  ps
-  11  idle    -          0.0    11  gpio
+   1  wait    -          0.4     1  forth
+   2  sleep    1         0.0     2  sleep
+   3  ready    1         0.0     1  ps
+  12  idle    -          0.0    12  snd
+  13  idle    -          0.1    13  kdev
+  14  idle    -          1.5    14  storage
+  15  event   -          0.5    15  cons
+/> kill 2
+/> ps
+task  state   parent     cpu group  name
+   0  ready   -          3.9     0  kernel
+   1  wait    -          0.4     1  forth
+   3  ready    1         0.0     1  ps
   12  idle    -          0.0    12  snd
   13  idle    -          0.1    13  kdev
   14  idle    -          1.6    14  storage
-  15  idle    -          0.5    15  cons
-/> kill 4
-/> ps
-task  state   parent     cpu group  name
-   0  ready   -          3.7     0  kernel
-   1  wait    -          0.1     1  init
-   2  wait     1         0.3     2  forth
-   3  event    1         0.0     1  wstart
-   5  ready    2         0.0     2  ps
-  11  idle    -          0.0    11  gpio
-  12  idle    -          0.0    12  snd
-  13  idle    -          0.1    13  kdev
-  14  idle    -          1.8    14  storage
-  15  idle    -          0.9    15  cons
+  15  event   -          0.6    15  cons
 ```
 
-`sleep` was in the state `sleep`, with the shell (task 2) as its parent. After `kill`, it's gone from the list.
+`sleep` was in the state `sleep`, with the shell (task 1) as its parent. After `kill`, it's gone from the list.
 
 **5.** 384 KB for each task, on the manual's Hydra: three RAM modules, at 128 KB each.
 
@@ -308,14 +297,14 @@ shared  1024 KB, 512 KB in segments (1), 512 KB free
 3. The processor reads the reset vector; the power-on self test; the drivers start; `init` starts; the shell
    starts.
 4. A program that looks after a device, so that other programs don't touch the chips themselves. `cons`: the
-   serial port and the windows. `storage`: the SD cards and the other disks. `snd`: the sound chip. (Also `gpio`:
-   the I/O header; `kdev`: the clock, the tasks and the environment; `vid`: the Vera X.)
-5. It starts another, so there's always a shell to type at. Without that, one mistyped `bye` would leave the
-   Hydra with no way in.
+   serial port and the windows. `storage`: the SD cards and the other disks. `snd`: the sound chip. (Also `kdev`:
+   the clock, the tasks, the environment and the I/O header; `vid`: the Vera X.)
+5. Another starts at once, so there's always a shell to type at: the kernel starts `init` again, and `init` becomes
+   the new shell. Without that, one mistyped `bye` would leave the Hydra with no way in.
 6. A timer in the VIA interrupts the processor 200 times a second. On each tick, the kernel can stop the task
    that's running and give another its turn, and it counts the time.
 
-**Challenge.** `mods | wc -l` says 17: a heading, and sixteen modules. `forth` is in 1 bank (bank 30), `basic` in
+**Challenge.** `mods | wc -l` says 16: a heading, and fifteen modules. `forth` is in 1 bank (bank 30), `basic` in
 5 (banks 9 to 13), and `hylang` in 8 (banks 14 to 21). hylang is by far the biggest language to *implement*, and
 Forth the smallest: one reason Forth was so popular on small machines.
 
@@ -365,7 +354,7 @@ echo three >>/ram/n.txt
 
 ```session
 % ls /rom/bin | wc -l
-     47
+     45
 % ls /sd/0/sample | wc -l
       6
 % cat /ram/n.txt | sort
@@ -378,7 +367,7 @@ two
 
 ```session
 % echo today is `{date}
-today is 2000-01-01 00:00:05
+today is 2000-01-01 00:00:04
 % now=`{date}
 % echo $#now
 2
@@ -437,14 +426,14 @@ there
 % ls /rom/bin | sort -r | head -3
 xmodem
 xd
-wstart
+wc
 % ls /rom/bin | grep e | wc -l
      15
 ```
 
-Six, because each program in a pipeline is a task: the Hydra has sixteen, and ten are in use at rc's prompt (the
-kernel, init, five drivers, wstart, HyForth and rc: `ps` shows them, and itself), which leaves six. For a job that
-needs seven programs, send the half-way result to a file in `/ram`, and start a second pipeline from that file.
+Nine, because each program in a pipeline is a task: the Hydra has sixteen, and seven are in use at rc's prompt (the
+kernel, four drivers, HyForth and rc: `ps` shows them, and itself), which leaves nine. For a job that
+needs ten programs, send the half-way result to a file in `/ram`, and start a second pipeline from that file.
 
 ## Lab 6. Scripts
 
@@ -585,8 +574,8 @@ d-r--r--r-- fx        0 2000-01-01 00:00 songs
 /> df
 disk  kind   size        free        label
 0     sdhc   16380 KB    15956 KB    HYDRA-16
-x     rom    623 KB      10 KB       ROM
-r     ram    255 KB      252 KB      RAM
+x     rom    623 KB      11 KB       ROM
+r     ram    255 KB      253 KB      RAM
 s     sram   511 KB      510 KB      SRAM
 ```
 
@@ -654,8 +643,8 @@ moves the keyboard between them.
 
 **7.** In the window's heading, at the top.
 
-**8.** The shell ends, and at once a new one starts in the same window: `init` sees to it. Window 0 never goes
-away.
+**8.** The shell ends, and at once a new one starts in the same window: the kernel starts `init` again, which
+becomes the new shell. Window 0 never goes away.
 
 **Questions.**
 

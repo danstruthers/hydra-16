@@ -1,0 +1,11 @@
+/* The Technical Reference: its extra furniture (added to manual/book.css).  An entry is a ## heading: its name in
+   the code face, a rule above it; its parts' labels (#### Syntax, #### Errors ...) are small capitals */
+body.book-reference h2 { font-family: "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace; font-size: 15pt; border-top: 2.2pt solid #111;
+  padding-top: 5pt; margin-top: 22pt; break-after: avoid; }
+body.book-reference h2 code { font-size: inherit; background: none; padding: 0; }
+body.book-reference h4 { font: bold 8.5pt "Segoe UI", Helvetica, Arial, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #333;
+  margin: 10pt 0 3pt; break-after: avoid; }
+body.book-reference dl { margin: 4pt 0 4pt 0; }
+body.book-reference dt { font-weight: 600; margin-top: 3pt; }
+body.book-reference dd { margin-left: 16pt; }
+body.book-reference table { break-inside: avoid; }

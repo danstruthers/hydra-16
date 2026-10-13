@@ -176,3 +176,24 @@ Not tried on a real board: the emulators' terminal is a model. Two things to loo
 interrupt's high-mark path is as long as a <kbd>CTRL</kbd>-<kbd>C</kbd>'s (the 200-cycle budget's edge, as that
 was), and at 115200 baud a terminal that takes more than about 150 characters to obey an XOFF will still overrun
 the ring (the PC tool sends 2,000 keys a second at most, so it can't).
+
+## A card's image as `/pc`
+
+The PC tool, and the emulators' `--pc-dir`, take a HydraFS image file in place of a folder (branch
+`reborn-pcimg`): `node reborn/sim/tools/hydrapc.js COM3 mycard.img`.
+
+* `/pc` is the card in the image: its names, dates and read-only bits, in the card's own order. What the Hydra
+  writes goes into the image, whose free map is written after every request that changed it, so the file is whole
+  on the PC whenever the Hydra isn't writing. An image that can't be written, or `--read-only`, is served
+  read-only (`reborn/sim/tools/pcfs.js`; the image library, `hydrafs.js`, learnt to resize, rename and fill holes).
+* Nothing changed in the Hydra for it: `/pc`'s requests are the same.
+* **One thing did change in the Hydra**, for the PC tool's sake. With flow control the tool took every bare XON
+  and XOFF out of the Hydra's bytes, inside a frame too: right for this ROM, which stuffs them, but an older ROM's
+  frames (and the old system's) hold them as data, and would have failed their check for ever. The console's
+  attach now says that it stuffs them (a second byte, 1), and the tool takes them out of frames only for a Hydra
+  that says so.
+* Tests: `pc-img` (the `pc` test's work on an image, then the image checked on the PC), and `flow` looks at the
+  attach.
+* The books: 2.5, 5.2, 9.9, 13.8, Appendix H, the index.
+
+Not tried with a real board and cable: the emulators and a stand-in serial port only.

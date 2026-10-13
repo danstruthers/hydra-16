@@ -208,8 +208,7 @@ task F: cons
 task E: storage
 task D: kdev
 task C: snd
-task B: gpio
-task A: vid
+task B: vid
 task 1: init
 ```
 
@@ -243,10 +242,12 @@ from the highest down, and prints each one's name:
 |---|---|---|
 | F | `cons` | The console: the serial port, its windows, and `/pc` |
 | E | `storage` | The SPI bus, the SD cards, the RAM disks and the ROM disk, and their files |
-| D | `kdev` | The kernel's own devices: the top of the file tree, the tasks (`/proc`), pipes, and more |
+| D | `kdev` | The kernel's own devices: the top of the file tree, the tasks (`/proc`), pipes, and more; and the I/O header J27, the I²C bus on it, and a Vera X's keyboard and mouse |
 | C | `snd` | The sound chips: the YM2151, and the Vera X's |
-| B | `gpio` | The I/O header J27 and the I²C bus on it |
-| A | `vid` | The Vera X's screen. With no Vera X, it finds nothing to do and ends |
+| B | `vid` | The Vera X's screen. With no Vera X, it finds nothing to do and ends |
+
+There are only sixteen tasks, so HydraOS keeps few of them standing: small jobs share a driver's task (the I/O
+header's pins are `kdev`'s), and a program that would only wait gets out of the way (as init does, below).
 
 Like most of HydraOS, the drivers live in the paged ROM, in **modules**. A module runs *in place*: its task's ROM
 bank register shows its bank at $A000-$DFFF, so its code never needs copying into RAM. A big module has a bank (or
@@ -276,13 +277,12 @@ init does everything needed to make the Hydra ready for you:
 ```text
 init: up in task 01
 T ST FL PA CPU    NAME
-0 01 00 FF 00004E kernel
-1 01 00 FF 00001B init
-B 04 01 FF 000003 gpio
+0 01 00 FF 000052 kernel
+1 01 00 FF 000017 init
 C 04 01 FF 000003 snd
-D 04 01 FF 00000C kdev
-E 04 01 FF 000076 storage
-F 04 01 FF 00004C cons
+D 06 01 FF 000011 kdev
+E 04 01 FF 000075 storage
+F 08 01 FF 00003F cons
 ```
 
 The columns are all in hex:
@@ -296,7 +296,8 @@ The columns are all in hex:
 | `CPU` | How much of the processor's time it has had, in ticks (200 a second) |
 | `NAME` | The program running in it |
 
-(Task A isn't there: without a Vera X, `vid` has already ended.)
+(Task B isn't there: without a Vera X, `vid` has already ended. `kdev` is asleep for a moment: it's looking for a
+Vera X's keyboard, three times in its first three seconds. And `cons` is waiting for its own news: a key from you.)
 
 6. It runs a small program, **hello**, and waits for it to end. hello greets its arguments, `from init`, and ends
    with the code 7 and the message `bye`. It's a quick check that programs can start, run and end:
@@ -306,12 +307,17 @@ hello, from init
 init: hello ended: code $07 (bye)
 ```
 
-7. It starts the **shell** in window 0. Which shell? The one named in `/lib/shell`. On the ROM disk, that file
-   says `/bin/forth -l`: HyForth, as a login shell.
-8. It starts **wstart**, which waits for you to ask for a new window (Chapter 10), and **input**, the driver for a Vera
-   X's keyboard and mouse (which ends at once if there isn't one).
+7. It **becomes the shell** in window 0. Which shell? The one named in `/lib/shell`. On the ROM disk, that file
+   says `/bin/forth -l`: HyForth, as a login shell. init doesn't start the shell in another task and wait for it: it
+   asks the kernel to put the shell *in its own place* (the `EXEC` call), so task 1, with its console and its files,
+   is the shell's from then on, and init is gone.
 
-Then init waits. If the shell or wstart ever ends, init starts it again, so there's always a shell to type at.
+So no task is used up just waiting. Two jobs that a waiting init would do are the kernel's instead:
+
+* **If the shell in window 0 ends**, the kernel starts init again in a free task, and init becomes a new shell there
+  (this time it skips steps 2, 4, 5 and 6). There's always a shell to type at.
+* **When you ask for a new window** (Chapter 10), the console's driver makes the window and asks the kernel to start
+  init for it; init opens that window's console, and becomes its shell.
 
 ### Step 8: The shell starts
 
@@ -336,20 +342,17 @@ The `ps` command lists the tasks, in a friendlier form than init's table, with t
 /> ps
 task  state   parent     cpu group  name
    0  ready   -          1.6     0  kernel
-   1  wait    -          0.1     1  init
-   2  wait     1         0.3     2  forth
-   3  event    1         0.0     1  wstart
-   4  ready    2         0.0     2  ps
-  11  idle    -          0.0    11  gpio
+   1  wait    -          0.4     1  forth
+   2  ready    1         0.0     1  ps
   12  idle    -          0.0    12  snd
   13  idle    -          0.1    13  kdev
-  14  idle    -          1.6    14  storage
-  15  idle    -          0.5    15  cons
+  14  idle    -          1.4    14  storage
+  15  event   -          0.5    15  cons
 ```
 
-You can see init (task 1), the shell, `forth` (task 2), wstart (task 3), `ps` itself (task 4: the shell started
-it, so its parent is 2), and the five drivers in tasks 11 to 15 (B to F). The `cpu` column is in seconds. Chapter 11
-explains the `group` column.
+You can see the kernel (task 0), the shell, `forth` (task 1: it's where init was), `ps` itself (task 2: the shell
+started it, so its parent is 1), and the four drivers in tasks 12 to 15 (C to F). That leaves ten tasks free for your
+programs and for more windows. The `cpu` column is in seconds. Chapter 11 explains the `group` column.
 
 > **TRY THIS:** Run `ps` again. Has anything changed? Which task do you think did most of the work while the Hydra
 > started?

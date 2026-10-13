@@ -18,6 +18,11 @@
 ;           name keeps it; free NAME), and a file a name, read as its segment's number and banks
 ;   #r      raw RAM, for init alone (not in the default namespace): task (every task's RAM, task t's at t * $8000,
 ;           512K) and shared (the shared banks, ID i's at i * $2000, 2M), read only
+; A system built on the base may put small devices of its own in this driver, so they don't each take a task: with
+; KDEV_X defined (the system's own modules/kdev/kdev.s defines it, and includes this file), kdevxt.inc is its devices'
+; letters and trees (SRV_TREES's lines) and kdevx.inc their code, with kx_init (run at the end of init: it may go on,
+; SRV_NAP), kx_irq (the irq entry), kx_opened, kx_clunked and kx_stat (srvlib's, for every device here: kx_stat calls
+; mod_stat).  HydraOS's are GPIO, I2C and the input controller.
 
 .include "hydra.inc"
 .include "hw.inc"
@@ -25,9 +30,17 @@
 .include "macros.inc"
 .include "srvlib.inc"
 
+.ifdef KDEV_X
+            HYX2_DRIVER "kdev", init, srv_serve, kx_irq, 0, HF_BOOT
+
+SRV_STAT        = kx_stat                                   ; (srvlib: a module's file's length: mod_stat; and the
+SRV_OPENED      = kx_opened                                 ;   system's own devices' hooks, kdevx.inc)
+SRV_CLUNKED     = kx_clunked
+.else
             HYX2_DRIVER "kdev", init, srv_serve, 0, 0, HF_BOOT
 
 SRV_STAT        = mod_stat                                  ; (srvlib: a module's file's length)
+.endif
 
 PIPE_N          = 8
 PIPE_SIZE       = 512
@@ -153,7 +166,11 @@ init:
             bra         @letter
 
 @done:
+.ifdef KDEV_X
+            jmp         kx_init                             ; (The system's own devices' init: kdevx.inc)
+.else
             clc
+.endif
 @failed:
             rts
 
@@ -4154,6 +4171,9 @@ SRV_TREES:
             .word       tree_seg
             .byte       'r'
             .word       tree_raw
+.ifdef KDEV_X
+.include "kdevxt.inc"                                       ; (The system's own devices' letters and trees)
+.endif
             .byte       0
 
 tree_root:
@@ -4317,5 +4337,9 @@ reg_name_lo: .byte      <s_rpc, <s_empty, <s_ra, <s_rx, <s_ry, <s_rs, <s_rp, <s_
 reg_name_hi: .byte      >s_rpc, >s_empty, >s_ra, >s_rx, >s_ry, >s_rs, >s_rp, >s_rw, >s_ru, >s_rram, >s_rrom
 reg_at:     .byte       TF_PC + 1, TF_PC, TF_A, TF_X, TF_Y, TF_S, TF_P, TF_W, TF_U, TF_RAM, TF_ROM
 REGS_N      = * - reg_at
+
+.ifdef KDEV_X
+.include "kdevx.inc"                                        ; (The system's own devices)
+.endif
 
 .include "srvlib.s"

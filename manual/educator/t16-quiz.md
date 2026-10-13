@@ -18,7 +18,7 @@ The answers are models. Any answer that shows the same understanding is right.
 | 6 | What is the bus? | The paths that join the processor to memory and to the other chips: addresses, data and control lines. |
 | 7 | The 65C02 can address 64K. How does the Hydra give it megabytes? | Parts of the 64K are "windows" onto bigger memories; a register chooses which piece (bank) shows through each. |
 | 8 | What is the kernel, and where is it kept? | The heart of HydraOS, which runs the other programs and shares the machine between them; in the kernel ROM, U6. |
-| 9 | What does the first program, `init`, do? | Sets the system up (the console, the RAM disks, the namespace), starts the shell, and starts it again if it ends. |
+| 9 | What does the first program, `init`, do? | Sets the system up (the console, the RAM disks, the namespace), then becomes the shell. (The kernel starts `init` again if that shell ends, and for each new window.) |
 | 10 | What stops one task from spoiling another's memory? | Each task's 32K is chosen by the T register, which only the kernel changes; a task has no address that reaches another task's RAM. |
 
 ## Set 2. Using HydraOS (Chapters 6 and 8 to 11; Labs 3 and 5 to 9)

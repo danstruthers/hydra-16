@@ -110,6 +110,8 @@
 #define HY_TASKMEM              0xF9D4
 #define HY_TASKSTOP             0xF9D7
 #define HY_TASKSTEP             0xF9DA
+#define HY_SRV_NAP              0xF9DD
+#define HY_INIT_RUN             0xF9E0
 
 /* ---- dbg: Debugging and tests: unstable, may change in any version */
 #define HY_DBG_SCALL            0xFA10

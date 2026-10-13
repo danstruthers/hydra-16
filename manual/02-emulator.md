@@ -109,7 +109,7 @@ The **Setup…** button opens the setup panel, where you choose the Hydra's hard
 
 * **A Vera X card in slot 0** adds the video card: its screen, its sound chips and its own SD card.
 * **The Vera X's keyboard and mouse** adds the card's input controller, so the screen takes keys and the mouse.
-  The program that reads them, `input`, uses one of the Hydra's sixteen tasks.
+  (The `kdev` driver reads them, between its other jobs.)
 * **The clock chip** fits a DS1747 clock chip in place of the task RAM chip U7. It keeps the date and time, which
   the emulator sets from your PC's clock.
 * **RAM modules** chooses how many memory cards are plugged in: one, two or three.
@@ -229,7 +229,7 @@ The most useful options are:
 | `--modules N` | Plugs in N memory cards (the emulator's normal number is 2) |
 | `--clock 7.15909` | Runs the processor at 7.16 MHz: the emulator can, the board's parts can't (section 4.6) |
 | `--sd FILE` | Puts an SD card image file in the next SD reader |
-| `--pc-dir FOLDER` | Lets the Hydra see a folder on your PC as `/pc` (section 2.5) |
+| `--pc-dir FOLDER` | Lets the Hydra see a folder on your PC (or an SD card image file) as `/pc` (section 2.5) |
 | `--speed N` | Runs N times faster than real time (0: as fast as possible) |
 
 Appendix H lists every option the emulator has.
@@ -283,6 +283,9 @@ On the Hydra, `ls /pc` lists the files in that folder, and you can read them, ru
 change them. It's the easiest way to move programs between the Hydra and your PC: write a program in your favourite
 PC editor, save it in the folder, and run it on the Hydra. Add `--pc-read-only` if you want the Hydra to be able to
 read the folder but not change it.
+
+`--pc-dir` takes an SD card image file (section 2.6) in place of a folder, too. Then `/pc` is the card in that
+image, and what the Hydra writes there goes into the image.
 
 A real Hydra can do the same through its serial cable, with the PC tool. Chapter 5 shows you how.
 
