@@ -311,13 +311,13 @@ db> d main+29 3
 db> b main+68
 db> c
 breakpoint 1
-PC=0898 A=20 X=2B Y=05 S=FD P=nv--dizC W=0 U=0 RAM=00 ROM=00
+PC=0898 A=20 X=2D Y=05 S=FD P=nv--dizC W=0 U=0 RAM=00 ROM=00
 0898  A9 D1     lda #$D1                 ; main+68
 db> s 4
 089A  85 02     sta r0                   ; main+6A
 089C  A9 09     lda #$09                 ; main+6C
 089E  85 03     sta r0+1                 ; main+6E
-PC=08A0 A=09 X=2B Y=05 S=FD P=nv--dizC W=0 U=0 RAM=00 ROM=00
+PC=08A0 A=09 X=2D Y=05 S=FD P=nv--dizC W=0 U=0 RAM=00 ROM=00
 08A0  20 03 F8  jsr ERRSTR               ; main+70
 db> q
 ```
@@ -353,7 +353,7 @@ task 5
 PC=0830 A=30 X=FF Y=02 S=FD P=nv--dizc W=0 U=0 RAM=00 ROM=00
 0830  9C 95 08  stz $0895
 db> c
-........PC=EB20 A=06 X=0E Y=05 S=FA P=nv--dIzc W=0 U=0 RAM=00 ROM=00 (in a call: its state 6)
+........PC=EB20 A=06 X=0F Y=05 S=FA P=nv--dIzc W=0 U=0 RAM=00 ROM=00 (in a call: its state 6)
 EB20  A5 A2     lda $A2
 db> q
 

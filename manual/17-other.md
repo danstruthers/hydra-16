@@ -171,9 +171,11 @@ environment of the task that's looking, a file for each variable:
 prompt
 path
 task
+prog
 ```
 
-A variable is a list of words, with a zero byte after each one:
+(`prog` is the path of the program that's looking, `/bin/ls` here: the shell gives it to each program it starts,
+section 8.4.) A variable is a list of words, with a zero byte after each one:
 
 ```session
 /> cat /env/path | xd
@@ -219,7 +221,7 @@ In each are these files:
 
 ```session
 /> cat /proc/2/status
-forth wait 1 68 2
+forth wait 1 64 2
 /> cat /proc/2/fd
 /
 0 rw #c 391 #c/cons

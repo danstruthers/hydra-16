@@ -101,12 +101,15 @@ works in two directions:
 * **Write a command to it**, as a line of text, to tell the driver to do something or change a setting.
 * **Read it**, to see the driver's settings, as lines of text.
 
-For example, the serial port's control file sets its speed and its flow control (section 13.6):
+For example, the serial port's control file sets its speed and its flow control, and reads as those two settings
+and two lines of counts, for a line that's giving trouble (section 13.6):
 
 ```session
 /> cat /dev/serctl
 b9600
 x1
+pc 0 req, 0 cut short, 0 unanswered, 0 damaged, 0 nak, 0 gone
+line 0 overruns, 0 framing errors
 ```
 
 and `echo b115200 >/dev/serctl` would change the speed. Because commands are plain text, any program can send them, and

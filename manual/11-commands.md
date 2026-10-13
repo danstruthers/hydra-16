@@ -758,8 +758,8 @@ note group, and its program.
 ```session
 /> ps -a
 task  state   parent     cpu group  name
-   0  ready   -          1.5     0  kernel
-   1  wait    -          0.1     1  init
+   0  ready   -          1.6     0  kernel
+   1  wait    -          0.2     1  init
    2  wait     1         0.3     2  forth -l
    3  event    1         0.0     1  wstart /bin/forth -l
    4  ready    2         0.0     2  ps -a
