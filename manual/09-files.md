@@ -289,6 +289,10 @@ The options for `bind` and `mount` are:
 You can change the namespace of any shell with `bind`, `mount` and `unmount`. To start again with the standard
 one, type `newns`. And `ns` shows your shell's namespace, as the binds and mounts that would make it:
 
+> **CAUTION:** `newns` starts your `/ram` again too. In the shell a window starts with, that empties it:
+> every file you have made in `/ram`, and in `/ram/bin`, is removed. Copy what you want to keep to `/sram` or
+> to an SD card first.
+
 ```session
 /> ns
 bind '#/' /

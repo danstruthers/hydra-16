@@ -115,7 +115,7 @@ C p c I0 o3 l4 r1 r1 r1 r1 [c d e c]2 [e f g2]2 [g8 a8 g8 f8 e c]2 [c <g> c2]2
    end of the notebook. `>` would empty the notebook first, every time.
 3. Into `/ram/bin`: new files in `/bin` go to the RAM disk, and are gone at the next reset. To keep the command,
    make the directory `/sd/0/bin` and put the script there. It joins `/bin` when the namespace is next built: at
-   a reset, or straight away with the command `newns`.
+   a reset, or straight away with the command `newns` (which empties `/ram`: copy the script to the card first).
 
 **Look for** a first comment that says how to use the command; behaviour that's sensible when the notebook
 doesn't exist yet; and a usage message.

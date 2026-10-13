@@ -525,7 +525,8 @@ for(d in $dirs) {
    anything you want to keep.
 2. The shell. It replaces the pattern with the list of matching names *before* `for` or any command sees it.
 3. It's lost, with the rest of the RAM disk. A script to keep goes in `/sd/0/bin` (make the directory; it joins
-   `/bin` the next time the namespace is built: after a reset, or the command `newns`).
+   `/bin` the next time the namespace is built: after a reset, or the command `newns`, which also empties
+   `/ram`).
 4. "While it is not true that `$i` matches `0`": `~` tests a match, `!` turns success into failure and back. So:
    carry on until `$i` is 0.
 

@@ -130,7 +130,8 @@ second.)
   helps.
 * Step 5's question has a sting: the script copied to `/bin` is really in `/ram/bin`, and is gone at the next
   reset. Let them find that out next lesson, and then teach `/sd/0/bin`. (A directory made there joins `/bin`
-  the next time the namespace is built: after a reset, or `newns`.)
+  the next time the namespace is built: after a reset. `newns` builds it at once, but empties the shell's `/ram`
+  as it does: not with work in `/ram` that anyone wants.)
 
 **Close with** "when is a script better than a function?" (When you want it tomorrow.)
 

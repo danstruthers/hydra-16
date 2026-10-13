@@ -872,6 +872,12 @@ newns
 Throws away this shell's namespace and builds the default one again, from `/lib/namespace`, as a login shell
 does when it starts. It undoes every `bind`, `mount` and `unmount` the shell has made.
 
+The default namespace gives a task its own area of the RAM disk as `/ram`, named for the task's number, and
+building it empties that area. So in a shell that the system started, the first shell of a window, `newns`
+removes every file in its `/ram`, `/ram/bin` and `/ram/lib` included. In a shell started from another shell,
+which until then shared its parent's `/ram`, the parent's files are untouched: the shell simply has a new,
+empty `/ram` of its own from then on.
+
 ### shift
 
 ```text
