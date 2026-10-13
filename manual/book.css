@@ -1,18 +1,32 @@
 /* The Hydra-16 User's and Builder's Manual: the printed book's look (build.js puts this in the HTML) */
 
+/* Numbers.  Georgia's figures are old-style: its 0 is an o's size and shape, its 1 a small capital I, and a number in
+   the text (a count, an address) reads as letters.  So the digits, and only they, come from a face with lining
+   figures: Cambria where it's installed, else the nearest there is.  "Book Digits" goes before Georgia wherever the
+   text face is named.  (A hex number in running text, $F8C0, is put in the code face by the build: tools/md.js) */
+@font-face { font-family: "Book Digits"; src: local("Cambria"), local("Times New Roman"), local("Liberation Serif"), local("DejaVu Serif");
+  unicode-range: U+0030-0039; size-adjust: 104%; }
+@font-face { font-family: "Book Digits"; font-weight: bold; src: local("Cambria Bold"), local("Times New Roman Bold"), local("Liberation Serif Bold"), local("DejaVu Serif Bold");
+  unicode-range: U+0030-0039; size-adjust: 104%; }
+@font-face { font-family: "Book Digits"; font-style: italic; src: local("Cambria Italic"), local("Times New Roman Italic"), local("Liberation Serif Italic"), local("DejaVu Serif Italic");
+  unicode-range: U+0030-0039; size-adjust: 104%; }
+@font-face { font-family: "Book Digits"; font-weight: bold; font-style: italic;
+  src: local("Cambria Bold Italic"), local("Times New Roman Bold Italic"), local("Liberation Serif Bold Italic"), local("DejaVu Serif Bold Italic");
+  unicode-range: U+0030-0039; size-adjust: 104%; }
+
 @page {
   size: 8.5in 11in;
   margin: 0.9in 0.85in 0.85in 0.85in;
-  @top-left { content: ""; font: italic 8.5pt Georgia, serif; color: #555; vertical-align: bottom; padding-bottom: 6pt; }
+  @top-left { content: ""; font: italic 8.5pt "Book Digits", Georgia, serif; color: #555; vertical-align: bottom; padding-bottom: 6pt; }
   @top-right { content: "HYDRA-16 MANUAL"; font: 7.5pt "Arial Black", Arial, sans-serif; letter-spacing: 1.5pt; color: #888; vertical-align: bottom; padding-bottom: 6pt; }
-  @bottom-center { content: counter(page); font: bold 9pt Georgia, serif; color: #333; }
+  @bottom-center { content: counter(page); font: bold 9pt "Book Digits", Georgia, serif; color: #333; }
 }
 @page :first { @top-right { content: none; } @bottom-center { content: none; } }
 @page front { @top-right { content: none; } }
 @page part { @top-right { content: none; } @bottom-center { content: none; } }
 
 html { font-size: 10.5pt; }
-body { font-family: Georgia, "Times New Roman", serif; line-height: 1.45; color: #161616; margin: 0; }
+body { font-family: "Book Digits", Georgia, "Times New Roman", serif; line-height: 1.45; color: #161616; margin: 0; }
 section { break-before: page; }
 .mk { position: absolute; font-size: 1px; color: #fff; }
 
@@ -21,9 +35,9 @@ section { break-before: page; }
 .title-page .top { text-align: left; }
 .title-page .brand { font: 11pt "Arial Black", Arial, sans-serif; letter-spacing: 4pt; color: #333; margin: 0; }
 .title-page h1.book { font: 64pt/0.95 "Arial Black", Arial, sans-serif; letter-spacing: -1pt; margin: 0.25in 0 0.05in; color: #111; }
-.title-page .sub { font: italic 22pt Georgia, serif; margin: 0 0 0.3in; color: #222; }
+.title-page .sub { font: italic 22pt "Book Digits", Georgia, serif; margin: 0 0 0.3in; color: #222; }
 .title-page .art { align-self: center; width: 5.6in; }
-.title-page .bottom { display: flex; justify-content: space-between; align-items: flex-end; font: 10pt Georgia, serif; color: #333; }
+.title-page .bottom { display: flex; justify-content: space-between; align-items: flex-end; font: 10pt "Book Digits", Georgia, serif; color: #333; }
 .title-page .bottom .os { font: 12pt "Arial Black", Arial, sans-serif; letter-spacing: 1pt; }
 
 .stripes { display: flex; flex-direction: column; gap: 3pt; margin: 0 0 14pt; }
@@ -52,7 +66,7 @@ header.opener h1 { font: 30pt/1.1 "Arial Black", Arial, sans-serif; margin: 6pt 
 h1 { font: 26pt/1.1 "Arial Black", Arial, sans-serif; margin: 0 0 18pt; }
 h2 { font: 15pt/1.2 "Arial Black", Arial, sans-serif; margin: 22pt 0 8pt; padding-bottom: 3pt; border-bottom: 1.2pt solid #1d1d1d; break-after: avoid; }
 h3 { font: bold 12pt/1.25 Arial, Helvetica, sans-serif; margin: 16pt 0 5pt; break-after: avoid; }
-h4 { font: bold italic 10.5pt Georgia, serif; margin: 12pt 0 4pt; break-after: avoid; }
+h4 { font: bold italic 10.5pt "Book Digits", Georgia, serif; margin: 12pt 0 4pt; break-after: avoid; }
 h5, h6 { font: bold 10pt Arial, sans-serif; margin: 10pt 0 3pt; break-after: avoid; }
 p { margin: 0 0 7pt; orphans: 3; widows: 3; }
 a { color: inherit; text-decoration: none; }
@@ -60,12 +74,13 @@ strong { font-weight: bold; }
 
 /* ---- Listings: typed (bold) and the Hydra's answers */
 code { font-family: "Courier New", Courier, monospace; font-size: 0.95em; }
+code.hex { white-space: nowrap; }                              /* (A hex number in the text: md.js) */
 pre { font: 8.8pt/1.32 "Courier New", Courier, monospace; background: #f5f2e9; border-left: 3pt solid #3a3a3a; padding: 6pt 9pt; margin: 6pt 0 9pt;
   white-space: pre-wrap; word-break: break-word; break-inside: avoid; }
 pre code { font-size: 1em; }
 pre.session { background: #f1f4ee; border-left-color: #3fa046; }
 pre.session b { font-weight: bold; color: #000; }
-pre .note { font-style: italic; font-family: Georgia, serif; color: #2a62b8; }
+pre .note { font-style: italic; font-family: "Book Digits", Georgia, serif; color: #2a62b8; }
 pre.long { break-inside: auto; }
 
 /* ---- Boxes: > **NOTE:** ... */
@@ -104,7 +119,7 @@ hr { border: 0; border-top: 1pt solid #999; margin: 14pt 0; }
 img { max-width: 100%; }
 figure { margin: 10pt 0 12pt; text-align: center; break-inside: avoid; }
 figure img, figure svg { max-width: 100%; }
-figcaption { font: italic 9pt Georgia, serif; color: #333; margin-top: 4pt; }
+figcaption { font: italic 9pt "Book Digits", Georgia, serif; color: #333; margin-top: 4pt; }
 kbd { font: bold 8.5pt Arial, sans-serif; border: 0.8pt solid #555; border-radius: 3pt; padding: 0 3pt; background: #fafafa; box-shadow: 0 1pt 0 #777; white-space: nowrap; }
 
 /* ---- Contents */
