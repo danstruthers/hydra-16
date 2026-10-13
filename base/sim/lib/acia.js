@@ -1,6 +1,7 @@
 // acia.js - the 65C51 ACIA (port 1): Rockwell R65C51 (TDRE status and the TX interrupt) or WDC W65C51N (its bug:
-// TDRE always reads 1, no TX interrupt; bytes written while one is still being sent are counted: they'd be
-// garbled on the chip).  A character takes the time its baud rate, word length, parity and stop bits give, from
+// TDRE always reads 1, no TX interrupt; a byte written while one is still being sent waits in its TDR, and one
+// written over that is lost, as on the chip: txLost counts them).  Either chip counts a byte written while one is
+// still being sent (overruns: the Rockwell model has no TDR of its own, so its driver keeps a gap).  A character takes the time its baud rate, word length, parity and stop bits give, from
 // its 1.790 MHz clock.  What it sends goes to env.onTx; what it receives comes from its input queue (keys, and
 // '\u0100': wait 2M cycles before the next one; '\u0101': wait for a prompt, the output (grown since) ending with
 // "> " or ">" (the old system's), "% " (rc's; or "%": a window painted again trims its blanks) or " <" (hylang's for
@@ -28,7 +29,7 @@ function createAcia(env) {
   const wdc = !!env.wdc, paste = !!env.paste, clock = env.clock;
   const flow = env.flow !== 'none', flowLag = env.flowLag === undefined ? 2 : env.flowLag;
   const a = {
-    cmd: 0, ctrl: 0, tdre: 1, txTimer: 0, irq: 0, rdrf: 0, rx: 0, overruns: 0,
+    cmd: 0, ctrl: 0, tdre: 1, txTimer: 0, txHold: null, txLost: 0, irq: 0, rdrf: 0, rx: 0, overruns: 0,
     // The line's idle time between characters sent: when the last one ended, and the shortest gap (in bits, at
     // the rate of the character after it; 0 = back to back or overlapping), counted once 8 have gone at the rate
     // last set
@@ -56,13 +57,19 @@ function createAcia(env) {
     if (r === 1) { const s = (a.irq ? 0x80 : 0) | (a.tdre || wdc ? 0x10 : 0) | (a.rdrf ? 0x08 : 0); a.irq = 0; return s; }
     return r === 2 ? a.cmd : a.ctrl;
   };
+  const emit = (v, t) => {                                  // A byte into the transmitter, at cycle t
+    if (++a.txSent > 8) a.gapMin = Math.min(a.gapMin, a.txTimer > 0 ? 0 : (t - a.txEnd) * ACIA_BAUD[a.ctrl & 15] / (clock * 1e6));
+    if (flow && (v === XON || v === XOFF)) a.flowByte = v;    // (The terminal's own: heard at its time's end)
+    else { if (!env.consoleOnly) a.shown(v, t); env.onTx(v, t); }
+    a.tdre = 0; a.txTimer = a.charCycles();
+  };
   a.write = (r, v, t) => {
     if (r === 0) {
-      if (a.txTimer > 0) a.overruns++;
-      if (++a.txSent > 8) a.gapMin = Math.min(a.gapMin, a.txTimer > 0 ? 0 : (t - a.txEnd) * ACIA_BAUD[a.ctrl & 15] / (clock * 1e6));
-      if (flow && (v === XON || v === XOFF)) a.flowByte = v;  // (The terminal's own: heard at its time's end)
-      else { if (!env.consoleOnly) a.shown(v, t); env.onTx(v, t); }
-      a.tdre = 0; a.txTimer = a.charCycles();
+      if (a.txTimer > 0) {
+        a.overruns++;
+        if (wdc) { if (a.txHold !== null) a.txLost++; a.txHold = v; return; }   // (The WDC chip: it waits in the TDR; one there is lost)
+      }
+      emit(v, t);
     } else if (r === 1) { a.cmd &= 0xE0; a.irq = 0; }       // Programmed reset
     else if (r === 2) a.cmd = v;                              // (The TX interrupt comes as TDRE goes on, as on the
                                                               //   board: turning it on with TDRE on is nothing)
@@ -72,6 +79,7 @@ function createAcia(env) {
   a.tick = (d, t) => {
     if (a.txTimer > 0 && (a.txTimer -= d) <= 0) {             // (A character's time)
       a.txEnd = t + a.txTimer; a.txTimer = 0; a.tdre = 1; if (!wdc && (a.cmd & 0x0C) === 0x04) a.irq = 1;
+      if (a.txHold !== null) { const v = a.txHold; a.txHold = null; emit(v, a.txEnd); a.txTimer -= t - a.txEnd; }   // (The byte waiting: from the last one's end)
       if (a.flowByte === XOFF) { a.xoffs++; if (!a.held) { a.held = true; a.lag = flowLag; } }
       else if (a.flowByte === XON) { a.xons++; a.held = false; }
       a.flowByte = 0;
@@ -129,7 +137,7 @@ function createAcia(env) {
   };
   a.type = key => a.rxQueue.push(key);                        // A key typed (interactive)
   a.send = bytes => { if (!a.pcQueue.length) a.pcDelay = a.charCycles(); a.pcQueue.push(...bytes); };   // The PC's own bytes
-  a.reset = () => { a.cmd = 0; a.ctrl = 0; a.tdre = 1; a.txTimer = 0; a.irq = 0; a.rdrf = 0; };
+  a.reset = () => { a.cmd = 0; a.ctrl = 0; a.tdre = 1; a.txTimer = 0; a.txHold = null; a.irq = 0; a.rdrf = 0; };
   return a;
 }
 
