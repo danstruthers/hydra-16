@@ -1,7 +1,7 @@
 # About This Reference
 
-This is a **preview** of the *Hydra-16 Technical Reference*: ten entries, at least one from each kind of thing the
-finished book will cover, written to settle its depth and its tone before the rest is done.
+This is the *Hydra-16 Technical Reference*, **in progress**. Its first chapter, HyBASIC's keywords, is being
+written letter by letter; the other chapters have one or two entries each so far, to show what they will be.
 
 The *User's and Builder's Manual* teaches the Hydra, and its appendices list what each language has in a line
 apiece. This book is where to look when a line isn't enough: when the question is what a keyword does with an
@@ -10,9 +10,9 @@ It assumes the manual has been read, and it says the same thing about every entr
 
 ## What it will hold
 
-| Chapter | Entries | In this preview |
+| Chapter | Entries | Written so far |
 |---|---|---|
-| 1. HyBASIC keywords | Every statement, function and operator | `ABS`, `ASC`, `FOR`...`NEXT`, `INPUT`, `OPEN` |
+| 1. HyBASIC keywords | Every statement, function and operator | `ABS` to `CVN` (all of A to C); `FOR`...`NEXT`, `INPUT`, `OPEN` |
 | 2. Commands | The shell's own commands, and the programs in `/bin` | `cp` |
 | 3. System calls | Every call a program can make | `OPEN`, `READ` |
 | 4. HyForth words | The core and every library | `>number` |

@@ -78,7 +78,7 @@ function defs(text) {
 function bookFiles(dir) {
   const list = path.join(dir, 'book.txt');
   if (!fs.existsSync(list)) return [];
-  return fs.readFileSync(list, 'utf8').split(/\r?\n/).map(s => s.trim()).filter(s => s && !s.startsWith('#')).map(s => path.join(dir, s));
+  return fs.readFileSync(list, 'utf8').split(/\r?\n/).map(s => s.trim().replace(/^\+\s+/, '')).filter(s => s && !s.startsWith('#')).map(s => path.join(dir, s));   // ("+ file": more of the chapter before)
 }
 function allBooks() {
   const dirs = [MANUAL].concat(fs.readdirSync(MANUAL, { withFileTypes: true }).filter(d => d.isDirectory()).map(d => path.join(MANUAL, d.name)));
