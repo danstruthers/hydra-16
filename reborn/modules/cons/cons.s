@@ -383,6 +383,8 @@ d_held:     .res        1                                   ; <> 0: the serial p
                                                             ;   key of its with no room in its window's queue) ...
 hold_ok:    .res        1                                   ;   <> 0: no Ctrl-] among the keys held, when the ring's
 hold_head:  .res        1                                   ;   head was here (looked at again when it has moved)
+hold_have:  .res        1                                   ;   <> 0: the key held, taken from the ring: the next
+hold_key:   .res        1                                   ;   of the serial port's (d_get)
 d_src:      .res        1                                   ; Whose keys distribute hands out now (0 the serial
                                                             ;   port's, 1 the keyboard's) ...
 d_pfx2:     .res        1                                   ;   and the other's d_pfx (d_swap)
@@ -708,6 +710,7 @@ rx_reset:
             php
             sei
             stz         hold_ok
+            stz         hold_have
             stz         rx_head
             stz         rx_tail
             LDR         rx_hp, rx_buf
@@ -725,8 +728,9 @@ rx_reset:
 ; Before each request: the keys come in, each to the window shown (its queue), Ctrl-] and the key after it acted on;
 ; /pc's frames taken out (pc_rx).  The serial port's, then the keyboard's (/kbin's ring: d_get); while /ser is open
 ; for reading only the keyboard's, the line's bytes its.  A key of the serial port's with no room in its window's
-; queue stays in the receive ring, with those behind it, till the window's reader has taken one (d_hold): text
+; queue is kept, and those behind it stay in the receive ring, till the window's reader has taken one (d_hold): text
 ; pasted at the terminal faster than a program reads it isn't cut at the queue's 63 keys, but at the ring's 255 more
+; (and then it's the newest that are lost, the irq entry's: what came first is whole)
 distribute:
             stz         d_src
             stz         d_held
@@ -889,7 +893,14 @@ d_get:
             lda         d_src
             bne         @kb
             lda         d_held                              ; (The serial port's held: none of its)
-            bne         :+
+            bne         :++
+            lda         hold_have                           ; (The key held, before the ring's)
+            beq         :+
+            stz         hold_have
+            lda         hold_key
+            clc
+            rts
+:
             jsr         rx_get
             bcs         :+
             rts
@@ -931,14 +942,16 @@ d_swap:
             stx         d_pfx
             rts
 
-; A key for window .X's queue, just taken from its ring (d_get): held, if the queue's full?  Only the serial port's
-; (the keyboard's are typed, not pasted), with no /pc request out (its reply would wait behind the key) and no
-; Ctrl-] among the keys behind it (the windows' keys must work with a program that reads nothing: then the key's
-; dropped, as iq_put drops it, and those up to the Ctrl-]).  Held: the key's in the ring again (unless the ring
-; filled meanwhile, over its place), no more of the serial port's are taken this round (d_held), and the request
-; that takes a key from a queue has the waiting ones look again (kbd_wait: iq_get).
+; Key .A for window .X's queue, just taken (d_get): held, if the queue's full?  Only the serial port's (the
+; keyboard's are typed, not pasted), with no /pc request out (its reply would wait behind the key) and no Ctrl-]
+; among the keys behind it (the windows' keys must work with a program that reads nothing: then the key's dropped,
+; as iq_put drops it, and those up to the Ctrl-]).  Held: the key's kept (hold_key: d_get's next; not put back in
+; the ring, which may have filled meanwhile: with it full, the irq entry drops what comes, the newest), no more of
+; the serial port's are taken this round (d_held), and the request that takes a key from a queue has the waiting
+; ones look again (kbd_wait: iq_get).
 ; OUT: C = 0: iq_put (room, or dropped); C = 1: held.  Keeps .X
 d_hold:
+            sta         hold_key
             lda         w_iqh,X
             inc         a
             and         #INQ_SIZE - 1
@@ -969,22 +982,11 @@ d_hold:
 :
             inc         hold_ok
 @hold:
-            php
-            sei
-            lda         rx_tail                             ; Back in the ring
-            dec         a
-            cmp         rx_head
-            beq         :+
-            sta         rx_tail
-            plp
             lda         #1
+            sta         hold_have
             sta         d_held
             sta         kbd_wait
             sec
-            rts
-:
-            plp
-            clc
             rts
 
 ; The keys' action .A (KA_*: a binding's)

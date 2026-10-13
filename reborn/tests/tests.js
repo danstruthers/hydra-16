@@ -2088,7 +2088,7 @@ module.exports = {
       name: 'philo', what: 'the philo sample (sdk/c/samples/philo: the dining philosophers, each fork a mutex, a shared segment) at rc: five tasks eat three meals each, the lower-numbered fork first, none in two hands at once; then -d, each its left fork first: a deadlock, seen, and ended (the tasks killed, their mutexes given back); then under rc -c, Ctrl-C: philo\'s handler ends it, rc -c waiting for it (then ending, before its next command)',
       init: 't_rc', cycles: 400e6,
       machine: { input: 'ā/sd/0/sample/c/philo -n 3\rā/sd/0/sample/c/philo -d; echo $status\r' +
-        'ārc -c \'/sd/0/sample/c/philo; echo after\'\r' + 'Ā'.repeat(12) + '\x03āecho $status\r' },   // (Read from the card: a moment more)
+        'ārc -c \'/sd/0/sample/c/philo; echo after\'\r' + 'Ā'.repeat(14) + '\x03āecho $status\r' },   // (Read from the card: a moment more.  12 waits came as philo set its handler: a ROM's change of a few cycles put it before)
       expect: ['5 philosophers ate 15 meals (3 to 3 each); a fork was in two hands 0 times.\n',
         'Deadlock: each holds their left fork and waits for their right one', 'a fork was in two hands 0 times.\ndeadlock\n',
         'a fork was in two hands 0 times.\n\n% echo $status\ninterrupted\n%'],
@@ -2590,6 +2590,15 @@ module.exports = {
       },
       expect: ['% sleep 1\n% echo ' + '1234567890'.repeat(7) + '\n' + '1234567890'.repeat(7) + '\n% echo ' + 'abcdefghij'.repeat(7) + '\n' + 'abcdefghij'.repeat(7) + '\n% echo after one\nafter one\n% ',
         '\n% echo ' + '0987654321'.repeat(7) + '\n' + '0987654321'.repeat(7) + '\n% echo ' + 'jihgfedcba'.repeat(7) + '\n' + 'jihgfedcba'.repeat(7) + '\n% echo after two\nafter two\n% '],
+    },
+    {
+      name: 'pasteahead', what: 'seven lines (399 keys) pasted at the line\'s rate while ps writes four times and nothing reads: more than the window\'s queue and the receive ring hold (63 + 255); the newest are lost (the irq entry\'s, with the ring full), and what came first is whole: the first five lines read and run in their turn',
+      init: 't_rc', cycles: 200e6,
+      machine: {
+        paste: true,
+        input: 'āps; ps; ps; ps; sleep 1\r' + [1, 2, 3, 4, 5, 6, 7].map(i => 'echo ' + i + ' ' + 'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\r').join(''),
+      },
+      expect: ['\n% ' + [1, 2, 3, 4, 5].map(i => 'echo ' + i + ' abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\n' + i + ' abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\n% ').join('')],
     },
     {
       name: 'dbover', what: 'the debugger\'s steps over a subroutine (n): a breakpoint in the subroutine stepped over, then a step and a continue from it (no step of the kernel\'s is out); a subroutine that calls itself stepped over at its second level, and returned from (u); Ctrl-C in a call of the kernel\'s stepped over, then continue runs on past the call\'s end; and stopped in the next, a step is refused',
