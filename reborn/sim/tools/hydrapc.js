@@ -25,7 +25,8 @@
 //                   windows' keys.  Windows Terminal keeps Ctrl-Tab for its own tabs: take that binding out of its
 //                   settings (its actions' nextTab and prevTab keys)
 // Keys: Ctrl-A is this tool's prefix: Ctrl-A x quits, Ctrl-A l turns the log on or off, Ctrl-A s says /pc's counts so
-// far (requests, attaches, frames from the Hydra that came damaged, replies asked for again: said at the end too),
+// far (requests, attaches, frames from the Hydra that came damaged or stopped part-way, replies asked for again: said
+// at the end too),
 // Ctrl-A Ctrl-A sends a Ctrl-A.  A typed $1E (Ctrl-^, /pc's frame mark) goes as $1E $1F, which the Hydra takes as the key.
 // The window's size: told to the Hydra as xterm answers ESC [ 18 t (ESC [ 8 ; rows ; columns t), as the tool starts
 // and whenever the window changes, so the Hydra's windows are its size; and the Hydra's ESC [ 18 t (its console
@@ -51,6 +52,7 @@ const W32 = require('../../../base/sim/lib/win32in.js');
 const { createPcFs } = require('./pcfs.js');
 
 const QUIET_MS = 100;                                         // A frame that stops this long isn't one: its bytes show
+const QUIET_SETTLE_MS = 20;                                   //   (once the port's waiting bytes have been read: this long after)
 const CHUNK = 16, CHUNK_MS = 8;                               // The keys' way out: this many, then a pause (a paste)
 const HELD_MS = 10000;                                        // After an XOFF with no XON this long, the keys go on
 
@@ -91,9 +93,9 @@ if (opt.list) {
 
 function run(portName, folder) {
   const stdin = process.stdin, stdout = process.stdout, tty = stdin.isTTY;
-  let logOn = opt.log, naks = 0;
+  let logOn = opt.log, naks = 0, givenUp = 0;
   const log = t => { if (logOn) process.stderr.write('[pc] ' + t + '\r\n'); };
-  const counts = () => { const s = fsrv.stats; return '/pc: ' + s.requests + ' request(s), ' + s.attaches + ' attach(es), ' + naks + ' frame(s) from the Hydra damaged (asked again), ' + s.repeats + ' repl' + (s.repeats === 1 ? 'y' : 'ies') + ' lost (asked for again)'; };
+  const counts = () => { const s = fsrv.stats; return '/pc: ' + s.requests + ' request(s), ' + s.attaches + ' attach(es), ' + naks + ' frame(s) from the Hydra damaged (asked again), ' + givenUp + ' stopped part-way (shown as text), ' + s.repeats + ' repl' + (s.repeats === 1 ? 'y' : 'ies') + ' lost (asked for again)'; };
   const say = t => stdout.write('\r\n[hydrapc] ' + t + '\r\n');
   let fsrv;
   try { fsrv = createPcFs({ root: folder, readOnly: opt.readOnly, log }); }
@@ -150,13 +152,26 @@ function run(portName, folder) {
       port.write(Buffer.from(P.encode(P.T_REPLY, f.tag, f.type === P.T_ATTACH ? fsrv.attach(f.payload) : fsrv.request(f.tag, f.payload))));
     },
     onBad: f => { naks++; log('a frame from the Hydra came damaged (tag ' + f.tag + '): asked for it again'); port.write(Buffer.from(P.encode(P.T_NAK, f.tag))); } });
-  let quiet = null;
+  // A frame that stops for QUIET_MS isn't one: its bytes are shown.  But a timer that comes due while this program was
+  // held up (its output waiting on the window, text being selected in it, the disk) runs before the port's bytes that
+  // came meanwhile are read: a whole frame, its second half already here, was thrown on the screen and never answered
+  // (the Hydra's "unanswered", and its request again two seconds on).  So when the time's up, the port's waiting
+  // bytes are let in first (after this turn's I/O, and a moment), and the frame is given up only if none came
+  let quiet = null, dataSeen = 0;
+  const hex = bytes => bytes.slice(0, 12).map(b => b.toString(16).padStart(2, '0')).join(' ') + (bytes.length > 12 ? ' ...' : '');
+  const giveUp = seen => {
+    if (dataSeen !== seen || !reader.inFrame()) return;         // (More came: the data's own timer is running)
+    const raw = reader.flush();
+    givenUp++;
+    log('a frame from the Hydra stopped part-way (' + raw.length + ' bytes: ' + hex(raw) + ', then nothing for ' + QUIET_MS + ' ms): shown as text');
+    shown(raw);
+  };
   port.on('data', buf => {
-    const out = [];
+    const out = [], seen = ++dataSeen;
     for (const b of buf) for (const c of reader.push(b)) out.push(c);
     shown(out);
     clearTimeout(quiet);
-    if (reader.inFrame()) quiet = setTimeout(() => shown(reader.flush()), QUIET_MS);
+    if (reader.inFrame()) quiet = setTimeout(() => setImmediate(() => { quiet = setTimeout(() => giveUp(seen), QUIET_SETTLE_MS); }), QUIET_MS);
   });
   port.on('close', () => finish('the port closed'));
   port.on('error', e => finish(e.message));
@@ -199,7 +214,7 @@ function run(portName, folder) {
     if (done) return;
     done = true;
     say(why);
-    if (fsrv.stats.requests || fsrv.stats.attaches || naks) say(counts());
+    if (fsrv.stats.requests || fsrv.stats.attaches || naks || givenUp) say(counts());
     fsrv.close();
     if (w32) stdout.write(W32.DISABLE);
     if (tty) stdin.setRawMode(false);

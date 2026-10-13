@@ -268,8 +268,8 @@ $ node sim/tools/hydrapc.js COM3 work                 # a terminal on COM3, and 
 ```
 
 `--baud N` sets the rate (9600 as the Hydra starts), `--read-only` keeps the folder from being changed, `--log` lists
-`/pc`'s requests (and the frames from the Hydra that came damaged, and the replies it asked for again: a bad line
-shows there; Ctrl-A l turns it on and off).  Ctrl-A s says the counts so far, and quitting says them too.  Ctrl-A x
+`/pc`'s requests (and the frames from the Hydra that came damaged or stopped part-way, and the replies it asked for
+again: a bad line shows there; Ctrl-A l turns it on and off).  Ctrl-A s says the counts so far, and quitting says them too.  Ctrl-A x
 quits.  It tells the Hydra its window's size, so the Hydra's windows fit it.  In Windows
 Terminal, `--win32-input` lets Ctrl-Tab reach the Hydra.
 

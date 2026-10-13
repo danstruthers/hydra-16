@@ -2621,7 +2621,7 @@ module.exports = {
       name: 'pc-damage', what: '/pc\'s frames damaged on the line: requests (the PC tool asks for them again: its NAK), a reply (the Hydra asks again, and the PC tool answers from its last reply); the answers right, nothing damaged shown; serctl counts them (2 nak, 1 damaged)',
       init: 't_rc', cycles: 140e6, pc: { files: { 'hello.txt': 'Hello from the PC\n' }, damage: ['q3', 'r4', 'q6'] },
       machine: { input: 'āls /pc\rācat /pc/hello.txt\rācat /pc/hello.txt\rācat /dev/serctl\r' },
-      expect: ['% ls /pc\nhello.txt\n%', '% cat /pc/hello.txt\nHello from the PC\n% cat /pc/hello.txt\nHello from the PC\n%', ' req, 0 cut short, 0 unanswered, 1 damaged, 2 nak, 0 gone\nline 0 overruns, 0 framing errors\n%'],
+      expect: ['% ls /pc\nhello.txt\n%', '% cat /pc/hello.txt\nHello from the PC\n% cat /pc/hello.txt\nHello from the PC\n%', ' req, 0 cut short, 0 unanswered, 1 damaged, 2 nak, 0 gone\nline 0 overruns, 0 framing errors, 0 dropped\n%'],
       check: m => pcReport(m, 1, 2, 1),
     },
     {
@@ -2739,13 +2739,15 @@ module.exports = {
       expect: ['% cat /dev/kmesg | head -2\n\nHydra-16: kernel ', '% echo still here\nstill here\n% '],
     },
     {
-      name: 'pasteahead', what: 'with no flow control (serctl\'s x0), seven lines (399 keys) pasted at the line\'s rate while ps writes four times and nothing reads: more than the window\'s queue and the receive ring hold (63 + 255); the newest are lost (the irq entry\'s, with the ring full), and what came first is whole: the first five lines read and run in their turn',
-      init: 't_rc', cycles: 200e6,
+      name: 'pasteahead', what: 'with no flow control (serctl\'s x0), seven lines (399 keys) pasted at the line\'s rate while ps writes four times and nothing reads: more than the window\'s queue and the receive ring hold (63 + 255); the newest are lost (the irq entry\'s, with the ring full: serctl counts them, dropped), and what came first is whole: the first five lines read and run in their turn',
+      init: 't_rc', cycles: 260e6,
       machine: {
         paste: true,
-        input: 'āecho x0 >/dev/serctl; cat /dev/serctl\r' + 'āps; ps; ps; ps; sleep 1\r' + [1, 2, 3, 4, 5, 6, 7].map(i => 'echo ' + i + ' ' + 'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\r').join(''),
+        input: 'āecho x0 >/dev/serctl; cat /dev/serctl\r' + 'āps; ps; ps; ps; sleep 1\r' + [1, 2, 3, 4, 5, 6, 7].map(i => 'echo ' + i + ' ' + 'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\r').join('') +
+          'Ā'.repeat(14) + '\r' + 'ĀĀ' + 'grep dropped /dev/serctl; echo counted\r',   // (Once the lines kept have run: what's left of the line cut short, run; then serctl's count of the lost)
       },
-      expect: ['% echo x0 >/dev/serctl; cat /dev/serctl\nb9600\nx0\npc 0 req, 0 cut short, 0 unanswered, 0 damaged, 0 nak, 0 gone\nline 0 overruns, 0 framing errors\n% ',
+      check(m, out) { return /\nline 0 overruns, 0 framing errors, [1-9]\d* dropped\n/.test(out) ? [] : ['serctl doesn\'t count the bytes dropped with the ring full: ' + JSON.stringify((out.match(/\nline .*\n/g) || []).pop())]; },
+      expect: ['\ncounted\n', '% echo x0 >/dev/serctl; cat /dev/serctl\nb9600\nx0\npc 0 req, 0 cut short, 0 unanswered, 0 damaged, 0 nak, 0 gone\nline 0 overruns, 0 framing errors, 0 dropped\n% ',
         '\n% ' + [1, 2, 3, 4, 5].map(i => 'echo ' + i + ' abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\n' + i + ' abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\n% ').join('')],
     },
     {
@@ -2759,9 +2761,9 @@ module.exports = {
           Array.from({ length: 60 }, (_, i) => 'echo ' + (i + 1) + ' ' + 'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\r').join('') +
           'echo pasted\r' + 'ācp /pc/xs /pc/xs2; cmp /pc/xs /pc/xs2; echo copied $status\r' + 'āecho x0 >/dev/serctl; echo x1 >/dev/serctl; cat /dev/serctl\r' + 'āecho the end\r',
       },
-      expect: ['% cat /dev/serctl\nb9600\nx1\npc 0 req, 0 cut short, 0 unanswered, 0 damaged, 0 nak, 0 gone\nline 0 overruns, 0 framing errors\n% ',
+      expect: ['% cat /dev/serctl\nb9600\nx1\npc 0 req, 0 cut short, 0 unanswered, 0 damaged, 0 nak, 0 gone\nline 0 overruns, 0 framing errors, 0 dropped\n% ',
         '\n% ' + Array.from({ length: 60 }, (_, i) => 'echo ' + (i + 1) + ' abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\n' + (i + 1) + ' abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\n% ').join(''),
-        '; echo copied $status\ncopied\n% ', '; cat /dev/serctl\nb9600\nx1\npc ', ' req, 0 cut short, 0 unanswered, 0 damaged, 0 nak, 0 gone\nline 0 overruns, 0 framing errors\n% echo the end\nthe end\n% '],
+        '; echo copied $status\ncopied\n% ', '; cat /dev/serctl\nb9600\nx1\npc ', ' req, 0 cut short, 0 unanswered, 0 damaged, 0 nak, 0 gone\nline 0 overruns, 0 framing errors, 0 dropped\n% echo the end\nthe end\n% '],
       check(m) {
         const f = [];
         if (m.acia.xoffs < 5 || m.acia.xons < 5) f.push('the console told the terminal to stop ' + m.acia.xoffs + ' times, and to go on ' + m.acia.xons + ' (5 each at least, for 3,400 keys)');
