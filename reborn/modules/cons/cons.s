@@ -446,6 +446,14 @@ pc_last:                                                    ; ---- (Its end)
 pc_owner:   .res        1                                   ;   the client whose request it is ($FF: none) ...
 pc_t:       .res        2                                   ;   scratch
 pc_n:       .res        1
+pc_n_req:   .res        2                                   ; /pc's counts (serctl shows them): requests sent ...
+pc_n_short: .res        1                                   ;   replies that stopped part-way (a byte lost) ...
+pc_n_none:  .res        1                                   ;   that never came ...
+pc_n_bad:   .res        1                                   ;   that came damaged ...
+pc_n_nak:   .res        1                                   ;   requests the PC had damaged (its NAK) ...
+pc_n_gone:  .res        1                                   ;   and times the PC was given up (E_IO)
+rx_ovr:     .res        2                                   ; The ACIA's receive overruns (the irq entry late: a byte lost) ...
+rx_fe:      .res        2                                   ;   and framing (or parity) errors (the line, or the rate)
 pc_k:       .res        1
 pc_crc:     .res        2                                   ;   a CRC
 
@@ -481,6 +489,11 @@ init:
             ldx         #pc_last - pc_first - 1
 :
             stz         pc_first,X
+            dex
+            bpl         :-
+            ldx         #rx_fe + 2 - pc_n_req - 1           ; (The counts serctl shows: 0)
+:
+            stz         pc_n_req,X
             dex
             bpl         :-
             lda         #$FF                                ; (No request out)
@@ -635,8 +648,10 @@ irq:
             cmp         #LINE_VIA_T2
             beq         t2_next
             lda         ACIA_STATUS                         ; (Reading it clears its interrupt)
-            and         #ACIA_ST_RDRF
-            beq         @none
+            and         #ACIA_ST_RDRF | ACIA_ST_OVR | $03   ; A byte, and no overrun, framing or parity error: on
+            cmp         #ACIA_ST_RDRF                       ;   (else @odd: the error counted, off the short path)
+            bne         @odd
+@byte:
             lda         ACIA_DATA
             ldx         pfx
             bne         @after
@@ -658,6 +673,25 @@ irq:
 @none:
             lda         #0
             rts
+
+@odd:                                                       ; No byte, or an error with or without one: counted (an
+            tax                                             ;   overrun, else a framing or parity error), and the
+            beq         @none                               ;   byte, if there is one, taken
+            and         #ACIA_ST_OVR
+            beq         @fe
+            inc         rx_ovr
+            bne         @counted
+            inc         rx_ovr + 1
+            bra         @counted
+@fe:
+            inc         rx_fe
+            bne         @counted
+            inc         rx_fe + 1
+@counted:
+            txa
+            and         #ACIA_ST_RDRF
+            beq         @none
+            bra         @byte
 
 @mark:                                                      ; Full: the byte's dropped.  Or x1's high mark: the
             ldx         rx_tail                             ;   byte's kept, the mark is the tail from here, and
@@ -7585,8 +7619,57 @@ gen_serctl:
             jsr         srv_tputc
             lda         #LF
             jsr         srv_tputc
+            lda         #<s_pcn                             ; Then the counts, for chasing a bad line: "pc N req, N cut
+            ldx         #>s_pcn                             ;   short, N unanswered, N damaged, N nak, N gone" and "line
+            jsr         srv_tputs                           ;   N overruns, N framing errors"
+            lda         pc_n_req
+            ldx         pc_n_req + 1
+            jsr         srv_tputdec
+            ldy         pc_n_short
+            lda         #<s_req
+            ldx         #>s_req
+            jsr         cnt_put
+            ldy         pc_n_none
+            lda         #<s_short
+            ldx         #>s_short
+            jsr         cnt_put
+            ldy         pc_n_bad
+            lda         #<s_unans
+            ldx         #>s_unans
+            jsr         cnt_put
+            ldy         pc_n_nak
+            lda         #<s_damaged
+            ldx         #>s_damaged
+            jsr         cnt_put
+            ldy         pc_n_gone
+            lda         #<s_nak
+            ldx         #>s_nak
+            jsr         cnt_put
+            lda         #<s_gone
+            ldx         #>s_gone
+            jsr         srv_tputs
+            lda         rx_ovr
+            ldx         rx_ovr + 1
+            jsr         srv_tputdec
+            lda         #<s_ovr
+            ldx         #>s_ovr
+            jsr         srv_tputs
+            lda         rx_fe
+            ldx         rx_fe + 1
+            jsr         srv_tputdec
+            lda         #<s_fe
+            ldx         #>s_fe
+            jsr         srv_tputs
             clc
             rts
+
+; The text at .A/.X, then the count .Y (serctl's)
+cnt_put:
+            phy
+            jsr         srv_tputs
+            pla
+            ldx         #0
+            jmp         srv_tputdec
 
 ; ****************************************************************************
 ; /pc (#P)
@@ -7653,6 +7736,10 @@ pc_request:
             sta         pc_step
             lda         #PC_TRIES
             sta         pc_tries
+            inc         pc_n_req                            ; (Counted: serctl shows it)
+            bne         @tag
+            inc         pc_n_req + 1
+@tag:
             inc         pc_tag
             jsr         pc_build
 
@@ -7691,12 +7778,17 @@ pc_waiting:
             bcc         @wait
 :
             stz         pc_rxs
+            ldx         #0                                  ; (Counted: cut short)
+            jsr         pc_count
             bra         pc_again
 
 @time:
             lda         #0
             jsr         pc_late
-            bcs         pc_again                            ; Its time has come: again
+            bcc         @wait
+            ldx         #1                                  ; Its time has come: again (counted: unanswered)
+            jsr         pc_count
+            bra         pc_again
 @wait:
             jmp         again                               ; (Woken early: wait on)
 
@@ -7705,15 +7797,19 @@ pc_waiting:
             jsr         pc_check
             bcc         @good
             tax
-            bne         pc_again                            ; Damaged: again
+            beq         @older
+            ldx         #2                                  ; Damaged: again (counted)
+            jsr         pc_count
+            bra         pc_again
+@older:
             jmp         again                               ; An older request's: wait on
 
 @good:
             cmp         #PC_T_REPLY                         ; (PC_T_NAK: it reached the PC damaged)
-            bne         pc_again
+            bne         @nak
             lda         pc_rxbuf + 2                        ; (Shorter than a reply: not one)
             cmp         #PC_REPLY_HDR
-            bcc         pc_again
+            bcc         @short
             lda         pc_step
             cmp         #PS_ATTACH
             bne         pc_answer
@@ -7724,6 +7820,15 @@ pc_waiting:
             sta         pc_online
             jmp         pc_request
 
+@nak:
+            ldx         #3                                  ; (Counted: the PC's NAK)
+            jsr         pc_count
+            bra         pc_again
+@short:
+            ldx         #2                                  ; (Counted: damaged)
+            jsr         pc_count
+            bra         pc_again
+
 ; Once more, if it has tries left; else the PC is gone
 pc_again:
             dec         pc_tries
@@ -7733,6 +7838,8 @@ pc_again:
 
 pc_gone:
             stz         pc_online
+            ldx         #4                                  ; (Counted: gone)
+            jsr         pc_count
             lda         #E_IO
             bra         pc_error
 
@@ -7800,6 +7907,14 @@ pc_release:
             stx         pc_owner
             stz         pc_rxf
             inc         TASK_EVENT
+            rts
+
+; Count .X of /pc's (pc_n_short, X: cut short, unanswered, damaged, nak, gone) up by one, to 255 at most.  Keeps .A
+pc_count:
+            inc         pc_n_short,X
+            bne         @ok
+            dec         pc_n_short,X
+@ok:
             rts
 
 ; Is this the request out, its client asking again, or another (it gave that one up: a non-blocking one)?  Its
@@ -8300,6 +8415,15 @@ s_wctl:     .byte       "wctl", 0
 s_wnew:     .byte       "wnew", 0
 s_ser:      .byte       "ser", 0
 s_serctl:   .byte       "serctl", 0
+s_pcn:      .byte       "pc ", 0                            ; (serctl's counts)
+s_req:      .byte       " req, ", 0
+s_short:    .byte       " cut short, ", 0
+s_unans:    .byte       " unanswered, ", 0
+s_damaged:  .byte       " damaged, ", 0
+s_nak:      .byte       " nak, ", 0
+s_gone:     .byte       " gone", LF, "line ", 0
+s_ovr:      .byte       " overruns, ", 0
+s_fe:       .byte       " framing errors", LF, 0
 s_kbdin:    .byte       "kbdin", 0
 s_text:     .byte       "text", 0
 s_label:    .byte       "label", 0

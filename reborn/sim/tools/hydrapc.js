@@ -24,8 +24,9 @@
 //                   (lib/win32in.js), so Ctrl-Tab and Ctrl-Shift-Tab reach the Hydra (ESC [ 9 ; 5 u, 6), its
 //                   windows' keys.  Windows Terminal keeps Ctrl-Tab for its own tabs: take that binding out of its
 //                   settings (its actions' nextTab and prevTab keys)
-// Keys: Ctrl-A is this tool's prefix: Ctrl-A x quits, Ctrl-A l turns the log on or off, Ctrl-A Ctrl-A sends a
-// Ctrl-A.  A typed $1E (Ctrl-^, /pc's frame mark) goes as $1E $1F, which the Hydra takes as the key.
+// Keys: Ctrl-A is this tool's prefix: Ctrl-A x quits, Ctrl-A l turns the log on or off, Ctrl-A s says /pc's counts so
+// far (requests, attaches, frames from the Hydra that came damaged, replies asked for again: said at the end too),
+// Ctrl-A Ctrl-A sends a Ctrl-A.  A typed $1E (Ctrl-^, /pc's frame mark) goes as $1E $1F, which the Hydra takes as the key.
 // The window's size: told to the Hydra as xterm answers ESC [ 18 t (ESC [ 8 ; rows ; columns t), as the tool starts
 // and whenever the window changes, so the Hydra's windows are its size; and the Hydra's ESC [ 18 t (its console
 // asks as it starts, and consctl's terminal size) is answered here, not shown.
@@ -90,10 +91,12 @@ if (opt.list) {
 
 function run(portName, folder) {
   const stdin = process.stdin, stdout = process.stdout, tty = stdin.isTTY;
-  let logOn = opt.log;
+  let logOn = opt.log, naks = 0;
+  const log = t => { if (logOn) process.stderr.write('[pc] ' + t + '\r\n'); };
+  const counts = () => { const s = fsrv.stats; return '/pc: ' + s.requests + ' request(s), ' + s.attaches + ' attach(es), ' + naks + ' frame(s) from the Hydra damaged (asked again), ' + s.repeats + ' repl' + (s.repeats === 1 ? 'y' : 'ies') + ' lost (asked for again)'; };
   const say = t => stdout.write('\r\n[hydrapc] ' + t + '\r\n');
   let fsrv;
-  try { fsrv = createPcFs({ root: folder, readOnly: opt.readOnly, log: t => { if (logOn) process.stderr.write('[pc] ' + t + '\r\n'); } }); }
+  try { fsrv = createPcFs({ root: folder, readOnly: opt.readOnly, log }); }
   catch (e) { usage(e.message); }
 
   const port = new SerialPort({ path: portName, baudRate: opt.baud, dataBits: 8, parity: 'none', stopBits: 1 }, err => {
@@ -101,7 +104,7 @@ function run(portName, folder) {
     port.set({ rts: true, dtr: true }, e => {                  // (The Hydra sends only while its CTS, our RTS, is on)
       if (e) say('RTS and DTR not set (' + e.message + '): the Hydra may not send');
       say('the Hydra on ' + portName + ' at ' + opt.baud + ' baud; /pc is ' + fsrv.what + (fsrv.readOnly ? ' (read-only)' : '') +
-        '.  Ctrl-A x quits, Ctrl-A l the log.');
+        '.  Ctrl-A x quits, Ctrl-A l the log, Ctrl-A s the /pc counts.');
       tellSize();
     });
   });
@@ -146,7 +149,7 @@ function run(portName, folder) {
       if (f.type === P.T_ATTACH) reader.flowIn(f.payload.length > 1 && (f.payload[1] & P.STUFFS));
       port.write(Buffer.from(P.encode(P.T_REPLY, f.tag, f.type === P.T_ATTACH ? fsrv.attach(f.payload) : fsrv.request(f.tag, f.payload))));
     },
-    onBad: f => port.write(Buffer.from(P.encode(P.T_NAK, f.tag))) });
+    onBad: f => { naks++; log('a frame from the Hydra came damaged (tag ' + f.tag + '): asked for it again'); port.write(Buffer.from(P.encode(P.T_NAK, f.tag))); } });
   let quiet = null;
   port.on('data', buf => {
     const out = [];
@@ -167,7 +170,8 @@ function run(portName, folder) {
       if (b === 1) sendKeys([1]);
       else if (k === 'x' || k === 'q') finish('quit');
       else if (k === 'l') { logOn = !logOn; say('log ' + (logOn ? 'on' : 'off')); }
-      else say('Ctrl-A then: x quit, l the log on or off, Ctrl-A a Ctrl-A');
+      else if (k === 's') say(counts());
+      else say('Ctrl-A then: x quit, l the log on or off, s the /pc counts, Ctrl-A a Ctrl-A');
       return;
     }
     if (b === 1) { prefix = true; return; }
@@ -195,6 +199,7 @@ function run(portName, folder) {
     if (done) return;
     done = true;
     say(why);
+    if (fsrv.stats.requests || fsrv.stats.attaches || naks) say(counts());
     fsrv.close();
     if (w32) stdout.write(W32.DISABLE);
     if (tty) stdin.setRawMode(false);

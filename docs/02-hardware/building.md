@@ -234,7 +234,8 @@ For a closer look at any fault, run the hardware test.
 
 A test of as much of the board as software can reach, for bringing a board up or chasing a fault.  It's a program of
 its own in paged ROM bank 1, the same in both systems' ROMs.  It takes the machine over: interrupts off, its own polled
-serial I/O at 9600 8N1, no calls into the system.  Its memory tests overwrite everything, so it ends with a reset.
+serial I/O at 9600 8N1 (it finds out for itself whether the serial chip is a Rockwell R65C51 or a WDC W65C51N, so
+the one image serves both, whatever the system was built for), no calls into the system.  Its memory tests overwrite everything, so it ends with a reset.
 
 **Starting it:**
 
@@ -276,11 +277,11 @@ crossed address line shows up as well as a bad data line.  "Bits" are hex masks 
 | `6` | RAM modules | Which memory cards there are; each bank of each has its mark in each task; every byte of each card's first bank (full: every bank, in every task) | the bank, the task, where, the bad bits |
 | `7` | BIOS ROM | A CRC of each 8K page against the build's checksums | `page N`, and `(W line n)` if it reads as another page |
 | `8` | paged ROM | A CRC of each 16K bank in use, and the bank lines | `bank NN`, or `bank line n` |
-| `I` | interrupts | No IRQ line active with the devices quiet; the vector RAM (all 16 entries, two patterns); `BRK` through entry `V`; the VIA's, the ACIA's and the YM2151's interrupts on their lines, one at a time, then all at once in priority order | `an IRQ line is held active`; `vector entry N wrote .. read ..`; the device and `no IRQ` or the line it came on; `unasked: IRQ on line N` |
+| `I` | interrupts | No IRQ line active with the devices quiet; the vector RAM (all 16 entries, two patterns); `BRK` through entry `V`; the VIA's, the ACIA's (a Rockwell's: a WDC chip's transmitter can't interrupt) and the YM2151's interrupts on their lines, one at a time, then all at once in priority order | `an IRQ line is held active`; `vector entry N wrote .. read ..`; the device and `no IRQ` or the line it came on; `unasked: IRQ on line N` |
 | `V` | VIA | Timer 1's latches, the shift register and IER read back; the timers counting and their flags | the part |
 | `Y` | sound chip | The YM2151's busy flag (set by a write, then clear), and its timers' flags | `always busy (no chip?)`, `never busy`, `timer A`, ... |
 | `K` | CPU clock | The CPU's clock against the YM2151's (`SND_CLK`): shows 0.89, 1.79, 3.58 or 7.16 MHz, which must be what the ROM is built for | the clock and what the ROM expects, or `not a clock the board has` |
-| `S` | serial port | DCD and DSR active; the control and command registers; a programmed reset; a character's time at 9600 baud (Rockwell only) | the register, or the character's time in cycles |
+| `S` | serial port | DCD and DSR active; the control and command registers; a programmed reset; a character's time at 9600 baud (on a Rockwell chip; a WDC chip, whose TDRE never clears, is named instead) | the register, or the character's time in cycles |
 | `P` | SPI devices | Information: each of devices 0-7 is sent an SD card's reset (CMD0); the SD cards that answer are shown | |
 | `C` | I2C bus | SCL and SDA high when released and each low alone when pulled low; then information: the devices that answer, at `$08-$77` | the lines' levels |
 | `X` | slot cards | Information: the slot ports (`1A` = slot 1, select A) that don't read as empty | |

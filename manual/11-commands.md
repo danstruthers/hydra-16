@@ -39,10 +39,11 @@ Most of the examples use a few small files. To make them, type:
 ## as: the assembler
 
 ```text
-as [-bl] file.s [out]
+as [-bl] file.s|- [out|-]
 ```
 
-Turns a program written in 65C02 **assembly language** into a program the Hydra can run. Chapter 27 is all about it.
+Turns a program written in 65C02 **assembly language** into a program the Hydra can run (`-`: standard input, or
+standard output, for a pipe). Chapter 27 is all about it.
 
 ## basic: HyBASIC
 

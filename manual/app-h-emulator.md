@@ -178,8 +178,10 @@ Don't give the same image to an emulator (`--sd`) while the PC tool has it.
 | `--win32-input` | As the emulator's (H.1) |
 
 Its keys: <kbd>CTRL</kbd>-<kbd>A</kbd> <kbd>X</kbd> quits, <kbd>CTRL</kbd>-<kbd>A</kbd> <kbd>L</kbd> turns the log
-on or off, and <kbd>CTRL</kbd>-<kbd>A</kbd> <kbd>CTRL</kbd>-<kbd>A</kbd> sends a <kbd>CTRL</kbd>-<kbd>A</kbd>. It needs
-the `serialport` package: run `npm install` in `reborn/sim` once.
+on or off, <kbd>CTRL</kbd>-<kbd>A</kbd> <kbd>S</kbd> says `/pc`'s counts so far (requests, and frames that came
+damaged or replies that had to be sent again: a bad line shows here), and <kbd>CTRL</kbd>-<kbd>A</kbd>
+<kbd>CTRL</kbd>-<kbd>A</kbd> sends a <kbd>CTRL</kbd>-<kbd>A</kbd>. It needs the `serialport` package: run `npm install`
+in `reborn/sim` once.
 
 **hysong.js** turns a score (section 15.6) into a ZSM song on the PC, as `play -o` does on the Hydra, and can make a
 VGM file too, to hear it on the PC:

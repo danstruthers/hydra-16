@@ -160,6 +160,7 @@ function ROM_BIN() {
 // The rc test's lines, and what each says
 const RC_LINES = [
   ["echo hello","hello"],
+  ["cat /env/prog; echo","/bin/cat"],
   ["x=(a b c); echo $x $#x $x(2)","a b c 3 b"],
   ["echo 'a  b' 'it''s'","a  b it's"],
   ["echo $\"x","a b c"],
@@ -1817,6 +1818,13 @@ module.exports = {
       },
     },
     {
+      name: 'flib', what: 'HyForth\'s lib and require after trouble: a bare name is tried in the current directory, then /lib/forth: with a directory of that name in the way (and in /pc with no PC tool) lib facility still loads; a library that fails to load (a bad .fl) is un-noted, so lib says so again rather than nothing; require of a file that isn\'t there, again',
+      init: 't_rc', cycles: 160e6,
+      machine: { input: 'āforth -l\r' + 'ācd /ram\r' + 'āmkdir facility.fl\r' + 'ālib facility\r' + 'ālibs\r' + 'āecho HYFLxx >bad.fl\r' + 'ālib bad\r' + 'ālib bad\r' + 'ārequire none.fs\r' + 'ārequire none.fs\r' + 'ācd /pc\r' + 'ālib string\r' + 'ālibs\r' + 'ābye\r' },
+      expect: ['/ram> lib facility\n/ram> libs\nforth coreext exception file tools shell facility\n/ram> echo HYFLxx >bad.fl\n/ram> lib bad\nnot this forth\'s library\n/ram> lib bad\nnot this forth\'s library\n/ram> require none.fs\nnone.fs: not found\n/ram> require none.fs\nnone.fs: not found\n/ram> cd /pc\n',
+        '/pc: i/o error\n/ram> lib string\n/ram> libs\nforth coreext exception file tools shell facility string\n/ram> bye\n'],
+    },
+    {
       name: 'fshell', what: 'HyForth as a shell (forth -l, shell.fl): its namespace and profile; a line Forth\'s or rc\'s by its first word (a number, one of the numbers library\'s, a word, a pipeline, a redirection); . on an empty stack, or rc\'s by % (a program a word shadows); cd and the prompt (its format); a definition over lines (the second prompt); status and $status; & ($apid) and wait; programs as values: sh-out, output-of, a word\'s output a program\'s input (|, piped: one that ends first, Ctrl-C), spawn; Ctrl-C ending a program; errors, a usage; -lib shell and lib shell; exit',
       init: 't_rc', cycles: 400e6,
       // (Each line typed at the shell's prompt (ā: "> " or "% "), but those it has none for: a definition's second line
@@ -2183,9 +2191,10 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'round', what: 'the round sample (sdk/c/samples/round: a barrier, then each task its own time) at rc: four tasks sing a round on YM2151 channels 0-3, an eighth 12 ticks; each voice\'s 27 notes in time (hy_sleep_until: within 5 ticks), each voice two bars after the one before',
-      init: 't_rc', cycles: 200e6,
-      machine: { input: 'ā/sd/0/sample/c/round 1 12\r' },
+      name: 'round', what: 'the round sample (sdk/c/samples/round: a barrier, then each task its own time) at rc, as a copy named /ram/rnd (the build\'s, through /pc: only $prog can find it): four tasks sing a round on YM2151 channels 0-3, an eighth 12 ticks; each voice\'s 27 notes in time (hy_sleep_until: within 5 ticks), each voice two bars after the one before',
+      init: 't_rc', cycles: 220e6,
+      pc: { files: () => ({ 'round.hyx': fs.readFileSync(path.join(__dirname, '..', 'obj', 'samples', 'c', 'round.hyx')) }) },
+      machine: { input: 'ācp /pc/round.hyx /ram/rnd; /ram/rnd 1 12\r' },
       expect: ['Each voice sang it 1 time, its latest note late by', ' ticks.\n%'],
       check(m, out) {
         // (Each channel's key-ons against the tune's: its note lengths, an eighth 12 ticks, from voice 0's first,
@@ -2260,8 +2269,8 @@ module.exports = {
         '% wc /pc/big.txt; head -3 /pc/big.txt\n   2001    4001   20004 /pc/big.txt\nline 1000\nline 1001\nline 0001\n%'],
     },
     {
-      name: 'as', what: 'as, the assembler (the module as): the SDK\'s hi from /lib/as, with its include files there, the same bytes as the build\'s (ca65 and ld65), run, its labels file (-l); nsum (numbers.inc\'s macros, numlib.s) the same; t_asall (tests/ram: every opcode in each mode, directives, expressions, labels, macros, conditionals, segments, .include, .incbin) the same as the build\'s; -b with .org; errors with their files and lines; a warning',
-      init: 't_rc', cycles: 200e6,
+      name: 'as', what: 'as, the assembler (the module as): the SDK\'s hi from /lib/as, with its include files there, the same bytes as the build\'s (ca65 and ld65), run, its labels file (-l); nsum (numbers.inc\'s macros, numlib.s) the same; t_asall (tests/ram: every opcode in each mode, directives, expressions, labels, macros, conditionals, segments, .include, .incbin) the same as the build\'s; -b with .org; errors with their files and lines; a warning; - for the source (a pipe, a < file; the output - too unless named) and for the output (stdout); -l with - refused',
+      init: 't_rc', cycles: 300e6,
       pc: {
         files: () => {
           const t = n => fs.readFileSync(path.join(__dirname, 'ram', 't_asall', n));
@@ -2275,14 +2284,20 @@ module.exports = {
       machine: {
         input: ['echo b115200 >/dev/serctl', 'as -l /sd/0/sample/as/hi.s /ram/hi; echo $status', 'cmp /ram/hi /sd/0/sample/hi; echo $status', '/ram/hi Ann',
           'grep main /ram/hi.lbl', 'as /sd/0/sample/as/nsum.s /ram/nsum; cmp /ram/nsum /sd/0/sample/nsum; echo $status', 'as /pc/t_asall.s /ram/t_asall; cmp /ram/t_asall /pc/t_asall.hyx; echo $status', 'as -b /pc/raw.s /ram/raw; xd /ram/raw',
-          'as /pc/bad.s /ram/bad; echo $status', 'as /pc/warn.s /ram/warn; echo $status; xd /ram/warn', 'as'].map(l => 'ā' + l + '\r').join(''),
+          'as /pc/bad.s /ram/bad; echo $status', 'as /pc/warn.s /ram/warn; echo $status; xd /ram/warn',
+          'cat /sd/0/sample/as/hi.s | as - /ram/hi2; cmp /ram/hi2 /ram/hi; echo $status', 'as /sd/0/sample/as/hi.s - >/ram/hi3; cmp /ram/hi3 /ram/hi; echo $status',
+          'dis /ram/hi | as - >/ram/hi4; cmp /ram/hi4 /ram/hi; echo $status', 'as -l - /ram/hi5 </sd/0/sample/as/hi.s; cmp /ram/hi5 /ram/hi; echo $status; grep main /ram/hi5.lbl',
+          'as -l - </sd/0/sample/as/hi.s; echo $status', 'as'].map(l => 'ā' + l + '\r').join(''),
       },
       expect: ['% as -l /sd/0/sample/as/hi.s /ram/hi; echo $status\n\n%', '% cmp /ram/hi /sd/0/sample/hi; echo $status\n\n%', '% /ram/hi Ann\nHello, Ann!\nI\'m task ',
         '% grep main /ram/hi.lbl\nal 000830 .main\n%', '% as /sd/0/sample/as/nsum.s /ram/nsum; cmp /ram/nsum /sd/0/sample/nsum; echo $status\n\n%',
         '% as /pc/t_asall.s /ram/t_asall; cmp /ram/t_asall /pc/t_asall.hyx; echo $status\n\n%',
         '% as -b /pc/raw.s /ram/raw; xd /ram/raw\n0000000  4c 00 c0 00 c0 05 00 ',
         '% as /pc/bad.s /ram/bad; echo $status\nas: /pc/bad.s:2: not an instruction, directive or macro: frob\nas: /pc/bad.s:3: stop\nas: /pc/bad.s:4: a bad expression\n1\n%',
-        '% as /pc/warn.s /ram/warn; echo $status; xd /ram/warn\nas: /pc/warn.s:2: warning: careful\n\n0000000  60 ', '% as\nusage: as [-bl] file.s [out]\n%'],
+        '% as /pc/warn.s /ram/warn; echo $status; xd /ram/warn\nas: /pc/warn.s:2: warning: careful\n\n0000000  60 ',
+        '% cat /sd/0/sample/as/hi.s | as - /ram/hi2; cmp /ram/hi2 /ram/hi; echo $status\n\n%', '% as /sd/0/sample/as/hi.s - >/ram/hi3; cmp /ram/hi3 /ram/hi; echo $status\n\n%',
+        '% dis /ram/hi | as - >/ram/hi4; cmp /ram/hi4 /ram/hi; echo $status\n\n%', '% as -l - /ram/hi5 </sd/0/sample/as/hi.s; cmp /ram/hi5 /ram/hi; echo $status; grep main /ram/hi5.lbl\n\nal 000830 .main\n%',
+        '% as -l - </sd/0/sample/as/hi.s; echo $status\nas: -l needs the output\'s name (as -l - out): - is stdout\n1\n%', '% as\nusage: as [-bl] file.s|- [out|-]\n%'],
       sdcard: true
     },
     {
@@ -2578,10 +2593,10 @@ module.exports = {
       expect: ['% ls /pc\n\x1eA', 'ls: /pc: i/o error\n%', '% cat /pc/x\n\x1eA', 'cat: /pc/x: i/o error\n%', '% echo still here\nstill here\n%'],
     },
     {
-      name: 'pc-damage', what: '/pc\'s frames damaged on the line: requests (the PC tool asks for them again: its NAK), a reply (the Hydra asks again, and the PC tool answers from its last reply); the answers right, nothing damaged shown',
-      init: 't_rc', cycles: 120e6, pc: { files: { 'hello.txt': 'Hello from the PC\n' }, damage: ['q3', 'r4', 'q6'] },
-      machine: { input: 'āls /pc\rācat /pc/hello.txt\rācat /pc/hello.txt\r' },
-      expect: ['% ls /pc\nhello.txt\n%', '% cat /pc/hello.txt\nHello from the PC\n% cat /pc/hello.txt\nHello from the PC\n%'],
+      name: 'pc-damage', what: '/pc\'s frames damaged on the line: requests (the PC tool asks for them again: its NAK), a reply (the Hydra asks again, and the PC tool answers from its last reply); the answers right, nothing damaged shown; serctl counts them (2 nak, 1 damaged)',
+      init: 't_rc', cycles: 140e6, pc: { files: { 'hello.txt': 'Hello from the PC\n' }, damage: ['q3', 'r4', 'q6'] },
+      machine: { input: 'āls /pc\rācat /pc/hello.txt\rācat /pc/hello.txt\rācat /dev/serctl\r' },
+      expect: ['% ls /pc\nhello.txt\n%', '% cat /pc/hello.txt\nHello from the PC\n% cat /pc/hello.txt\nHello from the PC\n%', ' req, 0 cut short, 0 unanswered, 1 damaged, 2 nak, 0 gone\nline 0 overruns, 0 framing errors\n%'],
       check: m => pcReport(m, 1, 2, 1),
     },
     {
@@ -2705,7 +2720,7 @@ module.exports = {
         paste: true,
         input: 'āecho x0 >/dev/serctl; cat /dev/serctl\r' + 'āps; ps; ps; ps; sleep 1\r' + [1, 2, 3, 4, 5, 6, 7].map(i => 'echo ' + i + ' ' + 'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\r').join(''),
       },
-      expect: ['% echo x0 >/dev/serctl; cat /dev/serctl\nb9600\nx0\n% ',
+      expect: ['% echo x0 >/dev/serctl; cat /dev/serctl\nb9600\nx0\npc 0 req, 0 cut short, 0 unanswered, 0 damaged, 0 nak, 0 gone\nline 0 overruns, 0 framing errors\n% ',
         '\n% ' + [1, 2, 3, 4, 5].map(i => 'echo ' + i + ' abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\n' + i + ' abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\n% ').join('')],
     },
     {
@@ -2719,9 +2734,9 @@ module.exports = {
           Array.from({ length: 60 }, (_, i) => 'echo ' + (i + 1) + ' ' + 'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\r').join('') +
           'echo pasted\r' + 'ācp /pc/xs /pc/xs2; cmp /pc/xs /pc/xs2; echo copied $status\r' + 'āecho x0 >/dev/serctl; echo x1 >/dev/serctl; cat /dev/serctl\r' + 'āecho the end\r',
       },
-      expect: ['% cat /dev/serctl\nb9600\nx1\n% ',
+      expect: ['% cat /dev/serctl\nb9600\nx1\npc 0 req, 0 cut short, 0 unanswered, 0 damaged, 0 nak, 0 gone\nline 0 overruns, 0 framing errors\n% ',
         '\n% ' + Array.from({ length: 60 }, (_, i) => 'echo ' + (i + 1) + ' abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\n' + (i + 1) + ' abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLM\n% ').join(''),
-        '; echo copied $status\ncopied\n% ', '; cat /dev/serctl\nb9600\nx1\n% echo the end\nthe end\n% '],
+        '; echo copied $status\ncopied\n% ', '; cat /dev/serctl\nb9600\nx1\npc ', ' req, 0 cut short, 0 unanswered, 0 damaged, 0 nak, 0 gone\nline 0 overruns, 0 framing errors\n% echo the end\nthe end\n% '],
       check(m) {
         const f = [];
         if (m.acia.xoffs < 5 || m.acia.xons < 5) f.push('the console told the terminal to stop ' + m.acia.xoffs + ' times, and to go on ' + m.acia.xons + ' (5 each at least, for 3,400 keys)');

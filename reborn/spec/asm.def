@@ -43,7 +43,7 @@ entry DIS asm impl=as_dis
   doc:    define is the NOP it runs: .byte and its bytes (1, 2 or 3).
 
 entry FILE asm impl=asm_file
-  in:     r0 = the source's name; r1 = the output's; .A = the flags (AF_)
+  in:     r0 = the source's name (-: fd 0, read as it is); r1 = the output's (-: fd 1; no labels file then); .A = the flags (AF_)
   out:    .A = the status (0, or 1 after an error); C = 1 if it's 1
   errors: -
   names:  hl - | bas - | fs - | c -

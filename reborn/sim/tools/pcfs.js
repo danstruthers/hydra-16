@@ -22,7 +22,7 @@
 //     the same image to an emulator as a card (--sd) while it's served: each would write over the other's work.
 //
 // createPcFs({ root, readOnly, log, now }) gives { request(tag, payload) -> reply payload, attach(payload) -> reply
-// payload, close(), stats: { repeats }, kind: 'folder' or 'image', what: a line about it, readOnly }.  root: the
+// payload, close(), stats: { requests, repeats, attaches }, kind: 'folder' or 'image', what: a line about it, readOnly }.  root: the
 // folder, or the image file.  now: an image's stamps for what's written (seconds since 2000: a test's; else the
 // PC's time).  A request repeated with the tag just answered (its reply was lost: the Hydra asks again) gets the
 // same reply, not done twice.
@@ -212,7 +212,7 @@ function createPcFs({ root, readOnly = false, log = () => {}, now }) {
   } else throw new Error(root + ' is neither a folder nor an image file');
   const fids = new Map();                                      // fid -> { file, fd, dir, stat, refs }
   let lastTag = -1, lastReply = null, version = 1;
-  const stats = { repeats: 0 };                                // (Requests asked again, answered from lastReply)
+  const stats = { requests: 0, repeats: 0, attaches: 0 };     // (Requests served; asked again, answered from lastReply; attaches)
 
   // The Hydra's name (the rest after /pc: "" or "/a/b") as the store's key
   const where = name => store.where(name.split('/').filter(p => p.length));
@@ -427,7 +427,8 @@ function createPcFs({ root, readOnly = false, log = () => {}, now }) {
 
   return {
     request(tag, payload) {
-      if (tag === lastTag && lastReply) { stats.repeats++; return lastReply; }   // (Asked again: its reply was lost)
+      if (tag === lastTag && lastReply) { stats.repeats++; log('asked again (tag ' + tag + '): my reply was lost on the way'); return lastReply; }
+      stats.requests++;
       let reply;
       try { reply = version === 2 ? serve2(payload) : serve(payload); }
       catch (e) {
@@ -443,7 +444,7 @@ function createPcFs({ root, readOnly = false, log = () => {}, now }) {
     // the folder is served read-only, and the count 0; version 2's has the version, 2, where the qid type goes
     attach(payload) {
       for (const [n, f] of fids) closeFid(n, f);
-      lastTag = -1; lastReply = null;
+      lastTag = -1; lastReply = null; stats.attaches++;
       version = payload && payload.length && payload[0] === 2 ? 2 : 1;
       log('attach (protocol ' + version + ')');
       return version === 2 ? [0, readOnly ? 1 : 0, 0, 0, 2] : [0, readOnly ? 1 : 0, 0, 0];

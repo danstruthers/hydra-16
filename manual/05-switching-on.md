@@ -84,6 +84,7 @@ Everything you type now goes to the Hydra. The PC tool's own keys start with <kb
 |---|---|
 | <kbd>CTRL</kbd>-<kbd>A</kbd> then <kbd>X</kbd> | Quit the PC tool |
 | <kbd>CTRL</kbd>-<kbd>A</kbd> then <kbd>L</kbd> | Turn the log on or off: a list of the Hydra's file requests |
+| <kbd>CTRL</kbd>-<kbd>A</kbd> then <kbd>S</kbd> | Say the counts so far: the Hydra's requests, and any that came damaged or had to be answered again (a bad cable shows here) |
 | <kbd>CTRL</kbd>-<kbd>A</kbd> then <kbd>CTRL</kbd>-<kbd>A</kbd> | Send a <kbd>CTRL</kbd>-<kbd>A</kbd> to the Hydra |
 
 It can also take these options, after the folder:
@@ -92,7 +93,7 @@ It can also take these options, after the folder:
 |---|---|
 | `--read-only` | The Hydra can read the folder's files (or the image's), but not change them |
 | `--baud N` | The serial port's speed (9600 unless you say) |
-| `--log` | Start with the log on |
+| `--log` | Start with the log on (it lists what the Hydra asks for, and any frame that came damaged) |
 | `--no-size` | Don't tell the Hydra the size of the window |
 | `--win32-input` | For Windows Terminal: lets keys like <kbd>CTRL</kbd>-<kbd>TAB</kbd> reach the Hydra |
 

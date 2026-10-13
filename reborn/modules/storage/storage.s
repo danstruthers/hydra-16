@@ -78,6 +78,8 @@ done:       .res        2                                   ;   the bytes moved 
 part:       .res        2                                   ;   this block's part of them ...
 within:     .res        2                                   ;   and where it starts in the block
 sd_cnt:     .res        2                                   ; (The SD layer's tries)
+sd_n_ref:   .res        1                                   ; The cards' errors (ctl's "errors" line): a command or data refused ...
+sd_n_busy:  .res        1                                   ;   and a write that stayed busy
 num:        .res        4                                   ; A number
 bufp:       .res        2                                   ; A block's 512 bytes (blk_read, blk_write)
 l2_ptr:     .res        2                                   ; A cached block ...
@@ -133,6 +135,8 @@ l2_minh:    .res        1
 ; Init: the module's banks, port B (nothing selected), the cache (empty), the ROM disk, HydraFS, and each device's
 ; letter
 init:
+            stz         sd_n_ref                            ; (The counts ctl shows: 0)
+            stz         sd_n_busy
             HYX2_BANKS_INIT
             ldx         #L2_SLOTS - 1
             lda         #$FF
@@ -758,8 +762,22 @@ sd_no_card:
 sd_refused:
             jsr         sd_end
             stz         vslow
+            ldx         #0                                  ; (Counted: ctl's "errors")
+            jsr         sd_count
             lda         #E_MEDIA
             sec
+            rts
+
+; Count .X of the cards' (sd_n_ref, X: refused, busy) up by one, to 255 at most: a card that has started (a slot with
+; no card, or something that isn't one, fails to start: not counted)
+sd_count:
+            ldy         dk
+            lda         d_state,Y
+            beq         @ok
+            inc         sd_n_ref,X
+            bne         @ok
+            dec         sd_n_ref,X
+@ok:
             rts
 
 ; Block lba of card dk into the 512 bytes at bufp.  OUT: C = 0; or C = 1, .A = the error.  Modifies: .A, .X, .Y
@@ -830,6 +848,8 @@ sd_write:
             jsr         sd_busy_wait                        ; While it writes
             bcc         :+
             jsr         sd_end
+            ldx         #1                                  ; (Counted: stayed busy)
+            jsr         sd_count
             lda         #E_IO
             sec
             rts
@@ -2551,6 +2571,29 @@ gen_disk:
             ldx         #>s_blocks
             jsr         srv_tputs
             FAR2        hfs_ctl_lines                       ; (Its HydraFS, if it has one)
+            ldx         dk                                  ; A card: the cards' trouble, if there was any (all
+            lda         d_state,X                           ;   of them): "errors N refused, N busy"
+            cmp         #DS_SDHC + 1
+            bcs         @noerr
+            lda         sd_n_ref
+            ora         sd_n_busy
+            beq         @noerr
+            lda         #<s_errors
+            ldx         #>s_errors
+            jsr         srv_tputs
+            lda         sd_n_ref
+            ldx         #0
+            jsr         srv_tputdec
+            lda         #<s_refused
+            ldx         #>s_refused
+            jsr         srv_tputs
+            lda         sd_n_busy
+            ldx         #0
+            jsr         srv_tputdec
+            lda         #<s_busy
+            ldx         #>s_busy
+            jsr         srv_tputs
+@noerr:
             ldx         dk                                  ; A RAM disk's memory: its banks ("banks $10-$13"),
             lda         d_state,X                           ;   or its segment ("segment 0")
             cmp         #DS_RAM
@@ -2717,6 +2760,9 @@ s_sram:     .byte       "sram ", 0
 s_mb:       .byte       " MB ", 0
 s_kb:       .byte       " KB ", 0
 s_blocks:   .byte       " blocks", LF, 0
+s_errors:   .byte       "errors ", 0
+s_refused:  .byte       " refused, ", 0
+s_busy:     .byte       " busy", LF, 0
 s_banks:    .byte       "banks $", 0
 s_to:       .byte       "-$", 0
 s_segment:  .byte       "segment ", 0

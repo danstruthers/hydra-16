@@ -614,7 +614,11 @@ includefile:                                                ; ( i*x fileid -- j*
 
             HEADER      "included", 0
 included:                                                   ; ( i*x c-addr u -- j*x ): the file named, opened and
-            jsr         inc_find                            ;   included (and noted, for REQUIRED)
+            lda         incn_len                            ;   included (and noted, for REQUIRED: un-noted again if it
+            sta         inc_mark                            ;   can't be opened or loaded)
+            lda         incn_len + 1
+            sta         inc_mark + 1
+            jsr         inc_find
             bcc         :+
             jsr         inc_add
 :
@@ -666,33 +670,41 @@ included:                                                   ; ( i*x c-addr u -- 
             lda         dlo,x
             sta         throw_nlen
             jsr         twodup
-            jsr         open_ro
+            jsr         inc_open
             lda         dlo,x
             ora         dhi,x
             beq         @found
-            lda         dlo,x                               ; Not there, and a bare name (no /): /lib/forth's
-            cmp         #<(-512 - E_NOENT)
-            bne         @fail
+            lda         dlo,x                               ; Not there (or the current directory's trouble: kept),
+            sta         inc_ior                             ;   and a bare name (no /): /lib/forth's
             lda         dhi,x
-            cmp         #>(-512 - E_NOENT)
-            bne         @fail
+            sta         inc_ior + 1
             inx
             inx
             jsr         lib_name
             bcs         @none
-            jsr         open_ro
+            jsr         inc_open
             lda         dlo,x
             ora         dhi,x
-            bne         @fail
+            bne         @libfail
             inx
             jmp         inc_or_load
 @none:
             dex                                             ; (Its ior again)
-            lda         #<(-512 - E_NOENT)
+            bra         @first
+@libfail:
+            lda         dlo,x                               ; /lib/forth has none: the current directory's error, if
+            cmp         #<(-512 - E_NOENT)                  ;   it had one other than that
+            bne         @fail
+            lda         dhi,x
+            cmp         #>(-512 - E_NOENT)
+            bne         @fail
+@first:
+            lda         inc_ior
             sta         dlo,x
-            lda         #>(-512 - E_NOENT)
+            lda         inc_ior + 1
             sta         dhi,x
 @fail:
+            jsr         inc_unnote
             stz         inc_named
             lda         #1
             sta         throw_named
@@ -756,10 +768,12 @@ LH_SIZE         = 15
 ; lib_load's ends: no room (THROW -8), another core's (THROW -259), the file closed first
 lib_full:
             jsr         lib_close
+            jsr         inc_unnote
             lda         #<-8
             jmp         throw_a
 lib_bad:
             jsr         lib_close
+            jsr         inc_unnote
             lda         #<-259
             sta         tmp
             lda         #>-259
@@ -1007,6 +1021,17 @@ lib_read:
             ldx         xsave
             rts
 
+; The file INCLUDED last un-noted: REQUIRED's names as they were before it (it couldn't be opened or loaded, so lib or
+; require can try it again).  Keeps .A, .X
+inc_unnote:
+            pha
+            lda         inc_mark
+            sta         incn_len
+            lda         inc_mark + 1
+            sta         incn_len + 1
+            pla
+            rts
+
 ; ---- The libraries loaded (libtab): what libs, lib, -lib and words (the Programming-Tools library's) know of each
 
 ; A library loaded noted in libtab, if there's room: its image tmp2, its end w2, its headers p1 (its first) to p2 (its
@@ -1151,6 +1176,33 @@ open_ro:
             sta         dlo,x
             stz         dhi,x
             jmp         openfile
+
+; ( c-addr u -- fileid ior ): INCLUDED's open, read only; a directory (OPEN allows one: it can be read) is closed
+; again and refused, E_ISDIR
+inc_open:
+            jsr         open_ro
+            lda         dlo,x
+            ora         dhi,x
+            bne         @done
+            stx         xsave
+            LDR         r0, statbuf                         ; (LDR: .A clobbered, so the fd after it)
+            lda         dlo + 1,x                           ; The fileid: its stat record's mode
+            jsr         FSTAT
+            ldx         xsave
+            bcs         @done
+            lda         statbuf + SR_MODE + 1               ; (DM_DIR: the mode's high byte)
+            and         #$80
+            beq         @done
+            lda         dlo + 1,x
+            stx         xsave
+            jsr         CLOSE
+            ldx         xsave
+            lda         #<(-512 - E_ISDIR)
+            sta         dlo,x
+            lda         #>(-512 - E_ISDIR)
+            sta         dhi,x
+@done:
+            rts
 
             HEADER      "required", 0
 required:                                                   ; ( i*x c-addr u -- j*x ): INCLUDED, unless it has been

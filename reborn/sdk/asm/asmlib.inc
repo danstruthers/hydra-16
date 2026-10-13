@@ -18,7 +18,7 @@
 ; ---- asm: The W65C02S's instructions, as as writes them: one disassembled; a source assembled
 ASM_DIS         = $A030       ; r0 = the instruction's bytes (its opcode and the two after it); r1 = its address; r2 = the text's place (DIS_MAX bytes); r3 = a name for the address its operand names (0: none); .A = the flags (DF_)
                               ; -> .A = its length (1-3); .X = its kind (DK_); .Y = the text's length (a 0 after it); r4 = the address its operand names (a branch's: where it goes)
-ASM_FILE        = $A033       ; r0 = the source's name; r1 = the output's; .A = the flags (AF_)
+ASM_FILE        = $A033       ; r0 = the source's name (-: fd 0, read as it is); r1 = the output's (-: fd 1; no labels file then); .A = the flags (AF_)
                               ; -> .A = the status (0, or 1 after an error); C = 1 if it's 1
 ASM_BEGIN       = $A036       ; r0 = the origin (the image's first address); r1 = the source's name (its messages'); .A = the flags (AF_QUIET)
                               ; -> C = 1 if there's no room (RAM banks)
