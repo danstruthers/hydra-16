@@ -225,8 +225,8 @@ RAM modules: 03
 /> ps
 task  state   parent     cpu group  name
    0  ready   -          1.5     0  kernel
-   1  wait    -          0.2     1  init
-   2  wait     1         0.3     2  forth
+   1  wait    -          0.1     1  init
+   2  wait     1         0.2     2  forth
    3  event    1         0.0     1  wstart
    4  ready    2         0.0     2  ps
   11  idle    -          0.0    11  gpio
@@ -262,8 +262,8 @@ ps
 /> ps
 task  state   parent     cpu group  name
    0  ready   -          2.0     0  kernel
-   1  wait    -          0.2     1  init
-   2  wait     1         0.3     2  forth
+   1  wait    -          0.1     1  init
+   2  wait     1         0.2     2  forth
    3  event    1         0.0     1  wstart
    4  sleep    2         0.0     4  sleep
    5  ready    2         0.0     2  ps
@@ -271,19 +271,19 @@ task  state   parent     cpu group  name
   12  idle    -          0.0    12  snd
   13  idle    -          0.1    13  kdev
   14  idle    -          1.7    14  storage
-  15  idle    -          0.5    15  cons
+  15  idle    -          0.6    15  cons
 /> kill 4
 /> ps
 task  state   parent     cpu group  name
    0  ready   -          3.6     0  kernel
-   1  wait    -          0.2     1  init
+   1  wait    -          0.1     1  init
    2  wait     1         0.3     2  forth
    3  event    1         0.0     1  wstart
    5  ready    2         0.0     2  ps
   11  idle    -          0.0    11  gpio
   12  idle    -          0.0    12  snd
   13  idle    -          0.1    13  kdev
-  14  idle    -          1.8    14  storage
+  14  idle    -          1.9    14  storage
   15  idle    -          0.9    15  cons
 ```
 
@@ -442,8 +442,9 @@ wstart
      15
 ```
 
-For a job that needs four programs, send the half-way result to a file in `/ram`, and start a second pipeline
-from that file.
+Six, because each program in a pipeline is a task: the Hydra has sixteen, and ten are in use at rc's prompt (the
+kernel, init, five drivers, wstart, HyForth and rc: `ps` shows them, and itself), which leaves six. For a job that
+needs seven programs, send the half-way result to a file in `/ram`, and start a second pipeline from that file.
 
 ## Lab 6. Scripts
 

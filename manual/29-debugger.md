@@ -311,13 +311,13 @@ db> d main+29 3
 db> b main+68
 db> c
 breakpoint 1
-PC=0898 A=20 X=2D Y=05 S=FD P=nv--dizC W=0 U=0 RAM=00 ROM=00
+PC=0898 A=20 X=2B Y=05 S=FD P=nv--dizC W=0 U=0 RAM=00 ROM=00
 0898  A9 D1     lda #$D1                 ; main+68
 db> s 4
 089A  85 02     sta r0                   ; main+6A
 089C  A9 09     lda #$09                 ; main+6C
 089E  85 03     sta r0+1                 ; main+6E
-PC=08A0 A=09 X=2D Y=05 S=FD P=nv--dizC W=0 U=0 RAM=00 ROM=00
+PC=08A0 A=09 X=2B Y=05 S=FD P=nv--dizC W=0 U=0 RAM=00 ROM=00
 08A0  20 03 F8  jsr ERRSTR               ; main+70
 db> q
 ```
@@ -363,6 +363,11 @@ db> q
 After eight dots, <kbd>CTRL</kbd>-<kbd>C</kbd> stopped it. `(in a call: its state 6)` means it was inside a system
 call, `SLEEP` (state 6 is sleeping): the PC, $EB1B, is in HydraOS's kernel. You can't step there, but `c` runs it on,
 and `q` ends it.
+
+<kbd>CTRL</kbd>-<kbd>C</kbd> stops an `n` or a `u` that's taking too long, too, and so does a breakpoint inside a
+subroutine that `n` is running. If the program stops in a subroutine of its own, carry on from there as you like:
+`s`, `n` and `c` all work. If it stops inside a system call that you were stepping over, `s` or `n` lets the call
+finish and stops after it, and `c` runs on.
 
 ## 29.10 Debugging a running task
 

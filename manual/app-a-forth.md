@@ -648,11 +648,11 @@ For example:
 
 ```session
 /> lib numbers
-/> 1000 s>n ndup n* ndup n* n.
+/> 1000000 ndup n* n.
 1000000000000
-/> 1 s>n 2/3 n+ n.
+/> 2/3 1 s>n n+ n.
 5/3
-/> 2 s>n 1.25 n* n.
+/> 1.25 2 s>n n* n.
 2.5
 /> 1 s>n 3 s>n n/ 4 to-fixed n.
 0.3333
@@ -664,8 +664,8 @@ For example:
 FF
 ```
 
-At the shell's prompt, start a line with a Forth word or a number that fits a cell, as these do: a line that starts
-with `2/3` or `100000` goes to rc (section 20.8).
+Once the library's loaded, a line at the shell's prompt can start with any of its numbers, as `1000000` and `2/3`
+do here (section 20.8).
 
 ## A.15 Sound (`sound`)
 
@@ -698,9 +698,9 @@ For example:
 8
 /> lib random
 /> 6 random 1+ .
-5
-/> 6 random 1+ .
 3
+/> 6 random 1+ .
+5
 ```
 
 ## A.17 The device libraries

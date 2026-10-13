@@ -234,7 +234,7 @@ HyBASIC's `TIMER` is the number of seconds since midnight:
 > 40 NEXT I
 > 50 PRINT C; "in"; TIMER - T; "seconds"
 > RUN
- 10000 in 2.73 seconds
+ 10000 in 2.725 seconds
 ```
 
 hylang's `(clock)` is the number of seconds since hylang started:

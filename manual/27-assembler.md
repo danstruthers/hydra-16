@@ -931,11 +931,11 @@ right in the dictionary, a byte at a time, and `disasm` (Chapter 28) shows it:
 Hi48 0 0 105
 /> lib disasm
 /> hi 5 disasm
- 463B  A9 48     lda #$48
- 463D  20 50 F9  jsr $F950
- 4640  A9 69     lda #$69
- 4642  20 50 F9  jsr $F950
- 4645  60        rts
+ 4654  A9 48     lda #$48
+ 4656  20 50 F9  jsr $F950
+ 4659  A9 69     lda #$69
+ 465B  20 50 F9  jsr $F950
+ 465E  60        rts
 ```
 
 The bytes are `lda #'H'`, `jsr PUTC`, `lda #'i'`, `jsr PUTC` and `rts`. After it ran, `.` printed the flags (48), Y,

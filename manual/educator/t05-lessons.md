@@ -111,9 +111,9 @@ second.)
 * Spaces around `=`. `pets = (cat dog)` isn't an assignment.
 * The backquote in `` `{date} ``. It's the key at the top left of most keyboards, and half the class will type
   an apostrophe.
-* **The three-program limit** on pipes (the manual's section 8.7). A four-stage pipeline fails with `too many fds`,
-  and in rc's own session it then breaks the next pipe too, until rc is restarted. The lab's challenge is
-  written to stay inside the limit; warn students who improvise.
+* **The six-program limit** on pipes (the manual's section 8.7). Each program in a pipeline is a task, and there
+  are sixteen tasks for everything, so a seventh program gets `no free task`. Nothing breaks: the rest of the
+  line runs without it, and the answer is wrong or missing. It's a good moment to run `ps` and count.
 
 **Close with** "what's the difference between `>` and `|`?" (One sends output to a file; the other to a program.)
 
@@ -370,10 +370,11 @@ of them, and run it again. The edit-run cycle is the lesson.
 
 **Open with** the question "how many times do you have to double 1 to pass a million?" Take guesses. (Twenty.)
 
-**Watch for** the one real trap in HyBASIC 1.0: **a program with a `SUB` or a `FUNCTION` can be `RUN` only once
-in a session** (the manual's section 23.12). The second `RUN` says `duplicate definition`. This lab avoids it by
-keeping programs in files and running them from the shell with `basic file.bas`, which always works. Make that
-the class's habit from this lab on, and say why, or you'll spend the lesson on it.
+**Watch for** whose variable it is. A `SUB`'s or a `FUNCTION`'s variables are its own (the manual's section
+23.12), so a student who adds to `TOTAL` inside a `SUB` finds the main program's `TOTAL` unchanged, and decides
+that HyBASIC is broken. `SHARED TOTAL` in the `SUB` is the cure; passing the value in and giving the answer back
+with a `FUNCTION` is the better one. The lab's programs have no line numbers: they're kept in files and run from
+the shell with `basic file.bas`. Make that the class's habit from this lab on.
 
 **Close with** "what does a `SUB` give you that a `GOSUB` doesn't?" (Its own variables, and a name.)
 

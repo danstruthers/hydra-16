@@ -95,8 +95,7 @@ FUNCTION SQUARE (N)        ' a function: PRINT SQUARE(7)
 END FUNCTION
 ```
 
-A program with a `SUB` or `FUNCTION` runs once for each time HyBASIC is started (section 23.12): keep it in a file,
-and run it from the shell.
+A `SUB`'s or `FUNCTION`'s variables are its own (section 23.12): `SHARED` names the main program's that it uses.
 
 ### When it goes wrong (section 23.13)
 

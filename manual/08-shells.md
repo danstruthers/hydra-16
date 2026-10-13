@@ -211,12 +211,22 @@ output becomes the second one's input. `wc -l` counts lines, so this counts the 
       5
 ```
 
-A line can pipe three programs together: `ls /rom/bin | sort | head`. And `|[2]` pipes standard error instead of
-standard output.
+A line can pipe several programs together. This one lists the ROM disk's programs, keeps the names with an `e` in
+them, sorts those backwards, and shows the first three:
 
-> **NOTE:** In HydraOS 1.0, three is the limit. A line with four programs piped together stops with `rc: too many
-> fds`, and if you typed it at rc's own `%` prompt, rc may then refuse even short pipes: leave it with `exit`, and
-> start it again. For a longer job, put the half-way result in a file in `/ram`, and carry on from there.
+```session
+% ls /rom/bin | grep e | sort -r | head -3
+xmodem
+tee
+sleep
+```
+
+And `|[2]` pipes standard error instead of standard output.
+
+> **NOTE:** Each program in a pipeline is a task, and the Hydra has sixteen tasks for everything (`ps` shows
+> them). On the book's Hydra that leaves room for six programs in one pipeline. A seventh isn't started: rc says
+> `no free task` for it, and the others run without it. For a longer job, put the half-way result in a file in
+> `/ram`, and carry on from there.
 
 ## 8.8 A command's output as words
 
@@ -307,6 +317,9 @@ Hydra's calculator, Chapter 11.)
 2
 1
 ```
+
+A `while()` with nothing in its parentheses has no test to fail, so it goes round for ever, until
+<kbd>CTRL</kbd>-<kbd>C</kbd> or an `exit` stops it. (An `if()` with nothing in them always runs its command.)
 
 **switch** compares a word with patterns, and runs the commands after the first `case` that matches:
 

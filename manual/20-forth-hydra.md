@@ -319,28 +319,27 @@ the number stack.
 With the library loaded, any number Forth can't fit in a cell goes on the number stack: `2/3`, `1.25`, `#xFF`, `2i`,
 `100000000000000000000`. `s>n` moves a cell from Forth's stack to the number stack, and `n>s` moves one back.
 
-> **NOTE:** At the shell's `/>` prompt, a line that starts with one of these numbers goes to rc, because the shell
-> only knows Forth's own numbers. Start the line with a Forth word instead (as with `0 drop` below), or type `forth`
-> for a plain HyForth, where every line is Forth.
-
 ```session
 /> lib numbers
-/> 0 drop 2/3 n.
+/> 2/3 n.
 2/3
-/> 0 drop 1/3 1/6 n+ n.
+/> 1/3 1/6 n+ n.
 1/2
-/> 0 drop 100 s>n 10 s>n npow n.
+/> 100 s>n 10 s>n npow n.
 100000000000000000000
-/> 0 drop 7 s>n 2 s>n n/ n.s
+/> 7 s>n 2 s>n n/ n.s
 <1> 7/2
 ```
+
+> **NOTE:** Load the library before you type one of its numbers. Without it, the shell takes a line that starts
+> with `2/3` for a command, not for Forth, and hands it to rc.
 
 The math functions, `nsqrt`, `nexp`, `nlog`, `nsin`, `ncos`, `ntan`, `natan` and `npi`, work to the precision in the
 variable `digits`, 12 unless you change it:
 
 ```session
 /> lib numbers
-/> 50 digits ! 0 drop 2 s>n nsqrt n.
+/> 50 digits ! 2 s>n nsqrt n.
 1.4142135623730950488016887242096980785696718753769
 ```
 

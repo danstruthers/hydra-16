@@ -6,7 +6,8 @@ PDF. The branch is `reborn-manual-rework`.
 
 ## Where it stands
 
-All five phases are done (12 October 2026). The three books:
+All five phases are done (12 October 2026), and the faults in HydraOS that the writing found are fixed (the last
+section), with the books' notes about them taken out. The three books:
 
 | Book | Build | PDF |
 |---|---|---|
@@ -114,22 +115,33 @@ explain a word.
 
 ## Decisions that are yours
 
-1. **Three books or one.** The work was done as three. Folding the Companion and the Guide back into the manual is
-   possible (they're separate folders), but the manual would pass 600 pages, with the answers in it.
+1. **Three books or one.** Decided: three.
 2. **The order of the parts.** Devices stay before languages, as you asked, with signposts. The other choice is to
    move Part Four in front of Part Three.
 3. **Photographs.** The books have drawings only. Photographs of a built board, a good and a bad joint, and each
    building stage would help a 12-year-old more than any drawing; they need a camera and a real board.
 4. **What a kit is.** Where a board, the parts and the programmed ROMs come from, and what they cost, is not in the
    repository. The Course Guide says so, and lists what a kit is made of (its Topic 3) so that it can be priced.
+   A component list and buy sheet (everything but the main board and the breakout cards, from sellers such as
+   Digi-Key) is to be a task of its own, after this one.
 5. **Changes outside the manual** that would remove whole paragraphs of explanation (not done here):
    * a `help` command on the Hydra (there is none: `help` answers `rc: help: not found`);
    * the emulators starting as the same Hydra (the web page: a Vera X, a clock chip, three modules; the terminal:
      none, none, two);
-   * `hydra-16.html` kept ready-made in the repository, beside the ROM images;
-   * the bugs found while writing: HyBASIC's second `RUN` of a program with a `SUB` or a `FUNCTION` ("duplicate
-     definition": even after `NEW` and `LOAD`, until HyBASIC is started again);
-     HyForth's `.` on an empty stack printing `{R1` before its message; `2/3` and `#xFF` at the HyForth prompt going
-     to rc; the Vera X's boot message cut into another line; the console dropping keys when a window's queue fills;
-     db's `c` after an interrupted `n`; a pipeline of four programs (`rc: too many fds`, and rc's pipes are then
-     broken until it's restarted).
+   * `hydra-16.html` kept ready-made in the repository, beside the ROM images.
+
+## The bugs found while writing: fixed
+
+The first editions of the three books worked round these faults in HydraOS. They're fixed now, each with a
+regression test (`node reborn/sim/test.js`: 128 tests), and the books' notes about them are gone.
+
+| The fault | The fix | Its test |
+|---|---|---|
+| HyBASIC: the second `RUN` of a program with a `SUB` or a `FUNCTION` said `duplicate definition`, until HyBASIC was started again | A procedure's entry is marked "not defined yet" when a program's first pass makes it (`modules/basic/procs.inc`) | `bsuite` (`tests/basic/prompt.txt`) |
+| rc: a pipeline of four programs said `too many fds`, and left rc's pipes broken | Pipes are made as each program starts, not all at once, and are closed if the line is abandoned (`modules/rc/exec.s`). The limit is now the Hydra's sixteen tasks: six programs at the prompt, then `no free task` | `rc` |
+| rc: `while()` and `if()` with an empty test | An empty test is true, as in Plan 9's rc | `rc` |
+| HyForth: `.` (and `u.`, `emit`, `type`, `spaces`) on an empty stack printed rubbish before `stack underflow` | The printing words look at the stack before they print (`modules/forth/ftext.inc`) | `fshell` |
+| HyForth as the shell: a line that started with `2/3`, `100000` or `#xFF` went to rc | The shell asks the numbers library, if it's loaded, whether the first word is one of its numbers (`forthlib/shell.s`, `forthlib/numbers.s`) | `fshell` |
+| db: after <kbd>CTRL</kbd>-<kbd>C</kbd> in an `n`, `c` stopped again, saying nothing, where the step would have ended. And a breakpoint inside a subroutine that `n` was running left `s`, `n` and `c` all refused | `n` runs a subroutine of the program's own in place, with a `BRK` of db's where it returns to, so no step of the kernel's is left unfinished; a system call's unfinished step is finished by `s` or `n`, and passed by `c` (`programs/db/db.c`) | `dbover` |
+| The console: the Vera X's boot message was cut into the next line (`[a1s8kt 1: init`) | The console driver waits for its question to the terminal to be sent before its start-up ends (`modules/cons/cons.s`) | `screen` |
+| The console: keys typed or pasted ahead of a program were dropped after the 63rd | A key with no room in its window's queue stays in the receive ring, with those behind it, till the program has read some: 255 more (`modules/cons/cons.s`) | `typeahead` |

@@ -40,6 +40,11 @@ up to 127 characters long; a line longer than the window is wide goes on to the 
 nothing, which tells it there's no more. `cat`, typed alone, copies what you type to the screen until you press
 <kbd>CTRL</kbd>-<kbd>D</kbd>.
 
+You don't have to wait for a prompt before you type. The console keeps the keys that come while a program is busy
+(about 300 of them from a terminal, 60 from the Vera X's keyboard), and hands them over when the program next
+reads: so you can type the next command while one is still running, or paste several lines at once from your PC.
+(Paste much more than that into a program that's slow to read, and the keys that don't fit are lost.)
+
 ## 13.3 Raw mode and keys
 
 A program like the screen editor needs each key as it's pressed, without waiting for <kbd>RETURN</kbd>. It writes

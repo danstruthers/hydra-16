@@ -352,10 +352,8 @@ A FUNCTION's value is what's given to its name. The variables in a SUB or FUNCTI
 main program's variables of the same names. (`SHARED` lets it use them, and `STATIC` keeps its own between calls.)
 `GOSUB` and `RETURN`, the older way, jump to a line and back.
 
-> **NOTE:** In HydraOS 1.0, HyBASIC remembers a `SUB` or a `FUNCTION` once a program has defined it, and won't
-> let it be defined again: `RUN` the program above a second time, and it stops with `duplicate definition`. Until
-> that's put right, keep a program that has `SUB`s or `FUNCTION`s in a file, and run it from the shell, with
-> `basic` and its name. That works every time.
+> **TIP:** A program with `SUB`s and `FUNCTION`s reads better without line numbers (section 23.14). Keep it in a
+> file, and run it from the shell with `basic` and its name.
 
 ## 23.13 Errors
 
@@ -395,7 +393,7 @@ NEXT without FOR
 | `label not defined` | A `GOTO` or `GOSUB` to a line that isn't there | `LIST` the program, and check the number |
 | `NEXT without FOR` | A `NEXT` with no `FOR` before it, or loops that cross each other | Each `FOR` needs its own `NEXT`, inside any loop it's in |
 | `?Redo from start` | `INPUT` wanted a number, and you typed something else | Type a number |
-| `duplicate definition` | A `SUB` or `FUNCTION` defined twice (see section 23.12's note) | Run the program from the shell |
+| `duplicate definition` | Two `SUB`s or `FUNCTION`s with the same name | Give one of them another name |
 | `0`, or an empty line, where you expected a value | A variable's name spelled two ways: `SCORE` and `SCROE` are two variables, and the new one is 0 | Check the names |
 | A program that never stops | A loop whose test never comes true | Press <kbd>CTRL</kbd>-<kbd>C</kbd>; then `CONT` carries on, or `LIST` shows the program |
 

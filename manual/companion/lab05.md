@@ -111,4 +111,4 @@
 
 > **CHALLENGE:** ★ In one line: list the names in `/rom/bin`, sort them backwards (`sort -r`), and show the first
 > three (`head -3`). What are they? Then, in another line: how many of the names have an `e` in them (`grep e`)?
-> A pipeline can join three programs at most (section 8.7). How would you do a job that needs four?
+> A pipeline can join six programs at most (section 8.7). Why six? And how would you do a job that needs seven?

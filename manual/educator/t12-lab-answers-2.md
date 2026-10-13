@@ -341,7 +341,7 @@ wired this way round because a VIA pin can take in much more current than it can
 
 ```session
 /> cat /proc/2/status
-forth wait 1 64 2
+forth wait 1 60 2
 /> cat /proc/2/fd
 /
 0 rw #c 391 #c/cons
@@ -400,15 +400,15 @@ Without a real Hydra, the task names:
 
 ```session
 % for(t in /proc/*) cat $t/status
-kernel ready - 458 0
-init wait - 42 1
+kernel ready - 457 0
+init wait - 33 1
 gpio idle - 4 11
-snd idle - 4 12
-kdev ready - 46 13
-storage idle - 334 14
-cons idle - 114 15
-forth wait 1 64 2
-wstart event 1 3 1
+snd idle - 3 12
+kdev ready - 47 13
+storage idle - 349 14
+cons idle - 124 15
+forth wait 1 58 2
+wstart event 1 2 1
 rc wait 2 30 2
 ```
 

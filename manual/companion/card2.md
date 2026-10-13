@@ -63,7 +63,7 @@ Chapter 11 has every command, with its options. These are the ones you'll use mo
 |---|---|
 | *command* `>`*file* | Send its output to a file |
 | *command* `<`*file* | Take its input from a file |
-| *command* `\|` *command* | Send the first one's output into the second (three commands at most) |
+| *command* `\|` *command* | Send the first one's output into the second (six commands at most) |
 | *command* `&&` *command* | Do the second only if the first worked |
 | *command* `\|\|` *command* | Do the second only if the first failed |
 
