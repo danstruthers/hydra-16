@@ -459,6 +459,7 @@ pc_n_bad:   .res        1                                   ;   that came damage
 pc_n_nak:   .res        1                                   ;   requests the PC had damaged (its NAK) ...
 pc_n_gone:  .res        1                                   ;   and times the PC was given up (E_IO)
 rx_ovr:     .res        2                                   ; The ACIA's receive overruns (the irq entry late: a byte lost) ...
+rx_drop:    .res        2                                   ;   bytes dropped, the receive ring full (nothing was reading) ...
 rx_fe:      .res        2                                   ;   and framing (or parity) errors (the line, or the rate)
 pc_k:       .res        1
 pc_crc:     .res        2                                   ;   a CRC
@@ -499,7 +500,7 @@ init:
             bpl         :-
             stz         wnew_n
             stz         live
-            ldx         #rx_fe + 2 - pc_n_req - 1           ; (The counts serctl shows: 0)
+            ldx         #rx_fe + 2 - pc_n_req - 1           ; (The counts serctl shows: 0; rx_drop's among them)
 :
             stz         pc_n_req,X
             dex
@@ -702,6 +703,14 @@ irq:
             lda         #0
             rts
 
+@drop:
+            inc         rx_drop
+            bne         :+
+            inc         rx_drop + 1
+:
+            lda         #0
+            rts
+
 @odd:                                                       ; No byte, or an error with or without one: counted (an
             tax                                             ;   overrun, else a framing or parity error), and the
             beq         @none                               ;   byte, if there is one, taken
@@ -721,10 +730,10 @@ irq:
             beq         @none
             bra         @byte
 
-@mark:                                                      ; Full: the byte's dropped.  Or x1's high mark: the
-            ldx         rx_tail                             ;   byte's kept, the mark is the tail from here, and
+@mark:                                                      ; Full: the byte's dropped (counted).  Or x1's high mark:
+            ldx         rx_tail                             ;   the byte's kept, the mark is the tail from here, and
             cpx         rx_mark                             ;   XOFF is asked of timer 2, started to run out soon
-            beq         @none                               ;   (serial.inc's FL_POKE: its count, the request, and
+            beq         @drop                               ;   (serial.inc's FL_POKE: its count, the request, and
             stx         rx_mark                             ;   this entry's answer, no task switch).  No
             sty         rx_head                             ;   TASK_EVENT, to keep this as short as a Ctrl-C's
             lda         #FL_POKE                            ;   path: timer 2's idle counts one
@@ -7687,7 +7696,7 @@ gen_serctl:
             jsr         srv_tputc
             lda         #<s_pcn                             ; Then the counts, for chasing a bad line: "pc N req, N cut
             ldx         #>s_pcn                             ;   short, N unanswered, N damaged, N nak, N gone" and "line
-            jsr         srv_tputs                           ;   N overruns, N framing errors"
+            jsr         srv_tputs                           ;   N overruns, N framing errors, N dropped"
             lda         pc_n_req
             ldx         pc_n_req + 1
             jsr         srv_tputdec
@@ -7725,6 +7734,12 @@ gen_serctl:
             jsr         srv_tputdec
             lda         #<s_fe
             ldx         #>s_fe
+            jsr         srv_tputs
+            lda         rx_drop
+            ldx         rx_drop + 1
+            jsr         srv_tputdec
+            lda         #<s_drop
+            ldx         #>s_drop
             jsr         srv_tputs
             clc
             rts
@@ -8489,7 +8504,8 @@ s_damaged:  .byte       " damaged, ", 0
 s_nak:      .byte       " nak, ", 0
 s_gone:     .byte       " gone", LF, "line ", 0
 s_ovr:      .byte       " overruns, ", 0
-s_fe:       .byte       " framing errors", LF, 0
+s_fe:       .byte       " framing errors, ", 0
+s_drop:     .byte       " dropped", LF, 0
 s_kbdin:    .byte       "kbdin", 0
 s_text:     .byte       "text", 0
 s_label:    .byte       "label", 0

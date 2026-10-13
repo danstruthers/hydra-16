@@ -110,7 +110,7 @@ and two lines of counts, for a line that's giving trouble (section 13.6):
 b9600
 x1
 pc 0 req, 0 cut short, 0 unanswered, 0 damaged, 0 nak, 0 gone
-line 0 overruns, 0 framing errors
+line 0 overruns, 0 framing errors, 0 dropped
 ```
 
 and `echo b115200 >/dev/serctl` would change the speed. Because commands are plain text, any program can send them, and

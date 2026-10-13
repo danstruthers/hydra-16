@@ -1763,7 +1763,7 @@ hylang> (use "dev")
 hylang> (dev.read "/dev/rtc")
 => "none\n"
 hylang> (dev.lines "/dev/serctl")
-=> {"b9600" "x1" "pc 0 req, 0 cut short, 0 unanswered, 0 damaged, 0 nak, 0 gone" "line 0 overruns, 0 framing errors"}
+=> {"b9600" "x1" "pc 0 req, 0 cut short, 0 unanswered, 0 damaged, 0 nak, 0 gone" "line 0 overruns, 0 framing errors, 0 dropped"}
 hylang> (dev.write "/dev/gpio/ctl" "out 2")
 => NIL
 hylang> (dev.num "/dev/gpio/2")

@@ -267,7 +267,7 @@ task  state   parent     cpu group  name
 /> kill 2
 /> ps
 task  state   parent     cpu group  name
-   0  ready   -          3.9     0  kernel
+   0  ready   -          3.8     0  kernel
    1  wait    -          0.5     1  forth
    3  ready    1         0.0     1  ps
   12  idle    -          0.0    12  snd

@@ -84,7 +84,7 @@ Everything you type now goes to the Hydra. The PC tool's own keys start with <kb
 |---|---|
 | <kbd>CTRL</kbd>-<kbd>A</kbd> then <kbd>X</kbd> | Quit the PC tool |
 | <kbd>CTRL</kbd>-<kbd>A</kbd> then <kbd>L</kbd> | Turn the log on or off: a list of the Hydra's file requests |
-| <kbd>CTRL</kbd>-<kbd>A</kbd> then <kbd>S</kbd> | Say the counts so far: the Hydra's requests, and any that came damaged or had to be answered again (a bad cable shows here) |
+| <kbd>CTRL</kbd>-<kbd>A</kbd> then <kbd>S</kbd> | Say the counts so far: the Hydra's requests, and any that came damaged, stopped part-way or had to be answered again (a bad cable shows here) |
 | <kbd>CTRL</kbd>-<kbd>A</kbd> then <kbd>CTRL</kbd>-<kbd>A</kbd> | Send a <kbd>CTRL</kbd>-<kbd>A</kbd> to the Hydra |
 
 It can also take these options, after the folder:
@@ -149,11 +149,11 @@ task 1: init
 HydraOS 1.0 for the Hydra-16
 init: up in task 01
 T ST FL PA CPU    NAME
-0 01 00 FF 000052 kernel
-1 01 00 FF 000012 init
+0 01 00 FF 00004E kernel
+1 01 00 FF 000019 init
 C 04 01 FF 000003 snd
 D 06 01 FF 00000B kdev
-E 04 01 FF 00007B storage
+E 04 01 FF 000078 storage
 F 08 01 FF 000047 cons
 hello, from init
 init: hello ended: code $07 (bye)
