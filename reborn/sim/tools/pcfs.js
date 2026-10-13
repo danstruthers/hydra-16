@@ -62,7 +62,7 @@ function createPcFs({ root, readOnly = false, log = () => {} }) {
   if (!fs.statSync(root).isDirectory()) throw new Error(root + ' is not a folder');
   const fids = new Map();                                      // fid -> { file, fd, dir, stat, refs }
   let lastTag = -1, lastReply = null, version = 1;
-  const stats = { repeats: 0 };                                // (Requests asked again, answered from lastReply)
+  const stats = { requests: 0, repeats: 0, attaches: 0 };     // (Requests served; asked again, answered from lastReply; attaches)
 
   // The Hydra's name (the rest after /pc: "" or "/a/b") as a path in the folder
   function where(name) {
@@ -303,7 +303,8 @@ function createPcFs({ root, readOnly = false, log = () => {} }) {
 
   return {
     request(tag, payload) {
-      if (tag === lastTag && lastReply) { stats.repeats++; return lastReply; }   // (Asked again: its reply was lost)
+      if (tag === lastTag && lastReply) { stats.repeats++; log('asked again (tag ' + tag + '): my reply was lost on the way'); return lastReply; }
+      stats.requests++;
       let reply;
       try { reply = version === 2 ? serve2(payload) : serve(payload); }
       catch (e) {
@@ -318,7 +319,7 @@ function createPcFs({ root, readOnly = false, log = () => {} }) {
     // the folder is served read-only, and the count 0; version 2's has the version, 2, where the qid type goes
     attach(payload) {
       for (const [n, f] of fids) closeFid(n, f);
-      lastTag = -1; lastReply = null;
+      lastTag = -1; lastReply = null; stats.attaches++;
       version = payload && payload.length && payload[0] === 2 ? 2 : 1;
       log('attach (protocol ' + version + ')');
       return version === 2 ? [0, readOnly ? 1 : 0, 0, 0, 2] : [0, readOnly ? 1 : 0, 0, 0];

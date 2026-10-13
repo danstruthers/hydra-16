@@ -162,7 +162,9 @@ port itself:
   reading, every byte that arrives is its, even <kbd>CTRL</kbd>-<kbd>C</kbd>, and the windows wait. `xmodem` works
   this way.
 * `serctl` sets the port's speed and its flow control. Writing a speed changes it at once (so change your
-  terminal's speed too); reading shows both settings, a line each.
+  terminal's speed too); reading shows both settings, a line each, and then two lines of counts that help when the
+  line is unreliable: `/pc`'s requests and how many had to be asked again (and why), and the serial chip's overruns
+  (a byte came before the last was taken) and framing errors (noise, or a speed that doesn't match).
 
 | Command | Speed | Really |
 |---|---|---|
@@ -192,6 +194,8 @@ that's set to *XON/XOFF* stops sending between the two, so nothing is lost, howe
 /> cat /dev/serctl
 b9600
 x1
+pc 0 req, 0 cut short, 0 unanswered, 0 damaged, 0 nak, 0 gone
+line 0 overruns, 0 framing errors
 ```
 
 Three things to know about it:

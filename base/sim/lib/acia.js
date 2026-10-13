@@ -29,7 +29,7 @@ function createAcia(env) {
   const wdc = !!env.wdc, paste = !!env.paste, clock = env.clock;
   const flow = env.flow !== 'none', flowLag = env.flowLag === undefined ? 2 : env.flowLag;
   const a = {
-    cmd: 0, ctrl: 0, tdre: 1, txTimer: 0, txHold: null, txLost: 0, irq: 0, rdrf: 0, rx: 0, overruns: 0,
+    cmd: 0, ctrl: 0, tdre: 1, txTimer: 0, txHold: null, txLost: 0, irq: 0, rdrf: 0, rx: 0, ovr: 0, overruns: 0,
     // The line's idle time between characters sent: when the last one ended, and the shortest gap (in bits, at
     // the rate of the character after it; 0 = back to back or overlapping), counted once 8 have gone at the rate
     // last set
@@ -52,9 +52,9 @@ function createAcia(env) {
   a.read = (r, t) => {
     if (r === 0) {
       if (a.rdrf && t !== undefined) { const l = a.rxLat, n = t - a.rxAt; l.min = Math.min(l.min, n); l.max = Math.max(l.max, n); l.sum += n; l.n++; }
-      a.rdrf = 0; return a.rx;
+      a.rdrf = 0; a.ovr = 0; return a.rx;
     }
-    if (r === 1) { const s = (a.irq ? 0x80 : 0) | (a.tdre || wdc ? 0x10 : 0) | (a.rdrf ? 0x08 : 0); a.irq = 0; return s; }
+    if (r === 1) { const s = (a.irq ? 0x80 : 0) | (a.tdre || wdc ? 0x10 : 0) | (a.rdrf ? 0x08 : 0) | (a.ovr ? 0x04 : 0); a.irq = 0; return s; }   // (ovr: a byte lost since the last read: the chip's overrun bit)
     return r === 2 ? a.cmd : a.ctrl;
   };
   const emit = (v, t) => {                                  // A byte into the transmitter, at cycle t
@@ -87,7 +87,7 @@ function createAcia(env) {
     if (a.pcQueue.length) {                                   // The PC's own bytes: back to back, the keys wait
       if ((a.pcDelay -= d) > 0) return;
       const c = a.pcQueue.shift();
-      if (a.rdrf) a.pcLost++;
+      if (a.rdrf) { a.pcLost++; a.ovr = 1; }
       else { a.rx = c; a.rdrf = 1; a.rxAt = t; if (!(a.cmd & 2)) a.irq = 1; }
       a.pcDelay = a.charCycles();
       if (!a.pcQueue.length && a.rxDelay < a.pcDelay) a.rxDelay = a.pcDelay;   // (A key after them: a character's time on)
@@ -108,7 +108,7 @@ function createAcia(env) {
       if (c === '\u0102' || c === '\u0103') { a.kbd = c === '\u0102' && !!env.keyboard; a.rxDelay = a.kbd ? KBD_DELAY : 20000; }
       else if (a.kbd && c !== '\u0100') { env.keyboard(c); a.rxDelay = KBD_DELAY; }
       else if (c === '\u0100') { a.rxDelay = 2000000; if (!a.rxQueue.length) a.typedLast = t + a.rxDelay; }   // \w: wait before the next key
-      else if (a.rdrf) { a.rxLost++; a.rxDelay = a.charCycles(); }   // (--paste: an overrun: the ACIA keeps the old byte)
+      else if (a.rdrf) { a.rxLost++; a.ovr = 1; a.rxDelay = a.charCycles(); }   // (--paste: an overrun: the ACIA keeps the old byte, and says so)
       else { if (a.typedAt < 0) a.typedAt = t; a.rx = c.charCodeAt(0); a.rdrf = 1; a.rxAt = t; if (!(a.cmd & 2)) a.irq = 1; a.rxDelay = paste ? a.charCycles() : 20000; }
     }
   };
@@ -137,7 +137,7 @@ function createAcia(env) {
   };
   a.type = key => a.rxQueue.push(key);                        // A key typed (interactive)
   a.send = bytes => { if (!a.pcQueue.length) a.pcDelay = a.charCycles(); a.pcQueue.push(...bytes); };   // The PC's own bytes
-  a.reset = () => { a.cmd = 0; a.ctrl = 0; a.tdre = 1; a.txTimer = 0; a.txHold = null; a.irq = 0; a.rdrf = 0; };
+  a.reset = () => { a.cmd = 0; a.ctrl = 0; a.tdre = 1; a.txTimer = 0; a.txHold = null; a.irq = 0; a.rdrf = 0; a.ovr = 0; };
   return a;
 }
 
