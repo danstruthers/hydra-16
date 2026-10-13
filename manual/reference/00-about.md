@@ -1,7 +1,7 @@
 # About This Reference
 
-This is the *Hydra-16 Technical Reference*, **in progress**. Its first three chapters, HyBASIC's keywords, the
-commands and the system calls, are complete; the other two have an entry each so far, to show what they will be.
+This is the *Hydra-16 Technical Reference*, **in progress**. Its first four chapters are complete: HyBASIC's keywords,
+the commands, the system calls and HyForth's words. hylang's chapter has one entry so far, to show what it will be.
 
 The *User's and Builder's Manual* teaches the Hydra, and its appendices list what each language has in a line
 apiece. This book is where to look when a line isn't enough: when the question is what a keyword does with an
@@ -15,7 +15,7 @@ It assumes the manual has been read, and it says the same thing about every entr
 | 1. HyBASIC keywords | Every statement, function and operator | `ABS` to `XOR`: every keyword |
 | 2. Commands | The programs in `/bin`, and the shell's own commands | Every one |
 | 3. System calls | Every call, with the constants and the error codes | Every one |
-| 4. HyForth words | The core and every library | `>number` |
+| 4. HyForth words | The core and every library | Every word |
 | 5. hylang forms | The special forms and the functions | `let` |
 
 The other reference appendices of the manual (the 65C02's instructions, the character sets, the memory map, the
