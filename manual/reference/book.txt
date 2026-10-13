@@ -11,6 +11,8 @@ r1-basic.md
 + r1-basic-m.md
 + r1-basic-r.md
 r2-commands.md
++ r2-commands-e.md
++ r2-commands-n.md
 r3-calls.md
 r4-forth.md
 r5-hylang.md
