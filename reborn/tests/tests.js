@@ -362,9 +362,20 @@ const C_LINES = [
   ["echo hello there | /sd/0/sample/c/upper","HELLO THERE"],
   ["/sd/0/sample/c/code 3; echo $status","3"],
   ["/sd/0/sample/c/code oops; echo $status","oops"],
-  ["/sd/0/sample/c/harn 42 | head -7","\n**** Birth Attributes ****\nSpecies Human\nSex Male\nBirthday Savor 23\nSunsign Tai\nFrame Medium"],
-  ["/sd/0/sample/c/harn 42 | grep 'Endur|Dodge|Climb|best|D&D'",
-    "Endurance 8\nClimbing 36\nDodge 55\nthe best 3 of 5 d6: 17 (6 6 5)\nD&D attributes: 13 (6 5 2 1) 13 (6 4 3 1) 12 (6 5 1 1) 12 (6 3 3 2) 11 (6 4 1 1) 10 (4 3 3 3)"],
+  ["/sd/0/sample/c/harn 99 | head -6", [
+    "Human Female, born 28 Nolus (Ahnu); Feudal Serf",
+    "2 of 4; Fostered, Favorite; clanhead: Distant Relation",
+    "71\", Medium, 165 lb (size 6); Attractive 13; Medium, Black hair, Hazel eyes",
+    "Strength 15, Stamina 11, Dexterity 7, Agility 6, Eyesight 9, Hearing 7, Smell 9, Voice 6",
+    "Intelligence 14, Aura 16, Will 11, Morality 10",
+    "Endurance 12, Move 6, Piety 19; medical: Parasites Hemophilia",
+  ].join('\n')],
+  ["/sd/0/sample/c/harn 99 | grep 'Automatic|broad|best|D&D'", [
+    "Automatic skills (SB/ML): Climbing 9/36 Condition 12/60 Jumping 9/36 Stealth 8/24 Throwing 10/40 Awareness 8/32 Intrigue 14/42 Oratory 11/22 Rhetoric 10/30 Singing 6/18 Language 10/60 Initiative 9/36 Unarmed 9/36 Dodge 6/30",
+    "A broadsword: A*1 on the left calf, effective impact 11: serious, 2 levels; UP 2",
+    "the best 3 of 5 d6: 15 (6 5 4)",
+    "D&D attributes: 14 (5 5 4 2) 14 (6 4 4 4) 13 (6 5 2 1) 13 (5 4 4 3) 12 (5 4 3 1) 9 (4 3 2 1)",
+  ].join('\n')],
   ["cd /ram; /sd/0/sample/c/ctest a 'b c'","ok - arguments",true],
   ["for(w in pear apple fig Apple banana 10 9 07) echo $w >>/ram/s; sort /ram/s", [
     "07",

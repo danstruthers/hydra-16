@@ -17,13 +17,13 @@ The SDK is this folder; `node build.js` builds the library and also copies the S
 | `numdefs.h` | The number libraries' constants (`NUM_MAX`, the errors `NE_`, the kinds `NK_` ...).  Made from `spec/numbers.def` by the build, and kept in Git; `num.h` includes it |
 | `include/asm.h` | The W65C02S's instructions: `dis_insn`, one disassembled as `as` writes it (the asm library's, `db`'s and `dis`'s), and symbol files (`lbl_load`: ld65's and `as -l`'s labels, `hydra.inc`'s calls; `lbl_at`, `lbl_label`, `lbl_near`, `lbl_addr`) |
 | `include/dice.h` | Dice for games, danlang's `lib/dice.dl` in C: `die`, `die_plus`, `d6` ... `d100`, `dice`, `dice_plus`, `sumrolls`, `special_die`, the open-ended dice (`oe_die` ...), `roll`, `best_of_rolls`, `worst_of_rolls`, the D&D attribute rolls; and the numbers they're rolled with, hylang's and HyForth's (`rand16`, `rand32`, `rseed`, `random`: xorshift32, the same numbers for the same seed) |
-| `include/harn.h` | HârnMaster characters, danlang's `lib/harn.dl` in C: the attributes, species, sexes, months and sunsigns (`harn_sunsign_of` a birthday's), height, frame and weight, an attribute rolled with its modifiers, `harn_create` (a character, any part of it fixed by a template), the skills (`harn_skills`: each one's attributes, sunsign bonuses, opening multiplier, specialties; a program's own after them) and a skill's base, opening mastery and development rolls, the volatiles, the load and the penalties, endurance and size |
+| `include/harn.h` | HârnMaster (third edition, 3.5) characters and their rules, the C version of danlang's `lib/harn.dl`: a character made as the book's Character article makes one (`harn_create`: birth, sunsign, culture and class, family, appearance, the attributes with their modifiers, medical traits; a template fixes any part), the Skill Data table (`harn_skills`: 91 skills, a program's own after them) and a skill's SB, OML and development, the penalties (UP, EP, PP), tests (`harn_test`'s CF, MF, MS, CS; EMLs; attribute, shock, stumble and fumble rolls), the combat tables (melee, missile, strike location, injury), armour, weapons, a wound taken (`harn_wound`: kill and shock rolls, bleeding, amputation), and healing |
 | `asmdefs.h` | The asm library's constants (`DIS_MAX`, `DF_PAD`, the kinds `DK_`).  Made from `spec/asm.def` by the build, and kept in Git; `asm.h` includes it |
 | `hydracalls.h` | Every system call's address, error code and constant, each with `HY_` before its name.  Made from `base/spec/` by the build, and kept in Git; never edit it.  `hydra.h` includes it |
-| `hydra.cfg` | The link: the header, code and data from `$0800`, the BSS after them, the heap, and the C stack (2K) down from `$7F00` |
+| `hydra.cfg` | The link: the header, code and data from `$0800`, the BSS after them, the heap, and the C stack (2K) down from `$7F00`; a program whose BSS ends within `__STACKMIN__` (768 bytes) of `$7F00` fails to link, rather than its stack running over its BSS |
 | `lib/hydra.lib` | The library: cc65's `none.lib`, with the modules of `lib/` in place of cc65's that a target gives (the build: `obj/sdk/c/hydra.lib`) |
-| `lib/` | Its sources: `crt0.s` (the header, the start, `exit`), the files and stdio's buffers, the environment, `system`, `signal`, `time` and `clock`, conio, errors; `num.h`'s functions (`num.s`, and `numcall.s`, which finds the libraries); `asm.h`'s (`dis.s`, `lbl.c`); `dice.h`'s (`xorshift.s`, `dice.c`, `dicemore.c`, `dicebest.c`) and `harn.h`'s (`harn.c`, `harngen.c`: a character made); `printf`'s and `scanf`'s cores, cc65's `_printf.s` and `_scanf.c` with the Hydra's numbers added |
-| `samples/` | `hello` (arguments), `upper` (a filter), `code` (exit statuses), `keys` (conio: the screen and raw keys), `tones` (sound: `snd.h`), `jukebox` (a song in the background: `snd_play`), `sketch` (the screen and the mouse: `vera.h`), `shapes` (cc65's TGI), `ctest` (the library's test), `harn` (a HârnMaster character made and shown as danlang's `tests/HarnTests.dl` shows one, and some dice: `harn.h`, `dice.h`); the multitasking demos (below): `race`, `chorus`, `philo`, `prodcons`, `round`, `ntest` (`num.h`'s test: numbers, and `printf`'s and `scanf`'s) |
+| `lib/` | Its sources: `crt0.s` (the header, the start, `exit`), the files and stdio's buffers, the environment, `system`, `signal`, `time` and `clock`, conio, errors; `num.h`'s functions (`num.s`, and `numcall.s`, which finds the libraries); `asm.h`'s (`dis.s`, `lbl.c`); `dice.h`'s (`xorshift.s`, `dice.c`, `dicemore.c`, `dicebest.c`) and `harn.h`'s (`harn.c` the skills and penalties, `harnname.c` the names, `harnsp.c` the skills' keys and specialties, `harngen.c` a character made, `harntest.c` the tests, `harncmbt.c` the combat tables and wounds, `harnarm.c` armour, `harnwpn.c` weapons, `harnheal.c` healing: each part a file, so a program links only what it uses); `printf`'s and `scanf`'s cores, cc65's `_printf.s` and `_scanf.c` with the Hydra's numbers added |
+| `samples/` | `hello` (arguments), `upper` (a filter), `code` (exit statuses), `keys` (conio: the screen and raw keys), `tones` (sound: `snd.h`), `jukebox` (a song in the background: `snd_play`), `sketch` (the screen and the mouse: `vera.h`), `shapes` (cc65's TGI), `ctest` (the library's test), `harn` (a HârnMaster character made and shown as a Character Profile has it, a blow struck at it, and some dice: `harn.h`, `dice.h`); the multitasking demos (below): `race`, `chorus`, `philo`, `prodcons`, `round`, `ntest` (`num.h`'s test: numbers, and `printf`'s and `scanf`'s) |
 
 ## A program
 
@@ -81,8 +81,9 @@ int main (int argc, char* argv[])
 
 ## Dice and HârnMaster
 
-`dice.h` and `harn.h` are danlang's `lib/dice.dl` and `lib/harn.dl`, function for function, by the same names
-where C allows (`harn.get-sb` is `harn_get_sb`, `die+` is `die_plus`, `oe-dice` is `oe_dice`).
+`dice.h` is danlang's `lib/dice.dl`, function for function, by the same names where C allows (`die+` is
+`die_plus`, `oe-dice` is `oe_dice`).  `harn.h` is HârnMaster, third edition (3.5): the C version of danlang's
+`lib/harn.dl`, both following the book, by harn.dl's names (`harn.get-sb` is `harn_get_sb`) and the book's.
 
 ```
 #include <stdio.h>
@@ -94,7 +95,7 @@ int main (void)
 
     harn_create (&h, NULL);
     printf ("%s, %s; endurance %u, dodge %u\n", harn_species_name (h.att[HARN_SP]),
-        harn_sunsign_name (h.att[HARN_SS]), harn_end (&h), h.ml[HARN_DDG]);
+        harn_sunsign_name (h.att[HARN_SS]), harn_end (&h), h.ml[HARN_DGE]);
     return 0;
 }
 ```
@@ -102,16 +103,22 @@ int main (void)
 * The numbers are hylang's and HyForth's (`lib random`): `rseed (42)` gives the same `rand16` and `random` as
   `42 0 rseed` gives HyForth's `rand` and `random`.  With no `rseed` the first number seeds the generator from
   the clock and the ticks.  `random (n)` is from 0 to n - 1; `die (6)` from 1 to 6.
-* A character's attributes are `att[]`, by `HARN_SP` ... (harn.dl's `harn.attributes`, in its order); its
-  birthday is `(month << 8) | day`; its skills' masteries `ml[]`, by `HARN_ACR` ... (`harn.skills`'s; Staves is
-  `HARN_STA_SK`, as `HARN_STA` is Stamina).  `harn_create` opens the automatic skills at their OML.
-* A template for `harn_create` fixes what it has: each `att[]` that isn't `HARN_ANY` (and `dty`, if not
-  `NULL`).
-* A program's own skills go after harn.dl's (`harn_own_skills`: skill numbers `HARN_NSKILLS` on, up to
+* A character's attributes are `att[]`, by `HARN_SP` ... (in the book's order of generation); its birthday is
+  `(month << 8) | day`; its skills' masteries `ml[]`, by `HARN_ACR` ... (the Skill Data table's order;
+  Dodge, the book's quasi-skill, is `HARN_DGE`, Agility times 5).  `harn_create` opens the automatic skills at
+  their OML, and Ritual for a deity the template gives.
+* `harn_template` makes a template that rolls everything; set what it should fix (an `att[]`, `culture`, a
+  medical trait ...) and pass it to `harn_create`.
+* EML: `harn_eml` is ML less five times the physical penalty (physical and combat skills) or the universal penalty
+  (the rest); `harn_test` rolls d100 against an EML (kept from 5 to 95) and gives `HARN_CF` ... `HARN_CS`.
+* Combat: `harn_melee_result` (or `harn_missile_result`) of the two parties' success levels gives a strike
+  (`HARN_R_AH` and its dice ...), a block, a fumble, a stumble or a tactical advantage; `harn_strike_location` a
+  location; the impact less `harn_armour_at` there is the effective impact, and `harn_wound` makes it an injury
+  and does what follows (the kill roll, shock, bleeding, amputation).
+* A program's own skills go after the book's (`harn_own_skills`: skill numbers `HARN_NSKILLS` on, up to
   `HARN_MAXSKILLS`), and every skill function works on them.
-* Where harn.dl is unfinished this is too: the medical and family attributes are none, the equipment table
-  `harn_equipment` has its one empty entry (a program has its own `harn_equip`s), and the current weight is the
-  optimal one.  `harn_get_fp` is the fatigue volatile (harn.dl's is 0).
+* Left out: occupations, contacts, aging, psionics, magic, religion's rituals and mounted combat.  The tables are
+  big: `harn.h` whole, with `printf`, leaves a program little room (the sample writes with `fputs`).
 
 ## Numbers
 
