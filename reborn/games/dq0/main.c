@@ -169,17 +169,20 @@ static char* __fastcall__ reply_line (char** at)
     return l;
 }
 
-/* The referee asked (the UI's slot): its request's kind, and a (a purpose ...), the slot's text already set */
-static struct req* __fastcall__ referee (unsigned char kind, unsigned char a)
+/* The referee asked (the UI's slot): its request's kind, and a (a purpose ...) and b, the slot's text already set */
+static struct req* __fastcall__ ask_b (unsigned char kind, unsigned char a, unsigned char b)
 {
     struct req* r = &HUB->slot[SLOT_UI];
 
     r->kind = kind;
     r->actor = 0;
     r->a = a;
+    r->b = b;
     r->steps = 0;
     return hub_ask (SLOT_UI);
 }
+
+#define referee(kind, a)    ask_b ((kind), (a), 0)
 
 /* The character's file read by the referee: its name and its calling */
 static void load_pc (void)
@@ -275,9 +278,7 @@ void status (void)
     if (world_task >= 0) {
         strcat (right, HUB->pcstatus);          /* (The referee's words: "UP 0" ...) */
         strcat (right, "  facing ");
-        n[0] = "NESW"[HUB->pc_face & 3];
-        n[1] = 0;
-        strcat (right, n);
+        strcat (right, head_abbr[HUB->pc_face & 7]);
         strcat (right, "  ");
     }
     strcat (right, utoa (s / 3600, n, 10));
@@ -321,7 +322,7 @@ static void events (void)
         case E_VIEW:
             if (m.who == 0) {
                 if (m.w1 == V_TURNED) {
-                    sayf ("\nYou turn to face %s.", dir_name[HUB->pc_face]);
+                    sayf ("\nYou turn to face %s.", head_name[HUB->pc_face & 7]);
                 } else {
                     msg (m.w1 == V_LIT ? "You light your torch." : "You put out your torch.");
                 }
@@ -354,61 +355,93 @@ static void __fastcall__ intend (unsigned char kind, unsigned char a)
     }
 }
 
-/* A word that's a direction: north (n) ... down (d), DIR_N ...; or one as the character faces (forward or ahead
-** (f), back (b), left, right), made the compass's; or 0xFF */
+/* A word that's a way: a heading of the compass's eight (north or n ... northwest or nw: H_N ...), or one as the
+** character faces (forward, ahead or f; right; back or b; left), made the compass's; up (u) or down (d): GO_UP,
+** GO_DOWN; or 0xFF */
+#define GO_UP       8
+#define GO_DOWN     9
 static unsigned char __fastcall__ direction (const char* w)
 {
-    static const char ab[] = "neswud";
-    static const char* const relw[8] = { "forward", "ahead", "right", "", "back", "", "left", "" };
-    unsigned char d;
+    static const char* const relw[8] = { "forward", "ahead", "f", "right", "back", "b", "left", "" };
+    static const unsigned char reloff[8] = { 0, 0, 0, 2, 4, 4, 6, 0 };
+    unsigned char h;
+    char ab[3];
 
-    for (d = 0; d < 6; ++d) {
-        if ((w[0] == ab[d] && !w[1]) || !strcmp (w, dir_name[d])) {
-            return d;
+    for (h = 0; h < 8; ++h) {
+        ab[0] = head_abbr[h][0] + 'a' - 'A';
+        ab[1] = head_abbr[h][1] ? head_abbr[h][1] + 'a' - 'A' : 0;
+        ab[2] = 0;
+        if (!strcmp (w, ab) || !strcmp (w, head_name[h])) {
+            return h;
         }
     }
-    for (d = 0; d < 8; ++d) {
-        if (*relw[d] && !strcmp (w, relw[d])) {
-            return (HUB->pc_face + d / 2) & 3;
-        }
+    if (!strcmp (w, "u") || !strcmp (w, "up")) {
+        return GO_UP;
     }
-    if (!w[1] && (w[0] == 'f' || w[0] == 'b')) {
-        return (HUB->pc_face + (w[0] == 'b' ? 2 : 0)) & 3;
+    if (!strcmp (w, "d") || !strcmp (w, "down")) {
+        return GO_DOWN;
+    }
+    for (h = 0; h < 7; ++h) {
+        if (!strcmp (w, relw[h])) {
+            return (HUB->pc_face + reloff[h]) & 7;
+        }
     }
     return 0xFF;
 }
 
-/* The word after a command's (made lower case): rest's first */
-static char* __fastcall__ next_word (char* rest)
+/* The next word of a command's (made lower case), *at moved past it */
+static char* __fastcall__ next_word (char** at)
 {
     char* w;
+    char* s = *at;
 
-    while (*rest == ' ') {
-        ++rest;
+    while (*s == ' ') {
+        ++s;
     }
-    for (w = rest; *rest && *rest != ' '; ++rest) {
-        if (*rest >= 'A' && *rest <= 'Z') {
-            *rest += 'a' - 'A';
+    for (w = s; *s && *s != ' '; ++s) {
+        if (*s >= 'A' && *s <= 'Z') {
+            *s += 'a' - 'A';
         }
     }
-    *rest = 0;
+    if (*s) {
+        *s++ = 0;
+    }
+    *at = s;
     return w;
 }
 
-/* turn left, right, around (or back), or north ...; face north ... (or left ...): the same */
-static void __fastcall__ turn (const char* how)
+/* The map, and beside it the referee's short lines (the attributes as they are now) */
+static void show_map (void)
 {
-    unsigned char d = !strcmp (how, "around") ? (HUB->pc_face + 2) & 3 : direction (how);
+    struct req* r = ask_b (RS_DESCRIBE, 0, 1);
 
-    if (d > DIR_W) {
-        msg ("Which way? (left, right, around, or north, east, south, west)");
+    map (r->text);                              /* (Its lines read where they are, in the hub's header, before the
+                                                **   level's put in the window) */
+    r->state = REQ_FREE;
+}
+
+/* turn left or right (a quarter turn), half left or half right (an eighth), around (or back), or north ...;
+** face north ... (or left ...): the same */
+static void __fastcall__ turn (char* rest)
+{
+    char* how = next_word (&rest);
+    unsigned char h = HUB->pc_face;
+
+    if (!strcmp (how, "half")) {
+        how = next_word (&rest);
+        h = !strcmp (how, "left") ? (h + 7) & 7 : !strcmp (how, "right") ? (h + 1) & 7 : 0xFF;
+    } else {
+        h = !strcmp (how, "around") ? (h + 4) & 7 : direction (how);
+    }
+    if (h > H_NW) {
+        msg ("Which way? (left, right, half left, half right, around, or north, northeast ... northwest)");
         return;
     }
-    if (d == HUB->pc_face) {
-        sayf ("\nYou face %s already.", dir_name[d]);
+    if (h == HUB->pc_face) {
+        sayf ("\nYou face %s already.", head_name[h]);
         return;
     }
-    intend (I_TURN, d & 3);
+    intend (I_TURN, h);
 }
 
 static void __fastcall__ command (char* l)
@@ -432,18 +465,22 @@ static void __fastcall__ command (char* l)
         return;
     }
     if (!strcmp (w, "go") || !strcmp (w, "walk")) {
-        w = next_word (rest);
+        w = next_word (&rest);
         if (!*w) {
             msg ("Go which way?");
             return;
         }
     }
     if ((d = direction (w)) != 0xFF) {
-        intend (d >= DIR_UP ? I_CLIMB : I_GO, d);
+        if (d >= GO_UP) {
+            intend (I_CLIMB, d == GO_UP ? DIR_UP : DIR_DOWN);
+        } else {
+            intend (I_GO, d);
+        }
     } else if (!strcmp (w, "quit") || !strcmp (w, "q")) {
         quit = 1;
     } else if (!strcmp (w, "turn") || !strcmp (w, "face")) {
-        turn (next_word (rest));
+        turn (rest);
     } else if (!strcmp (w, "light")) {
         if (HUB->pc_light) {
             msg ("Your torch is lit already.");
@@ -459,7 +496,7 @@ static void __fastcall__ command (char* l)
     } else if (!strcmp (w, "look") || !strcmp (w, "l")) {
         look (0);
     } else if (!strcmp (w, "map") || !strcmp (w, "m")) {
-        map ();
+        show_map ();
     } else if (!strcmp (w, "wait") || !strcmp (w, "z")) {
         intend (I_WAIT, 0);
     } else if (!strcmp (w, "sheet") || !strcmp (w, "skills")) {
@@ -469,9 +506,10 @@ static void __fastcall__ command (char* l)
         msg ("The game is paused: press Escape to go on.");
         status ();
     } else if (!strcmp (w, "help") || !strcmp (w, "?")) {
-        msg ("Commands: north, east, south, west (n, e, s, w, or go north ...); forward, back, left, right (f, b: as "
-             "you face); up and down (u, d: the stairs); turn left, right or around; face north ...; light and douse "
-             "(your torch); look (l), map (m), sheet (the character), wait (z), pause (or Escape), quit (q).");
+        msg ("Commands: north, northeast, east ... northwest (n, ne, e, se, s, sw, w, nw, or go north ...); forward, "
+             "back, left, right (f, b: as you face); up and down (u, d: the stairs); turn left, right, half left, half "
+             "right or around; face north ...; light and douse (your torch); look (l), map (m), sheet (the character), "
+             "wait (z), pause (or Escape), quit (q).");
     } else {
         sayf ("\nI don't know how to %s.", w);
     }

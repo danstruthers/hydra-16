@@ -2268,7 +2268,7 @@ module.exports = {
         '\u0101dq0 -p t -s 7\r\u0100\u0100k\r\u01002\r\u0100bow\r\u0100spear\r\u0100sword\r\u0100\r\u0100Dorn\r' +
         '\u0101sheet\r\u0101quit\r\u0101echo done\r' },
       expect: ['Tordan, Hunter/Trapper, enters the dungeon.', 'You stand by the stairs up to the way out.', 'The way out is shut fast.', 'Level 1 (you face',
-        '> wait', 'Time passes.', 'Commands: north, east, south, west',
+        '> wait', 'Time passes.', 'Commands: north, northeast, east',
         "I don't know how to foo.", '% echo $status', 'Keep this character, or roll again (k or r)?', 'Written to /ram/dq0.hm',
         'Dorn, Hunter/Trapper, enters the dungeon.', 'Dorn, Human Female, Hunter/Trapper; born 10 Ilvin (Skorus).', '% echo done\ndone'],
       sdcard: true

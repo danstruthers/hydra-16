@@ -58,7 +58,7 @@ static struct {
     unsigned char   on;                         /* A move under way */
     unsigned char   how;                        /* A_* */
     unsigned char   dir;                        /* (A_WALKED's) */
-    unsigned char   face;                       /* The way it'll face */
+    unsigned char   face;                       /* The heading it'll face */
     unsigned char   level, x, y;                /* Where it ends */
 } move;
 
@@ -141,10 +141,32 @@ static void see (void)
     hub_map (0);
 }
 
-/* The character starts out north, east ... (d): its time, and where it'll be */
-static void __fastcall__ go (unsigned char d)
+/* The door of room r that lies on heading h from (mx, my), the nearest if more than one: its wall (door_x, door_y),
+** or 0xFF (none) */
+static unsigned char __fastcall__ door_toward (unsigned char r, unsigned char h)
 {
-    unsigned char r, n, t, slow, sx, sy;
+    unsigned char d, k, best = 0xFF, bd = 0xFF, n;
+
+    for (d = 0; d < 4; ++d) {
+        for (k = 0; wall_tile (&L->room[r], d, k); ++k) {
+            if (TILE (L->tile[wall_y][wall_x]) == T_DOOR && bearing ((int) wall_x - mx, (int) wall_y - my) == h &&
+                (n = dist (wall_x, wall_y)) < bd) {
+                bd = n;
+                best = d;
+                door_x = wall_x;
+                door_y = wall_y;
+            }
+        }
+    }
+    return best;
+}
+
+/* The character sets out on heading h (north, northeast ...): its time, and where it'll be.  From a room: north,
+** east, south or west by a door in that wall; a diagonal, by the door that lies that way.  A passage goes only by
+** the four */
+static void __fastcall__ go (unsigned char h)
+{
+    unsigned char r, n, t, slow, sx, sy, d = h >> 1;
 
     lv = HUB->pc_level;
     mx = HUB->pc_x;
@@ -152,7 +174,7 @@ static void __fastcall__ go (unsigned char d)
     level_in (lv);
     slow = dark ();
     if ((r = room_at (L, mx, my)) != 0xFF) {
-        if (!doors_on (L, r, d)) {
+        if (h & 1 ? (d = door_toward (r, h)) == 0xFF : !doors_on (L, r, d)) {
             hub_map (0);
             no_way (N_NO_EXIT);
             return;
@@ -163,7 +185,7 @@ static void __fastcall__ go (unsigned char d)
         sx = mx;
         sy = my;
         n = walk (d, 0);
-    } else if (!(ways (L, mx, my) & (1 << d))) {
+    } else if ((h & 1) || !(ways (L, mx, my) & (1 << d))) {
         hub_map (0);
         no_way (N_NO_EXIT);
         return;
@@ -180,7 +202,7 @@ static void __fastcall__ go (unsigned char d)
     move.level = lv;
     move.x = sx;                                /* (Walked again from there as it ends: the tiles seen) */
     move.y = sy;
-    move.face = mface;
+    move.face = H_OF (mface);
     busy ((unsigned) (t + n) * (slow ? 2 * TILE_TIME : TILE_TIME));
 }
 
@@ -227,21 +249,18 @@ static void __fastcall__ make (unsigned char n)
     }
 }
 
-/* The way from (mx, my) to the middle of its room (as the character first comes down the stairs: it looks in) */
+/* The heading from (mx, my) to the middle of its room (as the character first comes down the stairs: it looks in) */
 static unsigned char toward_middle (void)
 {
     unsigned char r = room_at (L, mx, my);
     int dx, dy;
 
     if (r == 0xFF) {
-        return DIR_S;
+        return H_S;
     }
     dx = (int) (L->room[r].x + L->room[r].w / 2) - mx;
     dy = (int) (L->room[r].y + L->room[r].h / 2) - my;
-    if (abs (dx) > abs (dy)) {
-        return dx > 0 ? DIR_E : DIR_W;
-    }
-    return dy < 0 ? DIR_N : DIR_S;
+    return dx || dy ? bearing (dx, dy) : H_S;
 }
 
 /* A move done: the character there, what it saw seen, and the UI told */
@@ -286,13 +305,13 @@ static void __fastcall__ intent (struct msg* m)
         event (E_TIME, 0, m->w1 ? m->w1 : HUB->round);
         break;
     case I_GO:
-        go (m->a & 3);
+        go (m->a & 7);
         break;
     case I_CLIMB:
         climb (m->a);
         break;
     case I_TURN:
-        HUB->pc_face = m->a & 3;
+        HUB->pc_face = m->a & 7;
         busy (TILE_TIME);
         see ();
         event (E_VIEW, 0, V_TURNED);

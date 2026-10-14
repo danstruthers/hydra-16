@@ -71,7 +71,8 @@ extern struct pc P;
 /* ---- look.c: the place in words, and the map */
 
 void __fastcall__ look (unsigned char first);   /* Where the character is (first: the first time there) */
-void map (void);                                /* The map of what it's seen of the level */
+void __fastcall__ map (const char* rules);      /* The map of what it's seen of the level, and the character's
+                                                **   state beside it (rules: the referee's short lines) */
 
 /* ---- The overlays (bank.s: their stubs) */
 

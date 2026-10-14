@@ -41,9 +41,9 @@ struct msg {
 /* Intents: what an actor means to do (the UI's for the character, the denizens' for theirs) */
 enum {
     I_NONE, I_WAIT,                             /* w1: tenths (0: a round) */
-    I_GO,                                       /* a: a direction (level.h's DIR_N ... DIR_W) */
+    I_GO,                                       /* a: a heading (level.h's H_N ... H_NW) */
     I_CLIMB,                                    /* a: DIR_UP or DIR_DOWN (the stairs in the room) */
-    I_TURN,                                     /* a: the way to face (DIR_N ... DIR_W) */
+    I_TURN,                                     /* a: the heading to face (H_N ... H_NW) */
     I_LIGHT,                                    /* a: 1 the character's light lit, 0 put out */
     I_QUIT,
     NINTENTS
@@ -106,7 +106,7 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned long   seed;
     char            pcstatus[16];               /* The character's state, the referee's words ("UP 3") */
     volatile unsigned char pc_level, pc_x, pc_y;    /* Where the character is (the world's), */
-    volatile unsigned char pc_face;             /*   the way it faces (DIR_N ... DIR_W), */
+    volatile unsigned char pc_face;             /*   the way it faces (a heading: H_N ... H_NW), */
     volatile unsigned char pc_light;            /*   the light it carries: how far it reaches, in tiles (0: none) */
     struct rs_summary pcsum;                    /* The character's summary (the referee's: its senses ...) */
     /* The UI's intents to the world */

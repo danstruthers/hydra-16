@@ -50,17 +50,29 @@ struct level {
     unsigned char   tile[LH][LW];
 };
 
-/* Directions: the four by the compass, then up and down */
+/* Directions: the four of the walls and the passages, then up and down */
 enum { DIR_N, DIR_E, DIR_S, DIR_W, DIR_UP, DIR_DOWN };
-#define REL(d, face)    (((d) - (face)) & 3)    /* A direction as the character sees it: 0 ahead, 1 its right,
-                                                **   2 behind it, 3 its left */
 extern const signed char dir_x[4], dir_y[4];
 extern const char* const dir_name[6];
 
+/* Headings: the eight ways of the compass, the way the character faces or sets out (a direction d is heading
+** H_OF (d)) */
+enum { H_N, H_NE, H_E, H_SE, H_S, H_SW, H_W, H_NW };
+#define H_OF(d)         ((d) << 1)
+#define REL8(h, face)   (((h) - (face)) & 7)    /* A heading as the character sees it: 0 ahead, 1 ahead to its
+                                                **   right, 2 its right, 3 behind it to its right, 4 behind it ... */
+extern const signed char head_x[8], head_y[8];
+extern const char* const head_name[8];          /* "north", "northeast" ... */
+extern const char* const head_abbr[8];          /* "N", "NE" ... */
+
 /* level.c (each task its own copy: the world's and the UI's) */
 unsigned char __fastcall__ room_at (struct level* l, unsigned char x, unsigned char y);  /* Its room, or 0xFF */
+unsigned char __fastcall__ wall_tile (struct room* p, unsigned char d, unsigned char k);  /* A wall's kth tile
+                                                **   (wall_x, wall_y): 1, or 0 past its end */
+extern unsigned char wall_x, wall_y;
 unsigned char __fastcall__ doors_on (struct level* l, unsigned char r, unsigned char d); /* Doors in a room's wall */
 extern unsigned char door_x, door_y;            /* doors_on's first door's tile */
+unsigned char __fastcall__ bearing (int dx, int dy);    /* The heading nearest the way (dx, dy) goes */
 unsigned char __fastcall__ ways (struct level* l, unsigned char x, unsigned char y);    /* A passage's tile: the
                                                 **   directions it goes on in (bits, 1 << DIR_N ...) */
 

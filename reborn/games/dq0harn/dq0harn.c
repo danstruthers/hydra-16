@@ -5,7 +5,8 @@
 ** effects, summaries and words.
 **
 ** So far: RS_HELLO (its name, its round), RS_LOAD_PC (hmchar's file), RS_TEST (a purpose made a skill or an
-** attribute, the circumstances' steps 5 points each), RS_DESCRIBE (the character's sheet).
+** attribute, the circumstances' steps 5 points each), RS_DESCRIBE (the character's sheet; b 1: its short lines,
+** for the map's panel, each 15 characters at most).
 **
 ** The game's own choices in using the book (not the book's rules): a purpose names the skill (or attribute times 5)
 ** a GM would call for; a skill not opened is tested at its OML, as if opened on first use.
@@ -191,6 +192,36 @@ static void sheet (void)
     }
 }
 
+/* The short lines: the attributes in pairs, then endurance and the penalties, as they are now ("STR  3  STA  5") */
+static const char abbr[12][4] = {
+    "STR", "STA", "DEX", "AGL", "EYE", "HRG", "SML", "VOI", "INT", "AUR", "WIL", "MOR"
+};
+
+static void __fastcall__ pair (const char* a, int v, const char* b, int w)
+{
+    put (a);
+    put (v < 10 ? "  " : " ");
+    putn (v);
+    put ("  ");
+    put (b);
+    put (w < 10 ? "  " : " ");
+    putn (w);
+    put ("\n");
+}
+
+static void brief (void)
+{
+    unsigned char k;
+
+    for (k = 0; k < sizeof shown; k += 2) {
+        pair (abbr[k], pc.att[shown[k]], abbr[k + 1], pc.att[shown[k + 1]]);
+    }
+    put ("END ");
+    putn (harn_end (&pc));
+    put ("\n");
+    pair ("UP ", harn_get_up (&pc), "PP ", harn_get_pp (&pc));
+}
+
 /* ---- A request answered */
 
 static void __fastcall__ answer (struct req* r)
@@ -210,7 +241,11 @@ static void __fastcall__ answer (struct req* r)
         r->grade = test (&pc, r->a, r->steps);
         break;
     case RS_DESCRIBE:
-        sheet ();
+        if (r->b == 1) {
+            brief ();
+        } else {
+            sheet ();
+        }
         break;
     default:
         r->result = 0xFF;                       /* (Not yet) */

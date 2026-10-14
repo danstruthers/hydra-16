@@ -1,5 +1,6 @@
 /*
-** view.c - (dq0w) what the character sees, from where it stands and the way it faces: the tiles in front of it and
+** view.c - (dq0w) what the character sees, from where it stands and the way it faces (one of the compass's eight:
+** the half of the world that way): the tiles in front of it and
 ** to its sides (none behind, but for the ones it's next to), that a line from its eyes reaches without a wall or
 ** rock in the way, within its sight's range, and lit: by the room's own light, or by the light it carries.  Each
 ** is marked T_VIS (seen now: what the UI tells) and T_SEEN (remembered: the map).  A wall or a door beside a
@@ -108,7 +109,7 @@ void __fastcall__ view (struct level* l, unsigned char x, unsigned char y, unsig
             if (!d2 || d2 > r2) {
                 continue;
             }
-            if (dx * dir_x[face] + dy * dir_y[face] < 0 && d2 > 2) {
+            if (dx * head_x[face] + dy * head_y[face] < 0 && d2 > 2) {
                 continue;                       /* (Behind: but for what's next to it) */
             }
             if (d2 > l2 && !lit (i, j)) {
