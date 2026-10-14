@@ -227,6 +227,20 @@ may only be detectable by magical means"): a hidden portal is the wall it seems 
 map) till it's found: hidden mechanically, by a search (the referee's Awareness, or an ability it allows); hidden by
 magic, only by magical means (a spell or a power of detection, the referee's).  Found, it stays found.
 
+### Traps, pits and other nasty surprises
+
+The user (2026-10-14): "...and don't forget about traps, pits, and other nasty surprises."  A trap is a hazard of its
+own, a record in its chunk as a portal is, placed by the grower where the theme and the style say (a tomb's guarded
+door, a mine's rotten floor, a faction's ambush): its **kind** (a pit: open, covered, spiked, or down to the stratum
+below; a deadfall, a scything blade, darts or needles, gas, an alarm, a flooding chamber, a ceiling brought down, a
+rune or a glyph), its **trigger** (a plate trodden, a wire tripped, a door or a lid opened, a lock picked wrong, a
+weight lifted), its **hiding** (as a hidden portal's: mechanical, found by a search; magical, only by magical means;
+or none, a pit in plain sight), and its **state** (set, sprung, disarmed, broken).  Unfound, it's the floor or the
+wall it looks like.  The referee judges it all: noticing it (a glance, a search), dodging it as it goes off (Dodge,
+Jumping, Acrobatics), its harm (rs.h's RS_HARM: its dice, its aspect, a fall's height), disarming it (Lockcraft,
+Engineering; a dispelling for a magical one).  Denizens know their own faction's traps, and go round them; a trap
+sprung is an event, heard.  (With the referee's harm: climbing's falls and combat need it too.)
+
 ### Items: the dungeon's layer of things
 
 The user (2026-10-14): "Don't forget to include a dungeon "layer" where items are tracked.  Each area needs an
