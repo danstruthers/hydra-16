@@ -53,6 +53,7 @@ static const unsigned char purpose[P_THEME] = {
     HARN_LCK, HARN_LCK,
     HARN_CND, ATTR | HARN_END, ATTR | HARN_WIL, HARN_DGE,
     HARN_PHY, HARN_LOR, HARN_TRK, HARN_RHE, HARN_RHE, HARN_ANI,
+    HARN_MIN,                                                           /* Digging: Mining */
 };
 
 static signed char __fastcall__ grade (unsigned char level)
@@ -108,7 +109,8 @@ static void status (void)
     s->sight = sense (HARN_EYE);
     s->hearing = sense (HARN_HRG);
     s->smell = sense (HARN_SML);
-    s->darkvision = 0;
+    s->darkvision = 0;                          /* (The species' sight in the dark: the book's, to come) */
+    s->nightvision = 1;
     s->morale = pc.att[HARN_MOR];
     s->load = ep > 3 ? 3 : ep;
     s->power = 10;

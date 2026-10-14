@@ -1,8 +1,7 @@
 /*
 ** sight.c - (dq0w) what the character perceives, made into the hub's record of it (level.h's struct sight: the
-** UI words it, and never reads the dungeon), after each look about (view.c's squares seen now); and the map's
-** window round the character (each square it's seen, a floor's height against its own marked), drawn into the hub
-** on the UI's asking.
+** UI words it, and never reads the dungeon), after each look about (view.c's squares seen now).  (The map is the
+** maker's: dq0m/map.c.)
 */
 
 #include <string.h>
@@ -187,73 +186,4 @@ void __fastcall__ perceive (unsigned char sn, unsigned x, unsigned y, unsigned c
     }
     hub_map (0);
     memcpy (&HUB->sight, &S, sizeof S);
-}
-
-/* ---- The map's window */
-
-static char __fastcall__ glyph (unsigned char sn, unsigned x, unsigned y, int myz)
-{
-    unsigned char* p = at (sn, x, y);
-    unsigned char t;
-    int dz;
-
-    if (!p || !(*p & T_SEEN)) {
-        return ' ';
-    }
-    t = TILE (*p);
-    switch (t) {
-    case T_FLOOR:
-        dz = C->elev[cy_][cx_] - myz;
-        return dz >= 5 ? '1' + (dz - 5 >= 80 ? 8 : (dz - 5) / 10) : dz <= -5 ? 'a' + (-dz - 5 >= 80 ? 8 : (-dz - 5) / 10) :
-            '.';
-    case T_DOOR:
-        return '+';
-    case T_CORR:
-        return '#';
-    case T_STEPS:
-        return '=';
-    case T_UP:
-        return '<';
-    case T_DOWN:
-        return '>';
-    case T_WINDOW:
-        return '"';
-    case T_PIT:
-        return 'O';
-    case T_WALL:
-        if (((p = at (sn, x, y - 1)) && T_INSIDE (*p)) || ((p = at (sn, x, y + 1)) && T_INSIDE (*p))) {
-            return '-';
-        }
-        if (((p = at (sn, x - 1, y)) && T_INSIDE (*p)) || ((p = at (sn, x + 1, y)) && T_INSIDE (*p))) {
-            return '|';
-        }
-        return '-';
-    }
-    return ' ';
-}
-
-void __fastcall__ draw_map (unsigned char sn, unsigned x, unsigned y)
-{
-    static char row[MAP_W + 1];
-    struct stratum* s = &strata[sn];
-    unsigned left, top, i, j;
-    unsigned char n, c;
-    int myz = elev_at (sn, x, y);
-
-    left = s->w <= MAP_W ? s->x0 : x - MAP_W / 2 < s->x0 ? s->x0 : x - MAP_W / 2 > s->x0 + s->w - MAP_W ?
-        s->x0 + s->w - MAP_W : x - MAP_W / 2;
-    top = s->h <= MAP_H ? s->y0 : y - MAP_H / 2 < s->y0 ? s->y0 : y - MAP_H / 2 > s->y0 + s->h - MAP_H ?
-        s->y0 + s->h - MAP_H : y - MAP_H / 2;
-    for (j = 0; j < MAP_H; ++j) {
-        for (i = 0, n = 0; i < MAP_W; ++i) {
-            c = left + i == x && top + j == y ? '@' : glyph (sn, left + i, top + j, myz);
-            row[i] = c;
-            if (c != ' ') {
-                n = i + 1;
-            }
-        }
-        row[n] = 0;
-        hub_map (0);
-        strcpy (HUB->map[j], row);
-    }
 }

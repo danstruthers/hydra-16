@@ -47,6 +47,22 @@ static int __fastcall__ ovl_load (const char* dir)
     return 0;
 }
 
+/* A change made in its chunk, if it's in the cache */
+static void __fastcall__ cached (const struct mreq* q)
+{
+    struct stratum* s = &strata[q->sn];
+    unsigned cx = (q->cx - s->x0) / CW, cy = (q->cy - s->y0) / CW;
+    unsigned char k;
+
+    hub_map (0);
+    for (k = 0; k < NCSLOTS; ++k) {
+        if (HUB->cslot[k].used && HUB->cslot[k].sn == q->sn && HUB->cslot[k].cx == cx && HUB->cslot[k].cy == cy) {
+            change_cached (k, (q->cx - s->x0) % CW, (q->cy - s->y0) % CW, q->tile, q->elev, q->link);
+            break;
+        }
+    }
+}
+
 /* Request i answered: the strata's records copied first (the hub's are the truth), and back if they changed */
 static void __fastcall__ serve (unsigned char i)
 {
@@ -64,6 +80,10 @@ static void __fastcall__ serve (unsigned char i)
     case M_CHUNK:
         make_chunk (q.sn, q.cx, q.cy);
         break;
+    case M_CHANGE:                              /* (Kept, and made in the chunk if it's in the cache) */
+        change_keep (q.sn, q.cx, q.cy, q.tile, q.elev, q.link);
+        cached (&q);
+        break;
     }
     hub_map (0);
     HUB->mreq[i].state = REQ_DONE;
@@ -76,7 +96,9 @@ int main (int argc, char* argv[])
     if (argc < 4 || ovl_load (argv[3]) || hub_attach (atoi (argv[1]), atoi (argv[2]))) {
         return 1;
     }
+    changes_init ();
     for (;;) {
+        hub_map (0);                            /* (The hub's header: its own banks may be in the window) */
         hy_sem_acquire (HUB->sem[T_MAKER]);     /* (Waiting costs nothing) */
         hub_map (0);
         if (HUB->quit) {
@@ -86,6 +108,11 @@ int main (int argc, char* argv[])
             if (HUB->mreq[i].state == REQ_POSTED) {
                 serve (i);
             }
+        }
+        if (HUB->map_state == REQ_POSTED) {     /* (The UI's asked for the map) */
+            memcpy (strata, HUB->strata, sizeof strata);
+            draw_map ();
+            HUB->map_state = REQ_DONE;
         }
     }
     return 0;

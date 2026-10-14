@@ -147,6 +147,53 @@ when), kept by the maker: laid over a chunk each time it's made again, and in th
 same way, a chunk's map of them kept when the cache makes way for it.  A change that makes a way between strata adds
 a link to both strata's records.
 
+### Items: the dungeon's layer of things
+
+The user (2026-10-14): "Don't forget to include a dungeon "layer" where items are tracked.  Each area needs an
+inventory, just like each denizen and the player need.  Each item in the area's inventory should also be
+discoverable based on visibility, eyesight, distance, and any magical or mechanical obscurement."
+
+So items are a layer of their own over the strata: each item a record (what it is: the theme's kind, the referee's
+for its rules: weight, bulk, a weapon's or an armour's; its state; where it is), and where it is one of: an **area's
+inventory** (a stratum, a square, and how it lies there: in plain view, under rubble, in a niche, buried), an
+**actor's** (the character's, a denizen's: carried, worn, in a hand), or **inside another item** (a chest, a sack, a
+body).  The important ones (the puzzle's pieces, a faction's hoard, a guardian's charge) are placed when a stratum's
+plan is grown, as its populations are; the ordinary ones (what the style and age leave lying: tools, bones, rubbish,
+lost things) when a chunk is made, from its seed, so they're the same each time it's made, and what's moved since is
+in the change records.
+
+**Containers** (the user: "chests, backpacks, sacks, quivers, bowls, etc. are containers (as are belts, in a
+different manner) that can hold a specified amount of space and weight of items"): a container item has a capacity,
+its space (bulk) and the weight it bears, and holds items up to both; what it holds is carried with it, its weight
+counting toward its carrier's load.  Some hold only some things (a quiver arrows, a scabbard its blade, a bowl
+what's poured or small); a **belt** holds in its own way: things hang from it (a pouch, a scabbard, a quiver, a
+tool), each in a slot of its own, by how many it has room for and what each will bear, not by space inside it.
+
+An item is **found** through the character's senses, as everything else is: only on a square it sees now, lit;
+noticed by the referee's test of its sight (rs.h: P_NOTICE_SIGHT, or P_SEARCH when it searches), the steps from the
+distance, the light, the item's size, and how it's **hidden**: by nothing, by where it lies (in shadow, among
+rubble), mechanically (a false bottom, a hidden niche, a buried cache: found only by searching, at the hiding's
+difficulty), or by magic (invisible, illusion-hidden: found only by magic or a critical success, the theme's say).
+An item found stays known (the character's knowledge, kept with the change records); the perception record lists
+the items it knows of that it sees now, the UI words them.  Denizens find things by the same rules, through their
+own senses.
+
+### Hidden things, and seeing in the dark
+
+The user (2026-10-14): "using your "find hidden" ability, you could discover hidden items, hidden exits, hidden
+denizens, etc.  Don't forget ultra- and night-vision as it impacts ability to see in the dark."
+
+- **Searching** is one ability for every hidden thing: an item (above), an exit (a secret door, a hidden hatch, a
+  concealed shaft: a square that looks like wall or floor till it's found), a denizen (one that hides: the referee's
+  contest of its Stealth against the searcher's Awareness).  Each hidden thing has its hiding (how well, and how:
+  mechanical, magical), and a search (rs.h: P_SEARCH) of the squares round the character, a spell of time, tests
+  each one it sees; a passing glance (P_NOTICE_SIGHT) has a smaller chance, as the character moves.  What's found
+  is known (the change records keep a found exit as what it is).
+- **Seeing in the dark** goes by the referee's summary, whatever the ruleset calls it: **night vision** (the faintest
+  light carries further: a torch's reach, or a glow's, multiplied), and **ultravision** (dark-vision, infravision:
+  sight with no light at all, to a range, without colour or the finest detail).  Both are the character's (or a
+  denizen's) senses as they are now, so a species, a spell or a wound changes them.
+
 ### Moving
 
 A square's time is the referee's (its summary's step: HarnMaster's walking pace, half of Move, AGL less PP, in
@@ -178,5 +225,8 @@ into the hub; a floor's height against the character's marked (1-9 tens of feet 
    and the noise of it as an event.  (Breaking and accidents with the items that make them; tunnellers with the
    denizens.)
 2. **Climbing**: ledges, windows, shafts, ladders, falls (the referee's tests and harm).
+2b. **Items**: the item records and inventories (areas, the character; denizens' with them), the ordinary items a
+   chunk's made with, finding them (sight, distance, light, size, hiding; searching), taking, dropping, carrying
+   (the referee's weight and bulk: encumbrance); containers.
 3. **Natural caves** and the **water** (rivers, falls, lakes); **mines**; **age**.
 4. Then events, the denizens and the rest of the game's plan.

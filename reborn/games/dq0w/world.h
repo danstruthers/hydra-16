@@ -110,6 +110,8 @@ struct link {
     unsigned char   kind;                       /* O_STAIRS_DOWN, O_LADDER_DOWN ... (this stratum's end of it) */
     unsigned char   to;                         /* The other stratum */
     unsigned        x, y;                       /* Its square */
+    unsigned char   dug;                        /* Made by someone in the dungeon (a shaft dug): the grower leaves its
+                                                **   square alone (the change records have it) */
 };
 
 struct stratum {
@@ -138,9 +140,13 @@ struct mreq {
     volatile unsigned char state;               /* REQ_* (hub.h) */
     unsigned char   kind;                       /* M_* */
     unsigned char   sn;
-    unsigned        cx, cy;                     /* M_CHUNK's */
+    unsigned        cx, cy;                     /* M_CHUNK's chunk; M_CHANGE's square */
+    unsigned char   tile;                       /* M_CHANGE's: what the square becomes, */
+    signed char     elev;                       /*   its floor, */
+    unsigned char   link;                       /*   and the link it is (an opening), or 0xFF */
 };
-enum { M_PLAN, M_CHUNK };                       /* A stratum's plan and links down (its record set), a chunk */
+enum { M_PLAN, M_CHUNK, M_CHANGE };             /* A stratum's plan and links down (its record set), a chunk, a
+                                                **   square changed (and kept: the maker's records) */
 enum { ASK_WORLD, ASK_DENIZENS, NASK };
 
 /* ---- plan.c (the maker's): a stratum grown whole, in outline */

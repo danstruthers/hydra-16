@@ -5,7 +5,8 @@
 ** plan.c; made a chunk at a time as anyone comes near, chunk.c and built.c), and moves the character through it: a
 ** move takes its time (the referee's walking rate, the slopes), and the character's there when the time's up.  What
 ** it sees is worked out as it gets there, turns, or its light changes (view.c), and what it perceives recorded in
-** the hub for the UI to word (sight.c); the map drawn there when the UI asks.
+** the hub for the UI to word (sight.c).  It carries out digging, a spell of work at a time (the referee's tests), and
+** asks the maker to keep what it changes.
 **
 ** The clock (main.c's once): each real tick (200 a second) is round tenths of game time over tpr ticks (the pace:
 ** a round in tpr ticks); paused (Escape) or held (the UI asking something), it stands.  At the turns pace (tpr 0)
@@ -220,13 +221,15 @@ static unsigned char dark (void)
 static void __fastcall__ see (unsigned char first)
 {
     unsigned char face = HUB->pc_face, light = HUB->pc_light, sight = HUB->pcsum.sight;
+    unsigned char dark = HUB->pcsum.darkvision / 5;   /* (Ultravision's reach, in squares) */
     unsigned x = HUB->pc_x, y = HUB->pc_y;
 
+    light *= HUB->pcsum.nightvision ? HUB->pcsum.nightvision : 1;  /* (Night vision: a light carries further) */
     if (HUB->pcsum.cond & C_BLINDED) {
         sight = 0xFF;
     }
     sn_ = HUB->pc_stratum;
-    view (sn_, x, y, face, light, sight);
+    view (sn_, x, y, face, light, sight, dark);
     perceive (sn_, x, y, face, light, first);
 }
 
@@ -342,7 +345,9 @@ static void __fastcall__ grow_below (unsigned char n)
         ly0 = s->link[i].y < ly0 ? s->link[i].y : ly0;
         lx1 = s->link[i].x > lx1 ? s->link[i].x : lx1;
         ly1 = s->link[i].y > ly1 ? s->link[i].y : ly1;
-        b->link[b->nlinks].kind = s->link[i].kind == O_LADDER_DOWN ? O_LADDER_UP : O_STAIRS_UP;
+        b->link[b->nlinks].kind = s->link[i].kind == O_LADDER_DOWN ? O_LADDER_UP : s->link[i].kind == O_SHAFT_DOWN ?
+            O_SHAFT_UP : O_STAIRS_UP;
+        b->link[b->nlinks].dug = s->link[i].dug;
         b->link[b->nlinks].to = n;
         b->link[b->nlinks].x = s->link[i].x;
         b->link[b->nlinks++].y = s->link[i].y;
@@ -410,7 +415,8 @@ static void __fastcall__ climb (unsigned char d)
     move.dir = lk->kind;
     /* (The flight: the drop between the floors, a step's time a foot on a stairway, twice on a ladder) */
     t += (unsigned long) (abs (strata[sn_].datum - strata[lk->to].datum) + 1) * stept *
-        (lk->kind == O_LADDER_DOWN || lk->kind == O_LADDER_UP ? 2 : 1) / (d == DIR_UP ? 1 : 2);
+        (lk->kind == O_LADDER_DOWN || lk->kind == O_LADDER_UP ? 2 : lk->kind == O_SHAFT_DOWN ||
+        lk->kind == O_SHAFT_UP ? 3 : 1) / (d == DIR_UP ? 1 : 2);
     hub_map (0);
     busy (t > 60000UL ? 60000U : (unsigned) t);
 }
@@ -429,12 +435,18 @@ static unsigned char toward_middle (void)
     return dx || dy ? bearing (dx, dy) : H_S;
 }
 
+static void dig_on (void);                     /* (Digging's: below) */
+
 /* A move done: the character there, what it saw seen, and the UI told */
 static void arrive (void)
 {
     unsigned char r, first = 0, how = move.how;
 
     move.on = 0;
+    if (how == A_DIGGING) {                     /* (A spell of digging done) */
+        dig_on ();
+        return;
+    }
     sn_ = move.sn;
     mx = move.x;
     my = move.y;
@@ -492,6 +504,219 @@ static void begin (void)
     }
 }
 
+/* ---- Digging (DUNGEON.md: changing the dungeon): a wall or the rock beside the character, or a shaft down through
+** its floor; a spell of work at a time (ten minutes), the referee's test of it (P_DIG: HarnMaster's Mining) the feet
+** it makes (a critical success three, a success two, a marginal failure one, a critical failure none), loud (a noise
+** each spell, for the denizens); through, the square's a passage, or the shaft a way down to the stratum below (a
+** link, both its ends: the stratum below grown if no one has been there; or solid rock beneath, if the stratum
+** below doesn't reach under it) */
+
+#define SPELL           6000                    /* Tenths: ten minutes' work */
+
+static struct {
+    unsigned char   d;                          /* DIR_N ... DIR_W, DIR_DOWN */
+    signed char     steps;                      /* The rock's hardness, as the referee's steps */
+    unsigned        need, done;                 /* Feet */
+    unsigned        x, y;                       /* The square dug */
+} dig;
+
+/* The referee's test of the character's digging: its grade */
+static signed char test_dig (void)
+{
+    struct req* r;
+    signed char g;
+
+    hub_map (0);
+    r = &HUB->slot[SLOT_WORLD];
+    r->kind = RS_TEST;
+    r->actor = 0;
+    r->a = P_DIG;
+    r->steps = dig.steps;
+    r = hub_ask (SLOT_WORLD);
+    g = r->grade;
+    r->state = REQ_FREE;
+    return g;
+}
+
+static void spell (void)
+{
+    move.on = 1;
+    move.how = A_DIGGING;
+    move.sn = sn_;
+    move.x = HUB->pc_x;
+    move.y = HUB->pc_y;
+    move.face = HUB->pc_face;
+    busy (SPELL);
+}
+
+/* A change asked of the maker (kept, and made in the chunk) */
+static void __fastcall__ change (unsigned char sn, unsigned x, unsigned y, unsigned char tile, signed char elev,
+    unsigned char link)
+{
+    hub_map (0);
+    HUB->mreq[ASK_WORLD].tile = tile;
+    HUB->mreq[ASK_WORLD].elev = elev;
+    HUB->mreq[ASK_WORLD].link = link;
+    ask_maker (M_CHANGE, sn, x, y);
+}
+
+/* A link added to stratum sn's record (the hub's), its index */
+static unsigned char __fastcall__ add_link (unsigned char sn, unsigned char kind, unsigned char to, unsigned x,
+    unsigned y)
+{
+    struct stratum* s;
+    struct link* l;
+
+    hub_map (0);
+    s = &HUB->strata[sn];
+    if (s->nlinks >= NLINKS) {
+        return 0xFF;
+    }
+    l = &s->link[s->nlinks];
+    l->kind = kind;
+    l->to = to;
+    l->x = x;
+    l->y = y;
+    l->dug = 1;
+    return s->nlinks++;
+}
+
+static void __fastcall__ start_dig (unsigned char d)
+{
+    unsigned char* p;
+    unsigned char t;
+
+    sn_ = HUB->pc_stratum;
+    mx = HUB->pc_x;
+    my = HUB->pc_y;
+    dig.d = d;
+    dig.done = 0;
+    if (d == DIR_DOWN) {
+        if (sn_ + 1 >= MAXSTRATA || room_of (sn_, mx, my) == 0xFF) {
+            hub_map (0);
+            no_way (N_NO_DIG);                  /* (A shaft from a room's floor, and not from the deepest) */
+            return;
+        }
+        dig.x = mx;
+        dig.y = my;
+        if (TILE (*at (sn_, mx, my)) != T_FLOOR) {  /* (On a stairway, a doorway: a plain floor beside it) */
+            for (t = 0; t < 8; ++t) {
+                if ((p = at (sn_, mx + head_x[t], my + head_y[t])) != 0 && TILE (*p) == T_FLOOR &&
+                    room_of (sn_, mx + head_x[t], my + head_y[t]) != 0xFF) {
+                    dig.x = mx + head_x[t];
+                    dig.y = my + head_y[t];
+                    break;
+                }
+            }
+            if (t == 8) {
+                hub_map (0);
+                no_way (N_NO_DIG);
+                return;
+            }
+            hub_map (0);
+            HUB->pc_x = dig.x;                  /* (It steps aside to dig) */
+            HUB->pc_y = dig.y;
+        }
+        if (!strata[sn_ + 1].made) {
+            grow_below (sn_);                   /* (Grown now: the shaft goes down to its floors, if it reaches under) */
+            mx = dig.x;
+            my = dig.y;
+        }
+        dig.need = abs (strata[sn_].datum - strata[sn_ + 1].datum);
+        dig.steps = -4;
+    } else {
+        dig.x = mx + dir_x[d];
+        dig.y = my + dir_y[d];
+        p = at (sn_, dig.x, dig.y);
+        t = p ? TILE (*p) : T_PIT;
+        if (t != T_WALL && t != T_ROCK) {
+            hub_map (0);
+            no_way (N_NO_DIG);
+            return;
+        }
+        dig.need = t == T_WALL ? 2 : 5;         /* (A wall's masonry, two feet; a square of rock, five) */
+        dig.steps = t == T_WALL ? -2 : -4;
+    }
+    hub_map (0);
+    event (E_DIG, 0, D_BEGUN << 8 | (dig.need > 255 ? 255 : dig.need));
+    spell ();
+}
+
+/* A spell of work done: its test, its noise, and on, or through */
+static void dig_on (void)
+{
+    signed char g;
+    unsigned char l, u, k;
+    unsigned char* p;
+    int z;
+
+    sn_ = HUB->pc_stratum;
+    mx = HUB->pc_x;
+    my = HUB->pc_y;
+    g = test_dig ();
+    dig.done += g == G_CS ? 3 : g == G_MS ? 2 : g == G_MF ? 1 : 0;
+    hub_map (0);
+    {
+        static struct msg m;                    /* (The noise of it: loud, and carrying) */
+
+        m.kind = E_NOISE;
+        m.who = 0;
+        m.a = 6;
+        m.w1 = dig.x;
+        m.w2 = dig.y;
+        m.t = HUB->now;
+        hub_event (&m);
+    }
+    if (dig.done < dig.need) {
+        event (E_DIG, 0, (g == G_CS || g == G_MS ? D_GOOD : g == G_MF ? D_POOR : D_SLIP) << 8 |
+            (dig.need - dig.done > 255 ? 255 : dig.need - dig.done));
+        spell ();
+        return;
+    }
+    if (dig.d != DIR_DOWN) {                    /* (Through: the square a passage, at the character's floor) */
+        z = elev_at (sn_, mx, my);
+        change (sn_, dig.x, dig.y, T_CORR, z, 0xFF);
+        hub_map (0);
+        event (E_DIG, 0, D_THROUGH << 8);
+        see (0);
+        return;
+    }
+    /* The shaft: a way down, if the stratum below reaches under it */
+    if (strata[sn_ + 1].made && (dig.x - strata[sn_ + 1].x0 >= strata[sn_ + 1].w ||
+        dig.y - strata[sn_ + 1].y0 >= strata[sn_ + 1].h)) {
+        hub_map (0);
+        event (E_DIG, 0, D_SOLID << 8);
+        return;
+    }
+    l = add_link (sn_, O_SHAFT_DOWN, sn_ + 1, dig.x, dig.y);
+    if (l == 0xFF) {
+        hub_map (0);
+        event (E_DIG, 0, D_SOLID << 8);
+        return;
+    }
+    sync_strata ();
+    z = elev_at (sn_, dig.x, dig.y);
+    change (sn_, dig.x, dig.y, T_DOWN, z, l);   /* (Its head) */
+    if (!strata[sn_ + 1].made) {
+        grow_below (sn_);                       /* (Grown round it: a link up under each link down, this one's) */
+        for (u = 0xFF, k = 0; k < strata[sn_ + 1].nlinks; ++k) {
+            if (strata[sn_ + 1].link[k].x == dig.x && strata[sn_ + 1].link[k].y == dig.y) {
+                u = k;
+            }
+        }
+    } else {
+        u = add_link (sn_ + 1, O_SHAFT_UP, sn_, dig.x, dig.y);
+        sync_strata ();
+    }
+    if (u != 0xFF) {                            /* (Its foot: a hole in the ceiling below, into what's there) */
+        z = (p = at (sn_ + 1, dig.x, dig.y)) != 0 && T_PASS (*p) ? C->elev[cy_][cx_] : 0;
+        change (sn_ + 1, dig.x, dig.y, T_UP, z, u);
+    }
+    hub_map (0);
+    event (E_DIG, 0, D_THROUGH << 8 | 1);
+    see (0);
+}
+
 static void __fastcall__ intent (struct msg* m)
 {
     switch (m->kind) {
@@ -510,6 +735,9 @@ static void __fastcall__ intent (struct msg* m)
         busy (stept);
         see (0);
         event (E_VIEW, 0, V_TURNED);
+        break;
+    case I_DIG:
+        start_dig (m->a);
         break;
     case I_LIGHT:
         HUB->pc_light = m->a ? TORCH : 0;
@@ -566,13 +794,9 @@ int main (int argc, char* argv[])
         if (move.on && HUB->now >= HUB->pc_ready) {
             arrive ();
         }
-        if (was_busy && HUB->now >= HUB->pc_ready) {
+        if (was_busy && !move.on && HUB->now >= HUB->pc_ready) {
             event (E_READY, 0, 0);              /* (The character free again: the UI takes its next line) */
             was_busy = 0;
-        }
-        if (HUB->map_state == REQ_POSTED) {     /* (The UI's asked for the map) */
-            draw_map (HUB->pc_stratum, HUB->pc_x, HUB->pc_y);
-            HUB->map_state = REQ_DONE;
         }
         ++HUB->beat[T_WORLD];
         hy_sleep_ticks (2);

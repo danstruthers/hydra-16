@@ -6,7 +6,8 @@
 ** light or by the light it carries.  Each is marked T_VIS (seen now: the perception record's) and T_SEEN
 ** (remembered: the map).  A wall or a door beside a room's floor that's seen is seen too (a line along a wall the
 ** character stands by would run through it).  The range is the referee's (its summary's sight, 0-9, with whatever
-** the character's state does to it); blinded, it sees nothing.
+** the character's state does to it); blinded, it sees nothing.  In the dark its night vision carries a light further
+** (the light's reach, times it), and its ultravision sees without light to its range (the summary's, both).
 */
 
 #include <stdlib.h>
@@ -84,10 +85,10 @@ static unsigned char __fastcall__ beside_floor (unsigned x, unsigned y)
 }
 
 void __fastcall__ view (unsigned char sn, unsigned x, unsigned y, unsigned char face, unsigned char light,
-    unsigned char sight)
+    unsigned char sight, unsigned char dark)
 {
     int dx, dy, tz;
-    unsigned i, j, d2, r2, l2;
+    unsigned i, j, d2, r2, l2, u2 = dark * dark;
     unsigned char range, t;
     unsigned char* p;
 
@@ -114,7 +115,7 @@ void __fastcall__ view (unsigned char sn, unsigned x, unsigned y, unsigned char 
     bx1 = x + range;
     by1 = y + range;
     if ((p = at (sn, x, y)) != 0) {
-        *p |= lit (x, y) || light ? T_VIS | T_SEEN : T_SEEN;
+        *p |= lit (x, y) || light || dark ? T_VIS | T_SEEN : T_SEEN;
     }
     for (j = by0; j <= by1; ++j) {
         for (i = bx0; i <= bx1; ++i) {
@@ -131,8 +132,8 @@ void __fastcall__ view (unsigned char sn, unsigned x, unsigned y, unsigned char 
             if (dx * head_x[face] + dy * head_y[face] < 0 && d2 > 2) {
                 continue;                       /* (Behind: but for what's next to it) */
             }
-            if (d2 > l2 && !lit (i, j)) {
-                continue;                       /* (Dark) */
+            if (d2 > l2 && d2 > u2 && !lit (i, j)) {
+                continue;                       /* (Dark: beyond its light, and its ultravision) */
             }
             if (clear (i, j, tz) && (p = at (sn, i, j)) != 0) {
                 *p |= T_VIS | T_SEEN;

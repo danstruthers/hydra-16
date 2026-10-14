@@ -78,6 +78,12 @@ void __fastcall__ map (const char* rules);      /* The map of what it's seen rou
 /* ---- The overlays (bank.s: their stubs) */
 
 void title (void);                              /* Overlay 1: the title, the pace asked */
+void help (void);                               /* Overlay 1: the commands, listed */
+void __fastcall__ dig_words (unsigned char how, unsigned char feet);   /* Overlay 1: digging's, how it goes */
+void words (void);                              /* Overlay 2: what the character perceives, into lb */
+extern char lb[400];
+extern struct sight sight_copy;
+extern unsigned char sight_light;
 
 /* ---- bank.s */
 

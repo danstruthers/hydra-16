@@ -9,8 +9,8 @@
 ** kept but for the last region's.  An edge the stratum's bounds cut short has its way as near as it fits, the same
 ** for both chunks it joins.
 **
-** (What changes in a chunk, what the character has seen, is lost when it's made way for: the records that keep it,
-** and the save, are the next step's.)
+** What's changed in a chunk (changes.c's records: a square dug, a link made) is laid over it each time it's made,
+** and what the character's seen of it is kept as the cache makes way for it, and laid over it again.
 */
 
 #include <string.h>
@@ -169,7 +169,7 @@ unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned c
     e.y1 = w >= CW ? CW - 1 : w - 1;
     e.nland = 0;
     for (i = 0; i < s->nlinks && e.nland < 4; ++i) {
-        if (s->link[i].x - x < CW && s->link[i].y - y < CW) {
+        if (!s->link[i].dug && s->link[i].x - x < CW && s->link[i].y - y < CW) {   /* (A dug one's the records') */
             e.lx[e.nland] = s->link[i].x - x;
             e.ly[e.nland] = s->link[i].y - y;
             e.ln[e.nland++] = i;
@@ -180,6 +180,10 @@ unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned c
     }
     hub_map (0);
     k = pick ();
+    if (HUB->cslot[k].used) {                   /* (What's been seen of the one made way for, kept) */
+        seen_keep (k);
+        hub_map (0);
+    }
     sl = &HUB->cslot[k];
     sl->used = 1;
     sl->sn = sn;
@@ -194,6 +198,8 @@ unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned c
     if (e.x1 != 0xFF) {
         grow_built (c, &e, s->seed ^ ((unsigned long) cx << 16 | cy) * 40503UL);
     }
+    changes_over (c, x, y);
+    seen_over (c);
     hub_map (CACHE_BANK (k));
     memcpy (CHUNK_AT (k), c, sizeof *c);
     hub_map (0);

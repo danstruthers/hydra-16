@@ -28,6 +28,7 @@ enum {
     P_PICKLOCK, P_DISARM,
     P_ENDURE, P_RESIST_POISON, P_RESIST_MIND, P_DODGE_HAZARD,
     P_FIRST_AID, P_LORE, P_TRACK, P_PERSUADE, P_INTIMIDATE, P_ANIMALS,
+    P_DIG,                                      /* Digging: rock, a wall, a shaft */
     P_THEME,                                    /* A theme's own, P_THEME + n (named in its data) */
 };
 
@@ -73,7 +74,9 @@ struct rs_summary {
     unsigned char   step;                       /* Tenths of a second to go 5 feet */
     unsigned char   attacks;                    /* Attacks a round */
     unsigned char   sight, hearing, smell;      /* 0 (none) ... 9 (keen) */
-    unsigned char   darkvision;                 /* Feet it sees in the dark (0: none) */
+    unsigned char   darkvision;                 /* Ultravision: feet it sees with no light at all (0: none) */
+    unsigned char   nightvision;                /* Night vision: how far faint light carries for it, times (1: as
+                                                **   anyone's) */
     unsigned char   morale;
     unsigned char   load;                       /* Encumbrance: 0 none ... 3 overloaded */
     unsigned char   power;                      /* 0-100: how mighty, the same scale whatever the ruleset */

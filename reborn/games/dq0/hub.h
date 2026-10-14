@@ -48,6 +48,7 @@ enum {
     I_CLIMB,                                    /* a: DIR_UP or DIR_DOWN (the stairway or ladder in the room) */
     I_TURN,                                     /* a: the heading to face (H_N ... H_NW) */
     I_LIGHT,                                    /* a: 1 the character's light lit, 0 put out */
+    I_DIG,                                      /* a: a direction (DIR_N ... DIR_W, DIR_DOWN) */
     I_QUIT,
     NINTENTS
 };
@@ -61,12 +62,16 @@ enum {
                                                 **   and (up or down) the link's kind (O_*) times 4096 */
     E_NOWAY,                                    /* who can't: w1 why (N_*) */
     E_VIEW,                                     /* What who sees has changed: w1 why (V_*) */
+    E_DIG,                                      /* who's digging: w1 how it goes (D_*) times 256, and the feet to go */
+    E_NOISE,                                    /* A noise: a how loud (0-9), w1 w2 its square (the denizens') */
     NEVENTS
 };
 
-enum { A_WALKED, A_DOWN, A_UP, A_START };   /* E_ARRIVE's how */
-enum { N_NO_EXIT, N_SHUT, N_NO_STAIRS };      /* E_NOWAY's why: no way that way, the way out shut, no stairs */
+enum { A_WALKED, A_DOWN, A_UP, A_START, A_DIGGING };  /* E_ARRIVE's how (A_DIGGING: the world's own, a spell of work) */
+enum { N_NO_EXIT, N_SHUT, N_NO_STAIRS, N_NO_DIG };  /* E_NOWAY's why: no way that way, the way out shut, no stairs,
+                                                **   nothing to dig there */
 enum { V_TURNED, V_LIT, V_DARK };               /* E_VIEW's why */
+enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID };    /* E_DIG's how */
 
 /* A referee slot: a request (rs.h's RS_*) and its reply, and the reply's words.  The task that asks writes the
 ** request, then sets state REQ_POSTED and rings the referee's doorbell; the referee answers, then sets REQ_DONE; the
@@ -116,7 +121,7 @@ struct hub {                                    /* Bank 0, at $8000 */
     volatile unsigned char pc_light;            /*   the light it carries: how far it reaches, in tiles (0: none) */
     struct rs_summary pcsum;                    /* The character's summary (the referee's: its senses ...) */
     struct sight    sight;                      /* What it perceives (the world's, after each look about) */
-    /* The map: the UI asks (map_state REQ_POSTED, the world's doorbell), the world draws its window round the
+    /* The map: the UI asks (map_state REQ_POSTED, the maker's doorbell), the maker draws its window round the
     ** character into map (each row a line, 0-ended) and says REQ_DONE */
     volatile unsigned char map_state;
     char            map[MAP_H][MAP_W + 1];

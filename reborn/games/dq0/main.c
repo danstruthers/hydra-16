@@ -330,7 +330,8 @@ static void events (void)
                 if ((m.w1 & 0xFF) == A_DOWN || (m.w1 & 0xFF) == A_UP) {
                     k = m.w1 >> 12;             /* (The link's kind: a ladder, or a stairway) */
                     msg ((m.w1 & 0xFF) == A_DOWN ? (k == O_LADDER_DOWN ? "You climb down the ladder." :
-                        "You go down the stairway, a long flight.") : k == O_LADDER_UP ? "You climb the ladder." :
+                        k == O_SHAFT_DOWN ? "You climb down the shaft." : "You go down the stairway, a long flight.") :
+                        k == O_LADDER_UP ? "You climb the ladder." : k == O_SHAFT_UP ? "You climb up the shaft." :
                         "You climb the stairway.");
                     sayf (" You come into the %s.", stratum_name[HUB->sight.sname & 7]);
                 }
@@ -350,7 +351,14 @@ static void events (void)
         case E_NOWAY:
             if (m.who == 0) {
                 msg (m.w1 == N_SHUT ? "The way out is shut fast. Whatever opens it is somewhere below." :
-                     m.w1 == N_NO_STAIRS ? "There are no stairs that way here." : "You can't go that way.");
+                     m.w1 == N_NO_STAIRS ? "There's no way up or down here." : m.w1 == N_NO_DIG ?
+                     "There's nothing there to dig (a wall, or the rock; a shaft from a room's floor)." :
+                     "You can't go that way.");
+            }
+            break;
+        case E_DIG:
+            if (m.who == 0) {
+                dig_words (m.w1 >> 8, m.w1 & 0xFF);
             }
             break;
         }
@@ -497,6 +505,16 @@ static void __fastcall__ command (char* l)
         }
     } else if (!strcmp (w, "quit") || !strcmp (w, "q")) {
         quit = 1;
+    } else if (!strcmp (w, "dig")) {
+        w = next_word (&rest);
+        d = direction (w);
+        if (d == GO_DOWN) {
+            intend (I_DIG, DIR_DOWN);
+        } else if (d <= H_NW && !(d & 1)) {
+            intend (I_DIG, d >> 1);
+        } else {
+            msg ("Dig which way? (north, east, south or west: through a wall or the rock; or down, a shaft)");
+        }
     } else if (!strcmp (w, "turn") || !strcmp (w, "face")) {
         turn (rest);
     } else if (!strcmp (w, "light")) {
@@ -524,10 +542,7 @@ static void __fastcall__ command (char* l)
         msg ("The game is paused: press Escape to go on.");
         status ();
     } else if (!strcmp (w, "help") || !strcmp (w, "?")) {
-        msg ("Commands: north, northeast, east ... northwest (n, ne, e, se, s, sw, w, nw, or go north ...); forward, "
-             "back, left, right (f, b: as you face); up and down (u, d: the stairs); turn left, right, half left, half "
-             "right or around; face north ...; light and douse (your torch); look (l), map (m), sheet (the character), "
-             "wait (z), pause (or Escape), quit (q).");
+        help ();
     } else {
         sayf ("\nI don't know how to %s.", w);
     }
