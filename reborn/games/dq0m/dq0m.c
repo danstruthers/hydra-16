@@ -3,16 +3,49 @@
 ** its role there, hub.h), that grows the dungeon (DUNGEON.md) for whoever asks, the world or the denizens (each its
 ** request in the hub: world.h's struct mreq): a stratum's plan and its links down (plan.c: its record set by the
 ** asker), a chunk (make.c, built.c), into the hub's shared banks, where they read it.  It waits on its doorbell
-** (costing nothing) between requests.
+** (costing nothing) between requests.  Its grower is overlays (built.c, pass.c), read as it starts from the game's
+** lib folder (its third argument, the UI's) into banks of its own.
 */
 
+#include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <hydra.h>
 #include "../dq0/hub.h"
 #include "../dq0w/world.h"
+#include "grow.h"
 
 struct stratum strata[MAXSTRATA];               /* (This task's copy of the hub's) */
+
+/* The overlays: dir/dq0m.ovl, an 8K bank each (dq0m.cfg's OV1 ...; the file cut after the last one used: make.js),
+** read into banks of its own: 0, or -1 */
+static int __fastcall__ ovl_load (const char* dir)
+{
+    static unsigned char b[256];
+    static char path[64];
+    int fd, first, n;
+    unsigned char k;
+    unsigned off;
+
+    strcpy (path, dir);
+    strcat (path, "/dq0m.ovl");
+    if ((fd = open (path, O_RDONLY)) < 0 || (first = hy_banks_alloc (2)) < 0) {
+        return -1;
+    }
+    for (k = 0; k < 2; ++k) {
+        ovbank[k] = first + k;
+        for (off = 0; off < 0x2000; off += sizeof b) {
+            n = read (fd, b, sizeof b);
+            if (n <= 0) {
+                break;
+            }
+            bwrite (first + k, (void*) (0x8000 + off), b, n);
+        }
+    }
+    close (fd);
+    return 0;
+}
 
 /* Request i answered: the strata's records copied first (the hub's are the truth), and back if they changed */
 static void __fastcall__ serve (unsigned char i)
@@ -40,7 +73,7 @@ int main (int argc, char* argv[])
 {
     unsigned char i;
 
-    if (argc < 3 || hub_attach (atoi (argv[1]), atoi (argv[2]))) {
+    if (argc < 4 || ovl_load (argv[3]) || hub_attach (atoi (argv[1]), atoi (argv[2]))) {
         return 1;
     }
     for (;;) {

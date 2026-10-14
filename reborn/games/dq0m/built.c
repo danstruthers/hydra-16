@@ -9,21 +9,24 @@
 ** loops; each way across the chunk's edges joined to the nearest room; everything reached from everything, walking,
 ** or the chunk grown again (and at the last, a chunk of passages alone, meeting in its middle).  Some rooms are lit,
 ** fewer the deeper the stratum (a stand-in for the theme's say).
+**
+** (Overlay 1, the maker's: the chunk grown in the main RAM, its rooms and zones here, its passages pass.c's, overlay
+** 2, called through bank.s's stubs; make.c puts it in the hub's cache.)
 */
+
+#pragma code-name ("OV1CODE")
+#pragma rodata-name ("OV1RODATA")
 
 #include <string.h>
 #include <dice.h>
 #include "../dq0w/world.h"
+#include "grow.h"
 
-static struct chunk* L;
-static const struct edges* E;
+struct chunk* L;                                /* (The chunk being grown, in the main RAM: built.c's, pass.c's) */
+const struct edges* E;
+unsigned char mx, my;                           /* (The middle: where passages meet with no room to meet in) */
 
-#define PMAX    96                              /* A passage's squares, at most */
-static unsigned char px[PMAX], py[PMAX];
-static signed char pz[PMAX];
-static unsigned char pn;
-
-/* The stratum's ground at a square of the chunk: its corners', evenly between */
+/* The stratum's ground at a square of the chunk: its corners', evenly between (pass.c has its own) */
 static int __fastcall__ gz (unsigned char x, unsigned char y)
 {
     long top = (long) E->ground[0] * (CW - 1 - x) + (long) E->ground[1] * x;
@@ -242,225 +245,6 @@ static void __fastcall__ zones (unsigned char r)
     }
 }
 
-/* ---- Passages */
-
-/* A square of a passage, if it can be dug: 0 if it's in the way (a room's), or out of the bounds */
-static unsigned char __fastcall__ dig (unsigned char x, unsigned char y)
-{
-    unsigned char t;
-
-    if (x < E->x0 || x > E->x1 || y < E->y0 || y > E->y1) {
-        return 0;
-    }
-    t = TILE (L->tile[y][x]);
-    if (t != T_ROCK && t != T_CORR && t != T_STEPS) {
-        return 0;
-    }
-    if (t == T_STEPS) {                         /* (A room's steps aren't a passage's) */
-        for (t = 0; t < L->nrooms; ++t) {
-            if (x >= L->room[t].x && x < L->room[t].x + L->room[t].w && y >= L->room[t].y &&
-                y < L->room[t].y + L->room[t].h) {
-                return 0;
-            }
-        }
-    }
-    if (pn < PMAX) {
-        px[pn] = x;
-        py[pn] = y;
-        ++pn;
-    }
-    return pn < PMAX;
-}
-
-/* A dog-leg from (x, y) to (tx, ty), both dug: along the first axis to half way, across, then on */
-static unsigned char __fastcall__ leg (unsigned char x, unsigned char y, unsigned char tx, unsigned char ty,
-    unsigned char across)
-{
-    unsigned char m;
-
-    pn = 0;
-    if (!dig (x, y)) {
-        return 0;
-    }
-    if (across) {
-        m = (x + tx) / 2;
-        while (x != m) {
-            x += x < m ? 1 : -1;
-            if (!dig (x, y)) {
-                return 0;
-            }
-        }
-        while (y != ty) {
-            y += y < ty ? 1 : -1;
-            if (!dig (x, y)) {
-                return 0;
-            }
-        }
-    } else {
-        m = (y + ty) / 2;
-        while (y != m) {
-            y += y < m ? 1 : -1;
-            if (!dig (x, y)) {
-                return 0;
-            }
-        }
-        while (x != tx) {
-            x += x < tx ? 1 : -1;
-            if (!dig (x, y)) {
-                return 0;
-            }
-        }
-    }
-    while (x != tx || y != ty) {
-        if (x != tx) {
-            x += x < tx ? 1 : -1;
-        } else {
-            y += y < ty ? 1 : -1;
-        }
-        if (!dig (x, y)) {
-            return 0;
-        }
-    }
-    return 1;
-}
-
-/* The passage leg () dug made: its floor evenly from za (its first square's, exactly: a door's floor, or the ground
-** at the chunk's edge, where the next chunk's passage meets it) to zb (after its last); where it meets a passage there
-** already, that one's; steps where a step's rise is more than a walk's.  0: too steep, or a passage there at
-** another height */
-static unsigned char __fastcall__ lay (int za, int zb)
-{
-    unsigned char k, t;
-    int dz;
-
-    for (k = 0; k < pn; ++k) {
-        pz[k] = clampz (za + (zb - za) * k / pn);
-        t = TILE (L->tile[py[k]][px[k]]);
-        if (t != T_ROCK) {
-            dz = L->elev[py[k]][px[k]] - pz[k];
-            if (dz > 2 || dz < -2) {
-                return 0;
-            }
-            pz[k] = L->elev[py[k]][px[k]];
-        }
-    }
-    for (k = 0; k <= pn; ++k) {
-        dz = (k < pn ? pz[k] : zb) - (k ? pz[k - 1] : za);
-        if (dz > STAIR_MAX || dz < -STAIR_MAX) {
-            return 0;
-        }
-    }
-    for (k = 0; k < pn; ++k) {
-        t = TILE (L->tile[py[k]][px[k]]);
-        L->elev[py[k]][px[k]] = pz[k];
-        if (t == T_ROCK) {
-            L->tile[py[k]][px[k]] = T_CORR;
-        }
-        dz = pz[k] - (k ? pz[k - 1] : za);
-        if (dz > STEP_MAX || dz < -STEP_MAX) {
-            L->tile[py[k]][px[k]] = T_STEPS;
-            if (k) {
-                L->tile[py[k - 1]][px[k - 1]] = T_STEPS;
-            }
-        }
-    }
-    dz = zb - pz[pn - 1];
-    if (dz > STEP_MAX || dz < -STEP_MAX) {
-        L->tile[py[pn - 1]][px[pn - 1]] = T_STEPS;
-    }
-    return 1;
-}
-
-/* A door's square in room r's wall d, at random along it (never a corner), and the floor's elevation inside it */
-static unsigned char dxr, dyr;
-static int dzr;
-static void __fastcall__ door_in (unsigned char r, unsigned char d)
-{
-    struct room* p = &L->room[r];
-
-    if (d == DIR_N || d == DIR_S) {
-        dxr = p->x + random (p->w);
-        dyr = d == DIR_N ? p->y - 1 : p->y + p->h;
-    } else {
-        dyr = p->y + random (p->h);
-        dxr = d == DIR_W ? p->x - 1 : p->x + p->w;
-    }
-    dzr = L->elev[dyr - dir_y[d]][dxr - dir_x[d]];
-}
-
-static void __fastcall__ door (unsigned char x, unsigned char y, int z)
-{
-    L->tile[y][x] = T_DOOR;
-    L->elev[y][x] = z;
-}
-
-/* The way room a faces room b (or a square: b 0xFF, the square bx, by) */
-static unsigned char __fastcall__ facing (unsigned char a, unsigned char bx, unsigned char by)
-{
-    struct room* A = &L->room[a];
-
-    if (bx >= A->x + A->w) {
-        return by >= A->y && by < A->y + A->h || (bx - (A->x + A->w)) >= (by < A->y ? A->y - by : by - A->y - A->h) ?
-            DIR_E : by < A->y ? DIR_N : DIR_S;
-    }
-    if (bx < A->x) {
-        return by >= A->y && by < A->y + A->h || (A->x - bx) >= (by < A->y ? A->y - by : by - A->y - A->h) ?
-            DIR_W : by < A->y ? DIR_N : DIR_S;
-    }
-    return by < A->y ? DIR_N : DIR_S;
-}
-
-/* Rooms a and b joined: 1, or 0 */
-static unsigned char __fastcall__ join (unsigned char a, unsigned char b)
-{
-    struct room* B = &L->room[b];
-    unsigned char da, db, ax, ay;
-    int za;
-
-    da = facing (a, B->x + B->w / 2, B->y + B->h / 2);
-    db = (da + 2) & 3;
-    door_in (a, da);
-    ax = dxr;
-    ay = dyr;
-    za = dzr;
-    door_in (b, db);
-    if (!leg (ax + dir_x[da], ay + dir_y[da], dxr + dir_x[db], dyr + dir_y[db], da == DIR_E || da == DIR_W) ||
-        !lay (za, dzr)) {
-        return 0;
-    }
-    door (ax, ay, za);
-    door (dxr, dyr, dzr);
-    return 1;
-}
-
-/* The way across edge d (at its square sx, sy) joined to the nearest room, or (none) to the square mx, my: 1, or 0 */
-static unsigned char mx, my;
-static unsigned char __fastcall__ cross (unsigned char d, unsigned char sx, unsigned char sy)
-{
-    unsigned char r, best = 0xFF, dr;
-    unsigned dist, bd = 0xFFFF;
-    int zs = gz (sx, sy);
-
-    for (r = 0; r < L->nrooms; ++r) {
-        dist = (unsigned) (sx > L->room[r].x ? sx - L->room[r].x : L->room[r].x - sx) +
-            (sy > L->room[r].y ? sy - L->room[r].y : L->room[r].y - sy);
-        if (dist < bd) {
-            bd = dist;
-            best = r;
-        }
-    }
-    if (best == 0xFF) {
-        return leg (sx, sy, mx, my, d == DIR_E || d == DIR_W) && lay (zs, gz (mx, my));
-    }
-    dr = facing (best, sx, sy);
-    door_in (best, dr);
-    if (!leg (sx, sy, dxr + dir_x[dr], dyr + dir_y[dr], d == DIR_E || d == DIR_W) || !lay (zs, dzr)) {
-        return 0;
-    }
-    door (dxr, dyr, dzr);
-    return 1;
-}
-
 /* ---- Everything reached from everything, walking (a stack of squares) */
 
 #define SMAX    128
@@ -547,21 +331,12 @@ static unsigned char connected (void)
     return ok;
 }
 
-/* Every way across the edges joined */
-static unsigned char crossings (void)
-{
-    return (E->way[DIR_N] == NO_WAY || cross (DIR_N, E->way[DIR_N], 0)) &&
-        (E->way[DIR_S] == NO_WAY || cross (DIR_S, E->way[DIR_S], CW - 1)) &&
-        (E->way[DIR_W] == NO_WAY || cross (DIR_W, 0, E->way[DIR_W])) &&
-        (E->way[DIR_E] == NO_WAY || cross (DIR_E, CW - 1, E->way[DIR_E]));
-}
-
 static void clear (void)
 {
     memset (&L->nrooms, 0, sizeof *L - ((unsigned char*) &L->nrooms - (unsigned char*) L));
 }
 
-void __fastcall__ grow_built (struct chunk* c, const struct edges* e, unsigned long seed)
+void __fastcall__ o_grow_built (struct chunk* c, const struct edges* e, unsigned long seed)
 {
     struct stratum* s = &strata[c->sn];
     unsigned char i, r, tries, ok, x, y, k;

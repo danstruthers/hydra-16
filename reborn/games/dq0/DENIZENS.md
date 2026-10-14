@@ -51,6 +51,11 @@ goes where nobody has been has the chunks made for it as the character would, an
 faction's lair, a sleeping beast, a guarded door) is an event like any other: the disturbed act against it, and its
 own faction may answer them in turn.  Feuds the character never saw can spill into its way.
 
+Some denizens dig (DUNGEON.md: changing the dungeon): a creature that tunnels by nature makes its own ways as it
+goes, a faction of miners drives its galleries on, a besieged one digs a way out or a way in; and any of them can
+break a wall or bring a ceiling down, on purpose or by mishap.  The changes are kept as the character's are, so a
+passage that wasn't there yesterday is somebody's work.
+
 ### Attitudes
 
 Every denizen has an **attitude** to the character, on one scale whatever the ruleset: **hostile** (attacks on

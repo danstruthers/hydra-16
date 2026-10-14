@@ -121,6 +121,32 @@ A stratum below is made when the character first takes a way down to it: its bou
 stratum one chunk, 10 by 10, with a ladder down; the catacombs under it miles each way), and the chunk where the way
 comes out first.
 
+### Changing the dungeon: exits made by those in it
+
+The user (2026-10-14): "I would like to support player- or denizen-created "exits" such as digging shafts down to
+other levels, blowing holes in walls (either intentionally or on accident), or just denizens with natural abilities
+for tunneling, etc."
+
+So the dungeon isn't only what the growers made: anyone can change it, and the change stays.
+
+- **Digging:** a tunnel through rock or a wall, a way up or down (a shaft), a pit; by hand and tool (HarnMaster's
+  Mining, the tool's, the rock's hardness: the stratum's style and age, a built wall's masonry, a natural cave's
+  stone), a test each spell of work, the work's feet of progress; slow (hours for a wall, days for a shaft), and
+  loud (the denizens hear it: an event, how far it carries the rock's).  A shaft dug down far enough comes out in the
+  stratum below (grown then, if no one has been there): a new link between the strata, its two ends' squares the
+  same; dug into the rock of the stratum below, it ends in rock, a dead end until dug on.
+- **Breaking:** a hole blown or broken through a wall, a floor, a ceiling (powder, a ram, magic, later); on purpose,
+  or by accident (a blast that goes wrong, a test's critical failure; a ceiling an old stratum's age has weakened,
+  brought down by noise or a blow): rubble, a collapse that blocks a way or opens one, a fall to the stratum below.
+- **Tunnellers:** creatures that dig by nature (the theme's: a burrower, a wyrm, a colony of diggers) make their
+  own ways as they move, by the same rules, the denizens' task choosing where; the dungeon a living thing, changing
+  where nobody's looking.
+
+Each change is a **record** (a stratum, a square, what it became: its kind, its floor, its openings; who made it and
+when), kept by the maker: laid over a chunk each time it's made again, and in the save.  Seen squares are kept the
+same way, a chunk's map of them kept when the cache makes way for it.  A change that makes a way between strata adds
+a link to both strata's records.
+
 ### Moving
 
 A square's time is the referee's (its summary's step: HarnMaster's walking pace, half of Move, AGL less PP, in
@@ -147,6 +173,10 @@ into the hub; a floor's height against the character's marked (1-9 tens of feet 
    strata; the save folder on a card; movement by the referee's rate and the slopes; the perception record and the
    words; the map's window and heights.  (The populations' records with step 4's denizens, placed when the plan is
    grown.)
+1b. **Changes**: the change records and the seen squares' maps, kept by the maker, laid over a chunk made again;
+   digging (a tunnel, a shaft down to the stratum below: a new link) with the referee's tests and the work's time,
+   and the noise of it as an event.  (Breaking and accidents with the items that make them; tunnellers with the
+   denizens.)
 2. **Climbing**: ledges, windows, shafts, ladders, falls (the referee's tests and harm).
 3. **Natural caves** and the **water** (rivers, falls, lakes); **mines**; **age**.
 4. Then events, the denizens and the rest of the game's plan.

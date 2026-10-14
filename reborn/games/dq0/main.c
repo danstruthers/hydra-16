@@ -248,7 +248,7 @@ static void start_world (unsigned long seed)
     load_pc ();                                 /* (Its senses the referee's, before the world looks through them) */
     strcpy (path, libdir);
     strcat (path, "/dq0m");
-    if ((maker_task = hub_spawn (path, T_MAKER, 0)) < 0) {
+    if ((maker_task = hub_spawn (path, T_MAKER, libdir)) < 0) {
         t_end ();
         hy_exits ("dq0: its maker (lib/dq0/dq0m) can't be started");
     }

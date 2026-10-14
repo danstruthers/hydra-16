@@ -17,6 +17,9 @@
 #include <dice.h>
 #include "../dq0/hub.h"
 #include "../dq0w/world.h"
+#include "grow.h"
+
+static struct chunk cb;                         /* (A chunk grown in the main RAM: the grower's an overlay) */
 
 /* ---- A region's own ways between its chunks: (the last asked for's) each chunk's north and west edges' */
 
@@ -183,8 +186,7 @@ unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned c
     sl->cx = cx;
     sl->cy = cy;
     sl->stamp = ++HUB->stamp;
-    hub_map (CACHE_BANK (k));
-    c = CHUNK_AT (k);
+    c = &cb;
     memset (c, 0, sizeof *c);
     c->sn = sn;
     c->cx = cx;
@@ -192,6 +194,8 @@ unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned c
     if (e.x1 != 0xFF) {
         grow_built (c, &e, s->seed ^ ((unsigned long) cx << 16 | cy) * 40503UL);
     }
+    hub_map (CACHE_BANK (k));
+    memcpy (CHUNK_AT (k), c, sizeof *c);
     hub_map (0);
     return k;
 }
