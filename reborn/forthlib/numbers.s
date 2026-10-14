@@ -850,8 +850,8 @@ nw_negate:
 
             HEADER      "nabs", 0
 nw_abs:
-            LDR         r15, NUM_ABS
-            jmp         nm_un
+            LDR         r15, MATH_ABS                       ; (A complex number's modulus too)
+            jmp         mt_un
 
             HEADER      "ngcd", 0
 nw_gcd:

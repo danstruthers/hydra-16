@@ -286,7 +286,7 @@ const TOOL_LINES = [
     "  4+33 program  init",
     "  2- 4 boot     cons",
     "  5- 6 boot     storage",
-    " 31    boot     kdev",
+    " 32    boot     kdev",
     "  4+0A boot     snd",
     "",
   ].join('\n'), true],
@@ -1315,7 +1315,7 @@ const HYSUITE_PARTS = [
   { files: ['eval3'], checks: 1 },
   { files: ['eval4'], checks: 1 },
   { files: ['eval5'], checks: 3 },
-  { files: ['eval6', 'scope', 'control', 'errors', 'lists', 'strings', 'numbers', 'math', 'hashes', 'types', 'io', 'system', 'bits', 'buffers', 'library'], checks: 1338,
+  { files: ['eval6', 'scope', 'control', 'errors', 'lists', 'strings', 'numbers', 'math', 'hashes', 'types', 'io', 'system', 'bits', 'buffers', 'library'], checks: 1348,
     about: 'danlang\'s library, hylang\'s from its snapshot (globals.dl) and the ROM disk\'s /lib/hylang (dice.dl and screen.dl, where load finds a bare name, and use); files written on the card, programs run, the clock a DS1747\'s' },
 ];
 // A part's own files for the card: part.dl (run.dl with the part's list) and the pieces it names of a file that's cut

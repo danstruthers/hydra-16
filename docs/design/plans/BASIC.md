@@ -187,7 +187,7 @@ Done, on `reborn-numbers`: `modules/basic`, the new BASIC, in today's BASIC's pl
 * **Step 7**: the suite in `tests/basic` (twelve programs, 495 checks, and four scripts against their output: the bsuite test), the basic, bplay and bawin tests for the new BASIC, `romfs/bench/bench.bas` written again in its own style, all twenty of the benchmarks (a `FUNCTION` each, recursion where hylang and HyForth recurse), and today's BASIC retired: its module, its tests, its documents.  Writing the suite found its bugs (a `SUB` that called another took its entry; `GOTO` a label never defined ran on; an exit's status was always 0 ...), fixed.
 * **Speed**: 9.2 times HyForth's time and 4.0 times hylang's over the twenty benchmarks (geometric means; [../../basic.md](../basic.md), "Against hylang and HyForth"); over the six the first BASIC had, 14.9 and 4.2 times, where it was 44 and 12.3 (the plan's target, nearer hylang's than Microsoft's 12.3 times: met).
 * **Decided while building**, beside the reference as first written:
-  * `REAL(x)` and `IMAG(x)`, not `RE` and `IM`: `re` and `im` are a complex program's names.  `ABS` is a real number's.
+  * `REAL(x)` and `IMAG(x)`, not `RE` and `IM`: `re` and `im` are a complex program's names.  `ABS` is a real number's, and a complex number's modulus.
   * `INCLUDE "f"` (and QuickBASIC's `'$INCLUDE: 'f'`) is a line of its own; an error in the file says its name and line.
   * `ERL` is a line's number in a program with line numbers (the nearest before it), as QuickBASIC's; else the line in its file.  A typed program's errors say its lines' numbers too (`line 20: ...`).
   * In a file's statements a `#` is the file's: `PRINT #x1, ...` is the variable `x1`'s file.

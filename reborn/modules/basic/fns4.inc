@@ -85,7 +85,7 @@ f_abs:
             rts
 @lib:
             jsr         one_op
-            NUMCALL     NUM_ABS
+            MATHCALL    MATH_ABS                            ; (A complex number's modulus too)
             jmp         n_result1
 
 f_int:

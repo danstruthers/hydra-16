@@ -33,7 +33,8 @@ DIGS            = ARENA_END - NR_DIGS * 256     ; (The digits' pages)
 ; A library of two banks (docs/design/plans/NUMSPEED.md, step 2): code the second bank needs as well is assembled again
 ; there, in a scope of its own that defines NM_COPY (its variables the first's: each file's NUMBANK block is skipped
 ; there, .ifndef NM_COPY).  NM_CODE and NM_RODATA: the segment for the code and read-only data, the first bank's or
-; the second's.  NMFAR2: the routine in the second bank called from the first (by XCALL: .A, .X, .Y and r0-r13 pass,
+; the second's (NM_COPY 2: the math library's third bank's).  NMFAR: a routine in another of the library's banks;
+; NMFAR2: the routine in the second bank called from the first (by XCALL: .A, .X, .Y and r0-r13 pass,
 ; r14 and r15 are XCALL's)
 .macro RPAGE                                    ; .A = register .A's page (or the digits' page .A): r_page's,
             clc                                 ;   inline
@@ -41,17 +42,39 @@ DIGS            = ARENA_END - NR_DIGS * 256     ; (The digits' pages)
 .endmacro
 .macro NM_CODE
 .ifdef NM_COPY
+.if NM_COPY = 2
+.segment "CODE3"
+.else
 .segment "CODE2"
+.endif
 .else
 .segment "CODE"
 .endif
 .endmacro
 .macro NM_RODATA
 .ifdef NM_COPY
+.if NM_COPY = 2
+.segment "RODATA3"
+.else
 .segment "RODATA2"
+.endif
 .else
 .segment "RODATA"
 .endif
+.endmacro
+; bankcheck: far NMFAR
+.macro NMFAR    routine, delta                  ; (The routine in the bank delta banks on, -2 to 2)
+            pha
+            lda         #<(routine)
+            sta         r15
+            lda         #>(routine)
+            sta         r15 + 1
+            lda         ROM_BANK
+            clc
+            adc         #<(delta)
+            sta         r14
+            pla
+            jsr         XCALL
 .endmacro
 .macro NMFAR2   routine
             pha

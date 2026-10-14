@@ -12,6 +12,7 @@ mt_trig:
             lda         #NE_DOMAIN
             jmp         nm_fail
 :
+            ldy         #3
             jsr         mt_arg
             ldx         #XN
             lda         r_len,x
@@ -291,6 +292,7 @@ m_divpair:
 
 mt_atan:
             jsr         nm_begin
+            ldy         #4
             jsr         mt_arg
             ldx         #XN
             lda         r_len,x

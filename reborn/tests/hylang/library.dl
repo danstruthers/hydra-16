@@ -133,6 +133,8 @@
 (check (abs -5) 5)
 (check (abs 5) 5)
 (check (abs -1/2) 1/2)
+(check (abs (complex 3 -4)) 5)
+(check (abs (complex 1 1)) 1.41421356237)
 (check-error (abs "x"))
 (check (floor 7/2) 3)
 (check (floor -7/2) -4)
