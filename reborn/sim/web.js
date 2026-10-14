@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // ****************************************************************************
-// web.js - the emulator in a browser: one HTML file, the whole of it (the page, web/page.html and web/page.js; the
+// web.js - the emulator in a browser: one HTML file, bin/hydra-16.html (build.js makes it, and it's in Git: to open
+// with no Node.js and nothing else installed), the whole of it (the page, web/page.html and web/page.js; the
 // machine, sim/lib, in a Web Worker, web/worker.js; the ROM images, bin/bios.bin and bin/prom*.bin, gzipped), that
 // runs HydraOS with nothing installed and nothing sent anywhere; and bin/sdcard.img, HydraOS's SD card (the samples, the
 // songs), SD card 0 as it starts.  Open the file in a browser (Chrome, Edge, Firefox,
@@ -8,7 +9,7 @@
 // sound, the clock chip, the RAM modules and SD cards (kept in the browser) are the page's Setup.
 //
 // Usage: node sim/web.js [--out FILE] [--serve [PORT]] [--check]
-//   --out FILE      the page (default obj/web/hydra-16.html)
+//   --out FILE      the page (default bin/hydra-16.html, as build.js makes it)
 //   --serve [PORT]  then serve it at http://localhost:PORT (8017), till Ctrl-C
 //   --check         then run the page's worker (the bundle, as the page starts it) in Node: boot HydraOS in it, type at
 //                   its console, and see the answer; and hold web/mkfs.js's new card against sim/tools/hydrafs.js's
@@ -20,7 +21,7 @@
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
-const { execSync } = require('child_process');
+const crypto = require('crypto');
 const romimages = require('../../base/tools/images.js');
 
 const SIM = __dirname, ROOT = path.join(SIM, '..'), REPO = path.join(ROOT, '..');
@@ -65,15 +66,11 @@ function images() {
   return { bios, prom: Buffer.concat(proms), card: fs.existsSync(card) ? fs.readFileSync(card) : null };
 }
 
-// What the page says it was built from: the commit, and whether the tree had changes
-function buildInfo() {
-  try {
-    const opt = { cwd: ROOT, stdio: ['ignore', 'pipe', 'ignore'] };
-    const hash = execSync('git rev-parse --short HEAD', opt).toString().trim();
-    const dirty = execSync('git status --porcelain -- bin', opt).toString().trim() ? ' (with changed images)' : '';
-    const date = execSync('git log -1 --format=%cd --date=short', opt).toString().trim();
-    return 'HydraOS images from commit ' + hash + dirty + ', ' + date + '.';
-  } catch (e) { return ''; }
+// What the page says it was built from: its images, by their checksum (sha1sum of bin/bios_rockwell.bin, then
+// prom0.bin ... one after another).  Not the commit: the page is in Git, and is the same for the same images
+function buildInfo(img) {
+  const sha = crypto.createHash('sha1').update(img.bios).update(img.prom).digest('hex');
+  return 'HydraOS\'s ROM images, their checksum ' + sha.slice(0, 12) + ' (the BIOS ROM\'s for a Rockwell R65C51, bin/bios_rockwell.bin, and the paged ROM\'s).';
 }
 
 // A script's text, safe inside a <script> element
@@ -86,7 +83,7 @@ function build(out) {
   let html = fs.readFileSync(path.join(SIM, 'web', 'page.html'), 'utf8').replace(/\r\n/g, '\n');
   const put = (mark, text) => { if (!html.includes(mark)) throw new Error('page.html: no ' + mark); html = html.replace(mark, () => text); };
   put('<!--WORKER-->', '<script id="worker-src" type="text/plain">\n' + inScript(worker.code) + '</script>');
-  put('<!--ROMS-->', '<script id="roms" type="text/plain" data-bios="' + img.bios.length + '" data-build="' + attr(buildInfo()) + '">\n' + roms + '\n</script>' +
+  put('<!--ROMS-->', '<script id="roms" type="text/plain" data-bios="' + img.bios.length + '" data-build="' + attr(buildInfo(img)) + '">\n' + roms + '\n</script>' +
     (img.card ? '\n<script id="sdcard" type="text/plain">\n' + zlib.gzipSync(img.card, { level: 9 }).toString('base64') + '\n</script>' : ''));
   put('<!--PAGE-->', '<script>\n' + inScript(page.code) + '</script>');
   fs.mkdirSync(path.dirname(out), { recursive: true });
@@ -144,7 +141,7 @@ function serve(out, port) {
 }
 
 async function main(argv) {
-  let out = path.join(ROOT, 'obj', 'web', 'hydra-16.html'), port = 0, doCheck = false;
+  let out = path.join(ROOT, 'bin', 'hydra-16.html'), port = 0, doCheck = false;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--out') out = path.resolve(argv[++i]);

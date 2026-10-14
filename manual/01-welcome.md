@@ -377,7 +377,7 @@ calculator.
 ## 1.7 What you need
 
 **To use the Hydra on a PC**, all you need is a web browser and one file: the emulator's page, `hydra-16.html`
-(someone may give it to you; or section 2.3 shows how to make it yourself, in a minute).
+(it's in the project's `reborn/bin` folder, ready to use; or someone may give it to you).
 Chapter 2 shows you where it comes from, and how to use it.
 
 **To build and use a real Hydra-16**, you will need:
