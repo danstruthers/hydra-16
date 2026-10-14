@@ -71,7 +71,7 @@ enum { A_WALKED, A_DOWN, A_UP, A_START, A_DIGGING };  /* E_ARRIVE's how (A_DIGGI
 enum { N_NO_EXIT, N_SHUT, N_NO_STAIRS, N_NO_DIG };  /* E_NOWAY's why: no way that way, the way out shut, no stairs,
                                                 **   nothing to dig there */
 enum { V_TURNED, V_LIT, V_DARK };               /* E_VIEW's why */
-enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID };    /* E_DIG's how */
+enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL };  /* E_DIG's how */
 
 /* A referee slot: a request (rs.h's RS_*) and its reply, and the reply's words.  The task that asks writes the
 ** request, then sets state REQ_POSTED and rings the referee's doorbell; the referee answers, then sets REQ_DONE; the

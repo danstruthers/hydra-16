@@ -142,6 +142,30 @@ So the dungeon isn't only what the growers made: anyone can change it, and the c
   own ways as they move, by the same rules, the denizens' task choosing where; the dungeon a living thing, changing
   where nobody's looking.
 
+**Mining any way** (the user: "digging is just mining down, so I guess mining sideways is a thing too (or
+diagonally up or down as well).  Just something to keep in mind."): a dig goes level (a tunnel, an adit), down (a
+shaft, a winze), up (a raise through the ceiling, to the stratum above), or slanting up or down (an incline, its
+floor rising or falling square by square, as a sloped passage's does); each a run of squares changed, their floors
+at the incline's slope, kept as any change is.  (Built so far: level tunnels by the compass's four, shafts down.)
+
+**Materials, and who judges them** (the user: "There is mining with explosives, too, and magic/psionics could be
+used as well (dig spell?).  Anyway, mining should be the skill here and should apply anywhere attempted the same
+way.  Stone type and hardness matters as well, but that is something for the mining skill referee and the world
+builder to work out (world builder for the floor, ceiling, and wall materials, referee for how applied tools and
+skills/abilities affect it)."): the maker gives everything its material as it grows it (a region's rock, its kind
+and hardness, varying across the stratum; a built room's walls, floor and ceiling: brick, dressed stone, the rock
+cut); the world reads what's there and asks; the referee judges how what's applied to it (Mining with a tool,
+explosives, a spell, a psionic power) works on it.  (To come: the materials are still the world's guess, masonry or
+stone.)
+
+**Tools** (the user: "For digging, tools are important, so the referee will need to know which tools you have
+equipped as well since digging stone with your bare hands doesn't usually work well (or even with a shovel for
+that matter).  Digging was just one possibility"): what an actor has equipped is the referee's to know (rs.h's
+RS_EQUIP, as an item is taken in hand, worn or put away), and every test that needs a tool (digging, picking a lock,
+climbing with a rope) is judged by it: the world says what the work is on (digging: earth, stone, masonry), the
+referee says whether anything the actor has can do it, and how much a spell of work does.  Until the items layer is
+built, the referee keeps a short list of the tools equipped, and a game can begin with one (dq0 -k pick: the tests').
+
 Each change is a **record** (a stratum, a square, what it became: its kind, its floor, its openings; who made it and
 when), kept by the maker: laid over a chunk each time it's made again, and in the save.  Seen squares are kept the
 same way, a chunk's map of them kept when the cache makes way for it.  A change that makes a way between strata adds

@@ -44,6 +44,50 @@ static void __fastcall__ putn (int v)
     put (itoa (v, b, 10));
 }
 
+/* ---- What's equipped (till the items layer: the keys of the tools taken up), and digging judged by it.  The
+** book has no rules for digging: the game's own, a tool's feet a spell of work (ten minutes) at a marginal success,
+** by what it's into (earth, stone, masonry); a critical success twice that, a marginal failure half, a critical
+** failure none; bare hands dig only earth */
+
+#define NTOOLS  4
+static char tools[NTOOLS][12];
+
+static const struct { char key[8]; unsigned char rate[3]; } digger[] = {
+    { "hands", { 1, 0, 0 } }, { "shovel", { 3, 0, 0 } }, { "spade", { 3, 0, 0 } }, { "pick", { 2, 2, 1 } },
+    { "mattock", { 3, 2, 1 } }, { "chisel", { 0, 1, 2 } },
+};
+
+static void __fastcall__ equip (const char* key, unsigned char on)
+{
+    unsigned char k;
+
+    for (k = 0; k < NTOOLS; ++k) {
+        if (on ? !tools[k][0] : !strcmp (tools[k], key)) {
+            if (on) {
+                strncpy (tools[k], key, sizeof tools[k] - 1);
+            } else {
+                tools[k][0] = 0;
+            }
+            return;
+        }
+    }
+}
+
+/* The best rate of what's equipped (and bare hands) for the material */
+static unsigned char __fastcall__ dig_rate (unsigned char m)
+{
+    unsigned char k, t, best = digger[0].rate[m];
+
+    for (k = 0; k < NTOOLS; ++k) {
+        for (t = 1; t < sizeof digger / sizeof digger[0]; ++t) {
+            if (tools[k][0] && !strcmp (tools[k], digger[t].key) && digger[t].rate[m] > best) {
+                best = digger[t].rate[m];
+            }
+        }
+    }
+    return best;
+}
+
 /* ---- A purpose: the skill a GM would call for, or an attribute (an attribute | 0x80: tested times 5) */
 
 #define ATTR    0x80
@@ -229,6 +273,8 @@ static void brief (void)
 
 static void __fastcall__ answer (struct req* r)
 {
+    unsigned char k;
+
     tp = r->text;
     tend = r->text + REQ_TEXT - 1;
     r->result = 0;
@@ -241,7 +287,21 @@ static void __fastcall__ answer (struct req* r)
         load_pc (r);
         break;
     case RS_TEST:
+        if (r->a == P_DIG) {                    /* (Judged by the tools equipped) */
+            k = dig_rate (r->b > MAT_MASONRY ? MAT_STONE : r->b);
+            if (!k) {
+                r->result = 1;
+                r->w1 = 0;
+                break;
+            }
+            r->grade = test (&pc, r->a, r->steps);
+            r->w1 = r->grade == G_CS ? 2 * k : r->grade == G_MS ? k : r->grade == G_MF ? k / 2 : 0;
+            break;
+        }
         r->grade = test (&pc, r->a, r->steps);
+        break;
+    case RS_EQUIP:
+        equip (r->text, r->a);
         break;
     case RS_DESCRIBE:
         if (r->b == 1) {

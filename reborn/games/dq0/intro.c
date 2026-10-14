@@ -54,6 +54,9 @@ void __fastcall__ o_dig_words (unsigned char how, unsigned char feet)
     case D_THROUGH:
         msg (feet ? "The last of the rock gives way beneath you: the shaft is through." : "You break through.");
         return;
+    case D_NO_TOOL:
+        msg ("You have nothing that would bite into it: that wants a pick, or a hammer and chisel.");
+        return;
     default:
         msg ("Beneath the shaft is only solid rock, with nothing under it to break into.");
         return;

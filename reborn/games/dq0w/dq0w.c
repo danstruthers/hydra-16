@@ -515,12 +515,14 @@ static void begin (void)
 
 static struct {
     unsigned char   d;                          /* DIR_N ... DIR_W, DIR_DOWN */
-    signed char     steps;                      /* The rock's hardness, as the referee's steps */
+    unsigned char   mat;                        /* What it's into (rs.h's MAT_*: the referee judges the tools) */
     unsigned        need, done;                 /* Feet */
     unsigned        x, y;                       /* The square dug */
 } dig;
 
-/* The referee's test of the character's digging: its grade */
+/* The referee's test of the character's digging (by what it has equipped): its grade, and the feet it made (made
+** 0xFF: nothing it has can dig that) */
+static unsigned char made;
 static signed char test_dig (void)
 {
     struct req* r;
@@ -531,9 +533,11 @@ static signed char test_dig (void)
     r->kind = RS_TEST;
     r->actor = 0;
     r->a = P_DIG;
-    r->steps = dig.steps;
+    r->b = dig.mat;
+    r->steps = 0;
     r = hub_ask (SLOT_WORLD);
     g = r->grade;
+    made = r->result ? 0xFF : r->w1;
     r->state = REQ_FREE;
     return g;
 }
@@ -623,7 +627,7 @@ static void __fastcall__ start_dig (unsigned char d)
             my = dig.y;
         }
         dig.need = abs (strata[sn_].datum - strata[sn_ + 1].datum);
-        dig.steps = -4;
+        dig.mat = MAT_STONE;
     } else {
         dig.x = mx + dir_x[d];
         dig.y = my + dir_y[d];
@@ -635,7 +639,7 @@ static void __fastcall__ start_dig (unsigned char d)
             return;
         }
         dig.need = t == T_WALL ? 2 : 5;         /* (A wall's masonry, two feet; a square of rock, five) */
-        dig.steps = t == T_WALL ? -2 : -4;
+        dig.mat = t == T_WALL ? MAT_MASONRY : MAT_STONE;
     }
     hub_map (0);
     event (E_DIG, 0, D_BEGUN << 8 | (dig.need > 255 ? 255 : dig.need));
@@ -654,7 +658,12 @@ static void dig_on (void)
     mx = HUB->pc_x;
     my = HUB->pc_y;
     g = test_dig ();
-    dig.done += g == G_CS ? 3 : g == G_MS ? 2 : g == G_MF ? 1 : 0;
+    if (made == 0xFF) {                         /* (Nothing it has will bite into it) */
+        hub_map (0);
+        event (E_DIG, 0, D_NO_TOOL << 8);
+        return;
+    }
+    dig.done += made;
     hub_map (0);
     {
         static struct msg m;                    /* (The noise of it: loud, and carrying) */

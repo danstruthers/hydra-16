@@ -2264,10 +2264,10 @@ module.exports = {
       init: 't_rc', cycles: 600e6,
       // (\u0101: wait for a prompt, the game's "> " too; \u0100: wait a while, for hmchar's questions)
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm\r' +
-        ['look', 'u', 'map', 'n', 'e', 's', 'w', 'go west', 'map', 'wait', 'help', 'foo', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') +
+        ['look', 'u', 'map', 'dig down', 'n', 'e', 's', 'w', 'go west', 'map', 'wait', 'help', 'foo', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') +
         '\u0101dq0 -p t -s 7\r\u0100\u0100k\r\u01002\r\u0100bow\r\u0100spear\r\u0100sword\r\u0100\r\u0100Dorn\r' +
         '\u0101sheet\r\u0101quit\r\u0101echo done\r' },
-      expect: ['Tordan, Hunter/Trapper, enters the dungeon.', 'The way out is shut fast.', 'The map (you face',
+      expect: ['Tordan, Hunter/Trapper, enters the dungeon.', 'The way out is shut fast.', 'The map (you face', 'You have nothing that would bite into it',
         '> wait', 'Time passes.', 'Commands: north, northeast, east',
         "I don't know how to foo.", '% echo $status', 'Keep this character, or roll again (k or r)?', 'Written to /ram/dq0.hm',
         'Dorn, Hunter/Trapper, enters the dungeon.', 'Dorn, Human Female, Hunter/Trapper; born 10 Ilvin (Skorus).', '% echo done\ndone'],
@@ -2282,9 +2282,9 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0dig', what: 'Dingus Quest Zero digging (dq0 -T): a shaft down from a room by its stairway, spell by spell (Mining tests, the referee asked), through to the stratum below (grown round it then), and down it',
+      name: 'dq0dig', what: 'Dingus Quest Zero digging (dq0 -k pick -T: a pick equipped, till the items layer): a shaft down from a room by its stairway, spell by spell (Mining tests, the referee asked), through to the stratum below (grown round it then), and down it',
       init: 't_rc', cycles: 700e6,
-      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T\r' +
+      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -k pick -T\r' +
         ['dig down', 'look', 'd', 'look', 'map', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
       expect: ['You set to digging', 'feet to go.', 'the shaft is through.', 'You climb down the shaft.', 'The map (you face', '% echo $status'],
       sdcard: true

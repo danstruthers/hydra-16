@@ -1,7 +1,7 @@
 /*
 ** main.c - Dingus Quest Zero: the UI's task, its start and its loop.
 **
-** dq0 [-s seed] [-p pace] [-c file] [-T]: the seed makes the same game each time (the dice: dice.h's rseed); the pace is
+** dq0 [-s seed] [-p pace] [-c file] [-k tool] [-T]: the seed makes the same game each time (the dice: dice.h's rseed); the pace is
 ** r, n, m (relaxed, normal, menacing: asked at the start if it isn't given) or t (turns: the world moves only as
 ** the character acts, for tests); the file a character made already (hmchar's).  Without one, hmchar is run to make
 ** one (in this window, the screen as it is outside the game while it runs), into /ram/dq0.hm.
@@ -39,6 +39,7 @@ static unsigned char busy = 1;                  /* The character's doing somethi
 static unsigned place;                          /* Where this task is in the world's events */
 static int world_task = -1, referee_task = -1, maker_task = -1;
 static unsigned char test_start;
+static const char* kit;                         /* (dq0 -k: a tool, equipped as the game starts) */
 struct pc P;
 static volatile unsigned char quit;
 
@@ -246,6 +247,11 @@ static void start_world (unsigned long seed)
     HUB->round = r->w1;                         /* (The ruleset's round, in tenths) */
     r->state = REQ_FREE;
     load_pc ();                                 /* (Its senses the referee's, before the world looks through them) */
+    if (kit) {
+        strncpy (HUB->slot[SLOT_UI].text, kit, 11);
+        HUB->slot[SLOT_UI].text[11] = 0;
+        referee (RS_EQUIP, 1)->state = REQ_FREE;
+    }
     strcpy (path, libdir);
     strcat (path, "/dq0m");
     if ((maker_task = hub_spawn (path, T_MAKER, libdir)) < 0) {
@@ -558,6 +564,8 @@ int main (int argc, char* argv[])
     for (i = 1; i < argc; ++i) {
         if (!strcmp (argv[i], "-s") && i + 1 < argc) {
             seed = strtoul (argv[++i], 0, 10);
+        } else if (!strcmp (argv[i], "-k") && i + 1 < argc) {
+            kit = argv[++i];                    /* (A tool to begin with: till the items layer, the tests') */
         } else if (!strcmp (argv[i], "-T")) {
             test_start = 1;                     /* (For the tests: the character begins at a way down) */
         } else if (!strcmp (argv[i], "-c") && i + 1 < argc) {
@@ -567,7 +575,7 @@ int main (int argc, char* argv[])
             pace = argv[i][0] == 'r' ? PACE_RELAXED : argv[i][0] == 'm' ? PACE_MENACING :
                 argv[i][0] == 't' ? PACE_TURNS : PACE_NORMAL;
         } else {
-            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-T]");
+            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-k tool] [-T]");
         }
     }
     rseed (seed);
