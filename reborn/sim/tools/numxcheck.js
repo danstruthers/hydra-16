@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // numxcheck.js: numref.js (the number system's reference) against danlang, expression by expression: the tower's
 // arithmetic and order, the conversions, the bits, numbers written in every base and read back, texts that may not
-// be numbers, format's placeholders, fib, the math functions at precisions from 1 to 35 digits; some 12,000 cases
+// be numbers, format's placeholders, fib, the math functions at precisions from 1 to 35 digits (complex arguments
+// too); some 12,000 cases
 // from a fixed seed, run by danlang in one program.
 //
 // Usage: node sim/tools/numxcheck.js [DANLANG]     danlang's program (default: $DANLANG, or the Release build of
@@ -59,7 +60,7 @@ for (let k = 0; k < 1500; k++) {
   const fn = pick(['truncate', 'to-rational', 'rational.n', 'rational.d', 'abs', 'to-fixed', 'neg']);
   if (fn === 'to-fixed') { const p = rnd(25); cases.push([dlStr('(to-str (to-fixed ' + a + ' ' + p + '))'), () => js(() => S(R.toFixed(N(a), p)))]); }
   else if (fn === 'neg') cases.push([dlStr('(to-str (- ' + a + '))'), () => js(() => S(R.neg(N(a))))]);
-  else cases.push([dlStr('(to-str (' + fn + ' ' + a + '))'), () => js(() => S({ truncate: R.truncate, 'to-rational': R.toRational, 'rational.n': R.numerator, 'rational.d': R.denominator, abs: R.abs }[fn](N(a))))]);
+  else cases.push([dlStr('(to-str (' + fn + ' ' + a + '))'), () => js(() => S({ truncate: R.truncate, 'to-rational': R.toRational, 'rational.n': R.numerator, 'rational.d': R.denominator, abs: R.cabs }[fn](N(a))))]);
 }
 for (let k = 0; k < 800; k++) {
   const a = sgn() + digits(rnd(2) ? 4 : 30), b = sgn() + digits(rnd(2) ? 2 : 30);
@@ -114,6 +115,18 @@ for (let k = 0; k < 1200; k++) {
   }
   const a = fn === 'exp' ? pick([mreal(), String(rnd(400) - 200) + '.' + digits(4)]) : mreal();
   mathCase('(' + fn + ' ' + a + ')', () => js(() => S(MATH[fn](N(a)))));
+}
+// complex arguments (the principal values), abs's modulus, and powers of a complex or a negative number
+const mcpx = () => { const im = mreal(); return '(complex ' + mreal() + ' ' + (R.isZero(N(im)) ? '1' : im) + ')'; };
+for (let k = 0; k < 400; k++) {
+  const fn = pick([...Object.keys(MATH), 'abs', 'pow', 'pow']);
+  if (fn === 'pow') {
+    const a = rnd(2) ? mcpx() : '-' + mreal().replace(/^-/, ''), b = rnd(2) ? mcpx() : pick(['1/2', '1/3', '-1/2', '0.25', '1.5', mreal()]);
+    mathCase('(pow ' + a + ' ' + b + ')', () => js(() => S(R.rpow(N(a), N(b)))));
+    continue;
+  }
+  const a = mcpx();
+  mathCase('(' + fn + ' ' + a + ')', () => js(() => S(fn === 'abs' ? R.cabs(N(a)) : MATH[fn](N(a)))));
 }
 for (const t of ['9/4', '2.25', '16', '0.09', '1.0', '1/9', '0.0001', '123456789/100']) mathCase('(sqrt ' + t + ')', () => S(R.sqrt(N(t))));
 
