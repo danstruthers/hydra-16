@@ -78,6 +78,28 @@ struct opening {                                /* An opening that isn't a door 
     unsigned char   sill;                       /* Feet above the floor (a window's) */
     unsigned char   link;                       /* The stratum's link (struct stratum's) it is, or 0xFF */
 };
+/* A portal (DUNGEON.md): a fixture between two areas, on its square (a door's T_DOOR) */
+#define NPORTALS        16
+struct portal {
+    unsigned char   x, y;
+    unsigned char   kind;                       /* PK_* */
+    unsigned char   state;                      /* PS_* */
+    unsigned char   lock;                       /* A mechanical lock's complexity, 1-9 (0: none) */
+    unsigned char   mat;                        /* PM_* */
+    unsigned char   tough;                      /* What breaking it would take: worn away blow by blow */
+    unsigned char   bar;                        /* The way (DIR_*) from it to the side it's barred from */
+};
+enum { PK_DOOR, PK_WINDOW, PK_PORTCULLIS, PK_DRAWBRIDGE, PK_GATE, PK_GRATE, PK_HATCH };
+#define PS_OPEN         0x01
+#define PS_LOCKED       0x02
+#define PS_BARRED       0x04
+#define PS_WARDED       0x08                    /* (A magical lock: with the powers) */
+#define PS_BROKEN       0x10                    /* Its lock or its bar burst (it won't lock or bar again) */
+#define PS_HIDDEN       0x20                    /* A secret door: like the wall round it, till a search finds it */
+#define PS_MAGIC        0x40                    /* (Hidden by magic: found only by magical means, the referee's) */
+enum { PM_WOOD, PM_IRONBOUND, PM_IRON, PM_STONE };
+#define PORTAL_STATE    0xFE                    /* (A change record's link for a portal's state: tile its state) */
+
 struct chunk {
     unsigned char   sn;                         /* Its stratum */
     unsigned        cx, cy;                     /* Its place, in chunks from the stratum's x0, y0 */
@@ -85,6 +107,8 @@ struct chunk {
     struct room     room[NROOMS];
     struct zone     zone[NZONES];
     struct opening  open[NOPEN];
+    unsigned char   nportals;
+    struct portal   portal[NPORTALS];
     unsigned char   tile[CW][CW];
     signed char     elev[CW][CW];
 };
@@ -170,6 +194,7 @@ signed char __fastcall__ elev_at (unsigned char sn, unsigned x, unsigned y);
 unsigned char __fastcall__ step_ok (unsigned char sn, unsigned x, unsigned y, unsigned char d);   /* Walkable to d */
 unsigned char __fastcall__ room_of (unsigned char sn, unsigned x, unsigned y);  /* Its room in C (0xFF: none) */
 unsigned char __fastcall__ zone_of (unsigned char sn, unsigned x, unsigned y);  /* Its zone in C (0xFF: none) */
+struct portal* __fastcall__ portal_at (unsigned char x, unsigned char y);   /* C's portal on its square x, y */
 unsigned char __fastcall__ wall_tile (struct room* p, unsigned char d, unsigned char k);  /* A wall's kth square
                                                 **   (wall_x, wall_y: the chunk's), but its corners: 1, or 0 past its end */
 extern unsigned char wall_x, wall_y;

@@ -15,6 +15,7 @@ struct chunk* C;
 unsigned char cx_, cy_;
 
 static unsigned char me;                        /* ASK_WORLD ... */
+static unsigned char shut_ok (void);
 static unsigned char lastk = 0xFF, lsn;         /* The slot at () found last, and what it holds */
 static unsigned lcx, lcy;
 
@@ -120,7 +121,7 @@ unsigned char __fastcall__ step_ok (unsigned char sn, unsigned x, unsigned y, un
         return 0;
     }
     u = *p;
-    if (!T_PASS (u)) {
+    if (!T_PASS (u) || (TILE (u) == T_DOOR && !shut_ok ())) {
         return 0;
     }
     dz = C->elev[cy_][cx_] - z;
@@ -128,6 +129,26 @@ unsigned char __fastcall__ step_ok (unsigned char sn, unsigned x, unsigned y, un
         dz = -dz;
     }
     return dz <= (TILE (t) == T_STEPS || TILE (u) == T_STEPS ? STAIR_MAX : STEP_MAX);
+}
+
+struct portal* __fastcall__ portal_at (unsigned char x, unsigned char y)
+{
+    unsigned char i;
+
+    for (i = 0; i < C->nportals; ++i) {
+        if (C->portal[i].x == x && C->portal[i].y == y) {
+            return &C->portal[i];
+        }
+    }
+    return 0;
+}
+
+/* The door at at ()'s square open (or none on it): it can be walked through */
+static unsigned char shut_ok (void)
+{
+    struct portal* p = portal_at (cx_, cy_);
+
+    return !p || (p->state & (PS_OPEN | PS_HIDDEN)) == PS_OPEN;
 }
 
 unsigned char __fastcall__ room_of (unsigned char sn, unsigned x, unsigned y)

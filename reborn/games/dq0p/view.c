@@ -47,6 +47,7 @@ static unsigned char __fastcall__ clear (unsigned x, unsigned y, int tz)
     int sy = (int) (y - ey) > 0 ? 1 : -1, e = dx + dy, e2, n = dx > -dy ? dx : -dy, k = 0;
     unsigned cx = ex, cy = ey;
     unsigned char* p;
+    struct portal* q;
 
     for (;;) {
         e2 = 2 * e;
@@ -62,8 +63,9 @@ static unsigned char __fastcall__ clear (unsigned x, unsigned y, int tz)
         if (cx == x && cy == y) {
             return 1;
         }
-        if (!(p = at (vs, cx, cy)) || !T_CLEAR (*p) || C->elev[cy_][cx_] > ez + (tz - ez) * k / n) {
-            return 0;
+        if (!(p = at (vs, cx, cy)) || !T_CLEAR (*p) || C->elev[cy_][cx_] > ez + (tz - ez) * k / n ||
+            (TILE (*p) == T_DOOR && (q = portal_at (cx_, cy_)) != 0 && !(q->state & PS_OPEN))) {
+            return 0;                           /* (Rock, a wall, a floor above the line, a closed door) */
         }
     }
 }

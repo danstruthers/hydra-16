@@ -179,6 +179,54 @@ when), kept by the maker: laid over a chunk each time it's made again, and in th
 same way, a chunk's map of them kept when the cache makes way for it.  A change that makes a way between strata adds
 a link to both strata's records.
 
+### Portals
+
+The user (2026-10-14): "One important thing is portals, being doors and windows, portcullis and drawbridges (which
+can close off or join two areas), and similar that can be barred, locked, be of different materials and toughnesses,
+etc., and can be actively attacked/destroyed to gain access.  Magical and mechanical locks/bars both need to be
+thought about."
+
+A portal is a fixture between two areas (or an area and a passage): a **door**, a **window** (shutters, glass, bars),
+a **portcullis**, a **drawbridge**, a **gate**, a **grate**, a **hatch** (in a floor or a ceiling); a record of its
+own in its chunk: its kind, its **state** (open, closed; barred, and from which side; locked; warded), its **lock**
+(mechanical, how complex: the referee's Lockcraft, or a key that fits; magical, how strong: the referee's magic, a
+charm, a word), its **material** and **toughness** (wood, iron-bound, iron, stone: what breaking it takes, worn away
+blow by blow, each one loud), and what works it (a portcullis or a drawbridge from a winch or a lever, perhaps
+elsewhere; a door from either side).  Closed, it stops movement and sight (but a window's glass or a portcullis's
+bars let sight through), and dulls sound; open, it joins its two areas.  The referee judges every way through: a
+key, picking, forcing (Strength), breaking (a weapon's or a tool's blows against its toughness), magic (unwarding,
+a knock), climbing (a window).  Its state changes are kept as any change is; denizens open, close, lock and break
+them by the same rules.  (First: doors, their states, opening, closing, unlocking, forcing; the rest with weapons,
+items and powers.)
+
+A **window** (the user: "Windows can be of glass and/or have shutters (lockable/wardable) or bars") is parts, any
+of: **glass** (sight through, not movement, till it's broken: loud, and sharp), **shutters** (open or closed, locked
+or warded, as a door is), **bars** (sight through, not movement, till they're bent or broken: the user, "given the right amount of applied strength or tools.  The referee would work that out"); each part its own
+state, and the window's sill its height above the floor (a climb to go through).
+
+**What passes** (the user: "There are smaller openings, like murder holes and arrow slits, that can be seen through and
+fired through (or have boiling oil poured through), but cannot be traversed.  Barred windows don't restrict sight or
+arrow fire, but do restrict movement, and glassed windows do the same for vision at least, but shuttered windows
+block traversal, vision, and ranged attacks."): every portal, and every part of one, says what it lets through,
+**sight**, **missiles** (an arrow, a thrown spear), **movement**, **sound**, **liquids** (boiling oil, water); the
+portal's own is what all its parts let through, as they are now:
+
+| Part, or opening    | Sight | Missiles | Movement | (and)                |
+|---------------------|-------|----------|----------|----------------------|
+| open (any)          | yes   | yes      | yes      |                      |
+| murder hole         | yes   | yes      | no       | liquids poured       |
+| arrow slit          | yes   | yes      | no       |                      |
+| bars                | yes   | yes      | no       |                      |
+| glass               | yes   | no       | no       | (till broken)        |
+| shutters, closed    | no    | no       | no       |                      |
+| a door, closed      | no    | no       | no       | sound dulled         |
+
+**Hidden portals** (the user: "Don't forget secret/hidden doors that may "look" like nothing is there.  Only a search
+or special awareness ability would reveal them on a successful referee determination."; and "Magically hidden doors
+may only be detectable by magical means"): a hidden portal is the wall it seems to be (to movement, to sight, to the
+map) till it's found: hidden mechanically, by a search (the referee's Awareness, or an ability it allows); hidden by
+magic, only by magical means (a spell or a power of detection, the referee's).  Found, it stays found.
+
 ### Items: the dungeon's layer of things
 
 The user (2026-10-14): "Don't forget to include a dungeon "layer" where items are tracked.  Each area needs an

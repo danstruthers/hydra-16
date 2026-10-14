@@ -136,6 +136,7 @@ void __fastcall__ perceive (unsigned char sn, unsigned x, unsigned y, unsigned c
     struct room rp;
     struct zone* z;
     unsigned char* p = at (sn, x, y);
+    struct portal* q;
     unsigned char r, k, i, j, lx = cx_, ly = cy_, whole, d;
     int myz = C->elev[ly][lx], dz;
     unsigned area;
@@ -185,8 +186,10 @@ void __fastcall__ perceive (unsigned char sn, unsigned x, unsigned y, unsigned c
         }
         for (d = 0; d < 4; ++d) {               /* (Its doors seen) */
             for (k = 0; wall_tile (&rp, d, k) && S.ndoors < SEE_DOORS; ++k) {
-                if (TILE (C->tile[wall_y][wall_x]) == T_DOOR && (C->tile[wall_y][wall_x] & T_VIS)) {
+                if (TILE (C->tile[wall_y][wall_x]) == T_DOOR && (C->tile[wall_y][wall_x] & T_VIS) &&
+                    !((q = portal_at (wall_x, wall_y)) != 0 && (q->state & PS_HIDDEN))) {
                     S.door[S.ndoors].rel = REL8 (bearing ((int) wall_x - lx, (int) wall_y - ly), face);
+                    S.door[S.ndoors].state = (q = portal_at (wall_x, wall_y)) != 0 ? q->state & PS_OPEN : PS_OPEN;
                     S.door[S.ndoors++].dz = fz (C->elev[wall_y][wall_x] - myz);
                 }
             }
@@ -195,6 +198,7 @@ void __fastcall__ perceive (unsigned char sn, unsigned x, unsigned y, unsigned c
             for (i = rp.x ? rp.x - 1 : 0; i <= rp.x + rp.w && i < CW && S.ndoors < SEE_DOORS; ++i) {
                 if (TILE (C->tile[j][i]) == T_CORR && (C->tile[j][i] & T_VIS) && mouth (i, j)) {
                     S.door[S.ndoors].rel = REL8 (bearing ((int) i - lx, (int) j - ly), face) | MOUTH;
+                    S.door[S.ndoors].state = PS_OPEN;
                     S.door[S.ndoors++].dz = fz (C->elev[j][i] - myz);
                 }
             }
@@ -210,6 +214,14 @@ void __fastcall__ perceive (unsigned char sn, unsigned x, unsigned y, unsigned c
         }
     } else {
         S.where = W_PASSAGE;
+        for (d = 0; d < 4; ++d) {               /* (A door beside it, open or shut) */
+            if ((p = at (sn, x + dir_x[d], y + dir_y[d])) != 0 && TILE (*p) == T_DOOR && S.ndoors < SEE_DOORS &&
+                !((q = portal_at (cx_, cy_)) != 0 && (q->state & PS_HIDDEN))) {
+                S.door[S.ndoors].rel = REL8 (H_OF (d), face);
+                S.door[S.ndoors].state = q ? q->state & PS_OPEN : PS_OPEN;
+                S.door[S.ndoors++].dz = fz (C->elev[cy_][cx_] - myz);
+            }
+        }
         for (d = 0; d < 4; ++d) {               /* (The ways it goes on, felt in the dark too) */
             if (step_ok (sn, x, y, d) && (p = at (sn, x + dir_x[d], y + dir_y[d])) != 0) {
                 dz = C->elev[cy_][cx_] - myz;

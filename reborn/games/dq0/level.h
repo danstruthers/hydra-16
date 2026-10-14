@@ -41,7 +41,7 @@ struct sight {
     unsigned char   up_rel, up_ft;              /* The floor here: the way it rises, and feet in ten (0: level) */
     unsigned char   ceil, cmid, cwall;          /* Its zone's ceiling (ceil C_UNSEEN: not seen) */
     unsigned char   ndoors;                     /* Doors, and passages' mouths (rel | MOUTH) */
-    struct { unsigned char rel; signed char dz; } door[SEE_DOORS];
+    struct { unsigned char rel; signed char dz; unsigned char state; } door[SEE_DOORS];  /* (state: PS_OPEN ...) */
     unsigned char   nzones;                     /* The room's other zones seen */
     struct { unsigned char rel, how; signed char dz; } zone[SEE_ZONES];    /* how: Z_* */
     unsigned char   nopen;                      /* Stairways, ladders, shafts, windows seen */

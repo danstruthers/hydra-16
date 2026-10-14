@@ -418,7 +418,8 @@ static void __fastcall__ go (unsigned char h)
         for (k = 0; k < 4; ++k) {               /* (The doors that way: the quickest to walk to) */
             for (d = 0; wall_tile (&C->room[r], k, d); ++d) {
                 if (TILE (C->tile[wall_y][wall_x]) != T_DOOR || ((h & 1) ? bearing ((int) wall_x - wx,
-                    (int) wall_y - wy) != h : k != (h >> 1))) {
+                    (int) wall_y - wy) != h : k != (h >> 1)) || (portal_at (wall_x, wall_y) &&
+                    (portal_at (wall_x, wall_y)->state & PS_HIDDEN))) {
                     continue;
                 }
                 if ((t = cross_room (r, wx, wy, wall_x, wall_y, slow)) < bt) {
@@ -737,6 +738,21 @@ static signed char test_dig (void)
     return g;
 }
 
+/* A noise where the character is: how loud (0-9), for the denizens (the hub's header in the window) */
+static void __fastcall__ noise (unsigned char loud)
+{
+    static struct msg m;
+
+    hub_map (0);
+    m.kind = E_NOISE;
+    m.who = 0;
+    m.a = loud;
+    m.w1 = HUB->pc_x;
+    m.w2 = HUB->pc_y;
+    m.t = HUB->now;
+    hub_event (&m);
+}
+
 static void spell (void)
 {
     move.on = 1;
@@ -860,17 +876,7 @@ static void dig_on (void)
     }
     dig.done += made;
     hub_map (0);
-    {
-        static struct msg m;                    /* (The noise of it: loud, and carrying) */
-
-        m.kind = E_NOISE;
-        m.who = 0;
-        m.a = 6;
-        m.w1 = dig.x;
-        m.w2 = dig.y;
-        m.t = HUB->now;
-        hub_event (&m);
-    }
+    noise (6);
     if (dig.done < dig.need) {
         event (E_DIG, 0, (g == G_CS || g == G_MS ? D_GOOD : g == G_MF ? D_POOR : D_SLIP) << 8 |
             (dig.need - dig.done > 255 ? 255 : dig.need - dig.done));
@@ -921,6 +927,220 @@ static void dig_on (void)
     see (0);
 }
 
+/* ---- Doors (DUNGEON.md: portals): the one the character faces, walked up to, and worked: opened (unbarred, if
+** it's barred from this side), closed, its lock picked (the referee's Lockcraft, by the tools equipped: a minute
+** a try, harder the more complex the lock), forced (Strength against its material, its lock or bar burst: loud) */
+
+static unsigned px_, py_;                       /* (The door's square, in the frame) */
+static unsigned char pd_;                       /* (The way from where the character stands to it) */
+
+/* The door the character faces, walked up to (its time), its square in px_, py_: the door's record (in the window),
+** or NULL */
+static struct portal* __fastcall__ door_ahead (unsigned long* tt)
+{
+    unsigned char r, k, d, face = HUB->pc_face, slow, bx = 0, by = 0, wx, wy, bd = 0;
+    unsigned long t, bt = 0xFFFFFFFFUL;
+    unsigned ox, oy;
+    unsigned char* p;
+
+    sn_ = HUB->pc_stratum;
+    mx = HUB->pc_x;
+    my = HUB->pc_y;
+    stept = HUB->pcsum.step ? HUB->pcsum.step : 10;
+    slow = dark ();
+    *tt = 0;
+    if ((r = room_of (sn_, mx, my)) == 0xFF) {  /* (A passage: a door beside it, the way it faces first) */
+        for (k = 0; k < 4; ++k) {
+            d = (k + (face >> 1)) & 3;
+            if ((p = at (sn_, mx + dir_x[d], my + dir_y[d])) != 0 && TILE (*p) == T_DOOR &&
+                !(portal_at (cx_, cy_) && (portal_at (cx_, cy_)->state & PS_HIDDEN))) {
+                px_ = mx + dir_x[d];
+                py_ = my + dir_y[d];
+                pd_ = d;
+                at (sn_, px_, py_);
+                return portal_at (cx_, cy_);
+            }
+        }
+        return 0;
+    }
+    ox = mx - cx_;
+    oy = my - cy_;
+    wx = cx_;
+    wy = cy_;
+    for (k = 0; k < 4; ++k) {                   /* (Its room's doors that way: the quickest to walk up to) */
+        for (d = 0; wall_tile (&C->room[r], k, d); ++d) {
+            if (TILE (C->tile[wall_y][wall_x]) != T_DOOR || (bearing ((int) wall_x - wx, (int) wall_y - wy) != face &&
+                k != (face >> 1)) || (portal_at (wall_x, wall_y) && (portal_at (wall_x, wall_y)->state & PS_HIDDEN))) {
+                continue;
+            }
+            if ((t = cross_room (r, wx, wy, wall_x - dir_x[k], wall_y - dir_y[k], slow)) < bt) {
+                bt = t;
+                bx = wall_x;
+                by = wall_y;
+                bd = k;
+            }
+        }
+    }
+    if (bt == 0xFFFFFFFFUL) {
+        return 0;
+    }
+    *tt = bt;
+    px_ = ox + bx;
+    py_ = oy + by;
+    pd_ = bd;
+    mx = px_ - dir_x[bd];                       /* (Up to it: the room's square before it) */
+    my = py_ - dir_y[bd];
+    at (sn_, px_, py_);
+    return portal_at (cx_, cy_);
+}
+
+/* A door's state changed: kept by the maker, made in its chunk */
+static void __fastcall__ door_state (unsigned char st)
+{
+    change (sn_, px_, py_, st, 0, PORTAL_STATE);
+}
+
+static signed char __fastcall__ test_door (unsigned char purpose, unsigned char b, signed char steps, unsigned char* res)
+{
+    struct req* r;
+    signed char g;
+
+    hub_map (0);
+    r = &HUB->slot[SLOT_WORLD];
+    r->kind = RS_TEST;
+    r->actor = 0;
+    r->a = purpose;
+    r->b = b;
+    r->steps = steps;
+    r = hub_ask (SLOT_WORLD);
+    g = r->grade;
+    *res = r->result;
+    r->state = REQ_FREE;
+    return g;
+}
+
+/* A search about the character (a minute): the referee's Awareness (rs.h's P_SEARCH) against each hidden door within
+** a few squares that it sees; one found is a door like any other from then on */
+#define SEARCH_R        3
+static void search (void)
+{
+    unsigned i, j;
+    unsigned char k, found = 0, res;
+    unsigned char* p;
+    struct portal* q;
+
+    sn_ = HUB->pc_stratum;
+    mx = HUB->pc_x;
+    my = HUB->pc_y;
+    for (j = my - SEARCH_R; j <= my + SEARCH_R; ++j) {
+        for (i = mx - SEARCH_R; i <= mx + SEARCH_R; ++i) {
+            if ((p = at (sn_, i, j)) == 0 || TILE (*p) != T_DOOR || !(*p & T_VIS) ||
+                (q = portal_at (cx_, cy_)) == 0 || !(q->state & PS_HIDDEN)) {
+                continue;
+            }
+            k = q->state;
+            if (test_door (P_SEARCH, k & PS_MAGIC ? HIDE_MAGICAL : HIDE_MECHANICAL, 0, &res) > 0 && !res) {
+                px_ = i;
+                py_ = j;
+                door_state (k & ~PS_HIDDEN);
+                found = 1;
+            }
+        }
+    }
+    hub_map (0);
+    busy (600);
+    event (E_PORTAL, 0, found ? PO_FOUND : PO_NOTHING);
+    see (0);
+}
+
+static void __fastcall__ door_work (unsigned char what)
+{
+    static struct portal q;
+    struct portal* p;
+    unsigned long t;
+    unsigned char out, res;
+    signed char g;
+
+    if (what == PA_SEARCH) {
+        search ();
+        return;
+    }
+
+    if (!(p = door_ahead (&t))) {
+        hub_map (0);
+        event (E_PORTAL, 0, PO_NONE);
+        HUB->pc_ready = HUB->now;
+        return;
+    }
+    q = *p;                                     /* (Its record, while the window moves) */
+    out = PO_NONE;
+    switch (what) {
+    case PA_OPEN:
+        if (q.state & PS_OPEN) {
+            out = PO_IS_OPEN;
+        } else if ((q.state & PS_BARRED) && q.bar != ((pd_ + 2) & 3)) {
+            out = PO_BARRED;                    /* (Barred from the far side) */
+        } else if (q.state & PS_LOCKED) {
+            out = PO_LOCKED;
+        } else {
+            out = q.state & PS_BARRED ? PO_UNBARRED : PO_OPENED;
+            door_state ((q.state & ~PS_BARRED) | PS_OPEN);
+        }
+        t += stept * 2;
+        break;
+    case PA_CLOSE:
+        if (!(q.state & PS_OPEN)) {
+            out = PO_IS_SHUT;
+        } else {
+            out = PO_CLOSED;
+            door_state (q.state & ~PS_OPEN);
+        }
+        t += stept * 2;
+        break;
+    case PA_UNLOCK:
+        if (!(q.state & PS_LOCKED)) {
+            out = PO_NO_LOCK;
+            break;
+        }
+        g = test_door (P_PICKLOCK, q.lock, -2 * (signed char) q.lock, &res);
+        if (res) {
+            out = PO_NO_PICKS;
+            break;
+        }
+        t += 600;                               /* (A minute a try) */
+        if (g > 0) {
+            out = PO_PICKED;
+            door_state (q.state & ~PS_LOCKED);
+        } else {
+            out = PO_NOT_PICKED;
+        }
+        break;
+    case PA_FORCE:
+        if (q.state & PS_OPEN) {
+            out = PO_IS_OPEN;
+            break;
+        }
+        g = test_door (P_FORCE, q.mat, (q.mat == PM_WOOD ? 0 : q.mat == PM_IRONBOUND ? -2 : -4) -
+            ((q.state & (PS_LOCKED | PS_BARRED)) ? 1 : 0), &res);
+        t += ROUND_T;
+        noise (7);
+        if (g > 0) {
+            out = PO_FORCED;                    /* (Its lock or bar burst, the door open) */
+            door_state ((q.state & (PS_LOCKED | PS_BARRED) ? PS_BROKEN : 0) | PS_OPEN);
+        } else {
+            out = PO_HELD;
+        }
+        break;
+    }
+    hub_map (0);
+    HUB->pc_x = mx;                             /* (It's walked up to the door) */
+    HUB->pc_y = my;
+    HUB->pc_face = H_OF (pd_);
+    busy (t > 60000UL ? 60000U : (unsigned) t);
+    event (E_PORTAL, 0, out);
+    see (0);
+}
+
 static void __fastcall__ intent (struct msg* m)
 {
     switch (m->kind) {
@@ -942,6 +1162,9 @@ static void __fastcall__ intent (struct msg* m)
         break;
     case I_DIG:
         start_dig (m->a);
+        break;
+    case I_PORTAL:
+        door_work (m->a);
         break;
     case I_LIGHT:
         HUB->pc_light = m->a ? TORCH : 0;

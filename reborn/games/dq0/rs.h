@@ -34,6 +34,10 @@ enum {
     P_THEME,                                    /* A theme's own, P_THEME + n (named in its data) */
 };
 
+/* How a hidden thing's hidden (P_SEARCH's b): found by searching, or only by magical means (the referee's: a spell,
+** a power, an ability; its result 1 if the searcher has none) */
+enum { HIDE_MECHANICAL, HIDE_MAGICAL };
+
 /* What a dig is into */
 enum { MAT_EARTH, MAT_STONE, MAT_MASONRY };
 

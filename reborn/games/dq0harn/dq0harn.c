@@ -73,6 +73,19 @@ static void __fastcall__ equip (const char* key, unsigned char on)
     }
 }
 
+/* A tool equipped */
+static unsigned char __fastcall__ has (const char* key)
+{
+    unsigned char k;
+
+    for (k = 0; k < NTOOLS; ++k) {
+        if (!strcmp (tools[k], key)) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 /* The best rate of what's equipped (and bare hands) for the material */
 static unsigned char __fastcall__ dig_rate (unsigned char m)
 {
@@ -296,6 +309,14 @@ static void __fastcall__ answer (struct req* r)
             }
             r->grade = test (&pc, r->a, r->steps);
             r->w1 = r->grade == G_CS ? 2 * k : r->grade == G_MS ? k : r->grade == G_MF ? k / 2 : 0;
+            break;
+        }
+        if (r->a == P_SEARCH && r->b == HIDE_MAGICAL) {    /* (Only by magic: its spells to come) */
+            r->result = 1;
+            break;
+        }
+        if (r->a == P_PICKLOCK && !has ("picks")) {    /* (Lockcraft wants its tools: Skills 23) */
+            r->result = 1;
             break;
         }
         r->grade = test (&pc, r->a, r->steps);

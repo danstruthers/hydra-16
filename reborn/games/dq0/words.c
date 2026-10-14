@@ -17,6 +17,8 @@
 #include "dq0.h"
 #include "level.h"
 
+#define PS_OPEN_        0x01                    /* (A portal's state: open: dq0w/world.h's PS_OPEN) */
+
 static const char* const kindname[8] = {
     "chamber", "hall", "cell", "vault", "crypt", "gallery", "cave", "storeroom"
 };
@@ -82,8 +84,11 @@ static void __fastcall__ doors (unsigned char mouths)
             add (" ");
         }
         add (relname[d]);
-        for (i = 0; i < S->ndoors; ++i) {       /* (The first that way's height, if it's well above or below) */
+        for (i = 0; i < S->ndoors; ++i) {       /* (The first that way's state and height) */
             if ((S->door[i].rel & 7) == d && (S->door[i].rel & MOUTH) == mouths) {
+                if (!mouths) {
+                    add (S->door[i].state & PS_OPEN_ ? " (open)" : " (closed)");
+                }
                 if (S->door[i].dz >= 3 || S->door[i].dz <= -3) {
                     add (",");
                     height (S->door[i].dz);
@@ -215,7 +220,8 @@ static void passage (void)
     signed char dz;
 
     add (S->dark ? "It is dark; you feel your way. " : "");
-    add (S->nways <= 1 ? "The passage ends here; it goes back " : S->nways == 2 ? "You are in a passage. It goes " :
+    add (S->nways <= 1 && S->ndoors ? "The passage comes to a door; it goes back " : S->nways <= 1 ?
+         "The passage ends here; it goes back " : S->nways == 2 ? "You are in a passage. It goes " :
          "The passage forks here. It goes ");
     for (i = 0; i < S->nways; ++i) {
         if (i) {
@@ -230,6 +236,7 @@ static void passage (void)
         }
     }
     add (".");
+    doors (0);                                  /* (A door beside it) */
 }
 
 /* What the character perceives, in words, into lb (from look.c's copy of the hub's record) */

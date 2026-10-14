@@ -392,6 +392,11 @@ static void events (void)
                 climb_words (m.w1 >> 8, m.w1 & 0xFF);
             }
             break;
+        case E_PORTAL:
+            if (m.who == 0) {
+                portal_words (m.w1);
+            }
+            break;
         }
     }
 }
@@ -536,6 +541,10 @@ static void __fastcall__ command (char* l)
         }
     } else if (!strcmp (w, "quit") || !strcmp (w, "q")) {
         quit = 1;
+    } else if (!strcmp (w, "open") || !strcmp (w, "close") || !strcmp (w, "shut") || !strcmp (w, "unlock") ||
+               !strcmp (w, "pick") || !strcmp (w, "force") || !strcmp (w, "search")) {
+        intend (I_PORTAL, w[0] == 'o' ? PA_OPEN : w[1] == 'e' ? PA_SEARCH : w[0] == 'c' || w[0] == 's' ? PA_CLOSE :
+            w[0] == 'f' ? PA_FORCE : PA_UNLOCK);   /* (The door it faces: "open door" or "open" alike; search about) */
     } else if (!strcmp (w, "dig")) {
         w = next_word (&rest);
         d = direction (w);

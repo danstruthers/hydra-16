@@ -47,13 +47,28 @@ void __fastcall__ o_climb_words (unsigned char how, unsigned char feet)
     }
 }
 
+/* What came of working a door */
+void __fastcall__ o_portal_words (unsigned char out)
+{
+    static const char* const said[] = {
+        "There's no door that way.", "You open the door.", "You close the door.", "It stands open already.",
+        "It's shut already.", "It won't open: it's locked.", "It won't give: it's barred from the other side.",
+        "You lift the bar and open the door.", "The lock gives with a click.", "The lock defeats you, for now.",
+        "You've nothing to pick a lock with.", "There's no lock on it to pick.",
+        "With a crack the door bursts open.", "The door holds.",
+        "Searching the walls, you find a door hidden in them.", "You search about, and find nothing hidden."
+    };
+
+    msg (said[out]);
+}
+
 /* The commands, listed */
 void o_help (void)
 {
     msg ("Commands: north, northeast, east ... northwest (n, ne, e, se, s, sw, w, nw, or go north ...); forward, "
          "back, left, right (f, b: as you face); up and down (u, d: the stairs); turn left, right, half left, half "
          "right or around; face north ...; light and douse (your torch); dig north ... or down (a wall, the rock, a "
-         "shaft); look (l), map (m), sheet (the character), wait (z), pause (or Escape), quit (q).");
+         "shaft); open, close, unlock, force (the door ahead), search; look (l), map (m), sheet (the character), wait (z), pause (or Escape), quit (q).");
 }
 
 /* ---- Digging's words: how a spell of work went, and the feet to go */

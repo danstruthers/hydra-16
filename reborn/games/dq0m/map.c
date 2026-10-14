@@ -53,7 +53,7 @@ static unsigned char* __fastcall__ peek (unsigned char sn, unsigned x, unsigned 
 static char __fastcall__ glyph (unsigned char sn, unsigned x, unsigned y, int myz)
 {
     unsigned char* p = peek (sn, x, y);
-    unsigned char t;
+    unsigned char t, n;
     int dz;
 
     if (!p || !(*p & T_SEEN)) {
@@ -66,6 +66,11 @@ static char __fastcall__ glyph (unsigned char sn, unsigned x, unsigned y, int my
         return dz >= 5 ? '1' + (dz - 5 >= 80 ? 8 : (dz - 5) / 10) : dz <= -5 ? 'a' + (-dz - 5 >= 80 ? 8 : (-dz - 5) / 10) :
             '.';
     case T_DOOR:
+        for (n = 0; n < K->nportals; ++n) {     /* (A secret door: drawn as the wall it looks like) */
+            if (K->portal[n].x == kx && K->portal[n].y == ky && (K->portal[n].state & PS_HIDDEN)) {
+                return (p = peek (sn, x, y - 1)) && T_PASS (*p) ? '|' : '-';
+            }
+        }
         return '+';
     case T_CORR:
         return '#';

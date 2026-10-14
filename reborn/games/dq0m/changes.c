@@ -83,6 +83,16 @@ void __fastcall__ change_keep (unsigned char sn, unsigned x, unsigned y, unsigne
 static void __fastcall__ change_put (struct chunk* k, unsigned char lx, unsigned char ly, unsigned char tile,
     signed char elev, unsigned char link)
 {
+    unsigned char i;
+
+    if (link == PORTAL_STATE) {                 /* (A portal's state: tile it) */
+        for (i = 0; i < k->nportals; ++i) {
+            if (k->portal[i].x == lx && k->portal[i].y == ly) {
+                k->portal[i].state = tile;
+            }
+        }
+        return;
+    }
     k->tile[ly][lx] = (k->tile[ly][lx] & T_SEEN) | tile;
     k->elev[ly][lx] = elev;
     if (link != 0xFF && k->nopen < NOPEN) {

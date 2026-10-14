@@ -178,10 +178,54 @@ static void __fastcall__ door_in (unsigned char r, unsigned char d)
     dzr = L->elev[dyr - dir_y[d]][dxr - dir_x[d]];
 }
 
+/* A door at (x, y): its square, and its portal (most closed; some locked, some barred from inside the room; wood
+** mostly, some iron-bound, a few iron) */
+/* A door's own dice: from its square and its chunk's place, not the grower's (so its details never move the layout) */
+static unsigned long dh;
+static unsigned char __fastcall__ dr (unsigned char n)
+{
+    dh ^= dh << 13;
+    dh ^= dh >> 17;
+    dh ^= dh << 5;
+    return (unsigned char) ((dh >> 8) % n);
+}
+
 static void __fastcall__ door (unsigned char x, unsigned char y, int z)
 {
+    struct portal* p;
+    unsigned char d, k;
+
     L->tile[y][x] = T_DOOR;
     L->elev[y][x] = z;
+    if (L->nportals >= NPORTALS) {
+        return;
+    }
+    dh = ((unsigned long) L->cx << 20 ^ (unsigned long) L->cy << 8 ^ (unsigned) x << 5 ^ y) * 2654435761UL + 1;
+    k = dr (20);
+    p = &L->portal[L->nportals++];
+    p->x = x;
+    p->y = y;
+    p->kind = PK_DOOR;
+    p->state = k < 8 ? PS_OPEN : 0;
+    p->lock = 0;
+    if (k >= 14 && k < 18) {
+        p->lock = 1 + dr (5);
+        p->state = PS_LOCKED;
+    } else if (k >= 18) {
+        p->state = PS_BARRED;
+    }
+    if (!dr (15)) {
+        p->state = PS_HIDDEN | (dr (4) ? 0 : PS_MAGIC);  /* (A secret door: closed, like the wall; some by magic) */
+    }
+    k = dr (10);
+    p->mat = k < 6 ? PM_WOOD : k < 9 ? PM_IRONBOUND : PM_IRON;
+    p->tough = p->mat == PM_WOOD ? 20 : p->mat == PM_IRONBOUND ? 35 : 60;
+    p->bar = DIR_N;
+    for (d = 0; d < 4; ++d) {                   /* (Barred from the room's side) */
+        if (x + dir_x[d] < CW && y + dir_y[d] < CW && L->tile[y + dir_y[d]][x + dir_x[d]] == T_FLOOR) {
+            p->bar = d;
+        }
+    }
 }
 
 /* The way room a faces room b (or a square: b 0xFF, the square bx, by) */

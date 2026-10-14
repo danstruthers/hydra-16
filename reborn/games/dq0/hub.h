@@ -49,6 +49,7 @@ enum {
     I_TURN,                                     /* a: the heading to face (H_N ... H_NW) */
     I_LIGHT,                                    /* a: 1 the character's light lit, 0 put out */
     I_DIG,                                      /* a: a direction (DIR_N ... DIR_W, DIR_DOWN) */
+    I_PORTAL,                                   /* a: what's done to the door it faces (PA_*) */
     I_QUIT,
     NINTENTS
 };
@@ -66,6 +67,7 @@ enum {
     E_NOISE,                                    /* A noise: a how loud (0-9), w1 w2 its square (the denizens') */
     E_LEDGE,                                    /* who's come to a ledge: w1 its rise (a signed char: a fall less) */
     E_CLIMB,                                    /* who's climbing: w1 how it goes (K_*) times 256, and the feet to go */
+    E_PORTAL,                                   /* who's worked a door: w1 what came of it (PO_*) */
     NEVENTS
 };
 
@@ -77,6 +79,9 @@ enum { N_NO_EXIT, N_SHUT, N_NO_STAIRS, N_NO_DIG };  /* E_NOWAY's why: no way tha
 enum { V_TURNED, V_LIT, V_DARK };               /* E_VIEW's why */
 enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL };  /* E_DIG's how */
 enum { K_BEGUN, K_ON, K_BACK, K_FELL, K_UP, K_DOWN };   /* E_CLIMB's how: begun, on, slipped back, fallen, up, down */
+enum { PA_OPEN, PA_CLOSE, PA_UNLOCK, PA_FORCE, PA_SEARCH };  /* I_PORTAL's: what's done */
+enum { PO_NONE, PO_OPENED, PO_CLOSED, PO_IS_OPEN, PO_IS_SHUT, PO_LOCKED, PO_BARRED, PO_UNBARRED, PO_PICKED,
+       PO_NOT_PICKED, PO_NO_PICKS, PO_NO_LOCK, PO_FORCED, PO_HELD, PO_FOUND, PO_NOTHING };  /* E_PORTAL's */
 
 /* A referee slot: a request (rs.h's RS_*) and its reply, and the reply's words.  The task that asks writes the
 ** request, then sets state REQ_POSTED and rings the referee's doorbell; the referee answers, then sets REQ_DONE; the

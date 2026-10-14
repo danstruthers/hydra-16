@@ -81,6 +81,7 @@ void title (void);                              /* Overlay 1: the title, the pac
 void help (void);                               /* Overlay 1: the commands, listed */
 void __fastcall__ dig_words (unsigned char how, unsigned char feet);   /* Overlay 1: digging's, how it goes */
 void __fastcall__ climb_words (unsigned char how, unsigned char feet); /* Overlay 1: climbing's */
+void __fastcall__ portal_words (unsigned char out);                     /* Overlay 1: a door worked's */
 void words (void);                              /* Overlay 2: what the character perceives, into lb */
 extern char lb[400];
 extern struct sight sight_copy;
