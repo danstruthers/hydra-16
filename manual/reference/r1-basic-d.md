@@ -973,7 +973,7 @@ out should be written with `DO`.
 
 ## EXP
 
-A numeric function: e raised to a power.
+A numeric function: e raised to a power, any number.
 
 #### Syntax
 
@@ -984,7 +984,7 @@ EXP(x)
 #### Arguments
 
 *x*
-: A numeric expression whose value is real.
+: A numeric expression, complex too.
 
 #### Result
 
@@ -994,11 +994,12 @@ the number of significant digits that `DIGITS` has set (12 unless it has been ch
 There is no overflow. A large result is a decimal of that many significant digits followed by zeros, and is
 printed in full.
 
+For a complex *x*, the principal value, as mathematics defines it (Chapter 18 of the manual): `EXP(a + bi)` is e^*a* (cos *b* + i sin *b*), each part correctly rounded; `EXP(1i)` is cos 1 + i sin 1.
+
 #### Errors
 
 | `ERR` | Message | Cause |
 |---|---|---|
-| 5 | `illegal function call` | *x* is complex |
 | 13 | `type mismatch` | *x* is a string |
 
 #### See also
@@ -1012,6 +1013,8 @@ printed in full.
  1  2.71828182846  0.367879441171  1.6487212707
 > PRINT EXP(100)
  26881171418200000000000000000000000000000000
+> PRINT EXP(1i)
+ 0.540302305868+0.841470984808i
 ```
 
 ## FIB

@@ -288,7 +288,7 @@ const TOOL_LINES = [
     "  4+33 program  init",
     "  2- 4 boot     cons",
     "  5- 6 boot     storage",
-    " 31    boot     kdev",
+    " 32    boot     kdev",
     "  4+0A boot     snd",
     "",
   ].join('\n'), true],
@@ -1333,7 +1333,7 @@ const HYSUITE_PARTS = [
   { files: ['eval3'], checks: 1 },
   { files: ['eval4'], checks: 1 },
   { files: ['eval5'], checks: 3 },
-  { files: ['eval6', 'scope', 'control', 'errors', 'lists', 'strings', 'numbers', 'math', 'hashes', 'types', 'io', 'system', 'bits', 'buffers', 'library'], checks: 1338,
+  { files: ['eval6', 'scope', 'control', 'errors', 'lists', 'strings', 'numbers', 'math', 'hashes', 'types', 'io', 'system', 'bits', 'buffers', 'library'], checks: 1348,
     about: 'danlang\'s library, hylang\'s from its snapshot (globals.dl) and the ROM disk\'s /lib/hylang (dice.dl and screen.dl, where load finds a bare name, and use); files written on the card, programs run, the clock a DS1747\'s' },
 ];
 // A part's own files for the card: part.dl (run.dl with the part's list) and the pieces it names of a file that's cut
@@ -1770,7 +1770,7 @@ module.exports = {
       },
     },
     {
-      name: 'basic', what: 'BASIC (docs/06-languages/hybasic.md) at the console: its prompt, PRINT, exact numbers, keywords in either case, a program typed by its line numbers (LIST, RUN; GOSUB, DATA, READ, INPUT, DIM, a FUNCTION), Ctrl-C (Break in) in a GOTO\'s loop and CONT, INKEY$\'s key, errors (at the prompt; a typed program\'s by its line\'s number), BYE (code 0); a pipeline into it (no prompt; an error\'s line ended, its end at stdin\'s); in /ram: SAVE, LOAD, RUN "name", a file not there (by its name), the text cat; scripts (basic file, #!/bin/basic: status 0 and 1, a file not there); files: OPEN\'s modes, PRINT #, INPUT #, LINE INPUT #, EOF, APPEND, CLOSE, the cat; a file not open, open, not there; INPUT\'s Redo from start; sound: SOUND\'s notes (a patch, a volume, off), SLEEP between them (timed), BEEP (the bell), a line for /dev/sndctl (the volume kept; the driver\'s error), a channel past 23, a patch past 127; SYS: calls by name (GETPID, TICKS, BANKS_ALLOC; one not there) and RREG; memory: FRE, an array of 10001, 301 strings; the shell (basic -l at rc\'s prompt): BASIC\'s lines and rc\'s by the rule, cd and the prompt, $status, %, a usage, ENV$, a program line, exit',
+      name: 'basic', what: 'BASIC (docs/06-languages/hybasic.md) at the console: its prompt, PRINT, exact numbers, keywords in either case, a program typed by its line numbers (LIST, RUN; GOSUB, DATA, READ, INPUT, DIM, a FUNCTION), Ctrl-C (Break in) in a GOTO\'s loop and CONT, INKEY$\'s key (a string of one character), errors (at the prompt; a typed program\'s by its line\'s number), BYE (code 0); a pipeline into it (no prompt; an error\'s line ended, its end at stdin\'s); in /ram: SAVE, LOAD, RUN "name", a file not there (by its name), the text cat; scripts (basic file, #!/bin/basic: status 0 and 1, a file not there); files: OPEN\'s modes, PRINT #, INPUT #, LINE INPUT #, EOF, APPEND, CLOSE, the cat; a file not open, open, not there; INPUT\'s Redo from start; sound: SOUND\'s notes (a patch, a volume, off), SLEEP between them (timed), BEEP (the bell), a line for /dev/sndctl (the volume kept; the driver\'s error), a channel past 23, a patch past 127; SYS: calls by name (GETPID, TICKS, BANKS_ALLOC; one not there) and RREG; memory: FRE, an array of 10001, 301 strings; the shell (basic -l at rc\'s prompt): BASIC\'s lines and rc\'s by the rule, cd and the prompt, $status, %, a usage, ENV$, a program line, exit',
       init: 't_rc', cycles: 900e6,
       machine: {
         input: '\u0101basic\r' + '\u0101PRINT "Hello, World"; 2 + 3 * 4; 10 / 4; 2 ^ 70\r' +
@@ -1782,7 +1782,7 @@ module.exports = {
           '\u010140 FUNCTION twice (z): twice = z * 2: END FUNCTION\r' + '\u0101RUN\r' + '\u0100Ann\r' +
           '\u0101NEW\r' + '\u010110 i = i + 1: GOTO 10\r' + '\u0101RUN\r\u0100\u0003' + '\u0101CONT\r\u0100\u0003' +
           '\u0101PRINT i > 100\r' + '\u0101NEW\r' + '\u010110 DO: k$ = INKEY$: LOOP UNTIL k$ <> ""\r' +
-          '\u010120 PRINT "key "; k$; ASC(k$)\r' + '\u0101RUN\r\u0100k' + '\u0101PRINT 1 / 0\r' + '\u0101x\r' +
+          '\u010120 PRINT "key "; k$; ASC(k$); LEN(k$); k$ = "k"\r' + '\u0101RUN\r\u0100k' + '\u0101PRINT 1 / 0\r' + '\u0101x\r' +
           '\u0101NEW\r' + '\u010110 PRINT "a"\r' + '\u010120 PRINT 1 / 0\r' + '\u0101RUN\r' + '\u0101BYE\r' +
           '\u0101echo $status\r' +
           '\u0101{echo \'10 FOR i=1 TO 3\'; echo \'20 ? i*10\'; echo \'30 NEXT\'; echo RUN; echo \'? 1/0\'; echo \'? "end"\'} | basic; echo st $status\r' +
@@ -1818,7 +1818,7 @@ module.exports = {
         '> LIST\n10 FOR i = 1 TO 3: GOSUB 100: NEXT: PRINT "done"\n20 END\n100 PRINT i; i * i;: RETURN\n> RUN\n 1  1  2  4  3  9 done\n> ',
         '> RUN\n 3 two\nName? Ann\nHi Ann\n 14 \n> ',
         '> 10 i = i + 1: GOTO 10\n> RUN\nBreak in line 10\n> CONT\nBreak in line 10\n> PRINT i > 100\n-1 \n> ',
-        '> RUN\nkey k 107 \n> PRINT 1 / 0\ndivision by zero\n> x\nsyntax error\n> ',
+        '> RUN\nkey k 107  1 -1 \n> PRINT 1 / 0\ndivision by zero\n> x\nsyntax error\n> ',
         '> RUN\na\nline 20: division by zero\n> BYE\n',
         '% echo $status\n\n%',
         '| basic; echo st $status\n 10 \n 20 \n 30 \ndivision by zero\nend\nst\n%',

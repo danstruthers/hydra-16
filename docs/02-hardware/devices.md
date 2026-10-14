@@ -111,8 +111,8 @@ The serial port is the Hydra's console: everything in this book is typed at a te
   clock divided by 16).  Both the base and HydraOS start at **9600 baud, 8 data bits, no parity, 1 stop bit**, with
   RTS/CTS.  HydraOS can change the rate (`echo b115200 >/dev/serctl`).
 * DCD and DSR are tied active (to ground).
-* A **WDC W65C51N** works too, if the software is built for it (`node build.js --acia wdc`): its transmitter's status
-  bit and interrupt don't work, so the driver times each byte instead.
+* A **WDC W65C51N** works too, with the BIOS ROM for it (`bios_wdc.bin`): its transmitter's status bit and interrupt
+  don't work, so the drivers time each byte instead.
 
 **Sending is paced.**  At 115200 the 2.9% error and the MAX232's slow edges leave the receiver little margin, so long
 output sent back to back loses characters.  So the serial driver sends each byte from VIA timer 2, not from the

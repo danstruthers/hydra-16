@@ -1,0 +1,20 @@
+#!/bin/rc
+# jot - a notebook.  jot words ... adds a line; jot alone shows them all;
+# jot -n counts them; jot -l shows the last five; jot -f word finds the ones with a word in
+book=/sd/0/work/notebook
+if(~ $#* 0) {
+	cat $book
+	exit
+}
+switch($1){
+case -n
+	wc -l <$book
+case -l
+	tail -5 $book
+case -f
+	grep $2 $book
+case -*
+	echo 'usage: jot [-n] [-l] [-f word] [words ...]'
+case *
+	echo `{date} $* >>$book
+}

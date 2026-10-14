@@ -1027,7 +1027,9 @@ key_str:
             sta         kbuf
             lda         #1
 @push:
+            tay                                             ; (Its length kept: LDW takes .A)
             LDW         rs_ptr, kbuf
+            tya
             jmp         ram_str
 qb_keys:    .byte       72, 80, 77, 75, 71, 79, 82, 83, 73, 81, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 133, 134
 

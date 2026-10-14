@@ -10,7 +10,7 @@ Chapter 11 has every command, with its options. These are the ones you'll use mo
 | `pwd` | Say which directory you're in |
 | `cd` [*dir*] | Go to a directory (`cd ..`: up one; `cd /`: to the top) |
 | `cat` *file* | Show a file |
-| `more` *file* | Show it a screenful at a time (<kbd>Q</kbd> leaves) |
+| `more` *file* | Show it a screenful at a time (<kbd>Q</kbd> and <kbd>RETURN</kbd> leave) |
 | `head -5` *file*, `tail -5` *file* | Its first five lines; its last five |
 | `xd` *file* | Its bytes, in hex |
 
@@ -43,7 +43,7 @@ Chapter 11 has every command, with its options. These are the ones you'll use mo
 | Command | What it does |
 |---|---|
 | `ps` | List the tasks |
-| `top` | Show the busiest tasks, again and again (<kbd>Q</kbd> leaves) |
+| `top` | Show the busiest tasks, again and again (<kbd>CTRL</kbd>-<kbd>C</kbd> stops it) |
 | *command* `&` | Start a command in the background |
 | `kill` *task*, `slay` *name* | Stop a task by its number; by its name |
 | `sleep` *seconds* | Wait |
@@ -63,7 +63,7 @@ Chapter 11 has every command, with its options. These are the ones you'll use mo
 |---|---|
 | *command* `>`*file* | Send its output to a file |
 | *command* `<`*file* | Take its input from a file |
-| *command* `\|` *command* | Send the first one's output into the second (six commands at most) |
+| *command* `\|` *command* | Send the first one's output into the second (nine at most, on the book's Hydra) |
 | *command* `&&` *command* | Do the second only if the first worked |
 | *command* `\|\|` *command* | Do the second only if the first failed |
 

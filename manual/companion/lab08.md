@@ -1,6 +1,6 @@
 # Lab 8. Windows
 
-> **THIS LAB:** Manual: Chapter 10, sections 10.1 to 10.4, and 10.8. About 45 minutes. You need a Hydra, on a
+> **THIS LAB:** Manual: Chapter 10, sections 10.1 to 10.4, 10.7 and 10.8. About 45 minutes. You need a Hydra, on a
 > terminal at least 80 columns wide. The **window key** is <kbd>CTRL</kbd>-<kbd>]</kbd>: press it, let go, and then
 > press the next key.
 
@@ -12,8 +12,8 @@
 
 <div class="write"></div>
 
-2. Press <kbd>CTRL</kbd>-<kbd>]</kbd> <kbd>C</kbd>. ✎ What happened? Which window are you in now? (The bar at the top
-   says.)
+2. Press <kbd>CTRL</kbd>-<kbd>]</kbd> <kbd>C</kbd>. ✎ What happened? Which window are you in now? (<kbd>CTRL</kbd>-<kbd>]</kbd>
+   <kbd>W</kbd> lists the windows; <kbd>Q</kbd> puts the list away.)
 
 <div class="write l2"></div>
 
@@ -54,7 +54,14 @@
 /> cat /dev/label; echo
 ```
 
-   ✎ Where on the screen did the name appear?
+   The serial terminal starts with its **chrome** off: no bar, and no headings (section 10.7). Turn it on, and look
+   again:
+
+```text
+/> echo chrome serial on >/dev/wctl
+```
+
+   ✎ Where on the screen did the name appear? What else does the chrome show?
 
 <div class="write"></div>
 

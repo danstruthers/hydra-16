@@ -20,6 +20,8 @@
 | `calc 'sqrt 16'` | | |
 | `calc 'sqrt 2'` | | |
 | `calc 'sqrt(-4)'` | | |
+| `calc 'abs(3-4i)'` | | |
+| `calc 'sqrt(3+4i)'` | | |
 
 2. ✎ Most calculators say that 10 ÷ 4 is 2.5, and many computers say that 0.1 + 0.2 is 0.30000000000000004. What
    does the Hydra do differently?
@@ -75,6 +77,11 @@
 5. ✎ What does `calc 1/0` say? What should a program do when that can happen?
 
 <div class="write l2"></div>
+
+6. ✎ `abs(3-4i)` is 5. On squared paper, mark 0, and the point 3-4i: 3 squares across and 4 down. How far is the
+   point from 0? Which rule about right-angled triangles says so?
+
+<div class="space s1"></div>
 
 ### Check yourself
 

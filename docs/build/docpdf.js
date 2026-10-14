@@ -298,15 +298,25 @@ async function print(htmlFile, pdfFile, browser, a4) {
   const proc = spawn(browser, ['--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
     '--remote-debugging-port=0', '--user-data-dir=' + profile, 'about:blank'], { stdio: ['ignore', 'ignore', 'pipe'] });
   try {
-    const wsUrl = await new Promise((resolve, reject) => {     // "DevTools listening on ws://..."
-      let err = '';
-      const timer = setTimeout(() => reject(new Error('docpdf: the browser didn\'t start: ' + err)), 30000);
+    // "DevTools listening on ws://...", or the profile's DevToolsActivePort (Edge 155's msedge.exe hands off to
+    // another process and ends at once, saying nothing)
+    const wsUrl = await new Promise((resolve, reject) => {
+      let err = '', exited = null;
+      const done = (fn, v) => { clearInterval(poll); clearTimeout(timer); fn(v); };
+      const timer = setTimeout(() => done(reject, new Error('docpdf: the browser didn\'t start' +
+        (exited === null ? '' : ' (it ended: ' + exited + ')') + ': ' + err)), 30000);
+      const poll = setInterval(() => {
+        try {
+          const [port, wsPath] = fs.readFileSync(path.join(profile, 'DevToolsActivePort'), 'utf8').split(/\r?\n/);
+          if (port && wsPath) done(resolve, 'ws://127.0.0.1:' + port + wsPath);
+        } catch (e) { }
+      }, 200);
       proc.stderr.on('data', d => {
         err += d;
         const m = /DevTools listening on (ws:\/\/\S+)/.exec(err);
-        if (m) { clearTimeout(timer); resolve(m[1]); }
+        if (m) done(resolve, m[1]);
       });
-      proc.on('exit', code => reject(new Error('docpdf: the browser ended (' + code + '): ' + err)));
+      proc.on('exit', code => { exited = code; if (code) done(reject, new Error('docpdf: the browser ended (' + code + '): ' + err)); });
     });
     const ws = new WebSocket(wsUrl);
     await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject; });

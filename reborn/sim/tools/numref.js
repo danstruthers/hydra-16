@@ -392,6 +392,7 @@ function log10Floor(v) {
 
 const mpi = () => ziv(b => ({ A: piFixed(b), E: 2n, B: b, K: 0 }));
 function msqrt(x) {
+  if (isCpx(x)) return csqrt(x);
   const v = realOf(x);
   if (v.n < 0n) return norm({ re: 0n, im: msqrt(kindOf(x, { n: -v.n, d: v.d })) });
   if (v.n === 0n) return x;
@@ -409,11 +410,13 @@ function msqrt(x) {
   }
 }
 function mexp(x) {
+  if (isCpx(x)) return cexp(x);
   const v = realOf(x);
   if (v.n === 0n) return 1n;
   return ziv(b => expCore(fixedAt(v, b + 48), 1n, b + 48, b));
 }
 function mlog(x) {
+  if (isCpx(x)) return clog(x);
   const v = realOf(x);
   if (v.n === 0n) throw new NumError('DOMAIN', 'the logarithm of 0');
   if (v.n < 0n) {
@@ -426,11 +429,13 @@ function mlog(x) {
 }
 function mtrig(x, which) {
   if (which < 0 || which > 2) throw new NumError('DOMAIN', 'sin, cos or tan');
+  if (isCpx(x)) return ctrig(x, which);
   const v = realOf(x);
   if (v.n === 0n) return which === 1 ? 1n : 0n;
   return ziv(b => trigCore(v, which, b));
 }
 function matan(x) {
+  if (isCpx(x)) return catan(x);
   const v = realOf(x);
   if (v.n === 0n) return 0n;
   return ziv(b => atanCore(v, b));
@@ -440,14 +445,15 @@ function perfectRoot(a, q) {                               // (a above 0: its qt
   if (r === 1n) return a === 1n ? r : null;
   return r ** q === a ? r : null;
 }
-// x to the power y: a whole y exact (any x); else x real and 0 or more: exact when its root is rational, else exp (y log x)
+// x to the power y: a whole y exact (any x); else for x real and 0 or more, exact when its root is rational, else
+// exp (y log x); a complex x or y, or a negative x, cpow's (the principal value)
 function rpow(x, y) {
-  if (isCpx(y)) throw new NumError('REAL', 'a real power is needed');
+  if (isCpx(y)) return cpow(x, y);
   const yr = frac(y);
   if (yr.d === 1n) return pow(x, yr.n);
-  if (isCpx(x)) throw new NumError('REAL', 'a real number is needed');
+  if (isCpx(x)) return cpow(x, y);
   const v = frac(x);
-  if (v.n < 0n) throw new NumError('DOMAIN', 'a negative number to a power that isn\'t whole');
+  if (v.n < 0n) return cpow(x, y);
   if (v.n === 0n) { if (yr.n < 0n) throw new NumError('DIV0', 'Division by zero.'); return 0n; }
   const ra = perfectRoot(v.n, yr.d), rb = ra === null ? null : perfectRoot(v.d, yr.d);
   if (ra !== null && rb !== null) return pow(kindOf(x, { n: ra, d: rb }), yr.n);
@@ -458,6 +464,226 @@ function rpow(x, y) {
     const Ez = ((babs(L.E * yr.n) + yr.d - 1n) / yr.d) + 1n;
     return expCore(Z, Ez, bl, b);
   });
+}
+
+// ---- Complex arguments: the functions as mathematics defines them (their principal values: the argument of a number
+// from above -pi to pi), each part correctly rounded as a real result is.  A part is worked in binary fixed point with
+// a bound on its error (an approximation X = { A, E, B, K }: within E / 2^B of A / 2^B, times 10^K), again with more
+// bits till it rounds surely (zivC).  A part that's exactly 0 is known from the argument (a modulus of 1, an angle of
+// whole quarter turns, a power with a 0 part), never worked out: Ziv's way can't decide a 0 (and gives 0, past 1,024
+// bits, for one too small to tell from it).
+
+const ax = (v, b) => ({ A: fixedAt(v, b), E: 1n, B: b, K: 0 });                   // (an exact fraction)
+const aOne = b => ({ A: 1n << BigInt(b), E: 0n, B: b, K: 0 });
+const aPi = b => ({ A: piFixed(b), E: 2n, B: b, K: 0 });
+function aK(X, K) {                                          // (X as a multiple of 10^K)
+  if (X.K === K) return X;
+  const d = X.K - K;
+  if (d > 0) { const p = pow10(d); return { A: X.A * p, E: X.E * p, B: X.B, K }; }
+  const p = pow10(-d); return { A: X.A / p, E: X.E / p + 1n, B: X.B, K };
+}
+function aAdd(X, Y) { const K = Math.max(X.K, Y.K); X = aK(X, K); Y = aK(Y, K); return { A: X.A + Y.A, E: X.E + Y.E, B: X.B, K }; }
+const aNeg = X => ({ A: -X.A, E: X.E, B: X.B, K: X.K });
+const aSub = (X, Y) => aAdd(X, aNeg(Y));
+const aShr = (X, s) => ({ A: X.A >> BigInt(s), E: (X.E >> BigInt(s)) + 1n, B: X.B, K: X.K });
+function aMul(X, Y) {
+  const B = BigInt(X.B);
+  return { A: (X.A * Y.A) >> B, E: ((babs(X.A) * Y.E + babs(Y.A) * X.E + X.E * Y.E) >> B) + 2n, B: X.B, K: X.K + Y.K };
+}
+function aMulQ(X, f) {                                       // (X times an exact fraction)
+  return { A: (X.A * f.n) / f.d, E: (X.E * babs(f.n) + f.d - 1n) / f.d + 1n, B: X.B, K: X.K };
+}
+function aDiv(X, Y) {
+  const B = BigInt(X.B), ya = babs(Y.A), K = X.K - Y.K;
+  if (ya <= Y.E) return { A: 0n, E: 1n << BigInt(2 * X.B), B: X.B, K };            // (Y not known from 0: more bits)
+  return { A: (X.A << B) / Y.A, E: (((X.E * ya + babs(X.A) * Y.E) << B) / ((ya - Y.E) * ya)) + 2n, B: X.B, K };
+}
+function aSqrt(X) {                                          // (X at or above 0)
+  if (X.K & 1) X = aK(X, X.K - 1);
+  const B = BigInt(X.B), lo = X.A - X.E, K = X.K / 2;
+  if (lo <= 0n) return { A: 0n, E: isqrt((X.A + X.E) << B) + 2n, B: X.B, K };
+  return { A: isqrt(X.A << B), E: ((X.E << B) / (2n * isqrt(lo << B))) + 2n, B: X.B, K };
+}
+const aToB = (X, b) => { const s = BigInt(X.B - b); return { A: X.A >> s, E: (X.E >> s) + 1n, B: b, K: X.K }; };
+function aTrig(Z, which, b) {                                // (sin or cos of an approximation: 1 its slope at most)
+  const T = Z.A === 0n ? (which ? aOne(b) : { A: 0n, E: 0n, B: b, K: 0 })
+                       : trigCore({ n: Z.A, d: 1n << BigInt(Z.B) }, which, b);
+  return { A: T.A, E: T.E + (Z.E >> BigInt(Z.B - b)) + 1n, B: b, K: 0 };
+}
+function zivC(f, n = DIGITS) {
+  const need = Math.floor(n * 3.33) + 16;
+  let b = need + 8;
+  for (;;) {
+    const x = f(b), r = roundSig(x.A, x.E, x.B, x.K, n);
+    if (r !== null) return r;
+    if (b > 1024 && babs(x.A) <= x.E) return 0n;
+    b += Math.max(b >> 1, need - (bitLen(x.A) - bitLen(x.E)) + 8);
+  }
+}
+const W = b => b + 24;                                       // (A part's working bits)
+const fsgn = f => f.n < 0n ? -1 : f.n > 0n ? 1 : 0;
+const fneg = f => ({ n: -f.n, d: f.d });
+const fdiv = (f, g) => g.n < 0n ? { n: -f.n * g.d, d: f.d * -g.n } : { n: f.n * g.d, d: f.d * g.n };
+const modsq = x => { const c = cpxOf(x); return add(mul(c.re, c.re), mul(c.im, c.im)); };   // (|x|^2, exactly)
+const halfOf = c => (isFix(c.re) || isFix(c.im)) ? { fix: 5n, places: 1 } : { num: 1n, den: 2n };
+function sqrtExact(x) {                                      // (x's square root if it's rational, else null)
+  const v = frac(x);
+  if (v.n < 0n) return null;
+  const ra = isqrt(v.n), rb = isqrt(v.d);
+  return ra * ra === v.n && rb * rb === v.d ? kindOf(x, { n: ra, d: rb }) : null;
+}
+
+// The argument (angle) of a + y i (not 0), at w bits
+function aArg(a, y, w) {
+  if (a.n === 0n) { const h = aShr(aPi(w), 1); return y.n < 0n ? aNeg(h) : h; }
+  const t = y.n === 0n ? { A: 0n, E: 0n, B: w, K: 0 } : atanCore(fdiv(y, a), w);
+  if (a.n > 0n) return t;
+  return y.n < 0n ? aSub(t, aPi(w)) : aAdd(t, aPi(w));
+}
+
+// |x|: a real number's, or a complex number's modulus (the square root of re^2 + im^2)
+const cabs = x => isCpx(x) ? msqrt(modsq(x)) : abs(x);
+
+// The square root (its real part 0 or more): exact when it's rational
+function csqrt(x) {
+  const c = cpxOf(x), a = frac(c.re), y = frac(c.im), m2 = modsq(x), h = halfOf(c);
+  const r = sqrtExact(m2);
+  if (r !== null) {
+    const re = msqrt(mul(add(r, c.re), h)), im = msqrt(mul(sub(r, c.re), h));
+    return norm({ re, im: y.n < 0n ? neg(im) : im });
+  }
+  const parts = w => {                                       // (the part not cancelling first: then y over twice it)
+    const R = aSqrt(ax(frac(m2), w)), P = aSqrt(aShr(aAdd(R, ax(a.n < 0n ? fneg(a) : a, w)), 1));
+    const Q = aDiv(ax(y.n < 0n && a.n < 0n ? fneg(y) : y, w), aMulQ(P, { n: 2n, d: 1n }));
+    if (a.n >= 0n) return [P, Q];
+    return [Q, y.n < 0n ? aNeg(P) : P];
+  };
+  return norm({ re: zivC(b => aToB(parts(W(b))[0], b)), im: zivC(b => aToB(parts(W(b))[1], b)) });
+}
+
+// e to the x: e^a (cos y + i sin y)
+function cexp(x) {
+  const c = cpxOf(x), a = frac(c.re), y = frac(c.im);
+  const part = k => zivC(b => {
+    const w = W(b), T = trigCore(y, k ? 0 : 1, w);
+    if (a.n === 0n) return aToB(T, b);
+    return aToB(aMul(expCore(fixedAt(a, w + 48), 1n, w + 48, w), T), b);
+  });
+  return norm({ re: part(0), im: part(1) });
+}
+
+// The natural logarithm: log |x| + i arg x
+function clog(x) {
+  const c = cpxOf(x), a = frac(c.re), y = frac(c.im), m2 = frac(modsq(x));
+  const re = m2.n === m2.d ? 0n : zivC(b => aToB(aShr(logCore(m2, W(b)), 1), b));
+  return norm({ re, im: zivC(b => aToB(aArg(a, y, W(b)), b)) });
+}
+
+// sin, cos or tan of a + y i: with cosh y and sinh y (from e^y and e^-y)
+function ctrig(x, which) {
+  const c = cpxOf(x), a = frac(c.re), y = frac(c.im);
+  const hyp = (v, w) => {
+    const bz = w + 48, P = expCore(fixedAt(v, bz), 1n, bz, w), M = expCore(fixedAt(fneg(v), bz), 1n, bz, w);
+    return [aShr(aAdd(P, M), 1), aShr(aSub(P, M), 1)];
+  };
+  const sinA = (v, w) => trigCore(v, 0, w), cosA = (v, w) => v.n === 0n ? aOne(w) : trigCore(v, 1, w);
+  let f, zero;
+  if (which === 2) {                                         // (tan: (sin 2a + i sinh 2y) / (cos 2a + cosh 2y))
+    const a2 = { n: 2n * a.n, d: a.d }, y2 = { n: 2n * y.n, d: y.d };
+    f = k => b => { const w = W(b), [C, S] = hyp(y2, w); return aToB(aDiv(k ? S : sinA(a2, w), aAdd(cosA(a2, w), C)), b); };
+    zero = 0;
+  } else if (which === 0) {                                  // (sin a cosh y + i cos a sinh y)
+    f = k => b => { const w = W(b), [C, S] = hyp(y, w); return aToB(k ? aMul(cosA(a, w), S) : aMul(sinA(a, w), C), b); };
+    zero = 0;
+  } else {                                                   // (cos a cosh y - i sin a sinh y)
+    f = k => b => { const w = W(b), [C, S] = hyp(y, w); return aToB(k ? aNeg(aMul(sinA(a, w), S)) : aMul(cosA(a, w), C), b); };
+    zero = 1;
+  }
+  const part = k => (a.n === 0n && k === zero) ? 0n : zivC(f(k));
+  return norm({ re: part(0), im: part(1) });
+}
+
+// The arc tangent: (1/2) arg(1 - a^2 - y^2 + 2a i) + (i/4) log((a^2 + (y + 1)^2) / (a^2 + (y - 1)^2)), and on the
+// imaginary axis past i and -i, a quarter turn (atan is odd); of i and -i, NE_DOMAIN
+function catan(x) {
+  const c = cpxOf(x), a = frac(c.re), y = frac(c.im);
+  if (a.n === 0n && babs(y.n) === y.d) throw new NumError('DOMAIN', 'the arc tangent of i or -i');
+  const aa = mul(c.re, c.re);
+  const N = frac(add(aa, mul(add(c.im, 1n), add(c.im, 1n)))), D = frac(add(aa, mul(sub(c.im, 1n), sub(c.im, 1n))));
+  const im = zivC(b => aToB(aShr(logCore(fdiv(N, D), W(b)), 2), b));
+  let re;
+  if (a.n === 0n) re = babs(y.n) < y.d ? 0n : zivC(b => { const h = aShr(aPi(W(b)), 1); return aToB(y.n < 0n ? aNeg(h) : h, b); });
+  else {
+    const den = frac(sub(sub(1n, aa), mul(c.im, c.im))), num = { n: 2n * a.n, d: a.d };
+    re = zivC(b => aToB(aShr(aArg(den, num, W(b)), 1), b));
+  }
+  return norm({ re, im });
+}
+
+// The square root of x if it's exact (a complex number, or a negative real number), else null
+function csqrtExact(x) {
+  if (!isCpx(x)) { const r = sqrtExact(neg(x)); return r === null ? null : norm({ re: 0n, im: r }); }
+  const c = x, r = sqrtExact(modsq(x)), h = halfOf(c);
+  if (r === null) return null;
+  const re = sqrtExact(mul(add(r, c.re), h)), im = sqrtExact(mul(sub(r, c.re), h));
+  if (re === null || im === null) return null;
+  return norm({ re, im: frac(c.im).n < 0n ? neg(im) : im });
+}
+
+// x to the power y, the principal value: exp(y log x).  A whole y exact; y = n/2 exact when x's square root is; an
+// angle that's a whole number of quarter turns exact, the parts with it
+function cpow(x, y) {
+  const w_ = cpxOf(y), wr = frac(w_.re), wi = frac(w_.im);
+  if (isZero(x)) {
+    if (fsgn(wr) > 0) return 0n;
+    throw isCpx(y) ? new NumError('DOMAIN', '0 to a power whose real part is 0 or less') : new NumError('DIV0', 'Division by zero.');
+  }
+  if (!isCpx(y) && wr.d === 2n) { const s = csqrtExact(x); if (s !== null) return pow(s, wr.n); }
+  const c = cpxOf(x), a = frac(c.re), v = frac(c.im), m2 = frac(modsq(x));
+  const lre0 = m2.n === m2.d;                                // (log |x| is 0)
+  let q = null;                                              // (arg x, when it's q pi)
+  if (v.n === 0n) q = a.n > 0n ? { n: 0n, d: 1n } : { n: 1n, d: 1n };
+  else if (a.n === 0n) q = { n: v.n > 0n ? 1n : -1n, d: 2n };
+  else if (a.n * v.d === v.n * a.d || a.n * v.d === -v.n * a.d) q = { n: (a.n > 0n ? 1n : 3n) * (v.n > 0n ? 1n : -1n), d: 4n };
+  const arg0 = q !== null && q.n === 0n;
+  const t1 = wr.n !== 0n && !lre0, t2 = wi.n !== 0n && !arg0;            // (Tre = wr log|x| - wi arg x)
+  const t3 = wr.n !== 0n && !arg0, t4 = wi.n !== 0n && !lre0;            // (Tim = wr arg x + wi log|x|)
+  let p = null;                                              // (Tim = p pi, when it's that: arg x q pi, or 0)
+  if (!t4) { if (!t3) p = { n: 0n, d: 1n }; else if (q !== null) p = { n: wr.n * q.n, d: wr.d * q.d }; }
+  const bits = f => Math.max(bitLen(f.n) - bitLen(f.d), 0);
+  const bzOf = w => w + 48 + bits(wr) + bits(wi);
+  const Lre = bz => aShr(logCore(m2, bz), 1);
+  const Lim = bz => q !== null ? aMulQ(aPi(bz), q) : aArg(a, v, bz);
+  const Tre = bz => {
+    let T = { A: 0n, E: 0n, B: bz, K: 0 };
+    if (t1) T = aAdd(T, aMulQ(Lre(bz), wr));
+    if (t2) T = aSub(T, aMulQ(Lim(bz), wi));
+    return T;
+  };
+  const Tim = bz => {
+    if (p !== null) return aMulQ(aPi(bz), p);
+    let T = { A: 0n, E: 0n, B: bz, K: 0 };
+    if (t3) T = aAdd(T, aMulQ(Lim(bz), wr));
+    if (t4) T = aAdd(T, aMulQ(Lre(bz), wi));
+    return T;
+  };
+  const mag0 = !t1 && !t2;                                   // (|x^y| is 1)
+  const mag = w => { if (mag0) return aOne(w); const bz = bzOf(w), Z = Tre(bz); return expCore(Z.A, Z.E, bz, w); };
+  let cs = null;                                             // (cos and sin of Tim, when they're 0 and 1s)
+  if (p !== null) {
+    const r = { n: ((p.n % (2n * p.d)) + 2n * p.d) % (2n * p.d), d: p.d };  // (p mod 2)
+    if ((2n * r.n) % r.d === 0n) cs = [[1n, 0n], [0n, 1n], [-1n, 0n], [0n, -1n]][Number((2n * r.n) / r.d)];
+  }
+  const part = k => {
+    if (cs !== null) {
+      if (cs[k] === 0n) return 0n;
+      if (mag0) return cs[k];
+      const m = zivC(b => aToB(mag(W(b)), b));
+      return cs[k] < 0n ? neg(m) : m;
+    }
+    return zivC(b => { const w = W(b), bz = bzOf(w); return aToB(aMul(mag(w), aTrig(Tim(bz), k ? 0 : 1, w)), b); });
+  };
+  return norm({ re: part(0), im: part(1) });
 }
 
 // ---- Text: bases (danlang's NumberParser)
@@ -731,6 +957,6 @@ module.exports = {
   add, sub, mul, div, neg, abs, cmp, sign, idiv, gcd, pow,
   truncate, floor, round, toFixed, toRational, numerator, denominator, complex, part, fromInt, toInt,
   bits, fib, Random, NumberFormat, DECIMAL, display, parse,
-  MAX_DIGITS, getDigits, setDigits, sqrt: msqrt, exp: mexp, log: mlog, trig: mtrig, atan: matan, pi: mpi, rpow,
+  MAX_DIGITS, getDigits, setDigits, sqrt: msqrt, cabs, exp: mexp, log: mlog, trig: mtrig, atan: matan, pi: mpi, rpow,
   piFixed, ln2Fixed, ln10Fixed, atanInvExact,
 };

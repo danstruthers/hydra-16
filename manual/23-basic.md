@@ -348,6 +348,9 @@ one that gives back a value. Each has **parameters**: names for the values it's 
 Hello, Sam!
 ```
 
+`CALL` can be left out: `GREET "Sam"`, with no parentheses, does the same as `CALL GREET("Sam")`, which makes a
+SUB look like one of HyBASIC's own statements.
+
 A FUNCTION's value is what's given to its name. The variables in a SUB or FUNCTION are its own: they don't change the
 main program's variables of the same names. (`SHARED` lets it use them, and `STATIC` keeps its own between calls.)
 `GOSUB` and `RETURN`, the older way, jump to a line and back.

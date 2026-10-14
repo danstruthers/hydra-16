@@ -14,6 +14,7 @@ const fs = require('fs');
 const path = require('path');
 const { spawn, spawnSync } = require('child_process');
 const { createVera } = require('../../../base/sim/lib/vera.js');
+const images = require('../../../base/tools/images.js');
 
 const ROOT = path.join(__dirname, '..', '..');
 const HYDRA_DL = process.env.HYDRA_DL || path.join(__dirname, 'hydra.dl');
@@ -40,7 +41,8 @@ const keys = input => [...(input || '')].map(c => c.charCodeAt(0));
 function writeSpec(t, m, opt, dir, extra) {
   const out = [];
   const set = (name, value) => out.push('(set! {' + name + '} ' + value + ')');
-  out.push('(def {spec-bios spec-prom} ' + dlPath(path.join(ROOT, 'bin', 'bios.bin')) + ' ' + dlPath(path.join(dir, 'prom.bin')) + ')');
+  const bios = images.file(ROOT, 'bios', m.acia === 'wdc' ? 'wdc' : 'rockwell');   // (The machine's chip's BIOS)
+  out.push('(def {spec-bios spec-prom} ' + dlPath(bios) + ' ' + dlPath(path.join(dir, 'prom.bin')) + ')');
   set('spec-cycles', t.cycles);
   set('spec-init', t.expect ? '""' : dlStr(t.init));
   set('spec-expect', t.expect ? dlList(t.expect.map(e => dlStr(e))) : 'NIL');

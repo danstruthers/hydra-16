@@ -12,8 +12,9 @@
 ;   NMI_ENTRY                   page 0's NMI_HANDLER, and back
 ;   K_FAR, K_FAR_GO             the kernel's far call (FARCALL: kdefs.inc)
 ;   K_PEEK_PAGE                 a byte on another page (POST's test of the W lines)
-; Labels are defined by page 0's copy; the others are checked to line up with it.  After the block, at $FDFF,
-; each page has its number.
+; Labels are defined by page 0's copy; the others are checked to line up with it.  After the block, at $FDFE,
+; each page has the serial chip the BIOS is built for (BIOS_ACIA: hw.inc) and, at $FDFF, its number; at $FEFE
+; (BIOS_SUMFIX) the two bytes build.js sets to make its checksum 0, the same for every build (the hardware test's).
 
 .include "kdefs.inc"
 
@@ -162,5 +163,8 @@ stubs:
             COMMON_BLOCK
 common_define .set 0
 .segment .sprintf("ID_P%X", P)
+            .byte       ACIA_CHIP                           ; (The serial chip: BIOS_ACIA)
             .byte       P                                   ; (This page's number)
+.segment .sprintf("SUM_P%X", P)
+            .word       0                                   ; (Its checksum's fix: BIOS_SUMFIX)
 .endrepeat

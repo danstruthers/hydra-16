@@ -13,6 +13,7 @@ const runner = require('../../base/sim/test.js');
 const { createPcHost } = require('./lib/pchost.js');
 const hydrafs = require('./tools/hydrafs.js');
 const romimg = require('../tools/romimg.js');
+const images = require('../../base/tools/images.js');
 const romfs = require('../tools/romfs.js');
 const { readManifest, hwtest } = require('../build.js');
 const { tests, IRQ_OFF_MAX } = require('../tests/tests.js');
@@ -31,7 +32,7 @@ function image(t) {
     return fs.readFileSync(path.join(ROOT, '..', 'base', 'obj', b || 'modules', n + '.bin'));
   };
   const mods = [...sys.map(n => ({ file: n, data: bin('modules', n) })), ...own.map(n => ({ file: n, data: own_(n) }))];
-  return romimg.build({ modules: mods, init: t.init, hwtest: hwtest(), bios: fs.readFileSync(path.join(ROOT, 'bin', 'bios.bin')),
+  return romimg.build({ modules: mods, init: t.init, hwtest: hwtest(), bios: images.bios(ROOT, images.built(ROOT)),
     romfs: romfs.manifest(path.join(ROOT, 'romfs', 'romfs.txt')) }).image;
 }
 
@@ -75,7 +76,7 @@ function pcFolder(t, opt) {
 }
 
 runner.setup({ root: ROOT, tests, IRQ_OFF_MAX, image, pcFolder, self: __filename,
-  build: () => require('../build.js').build({ quiet: true }),
+  build: () => require('../build.js').buildBoth({ quiet: true }),
   runDl: (...a) => require('./dl/bridge.js').runDl(...a) });
 
 if (require.main === module) runner.main(process.argv.slice(2));

@@ -149,12 +149,12 @@ task 1: init
 HydraOS 1.0 for the Hydra-16
 init: up in task 01
 T ST FL PA CPU    NAME
-0 01 00 FF 000055 kernel
-1 01 00 FF 000010 init
-C 04 01 FF 000003 snd
-D 06 01 FF 00000E kdev
-E 04 01 FF 000078 storage
-F 08 01 FF 000044 cons
+0 01 00 FF 000050 kernel
+1 01 00 FF 000015 init
+C 04 01 FF 000004 snd
+D 06 01 FF 00000D kdev
+E 04 01 FF 00007A storage
+F 08 01 FF 000045 cons
 hello, from init
 init: hello ended: code $07 (bye)
 HyForth (Forth 2012), bye to end
@@ -173,6 +173,7 @@ Congratulations: you've built a computer! Here's what the messages mean (Chapter
 | `task 1: init` | The first program, **init**, has started. It sets up the system. |
 | `HydraOS 1.0 for the Hydra-16` | HydraOS is running. |
 | The table and `hello, from init` | A little program called **hello** says hello, and shows the tasks running. |
+| `init: hello ended: code $07 (bye)` | hello has finished, as it should. It always ends with the code 7 and the word `bye`, so init can tell that a program ran from start to end. |
 | `HyForth (Forth 2012), bye to end` | **HyForth**, the shell, has started, ready for your commands. |
 | `/>` | The **prompt**: the Hydra is waiting for you to type. |
 
@@ -204,7 +205,8 @@ Each RAM module gives every task 128 KB, so one module shows `128 KB a task (1 m
 the number of modules is less than the number you fitted, see section 5.7.
 
 > **NOTE:** The board has 2 MB of shared RAM, but `free` shows 1024 KB. That's the half HydraOS hands out to
-> programs, in pieces called *segments* (section 17.9). One segment is in use already: the RAM disk `/sram`, of 512 KB.
+> programs, in pieces called *segments*: a segment is a stretch of the shared RAM that one program, or several
+> together, can use (section 17.9 has more). One segment is in use already: the RAM disk `/sram`, of 512 KB.
 > HydraOS 1.0 keeps the other half of the shared RAM in reserve.
 
 Your Hydra works. **Chapter 6, First Steps**, is where you learn to use it: turn there now. The rest of this chapter
@@ -249,18 +251,20 @@ the fun, and you'll learn a lot about how the Hydra works. **Always switch off b
 1. Is the **power light** on? If not, check the power supply, its plug in J11, and the switch on J10.
 2. Is the terminal program using the right **port**, at **9600** baud? Unplug the adapter and plug it in again, and
    check which port appears.
-3. Is the cable a straight-through one, not a null-modem cable?
-4. Press the **reset button**. The messages should appear again.
-5. Try the jumper on **J30** on pins 2 and 3 (section 5.2).
-6. Is there exactly one **clock jumper**, on J7?
-7. Check the chips the Hydra needs to start: U1 (the processor), U6 (the kernel ROM), U3 and U5 (the serial port),
+3. Was U6 programmed with the kernel ROM for your serial chip, U3 (section 4.4)? An R65C51 needs `bios_rockwell.bin`,
+   a W65C51N `bios_wdc.bin`.
+4. Is the cable a straight-through one, not a null-modem cable?
+5. Press the **reset button**. The messages should appear again.
+6. Try the jumper on **J30** on pins 2 and 3 (section 5.2).
+7. Is there exactly one **clock jumper**, on J7?
+8. Check the chips the Hydra needs to start: U1 (the processor), U6 (the kernel ROM), U3 and U5 (the serial port),
    U39 and U40 (the clock) and U43 (the reset chip). Are they in the right sockets, the right way round, with no
    legs bent under?
-8. Then check the **address decoder**: U8 to U16 and U19 to U24 (Appendix I). These small logic chips work out
+9. Then check the **address decoder**: U4, U8 to U16 and U19 to U22 (Appendix I). These small logic chips work out
    which chip answers each address, so one of them in the wrong socket, or backwards, can keep the ROM or the serial
    chip from ever being heard. Many of them look alike: read the number printed on each, and compare it with the
    number printed on the board beside its socket.
-9. Check the joints on the back of the board around those chips, and around J3.
+10. Check the joints on the back of the board around those chips, and around J3.
 
 ### Letters appear, but they're nonsense
 

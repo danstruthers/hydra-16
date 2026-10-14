@@ -12,6 +12,11 @@
 //   4. the paged ROM       modules/rom.txt -> bin/prom0.bin (tools/romimg.js): the module directory, the hardware
 //                          test in bank 1, the modules (one 512K chip, as few banks as it needs; the rest $FF)
 //   5. the budgets         the BIOS ROM's pages, the modules: used, and room left (tools/budget.js)
+// All of it twice, once for each serial chip U3 can be (ACIA_CHIP, the kernel's alone: Rockwell's R65C51, WDC's
+// W65C51N), and the images named for the chip where the two builds' differ (tools/images.js): the BIOS ROM's,
+// bin/bios_rockwell.bin and bios_wdc.bin.  The paged ROM comes out the same for both (its drivers ask the BIOS, and
+// the BIOS's checksums are fixed at 0: fixSums), one file, bin/prom0.bin.  obj/ is the last build's: the Rockwell
+// one's, unless --acia wdc.
 // HydraOS (../reborn/build.js) runs this first, and builds its modules, its paged ROM and its SDKs with what this
 // gives: buildModule (a module, or a RAM program, with the base's includes: sdk/asm, include, obj/gen, lib),
 // assemble, the cc65 tools, the hardware test, readManifest (a rom.txt).
@@ -19,8 +24,10 @@
 // C:/source/cc65/win64_snapshot/bin, else the PATH.
 //
 // Usage: node build.js [--clock 1|2] [--acia rockwell|wdc] [--quiet]
-//   --clock 2: for a 7.16 MHz board (jumper J8); --acia wdc: a WDC W65C51N in the serial port (its TDRE bug)
-// From Node: require('./build.js').build(opts) does the same, and gives what it made.
+//   --clock 2: for a 7.16 MHz board (jumper J8); --acia: the chip whose build is the last, its objects left in obj/
+//   for the tests (rockwell unless it's wdc: a WDC W65C51N, with its TDRE bug's workaround)
+// From Node: require('./build.js').buildBoth(opts) does the same, and gives what the last build made; build(opts)
+// builds for opts.acia alone, its images bin/bios.bin, prom0.bin ... (buildBoth names them).
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -30,6 +37,7 @@ const budget = require('./tools/budget.js');
 const check = require('./tools/check.js');
 const bankcheck = require('./tools/bankcheck.js');
 const romimg = require('./tools/romimg.js');
+const images = require('./tools/images.js');
 
 const ROOT = __dirname;
 const at = (...p) => path.join(ROOT, ...p);
@@ -144,12 +152,28 @@ function readManifest(file) {
   return m;
 }
 
-// The build's defines, from its options
+// The build's defines, from its options (the modules' and programs': the serial chip is the kernel's alone,
+// kernelDefines, so the paged ROM is the same for both)
 function definesOf(opt) {
   const defines = [];
   if (opt.clock) defines.push('CPU_CLOCK_MULT=' + opt.clock);
-  if (opt.acia) defines.push('ACIA_CHIP=' + (opt.acia === 'wdc' ? 1 : 0));
   return defines;
+}
+function kernelDefines(opt) {
+  return [...definesOf(opt), 'ACIA_CHIP=' + (opt.acia === 'wdc' ? 1 : 0)];
+}
+
+// Each BIOS page's checksum (romimg's CRC of $E000-$FEFF, the hardware test's) made 0: its last two bytes
+// (BIOS_SUMFIX, $FEFE) the CRC of the rest, high first.  So the paged ROM's table of them is the same for every BIOS
+const SUMFIX = 0x1EFE;
+function fixSums(bios) {
+  for (let p = 0; p * romimg.PAGE < bios.length; p++) {
+    const at = p * romimg.PAGE;
+    if (bios.readUInt16LE(at + SUMFIX) !== 0) throw new Error('BIOS page ' + p + ': $FEFE is not the checksum fix (bios.cfg)');
+    bios.writeUInt16BE(romimg.crc16(i => bios[at + i], SUMFIX), at + SUMFIX);
+    if (romimg.crc16(i => bios[at + i], SUMFIX + 2) !== 0) throw new Error('BIOS page ' + p + ': its checksum is not 0');
+  }
+  return bios;
 }
 
 function build(opt = {}) {
@@ -161,9 +185,10 @@ function build(opt = {}) {
   // The kernel
   const kobj = at('obj', 'kernel');
   const kfiles = [...sources(at('kernel')), at('obj', 'gen', 'jumptable.s'), at('obj', 'gen', 'errtext.s')];
-  const objs = assemble(kfiles, kobj, [at('include'), at('obj', 'gen'), at('kernel')], defines);
+  const objs = assemble(kfiles, kobj, [at('include'), at('obj', 'gen'), at('kernel')], kernelDefines(opt));
   run(LD65, ['-C', at('kernel', 'bios.cfg'), '-o', at('bin', 'bios.bin'), '-m', path.join(kobj, 'bios.map'), '-Ln', path.join(kobj, 'bios.lbl'),
     '--dbgfile', path.join(kobj, 'bios.dbg'), ...objs]);
+  fs.writeFileSync(at('bin', 'bios.bin'), fixSums(fs.readFileSync(at('bin', 'bios.bin'))));
   fs.writeFileSync(at('obj', 'build.json'), JSON.stringify({ clock: opt.clock || 1, acia: opt.acia || 'rockwell' }) + '\n');
 
   // The base's modules (modules/NAME/*.s: obj/modules/NAME.bin)
@@ -191,6 +216,35 @@ function build(opt = {}) {
   return { bios, defines, modules, tests, manifest };
 }
 
+// A build's images in dir (names: a RegExp), its plain ones (NAME.bin, not NAME_rockwell.bin ...), read and removed
+const IMAGE_NAMES = /^(bios|prom\d+)(_(rockwell|wdc))?\.bin$/;
+function takeImages(dir, names) {
+  const out = {};
+  for (const f of fs.readdirSync(dir).filter(f => names.test(f) && !/_(rockwell|wdc)\./.test(f))) {
+    out[f] = fs.readFileSync(path.join(dir, f));
+    fs.rmSync(path.join(dir, f));
+  }
+  return out;
+}
+
+// The two builds, one for each serial chip, the other's first and opts.acia's (rockwell's) last, and the images
+// written for both (images.js).  dirs: each folder of images (the base's bin; HydraOS's adds its own) and its names.
+// OUT: the last build's result
+function buildBoth(opt = {}, buildOne = build, dirs = [[at('bin'), IMAGE_NAMES]]) {
+  const last = opt.acia || 'rockwell';
+  if (!images.ACIAS.includes(last)) throw new Error('--acia rockwell or wdc');
+  const order = [images.ACIAS.find(a => a !== last), last], made = dirs.map(() => ({}));
+  let result;
+  for (const acia of order) {
+    if (!opt.quiet && acia !== last) console.log('(Built for the ' + (acia === 'wdc' ? 'WDC W65C51N' : 'Rockwell R65C51') + ' first: its images only)');
+    result = buildOne(Object.assign({}, opt, { acia, quiet: opt.quiet || acia !== last }));
+    dirs.forEach(([dir, names], i) => { made[i][acia] = takeImages(dir, names); });
+  }
+  const files = dirs.map(([dir, names], i) => images.write(dir, made[i], names).map(f => (path.relative(process.cwd(), dir) || '.').split(path.sep).join('/') + '/' + f));
+  if (!opt.quiet) console.log('Images (R65C51 and W65C51N): ' + files.flat().join(', '));
+  return result;
+}
+
 if (require.main === module) {
   const a = process.argv.slice(2), opt = {};
   for (let i = 0; i < a.length; i++) {
@@ -199,6 +253,6 @@ if (require.main === module) {
     else if (a[i] === '--quiet') opt.quiet = true;
     else { console.error('usage: node build.js [--clock 1|2] [--acia rockwell|wdc] [--quiet]'); process.exit(2); }
   }
-  try { build(opt); } catch (e) { console.error('build: ' + e.message); process.exit(1); }
+  try { buildBoth(opt); } catch (e) { console.error('build: ' + e.message); process.exit(1); }
 }
-module.exports = { build, buildModule, packable, relinkModule, assemble, run, tool, sources, readManifest, hwtest, definesOf, moduleCfg, INCLUDES, CA65, LD65, ROOT, HWTEST_IMAGE };
+module.exports = { build, buildBoth, fixSums, kernelDefines, takeImages, IMAGE_NAMES, buildModule, packable, relinkModule, assemble, run, tool, sources, readManifest, hwtest, definesOf, moduleCfg, INCLUDES, CA65, LD65, ROOT, HWTEST_IMAGE };

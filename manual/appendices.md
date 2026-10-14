@@ -2,7 +2,8 @@
 
 The appendices are for looking things up: every word, function and keyword of the three languages, the 65C02's
 instructions, the characters, the memory map, the error codes, the emulator's options, the parts, the words this book
-uses, and every system call. The index, at the very end, finds the page where a word is explained.
+uses, and every system call. Appendices A, B, C and K give each one a line; the *Technical Reference* gives each a
+page or so, with its errors and an example. The index, at the very end, finds the page where a word is explained.
 
 * Appendix A. HyForth Reference
 * Appendix B. hylang Reference

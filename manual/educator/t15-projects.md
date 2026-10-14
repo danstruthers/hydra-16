@@ -1,6 +1,6 @@
 # Topic 15. The Projects
 
-For each of the Companion's seven projects: the answers to "Understand it first", what a good finished project
+For each of the Companion's eight projects: the answers to "Understand it first", what a good finished project
 looks like, the snags to expect, and a worked solution to one or two of the extensions. Topic 7 has the rubric.
 
 A general rule for all seven: **the starting listing is not the project.** A student who has typed it in and run it
@@ -110,7 +110,7 @@ C p c I0 o3 l4 r1 r1 r1 r1 [c d e c]2 [e f g2]2 [g8 a8 g8 f8 e c]2 [c <g> c2]2
 
 **Understand it first.**
 
-1. `$*` is the list of the script's arguments, and `$#*` is how many there are: 0, when `note` is typed alone.
+1. `$*` is the list of the script's arguments, and `$#*` is how many there are: 0, when `jot` is typed alone.
 2. It runs `date`, and puts its output into the line as words: the date, and the time. `>>` adds the line to the
    end of the notebook. `>` would empty the notebook first, every time.
 3. Into `/ram/bin`: new files in `/bin` go to the RAM disk, and are gone at the next reset. To keep the command,
@@ -127,12 +127,12 @@ their words all along.
 
 **A worked solution**, with three options and a usage line:
 
-<!-- listing samples/note2 -->
+<!-- listing samples/jot2 -->
 
 ```text
 #!/bin/rc
-# note - a notebook.  note words ... adds a line; note alone shows them all;
-# note -n counts them; note -l shows the last five; note -f word finds the ones with a word in
+# jot - a notebook.  jot words ... adds a line; jot alone shows them all;
+# jot -n counts them; jot -l shows the last five; jot -f word finds the ones with a word in
 book=/sd/0/work/notebook
 if(~ $#* 0) {
 	cat $book
@@ -146,7 +146,7 @@ case -l
 case -f
 	grep $2 $book
 case -*
-	echo 'usage: note [-n] [-l] [-f word] [words ...]'
+	echo 'usage: jot [-n] [-l] [-f word] [words ...]'
 case *
 	echo `{date} $* >>$book
 }
@@ -155,18 +155,18 @@ case *
 <!-- session
 mkdir /sd/0/work
 cd /ram
-!file samples/note2
-rc note2 Feed the cat
-rc note2 Buy solder
+!file samples/jot2
+rc jot2 Feed the cat
+rc jot2 Buy solder
 -->
 
 ```session
-/ram> rc note2 -n
+/ram> rc jot2 -n
       2
-/ram> rc note2 -f solder
-2000-01-01 00:01:13 Buy solder
-/ram> rc note2 -z
-usage: note [-n] [-l] [-f word] [words ...]
+/ram> rc jot2 -f solder
+2000-01-01 00:01:12 Buy solder
+/ram> rc jot2 -z
+usage: jot [-n] [-l] [-f word] [words ...]
 ```
 
 ## Project 5. A Program in the Background
@@ -269,3 +269,41 @@ CALL ASM count, 0, LIMIT MOD 256, LIMIT \ 256
 **The challenge.** A loop that runs once at start-up: HyBASIC, since nobody will notice the time. A loop over
 every dot of a picture (76,800 of them): machine code, or the wait is minutes. A program to run once and throw
 away: HyBASIC, every time. The time that matters is the programmer's.
+
+## Project 8. A Game: Catch the Stars
+
+**Understand it first.**
+
+1. `INPUT` waits for a whole line and <kbd>RETURN</kbd>: the star would hang in the air until the player typed one.
+   `INKEY$` looks, and goes on at once, so the star keeps falling whether a key has been pressed or not.
+2. It waits for the star's next step (`SPEED` seconds), and while it waits, it reads the keys and moves the
+   basket. A smaller `SPEED` is a shorter wait between steps, so the star falls faster: each star's is 9/10 of the
+   last one's.
+3. A SUB's variables are its own (section 23.12). Without `SHARED`, `X`, `H` and `W` inside `BASKET` are new
+   variables, all 0, and `LOCATE 0, ...` stops the program with `illegal function call`.
+4. The basket's middle is column `X`, and it covers `X - 1` to `X + 1`: a star in any of those three columns is
+   caught.
+5. So that the star doesn't leave a trail. The screen keeps whatever was printed on it until something is printed
+   over it.
+
+**Look for** a game that someone else can play from what's on the screen, and a screen that's tidy as it's played.
+The "1 star" change is a small `IF`, and a good first one. The arrow keys need the student to find out what
+`INKEY$` gives for them (two characters), which is worth doing at the prompt first:
+`10 K$ = INKEY$ : IF K$ = "" THEN 10`, then `20 PRINT LEN(K$), ASC(K$), ASC(RIGHT$(K$, 1))`.
+
+**Expect** a basket that flickers or lags on a slow terminal (each move prints a whole row); students who move the
+basket by more than one column at a time, and then wonder why it leaves pieces behind; and a SUB written without
+`SHARED`. The game's timing is in seconds, so it plays the same on a real Hydra and in the emulator at **Real time**,
+but faster than intended at **As fast as it goes**.
+
+**A worked extension**: the arrow keys, and "1 star".
+
+```text
+      K$ = UCASE$(INKEY$)
+      IF K$ = CHR$(0) + "K" THEN K$ = "J"
+      IF K$ = CHR$(0) + "M" THEN K$ = "L"
+      ...
+IF SCORE = 1 THEN S$ = "star." ELSE S$ = "stars."
+LOCATE H + 4, 1 : PRINT "Game over! You caught"; SCORE; S$
+```
+

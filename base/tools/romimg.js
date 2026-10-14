@@ -241,4 +241,4 @@ function main(argv) {
 if (require.main === module) {
   try { main(process.argv.slice(2)); } catch (e) { console.error('romimg: ' + e.message); process.exit(1); }
 }
-module.exports = { build, plan, place, read, readHeader, romBank, socketBank, sums, crc16, CHIP };
+module.exports = { build, plan, place, read, readHeader, romBank, socketBank, sums, crc16, CHIP, PAGE };

@@ -64,9 +64,9 @@ complements a mainstream course. It doesn't replace one.
 
 | Students | What works |
 |---|---|
-| **Ages 12 to 14** | The emulator; Labs 1 to 9, 12, 13, 15, 20 and 21; HyBASIC as the language; Projects 1, 3 and 4. A group build, with the adults doing the surface-mount chips. |
+| **Ages 12 to 14** | The emulator; Labs 1 to 9, 12, 13, 15, 20 and 21; HyBASIC as the language; Projects 1, 3, 4 and 8. A group build, with the adults doing the surface-mount chips. |
 | **Ages 14 to 18** | Everything. A build in pairs or threes. Two languages, and Part Five for those who want it. |
-| **University, first or second year** | A lab companion to a computer organization or operating systems course: Chapters 7, 9, 12, 17 and 26 to 29, with the system's source code as the further reading. Topic 2 has an outline. |
+| **University, first or second year** | A lab companion to a computer organisation or operating systems course: Chapters 7, 9, 12, 17 and 26 to 29, with the system's source code as the further reading. Topic 2 has an outline. |
 | **Adults and hobbyists** | The manual on its own; the Companion's build log is worth having. |
 
 ## What students need first

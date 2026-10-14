@@ -70,8 +70,8 @@ chip's address plays a note; reading the serial chip's address gives you the key
 
 Inside every computer is a **clock**, not one that tells the time of day, but a steady beat, like a drummer
 keeping time for a band. On each beat the processor does one small step of its work. The Hydra's clock beats
-3,579,545 times every second, written **3.58 MHz** (megahertz: millions of beats per second). You can make it go
-twice as fast, or slower, by moving a little jumper on the board.
+3,579,545 times every second, written **3.58 MHz** (megahertz: millions of beats per second). A little jumper on the
+board can make it beat more slowly, for testing.
 
 ### The bus
 
@@ -85,8 +85,8 @@ as the many thin lines running in parallel between the chips.
 The Hydra-16 is a computer you build yourself. It is a single large circuit board, about the size of a sheet of
 paper, covered in chips that you put in their places one by one. Its name comes from the Hydra of Greek legend, a
 monster with many heads. The Hydra-16 has sixteen "heads": it can run up to **sixteen programs at the same time**,
-each in its own private part of the memory, without any of them getting in the others' way. (Four of the sixteen
-are HydraOS's own, so twelve are yours.)
+each in its own private part of the memory, without any of them getting in the others' way. (HydraOS keeps five of
+them for itself, and the shell you type at takes one, so ten are free for the programs you start.)
 
 That ability, called **multitasking**, is something the home computers of the 1980s could not do. A Commodore 64
 or an Apple II ran one program at a time. The Hydra is built from the same kind of chips as those machines, but it
@@ -151,7 +151,9 @@ They hold the rest of HydraOS: its drivers, shells, languages and tools, and a w
 **The registers and mirrors.** The rows of smaller chips in the middle of the board are the Hydra's special trick.
 Four of them, labelled **T**, **U**, **V** and **W Register**, choose which task's memory the processor sees, which
 shared memory, which interrupt, and which page of the kernel ROM. Others, the **mirror RAMs**, remember which bank
-of memory each task has chosen. Chapter 7 tells you how they work together.
+of memory each task has chosen. (A **bank** is one piece of a memory bigger than the processor can see at once:
+the processor looks at one bank at a time, and can choose another. An **interrupt** is a chip's signal that it
+needs attention now.) Chapter 7 tells you how they work together.
 
 **The VIA (U2).** The R65C22 *Versatile Interface Adapter* has two timers and two 8-bit ports. One timer ticks the
 Hydra's clock for multitasking. One port runs the **SPI bus**, which talks to SD cards and other gadgets through

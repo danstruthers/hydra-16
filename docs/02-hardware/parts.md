@@ -45,9 +45,9 @@ WDC's W65C22N and W65C51N are current:
 
 * **The W65C22N** is a drop-in replacement (the N has an open-drain IRQ output, as the R65C22 has).
 * **The W65C51N** has a known fault: its transmitter's status bit is stuck "empty" and it gives no transmitter
-  interrupt.  The software allows for it: build with `node build.js --acia wdc` ([building it](building.md#programming-the-roms)).
+  interrupt.  The software allows for it: program U6 with `bios_wdc.bin` ([programming the ROMs](building.md#programming-the-roms)).
 
-Both WDC chips have run on a 1.8D (2026-10-13: a W65C22 in U2 with no change, a W65C51N in U3 with the `--acia wdc`
+Both WDC chips have run on a 1.8D (2026-10-13: a W65C22 in U2 with no change, a W65C51N in U3 with the WDC
 build).  U2's IRQ pin is the priority encoder's own input (`nIRQ0`), not a shared line, so the push-pull W65C22S works
 there as well as the open-drain N.
 

@@ -185,8 +185,8 @@ entry ABS numbers impl=nm_abs
   in:     r0 = x
   out:    .A/.X = the result's length
   errors: NE_ROOM NE_NOTNUM NE_REAL
-  names:  hl abs | bas ABS | fs nabs | c num_abs
-  doc:    |x|, a real number's.
+  names:  hl - | bas - | fs - | c -
+  doc:    |x|, a real number's (NE_REAL for a complex one: math's ABS gives its modulus, and is what the languages call).
 
 entry CMP numbers impl=nm_cmp
   in:     r0 = x; r1 = y
@@ -363,7 +363,9 @@ entry OPTIONS numbers impl=nm_options
 # ---- math: the functions (the module math: numbers's registers and tower, in the same bank of RAM, r13).  A result
 # that isn't exact is a fixed decimal of the precision's significant digits, correctly rounded (danlang's NumMath.cs:
 # the value worked in binary fixed point with a bound on its error, again with more bits till all the bound allows
-# rounds the same), so any right way of working it gives the same digits.  A real argument is needed (NE_REAL).
+# rounds the same), so any right way of working it gives the same digits.  A complex argument has the principal
+# value, as mathematics defines it (the argument of a number above -pi and to pi), each part correctly rounded, a part
+# exactly 0 known from the argument (mtcplx.inc, numref.js's csqrt ... cpow).
 
 entry DIGITS math impl=mt_digits
   in:     .A = a precision (1 to 100 significant digits; 0: none set, the precision given back alone)
@@ -375,47 +377,53 @@ entry DIGITS math impl=mt_digits
 entry SQRT math impl=mt_sqrt
   in:     r0 = x
   out:    .A/.X = the result's length
-  errors: NE_REAL NE_ROOM NE_NOTNUM NE_BIG
+  errors: NE_ROOM NE_NOTNUM NE_BIG
   names:  hl sqrt | bas SQR | fs nsqrt | c num_sqrt
   doc:    The square root: exact when it is (a perfect square of an integer or a rational: 9/4 gives 3/2, 2.25 1.5,
-  doc:    x's kind), else a fixed decimal of the precision's digits; of a negative number, imaginary (sqrt -1 is i).
+  doc:    x's kind), else a fixed decimal of the precision's digits; of a negative number, imaginary (sqrt -1 is i); of
+  doc:    a complex number, the root whose real part is above 0 (or 0 and its imaginary part above 0): sqrt(3+4i) 2+i.
 
 entry EXP math impl=mt_exp
   in:     r0 = x
   out:    .A/.X = the result's length
-  errors: NE_REAL NE_DOMAIN NE_ROOM NE_NOTNUM NE_BIG
+  errors: NE_DOMAIN NE_ROOM NE_NOTNUM NE_BIG
   names:  hl exp | bas EXP | fs nexp | c num_exp
-  doc:    e to the x (exp 0 is 1).  NE_DOMAIN: x more than 20000 from 0.
+  doc:    e to the x (exp 0 is 1; of a + bi, e^a (cos b + i sin b)).  NE_DOMAIN: x's real part more than 20000 from 0.
 
 entry LOG math impl=mt_log
   in:     r0 = x
   out:    .A/.X = the result's length
-  errors: NE_REAL NE_DOMAIN NE_ROOM NE_NOTNUM NE_BIG
+  errors: NE_DOMAIN NE_ROOM NE_NOTNUM NE_BIG
   names:  hl log | bas LOG | fs nlog | c num_log
-  doc:    The natural logarithm (log 1 is 0; of a negative number, complex: log |x| + pi i; of 0, NE_DOMAIN).
+  doc:    The natural logarithm (log 1 is 0; of a negative or complex number, log |x| + i arg x, arg x above -pi and to
+  doc:    pi: log -1 is pi i; of 0, NE_DOMAIN).
 
 entry TRIG math impl=mt_trig
   in:     r0 = x, in radians; .Y = 0 sine, 1 cosine, 2 tangent
   out:    .A/.X = the result's length
-  errors: NE_REAL NE_DOMAIN NE_ROOM NE_NOTNUM NE_BIG
+  errors: NE_DOMAIN NE_ROOM NE_NOTNUM NE_BIG
   names:  hl sin cos tan | bas SIN COS TAN | fs nsin ncos ntan | c num_sin num_cos num_tan
-  doc:    The circle's functions (sin 0 is 0, cos 0 is 1).  NE_DOMAIN: another .Y.
+  doc:    The circle's functions (sin 0 is 0, cos 0 is 1; of a + bi, by cosh b and sinh b: sin i is 1.175...i).
+  doc:    NE_DOMAIN: another .Y, or b more than 10000 from 0.
 
 entry ATAN math impl=mt_atan
   in:     r0 = x
   out:    .A/.X = the result's length
-  errors: NE_REAL NE_ROOM NE_NOTNUM NE_BIG
+  errors: NE_DOMAIN NE_ROOM NE_NOTNUM NE_BIG
   names:  hl atan | bas ATN | fs natan | c num_atan
-  doc:    The arc tangent, in radians (atan 0 is 0).
+  doc:    The arc tangent, in radians (atan 0 is 0; of a complex number, its principal value, atan of -x -atan x).
+  doc:    NE_DOMAIN: of i or -i.
 
 entry RPOW math impl=mt_pow
   in:     r0 = x; r1 = y
   out:    .A/.X = the result's length
-  errors: NE_REAL NE_DOMAIN NE_DIV0 NE_BIG NE_ROOM NE_NOTNUM
+  errors: NE_DOMAIN NE_DIV0 NE_BIG NE_ROOM NE_NOTNUM
   names:  hl pow | bas ^ | fs npow | c num_pow
-  doc:    x to the power y, any real y: a whole y's power exactly (numbers' POW: any x), else x real and 0 or more:
-  doc:    exact when its root is rational (4^1/2 is 2, 0.25^0.5 0.5, x's kind), else exp (y log x) at the precision.
-  doc:    NE_DOMAIN: x below 0 (y not whole), or y log x more than 20000 from 0; NE_DIV0: 0 to a power below 0.
+  doc:    x to the power y: a whole y's power exactly (numbers' POW: any x); x 0 or more and y real: exact when its root
+  doc:    is rational (4^1/2 is 2, 0.25^0.5 0.5, x's kind), else exp (y log x) at the precision; else (x below 0, or x
+  doc:    or y complex) the principal value, exp (y log x): exact for y = n/2 when x's square root is ((-4)^1/2 is 2i),
+  doc:    a part 0 when the angle is whole quarter turns (i^i is real).  NE_DOMAIN: the real part of y log x more than
+  doc:    20000 from 0, or 0 to a complex power whose real part isn't above 0; NE_DIV0: 0 to a power below 0.
 
 entry PI math impl=mt_pi
   in:     -
@@ -423,3 +431,11 @@ entry PI math impl=mt_pi
   errors: NE_ROOM
   names:  hl pi | bas PI | fs npi | c num_pi
   doc:    Pi, a fixed decimal of the precision's digits.
+
+entry ABS math impl=mt_abs
+  in:     r0 = x
+  out:    .A/.X = the result's length
+  errors: NE_ROOM NE_NOTNUM NE_BIG
+  names:  hl abs | bas ABS | fs nabs | c num_abs
+  doc:    |x|: a real number's, or a complex number's modulus, the square root of re^2 + im^2 (|3-4i| is 5), exact when
+  doc:    it's rational, else a fixed decimal of the precision's digits.

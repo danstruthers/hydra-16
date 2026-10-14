@@ -1388,7 +1388,7 @@ here 5  17
 
 ## LOG
 
-A numeric function: the natural logarithm.
+A numeric function: the natural logarithm, of any number but 0.
 
 #### Syntax
 
@@ -1399,7 +1399,7 @@ LOG(x)
 #### Arguments
 
 *x*
-: A numeric expression whose value is real and not 0.
+: A numeric expression, complex too and not 0.
 
 #### Result
 
@@ -1408,11 +1408,14 @@ number of significant digits that `DIGITS` has set (12 unless it has been change
 
 For a negative *x* the result is complex: the logarithm of the size of *x*, plus π i. `LOG(-1)` is π i.
 
+For a complex *x*, the principal value: the logarithm of its size, plus i times its angle (from above −π to π).
+`LOG(1i)` is π/2 i, and a part that is exactly 0 (the size of 0.6+0.8i is 1) is given as 0.
+
 #### Errors
 
 | `ERR` | Message | Cause |
 |---|---|---|
-| 5 | `illegal function call` | *x* is 0, or is complex |
+| 5 | `illegal function call` | *x* is 0 |
 | 13 | `type mismatch` | *x* is a string |
 
 #### Notes
@@ -1430,6 +1433,8 @@ A logarithm to another base is a quotient: `LOG(x) / LOG(10)` is the logarithm t
  0  2.30258509299 -0.69314718056  69.314718056  3.14159265359i
 > PRINT LOG(0)
 illegal function call
+> PRINT LOG(1i); LOG(1+1i)
+ 1.57079632679i  0.34657359028+0.785398163397i
 ```
 
 ## LOOP

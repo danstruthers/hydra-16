@@ -17,7 +17,7 @@ page is how to make another.
 
 ## What the kernel gives
 
-The kernel is the BIOS ROM (`base/bin/bios.bin`), the same for every system, with its 89 calls ([the system
+The kernel is the BIOS ROM (`base/bin/bios_rockwell.bin`, or `bios_wdc.bin` for a WDC serial chip), the same for every system, with its 89 calls ([the system
 calls](../03-base/calls.md)): tasks and the scheduler, memory and banks, shared segments, semaphores, notes, the clock,
 files and the server protocol, namespaces, the loader.  Your system uses them as HydraOS does; it never needs to change
 the kernel.

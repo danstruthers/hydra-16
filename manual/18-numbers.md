@@ -68,6 +68,9 @@ Each part of a complex number can be any real kind, and the two needn't match: `
 divides, in `calc` and HyBASIC, a fraction written right before `i` is still one number: `1/2i` is half of `i`, and
 `1/(2i)` divides.
 
+A complex number's **size**, its `abs`, is how far it is from 0, as if its real part were a distance across and its
+imaginary part a distance up: by Pythagoras, the square root of the two squared and added. So `abs(3-4i)` is 5.
+
 ## 18.2 Functions and precision
 
 Some numbers can't be written exactly in any of these ways: the square root of 2, or pi, has digits that go on for
@@ -85,6 +88,26 @@ ever. For these, the **math library**'s functions (square roots, powers, logarit
 
 The answers are fixed decimals, rounded at the last place. Each language has its own way to set the precision (up to
 100 digits): Chapters 19, 21 and 23 show how.
+
+The functions take complex numbers too, and give the answers a mathematics book gives (their **principal values**,
+when there's more than one answer: the square root whose real part is above 0, for one). An answer that's exact
+stays exact:
+
+```session
+/> calc 'sqrt(3+4i)'
+2+1i
+/> calc 'abs(3-4i)'
+5
+/> calc 'exp(1i)'
+0.540302305868+0.841470984808i
+/> calc '1i^1i'
+0.207879576351
+/> calc '(-8)^(1/3)'
+1+1.73205080757i
+```
+
+(`i` to the power `i` is a real number, a surprise to most people the first time. And a negative number's cube
+root is complex: -2 is one of -8's three cube roots, but the principal one is 1 + 1.732...i.)
 
 ## 18.3 Bases
 
@@ -369,11 +392,11 @@ computers.
 | `outside the function's domain` | A function given a number it can't take, like the logarithm of 0 |
 | `not a base` | A base string that names no base |
 | `an integer is needed` | A fraction where only a whole number will do |
-| `a real number is needed` | A complex number where only a real one will do |
+| `a real number is needed` | A complex number where only a real one will do: `floor`, `round`, `truncate`, comparing which is bigger |
 
 ```session
 /> calc 1/0
 calc: division by zero
-/> calc 'abs(3-4i)'
+/> calc 'floor(2.5+1i)'
 calc: a real number is needed
 ```

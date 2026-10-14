@@ -20,12 +20,14 @@ chapters works the same way on both.
 > and how much time an activity takes. A whole class can use the emulator (Chapter 2) at the same time, with one
 > or two real Hydras built as a group project.
 
-Two more books go with this one. The **Student Companion** is a workbook: a build log with a box to tick for every
-part, lab sheets and exercises for each chapter, projects, and quick-reference cards. The **Educator's Course
+Three more books go with this one. The **Student Companion** is a workbook: a build log with a box to tick for
+every part, lab sheets and exercises for each chapter, projects, and quick-reference cards. The **Educator's Course
 Guide** is for whoever is running a class or a club: course plans, lesson by lesson, a safety policy, how to equip
-a room, how to mark the work, and the answers. You don't need either to use this book. It's complete on its own.
+a room, how to mark the work, and the answers. The **Technical Reference** is for looking things up in full: every
+HyBASIC keyword, every command, every system call, and every word and function of HyForth and hylang, with a page
+or so on each. You don't need any of them to use this book. It's complete on its own.
 
-## How this book is organized
+## How this book is organised
 
 The book has five parts, plus appendices at the back for looking things up.
 
@@ -50,7 +52,9 @@ and every system call. The index, at the very end, finds the page where a word i
 
 ### Which way through?
 
-You don't have to read the parts in order. After Chapter 6, every reader knows enough to go where they like:
+You can read this book from the first page to the last: each chapter uses only what the chapters before it have
+explained, and when it mentions something a later chapter covers, it says enough for you to go on without it. But
+you don't have to read the parts in order. After Chapter 6, every reader knows enough to go where they like:
 
 | If you want to | Read |
 |---|---|
@@ -60,13 +64,15 @@ You don't have to read the parts in order. After Chapter 6, every reader knows e
 | Understand how the machine and its system work | Parts Two and Three, in order |
 | Make sounds and pictures | Chapter 6, then Chapters 15 and 16, and the second chapter of your language in Part Four |
 | Program the processor itself | Chapter 6, a language from Part Four, then Part Five |
+| Learn it all, as a course | Every chapter in order. Chapter 11 and the long tables of Part Three are for looking things up: read their openings, and come back when you need them |
 
 Each chapter opens with a box, **IN THIS CHAPTER**, that says what you'll be able to do by the end of it, and what
 it expects you to know already.
 
-**When you want every detail**, the Hydra's **reference book** has it: the folder `docs` in the Hydra's files (start
-at `docs/README.md`) describes the architecture, every driver's files and commands, the expansion cards and the
-quirks. This book explains; that one specifies.
+**When you want every detail**, the *Technical Reference* has each keyword, command, word and call in full. And the
+Hydra's **design documents**, the folder `docs` in the Hydra's files (start at `docs/README.md`), describe its
+architecture, every driver's files and commands, the expansion cards and the quirks. This book explains; those
+specify.
 
 ## How to read the examples
 

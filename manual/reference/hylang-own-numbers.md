@@ -97,7 +97,9 @@ Functions: a number plus one; minus one; and without its sign.
 #### Result
 
 `1+` gives *x* + 1 and `1-` gives *x* - 1, for any kind of number. `abs` gives *x* if it is 0 or more, and its
-negative if it is below 0.
+negative if it is below 0; for a complex number, its modulus, its distance from 0: the square root of its real part
+squared plus its imaginary part squared, exact when that is (`(abs 3-4i)` is 5), else a decimal of `(digits)`
+significant digits.
 
 #### Errors
 
@@ -109,9 +111,6 @@ negative if it is below 0.
 #### Notes
 
 `1+` is `+` with a 1, so `(1+ "a")` is not an error: it is the string `"a1"`.
-
-`abs` does not give a complex number's size. It treats one as it treats any number, by its order: a complex
-number whose real part is negative comes back with both its signs changed, and any other comes back as it is.
 
 #### Example
 
@@ -126,6 +125,8 @@ hylang> (abs -5)
 => 5
 hylang> (abs -2.5)
 => 2.5
+hylang> (abs 3-4i)
+=> 5
 ```
 
 ## truncate
@@ -559,11 +560,10 @@ Functions: square root, exponential, natural logarithm, the trigonometric functi
 #### Arguments
 
 *x*
-: A real number. For `sin`, `cos` and `tan` it is an angle in radians. For `pow` with a whole *y* it may be
-  any number, complex too.
+: Any number, complex too. For `sin`, `cos` and `tan` it is an angle in radians.
 
 *y*
-: The power: any real number.
+: The power: any number, complex too.
 
 #### Result
 
@@ -575,7 +575,7 @@ Functions: square root, exponential, natural logarithm, the trigonometric functi
 | `sin`, `cos`, `tan` | The sine, cosine and tangent of the angle *x* |
 | `atan` | The angle, in radians, whose tangent is *x* |
 | `pi` | Pi, to the precision in force. It is a function, called with no arguments |
-| `pow` | *x* to the power *y* |
+| `pow` | *x* to the power *y*. A negative *x* to a fractional power is complex: `(pow -8 1/3)` is `1+1.73205080757i` |
 
 #### Description
 
@@ -590,14 +590,19 @@ with. Such an answer is rounded, so results that should be 0 can come out as a v
 Each function takes exactly the arguments shown: `log` has no second argument for a base (divide two
 logarithms), and `atan` has no two-argument form.
 
+A complex argument, or a complex power, gives the **principal value**, as mathematics defines it: the square root
+whose real part is above 0, the logarithm whose imaginary part (the angle) is above -pi and at most pi, and each
+of the others from those (`pow` is `exp` of *y* times `log` *x*). Each part is rounded as a real result is, and a
+part that is exactly 0 is given as 0: `(pow 1i 1i)` is a real number, and `(log 0.6+0.8i)` has no real part.
+
 #### Errors
 
 | Message | Cause |
 |---|---|
 | `'sqrt' expects a number` | The argument is not a number (each function with its own name) |
-| `'sqrt' expects a real number` | The argument is complex |
 | `'log': the logarithm of 0` | `(log 0)` |
-| `'pow': a negative number to a power that isn't whole` | A negative *x* with a fractional *y* |
+| `'atan': out of range` | `(atan 1i)` or `(atan -1i)`, where the arc tangent is infinite |
+| `'pow': out of range` | 0 to a complex power whose real part is 0 or less; or a result too big to hold |
 | `Division by zero.` | 0 to a negative power |
 
 #### See also
@@ -625,6 +630,12 @@ hylang> (* 4 (atan 1))
 => 3.141592653588
 hylang> (pi)
 => 3.14159265359
+hylang> (sqrt 3+4i)
+=> 2+1i
+hylang> (exp 1i)
+=> 0.540302305868+0.841470984808i
+hylang> (pow 1i 1i)
+=> 0.207879576351
 ```
 
 ## number-bytes, bytes-number

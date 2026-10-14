@@ -422,46 +422,27 @@ rc itself can be started with options:
 ## 8.15 HyForth's shell words
 
 A command that rc runs, runs in a task of its own, so it can't change HyForth's own directory or namespace. So
-HyForth has its own words for those jobs, and a few more:
+HyForth has its own words for those jobs, and a few more. You type them as you'd type commands:
 
-| Word | What it does |
+| Typed | What it does |
 |---|---|
 | `% command` | The rest of the line is rc's |
 | `cd dir` | Go to a directory (with none: `$home`) |
 | `bind`, `mount`, `unmount`, `newns` | The same as rc's (section 8.14) |
-| `status` ( -- n ) | The status of the last command (0: success) |
-| `exit` | At the prompt: leave HyForth (in a definition, it's Forth's `EXIT`) |
-| `exits` ( n -- ) | Leave HyForth with status *n* |
-| `wait` ( task -- ) | Wait for a task started in the background |
-| `getenv` ( c-addr u -- c-addr2 u2 ) | An environment variable's value |
-| `setenv` ( c-addr u c-addr2 u2 -- ) | Set an environment variable |
-| `unsetenv` ( c-addr u -- ) | Remove an environment variable |
-| `spawn` ( c-addr u -- task ) | Start a command in the background; its task number |
-| `sh-out` ( c-addr u -- c-addr2 u2 ) | Run a command line, and give its output as a string |
-| `output-of` ( xt -- c-addr u ) | Run a Forth word, and give what it printed as a string |
-| `xt | command` | What a Forth word prints, piped into a command |
-| `piped` ( xt c-addr u -- ) | The same, with the command as a string |
+| `status .` | Print the status of the last command (0: success) |
+| `exit`, or `bye` | Leave HyForth |
 | `send n line` | Type a line into window *n*'s shell, as if you'd typed it there |
-| `prompt` ( c-addr u -- ) | Set the prompt |
-| `prompt2` ( c-addr u -- ) | Set the second prompt, shown while you're typing a definition |
-
-(The words in parentheses, like `( c-addr u -- )`, show what each word takes from Forth's stack, and leaves there.
-Chapter 19 explains them.)
 
 ```session
 /> ls /nothing
 ls: /nothing: not found
 /> status .
 1
-/> s" date" sh-out type
-2000-01-01 00:00:05
-/> : hi ." Hello" cr ." there" cr ;
-/> ' hi | wc -l
-      2
-/> s" color" s" green" setenv
-/> echo $color
-green
 ```
+
+HyForth has more shell words, for programs to use: to run a command and keep what it printed, to start one in the
+background, to read and set the environment. They take their values from Forth's stack, so they're in section 20.2,
+once Chapter 19 has explained the stack.
 
 **The prompt.** HyForth's prompt is made from a **format**: its letters are shown as they are, except for these:
 
@@ -474,7 +455,8 @@ green
 | `%w` | The window's number |
 | `%%` | A `%` |
 
-The usual format is `%v%d> `, which shows `/rom/lib> ` in `/rom/lib`, and `0:/games> ` in `/sd/0/games`:
+The usual format is `%v%d> `, which shows `/rom/lib> ` in `/rom/lib`, and `0:/games> ` in `/sd/0/games`. To use
+another, type it between `s" ` and `"`, then the word `prompt`:
 
 ```session 1_/rom/lib>_
 /> cd /rom/lib
@@ -485,8 +467,8 @@ The usual format is `%v%d> `, which shows `/rom/lib> ` in `/rom/lib`, and `0:/ga
 
 ## 8.16 Choosing your shell
 
-Three of the Hydra's languages can be your shell, and each follows the same idea: a line in the language is the
-language's, and any other line is rc's.
+Any of the Hydra's three languages can be your shell, as well as rc itself. Each language follows the same idea: a
+line in the language is the language's, and any other line is rc's.
 
 | Shell | Start it | Its lines are |
 |---|---|---|
@@ -512,6 +494,6 @@ The shell init becomes in each window is named in the file `/lib/shell`. On the 
 ```
 
 To choose another, put a file called `shell` in the `lib` directory of your SD card (`/sd/0/lib/shell`), with one
-line: `/bin/hylang -l`, say, or `rc -l`. Because `/lib` is a union (Chapter 9), the card's file is found before the
-ROM disk's. init reads the file again each time it starts a shell, so the simplest way to make the change is to
+line: `/bin/hylang -l`, say, or `rc -l`. `/lib` is a **union**: several directories seen as one, the card's
+before the ROM disk's (Chapter 9 shows how it's made). So the card's file is found first. init reads the file again each time it starts a shell, so the simplest way to make the change is to
 reset the Hydra.

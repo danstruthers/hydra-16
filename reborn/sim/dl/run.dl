@@ -11,7 +11,7 @@
 ;                       cycles from cycle 200000
 ;   --speed N           interactive: N times real time (default 1; 0: as fast as it goes)
 ;   --clock MHz         the CPU clock (3.579545; 7.15909 with jumper J8: build with --clock 2 too)
-;   --acia wdc          a WDC W65C51N in the serial port (build with --acia wdc too)
+;   --acia wdc          a WDC W65C51N in the serial port, and its BIOS (bin/bios_wdc.bin)
 ;   --modules N         RAM modules installed (default 2)
 ;   --seed N            the power-up's junk RAM and registers (default 1)
 ;   --bios FILE, --prom FILE   other images (--prom: the whole paged ROM, as sim/dl/image.js writes a test's)
@@ -68,14 +68,16 @@
       (do (set {out} (join out (list c))) (set {k} (+ k 1)))))
   out})
 
-; ---- the images: the BIOS ROM, and the paged ROM (its chips one after another: bin/prom0.bin, prom1.bin ...)
+; ---- the images: the BIOS ROM (the chip's: bin/bios_rockwell.bin, or bios_wdc.bin with --acia wdc), and the paged
+; ROM (its chips one after another: bin/prom0.bin, prom1.bin ...)
 (fun {chips} {do
   (set {s} "")
   (set {k} 0)
   (while {exists? (+ root "bin/prom" k ".bin")} (set {s} (+ s (read-file (+ root "bin/prom" k ".bin")))) (set {k} (+ k 1)))
   (if (zero? k) (usage "no bin/prom0.bin: node build.js") s)})
 (def {t0} (time))
-(load-roms (read-file (if (> (len run-bios) 0) run-bios (+ root "bin/bios.bin"))) (if (> (len run-prom) 0) (read-file run-prom) (chips)))
+(load-roms (read-file (if (> (len run-bios) 0) run-bios (+ root (if ac-wdc "bin/bios_wdc.bin" "bin/bios_rockwell.bin"))))
+  (if (> (len run-prom) 0) (read-file run-prom) (chips)))
 
 ; The cards: each image's blocks read from it, and those written written back to it at once
 (def {sd-streams} (hash-create))
