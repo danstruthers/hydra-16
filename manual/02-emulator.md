@@ -340,8 +340,8 @@ node reborn/build.js
 ```
 
 In about twenty seconds, it builds the kernel, every driver, shell, language and tool, and writes new ROM images to
-`reborn/bin`: `bios.bin` for the kernel ROM, and `prom0.bin`, `prom1.bin` and `prom2.bin` for the paged ROM
-chips. The emulator uses the new images the next time you start it, and Chapter 4 shows you how to put them into a
+`reborn/bin`: `bios_rockwell.bin` and `bios_wdc.bin` for the kernel ROM (one for each kind of serial chip a Hydra
+can have: section 4.4), and `prom0.bin`, `prom1.bin` and `prom2.bin` for the paged ROM chips. The emulator uses the new images the next time you start it, and Chapter 4 shows you how to put them into a
 real Hydra's ROM chips.
 
 Now that you can run a Hydra, you can try everything in Parts Two to Five of this book. If you're building a real

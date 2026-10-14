@@ -760,7 +760,7 @@ note group, and its program.
 ```session
 /> ps -a
 task  state   parent     cpu group  name
-   0  ready   -          1.6     0  kernel
+   0  ready   -          1.5     0  kernel
    1  wait    -          0.4     1  forth -l
    2  ready    1         0.0     1  ps -a
   12  idle    -          0.0    12  snd

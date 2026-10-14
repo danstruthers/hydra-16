@@ -29,16 +29,22 @@
 // (cc65 -t none) and linked with the C library and sdk/c/hydra.cfg (sdk/c/README.md); the C samples are
 // sdk/c/samples/NAME -> obj/samples/c/NAME.hyx.
 // and obj/build.json: the options it was built with ({ clock, acia }: sim/test.js's budgets can depend on them).
+// All of it twice, once for each serial chip U3 can be (Rockwell's R65C51, WDC's W65C51N: the kernel's ACIA_CHIP),
+// and the images named for the chip where the two builds' differ (../base/tools/images.js): the BIOS ROM's,
+// bin/bios_rockwell.bin and bios_wdc.bin, and the base's the same way in ../base/bin; the rest, the same for both,
+// once (prom0.bin, prom1.bin, prom2.bin, sdcard.img).  obj/ is the last build's: the Rockwell one's, unless --acia wdc.
 //
 // Usage: node build.js [--clock 1|2] [--acia rockwell|wdc] [--quiet]
-//   --clock 2: for a 7.16 MHz board (jumper J8); --acia wdc: a WDC W65C51N in the serial port (its TDRE bug)
+//   --clock 2: for a 7.16 MHz board (jumper J8); --acia: the chip whose build is the last, its objects left in obj/
+//   for the tests (rockwell unless it's wdc: a WDC W65C51N, with its TDRE bug's workaround)
 //        node build.js prog DIR
 //   a RAM program from DIR/*.s (with the SDK: sdk/asm/README.md), or DIR/*.c and *.s (a C program: sdk/c/README.md),
 //   into DIR/NAME.hyx, NAME the folder's
 // The cc65 tools: $CC65_BIN, else $CC65_HOME/bin (as the repository's CI sets it), else
 // C:/source/cc65/win64_snapshot/bin, else the PATH; cc65's own folders (include, asminc, lib): $CC65_HOME, else the
 // folder above its tools'.
-// From Node: require('./build.js').build(opts) does the same, and gives what it made.
+// From Node: require('./build.js').buildBoth(opts) does the same, and gives what the last build made; build(opts)
+// builds for opts.acia alone, its images bin/bios.bin, prom0.bin ... (buildBoth names them).
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -287,6 +293,12 @@ function build(opt = {}) {
   return { modules, tests, progs, programs, samples, manifest, report };
 }
 
+// Both chips' builds, and their images (the base's buildBoth): HydraOS's bin (its card's image too) and the base's
+const IMAGE_NAMES = /^(bios|prom\d+)(_(rockwell|wdc))?\.bin$|^sdcard(_(rockwell|wdc))?\.img$/;
+function buildBoth(opt = {}) {
+  return base.buildBoth(opt, build, [[at('bin'), IMAGE_NAMES], [atBase('bin'), base.IMAGE_NAMES]]);
+}
+
 if (require.main === module) {
   const a = process.argv.slice(2), opt = {};
   if (a[0] === 'prog') {
@@ -300,6 +312,7 @@ if (require.main === module) {
     else if (a[i] === '--quiet') opt.quiet = true;
     else { console.error('usage: node build.js [--clock 1|2] [--acia rockwell|wdc] [--quiet]'); process.exit(2); }
   }
-  try { build(opt); } catch (e) { console.error('build: ' + e.message); process.exit(1); }
+  try { buildBoth(opt); } catch (e) { console.error('build: ' + e.message); process.exit(1); }
 }
-module.exports = { build, buildModule, readManifest, hwtest, prog, clib, cprog };
+
+module.exports = { build, buildBoth, buildModule, readManifest, hwtest, prog, clib, cprog };

@@ -15,6 +15,9 @@
 ;                   it (rate_t2 alone: the ACIA left as it is)
 ;   SER_ON          the rate the kernel's bring-up console left (RATE_BOOT, 9600), and the ACIA's receive interrupt on
 ;                   (its transmit one stays off: timer 2 paces the sending)
+;   SER_RATE_IX     .Y = the rate's index in the tables, for the chip
+; The two chips differ (the R65C51's sending, the W65C51N's TDRE): the code is the same for both, and asks the BIOS
+; which it is built for (BIOS_ACIA: hw.inc), so the paged ROM is one image whichever is in U3.
 ;   SER_FLOW        the sender held back, for a driver that declares fl_send (below): rx_marks, fl_run, fl_put
 ;
 ; Flow control (a driver that declares fl_send and rx_mark on its zero page, and fl_x, has it: HydraOS's console; the
@@ -52,16 +55,16 @@ FL_LO           = 32            ;   and to go on
 ; byte may be going: the count is 9600's character and a little, so at 9600 and above its time isn't cut short (the
 ; ring's next byte is only late).  Below 9600 it may be: the R65C51 keeps XOFF in its transmitter data register
 ; till the byte's out.  The W65C51N has none to trust (a byte written over one going garbles both): its count is
-; long enough for 2400 and up.  (Under $80: it's the irq entry's answer too, no task switch.  And not XON)
-.if ACIA_CHIP = ACIA_WDC
-FL_POKE         = $7F
-.else
+; long enough for 2400 and up.  (Under $80: it's the irq entry's answer too, no task switch.  And not XON)  The
+; driver's irq entry (in its RAM) has the Rockwell's, and puts the WDC's in its place as it starts, if it's that.
 FL_POKE         = T2C_5 / 256 + 2
-.endif
+FL_POKE_WDC     = $7F
 .assert     FL_POKE < $80 .and FL_POKE <> XON .and FL_POKE * 256 >= T2C_5, error, "FL_POKE: timer 2's count for an XOFF"
+.assert     FL_POKE_WDC < $80 .and FL_POKE_WDC <> XON .and FL_POKE_WDC * 256 >= T2C_5, error, "FL_POKE_WDC"
 
 ; The rates: the ACIA's code, and timer 2 for a character (10 bits, and the idle bits after it: 2 at 115200 on
-; the Rockwell, 1 otherwise), in rounds of at most 65000 cycles.  A bit is 32 cycles at 115200 (the CPU's clock
+; the Rockwell, 1 otherwise: the table's 115200 is the Rockwell's, and the WDC's after the rest, RATE_N's), in rounds
+; of at most 65000 cycles.  A bit is 32 cycles at 115200 (the CPU's clock
 ; is the ACIA's * 2, times CPU_CLOCK_MULT).  RATE i, div, gap: T2C_i the cycles, T2R_i the rounds, T2P_i a round's
 ; count (less the 2 the timer adds).  (Symbols, not .define functions: ca65 loses nested ones' values)
 .macro RATE i, div, gap
@@ -70,11 +73,7 @@ FL_POKE         = T2C_5 / 256 + 2
             .ident(.sprintf("T2P_%d", i)) = .ident(.sprintf("T2C_%d", i)) / .ident(.sprintf("T2R_%d", i)) - 2
 .endmacro
 GAP         = 1
-.if ACIA_CHIP = ACIA_WDC
-GAP_FAST    = 1
-.else
 GAP_FAST    = 2
-.endif
             RATE        0, 384, GAP                         ; 300
             RATE        1, 192, GAP                         ; 600
             RATE        2, 96, GAP                          ; 1200
@@ -82,13 +81,14 @@ GAP_FAST    = 2
             RATE        4, 24, GAP                          ; 4800
             RATE        5, 12, GAP                          ; 9600
             RATE        6, 6, GAP                           ; 19200
-            RATE        7, 1, GAP_FAST                      ; 115200
+            RATE        7, 1, GAP_FAST                      ; 115200 (the R65C51's)
+            RATE        8, 1, GAP                           ; 115200 (the W65C51N's: SER_RATE_IX)
 
 .macro SER_RATES
 rate_code:  .byte       $06, $07, $08, $0A, $0C, ACIA_RATE_9600, ACIA_RATE_19200, ACIA_RATE_115200
-rate_lo:    .byte       <T2P_0, <T2P_1, <T2P_2, <T2P_3, <T2P_4, <T2P_5, <T2P_6, <T2P_7
-rate_hi:    .byte       >T2P_0, >T2P_1, >T2P_2, >T2P_3, >T2P_4, >T2P_5, >T2P_6, >T2P_7
-rate_rounds: .byte      T2R_0, T2R_1, T2R_2, T2R_3, T2R_4, T2R_5, T2R_6, T2R_7
+rate_lo:    .byte       <T2P_0, <T2P_1, <T2P_2, <T2P_3, <T2P_4, <T2P_5, <T2P_6, <T2P_7, <T2P_8
+rate_hi:    .byte       >T2P_0, >T2P_1, >T2P_2, >T2P_3, >T2P_4, >T2P_5, >T2P_6, >T2P_7, >T2P_8
+rate_rounds: .byte      T2R_0, T2R_1, T2R_2, T2R_3, T2R_4, T2R_5, T2R_6, T2R_7, T2R_8
 .assert     ACIA_RATE_9600 = $0E .and ACIA_RATE_19200 = $0F, error, "The rates' codes"
 .endmacro
 
@@ -154,7 +154,7 @@ tx_start:
 .ifdef t2_nap
             stz         t2_nap
 .endif
-            ldy         rate                                ; (A character's time: a wait may have had timer 2)
+            SER_RATE_IX                                     ; (A character's time: a wait may have had timer 2)
             lda         rate_hi,Y
             sta         t2_hi
             lda         t2_rounds
@@ -301,14 +301,28 @@ fl_put:
             sta         ACIA_CTRL
 rate_t2:                                                    ; Timer 2 for rate .X's characters
             stx         rate
-            lda         rate_lo,X
+            phy
+            SER_RATE_IX
+            lda         rate_lo,Y
             sta         t2_lo
-            lda         rate_hi,X
+            lda         rate_hi,Y
             sta         t2_hi
-            lda         rate_rounds,X
+            lda         rate_rounds,Y
             sta         t2_rounds
+            ply
             clc
             rts
+.endmacro
+
+; .Y = rate's index in the tables: itself, but the W65C51N's 115200 (BIOS_ACIA) RATE_N's.  Modifies .A
+.macro SER_RATE_IX
+            ldy         rate
+            cpy         #RATE_N - 1
+            bne         :+
+            lda         BIOS_ACIA
+            beq         :+
+            ldy         #RATE_N
+:
 .endmacro
 
 ; The rate the bring-up console left the ACIA at (9600), and its receive interrupt on (its transmit one off).

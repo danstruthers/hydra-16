@@ -26,6 +26,7 @@ const fs = require('fs');
 const path = require('path');
 const { boot, labels } = require('./run.js');
 const romimg = require('../tools/romimg.js');
+const images = require('../tools/images.js');
 const { readManifest, hwtest } = require('../build.js');
 
 const BASE = path.join(__dirname, '..');
@@ -34,7 +35,8 @@ const env = { root: BASE, tests: null, IRQ_OFF_MAX: 200, image: null, build: nul
 function setup(e) { Object.assign(env, e); }
 const baseTests = () => require('../tests/tests.js').tests.map(t => Object.assign(t, { system: 'base' }));
 
-// The options the image was built with (build.js: obj/build.json)
+// The options the image was built with (build.js: obj/build.json).  Its acia is the chip the tests' machines have,
+// and their BIOS's (bin/bios_rockwell.bin or bios_wdc.bin: obj/kernel's labels are its)
 function built() {
   try { return JSON.parse(fs.readFileSync(path.join(env.root, 'obj', 'build.json'), 'utf8')); }
   catch (e) { return { clock: 1, acia: 'rockwell' }; }
@@ -50,7 +52,7 @@ function baseImage(t) {
   if (!sys.includes(t.init) && !own.includes(t.init)) own.unshift(t.init);
   const own_ = n => bin(fs.existsSync(path.join(BASE, 'obj', 'tests', n + '.bin')) ? 'tests' : 'modules', n);
   const mods = [...sys.map(n => ({ file: n, data: bin('modules', n) })), ...own.map(n => ({ file: n, data: own_(n) }))];
-  return romimg.build({ modules: mods, init: t.init, hwtest: hwtest(), bios: fs.readFileSync(path.join(BASE, 'bin', 'bios.bin')) }).image;
+  return romimg.build({ modules: mods, init: t.init, hwtest: hwtest(), bios: images.bios(BASE, built().acia) }).image;
 }
 const image = t => t.system === 'base' || !env.image ? baseImage(t) : env.image(t);
 
@@ -72,7 +74,7 @@ function runTest(t, opt) {
     if (t.send && name === t.send.after) m.acia.send(t.send.bytes);
   };
   const pc = t.pc ? env.pcFolder(t, opt) : null;
-  m = boot(Object.assign({ prom: image(t), seed: opt.seed, marks: markNames, log, trace: 0,
+  m = boot(Object.assign({ root: env.root, acia: built().acia, prom: image(t), seed: opt.seed, marks: markNames, log, trace: 0,
     pcWatches: bootDone === undefined ? [] : [{ pc: bootDone, page: 0 }] }, t.machine || {}, pc ? { pcHost: pc.host } : {}));
   m.pc = pc;
   if (t.start) t.start(m);
@@ -92,7 +94,7 @@ function runTest(t, opt) {
 async function runTestDl(t, opt) {
   const bootDone = labels().byName.get('BOOT_DONE');
   const pc = t.pc ? env.pcFolder(t, opt) : null;
-  const machine = t.machine || {};                            // (A getter's, once: its cards, its peer)
+  const machine = Object.assign({ acia: built().acia }, t.machine || {});   // (A getter's, once: its cards, its peer)
   if (!env.runDl) throw new Error('--dl: the danlang emulator is HydraOS\'s (reborn/sim/test.js)');
   const { m, marks } = await env.runDl(t, machine, opt,
     { image: image(t), marks: markNamesOf(t), bootDone, peer: pc ? pc.host : machine.pcHost || null });
@@ -205,7 +207,7 @@ async function main(argv) {
     console.log(r.text);
     process.exit(r.ok ? 0 : 1);
   }
-  if (opt.build) (env.build || (() => require('../build.js').build({ quiet: true })))();
+  if (opt.build) (env.build || (() => require('../build.js').buildBoth({ quiet: true })))();
   const named = opt.names.length ? tests.filter(t => opt.names.includes(t.name)) : tests;
   if (!named.length) { console.error('no such test: ' + opt.names.join(' ')); process.exit(2); }
   const list = named.filter(t => !(opt.dl && t.jsOnly));

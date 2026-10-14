@@ -28,7 +28,7 @@ node reborn/sim/run.js [options]
 |---|---|
 | `--modules N` | RAM modules on the memory cards (2 if it isn't given) |
 | `--clock MHz` | The processor's clock: 3.579545 (the normal one), or 7.15909 (jumper J8, for a board with faster parts than Appendix I's; HydraOS must be built with `--clock 2` too) |
-| `--acia wdc` | A WDC W65C51N chip for the serial port, instead of a Rockwell one (HydraOS must be built with `--acia wdc` too) |
+| `--acia wdc` | A WDC W65C51N chip for the serial port, instead of a Rockwell one, and the kernel ROM for it (`bios_wdc.bin`) |
 | `--seed N` | The random values that RAM and the registers have at power-up: the same N gives the same values every time |
 | `--bios FILE`, `--prom FILE` | Other ROM images than HydraOS's own (`--prom`: the whole paged ROM, its chips' images one after another) |
 | `--sd FILE` | An SD card image, in SD device 0 (then 1, and so on, for more). The Hydra reads and writes the file itself |

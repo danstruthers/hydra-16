@@ -26,7 +26,7 @@ Booted on its own, the base is four tasks:
 
 | Task | Module | What it is |
 | :--- | :----- | :--------- |
-| 0 | the kernel | The BIOS ROM (`base/bin/bios.bin`, from `base/kernel/`): the boot and POST, the scheduler and the tick, tasks, memory and banks, semaphores, shared segments, notes, the clock, files and the server protocol, namespaces, the loader; 89 system calls in a jump table of 192 slots at `$F800` |
+| 0 | the kernel | The BIOS ROM (`base/bin/bios_rockwell.bin` or `bios_wdc.bin`, from `base/kernel/`): the boot and POST, the scheduler and the tick, tasks, memory and banks, semaphores, shared segments, notes, the clock, files and the server protocol, namespaces, the loader; 89 system calls in a jump table of 192 slots at `$F800` |
 | F | `ser` | The console driver: the serial port as files (`#c`: `cons`, `consctl`, `ser`, `serctl`) |
 | E | `kdev` | The kernel's devices: the modules (`#m`), `null` and the kernel's messages (`#n`), the tasks (`#p`), pipes (`#\|`), the environment (`#e`), shared segments by name (`#s`), the ticks (`#t`), raw RAM (`#r`), the root (`#/`) |
 | 1 | `wozmon` | The monitor, as init: [Woz's Apple 1 monitor](monitor.md), with a disassembler |
@@ -51,14 +51,14 @@ files and more: windows), adds its own drivers, and starts `init` instead of the
 | `base/tools/` | `apigen.js` (the spec into the jump table, the error texts, `hydra.inc`), `romimg.js` (a paged ROM image), `check.js`, `budget.js` |
 | `base/sim/` | The emulator, cycle by cycle ([chapter 8](../08-emulator.md)) |
 | `base/tests/` | The base's tests and their modules |
-| `base/bin/` | The images, in Git: `bios.bin`, `prom0.bin` |
+| `base/bin/` | The images, in Git: `bios_rockwell.bin` and `bios_wdc.bin` (one for each serial chip), `prom0.bin` |
 
 **Building it** needs Node.js 18 or later and cc65 (`ca65` and `ld65`), found in `$CC65_BIN`, `$CC65_HOME/bin`, or on
 the PATH:
 
 ```
 $ cd base
-$ node build.js          # the kernel (bin/bios.bin), the modules, the paged ROM (bin/prom0.bin), hydra.inc
+$ node build.js          # the kernel (bin/bios_*.bin), the modules, the paged ROM (bin/prom0.bin), hydra.inc
 $ node sim/run.js -i     # the base in the emulator, its serial console in your terminal (Ctrl-A x quits)
 $ node sim/test.js       # the base's tests
 ```

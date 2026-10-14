@@ -18,7 +18,7 @@ Node.js 18 or later, and cc65 (`ca65`, `ld65`, and for the C programs `cc65`, `a
 `lib`): `$CC65_BIN`, `$CC65_HOME/bin`, `C:\source\cc65\win64_snapshot\bin`, or the PATH.
 
 ```
-node build.js                       the BIOS ROM (bin/bios.bin), the paged ROM (bin/prom0.bin, prom1.bin ...: a 512K
+node build.js                       the BIOS ROM (bin/bios_rockwell.bin, bios_wdc.bin), the paged ROM (bin/prom0.bin, prom1.bin ...: a 512K
                                     image for each socket it fills; the modules, the old hardware test in bank 1, the
                                     ROM disk), the budget report
 node sim/run.js                     boot them in the emulator for a while, then report (the output, the tasks)
@@ -50,8 +50,10 @@ node ../docs/build/docpdf.js        ../docs/hydra-16.pdf, the book as one PDF to
                                     after changing the book, made again and committed with it
 ```
 
-`build.js --clock 2` builds for a 7.16 MHz board (jumper J8); `--acia wdc` for a WDC W65C51N in the serial
-port.  The ROM images in `bin/` (`bios.bin`, `prom0.bin` ...) are in Git, for programming the chips without a
+`build.js --clock 2` builds for a 7.16 MHz board (jumper J8).  The kernel is built for both serial chips U3 can be:
+`bin/bios_rockwell.bin` for a Rockwell R65C51, `bin/bios_wdc.bin` for a WDC W65C51N; the paged ROM is the same for
+both (`--acia wdc` leaves `obj/` the WDC build's, for the tests).  The ROM images in `bin/` (`bios_rockwell.bin`,
+`bios_wdc.bin`, `prom0.bin` ...) are in Git, for programming the chips without a
 toolchain: rebuild and commit them with a change to what's in them (and a merge's conflict in one: rebuild).  The
 rest of `bin/`, and `obj/`, are the build's (`bin/sdk/asm` and `bin/sdk/c` are the SDKs, whole, to take away).
 

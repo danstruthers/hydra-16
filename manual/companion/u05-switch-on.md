@@ -67,7 +67,7 @@ changed, in the fault diary on the next page. Section 5.7 has the details of eve
 | | The voltages, as in Unit 3. No +5 V: unplug, and look for a short | ☐ |
 | **Light on, but nothing in the terminal** | The right port, at 9600 baud. Unplug the adapter, plug it in again, and see which port appears | ☐ |
 | | The cable: straight-through, not null-modem; an RS-232 adapter, not a TTL one | ☐ |
-| | The ROM chips programmed for U3's chip: a W65C51N needs HydraOS built for it (section 4.4) | ☐ |
+| | U6 programmed with U3's kernel ROM: `bios_rockwell.bin` for an R65C51, `bios_wdc.bin` for a W65C51N (section 4.4) | ☐ |
 | | Press reset. Do the messages come now? | ☐ |
 | | Move the J30 jumper to pins 2 and 3 | ☐ |
 | | Exactly one clock jumper, on J7 | ☐ |

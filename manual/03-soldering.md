@@ -331,7 +331,7 @@ buying: read it before you order. A few parts need care:
 | Part | What to know |
 |---|---|
 | The processor, U1 | Buy WDC's current part, the W65C02S6TPG-14: it's still made |
-| The VIA and the serial chip, U2 and U3 | The Rockwell R65C22 and R65C51 are long out of production. WDC's W65C22N is a drop-in replacement for the VIA; its W65C51N works for the serial chip, but HydraOS must be built for it (section 4.5) |
+| The VIA and the serial chip, U2 and U3 | The Rockwell R65C22 and R65C51 are long out of production. WDC's W65C22N is a drop-in replacement for the VIA; its W65C51N works for the serial chip, with the kernel ROM made for it (section 4.4) |
 | The RAM chips | Hitachi's HM628512 is surplus now; Alliance's AS6C4008 is current and fits the same socket |
 | The 74LS219s, IC1 to IC8 | Out of production, but easy to find as surplus. The 74LS189 looks the same and **won't** do |
 | The sound chips, U38 and U41 | Fake YM2151s are common: buy from a seller with a record, and let the hardware test check them (section 5.7). Or fit an **OPM2151**, a modern pin-compatible replacement, with its own DAC board in U41's socket |

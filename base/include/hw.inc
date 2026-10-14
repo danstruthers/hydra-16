@@ -96,11 +96,14 @@ ACIA_CMD_DTR    = $01           ; Command: the chip on (DTR) ...
 ACIA_CMD_NO_RXIRQ = $02         ;   no receive interrupt ...
 ACIA_CMD_TX_ON  = $08           ;   transmitter on, RTS low, no transmit interrupt
 ACIA_CMD_TX_IRQ = $04           ;   transmitter on, RTS low, its interrupt on (Rockwell only)
-ACIA_ROCKWELL   = 0             ; The chip (a build option): Rockwell R65C51, or WDC W65C51N (TDRE always set)
+ACIA_ROCKWELL   = 0             ; The chip (the BIOS's build option): Rockwell R65C51, or WDC W65C51N (TDRE always set)
 ACIA_WDC        = 1
 .ifndef ACIA_CHIP
 ACIA_CHIP       = ACIA_ROCKWELL
 .endif
+BIOS_ACIA       = $FDFE         ; The BIOS's chip, on each of its pages (ACIA_ROCKWELL or ACIA_WDC): the paged ROM's
+                                ;   serial drivers read it, so the paged ROM is one image for both
+BIOS_SUMFIX     = $FEFE         ; (2) Each BIOS page's checksum's fix: its CRC ($E000-$FEFF) comes out 0 (build.js)
 
 ; ---- YM2151 (port 4, $FF40)
 YM_REG          = $FF40         ; Write: select a register

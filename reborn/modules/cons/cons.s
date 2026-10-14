@@ -572,6 +572,11 @@ init:
             sta         def_ffmt,X
             dex
             bpl         :-
+            lda         BIOS_ACIA                           ; (The W65C51N's count for an XOFF: serial.inc's
+            beq         :+                                  ;   FL_POKE_WDC, in the irq entry)
+            lda         #FL_POKE_WDC
+            sta         fl_poke
+:
             FAR2        vt_init
             lda         #$FF                                ; Window 0: shown, init's note group's, a group of
             jsr         w_make                              ;   its own (0)
@@ -672,6 +677,27 @@ t2_idle:
             lda         #0
             rts
 
+; The irq entry's ring full (its own labels: fl_poke)
+irq_mark:                                                   ; Full: the byte's dropped (counted).  Or x1's high mark:
+            ldx         rx_tail                             ;   the byte's kept, the mark is the tail from here, and
+            cpx         rx_mark                             ;   XOFF is asked of timer 2, started to run out soon
+            beq         irq_drop                            ;   (serial.inc's FL_POKE: its count, the request, and
+            stx         rx_mark                             ;   this entry's answer, no task switch).  No
+            sty         rx_head                             ;   TASK_EVENT, to keep this as short as a Ctrl-C's
+            lda         #FL_POKE                            ;   path: timer 2's idle counts one.  (fl_poke: the
+fl_poke     = * - 1                                         ;   WDC's count put in as it starts)
+            sta         fl_send
+            sta         VIA_T2CH
+            rts
+
+irq_drop:                                                   ; (Its full ring: the byte dropped)
+            inc         rx_drop
+            bne         :+
+            inc         rx_drop + 1
+:
+            lda         #0
+            rts
+
 ; The irq entry (the comment above)
 irq:
             cmp         #LINE_VIA_T2
@@ -696,18 +722,10 @@ irq:
             sta         rx_buf,Y
             iny
             cpy         rx_mark                             ; (The tail: full; or x1's high mark)
-            beq         @mark
+            beq         irq_mark
             sty         rx_head
             inc         TASK_EVENT                          ; (The clients waiting look again)
 @none:
-            lda         #0
-            rts
-
-@drop:
-            inc         rx_drop
-            bne         :+
-            inc         rx_drop + 1
-:
             lda         #0
             rts
 
@@ -729,17 +747,6 @@ irq:
             and         #ACIA_ST_RDRF
             beq         @none
             bra         @byte
-
-@mark:                                                      ; Full: the byte's dropped (counted).  Or x1's high mark:
-            ldx         rx_tail                             ;   the byte's kept, the mark is the tail from here, and
-            cpx         rx_mark                             ;   XOFF is asked of timer 2, started to run out soon
-            beq         @drop                               ;   (serial.inc's FL_POKE: its count, the request, and
-            stx         rx_mark                             ;   this entry's answer, no task switch).  No
-            sty         rx_head                             ;   TASK_EVENT, to keep this as short as a Ctrl-C's
-            lda         #FL_POKE                            ;   path: timer 2's idle counts one
-            sta         fl_send
-            sta         VIA_T2CH
-            rts
 
 @after:                                                     ; (pfx $FF: /ser's, the bytes as they are)
             bmi         @ser

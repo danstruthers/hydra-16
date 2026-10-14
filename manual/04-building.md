@@ -220,19 +220,19 @@ The files are in the HydraOS folder `reborn/bin` (see Chapter 2):
 
 | File | Chip type | Goes in | What it holds |
 |---|---|---|---|
-| `bios.bin` | SST39SF010A (128K, PLCC-32) | **U6** | The kernel, the heart of HydraOS |
+| `bios_rockwell.bin` or `bios_wdc.bin` | SST39SF010A (128K, PLCC-32) | **U6** | The kernel, the heart of HydraOS (the one for your serial chip: below) |
 | `prom0.bin` | SST39SF040 (512K, DIP-32) | **U31** | The paged ROM, part 1 |
 | `prom1.bin` | SST39SF040 (512K, DIP-32) | **U32** | The paged ROM, part 2 |
 | `prom2.bin` | SST39SF040 (512K, DIP-32) | **U34** | The paged ROM, part 3 |
 
 Together, the three paged ROM chips hold the drivers, the shells, the languages and the ROM disk's files.
 
-> **CAUTION:** Look at the serial chip, U3, before you program anything. The Hydra was designed for Rockwell's
-> **R65C51**, and the files in `reborn/bin` are for it. But Rockwell stopped making it long ago, so your kit
-> probably has WDC's **W65C51N** instead. That chip has a fault in the way it reports that it's ready to send, and
-> HydraOS must be built to work around it: build HydraOS yourself (section 2.7) with
-> `node reborn/build.js --acia wdc`, and program the files that makes. With the wrong files, the Hydra starts but
-> its serial port sends nothing, or sends nonsense.
+> **CAUTION:** Look at the serial chip, U3, before you program U6. The Hydra was designed for Rockwell's
+> **R65C51**: for it, program `bios_rockwell.bin`. But Rockwell stopped making it long ago, so your kit probably
+> has WDC's **W65C51N** instead. That chip has a fault in the way it reports that it's ready to send, and the kernel
+> must work around it: for it, program `bios_wdc.bin`. Only U6 depends on the serial chip; the paged ROM chips are
+> the same for both. With the wrong kernel ROM, the Hydra starts but its serial port sends nothing, or sends
+> nonsense. (If you change the serial chip later, reprogram U6 alone.)
 
 For each chip:
 
@@ -246,7 +246,7 @@ For each chip:
 > grow into: the board can hold up to 4 MB of ROM.
 
 > **TIP:** If you can only get a 512K SST39SF040 in a PLCC package for U6, you can use it instead of the 128K
-> SST39SF010A, but you must program `bios.bin` into it **four times**: at addresses $00000, $20000, $40000 and
+> SST39SF010A, but you must program the kernel's file into it **four times**: at addresses $00000, $20000, $40000 and
 > $60000. (Most programmer software can load a file at a given address.) The board doesn't clear two of the chip's
 > extra address lines when it starts, so the processor might start in any of the four copies.
 
@@ -271,7 +271,7 @@ Put each chip in the socket with its reference:
 | R65C22 or W65C22N (VIA) | U2 |
 | R65C51 or W65C51N (ACIA, serial) | U3 |
 | MAX232 (serial levels) | U5 |
-| SST39SF010A, programmed with `bios.bin` | U6 |
+| SST39SF010A, programmed with `bios_rockwell.bin` or `bios_wdc.bin` (U3's) | U6 |
 | HM628512 (task RAM), or a DS1747 for a real-time clock | U7 |
 | SST39SF040, programmed with `prom0.bin`, `prom1.bin`, `prom2.bin` | U31, U32, U34 |
 | YM2151 (sound) | U38 |
@@ -301,8 +301,8 @@ Put each chip in the socket with its reference:
 | 74F125 | U61 |
 | 74LS219 | IC1 to IC8 |
 
-> **NOTE:** U3, the serial chip, can be a Rockwell **R65C51** or WDC's **W65C51N**, as long as the ROM chips were
-> programmed for it (section 4.4). U2, the VIA, is a Rockwell **R65C22** on the schematic. It's out of production too,
+> **NOTE:** U3, the serial chip, can be a Rockwell **R65C51** or WDC's **W65C51N**, as long as U6 was programmed
+> with the kernel ROM for it (section 4.4). U2, the VIA, is a Rockwell **R65C22** on the schematic. It's out of production too,
 > and WDC's **W65C22N** is a drop-in replacement that needs no change to HydraOS.
 
 > **CAUTION:** Read each chip's markings carefully: some chips look alike. A 74F08 isn't a 74ACT08, and a 74LS139
