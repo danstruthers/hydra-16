@@ -20,12 +20,18 @@
 #include "rs.h"
 #include "level.h"
 #include "../dq0w/world.h"
+#include "items.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
 #define HUB_VERSION     1
-#define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS)  /* Bank 0: the header, the queues, the referee's slots,
-                                                **   what the character perceives, the map, the strata's records;
-                                                **   then the plans' banks and the chunks' (world.h) */
+#define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS)  /* Bank 0: the header, the queues, the
+                                                **   referee's slots, what the character perceives, the map, the
+                                                **   strata's records; then the plans' banks and the chunks' (world.h);
+                                                **   the catalogue's, and the items' (items.h) */
+#define CAT_BANK        (1 + PLAN_BANKS + CACHE_BANKS)
+#define CATALOGUE       ((struct kind*) 0x8000)
+#define ITEM_BANK(i)    (CAT_BANK + 1 + (i) / (0x2000 / sizeof (struct item)))
+#define ITEM_AT(i)      ((struct item*) 0x8000 + (i) % (0x2000 / sizeof (struct item)))
 #define HUB_WINDOW      ((unsigned char*) 0x8000)
 
 /* The tasks, and so their doorbells */
@@ -43,7 +49,7 @@ struct msg {
 
 /* Intents: what an actor means to do (the UI's for the character, the denizens' for theirs) */
 enum {
-    I_NONE, I_WAIT,                             /* w1: tenths (0: a round) */
+    I_NONE, I_WAIT,                             /* w1: tenths (0: a round); w2: 1, quietly (a thing's handling) */
     I_GO,                                       /* a: a heading (level.h's H_N ... H_NW) */
     I_CLIMB,                                    /* a: DIR_UP or DIR_DOWN (the stairway or ladder in the room) */
     I_TURN,                                     /* a: the heading to face (H_N ... H_NW) */
@@ -149,6 +155,11 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned        stamp;
     struct mreq     mreq[NASK];
     unsigned char   inuse[NASK];
+    /* The things (items.h): the store's lock (a semaphore: the maker and the things both take its records), a
+    ** request to the things (dq0p), and their words for the UI (what's carried) */
+    unsigned char   item_lock;
+    struct ireq     ireq;
+    char            things_text[400];
     /* The UI's intents to the world */
     volatile unsigned char iq_head, iq_tail;    /* Written at head (the UI), read at tail (the world) */
     struct msg      iq[IQ_SIZE];
@@ -160,6 +171,7 @@ struct hub {                                    /* Bank 0, at $8000 */
 };
 
 #define HUB     ((struct hub*) HUB_WINDOW)
+typedef char hub_fits[sizeof (struct hub) <= 0x2000 ? 1 : -1];   /* (The header in bank 0) */
 
 /* hub.c */
 int __fastcall__ hub_create (unsigned char banks);      /* The UI's: the segment, its doorbells: 0, or -1 */

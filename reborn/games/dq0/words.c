@@ -239,6 +239,29 @@ static void passage (void)
     doors (0);                                  /* (A door beside it) */
 }
 
+/* The things it sees lying about: "On the floor ahead lies a pick." "At your feet lie some bones." */
+static void items (void)
+{
+    unsigned char i;
+
+    for (i = 0; i < S->nitems; ++i) {
+        add (S->item[i].rel == 0xFF ? " At your feet " : " On the floor ");
+        if (S->item[i].rel != 0xFF) {
+            add (relname[S->item[i].rel & 7]);
+            add (" ");
+        }
+        add (S->item[i].plural || S->item[i].qty > 1 ? "lie " : "lies ");
+        if (S->item[i].qty > 1) {
+            addn (S->item[i].qty);
+            add (" ");
+        } else {
+            add (S->item[i].plural ? "some " : strchr ("aeiou", S->item[i].name[0]) ? "an " : "a ");
+        }
+        add (S->item[i].name);
+        add (".");
+    }
+}
+
 /* What the character perceives, in words, into lb (from look.c's copy of the hub's record) */
 void o_words (void)
 {
@@ -249,4 +272,5 @@ void o_words (void)
     } else {
         passage ();
     }
+    items ();
 }

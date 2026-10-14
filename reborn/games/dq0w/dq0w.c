@@ -1205,7 +1205,9 @@ static void __fastcall__ intent (struct msg* m)
     switch (m->kind) {
     case I_WAIT:
         busy (m->w1 ? m->w1 : HUB->round);
-        event (E_TIME, 0, m->w1 ? m->w1 : HUB->round);
+        if (!m->w2) {
+            event (E_TIME, 0, m->w1 ? m->w1 : HUB->round);
+        }
         break;
     case I_GO:
         go (m->a & 7);

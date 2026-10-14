@@ -8,6 +8,7 @@
 #include "../dq0/hub.h"
 #include "../dq0w/world.h"
 #include "sight.h"
+#include "things.h"
 
 #define EYE         5
 
@@ -239,6 +240,7 @@ void __fastcall__ perceive (unsigned char sn, unsigned x, unsigned y, unsigned c
             }
         }
     }
+    things_seen (&S, sn, x, y, face);           /* (The things it sees lying about) */
     hub_map (0);
     memcpy (&HUB->sight, &S, sizeof S);
 }

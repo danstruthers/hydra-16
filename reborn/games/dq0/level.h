@@ -30,6 +30,7 @@ unsigned char __fastcall__ bearing (int dx, int dy);    /* The heading nearest t
 #define SEE_DOORS       8
 #define SEE_ZONES       4
 #define SEE_OPEN        4
+#define SEE_ITEMS       6
 struct sight {
     unsigned char   seq;                        /* Bumped as it's made again */
     unsigned char   where;                      /* W_* */
@@ -49,6 +50,8 @@ struct sight {
     struct { unsigned char rel, kind; signed char dz; unsigned x, y; } open[SEE_OPEN];    /* kind: O_* */
     unsigned char   nways;                      /* A passage's ways on */
     struct { unsigned char rel; signed char dz; unsigned char steps; } way[4];
+    unsigned char   nitems;                     /* The things it sees lying about (the things', named) */
+    struct { char name[14]; unsigned char qty, plural, rel; unsigned n, x, y; } item[SEE_ITEMS];
     unsigned char   stratum, sname, style;      /* The stratum: its number, its name (the theme's), its style */
     int             z;                          /* The floor where it stands: feet above the way in */
     unsigned        x, y;                       /* Its square */

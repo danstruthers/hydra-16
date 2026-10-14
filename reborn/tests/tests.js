@@ -2294,7 +2294,15 @@ module.exports = {
       init: 't_rc', cycles: 600e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T\r' +
         ['take a gander', 'turn half left', 'face north and east', 'walk to the door on my right', 'look closely', 'pick up the sword', 'take off my coat', 'saunter off to the left', 'foo', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
-      expect: ['You turn to face east', 'You turn to face northeast', 'You go over to it.', 'You search about', 'nothing here you could take', 'nothing on you could take off', "I don't know how to foo.", '% echo $status'],
+      expect: ['You turn to face east', 'You turn to face northeast', 'You go over to it.', 'You search about', 'You see none of those here.', 'nothing on you could take off', "I don't know how to foo.", '% echo $status'],
+      sdcard: true
+    },
+    {
+      name: 'dq0items', what: 'Dingus Quest Zero\'s things (items.h, dq0p/things.c): the kit a character begins with, listed (worn, held, inside), a thing put down and seen at its feet, taken up again, and one out of reach walked over to first',
+      init: 't_rc', cycles: 700e6,
+      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -k pick -T\r' +
+        ['inventory', 'drop the dagger', 'look', 'get dagger', 'drop pick', 'walk to the door ahead', 'turn around', 'look', 'take the pick', 'look', 'i', 'drop rocks', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['You carry', 'backpack', 'rations', 'pennies', 'Put down.', 'At your feet lies a dagger.', 'Taken.', 'On the floor ahead to your left lies a pick.', 'You go over to it.', 'You carry none of those.', '% echo $status'],
       sdcard: true
     },
     {

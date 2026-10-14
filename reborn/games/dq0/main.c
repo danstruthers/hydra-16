@@ -43,6 +43,7 @@ static int world_task = -1, referee_task = -1, maker_task = -1, senses_task = -1
 static unsigned char test_start;
 static const char* kit;                         /* (dq0 -k: a tool, equipped as the game starts) */
 static const char* savedir;                     /* (dq0 -d: the save's folder) */
+static unsigned char __fastcall__ things (unsigned char op, const char* name);
 
 struct pc P;
 static volatile unsigned char quit;
@@ -354,7 +355,7 @@ static void start_world (unsigned long seed)
         HUB->pc_face = sv.face;
         HUB->pc_light = sv.light;
     }
-    if (kit) {
+    if (kit) {                                  /* (A tool to begin with: the referee told it's equipped) */
         strncpy (HUB->slot[SLOT_UI].text, kit, 11);
         HUB->slot[SLOT_UI].text[11] = 0;
         referee (RS_EQUIP, 1)->state = REQ_FREE;
@@ -370,6 +371,9 @@ static void start_world (unsigned long seed)
     if ((senses_task = hub_spawn (path, T_SENSES, 0)) < 0) {
         t_end ();
         hy_exits ("dq0: its senses (lib/dq0/dq0p) can't be started");
+    }
+    if (!resumed) {                             /* (The character's kit: a new game's) */
+        things (IO_KIT, kit ? kit : "");
     }
     strcpy (path, libdir);
     strcat (path, "/dq0w");
@@ -542,6 +546,44 @@ static void __fastcall__ intend (unsigned char kind, unsigned char a)
     }
 }
 
+/* ---- The things (items.h): a request to the things task (dq0p), waited for: its result */
+static unsigned char __fastcall__ things (unsigned char op, const char* name)
+{
+    struct ireq* q = &HUB->ireq;
+
+    q->op = op;
+    strncpy (q->name, name, sizeof q->name - 1);
+    q->name[sizeof q->name - 1] = 0;
+    q->state = REQ_POSTED;
+    hub_ring (T_SENSES);
+    while (q->state != REQ_DONE) {
+        hy_yield ();
+        hub_map (0);
+    }
+    q->state = REQ_FREE;
+    return q->result;
+}
+
+static char pending[16];                        /* A thing to take up, walked over to first */
+
+/* A thing taken up, by its name (walked over to first, if it's out of reach) */
+static void __fastcall__ take (const char* name)
+{
+    unsigned char r = things (IO_GET, name);
+
+    if (r == IR_NOT_HERE) {
+        strcpy (pending, name);
+        intend2 (I_GOTO, HUB->ireq.x, HUB->ireq.y);
+        return;
+    }
+    pending[0] = 0;
+    msg (r == IR_OK ? "Taken." : r == IR_FULL ? "Your hands are full, and your pack too." : "You see none of those here.");
+    if (r == IR_OK) {
+        intend2 (I_WAIT, 20, 1);
+    }
+}
+
+
 /* The map, and beside it the referee's short lines (the attributes as they are now) */
 static void show_map (void)
 {
@@ -659,8 +701,25 @@ static void __fastcall__ command (char* l)
         }
         return;
     case V_GET:
+        if (!c.word[0]) {
+            msg ("Take what?");
+        } else {
+            take (c.word);
+        }
+        return;
     case V_DROP:
-        msg ("There's nothing here you could take, or put down.");
+        if (!c.word[0]) {
+            msg ("Put down what?");
+        } else if (things (IO_DROP, c.word) == IR_OK) {
+            msg ("Put down.");
+            intend2 (I_WAIT, 10, 1);
+        } else {
+            msg ("You carry none of those.");
+        }
+        return;
+    case V_INVENTORY:
+        things (IO_LIST, "");
+        msg (HUB->things_text);
         return;
     case V_DON:
     case V_DOFF:
@@ -785,6 +844,10 @@ int main (int argc, char* argv[])
         now = hub_now ();
         if (now / 10 != was) {
             status ();                          /* (The clock on the status line, each game second) */
+        }
+        if (!busy && pending[0]) {              /* (Walked over: now taken up) */
+            take (pending);
+            pending[0] = 0;
         }
         if (!busy && (l = t_line ()) != 0) {
             command (l);

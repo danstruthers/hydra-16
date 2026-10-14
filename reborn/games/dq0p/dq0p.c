@@ -3,7 +3,8 @@
 ** role there, hub.h), that looks about for the character as the world asks (the hub's look_state): the squares it
 ** sees now marked in the dungeon's chunks (view.c: in front of it and to its sides, a clear line in plan and in
 ** height, its sight's range, lit, its night vision and ultravision), and what it perceives recorded in the hub for
-** the UI to word (sight.c).  (The denizens will see through it too, each through its own senses.)  It waits on its
+** the UI to word (sight.c); and the things (things.c: the catalogue, the items, moved and listed as the UI asks).
+** (The denizens will see through it too, each through its own senses.)  It waits on its
 ** doorbell (costing nothing) between looks.
 */
 
@@ -14,9 +15,11 @@
 #include "../dq0w/world.h"
 #include "view.h"
 #include "sight.h"
+#include "things.h"
 
-/* A look about for the character, from what the hub has of it (its square, its facing, its light, its senses) */
-static void look (void)
+/* A look about for the character, from what the hub has of it (its square, its facing, its light, its senses); again:
+** where it already is (a thing taken up or put down) */
+static void __fastcall__ look (unsigned char again)
 {
     unsigned char face, light, sight, dark, sn, first, own;
     unsigned x, y;
@@ -30,7 +33,7 @@ static void look (void)
     sn = HUB->pc_stratum;
     x = HUB->pc_x;
     y = HUB->pc_y;
-    first = HUB->look_first;
+    first = again ? 0 : HUB->look_first;
     memcpy (strata, HUB->strata, sizeof strata);
     view (sn, x, y, face, light, sight, dark);
     perceive (sn, x, y, face, own, first);
@@ -42,6 +45,7 @@ int main (int argc, char* argv[])
         return 1;
     }
     chunks_init (ASK_SENSES);
+    things_init ();
     for (;;) {
         hub_map (0);
         hy_sem_acquire (HUB->sem[T_SENSES]);    /* (Waiting costs nothing) */
@@ -49,8 +53,16 @@ int main (int argc, char* argv[])
         if (HUB->quit) {
             break;
         }
+        if (HUB->ireq.state == REQ_POSTED) {
+            if (things_serve ()) {
+                look (1);
+            }
+            hub_map (0);
+            HUB->ireq.state = REQ_DONE;
+        }
+        hub_map (0);
         if (HUB->look_state == REQ_POSTED) {
-            look ();
+            look (0);
             hub_map (0);
             HUB->look_state = REQ_DONE;
         }

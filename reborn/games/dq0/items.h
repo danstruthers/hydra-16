@@ -1,0 +1,79 @@
+/*
+** items.h - Dingus Quest Zero's things (DUNGEON.md: items, the dungeon's layer of things): a catalogue of kinds (what
+** a thing is: its name, its weight and bulk, a container's room, a belt's slots, a light's reach, a tool's key for
+** the referee), and the items themselves, each a record of what it is and where: on a square of the dungeon, an
+** actor's (carried, worn, held), or inside another item.  Both in the hub's banks (after the dungeon's); the senses
+** and things task (games/dq0p) keeps them, the maker puts a chunk's ordinary things down as it first makes it.
+*/
+
+#ifndef _ITEMS_H
+#define _ITEMS_H
+
+/* A kind of thing (the catalogue's: a stand-in for the theme's data) */
+#define NKINDS          48
+struct kind {
+    char            name[14];                   /* "torch", "backpack" ... */
+    unsigned char   flags;                      /* K_* */
+    unsigned char   weight;                     /* In quarter pounds */
+    unsigned char   bulk;                       /* Its room: in pints, near enough */
+    unsigned char   cap_bulk, cap_weight;       /* A container's: what it holds (pints; pounds) */
+    unsigned char   slots;                      /* A belt's: things that hang from it */
+    unsigned char   light;                      /* A light's reach, lit: in squares */
+    unsigned char   size;                       /* How easily it's seen: 0 tiny ... 9 huge */
+    char            tool[8];                    /* Its key for the referee's tests ("pick", "picks"), or "" */
+};
+#define K_CONTAINER     0x01                    /* Holds things inside it */
+#define K_BELT          0x02                    /* Things hang from it, each in a slot */
+#define K_LIGHT         0x04                    /* Can be lit */
+#define K_WEAR          0x08                    /* Worn */
+#define K_HAND          0x10                    /* Held in a hand (a tool, a weapon, a light) */
+#define K_HANG          0x20                    /* Hangs from a belt (a pouch, a sheath, a quiver) */
+#define K_PLURAL        0x40                    /* Its name's a plural ("bones", "rations") */
+
+/* An item */
+#define NITEMS          (ITEM_BANKS * (0x2000 / sizeof (struct item)))
+struct item {
+    unsigned char   kind;                       /* 0: a free record; else the catalogue's (1 on) */
+    unsigned char   flags;                      /* I_* */
+    unsigned char   where;                      /* IW_* */
+    unsigned char   sn;                         /* (On a square: its stratum) */
+    unsigned        x, y;                       /* On a square: it; an actor's: x the actor (0 the character); in
+                                                **   an item: x that item's number */
+    unsigned char   qty;
+    unsigned char   owner;                      /* Whose it is (0: nobody's; a faction's, an actor's) */
+};
+#define I_LIT           0x01                    /* A light, lit */
+#define I_HELD          0x02                    /* In a hand */
+#define I_WORN          0x04                    /* Worn (a belt, a pack, armour) */
+#define I_HIDDEN        0x08                    /* Hidden (found by searching) */
+#define I_MAGIC         0x10                    /*   by magic (found only by magical means) */
+#define I_KNOWN         0x20                    /* Known to the character (seen, or found) */
+enum { IW_SQUARE, IW_ACTOR, IW_ITEM };
+
+#define ITEM_BANKS      2
+
+/* A request to the things (one at a time, the hub's): what's done, to which item, by whom, and what came of it */
+struct ireq {
+    volatile unsigned char state;               /* REQ_* */
+    unsigned char   op;                         /* IO_* */
+    unsigned        item, to;                   /* The item; where it goes (a container's number) */
+    unsigned char   result;                     /* IR_* */
+    char            name[16];                   /* A thing's name (IO_GET's, IO_DROP's; IO_KIT's: one more) */
+    unsigned        x, y;                       /* IR_NOT_HERE's: where it is */
+};
+enum { IO_KIT, IO_GET, IO_DROP, IO_LIST, IO_SAVE, IO_RESTORE };
+enum { IR_OK, IR_NONE, IR_FULL, IR_HEAVY, IR_NOT_HERE };
+
+/* What the character carries, for the UI to word (IO_LIST's): each thing, how deep it's in others, its state */
+#define NCARRY          16
+struct carried {
+    unsigned char   n;
+    struct {
+        char        name[14];
+        unsigned char qty, depth, flags;        /* depth: 0 on it, 1 in (or on) the first, 2 ... */
+        unsigned    item;                       /* Its number */
+    } e[NCARRY];
+    unsigned        weight;                     /* In quarter pounds, all told */
+};
+
+#endif
