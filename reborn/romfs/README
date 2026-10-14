@@ -15,11 +15,14 @@ the modules (the disk x: mount '#f' /rom x).
                   pre-compiled (REQUIRE tools.fl): coreext.fl, exception.fl,
                   file.fl, facility.fl, string.fl, search.fl, tools.fl,
                   double.fl, and hydra.fl (the sys- words, SH, RUN, banks);
-                  hydra.fs, the system's constants and error codes; and
-                  startup.fs, what forth loads as it starts
+                  hydra.fs, the system's constants and error codes;
+                  startup.fs, what forth loads as it starts; and harn.fs,
+                  HarnMaster's characters and rules (lib harn)
   lib/hylang      hylang's library (load finds a bare name there):
                   danlang's, globals.hl (in hylang as it starts, from its
-                  snapshot in the paged ROM), dice.hl and screen.hl
+                  snapshot in the paged ROM), dice.hl and screen.hl; and
+                  harn.hl and harntest.hl, HarnMaster's characters and
+                  rules (use "harn")
   doc/api.md      the system calls, their registers and their errors
   bin             programs read into RAM to run: mkfs, fsck, label, and
                   grep and sort (in C); scom, a song (an rc script); bound

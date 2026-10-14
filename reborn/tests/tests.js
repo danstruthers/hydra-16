@@ -1561,6 +1561,89 @@ const VSD_LINES = [
   ['ls /sd', 'v/'],
 ];
 
+// The hmchar tests' checks (hmcharhl, hmcharfs: games/hmchar's hylang and HyForth generators, C's hmchar's
+// companions): the last profile printed, and the file written (harnfile.c's lines), each as it should be and the two
+// agreeing (the skills' names, keys and which are automatic from harn.hl's Skill Data table, a line each): a list of
+// failures
+const HM_SKILLS = fs.readFileSync(path.join(__dirname, '..', 'romfs', 'lib', 'hylang', 'harn.hl'), 'latin1').split(/\r?\n/)
+  .filter(l => l.length === 41 && /^[a-z]{3,4} +[A-Z]/.test(l) && l[27] === ' ' && l[36] === ' ')
+  .map(l => ({ key: l.slice(0, 5).trim(), name: l.slice(5, 24).trim(), auto: l[38] === '1' }));
+const HM_NAMES = {
+  sp: ['Human', 'Sindarin', 'Khuzdul', 'Other'], sx: ['Female', 'Male'],
+  month: ['Nuzyael', 'Peonu', 'Kelen', 'Nolus', 'Larane', 'Agrazhar', 'Azura', 'Halane', 'Savor', 'Ilvin', 'Navek', 'Morgat'],
+  culture: ['Tribal', 'Viking', 'Feudal', 'Imperial', 'Khuzan', 'Sindarin'], social: ['Slave', 'Serf', 'Unguilded', 'Guilded', 'Noble'],
+  parent: ['Offspring', 'Fostered', 'Adopted', 'Bastard', 'Orphan'], estrange: ['Outcast', 'Unpopular', 'Average', 'Popular', 'Favorite'],
+  clanhead: ['Distant Relation', 'Aunt or Uncle', 'Cousin', 'Father or Mother'], fr: ['Scant', 'Light', 'Medium', 'Heavy', 'Massive'],
+  complexion: ['Fair', 'Medium', 'Dark'], hair: ['Brown', 'Black', 'Red', 'Silver', 'Blond'], eyes: ['Hazel', 'Gray', 'Violet', 'Green', 'Blue'],
+};
+const HM_ATTRS = ['sp', 'sx', 'bd', 'ss', 'ht', 'fr', 'owt', 'wt', 'cml', 'str', 'sta', 'dex', 'agl', 'eye', 'hrg', 'sml', 'voi',
+  'int', 'aur', 'wil', 'mor', 'dty', 'pty'];
+const HM_OCCS = ['Gladiator', 'Hunter/Trapper', 'Thief', 'Physician', 'Miner', 'Sage'];
+function hmcharCheck(out, file) {
+  const f = [], end = out.lastIndexOf('\nWritten to ');
+  if (HM_SKILLS.length !== 91) return ['harn.hl\'s Skill Data table: ' + HM_SKILLS.length + ' skills read, not 91'];
+  if (end < 0) return ['no "Written to"'];
+  const lines = out.slice(0, end).split('\n'), at = lines.length - 1 - [...lines].reverse().findIndex(l => / born \d+ /.test(l));
+  const p = lines.slice(at), fl = file.split('\n').filter(l => l);
+  const m1 = p[0].match(/^(.+), (\w+) (\w+), born (\d+) (\w+) \((.+)\); (\w+) (\w+), (.+)$/);
+  const m2 = (p[1] || '').match(/^(\d+) of (\d+); (\w+), (\w+); clanhead: (.+)$/);
+  const m3 = (p[2] || '').match(/^(\d+)", (\w+), (\d+) lb \(size (\d+)\); (\w+) (\d+); (\w+), (\w+) hair, (\w+) eyes$/);
+  const m6 = (p[5] || '').match(/^Endurance (\d+), Move (\d+), Piety (\d+); medical:(.*)$/);
+  if (!m1 || !m2 || !m3 || !m6) return ['the profile isn\'t as hmchar prints it: ' + JSON.stringify(p.slice(0, 7))];
+  // The file: its lines in harnfile.c's order
+  const a = {};
+  if (fl[0] !== 'harn 1') f.push('the file\'s first line: ' + fl[0]);
+  HM_ATTRS.forEach((k, i) => { const m = (fl[1 + i] || '').match(/^att (\w+) (\d+)$/); if (!m || m[1] !== k) f.push('att ' + k + ': ' + fl[1 + i]); else a[k] = +m[2]; });
+  const nums = (l, key, n) => { const w = (l || '').split(' '); if (w[0] !== key || w.length - 1 < n) { f.push(key + ': ' + l); return []; } return w.slice(1).map(Number); };
+  const fam = nums(fl[24], 'fam', 7), look = nums(fl[25], 'look', 3), med = nums(fl[26], 'med', 0);
+  let k = 27;
+  while (/^psy /.test(fl[k] || '')) k++;
+  if (fl[k++] !== 'sexuality 0') f.push('sexuality: ' + fl[k - 1]);
+  const ml = new Map();
+  while (/^ml /.test(fl[k] || '')) { const w = fl[k++].split(' '); ml.set(w[1], +w[2]); }
+  if (fl[k++] !== 'vol 0 0 0 0 0') f.push('vol: ' + fl[k - 1]);
+  if (fl[k++] !== 'name ' + m1[1]) f.push('name: ' + fl[k - 1] + ', the profile\'s ' + m1[1]);
+  if (fl[k++] !== 'occupation ' + m1[9]) f.push('occupation: ' + fl[k - 1] + ', the profile\'s ' + m1[9]);
+  if (fl.length !== k) f.push('the file\'s lines after occupation: ' + JSON.stringify(fl.slice(k)));
+  if (f.length) return f;
+  // The profile agreeing with it
+  const eq = (what, x, y) => { if (x !== y) f.push(what + ': ' + x + ' printed, ' + y + ' in the file'); };
+  eq('species', m1[2], HM_NAMES.sp[a.sp]); eq('sex', m1[3], HM_NAMES.sx[a.sx]);
+  eq('birthday', +m1[4], a.bd & 255); eq('month', m1[5], HM_NAMES.month[(a.bd >> 8) - 1]);
+  eq('culture', m1[7], HM_NAMES.culture[fam[0]]); eq('class', m1[8], HM_NAMES.social[fam[1]]);
+  if (!HM_OCCS.includes(m1[9])) f.push('occupation ' + m1[9]);
+  eq('sibling rank', +m2[1], fam[2]); eq('family', +m2[2], fam[3]); eq('parent', m2[3], HM_NAMES.parent[fam[4]]);
+  eq('estrangement', m2[4], HM_NAMES.estrange[fam[5]]); eq('clanhead', m2[5], HM_NAMES.clanhead[fam[6]]);
+  eq('comeliness', m3[5], ['Ugly', 'Plain', 'Average', 'Attractive', 'Handsome'][a.cml <= 5 ? 0 : a.cml <= 8 ? 1 : a.cml <= 12 ? 2 : a.cml <= 15 ? 3 : 4]);
+  eq('height', +m3[1], a.ht); eq('frame', m3[2], HM_NAMES.fr[a.fr]); eq('weight', +m3[3], a.wt); eq('comeliness', +m3[6], a.cml);
+  eq('complexion', m3[7], HM_NAMES.complexion[look[0]]); eq('hair', m3[8], HM_NAMES.hair[look[1]]); eq('eyes', m3[9], HM_NAMES.eyes[look[2]]);
+  eq('physical', p[3], `Strength ${a.str}, Stamina ${a.sta}, Dexterity ${a.dex}, Agility ${a.agl}, Eyesight ${a.eye}, Hearing ${a.hrg}, Smell ${a.sml}, Voice ${a.voi}`);
+  eq('personality', p[4], `Intelligence ${a.int}, Aura ${a.aur}, Will ${a.wil}, Morality ${a.mor}`);
+  eq('endurance', +m6[1], Math.floor(((a.str + a.sta + a.wil) * 2 + 3) / 6)); eq('move', +m6[2], a.agl); eq('piety', +m6[3], a.pty);
+  if (a.dty !== 10) f.push('a deity: ' + a.dty);
+  eq('medical traits', m6[4] === ' none' ? 0 : m6[4].trim().split(' ').length, med.length);
+  const sk = (p.slice(6).join('\n').match(/^Skills \(ML\):([^]*)$/) || [])[1];
+  if (!sk) return [...f, 'no skills line'];
+  const shown = new Map([...sk.matchAll(/ ([A-Z][A-Za-z':\- ]*?) (\d+)(?= |\n|$)/g)].map(m => [m[1].trim(), +m[2]]));
+  for (const s of HM_SKILLS) {
+    if (s.auto && !ml.has(s.key)) f.push('an automatic skill not open: ' + s.name);
+    if (ml.get(s.key) !== shown.get(s.name)) f.push(s.name + ': ' + shown.get(s.name) + ' printed, ' + ml.get(s.key) + ' in the file');
+  }
+  if (ml.size !== shown.size) f.push(ml.size + ' skills in the file, ' + shown.size + ' printed');
+  return f;
+}
+
+// The hmcharhl test's runs: hmchar.hl -q, its file; then as a player answers: a roll again, kept; an occupation out of
+// range, then Gladiator; weapons (a beginning, one that isn't enough, one twice); option points (Climbing three times,
+// a skill there isn't, Enter); a name; its file
+const HM_PLAY = 'r\rk\r7\r1\rsw\rs\rshield\rshield\rdag\rclimb\rclimb\rclimb\rzzz\r\rDorn\r';
+const HM_FILE = f => 'echo ==file; cat ' + f + '; echo ==end';
+// A run's part of the output (from its command line), and the file it cat'd (between ==file and ==end)
+function hmRun(out, cmd) {
+  const a = out.indexOf('% ' + cmd + '\n'), b = out.indexOf('\n==file\n', a), e = out.indexOf('==end\n', b);
+  return a < 0 || b < 0 || e < 0 ? null : { out: out.slice(a, b + 1), file: out.slice(b + 8, e) };
+}
+
 module.exports = {
   IRQ_OFF_MAX,
   tests: [
@@ -2196,6 +2279,63 @@ module.exports = {
       // (Each line typed at its prompt, as the C test's)
       machine: { input: CNUM_LINES.map(l => 'ā' + l[0] + '\r').join('') },
       expect: [...CNUM_LINES.map(l => '% ' + l[0] + '\n' + (l[2] ? l[1] : l[1] + '\n%')), '\nntest: 0 failed\n%'],
+      sdcard: true
+    },
+    {
+      name: 'hmcharhl', what: 'hmchar.hl (games/hmchar: hmchar in hylang, harn.hl in the ROM disk\'s /lib/hylang) at rc: -q, its profile and its file (harnfile.c\'s lines) agreeing, the automatic skills open; then as a player answers (a roll again, an occupation out of range, weapons by a beginning of their names, one ambiguous, one twice, an option point\'s second improvement and a third, a skill there isn\'t), the skills it says as they should be; -s refused (hylang\'s random can\'t be seeded); harntest.hl\'s tests of the character it read back',
+      init: 't_rc', cycles: 500e6,
+      machine: { input: 'ācd /ram; hmchar.hl -q -o q.hm; ' + HM_FILE('q.hm') + '\r' + 'āhmchar.hl\r' + HM_PLAY + 'ā' + HM_FILE('Dorn.hm') + '\r' +
+        'āhmchar.hl -s 3; echo $status\r' + 'āecho \'(do (use "harntest") (def {c} (harn.read "Dorn.hm")) (list (c :other) (harn.eml c 1)))\' | hylang\r' },
+      expect: ['Written to q.hm\n', 'Which (1-6)? 7\nWhich (1-6)? 1\n', 'The second: s\nWhich? More than one begins so.\n',
+        'The third: shield\nThat one\'s chosen already.\n', 'Points left: 2. A skill: climb\nIt can be improved only twice.\n',
+        'A skill: zzz\nThere\'s no such skill.\n', 'Written to Dorn.hm\n',
+        'hmchar.hl: -s: hylang\'s random can\'t be seeded (hmchar.fs and C\'s hmchar have -s)\nusage: hmchar.hl [-o file] [-q]\n1\n%',
+        '=> {{"name Dorn" "occupation Gladiator"} ', 'hylang> => exit'],
+      check(m, out) {
+        const f = [], q = hmRun(out, 'cd /ram; hmchar.hl -q -o q.hm; ' + HM_FILE('q.hm')), d = hmRun(out, HM_FILE('Dorn.hm'));
+        if (!q) return ['-q: its output or its file not found'];
+        f.push(...hmcharCheck(q.out, q.file).map(e => '-q: ' + e));
+        const play = out.slice(out.indexOf('% hmchar.hl\n'), out.indexOf('% ' + HM_FILE('Dorn.hm')));
+        if (!d) return [...f, 'Dorn.hm not found'];
+        f.push(...hmcharCheck(play, d.file).map(e => 'played: ' + e));
+        // (Climbing: the kept roll's, then improved by its SB twice; the Gladiator's weapons; the eml in harntest's
+        // test the file's Climbing)
+        const kept = play.slice(0, play.indexOf('roll again (k or r)? k')), c0 = +((kept.match(/Climbing (\d+)/g) || []).pop() || ' 0').split(' ')[1];
+        const c = [...play.matchAll(/Climbing is (\d+)/g)].map(m => +m[1]);
+        if (c.length !== 2 || c[0] - c0 <= 0 || c[1] - c[0] !== c[0] - c0) f.push('Climbing: ' + c0 + ', then ' + c.join(', ') + ': not improved by its SB twice');
+        if (!/occupation Gladiator\n/.test(d.file) || !['ml dag ', 'ml shd ', 'ml swd '].every(k => d.file.includes(k))) f.push('Dorn.hm: not a Gladiator with Dagger, Shield and Sword');
+        const eml = out.match(/=> \{\{"name Dorn" "occupation Gladiator"\} (\d+)\}/);
+        if (!eml || +eml[1] !== c[1]) f.push('harntest.hl\'s eml of Climbing: ' + (eml && eml[1]) + ', not ' + c[1]);
+        this.notes = ['-q: ' + q.out.split('\n')[2]];
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'hmcharfs', what: 'hmchar.fs (games/hmchar: hmchar in HyForth, harn.fs in the ROM disk\'s /lib/forth) at rc, against C\'s hmchar: -q from a seed, its profile and its file the same as C\'s from it (the dice in the same order), the two agreeing and as they should be; then the same seed answered as a player would (a roll again, an occupation out of range, weapons by a beginning, one ambiguous, one twice, an option point\'s improvements, a skill there isn\'t), its questions, profile and file the same as C\'s; a bad option; harn.fs\'s harn-read of the file, harn-eml and harn-end',
+      init: 't_rc', cycles: 700e6,
+      machine: { input: 'ācd /ram; hmchar.fs -q -s 5 -o x.hm >f.out; cp x.hm f.hm\r' +
+        'āhmchar -q -s 5 -o x.hm >c.out; cmp f.out c.out && cmp f.hm x.hm && echo same\r' +
+        'ācat f.out; ' + HM_FILE('f.hm') + '\r' +
+        'āhmchar.fs -s 5 -o x.hm >fi.out\r' + HM_PLAY + 'ācp x.hm fi.hm\r' +
+        'āhmchar -s 5 -o x.hm >ci.out\r' + HM_PLAY + 'ācmp fi.out ci.out && cmp fi.hm x.hm && echo the same\r' +
+        'ācat fi.out; ' + HM_FILE('fi.hm') + '\r' + 'āhmchar.fs -s; echo $status\r' +
+        'āecho \'require harn.fs s" fi.hm" r/o open-file throw harn-read . 1 harn-eml . harn-end .\' | forth\r' +
+        'āecho end of test\r' },
+      expect: ['\nsame\n%', '\nthe same\n%', 'usage: hmchar.fs [-s seed] [-o file] [-q]\n1\n%', '% echo end of test\nend of test\n'],
+      check(m, out) {
+        const f = [], q = hmRun(out, 'cat f.out; ' + HM_FILE('f.hm')), d = hmRun(out, 'cat fi.out; ' + HM_FILE('fi.hm'));
+        if (!q || !d) return ['the runs\' output or files not found'];
+        f.push(...hmcharCheck(q.out, q.file).map(e => '-q: ' + e), ...hmcharCheck(d.out, d.file).map(e => 'played: ' + e));
+        for (const t of ['Which? More than one begins so.', 'That one\'s chosen already.', 'It can be improved only twice.', 'There\'s no such skill.'])
+          if (!d.out.includes(t)) f.push('played: "' + t + '" not said');
+        if (!/occupation Gladiator\n/.test(d.file) || !['ml dag ', 'ml shd ', 'ml swd '].every(k => d.file.includes(k))) f.push('fi.hm: not a Gladiator with Dagger, Shield and Sword');
+        // (harn-read's ior, then Climbing's EML: its ML, no penalty; Endurance: the profile's)
+        const r = out.match(/\| forth\n0 (\d+) (\d+) /), cli = d.file.match(/^ml cli (\d+)$/m), end = d.out.match(/.*Endurance (\d+),/s);
+        if (!r || !cli || !end || r[1] !== cli[1] || r[2] !== end[1]) f.push('harn-read, harn-eml, harn-end: ' + (r ? r.slice(1).join(' ') : 'nothing') + ', not ' + (cli && cli[1]) + ' ' + (end && end[1]));
+        this.notes = ['-s 5 -q: ' + q.out.split('\n')[2]];
+        return f;
+      },
       sdcard: true
     },
     {

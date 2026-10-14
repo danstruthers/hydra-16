@@ -1,0 +1,43 @@
+; harntest.hl - HarnMaster's tests, penalties and development (Skills 5-6, 21-22), for harn.hl's characters: (use
+; "harntest"), which uses harn.  Kept apart from harn.hl, as harn.h's harntest.c is, so a program that only makes a
+; character (hmchar.hl) doesn't wait for hylang to read them.  A test's result is 0 CF, 1 MF, 2 MS or 3 CS.
+
+(use "harn")
+
+; Development (Skills 6): d100 and SB over ML raise it by 1 (it can't pass 100 + SB): :improved, :not-improved,
+; :maxed; a development point spent on one (apply-dr): :no-dp if there's none
+(def {harn.develop} (fn {ch sk} {do
+  =(ml (harn.get-ml ch sk))
+  =(sb (harn.get-sb ch sk))
+  ?((>= ml (+ 100 sb)) :maxed
+    ?((> (+ (harn.d 100) sb) ml) (do (harn.put-ml ch sk (+ ml 1)) :improved) :not-improved))}))
+(def {harn.apply-dr} (fn {ch sk} {?((zero? (ch :dp)) :no-dp
+  (do =(r (harn.develop ch sk)) ?((eq r :maxed) NIL (hash-put ch [:dp (- (ch :dp) 1)])) r))}))
+
+; d100 at or under the EML (kept from 5 to 95): 0 CF, 1 MF, 2 MS, 3 CS (a roll ending in 0 or 5 critical)
+(def {harn.test} (fn {eml} {do
+  =(r (harn.d 100))
+  =(c ?((elem? (- r (* 10 (truncate (/ r 10)))) {0 5}) 1 0))
+  ?((<= r (max 5 (min 95 eml))) (+ 2 c) (- 1 c))}))
+(def {harn.success?} (fn {l} {>= l 2}))
+
+; EML: ML less five times the physical penalty (physical and combat skills) or the universal (the rest)
+(def {harn.eml} (fn {ch sk} {do
+  =(g (harn.skill-group sk))
+  (- (harn.get-ml ch sk) (* 5 ?((or (zero? g) (eq g 3)) (harn.get-pp ch) (harn.get-up ch))))}))
+(def {harn.test-skill} (fn {ch sk mod} {harn.test (+ (harn.eml ch sk) mod)}))
+
+; Skill against skill: :a won, :b won, or NIL (neither)
+(def {harn.versus} (fn {a b} {?((> a b) :a ?((> b a) :b NIL))}))
+
+; An attribute times n on d100, less 5 a point of penalty (the physical attributes' PP, the rest's UP); or 3d6 and
+; the penalty at most the attribute (T); the shock roll (1d6 a point of UP over END: down), stumble and fumble
+(def {harn.get-attr} (fn {ch a} {?((eq a :end) (harn.end ch) (ch a))}))
+(def {harn.attr-penalty} (fn {ch a} {
+  ?((elem? a {:str :sta :dex :agl :eye :hrg :sml :voi :end}) (harn.get-pp ch) (harn.get-up ch))}))
+(def {harn.test-attr} (fn {ch a n mod} {harn.test (+ (* n (harn.get-attr ch a)) (* -5 (harn.attr-penalty ch a)) mod)}))
+(def {harn.roll-attr} (fn {ch a mod} {<= (+ (harn.dice 3 6) (harn.attr-penalty ch a) mod) (harn.get-attr ch a)}))
+(def {harn.shock-roll} (fn {ch} {> (harn.dice (harn.get-up ch) 6) (harn.end ch)}))
+(def {harn.stumble-roll} (fn {ch mod} {> (+ (harn.dice 3 6) (harn.get-pp ch) mod) (ch :agl)}))
+(def {harn.fumble-roll} (fn {ch mod} {> (+ (harn.dice 3 6) (harn.get-pp ch) mod) (ch :dex)}))
+
