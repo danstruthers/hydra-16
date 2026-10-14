@@ -272,6 +272,16 @@ counting toward its carrier's load.  Some hold only some things (a quiver arrows
 what's poured or small); a **belt** holds in its own way: things hang from it (a pouch, a scabbard, a quiver, a
 tool), each in a slot of its own, by how many it has room for and what each will bear, not by space inside it.
 
+**Surfaces, and what a container keeps in** (the user: "a table or chair is a type of container as well.  Some
+containers cannot hold liquids (wicker baskets), but hold clothes just fine; same with gasses (a balloon or a cloth
+sack).  Something to note and make accommodations for later."): noted, not built.  Things can lie **on** an item as
+well as in it (a table, a chair, a shelf, an altar: a surface, its room in area and the weight it bears; what's on
+it seen with it, not hidden inside); and a container says what it keeps in by form: solids, small things (a sack
+keeps coins, a basket doesn't keep sand), liquids (a skin, a bottle, a bowl, not a basket or a sack), gases (a
+bladder, a balloon, not a cloth sack).  A thing put where it won't stay is refused, or (a liquid in a basket) runs
+out.  Liquids and gases as things in their own right (a skin's water, a flask's oil, lamp fuel) come with water
+and the items' later work.
+
 An item is **found** through the character's senses, as everything else is: only on a square it sees now, lit;
 noticed by the referee's test of its sight (rs.h: P_NOTICE_SIGHT, or P_SEARCH when it searches), the steps from the
 distance, the light, the item's size, and how it's **hidden**: by nothing, by where it lies (in shadow, among
