@@ -96,13 +96,14 @@ static void status (void)
 {
     char b[8];
     struct rs_summary* s = &HUB->pcsum;
-    unsigned char ep = harn_get_pp (&pc) - harn_get_up (&pc);
+    unsigned char ep = harn_get_pp (&pc) - harn_get_up (&pc), k;
 
     strcpy (HUB->pcstatus, "UP ");
     strcat (HUB->pcstatus, utoa (harn_get_up (&pc), b, 10));
     s->cond = 0;
     s->health = H_FINE;
-    s->step = 10;
+    k = harn_move (&pc);                       /* (Walking: half its Move, squares a round: Combat 6) */
+    s->step = k < 4 ? 50 : 200 / k;
     s->attacks = 1;
     s->sight = sense (HARN_EYE);
     s->hearing = sense (HARN_HRG);

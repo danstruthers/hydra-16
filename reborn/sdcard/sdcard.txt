@@ -27,10 +27,11 @@ sample/c/philo      ../obj/samples/c/philo.hyx
 sample/c/prodcons   ../obj/samples/c/prodcons.hyx
 sample/c/round      ../obj/samples/c/round.hyx
 games/dq0           ../obj/games/dq0.hyx        ; The games (games/: not in the card's bin, which the books' labs
-games/lib/dq0/dq0.ovl ../obj/games/dq0.hyx.ovl  ;   have the reader make): Dingus Quest Zero, its overlays and its
-games/lib/dq0/dq0w  ../obj/games/dq0w.hyx       ;   world and its rules (HarnMaster's referee): tasks of the
-games/lib/dq0/dq0harn ../obj/games/dq0harn.hyx ;   game's; /sd/0/games/dq0, or dq0 with bind -a /sd/0/games
-games/hmchar        ../obj/games/hmchar.hyx     ;   /bin; hmchar, a HarnMaster character made
+games/lib/dq0/dq0.ovl ../obj/games/dq0.hyx.ovl  ;   have the reader make): Dingus Quest Zero, its overlays, and its
+games/lib/dq0/dq0w  ../obj/games/dq0w.hyx       ;   tasks: its world, its rules (HarnMaster's referee) and its maker
+games/lib/dq0/dq0harn ../obj/games/dq0harn.hyx ;   (the dungeon grown); /sd/0/games/dq0, or dq0 with bind -a
+games/lib/dq0/dq0m  ../obj/games/dq0m.hyx       ;   /sd/0/games /bin; and hmchar, a HarnMaster character made
+games/hmchar        ../obj/games/hmchar.hyx
 songs/test.zsm      songs/test.zsm              ; Songs (play /sd/0/songs/test.zsm): the old system's test song
 songs/vera.mml      songs/vera.mml              ;   (os_rom/songs/test.mml), and a score for both chips (the PSG's
                                                 ;   with a Vera X); scom.zsm stays in the ROM (/rom/songs)

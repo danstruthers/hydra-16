@@ -7,7 +7,7 @@
 **   term.c     the screen: the status line at the top, the story scrolling under it (its words wrapped), the line
 **              being typed at the bottom, kept whole while the story moves on; sayf, the story's own printf
 **   bank.s     the RAM banks: the window at $8000, bytes between a bank and the main RAM, the overlays' calls
-**   look.c     the place the character's in, in words; the map of the level (level.h: the dungeon, in the hub)
+**   look.c     what the character perceives, in words (the world's record of it, in the hub: level.h); the map
 **   intro.c    (overlay 1) the title and the pace (the character is hmchar's: a program of its own,
 **              games/hmchar, that main.c runs, and whose file the referee reads)
 **
@@ -71,7 +71,8 @@ extern struct pc P;
 /* ---- look.c: the place in words, and the map */
 
 void __fastcall__ look (unsigned char first);   /* Where the character is (first: the first time there) */
-void __fastcall__ map (const char* rules);      /* The map of what it's seen of the level, and the character's
+extern const char* const stratum_name[8];       /* (A stand-in theme's names of the strata) */
+void __fastcall__ map (const char* rules);      /* The map of what it's seen round it, and the character's
                                                 **   state beside it (rules: the referee's short lines) */
 
 /* ---- The overlays (bank.s: their stubs) */

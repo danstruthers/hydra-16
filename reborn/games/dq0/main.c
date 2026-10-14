@@ -1,13 +1,14 @@
 /*
 ** main.c - Dingus Quest Zero: the UI's task, its start and its loop.
 **
-** dq0 [-s seed] [-p pace] [-c file]: the seed makes the same game each time (the dice: dice.h's rseed); the pace is
+** dq0 [-s seed] [-p pace] [-c file] [-T]: the seed makes the same game each time (the dice: dice.h's rseed); the pace is
 ** r, n, m (relaxed, normal, menacing: asked at the start if it isn't given) or t (turns: the world moves only as
 ** the character acts, for tests); the file a character made already (hmchar's).  Without one, hmchar is run to make
 ** one (in this window, the screen as it is outside the game while it runs), into /ram/dq0.hm.
 **
 ** The game is tasks that meet in the hub (hub.h): this one, the UI, makes it and starts the others (the world,
-** libdir/dq0w, and the referee, libdir/dq0harn: the rules, asked in rs.h's terms).  The loop: each key goes to the line being typed (term.c); a line entered is the
+** libdir/dq0w; the referee, libdir/dq0harn: the rules, asked in rs.h's terms; the maker, libdir/dq0m: the
+** dungeon grown, as the world asks).  The loop: each key goes to the line being typed (term.c); a line entered is the
 ** character's next command, made an intent for the world when the character's free (the world says so: E_READY);
 ** the world's events are worded into the story.  Escape pauses the game and goes on again.
 */
@@ -36,7 +37,8 @@ static const unsigned tpr[4] = { 1000, 600, 400, 0 };
 static unsigned char busy = 1;                  /* The character's doing something: no command till it's free (nor
                                                 **   till the world's started, and says so: E_READY) */
 static unsigned place;                          /* Where this task is in the world's events */
-static int world_task = -1, referee_task = -1;
+static int world_task = -1, referee_task = -1, maker_task = -1;
+static unsigned char test_start;
 struct pc P;
 static volatile unsigned char quit;
 
@@ -233,6 +235,7 @@ static void start_world (unsigned long seed)
     HUB->tpr = tpr[pace];
     HUB->pace = pace;
     HUB->seed = seed;
+    HUB->test_start = test_start;
     strcpy (path, libdir);
     strcat (path, "/dq0harn");
     if ((referee_task = hub_spawn (path, T_REFEREE, 0)) < 0) {
@@ -243,6 +246,12 @@ static void start_world (unsigned long seed)
     HUB->round = r->w1;                         /* (The ruleset's round, in tenths) */
     r->state = REQ_FREE;
     load_pc ();                                 /* (Its senses the referee's, before the world looks through them) */
+    strcpy (path, libdir);
+    strcat (path, "/dq0m");
+    if ((maker_task = hub_spawn (path, T_MAKER, 0)) < 0) {
+        t_end ();
+        hy_exits ("dq0: its maker (lib/dq0/dq0m) can't be started");
+    }
     strcpy (path, libdir);
     strcat (path, "/dq0w");
     if ((world_task = hub_spawn (path, T_WORLD, 0)) < 0) {
@@ -262,6 +271,10 @@ static void stop_world (void)
     if (referee_task >= 0) {
         hub_ring (T_REFEREE);
         hy_wait (referee_task, 0);
+    }
+    if (maker_task >= 0) {
+        hub_ring (T_MAKER);
+        hy_wait (maker_task, 0);
     }
 }
 
@@ -294,6 +307,7 @@ void status (void)
 static void events (void)
 {
     static struct msg m;
+    unsigned char k;
 
     while (hub_next (&place, &m)) {
         switch (m.kind) {
@@ -314,7 +328,11 @@ static void events (void)
         case E_ARRIVE:
             if (m.who == 0) {
                 if ((m.w1 & 0xFF) == A_DOWN || (m.w1 & 0xFF) == A_UP) {
-                    msg ((m.w1 & 0xFF) == A_DOWN ? "You go down the stairs." : "You climb the stairs.");
+                    k = m.w1 >> 12;             /* (The link's kind: a ladder, or a stairway) */
+                    msg ((m.w1 & 0xFF) == A_DOWN ? (k == O_LADDER_DOWN ? "You climb down the ladder." :
+                        "You go down the stairway, a long flight.") : k == O_LADDER_UP ? "You climb the ladder." :
+                        "You climb the stairway.");
+                    sayf (" You come into the %s.", stratum_name[HUB->sight.sname & 7]);
                 }
                 look (m.w1 >> 8);
             }
@@ -416,7 +434,7 @@ static void show_map (void)
     struct req* r = ask_b (RS_DESCRIBE, 0, 1);
 
     map (r->text);                              /* (Its lines read where they are, in the hub's header, before the
-                                                **   level's put in the window) */
+                                                **   map's drawn) */
     r->state = REQ_FREE;
 }
 
@@ -525,6 +543,8 @@ int main (int argc, char* argv[])
     for (i = 1; i < argc; ++i) {
         if (!strcmp (argv[i], "-s") && i + 1 < argc) {
             seed = strtoul (argv[++i], 0, 10);
+        } else if (!strcmp (argv[i], "-T")) {
+            test_start = 1;                     /* (For the tests: the character begins at a way down) */
         } else if (!strcmp (argv[i], "-c") && i + 1 < argc) {
             file = argv[++i];
         } else if (!strcmp (argv[i], "-p") && i + 1 < argc) {
@@ -532,7 +552,7 @@ int main (int argc, char* argv[])
             pace = argv[i][0] == 'r' ? PACE_RELAXED : argv[i][0] == 'm' ? PACE_MENACING :
                 argv[i][0] == 't' ? PACE_TURNS : PACE_NORMAL;
         } else {
-            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file]");
+            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-T]");
         }
     }
     rseed (seed);

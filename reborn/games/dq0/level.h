@@ -1,54 +1,12 @@
 /*
-** level.h - Dingus Quest Zero's dungeon: its levels, each a grid of tiles (rooms with walls and doors, the passages
-** between them, the stairs), kept in the hub's banks (four to a bank, after its header's bank 0): the world makes
-** them and changes them, the UI reads them to tell what the character sees, and to draw the map.  A tile is 5 feet.
-**
-** A place, as the game tells it, is a room (wherever in it the character stands), or a stretch of passage that
-** ends where the passage forks, meets a door, or stops.  Going north from a room is going out by a door in its
-** north wall and along the passage beyond, to the next place.
-**
-** The character sees the dungeon through its own eyes (the world's view.c): what's in front of it and to its
-** sides, in a line it can see along, near enough for its sight, and lit, by the room or by the light it carries.
-** What it sees now is T_VIS (the UI tells only that); what it's ever seen T_SEEN (the map).
+** level.h - Dingus Quest Zero's dungeon (DUNGEON.md), the part every task shares: the headings and directions and
+** their names, what the character perceives (struct sight: the world's, which the UI words), and the map's window.
+** The dungeon itself is the world's alone (dq0w/world.h: its strata, their plans, their chunks, in its own banks).
+** A square is 5 feet.
 */
 
 #ifndef _LEVEL_H
 #define _LEVEL_H
-
-#define LW              64                      /* A level's tiles: across, */
-#define LH              20                      /*   and down (the map fits under the status line) */
-#define NROOMS          12                      /* Rooms on a level, at most */
-#define NLEVELS         8                       /* Levels in the dungeon */
-#define LEVEL_SIZE      0x0800                  /* Each level's room in its bank */
-#define LEVEL_BANK(n)   (1 + ((n) >> 2))        /* Its hub bank, */
-#define LEVEL(n)        ((struct level*) (0x8000 + ((n) & 3) * LEVEL_SIZE))    /*   and where it is there */
-
-/* Tiles (a tile's low six bits; T_SEEN: the character has seen it) */
-enum { T_ROCK, T_FLOOR, T_WALL, T_DOOR, T_CORR, T_UP, T_DOWN };
-#define T_SEEN          0x80
-#define T_VIS           0x40                    /* Seen now (the world's view) */
-#define T_MARK          0x40                    /* (Generation's, the same bit: a tile reached) */
-#define TILE(t)         ((t) & 0x3F)
-#define T_PASS(t)       (TILE (t) != T_ROCK && TILE (t) != T_WALL)  /* A tile that can be walked */
-#define T_INSIDE(t)     (TILE (t) == T_FLOOR || TILE (t) == T_UP || TILE (t) == T_DOWN)    /* A room's */
-
-/* A room: its floor, x to x + w - 1 and y to y + h - 1; its walls round it */
-struct room {
-    unsigned char   x, y, w, h;
-    unsigned char   flags;                      /* R_* */
-    unsigned char   kind;                       /* What the theme calls it (the UI's words) */
-};
-#define R_VISITED       0x01
-#define R_LIT           0x02                    /* Lit, by a light of its own (torches, a glow: the theme's) */
-
-struct level {
-    unsigned char   made;                       /* Generated yet */
-    unsigned char   depth;                      /* 0: the top */
-    unsigned char   nrooms;
-    unsigned char   upx, upy, downx, downy;     /* The stairs (no way down on the last level: downx 0) */
-    struct room     room[NROOMS];
-    unsigned char   tile[LH][LW];
-};
 
 /* Directions: the four of the walls and the passages, then up and down */
 enum { DIR_N, DIR_E, DIR_S, DIR_W, DIR_UP, DIR_DOWN };
@@ -64,16 +22,46 @@ enum { H_N, H_NE, H_E, H_SE, H_S, H_SW, H_W, H_NW };
 extern const signed char head_x[8], head_y[8];
 extern const char* const head_name[8];          /* "north", "northeast" ... */
 extern const char* const head_abbr[8];          /* "N", "NE" ... */
-
-/* level.c (each task its own copy: the world's and the UI's) */
-unsigned char __fastcall__ room_at (struct level* l, unsigned char x, unsigned char y);  /* Its room, or 0xFF */
-unsigned char __fastcall__ wall_tile (struct room* p, unsigned char d, unsigned char k);  /* A wall's kth tile
-                                                **   (wall_x, wall_y): 1, or 0 past its end */
-extern unsigned char wall_x, wall_y;
-unsigned char __fastcall__ doors_on (struct level* l, unsigned char r, unsigned char d); /* Doors in a room's wall */
-extern unsigned char door_x, door_y;            /* doors_on's first door's tile */
 unsigned char __fastcall__ bearing (int dx, int dy);    /* The heading nearest the way (dx, dy) goes */
-unsigned char __fastcall__ ways (struct level* l, unsigned char x, unsigned char y);    /* A passage's tile: the
-                                                **   directions it goes on in (bits, 1 << DIR_N ...) */
+
+/* What the character perceives (the world's, after each look about; in the hub's header, struct hub's sight): the
+** UI's words are made from it alone.  A way is REL8's (0xFF: where it stands); a height in feet, against the floor
+** where the character stands */
+#define SEE_DOORS       8
+#define SEE_ZONES       4
+#define SEE_OPEN        4
+struct sight {
+    unsigned char   seq;                        /* Bumped as it's made again */
+    unsigned char   where;                      /* W_* */
+    unsigned char   dark;                       /* Its own square unlit: it feels its way */
+    unsigned char   kind;                       /* A room's kind (the theme's) */
+    unsigned char   size;                       /* S_*: as much as it's seen of it */
+    unsigned char   lit;                        /* The room lit by its own light */
+    unsigned char   first;                      /* The first time there */
+    unsigned char   up_rel, up_ft;              /* The floor here: the way it rises, and feet in ten (0: level) */
+    unsigned char   ceil, cmid, cwall;          /* Its zone's ceiling (ceil C_UNSEEN: not seen) */
+    unsigned char   ndoors;
+    struct { unsigned char rel; signed char dz; } door[SEE_DOORS];
+    unsigned char   nzones;                     /* The room's other zones seen */
+    struct { unsigned char rel, how; signed char dz; } zone[SEE_ZONES];    /* how: Z_* */
+    unsigned char   nopen;                      /* Stairways, ladders, shafts, windows seen */
+    struct { unsigned char rel, kind; signed char dz; } open[SEE_OPEN];    /* kind: O_* */
+    unsigned char   nways;                      /* A passage's ways on */
+    struct { unsigned char rel; signed char dz; unsigned char steps; } way[4];
+    unsigned char   stratum, sname, style;      /* The stratum: its number, its name (the theme's), its style */
+    int             z;                          /* The floor where it stands: feet above the way in */
+    unsigned        x, y;                       /* Its square */
+};
+enum { W_ROOM, W_PASSAGE };
+enum { S_PART, S_SMALL, S_MID, S_LARGE, S_LONG };
+enum { Z_STEPS, Z_SLOPE, Z_LEDGE };
+enum { C_FLAT, C_BARREL, C_DOME, C_CATHEDRAL, C_SLOPED, C_ROUGH, C_UNSEEN };
+enum { O_STAIRS_UP, O_STAIRS_DOWN, O_LADDER_UP, O_LADDER_DOWN, O_WINDOW, O_SHAFT_UP, O_SHAFT_DOWN, O_WAY_OUT };
+enum { ST_BUILT, ST_NATURAL, ST_MINE, ST_MIXED };
+
+/* The map's window: the stratum round the character, a square a character, drawn by the world into the hub
+** (struct hub's map), each row's text and its end */
+#define MAP_W           64
+#define MAP_H           20
 
 #endif

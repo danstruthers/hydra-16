@@ -18,15 +18,18 @@
 #define _HUB_H
 
 #include "rs.h"
+#include "level.h"
+#include "../dq0w/world.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
 #define HUB_VERSION     1
-#define HUB_BANKS       3                       /* Bank 0: the header and queues; bank 1 on: the dungeon's levels
-                                                **   (level.h: four a bank) */
+#define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS)  /* Bank 0: the header, the queues, the referee's slots,
+                                                **   what the character perceives, the map, the strata's records;
+                                                **   then the plans' banks and the chunks' (world.h) */
 #define HUB_WINDOW      ((unsigned char*) 0x8000)
 
 /* The tasks, and so their doorbells */
-enum { T_UI, T_WORLD, T_DENIZENS, T_REFEREE, T_SOUND, NTASKS };
+enum { T_UI, T_WORLD, T_DENIZENS, T_REFEREE, T_SOUND, T_MAKER, NTASKS };
 
 /* An entry of a queue: an intent (to the world), or an event (from it) */
 struct msg {
@@ -42,7 +45,7 @@ struct msg {
 enum {
     I_NONE, I_WAIT,                             /* w1: tenths (0: a round) */
     I_GO,                                       /* a: a heading (level.h's H_N ... H_NW) */
-    I_CLIMB,                                    /* a: DIR_UP or DIR_DOWN (the stairs in the room) */
+    I_CLIMB,                                    /* a: DIR_UP or DIR_DOWN (the stairway or ladder in the room) */
     I_TURN,                                     /* a: the heading to face (H_N ... H_NW) */
     I_LIGHT,                                    /* a: 1 the character's light lit, 0 put out */
     I_QUIT,
@@ -54,7 +57,8 @@ enum {
     E_NONE, E_TIME,                             /* Time passed for who: w1 tenths */
     E_READY,                                    /* who can act again */
     E_BYE,                                      /* The world's ending */
-    E_ARRIVE,                                   /* who's somewhere new: w1 how (A_*), and 256 the first time there */
+    E_ARRIVE,                                   /* who's somewhere new: w1 how (A_*), 256 the first time there,
+                                                **   and (up or down) the link's kind (O_*) times 4096 */
     E_NOWAY,                                    /* who can't: w1 why (N_*) */
     E_VIEW,                                     /* What who sees has changed: w1 why (V_*) */
     NEVENTS
@@ -103,12 +107,26 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned        tpr;                        /* Real ticks a round, at the pace (0: turns) */
     volatile unsigned char paused, hold, quit;  /* The UI's: paused (Escape), held (a question), ending */
     unsigned char   pace;
+    unsigned char   test_start;                 /* (dq0 -T: the character begins at a way down, for the tests) */
     unsigned long   seed;
     char            pcstatus[16];               /* The character's state, the referee's words ("UP 3") */
-    volatile unsigned char pc_level, pc_x, pc_y;    /* Where the character is (the world's), */
+    volatile unsigned char pc_stratum;          /* Where the character is (the world's): its stratum, */
+    volatile unsigned pc_x, pc_y;               /*   its square (the dungeon's frame, world.h's), */
     volatile unsigned char pc_face;             /*   the way it faces (a heading: H_N ... H_NW), */
     volatile unsigned char pc_light;            /*   the light it carries: how far it reaches, in tiles (0: none) */
     struct rs_summary pcsum;                    /* The character's summary (the referee's: its senses ...) */
+    struct sight    sight;                      /* What it perceives (the world's, after each look about) */
+    /* The map: the UI asks (map_state REQ_POSTED, the world's doorbell), the world draws its window round the
+    ** character into map (each row a line, 0-ended) and says REQ_DONE */
+    volatile unsigned char map_state;
+    char            map[MAP_H][MAP_W + 1];
+    /* The dungeon (world.h): the strata's records, the chunks' cache's table, the maker's requests, and the slot
+    ** each task that reads the chunks is reading (the maker never makes way for it) */
+    struct stratum  strata[MAXSTRATA];
+    struct cslot    cslot[NCSLOTS];
+    unsigned        stamp;
+    struct mreq     mreq[NASK];
+    unsigned char   inuse[NASK];
     /* The UI's intents to the world */
     volatile unsigned char iq_head, iq_tail;    /* Written at head (the UI), read at tail (the world) */
     struct msg      iq[IQ_SIZE];

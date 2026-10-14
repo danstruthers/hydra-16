@@ -45,6 +45,12 @@ isn't, and square by square where it is; so a patrol met at a crossroads was wal
 cellar were there all along, and a lair cleared stays cleared (or is moved into by something else, as the theme's
 rules say).  Each stratum's populations go in its save with its plan.
 
+The denizens explore too (the user: the dungeon can be made by the denizens' movements as well as the character's,
+"which could cause complications for the denizens if other factions hostile to them are disturbed"): a denizen that
+goes where nobody has been has the chunks made for it as the character would, and what it disturbs there (another
+faction's lair, a sleeping beast, a guarded door) is an event like any other: the disturbed act against it, and its
+own faction may answer them in turn.  Feuds the character never saw can spill into its way.
+
 ### Attitudes
 
 Every denizen has an **attitude** to the character, on one scale whatever the ruleset: **hostile** (attacks on

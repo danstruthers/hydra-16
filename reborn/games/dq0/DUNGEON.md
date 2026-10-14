@@ -82,8 +82,15 @@ style's rules over the whole stratum at once:
   before it came, and goes on living there whether it's met or not;
 - **the puzzle's pieces** this stratum holds, where the theme says they may lie.
 
-A 5-mile stratum is about 440 regions: a few K of plan.  **Detail** comes as the character explores: a region's
-chunks' crossings when it first comes near the region, and each chunk's squares when it comes near the chunk.
+A 5-mile stratum is about 440 regions: a few K of plan.  **Detail** comes as the dungeon is explored: a region's
+chunks' crossings when anyone first comes near the region, and each chunk's squares when anyone comes near the
+chunk.  Anyone: the user (2026-10-14), "A dungeon strata could be generated based on movements of denizens as well
+as the player, so keep that in mind, which could cause complications for the denizens if other factions hostile to
+them are disturbed."  So a chunk is made for whoever needs its squares (the character, or a denizen moving square by
+square: a raiding party, a hunter following a scent), the same chunk whoever it's made for (it's the seed's), and
+seen only by those who see it; and a stratum's plan is grown when anyone first takes a way down to it.  What the
+making turns up that someone disturbs (a lair broken into, a nest woken, a sealed door opened) is an event the
+denizens' task hears, so the factions it wakes act on it, against whoever disturbed them.
 
 ### Growing a chunk: the style's rules
 

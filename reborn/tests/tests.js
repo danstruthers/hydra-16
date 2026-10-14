@@ -2261,16 +2261,24 @@ module.exports = {
     },
     {
       name: 'dq0', what: 'Dingus Quest Zero (games/dq0) at rc, its turns pace: a character from hmchar\'s file (-c), commands typed ahead (each waits for its prompt): looking, the way out shut, the map, going, quit; then the game running hmchar itself, in its window, answered as a player would, and the character it made read back',
-      init: 't_rc', cycles: 400e6,
+      init: 't_rc', cycles: 600e6,
       // (\u0101: wait for a prompt, the game's "> " too; \u0100: wait a while, for hmchar's questions)
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm\r' +
         ['look', 'u', 'map', 'n', 'e', 's', 'w', 'go west', 'map', 'wait', 'help', 'foo', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') +
         '\u0101dq0 -p t -s 7\r\u0100\u0100k\r\u01002\r\u0100bow\r\u0100spear\r\u0100sword\r\u0100\r\u0100Dorn\r' +
         '\u0101sheet\r\u0101quit\r\u0101echo done\r' },
-      expect: ['Tordan, Hunter/Trapper, enters the dungeon.', 'You stand by the stairs up to the way out.', 'The way out is shut fast.', 'Level 1 (you face',
+      expect: ['Tordan, Hunter/Trapper, enters the dungeon.', 'The way out is shut fast.', 'The map (you face',
         '> wait', 'Time passes.', 'Commands: north, northeast, east',
         "I don't know how to foo.", '% echo $status', 'Keep this character, or roll again (k or r)?', 'Written to /ram/dq0.hm',
         'Dorn, Hunter/Trapper, enters the dungeon.', 'Dorn, Human Female, Hunter/Trapper; born 10 Ilvin (Skorus).', '% echo done\ndone'],
+      sdcard: true
+    },
+    {
+      name: 'dq0deep', what: 'Dingus Quest Zero down a way to the stratum below (dq0 -T: the character begins at the first way down of the top stratum): the stratum below grown in outline as the character first takes the way, its first chunk made, looked about and mapped, and back up',
+      init: 't_rc', cycles: 500e6,
+      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T\r' +
+        ['look', 'd', 'look', 'map', 'u', 'look', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['You come into the', 'The map (you face', 'You climb the', '% echo $status'],
       sdcard: true
     },
     {

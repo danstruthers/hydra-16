@@ -1,20 +1,19 @@
 /*
-** look.c - Dingus Quest Zero's places told (the UI's): where the character is, as it sees it (look), and the map of
-** what it's seen of the level (map).  Both read the level in its hub bank (level.h), then put the hub's header back
-** before a word goes out.
+** look.c - Dingus Quest Zero's places told (the UI's): what the character perceives, in words (look), from the
+** world's record of it in the hub (level.h's struct sight: the UI never reads the dungeon); and the map (the world
+** draws its window into the hub, on asking), with the character's state beside it.
 **
-** The words are the character's: only what it sees now (the world's view: the tiles marked T_VIS, in front of it
-** and to its sides, lit, near enough for its eyes), each where it lies from it as it faces (one of eight: ahead,
-** ahead to its right, to its right ... ahead to its left).
-** A passage it can feel its way along in the dark: which ways it goes is told whatever the light.  A room's size
-** it knows when it's seen the whole of it.
+** The words are the character's: only what it sees now (or, in the dark, feels), each where it lies from it as it
+** faces (one of eight: ahead, ahead to its right ... ahead to its left), and how far above or below it.  A room's
+** size it knows when it's seen the whole of it; a ceiling when the light reaches it.
 **
-** The words are a stand-in theme's, till themes are data: a room's kind is one of eight names, a lit room's light
-** torches.
+** The words are a stand-in theme's, till themes are data: a room's kind one of eight names, a stratum's one of
+** eight, a lit room's light torches.
 */
 
 #include <stdlib.h>
 #include <string.h>
+#include <hydra.h>
 #include "dq0.h"
 #include "hub.h"
 #include "level.h"
@@ -22,83 +21,55 @@
 static const char* const kindname[8] = {
     "chamber", "hall", "cell", "vault", "crypt", "gallery", "cave", "storeroom"
 };
+const char* const stratum_name[8] = {
+    "Upper Halls", "Old Cellars", "Cisterns", "Long Galleries", "Bone Vaults", "Sunken Ways", "Deep Halls",
+    "Black Crypts"
+};
 static const char* const relname[8] = {
     "ahead", "ahead to your right", "to your right", "behind you to your right", "behind you",
     "behind you to your left", "to your left", "ahead to your left"
 };
+static const char* const count[5] = { "", "one", "two", "three", "four" };
 
-static char lb[360];                            /* The words, made while the level's in the window */
-static struct level* L;
-static unsigned char lv, px, py, face, light;
-
-static void here (void)
-{
-    lv = HUB->pc_level;
-    px = HUB->pc_x;
-    py = HUB->pc_y;
-    face = HUB->pc_face;
-    hub_map (LEVEL_BANK (lv));
-    L = LEVEL (lv);
-}
+static char lb[400];                            /* The words, as they're made */
+static struct sight* S;
 
 static void __fastcall__ add (const char* s)
 {
     strcat (lb, s);
 }
 
-#define VIS(x, y)       (L->tile[y][x] & T_VIS)
-
-/* Ways in a list, as the character sees them (m: bits, by REL8): "ahead", "ahead and to your left" ... */
-static void __fastcall__ rels (unsigned char m)
+static void __fastcall__ addn (int v)
 {
-    unsigned char d, n = 0, k = 0;
+    char b[8];
 
-    for (d = 0; d < 8; ++d) {
-        n += (m >> d) & 1;
-    }
-    for (d = 0; d < 8; ++d) {
-        if (m & (1 << d)) {
-            ++k;
-            if (k > 1) {
-                add (k == n ? " and " : ", ");
-            }
-            add (relname[d]);
-        }
+    add (itoa (v, b, 10));
+}
+
+/* " 6 feet higher" or " 4 feet lower" (nothing if within a couple of feet) */
+static void __fastcall__ height (signed char dz)
+{
+    if (dz >= 3 || dz <= -3) {
+        add (" ");
+        addn (dz > 0 ? dz : -dz);
+        add (dz > 0 ? " feet higher" : " feet lower");
     }
 }
 
-/* Where (x, y) lies from the character, as it sees it (REL8's) */
-static unsigned char __fastcall__ rel_to (unsigned char x, unsigned char y)
-{
-    return REL8 (bearing ((int) x - px, (int) y - py), face);
-}
+/* ---- A room */
 
-/* A room's doors that the character sees, counted by where they lie from it (REL8's) */
-static unsigned char seen[8];
-static void __fastcall__ doors_seen (struct room* p)
+static void doors (void)
 {
-    unsigned char d, k;
+    unsigned char seen[8], d, k, n = 0, i;
 
     memset (seen, 0, sizeof seen);
-    for (d = 0; d < 4; ++d) {
-        for (k = 0; wall_tile (p, d, k); ++k) {
-            if (TILE (L->tile[wall_y][wall_x]) == T_DOOR && VIS (wall_x, wall_y)) {
-                ++seen[rel_to (wall_x, wall_y)];
-            }
-        }
+    for (i = 0; i < S->ndoors; ++i) {
+        ++seen[S->door[i].rel & 7];
     }
-}
-
-/* The doors seen, in words: "There is a door ahead." "There are two doors ahead and one to your left." */
-static void doors_words (void)
-{
-    static const char* const count[5] = { "", "one", "two", "three", "four" };
-    unsigned char d, n = 0, k = 0;
-
     for (d = 0; d < 8; ++d) {
         n += seen[d] != 0;
     }
-    for (d = 0; d < 8; ++d) {
+    for (d = 0, k = 0; d < 8; ++d) {
         if (!seen[d]) {
             continue;
         }
@@ -114,111 +85,175 @@ static void doors_words (void)
             add (" ");
         }
         add (relname[d]);
+        for (i = 0; i < S->ndoors; ++i) {       /* (The first that way's height, if it's well above or below) */
+            if ((S->door[i].rel & 7) == d) {
+                if (S->door[i].dz >= 3 || S->door[i].dz <= -3) {
+                    add (",");
+                    height (S->door[i].dz);
+                }
+                break;
+            }
+        }
     }
     if (n) {
         add (".");
     }
 }
 
-/* The whole of a room's floor seen (now, or before) */
-static unsigned char __fastcall__ all_seen (struct room* p)
+static void zones (void)
 {
-    unsigned char i, j;
+    unsigned char i, at;
+    signed char dz;
 
-    for (j = p->y; j < p->y + p->h; ++j) {
-        for (i = p->x; i < p->x + p->w; ++i) {
-            if (!(L->tile[j][i] & T_SEEN)) {
-                return 0;
-            }
-        }
-    }
-    return 1;
-}
-
-/* Stairs seen: "You stand by stairs leading down." "You see the stairs up to the way out ahead." */
-static void __fastcall__ stairs (unsigned char x, unsigned char y, const char* name)
-{
-    if (!x || !VIS (x, y)) {
-        return;
-    }
-    if (x == px && y == py) {
-        add (" You stand by ");
-        add (name);
-    } else {
-        add (" You see ");
-        add (name);
+    for (i = 0; i < S->nzones; ++i) {
+        dz = S->zone[i].dz;
         add (" ");
-        add (relname[rel_to (x, y)]);
-    }
-    add (".");
-}
-
-static void __fastcall__ room_words (unsigned char r)
-{
-    struct room* p = &L->room[r];
-    unsigned char area = p->w * p->h, whole = all_seen (p);
-
-    if (!VIS (px, py)) {
-        add ("It is dark. You can see nothing, but you feel the open floor of a room about you.");
-        return;
-    }
-    add (whole ? "You are in a" : "You can see part of a");
-    add (!whole ? " " : area <= 8 ? " small " : area >= 30 ? " large " : p->w >= 3 * p->h ? " long " : " ");
-    add (kindname[p->kind & 7]);
-    add (p->flags & R_LIT ? ", lit by torches in iron brackets." : light ? ", by the light of your torch." : ".");
-    doors_seen (p);
-    doors_words ();
-    stairs (L->upx, L->upy, lv ? "stairs leading up" : "the stairs up to the way out");
-    stairs (L->downx, L->downy, "stairs leading down");
-}
-
-static void passage_words (void)
-{
-    unsigned char m = ways (L, px, py), r = 0, d, n;
-
-    for (d = 0; d < 4; ++d) {
-        if (m & (1 << d)) {
-            r |= 1 << REL8 (H_OF (d), face);
+        at = strlen (lb);
+        add (relname[S->zone[i].rel & 7]);
+        lb[at] &= ~0x20;                        /* (Its first letter a capital) */
+        if (dz >= 3 || dz <= -3) {
+            add (dz > 0 ? " the floor rises " : " the floor falls ");
+            addn (dz > 0 ? dz : -dz);
+            add (dz > 0 ? " feet to a higher part of the room" : " feet to a lower part of the room");
+            add (S->zone[i].how == Z_STEPS ? ", by steps." : S->zone[i].how == Z_SLOPE ? ", in a slope." :
+                 ", at a ledge.");
+        } else {
+            add (" the room goes on, nearly level.");
         }
     }
-    n = (m & 1) + (m >> 1 & 1) + (m >> 2 & 1) + (m >> 3 & 1);
-    add (VIS (px, py) ? "" : "It is dark; you feel your way. ");
-    if (n <= 1) {
-        add ("The passage ends here; it goes back ");
-    } else if (n == 2) {
-        add ("You are in a passage. It goes ");
-    } else {
-        add ("The passage forks here. It goes ");
+}
+
+static void ceiling (void)
+{
+    if (S->ceil == C_UNSEEN) {
+        if (!S->dark && !S->lit) {
+            add (" Above, the dark hides the ceiling.");
+        }
+        return;
     }
-    rels (r);
+    switch (S->ceil != C_ROUGH && S->cwall >= S->cmid ? C_FLAT : S->ceil) {   /* (A vault no higher in the middle: flat) */
+    case C_FLAT:
+        add (" The ceiling is flat, ");
+        addn (S->cmid);
+        add (" feet up.");
+        return;
+    case C_BARREL:
+        add (" A barrel vault rises to ");
+        break;
+    case C_DOME:
+        add (" The ceiling is a dome, ");
+        break;
+    case C_CATHEDRAL:
+        add (" A pointed vault rises high overhead, to ");
+        break;
+    case C_SLOPED:
+        add (" The ceiling slopes from ");
+        addn (S->cmid);
+        add (" feet down to ");
+        addn (S->cwall);
+        add (".");
+        return;
+    default:
+        add (" The ceiling is rough stone, about ");
+        addn (S->cmid);
+        add (" feet up.");
+        return;
+    }
+    addn (S->cmid);
+    add (S->ceil == C_DOME ? " feet at its height and " : " feet, ");
+    addn (S->cwall);
+    add (" at the walls.");
+}
+
+static void __fastcall__ opening (unsigned char i)
+{
+    unsigned char k = S->open[i].kind, rel = S->open[i].rel;
+
+    add (rel == 0xFF ? " You stand by " : " You see ");
+    add (k == O_WAY_OUT ? "the stairs up to the way out" : k == O_STAIRS_UP ? "a stairway leading up" :
+         k == O_STAIRS_DOWN ? "a stairway leading down" : k == O_LADDER_UP ? "a ladder going up" :
+         k == O_LADDER_DOWN ? "a ladder going down" : k == O_SHAFT_UP ? "a shaft in the ceiling" :
+         k == O_SHAFT_DOWN ? "a shaft in the floor" : "a window");
+    if (rel != 0xFF) {
+        add (" ");
+        add (relname[rel & 7]);
+        height (S->open[i].dz);
+    }
     add (".");
 }
 
-/* Where the character is, as it sees it (first: the first time there) */
+static void room (void)
+{
+    unsigned char i;
+
+    if (S->dark) {
+        add ("It is dark. You can see nothing, but you feel the floor of a room about you.");
+        return;
+    }
+    add (S->size != S_PART ? "You are in a" : "You can see part of a");
+    add (S->size == S_SMALL ? " small " : S->size == S_LARGE ? " large " : S->size == S_LONG ? " long " : " ");
+    add (kindname[S->kind & 7]);
+    add (S->lit ? ", lit by torches in iron brackets." : HUB->pc_light ? ", by the light of your torch." : ".");
+    if (S->up_ft) {
+        add (" The floor slopes up ");
+        add (relname[S->up_rel & 7]);
+        add (", ");
+        addn (S->up_ft);
+        add (S->up_ft == 1 ? " foot in ten." : " feet in ten.");
+    }
+    ceiling ();
+    zones ();
+    doors ();
+    for (i = 0; i < S->nopen; ++i) {
+        opening (i);
+    }
+}
+
+/* ---- A passage */
+
+static void passage (void)
+{
+    unsigned char i;
+    signed char dz;
+
+    add (S->dark ? "It is dark; you feel your way. " : "");
+    add (S->nways <= 1 ? "The passage ends here; it goes back " : S->nways == 2 ? "You are in a passage. It goes " :
+         "The passage forks here. It goes ");
+    for (i = 0; i < S->nways; ++i) {
+        if (i) {
+            add (i + 1 == S->nways ? " and " : ", ");
+        }
+        add (relname[S->way[i].rel & 7]);
+        dz = S->way[i].dz;
+        if (S->way[i].steps) {
+            add (dz > 0 ? " up steps" : " down steps");
+        } else if (dz >= 1 || dz <= -1) {
+            add (dz > 0 ? ", rising" : ", falling");
+        }
+    }
+    add (".");
+}
+
+/* What the character perceives (first: the first time there) */
 void __fastcall__ look (unsigned char first)
 {
-    unsigned char r;
-
-    (void) first;                               /* (The theme's words for a room's first sight: later) */
+    (void) first;                               /* (The theme's words for a place's first sight: later) */
     lb[0] = 0;
-    light = HUB->pc_light;
-    here ();
-    if ((r = room_at (L, px, py)) != 0xFF) {
-        room_words (r);
+    S = &HUB->sight;
+    if (S->where == W_ROOM) {
+        room ();
     } else {
-        passage_words ();
+        passage ();
     }
-    hub_map (0);
     msg (lb);
 }
 
-/* ---- The map: the level's tiles seen, a character each (the character an @), and beside it (under it, if the
-** screen's too narrow) the character's state: where it is (the level, its square: 5 feet across, from the level's
-** northwest corner), the way it faces, its light, its senses as they are now (the summary's, whatever lowers them
-** in them), and the ruleset's short lines (the referee's: the attributes, the penalties) */
+/* ---- The map, and beside it (under it, if the screen's too narrow) the character's state: where it is (its
+** stratum, its depth, its square), the way it faces, its light, its senses as they are now (the summary's, whatever
+** lowers them in them), and the ruleset's short lines (the referee's: the attributes, the penalties) */
 
 #define PANEL       14                          /* The panel's width */
-#define PLINES      16                          /* (Seven of the UI's, a gap, eight of the referee's) */
+#define PLINES      18
 static char panel[PLINES][PANEL + 1];
 static unsigned char np;
 
@@ -231,32 +266,29 @@ static void __fastcall__ pline (const char* s)
 }
 
 /* A line of the panel: words, a number, words */
-static void __fastcall__ num (const char* a, unsigned v, const char* z)
+static void __fastcall__ num (const char* a, int v, const char* z)
 {
     static char b[PANEL + 1];
-    char n[6];
+    char n[8];
 
     strcpy (b, a);
-    strcat (b, utoa (v, n, 10));
+    strcat (b, itoa (v, n, 10));
     strcat (b, z);
     pline (b);
 }
 
-/* The panel's lines, from the hub's header (before the level's put in the window) and the referee's */
+/* The panel's lines, from the hub's header, and the referee's (rules: its lines, each ended by a new line) */
 static void __fastcall__ make_panel (const char* rules)
 {
     static char b[PANEL + 1];
-    char n2[6];
     const char* e;
     unsigned char n;
 
     np = 0;
-    num ("Level ", HUB->pc_level + 1, "");
-    strcpy (b, "Square ");
-    strcat (b, utoa (HUB->pc_x, n2, 10));
-    strcat (b, ",");
-    strcat (b, utoa (HUB->pc_y, n2, 10));
-    pline (b);
+    pline (stratum_name[HUB->sight.sname & 7]);
+    num ("Depth ", -HUB->sight.z, " ft");
+    num ("Sq ", (int) (HUB->pc_x - 32768U), ",");
+    strcat (panel[np - 1], itoa ((int) (HUB->pc_y - 32768U), b, 10));
     strcpy (b, "Facing ");
     strcat (b, head_abbr[HUB->pc_face & 7]);
     pline (b);
@@ -268,7 +300,7 @@ static void __fastcall__ make_panel (const char* rules)
     num ("Sight ", HUB->pcsum.sight, "");
     num ("Hearing ", HUB->pcsum.hearing, "");
     num ("Smell ", HUB->pcsum.smell, "");
-    pline ("");
+    pline ("1-9 up a-i dn");
     while (*rules) {                            /* (The referee's, a line each) */
         e = strchr (rules, '\n');
         n = e ? e - rules : strlen (rules);
@@ -279,100 +311,40 @@ static void __fastcall__ make_panel (const char* rules)
     }
 }
 
-static char __fastcall__ glyph (unsigned char x, unsigned char y)
-{
-    unsigned char t = L->tile[y][x];
-
-    if (!(t & T_SEEN)) {
-        return ' ';
-    }
-    switch (TILE (t)) {
-    case T_FLOOR:
-        return '.';
-    case T_DOOR:
-        return '+';
-    case T_CORR:
-        return '#';
-    case T_UP:
-        return '<';
-    case T_DOWN:
-        return '>';
-    case T_WALL:
-        if ((y && T_INSIDE (L->tile[y - 1][x])) || (y + 1 < LH && T_INSIDE (L->tile[y + 1][x]))) {
-            return '-';
-        }
-        if ((x && T_INSIDE (L->tile[y][x - 1])) || (x + 1 < LW && T_INSIDE (L->tile[y][x + 1]))) {
-            return '|';
-        }
-        return '-';
-    }
-    return ' ';
-}
-
-/* Row y of the map into line (its length: the last tile seen, or the character's) */
-static void __fastcall__ map_row (char* line, unsigned char y)
-{
-    unsigned char x, n = 0;
-
-    if (y < LH) {
-        for (x = 0; x < LW; ++x) {
-            if ((line[x] = glyph (x, y)) != ' ') {
-                n = x + 1;
-            }
-        }
-        if (y == py) {
-            line[px] = '@';
-            if (n <= px) {
-                n = px + 1;
-            }
-        }
-    }
-    line[n] = 0;
-}
-
-/* A row with a tile seen (or the character) */
-static unsigned char __fastcall__ row_seen (unsigned char y)
-{
-    unsigned char x;
-
-    if (y == py) {
-        return 1;
-    }
-    for (x = 0; x < LW; ++x) {
-        if (L->tile[y][x] & T_SEEN) {
-            return 1;
-        }
-    }
-    return 0;
-}
-
 void __fastcall__ map (const char* rules)
 {
-    static char line[LW + PANEL + 3];
+    static char line[MAP_W + PANEL + 3];
     unsigned char x, y, n, side, k;
 
     make_panel (rules);
+    HUB->map_state = REQ_POSTED;                /* (The world draws it into the hub) */
+    hub_ring (T_WORLD);
+    while (HUB->map_state != REQ_DONE) {
+        hy_yield ();
+        hub_map (0);
+    }
     blank ();
-    sayf ("Level %u (you face %s):", HUB->pc_level + 1, head_name[HUB->pc_face & 7]);
-    here ();                                    /* (The level in the window till the map's out: the words go to
-                                                **   term.c's buffer, in the main RAM) */
-    for (n = 0; n < LH - 1 && !row_seen (n); ++n) {
+    sayf ("The map (you face %s; heights in tens of feet against yours):", head_name[HUB->pc_face & 7]);
+    for (n = 0; n < MAP_H - 1 && !HUB->map[n][0]; ++n) {
     }
-    for (y = LH - 1; y > n && !row_seen (y); --y) {
+    for (y = MAP_H - 1; y > n && !HUB->map[y][0]; --y) {
     }
-    side = tw > LW + PANEL + 1;            /* (Each line short of the last column: say_raw's) */
+    side = tw > MAP_W + PANEL + 1;
     for (k = 0; n + k <= y || (side && k < np); ++k) {  /* (The rows from the first seen to the last, the panel's
                                                 **   beside them) */
-        map_row (line, n + k <= y ? n + k : LH);
+        line[0] = 0;
+        if (n + k <= y && n + k < MAP_H) {
+            strcpy (line, HUB->map[n + k]);
+        }
         if (side && k < np) {
-            for (x = strlen (line); x < LW + 1; ++x) {
+            for (x = strlen (line); x < MAP_W + 1; ++x) {
                 line[x] = ' ';
             }
-            strcpy (line + LW + 1, panel[k]);
+            strcpy (line + MAP_W + 1, panel[k]);
         }
         say_raw (line);
     }
-    hub_map (0);
+    HUB->map_state = REQ_FREE;
     if (!side) {
         blank ();
         for (k = 0; k < np; ++k) {

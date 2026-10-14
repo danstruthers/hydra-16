@@ -1,40 +1,51 @@
 /*
-** view.c - (dq0w) what the character sees, from where it stands and the way it faces (one of the compass's eight:
-** the half of the world that way): the tiles in front of it and
-** to its sides (none behind, but for the ones it's next to), that a line from its eyes reaches without a wall or
-** rock in the way, within its sight's range, and lit: by the room's own light, or by the light it carries.  Each
-** is marked T_VIS (seen now: what the UI tells) and T_SEEN (remembered: the map).  A wall or a door beside a
-** room's floor that's seen is seen too (a line along a wall the character stands by would run through it).  The range is the referee's
-** (its summary's sight, 0-9, with whatever the character's state does to it); blinded, it sees nothing.
+** view.c - (dq0w) what the character sees (DUNGEON.md), from where it stands and the way it faces (one of the
+** compass's eight: the half of the world that way): the squares in front of it and to its sides (none behind, but
+** for the ones it's next to), that a line from its eyes (five feet above its floor) reaches without a wall or rock
+** in the way, nor a floor between that rises above the line; within its sight's range; and lit, by a room's own
+** light or by the light it carries.  Each is marked T_VIS (seen now: the perception record's) and T_SEEN
+** (remembered: the map).  A wall or a door beside a room's floor that's seen is seen too (a line along a wall the
+** character stands by would run through it).  The range is the referee's (its summary's sight, 0-9, with whatever
+** the character's state does to it); blinded, it sees nothing.
 */
 
 #include <stdlib.h>
-#include "../dq0/level.h"
+#include "world.h"
 #include "view.h"
 
-static struct level* L;
-static unsigned char ex, ey;                    /* The eyes */
+#define EYE         5                           /* The eyes, feet above the floor */
 
-/* A room's light reaching (x, y): its floor and its walls */
-static unsigned char __fastcall__ lit (unsigned char x, unsigned char y)
+static unsigned char vs;                        /* The stratum */
+static unsigned ex, ey;                         /* The eyes' square, */
+static int ez;                                  /*   and their height */
+static unsigned bx0, by0, bx1, by1;             /* The squares the last view looked at */
+
+/* A room's own light reaching (x, y): its floor and its walls (a room's walls are in its chunk) */
+static unsigned char __fastcall__ lit (unsigned x, unsigned y)
 {
     unsigned char r;
     struct room* p;
 
-    for (r = 0; r < L->nrooms; ++r) {
-        p = &L->room[r];
-        if ((p->flags & R_LIT) && x + 1 >= p->x && x <= p->x + p->w && y + 1 >= p->y && y <= p->y + p->h) {
+    if (!at (vs, x, y)) {
+        return 0;
+    }
+    for (r = 0; r < C->nrooms; ++r) {
+        p = &C->room[r];
+        if ((p->flags & R_LIT) && cx_ + 1 >= p->x && cx_ <= p->x + p->w && cy_ + 1 >= p->y && cy_ <= p->y + p->h) {
             return 1;
         }
     }
     return 0;
 }
 
-/* A line from the eyes to (x, y) with nothing in the way (the tile itself may be a wall) */
-static unsigned char __fastcall__ clear (unsigned char x, unsigned char y)
+/* A line from the eyes to (x, y) with nothing in the way: no wall or rock, no floor above the line (the square
+** itself may be a wall) */
+static unsigned char __fastcall__ clear (unsigned x, unsigned y, int tz)
 {
-    int dx = abs ((int) x - ex), dy = -abs ((int) y - ey), sx = x > ex ? 1 : -1, sy = y > ey ? 1 : -1, e = dx + dy, e2;
-    int cx = ex, cy = ey;
+    int dx = abs ((int) (x - ex)), dy = -abs ((int) (y - ey)), sx = (int) (x - ex) > 0 ? 1 : -1;
+    int sy = (int) (y - ey) > 0 ? 1 : -1, e = dx + dy, e2, n = dx > -dy ? dx : -dy, k = 0;
+    unsigned cx = ex, cy = ey;
+    unsigned char* p;
 
     for (;;) {
         e2 = 2 * e;
@@ -46,24 +57,25 @@ static unsigned char __fastcall__ clear (unsigned char x, unsigned char y)
             e += dx;
             cy += sy;
         }
+        ++k;
         if (cx == x && cy == y) {
             return 1;
         }
-        if (!T_PASS (L->tile[cy][cx])) {
+        if (!(p = at (vs, cx, cy)) || !T_CLEAR (*p) || C->elev[cy_][cx_] > ez + (tz - ez) * k / n) {
             return 0;
         }
     }
 }
 
-/* A room's floor beside (x, y), seen now (the eight round it: a corner too) */
-static unsigned char __fastcall__ beside_floor (unsigned char x, unsigned char y)
+/* A room's floor beside (x, y), seen now (the eight round it) */
+static unsigned char __fastcall__ beside_floor (unsigned x, unsigned y)
 {
-    unsigned char i, j, t;
+    signed char i, j;
+    unsigned char* p;
 
-    for (j = y ? y - 1 : 0; j <= y + 1 && j < LH; ++j) {
-        for (i = x ? x - 1 : 0; i <= x + 1 && i < LW; ++i) {
-            t = L->tile[j][i];
-            if ((t & T_VIS) && T_INSIDE (t)) {
+    for (j = -1; j <= 1; ++j) {
+        for (i = -1; i <= 1; ++i) {
+            if ((p = at (vs, x + i, y + j)) && (*p & T_VIS) && T_INSIDE (*p)) {
                 return 1;
             }
         }
@@ -71,40 +83,47 @@ static unsigned char __fastcall__ beside_floor (unsigned char x, unsigned char y
     return 0;
 }
 
-void __fastcall__ view (struct level* l, unsigned char x, unsigned char y, unsigned char face, unsigned char light,
+void __fastcall__ view (unsigned char sn, unsigned x, unsigned y, unsigned char face, unsigned char light,
     unsigned char sight)
 {
-    int dx, dy;
-    unsigned char i, j, x0, y0, x1, y1, range, t;
-    unsigned d2, r2, l2;
+    int dx, dy, tz;
+    unsigned i, j, d2, r2, l2;
+    unsigned char range, t;
+    unsigned char* p;
 
-    L = l;
-    ex = x;
-    ey = y;
-    for (j = 0; j < LH; ++j) {
-        for (i = 0; i < LW; ++i) {
-            L->tile[j][i] &= ~T_VIS;
+    for (j = by0; j <= by1 && bx1; ++j) {       /* (What the last view saw, unseen now) */
+        for (i = bx0; i <= bx1; ++i) {
+            if ((p = at (vs, i, j)) != 0) {
+                *p &= ~T_VIS;
+            }
         }
     }
+    vs = sn;
+    ex = x;
+    ey = y;
+    ez = elev_at (sn, x, y) + EYE;
+    bx1 = 0;
     if (sight == 0xFF) {                        /* (Blinded) */
         return;
     }
     range = 4 + 2 * (sight > 9 ? 9 : sight);
     r2 = range * range;
     l2 = light * light;
-    x0 = x > range ? x - range : 0;
-    y0 = y > range ? y - range : 0;
-    x1 = x + range < LW ? x + range : LW - 1;
-    y1 = y + range < LH ? y + range : LH - 1;
-    L->tile[y][x] |= lit (x, y) || light ? T_VIS | T_SEEN : T_SEEN;
-    for (j = y0; j <= y1; ++j) {
-        for (i = x0; i <= x1; ++i) {
-            t = L->tile[j][i];
-            if (TILE (t) == T_ROCK) {
+    bx0 = x - range;
+    by0 = y - range;
+    bx1 = x + range;
+    by1 = y + range;
+    if ((p = at (sn, x, y)) != 0) {
+        *p |= lit (x, y) || light ? T_VIS | T_SEEN : T_SEEN;
+    }
+    for (j = by0; j <= by1; ++j) {
+        for (i = bx0; i <= bx1; ++i) {
+            if (!(p = at (sn, i, j)) || TILE (*p) == T_ROCK) {
                 continue;
             }
-            dx = (int) i - x;
-            dy = (int) j - y;
+            tz = C->elev[cy_][cx_];
+            dx = (int) (i - x);
+            dy = (int) (j - y);
             d2 = dx * dx + dy * dy;
             if (!d2 || d2 > r2) {
                 continue;
@@ -115,16 +134,20 @@ void __fastcall__ view (struct level* l, unsigned char x, unsigned char y, unsig
             if (d2 > l2 && !lit (i, j)) {
                 continue;                       /* (Dark) */
             }
-            if (clear (i, j)) {
-                L->tile[j][i] = t | T_VIS | T_SEEN;
+            if (clear (i, j, tz) && (p = at (sn, i, j)) != 0) {
+                *p |= T_VIS | T_SEEN;
             }
         }
     }
-    for (j = y0; j <= y1; ++j) {
-        for (i = x0; i <= x1; ++i) {
-            t = TILE (L->tile[j][i]);
-            if ((t == T_WALL || t == T_DOOR) && !(L->tile[j][i] & T_VIS) && beside_floor (i, j)) {
-                L->tile[j][i] |= T_VIS | T_SEEN;
+    for (j = by0; j <= by1; ++j) {
+        for (i = bx0; i <= bx1; ++i) {
+            if (!(p = at (sn, i, j))) {
+                continue;
+            }
+            t = TILE (*p);
+            if ((t == T_WALL || t == T_DOOR || t == T_WINDOW) && !(*p & T_VIS) && beside_floor (i, j) &&
+                (p = at (sn, i, j)) != 0) {
+                *p |= T_VIS | T_SEEN;
             }
         }
     }
