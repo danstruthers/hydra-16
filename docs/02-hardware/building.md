@@ -88,22 +88,25 @@ The ROM images are already built, in the repository:
 
 | System | BIOS ROM (U6, SST39SF010A) | Paged ROM (SST39SF040) |
 | :----- | :------------------------- | :--------------------- |
-| **HydraOS** (`reborn/bin/`) | `bios.bin` | `prom0.bin` in **U31**, `prom1.bin` in **U32**, `prom2.bin` in **U34** |
-| **The base alone** (`base/bin/`) | `bios.bin` | `prom0.bin` in **U31** |
+| **HydraOS** (`reborn/bin/`) | `bios_rockwell.bin` or `bios_wdc.bin` | `prom0.bin` in **U31**, `prom1.bin` in **U32**, `prom2.bin` in **U34** |
+| **The base alone** (`base/bin/`) | `bios_rockwell.bin` or `bios_wdc.bin` | `prom0.bin` in **U31** |
+
+The BIOS ROM is the one image that depends on the serial chip in U3: `bios_rockwell.bin` for a **Rockwell R65C51**,
+`bios_wdc.bin` for a **WDC W65C51N** ([its fault](quirks.md)).  The paged ROM is the same for both: its serial drivers
+ask the BIOS which chip it's built for (`BIOS_ACIA`, `$FDFE`).  Changing the chip in U3 means reprogramming U6 alone.
 
 * Burn each file whole, from offset 0, and verify it.  Each is exactly one chip (128K or 512K).
 * The other paged ROM sockets stay empty.
 * Mark each chip with its file and socket before it leaves the programmer: the four paged ROMs look alike.
-* The images are built for **3.58 MHz** (J7) and a **Rockwell R65C51**.  For anything else, build them again
-  (it needs cc65; [the emulator and the PC tools](../08-emulator.md) say how):
-  * `node build.js --clock 2` for 7.16 MHz (J8), for a board with faster parts than the stated ones: with the
-    stated parts, 3.58 MHz is the fastest valid speed (the RAM path doesn't make the cycle, and the YM2151 never
-    could);
-  * `node build.js --acia wdc` for a WDC W65C51N in U3.
+* The images are built for **3.58 MHz** (J7).  For 7.16 MHz (J8), build them again with `node build.js --clock 2`
+  (it needs cc65; [the emulator and the PC tools](../08-emulator.md) say how), for a board with faster parts than the
+  stated ones: with the stated parts, 3.58 MHz is the fastest valid speed (the RAM path doesn't make the cycle, and the
+  YM2151 never could).
 * The paged ROM's images already allow for the board's swapped bank halves and crossed bank bits: burn them as they
   are.
 * The BIOS ROM and the paged ROM must come from the **same build**: the modules are built against that kernel's calls,
-  and the hardware test checks every chip against the checksums the build stored.
+  and the hardware test checks every chip against the checksums the build stored.  (Each BIOS ROM page has two bytes,
+  at `$FEFE`, that make its checksum 0: so the stored checksums are the same for either BIOS image.)
 
 **The PLCC socket.**  U6's chip has one bevelled corner and a dot over pin 1; the socket has the same bevelled corner.
 Press the chip in evenly.  To take it out, use a PLCC extractor (or two thin hooks in the socket's corner slots), never

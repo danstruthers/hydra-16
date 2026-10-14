@@ -213,7 +213,8 @@ socket.)
 * CPU A0-A12 go to the chip's A0-A12, and `W0-W5` to its A13-A18: each value of `W` selects an 8K page.
 * It's selected for `$E000-$FEFF` and for `$FFFA-$FFFD`, the NMI and RESET vectors.  The I/O space and the vector RAM
   take the rest of `$FF00-$FFFF`.
-* The build's `bin/bios.bin` is 128K, the whole '010A.
+* The build's `bin/bios_rockwell.bin` and `bin/bios_wdc.bin` (one for each serial chip U3 can have) are 128K, the
+  whole '010A.
 
 **Changing `W` changes the code being run.**  The next instruction is fetched from the new page, at the same
 address.  So the kernel keeps identical code at the same address on every page: the COMMON block at `$FD00` (the IRQ

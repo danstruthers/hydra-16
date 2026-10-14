@@ -64,7 +64,7 @@ with a good +5 V means the supply's own rails, or the joints at J11: the Hydra w
 matters is that it's filled in.
 
 **DS1747 or HM628512? R65C51 or W65C51N?** Whatever is fitted. It matters later: without a DS1747 the date
-starts at 2000 every time; and a WDC W65C51N needs HydraOS built for it (the manual's section 4.5).
+starts at 2000 every time; and a WDC W65C51N needs its own kernel ROM, `bios_wdc.bin` (the manual's section 4.4).
 
 **The drawing of J10.** Two rows of six, pin 1 at the square pad; the switch across 11 and 9; the reset button
 across 7 and 5; the LED from 12 (its longer leg) to 10.

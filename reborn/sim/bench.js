@@ -66,7 +66,8 @@ function rom(tree) {
   const sys = readManifest(path.join(tree, 'modules', 'rom.txt')).modules;
   const mods = [...sys.map(n => ({ file: n, data: bin('modules', n) })), { file: 't_rc', data: bin('tests', 't_rc') }];
   const files = romfs.manifest(path.join(tree, 'romfs', 'romfs.txt'));
-  return romimg.build({ modules: mods, init: 't_rc', hwtest: hwtest(), bios: fs.readFileSync(path.join(tree, 'bin', 'bios.bin')),
+  const images = require(path.join(__dirname, '..', '..', 'base', 'tools', 'images.js'));   // (An older tree's bin/bios.bin too)
+  return romimg.build({ modules: mods, init: 't_rc', hwtest: hwtest(), bios: images.bios(tree, images.built(tree)),
     romfs: files }).image;
 }
 

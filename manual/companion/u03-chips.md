@@ -35,16 +35,16 @@
 
 Skip this if your ROM chips came programmed and labelled (section 4.4).
 
-⚠ First look at the serial chip, U3. A Rockwell R65C51 takes the files in `reborn/bin` as they are. A WDC W65C51N
-needs HydraOS built for it (`node reborn/build.js --acia wdc`, sections 2.7 and 4.4), and those files programmed.
+⚠ First look at the serial chip, U3. The kernel ROM, U6, has a file for each kind: `bios_rockwell.bin` for a
+Rockwell R65C51, `bios_wdc.bin` for a WDC W65C51N (section 4.4). The paged ROM's files are the same for both.
 
 | ☐ | Check |
 |---|---|
-| ☐ | U3 is a ________________, and the files I'm programming were built for it. |
+| ☐ | U3 is a ________________, so U6's file is ________________. |
 
 | Programmed | Verified | Labelled | File | Chip type | Goes in |
 |---|---|---|---|---|---|
-| ☐ | ☐ | ☐ | `bios.bin` | SST39SF010A (PLCC) | U6 |
+| ☐ | ☐ | ☐ | `bios_rockwell.bin` or `bios_wdc.bin` | SST39SF010A (PLCC) | U6 |
 | ☐ | ☐ | ☐ | `prom0.bin` | SST39SF040 | U31 |
 | ☐ | ☐ | ☐ | `prom1.bin` | SST39SF040 | U32 |
 | ☐ | ☐ | ☐ | `prom2.bin` | SST39SF040 | U34 |
@@ -68,7 +68,7 @@ the socket.
 | ☐ | ☐ | R65C22 or W65C22N (VIA) | U2 | 1 |
 | ☐ | ☐ | R65C51 or W65C51N (ACIA, serial) | U3 | 1 |
 | ☐ | ☐ | MAX232 (serial levels) | U5 | 1 |
-| ☐ | ☐ | SST39SF010A, programmed with `bios.bin` | U6 | 1 |
+| ☐ | ☐ | SST39SF010A, programmed with U3's kernel ROM file | U6 | 1 |
 | ☐ | ☐ | HM628512 (task RAM), or a DS1747 for a real-time clock | U7 | 1 |
 | ☐ | ☐ | SST39SF040, programmed with `prom0.bin`, `prom1.bin`, `prom2.bin` | U31, U32, U34 | 3 |
 | ☐ | ☐ | YM2151 (sound) | U38 | 1 |

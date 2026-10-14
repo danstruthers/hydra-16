@@ -2,7 +2,8 @@
 // ****************************************************************************
 // run.js - a system on the base in the emulator (sim/lib: the Hydra-16 V1 board, cycle by cycle): the base's own
 // (base/bin), or HydraOS's (reborn/sim/run.js runs this with reborn/ as the system's folder).  It boots the system's
-// bin/bios.bin and the paged ROM's chips, bin/prom0.bin ... (node build.js), and either runs for a while and
+// bin/bios_rockwell.bin (or bios_wdc.bin: --acia wdc) and the paged ROM's chips, bin/prom0.bin ... (node build.js:
+// tools/images.js), and either runs for a while and
 // reports (the console's output, each task's state, the longest IRQs-off stretches, the stacks' depths), or is the
 // serial console, live.  The kernel's labels and the calls' names are the base's (base/obj: base/build.js).
 //
@@ -21,7 +22,7 @@
 //                       and the keys go on (otherwise it honours them, as a terminal set to XON/XOFF: lib/acia.js)
 //   --speed N           interactive: N times real time (0: as fast as it goes)
 //   --clock MHz         the CPU clock (3.579545; 7.15909 with jumper J8: build with --clock 2 too)
-//   --acia wdc          a WDC W65C51N in the serial port (build with --acia wdc too)
+//   --acia wdc          a WDC W65C51N in the serial port, and its BIOS (bin/bios_wdc.bin)
 //   --modules N         RAM modules installed (default 2)
 //   --seed N            the power-up's random RAM and registers, repeatable (default: random)
 //   --trace N           the last N instructions in the report (default 25)
@@ -70,6 +71,7 @@
 const fs = require('fs');
 const path = require('path');
 const { createMachine, romBank } = require('./lib/machine.js');
+const images = require('../tools/images.js');
 const { encodePng } = require('./lib/png.js');
 const { createWin32Input, ENABLE: W32_ENABLE, DISABLE: W32_DISABLE } = require('./lib/win32in.js');
 
@@ -112,23 +114,20 @@ function labels(file = path.join(BASE, 'obj', 'kernel', 'bios.dbg')) {
 }
 
 // The paged ROM's chips as build.js writes them (bin/prom0.bin, prom1.bin ...: 512K each, socket 0 on), one image
-function chips(root = ROOT) {
-  const out = [];
-  for (let k = 0; fs.existsSync(path.join(root, 'bin', 'prom' + k + '.bin')); k++) out.push(fs.readFileSync(path.join(root, 'bin', 'prom' + k + '.bin')));
-  if (!out.length) throw new Error('no bin/prom0.bin: node build.js');
-  return Buffer.concat(out);
+function chips(root = ROOT, acia = 'rockwell') {
+  return Buffer.concat(images.chipList(root, acia));
 }
 
 // The machine, booted from the images.  opt: createMachine's (sim/lib/machine.js), and bios, prom (files or bytes;
-// the paged ROM a whole image, the sockets' in order; none: the chips' images)
+// the paged ROM a whole image, the sockets' in order; none: the images for opt.acia's chip, tools/images.js)
 function boot(opt = {}) {
-  const root = opt.root || ROOT;
-  const img = (v, f) => v instanceof Uint8Array ? v : fs.readFileSync(v || path.join(root, 'bin', f));
-  const prom = opt.prom instanceof Uint8Array ? opt.prom : opt.prom ? fs.readFileSync(opt.prom) : chips(root);
+  const root = opt.root || ROOT, acia = opt.acia || 'rockwell';
+  const bios = opt.bios instanceof Uint8Array ? opt.bios : opt.bios ? fs.readFileSync(opt.bios) : images.bios(root, acia);
+  const prom = opt.prom instanceof Uint8Array ? opt.prom : opt.prom ? fs.readFileSync(opt.prom) : chips(root, acia);
   return createMachine(Object.assign({
     modules: 2, sharedU: 16, aciaLine: 1, stuckIrq: -1, acia: 'rockwell', clock: CLOCK, trace: 25,
     pcWatches: [], watches: [], marks: [], log: s => console.log('[sim] ' + s),
-  }, opt, { osrom: img(opt.bios, 'bios.bin'), pagedrom: prom }));
+  }, opt, { osrom: bios, pagedrom: prom }));
 }
 
 // Each task in use: { task, state, flags, preempt, guest, sp, name }

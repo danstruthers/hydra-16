@@ -9,7 +9,7 @@ Booted on its own, it is three tasks and a monitor:
 
 | Task | Module | What it is |
 | :--- | :----- | :--------- |
-| 0 | the kernel | The BIOS ROM (`bin/bios.bin`, `kernel/`): the boot and POST, the scheduler and the tick, tasks, memory and banks, semaphores, shared segments, notes, the clock, files and the server protocol, namespaces, the loader; 192 system call slots at `$F800` |
+| 0 | the kernel | The BIOS ROM (`bin/bios_rockwell.bin` or `bios_wdc.bin`, `kernel/`): the boot and POST, the scheduler and the tick, tasks, memory and banks, semaphores, shared segments, notes, the clock, files and the server protocol, namespaces, the loader; 192 system call slots at `$F800` |
 | F | `ser` | The console driver: the serial port (`#c`: `cons`, `consctl`, `ser`, `serctl`), on the serial layer HydraOS's console shares (`lib/serial.inc`) |
 | E | `kdev` | The kernel's devices: the modules (`#m`, which `SPAWN` reads), null and the kernel's messages (`#n`), the tasks (`#p`), pipes (`#|`), the environment (`#e`), named shared segments (`#s`), the ticks (`#t`), raw RAM (`#r`) |
 | 1 | `wozmon` | The monitor, as init: [Woz's Apple 1 monitor](../docs/03-base/monitor.md), with a disassembler |
@@ -37,13 +37,14 @@ With Node.js 18 or later and cc65 (`ca65`, `ld65`: `$CC65_BIN`, `$CC65_HOME/bin`
 the PATH):
 
 ```
-node build.js            the kernel (bin/bios.bin), the modules (ser, kdev, wozmon), the paged ROM (bin/prom0.bin),
+node build.js            the kernel (bin/bios_*.bin), the modules (ser, kdev, wozmon), the paged ROM (bin/prom0.bin),
                          the assembly SDK's hydra.inc (sdk/asm), the budgets
 node sim/run.js -i       the base in the emulator, its serial console in your terminal (Ctrl-A x quits, Ctrl-A h helps)
 node sim/test.js         the base's tests (the boot, the monitor, the kernel's own tests)
 ```
 
-The images are in Git (`bin/`), so `node sim/run.js -i` works without cc65.  On the board, `bin/bios.bin` goes into
+The images are in Git (`bin/`), so `node sim/run.js -i` works without cc65.  On the board, `bin/bios_rockwell.bin`
+(or `bios_wdc.bin`, for a WDC W65C51N in U3: the build makes both, and the paged ROM is the same for either) goes into
 the BIOS ROM's socket and `bin/prom0.bin` into the first paged ROM socket (U31), as for HydraOS (its BIOS ROM is this
 one, byte for byte); a terminal at 9600 baud on the serial port is the console.  `node ../reborn/build.js` builds this
 first, then HydraOS on it.
@@ -58,10 +59,10 @@ first, then HydraOS on it.
 | `modules/` | The base's modules, a folder each: `ser`, `kdev`, `wozmon`; `rom.txt`, the paged ROM's list and its init; `module.cfg` ... `module8.cfg`, a module's link (one bank to eight) |
 | `lib/` | Sources shared with HydraOS's modules: `serial.inc` (the serial port's layer: `ser`'s and `cons`'s), `dis.inc` and `w65c02.inc` (the disassembler and the W65C02S's instructions: `wozmon`'s and HydraOS's asm library's) |
 | `sdk/asm/` | The assembly SDK's core: `hyx2.inc` and `hyx2.cfg` (a module's or a RAM program's header and link), `macros.inc`, `srvlib.inc` and `srvlib.s` (the server library a driver is built on), and `hydra.inc` (the calls, the error codes and the constants: made from `spec/` by the build, and in Git, so a program can be built against it without one) |
-| `tools/` | `apigen.js` (the spec into the jump table, the error texts, `hydra.inc`, `api.json`), `romimg.js` (a paged ROM image: the module directory, the hardware test, the modules), `check.js` (only the kernel writes `T`, `V`, `W`), `budget.js` |
+| `tools/` | `apigen.js` (the spec into the jump table, the error texts, `hydra.inc`, `api.json`), `romimg.js` (a paged ROM image: the module directory, the hardware test, the modules), `check.js` (only the kernel writes `T`, `V`, `W`), `budget.js`, `images.js` (the images for each serial chip: the build's, the emulators' and tests') |
 | `sim/` | The board's emulator, cycle by cycle (`lib/`: the W65C02S, `T`/`U`/`V`/`W`, the ACIA, the VIA, the YM2151, the DS1747, a Vera X card, SD cards), `run.js` (any system's images, live or for a while; the monitor, breaks, the call trace), `view.js` (the screen and sound in a browser), `test.js` (the tests' runner, HydraOS's too) |
 | `tests/` | `tests.js`, the base's tests; `mod/`, their modules (and `testlib.inc`, HydraOS's test modules' too) |
-| `bin/` | The images (in Git): `bios.bin`, `prom0.bin` |
+| `bin/` | The images (in Git): `bios_rockwell.bin`, `bios_wdc.bin`, `prom0.bin` |
 
 The bank-1 hardware test is the old system's, unchanged (`../old/os_rom/bin/paged_rom_C02.bin`'s bank 1); POST starts
 it if T is typed during the boot.

@@ -6,7 +6,7 @@ all modules on this kernel); this page is how to make another.
 
 ### **What the kernel gives**
 
-The kernel is the BIOS ROM (`bin/bios.bin`), the same for every system.  A program calls it with `jsr` to a slot of the
+The kernel is the BIOS ROM (`bin/bios_rockwell.bin`, or `bios_wdc.bin` for a WDC serial chip), the same for every system.  A program calls it with `jsr` to a slot of the
 jump table at `$F800` (the addresses are `hydra.inc`'s, made from `spec/api.def` by the build: `sdk/asm/hydra.inc`, in Git):
 arguments in `.A`, `.X`, `.Y` and the call registers `r0`-`r15` (`$02-$21`), `C = 0` for success, `C = 1` with an error
 code in `.A`.  The groups:

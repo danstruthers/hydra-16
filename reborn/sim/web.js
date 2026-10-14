@@ -21,6 +21,7 @@ const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
 const { execSync } = require('child_process');
+const romimages = require('../../base/tools/images.js');
 
 const SIM = __dirname, ROOT = path.join(SIM, '..'), REPO = path.join(ROOT, '..');
 
@@ -59,9 +60,7 @@ load(${JSON.stringify(entry)});
 
 // The ROM images: the BIOS ROM's, then the paged ROM's chips' (as run.js boots them)
 function images() {
-  const bios = fs.readFileSync(path.join(ROOT, 'bin', 'bios.bin')), proms = [];
-  for (let k = 0; fs.existsSync(path.join(ROOT, 'bin', 'prom' + k + '.bin')); k++) proms.push(fs.readFileSync(path.join(ROOT, 'bin', 'prom' + k + '.bin')));
-  if (!proms.length) throw new Error('no bin/prom0.bin: node build.js');
+  const bios = romimages.bios(ROOT, 'rockwell'), proms = romimages.chipList(ROOT, 'rockwell');   // (The page's machine's chip)
   const card = path.join(ROOT, 'bin', 'sdcard.img');            // (HydraOS's SD card: the samples, the songs, the benchmarks)
   return { bios, prom: Buffer.concat(proms), card: fs.existsSync(card) ? fs.readFileSync(card) : null };
 }

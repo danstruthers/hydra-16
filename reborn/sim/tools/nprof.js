@@ -46,12 +46,13 @@ function profile(o) {
   const romfs = require(path.join(tree, 'tools', 'romfs.js'));
   const { readManifest, hwtest } = require(path.join(tree, 'build.js'));
   const { romBank } = require(path.join(tree, '..', 'base', 'sim', 'lib', 'machine.js'));
+  const images = require(path.join(__dirname, '..', '..', '..', 'base', 'tools', 'images.js'));   // (An older tree's bios.bin too)
 
   // The image: the system's modules and t_rc as init (the tests' image), each module's banks noted
   const bin = (d, n) => fs.readFileSync(path.join(tree, 'obj', d, n + '.bin'));
   const sys = readManifest(path.join(tree, 'modules', 'rom.txt')).modules;
   const built = romimg.build({ modules: [...sys.map(n => ({ file: n, data: bin('modules', n) })), { file: 't_rc', data: bin('tests', 't_rc') }],
-    init: 't_rc', hwtest: hwtest(), bios: fs.readFileSync(path.join(tree, 'bin', 'bios.bin')), romfs: romfs.manifest(path.join(tree, 'romfs', 'romfs.txt')) });
+    init: 't_rc', hwtest: hwtest(), bios: images.bios(tree, images.built(tree)), romfs: romfs.manifest(path.join(tree, 'romfs', 'romfs.txt')) });
   const modOfBank = new Map();
   for (const e of built.entries) for (let k = 0; k < e.banks; k++) modOfBank.set(e.bank + k, [e.name, k]);
   const modAt = b => modOfBank.get(b) || modOfBank.get(romBank(b));

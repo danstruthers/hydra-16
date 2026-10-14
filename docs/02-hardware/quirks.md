@@ -119,7 +119,8 @@ margin, so the serial driver paces its sending by VIA timer 2, with idle bits be
 devices](devices.md#the-acia-65c51-and-the-serial-port)).
 
 **The WDC W65C51N** has a hardware fault of its own: its "transmitter empty" status bit is always set and it never
-interrupts for sending.  Software built with `--acia wdc` times each character instead.
+interrupts for sending.  The BIOS ROM built for it (`bios_wdc.bin`) times each character instead, and tells the
+paged ROM's serial drivers (`BIOS_ACIA`), which do the same.
 
 ---
 

@@ -33,7 +33,7 @@ From `reborn/` (HydraOS) or `base/` (the base alone):
 $ node sim/run.js -i
 ```
 
-boots the system's images (`bin/bios.bin` and `bin/prom*.bin`) in **real time**, with your terminal as the Hydra's serial
+boots the system's images (`bin/bios_rockwell.bin`, or `bios_wdc.bin` with `--acia wdc`, and `bin/prom*.bin`) in **real time**, with your terminal as the Hydra's serial
 console.  Without `-i`, it runs for a while (30 million cycles: 8.4 s of the Hydra's time, as fast as the PC can) and
 **reports**: the console's output, each task's state, the longest stretches with interrupts off, the stacks' depths,
 and the last instructions run.
@@ -78,7 +78,7 @@ window changes.
 | `--cycles N` | Stop at cycle N (default 30,000,000; with `-i`, never) |
 | `--input TEXT` | Keys to type (`\r` Enter, `\w` a wait), one every 20,000 cycles from cycle 200,000; `--paste` as fast as the line goes |
 | `--clock MHz` | The CPU's clock (3.579545; `7.15909` for a J8 board with faster parts than the stated ones, with a `build.js --clock 2` build: the stated parts run at 3.58 MHz or lower) |
-| `--acia wdc` | A WDC W65C51N in the serial port (with a `build.js --acia wdc` build) |
+| `--acia wdc` | A WDC W65C51N in the serial port, and its BIOS ROM (`bin/bios_wdc.bin`) |
 | `--modules N` | Memory cards installed (default 2) |
 | `--seed N` | The power-up's random RAM and registers, repeatable |
 | `--sd FILE` | A card image in SD device 0 (again for 1, 2 ...), read and written in the file itself.  With none, the system's own card (HydraOS's `bin/sdcard.img`), its writes kept in memory; `--no-sd`: no card |
@@ -193,16 +193,17 @@ $ cd reborn
 $ node build.js
 ```
 
-builds the base first, then HydraOS: the BIOS ROM (`bin/bios.bin`), the paged ROM's chips (`bin/prom0.bin` ...), the ROM
+builds the base first, then HydraOS: the BIOS ROM, one for each serial chip (`bin/bios_rockwell.bin` and
+`bin/bios_wdc.bin`: the kernel is built twice), the paged ROM's chips (`bin/prom0.bin` ...: the same for both), the ROM
 disk, the SD card's image (`bin/sdcard.img`), the SDKs (`bin/sdk`), and a report of each part's size and room left.  It
 needs cc65's `ca65` and `ld65` (and `cc65` and `ar65` for the C programs), found in `$CC65_BIN`, `$CC65_HOME/bin`, or on
 the PATH.
 
 | Command | What it builds |
 | :------ | :------------- |
-| `node build.js` | Everything, for a 3.58 MHz board with a Rockwell ACIA |
+| `node build.js` | Everything, for a 3.58 MHz board (a BIOS ROM for each ACIA, Rockwell's and WDC's) |
 | `node build.js --clock 2` | For a 7.16 MHz board (jumper J8): one with faster parts than the stated ones, which run at 3.58 MHz or lower |
-| `node build.js --acia wdc` | For a WDC W65C51N in the serial port |
+| `node build.js --acia wdc` | The same images, with `obj/` (the labels, the objects the tests use) the WDC build's, not the Rockwell's: `sim/test.js` then runs the tests on a W65C51N |
 | `node build.js prog DIR` | A program of your own: `DIR/*.s` (or `*.c`) into `DIR/NAME.hyx` ([programming](09-programming/README.md)) |
 | `node ../base/build.js` | The base alone (from `reborn/`), or `node build.js` in `base/` |
 

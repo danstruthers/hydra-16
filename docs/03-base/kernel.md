@@ -58,7 +58,10 @@ On **every** page:
 * `$E000`: the reset stub ([the boot](boot.md#the-reset-stub)).
 * `$FD00-$FDFE`: the **COMMON block**, the same bytes on every page: the interrupt entry and exit, and `K_FAR`, the
   kernel's far call between pages.  Since changing `W` changes the code under the CPU, every page change happens in here.
+* `$FDFE`: the serial chip the BIOS is built for (`BIOS_ACIA`: 0 a Rockwell R65C51, 1 a WDC W65C51N), which the
+  paged ROM's serial drivers read.
 * `$FDFF`: the page's number (POST reads it).
+* `$FEFE`: two bytes that make the page's checksum (the hardware test's CRC of `$E000-$FEFF`) 0, set by the build.
 * `$FFFA`: the vectors.
 
 Page 0 is the scarce one (about 1.5K free); the others have plenty.  A system call whose routine is on another page is
