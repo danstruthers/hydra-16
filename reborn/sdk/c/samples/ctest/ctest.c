@@ -2,7 +2,8 @@
 ** ctest.c - the C library's test (tests/tests.js's c runs it at rc): its arguments and name, files (stdio and the
 ** calls under it), errors, directories, the heap, the time, the environment, stat, commands and their exit
 ** statuses (system, hy_spawn, hy_wait, hy_exec: with the sample code), the namespace, a note as a signal, RAM banks, shared
-** segments, isatty, the window's chrome (hy_wlabel, hy_wstatus, hy_wctl), windows made (hy_wnew).
+** segments, isatty, the window's chrome (hy_wlabel, hy_wstatus, hy_wctl), windows made (hy_wnew); dice.h's numbers
+** (hylang's and HyForth's, for the same seed) and dice (the harn sample's test has harn.h's).
 ** Each check prints "ok - " or "not ok - " and its name; the last line is "ctest: N failed", and its exit status
 ** is the count.  Run it as ctest a 'b c', in a directory it can write in (/ram), with the C samples in
 ** /sd/0/sample/c.  (ctest exec: its hy_exec check's child, which runs code in its place.)
@@ -19,6 +20,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <hydra.h>
+#include <dice.h>
 
 #define CODE    "/sd/0/sample/c/code"
 #define CTEST   "/sd/0/sample/c/ctest"
@@ -279,6 +281,23 @@ int main (int argc, char* argv[])
             fd = open (p, O_RDWR);
             check (fd >= 0 && write (fd, "x", 1) == 1 && close (fd) == 0, "hy_wnew: its cons written, closed");
         }
+    }
+
+    /* dice.h: xorshift32, the same numbers as HyForth's lib random gives for 42 0 rseed (rand rand 6 random
+    ** 100 random 1000 random: 17704 13484 4 76 795); dice in range */
+    {
+        unsigned char i, ok = 1;
+
+        rseed (42);
+        check (rand16 () == 17704 && rand16 () == 13484 && random (6) == 4 && random (100) == 76 &&
+            random (1000) == 795, "dice.h: rseed, rand16, random: HyForth's numbers");
+        for (i = 0; i < 50; ++i) {
+            if (die (6) < 1 || die (6) > 6 || dice (3, 6) < 3 || dice (3, 6) > 18 || d20_plus (5) < 6 ||
+                d20_plus (5) > 25) {
+                ok = 0;
+            }
+        }
+        check (ok, "dice.h: die, dice, d20_plus in range");
     }
 
     printf ("ctest: %d failed\n", failed);

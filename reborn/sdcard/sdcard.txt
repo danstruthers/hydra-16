@@ -20,6 +20,7 @@ sample/c/tones      ../obj/samples/c/tones.hyx
 sample/c/jukebox    ../obj/samples/c/jukebox.hyx
 sample/c/ctest      ../obj/samples/c/ctest.hyx
 sample/c/ntest      ../obj/samples/c/ntest.hyx
+sample/c/harn       ../obj/samples/c/harn.hyx   ; A HarnMaster character and dice (harn.h, dice.h)
 sample/c/race       ../obj/samples/c/race.hyx   ; The multitasking demos: tasks, semaphores, a shared segment
 sample/c/chorus     ../obj/samples/c/chorus.hyx
 sample/c/philo      ../obj/samples/c/philo.hyx

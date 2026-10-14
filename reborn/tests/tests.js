@@ -362,6 +362,9 @@ const C_LINES = [
   ["echo hello there | /sd/0/sample/c/upper","HELLO THERE"],
   ["/sd/0/sample/c/code 3; echo $status","3"],
   ["/sd/0/sample/c/code oops; echo $status","oops"],
+  ["/sd/0/sample/c/harn 42 | head -7","\n**** Birth Attributes ****\nSpecies Human\nSex Male\nBirthday Savor 23\nSunsign Tai\nFrame Medium"],
+  ["/sd/0/sample/c/harn 42 | grep 'Endur|Dodge|Climb|best|D&D'",
+    "Endurance 8\nClimbing 36\nDodge 55\nthe best 3 of 5 d6: 17 (6 6 5)\nD&D attributes: 13 (6 5 2 1) 13 (6 4 3 1) 12 (6 5 1 1) 12 (6 3 3 2) 11 (6 4 1 1) 10 (4 3 3 3)"],
   ["cd /ram; /sd/0/sample/c/ctest a 'b c'","ok - arguments",true],
   ["for(w in pear apple fig Apple banana 10 9 07) echo $w >>/ram/s; sort /ram/s", [
     "07",
