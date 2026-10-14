@@ -55,6 +55,7 @@ lib/forth/video.fs  lib/forth/video.fs          ;   the Vera X's screen: drawing
 lib/font/iso8859-15 ../modules/vid/iso8859-15.fnt ; The screen's fonts, 8 x 8, for /dev/vid/font: vid's own ...
 lib/font/cp437      lib/font/cp437              ;   and the PC's (both the X16 ROM's charsets, public domain)
 lib/forth/pc.fs     lib/forth/pc.fs
+lib/forth/harn.fs   lib/forth/harn.fs           ; HarnMaster characters (lib harn), harn.h's for HyForth
 lib/hylang/globals.hl lib/hylang/globals.hl ; hylang's library: danlang's (lib/ there), globals loaded as hylang starts
 lib/hylang/hylib.hl lib/hylang/hylib.hl     ;   (hylib.hl loads it, then hylang's own: clock ...)
 lib/hylang/dice.hl  lib/hylang/dice.hl      ;   (from its snapshot, the module hysnap) and the others by (load "dice")
@@ -71,6 +72,8 @@ lib/hylang/clock.hl lib/hylang/clock.hl
 lib/hylang/disk.hl  lib/hylang/disk.hl
 lib/hylang/pc.hl    lib/hylang/pc.hl
 lib/hylang/snd.hl   lib/hylang/snd.hl
+lib/hylang/harn.hl  lib/hylang/harn.hl      ; HarnMaster characters (use "harn"), harn.h's for hylang; its tests
+lib/hylang/harntest.hl lib/hylang/harntest.hl ;   (use "harntest")
 lib/hylang/login.hl lib/hylang/login.hl     ; hylang -l, a login shell: login.hl, profile.hl (and shell.hl,
 lib/hylang/profile.hl lib/hylang/profile.hl ;   the shell's rule: an rc command line at the prompt)
 lib/basic/profile.bas lib/basic/profile.bas ; basic -l, a login shell: run as typed after its namespace and window

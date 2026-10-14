@@ -56,3 +56,5 @@ bench/hl/fold.hl    bench/hl/fold.hl
 bench/hl/each.hl    bench/hl/each.hl
 bench/hl/chars.hl   bench/hl/chars.hl
 bench/hl/digits.hl  bench/hl/digits.hl
+bin/hmchar.hl       ../games/hmchar/hmchar.hl ; hmchar in hylang (games/hmchar: /rom/lib/hylang/harn.hl's)
+bin/hmchar.fs       ../games/hmchar/hmchar.fs ;   and in HyForth (/rom/lib/forth/harn.fs's)

@@ -130,6 +130,14 @@ rd_start:
             bcs         @high
             cmp         #';'
             beq         @comment
+            cmp         #'#'                                ; (#!, a comment to the line's end too: a script's
+            bne         :+                                  ;   first line, #!/bin/hylang)
+            ldy         #1
+            lda         (rp),y
+            cmp         #'!'
+            beq         @comment
+            lda         #'#'
+:
             cmp         #'"'
             beq         @string
             ldx         #5
@@ -1147,6 +1155,7 @@ rd_number:
             sta         hq + 1
             lda         rn
             sta         hn
+            stz         hn + 1                              ; (Not a string's before it: one of 256 bytes or more)
             FARN        3, num_parse
             bcc         :+
             jmp         rd_nomem

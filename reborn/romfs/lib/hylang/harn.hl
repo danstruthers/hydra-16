@@ -1,0 +1,454 @@
+; harn.hl - HarnMaster (third edition, 3.5) characters and their rules: (use "harn").  danlang's lib/harn.dl made
+; for hylang's speed: the same rules, by the C SDK's numbers (harn.h's: a species 0-3, a sunsign 0-35 ...), so a
+; character is harn.h's and its file harnfile.c's, which the C game and every generator read.  Each value's names are
+; lists (nth): (nth sp harn.species-names).  harntest.hl has the tests, the penalties and development (as harn.h's
+; harntest.c); combat and healing are harn.dl's and harn.h's.  As harn.dl, occupations, contacts, aging, psionics,
+; magic and rituals are left out.
+;
+; A character is a hash: its attributes by harn.dl's keys (:sp :sx :bd :ss :ht :fr :owt :wt :cml :str ... :mor :dty
+; :pty: harn.attr-keys), its family (:culture :social :sibrank :famsize :parent :estrange :clanhead), its colours
+; (:complexion :hair :eyes), :med (its medical traits), :psy (its disorders, a list of {disorder severity}),
+; :sexuality, :ml (a buffer: each skill's mastery level by its number, 0 not opened), its volatiles (:fl :bl :dp
+; :state :shockhr, and :inj, a list of injuries: {loc aspect sev il hr flags}), and :sg (its sunsign's two signs'
+; letters, for the skills' bonuses).
+;
+; hylang reads a library slowly, and compiles each function fun makes as it's read: these are def's and fn's, each
+; compiled at its second call, so those a program calls once or not at all cost it no time.  The Skill Data table is
+; text, for the same reason.  hylang's random can't be seeded: the same character twice is HyForth's (harn.fs) or C's.
+
+; ****************
+; *** Dice ***
+; ****************
+(def {harn.d} (fn {n} {+ 1 (random n)}))
+(def {harn.dice} (fn {n s} {?((zero? n) 0 (+ 1 (random s) (harn.dice (- n 1) s)))}))
+
+; A table's place for a roll: the first of its upper bounds the roll doesn't pass (the last if it passes them all)
+(def {harn.table} (fn {upto r} {?((or (nil? (tail upto)) (<= r (fst upto))) 0 (+ 1 (harn.table (tail upto) r)))}))
+
+; ***************************
+; *** The names ***
+; ***************************
+(def {harn.attr-keys} {:sp :sx :bd :ss :ht :fr :owt :wt :cml :str :sta :dex :agl :eye :hrg :sml :voi :int :aur :wil
+  :mor :dty :pty})
+(def {harn.attr-names} {"Species" "Sex" "Birthday" "Sunsign" "Height" "Frame" "Optimum Weight" "Weight" "Comeliness"
+  "Strength" "Stamina" "Dexterity" "Agility" "Eyesight" "Hearing" "Smell" "Voice" "Intelligence" "Aura" "Will"
+  "Morality" "Deity" "Piety" "Endurance"})
+(def {harn.species-names} {"Human" "Sindarin" "Khuzdul" "Other"})
+(def {harn.sex-names} {"Female" "Male"})
+(def {harn.month-names} {"Nuzyael" "Peonu" "Kelen" "Nolus" "Larane" "Agrazhar" "Azura" "Halane" "Savor" "Ilvin"
+  "Navek" "Morgat"})
+(def {harn.sign-names} {"Ulandus" "Aralius" "Feniri" "Ahnu" "Angberelius" "Nadai" "Hirin" "Tarael" "Tai" "Skorus"
+  "Masara" "Lado"})
+(def {harn.culture-names} {"Tribal" "Viking" "Feudal" "Imperial" "Khuzan" "Sindarin"})
+(def {harn.class-names} {"Slave" "Serf" "Unguilded" "Guilded" "Noble"})
+(def {harn.parent-names} {"Offspring" "Fostered" "Adopted" "Bastard" "Orphan"})
+(def {harn.estrangement-names} {"Outcast" "Unpopular" "Average" "Popular" "Favorite"})
+(def {harn.clanhead-names} {"Distant Relation" "Aunt or Uncle" "Cousin" "Father or Mother"})
+(def {harn.frame-names} {"Scant" "Light" "Medium" "Heavy" "Massive"})
+(def {harn.complexion-names} {"Fair" "Medium" "Dark"})
+(def {harn.hair-names} {"Brown" "Black" "Red" "Silver" "Blond"})
+(def {harn.eye-names} {"Hazel" "Gray" "Violet" "Green" "Blue"})
+(def {harn.medical-names} {"None" "Addiction" "Albinism" "Allergy" "Ambidextrous" "Arm" "Birthmark" "Dwarfism"
+  "Epilepsy" "Ear" "Eye" "Gigantism" "Hemophilia" "Hirsutism" "Leg" "Left-Handed" "Leprosy" "Lycanthropy"
+  "Monochromasia" "Obesity" "Parasites" "Poxmarks" "Scars" "Sterile"})
+(def {harn.psyche-names} {"None" "Acrophobia" "Aichmophobia" "Algophobia" "Astraphobia" "Ballistophobia" "Bulimia"
+  "Claustrophobia" "Cynophobia" "Dyslexia" "Entomophobia" "Gamblamania" "Gephyrophobia" "Heliophobia" "Hemophobia"
+  "Hydrophobia" "Hypochondria" "Ivashuphobia" "Kleptomania" "Megalomania" "Mysophobia" "Multiple Personality"
+  "Musophobia" "Necrophobia" "Nyctophobia" "Ophidiophobia" "Ornithophobia" "Paranoia" "Psychopathy" "Pvaraphobia"
+  "Pyromania" "Pyrophobia" "Sadism" "Sex Mania" "Theophobia" "Toxicophobia" "Violent Temper" "Xenophobia"
+  "Yaelaphobia"})
+(def {harn.sexuality-names} {"Heterosexual" "Bi-Sexual" "Homosexual"})
+(def {harn.deity-names} {"Agrik" "Halea" "Ilvir" "Larani" "Morgath" "Naveh" "Peoni" "Sarajin" "Save-K'nor" "Siem"
+  "None"})
+
+; A month's name (1-12), a comeliness's (Character 6)
+(def {harn.month-name} (fn {m} {nth (- m 1) harn.month-names}))
+(def {harn.comeliness-name} (fn {n} {
+  nth (harn.table {5 8 12 15 99} n) {"Ugly" "Plain" "Average" "Attractive" "Handsome"}}))
+
+; A sunsign's signs (Character 3): its own, then the other of a cusp (the one before for its first days, after for
+; its last; its own again for the sign alone)
+(def {harn.sunsign-signs} (fn {ss} {do
+  =(s (truncate (/ ss 3)))
+  =(k (- ss (* 3 s)))
+  (list s ?((eq k 1) s ?((zero? k) ?((zero? s) 11 (- s 1)) ?((eq s 11) 0 (+ s 1)))))}))
+
+(def {harn.sunsign-name} (fn {ss} {do
+  =(s (harn.sunsign-signs ss))
+  ?((eq (fst s) (snd s)) (nth (fst s) harn.sign-names)
+    (+ (nth (fst s) harn.sign-names) "-" (nth (snd s) harn.sign-names) " Cusp"))}))
+
+; ************************
+; *** Birth (Character 2-3) ***
+; ************************
+; Each sign's first day of the year (0 the 1st of Nuzyael): Ulandus from the 4th of Nuzyael ... Lado from the 2nd of
+; Morgat to the 3rd of Nuzyael; a sign's first two days and last two its cusps
+(def {harn.sign-starts} {3 33 62 93 124 156 185 214 243 272 302 331})
+(def {harn.sunsign-of} (fn {m d} {do
+  =(day (+ (* 30 (- m 1)) d -1))
+  =(s (harn.table harn.sign-starts (+ day 1)))
+  =(s ?((< day 3) 11 ?((< day (nth s harn.sign-starts)) (- s 1) s)))
+  =(from (nth s harn.sign-starts))
+  =(ln (- ?((< s 11) (nth (+ s 1) harn.sign-starts) 363) from))
+  =(at (- day from))
+  =(at ?((< at 0) (+ at 360) at))
+  (+ (* 3 s) ?((< at 2) 0 ?((>= at (- ln 2)) 2 1)))}))
+
+; Each culture's upper bounds for slave, serf, unguilded and guilded (noble the rest).  (The Viking column has
+; unguilded 81-93 and guilded 86-98: here unguilded 81-85.  Feudal slaves are Rethem's, serfs elsewhere: the table
+; as it is)
+(def {harn.class-table} {{10 10 99 99 100} {15 80 85 98 100} {15 70 93 98 100} {25 25 90 98 100} {0 0 15 98 100}
+  {0 0 70 99 100}})
+
+; *****************************
+; *** Appearance (Character 6) ***
+; *****************************
+; The Height/Weight table: 75 pounds at 40", 2 more an inch to 51", 3 from 52", 4 from 64", 3 at 70", 5 from 71"
+; (to 89": 255); then the frame's -20% ... +20%, rounded
+(def {harn.weight} (fn {ht fr} {do
+  =(h (min 89 (max 40 ht)))
+  =(w ?((<= h 51) (+ 75 (* 2 (- h 40))) ?((<= h 63) (+ 97 (* 3 (- h 51))) ?((<= h 69) (+ 133 (* 4 (- h 63)))
+    (+ 160 (* 5 (- h 70)))))))
+  (truncate (/ (+ (* w (+ 8 fr)) 5) 10))}))
+
+; Hair and eyes by the complexion (humans +25 for a fair one, -25 for a dark one): each species' upper bounds (Human,
+; Sindarin, Khuzdul; Other as Human)
+(def {harn.colour-roll} (fn {sp c} {do
+  =(r (harn.d 100))
+  (max 1 (min 100 ?((or (zero? sp) (eq sp 3)) (+ r (nth c {25 0 -25})) r)))}))
+
+; **********************************************
+; *** The attributes' modifiers (Character 6-10) ***
+; **********************************************
+; By species (a human female's own), frame (Agility: scant +2 ... massive -2), weight (Strength: 56-85 -4 ...
+; 146-155 0 ... 216-245 +4, the table's ends past it)
+(def {harn.species-mods} (list #({}) #({{:fr -2} {:str 1} {:sta 1} {:cml 2} {:dex 2} {:agl 2} {:eye 2} {:hrg 2}
+  {:voi 2} {:sml 3} {:mor 3} {:aur 4}}) #({{:aur -2} {:dex 1} {:eye 1} {:hrg 2} {:sml 2} {:fr 3} {:wil 3} {:str 4}
+  {:sta 4}}) #({})))
+(def {harn.female-mods} #({{:fr -3} {:aur 2}}))
+(def {harn.species-attr-mod} (fn {sp sx a} {do
+  =(v (?((and (zero? sx) (zero? sp)) harn.female-mods (nth sp harn.species-mods)) a))
+  ?(v v 0)}))
+
+; An attribute rolled: 3d6 and its modifiers, at least 1
+(def {harn.rand-attr} (fn {sp sx fr wt a} {do
+  =(r (+ (harn.dice 3 6) (harn.species-attr-mod sp sx a)))
+  (max 1 ?((eq a :agl) (+ r 2 (- fr))
+    ?((eq a :str) (+ r -4 (harn.table {85 110 130 145 155 170 190 215 999} wt)) r)))}))
+
+; ***********************************
+; *** Medical traits (Character 9) ***
+; ***********************************
+; Each trait's upper bound (1, Addiction ... 23, Sterile): a male's roll, a female's
+(def {harn.medical-m} {8 9 14 17 20 24 25 27 28 30 31 32 33 35 39 41 42 44 47 57 60 63 65})
+(def {harn.medical-f} {5 6 10 14 15 19 20 22 23 25 26 27 29 30 40 42 43 45 48 58 61 63 65})
+
+; A trait's effects (dwarfism's and gigantism's on height aren't made: the height's taken).  Epilepsy's Intelligence
+; is :int+ till Intelligence is rolled (harn_create's order: the traits before the personality)
+(def {harn.less} (fn {ch a n} {hash-put ch [a (max 1 (- (ch a) n))]}))
+(def {harn.medical-effect} (fn {ch m} {
+  ?((eq m 4) (hash-put ch [:dex (+ (ch :dex) (harn.d 3))])
+  ?((eq m 5) (harn.less ch :dex (harn.d 3))
+  ?((elem? m {6 13 21 22}) (harn.less ch :cml (harn.d 3))
+  ?((eq m 8) (hash-put ch [:int+ (harn.d 3)])
+  ?((eq m 9) (harn.less ch :hrg (harn.d 3))
+  ?((or (eq m 10) (eq m 18)) (harn.less ch :eye (harn.d 3))
+  ?((eq m 14) (harn.less ch :agl (shr (ch :agl) 1))
+  ?((eq m 15) (hash-put ch [:dex (+ (ch :dex) (harn.d 2))])
+  ?((eq m 16) (harn.less ch :cml (harn.dice 2 6))
+  ?((eq m 19)
+    (do (hash-put ch [:wt (truncate (/ (* (ch :wt) (+ 150 (random 51))) 100))]) (harn.less ch :agl (harn.d 3)))
+  NIL))))))))))}))
+
+; A roll on the table: a trait (with its effects; each once, four at most), multiple (two rolls more), or none
+(def {harn.rand-medical} (fn {ch depth} {do
+  =(r (harn.d 100))
+  ?((> r 70) NIL
+  ?((> r 65) ?((< depth 3) (do (harn.rand-medical ch (+ depth 1)) (harn.rand-medical ch (+ depth 1))) NIL)
+    (do
+      =(m (+ 1 (harn.table ?((zero? (ch :sx)) harn.medical-f harn.medical-m) r)))
+      ?((or (elem? m (ch :med)) (>= (len (ch :med)) 4)) NIL
+        (do (hash-put ch [:med (join (ch :med) (list m))]) (harn.medical-effect ch m))))))}))
+
+; *************************************************************************
+; *** Mental disorders and sexuality (Character 11: optional rules, not made) ***
+; *************************************************************************
+; A disorder (1, Acrophobia ... 38, Yaelaphobia) or more, each with its severity (0 mild, 1 moderate, 2 severe), into
+; :psy; a sexuality (0 heterosexual, 1 bisexual, 2 homosexual)
+(def {harn.psyche-table} {3 5 6 8 9 11 14 15 17 19 22 24 25 26 28 31 32 35 36 37 38 40 43 45 46 47 48 49 51 54 56 57
+  59 60 61 63 64 65})
+(def {harn.rand-psyche} (fn {ch depth} {do
+  =(r (harn.d 100))
+  ?((> r 70) NIL
+  ?((> r 65) ?((< depth 3) (do (harn.rand-psyche ch (+ depth 1)) (harn.rand-psyche ch (+ depth 1))) NIL)
+    (do
+      =(p (+ 1 (harn.table harn.psyche-table r)))
+      =(s (harn.table {60 90 100} (harn.d 100)))
+      ?((< (len (ch :psy)) 3) (hash-put ch [:psy (join (ch :psy) (list (list p s)))]) NIL))))}))
+(def {harn.rand-sexuality} (fn {} {harn.table {90 96 100} (harn.d 100)}))
+
+; ***************************************************
+; *** Skills (Skills 3-4: the Skill Data table, its order) ***
+; ***************************************************
+; A line a skill, 42 bytes with its LF (skill n's from byte 1 + 42n): its key (harn.dl's, the file's), its name, its
+; three attributes (S STR, T STA, D DEX, A AGL, E EYE, H HRG, M SML, V VOI, I INT, U AUR, W WIL, C CML), its sunsign
+; bonuses (each a sign, a Ulandus ... l Lado, and its bonus), its OML's multiple of SB (L a native tongue, 50-80 + SB
+; by social class; S a native script, 70 + SB), 1 if it's automatic, its group (0 physical, 1 communication,
+; 2 religion, 3 combat, 4 craft: physical and combat skills take the physical penalty, the rest the universal), and a
+; craft's months of teaching (0: opened on its first use).  (A table as text: hylang reads it many times faster)
+(def {harn.skill-rows} (+ """
+acr  Acrobatics         SAA f2g1     2000
+cli  Climbing           SDA a2b2     4100
+cnd  Condition          STW a1l1     5100
+dan  Dancing            DAA h2g1i1   2000
+jmp  Jumping            SAA f2g2     4100
+leg  Legerdemain        DDW j2i2h2   1000
+ski  Skiing             SDA k2j1l1   1000
+stl  Stealth            AHW g2h2i2   3100
+swi  Swimming           TDA j1k3l3   1000
+thr  Throwing           SDE g2h1f1   4100
+act  Acting             AVI h1i1     2010
+awa  Awareness          EHM g2h2     4110
+ntr  Intrigue           IUW i1h1j1   3110
+lov  Lovecraft          CAV k1e1     3010
+men  Mental Conflict    UWW          3010
+mus  Musician           DHH k1e1     1010
+ora  Oratory            CVI h1       2110
+rhe  Rhetoric           VIW i1h1j1   3110
+sng  Singing            HVV k1       3110
+lan  Language           VIW i1       L110
+scr  Script             DEI h1i1     S011
+ragr Ritual: Agrik      VIS f2e1d1   1020
+rhal Ritual: Halea      VIC h2g1k1   1020
+rilv Ritual: Ilvir      VIU j2i1a1   1020
+rlar Ritual: Larani     VIW e2d1c1   1020
+rmor Ritual: Morgath    VIU l2d1k1   1020
+rnav Ritual: Naveh      VIW k2j1h1   1020
+rpeo Ritual: Peoni      VID b2e1a1   1020
+rsar Ritual: Sarajin    VIS c2b1l1   1020
+rsav Ritual: Save-K'nor VII i2j1h1   1020
+rsie Ritual: Siem       VIU g2c1a1   1020
+ini  Initiative         AWW          4130
+una  Unarmed            SDA k2l2a2   4130
+rid  Riding             DAW a1b1     1030
+axe  Axe                SSD d1c1e1   3030
+blo  Blowgun            TDE g2h1f1   4030
+bow  Bow                SDE g1h1f1   2030
+clu  Club               SSD a1b1     4030
+dag  Dagger             DDE e2f2     3030
+fla  Flail              DDD g1h1f1   1030
+net  Net                DDE k1j1l1   1030
+pol  Polearm            SSD e1b1     2030
+shd  Shield             SDD a1l1k1   3030
+slg  Sling              DDE g1h1f1   1030
+spr  Spear              SSD b1c1a1   3030
+swd  Sword              SDD e3d1f1   3030
+whp  Whip               DDE g1f1     1030
+dge  Dodge              AAA          5130
+""" (substring """
+agr  Agriculture        STW a2b2     2041
+alc  Alchemy            MIU j3i2k2   1046
+ani  Animalcraft        AVW a1b1     1041
+ast  Astrology          EIU h1       1043
+bre  Brewing            DMM j3i2k2   2041
+cer  Ceramics           DDE a2b2     2042
+coo  Cookery            DMM j1       3040
+dra  Drawing            DEE j1i1     2041
+emb  Embalming          DEM j1a1     1042
+eng  Engineering        DII a2b2c1   1043
+fis  Fishing            DEW k2l2     3040
+fle  Fletching          DDE g2h1f1   1041
+fol  Folklore           VII i2       3040
+for  Foraging           DMI a2b2     3040
+gla  Glassworking       DEW c2       1043
+hrl  Heraldry           DEW j1i1     1041
+hrb  Herblore           EMI a3b2     1041
+hid  Hidework           DMW a1b1     2041
+hun  Hunting            AMI a2b2     2040
+ink  Inkcraft           EMI j2i1     1041
+jew  Jewelcraft         DEW c3h1b1   1042
+law  Law                VIW h1i1     1042
+lck  Lockcraft          DEW c1       1042
+lor  Lore               EII i2       2041
+msn  Masonry            SDI a2b2     1041
+mat  Mathematics        IIW i3h1j1   1043
+met  Metalcraft         SDW c3d1e1   1042
+mil  Milling            SDM a1       2041
+min  Mining             SEI a2b2c1   1041
+prf  Perfumery          MMI g1j1h1   1041
+phy  Physician          DEI k2j1i1   1040
+pil  Piloting           DEI l3k1     1046
+run  Runecraft          IUU i2j1     1046
+sea  Seamanship         SDA l3k1j1   2041
+shw  Shipwright         SDI l3k1     1042
+sur  Survival           SDI a2b1     3041
+trt  Tarotry            IUW h2i2j1g1 1044
+tex  Textilecraft       DDE a1b1     2041
+tim  Timbercraft        SDA a3b1     2041
+trk  Tracking           EMW a3b3     2041
+wpn  Weaponcraft        SDW c3d1e1   1044
+wea  Weatherlore        IEM g1h1k1l1 3041
+woo  Woodcraft          DDW a2b1l1   2041
+""" 1)))
+(def {harn.nskills} 91)
+(def {harn.codes} {:str :sta :dex :agl :eye :hrg :sml :voi :int :aur :wil :cml})
+
+; A skill's byte i (its line's), its key, its name, its group; a skill by its key ("cli": -1, none)
+(def {harn.sk} (fn {sk i} {char-at harn.skill-rows (+ 1 i (* 42 sk))}))
+(def {harn.skill-key} (fn {sk} {str-trim (substring harn.skill-rows (+ 1 (* 42 sk)) 5)}))
+(def {harn.skill-name} (fn {sk} {str-trim (substring harn.skill-rows (+ 6 (* 42 sk)) 19)}))
+(def {harn.skill-group} (fn {sk} {- (char-code (harn.sk sk 39)) 48}))
+(def {harn.skill-keys} (map harn.skill-key (range 0 91)))
+(def {harn.skill-of} (fn {key} {index-of harn.skill-keys key}))
+
+; *****************************
+; *** A character's skills ***
+; *****************************
+; The average of three attributes, rounded (half up); Endurance: Strength's, Stamina's and Will's
+(def {harn.avg} (fn {a b c} {shr (* (+ a b c a b c 3) 171) 10}))
+(def {harn.end} (fn {ch} {harn.avg (ch :str) (ch :sta) (ch :wil)}))
+
+; The best bonus of a skill's signs that the character's sunsign has (a cusp: either of its two; :sg, their letters)
+(def {harn.get-ssb} (fn {ch sk} {harn.ssb (+ 29 (* 42 sk)) (fst (ch :sg)) (snd (ch :sg)) 0 0}))
+(def {harn.ssb} (fn {o a b p m} {do
+  =(c (char-at harn.skill-rows (+ o p p)))
+  ?((or (eq p 4) (eq c \space)) m
+    (harn.ssb o a b (+ p 1)
+      ?((or (eq c a) (eq c b)) (max m (- (char-code (char-at harn.skill-rows (+ o p p 1))) 48)) m)))}))
+
+; SB: the three attributes' average and the sunsign's bonus (Condition's SB is Endurance: Skills 9)
+(def {harn.att} (fn {ch sk i} {ch (nth (index-of "STDAEHMVIUWC" (harn.sk sk i)) harn.codes)}))
+(def {harn.get-sb} (fn {ch sk} {?((eq sk 2) (harn.end ch)
+  (+ (harn.avg (harn.att ch sk 24) (harn.att ch sk 25) (harn.att ch sk 26)) (harn.get-ssb ch sk)))}))
+
+; OML: SB times its multiple; a native script 70 + SB, a native tongue 50-80 + SB by social class (Skills 11)
+(def {harn.get-oml} (fn {ch sk} {do
+  =(m (harn.sk sk 37))
+  =(sb (harn.get-sb ch sk))
+  ?((eq m \S) (+ 70 sb) ?((eq m \L) (+ sb (nth (ch :social) {50 50 60 60 70})) (* sb (- (char-code m) 48))))}))
+
+(def {harn.get-ml} (fn {ch sk} {buffer-get (ch :ml) sk}))
+(def {harn.get-si} (fn {ch sk} {truncate (/ (harn.get-ml ch sk) 10)}))
+(def {harn.put-ml} (fn {ch sk v} {buffer-put (ch :ml) sk (min 255 v)}))
+(def {harn.open-skill} (fn {ch sk} {?((zero? (harn.get-ml ch sk)) (harn.put-ml ch sk (harn.get-oml ch sk)) NIL)}))
+
+; *****************************************************************
+; *** Penalties (Skills 6), move (Combat 6), size (Character 6) ***
+; *****************************************************************
+; UP: fatigue and the injuries' levels; PP: UP and EP, the load (:load, pounds) over Endurance, rounded
+(def {harn.il} (fn {i} {nth 3 i}))
+(def {harn.get-up} (fn {ch} {+ (ch :fl) (sum (map harn.il (ch :inj)))}))
+(def {harn.get-ep} (fn {ch} {do =(l (ch :load)) =(e (harn.end ch)) ?(l (truncate (/ (+ l l e) (* 2 e))) 0)}))
+(def {harn.get-pp} (fn {ch} {+ (harn.get-up ch) (harn.get-ep ch)}))
+(def {harn.move} (fn {ch} {max 1 (- (ch :agl) (harn.get-pp ch))}))
+
+; Size: 1-10 by weight (Character 6)
+(def {harn.size} (fn {ch} {+ 1 (harn.table {65 75 90 110 135 165 200 240 285 9999} (ch :wt))}))
+
+; ************************************************
+; *** A new character (Character 2-12): harn.create ***
+; ************************************************
+; In harn_create's order (harngen.c's): birth, culture and class, family, appearance, the physical attributes, the
+; medical traits, the personality, piety; then the automatic skills opened
+; (A hash made whole is made faster than one put an entry at a time: the attributes as far as the physical ones,
+; and harn.blank's, in one)
+(def {harn.blank} {{:med {}} {:psy {}} {:inj {}} {:sexuality 0} {:fl 0} {:bl 0} {:dp 0} {:state 0} {:shockhr 0}})
+(def {harn.new} (fn {} {hash-create (cons [:ml (buffer 100)] harn.blank)}))
+(def {harn.signs-of} (fn {ss} {do
+  =(s (harn.sunsign-signs ss))
+  (list (char-at "abcdefghijkl" (fst s)) (char-at "abcdefghijkl" (snd s)))}))
+
+(def {harn.create} (fn {} {do
+  =(sp (harn.table {97 98 99 100} (harn.d 100)))
+  =(sx ?((<= (harn.d 100) (nth sp {48 45 75 48})) 1 0))
+  =(m (harn.d 12))
+  =(d (harn.d 30))
+  =(ss (harn.sunsign-of m d))
+  =(culture (nth sp {2 5 4 2}))
+  =(social (harn.table (nth culture harn.class-table) (harn.d 100)))
+  =(rank (+ 1 (harn.table {25 50 70 85 95 100} (max 1 (- (harn.d 100) ?((or (eq sp 1) (eq sp 2)) 20 0))))))
+  =(size (+ rank (harn.d 6) -1))
+  =(parent (harn.table {50 70 75 90 100} (harn.d 100)))
+  =(est (harn.table {10 40 60 95 100} (min 100 (+ (harn.d 100) ?((eq rank 1) 5 0)))))
+  =(head (harn.table {50 75 85 100} (harn.d 100)))
+  =(ht (+ (nth sp ?((zero? sx) {52 50 40 52} {54 51 40 54})) (harn.dice 4 6)))
+  =(fr (harn.table {5 8 12 15 99} (+ (harn.dice 3 6) (harn.species-attr-mod sp sx :fr))))
+  =(wt (harn.weight ht fr))
+  =(cml (harn.rand-attr sp sx fr wt :cml))
+  =(c (harn.table (nth sp {{27 74 100} {97 99 100} {90 100 100} {27 74 100}}) (harn.d 100)))
+  =(hair (harn.table (nth sp {{40 55 65 70 100} {25 48 50 60 100} {40 45 70 90 100} {40 55 65 70 100}})
+    (harn.colour-roll sp c)))
+  =(eyes (harn.table (nth sp {{40 55 56 70 100} {15 65 75 80 100} {50 69 70 85 100} {40 55 56 70 100}})
+    (harn.colour-roll sp c)))
+  =(ch (hash-create (join (list [:sp sp] [:sx sx] [:bd (+ (* 256 m) d)] [:ss ss] [:sg (harn.signs-of ss)]
+    [:culture culture] [:social social] [:sibrank rank] [:famsize size] [:parent parent] [:estrange est]
+    [:clanhead head] [:ht ht] [:fr fr] [:owt wt] [:wt wt] [:cml cml] [:complexion c] [:hair hair] [:eyes eyes]
+    [:ml (buffer 100)])
+    (harn.rolls sp sx fr wt {:str :sta :dex :agl :eye :hrg :sml :voi}) harn.blank)))
+  (harn.rand-medical ch 0)
+  =(e (ch :int+))
+  (hash-put ch [:int (+ (harn.rand-attr sp sx fr wt :int) ?(e e 0))] [:aur (harn.rand-attr sp sx fr wt :aur)]
+    [:wil (harn.rand-attr sp sx fr wt :wil)] [:mor (harn.rand-attr sp sx fr wt :mor)] [:dty 10] [:pty (harn.dice 5 6)])
+  ?(e (hash-remove ch :int+) NIL)
+  (harn.open-autos ch 0)
+  ch}))
+
+; Attributes rolled, a list of entries
+(def {harn.rolls} (fn {sp sx fr wt l} {
+  ?(l (cons [(fst l) (harn.rand-attr sp sx fr wt (fst l))] (harn.rolls sp sx fr wt (tail l))) {})}))
+
+; The automatic skills, at their OMLs (from skill k on)
+(def {harn.open-autos} (fn {ch k} {
+  ?((< k 91) (do ?((eq (harn.sk k 38) \1) (harn.open-skill ch k) NIL) (harn.open-autos ch (+ k 1))) NIL)}))
+
+; ************************************************
+; *** Files (harnfile.c's): a line a thing ***
+; ************************************************
+; harn 1; att KEY VALUE (each attribute, harn.attr-keys' order); fam culture social sibrank famsize parent estrange
+; clanhead; look complexion hair eyes; med (the traits); psy DISORDER SEVERITY (a line each); sexuality N; ml KEY ML
+; (each open skill); vol fl bl dp state shockhr; inj loc aspect sev il hr flags (each injury); then the program's own
+; lines (more: a list of strings, "name Dorn" ...)
+(def {harn.att-line} (fn {ch a} {+ "att " (substring (to-str a) 1) " " (ch a)}))
+(def {harn.ml-lines} (fn {ch k l} {?((< k 0) l (do =(ml (buffer-get (ch :ml) k))
+  (harn.ml-lines ch (- k 1) ?((zero? ml) l (cons (+ "ml " (harn.skill-key k) " " ml) l)))))}))
+(def {harn.of} (fn {ch a} {ch a}))
+(def {harn.nums} (fn {ch l} {str-join (map (harn.of ch) l) " "}))
+(def {harn.lines} (fn {ch} {join
+  {"harn 1"}
+  (map (harn.att-line ch) harn.attr-keys)
+  (list (+ "fam " (harn.nums ch {:culture :social :sibrank :famsize :parent :estrange :clanhead}))
+    (+ "look " (harn.nums ch {:complexion :hair :eyes}))
+    (str-join (cons "med" (ch :med)) " "))
+  (map (fn {x} {+ "psy " (fst x) " " (snd x)}) (ch :psy))
+  (list (+ "sexuality " (ch :sexuality)))
+  (harn.ml-lines ch 90 {})
+  (list (+ "vol " (harn.nums ch {:fl :bl :dp :state :shockhr})))
+  (map (fn {i} {str-join (cons "inj" i) " "}) (ch :inj))}))
+
+(def {harn.write} (fn {path ch more} {write-file path (str-join (join (harn.lines ch) more {""}) "\n")}))
+
+; A character read from a file (NIL: none there): its lines that aren't harn.h's in :other, a list
+(def {harn.read} (fn {path} {do
+  =(ch (harn.new))
+  (hash-put ch [:other {}])
+  (each (harn.read-line ch) (read-lines path))
+  ?((ch :ss) (do (hash-put ch [:sg (harn.signs-of (ch :ss))]) ch) NIL)}))
+
+(def {harn.put-all} (fn {ch keys vals} {?((and keys vals) (do (hash-put ch [(fst keys) (fst vals)])
+  (harn.put-all ch (tail keys) (tail vals))) NIL)}))
+(def {harn.read-line} (fn {ch l} {do
+  =(w (str-split (str-trim l) " "))
+  =(k (fst w))
+  =(n (map val (filter digit? (tail w))))
+  ?((eq k "att") (hash-put ch [(to-atom (snd w)) (val (thd w))])
+  ?((eq k "fam") (harn.put-all ch {:culture :social :sibrank :famsize :parent :estrange :clanhead} n)
+  ?((eq k "look") (harn.put-all ch {:complexion :hair :eyes} n)
+  ?((eq k "med") (hash-put ch [:med n])
+  ?((eq k "psy") (hash-put ch [:psy (join (ch :psy) (list n))])
+  ?((eq k "sexuality") (hash-put ch [:sexuality (fst n)])
+  ?((eq k "ml") (do =(sk ?((digit? (snd w)) (val (snd w)) (harn.skill-of ?((eq (snd w) "tar") "trt" (snd w)))))
+    ?((>= sk 0) (harn.put-ml ch sk (val (thd w))) NIL))
+  ?((eq k "vol") (harn.put-all ch {:fl :bl :dp :state :shockhr} n)
+  ?((eq k "inj") (hash-put ch [:inj (join (ch :inj) (list n))])
+  ?((or (eq k "harn") (eq k "")) NIL
+  (hash-put ch [:other (join (ch :other) (list l))])))))))))))}))
