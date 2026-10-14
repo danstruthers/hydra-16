@@ -6,7 +6,7 @@
 
 #include <string.h>
 #include "../dq0/hub.h"
-#include "world.h"
+#include "../dq0w/world.h"
 #include "sight.h"
 
 #define EYE         5

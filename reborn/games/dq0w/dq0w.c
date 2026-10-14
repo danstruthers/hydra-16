@@ -4,8 +4,8 @@
 ** happened as events.  It keeps the dungeon (world.h: strata grown whole in outline as anyone first comes to them,
 ** plan.c; made a chunk at a time as anyone comes near, chunk.c and built.c), and moves the character through it: a
 ** move takes its time (the referee's walking rate, the slopes), and the character's there when the time's up.  What
-** it sees is worked out as it gets there, turns, or its light changes (view.c), and what it perceives recorded in
-** the hub for the UI to word (sight.c).  It carries out digging, a spell of work at a time (the referee's tests), and
+** it sees is worked out as it gets there, turns, or its light changes, and what it perceives recorded in the hub for
+** the UI to word, by the senses (games/dq0p, asked).  It carries out digging, a spell of work at a time (the referee's tests), and
 ** asks the maker to keep what it changes.
 **
 ** The clock (main.c's once): each real tick (200 a second) is round tenths of game time over tpr ticks (the pace:
@@ -19,8 +19,6 @@
 #include <hydra.h>
 #include "../dq0/hub.h"
 #include "world.h"
-#include "view.h"
-#include "sight.h"
 
 static unsigned last;                           /* The tick count at the last look */
 static unsigned long acc;                       /* Real ticks times round, not yet game time */
@@ -64,6 +62,7 @@ static struct {
     unsigned char   face;                       /* The heading it'll face */
     unsigned char   sn;                         /* Where its walk begins (A_WALKED's), or where it ends */
     unsigned        x, y;
+    signed char     ledge;                      /* (A_CROSSED's: the ledge that stopped it, or 0) */
 } move;
 
 static unsigned char sn_, mface;                /* (The character's stratum; a walk's heading as it ends) */
@@ -216,21 +215,168 @@ static unsigned char dark (void)
     return !(*at (sn_, mx, my) & T_VIS);
 }
 
-/* What the character sees, made again, and what it perceives recorded (the hub's header in the window: as it ends
-** too) */
+/* What the character sees, made again, and what it perceives recorded: the senses asked (dq0p), and waited for (the
+** hub's header in the window as it ends) */
 static void __fastcall__ see (unsigned char first)
 {
-    unsigned char face = HUB->pc_face, light = HUB->pc_light, sight = HUB->pcsum.sight;
-    unsigned char dark = HUB->pcsum.darkvision / 5;   /* (Ultravision's reach, in squares) */
-    unsigned x = HUB->pc_x, y = HUB->pc_y;
-
-    light *= HUB->pcsum.nightvision ? HUB->pcsum.nightvision : 1;  /* (Night vision: a light carries further) */
-    if (HUB->pcsum.cond & C_BLINDED) {
-        sight = 0xFF;
+    hub_map (0);
+    HUB->look_first = first;
+    HUB->look_state = REQ_POSTED;
+    hub_ring (T_SENSES);
+    while (HUB->look_state != REQ_DONE) {
+        hy_yield ();
+        hub_map (0);
     }
+    HUB->look_state = REQ_FREE;
     sn_ = HUB->pc_stratum;
-    view (sn_, x, y, face, light, sight, dark);
-    perceive (sn_, x, y, face, light, first);
+}
+
+/* Across room r on heading h (no door that way): as far as its floor can be walked, a ledge stopping it (told) */
+static void __fastcall__ across (unsigned char h, unsigned char r, unsigned char slow)
+{
+    unsigned long t = 0;
+    unsigned char n = 0, st;
+    signed char ledge = 0;
+    unsigned char* p;
+    unsigned nx, ny;
+    int z, dz;
+
+    for (;;) {
+        nx = mx + head_x[h];
+        ny = my + head_y[h];
+        p = at (sn_, mx, my);
+        st = TILE (*p) == T_STEPS;
+        z = C->elev[cy_][cx_];
+        if (room_of (sn_, nx, ny) != r || !(p = at (sn_, nx, ny)) || !T_PASS (*p)) {
+            break;
+        }
+        dz = C->elev[cy_][cx_] - z;
+        st |= TILE (*p) == T_STEPS;
+        if ((dz < 0 ? -dz : dz) > (st ? STAIR_MAX : STEP_MAX)) {
+            ledge = dz > 120 ? 120 : dz < -120 ? -120 : dz;
+            break;
+        }
+        t += (unsigned long) cost (dz, st, slow) * ((h & 1) ? 7 : 5) / 5;
+        mx = nx;
+        my = ny;
+        ++n;
+    }
+    hub_map (0);
+    if (!n) {
+        if (ledge) {
+            HUB->pc_face = h;                   /* (It turns to face the ledge) */
+            event (E_LEDGE, 0, (unsigned char) ledge);
+            HUB->pc_ready = HUB->now;
+        } else {
+            no_way (N_NO_EXIT);
+        }
+        return;
+    }
+    move.on = 1;
+    move.how = A_CROSSED;
+    move.sn = sn_;
+    move.x = mx;
+    move.y = my;
+    move.face = h;
+    move.ledge = ledge;
+    busy (t > 60000UL ? 60000U : (unsigned) t);
+}
+
+/* ---- Climbing a ledge (HarnMaster's Climbing, Skills 8: feet of progress a test, a test a round, the game's
+** choice; a hard climb, rough stone: 20 feet on a critical success, 10 on a success, 5 back on a marginal failure,
+** and on a critical failure a fall, the referee's harm to come) */
+
+#define ROUND_T         100                     /* Tenths: a round */
+
+static struct {
+    unsigned char   up;
+    unsigned        need, done;                 /* Feet */
+    unsigned        x, y;                       /* The square at its top (up) or its foot (down) */
+} cl;
+
+static signed char __fastcall__ test_climb (void)
+{
+    struct req* r;
+    signed char g;
+
+    hub_map (0);
+    r = &HUB->slot[SLOT_WORLD];
+    r->kind = RS_TEST;
+    r->actor = 0;
+    r->a = P_CLIMB;
+    r->steps = 0;
+    r = hub_ask (SLOT_WORLD);
+    g = r->grade;
+    r->state = REQ_FREE;
+    return g;
+}
+
+static void climb_round (void)
+{
+    move.on = 1;
+    move.how = A_CLIMBING;
+    move.sn = sn_;
+    move.x = HUB->pc_x;
+    move.y = HUB->pc_y;
+    move.face = HUB->pc_face;
+    busy (ROUND_T);
+}
+
+/* The ledge ahead of the character, up (or down): its climb begun, or 0 (none) */
+static unsigned char __fastcall__ start_ledge (unsigned char up, unsigned char face)
+{
+    unsigned char* p;
+    unsigned nx, ny;
+    int z, dz;
+
+    nx = mx + head_x[face];
+    ny = my + head_y[face];
+    z = elev_at (sn_, mx, my);
+    if (!(p = at (sn_, nx, ny)) || !T_PASS (*p)) {
+        return 0;
+    }
+    dz = C->elev[cy_][cx_] - z;
+    if (up ? dz <= STEP_MAX : dz >= -STEP_MAX) {
+        return 0;
+    }
+    cl.up = up;
+    cl.need = dz < 0 ? -dz : dz;
+    cl.done = 0;
+    cl.x = nx;
+    cl.y = ny;
+    hub_map (0);
+    event (E_CLIMB, 0, K_BEGUN << 8 | (cl.need > 255 ? 255 : cl.need));
+    climb_round ();
+    return 1;
+}
+
+/* A round of climbing done: its test, and on, back, fallen, or there */
+static void climb_on (void)
+{
+    signed char g;
+
+    sn_ = HUB->pc_stratum;
+    g = test_climb ();
+    hub_map (0);
+    if (g == G_CF) {                            /* (A fall: from as high as it got, up; to the foot, down) */
+        if (!cl.up) {
+            HUB->pc_x = cl.x;
+            HUB->pc_y = cl.y;
+        }
+        event (E_CLIMB, 0, K_FELL << 8 | (cl.up ? cl.done : cl.need - cl.done));
+        see (0);
+        return;
+    }
+    cl.done = g == G_CS ? cl.done + 20 : g == G_MS ? cl.done + 10 : cl.done > 5 ? cl.done - 5 : 0;
+    if (cl.done < cl.need) {
+        event (E_CLIMB, 0, (g == G_MF ? K_BACK : K_ON) << 8 | (cl.need - cl.done > 255 ? 255 : cl.need - cl.done));
+        climb_round ();
+        return;
+    }
+    HUB->pc_x = cl.x;
+    HUB->pc_y = cl.y;
+    event (E_CLIMB, 0, (cl.up ? K_UP : K_DOWN) << 8);
+    see (0);
 }
 
 /* The character sets out on heading h (north, northeast ...): its time, and where it'll be.  From a room: north,
@@ -266,9 +412,8 @@ static void __fastcall__ go (unsigned char h)
                 }
             }
         }
-        if (best == 0xFF) {
-            hub_map (0);
-            no_way (N_NO_EXIT);
+        if (best == 0xFF) {                     /* (No door that way: across the room) */
+            across (h, r, slow);
             return;
         }
         mx = ox + bx;
@@ -385,19 +530,23 @@ static unsigned char __fastcall__ link_here (unsigned char d, unsigned long* t)
 static void __fastcall__ climb (unsigned char d)
 {
     unsigned long t;
-    unsigned char l;
+    unsigned char l, face;
     struct link* lk;
 
     sn_ = HUB->pc_stratum;
     mx = HUB->pc_x;
     my = HUB->pc_y;
     stept = HUB->pcsum.step ? HUB->pcsum.step : 10;
+    face = HUB->pc_face;
     l = link_here (d, &t);
-    hub_map (0);
     if (l == 0xFF || t == 0xFFFFFFFFUL) {
-        no_way (N_NO_STAIRS);
+        if (!start_ledge (d == DIR_UP, face)) {       /* (No way up or down here: a ledge ahead, climbed) */
+            hub_map (0);
+            no_way (N_NO_STAIRS);
+        }
         return;
     }
+    hub_map (0);
     lk = &strata[sn_].link[l];
     if (lk->kind == O_WAY_OUT) {
         no_way (N_SHUT);                        /* (The way out: the puzzle's, later) */
@@ -447,12 +596,16 @@ static void arrive (void)
         dig_on ();
         return;
     }
+    if (how == A_CLIMBING) {                    /* (A round of climbing done) */
+        climb_on ();
+        return;
+    }
     sn_ = move.sn;
     mx = move.x;
     my = move.y;
     if (how == A_WALKED) {
         walk (move.dir, 1, dark ());
-    } else {
+    } else if (how != A_CROSSED) {
         move.face = toward_middle ();
     }
     if ((r = room_of (sn_, mx, my)) != 0xFF) {
@@ -466,6 +619,9 @@ static void arrive (void)
     HUB->pc_face = move.face;
     see (first);
     event (E_ARRIVE, 0, how | first << 8 | (how == A_UP || how == A_DOWN ? (unsigned) move.dir << 12 : 0));
+    if (how == A_CROSSED && move.ledge) {
+        event (E_LEDGE, 0, (unsigned char) move.ledge);
+    }
 }
 
 /* The dungeon begun: the top stratum's record (a stand-in for the theme's say: a few hundred feet each way), its way

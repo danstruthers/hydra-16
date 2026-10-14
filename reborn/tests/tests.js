@@ -2264,10 +2264,10 @@ module.exports = {
       init: 't_rc', cycles: 600e6,
       // (\u0101: wait for a prompt, the game's "> " too; \u0100: wait a while, for hmchar's questions)
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm\r' +
-        ['look', 'u', 'map', 'dig down', 'n', 'e', 's', 'w', 'go west', 'map', 'wait', 'help', 'foo', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') +
+        ['look', 'u', 'map', 'dig down', 'n', 'e', 'u', 'look', 's', 'w', 'go west', 'map', 'wait', 'help', 'foo', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') +
         '\u0101dq0 -p t -s 7\r\u0100\u0100k\r\u01002\r\u0100bow\r\u0100spear\r\u0100sword\r\u0100\r\u0100Dorn\r' +
         '\u0101sheet\r\u0101quit\r\u0101echo done\r' },
-      expect: ['Tordan, Hunter/Trapper, enters the dungeon.', 'The way out is shut fast.', 'The map (you face', 'You have nothing that would bite into it',
+      expect: ['Tordan, Hunter/Trapper, enters the dungeon.', 'The way out is shut fast.', 'The map (you face', 'You have nothing that would bite into it', 'at a ledge ahead', 'You set to climbing',
         '> wait', 'Time passes.', 'Commands: north, northeast, east',
         "I don't know how to foo.", '% echo $status', 'Keep this character, or roll again (k or r)?', 'Written to /ram/dq0.hm',
         'Dorn, Hunter/Trapper, enters the dungeon.', 'Dorn, Human Female, Hunter/Trapper; born 10 Ilvin (Skorus).', '% echo done\ndone'],

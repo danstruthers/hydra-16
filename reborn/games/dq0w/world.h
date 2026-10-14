@@ -147,7 +147,7 @@ struct mreq {
 };
 enum { M_PLAN, M_CHUNK, M_CHANGE };             /* A stratum's plan and links down (its record set), a chunk, a
                                                 **   square changed (and kept: the maker's records) */
-enum { ASK_WORLD, ASK_DENIZENS, NASK };
+enum { ASK_WORLD, ASK_DENIZENS, ASK_SENSES, NASK };
 
 /* ---- plan.c (the maker's): a stratum grown whole, in outline */
 void __fastcall__ plan_stratum (unsigned char n);   /* strata[n] (its bounds, style, seed, links already set) */

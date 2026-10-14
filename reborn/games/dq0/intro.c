@@ -25,6 +25,28 @@ void o_title (void)
     blank ();
 }
 
+/* Climbing's words: how a round went, and the feet to go */
+void __fastcall__ o_climb_words (unsigned char how, unsigned char feet)
+{
+    switch (how) {
+    case K_BEGUN:
+        sayf ("\nYou set to climbing: %u feet of it.", feet);
+        return;
+    case K_ON:
+        sayf ("\nYou climb on (%u feet to go).", feet);
+        return;
+    case K_BACK:
+        sayf ("\nYou slip back a little (%u feet to go).", feet);
+        return;
+    case K_FELL:
+        sayf ("\nYour hold gives way: you fall %u feet.", feet);
+        return;
+    default:
+        msg (how == K_UP ? "You haul yourself up over the edge." : "You come down to the foot of the ledge.");
+        return;
+    }
+}
+
 /* The commands, listed */
 void o_help (void)
 {

@@ -1,0 +1,59 @@
+/*
+** dq0p.c - Dingus Quest Zero's senses: a task of its own, started by the UI (dq0p SEG ROLE: the hub's segment and its
+** role there, hub.h), that looks about for the character as the world asks (the hub's look_state): the squares it
+** sees now marked in the dungeon's chunks (view.c: in front of it and to its sides, a clear line in plan and in
+** height, its sight's range, lit, its night vision and ultravision), and what it perceives recorded in the hub for
+** the UI to word (sight.c).  (The denizens will see through it too, each through its own senses.)  It waits on its
+** doorbell (costing nothing) between looks.
+*/
+
+#include <stdlib.h>
+#include <string.h>
+#include <hydra.h>
+#include "../dq0/hub.h"
+#include "../dq0w/world.h"
+#include "view.h"
+#include "sight.h"
+
+/* A look about for the character, from what the hub has of it (its square, its facing, its light, its senses) */
+static void look (void)
+{
+    unsigned char face, light, sight, dark, sn, first, own;
+    unsigned x, y;
+
+    hub_map (0);
+    face = HUB->pc_face;
+    own = HUB->pc_light;
+    light = HUB->pc_light * (HUB->pcsum.nightvision ? HUB->pcsum.nightvision : 1);  /* (Night vision: further) */
+    sight = HUB->pcsum.cond & C_BLINDED ? 0xFF : HUB->pcsum.sight;
+    dark = HUB->pcsum.darkvision / 5;           /* (Ultravision's reach, in squares) */
+    sn = HUB->pc_stratum;
+    x = HUB->pc_x;
+    y = HUB->pc_y;
+    first = HUB->look_first;
+    memcpy (strata, HUB->strata, sizeof strata);
+    view (sn, x, y, face, light, sight, dark);
+    perceive (sn, x, y, face, own, first);
+}
+
+int main (int argc, char* argv[])
+{
+    if (argc < 3 || hub_attach (atoi (argv[1]), atoi (argv[2]))) {
+        return 1;
+    }
+    chunks_init (ASK_SENSES);
+    for (;;) {
+        hub_map (0);
+        hy_sem_acquire (HUB->sem[T_SENSES]);    /* (Waiting costs nothing) */
+        hub_map (0);
+        if (HUB->quit) {
+            break;
+        }
+        if (HUB->look_state == REQ_POSTED) {
+            look ();
+            hub_map (0);
+            HUB->look_state = REQ_DONE;
+        }
+    }
+    return 0;
+}

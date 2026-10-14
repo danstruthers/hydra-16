@@ -149,4 +149,5 @@ ovl_out:
             OVFN        title, 1
             OVFN        help, 1
             OVFN        dig_words, 1
+            OVFN        climb_words, 1
             OVFN        words, 2

@@ -29,7 +29,7 @@
 #define HUB_WINDOW      ((unsigned char*) 0x8000)
 
 /* The tasks, and so their doorbells */
-enum { T_UI, T_WORLD, T_DENIZENS, T_REFEREE, T_SOUND, T_MAKER, NTASKS };
+enum { T_UI, T_WORLD, T_DENIZENS, T_REFEREE, T_SOUND, T_MAKER, T_SENSES, NTASKS };
 
 /* An entry of a queue: an intent (to the world), or an event (from it) */
 struct msg {
@@ -64,14 +64,19 @@ enum {
     E_VIEW,                                     /* What who sees has changed: w1 why (V_*) */
     E_DIG,                                      /* who's digging: w1 how it goes (D_*) times 256, and the feet to go */
     E_NOISE,                                    /* A noise: a how loud (0-9), w1 w2 its square (the denizens') */
+    E_LEDGE,                                    /* who's come to a ledge: w1 its rise (a signed char: a fall less) */
+    E_CLIMB,                                    /* who's climbing: w1 how it goes (K_*) times 256, and the feet to go */
     NEVENTS
 };
 
-enum { A_WALKED, A_DOWN, A_UP, A_START, A_DIGGING };  /* E_ARRIVE's how (A_DIGGING: the world's own, a spell of work) */
+enum { A_WALKED, A_DOWN, A_UP, A_START, A_DIGGING, A_CROSSED, A_CLIMBING, A_CLIMBED };
+                                                /* E_ARRIVE's how (A_DIGGING, A_CLIMBING: the world's own, a spell
+                                                **   of work, a round's climbing) */
 enum { N_NO_EXIT, N_SHUT, N_NO_STAIRS, N_NO_DIG };  /* E_NOWAY's why: no way that way, the way out shut, no stairs,
                                                 **   nothing to dig there */
 enum { V_TURNED, V_LIT, V_DARK };               /* E_VIEW's why */
 enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL };  /* E_DIG's how */
+enum { K_BEGUN, K_ON, K_BACK, K_FELL, K_UP, K_DOWN };   /* E_CLIMB's how: begun, on, slipped back, fallen, up, down */
 
 /* A referee slot: a request (rs.h's RS_*) and its reply, and the reply's words.  The task that asks writes the
 ** request, then sets state REQ_POSTED and rings the referee's doorbell; the referee answers, then sets REQ_DONE; the
@@ -120,7 +125,11 @@ struct hub {                                    /* Bank 0, at $8000 */
     volatile unsigned char pc_face;             /*   the way it faces (a heading: H_N ... H_NW), */
     volatile unsigned char pc_light;            /*   the light it carries: how far it reaches, in tiles (0: none) */
     struct rs_summary pcsum;                    /* The character's summary (the referee's: its senses ...) */
-    struct sight    sight;                      /* What it perceives (the world's, after each look about) */
+    struct sight    sight;                      /* What it perceives (the senses', after each look about) */
+    /* A look about asked of the senses (dq0p: the world asks, as the character's moved, turned, lit a light): the
+    ** squares it sees marked, what it perceives recorded in sight */
+    volatile unsigned char look_state;          /* REQ_* */
+    unsigned char   look_first;                 /* The first time there */
     /* The map: the UI asks (map_state REQ_POSTED, the maker's doorbell), the maker draws its window round the
     ** character into map (each row a line, 0-ended) and says REQ_DONE */
     volatile unsigned char map_state;

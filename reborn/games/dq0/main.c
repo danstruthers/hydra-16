@@ -37,7 +37,7 @@ static const unsigned tpr[4] = { 1000, 600, 400, 0 };
 static unsigned char busy = 1;                  /* The character's doing something: no command till it's free (nor
                                                 **   till the world's started, and says so: E_READY) */
 static unsigned place;                          /* Where this task is in the world's events */
-static int world_task = -1, referee_task = -1, maker_task = -1;
+static int world_task = -1, referee_task = -1, maker_task = -1, senses_task = -1;
 static unsigned char test_start;
 static const char* kit;                         /* (dq0 -k: a tool, equipped as the game starts) */
 struct pc P;
@@ -259,6 +259,12 @@ static void start_world (unsigned long seed)
         hy_exits ("dq0: its maker (lib/dq0/dq0m) can't be started");
     }
     strcpy (path, libdir);
+    strcat (path, "/dq0p");
+    if ((senses_task = hub_spawn (path, T_SENSES, 0)) < 0) {
+        t_end ();
+        hy_exits ("dq0: its senses (lib/dq0/dq0p) can't be started");
+    }
+    strcpy (path, libdir);
     strcat (path, "/dq0w");
     if ((world_task = hub_spawn (path, T_WORLD, 0)) < 0) {
         t_end ();
@@ -281,6 +287,10 @@ static void stop_world (void)
     if (maker_task >= 0) {
         hub_ring (T_MAKER);
         hy_wait (maker_task, 0);
+    }
+    if (senses_task >= 0) {
+        hub_ring (T_SENSES);
+        hy_wait (senses_task, 0);
     }
 }
 
@@ -341,7 +351,10 @@ static void events (void)
                         "You climb the stairway.");
                     sayf (" You come into the %s.", stratum_name[HUB->sight.sname & 7]);
                 }
-                look (m.w1 >> 8);
+                if ((m.w1 & 0xFF) == A_CROSSED) {
+                    msg ("You cross the room.");
+                }
+                look (m.w1 >> 8 & 1);
             }
             break;
         case E_VIEW:
@@ -365,6 +378,18 @@ static void events (void)
         case E_DIG:
             if (m.who == 0) {
                 dig_words (m.w1 >> 8, m.w1 & 0xFF);
+            }
+            break;
+        case E_LEDGE:
+            if (m.who == 0) {
+                k = (signed char) m.w1 > 0 ? (signed char) m.w1 : -(signed char) m.w1;
+                sayf ((signed char) m.w1 > 0 ? "\nThe floor rises %u feet at a ledge ahead: climb it (u) to go on." :
+                      "\nThe floor falls %u feet at a ledge ahead: climb down it (d) to go on.", k);
+            }
+            break;
+        case E_CLIMB:
+            if (m.who == 0) {
+                climb_words (m.w1 >> 8, m.w1 & 0xFF);
             }
             break;
         }

@@ -11,7 +11,7 @@
 */
 
 #include <stdlib.h>
-#include "world.h"
+#include "../dq0w/world.h"
 #include "view.h"
 
 #define EYE         5                           /* The eyes, feet above the floor */
