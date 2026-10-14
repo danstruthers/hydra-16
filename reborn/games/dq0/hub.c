@@ -1,0 +1,169 @@
+/*
+** hub.c - hub.h's shared segment: made (the UI) or attached (the others), put at $8000, its queues and its doorbells.
+** Each program of the game's compiles this file with its own (games/dq0w ... include it).
+*/
+
+#include <stdlib.h>
+#include <string.h>
+#include <hydra.h>
+#include "hub.h"
+
+static unsigned char seg;
+static unsigned char u[HUB_BANKS], x[HUB_BANKS];   /* Each bank's U and $00 (SEG_MAP's), found once */
+
+/* Each bank's U and $00, kept, and bank 0 put at $8000 */
+static int find_banks (void)
+{
+    static struct hy_regs r;
+    unsigned char b;
+
+    for (b = HUB_BANKS; b--; ) {
+        r.a = seg;
+        r.x = b;
+        if (hy_call (HY_SEG_MAP, &r)) {
+            return -1;
+        }
+        u[b] = r.a;
+        x[b] = r.x;
+    }
+    hub_map (0);
+    return 0;
+}
+
+void __fastcall__ hub_map (unsigned char bank)
+{
+    *(volatile unsigned char*) 0xFFF1 = u[bank];    /* U, then the bank (hydra.h's hy_seg_map, without the call) */
+    *(volatile unsigned char*) 0 = x[bank];
+}
+
+int __fastcall__ hub_create (unsigned char banks)
+{
+    int s = hy_seg_create (banks);
+    unsigned char t;
+
+    if (s < 0) {
+        return -1;
+    }
+    seg = s;
+    if (find_banks ()) {
+        return -1;
+    }
+    memset (HUB, 0, sizeof (struct hub));
+    HUB->magic = HUB_MAGIC;
+    HUB->version = HUB_VERSION;
+    HUB->seg = seg;
+    for (t = 0; t < NTASKS; ++t) {
+        if ((s = hy_sem_new (0, 0)) < 0) {
+            return -1;
+        }
+        HUB->sem[t] = s;
+    }
+    HUB->task[T_UI] = hy_task ();
+    return 0;
+}
+
+int __fastcall__ hub_attach (unsigned char s, unsigned char me)
+{
+    seg = s;
+    if (hy_seg_attach (s) < 0 || find_banks () || HUB->magic != HUB_MAGIC || HUB->version != HUB_VERSION) {
+        return -1;
+    }
+    HUB->task[me] = hy_task ();
+    return 0;
+}
+
+/* The clock, read whole: tick is bumped before now is written and after (the world's), so a read between two
+** equal even ticks saw it whole */
+unsigned long hub_now (void)
+{
+    unsigned char t;
+    unsigned long n;
+
+    do {
+        t = HUB->tick;
+        n = HUB->now;
+    } while ((t & 1) || t != HUB->tick);
+    return n;
+}
+
+void __fastcall__ hub_ring (unsigned char t)
+{
+    hy_sem_release (HUB->sem[t]);
+}
+
+/* ---- The UI's intents, to the world */
+
+unsigned char __fastcall__ hub_send (const struct msg* m)
+{
+    unsigned char h = HUB->iq_head, n = (h + 1) % IQ_SIZE;
+
+    if (n == HUB->iq_tail) {
+        return 0;
+    }
+    memcpy (&HUB->iq[h], m, sizeof *m);
+    HUB->iq_head = n;                           /* (Written whole, then shown) */
+    hub_ring (T_WORLD);
+    return 1;
+}
+
+unsigned char __fastcall__ hub_take (struct msg* m)
+{
+    unsigned char t = HUB->iq_tail;
+
+    if (t == HUB->iq_head) {
+        return 0;
+    }
+    memcpy (m, &HUB->iq[t], sizeof *m);
+    HUB->iq_tail = (t + 1) % IQ_SIZE;
+    return 1;
+}
+
+/* ---- The world's events, to everyone (a reader that falls EQ_SIZE behind loses the oldest) */
+
+void __fastcall__ hub_event (const struct msg* m)
+{
+    unsigned h = HUB->eq_head;
+    unsigned char t;
+
+    memcpy (&HUB->eq[h % EQ_SIZE], m, sizeof *m);
+    HUB->eq_head = h + 1;
+    for (t = T_DENIZENS; t < NTASKS; ++t) {     /* (Those that wait for them: the UI looks as it goes) */
+        if (t != T_REFEREE && HUB->task[t]) {
+            hub_ring (t);
+        }
+    }
+}
+
+unsigned char __fastcall__ hub_next (unsigned* place, struct msg* m)
+{
+    unsigned h = HUB->eq_head;
+
+    if (*place == h) {
+        return 0;
+    }
+    if (h - *place > EQ_SIZE) {
+        *place = h - EQ_SIZE;                   /* (Too far behind: the oldest are gone) */
+    }
+    memcpy (m, &HUB->eq[*place % EQ_SIZE], sizeof *m);
+    ++*place;
+    return 1;
+}
+
+/* ---- A task of the game's: path, given the segment and its role (and more, a word or none) */
+
+int __fastcall__ hub_spawn (const char* path, unsigned char t, const char* more)
+{
+    static char sb[4], tb[4];
+    static char* argv[5];
+    const char* name = strrchr (path, '/');
+    int s;
+
+    argv[0] = (char*) (name ? name + 1 : path);
+    argv[1] = utoa (seg, sb, 10);
+    argv[2] = utoa (t, tb, 10);
+    argv[3] = (char*) more;
+    argv[4] = 0;
+    s = hy_spawn (path, argv, 0);
+    hub_map (0);                                /* (A spawn leaves the window on another bank) */
+    return s;
+}

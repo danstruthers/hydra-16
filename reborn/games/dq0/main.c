@@ -1,14 +1,15 @@
 /*
-** main.c - Dingus Quest Zero: its start and its loop.
+** main.c - Dingus Quest Zero: the UI's task, its start and its loop.
 **
 ** dq0 [-s seed] [-p pace] [-c file]: the seed makes the same game each time (the dice: dice.h's rseed); the pace is
 ** r, n, m (relaxed, normal, menacing: asked at the start if it isn't given) or t (turns: the world moves only as
 ** the character acts, for tests); the file a character made already (hmchar's).  Without one, hmchar is run to make
 ** one (in this window, the screen as it is outside the game while it runs), into /ram/dq0.hm.
 **
-** The loop: each key goes to the line being typed (term.c); the real clock's ticks run the game's clock at the
-** pace (the world's things happen as its time comes); a line entered is the character's next command, done when the
-** character's free (its last action's time over).  Escape pauses the game and goes on again.
+** The game is tasks that meet in the hub (hub.h): this one, the UI, makes it and starts the others (the world,
+** LIBDIR/dq0w, so far).  The loop: each key goes to the line being typed (term.c); a line entered is the
+** character's next command, made an intent for the world when the character's free (the world says so: E_READY);
+** the world's events are worded into the story.  Escape pauses the game and goes on again.
 */
 
 #include <conio.h>
@@ -19,18 +20,19 @@
 #include <unistd.h>
 #include <hydra.h>
 #include "dq0.h"
+#include "hub.h"
 
-unsigned long now;                              /* The game's time, tenths of a second */
+unsigned long now;                              /* The game's time, as the world's clock last said */
 unsigned char pace = 0xFF, paused;
 const char* const pacename[4] = { "relaxed", "normal", "menacing", "turns" };
 
-/* Real ticks (200 a second) a tenth of the game's second takes, by pace: a combat round (10 game seconds) in 5,
-** 3 and 2 real seconds */
-static const unsigned char tpt[3] = { 10, 6, 4 };
+/* Real ticks (200 a second) a combat round takes, by pace: 5, 3 and 2 real seconds, whatever the ruleset's round
+** (the turns pace: 0) */
+static const unsigned tpr[4] = { 1000, 600, 400, 0 };
 
-static unsigned last;                           /* The tick count at the last look, */
-static unsigned acc;                            /*   and the ticks not yet the game's time */
-static unsigned long ready;                     /* When the character can act next */
+static unsigned char busy;                      /* The character's doing something: no command till it's free */
+static unsigned place;                          /* Where this task is in the world's events */
+static int world_task = -1;
 static volatile unsigned char quit;
 
 static void interrupted (int sig)
@@ -110,6 +112,34 @@ static void __fastcall__ character (const char* file, unsigned long seed)
     }
 }
 
+/* ---- The hub, and the world started */
+
+static void start_world (unsigned long seed)
+{
+    if (hub_create (HUB_BANKS)) {
+        t_end ();
+        hy_exits ("dq0: no shared segment, or no semaphores, for the game's tasks");
+    }
+    HUB->round = ROUND;                         /* (The ruleset's: HarnMaster's 10 seconds, till the referee says) */
+    HUB->tpr = tpr[pace];
+    HUB->pace = pace;
+    HUB->seed = seed;
+    if ((world_task = hub_spawn (LIBDIR "/dq0w", T_WORLD, 0)) < 0) {
+        t_end ();
+        hy_exits ("dq0: " LIBDIR "/dq0w: can't start it");
+    }
+}
+
+/* The game's end: the world told to stop, and waited for */
+static void stop_world (void)
+{
+    if (world_task >= 0) {
+        HUB->quit = 1;
+        hub_ring (T_WORLD);
+        hy_wait (world_task, 0);
+    }
+}
+
 /* ---- The status line */
 
 void status (void)
@@ -131,53 +161,44 @@ void status (void)
     t_status (left, right);
 }
 
-/* ---- The world: what happens as its time comes (the dungeon's comes later) */
+/* ---- The world's events, worded */
 
-static void world (void)
+static void events (void)
 {
-}
+    static struct msg m;
 
-/* The game's clock run on to t, the world's things as their time comes */
-static void __fastcall__ run_to (unsigned long t)
-{
-    while (now < t) {
-        ++now;
-        world ();
-    }
-}
-
-/* The real clock's ticks since the last look, made the game's time at the pace */
-static void clock_run (void)
-{
-    unsigned t = hy_ticks (), d = t - last;
-    unsigned long was = now / 10;
-
-    last = t;
-    if (paused || pace == PACE_TURNS) {
-        return;
-    }
-    acc += d;
-    while (acc >= tpt[pace]) {
-        acc -= tpt[pace];
-        ++now;
-        world ();
-    }
-    if (now / 10 != was) {
-        status ();                              /* (The clock on the status line, each game second) */
-    }
-}
-
-/* An action of the character's, taking time t: done now, the character busy till its time is over (a turn game:
-** the world runs on to then at once) */
-static void __fastcall__ takes (unsigned t)
-{
-    ready = now + t;
-    if (pace == PACE_TURNS) {
-        run_to (ready);
+    while (hub_next (&place, &m)) {
+        switch (m.kind) {
+        case E_TIME:
+            if (m.who == 0) {
+                msg ("Time passes.");
+            }
+            break;
+        case E_READY:
+            if (m.who == 0) {
+                busy = 0;
+            }
+            break;
+        case E_BYE:
+            quit = 1;
+            break;
+        }
     }
 }
 
 /* ---- The commands (the parser comes later: a word, and the rest) */
+
+static void __fastcall__ intend (unsigned char kind, unsigned w1)
+{
+    static struct msg m;
+
+    m.kind = kind;
+    m.who = 0;
+    m.w1 = w1;
+    if (hub_send (&m)) {
+        busy = 1;
+    }
+}
 
 static void __fastcall__ command (char* l)
 {
@@ -201,12 +222,11 @@ static void __fastcall__ command (char* l)
     if (!strcmp (w, "quit") || !strcmp (w, "q")) {
         quit = 1;
     } else if (!strcmp (w, "wait") || !strcmp (w, "z")) {
-        msg ("Time passes.");
-        takes (ROUND);
+        intend (I_WAIT, 0);
     } else if (!strcmp (w, "sheet") || !strcmp (w, "skills")) {
         sheet ();
     } else if (!strcmp (w, "pause")) {
-        paused = 1;
+        HUB->paused = paused = 1;
         msg ("The game is paused: press Escape to go on.");
         status ();
     } else if (!strcmp (w, "help") || !strcmp (w, "?")) {
@@ -218,7 +238,7 @@ static void __fastcall__ command (char* l)
 
 int main (int argc, char* argv[])
 {
-    unsigned long seed = hy_time () ^ hy_ticks ();
+    unsigned long seed = hy_time () ^ hy_ticks (), was;
     const char* file = 0;
     unsigned char k, i;
     char* l;
@@ -243,18 +263,19 @@ int main (int argc, char* argv[])
     t_init ();
     title ();
     character (file, seed);
+    start_world (seed);
     status ();
     blank ();
     sayf ("%s, %s, enters the dungeon.", P.name, P.occupation);
     blank ();
     msg ("Type help for the commands.");
     t_done ();
-    last = hy_ticks ();
     while (!quit) {
+        hub_map (0);                            /* (The hub at $8000 again: a call may have moved the window) */
         while (kbhit ()) {
             k = cgetc ();
             if (k == CH_ESC) {
-                paused = !paused;
+                HUB->paused = paused = !paused;
                 status ();
             } else if (k == CH_RESIZE) {
                 t_init ();
@@ -262,14 +283,20 @@ int main (int argc, char* argv[])
                 t_key (k);
             }
         }
-        clock_run ();
-        if (now >= ready && (l = t_line ()) != 0) {
+        events ();
+        was = now / 10;
+        now = hub_now ();
+        if (now / 10 != was) {
+            status ();                          /* (The clock on the status line, each game second) */
+        }
+        if (!busy && (l = t_line ()) != 0) {
             command (l);
             status ();
         }
         t_done ();
         hy_sleep_ticks (2);
     }
+    stop_world ();
     t_end ();
     return 0;
 }

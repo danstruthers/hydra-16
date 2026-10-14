@@ -248,6 +248,8 @@ static const unsigned char med_f[HARN_NMEDICAL] = {
     0, 5, 6, 10, 14, 15, 19, 20, 22, 23, 25, 26, 27, 29, 30, 40, 42, 43, 45, 48, 58, 61, 63, 65
 };
 
+static unsigned char epilepsy;                  /* Epilepsy's Intelligence, owed till INT is rolled */
+
 /* An attribute less n, at least 1 */
 static unsigned __fastcall__ lower (unsigned v, unsigned n)
 {
@@ -271,7 +273,7 @@ static void __fastcall__ med_effect (harn_char* c, unsigned char m)
         a[HARN_CML] = lower (a[HARN_CML], d3 ());
         break;
     case HARN_EPILEPSY:
-        a[HARN_INT] += d3 ();
+        epilepsy = d3 ();                      /* (Rolled here, in the dice's order; added once INT is) */
         break;
     case HARN_MED_EAR:
         a[HARN_HRG] = lower (a[HARN_HRG], d3 ());
@@ -436,7 +438,8 @@ void __fastcall__ harn_create (harn_char* c, const harn_char* t)
         rand_medical (c, 0);
     }
     /* Personality, religion */
-    c->att[HARN_INT] = fixed (t, HARN_INT, harn_rand_attr (sp, sx, fr, wt, HARN_INT));
+    c->att[HARN_INT] = fixed (t, HARN_INT, harn_rand_attr (sp, sx, fr, wt, HARN_INT)) + epilepsy;
+    epilepsy = 0;
     c->att[HARN_AUR] = fixed (t, HARN_AUR, harn_rand_attr (sp, sx, fr, wt, HARN_AUR));
     c->att[HARN_WIL] = fixed (t, HARN_WIL, harn_rand_attr (sp, sx, fr, wt, HARN_WIL));
     c->att[HARN_MOR] = fixed (t, HARN_MOR, harn_rand_attr (sp, sx, fr, wt, HARN_MOR));

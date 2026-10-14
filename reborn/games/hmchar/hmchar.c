@@ -202,7 +202,7 @@ static void occupation (void)
         } while (occ >= NOCC);
     }
     o = &occs[occ];
-    for (k = 0; k < 9 && o->sk[k][0]; ++k) {
+    for (k = 0; k < 9 && (o->sk[k][0] | o->sk[k][1]); ++k) {    /* (An empty place is 0, 0: Acrobatics is skill 0) */
         sk = o->sk[k][0];
         m = o->sk[k][1];
         if (sk & WEAPONS) {

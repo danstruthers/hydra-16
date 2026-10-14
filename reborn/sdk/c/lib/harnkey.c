@@ -90,7 +90,7 @@ static const char* const skillkeys[HARN_NSKILLS] = {
     "sea",
     "shw",
     "sur",
-    "tar",
+    "trt",
     "tex",
     "tim",
     "trk",
