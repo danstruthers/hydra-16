@@ -22,7 +22,7 @@ choices. *n* and *x* are numbers, *s$* a string, *v* a variable, *f* a file numb
 
 | Keyword | Syntax | What it does |
 |---|---|---|
-| `ABS` | `ABS(x)` | The size of *x* |
+| `ABS` | `ABS(x)` | The size of *x* (a complex number's distance from 0) |
 | `ABSOLUTE` | `CALL ABSOLUTE (addr)` | Call machine code |
 | `AND` | *a* `AND` *b* | True if both are; bit by bit on numbers |
 | `APPEND` | `OPEN ... FOR APPEND` | Open a file to write on to its end |

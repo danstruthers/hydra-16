@@ -1,6 +1,6 @@
 ## ABS
 
-A numeric function: the absolute value of a real number.
+A numeric function: the absolute value of a number, its size.
 
 #### Syntax
 
@@ -11,7 +11,7 @@ ABS(x)
 #### Arguments
 
 *x*
-: A numeric expression whose value is real: an integer, a rational or a decimal.
+: A numeric expression: an integer, a rational, a decimal or a complex number.
 
 #### Result
 
@@ -19,17 +19,16 @@ ABS(x)
 integer gives an integer, of whatever length; a rational gives a rational in lowest terms; a decimal gives a
 decimal with the same digits. There is no largest value and no overflow.
 
+For a complex number, its modulus: its distance from 0, the square root of its real part squared plus its
+imaginary part squared. `ABS(3+4i)` is 5. It is exact when that root is, and otherwise a decimal of the digits
+`DIGITS` has set.
+
 #### Errors
 
 | `ERR` | Message | Cause |
 |---|---|---|
-| 5 | `illegal function call` | *x* is complex. A complex number has no sign, and `ABS` does not give its modulus |
 | 13 | `type mismatch` | *x* is a string |
 | 2 | `syntax error` | No argument, or more than one |
-
-#### Notes
-
-For the modulus of a complex number *z*, use `SQR(REAL(z) ^ 2 + IMAG(z) ^ 2)`.
 
 #### See also
 
@@ -42,10 +41,8 @@ For the modulus of a complex number *z*, use `SQR(REAL(z) ^ 2 + IMAG(z) ^ 2)`.
  7  7  7/2  2.5
 > PRINT ABS(-2 ^ 100)
  1267650600228229401496703205376
-> PRINT ABS(3+4i)
-illegal function call
-> PRINT ERR; SQR(REAL(3+4i) ^ 2 + IMAG(3+4i) ^ 2)
- 5  5
+> PRINT ABS(3+4i); ABS(1+1i)
+ 5  1.41421356237
 ```
 
 ## ABSOLUTE
@@ -299,7 +296,7 @@ that writes where it shouldn't, takes HyBASIC down with it.
 
 ## ATN
 
-A numeric function: the arctangent of a real number.
+A numeric function: the arctangent.
 
 #### Syntax
 
@@ -310,7 +307,7 @@ ATN(x)
 #### Arguments
 
 *x*
-: A numeric expression whose value is real.
+: A numeric expression, complex too.
 
 #### Result
 
@@ -318,11 +315,13 @@ The angle, in radians, whose tangent is *x*: more than −π/2 and less than π/
 other result is a decimal, correct to the number of significant digits that `DIGITS` has set (12 unless it has
 been changed), whatever kind of number *x* is.
 
+For a complex *x*, the principal value, as mathematics defines it (Chapter 18 of the manual): each part correctly rounded, and `ATN(-x)` always `-ATN(x)`. `ATN(2i)` is π/2 + 0.549...i.
+
 #### Errors
 
 | `ERR` | Message | Cause |
 |---|---|---|
-| 5 | `illegal function call` | *x* is complex |
+| 5 | `illegal function call` | *x* is i or −i, where the arctangent is infinite |
 | 13 | `type mismatch` | *x* is a string |
 
 #### Notes
@@ -341,6 +340,8 @@ gives π to the digits set, directly.
  0.785398163397  0 -0.785398163397  0.463647609001
 > DIGITS 30 : PRINT ATN(1) : DIGITS 12
  0.78539816339744830961566084582
+> PRINT ATN(2i); ATN(1+1i)
+ 1.57079632679+0.549306144334i  1.0172219679+0.402359478109i
 ```
 
 ## BANK
@@ -1181,7 +1182,7 @@ cannot continue
 
 ## COS
 
-A numeric function: the cosine of a real number.
+A numeric function: the cosine.
 
 #### Syntax
 
@@ -1192,18 +1193,19 @@ COS(x)
 #### Arguments
 
 *x*
-: A numeric expression whose value is real: an angle in radians.
+: A numeric expression, complex too: an angle in radians.
 
 #### Result
 
 The cosine of *x*, from −1 to 1. `COS(0)` is the integer 1. Any other result is a decimal, correct to the number
 of significant digits that `DIGITS` has set (12 unless it has been changed).
 
+For a complex *x*, the principal value, as mathematics defines it (Chapter 18 of the manual): `COS(a + bi)` is cos *a* cosh *b* − i sin *a* sinh *b*, each part correctly rounded.
+
 #### Errors
 
 | `ERR` | Message | Cause |
 |---|---|---|
-| 5 | `illegal function call` | *x* is complex |
 | 13 | `type mismatch` | *x* is a string |
 
 #### Notes
@@ -1222,6 +1224,8 @@ cosine of the angle that `PI / 2` really is.
 ```session
 > PRINT COS(0); COS(1); COS(PI); COS(60 * PI / 180)
  1  0.540302305868 -1  0.5
+> PRINT COS(1i)
+ 1.54308063482
 ```
 
 ## CSRLIN

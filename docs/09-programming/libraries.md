@@ -127,19 +127,22 @@ entry ([C](c.md#numbers)).
 | :- | :- |
 | Its bank | `INIT`; `SET_BASE`, `GET_BASE` (the base, a string) |
 | Text | `PARSE` (the longest start of a text that's a number, or with `NPARSE_WHOLE` the whole text), `DISPLAY` (a number written exactly), `FORMAT` (a format string's `{}` placeholders filled) |
-| Arithmetic | `ADD`, `SUB`, `MUL`, `DIV` (exact: `10/4` is `5/2`), `NEG`, `ABS`, `CMP` (by value, whatever the kinds), `KIND` (an integer, a fixed decimal, a rational, a complex number; its sign), `IDIV` (an integer quotient toward 0, and the remainder), `GCD`, `POW` (a whole power) |
+| Arithmetic | `ADD`, `SUB`, `MUL`, `DIV` (exact: `10/4` is `5/2`), `NEG`, `ABS` (a real number's: `math`'s takes complex ones too), `CMP` (by value, whatever the kinds), `KIND` (an integer, a fixed decimal, a rational, a complex number; its sign), `IDIV` (an integer quotient toward 0, and the remainder), `GCD`, `POW` (a whole power) |
 | Conversions | `TRUNCATE`, `FLOOR`, `ROUND` (a half to the even one), `TO_FIXED`, `TO_RATIONAL`, `NUMERATOR`, `DENOMINATOR`, `COMPLEX`, `PART`, `FROM_INT` and `TO_INT` (16 or 32 bits), `BYTES` (bytes checked as a number) |
 | Bits | `BITS`: and, or, xor, not, shifts, a bit's test, on integers of any size in two's complement |
 | Others | `RANDOM` (an integer below n, or a fixed decimal from 0 to 1) and `SEED`; `FIB` |
 
 | | `math`'s |
 | :- | :- |
-| The functions | `SQRT`, `EXP`, `LOG`, `TRIG` (sine, cosine, tangent), `ATAN`, `RPOW` (any real power), `PI` |
+| The functions | `SQRT`, `EXP`, `LOG`, `TRIG` (sine, cosine, tangent), `ATAN`, `RPOW` (any power), `PI`, `ABS` (a complex number's modulus too) |
 | The precision | `DIGITS`: 1 to 100 significant digits, 12 at the start |
 
 The functions are exact when their answer is (`SQRT` of `9/4` is `3/2`), else a fixed decimal of the precision's
 significant digits, **correctly rounded**, so the Hydra, danlang and the PC's reference agree to the last digit.  A
-negative number's square root or logarithm is complex.  At 12 digits a sine takes some 220,000 cycles.
+negative number's square root or logarithm is complex.  A complex argument (or a negative number to a power that isn't
+whole) gives the principal value, as mathematics defines it, each part correctly rounded: `sqrt(3+4i)` is `2+1i`,
+`ABS` of `3-4i` is `5`, `i^i` is real.  These are worked in the library's third bank (`mtcplx.inc`), from the real
+functions' cores.  At 12 digits a sine takes some 220,000 cycles.
 
 ### Errors
 

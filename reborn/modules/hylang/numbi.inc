@@ -402,7 +402,7 @@ nm_plus1:
             plp
             rts
 
-; (abs x): x's magnitude: x, or -x if it's below 0 (danlang's: a complex number by its order, too)
+; (abs x): x's magnitude: x, or -x if it's below 0; a complex number's modulus, the math library's (|3-4i| is 5)
 bi_abs:
             jsr         n_arg0
             lda         ex
@@ -412,6 +412,11 @@ bi_abs:
             bne         :+
             LDAX        s_absnum
             jmp         n_error
+:
+            cmp         #NK_COMPLEX
+            bne         :+
+            lda         #MF_ABS
+            jmp         nm_math1
 :
             lda         ex                                  ; (Below 0?)
             ldx         ex + 1
@@ -1062,8 +1067,9 @@ MF_TAN          = 6
 MF_PI           = 7
 MF_POW          = 8
 MF_DIGITS       = 9
+MF_ABS          = 10
 
-; (sqrt x), (exp x), (log x), (atan x), (sin x), (cos x), (tan x): x a real number
+; (sqrt x), (exp x), (log x), (atan x), (sin x), (cos x), (tan x): x any number (a complex one's principal value)
 bi_sqrt:
             lda         #MF_SQRT
             bra         nm_math1
@@ -1199,11 +1205,6 @@ bi_pow:
             LDAX        s_mnums                             ; ("'pow' expects numbers")
             jmp         nm_mtext
 :
-            cmp         #NK_COMPLEX
-            bne         :+
-            LDAX        s_mpower                            ; ("'pow' expects a real power")
-            jmp         nm_mtext
-:
             lda         nl_math
             bne         :+
             LDAX        s_nomath
@@ -1219,22 +1220,8 @@ bi_pow:
             jsr         nl_result_a
             jmp         n_leave
 @err:
-            cmp         #NE_REAL                            ; (x complex, y not whole)
-            bne         :+
-            LDAX        s_mpowreal
-            jmp         nm_mtext
-:
-            cmp         #NE_DOMAIN                          ; (x below 0, y not whole; or y log x too far)
+            cmp         #NE_DOMAIN                          ; (y log x too far from 0; 0 to a complex power)
             bne         @other
-            jsr         n_arg0
-            lda         ex
-            ldx         ex + 1
-            jsr         n_sign3
-            cmp         #0
-            bne         :+
-            LDAX        s_mpowneg
-            jmp         nm_mtext
-:
             LDAX        s_mrange
             jmp         nm_mtext
 @other:
@@ -1845,11 +1832,11 @@ n_c:        .res        1                                   ; (A byte; range's d
 n_xl:       .res        2                                   ; (range's x: its bytes' count)
 
 .segment "RODATA3"
-mf_lo:      .lobytes    MATH_SQRT, MATH_EXP, MATH_LOG, MATH_ATAN, MATH_TRIG, MATH_TRIG, MATH_TRIG, MATH_PI, MATH_RPOW, MATH_DIGITS
-mf_hi:      .hibytes    MATH_SQRT, MATH_EXP, MATH_LOG, MATH_ATAN, MATH_TRIG, MATH_TRIG, MATH_TRIG, MATH_PI, MATH_RPOW, MATH_DIGITS
-mf_y:       .byte       0, 0, 0, 0, 0, 1, 2, 0, 0, 0
-mf_name_lo: .lobytes    s_fsqrt, s_fexp, s_flog, s_fatan, s_fsin, s_fcos, s_ftan, s_fpi, s_fpow, s_fdigits
-mf_name_hi: .hibytes    s_fsqrt, s_fexp, s_flog, s_fatan, s_fsin, s_fcos, s_ftan, s_fpi, s_fpow, s_fdigits
+mf_lo:      .lobytes    MATH_SQRT, MATH_EXP, MATH_LOG, MATH_ATAN, MATH_TRIG, MATH_TRIG, MATH_TRIG, MATH_PI, MATH_RPOW, MATH_DIGITS, MATH_ABS
+mf_hi:      .hibytes    MATH_SQRT, MATH_EXP, MATH_LOG, MATH_ATAN, MATH_TRIG, MATH_TRIG, MATH_TRIG, MATH_PI, MATH_RPOW, MATH_DIGITS, MATH_ABS
+mf_y:       .byte       0, 0, 0, 0, 0, 1, 2, 0, 0, 0, 0
+mf_name_lo: .lobytes    s_fsqrt, s_fexp, s_flog, s_fatan, s_fsin, s_fcos, s_ftan, s_fpi, s_fpow, s_fdigits, s_fabs
+mf_name_hi: .hibytes    s_fsqrt, s_fexp, s_flog, s_fatan, s_fsin, s_fcos, s_ftan, s_fpi, s_fpow, s_fdigits, s_fabs
 s_fsqrt:    .byte       "sqrt", 0
 s_fexp:     .byte       "exp", 0
 s_flog:     .byte       "log", 0
@@ -1860,14 +1847,12 @@ s_ftan:     .byte       "tan", 0
 s_fpi:      .byte       "pi", 0
 s_fpow:     .byte       "pow", 0
 s_fdigits:  .byte       "digits", 0
+s_fabs:     .byte       "abs", 0
 s_mexpects: .byte       "' expects a number", 0
 s_mreal:    .byte       "' expects a real number", 0
 s_mrange:   .byte       "': out of range", 0
 s_mlog0:    .byte       "'log': the logarithm of 0", 0
 s_mnums:    .byte       "' expects numbers", 0
-s_mpower:   .byte       "' expects a real power", 0
-s_mpowreal: .byte       "' expects a real number when its power isn't whole", 0
-s_mpowneg:  .byte       "': a negative number to a power that isn't whole", 0
 s_mdigits:  .byte       "'digits' takes a whole number from 1 to 100", 0
 s_nomath:   .byte       "': the math library (the module math) isn't there", 0
 nm_ops:     .byte       "+-*/"

@@ -45,6 +45,7 @@ proj4.md
 proj5.md
 proj6.md
 proj7.md
+proj8.md
 part4.md
 card1.md
 card2.md

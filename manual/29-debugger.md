@@ -148,7 +148,7 @@ PC=0844 A=01 X=FF Y=00 S=FB P=nv--dizc W=0 U=0 RAM=00 ROM=00
 ```
 
 * The first `s` ran `lda #$01`: A is 1. The second ran `sta row`.
-* `m row 2` shows 2 bytes of memory from `row`: `row` is 1, as it should be. `count` is $51: whatever was left in
+* `m row 2` shows 2 bytes of memory from `row`: `row` is 1, as it should be. `count` is $F6: whatever was left in
   that byte, since the program hasn't set it yet.
 * `s 3` ran three instructions, showing each one as it went: `lda row`, the `jsr`, and, inside `line`, `sta count`.
   S went from $FD to $FB: the `jsr` pushed its return address, two bytes, on the stack.
@@ -361,7 +361,7 @@ db> q
 ```
 
 After eight dots, <kbd>CTRL</kbd>-<kbd>C</kbd> stopped it. `(in a call: its state 6)` means it was inside a system
-call, `SLEEP` (state 6 is sleeping): the PC, $EB20, is in HydraOS's kernel. You can't step there, but `c` runs it on,
+call, `SLEEP` (state 6 is sleeping): the PC, $EB31, is in HydraOS's kernel. You can't step there, but `c` runs it on,
 and `q` ends it.
 
 <kbd>CTRL</kbd>-<kbd>C</kbd> stops an `n` or a `u` that's taking too long, too, and so does a breakpoint inside a

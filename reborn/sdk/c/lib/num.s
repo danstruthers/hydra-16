@@ -63,7 +63,7 @@ fail:
 
 _num_neg:   ldy         #NUM(NUM_NEG)
             bra         unary
-_num_abs:   ldy         #NUM(NUM_ABS)
+_num_abs:   ldy         #MATH(MATH_ABS)
             bra         unary
 _num_truncate: ldy      #NUM(NUM_TRUNCATE)
             bra         unary

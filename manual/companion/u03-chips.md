@@ -35,6 +35,13 @@
 
 Skip this if your ROM chips came programmed and labelled (section 4.4).
 
+⚠ First look at the serial chip, U3. A Rockwell R65C51 takes the files in `reborn/bin` as they are. A WDC W65C51N
+needs HydraOS built for it (`node reborn/build.js --acia wdc`, sections 2.7 and 4.4), and those files programmed.
+
+| ☐ | Check |
+|---|---|
+| ☐ | U3 is a ________________, and the files I'm programming were built for it. |
+
 | Programmed | Verified | Labelled | File | Chip type | Goes in |
 |---|---|---|---|---|---|
 | ☐ | ☐ | ☐ | `bios.bin` | SST39SF010A (PLCC) | U6 |
@@ -58,8 +65,8 @@ the socket.
 | Fitted | Checked | Chip | Places | How many |
 |---|---|---|---|---|
 | ☐ | ☐ | W65C02S (processor) | U1 | 1 |
-| ☐ | ☐ | R65C22 (VIA) | U2 | 1 |
-| ☐ | ☐ | R65C51 (ACIA, serial) | U3 | 1 |
+| ☐ | ☐ | R65C22 or W65C22N (VIA) | U2 | 1 |
+| ☐ | ☐ | R65C51 or W65C51N (ACIA, serial) | U3 | 1 |
 | ☐ | ☐ | MAX232 (serial levels) | U5 | 1 |
 | ☐ | ☐ | SST39SF010A, programmed with `bios.bin` | U6 | 1 |
 | ☐ | ☐ | HM628512 (task RAM), or a DS1747 for a real-time clock | U7 | 1 |

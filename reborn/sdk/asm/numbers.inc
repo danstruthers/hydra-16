@@ -118,6 +118,8 @@ MATH_RPOW       = $A042       ; r0 = x; r1 = y
                               ; -> .A/.X = the result's length
 MATH_PI         = $A045       ; -
                               ; -> .A/.X = the result's length
+MATH_ABS        = $A048       ; r0 = x
+                              ; -> .A/.X = the result's length
 
 ; ---- constants
 NUM_MAX         = 1040        ; The longest number in the stored format (a complex number of two rationals of 255-byte integers: 1039)

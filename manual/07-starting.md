@@ -321,8 +321,9 @@ So no task is used up just waiting. Two jobs that a waiting init would do are th
 
 ### Step 8: The shell starts
 
-HyForth starts, and loads its start-up file, `/lib/forth/startup.fs`, which adds four sets of words to its
-**dictionary**: the Core Extension, Exception, File Access and Programming-Tools word sets (Chapter 19). Because it
+HyForth starts, and loads its start-up file, `/lib/forth/startup.fs`. A Forth language knows a list of **words**
+(its commands), called its **dictionary**, and the start-up file adds four sets of them: the Core Extension,
+Exception, File Access and Programming-Tools word sets (Chapter 19 begins Forth). Because it
 was started with `-l`, as a **login shell**, it then reads `/lib/forth/profile.fs`, which turns HyForth into a
 shell: it loads `shell.fl`, the words that let it run commands, and sets up the window. Then it says hello, and
 prints its prompt:
@@ -352,7 +353,14 @@ task  state   parent     cpu group  name
 
 You can see the kernel (task 0), the shell, `forth` (task 1: it's where init was), `ps` itself (task 2: the shell
 started it, so its parent is 1), and the four drivers in tasks 12 to 15 (C to F). That leaves ten tasks free for your
-programs and for more windows. The `cpu` column is in seconds. Chapter 11 explains the `group` column.
+programs and for more windows. The `cpu` column is in seconds.
+
+The `group` column is each task's **note group**. A **note** is a short message that HydraOS, or another task, sends
+a task. <kbd>CTRL</kbd>-<kbd>C</kbd> is one: it sends the note `interrupt` to every task in the group of the window
+you're typing in, and that's how it stops the program you're running. A program starts in the group of the shell
+that started it, unless it's started in the background (with `&`, Chapter 8): then it has a group of its own, and
+<kbd>CTRL</kbd>-<kbd>C</kbd> leaves it alone. Most notes end the program they're sent to, but a program can catch
+them, and carry on (section 27.16 shows how).
 
 > **TRY THIS:** Run `ps` again. Has anything changed? Which task do you think did most of the work while the Hydra
 > started?

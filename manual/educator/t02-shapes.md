@@ -47,6 +47,7 @@ up; allow half as long again for younger students or slow typists. "Reads" is th
 | 5 A Program in the Background | 2 | rc | Any Hydra | 4, 6 |
 | 6 A Traffic Light | 3 | rc | A real Hydra, LEDs | 14 |
 | 7 Faster, with Machine Code | 3 | HyBASIC and assembly | Any Hydra | 21, 24, 25 |
+| 8 A Game: Catch the Stars | 2 to 3 | HyBASIC | Any Hydra | 10, 20, 21 |
 
 **The build** (the Companion's Part One) is 15 to 20 hours of bench time for one board, however many hands share
 it, plus the memory card. Topic 6 says how to share it.
@@ -95,7 +96,7 @@ Eighteen weeks, two or three lessons a week. Emulators for everyone, and one or 
 | 3 to 6 | Inside HydraOS | 4, 5, 6, 7, 8, 9 | 4 or 5 |
 | 7 to 9 | Devices | 10, 11, 12, 13, 14 | 3 (or 6, with hardware) |
 | 10 | Numbers | 15 | |
-| 11 to 14 | A language, properly; a second, briefly | Two of 16-17, 18-19, 20-21; then 22, 23 | 1 or 2 |
+| 11 to 14 | A language, properly; a second, briefly | Two of 16-17, 18-19, 20-21; then 22, 23 | 1, 2 or 8 |
 | 15 to 17 | Machine language | 24, 25, 26 | 7 |
 | 18 | Showcase and assessment | | |
 
@@ -129,7 +130,7 @@ a workshop.
 
 ## Shape F: a university laboratory
 
-Six three-hour laboratory sessions beside a second-year course in computer organization or operating systems.
+Six three-hour laboratory sessions beside a second-year course in computer organisation or operating systems.
 The students can program already. The Hydra's value to them is that the *whole* system is small enough to read:
 after the labs, the kernel's source is the further reading.
 

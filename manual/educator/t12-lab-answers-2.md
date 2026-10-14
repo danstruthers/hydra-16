@@ -84,8 +84,17 @@ normal. Without it, everything printed afterwards (the prompt, and what's typed)
 : banner ( -- ) esc ." [2J" esc ." [12;34H" esc ." [1;33;44m  Sam  " esc ." [0m" cr ;
 ```
 
-In rc, the hard part is typing an <kbd>ESC</kbd> into the script: the editor takes the key for itself. The
-manual's entry for `echo`, and section 13.7, give the ways round it.
+To make it flash, add `5;` to the colours (`[5;1;33;44m`). For the box, `ESC (0` switches to the line-drawing
+characters and `ESC (B` back; in between, `l` `q` `k` draw the top (┌─┐), `x` the sides (│) and `m` `q` `j` the
+bottom (└─┘):
+
+```text
+: line ( n -- ) 0 do [char] q emit loop ;
+: boxed ( -- ) esc ." [2J" esc ." (0"
+  esc ." [11;32H" [char] l emit 7 line [char] k emit
+  esc ." [12;32H" [char] x emit esc ." (B" esc ." [5;1;33;44m  Sam  " esc ." [0m" esc ." (0" [char] x emit
+  esc ." [13;32H" [char] m emit 7 line [char] j emit esc ." (B" cr ;
+```
 
 ## Lab 11. Disks
 
@@ -105,7 +114,7 @@ free 15956 KB of 16380 KB
 /> cat /dev/sd/x/ctl
 rom 4 MB 8192 blocks
 hydrafs label=ROM
-partition at block 1024
+partition at block 1056
 free 11 KB of 623 KB
 /> cat /dev/sd/r/ctl
 ram 256 KB 512 blocks
@@ -438,7 +447,14 @@ rc wait 1 30 1
 1.41421356237
 /> calc 'sqrt(-4)'
 2i
+/> calc 'abs(3-4i)'
+5
+/> calc 'sqrt(3+4i)'
+2+1i
 ```
+
+The last two surprise most people. `abs` of a complex number is its distance from 0 (question 6); and `2+1i`
+squared is 4 + 4i + i², which is 3 + 4i, because i² is -1.
 
 **2.** It keeps fractions as fractions, exactly, instead of turning them into decimals that have to be cut off
 somewhere; and it keeps decimals in base ten, not in binary, so 0.1 really is a tenth.
@@ -495,6 +511,10 @@ LFLS
 /> calc 1/0
 calc: division by zero
 ```
+
+6. 5 squares. The line from 0 to the point is the long side of a right-angled triangle whose other sides are 3 and
+   4, and Pythagoras says its square is 3² + 4² = 25: so it's 5. That's what `abs` works out for any complex
+   number.
 
 **Challenge.** 302 digits. `wc -c` says one more, because it counts the new line at the end.
 

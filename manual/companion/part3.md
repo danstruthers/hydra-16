@@ -13,3 +13,4 @@ a project isn't done until someone else has seen it run.
 * Project 5. A Program in the Background
 * Project 6. A Traffic Light
 * Project 7. Faster, with Machine Code
+* Project 8. A Game: Catch the Stars

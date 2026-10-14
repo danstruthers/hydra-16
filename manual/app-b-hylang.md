@@ -178,7 +178,7 @@ hylang> (elem? 8 l)
 | Function | Gives |
 |---|---|
 | `(+ x ...)`, `(- x ...)`, `(* x ...)`, `(/ x ...)` | Sum, difference, product, quotient (exact) |
-| `(1+ x)`, `(1- x)`, `(abs x)` | Plus one; minus one; its size |
+| `(1+ x)`, `(1- x)`, `(abs x)` | Plus one; minus one; its size (a complex number's distance from 0) |
 | `(truncate x)` | The whole part (toward zero) |
 | `(to-fixed x [places])`, `(to-rational x)` | As a fixed decimal; as a fraction |
 | `(rational.n x)`, `(rational.d x)` | Its top; its bottom |

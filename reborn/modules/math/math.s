@@ -14,7 +14,7 @@
 .include "numbers.inc"
 .include "numbers/nmbank.inc"
 
-            HYX2_LIBRARY "math", "HEADER", "ROM2", 2
+            HYX2_LIBRARY "math", "HEADER", "ROM3", 3
 .include "math_jt.inc"
 
 .code
@@ -47,6 +47,27 @@ mt_trig:
             rts
 mt_atan:
             NMFAR2      b2::mt_atan
+            rts
+
+; ---- The complex arguments' functions (mtcplx.inc), in the third bank, with their own copies of what they use, as the
+; second's; the cores they work with called in the first and second banks (NMFAR)
+.segment "CODE3"
+.scope b3
+NM_COPY         = 2
+CPX_BANK        = 1
+.include "numbers/nmcall.inc"
+.include "numbers/nmreg.inc"
+.include "numbers/nmval.inc"
+.include "mtcore.inc"
+.include "mtargs.inc"
+.include "mtcplx.inc"
+.endscope
+mt_cgo          = b3::c_go                                  ; (The third bank's, from the others: NMFAR)
+
+; ABS, in the third bank
+.code
+mt_abs:
+            NMFAR       b3::c_abs, 2
             rts
 
 ; ---- The arena: the rest of the bank (each call's own: math's variables aren't numbers')

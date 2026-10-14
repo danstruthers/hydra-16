@@ -1,7 +1,7 @@
 # Chapter 21. Learning hylang
 
-**hylang** is the Hydra's version of **danlang**, a language in the family of **Lisp**, one of the oldest programming
-languages there is (it was invented in 1958). In Lisp, a program is made of lists, and the language can work on its
+**hylang** is the Hydra's version of **danlang** (a language its author wrote first, for PCs), and is in the family of
+**Lisp**, one of the oldest programming languages there is (it was invented in 1958). In Lisp, a program is made of lists, and the language can work on its
 own programs as easily as on any other list. hylang has the Hydra's whole number system, strings, lists and hashes,
 and functions for the Hydra's files, devices and programs. This chapter teaches you the language.
 

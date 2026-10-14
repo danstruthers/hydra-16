@@ -58,6 +58,7 @@ mt_cm:      .res        2
 mt_s6:      .res        2                                   ; (m_round's: the power of 10 R6 holds (m_sig's 10^|s|),
 mt_s6ok:    .res        1                                   ;   if it holds one, and whether R31 is 2^(b - 1))
 mt_b31ok:   .res        1
+mt_cfn:     .res        1                                   ; (The entry, for a complex argument: mtcplx.inc's c_go)
 
 .endif
             NM_CODE
@@ -826,6 +827,19 @@ m_ziv:
             bcs         :+
             rts
 :
+.ifdef NM_COPY
+.if NM_COPY = 2
+            lda         mt_b + 1                            ; (A complex result's part past 1,024 bits not known from
+            cmp         #>1024                              ;   0: 0, as a part too small to tell from it is)
+            bcc         :+
+            RUCMP       MA, ME
+            cmp         #1
+            beq         :+
+            LDR         hv, n_zero
+            rts
+:
+.endif
+.endif
             lda         #MA                                 ; (More bits: the more of b / 2, and what A lacks)
             jsr         m_bitlen
             sta         mt_t

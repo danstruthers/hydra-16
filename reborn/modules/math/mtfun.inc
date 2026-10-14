@@ -16,6 +16,7 @@ mt_lt:      .res        2                                   ; (log's power of 2)
 mt_need2:   .res        1                                   ; (trig's: bit 7 sin r, bits 0-3 cos r)
 mt_g16:     .res        2                                   ; (m_isqrt's guess: the top 16 bits, the remainder, its
 mt_r16:     .res        2                                   ;   root, a trial)
+mt_inex:    .res        1                                   ; (m_sqrt's: 0 its root exact, 1 rounded)
 mt_rt:      .res        1
 mt_tr:      .res        2
 
@@ -65,6 +66,7 @@ m_picore:
 
 mt_sqrt:
             jsr         nm_begin
+            ldy         #0
             jsr         mt_arg
             ldx         #XN
             lda         r_neg,x
@@ -90,6 +92,7 @@ mt_sqrt:
 ; hv = sqrt(XN / XD) (above 0): exact, the root in x's kind (n_kv), if both are perfect squares; else rounded to the
 ; precision, as integers: R = round(sqrt(P Q) / Q), P / Q = x 10^2p, (isqrt(4 P Q) + Q) / 2Q
 m_sqrt:
+            stz         mt_inex
             lda         #XN
             ldy         #2
             jsr         m_isqrt
@@ -106,6 +109,7 @@ m_sqrt:
             bne         @inexact
             jmp         m_kindout
 @inexact:
+            inc         mt_inex
             lda         st_digits
             sta         mt_n
             jsr         m_log10q                            ; (e = floor(log10 x))
@@ -429,6 +433,7 @@ m_isqrt:
 
 mt_exp:
             jsr         nm_begin
+            ldy         #1
             jsr         mt_arg
             ldx         #XN
             lda         r_len,x
@@ -540,6 +545,7 @@ m_expcore:
 
 mt_log:
             jsr         nm_begin
+            ldy         #2
             jsr         mt_arg
             ldx         #XN
             lda         r_len,x
@@ -712,7 +718,7 @@ mt_pow:
             ldx         n_y + 1
             jsr         n_kind
             cmp         #NK_COMPLEX
-            beq         @real
+            beq         @cpx
             lda         n_y                                 ; (y: YN / YD, in lowest terms)
             ldx         n_y + 1
             ldy         #YN
@@ -729,9 +735,9 @@ mt_pow:
             jsr         n_kind
             cmp         #NK_COMPLEX
             bne         :+
-@real:
-            lda         #NE_REAL
-            jmp         nm_fail
+@cpx:
+            ldy         #5                                  ; (Complex, or x below 0: the third bank's)
+            jmp         mt_tocpx
 :
             lda         n_x
             ldx         n_x + 1
@@ -739,10 +745,7 @@ mt_pow:
             jsr         n_load
             ldx         #XN
             lda         r_neg,x
-            beq         :+
-            lda         #NE_DOMAIN
-            jmp         nm_fail
-:
+            bne         @cpx
             lda         r_len,x
             bne         @pos
             ldx         #YN                                 ; (0: to a power above 0, 0)

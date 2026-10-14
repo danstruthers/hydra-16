@@ -7,7 +7,8 @@ and the other way round.
 
 > **IN THIS CHAPTER:** You'll run a Hydra on a PC, in a web browser and in a terminal window, choose its hardware,
 > share files with your PC, and make SD card images. **You need:** a PC with a web browser; and for sections 2.3 to
-> 2.7, permission to install Node.js on it.
+> 2.7, permission to install Node.js on it. Sections 2.1 and 2.2 are all you need to start: come back to the rest
+> when you build a Hydra (Chapters 4 and 5 use it), or want to share files with your PC.
 
 This chapter shows you two ways to run the emulator: in a **web browser**, the easiest way, with nothing to
 install; and in a **terminal window** on your PC, which gives you extra tools for exploring. At the end you'll see
@@ -83,10 +84,9 @@ Above the console:
   windows to the new size.
 * **Copy text** copies everything in the console, including the lines that have scrolled away, so you can paste it
   into a document.
-* **Paste** types whatever is on your PC's clipboard into the Hydra, as if you typed it. The Hydra asks the page to
-  wait whenever it falls behind (XON/XOFF, section 13.6), so a whole program arrives whole. For programs you'll
-  change often, `/pc` (section 2.5) is handier still. (<kbd>CTRL</kbd>-<kbd>SHIFT</kbd>-<kbd>V</kbd> does the
-  same.)
+* **Paste** types whatever is on your PC's clipboard into the Hydra, as if you typed it (<kbd>CTRL</kbd>-<kbd>SHIFT</kbd>-<kbd>V</kbd>
+  does the same). The Hydra asks the page to wait whenever it falls behind, so a whole program arrives whole. For
+  programs you'll change often, `/pc` (section 2.5) is handier still.
 
 You can also scroll back through old lines with the mouse wheel, and drag across text to select and copy it.
 
@@ -136,8 +136,8 @@ A few things are different from a real board:
   play too fast. Use **Real time** for sound.
 * The clock chip is only in the web emulator (its Setup). In the terminal emulator, the Hydra has no clock chip, so
   its clock starts at midnight on January 1, 2000 each time it is switched on.
-* The web emulator has no `/pc` folder for sharing files with the PC. The terminal emulator does (section 2.5),
-  and so does a real Hydra with the PC tool (Chapter 5).
+* The web emulator's `/pc` is always empty: there's no PC tool behind it, to share files with your PC. The
+  terminal emulator has one (section 2.5), and so does a real Hydra (Chapter 5).
 
 ## 2.3 Getting the Hydra's files
 
@@ -162,8 +162,8 @@ The project's folder holds these folders:
 | `base` | The kernel (the heart of HydraOS) and the core of the emulator |
 | `reborn` | The rest of HydraOS: its drivers, shells, languages and tools; its ROM images; and its emulator |
 | `board` | The Hydra-16's circuit board design, for the KiCad design program |
-| `manual` | This book |
-| `docs` | The reference book: the architecture, every driver's files and commands, the expansion cards, the quirks |
+| `manual` | This book, the Student Companion, the Educator's Course Guide and the Technical Reference |
+| `docs` | The design documents: the architecture, every driver's files and commands, the expansion cards, the quirks |
 | `old` | The first HydraOS, kept for the record; nothing in this book needs it |
 
 Everything you need to *run* the emulator is already there, including the ROM images in `reborn/bin`. You do not

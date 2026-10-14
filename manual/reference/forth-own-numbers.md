@@ -147,19 +147,21 @@ npow      ( N: x y -- z )
 
 #### Description
 
-`nnegate` changes a number's sign. `nabs` leaves a real number without its sign; a complex number is an
-error. `ngcd` leaves the greatest common divisor of two integers: the largest number that divides both.
+`nnegate` changes a number's sign. `nabs` leaves a real number without its sign, and a complex number's modulus,
+its distance from 0 (`3-4i nabs` is 5). `ngcd` leaves the greatest common divisor of two integers: the largest
+number that divides both.
 
 `npow` leaves *x* to the power *y*. With a whole *y* the result is exact, whatever *x* is: `2 100` gives all
 31 digits, and a negative power gives a fraction. With a fractional *y* the result is exact when the root
-is, and otherwise a decimal to the precision in `digits`.
+is, and otherwise a decimal to the precision in `digits`. A negative *x* to a fractional power, or a complex *x*
+or *y*, gives the principal value (`-8 s>n 1/3 npow` is `1+1.73205080757i`, `1i 1i npow` is 0.207879576351).
 
 #### Errors
 
 | Throw code | Message | Cause |
 |---|---|---|
-| −24 | `invalid numeric argument` | `nabs` of a complex number; `ngcd` of numbers that are not integers |
-| −46 | `outside the function's domain` | `npow`: a negative number to a power that isn't whole |
+| −24 | `invalid numeric argument` | `ngcd` of numbers that are not integers |
+| −46 | `outside the function's domain` | `npow`: 0 to a complex power whose real part is 0 or less |
 
 #### See also
 
@@ -844,14 +846,14 @@ an angle in radians, the angle whose tangent is given, and pi.
 
 Where there is an exact answer it is given: `16 nsqrt` is 4, and the square root of a negative number is an
 imaginary one. Otherwise the result is a decimal with as many significant digits as the variable `digits`
-holds, 12 unless a program changes it.
+holds, 12 unless a program changes it. A complex argument gives the principal value, each part so rounded:
+`3+4i nsqrt` is `2+1i`.
 
 #### Errors
 
 | Throw code | Message | Cause |
 |---|---|---|
-| −46 | `outside the function's domain` | The logarithm of 0 |
-| −24 | `invalid numeric argument` | A complex number |
+| −46 | `outside the function's domain` | The logarithm of 0; the arc tangent of `1i` or `-1i` |
 
 #### See also
 
@@ -869,6 +871,8 @@ holds, 12 unless a program changes it.
 2.71828182846
 /> npi n.
 3.14159265359
+/> 3+4i nsqrt n. 1i nexp n.
+2+1i 0.540302305868+0.841470984808i
 ```
 
 ## digits

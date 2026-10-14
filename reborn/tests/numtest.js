@@ -15,6 +15,7 @@ const NUMS = readNumbers(path.join(ROOT, 'spec', 'numbers.def'));
 const K = Object.fromEntries(NUMS.consts.map(k => [k.name, k.value]));
 const SLOT = Object.fromEntries(NUMS.libs.find(l => l.name === 'numbers').entries.map((e, i) => [e.name, i]));
 const MSLOT = Object.fromEntries(NUMS.libs.find(l => l.name === 'math').entries.map((e, i) => [e.name, 0x80 + i]));   // (math's: t_num's op $80 + its slot)
+MSLOT.MABS = MSLOT.ABS;                                       // (math's ABS: numbers' is ABS)
 const ERR = Object.fromEntries(NUMS.consts.filter(k => k.name.startsWith('NE_')).map(k => [k.value, k.name]));
 const RESULT = 1, IN_BANK = 2, SECOND = 4;                    // (A record's flags)
 const ARG_ROOM = [2560, 2560, 512, 512, 512], BANK_ARG_ROOM = [0x800, 0x800, 0x400, 0x400, 0x400];   // (r0, r1, r4-r6)
@@ -584,14 +585,15 @@ function calls(seed = 1066) {
     fmt(parts.join(rnd(2) ? ' ' : '{{}}'), args, !!(k & 1));
   }
 
-  // ---- The math library (modules/math): DIGITS, SQRT, EXP, LOG, TRIG, ATAN, RPOW, PI against numref.js (danlang's
-  // NumMath.cs): each exact when it is, else correctly rounded to the precision's digits, so the same digits
+  // ---- The math library (modules/math): DIGITS, SQRT, EXP, LOG, TRIG, ATAN, RPOW, PI, ABS against numref.js (danlang's
+  // NumMath.cs; a complex argument's principal value, numref.js's csqrt ... cpow): each exact when it is, else correctly
+  // rounded to the precision's digits, so the same digits
   call('DIGITS', { a: 0 }, { a: 12, x: 0 }, 'DIGITS 0: the precision at the start, 12');
   call('DIGITS', { a: 101 }, { err: K.NE_DOMAIN }, 'DIGITS 101: NE_DOMAIN');
   let prec = 12;
   const digits = d => { call('DIGITS', { a: d }, { a: prec, x: 0 }, 'DIGITS ' + d); prec = d; };
   const N = t => numfmt.parse(t);
-  const fn1 = { SQRT: x => R.sqrt(x), EXP: x => R.exp(x), LOG: x => R.log(x), ATAN: x => R.atan(x) };
+  const fn1 = { SQRT: x => R.sqrt(x), EXP: x => R.exp(x), LOG: x => R.log(x), ATAN: x => R.atan(x), ABS: x => R.cabs(x) };
   const math = (op, x, y, what) => {
     const d = prec, o = { flags: RESULT | (rnd(2) ? IN_BANK : 0), room: 600, r0: where(enc(x)) };
     let js;
@@ -599,7 +601,7 @@ function calls(seed = 1066) {
     else if (op === 'RPOW') { o.r1 = where(enc(y)); js = () => R.rpow(x, y); }
     else if (op === 'PI') { delete o.r0; js = () => R.pi(); }
     else js = () => fn1[op](x);
-    call(op, o, want(() => { R.setDigits(d); try { return nbytesOf(js()); } catch (e) { if (e instanceof RangeError) return { err: K.NE_BIG }; throw e; } finally { R.setDigits(12); } }),
+    call(op === 'ABS' ? 'MABS' : op, o, want(() => { R.setDigits(d); try { return nbytesOf(js()); } catch (e) { if (e instanceof RangeError) return { err: K.NE_BIG }; throw e; } finally { R.setDigits(12); } }),
       what || op + ' ' + (op === 'PI' ? '' : show(x)) + (op === 'TRIG' ? ' (' + ['sin', 'cos', 'tan'][y] + ')' : op === 'RPOW' ? ' ' + show(y) : '') + ' at ' + d);
   };
   math('PI');
@@ -613,8 +615,21 @@ function calls(seed = 1066) {
     ['32', '0.2'], ['1000000', '1/6'], ['1', '0.37'], ['1.0', '0.5'], ['0', '0.5'], ['2', '0.5'], ['2', '1/12'], ['1/2', '1/2'], ['1.5', '2.5'],
     ['10', '0.1'], ['2', '10'], ['2', '-2'], ['1.5', '2'], ['-8', '1/3'], ['0', '-1/2'], ['2', '3.0']].map(p => p.map(N))) math('RPOW', a, b);
   math('RPOW', { re: 0n, im: 1n }, 2n);
-  math('RPOW', { re: 1n, im: 1n }, N('0.5'), 'RPOW 1+i 0.5: NE_REAL');
-  math('SQRT', { re: 1n, im: 1n }, undefined, 'SQRT 1+i: NE_REAL');
+  // Complex arguments: exact roots and moduli, the parts known 0 (log of a modulus of 1, whole quarter turns), atan's
+  // poles, and the principal values' branches
+  const Z = t => R.parse(t);
+  const zs = ['3-4i', '1+1i', '-1+1i', '-1-1i', '1i', '-1i', '2i', '0.3+0.4i', '-3+4i', '-3-4i', '1/2+1/3i', '-7/5+2/9i',
+    '10+0.001i', '0.001+10i', '-100+1i', '1+20i', '0.6+0.8i', '3/5-4/5i', '1/2i', '-1/2i', '1.5+2i'].map(Z);
+  for (const z of zs) {
+    for (const op of ['SQRT', 'EXP', 'LOG', 'ATAN', 'ABS']) math(op, z);
+    for (const w of [0, 1, 2]) math('TRIG', z, w);
+  }
+  for (const t of ['3', '-3', '0', '2.5', '-1/3']) math('ABS', N(t));
+  for (const [a, b] of [['1i', '1i'], ['-1', '1/2'], ['-4', '3/2'], ['-8', '1/3'], ['2', '1i'], ['1+1i', '1/2'], ['1+1i', '1i'],
+    ['-1', '1/3'], ['1i', '1/2'], ['1', '1i'], ['-2', '0.5'], ['3+4i', '1/2'], ['3+4i', '1.5'], ['-1', '0.25'], ['2+3i', '4-5i'],
+    ['-3', '1i'], ['0.5', '2+1i'], ['1+1i', '-1/3'], ['-1', '7/2'], ['1i', '3/2'], ['-1i', '1/3'], ['10', '1/3+1/2i'],
+    ['-4', '-1/2'], ['0', '1+1i'], ['0', '-1+1i'], ['0', '1i'], ['-27', '2/3'], ['1+1i', '0.75'], ['-1', '1.5']]) math('RPOW', Z(a), Z(b));
+  const mcpx = () => R.complex(mreal(), mreal() || 1n);
   const mreal = () => {
     const sg = rnd(3) ? 1n : -1n;
     switch (rnd(5)) {
@@ -635,6 +650,10 @@ function calls(seed = 1066) {
       math('TRIG', mreal(), rnd(3));
       math('ATAN', mreal());
       math('RPOW', posOf(mreal()), rnd(2) ? mreal() : [N('1/2'), N('1/3'), N('-1/2'), N('0.25')][rnd(4)]);
+      if (k < 3) {
+        const z = mcpx(), op = ['SQRT', 'EXP', 'LOG', 'ATAN', 'ABS', 'TRIG', 'RPOW'][rnd(7)];
+        if (op === 'TRIG') math(op, z, rnd(3)); else if (op === 'RPOW') math(op, rnd(2) ? z : mreal(), rnd(2) ? mcpx() : mreal()); else math(op, z);
+      }
     }
     math('PI');
   }

@@ -71,6 +71,8 @@ $8000, a 16K ROM bank at $A000 (7.2).
 
 **Chip.** An integrated circuit: a tiny circuit in a plastic package with metal legs (3.4).
 
+**Chrome.** The lines the console draws around its windows: the bar, each window's header and footer (10.7).
+
 **Clock.** The signal whose ticks pace the processor: 3.58 million a second (7.1). Also the clock chip, which keeps
 the date and time (17.5).
 
@@ -218,6 +220,8 @@ note numbers (60 is middle C) and its lists of instruments and drums (15.2, 15.4
 **Module.** A program or driver kept in the paged ROM (7.4). Also a **RAM module**: 2 MB of RAM on a memory card
 (4.7).
 
+**Modulus.** A complex number's size: its distance from 0, the square root of its parts squared and added. `abs` gives it: `abs(3-4i)` is 5 (18.1).
+
 **Monitor.** The emulator's own command line, for looking inside the processor (2.4).
 
 **Mount.** To attach a device's files to the namespace (9.5).
@@ -228,7 +232,7 @@ note numbers (60 is middle C) and its lists of instruments and drums (15.2, 15.4
 **Namespace.** The tree of names a task sees, made by binds and mounts (9.5).
 
 **Note.** A message to a task, like `interrupt` (<kbd>CTRL</kbd>-<kbd>C</kbd>). A **note group** is the tasks that
-get a note together (27.16).
+get a note together (7.5).
 
 **Octal.** Base 8: the digits 0 to 7 (18.3).
 
@@ -265,6 +269,8 @@ get a note together (27.16).
 **Port.** A group of 16 addresses for a chip (7.2); or a connector.
 
 **POST.** Power-on self test: the checks of its memory that the Hydra makes each time it starts (7.4).
+
+**Principal value.** The answer a function gives when there's more than one it could: the square root whose real part is above 0, the logarithm whose angle is above -pi and at most pi (18.2).
 
 **Processor.** The chip that runs programs: the W65C02S (Chapter 26).
 

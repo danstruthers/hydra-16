@@ -67,7 +67,7 @@ Establish at once that an error message is information, not a telling-off.
 * Capitals. Students arriving from phones type `Ls` and `Date`. The Hydra says `not found`, and they conclude that
   the Hydra is broken.
 * The unfinished definition in step 5. A student who types `: test` and then anything else is inside HyForth's
-  compiler, with a prompt of spaces, and every command they try "does nothing". Teach the cure (`;`) to the
+  compiler, with a tab for a prompt and no `/>`, and every command they try "does nothing". Teach the cure (`;`) to the
   whole class, because half of them will meet this by accident within the week.
 * `edit`. Some terminals and browsers grab <kbd>CTRL</kbd>-<kbd>O</kbd> or <kbd>CTRL</kbd>-<kbd>W</kbd> for
   themselves. Try the editor on the students' own computers beforehand; in the web emulator, click in the
