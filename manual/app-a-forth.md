@@ -618,7 +618,7 @@ The number stack's words; `N:` shows it. Any number Forth's cells can't hold goe
 | `ndrop`, `ndup`, `nover`, `nswap`, `nrot` | N: | As the cell words |
 | `n+`, `n-`, `n*`, `n/` | N: ( *x y* -- *z* ) | Exactly (`n/` gives fractions) |
 | `n/mod` | N: ( *x y* -- *rem quot* ) | Whole-number division |
-| `nnegate`, `nabs`, `ngcd`, `npow` | N: | Negate; size; greatest common divisor; a power |
+| `nnegate`, `nabs`, `ngcd`, `npow` | N: | Negate; size (a complex number's distance from 0); greatest common divisor; a power |
 | `ncompare` | ( -- -1 \| 0 \| 1 ) N: ( *x y* -- ) | Compare |
 | `n=`, `n<`, `n>`, `n0=`, `n0<` | ( -- *flag* ) N: ( ... -- ) | Tests |
 | `int?`, `fixed?`, `rational?`, `complex?` | ( -- *flag* ) N: ( *x* -- ) | Its kind |

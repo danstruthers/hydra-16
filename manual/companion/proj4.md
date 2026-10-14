@@ -7,15 +7,15 @@
 
 ### The starting point
 
-`note` is a notebook. `note` and some words adds a line, with the date and time in front. `note` alone shows the
-notebook. Type this into `/ram/note` with `edit`. (It keeps the notebook in `/sd/0/work`: make that directory
+`jot` is a notebook. `jot` and some words adds a line, with the date and time in front. `jot` alone shows the
+notebook. Type this into `/ram/jot` with `edit`. (It keeps the notebook in `/sd/0/work`: make that directory
 first, if you haven't got one.)
 
-<!-- listing samples/note -->
+<!-- listing samples/jot -->
 
 ```text
 #!/bin/rc
-# note - a notebook.  note words ... adds a line, with the date; note alone shows them all
+# jot - a notebook.  jot words ... adds a line, with the date; jot alone shows them all
 book=/sd/0/work/notebook
 if(~ $#* 0) {
 	cat $book
@@ -29,13 +29,13 @@ Try it, as a script:
 <!-- session
 mkdir /sd/0/work
 cd /ram
-!file samples/note
+!file samples/jot
 -->
 
 ```session
-/ram> rc note Feed the cat
-/ram> rc note Solder step 4
-/ram> rc note
+/ram> rc jot Feed the cat
+/ram> rc jot Solder step 4
+/ram> rc jot
 2000-01-01 00:00:35 Feed the cat
 2000-01-01 00:00:37 Solder step 4
 ```
@@ -43,15 +43,15 @@ cd /ram
 Then make it a command, by copying it into `/bin`. Now it runs by its name, from any directory:
 
 ```text
-/ram> cp note /bin/note
+/ram> cp jot /bin/jot
 /ram> cd /
-/> note Buy solder
-/> note
+/> jot Buy solder
+/> jot
 ```
 
 ### Understand it first
 
-1. ✎ What do `$*` and `$#*` stand for? What's `$#*` when you type just `note`?
+1. ✎ What do `$*` and `$#*` stand for? What's `$#*` when you type just `jot`?
 
 <div class="write l2"></div>
 
@@ -70,10 +70,10 @@ Then make it a command, by copying it into `/bin`. Now it runs by its name, from
 |---|---|
 | ☐ | Keep the command for good: put it where it will still be after the power's been off |
 | ☐ | Say something sensible when there's no notebook yet, in place of `cat`'s error |
-| ☐ | `note -n` shows how many notes there are (`wc -l`) |
-| ☐ | `note -f word` shows only the notes with that word in them (`grep`) |
-| ☐ | `note -l` shows only the last five (`tail`) |
-| ☐ | `note -x` empties the notebook, but only after asking "Are you sure?" |
+| ☐ | `jot -n` shows how many entries there are (`wc -l`) |
+| ☐ | `jot -f word` shows only the entries with that word in them (`grep`) |
+| ☐ | `jot -l` shows only the last five (`tail`) |
+| ☐ | `jot -x` empties the notebook, but only after asking "Are you sure?" |
 | ☐ | A wrong option prints a usage line, as the Hydra's own commands do |
 
 ✎ Write your finished script here.

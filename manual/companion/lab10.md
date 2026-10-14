@@ -102,5 +102,5 @@
 | ☐ | change the screen's colours with an escape sequence |
 
 > **CHALLENGE:** ★ Write a HyForth word `banner` that clears the screen, moves to the middle, and prints your name
-> in yellow on blue. Then write an rc script that does the same. (In rc, you'll need a real <kbd>ESC</kbd>
-> character: section 13.7 and the entry for `echo` in Chapter 11 will help.)
+> in yellow on blue. Then make it flash (blinking, in section 13.7's table), and draw a box round your name with the
+> DEC Special Graphics' line-drawing characters (section 13.7, "Character sets").

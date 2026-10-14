@@ -25,8 +25,9 @@ foam so the parts are held against it.
 corner first. Then look at the part from the side: is it flat on the board, and straight? If not, melt that one joint
 and push the part into place. Only when it's right, solder the opposite corner, and then all the rest.
 
-**Tick them off.** Appendix I has a complete parts list with a box beside each part. Tick each box as you fit the
-part. It's the best way to make sure nothing is forgotten.
+**Tick them off.** Appendix I has a complete parts list with a box beside each part, and the *Student Companion*'s
+build log has a box for every step. Tick each box as you fit the part. It's the best way to make sure nothing is
+forgotten.
 
 **Check the kit.** Before you start, sort the parts into groups (resistors, ceramic capacitors, electrolytic
 capacitors, sockets, chips, connectors) and check them against the parts list. Leave the chips in their anti-static
@@ -226,6 +227,13 @@ The files are in the HydraOS folder `reborn/bin` (see Chapter 2):
 
 Together, the three paged ROM chips hold the drivers, the shells, the languages and the ROM disk's files.
 
+> **CAUTION:** Look at the serial chip, U3, before you program anything. The Hydra was designed for Rockwell's
+> **R65C51**, and the files in `reborn/bin` are for it. But Rockwell stopped making it long ago, so your kit
+> probably has WDC's **W65C51N** instead. That chip has a fault in the way it reports that it's ready to send, and
+> HydraOS must be built to work around it: build HydraOS yourself (section 2.7) with
+> `node reborn/build.js --acia wdc`, and program the files that makes. With the wrong files, the Hydra starts but
+> its serial port sends nothing, or sends nonsense.
+
 For each chip:
 
 1. In the programmer's software, choose the chip type (for example *SST39SF040* or *SST39SF010A*).
@@ -260,8 +268,8 @@ Put each chip in the socket with its reference:
 | Chip | Places |
 |---|---|
 | W65C02S (processor) | U1 |
-| R65C22 (VIA) | U2 |
-| R65C51 (ACIA, serial) | U3 |
+| R65C22 or W65C22N (VIA) | U2 |
+| R65C51 or W65C51N (ACIA, serial) | U3 |
 | MAX232 (serial levels) | U5 |
 | SST39SF010A, programmed with `bios.bin` | U6 |
 | HM628512 (task RAM), or a DS1747 for a real-time clock | U7 |
@@ -293,12 +301,9 @@ Put each chip in the socket with its reference:
 | 74F125 | U61 |
 | 74LS219 | IC1 to IC8 |
 
-> **NOTE:** U3, the serial chip, should be a Rockwell **R65C51**. A WDC **W65C51N** fits too, but it has a fault in
-> the way it reports that it's ready to send, and HydraOS must be built to work around it:
-> `node reborn/build.js --acia wdc` (Chapter 2 shows how to build HydraOS).
->
-> U2, the VIA, is a Rockwell **R65C22** on the schematic. It's out of production too, and WDC's **W65C22N** is a
-> drop-in replacement that needs no change to HydraOS.
+> **NOTE:** U3, the serial chip, can be a Rockwell **R65C51** or WDC's **W65C51N**, as long as the ROM chips were
+> programmed for it (section 4.4). U2, the VIA, is a Rockwell **R65C22** on the schematic. It's out of production too,
+> and WDC's **W65C22N** is a drop-in replacement that needs no change to HydraOS.
 
 > **CAUTION:** Read each chip's markings carefully: some chips look alike. A 74F08 isn't a 74ACT08, and a 74LS139
 > isn't a 74F139, even though they have the same number of pins. The letters between the "74" and the number tell

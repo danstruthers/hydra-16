@@ -33,7 +33,7 @@
 | The prompt | Who's listening | To get back |
 |---|---|---|
 | `/>` | HyForth, the shell | |
-| Spaces | HyForth, in a definition | `;` |
+| A tab, and no `/>` | HyForth, in a definition | `;` |
 | `%` | rc | `exit` |
 | `>` | HyBASIC | `SYSTEM` |
 | `hylang>` | hylang | `(exit)` |

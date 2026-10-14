@@ -62,14 +62,22 @@ The `hydra` library has words that run commands, and other programs, from Forth:
 | `sh` | ( *c-addr u* -- *status* ) | Runs a command line with rc, and waits: its status (0 for success) |
 | `run` | ( *c-addr u* -- *status* ) | Runs a program and its arguments (without rc), and waits |
 
-And the shell library has more (section 8.15):
+And the shell library has more: the shell words of section 8.15 that a program uses, with their stack diagrams.
 
 | Word | Stack | What it does |
 |---|---|---|
 | `sh-out` | ( *c-addr u* -- *c-addr2 u2* ) | Runs a command line, and gives its output as a string |
 | `spawn` | ( *c-addr u* -- *task* ) | Starts a command line, without waiting: its task |
 | `wait` | ( *task* -- ) | Waits for it to end |
+| `status` | ( -- *n* ) | The status of the last command (0: success) |
+| `exits` | ( *n* -- ) | Leaves HyForth with status *n* |
+| `output-of` | ( *xt* -- *c-addr u* ) | Runs a Forth word, and gives what it printed as a string |
 | `piped` | ( *xt c-addr u* -- ) | What a word prints, into a command line's input |
+| *xt* `|` *command* | ( *xt* -- ) | The same, typed at the prompt: the rest of the line is the command |
+| `getenv` | ( *c-addr u* -- *c-addr2 u2* ) | An environment variable's value |
+| `setenv` | ( *c-addr u c-addr2 u2* -- ) | Sets an environment variable |
+| `unsetenv` | ( *c-addr u* -- ) | Removes an environment variable |
+| `prompt`, `prompt2` | ( *c-addr u* -- ) | Sets the prompt's format (section 8.15), or the second prompt's, shown while a definition is typed |
 
 <!-- session
 lib hydra
@@ -81,7 +89,17 @@ ls: /nothing: not found
 1
 /> s" /bin/echo hi there" run drop
 hi there
+/> s" date" sh-out type
+2000-01-01 00:00:06
+/> : hi ." Hello" cr ." there" cr ;
+/> ' hi | wc -l
+      2
+/> s" color" s" green" setenv
+/> echo $color
+green
 ```
+
+`'` ("tick") gives a word's **execution token**, *xt*: a number that stands for the word, for another word to run.
 
 ## 20.3 Files
 
@@ -342,6 +360,8 @@ variable `digits`, 12 unless you change it:
 /> 50 digits ! 2 s>n nsqrt n.
 1.4142135623730950488016887242096980785696718753769
 ```
+
+They take complex numbers too, as Chapter 18 shows: `3-4i nabs n.` prints 5, and `-3+4i nsqrt n.` prints `1+2i`.
 
 `set-base` ( *c-addr u* -- ) sets the base for all numbers, with any base string from Chapter 18: `s" b" set-base`
 works in binary. Appendix A lists all the library's words.

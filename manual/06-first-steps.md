@@ -198,15 +198,15 @@ and it's waiting for *its* kind of line:
 | The prompt | Who's listening | To get back |
 |---|---|---|
 | `/>`, `/ram>`, `0:/work>` | HyForth, the Hydra's shell. This is home. | |
-| Eight spaces, and no `>` | HyForth, in the middle of a definition you began with `:` | Type `;` |
+| A tab (the line starts further in), and no `>` | HyForth, in the middle of a definition you began with `:` | Type `;` |
 | `%` | rc, the command shell (Chapter 8) | Type `exit` |
 | `>` | HyBASIC (Chapter 23) | Type `SYSTEM` |
 | `hylang>` | hylang (Chapter 21) | Type `exit` or `(exit)` |
 | `*` | `ed`, the line editor (Chapter 11) | Type `q` |
 | `db>` | `db`, the debugger (Chapter 29) | Type `q` |
 
-And three programs take over the whole screen: `edit` (leave it with <kbd>CTRL</kbd>-<kbd>X</kbd>), `more` and `top`
-(leave them with <kbd>Q</kbd>).
+And three programs take over the whole screen: `edit` (leave it with <kbd>CTRL</kbd>-<kbd>X</kbd>), `more` (leave
+it with <kbd>Q</kbd> and <kbd>RETURN</kbd>) and `top` (stop it with <kbd>CTRL</kbd>-<kbd>C</kbd>).
 
 > **TIP:** Lost? Try <kbd>CTRL</kbd>-<kbd>C</kbd> first, then <kbd>CTRL</kbd>-<kbd>D</kbd>, then the table above. If
 > nothing brings the prompt back, press the reset button. You'll lose what was in memory, but not what's on the SD
@@ -444,8 +444,9 @@ number are kept as a program, `RUN` runs it, and `SYSTEM` goes back to the shell
 />
 ```
 
-**hylang** is the Hydra's own language, where everything is written in parentheses, with what to do first. Type
-`hylang` to start it, and `(exit)` to leave:
+**hylang** is the Hydra's own language, where everything is written in parentheses, with what to do first. It grew
+from **danlang**, a language its author wrote first, for PCs: that's the name in its greeting. Type `hylang` to
+start it, and `(exit)` to leave:
 
 ```session
 /> hylang

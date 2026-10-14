@@ -141,7 +141,9 @@ The numbers are those of Chapter 18: integers of any length, exact fractions, de
 operators are `+`, `-`, `*`, `/`, `%` (the remainder of dividing integers) and `^` (a power), with parentheses.
 The functions, each applied to what follows it, are `sqrt`, `exp`, `log`, `sin`, `cos`, `tan`, `atan`, `abs`,
 `floor`, `round`, `truncate`, `fib`, `numerator`, `denominator`, `re`, `im`, `rational` and `random`; and with
-two arguments in parentheses, `gcd`, `pow`, `complex` and `fixed`. The constants are `pi`, `e` and `i`.
+two arguments in parentheses, `gcd`, `pow`, `complex` and `fixed`. The constants are `pi`, `e` and `i`. The
+functions and powers take complex numbers too, and give their principal values (`sqrt(3+4i)` is `2+1i`); `abs` of a
+complex number is its modulus (`abs(3-4i)` is 5).
 
 Each answer is printed on a line of its own. A mistake in one expression is reported and, when lines are being
 read, the next line is gone on with.
@@ -167,6 +169,8 @@ Chapter 18.
 FF
 /> calc -d 5 sqrt 2
 1.4142
+/> calc 'abs(3-4i)'
+5
 /> calc 1 / 0
 calc: division by zero
 ```

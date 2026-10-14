@@ -950,7 +950,7 @@ A negative *n* shifts the other way: `SHR(1, -2)` is `SHL(1, 2)`.
 
 ## SIN
 
-A numeric function: the sine of a real number.
+A numeric function: the sine.
 
 #### Syntax
 
@@ -961,18 +961,19 @@ SIN(x)
 #### Arguments
 
 *x*
-: A numeric expression whose value is real: an angle in radians.
+: A numeric expression, complex too: an angle in radians.
 
 #### Result
 
 The sine of *x*, from −1 to 1. `SIN(0)` is the integer 0. Any other result is a decimal, correct to the number
 of significant digits that `DIGITS` has set (12 unless it has been changed).
 
+For a complex *x*, the principal value, as mathematics defines it (Chapter 18 of the manual): `SIN(a + bi)` is sin *a* cosh *b* + i cos *a* sinh *b*, each part correctly rounded.
+
 #### Errors
 
 | `ERR` | Message | Cause |
 |---|---|---|
-| 5 | `illegal function call` | *x* is complex |
 | 13 | `type mismatch` | *x* is a string |
 
 #### Notes
@@ -989,6 +990,8 @@ of the angle that `PI` really is.
 ```session
 > PRINT SIN(0); SIN(1); SIN(PI / 2); SIN(-1); SIN(PI)
  0  0.841470984808  1 -0.841470984808 -0.000000000000206761537357
+> PRINT SIN(1i)
+ 1.17520119364i
 ```
 
 ## SLEEP
@@ -1202,7 +1205,7 @@ first.
 
 ## SQR
 
-A numeric function: the square root.
+A numeric function: the square root, of any number.
 
 #### Syntax
 
@@ -1213,7 +1216,7 @@ SQR(x)
 #### Arguments
 
 *x*
-: A numeric expression whose value is real.
+: A numeric expression, complex too.
 
 #### Result
 
@@ -1226,17 +1229,20 @@ The square root of *x*.
 * If *x* is negative, the result is imaginary: the root of its size, times i. `SQR(-16)` is `4i`. It is not an
   error.
 
+For a complex *x*, the root whose real part is above 0 (the principal one): exact when its parts are rational,
+so `SQR(3+4i)` is `2+1i`, and otherwise each part correctly rounded.
+
 #### Errors
 
 | `ERR` | Message | Cause |
 |---|---|---|
-| 5 | `illegal function call` | *x* is complex |
 | 13 | `type mismatch` | *x* is a string |
 
 #### Notes
 
 A program brought from another BASIC that relies on `SQR` of a negative number being an error will go on with
-an imaginary number instead, and fail later, at the first function that won't take one. Test the sign first.
+an imaginary number instead, and fail later, at the first thing that won't take one: `INT`, `FIX`, or a comparison
+with `<`. Test the sign first.
 
 #### See also
 
@@ -1247,6 +1253,8 @@ an imaginary number instead, and fail later, at the first function that won't ta
 ```session
 > PRINT SQR(16); SQR(2); SQR(1/4); SQR(0.25); SQR(-16); SQR(-2); SQR(2 ^ 100)
  4  1.41421356237  1/2  0.5  4i  1.41421356237i  1125899906842624
+> PRINT SQR(3+4i); SQR(1+1i)
+ 2+1i  1.09868411347+0.455089860562i
 ```
 
 ## STATIC
@@ -1647,7 +1655,7 @@ Used in `PRINT`: `TAB(n)` moves to column *n*. See `PRINT`.
 
 ## TAN
 
-A numeric function: the tangent of a real number.
+A numeric function: the tangent.
 
 #### Syntax
 
@@ -1658,18 +1666,19 @@ TAN(x)
 #### Arguments
 
 *x*
-: A numeric expression whose value is real: an angle in radians.
+: A numeric expression, complex too: an angle in radians.
 
 #### Result
 
 The tangent of *x*. `TAN(0)` is the integer 0. Any other result is a decimal, correct to the number of
 significant digits that `DIGITS` has set (12 unless it has been changed).
 
+For a complex *x*, the principal value, as mathematics defines it (Chapter 18 of the manual): `SIN(x) / COS(x)`, each part correctly rounded.
+
 #### Errors
 
 | `ERR` | Message | Cause |
 |---|---|---|
-| 5 | `illegal function call` | *x* is complex |
 | 13 | `type mismatch` | *x* is a string |
 
 #### Notes
@@ -1686,6 +1695,8 @@ not an error: it is a very large number, the tangent of the angle that `PI / 2` 
 ```session
 > PRINT TAN(0); TAN(1); TAN(PI / 4)
  0  1.55740772465  1
+> PRINT TAN(1+1i)
+ 0.27175258532+1.08392332734i
 ```
 
 ## THEN

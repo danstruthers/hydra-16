@@ -7,6 +7,7 @@ arguments: 6.2, 8.2
 backing up your work: 6.7, 14.7
 capital letters in names: 6.4, 9.1
 copying a file: 6.6
+Technical Reference, the: 11
 `CTRL`-`C` (stopping a program): 6.3, 6.4
 `CTRL`-`D` (the end of your typing): 6.4
 date and time, setting: 17.5
@@ -63,6 +64,8 @@ arithmetic, in HyForth: 19.3
 arithmetic, in hylang: 21.2
 arithmetic, in HyBASIC: 23.6
 arrays, in HyBASIC: 23.10
+complex numbers, their functions: 18.1, 18.2
+`abs` of a complex number: 18.1
 decisions, in rc: 8.11
 decisions, in HyForth: 19.8
 decisions, in hylang: 21.8
@@ -93,3 +96,5 @@ variables, in rc: 8.4
 variables, in HyForth: 19.10
 variables, in hylang: 21.4
 variables, in HyBASIC: 23.3
+keys read without waiting, in HyBASIC (`INKEY$`): 24.2
+SUBs without `CALL`: 23.12

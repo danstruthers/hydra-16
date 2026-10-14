@@ -29,7 +29,7 @@ The emulator has a Vera X too (Chapter 2). In the web emulator it's there unless
 terminal emulator, add `--vera`.
 
 > **NOTE:** The Vera X isn't part of the Hydra-16 kit, and this book doesn't show how to build one or wire it up: the
-> reference book does (`docs/02-hardware/cards.md` has the breakout card's wiring, pin by pin, and how to bring the
+> design documents do (`docs/02-hardware/cards.md` has the breakout card's wiring, pin by pin, and how to bring the
 > card up). If you don't have one, use the emulator's: everything in this chapter works there.
 
 ## 16.2 The console on the screen

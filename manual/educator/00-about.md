@@ -10,7 +10,7 @@ takes, what goes wrong, how to keep a room safe, and how to tell whether anyone 
 | Book | Who holds it | What it's for |
 |---|---|---|
 | **The User's and Builder's Manual** | Everyone | The tutorial and the reference. Every fact is in here, and only here. |
-| **The Student Companion** | Each student | A workbook: the build log, 26 lab sheets, 7 projects, reference cards, a logbook. It has questions, and no answers. |
+| **The Student Companion** | Each student | A workbook: the build log, 26 lab sheets, 8 projects, reference cards, a logbook. It has questions, and no answers. |
 | **The Educator's Course Guide** | You | Course plans, notes on each lesson, safety, assessment, and the answers. |
 
 Wherever this guide says **Chapter 6** or **section 6.4**, it means the manual's. **Lab 3**, **Project 2**, **Unit 4**

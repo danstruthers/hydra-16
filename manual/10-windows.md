@@ -51,8 +51,8 @@ The list shows each window's number, its group (section 10.3), and the program r
 window that was shown. Press a window's number to show it, or move with the arrow keys and press
 <kbd>RETURN</kbd>; <kbd>Q</kbd> leaves the list.
 
-When a window's shell ends (type `bye` in HyForth, or `exit` in rc), the window goes away. Window 0 is special: it
-never goes away: the kernel starts init again, and init becomes a new shell in it.
+When a window's shell ends (type `bye` in HyForth, or `exit` in rc), the window goes away. Window 0 is special,
+because it never goes away. When its shell ends, the kernel starts init again, and init becomes a new shell in it.
 
 ## 10.3 Groups
 

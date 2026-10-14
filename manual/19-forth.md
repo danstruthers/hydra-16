@@ -170,8 +170,8 @@ job. Give your words names that say what they do, and keep each one short: a lin
 the new definition is used from then on, but the words already made with the old one keep using it.
 
 **A definition on several lines.** A definition doesn't have to fit on one line. Until its `;`, HyForth is still
-**compiling** it: adding each word you type to the new word, not doing it. To show that, the prompt changes to a
-row of spaces:
+**compiling** it: adding each word you type to the new word, not doing it. To show that, the prompt changes: there's
+no `/>`, and the line starts further in (the prompt is a tab):
 
 ```session
 /> : half
@@ -181,7 +181,7 @@ row of spaces:
 5
 ```
 
-So if the prompt ever turns into spaces when you didn't expect it, you've left out a `;`. Type one, and the normal
+So if the `/>` ever disappears when you didn't expect it, you've left out a `;`. Type one, and the normal
 prompt comes back. (A line can be 127 characters long, at most; a long definition *has* to be on several lines.)
 
 > **TRY THIS:** Define `double` ( *n* -- *2n* ), and then `quadruple`, using `double` twice. Check them: `5 quadruple
@@ -457,7 +457,7 @@ Here are the mistakes everyone makes when they start, and what to do about each:
 |---|---|---|
 | `3+ ?` | No space: `3+` was read as one word | Put a space between every two words |
 | `rc: sqare: not found` | The line's first word wasn't Forth's, so the whole line went to rc as a command (section 8.1) | Check the first word's spelling |
-| A prompt of spaces | You're inside a definition: there was a `:` with no `;` | Type `;` (then define the word again, properly) |
+| No `/>`, the line further in | You're inside a definition: there was a `:` with no `;` | Type `;` (then define the word again, properly) |
 | `if: compile only` | `if`, a loop or `."` typed outside a definition | Put it in a definition |
 | `stack underflow` | A word needed more numbers than there were | Count what each word takes: write its stack diagram |
 | A wrong answer, with no message | Numbers left on the stack by an earlier line got used | Type `.s` to look, and `drop` what shouldn't be there |

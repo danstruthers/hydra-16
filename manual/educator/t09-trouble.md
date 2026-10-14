@@ -21,7 +21,7 @@ faults in a board you've built are the manual's section 5.7 and Topic 6; this to
 
 | What a student says | What's happened | What to do |
 |---|---|---|
-| "Nothing I type does anything" | A program is running and waiting; or they're inside a HyForth definition (a prompt of spaces); or inside a quote | <kbd>CTRL</kbd>-<kbd>C</kbd>; then <kbd>CTRL</kbd>-<kbd>D</kbd>; then `;`; then reset. In that order |
+| "Nothing I type does anything" | A program is running and waiting; or they're inside a HyForth definition (a tab for a prompt, no `/>`); or inside a quote | <kbd>CTRL</kbd>-<kbd>C</kbd>; then <kbd>CTRL</kbd>-<kbd>D</kbd>; then `;`; then reset. In that order |
 | "It says not found" | A misspelling; a capital; or the file is in another directory | "Read me what you typed." Then `ls`, to see what *is* there |
 | "My prompt looks different" | They're in rc (`%`), HyBASIC (`>`), hylang, `ed` (`*`) or `db` | Card 1's table: each prompt, and how to leave |
 | "It printed a question mark" | HyForth doesn't know a word: usually a missing space | Look for two things run together: `3+`, `."Hello` |

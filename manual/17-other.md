@@ -225,7 +225,7 @@ forth wait - 89 1
 1 rw #c 367 #c/cons
 2 rw #c 367 #c/cons
 /> cat /proc/1/regs
-PC=EAA0 A=00 X=02 Y=01 S=E7 P=37 W=00 U=00 RAM=00 ROM=1E
+PC=EAA0 A=00 X=02 Y=01 S=E7 P=37 W=00 U=00 RAM=00 ROM=1F
 ```
 
 | `ctl` command | What it does |

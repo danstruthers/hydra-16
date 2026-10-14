@@ -4,7 +4,8 @@ This chapter is a guide to every program on the Hydra, in alphabetical order, fo
 commands. Each entry shows how to type the command, what its options mean, and an example of it at work.
 
 > **IN THIS CHAPTER:** This is a chapter for looking things up: every program and every shell command, with its
-> options and an example. **You need:** Chapter 6. Don't read it through; dip into it.
+> options and an example. **You need:** Chapter 6. Don't read it through; dip into it. (The *Technical Reference*'s
+> Chapter 2 has each command again, with every error it can give.)
 
 **How to read the usage lines.** Each entry starts with a line like this one:
 
@@ -68,7 +69,7 @@ Works out an **expression**, exactly, and prints the answer. The expression is t
 | `-d` *digits* | How many digits to work out for answers like square roots, which never end (12 unless you say) |
 
 `calc` knows the Hydra's whole number system, which Chapter 18 explains: fractions stay exact, whole numbers can be
-as big as you like, and numbers can be written in any base. It has:
+as big as you like, numbers can be written in any base, and the functions take complex numbers too. It has:
 
 * the operators `+` `-` `*` `/`, `%` (the remainder after dividing whole numbers), `^` (a power), and parentheses;
 * the functions `sqrt` `exp` `log` `sin` `cos` `tan` `atan` `abs` `floor` `round` `truncate` `fib` `numerator`
@@ -94,6 +95,8 @@ FF
 260
 /> calc 'gcd(12, 18)'
 6
+/> calc 'abs(3-4i)'
+5
 /> calc 1/0
 calc: division by zero
 ```
@@ -644,18 +647,18 @@ bank   type     name
   4+33 program  init
   2- 4 boot     cons
   5- 6 boot     storage
- 31    boot     kdev
+ 32    boot     kdev
   4+0A boot     snd
   0+0A boot     vid
- 28    program  rc
+ 29    program  rc
   7- 8 program  play
- 30    program  forth
+ 31    program  forth
   9-13 program  basic
  14-21 program  hylang
  22-23 library  hysnap
  24-25 library  numbers
- 26-27 library  math
- 29    library  asm
+ 26-28 library  math
+ 30    library  asm
 ```
 
 ## more: a screen at a time
@@ -776,8 +779,8 @@ task  state   parent     cpu group  name
 | `blocked` | Waiting for a busy driver |
 | `event` | Waiting for news from a driver |
 
-A **note group** is the tasks that get a note together: <kbd>CTRL</kbd>-<kbd>C</kbd> interrupts every task in the
-window's group. A command run in the background (`&`) gets a group of its own, so <kbd>CTRL</kbd>-<kbd>C</kbd> doesn't
+A **note group** is the tasks that get a note together (section 7.5): <kbd>CTRL</kbd>-<kbd>C</kbd> interrupts every
+task in the window's group. A command run in the background (`&`) gets a group of its own, so <kbd>CTRL</kbd>-<kbd>C</kbd> doesn't
 stop it.
 
 ## pwd: where you are

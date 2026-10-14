@@ -304,7 +304,7 @@ shared  1024 KB, 512 KB in segments (1), 512 KB free
 6. A timer in the VIA interrupts the processor 200 times a second. On each tick, the kernel can stop the task
    that's running and give another its turn, and it counts the time.
 
-**Challenge.** `mods | wc -l` says 16: a heading, and fifteen modules. `forth` is in 1 bank (bank 30), `basic` in
+**Challenge.** `mods | wc -l` says 16: a heading, and fifteen modules. `forth` is in 1 bank (bank 31), `basic` in
 5 (banks 9 to 13), and `hylang` in 8 (banks 14 to 21). hylang is by far the biggest language to *implement*, and
 Forth the smallest: one reason Forth was so popular on small machines.
 
@@ -624,10 +624,10 @@ the programs in the paged ROM itself. A card with a `bin` directory adds a fifth
 
 ## Lab 8. Windows
 
-**1.** A list of the window keys. Any key puts it away.
+**1.** A list of the window keys. <kbd>Q</kbd> puts it away.
 
-**2.** The screen clears, and a new shell says hello: a new window, in a new group. It's window 1, and the bar at
-the top shows it.
+**2.** The screen clears, and a new shell says hello: a new window, in a new group. It's window 1: the window
+list (<kbd>CTRL</kbd>-<kbd>]</kbd> <kbd>W</kbd>) marks it with a `>`.
 
 **3.** <kbd>0</kbd>: window 0, just as it was left. <kbd>1</kbd>: the second window, with its line still there.
 <kbd>W</kbd>: a list of the windows, each with its number, its group and the program running in it. <kbd>N</kbd>:
@@ -641,7 +641,8 @@ moves the keyboard between them.
 
 **6.** `columns` or `rows`: the editor in one, and a shell in the other.
 
-**7.** In the window's heading, at the top.
+**7.** Once the chrome is on, in the window's heading, at the top, after its number. The chrome also shows the bar
+(the groups, and the time) above it. On the Vera X's screen the chrome is always on.
 
 **8.** The shell ends, and at once a new one starts in the same window: the kernel starts `init` again, which
 becomes the new shell. Window 0 never goes away.

@@ -3,10 +3,10 @@
 Building a Hydra means soldering about 2,200 connections on the main board, and 240 more on a memory card, one at a
 time. That sounds like a lot, and it is: this is a big project, not an afternoon's. But each joint takes only a few
 seconds, more than half of them are in neat rows along the chip sockets, and after the first fifty or so your hands
-will know what to do. This chapter gets you ready: the tools you need, how to stay safe, how to recognize every kind
+will know what to do. This chapter gets you ready: the tools you need, how to stay safe, how to recognise every kind
 of part in the kit, and how to make a good solder joint, and fix a bad one.
 
-> **IN THIS CHAPTER:** You'll learn the tools, the safety rules, how to recognize each kind of part and read its
+> **IN THIS CHAPTER:** You'll learn the tools, the safety rules, how to recognise each kind of part and read its
 > value, and how to make, judge and repair a solder joint. **You need:** nothing yet. Read this chapter before you
 > buy tools or open the kit.
 
@@ -313,8 +313,6 @@ Flux leaves a sticky brown residue on the board. When you finish a section of th
 toothbrush dipped in isopropyl alcohol, and let it dry completely. A clean board is easier to inspect, and the flux
 won't collect dust.
 
-Now you know your tools and your parts. In the next chapter you'll put them all together.
-
 ## 3.9 Getting a board and the parts
 
 A Hydra-16 kit is planned. Until there is one, you can build a Hydra from the design itself, and this section says
@@ -326,7 +324,7 @@ cards (through-hole, and surface-mount), and `HydraBusBreakoutCard` the breakout
 Boards are made to order from those designs: open a project in KiCad, plot its **Gerber** files, and send them to
 any circuit-board maker.
 
-**The parts.** Appendix I lists every part by its place, value and package. The reference book's parts list,
+**The parts.** Appendix I lists every part by its place, value and package. The design documents' parts list,
 `docs/02-hardware/parts.md`, has the same list with the part numbers to order, the sockets to buy, and a section on
 buying: read it before you order. A few parts need care:
 
@@ -342,3 +340,5 @@ buying: read it before you order. A few parts need care:
 
 The Hydra works without its sound chips, without an SD card reader and without a Vera X: if a part is hard to find,
 build without it and add it later.
+
+Now you know your tools and your parts, and where to get them. In the next chapter you'll put them all together.
