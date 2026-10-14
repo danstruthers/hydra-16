@@ -75,7 +75,7 @@ static void __fastcall__ put_room (unsigned char x, unsigned char y, unsigned ch
     r->y = y;
     r->w = w;
     r->h = h;
-    r->flags = random (8) + strata[L->sn].n < 5 ? R_LIT : 0;
+    r->flags = random (8) + strata[L->sn].n < SP->lit ? R_LIT : 0;
     r->kind = random (8);
     for (j = y - 1; j <= y + h; ++j) {
         for (i = x - 1; i <= x + w; ++i) {
@@ -137,9 +137,12 @@ static void sort (void)
 /* Zone z's ceiling: a kind, its height at the middle and at the walls (feet above the floor) */
 static void __fastcall__ ceiling (struct zone* z)
 {
-    unsigned char k = random (20);
+    unsigned char k = random (20), c;
 
-    z->ceil = k < 6 ? C_FLAT : k < 10 ? C_BARREL : k < 13 ? C_DOME : k < 15 ? C_CATHEDRAL : k < 17 ? C_SLOPED : C_ROUGH;
+    for (c = C_FLAT; c < C_ROUGH && k >= SP->ceil[c]; ++c) {    /* (By the style's weights) */
+        k -= SP->ceil[c];
+    }
+    z->ceil = c;
     if (z->ceil == C_DOME && (z->w < 3 || z->h < 3)) {
         z->ceil = C_BARREL;
     }
@@ -186,8 +189,8 @@ static void __fastcall__ zones (unsigned char r)
     unsigned char across = p->w >= p->h, len = across ? p->w : p->h, k = 1, i, x, y, at, part, m, side;
     int zz, dz, worst;
 
-    if (len >= 6 && random (10) < 4) {
-        k = len >= 9 && !random (3) ? 3 : 2;
+    if (len >= 6 && random (10) < SP->zones) {
+        k = len >= 9 && random (3) < SP->zones3 ? 3 : 2;
     }
     if (L->nzones + k > NZONES) {
         k = 1;
@@ -210,7 +213,7 @@ static void __fastcall__ zones (unsigned char r)
         }
         z->z = clampz (zz);
         z->gx = z->gy = 0;
-        if (!random (4)) {                      /* (A floor that slopes evenly: up to a foot and a half a square) */
+        if (random (4) < SP->slope) {           /* (A floor that slopes evenly: up to a foot and a half a square) */
             if (random (2)) {
                 z->gx = (random (2) ? 1 : -1) * (signed char) (1 + random (6));
             } else {

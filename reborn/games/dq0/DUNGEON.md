@@ -114,6 +114,13 @@ features), filling the rest:
 - **mines:** tunnels along a vein, galleries where it widened, shafts and ladders, timbering;
 - **mixed:** built into natural, natural breaking into built.
 
+**Every proportion is the style's** (the user, 2026-10-14: "All of the percentages of each type of thing should be
+part of the style (natural caves don't usually have doors, for instance, unless extended by sentient beings)."): how
+often a room is lit, in zones, sloping; its ceilings' kinds; how often a way out has a door, and the doors' states,
+locks, bars, hiding and materials; a cave's chambers, its tunnels' widths, its glows: a record for each style (the
+maker's, dq0m/make.c's styles, till the theme's data gives them), the growers reading it.  Natural caves have no
+doors; the mixed style, caves that sentient hands have been at, has some.
+
 **Age** wears it: the older, the more collapse (rubble, a passage blocked, a ceiling fallen into a heap), the more
 water's made of it (flooded hollows, flowstone), the less is left of what was built.
 

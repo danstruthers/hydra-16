@@ -189,7 +189,7 @@ void __fastcall__ perceive (unsigned char sn, unsigned x, unsigned y, unsigned c
                 if (TILE (C->tile[wall_y][wall_x]) == T_DOOR && (C->tile[wall_y][wall_x] & T_VIS) &&
                     !((q = portal_at (wall_x, wall_y)) != 0 && (q->state & PS_HIDDEN))) {
                     S.door[S.ndoors].rel = REL8 (bearing ((int) wall_x - lx, (int) wall_y - ly), face);
-                    S.door[S.ndoors].state = (q = portal_at (wall_x, wall_y)) != 0 ? q->state & PS_OPEN : PS_OPEN;
+                    S.door[S.ndoors].state = (q = portal_at (wall_x, wall_y)) != 0 ? q->state & PS_OPEN : DOORWAY;
                     S.door[S.ndoors++].dz = fz (C->elev[wall_y][wall_x] - myz);
                 }
             }
@@ -218,7 +218,7 @@ void __fastcall__ perceive (unsigned char sn, unsigned x, unsigned y, unsigned c
             if ((p = at (sn, x + dir_x[d], y + dir_y[d])) != 0 && TILE (*p) == T_DOOR && S.ndoors < SEE_DOORS &&
                 !((q = portal_at (cx_, cy_)) != 0 && (q->state & PS_HIDDEN))) {
                 S.door[S.ndoors].rel = REL8 (H_OF (d), face);
-                S.door[S.ndoors].state = q ? q->state & PS_OPEN : PS_OPEN;
+                S.door[S.ndoors].state = q ? q->state & PS_OPEN : DOORWAY;
                 S.door[S.ndoors++].dz = fz (C->elev[cy_][cx_] - myz);
             }
         }

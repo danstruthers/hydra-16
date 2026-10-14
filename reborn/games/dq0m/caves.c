@@ -99,7 +99,7 @@ static void __fastcall__ chamber (unsigned char cx, unsigned char cy, unsigned c
     p->y = y0;
     p->w = x1 - x0 + 1;
     p->h = y1 - y0 + 1;
-    p->flags = !random (10) ? R_LIT : 0;        /* (A glow: the theme's, later) */
+    p->flags = random (10) < SP->glow ? R_LIT : 0;    /* (A glow: the style's say) */
     p->kind = 6;                                /* (A cave) */
     p->z0 = L->nzones;
     p->nz = 1;
@@ -137,18 +137,18 @@ void __fastcall__ o_grow_caves (struct chunk* c, const struct edges* e, unsigned
         tunnel (e->lx[i], e->ly[i], mx, my, random (2));
     }
     if (e->way[DIR_N] != NO_WAY) {
-        tunnel (e->way[DIR_N], 0, mx, my, random (3) == 0);
+        tunnel (e->way[DIR_N], 0, mx, my, random (3) < SP->wide);
     }
     if (e->way[DIR_S] != NO_WAY) {
-        tunnel (e->way[DIR_S], CW - 1, mx, my, random (3) == 0);
+        tunnel (e->way[DIR_S], CW - 1, mx, my, random (3) < SP->wide);
     }
     if (e->way[DIR_W] != NO_WAY) {
-        tunnel (0, e->way[DIR_W], mx, my, random (3) == 0);
+        tunnel (0, e->way[DIR_W], mx, my, random (3) < SP->wide);
     }
     if (e->way[DIR_E] != NO_WAY) {
-        tunnel (CW - 1, e->way[DIR_E], mx, my, random (3) == 0);
+        tunnel (CW - 1, e->way[DIR_E], mx, my, random (3) < SP->wide);
     }
-    for (k = random (3); k; --k) {              /* (A chamber or two more, along the tunnels) */
+    for (k = random (SP->chambers ? SP->chambers : 1); k; --k) {   /* (Chambers more, along the tunnels) */
         for (n = 0; n < 40; ++n) {
             x = 2 + random (CW - 4);
             y = 2 + random (CW - 4);

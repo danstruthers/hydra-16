@@ -21,6 +21,19 @@
 
 static struct chunk cb;                         /* (A chunk grown in the main RAM: the grower's an overlay) */
 
+/* The styles' proportions (a stand-in for the theme's data): purpose-built (rooms and doors, most closed); natural
+** (caves: no doors, unless sentient hands have been at them: the mixed style's); mines (galleries, few doors,
+** timbered: built's, for now); mixed (built into natural) */
+static const struct style styles[4] = {
+    /* lit zones z3 slope  ceilings: flat barrel dome cathedral sloped rough   doors open lock bar  hid mag  wood ib
+    ** chambers wide glow */
+    { 5, 4, 1, 1, { 6, 4, 3, 2, 2, 3 }, 20, 8, 4, 2, 1, 1, 6, 3, 3, 1, 1 },     /* built */
+    { 1, 0, 0, 1, { 0, 0, 0, 0, 0, 20 }, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1, 1 },     /* natural */
+    { 2, 2, 0, 1, { 12, 4, 0, 0, 2, 2 }, 8, 12, 2, 2, 1, 0, 9, 1, 2, 1, 0 },    /* mine */
+    { 4, 3, 1, 1, { 4, 3, 2, 1, 2, 8 }, 10, 8, 3, 2, 1, 1, 6, 3, 3, 1, 1 },     /* mixed */
+};
+const struct style* SP;
+
 /* ---- A region's own ways between its chunks: (the last asked for's) each chunk's north and west edges' */
 
 static unsigned char dsn = 0xFF, drx, dry;
@@ -195,6 +208,7 @@ unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned c
     c->sn = sn;
     c->cx = cx;
     c->cy = cy;
+    SP = &styles[s->style & 3];
     if (e.x1 != 0xFF) {                         /* (By its stratum's style) */
         if (s->style == ST_NATURAL) {
             grow_caves (c, &e, s->seed ^ ((unsigned long) cx << 16 | cy) * 40503UL);

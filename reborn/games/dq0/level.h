@@ -53,6 +53,7 @@ struct sight {
     unsigned        x, y;                       /* Its square */
 };
 #define MOUTH           0x08
+#define DOORWAY         0x81                    /* (A seen door's state: no door in it, a doorway, open) */
 enum { W_ROOM, W_PASSAGE };
 enum { S_PART, S_SMALL, S_MID, S_LARGE, S_LONG };
 enum { Z_STEPS, Z_SLOPE, Z_LEDGE };

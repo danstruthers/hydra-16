@@ -3,6 +3,23 @@
 ** their stubs (bank.s)
 */
 
+/* A style's proportions (DUNGEON.md): what its growers make, and how often; each a chance in so many (its own die's
+** sides, as noted), or weights.  The maker's records (make.c's styles), till the theme's data gives them */
+struct style {
+    unsigned char   lit;                        /* A room lit by its own light: in 8, one fewer each stratum down */
+    unsigned char   zones, zones3;              /* A long room (6 squares) in zones: in 10; three (9 squares): in 3 */
+    unsigned char   slope;                      /* A zone's floor sloping: in 4 */
+    unsigned char   ceil[6];                    /* Ceilings by kind (C_FLAT ... C_ROUGH): weights, summing to 20 */
+    unsigned char   doors;                      /* A way out with a door at all (else a doorway): in 20 */
+    unsigned char   d_open, d_locked, d_barred; /* A door open, locked, barred: in 20 */
+    unsigned char   d_hidden, d_magic;          /* A door hidden: in 15; of those, hidden by magic: in 4 */
+    unsigned char   m_wood, m_ironbound;        /* A door's wood, iron-bound (the rest iron): in 10 */
+    unsigned char   chambers;                   /* (Caves) chambers along the tunnels: up to, less one */
+    unsigned char   wide;                       /* (Caves) a tunnel three squares wide: in 3 */
+    unsigned char   glow;                       /* (Caves) a chamber with a glow: in 10 */
+};
+extern const struct style* SP;                  /* The chunk's stratum's (make.c's) */
+
 extern struct chunk* L;
 extern const struct edges* E;
 extern unsigned char mx, my;

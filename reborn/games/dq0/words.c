@@ -87,7 +87,8 @@ static void __fastcall__ doors (unsigned char mouths)
         for (i = 0; i < S->ndoors; ++i) {       /* (The first that way's state and height) */
             if ((S->door[i].rel & 7) == d && (S->door[i].rel & MOUTH) == mouths) {
                 if (!mouths) {
-                    add (S->door[i].state & PS_OPEN_ ? " (open)" : " (closed)");
+                    add (S->door[i].state == DOORWAY ? " (a doorway)" : S->door[i].state & PS_OPEN_ ? " (open)" :
+                         " (closed)");
                 }
                 if (S->door[i].dz >= 3 || S->door[i].dz <= -3) {
                     add (",");

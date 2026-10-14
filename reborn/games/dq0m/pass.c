@@ -206,25 +206,28 @@ static void __fastcall__ door (unsigned char x, unsigned char y, int z)
     p->x = x;
     p->y = y;
     p->kind = PK_DOOR;
-    p->state = k < 8 ? PS_OPEN : 0;
+    p->state = k < SP->d_open ? PS_OPEN : 0;    /* (By the style's proportions) */
     p->lock = 0;
-    if (k >= 14 && k < 18) {
+    if (k >= 20 - SP->d_locked - SP->d_barred && k < 20 - SP->d_barred) {
         p->lock = 1 + dr (5);
         p->state = PS_LOCKED;
-    } else if (k >= 18) {
+    } else if (k >= 20 - SP->d_barred) {
         p->state = PS_BARRED;
     }
-    if (!dr (15)) {
-        p->state = PS_HIDDEN | (dr (4) ? 0 : PS_MAGIC);  /* (A secret door: closed, like the wall; some by magic) */
+    if (dr (15) < SP->d_hidden) {               /* (A secret door: closed, like the wall; some by magic) */
+        p->state = PS_HIDDEN | (dr (4) < SP->d_magic ? PS_MAGIC : 0);
     }
     k = dr (10);
-    p->mat = k < 6 ? PM_WOOD : k < 9 ? PM_IRONBOUND : PM_IRON;
+    p->mat = k < SP->m_wood ? PM_WOOD : k < SP->m_wood + SP->m_ironbound ? PM_IRONBOUND : PM_IRON;
     p->tough = p->mat == PM_WOOD ? 20 : p->mat == PM_IRONBOUND ? 35 : 60;
     p->bar = DIR_N;
     for (d = 0; d < 4; ++d) {                   /* (Barred from the room's side) */
         if (x + dir_x[d] < CW && y + dir_y[d] < CW && L->tile[y + dir_y[d]][x + dir_x[d]] == T_FLOOR) {
             p->bar = d;
         }
+    }
+    if (dr (20) >= SP->doors) {                 /* (No door at all: a doorway, by the style's say) */
+        --L->nportals;
     }
 }
 
