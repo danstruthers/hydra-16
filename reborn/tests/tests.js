@@ -2261,7 +2261,7 @@ module.exports = {
     },
     {
       name: 'dq0', what: 'Dingus Quest Zero (games/dq0) at rc, its turns pace: a character from hmchar\'s file (-c), commands typed ahead (each waits for its prompt): looking, the way out shut, the map, going, quit; then the game running hmchar itself, in its window, answered as a player would, and the character it made read back',
-      init: 't_rc', cycles: 600e6,
+      init: 't_rc', cycles: 800e6,
       // (\u0101: wait for a prompt, the game's "> " too; \u0100: wait a while, for hmchar's questions)
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm\r' +
         ['look', 'u', 'map', 'dig down', 'n', 'look', 'open', 'n', 'e', 'u', 'look', 's', 'w', 'go west', 'map', 'wait', 'help', 'foo', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') +
@@ -2287,6 +2287,14 @@ module.exports = {
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -k pick -T\r' +
         ['dig down', 'look', 'd', 'look', 'map', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
       expect: ['You set to digging', 'feet to go.', 'the shaft is through.', 'You climb down the shaft.', 'The map (you face', '% echo $status'],
+      sdcard: true
+    },
+    {
+      name: 'dq0talk', what: 'Dingus Quest Zero understanding the player (parse.c, after the user Language.txt): synonyms, several words to a verb, directions as the character faces and two together, things it sees walked up to and gone through, the little words passed over',
+      init: 't_rc', cycles: 600e6,
+      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T\r' +
+        ['take a gander', 'turn half left', 'face north and east', 'walk to the door on my right', 'look closely', 'pick up the sword', 'saunter off to the left', 'foo', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['You turn to face east', 'You turn to face northeast', 'You go over to it.', 'You search about', 'nothing here you could take', "I don't know how to foo.", '% echo $status'],
       sdcard: true
     },
     {

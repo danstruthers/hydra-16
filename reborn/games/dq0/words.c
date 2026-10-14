@@ -197,12 +197,11 @@ static void room (void)
     add (S->size == S_SMALL ? " small " : S->size == S_LARGE ? " large " : S->size == S_LONG ? " long " : " ");
     add (kindname[S->kind & 7]);
     add (S->lit ? ", lit by torches in iron brackets." : sight_light ? ", by the light of your torch." : ".");
-    if (S->up_ft) {
-        add (" The floor slopes up ");
+    if (S->up_ft) {                             /* (The slope's words, the user's: a slight rise, a rise, steep) */
+        add (S->up_ft <= 2 ? " The floor rises gently " : S->up_ft <= 5 ? " The floor rises " : S->up_ft <= 9 ?
+             " The floor rises steeply " : " The floor climbs sharply ");
         add (relname[S->up_rel & 7]);
-        add (", ");
-        addn (S->up_ft);
-        add (S->up_ft == 1 ? " foot in ten." : " feet in ten.");
+        add (".");
     }
     ceiling ();
     zones ();
@@ -233,7 +232,7 @@ static void passage (void)
         if (S->way[i].steps) {
             add (dz > 0 ? " up steps" : " down steps");
         } else if (dz >= 1 || dz <= -1) {
-            add (dz > 0 ? ", rising" : ", falling");
+            add (dz == 1 ? ", rising gently" : dz == -1 ? ", falling gently" : dz > 0 ? ", rising" : ", falling");
         }
     }
     add (".");

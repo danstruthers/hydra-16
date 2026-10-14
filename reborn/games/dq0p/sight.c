@@ -190,6 +190,8 @@ void __fastcall__ perceive (unsigned char sn, unsigned x, unsigned y, unsigned c
                     !((q = portal_at (wall_x, wall_y)) != 0 && (q->state & PS_HIDDEN))) {
                     S.door[S.ndoors].rel = REL8 (bearing ((int) wall_x - lx, (int) wall_y - ly), face);
                     S.door[S.ndoors].state = (q = portal_at (wall_x, wall_y)) != 0 ? q->state & PS_OPEN : DOORWAY;
+                    S.door[S.ndoors].x = x - lx + wall_x;
+                    S.door[S.ndoors].y = y - ly + wall_y;
                     S.door[S.ndoors++].dz = fz (C->elev[wall_y][wall_x] - myz);
                 }
             }
@@ -199,6 +201,8 @@ void __fastcall__ perceive (unsigned char sn, unsigned x, unsigned y, unsigned c
                 if (TILE (C->tile[j][i]) == T_CORR && (C->tile[j][i] & T_VIS) && mouth (i, j)) {
                     S.door[S.ndoors].rel = REL8 (bearing ((int) i - lx, (int) j - ly), face) | MOUTH;
                     S.door[S.ndoors].state = PS_OPEN;
+                    S.door[S.ndoors].x = x - lx + i;
+                    S.door[S.ndoors].y = y - ly + j;
                     S.door[S.ndoors++].dz = fz (C->elev[j][i] - myz);
                 }
             }
@@ -209,6 +213,8 @@ void __fastcall__ perceive (unsigned char sn, unsigned x, unsigned y, unsigned c
             if (i >= rp.x && i < rp.x + rp.w && j >= rp.y && j < rp.y + rp.h && (C->tile[j][i] & T_VIS)) {
                 S.open[S.nopen].rel = i == lx && j == ly ? 0xFF : REL8 (bearing ((int) i - lx, (int) j - ly), face);
                 S.open[S.nopen].kind = C->open[k].kind;
+                S.open[S.nopen].x = x - lx + i;
+                S.open[S.nopen].y = y - ly + j;
                 S.open[S.nopen++].dz = fz (C->elev[j][i] - myz);
             }
         }
@@ -219,6 +225,8 @@ void __fastcall__ perceive (unsigned char sn, unsigned x, unsigned y, unsigned c
                 !((q = portal_at (cx_, cy_)) != 0 && (q->state & PS_HIDDEN))) {
                 S.door[S.ndoors].rel = REL8 (H_OF (d), face);
                 S.door[S.ndoors].state = q ? q->state & PS_OPEN : DOORWAY;
+                S.door[S.ndoors].x = x + dir_x[d];
+                S.door[S.ndoors].y = y + dir_y[d];
                 S.door[S.ndoors++].dz = fz (C->elev[cy_][cx_] - myz);
             }
         }

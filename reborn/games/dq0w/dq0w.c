@@ -299,6 +299,55 @@ static void __fastcall__ across (unsigned char h, unsigned char r, unsigned char
     busy (t > 60000UL ? 60000U : (unsigned) t);
 }
 
+/* Up to square (x, y) of the character's room (a door's or a passage's mouth: the room's square before it), by the
+** way it can walk */
+static void __fastcall__ go_to (unsigned x, unsigned y)
+{
+    unsigned char r, slow, tx, ty, d, t, fx, fy;
+    unsigned long tt;
+    unsigned char* p;
+
+    sn_ = HUB->pc_stratum;
+    mx = HUB->pc_x;
+    my = HUB->pc_y;
+    stept = HUB->pcsum.step ? HUB->pcsum.step : 10;
+    slow = dark ();
+    if ((r = room_of (sn_, mx, my)) == 0xFF || x - (mx - cx_) >= CW || y - (my - cy_) >= CW) {
+        hub_map (0);
+        no_way (N_NO_EXIT);
+        return;
+    }
+    fx = cx_;
+    fy = cy_;
+    tx = x - (mx - cx_);
+    ty = y - (my - cy_);
+    t = TILE (C->tile[ty][tx]);
+    if (t == T_DOOR || t == T_CORR) {           /* (Up to it: the room's square before it) */
+        for (d = 0; d < 4; ++d) {
+            p = &C->tile[ty - dir_y[d]][tx - dir_x[d]];
+            if (T_INSIDE (*p)) {
+                tx -= dir_x[d];
+                ty -= dir_y[d];
+                break;
+            }
+        }
+    }
+    if ((tt = cross_room (r, fx, fy, tx, ty, slow)) == 0xFFFFFFFFUL) {
+        hub_map (0);
+        no_way (N_NO_EXIT);
+        return;
+    }
+    hub_map (0);
+    move.on = 1;
+    move.how = A_WENT_TO;
+    move.sn = sn_;
+    move.x = mx - fx + tx;
+    move.y = my - fy + ty;
+    move.face = tx == x - (mx - fx) && ty == y - (my - fy) ? HUB->pc_face : bearing ((int) x - move.x, (int) y - move.y);
+    move.ledge = 0;
+    busy (tt > 60000UL ? 60000U : (unsigned) tt);
+}
+
 /* ---- Climbing a ledge (HarnMaster's Climbing, Skills 8: feet of progress a test, a test a round, the game's
 ** choice; a hard climb, rough stone: 20 feet on a critical success, 10 on a success, 5 back on a marginal failure,
 ** and on a critical failure a fall, the referee's harm to come) */
@@ -645,7 +694,7 @@ static void arrive (void)
     my = move.y;
     if (how == A_WALKED) {
         walk (move.dir, 1, dark ());
-    } else if (how != A_CROSSED) {
+    } else if (how != A_CROSSED && how != A_WENT_TO) {
         move.face = toward_middle ();
     }
     if ((r = room_of (sn_, mx, my)) != 0xFF) {
@@ -1162,6 +1211,9 @@ static void __fastcall__ intent (struct msg* m)
         break;
     case I_DIG:
         start_dig (m->a);
+        break;
+    case I_GOTO:
+        go_to (m->w1, m->w2);
         break;
     case I_PORTAL:
         door_work (m->a);

@@ -75,6 +75,28 @@ extern const char* const stratum_name[8];       /* (A stand-in theme's names of 
 void __fastcall__ map (const char* rules);      /* The map of what it's seen round it, and the character's
                                                 **   state beside it (rules: the referee's short lines) */
 
+/* ---- parse.c (overlay 3): a command understood */
+
+enum {
+    V_NONE, V_MOVE, V_ENTER, V_APPROACH, V_LOOK, V_EXAMINE, V_SEARCH, V_TURN, V_FACE, V_CLIMB, V_JUMP, V_OPEN, V_CLOSE,
+    V_UNLOCK, V_FORCE, V_DIG, V_GET, V_DROP, V_LIGHT, V_DOUSE, V_WAIT, V_MAP, V_SHEET, V_HELP, V_PAUSE, V_QUIT
+};
+enum { OB_NONE, OB_DOOR, OB_PASSAGE, OB_STAIRS, OB_LADDER, OB_SHAFT, OB_LEDGE, OB_WAY_OUT, OB_WALL };
+enum { HOW_ANY, HOW_TO, HOW_THROUGH };
+#define GO_UP       8                           /* (A direction: up, down; else a heading, H_N ...) */
+#define GO_DOWN     9
+struct pcmd {
+    unsigned char   verb;                       /* V_* */
+    unsigned char   dir;                        /* A heading (the compass's), GO_UP, GO_DOWN, or 0xFF */
+    unsigned char   obj;                        /* OB_* */
+    unsigned char   orel;                       /* The heading the thing lies (or 0xFF: any) */
+    unsigned char   how;                        /* HOW_*: up to it, or through it */
+    unsigned char   half, around;               /* (turn half left; turn around, look around) */
+    char            word[16];                   /* The first word not understood */
+};
+extern unsigned char pc_face;                   /* (The hub's, copied for the overlay) */
+void __fastcall__ parse (char* l, struct pcmd* c);   /* Overlay 3 */
+
 /* ---- The overlays (bank.s: their stubs) */
 
 void title (void);                              /* Overlay 1: the title, the pace asked */

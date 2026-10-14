@@ -50,6 +50,7 @@ enum {
     I_LIGHT,                                    /* a: 1 the character's light lit, 0 put out */
     I_DIG,                                      /* a: a direction (DIR_N ... DIR_W, DIR_DOWN) */
     I_PORTAL,                                   /* a: what's done to the door it faces (PA_*) */
+    I_GOTO,                                     /* w1, w2: a square in its room it sees, walked up to */
     I_QUIT,
     NINTENTS
 };
@@ -71,7 +72,7 @@ enum {
     NEVENTS
 };
 
-enum { A_WALKED, A_DOWN, A_UP, A_START, A_DIGGING, A_CROSSED, A_CLIMBING, A_CLIMBED };
+enum { A_WALKED, A_DOWN, A_UP, A_START, A_DIGGING, A_CROSSED, A_CLIMBING, A_CLIMBED, A_WENT_TO };
                                                 /* E_ARRIVE's how (A_DIGGING, A_CLIMBING: the world's own, a spell
                                                 **   of work, a round's climbing) */
 enum { N_NO_EXIT, N_SHUT, N_NO_STAIRS, N_NO_DIG };  /* E_NOWAY's why: no way that way, the way out shut, no stairs,

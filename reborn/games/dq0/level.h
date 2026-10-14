@@ -41,11 +41,12 @@ struct sight {
     unsigned char   up_rel, up_ft;              /* The floor here: the way it rises, and feet in ten (0: level) */
     unsigned char   ceil, cmid, cwall;          /* Its zone's ceiling (ceil C_UNSEEN: not seen) */
     unsigned char   ndoors;                     /* Doors, and passages' mouths (rel | MOUTH) */
-    struct { unsigned char rel; signed char dz; unsigned char state; } door[SEE_DOORS];  /* (state: PS_OPEN ...) */
+    struct { unsigned char rel; signed char dz; unsigned char state; unsigned x, y; } door[SEE_DOORS];
+                                                /* (state: PS_OPEN ...; x, y its square) */
     unsigned char   nzones;                     /* The room's other zones seen */
     struct { unsigned char rel, how; signed char dz; } zone[SEE_ZONES];    /* how: Z_* */
     unsigned char   nopen;                      /* Stairways, ladders, shafts, windows seen */
-    struct { unsigned char rel, kind; signed char dz; } open[SEE_OPEN];    /* kind: O_* */
+    struct { unsigned char rel, kind; signed char dz; unsigned x, y; } open[SEE_OPEN];    /* kind: O_* */
     unsigned char   nways;                      /* A passage's ways on */
     struct { unsigned char rel; signed char dz; unsigned char steps; } way[4];
     unsigned char   stratum, sname, style;      /* The stratum: its number, its name (the theme's), its style */

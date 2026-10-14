@@ -27,6 +27,7 @@
 #include "level.h"
 
 unsigned long now;                              /* The game's time, as the world's clock last said */
+unsigned char pc_face;                          /* (The character's facing, copied for the parser's overlay) */
 unsigned char pace = 0xFF, paused;
 const char* const pacename[4] = { "relaxed", "normal", "menacing", "turns" };
 
@@ -353,6 +354,8 @@ static void events (void)
                 }
                 if ((m.w1 & 0xFF) == A_CROSSED) {
                     msg ("You cross the room.");
+                } else if ((m.w1 & 0xFF) == A_WENT_TO) {
+                    msg ("You go over to it.");
                 }
                 look (m.w1 >> 8 & 1);
             }
@@ -403,6 +406,21 @@ static void events (void)
 
 /* ---- The commands (the parser comes later: a word, and the rest) */
 
+static void __fastcall__ intend2 (unsigned char kind, unsigned w1, unsigned w2)
+{
+    static struct msg m;
+
+    m.kind = kind;
+    m.who = 0;
+    m.a = 0;
+    m.w1 = w1;
+    m.w2 = w2;
+    if (hub_send (&m)) {
+        busy = 1;
+        t_prompt (0);
+    }
+}
+
 static void __fastcall__ intend (unsigned char kind, unsigned char a)
 {
     static struct msg m;
@@ -417,61 +435,6 @@ static void __fastcall__ intend (unsigned char kind, unsigned char a)
     }
 }
 
-/* A word that's a way: a heading of the compass's eight (north or n ... northwest or nw: H_N ...), or one as the
-** character faces (forward, ahead or f; right; back or b; left), made the compass's; up (u) or down (d): GO_UP,
-** GO_DOWN; or 0xFF */
-#define GO_UP       8
-#define GO_DOWN     9
-static unsigned char __fastcall__ direction (const char* w)
-{
-    static const char* const relw[8] = { "forward", "ahead", "f", "right", "back", "b", "left", "" };
-    static const unsigned char reloff[8] = { 0, 0, 0, 2, 4, 4, 6, 0 };
-    unsigned char h;
-    char ab[3];
-
-    for (h = 0; h < 8; ++h) {
-        ab[0] = head_abbr[h][0] + 'a' - 'A';
-        ab[1] = head_abbr[h][1] ? head_abbr[h][1] + 'a' - 'A' : 0;
-        ab[2] = 0;
-        if (!strcmp (w, ab) || !strcmp (w, head_name[h])) {
-            return h;
-        }
-    }
-    if (!strcmp (w, "u") || !strcmp (w, "up")) {
-        return GO_UP;
-    }
-    if (!strcmp (w, "d") || !strcmp (w, "down")) {
-        return GO_DOWN;
-    }
-    for (h = 0; h < 7; ++h) {
-        if (!strcmp (w, relw[h])) {
-            return (HUB->pc_face + reloff[h]) & 7;
-        }
-    }
-    return 0xFF;
-}
-
-/* The next word of a command's (made lower case), *at moved past it */
-static char* __fastcall__ next_word (char** at)
-{
-    char* w;
-    char* s = *at;
-
-    while (*s == ' ') {
-        ++s;
-    }
-    for (w = s; *s && *s != ' '; ++s) {
-        if (*s >= 'A' && *s <= 'Z') {
-            *s += 'a' - 'A';
-        }
-    }
-    if (*s) {
-        *s++ = 0;
-    }
-    *at = s;
-    return w;
-}
-
 /* The map, and beside it the referee's short lines (the attributes as they are now) */
 static void show_map (void)
 {
@@ -482,72 +445,104 @@ static void show_map (void)
     r->state = REQ_FREE;
 }
 
-/* turn left or right (a quarter turn), half left or half right (an eighth), around (or back), or north ...;
-** face north ... (or left ...): the same */
-static void __fastcall__ turn (char* rest)
+/* A thing it sees, the parser's (its kind, and the heading it lies, if one was said): its square, in tx, ty (1),
+** or 0 */
+static unsigned tx, ty;
+static unsigned char __fastcall__ find (unsigned char obj, unsigned char orel)
 {
-    char* how = next_word (&rest);
-    unsigned char h = HUB->pc_face;
+    struct sight* s = &HUB->sight;
+    unsigned char i, k, h;
 
-    if (!strcmp (how, "half")) {
-        how = next_word (&rest);
-        h = !strcmp (how, "left") ? (h + 7) & 7 : !strcmp (how, "right") ? (h + 1) & 7 : 0xFF;
-    } else {
-        h = !strcmp (how, "around") ? (h + 4) & 7 : direction (how);
+    for (i = 0; i < s->ndoors; ++i) {
+        h = (pc_face + (s->door[i].rel & 7)) & 7;
+        if ((obj == OB_DOOR ? !(s->door[i].rel & MOUTH) : obj == OB_PASSAGE && (s->door[i].rel & MOUTH)) &&
+            (orel == 0xFF || h == orel)) {
+            tx = s->door[i].x;
+            ty = s->door[i].y;
+            return 1;
+        }
     }
-    if (h > H_NW) {
-        msg ("Which way? (left, right, half left, half right, around, or north, northeast ... northwest)");
-        return;
+    for (i = 0; i < s->nopen; ++i) {
+        k = s->open[i].kind;
+        h = s->open[i].rel == 0xFF ? 0xFF : (pc_face + (s->open[i].rel & 7)) & 7;
+        if ((obj == OB_STAIRS && (k == O_STAIRS_UP || k == O_STAIRS_DOWN || k == O_WAY_OUT)) ||
+            (obj == OB_LADDER && (k == O_LADDER_UP || k == O_LADDER_DOWN)) ||
+            (obj == OB_SHAFT && (k == O_SHAFT_UP || k == O_SHAFT_DOWN)) || (obj == OB_WAY_OUT && k == O_WAY_OUT)) {
+            if (orel == 0xFF || h == orel) {
+                tx = s->open[i].x;
+                ty = s->open[i].y;
+                return 1;
+            }
+        }
     }
-    if (h == HUB->pc_face) {
-        sayf ("\nYou face %s already.", head_name[h]);
-        return;
-    }
-    intend (I_TURN, h);
+    return 0;
 }
 
+static const char* const thing[] = { "", "door", "way on", "stairs", "ladder", "shaft", "ledge", "way out", "wall" };
+
+/* A command, the parser's, carried out */
 static void __fastcall__ command (char* l)
 {
-    char* w = l;
-    char* rest;
+    static struct pcmd c;
     unsigned char d;
 
-    while (*w == ' ') {
-        ++w;
-    }
-    for (rest = w; *rest && *rest != ' '; ++rest) {
-        if (*rest >= 'A' && *rest <= 'Z') {
-            *rest += 'a' - 'A';
-        }
-    }
-    if (*rest) {
-        *rest++ = 0;
-    }
-    if (!*w) {
+    pc_face = HUB->pc_face;
+    parse (l, &c);
+    if (c.word[0] && c.verb == V_MOVE && c.dir == 0xFF && !c.obj) {
+        sayf ("\nI don't know how to %s.", c.word);
         return;
     }
-    if (!strcmp (w, "go") || !strcmp (w, "walk")) {
-        w = next_word (&rest);
-        if (!*w) {
-            msg ("Go which way?");
-            return;
-        }
-    }
-    if ((d = direction (w)) != 0xFF) {
-        if (d >= GO_UP) {
-            intend (I_CLIMB, d == GO_UP ? DIR_UP : DIR_DOWN);
+    switch (c.verb) {
+    case V_NONE:
+        return;
+    case V_MOVE:
+    case V_ENTER:
+    case V_APPROACH:
+        if (c.obj) {                            /* (A thing: up to it, or through it) */
+            if (!find (c.obj, c.orel)) {
+                sayf ("\nYou see no %s %s.", thing[c.obj], c.orel == 0xFF ? "here" : "that way");
+            } else if ((c.how == HOW_THROUGH || c.verb == V_ENTER) && (c.obj == OB_DOOR || c.obj == OB_PASSAGE)) {
+                intend (I_GO, bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y));
+            } else {
+                intend2 (I_GOTO, tx, ty);
+            }
+        } else if (c.dir == GO_UP || c.dir == GO_DOWN) {
+            intend (I_CLIMB, c.dir == GO_UP ? DIR_UP : DIR_DOWN);
+        } else if (c.dir != 0xFF) {
+            intend (I_GO, c.dir);
         } else {
-            intend (I_GO, d);
+            msg ("Go which way?");
         }
-    } else if (!strcmp (w, "quit") || !strcmp (w, "q")) {
-        quit = 1;
-    } else if (!strcmp (w, "open") || !strcmp (w, "close") || !strcmp (w, "shut") || !strcmp (w, "unlock") ||
-               !strcmp (w, "pick") || !strcmp (w, "force") || !strcmp (w, "search")) {
-        intend (I_PORTAL, w[0] == 'o' ? PA_OPEN : w[1] == 'e' ? PA_SEARCH : w[0] == 'c' || w[0] == 's' ? PA_CLOSE :
-            w[0] == 'f' ? PA_FORCE : PA_UNLOCK);   /* (The door it faces: "open door" or "open" alike; search about) */
-    } else if (!strcmp (w, "dig")) {
-        w = next_word (&rest);
-        d = direction (w);
+        return;
+    case V_CLIMB:
+        intend (I_CLIMB, c.dir == GO_DOWN ? DIR_DOWN : DIR_UP);
+        return;
+    case V_TURN:
+    case V_FACE:
+        if (c.dir > H_NW) {
+            msg ("Which way? (left, right, half left, half right, around, or north, northeast ... northwest)");
+        } else if (c.dir == HUB->pc_face) {
+            sayf ("\nYou face %s already.", head_name[c.dir]);
+        } else {
+            intend (I_TURN, c.dir);
+        }
+        return;
+    case V_OPEN:
+    case V_CLOSE:
+    case V_UNLOCK:
+    case V_FORCE:
+        if (c.orel != 0xFF && c.orel <= H_NW && c.orel != HUB->pc_face) {
+            intend (I_TURN, c.orel);            /* (The door that way: faced first) */
+        }
+        intend (I_PORTAL, c.verb == V_OPEN ? PA_OPEN : c.verb == V_CLOSE ? PA_CLOSE : c.verb == V_FORCE ? PA_FORCE :
+            PA_UNLOCK);
+        return;
+    case V_SEARCH:
+    case V_EXAMINE:
+        intend (I_PORTAL, PA_SEARCH);
+        return;
+    case V_DIG:
+        d = c.dir;
         if (d == GO_DOWN) {
             intend (I_DIG, DIR_DOWN);
         } else if (d <= H_NW && !(d & 1)) {
@@ -555,36 +550,51 @@ static void __fastcall__ command (char* l)
         } else {
             msg ("Dig which way? (north, east, south or west: through a wall or the rock; or down, a shaft)");
         }
-    } else if (!strcmp (w, "turn") || !strcmp (w, "face")) {
-        turn (rest);
-    } else if (!strcmp (w, "light")) {
+        return;
+    case V_GET:
+    case V_DROP:
+        msg ("There's nothing here you could take, or put down.");
+        return;
+    case V_JUMP:
+        msg ("You jump, and come down where you were.");
+        return;
+    case V_LIGHT:
         if (HUB->pc_light) {
             msg ("Your torch is lit already.");
         } else {
             intend (I_LIGHT, 1);
         }
-    } else if (!strcmp (w, "douse") || !strcmp (w, "extinguish")) {
+        return;
+    case V_DOUSE:
         if (!HUB->pc_light) {
             msg ("Your torch isn't lit.");
         } else {
             intend (I_LIGHT, 0);
         }
-    } else if (!strcmp (w, "look") || !strcmp (w, "l")) {
+        return;
+    case V_LOOK:
         look (0);
-    } else if (!strcmp (w, "map") || !strcmp (w, "m")) {
+        return;
+    case V_MAP:
         show_map ();
-    } else if (!strcmp (w, "wait") || !strcmp (w, "z")) {
+        return;
+    case V_WAIT:
         intend (I_WAIT, 0);
-    } else if (!strcmp (w, "sheet") || !strcmp (w, "skills")) {
+        return;
+    case V_SHEET:
         sheet ();
-    } else if (!strcmp (w, "pause")) {
+        return;
+    case V_PAUSE:
         HUB->paused = paused = 1;
         msg ("The game is paused: press Escape to go on.");
         status ();
-    } else if (!strcmp (w, "help") || !strcmp (w, "?")) {
+        return;
+    case V_HELP:
         help ();
-    } else {
-        sayf ("\nI don't know how to %s.", w);
+        return;
+    case V_QUIT:
+        quit = 1;
+        return;
     }
 }
 
