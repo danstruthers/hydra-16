@@ -291,6 +291,15 @@ An item found stays known (the character's knowledge, kept with the change recor
 the items it knows of that it sees now, the UI words them.  Denizens find things by the same rules, through their
 own senses.
 
+**Hidden by what's over it, or on someone** (the user: "some things may be hidden by clothing or trapped under a
+dead person, or purposely concealed in a secret pocket"): a thing can be hidden by another thing as well as by where
+it lies: under a body, a cloak, a fallen beam (seen once that's moved, or felt for by a search; trapped under
+something heavy, freed only by moving it, a strength test); worn or carried under clothing (a dagger in a boot, a
+pouch beneath a tunic: not seen on a denizen, nor on a body until it's searched); or concealed on purpose in a
+secret pocket, a hollow heel, a false lining (a container's hidden part, found only by searching it, at its
+maker's skill).  The item records where it is (in, on, under or worn beneath another item, or an actor's) and
+how it's hidden; searching a body or a container is a search of what's in, on, and under it.
+
 ### Hidden things, and seeing in the dark
 
 The user (2026-10-14): "using your "find hidden" ability, you could discover hidden items, hidden exits, hidden
