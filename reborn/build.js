@@ -296,7 +296,10 @@ function build(opt = {}) {
 // Both chips' builds, and their images (the base's buildBoth): HydraOS's bin (its card's image too) and the base's
 const IMAGE_NAMES = /^(bios|prom\d+)(_(rockwell|wdc))?\.bin$|^sdcard(_(rockwell|wdc))?\.img$/;
 function buildBoth(opt = {}) {
-  return base.buildBoth(opt, build, [[at('bin'), IMAGE_NAMES], [atBase('bin'), base.IMAGE_NAMES]]);
+  const r = base.buildBoth(opt, build, [[at('bin'), IMAGE_NAMES], [atBase('bin'), base.IMAGE_NAMES]]);
+  const page = require('./sim/web.js').build(at('bin', 'hydra-16.html'));   // (The emulator in one page, from them)
+  if (!opt.quiet) console.log('The emulator in a browser: bin/hydra-16.html, ' + (page.size / 1048576).toFixed(1) + ' MB (sim/web.js)');
+  return r;
 }
 
 if (require.main === module) {

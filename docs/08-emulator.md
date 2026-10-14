@@ -154,9 +154,11 @@ is the whole machine: open http://localhost:8016 for the screen and sound, and t
 $ node sim/web.js
 ```
 
-builds **`obj/web/hydra-16.html`**: one file holding the page, the emulator (in a Web Worker) and the ROM images, which
-runs HydraOS in Chrome, Edge, Firefox or Safari with nothing installed and nothing sent anywhere.  `--serve` serves it at
-http://localhost:8017.
+builds **`bin/hydra-16.html`**: one file holding the page, the emulator (in a Web Worker) and the ROM images, which
+runs HydraOS in Chrome, Edge, Firefox or Safari with nothing installed and nothing sent anywhere, opened straight from
+the disk.  `build.js` makes it too, after the images, and it's in Git with them (the same images make the same page:
+it names them by their checksum, not the commit), so it's there ready made, with no Node.js.  `--serve` serves it
+at http://localhost:8017.
 
 * The serial console is a terminal in the page, with the Vera X's screen beside it.
 * **Setup** has the Vera X card, its keyboard and mouse, the clock chip, the memory cards, and SD cards: HydraOS's card
