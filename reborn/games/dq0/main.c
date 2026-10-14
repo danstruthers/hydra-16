@@ -555,6 +555,10 @@ static void __fastcall__ command (char* l)
     case V_DROP:
         msg ("There's nothing here you could take, or put down.");
         return;
+    case V_DON:
+    case V_DOFF:
+        msg (c.verb == V_DON ? "You have nothing to put on, or take up." : "You have nothing on you could take off.");
+        return;
     case V_JUMP:
         msg ("You jump, and come down where you were.");
         return;

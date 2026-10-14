@@ -6,7 +6,7 @@
 ** (n, north, ne, northeast ...), as the character faces (f, fwd, forward, ahead, front; b, back, behind; l, left;
 ** r, right), up and down (over my head, above; under, underneath, below), and two together ("north and east",
 ** "front right", "behind to my left": the way between them); the little words (the, a, to the, off, of me, my ...)
-** passed over.  A relative direction is made the compass's by the way the character faces (pc_face, the UI's copy of
+** passed over ("off" and "on" are the verb's in take off, put on: a word's sense goes by its place).  A relative direction is made the compass's by the way the character faces (pc_face, the UI's copy of
 ** the hub's, for an overlay doesn't see the hub).  What's done with the command is main.c's.
 */
 
@@ -21,6 +21,7 @@
 static const struct { char w[16]; unsigned char v; } verbs[] = {
     { "take a gander", V_LOOK }, { "look closely", V_EXAMINE }, { "look close", V_EXAMINE },
     { "look in detail", V_EXAMINE }, { "close look", V_EXAMINE }, { "pick up", V_GET }, { "put out", V_DOUSE },
+    { "take off", V_DOFF }, { "put on", V_DON },          /* ("off" and "on" the verb's, here; else little words) */
     { "move", V_MOVE }, { "mv", V_MOVE }, { "walk", V_MOVE }, { "go", V_MOVE }, { "trundle", V_MOVE },
     { "mosey", V_MOVE }, { "saunter", V_MOVE }, { "run", V_MOVE }, { "crawl", V_MOVE }, { "head", V_MOVE },
     { "enter", V_ENTER }, { "approach", V_APPROACH },
@@ -29,6 +30,8 @@ static const struct { char w[16]; unsigned char v; } verbs[] = {
     { "turn", V_TURN }, { "face", V_FACE }, { "climb", V_CLIMB }, { "jump", V_JUMP },
     { "open", V_OPEN }, { "close", V_CLOSE }, { "shut", V_CLOSE }, { "unlock", V_UNLOCK }, { "pick", V_UNLOCK },
     { "force", V_FORCE }, { "dig", V_DIG }, { "mine", V_DIG },
+    { "don", V_DON }, { "wear", V_DON }, { "equip", V_DON }, { "ready", V_DON }, { "wield", V_DON },
+    { "doff", V_DOFF }, { "remove", V_DOFF }, { "unequip", V_DOFF }, { "store", V_DOFF },
     { "get", V_GET }, { "take", V_GET }, { "grab", V_GET }, { "acquire", V_GET }, { "drop", V_DROP },
     { "light", V_LIGHT }, { "douse", V_DOUSE }, { "extinguish", V_DOUSE },
     { "wait", V_WAIT }, { "z", V_WAIT }, { "map", V_MAP }, { "m", V_MAP }, { "sheet", V_SHEET },
@@ -192,6 +195,9 @@ void __fastcall__ o_parse (char* l, struct pcmd* c)
     }
     if (c->verb == V_TURN && c->half && dir < GO_UP) {  /* (Half left, half right: an eighth) */
         c->dir = ((dir - pc_face) & 7) == 6 ? (pc_face + 7) & 7 : ((dir - pc_face) & 7) == 2 ? (pc_face + 1) & 7 : dir;
+    }
+    if (c->verb == V_DOFF && !c->obj && dir != 0xFF) {   /* ("take off to the left": going, not undressing) */
+        c->verb = V_MOVE;
     }
     if ((c->verb == V_TURN || c->verb == V_FACE) && c->around && dir == 0xFF) {
         c->dir = (pc_face + 4) & 7;

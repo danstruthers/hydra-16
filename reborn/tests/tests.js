@@ -2293,8 +2293,8 @@ module.exports = {
       name: 'dq0talk', what: 'Dingus Quest Zero understanding the player (parse.c, after the user Language.txt): synonyms, several words to a verb, directions as the character faces and two together, things it sees walked up to and gone through, the little words passed over',
       init: 't_rc', cycles: 600e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T\r' +
-        ['take a gander', 'turn half left', 'face north and east', 'walk to the door on my right', 'look closely', 'pick up the sword', 'saunter off to the left', 'foo', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
-      expect: ['You turn to face east', 'You turn to face northeast', 'You go over to it.', 'You search about', 'nothing here you could take', "I don't know how to foo.", '% echo $status'],
+        ['take a gander', 'turn half left', 'face north and east', 'walk to the door on my right', 'look closely', 'pick up the sword', 'take off my coat', 'saunter off to the left', 'foo', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['You turn to face east', 'You turn to face northeast', 'You go over to it.', 'You search about', 'nothing here you could take', 'nothing on you could take off', "I don't know how to foo.", '% echo $status'],
       sdcard: true
     },
     {
