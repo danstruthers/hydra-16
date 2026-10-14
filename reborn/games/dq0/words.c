@@ -52,13 +52,16 @@ static void __fastcall__ height (signed char dz)
 
 /* ---- A room */
 
-static void doors (void)
+/* The doors seen (mouths 0), or the passages' mouths (MOUTH) */
+static void __fastcall__ doors (unsigned char mouths)
 {
     unsigned char seen[8], d, k, n = 0, i;
 
     memset (seen, 0, sizeof seen);
     for (i = 0; i < S->ndoors; ++i) {
-        ++seen[S->door[i].rel & 7];
+        if ((S->door[i].rel & MOUTH) == mouths) {
+            ++seen[S->door[i].rel & 7];
+        }
     }
     for (d = 0; d < 8; ++d) {
         n += seen[d] != 0;
@@ -68,10 +71,10 @@ static void doors (void)
             continue;
         }
         if (!k++) {
-            add (seen[d] == 1 ? " There is a door " : " There are ");
+            add (seen[d] == 1 ? (mouths ? " A passage leads off " : " There is a door ") : " There are ");
             if (seen[d] > 1) {
                 add (count[seen[d] > 4 ? 4 : seen[d]]);
-                add (" doors ");
+                add (mouths ? " passages leading off " : " doors ");
             }
         } else {
             add (k == n ? " and " : ", ");
@@ -80,7 +83,7 @@ static void doors (void)
         }
         add (relname[d]);
         for (i = 0; i < S->ndoors; ++i) {       /* (The first that way's height, if it's well above or below) */
-            if ((S->door[i].rel & 7) == d) {
+            if ((S->door[i].rel & 7) == d && (S->door[i].rel & MOUTH) == mouths) {
                 if (S->door[i].dz >= 3 || S->door[i].dz <= -3) {
                     add (",");
                     height (S->door[i].dz);
@@ -197,7 +200,8 @@ static void room (void)
     }
     ceiling ();
     zones ();
-    doors ();
+    doors (0);
+    doors (MOUTH);
     for (i = 0; i < S->nopen; ++i) {
         opening (i);
     }

@@ -12,6 +12,7 @@
 #define EYE         5
 
 static struct sight S;
+static unsigned char mx_[SEE_DOORS], my_[SEE_DOORS];     /* (The mouths' squares, as they're counted) */
 static unsigned char seq;
 
 static int __fastcall__ abs_ (int v)
@@ -32,6 +33,32 @@ static unsigned char __fastcall__ zone_index (unsigned char x, unsigned char y)
         }
     }
     return 0xFF;
+}
+
+/* A passage's square (i, j) of the chunk in the window, at a room's edge: a mouth, unless one's been counted
+** beside it (a wide tunnel's three squares one mouth) */
+static unsigned char __fastcall__ mouth (unsigned char i, unsigned char j)
+{
+    unsigned char k, d, f = 0;
+
+    for (d = 0; d < 4; ++d) {                   /* (Beside a room's floor) */
+        if (i + dir_x[d] < CW && j + dir_y[d] < CW && T_INSIDE (C->tile[j + dir_y[d]][i + dir_x[d]])) {
+            f = 1;
+        }
+    }
+    if (!f) {
+        return 0;
+    }
+    for (k = 0; k < S.ndoors; ++k) {
+        if ((S.door[k].rel & MOUTH) && mx_[k] + 1 >= i && mx_[k] <= i + 1 && my_[k] + 1 >= j && my_[k] <= j + 1) {
+            mx_[k] = i;                         /* (One mouth: its squares follow on) */
+            my_[k] = j;
+            return 0;
+        }
+    }
+    mx_[S.ndoors] = i;
+    my_[S.ndoors] = j;
+    return 1;
 }
 
 static signed char __fastcall__ fz (int dz)
@@ -161,6 +188,14 @@ void __fastcall__ perceive (unsigned char sn, unsigned x, unsigned y, unsigned c
                 if (TILE (C->tile[wall_y][wall_x]) == T_DOOR && (C->tile[wall_y][wall_x] & T_VIS)) {
                     S.door[S.ndoors].rel = REL8 (bearing ((int) wall_x - lx, (int) wall_y - ly), face);
                     S.door[S.ndoors++].dz = fz (C->elev[wall_y][wall_x] - myz);
+                }
+            }
+        }
+        for (j = rp.y ? rp.y - 1 : 0; j <= rp.y + rp.h && j < CW; ++j) {     /* (Its passages' mouths seen) */
+            for (i = rp.x ? rp.x - 1 : 0; i <= rp.x + rp.w && i < CW && S.ndoors < SEE_DOORS; ++i) {
+                if (TILE (C->tile[j][i]) == T_CORR && (C->tile[j][i] & T_VIS) && mouth (i, j)) {
+                    S.door[S.ndoors].rel = REL8 (bearing ((int) i - lx, (int) j - ly), face) | MOUTH;
+                    S.door[S.ndoors++].dz = fz (C->elev[j][i] - myz);
                 }
             }
         }

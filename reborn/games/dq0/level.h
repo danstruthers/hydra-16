@@ -40,7 +40,7 @@ struct sight {
     unsigned char   first;                      /* The first time there */
     unsigned char   up_rel, up_ft;              /* The floor here: the way it rises, and feet in ten (0: level) */
     unsigned char   ceil, cmid, cwall;          /* Its zone's ceiling (ceil C_UNSEEN: not seen) */
-    unsigned char   ndoors;
+    unsigned char   ndoors;                     /* Doors, and passages' mouths (rel | MOUTH) */
     struct { unsigned char rel; signed char dz; } door[SEE_DOORS];
     unsigned char   nzones;                     /* The room's other zones seen */
     struct { unsigned char rel, how; signed char dz; } zone[SEE_ZONES];    /* how: Z_* */
@@ -52,6 +52,7 @@ struct sight {
     int             z;                          /* The floor where it stands: feet above the way in */
     unsigned        x, y;                       /* Its square */
 };
+#define MOUTH           0x08
 enum { W_ROOM, W_PASSAGE };
 enum { S_PART, S_SMALL, S_MID, S_LARGE, S_LONG };
 enum { Z_STEPS, Z_SLOPE, Z_LEDGE };

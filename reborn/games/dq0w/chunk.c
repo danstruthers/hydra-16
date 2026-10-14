@@ -140,8 +140,9 @@ unsigned char __fastcall__ room_of (unsigned char sn, unsigned x, unsigned y)
     }
     for (r = 0; r < C->nrooms; ++r) {
         p = &C->room[r];
-        if (cx_ >= p->x && cx_ < p->x + p->w && cy_ >= p->y && cy_ < p->y + p->h) {
-            return r;
+        if (cx_ >= p->x && cx_ < p->x + p->w && cy_ >= p->y && cy_ < p->y + p->h &&
+            TILE (C->tile[cy_][cx_]) != T_CORR && TILE (C->tile[cy_][cx_]) != T_WALL) {
+            return r;                           /* (A cave's bounds may take in a tunnel's squares, or its walls) */
         }
     }
     return 0xFF;

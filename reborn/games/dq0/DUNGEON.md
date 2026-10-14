@@ -76,6 +76,14 @@ style's rules over the whole stratum at once:
   waterfall where the way down falls more steeply than water runs.  Each river is a line of points (its course,
   width, depth, elevation), each lake a basin and a level; a chunk carves its piece (the channel, the banks, the
   falls, the shore);
+- **water levels** (the user, 2026-10-14: "Don't forget about water and water-filled spaces.  There should be a water
+  level that dictates if water has filled the space or not, and then swimming skill comes into play, and fatigue
+  from swimming, drowning, spells for breathing under water, etc.  This should be remembered and accounted for in
+  future plans, but not worked on specifically at this time."): a lake's, a flooded hollow's, a cistern's, a
+  channel's surface; a square whose floor is below it is under water, to that depth (wading, then swimming, then
+  under), and moving there is the referee's: Swimming tests, swimming's fatigue, the breath held and drowning, a
+  spell or an ability to breathe water; sight under water short, and light too; a level that can change (a flood,
+  a sluice opened, a dam broken).  (Not now: kept for the water's step.)
 - **the populations** (DENIZENS.md): the theme's factions and animals for the stratum's style, placed then, in the
   regions that suit them: their lairs, their numbers, their territories and their ways about (patrols, hunting
   grounds, water they go to), each denizen a record from the start, so that what the character meets was there

@@ -2274,11 +2274,11 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0deep', what: 'Dingus Quest Zero down a way to the stratum below (dq0 -T: the character begins at the first way down of the top stratum): the stratum below grown in outline as the character first takes the way, its first chunk made, looked about and mapped, and back up',
+      name: 'dq0deep', what: 'Dingus Quest Zero down a way to the stratum below (dq0 -T: the character begins at the first way down of the top stratum): the stratum below grown in outline as the character first takes the way, its first chunk made (natural, at this seed: caves), looked about and mapped, and along a tunnel',
       init: 't_rc', cycles: 500e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T\r' +
-        ['look', 'd', 'look', 'map', 'u', 'look', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
-      expect: ['You come into the', 'The map (you face', 'You climb the', '% echo $status'],
+        ['look', 'd', 'look', 'map', 'sw', 'look', 'map', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['You come into the', 'A passage leads off', 'The map (you face', '% echo $status'],
       sdcard: true
     },
     {

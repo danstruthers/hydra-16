@@ -10,6 +10,7 @@ extern unsigned char mx, my;
 unsigned char __fastcall__ join (unsigned char a, unsigned char b);    /* (Stubs: overlay 2's o_join ...) */
 unsigned char crossings (void);
 void __fastcall__ grow_built (struct chunk* c, const struct edges* e, unsigned long seed);  /* (Overlay 1's) */
+void __fastcall__ grow_caves (struct chunk* c, const struct edges* e, unsigned long seed);  /* (Overlay 3's) */
 
 /* changes.c: what's changed, and what's been seen, kept */
 void changes_init (void);

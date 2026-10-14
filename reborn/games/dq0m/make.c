@@ -195,8 +195,12 @@ unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned c
     c->sn = sn;
     c->cx = cx;
     c->cy = cy;
-    if (e.x1 != 0xFF) {
-        grow_built (c, &e, s->seed ^ ((unsigned long) cx << 16 | cy) * 40503UL);
+    if (e.x1 != 0xFF) {                         /* (By its stratum's style) */
+        if (s->style == ST_NATURAL) {
+            grow_caves (c, &e, s->seed ^ ((unsigned long) cx << 16 | cy) * 40503UL);
+        } else {
+            grow_built (c, &e, s->seed ^ ((unsigned long) cx << 16 | cy) * 40503UL);
+        }
     }
     changes_over (c, x, y);
     seen_over (c);

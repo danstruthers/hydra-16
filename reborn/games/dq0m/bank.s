@@ -149,3 +149,4 @@ ovl_out:
             OVFN        grow_built, 1
             OVFN        join, 2
             OVFN        crossings, 2
+            OVFN        grow_caves, 3

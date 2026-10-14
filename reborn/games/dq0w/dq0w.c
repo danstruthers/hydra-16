@@ -165,6 +165,8 @@ static unsigned char __fastcall__ can (unsigned char x, unsigned char y, unsigne
 }
 
 /* From (fx, fy) to (tx, ty) within room r's floor and walls (chunk squares): its time, or 0xFFFFFFFF (no way) */
+static unsigned char last_d;                    /* (cross_room's way into its last square) */
+
 static unsigned long __fastcall__ cross_room (unsigned char r, unsigned char fx, unsigned char fy, unsigned char tx,
     unsigned char ty, unsigned char dark)
 {
@@ -198,6 +200,7 @@ static unsigned long __fastcall__ cross_room (unsigned char r, unsigned char fx,
     if (x >= w || y >= h || bfrom[y][x] == 0xFF) {
         return 0xFFFFFFFFUL;
     }
+    last_d = bfrom[y][x];                       /* (The way it came into the square: a mouth's way on) */
     while ((d = bfrom[y][x]) != 4) {           /* (Back along the way, its steps' times) */
         nx = x - dir_x[d];
         ny = y - dir_y[d];
@@ -248,6 +251,20 @@ static void __fastcall__ across (unsigned char h, unsigned char r, unsigned char
         st = TILE (*p) == T_STEPS;
         z = C->elev[cy_][cx_];
         if (room_of (sn_, nx, ny) != r || !(p = at (sn_, nx, ny)) || !T_PASS (*p)) {
+            if (!(h & 1) && p && (TILE (*p) == T_CORR || TILE (*p) == T_DOOR) && step_ok (sn_, mx, my, h >> 1)) {
+                hub_map (0);                    /* (A passage's mouth: on along it, to the next place) */
+                move.on = 1;
+                move.how = A_WALKED;
+                move.dir = h >> 1;
+                move.sn = sn_;
+                move.x = mx;
+                move.y = my;
+                t += walk (h >> 1, 0, slow);
+                move.face = H_OF (mface);
+                hub_map (0);
+                busy (t > 60000UL ? 60000U : (unsigned) t);
+                return;
+            }
             break;
         }
         dz = C->elev[cy_][cx_] - z;
@@ -412,9 +429,30 @@ static void __fastcall__ go (unsigned char h)
                 }
             }
         }
-        if (best == 0xFF) {                     /* (No door that way: across the room) */
-            across (h, r, slow);
-            return;
+        if (best == 0xFF) {                     /* (No door that way: a passage's mouth that way, the quickest) */
+            for (by = C->room[r].y ? C->room[r].y - 1 : 0; by <= C->room[r].y + C->room[r].h && by < CW; ++by) {
+                for (bx = C->room[r].x ? C->room[r].x - 1 : 0; bx <= C->room[r].x + C->room[r].w && bx < CW; ++bx) {
+                    if (TILE (C->tile[by][bx]) != T_CORR || bearing ((int) bx - wx, (int) by - wy) != h ||
+                        (t = cross_room (r, wx, wy, bx, by, slow)) >= bt) {
+                        continue;
+                    }
+                    bt = t;
+                    best = last_d;              /* (The way on from it) */
+                    k = bx;
+                    d = by;
+                }
+            }
+            if (best == 0xFF) {                 /* (None: across the room) */
+                across (h, r, slow);
+                return;
+            }
+            mx = ox + k - dir_x[best];          /* (From the room's square before it, walked on) */
+            my = oy + d - dir_y[best];
+            d = best;
+            move.x = mx;
+            move.y = my;
+            t = bt + walk (d, 0, slow);
+            goto set_out;
         }
         mx = ox + bx;
         my = oy + by;
@@ -431,6 +469,7 @@ static void __fastcall__ go (unsigned char h)
         move.y = my;
         t = walk (d, 0, slow);
     }
+set_out:
     hub_map (0);
     move.on = 1;
     move.how = A_WALKED;
@@ -478,7 +517,7 @@ static void __fastcall__ grow_below (unsigned char n)
     memset (b, 0, sizeof *b);
     b->n = n + 1;
     b->seed = s->seed * 69069UL + 1;
-    b->style = ST_BUILT;
+    b->style = random (2) ? ST_NATURAL : ST_BUILT;    /* (A stand-in for the theme's say) */
     b->age = 1 + random (40);
     b->name = random (8);
     b->datum = s->datum - 30 - random (40);
