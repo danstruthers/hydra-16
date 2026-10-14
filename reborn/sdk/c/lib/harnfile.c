@@ -22,14 +22,14 @@
 #include <unistd.h>
 #include <harn.h>
 
-static const char* const keys[HARN_NATTRS] = {
+static const char* const attrkeys[HARN_NATTRS] = {
     "sp", "sx", "bd", "ss", "ht", "fr", "owt", "wt", "cml", "str", "sta", "dex", "agl", "eye", "hrg", "sml", "voi",
     "int", "aur", "wil", "mor", "dty", "pty", "end"
 };
 
 const char* __fastcall__ harn_attr_key (unsigned char a)
 {
-    return a < HARN_NATTRS ? keys[a] : "";
+    return a < HARN_NATTRS ? attrkeys[a] : "";
 }
 
 /* ---- Writing */
@@ -83,7 +83,7 @@ int __fastcall__ harn_write (int fd, const harn_char* c)
     put ("harn 1\n");
     for (k = 0; k < HARN_END; ++k) {
         put ("att ");
-        put (keys[k]);
+        put (attrkeys[k]);
         num (c->att[k]);
         put ("\n");
     }
@@ -203,8 +203,8 @@ static void __fastcall__ line (harn_char* c, char* l, void (*other) (char* line)
             ++rest;
         }
         for (k = 0; k < HARN_END; ++k) {
-            n = strlen (keys[k]);
-            if (!strncmp (rest, keys[k], n) && rest[n] == ' ') {
+            n = strlen (attrkeys[k]);
+            if (!strncmp (rest, attrkeys[k], n) && rest[n] == ' ') {
                 c->att[k] = atoi (rest + n);
                 return;
             }

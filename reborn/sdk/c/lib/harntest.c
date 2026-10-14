@@ -6,6 +6,12 @@
 
 #include <harn.h>
 
+/* (harn.dl's roll-3d6: here, as the tests use it, so a program that tests doesn't bring harngen.c with it) */
+int roll_3d6 (void)
+{
+    return dice (3, 6);
+}
+
 static unsigned char last;                      /* The last test's d100 */
 
 /* d100 at or under the EML (kept from 5 to 95) succeeds; a roll ending in 0 or 5 is critical */

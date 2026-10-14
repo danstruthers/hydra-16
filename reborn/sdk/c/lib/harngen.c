@@ -10,11 +10,6 @@
 #include <stddef.h>
 #include <harn.h>
 
-int roll_3d6 (void)
-{
-    return dice (3, 6);
-}
-
 /* A value from a d100 table: the first of n upper bounds the roll doesn't pass */
 static unsigned char __fastcall__ d100_table (const unsigned char* upto, unsigned char n, int roll)
 {

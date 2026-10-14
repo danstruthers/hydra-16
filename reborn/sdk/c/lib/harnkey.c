@@ -5,7 +5,7 @@
 
 #include <harn.h>
 
-static const char* const keys[HARN_NSKILLS] = {
+static const char* const skillkeys[HARN_NSKILLS] = {
     "acr",
     "cli",
     "cnd",
@@ -101,5 +101,5 @@ static const char* const keys[HARN_NSKILLS] = {
 
 const char* __fastcall__ harn_skill_key (unsigned char sk)
 {
-    return sk < HARN_NSKILLS ? keys[sk] : "";
+    return sk < HARN_NSKILLS ? skillkeys[sk] : "";
 }

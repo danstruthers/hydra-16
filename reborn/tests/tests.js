@@ -273,11 +273,12 @@ const TOOL_LINES = [
     "mount -c '#f' /ram r/2",
     "bind -c '#fr/2/bin' /bin",
     "bind -a '#fs/bin' /bin",
-    "bind -a '#f/0/bin' /bin",               // (The card has a bin: hmchar's)
+    "bind -a '#f/0/bin' /bin",               // (The card has a bin: hmchar's, dq0's)
     "bind -a '#fx/bin' /bin",
     "bind -a '#m/bin' /bin",
     "bind -c '#fr/2/lib' /lib",
     "bind -a '#fs/lib' /lib",
+    "bind -a '#f/0/lib' /lib",               // (And a lib: dq0's)
     "bind -a '#fx/lib' /lib",
     "bind '#P' /pc",
   ].join('\n')],
@@ -2174,6 +2175,19 @@ module.exports = {
         return [...C_LINES.map(l => '% ' + l[0] + '\n' + (l[2] ? l[1] : (l[1] === null ? '' : l[1] + '\n') + '%')),
           '\nctest: 0 failed\n%', 'codes:\x1b[27m 61 62 80 1B\nended at 18,2\n%', '% echo $status\ninterrupt\n%'];
       },
+      sdcard: true
+    },
+    {
+      name: 'dq0', what: 'Dingus Quest Zero (games/dq0) at rc, its turns pace: a character from hmchar\'s file (-c), commands typed ahead (each waits for its prompt), quit; then the game running hmchar itself, in its window, answered as a player would, and the character it made read back',
+      init: 't_rc', cycles: 400e6,
+      // (\u0101: wait for a prompt, the game's "> " too; \u0100: wait a while, for hmchar's questions)
+      machine: { input: '\u0101echo start\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -c /ram/c.hm\r' +
+        ['wait', 'help', 'foo', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') +
+        '\u0101dq0 -p t -s 7\r\u0100\u0100k\r\u01002\r\u0100bow\r\u0100spear\r\u0100sword\r\u0100\r\u0100Dorn\r' +
+        '\u0101sheet\r\u0101quit\r\u0101echo done\r' },
+      expect: ['Tordan, Hunter/Trapper, enters the dungeon.', '> wait', 'Time passes.', 'Commands: sheet (the character)',
+        "I don't know how to foo.", '% echo $status', 'Keep this character, or roll again (k or r)?', 'Written to /ram/dq0.hm',
+        'Dorn, Hunter/Trapper, enters the dungeon.', 'Dorn, Human Female, Hunter/Trapper; born 10 Ilvin (Skorus).', '% echo done\ndone'],
       sdcard: true
     },
     {
