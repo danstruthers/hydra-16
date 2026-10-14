@@ -44,27 +44,46 @@ areas, its openings), three to an 8K bank.
 
 The chunks are kept in the **world task's own RAM banks** (its 384K on a board with three modules; the UI never
 reads them, so they needn't be shared): those near the character, a few dozen.  A chunk that goes out of the cache
-is dropped; what the character changed there (what it's seen, doors opened, things moved, rock dug) is kept as a
-small record and laid over the chunk when it's made again.  The records go to the SD card if RAM runs short (a file
-of the game's own, beside the save).
+is dropped; what changed there (what the character's seen, doors opened, things moved, rock dug) is kept as a small
+record and laid over the chunk when it's made again.
 
-### A stratum's plan: the coarse layer
+**The save** is on the SD card the player chooses (the user: "the games should write to the SD card of choice to
+save the dungeon, game state, etc."): a folder of the game's (asked for as a new game starts, or given: dq0 -d
+/sd/1/dq0), holding the game's state (the clock, the character, the referee's sheets), each stratum's plan and
+populations, and the chunks' records, written as they change (so a game quit is saved, and a game whose machine
+is switched off loses little).  Death is still permanent: the save goes with it.
 
-So that chunks made apart still fit together, a stratum has a **coarse layer**, worked out (not stored square by
-square) from its seed:
+### A stratum's plan: grown whole, then detailed as explored
 
-- **the lie of the rock:** an elevation at each chunk's corners (smooth noise from the seed, its roughness the
-  style's and the age's), so a chunk's floors start from a slope that its neighbours share;
-- **the crossings:** what passes each chunk edge (a passage, a cave mouth, a river), where along it and at what
-  height, from the edge's own hash, so both chunks it joins agree without the other made;
-- **features bigger than a chunk:** great halls, chasms, lakes, rivers: a short list kept for the stratum
-  (rectangles and lines, each with its elevations), stamped into each chunk they cross before the rest is grown.
+The user (2026-10-14): "Each stratum should be mapped out/grown in a general sense at once, then detail added as
+explored.  Initial denizen populations and such should be determined at this time so encounters do not feel
+contrived, since the denizens of the dungeon are added based on the theme and style."
 
-**Water** is worked out on the coarse layer when the stratum is made: sources (where the hash puts them, high
-ground) traced downhill, chunk by chunk, to where the ground rises all round, and there a lake filled until it
-spills over its lowest rim, and on from the spill; a waterfall where the way down falls more steeply than water
-runs.  Each river is kept as a line of points (its course, its width, its depth, its elevation), each lake as a
-basin and a level; a chunk carves its piece of them (the channel, the banks, the falls, the shore).
+So when the character first comes to a stratum, the whole of it is grown in outline, its **plan**, kept (in the
+world's banks, and in the save on the card): a grid of **regions**, each 8 by 8 chunks (1,280 feet), grown by the
+style's rules over the whole stratum at once:
+
+- **each region's** kind (a hall complex, a cave system, a gallery of tombs, a flooded hollow, solid rock), its
+  elevations (the lie of the rock at its corners: a chunk's floors start from a slope its neighbours share), its
+  age's marks (collapsed, flooded, abandoned);
+- **the ways between regions:** where a passage, a cave or a river crosses each region's edges, at what height, so the
+  regions (and so the chunks) made apart fit together; within a region, the same for its chunks' edges, worked out
+  when the region is first detailed;
+- **features bigger than a chunk:** great halls, chasms, lakes, rivers: a list for the stratum (rectangles and lines,
+  each with its elevations), stamped into each chunk they cross before the rest is grown;
+- **water**, traced over the regions as the plan is grown: sources (high ground) followed downhill to where the
+  ground rises all round, there a lake filled until it spills over its lowest rim, and on from the spill; a
+  waterfall where the way down falls more steeply than water runs.  Each river is a line of points (its course,
+  width, depth, elevation), each lake a basin and a level; a chunk carves its piece (the channel, the banks, the
+  falls, the shore);
+- **the populations** (DENIZENS.md): the theme's factions and animals for the stratum's style, placed then, in the
+  regions that suit them: their lairs, their numbers, their territories and their ways about (patrols, hunting
+  grounds, water they go to), each denizen a record from the start, so that what the character meets was there
+  before it came, and goes on living there whether it's met or not;
+- **the puzzle's pieces** this stratum holds, where the theme says they may lie.
+
+A 5-mile stratum is about 440 regions: a few K of plan.  **Detail** comes as the character explores: a region's
+chunks' crossings when it first comes near the region, and each chunk's squares when it comes near the chunk.
 
 ### Growing a chunk: the style's rules
 
@@ -115,10 +134,12 @@ into the hub; a floor's height against the character's marked (1-9 tens of feet 
 
 ## Steps
 
-1. **Chunks**: the chunk store and cache in the world's banks, coarse elevations and crossings, the purpose-built
-   grower within a chunk (rooms, zones, ceilings, sloping passages, steps), small strata (one chunk, bounds smaller
-   than it), stairways and ladders between strata; movement by the referee's rate and the slopes; the perception
-   record and the words; the map's window and heights.
+1. **Plan and chunks**: a stratum's plan grown whole (its regions, the ways between them, its elevations), the
+   chunk store and cache in the world's banks, the purpose-built grower within a chunk (rooms, zones, ceilings,
+   sloping passages, steps), small strata (one chunk, bounds smaller than it), stairways and ladders between
+   strata; the save folder on a card; movement by the referee's rate and the slopes; the perception record and the
+   words; the map's window and heights.  (The populations' records with step 4's denizens, placed when the plan is
+   grown.)
 2. **Climbing**: ledges, windows, shafts, ladders, falls (the referee's tests and harm).
 3. **Natural caves** and the **water** (rivers, falls, lakes); **mines**; **age**.
 4. Then events, the denizens and the rest of the game's plan.

@@ -32,6 +32,19 @@ A theme is data (a file of the game's, one of several, picked by the game's seed
 - **its animals:** the beasts, which Animalcraft can calm, befriend or drive off, and none of the persuasive skills
   can.
 
+### Populations
+
+The user (2026-10-14): "Initial denizen populations and such should be determined at this time [as a stratum's plan
+is grown] so encounters do not feel contrived, since the denizens of the dungeon are added based on the theme and
+style."  So nothing is made up as the character turns a corner.  When a stratum's plan is grown (DUNGEON.md), the
+theme's factions and animals for its style are placed in the regions that suit them: a lair, its numbers and kinds,
+its territory, its ways about (patrols, hunting grounds, the water it goes to), and each denizen is a record from
+then on (its kind, its faction, its attitude, where it is, what it's doing, its state: the referee's sheet once it
+has one).  The denizens' task moves them all, but coarsely (a region at a time, by the hour) where the character
+isn't, and square by square where it is; so a patrol met at a crossroads was walking its round, the rats in the
+cellar were there all along, and a lair cleared stays cleared (or is moved into by something else, as the theme's
+rules say).  Each stratum's populations go in its save with its plan.
+
 ### Attitudes
 
 Every denizen has an **attitude** to the character, on one scale whatever the ruleset: **hostile** (attacks on
