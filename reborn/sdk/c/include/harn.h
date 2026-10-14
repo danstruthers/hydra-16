@@ -396,6 +396,14 @@ unsigned char __fastcall__ harn_best_aspect (const harn_weapon* w);   /* The asp
 unsigned char __fastcall__ harn_wound (harn_char* c, unsigned char loc, unsigned char aspect, int impact);
 unsigned char __fastcall__ harn_kill_roll (const harn_char* c, unsigned char n);   /* n d6 over END: 1 (dead) */
 
+/* ---- Files (harnfile.c): a character as text, a line a thing ("att str 12", "ml cli 36" ...: harnfile.c has the
+** format); lines it doesn't know are a program's own (harn_read gives each to other; harn_write_line writes one) */
+
+int __fastcall__ harn_write (int fd, const harn_char* c);       /* 0 */
+void __fastcall__ harn_write_line (int fd, const char* line);   /* A line of the program's own ("name Dorn") */
+int __fastcall__ harn_read (int fd, harn_char* c, void (*other) (char* line));    /* 0, or -1: nothing read */
+const char* __fastcall__ harn_attr_key (unsigned char a);       /* harn.dl's key: "sp" ... "end" */
+
 /* ---- Healing (Physician 2-4) */
 
 unsigned char __fastcall__ harn_treat (harn_char* c, unsigned char i, int eml);   /* A treatment of injury i at

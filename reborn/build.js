@@ -147,11 +147,12 @@ function clib() {
 }
 
 // A C program: dir's .c and .s files, linked with the C library and sdk/c/hydra.cfg into out (a RAM program; its
-// map and labels in objdir).  OUT: its image
+// map and labels in objdir); or with the folder's own NAME.cfg, if it has one (a game's, with its overlays: files
+// beside out that the cfg names).  OUT: its image
 function cprog(dir, objdir, out, extra) {
-  const name = path.basename(out).replace(/\.hyx$/, '');
+  const name = path.basename(out).replace(/\.hyx$/, ''), own = path.join(dir, path.basename(dir) + '.cfg');
   const objs = compileC(csources(dir), objdir, extra);
-  run(LD65, ['-C', at('sdk', 'c', 'hydra.cfg'), '-o', out, '-m', path.join(objdir, name + '.map'), '-Ln', path.join(objdir, name + '.lbl'),
+  run(LD65, ['-C', fs.existsSync(own) ? own : at('sdk', 'c', 'hydra.cfg'), '-o', out, '-m', path.join(objdir, name + '.map'), '-Ln', path.join(objdir, name + '.lbl'),
     ...objs, at('obj', 'sdk', 'c', 'hydra.lib')]);
   const data = fs.readFileSync(out);
   check.checkModule(name, data, 0x0800);
@@ -218,7 +219,7 @@ function build(opt = {}) {
   clib();
   const ram = (dir, objdir) => isC(dir) ? cprog(dir, path.join(objdir, path.basename(dir)), path.join(objdir, path.basename(dir) + '.hyx'))
     : buildModule(dir, objdir, defines, true);
-  const modules = {}, tests = {}, progs = {}, programs = {}, samples = {};
+  const modules = {}, tests = {}, progs = {}, programs = {}, samples = {}, games = {};
   mkdir(at('obj', 'modules'));                          // The base's modules (kdev, ser, wozmon) as HydraOS's too: in
   for (const [n, data] of Object.entries(baseBuilt.modules)) {  //   obj/modules with its own, for the tools that read them there
     modules[n] = data;
@@ -244,6 +245,12 @@ function build(opt = {}) {
   }
   for (const d of fs.readdirSync(at('sdk', 'c', 'samples'), { withFileTypes: true }).filter(d => d.isDirectory()))
     samples['c/' + d.name] = ram(at('sdk', 'c', 'samples', d.name), at('obj', 'samples', 'c'));
+  if (fs.existsSync(at('games')))                       // The games (games/NAME: on the SD card), each a C program,
+    for (const d of fs.readdirSync(at('games'), { withFileTypes: true }).filter(d => d.isDirectory())) {   //   and its make.js's
+      games[d.name] = ram(at('games', d.name), at('obj', 'games'));                                         //   data files, if
+      const make = at('games', d.name, 'make.js');                                                          //   it has one
+      if (fs.existsSync(make)) require(make).build({ dir: at('games', d.name), objdir: at('obj', 'games', d.name), say });
+    }
   sdk();
   const card = sdcard.build(ROOT);                          // The SD card's image (bin/sdcard.img): the samples, the songs, the benchmarks
   forthlib.build({ root: ROOT, modules, assemble: (files, od, inc) => assemble(files, od, inc, defines), ld65: args => run(LD65, args) });
@@ -274,7 +281,7 @@ function build(opt = {}) {
   for (let k = 0; k < chips; k++) fs.writeFileSync(at('bin', 'prom' + k + '.bin'), image.subarray(k * romimg.CHIP, (k + 1) * romimg.CHIP));
   fs.writeFileSync(at('obj', 'build.json'), JSON.stringify({ clock: opt.clock || 1, acia: opt.acia || 'rockwell' }) + '\n');
 
-  const report = budget.report(base.ROOT, { modules, tests, progs, programs, samples, entries });
+  const report = budget.report(base.ROOT, { modules, tests, progs, programs, samples, games, entries });
   say(report.text);
   if (disk) {
     const bytes = disk.files.reduce((n, f) => n + f.size, 0), used = disk.volume.length / 512, first = disk.start / 32;
@@ -284,7 +291,7 @@ function build(opt = {}) {
   say('SD card: ' + card.files.length + ' files, ' + card.bytes + ' bytes (the samples, the songs, the benchmarks): bin/sdcard.img, ' + card.size / 1048576 + ' MB');
   say('Paged ROM: ' + banks + ' banks of 256, ' + chips + ' chip' + (chips === 1 ? '' : 's') + ' of 512K: ' +
     [...Array(chips)].map((_, k) => 'bin/prom' + k + '.bin').join(', '));
-  return { modules, tests, progs, programs, samples, manifest, report };
+  return { modules, tests, progs, programs, samples, games, manifest, report };
 }
 
 if (require.main === module) {

@@ -273,6 +273,7 @@ const TOOL_LINES = [
     "mount -c '#f' /ram r/2",
     "bind -c '#fr/2/bin' /bin",
     "bind -a '#fs/bin' /bin",
+    "bind -a '#f/0/bin' /bin",               // (The card has a bin: hmchar's)
     "bind -a '#fx/bin' /bin",
     "bind -a '#m/bin' /bin",
     "bind -c '#fr/2/lib' /lib",
@@ -377,6 +378,8 @@ const C_LINES = [
     "D&D attributes: 14 (5 5 4 2) 14 (6 4 4 4) 13 (6 5 2 1) 13 (5 4 4 3) 12 (5 4 3 1) 9 (4 3 2 1)",
   ].join('\n')],
   ["cd /ram; /sd/0/sample/c/ctest a 'b c'","ok - arguments",true],
+  ["hmchar -q -s 5 -o /ram/t.hm | head -2", "\nTordan, Human Male, born 28 Peonu (Aralius); Feudal Serf, Hunter/Trapper"],
+  ["grep -c '^ml ' /ram/t.hm; grep 'trk|bow|occupation|^fam' /ram/t.hm", "24\nfam 2 1 1 4 3 3 1\nml bow 36\nml trk 80\noccupation Hunter/Trapper"],
   ["for(w in pear apple fig Apple banana 10 9 07) echo $w >>/ram/s; sort /ram/s", [
     "07",
     "10",
@@ -2160,7 +2163,7 @@ module.exports = {
     },
     {
       name: 'c', what: 'the C target (cc65): its samples at rc, the library\'s test (ctest), conio\'s raw keys (an Escape alone too; and raw ended with the program)',
-      init: 't_rc', cycles: 150e6,
+      init: 't_rc', cycles: 220e6,
       // (Each line typed at its prompt, as the tools test's.  Then keys: three keys and q; and again, ended by Ctrl-C,
       // its window cooked again for rc)
       get machine() {

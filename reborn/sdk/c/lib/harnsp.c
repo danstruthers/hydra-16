@@ -1,103 +1,9 @@
 /*
-** harnsp.c - harn.h's skills' keys (harn.dl's: "acr" ...) and specialties (the Skill Data table's), each skill's
-** in its order; a program's own skills have none.
+** harnsp.c - harn.h's skills' specialties (the Skill Data table's), each skill's in its order; a program's own
+** skills have none.  (harnkey.c has their keys.)
 */
 
 #include <harn.h>
-
-static const char* const keys[HARN_NSKILLS] = {
-    "acr",
-    "cli",
-    "cnd",
-    "dan",
-    "jmp",
-    "leg",
-    "ski",
-    "stl",
-    "swi",
-    "thr",
-    "act",
-    "awa",
-    "ntr",
-    "lov",
-    "men",
-    "mus",
-    "ora",
-    "rhe",
-    "sng",
-    "lan",
-    "scr",
-    "ragr",
-    "rhal",
-    "rilv",
-    "rlar",
-    "rmor",
-    "rnav",
-    "rpeo",
-    "rsar",
-    "rsav",
-    "rsie",
-    "ini",
-    "una",
-    "rid",
-    "axe",
-    "blo",
-    "bow",
-    "clu",
-    "dag",
-    "fla",
-    "net",
-    "pol",
-    "shd",
-    "slg",
-    "spr",
-    "swd",
-    "whp",
-    "dge",
-    "agr",
-    "alc",
-    "ani",
-    "ast",
-    "bre",
-    "cer",
-    "coo",
-    "dra",
-    "emb",
-    "eng",
-    "fis",
-    "fle",
-    "fol",
-    "for",
-    "gla",
-    "hrl",
-    "hrb",
-    "hid",
-    "hun",
-    "ink",
-    "jew",
-    "law",
-    "lck",
-    "lor",
-    "msn",
-    "mat",
-    "met",
-    "mil",
-    "min",
-    "prf",
-    "phy",
-    "pil",
-    "run",
-    "sea",
-    "shw",
-    "sur",
-    "tar",
-    "tex",
-    "tim",
-    "trk",
-    "wpn",
-    "wea",
-    "woo",
-};
 
 static const char* const specialties[HARN_NSKILLS] = {
     "trapeze, tumbling, vaulting",
@@ -192,11 +98,6 @@ static const char* const specialties[HARN_NSKILLS] = {
     "climates",
     "cabinetry, carpentry, cooper, carving, wheelwright",
 };
-
-const char* __fastcall__ harn_skill_key (unsigned char sk)
-{
-    return sk < HARN_NSKILLS ? keys[sk] : "";
-}
 
 const char* __fastcall__ harn_skill_sp (unsigned char sk)
 {
