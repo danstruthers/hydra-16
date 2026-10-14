@@ -226,7 +226,8 @@ static void sheet (void)
     r->state = REQ_FREE;
 }
 
-/* ---- The save (DUNGEON.md): game.dat, the UI's (the game's state, the strata's records), beside the referee's pc.hm
+/* ---- The save (DUNGEON.md): game.dat, the UI's (the game's state, the strata's records), beside the things' items.dat
+** (dq0p's), the referee's pc.hm
 ** and the maker's changes.dat and seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
@@ -286,6 +287,7 @@ static void save_game (void)
         hub_map (0);
     }
     q->state = REQ_FREE;
+    things (IO_SAVE, "");                       /* (The things': items.dat) */
     sv.magic = SAVE_MAGIC;
     sv.version = SAVE_VER;
     sv.pace = pace;

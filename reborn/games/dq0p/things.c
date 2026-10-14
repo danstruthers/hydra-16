@@ -3,11 +3,14 @@
 ** (a stand-in for the theme's data); the items' records kept, moved as the UI asks (the character's kit, a thing
 ** taken up, put down), listed (what the character carries, worded into the hub's text for the UI to say); and the
 ** things the character sees, named in what it perceives (sight.c).  The item store's free records are taken under
-** the hub's lock (the maker puts chunks' things down too).
+** the hub's lock (the maker puts chunks' things down too).  Kept with the game (dq0 -d): the store's banks as they
+** are, the save folder's items.dat.
 */
 
+#include <fcntl.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <hydra.h>
 #include "../dq0/hub.h"
 #include "../dq0w/world.h"
@@ -44,6 +47,44 @@ static const struct kind kinds[] = {
 };
 #define NK      (sizeof kinds / sizeof kinds[0])
 
+/* ---- The store kept (back: read again), the save folder's items.dat: its banks a piece at a time, through main
+** RAM (the window's only the task's own: the kernel's copies want the task's memory) */
+static unsigned char piece[256];
+
+static void __fastcall__ keep (unsigned char back)
+{
+    static char p[48];
+    unsigned char b;
+    unsigned off;
+    int fd;
+
+    hub_map (0);
+    if (!HUB->savedir[0]) {
+        return;
+    }
+    strcpy (p, HUB->savedir);
+    strcat (p, "/items.dat");
+    if ((fd = back ? open (p, O_RDONLY) : open (p, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0) {
+        return;
+    }
+    for (b = 0; b < ITEM_BANKS; ++b) {
+        for (off = 0; off < 0x2000; off += sizeof piece) {
+            if (back) {
+                if (read (fd, piece, sizeof piece) != sizeof piece) {
+                    memset (piece, 0, sizeof piece);
+                }
+                hub_map (CAT_BANK + 1 + b);
+                memcpy ((char*) 0x8000 + off, piece, sizeof piece);
+            } else {
+                hub_map (CAT_BANK + 1 + b);
+                memcpy (piece, (char*) 0x8000 + off, sizeof piece);
+                write (fd, piece, sizeof piece);
+            }
+        }
+    }
+    close (fd);
+}
+
 void things_init (void)
 {
     unsigned char b;
@@ -51,12 +92,13 @@ void things_init (void)
     hub_map (CAT_BANK);
     memset ((void*) 0x8000, 0, NKINDS * sizeof (struct kind));
     memcpy ((void*) 0x8000, kinds, sizeof kinds);
+    for (b = 0; b < ITEM_BANKS; ++b) {          /* (The store empty; a game carried on, its kept) */
+        hub_map (CAT_BANK + 1 + b);
+        memset ((void*) 0x8000, 0, 0x2000);
+    }
     hub_map (0);
-    if (!HUB->resume) {                         /* (A new game: the store empty) */
-        for (b = 0; b < ITEM_BANKS; ++b) {
-            hub_map (CAT_BANK + 1 + b);
-            memset ((void*) 0x8000, 0, 0x2000);
-        }
+    if (HUB->resume) {
+        keep (1);
     }
 }
 
@@ -414,6 +456,9 @@ unsigned char things_serve (void)
         break;
     case IO_LIST:
         list ();
+        break;
+    case IO_SAVE:
+        keep (0);
         break;
     }
     hub_map (0);
