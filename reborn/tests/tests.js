@@ -2298,6 +2298,14 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0save', what: 'Dingus Quest Zero kept (dq0 -d: the save on a card, here /ram): down a stairway, quit (kept as it ends), the folder listed (the UI game, the referee sheet, the maker records), then the game carried on: in the stratum below, where it stood',
+      init: 't_rc', cycles: 900e6,
+      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/kept\r' +
+        ['d', 'quit', 'ls /ram/kept', 'dq0 -d /ram/kept', 'look', 'map', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['You come into the', 'changes.dat', 'game.dat', 'pc.hm', 'seen.dat', 'takes up where they left off.', 'You stand by a stairway leading up.', 'The map (you face', '% echo $status'],
+      sdcard: true
+    },
+    {
       name: 'cnum', what: 'the numbers in C and assembly: num.h\'s test (ntest: the number libraries from C, printf\'s and scanf\'s %N and %{base}), calc at rc (its operators, functions, bases, digits, errors, its input a line at a time, long results), the assembly sample nsum (numbers.inc, numlib.s)',
       init: 't_rc', cycles: 150e6,
       // (Each line typed at its prompt, as the C test's)

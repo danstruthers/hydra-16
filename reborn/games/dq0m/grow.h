@@ -31,6 +31,8 @@ void __fastcall__ grow_caves (struct chunk* c, const struct edges* e, unsigned l
 
 /* changes.c: what's changed, and what's been seen, kept */
 void changes_init (void);
+int changes_save (void);                        /* The records into the save's folder: 0, or -1 */
+int changes_restore (void);                     /* And back */
 void __fastcall__ change_keep (unsigned char sn, unsigned x, unsigned y, unsigned char tile, signed char elev,
     unsigned char link);
 void __fastcall__ changes_over (struct chunk* k, unsigned x, unsigned y);

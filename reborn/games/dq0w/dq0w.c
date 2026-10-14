@@ -694,7 +694,7 @@ static void arrive (void)
     my = move.y;
     if (how == A_WALKED) {
         walk (move.dir, 1, dark ());
-    } else if (how != A_CROSSED && how != A_WENT_TO) {
+    } else if (how != A_CROSSED && how != A_WENT_TO && how != A_RESUMED) {
         move.face = toward_middle ();
     }
     if ((r = room_of (sn_, mx, my)) != 0xFF) {
@@ -721,6 +721,16 @@ static void begin (void)
     unsigned long seed;
 
     hub_map (0);
+    if (HUB->resume) {                          /* (Carried on: the save's strata, the maker's records back) */
+        move.how = A_RESUMED;
+        move.sn = HUB->pc_stratum;
+        move.x = HUB->pc_x;
+        move.y = HUB->pc_y;
+        move.face = HUB->pc_face;
+        sync_strata ();
+        ask_maker (M_RESTORE, 0, 0, 0);
+        return;
+    }
     s = &HUB->strata[0];
     seed = HUB->seed;
     rseed (seed ^ 0x57524C44UL);
@@ -1256,7 +1266,9 @@ int main (int argc, char* argv[])
     }
     chunks_init (ASK_WORLD);
     hub_map (0);
-    HUB->pc_light = TORCH;                      /* (A torch lit: items come later) */
+    if (!HUB->resume) {
+        HUB->pc_light = TORCH;                  /* (A torch lit: items come later) */
+    }
     stept = HUB->pcsum.step ? HUB->pcsum.step : 10;
     begin ();
     arrive ();

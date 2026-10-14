@@ -202,6 +202,27 @@ static void __fastcall__ load_pc (struct req* r)
     status ();
 }
 
+/* The character's sheet written (r's text a path): 0, or 1 */
+static void __fastcall__ save_pc (struct req* r)
+{
+    static char line[48];
+    int fd;
+
+    r->result = 1;
+    if ((fd = open (r->text, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0) {
+        return;
+    }
+    harn_write (fd, &pc);
+    strcpy (line, "name ");
+    strcat (line, name);
+    harn_write_line (fd, line);
+    strcpy (line, "occupation ");
+    strcat (line, calling);
+    harn_write_line (fd, line);
+    close (fd);
+    r->result = 0;
+}
+
 /* ---- The sheet */
 
 static const unsigned char shown[] = {
@@ -323,6 +344,9 @@ static void __fastcall__ answer (struct req* r)
         break;
     case RS_EQUIP:
         equip (r->text, r->a);
+        break;
+    case RS_SAVE:                               /* (The sheet into the save: hmchar's format, its own lines) */
+        save_pc (r);
         break;
     case RS_DESCRIBE:
         if (r->b == 1) {

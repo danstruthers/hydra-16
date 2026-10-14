@@ -6,7 +6,9 @@
 ** step's: these are what it will write.)
 */
 
+#include <fcntl.h>
 #include <string.h>
+#include <unistd.h>
 #include <hydra.h>
 #include "../dq0/hub.h"
 #include "../dq0w/world.h"
@@ -199,4 +201,85 @@ void __fastcall__ seen_over (struct chunk* k)
             break;
         }
     }
+}
+
+/* ---- The save (the hub's savedir): changes.dat (its count, then the records), seen.dat (the seen maps); the
+** squares seen in the chunks in the cache kept first (seen_keep), so nothing seen is lost.  0, or -1 */
+
+static char path[48];
+
+static int __fastcall__ open_in (const char* name, int how)
+{
+    hub_map (0);
+    strcpy (path, HUB->savedir);
+    strcat (path, "/");
+    strcat (path, name);
+    return open (path, how, 0644);
+}
+
+int changes_save (void)
+{
+    static unsigned char b[256];
+    unsigned i, n;
+    unsigned char k;
+    int fd;
+
+    for (k = 0; k < NCSLOTS; ++k) {             /* (The seen squares of what's in the cache, kept) */
+        hub_map (0);
+        if (HUB->cslot[k].used) {
+            seen_keep (k);
+        }
+    }
+    if ((fd = open_in ("changes.dat", O_WRONLY | O_CREAT | O_TRUNC)) < 0) {
+        return -1;
+    }
+    write (fd, &nch, sizeof nch);
+    for (i = 0; i < nch; i += n) {              /* (Through the main RAM: a bank isn't seen while write works) */
+        n = nch - i > sizeof b / sizeof (struct change) ? sizeof b / sizeof (struct change) : nch - i;
+        for (k = 0; k < n; ++k) {
+            memcpy (b + k * sizeof (struct change), change_at (i + k), sizeof (struct change));
+        }
+        write (fd, b, n * sizeof (struct change));
+    }
+    close (fd);
+    if ((fd = open_in ("seen.dat", O_WRONLY | O_CREAT | O_TRUNC)) < 0) {
+        return -1;
+    }
+    for (k = 0; k < SEEN_BANKS * SEEN_PER_BANK; ++k) {
+        memcpy (b, seen_at (k), sizeof (struct seen));
+        if (((struct seen*) b)->used) {
+            write (fd, b, sizeof (struct seen));
+        }
+    }
+    close (fd);
+    return 0;
+}
+
+int changes_restore (void)
+{
+    static unsigned char b[sizeof (struct seen)];
+    unsigned i;
+    unsigned char k;
+    int fd;
+
+    if ((fd = open_in ("changes.dat", O_RDONLY)) < 0) {
+        return -1;
+    }
+    nch = 0;
+    read (fd, &i, sizeof i);
+    for (; nch < i && nch < CH_BANKS * CH_PER_BANK; ++nch) {
+        if (read (fd, b, sizeof (struct change)) != sizeof (struct change)) {
+            break;
+        }
+        memcpy (change_at (nch), b, sizeof (struct change));
+    }
+    close (fd);
+    if ((fd = open_in ("seen.dat", O_RDONLY)) >= 0) {
+        for (k = 0; k < SEEN_BANKS * SEEN_PER_BANK && read (fd, b, sizeof (struct seen)) == sizeof (struct seen); ++k) {
+            memcpy (seen_at (k), b, sizeof (struct seen));
+        }
+        nexts = k % (SEEN_BANKS * SEEN_PER_BANK);
+        close (fd);
+    }
+    return 0;
 }

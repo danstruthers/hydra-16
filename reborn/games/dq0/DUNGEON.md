@@ -51,7 +51,9 @@ record and laid over the chunk when it's made again.
 save the dungeon, game state, etc."): a folder of the game's (asked for as a new game starts, or given: dq0 -d
 /sd/1/dq0), holding the game's state (the clock, the character, the referee's sheets), each stratum's plan and
 populations, and the chunks' records, written as they change (so a game quit is saved, and a game whose machine
-is switched off loses little).  Death is still permanent: the save goes with it.
+is switched off loses little).  Death is still permanent: the save goes with it.  (Built: dq0 -d FOLDER, a game
+there carried on; kept as the game ends, on save, and as the character comes into a stratum; the plans not kept,
+but grown again from their seeds, the same.)
 
 ### A stratum's plan: grown whole, then detailed as explored
 
@@ -315,7 +317,8 @@ into the hub; a floor's height against the character's marked (1-9 tens of feet 
 
 ## Steps
 
-1. **Plan and chunks**: a stratum's plan grown whole (its regions, the ways between them, its elevations), the
+1. (Done, 2026-10-14: and with it doors and hidden doors, crossing rooms, climbing ledges, digging, the parser.)
+   **Plan and chunks**: a stratum's plan grown whole (its regions, the ways between them, its elevations), the
    chunk store and cache in the world's banks, the purpose-built grower within a chunk (rooms, zones, ceilings,
    sloping passages, steps), small strata (one chunk, bounds smaller than it), stairways and ladders between
    strata; the save folder on a card; movement by the referee's rate and the slopes; the perception record and the

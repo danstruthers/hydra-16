@@ -81,6 +81,17 @@ static void __fastcall__ serve (unsigned char i)
     case M_CHUNK:
         make_chunk (q.sn, q.cx, q.cy);
         break;
+    case M_SAVE:
+        changes_save ();
+        break;
+    case M_RESTORE:                             /* (The records back, each stratum made grown again: the same plan) */
+        changes_restore ();
+        for (q.sn = 0; q.sn < MAXSTRATA; ++q.sn) {
+            if (strata[q.sn].made) {
+                plan_stratum (q.sn);
+            }
+        }
+        break;
     case M_CHANGE:                              /* (Kept, and made in the chunk if it's in the cache) */
         change_keep (q.sn, q.cx, q.cy, q.tile, q.elev, q.link);
         cached (&q);

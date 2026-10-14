@@ -72,7 +72,7 @@ enum {
     NEVENTS
 };
 
-enum { A_WALKED, A_DOWN, A_UP, A_START, A_DIGGING, A_CROSSED, A_CLIMBING, A_CLIMBED, A_WENT_TO };
+enum { A_WALKED, A_DOWN, A_UP, A_START, A_DIGGING, A_CROSSED, A_CLIMBING, A_CLIMBED, A_WENT_TO, A_RESUMED };
                                                 /* E_ARRIVE's how (A_DIGGING, A_CLIMBING: the world's own, a spell
                                                 **   of work, a round's climbing) */
 enum { N_NO_EXIT, N_SHUT, N_NO_STAIRS, N_NO_DIG };  /* E_NOWAY's why: no way that way, the way out shut, no stairs,
@@ -124,6 +124,8 @@ struct hub {                                    /* Bank 0, at $8000 */
     volatile unsigned char paused, hold, quit;  /* The UI's: paused (Escape), held (a question), ending */
     unsigned char   pace;
     unsigned char   test_start;                 /* (dq0 -T: the character begins at a way down, for the tests) */
+    unsigned char   resume;                     /* A game carried on from its save (the world restores, not begins) */
+    char            savedir[40];                /* The save's folder (dq0 -d), or "" (none) */
     unsigned long   seed;
     char            pcstatus[16];               /* The character's state, the referee's words ("UP 3") */
     volatile unsigned char pc_stratum;          /* Where the character is (the world's): its stratum, */

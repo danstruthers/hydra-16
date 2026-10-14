@@ -1,7 +1,8 @@
 /*
 ** main.c - Dingus Quest Zero: the UI's task, its start and its loop.
 **
-** dq0 [-s seed] [-p pace] [-c file] [-k tool] [-T]: the seed makes the same game each time (the dice: dice.h's rseed); the pace is
+** dq0 [-s seed] [-p pace] [-c file] [-d folder] [-k tool] [-T]: -d keeps the game in a folder (on any card), and
+** carries on the game kept there if there is one; without it nothing's kept. the seed makes the same game each time (the dice: dice.h's rseed); the pace is
 ** r, n, m (relaxed, normal, menacing: asked at the start if it isn't given) or t (turns: the world moves only as
 ** the character acts, for tests); the file a character made already (hmchar's).  Without one, hmchar is run to make
 ** one (in this window, the screen as it is outside the game while it runs), into /ram/dq0.hm.
@@ -41,6 +42,8 @@ static unsigned place;                          /* Where this task is in the wor
 static int world_task = -1, referee_task = -1, maker_task = -1, senses_task = -1;
 static unsigned char test_start;
 static const char* kit;                         /* (dq0 -k: a tool, equipped as the game starts) */
+static const char* savedir;                     /* (dq0 -d: the save's folder) */
+
 struct pc P;
 static volatile unsigned char quit;
 
@@ -222,6 +225,96 @@ static void sheet (void)
     r->state = REQ_FREE;
 }
 
+/* ---- The save (DUNGEON.md): game.dat, the UI's (the game's state, the strata's records), beside the referee's pc.hm
+** and the maker's changes.dat and seen.dat */
+
+#define SAVE_MAGIC  0x5144                      /* "DQ" */
+#define SAVE_VER    1
+static struct save {
+    unsigned        magic;
+    unsigned char   version, pace;
+    unsigned long   seed, now;
+    unsigned char   stratum, face, light;
+    unsigned        x, y;
+    struct pc       pc;
+} sv;
+static unsigned char resumed;
+
+static char* __fastcall__ save_path (const char* name)
+{
+    static char p[56];
+
+    strcpy (p, savedir);
+    strcat (p, "/");
+    strcat (p, name);
+    return p;
+}
+
+/* A game kept in the folder: its state read (0), or -1 (none) */
+static int load_save (void)
+{
+    int fd = open (save_path ("game.dat"), O_RDONLY), n;
+
+    if (fd < 0) {
+        return -1;
+    }
+    n = read (fd, &sv, sizeof sv);
+    close (fd);
+    return n == sizeof sv && sv.magic == SAVE_MAGIC && sv.version == SAVE_VER ? 0 : -1;
+}
+
+/* The game kept: the referee's sheet, the maker's records, and the game's state (the hub's header in the window) */
+static void save_game (void)
+{
+    struct req* r;
+    struct mreq* q;
+    int fd;
+
+    if (!savedir) {
+        return;
+    }
+    strcpy (HUB->slot[SLOT_UI].text, save_path ("pc.hm"));
+    r = referee (RS_SAVE, 0);
+    r->state = REQ_FREE;
+    q = &HUB->mreq[ASK_UI];                     /* (The maker's records: asked, and waited for) */
+    q->kind = M_SAVE;
+    q->state = REQ_POSTED;
+    hub_ring (T_MAKER);
+    while (q->state != REQ_DONE) {
+        hy_yield ();
+        hub_map (0);
+    }
+    q->state = REQ_FREE;
+    sv.magic = SAVE_MAGIC;
+    sv.version = SAVE_VER;
+    sv.pace = pace;
+    sv.seed = HUB->seed;
+    sv.now = hub_now ();
+    sv.stratum = HUB->pc_stratum;
+    sv.x = HUB->pc_x;
+    sv.y = HUB->pc_y;
+    sv.face = HUB->pc_face;
+    sv.light = HUB->pc_light;
+    sv.pc = P;
+    if ((fd = open (save_path ("game.dat"), O_WRONLY | O_CREAT | O_TRUNC, 0644)) >= 0) {
+        write (fd, &sv, sizeof sv);
+        write (fd, HUB->strata, sizeof HUB->strata);
+        close (fd);
+    }
+}
+
+/* The saved strata's records into the hub (after the save's header) */
+static void __fastcall__ load_strata (void)
+{
+    int fd = open (save_path ("game.dat"), O_RDONLY);
+
+    if (fd >= 0) {
+        read (fd, &sv, sizeof sv);
+        read (fd, HUB->strata, sizeof HUB->strata);
+        close (fd);
+    }
+}
+
 /* ---- The hub; the referee started, the character loaded, and the world started */
 
 static void start_world (unsigned long seed)
@@ -248,6 +341,19 @@ static void start_world (unsigned long seed)
     HUB->round = r->w1;                         /* (The ruleset's round, in tenths) */
     r->state = REQ_FREE;
     load_pc ();                                 /* (Its senses the referee's, before the world looks through them) */
+    if (savedir) {
+        strncpy (HUB->savedir, savedir, sizeof HUB->savedir - 1);
+    }
+    if (resumed) {                              /* (Carried on: where it was, and when, the strata as they were) */
+        load_strata ();
+        HUB->resume = 1;
+        HUB->now = sv.now;
+        HUB->pc_stratum = sv.stratum;
+        HUB->pc_x = sv.x;
+        HUB->pc_y = sv.y;
+        HUB->pc_face = sv.face;
+        HUB->pc_light = sv.light;
+    }
     if (kit) {
         strncpy (HUB->slot[SLOT_UI].text, kit, 11);
         HUB->slot[SLOT_UI].text[11] = 0;
@@ -351,6 +457,7 @@ static void events (void)
                         k == O_LADDER_UP ? "You climb the ladder." : k == O_SHAFT_UP ? "You climb up the shaft." :
                         "You climb the stairway.");
                     sayf (" You come into the %s.", stratum_name[HUB->sight.sname & 7]);
+                    save_game ();               /* (Kept as it comes into a stratum) */
                 }
                 if ((m.w1 & 0xFF) == A_CROSSED) {
                     msg ("You cross the room.");
@@ -599,6 +706,14 @@ static void __fastcall__ command (char* l)
     case V_QUIT:
         quit = 1;
         return;
+    case V_SAVE:
+        if (!savedir) {
+            msg ("This game isn't being kept (dq0 -d FOLDER keeps one).");
+        } else {
+            save_game ();
+            msg ("The game is kept.");
+        }
+        return;
     }
 }
 
@@ -612,6 +727,8 @@ int main (int argc, char* argv[])
     for (i = 1; i < argc; ++i) {
         if (!strcmp (argv[i], "-s") && i + 1 < argc) {
             seed = strtoul (argv[++i], 0, 10);
+        } else if (!strcmp (argv[i], "-d") && i + 1 < argc) {
+            savedir = argv[++i];                /* (The save's folder) */
         } else if (!strcmp (argv[i], "-k") && i + 1 < argc) {
             kit = argv[++i];                    /* (A tool to begin with: till the items layer, the tests') */
         } else if (!strcmp (argv[i], "-T")) {
@@ -623,8 +740,18 @@ int main (int argc, char* argv[])
             pace = argv[i][0] == 'r' ? PACE_RELAXED : argv[i][0] == 'm' ? PACE_MENACING :
                 argv[i][0] == 't' ? PACE_TURNS : PACE_NORMAL;
         } else {
-            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-k tool] [-T]");
+            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d folder] [-k tool] [-T]");
         }
+    }
+    if (savedir && !load_save ()) {             /* (A game kept there: carried on) */
+        resumed = 1;
+        seed = sv.seed;
+        if (pace == 0xFF) {
+            pace = sv.pace;
+        }
+        file = save_path ("pc.hm");
+    } else if (savedir) {
+        mkdir (savedir, 0755);                  /* (A new game: its folder) */
     }
     rseed (seed);
     signal (SIGINT, interrupted);
@@ -636,7 +763,7 @@ int main (int argc, char* argv[])
     start_world (seed);
     status ();
     blank ();
-    sayf ("%s, %s, enters the dungeon.", P.name, P.occupation);
+    sayf (resumed ? "%s, %s, takes up where they left off." : "%s, %s, enters the dungeon.", P.name, P.occupation);
     blank ();
     msg ("Type help for the commands.");
     t_done ();
@@ -666,6 +793,7 @@ int main (int argc, char* argv[])
         t_done ();
         hy_sleep_ticks (2);
     }
+    save_game ();                               /* (Kept as it ends: the game's quit, not lost) */
     stop_world ();
     t_end ();
     return 0;

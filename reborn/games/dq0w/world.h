@@ -169,9 +169,10 @@ struct mreq {
     signed char     elev;                       /*   its floor, */
     unsigned char   link;                       /*   and the link it is (an opening), or 0xFF */
 };
-enum { M_PLAN, M_CHUNK, M_CHANGE };             /* A stratum's plan and links down (its record set), a chunk, a
-                                                **   square changed (and kept: the maker's records) */
-enum { ASK_WORLD, ASK_DENIZENS, ASK_SENSES, NASK };
+enum { M_PLAN, M_CHUNK, M_CHANGE, M_SAVE, M_RESTORE };   /* A stratum's plan and links down (its record set), a
+                                                **   chunk, a square changed (and kept: the maker's records); the
+                                                **   records written to the save, read back (the plans grown again) */
+enum { ASK_WORLD, ASK_DENIZENS, ASK_SENSES, ASK_UI, NASK };
 
 /* ---- plan.c (the maker's): a stratum grown whole, in outline */
 void __fastcall__ plan_stratum (unsigned char n);   /* strata[n] (its bounds, style, seed, links already set) */
