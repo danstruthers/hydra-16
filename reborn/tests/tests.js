@@ -273,12 +273,10 @@ const TOOL_LINES = [
     "mount -c '#f' /ram r/2",
     "bind -c '#fr/2/bin' /bin",
     "bind -a '#fs/bin' /bin",
-    "bind -a '#f/0/bin' /bin",               // (The card has a bin: hmchar's, dq0's)
     "bind -a '#fx/bin' /bin",
     "bind -a '#m/bin' /bin",
     "bind -c '#fr/2/lib' /lib",
     "bind -a '#fs/lib' /lib",
-    "bind -a '#f/0/lib' /lib",               // (And a lib: dq0's)
     "bind -a '#fx/lib' /lib",
     "bind '#P' /pc",
   ].join('\n')],
@@ -379,6 +377,7 @@ const C_LINES = [
     "D&D attributes: 14 (5 5 4 2) 14 (6 4 4 4) 13 (6 5 2 1) 13 (5 4 4 3) 12 (5 4 3 1) 9 (4 3 2 1)",
   ].join('\n')],
   ["cd /ram; /sd/0/sample/c/ctest a 'b c'","ok - arguments",true],
+  ["bind -a /sd/0/games /bin", null],
   ["hmchar -q -s 5 -o /ram/t.hm | head -2", "\nTordan, Human Male, born 28 Peonu (Aralius); Feudal Serf, Hunter/Trapper"],
   ["grep -c '^ml ' /ram/t.hm; grep 'trk|bow|occupation|^fam' /ram/t.hm", "24\nfam 2 1 1 4 3 3 1\nml bow 36\nml trk 80\noccupation Hunter/Trapper"],
   ["for(w in pear apple fig Apple banana 10 9 07) echo $w >>/ram/s; sort /ram/s", [
@@ -2261,14 +2260,15 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0', what: 'Dingus Quest Zero (games/dq0) at rc, its turns pace: a character from hmchar\'s file (-c), commands typed ahead (each waits for its prompt), quit; then the game running hmchar itself, in its window, answered as a player would, and the character it made read back',
+      name: 'dq0', what: 'Dingus Quest Zero (games/dq0) at rc, its turns pace: a character from hmchar\'s file (-c), commands typed ahead (each waits for its prompt): looking, the way out shut, the map, going, quit; then the game running hmchar itself, in its window, answered as a player would, and the character it made read back',
       init: 't_rc', cycles: 400e6,
       // (\u0101: wait for a prompt, the game's "> " too; \u0100: wait a while, for hmchar's questions)
-      machine: { input: '\u0101echo start\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -c /ram/c.hm\r' +
-        ['wait', 'help', 'foo', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') +
+      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm\r' +
+        ['look', 'u', 'map', 'n', 'e', 's', 'w', 'go west', 'map', 'wait', 'help', 'foo', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') +
         '\u0101dq0 -p t -s 7\r\u0100\u0100k\r\u01002\r\u0100bow\r\u0100spear\r\u0100sword\r\u0100\r\u0100Dorn\r' +
         '\u0101sheet\r\u0101quit\r\u0101echo done\r' },
-      expect: ['Tordan, Hunter/Trapper, enters the dungeon.', '> wait', 'Time passes.', 'Commands: sheet (the character)',
+      expect: ['Tordan, Hunter/Trapper, enters the dungeon.', 'You stand by the stairs up to the way out.', 'The way out is shut fast.', 'Level 1 (you face',
+        '> wait', 'Time passes.', 'Commands: north, east, south, west',
         "I don't know how to foo.", '% echo $status', 'Keep this character, or roll again (k or r)?', 'Written to /ram/dq0.hm',
         'Dorn, Hunter/Trapper, enters the dungeon.', 'Dorn, Human Female, Hunter/Trapper; born 10 Ilvin (Skorus).', '% echo done\ndone'],
       sdcard: true
@@ -2284,7 +2284,7 @@ module.exports = {
     {
       name: 'hmcharhl', what: 'hmchar.hl (games/hmchar: hmchar in hylang, harn.hl in the ROM disk\'s /lib/hylang) at rc: -q, its profile and its file (harnfile.c\'s lines) agreeing, the automatic skills open; then as a player answers (a roll again, an occupation out of range, weapons by a beginning of their names, one ambiguous, one twice, an option point\'s second improvement and a third, a skill there isn\'t), the skills it says as they should be; -s refused (hylang\'s random can\'t be seeded); harntest.hl\'s tests of the character it read back',
       init: 't_rc', cycles: 500e6,
-      machine: { input: 'ācd /ram; hmchar.hl -q -o q.hm; ' + HM_FILE('q.hm') + '\r' + 'āhmchar.hl\r' + HM_PLAY + 'ā' + HM_FILE('Dorn.hm') + '\r' +
+      machine: { input: 'ābind -a /sd/0/games /bin\r' + 'ācd /ram; hmchar.hl -q -o q.hm; ' + HM_FILE('q.hm') + '\r' + 'āhmchar.hl\r' + HM_PLAY + 'ā' + HM_FILE('Dorn.hm') + '\r' +
         'āhmchar.hl -s 3; echo $status\r' + 'āecho \'(do (use "harntest") (def {c} (harn.read "Dorn.hm")) (list (c :other) (harn.eml c 1)))\' | hylang\r' },
       expect: ['Written to q.hm\n', 'Which (1-6)? 7\nWhich (1-6)? 1\n', 'The second: s\nWhich? More than one begins so.\n',
         'The third: shield\nThat one\'s chosen already.\n', 'Points left: 2. A skill: climb\nIt can be improved only twice.\n',
@@ -2314,7 +2314,7 @@ module.exports = {
     {
       name: 'hmcharfs', what: 'hmchar.fs (games/hmchar: hmchar in HyForth, harn.fs in the ROM disk\'s /lib/forth) at rc, against C\'s hmchar: -q from a seed, its profile and its file the same as C\'s from it (the dice in the same order), the two agreeing and as they should be; then the same seed answered as a player would (a roll again, an occupation out of range, weapons by a beginning, one ambiguous, one twice, an option point\'s improvements, a skill there isn\'t), its questions, profile and file the same as C\'s; a bad option; harn.fs\'s harn-read of the file, harn-eml and harn-end',
       init: 't_rc', cycles: 700e6,
-      machine: { input: 'ācd /ram; hmchar.fs -q -s 5 -o x.hm >f.out; cp x.hm f.hm\r' +
+      machine: { input: 'ābind -a /sd/0/games /bin\r' + 'ācd /ram; hmchar.fs -q -s 5 -o x.hm >f.out; cp x.hm f.hm\r' +
         'āhmchar -q -s 5 -o x.hm >c.out; cmp f.out c.out && cmp f.hm x.hm && echo same\r' +
         'ācat f.out; ' + HM_FILE('f.hm') + '\r' +
         'āhmchar.fs -s 5 -o x.hm >fi.out\r' + HM_PLAY + 'ācp x.hm fi.hm\r' +
@@ -3670,12 +3670,13 @@ module.exports = {
       name: 'draw', what: 'the graphics words (VIDEO.md step 5): vid\'s /dev/vid/draw (pen, plot, line, box, bar, circle, disc, clear) on the bitmap at 8, 4, 2 and 1 bits a pixel (640 across), what falls off it, bad numbers, a bitmap too big (the console on the serial port alone meanwhile: a bitmap 320 across makes the screen\'s text 40 columns, and the windows with it); HyForth\'s lib video (the drawing, vpeek, the turtle, text, the palette, a sprite) and rc\'s lines to the file; hylang\'s video.hl (the drawing, vpeek, the turtle, text); the C SDK\'s shapes sample (cc65\'s TGI on hydra_tgi: a line, a bar, a circle, an ellipse and text, read back) and sketch (vera.h, drawing after the emulator\'s mouse till a key)',
       init: 'init', cycles: 260e6,
       // (The mouse for sketch: to the top left, onto the strip's colour 2 and clicked, then to (150, 120), pressed,
-      // dragged 20 right and 20 down, let go; then a key, x, ends it)
+      // dragged 20 right and 20 down, let go; then a key, x, ends it, and a while after it (not a prompt: rc's may come
+      // out before the keyboard's input has ended, as the test runner sees it), echo $status)
       get machine() {
         const W = '\u0101', M = '\u0400', P = '\u0100';
         return { vera: true, smc: { moves: [[-400, -400, 0], [50, 5, 0], [0, 0, 1], [0, 0, 0], [100, 115, 0], [0, 0, 1], [20, 0, 1], [0, 20, 1], [0, 0, 0]] },
           input: DRAW_FORTH.map(l => W + l[0] + '\r').join('') + W + 'hylang\r' + DRAW_HY.map(l => W + l[0] + '\r').join('') + W + 'exit\r' +
-            W + '/sd/0/sample/c/shapes\r' + W + '/sd/0/sample/c/sketch\r' + '\u0102' + P + P + (M + P).repeat(9) + 'x\u0103' + W + 'echo $status\r' };
+            W + '/sd/0/sample/c/shapes\r' + W + '/sd/0/sample/c/sketch\r' + '\u0102' + P + P + (M + P).repeat(9) + 'x\u0103' + P + 'echo $status\r' };
       },
       get expect() {
         return [DRAW_FORTH.map(l => '/> ' + l[0] + '\n' + (l[1] ? l[1] + '\n' : '')).join('') + '/> hylang\n',

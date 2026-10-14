@@ -73,6 +73,7 @@ and it lists what's in there. The SD card is the directory `/sd/0`:
 ```session
 /> ls /sd/0
 bench/
+games/
 sample/
 songs/
 ```

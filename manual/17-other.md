@@ -218,7 +218,7 @@ In each are these files:
 
 ```session
 /> cat /proc/1/status
-forth wait - 96 1
+forth wait - 98 1
 /> cat /proc/1/fd
 /
 0 rw #c 367 #c/cons

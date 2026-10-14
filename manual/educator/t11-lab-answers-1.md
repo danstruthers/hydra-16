@@ -113,6 +113,7 @@ that instant, and `c` lets it carry on.
 Hello, Hydra!
 /> ls /sd/0
 bench/
+games/
 sample/
 songs/
 /> 2 3 + .
@@ -224,7 +225,7 @@ RAM modules: 03
 ```session
 /> ps
 task  state   parent     cpu group  name
-   0  ready   -          1.6     0  kernel
+   0  ready   -          1.5     0  kernel
    1  wait    -          0.4     1  forth
    2  ready    1         0.0     1  ps
   12  idle    -          0.0    12  snd
@@ -256,7 +257,7 @@ ps
 /> sleep 60 &
 /> ps
 task  state   parent     cpu group  name
-   0  ready   -          2.1     0  kernel
+   0  ready   -          2.0     0  kernel
    1  wait    -          0.4     1  forth
    2  sleep    1         0.0     2  sleep
    3  ready    1         0.0     1  ps
@@ -267,12 +268,12 @@ task  state   parent     cpu group  name
 /> kill 2
 /> ps
 task  state   parent     cpu group  name
-   0  ready   -          3.9     0  kernel
-   1  wait    -          0.4     1  forth
+   0  ready   -          3.7     0  kernel
+   1  wait    -          0.5     1  forth
    3  ready    1         0.0     1  ps
   12  idle    -          0.0    12  snd
   13  idle    -          0.1    13  kdev
-  14  idle    -          1.6    14  storage
+  14  idle    -          1.7    14  storage
   15  event   -          0.6    15  cons
 ```
 
@@ -498,6 +499,7 @@ lib/
 tour
 In /sd/0 there are:
 bench/
+games/
 sample/
 songs/
 ```
@@ -561,7 +563,7 @@ a length of 0.
 
 ```session
 /> ls -l /rom
---r--r--r-- fx     1955 2000-01-01 00:00 README
+--r--r--r-- fx     2141 2000-01-01 00:00 README
 d-r--r--r-- fx        0 2000-01-01 00:00 bin
 d-r--r--r-- fx        0 2000-01-01 00:00 doc
 d-r--r--r-- fx        0 2000-01-01 00:00 lib
@@ -573,8 +575,8 @@ d-r--r--r-- fx        0 2000-01-01 00:00 songs
 ```session
 /> df
 disk  kind   size        free        label
-0     sdhc   16380 KB    15956 KB    HYDRA-16
-x     rom    623 KB      11 KB       ROM
+0     sdhc   16380 KB    15788 KB    HYDRA-16
+x     rom    671 KB      1 KB        ROM
 r     ram    255 KB      253 KB      RAM
 s     sram   511 KB      510 KB      SRAM
 ```

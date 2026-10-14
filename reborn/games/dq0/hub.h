@@ -17,9 +17,12 @@
 #ifndef _HUB_H
 #define _HUB_H
 
+#include "rs.h"
+
 #define HUB_MAGIC       0x5144                  /* "DQ" */
 #define HUB_VERSION     1
-#define HUB_BANKS       2                       /* Bank 0: the header and queues; bank 1 on: the world */
+#define HUB_BANKS       3                       /* Bank 0: the header and queues; bank 1 on: the dungeon's levels
+                                                **   (level.h: four a bank) */
 #define HUB_WINDOW      ((unsigned char*) 0x8000)
 
 /* The tasks, and so their doorbells */
@@ -38,6 +41,10 @@ struct msg {
 /* Intents: what an actor means to do (the UI's for the character, the denizens' for theirs) */
 enum {
     I_NONE, I_WAIT,                             /* w1: tenths (0: a round) */
+    I_GO,                                       /* a: a direction (level.h's DIR_N ... DIR_W) */
+    I_CLIMB,                                    /* a: DIR_UP or DIR_DOWN (the stairs in the room) */
+    I_TURN,                                     /* a: the way to face (DIR_N ... DIR_W) */
+    I_LIGHT,                                    /* a: 1 the character's light lit, 0 put out */
     I_QUIT,
     NINTENTS
 };
@@ -47,8 +54,36 @@ enum {
     E_NONE, E_TIME,                             /* Time passed for who: w1 tenths */
     E_READY,                                    /* who can act again */
     E_BYE,                                      /* The world's ending */
+    E_ARRIVE,                                   /* who's somewhere new: w1 how (A_*), and 256 the first time there */
+    E_NOWAY,                                    /* who can't: w1 why (N_*) */
+    E_VIEW,                                     /* What who sees has changed: w1 why (V_*) */
     NEVENTS
 };
+
+enum { A_WALKED, A_DOWN, A_UP, A_START };   /* E_ARRIVE's how */
+enum { N_NO_EXIT, N_SHUT, N_NO_STAIRS };      /* E_NOWAY's why: no way that way, the way out shut, no stairs */
+enum { V_TURNED, V_LIT, V_DARK };               /* E_VIEW's why */
+
+/* A referee slot: a request (rs.h's RS_*) and its reply, and the reply's words.  The task that asks writes the
+** request, then sets state REQ_POSTED and rings the referee's doorbell; the referee answers, then sets REQ_DONE; the
+** task takes the reply and sets REQ_FREE.  Slot 0 is the world's (its requests change things), slot 1 the UI's */
+#define REQ_FREE        0
+#define REQ_POSTED      1
+#define REQ_DONE        2
+#define REQ_TEXT        1024
+struct req {
+    volatile unsigned char state;
+    unsigned char   kind;                       /* RS_* */
+    unsigned char   actor, other;               /* Who asks about whom */
+    signed char     steps;                      /* The circumstances: + better, - worse */
+    unsigned char   a, b, c;
+    unsigned        w1, w2;
+    unsigned char   x[32];                      /* By kind: a reply's effects (rs.h's), a summary ... */
+    signed char     grade;                      /* The reply's: G_CF ... G_CS */
+    unsigned char   result;
+    char            text[REQ_TEXT];             /* A request's path, or a reply's words (lines, a 0 at the end) */
+};
+enum { SLOT_WORLD, SLOT_UI, NSLOTS };
 
 #define IQ_SIZE         16                      /* The UI's intents */
 #define EQ_SIZE         128                     /* The world's events (each reader its own place) */
@@ -70,12 +105,18 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned char   pace;
     unsigned long   seed;
     char            pcstatus[16];               /* The character's state, the referee's words ("UP 3") */
+    volatile unsigned char pc_level, pc_x, pc_y;    /* Where the character is (the world's), */
+    volatile unsigned char pc_face;             /*   the way it faces (DIR_N ... DIR_W), */
+    volatile unsigned char pc_light;            /*   the light it carries: how far it reaches, in tiles (0: none) */
+    struct rs_summary pcsum;                    /* The character's summary (the referee's: its senses ...) */
     /* The UI's intents to the world */
     volatile unsigned char iq_head, iq_tail;    /* Written at head (the UI), read at tail (the world) */
     struct msg      iq[IQ_SIZE];
     /* The world's events, to everyone: each reader keeps its own place */
     volatile unsigned eq_head;                  /* Events written so far (the world's) */
     struct msg      eq[EQ_SIZE];
+    /* The referee's slots */
+    struct req      slot[NSLOTS];
 };
 
 #define HUB     ((struct hub*) HUB_WINDOW)
@@ -91,5 +132,7 @@ unsigned char __fastcall__ hub_take (struct msg* m);    /* An intent (the world'
 void __fastcall__ hub_event (const struct msg* m);      /* An event (the world's) */
 unsigned char __fastcall__ hub_next (unsigned* place, struct msg* m);  /* The next event after place: 1, or 0 */
 int __fastcall__ hub_spawn (const char* path, unsigned char t, const char* more);   /* A task of the game's */
+struct req* __fastcall__ hub_ask (unsigned char slot);  /* A slot's request posted, its reply waited for: the slot
+                                                        **   (set REQ_FREE when its reply's taken) */
 
 #endif

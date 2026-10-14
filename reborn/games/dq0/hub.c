@@ -167,3 +167,18 @@ int __fastcall__ hub_spawn (const char* path, unsigned char t, const char* more)
     hub_map (0);                                /* (A spawn leaves the window on another bank) */
     return s;
 }
+
+/* ---- The referee: a request posted in a slot (already written there), its reply waited for (the others run) */
+
+struct req* __fastcall__ hub_ask (unsigned char slot)
+{
+    struct req* r = &HUB->slot[slot];
+
+    r->state = REQ_POSTED;
+    hub_ring (T_REFEREE);
+    while (r->state != REQ_DONE) {
+        hy_yield ();
+        hub_map (0);
+    }
+    return r;
+}

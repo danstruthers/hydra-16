@@ -17,6 +17,7 @@
 #include "dq0.h"
 
 unsigned char tw, th;                           /* The screen */
+unsigned char t_ready;                          /* The character can act: the line typed's prompt "> " (else "  ") */
 char inl[INMAX + 1];                            /* The line being typed, */
 unsigned char inn;                              /*   its length */
 
@@ -195,6 +196,21 @@ void __fastcall__ say (const char* s)
     }
 }
 
+/* A line of the story as it is (the map's): not wrapped, cut at the screen's width */
+void __fastcall__ say_raw (const char* s)
+{
+    if (col) {
+        newline ();
+    }
+    to_story ();
+    while (*s && col < tw - 1) {
+        out (*s++);
+        ++col;
+    }
+    blanked = 0;
+    newline ();
+}
+
 void __fastcall__ msg (const char* s)
 {
     if (col) {
@@ -260,6 +276,14 @@ void sayf (const char* f, ...)
 
 /* ---- The line being typed */
 
+void __fastcall__ t_prompt (unsigned char ready)
+{
+    if (ready != t_ready) {
+        t_ready = ready;
+        away = 1;                               /* (Drawn again at t_done) */
+    }
+}
+
 void inl_show (void)
 {
     unsigned char from = inn > tw - 4 ? inn - (tw - 4) : 0;
@@ -267,7 +291,7 @@ void inl_show (void)
     go (th, 1);                                 /* (Cleared first: with nothing typed, "> " is the last thing out,
     csi ();                                     /*   a prompt for a test to wait for) */
     out ('K');
-    outs ("> ");
+    outs (t_ready ? "> " : "  ");
     outs (inl + from);
     shown = inn - from;
     away = 0;
@@ -282,7 +306,7 @@ void t_done (void)
             go (th, 1);                         /* (Nothing typed: "> " again, the last thing out, a prompt) */
             csi ();
             out ('K');
-            outs ("> ");
+            outs (t_ready ? "> " : "  ");
         }
         away = 0;
     }

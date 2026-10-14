@@ -217,8 +217,8 @@ Lists the disks that have started, with each one's kind, size, free space and la
 ```session
 /> df
 disk  kind   size        free        label
-0     sdhc   16380 KB    15956 KB    HYDRA-16
-x     rom    623 KB      11 KB       ROM
+0     sdhc   16380 KB    15788 KB    HYDRA-16
+x     rom    671 KB      1 KB        ROM
 r     ram    255 KB      253 KB      RAM
 s     sram   511 KB      510 KB      SRAM
 ```
@@ -253,9 +253,9 @@ the current directory.
 1       /rom/lib/basic
 2       /rom/lib/edit
 4       /rom/lib/font
-83      /rom/lib/forth
-59      /rom/lib/hylang
-329     /rom/lib
+112     /rom/lib/forth
+87      /rom/lib/hylang
+386     /rom/lib
 ```
 
 ## echo: print words
@@ -624,8 +624,8 @@ card before you use it with the Hydra (Chapter 14). The words after the disk's n
 /> mkfs s
 /> df
 disk  kind   size        free        label
-0     sdhc   16380 KB    15956 KB    HYDRA-16
-x     rom    623 KB      11 KB       ROM
+0     sdhc   16380 KB    15788 KB    HYDRA-16
+x     rom    671 KB      1 KB        ROM
 r     ram    255 KB      253 KB      RAM
 s     sram   511 KB      511 KB
 ```

@@ -27,7 +27,7 @@ terminal serial
 sdhc 17 MB 34816 blocks
 hydrafs label=HYDRA-16
 partition at block 2048
-free 15956 KB of 16380 KB
+free 15788 KB of 16380 KB
 /> cat /dev/time
 2000-01-01 00:00:07
 ```
@@ -110,12 +110,12 @@ s/
 sdhc 17 MB 34816 blocks
 hydrafs label=HYDRA-16
 partition at block 2048
-free 15956 KB of 16380 KB
+free 15788 KB of 16380 KB
 /> cat /dev/sd/x/ctl
 rom 4 MB 8192 blocks
 hydrafs label=ROM
 partition at block 1056
-free 11 KB of 623 KB
+free 1 KB of 671 KB
 /> cat /dev/sd/r/ctl
 ram 256 KB 512 blocks
 hydrafs label=RAM
@@ -131,7 +131,7 @@ segment 15
 | Disk | What kind | Its size | Seen at |
 |---|---|---|---|
 | `0` | An SD card (`sdhc`) | 17 MB, on the manual's Hydra | `/sd/0` |
-| `x` | The ROM disk | 623 KB of files, in the 4 MB of paged ROM | `/rom` |
+| `x` | The ROM disk | 671 KB of files, in the 4 MB of paged ROM | `/rom` |
 | `r` | A RAM disk, in RAM banks | 256 KB | `/ram` |
 | `s` | A RAM disk, in a shared segment | 512 KB | `/sram` |
 
@@ -148,8 +148,8 @@ rc: /rom/test: read-only
 ```session
 /> df
 disk  kind   size        free        label
-0     sdhc   16380 KB    15956 KB    HYDRA-16
-x     rom    623 KB      11 KB       ROM
+0     sdhc   16380 KB    15788 KB    HYDRA-16
+x     rom    671 KB      1 KB        ROM
 r     ram    255 KB      253 KB      RAM
 s     sram   511 KB      510 KB      SRAM
 /> echo x >/sd/0/tiny
@@ -157,8 +157,8 @@ s     sram   511 KB      510 KB      SRAM
 --rw-rw-rw- f0        2 2000-01-01 00:00 /sd/0/tiny
 /> df
 disk  kind   size        free        label
-0     sdhc   16380 KB    15952 KB    HYDRA-16
-x     rom    623 KB      11 KB       ROM
+0     sdhc   16380 KB    15784 KB    HYDRA-16
+x     rom    671 KB      1 KB        ROM
 r     ram    255 KB      253 KB      RAM
 s     sram   511 KB      510 KB      SRAM
 ```
@@ -178,8 +178,8 @@ segment 15
 ```session
 /> du /sd/0/sample
 14      /sd/0/sample/as
-188     /sd/0/sample/c
-208     /sd/0/sample
+216     /sd/0/sample/c
+236     /sd/0/sample
 /> du /rom/bin
 224     /rom/bin
 ```
@@ -211,8 +211,8 @@ shared  1024 KB, 0 KB in segments (0), 1024 KB free
 /> echo start 16 >/dev/sd/s/ctl
 /> df
 disk  kind   size        free        label
-0     sdhc   16380 KB    15956 KB    HYDRA-16
-x     rom    623 KB      11 KB       ROM
+0     sdhc   16380 KB    15788 KB    HYDRA-16
+x     rom    671 KB      1 KB        ROM
 r     ram    255 KB      253 KB      RAM
 s     sram   127 KB      127 KB      SRAM
 /> free
@@ -353,7 +353,7 @@ wired this way round because a VIA pin can take in much more current than it can
 
 ```session
 /> cat /proc/1/status
-forth wait - 89 1
+forth wait - 98 1
 /> cat /proc/1/fd
 /
 0 rw #c 367 #c/cons
@@ -415,13 +415,13 @@ Without a real Hydra, the task names:
 
 ```session
 % for(t in /proc/*) cat $t/status
-kernel ready - 480 0
-forth wait - 87 1
-snd idle - 4 12
-kdev ready - 42 13
-storage idle - 296 14
-cons event - 103 15
-rc wait 1 30 1
+kernel ready - 458 0
+forth wait - 97 1
+snd idle - 5 12
+kdev ready - 41 13
+storage idle - 302 14
+cons event - 105 15
+rc wait 1 31 1
 ```
 
 ## Lab 15. Numbers and Bases

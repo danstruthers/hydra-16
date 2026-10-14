@@ -147,5 +147,3 @@ ovl_out:
 
 ; The overlays' functions (dq0.h has them with their overlays)
             OVFN        title, 1
-            OVFN        sheet, 1
-            OVFN        load, 1

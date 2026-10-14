@@ -51,7 +51,7 @@ scom.zsm
 
 ```session
 /> ls -l /rom
---r--r--r-- fx     1955 2000-01-01 00:00 README
+--r--r--r-- fx     2141 2000-01-01 00:00 README
 d-r--r--r-- fx        0 2000-01-01 00:00 bin
 d-r--r--r-- fx        0 2000-01-01 00:00 doc
 d-r--r--r-- fx        0 2000-01-01 00:00 lib
@@ -64,7 +64,7 @@ Each line has five parts:
 |---|---|---|
 | The mode | `d-r--r--r--` | `d` for a directory; `a` next if the file is append-only (writes always go on its end); then who may read (`r`), write (`w`) and run (`x`) it |
 | The device | `fx` | Which driver keeps the file (`f`: HydraFS), and which disk (`x`: the ROM disk) |
-| The length | `1955` | How many bytes it holds |
+| The length | `2141` | How many bytes it holds |
 | The time | `2000-01-01 00:00` | When it was last changed |
 | The name | `README` | |
 
@@ -102,8 +102,8 @@ isn't round!) Each one is part of the tree:
 ```session
 /> df
 disk  kind   size        free        label
-0     sdhc   16380 KB    15956 KB    HYDRA-16
-x     rom    623 KB      11 KB       ROM
+0     sdhc   16380 KB    15788 KB    HYDRA-16
+x     rom    671 KB      1 KB        ROM
 r     ram    255 KB      253 KB      RAM
 s     sram   511 KB      510 KB      SRAM
 ```
