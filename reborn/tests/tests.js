@@ -2264,7 +2264,7 @@ module.exports = {
       init: 't_rc', cycles: 800e6,
       // (\u0101: wait for a prompt, the game's "> " too; \u0100: wait a while, for hmchar's questions)
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm\r' +
-        ['look', 'u', 'map', 'n', 'look', 'open', 'n', 'e', 'u', 'look', 's', 'w', 'go west', 'map', 'wait', 'help', 'foo', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') +
+        ['look', 'u', 'map', 'n', 'open the door behind me on my right', 'n', 'look', 'open', 'n', 'e', 'u', 'look', 's', 'w', 'go west', 'map', 'wait', 'help', 'foo', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') +
         '\u0101dq0 -p t -s 7\r\u0100\u0100k\r\u01002\r\u0100bow\r\u0100spear\r\u0100sword\r\u0100\r\u0100Dorn\r' +
         '\u0101sheet\r\u0101quit\r\u0101echo done\r' },
       expect: ['Tordan, Hunter/Trapper, enters the dungeon.', 'The way out is shut fast.', 'The map (you face', 'You open the door.', 'at a ledge ahead', 'You set to climbing',
@@ -2334,7 +2334,7 @@ module.exports = {
       name: 'dq0harm', what: 'Dingus Quest Zero\'s harm (the referee\'s RS_HARM: HarnMaster\'s falling, Skills 8, and its injuries, Combat 13-14): up a ledge, then jumped down it, a fall of 7 feet onto paving (1d6 and 1d6 more), the injury it does worded, on the character\'s sheet and its map\'s panel (its injury levels), and kept in the save (pc.hm\'s inj line, hmchar\'s format)',
       init: 't_rc', cycles: 800e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -d /ram/hurt\r' +
-        ['look', 'u', 'map', 'n', 'look', 'open', 'n', 'e', 'u', 'turn around', 'jump down', 'sheet', 'map', 'quit', 'cat /ram/hurt/pc.hm', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
+        ['look', 'u', 'map', 'n', 'open the door behind me on my right', 'n', 'look', 'open', 'n', 'e', 'u', 'u', 'turn around', 'jump down', 'sheet', 'map', 'quit', 'cat /ram/hurt/pc.hm', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
       expect: ['You haul yourself up over the edge.', 'You jump, and drop 7 feet. You land hard: a ', 'Injuries: ', 'IP ', '\ninj ', '% echo $status'],
       sdcard: true
     },
@@ -2406,14 +2406,13 @@ module.exports = {
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 16 -c /ram/c.hm -T\r' +
         ['face east', 'force', 'e', 'force', 'force', 'e', 'e', 'look', 'quit'].map(l => 'ā' + l + '\r').join('') +
         'āhmchar -q -s 1 -o /ram/t.hm\rādq0 -p t -s 7 -c /ram/t.hm\r' +
-        ['search', 'search', 'search', 'search', 'search', 'search', 'x dagger', 'x dagger', 'x dagger', 'x dagger',
-          'x dagger', 'x dagger', 'face south', 'open', 'disarm', 'open', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+        ['search', 'search', 'search', 'search', 'search', 'search', 'x dagger', 'x dagger', 'x dagger', 'x dagger', 'x dagger', 'x dagger', 'x dagger', 'x dagger', 'face south', 'open', 'disarm', 'disarm', 'disarm', 'disarm', 'disarm', 'open', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
       expect: ['As the door opens, something clicks. A blade scythes out of the wall! You throw\nyourself clear.',
         'A plate sinks under your foot with a click. A blade scythes out of the wall! It\nhurts you: ',
         'scything blade, set off by a plate in the floor, at your feet (sprung).',
         'You find a trap: a dart trap, set to go off as its door opens.',
         'There\'s a trap on that door you know of: disarm it before you open it.',
-        'You work at the trap a while, and disarm it.', 'You open the door.', '% echo $status'],
+        'You study the mechanism a while, and make out how it works', 'You work at the trap a while, and disarm it.', 'You open the door.', '% echo $status'],
       sdcard: true
     },
     {

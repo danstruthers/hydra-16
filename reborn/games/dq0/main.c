@@ -494,7 +494,7 @@ static void events (void)
             } else if (m.who == 0) {
                 tell (m.w1 == N_SHUT ? T_THE_WAY_OUT :
                      m.w1 == N_NO_STAIRS ? T_THERE_S_NO : m.w1 == N_NO_DIG ?
-                     T_THERE_S_NOTHING : m.w1 == N_CLOSED ? T_THE_PORTCULLIS_IS :
+                     T_THERE_S_NOTHING : m.w1 == N_CLOSED ? T_THE_PORTCULLIS_IS : m.w1 == N_DOOR ? T_DOOR_SHUT :
                      T_YOU_CAN_T);
             }
             break;

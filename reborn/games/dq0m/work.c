@@ -72,7 +72,7 @@ static void __fastcall__ keep (unsigned x, unsigned y, unsigned char tile, signe
 
 static void __fastcall__ door_state (unsigned char st)
 {
-    keep (px, py, st, pq.parts, PORTAL_STATE);
+    keep (px, py, st, pq.parts | PP_KNOWN, PORTAL_STATE);  /* (Handled: a walk may open it again, the user's) */
 }
 
 static void __fastcall__ trap_state (unsigned char st)
@@ -222,7 +222,9 @@ static void step (void)
     }
 }
 
-/* The trap tq (tx, ty) disarmed: a minute's work */
+/* The trap tq (tx, ty) disarmed, a minute's work a try, in two checks (the user's): its mechanism made out first
+** (P_ASSESS: never deadly; a critical success makes the disarm easier), then the disarm (P_DISARM: a critical failure
+** sets it off) */
 static void disarm (void)
 {
     unsigned char o = TO_PIT;
@@ -230,8 +232,19 @@ static void disarm (void)
 
     if (tq.kind > TK_SPIKED) {
         tt += 600;
-        g = test (P_DISARM, tq.state & TS_MAGIC ? HIDE_MAGICAL : HIDE_MECHANICAL, -(signed char) (tq.power >> 1));
-        o = res ? TO_CANT : G_OK (g) ? TO_DISARMED : g == G_CF ? TO_FUMBLED : TO_NOT_YET;
+        if (tq.state & TS_MAGIC) {
+            test (P_DISARM, HIDE_MAGICAL, 0);   /* (By magic only: the referee's means, or none) */
+            o = res ? TO_CANT : TO_NOT_YET;
+        } else if (!(tq.state & TS_ASSESSED)) {
+            g = test (P_ASSESS, 0, -(signed char) (tq.power >> 1));
+            o = G_OK (g) ? TO_ASSESSED : TO_PUZZLED;
+            if (o == TO_ASSESSED) {
+                trap_state (tq.state | TS_ASSESSED | (g == G_CS ? TS_KEEN : 0));
+            }
+        } else {
+            g = test (P_DISARM, HIDE_MECHANICAL, -(signed char) (tq.power >> 1) + (tq.state & TS_KEEN ? 2 : 0));
+            o = G_OK (g) ? TO_DISARMED : g == G_CF ? TO_FUMBLED : TO_NOT_YET;
+        }
     }
     trap_told (o);
     if (o == TO_DISARMED) {

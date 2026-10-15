@@ -93,7 +93,7 @@ enum {
 enum { A_WALKED, A_DOWN, A_UP, A_START, A_DIGGING, A_CROSSED, A_CLIMBING, A_CLIMBED, A_WENT_TO, A_RESUMED,
        A_STOPPED };                             /* E_ARRIVE's how (A_DIGGING, A_CLIMBING: the world's own, a spell
                                                 **   of work, a round's climbing; A_STOPPED: on its way, at a trap) */
-enum { N_NO_EXIT, N_SHUT, N_NO_STAIRS, N_NO_DIG, N_CLOSED, N_DEN };    /* E_NOWAY's why: no way that way, the way out
+enum { N_NO_EXIT, N_SHUT, N_NO_STAIRS, N_NO_DIG, N_CLOSED, N_DEN, N_DOOR };    /* E_NOWAY's why: no way that way, the way out
                                                 **   shut, no stairs, nothing to dig there, the portcullis that way
                                                 **   down, a denizen in the way (the actor times 256) */
 enum { V_TURNED, V_LIT, V_DARK, V_STIR };       /* E_VIEW's why (V_STIR: a denizen come into sight, gone from it,
@@ -114,7 +114,7 @@ enum { PO_NONE, PO_OPENED, PO_CLOSED, PO_IS_OPEN, PO_IS_SHUT, PO_LOCKED, PO_BARR
                                                 **   shutters smashed, climbed through; */
        PO_TRAPPED, PO_FOUND_TRAP };             /*   a known trap on a door; a search's traps, told as found) */
 enum { TO_SPRUNG, TO_DODGED, TO_RESISTED, TO_CHOKED, TO_OPENED, TO_NOTICED, TO_FOUND, TO_DISARMED, TO_NOT_YET,
-       TO_FUMBLED, TO_CANT, TO_PIT, TO_NONE };  /* E_TRAP's: set off, dodged, its gas resisted or choked on, a pit's
+       TO_FUMBLED, TO_CANT, TO_PIT, TO_NONE, TO_ASSESSED, TO_PUZZLED };  /* E_TRAP's: set off, dodged, its gas resisted or choked on, a pit's
                                                 **   cover fallen in (no one on it); noticed in passing, found by a
                                                 **   search; disarmed, not yet, set off disarming it, no means to
                                                 **   (magic), a pit (gone round, not disarmed), none in reach */

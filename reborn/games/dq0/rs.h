@@ -37,6 +37,8 @@ enum {
     P_CONCEAL,                                  /* Concealment: a thing hidden, or oneself (in shadows ...): the
                                                 **   grade sets a thing's difficulty to find, or a person's against
                                                 **   a search */
+    P_ASSESS,                                   /* A mechanism made out (a trap's, before it's disarmed: never
+                                                **   deadly, however it goes) */
     P_THEME,                                    /* A theme's own, P_THEME + n (named in its data) */
 };
 

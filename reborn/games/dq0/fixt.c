@@ -79,6 +79,12 @@ void __fastcall__ o_trap_words (unsigned w)
     case TO_FUMBLED:
         strcpy (lb, "Your hand slips: the trap goes off!");
         break;
+    case TO_ASSESSED:
+        strcpy (lb, "You study the mechanism a while, and make out how it works: now to disarm it.");
+        break;
+    case TO_PUZZLED:
+        strcpy (lb, "You study the mechanism a while, but can't make out how it works.");
+        break;
     case TO_CANT:
         strcpy (lb, "It's set by magic: you've no means to undo it.");
         break;

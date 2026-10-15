@@ -665,6 +665,9 @@ static void climb_on (void)
     see (0);
 }
 
+static void __fastcall__ change (unsigned char sn, unsigned x, unsigned y, unsigned char tile, signed char elev,
+    unsigned char link);
+
 /* The character sets out on heading h (north, northeast ...): its time, and where it'll be.  From a room: north,
 ** east, south or west by a door in that wall (the nearest it can walk to); a diagonal, by the door that lies that
 ** way; across the room by the way it can walk.  A passage goes only by the four */
@@ -730,10 +733,19 @@ static void __fastcall__ go (unsigned char h)
             t = bt + walk (d, 0, slow);
             goto set_out;
         }
-        if ((q = portal_at (bx, by)) != 0 && q->kind == PK_PORTCULLIS && !(q->state & PS_OPEN)) {
-            hub_map (0);
-            no_way (N_CLOSED);                  /* (Its portcullis down) */
-            return;
+        if ((q = portal_at (bx, by)) != 0 && !(q->state & PS_OPEN)) {
+            k = q->state;                       /* (Shut: a door it has handled opened again, as it goes; another
+                                                **   it must open itself, the user's; a portcullis down, raised) */
+            d = q->parts;
+            if (q->kind != PK_DOOR || !(d & PP_KNOWN) || (k & (PS_LOCKED | PS_BARRED | PS_WARDED))) {
+                k = q->kind == PK_PORTCULLIS ? N_CLOSED : N_DOOR;    /* (Read while its chunk's in the window) */
+                hub_map (0);
+                no_way (k);
+                return;
+            }
+            change (sn_, ox + bx, oy + by, k | PS_OPEN, d, PORTAL_STATE);
+            event (E_PORTAL, 0, PO_OPENED);
+            bt += 2 * stept;
         }
         if (cross_room (r, wx, wy, bx, by, slow), cut) {
             on_way ();

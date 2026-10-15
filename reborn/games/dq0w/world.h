@@ -97,6 +97,8 @@ enum { PK_DOOR, PK_WINDOW, PK_PORTCULLIS, PK_DRAWBRIDGE, PK_GATE, PK_GRATE, PK_H
 #define PP_GLASS        0x01                    /* (Sight through, not missiles; till it's broken) */
 #define PP_SHUTTERS     0x02                    /* (Open or closed: PS_OPEN; barred, as a door is) */
 #define PP_BARS         0x04                    /* (Sight and missiles through, not movement) */
+#define PP_KNOWN        0x80                    /* (A door the character has opened or shut: a walk out of a room
+                                                **   opens it again, as it goes; any other it must open, asked) */
 #define PS_OPEN         0x01
 #define PS_LOCKED       0x02
 #define PS_BARRED       0x04
@@ -130,6 +132,8 @@ enum { TT_PLATE, TT_WIRE, TT_DOOR };            /* Set off: a plate trodden, a w
 #define TS_SPRUNG       0x01
 #define TS_DISARMED     0x02
 #define TS_BROKEN       0x04
+#define TS_ASSESSED     0x08                    /* Its mechanism made out (a disarm's first check: never deadly) */
+#define TS_KEEN         0x10                    /*   and made out well (a critical success: the disarm easier) */
 #define TS_HIDDEN       0x20                    /* (Found by a search, as a secret door is, */
 #define TS_MAGIC        0x40                    /*   or hidden by magic: by magical means only) */
 #define TS_SET(s)       (!((s) & (TS_SPRUNG | TS_DISARMED | TS_BROKEN)))   /* (It would go off) */

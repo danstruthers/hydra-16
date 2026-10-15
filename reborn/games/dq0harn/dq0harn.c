@@ -158,6 +158,7 @@ static const unsigned char purpose[P_THEME] = {
     HARN_MIN,                                                           /* Digging: Mining */
     HARN_WEA,                                                           /* Appraising: by its craft (appraiser) */
     HARN_STL,                                                           /* Concealment: HarnMaster's Stealth */
+    HARN_LCK,                                                           /* A mechanism made out: Lockcraft (traps) */
 };
 
 /* The skill that knows a thing (rs.h's AP_*): weapons and armour Weaponcraft, metal Metalcraft, wood Timbercraft,

@@ -44,6 +44,7 @@ static const char* const said[T_COUNT] = {
     "Type help for the commands.",
     "You pick yourself up at the foot of the shaft.",
     "The portcullis is down: raise it first.",
+    "The door is shut: open it first.",
 };
 
 void __fastcall__ o_tell (unsigned char n)

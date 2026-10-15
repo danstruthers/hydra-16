@@ -288,9 +288,17 @@ knows of is left shut.  Stepping on one, the character may notice it in time (Aw
 search's; never a magical one); else a pit's cover gives way (a fall, its depth; a spiked one's spikes a strike),
 and it climbs out; gas is resisted (Condition) or choked on, senseless a while; an alarm's a noise the denizens
 hear; the rest are dodged (Dodge) or strike (their aspect, dice and place, the referee's injuries).  A search finds
-hidden ones as it finds hidden doors; one known of is disarmed (Lockcraft, a minute a try; a fumble sets it off;
-magic only by magical means; a pit not at all).  Their states (sprung, disarmed, found) kept in the maker's change
+hidden ones as it finds hidden doors; one known of is disarmed in two checks (the user: "one to assess the
+mechanism, and one to disarm.  Assess is not deadly, disarm could be if fumbled"): its mechanism made out first
+(P_ASSESS, Lockcraft, a minute a try, never deadly; a critical success makes the disarm easier), then disarmed
+(Lockcraft, a minute a try; a fumble sets it off, and fumbles can be deadly); magic only by magical means; a pit not
+at all).  Their states (sprung, disarmed, found) kept in the maker's change
 records (TRAP_STATE), a pit's square a pit once it's given way; the ones it knows of in what it perceives.)
+
+**Doors on the way** (the user: "auto-opening a door is OK as long as it has been opened previously, but I would say
+opening needs to be explicit"): a walk stops at a closed door ("The door is shut: open it first."), but one the
+character has opened or shut before (its parts' PP_KNOWN, kept with its state), not locked or barred, it opens
+again as it goes.
 
 ### Items: the dungeon's layer of things
 
