@@ -72,8 +72,6 @@ static unsigned char __fastcall__ find (unsigned char sn, unsigned cx, unsigned 
     return 0xFF;
 }
 
-#pragma static-locals (push, on)                /* (The squares' calls, every task's most called: their locals
-                                                **   static, quicker) */
 unsigned char* __fastcall__ at (unsigned char sn, unsigned x, unsigned y)
 {
     struct stratum* s = &strata[sn];
@@ -136,15 +134,14 @@ unsigned char __fastcall__ step_ok (unsigned char sn, unsigned x, unsigned y, un
     return dz <= (TILE (t) == T_STEPS || TILE (u) == T_STEPS ? STAIR_MAX : STEP_MAX);
 }
 
-#pragma static-locals (pop)
-
 struct portal* __fastcall__ portal_at (unsigned char x, unsigned char y)
 {
+    struct portal* p = C->portal;
     unsigned char i;
 
-    for (i = 0; i < C->nportals; ++i) {
-        if (C->portal[i].x == x && C->portal[i].y == y) {
-            return &C->portal[i];
+    for (i = C->nportals; i; --i, ++p) {
+        if (p->x == x && p->y == y) {
+            return p;
         }
     }
     return 0;
@@ -166,8 +163,7 @@ unsigned char __fastcall__ room_of (unsigned char sn, unsigned x, unsigned y)
     if (!at (sn, x, y)) {
         return 0xFF;
     }
-    for (r = 0; r < C->nrooms; ++r) {
-        p = &C->room[r];
+    for (r = 0, p = C->room; r < C->nrooms; ++r, ++p) {
         if (cx_ >= p->x && cx_ < p->x + p->w && cy_ >= p->y && cy_ < p->y + p->h &&
             TILE (C->tile[cy_][cx_]) != T_CORR && TILE (C->tile[cy_][cx_]) != T_WALL) {
             return r;                           /* (A cave's bounds may take in a tunnel's squares, or its walls) */
@@ -184,8 +180,7 @@ unsigned char __fastcall__ zone_of (unsigned char sn, unsigned x, unsigned y)
     if (!at (sn, x, y)) {
         return 0xFF;
     }
-    for (z = 0; z < C->nzones; ++z) {
-        p = &C->zone[z];
+    for (z = 0, p = C->zone; z < C->nzones; ++z, ++p) {
         if (cx_ >= p->x && cx_ < p->x + p->w && cy_ >= p->y && cy_ < p->y + p->h) {
             return z;
         }

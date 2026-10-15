@@ -74,14 +74,15 @@ static unsigned rx0, ry0;                       /* (The room's chunk's first squ
 
 static void dens_where (void)
 {
+    struct actor* q;
     unsigned char k;
 
     hub_map (0);
-    for (k = nden = 0; k < NACTORS; ++k) {
-        if (HUB->actor[k].name[0] && HUB->actor[k].sn == HUB->pc_stratum) {
+    for (k = nden = 0, q = HUB->actor; k < NACTORS; ++k, ++q) {
+        if (q->name[0] && q->sn == HUB->pc_stratum) {
             dk[nden] = k;
-            dsx[nden] = HUB->actor[k].x;
-            dsy[nden++] = HUB->actor[k].y;
+            dsx[nden] = q->x;
+            dsy[nden++] = q->y;
         }
     }
     blocked = 0;
@@ -187,7 +188,33 @@ static void __fastcall__ no_way (unsigned why)
 }
 
 /* Stopped by a denizen in its way before it's gone a square (told: the actor's) */
-#define DEN_WAY         (N_DEN | (unsigned) (blocked - 1) << 8)
+static void den_way (void)
+{
+    no_way (N_DEN | (unsigned) (blocked - 1) << 8);
+}
+
+/* ---- Traps on the way (DUNGEON.md: traps; the maker sets them off, dq0m/work.c): a walk worked out stops at the
+** first it would set off (a plate's, a wire's, on a room's floor), and goes round one the character knows of */
+
+static unsigned tx_, ty_, fx_, fy_;             /* (The trap's square, and the one it's walked onto from) */
+static unsigned char cut;                       /* (The way worked out last stops at it, cut_t tenths on) */
+static unsigned long cut_t;
+static void on_way (void);
+static void stopped (void);
+
+/* C's trap on its square x, y that's set, and set off as it's walked on; or NULL */
+static struct trap* __fastcall__ trap_at (unsigned char x, unsigned char y)
+{
+    struct trap* t = C->trap;
+    unsigned char n;
+
+    for (n = C->ntraps; n; --n, ++t) {
+        if (t->x == x && t->y == y && TS_SET (t->state) && t->trigger != TT_DOOR) {
+            return t;
+        }
+    }
+    return 0;
+}
 
 /* ---- The way across a room, round its ledges: the squares of its chunk (in the window) from the room's floor to
 ** one of its doors or openings, by steps that can be walked; the time it takes */
@@ -199,14 +226,15 @@ static unsigned char bq[BW * BH], bfrom[BH][BW];
 static unsigned char __fastcall__ can (unsigned char x, unsigned char y, unsigned char d)
 {
     unsigned char nx = x + dir_x[d], ny = y + dir_y[d], t = C->tile[y][x], u;
+    struct trap* q;
     int dz;
 
     if (nx >= CW || ny >= CW) {
         return 0;
     }
     u = C->tile[ny][nx];
-    if (!T_PASS (u) || den_on (rx0 + nx, ry0 + ny)) {
-        return 0;
+    if (!T_PASS (u) || den_on (rx0 + nx, ry0 + ny) || ((q = trap_at (nx, ny)) != 0 && !(q->state & TS_HIDDEN))) {
+        return 0;                               /* (Nor onto a denizen, nor a trap it knows of: it goes round) */
     }
     dz = C->elev[ny][nx] - C->elev[y][x];
     if (dz < 0) {
@@ -225,6 +253,7 @@ static unsigned long __fastcall__ cross_room (unsigned char r, unsigned char fx,
     unsigned char ox = p->x - 1, oy = p->y - 1, w = p->w + 2, h = p->h + 2, head = 0, tail = 0, x, y, d, nx, ny;
     unsigned long t = 0;
 
+    cut = 0;
     if (w > BW || h > BH) {
         return 0xFFFFFFFFUL;
     }
@@ -255,11 +284,20 @@ static unsigned long __fastcall__ cross_room (unsigned char r, unsigned char fx,
     while ((d = bfrom[y][x]) != 4) {           /* (Back along the way, its steps' times) */
         nx = x - dir_x[d];
         ny = y - dir_y[d];
+        if (trap_at (x + ox, y + oy)) {
+            cut = 1;                            /* (A trap it would set off: the first on the way, the last found) */
+            cut_t = t;
+            tx_ = x + ox;
+            ty_ = y + oy;
+            fx_ = nx + ox;
+            fy_ = ny + oy;
+        }
         t += cost (C->elev[y + oy][x + ox] - C->elev[ny + oy][nx + ox], TILE (C->tile[y + oy][x + ox]) == T_STEPS,
             dark);
         x = nx;
         y = ny;
     }
+    cut_t = t - cut_t;                          /* (The time to the trap, from where it set out) */
     return t;
 }
 
@@ -332,6 +370,7 @@ static void __fastcall__ across (unsigned char h, unsigned char r, unsigned char
     unsigned char n = 0, st;
     signed char ledge = 0;
     unsigned char* p;
+    struct trap* q;
     unsigned nx, ny;
     int z, dz;
 
@@ -355,7 +394,7 @@ static void __fastcall__ across (unsigned char h, unsigned char r, unsigned char
                 hub_map (0);
                 if (!n && blocked && mx == move.x && my == move.y) {
                     move.on = 0;
-                    no_way (DEN_WAY);
+                    den_way ();
                     return;
                 }
                 busy (t > 60000UL ? 60000U : (unsigned) t);
@@ -373,6 +412,18 @@ static void __fastcall__ across (unsigned char h, unsigned char r, unsigned char
         if ((blocked = den_on (nx, ny)) != 0) {
             break;
         }
+        if ((q = trap_at (cx_, cy_)) != 0) {
+            if (!(q->state & TS_HIDDEN)) {
+                break;                          /* (A trap it knows of: it stops short of it) */
+            }
+            cut_t = t + cost (dz, st, slow);
+            tx_ = cx_;
+            ty_ = cy_;
+            fx_ = cx_ - head_x[h];
+            fy_ = cy_ - head_y[h];
+            on_way ();
+            return;
+        }
         t += (unsigned long) cost (dz, st, slow) * ((h & 1) ? 7 : 5) / 5;
         mx = nx;
         my = ny;
@@ -385,7 +436,11 @@ static void __fastcall__ across (unsigned char h, unsigned char r, unsigned char
             event (E_LEDGE, 0, (unsigned char) ledge);
             HUB->pc_ready = HUB->now;
         } else {
-            no_way (blocked ? DEN_WAY : N_NO_EXIT);
+            if (blocked) {
+                den_way ();
+            } else {
+                no_way (N_NO_EXIT);
+            }
         }
         return;
     }
@@ -427,7 +482,7 @@ static void __fastcall__ go_to (unsigned x, unsigned y)
     tx = x - (mx - cx_);
     ty = y - (my - cy_);
     t = TILE (C->tile[ty][tx]);
-    if (t == T_DOOR || t == T_CORR) {           /* (Up to it: the room's square before it) */
+    if (t == T_DOOR || t == T_CORR || t == T_WINDOW) {  /* (Up to it: the room's square before it) */
         for (d = 0; d < 4; ++d) {
             p = &C->tile[ty - dir_y[d]][tx - dir_x[d]];
             if (T_INSIDE (*p)) {
@@ -444,7 +499,15 @@ static void __fastcall__ go_to (unsigned x, unsigned y)
         nden = d;
         blocked = d ? dk[0] + 1 : 0;
         hub_map (0);
-        no_way (tt != 0xFFFFFFFFUL && blocked ? DEN_WAY : N_NO_EXIT);
+        if (tt != 0xFFFFFFFFUL && blocked) {
+            den_way ();
+        } else {
+            no_way (N_NO_EXIT);
+        }
+        return;
+    }
+    if (cut) {
+        on_way ();                              /* (A trap on its way) */
         return;
     }
     hub_map (0);
@@ -610,6 +673,7 @@ static void __fastcall__ go (unsigned char h)
     unsigned char r, d = h >> 1, k, best = 0xFF, slow, bx = 0, by = 0, wx, wy;
     unsigned long t, bt = 0xFFFFFFFFUL;
     unsigned ox, oy;
+    struct portal* q;
 
     dens_where ();
     sn_ = HUB->pc_stratum;
@@ -654,6 +718,10 @@ static void __fastcall__ go (unsigned char h)
                 across (h, r, slow);
                 return;
             }
+            if (cross_room (r, wx, wy, k, d, slow), cut) {
+                on_way ();                      /* (A trap on its way to it) */
+                return;
+            }
             mx = ox + k - dir_x[best];          /* (From the room's square before it, walked on) */
             my = oy + d - dir_y[best];
             d = best;
@@ -661,6 +729,15 @@ static void __fastcall__ go (unsigned char h)
             move.y = my;
             t = bt + walk (d, 0, slow);
             goto set_out;
+        }
+        if ((q = portal_at (bx, by)) != 0 && q->kind == PK_PORTCULLIS && !(q->state & PS_OPEN)) {
+            hub_map (0);
+            no_way (N_CLOSED);                  /* (Its portcullis down) */
+            return;
+        }
+        if (cross_room (r, wx, wy, bx, by, slow), cut) {
+            on_way ();
+            return;
         }
         mx = ox + bx;
         my = oy + by;
@@ -678,7 +755,7 @@ static void __fastcall__ go (unsigned char h)
         t = walk (d, 0, slow);
         if (blocked && mx == move.x && my == move.y) {
             hub_map (0);
-            no_way (DEN_WAY);
+            den_way ();
             return;
         }
     }
@@ -869,7 +946,7 @@ static void arrive (void)
         walk (move.dir, 1, dark ());           /* (Stopped short, if a denizen's come into its way) */
     } else if (how == A_CROSSED && move.den) {
         blocked = den_on (mx + head_x[move.face], my + head_y[move.face]);
-    } else if (how != A_CROSSED && how != A_WENT_TO && how != A_RESUMED) {
+    } else if (how != A_CROSSED && how != A_WENT_TO && how != A_RESUMED && how != A_STOPPED) {
         move.face = toward_middle ();
     }
     if ((r = room_of (sn_, mx, my)) != 0xFF) {
@@ -887,8 +964,11 @@ static void arrive (void)
     if (how == A_CROSSED && move.ledge) {
         event (E_LEDGE, 0, (unsigned char) move.ledge);
     }
+    if (how == A_STOPPED) {
+        stopped ();
+    }
     if (blocked) {
-        event (E_NOWAY, 0, DEN_WAY);
+        den_way ();
     }
 }
 
@@ -1175,12 +1255,14 @@ static void dig_on (void)
     see (0);
 }
 
-/* ---- Doors (DUNGEON.md: portals): the one the character faces, walked up to, and worked: opened (unbarred, if
-** it's barred from this side), closed, its lock picked (the referee's Lockcraft, by the tools equipped: a minute
-** a try, harder the more complex the lock), forced (Strength against its material, its lock or bar burst: loud) */
+/* ---- Doors (DUNGEON.md: portals), and the other portals (portcullises, windows, arrow slits) and the traps: the one
+** the character faces walked up to, and worked by the maker, which keeps them (dq0m/work.c: opened, closed, a lock
+** picked, forced; raised, lowered; broken, climbed through; a trap disarmed, a search), while the world waits */
 
 static unsigned px_, py_;                       /* (The door's square, in the frame) */
 static unsigned char pd_;                       /* (The way from where the character stands to it) */
+static unsigned char want_;                     /* (What's to be worked, I_PORTAL's b: PW_*) */
+#define WANTED(t)       ((TILE (t) == T_DOOR && want_ != PW_WINDOW) || (TILE (t) == T_WINDOW && want_ != PW_DOOR))
 
 /* The door the character faces, walked up to (its time), its square in px_, py_: the door's record (in the window),
 ** or NULL */
@@ -1198,10 +1280,11 @@ static struct portal* __fastcall__ door_ahead (unsigned long* tt)
     slow = dark ();
     *tt = 0;
     dens_where ();                              /* (Walked up to round the denizens) */
+    cut = 0;
     if ((r = room_of (sn_, mx, my)) == 0xFF) {  /* (A passage: a door beside it, the way it faces first) */
         for (k = 0; k < 4; ++k) {
             d = (k + (face >> 1)) & 3;
-            if ((p = at (sn_, mx + dir_x[d], my + dir_y[d])) != 0 && TILE (*p) == T_DOOR &&
+            if ((p = at (sn_, mx + dir_x[d], my + dir_y[d])) != 0 && WANTED (*p) &&
                 !(portal_at (cx_, cy_) && (portal_at (cx_, cy_)->state & PS_HIDDEN))) {
                 px_ = mx + dir_x[d];
                 py_ = my + dir_y[d];
@@ -1218,7 +1301,7 @@ static struct portal* __fastcall__ door_ahead (unsigned long* tt)
     wy = cy_;
     for (k = 0; k < 4; ++k) {                   /* (Its room's doors that way: the quickest to walk up to) */
         for (d = 0; wall_tile (&C->room[r], k, d); ++d) {
-            if (TILE (C->tile[wall_y][wall_x]) != T_DOOR || (bearing ((int) wall_x - wx, (int) wall_y - wy) != face &&
+            if (!WANTED (C->tile[wall_y][wall_x]) || (bearing ((int) wall_x - wx, (int) wall_y - wy) != face &&
                 k != (face >> 1)) || (portal_at (wall_x, wall_y) && (portal_at (wall_x, wall_y)->state & PS_HIDDEN))) {
                 continue;
             }
@@ -1233,6 +1316,7 @@ static struct portal* __fastcall__ door_ahead (unsigned long* tt)
     if (bt == 0xFFFFFFFFUL) {
         return 0;
     }
+    cross_room (r, wx, wy, bx - dir_x[bd], by - dir_y[bd], slow);   /* (Its way again: a trap on it?) */
     *tt = bt;
     px_ = ox + bx;
     py_ = oy + by;
@@ -1243,151 +1327,111 @@ static struct portal* __fastcall__ door_ahead (unsigned long* tt)
     return portal_at (cx_, cy_);
 }
 
-/* A door's state changed: kept by the maker, made in its chunk */
-static void __fastcall__ door_state (unsigned char st)
+/* The maker asked to work what (PA_*, or W_STEP) at x, y (or about the character, NO_SQ) from where the character
+** stands (mx, my), d the way from there to it: 1 if there was nothing there to work */
+static unsigned char __fastcall__ work (unsigned char what, unsigned x, unsigned y, unsigned char d)
 {
-    change (sn_, px_, py_, st, 0, PORTAL_STATE);
-}
-
-static signed char __fastcall__ test_door (unsigned char purpose, unsigned char b, signed char steps, unsigned char* res)
-{
-    struct req* r;
-    signed char g;
+    struct mreq* q;
 
     hub_map (0);
-    r = &HUB->slot[SLOT_WORLD];
-    r->kind = RS_TEST;
-    r->actor = 0;
-    r->a = purpose;
-    r->b = b;
-    r->steps = steps;
-    r = hub_ask (SLOT_WORLD);
-    g = r->grade;
-    *res = r->result;
-    r->state = REQ_FREE;
-    return g;
+    q = &HUB->mreq[ASK_WORLD];
+    q->tile = what;
+    q->elev = d;
+    q->fx = mx;
+    q->fy = my;
+    ask_maker (M_WORK, sn_, x, y);
+    return q->res;
 }
 
-/* A search about the character (a minute): the referee's Awareness (rs.h's P_SEARCH) against each hidden door within
-** a few squares that it sees; one found is a door like any other from then on */
-#define SEARCH_R        3
-static void search (void)
+/* What came of it (the maker's reply): the character where it says, busy t more and the time it took; or in a pit,
+** climbing out to there */
+static void __fastcall__ worked (unsigned long t)
 {
-    unsigned i, j;
-    unsigned char k, found = 0, res;
-    unsigned char* p;
-    struct portal* q;
+    struct mreq* q;
+
+    hub_map (0);
+    q = &HUB->mreq[ASK_WORLD];
+    t += q->t;
+    HUB->pc_x = q->fx;
+    HUB->pc_y = q->fy;
+    if (q->climb) {
+        cl.up = 1;
+        cl.need = q->climb;
+        cl.done = 0;
+        cl.x = q->fx;
+        cl.y = q->fy;
+        HUB->pc_x = tx_;                        /* (At the pit's foot) */
+        HUB->pc_y = ty_;
+        event (E_CLIMB, 0, K_BEGUN << 8 | cl.need);
+        climb_round ();
+        t += t ? ROUND_T : 0;
+    }
+    if (t) {
+        busy (t > 60000UL ? 60000U : (unsigned) t);
+    }
+    t = q->res;
+    see (0);
+    if (t) {
+        event (E_ARRIVE, 0, A_CLIMBED);         /* (Through a window: somewhere new) */
+    }
+}
+
+/* A door (or a portcullis, a window, a slit) the character faces worked, walked up to first; or about it: a search,
+** a trap in reach disarmed (else the door ahead's) */
+static void __fastcall__ door_work (unsigned char what)
+{
+    unsigned long t;
 
     sn_ = HUB->pc_stratum;
     mx = HUB->pc_x;
     my = HUB->pc_y;
-    for (j = my - SEARCH_R; j <= my + SEARCH_R; ++j) {
-        for (i = mx - SEARCH_R; i <= mx + SEARCH_R; ++i) {
-            if ((p = at (sn_, i, j)) == 0 || TILE (*p) != T_DOOR || !(*p & T_VIS) ||
-                (q = portal_at (cx_, cy_)) == 0 || !(q->state & PS_HIDDEN)) {
-                continue;
-            }
-            k = q->state;
-            if (test_door (P_SEARCH, k & PS_MAGIC ? HIDE_MAGICAL : HIDE_MECHANICAL, 0, &res) > 0 && !res) {
-                px_ = i;
-                py_ = j;
-                door_state (k & ~PS_HIDDEN);
-                found = 1;
-            }
-        }
-    }
-    hub_map (0);
-    busy (600);
-    event (E_PORTAL, 0, found ? PO_FOUND : PO_NOTHING);
-    see (0);
-}
-
-static void __fastcall__ door_work (unsigned char what)
-{
-    static struct portal q;
-    struct portal* p;
-    unsigned long t;
-    unsigned char out, res;
-    signed char g;
-
-    if (what == PA_SEARCH) {
-        search ();
+    if ((what == PA_SEARCH || what == PA_DISARM) && !work (what, NO_SQ, NO_SQ, 0)) {
+        worked (0);
         return;
     }
-
-    if (!(p = door_ahead (&t))) {
+    if (!door_ahead (&t)) {
         hub_map (0);
-        event (E_PORTAL, 0, PO_NONE);
+        event (what == PA_DISARM ? E_TRAP : E_PORTAL, 0, what == PA_DISARM ? TO_NONE << 8 : want_ == PW_WINDOW ?
+            PO_NONE | PK_WINDOW << 8 : PO_NONE);
         HUB->pc_ready = HUB->now;
         return;
     }
-    q = *p;                                     /* (Its record, while the window moves) */
-    out = PO_NONE;
-    switch (what) {
-    case PA_OPEN:
-        if (q.state & PS_OPEN) {
-            out = PO_IS_OPEN;
-        } else if ((q.state & PS_BARRED) && q.bar != ((pd_ + 2) & 3)) {
-            out = PO_BARRED;                    /* (Barred from the far side) */
-        } else if (q.state & PS_LOCKED) {
-            out = PO_LOCKED;
-        } else {
-            out = q.state & PS_BARRED ? PO_UNBARRED : PO_OPENED;
-            door_state ((q.state & ~PS_BARRED) | PS_OPEN);
-        }
-        t += stept * 2;
-        break;
-    case PA_CLOSE:
-        if (!(q.state & PS_OPEN)) {
-            out = PO_IS_SHUT;
-        } else {
-            out = PO_CLOSED;
-            door_state (q.state & ~PS_OPEN);
-        }
-        t += stept * 2;
-        break;
-    case PA_UNLOCK:
-        if (!(q.state & PS_LOCKED)) {
-            out = PO_NO_LOCK;
-            break;
-        }
-        g = test_door (P_PICKLOCK, q.lock, -2 * (signed char) q.lock, &res);
-        if (res) {
-            out = PO_NO_PICKS;
-            break;
-        }
-        t += 600;                               /* (A minute a try) */
-        if (g > 0) {
-            out = PO_PICKED;
-            door_state (q.state & ~PS_LOCKED);
-        } else {
-            out = PO_NOT_PICKED;
-        }
-        break;
-    case PA_FORCE:
-        if (q.state & PS_OPEN) {
-            out = PO_IS_OPEN;
-            break;
-        }
-        g = test_door (P_FORCE, q.mat, (q.mat == PM_WOOD ? 0 : q.mat == PM_IRONBOUND ? -2 : -4) -
-            ((q.state & (PS_LOCKED | PS_BARRED)) ? 1 : 0), &res);
-        t += ROUND_T;
-        noise (7);
-        if (g > 0) {
-            out = PO_FORCED;                    /* (Its lock or bar burst, the door open) */
-            door_state ((q.state & (PS_LOCKED | PS_BARRED) ? PS_BROKEN : 0) | PS_OPEN);
-        } else {
-            out = PO_HELD;
-        }
-        break;
+    if (cut) {
+        on_way ();                              /* (A trap on its way up to it) */
+        return;
     }
-    hub_map (0);
-    HUB->pc_x = mx;                             /* (It's walked up to the door) */
-    HUB->pc_y = my;
+    work (what, px_, py_, pd_);
     HUB->pc_face = H_OF (pd_);
-    busy (t > 60000UL ? 60000U : (unsigned) t);
-    event (E_PORTAL, 0, out);
-    see (0);
+    worked (t);
+}
+
+/* The walk worked out last stops at the trap on its way (tx_, ty_, from fx_, fy_: its chunk's, C's, made the
+** frame's), to be set off as it gets there (or noticed in time: the maker's) */
+static void on_way (void)
+{
+    unsigned ox = strata[sn_].x0 + C->cx * CW, oy = strata[sn_].y0 + C->cy * CW;
+
+    tx_ += ox;
+    ty_ += oy;
+    fx_ += ox;
+    fy_ += oy;
+    hub_map (0);
+    move.on = 1;
+    move.how = A_STOPPED;
+    move.sn = sn_;
+    move.x = tx_;
+    move.y = ty_;
+    move.face = bearing ((int) (tx_ - fx_), (int) (ty_ - fy_));
+    busy (cut_t > 60000UL ? 60000U : (unsigned) cut_t);
+}
+
+/* On the trap on its way (A_STOPPED): the maker's to set off */
+static void stopped (void)
+{
+    mx = fx_;
+    my = fy_;
+    work (W_STEP, tx_, ty_, 0);
+    worked (0);
 }
 
 /* ---- The denizens (DENIZENS.md: their task decides, the world carries out): an actor's intent (the hub's actor
@@ -1460,6 +1504,7 @@ static void __fastcall__ intent (struct msg* m)
         go_to (m->w1, m->w2);
         break;
     case I_PORTAL:
+        want_ = m->b;
         door_work (m->a);
         break;
     case I_LIGHT:
@@ -1478,24 +1523,25 @@ static void __fastcall__ intent (struct msg* m)
 ** task slow to, a while, is left to catch up as it can).  1 while it waits for them */
 static unsigned waited;
 
+#define BEHIND          ((unsigned) HUB->den_at != (unsigned) HUB->now)    /* (The low words enough: a slice apart) */
+
 static unsigned char turns_run (void)
 {
-    unsigned long d;
+    unsigned d;
 
     if (HUB->tpr || HUB->paused || HUB->hold) {
         return 0;
     }
-    if (HUB->den_at != HUB->now && !late) {
-        while (HUB->den_at != HUB->now && hy_ticks () - waited < 100) {
+    if (BEHIND && !late) {
+        while (BEHIND && hy_ticks () - waited < 100) {
             hy_sleep_ticks (1);                 /* (Waited for here: the rest of the round's no use) */
         }
-        late = HUB->den_at != HUB->now;
+        late = BEHIND;
         return 1;
     }
-    if (HUB->now >= HUB->pc_ready) {
-        return 0;
+    if ((d = (unsigned) HUB->pc_ready - (unsigned) HUB->now) == 0 || d > 60000U) {
+        return 0;                               /* (Free: busy () takes 60,000 tenths at most) */
     }
-    d = HUB->pc_ready - HUB->now;
     advance (d < TURN_SLICE ? d : TURN_SLICE);
     waited = hy_ticks ();
     return 1;

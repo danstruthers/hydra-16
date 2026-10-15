@@ -439,7 +439,6 @@ static void events (void)
     static struct msg m;
     unsigned char k;
     struct req* r;
-    const char* nm;
 
     while (!quit && hub_next (&place, &m)) {
         switch (m.kind) {
@@ -490,12 +489,12 @@ static void events (void)
             break;
         case E_NOWAY:
             if (m.who == 0 && (m.w1 & 0xFF) == N_DEN) {
-                nm = HUB->actor[(m.w1 >> 8) & 7].name;  /* (A denizen's: its name) */
-                sayf ("\n%s %s is in the way.", strchr ("aeiou", *nm) ? "An" : "A", nm);
+                strcpy (lb, HUB->actor[(m.w1 >> 8) & 7].name);  /* (A denizen's: its name, for overlay 4) */
+                den_way ();
             } else if (m.who == 0) {
                 tell (m.w1 == N_SHUT ? T_THE_WAY_OUT :
                      m.w1 == N_NO_STAIRS ? T_THERE_S_NO : m.w1 == N_NO_DIG ?
-                     T_THERE_S_NOTHING :
+                     T_THERE_S_NOTHING : m.w1 == N_CLOSED ? T_THE_PORTCULLIS_IS :
                      T_YOU_CAN_T);
             }
             break;
@@ -536,12 +535,17 @@ static void events (void)
         case E_PORTAL:
             if (m.who == 0) {
                 if (!finds || m.w1 != PO_NOTHING) {
-                    portal_words (m.w1);
+                    fixt_words (m.w1);
                 }
-                if (finds && (m.w1 == PO_FOUND || m.w1 == PO_NOTHING)) {
+                if (finds && (m.w1 == PO_FOUND || m.w1 == PO_NOTHING || m.w1 == PO_FOUND_TRAP)) {
                     msg (HUB->things_text);     /* (What its search turned up besides) */
                     finds = 0;
                 }
+            }
+            break;
+        case E_TRAP:
+            if (m.who == 0) {
+                trap_words (m.w1);
             }
             break;
         }
@@ -559,6 +563,22 @@ static void __fastcall__ intend2 (unsigned char kind, unsigned w1, unsigned w2)
     m.a = 0;
     m.w1 = w1;
     m.w2 = w2;
+    if (hub_send (&m)) {
+        busy = 1;
+        t_prompt (0);
+    }
+}
+
+/* A portal (or a trap) worked: what's done (PA_*), to what (the parser's thing: a door, a window, or either) */
+static void __fastcall__ work (unsigned char what, unsigned char obj)
+{
+    static struct msg m;
+
+    m.kind = I_PORTAL;
+    m.who = 0;
+    m.a = what;
+    m.b = obj == OB_DOOR || obj == OB_PORTC ? PW_DOOR : obj == OB_WINDOW ? PW_WINDOW : PW_ANY;
+    m.w1 = 0;
     if (hub_send (&m)) {
         busy = 1;
         t_prompt (0);
@@ -684,7 +704,9 @@ static unsigned char __fastcall__ find (unsigned char obj, unsigned char orel)
 
     for (i = 0; i < s->ndoors; ++i) {
         h = (pc_face + (s->door[i].rel & 7)) & 7;
-        if ((obj == OB_DOOR ? !(s->door[i].rel & MOUTH) : obj == OB_PASSAGE && (s->door[i].rel & MOUTH)) &&
+        k = s->door[i].kind == PK_WINDOW || s->door[i].kind == PK_SLIT;    /* (A window, or a slit) */
+        if ((obj == OB_DOOR ? !(s->door[i].rel & MOUTH) && !k : obj == OB_WINDOW ? k : obj == OB_PORTC ?
+            s->door[i].kind == PK_PORTCULLIS : obj == OB_PASSAGE && (s->door[i].rel & MOUTH)) &&
             (orel == 0xFF || h == orel)) {
             tx = s->door[i].x;
             ty = s->door[i].y;
@@ -773,7 +795,7 @@ static void __fastcall__ command (char* l)
 {
     static struct pcmd c;
     struct req* r;
-    unsigned char d;
+    unsigned char d, pa;
 
     pc_face = HUB->pc_face;
     parse (l, &c);
@@ -790,6 +812,9 @@ static void __fastcall__ command (char* l)
         if (c.obj) {                            /* (A thing: up to it, or through it) */
             if (!find (c.obj, c.orel)) {
                 sayf ("\nYou see no %s %s.", thing[c.obj], c.orel == 0xFF ? "here" : "that way");
+            } else if (c.obj == OB_WINDOW && (c.how == HOW_THROUGH || c.verb == V_ENTER)) {
+                pa = PA_THROUGH;                /* (Climbed through) */
+                goto portal;
             } else if ((c.how == HOW_THROUGH || c.verb == V_ENTER) && (c.obj == OB_DOOR || c.obj == OB_PASSAGE)) {
                 intend (I_GO, bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y));
             } else {
@@ -804,6 +829,11 @@ static void __fastcall__ command (char* l)
         }
         return;
     case V_CLIMB:
+        if (c.obj == OB_WINDOW || c.how == HOW_THROUGH) {
+            c.obj = OB_WINDOW;                  /* (Through a window) */
+            pa = PA_THROUGH;
+            goto portal;
+        }
         intend (I_CLIMB, c.dir == GO_DOWN ? DIR_DOWN : DIR_UP);
         return;
     case V_TURN:
@@ -820,11 +850,24 @@ static void __fastcall__ command (char* l)
     case V_CLOSE:
     case V_UNLOCK:
     case V_FORCE:
+    case V_RAISE:
+    case V_LOWER:
+    case V_BREAK:
+    case V_DISARM:
+        pa = c.verb == V_OPEN ? PA_OPEN : c.verb == V_CLOSE ? PA_CLOSE : c.verb == V_FORCE ? PA_FORCE :
+            c.verb == V_RAISE ? PA_RAISE : c.verb == V_LOWER ? PA_LOWER : c.verb == V_BREAK ? PA_BREAK :
+            c.verb == V_DISARM ? PA_DISARM : PA_UNLOCK;
+        if (pa == PA_RAISE || pa == PA_LOWER) {
+            c.obj = OB_PORTC;
+        }
+portal:
+        if (c.obj && c.orel == 0xFF && find (c.obj, 0xFF)) {
+            c.orel = bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y);    /* (The one it sees: faced) */
+        }
         if (c.orel != 0xFF && c.orel <= H_NW && c.orel != HUB->pc_face) {
             intend (I_TURN, c.orel);            /* (The door that way: faced first) */
         }
-        intend (I_PORTAL, c.verb == V_OPEN ? PA_OPEN : c.verb == V_CLOSE ? PA_CLOSE : c.verb == V_FORCE ? PA_FORCE :
-            PA_UNLOCK);
+        work (pa, c.obj);
         return;
     case V_SEARCH:
     case V_EXAMINE:
@@ -907,7 +950,7 @@ static void __fastcall__ command (char* l)
 int main (int argc, char* argv[])
 {
     unsigned long seed = hy_time () ^ hy_ticks (), was = 0;
-    unsigned shown = 0;
+    unsigned shown = 0, lnow = 0;
     const char* file = 0;
     unsigned char k, i;
     char* l;
@@ -970,13 +1013,14 @@ int main (int argc, char* argv[])
         }
         events ();
         now = hub_now ();
-        if (now != was && (HUB->tpr || !busy || hy_ticks () - shown >= 100)) {
-            if (now / 10 != was / 10) {         /* (The clock on the status line, each game second; the turns
+        if ((unsigned) now != lnow && (HUB->tpr || !busy || hy_ticks () - shown >= 100)) {
+            lnow = now;                         /* (The clock on the status line, each game second; the turns
                                                 **   pace's, as the character's busy, each half a real second) */
+            if (now / 10 != was) {
+                was = now / 10;
                 shown = hy_ticks ();
                 status ();
             }
-            was = now;
         }
         if (!busy && pending[0]) {              /* (Walked over: now taken up) */
             take (pending);
@@ -987,7 +1031,7 @@ int main (int argc, char* argv[])
             status ();
         }
         t_done ();
-        hy_sleep_ticks (busy && !HUB->tpr ? 10 : 2);   /* (The turns pace's clock running on: no keys till it's done) */
+        hy_sleep_ticks (2);
     }
     save_game ();                               /* (Kept as it ends: the game's quit, not lost) */
     stop_world ();

@@ -353,7 +353,8 @@ static void __fastcall__ answer (struct req* r)
             r->grade = test_sk (&pc, appraiser[r->b < NAP ? r->b : 0], r->steps);
             break;
         }
-        if (r->a == P_SEARCH && r->b == HIDE_MAGICAL) {    /* (Only by magic: its spells to come) */
+        if ((r->a == P_SEARCH || r->a == P_DISARM) && r->b == HIDE_MAGICAL) {   /* (Only by magic: its spells
+                                                **   to come) */
             r->result = 1;
             break;
         }

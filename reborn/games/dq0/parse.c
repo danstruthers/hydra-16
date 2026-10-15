@@ -44,6 +44,8 @@ static const struct { char w[16]; unsigned char v; } verbs[] = {
     { "wait", V_WAIT }, { "z", V_WAIT }, { "map", V_MAP }, { "m", V_MAP }, { "sheet", V_SHEET },
     { "skills", V_SHEET }, { "help", V_HELP }, { "?", V_HELP }, { "pause", V_PAUSE }, { "quit", V_QUIT },
     { "hide", V_HIDE }, { "conceal", V_HIDE }, { "stash", V_HIDE },
+    { "raise", V_RAISE }, { "lift", V_RAISE }, { "winch", V_RAISE }, { "lower", V_LOWER },
+    { "break", V_BREAK }, { "smash", V_BREAK }, { "bend", V_FORCE }, { "disarm", V_DISARM }, { "disable", V_DISARM },
     { "save", V_SAVE }, { "inventory", V_INVENTORY }, { "inv", V_INVENTORY }, { "i", V_INVENTORY },
     { "q", V_QUIT },
 };
@@ -70,6 +72,9 @@ static const struct { char w[12]; unsigned char o; } things[] = {
     { "hallway", OB_PASSAGE }, { "stairs", OB_STAIRS }, { "stair", OB_STAIRS }, { "stairway", OB_STAIRS },
     { "staircase", OB_STAIRS }, { "steps", OB_STAIRS }, { "ladder", OB_LADDER }, { "shaft", OB_SHAFT },
     { "hole", OB_SHAFT }, { "ledge", OB_LEDGE }, { "exit", OB_WAY_OUT }, { "wall", OB_WALL },
+    { "portcullis", OB_PORTC }, { "window", OB_WINDOW }, { "shutters", OB_WINDOW }, { "shutter", OB_WINDOW },
+    { "glass", OB_WINDOW }, { "bars", OB_WINDOW }, { "slit", OB_WINDOW }, { "trap", OB_TRAP }, { "plate", OB_TRAP },
+    { "wire", OB_TRAP }, { "tripwire", OB_TRAP }, { "pit", OB_TRAP },
 };
 
 /* The words for the other thing, after the first (put X in Y, on Y; take X from Y, out of it, off it) */

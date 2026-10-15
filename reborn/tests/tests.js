@@ -2283,7 +2283,7 @@ module.exports = {
     },
     {
       name: 'dq0dig', what: 'Dingus Quest Zero digging (dq0 -k pick -T: a pick in hand, the tool the referee takes (the room\'s floor earth, the maker\'s), named as it is first used): a shaft down from a room by its stairway, spell by spell (Mining tests, the referee asked), through to the stratum below (grown round it then), and down it; the rats by the stairway living through every spell of it (the turns pace: some eleven hours, the denizens kept up a slice at a time)',
-      init: 't_rc', cycles: 900e6,
+      init: 't_rc', cycles: 1100e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -k pick -T\r' +
         ['dig down', 'look', 'd', 'look', 'map', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
       expect: ['You set to digging', 'You dig with your pick.', 'feet to go.', 'the shaft is through.', 'You climb down the shaft.', 'The map (you face', '% echo $status'],
@@ -2376,6 +2376,44 @@ module.exports = {
         if (!g.includes('A giant rat is in the way.') || g.includes('You cross')) f.push('the character not stopped by the rat in its way');
         return f;
       },
+      sdcard: true
+    },
+    {
+      // (East three times, waiting between: the giant rats by the way down in the way, keeping their distance till
+      // they're cornered, then darting past)
+      name: 'dq0portc', what: 'Dingus Quest Zero\'s portcullises (DUNGEON.md: portals; the maker works them, dq0m/work.c): through one raised (seed 12, dq0 -T: east of the first way down) into a cell, seen and worded as a portcullis, lowered by its winch on the cell\'s side (faced first), never walked through while it\'s down, raised again by the winch, and gone back through',
+      init: 't_rc', cycles: 900e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 12 -c /ram/c.hm -T\r' +
+        ['e', 'wait', 'e', 'wait', 'e', 'lower portcullis', 'w', 'look', 'raise portcullis', 'w', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['There is a portcullis behind you (raised).', 'You loose the winch: the portcullis crashes down.',
+        'The portcullis is down: raise it first.', 'There is a portcullis\nahead (down).',
+        'You wind the winch beside it, and the portcullis grinds up.', 'You are in a long vault', '% echo $status'],
+      sdcard: true
+    },
+    {
+      name: 'dq0window', what: 'Dingus Quest Zero\'s windows (DUNGEON.md: portals): one looked through and worded (seed 12: in the second room\'s wall, glazed, its shutters open), not climbed through while its glass is in it, the glass broken (the referee\'s blow at a thing, HC_BLOW at RS_THING), then climbed through (its sill, P_CLIMB) into the passage beyond, the window seen from there',
+      init: 't_rc', cycles: 900e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 12 -c /ram/c.hm\r' +
+        ['n', 'climb through window', 'break window', 'climb through window', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['There is a glazed window\nbehind you to your right (its shutters open).', 'You can\'t climb through: it\'s shut, glazed or barred.',
+        'The glass shatters with a crash.', 'You climb up onto the sill, and through.', 'You are in a passage.',
+        'There is a shuttered window behind you (its shutters open).', '% echo $status'],
+      sdcard: true
+    },
+    {
+      name: 'dq0traps', what: 'Dingus Quest Zero\'s traps (DUNGEON.md: traps; the world\'s walk stops on one, the maker sets it off, the referee judges it): a door\'s blade, set off as the door\'s forced open (seed 16, dq0 -T), dodged; then a plate in a cave\'s floor walked onto, its blade striking (HC_STRIKE: a wound) and the trap seen after, sprung; then (seed 7, a thief, hmchar -s 1) a hidden dart trap on a door found by searching, the door left shut while it\'s known, the trap disarmed (Lockcraft), and the door opened',
+      init: 't_rc', cycles: 2000e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 16 -c /ram/c.hm -T\r' +
+        ['face east', 'force', 'e', 'force', 'force', 'e', 'e', 'look', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        'āhmchar -q -s 1 -o /ram/t.hm\rādq0 -p t -s 7 -c /ram/t.hm\r' +
+        ['search', 'search', 'search', 'search', 'search', 'search', 'x dagger', 'x dagger', 'x dagger', 'x dagger',
+          'x dagger', 'x dagger', 'face south', 'open', 'disarm', 'open', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['As the door opens, something clicks. A blade scythes out of the wall! You throw\nyourself clear.',
+        'A plate sinks under your foot with a click. A blade scythes out of the wall! It\nhurts you: ',
+        'scything blade, set off by a plate in the floor, at your feet (sprung).',
+        'You find a trap: a dart trap, set to go off as its door opens.',
+        'There\'s a trap on that door you know of: disarm it before you open it.',
+        'You work at the trap a while, and disarm it.', 'You open the door.', '% echo $status'],
       sdcard: true
     },
     {

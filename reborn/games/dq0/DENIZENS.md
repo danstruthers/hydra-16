@@ -107,11 +107,14 @@ allies.
   and depths it lives in, its numbers, its range, its senses, its pace), made a data file the task reads into a bank
   of its own.  The records (64 lairs, 240 denizens) are in another bank, kept with the game (dens.dat).
 - **Placing:** a lair's denizens are put on squares of their own as the character comes into its chunk or one beside
-  it (round the way, or in a room of the chunk), by the lair's own numbers, so it's the same whenever it happens.
+  it (round the way, or in a room of the chunk), by the lair's own numbers, so it's the same whenever it happens:
+  none on the way or beside it, nor beside the character (it comes out there, and isn't boxed in).  No lair is by
+  the dungeon's way in (the top stratum's first: where the character begins).
 - **Acting:** those within about 24 squares of the character are actors (the hub's, eight at most): each, as it's
   free, senses the character (seen by its light, or with none by darkvision, along a line clear of rock, walls and
   shut doors; heard moving, nearer), and wanders about its lair (a few squares, or its range), keeps to it, watches
-  the character, keeps its distance (a shy one: till it's a few squares further), or comes towards it (a bold one);
+  the character, keeps its distance (a shy one: till it's a few squares further; cornered close by, a step no
+  nearer, a way round; cornered beside the character, it darts past it), or comes towards it (a bold one);
   and asks the world, which moves it a square at a time by the character's rules (a step it can walk, its time by
   its pace and the slope).  No two denizens share a square, and none goes onto the character's, nor where the
   character's move ends (the hub's pc_tx, pc_ty).

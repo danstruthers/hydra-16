@@ -88,7 +88,8 @@ struct portal {
     unsigned char   lock;                       /* A mechanical lock's complexity, 1-9 (0: none) */
     unsigned char   mat;                        /* PM_* */
     unsigned char   tough;                      /* What breaking it would take: worn away blow by blow */
-    unsigned char   bar;                        /* The way (DIR_*) from it to the side it's barred from */
+    unsigned char   bar;                        /* The way (DIR_*) from it to the side it's barred from (a
+                                                **   portcullis's: the side its winch is on) */
     unsigned char   parts;                      /* A window's (PP_*: any of them; none, an empty frame), a
                                                 **   portcullis's bars */
 };
@@ -104,12 +105,15 @@ enum { PK_DOOR, PK_WINDOW, PK_PORTCULLIS, PK_DRAWBRIDGE, PK_GATE, PK_GRATE, PK_H
 #define PS_HIDDEN       0x20                    /* A secret door: like the wall round it, till a search finds it */
 #define PS_MAGIC        0x40                    /* (Hidden by magic: found only by magical means, the referee's) */
 enum { PM_WOOD, PM_IRONBOUND, PM_IRON, PM_STONE };
-#define PORTAL_STATE    0xFE                    /* (A change record's link for a portal's state: tile its state) */
+#define PORTAL_STATE    0xFE                    /* (A change record's link for a portal's state: tile its state,
+                                                **   elev its parts) */
+#define TRAP_STATE      0xFC                    /* (And for a trap's: tile its state) */
 /* A window (T_WINDOW, PK_WINDOW) and an arrow slit (T_WINDOW, PK_SLIT, always open) are seen through (the senses'),
 ** but a window's closed shutters; a portcullis (T_DOOR, PK_PORTCULLIS) is seen through, up or down */
 
 /* A trap (DUNGEON.md): a hazard on its square, the floor (or a door) it looks like till it's found; an open pit's
-** square T_PIT, in plain sight.  What it does is the referee's (its harm), the world's to set off */
+** square T_PIT, in plain sight (a covered one's too, once it's given way).  What it does is the referee's (its
+** harm); the world sets it off, as it's walked on (a plate's, a wire's) or its door's opened */
 #define NTRAPS          6
 struct trap {
     unsigned char   x, y;
@@ -128,6 +132,7 @@ enum { TT_PLATE, TT_WIRE, TT_DOOR };            /* Set off: a plate trodden, a w
 #define TS_BROKEN       0x04
 #define TS_HIDDEN       0x20                    /* (Found by a search, as a secret door is, */
 #define TS_MAGIC        0x40                    /*   or hidden by magic: by magical means only) */
+#define TS_SET(s)       (!((s) & (TS_SPRUNG | TS_DISARMED | TS_BROKEN)))   /* (It would go off) */
 
 /* The materials (rs.h's MAT_*) of a room's floor, walls and ceiling (struct chunk's mat[r]), and of its passages'
 ** (mat[NROOMS]: their floors, the rock round them and over them: the rock's, dug or cut) */
@@ -205,10 +210,19 @@ struct mreq {
     unsigned char   tile;                       /* M_CHANGE's: what the square becomes, */
     signed char     elev;                       /*   its floor, */
     unsigned char   link;                       /*   and the link it is (an opening), or 0xFF */
+    unsigned        fx, fy;                     /* M_WORK's: where the character stands (or came from), and the
+                                                **   reply's where it is after (a pit's: where it climbs out to); */
+    unsigned        t;                          /*   the reply's tenths it took (and it was out for), */
+    unsigned char   climb, res;                 /*   a pit's climb out (feet, or 0), 1 if nothing was there */
 };
-enum { M_PLAN, M_CHUNK, M_CHANGE, M_SAVE, M_RESTORE };   /* A stratum's plan and links down (its record set), a
-                                                **   chunk, a square changed (and kept: the maker's records); the
-                                                **   records written to the save, read back (the plans grown again) */
+enum { M_PLAN, M_CHUNK, M_CHANGE, M_SAVE, M_RESTORE, M_WORK };   /* A stratum's plan and links down (its record
+                                                **   set), a chunk, a square changed (and kept: the maker's records);
+                                                **   the records written to the save, read back (the plans grown
+                                                **   again); a portal or a trap worked (dq0m/work.c: cx, cy its square,
+                                                **   or NO_SQ, about the character; tile what's done, hub.h's PA_* or
+                                                **   W_STEP; elev the way from fx, fy to it) */
+#define NO_SQ           0xFFFF
+#define W_STEP          0xFF                    /* (M_WORK's: a trap stepped onto, from fx, fy) */
 enum { ASK_WORLD, ASK_DENIZENS, ASK_SENSES, ASK_UI, NASK };
 
 /* ---- plan.c (the maker's): a stratum grown whole, in outline */

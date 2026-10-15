@@ -580,9 +580,24 @@ static void __fastcall__ coarse (unsigned char k, unsigned lim)
     a.ready += 60 + random (60);
 }
 
+/* Actor a (the copy), shy and cornered beside the character: it darts past it, to the square beyond (open, no one
+** on it), a moment's dash; 1 if it did */
+static unsigned char __fastcall__ dart (unsigned char k)
+{
+    unsigned x = pcx + (pcx - a.x), y = pcy + (pcy - a.y);
+
+    if (!open_sq (at (a.sn, x, y)) || taken (k, x, y)) {
+        return 0;
+    }
+    a.x = x;
+    a.y = y;
+    a.ready += 2 * a.step;
+    return 1;
+}
+
 /* What actor k means to do, by its kind and what it senses: asked of the world (or a while waited); at the turns pace
-** done here.  Watching the character, a shy one keeps its distance (till it's a few squares further), a bold one
-** comes towards it; else it wanders about its lair (or keeps to it) */
+** done here.  Watching the character, a shy one keeps its distance (till it's a few squares further; cornered beside
+** it, it darts past), a bold one comes towards it; else it wanders about its lair (or keeps to it) */
 static void __fastcall__ decide (unsigned char k)
 {
     unsigned char d = 0xFF, was;
@@ -610,7 +625,9 @@ static void __fastcall__ decide (unsigned char k)
         a.doing = DO_WATCH;
         if ((K.flags & K_SHY) && dist < (was == DO_SHY ? 7 : 5)) {
             a.doing = DO_SHY;
-            d = step_for (k, 2 * K.range, S_AWAY);
+            if ((d = step_for (k, 2 * K.range, S_AWAY)) == 0xFF && dist == 1 && dart (k)) {
+                d = 0xFD;                       /* (Cornered: past the character) */
+            }
         } else if ((K.flags & K_BOLD) && dist > 1 && (d = step_for (k, 2 * K.range, S_TOWARD)) != 0xFF) {
             a.doing = DO_COMING;
         }
@@ -622,7 +639,7 @@ static void __fastcall__ decide (unsigned char k)
     }
     if (d == 0xFF) {
         a.ready += a.doing ? 60 + random (60) : 10 + random (40);    /* (Watching: a while, unless it changes) */
-    } else if (d == 0xFE) {
+    } else if (d >= 0xFD) {
     } else if (turns) {
         step_here (d);
     } else {
@@ -631,7 +648,7 @@ static void __fastcall__ decide (unsigned char k)
     }
     hub_map (0);
     memcpy (&HUB->actor[k], &a, sizeof a);
-    if (a.doing != was || (turns && d < 4)) {
+    if (a.doing != was || (turns && d < 4) || d == 0xFD) {
         ++HUB->den_seq;                         /* (Changed: the world looks again at what the character sees) */
     }
     if (d < 4 && !turns) {
