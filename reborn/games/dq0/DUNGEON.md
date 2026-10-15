@@ -224,7 +224,14 @@ them by the same rules.  (First: doors, their states, opening, closing, unlockin
 items and powers.  Grown as data, by the style's say (dq0m/fixtures.c): windows, their parts any of glass,
 shutters and bars, and arrow slits, in a room's wall where a passage runs beside it (world.h's PK_WINDOW, PK_SLIT
 on a T_WINDOW square); portcullises for some doors (PK_PORTCULLIS); none in a natural cave.  Seen through as the
-table says (a window's shutters closed not; a portcullis up or down), but not yet worked: the world's to come.)
+table says (a window's shutters closed not; a portcullis up or down), and worked (dq0m/work.c: the maker keeps the
+fixtures it grew, so it works them for the world, which walks the character up to them and waits): a portcullis
+raised and lowered by its winch, on its room's side, or heaved up from the far side (Strength), never walked
+through while it's down; a window's shutters opened, closed and forced as a door's, its bars bent (Strength), its
+glass or its shutters broken by a blow (the referee's impact against theirs), an open one climbed through (its
+sill a climb); a slit only seen through.  Worded as what they are: "a barred window", "an arrow slit", "a
+portcullis (down)".  Their states kept as a door's are, a window's parts with them.  (To come: missiles through
+them, with the weapons; a portcullis's winch elsewhere; the blow struck with what's in hand.)
 
 A **window** (the user: "Windows can be of glass and/or have shutters (lockable/wardable) or bars") is parts, any
 of: **glass** (sight through, not movement, till it's broken: loud, and sharp), **shutters** (open or closed, locked
@@ -270,8 +277,16 @@ sprung is an event, heard.  (With the referee's harm: climbing's falls and comba
 already, by the style's say (dq0m/fixtures.c, world.h's struct trap): pits, open (a T_PIT square, in plain sight:
 its depth) or covered, spiked or not (hidden), where the squares round it are floor and as level as a walk, so a
 chunk's ways are never parted; deadfalls, blades, darts, gas and alarms, a plate's or a wire's, and a closed
-door's, set off as it's opened; hidden (a search's steps) or by magic; a natural cave's only pits.  The world
-doesn't set them off yet.)
+door's, set off as it's opened; hidden (a search's steps) or by magic; a natural cave's only pits.  And now set
+off (dq0m/work.c, for the world): a walk worked out stops on the first it would set off, a plate's or a wire's,
+and one the character knows of is gone round; a door's goes off as it's opened or forced, and a door with one it
+knows of is left shut.  Stepping on one, the character may notice it in time (Awareness, a smaller chance than a
+search's; never a magical one); else a pit's cover gives way (a fall, its depth; a spiked one's spikes a strike),
+and it climbs out; gas is resisted (Condition) or choked on, senseless a while; an alarm's a noise the denizens
+hear; the rest are dodged (Dodge) or strike (their aspect, dice and place, the referee's injuries).  A search finds
+hidden ones as it finds hidden doors; one known of is disarmed (Lockcraft, a minute a try; a fumble sets it off;
+magic only by magical means; a pit not at all).  Their states (sprung, disarmed, found) kept in the maker's change
+records (TRAP_STATE), a pit's square a pit once it's given way; the ones it knows of in what it perceives.)
 
 ### Items: the dungeon's layer of things
 

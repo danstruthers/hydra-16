@@ -2348,6 +2348,42 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0portc', what: 'Dingus Quest Zero\'s portcullises (DUNGEON.md: portals; the maker works them, dq0m/work.c): through one raised (seed 12, dq0 -T: east of the first way down) into a cell, seen and worded as a portcullis, lowered by its winch on the cell\'s side (faced first), never walked through while it\'s down, raised again by the winch, and gone back through',
+      init: 't_rc', cycles: 900e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 12 -c /ram/c.hm -T\r' +
+        ['e', 'lower portcullis', 'w', 'look', 'raise portcullis', 'w', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['There is a portcullis behind you (raised).', 'You loose the winch: the portcullis crashes down.',
+        'The portcullis is down: raise it first.', 'There is a portcullis\nahead (down).',
+        'You wind the winch beside it, and the portcullis grinds up.', 'You are in a long vault', '% echo $status'],
+      sdcard: true
+    },
+    {
+      name: 'dq0window', what: 'Dingus Quest Zero\'s windows (DUNGEON.md: portals): one looked through and worded (seed 12: in the second room\'s wall, glazed, its shutters open), not climbed through while its glass is in it, the glass broken (the referee\'s blow at a thing, HC_BLOW at RS_THING), then climbed through (its sill, P_CLIMB) into the passage beyond, the window seen from there',
+      init: 't_rc', cycles: 900e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 12 -c /ram/c.hm\r' +
+        ['n', 'climb through window', 'break window', 'climb through window', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['There is a glazed window\nbehind you to your right (its shutters open).', 'You can\'t climb through: it\'s shut, glazed or barred.',
+        'The glass shatters with a crash.', 'You climb up onto the sill, and through.', 'You are in a passage.',
+        'There is a shuttered window behind you (its shutters open).', '% echo $status'],
+      sdcard: true
+    },
+    {
+      name: 'dq0traps', what: 'Dingus Quest Zero\'s traps (DUNGEON.md: traps; the world\'s walk stops on one, the maker sets it off, the referee judges it): a door\'s blade, set off as the door\'s forced open (seed 16, dq0 -T), dodged; then a plate in a cave\'s floor walked onto, its blade striking (HC_STRIKE: a wound) and the trap seen after, sprung; then (seed 7, a thief, hmchar -s 1) a hidden dart trap on a door found by searching, the door left shut while it\'s known, the trap disarmed (Lockcraft), and the door opened',
+      init: 't_rc', cycles: 2000e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 16 -c /ram/c.hm -T\r' +
+        ['face east', 'force', 'e', 'force', 'force', 'e', 'e', 'look', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        'āhmchar -q -s 1 -o /ram/t.hm\rādq0 -p t -s 7 -c /ram/t.hm\r' +
+        ['search', 'search', 'search', 'search', 'search', 'search', 'x dagger', 'x dagger', 'x dagger', 'x dagger',
+          'x dagger', 'x dagger', 'face south', 'open', 'disarm', 'open', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['As the door opens, something clicks. A blade scythes out of the wall! You throw\nyourself clear.',
+        'A plate sinks under your foot with a click. A blade scythes out of the wall! It\nhurts you: ',
+        'scything blade, set off by a plate in the floor, at your feet (sprung).',
+        'You find a trap: a dart trap, set to go off as its door opens.',
+        'There\'s a trap on that door you know of: disarm it before you open it.',
+        'You work at the trap a while, and disarm it.', 'You open the door.', '% echo $status'],
+      sdcard: true
+    },
+    {
       name: 'cnum', what: 'the numbers in C and assembly: num.h\'s test (ntest: the number libraries from C, printf\'s and scanf\'s %N and %{base}), calc at rc (its operators, functions, bases, digits, errors, its input a line at a time, long results), the assembly sample nsum (numbers.inc, numlib.s)',
       init: 't_rc', cycles: 150e6,
       // (Each line typed at its prompt, as the C test's)
