@@ -49,7 +49,7 @@ enum { HIDE_MECHANICAL, HIDE_MAGICAL };
 
 /* The crafts that know things (P_APPRAISE's b): a warrior knows weapons and armour, not books of magic */
 enum { AP_WEAPON, AP_ARMOUR, AP_METAL, AP_WOOD, AP_HIDE, AP_CLOTH, AP_POTTERY, AP_JEWEL, AP_BOOK, AP_FOOD, AP_BONE,
-    NAP };
+    AP_STONE, AP_GLASS, NAP };                  /* (Stone: a mason's; glass: a glazier's) */
 
 /* What a dig is into (and what a fall lands on): a floor's flags (the user: a material of their own) are lifted, not
 ** cut */
@@ -102,7 +102,8 @@ enum { BP_SKULL, BP_FACE, BP_NECK, BP_SHOULDER, BP_UPPER_ARM, BP_ELBOW, BP_FOREA
 **   HC_BLOW     a blow the actor strikes at the other, with what it has in hand (its key in the text: "blade",
 **               "pick" ...; "hands"): b its aspect (AS_BEST: what it does best), c its dice (0: one).  At a thing
 **               (other RS_THING: a door, a portcullis's bars, a chest) only the blow's impact is worked out, the
-**               reply's w1: what the thing's material and toughness take from it is the world's
+**               reply's w1 (b its aspect, the text what struck it: none named, the tool to hand that hits a thing
+**               hardest, but a weapon): what the thing's material and toughness take from it is the world's
 ** The reply: its effects (x: up to RS_EFFECTS, X_NONE after the last), b the worst wound's band (0: unhurt), w2 the
 ** tenths the actor's out for (knocked senseless), result 1 a fall stopped (a hold grabbed); its words in the text,
 ** a line (and RS_DESCRIBE b 2's: the last harm's) */

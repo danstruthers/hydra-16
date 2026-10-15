@@ -101,6 +101,15 @@ void __fastcall__ o_harm (struct req* r)
     case HC_BLOW:                               /* (With what's in hand: unknown, bare hands) */
         for (k = sizeof striker / sizeof striker[0] - 1; k && strcmp (striker[k].key, blow); --k) {
         }
+        if (!*blow && r->other == RS_THING) {   /* (At a thing, none named: the tool to hand that hits it hardest,
+                                                **   but a weapon, which a thing would spoil) */
+            for (w = 3, aspect = 0; w < sizeof striker / sizeof striker[0]; ++w) {
+                if (has (striker[w].key) && striker[w].imp[0] + striker[w].imp[1] + striker[w].imp[2] > aspect) {
+                    aspect = striker[w].imp[0] + striker[w].imp[1] + striker[w].imp[2];
+                    k = w;
+                }
+            }
+        }
         imp = striker[k].imp;
         aspect = r->b;
         if (aspect > AS_POINT || imp[aspect] < 0) {
@@ -110,7 +119,9 @@ void __fastcall__ o_harm (struct req* r)
         }
         impact = imp[aspect] + dice (r->c ? r->c : 1, 6);
         if (r->other == RS_THING) {
-            r->w1 = impact;                     /* (A thing's: what it takes of it is the world's) */
+            r->w1 = impact;                     /* (A thing's: what it takes of it is the world's, by its aspect, */
+            r->b = aspect;                      /*   b, and what struck it, the text) */
+            strcpy (hurt, striker[k].key);
             return;
         }
         break;

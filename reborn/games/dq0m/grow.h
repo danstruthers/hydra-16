@@ -62,8 +62,10 @@ void __fastcall__ seen_over (struct chunk* k);
 /* map.c */
 void draw_map (void);
 
-/* work.c: a portal or a trap worked, for the world (M_WORK: its reply written into q) */
+/* work.c: a portal or a trap worked, for the world (M_WORK: its reply written into q); a portal's leaf's body (its
+** material PM_*, its size, its thickness, its state: fixtures.c's too) */
 void __fastcall__ work (struct mreq* q);
+unsigned char __fastcall__ part_body (unsigned char mat, unsigned char size, unsigned char thick, unsigned char qual);
 
 /* bank.s */
 void __fastcall__ setbank (unsigned char b);

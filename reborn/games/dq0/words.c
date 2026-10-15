@@ -3,7 +3,9 @@
 ** struct sight, in the main RAM, for the hub isn't in the window while an overlay is).  The words are the
 ** character's: only what it sees now (or, in the dark, feels), each where it lies from it as it faces (one of eight:
 ** ahead, ahead to its right ... ahead to its left), and how far above or below it.  A room's size it knows when it's
-** seen the whole of it; a ceiling when the light reaches it.
+** seen the whole of it; a ceiling when the light reaches it.  At a glance (the user's), in general words: a small
+** hall, a long gallery, a high ceiling, a low, rough one (overlay 4's ceiling_glance); its figures (its size in feet,
+** its ceiling's heights) only on a close look (look closely, examine the room: look's sight_close).
 **
 ** The words are a stand-in theme's, till themes are data: a room's kind one of eight names, a lit room's light
 ** torches.
@@ -94,7 +96,8 @@ static void __fastcall__ doors (unsigned char mouths)
         for (i = 0; i < S->ndoors; ++i) {       /* (The first that way's state and height) */
             if ((S->door[i].rel & 7) == d && is (i, mouths)) {
                 if (!mouths) {
-                    add (S->door[i].state == DOORWAY ? " (a doorway)" : S->door[i].state & PS_OPEN_ ? " (open)" :
+                    add (S->door[i].state == DOORWAY ? " (a doorway)" : S->door[i].state & PS_WRECKED ?
+                         " (broken down)" : S->door[i].state & PS_OPEN_ ? " (open)" :
                          " (closed)");
                 }
                 if (S->door[i].dz >= 3 || S->door[i].dz <= -3) {
@@ -174,12 +177,17 @@ static void zones (void)
     }
 }
 
+/* The ceiling: at a glance, or (a close look) its figures */
 static void ceiling (void)
 {
     if (S->ceil == C_UNSEEN) {
         if (!S->dark && !S->lit) {
             add (" Above, the dark hides the ceiling.");
         }
+        return;
+    }
+    if (!sight_close) {
+        ceiling_glance ();                      /* (Overlay 4's: this one's full) */
         return;
     }
     switch (S->ceil != C_ROUGH && S->cwall >= S->cmid ? C_FLAT : S->ceil) {   /* (A vault no higher in the middle: flat) */
@@ -249,6 +257,13 @@ static void room (void)
     } else {
         add (", by the light of your ");
         add (sight_lamp);
+        add (".");
+    }
+    if (sight_close && S->size != S_PART) {      /* (Its figures, a close look's) */
+        add (" It is ");
+        addn (5 * S->rw);
+        add (" feet by ");
+        addn (5 * S->rh);
         add (".");
     }
     if (S->up_ft) {                             /* (The slope's words, the user's: a slight rise, a rise, steep) */

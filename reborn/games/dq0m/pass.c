@@ -219,7 +219,6 @@ static void __fastcall__ door (unsigned char x, unsigned char y, int z)
     }
     k = dr (10);
     p->mat = k < SP->m_wood ? PM_WOOD : k < SP->m_wood + SP->m_ironbound ? PM_IRONBOUND : PM_IRON;
-    p->tough = p->mat == PM_WOOD ? 20 : p->mat == PM_IRONBOUND ? 35 : 60;
     p->bar = DIR_N;
     for (d = 0; d < 4; ++d) {                   /* (Barred from the room's side) */
         if (x + dir_x[d] < CW && y + dir_y[d] < CW && L->tile[y + dir_y[d]][x + dir_x[d]] == T_FLOOR) {

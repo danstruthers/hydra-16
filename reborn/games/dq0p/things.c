@@ -162,7 +162,8 @@ static const struct kind* __fastcall__ kind_at (unsigned i)
 /* ---- A thing made its own, as the things task first comes to it (no two alike): its number (record 0 keeps the
 ** last given), its quality (most are middling), its material (a blade of iron, of steel if it's well made, of
 ** bronze if crudely), its durability's most (its material's toughness, its weight, its quality) and what's left of
-** it (a thing found lying in the dungeon is the worse for its years there) */
+** it (a thing found lying in the dungeon is the worse for its years there); a portal's part's material and quality
+** the maker's already (its portal's) */
 static void __fastcall__ make_own (unsigned i)
 {
     static struct item q;
@@ -178,16 +179,18 @@ static void __fastcall__ make_own (unsigned i)
     p = item_at (0);
     id = ++p->x;
     q.id = id;
-    q.quality = rnd (4) + rnd (4) + rnd (3);
-    if (rnd (8) == 0) {
-        ++q.quality;
-    }
     k = kind_of (q.kind);
-    m = k->mat;
-    if (m == MT_IRON && !strcmp (k->tool, "blade")) {
-        m = q.quality >= 7 ? MT_STEEL : q.quality <= 1 ? MT_BRONZE : MT_IRON;
+    if (!(m = q.mat)) {
+        q.quality = rnd (4) + rnd (4) + rnd (3);
+        if (rnd (8) == 0) {
+            ++q.quality;
+        }
+        m = k->mat;
+        if (m == MT_IRON && !strcmp (k->tool, "blade")) {
+            m = q.quality >= 7 ? MT_STEEL : q.quality <= 1 ? MT_BRONZE : MT_IRON;
+        }
+        q.mat = m;
     }
-    q.mat = m;
     q.dur_max = tough[m] * (k->weight + 4) * (5 + q.quality) / 5;
     q.dur = q.where == IW_SQUARE ? q.dur_max - q.dur_max / 10 * rnd (7) : q.dur_max;
     if (!q.dur) {
@@ -377,8 +380,8 @@ static const struct item* __fastcall__ lying (const struct item* q)
 {
     static struct item s;
 
-    if (q->where == IW_SQUARE) {
-        return q;
+    if (q->where == IW_SQUARE || q->where == IW_PORTAL) {
+        return q;                               /* (A portal's part as a thing lying there) */
     }
     if (q->where != IW_ITEM) {
         return 0;
@@ -609,12 +612,13 @@ static unsigned char __fastcall__ get (const char* name)
     hub_map (0);
     x = HUB->pc_x;
     y = HUB->pc_y;
+    HUB->ireq.x = s->x;                         /* (Where it is: IR_NOT_HERE's, IR_FIXED's) */
+    HUB->ireq.y = s->y;
     if (s->x - x + 1 > 2 || s->y - y + 1 > 2) {
-        HUB->ireq.x = s->x;
-        HUB->ireq.y = s->y;
         return IR_NOT_HERE;
     }
-    return carry (n, 0) ? IR_OK : IR_FULL;
+    return rec.where == IW_PORTAL ? IR_FIXED : carry (n, 0) ? IR_OK : IR_FULL;  /* (A portal's part: lifted out
+                                                **   first, the maker's) */
 }
 
 /* Put down where the character stands (what's in it with it) */
@@ -839,6 +843,8 @@ static unsigned char __fastcall__ describe (const char* name)
     r->dur = rec.dur;
     r->dur_max = rec.dur_max;
     r->value = k->value;
+    r->size = rec.size;
+    r->thick = rec.thick;
     return IR_OK;
 }
 

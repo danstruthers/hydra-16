@@ -192,6 +192,8 @@ void __fastcall__ perceive (unsigned char sn, unsigned x, unsigned y, unsigned c
             }
         }
         area = rp.w * rp.h;
+        S.rw = rp.w;
+        S.rh = rp.h;
         S.size = !whole ? S_PART : area <= 8 ? S_SMALL : area >= 30 ? S_LARGE : rp.w >= 3 * rp.h ||
             rp.h >= 3 * rp.w ? S_LONG : S_MID;
         if ((k = zone_index (lx, ly)) != 0xFF) {
@@ -216,7 +218,7 @@ void __fastcall__ perceive (unsigned char sn, unsigned x, unsigned y, unsigned c
                     (C->tile[wall_y][wall_x] & T_VIS) &&
                     !((q = portal_at (wall_x, wall_y)) != 0 && (q->state & PS_HIDDEN))) {
                     S.door[S.ndoors].rel = REL8 (bearing ((int) wall_x - lx, (int) wall_y - ly), face);
-                    S.door[S.ndoors].state = (q = portal_at (wall_x, wall_y)) != 0 ? q->state & PS_OPEN : DOORWAY;
+                    S.door[S.ndoors].state = (q = portal_at (wall_x, wall_y)) != 0 ? q->state & (PS_OPEN | PS_WRECKED) : DOORWAY;
                     portal_seen (q);                /* (A portcullis, a window, a slit: its kind and parts) */
                     S.door[S.ndoors].x = x - lx + wall_x;
                     S.door[S.ndoors].y = y - ly + wall_y;
@@ -252,7 +254,7 @@ void __fastcall__ perceive (unsigned char sn, unsigned x, unsigned y, unsigned c
             if ((p = at (sn, x + dir_x[d], y + dir_y[d])) != 0 && (TILE (*p) == T_DOOR || TILE (*p) == T_WINDOW) &&
                 S.ndoors < SEE_DOORS && !((q = portal_at (cx_, cy_)) != 0 && (q->state & PS_HIDDEN))) {
                 S.door[S.ndoors].rel = REL8 (H_OF (d), face);
-                S.door[S.ndoors].state = q ? q->state & PS_OPEN : DOORWAY;
+                S.door[S.ndoors].state = q ? q->state & (PS_OPEN | PS_WRECKED) : DOORWAY;
                 portal_seen (q);
                 S.door[S.ndoors].x = x + dir_x[d];
                 S.door[S.ndoors].y = y + dir_y[d];

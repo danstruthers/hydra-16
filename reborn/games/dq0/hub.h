@@ -102,8 +102,11 @@ enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL };  /* E_D
 enum { K_BEGUN, K_ON, K_BACK, K_FELL, K_UP, K_DOWN, K_JUMPED };    /* E_CLIMB's how: begun, on, slipped back,
                                                 **   fallen, up, down; jumped down (a ledge, a shaft) */
 enum { PA_OPEN, PA_CLOSE, PA_UNLOCK, PA_FORCE, PA_SEARCH,     /* I_PORTAL's: what's done (a door's opened, ... */
-       PA_RAISE, PA_LOWER, PA_BREAK, PA_THROUGH, PA_DISARM };  /*   a portcullis raised, a window's glass broken,
-                                                **   climbed through, a trap disarmed: one in reach, or the door's) */
+       PA_RAISE, PA_LOWER, PA_BREAK, PA_THROUGH, PA_DISARM,    /*   a portcullis raised, a window's glass broken,
+                                                **   climbed through, a trap disarmed: one in reach, or the door's; */
+       PA_LIFT,                                 /*   a door's bar lifted out, a window's pane or its bent bars; */
+       PA_EXAMINE };                            /*   looked at closely: the UI's own M_WORK, ASK_UI's, cx, cy its
+                                                **   square: its record copied into the hub's pview) */
 enum { PW_ANY, PW_DOOR, PW_WINDOW };            /* I_PORTAL's b: a door or a portcullis, a window or a slit */
 enum { PO_NONE, PO_OPENED, PO_CLOSED, PO_IS_OPEN, PO_IS_SHUT, PO_LOCKED, PO_BARRED, PO_UNBARRED, PO_PICKED,
        PO_NOT_PICKED, PO_NO_PICKS, PO_NO_LOCK, PO_FORCED, PO_HELD, PO_FOUND, PO_NOTHING,   /* E_PORTAL's (a door's, */
@@ -112,7 +115,13 @@ enum { PO_NONE, PO_OPENED, PO_CLOSED, PO_IS_OPEN, PO_IS_SHUT, PO_LOCKED, PO_BARR
        PO_NO_SHUTTERS, PO_BENT, PO_BARS_HOLD, PO_SHATTERED, PO_SMASHED, PO_NOTHING_THERE, PO_IN_WAY, PO_SLIT,
        PO_CLIMBED, PO_NO_CLIMB, PO_SLIPPED, PO_NOT_WINDOW,  /*   a window's: its bars bent, its glass broken, its
                                                 **   shutters smashed, climbed through; */
-       PO_TRAPPED, PO_FOUND_TRAP };             /*   a known trap on a door; a search's traps, told as found) */
+       PO_TRAPPED, PO_FOUND_TRAP,               /*   a known trap on a door; a search's traps, told as found; */
+       PO_BROKE_DOWN, PO_GIVING, PO_HOLDING, PO_NO_MARK,   /*   blows at it: it gives way, it's giving, it holds
+                                                **   (marked), they make no mark; */
+       PO_WRECKED, PO_LIFTED, PO_BAR_FAR, PO_NO_BAR, PO_SET_FAST, PO_PANE_OUT, PO_BARS_OUT, PO_BARS_BROKEN };
+                                                /*   broken down: it won't shut; a bar lifted out, one on the far
+                                                **   side, none to lift; bars set fast; a pane worked out, bent bars
+                                                **   lifted out, bars broken out) */
 enum { TO_SPRUNG, TO_DODGED, TO_RESISTED, TO_CHOKED, TO_OPENED, TO_NOTICED, TO_FOUND, TO_DISARMED, TO_NOT_YET,
        TO_FUMBLED, TO_CANT, TO_PIT, TO_NONE, TO_ASSESSED, TO_PUZZLED };  /* E_TRAP's: set off, dodged, its gas resisted or choked on, a pit's
                                                 **   cover fallen in (no one on it); noticed in passing, found by a
@@ -214,6 +223,8 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned char   item_lock;
     struct ireq     ireq;
     char            things_text[400];
+    struct portal   pview;                      /* A portal looked at closely (PA_EXAMINE's: the maker's record of
+                                                **   it, but bar: 1 the character's on its bar's side) */
     char            dig_tool[4][8];             /* A dig's spells' tools, the referee's choices (their keys), in turn */
     unsigned char   dig_wear[4];                /*   and the wear each spell did (E_DIG's b, which: the world runs on */
                                                 /*   ahead of the UI's reading of its events, the turns pace) */

@@ -58,7 +58,8 @@ struct kind {
 enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKIN, KI_RATIONS, KI_TINDERBOX, KI_PICK,
     KI_SHOVEL, KI_LOCKPICKS, KI_CHISEL, KI_ROPE, KI_BONES, KI_PENNIES, KI_KEY, KI_CANDLE, KI_LANTERN, KI_SACK, KI_CHEST,
     KI_SKULL, KI_BROKEN_SWORD, KI_CLOAK, KI_POTSHERDS, KI_SWORD, KI_BASKET, KI_SAND, KI_TABLE, KI_CHAIR, KI_QUIVER,
-    KI_ARROWS, KI_COUNT };
+    KI_ARROWS, KI_BAR, KI_PANE, KI_BARS, KI_SHARDS, KI_COUNT };   /* (A door's bar, a window's pane and its bars: a
+                                                **   portal's parts, IW_PORTAL; a pane broken, its shards) */
 
 /* An item */
 #define NITEMS          (ITEM_BANKS * (0x2000 / sizeof (struct item)))
@@ -80,6 +81,9 @@ struct item {
     unsigned char   mat;                        /* What it's made of (MT_*: its resistances) */
     unsigned        dur, dur_max;               /* Its durability: the harm it can take before it breaks, what's
                                                 **   left (its most by its quality, its material, its weight) */
+    unsigned char   size;                       /* Its size, where it matters (a portal's part's: its portal's
+                                                **   opening, world.h's: feet, its width the low four bits; or 0) */
+    unsigned char   thick;                      /*   and its thickness, in eighths of an inch (or 0) */
 };
 #define I_LIT           0x01                    /* A light, lit */
 #define I_HELD          0x02                    /* In a hand */
@@ -87,7 +91,11 @@ struct item {
 #define I_HIDDEN        0x08                    /* Hidden (found by searching) */
 #define I_MAGIC         0x10                    /*   by magic (found only by magical means) */
 #define I_KNOWN         0x20                    /* Known to the character (seen, or found) */
-enum { IW_SQUARE, IW_ACTOR, IW_ITEM };
+enum { IW_SQUARE, IW_ACTOR, IW_ITEM,
+    IW_PORTAL };                                /* A portal's part (a door's bar, a window's pane or bars: the maker's,
+                                                **   as it stocks a chunk), in it: sn, x, y its square (a bar's, the
+                                                **   square on its bar's side), seen and judged as a thing lying there
+                                                **   is, not taken up (IR_FIXED) but lifted out (the maker's) */
 
 #define ITEM_BANKS      2
 
@@ -102,6 +110,7 @@ struct ireq {
     unsigned        x, y;                       /* IR_NOT_HERE's: where it is */
     unsigned char   craft, quality, mat, plural, qty;   /* IO_DESCRIBE's: what it is (its kind's name in name) */
     unsigned        dur, dur_max, value;
+    unsigned char   size, thick;                /*   (and its size, its thickness: the item's) */
     char            into[16];                   /* The other thing's name (IO_PUT's, IO_TAKE's: in it, on it, from it) */
 };
 enum { IO_KIT, IO_GET, IO_DROP, IO_LIST, IO_SAVE, IO_RESTORE,
@@ -122,7 +131,8 @@ enum { IO_KIT, IO_GET, IO_DROP, IO_LIST, IO_SAVE, IO_RESTORE,
     IO_TAKE,                                    /* Taken from into: into the pack, else a hand */
     IO_DON, IO_DOFF,                            /* Worn; taken off (into a hand, else the pack) */
     IO_LIGHT, IO_DOUSE };                       /* Lit (a tinderbox carried, or a flame); put out ("": the first) */
-enum { IR_OK, IR_NONE, IR_FULL, IR_HEAVY, IR_NOT_HERE, IR_NO };     /* (IR_NO: refused, the things' words why) */
+enum { IR_OK, IR_NONE, IR_FULL, IR_HEAVY, IR_NOT_HERE, IR_NO, IR_FIXED };    /* (IR_NO: refused, the things' words
+                                                **   why; IR_FIXED: a portal's part, in it) */
 
 /* What the character carries, for the UI to word (IO_LIST's): each thing, how deep it's in others, its state */
 #define NCARRY          16

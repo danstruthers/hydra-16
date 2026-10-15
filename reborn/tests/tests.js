@@ -2294,7 +2294,7 @@ module.exports = {
       init: 't_rc', cycles: 600e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T\r' +
         ['take a gander', 'turn half left', 'face north and east', 'walk to the door on my right', 'look closely', 'pick up the sword', 'take off my coat', 'saunter off to the left', 'foo', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
-      expect: ['You turn to face east', 'You turn to face northeast', 'You go over to it.', 'You search about', 'You see none of those here.', "You aren't wearing any coat.", "I don't know how to foo.", '% echo $status'],
+      expect: ['You turn to face east', 'You turn to face northeast', 'You go over to it.', 'feet by', 'You see none of those here.', "You aren't wearing any coat.", "I don't know how to foo.", '% echo $status'],
       sdcard: true
     },
     {
@@ -2360,7 +2360,7 @@ module.exports = {
       name: 'dq0denizens', what: 'Dingus Quest Zero\'s denizens (dq0d: the populations decided as a stratum is grown, from a stand-in theme\'s kinds, kinds.txt): the giant rats that lair by the top stratum\'s ways placed round the way down as the character starts there (dq0 -T), seen (the world\'s actors, in what it perceives), and moving about as time passes (their own task deciding): at the turns pace through all the time a minute\'s search takes (the clock on a slice at a time as they keep up, told as they stir before it\'s done), told only as what they do changes (keeping their distance), not again when nothing has; then (seed 5, down its ladder) the rats there cornered, and in the character\'s way: the world stops it short of them, and won\'t let it walk onto a rat\'s square',
       init: 't_rc', cycles: 900e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T\r' +
-        ['look', 'look closely', 'look closely', 'look', 'quit'].map(l => '\u0101' + l + '\r').join('') + '\u0101dq0 -p t -s 5 -c /ram/c.hm -T\r' +
+        ['look', 'search', 'search', 'look', 'quit'].map(l => '\u0101' + l + '\r').join('') + '\u0101dq0 -p t -s 5 -c /ram/c.hm -T\r' +
         ['d', 'wait', 'go right', 'go forward', 'look', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
       expect: ['A giant rat is ', ' feet away', 'Something stirs.', 'keeping its', 'A giant rat is in the way.', '% echo $status'],
       // (The first search's stir told before its prompt, the second's none: nothing they do has changed; the way
@@ -2386,7 +2386,7 @@ module.exports = {
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 12 -c /ram/c.hm -T\r' +
         ['e', 'wait', 'e', 'wait', 'e', 'lower portcullis', 'w', 'look', 'raise portcullis', 'w', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
       expect: ['There is a portcullis behind you (raised).', 'You loose the winch: the portcullis crashes down.',
-        'The portcullis is down: raise it first.', 'There is a portcullis\nahead (down).',
+        'The portcullis is down: raise it first.', 'There is a portcullis ahead\n(down).',
         'You wind the winch beside it, and the portcullis grinds up.', 'You are in a long vault', '% echo $status'],
       sdcard: true
     },
@@ -2395,9 +2395,53 @@ module.exports = {
       init: 't_rc', cycles: 900e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 12 -c /ram/c.hm\r' +
         ['n', 'climb through window', 'break window', 'climb through window', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
-      expect: ['There is a glazed window\nbehind you to your right (its shutters open).', 'You can\'t climb through: it\'s shut, glazed or barred.',
+      expect: ['There is a glazed window behind you to your right (its shutters\nopen).', 'You can\'t climb through: it\'s shut, glazed or barred.',
         'The glass shatters with a crash.', 'You climb up onto the sill, and through.', 'You are in a passage.',
         'There is a shuttered window behind you (its shutters open).', '% echo $status'],
+      sdcard: true
+    },
+    {
+      name: 'dq0look', what: 'draft',
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm\r' +
+        ['look', 'look closely', 'x room', 'n', 'examine the door behind me on my right', 'examine bar', 'take the bar', 'break the door behind me on my right', 'break the door behind me on my right', 'look', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['% echo $status'],
+      sdcard: true
+    },
+    {
+      name: 'dq0doors', what: 'Dingus Quest Zero\'s rooms and doors as the user asked (2026-10-15): a room told in general words (a small hall, a flat ceiling), its figures (its size in feet, its ceiling\'s height) only on a close look (look closely, x room); a door examined (its make, size, thickness and features plain, its state and stoutness the appraiser\'s judgement: the referee\'s Timbercraft), and its bar (an item in its brackets: IW_PORTAL), lifted out and taken; a window examined, its pane judged (Glassworking), broken into shards; a strong iron-bound door battered with bare hands holding, a weaker wooden one giving way (each blow the referee\'s impact less the wood\'s resistance, off its body), broken down for good',
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 3 -c /ram/c.hm\r' +
+        ['look', 'look closely', 'x room', 'examine the door behind me on my right', 'break the door behind me on my right', 'break', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        'ādq0 -p t -s 15 -c /ram/c.hm\r' +
+        ['examine the door ahead to my left', 'examine bar', 'break the door ahead to my left', 'break', 'look', 'close', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        'ādq0 -p t -s 4 -c /ram/c.hm\r' + ['take the bar', 'i', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        'ādq0 -p t -s 12 -c /ram/c.hm\r' +
+        ['n', 'examine the window', 'x glass', 'break window', 'look', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['% echo $status'],
+      // (Its words checked with the lines' wrapping taken out, each in its turn: the glance with no figures, the close
+      // looks with them)
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        const want = ['> look You are in a small hall', 'The ceiling is flat. There is a door', '> look closely',
+          'It is 10 feet by 10.', 'The ceiling is flat, 8 feet up.', '> x room', 'It is 10 feet by 10.',
+          'A door of iron-bound wood, 3 feet wide and 7 high, 3 inches thick.', 'it\'s marked, but it holds.',
+          'it\'s starting to give.', 'Brackets for a bar are fixed on this side, the bar in them.',
+          'It\'s 4 feet long, 3 inches thick.', 'it\'s starting to give.', 'You batter at it till it gives way, and it crashes open.',
+          '(broken down)', 'It\'s broken: it won\'t shut.', 'You lift the bar out of its brackets, and set it down.', 'Taken.',
+          'tinderbox, a bar)', 'A window, 2 feet wide and 3 high; its shutters of wood, 2 inches thick. It\'s glazed',
+          'It\'s 2 by 3 feet, a quarter inch thick.', 'The glass shatters with a crash.', 'At your feet lie some glass shards.',
+          '% echo $status'];
+        let at = 0;
+        for (const w of want) {
+          const i = o.indexOf(w, at);
+          if (i < 0) { f.push('not found (in its turn): ' + w); break; }
+          at = i + w.length;
+        }
+        const g = o.slice(o.indexOf('> look You are'), o.indexOf('> look closely'));
+        if (/feet up|feet by/.test(g)) f.push('the glance gives figures: ' + g);
+        return f;
+      },
       sdcard: true
     },
     {

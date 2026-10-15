@@ -110,9 +110,9 @@ void o_help (void)
          "back, left, right (f, b: as you face); up and down (u, d: the stairs); turn left, right, half left, half "
          "right or around; face north ...; light and douse (a torch, a candle, a lantern); dig north ... or down (a "
          "wall, the rock, a shaft); jump down (a ledge, a shaft); open, close, unlock, force (the door ahead), raise, "
-         "lower (a portcullis), break (a window's glass), climb through (a window), disarm (a trap), search; get, "
+         "lower (a portcullis), break (a door, a window's glass), lift (a bar), climb through (a window), disarm (a trap), search; get, "
          "drop, hold (wield), stow, put the dagger in the sack (or on the table), take the rope from the pack, hang "
-         "the pouch (on your belt), wear, take off, inventory (i), examine, hide; look (l), map (m), sheet (the "
+         "the pouch (on your belt), wear, take off, inventory (i), examine (a thing, a door, the room: look closely), hide; look (l), map (m), sheet (the "
          "character), wait (z), pause (or Escape), quit (q).");
 }
 

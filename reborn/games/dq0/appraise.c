@@ -107,8 +107,10 @@ void __fastcall__ o_appraise (const struct ireq* q, signed char g)
         add (q->name);
     }
     if (*mats[mat].name) {
-        add (", of ");
-        add (mats[mat].name);
+        if (!strstr (q->name, mats[mat].name)) {    /* (Not "a pane of glass, of glass") */
+            add (", of ");
+            add (mats[mat].name);
+        }
         add (q->qty > 1 || q->plural ? ": they stand up " : ": it stands up ");
         life = resists (mats[mat].resist, 7, 9, "well to ", 0);
         life = resists (mats[mat].resist, 4, 6, "fairly to ", life);
@@ -116,6 +118,24 @@ void __fastcall__ o_appraise (const struct ireq* q, signed char g)
         life = q->dur_max ? (unsigned char) (dur / (q->dur_max / 10 + 1)) : 10;
     }
     add (". ");
+    if (q->size) {                              /* (Its size and thickness, plain to see: a portal's part's) */
+        add (q->plural ? "They're " : "It's ");
+        add (utoa (q->size & 15, b, 10));
+        if (q->size >> 4) {
+            add (" by ");
+            add (utoa (q->size >> 4, b, 10));
+            add (" feet");
+        } else {
+            add (" feet long");
+        }
+        if (q->thick) {
+            add (", ");
+            add (q->thick >= 8 ? utoa (q->thick >> 3, b, 10) : q->thick >= 4 ? "half an" : q->thick >= 2 ? "a quarter" :
+                "an eighth of an");
+            add (q->thick >= 16 ? " inches thick" : " inch thick");
+        }
+        add (". ");
+    }
     if (q->qty > 1 || q->plural) {
         add (life >= 10 ? "They're as good as new" : life >= 7 ? "They have most of their life left" : life >= 4 ?
             "They have about half their life left" : life >= 2 ? "They have little life left" : "They're close to breaking");
