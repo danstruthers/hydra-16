@@ -152,5 +152,6 @@ ovl_out:
             OVFN        climb_words, 1
             OVFN        portal_words, 1
             OVFN        appraise, 1
+            OVFN        tell, 1
             OVFN        words, 2
             OVFN        parse, 3

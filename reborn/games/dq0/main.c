@@ -23,6 +23,7 @@
 #include <dice.h>
 #include <hydra.h>
 #include "dq0.h"
+#include "tell.h"
 #include "hub.h"
 #include "rs.h"
 #include "level.h"
@@ -443,7 +444,7 @@ static void events (void)
         switch (m.kind) {
         case E_TIME:
             if (m.who == 0) {
-                msg ("Time passes.");
+                tell (T_TIME_PASSES);
             }
             break;
         case E_READY:
@@ -459,17 +460,17 @@ static void events (void)
             if (m.who == 0) {
                 if ((m.w1 & 0xFF) == A_DOWN || (m.w1 & 0xFF) == A_UP) {
                     k = m.w1 >> 12;             /* (The link's kind: a ladder, or a stairway) */
-                    msg ((m.w1 & 0xFF) == A_DOWN ? (k == O_LADDER_DOWN ? "You climb down the ladder." :
-                        k == O_SHAFT_DOWN ? "You climb down the shaft." : "You go down the stairway, a long flight.") :
-                        k == O_LADDER_UP ? "You climb the ladder." : k == O_SHAFT_UP ? "You climb up the shaft." :
-                        "You climb the stairway.");
+                    tell ((m.w1 & 0xFF) == A_DOWN ? (k == O_LADDER_DOWN ? T_YOU_CLIMB_DOWN :
+                        k == O_SHAFT_DOWN ? T_YOU_CLIMB_DOWN_2 : T_YOU_GO_DOWN) :
+                        k == O_LADDER_UP ? T_YOU_CLIMB_THE : k == O_SHAFT_UP ? T_YOU_CLIMB_UP :
+                        T_YOU_CLIMB_THE_2);
                     sayf (" You come into the %s.", stratum_name[HUB->sight.sname & 7]);
                     save_game ();               /* (Kept as it comes into a stratum) */
                 }
                 if ((m.w1 & 0xFF) == A_CROSSED) {
-                    msg ("You cross the room.");
+                    tell (T_YOU_CROSS_THE);
                 } else if ((m.w1 & 0xFF) == A_WENT_TO) {
-                    msg ("You go over to it.");
+                    tell (T_YOU_GO_OVER);
                 }
                 look (m.w1 >> 8 & 1);
             }
@@ -479,17 +480,17 @@ static void events (void)
                 if (m.w1 == V_TURNED) {
                     sayf ("\nYou turn to face %s.", head_name[HUB->pc_face & 7]);
                 } else {
-                    msg (m.w1 == V_LIT ? "You light your torch." : "You put out your torch.");
+                    tell (m.w1 == V_LIT ? T_YOU_LIGHT_YOUR : T_YOU_PUT_OUT);
                 }
                 look (0);
             }
             break;
         case E_NOWAY:
             if (m.who == 0) {
-                msg (m.w1 == N_SHUT ? "The way out is shut fast. Whatever opens it is somewhere below." :
-                     m.w1 == N_NO_STAIRS ? "There's no way up or down here." : m.w1 == N_NO_DIG ?
-                     "There's nothing there to dig (a wall, or the rock; a shaft from a room's floor)." :
-                     "You can't go that way.");
+                tell (m.w1 == N_SHUT ? T_THE_WAY_OUT :
+                     m.w1 == N_NO_STAIRS ? T_THERE_S_NO : m.w1 == N_NO_DIG ?
+                     T_THERE_S_NOTHING :
+                     T_YOU_CAN_T);
             }
             break;
         case E_DIG:
@@ -612,7 +613,7 @@ static void __fastcall__ take (const char* name)
         return;
     }
     pending[0] = 0;
-    msg (r == IR_OK ? "Taken." : r == IR_FULL ? "Your hands are full, and your pack too." : "You see none of those here.");
+    tell (r == IR_OK ? T_TAKEN : r == IR_FULL ? T_YOUR_HANDS_ARE : T_YOU_SEE_NONE);
     if (r == IR_OK) {
         to_hand ();
         intend2 (I_WAIT, 20, 1);
@@ -665,6 +666,86 @@ static unsigned char __fastcall__ find (unsigned char obj, unsigned char orel)
 
 static const char* const thing[] = { "", "door", "way on", "stairs", "ladder", "shaft", "ledge", "way out", "wall" };
 
+/* A thing hidden where the character stands (Concealment: the referee's test, the things' record), worded by how
+** well */
+static void __fastcall__ hide (const char* w)
+{
+    unsigned char d;
+
+    if (!*w) {
+        tell (T_HIDE_WHAT_HIDING);
+    } else if (things (IO_HIDE, w) == IR_OK) {
+        d = HUB->ireq.qty;
+        tell (d >= 6 ? T_HID_CUNNINGLY : d >= 3 ? T_HID_WELL : T_HID_POORLY);
+        to_hand ();
+        intend2 (I_WAIT, 600, 1);
+    } else {
+        tell (T_YOU_CARRY_NONE);
+    }
+}
+
+/* The commands that want nothing but their verb (unoptimised: cc65 2.19's optimiser takes a branch here for a short
+** one that isn't, an assembler's range error) */
+#pragma optimize (push, off)
+static void __fastcall__ chores (unsigned char verb)
+{
+    switch (verb) {
+    case V_DON:
+    case V_DOFF:
+        tell (T_NOTHING_TO_DON + (verb == V_DOFF));    /* (The two in turn) */
+        return;
+    case V_JUMP:
+        tell (T_YOU_JUMP_AND);
+        return;
+    case V_LIGHT:
+        if (HUB->pc_light) {
+            tell (T_TORCH_LIT);
+        } else {
+            intend (I_LIGHT, 1);
+        }
+        return;
+    case V_DOUSE:
+        if (!HUB->pc_light) {
+            tell (T_TORCH_OUT);
+        } else {
+            intend (I_LIGHT, 0);
+        }
+        return;
+    case V_LOOK:
+        look (0);
+        return;
+    case V_MAP:
+        show_map ();
+        return;
+    case V_WAIT:
+        intend (I_WAIT, 0);
+        return;
+    case V_SHEET:
+        sheet ();
+        return;
+    case V_PAUSE:
+        HUB->paused = paused = 1;
+        tell (T_PAUSED);
+        status ();
+        return;
+    case V_HELP:
+        help ();
+        return;
+    case V_QUIT:
+        quit = 1;
+        return;
+    case V_SAVE:
+        if (!savedir) {
+            tell (T_NOT_KEPT);
+        } else {
+            save_game ();
+            tell (T_KEPT);
+        }
+        return;
+    }
+}
+#pragma optimize (pop)
+
 /* A command, the parser's, carried out */
 static void __fastcall__ command (char* l)
 {
@@ -697,7 +778,7 @@ static void __fastcall__ command (char* l)
         } else if (c.dir != 0xFF) {
             intend (I_GO, c.dir);
         } else {
-            msg ("Go which way?");
+            tell (T_GO_WHICH_WAY);
         }
         return;
     case V_CLIMB:
@@ -706,7 +787,7 @@ static void __fastcall__ command (char* l)
     case V_TURN:
     case V_FACE:
         if (c.dir > H_NW) {
-            msg ("Which way? (left, right, half left, half right, around, or north, northeast ... northwest)");
+            tell (T_WHICH_WAY_LEFT);
         } else if (c.dir == HUB->pc_face) {
             sayf ("\nYou face %s already.", head_name[c.dir]);
         } else {
@@ -748,95 +829,36 @@ static void __fastcall__ command (char* l)
         } else if (d <= H_NW && !(d & 1)) {
             intend (I_DIG, d >> 1);
         } else {
-            msg ("Dig which way? (north, east, south or west: through a wall or the rock; or down, a shaft)");
+            tell (T_DIG_WHICH_WAY);
         }
         return;
     case V_GET:
         if (!c.word[0]) {
-            msg ("Take what?");
+            tell (T_TAKE_WHAT);
         } else {
             take (c.word);
         }
         return;
     case V_DROP:
         if (!c.word[0]) {
-            msg ("Put down what?");
+            tell (T_PUT_DOWN_WHAT);
         } else if (things (IO_DROP, c.word) == IR_OK) {
-            msg ("Put down.");
+            tell (T_PUT_DOWN);
             to_hand ();
             intend2 (I_WAIT, 10, 1);
         } else {
-            msg ("You carry none of those.");
+            tell (T_YOU_CARRY_NONE);
         }
         return;
     case V_HIDE:                                /* (Concealment: a thing; oneself comes with the denizens) */
-        if (!c.word[0]) {
-            msg ("Hide what? (Hiding yourself, in the shadows, comes when there's someone to hide from.)");
-        } else if (things (IO_HIDE, c.word) == IR_OK) {
-            d = HUB->ireq.qty;
-            msg (d >= 6 ? "You hide it cunningly: it would take a sharp eye to find it." : d >= 3 ?
-                "You hide it well enough." : "You hide it, after a fashion: a careful search would turn it up.");
-            to_hand ();
-            intend2 (I_WAIT, 600, 1);
-        } else {
-            msg ("You carry none of those.");
-        }
+        hide (c.word);
         return;
     case V_INVENTORY:
         things (IO_LIST, "");
         msg (HUB->things_text);
         return;
-    case V_DON:
-    case V_DOFF:
-        msg (c.verb == V_DON ? "You have nothing to put on, or take up." : "You have nothing on you could take off.");
-        return;
-    case V_JUMP:
-        msg ("You jump, and come down where you were.");
-        return;
-    case V_LIGHT:
-        if (HUB->pc_light) {
-            msg ("Your torch is lit already.");
-        } else {
-            intend (I_LIGHT, 1);
-        }
-        return;
-    case V_DOUSE:
-        if (!HUB->pc_light) {
-            msg ("Your torch isn't lit.");
-        } else {
-            intend (I_LIGHT, 0);
-        }
-        return;
-    case V_LOOK:
-        look (0);
-        return;
-    case V_MAP:
-        show_map ();
-        return;
-    case V_WAIT:
-        intend (I_WAIT, 0);
-        return;
-    case V_SHEET:
-        sheet ();
-        return;
-    case V_PAUSE:
-        HUB->paused = paused = 1;
-        msg ("The game is paused: press Escape to go on.");
-        status ();
-        return;
-    case V_HELP:
-        help ();
-        return;
-    case V_QUIT:
-        quit = 1;
-        return;
-    case V_SAVE:
-        if (!savedir) {
-            msg ("This game isn't being kept (dq0 -d FOLDER keeps one).");
-        } else {
-            save_game ();
-            msg ("The game is kept.");
-        }
+    default:                                    /* (The rest: chores) */
+        chores (c.verb);
         return;
     }
 }
@@ -889,7 +911,7 @@ int main (int argc, char* argv[])
     blank ();
     sayf (resumed ? "%s, %s, takes up where they left off." : "%s, %s, enters the dungeon.", P.name, P.occupation);
     blank ();
-    msg ("Type help for the commands.");
+    tell (T_TYPE_HELP_FOR);
     t_done ();
     while (!quit) {
         hub_map (0);                            /* (The hub at $8000 again: a call may have moved the window) */
