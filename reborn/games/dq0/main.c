@@ -47,6 +47,8 @@ static unsigned char __fastcall__ things (unsigned char op, const char* name);
 static void to_hand (void);
 static void dig_used (void);
 static char dug_with[16];                       /* (The tool a dig took, named) */
+static unsigned char finds;                     /* (Things a search turned up, told as it ends: the hub's text) */
+static struct ireq judged;                      /* (A thing looked at closely: what it is, for the appraiser) */
 
 struct pc P;
 static volatile unsigned char quit;
@@ -515,7 +517,13 @@ static void events (void)
             break;
         case E_PORTAL:
             if (m.who == 0) {
-                portal_words (m.w1);
+                if (!finds || m.w1 != PO_NOTHING) {
+                    portal_words (m.w1);
+                }
+                if (finds && (m.w1 == PO_FOUND || m.w1 == PO_NOTHING)) {
+                    msg (HUB->things_text);     /* (What its search turned up besides) */
+                    finds = 0;
+                }
             }
             break;
         }
@@ -661,6 +669,7 @@ static const char* const thing[] = { "", "door", "way on", "stairs", "ladder", "
 static void __fastcall__ command (char* l)
 {
     static struct pcmd c;
+    struct req* r;
     unsigned char d;
 
     pc_face = HUB->pc_face;
@@ -716,6 +725,20 @@ static void __fastcall__ command (char* l)
         return;
     case V_SEARCH:
     case V_EXAMINE:
+        if (c.verb == V_EXAMINE && c.word[0]) {  /* (A thing looked at closely: judged, by the craft that knows it) */
+            if (things (IO_DESCRIBE, c.word) != IR_OK) {
+                sayf ("\nYou see no %s here.", c.word);
+                return;
+            }
+            memcpy (&judged, &HUB->ireq, sizeof judged);
+            r = ask_b (RS_TEST, P_APPRAISE, judged.craft);
+            d = r->grade;
+            r->state = REQ_FREE;
+            appraise (&judged, d);
+            msg (lb);
+            return;
+        }
+        finds = things (IO_SEARCH, "");         /* (Things concealed about it; then the walls) */
         intend (I_PORTAL, PA_SEARCH);
         return;
     case V_DIG:

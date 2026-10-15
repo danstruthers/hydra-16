@@ -87,6 +87,9 @@ static void __fastcall__ change_put (struct chunk* k, unsigned char lx, unsigned
 {
     unsigned char i;
 
+    if (link == STOCKED) {                      /* (Its things put down: the record only a mark) */
+        return;
+    }
     if (link == PORTAL_STATE) {                 /* (A portal's state: tile it) */
         for (i = 0; i < k->nportals; ++i) {
             if (k->portal[i].x == lx && k->portal[i].y == ly) {
@@ -106,20 +109,23 @@ static void __fastcall__ change_put (struct chunk* k, unsigned char lx, unsigned
     }
 }
 
-/* The changes laid over a chunk just made (in the main RAM; its first square x, y in the frame) */
-void __fastcall__ changes_over (struct chunk* k, unsigned x, unsigned y)
+/* The changes laid over a chunk just made (in the main RAM; its first square x, y in the frame): 1 if it's been
+** stocked */
+unsigned char __fastcall__ changes_over (struct chunk* k, unsigned x, unsigned y)
 {
     static struct change c;
     unsigned i;
-    unsigned char b = getbank ();
+    unsigned char b = getbank (), stocked = 0;
 
     for (i = 0; i < nch; ++i) {
         memcpy (&c, change_at (i), sizeof c);
         if (c.sn == k->sn && c.x - x < CW && c.y - y < CW) {
             change_put (k, c.x - x, c.y - y, c.tile, c.elev, c.link);
+            stocked |= c.link == STOCKED;
         }
     }
     setbank (b);
+    return stocked;
 }
 
 /* A change on a chunk in the cache (slot s: the hub's bank in the window after) */

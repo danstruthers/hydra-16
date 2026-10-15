@@ -32,12 +32,18 @@ enum {
                                                 **   suits it best (the referee's choice: its key in the reply's
                                                 **   text, the wear the spell did it in w2); the reply's w1 the feet a
                                                 **   spell of work makes, its result 1 if nothing it has can dig that */
+    P_APPRAISE,                                 /* A thing judged (b: the craft that knows it, AP_*): its make, its
+                                                **   worth; the grade how near the judgement comes */
     P_THEME,                                    /* A theme's own, P_THEME + n (named in its data) */
 };
 
 /* How a hidden thing's hidden (P_SEARCH's b): found by searching, or only by magical means (the referee's: a spell,
 ** a power, an ability; its result 1 if the searcher has none) */
 enum { HIDE_MECHANICAL, HIDE_MAGICAL };
+
+/* The crafts that know things (P_APPRAISE's b): a warrior knows weapons and armour, not books of magic */
+enum { AP_WEAPON, AP_ARMOUR, AP_METAL, AP_WOOD, AP_HIDE, AP_CLOTH, AP_POTTERY, AP_JEWEL, AP_BOOK, AP_FOOD, AP_BONE,
+    NAP };
 
 /* What a dig is into */
 enum { MAT_EARTH, MAT_STONE, MAT_MASONRY };

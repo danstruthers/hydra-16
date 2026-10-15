@@ -17,6 +17,11 @@ struct style {
     unsigned char   chambers;                   /* (Caves) chambers along the tunnels: up to, less one */
     unsigned char   wide;                       /* (Caves) a tunnel three squares wide: in 3 */
     unsigned char   glow;                       /* (Caves) a chamber with a glow: in 10 */
+    unsigned char   things;                     /* A thing in a room (two tries): in 20 */
+    unsigned char   hidden;                     /*   concealed: in 20 */
+    unsigned char   h_lo, h_span;               /*   how well: a difficulty from h_lo, h_span of them (0-9) */
+    unsigned char   kinds[8];                   /* What's lying about (items.h's KI_*) */
+    unsigned char   hide_kinds[4];              /* What's concealed */
 };
 extern const struct style* SP;                  /* The chunk's stratum's (make.c's) */
 
@@ -35,7 +40,9 @@ int changes_save (void);                        /* The records into the save's f
 int changes_restore (void);                     /* And back */
 void __fastcall__ change_keep (unsigned char sn, unsigned x, unsigned y, unsigned char tile, signed char elev,
     unsigned char link);
-void __fastcall__ changes_over (struct chunk* k, unsigned x, unsigned y);
+unsigned char __fastcall__ changes_over (struct chunk* k, unsigned x, unsigned y);     /* 1: it's been stocked */
+#define STOCKED         0xFD                    /* (A change record's link: the chunk at x, y stocked) */
+void __fastcall__ stock (const struct chunk* c, unsigned x0, unsigned y0);              /* stock.c's */
 void __fastcall__ change_cached (unsigned char s, unsigned char lx, unsigned char ly, unsigned char tile,
     signed char elev, unsigned char link);
 void __fastcall__ seen_keep (unsigned char s);

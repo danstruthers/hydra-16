@@ -20,33 +20,44 @@
 ** tool's key */
 static const struct kind kinds[] = {
     { "", 0 },
-    { "torch", K_LIGHT | K_HAND, 4, 2, 0, 0, 0, 4, 3, "" },
-    { "backpack", K_CONTAINER | K_WEAR, 8, 20, 32, 40, 0, 0, 5, "" },
-    { "belt", K_BELT | K_WEAR, 2, 1, 0, 0, 4, 0, 2, "" },
-    { "pouch", K_CONTAINER | K_HANG, 1, 1, 2, 4, 0, 0, 1, "" },
-    { "dagger", K_HAND | K_HANG, 4, 1, 0, 0, 0, 0, 2, "knife" },
-    { "waterskin", K_HANG, 4, 4, 0, 0, 0, 0, 2, "" },
-    { "rations", K_PLURAL, 4, 2, 0, 0, 0, 0, 2, "" },
-    { "tinderbox", 0, 1, 1, 0, 0, 0, 0, 1, "tinder" },
-    { "pick", K_HAND, 24, 6, 0, 0, 0, 0, 4, "pick" },
-    { "shovel", K_HAND, 20, 8, 0, 0, 0, 0, 4, "shovel" },
-    { "lockpicks", 0, 1, 1, 0, 0, 0, 0, 1, "picks" },
-    { "chisel", K_HAND, 2, 1, 0, 0, 0, 0, 1, "chisel" },
-    { "rope", 0, 40, 8, 0, 0, 0, 0, 4, "rope" },
-    { "bones", K_PLURAL, 8, 4, 0, 0, 0, 0, 4, "" },
-    { "pennies", K_PLURAL, 0, 0, 0, 0, 0, 0, 1, "" },
-    { "iron key", 0, 1, 0, 0, 0, 0, 0, 1, "key" },
-    { "candle", K_LIGHT | K_HAND, 1, 1, 0, 0, 0, 2, 1, "" },
-    { "lantern", K_LIGHT | K_HAND, 8, 4, 0, 0, 0, 6, 3, "" },
-    { "sack", K_CONTAINER, 2, 2, 24, 30, 0, 0, 3, "" },
-    { "chest", K_CONTAINER, 120, 80, 60, 100, 0, 0, 7, "" },
-    { "skull", 0, 4, 2, 0, 0, 0, 0, 3, "" },
-    { "broken sword", 0, 12, 2, 0, 0, 0, 0, 4, "blade" },
-    { "cloak", K_WEAR, 8, 6, 0, 0, 0, 0, 4, "" },
-    { "potsherds", K_PLURAL, 2, 1, 0, 0, 0, 0, 2, "" },
-    { "sword", K_HAND | K_HANG, 12, 3, 0, 0, 0, 0, 4, "blade" },
+    { "torch", K_LIGHT | K_HAND, 4, 2, 0, 0, 0, 4, 3, "", MT_WOOD, AP_WOOD, 1 },
+    { "backpack", K_CONTAINER | K_WEAR, 8, 20, 32, 40, 0, 0, 5, "", MT_LEATHER, AP_HIDE, 24 },
+    { "belt", K_BELT | K_WEAR, 2, 1, 0, 0, 4, 0, 2, "", MT_LEATHER, AP_HIDE, 6 },
+    { "pouch", K_CONTAINER | K_HANG, 1, 1, 2, 4, 0, 0, 1, "", MT_LEATHER, AP_HIDE, 3 },
+    { "dagger", K_HAND | K_HANG, 4, 1, 0, 0, 0, 0, 2, "knife", MT_IRON, AP_WEAPON, 60 },
+    { "waterskin", K_HANG, 4, 4, 0, 0, 0, 0, 2, "", MT_LEATHER, AP_HIDE, 8 },
+    { "rations", K_PLURAL, 4, 2, 0, 0, 0, 0, 2, "", MT_OTHER, AP_FOOD, 4 },
+    { "tinderbox", 0, 1, 1, 0, 0, 0, 0, 1, "tinder", MT_IRON, AP_METAL, 6 },
+    { "pick", K_HAND, 24, 6, 0, 0, 0, 0, 4, "pick", MT_IRON, AP_METAL, 48 },
+    { "shovel", K_HAND, 20, 8, 0, 0, 0, 0, 4, "shovel", MT_IRON, AP_METAL, 36 },
+    { "lockpicks", 0, 1, 1, 0, 0, 0, 0, 1, "picks", MT_IRON, AP_METAL, 40 },
+    { "chisel", K_HAND, 2, 1, 0, 0, 0, 0, 1, "chisel", MT_STEEL, AP_METAL, 12 },
+    { "rope", 0, 40, 8, 0, 0, 0, 0, 4, "rope", MT_CLOTH, AP_CLOTH, 12 },
+    { "bones", K_PLURAL, 8, 4, 0, 0, 0, 0, 4, "", MT_BONE, AP_BONE, 0 },
+    { "pennies", K_PLURAL, 0, 0, 0, 0, 0, 0, 1, "", MT_BRONZE, AP_METAL, 1 },
+    { "iron key", 0, 1, 0, 0, 0, 0, 0, 1, "key", MT_IRON, AP_METAL, 4 },
+    { "candle", K_LIGHT | K_HAND, 1, 1, 0, 0, 0, 2, 1, "", MT_OTHER, AP_FOOD, 1 },
+    { "lantern", K_LIGHT | K_HAND, 8, 4, 0, 0, 0, 6, 3, "", MT_IRON, AP_METAL, 30 },
+    { "sack", K_CONTAINER, 2, 2, 24, 30, 0, 0, 3, "", MT_CLOTH, AP_CLOTH, 3 },
+    { "chest", K_CONTAINER, 120, 80, 60, 100, 0, 0, 7, "", MT_WOOD, AP_WOOD, 80 },
+    { "skull", 0, 4, 2, 0, 0, 0, 0, 3, "", MT_BONE, AP_BONE, 0 },
+    { "broken sword", 0, 12, 2, 0, 0, 0, 0, 4, "blade", MT_IRON, AP_WEAPON, 10 },
+    { "cloak", K_WEAR, 8, 6, 0, 0, 0, 0, 4, "", MT_CLOTH, AP_CLOTH, 24 },
+    { "potsherds", K_PLURAL, 2, 1, 0, 0, 0, 0, 2, "", MT_CLAY, AP_POTTERY, 0 },
+    { "sword", K_HAND | K_HANG, 12, 3, 0, 0, 0, 0, 4, "blade", MT_IRON, AP_WEAPON, 240 },
 };
 #define NK      (sizeof kinds / sizeof kinds[0])
+
+/* The materials' toughness (items.h's MT_*) */
+static const unsigned char tough[NMATS] = MAT_TOUGH;
+
+/* Its own numbers, for the things' differences (not the game's: those are the referee's and the maker's) */
+static unsigned rs = 0x2545;
+static unsigned char __fastcall__ rnd (unsigned char n)
+{
+    rs = rs * 25173U + 13849U;
+    return (rs >> 8) % n;
+}
 
 /* ---- The store kept (back: read again), the save folder's items.dat: its banks a piece at a time, through main
 ** RAM (the window's only the task's own: the kernel's copies want the task's memory) */
@@ -98,6 +109,7 @@ void things_init (void)
         memset ((void*) 0x8000, 0, 0x2000);
     }
     hub_map (0);
+    rs = (unsigned) HUB->seed | 1;
     if (HUB->resume) {
         keep (1);
     }
@@ -112,6 +124,41 @@ struct item* __fastcall__ item_at (unsigned i)
 static const struct kind* __fastcall__ kind_of (unsigned char k)
 {
     return k < NK ? &kinds[k] : &kinds[0];
+}
+
+/* ---- A thing made its own, as the things task first comes to it (no two alike): its number (record 0 keeps the
+** last given), its quality (most are middling), its material (a blade of iron, of steel if it's well made, of
+** bronze if crudely), its durability's most (its material's toughness, its weight, its quality) and what's left of
+** it (a thing found lying in the dungeon is the worse for its years there) */
+static void __fastcall__ make_own (unsigned i)
+{
+    static struct item q;
+    struct item* p;
+    unsigned id;
+    unsigned char m;
+
+    memcpy (&q, item_at (i), sizeof q);
+    if (q.id || !q.kind) {
+        return;
+    }
+    p = item_at (0);
+    id = ++p->x;
+    q.id = id;
+    q.quality = rnd (4) + rnd (4) + rnd (3);
+    if (rnd (8) == 0) {
+        ++q.quality;
+    }
+    m = kinds[q.kind < NK ? q.kind : 0].mat;
+    if (m == MT_IRON && !strcmp (kinds[q.kind].tool, "blade")) {
+        m = q.quality >= 7 ? MT_STEEL : q.quality <= 1 ? MT_BRONZE : MT_IRON;
+    }
+    q.mat = m;
+    q.dur_max = tough[m] * (kinds[q.kind].weight + 4) * (5 + q.quality) / 5;
+    q.dur = q.where == IW_SQUARE ? q.dur_max - q.dur_max / 10 * rnd (7) : q.dur_max;
+    if (!q.dur) {
+        q.dur = 1;
+    }
+    memcpy (item_at (i), &q, sizeof q);
 }
 
 /* A free record, taken (under the hub's lock): its number, or 0xFFFF */
@@ -136,12 +183,18 @@ unsigned __fastcall__ item_new (unsigned char kind, unsigned char where, unsigne
             p->owner = 0;
             p->wear = 0;
             p->hide = 0;
+            p->id = 0;
             break;
         }
     }
     hub_map (0);
     hy_sem_release (HUB->item_lock);
-    return i < NITEMS ? i : 0xFFFF;
+    if (i >= NITEMS) {
+        return 0xFFFF;
+    }
+    item_at (i)->id = 0;
+    make_own (i);
+    return i;
 }
 
 /* A kind by its name: its number, or 0 */
@@ -404,6 +457,8 @@ static void __fastcall__ put (const char* s)
     *tp = 0;
 }
 
+/* A thing in words: its kind, how many, and what anyone can see of its state (its make and worth are an appraiser's
+** to judge) */
 static void __fastcall__ thing_words (const struct item* q)
 {
     const struct kind* k = kind_of (q->kind);
@@ -416,6 +471,11 @@ static void __fastcall__ thing_words (const struct item* q)
         put (strchr ("aeiou", k->name[0]) ? "an " : "a ");
     }
     put (k->name);
+    if (q->dur_max && q->dur * 10 < q->dur_max) {
+        put (" (nearly broken)");
+    } else if (q->dur_max && q->dur * 3 < q->dur_max) {
+        put (" (battered)");
+    }
     if (q->flags & I_LIT) {
         put (" (lit)");
     }
@@ -466,6 +526,87 @@ static void list (void)
     contents (IW_ACTOR, 0, 0);
 }
 
+/* ---- A search for what's concealed about the character (on the squares it sees, within SEARCH_R): the referee's
+** test for each (its search, at the concealment's difficulty: two steps of it each, from +2), the ones found no
+** longer hidden, and named in the hub's text; but what's hidden by magic (found by magical means only) */
+#define SEARCH_R        3
+static unsigned char search (void)
+{
+    static struct item q;
+    struct req* r;
+    unsigned char* p;
+    unsigned i, x, y;
+    unsigned char sn, found = 0;
+    signed char g;
+
+    hub_map (0);
+    sn = HUB->pc_stratum;
+    x = HUB->pc_x;
+    y = HUB->pc_y;
+    tp = HUB->things_text;
+    *tp = 0;
+    for (i = 1; i < NITEMS; ++i) {
+        memcpy (&q, item_at (i), sizeof q);
+        if (!q.kind || q.where != IW_SQUARE || q.sn != sn || (q.flags & (I_HIDDEN | I_MAGIC)) != I_HIDDEN ||
+            q.x - x + SEARCH_R > 2 * SEARCH_R || q.y - y + SEARCH_R > 2 * SEARCH_R || !(p = at (sn, q.x, q.y)) ||
+            !(*p & T_VIS)) {
+            continue;
+        }
+        make_own (i);
+        memcpy (&q, item_at (i), sizeof q);
+        hub_map (0);
+        r = &HUB->slot[SLOT_UI];                /* (The UI's: it waits on this request meanwhile) */
+        r->kind = RS_TEST;
+        r->actor = 0;
+        r->a = P_SEARCH;
+        r->b = HIDE_MECHANICAL;
+        r->steps = 2 - 2 * q.hide;
+        r = hub_ask (SLOT_UI);
+        g = r->grade;
+        r->state = REQ_FREE;
+        if (g >= G_MS) {
+            item_at (i)->flags = (q.flags & ~I_HIDDEN) | I_KNOWN;
+            put (found ? ", and " : "Searching, you turn up ");
+            thing_words (&q);
+            ++found;
+        }
+    }
+    if (found) {
+        put (".");
+    }
+    return found;
+}
+
+/* ---- A thing looked at closely (carried, or seen): what it truly is, in the request, for the appraiser's judgement
+** (the UI's, by the referee's test of the craft that knows it) */
+static unsigned char __fastcall__ describe (const char* name)
+{
+    static struct item q;
+    const struct kind* k;
+    struct ireq* r;
+    unsigned n = carried_named (name);
+
+    if (!n && !(n = seen_named (name))) {
+        return IR_NONE;
+    }
+    make_own (n);
+    memcpy (&q, item_at (n), sizeof q);
+    k = kind_of (q.kind);
+    hub_map (0);
+    r = &HUB->ireq;
+    strcpy (r->name, k->name);
+    r->item = q.id;
+    r->craft = k->craft;
+    r->quality = q.quality;
+    r->mat = q.mat;
+    r->plural = (k->flags & K_PLURAL) != 0;
+    r->qty = q.qty;
+    r->dur = q.dur;
+    r->dur_max = q.dur_max;
+    r->value = k->value;
+    return IR_OK;
+}
+
 /* ---- The things the character sees (sight.c's): on the squares it sees now, not hidden, named, where they lie */
 void __fastcall__ things_seen (struct sight* s, unsigned char sn, unsigned x, unsigned y, unsigned char face)
 {
@@ -481,6 +622,7 @@ void __fastcall__ things_seen (struct sight* s, unsigned char sn, unsigned x, un
             q.y - y + 20 > 40 || !(p = at (sn, q.x, q.y)) || !(*p & T_VIS)) {
             continue;
         }
+        make_own (i);
         k = s->nitems++;
         strcpy (s->item[k].name, kind_of (q.kind)->name);
         s->item[k].qty = q.qty;
@@ -497,6 +639,7 @@ void __fastcall__ things_seen (struct sight* s, unsigned char sn, unsigned x, un
 unsigned char things_serve (void)
 {
     static struct ireq q;
+    unsigned char changed = 0;
 
     hub_map (0);
     memcpy (&q, &HUB->ireq, sizeof q);
@@ -523,8 +666,14 @@ unsigned char things_serve (void)
     case IO_WEAR:
         wear (q.name, q.to);
         break;
+    case IO_SEARCH:
+        changed = q.result = search ();
+        break;
+    case IO_DESCRIBE:
+        q.result = describe (q.name);
+        break;
     }
     hub_map (0);
     HUB->ireq.result = q.result;
-    return (q.op == IO_GET || q.op == IO_DROP) && q.result == IR_OK;
+    return changed || (q.op == IO_GET || q.op == IO_DROP) && q.result == IR_OK;
 }

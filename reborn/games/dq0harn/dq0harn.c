@@ -136,6 +136,13 @@ static const unsigned char purpose[P_THEME] = {
     HARN_CND, ATTR | HARN_END, ATTR | HARN_WIL, HARN_DGE,
     HARN_PHY, HARN_LOR, HARN_TRK, HARN_RHE, HARN_RHE, HARN_ANI,
     HARN_MIN,                                                           /* Digging: Mining */
+    HARN_WEA,                                                           /* Appraising: by its craft (appraiser) */
+};
+
+/* The skill that knows a thing (rs.h's AP_*): weapons and armour Weaponcraft, metal Metalcraft, wood Timbercraft,
+** hide Hideworking, cloth Textilecraft, pottery Ceramics, jewels Jewelcraft, books and bones Lore, food Cookery */
+static const unsigned char appraiser[NAP] = {
+    HARN_WEA, HARN_WEA, HARN_MET, HARN_TIM, HARN_HID, HARN_TEX, HARN_CER, HARN_JEW, HARN_LOR, HARN_COO, HARN_LOR
 };
 
 static signed char __fastcall__ grade (unsigned char level)
@@ -145,15 +152,11 @@ static signed char __fastcall__ grade (unsigned char level)
     return g[level & 3];
 }
 
-static signed char __fastcall__ test (harn_char* c, unsigned char p, signed char steps)
+/* A skill's test (or an attribute's: ATTR), at the steps (a skill not learnt: its opening level, less a penalty) */
+static signed char __fastcall__ test_sk (harn_char* c, unsigned char sk, signed char steps)
 {
-    unsigned char sk;
     int mod = 5 * steps;
 
-    if (p >= P_THEME) {
-        return grade (harn_test (50 + mod));     /* (A theme's own: till themes say, an even chance) */
-    }
-    sk = purpose[p];
     if (sk & ATTR) {
         return grade (harn_test_attr (c, sk & ~ATTR, 5, mod));
     }
@@ -161,6 +164,14 @@ static signed char __fastcall__ test (harn_char* c, unsigned char p, signed char
         return grade (harn_test (harn_get_oml (c, sk) - 5 * harn_get_pp (c) + mod));
     }
     return grade (harn_test_skill (c, sk, mod));
+}
+
+static signed char __fastcall__ test (harn_char* c, unsigned char p, signed char steps)
+{
+    if (p >= P_THEME) {
+        return grade (harn_test (50 + 5 * steps));      /* (A theme's own: till themes say, an even chance) */
+    }
+    return test_sk (c, purpose[p], steps);
 }
 
 /* ---- The character's state, in the hub's header: the UI's status line, and its summary (rs.h's: what the world
@@ -360,6 +371,10 @@ static void __fastcall__ answer (struct req* r)
             }
             r->grade = test (&pc, r->a, r->steps);
             r->w1 = r->grade == G_CS ? 2 * k : r->grade == G_MS ? k : r->grade == G_MF ? k / 2 : 0;
+            break;
+        }
+        if (r->a == P_APPRAISE) {               /* (By the craft that knows the thing) */
+            r->grade = test_sk (&pc, appraiser[r->b < NAP ? r->b : 0], r->steps);
             break;
         }
         if (r->a == P_SEARCH && r->b == HIDE_MAGICAL) {    /* (Only by magic: its spells to come) */

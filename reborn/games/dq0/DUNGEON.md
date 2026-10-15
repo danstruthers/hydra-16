@@ -319,6 +319,32 @@ and the concealer's test of their hiding skill (the referee's: Stealth, or a cra
 search finds it by a test whose steps are that difficulty's; the character can hide things too, by the same
 test.
 
+**Holes** (the user: "A hole is a container, and putting a chest in it, then filling the hole, makes for great
+concealment.  A filled hole is still a container, just a hard one to find!"): a hole dug in a floor (digging's, a
+foot or two down) is a container, its room by its size; filled in, it's a concealed one, its difficulty by the
+filling's care and the digger's skill (and the floor: fresh earth shows on a flagged floor).  Found by a search, it
+must be dug out again to get at what's in it.  Not built.
+
+**No two things alike** (the user: "Each item is unique and should have a unique ID.  Also, each item of a type
+should have unique characteristics such that 'all longswords are not the same'.  Each should have quality (how
+well made), resistances to different kinds of damage (based on materials), and durability (how much damage it can
+take overall and how much is left before breaking; maximum based on quality + materials)."): each item has its own
+number, never another's; its quality (0 crude ... 9 a master's, most middling); its material (a kind's as a rule,
+but a blade of steel if it's well made, of bronze if crudely), whose resistances to each kind of harm (blows, edges,
+points, fire, cold, acid, 0-9) are its; and its durability, the harm it can take, and what's left of it, its most
+by its material's toughness, its weight and its quality (a thing found in the dungeon the worse for its years).
+Built: each made its own as the things task first comes to it (items.h).
+
+**Appraising** (the user: "Examining an object (using a skill) would return some estimation (possibly way off) of
+the quality, value, etc. based on expertise in the item judged by the appraiser.  Warriors would do well assessing
+the quality and value weapons, but not books of magic."): what anyone sees of a thing is its kind and its plain
+state (battered, nearly broken); its make, its material's worth and its value are an appraiser's judgement
+(examine X): the referee tests the craft that knows that kind of thing (rs.h's P_APPRAISE, its AP_*: weapons and
+armour Weaponcraft, metal Metalcraft, wood Timbercraft, books Lore ...; one not learnt at its opening level, less
+a penalty), and the judgement is as near the truth as the grade: a critical success right, a marginal success near
+(its make a step off, its worth a fifth), a marginal failure well off, a critical failure wild (said as surely).
+Built.  Still to come: the judgement remembered with the thing, and the theme's things' values.
+
 ### Hidden things, and seeing in the dark
 
 The user (2026-10-14): "using your "find hidden" ability, you could discover hidden items, hidden exits, hidden

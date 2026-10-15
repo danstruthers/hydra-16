@@ -9,6 +9,18 @@
 #ifndef _ITEMS_H
 #define _ITEMS_H
 
+/* What a thing's made of: its resistance to each kind of harm (0 none ... 9 all but proof), and its toughness (the
+** durability a pound of it gives, at middling quality) */
+enum { MT_NONE, MT_WOOD, MT_IRON, MT_STEEL, MT_BRONZE, MT_LEATHER, MT_CLOTH, MT_BONE, MT_CLAY, MT_STONE, MT_GLASS,
+    MT_SILVER, MT_OTHER, NMATS };
+#define MAT_TOUGH       { 1, 3, 6, 8, 5, 3, 1, 2, 1, 8, 1, 4, 1 }
+enum { DM_BLUNT, DM_EDGE, DM_POINT, DM_FIRE, DM_COLD, DM_ACID, NDMG };  /* Kinds of harm (the referee's, by aspect) */
+struct material {
+    char            name[8];
+    unsigned char   resist[NDMG];
+    unsigned char   tough;
+};
+
 /* A kind of thing (the catalogue's: a stand-in for the theme's data) */
 #define NKINDS          48
 struct kind {
@@ -21,6 +33,9 @@ struct kind {
     unsigned char   light;                      /* A light's reach, lit: in squares */
     unsigned char   size;                       /* How easily it's seen: 0 tiny ... 9 huge */
     char            tool[8];                    /* Its key for the referee's tests ("pick", "picks"), or "" */
+    unsigned char   mat;                        /* What it's mostly made of, as a rule (MT_*: one may differ) */
+    unsigned char   craft;                      /* The craft that knows it (rs.h's AP_*: its appraiser's) */
+    unsigned        value;                      /* Its worth, a sound one, new: in pennies */
 };
 #define K_CONTAINER     0x01                    /* Holds things inside it */
 #define K_BELT          0x02                    /* Things hang from it, each in a slot */
@@ -29,6 +44,11 @@ struct kind {
 #define K_HAND          0x10                    /* Held in a hand (a tool, a weapon, a light) */
 #define K_HANG          0x20                    /* Hangs from a belt (a pouch, a sheath, a quiver) */
 #define K_PLURAL        0x40                    /* Its name's a plural ("bones", "rations") */
+
+/* The catalogue's kinds, by number (things.c's order: the maker puts them down by these) */
+enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKIN, KI_RATIONS, KI_TINDERBOX, KI_PICK,
+    KI_SHOVEL, KI_LOCKPICKS, KI_CHISEL, KI_ROPE, KI_BONES, KI_PENNIES, KI_KEY, KI_CANDLE, KI_LANTERN, KI_SACK, KI_CHEST,
+    KI_SKULL, KI_BROKEN_SWORD, KI_CLOAK, KI_POTSHERDS, KI_SWORD };
 
 /* An item */
 #define NITEMS          (ITEM_BANKS * (0x2000 / sizeof (struct item)))
@@ -44,6 +64,12 @@ struct item {
     unsigned char   wear;                       /* Its wear, 0 new ... 255 (a blade dug with, dulled) */
     unsigned char   hide;                       /* Concealed on purpose (I_HIDDEN): how hard to find, 0-9 (the
                                                 **   method's quality and the concealer's skill) */
+    /* Its own (no two alike: the things task's, as it first comes to it; id 0 till then) */
+    unsigned        id;                         /* Its number, never another's (record 0's x the last given) */
+    unsigned char   quality;                    /* How well it's made: 0 crude ... 9 a master's */
+    unsigned char   mat;                        /* What it's made of (MT_*: its resistances) */
+    unsigned        dur, dur_max;               /* Its durability: the harm it can take before it breaks, what's
+                                                **   left (its most by its quality, its material, its weight) */
 };
 #define I_LIT           0x01                    /* A light, lit */
 #define I_HELD          0x02                    /* In a hand */
@@ -63,11 +89,18 @@ struct ireq {
     unsigned char   result;                     /* IR_* */
     char            name[16];                   /* A thing's name (IO_GET's, IO_DROP's; IO_KIT's: one more) */
     unsigned        x, y;                       /* IR_NOT_HERE's: where it is */
+    unsigned char   craft, quality, mat, plural, qty;   /* IO_DESCRIBE's: what it is (its kind's name in name) */
+    unsigned        dur, dur_max, value;
 };
 enum { IO_KIT, IO_GET, IO_DROP, IO_LIST, IO_SAVE, IO_RESTORE,
     IO_TOOLS,                                   /* The tools' keys of all it carries, into things_text (for the
                                                 **   referee: a skill used, the right tool to hand takes itself) */
-    IO_WEAR };                                  /* The tool with the key (name) worn by to: its name back in name */
+    IO_WEAR,                                    /* The tool with the key (name) worn by to: its name back in name */
+    IO_SEARCH,                                  /* The things concealed about it searched for (the referee's tests,
+                                                **   each at its difficulty): the result the number found, worded in
+                                                **   things_text */
+    IO_DESCRIBE };                              /* A thing (carried, or seen) looked at closely: what it truly is,
+                                                **   in the request (for the appraiser's judgement: the UI's) */
 enum { IR_OK, IR_NONE, IR_FULL, IR_HEAVY, IR_NOT_HERE };
 
 /* What the character carries, for the UI to word (IO_LIST's): each thing, how deep it's in others, its state */
