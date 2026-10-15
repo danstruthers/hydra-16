@@ -54,7 +54,8 @@ enum {
     I_CLIMB,                                    /* a: DIR_UP or DIR_DOWN (the stairway or ladder in the room);
                                                 **   | I_JUMP, down: jumped (a ledge, a shaft: a fall) */
     I_TURN,                                     /* a: the heading to face (H_N ... H_NW) */
-    I_LIGHT,                                    /* a: 1 the character's light lit, 0 put out */
+    I_LIGHT,                                    /* a: 1 a light of the character's lit, 0 put out (its light the
+                                                **   things' already, pc_light: the world takes the time, looks) */
     I_DIG,                                      /* a: a direction (DIR_N ... DIR_W, DIR_DOWN) */
     I_PORTAL,                                   /* a: what's done to the door it faces (PA_*) */
     I_GOTO,                                     /* w1, w2: a square in its room it sees, walked up to */
@@ -164,7 +165,9 @@ struct hub {                                    /* Bank 0, at $8000 */
     volatile unsigned char pc_stratum;          /* Where the character is (the world's): its stratum, */
     volatile unsigned pc_x, pc_y;               /*   its square (the dungeon's frame, world.h's), */
     volatile unsigned char pc_face;             /*   the way it faces (a heading: H_N ... H_NW), */
-    volatile unsigned char pc_light;            /*   the light it carries: how far it reaches, in tiles (0: none) */
+    volatile unsigned char pc_light;            /*   the light it carries: how far it reaches, in tiles (0: none:
+                                                **   the things' (dq0p), from the lit things it holds), */
+    char            pc_lamp[14];                /*   and the brightest of them, named */
     struct rs_summary pcsum;                    /* The character's summary (the referee's: its senses ...) */
     struct sight    sight;                      /* What it perceives (the senses', after each look about) */
     /* A look about asked of the senses (dq0p: the world asks, as the character's moved, turned, lit a light): the

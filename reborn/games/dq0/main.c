@@ -1,7 +1,7 @@
 /*
 ** main.c - Dingus Quest Zero: the UI's task, its start and its loop.
 **
-** dq0 [-s seed] [-p pace] [-c file] [-d folder] [-k tool] [-T]: -d keeps the game in a folder (on any card), and
+** dq0 [-s seed] [-p pace] [-c file] [-d folder] [-k things] [-T]: -d keeps the game in a folder (on any card), and
 ** carries on the game kept there if there is one; without it nothing's kept. the seed makes the same game each time (the dice: dice.h's rseed); the pace is
 ** r, n, m (relaxed, normal, menacing: asked at the start if it isn't given) or t (turns: the world moves only as
 ** the character acts, for tests); the file a character made already (hmchar's).  Without one, hmchar is run to make
@@ -43,7 +43,7 @@ static unsigned char busy = 1;                  /* The character's doing somethi
 static unsigned place;                          /* Where this task is in the world's events */
 static int task_[NTASKS];                       /* Each task's number, as it was started (0: not) */
 static unsigned char test_start;
-static const char* kit;                         /* (dq0 -k: a tool, equipped as the game starts) */
+static const char* kit;                         /* (dq0 -k: things more, as the game starts: a tool, ...) */
 static const char* savedir;                     /* (dq0 -d: the save's folder) */
 static unsigned char __fastcall__ things (unsigned char op, const char* name);
 static void to_hand (void);
@@ -385,8 +385,9 @@ static void start_world (unsigned long seed)
     }
     start ("dq0m", T_MAKER, libdir);            /* (Its maker, its senses) */
     start ("dq0p", T_SENSES, libdir);
-    if (!resumed) {                             /* (The character's kit: a new game's, -k's thing in hand too) */
-        things (IO_KIT, kit ? kit : "");
+    if (!resumed) {                             /* (The character's kit: a new game's, -k's things too) */
+        strcpy (HUB->things_text, kit ? kit : "");    /* (Its things more, commas between) */
+        things (IO_KIT, "");
     }
     to_hand ();
     start ("dq0d", T_DENIZENS, libdir);         /* (Its denizens, its world) */
@@ -480,10 +481,8 @@ static void events (void)
                     stir ();                    /* (A denizen it sees moved) */
                     break;
                 }
-                if (m.w1 == V_TURNED) {
+                if (m.w1 == V_TURNED) {          /* (A light lit or put out: the things' words, said) */
                     sayf ("\nYou turn to face %s.", head_name[HUB->pc_face & 7]);
-                } else {
-                    tell (m.w1 == V_LIT ? T_YOU_LIGHT_YOUR : T_YOU_PUT_OUT);
                 }
                 look (0);
             }
@@ -614,12 +613,39 @@ static void __fastcall__ dig_used (unsigned char n)
     }
 }
 
+/* After a thing's handled (taken up, put down ...): its light changed (lit, put out, a torch put down), the world's
+** look about in the new light; else the time it took (t tenths), quietly */
+static void __fastcall__ after (unsigned char was, unsigned t, unsigned char op)
+{
+    to_hand ();
+    if (op == IO_LIGHT || op == IO_DOUSE || HUB->pc_light != was) {
+        intend (I_LIGHT, op == IO_LIGHT || HUB->pc_light > was);
+    } else {
+        intend2 (I_WAIT, t, 1);
+    }
+}
+
+/* A thing handled (held, stowed, put in or on another, taken from it, worn, taken off, lit, put out), by its name
+** (and the other's: y, on 1 for on it): the things' words of it said */
+static void __fastcall__ handle (unsigned char op, const char* x, const char* y, unsigned char on)
+{
+    unsigned char was = HUB->pc_light;
+
+    strcpy (HUB->ireq.into, y);
+    HUB->ireq.to = on;
+    things (op, x);
+    msg (HUB->things_text);
+    if (HUB->ireq.result == IR_OK) {
+        after (was, HUB->ireq.x, op);
+    }
+}
+
 static char pending[16];                        /* A thing to take up, walked over to first */
 
 /* A thing taken up, by its name (walked over to first, if it's out of reach) */
 static void __fastcall__ take (const char* name)
 {
-    unsigned char r = things (IO_GET, name);
+    unsigned char was = HUB->pc_light, r = things (IO_GET, name);
 
     if (r == IR_NOT_HERE) {
         strcpy (pending, name);
@@ -629,8 +655,7 @@ static void __fastcall__ take (const char* name)
     pending[0] = 0;
     tell (r == IR_OK ? T_TAKEN : r == IR_FULL ? T_YOUR_HANDS_ARE : T_YOU_SEE_NONE);
     if (r == IR_OK) {
-        to_hand ();
-        intend2 (I_WAIT, 20, 1);
+        after (was, 20, IO_GET);
     }
 }
 
@@ -704,24 +729,6 @@ static void __fastcall__ hide (const char* w)
 static void __fastcall__ chores (unsigned char verb)
 {
     switch (verb) {
-    case V_DON:
-    case V_DOFF:
-        tell (T_NOTHING_TO_DON + (verb == V_DOFF));    /* (The two in turn) */
-        return;
-    case V_LIGHT:
-        if (HUB->pc_light) {
-            tell (T_TORCH_LIT);
-        } else {
-            intend (I_LIGHT, 1);
-        }
-        return;
-    case V_DOUSE:
-        if (!HUB->pc_light) {
-            tell (T_TORCH_OUT);
-        } else {
-            intend (I_LIGHT, 0);
-        }
-        return;
     case V_LOOK:
         look (0);
         return;
@@ -844,7 +851,9 @@ static void __fastcall__ command (char* l)
         }
         return;
     case V_GET:
-        if (!c.word[0]) {
+        if (c.prep == PR_FROM) {
+            handle (IO_TAKE, c.word, c.word2, 0);
+        } else if (!c.word[0]) {
             tell (T_TAKE_WHAT);
         } else {
             take (c.word);
@@ -853,16 +862,26 @@ static void __fastcall__ command (char* l)
     case V_DROP:
         if (!c.word[0]) {
             tell (T_PUT_DOWN_WHAT);
-        } else if (things (IO_DROP, c.word) == IR_OK) {
+        } else if (d = HUB->pc_light, things (IO_DROP, c.word) == IR_OK) {
             tell (T_PUT_DOWN);
-            to_hand ();
-            intend2 (I_WAIT, 10, 1);
+            after (d, 10, IO_DROP);
         } else {
             tell (T_YOU_CARRY_NONE);
         }
         return;
     case V_HIDE:                                /* (Concealment: a thing; oneself comes with the denizens) */
         hide (c.word);
+        return;
+    case V_HOLD:
+    case V_STOW:
+    case V_PUT:
+    case V_DON:
+    case V_DOFF:
+    case V_LIGHT:
+    case V_DOUSE:
+        handle (c.verb == V_HOLD ? IO_HOLD : c.verb == V_STOW ? IO_STOW : c.verb == V_PUT ? IO_PUT : c.verb == V_DON ?
+            IO_DON : c.verb == V_DOFF ? IO_DOFF : c.verb == V_LIGHT ? IO_LIGHT : IO_DOUSE, c.word, c.word2,
+            c.prep == PR_ON);
         return;
     case V_INVENTORY:
         things (IO_LIST, "");
@@ -904,7 +923,7 @@ int main (int argc, char* argv[])
             pace = argv[i][0] == 'r' ? PACE_RELAXED : argv[i][0] == 'm' ? PACE_MENACING :
                 argv[i][0] == 't' ? PACE_TURNS : PACE_NORMAL;
         } else {
-            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d folder] [-k tool] [-T]");
+            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d folder] [-k things] [-T]");
         }
     }
     if (savedir && !load_save ()) {             /* (A game kept there: carried on) */

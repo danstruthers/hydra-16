@@ -291,23 +291,38 @@ body).  The important ones (the puzzle's pieces, a faction's hoard, a guardian's
 plan is grown, as its populations are; the ordinary ones (what the style and age leave lying: tools, bones, rubbish,
 lost things) when a chunk is made, from its seed, so they're the same each time it's made, and what's moved since is
 in the change records.
-
 **Containers** (the user: "chests, backpacks, sacks, quivers, bowls, etc. are containers (as are belts, in a
 different manner) that can hold a specified amount of space and weight of items"): a container item has a capacity,
 its space (bulk) and the weight it bears, and holds items up to both; what it holds is carried with it, its weight
 counting toward its carrier's load.  Some hold only some things (a quiver arrows, a scabbard its blade, a bowl
 what's poured or small); a **belt** holds in its own way: things hang from it (a pouch, a scabbard, a quiver, a
 tool), each in a slot of its own, by how many it has room for and what each will bear, not by space inside it.
+Built (dq0p's things.c, its code in the catalogue's bank): held in a hand (hold, wield, ready: two hands at most, a
+two-handed thing or a big one both), stowed in the pack, put in a container (by its room and the weight it bears;
+a container in another, by its own bulk or what it holds, the more; never into itself or what's in it), taken from
+it (into the pack, else a hand), hung from the belt (by its slots; only what hangs: a pouch, a sheath, a quiver, a
+blade), worn and taken off (one of a kind worn); the inventory says which hand (both), what's worn, what's in or on
+what, and the load.  Taking up still fills the pack first, then a hand.  (To come: a scabbard's one blade, a
+quiver's arrows only; the load as the referee's encumbrance.)
 
 **Surfaces, and what a container keeps in** (the user: "a table or chair is a type of container as well.  Some
 containers cannot hold liquids (wicker baskets), but hold clothes just fine; same with gasses (a balloon or a cloth
-sack).  Something to note and make accommodations for later."): noted, not built.  Things can lie **on** an item as
+sack).  Something to note and make accommodations for later."): things can lie **on** an item as
 well as in it (a table, a chair, a shelf, an altar: a surface, its room in area and the weight it bears; what's on
 it seen with it, not hidden inside); and a container says what it keeps in by form: solids, small things (a sack
 keeps coins, a basket doesn't keep sand), liquids (a skin, a bottle, a bowl, not a basket or a sack), gases (a
 bladder, a balloon, not a cloth sack).  A thing put where it won't stay is refused, or (a liquid in a basket) runs
-out.  Liquids and gases as things in their own right (a skin's water, a flask's oil, lamp fuel) come with water
-and the items' later work.
+out.  Built: a kind's keeps (items.h's KF_*: a surface KF_ON) and its own form; a thing that won't stay refused (a
+basket and a heap of sand; a waterskin keeps only liquids), a lit thing not put in a container (put it out first);
+what's on a surface told with it ("On the table lies a candle"), taken from it, taken up from it.  Liquids and gases
+as things in their own right (a skin's water, a flask's oil, lamp fuel) come with water and the items' later work.
+
+**Light** (the character's): from the lit things it carries, the brightest's reach (a torch 20 feet, a candle 10, a
+lantern 30: the kinds'), in a hand, worn or hung from the belt; lit (light X, or the first unlit) with a tinderbox
+carried or another flame (one carried, or lit within reach), put out (douse X); a thing lit in the pack taken into a
+hand first.  Put down lit, it lights the squares round it it has a clear line to (dq0p's view.c, its lamps), seen
+from where the character stands; the room's words name what gives its light ("by the light of your candle").  The
+things keep it in the hub (pc_light, pc_lamp); the world takes the time and looks again (I_LIGHT).
 
 An item is **found** through the character's senses, as everything else is: only on a square it sees now, lit;
 noticed by the referee's test of its sight (rs.h: P_NOTICE_SIGHT, or P_SEARCH when it searches), the steps from the
