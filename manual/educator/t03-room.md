@@ -20,8 +20,8 @@ class sees thirty emulators: they stop being a web page, and become *copies of t
 The web emulator is one file, `hydra-16.html`, of about a megabyte. It needs no installation, no network, no
 account and no plug-in: any browser of the last few years will run it straight from a disk.
 
-1. On one computer with Node.js, make it (the manual's section 2.3): `node reborn/sim/web.js`. This is the only
-   step that needs anything installed, and you need do it only once.
+1. Take it from the project's `reborn/bin` folder (on its GitHub page: open `reborn/bin/hydra-16.html`, then
+   *Download raw file*). It's made with every build of HydraOS, so it always matches the ROM images beside it.
 2. Copy `hydra-16.html` to a shared drive, or onto each computer, or onto a memory stick for each student.
 3. Open it once on a student computer, with the student's login, *before* the first lesson. School filters and
    locked-down browsers are the commonest reason for a lost first lesson: find out a week early.

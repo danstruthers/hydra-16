@@ -21,8 +21,9 @@ how to share files between your PC and the Hydra.
 
 ## 2.1 The emulator in a web browser
 
-The web emulator is one file called **hydra-16.html**. Your teacher may give it to you, or you can make it
-yourself: section 2.3 shows how, and it takes one command. To start it, open the file in a web browser: Chrome, Edge, Firefox or Safari
+The web emulator is one file called **hydra-16.html**. Your teacher may give it to you, or you can take it from
+the project: it's in the `reborn/bin` folder, beside the ROM images, ready to use. (On the project's GitHub page,
+open `reborn/bin/hydra-16.html` and use the *Download raw file* button.) Nothing needs to be installed. To start it, open the file in a web browser: Chrome, Edge, Firefox or Safari
 all work. Double-clicking the file is usually enough.
 
 The Hydra switches on at once. Within a few seconds the **serial console** fills with the Hydra's start-up
@@ -169,14 +170,15 @@ The project's folder holds these folders:
 Everything you need to *run* the emulator is already there, including the ROM images in `reborn/bin`. You do not
 need to build anything.
 
-To make your own web emulator, open a terminal window (on Windows, *Command Prompt* or *PowerShell*; on a Mac or
-Linux, *Terminal*), go to the project's folder, and type:
+The web emulator is there too, ready made: `reborn/bin/hydra-16.html`. Building HydraOS (below) makes it again,
+from the new ROM images. To make only the page, open a terminal window (on Windows, *Command Prompt* or
+*PowerShell*; on a Mac or Linux, *Terminal*), go to the project's folder, and type:
 
 ```text
 node reborn/sim/web.js
 ```
 
-That writes the page to `reborn/obj/web/hydra-16.html`. Copy it anywhere you like. To try it straight away,
+That writes the page to `reborn/bin/hydra-16.html`. Copy it anywhere you like. To try it straight away,
 `node reborn/sim/web.js --serve` serves the page on your PC, at **http://localhost:8017**.
 
 ## 2.4 The emulator in a terminal window

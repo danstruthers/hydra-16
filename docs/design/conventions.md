@@ -292,7 +292,8 @@ bank t).  Every fixed address is in `base/include/layout.inc`, and nowhere else.
   modes, stat records), `F_` (the file calls' scratch), `srv_` (srvlib), `P_` (POST), `m_`/`n_`/`f_`/`t_` (mem.s,
   notes.s, file.s and task.s's own helpers).
 * Text files have CRLF line endings in the working copy (Git stores LF).
-* The ROM images in `bin/` (`bios_rockwell.bin`, `bios_wdc.bin`, `prom0.bin` ...) are in Git, for programming the chips without a toolchain:
+* The ROM images in `bin/` (`bios_rockwell.bin`, `bios_wdc.bin`, `prom0.bin` ...), and HydraOS's web emulator made from them
+  (`hydra-16.html`), are in Git, for programming the chips and running the emulator without a toolchain:
   a change to what's in them is committed with them rebuilt (a merge's conflict in one: rebuild).  The rest of
   `bin/`, and `obj/`, are the build's.  `../old/` is the old system, frozen: HydraOS's own copies of its PC tools are
   `sim/tools/`.

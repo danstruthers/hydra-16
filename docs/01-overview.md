@@ -278,8 +278,8 @@ HyForth (Forth 2012), bye to end
 
 The emulator takes keys after **Ctrl-A**: Ctrl-A x quits, Ctrl-A r presses the reset button, Ctrl-A h lists the rest.
 
-If you'd rather not use a terminal, `node sim/web.js` (also from `reborn/`) builds `obj/web/hydra-16.html`: the whole
-emulator as one web page.  Open it in a browser, and the serial console is a terminal in the page, with the Vera X's
+If you'd rather not use a terminal, open `reborn/bin/hydra-16.html` (in Git, made by every build; `node sim/web.js`
+makes it alone): the whole emulator as one web page, which needs nothing installed.  Open it in a browser, and the serial console is a terminal in the page, with the Vera X's
 screen beside it and a Sound button.
 
 ### The shell

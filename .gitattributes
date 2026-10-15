@@ -10,6 +10,8 @@ reborn/bin/*.bin binary
 # The base's images (base/bin), and HydraOS's SD card's image (reborn/bin/sdcard.img): bytes
 base/bin/*.bin binary
 reborn/bin/*.img binary
+# HydraOS's web emulator (reborn/bin/hydra-16.html, made from the images): the page as built, byte for byte
+reborn/bin/hydra-16.html binary
 # The ROM disk's files (reborn/romfs): bytes for the Hydra (LF line ends), the same on every checkout
 reborn/romfs/** -text
 # The SD card's files (reborn/sdcard): bytes too, as the card has them
