@@ -44,18 +44,40 @@ static void __fastcall__ putn (int v)
     put (itoa (v, b, 10));
 }
 
-/* ---- What's equipped (till the items layer: the keys of the tools taken up), and digging judged by it.  The
-** book has no rules for digging: the game's own, a tool's feet a spell of work (ten minutes) at a marginal success,
-** by what it's into (earth, stone, masonry); a critical success twice that, a marginal failure half, a critical
-** failure none; bare hands dig only earth */
+/* ---- What's to hand (the keys of the tools the character carries, all of them: the UI's, from the things), and
+** digging judged by it: a skill used, the one versed in it takes out the tool that suits the job best (the user's: a
+** shovel in earth, a pick in stone; a sword digs earth too, poorly, and dulls).  The book has no rules for digging:
+** the game's own, a tool's feet a spell of work (ten minutes) at a marginal success, by what it's into (earth, stone,
+** masonry); a critical success twice that, a marginal failure half, a critical failure none; bare hands dig only
+** earth; and the wear a spell does the tool */
 
-#define NTOOLS  4
-static char tools[NTOOLS][12];
+#define NTOOLS  12
+static char tools[NTOOLS][8];
 
-static const struct { char key[8]; unsigned char rate[3]; } digger[] = {
-    { "hands", { 1, 0, 0 } }, { "shovel", { 3, 0, 0 } }, { "spade", { 3, 0, 0 } }, { "pick", { 2, 2, 1 } },
-    { "mattock", { 3, 2, 1 } }, { "chisel", { 0, 1, 2 } },
+static const struct { char key[8]; unsigned char rate[3], wear[3]; } digger[] = {
+    { "hands", { 1, 0, 0 }, { 0, 0, 0 } }, { "shovel", { 3, 0, 0 }, { 0, 0, 0 } }, { "spade", { 3, 0, 0 }, { 0, 0, 0 } },
+    { "pick", { 2, 2, 1 }, { 0, 1, 1 } }, { "mattock", { 3, 2, 1 }, { 0, 1, 1 } }, { "chisel", { 0, 1, 2 }, { 0, 1, 1 } },
+    { "blade", { 1, 0, 0 }, { 40, 0, 0 } }, { "knife", { 1, 0, 0 }, { 40, 0, 0 } },
 };
+
+/* All that's to hand, anew: the keys in the text, a space between */
+static void __fastcall__ equip_all (const char* keys)
+{
+    unsigned char k = 0, n;
+
+    memset (tools, 0, sizeof tools);
+    while (*keys && k < NTOOLS) {
+        for (n = 0; keys[n] && keys[n] != ' '; ++n) {
+        }
+        if (n && n < sizeof tools[0]) {
+            memcpy (tools[k++], keys, n);
+        }
+        keys += n;
+        while (*keys == ' ') {
+            ++keys;
+        }
+    }
+}
 
 static void __fastcall__ equip (const char* key, unsigned char on)
 {
@@ -86,15 +108,18 @@ static unsigned char __fastcall__ has (const char* key)
     return 0;
 }
 
-/* The best rate of what's equipped (and bare hands) for the material */
-static unsigned char __fastcall__ dig_rate (unsigned char m)
+/* The tool to hand that suits the material best (bare hands, digger's 0, if none does better; of two as good, the
+** one it wears less): its digger's number */
+static unsigned char __fastcall__ dig_tool (unsigned char m)
 {
-    unsigned char k, t, best = digger[0].rate[m];
+    unsigned char k, t, best = 0;
 
     for (k = 0; k < NTOOLS; ++k) {
         for (t = 1; t < sizeof digger / sizeof digger[0]; ++t) {
-            if (tools[k][0] && !strcmp (tools[k], digger[t].key) && digger[t].rate[m] > best) {
-                best = digger[t].rate[m];
+            if (tools[k][0] && !strcmp (tools[k], digger[t].key) && (digger[t].rate[m] > digger[best].rate[m] ||
+                digger[t].rate[m] && digger[t].rate[m] == digger[best].rate[m] &&
+                digger[t].wear[m] < digger[best].wear[m])) {
+                best = t;
             }
         }
     }
@@ -307,7 +332,7 @@ static void brief (void)
 
 static void __fastcall__ answer (struct req* r)
 {
-    unsigned char k;
+    unsigned char k, m, t;
 
     tp = r->text;
     tend = r->text + REQ_TEXT - 1;
@@ -321,11 +346,16 @@ static void __fastcall__ answer (struct req* r)
         load_pc (r);
         break;
     case RS_TEST:
-        if (r->a == P_DIG) {                    /* (Judged by the tools equipped) */
-            k = dig_rate (r->b > MAT_MASONRY ? MAT_STONE : r->b);
+        if (r->a == P_DIG) {                    /* (Judged by the tool to hand that suits it best) */
+            m = r->b > MAT_MASONRY ? MAT_STONE : r->b;
+            t = dig_tool (m);
+            k = digger[t].rate[m];
+            strcpy (r->text, digger[t].key);
+            r->w2 = digger[t].wear[m];
             if (!k) {
                 r->result = 1;
                 r->w1 = 0;
+                r->w2 = 0;
                 break;
             }
             r->grade = test (&pc, r->a, r->steps);
@@ -343,7 +373,11 @@ static void __fastcall__ answer (struct req* r)
         r->grade = test (&pc, r->a, r->steps);
         break;
     case RS_EQUIP:
-        equip (r->text, r->a);
+        if (r->a == 2) {
+            equip_all (r->text);
+        } else {
+            equip (r->text, r->a);
+        }
         break;
     case RS_SAVE:                               /* (The sheet into the save: hmchar's format, its own lines) */
         save_pc (r);

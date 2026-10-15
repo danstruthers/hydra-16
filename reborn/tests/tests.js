@@ -2282,11 +2282,11 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0dig', what: 'Dingus Quest Zero digging (dq0 -k pick -T: a pick equipped, till the items layer): a shaft down from a room by its stairway, spell by spell (Mining tests, the referee asked), through to the stratum below (grown round it then), and down it',
+      name: 'dq0dig', what: 'Dingus Quest Zero digging (dq0 -k pick -T: a pick in hand, the tool the referee takes for stone, named as it is first used): a shaft down from a room by its stairway, spell by spell (Mining tests, the referee asked), through to the stratum below (grown round it then), and down it',
       init: 't_rc', cycles: 700e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -k pick -T\r' +
         ['dig down', 'look', 'd', 'look', 'map', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
-      expect: ['You set to digging', 'feet to go.', 'the shaft is through.', 'You climb down the shaft.', 'The map (you face', '% echo $status'],
+      expect: ['You set to digging', 'You dig with your pick.', 'feet to go.', 'the shaft is through.', 'You climb down the shaft.', 'The map (you face', '% echo $status'],
       sdcard: true
     },
     {
@@ -2303,6 +2303,14 @@ module.exports = {
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -k pick -T\r' +
         ['inventory', 'drop the dagger', 'look', 'get dagger', 'drop pick', 'walk to the door ahead', 'turn around', 'look', 'take the pick', 'look', 'i', 'drop rocks', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
       expect: ['You carry', 'backpack', 'rations', 'pennies', 'Put down.', 'At your feet lies a dagger.', 'Taken.', 'On the floor ahead to your left lies a pick.', 'You go over to it.', 'You carry none of those.', '% echo $status'],
+      sdcard: true
+    },
+    {
+      name: 'dq0tools', what: 'Dingus Quest Zero\'s tools to hand (the referee told all the tools the character carries; a skill used takes the one that suits best): a sword (dq0 -k sword) and a dagger won\'t dig stone, bare hands won\'t either; what\'s carried listed',
+      init: 't_rc', cycles: 400e6,
+      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -k sword -T\r' +
+        ['dig down', 'i', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['You set to digging', 'You have nothing that would bite into it', 'a sword, in your hand', '% echo $status'],
       sdcard: true
     },
     {

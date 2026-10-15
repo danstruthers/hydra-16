@@ -160,6 +160,8 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned char   item_lock;
     struct ireq     ireq;
     char            things_text[400];
+    char            dig_tool[8];                /* The last dig's tool, the referee's choice (its key), */
+    unsigned char   dig_wear;                   /*   and the wear that spell did it */
     /* The UI's intents to the world */
     volatile unsigned char iq_head, iq_tail;    /* Written at head (the UI), read at tail (the world) */
     struct msg      iq[IQ_SIZE];

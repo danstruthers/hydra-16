@@ -28,9 +28,10 @@ enum {
     P_PICKLOCK, P_DISARM,
     P_ENDURE, P_RESIST_POISON, P_RESIST_MIND, P_DODGE_HAZARD,
     P_FIRST_AID, P_LORE, P_TRACK, P_PERSUADE, P_INTIMIDATE, P_ANIMALS,
-    P_DIG,                                      /* Digging (b: the material, MAT_*): judged by the tools equipped;
-                                                **   the reply's w1 the feet a spell of work makes, its result 1 if
-                                                **   nothing it has can dig that */
+    P_DIG,                                      /* Digging (b: the material, MAT_*): judged by the tool to hand that
+                                                **   suits it best (the referee's choice: its key in the reply's
+                                                **   text, the wear the spell did it in w2); the reply's w1 the feet a
+                                                **   spell of work makes, its result 1 if nothing it has can dig that */
     P_THEME,                                    /* A theme's own, P_THEME + n (named in its data) */
 };
 
@@ -106,7 +107,9 @@ enum {
     RS_REST,                                    /* Hours resting: healing, advancement -> effects, words */
     RS_TREAT,                                   /* A healer, a patient -> effects */
     RS_EQUIP,                                   /* An item taken up (a 1) or put away (a 0): its key in the text
-                                                **   ("pick"): the referee judges tests by what's equipped */
+                                                **   ("pick"); or all that's to hand anew (a 2: the keys, a space
+                                                **   between): the referee judges tests by it, a skill used taking the
+                                                **   tool that suits */
     RS_INITIATIVE,                              /* Actors -> each one's delay as a fight starts */
     RS_MORALE,
     RS_EXPERIENCE,                              /* Something that counts to advancement */

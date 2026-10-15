@@ -41,9 +41,10 @@ static const struct kind kinds[] = {
     { "sack", K_CONTAINER, 2, 2, 24, 30, 0, 0, 3, "" },
     { "chest", K_CONTAINER, 120, 80, 60, 100, 0, 0, 7, "" },
     { "skull", 0, 4, 2, 0, 0, 0, 0, 3, "" },
-    { "broken sword", 0, 12, 2, 0, 0, 0, 0, 4, "" },
+    { "broken sword", 0, 12, 2, 0, 0, 0, 0, 4, "blade" },
     { "cloak", K_WEAR, 8, 6, 0, 0, 0, 0, 4, "" },
     { "potsherds", K_PLURAL, 2, 1, 0, 0, 0, 0, 2, "" },
+    { "sword", K_HAND | K_HANG, 12, 3, 0, 0, 0, 0, 4, "blade" },
 };
 #define NK      (sizeof kinds / sizeof kinds[0])
 
@@ -133,6 +134,8 @@ unsigned __fastcall__ item_new (unsigned char kind, unsigned char where, unsigne
             p->y = y;
             p->qty = qty;
             p->owner = 0;
+            p->wear = 0;
+            p->hide = 0;
             break;
         }
     }
@@ -244,25 +247,75 @@ static unsigned __fastcall__ seen_named (const char* name)
     return best;
 }
 
-/* The first thing named the character carries (on it, or in what it carries): its number, or 0 */
+/* The character's (on it, or in what it carries) */
+static unsigned char __fastcall__ on_pc (unsigned i)
+{
+    unsigned j;
+
+    for (j = i; item_at (j)->where == IW_ITEM; j = item_at (j)->x) {         /* (Up to whoever has it) */
+    }
+    return item_at (j)->where == IW_ACTOR && !item_at (j)->x;
+}
+
+/* The first thing named the character carries: its number, or 0 */
 static unsigned __fastcall__ carried_named (const char* name)
 {
     static struct item q;
-    unsigned i, j;
+    unsigned i;
     unsigned char n = strlen (name);
 
     for (i = 1; i < NITEMS; ++i) {
         memcpy (&q, item_at (i), sizeof q);
-        if (!q.kind || q.where == IW_SQUARE || strncmp (kind_of (q.kind)->name, name, n)) {
-            continue;
-        }
-        for (j = i; item_at (j)->where == IW_ITEM; j = item_at (j)->x) {     /* (Up to whoever has it) */
-        }
-        if (item_at (j)->where == IW_ACTOR && !item_at (j)->x) {
+        if (q.kind && q.where != IW_SQUARE && !strncmp (kind_of (q.kind)->name, name, n) && on_pc (i)) {
             return i;
         }
     }
     return 0;
+}
+
+/* ---- The tools: the keys of all the character carries (anywhere on it: a skill used, the one that suits takes
+** itself out), into the hub's things_text, a space between; and one used, worn (the referee's choice, by its key),
+** its name back in the request (bare hands: "hands") */
+static void tools (void)
+{
+    static struct item q;
+    unsigned i;
+    char* t;
+
+    hub_map (0);
+    HUB->things_text[0] = 0;
+    for (i = 1; i < NITEMS; ++i) {
+        memcpy (&q, item_at (i), sizeof q);
+        if (q.kind && q.where != IW_SQUARE && kind_of (q.kind)->tool[0] && on_pc (i)) {
+            hub_map (0);
+            t = HUB->things_text;
+            if (strlen (t) < sizeof HUB->things_text - 10) {
+                strcat (t, kind_of (q.kind)->tool);
+                strcat (t, " ");
+            }
+        }
+    }
+}
+
+static void __fastcall__ wear (const char* key, unsigned char by)
+{
+    static struct item q;
+    static char name[16];
+    struct item* p;
+    unsigned i;
+
+    strcpy (name, key);
+    for (i = 1; i < NITEMS; ++i) {
+        memcpy (&q, item_at (i), sizeof q);
+        if (q.kind && q.where != IW_SQUARE && !strcmp (kind_of (q.kind)->tool, key) && on_pc (i)) {
+            p = item_at (i);
+            p->wear = p->wear + by < p->wear ? 255 : p->wear + by;
+            strcpy (name, kind_of (q.kind)->name);
+            break;
+        }
+    }
+    hub_map (0);
+    strcpy (HUB->ireq.name, name);
 }
 
 /* ---- Taken up: into the backpack if it fits (its room, its weight), else in a hand (two, at most); not within
@@ -366,6 +419,10 @@ static void __fastcall__ thing_words (const struct item* q)
     if (q->flags & I_LIT) {
         put (" (lit)");
     }
+    if (q->wear >= 32) {                        /* (Its wear: a blade dulled, a tool worn) */
+        put (!strcmp (k->tool, "blade") || !strcmp (k->tool, "knife") ? (q->wear >= 128 ? " (dull)" : " (dulled)") :
+            " (worn)");
+    }
 }
 
 static void __fastcall__ contents (unsigned char where, unsigned x, unsigned char depth)
@@ -459,6 +516,12 @@ unsigned char things_serve (void)
         break;
     case IO_SAVE:
         keep (0);
+        break;
+    case IO_TOOLS:
+        tools ();
+        break;
+    case IO_WEAR:
+        wear (q.name, q.to);
         break;
     }
     hub_map (0);

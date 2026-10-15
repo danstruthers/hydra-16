@@ -793,6 +793,8 @@ static signed char test_dig (void)
     r = hub_ask (SLOT_WORLD);
     g = r->grade;
     made = r->result ? 0xFF : r->w1;
+    strncpy (HUB->dig_tool, r->text, sizeof HUB->dig_tool - 1);
+    HUB->dig_wear = r->w2;
     r->state = REQ_FREE;
     return g;
 }

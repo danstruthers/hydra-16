@@ -41,6 +41,9 @@ struct item {
                                                 **   an item: x that item's number */
     unsigned char   qty;
     unsigned char   owner;                      /* Whose it is (0: nobody's; a faction's, an actor's) */
+    unsigned char   wear;                       /* Its wear, 0 new ... 255 (a blade dug with, dulled) */
+    unsigned char   hide;                       /* Concealed on purpose (I_HIDDEN): how hard to find, 0-9 (the
+                                                **   method's quality and the concealer's skill) */
 };
 #define I_LIT           0x01                    /* A light, lit */
 #define I_HELD          0x02                    /* In a hand */
@@ -61,7 +64,10 @@ struct ireq {
     char            name[16];                   /* A thing's name (IO_GET's, IO_DROP's; IO_KIT's: one more) */
     unsigned        x, y;                       /* IR_NOT_HERE's: where it is */
 };
-enum { IO_KIT, IO_GET, IO_DROP, IO_LIST, IO_SAVE, IO_RESTORE };
+enum { IO_KIT, IO_GET, IO_DROP, IO_LIST, IO_SAVE, IO_RESTORE,
+    IO_TOOLS,                                   /* The tools' keys of all it carries, into things_text (for the
+                                                **   referee: a skill used, the right tool to hand takes itself) */
+    IO_WEAR };                                  /* The tool with the key (name) worn by to: its name back in name */
 enum { IR_OK, IR_NONE, IR_FULL, IR_HEAVY, IR_NOT_HERE };
 
 /* What the character carries, for the UI to word (IO_LIST's): each thing, how deep it's in others, its state */

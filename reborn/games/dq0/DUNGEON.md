@@ -180,8 +180,19 @@ equipped as well since digging stone with your bare hands doesn't usually work w
 that matter).  Digging was just one possibility"): what an actor has equipped is the referee's to know (rs.h's
 RS_EQUIP, as an item is taken in hand, worn or put away), and every test that needs a tool (digging, picking a lock,
 climbing with a rope) is judged by it: the world says what the work is on (digging: earth, stone, masonry), the
-referee says whether anything the actor has can do it, and how much a spell of work does.  Until the items layer is
-built, the referee keeps a short list of the tools equipped, and a game can begin with one (dq0 -k pick: the tests').
+referee says whether anything the actor has can do it, and how much a spell of work does.
+
+**Tools to hand** (the user: "if you are using a skill, then you are versed enough to auto-equip the right tool for
+the job if you have it available.  If you carry both a shovel and a pick, digging in the dirt might choose a shovel,
+but digging in a stony field might choose the pick.  If you have a sword, you could dig in the dirt with it, not as
+efficiently as a shovel, but it would still work, dulling it all the way"): so nothing is equipped by hand for a
+skill.  The referee is told every tool the actor carries, wherever it's carried (RS_EQUIP's whole list, sent again
+as anything is taken up or put down), and a skill used takes out the one that suits the work best: by its rate on
+that material, and of two as good the one the work wears less.  The reply names the tool and the wear the work did
+it; the item records its wear (a blade dug with is dulled, then dull: worded in what's carried).  A tool that can't
+do the work isn't used for it (a sword won't dig stone).  Built: digging so judged, its tool named as it's first
+taken up ("You dig with your pick"); a game can still begin with a thing in hand (dq0 -k TOOL).  Earth to dig, where
+a shovel or a sword would be taken, comes with the materials the world builder gives floors and walls.
 
 Each change is a **record** (a stratum, a square, what it became: its kind, its floor, its openings; who made it and
 when), kept by the maker: laid over a chunk each time it's made again, and in the save.  Seen squares are kept the
@@ -299,6 +310,14 @@ pouch beneath a tunic: not seen on a denizen, nor on a body until it's searched)
 secret pocket, a hollow heel, a false lining (a container's hidden part, found only by searching it, at its
 maker's skill).  The item records where it is (in, on, under or worn beneath another item, or an actor's) and
 how it's hidden; searching a body or a container is a search of what's in, on, and under it.
+
+**Concealment** (the user: "each purposely concealed item would have a difficulty rating (0-9) to find the
+concealed item, determined by the quality of the method of concealment and the skill of the concealer.  Hiding
+something is an art/skill."): a thing concealed on purpose carries its difficulty, 0-9 (the item record's hide),
+set as it's hidden: by the method's quality (a false bottom well made, a stone loose in a wall, a fold of cloth)
+and the concealer's test of their hiding skill (the referee's: Stealth, or a craft's, the ruleset's say).  A
+search finds it by a test whose steps are that difficulty's; the character can hide things too, by the same
+test.
 
 ### Hidden things, and seeing in the dark
 

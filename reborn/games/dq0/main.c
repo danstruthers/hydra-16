@@ -44,6 +44,9 @@ static unsigned char test_start;
 static const char* kit;                         /* (dq0 -k: a tool, equipped as the game starts) */
 static const char* savedir;                     /* (dq0 -d: the save's folder) */
 static unsigned char __fastcall__ things (unsigned char op, const char* name);
+static void to_hand (void);
+static void dig_used (void);
+static char dug_with[16];                       /* (The tool a dig took, named) */
 
 struct pc P;
 static volatile unsigned char quit;
@@ -357,11 +360,6 @@ static void start_world (unsigned long seed)
         HUB->pc_face = sv.face;
         HUB->pc_light = sv.light;
     }
-    if (kit) {                                  /* (A tool to begin with: the referee told it's equipped) */
-        strncpy (HUB->slot[SLOT_UI].text, kit, 11);
-        HUB->slot[SLOT_UI].text[11] = 0;
-        referee (RS_EQUIP, 1)->state = REQ_FREE;
-    }
     strcpy (path, libdir);
     strcat (path, "/dq0m");
     if ((maker_task = hub_spawn (path, T_MAKER, libdir)) < 0) {
@@ -374,9 +372,10 @@ static void start_world (unsigned long seed)
         t_end ();
         hy_exits ("dq0: its senses (lib/dq0/dq0p) can't be started");
     }
-    if (!resumed) {                             /* (The character's kit: a new game's) */
+    if (!resumed) {                             /* (The character's kit: a new game's, -k's thing in hand too) */
         things (IO_KIT, kit ? kit : "");
     }
+    to_hand ();
     strcpy (path, libdir);
     strcat (path, "/dq0w");
     if ((world_task = hub_spawn (path, T_WORLD, 0)) < 0) {
@@ -493,7 +492,13 @@ static void events (void)
             break;
         case E_DIG:
             if (m.who == 0) {
-                dig_words (m.w1 >> 8, m.w1 & 0xFF);
+                k = m.w1 >> 8;
+                if (k == D_BEGUN) {
+                    dug_with[0] = 0;
+                } else if (k != D_NO_TOOL) {
+                    dig_used ();
+                }
+                dig_words (k, m.w1 & 0xFF);
             }
             break;
         case E_LEDGE:
@@ -566,6 +571,26 @@ static unsigned char __fastcall__ things (unsigned char op, const char* name)
     return q->result;
 }
 
+/* What's to hand, told the referee (the keys of the tools it carries): a skill used takes the tool that suits */
+static void to_hand (void)
+{
+    things (IO_TOOLS, "");
+    strcpy (HUB->slot[SLOT_UI].text, HUB->things_text);
+    referee (RS_EQUIP, 2)->state = REQ_FREE;
+}
+
+/* The tool a dig's spell took (the referee's choice): worn by it, and named as it's first taken up */
+char dig_with[16];
+static void dig_used (void)
+{
+    HUB->ireq.to = HUB->dig_wear;
+    things (IO_WEAR, HUB->dig_tool);
+    if (strcmp (dug_with, HUB->ireq.name)) {
+        strcpy (dug_with, HUB->ireq.name);
+        strcpy (dig_with, dug_with);
+    }
+}
+
 static char pending[16];                        /* A thing to take up, walked over to first */
 
 /* A thing taken up, by its name (walked over to first, if it's out of reach) */
@@ -581,6 +606,7 @@ static void __fastcall__ take (const char* name)
     pending[0] = 0;
     msg (r == IR_OK ? "Taken." : r == IR_FULL ? "Your hands are full, and your pack too." : "You see none of those here.");
     if (r == IR_OK) {
+        to_hand ();
         intend2 (I_WAIT, 20, 1);
     }
 }
@@ -714,6 +740,7 @@ static void __fastcall__ command (char* l)
             msg ("Put down what?");
         } else if (things (IO_DROP, c.word) == IR_OK) {
             msg ("Put down.");
+            to_hand ();
             intend2 (I_WAIT, 10, 1);
         } else {
             msg ("You carry none of those.");

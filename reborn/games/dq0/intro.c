@@ -6,6 +6,7 @@
 #pragma code-name ("OV1CODE")
 #pragma rodata-name ("OV1RODATA")
 
+#include <string.h>
 #include "dq0.h"
 #include "hub.h"
 
@@ -75,18 +76,23 @@ void o_help (void)
 
 void __fastcall__ o_dig_words (unsigned char how, unsigned char feet)
 {
+    const char* s;
+
     switch (how) {
     case D_BEGUN:
         sayf ("\nYou set to digging: some %u feet of it, by the look of it.", feet);
         return;
     case D_GOOD:
-        msg ("The work goes well.");
-        break;
     case D_POOR:
-        msg ("The work goes slowly.");
-        break;
     case D_SLIP:
-        msg ("Your tool slips and turns; little comes of that spell of work.");
+        s = how == D_GOOD ? "The work goes well." : how == D_POOR ? "The work goes slowly." :
+            "Your tool slips and turns; little comes of that spell of work.";
+        if (dig_with[0]) {                      /* (The tool it took, named the first time) */
+            sayf (strcmp (dig_with, "hands") ? "\nYou dig with your %s. %s" : "\nYou dig with your bare %s. %s", dig_with, s);
+            dig_with[0] = 0;
+        } else {
+            msg (s);
+        }
         break;
     case D_THROUGH:
         msg (feet ? "The last of the rock gives way beneath you: the shaft is through." : "You break through.");
