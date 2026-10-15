@@ -33,12 +33,15 @@ static void __fastcall__ advance (unsigned long d)
     ++HUB->tick;
 }
 
+static unsigned char evb;                       /* (The next event's b: then 0) */
 static void __fastcall__ event (unsigned char kind, unsigned char who, unsigned w1)
 {
     static struct msg m;
 
     m.kind = kind;
     m.who = who;
+    m.b = evb;
+    evb = 0;
     m.w1 = w1;
     m.t = HUB->now;
     hub_event (&m);
@@ -98,8 +101,6 @@ static unsigned char __fastcall__ den_on (unsigned x, unsigned y)
 }
 
 /* ---- The character's moves: worked out as they start (where to, how long), and made when they're done */
-
-#define TORCH           4                       /* A torch's light: 20 feet */
 
 static struct {
     unsigned char   on;                         /* A move under way */
@@ -464,21 +465,27 @@ static void __fastcall__ go_to (unsigned x, unsigned y)
 
 #define ROUND_T         100                     /* Tenths: a round */
 
-/* A fall of the character's (the referee's harm, rs.h's HC_FALL): feet, onto the stratum's floor (a built one's
-** paving, a natural one's broken rock), how (HF_*); the UI told (E_HARM).  The tenths it's out for (knocked
-** senseless), or 0xFFFF: a hold grabbed, no fall */
+/* A fall of the character's (the referee's harm, rs.h's HC_FALL): feet, onto the floor where it lands (the maker's
+** material for it: earth, flags or masonry hard, stone broken rock), how (HF_*); the UI told (E_HARM).  The tenths
+** it's out for (knocked senseless), or 0xFFFF: a hold grabbed, no fall */
 static unsigned __fastcall__ fall (unsigned feet, unsigned char how)
 {
     struct req* r;
     unsigned out;
+    unsigned char k, m = MAT_STONE;
 
+    hub_map (0);
+    if (at (sn_, HUB->pc_x, HUB->pc_y)) {
+        k = room_of (sn_, HUB->pc_x, HUB->pc_y);
+        m = C->mat[k == 0xFF ? NROOMS : k][MP_FLOOR];
+    }
     hub_map (0);
     r = &HUB->slot[SLOT_WORLD];
     r->kind = RS_HARM;
     r->actor = 0;
     r->other = 0;
     r->a = HC_FALL;
-    r->b = strata[sn_].style == ST_BUILT ? GR_HARD : GR_ROCKY;
+    r->b = m == MAT_EARTH ? GR_FLOOR : m == MAT_STONE ? GR_ROCKY : GR_HARD;
     r->c = how;
     r->w1 = feet;
     r = hub_ask (SLOT_WORLD);
@@ -943,6 +950,7 @@ static void begin (void)
 static struct {
     unsigned char   d;                          /* DIR_N ... DIR_W, DIR_DOWN */
     unsigned char   mat;                        /* What it's into (rs.h's MAT_*: the referee judges the tools) */
+    unsigned char   top;                        /*   for its first feet (a shaft: the floor's; the rock's below) */
     unsigned        need, done;                 /* Feet */
     unsigned        x, y;                       /* The square dug */
 } dig;
@@ -950,6 +958,7 @@ static struct {
 /* The referee's test of the character's digging (by what it has equipped): its grade, and the feet it made (made
 ** 0xFF: nothing it has can dig that) */
 static unsigned char made;
+static unsigned char dign;
 static signed char test_dig (void)
 {
     struct req* r;
@@ -960,13 +969,14 @@ static signed char test_dig (void)
     r->kind = RS_TEST;
     r->actor = 0;
     r->a = P_DIG;
-    r->b = dig.mat;
+    r->b = dig.done < dig.top ? dig.mat : MAT_STONE;     /* (Through the floor: the stratum's rock) */
     r->steps = 0;
     r = hub_ask (SLOT_WORLD);
     g = r->grade;
     made = r->result ? 0xFF : r->w1;
-    strncpy (HUB->dig_tool, r->text, sizeof HUB->dig_tool - 1);
-    HUB->dig_wear = r->w2;
+    evb = ++dign & 3;                           /* (Its tool and its wear, for the next event: E_DIG's) */
+    strncpy (HUB->dig_tool[evb], r->text, sizeof HUB->dig_tool[0] - 1);
+    HUB->dig_wear[evb] = r->w2;
     r->state = REQ_FREE;
     return g;
 }
@@ -1066,6 +1076,7 @@ static void __fastcall__ start_dig (unsigned char d)
             HUB->pc_y = dig.y;
         }
         dig.mat = C->mat[room_of (sn_, dig.x, dig.y)][MP_FLOOR];    /* (The room's floor: the maker's) */
+        dig.top = dig.mat == MAT_EARTH ? 2 : dig.mat == MAT_STONE ? 0 : 1;   /* (Earth two feet, flags or masonry one) */
         if (!strata[sn_ + 1].made) {
             grow_below (sn_);                   /* (Grown now: the shaft goes down to its floors, if it reaches under) */
             mx = dig.x;
@@ -1087,6 +1098,7 @@ static void __fastcall__ start_dig (unsigned char d)
         }
         dig.need = t == T_WALL ? 2 : 5;         /* (A wall, two feet; a square of rock, five) */
         dig.mat = C->mat[t == T_WALL && k != 0xFF ? k : NROOMS][MP_WALL];   /* (Its room's walls, or the rock) */
+        dig.top = 0xFF;
     }
     hub_map (0);
     event (E_DIG, 0, D_BEGUN << 8 | (dig.need > 255 ? 255 : dig.need));
@@ -1185,6 +1197,7 @@ static struct portal* __fastcall__ door_ahead (unsigned long* tt)
     stept = HUB->pcsum.step ? HUB->pcsum.step : 10;
     slow = dark ();
     *tt = 0;
+    dens_where ();                              /* (Walked up to round the denizens) */
     if ((r = room_of (sn_, mx, my)) == 0xFF) {  /* (A passage: a door beside it, the way it faces first) */
         for (k = 0; k < 4; ++k) {
             d = (k + (face >> 1)) & 3;
@@ -1199,8 +1212,8 @@ static struct portal* __fastcall__ door_ahead (unsigned long* tt)
         }
         return 0;
     }
-    ox = mx - cx_;
-    oy = my - cy_;
+    rx0 = ox = mx - cx_;
+    ry0 = oy = my - cy_;
     wx = cx_;
     wy = cy_;
     for (k = 0; k < 4; ++k) {                   /* (Its room's doors that way: the quickest to walk up to) */
@@ -1450,7 +1463,6 @@ static void __fastcall__ intent (struct msg* m)
         door_work (m->a);
         break;
     case I_LIGHT:
-        HUB->pc_light = m->a ? TORCH : 0;
         busy (m->a ? 3 * stept : stept);
         see (0);
         event (E_VIEW, 0, m->a ? V_LIT : V_DARK);
@@ -1516,9 +1528,6 @@ int main (int argc, char* argv[])
     }
     chunks_init (ASK_WORLD);
     hub_map (0);
-    if (!HUB->resume) {
-        HUB->pc_light = TORCH;                  /* (A torch lit: items come later) */
-    }
     stept = HUB->pcsum.step ? HUB->pcsum.step : 10;
     begin ();
     arrive ();

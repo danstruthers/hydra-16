@@ -172,7 +172,7 @@ static void __fastcall__ populate (unsigned char n)
 {
     struct stratum* s = &strata[n];
     struct region* r;
-    unsigned char k, j, m, i, rx = 0, ry = 0, t;
+    unsigned char k, j, m, i, rx = 0, ry = 0, t, u;
     unsigned w = (s->w + CW - 1) / CW, h = (s->h + CW - 1) / CW;
 
     rseed (s->seed ^ 0x44454E5AUL);
@@ -187,13 +187,14 @@ static void __fastcall__ populate (unsigned char n)
             L.sn = n;
             L.kind = k;
             L.link = 0xFF;
-            if (K.flags & K_WAYS) {             /* (By the stratum's ways, the first ones) */
-                if (j >= s->nlinks) {
+            if (K.flags & K_WAYS) {             /* (By the stratum's ways, the first ones: not the dungeon's way in,
+                                                **   the top's first, where the character begins) */
+                if ((u = j + (n == 0)) >= s->nlinks) {
                     break;
                 }
-                L.link = j;
-                L.cx = (s->link[j].x - s->x0) / CW;
-                L.cy = (s->link[j].y - s->y0) / CW;
+                L.link = u;
+                L.cx = (s->link[u].x - s->x0) / CW;
+                L.cy = (s->link[u].y - s->y0) / CW;
             } else {
                 for (t = 0; t < 8; ++t) {       /* (A region of halls, a chunk of it) */
                     rx = random (s->rw);
@@ -294,9 +295,10 @@ static void __fastcall__ place (unsigned char i)
         for (t = 0; t < 32; ++t) {
             x = x0 + random (w);
             y = y0 + random (h);
-            if (open_sq (at (L.sn, x, y)) && (L.link == 0xFF || x != L.hx || y != L.hy) && !rec_on (L.sn, x, y) &&
-                !taken (0xFF, x, y)) {
-                break;                          /* (Not on another's, nor the character's) */
+            if (open_sq (at (L.sn, x, y)) && (L.link == 0xFF || apart (x - L.hx, y - L.hy) > 1) &&
+                apart (x - pcx, y - pcy) > 1 && !rec_on (L.sn, x, y) && !taken (0xFF, x, y)) {
+                break;                          /* (Not on another's, nor on the way or the character's square or
+                                                **   beside them: the character comes out there, not boxed in) */
             }
         }
         den_get (L.first + j);
@@ -500,8 +502,9 @@ static unsigned char __fastcall__ senses (unsigned dist, int dx, int dy)
 }
 
 /* A step for actor k (the copy): a way it can walk to a square no one's on, within lim squares of its home; how:
-** S_ANY (the way it faces, or another), S_AWAY (only one that takes it further from the character: the furthest),
-** S_TOWARD (only one that takes it nearer: the nearest).  Its direction, or 0xFF */
+** S_ANY (the way it faces, or another), S_AWAY (only one that takes it further from the character: the furthest;
+** close by it, cornered, one no nearer: a way round it, out), S_TOWARD (only one that takes it nearer: the nearest).
+** Its direction, or 0xFF */
 enum { S_ANY, S_AWAY, S_TOWARD };
 static unsigned char __fastcall__ step_for (unsigned char k, unsigned lim, unsigned char how)
 {
@@ -513,8 +516,8 @@ static unsigned char __fastcall__ step_for (unsigned char k, unsigned lim, unsig
         nx = a.x + dir_x[d];
         ny = a.y + dir_y[d];
         f = apart (nx - pcx, ny - pcy);         /* (The walk's own test last: it's the dearest) */
-        if (apart (nx - ahx[k], ny - ahy[k]) > lim || (how != S_ANY && (how == S_AWAY ? f <= bf : f >= bf)) ||
-            taken (k, nx, ny) || !step_ok (a.sn, a.x, a.y, d)) {
+        if (apart (nx - ahx[k], ny - ahy[k]) > lim || (how == S_AWAY && (f < bf || (f == bf && bf > 2))) ||
+            (how == S_TOWARD && f >= bf) || taken (k, nx, ny) || !step_ok (a.sn, a.x, a.y, d)) {
             continue;
         }
         if (how == S_ANY) {
@@ -755,7 +758,7 @@ static void tend (void)
             continue;
         }
         if (woke && q->doing && q->ready > now + 10) {
-            q->ready = now + random (10);       /* (The character's changed: a watcher sees to it soon) */
+            q->ready = now + 1 + random (10);   /* (The character's changed: a watcher sees to it soon) */
         }
         if (q->sn != pcs || apart (q->x - pcx, q->y - pcy) > ACT_R + 8) {
             retire (k);
@@ -831,6 +834,7 @@ int main (int argc, char* argv[])
 {
     static unsigned lpx, lpy;
     static unsigned char lpl;
+    unsigned char* p;
     int b;
 
     if (argc < 4 || (b = hy_banks_alloc (2)) < 0 || hub_attach (atoi (argv[1]), atoi (argv[2]))) {
@@ -860,8 +864,11 @@ int main (int argc, char* argv[])
         pcx = HUB->pc_x;
         pcy = HUB->pc_y;
         pcs = HUB->pc_stratum;
-        pclit = HUB->pc_light != 0;
         pcbusy = HUB->pc_ready > now;
+        if (!(pclit = HUB->pc_light != 0) && hd.done[pcs] && (p = at (pcs, pcx, pcy)) != 0) {
+            pclit = (*p & T_VIS) != 0;          /* (Lit where it stands: a room's light, a lamp put down) */
+        }
+        hub_map (0);
         if (pcx != lpx || pcy != lpy || (pclit | pcbusy << 1) != lpl) {
             lpx = pcx;                          /* (The character changed: each actor senses it again) */
             lpy = pcy;

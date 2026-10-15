@@ -2294,15 +2294,32 @@ module.exports = {
       init: 't_rc', cycles: 600e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T\r' +
         ['take a gander', 'turn half left', 'face north and east', 'walk to the door on my right', 'look closely', 'pick up the sword', 'take off my coat', 'saunter off to the left', 'foo', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
-      expect: ['You turn to face east', 'You turn to face northeast', 'You go over to it.', 'You search about', 'You see none of those here.', 'nothing on you could take off', "I don't know how to foo.", '% echo $status'],
+      expect: ['You turn to face east', 'You turn to face northeast', 'You go over to it.', 'You search about', 'You see none of those here.', "You aren't wearing any coat.", "I don't know how to foo.", '% echo $status'],
       sdcard: true
     },
     {
       name: 'dq0items', what: 'Dingus Quest Zero\'s things (items.h, dq0p/things.c): the kit a character begins with, listed (worn, held, inside), a thing put down and seen at its feet, taken up again, and one out of reach walked over to first',
-      init: 't_rc', cycles: 900e6,
+      init: 't_rc', cycles: 1200e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -k pick -T\r' +
         ['inventory', 'examine the dagger', 'x torch', 'examine pennies', 'examine the moon', 'drop the dagger', 'look', 'get dagger', 'drop pick', 'walk to the door ahead', 'turn around', 'look', 'take the pick', 'look', 'i', 'drop rocks', 'hide the pouch', 'look', 'i', 'take pouch', 'i', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
       expect: ['You carry', 'backpack', 'rations', 'pennies', 'You judge it', 'You see no moon here.', 'Put down.', 'At your feet lies a dagger.', 'Taken.', 'On the floor ahead to your left lies a pick.', 'You go over to it.', 'You carry none of those.', 'You hide it', 'Hidden at your feet lies a pouch.', 'Taken.', '% echo $status'],
+      sdcard: true
+    },
+    {
+      name: 'dq0equip', what: 'Dingus Quest Zero\'s things handled (dq0p/things.c): a kit of things more (dq0 -k, commas between: a table held in both hands, the rest in the pack); a table put down and a candle put on it (seen with it), taken from it again; a cloak worn and taken off; a basket held that won\'t keep sand, a waterskin that keeps only liquids, a quiver hung on the belt and arrows put in it, a candle that won\'t hang, hands full, the pack not into what\'s in it; then down to a dark place: the torch put out, a candle lit from the tinderbox (out of the pack into a hand), the torch lit, put down lit (its light lies about it, the room still seen), taken up again',
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 3 -c /ram/c.hm -T -k table,basket,sand,cloak,candle,quiver,arrows\r' +
+        ['i', 'drop table', 'put the candle on the table', 'look', 'take the candle from the table', 'wear cloak', 'hold basket', 'put sand in basket',
+         'put the dagger in the waterskin', 'hang the quiver on my belt', 'put arrows in quiver', 'hang the candle', 'wield the dagger', 'stow basket',
+         'put the backpack in the basket', 'take the cloak off', 'stow cloak', 'i',
+         'd', 'douse the torch', 'look', 'light the candle', 'look', 'light torch', 'drop the torch', 'douse candle', 'look', 'get torch', 'i', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['in both hands', 'Put down.', 'You put the candle on the table.', 'At your feet lies a table.', 'table lies a candle.',
+        'You take the candle from the table. It\'s in your backpack.', 'You put on the cloak.', 'You take the basket in your hand.',
+        'The basket won\'t keep the heap of sand: it would run out.', 'The dagger won\'t go in the waterskin.', 'You hang the quiver from your belt.',
+        'You put the arrows in the quiver.', 'The candle won\'t hang from a belt.', 'Your hands are full', 'You stow the basket in your backpack.',
+        'The backpack won\'t go inside itself.', 'You take off the cloak. It\'s in your hand.', 'You stow the cloak in your backpack.',
+        'a quiver (in it: arrows)', 'You put out the torch.', 'It is dark', 'You light the candle.', 'by the light of your candle', 'You light the torch.',
+        'Put down.', 'lit torch', 'You put out the candle.', 'Taken.', 'a torch (lit), in your hand', '% echo $status'],
       sdcard: true
     },
     {
@@ -2322,12 +2339,12 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0earth', what: 'Dingus Quest Zero\'s materials (the maker\'s: dq0m/fixtures.c, a room\'s floor, walls and ceiling by its stratum\'s style and age), the world\'s dig taking the floor\'s from the chunk: a shovel (dq0 -k shovel) digs a room\'s earth floor (seed 3\'s first), the referee taking it, named, through to the stratum below; then a flagged floor (seed 5\'s) it won\'t bite into',
+      name: 'dq0earth', what: 'Dingus Quest Zero\'s materials (the maker\'s: dq0m/fixtures.c, a room\'s floor, walls and ceiling by its stratum\'s style and age), the world\'s dig taking the floor\'s from the chunk: a shovel (dq0 -k shovel) digs a room\'s earth floor (seed 3\'s first), the referee taking it, named, till the stratum\'s rock under it stops it (the user: the floor, then the rock); then a flagged floor (seed 5\'s), its flags lifted, then the rock',
       init: 't_rc', cycles: 900e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -k shovel -T\r' +
         ['dig down', 'quit'].map(l => '\u0101' + l + '\r').join('') + '\u0101dq0 -p t -s 5 -c /ram/c.hm -k shovel -T\r' +
         ['dig down', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
-      expect: ['You set to digging', 'You dig with your shovel.', 'the shaft is through.', 'You set to digging',
+      expect: ['You set to digging', 'You dig with your shovel.', 'You have nothing that would bite into it', 'You set to digging',
         'You have nothing that would bite into it', '% echo $status'],
       sdcard: true
     },
@@ -2340,21 +2357,23 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0denizens', what: 'Dingus Quest Zero\'s denizens (dq0d: the populations decided as a stratum is grown, from a stand-in theme\'s kinds, kinds.txt): the giant rats that lair by the top stratum\'s ways placed round the way down as the character starts there (dq0 -T), seen (the world\'s actors, in what it perceives), and moving about as time passes (their own task deciding): at the turns pace through all the time a minute\'s search takes (the clock on a slice at a time as they keep up, told as they stir before it\'s done), told only as what they do changes (keeping their distance), not again when nothing has; then (seed 5) a rat beside the character in its way, the world not letting it walk onto the rat\'s square',
+      name: 'dq0denizens', what: 'Dingus Quest Zero\'s denizens (dq0d: the populations decided as a stratum is grown, from a stand-in theme\'s kinds, kinds.txt): the giant rats that lair by the top stratum\'s ways placed round the way down as the character starts there (dq0 -T), seen (the world\'s actors, in what it perceives), and moving about as time passes (their own task deciding): at the turns pace through all the time a minute\'s search takes (the clock on a slice at a time as they keep up, told as they stir before it\'s done), told only as what they do changes (keeping their distance), not again when nothing has; then (seed 5, down its ladder) the rats there cornered, and in the character\'s way: the world stops it short of them, and won\'t let it walk onto a rat\'s square',
       init: 't_rc', cycles: 900e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T\r' +
         ['look', 'look closely', 'look closely', 'look', 'quit'].map(l => '\u0101' + l + '\r').join('') + '\u0101dq0 -p t -s 5 -c /ram/c.hm -T\r' +
-        ['go right', 'look', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
+        ['d', 'wait', 'go right', 'go forward', 'look', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
       expect: ['A giant rat is ', ' feet away', 'Something stirs.', 'keeping its', 'A giant rat is in the way.', '% echo $status'],
       // (The first search's stir told before its prompt, the second's none: nothing they do has changed; the way
-      // blocked, the character still by the ladder)
+      // blocked: down the ladder, the rats there cornered, a step towards them told they're in the way, as it stops
+      // short of one crossing to them, and then going on: no step taken)
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), s1 = o.indexOf('You search about'), s2 = o.indexOf('You search about', s1 + 1);
         const seg = (a, b) => a < 0 ? '' : o.slice(a, o.indexOf(b, a));
         const f = [];
         if (!seg(s1, '> look').includes('Something stirs.')) f.push('the rats not told stirring while the first search went on');
         if (seg(s2, '> look').includes('Something stirs.')) f.push('the rats told stirring again, with nothing changed');
-        if (!seg(o.indexOf('A giant rat is in the way.'), '> quit').includes('You stand by a ladder going down.')) f.push('the character not where it was, the way blocked');
+        const g = seg(o.indexOf('> go forward', o.indexOf('> go forward') + 1), '> look');
+        if (!g.includes('A giant rat is in the way.') || g.includes('You cross')) f.push('the character not stopped by the rat in its way');
         return f;
       },
       sdcard: true

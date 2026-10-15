@@ -25,7 +25,8 @@ const char* const stratum_name[8] = {
 
 char lb[400];                                   /* The words, as they're made (words.c's) */
 struct sight sight_copy;                        /* The hub's record, copied for the overlay */
-unsigned char sight_light;                      /*   and the character's light */
+unsigned char sight_light;                      /*   and the character's light, */
+char sight_lamp[14];                            /*   what gives it, named */
 
 /* What the character perceives (first: the first time there): the hub's record copied, worded (overlay 2) */
 void __fastcall__ look (unsigned char first)
@@ -33,6 +34,7 @@ void __fastcall__ look (unsigned char first)
     (void) first;                               /* (The theme's words for a place's first sight: later) */
     memcpy (&sight_copy, &HUB->sight, sizeof sight_copy);
     sight_light = HUB->pc_light;
+    strcpy (sight_lamp, HUB->pc_lamp);
     pc_face = HUB->pc_face;
     words ();
     msg (lb);
