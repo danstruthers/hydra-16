@@ -71,6 +71,7 @@ extern struct pc P;
 /* ---- look.c: the place in words, and the map */
 
 void __fastcall__ look (unsigned char first);   /* Where the character is (first: the first time there) */
+void stir (void);                               /* The denizens it sees, told as they move */
 extern const char* const stratum_name[8];       /* (A stand-in theme's names of the strata) */
 void __fastcall__ map (const char* rules);      /* The map of what it's seen round it, and the character's
                                                 **   state beside it (rules: the referee's short lines) */
@@ -108,6 +109,8 @@ extern char dig_with[16];                       /* The tool a dig's taken up, to
 void __fastcall__ climb_words (unsigned char how, unsigned char feet); /* Overlay 1: climbing's */
 void __fastcall__ portal_words (unsigned char out);                     /* Overlay 1: a door worked's */
 void words (void);                              /* Overlay 2: what the character perceives, into lb */
+void stir_words (void);                         /* Overlay 2: the denizens it sees, moving, into lb (or "": as
+                                                **   they were told last) */
 extern char lb[400];
 extern struct sight sight_copy;
 extern unsigned char sight_light;

@@ -263,6 +263,49 @@ static void items (void)
     }
 }
 
+/* The denizens it sees: "A giant rat is ahead to your left, 15 feet away, watching you." (each, as there's room
+** in lb) */
+static void denizens (void)
+{
+    unsigned char i;
+
+    int dx, dy;
+
+    for (i = 0; i < S->ndens && strlen (lb) < sizeof lb - 80; ++i) {
+        dx = S->den[i].x - S->x;
+        dy = S->den[i].y - S->y;
+        add (strchr ("aeiou", S->den[i].name[0]) ? " An " : " A ");
+        add (S->den[i].name);
+        add (" is ");
+        add (relname[REL8 (bearing (dx, dy), pc_face)]);
+        add (", ");
+        dx = dx < 0 ? -dx : dx;
+        dy = dy < 0 ? -dy : dy;
+        addn (5 * (dx > dy ? dx : dy));
+        add (S->den[i].aware ? " feet away, watching you." : " feet away.");
+    }
+}
+
+/* The denizens it sees, as they move (into lb): "Something stirs. A giant rat is ..."; or nothing, if what it sees
+** of them is as it was told last */
+static unsigned char was;
+
+void o_stir_words (void)
+{
+    unsigned char k, sum = 0;
+
+    lb[0] = 0;
+    S = &sight_copy;
+    for (k = 0; k < S->ndens; ++k) {
+        sum += (k + 1) * (S->den[k].x * 3 + S->den[k].y * 5 + S->den[k].aware) + pc_face;
+    }
+    if (sum != was) {
+        was = sum;
+        add (S->ndens ? "Something stirs." : "Nothing stirs in sight now.");
+        denizens ();
+    }
+}
+
 /* What the character perceives, in words, into lb (from look.c's copy of the hub's record) */
 void o_words (void)
 {
@@ -274,4 +317,5 @@ void o_words (void)
         passage ();
     }
     items ();
+    denizens ();
 }

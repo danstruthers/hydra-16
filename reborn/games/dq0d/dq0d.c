@@ -1,0 +1,681 @@
+/*
+** dq0d.c - Dingus Quest Zero's denizens (DENIZENS.md): a task of its own, started by the UI (dq0d SEG ROLE LIBDIR:
+** the hub's segment, its role there, hub.h, and the game's lib folder).  As each stratum's plan is grown, it decides
+** the stratum's populations, by its style and its depth, from the kinds a stand-in theme has (kinds.txt, made
+** lib/dq0/dq0d.dat, read into a bank of its own as it starts): the lairs, where they lie in the plan, and the
+** denizens of each, a record each from then on; so nothing is made up as the character turns a corner.  As the
+** character comes near a lair (its chunk, or one beside it), its denizens are placed in it, each on a square of its
+** own (the chunk made, the maker's, if it isn't yet); and those near the character are actors (the hub's: the world
+** moves them, the senses see them), each deciding what it means to do by its kind and what it senses, and asking the
+** world to do it: to wander about its lair (a few squares, or a wide range), to keep to it, to watch the character,
+** to keep its distance from it.  It senses through its own senses: it sees the character as far as its sight goes
+** by the character's light (or its darkvision, with none), along a line clear of rock, walls and shut doors; it
+** hears it moving, nearer.  (Attitudes, factions and influence, the coarse moves of those far from the character,
+** and the denizens' own exploring come later.)
+**
+** Its records (the lairs, the denizens) are in a bank of its own, a record at a time copied out; kept with the game
+** (dq0 -d: the UI asks, the hub's den_state), the save folder's dens.dat.
+*/
+
+#include <fcntl.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <dice.h>
+#include <hydra.h>
+#include "../dq0/hub.h"
+#include "../dq0w/world.h"
+
+/* ---- The kinds: the data file's (make.js's, from kinds.txt), in a bank of their own */
+
+struct dkind {
+    char            name[12];
+    char            key[8];                     /* The referee's creature (its sheet, later: RS_NEW_ACTOR's key) */
+    unsigned char   flags;                      /* K_* */
+    unsigned char   styles;                     /* The strata's styles it lives in: a bit each (1 << ST_*) */
+    unsigned char   deep0, deep1;               /* The strata it lives in, from the top down */
+    unsigned char   nmin, nmax;                 /* How many in a lair */
+    unsigned char   lairs;                      /* Lairs a stratum, at most */
+    unsigned char   range;                      /* Squares from its lair it goes */
+    unsigned char   sight, dark;                /* Squares it sees the character by its light, and with none */
+    unsigned char   hear;                       /* Squares it hears it moving */
+    unsigned char   step;                       /* Tenths of a second a square */
+};
+#define K_SHY           0x01                    /* It keeps its distance from the character */
+#define K_LAIR          0x02                    /* It keeps to its lair */
+#define K_WAYS          0x04                    /* Its lairs are by the stratum's ways in and out */
+#define KINDS           ((struct dkind*) 0x8000)
+
+/* ---- The records: the lairs and the denizens, in a bank of their own */
+
+#define NLAIRS          64
+#define NDENS           240
+struct lair {
+    unsigned char   sn, kind, n, first;         /* Its stratum, its kind, its denizens (n records from first) */
+    unsigned char   flags;                      /* L_* */
+    unsigned char   link;                       /* The stratum's link it's by, or 0xFF (a room of its chunk) */
+    unsigned        cx, cy;                     /* Its chunk (from the stratum's x0, y0) */
+    unsigned        hx, hy;                     /* Its home square (placed) */
+};
+#define L_PLACED        0x01                    /* Its denizens placed */
+struct den {
+    unsigned char   kind, lair;
+    unsigned char   flags;                      /* D_* */
+    unsigned char   sn, face;
+    unsigned        x, y;                       /* Its square (placed) */
+    unsigned long   ready;                      /* When it can act again */
+};
+#define D_OUT           0x01                    /* On a square of its own */
+#define D_ACTOR         0x02                    /* An actor now (the hub's entry the truth while it is) */
+struct head {
+    unsigned char   done[MAXSTRATA];            /* Each stratum's populations decided */
+    unsigned char   nlairs, ndens;
+};
+struct pop {
+    struct head     h;
+    struct lair     lair[NLAIRS];
+    struct den      den[NDENS];
+};
+#define POP             ((struct pop*) 0x8000)
+typedef char pop_fits[sizeof (struct pop) <= 0x2000 ? 1 : -1];
+
+static unsigned char kb, pb;                    /* Its banks: the kinds', the records' */
+static unsigned char nkinds;
+static struct head hd;                          /* (The records' head, kept in the main RAM) */
+static struct dkind K;                          /* (A kind, a lair, a denizen: copied out) */
+static struct lair L;
+static struct den D;
+static unsigned char piece[256];                /* (The files' pieces, through the main RAM) */
+
+/* Each copied out (or in) of its bank, the hub's header in the window after */
+static void __fastcall__ kind_get (unsigned char k)
+{
+    hy_bank (kb);
+    memcpy (&K, &KINDS[k < nkinds ? k : 0], sizeof K);
+    hub_map (0);
+}
+
+static void __fastcall__ lair_get (unsigned char i)
+{
+    hy_bank (pb);
+    memcpy (&L, &POP->lair[i], sizeof L);
+    hub_map (0);
+}
+
+static void __fastcall__ lair_put (unsigned char i)
+{
+    hy_bank (pb);
+    memcpy (&POP->lair[i], &L, sizeof L);
+    hub_map (0);
+}
+
+static void __fastcall__ den_get (unsigned char i)
+{
+    hy_bank (pb);
+    memcpy (&D, &POP->den[i], sizeof D);
+    hub_map (0);
+}
+
+static void __fastcall__ den_put (unsigned char i)
+{
+    hy_bank (pb);
+    memcpy (&POP->den[i], &D, sizeof D);
+    hub_map (0);
+}
+
+/* The kinds read in (dir/dq0d.dat): 0, or -1 */
+static int __fastcall__ kinds_load (const char* dir)
+{
+    static char path[64];
+    unsigned off;
+    int fd, n;
+
+    strcpy (path, dir);
+    strcat (path, "/dq0d.dat");
+    if ((fd = open (path, O_RDONLY)) < 0) {
+        return -1;
+    }
+    for (off = 0; off < 0x2000 && (n = read (fd, piece, sizeof piece)) > 0; off += n) {
+        hy_bank (kb);
+        memcpy ((char*) 0x8000 + off, piece, n);
+    }
+    close (fd);
+    hub_map (0);
+    nkinds = off / sizeof (struct dkind);
+    return 0;
+}
+
+/* ---- The character, as the hub has it (each time round) */
+
+static unsigned long now;
+static unsigned pcx, pcy;
+static unsigned char pcs, pclit, pcbusy;
+
+static unsigned __fastcall__ apart (int dx, int dy)
+{
+    dx = dx < 0 ? -dx : dx;
+    dy = dy < 0 ? -dy : dy;
+    return dx > dy ? dx : dy;
+}
+
+/* ---- Populations: stratum n's decided as its plan is grown (its record and links whole: the hub's strata[n],
+** copied): for each kind that lives in its style at its depth, its lairs (by the stratum's ways, if it lairs there;
+** else in a region of halls, a chunk of it), and the denizens in each, a record each */
+static void __fastcall__ populate (unsigned char n)
+{
+    struct stratum* s = &strata[n];
+    struct region* r;
+    unsigned char k, j, m, i, rx = 0, ry = 0, t;
+    unsigned w = (s->w + CW - 1) / CW, h = (s->h + CW - 1) / CW;
+
+    rseed (s->seed ^ 0x44454E5AUL);
+    for (k = 1; k < nkinds; ++k) {
+        kind_get (k);
+        if (!(K.styles & (1 << s->style)) || n < K.deep0 || n > K.deep1) {
+            continue;
+        }
+        m = K.flags & K_WAYS ? K.lairs : random (K.lairs + 1);
+        for (j = 0; j < m && hd.nlairs < NLAIRS; ++j) {
+            memset (&L, 0, sizeof L);
+            L.sn = n;
+            L.kind = k;
+            L.link = 0xFF;
+            if (K.flags & K_WAYS) {             /* (By the stratum's ways, the first ones) */
+                if (j >= s->nlinks) {
+                    break;
+                }
+                L.link = j;
+                L.cx = (s->link[j].x - s->x0) / CW;
+                L.cy = (s->link[j].y - s->y0) / CW;
+            } else {
+                for (t = 0; t < 8; ++t) {       /* (A region of halls, a chunk of it) */
+                    rx = random (s->rw);
+                    ry = random (s->rh);
+                    hub_map (PLAN_BANK (n));
+                    r = PLAN_AT (n) + (unsigned) ry * s->rw + rx;
+                    if (r->kind == RG_HALLS) {
+                        break;
+                    }
+                }
+                hub_map (0);
+                if (t == 8) {
+                    continue;
+                }
+                L.cx = (unsigned) rx * RCH + random (RCH);
+                L.cy = (unsigned) ry * RCH + random (RCH);
+                L.cx = L.cx < w ? L.cx : w - 1;
+                L.cy = L.cy < h ? L.cy : h - 1;
+            }
+            L.n = K.nmin + random (K.nmax - K.nmin + 1);
+            if (hd.ndens + L.n > NDENS) {
+                break;
+            }
+            L.first = hd.ndens;
+            memset (&D, 0, sizeof D);
+            D.kind = k;
+            D.lair = hd.nlairs;
+            D.sn = n;
+            for (i = 0; i < L.n; ++i) {
+                den_put (hd.ndens++);
+            }
+            lair_put (hd.nlairs++);
+        }
+    }
+    hd.done[n] = 1;
+}
+
+/* The strata grown since the last look, populated (none while the world's asking the maker: a plan may be half
+** copied into the hub) */
+static void grow (void)
+{
+    unsigned char n;
+
+    for (n = 0; n < MAXSTRATA; ++n) {
+        hub_map (0);
+        if (HUB->strata[n].made && !hd.done[n] && HUB->mreq[ASK_WORLD].state != REQ_POSTED) {
+            sync_strata ();
+            populate (n);
+        }
+    }
+}
+
+/* ---- Placing: lair i's denizens put on squares of their own, as the character comes near it.  By its link: round
+** the link's square (not on it: the character comes out there); else in a room of its chunk (or, a chunk with none,
+** about its middle).  Its own numbers (the stratum's seed and the lair's), so it's the same whenever it's done */
+
+static unsigned char __fastcall__ open_sq (unsigned char* p)
+{
+    return p && (TILE (*p) == T_FLOOR || TILE (*p) == T_CORR || TILE (*p) == T_STEPS);
+}
+
+static void __fastcall__ place (unsigned char i)
+{
+    struct stratum* s;
+    struct room* q;
+    unsigned x0, y0, x, y, ox, oy;
+    unsigned char w = 7, h = 7, j, t, u;
+
+    lair_get (i);
+    s = &strata[L.sn];
+    rseed (s->seed + (unsigned long) i * 7919UL);
+    ox = s->x0 + L.cx * CW;
+    oy = s->y0 + L.cy * CW;
+    if (L.link != 0xFF) {
+        L.hx = s->link[L.link].x;
+        L.hy = s->link[L.link].y;
+        x0 = L.hx - 3;
+        y0 = L.hy - 3;
+    } else if (at (L.sn, ox, oy) && C->nrooms) {
+        q = &C->room[random (C->nrooms)];
+        x0 = ox + q->x;
+        y0 = oy + q->y;
+        w = q->w;
+        h = q->h;
+        L.hx = x0 + w / 2;
+        L.hy = y0 + h / 2;
+    } else {
+        x0 = ox + 8;
+        y0 = oy + 8;
+        w = h = 16;
+        L.hx = ox + 16;
+        L.hy = oy + 16;
+    }
+    for (j = 0; j < L.n; ++j) {
+        for (t = 0; t < 32; ++t) {
+            x = x0 + random (w);
+            y = y0 + random (h);
+            if (!open_sq (at (L.sn, x, y)) || (x == pcx && y == pcy)) {
+                continue;
+            }
+            for (u = 0; u < j; ++u) {           /* (Not on another's) */
+                den_get (L.first + u);
+                if ((D.flags & D_OUT) && D.x == x && D.y == y) {
+                    break;
+                }
+            }
+            if (u == j) {
+                break;
+            }
+        }
+        den_get (L.first + j);
+        if (t < 32) {
+            D.x = x;
+            D.y = y;
+            D.flags |= D_OUT;
+            D.face = random (4) * 2;
+            D.ready = now + random (50);
+            den_put (L.first + j);
+        }
+    }
+    L.flags |= L_PLACED;
+    lair_put (i);
+}
+
+/* Chunk (cx, cy) of stratum sn made already (in the cache: the hub's header in the window) */
+static unsigned char __fastcall__ made (unsigned char sn, unsigned cx, unsigned cy)
+{
+    unsigned char k;
+
+    hub_map (0);
+    for (k = 0; k < NCSLOTS; ++k) {
+        if (HUB->cslot[k].used && HUB->cslot[k].sn == sn && HUB->cslot[k].cx == cx && HUB->cslot[k].cy == cy) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* The lairs on the character's stratum whose chunks are its own or beside it, and made (the character's
+** surroundings detailed: this task never makes a chunk to place a lair), placed: 1 if any was */
+static unsigned char nearby (void)
+{
+    struct stratum* s = &strata[pcs];
+    unsigned cx = (pcx - s->x0) / CW, cy = (pcy - s->y0) / CW;
+    unsigned char i, n = 0;
+
+    for (i = 0; i < hd.nlairs; ++i) {
+        lair_get (i);
+        if (L.sn == pcs && !(L.flags & L_PLACED) && L.cx + 1 - cx <= 2 && L.cy + 1 - cy <= 2 &&
+            made (L.sn, L.cx, L.cy)) {
+            place (i);
+            n = 1;
+        }
+    }
+    return n;
+}
+
+/* ---- The actors: the denizens near the character, in the hub for the world and the senses */
+
+#define ACT_R           24                      /* Squares from the character a denizen's an actor */
+#define CATCHUP         30                      /* Tenths an actor makes up, at most, that it's fallen behind the
+                                                **   clock (the turns pace's jumps) */
+
+static struct actor a;
+static unsigned char akind[NACTORS];            /* Each actor's kind, and its lair's home */
+static unsigned ahx[NACTORS], ahy[NACTORS];
+
+/* Actor k's place and time written back to its record */
+static void __fastcall__ write_back (unsigned char k)
+{
+    hub_map (0);
+    memcpy (&a, &HUB->actor[k], sizeof a);
+    den_get (a.den);
+    D.sn = a.sn;
+    D.x = a.x;
+    D.y = a.y;
+    D.face = a.face;
+    D.ready = a.ready;
+}
+
+/* Actor k no longer one (far from the character): its record its own again, the entry free */
+static void __fastcall__ retire (unsigned char k)
+{
+    write_back (k);
+    D.flags &= ~D_ACTOR;
+    den_put (a.den);
+    HUB->actor[k].name[0] = 0;
+}
+
+/* Denizen i made an actor, in free entry k */
+static void __fastcall__ enlist (unsigned char i, unsigned char k)
+{
+    D.flags |= D_ACTOR;
+    den_put (i);
+    kind_get (D.kind);
+    lair_get (D.lair);
+    akind[k] = D.kind;
+    ahx[k] = L.hx;
+    ahy[k] = L.hy;
+    memset (&a, 0, sizeof a);
+    a.den = i;
+    a.sn = D.sn;
+    a.face = D.face;
+    a.x = D.x;
+    a.y = D.y;
+    a.ready = D.ready;
+    a.step = K.step;
+    strcpy (a.name, K.name);
+    hub_map (0);
+    memcpy (&HUB->actor[k], &a, sizeof a);      /* (Its name last: the entry used once it's whole) */
+}
+
+/* The denizens out near the character made actors, as there are entries free */
+static void enlist_near (void)
+{
+    unsigned char i, k = 0;
+
+    for (i = 0; i < hd.ndens; ++i) {
+        hub_map (0);
+        while (k < NACTORS && HUB->actor[k].name[0]) {
+            ++k;
+        }
+        if (k == NACTORS) {
+            return;
+        }
+        den_get (i);
+        if ((D.flags & (D_OUT | D_ACTOR)) == D_OUT && D.sn == pcs && apart (D.x - pcx, D.y - pcy) <= ACT_R) {
+            enlist (i, k);
+        }
+    }
+}
+
+/* Another actor (or the character) on square x, y (the hub's header in the window after) */
+static unsigned char __fastcall__ taken (unsigned x, unsigned y)
+{
+    unsigned char k;
+
+    hub_map (0);
+    if (x == pcx && y == pcy) {
+        return 1;
+    }
+    for (k = 0; k < NACTORS; ++k) {
+        if (HUB->actor[k].name[0] && HUB->actor[k].x == x && HUB->actor[k].y == y) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* Its senses: whether actor a (the copy) senses the character, dist squares off (dx, dy): seen, by its light (or
+** with none, its darkvision), along a line clear of rock, walls and shut doors; or heard, moving, nearer */
+static unsigned char __fastcall__ senses (unsigned dist, int dx, int dy)
+{
+    unsigned char* p;
+    struct portal* q;
+    unsigned i;
+
+    if (a.sn != pcs) {
+        return 0;
+    }
+    if (dist <= K.hear && pcbusy) {
+        return 1;
+    }
+    if (dist > (pclit ? K.sight : K.dark)) {
+        return 0;
+    }
+    for (i = 1; i < dist; ++i) {
+        p = at (a.sn, a.x + dx * (int) i / (int) dist, a.y + dy * (int) i / (int) dist);
+        if (!p || !T_CLEAR (*p) || (TILE (*p) == T_DOOR && (q = portal_at (cx_, cy_)) != 0 &&
+            !(q->state & PS_OPEN))) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+/* A step for actor k (the copy): a way it can walk to a square no one's on, within lim squares of its home; away:
+** only one that takes it further from the character (the furthest).  Its direction, or 0xFF */
+static unsigned char __fastcall__ step_for (unsigned char k, unsigned lim, unsigned char away)
+{
+    unsigned char d, j, best = 0xFF, s = random (2) ? a.face >> 1 : random (4);
+    unsigned nx, ny, f, bf = apart (a.x - pcx, a.y - pcy);
+
+    for (j = 0; j < 4; ++j) {
+        d = (s + j) & 3;
+        nx = a.x + dir_x[d];
+        ny = a.y + dir_y[d];
+        if (apart (nx - ahx[k], ny - ahy[k]) > lim || !step_ok (a.sn, a.x, a.y, d) || taken (nx, ny)) {
+            continue;
+        }
+        if (!away) {
+            return d;
+        }
+        if ((f = apart (nx - pcx, ny - pcy)) > bf) {
+            bf = f;
+            best = d;
+        }
+    }
+    return best;
+}
+
+/* What actor k means to do, by its kind and what it senses, asked of the world (or a while waited) */
+static void __fastcall__ decide (unsigned char k)
+{
+    unsigned char d = 0xFF;
+    unsigned dist;
+    int dx, dy;
+
+    kind_get (akind[k]);
+    memcpy (&a, &HUB->actor[k], sizeof a);
+    if (a.ready + CATCHUP < now) {
+        a.ready = now - CATCHUP;
+    }
+    dx = pcx - a.x;
+    dy = pcy - a.y;
+    dist = apart (dx, dy);
+    a.aware = senses (dist, dx, dy);
+    if (a.aware) {                              /* (It watches the character; a shy one keeps its distance) */
+        a.face = bearing (dx, dy);
+        if ((K.flags & K_SHY) && dist < 5) {
+            d = step_for (k, 2 * K.range, 1);
+        }
+    } else if (K.flags & K_LAIR ? !random (4) : random (3)) {
+        d = step_for (k, K.flags & K_LAIR ? 2 : K.range, 0);
+    }
+    if (d == 0xFF) {
+        a.ready += 10 + random (a.aware ? 20 : 40);
+    } else {
+        a.intent = I_GO;
+        a.a = H_OF (d);
+    }
+    hub_map (0);
+    memcpy (&HUB->actor[k], &a, sizeof a);
+    if (d != 0xFF) {
+        HUB->actor[k].state = REQ_POSTED;       /* (Written whole, then posted) */
+        hub_ring (T_WORLD);
+    }
+}
+
+/* Each actor tended: what the world's done taken, those far from the character retired, those free to act set
+** going; the denizens near it placed (for a while after it moves: the chunks round it made as it looks about) and
+** enlisted.  Nothing, if nothing's changed (the clock, the character, the world's work): the turns pace's clock
+** stands between the character's acts */
+static void tend (void)
+{
+    static unsigned lx, ly;
+    static unsigned long lnow;
+    static unsigned char ls = 0xFF, fresh;
+    unsigned char k, again = 0;
+
+    if (pcx != lx || pcy != ly || pcs != ls) {
+        lx = pcx;
+        ly = pcy;
+        ls = pcs;
+        again = 1;
+        fresh = 10;
+    }
+    if (fresh) {
+        --fresh;
+        again |= nearby ();
+    }
+    for (k = 0; k < NACTORS && !again && now == lnow; ++k) {
+        hub_map (0);
+        if (HUB->actor[k].state == REQ_DONE) {
+            again = 1;
+        }
+    }
+    if (!again && now == lnow) {
+        return;
+    }
+    lnow = now;
+    for (k = 0; k < NACTORS; ++k) {
+        hub_map (0);
+        if (HUB->actor[k].state == REQ_DONE) {   /* (Done; or it couldn't, and it waits a moment) */
+            if (HUB->actor[k].result) {
+                HUB->actor[k].ready += 10;
+            }
+            HUB->actor[k].state = REQ_FREE;
+        }
+        if (!HUB->actor[k].name[0] || HUB->actor[k].state != REQ_FREE) {
+            continue;
+        }
+        if (HUB->actor[k].sn != pcs || apart (HUB->actor[k].x - pcx, HUB->actor[k].y - pcy) > ACT_R + 8) {
+            retire (k);
+            again = 1;
+        } else if (HUB->actor[k].ready <= now) {
+            decide (k);
+        }
+    }
+    if (again) {
+        enlist_near ();
+    }
+}
+
+/* ---- The records kept (back: read again), the save folder's dens.dat: the bank a piece at a time, through the
+** main RAM (the actors' places written back first; read back, none an actor yet) */
+static void __fastcall__ keep (unsigned char back)
+{
+    static char p[56];
+    unsigned off;
+    unsigned char k;
+    int fd;
+
+    hub_map (0);
+    if (!HUB->savedir[0]) {
+        return;
+    }
+    strcpy (p, HUB->savedir);
+    strcat (p, "/dens.dat");
+    if ((fd = back ? open (p, O_RDONLY) : open (p, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0) {
+        return;
+    }
+    if (!back) {
+        for (k = 0; k < NACTORS; ++k) {
+            hub_map (0);
+            if (HUB->actor[k].name[0]) {
+                write_back (k);
+                den_put (a.den);
+            }
+        }
+        hy_bank (pb);
+        memcpy (POP, &hd, sizeof hd);
+    }
+    for (off = 0; off < 0x2000; off += sizeof piece) {
+        if (back) {
+            if (read (fd, piece, sizeof piece) != sizeof piece) {
+                memset (piece, 0, sizeof piece);
+            }
+            hy_bank (pb);
+            memcpy ((char*) 0x8000 + off, piece, sizeof piece);
+        } else {
+            hy_bank (pb);
+            memcpy (piece, (char*) 0x8000 + off, sizeof piece);
+            write (fd, piece, sizeof piece);
+        }
+    }
+    close (fd);
+    if (back) {
+        hy_bank (pb);
+        memcpy (&hd, POP, sizeof hd);
+        for (k = 0; k < hd.ndens; ++k) {
+            den_get (k);
+            D.flags &= ~D_ACTOR;
+            den_put (k);
+        }
+    }
+    hub_map (0);
+}
+
+int main (int argc, char* argv[])
+{
+    int b;
+
+    if (argc < 4 || (b = hy_banks_alloc (2)) < 0 || hub_attach (atoi (argv[1]), atoi (argv[2]))) {
+        return 1;
+    }
+    kb = b;
+    pb = b + 1;
+    if (kinds_load (argv[3])) {
+        return 1;
+    }
+    chunks_init (ASK_DENIZENS);
+    hy_bank (pb);
+    memset (POP, 0, 0x2000);
+    hub_map (0);
+    if (HUB->resume) {
+        keep (1);
+    }
+    while (hub_map (0), !HUB->quit) {
+        while (hy_sem_try (HUB->sem[T_DENIZENS]) == 0) {
+        }
+        if (HUB->den_state == REQ_POSTED) {     /* (The UI's asked for a save) */
+            keep (0);
+            hub_map (0);
+            HUB->den_state = REQ_DONE;
+        }
+        now = hub_now ();
+        pcx = HUB->pc_x;
+        pcy = HUB->pc_y;
+        pcs = HUB->pc_stratum;
+        pclit = HUB->pc_light != 0;
+        pcbusy = HUB->pc_ready > now;
+        grow ();
+        if (hd.done[pcs]) {
+            tend ();
+        }
+        hub_map (0);
+        ++HUB->beat[T_DENIZENS];
+        hy_sleep_ticks (10);
+    }
+    return 0;
+}
