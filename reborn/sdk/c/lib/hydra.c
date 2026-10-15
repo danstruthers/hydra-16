@@ -1,6 +1,7 @@
 /*
 ** hydra.c - hydra.h's calls of the Hydra's own (on hy_call): the tick, sleeping, tasks and exit statuses,
-** semaphores, the namespace, an fd's name, RAM banks, shared segments, error texts.  A failed call returns -1 (errno and _oserror set: hy_call).
+** semaphores, the namespace, an fd's name, RAM banks, shared segments, error texts (spawning, exec and waiting:
+** hyspawn.c's, so that a program that doesn't start others doesn't take in stdio's buffers, which they write out).  A failed call returns -1 (errno and _oserror set: hy_call).
 */
 
 #include <stdio.h>
@@ -52,55 +53,6 @@ unsigned char hy_task (void)
 {
     hy_call (HY_GETPID, &r);
     return r.a;
-}
-
-/* SPAWN's and EXEC's path and arguments into r (argv: a list, argv[0], the name, left out), stdio's buffers out
-** first.  OUT: -1 if they're too long (errno EINVAL), else 0 */
-static int __fastcall__ hy_args (const char* path, char* const* argv)
-{
-    static char args[HY_ARGS_MAX];
-    unsigned n = 0, k;
-
-    if (argv && *argv) {
-        while (*++argv) {
-            k = strlen (*argv) + 1;
-            if (n + k + 1 > HY_ARGS_MAX) {
-                return _directerrno (EINVAL);
-            }
-            memcpy (args + n, *argv, k);
-            n += k;
-        }
-    }
-    args[n] = 0;
-    fflush (0);                                         /* (What's waiting in stdio's buffers: out first) */
-    r.r[0] = (unsigned) path;
-    r.r[1] = (unsigned) args;
-    return 0;
-}
-
-int __fastcall__ hy_spawn (const char* path, char* const* argv, unsigned char flags)
-{
-    if (hy_args (path, argv)) {
-        return -1;
-    }
-    r.a = flags & ~HY_SPAWN_FDMAP;                      /* (Its fds: this one's 0, 1 and 2) */
-    return hy_call (HY_SPAWN, &r) ? -1 : r.a;
-}
-
-int __fastcall__ hy_exec (const char* path, char* const* argv)
-{
-    if (hy_args (path, argv)) {
-        return -1;
-    }
-    hy_call (HY_EXEC, &r);                              /* (Back only if it failed) */
-    return -1;
-}
-
-int __fastcall__ hy_wait (int task, char* msg)
-{
-    r.a = task < 0 ? 0xFF : task;
-    r.r[0] = (unsigned) msg;
-    return hy_call (HY_WAIT, &r) ? -1 : r.x;
 }
 
 void __fastcall__ hy_exits (const char* msg)

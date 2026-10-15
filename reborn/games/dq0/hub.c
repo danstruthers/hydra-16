@@ -1,6 +1,7 @@
 /*
 ** hub.c - hub.h's shared segment: made (the UI) or attached (the others), put at $8000, its queues and its doorbells.
-** Each program of the game's compiles this file with its own (games/dq0w ... include it).
+** Each program of the game's compiles this file with its own (games/dq0w ... include it, HUB_ATTACHED defined: they
+** attach to the hub, so they take neither its making nor the spawning of tasks, which takes in stdio).
 */
 
 #include <stdlib.h>
@@ -36,6 +37,7 @@ void __fastcall__ hub_map (unsigned char bank)
     *(volatile unsigned char*) 0 = x[bank];
 }
 
+#ifndef HUB_ATTACHED
 int __fastcall__ hub_create (unsigned char banks)
 {
     int s = hy_seg_create (banks);
@@ -65,6 +67,7 @@ int __fastcall__ hub_create (unsigned char banks)
     HUB->task[T_UI] = hy_task ();
     return 0;
 }
+#endif
 
 int __fastcall__ hub_attach (unsigned char s, unsigned char me)
 {
@@ -153,6 +156,7 @@ unsigned char __fastcall__ hub_next (unsigned* place, struct msg* m)
     return 1;
 }
 
+#ifndef HUB_ATTACHED
 /* ---- A task of the game's: path, given the segment and its role (and more, a word or none) */
 
 int __fastcall__ hub_spawn (const char* path, unsigned char t, const char* more)
@@ -171,6 +175,7 @@ int __fastcall__ hub_spawn (const char* path, unsigned char t, const char* more)
     hub_map (0);                                /* (A spawn leaves the window on another bank) */
     return s;
 }
+#endif
 
 /* ---- The referee: a request posted in a slot (already written there), its reply waited for (the others run) */
 
