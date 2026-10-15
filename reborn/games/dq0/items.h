@@ -99,7 +99,9 @@ enum { IO_KIT, IO_GET, IO_DROP, IO_LIST, IO_SAVE, IO_RESTORE,
     IO_SEARCH,                                  /* The things concealed about it searched for (the referee's tests,
                                                 **   each at its difficulty): the result the number found, worded in
                                                 **   things_text */
-    IO_DESCRIBE };                              /* A thing (carried, or seen) looked at closely: what it truly is,
+    IO_DESCRIBE,
+    IO_HIDE };                                  /* A thing carried hidden where it stands (Concealment, the referee's
+                                                **   test): its difficulty back in qty */                              /* A thing (carried, or seen) looked at closely: what it truly is,
                                                 **   in the request (for the appraiser's judgement: the UI's) */
 enum { IR_OK, IR_NONE, IR_FULL, IR_HEAVY, IR_NOT_HERE };
 

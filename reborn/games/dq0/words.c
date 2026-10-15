@@ -245,7 +245,8 @@ static void items (void)
     unsigned char i;
 
     for (i = 0; i < S->nitems; ++i) {
-        add (S->item[i].rel == 0xFF ? " At your feet " : " On the floor ");
+        add (S->item[i].hid ? (S->item[i].rel == 0xFF ? " Hidden at your feet " : " Hidden on the floor ") :
+            S->item[i].rel == 0xFF ? " At your feet " : " On the floor ");
         if (S->item[i].rel != 0xFF) {
             add (relname[S->item[i].rel & 7]);
             add (" ");

@@ -36,6 +36,7 @@ static const struct { char w[16]; unsigned char v; } verbs[] = {
     { "light", V_LIGHT }, { "douse", V_DOUSE }, { "extinguish", V_DOUSE },
     { "wait", V_WAIT }, { "z", V_WAIT }, { "map", V_MAP }, { "m", V_MAP }, { "sheet", V_SHEET },
     { "skills", V_SHEET }, { "help", V_HELP }, { "?", V_HELP }, { "pause", V_PAUSE }, { "quit", V_QUIT },
+    { "hide", V_HIDE }, { "conceal", V_HIDE }, { "stash", V_HIDE },
     { "save", V_SAVE }, { "inventory", V_INVENTORY }, { "inv", V_INVENTORY }, { "i", V_INVENTORY },
     { "q", V_QUIT },
 };

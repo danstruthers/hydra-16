@@ -291,7 +291,8 @@ static unsigned __fastcall__ seen_named (const char* name)
     y = HUB->pc_y;
     for (i = 1; i < NITEMS; ++i) {
         memcpy (&q, item_at (i), sizeof q);
-        if (!q.kind || q.where != IW_SQUARE || q.sn != sn || (q.flags & I_HIDDEN) || strncmp (kind_of (q.kind)->name,
+        if (!q.kind || q.where != IW_SQUARE || q.sn != sn || (q.flags & (I_HIDDEN | I_KNOWN)) == I_HIDDEN ||
+            strncmp (kind_of (q.kind)->name,
             name, n) || q.x - x + 20 > 40 || q.y - y + 20 > 40 || !(p = at (sn, q.x, q.y)) || !(*p & T_VIS)) {
             continue;
         }
@@ -421,11 +422,12 @@ static unsigned char __fastcall__ get (const char* name)
     } else {
         return IR_FULL;
     }
-    item_at (n)->flags |= I_KNOWN;
+    item_at (n)->flags = (item_at (n)->flags | I_KNOWN) & ~I_HIDDEN;
     return IR_OK;
 }
 
 /* Put down where the character stands (what's in it with it) */
+static unsigned dropped;                        /* (The last put down) */
 static unsigned char __fastcall__ drop (const char* name)
 {
     static struct item q;
@@ -448,6 +450,37 @@ static unsigned char __fastcall__ drop (const char* name)
     item_at (n)->x = x;
     item_at (n)->y = y;
     item_at (n)->flags &= ~(I_HELD | I_WORN);
+    dropped = n;
+    return IR_OK;
+}
+
+/* Hidden where the character stands (the user: hiding is a skill, Concealment; a thing's difficulty to find by the
+** method's quality and the concealer's skill): its difficulty, the method's 1 (a floor's dust and corners) and the
+** referee's test's (rs.h's P_CONCEAL); known to the character, who hid it */
+static unsigned char __fastcall__ hide (const char* name)
+{
+    struct req* r;
+    signed char g;
+    unsigned char d;
+
+    if (drop (name) != IR_OK) {
+        return IR_NONE;
+    }
+    hub_map (0);
+    r = &HUB->slot[SLOT_UI];                    /* (The UI's: it waits on this request meanwhile) */
+    r->kind = RS_TEST;
+    r->actor = 0;
+    r->a = P_CONCEAL;
+    r->b = 0;
+    r->steps = 0;
+    r = hub_ask (SLOT_UI);
+    g = r->grade;
+    r->state = REQ_FREE;
+    d = 1 + (g == G_CS ? 6 : g == G_MS ? 3 : g == G_MF ? 1 : 0);
+    item_at (dropped)->flags |= I_HIDDEN | I_KNOWN;
+    item_at (dropped)->hide = d;
+    hub_map (0);
+    HUB->ireq.qty = d;
     return IR_OK;
 }
 
@@ -553,7 +586,7 @@ static unsigned char search (void)
     *tp = 0;
     for (i = 1; i < NITEMS; ++i) {
         memcpy (&q, item_at (i), sizeof q);
-        if (!q.kind || q.where != IW_SQUARE || q.sn != sn || (q.flags & (I_HIDDEN | I_MAGIC)) != I_HIDDEN ||
+        if (!q.kind || q.where != IW_SQUARE || q.sn != sn || (q.flags & (I_HIDDEN | I_MAGIC | I_KNOWN)) != I_HIDDEN ||
             q.x - x + SEARCH_R > 2 * SEARCH_R || q.y - y + SEARCH_R > 2 * SEARCH_R || !(p = at (sn, q.x, q.y)) ||
             !(*p & T_VIS)) {
             continue;
@@ -624,7 +657,8 @@ void __fastcall__ things_seen (struct sight* s, unsigned char sn, unsigned x, un
     s->nitems = 0;
     for (i = 1; i < NITEMS && s->nitems < SEE_ITEMS; ++i) {
         memcpy (&q, item_at (i), sizeof q);
-        if (!q.kind || q.where != IW_SQUARE || q.sn != sn || (q.flags & I_HIDDEN) || q.x - x + 20 > 40 ||
+        if (!q.kind || q.where != IW_SQUARE || q.sn != sn || (q.flags & (I_HIDDEN | I_KNOWN)) == I_HIDDEN ||
+            q.x - x + 20 > 40 ||
             q.y - y + 20 > 40 || !(p = at (sn, q.x, q.y)) || !(*p & T_VIS)) {
             continue;
         }
@@ -633,6 +667,7 @@ void __fastcall__ things_seen (struct sight* s, unsigned char sn, unsigned x, un
         strcpy (s->item[k].name, kind_of (q.kind)->name);
         s->item[k].qty = q.qty;
         s->item[k].plural = (kind_of (q.kind)->flags & K_PLURAL) != 0;
+        s->item[k].hid = (q.flags & I_HIDDEN) != 0;
         s->item[k].rel = q.x == x && q.y == y ? 0xFF : REL8 (bearing ((int) (q.x - x), (int) (q.y - y)), face);
         s->item[k].n = i;
         s->item[k].x = q.x;
@@ -678,8 +713,11 @@ unsigned char things_serve (void)
     case IO_DESCRIBE:
         q.result = describe (q.name);
         break;
+    case IO_HIDE:
+        q.result = hide (q.name);
+        break;
     }
     hub_map (0);
     HUB->ireq.result = q.result;
-    return changed || (q.op == IO_GET || q.op == IO_DROP) && q.result == IR_OK;
+    return changed || (q.op == IO_GET || q.op == IO_DROP || q.op == IO_HIDE) && q.result == IR_OK;
 }

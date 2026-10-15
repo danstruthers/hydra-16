@@ -769,6 +769,19 @@ static void __fastcall__ command (char* l)
             msg ("You carry none of those.");
         }
         return;
+    case V_HIDE:                                /* (Concealment: a thing; oneself comes with the denizens) */
+        if (!c.word[0]) {
+            msg ("Hide what? (Hiding yourself, in the shadows, comes when there's someone to hide from.)");
+        } else if (things (IO_HIDE, c.word) == IR_OK) {
+            d = HUB->ireq.qty;
+            msg (d >= 6 ? "You hide it cunningly: it would take a sharp eye to find it." : d >= 3 ?
+                "You hide it well enough." : "You hide it, after a fashion: a careful search would turn it up.");
+            to_hand ();
+            intend2 (I_WAIT, 600, 1);
+        } else {
+            msg ("You carry none of those.");
+        }
+        return;
     case V_INVENTORY:
         things (IO_LIST, "");
         msg (HUB->things_text);
