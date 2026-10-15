@@ -54,7 +54,8 @@ enum {
     I_CLIMB,                                    /* a: DIR_UP or DIR_DOWN (the stairway or ladder in the room);
                                                 **   | I_JUMP, down: jumped (a ledge, a shaft: a fall) */
     I_TURN,                                     /* a: the heading to face (H_N ... H_NW) */
-    I_LIGHT,                                    /* a: 1 the character's light lit, 0 put out */
+    I_LIGHT,                                    /* a: 1 a light of the character's lit, 0 put out (its light the
+                                                **   things' already, pc_light: the world takes the time, looks) */
     I_DIG,                                      /* a: a direction (DIR_N ... DIR_W, DIR_DOWN) */
     I_PORTAL,                                   /* a: what's done to the door it faces (PA_*); b: which (PW_*: a
                                                 **   door or a portcullis, a window or a slit, either) */
@@ -183,7 +184,9 @@ struct hub {                                    /* Bank 0, at $8000 */
     volatile unsigned char pc_stratum;          /* Where the character is (the world's): its stratum, */
     volatile unsigned pc_x, pc_y;               /*   its square (the dungeon's frame, world.h's), */
     volatile unsigned char pc_face;             /*   the way it faces (a heading: H_N ... H_NW), */
-    volatile unsigned char pc_light;            /*   the light it carries: how far it reaches, in tiles (0: none) */
+    volatile unsigned char pc_light;            /*   the light it carries: how far it reaches, in tiles (0: none:
+                                                **   the things' (dq0p), from the lit things it holds), */
+    char            pc_lamp[14];                /*   and the brightest of them, named */
     struct rs_summary pcsum;                    /* The character's summary (the referee's: its senses ...) */
     struct sight    sight;                      /* What it perceives (the senses', after each look about) */
     /* A look about asked of the senses (dq0p: the world asks, as the character's moved, turned, lit a light): the
@@ -206,8 +209,9 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned char   item_lock;
     struct ireq     ireq;
     char            things_text[400];
-    char            dig_tool[8];                /* The last dig's tool, the referee's choice (its key), */
-    unsigned char   dig_wear;                   /*   and the wear that spell did it */
+    char            dig_tool[4][8];             /* A dig's spells' tools, the referee's choices (their keys), in turn */
+    unsigned char   dig_wear[4];                /*   and the wear each spell did (E_DIG's b, which: the world runs on */
+                                                /*   ahead of the UI's reading of its events, the turns pace) */
     /* The UI's intents to the world */
     volatile unsigned char iq_head, iq_tail;    /* Written at head (the UI), read at tail (the world) */
     struct msg      iq[IQ_SIZE];

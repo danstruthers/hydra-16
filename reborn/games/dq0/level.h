@@ -54,7 +54,8 @@ struct sight {
     unsigned char   nways;                      /* A passage's ways on */
     struct { unsigned char rel; signed char dz; unsigned char steps; } way[4];
     unsigned char   nitems;                     /* The things it sees lying about (the things', named) */
-    struct { char name[14]; unsigned char qty, plural, rel, hid; unsigned n, x, y; } item[SEE_ITEMS];  /* (hid: it hid it) */
+    struct { char name[14]; unsigned char qty, plural, rel, hid; unsigned n, x, y; } item[SEE_ITEMS];
+                                                /* (hid: 1 it hid it, 2 on the surface before it, 4 lit) */
     unsigned char   stratum, sname, style;      /* The stratum: its number, its name (the theme's), its style */
     int             z;                          /* The floor where it stands: feet above the way in */
     unsigned        x, y;                       /* Its square */

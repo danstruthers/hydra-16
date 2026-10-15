@@ -70,10 +70,11 @@ void __fastcall__ putn (int v)
 #define NTOOLS  12
 static char tools[NTOOLS][8];
 
-static const struct { char key[8]; unsigned char rate[3], wear[3]; } digger[] = {
-    { "hands", { 1, 0, 0 }, { 0, 0, 0 } }, { "shovel", { 3, 0, 0 }, { 0, 0, 0 } }, { "spade", { 3, 0, 0 }, { 0, 0, 0 } },
-    { "pick", { 2, 2, 1 }, { 0, 1, 1 } }, { "mattock", { 3, 2, 1 }, { 0, 1, 1 } }, { "chisel", { 0, 1, 2 }, { 0, 1, 1 } },
-    { "blade", { 1, 0, 0 }, { 40, 0, 0 } }, { "knife", { 1, 0, 0 }, { 40, 0, 0 } },
+static const struct { char key[8]; unsigned char rate[4], wear[4]; } digger[] = {    /* Earth, stone, masonry, flags */
+    { "hands", { 1, 0, 0, 0 }, { 0, 0, 0, 0 } }, { "shovel", { 3, 0, 0, 1 }, { 0, 0, 0, 0 } },
+    { "spade", { 3, 0, 0, 1 }, { 0, 0, 0, 0 } }, { "pick", { 2, 2, 1, 3 }, { 0, 1, 1, 1 } },
+    { "mattock", { 3, 2, 1, 3 }, { 0, 1, 1, 1 } }, { "chisel", { 0, 1, 2, 1 }, { 0, 1, 1, 1 } },
+    { "blade", { 1, 0, 0, 0 }, { 40, 0, 0, 0 } }, { "knife", { 1, 0, 0, 0 }, { 40, 0, 0, 0 } },
 };
 
 /* All that's to hand, anew: the keys in the text, a space between */
@@ -128,14 +129,17 @@ static unsigned char __fastcall__ has (const char* key)
 ** one it wears less): its digger's number */
 static unsigned char __fastcall__ dig_tool (unsigned char m)
 {
-    unsigned char k, t, best = 0;
+    unsigned char k, t, best = 0, r, br = digger[0].rate[m];
 
     for (k = 0; k < NTOOLS; ++k) {
-        for (t = 1; t < sizeof digger / sizeof digger[0]; ++t) {
-            if (tools[k][0] && !strcmp (tools[k], digger[t].key) && (digger[t].rate[m] > digger[best].rate[m] ||
-                digger[t].rate[m] && digger[t].rate[m] == digger[best].rate[m] &&
-                digger[t].wear[m] < digger[best].wear[m])) {
+        for (t = 1; tools[k][0] && t < sizeof digger / sizeof digger[0]; ++t) {
+            if (strcmp (tools[k], digger[t].key)) {
+                continue;
+            }
+            r = digger[t].rate[m];
+            if (r > br || (r && r == br && digger[t].wear[m] < digger[best].wear[m])) {
                 best = t;
+                br = r;
             }
         }
     }
@@ -330,7 +334,7 @@ static void __fastcall__ answer (struct req* r)
         break;
     case RS_TEST:
         if (r->a == P_DIG) {                    /* (Judged by the tool to hand that suits it best) */
-            m = r->b > MAT_MASONRY ? MAT_STONE : r->b;
+            m = r->b > MAT_FLAGS ? MAT_STONE : r->b;
             t = dig_tool (m);
             k = digger[t].rate[m];
             strcpy (r->text, digger[t].key);

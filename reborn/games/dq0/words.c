@@ -244,7 +244,13 @@ static void room (void)
     add (S->size != S_PART ? "You are in a" : "You can see part of a");
     add (S->size == S_SMALL ? " small " : S->size == S_LARGE ? " large " : S->size == S_LONG ? " long " : " ");
     add (kindname[S->kind & 7]);
-    add (S->lit ? ", lit by torches in iron brackets." : sight_light ? ", by the light of your torch." : ".");
+    if (S->lit || !sight_light) {
+        add (S->lit ? ", lit by torches in iron brackets." : ".");
+    } else {
+        add (", by the light of your ");
+        add (sight_lamp);
+        add (".");
+    }
     if (S->up_ft) {                             /* (The slope's words, the user's: a slight rise, a rise, steep) */
         add (S->up_ft <= 2 ? " The floor rises gently " : S->up_ft <= 5 ? " The floor rises " : S->up_ft <= 9 ?
              " The floor rises steeply " : " The floor climbs sharply ");
@@ -289,25 +295,35 @@ static void passage (void)
     portals ();
 }
 
-/* The things it sees lying about: "On the floor ahead lies a pick." "At your feet lie some bones." */
+/* The things it sees lying about: "On the floor ahead lies a pick." "At your feet lie some bones." "On the table
+** lies a candle." (a surface's things after it, hid 2); "At your feet lies a lit torch." (hid 4) */
 static void items (void)
 {
-    unsigned char i;
+    unsigned char i, on = 0;
 
     for (i = 0; i < S->nitems; ++i) {
-        add (S->item[i].hid ? (S->item[i].rel == 0xFF ? " Hidden at your feet " : " Hidden on the floor ") :
-            S->item[i].rel == 0xFF ? " At your feet " : " On the floor ");
-        if (S->item[i].rel != 0xFF) {
-            add (relname[S->item[i].rel & 7]);
+        if (S->item[i].hid & 2) {
+            add (" On the ");
+            add (S->item[on].name);
             add (" ");
+        } else {
+            on = i;
+            add (S->item[i].hid & 1 ? (S->item[i].rel == 0xFF ? " Hidden at your feet " : " Hidden on the floor ") :
+                S->item[i].rel == 0xFF ? " At your feet " : " On the floor ");
+            if (S->item[i].rel != 0xFF) {
+                add (relname[S->item[i].rel & 7]);
+                add (" ");
+            }
         }
         add (S->item[i].plural || S->item[i].qty > 1 ? "lie " : "lies ");
         if (S->item[i].qty > 1) {
             addn (S->item[i].qty);
             add (" ");
         } else {
-            add (S->item[i].plural ? "some " : strchr ("aeiou", S->item[i].name[0]) ? "an " : "a ");
+            add (S->item[i].plural ? "some " : !(S->item[i].hid & 4) && strchr ("aeiou", S->item[i].name[0]) ? "an " :
+                "a ");
         }
+        add (S->item[i].hid & 4 ? "lit " : "");
         add (S->item[i].name);
         add (".");
     }
