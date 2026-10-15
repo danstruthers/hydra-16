@@ -60,12 +60,14 @@ const wantCard = {};                                          // (Each slot's ca
 let saveTimer = null;
 const written = new Set();
 
-// HydraOS's SD card (bin/sdcard.img: the samples, the songs, the benchmarks), gzipped in the page
+// HydraOS's SD card (bin/sdcard.img: the samples, the games, the songs, the benchmarks), gzipped in the page; kept in
+// the browser with its sum (the page's data-sum), so that one kept from an older page is known for what it is
 const SAMPLES = 'HydraOS\'s samples card';
 async function samplesCard() {
   const raw = Uint8Array.from(atob($('sdcard').textContent.trim()), c => c.charCodeAt(0));
   return new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
 }
+const samples = async () => ({ name: SAMPLES, sum: $('sdcard').dataset.sum, bytes: await samplesCard() });
 
 async function roms() {
   const el = $('roms'), raw = Uint8Array.from(atob(el.textContent.trim()), c => c.charCodeAt(0));
@@ -81,7 +83,7 @@ async function syncCards() {
   written.clear();
   for (const slot of slots) {
     const bytes = await new Promise(ok => { wantCard[slot] = ok; worker.postMessage({ type: 'card', slot }); });
-    if (bytes && cards[slot]) { cards[slot].bytes = bytes.buffer; await idb.put(slot, cards[slot]); }
+    if (bytes && cards[slot]) { cards[slot].bytes = bytes.buffer; cards[slot].changed = true; await idb.put(slot, cards[slot]); }
   }
 }
 
@@ -461,7 +463,7 @@ dlg.addEventListener('click', async e => {
     await idb.put(slot, cards[slot]);
   } else if (act === 'samples') {
     if (!$('sdcard')) return;
-    cards[slot] = { name: SAMPLES, bytes: await samplesCard() };
+    cards[slot] = await samples();
     await idb.put(slot, cards[slot]);
   } else if (act === 'load') { loadSlot = slot; $('cardfile').value = ''; $('cardfile').click(); return; }
   else if (act === 'save') {
@@ -507,8 +509,14 @@ $('build').textContent = $('roms').dataset.build || '';
     const c = await idb.get(slot);
     if (c && c.bytes) cards[slot] = c;
   }
-  if (!cards.sd0 && $('sdcard')) {                            // (None kept: HydraOS's card, the samples, songs and benchmarks)
-    cards.sd0 = { name: SAMPLES, bytes: await samplesCard() };
+  const old = cards.sd0 && cards.sd0.name === SAMPLES && $('sdcard') && cards.sd0.sum !== $('sdcard').dataset.sum;
+  if (old && (cards.sd0.sum && !cards.sd0.changed ||          // (HydraOS's card from an older page: this page's, newer;
+    confirm('This page has a newer HydraOS card (the samples, the games, the songs). Use it in place of the one kept ' +
+      'in this browser? What was written on that one would be lost (Setup\'s Save card keeps it first).'))) {
+    delete cards.sd0;                                       //   asked first if it may have been written on)
+  }
+  if (!cards.sd0 && $('sdcard')) {                            // (None kept: HydraOS's card, the samples, games, songs and benchmarks)
+    cards.sd0 = await samples();
     await idb.put('sd0', cards.sd0);
   }
   await power();

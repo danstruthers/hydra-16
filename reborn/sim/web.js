@@ -84,7 +84,8 @@ function build(out) {
   const put = (mark, text) => { if (!html.includes(mark)) throw new Error('page.html: no ' + mark); html = html.replace(mark, () => text); };
   put('<!--WORKER-->', '<script id="worker-src" type="text/plain">\n' + inScript(worker.code) + '</script>');
   put('<!--ROMS-->', '<script id="roms" type="text/plain" data-bios="' + img.bios.length + '" data-build="' + attr(buildInfo(img)) + '">\n' + roms + '\n</script>' +
-    (img.card ? '\n<script id="sdcard" type="text/plain">\n' + zlib.gzipSync(img.card, { level: 9 }).toString('base64') + '\n</script>' : ''));
+    (img.card ? '\n<script id="sdcard" type="text/plain" data-sum="' + crypto.createHash('sha1').update(img.card).digest('hex').slice(0, 12) +
+      '">\n' + zlib.gzipSync(img.card, { level: 9 }).toString('base64') + '\n</script>' : ''));   // (Its sum: a card kept from an older page is known)
   put('<!--PAGE-->', '<script>\n' + inScript(page.code) + '</script>');
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, html);
