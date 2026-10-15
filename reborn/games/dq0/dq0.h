@@ -89,7 +89,7 @@ enum {
     V_PAUSE, V_QUIT, V_SAVE, V_INVENTORY, V_HIDE, V_HOLD, V_STOW, V_PUT, V_HANG, V_RAISE, V_LOWER, V_BREAK, V_DISARM
 };
 enum { OB_NONE, OB_DOOR, OB_PASSAGE, OB_STAIRS, OB_LADDER, OB_SHAFT, OB_LEDGE, OB_WAY_OUT, OB_WALL, OB_WINDOW, OB_TRAP,
-    OB_PORTC };
+    OB_PORTC, OB_ROOM };                        /* (OB_ROOM: the room, its ceiling: looked at closely) */
 enum { HOW_ANY, HOW_TO, HOW_THROUGH };
 enum { PR_NONE, PR_IN, PR_ON, PR_FROM };         /* (The other thing: in it, on it, from it) */
 #define GO_UP       8                           /* (A direction: up, down; else a heading, H_N ...) */
@@ -125,6 +125,11 @@ void __fastcall__ trap_words (unsigned w);      /* Overlay 4: a trap's (an E_TRA
 void __fastcall__ trap_name (unsigned char kind, unsigned char trigger, unsigned char state);  /* Overlay 4: a
                                                 **   trap's name, added to lb */
 void den_way (void);                            /* Overlay 4: a denizen in the way (its name in lb) */
+struct portal;
+void __fastcall__ portal_look (const struct portal* p, signed char g);  /* Overlay 4: a portal looked at closely
+                                                **   (the maker's record of it, the hub's pview, copied), judged at
+                                                **   the appraiser's grade g, into lb */
+void ceiling_glance (void);                     /* Overlay 4: a ceiling at a glance (sight_copy's), added to lb */
 void words (void);                              /* Overlay 2: what the character perceives, into lb */
 void stir_words (void);                         /* Overlay 2: the denizens it sees, moving, into lb (or "": as
                                                 **   they were told last) */
@@ -132,6 +137,7 @@ extern char lb[400];
 extern struct sight sight_copy;
 extern unsigned char sight_light;
 extern char sight_lamp[14];                     /* (What gives its light, named: the hub's pc_lamp) */
+extern unsigned char sight_close;               /* (A close look: the room's figures, its size and its ceiling's) */
 
 /* ---- bank.s */
 

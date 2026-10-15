@@ -65,7 +65,9 @@ static const struct { char w[12]; unsigned char d; } dirs[] = {
     { "underneath", GO_DOWN }, { "beneath", GO_DOWN }, { "downward", GO_DOWN }, { "downwards", GO_DOWN },
 };
 
-/* The things it can see and name */
+/* The things it can see and name (PART: a portal's part, an item of its own, its word the thing's word too: "take the
+** bar", "examine the glass"; the room and its ceiling, looked at closely) */
+#define PART    0x80
 static const struct { char w[12]; unsigned char o; } things[] = {
     { "door", OB_DOOR }, { "doors", OB_DOOR }, { "doorway", OB_DOOR }, { "gate", OB_DOOR }, { "portal", OB_DOOR },
     { "passage", OB_PASSAGE }, { "tunnel", OB_PASSAGE }, { "corridor", OB_PASSAGE }, { "opening", OB_PASSAGE },
@@ -73,7 +75,9 @@ static const struct { char w[12]; unsigned char o; } things[] = {
     { "staircase", OB_STAIRS }, { "steps", OB_STAIRS }, { "ladder", OB_LADDER }, { "shaft", OB_SHAFT },
     { "hole", OB_SHAFT }, { "ledge", OB_LEDGE }, { "exit", OB_WAY_OUT }, { "wall", OB_WALL },
     { "portcullis", OB_PORTC }, { "window", OB_WINDOW }, { "shutters", OB_WINDOW }, { "shutter", OB_WINDOW },
-    { "glass", OB_WINDOW }, { "bars", OB_WINDOW }, { "slit", OB_WINDOW }, { "trap", OB_TRAP }, { "plate", OB_TRAP },
+    { "glass", OB_WINDOW | PART }, { "bars", OB_WINDOW | PART }, { "pane", OB_WINDOW | PART },
+    { "bar", OB_DOOR | PART }, { "slit", OB_WINDOW }, { "room", OB_ROOM }, { "chamber", OB_ROOM },
+    { "hall", OB_ROOM }, { "cave", OB_ROOM }, { "cell", OB_ROOM }, { "vault", OB_ROOM }, { "ceiling", OB_ROOM }, { "trap", OB_TRAP }, { "plate", OB_TRAP },
     { "wire", OB_TRAP }, { "tripwire", OB_TRAP }, { "pit", OB_TRAP },
 };
 
@@ -211,7 +215,10 @@ void __fastcall__ o_parse (char* l, struct pcmd* c)
         for (k = 0; k < sizeof things / sizeof things[0] && strcmp (word[i], things[k].w); ++k) {
         }
         if (k < sizeof things / sizeof things[0]) {
-            c->obj = things[k].o;
+            c->obj = things[k].o & ~PART;
+            if ((things[k].o & PART) && !c->word[0]) {
+                strcpy (c->word, word[i]);      /* (The part's own word: the thing's) */
+            }
             continue;
         }
         if (!c->word[0]) {                      /* (The first word not understood) */

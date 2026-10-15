@@ -605,9 +605,9 @@ static unsigned char __fastcall__ get (const char* name)
     hub_map (0);
     x = HUB->pc_x;
     y = HUB->pc_y;
+    HUB->ireq.x = s->x;                         /* (Where it is: IR_NOT_HERE's, IR_FIXED's) */
+    HUB->ireq.y = s->y;
     if (s->x - x + 1 > 2 || s->y - y + 1 > 2) {
-        HUB->ireq.x = s->x;
-        HUB->ireq.y = s->y;
         return IR_NOT_HERE;
     }
     return rec.where == IW_PORTAL ? IR_FIXED : carry (n, 0) ? IR_OK : IR_FULL;  /* (A portal's part: lifted out

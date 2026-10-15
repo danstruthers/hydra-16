@@ -77,7 +77,7 @@ static void __fastcall__ part (unsigned char kind, unsigned char sn, unsigned x,
 
 /* The chunk (in the main RAM; its first square x0, y0 in the frame) stocked: two tries a room, each a thing at the
 ** style's odds, at a square of its floor; then its portals' parts (a barred door's bar in its brackets, some unbarred
-** doors' set aside by them; a window's pane, its bars), with no dice: nothing else moves for them */
+** doors' set aside by them, one in four; a window's pane, its bars), with no dice: nothing else moves for them */
 void __fastcall__ o_stock (const struct chunk* c, unsigned x0, unsigned y0)
 {
     const struct room* r;
@@ -106,7 +106,7 @@ void __fastcall__ o_stock (const struct chunk* c, unsigned x0, unsigned y0)
     for (i = 0, p = c->portal; i < c->nportals; ++i, ++p) {
         x = x0 + p->x;
         y = y0 + p->y;
-        if (p->kind == PK_DOOR && (p->feat & PF_BRACKETS) && ((p->state & PS_BARRED) || ((p->x ^ p->y) & 1))) {
+        if (p->kind == PK_DOOR && (p->feat & PF_BRACKETS) && ((p->state & PS_BARRED) || !((p->x ^ p->y) & 3))) {
             part (KI_BAR, c->sn, x + dir_x[p->bar], y + dir_y[p->bar], p, p->state & PS_BARRED ? IW_PORTAL : IW_SQUARE);
         } else if (p->kind == PK_WINDOW) {
             if (p->parts & PP_GLASS) {

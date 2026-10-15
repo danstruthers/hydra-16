@@ -161,3 +161,5 @@ ovl_out:
             OVFN        trap_words, 4
             OVFN        trap_name, 4
             OVFN        den_way, 4
+            OVFN        portal_look, 4
+            OVFN        ceiling_glance, 4

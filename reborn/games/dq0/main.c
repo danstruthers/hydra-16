@@ -50,6 +50,9 @@ static void __fastcall__ dig_used (unsigned char n);
 static char dug_with[16];                       /* (The tool a dig took, named) */
 static unsigned char finds;                     /* (Things a search turned up, told as it ends: the hub's text) */
 static struct ireq judged;                      /* (A thing looked at closely: what it is, for the appraiser) */
+static struct portal viewed;                    /* (A portal looked at closely: the maker's record of it) */
+static char pending[16];                        /* A thing to take up, walked over to first (or lifted out) */
+static char lifting[16];                        /* (A portal's part being lifted out, to take up after) */
 
 struct pc P;
 static volatile unsigned char quit;
@@ -232,7 +235,7 @@ static void sheet (void)
 ** and the maker's changes.dat and seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    1
+#define SAVE_VER    2                           /* (2: the items' records with their size, the portals' make) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
@@ -531,6 +534,11 @@ static void events (void)
                 if (!finds || m.w1 != PO_NOTHING) {
                     fixt_words (m.w1);
                 }
+                k = m.w1;                       /* (A part lifted out: now taken up) */
+                if (lifting[0] && (k == PO_LIFTED || k == PO_PANE_OUT || k == PO_BARS_OUT)) {
+                    strcpy (pending, lifting);
+                }
+                lifting[0] = 0;
                 if (finds && (m.w1 == PO_FOUND || m.w1 == PO_NOTHING || m.w1 == PO_FOUND_TRAP)) {
                     msg (HUB->things_text);     /* (What its search turned up besides) */
                     finds = 0;
@@ -658,9 +666,29 @@ static void __fastcall__ handle (unsigned char op, const char* x, const char* y,
     }
 }
 
-static char pending[16];                        /* A thing to take up, walked over to first */
+/* A portal's part, fixed in it (a door's bar, a window's pane or its bars: IR_FIXED, its square in the request's x,
+** y): the portal at it or beside it faced, and the part lifted out (the maker's: a bar only from its side), then taken
+** up (E_PORTAL's) */
+static void __fastcall__ lift (const char* name)
+{
+    struct sight* s = &HUB->sight;
+    unsigned char i, d;
 
-/* A thing taken up, by its name (walked over to first, if it's out of reach) */
+    for (i = 0; i < s->ndoors; ++i) {
+        if (!(s->door[i].rel & MOUTH) && s->door[i].x - HUB->ireq.x + 1 <= 2 && s->door[i].y - HUB->ireq.y + 1 <= 2) {
+            d = bearing ((int) s->door[i].x - HUB->pc_x, (int) s->door[i].y - HUB->pc_y);
+            if (d != HUB->pc_face) {
+                intend (I_TURN, d);
+            }
+            strcpy (lifting, name);
+            work (PA_LIFT, s->door[i].kind == PK_WINDOW ? OB_WINDOW : OB_DOOR);
+            return;
+        }
+    }
+    tell (T_YOU_SEE_NONE);
+}
+
+/* A thing taken up, by its name (walked over to first, if it's out of reach; a portal's part lifted out first) */
 static void __fastcall__ take (const char* name)
 {
     unsigned char was = HUB->pc_light, r = things (IO_GET, name);
@@ -671,6 +699,10 @@ static void __fastcall__ take (const char* name)
         return;
     }
     pending[0] = 0;
+    if (r == IR_FIXED) {
+        lift (name);
+        return;
+    }
     tell (r == IR_OK ? T_TAKEN : r == IR_FULL ? T_YOUR_HANDS_ARE : T_YOU_SEE_NONE);
     if (r == IR_OK) {
         after (was, 20, IO_GET);
@@ -723,7 +755,46 @@ static unsigned char __fastcall__ find (unsigned char obj, unsigned char orel)
     return 0;
 }
 
-static const char* const thing[] = { "", "door", "way on", "stairs", "ladder", "shaft", "ledge", "way out", "wall" };
+static const char* const thing[] = { "", "door", "way on", "stairs", "ladder", "shaft", "ledge", "way out", "wall",
+    "window", "trap", "portcullis", "room" };
+
+/* A portal it sees looked at closely (the parser's thing, the way it lies): the maker's record of it (ASK_UI's
+** M_WORK, PA_EXAMINE: a doorway has none), judged by the craft that knows its material (the referee's test: wood
+** Timbercraft, iron Metalcraft, stone Masonry), in words (overlay 4); a few seconds' looking */
+static void __fastcall__ inspect (unsigned char obj, unsigned char orel)
+{
+    struct mreq* q = &HUB->mreq[ASK_UI];
+    struct req* r;
+    signed char g;
+
+    if (!find (obj, orel)) {
+        sayf ("\nYou see no %s here.", thing[obj]);
+        return;
+    }
+    q->kind = M_WORK;
+    q->tile = PA_EXAMINE;
+    q->sn = HUB->pc_stratum;
+    q->cx = tx;
+    q->cy = ty;
+    q->state = REQ_POSTED;
+    hub_ring (T_MAKER);
+    while (q->state != REQ_DONE) {
+        hy_yield ();
+        hub_map (0);
+    }
+    q->state = REQ_FREE;
+    if (q->res) {
+        msg ("An open doorway: there's no door in it.");
+        return;
+    }
+    memcpy (&viewed, &HUB->pview, sizeof viewed);
+    r = ask_b (RS_TEST, P_APPRAISE, viewed.mat == PM_STONE ? AP_STONE : viewed.mat == PM_IRON ? AP_METAL : AP_WOOD);
+    g = r->grade;
+    r->state = REQ_FREE;
+    portal_look (&viewed, g);
+    msg (lb);
+    intend2 (I_WAIT, 50, 1);
+}
 
 /* A thing hidden where the character stands (Concealment: the referee's test, the things' record), worded by how
 ** well */
@@ -851,7 +922,9 @@ static void __fastcall__ command (char* l)
         pa = c.verb == V_OPEN ? PA_OPEN : c.verb == V_CLOSE ? PA_CLOSE : c.verb == V_FORCE ? PA_FORCE :
             c.verb == V_RAISE ? PA_RAISE : c.verb == V_LOWER ? PA_LOWER : c.verb == V_BREAK ? PA_BREAK :
             c.verb == V_DISARM ? PA_DISARM : PA_UNLOCK;
-        if (pa == PA_RAISE || pa == PA_LOWER) {
+        if (pa == PA_RAISE && c.word[0]) {
+            pa = PA_LIFT;                       /* ("Lift the bar": a portal's part lifted out) */
+        } else if (pa == PA_RAISE || pa == PA_LOWER) {
             c.obj = OB_PORTC;
         }
 portal:
@@ -863,21 +936,26 @@ portal:
         }
         work (pa, c.obj);
         return;
-    case V_SEARCH:
-    case V_EXAMINE:
-        if (c.verb == V_EXAMINE && c.word[0]) {  /* (A thing looked at closely: judged, by the craft that knows it) */
-            if (things (IO_DESCRIBE, c.word) != IR_OK) {
+    case V_EXAMINE:                             /* (A thing looked at closely: judged, by the craft that knows it; a
+                                                **   portal, or its part if it's not there; else the room) */
+        if (!c.word[0] || things (IO_DESCRIBE, c.word) != IR_OK) {
+            if (c.obj == OB_DOOR || c.obj == OB_WINDOW || c.obj == OB_PORTC) {
+                inspect (c.obj, c.orel);
+            } else if (c.word[0]) {
                 sayf ("\nYou see no %s here.", c.word);
-                return;
+            } else {
+                look (2);                       /* (A close look about: the room's figures) */
             }
-            memcpy (&judged, &HUB->ireq, sizeof judged);
-            r = ask_b (RS_TEST, P_APPRAISE, judged.craft);
-            d = r->grade;
-            r->state = REQ_FREE;
-            appraise (&judged, d);
-            msg (lb);
             return;
         }
+        memcpy (&judged, &HUB->ireq, sizeof judged);
+        r = ask_b (RS_TEST, P_APPRAISE, judged.craft);
+        d = r->grade;
+        r->state = REQ_FREE;
+        appraise (&judged, d);
+        msg (lb);
+        return;
+    case V_SEARCH:
         finds = things (IO_SEARCH, "");         /* (Things concealed about it; then the walls) */
         intend (I_PORTAL, PA_SEARCH);
         return;

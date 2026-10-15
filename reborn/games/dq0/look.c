@@ -27,11 +27,13 @@ char lb[400];                                   /* The words, as they're made (w
 struct sight sight_copy;                        /* The hub's record, copied for the overlay */
 unsigned char sight_light;                      /*   and the character's light, */
 char sight_lamp[14];                            /*   what gives it, named */
+unsigned char sight_close;                      /*   and a close look (look's first 2) */
 
-/* What the character perceives (first: the first time there): the hub's record copied, worded (overlay 2) */
+/* What the character perceives (first: the first time there; 2, a close look, the room's figures with it): the hub's
+** record copied, worded (overlay 2) */
 void __fastcall__ look (unsigned char first)
 {
-    (void) first;                               /* (The theme's words for a place's first sight: later) */
+    sight_close = first == 2;                   /* (The theme's words for a place's first sight: later) */
     memcpy (&sight_copy, &HUB->sight, sizeof sight_copy);
     sight_light = HUB->pc_light;
     strcpy (sight_lamp, HUB->pc_lamp);

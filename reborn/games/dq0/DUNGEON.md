@@ -300,6 +300,29 @@ opening needs to be explicit"): a walk stops at a closed door ("The door is shut
 character has opened or shut before (its parts' PP_KNOWN, kept with its state), not locked or barred, it opens
 again as it goes.
 
+**A portal's make** (the user, 2026-10-15: "A door should be examinable for quality, material, and other
+characteristics ... Doors also don't have a size ... Door quality may be better or worse (rotten versus new) which
+would make them harder or easier to break down, as would their resistances and overall "body" points"): each portal
+is made with its chunk, by its own dice (the layout never moves for them: dq0m/fixtures.c), with a **size** (a
+built place's doors much alike, the stratum's own, a few odd; a cave's or a mixed place's each its own, added
+later), a **thickness**, a **state** (0 rotten ... 4 sound ... 9 new: as made, by the style, then worn by the
+stratum's age, wood fastest, stone hardly), a door's **features** (a little window with a grille, a spy-hole, a
+bar's brackets, iron studs, which side its hinges are, two leaves), and so a **body**: the net harm it takes
+before it fails, by its material, size, thickness and state.  **Breaking** (break the door; a window's shutters,
+glass, bars) goes by it: blows, a dozen at most a time, each the referee's impact (HC_BLOW at RS_THING, with the
+best tool to hand, never a weapon) less its material's resistance to the blow's aspect (the less, the worse its
+state), off its body; the harm kept (PORTAL_HARM); a door broken down open for good (PS_WRECKED: it won't shut).
+Forcing (Strength) is easier on a rotten door, harder on a new one.  Its **parts** are items of their own (items.h's
+IW_PORTAL, put in it as the chunk's stocked): a door's **bar** (in its brackets, on the square on its bar's side;
+some unbarred doors' set aside by them), a window's **pane** and **bars**, each with its material, its state, its
+size and thickness: examined as any thing is, lifted out (take the bar, lift the bar: only from its side; a pane
+worked out whole; bent bars lifted out) and carried; a pane broken is shards at the character's feet.  **Examined**
+(examine the door, the window, the portcullis): its kind, size, material, thickness and features plain to see, its
+state and how stout it is the appraiser's judgement (the referee's Timbercraft, Metalcraft or Masonry, as near the
+truth as the grade).  A room's words are general at a glance (a small hall, a high ceiling, a low, rough one); its
+figures (its size in feet, its ceiling's heights) come with a close look (look closely, examine the room); search is
+search.
+
 ### Items: the dungeon's layer of things
 
 The user (2026-10-14): "Don't forget to include a dungeon "layer" where items are tracked.  Each area needs an

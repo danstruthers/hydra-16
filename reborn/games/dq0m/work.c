@@ -163,7 +163,7 @@ static void __fastcall__ harm (unsigned char a, unsigned char b, unsigned char c
 ** new); a window's bars half a plate's (fixtures.c's, as it makes them, and the blows') */
 unsigned char __fastcall__ part_body (unsigned char mat, unsigned char size, unsigned char thick, unsigned char qual)
 {
-    static const unsigned char per[4] = { 1, 2, 4, 3 };    /* (PM_*: a square foot an inch thick, in quarters) */
+    static const unsigned char per[4] = { 2, 3, 6, 4 };    /* (PM_*: a square foot an inch thick, in quarters) */
     unsigned b = (size & 15) * (size >> 4) * thick * per[mat & 3] / 4 * (2 + qual) / 6;
 
     return b > 255 ? 255 : b ? b : 1;
@@ -198,8 +198,8 @@ static unsigned char __fastcall__ part_moved (unsigned char k, unsigned x, unsig
 #define AT_BAR          px + dir_x[pq.bar], py + dir_y[pq.bar]  /* (A door's bar's square: on its bar's side) */
 #define AT_PC           W->fx, W->fy
 
-/* Blows at the portal's part (its material mat, PM_* or 4 glass; its body): as many as it takes, or a dozen (three
-** in a row that make no mark: given up), a few seconds each; each the referee's impact (HC_BLOW at RS_THING: with
+/* Blows at the portal's part (its material mat, PM_* or 4 glass; its body): as many as it takes, or a dozen (four
+** that make no mark at all: given up), a few seconds each; each the referee's impact (HC_BLOW at RS_THING: with
 ** the best to hand) less the material's resistance to its aspect (the less, the worse the part's state), the harm
 ** kept (pq.harm's part, its mask hm, its shift hs: a window's shutters' and its bars' a nibble each, a door's the
 ** byte): 0 if it gives way, else how it stands (PO_GIVING, PO_HOLDING, PO_NO_MARK) */
@@ -209,23 +209,23 @@ static unsigned char __fastcall__ batter (unsigned char mat, unsigned char body)
     static const unsigned char resist[5][4] = {     /* Against blows, edges, points, fire (items.h's DM_*) */
         { 4, 3, 4, 1 }, { 5, 5, 5, 3 }, { 6, 7, 7, 7 }, { 6, 8, 9, 9 }, { 0, 5, 3, 6 }
     };
-    unsigned char n, idle = 0, h = pq.harm >> hs & hm, was = h, r, gone = 0;
+    unsigned char n, h = pq.harm >> hs & hm, was = h, r, gone = 0;
 
     if (body > hm) {
         body = hm;
     }
-    for (n = 0; n < 12 && idle < 3 && !gone; ++n) {
+    for (n = 0; n < 12 && !gone && (n < 4 || h != was); ++n) {
         tt += 30;
         harm (HC_BLOW, AS_BEST, 0, 0);
         r = resist[mat][aspect & 3];
         r -= r && pq.qual <= 3 ? (pq.qual <= 1 && r > 1 ? 2 : 1) : 0;
         if (impact <= r) {
-            ++idle;
-        } else if ((unsigned) h + impact - r >= body) {
+            continue;
+        }
+        if ((unsigned) h + impact - r >= body) {
             gone = 1;
             h = 0;
         } else {
-            idle = 0;
             h += impact - r;
         }
     }

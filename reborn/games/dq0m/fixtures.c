@@ -160,7 +160,7 @@ static void portcullises (void)
 
 static void make (void)
 {
-    static const unsigned char rot[4] = { 4, 3, 2, 1 };    /* (PM_*: tenths of a step of wear a century) */
+    static const unsigned char rot[4] = { 2, 2, 1, 0 };    /* (PM_*: tenths of a step of wear a century) */
     struct stratum* s = &strata[L->sn];
     struct portal* p;
     unsigned char i, w, h, t, q, f, alike = s->style == ST_BUILT || s->style == ST_MINE;
