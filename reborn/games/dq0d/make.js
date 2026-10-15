@@ -4,7 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const WAYS = { s: 0x01, l: 0x02, w: 0x04 };     // dq0d.c's K_SHY, K_LAIR, K_WAYS
+const WAYS = { s: 0x01, l: 0x02, w: 0x04, a: 0x08 };   // dq0d.c's K_SHY, K_LAIR, K_WAYS, K_BOLD
 const STYLES = { b: 0, n: 1, m: 2, x: 3 };      // level.h's ST_*: a bit each
 
 function build({ dir, objdir, say = () => {} }) {

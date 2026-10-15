@@ -18,6 +18,8 @@ static unsigned char me;                        /* ASK_WORLD ... */
 static unsigned char shut_ok (void);
 static unsigned char lastk = 0xFF, lsn;         /* The slot at () found last, and what it holds */
 static unsigned lcx, lcy;
+static unsigned char lbank;                     /* (Its bank, its chunk in the window) */
+static struct chunk* lchunk;
 
 void __fastcall__ chunks_init (unsigned char who)
 {
@@ -57,11 +59,10 @@ void __fastcall__ ask_maker (unsigned char kind, unsigned char sn, unsigned cx, 
 static unsigned char __fastcall__ find (unsigned char sn, unsigned cx, unsigned cy)
 {
     unsigned char k;
-    struct cslot* s;
+    struct cslot* s = HUB->cslot;
 
     hub_map (0);
-    for (k = 0; k < NCSLOTS; ++k) {
-        s = &HUB->cslot[k];
+    for (k = 0; k < NCSLOTS; ++k, ++s) {
         if (s->used && s->sn == sn && s->cx == cx && s->cy == cy) {
             s->stamp = ++HUB->stamp;
             HUB->inuse[me] = k;
@@ -71,6 +72,8 @@ static unsigned char __fastcall__ find (unsigned char sn, unsigned cx, unsigned 
     return 0xFF;
 }
 
+#pragma static-locals (push, on)                /* (The squares' calls, every task's most called: their locals
+                                                **   static, quicker) */
 unsigned char* __fastcall__ at (unsigned char sn, unsigned x, unsigned y)
 {
     struct stratum* s = &strata[sn];
@@ -80,10 +83,10 @@ unsigned char* __fastcall__ at (unsigned char sn, unsigned x, unsigned y)
     if (ox >= s->w || oy >= s->h) {
         return 0;
     }
-    cx = ox / CW;
-    cy = oy / CW;
-    cx_ = ox % CW;
-    cy_ = oy % CW;
+    cx = ox >> CW_BITS;
+    cy = oy >> CW_BITS;
+    cx_ = ox & (CW - 1);
+    cy_ = oy & (CW - 1);
     if (lastk == 0xFF || lsn != sn || lcx != cx || lcy != cy) {
         if ((k = find (sn, cx, cy)) == 0xFF) {
             ask_maker (M_CHUNK, sn, cx, cy);
@@ -93,9 +96,11 @@ unsigned char* __fastcall__ at (unsigned char sn, unsigned x, unsigned y)
         lsn = sn;
         lcx = cx;
         lcy = cy;
+        lbank = CACHE_BANK (k);                 /* (Worked out once a slot: cc65 divides slowly) */
+        lchunk = CHUNK_AT (k);
     }
-    hub_map (CACHE_BANK (lastk));
-    C = CHUNK_AT (lastk);
+    hub_map (lbank);
+    C = lchunk;
     return &C->tile[cy_][cx_];
 }
 
@@ -130,6 +135,8 @@ unsigned char __fastcall__ step_ok (unsigned char sn, unsigned x, unsigned y, un
     }
     return dz <= (TILE (t) == T_STEPS || TILE (u) == T_STEPS ? STAIR_MAX : STEP_MAX);
 }
+
+#pragma static-locals (pop)
 
 struct portal* __fastcall__ portal_at (unsigned char x, unsigned char y)
 {

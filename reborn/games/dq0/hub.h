@@ -88,9 +88,11 @@ enum {
 enum { A_WALKED, A_DOWN, A_UP, A_START, A_DIGGING, A_CROSSED, A_CLIMBING, A_CLIMBED, A_WENT_TO, A_RESUMED };
                                                 /* E_ARRIVE's how (A_DIGGING, A_CLIMBING: the world's own, a spell
                                                 **   of work, a round's climbing) */
-enum { N_NO_EXIT, N_SHUT, N_NO_STAIRS, N_NO_DIG };  /* E_NOWAY's why: no way that way, the way out shut, no stairs,
-                                                **   nothing to dig there */
-enum { V_TURNED, V_LIT, V_DARK, V_STIR };       /* E_VIEW's why (V_STIR: a denizen it sees has moved) */
+enum { N_NO_EXIT, N_SHUT, N_NO_STAIRS, N_NO_DIG, N_DEN };  /* E_NOWAY's why: no way that way, the way out shut, no
+                                                **   stairs, nothing to dig there, a denizen in the way (the actor
+                                                **   times 256) */
+enum { V_TURNED, V_LIT, V_DARK, V_STIR };       /* E_VIEW's why (V_STIR: a denizen come into sight, gone from it,
+                                                **   or doing something else) */
 enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL };  /* E_DIG's how */
 enum { K_BEGUN, K_ON, K_BACK, K_FELL, K_UP, K_DOWN, K_JUMPED };    /* E_CLIMB's how: begun, on, slipped back,
                                                 **   fallen, up, down; jumped down (a ledge, a shaft) */
@@ -123,8 +125,12 @@ enum { SLOT_WORLD, SLOT_UI, NSLOTS };
 ** own banks) for the world to move and the senses to see.  Its intents are posted in its own entry, one at a time:
 ** the denizens' task writes intent and a, then sets state REQ_POSTED; the world carries it out (by the character's
 ** rules: a square at a time, its time added to ready), then sets REQ_DONE; the denizens' task takes it and sets
-** REQ_FREE.  While it's REQ_FREE the entry is the denizens' task's alone */
+** REQ_FREE.  While it's REQ_FREE the entry is the denizens' task's alone.  At the turns pace the world moves the
+** clock on through what the character does a slice at a time (TURN_SLICE tenths), each once the denizens' task
+** has caught up with it (den_at the clock): it moves its actors itself as it catches up, by the same rules, the
+** world waiting; and bumps den_seq as it changes what the character may see of them (moved, what they're doing) */
 #define NACTORS         8
+#define TURN_SLICE      100
 struct actor {
     volatile unsigned char state;               /* REQ_* */
     unsigned char   den;                        /* Its record (the denizens' task's) */
@@ -134,7 +140,8 @@ struct actor {
     unsigned char   intent, a;                  /* I_* (I_GO: a heading, H_N, H_E ...) */
     unsigned char   result;                     /* 0 done, or N_* */
     unsigned        x, y;                       /* (These last as struct sight's den: copied whole) */
-    unsigned char   aware;                      /* It senses the character (and watches it) */
+    unsigned char   doing;                      /* What it's doing (DO_*: watching, coming, keeping off: it senses the
+                                                **   character) */
     char            name[12];                   /* ("": the entry free) */
 };
 
@@ -201,6 +208,10 @@ struct hub {                                    /* Bank 0, at $8000 */
     ** task (REQ_*: its records written to the save folder's dens.dat) */
     struct actor    actor[NACTORS];
     volatile unsigned char den_state;
+    volatile unsigned long den_at;              /* The clock as the denizens' task last caught up with it */
+    volatile unsigned char den_seq;             /* Bumped as it changes what the character may see of its actors */
+    volatile unsigned pc_tx, pc_ty;             /* Where the character's move ends (the world's: no denizen goes
+                                                **   there, nor onto the character) */
 };
 
 #define HUB     ((struct hub*) HUB_WINDOW)

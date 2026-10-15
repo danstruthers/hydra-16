@@ -265,6 +265,10 @@ static void items (void)
 
 /* The denizens it sees: "A giant rat is ahead to your left, 15 feet away, watching you." (each, as there's room
 ** in lb) */
+static const char* const doing[4] = {
+    " feet away.", " feet away, watching you.", " feet away, coming towards you.", " feet away, keeping its distance."
+};
+
 static void denizens (void)
 {
     unsigned char i;
@@ -282,28 +286,18 @@ static void denizens (void)
         dx = dx < 0 ? -dx : dx;
         dy = dy < 0 ? -dy : dy;
         addn (5 * (dx > dy ? dx : dy));
-        add (S->den[i].aware ? " feet away, watching you." : " feet away.");
+        add (doing[S->den[i].doing & 3]);
     }
 }
 
-/* The denizens it sees, as they move (into lb): "Something stirs. A giant rat is ..."; or nothing, if what it sees
-** of them is as it was told last */
-static unsigned char was;
-
+/* The denizens it sees, as one comes into sight, goes from it, or does something else (the world's V_STIR: into
+** lb): "Something stirs. A giant rat is ..." */
 void o_stir_words (void)
 {
-    unsigned char k, sum = 0;
-
     lb[0] = 0;
     S = &sight_copy;
-    for (k = 0; k < S->ndens; ++k) {
-        sum += (k + 1) * (S->den[k].x * 3 + S->den[k].y * 5 + S->den[k].aware) + pc_face;
-    }
-    if (sum != was) {
-        was = sum;
-        add (S->ndens ? "Something stirs." : "Nothing stirs in sight now.");
-        denizens ();
-    }
+    add (S->ndens ? "Something stirs." : "Nothing stirs in sight now.");
+    denizens ();
 }
 
 /* What the character perceives, in words, into lb (from look.c's copy of the hub's record) */

@@ -438,6 +438,7 @@ static void events (void)
     static struct msg m;
     unsigned char k;
     struct req* r;
+    const char* nm;
 
     while (!quit && hub_next (&place, &m)) {
         switch (m.kind) {
@@ -489,7 +490,10 @@ static void events (void)
             }
             break;
         case E_NOWAY:
-            if (m.who == 0) {
+            if (m.who == 0 && (m.w1 & 0xFF) == N_DEN) {
+                nm = HUB->actor[(m.w1 >> 8) & 7].name;  /* (A denizen's: its name) */
+                sayf ("\n%s %s is in the way.", strchr ("aeiou", *nm) ? "An" : "A", nm);
+            } else if (m.who == 0) {
                 tell (m.w1 == N_SHUT ? T_THE_WAY_OUT :
                      m.w1 == N_NO_STAIRS ? T_THERE_S_NO : m.w1 == N_NO_DIG ?
                      T_THERE_S_NOTHING :
@@ -883,7 +887,8 @@ static void __fastcall__ command (char* l)
 
 int main (int argc, char* argv[])
 {
-    unsigned long seed = hy_time () ^ hy_ticks (), was;
+    unsigned long seed = hy_time () ^ hy_ticks (), was = 0;
+    unsigned shown = 0;
     const char* file = 0;
     unsigned char k, i;
     char* l;
@@ -945,10 +950,14 @@ int main (int argc, char* argv[])
             }
         }
         events ();
-        was = now / 10;
         now = hub_now ();
-        if (now / 10 != was) {
-            status ();                          /* (The clock on the status line, each game second) */
+        if (now != was && (HUB->tpr || !busy || hy_ticks () - shown >= 100)) {
+            if (now / 10 != was / 10) {         /* (The clock on the status line, each game second; the turns
+                                                **   pace's, as the character's busy, each half a real second) */
+                shown = hy_ticks ();
+                status ();
+            }
+            was = now;
         }
         if (!busy && pending[0]) {              /* (Walked over: now taken up) */
             take (pending);
@@ -959,7 +968,7 @@ int main (int argc, char* argv[])
             status ();
         }
         t_done ();
-        hy_sleep_ticks (2);
+        hy_sleep_ticks (busy && !HUB->tpr ? 10 : 2);   /* (The turns pace's clock running on: no keys till it's done) */
     }
     save_game ();                               /* (Kept as it ends: the game's quit, not lost) */
     stop_world ();

@@ -2282,8 +2282,8 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0dig', what: 'Dingus Quest Zero digging (dq0 -k pick -T: a pick in hand, the tool the referee takes (the room\'s floor earth, the maker\'s), named as it is first used): a shaft down from a room by its stairway, spell by spell (Mining tests, the referee asked), through to the stratum below (grown round it then), and down it',
-      init: 't_rc', cycles: 700e6,
+      name: 'dq0dig', what: 'Dingus Quest Zero digging (dq0 -k pick -T: a pick in hand, the tool the referee takes (the room\'s floor earth, the maker\'s), named as it is first used): a shaft down from a room by its stairway, spell by spell (Mining tests, the referee asked), through to the stratum below (grown round it then), and down it; the rats by the stairway living through every spell of it (the turns pace: some eleven hours, the denizens kept up a slice at a time)',
+      init: 't_rc', cycles: 900e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -k pick -T\r' +
         ['dig down', 'look', 'd', 'look', 'map', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
       expect: ['You set to digging', 'You dig with your pick.', 'feet to go.', 'the shaft is through.', 'You climb down the shaft.', 'The map (you face', '% echo $status'],
@@ -2340,11 +2340,23 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0denizens', what: 'Dingus Quest Zero\'s denizens (dq0d: the populations decided as a stratum is grown, from a stand-in theme\'s kinds, kinds.txt): the giant rats that lair by the top stratum\'s ways placed round the way down as the character starts there (dq0 -T), seen (the world\'s actors, in what it perceives), and moving about as time passes (their own task deciding, the world carrying it out: told as they stir)',
+      name: 'dq0denizens', what: 'Dingus Quest Zero\'s denizens (dq0d: the populations decided as a stratum is grown, from a stand-in theme\'s kinds, kinds.txt): the giant rats that lair by the top stratum\'s ways placed round the way down as the character starts there (dq0 -T), seen (the world\'s actors, in what it perceives), and moving about as time passes (their own task deciding): at the turns pace through all the time a minute\'s search takes (the clock on a slice at a time as they keep up, told as they stir before it\'s done), told only as what they do changes (keeping their distance), not again when nothing has; then (seed 5) a rat beside the character in its way, the world not letting it walk onto the rat\'s square',
       init: 't_rc', cycles: 900e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T\r' +
-        ['look', 'wait', 'wait', 'wait', 'look', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
-      expect: ['A giant rat is ', ' feet away', 'Something stirs.', '% echo $status'],
+        ['look', 'look closely', 'look closely', 'look', 'quit'].map(l => '\u0101' + l + '\r').join('') + '\u0101dq0 -p t -s 5 -c /ram/c.hm -T\r' +
+        ['go right', 'look', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['A giant rat is ', ' feet away', 'Something stirs.', 'keeping its', 'A giant rat is in the way.', '% echo $status'],
+      // (The first search's stir told before its prompt, the second's none: nothing they do has changed; the way
+      // blocked, the character still by the ladder)
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), s1 = o.indexOf('You search about'), s2 = o.indexOf('You search about', s1 + 1);
+        const seg = (a, b) => a < 0 ? '' : o.slice(a, o.indexOf(b, a));
+        const f = [];
+        if (!seg(s1, '> look').includes('Something stirs.')) f.push('the rats not told stirring while the first search went on');
+        if (seg(s2, '> look').includes('Something stirs.')) f.push('the rats told stirring again, with nothing changed');
+        if (!seg(o.indexOf('A giant rat is in the way.'), '> quit').includes('You stand by a ladder going down.')) f.push('the character not where it was, the way blocked');
+        return f;
+      },
       sdcard: true
     },
     {

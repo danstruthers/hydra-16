@@ -24,6 +24,7 @@
 #include "../dq0/level.h"
 
 #define CW              32                      /* A chunk's squares, each way */
+#define CW_BITS         5                       /*   (CW's: a square's chunk by a shift, cc65 dividing slowly) */
 #define RCH             8                       /* A region's chunks, each way */
 #define RW              (CW * RCH)              /* A region's squares, each way (256: 1,280 feet) */
 #define MAXSTRATA       8

@@ -111,10 +111,27 @@ allies.
 - **Acting:** those within about 24 squares of the character are actors (the hub's, eight at most): each, as it's
   free, senses the character (seen by its light, or with none by darkvision, along a line clear of rock, walls and
   shut doors; heard moving, nearer), and wanders about its lair (a few squares, or its range), keeps to it, watches
-  the character, or (a shy one) keeps its distance; and asks the world, which moves it a square at a time by the
-  character's rules (a step it can walk, its time by its pace and the slope), never onto the character.
-- **Seen:** the world adds the actors on squares the character sees to what it perceives, after each look; a move it
-  sees (the character standing) is a look again, and the UI says what stirs.
-- **Later:** attitudes, factions and influence; the referee's sheets (RS_NEW_ACTOR by the kind's key) and fights; the
-  coarse moves of those away from the character, and their exploring and digging; the character's own moves blocked
-  by a denizen; the theme as data.
+  the character, keeps its distance (a shy one: till it's a few squares further), or comes towards it (a bold one);
+  and asks the world, which moves it a square at a time by the character's rules (a step it can walk, its time by
+  its pace and the slope).  No two denizens share a square, and none goes onto the character's, nor where the
+  character's move ends (the hub's pc_tx, pc_ty).
+- **Time:** at the turns pace the world moves the clock on through what the character does a slice at a time (ten
+  seconds: TURN_SLICE), each once the denizens' task has caught up with it (the hub's den_at; a task slow to, for a
+  while, is left to catch up as it can), so the denizens act through all of it: a ten-minute spell of digging gives
+  them ten minutes, and they may come and go while it lasts.  As it catches up the denizens' task moves its actors
+  itself (the world waiting, by the same rules), cheaply: those out of the character's sight and not sensing it a
+  few squares at a time (coarse), a watcher left a while unless the character changes (moves, its light, busy or
+  not).  At the real paces they're the world's to move, as the clock runs.
+- **Away:** the denizens out but not actors move coarsely, every half minute to a minute and a half, to a square of
+  their range about their lairs (in a chunk that's made: none is made for them), so the dungeon goes on where the
+  character isn't; their records stay in the denizens' bank.
+- **Seen:** the world adds the actors on squares the character sees to what it perceives, after each look; and as
+  they change (the denizens' task bumps the hub's den_seq, or the world moves one it sees) it looks at them again,
+  and the UI says what stirs only when one has come into sight, gone from it, or is doing something else (watching,
+  coming towards it, keeping its distance, going about its business): not at each step.  Not while the character's
+  on its way somewhere (it looks about as it gets there); while it digs, yes.
+- **In the way:** the character can't walk onto a denizen's square: a walk along a passage, across a room or up to
+  a square stops short of one (the way across a room found round them), and one in the very next square is told
+  ("A giant rat is in the way.": E_NOWAY's N_DEN, the actor's).
+- **Later:** attitudes, factions and influence; the referee's sheets (RS_NEW_ACTOR by the kind's key) and fights;
+  their exploring and digging; the theme as data.

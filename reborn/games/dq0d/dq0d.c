@@ -8,10 +8,14 @@
 ** own (the chunk made, the maker's, if it isn't yet); and those near the character are actors (the hub's: the world
 ** moves them, the senses see them), each deciding what it means to do by its kind and what it senses, and asking the
 ** world to do it: to wander about its lair (a few squares, or a wide range), to keep to it, to watch the character,
-** to keep its distance from it.  It senses through its own senses: it sees the character as far as its sight goes
-** by the character's light (or its darkvision, with none), along a line clear of rock, walls and shut doors; it
-** hears it moving, nearer.  (Attitudes, factions and influence, the coarse moves of those far from the character,
-** and the denizens' own exploring come later.)
+** to keep its distance from it (a shy one), to come towards it (a bold one).  It senses through its own senses: it
+** sees the character as far as its sight goes by the character's light (or its darkvision, with none), along a line
+** clear of rock, walls and shut doors; it hears it moving, nearer.  At the turns pace it moves its actors itself, as
+** the world waits for it (a slice of the clock at a time: hub.h's TURN_SLICE), so they act through all the time what
+** the character does takes: those out of its sight and not sensing it coarsely, a few squares a while.  Those out
+** but away from the character (not actors) move coarsely too, to squares about their lairs in chunks that are made
+** (roam).  No two are on a square, nor any on the character's or where it's going.  (Attitudes, factions and
+** influence, and the denizens' own exploring come later.)
 **
 ** Its records (the lairs, the denizens) are in a bank of its own, a record at a time copied out; kept with the game
 ** (dq0 -d: the UI asks, the hub's den_state), the save folder's dens.dat.
@@ -25,6 +29,8 @@
 #include <hydra.h>
 #include "../dq0/hub.h"
 #include "../dq0w/world.h"
+
+#pragma static-locals (on)                      /* (Its locals static: quicker, and nothing here is reentered) */
 
 /* ---- The kinds: the data file's (make.js's, from kinds.txt), in a bank of their own */
 
@@ -44,6 +50,7 @@ struct dkind {
 #define K_SHY           0x01                    /* It keeps its distance from the character */
 #define K_LAIR          0x02                    /* It keeps to its lair */
 #define K_WAYS          0x04                    /* Its lairs are by the stratum's ways in and out */
+#define K_BOLD          0x08                    /* It comes towards the character */
 #define KINDS           ((struct dkind*) 0x8000)
 
 /* ---- The records: the lairs and the denizens, in a bank of their own */
@@ -243,6 +250,9 @@ static void grow (void)
 ** the link's square (not on it: the character comes out there); else in a room of its chunk (or, a chunk with none,
 ** about its middle).  Its own numbers (the stratum's seed and the lair's), so it's the same whenever it's done */
 
+static unsigned char __fastcall__ rec_on (unsigned char sn, unsigned x, unsigned y);
+static unsigned char __fastcall__ taken (unsigned char me, unsigned x, unsigned y);
+
 static unsigned char __fastcall__ open_sq (unsigned char* p)
 {
     return p && (TILE (*p) == T_FLOOR || TILE (*p) == T_CORR || TILE (*p) == T_STEPS);
@@ -253,7 +263,7 @@ static void __fastcall__ place (unsigned char i)
     struct stratum* s;
     struct room* q;
     unsigned x0, y0, x, y, ox, oy;
-    unsigned char w = 7, h = 7, j, t, u;
+    unsigned char w = 7, h = 7, j, t;
 
     lair_get (i);
     s = &strata[L.sn];
@@ -284,17 +294,9 @@ static void __fastcall__ place (unsigned char i)
         for (t = 0; t < 32; ++t) {
             x = x0 + random (w);
             y = y0 + random (h);
-            if (!open_sq (at (L.sn, x, y)) || (x == pcx && y == pcy)) {
-                continue;
-            }
-            for (u = 0; u < j; ++u) {           /* (Not on another's) */
-                den_get (L.first + u);
-                if ((D.flags & D_OUT) && D.x == x && D.y == y) {
-                    break;
-                }
-            }
-            if (u == j) {
-                break;
+            if (open_sq (at (L.sn, x, y)) && (L.link == 0xFF || x != L.hx || y != L.hy) && !rec_on (L.sn, x, y) &&
+                !taken (0xFF, x, y)) {
+                break;                          /* (Not on another's, nor the character's) */
             }
         }
         den_get (L.first + j);
@@ -314,15 +316,24 @@ static void __fastcall__ place (unsigned char i)
 /* Chunk (cx, cy) of stratum sn made already (in the cache: the hub's header in the window) */
 static unsigned char __fastcall__ made (unsigned char sn, unsigned cx, unsigned cy)
 {
+    struct cslot* q = HUB->cslot;
     unsigned char k;
 
     hub_map (0);
-    for (k = 0; k < NCSLOTS; ++k) {
-        if (HUB->cslot[k].used && HUB->cslot[k].sn == sn && HUB->cslot[k].cx == cx && HUB->cslot[k].cy == cy) {
+    for (k = 0; k < NCSLOTS; ++k, ++q) {
+        if (q->used && q->sn == sn && q->cx == cx && q->cy == cy) {
             return 1;
         }
     }
     return 0;
+}
+
+/* Square x, y of stratum sn in a chunk that's made already */
+static unsigned char __fastcall__ made_at (unsigned char sn, unsigned x, unsigned y)
+{
+    struct stratum* s = &strata[sn];
+
+    return x - s->x0 < s->w && y - s->y0 < s->h && made (sn, (x - s->x0) >> CW_BITS, (y - s->y0) >> CW_BITS);
 }
 
 /* The lairs on the character's stratum whose chunks are its own or beside it, and made (the character's
@@ -348,11 +359,19 @@ static unsigned char nearby (void)
 
 #define ACT_R           24                      /* Squares from the character a denizen's an actor */
 #define CATCHUP         30                      /* Tenths an actor makes up, at most, that it's fallen behind the
-                                                **   clock (the turns pace's jumps) */
+                                                **   clock (the real paces': this task's late) */
+#define NEAR            16
 
 static struct actor a;
 static unsigned char akind[NACTORS];            /* Each actor's kind, and its lair's home */
 static unsigned ahx[NACTORS], ahy[NACTORS];
+static unsigned char turns;                     /* The turns pace: this task moves its actors itself */
+static unsigned char nnear;                     /* The denizens out near the character but not actors (more than
+                                                **   there are entries for): their squares, each time round */
+static unsigned nearx[NEAR], neary[NEAR];
+static unsigned char sense_gen = 1;            /* (Bumped as the character changes: where it is, its light, busy) */
+static unsigned char sgen[NACTORS], sres[NACTORS];  /* (Each actor's senses as they were last: of sense_gen, there) */
+static unsigned sax[NACTORS], say[NACTORS];
 
 /* Actor k's place and time written back to its record */
 static void __fastcall__ write_back (unsigned char k)
@@ -374,9 +393,10 @@ static void __fastcall__ retire (unsigned char k)
     D.flags &= ~D_ACTOR;
     den_put (a.den);
     HUB->actor[k].name[0] = 0;
+    ++HUB->den_seq;
 }
 
-/* Denizen i made an actor, in free entry k */
+/* Denizen i made an actor, in free entry k (its time from now: the coarse moves have kept it while it wasn't one) */
 static void __fastcall__ enlist (unsigned char i, unsigned char k)
 {
     D.flags |= D_ACTOR;
@@ -392,44 +412,60 @@ static void __fastcall__ enlist (unsigned char i, unsigned char k)
     a.face = D.face;
     a.x = D.x;
     a.y = D.y;
-    a.ready = D.ready;
+    a.ready = D.ready > now ? D.ready : now;
     a.step = K.step;
+    sgen[k] = 0;
     strcpy (a.name, K.name);
     hub_map (0);
     memcpy (&HUB->actor[k], &a, sizeof a);      /* (Its name last: the entry used once it's whole) */
+    ++HUB->den_seq;
 }
 
-/* The denizens out near the character made actors, as there are entries free */
+/* The denizens out near the character made actors, as there are entries free; those left over noted (nearx ...) */
 static void enlist_near (void)
 {
+    struct den* q = POP->den;
     unsigned char i, k = 0;
 
-    for (i = 0; i < hd.ndens; ++i) {
+    nnear = 0;
+    for (i = 0; i < hd.ndens; ++i, ++q) {
+        hy_bank (pb);                           /* (Looked at in its bank; copied out only if it's near) */
+        if ((q->flags & (D_OUT | D_ACTOR)) != D_OUT || q->sn != pcs || apart (q->x - pcx, q->y - pcy) > ACT_R + 16) {
+            continue;
+        }
         hub_map (0);
         while (k < NACTORS && HUB->actor[k].name[0]) {
             ++k;
         }
-        if (k == NACTORS) {
-            return;
-        }
         den_get (i);
-        if ((D.flags & (D_OUT | D_ACTOR)) == D_OUT && D.sn == pcs && apart (D.x - pcx, D.y - pcy) <= ACT_R) {
+        if (k < NACTORS && apart (D.x - pcx, D.y - pcy) <= ACT_R) {
             enlist (i, k);
+        } else if (nnear < NEAR) {
+            nearx[nnear] = D.x;
+            neary[nnear++] = D.y;
         }
     }
+    hub_map (0);
 }
 
-/* Another actor (or the character) on square x, y (the hub's header in the window after) */
-static unsigned char __fastcall__ taken (unsigned x, unsigned y)
+/* Anyone but actor me on square x, y: the character (or where it's going), another actor, a denizen out near it (the
+** hub's header in the window after) */
+static unsigned char __fastcall__ taken (unsigned char me, unsigned x, unsigned y)
 {
+    struct actor* q = HUB->actor;
     unsigned char k;
 
     hub_map (0);
-    if (x == pcx && y == pcy) {
+    if ((x == pcx && y == pcy) || (x == HUB->pc_tx && y == HUB->pc_ty)) {
         return 1;
     }
-    for (k = 0; k < NACTORS; ++k) {
-        if (HUB->actor[k].name[0] && HUB->actor[k].x == x && HUB->actor[k].y == y) {
+    for (k = 0; k < NACTORS; ++k, ++q) {
+        if (k != me && q->name[0] && q->x == x && q->y == y) {
+            return 1;
+        }
+    }
+    for (k = 0; k < nnear; ++k) {
+        if (nearx[k] == x && neary[k] == y) {
             return 1;
         }
     }
@@ -463,9 +499,11 @@ static unsigned char __fastcall__ senses (unsigned dist, int dx, int dy)
     return 1;
 }
 
-/* A step for actor k (the copy): a way it can walk to a square no one's on, within lim squares of its home; away:
-** only one that takes it further from the character (the furthest).  Its direction, or 0xFF */
-static unsigned char __fastcall__ step_for (unsigned char k, unsigned lim, unsigned char away)
+/* A step for actor k (the copy): a way it can walk to a square no one's on, within lim squares of its home; how:
+** S_ANY (the way it faces, or another), S_AWAY (only one that takes it further from the character: the furthest),
+** S_TOWARD (only one that takes it nearer: the nearest).  Its direction, or 0xFF */
+enum { S_ANY, S_AWAY, S_TOWARD };
+static unsigned char __fastcall__ step_for (unsigned char k, unsigned lim, unsigned char how)
 {
     unsigned char d, j, best = 0xFF, s = random (2) ? a.face >> 1 : random (4);
     unsigned nx, ny, f, bf = apart (a.x - pcx, a.y - pcy);
@@ -474,69 +512,213 @@ static unsigned char __fastcall__ step_for (unsigned char k, unsigned lim, unsig
         d = (s + j) & 3;
         nx = a.x + dir_x[d];
         ny = a.y + dir_y[d];
-        if (apart (nx - ahx[k], ny - ahy[k]) > lim || !step_ok (a.sn, a.x, a.y, d) || taken (nx, ny)) {
+        f = apart (nx - pcx, ny - pcy);         /* (The walk's own test last: it's the dearest) */
+        if (apart (nx - ahx[k], ny - ahy[k]) > lim || (how != S_ANY && (how == S_AWAY ? f <= bf : f >= bf)) ||
+            taken (k, nx, ny) || !step_ok (a.sn, a.x, a.y, d)) {
             continue;
         }
-        if (!away) {
+        if (how == S_ANY) {
             return d;
         }
-        if ((f = apart (nx - pcx, ny - pcy)) > bf) {
-            bf = f;
-            best = d;
-        }
+        bf = f;
+        best = d;
     }
     return best;
 }
 
-/* What actor k means to do, by its kind and what it senses, asked of the world (or a while waited) */
+/* Actor a (the copy) a square on heading d, as the world would move it (the turns pace: the world waits while
+** this task catches up, so it moves its actors itself): a step step_for's found it can walk, to a square no one's
+** on; its time by its pace and the slope (the world's cost ()) */
+static void __fastcall__ step_here (unsigned char d)
+{
+    unsigned nx = a.x + dir_x[d], ny = a.y + dir_y[d], c = a.step;
+    unsigned char* p;
+    int z;
+
+    z = elev_at (a.sn, a.x, a.y);
+    p = at (a.sn, nx, ny);
+    z = C->elev[cy_][cx_] - z;
+    if (z > 0) {
+        c += a.step * z / 2;
+    } else if (z < -1) {
+        c += a.step * (-z - 1) / 4;
+    }
+    if (TILE (*p) == T_STEPS) {
+        c += a.step / 2;
+    }
+    a.ready += c;
+    a.x = nx;
+    a.y = ny;
+    a.face = H_OF (d);
+}
+
+/* Actor a (the copy), out of the character's sight and not sensing it, moved coarsely (the turns pace's, catching
+** up): a few squares' wander at a time, a while for them (stopped as it comes into the character's sight) */
+static void __fastcall__ coarse (unsigned char k, unsigned lim)
+{
+    unsigned char t, d;
+    unsigned char* p;
+    unsigned x, y;
+
+    for (t = 0; t < 4; ++t) {
+        d = random (4);
+        x = a.x + dir_x[d];
+        y = a.y + dir_y[d];
+        if (apart (x - ahx[k], y - ahy[k]) > lim || !step_ok (a.sn, a.x, a.y, d) || taken (k, x, y)) {
+            continue;
+        }
+        a.x = x;
+        a.y = y;
+        a.face = H_OF (d);
+        if ((p = at (a.sn, x, y)) != 0 && (*p & T_VIS)) {
+            break;
+        }
+    }
+    a.ready += 60 + random (60);
+}
+
+/* What actor k means to do, by its kind and what it senses: asked of the world (or a while waited); at the turns pace
+** done here.  Watching the character, a shy one keeps its distance (till it's a few squares further), a bold one
+** comes towards it; else it wanders about its lair (or keeps to it) */
 static void __fastcall__ decide (unsigned char k)
 {
-    unsigned char d = 0xFF;
+    unsigned char d = 0xFF, was;
     unsigned dist;
     int dx, dy;
 
     kind_get (akind[k]);
     memcpy (&a, &HUB->actor[k], sizeof a);
-    if (a.ready + CATCHUP < now) {
+    if (!turns && a.ready + CATCHUP < now) {
         a.ready = now - CATCHUP;
     }
+    was = a.doing;
     dx = pcx - a.x;
     dy = pcy - a.y;
     dist = apart (dx, dy);
-    a.aware = senses (dist, dx, dy);
-    if (a.aware) {                              /* (It watches the character; a shy one keeps its distance) */
+    a.doing = DO_ROAM;
+    if (sgen[k] != sense_gen || sax[k] != a.x || say[k] != a.y) {
+        sgen[k] = sense_gen;                    /* (Sensed again only as it or the character has changed) */
+        sax[k] = a.x;
+        say[k] = a.y;
+        sres[k] = senses (dist, dx, dy);
+    }
+    if (sres[k]) {
         a.face = bearing (dx, dy);
-        if ((K.flags & K_SHY) && dist < 5) {
-            d = step_for (k, 2 * K.range, 1);
+        a.doing = DO_WATCH;
+        if ((K.flags & K_SHY) && dist < (was == DO_SHY ? 7 : 5)) {
+            a.doing = DO_SHY;
+            d = step_for (k, 2 * K.range, S_AWAY);
+        } else if ((K.flags & K_BOLD) && dist > 1 && (d = step_for (k, 2 * K.range, S_TOWARD)) != 0xFF) {
+            a.doing = DO_COMING;
         }
+    } else if (turns && !(*at (a.sn, a.x, a.y) & T_VIS)) {
+        coarse (k, K.flags & K_LAIR ? 2 : K.range);
+        d = 0xFE;                               /* (Unseen, unaware: a coarse move) */
     } else if (K.flags & K_LAIR ? !random (4) : random (3)) {
-        d = step_for (k, K.flags & K_LAIR ? 2 : K.range, 0);
+        d = step_for (k, K.flags & K_LAIR ? 2 : K.range, S_ANY);
     }
     if (d == 0xFF) {
-        a.ready += 10 + random (a.aware ? 20 : 40);
+        a.ready += a.doing ? 60 + random (60) : 10 + random (40);    /* (Watching: a while, unless it changes) */
+    } else if (d == 0xFE) {
+    } else if (turns) {
+        step_here (d);
     } else {
         a.intent = I_GO;
         a.a = H_OF (d);
     }
     hub_map (0);
     memcpy (&HUB->actor[k], &a, sizeof a);
-    if (d != 0xFF) {
+    if (a.doing != was || (turns && d < 4)) {
+        ++HUB->den_seq;                         /* (Changed: the world looks again at what the character sees) */
+    }
+    if (d < 4 && !turns) {
         HUB->actor[k].state = REQ_POSTED;       /* (Written whole, then posted) */
         hub_ring (T_WORLD);
     }
 }
 
+/* ---- The denizens away from the character (out, but not actors): moved coarsely, a while at a time, each to a
+** square of its range about its lair (in a chunk that's made: never made for them), so the dungeon goes on where
+** the character isn't */
+
+#define ROAM_T          300                     /* Tenths between their moves, at least (and as much again) */
+
+/* A record (out, not an actor) on square x, y of stratum sn */
+static unsigned char __fastcall__ rec_on (unsigned char sn, unsigned x, unsigned y)
+{
+    struct den* q = POP->den;
+    unsigned char i, f = 0;
+
+    hy_bank (pb);
+    for (i = 0; i < hd.ndens; ++i, ++q) {
+        if ((q->flags & (D_OUT | D_ACTOR)) == D_OUT && q->x == x && q->y == y && q->sn == sn) {
+            f = 1;
+            break;
+        }
+    }
+    hub_map (0);
+    return f;
+}
+
+/* Those due moved: 1 if any was */
+static unsigned long roam_at;                   /* (The soonest one's due) */
+
+static unsigned char roam (void)
+{
+    struct den* q = POP->den;
+    unsigned char i, lim, n = 0;
+    unsigned x, y;
+
+    if (now < roam_at) {
+        return 0;
+    }
+    roam_at = now + ROAM_T;
+    for (i = 0; i < hd.ndens; ++i, ++q) {
+        hy_bank (pb);
+        if ((q->flags & (D_OUT | D_ACTOR)) != D_OUT) {
+            continue;
+        }
+        if (q->ready > now) {
+            if (q->ready < roam_at) {
+                roam_at = q->ready;
+            }
+            continue;
+        }
+        den_get (i);
+        kind_get (D.kind);
+        lair_get (D.lair);
+        lim = K.flags & K_LAIR ? 2 : K.range;
+        x = L.hx + random (2 * lim + 1) - lim;
+        y = L.hy + random (2 * lim + 1) - lim;
+        if (made_at (D.sn, x, y) && open_sq (at (D.sn, x, y)) && !taken (0xFF, x, y) && !rec_on (D.sn, x, y)) {
+            D.x = x;
+            D.y = y;
+            D.face = random (4) * 2;
+            n |= D.sn == pcs && apart (x - pcx, y - pcy) <= ACT_R + 16;    /* (Near the character now) */
+        }
+        D.ready = now + ROAM_T + random (ROAM_T);
+        if (D.ready < roam_at) {
+            roam_at = D.ready;
+        }
+        den_put (i);
+    }
+    hub_map (0);
+    return n;
+}
+
 /* Each actor tended: what the world's done taken, those far from the character retired, those free to act set
-** going; the denizens near it placed (for a while after it moves: the chunks round it made as it looks about) and
-** enlisted.  Nothing, if nothing's changed (the clock, the character, the world's work): the turns pace's clock
-** stands between the character's acts */
+** going (at the turns pace, each caught up with the clock: moved here, the world waiting); the denizens near it
+** placed (for a while after it moves: the chunks round it made as it looks about) and enlisted; those away from it
+** moved, coarsely.  Nothing, if nothing's changed (the clock, the character, the world's work) */
 static void tend (void)
 {
     static unsigned lx, ly;
     static unsigned long lnow;
-    static unsigned char ls = 0xFF, fresh;
-    unsigned char k, again = 0;
+    static unsigned char ls = 0xFF, fresh, lgen;
+    struct actor* q;
+    unsigned char k, n, again = 0, woke = lgen != sense_gen;
 
+    lgen = sense_gen;
     if (pcx != lx || pcy != ly || pcs != ls) {
         lx = pcx;
         ly = pcy;
@@ -548,32 +730,41 @@ static void tend (void)
         --fresh;
         again |= nearby ();
     }
-    for (k = 0; k < NACTORS && !again && now == lnow; ++k) {
-        hub_map (0);
-        if (HUB->actor[k].state == REQ_DONE) {
+    hub_map (0);
+    for (k = 0, q = HUB->actor; k < NACTORS && !again && now == lnow; ++k, ++q) {
+        if (q->state == REQ_DONE) {
             again = 1;
         }
     }
-    if (!again && now == lnow) {
+    if (!again && !woke && now == lnow) {
         return;
     }
+    if (now != lnow) {
+        again |= roam ();
+    }
     lnow = now;
-    for (k = 0; k < NACTORS; ++k) {
+    for (k = 0, q = HUB->actor; k < NACTORS; ++k, ++q) {
         hub_map (0);
-        if (HUB->actor[k].state == REQ_DONE) {   /* (Done; or it couldn't, and it waits a moment) */
-            if (HUB->actor[k].result) {
-                HUB->actor[k].ready += 10;
+        if (q->state == REQ_DONE) {             /* (Done; or it couldn't, and it waits a moment) */
+            if (q->result) {
+                q->ready += 10;
             }
-            HUB->actor[k].state = REQ_FREE;
+            q->state = REQ_FREE;
         }
-        if (!HUB->actor[k].name[0] || HUB->actor[k].state != REQ_FREE) {
+        if (!q->name[0] || q->state != REQ_FREE) {
             continue;
         }
-        if (HUB->actor[k].sn != pcs || apart (HUB->actor[k].x - pcx, HUB->actor[k].y - pcy) > ACT_R + 8) {
+        if (woke && q->doing && q->ready > now + 10) {
+            q->ready = now + random (10);       /* (The character's changed: a watcher sees to it soon) */
+        }
+        if (q->sn != pcs || apart (q->x - pcx, q->y - pcy) > ACT_R + 8) {
             retire (k);
             again = 1;
-        } else if (HUB->actor[k].ready <= now) {
+            continue;
+        }
+        for (n = 0; q->ready <= now && n < (turns ? 64 : 1); ++n) {
             decide (k);
+            hub_map (0);
         }
     }
     if (again) {
@@ -638,6 +829,8 @@ static void __fastcall__ keep (unsigned char back)
 
 int main (int argc, char* argv[])
 {
+    static unsigned lpx, lpy;
+    static unsigned char lpl;
     int b;
 
     if (argc < 4 || (b = hy_banks_alloc (2)) < 0 || hub_attach (atoi (argv[1]), atoi (argv[2]))) {
@@ -669,13 +862,27 @@ int main (int argc, char* argv[])
         pcs = HUB->pc_stratum;
         pclit = HUB->pc_light != 0;
         pcbusy = HUB->pc_ready > now;
+        if (pcx != lpx || pcy != lpy || (pclit | pcbusy << 1) != lpl) {
+            lpx = pcx;                          /* (The character changed: each actor senses it again) */
+            lpy = pcy;
+            lpl = pclit | pcbusy << 1;
+            if (!++sense_gen) {
+                sense_gen = 1;
+            }
+        }
+        turns = !HUB->tpr;
         grow ();
         if (hd.done[pcs]) {
             tend ();
         }
         hub_map (0);
+        HUB->den_at = now;                      /* (Caught up: the turns pace's clock goes on) */
         ++HUB->beat[T_DENIZENS];
-        hy_sleep_ticks (10);
+        if (turns && HUB->pc_ready > now) {
+            hy_yield ();                        /* (The turns pace's clock moving: kept up with) */
+        } else {
+            hy_sleep_ticks (10);
+        }
     }
     return 0;
 }

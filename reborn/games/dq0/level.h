@@ -56,10 +56,12 @@ struct sight {
     unsigned char   stratum, sname, style;      /* The stratum: its number, its name (the theme's), its style */
     int             z;                          /* The floor where it stands: feet above the way in */
     unsigned        x, y;                       /* Its square */
-    unsigned char   ndens;                      /* The denizens it sees: each one's square, whether it's watching the
-                                                **   character, its name (the hub's actor's, as it lies there) */
-    struct { unsigned x, y; unsigned char aware; char name[12]; } den[SEE_DENS];
+    unsigned char   ndens;                      /* The denizens it sees: each one's square, what it's doing (DO_*),
+                                                **   its name (the hub's actor's, as it lies there) */
+    struct { unsigned x, y; unsigned char doing; char name[12]; } den[SEE_DENS];
 };
+enum { DO_ROAM, DO_WATCH, DO_COMING, DO_SHY };  /* A denizen's doing: going about its own business, watching the
+                                                **   character, coming towards it, keeping its distance */
 #define MOUTH           0x08
 #define DOORWAY         0x81                    /* (A seen door's state: no door in it, a doorway, open) */
 enum { W_ROOM, W_PASSAGE };
