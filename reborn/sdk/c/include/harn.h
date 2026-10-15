@@ -22,8 +22,9 @@
 ** Combat (Combat 1-18, the Combat Tables): the melee and missile attack tables, the strike location table (aiming
 ** high, mid, low), the injury table, armour (its materials' protection against blunt, edge, point and fire, its
 ** pieces' coverage), the weapons, and harn_wound: an effective impact on a body location made an injury (the kill
-** roll, the shock roll, bleeding, a fumble or stumble roll).  Healing (Physician 2-4): treatment (a healing rate),
-** the five-day healing roll, shock recovery, bloodloss.
+** roll, the shock roll, bleeding, a fumble or stumble roll).  Falling (Skills 8): a fall's impact, by its height and
+** the ground, a landing on the feet, a hold grabbed.  Healing (Physician 2-4): treatment (a healing rate), the
+** five-day healing roll, shock recovery, bloodloss.
 **
 ** Left out: occupations and their skills, contacts, aging, psionics, magic, religion's rituals, mounted combat.
 */
@@ -395,6 +396,23 @@ unsigned char __fastcall__ harn_best_aspect (const harn_weapon* w);   /* The asp
 #define HARN_W_LIMB         0x80                /* A limb made unusable: what it held dropped, or fallen */
 unsigned char __fastcall__ harn_wound (harn_char* c, unsigned char loc, unsigned char aspect, int impact);
 unsigned char __fastcall__ harn_kill_roll (const harn_char* c, unsigned char n);   /* n d6 over END: 1 (dead) */
+
+/* ---- Falling (Skills 8, harnfall.c): a fall of more than five feet a blunt strike, a d6 of impact for each ten feet
+** or part of ten, more or fewer by the ground it lands on (HARN_GROUND ...: fewer taken away); in a clear fall of
+** more than 15 feet (HARN_FALL_CLEAR), the better of Acrobatics and Dodge tested to land on the feet, the impact
+** less (or more, a failure); past holds to grab (HARN_FALL_HOLDS), DEX times 5 tested to slow it (CS 3d6 less, MS
+** 2d6), the fall stopped if that takes all its impact, and a CF an arm wrenched (a blunt M1 to a shoulder, taken).
+** harn_fall: the impact it lands with (0: none), and in how what came of it (HARN_FALL_CAUGHT ...).  Its location's
+** the caller's (harn_strike_location: low, on its feet; else mid) */
+enum { HARN_GROUND, HARN_DEEP_WATER, HARN_SHALLOW_WATER, HARN_SOFT_GROUND, HARN_HARD_GROUND, HARN_ROCKY_GROUND };
+#define HARN_FALL_CLEAR     0x01                /* (Its flags) A clear fall: it may land on its feet */
+#define HARN_FALL_HOLDS     0x02                /*   Holds to grab, on the way down */
+#define HARN_FALL_CAUGHT    0x04                /* (What came of it) A hold grabbed: the fall stopped */
+#define HARN_FALL_FEET      0x08                /*   Landed on its feet */
+#define HARN_FALL_WRENCHED  0x10                /*   An arm wrenched grabbing (its M1 taken) */
+unsigned char __fastcall__ harn_fall_dice (unsigned feet);     /* Its d6s by its height (0: five feet or less) */
+int __fastcall__ harn_fall (harn_char* c, unsigned feet, unsigned char ground, unsigned char flags,
+                            unsigned char* how);
 
 /* ---- Files (harnfile.c): a character as text, a line a thing ("att str 12", "ml cli 36" ...: harnfile.c has the
 ** format); lines it doesn't know are a program's own (harn_read gives each to other; harn_write_line writes one) */

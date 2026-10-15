@@ -1,8 +1,8 @@
 /*
 ** harnheal.c - harn.h's healing (Physician 2-4): a treatment roll gives an injury its healing rate (the Treatment
 ** table, by the injury's aspect and severity); a healing roll every five days takes its levels away (or infects an
-** open wound, which then rolls daily); shock recovers by four-hour rolls; a fainted character wakes by shock rolls;
-** grievous wounds bleed a point a minute, and bloodloss regenerates; rest takes fatigue away.
+** open wound, which then rolls daily); shock recovers by four-hour rolls; grievous wounds bleed a point a minute,
+** and bloodloss regenerates; rest takes fatigue away.  (A fainted character wakes by shock rolls: harncmbt.c's.)
 */
 
 #include <harn.h>
@@ -124,21 +124,6 @@ unsigned char __fastcall__ harn_shock_recovery (harn_char* c, int bonus)
         c->state = HARN_CONSCIOUS;
     }
     c->shockhr = hr < 0 ? 0 : hr;
-    return c->state;
-}
-
-/* A fainted character's turn: a shock roll not over Endurance wakes it, then one more decides whether it's in
-** shock (Skills 22, Combat 14) */
-unsigned char __fastcall__ harn_wake (harn_char* c)
-{
-    if (c->state == HARN_UNCONSCIOUS && !harn_shock_roll (c)) {
-        if (harn_shock_roll (c)) {
-            c->state = HARN_SHOCK;
-            c->shockhr = 5;
-        } else {
-            c->state = HARN_CONSCIOUS;
-        }
-    }
     return c->state;
 }
 
