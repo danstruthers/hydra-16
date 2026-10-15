@@ -90,7 +90,7 @@ enum { A_WALKED, A_DOWN, A_UP, A_START, A_DIGGING, A_CROSSED, A_CLIMBING, A_CLIM
                                                 **   of work, a round's climbing) */
 enum { N_NO_EXIT, N_SHUT, N_NO_STAIRS, N_NO_DIG };  /* E_NOWAY's why: no way that way, the way out shut, no stairs,
                                                 **   nothing to dig there */
-enum { V_TURNED, V_LIT, V_DARK };               /* E_VIEW's why */
+enum { V_TURNED, V_LIT, V_DARK, V_STIR };       /* E_VIEW's why (V_STIR: a denizen it sees has moved) */
 enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL };  /* E_DIG's how */
 enum { K_BEGUN, K_ON, K_BACK, K_FELL, K_UP, K_DOWN, K_JUMPED };    /* E_CLIMB's how: begun, on, slipped back,
                                                 **   fallen, up, down; jumped down (a ledge, a shaft) */
@@ -118,6 +118,25 @@ struct req {
     char            text[REQ_TEXT];             /* A request's path, or a reply's words (lines, a 0 at the end) */
 };
 enum { SLOT_WORLD, SLOT_UI, NSLOTS };
+
+/* An actor: a denizen near the character, put here by the denizens' task (dq0d: its records are its own, in its
+** own banks) for the world to move and the senses to see.  Its intents are posted in its own entry, one at a time:
+** the denizens' task writes intent and a, then sets state REQ_POSTED; the world carries it out (by the character's
+** rules: a square at a time, its time added to ready), then sets REQ_DONE; the denizens' task takes it and sets
+** REQ_FREE.  While it's REQ_FREE the entry is the denizens' task's alone */
+#define NACTORS         8
+struct actor {
+    volatile unsigned char state;               /* REQ_* */
+    unsigned char   den;                        /* Its record (the denizens' task's) */
+    unsigned char   sn, face;
+    unsigned long   ready;                      /* When it can act again */
+    unsigned char   step;                       /* Tenths of a second to go 5 feet */
+    unsigned char   intent, a;                  /* I_* (I_GO: a heading, H_N, H_E ...) */
+    unsigned char   result;                     /* 0 done, or N_* */
+    unsigned        x, y;                       /* (These last as struct sight's den: copied whole) */
+    unsigned char   aware;                      /* It senses the character (and watches it) */
+    char            name[12];                   /* ("": the entry free) */
+};
 
 #define IQ_SIZE         16                      /* The UI's intents */
 #define EQ_SIZE         128                     /* The world's events (each reader its own place) */
@@ -178,6 +197,10 @@ struct hub {                                    /* Bank 0, at $8000 */
     struct msg      eq[EQ_SIZE];
     /* The referee's slots */
     struct req      slot[NSLOTS];
+    /* The denizens near the character (the denizens' task's, moved by the world), and a save asked of the denizens'
+    ** task (REQ_*: its records written to the save folder's dens.dat) */
+    struct actor    actor[NACTORS];
+    volatile unsigned char den_state;
 };
 
 #define HUB     ((struct hub*) HUB_WINDOW)

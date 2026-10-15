@@ -31,6 +31,7 @@ unsigned char __fastcall__ bearing (int dx, int dy);    /* The heading nearest t
 #define SEE_ZONES       4
 #define SEE_OPEN        4
 #define SEE_ITEMS       6
+#define SEE_DENS        4
 struct sight {
     unsigned char   seq;                        /* Bumped as it's made again */
     unsigned char   where;                      /* W_* */
@@ -55,6 +56,9 @@ struct sight {
     unsigned char   stratum, sname, style;      /* The stratum: its number, its name (the theme's), its style */
     int             z;                          /* The floor where it stands: feet above the way in */
     unsigned        x, y;                       /* Its square */
+    unsigned char   ndens;                      /* The denizens it sees: each one's square, whether it's watching the
+                                                **   character, its name (the hub's actor's, as it lies there) */
+    struct { unsigned x, y; unsigned char aware; char name[12]; } den[SEE_DENS];
 };
 #define MOUTH           0x08
 #define DOORWAY         0x81                    /* (A seen door's state: no door in it, a doorway, open) */

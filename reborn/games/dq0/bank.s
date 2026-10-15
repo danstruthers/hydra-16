@@ -155,4 +155,5 @@ ovl_out:
             OVFN        appraise, 1
             OVFN        tell, 1
             OVFN        words, 2
+            OVFN        stir_words, 2
             OVFN        parse, 3

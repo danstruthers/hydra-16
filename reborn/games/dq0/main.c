@@ -9,9 +9,10 @@
 **
 ** The game is tasks that meet in the hub (hub.h): this one, the UI, makes it and starts the others (the world,
 ** libdir/dq0w; the referee, libdir/dq0harn: the rules, asked in rs.h's terms; the maker, libdir/dq0m: the
-** dungeon grown, as the world asks).  The loop: each key goes to the line being typed (term.c); a line entered is the
-** character's next command, made an intent for the world when the character's free (the world says so: E_READY);
-** the world's events are worded into the story.  Escape pauses the game and goes on again.
+** dungeon grown, as the world asks; the senses, libdir/dq0p; the denizens, libdir/dq0d).  The loop: each key goes
+** to the line being typed (term.c); a line entered is the character's next command, made an intent for the world
+** when the character's free (the world says so: E_READY); the world's events are worded into the story.  Escape
+** pauses the game and goes on again.
 */
 
 #include <conio.h>
@@ -40,7 +41,7 @@ static const unsigned tpr[4] = { 1000, 600, 400, 0 };
 static unsigned char busy = 1;                  /* The character's doing something: no command till it's free (nor
                                                 **   till the world's started, and says so: E_READY) */
 static unsigned place;                          /* Where this task is in the world's events */
-static int world_task = -1, referee_task = -1, maker_task = -1, senses_task = -1;
+static int task_[NTASKS];                       /* Each task's number, as it was started (0: not) */
 static unsigned char test_start;
 static const char* kit;                         /* (dq0 -k: a tool, equipped as the game starts) */
 static const char* savedir;                     /* (dq0 -d: the save's folder) */
@@ -294,6 +295,15 @@ static void save_game (void)
     }
     q->state = REQ_FREE;
     things (IO_SAVE, "");                       /* (The things': items.dat) */
+    if (task_[T_DENIZENS] > 0) {                /* (The denizens': dens.dat) */
+        HUB->den_state = REQ_POSTED;
+        hub_ring (T_DENIZENS);
+        while (HUB->den_state != REQ_DONE) {
+            hy_yield ();
+            hub_map (0);
+        }
+        HUB->den_state = REQ_FREE;
+    }
     sv.magic = SAVE_MAGIC;
     sv.version = SAVE_VER;
     sv.pace = pace;
@@ -326,9 +336,24 @@ static void __fastcall__ load_strata (void)
 
 /* ---- The hub; the referee started, the character loaded, and the world started */
 
-static void start_world (unsigned long seed)
+/* A task of the game's started, libdir/name in role t (more: its third argument, or none); or the game's over */
+static void __fastcall__ start (const char* name, unsigned char t, const char* more)
 {
     static char path[56];
+
+    strcpy (path, libdir);
+    strcat (path, "/");
+    strcat (path, name);
+    if ((task_[t] = hub_spawn (path, t, more)) < 0) {
+        t_end ();
+        strcpy (path, "dq0: this can't be started: lib/dq0/");
+        strcat (path, name);
+        hy_exits (path);
+    }
+}
+
+static void start_world (unsigned long seed)
+{
     struct req* r;
 
     if (hub_create (HUB_BANKS)) {
@@ -340,12 +365,7 @@ static void start_world (unsigned long seed)
     HUB->pace = pace;
     HUB->seed = seed;
     HUB->test_start = test_start;
-    strcpy (path, libdir);
-    strcat (path, "/dq0harn");
-    if ((referee_task = hub_spawn (path, T_REFEREE, libdir)) < 0) {
-        t_end ();
-        hy_exits ("dq0: its rules (lib/dq0/dq0harn) can't be started");
-    }
+    start ("dq0harn", T_REFEREE, libdir);       /* (Its rules: its folder, for its overlay) */
     r = referee (RS_HELLO, 0);
     HUB->round = r->w1;                         /* (The ruleset's round, in tenths) */
     r->state = REQ_FREE;
@@ -363,49 +383,27 @@ static void start_world (unsigned long seed)
         HUB->pc_face = sv.face;
         HUB->pc_light = sv.light;
     }
-    strcpy (path, libdir);
-    strcat (path, "/dq0m");
-    if ((maker_task = hub_spawn (path, T_MAKER, libdir)) < 0) {
-        t_end ();
-        hy_exits ("dq0: its maker (lib/dq0/dq0m) can't be started");
-    }
-    strcpy (path, libdir);
-    strcat (path, "/dq0p");
-    if ((senses_task = hub_spawn (path, T_SENSES, libdir)) < 0) {
-        t_end ();
-        hy_exits ("dq0: its senses (lib/dq0/dq0p) can't be started");
-    }
+    start ("dq0m", T_MAKER, libdir);            /* (Its maker, its senses) */
+    start ("dq0p", T_SENSES, libdir);
     if (!resumed) {                             /* (The character's kit: a new game's, -k's thing in hand too) */
         things (IO_KIT, kit ? kit : "");
     }
     to_hand ();
-    strcpy (path, libdir);
-    strcat (path, "/dq0w");
-    if ((world_task = hub_spawn (path, T_WORLD, 0)) < 0) {
-        t_end ();
-        hy_exits ("dq0: its world (lib/dq0/dq0w) can't be started");
-    }
+    start ("dq0d", T_DENIZENS, libdir);         /* (Its denizens, its world) */
+    start ("dq0w", T_WORLD, 0);
 }
 
-/* The game's end: the world and the referee told to stop, and waited for */
+/* The game's end: its tasks told to stop (the world first), and waited for */
 static void stop_world (void)
 {
+    unsigned char t;
+
     HUB->quit = 1;
-    if (world_task >= 0) {
-        hub_ring (T_WORLD);
-        hy_wait (world_task, 0);
-    }
-    if (referee_task >= 0) {
-        hub_ring (T_REFEREE);
-        hy_wait (referee_task, 0);
-    }
-    if (maker_task >= 0) {
-        hub_ring (T_MAKER);
-        hy_wait (maker_task, 0);
-    }
-    if (senses_task >= 0) {
-        hub_ring (T_SENSES);
-        hy_wait (senses_task, 0);
+    for (t = T_WORLD; t < NTASKS; ++t) {
+        if (task_[t] > 0) {
+            hub_ring (t);
+            hy_wait (task_[t], 0);
+        }
     }
 }
 
@@ -419,7 +417,7 @@ void status (void)
 
     strcpy (left, P.name[0] ? P.name : "Dingus Quest Zero");
     strcpy (right, paused ? "PAUSED  " : "");
-    if (world_task >= 0) {
+    if (task_[T_WORLD] > 0) {
         strcat (right, HUB->pcstatus);          /* (The referee's words: "UP 0" ...) */
         strcat (right, "  facing ");
         strcat (right, head_abbr[HUB->pc_face & 7]);
@@ -478,6 +476,10 @@ static void events (void)
             break;
         case E_VIEW:
             if (m.who == 0) {
+                if (m.w1 == V_STIR) {
+                    stir ();                    /* (A denizen it sees moved) */
+                    break;
+                }
                 if (m.w1 == V_TURNED) {
                     sayf ("\nYou turn to face %s.", head_name[HUB->pc_face & 7]);
                 } else {

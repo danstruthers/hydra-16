@@ -33,8 +33,21 @@ void __fastcall__ look (unsigned char first)
     (void) first;                               /* (The theme's words for a place's first sight: later) */
     memcpy (&sight_copy, &HUB->sight, sizeof sight_copy);
     sight_light = HUB->pc_light;
+    pc_face = HUB->pc_face;
     words ();
     msg (lb);
+}
+
+/* A denizen the character sees has moved (the world's E_VIEW, V_STIR): the hub's record copied, worded (overlay 2),
+** and told if what it sees of them has changed */
+void stir (void)
+{
+    memcpy (&sight_copy, &HUB->sight, sizeof sight_copy);
+    pc_face = HUB->pc_face;
+    stir_words ();
+    if (lb[0]) {
+        msg (lb);
+    }
 }
 
 /* ---- The map, and beside it (under it, if the screen's too narrow) the character's state: where it is (its

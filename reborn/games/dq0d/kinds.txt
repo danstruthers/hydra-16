@@ -1,0 +1,26 @@
+# kinds.txt - (dq0d) the denizens' kinds: a stand-in theme's bestiary, till themes are data of their own.  make.js
+# makes it the denizens' task's data file (lib/dq0/dq0d.dat: 32 bytes a kind, the first none), which it reads into a
+# bank of its own as it starts.  The numbers are the game's own, not a ruleset's: the referee's sheet for a creature
+# comes from its key (later).
+#
+# A line a kind, its fields between bars:
+#   name      what the character sees it as (11 letters at most)
+#   key       the referee's creature (7 at most)
+#   ways      letters: s shy (it keeps its distance from the character), l it keeps to its lair, w its lairs are
+#             by the stratum's ways in and out (where everyone passes), or - none
+#   styles    the strata's styles it lives in: b built, n natural, m mine, x mixed
+#   strata    the strata it lives in, from the top (0) down: first-last
+#   group     how many in a lair: least-most
+#   lairs     lairs a stratum, at most
+#   range     squares from its lair it goes
+#   sight     squares it sees the character by the character's light, and with none (its darkvision)
+#   hearing   squares it hears the character
+#   step      tenths of a second it takes to go a square (5 feet)
+#
+# name      | key    | ways | styles | strata | group | lairs | range | sight | hearing | step
+giant rat   | rat    | sw   | bnmx   | 0-7    | 2-5   | 2     | 10    | 8-3   | 6       | 6
+cave spider | spider | l    | nx     | 1-7    | 1-2   | 2     | 3     | 4-4   | 3       | 8
+ghoul       | ghoul  | -    | bx     | 1-7    | 2-4   | 2     | 24    | 10-8  | 8       | 10
+skeleton    | skel   | l    | b      | 0-7    | 2-5   | 1     | 4     | 8-8   | 4       | 12
+cave bear   | bear   | -    | n      | 1-7    | 1-1   | 1     | 20    | 6-2   | 8       | 9
+kobold      | kobold | -    | m      | 1-7    | 3-6   | 2     | 30    | 10-6  | 8       | 10

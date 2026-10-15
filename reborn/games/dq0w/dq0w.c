@@ -6,7 +6,8 @@
 ** move takes its time (the referee's walking rate, the slopes), and the character's there when the time's up.  What
 ** it sees is worked out as it gets there, turns, or its light changes, and what it perceives recorded in the hub for
 ** the UI to word, by the senses (games/dq0p, asked).  It carries out digging, a spell of work at a time (the referee's tests), and
-** asks the maker to keep what it changes.
+** asks the maker to keep what it changes.  The denizens near the character it moves by the same rules, as their task
+** (games/dq0d) asks (the hub's actors: den_act).
 **
 ** The clock (main.c's once): each real tick (200 a second) is round tenths of game time over tpr ticks (the pace:
 ** a round in tpr ticks); paused (Escape) or held (the UI asking something), it stands.  At the turns pace (tpr 0)
@@ -218,8 +219,27 @@ static unsigned char dark (void)
     return !(*at (sn_, mx, my) & T_VIS);
 }
 
-/* What the character sees, made again, and what it perceives recorded: the senses asked (dq0p), and waited for (the
-** hub's header in the window as it ends) */
+/* The denizens the character sees (the hub's actors, on squares it sees now), added to what it perceives */
+static void dens_seen (void)
+{
+    static struct actor a;
+    static unsigned char k, n;
+    static unsigned char* p;
+
+    for (k = n = 0; k < NACTORS; ++k) {
+        hub_map (0);
+        memcpy (&a, &HUB->actor[k], sizeof a);
+        if (a.name[0] && a.sn == HUB->pc_stratum && n < SEE_DENS && (p = at (a.sn, a.x, a.y)) != 0 && (*p & T_VIS)) {
+            hub_map (0);
+            memcpy (&HUB->sight.den[n++], &a.x, sizeof HUB->sight.den[0]);
+        }
+    }
+    hub_map (0);
+    HUB->sight.ndens = n;
+}
+
+/* What the character sees, made again, and what it perceives recorded: the senses asked (dq0p), and waited for, the
+** denizens it sees added (the hub's header in the window as it ends) */
 static void __fastcall__ see (unsigned char first)
 {
     hub_map (0);
@@ -231,6 +251,7 @@ static void __fastcall__ see (unsigned char first)
         hub_map (0);
     }
     HUB->look_state = REQ_FREE;
+    dens_seen ();
     sn_ = HUB->pc_stratum;
 }
 
@@ -1253,6 +1274,47 @@ static void __fastcall__ door_work (unsigned char what)
     see (0);
 }
 
+/* ---- The denizens (DENIZENS.md: their task decides, the world carries out): an actor's intent (the hub's actor
+** q), a square at a time by the character's rules (a step it can walk, its time from when it was last free), never
+** onto the character; and, if the character sees it go (and stands still), the denizens it sees made again and the UI
+** told */
+static void __fastcall__ den_act (struct actor* q)
+{
+    static struct actor a;
+    static unsigned char d, seen, st;
+    static unsigned nx, ny;
+    static unsigned char* p;
+    static int z;
+
+    memcpy (&a, q, sizeof a);                   /* (I_GO, the only one yet: a heading of the four) */
+    a.result = N_NO_EXIT;
+    d = a.a >> 1;
+    nx = a.x + dir_x[d];
+    ny = a.y + dir_y[d];
+    seen = 0;
+    if ((nx != HUB->pc_x || ny != HUB->pc_y) && step_ok (a.sn, a.x, a.y, d)) {
+        seen = *at (a.sn, a.x, a.y);
+        z = C->elev[cy_][cx_];
+        p = at (a.sn, nx, ny);
+        seen |= *p;
+        st = stept;
+        stept = a.step;
+        a.ready += cost (C->elev[cy_][cx_] - z, TILE (*p) == T_STEPS, 0);
+        stept = st;
+        a.x = nx;
+        a.y = ny;
+        a.face = a.a;
+        a.result = 0;
+    }
+    hub_map (0);
+    memcpy (q, &a, sizeof a);                   /* (Still posted, as it's written: then done) */
+    q->state = REQ_DONE;
+    if ((seen & T_VIS) && !move.on) {
+        dens_seen ();                           /* (What it sees is as it was: but for the denizens) */
+        event (E_VIEW, 0, V_STIR);
+    }
+}
+
 static void __fastcall__ intent (struct msg* m)
 {
     switch (m->kind) {
@@ -1314,7 +1376,7 @@ static void clock_run (void)
 int main (int argc, char* argv[])
 {
     static struct msg m;
-    unsigned char was_busy = 0;
+    unsigned char was_busy = 0, k;
 
     if (argc < 3 || hub_attach (atoi (argv[1]), atoi (argv[2]))) {
         return 1;
@@ -1335,6 +1397,11 @@ int main (int argc, char* argv[])
         while (hub_take (&m)) {
             intent (&m);
             was_busy = 1;
+        }
+        for (k = 0; k < NACTORS; ++k) {         /* (The denizens' intents) */
+            if (HUB->actor[k].state == REQ_POSTED) {
+                den_act (&HUB->actor[k]);
+            }
         }
         clock_run ();
         if (move.on && HUB->now >= HUB->pc_ready) {
