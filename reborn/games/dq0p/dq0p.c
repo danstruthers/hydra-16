@@ -45,7 +45,9 @@ int main (int argc, char* argv[])
         return 1;
     }
     chunks_init (ASK_SENSES);
-    things_init ();
+    if (argc < 4 || things_init (argv[3])) {    /* (Its catalogue: the lib folder's dq0p.ovl) */
+        return 1;
+    }
     for (;;) {
         hub_map (0);
         hy_sem_acquire (HUB->sem[T_SENSES]);    /* (Waiting costs nothing) */

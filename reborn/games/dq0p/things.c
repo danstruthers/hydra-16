@@ -4,7 +4,8 @@
 ** taken up, put down), listed (what the character carries, worded into the hub's text for the UI to say); and the
 ** things the character sees, named in what it perceives (sight.c).  The item store's free records are taken under
 ** the hub's lock (the maker puts chunks' things down too).  Kept with the game (dq0 -d): the store's banks as they
-** are, the save folder's items.dat.
+** are, the save folder's items.dat.  The catalogue's in the hub's catalogue bank (kinds.c: read in from the task's
+** overlay file as it starts), each kind copied out as it's wanted.
 */
 
 #include <fcntl.h>
@@ -16,37 +17,7 @@
 #include "../dq0w/world.h"
 #include "things.h"
 
-/* The catalogue: name, flags, weight (quarter pounds), bulk (pints), its room (pints, pounds), slots, light, size,
-** tool's key */
-static const struct kind kinds[] = {
-    { "", 0 },
-    { "torch", K_LIGHT | K_HAND, 4, 2, 0, 0, 0, 4, 3, "", MT_WOOD, AP_WOOD, 1 },
-    { "backpack", K_CONTAINER | K_WEAR, 8, 20, 32, 40, 0, 0, 5, "", MT_LEATHER, AP_HIDE, 24 },
-    { "belt", K_BELT | K_WEAR, 2, 1, 0, 0, 4, 0, 2, "", MT_LEATHER, AP_HIDE, 6 },
-    { "pouch", K_CONTAINER | K_HANG, 1, 1, 2, 4, 0, 0, 1, "", MT_LEATHER, AP_HIDE, 3 },
-    { "dagger", K_HAND | K_HANG, 4, 1, 0, 0, 0, 0, 2, "knife", MT_IRON, AP_WEAPON, 60 },
-    { "waterskin", K_HANG, 4, 4, 0, 0, 0, 0, 2, "", MT_LEATHER, AP_HIDE, 8 },
-    { "rations", K_PLURAL, 4, 2, 0, 0, 0, 0, 2, "", MT_OTHER, AP_FOOD, 4 },
-    { "tinderbox", 0, 1, 1, 0, 0, 0, 0, 1, "tinder", MT_IRON, AP_METAL, 6 },
-    { "pick", K_HAND, 24, 6, 0, 0, 0, 0, 4, "pick", MT_IRON, AP_METAL, 48 },
-    { "shovel", K_HAND, 20, 8, 0, 0, 0, 0, 4, "shovel", MT_IRON, AP_METAL, 36 },
-    { "lockpicks", 0, 1, 1, 0, 0, 0, 0, 1, "picks", MT_IRON, AP_METAL, 40 },
-    { "chisel", K_HAND, 2, 1, 0, 0, 0, 0, 1, "chisel", MT_STEEL, AP_METAL, 12 },
-    { "rope", 0, 40, 8, 0, 0, 0, 0, 4, "rope", MT_CLOTH, AP_CLOTH, 12 },
-    { "bones", K_PLURAL, 8, 4, 0, 0, 0, 0, 4, "", MT_BONE, AP_BONE, 0 },
-    { "pennies", K_PLURAL, 0, 0, 0, 0, 0, 0, 1, "", MT_BRONZE, AP_METAL, 1 },
-    { "iron key", 0, 1, 0, 0, 0, 0, 0, 1, "key", MT_IRON, AP_METAL, 4 },
-    { "candle", K_LIGHT | K_HAND, 1, 1, 0, 0, 0, 2, 1, "", MT_OTHER, AP_FOOD, 1 },
-    { "lantern", K_LIGHT | K_HAND, 8, 4, 0, 0, 0, 6, 3, "", MT_IRON, AP_METAL, 30 },
-    { "sack", K_CONTAINER, 2, 2, 24, 30, 0, 0, 3, "", MT_CLOTH, AP_CLOTH, 3 },
-    { "chest", K_CONTAINER, 120, 80, 60, 100, 0, 0, 7, "", MT_WOOD, AP_WOOD, 80 },
-    { "skull", 0, 4, 2, 0, 0, 0, 0, 3, "", MT_BONE, AP_BONE, 0 },
-    { "broken sword", 0, 12, 2, 0, 0, 0, 0, 4, "blade", MT_IRON, AP_WEAPON, 10 },
-    { "cloak", K_WEAR, 8, 6, 0, 0, 0, 0, 4, "", MT_CLOTH, AP_CLOTH, 24 },
-    { "potsherds", K_PLURAL, 2, 1, 0, 0, 0, 0, 2, "", MT_CLAY, AP_POTTERY, 0 },
-    { "sword", K_HAND | K_HANG, 12, 3, 0, 0, 0, 0, 4, "blade", MT_IRON, AP_WEAPON, 240 },
-};
-#define NK      (sizeof kinds / sizeof kinds[0])
+#define NK      KI_COUNT
 
 /* The materials' toughness (items.h's MT_*) */
 static const unsigned char tough[NMATS] = MAT_TOUGH;
@@ -97,13 +68,35 @@ static void __fastcall__ keep (unsigned char back)
     close (fd);
 }
 
-void things_init (void)
+/* The catalogue read into the hub's catalogue bank (dir/dq0p.ovl: kinds.c's, linked at $8000): 0, or -1 */
+static int __fastcall__ catalogue (const char* dir)
+{
+    static char p[48];
+    unsigned off;
+    int fd, n;
+
+    strcpy (p, dir);
+    strcat (p, "/dq0p.ovl");
+    if ((fd = open (p, O_RDONLY)) < 0) {
+        return -1;
+    }
+    hub_map (CAT_BANK);
+    memset ((void*) 0x8000, 0, 0x2000);
+    for (off = 0; off < 0x2000 && (n = read (fd, piece, sizeof piece)) > 0; off += n) {
+        hub_map (CAT_BANK);
+        memcpy ((char*) 0x8000 + off, piece, n);
+    }
+    close (fd);
+    return 0;
+}
+
+int __fastcall__ things_init (const char* dir)
 {
     unsigned char b;
 
-    hub_map (CAT_BANK);
-    memset ((void*) 0x8000, 0, NKINDS * sizeof (struct kind));
-    memcpy ((void*) 0x8000, kinds, sizeof kinds);
+    if (catalogue (dir)) {
+        return -1;
+    }
     for (b = 0; b < ITEM_BANKS; ++b) {          /* (The store empty; a game carried on, its kept) */
         hub_map (CAT_BANK + 1 + b);
         memset ((void*) 0x8000, 0, 0x2000);
@@ -113,6 +106,7 @@ void things_init (void)
     if (HUB->resume) {
         keep (1);
     }
+    return 0;
 }
 
 struct item* __fastcall__ item_at (unsigned i)
@@ -121,9 +115,17 @@ struct item* __fastcall__ item_at (unsigned i)
     return ITEM_AT (i);
 }
 
+/* A kind's record, copied out of the catalogue's bank (into one of four, in turn: an expression may want two at
+** once): the catalogue's bank left in the window */
 static const struct kind* __fastcall__ kind_of (unsigned char k)
 {
-    return k < NK ? &kinds[k] : &kinds[0];
+    static struct kind kb[4];
+    static unsigned char next;
+    struct kind* r = &kb[next++ & 3];
+
+    hub_map (CAT_BANK);
+    memcpy (r, CATALOGUE + (k < NK ? k : 0), sizeof *r);
+    return r;
 }
 
 /* ---- A thing made its own, as the things task first comes to it (no two alike): its number (record 0 keeps the
@@ -134,6 +136,7 @@ static void __fastcall__ make_own (unsigned i)
 {
     static struct item q;
     struct item* p;
+    const struct kind* k;
     unsigned id;
     unsigned char m;
 
@@ -148,12 +151,13 @@ static void __fastcall__ make_own (unsigned i)
     if (rnd (8) == 0) {
         ++q.quality;
     }
-    m = kinds[q.kind < NK ? q.kind : 0].mat;
-    if (m == MT_IRON && !strcmp (kinds[q.kind].tool, "blade")) {
+    k = kind_of (q.kind);
+    m = k->mat;
+    if (m == MT_IRON && !strcmp (k->tool, "blade")) {
         m = q.quality >= 7 ? MT_STEEL : q.quality <= 1 ? MT_BRONZE : MT_IRON;
     }
     q.mat = m;
-    q.dur_max = tough[m] * (kinds[q.kind].weight + 4) * (5 + q.quality) / 5;
+    q.dur_max = tough[m] * (k->weight + 4) * (5 + q.quality) / 5;
     q.dur = q.where == IW_SQUARE ? q.dur_max - q.dur_max / 10 * rnd (7) : q.dur_max;
     if (!q.dur) {
         q.dur = 1;
@@ -203,7 +207,7 @@ static unsigned char __fastcall__ kind_named (const char* name)
     unsigned char k;
 
     for (k = 1; k < NK; ++k) {
-        if (!strcmp (kinds[k].name, name)) {
+        if (!strcmp (kind_of (k)->name, name)) {
             return k;
         }
     }
@@ -332,6 +336,7 @@ static unsigned __fastcall__ carried_named (const char* name)
 static void tools (void)
 {
     static struct item q;
+    const struct kind* k;
     unsigned i;
     char* t;
 
@@ -339,11 +344,12 @@ static void tools (void)
     HUB->things_text[0] = 0;
     for (i = 1; i < NITEMS; ++i) {
         memcpy (&q, item_at (i), sizeof q);
-        if (q.kind && q.where != IW_SQUARE && kind_of (q.kind)->tool[0] && on_pc (i)) {
+        k = kind_of (q.kind);                   /* (Copied: the hub's text is in another bank) */
+        if (q.kind && q.where != IW_SQUARE && k->tool[0] && on_pc (i)) {
             hub_map (0);
             t = HUB->things_text;
             if (strlen (t) < sizeof HUB->things_text - 10) {
-                strcat (t, kind_of (q.kind)->tool);
+                strcat (t, k->tool);
                 strcat (t, " ");
             }
         }
