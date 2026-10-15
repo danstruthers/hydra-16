@@ -6,8 +6,11 @@
 ** (n, north, ne, northeast ...), as the character faces (f, fwd, forward, ahead, front; b, back, behind; l, left;
 ** r, right), up and down (over my head, above; under, underneath, below), and two together ("north and east",
 ** "front right", "behind to my left": the way between them); the little words (the, a, to the, off, of me, my ...)
-** passed over ("off" and "on" are the verb's in take off, put on: a word's sense goes by its place).  A relative direction is made the compass's by the way the character faces (pc_face, the UI's copy of
-** the hub's, for an overlay doesn't see the hub).  What's done with the command is main.c's.
+** passed over ("off" and "on" are the verb's in take off, put on: a word's sense goes by its place); after the thing,
+** in, on, from (out of, off) name another, the thing it goes in or on, or comes from (put the dagger in the sack,
+** hang the pouch on the belt, take the rope out of the pack).  A relative direction is made the compass's by the way
+** the character faces (pc_face, the UI's copy of the hub's, for an overlay doesn't see the hub).  What's done with
+** the command is main.c's.
 */
 
 #pragma code-name ("OV3CODE")
@@ -22,6 +25,7 @@ static const struct { char w[16]; unsigned char v; } verbs[] = {
     { "take a gander", V_LOOK }, { "look closely", V_EXAMINE }, { "look close", V_EXAMINE },
     { "look in detail", V_EXAMINE }, { "close look", V_EXAMINE }, { "pick up", V_GET }, { "put out", V_DOUSE },
     { "take off", V_DOFF }, { "put on", V_DON },          /* ("off" and "on" the verb's, here; else little words) */
+    { "put down", V_DROP }, { "set down", V_DROP }, { "put away", V_STOW },
     { "move", V_MOVE }, { "mv", V_MOVE }, { "walk", V_MOVE }, { "go", V_MOVE }, { "trundle", V_MOVE },
     { "mosey", V_MOVE }, { "saunter", V_MOVE }, { "run", V_MOVE }, { "crawl", V_MOVE }, { "head", V_MOVE },
     { "enter", V_ENTER }, { "approach", V_APPROACH },
@@ -30,8 +34,11 @@ static const struct { char w[16]; unsigned char v; } verbs[] = {
     { "turn", V_TURN }, { "face", V_FACE }, { "climb", V_CLIMB }, { "jump", V_JUMP },
     { "open", V_OPEN }, { "close", V_CLOSE }, { "shut", V_CLOSE }, { "unlock", V_UNLOCK }, { "pick", V_UNLOCK },
     { "force", V_FORCE }, { "dig", V_DIG }, { "mine", V_DIG },
-    { "don", V_DON }, { "wear", V_DON }, { "equip", V_DON }, { "ready", V_DON }, { "wield", V_DON },
-    { "doff", V_DOFF }, { "remove", V_DOFF }, { "unequip", V_DOFF }, { "store", V_DOFF },
+    { "don", V_DON }, { "wear", V_DON }, { "equip", V_DON }, { "ready", V_HOLD }, { "wield", V_HOLD },
+    { "hold", V_HOLD }, { "grip", V_HOLD }, { "grasp", V_HOLD }, { "brandish", V_HOLD },
+    { "doff", V_DOFF }, { "remove", V_DOFF }, { "unequip", V_DOFF }, { "store", V_STOW }, { "stow", V_STOW },
+    { "pack", V_STOW }, { "put", V_PUT }, { "place", V_PUT }, { "set", V_PUT }, { "lay", V_PUT }, { "hang", V_HANG },
+    { "sheathe", V_HANG },
     { "get", V_GET }, { "take", V_GET }, { "grab", V_GET }, { "acquire", V_GET }, { "drop", V_DROP },
     { "light", V_LIGHT }, { "douse", V_DOUSE }, { "extinguish", V_DOUSE },
     { "wait", V_WAIT }, { "z", V_WAIT }, { "map", V_MAP }, { "m", V_MAP }, { "sheet", V_SHEET },
@@ -63,6 +70,12 @@ static const struct { char w[12]; unsigned char o; } things[] = {
     { "hallway", OB_PASSAGE }, { "stairs", OB_STAIRS }, { "stair", OB_STAIRS }, { "stairway", OB_STAIRS },
     { "staircase", OB_STAIRS }, { "steps", OB_STAIRS }, { "ladder", OB_LADDER }, { "shaft", OB_SHAFT },
     { "hole", OB_SHAFT }, { "ledge", OB_LEDGE }, { "exit", OB_WAY_OUT }, { "wall", OB_WALL },
+};
+
+/* The words for the other thing, after the first (put X in Y, on Y; take X from Y, out of it, off it) */
+static const struct { char w[8]; unsigned char p; } preps[] = {
+    { "in", PR_IN }, { "into", PR_IN }, { "inside", PR_IN }, { "on", PR_ON }, { "onto", PR_ON }, { "upon", PR_ON },
+    { "from", PR_FROM }, { "out", PR_FROM }, { "off", PR_FROM },
 };
 
 /* The little words, passed over (to, toward, at: up to it; through, into, out: through it) */
@@ -149,6 +162,16 @@ void __fastcall__ o_parse (char* l, struct pcmd* c)
         c->verb = V_MOVE;                       /* (A way, or a thing, alone: going there) */
     }
     for (; i < nw; ++i) {
+        for (k = 0; c->word[0] && !c->prep && k < sizeof preps / sizeof preps[0] && strcmp (word[i], preps[k].w); ++k) {
+        }
+        if (c->word[0] && !c->prep && k < sizeof preps / sizeof preps[0]) {
+            c->prep = preps[k].p;               /* (The other thing's: what's after it) */
+            continue;
+        }
+        if (c->verb == V_PUT && !strcmp (word[i], "away")) {
+            c->verb = V_STOW;                   /* ("put the dagger away") */
+            continue;
+        }
         if (!strcmp (word[i], "to") || !strcmp (word[i], "toward") || !strcmp (word[i], "towards") ||
             !strcmp (word[i], "at") || !strcmp (word[i], "near") || !strcmp (word[i], "by")) {
             c->how = HOW_TO;
@@ -188,6 +211,8 @@ void __fastcall__ o_parse (char* l, struct pcmd* c)
         }
         if (!c->word[0]) {                      /* (The first word not understood) */
             strncpy (c->word, word[i], sizeof c->word - 1);
+        } else if (c->prep && !c->word2[0]) {   /*   (and the other thing's) */
+            strncpy (c->word2, word[i], sizeof c->word2 - 1);
         }
     }
     if (c->obj) {                               /* (With a thing, its direction is where it lies) */
@@ -200,6 +225,18 @@ void __fastcall__ o_parse (char* l, struct pcmd* c)
     }
     if (c->verb == V_DOFF && !c->obj && dir != 0xFF) {   /* ("take off to the left": going, not undressing) */
         c->verb = V_MOVE;
+    }
+    if (c->verb == V_HANG || (c->verb == V_STOW && c->word2[0])) {     /* (Hung: on the belt; stowed in another) */
+        c->prep = c->verb == V_HANG ? PR_ON : c->prep;
+        c->verb = V_PUT;
+    }
+    if (c->verb == V_PUT && !c->word2[0] && dir == GO_DOWN) {
+        c->verb = V_DROP;                       /* ("put the dagger down") */
+    }
+    if (c->verb == V_DOFF && c->prep == PR_FROM && c->word2[0]) {
+        c->verb = V_GET;                        /* ("remove the dagger from the sack") */
+    } else if (c->verb == V_GET && c->prep == PR_FROM && !c->word2[0]) {
+        c->verb = V_DOFF;                       /* ("take the cloak off") */
     }
     if ((c->verb == V_TURN || c->verb == V_FACE) && c->around && dir == 0xFF) {
         c->dir = (pc_face + 4) & 7;

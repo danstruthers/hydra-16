@@ -3,11 +3,12 @@
 ** compass's eight: the half of the world that way): the squares in front of it and to its sides (none behind, but
 ** for the ones it's next to), that a line from its eyes (five feet above its floor) reaches without a wall or rock
 ** in the way, nor a floor between that rises above the line; within its sight's range; and lit, by a room's own
-** light or by the light it carries.  Each is marked T_VIS (seen now: the perception record's) and T_SEEN
-** (remembered: the map).  A wall or a door beside a room's floor that's seen is seen too (a line along a wall the
-** character stands by would run through it).  The range is the referee's (its summary's sight, 0-9, with whatever
-** the character's state does to it); blinded, it sees nothing.  In the dark its night vision carries a light further
-** (the light's reach, times it), and its ultravision sees without light to its range (the summary's, both).
+** light, by the light it carries, or by a lit thing lying about (a torch put down: things.c's lamps).  Each is
+** marked T_VIS (seen now: the perception record's) and T_SEEN (remembered: the map).  A wall or a door beside a
+** room's floor that's seen is seen too (a line along a wall the character stands by would run through it).  The
+** range is the referee's (its summary's sight, 0-9, with whatever the character's state does to it); blinded, it
+** sees nothing.  In the dark its night vision carries a light further (the light's reach, times it), and its
+** ultravision sees without light to its range (the summary's, both).
 */
 
 #include <stdlib.h>
@@ -71,6 +72,39 @@ static unsigned char __fastcall__ clear (unsigned x, unsigned y, int tz)
     }
 }
 
+/* A lit thing lying about (things.c's lamps) lighting (x, y), its floor tz: within its reach, a clear line to it from
+** the light (a couple of feet above its floor) */
+struct lamp lamp[NLAMPS];
+unsigned char nlamps;
+
+static unsigned char __fastcall__ lamplit (unsigned x, unsigned y, int tz)
+{
+    static struct lamp* l;
+    static unsigned sx, sy;
+    static int sz;
+    static unsigned d, w;
+    static unsigned char k, r;
+
+    r = 0;
+    for (k = 0, l = lamp; k < nlamps && !r; ++k, ++l) {
+        d = l->r;
+        w = d + d;
+        if (x - l->x + d <= w && y - l->y + d <= w) {   /* (Within its reach: a square of it, near enough) */
+            sx = ex;
+            sy = ey;
+            sz = ez;
+            ex = l->x;
+            ey = l->y;
+            ez = elev_at (vs, ex, ey) + 2;
+            r = (x == ex && y == ey) || clear (x, y, tz);
+            ex = sx;
+            ey = sy;
+            ez = sz;
+        }
+    }
+    return r;
+}
+
 /* A room's floor beside (x, y), seen now (the eight round it) */
 static unsigned char __fastcall__ beside_floor (unsigned x, unsigned y)
 {
@@ -117,8 +151,9 @@ void __fastcall__ view (unsigned char sn, unsigned x, unsigned y, unsigned char 
     by0 = y - range;
     bx1 = x + range;
     by1 = y + range;
+    t = lit (x, y) || light || dark || lamplit (x, y, ez - EYE);
     if ((p = at (sn, x, y)) != 0) {
-        *p |= lit (x, y) || light || dark ? T_VIS | T_SEEN : T_SEEN;
+        *p |= t ? T_VIS | T_SEEN : T_SEEN;
     }
     for (j = by0; j <= by1; ++j) {
         for (i = bx0; i <= bx1; ++i) {
@@ -135,8 +170,8 @@ void __fastcall__ view (unsigned char sn, unsigned x, unsigned y, unsigned char 
             if (dx * head_x[face] + dy * head_y[face] < 0 && d2 > 2) {
                 continue;                       /* (Behind: but for what's next to it) */
             }
-            if (d2 > l2 && d2 > u2 && !lit (i, j)) {
-                continue;                       /* (Dark: beyond its light, and its ultravision) */
+            if (d2 > l2 && d2 > u2 && !lit (i, j) && !lamplit (i, j, tz)) {
+                continue;                       /* (Dark: beyond its light, its ultravision, a light lying about) */
             }
             if (clear (i, j, tz) && (p = at (sn, i, j)) != 0) {
                 *p |= T_VIS | T_SEEN;

@@ -81,10 +81,11 @@ void __fastcall__ map (const char* rules);      /* The map of what it's seen rou
 enum {
     V_NONE, V_MOVE, V_ENTER, V_APPROACH, V_LOOK, V_EXAMINE, V_SEARCH, V_TURN, V_FACE, V_CLIMB, V_JUMP, V_OPEN, V_CLOSE,
     V_UNLOCK, V_FORCE, V_DIG, V_GET, V_DROP, V_DON, V_DOFF, V_LIGHT, V_DOUSE, V_WAIT, V_MAP, V_SHEET, V_HELP,
-    V_PAUSE, V_QUIT, V_SAVE, V_INVENTORY, V_HIDE
+    V_PAUSE, V_QUIT, V_SAVE, V_INVENTORY, V_HIDE, V_HOLD, V_STOW, V_PUT, V_HANG
 };
 enum { OB_NONE, OB_DOOR, OB_PASSAGE, OB_STAIRS, OB_LADDER, OB_SHAFT, OB_LEDGE, OB_WAY_OUT, OB_WALL };
 enum { HOW_ANY, HOW_TO, HOW_THROUGH };
+enum { PR_NONE, PR_IN, PR_ON, PR_FROM };         /* (The other thing: in it, on it, from it) */
 #define GO_UP       8                           /* (A direction: up, down; else a heading, H_N ...) */
 #define GO_DOWN     9
 struct pcmd {
@@ -95,6 +96,8 @@ struct pcmd {
     unsigned char   how;                        /* HOW_*: up to it, or through it */
     unsigned char   half, around;               /* (turn half left; turn around, look around) */
     char            word[16];                   /* The first word not understood */
+    unsigned char   prep;                       /* PR_*: a word for the other thing (put X in Y, take X from Y) */
+    char            word2[16];                  /*   and the first not understood after it (the other thing) */
 };
 extern unsigned char pc_face;                   /* (The hub's, copied for the overlay) */
 void __fastcall__ parse (char* l, struct pcmd* c);   /* Overlay 3 */
@@ -116,6 +119,7 @@ void stir_words (void);                         /* Overlay 2: the denizens it se
 extern char lb[400];
 extern struct sight sight_copy;
 extern unsigned char sight_light;
+extern char sight_lamp[14];                     /* (What gives its light, named: the hub's pc_lamp) */
 
 /* ---- bank.s */
 

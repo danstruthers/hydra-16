@@ -2294,15 +2294,32 @@ module.exports = {
       init: 't_rc', cycles: 600e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T\r' +
         ['take a gander', 'turn half left', 'face north and east', 'walk to the door on my right', 'look closely', 'pick up the sword', 'take off my coat', 'saunter off to the left', 'foo', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
-      expect: ['You turn to face east', 'You turn to face northeast', 'You go over to it.', 'You search about', 'You see none of those here.', 'nothing on you could take off', "I don't know how to foo.", '% echo $status'],
+      expect: ['You turn to face east', 'You turn to face northeast', 'You go over to it.', 'You search about', 'You see none of those here.', "You aren't wearing any coat.", "I don't know how to foo.", '% echo $status'],
       sdcard: true
     },
     {
       name: 'dq0items', what: 'Dingus Quest Zero\'s things (items.h, dq0p/things.c): the kit a character begins with, listed (worn, held, inside), a thing put down and seen at its feet, taken up again, and one out of reach walked over to first',
-      init: 't_rc', cycles: 900e6,
+      init: 't_rc', cycles: 1200e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -k pick -T\r' +
         ['inventory', 'examine the dagger', 'x torch', 'examine pennies', 'examine the moon', 'drop the dagger', 'look', 'get dagger', 'drop pick', 'walk to the door ahead', 'turn around', 'look', 'take the pick', 'look', 'i', 'drop rocks', 'hide the pouch', 'look', 'i', 'take pouch', 'i', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
       expect: ['You carry', 'backpack', 'rations', 'pennies', 'You judge it', 'You see no moon here.', 'Put down.', 'At your feet lies a dagger.', 'Taken.', 'On the floor ahead to your left lies a pick.', 'You go over to it.', 'You carry none of those.', 'You hide it', 'Hidden at your feet lies a pouch.', 'Taken.', '% echo $status'],
+      sdcard: true
+    },
+    {
+      name: 'dq0equip', what: 'Dingus Quest Zero\'s things handled (dq0p/things.c): a kit of things more (dq0 -k, commas between: a table held in both hands, the rest in the pack); a table put down and a candle put on it (seen with it), taken from it again; a cloak worn and taken off; a basket held that won\'t keep sand, a waterskin that keeps only liquids, a quiver hung on the belt and arrows put in it, a candle that won\'t hang, hands full, the pack not into what\'s in it; then down to a dark place: the torch put out, a candle lit from the tinderbox (out of the pack into a hand), the torch lit, put down lit (its light lies about it, the room still seen), taken up again',
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 3 -c /ram/c.hm -T -k table,basket,sand,cloak,candle,quiver,arrows\r' +
+        ['i', 'drop table', 'put the candle on the table', 'look', 'take the candle from the table', 'wear cloak', 'hold basket', 'put sand in basket',
+         'put the dagger in the waterskin', 'hang the quiver on my belt', 'put arrows in quiver', 'hang the candle', 'wield the dagger', 'stow basket',
+         'put the backpack in the basket', 'take the cloak off', 'stow cloak', 'i',
+         'd', 'douse the torch', 'look', 'light the candle', 'look', 'light torch', 'drop the torch', 'douse candle', 'look', 'get torch', 'i', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['in both hands', 'Put down.', 'You put the candle on the table.', 'At your feet lies a table.', 'table lies a candle.',
+        'You take the candle from the table. It\'s in your backpack.', 'You put on the cloak.', 'You take the basket in your hand.',
+        'The basket won\'t keep the heap of sand: it would run out.', 'The dagger won\'t go in the waterskin.', 'You hang the quiver from your belt.',
+        'You put the arrows in the quiver.', 'The candle won\'t hang from a belt.', 'Your hands are full', 'You stow the basket in your backpack.',
+        'The backpack won\'t go inside itself.', 'You take off the cloak. It\'s in your hand.', 'You stow the cloak in your backpack.',
+        'a quiver (in it: arrows)', 'You put out the torch.', 'It is dark', 'You light the candle.', 'by the light of your candle', 'You light the torch.',
+        'Put down.', 'lit torch', 'You put out the candle.', 'Taken.', 'a torch (lit), in your hand', '% echo $status'],
       sdcard: true
     },
     {

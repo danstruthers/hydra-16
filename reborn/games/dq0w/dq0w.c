@@ -54,8 +54,6 @@ static void __fastcall__ busy (unsigned t)
 
 /* ---- The character's moves: worked out as they start (where to, how long), and made when they're done */
 
-#define TORCH           4                       /* A torch's light: 20 feet */
-
 static struct {
     unsigned char   on;                         /* A move under way */
     unsigned char   how;                        /* A_* */
@@ -1346,7 +1344,6 @@ static void __fastcall__ intent (struct msg* m)
         door_work (m->a);
         break;
     case I_LIGHT:
-        HUB->pc_light = m->a ? TORCH : 0;
         busy (m->a ? 3 * stept : stept);
         see (0);
         event (E_VIEW, 0, m->a ? V_LIT : V_DARK);
@@ -1383,9 +1380,6 @@ int main (int argc, char* argv[])
     }
     chunks_init (ASK_WORLD);
     hub_map (0);
-    if (!HUB->resume) {
-        HUB->pc_light = TORCH;                  /* (A torch lit: items come later) */
-    }
     stept = HUB->pcsum.step ? HUB->pcsum.step : 10;
     begin ();
     arrive ();
