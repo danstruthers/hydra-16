@@ -49,6 +49,10 @@ const struct kind kinds[KI_COUNT] = {
     { "chair", 0, 40, 20, 8, 30, 0, 0, 5, "", MT_WOOD, AP_WOOD, 8, KF_ON },
     { "quiver", K_CONTAINER | K_HANG, 2, 2, 4, 6, 0, 0, 2, "", MT_LEATHER, AP_HIDE, 4, KF_SOLID },
     { "arrows", K_PLURAL, 2, 2, 0, 0, 0, 0, 2, "", MT_WOOD, AP_WEAPON, 1 },
+    { "bar", 0, 40, 30, 0, 0, 0, 0, 5, "", MT_WOOD, AP_WOOD, 4 },        /* (A portal's parts: a door's bar, */
+    { "pane of glass", 0, 4, 6, 0, 0, 0, 0, 3, "", MT_GLASS, AP_GLASS, 30 },     /*   a window's glass, */
+    { "iron bars", K_PLURAL, 60, 20, 0, 0, 0, 0, 5, "", MT_IRON, AP_METAL, 10 },  /*   its bars; */
+    { "glass shards", K_PLURAL, 2, 1, 0, 0, 0, 0, 2, "", MT_GLASS, AP_GLASS, 0 },  /*   a pane broken) */
 };
 
 /* The things' words (things.h's SA_*): % the thing's name, # the other's (the pack's, the belt's, a container's) */

@@ -14,6 +14,7 @@ extern char* tend;                              /*   and the end */
 void __fastcall__ put (const char* s);          /* (From the overlay too: s may be in the window) */
 void __fastcall__ putn (int v);
 unsigned conditions (void);                     /* The character's (rs.h's C_*) */
+unsigned char __fastcall__ has (const char* key);   /* A tool to hand, by its key ("pick") */
 
 /* sheet.c (overlay 1) */
 #define OVLS    1

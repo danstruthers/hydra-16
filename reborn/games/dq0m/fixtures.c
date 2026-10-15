@@ -118,8 +118,8 @@ static void __fastcall__ windows (unsigned char r)
                 if ((p->parts & PP_SHUTTERS) && dr (2)) {
                     p->state = dr (4) ? 0 : PS_BARRED;  /* (Its shutters closed, some barred) */
                 }
-                p->mat = p->parts & PP_BARS ? PM_IRON : PM_WOOD;
-                p->tough = p->parts & PP_BARS ? 60 : p->parts & PP_SHUTTERS ? 15 : 5;
+                p->mat = (p->parts & (PP_BARS | PP_SHUTTERS)) == PP_BARS ? PM_IRON : PM_WOOD;   /* (Its shutters',
+                                                **   else its bars') */
             }
             break;
         }
@@ -143,12 +143,69 @@ static void portcullises (void)
         p->state = dr (2) ? PS_OPEN : 0;
         p->lock = 0;
         p->mat = PM_IRON;
-        p->tough = 90;
         p->parts = PP_BARS;
         for (d = 0; d < 4; ++d) {
             if (p->x + dir_x[d] < CW && p->y + dir_y[d] < CW && L->tile[p->y + dir_y[d]][p->x + dir_x[d]] == T_FLOOR) {
                 p->bar = d;
             }
+        }
+    }
+}
+
+/* ---- The portals' make (each with its own dice, the sixth decision's: its square's): its size (a built place's
+** doors much alike, the stratum's own, a few odd; a cave's, a mixed place's, each its own, added later), its
+** thickness, its state (as made, by the style; then worn by the stratum's age, the faster the softer its material:
+** wood rots, iron rusts, stone hardly wears), a door's features (a grille, a spy-hole, a bar's brackets, studs, which
+** side its hinges are), and so its body (work.c's part_body) */
+
+static void make (void)
+{
+    static const unsigned char rot[4] = { 4, 3, 2, 1 };    /* (PM_*: tenths of a step of wear a century) */
+    struct stratum* s = &strata[L->sn];
+    struct portal* p;
+    unsigned char i, w, h, t, q, f, alike = s->style == ST_BUILT || s->style == ST_MINE;
+    unsigned char sd = (unsigned char) (s->seed >> 5);
+
+    for (i = 0, p = L->portal; i < L->nportals; ++i, ++p) {
+        dseed (6, p->x << 5 | p->y);
+        if (p->kind == PK_WINDOW || p->kind == PK_SLIT) {
+            w = p->kind == PK_SLIT ? 1 : 2 + dr (2);
+            h = 2 + dr (3);
+            t = 1 + dr (2);
+        } else if (alike && dr (8)) {           /* (The stratum's door) */
+            w = 3 + (sd & 1);
+            h = 6 + (sd >> 1 & 1) + (sd >> 2 & 1);
+            t = 2 + (sd >> 3 & 1);
+        } else {
+            w = 2 + dr (4);
+            h = 4 + dr (5);
+            t = 1 + dr (3);
+        }
+        if (p->kind == PK_PORTCULLIS) {
+            t = 2;                              /* (Its bars) */
+        } else if (p->mat == PM_IRON) {
+            t = 1;                              /* (A plate) */
+        }
+        q = alike ? 4 + dr (4) : 2 + dr (6);    /* (As made) */
+        h = h > 15 ? 15 : h;
+        f = s->age * rot[p->mat & 3] / 10 + dr (2);   /* (The years' wear) */
+        q = q > f ? q - f : 0;
+        f = 0;
+        if (p->kind == PK_DOOR && !(p->state & PS_HIDDEN)) {    /* (A secret door's the wall it looks like) */
+            f = !dr (6) ? PF_GRILLE : !dr (5) ? PF_PEEP : 0;
+            f |= (p->state & PS_BARRED) || !dr (4) ? PF_BRACKETS : 0;
+            f |= p->mat == PM_WOOD && !dr (4) ? PF_STUDS : 0;
+            f |= dr (2) ? PF_HINGES : 0;
+            f |= w >= 5 ? PF_DOUBLE : 0;
+        }
+        p->size = w | h << 4;
+        p->thick = t;
+        p->qual = q;
+        p->feat = f;
+        p->harm = 0;
+        p->tough = part_body (p->mat, p->size, t, q) >> (p->kind == PK_PORTCULLIS);   /* (Bars half a plate) */
+        if (p->kind == PK_WINDOW && p->tough > 15) {
+            p->tough = 15;                      /* (A window's parts' harm a nibble each: work.c's) */
         }
     }
 }
@@ -247,5 +304,6 @@ void __fastcall__ o_fixtures (struct chunk* c)
         windows (r);
     }
     portcullises ();
+    make ();
     traps ();
 }

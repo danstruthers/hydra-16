@@ -14,6 +14,15 @@
 ** (its sill a climb, P_CLIMB: a fall on a critical failure).  A slit's only seen and shot through.  What passes
 ** them is the senses' (dq0p's view).
 **
+** Broken by blows (break: the user's, 2026-10-15): a door battered down, a window's shutters, its glass, its bars,
+** each blow the referee's impact (HC_BLOW at RS_THING, with the best tool to hand) less the material's resistance
+** to it (the less, the worse its state) taken off its body (fixtures.c's, by its material, size, thickness and
+** state), the harm kept (PORTAL_HARM); a door broken down open for good (PS_WRECKED).  A rotten door forced more
+** easily, a new one less.  A portal's parts are items (items.h's IW_PORTAL: a door's bar, a window's pane and bars):
+** a bar lifted out (lift: only from its side; or as the door's unbarred to open it) and set down at the
+** character's feet, as a pane is worked out whole, bent bars lifted out, or broken glass left in shards.  Looked at
+** closely (the UI's, PA_EXAMINE): a portal's record copied into the hub (pview) for the appraiser's words.
+**
 ** Traps: set off as their record says (a plate trodden, a wire walked through: the world's walk stops on them; a door
 ** opened), each judged by the referee: a pit fallen into (HC_FALL, its depth; a spiked one's spikes, HC_STRIKE) and
 ** climbed out of (the world's climb); gas resisted (P_RESIST_POISON) or choked on, senseless a while; an alarm a
@@ -31,7 +40,7 @@
 #include "grow.h"
 
 static struct mreq* W;                          /* (The request, the maker's copy: its reply's written into it) */
-static unsigned char sn, pd, ks, kx, ky, res, impact;
+static unsigned char sn, pd, ks, kx, ky, res, impact, aspect;
 static unsigned px, py, tx, ty;                 /* (The portal's square, the trap's) */
 static unsigned long tt;                        /* (The time it takes) */
 static struct chunk* K;
@@ -141,11 +150,90 @@ static void __fastcall__ harm (unsigned char a, unsigned char b, unsigned char c
     r->text[0] = 0;
     r = hub_ask (SLOT_WORLD);
     impact = r->w1;
+    aspect = r->b;                              /* (A blow at a thing's: its aspect, AS_*) */
     if (a != HC_BLOW) {
         tt += r->w2;
         told (E_HARM, a | r->b << 8 | (r->w2 ? E_OUT : 0), 0);
     }
     r->state = REQ_FREE;
+}
+
+/* ---- A portal's body (DUNGEON.md: portals): the net harm a leaf (a door, shutters, a portcullis's bars) takes
+** before it fails, by its material, its size (feet, world.h's), its thickness (inches) and its state (0 rotten ... 9
+** new); a window's bars half a plate's (fixtures.c's, as it makes them, and the blows') */
+unsigned char __fastcall__ part_body (unsigned char mat, unsigned char size, unsigned char thick, unsigned char qual)
+{
+    static const unsigned char per[4] = { 1, 2, 4, 3 };    /* (PM_*: a square foot an inch thick, in quarters) */
+    unsigned b = (size & 15) * (size >> 4) * thick * per[mat & 3] / 4 * (2 + qual) / 6;
+
+    return b > 255 ? 255 : b ? b : 1;
+}
+
+/* A portal's part (an item: items.h's IW_PORTAL, of kind k, on square x, y) moved out of it, onto square tx, ty (as
+** kind nk: a pane broken, shards); 1 if it was there (the window as it was: the hub's header) */
+static unsigned char __fastcall__ part_moved (unsigned char k, unsigned x, unsigned y, unsigned char nk, unsigned tx,
+    unsigned ty)
+{
+    struct item* p;
+    unsigned i;
+
+    hub_map (0);
+    hy_sem_acquire (HUB->item_lock);
+    for (i = 1; i < NITEMS; ++i) {
+        hub_map (ITEM_BANK (i));
+        p = ITEM_AT (i);
+        if (p->kind == k && p->where == IW_PORTAL && p->sn == sn && p->x == x && p->y == y) {
+            p->kind = nk;
+            p->where = IW_SQUARE;
+            p->x = tx;
+            p->y = ty;
+            break;
+        }
+    }
+    hub_map (0);
+    hy_sem_release (HUB->item_lock);
+    return i < NITEMS;
+}
+
+#define AT_BAR          px + dir_x[pq.bar], py + dir_y[pq.bar]  /* (A door's bar's square: on its bar's side) */
+#define AT_PC           W->fx, W->fy
+
+/* Blows at the portal's part (its material mat, PM_* or 4 glass; its body): as many as it takes, or a dozen (three
+** in a row that make no mark: given up), a few seconds each; each the referee's impact (HC_BLOW at RS_THING: with
+** the best to hand) less the material's resistance to its aspect (the less, the worse the part's state), the harm
+** kept (pq.harm's part, its mask hm, its shift hs: a window's shutters' and its bars' a nibble each, a door's the
+** byte): 0 if it gives way, else how it stands (PO_GIVING, PO_HOLDING, PO_NO_MARK) */
+static unsigned char hm, hs;
+static unsigned char __fastcall__ batter (unsigned char mat, unsigned char body)
+{
+    static const unsigned char resist[5][4] = {     /* Against blows, edges, points, fire (items.h's DM_*) */
+        { 4, 3, 4, 1 }, { 5, 5, 5, 3 }, { 6, 7, 7, 7 }, { 6, 8, 9, 9 }, { 0, 5, 3, 6 }
+    };
+    unsigned char n, idle = 0, h = pq.harm >> hs & hm, was = h, r, gone = 0;
+
+    if (body > hm) {
+        body = hm;
+    }
+    for (n = 0; n < 12 && idle < 3 && !gone; ++n) {
+        tt += 30;
+        harm (HC_BLOW, AS_BEST, 0, 0);
+        r = resist[mat][aspect & 3];
+        r -= r && pq.qual <= 3 ? (pq.qual <= 1 && r > 1 ? 2 : 1) : 0;
+        if (impact <= r) {
+            ++idle;
+        } else if ((unsigned) h + impact - r >= body) {
+            gone = 1;
+            h = 0;
+        } else {
+            idle = 0;
+            h += impact - r;
+        }
+    }
+    pq.harm = (pq.harm & ~(hm << hs)) | h << hs;
+    if (h != was) {
+        keep (px, py, pq.harm, 0, PORTAL_HARM);
+    }
+    return gone ? 0 : h * 2 >= body ? PO_GIVING : h ? PO_HOLDING : PO_NO_MARK;
 }
 
 /* ---- Traps */
@@ -372,20 +460,38 @@ static unsigned char __fastcall__ window (unsigned char what)
         }
         what = PA_BREAK;
     }
-    if (what == PA_BREAK) {                     /* (Its shutters, closed; else its glass) */
-        part = shut ? PP_SHUTTERS : pq.parts & PP_GLASS;
-        if (!part) {
-            return pq.parts & PP_BARS ? PO_BARS_HOLD : PO_NOTHING_THERE;
+    if (what == PA_LIFT) {                      /* (Its glass worked out whole; its bars, once they're bent) */
+        if (shut) {
+            return PO_IN_WAY;
         }
-        tt += 20;
+        if (pq.parts & PP_GLASS) {
+            tt += 300;
+            pq.parts &= ~PP_GLASS;
+            door_state (pq.state);
+            part_moved (KI_PANE, px, py, KI_PANE, AT_PC);
+            return PO_PANE_OUT;
+        }
+        return pq.parts & PP_BARS ? PO_SET_FAST : part_moved (KI_BARS, px, py, KI_BARS, AT_PC) ? PO_BARS_OUT :
+            PO_NO_BAR;
+    }
+    if (what == PA_BREAK) {                     /* (Its shutters, closed; else its glass; else its bars) */
+        part = shut ? PP_SHUTTERS : pq.parts & PP_GLASS ? PP_GLASS : pq.parts & PP_BARS;
+        if (!part) {
+            return PO_NOTHING_THERE;
+        }
         noise (part == PP_GLASS ? 8 : 7);
-        harm (HC_BLOW, AS_BEST, 0, 0);
-        if (impact < (part == PP_GLASS ? 3 : 12)) {
-            return PO_HELD;
+        hm = 15;
+        hs = part == PP_BARS ? 4 : 0;
+        if ((g = batter (part == PP_GLASS ? 4 : part == PP_BARS ? PM_IRON : pq.mat, part == PP_GLASS ? 1 :
+            part == PP_BARS ? part_body (PM_IRON, pq.size, 1, pq.qual) >> 1 : pq.tough)) != 0) {
+            return g;
         }
         pq.parts &= ~part;
         door_state (pq.state | PS_OPEN);
-        return part == PP_GLASS ? PO_SHATTERED : PO_SMASHED;
+        if (part != PP_SHUTTERS) {              /* (Its glass in shards at the character's feet; its bars broken out) */
+            part_moved (part == PP_GLASS ? KI_PANE : KI_BARS, px, py, part == PP_GLASS ? KI_SHARDS : KI_BARS, AT_PC);
+        }
+        return part == PP_GLASS ? PO_SHATTERED : part == PP_BARS ? PO_BARS_BROKEN : PO_SMASHED;
     }
     if (what != PA_THROUGH) {
         return PO_NOT_PORTC;
@@ -428,7 +534,7 @@ static void __fastcall__ portal (unsigned char what)
     if (pq.kind == PK_PORTCULLIS) {             /* (Never opened: raised) */
         out = portcullis (what == PA_OPEN || what == PA_FORCE ? PA_RAISE : what == PA_CLOSE ? PA_LOWER : what);
     } else if (pq.kind == PK_DOOR || (out = window (what)) == 0xFF) {
-        switch (what == PA_BREAK ? PA_FORCE : what) {
+        switch (what) {
         case PA_OPEN:
             tt += 2 * st;
             if (pq.state & PS_OPEN) {
@@ -442,11 +548,24 @@ static void __fastcall__ portal (unsigned char what)
             } else {
                 out = pq.state & PS_BARRED ? PO_UNBARRED : PO_OPENED;
                 door_state ((pq.state & ~PS_BARRED) | PS_OPEN);
+                if (out == PO_UNBARRED) {       /* (Its bar lifted out, and set down by it) */
+                    part_moved (KI_BAR, AT_BAR, KI_BAR, AT_PC);
+                }
+            }
+            break;
+        case PA_LIFT:                           /* (Its bar lifted out, the door left shut) */
+            tt += 2 * st;
+            out = !(pq.state & PS_BARRED) ? PO_NO_BAR : pq.bar != ((pd + 2) & 3) ? PO_BAR_FAR : PO_LIFTED;
+            if (out == PO_LIFTED) {
+                door_state (pq.state & ~PS_BARRED);
+                part_moved (KI_BAR, AT_BAR, KI_BAR, AT_PC);
             }
             break;
         case PA_CLOSE:
             tt += 2 * st;
-            if (!(pq.state & PS_OPEN)) {
+            if (pq.state & PS_WRECKED) {
+                out = PO_WRECKED;
+            } else if (!(pq.state & PS_OPEN)) {
                 out = PO_IS_SHUT;
             } else {
                 out = PO_CLOSED;
@@ -477,14 +596,30 @@ static void __fastcall__ portal (unsigned char what)
                 break;
             }
             g = test (P_FORCE, pq.mat, (pq.mat == PM_WOOD ? 0 : pq.mat == PM_IRONBOUND ? -2 : -4) -
-                ((pq.state & (PS_LOCKED | PS_BARRED)) ? 1 : 0));
+                ((pq.state & (PS_LOCKED | PS_BARRED)) ? 1 : 0) + (pq.qual <= 1 ? 2 : pq.qual <= 3 ? 1 : 0) -
+                (pq.qual >= 8));                /* (A rotten door easier, a new one harder) */
             tt += 100;
             noise (7);
             if (g > 0) {
                 out = PO_FORCED;                /* (Its lock or bar burst, the door open) */
                 door_state ((pq.state & (PS_LOCKED | PS_BARRED) ? PS_BROKEN : 0) | PS_OPEN);
+                part_moved (KI_BAR, AT_BAR, KI_BAR, AT_BAR);    /* (Its bar, burst, fallen where it was) */
             } else {
                 out = PO_HELD;
+            }
+            break;
+        case PA_BREAK:                          /* (Battered down: its body gone, it's open for good) */
+            if (pq.state & PS_OPEN) {
+                out = PO_IS_OPEN;
+                break;
+            }
+            noise (8);
+            hm = 0xFF;
+            hs = 0;
+            if ((out = batter (pq.mat, pq.tough)) == 0) {
+                out = PO_BROKE_DOWN;
+                door_state (PS_WRECKED | PS_BROKEN | PS_OPEN);
+                part_moved (KI_BAR, AT_BAR, KI_BAR, AT_BAR);
             }
             break;
         default:
@@ -498,8 +633,29 @@ static void __fastcall__ portal (unsigned char what)
         W->fy = py + dir_y[pd];
     } else if (out == PO_SLIPPED) {
         harm (HC_FALL, strata[sn].style == ST_BUILT ? GR_HARD : GR_ROCKY, HF_CLEAR, SILL);
-    } else if (armed && (out == PO_OPENED || out == PO_UNBARRED || out == PO_FORCED)) {
+    } else if (armed && (out == PO_OPENED || out == PO_UNBARRED || out == PO_FORCED || out == PO_BROKE_DOWN)) {
         spring (0);
+    }
+}
+
+/* The portal on px, py looked at closely (PA_EXAMINE: the UI's, the square one it sees): its record copied into the
+** hub's pview, its bar 1 if the character's on its bar's side; W's res 1 if there's none */
+static void look_at (void)
+{
+    unsigned char k;
+
+    W->res = 1;
+    if (!sq (px, py)) {
+        return;
+    }
+    for (k = 0; k < K->nportals && (K->portal[k].x != kx || K->portal[k].y != ky); ++k) {
+    }
+    if (k < K->nportals) {
+        pq = K->portal[k];
+        hub_map (0);
+        pq.bar = dir_x[pq.bar] * (int) (HUB->pc_x - px) + dir_y[pq.bar] * (int) (HUB->pc_y - py) > 0;
+        memcpy (&HUB->pview, &pq, sizeof pq);
+        W->res = 0;
     }
 }
 
@@ -521,6 +677,9 @@ void __fastcall__ work (struct mreq* q)
         break;
     case PA_SEARCH:
         search ();
+        break;
+    case PA_EXAMINE:
+        look_at ();
         break;
     default:
         if (px != NO_SQ) {

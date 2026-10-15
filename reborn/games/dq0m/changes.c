@@ -92,11 +92,16 @@ static void __fastcall__ change_put (struct chunk* k, unsigned char lx, unsigned
     if (link == STOCKED) {                      /* (Its things put down: the record only a mark) */
         return;
     }
-    if (link == PORTAL_STATE) {                 /* (A portal's state: tile it, elev its parts) */
+    if (link == PORTAL_STATE || link == PORTAL_HARM) {     /* (A portal's state: tile it, elev its parts; or the
+                                                **   harm it's taken: tile it) */
         for (i = 0; i < k->nportals; ++i) {
             if (k->portal[i].x == lx && k->portal[i].y == ly) {
-                k->portal[i].state = tile;
-                k->portal[i].parts = elev;
+                if (link == PORTAL_HARM) {
+                    k->portal[i].harm = tile;
+                } else {
+                    k->portal[i].state = tile;
+                    k->portal[i].parts = elev;
+                }
             }
         }
         return;

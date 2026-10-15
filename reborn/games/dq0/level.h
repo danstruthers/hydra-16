@@ -39,6 +39,7 @@ struct sight {
     unsigned char   dark;                       /* Its own square unlit: it feels its way */
     unsigned char   kind;                       /* A room's kind (the theme's) */
     unsigned char   size;                       /* S_*: as much as it's seen of it */
+    unsigned char   rw, rh;                     /* Its floor, in squares (the figures a close look gives) */
     unsigned char   lit;                        /* The room lit by its own light */
     unsigned char   first;                      /* The first time there */
     unsigned char   up_rel, up_ft;              /* The floor here: the way it rises, and feet in ten (0: level) */
@@ -68,7 +69,8 @@ struct sight {
 enum { DO_ROAM, DO_WATCH, DO_COMING, DO_SHY };  /* A denizen's doing: going about its own business, watching the
                                                 **   character, coming towards it, keeping its distance */
 #define MOUTH           0x08
-#define DOORWAY         0x81                    /* (A seen door's state: no door in it, a doorway, open) */
+#define DOORWAY         0x83                    /* (A seen door's state: no door in it, a doorway, open; else its
+                                                **   portal's PS_OPEN and PS_WRECKED) */
 enum { W_ROOM, W_PASSAGE };
 enum { S_PART, S_SMALL, S_MID, S_LARGE, S_LONG };
 enum { Z_STEPS, Z_SLOPE, Z_LEDGE };

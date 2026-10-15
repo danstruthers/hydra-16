@@ -112,8 +112,8 @@ static void __fastcall__ equip (const char* key, unsigned char on)
     }
 }
 
-/* A tool equipped */
-static unsigned char __fastcall__ has (const char* key)
+/* A tool equipped (sheet.c's too: a blow at a thing struck with the best to hand) */
+unsigned char __fastcall__ has (const char* key)
 {
     unsigned char k;
 
@@ -162,9 +162,11 @@ static const unsigned char purpose[P_THEME] = {
 };
 
 /* The skill that knows a thing (rs.h's AP_*): weapons and armour Weaponcraft, metal Metalcraft, wood Timbercraft,
-** hide Hideworking, cloth Textilecraft, pottery Ceramics, jewels Jewelcraft, books and bones Lore, food Cookery */
+** hide Hideworking, cloth Textilecraft, pottery Ceramics, jewels Jewelcraft, books and bones Lore, food Cookery, stone
+** Masonry, glass Glassworking */
 static const unsigned char appraiser[NAP] = {
-    HARN_WEA, HARN_WEA, HARN_MET, HARN_TIM, HARN_HID, HARN_TEX, HARN_CER, HARN_JEW, HARN_LOR, HARN_COO, HARN_LOR
+    HARN_WEA, HARN_WEA, HARN_MET, HARN_TIM, HARN_HID, HARN_TEX, HARN_CER, HARN_JEW, HARN_LOR, HARN_COO, HARN_LOR,
+    HARN_MSN, HARN_GLA
 };
 
 static signed char __fastcall__ grade (unsigned char level)

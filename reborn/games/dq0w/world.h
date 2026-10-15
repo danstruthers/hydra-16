@@ -86,12 +86,22 @@ struct portal {
     unsigned char   kind;                       /* PK_* */
     unsigned char   state;                      /* PS_* */
     unsigned char   lock;                       /* A mechanical lock's complexity, 1-9 (0: none) */
-    unsigned char   mat;                        /* PM_* */
-    unsigned char   tough;                      /* What breaking it would take: worn away blow by blow */
+    unsigned char   mat;                        /* PM_* (a window's: its shutters', else its bars') */
+    unsigned char   tough;                      /* Its body: the net harm it takes before it fails (each blow's
+                                                **   impact less its material's resistance), by its material, its
+                                                **   size, its thickness and its state (part_body's) */
     unsigned char   bar;                        /* The way (DIR_*) from it to the side it's barred from (a
                                                 **   portcullis's: the side its winch is on) */
     unsigned char   parts;                      /* A window's (PP_*: any of them; none, an empty frame), a
                                                 **   portcullis's bars */
+    /* Its make (the maker's, with its own dice: fixtures.c's), what an observer judges (examine the door) */
+    unsigned char   size;                       /* Its opening, in feet: its width (the low four bits), its height */
+    unsigned char   thick;                      /* Its leaf's thickness, in inches (a door's, shutters', bars') */
+    unsigned char   qual;                       /* Its state as made and as the years have left it: 0 rotten ...
+                                                **   4 sound ... 9 new */
+    unsigned char   feat;                       /* PF_* */
+    unsigned char   harm;                       /* The harm it's taken so far (of tough; a window's, its part
+                                                **   that's outermost now: its shutters closed, its glass, its bars) */
 };
 enum { PK_DOOR, PK_WINDOW, PK_PORTCULLIS, PK_DRAWBRIDGE, PK_GATE, PK_GRATE, PK_HATCH, PK_SLIT };
 #define PP_GLASS        0x01                    /* (Sight through, not missiles; till it's broken) */
@@ -106,12 +116,23 @@ enum { PK_DOOR, PK_WINDOW, PK_PORTCULLIS, PK_DRAWBRIDGE, PK_GATE, PK_GRATE, PK_H
 #define PS_BROKEN       0x10                    /* Its lock or its bar burst (it won't lock or bar again) */
 #define PS_HIDDEN       0x20                    /* A secret door: like the wall round it, till a search finds it */
 #define PS_MAGIC        0x40                    /* (Hidden by magic: found only by magical means, the referee's) */
+#define PS_WRECKED      0x80                    /* Broken down (its body gone): open for good, it won't shut */
 enum { PM_WOOD, PM_IRONBOUND, PM_IRON, PM_STONE };
+#define PF_GRILLE       0x01                    /* A door's features: a little window in it, a grille across it; */
+#define PF_PEEP         0x02                    /*   a spy-hole, its cover on the bar's side; */
+#define PF_BRACKETS     0x04                    /*   brackets for a bar, on the bar's side (barred: its bar in them,
+                                                **   an item of its own, items.h's IW_PORTAL); */
+#define PF_STUDS        0x08                    /*   studded with iron (a wooden one's); */
+#define PF_HINGES       0x10                    /*   its hinges on the bar's side (else the far side's); */
+#define PF_DOUBLE       0x20                    /*   two leaves (a wide one's) */
 #define PORTAL_STATE    0xFE                    /* (A change record's link for a portal's state: tile its state,
                                                 **   elev its parts) */
+#define PORTAL_HARM     0xFB                    /* (And for the harm it's taken: tile it) */
 #define TRAP_STATE      0xFC                    /* (And for a trap's: tile its state) */
 /* A window (T_WINDOW, PK_WINDOW) and an arrow slit (T_WINDOW, PK_SLIT, always open) are seen through (the senses'),
-** but a window's closed shutters; a portcullis (T_DOOR, PK_PORTCULLIS) is seen through, up or down */
+** but a window's closed shutters; a portcullis (T_DOOR, PK_PORTCULLIS) is seen through, up or down.  A window's glass
+** and bars are items of their own (a pane, bars: items.h's IW_PORTAL, on its square), as a door's bar is (on the
+** square on its bar's side) */
 
 /* A trap (DUNGEON.md): a hazard on its square, the floor (or a door) it looks like till it's found; an open pit's
 ** square T_PIT, in plain sight (a covered one's too, once it's given way).  What it does is the referee's (its
