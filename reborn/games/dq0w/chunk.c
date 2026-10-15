@@ -20,6 +20,10 @@ static unsigned char lastk = 0xFF, lsn;         /* The slot at () found last, an
 static unsigned lcx, lcy;
 static unsigned char lbank;                     /* (Its bank, its chunk in the window) */
 static struct chunk* lchunk;
+static unsigned char fsn = 0xFF;                /* (at ()'s quick way: the stratum it found last, its bounds, */
+static unsigned fx0, fy0, fw, fh;               /*   the first square of the chunk, in the stratum's own squares, */
+static unsigned fox, foy, fdx, fdy;             /*   and a square's place from them) */
+static unsigned char* ftile;
 
 void __fastcall__ chunks_init (unsigned char who)
 {
@@ -29,6 +33,7 @@ void __fastcall__ chunks_init (unsigned char who)
 
 void sync_strata (void)
 {
+    fsn = 0xFF;                                 /* (at ()'s quick way: the bounds found again) */
     hub_map (0);
     memcpy (strata, HUB->strata, sizeof strata);
 }
@@ -51,6 +56,7 @@ void __fastcall__ ask_maker (unsigned char kind, unsigned char sn, unsigned cx, 
     }
     q->state = REQ_FREE;
     if (kind != M_CHUNK) {
+        fsn = 0xFF;
         memcpy (strata, HUB->strata, sizeof strata);
     }
 }
@@ -72,12 +78,34 @@ static unsigned char __fastcall__ find (unsigned char sn, unsigned cx, unsigned 
     return 0xFF;
 }
 
+/* The square in the chunk at () found last, in its stratum (the quick way: no multiplying, no shifting, nothing on
+** the C stack but the arguments; a look about asks for thousands): its chunk in the window; or NULL, another chunk */
+static unsigned char* __fastcall__ again (unsigned char sn, unsigned x, unsigned y)
+{
+    if (sn != fsn || (fdx = x - fx0) >= fw || (fdx -= fox) >= CW || (fdy = y - fy0) >= fh || (fdy -= foy) >= CW) {
+        return 0;
+    }
+    cx_ = fdx;
+    cy_ = fdy;
+    hub_map (lbank);
+    C = lchunk;
+    fdy <<= CW_BITS;
+    return ftile + fdy + cx_;
+}
+
 unsigned char* __fastcall__ at (unsigned char sn, unsigned x, unsigned y)
 {
-    struct stratum* s = &strata[sn];
-    unsigned ox = x - s->x0, oy = y - s->y0, cx, cy;
+    struct stratum* s;
+    unsigned ox, oy, cx, cy;
     unsigned char k;
+    unsigned char* p;
 
+    if ((p = again (sn, x, y)) != 0) {
+        return p;
+    }
+    s = &strata[sn];
+    ox = x - s->x0;
+    oy = y - s->y0;
     if (ox >= s->w || oy >= s->h) {
         return 0;
     }
@@ -99,6 +127,14 @@ unsigned char* __fastcall__ at (unsigned char sn, unsigned x, unsigned y)
     }
     hub_map (lbank);
     C = lchunk;
+    fsn = sn;                                   /* (The quick way, the next time: this chunk) */
+    fx0 = s->x0;
+    fy0 = s->y0;
+    fw = s->w;
+    fh = s->h;
+    fox = cx << CW_BITS;
+    foy = cy << CW_BITS;
+    ftile = &C->tile[0][0];
     return &C->tile[cy_][cx_];
 }
 
@@ -172,6 +208,7 @@ unsigned char __fastcall__ room_of (unsigned char sn, unsigned x, unsigned y)
     return 0xFF;
 }
 
+#ifndef CHUNK_NO_ZONES                          /* (A task that never asks: its room) */
 unsigned char __fastcall__ zone_of (unsigned char sn, unsigned x, unsigned y)
 {
     unsigned char z;
@@ -187,6 +224,7 @@ unsigned char __fastcall__ zone_of (unsigned char sn, unsigned x, unsigned y)
     }
     return 0xFF;
 }
+#endif
 
 unsigned char wall_x, wall_y;
 

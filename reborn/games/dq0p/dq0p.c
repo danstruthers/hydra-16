@@ -40,9 +40,20 @@ static void __fastcall__ look (unsigned char again)
     perceive (sn, x, y, face, own, first);
 }
 
+/* A number, an argument's (atoi's, without the C library's ctype) */
+static unsigned char __fastcall__ num (const char* s)
+{
+    unsigned char n = 0;
+
+    while (*s >= '0' && *s <= '9') {
+        n = n * 10 + *s++ - '0';
+    }
+    return n;
+}
+
 int main (int argc, char* argv[])
 {
-    if (argc < 3 || hub_attach (atoi (argv[1]), atoi (argv[2]))) {
+    if (argc < 3 || hub_attach (num (argv[1]), num (argv[2]))) {
         return 1;
     }
     chunks_init (ASK_SENSES);

@@ -893,8 +893,13 @@ int main (int argc, char* argv[])
         hub_map (0);
         HUB->den_at = now;                      /* (Caught up: the turns pace's clock goes on) */
         ++HUB->beat[T_DENIZENS];
-        if (turns && HUB->pc_ready > now) {
-            hy_yield ();                        /* (The turns pace's clock moving: kept up with) */
+        if (turns && HUB->pc_ready > now) {     /* (The turns pace's clock moving: kept up with, a tick at a time,
+                                                **   never spinning: the others' work goes on meanwhile) */
+            if (hub_now () != now) {
+                hy_yield ();
+            } else {
+                hy_sleep_ticks (1);
+            }
         } else {
             hy_sleep_ticks (10);
         }

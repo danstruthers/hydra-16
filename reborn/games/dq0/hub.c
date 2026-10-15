@@ -98,6 +98,7 @@ void __fastcall__ hub_ring (unsigned char t)
     hy_sem_release (HUB->sem[t]);
 }
 
+#ifndef HUB_NO_QUEUES                           /* (A task that neither sends nor takes intents and events: its room) */
 /* ---- The UI's intents, to the world */
 
 unsigned char __fastcall__ hub_send (const struct msg* m)
@@ -155,6 +156,7 @@ unsigned char __fastcall__ hub_next (unsigned* place, struct msg* m)
     ++*place;
     return 1;
 }
+#endif
 
 #ifndef HUB_ATTACHED
 /* ---- A task of the game's: path, given the segment and its role (and more, a word or none) */

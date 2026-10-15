@@ -105,20 +105,34 @@ static unsigned char __fastcall__ lamplit (unsigned x, unsigned y, int tz)
     return r;
 }
 
-/* A room's floor beside (x, y), seen now (the eight round it) */
-static unsigned char __fastcall__ beside_floor (unsigned x, unsigned y)
-{
-    signed char i, j;
-    unsigned char* p;
+/* The walls, doors and windows round (x, y), a room's floor seen now, seen too (but those outside the view's squares:
+** the next view unsees only those): the eight in its chunk found there (round[], from the square up and to the left
+** of it); else each by itself */
+static const unsigned char round[9] = { 0, 1, 2, CW, CW + 1, CW + 2, 2 * CW, 2 * CW + 1, 2 * CW + 2 };
 
-    for (j = -1; j <= 1; ++j) {
-        for (i = -1; i <= 1; ++i) {
-            if ((p = at (vs, x + i, y + j)) && (*p & T_VIS) && T_INSIDE (*p)) {
-                return 1;
+static void __fastcall__ walls_round (unsigned x, unsigned y)
+{
+    static unsigned char* p;
+    static unsigned char k, t;
+    static unsigned nx, ny;
+
+    if ((p = at (vs, x, y)) != 0 && cx_ - 1 < CW - 2 && cy_ - 1 < CW - 2 && x - bx0 - 1 < bx1 - bx0 - 1 &&
+        y - by0 - 1 < by1 - by0 - 1) {
+        for (p -= CW + 1, k = 0; k < 9; ++k) {
+            if ((t = TILE (p[round[k]])) == T_WALL || t == T_DOOR || t == T_WINDOW) {
+                p[round[k]] |= T_VIS | T_SEEN;
             }
         }
+        return;
     }
-    return 0;
+    for (k = 0; k < 8; ++k) {
+        nx = x + head_x[k];
+        ny = y + head_y[k];
+        if (nx - bx0 <= bx1 - bx0 && ny - by0 <= by1 - by0 && (p = at (vs, nx, ny)) != 0 &&
+            ((t = TILE (*p)) == T_WALL || t == T_DOOR || t == T_WINDOW)) {
+            *p |= T_VIS | T_SEEN;
+        }
+    }
 }
 
 void __fastcall__ view (unsigned char sn, unsigned x, unsigned y, unsigned char face, unsigned char light,
@@ -154,6 +168,9 @@ void __fastcall__ view (unsigned char sn, unsigned x, unsigned y, unsigned char 
     t = lit (x, y) || light || dark || lamplit (x, y, ez - EYE);
     if ((p = at (sn, x, y)) != 0) {
         *p |= t ? T_VIS | T_SEEN : T_SEEN;
+        if (t && T_INSIDE (*p)) {
+            walls_round (x, y);
+        }
     }
     for (j = by0; j <= by1; ++j) {
         for (i = bx0; i <= bx1; ++i) {
@@ -175,18 +192,9 @@ void __fastcall__ view (unsigned char sn, unsigned x, unsigned y, unsigned char 
             }
             if (clear (i, j, tz) && (p = at (sn, i, j)) != 0) {
                 *p |= T_VIS | T_SEEN;
-            }
-        }
-    }
-    for (j = by0; j <= by1; ++j) {
-        for (i = bx0; i <= bx1; ++i) {
-            if (!(p = at (sn, i, j))) {
-                continue;
-            }
-            t = TILE (*p);
-            if ((t == T_WALL || t == T_DOOR || t == T_WINDOW) && !(*p & T_VIS) && beside_floor (i, j) &&
-                (p = at (sn, i, j)) != 0) {
-                *p |= T_VIS | T_SEEN;
+                if (T_INSIDE (*p)) {
+                    walls_round (i, j);         /* (A wall or a door beside a room's floor that's seen) */
+                }
             }
         }
     }

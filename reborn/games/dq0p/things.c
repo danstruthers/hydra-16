@@ -124,8 +124,15 @@ int __fastcall__ things_init (const char* dir)
 
 struct item* __fastcall__ item_at (unsigned i)
 {
-    hub_map (ITEM_BANK (i));
-    return ITEM_AT (i);
+    unsigned char b = ITEM_BANK (0);
+
+    while (i >= 0x2000 / sizeof (struct item)) {    /* (ITEM_BANK's and ITEM_AT's, a bank at a time: cc65 divides
+                                                    **   slowly, and a look about reads every record) */
+        i -= 0x2000 / sizeof (struct item);
+        ++b;
+    }
+    hub_map (b);
+    return (struct item*) 0x8000 + i;
 }
 
 /* A kind's record, copied out of the catalogue's bank (into one of four, in turn: an expression may want two at
