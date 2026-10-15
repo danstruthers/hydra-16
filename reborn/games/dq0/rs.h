@@ -34,6 +34,9 @@ enum {
                                                 **   spell of work makes, its result 1 if nothing it has can dig that */
     P_APPRAISE,                                 /* A thing judged (b: the craft that knows it, AP_*): its make, its
                                                 **   worth; the grade how near the judgement comes */
+    P_CONCEAL,                                  /* Concealment: a thing hidden, or oneself (in shadows ...): the
+                                                **   grade sets a thing's difficulty to find, or a person's against
+                                                **   a search */
     P_THEME,                                    /* A theme's own, P_THEME + n (named in its data) */
 };
 

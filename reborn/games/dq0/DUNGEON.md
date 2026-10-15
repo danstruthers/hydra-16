@@ -315,9 +315,12 @@ how it's hidden; searching a body or a container is a search of what's in, on, a
 concealed item, determined by the quality of the method of concealment and the skill of the concealer.  Hiding
 something is an art/skill."): a thing concealed on purpose carries its difficulty, 0-9 (the item record's hide),
 set as it's hidden: by the method's quality (a false bottom well made, a stone loose in a wall, a fold of cloth)
-and the concealer's test of their hiding skill (the referee's: Stealth, or a craft's, the ruleset's say).  A
-search finds it by a test whose steps are that difficulty's; the character can hide things too, by the same
-test.
+and the concealer's test of their hiding skill.  The skill is **Concealment** (the user: "The hiding skill is
+called Concealment, and is for concealing items as well as people (hide in shadows anyone?)"): one skill for hiding
+a thing and for hiding oneself (in shadows, behind a pillar, among the bones), rs.h's P_CONCEAL, which a ruleset's
+referee maps to its own (HârnMaster has no skill of that name: its Stealth).  A search finds a thing by a test whose
+steps are its difficulty's, and a hidden person by a contest against their Concealment; the character can hide
+things, and itself, by the same test.
 
 **Holes** (the user: "A hole is a container, and putting a chest in it, then filling the hole, makes for great
 concealment.  A filled hole is still a container, just a hard one to find!"): a hole dug in a floor (digging's, a
@@ -352,7 +355,7 @@ denizens, etc.  Don't forget ultra- and night-vision as it impacts ability to se
 
 - **Searching** is one ability for every hidden thing: an item (above), an exit (a secret door, a hidden hatch, a
   concealed shaft: a square that looks like wall or floor till it's found), a denizen (one that hides: the referee's
-  contest of its Stealth against the searcher's Awareness).  Each hidden thing has its hiding (how well, and how:
+  contest of its Concealment against the searcher's Awareness).  Each hidden thing has its hiding (how well, and how:
   mechanical, magical), and a search (rs.h: P_SEARCH) of the squares round the character, a spell of time, tests
   each one it sees; a passing glance (P_NOTICE_SIGHT) has a smaller chance, as the character moves.  What's found
   is known (the change records keep a found exit as what it is).
