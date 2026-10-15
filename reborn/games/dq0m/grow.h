@@ -62,6 +62,9 @@ void __fastcall__ seen_over (struct chunk* k);
 /* map.c */
 void draw_map (void);
 
+/* work.c: a portal or a trap worked, for the world (M_WORK: its reply written into q) */
+void __fastcall__ work (struct mreq* q);
+
 /* bank.s */
 void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);

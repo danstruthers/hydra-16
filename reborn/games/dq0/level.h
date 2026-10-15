@@ -32,6 +32,7 @@ unsigned char __fastcall__ bearing (int dx, int dy);    /* The heading nearest t
 #define SEE_OPEN        4
 #define SEE_ITEMS       6
 #define SEE_DENS        4
+#define SEE_TRAPS       3
 struct sight {
     unsigned char   seq;                        /* Bumped as it's made again */
     unsigned char   where;                      /* W_* */
@@ -43,8 +44,9 @@ struct sight {
     unsigned char   up_rel, up_ft;              /* The floor here: the way it rises, and feet in ten (0: level) */
     unsigned char   ceil, cmid, cwall;          /* Its zone's ceiling (ceil C_UNSEEN: not seen) */
     unsigned char   ndoors;                     /* Doors, and passages' mouths (rel | MOUTH) */
-    struct { unsigned char rel; signed char dz; unsigned char state; unsigned x, y; } door[SEE_DOORS];
-                                                /* (state: PS_OPEN ...; x, y its square) */
+    struct { unsigned char rel; signed char dz; unsigned char state; unsigned x, y; unsigned char kind, parts; }
+        door[SEE_DOORS];                        /* (state: PS_OPEN ...; x, y its square; a portal's kind and
+                                                **   parts, world.h's PK_* and PP_*: a portcullis, a window, a slit) */
     unsigned char   nzones;                     /* The room's other zones seen */
     struct { unsigned char rel, how; signed char dz; } zone[SEE_ZONES];    /* how: Z_* */
     unsigned char   nopen;                      /* Stairways, ladders, shafts, windows seen */
@@ -59,6 +61,8 @@ struct sight {
     unsigned char   ndens;                      /* The denizens it sees: each one's square, whether it's watching the
                                                 **   character, its name (the hub's actor's, as it lies there) */
     struct { unsigned x, y; unsigned char aware; char name[12]; } den[SEE_DENS];
+    unsigned char   ntraps;                     /* The traps it knows of and sees (world.h's TK_*, TT_*, TS_*) */
+    struct { unsigned char rel, kind, trigger, state; } trap[SEE_TRAPS];
 };
 #define MOUTH           0x08
 #define DOORWAY         0x81                    /* (A seen door's state: no door in it, a doorway, open) */

@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "dq0.h"
+#include "hub.h"
 #include "level.h"
 
 #define PS_OPEN_        0x01                    /* (A portal's state: open: dq0w/world.h's PS_OPEN) */
@@ -54,6 +55,12 @@ static void __fastcall__ height (signed char dz)
 
 /* ---- A room */
 
+/* Seen door i one of the doors (mouths 0: but a portcullis, a window or a slit), or the passages' mouths (MOUTH) */
+static unsigned char __fastcall__ is (unsigned char i, unsigned char mouths)
+{
+    return (S->door[i].rel & MOUTH) == mouths && (mouths || S->door[i].kind == PK_DOOR);
+}
+
 /* The doors seen (mouths 0), or the passages' mouths (MOUTH) */
 static void __fastcall__ doors (unsigned char mouths)
 {
@@ -61,7 +68,7 @@ static void __fastcall__ doors (unsigned char mouths)
 
     memset (seen, 0, sizeof seen);
     for (i = 0; i < S->ndoors; ++i) {
-        if ((S->door[i].rel & MOUTH) == mouths) {
+        if (is (i, mouths)) {
             ++seen[S->door[i].rel & 7];
         }
     }
@@ -85,7 +92,7 @@ static void __fastcall__ doors (unsigned char mouths)
         }
         add (relname[d]);
         for (i = 0; i < S->ndoors; ++i) {       /* (The first that way's state and height) */
-            if ((S->door[i].rel & 7) == d && (S->door[i].rel & MOUTH) == mouths) {
+            if ((S->door[i].rel & 7) == d && is (i, mouths)) {
                 if (!mouths) {
                     add (S->door[i].state == DOORWAY ? " (a doorway)" : S->door[i].state & PS_OPEN_ ? " (open)" :
                          " (closed)");
@@ -100,6 +107,47 @@ static void __fastcall__ doors (unsigned char mouths)
     }
     if (n) {
         add (".");
+    }
+}
+
+/* The portcullises, windows and slits seen, each: "There is a barred window ahead to your left (its shutters
+** open)." */
+static void portals (void)
+{
+    unsigned char i, k, p;
+
+    for (i = 0; i < S->ndoors; ++i) {
+        k = S->door[i].kind;
+        p = S->door[i].parts;
+        if ((S->door[i].rel & MOUTH) || k == PK_DOOR) {
+            continue;
+        }
+        add (k == PK_PORTCULLIS ? " There is a portcullis " : k == PK_SLIT ? " There is an arrow slit " :
+             p & PP_BARS ? " There is a barred window " : p & PP_GLASS ? " There is a glazed window " :
+             p & PP_SHUTTERS ? " There is a shuttered window " : " There is an empty window frame ");
+        add (relname[S->door[i].rel & 7]);
+        if (k == PK_PORTCULLIS) {
+            add (S->door[i].state & PS_OPEN_ ? " (raised)" : " (down)");
+        } else if (k == PK_WINDOW && (p & PP_SHUTTERS)) {
+            add (S->door[i].state & PS_OPEN_ ? " (its shutters open)" : " (its shutters closed)");
+        }
+        height (S->door[i].dz);
+        add (".");
+    }
+}
+
+/* The traps it knows of and sees: "There is a dart trap, set off by a tripwire, ahead to your right." */
+static void traps (void)
+{
+    unsigned char i;
+
+    for (i = 0; i < S->ntraps; ++i) {
+        add (" There is ");
+        trap_name (S->trap[i].kind, S->trap[i].trigger, S->trap[i].state);
+        add (S->trap[i].kind <= TK_SPIKED ? " " : ", ");
+        add (S->trap[i].rel == 0xFF ? "at your feet" : relname[S->trap[i].rel & 7]);
+        add (S->trap[i].state & TS_DISARMED ? " (disarmed)." : S->trap[i].kind > TK_SPIKED &&
+             (S->trap[i].state & TS_SPRUNG) ? " (sprung)." : ".");
     }
 }
 
@@ -207,6 +255,7 @@ static void room (void)
     zones ();
     doors (0);
     doors (MOUTH);
+    portals ();
     for (i = 0; i < S->nopen; ++i) {
         opening (i);
     }
@@ -237,6 +286,7 @@ static void passage (void)
     }
     add (".");
     doors (0);                                  /* (A door beside it) */
+    portals ();
 }
 
 /* The things it sees lying about: "On the floor ahead lies a pick." "At your feet lie some bones." */
@@ -316,6 +366,7 @@ void o_words (void)
     } else {
         passage ();
     }
+    traps ();
     items ();
     denizens ();
 }

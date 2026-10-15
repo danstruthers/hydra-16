@@ -2,7 +2,8 @@
 ** dq0m.c - Dingus Quest Zero's maker: a task of its own, started by the UI (dq0m SEG ROLE: the hub's segment and
 ** its role there, hub.h), that grows the dungeon (DUNGEON.md) for whoever asks, the world or the denizens (each its
 ** request in the hub: world.h's struct mreq): a stratum's plan and its links down (plan.c: its record set by the
-** asker), a chunk (make.c, built.c), into the hub's shared banks, where they read it.  It waits on its doorbell
+** asker), a chunk (make.c, built.c), into the hub's shared banks, where they read it; and it works the fixtures it
+** grew, the portals and the traps, for the world (work.c).  It waits on its doorbell
 ** (costing nothing) between requests.  Its growers are overlays (built.c, pass.c, caves.c, plan.c ...), read as it
 ** starts from the game's lib folder (its third argument, the UI's) into banks of its own.
 */
@@ -95,6 +96,11 @@ static void __fastcall__ serve (unsigned char i)
     case M_CHANGE:                              /* (Kept, and made in the chunk if it's in the cache) */
         change_keep (q.sn, q.cx, q.cy, q.tile, q.elev, q.link);
         cached (&q);
+        break;
+    case M_WORK:                                /* (A portal or a trap worked: the reply's back in the request) */
+        work (&q);
+        hub_map (0);
+        memcpy (&HUB->mreq[i], &q, sizeof q);
         break;
     }
     hub_map (0);

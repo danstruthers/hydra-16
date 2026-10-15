@@ -126,11 +126,12 @@ static void __fastcall__ windows (unsigned char r)
     }
 }
 
-/* Some doors portcullises instead (iron bars: raised, or down) */
+/* Some doors portcullises instead (iron bars: raised, or down), each with its winch on its room's side (its bar's
+** way) */
 static void portcullises (void)
 {
     struct portal* p;
-    unsigned char i;
+    unsigned char i, d;
 
     for (i = 0; i < L->nportals; ++i) {
         p = &L->portal[i];
@@ -144,6 +145,11 @@ static void portcullises (void)
         p->mat = PM_IRON;
         p->tough = 90;
         p->parts = PP_BARS;
+        for (d = 0; d < 4; ++d) {
+            if (p->x + dir_x[d] < CW && p->y + dir_y[d] < CW && L->tile[p->y + dir_y[d]][p->x + dir_x[d]] == T_FLOOR) {
+                p->bar = d;
+            }
+        }
     }
 }
 

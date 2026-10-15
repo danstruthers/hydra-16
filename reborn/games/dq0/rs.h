@@ -41,7 +41,8 @@ enum {
 };
 
 /* How a hidden thing's hidden (P_SEARCH's b): found by searching, or only by magical means (the referee's: a spell,
-** a power, an ability; its result 1 if the searcher has none) */
+** a power, an ability; its result 1 if the searcher has none); and how a trap's set (P_DISARM's b: magic only
+** dispelled, the same) */
 enum { HIDE_MECHANICAL, HIDE_MAGICAL };
 
 /* The crafts that know things (P_APPRAISE's b): a warrior knows weapons and armour, not books of magic */

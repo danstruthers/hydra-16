@@ -8,6 +8,7 @@
 **              being typed at the bottom, kept whole while the story moves on; sayf, the story's own printf
 **   bank.s     the RAM banks: the window at $8000, bytes between a bank and the main RAM, the overlays' calls
 **   look.c     what the character perceives, in words (the world's record of it, in the hub: level.h); the map
+**   fixt.c     (overlay 4) the fixtures' words: portcullises, windows and slits worked, traps (an E_TRAP's)
 **   intro.c    (overlay 1) the title and the pace (the character is hmchar's: a program of its own,
 **              games/hmchar, that main.c runs, and whose file the referee reads)
 **
@@ -81,9 +82,10 @@ void __fastcall__ map (const char* rules);      /* The map of what it's seen rou
 enum {
     V_NONE, V_MOVE, V_ENTER, V_APPROACH, V_LOOK, V_EXAMINE, V_SEARCH, V_TURN, V_FACE, V_CLIMB, V_JUMP, V_OPEN, V_CLOSE,
     V_UNLOCK, V_FORCE, V_DIG, V_GET, V_DROP, V_DON, V_DOFF, V_LIGHT, V_DOUSE, V_WAIT, V_MAP, V_SHEET, V_HELP,
-    V_PAUSE, V_QUIT, V_SAVE, V_INVENTORY, V_HIDE
+    V_PAUSE, V_QUIT, V_SAVE, V_INVENTORY, V_HIDE, V_RAISE, V_LOWER, V_BREAK, V_DISARM
 };
-enum { OB_NONE, OB_DOOR, OB_PASSAGE, OB_STAIRS, OB_LADDER, OB_SHAFT, OB_LEDGE, OB_WAY_OUT, OB_WALL };
+enum { OB_NONE, OB_DOOR, OB_PASSAGE, OB_STAIRS, OB_LADDER, OB_SHAFT, OB_LEDGE, OB_WAY_OUT, OB_WALL, OB_WINDOW, OB_TRAP,
+    OB_PORTC };
 enum { HOW_ANY, HOW_TO, HOW_THROUGH };
 #define GO_UP       8                           /* (A direction: up, down; else a heading, H_N ...) */
 #define GO_DOWN     9
@@ -110,6 +112,11 @@ void __fastcall__ climb_words (unsigned char how, unsigned char feet); /* Overla
 void __fastcall__ portal_words (unsigned char out);                     /* Overlay 1: a door worked's */
 void __fastcall__ harm_words (unsigned w, unsigned cond);               /* Overlay 1: harm's (an E_HARM's w1,
                                                                         **   the conditions; the wounds in lb) */
+void __fastcall__ fixt_words (unsigned w);      /* Overlay 4: a portal worked's (an E_PORTAL's w1: a door's,
+                                                **   portal_words) */
+void __fastcall__ trap_words (unsigned w);      /* Overlay 4: a trap's (an E_TRAP's w1) */
+void __fastcall__ trap_name (unsigned char kind, unsigned char trigger, unsigned char state);  /* Overlay 4: a
+                                                **   trap's name, added to lb */
 void words (void);                              /* Overlay 2: what the character perceives, into lb */
 void stir_words (void);                         /* Overlay 2: the denizens it sees, moving, into lb (or "": as
                                                 **   they were told last) */

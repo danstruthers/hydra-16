@@ -56,7 +56,8 @@ enum {
     I_TURN,                                     /* a: the heading to face (H_N ... H_NW) */
     I_LIGHT,                                    /* a: 1 the character's light lit, 0 put out */
     I_DIG,                                      /* a: a direction (DIR_N ... DIR_W, DIR_DOWN) */
-    I_PORTAL,                                   /* a: what's done to the door it faces (PA_*) */
+    I_PORTAL,                                   /* a: what's done to the door it faces (PA_*); b: which (PW_*: a
+                                                **   door or a portcullis, a window or a slit, either) */
     I_GOTO,                                     /* w1, w2: a square in its room it sees, walked up to */
     I_QUIT,
     NINTENTS
@@ -75,9 +76,12 @@ enum {
     E_NOISE,                                    /* A noise: a how loud (0-9), w1 w2 its square (the denizens') */
     E_LEDGE,                                    /* who's come to a ledge: w1 its rise (a signed char: a fall less) */
     E_CLIMB,                                    /* who's climbing: w1 how it goes (K_*) times 256, and the feet to go */
-    E_PORTAL,                                   /* who's worked a door: w1 what came of it (PO_*) */
+    E_PORTAL,                                   /* who's worked a door: w1 what came of it (PO_*), and the
+                                                **   portal's kind (PK_*) times 256 */
     E_HARM,                                     /* who's been harmed (the referee's RS_HARM): w1 its cause (HC_*),
                                                 **   its worst wound's band times 256 (0: unhurt), E_OUT, E_CAUGHT */
+    E_TRAP,                                     /* A trap and who: w1 its kind (TK_*) and its trigger (TT_*) times
+                                                **   16, what came of it (TO_*) times 256 */
     NEVENTS
 };
 #define I_JUMP          0x80
@@ -85,18 +89,33 @@ enum {
 #define E_CAUGHT        0x8000                  /*   (and a fall stopped, a hold grabbed) */
 #define O_FELL          8                       /* (E_ARRIVE's link kind, or'd: fallen down it, jumped) */
 
-enum { A_WALKED, A_DOWN, A_UP, A_START, A_DIGGING, A_CROSSED, A_CLIMBING, A_CLIMBED, A_WENT_TO, A_RESUMED };
-                                                /* E_ARRIVE's how (A_DIGGING, A_CLIMBING: the world's own, a spell
-                                                **   of work, a round's climbing) */
-enum { N_NO_EXIT, N_SHUT, N_NO_STAIRS, N_NO_DIG };  /* E_NOWAY's why: no way that way, the way out shut, no stairs,
-                                                **   nothing to dig there */
+enum { A_WALKED, A_DOWN, A_UP, A_START, A_DIGGING, A_CROSSED, A_CLIMBING, A_CLIMBED, A_WENT_TO, A_RESUMED,
+       A_STOPPED };                             /* E_ARRIVE's how (A_DIGGING, A_CLIMBING: the world's own, a spell
+                                                **   of work, a round's climbing; A_STOPPED: on its way, at a trap) */
+enum { N_NO_EXIT, N_SHUT, N_NO_STAIRS, N_NO_DIG, N_CLOSED };   /* E_NOWAY's why: no way that way, the way out shut,
+                                                **   no stairs, nothing to dig there, the portcullis that way
+                                                **   down */
 enum { V_TURNED, V_LIT, V_DARK, V_STIR };       /* E_VIEW's why (V_STIR: a denizen it sees has moved) */
 enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL };  /* E_DIG's how */
 enum { K_BEGUN, K_ON, K_BACK, K_FELL, K_UP, K_DOWN, K_JUMPED };    /* E_CLIMB's how: begun, on, slipped back,
                                                 **   fallen, up, down; jumped down (a ledge, a shaft) */
-enum { PA_OPEN, PA_CLOSE, PA_UNLOCK, PA_FORCE, PA_SEARCH };  /* I_PORTAL's: what's done */
+enum { PA_OPEN, PA_CLOSE, PA_UNLOCK, PA_FORCE, PA_SEARCH,     /* I_PORTAL's: what's done (a door's opened, ... */
+       PA_RAISE, PA_LOWER, PA_BREAK, PA_THROUGH, PA_DISARM };  /*   a portcullis raised, a window's glass broken,
+                                                **   climbed through, a trap disarmed: one in reach, or the door's) */
+enum { PW_ANY, PW_DOOR, PW_WINDOW };            /* I_PORTAL's b: a door or a portcullis, a window or a slit */
 enum { PO_NONE, PO_OPENED, PO_CLOSED, PO_IS_OPEN, PO_IS_SHUT, PO_LOCKED, PO_BARRED, PO_UNBARRED, PO_PICKED,
-       PO_NOT_PICKED, PO_NO_PICKS, PO_NO_LOCK, PO_FORCED, PO_HELD, PO_FOUND, PO_NOTHING };  /* E_PORTAL's */
+       PO_NOT_PICKED, PO_NO_PICKS, PO_NO_LOCK, PO_FORCED, PO_HELD, PO_FOUND, PO_NOTHING,   /* E_PORTAL's (a door's, */
+       PO_RAISED, PO_HEAVED, PO_LOWERED, PO_IS_UP, PO_IS_DOWN, PO_NO_WINCH, PO_TOO_HEAVY, PO_NOT_PORTC,   /* a
+                                                **   portcullis's: by its winch, by hand; */
+       PO_NO_SHUTTERS, PO_BENT, PO_BARS_HOLD, PO_SHATTERED, PO_SMASHED, PO_NOTHING_THERE, PO_IN_WAY, PO_SLIT,
+       PO_CLIMBED, PO_NO_CLIMB, PO_SLIPPED, PO_NOT_WINDOW,  /*   a window's: its bars bent, its glass broken, its
+                                                **   shutters smashed, climbed through; */
+       PO_TRAPPED, PO_FOUND_TRAP };             /*   a known trap on a door; a search's traps, told as found) */
+enum { TO_SPRUNG, TO_DODGED, TO_RESISTED, TO_CHOKED, TO_OPENED, TO_NOTICED, TO_FOUND, TO_DISARMED, TO_NOT_YET,
+       TO_FUMBLED, TO_CANT, TO_PIT, TO_NONE };  /* E_TRAP's: set off, dodged, its gas resisted or choked on, a pit's
+                                                **   cover fallen in (no one on it); noticed in passing, found by a
+                                                **   search; disarmed, not yet, set off disarming it, no means to
+                                                **   (magic), a pit (gone round, not disarmed), none in reach */
 
 /* A referee slot: a request (rs.h's RS_*) and its reply, and the reply's words.  The task that asks writes the
 ** request, then sets state REQ_POSTED and rings the referee's doorbell; the referee answers, then sets REQ_DONE; the

@@ -109,7 +109,9 @@ void o_help (void)
     msg ("Commands: north, northeast, east ... northwest (n, ne, e, se, s, sw, w, nw, or go north ...); forward, "
          "back, left, right (f, b: as you face); up and down (u, d: the stairs); turn left, right, half left, half "
          "right or around; face north ...; light and douse (your torch); dig north ... or down (a wall, the rock, a "
-         "shaft); jump down (a ledge, a shaft); open, close, unlock, force (the door ahead), search; look (l), map (m), sheet (the character), wait (z), pause (or Escape), quit (q).");
+         "shaft); jump down (a ledge, a shaft); open, close, unlock, force (the door ahead), raise, lower (a "
+         "portcullis), break (a window's glass), climb through (a window), disarm (a trap), search; look (l), map "
+         "(m), sheet (the character), wait (z), pause (or Escape), quit (q).");
 }
 
 /* ---- Digging's words: how a spell of work went, and the feet to go */

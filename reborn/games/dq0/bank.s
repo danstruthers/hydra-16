@@ -157,3 +157,6 @@ ovl_out:
             OVFN        words, 2
             OVFN        stir_words, 2
             OVFN        parse, 3
+            OVFN        fixt_words, 4
+            OVFN        trap_words, 4
+            OVFN        trap_name, 4

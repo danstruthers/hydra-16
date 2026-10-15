@@ -62,6 +62,31 @@ static unsigned char __fastcall__ mouth (unsigned char i, unsigned char j)
     return 1;
 }
 
+/* A seen door's portal (q: or NULL, a doorway): its kind and parts */
+static void __fastcall__ portal_seen (const struct portal* q)
+{
+    S.door[S.ndoors].kind = q ? q->kind : PK_DOOR;
+    S.door[S.ndoors].parts = q ? q->parts : 0;
+}
+
+/* The traps the character knows of (found, or never hidden: an open pit) on the squares of its chunk it sees now */
+static void __fastcall__ traps_seen (unsigned char sn, unsigned x, unsigned y, unsigned char face)
+{
+    struct trap* t;
+    unsigned char k;
+
+    at (sn, x, y);
+    for (k = 0, t = C->trap; k < C->ntraps && S.ntraps < SEE_TRAPS; ++k, ++t) {
+        if (!(t->state & TS_HIDDEN) && (C->tile[t->y][t->x] & T_VIS)) {
+            S.trap[S.ntraps].rel = t->x == cx_ && t->y == cy_ ? 0xFF : REL8 (bearing ((int) t->x - cx_,
+                (int) t->y - cy_), face);
+            S.trap[S.ntraps].kind = t->kind;
+            S.trap[S.ntraps].trigger = t->trigger;
+            S.trap[S.ntraps++].state = t->state;
+        }
+    }
+}
+
 static signed char __fastcall__ fz (int dz)
 {
     return dz > 127 ? 127 : dz < -127 ? -127 : dz;
@@ -187,10 +212,12 @@ void __fastcall__ perceive (unsigned char sn, unsigned x, unsigned y, unsigned c
         }
         for (d = 0; d < 4; ++d) {               /* (Its doors seen) */
             for (k = 0; wall_tile (&rp, d, k) && S.ndoors < SEE_DOORS; ++k) {
-                if (TILE (C->tile[wall_y][wall_x]) == T_DOOR && (C->tile[wall_y][wall_x] & T_VIS) &&
+                if ((TILE (C->tile[wall_y][wall_x]) == T_DOOR || TILE (C->tile[wall_y][wall_x]) == T_WINDOW) &&
+                    (C->tile[wall_y][wall_x] & T_VIS) &&
                     !((q = portal_at (wall_x, wall_y)) != 0 && (q->state & PS_HIDDEN))) {
                     S.door[S.ndoors].rel = REL8 (bearing ((int) wall_x - lx, (int) wall_y - ly), face);
                     S.door[S.ndoors].state = (q = portal_at (wall_x, wall_y)) != 0 ? q->state & PS_OPEN : DOORWAY;
+                    portal_seen (q);                /* (A portcullis, a window, a slit: its kind and parts) */
                     S.door[S.ndoors].x = x - lx + wall_x;
                     S.door[S.ndoors].y = y - ly + wall_y;
                     S.door[S.ndoors++].dz = fz (C->elev[wall_y][wall_x] - myz);
@@ -222,10 +249,11 @@ void __fastcall__ perceive (unsigned char sn, unsigned x, unsigned y, unsigned c
     } else {
         S.where = W_PASSAGE;
         for (d = 0; d < 4; ++d) {               /* (A door beside it, open or shut) */
-            if ((p = at (sn, x + dir_x[d], y + dir_y[d])) != 0 && TILE (*p) == T_DOOR && S.ndoors < SEE_DOORS &&
-                !((q = portal_at (cx_, cy_)) != 0 && (q->state & PS_HIDDEN))) {
+            if ((p = at (sn, x + dir_x[d], y + dir_y[d])) != 0 && (TILE (*p) == T_DOOR || TILE (*p) == T_WINDOW) &&
+                S.ndoors < SEE_DOORS && !((q = portal_at (cx_, cy_)) != 0 && (q->state & PS_HIDDEN))) {
                 S.door[S.ndoors].rel = REL8 (H_OF (d), face);
                 S.door[S.ndoors].state = q ? q->state & PS_OPEN : DOORWAY;
+                portal_seen (q);
                 S.door[S.ndoors].x = x + dir_x[d];
                 S.door[S.ndoors].y = y + dir_y[d];
                 S.door[S.ndoors++].dz = fz (C->elev[cy_][cx_] - myz);
@@ -240,6 +268,7 @@ void __fastcall__ perceive (unsigned char sn, unsigned x, unsigned y, unsigned c
             }
         }
     }
+    traps_seen (sn, x, y, face);
     things_seen (&S, sn, x, y, face);           /* (The things it sees lying about) */
     hub_map (0);
     memcpy (&HUB->sight, &S, sizeof S);
