@@ -95,32 +95,54 @@
       (harn.put-ml h sk ?((zero? (snd s)) (harn.get-oml h sk) (* (snd s) (harn.get-sb h sk))))))})
     (thd (nth occ occs)))}))
 
-; Five option points: a skill opened at OML for one; an open skill improved by its SB for one, the second time for
-; two more (Character 16)
+; The skills listed (? at the option points' prompt): the open ones at their ML; the others (but the rituals: the
+; character has no deity) at the OML they'd open at; three to a line
+(def {cells} (fn {l n} {do
+  ?(l
+    (do
+      =(sk (fst (fst l)))
+      =(v (snd (fst l)))
+      =(nm (harn.skill-name sk))
+      (write "  " nm (str-repeat " " (max 0 (- 17 (len nm)))) ?((< v 100) ?((< v 10) "  " " ") "") v)
+      ?((eq (mod n 3) 2) (print) NIL)
+      (cells (tail l) (+ n 1)))
+    ?((zero? (mod n 3)) NIL (print)))}))
+(def {list-skills} (fn {} {do
+  (print "Your skills, at their ML:")
+  (cells (map (fn {sk} {list sk (harn.get-ml h sk)}) (filter (fn {sk} {> (harn.get-ml h sk) 0}) (range 0 91))) 0)
+  (print "The others, at the OML they would open at:")
+  (cells (map (fn {sk} {list sk (harn.get-oml h sk)})
+    (filter (fn {sk} {and (zero? (harn.get-ml h sk)) (or (< sk 21) (> sk 30))}) (range 0 91))) 0)}))
+
+; Five option points: a skill opened at OML for one; an open skill improved by its SB for one (Character 16); no more
+; than two points in a skill (the user's: the book's second improvement, two more, would make three)
 (def {option-points} (fn {} {do
   =(improved (buffer 91))
   =(op 5)
   ?(quiet NIL (do
     (print)
     (print "Five option points: a skill's name opens it at its OML (1 point), or improves an open one by its SB")
-    (print "(1 point; the second time 2 more). Enter alone keeps what's left.")))
+    (print "(1 point), no more than two points in a skill. ? lists them. Enter alone keeps what's left.")))
   (while {> op 0} {do
     =(sk ?(quiet (random 91)
-      (do =(w (ask (+ "Points left: " op ". A skill: "))) ?((eq w "") :done (skill-named w (range 0 91))))))
+      (do =(w (ask (+ "Points left: " op ". A skill: "))) ?((eq w "") :done ?((eq w "?") :list
+        (skill-named w (range 0 91)))))))
     ?((eq sk :done) (set! {op} 0)
+    ?((eq sk :list) (list-skills)
     ?((or (nil? sk) (eq sk :two)) (print ?((eq sk :two) "Which? More than one begins so." "There's no such skill."))
     ?((and quiet (>= sk 21) (<= sk 30)) NIL             ; (Not a ritual: the character has no deity)
       (do
         =(ml (harn.get-ml h sk))
         =(i (buffer-get improved sk))
-        =(cost ?((zero? ml) 1 ?((zero? i) 1 ?((eq i 1) 2 99))))
+        =(cost ?((or (zero? ml) (zero? i)) 1 99))
         ?((> cost op)
-          ?(quiet NIL (print ?((eq cost 99) "It can be improved only twice." "Not enough points left for that.")))
+          ?(quiet NIL (print ?((eq cost 99) "No more than two points in a skill: that one's had its share."
+            "Not enough points left for that.")))
           (do
             ?((zero? ml) (harn.open-skill h sk)
               (do (harn.put-ml h sk (+ ml (harn.get-sb h sk))) (buffer-put improved sk (+ i 1))))
             (set! {op} (- op cost))
-            ?(quiet NIL (print (+ (harn.skill-name sk) " is " (harn.get-ml h sk))))))))))})}))
+            ?(quiet NIL (print (+ (harn.skill-name sk) " is " (harn.get-ml h sk)))))))))))})}))
 
 ; ---- The profile
 (def {profile} (fn {} {do

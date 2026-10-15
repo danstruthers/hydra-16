@@ -11,7 +11,8 @@
 ** The steps (Character 1): the attributes rolled (kept, or rolled again); an occupation, its skills opened as the
 ** Occupational Skills table has them (Character 15; a few of the book's, those of use in a dungeon; "three weapons
 ** at OML + SB" chosen); the five option points spent (Character 16: a skill opened at its OML for one, or improved
-** by its SB for one, a second time for two more); a name.  Not here: the family's occupation and its skills, contacts,
+** by its SB for one; but no more than two points in one skill, the user's: so improved once at most; ? lists the
+** skills, the open ones' ML and the others' OML); a name.  Not here: the family's occupation and its skills, contacts,
 ** the veterans' points.
 */
 
@@ -213,8 +214,41 @@ static void occupation (void)
     }
 }
 
-/* Five option points: a skill opened at OML for one; an open skill improved by its SB for one, the second time for
-** two more (Character 16) */
+/* The skills listed (? at the option points' prompt): the open ones at their ML; the others (but the rituals: the
+** character has no deity) at the OML they'd open at; three to a line */
+static void list_skills (void)
+{
+    unsigned char k, pass, col, v, w;
+    const char* nm;
+
+    for (pass = 0; pass < 2; ++pass) {
+        s (pass ? "The others, at the OML they would open at:\n" : "Your skills, at their ML:\n");
+        col = 0;
+        for (k = 0; k < HARN_NSKILLS; ++k) {
+            if ((h.ml[k] == 0) != pass || (pass && k >= HARN_RAGR && k <= HARN_RSIE)) {
+                continue;
+            }
+            nm = harn_skill_name (k);
+            v = pass ? harn_get_oml (&h, k) : h.ml[k];
+            s ("  ");
+            s (nm);
+            for (w = strlen (nm) + 3 - (v < 10) - (v < 100); w < 20; ++w) {    /* (Its number at the 20th column) */
+                s (" ");
+            }
+            n (v);
+            if (++col == 3) {
+                s ("\n");
+                col = 0;
+            }
+        }
+        if (col) {
+            s ("\n");
+        }
+    }
+}
+
+/* Five option points: a skill opened at OML for one; an open skill improved by its SB for one (Character 16); no more
+** than two points in a skill (the user's: the book's second improvement, two more, would make three) */
 static void option_points (void)
 {
     static unsigned char improved[HARN_NSKILLS];
@@ -223,7 +257,7 @@ static void option_points (void)
 
     if (!quiet) {
         s ("\nFive option points: a skill's name opens it at its OML (1 point), or improves an open one by its SB\n"
-           "(1 point; the second time 2 more). Enter alone keeps what's left.\n");
+           "(1 point), no more than two points in a skill. ? lists them. Enter alone keeps what's left.\n");
     }
     while (op) {
         if (quiet) {
@@ -236,16 +270,21 @@ static void option_points (void)
             if (!ask ("", b, sizeof b)) {
                 return;
             }
+            if (b[0] == '?' && !b[1]) {
+                list_skills ();
+                continue;
+            }
             sk = skill_named (b, 0, HARN_NSKILLS);
             if (sk >= 0xFE) {
                 s (sk == 0xFE ? "Which? More than one begins so.\n" : "There's no such skill.\n");
                 continue;
             }
         }
-        cost = !h.ml[sk] ? 1 : improved[sk] == 0 ? 1 : improved[sk] == 1 ? 2 : 0xFF;
+        cost = !h.ml[sk] || !improved[sk] ? 1 : 0xFF;
         if (cost > op) {
             if (!quiet) {
-                s (cost == 0xFF ? "It can be improved only twice.\n" : "Not enough points left for that.\n");
+                s (cost == 0xFF ? "No more than two points in a skill: that one's had its share.\n" :
+                    "Not enough points left for that.\n");
             }
             continue;
         }

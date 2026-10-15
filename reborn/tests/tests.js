@@ -1633,7 +1633,7 @@ function hmcharCheck(out, file) {
 }
 
 // The hmcharhl test's runs: hmchar.hl -q, its file; then as a player answers: a roll again, kept; an occupation out of
-// range, then Gladiator; weapons (a beginning, one that isn't enough, one twice); option points (Climbing three times,
+// range, then Gladiator; weapons (a beginning, one that isn't enough, one twice); option points (Climbing three times: the second and third refused, two points a skill at most,
 // a skill there isn't, Enter); a name; its file
 const HM_PLAY = 'r\rk\r7\r1\rsw\rs\rshield\rshield\rdag\rclimb\rclimb\rclimb\rzzz\r\rDorn\r';
 const HM_FILE = f => 'echo ==file; cat ' + f + '; echo ==end';
@@ -2429,7 +2429,7 @@ module.exports = {
       machine: { input: 'ābind -a /sd/0/games /bin\r' + 'ācd /ram; hmchar.hl -q -o q.hm; ' + HM_FILE('q.hm') + '\r' + 'āhmchar.hl\r' + HM_PLAY + 'ā' + HM_FILE('Dorn.hm') + '\r' +
         'āhmchar.hl -s 3; echo $status\r' + 'āecho \'(do (use "harntest") (def {c} (harn.read "Dorn.hm")) (list (c :other) (harn.eml c 1)))\' | hylang\r' },
       expect: ['Written to q.hm\n', 'Which (1-6)? 7\nWhich (1-6)? 1\n', 'The second: s\nWhich? More than one begins so.\n',
-        'The third: shield\nThat one\'s chosen already.\n', 'Points left: 2. A skill: climb\nIt can be improved only twice.\n',
+        'The third: shield\nThat one\'s chosen already.\n', 'Points left: 4. A skill: climb\nNo more than two points in a skill: that one\'s had its share.\n',
         'A skill: zzz\nThere\'s no such skill.\n', 'Written to Dorn.hm\n',
         'hmchar.hl: -s: hylang\'s random can\'t be seeded (hmchar.fs and C\'s hmchar have -s)\nusage: hmchar.hl [-o file] [-q]\n1\n%',
         '=> {{"name Dorn" "occupation Gladiator"} ', 'hylang> => exit'],
@@ -2440,14 +2440,14 @@ module.exports = {
         const play = out.slice(out.indexOf('% hmchar.hl\n'), out.indexOf('% ' + HM_FILE('Dorn.hm')));
         if (!d) return [...f, 'Dorn.hm not found'];
         f.push(...hmcharCheck(play, d.file).map(e => 'played: ' + e));
-        // (Climbing: the kept roll's, then improved by its SB twice; the Gladiator's weapons; the eml in harntest's
-        // test the file's Climbing)
+        // (Climbing: the kept roll's, then improved by its SB once, the second and third refused: two points a skill
+        // at most; the Gladiator's weapons; the eml in harntest's test the file's Climbing)
         const kept = play.slice(0, play.indexOf('roll again (k or r)? k')), c0 = +((kept.match(/Climbing (\d+)/g) || []).pop() || ' 0').split(' ')[1];
         const c = [...play.matchAll(/Climbing is (\d+)/g)].map(m => +m[1]);
-        if (c.length !== 2 || c[0] - c0 <= 0 || c[1] - c[0] !== c[0] - c0) f.push('Climbing: ' + c0 + ', then ' + c.join(', ') + ': not improved by its SB twice');
+        if (c.length !== 1 || c[0] - c0 <= 0) f.push('Climbing: ' + c0 + ', then ' + c.join(', ') + ': not improved by its SB once');
         if (!/occupation Gladiator\n/.test(d.file) || !['ml dag ', 'ml shd ', 'ml swd '].every(k => d.file.includes(k))) f.push('Dorn.hm: not a Gladiator with Dagger, Shield and Sword');
         const eml = out.match(/=> \{\{"name Dorn" "occupation Gladiator"\} (\d+)\}/);
-        if (!eml || +eml[1] !== c[1]) f.push('harntest.hl\'s eml of Climbing: ' + (eml && eml[1]) + ', not ' + c[1]);
+        if (!eml || +eml[1] !== c[0]) f.push('harntest.hl\'s eml of Climbing: ' + (eml && eml[1]) + ', not ' + c[0]);
         this.notes = ['-q: ' + q.out.split('\n')[2]];
         return f;
       },
@@ -2469,7 +2469,7 @@ module.exports = {
         const f = [], q = hmRun(out, 'cat f.out; ' + HM_FILE('f.hm')), d = hmRun(out, 'cat fi.out; ' + HM_FILE('fi.hm'));
         if (!q || !d) return ['the runs\' output or files not found'];
         f.push(...hmcharCheck(q.out, q.file).map(e => '-q: ' + e), ...hmcharCheck(d.out, d.file).map(e => 'played: ' + e));
-        for (const t of ['Which? More than one begins so.', 'That one\'s chosen already.', 'It can be improved only twice.', 'There\'s no such skill.'])
+        for (const t of ['Which? More than one begins so.', 'That one\'s chosen already.', 'No more than two points in a skill: that one\'s had its share.', 'There\'s no such skill.'])
           if (!d.out.includes(t)) f.push('played: "' + t + '" not said');
         if (!/occupation Gladiator\n/.test(d.file) || !['ml dag ', 'ml shd ', 'ml swd '].every(k => d.file.includes(k))) f.push('fi.hm: not a Gladiator with Dagger, Shield and Sword');
         // (harn-read's ior, then Climbing's EML: its ML, no penalty; Endurance: the profile's)

@@ -103,27 +103,42 @@ variable times   variable got
     then 2 +
   loop drop ;
 
-\ Five option points: a skill opened at OML for one; an open skill improved by its SB for one, the second time for
-\ two more (Character 16)
+\ The skills listed (? at the option points' prompt): the open ones at their ML; the others (but the rituals: the
+\ character has no deity) at the OML they'd open at; three to a line
+variable col
+: skill. ( sk v -- )
+  >r  2 spaces harn-skill-name dup >r type  20 r> - 3 - 0 max spaces  r> 3 .r
+  1 col +!  col @ 3 = if cr 0 col ! then ;
+: list-skills ( -- )
+  ." Your skills, at their ML:" cr  0 col !
+  91 0 do i harn-ml@ ?dup if i swap skill. then loop  col @ if cr then
+  ." The others, at the OML they would open at:" cr  0 col !
+  91 0 do i harn-ml@ 0= i 21 31 within 0= and if i dup harn-oml skill. then loop  col @ if cr then ;
+
+\ Five option points: a skill opened at OML for one; an open skill improved by its SB for one (Character 16); no more
+\ than two points in a skill (the user's: the book's second improvement, two more, would make three)
 create improved 91 allot   variable op   variable cost
 : option-points ( -- )
   improved 91 erase  5 op !
   quiet 0= if
     cr ." Five option points: a skill's name opens it at its OML (1 point), or improves an open one by its SB" cr
-    ." (1 point; the second time 2 more). Enter alone keeps what's left." cr
+    ." (1 point), no more than two points in a skill. ? lists them. Enter alone keeps what's left." cr
   then
   begin op @ while
     quiet if 91 random else
-      s" Points left:" op @ s" . A skill: " named  s" " ask  dup 0= if 2drop exit then  0 91 skill-named
+      s" Points left:" op @ s" . A skill: " named  s" " ask  dup 0= if 2drop exit then
+      2dup s" ?" compare 0= if 2drop list-skills -3 else 0 91 skill-named then
     then
     dup 0< if
-      quiet 0= if -2 = if ." Which? More than one begins so." else ." There's no such skill." then cr else drop then
+      quiet 0= if dup -3 = if drop else -2 = if ." Which? More than one begins so." else ." There's no such skill."
+      then cr then else drop then
     else quiet over 21 31 within and if drop        \ (Not a ritual: the character has no deity)
     else
-      dup harn-ml@ 0= if 1 else dup improved + c@ dup 0= if drop 1 else 1 = if 2 else 255 then then then cost !
+      dup harn-ml@ 0= over improved + c@ 0= or if 1 else 255 then cost !
       cost @ op @ > if
         quiet 0= if
-          cost @ 255 = if ." It can be improved only twice." else ." Not enough points left for that." then cr
+          cost @ 255 = if ." No more than two points in a skill: that one's had its share."
+          else ." Not enough points left for that." then cr
         then
         drop
       else
