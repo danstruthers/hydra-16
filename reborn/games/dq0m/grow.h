@@ -54,5 +54,12 @@ void draw_map (void);
 /* bank.s */
 void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
+void __fastcall__ bread (unsigned char bank, const void* from, void* to, unsigned n);
 void __fastcall__ bwrite (unsigned char bank, void* to, const void* from, unsigned n);
-extern unsigned char ovbank[4];
+extern unsigned char ovbank[5];
+
+/* make.c: a hub's bank reached from an overlay (its bytes copied to the main RAM, or from it, or set) */
+void __fastcall__ hub_get (unsigned char bank, const void* from, void* to, unsigned n);
+void __fastcall__ hub_put (unsigned char bank, void* to, const void* from, unsigned n);
+void __fastcall__ hub_set (unsigned char bank, void* to, unsigned char c, unsigned n);
+extern unsigned char detail_bank;               /* (changes.c's: the regions' details' cache, plan.c's) */

@@ -177,9 +177,9 @@ enum { ASK_WORLD, ASK_DENIZENS, ASK_SENSES, ASK_UI, NASK };
 /* ---- plan.c (the maker's): a stratum grown whole, in outline */
 void __fastcall__ plan_stratum (unsigned char n);   /* strata[n] (its bounds, style, seed, links already set) */
 void __fastcall__ links_down (unsigned char n);     /* Stratum n's own links down (its plan grown) */
-struct region* __fastcall__ region (unsigned char sn, unsigned char rx, unsigned char ry);  /* In the window */
-int __fastcall__ ground (unsigned char sn, unsigned x, unsigned y);    /* The lie of the rock at a square (feet
-                                                **   above the datum: the regions' corners, between them evenly) */
+struct edges;
+void __fastcall__ chunk_edges (unsigned char sn, unsigned cx, unsigned cy, struct edges* e);
+                                                /* A chunk's edges, from the plan (built.c's struct edges) */
 
 /* ---- make.c (the maker's): a chunk made into the cache */
 unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned cy);    /* Its slot */

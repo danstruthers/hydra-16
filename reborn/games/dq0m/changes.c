@@ -35,16 +35,18 @@ struct seen {
 };
 
 static unsigned char chb, seb;                  /* The first banks */
+unsigned char detail_bank;                      /* (The regions' details' cache: plan.c's, emptied here) */
 static unsigned nch;                            /* Changes kept */
 static unsigned char nseen, nexts;              /* Seen maps kept, the next made way for */
 
 void changes_init (void)
 {
-    int b = hy_banks_alloc (CH_BANKS + SEEN_BANKS);
+    int b = hy_banks_alloc (CH_BANKS + SEEN_BANKS + 1);
 
     chb = b;
     seb = b + CH_BANKS;
-    for (nexts = 0; nexts < SEEN_BANKS; ++nexts) {
+    detail_bank = seb + SEEN_BANKS;
+    for (nexts = 0; nexts <= SEEN_BANKS; ++nexts) {
         setbank (seb + nexts);
         memset ((void*) 0x8000, 0, 0x2000);
     }
