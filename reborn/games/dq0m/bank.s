@@ -13,7 +13,7 @@
             .include    "zeropage.inc"
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 4                     ; dq0.cfg's overlays
+OVMAX       = 5                     ; dq0m.cfg's overlays
 DEPTH       = 16                    ; Overlay calls in calls, at most
 
             .bss
@@ -150,3 +150,8 @@ ovl_out:
             OVFN        join, 2
             OVFN        crossings, 2
             OVFN        grow_caves, 3
+            OVFN        stock, 3
+            OVFN        plan_stratum, 4
+            OVFN        links_down, 4
+            OVFN        chunk_edges, 4
+            OVFN        fixtures, 5

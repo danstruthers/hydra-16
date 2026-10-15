@@ -88,8 +88,13 @@ struct portal {
     unsigned char   mat;                        /* PM_* */
     unsigned char   tough;                      /* What breaking it would take: worn away blow by blow */
     unsigned char   bar;                        /* The way (DIR_*) from it to the side it's barred from */
+    unsigned char   parts;                      /* A window's (PP_*: any of them; none, an empty frame), a
+                                                **   portcullis's bars */
 };
-enum { PK_DOOR, PK_WINDOW, PK_PORTCULLIS, PK_DRAWBRIDGE, PK_GATE, PK_GRATE, PK_HATCH };
+enum { PK_DOOR, PK_WINDOW, PK_PORTCULLIS, PK_DRAWBRIDGE, PK_GATE, PK_GRATE, PK_HATCH, PK_SLIT };
+#define PP_GLASS        0x01                    /* (Sight through, not missiles; till it's broken) */
+#define PP_SHUTTERS     0x02                    /* (Open or closed: PS_OPEN; barred, as a door is) */
+#define PP_BARS         0x04                    /* (Sight and missiles through, not movement) */
 #define PS_OPEN         0x01
 #define PS_LOCKED       0x02
 #define PS_BARRED       0x04
@@ -99,6 +104,33 @@ enum { PK_DOOR, PK_WINDOW, PK_PORTCULLIS, PK_DRAWBRIDGE, PK_GATE, PK_GRATE, PK_H
 #define PS_MAGIC        0x40                    /* (Hidden by magic: found only by magical means, the referee's) */
 enum { PM_WOOD, PM_IRONBOUND, PM_IRON, PM_STONE };
 #define PORTAL_STATE    0xFE                    /* (A change record's link for a portal's state: tile its state) */
+/* A window (T_WINDOW, PK_WINDOW) and an arrow slit (T_WINDOW, PK_SLIT, always open) are seen through (the senses'),
+** but a window's closed shutters; a portcullis (T_DOOR, PK_PORTCULLIS) is seen through, up or down */
+
+/* A trap (DUNGEON.md): a hazard on its square, the floor (or a door) it looks like till it's found; an open pit's
+** square T_PIT, in plain sight.  What it does is the referee's (its harm), the world's to set off */
+#define NTRAPS          6
+struct trap {
+    unsigned char   x, y;
+    unsigned char   kind;                       /* TK_* */
+    unsigned char   trigger;                    /* TT_* */
+    unsigned char   state;                      /* TS_* */
+    unsigned char   hide;                       /* Hidden: how well, 0-9 (a search's steps) */
+    unsigned char   power;                      /* A pit's depth in feet; else how hard it strikes, 1-9 */
+};
+enum { TK_PIT, TK_COVERED, TK_SPIKED, TK_DEADFALL, TK_BLADE, TK_DARTS, TK_GAS, TK_ALARM };   /* A pit (open,
+                                                **   covered, spiked and covered), a deadfall, a scything blade,
+                                                **   darts or needles, gas, an alarm */
+enum { TT_PLATE, TT_WIRE, TT_DOOR };            /* Set off: a plate trodden, a wire tripped, its door opened */
+#define TS_SPRUNG       0x01
+#define TS_DISARMED     0x02
+#define TS_BROKEN       0x04
+#define TS_HIDDEN       0x20                    /* (Found by a search, as a secret door is, */
+#define TS_MAGIC        0x40                    /*   or hidden by magic: by magical means only) */
+
+/* The materials (rs.h's MAT_*) of a room's floor, walls and ceiling (struct chunk's mat[r]), and of its passages'
+** (mat[NROOMS]: their floors, the rock round them and over them: the rock's, dug or cut) */
+enum { MP_FLOOR, MP_WALL, MP_CEIL };
 
 struct chunk {
     unsigned char   sn;                         /* Its stratum */
@@ -111,8 +143,12 @@ struct chunk {
     struct portal   portal[NPORTALS];
     unsigned char   tile[CW][CW];
     signed char     elev[CW][CW];
+    unsigned char   mat[NROOMS + 1][3];         /* Its rooms' materials (MP_*), and its passages' */
+    unsigned char   ntraps;
+    struct trap     trap[NTRAPS];
 };
 #define CHUNK_SIZE      0x0AA0                  /* Three to a bank */
+typedef char chunk_fits[sizeof (struct chunk) <= CHUNK_SIZE ? 1 : -1];
 
 /* ---- A stratum, and its plan */
 
@@ -177,9 +213,9 @@ enum { ASK_WORLD, ASK_DENIZENS, ASK_SENSES, ASK_UI, NASK };
 /* ---- plan.c (the maker's): a stratum grown whole, in outline */
 void __fastcall__ plan_stratum (unsigned char n);   /* strata[n] (its bounds, style, seed, links already set) */
 void __fastcall__ links_down (unsigned char n);     /* Stratum n's own links down (its plan grown) */
-struct region* __fastcall__ region (unsigned char sn, unsigned char rx, unsigned char ry);  /* In the window */
-int __fastcall__ ground (unsigned char sn, unsigned x, unsigned y);    /* The lie of the rock at a square (feet
-                                                **   above the datum: the regions' corners, between them evenly) */
+struct edges;
+void __fastcall__ chunk_edges (unsigned char sn, unsigned cx, unsigned cy, struct edges* e);
+                                                /* A chunk's edges, from the plan (built.c's struct edges) */
 
 /* ---- make.c (the maker's): a chunk made into the cache */
 unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned cy);    /* Its slot */

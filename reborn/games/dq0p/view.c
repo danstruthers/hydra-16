@@ -64,8 +64,9 @@ static unsigned char __fastcall__ clear (unsigned x, unsigned y, int tz)
             return 1;
         }
         if (!(p = at (vs, cx, cy)) || !T_CLEAR (*p) || C->elev[cy_][cx_] > ez + (tz - ez) * k / n ||
-            (TILE (*p) == T_DOOR && (q = portal_at (cx_, cy_)) != 0 && !(q->state & PS_OPEN))) {
-            return 0;                           /* (Rock, a wall, a floor above the line, a closed door) */
+            ((TILE (*p) == T_DOOR || TILE (*p) == T_WINDOW) && (q = portal_at (cx_, cy_)) != 0 &&
+            !(q->state & PS_OPEN) && q->kind != PK_PORTCULLIS)) {
+            return 0;                           /* (Rock, a wall, a floor above the line, a closed door or shutters) */
         }
     }
 }

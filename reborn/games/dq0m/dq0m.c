@@ -3,8 +3,8 @@
 ** its role there, hub.h), that grows the dungeon (DUNGEON.md) for whoever asks, the world or the denizens (each its
 ** request in the hub: world.h's struct mreq): a stratum's plan and its links down (plan.c: its record set by the
 ** asker), a chunk (make.c, built.c), into the hub's shared banks, where they read it.  It waits on its doorbell
-** (costing nothing) between requests.  Its growers are overlays (built.c, pass.c, caves.c), read as it starts from the game's
-** lib folder (its third argument, the UI's) into banks of its own.
+** (costing nothing) between requests.  Its growers are overlays (built.c, pass.c, caves.c, plan.c ...), read as it
+** starts from the game's lib folder (its third argument, the UI's) into banks of its own.
 */
 
 #include <fcntl.h>
@@ -17,7 +17,7 @@
 #include "grow.h"
 
 struct stratum strata[MAXSTRATA];               /* (This task's copy of the hub's) */
-#define OVLS    3                               /* Its overlays: built.c, pass.c, caves.c */
+#define OVLS    5                               /* Its overlays: built.c, pass.c, caves.c, plan.c, fixtures.c */
 
 /* The overlays: dir/dq0m.ovl, an 8K bank each (dq0m.cfg's OV1 ...; the file cut after the last one used: make.js),
 ** read into banks of its own: 0, or -1 */

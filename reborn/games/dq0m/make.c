@@ -3,11 +3,9 @@
 ** whoever it's for (the stratum's seed's and its place's).  The slot it goes in: one empty, or the one least lately
 ** found, but never one a task is reading (the hub's inuse) nor one beside the character's chunk.
 **
-** A chunk's edges: the ways across them.  Where an edge is a region's, the plan's way (plan.c: a square along the
-** region's edge; the chunk whose stretch of edge it's in has it); inside a region, the region's own tree of ways
-** between its 64 chunks, worked out from the seed whenever it's needed (a random walk's, as the plan's are), never
-** kept but for the last region's.  An edge the stratum's bounds cut short has its way as near as it fits, the same
-** for both chunks it joins.
+** A chunk's edges (the ways across them, the ground at its corners) are the plan's, worked out by plan.c's
+** chunk_edges (overlay 4); the chunk grown by its style's grower (built.c, caves.c: overlays 1 and 3) in the main
+** RAM, and given its materials and its fixtures (fixtures.c), then copied into the cache.
 **
 ** What's changed in a chunk (changes.c's records: a square dug, a link made) is laid over it each time it's made,
 ** and what the character's seen of it is kept as the cache makes way for it, and laid over it again.
@@ -26,115 +24,55 @@ static struct chunk cb;                         /* (A chunk grown in the main RA
 ** timbered: built's, for now); mixed (built into natural) */
 static const struct style styles[4] = {
     /* lit zones z3 slope  ceilings: flat barrel dome cathedral sloped rough   doors open lock bar  hid mag  wood ib
-    ** chambers wide glow */
+    ** chambers wide glow  things hidden h_lo h_span  kinds  hide_kinds
+    ** earth: floors passages  masonry: walls ceilings  windows slits glass shutters bars  portcullises  traps pits
+    ** hidden magic  door traps */
     { 5, 4, 1, 1, { 6, 4, 3, 2, 2, 3 }, 20, 8, 4, 2, 1, 1, 6, 3, 3, 1, 1,      /* built */
       6, 3, 2, 6, { KI_POTSHERDS, KI_BONES, KI_SKULL, KI_CANDLE, KI_BROKEN_SWORD, KI_SACK, KI_ROPE, KI_PENNIES },
-      { KI_PENNIES, KI_KEY, KI_LOCKPICKS, KI_POUCH } },
+      { KI_PENNIES, KI_KEY, KI_LOCKPICKS, KI_POUCH },
+      6, 8, 20, 14, 6, 6, 2, 2, 2, 2, 3, 1, 8, 1, 2 },
     { 1, 0, 0, 1, { 0, 0, 0, 0, 0, 20 }, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1, 1,      /* natural */
       4, 2, 1, 4, { KI_BONES, KI_BONES, KI_SKULL, KI_POTSHERDS, KI_BROKEN_SWORD, KI_PENNIES, KI_ROPE, KI_BONES },
-      { KI_PENNIES, KI_PENNIES, KI_POUCH, KI_KEY } },
+      { KI_PENNIES, KI_PENNIES, KI_POUCH, KI_KEY },
+      8, 6, 0, 0, 0, 0, 0, 0, 0, 0, 2, 4, 0, 0, 0 },
     { 2, 2, 0, 1, { 12, 4, 0, 0, 2, 2 }, 8, 12, 2, 2, 1, 0, 9, 1, 2, 1, 0,     /* mine */
       5, 2, 2, 4, { KI_PICK, KI_SHOVEL, KI_ROPE, KI_CANDLE, KI_LANTERN, KI_SACK, KI_BONES, KI_POTSHERDS },
-      { KI_PENNIES, KI_CHISEL, KI_POUCH, KI_KEY } },
+      { KI_PENNIES, KI_CHISEL, KI_POUCH, KI_KEY },
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 6, 0, 1 },
     { 4, 3, 1, 1, { 4, 3, 2, 1, 2, 8 }, 10, 8, 3, 2, 1, 1, 6, 3, 3, 1, 1,      /* mixed */
       6, 3, 2, 6, { KI_POTSHERDS, KI_BONES, KI_SKULL, KI_CANDLE, KI_BROKEN_SWORD, KI_SACK, KI_ROPE, KI_PENNIES },
-      { KI_PENNIES, KI_KEY, KI_LOCKPICKS, KI_POUCH } },
+      { KI_PENNIES, KI_KEY, KI_LOCKPICKS, KI_POUCH },
+      6, 8, 12, 8, 3, 6, 2, 2, 2, 1, 3, 2, 8, 1, 2 },
 };
 const struct style* SP;
 
-/* ---- A region's own ways between its chunks: (the last asked for's) each chunk's north and west edges' */
-
-static unsigned char dsn = 0xFF, drx, dry;
-static unsigned char dn[RCH][RCH], dw[RCH][RCH];
-
-static void __fastcall__ detail (unsigned char sn, unsigned char rx, unsigned char ry)
+/* A hub's bank's bytes copied to the main RAM (hub_get), or from it (hub_put), or set (hub_set), the window put back
+** as it was: the hub reached from an overlay's code (which the hub's bank in the window would put out) */
+void __fastcall__ hub_get (unsigned char bank, const void* from, void* to, unsigned n)
 {
-    struct stratum* s = &strata[sn];
-    unsigned char ix, iy, nx, ny, d, kw, kh, seen[RCH];
-    unsigned todo, steps;
+    unsigned char b = getbank ();
 
-    if (dsn == sn && drx == rx && dry == ry) {
-        return;
-    }
-    dsn = sn;
-    drx = rx;
-    dry = ry;
-    memset (dn, NO_WAY, sizeof dn);
-    memset (dw, NO_WAY, sizeof dw);
-    if (region (sn, rx, ry)->kind == RG_ROCK) {
-        return;
-    }
-    kw = (s->w - (unsigned) rx * RW + CW - 1) / CW;      /* (Its chunks in the stratum, each way) */
-    kh = (s->h - (unsigned) ry * RW + CW - 1) / CW;
-    kw = kw > RCH ? RCH : kw;
-    kh = kh > RCH ? RCH : kh;
-    rseed (s->seed ^ ((unsigned long) rx << 16 | ry) * 2654435761UL);
-    memset (seen, 0, sizeof seen);
-    seen[0] = 1;
-    ix = iy = 0;
-    for (todo = kw * kh - 1, steps = 0; todo && steps < 20000; ++steps) {
-        d = random (4);
-        nx = ix + dir_x[d];
-        ny = iy + dir_y[d];
-        if (nx >= kw || ny >= kh) {
-            continue;
-        }
-        if (!(seen[ny] & (1 << nx))) {
-            seen[ny] |= 1 << nx;
-            --todo;
-            if (d == DIR_N) {
-                dn[ix][iy] = 2 + random (CW - 4);
-            } else if (d == DIR_S) {
-                dn[nx][ny] = 2 + random (CW - 4);
-            } else if (d == DIR_W) {
-                dw[ix][iy] = 2 + random (CW - 4);
-            } else {
-                dw[nx][ny] = 2 + random (CW - 4);
-            }
-        }
-        ix = nx;
-        iy = ny;
-    }
-    for (iy = 0; iy < kh; ++iy) {                /* (A few more, for loops) */
-        for (ix = 0; ix < kw; ++ix) {
-            if (iy && dn[ix][iy] == NO_WAY && !random (4)) {
-                dn[ix][iy] = 2 + random (CW - 4);
-            }
-            if (ix && dw[ix][iy] == NO_WAY && !random (4)) {
-                dw[ix][iy] = 2 + random (CW - 4);
-            }
-        }
-    }
+    hub_map (bank);
+    memcpy (to, from, n);
+    setbank (b);
 }
 
-/* The way across chunk (cx, cy)'s north edge (west: across its west), or NO_WAY */
-static unsigned char __fastcall__ edge_way (unsigned char sn, unsigned cx, unsigned cy, unsigned char west)
+void __fastcall__ hub_put (unsigned char bank, void* to, const void* from, unsigned n)
 {
-    struct stratum* s = &strata[sn];
-    unsigned char rx = cx / RCH, ry = cy / RCH, ix = cx % RCH, iy = cy % RCH, p;
-    unsigned len;
+    unsigned char b = getbank ();
 
-    if (cx >= (s->w + CW - 1) / CW || cy >= (s->h + CW - 1) / CW || (west ? !cx : !cy)) {
-        return NO_WAY;
-    }
-    if (west ? !ix : !iy) {                     /* (A region's edge: the plan's) */
-        p = west ? region (sn, rx, ry)->w : region (sn, rx, ry)->n;
-        if (p == NO_WAY || p / CW != (west ? iy : ix)) {
-            return NO_WAY;
-        }
-        p %= CW;
-    } else {
-        detail (sn, rx, ry);
-        p = west ? dw[ix][iy] : dn[ix][iy];
-        if (p == NO_WAY) {
-            return NO_WAY;
-        }
-    }
-    len = west ? (s->h - cy * CW >= CW ? CW : s->h - cy * CW) : (s->w - cx * CW >= CW ? CW : s->w - cx * CW);
-    if (len < 3) {
-        return NO_WAY;
-    }
-    return p > len - 2 ? len - 2 : p;
+    hub_map (bank);
+    memcpy (to, from, n);
+    setbank (b);
+}
+
+void __fastcall__ hub_set (unsigned char bank, void* to, unsigned char c, unsigned n)
+{
+    unsigned char b = getbank ();
+
+    hub_map (bank);
+    memset (to, c, n);
+    setbank (b);
 }
 
 /* The slot a new chunk goes in: an empty one, or the least lately found that no task is reading and isn't beside
@@ -169,36 +107,12 @@ unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned c
 {
     static struct edges e;
     struct stratum* s = &strata[sn];
-    unsigned x = s->x0 + cx * CW, y = s->y0 + cy * CW, w;
-    unsigned char i, k;
+    unsigned x = s->x0 + cx * CW, y = s->y0 + cy * CW;
+    unsigned char k;
     struct chunk* c;
     struct cslot* sl;
 
-    e.way[DIR_N] = edge_way (sn, cx, cy, 0);
-    e.way[DIR_W] = edge_way (sn, cx, cy, 1);
-    e.way[DIR_S] = edge_way (sn, cx, cy + 1, 0);
-    e.way[DIR_E] = edge_way (sn, cx + 1, cy, 1);
-    e.ground[0] = ground (sn, x, y);
-    e.ground[1] = ground (sn, x + CW - 1, y);
-    e.ground[2] = ground (sn, x, y + CW - 1);
-    e.ground[3] = ground (sn, x + CW - 1, y + CW - 1);
-    w = s->w - cx * CW;
-    e.x0 = 0;
-    e.x1 = w >= CW ? CW - 1 : w - 1;
-    w = s->h - cy * CW;
-    e.y0 = 0;
-    e.y1 = w >= CW ? CW - 1 : w - 1;
-    e.nland = 0;
-    for (i = 0; i < s->nlinks && e.nland < 4; ++i) {
-        if (!s->link[i].dug && s->link[i].x - x < CW && s->link[i].y - y < CW) {   /* (A dug one's the records') */
-            e.lx[e.nland] = s->link[i].x - x;
-            e.ly[e.nland] = s->link[i].y - y;
-            e.ln[e.nland++] = i;
-        }
-    }
-    if (region (sn, cx / RCH, cy / RCH)->kind == RG_ROCK && !e.nland) {
-        e.x1 = e.y1 = 0xFF;                     /* (Solid rock: nothing grown) */
-    }
+    chunk_edges (sn, cx, cy, &e);
     hub_map (0);
     k = pick ();
     if (HUB->cslot[k].used) {                   /* (What's been seen of the one made way for, kept) */
@@ -223,6 +137,7 @@ unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned c
         } else {
             grow_built (c, &e, s->seed ^ ((unsigned long) cx << 16 | cy) * 40503UL);
         }
+        fixtures (c);                           /* (Its materials, its windows, its traps ...) */
     }
     if (!changes_over (c, x, y) && e.x1 != 0xFF) {
         stock (c, x, y);                        /* (Its things put down, the first time it's made) */

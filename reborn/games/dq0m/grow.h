@@ -22,6 +22,16 @@ struct style {
     unsigned char   h_lo, h_span;               /*   how well: a difficulty from h_lo, h_span of them (0-9) */
     unsigned char   kinds[8];                   /* What's lying about (items.h's KI_*) */
     unsigned char   hide_kinds[4];              /* What's concealed */
+    unsigned char   f_earth, p_earth;           /* (fixtures.c) A room's floor bare earth (else flagged; a cave's
+                                                **   stone), a chunk's passages': in 20, one more each 4 centuries old */
+    unsigned char   w_built, c_built;           /* A room's walls masonry, its ceiling (else the rock): in 20 */
+    unsigned char   windows, slits;             /* A room's side with a window, where a passage runs beside it: in
+                                                **   20; of those, an arrow slit: in 20 */
+    unsigned char   w_glass, w_shut, w_bars;    /* A window's glass, shutters, bars: in 4 each */
+    unsigned char   portc;                      /* A door a portcullis instead: in 20 */
+    unsigned char   traps, t_pit;               /* A trap in a room: in 20; a pit (open or covered): in 4 */
+    unsigned char   t_hidden, t_magic;          /* A trap hidden: in 10; of those, by magic: in 10 */
+    unsigned char   d_trap;                     /* A closed door trapped: in 20 */
 };
 extern const struct style* SP;                  /* The chunk's stratum's (make.c's) */
 
@@ -33,6 +43,7 @@ unsigned char __fastcall__ join (unsigned char a, unsigned char b);    /* (Stubs
 unsigned char crossings (void);
 void __fastcall__ grow_built (struct chunk* c, const struct edges* e, unsigned long seed);  /* (Overlay 1's) */
 void __fastcall__ grow_caves (struct chunk* c, const struct edges* e, unsigned long seed);  /* (Overlay 3's) */
+void __fastcall__ fixtures (struct chunk* c);   /* Its materials, windows, portcullises, traps (overlay 5's) */
 
 /* changes.c: what's changed, and what's been seen, kept */
 void changes_init (void);
@@ -54,5 +65,12 @@ void draw_map (void);
 /* bank.s */
 void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
+void __fastcall__ bread (unsigned char bank, const void* from, void* to, unsigned n);
 void __fastcall__ bwrite (unsigned char bank, void* to, const void* from, unsigned n);
-extern unsigned char ovbank[4];
+extern unsigned char ovbank[5];
+
+/* make.c: a hub's bank reached from an overlay (its bytes copied to the main RAM, or from it, or set) */
+void __fastcall__ hub_get (unsigned char bank, const void* from, void* to, unsigned n);
+void __fastcall__ hub_put (unsigned char bank, void* to, const void* from, unsigned n);
+void __fastcall__ hub_set (unsigned char bank, void* to, unsigned char c, unsigned n);
+extern unsigned char detail_bank;               /* (changes.c's: the regions' details' cache, plan.c's) */

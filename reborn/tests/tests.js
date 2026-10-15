@@ -2260,14 +2260,14 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0', what: 'Dingus Quest Zero (games/dq0) at rc, its turns pace: a character from hmchar\'s file (-c), commands typed ahead (each waits for its prompt): looking, the way out shut, the map, going, quit; then the game running hmchar itself, in its window, answered as a player would, and the character it made read back',
+      name: 'dq0', what: 'Dingus Quest Zero (games/dq0) at rc, its turns pace: a character from hmchar\'s file (-c), commands typed ahead (each waits for its prompt): looking, the way out shut, the map, going, quit (digging: dq0dig, dq0tools, dq0earth); then the game running hmchar itself, in its window, answered as a player would, and the character it made read back',
       init: 't_rc', cycles: 800e6,
       // (\u0101: wait for a prompt, the game's "> " too; \u0100: wait a while, for hmchar's questions)
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm\r' +
-        ['look', 'u', 'map', 'dig down', 'n', 'look', 'open', 'n', 'e', 'u', 'look', 's', 'w', 'go west', 'map', 'wait', 'help', 'foo', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') +
+        ['look', 'u', 'map', 'n', 'look', 'open', 'n', 'e', 'u', 'look', 's', 'w', 'go west', 'map', 'wait', 'help', 'foo', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') +
         '\u0101dq0 -p t -s 7\r\u0100\u0100k\r\u01002\r\u0100bow\r\u0100spear\r\u0100sword\r\u0100\r\u0100Dorn\r' +
         '\u0101sheet\r\u0101quit\r\u0101echo done\r' },
-      expect: ['Tordan, Hunter/Trapper, enters the dungeon.', 'The way out is shut fast.', 'The map (you face', 'You have nothing that would bite into it', 'You open the door.', 'at a ledge ahead', 'You set to climbing',
+      expect: ['Tordan, Hunter/Trapper, enters the dungeon.', 'The way out is shut fast.', 'The map (you face', 'You open the door.', 'at a ledge ahead', 'You set to climbing',
         '> wait', 'Time passes.', 'Commands: north, northeast, east',
         "I don't know how to foo.", '% echo $status', 'Keep this character, or roll again (k or r)?', 'Written to /ram/dq0.hm',
         'Dorn, Hunter/Trapper, enters the dungeon.', 'Dorn, Human Female, Hunter/Trapper; born 10 Ilvin (Skorus).', '% echo done\ndone'],
@@ -2282,7 +2282,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0dig', what: 'Dingus Quest Zero digging (dq0 -k pick -T: a pick in hand, the tool the referee takes for stone, named as it is first used): a shaft down from a room by its stairway, spell by spell (Mining tests, the referee asked), through to the stratum below (grown round it then), and down it',
+      name: 'dq0dig', what: 'Dingus Quest Zero digging (dq0 -k pick -T: a pick in hand, the tool the referee takes (the room\'s floor earth, the maker\'s), named as it is first used): a shaft down from a room by its stairway, spell by spell (Mining tests, the referee asked), through to the stratum below (grown round it then), and down it',
       init: 't_rc', cycles: 700e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -k pick -T\r' +
         ['dig down', 'look', 'd', 'look', 'map', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
@@ -2306,9 +2306,9 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0tools', what: 'Dingus Quest Zero\'s tools to hand (the referee told all the tools the character carries; a skill used takes the one that suits best): a sword (dq0 -k sword) and a dagger won\'t dig stone, bare hands won\'t either; what\'s carried listed',
+      name: 'dq0tools', what: 'Dingus Quest Zero\'s tools to hand (the referee told all the tools the character carries; a skill used takes the one that suits best): a sword (dq0 -k sword) and a dagger won\'t dig a flagged floor (the maker\'s materials: seed 5\'s first room\'s), bare hands won\'t either; what\'s carried listed',
       init: 't_rc', cycles: 400e6,
-      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -k sword -T\r' +
+      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 5 -c /ram/c.hm -k sword -T\r' +
         ['dig down', 'i', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
       expect: ['You set to digging', 'You have nothing that would bite into it', 'a sword, in your hand', '% echo $status'],
       sdcard: true
@@ -2317,8 +2317,18 @@ module.exports = {
       name: 'dq0harm', what: 'Dingus Quest Zero\'s harm (the referee\'s RS_HARM: HarnMaster\'s falling, Skills 8, and its injuries, Combat 13-14): up a ledge, then jumped down it, a fall of 7 feet onto paving (1d6 and 1d6 more), the injury it does worded, on the character\'s sheet and its map\'s panel (its injury levels), and kept in the save (pc.hm\'s inj line, hmchar\'s format)',
       init: 't_rc', cycles: 800e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -d /ram/hurt\r' +
-        ['look', 'u', 'map', 'dig down', 'n', 'look', 'open', 'n', 'e', 'u', 'turn around', 'jump down', 'sheet', 'map', 'quit', 'cat /ram/hurt/pc.hm', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
+        ['look', 'u', 'map', 'n', 'look', 'open', 'n', 'e', 'u', 'turn around', 'jump down', 'sheet', 'map', 'quit', 'cat /ram/hurt/pc.hm', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
       expect: ['You haul yourself up over the edge.', 'You jump, and drop 7 feet. You land hard: a ', 'Injuries: ', 'IP ', '\ninj ', '% echo $status'],
+      sdcard: true
+    },
+    {
+      name: 'dq0earth', what: 'Dingus Quest Zero\'s materials (the maker\'s: dq0m/fixtures.c, a room\'s floor, walls and ceiling by its stratum\'s style and age), the world\'s dig taking the floor\'s from the chunk: a shovel (dq0 -k shovel) digs a room\'s earth floor (seed 3\'s first), the referee taking it, named, through to the stratum below; then a flagged floor (seed 5\'s) it won\'t bite into',
+      init: 't_rc', cycles: 900e6,
+      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -k shovel -T\r' +
+        ['dig down', 'quit'].map(l => '\u0101' + l + '\r').join('') + '\u0101dq0 -p t -s 5 -c /ram/c.hm -k shovel -T\r' +
+        ['dig down', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['You set to digging', 'You dig with your shovel.', 'the shaft is through.', 'You set to digging',
+        'You have nothing that would bite into it', '% echo $status'],
       sdcard: true
     },
     {

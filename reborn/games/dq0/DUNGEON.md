@@ -172,8 +172,11 @@ builder to work out (world builder for the floor, ceiling, and wall materials, r
 skills/abilities affect it)."): the maker gives everything its material as it grows it (a region's rock, its kind
 and hardness, varying across the stratum; a built room's walls, floor and ceiling: brick, dressed stone, the rock
 cut); the world reads what's there and asks; the referee judges how what's applied to it (Mining with a tool,
-explosives, a spell, a psionic power) works on it.  (To come: the materials are still the world's guess, masonry or
-stone.)
+explosives, a spell, a psionic power) works on it.  (Built: as a chunk is grown, each of its rooms is given its
+floor's, its walls' and its ceiling's materials, and its passages theirs (their floors, the rock they're cut in),
+by the stratum's style and age (dq0m/fixtures.c): a built room's walls masonry, its floor flagged or bare earth,
+the more earth the older; a cave's floor earth or stone, its walls the rock; a mine's all stone; the world's dig
+takes the floor's, or the wall's, from the chunk.  To come: the rock's own kinds and hardness, across a stratum.)
 
 **Tools** (the user: "For digging, tools are important, so the referee will need to know which tools you have
 equipped as well since digging stone with your bare hands doesn't usually work well (or even with a shovel for
@@ -192,7 +195,8 @@ that material, and of two as good the one the work wears less.  The reply names 
 it; the item records its wear (a blade dug with is dulled, then dull: worded in what's carried).  A tool that can't
 do the work isn't used for it (a sword won't dig stone).  Built: digging so judged, its tool named as it's first
 taken up ("You dig with your pick"); a game can still begin with a thing in hand (dq0 -k TOOL).  Earth to dig, where
-a shovel or a sword would be taken, comes with the materials the world builder gives floors and walls.
+a shovel is taken (bare hands before a sword, which the work would dull), comes with the materials the maker gives
+floors and walls (dq0 -k shovel digs an earth floor; a flagged one it won't bite into).
 
 Each change is a **record** (a stratum, a square, what it became: its kind, its floor, its openings; who made it and
 when), kept by the maker: laid over a chunk each time it's made again, and in the save.  Seen squares are kept the
@@ -217,7 +221,10 @@ bars let sight through), and dulls sound; open, it joins its two areas.  The ref
 key, picking, forcing (Strength), breaking (a weapon's or a tool's blows against its toughness), magic (unwarding,
 a knock), climbing (a window).  Its state changes are kept as any change is; denizens open, close, lock and break
 them by the same rules.  (First: doors, their states, opening, closing, unlocking, forcing; the rest with weapons,
-items and powers.)
+items and powers.  Grown as data, by the style's say (dq0m/fixtures.c): windows, their parts any of glass,
+shutters and bars, and arrow slits, in a room's wall where a passage runs beside it (world.h's PK_WINDOW, PK_SLIT
+on a T_WINDOW square); portcullises for some doors (PK_PORTCULLIS); none in a natural cave.  Seen through as the
+table says (a window's shutters closed not; a portcullis up or down), but not yet worked: the world's to come.)
 
 A **window** (the user: "Windows can be of glass and/or have shutters (lockable/wardable) or bars") is parts, any
 of: **glass** (sight through, not movement, till it's broken: loud, and sharp), **shutters** (open or closed, locked
@@ -259,7 +266,12 @@ or none, a pit in plain sight), and its **state** (set, sprung, disarmed, broken
 wall it looks like.  The referee judges it all: noticing it (a glance, a search), dodging it as it goes off (Dodge,
 Jumping, Acrobatics), its harm (rs.h's RS_HARM: its dice, its aspect, a fall's height), disarming it (Lockcraft,
 Engineering; a dispelling for a magical one).  Denizens know their own faction's traps, and go round them; a trap
-sprung is an event, heard.  (With the referee's harm: climbing's falls and combat need it too.)
+sprung is an event, heard.  (With the referee's harm: climbing's falls and combat need it too.  Grown as data
+already, by the style's say (dq0m/fixtures.c, world.h's struct trap): pits, open (a T_PIT square, in plain sight:
+its depth) or covered, spiked or not (hidden), where the squares round it are floor and as level as a walk, so a
+chunk's ways are never parted; deadfalls, blades, darts, gas and alarms, a plate's or a wire's, and a closed
+door's, set off as it's opened; hidden (a search's steps) or by magic; a natural cave's only pits.  The world
+doesn't set them off yet.)
 
 ### Items: the dungeon's layer of things
 

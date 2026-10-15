@@ -5,17 +5,42 @@
 ** that reaches every hall (a random walk's: the first step into each region is a way), and a few more for loops;
 ** the rock's lie a walk too, each region near its neighbours'.  The regions none of the halls reach become rock.
 ** (The populations, the water and the features come with their steps.)
+**
+** And a chunk's edges, from the plan (chunk_edges: make.c's): the ways across them, the ground at its corners.
+** Where an edge is a region's, the plan's way (a square along the region's edge; the chunk whose stretch of edge
+** it's in has it); inside a region, the region's own tree of ways between its 64 chunks, worked out from the seed
+** whenever it's needed (a random walk's, as the plan's are), kept in a bank of the maker's own (a cache of them, so
+** a chunk on a region's edge doesn't work its neighbours' out again and again).  An edge the stratum's bounds cut
+** short has its way as near as it fits, the same for both chunks it joins.
+**
+** (Overlay 4, the maker's: its code in a bank of its own, so the plan's banks are reached a region at a time, copied
+** out and back (rg, rp: hub_get's and hub_put's), and the cache by bread and bwrite.)
 */
+
+#pragma code-name ("OV4CODE")
+#pragma rodata-name ("OV4RODATA")
 
 #include <string.h>
 #include <dice.h>
 #include "../dq0/hub.h"
 #include "../dq0w/world.h"
+#include "grow.h"
 
-struct region* __fastcall__ region (unsigned char sn, unsigned char rx, unsigned char ry)
+static struct region R;                         /* (A region copied out of its plan: rg's, put back by rp) */
+static struct region* ra;
+static unsigned char rb;
+
+static struct region* __fastcall__ rg (unsigned char sn, unsigned char rx, unsigned char ry)
 {
-    hub_map (PLAN_BANK (sn));
-    return PLAN_AT (sn) + (unsigned) ry * strata[sn].rw + rx;
+    rb = PLAN_BANK (sn);
+    ra = PLAN_AT (sn) + (unsigned) ry * strata[sn].rw + rx;
+    hub_get (rb, ra, &R, sizeof R);
+    return &R;
+}
+
+static void rp (void)
+{
+    hub_put (rb, ra, &R, sizeof R);
 }
 
 /* A region's corner's lie (feet), the plan's edge's for a corner past it */
@@ -23,10 +48,11 @@ static int __fastcall__ corner (unsigned char sn, unsigned char rx, unsigned cha
 {
     struct stratum* s = &strata[sn];
 
-    return 2 * region (sn, rx < s->rw ? rx : s->rw - 1, ry < s->rh ? ry : s->rh - 1)->z;
+    return 2 * rg (sn, rx < s->rw ? rx : s->rw - 1, ry < s->rh ? ry : s->rh - 1)->z;
 }
 
-int __fastcall__ ground (unsigned char sn, unsigned x, unsigned y)
+/* The lie of the rock at a square (feet above the datum: the regions' corners, between them evenly) */
+static int __fastcall__ ground (unsigned char sn, unsigned x, unsigned y)
 {
     struct stratum* s = &strata[sn];
     unsigned ox = x - s->x0, oy = y - s->y0;
@@ -57,11 +83,10 @@ static unsigned char __fastcall__ way_at (unsigned char len)
 
 #define VISITED     0x01
 
-void __fastcall__ plan_stratum (unsigned char n)
+void __fastcall__ o_plan_stratum (unsigned char n)
 {
     struct stratum* s = &strata[n];
     struct region* r;
-    struct region* q;
     unsigned char rx, ry, i, k, nx, ny, d;
     unsigned todo, steps;
     int z;
@@ -78,47 +103,50 @@ void __fastcall__ plan_stratum (unsigned char n)
         }
     }
     rseed (s->seed);
-    hub_map (PLAN_BANK (n));
-    memset (PLAN_AT (n), 0, 0x1000);
+    hub_set (PLAN_BANK (n), PLAN_AT (n), 0, 0x1000);
     /* Kinds, and the rock's lie: each region near the average of those north and west of it */
     for (ry = 0; ry < s->rh; ++ry) {
         for (rx = 0; rx < s->rw; ++rx) {
             z = 0;
             k = 0;
             if (rx) {
-                z += region (n, rx - 1, ry)->z;
+                z += rg (n, rx - 1, ry)->z;
                 ++k;
             }
             if (ry) {
-                z += region (n, rx, ry - 1)->z;
+                z += rg (n, rx, ry - 1)->z;
                 ++k;
             }
             z = (k ? z / k : 0) + (int) random (9) - 4;
-            r = region (n, rx, ry);
+            r = rg (n, rx, ry);
             r->z = z > 50 ? 50 : z < -50 ? -50 : z;
             r->kind = s->rw * s->rh > 1 && !random (6) ? RG_ROCK : RG_HALLS;
             r->n = r->w = NO_WAY;
+            rp ();
         }
     }
     for (i = 0; i < s->nlinks; ++i) {           /* (A link's region is halls) */
-        region (n, (s->link[i].x - s->x0) >> 8, (s->link[i].y - s->y0) >> 8)->kind = RG_HALLS;
+        rg (n, (s->link[i].x - s->x0) >> 8, (s->link[i].y - s->y0) >> 8)->kind = RG_HALLS;
+        rp ();
     }
     /* The halls the first link's region reaches (repeated sweeps), the rest rock */
     rx = s->nlinks ? (s->link[0].x - s->x0) >> 8 : 0;
     ry = s->nlinks ? (s->link[0].y - s->y0) >> 8 : 0;
-    region (n, rx, ry)->flags |= VISITED;
+    rg (n, rx, ry)->flags |= VISITED;
+    rp ();
     do {
         k = 0;
         for (ny = 0; ny < s->rh; ++ny) {
             for (nx = 0; nx < s->rw; ++nx) {
-                r = region (n, nx, ny);
+                r = rg (n, nx, ny);
                 if (r->kind != RG_HALLS || (r->flags & VISITED)) {
                     continue;
                 }
                 for (d = 0; d < 4; ++d) {
                     if ((unsigned char) (nx + dir_x[d]) < s->rw && (unsigned char) (ny + dir_y[d]) < s->rh &&
-                        (region (n, nx + dir_x[d], ny + dir_y[d])->flags & VISITED)) {
-                        region (n, nx, ny)->flags |= VISITED;
+                        (rg (n, nx + dir_x[d], ny + dir_y[d])->flags & VISITED)) {
+                        rg (n, nx, ny)->flags |= VISITED;
+                        rp ();
                         k = 1;
                         break;
                     }
@@ -129,38 +157,45 @@ void __fastcall__ plan_stratum (unsigned char n)
     todo = 0;
     for (ny = 0; ny < s->rh; ++ny) {
         for (nx = 0; nx < s->rw; ++nx) {
-            r = region (n, nx, ny);
+            r = rg (n, nx, ny);
             if (!(r->flags & VISITED)) {
                 r->kind = RG_ROCK;
             } else {
                 r->flags &= ~VISITED;
                 ++todo;
             }
+            rp ();
         }
     }
     /* The ways: a random walk over the halls, its first step into each a way (a tree that reaches them all) */
-    region (n, rx, ry)->flags |= VISITED;
+    rg (n, rx, ry)->flags |= VISITED;
+    rp ();
     for (steps = 0, --todo; todo && steps < 60000U; ++steps) {
         d = random (4);
         nx = rx + dir_x[d];
         ny = ry + dir_y[d];
-        if (nx >= s->rw || ny >= s->rh || region (n, nx, ny)->kind != RG_HALLS) {
+        if (nx >= s->rw || ny >= s->rh || rg (n, nx, ny)->kind != RG_HALLS) {
             continue;
         }
-        q = region (n, nx, ny);
-        if (!(q->flags & VISITED)) {
-            q->flags |= VISITED;
+        if (!(R.flags & VISITED)) {
+            R.flags |= VISITED;
+            rp ();
             --todo;
             /* (The edge between: the southern or eastern region's north or west) */
             if (d == DIR_N) {
-                region (n, rx, ry)->n = way_at (edge_len ((unsigned) rx * RW, s->w));
+                k = way_at (edge_len ((unsigned) rx * RW, s->w));
+                rg (n, rx, ry)->n = k;
             } else if (d == DIR_S) {
-                region (n, nx, ny)->n = way_at (edge_len ((unsigned) nx * RW, s->w));
+                k = way_at (edge_len ((unsigned) nx * RW, s->w));
+                rg (n, nx, ny)->n = k;
             } else if (d == DIR_W) {
-                region (n, rx, ry)->w = way_at (edge_len ((unsigned) ry * RW, s->h));
+                k = way_at (edge_len ((unsigned) ry * RW, s->h));
+                rg (n, rx, ry)->w = k;
             } else {
-                region (n, nx, ny)->w = way_at (edge_len ((unsigned) ny * RW, s->h));
+                k = way_at (edge_len ((unsigned) ny * RW, s->h));
+                rg (n, nx, ny)->w = k;
             }
+            rp ();
         }
         rx = nx;
         ry = ny;
@@ -168,16 +203,21 @@ void __fastcall__ plan_stratum (unsigned char n)
     /* A few more, for loops */
     for (ny = 0; ny < s->rh; ++ny) {
         for (nx = 0; nx < s->rw; ++nx) {
-            r = region (n, nx, ny);
+            r = rg (n, nx, ny);
             r->flags &= ~VISITED;
+            rp ();
             if (r->kind != RG_HALLS) {
                 continue;
             }
-            if (ny && r->n == NO_WAY && region (n, nx, ny - 1)->kind == RG_HALLS && !random (5)) {
-                region (n, nx, ny)->n = way_at (edge_len ((unsigned) nx * RW, s->w));
+            if (ny && r->n == NO_WAY && rg (n, nx, ny - 1)->kind == RG_HALLS && !random (5)) {
+                k = way_at (edge_len ((unsigned) nx * RW, s->w));
+                rg (n, nx, ny)->n = k;
+                rp ();
             }
-            if (nx && region (n, nx, ny)->w == NO_WAY && region (n, nx - 1, ny)->kind == RG_HALLS && !random (5)) {
-                region (n, nx, ny)->w = way_at (edge_len ((unsigned) ny * RW, s->h));
+            if (nx && rg (n, nx, ny)->w == NO_WAY && rg (n, nx - 1, ny)->kind == RG_HALLS && !random (5)) {
+                k = way_at (edge_len ((unsigned) ny * RW, s->h));
+                rg (n, nx, ny)->w = k;
+                rp ();
             }
         }
     }
@@ -187,7 +227,7 @@ void __fastcall__ plan_stratum (unsigned char n)
 /* ---- The strata: the one below a link, grown when anyone first takes it */
 
 /* Stratum n's own links down (one or two, in its halls; none from the deepest), to stratum n + 1 */
-void __fastcall__ links_down (unsigned char n)
+void __fastcall__ o_links_down (unsigned char n)
 {
     struct stratum* s = &strata[n];
     unsigned char k, tries;
@@ -201,12 +241,154 @@ void __fastcall__ links_down (unsigned char n)
             l = &s->link[s->nlinks];
             l->x = s->x0 + 2 + random (s->w - 4);
             l->y = s->y0 + 2 + random (s->h - 4);
-            if (region (n, (l->x - s->x0) >> 8, (l->y - s->y0) >> 8)->kind == RG_HALLS) {
+            if (rg (n, (l->x - s->x0) >> 8, (l->y - s->y0) >> 8)->kind == RG_HALLS) {
                 l->kind = random (10) < 7 ? O_STAIRS_DOWN : O_LADDER_DOWN;
                 l->to = n + 1;
                 ++s->nlinks;
                 break;
             }
         }
+    }
+}
+
+/* ---- A region's own ways between its chunks: (the last asked for's) each chunk's north and west edges', kept in
+** the cache's bank (detail_bank: changes.c's), a place for each region by its number */
+
+#define DCACHE      (0x2000 / sizeof (struct detail))
+static struct detail {
+    unsigned char   used, sn, rx, ry;
+    unsigned char   n[RCH][RCH], w[RCH][RCH];
+} D;
+
+static void __fastcall__ detail (unsigned char sn, unsigned char rx, unsigned char ry)
+{
+    struct stratum* s = &strata[sn];
+    struct detail* at = (struct detail*) 0x8000 + ((unsigned) rx * 31 + (unsigned) ry * 17 + sn * 7) % DCACHE;
+    unsigned char ix, iy, nx, ny, d, kw, kh, seen[RCH];
+    unsigned todo, steps;
+
+    if (D.used && D.sn == sn && D.rx == rx && D.ry == ry) {
+        return;
+    }
+    bread (detail_bank, at, &D, sizeof D);      /* (Worked out before?) */
+    if (D.used && D.sn == sn && D.rx == rx && D.ry == ry) {
+        return;
+    }
+    D.used = 1;
+    D.sn = sn;
+    D.rx = rx;
+    D.ry = ry;
+    memset (D.n, NO_WAY, sizeof D.n);
+    memset (D.w, NO_WAY, sizeof D.w);
+    if (rg (sn, rx, ry)->kind == RG_ROCK) {
+        bwrite (detail_bank, at, &D, sizeof D);
+        return;
+    }
+    kw = (s->w - (unsigned) rx * RW + CW - 1) / CW;      /* (Its chunks in the stratum, each way) */
+    kh = (s->h - (unsigned) ry * RW + CW - 1) / CW;
+    kw = kw > RCH ? RCH : kw;
+    kh = kh > RCH ? RCH : kh;
+    rseed (s->seed ^ ((unsigned long) rx << 16 | ry) * 2654435761UL);
+    memset (seen, 0, sizeof seen);
+    seen[0] = 1;
+    ix = iy = 0;
+    for (todo = kw * kh - 1, steps = 0; todo && steps < 20000; ++steps) {
+        d = random (4);
+        nx = ix + dir_x[d];
+        ny = iy + dir_y[d];
+        if (nx >= kw || ny >= kh) {
+            continue;
+        }
+        if (!(seen[ny] & (1 << nx))) {
+            seen[ny] |= 1 << nx;
+            --todo;
+            if (d == DIR_N) {
+                D.n[ix][iy] = 2 + random (CW - 4);
+            } else if (d == DIR_S) {
+                D.n[nx][ny] = 2 + random (CW - 4);
+            } else if (d == DIR_W) {
+                D.w[ix][iy] = 2 + random (CW - 4);
+            } else {
+                D.w[nx][ny] = 2 + random (CW - 4);
+            }
+        }
+        ix = nx;
+        iy = ny;
+    }
+    for (iy = 0; iy < kh; ++iy) {                /* (A few more, for loops) */
+        for (ix = 0; ix < kw; ++ix) {
+            if (iy && D.n[ix][iy] == NO_WAY && !random (4)) {
+                D.n[ix][iy] = 2 + random (CW - 4);
+            }
+            if (ix && D.w[ix][iy] == NO_WAY && !random (4)) {
+                D.w[ix][iy] = 2 + random (CW - 4);
+            }
+        }
+    }
+    bwrite (detail_bank, at, &D, sizeof D);
+}
+
+/* The way across chunk (cx, cy)'s north edge (west: across its west), or NO_WAY */
+static unsigned char __fastcall__ edge_way (unsigned char sn, unsigned cx, unsigned cy, unsigned char west)
+{
+    struct stratum* s = &strata[sn];
+    unsigned char rx = cx / RCH, ry = cy / RCH, ix = cx % RCH, iy = cy % RCH, p;
+    unsigned len;
+
+    if (cx >= (s->w + CW - 1) / CW || cy >= (s->h + CW - 1) / CW || (west ? !cx : !cy)) {
+        return NO_WAY;
+    }
+    if (west ? !ix : !iy) {                     /* (A region's edge: the plan's) */
+        p = west ? rg (sn, rx, ry)->w : rg (sn, rx, ry)->n;
+        if (p == NO_WAY || p / CW != (west ? iy : ix)) {
+            return NO_WAY;
+        }
+        p %= CW;
+    } else {
+        detail (sn, rx, ry);
+        p = west ? D.w[ix][iy] : D.n[ix][iy];
+        if (p == NO_WAY) {
+            return NO_WAY;
+        }
+    }
+    len = west ? (s->h - cy * CW >= CW ? CW : s->h - cy * CW) : (s->w - cx * CW >= CW ? CW : s->w - cx * CW);
+    if (len < 3) {
+        return NO_WAY;
+    }
+    return p > len - 2 ? len - 2 : p;
+}
+
+/* Chunk (cx, cy)'s edges: the ways across them, the ground at its corners, its squares in the bounds, the links in
+** it (x1 and y1 0xFF: solid rock, nothing to grow) */
+void __fastcall__ o_chunk_edges (unsigned char sn, unsigned cx, unsigned cy, struct edges* e)
+{
+    struct stratum* s = &strata[sn];
+    unsigned x = s->x0 + cx * CW, y = s->y0 + cy * CW, w;
+    unsigned char i;
+
+    e->way[DIR_N] = edge_way (sn, cx, cy, 0);
+    e->way[DIR_W] = edge_way (sn, cx, cy, 1);
+    e->way[DIR_S] = edge_way (sn, cx, cy + 1, 0);
+    e->way[DIR_E] = edge_way (sn, cx + 1, cy, 1);
+    e->ground[0] = ground (sn, x, y);
+    e->ground[1] = ground (sn, x + CW - 1, y);
+    e->ground[2] = ground (sn, x, y + CW - 1);
+    e->ground[3] = ground (sn, x + CW - 1, y + CW - 1);
+    w = s->w - cx * CW;
+    e->x0 = 0;
+    e->x1 = w >= CW ? CW - 1 : w - 1;
+    w = s->h - cy * CW;
+    e->y0 = 0;
+    e->y1 = w >= CW ? CW - 1 : w - 1;
+    e->nland = 0;
+    for (i = 0; i < s->nlinks && e->nland < 4; ++i) {
+        if (!s->link[i].dug && s->link[i].x - x < CW && s->link[i].y - y < CW) {   /* (A dug one's the records') */
+            e->lx[e->nland] = s->link[i].x - x;
+            e->ly[e->nland] = s->link[i].y - y;
+            e->ln[e->nland++] = i;
+        }
+    }
+    if (rg (sn, cx / RCH, cy / RCH)->kind == RG_ROCK && !e->nland) {
+        e->x1 = e->y1 = 0xFF;                   /* (Solid rock: nothing grown) */
     }
 }
