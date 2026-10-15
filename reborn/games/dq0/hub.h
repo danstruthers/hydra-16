@@ -187,8 +187,9 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned char   item_lock;
     struct ireq     ireq;
     char            things_text[400];
-    char            dig_tool[8];                /* The last dig's tool, the referee's choice (its key), */
-    unsigned char   dig_wear;                   /*   and the wear that spell did it */
+    char            dig_tool[4][8];             /* A dig's spells' tools, the referee's choices (their keys), in turn */
+    unsigned char   dig_wear[4];                /*   and the wear each spell did (E_DIG's b, which: the world runs on */
+                                                /*   ahead of the UI's reading of its events, the turns pace) */
     /* The UI's intents to the world */
     volatile unsigned char iq_head, iq_tail;    /* Written at head (the UI), read at tail (the world) */
     struct msg      iq[IQ_SIZE];

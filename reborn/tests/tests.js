@@ -2322,12 +2322,12 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0earth', what: 'Dingus Quest Zero\'s materials (the maker\'s: dq0m/fixtures.c, a room\'s floor, walls and ceiling by its stratum\'s style and age), the world\'s dig taking the floor\'s from the chunk: a shovel (dq0 -k shovel) digs a room\'s earth floor (seed 3\'s first), the referee taking it, named, through to the stratum below; then a flagged floor (seed 5\'s) it won\'t bite into',
+      name: 'dq0earth', what: 'Dingus Quest Zero\'s materials (the maker\'s: dq0m/fixtures.c, a room\'s floor, walls and ceiling by its stratum\'s style and age), the world\'s dig taking the floor\'s from the chunk: a shovel (dq0 -k shovel) digs a room\'s earth floor (seed 3\'s first), the referee taking it, named, till the stratum\'s rock under it stops it (the user: the floor, then the rock); then a flagged floor (seed 5\'s), its flags lifted, then the rock',
       init: 't_rc', cycles: 900e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -k shovel -T\r' +
         ['dig down', 'quit'].map(l => '\u0101' + l + '\r').join('') + '\u0101dq0 -p t -s 5 -c /ram/c.hm -k shovel -T\r' +
         ['dig down', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
-      expect: ['You set to digging', 'You dig with your shovel.', 'the shaft is through.', 'You set to digging',
+      expect: ['You set to digging', 'You dig with your shovel.', 'You have nothing that would bite into it', 'You set to digging',
         'You have nothing that would bite into it', '% echo $status'],
       sdcard: true
     },

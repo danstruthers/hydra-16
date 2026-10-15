@@ -48,8 +48,9 @@ enum { HIDE_MECHANICAL, HIDE_MAGICAL };
 enum { AP_WEAPON, AP_ARMOUR, AP_METAL, AP_WOOD, AP_HIDE, AP_CLOTH, AP_POTTERY, AP_JEWEL, AP_BOOK, AP_FOOD, AP_BONE,
     NAP };
 
-/* What a dig is into */
-enum { MAT_EARTH, MAT_STONE, MAT_MASONRY };
+/* What a dig is into (and what a fall lands on): a floor's flags (the user: a material of their own) are lifted, not
+** cut */
+enum { MAT_EARTH, MAT_STONE, MAT_MASONRY, MAT_FLAGS };
 
 /* ---- Conditions (bits): what the world must know of an actor's state */
 #define C_PRONE         0x0001

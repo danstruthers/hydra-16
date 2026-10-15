@@ -176,7 +176,11 @@ explosives, a spell, a psionic power) works on it.  (Built: as a chunk is grown,
 floor's, its walls' and its ceiling's materials, and its passages theirs (their floors, the rock they're cut in),
 by the stratum's style and age (dq0m/fixtures.c): a built room's walls masonry, its floor flagged or bare earth,
 the more earth the older; a cave's floor earth or stone, its walls the rock; a mine's all stone; the world's dig
-takes the floor's, or the wall's, from the chunk.  To come: the rock's own kinds and hardness, across a stratum.)
+takes the floor's, or the wall's, from the chunk.  The user's answers (2026-10-15): flags are a material of their
+own (rs.h's MAT_FLAGS: lifted, a pick's or a mattock's quickest, a shovel's slowly, not bare hands); a shaft dug down
+goes through the floor (earth two feet, flags or masonry one) and then the stratum's rock; a fall lands on the floor's
+material (earth the ground, flags and masonry hard, stone broken rock).  To come: the rock's own kinds and hardness,
+across a stratum.)
 
 **Tools** (the user: "For digging, tools are important, so the referee will need to know which tools you have
 equipped as well since digging stone with your bare hands doesn't usually work well (or even with a shovel for
@@ -196,7 +200,7 @@ it; the item records its wear (a blade dug with is dulled, then dull: worded in 
 do the work isn't used for it (a sword won't dig stone).  Built: digging so judged, its tool named as it's first
 taken up ("You dig with your pick"); a game can still begin with a thing in hand (dq0 -k TOOL).  Earth to dig, where
 a shovel is taken (bare hands before a sword, which the work would dull), comes with the materials the maker gives
-floors and walls (dq0 -k shovel digs an earth floor; a flagged one it won't bite into).
+floors and walls (dq0 -k shovel digs an earth floor, and lifts flags, till the rock under them stops it).
 
 Each change is a **record** (a stratum, a square, what it became: its kind, its floor, its openings; who made it and
 when), kept by the maker: laid over a chunk each time it's made again, and in the save.  Seen squares are kept the

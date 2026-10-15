@@ -47,7 +47,7 @@ static const char* kit;                         /* (dq0 -k: a tool, equipped as 
 static const char* savedir;                     /* (dq0 -d: the save's folder) */
 static unsigned char __fastcall__ things (unsigned char op, const char* name);
 static void to_hand (void);
-static void dig_used (void);
+static void __fastcall__ dig_used (unsigned char n);
 static char dug_with[16];                       /* (The tool a dig took, named) */
 static unsigned char finds;                     /* (Things a search turned up, told as it ends: the hub's text) */
 static struct ireq judged;                      /* (A thing looked at closely: what it is, for the appraiser) */
@@ -502,7 +502,7 @@ static void events (void)
                 if (k == D_BEGUN) {
                     dug_with[0] = 0;
                 } else if (k != D_NO_TOOL) {
-                    dig_used ();
+                    dig_used (m.b);
                 }
                 dig_words (k, m.w1 & 0xFF);
             }
@@ -604,10 +604,10 @@ static void to_hand (void)
 
 /* The tool a dig's spell took (the referee's choice): worn by it, and named as it's first taken up */
 char dig_with[16];
-static void dig_used (void)
+static void __fastcall__ dig_used (unsigned char n)
 {
-    HUB->ireq.to = HUB->dig_wear;
-    things (IO_WEAR, HUB->dig_tool);
+    HUB->ireq.to = HUB->dig_wear[n];
+    things (IO_WEAR, HUB->dig_tool[n]);
     if (strcmp (dug_with, HUB->ireq.name)) {
         strcpy (dug_with, HUB->ireq.name);
         strcpy (dig_with, dug_with);
