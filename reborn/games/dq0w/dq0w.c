@@ -6,8 +6,9 @@
 ** move takes its time (the referee's walking rate, the slopes), and the character's there when the time's up.  What
 ** it sees is worked out as it gets there, turns, or its light changes, and what it perceives recorded in the hub for
 ** the UI to word, by the senses (games/dq0p, asked).  It carries out digging, a spell of work at a time (the referee's tests), and
-** asks the maker to keep what it changes.  The denizens near the character it moves by the same rules, as their task
-** (games/dq0d) asks (the hub's actors: den_act).
+** asks the maker to keep what it changes.  The denizens near the character move themselves (their task, games/dq0d,
+** by the character's rules: the hub's actors); the world keeps the character out of their squares, and looks again
+** at those it sees as they change (den_seq).
 **
 ** The clock (main.c's once): each real tick (200 a second) is round tenths of game time over tpr ticks (the pace:
 ** a round in tpr ticks); paused (Escape) or held (the UI asking something), it stands.  At the turns pace (tpr 0)
@@ -51,9 +52,9 @@ static void __fastcall__ event (unsigned char kind, unsigned char who, unsigned 
 ** time, turns_run), standing where it is unless a move says where it's going (bound_for) */
 static unsigned char late;                      /* (The turns pace's: the denizens' task slow to keep up) */
 
-static void __fastcall__ busy (unsigned t)
+static void __fastcall__ busy (unsigned long t)
 {
-    HUB->pc_ready = HUB->now + t;
+    HUB->pc_ready = HUB->now + (t > 60000UL ? 60000U : (unsigned) t);
     HUB->pc_tx = HUB->pc_x;
     HUB->pc_ty = HUB->pc_y;
     late = 0;
@@ -118,6 +119,15 @@ static unsigned char sn_, mface;                /* (The character's stratum; a w
 static unsigned char stept = 10;                /* (The referee's step, tenths a square: from the hub as a move
                                                 **   starts, for the chunks are in the window as it's walked) */
 static unsigned mx, my;                         /* (A walk's square) */
+
+/* Where the character is, as a move or a piece of work starts: its stratum, its square, its step */
+static void here (void)
+{
+    sn_ = HUB->pc_stratum;
+    mx = HUB->pc_x;
+    my = HUB->pc_y;
+    stept = HUB->pcsum.step ? HUB->pcsum.step : 10;
+}
 
 /* A square's time to walk into, tenths of a second: the referee's step (HarnMaster's: walking, half its Move a
 ** round), more uphill (half again a foot of rise), a little more steeply downhill (a quarter a foot past the
@@ -397,7 +407,7 @@ static void __fastcall__ across (unsigned char h, unsigned char r, unsigned char
                     den_way ();
                     return;
                 }
-                busy (t > 60000UL ? 60000U : (unsigned) t);
+                busy (t);
                 bound_for (mx, my);
                 return;
             }
@@ -452,7 +462,7 @@ static void __fastcall__ across (unsigned char h, unsigned char r, unsigned char
     move.face = h;
     move.ledge = ledge;
     move.den = blocked;
-    busy (t > 60000UL ? 60000U : (unsigned) t);
+    busy (t);
     bound_for (mx, my);
 }
 
@@ -465,10 +475,7 @@ static void __fastcall__ go_to (unsigned x, unsigned y)
     unsigned char* p;
 
     dens_where ();
-    sn_ = HUB->pc_stratum;
-    mx = HUB->pc_x;
-    my = HUB->pc_y;
-    stept = HUB->pcsum.step ? HUB->pcsum.step : 10;
+    here ();
     slow = dark ();
     if ((r = room_of (sn_, mx, my)) == 0xFF || x - (mx - cx_) >= CW || y - (my - cy_) >= CW) {
         hub_map (0);
@@ -518,7 +525,7 @@ static void __fastcall__ go_to (unsigned x, unsigned y)
     move.y = my - fy + ty;
     move.face = tx == x - (mx - fx) && ty == y - (my - fy) ? HUB->pc_face : bearing ((int) x - move.x, (int) y - move.y);
     move.ledge = 0;
-    busy (tt > 60000UL ? 60000U : (unsigned) tt);
+    busy (tt);
     bound_for (move.x, move.y);
 }
 
@@ -581,15 +588,21 @@ static signed char __fastcall__ test_climb (void)
     return g;
 }
 
-static void climb_round (void)
+/* A spell of work where the character stands (how: A_CLIMBING, A_DIGGING), t tenths */
+static void __fastcall__ in_place (unsigned char how, unsigned t)
 {
     move.on = 1;
-    move.how = A_CLIMBING;
+    move.how = how;
     move.sn = sn_;
     move.x = HUB->pc_x;
     move.y = HUB->pc_y;
     move.face = HUB->pc_face;
-    busy (ROUND_T);
+    busy (t);
+}
+
+static void climb_round (void)
+{
+    in_place (A_CLIMBING, ROUND_T);
 }
 
 /* The ledge ahead of the character, up (or down): its climb begun (jump: jumped down it), or 0 (none) */
@@ -679,10 +692,7 @@ static void __fastcall__ go (unsigned char h)
     struct portal* q;
 
     dens_where ();
-    sn_ = HUB->pc_stratum;
-    mx = HUB->pc_x;
-    my = HUB->pc_y;
-    stept = HUB->pcsum.step ? HUB->pcsum.step : 10;
+    here ();
     slow = dark ();
     if ((r = room_of (sn_, mx, my)) != 0xFF) {
         rx0 = ox = mx - cx_;                    /* (The chunk's first square, in the frame) */
@@ -778,7 +788,7 @@ set_out:
     move.dir = d;
     move.sn = sn_;
     move.face = H_OF (mface);
-    busy (t > 60000UL ? 60000U : (unsigned) t);
+    busy (t);
     bound_for (mx, my);
 }
 
@@ -811,7 +821,9 @@ static void __fastcall__ grow_below (unsigned char n)
 {
     struct stratum* s = &strata[n];
     struct stratum* b;
-    unsigned lx0 = 0xFFFF, ly0 = 0xFFFF, lx1 = 0, ly1 = 0;
+    struct link* l;
+    struct link* k;
+    unsigned lx0 = 0xFFFF, ly0 = 0xFFFF, lx1 = 0, ly1 = 0, x, y;
     unsigned char i;
 
     hub_map (0);
@@ -824,20 +836,22 @@ static void __fastcall__ grow_below (unsigned char n)
     b->age = 1 + random (40);
     b->name = random (8);
     b->datum = s->datum - 30 - random (40);
-    for (i = 0; i < s->nlinks; ++i) {
-        if (s->link[i].to != n + 1) {
+    for (i = s->nlinks, l = s->link, k = b->link; i; --i, ++l) {   /* (A link up under each link down to it) */
+        if (l->to != n + 1) {
             continue;
         }
-        lx0 = s->link[i].x < lx0 ? s->link[i].x : lx0;
-        ly0 = s->link[i].y < ly0 ? s->link[i].y : ly0;
-        lx1 = s->link[i].x > lx1 ? s->link[i].x : lx1;
-        ly1 = s->link[i].y > ly1 ? s->link[i].y : ly1;
-        b->link[b->nlinks].kind = s->link[i].kind == O_LADDER_DOWN ? O_LADDER_UP : s->link[i].kind == O_SHAFT_DOWN ?
-            O_SHAFT_UP : O_STAIRS_UP;
-        b->link[b->nlinks].dug = s->link[i].dug;
-        b->link[b->nlinks].to = n;
-        b->link[b->nlinks].x = s->link[i].x;
-        b->link[b->nlinks++].y = s->link[i].y;
+        x = l->x;
+        y = l->y;
+        lx0 = x < lx0 ? x : lx0;
+        ly0 = y < ly0 ? y : ly0;
+        lx1 = x > lx1 ? x : lx1;
+        ly1 = y > ly1 ? y : ly1;
+        k->kind = l->kind == O_LADDER_DOWN ? O_LADDER_UP : l->kind == O_SHAFT_DOWN ? O_SHAFT_UP : O_STAIRS_UP;
+        k->dug = l->dug;
+        k->to = n;
+        k->x = x;
+        k++->y = y;
+        ++b->nlinks;
     }
     bounds (b, lx0, ly0, lx1, ly1);
     ask_maker (M_PLAN, n + 1, 0, 0);
@@ -876,10 +890,7 @@ static void __fastcall__ climb (unsigned char d)
     unsigned feet;
     struct link* lk;
 
-    sn_ = HUB->pc_stratum;
-    mx = HUB->pc_x;
-    my = HUB->pc_y;
-    stept = HUB->pcsum.step ? HUB->pcsum.step : 10;
+    here ();
     face = HUB->pc_face;
     d &= ~I_JUMP;
     l = link_here (d, &t);
@@ -917,7 +928,7 @@ static void __fastcall__ climb (unsigned char d)
         move.dir |= O_FELL;
     }
     hub_map (0);
-    busy (t > 60000UL ? 60000U : (unsigned) t);
+    busy (t);
 }
 
 /* The heading from (mx, my) to the middle of its room (as the character comes into a stratum: it looks in) */
@@ -1090,13 +1101,7 @@ static void __fastcall__ noise (unsigned char loud)
 
 static void spell (void)
 {
-    move.on = 1;
-    move.how = A_DIGGING;
-    move.sn = sn_;
-    move.x = HUB->pc_x;
-    move.y = HUB->pc_y;
-    move.face = HUB->pc_face;
-    busy (SPELL);
+    in_place (A_DIGGING, SPELL);
 }
 
 /* A change asked of the maker (kept, and made in the chunk) */
@@ -1136,9 +1141,7 @@ static void __fastcall__ start_dig (unsigned char d)
     unsigned char* p;
     unsigned char t, k;
 
-    sn_ = HUB->pc_stratum;
-    mx = HUB->pc_x;
-    my = HUB->pc_y;
+    here ();
     dig.d = d;
     dig.done = 0;
     if (d == DIR_DOWN) {
@@ -1200,14 +1203,14 @@ static void __fastcall__ start_dig (unsigned char d)
 /* A spell of work done: its test, its noise, and on, or through */
 static void dig_on (void)
 {
+    struct stratum* b;
+    struct link* q;
     signed char g;
     unsigned char l, u, k;
     unsigned char* p;
     int z;
 
-    sn_ = HUB->pc_stratum;
-    mx = HUB->pc_x;
-    my = HUB->pc_y;
+    here ();
     g = test_dig ();
     if (made == 0xFF) {                         /* (Nothing it has will bite into it) */
         hub_map (0);
@@ -1232,8 +1235,8 @@ static void dig_on (void)
         return;
     }
     /* The shaft: a way down, if the stratum below reaches under it */
-    if (strata[sn_ + 1].made && (dig.x - strata[sn_ + 1].x0 >= strata[sn_ + 1].w ||
-        dig.y - strata[sn_ + 1].y0 >= strata[sn_ + 1].h)) {
+    b = &strata[sn_ + 1];
+    if (b->made && (dig.x - b->x0 >= b->w || dig.y - b->y0 >= b->h)) {
         hub_map (0);
         event (E_DIG, 0, D_SOLID << 8);
         return;
@@ -1247,10 +1250,10 @@ static void dig_on (void)
     sync_strata ();
     z = elev_at (sn_, dig.x, dig.y);
     change (sn_, dig.x, dig.y, T_DOWN, z, l);   /* (Its head) */
-    if (!strata[sn_ + 1].made) {
+    if (!b->made) {
         grow_below (sn_);                       /* (Grown round it: a link up under each link down, this one's) */
-        for (u = 0xFF, k = 0; k < strata[sn_ + 1].nlinks; ++k) {
-            if (strata[sn_ + 1].link[k].x == dig.x && strata[sn_ + 1].link[k].y == dig.y) {
+        for (u = 0xFF, k = 0, q = b->link; k < b->nlinks; ++k, ++q) {
+            if (q->x == dig.x && q->y == dig.y) {
                 u = k;
             }
         }
@@ -1285,10 +1288,7 @@ static struct portal* __fastcall__ door_ahead (unsigned long* tt)
     unsigned ox, oy;
     unsigned char* p;
 
-    sn_ = HUB->pc_stratum;
-    mx = HUB->pc_x;
-    my = HUB->pc_y;
-    stept = HUB->pcsum.step ? HUB->pcsum.step : 10;
+    here ();
     slow = dark ();
     *tt = 0;
     dens_where ();                              /* (Walked up to round the denizens) */
@@ -1379,7 +1379,7 @@ static void __fastcall__ worked (unsigned long t)
         t += t ? ROUND_T : 0;
     }
     if (t) {
-        busy (t > 60000UL ? 60000U : (unsigned) t);
+        busy (t);
     }
     t = q->res;
     see (0);
@@ -1394,9 +1394,7 @@ static void __fastcall__ door_work (unsigned char what)
 {
     unsigned long t;
 
-    sn_ = HUB->pc_stratum;
-    mx = HUB->pc_x;
-    my = HUB->pc_y;
+    here ();
     if ((what == PA_SEARCH || what == PA_DISARM) && !work (what, NO_SQ, NO_SQ, 0)) {
         worked (0);
         return;
@@ -1434,7 +1432,7 @@ static void on_way (void)
     move.x = tx_;
     move.y = ty_;
     move.face = bearing ((int) (tx_ - fx_), (int) (ty_ - fy_));
-    busy (cut_t > 60000UL ? 60000U : (unsigned) cut_t);
+    busy (cut_t);
 }
 
 /* On the trap on its way (A_STOPPED): the maker's to set off */
@@ -1444,48 +1442,6 @@ static void stopped (void)
     my = fy_;
     work (W_STEP, tx_, ty_, 0);
     worked (0);
-}
-
-/* ---- The denizens (DENIZENS.md: their task decides, the world carries out): an actor's intent (the hub's actor
-** q), a square at a time by the character's rules (a step it can walk, its time from when it was last free), never
-** onto the character (nor where it's going) or another; and, if the character sees it go, the denizens it sees
-** looked at again (stirred).  (At the turns pace their task moves them itself, the world waiting: turns_run) */
-static void __fastcall__ den_act (struct actor* q)
-{
-    static struct actor a;
-    static unsigned char d, seen, st;
-    static unsigned nx, ny;
-    static unsigned char* p;
-    static int z;
-
-    memcpy (&a, q, sizeof a);                   /* (I_GO, the only one yet: a heading of the four) */
-    a.result = N_NO_EXIT;
-    d = a.a >> 1;
-    nx = a.x + dir_x[d];
-    ny = a.y + dir_y[d];
-    seen = 0;
-    dens_where ();
-    if ((nx != HUB->pc_x || ny != HUB->pc_y) && (nx != HUB->pc_tx || ny != HUB->pc_ty) && !den_on (nx, ny) &&
-        step_ok (a.sn, a.x, a.y, d)) {
-        seen = *at (a.sn, a.x, a.y);
-        z = C->elev[cy_][cx_];
-        p = at (a.sn, nx, ny);
-        seen |= *p;
-        st = stept;
-        stept = a.step;
-        a.ready += cost (C->elev[cy_][cx_] - z, TILE (*p) == T_STEPS, 0);
-        stept = st;
-        a.x = nx;
-        a.y = ny;
-        a.face = a.a;
-        a.result = 0;
-    }
-    hub_map (0);
-    memcpy (q, &a, sizeof a);                   /* (Still posted, as it's written: then done) */
-    q->state = REQ_DONE;
-    if (seen & T_VIS) {
-        stirred ();                             /* (What it sees is as it was: but for the denizens) */
-    }
 }
 
 static void __fastcall__ intent (struct msg* m)
@@ -1578,8 +1534,7 @@ static void clock_run (void)
 int main (int argc, char* argv[])
 {
     static struct msg m;
-    struct actor* q;
-    unsigned char was_busy = 0, k, dseq = 0;
+    unsigned char was_busy = 0, dseq = 0;
 
     if (argc < 3 || hub_attach (atoi (argv[1]), atoi (argv[2]))) {
         return 1;
@@ -1597,11 +1552,6 @@ int main (int argc, char* argv[])
         while (hub_take (&m)) {
             intent (&m);
             was_busy = 1;
-        }
-        for (k = 0, q = HUB->actor; k < NACTORS; ++k, ++q) {   /* (The denizens' intents) */
-            if (q->state == REQ_POSTED) {
-                den_act (q);
-            }
         }
         clock_run ();
         if (HUB->den_seq != dseq) {

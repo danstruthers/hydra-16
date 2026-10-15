@@ -48,6 +48,10 @@ extern unsigned char inn;                       /*   its length */
 void __fastcall__ t_key (unsigned char k);      /* A key for the line being typed */
 char* t_line (void);                            /* A line that's been entered (Enter), or NULL */
 unsigned char __fastcall__ ask (const char* keys);      /* One of keys typed, waiting (the world stopped): which */
+unsigned char t_haskey (void);                  /* A key's come (conio's kbhit) */
+unsigned char t_getkey (void);                  /* The next key, waiting (conio's cgetc: Enter '
+') */
+void __fastcall__ consctl (const char* what);   /* (main.c) A line to the window's consctl (rawon, rawoff) */
 void __fastcall__ ask_line (char* b, unsigned char max);  /* A line typed, waiting */
 
 /* ---- The clock: the book's time, in tenths of a second (a combat round 100), run at the pace */

@@ -15,7 +15,6 @@
 ** pauses the game and goes on again.
 */
 
-#include <conio.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -123,7 +122,7 @@ static void ovl_load (void)
 /* ---- The character: hmchar's, its file read by the referee */
 
 /* A line written to the window's consctl: on an fd kept open (raw mode lasts while the consctl that set it is) */
-static void __fastcall__ consctl (const char* what)
+void __fastcall__ consctl (const char* what)
 {
     static int fd = -1;
 
@@ -140,24 +139,19 @@ static char pcfile[64];
 
 static void __fastcall__ character (const char* file, unsigned long seed)
 {
-    static char s[12], s2[48];
-    static char* argv[6];
+    static char s[32] = "-o\0/ram/dq0.hm\0-s", s2[48];
     int task;
 
     if (!file) {
-        file = "/ram/dq0.hm";
+        file = s + 3;                           /* (hmchar -o /ram/dq0.hm -s seed) */
         t_end ();
         consctl ("rawoff");
-        argv[0] = "hmchar";
-        argv[1] = "-o";
-        argv[2] = (char*) file;
-        argv[3] = "-s";
-        argv[4] = ultoa (seed, s, 10);
-        argv[5] = 0;
+        ultoa (seed, s + 18, 10);
+        s[19 + strlen (s + 18)] = 0;
         strcpy (s2, gamedir);
         strcat (s2, "/hmchar");
-        task = hy_spawn (s2, argv, 0);
-        if (task < 0 || hy_wait (task, 0)) {
+        task = hub_run (s2, s);
+        if (task < 0 || hub_wait (task)) {
             hy_exits ("dq0: hmchar didn't make a character");
         }
         consctl ("rawon");
@@ -403,7 +397,7 @@ static void stop_world (void)
     for (t = T_WORLD; t < NTASKS; ++t) {
         if (task_[t] > 0) {
             hub_ring (t);
-            hy_wait (task_[t], 0);
+            hub_wait (task_[t]);
         }
     }
 }
@@ -957,7 +951,9 @@ int main (int argc, char* argv[])
 
     for (i = 1; i < argc; ++i) {
         if (!strcmp (argv[i], "-s") && i + 1 < argc) {
-            seed = strtoul (argv[++i], 0, 10);
+            for (seed = 0, l = argv[++i]; *l >= '0' && *l <= '9'; ++l) {
+                seed = seed * 10 + *l - '0';
+            }
         } else if (!strcmp (argv[i], "-d") && i + 1 < argc) {
             savedir = argv[++i];                /* (The save's folder) */
         } else if (!strcmp (argv[i], "-k") && i + 1 < argc) {
@@ -1000,8 +996,8 @@ int main (int argc, char* argv[])
     t_done ();
     while (!quit) {
         hub_map (0);                            /* (The hub at $8000 again: a call may have moved the window) */
-        while (kbhit ()) {
-            k = cgetc ();
+        while (t_haskey ()) {
+            k = t_getkey ();
             if (k == CH_ESC) {
                 HUB->paused = paused = !paused;
                 status ();
