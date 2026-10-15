@@ -45,6 +45,7 @@ enum {
     T_NOT_KEPT,
     T_KEPT,
     T_TYPE_HELP_FOR,
+    T_PICK_YOURSELF_UP,
     T_COUNT
 };
 

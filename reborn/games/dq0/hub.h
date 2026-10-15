@@ -51,7 +51,8 @@ struct msg {
 enum {
     I_NONE, I_WAIT,                             /* w1: tenths (0: a round); w2: 1, quietly (a thing's handling) */
     I_GO,                                       /* a: a heading (level.h's H_N ... H_NW) */
-    I_CLIMB,                                    /* a: DIR_UP or DIR_DOWN (the stairway or ladder in the room) */
+    I_CLIMB,                                    /* a: DIR_UP or DIR_DOWN (the stairway or ladder in the room);
+                                                **   | I_JUMP, down: jumped (a ledge, a shaft: a fall) */
     I_TURN,                                     /* a: the heading to face (H_N ... H_NW) */
     I_LIGHT,                                    /* a: 1 the character's light lit, 0 put out */
     I_DIG,                                      /* a: a direction (DIR_N ... DIR_W, DIR_DOWN) */
@@ -75,8 +76,14 @@ enum {
     E_LEDGE,                                    /* who's come to a ledge: w1 its rise (a signed char: a fall less) */
     E_CLIMB,                                    /* who's climbing: w1 how it goes (K_*) times 256, and the feet to go */
     E_PORTAL,                                   /* who's worked a door: w1 what came of it (PO_*) */
+    E_HARM,                                     /* who's been harmed (the referee's RS_HARM): w1 its cause (HC_*),
+                                                **   its worst wound's band times 256 (0: unhurt), E_OUT, E_CAUGHT */
     NEVENTS
 };
+#define I_JUMP          0x80
+#define E_OUT           0x4000                  /* (E_HARM's: knocked senseless a while) */
+#define E_CAUGHT        0x8000                  /*   (and a fall stopped, a hold grabbed) */
+#define O_FELL          8                       /* (E_ARRIVE's link kind, or'd: fallen down it, jumped) */
 
 enum { A_WALKED, A_DOWN, A_UP, A_START, A_DIGGING, A_CROSSED, A_CLIMBING, A_CLIMBED, A_WENT_TO, A_RESUMED };
                                                 /* E_ARRIVE's how (A_DIGGING, A_CLIMBING: the world's own, a spell
@@ -85,7 +92,8 @@ enum { N_NO_EXIT, N_SHUT, N_NO_STAIRS, N_NO_DIG };  /* E_NOWAY's why: no way tha
                                                 **   nothing to dig there */
 enum { V_TURNED, V_LIT, V_DARK };               /* E_VIEW's why */
 enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL };  /* E_DIG's how */
-enum { K_BEGUN, K_ON, K_BACK, K_FELL, K_UP, K_DOWN };   /* E_CLIMB's how: begun, on, slipped back, fallen, up, down */
+enum { K_BEGUN, K_ON, K_BACK, K_FELL, K_UP, K_DOWN, K_JUMPED };    /* E_CLIMB's how: begun, on, slipped back,
+                                                **   fallen, up, down; jumped down (a ledge, a shaft) */
 enum { PA_OPEN, PA_CLOSE, PA_UNLOCK, PA_FORCE, PA_SEARCH };  /* I_PORTAL's: what's done */
 enum { PO_NONE, PO_OPENED, PO_CLOSED, PO_IS_OPEN, PO_IS_SHUT, PO_LOCKED, PO_BARRED, PO_UNBARRED, PO_PICKED,
        PO_NOT_PICKED, PO_NO_PICKS, PO_NO_LOCK, PO_FORCED, PO_HELD, PO_FOUND, PO_NOTHING };  /* E_PORTAL's */

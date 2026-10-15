@@ -1,7 +1,8 @@
 /*
 ** harncmbt.c - harn.h's combat (Combat 1-18, the Combat Tables): the melee and missile attack tables, the strike
 ** location table, the injury table, armour's materials and its protection at a location (Combat 5), the best aspect
-** of a weapon, and a wound taken (the kill roll, shock, bleeding, amputation, a limb made unusable: Combat 13-14).
+** of a weapon, and a wound taken (the kill roll, shock, bleeding, amputation, a limb made unusable: Combat 13-14),
+** and a fainted character's waking.
 ** harnarm.c has the armour pieces, harnwpn.c the weapons.
 */
 
@@ -233,4 +234,19 @@ unsigned char __fastcall__ harn_wound (harn_char* c, unsigned char loc, unsigned
         w |= HARN_W_DOWN;
     }
     return w;
+}
+
+/* A fainted character's turn: a shock roll not over Endurance wakes it, then one more decides whether it's in
+** shock (Skills 22, Combat 14) */
+unsigned char __fastcall__ harn_wake (harn_char* c)
+{
+    if (c->state == HARN_UNCONSCIOUS && !harn_shock_roll (c)) {
+        if (harn_shock_roll (c)) {
+            c->state = HARN_SHOCK;
+            c->shockhr = 5;
+        } else {
+            c->state = HARN_CONSCIOUS;
+        }
+    }
+    return c->state;
 }

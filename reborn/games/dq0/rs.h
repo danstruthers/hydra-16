@@ -85,6 +85,31 @@ struct rs_effect {
     unsigned char   x[2];
 };
 enum { X_NONE, X_WOUND, X_HEAL, X_COND_ON, X_COND_OFF, X_DEATH, X_DROP, X_EXTRA_ACTION, X_IMPROVED };
+/* (An X_WOUND's cond: the conditions it leaves the actor in; its x[0] where it is, BP_*, and x[1] its aspect, AS_*) */
+enum { BP_SKULL, BP_FACE, BP_NECK, BP_SHOULDER, BP_UPPER_ARM, BP_ELBOW, BP_FOREARM, BP_HAND, BP_CHEST, BP_BELLY,
+    BP_GROIN, BP_HIP, BP_THIGH, BP_KNEE, BP_CALF, BP_FOOT };
+#define BP_RIGHT        0x80                    /* (A limb's right side) */
+
+/* ---- Harm (RS_HARM): its cause (the request's a), and the rest by cause:
+**   HC_FALL     w1 its height in feet; b the ground it lands on (GR_*); c HF_* (a clear fall; holds to grab)
+**   HC_STRIKE   a trap's (a blade, darts, spikes, a deadfall), or any blow with no one behind it: b its aspect
+**               (AS_*), c its dice (d6s), w1 impact more, w2 where it strikes (Z_*)
+**   HC_FIRE     a burn: c its dice, w1 more, w2 where
+**   HC_BLOW     a blow the actor strikes at the other, with what it has in hand (its key in the text: "blade",
+**               "pick" ...; "hands"): b its aspect (AS_BEST: what it does best), c its dice (0: one).  At a thing
+**               (other RS_THING: a door, a portcullis's bars, a chest) only the blow's impact is worked out, the
+**               reply's w1: what the thing's material and toughness take from it is the world's
+** The reply: its effects (x: up to RS_EFFECTS, X_NONE after the last), b the worst wound's band (0: unhurt), w2 the
+** tenths the actor's out for (knocked senseless), result 1 a fall stopped (a hold grabbed); its words in the text,
+** a line (and RS_DESCRIBE b 2's: the last harm's) */
+enum { HC_FALL, HC_STRIKE, HC_FIRE, HC_BLOW };
+enum { AS_BLUNT, AS_EDGE, AS_POINT, AS_FIRE, AS_BEST };     /* (items.h's DM_* in the same order) */
+enum { Z_MID, Z_HIGH, Z_LOW };
+enum { GR_FLOOR, GR_DEEP_WATER, GR_SHALLOW_WATER, GR_SOFT, GR_HARD, GR_ROCKY };    /* Earth; water; mud; paving;
+                                                **   broken rock */
+#define HF_CLEAR        0x01
+#define HF_HOLDS        0x02
+#define RS_THING        0xFF                    /* (other: not an actor) */
 
 /* An actor's summary: what the world needs often, kept by the referee in the actor's record so as not to ask */
 struct rs_summary {

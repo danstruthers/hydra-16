@@ -151,6 +151,7 @@ ovl_out:
             OVFN        dig_words, 1
             OVFN        climb_words, 1
             OVFN        portal_words, 1
+            OVFN        harm_words, 1
             OVFN        appraise, 1
             OVFN        tell, 1
             OVFN        words, 2

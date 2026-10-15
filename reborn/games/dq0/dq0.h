@@ -107,6 +107,8 @@ void __fastcall__ appraise (const struct ireq* q, signed char g);       /* Overl
 extern char dig_with[16];                       /* The tool a dig's taken up, to name (then ""): main.c's */
 void __fastcall__ climb_words (unsigned char how, unsigned char feet); /* Overlay 1: climbing's */
 void __fastcall__ portal_words (unsigned char out);                     /* Overlay 1: a door worked's */
+void __fastcall__ harm_words (unsigned w, unsigned cond);               /* Overlay 1: harm's (an E_HARM's w1,
+                                                                        **   the conditions; the wounds in lb) */
 void words (void);                              /* Overlay 2: what the character perceives, into lb */
 extern char lb[400];
 extern struct sight sight_copy;

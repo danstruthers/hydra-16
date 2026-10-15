@@ -342,7 +342,7 @@ static void start_world (unsigned long seed)
     HUB->test_start = test_start;
     strcpy (path, libdir);
     strcat (path, "/dq0harn");
-    if ((referee_task = hub_spawn (path, T_REFEREE, 0)) < 0) {
+    if ((referee_task = hub_spawn (path, T_REFEREE, libdir)) < 0) {
         t_end ();
         hy_exits ("dq0: its rules (lib/dq0/dq0harn) can't be started");
     }
@@ -439,8 +439,9 @@ static void events (void)
 {
     static struct msg m;
     unsigned char k;
+    struct req* r;
 
-    while (hub_next (&place, &m)) {
+    while (!quit && hub_next (&place, &m)) {
         switch (m.kind) {
         case E_TIME:
             if (m.who == 0) {
@@ -461,7 +462,7 @@ static void events (void)
                 if ((m.w1 & 0xFF) == A_DOWN || (m.w1 & 0xFF) == A_UP) {
                     k = m.w1 >> 12;             /* (The link's kind: a ladder, or a stairway) */
                     tell ((m.w1 & 0xFF) == A_DOWN ? (k == O_LADDER_DOWN ? T_YOU_CLIMB_DOWN :
-                        k == O_SHAFT_DOWN ? T_YOU_CLIMB_DOWN_2 : T_YOU_GO_DOWN) :
+                        k == O_SHAFT_DOWN ? T_YOU_CLIMB_DOWN_2 : k & O_FELL ? T_PICK_YOURSELF_UP : T_YOU_GO_DOWN) :
                         k == O_LADDER_UP ? T_YOU_CLIMB_THE : k == O_SHAFT_UP ? T_YOU_CLIMB_UP :
                         T_YOU_CLIMB_THE_2);
                     sayf (" You come into the %s.", stratum_name[HUB->sight.sname & 7]);
@@ -514,6 +515,17 @@ static void events (void)
         case E_CLIMB:
             if (m.who == 0) {
                 climb_words (m.w1 >> 8, m.w1 & 0xFF);
+            }
+            break;
+        case E_HARM:
+            if (m.who == 0) {                   /* (The referee's words of its wounds, then the UI's of it all) */
+                r = ask_b (RS_DESCRIBE, 0, 2);
+                strcpy (lb, r->text);
+                r->state = REQ_FREE;
+                harm_words (m.w1, HUB->pcsum.cond);
+                if (HUB->pcsum.cond & C_DEAD) {
+                    quit = 1;                   /* (The game's end) */
+                }
             }
             break;
         case E_PORTAL:
@@ -694,9 +706,6 @@ static void __fastcall__ chores (unsigned char verb)
     case V_DOFF:
         tell (T_NOTHING_TO_DON + (verb == V_DOFF));    /* (The two in turn) */
         return;
-    case V_JUMP:
-        tell (T_YOU_JUMP_AND);
-        return;
     case V_LIGHT:
         if (HUB->pc_light) {
             tell (T_TORCH_LIT);
@@ -856,6 +865,13 @@ static void __fastcall__ command (char* l)
     case V_INVENTORY:
         things (IO_LIST, "");
         msg (HUB->things_text);
+        return;
+    case V_JUMP:
+        if (c.dir == GO_DOWN) {
+            intend (I_CLIMB, DIR_DOWN | I_JUMP);    /* (Down a ledge, or a shaft: a fall) */
+        } else {
+            tell (T_YOU_JUMP_AND);
+        }
         return;
     default:                                    /* (The rest: chores) */
         chores (c.verb);

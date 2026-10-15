@@ -48,6 +48,7 @@ static const char* const said[T_COUNT] = {
     "This game isn't being kept (dq0 -d FOLDER keeps one).",
     "The game is kept.",
     "Type help for the commands.",
+    "You pick yourself up at the foot of the shaft.",
 };
 
 void __fastcall__ o_tell (unsigned char n)

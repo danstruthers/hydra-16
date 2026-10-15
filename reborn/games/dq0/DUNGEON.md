@@ -372,6 +372,15 @@ takes the shortest way it can walk to where it's going (around a ledge, by the s
 walk, a window's sill, a shaft or a ladder: a climb, the referee's test (HarnMaster's Climbing: feet of progress each
 test, a test a round; a fall's impact by its height, the landing's surface).
 
+**Harm** (rs.h's RS_HARM, the referee's): a fall (its height, the ground it lands on, whether it's clear or past holds
+to grab), a trap's strike (its aspect, its dice, where it strikes), a burn, a blow struck with what's in hand; each
+made the ruleset's injuries on the sheet (HarnMaster's: the book's falling, an impact on a location, its severity and
+levels, the shock roll, bleeding, a limb made useless), kept in the save, told back as effects and conditions (the
+summary's), the referee's words of the wounds and the UI's of the rest.  A blow at a thing (a door, bars, a chest)
+gives only its impact, for the world to take the thing's resistance and toughness from.  Built: falls, from a climb's
+critical failure (a hold grabbed may stop it) and from jumping down a ledge or a shaft (jump down); a death ends the
+game.  (To come: bleeding and waking as time passes, RS_TIME; armour; the traps' and the blows' callers.)
+
 ### Seeing, and the map
 
 The world works out what the character sees (in front of it and to its sides, a clear line in plan and over the

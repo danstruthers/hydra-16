@@ -1,5 +1,6 @@
 /*
-** intro.c - (overlay 1) Dingus Quest Zero's title, and its pace asked; the commands' list (help); digging's words.  The character is made by hmchar (main.c
+** intro.c - (overlay 1) Dingus Quest Zero's title, and its pace asked; the commands' list (help); digging's, climbing's
+** and harm's words.  The character is made by hmchar (main.c
 ** runs it), and its file read by the referee.
 */
 
@@ -42,9 +43,48 @@ void __fastcall__ o_climb_words (unsigned char how, unsigned char feet)
     case K_FELL:
         sayf ("\nYour hold gives way: you fall %u feet.", feet);
         return;
+    case K_JUMPED:
+        sayf ("\nYou jump, and drop %u feet.", feet);
+        return;
     default:
         msg (how == K_UP ? "You haul yourself up over the edge." : "You come down to the foot of the ledge.");
         return;
+    }
+}
+
+/* Harm's words: what came of it (w: an E_HARM's, its cause and the worst wound's band), the referee's words of the
+** wounds (in lb), and what they've left the character in (cond: its conditions, rs.h's C_*) */
+void __fastcall__ o_harm_words (unsigned w, unsigned cond)
+{
+    if (w & E_CAUGHT) {
+        say (" You snatch at a hold as you go, and it holds: you hang there, and climb on.");
+        return;
+    }
+    if (!(w & 0x700)) {
+        say ((w & 0xFF) == HC_FALL ? " You land, shaken, but unhurt." : " It does you no harm.");
+        return;
+    }
+    say ((w & 0xFF) == HC_FALL ? " You land hard: " : " It hurts you: ");
+    say (lb);
+    say (".");
+    if (cond & C_DEAD) {
+        msg ("You are dead.");
+        return;
+    }
+    if (w & E_OUT) {
+        say (" Everything goes black; you come to some time later.");
+    }
+    if (cond & C_STUNNED) {
+        say (" You are in shock.");
+    }
+    if (cond & C_BLEEDING) {
+        say (" You are bleeding badly.");
+    }
+    if (cond & C_LEG_USELESS) {
+        say (" Your leg won't bear you.");
+    }
+    if (cond & C_ARM_USELESS) {
+        say (" Your arm hangs useless.");
     }
 }
 
@@ -69,7 +109,7 @@ void o_help (void)
     msg ("Commands: north, northeast, east ... northwest (n, ne, e, se, s, sw, w, nw, or go north ...); forward, "
          "back, left, right (f, b: as you face); up and down (u, d: the stairs); turn left, right, half left, half "
          "right or around; face north ...; light and douse (your torch); dig north ... or down (a wall, the rock, a "
-         "shaft); open, close, unlock, force (the door ahead), search; look (l), map (m), sheet (the character), wait (z), pause (or Escape), quit (q).");
+         "shaft); jump down (a ledge, a shaft); open, close, unlock, force (the door ahead), search; look (l), map (m), sheet (the character), wait (z), pause (or Escape), quit (q).");
 }
 
 /* ---- Digging's words: how a spell of work went, and the feet to go */

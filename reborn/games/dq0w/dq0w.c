@@ -350,9 +350,33 @@ static void __fastcall__ go_to (unsigned x, unsigned y)
 
 /* ---- Climbing a ledge (HarnMaster's Climbing, Skills 8: feet of progress a test, a test a round, the game's
 ** choice; a hard climb, rough stone: 20 feet on a critical success, 10 on a success, 5 back on a marginal failure,
-** and on a critical failure a fall, the referee's harm to come) */
+** and on a critical failure a fall, the referee's harm); or jumping down one */
 
 #define ROUND_T         100                     /* Tenths: a round */
+
+/* A fall of the character's (the referee's harm, rs.h's HC_FALL): feet, onto the stratum's floor (a built one's
+** paving, a natural one's broken rock), how (HF_*); the UI told (E_HARM).  The tenths it's out for (knocked
+** senseless), or 0xFFFF: a hold grabbed, no fall */
+static unsigned __fastcall__ fall (unsigned feet, unsigned char how)
+{
+    struct req* r;
+    unsigned out;
+
+    hub_map (0);
+    r = &HUB->slot[SLOT_WORLD];
+    r->kind = RS_HARM;
+    r->actor = 0;
+    r->other = 0;
+    r->a = HC_FALL;
+    r->b = strata[sn_].style == ST_BUILT ? GR_HARD : GR_ROCKY;
+    r->c = how;
+    r->w1 = feet;
+    r = hub_ask (SLOT_WORLD);
+    out = r->result == 1 ? 0xFFFF : r->w2;
+    event (E_HARM, 0, HC_FALL | r->b << 8 | (r->result == 1 ? E_CAUGHT : 0) | (r->w2 ? E_OUT : 0));
+    r->state = REQ_FREE;
+    return out;
+}
 
 static struct {
     unsigned char   up;
@@ -388,8 +412,8 @@ static void climb_round (void)
     busy (ROUND_T);
 }
 
-/* The ledge ahead of the character, up (or down): its climb begun, or 0 (none) */
-static unsigned char __fastcall__ start_ledge (unsigned char up, unsigned char face)
+/* The ledge ahead of the character, up (or down): its climb begun (jump: jumped down it), or 0 (none) */
+static unsigned char __fastcall__ start_ledge (unsigned char up, unsigned char face, unsigned char jump)
 {
     unsigned char* p;
     unsigned nx, ny;
@@ -411,6 +435,14 @@ static unsigned char __fastcall__ start_ledge (unsigned char up, unsigned char f
     cl.x = nx;
     cl.y = ny;
     hub_map (0);
+    if (jump && !up) {                          /* (Jumped: a fall to its foot) */
+        event (E_CLIMB, 0, K_JUMPED << 8 | (cl.need > 255 ? 255 : cl.need));
+        HUB->pc_x = nx;
+        HUB->pc_y = ny;
+        busy (stept + fall (cl.need, HF_CLEAR));
+        see (0);
+        return 1;
+    }
     event (E_CLIMB, 0, K_BEGUN << 8 | (cl.need > 255 ? 255 : cl.need));
     climb_round ();
     return 1;
@@ -420,16 +452,24 @@ static unsigned char __fastcall__ start_ledge (unsigned char up, unsigned char f
 static void climb_on (void)
 {
     signed char g;
+    unsigned t;
 
     sn_ = HUB->pc_stratum;
     g = test_climb ();
     hub_map (0);
     if (g == G_CF) {                            /* (A fall: from as high as it got, up; to the foot, down) */
+        t = cl.up ? cl.done : cl.need - cl.done;
+        event (E_CLIMB, 0, K_FELL << 8 | t);
+        if ((t = fall (t, HF_CLEAR | HF_HOLDS)) == 0xFFFF) {
+            climb_round ();                     /* (Caught on the way down: the climb goes on) */
+            return;
+        }
+        hub_map (0);
         if (!cl.up) {
             HUB->pc_x = cl.x;
             HUB->pc_y = cl.y;
         }
-        event (E_CLIMB, 0, K_FELL << 8 | (cl.up ? cl.done : cl.need - cl.done));
+        busy (t);
         see (0);
         return;
     }
@@ -615,11 +655,12 @@ static unsigned char __fastcall__ link_here (unsigned char d, unsigned long* t)
     return best;
 }
 
-/* The stairway or ladder in the room, and up or down it */
+/* The stairway or ladder in the room, and up or down it (I_JUMP: down a shaft, or a ledge, jumped) */
 static void __fastcall__ climb (unsigned char d)
 {
     unsigned long t;
-    unsigned char l, face;
+    unsigned char l, face, jump = d & I_JUMP;
+    unsigned feet;
     struct link* lk;
 
     sn_ = HUB->pc_stratum;
@@ -627,9 +668,10 @@ static void __fastcall__ climb (unsigned char d)
     my = HUB->pc_y;
     stept = HUB->pcsum.step ? HUB->pcsum.step : 10;
     face = HUB->pc_face;
+    d &= ~I_JUMP;
     l = link_here (d, &t);
     if (l == 0xFF || t == 0xFFFFFFFFUL) {
-        if (!start_ledge (d == DIR_UP, face)) {       /* (No way up or down here: a ledge ahead, climbed) */
+        if (!start_ledge (d == DIR_UP, face, jump)) { /* (No way up or down here: a ledge ahead, climbed) */
             hub_map (0);
             no_way (N_NO_STAIRS);
         }
@@ -652,9 +694,15 @@ static void __fastcall__ climb (unsigned char d)
     move.face = HUB->pc_face;
     move.dir = lk->kind;
     /* (The flight: the drop between the floors, a step's time a foot on a stairway, twice on a ladder) */
-    t += (unsigned long) (abs (strata[sn_].datum - strata[lk->to].datum) + 1) * stept *
+    feet = abs (strata[sn_].datum - strata[lk->to].datum);
+    t += (unsigned long) (feet + 1) * stept *
         (lk->kind == O_LADDER_DOWN || lk->kind == O_LADDER_UP ? 2 : lk->kind == O_SHAFT_DOWN ||
         lk->kind == O_SHAFT_UP ? 3 : 1) / (d == DIR_UP ? 1 : 2);
+    if (jump && lk->kind == O_SHAFT_DOWN) {     /* (Jumped down the shaft: a fall to its foot, told as fallen) */
+        event (E_CLIMB, 0, K_JUMPED << 8 | (feet > 255 ? 255 : feet));
+        t = stept + fall (feet, HF_CLEAR);
+        move.dir |= O_FELL;
+    }
     hub_map (0);
     busy (t > 60000UL ? 60000U : (unsigned) t);
 }
