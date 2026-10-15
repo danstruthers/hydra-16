@@ -2299,7 +2299,7 @@ module.exports = {
     },
     {
       name: 'dq0items', what: 'Dingus Quest Zero\'s things (items.h, dq0p/things.c): the kit a character begins with, listed (worn, held, inside), a thing put down and seen at its feet, taken up again, and one out of reach walked over to first',
-      init: 't_rc', cycles: 700e6,
+      init: 't_rc', cycles: 900e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -k pick -T\r' +
         ['inventory', 'examine the dagger', 'x torch', 'examine pennies', 'examine the moon', 'drop the dagger', 'look', 'get dagger', 'drop pick', 'walk to the door ahead', 'turn around', 'look', 'take the pick', 'look', 'i', 'drop rocks', 'hide the pouch', 'look', 'i', 'take pouch', 'i', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
       expect: ['You carry', 'backpack', 'rations', 'pennies', 'You judge it', 'You see no moon here.', 'Put down.', 'At your feet lies a dagger.', 'Taken.', 'On the floor ahead to your left lies a pick.', 'You go over to it.', 'You carry none of those.', 'You hide it', 'Hidden at your feet lies a pouch.', 'Taken.', '% echo $status'],
@@ -2318,7 +2318,15 @@ module.exports = {
       init: 't_rc', cycles: 900e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/kept\r' +
         ['drop the dagger', 'd', 'quit', 'ls /ram/kept', 'dq0 -d /ram/kept', 'look', 'inventory', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
-      expect: ['You come into the', 'changes.dat', 'game.dat', 'items.dat', 'pc.hm', 'seen.dat', 'takes up where they left off.', 'You stand by a stairway leading up.', 'a belt, worn (on it: a pouch (in it: 12 pennies), a waterskin)', '% echo $status'],
+      expect: ['You come into the', 'changes.dat', 'dens.dat', 'game.dat', 'items.dat', 'pc.hm', 'seen.dat', 'takes up where they left off.', 'You stand by a stairway leading up.', 'a belt, worn (on it: a pouch (in it: 12 pennies), a waterskin)', '% echo $status'],
+      sdcard: true
+    },
+    {
+      name: 'dq0denizens', what: 'Dingus Quest Zero\'s denizens (dq0d: the populations decided as a stratum is grown, from a stand-in theme\'s kinds, kinds.txt): the giant rats that lair by the top stratum\'s ways placed round the way down as the character starts there (dq0 -T), seen (the world\'s actors, in what it perceives), and moving about as time passes (their own task deciding, the world carrying it out: told as they stir)',
+      init: 't_rc', cycles: 900e6,
+      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T\r' +
+        ['look', 'wait', 'wait', 'wait', 'look', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['A giant rat is ', ' feet away', 'Something stirs.', '% echo $status'],
       sdcard: true
     },
     {

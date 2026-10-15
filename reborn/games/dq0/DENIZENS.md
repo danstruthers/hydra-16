@@ -97,3 +97,24 @@ allies.
   character's requests.
 - **The referee** answers the tests and contests (influence, morale, combat), and keeps each creature's sheet.
 - **The UI** words it all, and parses the player's influence and requests ("persuade the goblin", "tell Grub to wait").
+
+### So far (the first step)
+
+- **Populations:** the denizens' task (games/dq0d) decides a stratum's as soon as its plan is grown (the hub's record
+  whole), from its seed: for each kind that lives in the stratum's style at its depth, its lairs (by the stratum's
+  ways in and out, for those that lair there; else a chunk of a region of halls) and how many in each, a record each
+  from then on.  The kinds are a stand-in theme's (dq0d/kinds.txt: a name, the referee's key, its ways, the styles
+  and depths it lives in, its numbers, its range, its senses, its pace), made a data file the task reads into a bank
+  of its own.  The records (64 lairs, 240 denizens) are in another bank, kept with the game (dens.dat).
+- **Placing:** a lair's denizens are put on squares of their own as the character comes into its chunk or one beside
+  it (round the way, or in a room of the chunk), by the lair's own numbers, so it's the same whenever it happens.
+- **Acting:** those within about 24 squares of the character are actors (the hub's, eight at most): each, as it's
+  free, senses the character (seen by its light, or with none by darkvision, along a line clear of rock, walls and
+  shut doors; heard moving, nearer), and wanders about its lair (a few squares, or its range), keeps to it, watches
+  the character, or (a shy one) keeps its distance; and asks the world, which moves it a square at a time by the
+  character's rules (a step it can walk, its time by its pace and the slope), never onto the character.
+- **Seen:** the world adds the actors on squares the character sees to what it perceives, after each look; a move it
+  sees (the character standing) is a look again, and the UI says what stirs.
+- **Later:** attitudes, factions and influence; the referee's sheets (RS_NEW_ACTOR by the kind's key) and fights; the
+  coarse moves of those away from the character, and their exploring and digging; the character's own moves blocked
+  by a denizen; the theme as data.
