@@ -110,7 +110,7 @@ s/
 sdhc 17 MB 34816 blocks
 hydrafs label=HYDRA-16
 partition at block 2048
-free 15788 KB of 16380 KB
+free 15624 KB of 16380 KB
 ```
 
 Reading a disk's `ctl` gives:
