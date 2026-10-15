@@ -860,7 +860,7 @@ static unsigned char __fastcall__ add_link (unsigned char sn, unsigned char kind
 static void __fastcall__ start_dig (unsigned char d)
 {
     unsigned char* p;
-    unsigned char t;
+    unsigned char t, k;
 
     sn_ = HUB->pc_stratum;
     mx = HUB->pc_x;
@@ -893,16 +893,19 @@ static void __fastcall__ start_dig (unsigned char d)
             HUB->pc_x = dig.x;                  /* (It steps aside to dig) */
             HUB->pc_y = dig.y;
         }
+        dig.mat = C->mat[room_of (sn_, dig.x, dig.y)][MP_FLOOR];    /* (The room's floor: the maker's) */
         if (!strata[sn_ + 1].made) {
             grow_below (sn_);                   /* (Grown now: the shaft goes down to its floors, if it reaches under) */
             mx = dig.x;
             my = dig.y;
         }
         dig.need = abs (strata[sn_].datum - strata[sn_ + 1].datum);
-        dig.mat = MAT_STONE;
     } else {
         dig.x = mx + dir_x[d];
         dig.y = my + dir_y[d];
+        if ((k = room_of (sn_, mx, my)) == 0xFF) {  /* (A wall's room: its side's, or the far side's; in its chunk) */
+            k = room_of (sn_, dig.x + dir_x[d], dig.y + dir_y[d]);
+        }
         p = at (sn_, dig.x, dig.y);
         t = p ? TILE (*p) : T_PIT;
         if (t != T_WALL && t != T_ROCK) {
@@ -910,8 +913,8 @@ static void __fastcall__ start_dig (unsigned char d)
             no_way (N_NO_DIG);
             return;
         }
-        dig.need = t == T_WALL ? 2 : 5;         /* (A wall's masonry, two feet; a square of rock, five) */
-        dig.mat = t == T_WALL ? MAT_MASONRY : MAT_STONE;
+        dig.need = t == T_WALL ? 2 : 5;         /* (A wall, two feet; a square of rock, five) */
+        dig.mat = C->mat[t == T_WALL && k != 0xFF ? k : NROOMS][MP_WALL];   /* (Its room's walls, or the rock) */
     }
     hub_map (0);
     event (E_DIG, 0, D_BEGUN << 8 | (dig.need > 255 ? 255 : dig.need));

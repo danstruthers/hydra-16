@@ -24,19 +24,25 @@ static struct chunk cb;                         /* (A chunk grown in the main RA
 ** timbered: built's, for now); mixed (built into natural) */
 static const struct style styles[4] = {
     /* lit zones z3 slope  ceilings: flat barrel dome cathedral sloped rough   doors open lock bar  hid mag  wood ib
-    ** chambers wide glow */
+    ** chambers wide glow  things hidden h_lo h_span  kinds  hide_kinds
+    ** earth: floors passages  masonry: walls ceilings  windows slits glass shutters bars  portcullises  traps pits
+    ** hidden magic  door traps */
     { 5, 4, 1, 1, { 6, 4, 3, 2, 2, 3 }, 20, 8, 4, 2, 1, 1, 6, 3, 3, 1, 1,      /* built */
       6, 3, 2, 6, { KI_POTSHERDS, KI_BONES, KI_SKULL, KI_CANDLE, KI_BROKEN_SWORD, KI_SACK, KI_ROPE, KI_PENNIES },
-      { KI_PENNIES, KI_KEY, KI_LOCKPICKS, KI_POUCH } },
+      { KI_PENNIES, KI_KEY, KI_LOCKPICKS, KI_POUCH },
+      6, 8, 20, 14, 6, 6, 2, 2, 2, 2, 3, 1, 8, 1, 2 },
     { 1, 0, 0, 1, { 0, 0, 0, 0, 0, 20 }, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1, 1,      /* natural */
       4, 2, 1, 4, { KI_BONES, KI_BONES, KI_SKULL, KI_POTSHERDS, KI_BROKEN_SWORD, KI_PENNIES, KI_ROPE, KI_BONES },
-      { KI_PENNIES, KI_PENNIES, KI_POUCH, KI_KEY } },
+      { KI_PENNIES, KI_PENNIES, KI_POUCH, KI_KEY },
+      8, 6, 0, 0, 0, 0, 0, 0, 0, 0, 2, 4, 0, 0, 0 },
     { 2, 2, 0, 1, { 12, 4, 0, 0, 2, 2 }, 8, 12, 2, 2, 1, 0, 9, 1, 2, 1, 0,     /* mine */
       5, 2, 2, 4, { KI_PICK, KI_SHOVEL, KI_ROPE, KI_CANDLE, KI_LANTERN, KI_SACK, KI_BONES, KI_POTSHERDS },
-      { KI_PENNIES, KI_CHISEL, KI_POUCH, KI_KEY } },
+      { KI_PENNIES, KI_CHISEL, KI_POUCH, KI_KEY },
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 6, 0, 1 },
     { 4, 3, 1, 1, { 4, 3, 2, 1, 2, 8 }, 10, 8, 3, 2, 1, 1, 6, 3, 3, 1, 1,      /* mixed */
       6, 3, 2, 6, { KI_POTSHERDS, KI_BONES, KI_SKULL, KI_CANDLE, KI_BROKEN_SWORD, KI_SACK, KI_ROPE, KI_PENNIES },
-      { KI_PENNIES, KI_KEY, KI_LOCKPICKS, KI_POUCH } },
+      { KI_PENNIES, KI_KEY, KI_LOCKPICKS, KI_POUCH },
+      6, 8, 12, 8, 3, 6, 2, 2, 2, 1, 3, 2, 8, 1, 2 },
 };
 const struct style* SP;
 
@@ -131,6 +137,7 @@ unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned c
         } else {
             grow_built (c, &e, s->seed ^ ((unsigned long) cx << 16 | cy) * 40503UL);
         }
+        fixtures (c);                           /* (Its materials, its windows, its traps ...) */
     }
     if (!changes_over (c, x, y) && e.x1 != 0xFF) {
         stock (c, x, y);                        /* (Its things put down, the first time it's made) */

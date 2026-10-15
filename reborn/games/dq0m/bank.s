@@ -154,3 +154,4 @@ ovl_out:
             OVFN        plan_stratum, 4
             OVFN        links_down, 4
             OVFN        chunk_edges, 4
+            OVFN        fixtures, 5
