@@ -2314,6 +2314,14 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0harm', what: 'Dingus Quest Zero\'s harm (the referee\'s RS_HARM: HarnMaster\'s falling, Skills 8, and its injuries, Combat 13-14): up a ledge, then jumped down it, a fall of 7 feet onto paving (1d6 and 1d6 more), the injury it does worded, on the character\'s sheet and its map\'s panel (its injury levels), and kept in the save (pc.hm\'s inj line, hmchar\'s format)',
+      init: 't_rc', cycles: 800e6,
+      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -d /ram/hurt\r' +
+        ['look', 'u', 'map', 'dig down', 'n', 'look', 'open', 'n', 'e', 'u', 'turn around', 'jump down', 'sheet', 'map', 'quit', 'cat /ram/hurt/pc.hm', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['You haul yourself up over the edge.', 'You jump, and drop 7 feet. You land hard: a ', 'Injuries: ', 'IP ', '\ninj ', '% echo $status'],
+      sdcard: true
+    },
+    {
       name: 'dq0save', what: 'Dingus Quest Zero kept (dq0 -d: the save on a card, here /ram): a thing put down, down a stairway, quit (kept as it ends), the folder listed (the UI game, the things, the referee sheet, the maker records), then the game carried on: in the stratum below, where it stood, with what it carried',
       init: 't_rc', cycles: 900e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/kept\r' +

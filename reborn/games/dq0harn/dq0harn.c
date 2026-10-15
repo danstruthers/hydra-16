@@ -1,18 +1,21 @@
 /*
-** dq0harn.c - Dingus Quest Zero's HarnMaster referee: a task of the game's (dq0harn SEG ROLE, started by the UI),
+** dq0harn.c - Dingus Quest Zero's HarnMaster referee: a task of the game's (dq0harn SEG ROLE DIR, started by the UI),
 ** answering the rules' questions (rs.h's requests) in the hub's slots, with the C SDK's harn.h (the book's rules).
 ** It holds the characters' sheets; the rest of the game knows them only by what it answers: grades, conditions,
 ** effects, summaries and words.
 **
 ** So far: RS_HELLO (its name, its round), RS_LOAD_PC (hmchar's file), RS_TEST (a purpose made a skill or an
-** attribute, the circumstances' steps 5 points each), RS_DESCRIBE (the character's sheet; b 1: its short lines,
-** for the map's panel, each 15 characters at most).
+** attribute, the circumstances' steps 5 points each), RS_HARM (a fall, a trap's strike, a burn, a blow: injuries on
+** the sheet), RS_DESCRIBE (the character's sheet, its injuries with it; b 1: its short lines, for the map's panel,
+** each 15 characters at most; b 2: the last harm's words), RS_SAVE (the sheet, its injuries and all).  The sheet's
+** words and the harm are overlay 1's (sheet.c: DIR/dq0harn.ovl, read into a bank of its own as it starts).
 **
 ** The game's own choices in using the book (not the book's rules): a purpose names the skill (or attribute times 5)
 ** a GM would call for; a skill not opened is tested at its OML, as if opened on first use.
 */
 
 #include <fcntl.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -20,24 +23,37 @@
 #include <harn.h>
 #include "../dq0/hub.h"
 #include "../dq0/rs.h"
+#include "dq0harn.h"
 
-static harn_char pc;                            /* The character */
-static char name[16], calling[20];
+harn_char pc;                                   /* The character */
+char name[16], calling[20];
 
-/* ---- Words into a reply */
+/* ---- Words into a reply (from the overlay too: s may be in the window, where the hub is, so each character's
+** taken with s's bank in, and put with the hub's) */
 
-static char* tp;                                /* Where the next goes, */
-static char* tend;                              /*   and the end */
+char* tp;                                       /* Where the next goes, */
+char* tend;                                     /*   and the end */
 
-static void __fastcall__ put (const char* s)
+void __fastcall__ put (const char* s)
 {
-    while (*s && tp < tend) {
-        *tp++ = *s++;
+    unsigned char b = getbank (), h, c;
+
+    hub_map (0);
+    h = getbank ();
+    for (;;) {
+        setbank (b);
+        c = *s++;
+        setbank (h);
+        if (!c || tp >= tend) {
+            break;
+        }
+        *tp++ = c;
     }
     *tp = 0;
+    setbank (b);
 }
 
-static void __fastcall__ putn (int v)
+void __fastcall__ putn (int v)
 {
     char b[8];
 
@@ -187,16 +203,49 @@ static unsigned char __fastcall__ sense (unsigned char a)
     return v <= 3 ? 0 : v >= 18 ? 9 : (v - 3) * 3 / 5;
 }
 
+/* Its conditions (rs.h's C_*), as its sheet has them: its state (senseless, in shock, dead), bleeders, limbs made
+** useless */
+unsigned conditions (void)
+{
+    static const unsigned state[4] = { 0, C_UNCONSCIOUS, C_STUNNED, C_DEAD };
+    unsigned c = state[pc.state & 3];
+    unsigned char k;
+    harn_injury* j;
+
+    for (k = 0; k < pc.ninj; ++k) {
+        j = &pc.inj[k];
+        if (j->flags & HARN_IF_BLEEDER) {
+            c |= C_BLEEDING;
+        }
+        if (j->flags & HARN_IF_LIMB) {
+            c |= harn_is_limb (j->loc) == 1 ? C_ARM_USELESS : C_LEG_USELESS;
+        }
+    }
+    return c;
+}
+
+/* Its health in words any ruleset can say (the game's: by its injuries' levels against its Endurance; down, in
+** shock or senseless) */
+static unsigned char health (void)
+{
+    unsigned char ip = harn_get_ip (&pc), e = harn_end (&pc);
+
+    return pc.state == HARN_DEAD ? H_DEAD : pc.state != HARN_CONSCIOUS ? H_DOWN : !ip ? H_FINE : 3 * ip < e ? H_HURT :
+        3 * ip < 2 * e ? H_BADLY : H_CRITICAL;
+}
+
 static void status (void)
 {
+    static const char* const word[4] = { "", " OUT", " SHOCK", " DEAD" };
     char b[8];
     struct rs_summary* s = &HUB->pcsum;
     unsigned char ep = harn_get_pp (&pc) - harn_get_up (&pc), k;
 
     strcpy (HUB->pcstatus, "UP ");
     strcat (HUB->pcstatus, utoa (harn_get_up (&pc), b, 10));
-    s->cond = 0;
-    s->health = H_FINE;
+    s->cond = conditions ();
+    strcat (HUB->pcstatus, pc.state ? word[pc.state & 3] : s->cond & C_BLEEDING ? " BLEEDING" : "");
+    s->health = health ();
     k = harn_move (&pc);                       /* (Walking: half its Move, squares a round: Combat 6) */
     s->step = k < 4 ? 50 : 200 / k;
     s->attacks = 1;
@@ -260,87 +309,9 @@ static void __fastcall__ save_pc (struct req* r)
     r->result = 0;
 }
 
-/* ---- The sheet */
-
-static const unsigned char shown[] = {
-    HARN_STR, HARN_STA, HARN_DEX, HARN_AGL, HARN_EYE, HARN_HRG, HARN_SML, HARN_VOI, HARN_INT, HARN_AUR, HARN_WIL,
-    HARN_MOR
-};
-
-static void sheet (void)
-{
-    unsigned char k;
-
-    put (name);
-    put (", ");
-    put (harn_species_name (pc.att[HARN_SP]));
-    put (" ");
-    put (harn_sex_name (pc.att[HARN_SX]));
-    put (", ");
-    put (calling);
-    put ("; born ");
-    putn (pc.att[HARN_BD] & 0xFF);
-    put (" ");
-    put (harn_month_name (pc.att[HARN_BD] >> 8));
-    put (" (");
-    put (harn_sunsign_name (pc.att[HARN_SS]));
-    put (").\n");
-    for (k = 0; k < sizeof shown; ++k) {
-        put (harn_attr_name (shown[k]));
-        put (" ");
-        putn (pc.att[shown[k]]);
-        put (k + 1 < sizeof shown ? ", " : ".\n");
-    }
-    put ("Endurance ");
-    putn (harn_end (&pc));
-    put (", Move ");
-    putn (harn_move (&pc));
-    put ("; universal penalty ");
-    putn (harn_get_up (&pc));
-    put (", physical ");
-    putn (harn_get_pp (&pc));
-    put (".\nSkills (EML):");
-    for (k = 0; k < HARN_NSKILLS; ++k) {
-        if (pc.ml[k]) {
-            put (" ");
-            put (harn_skill_name (k));
-            put (" ");
-            putn (harn_eml (&pc, k));
-        }
-    }
-}
-
-/* The short lines: the attributes in pairs, then endurance and the penalties, as they are now ("STR  3  STA  5") */
-static const char abbr[12][4] = {
-    "STR", "STA", "DEX", "AGL", "EYE", "HRG", "SML", "VOI", "INT", "AUR", "WIL", "MOR"
-};
-
-static void __fastcall__ pair (const char* a, int v, const char* b, int w)
-{
-    put (a);
-    put (v < 10 ? "  " : " ");
-    putn (v);
-    put ("  ");
-    put (b);
-    put (w < 10 ? "  " : " ");
-    putn (w);
-    put ("\n");
-}
-
-static void brief (void)
-{
-    unsigned char k;
-
-    for (k = 0; k < sizeof shown; k += 2) {
-        pair (abbr[k], pc.att[shown[k]], abbr[k + 1], pc.att[shown[k + 1]]);
-    }
-    put ("END ");
-    putn (harn_end (&pc));
-    put ("\n");
-    pair ("UP ", harn_get_up (&pc), "PP ", harn_get_pp (&pc));
-}
-
 /* ---- A request answered */
+
+static unsigned char rq[offsetof (struct req, text)];  /* (A request's copy, for the overlay: but its text) */
 
 static void __fastcall__ answer (struct req* r)
 {
@@ -395,12 +366,22 @@ static void __fastcall__ answer (struct req* r)
             equip (r->text, r->a);
         }
         break;
+    case RS_HARM:                               /* (In a copy, the overlay's: its words, a line) */
+        memcpy (rq, r, sizeof rq);
+        strncpy (blow, r->text, sizeof blow - 1);
+        harm ((struct req*) rq);
+        memcpy (r, rq, sizeof rq);
+        strcpy (r->text, hurt);
+        status ();
+        break;
     case RS_SAVE:                               /* (The sheet into the save: hmchar's format, its own lines) */
         save_pc (r);
         break;
     case RS_DESCRIBE:
         if (r->b == 1) {
             brief ();
+        } else if (r->b == 2) {
+            put (hurt);
         } else {
             sheet ();
         }
@@ -412,11 +393,40 @@ static void __fastcall__ answer (struct req* r)
     }
 }
 
+/* The overlays: dir/dq0harn.ovl, an 8K bank each (dq0harn.cfg's OV1 ...; the file cut after the last one used:
+** make.js), read into banks of its own: 0, or -1 */
+static int __fastcall__ ovl_load (const char* dir)
+{
+    static unsigned char b[256];
+    static char path[64];
+    int fd, first, n;
+    unsigned char k;
+    unsigned off;
+
+    strcpy (path, dir);
+    strcat (path, "/dq0harn.ovl");
+    if ((fd = open (path, O_RDONLY)) < 0 || (first = hy_banks_alloc (OVLS)) < 0) {
+        return -1;
+    }
+    for (k = 0; k < OVLS; ++k) {
+        ovbank[k] = first + k;
+        for (off = 0; off < 0x2000; off += sizeof b) {
+            n = read (fd, b, sizeof b);
+            if (n <= 0) {
+                break;
+            }
+            bwrite (first + k, (void*) (0x8000 + off), b, n);
+        }
+    }
+    close (fd);
+    return 0;
+}
+
 int main (int argc, char* argv[])
 {
     unsigned char s;
 
-    if (argc < 3 || hub_attach (atoi (argv[1]), atoi (argv[2]))) {
+    if (argc < 4 || ovl_load (argv[3]) || hub_attach (atoi (argv[1]), atoi (argv[2]))) {
         return 1;
     }
     rseed (HUB->seed ^ 0x5245);                 /* (Its own dice: the game's seed, and its role) */
