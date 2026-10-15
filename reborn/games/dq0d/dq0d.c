@@ -6,11 +6,11 @@
 ** denizens of each, a record each from then on; so nothing is made up as the character turns a corner.  As the
 ** character comes near a lair (its chunk, or one beside it), its denizens are placed in it, each on a square of its
 ** own (the chunk made, the maker's, if it isn't yet); and those near the character are actors (the hub's: the world
-** moves them, the senses see them), each deciding what it means to do by its kind and what it senses, and asking the
-** world to do it: to wander about its lair (a few squares, or a wide range), to keep to it, to watch the character,
+** keeps the character out of their way, the senses see them), each deciding what it means to do by its kind and what
+** it senses, and doing it by the character's rules: to wander about its lair (a few squares, or a wide range), to keep to it, to watch the character,
 ** to keep its distance from it (a shy one), to come towards it (a bold one).  It senses through its own senses: it
 ** sees the character as far as its sight goes by the character's light (or its darkvision, with none), along a line
-** clear of rock, walls and shut doors; it hears it moving, nearer.  At the turns pace it moves its actors itself, as
+** clear of rock, walls and shut doors; it hears it moving, nearer.  At the turns pace it keeps up with the clock, as
 ** the world waits for it (a slice of the clock at a time: hub.h's TURN_SLICE), so they act through all the time what
 ** the character does takes: those out of its sight and not sensing it coarsely, a few squares a while.  Those out
 ** but away from the character (not actors) move coarsely too, to squares about their lairs in chunks that are made
@@ -529,9 +529,8 @@ static unsigned char __fastcall__ step_for (unsigned char k, unsigned lim, unsig
     return best;
 }
 
-/* Actor a (the copy) a square on heading d, as the world would move it (the turns pace: the world waits while
-** this task catches up, so it moves its actors itself): a step step_for's found it can walk, to a square no one's
-** on; its time by its pace and the slope (the world's cost ()) */
+/* Actor a (the copy) a square on heading d, as the world would move the character: a step step_for's found it can
+** walk, to a square no one's on; its time by its pace and the slope (the world's cost ()) */
 static void __fastcall__ step_here (unsigned char d)
 {
     unsigned nx = a.x + dir_x[d], ny = a.y + dir_y[d], c = a.step;
@@ -595,8 +594,8 @@ static unsigned char __fastcall__ dart (unsigned char k)
     return 1;
 }
 
-/* What actor k means to do, by its kind and what it senses: asked of the world (or a while waited); at the turns pace
-** done here.  Watching the character, a shy one keeps its distance (till it's a few squares further; cornered beside
+/* What actor k means to do, by its kind and what it senses, and done (or a while waited), by the character's rules
+** (step_here: the world's own, as they were when it moved them).  Watching the character, a shy one keeps its distance (till it's a few squares further; cornered beside
 ** it, it darts past), a bold one comes towards it; else it wanders about its lair (or keeps to it) */
 static void __fastcall__ decide (unsigned char k)
 {
@@ -639,21 +638,13 @@ static void __fastcall__ decide (unsigned char k)
     }
     if (d == 0xFF) {
         a.ready += a.doing ? 60 + random (60) : 10 + random (40);    /* (Watching: a while, unless it changes) */
-    } else if (d >= 0xFD) {
-    } else if (turns) {
+    } else if (d < 4) {
         step_here (d);
-    } else {
-        a.intent = I_GO;
-        a.a = H_OF (d);
     }
     hub_map (0);
     memcpy (&HUB->actor[k], &a, sizeof a);
-    if (a.doing != was || (turns && d < 4) || d == 0xFD) {
+    if (a.doing != was || d < 4 || d == 0xFD) {
         ++HUB->den_seq;                         /* (Changed: the world looks again at what the character sees) */
-    }
-    if (d < 4 && !turns) {
-        HUB->actor[k].state = REQ_POSTED;       /* (Written whole, then posted) */
-        hub_ring (T_WORLD);
     }
 }
 

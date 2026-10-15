@@ -5,10 +5,11 @@
 ** dungeon does while the player types scrolls past above it and the line stays whole.
 **
 ** Everything goes out through a buffer of this file's, written to fd 1 at t_done (and when it's full): no stdio, no
-** printf (sayf is this file's own, with %s %d %u %c).  The keys come from conio (kbhit, cgetc: raw).
+** printf (sayf is this file's own, with %s %d %u %c).  The keys are this file's too (conio's kbhit and cgetc, and
+** its screensize, without the stdio they take in): read raw from the window's console.
 */
 
-#include <conio.h>
+#include <fcntl.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
@@ -100,11 +101,88 @@ static void newline (void)
     gap = 0;
 }
 
+/* ---- The keys: the window's console read raw (main.c's consctl: rawon), each key one code (hydra.h's CH_*), on
+** an fd of its own, and looked for without waiting on another */
+
+int __fastcall__ _hy_open (const char* name, unsigned char mode);     /* (The C library's) */
+static int kfd = -1, nbfd = -1;
+static int pend = -1;                           /* A key t_haskey saw */
+
+static void keys (void)
+{
+    if (kfd < 0) {
+        consctl ("rawon");
+        kfd = _hy_open ("/dev/cons", HY_O_READ);
+        nbfd = _hy_open ("/dev/cons", HY_O_READ | HY_O_NONBLOCK);
+    }
+}
+
+unsigned char t_haskey (void)
+{
+    unsigned char c;
+
+    keys ();
+    if (pend < 0 && read (nbfd, &c, 1) == 1) {
+        pend = c;
+    }
+    return pend >= 0;
+}
+
+unsigned char t_getkey (void)
+{
+    unsigned char c;
+
+    keys ();
+    if (pend >= 0) {
+        c = pend;
+        pend = -1;
+    } else {
+        while (read (kfd, &c, 1) != 1) {
+            hy_yield ();
+        }
+    }
+    return c == '\r' ? '\n' : c;
+}
+
+/* The window's size: its consctl's size line (C R), else $COLUMNS and $LINES, else 80 by 24 */
+static void size (void)
+{
+    static char b[100];
+    char* p;
+    int fd, n = 0;
+
+    tw = 80;
+    th = 24;
+    if ((fd = _hy_open ("/dev/consctl", HY_O_READ)) >= 0) {
+        n = read (fd, b, sizeof b - 1);
+        close (fd);
+    }
+    b[n > 0 ? n : 0] = 0;
+    for (p = b; p; p = strchr (p, '\n')) {
+        if (*p == '\n') {
+            ++p;
+        }
+        if (!strncmp (p, "size ", 5)) {
+            tw = atoi (p + 5);
+            if ((p = strchr (p + 5, ' ')) != 0) {
+                th = atoi (p + 1);
+            }
+            return;
+        }
+    }
+    if ((p = getenv ("COLUMNS")) != 0 && atoi (p) > 0) {
+        tw = atoi (p);
+    }
+    if ((p = getenv ("LINES")) != 0 && atoi (p) > 0) {
+        th = atoi (p);
+    }
+}
+
 /* ---- The screen */
 
 void t_init (void)
 {
-    screensize (&tw, &th);
+    size ();
     if (tw < 40) {
         tw = 40;
     }
@@ -392,7 +470,7 @@ unsigned char __fastcall__ ask (const char* keys)
 
     t_done ();
     for (;;) {
-        k = cgetc ();
+        k = t_getkey ();
         if (k >= 'A' && k <= 'Z') {
             k += 'a' - 'A';
         }
@@ -413,7 +491,7 @@ void __fastcall__ ask_line (char* b, unsigned char max)
     inl_show ();
     t_done ();
     while ((l = t_line ()) == 0) {
-        t_key (cgetc ());
+        t_key (t_getkey ());
         t_done ();
     }
     strncpy (b, l, max);

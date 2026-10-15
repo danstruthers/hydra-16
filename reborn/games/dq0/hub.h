@@ -141,13 +141,12 @@ struct req {
 enum { SLOT_WORLD, SLOT_UI, NSLOTS };
 
 /* An actor: a denizen near the character, put here by the denizens' task (dq0d: its records are its own, in its
-** own banks) for the world to move and the senses to see.  Its intents are posted in its own entry, one at a time:
-** the denizens' task writes intent and a, then sets state REQ_POSTED; the world carries it out (by the character's
-** rules: a square at a time, its time added to ready), then sets REQ_DONE; the denizens' task takes it and sets
-** REQ_FREE.  While it's REQ_FREE the entry is the denizens' task's alone.  At the turns pace the world moves the
-** clock on through what the character does a slice at a time (TURN_SLICE tenths), each once the denizens' task
-** has caught up with it (den_at the clock): it moves its actors itself as it catches up, by the same rules, the
-** world waiting; and bumps den_seq as it changes what the character may see of them (moved, what they're doing) */
+** own banks) for the world to keep the character out of its way and the senses to see.  The denizens' task moves
+** its actors itself, by the character's rules (a square at a time, its time added to ready), and bumps den_seq as
+** it changes what the character may see of them (moved, what they're doing).  (state, intent, a and result: the
+** world's moves of them, once; unused.)  At the turns pace the world moves the clock on through what the character
+** does a slice at a time (TURN_SLICE tenths), each once the denizens' task has caught up with it (den_at the
+** clock), the world waiting */
 #define NACTORS         8
 #define TURN_SLICE      100
 struct actor {
@@ -250,6 +249,9 @@ unsigned char __fastcall__ hub_take (struct msg* m);    /* An intent (the world'
 void __fastcall__ hub_event (const struct msg* m);      /* An event (the world's) */
 unsigned char __fastcall__ hub_next (unsigned* place, struct msg* m);  /* The next event after place: 1, or 0 */
 int __fastcall__ hub_spawn (const char* path, unsigned char t, const char* more);   /* A task of the game's */
+int __fastcall__ hub_run (const char* path, const char* args);  /* A program (its arguments each 0-ended, then an
+                                                        **   empty one): its task, or -1 (hy_spawn without stdio) */
+int __fastcall__ hub_wait (unsigned char task);         /* A task waited for: its status, or -1 */
 struct req* __fastcall__ hub_ask (unsigned char slot);  /* A slot's request posted, its reply waited for: the slot
                                                         **   (set REQ_FREE when its reply's taken) */
 

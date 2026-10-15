@@ -159,19 +159,42 @@ unsigned char __fastcall__ hub_next (unsigned* place, struct msg* m)
 #ifndef HUB_ATTACHED
 /* ---- A task of the game's: path, given the segment and its role (and more, a word or none) */
 
+static struct hy_regs r;
+
+/* A program started: path, its arguments (each ended by a 0, and an empty one after them): its task, or -1.  (hydra.h's
+** hy_spawn, without the stdio it takes in to write its buffers out first: the UI has none) */
+int __fastcall__ hub_run (const char* path, const char* args)
+{
+    r.a = 0;                                    /* (Its fds: this one's 0, 1 and 2) */
+    r.r[0] = (unsigned) path;
+    r.r[1] = (unsigned) args;
+    return hy_call (HY_SPAWN, &r) ? -1 : r.a;
+}
+
+/* A task waited for (hy_wait's, no message): its exit status, or -1 */
+int __fastcall__ hub_wait (unsigned char task)
+{
+    r.a = task;
+    r.r[0] = 0;
+    return hy_call (HY_WAIT, &r) ? -1 : r.x;
+}
+
 int __fastcall__ hub_spawn (const char* path, unsigned char t, const char* more)
 {
-    static char sb[4], tb[4];
-    static char* argv[5];
-    const char* name = strrchr (path, '/');
+    static char args[64];
+    unsigned char n;
     int s;
 
-    argv[0] = (char*) (name ? name + 1 : path);
-    argv[1] = utoa (seg, sb, 10);
-    argv[2] = utoa (t, tb, 10);
-    argv[3] = (char*) more;
-    argv[4] = 0;
-    s = hy_spawn (path, argv, 0);
+    utoa (seg, args, 10);
+    n = strlen (args) + 1;
+    utoa (t, args + n, 10);
+    n += strlen (args + n) + 1;
+    if (more) {
+        strcpy (args + n, more);
+        n += strlen (more) + 1;
+    }
+    args[n] = 0;
+    s = hub_run (path, args);
     hub_map (0);                                /* (A spawn leaves the window on another bank) */
     return s;
 }
