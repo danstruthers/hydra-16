@@ -138,14 +138,21 @@ void __fastcall__ o_fixt_words (unsigned w)
         "The shutters are barred from the other side.", "You lift the bar and open the shutters.", 0, 0, 0,
         "There's no lock on them to pick.", "With a crack the shutters burst open.", "It holds."
     };
-    static const char* const blows[PO_BARS_BROKEN + 1 - PO_BROKE_DOWN] = {
+    static const char* const blows[PO_JAMMED + 1 - PO_BROKE_DOWN] = {
         "You batter at it till it gives way, and it crashes open.", "You batter at it a while: it's starting to give.",
         "You batter at it a while: it's marked, but it holds.", "Your blows make no mark on it.",
         "It's broken: it won't shut.", "You lift the bar out of its brackets, and set it down.",
         "The bar's on the far side: you can't get at it from here.", "There's nothing there to lift out.",
         "The bars are set fast in the stone: bend them, or break them, first.",
         "You work the pane free of its frame, and lift it out whole.", "You work the bent bars free, and lift them out.",
-        "The bars break out of the stone with a clang."
+        "The bars break out of the stone with a clang.",
+        "You set the bar in its brackets: the door is barred.", "There are no brackets for a bar on this side.",
+        "It's barred already.", "It stands open: shut it first, then bar it.",
+        "It was burst open once: its brackets won't hold a bar now.",
+        "You have no bar to put in its brackets (carry one, or set one down by it).",
+        "That bar is too short to span the door.",
+        "The bars buckle and break under your blows: there's a gap to get through.",
+        "Its bars are forced apart, and it's jammed where it is: there's a gap to get through."
     };
     unsigned char out = w & 0xFF, kind = w >> 8;
 
@@ -260,6 +267,9 @@ void __fastcall__ o_portal_look (const struct portal* p, signed char g)
         }
         add (p->state & PS_WRECKED ? " It's been broken down, and hangs in pieces." : p->state & PS_OPEN ?
              " It stands open." : "");
+    }
+    if (k == PK_PORTCULLIS && (p->state & PS_WRECKED)) {
+        add (" Its bars are forced apart: there's a gap to get through.");
     }
     if (p->harm && !(p->state & PS_WRECKED)) {
         add (m == PM_IRON || k == PK_PORTCULLIS ? " It's dented with blows." : " It's splintered with blows.");

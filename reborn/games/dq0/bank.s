@@ -173,4 +173,3 @@ ovl_out:
             OVFN        fixed, 5
             OVFN        fight_words, 6
             OVFN        fight_target, 6
-            OVFN        fight_stance, 6

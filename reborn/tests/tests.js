@@ -2615,6 +2615,42 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0fight', what: 'Dingus Quest Zero\'s fights (DENIZENS.md: fights; the referee\'s HarnMaster melee, RS_ATTACK): a fight with a giant rat won (seed 5, down its ladder, a sword in hand: dq0 -k sword): the blows struck and dodged both ways (the rat turns on the character as it\'s struck at: it bites back, on its own turn), a grievous wound knocking it senseless (the size of a man against a rat\'s, a point a die), finished where it lies, its body left (an item, seen as the world looks about again); then one out of reach, and the character\'s sheet unhurt',
+      init: 't_rc', cycles: 900e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 5 -c /ram/c.hm -k sword -T\r' +
+        ['d', 'wait', 'go right', 'attack the rat', 'attack the rat', 'attack the rat', 'attack the rat', 'look', 'hit the rat', 'sheet', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['You strike at the giant rat with your sword; it dodges.', 'The giant rat bites at you; you dodge.', 'fighting you.',
+        'You strike at the giant rat with your sword: a grievous deep gash to its right\nshoulder (G4). It falls senseless.', 'lying senseless.',
+        'You finish the giant rat where it lies. The giant rat falls dead.', 'On the floor ahead lies a body.',
+        'It\'s out of reach: go up to it first.', 'No injuries.', '% echo $status'],
+      sdcard: true
+    },
+    {
+      name: 'dq0ghoul', what: 'Dingus Quest Zero\'s denizens fighting (DENIZENS.md: fights): a ghoul (hostile, its kind\'s attitude) down the stairway at seed 7 comes towards the character and claws at it, a round at a time while it waits, wounding it (HarnMaster\'s injuries on its sheet, its universal penalty); the character\'s stance set (defend dodge)',
+      init: 't_rc', cycles: 1200e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 7 -c /ram/c.hm -T\r' +
+        ['d', 'defend dodge', 'wait', 'wait', 'wait', 'sheet', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['A ghoul is ahead to your left, 10 feet away.', 'You will dodge.', 'The ghoul claws at you', 'fighting you.',
+        'Injuries: ', '% echo $status'],
+      sdcard: true
+    },
+    {
+      name: 'dq0armour', what: 'Dingus Quest Zero\'s armour (the catalogue\'s armour kinds, worn: the things tell the referee what\'s worn and how well made, RS_EQUIP\'s marks; HarnMaster\'s protection by location, layers summed, Combat 4-5): a gambeson under a mail hauberk (dq0 -k), worn, the character standing undefended (defend none) as seed 7\'s ghoul claws at it: a blow turned by the armour, a wound where it doesn\'t cover',
+      init: 't_rc', cycles: 1400e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 7 -c /ram/c.hm -k \'gambeson,mail hauberk\' -T\r' +
+        ['wear the gambeson', 'wear the mail hauberk', 'd', 'defend none', 'wait', 'wait', 'wait', 'wait', 'wait', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['You put on the gambeson.', 'You put on the mail hauberk.', 'You will not defend yourself.', 'your mail hauberk turns the blow', '% echo $status'],
+      sdcard: true
+    },
+    {
+      name: 'dq0flee', what: 'Dingus Quest Zero\'s morale (RS_MORALE, HarnMaster\'s Initiative test): a giant rat struck with bare fists (seed 5, the torch put down), wounded but standing, its courage tested and failed, flees (shy, cautious: broken), seen fleeing',
+      init: 't_rc', cycles: 1200e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 5 -c /ram/c.hm -T\r' +
+        ['d', 'wait', 'go right', 'drop the torch', 'attack the rat', 'attack the rat', 'attack the rat', 'attack the rat', 'attack the rat', 'attack the rat', 'look', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['with your fists', 'It flees.', '% echo $status'],
+      sdcard: true
+    },
+    {
       name: 'dq0traps', what: 'Dingus Quest Zero\'s traps (DUNGEON.md: traps; the world\'s walk stops on one, the maker sets it off, the referee judges it): a door\'s blade, set off as the door\'s forced open (seed 16, dq0 -T), dodged; then a plate in a cave\'s floor walked onto, its blade striking (HC_STRIKE: a wound) and the trap seen after, sprung; then (seed 7, a thief, hmchar -s 1) a hidden dart trap on a door found by searching, the door left shut while it\'s known, the trap disarmed (Lockcraft), and the door opened',
       init: 't_rc', cycles: 2000e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 16 -c /ram/c.hm -T\r' +
@@ -2627,6 +2663,104 @@ module.exports = {
         'You find a trap: a dart trap, set to go off as its door opens.',
         'There\'s a trap on that door you know of: disarm it before you open it.',
         'You study the mechanism a while, and make out how it works', 'You work at the trap a while, and disarm it.', 'You open the door.', '% echo $status'],
+      sdcard: true
+    },
+    {
+      name: 'dq0stairtrap', what: 'Dingus Quest Zero\'s walks to stairs and ladders checking their way for traps, as the other walks do (the user\'s, 2026-10-16): at seed 38 the character goes round to the gallery\'s far door, clear of the covered pit hidden between it and the stairs up to the way out, then up (u): the walk back to the stairs stops on the pit, which gives way under it (a fall, a climb out begun); then from the window the stairs again, the pit it knows of now gone round, and the way out reached (shut fast), no second fall',
+      init: 't_rc', cycles: 600e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 38 -c /ram/c.hm\r' +
+        ['se', 'walk to the door east', 'u', 'look', 'walk to the window', 'u', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        const want = ['> walk to the door east', 'You go over to it.', '> u', 'The floor gives way beneath you: a pit!',
+          'You set to climbing', '> look', 'There is an open pit at your feet.', '> walk to the window', '> u',
+          'The way out is shut fast.', '% echo $status'];
+        let at = 0;
+        for (const w of want) {
+          const i = o.indexOf(w, at);
+          if (i < 0) { f.push('not found (in its turn): ' + w); break; }
+          at = i + w.length;
+        }
+        if ((o.match(/gives way beneath you/g) || []).length !== 1) f.push('the pit gave way more than once (not gone round)');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0rebar', what: 'Dingus Quest Zero\'s doors barred again (the user\'s, 2026-10-16): at seed 4 the door\'s bar lifted out of its brackets and taken, then put back (bar the door: from its side, the door shut): out of the pack (the load lighter), in its brackets again (examined), the door barred (opened, the bar lifted out again, at its feet); not while the door stands open; put back from the floor (put the bar back in its brackets); kept (dq0 -d), the door still barred and the bar in it as the game carries on',
+      init: 't_rc', cycles: 1000e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 4 -c /ram/c.hm -d /ram/g\r' +
+        ['take the bar', 'bar the door', 'i', 'x door', 'open', 'look', 'bar the door', 'close', 'put the bar back in its brackets', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        'ādq0 -p t -d /ram/g\r' + ['x door', 'i', 'open', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        const want = ['> take the bar', 'You lift the bar out of its brackets, and set it down.', 'Taken.', '> bar the door',
+          'You set the bar in its brackets: the door is barred.', '> i', 'a tinderbox); a belt', 'In all, 7 lb.', '> x door',
+          'Brackets for a bar are fixed on this side, the bar in them.', '> open', 'You lift the bar and open the door.',
+          'At your feet lies a bar.', '> bar the door', 'It stands open: shut it first, then bar it.', '> close',
+          '> put the bar back in its brackets', 'You set the bar in its brackets: the door is barred.',
+          'takes up where they left off.', '> x door', 'Brackets for a bar are fixed on this side, the bar in them.', '> i',
+          'In all, 7 lb.', '> open', 'You lift the bar and open the door.', '% echo $status'];
+        let at = 0;
+        for (const w of want) {
+          const i = o.indexOf(w, at);
+          if (i < 0) { f.push('not found (in its turn): ' + w); break; }
+          at = i + w.length;
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0portcbreak', what: 'Dingus Quest Zero\'s portcullises broken (the user\'s, 2026-10-16): at seed 12 (dq0 -T) the cell\'s portcullis lowered by its winch, then battered with a pick (dq0 -k pick: blows at its iron bars off their body, as a door\'s) till they break, a gap through for good (seen and examined so, jammed: it won\'t lower), and gone through; then a strong character (Strength 18) bending its bars apart (P_FORCE: once they hold, then they give), and through',
+      init: 't_rc', cycles: 1400e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 12 -c /ram/c.hm -T -k pick\r' +
+        ['e', 'wait', 'e', 'wait', 'e', 'lower portcullis', 'break portcullis', 'break', 'look', 'x portcullis', 'lower portcullis', 'w', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        'āhmchar -q -s 5 -o /ram/s.hm\rāecho att str 18 >> /ram/s.hm\rādq0 -p t -s 12 -c /ram/s.hm -T\r' +
+        ['e', 'wait', 'e', 'wait', 'e', 'lower portcullis', 'bend the bars', 'bend bars', 'look', 'w', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        const want = ['You loose the winch: the portcullis crashes down.', '> break portcullis', 'You batter at it a while: it\'s starting to give.',
+          '> break', 'The bars buckle and break under your blows: there\'s a gap to get through.', '> look',
+          'There is a portcullis ahead (its bars forced apart).', '> x portcullis', 'Its bars are forced apart: there\'s a gap to get through.',
+          '> lower portcullis', 'Its bars are forced apart, and it\'s jammed where it is', '> w', 'You are in a long vault',
+          'You loose the winch: the portcullis crashes down.', '> bend the bars', 'The bars won\'t give.', '> bend bars',
+          'You strain at the bars, and bend them apart: there\'s room to get through.', '> look',
+          'There is a portcullis ahead (its bars forced apart).', '> w', 'You are in a long vault', '% echo $status'];
+        let at = 0;
+        for (const w of want) {
+          const i = o.indexOf(w, at);
+          if (i < 0) { f.push('not found (in its turn): ' + w); break; }
+          at = i + w.length;
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0load', what: 'Dingus Quest Zero\'s load (the user\'s, 2026-10-16): the things\' weight, all the character carries, given the referee, its HarnMaster encumbrance (the load over its endurance) its physical penalty: the kit alone 7 lb, a little burdened (the inventory\'s words; the sheet\'s load and encumbrance 1, its move 16, the skills of the body 5 less); with a pick, a shovel, a rope, a sword and bones (dq0 -k) 33 lb, heavily burdened (encumbrance 3, its move 14, its climbing and dodging 10 less again, its awareness not); some put down, a little burdened again',
+      init: 't_rc', cycles: 900e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 3 -c /ram/c.hm\r' +
+        ['i', 'sheet', 'quit'].map(l => 'ā' + l + '\r').join('') + 'ādq0 -p t -s 3 -c /ram/c.hm -k pick,shovel,rope,sword,bones\r' +
+        ['i', 'sheet', 'drop rope', 'drop shovel', 'drop sword', 'i', 'sheet', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        const want = ['> i', 'In all, 7 lb. You\'re a little burdened.', '> sheet', 'Move 16; load 7 lb, encumbrance 1;',
+          'Climbing 55', 'Awareness 44', 'Dodge 80', '> i', 'In all, 33 lb. You\'re heavily burdened.', '> sheet',
+          'Move 14; load 33 lb, encumbrance 3;', 'Climbing 45', 'Awareness 44', 'Dodge 70', '> drop sword', '> i',
+          'In all, 15 lb. You\'re a little burdened.', '> sheet', 'Move 16; load 15 lb, encumbrance 1;', 'Dodge 80', '% echo $status'];
+        let at = 0;
+        for (const w of want) {
+          const i = o.indexOf(w, at);
+          if (i < 0) { f.push('not found (in its turn): ' + w); break; }
+          at = i + w.length;
+        }
+        return f;
+      },
       sdcard: true
     },
     {

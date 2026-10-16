@@ -415,6 +415,11 @@ static void __fastcall__ ask (unsigned char kind, unsigned char actor, unsigned 
             break;
         }
         hub_map (0);
+        if (HUB->quit) {
+            rq.result = 0xFF;                   /* (The game's ending: the referee may be gone) */
+            memset (rq.x, 0, sizeof rq.x);
+            return;
+        }
         hy_sleep_ticks (1);
     }
     memcpy (&rq, DSLOT_AT, RQ_SIZE);
@@ -976,7 +981,7 @@ static void __fastcall__ bleeding (unsigned char k)
     rq.w1 = m;
     ask (RS_TIME, k + 1, 0);
     HUB->actor[k].health = rq.b;
-    if (rq.result) {
+    if (rq.result == 1) {
         if ((p = at (a.sn, a.x, a.y)) != 0 && (*p & T_VIS)) {
             memset (&fw, 0, sizeof fw);
             told (k + 1, 0, FO_BLED, FF_A_DEAD);

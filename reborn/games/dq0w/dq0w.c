@@ -867,12 +867,13 @@ static void __fastcall__ grow_below (unsigned char n)
 }
 
 /* The link in the character's room the way d (up or down): its index in the stratum, the time to walk to it, or
-** 0xFF */
+** 0xFF; its way walked out again, so cut says if a trap's on it (the other walks' rule: one it knows of gone round) */
 static unsigned char __fastcall__ link_here (unsigned char d, unsigned long* t)
 {
-    unsigned char r, k, kind, best = 0xFF;
+    unsigned char r, k, kind, best = 0xFF, bk = 0;
     unsigned long bt = 0xFFFFFFFFUL, u;
 
+    cut = 0;
     if ((r = room_of (sn_, mx, my)) == 0xFF) {
         return 0xFF;
     }
@@ -884,8 +885,13 @@ static unsigned char __fastcall__ link_here (unsigned char d, unsigned long* t)
         if ((u = cross_room (r, cx_, cy_, C->open[k].x, C->open[k].y, dark () ? 1 : 0)) < bt) {
             bt = u;
             best = C->open[k].link;
+            bk = k;
         }
         at (sn_, mx, my);                       /* (Its chunk in the window again) */
+    }
+    if (best != 0xFF) {
+        cross_room (r, cx_, cy_, C->open[bk].x, C->open[bk].y, dark () ? 1 : 0);    /* (Its way again: a trap on it?) */
+        at (sn_, mx, my);
     }
     *t = bt;
     return best;
@@ -908,6 +914,10 @@ static void __fastcall__ climb (unsigned char d)
             hub_map (0);
             no_way (N_NO_STAIRS);
         }
+        return;
+    }
+    if (cut) {
+        on_way ();                              /* (A trap on its way to it: stopped there, as the other walks are) */
         return;
     }
     hub_map (0);
@@ -1310,6 +1320,7 @@ static void dig_on (void)
 static unsigned px_, py_;                       /* (The door's square, in the frame) */
 static unsigned char pd_;                       /* (The way from where the character stands to it) */
 static unsigned char want_;                     /* (What's to be worked, I_PORTAL's b: PW_*) */
+static unsigned char barw_;                     /* (A bar to set in a door's brackets, I_PORTAL's w2: its width) */
 #define WANTED(t)       ((TILE (t) == T_DOOR && want_ != PW_WINDOW) || (TILE (t) == T_WINDOW && want_ != PW_DOOR))
 
 /* The door the character faces, walked up to (its time), its square in px_, py_: the door's record (in the window),
@@ -1382,6 +1393,7 @@ static unsigned char __fastcall__ work (unsigned char what, unsigned x, unsigned
     q = &HUB->mreq[ASK_WORLD];
     q->tile = what;
     q->elev = d;
+    q->link = barw_;                            /* (PA_BAR's: the bar to hand, its width; 0 none) */
     q->fx = mx;
     q->fy = my;
     ask_maker (M_WORK, sn_, x, y);
@@ -1506,6 +1518,7 @@ static void __fastcall__ intent (struct msg* m)
         break;
     case I_PORTAL:
         want_ = m->b;
+        barw_ = m->w2;
         door_work (m->a);
         break;
     case I_LIGHT:

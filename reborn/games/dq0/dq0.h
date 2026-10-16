@@ -89,6 +89,7 @@ enum {
     V_NONE, V_MOVE, V_ENTER, V_APPROACH, V_LOOK, V_EXAMINE, V_SEARCH, V_TURN, V_FACE, V_CLIMB, V_JUMP, V_OPEN, V_CLOSE,
     V_UNLOCK, V_FORCE, V_DIG, V_GET, V_DROP, V_DON, V_DOFF, V_LIGHT, V_DOUSE, V_WAIT, V_MAP, V_SHEET, V_HELP,
     V_PAUSE, V_QUIT, V_SAVE, V_INVENTORY, V_HIDE, V_HOLD, V_STOW, V_PUT, V_HANG, V_RAISE, V_LOWER, V_BREAK, V_DISARM,
+    V_BAR, V_BEND,
     V_READ, V_USE, V_COMBINE,                   /* (The theme's puzzle's: theme.c) */
     V_ATTACK, V_DEFEND                          /* (A fight's: blows.c) */
 };
@@ -164,13 +165,14 @@ void __fastcall__ trap_name (unsigned char kind, unsigned char trigger, unsigned
 void den_way (void);                            /* Overlay 4: a denizen in the way (its name in lb) */
 struct msg;
 struct fight;
-void __fastcall__ fight_words (const struct msg* m);    /* Overlay 6: a blow (an E_FIGHT; its record from the
-                                                **   ring copied into lb's end: FIGHT_LB), into lb */
+unsigned __fastcall__ fight_words (const struct msg* m);    /* Overlay 6: a blow (an E_FIGHT; its record from the
+                                                **   ring copied into lb's end: FIGHT_LB), into lb: the tenths the
+                                                **   character's knocked senseless for, or 0 */
 #define FIGHT_LB    ((struct fight*) (lb + sizeof lb) - 1)
-unsigned char __fastcall__ fight_target (const char* w, unsigned char dir);   /* Overlay 6: the denizen beside the
-                                                **   character to strike at (its name has w; it lies dir): its entry
-                                                **   plus 1, or 0 and why not in lb */
-void __fastcall__ fight_stance (const char* w); /* Overlay 6: the character's stance set by its word, told in lb */
+unsigned char __fastcall__ fight_target (const struct pcmd* c);   /* Overlay 6: V_ATTACK's denizen beside the
+                                                **   character to strike at (its name has the word; it lies that way):
+                                                **   its entry plus 1, or 0 and why not in lb; V_DEFEND's stance set,
+                                                **   told in lb (0) */
 void __fastcall__ heard_words (unsigned char what, unsigned char rel);  /* Overlay 2: a denizen heard (an E_DEN's
                                                 **   what, | 0x80 muffled, the way it lies as the character faces),
                                                 **   into lb */

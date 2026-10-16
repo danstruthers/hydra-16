@@ -60,10 +60,11 @@ static void __fastcall__ struck (unsigned char n, unsigned char you)
     }
 }
 
-void __fastcall__ o_fight_words (const struct msg* m)
+unsigned __fastcall__ o_fight_words (const struct msg* m)
 {
-    static unsigned char n;                     /* (What the character sees: whether it sees the denizen) */
-    static unsigned at[2];
+    static unsigned char n;                     /* (What the character sees: whether it sees the denizen, or one of its
+                                                **   name: the senses' last look, a step behind it) */
+    static char at[12];
     struct fight* f = FIGHT_LB;
     unsigned char out = m->x[1], fl = m->x[2], pc = !m->who, k;
     const char* aw;
@@ -71,14 +72,15 @@ void __fastcall__ o_fight_words (const struct msg* m)
 
     hub_mem (DEN_BANK, f, FIGHT_AT + m->x[3] % NFIGHTS, sizeof *f);
     hub_mem (0, &n, &HUB->sight.ndens, 1);
+    s = pc ? f->def : f->att;
     for (k = n; k--; ) {
-        hub_mem (0, at, &HUB->sight.den[k].x, sizeof at);
-        if (at[0] == m->w1 && at[1] == m->w2) {
+        hub_mem (0, at, HUB->sight.den[k].name, sizeof at);
+        if (!strcmp (at, s)) {
             break;
         }
     }
     if (k == 0xFF) {
-        strcpy (pc ? f->def : f->att, "?");      /* (Not seen: something) */
+        strcpy (s, "?");                        /* (Not seen: something) */
     }
     t = lb;
     *t = 0;
@@ -98,18 +100,18 @@ void __fastcall__ o_fight_words (const struct msg* m)
     if (out == FO_GONE) {
         add (dname ? "The " : "It");
         add (dname ? dname : "");
-        add (dname ? " is out of reach." : " is out of reach.");
-        return;
+        add (" is out of reach.");
+        return 0;
     }
     if (out == FO_BLED) {
         who (aname, 1);
         add (" collapses, bled white.");
-        return;
+        return 0;
     }
     if (out == O_RISE) {
         who (aname, 1);
         add (pc ? " get to your feet." : " gets to its feet.");
-        return;
+        return 0;
     }
     if (out == O_DISPATCH) {
         add ("You finish ");
@@ -192,6 +194,7 @@ void __fastcall__ o_fight_words (const struct msg* m)
     if (fl & FF_FLEES) {
         add (" It flees.");
     }
+    return fl & (pc ? FF_A_DOWN : FF_D_DOWN) ? f->out : 0;
 }
 
 /* A word of a fight's, into lb: the stance taken (rs.h's D_*), or why there's no blow (FN_*) */
@@ -208,15 +211,32 @@ static void __fastcall__ note (unsigned char n)
     strcpy (lb, say[n & 7]);
 }
 
-/* The denizen beside the character to strike at (one whose name has the word w, if it's given; the one that way,
-** dir, a heading, if that is): its entry plus 1; or 0, and why not in lb */
-unsigned char __fastcall__ o_fight_target (const char* w, unsigned char dir)
+/* The character's stance (the hub's pc_stance, rs.h's D_*: the referee's defence for it) set by its word (dodge,
+** block, counter, none; else the best), told in lb */
+static void __fastcall__ stance (const char* w)
+{
+    static unsigned char s;
+    unsigned char d = *w;
+
+    s = d == 'd' ? D_DODGE : d == 'b' && w[1] == 'l' ? D_BLOCK : d == 'c' ? D_COUNTER : d == 'n' ? D_NONE : D_AUTO;
+    hub_mem (0, &HUB->pc_stance, &s, 1);
+    note (s);
+}
+
+/* V_ATTACK's denizen beside the character to strike at (one whose name has the command's word, if it's given; the
+** one that way, a heading, if that is): its entry plus 1; or 0, and why not in lb.  V_DEFEND's stance set (0) */
+unsigned char __fastcall__ o_fight_target (const struct pcmd* c)
 {
     static struct actor q;
     static struct { unsigned char sn; unsigned x, y; } pc;
-    unsigned char k, away = 0;
+    const char* w = c->word;
+    unsigned char k, away = 0, dir = c->dir;
     int dx, dy;
 
+    if (c->verb == V_DEFEND) {
+        stance (w);
+        return 0;
+    }
     hub_mem (0, &pc.sn, (const void*) &HUB->pc_stratum, 1);
     hub_mem (0, &pc.x, (const void*) &HUB->pc_x, 4);
     for (k = 0; k < NACTORS; ++k) {
@@ -234,14 +254,3 @@ unsigned char __fastcall__ o_fight_target (const char* w, unsigned char dir)
     return 0;
 }
 
-/* The character's stance (the hub's pc_stance, rs.h's D_*: the referee's defence for it) set by its word (dodge,
-** block, counter, none; else the best), told in lb */
-void __fastcall__ o_fight_stance (const char* w)
-{
-    static unsigned char s;
-    unsigned char d = *w;
-
-    s = d == 'd' ? D_DODGE : d == 'b' && w[1] == 'l' ? D_BLOCK : d == 'c' ? D_COUNTER : d == 'n' ? D_NONE : D_AUTO;
-    hub_mem (0, &HUB->pc_stance, &s, 1);
-    note (s);
-}

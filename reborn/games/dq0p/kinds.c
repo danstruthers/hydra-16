@@ -16,6 +16,7 @@
 /* The catalogue: name, flags, weight (quarter pounds), bulk (pints), its room (pints, pounds), slots, light, size,
 ** tool's key, material, the craft that knows it, its worth (pennies); what it keeps (KF_*: a surface KF_ON), its own
 ** form (0 a thing whole) */
+typedef char kinds_fit[KI_COUNT <= KI_THEME ? 1 : -1];   /* (The theme's after the catalogue's own) */
 const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, theme.h: the UI's, as it starts) */
     { "", 0 },
     { "torch", K_LIGHT | K_HAND, 4, 2, 0, 0, 0, 4, 3, "torch", MT_WOOD, AP_WOOD, 1 },
@@ -60,6 +61,7 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "ring byrnie", K_WEAR, 70, 8, 0, 0, 0, 0, 4, "ringbyr", MT_IRON, AP_ARMOUR, 308 },
     { "mail hauberk", K_WEAR, 132, 10, 0, 0, 0, 0, 4, "mailhbk", MT_IRON, AP_ARMOUR, 990 },
     { "gauntlets", K_WEAR | K_PLURAL, 3, 1, 0, 0, 0, 0, 2, "gauntlt", MT_LEATHER, AP_ARMOUR, 16 },
+    { "knee boots", K_WEAR | K_PLURAL, 15, 4, 0, 0, 0, 0, 3, "boots", MT_LEATHER, AP_ARMOUR, 76 },
     { "mace", K_HAND | K_HANG, 16, 3, 0, 0, 0, 0, 3, "mace", MT_IRON, AP_WEAPON, 84 },     /* (Weapons) */
     { "spear", K_HAND, 20, 6, 0, 0, 0, 0, 5, "spear", MT_WOOD, AP_WEAPON, 60 },
     { "round shield", K_HAND, 24, 12, 0, 0, 0, 0, 4, "shield", MT_WOOD, AP_WEAPON, 42 },

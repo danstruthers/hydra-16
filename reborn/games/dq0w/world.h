@@ -116,7 +116,8 @@ enum { PK_DOOR, PK_WINDOW, PK_PORTCULLIS, PK_DRAWBRIDGE, PK_GATE, PK_GRATE, PK_H
 #define PS_BROKEN       0x10                    /* Its lock or its bar burst (it won't lock or bar again) */
 #define PS_HIDDEN       0x20                    /* A secret door: like the wall round it, till a search finds it */
 #define PS_MAGIC        0x40                    /* (Hidden by magic: found only by magical means, the referee's) */
-#define PS_WRECKED      0x80                    /* Broken down (its body gone): open for good, it won't shut */
+#define PS_WRECKED      0x80                    /* Broken down (its body gone): open for good, it won't shut (a
+                                                **   portcullis: its bars bent or broken apart, jammed, a gap in it) */
 enum { PM_WOOD, PM_IRONBOUND, PM_IRON, PM_STONE };
 #define PF_GRILLE       0x01                    /* A door's features: a little window in it, a grille across it; */
 #define PF_PEEP         0x02                    /*   a spy-hole, its cover on the bar's side; */

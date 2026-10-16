@@ -107,6 +107,7 @@ static const struct piece {
     { "lcap", "leather cap", HARN_LEATHER, L (SKULL) }, { "ltunic", "leather tunic", HARN_LEATHER, TUNIC },
     { "gambson", "gambeson", HARN_QUILT, HAUBERK }, { "ringbyr", "ring byrnie", HARN_RING, TUNIC },
     { "mailhbk", "mail hauberk", HARN_MAIL, HAUBERK }, { "gauntlt", "gauntlets", HARN_LEATHER, L (HAND) },
+    { "boots", "knee boots", HARN_LEATHER, L (KNEE) | L (CALF) | L (FOOT) },
 };
 #define NARMOUR         (sizeof pieces / sizeof pieces[0])
 

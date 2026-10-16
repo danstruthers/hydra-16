@@ -8,7 +8,10 @@
 ** Doors: opened (unbarred, if barred from this side), closed, a lock picked (the referee's Lockcraft, by the tools to
 ** hand: a minute a try, harder the more complex the lock), forced (Strength against the door's material: its lock or
 ** bar burst; loud).  A portcullis is never opened: raised by its winch (on its bar's side: a few rounds' cranking,
-** loud) or heaved up from the far side (P_LIFT, hard), and lowered by the winch only (dropped at once).  A window's
+** loud) or heaved up from the far side (P_LIFT, hard), and lowered by the winch only (dropped at once); down, its
+** bars bent apart (P_FORCE, harder than a window's) or broken through by blows (as a door's, off their body), and
+** it's a way through for good, jammed (PS_WRECKED).  A door's bar set in its brackets again (bar the door: shut,
+** from its side, a bar to hand that spans it: the things' to put back, an IW_PORTAL part again).  A window's
 ** shutters are worked as a door is; its bars bent (P_FORCE, hard, loud); its glass or its shutters broken by a blow
 ** (the referee's HC_BLOW at RS_THING: its impact against theirs, loud; bars aren't); an open window climbed through
 ** (its sill a climb, P_CLIMB: a fall on a critical failure).  A slit's only seen and shot through.  What passes
@@ -430,8 +433,34 @@ static unsigned char through;
 
 static unsigned char __fastcall__ portcullis (unsigned char what)
 {
-    unsigned char up = what == PA_RAISE, mine = pq.bar == ((pd + 2) & 3);
+    unsigned char up = what == PA_RAISE, mine = pq.bar == ((pd + 2) & 3), g;
 
+    if (pq.state & PS_WRECKED) {
+        return PO_JAMMED;                       /* (Its bars forced apart: it won't move, but it's a way through) */
+    }
+    if (what == PA_BREAK || what == PA_BEND) {  /* (Its bars, down: bent apart, P_FORCE, the thicker the harder; or
+                                                **   broken through by blows, off their body: a gap for good) */
+        if (pq.state & PS_OPEN) {
+            return PO_IS_UP;
+        }
+        noise (what == PA_BEND ? 7 : 8);
+        if (what == PA_BEND) {
+            tt += 100;
+            if (!G_OK (test (P_FORCE, PM_IRON, -6 - (signed char) pq.thick))) {
+                return PO_BARS_HOLD;
+            }
+            g = PO_BENT;
+        } else {
+            hm = 0xFF;
+            hs = 0;
+            if ((g = batter (PM_IRON, pq.tough)) != 0) {
+                return g;
+            }
+            g = PO_GAP;
+        }
+        door_state (PS_WRECKED | PS_OPEN);
+        return g;
+    }
     if (!up && what != PA_LOWER) {
         return what == PA_THROUGH ? PO_NOT_WINDOW : PO_NOT_PORTC;
     }
@@ -550,7 +579,12 @@ static void __fastcall__ portal (unsigned char what)
         }
         return;
     }
-    if (pq.kind == PK_PORTCULLIS) {             /* (Never opened: raised) */
+    if (what == PA_BEND && pq.kind != PK_PORTCULLIS) {
+        what = PA_FORCE;                        /* (A window's bars bent: forced) */
+    }
+    if (what == PA_BAR && pq.kind != PK_DOOR) {
+        out = PO_NO_BRACKETS;
+    } else if (pq.kind == PK_PORTCULLIS) {      /* (Never opened: raised) */
         out = portcullis (what == PA_OPEN || what == PA_FORCE ? PA_RAISE : what == PA_CLOSE ? PA_LOWER : what);
     } else if (pq.kind == PK_DOOR || (out = window (what)) == 0xFF) {
         switch (what) {
@@ -578,6 +612,17 @@ static void __fastcall__ portal (unsigned char what)
             if (out == PO_LIFTED) {
                 door_state (pq.state & ~PS_BARRED);
                 part_moved (KI_BAR, AT_BAR, KI_BAR, AT_PC);
+            }
+            break;
+        case PA_BAR:                            /* (A bar set in its brackets again: the door shut, from its side;
+                                                **   W's link the widest bar to hand, its width: the things', which
+                                                **   put it in them, IW_PORTAL, as the UI's told) */
+            tt += 2 * st;
+            out = !(pq.feat & PF_BRACKETS) || pq.bar != ((pd + 2) & 3) ? PO_NO_BRACKETS : pq.state & PS_BARRED ?
+                PO_IS_BARRED : pq.state & PS_OPEN ? PO_SHUT_FIRST : pq.state & PS_BROKEN ? PO_BURST : !W->link ?
+                PO_NO_BAR_HELD : W->link <= (pq.size & 15) ? PO_BAR_SHORT : PO_REBARRED;
+            if (out == PO_REBARRED) {
+                door_state (pq.state | PS_BARRED);
             }
             break;
         case PA_CLOSE:

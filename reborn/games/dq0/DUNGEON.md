@@ -232,7 +232,9 @@ on a T_WINDOW square); portcullises for some doors (PK_PORTCULLIS); none in a na
 table says (a window's shutters closed not; a portcullis up or down), and worked (dq0m/work.c: the maker keeps the
 fixtures it grew, so it works them for the world, which walks the character up to them and waits): a portcullis
 raised and lowered by its winch, on its room's side, or heaved up from the far side (Strength), never walked
-through while it's down; a window's shutters opened, closed and forced as a door's, its bars bent (Strength), its
+through while it's down, but its bars bent apart (bend the bars: Strength, harder the thicker they are) or broken
+through by blows (break the portcullis: as a door's, off their body, iron's resistances), and it's a way through for
+good, jammed where it is (PS_WRECKED, "a portcullis (its bars forced apart)"); a window's shutters opened, closed and forced as a door's, its bars bent (Strength), its
 glass or its shutters broken by a blow (the referee's impact against theirs), an open one climbed through (its
 sill a climb); a slit only seen through.  Worded as what they are: "a barred window", "an arrow slit", "a
 portcullis (down)".  Their states kept as a door's are, a window's parts with them.  (To come: missiles through
@@ -284,7 +286,7 @@ its depth) or covered, spiked or not (hidden), where the squares round it are fl
 chunk's ways are never parted; deadfalls, blades, darts, gas and alarms, a plate's or a wire's, and a closed
 door's, set off as it's opened; hidden (a search's steps) or by magic; a natural cave's only pits.  And now set
 off (dq0m/work.c, for the world): a walk worked out stops on the first it would set off, a plate's or a wire's,
-and one the character knows of is gone round; a door's goes off as it's opened or forced, and a door with one it
+and one the character knows of is gone round (a walk to the stairs or a ladder too, the user's, 2026-10-16); a door's goes off as it's opened or forced, and a door with one it
 knows of is left shut.  Stepping on one, the character may notice it in time (Awareness, a smaller chance than a
 search's; never a magical one); else a pit's cover gives way (a fall, its depth; a spiked one's spikes a strike),
 and it climbs out; gas is resisted (Condition) or choked on, senseless a while; an alarm's a noise the denizens
@@ -336,7 +338,8 @@ harder on a new one.  Its **parts** are items of their own (items.h's IW_PORTAL,
 a door's **bar** (in its brackets, on the square on its bar's side; some unbarred doors' set aside by them), a
 window's **pane** and **bars**, each with its material, its state, its size and thickness: examined as any thing is,
 lifted out (take the bar, lift the bar: only from its side; a pane worked out whole; bent bars lifted out) and
-carried; a pane broken is shards at the character's feet.  **Examined** (examine the door, the window, the
+carried; a bar put back (bar the door, put the bar on the door: from its side, the door shut, a bar carried or in
+reach that spans it, the widest; the maker's state barred, the things' bar in its brackets again); a pane broken is shards at the character's feet.  **Examined** (examine the door, the window, the
 portcullis): its kind, size, material, thickness and features plain to see, its state and how stout it is the
 appraiser's judgement (the referee's Timbercraft, Metalcraft or Masonry, as near the truth as the grade).  A room's
 words are general at a glance (a small hall, a high ceiling, a low, rough one); its figures (its size in feet, its
@@ -367,8 +370,11 @@ two-handed thing or a big one both), stowed in the pack, put in a container (by 
 a container in another, by its own bulk or what it holds, the more; never into itself or what's in it), taken from
 it (into the pack, else a hand), hung from the belt (by its slots; only what hangs: a pouch, a sheath, a quiver, a
 blade), worn and taken off (one of a kind worn); the inventory says which hand (both), what's worn, what's in or on
-what, and the load.  Taking up still fills the pack first, then a hand.  (To come: a scabbard's one blade, a
-quiver's arrows only; the load as the referee's encumbrance.)
+what, and the load.  Taking up still fills the pack first, then a hand.  **The load** (all the character carries,
+worn or not, its armour too) is the referee's to judge: the things give it with the tools to hand (RS_EQUIP), and
+the referee makes it HarnMaster's encumbrance (the load over the endurance, its physical penalty: the body's tests
+harder, its move less, so the world's step slower), worded on the sheet (the load, the encumbrance) and in the
+inventory ("You're heavily burdened.").  (To come: a scabbard's one blade, a quiver's arrows only.)
 
 **Surfaces, and what a container keeps in** (the user: "a table or chair is a type of container as well.  Some
 containers cannot hold liquids (wicker baskets), but hold clothes just fine; same with gasses (a balloon or a cloth
