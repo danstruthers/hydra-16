@@ -3,7 +3,7 @@
 ** regions (8 by 8 chunks each) in the hub's plans' banks, each region's kind, the lie of the rock at its corner,
 ** and the ways across its edges; and its links down to the stratum below.  Purpose-built strata so far: the regions halls, a few solid rock; the ways a tree
 ** that reaches every hall (a random walk's: the first step into each region is a way), and a few more for loops;
-** the rock's lie a walk too, each region near its neighbours'.  The regions none of the halls reach become rock.
+** the rock's lie a walk too, each region near its neighbours' (a built stratum's level).  The regions none of the halls reach become rock.
 ** (The populations, the water and the features come with their steps.)
 **
 ** And a chunk's edges, from the plan (chunk_edges: make.c's): the ways across them, the ground at its corners.
@@ -119,7 +119,8 @@ void __fastcall__ o_plan_stratum (unsigned char n)
             }
             z = (k ? z / k : 0) + (int) random (9) - 4;
             r = rg (n, rx, ry);
-            r->z = z > 50 ? 50 : z < -50 ? -50 : z;
+            r->z = s->style == ST_BUILT ? 0 : z > 50 ? 50 : z < -50 ? -50 : z;   /* (A built stratum's level: its
+                                                **   floors flat, DUNGEON.md's built to a plan) */
             r->kind = s->rw * s->rh > 1 && !random (6) ? RG_ROCK : RG_HALLS;
             r->n = r->w = NO_WAY;
             rp ();

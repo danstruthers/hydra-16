@@ -18,7 +18,8 @@
 #include "grow.h"
 
 struct stratum strata[MAXSTRATA];               /* (This task's copy of the hub's) */
-#define OVLS    5                               /* Its overlays: built.c, pass.c, caves.c, plan.c, fixtures.c */
+#define OVLS    6                               /* Its overlays: built.c, pass.c, caves.c, plan.c, fixtures.c,
+                                                **   uses.c */
 
 /* The overlays: dir/dq0m.ovl, an 8K bank each (dq0m.cfg's OV1 ...; the file cut after the last one used: make.js),
 ** read into banks of its own: 0, or -1 */

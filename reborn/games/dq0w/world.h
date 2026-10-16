@@ -68,11 +68,16 @@ struct zone {                                   /* A rectangle of a room's floor
 struct room {
     unsigned char   x, y, w, h;                 /* Its floor (its walls round it) */
     unsigned char   flags;                      /* R_* */
-    unsigned char   kind;                       /* What the theme calls it */
+    unsigned char   kind;                       /* What the theme calls it (a built room's: its use) */
     unsigned char   z0, nz;                     /* Its zones */
+    unsigned char   use;                        /* What it was built for (U_*: DUNGEON.md's built to a plan) */
 };
 #define R_VISITED       0x01
 #define R_LIT           0x02
+#define R_MURDER        0x04                    /* (A gatehouse's: murder holes in its vault) */
+/* A room's use (the theme's words: its rooms' eight, then its uses'); a cave's chamber U_CAVE */
+enum { U_CHAMBER, U_HALL, U_CELL, U_VAULT, U_CRYPT, U_GALLERY, U_CAVE, U_STORE, U_KITCHEN, U_PANTRY, U_BARRACKS,
+    U_ARMOURY, U_CHAPEL, U_QUARTERS, U_SOLAR, U_WELL, U_CISTERN, U_GATEHOUSE, U_GUARDROOM, U_WORKSHOP, NUSES };
 struct opening {                                /* An opening that isn't a door */
     unsigned char   kind;                       /* O_* (level.h) */
     unsigned char   x, y;
@@ -178,6 +183,8 @@ struct chunk {
     unsigned char   mat[NROOMS + 1][3];         /* Its rooms' materials (MP_*), and its passages' */
     unsigned char   ntraps;
     struct trap     trap[NTRAPS];
+    unsigned char   pceil;                      /* Its passages' ceiling, feet above their floor (a built one's: its
+                                                **   small rooms' too, the builders' one height) */
 };
 #define CHUNK_SIZE      0x0AA0                  /* Three to a bank */
 typedef char chunk_fits[sizeof (struct chunk) <= CHUNK_SIZE ? 1 : -1];

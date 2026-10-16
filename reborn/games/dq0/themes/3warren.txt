@@ -6,12 +6,14 @@ mission  | both
 story    | You fell through the floor of a ruin into the warren of the kobolds, and the hole has been stopped up
            behind you.  The warren's gate is locked with brass, and the kobolds keep its key in pieces; and they
            obey whoever sets their totem on the bone throne of their chieftains.
-stratum  | Warren Mouth | x
-stratum  | Dung Tunnels | m
-stratum  | Kobold Mines | mx
-stratum  | the Chieftain's Den | mn
-stratum  | Old Diggings | mn
+stratum  | Warren Mouth | x | keep
+stratum  | Dung Tunnels | m | works
+stratum  | Kobold Mines | mx | works
+stratum  | the Chieftain's Den | mn | keep
+stratum  | Old Diggings | mn | works
 rooms    | den | burrow | pen | midden | lair | gallery | cave | storeroom
+uses     | cookpit | larder | warriors' den | armoury | shrine | sleeping burrow | chieftain's den | well | cistern | gatehouse
+           | guardroom | workshop
 light    | lit by smoky tallow lamps
 denizens | kobold rat spider bear
 

@@ -60,7 +60,7 @@ void __fastcall__ o_theme_load (unsigned char t)
 void __fastcall__ o_theme_named (unsigned char what, unsigned char n)
 {
     if (what >= TN_ROOM) {
-        strcat (lb, what == TN_ROOM ? T->room[n & 7] : T->light);
+        strcat (lb, what != TN_ROOM ? T->light : n < 8 ? T->room[n] : T->uses[(n - 8) % TUSES]);
     } else {
         strcpy (tname, what == TN_THEME ? T->name : T->stratum[n & 7]);
     }

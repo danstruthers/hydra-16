@@ -6,13 +6,15 @@ mission  | escape
 story    | The temple of the Deep Mother sank into the marsh a lifetime ago, and its priests with it.  Its doors
            were sealed against the water, and sealed they stay: the Mother opens them, the songs say, only to the
            pearl of the deep laid on her altar in her chalice.
-stratum  | Temple Steps | b
-stratum  | Flooded Nave | b
-stratum  | Sunken Cloister | bn
+stratum  | Temple Steps | b | temple
+stratum  | Flooded Nave | b | temple
+stratum  | Sunken Cloister | bn | temple
 stratum  | Drowned Grottoes | n
 stratum  | Black Water | n
 stratum  | the Mother's Deep | n
 rooms    | chapel | nave | cell | vault | shrine | cloister | grotto | sacristy
+uses     | kitchen | larder | dormitory | armoury | lady chapel | priest's cell | high priest's | well room | cistern
+           | gatehouse | porter's lodge | scriptorium
 light    | lit by lamps of green glass
 denizens | rat spider ghoul skel
 

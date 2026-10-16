@@ -53,6 +53,12 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "pane of glass", 0, 4, 6, 0, 0, 0, 0, 3, "", MT_GLASS, AP_GLASS, 30 },     /*   a window's glass, */
     { "iron bars", K_PLURAL, 60, 20, 0, 0, 0, 0, 5, "", MT_IRON, AP_METAL, 10 },  /*   its bars; */
     { "glass shards", K_PLURAL, 2, 1, 0, 0, 0, 0, 2, "", MT_GLASS, AP_GLASS, 0 },  /*   a pane broken) */
+    { "iron pot", K_CONTAINER, 32, 8, 6, 12, 0, 0, 3, "", MT_IRON, AP_METAL, 10, SS | KF_LIQUID }, /* (A room's use's
+                                                **   leavings: the stock's, dq0m/uses.c) */
+    { "heap of straw", 0, 4, 8, 0, 0, 0, 0, 3, "", MT_OTHER, AP_WOOD, 0 },
+    { "candle stubs", K_PLURAL, 1, 1, 0, 0, 0, 0, 1, "", MT_OTHER, AP_FOOD, 0 },
+    { "well", 0, 255, 255, 0, 0, 0, 0, 8, "", MT_STONE, AP_STONE, 0, KF_FIXED },   /* (Its stone curb: never taken
+                                                **   up; its water the water's work's, to come) */
 };
 
 /* The things' words (things.h's SA_*): % the thing's name, # the other's (the pack's, the belt's, a container's) */

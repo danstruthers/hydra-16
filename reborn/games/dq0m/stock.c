@@ -1,6 +1,8 @@
 /*
 ** stock.c - (dq0m) a chunk's ordinary things put down, once, as it's first made (DUNGEON.md: items): in its rooms
-** (a cave's chambers), by its stratum's style's say (how often, which kinds, how many concealed, and how well); the
+** (a cave's chambers), by its stratum's style's say (how often, how many concealed, and how well), what lies about
+** by each room's former use (uses.c's: a kitchen's pots and bones; a chamber's, a cave's, the style's kinds), the
+** stratum's age rotting what rots, and each use's mark (a kitchen's pot, a chapel's candle stubs, a well); the
 ** things' records taken from the hub's item store under its lock (the things task, dq0p, keeps them after).  A
 ** chunk stocked is marked among the change records (STOCKED), so a chunk made again isn't stocked twice.
 **
@@ -105,8 +107,10 @@ static void __fastcall__ piece_down (const struct chunk* c, unsigned char i, uns
     }
 }
 
-/* The chunk (in the main RAM; its first square x0, y0 in the frame) stocked: two tries a room, each a thing at the
-** style's odds, at a square of its floor; the theme's pieces whose place it is; then its portals' parts (a barred
+/* The chunk (in the main RAM, the growers' L; its first square x0, y0 in the frame) stocked: two tries a room, each a
+** thing at the style's odds, at a square of its floor, of a kind its use left; its use's mark, in its middle (and a
+** kitchen's well, where there's water, by its west wall); the theme's pieces whose place it is; then its portals'
+** parts (a barred
 ** door's bar in its brackets, some unbarred doors' set aside by them, one in four; a window's pane, its bars), with
 ** no dice: nothing else moves for them */
 void __fastcall__ o_stock (const struct chunk* c, unsigned x0, unsigned y0)
@@ -129,9 +133,22 @@ void __fastcall__ o_stock (const struct chunk* c, unsigned x0, unsigned y0)
                 continue;
             }
             hidden = random (20) < SP->hidden;
-            k = hidden ? SP->hide_kinds[random (4)] : SP->kinds[random (8)];
+            k = hidden ? SP->hide_kinds[random (4)] : uses (US_THING, i | random (8) << 3);
+            if (!k) {
+                continue;                       /* (Rotted away) */
+            }
             put_down (k, c->sn, x0 + lx, y0 + ly, k == KI_PENNIES ? 2 + random (20) : 1,
                 hidden ? SP->h_lo + random (SP->h_span) : 0xFF);
+        }
+    }
+    for (i = 0; i < c->nrooms; ++i) {           /* (Each room's use's mark, and a kitchen's well: no dice) */
+        r = &c->room[i];
+        for (n = 0; n < 2; ++n) {
+            lx = n ? r->x : r->x + r->w / 2;
+            ly = r->y + r->h / 2;
+            if ((k = uses (US_SIGN, i | (n ? 0x80 : 0))) && TILE (c->tile[ly][lx]) == T_FLOOR) {
+                put_down (k, c->sn, x0 + lx, y0 + ly, 1, 0xFF);
+            }
         }
     }
     for (i = 0; i < NPIECES; ++i) {             /* (The theme's pieces whose place is the chunk: on a room's floor) */

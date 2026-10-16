@@ -19,31 +19,7 @@
 
 static struct chunk cb;                         /* (A chunk grown in the main RAM: the grower's an overlay) */
 
-/* The styles' proportions (a stand-in for the theme's data): purpose-built (rooms and doors, most closed); natural
-** (caves: no doors, unless sentient hands have been at them: the mixed style's); mines (galleries, few doors,
-** timbered: built's, for now); mixed (built into natural) */
-static const struct style styles[4] = {
-    /* lit zones z3 slope  ceilings: flat barrel dome cathedral sloped rough   doors open lock bar  hid mag  wood ib
-    ** chambers wide glow  things hidden h_lo h_span  kinds  hide_kinds
-    ** earth: floors passages  masonry: walls ceilings  windows slits glass shutters bars  portcullises  traps pits
-    ** hidden magic  door traps */
-    { 5, 4, 1, 1, { 6, 4, 3, 2, 2, 3 }, 20, 8, 4, 2, 1, 1, 6, 3, 3, 1, 1,      /* built */
-      6, 3, 2, 6, { KI_POTSHERDS, KI_BONES, KI_SKULL, KI_CANDLE, KI_BROKEN_SWORD, KI_SACK, KI_ROPE, KI_PENNIES },
-      { KI_PENNIES, KI_KEY, KI_LOCKPICKS, KI_POUCH },
-      6, 8, 20, 14, 6, 6, 2, 2, 2, 2, 3, 1, 8, 1, 2 },
-    { 1, 0, 0, 1, { 0, 0, 0, 0, 0, 20 }, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1, 1,      /* natural */
-      4, 2, 1, 4, { KI_BONES, KI_BONES, KI_SKULL, KI_POTSHERDS, KI_BROKEN_SWORD, KI_PENNIES, KI_ROPE, KI_BONES },
-      { KI_PENNIES, KI_PENNIES, KI_POUCH, KI_KEY },
-      8, 6, 0, 0, 0, 0, 0, 0, 0, 0, 2, 4, 0, 0, 0 },
-    { 2, 2, 0, 1, { 12, 4, 0, 0, 2, 2 }, 8, 12, 2, 2, 1, 0, 9, 1, 2, 1, 0,     /* mine */
-      5, 2, 2, 4, { KI_PICK, KI_SHOVEL, KI_ROPE, KI_CANDLE, KI_LANTERN, KI_SACK, KI_BONES, KI_POTSHERDS },
-      { KI_PENNIES, KI_CHISEL, KI_POUCH, KI_KEY },
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 6, 0, 1 },
-    { 4, 3, 1, 1, { 4, 3, 2, 1, 2, 8 }, 10, 8, 3, 2, 1, 1, 6, 3, 3, 1, 1,      /* mixed */
-      6, 3, 2, 6, { KI_POTSHERDS, KI_BONES, KI_SKULL, KI_CANDLE, KI_BROKEN_SWORD, KI_SACK, KI_ROPE, KI_PENNIES },
-      { KI_PENNIES, KI_KEY, KI_LOCKPICKS, KI_POUCH },
-      6, 8, 12, 8, 3, 6, 2, 2, 2, 1, 3, 2, 8, 1, 2 },
-};
+struct style sty;                               /* (The chunk's stratum's: uses.c copies it from its styles) */
 const struct style* SP;
 
 /* A hub's bank's bytes copied to the main RAM (hub_get), or from it (hub_put), or set (hub_set), the window put back
@@ -130,7 +106,8 @@ unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned c
     c->sn = sn;
     c->cx = cx;
     c->cy = cy;
-    SP = &styles[s->style & 3];
+    SP = &sty;
+    uses (US_STYLE, s->style);
     if (e.x1 != 0xFF) {                         /* (By its stratum's style) */
         if (s->style == ST_NATURAL) {
             grow_caves (c, &e, s->seed ^ ((unsigned long) cx << 16 | cy) * 40503UL);
