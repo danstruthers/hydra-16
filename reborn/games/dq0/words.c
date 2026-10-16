@@ -5,7 +5,8 @@
 ** ahead, ahead to its right ... ahead to its left), and how far above or below it.  A room's size it knows when it's
 ** seen the whole of it; a ceiling when the light reaches it.  At a glance (the user's), in general words: a small
 ** hall, a long gallery, a high ceiling, a low, rough one (overlay 4's ceiling_glance); its figures (its size in feet,
-** its ceiling's heights) only on a close look (look closely, examine the room: look's sight_close).
+** its ceiling's heights) only on a close look (look closely, examine the room: look's sight_close).  As a run or a
+** sprint ends (the world's hurry), briefly: the place and its ways out, not its ceiling, its zones or its things.
 **
 ** The words for a room and its light are the theme's (theme.h; theme.c's theme_named, added to lb).
 */
@@ -273,8 +274,10 @@ static void room (void)
         add (relname[S->up_rel & 7]);
         add (".");
     }
-    ceiling ();
-    zones ();
+    if (!S->hurry) {                            /* (A run's or a sprint's look: the place and its ways out) */
+        ceiling ();
+        zones ();
+    }
     doors (0);
     doors (MOUTH);
     portals ();
@@ -421,6 +424,8 @@ void o_words (void)
         passage ();
     }
     traps ();
-    items ();
+    if (!S->hurry) {
+        items ();
+    }
     denizens ();
 }
