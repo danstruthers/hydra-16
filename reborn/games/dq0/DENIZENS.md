@@ -146,7 +146,7 @@ After the first changes a move across a room still took five seconds and more to
 seconds of their CPU (some 6 million cycles: a square's chunk found the long way when a line crossed between two,
 the rays in C), an inventory two (every record of the item store gone through a dozen times, each found by
 multiplying); and the UI took no command till the character was free, so what was typed during a move or a look
-waited for both. Now the look is worked out in a grid of its own (the hub's LOOK_BANK: the squares round the
+waited for both.  Now the look is worked out in a grid of its own (the hub's LOOK_BANK: the squares round the
 character copied in a chunk's run at a time, the lines cast in assembly, dq0p/cast.s, the same squares seen as
 before), 0.29 seconds; the item store is gone down in assembly (dq0p/items.s), an inventory 0.14; a command that
 wants nothing of the character (what it carries, its sheet, the map, the help) is carried out at once even while
