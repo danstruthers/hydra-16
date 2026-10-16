@@ -5,8 +5,8 @@
 ** watchfulness ("search for traps as I go", "watch for traps", "move carefully", "listen as I go", "map as I go";
 ** "stop searching", "stop listening", "stop mapping", "stop running"), "status", and a small move ("move left one
 ** space", "step forward", "go north 20 feet", "back up two squares", "sidestep right": a square is 5 feet, a yard 3).
-** The pace and the watchfulness are the referee's to set and word (RS_DESCRIBE b 3, its a hub.h's ST_*), the small
-** move the world's (I_STEP).  Its own words matched here; the direction the parser's (a relative one made the
+** The pace and the watchfulness are set in the hub (the hub's gait and watch), the referee's to word (RS_DESCRIBE b
+** 3), the small move the world's (I_STEP).  Its own words matched here; the direction the parser's (a relative one made the
 ** compass's).
 */
 
@@ -135,8 +135,8 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
         if ((d = count_of (w[i])) == 0) {
             continue;
         }
-        if (i + 1 == nw) {                      /* (Figures at the end: squares) */
-            n = *w[i] >= '0' && *w[i] <= '9' ? d : n;
+        if (i + 1 == nw) {                      /* (Figures at the end, after a way: squares; alone, a choice's) */
+            n = i && *w[i] >= '0' && *w[i] <= '9' ? d : n;
         } else if (any ("space\0spaces\0square\0squares\0step\0steps\0pace\0paces\0") == i + 2) {
             n = d;                              /* (A count and its unit: squares) */
         } else if (any ("foot\0feet\0ft\0") == i + 2) {
@@ -168,10 +168,7 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
             wa |= WA_MAP;                       /* (The map's side, its materials, the orientation's) */
         }
     }
-    st = g + 1;                                 /* (0: no pace said) */
-    if (wa != HUB->watch) {
-        st |= ST_CLEAR | wa * ST_WATCH;
-    }
+    st = g != 0xFF || wa != HUB->watch;          /* (A pace said, or the watchfulness changed) */
     if (any ("step\0sidestep\0shuffle\0") == 1 || (nw > 1 && !strcmp (w[0], "back") && !strcmp (w[1], "up"))) {
         n = n ? n : 0xFF;                       /* (A small move: by the pace, if no count, below) */
     }
@@ -182,8 +179,13 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
     pc_face = HUB->pc_face;
     parse (b2, &c);
     k = (c.verb == V_MOVE || c.verb == V_ENTER || c.verb == V_APPROACH) && (c.dir != 0xFF || c.obj);
-    if (st && (!k || n || g != HUB->gait || wa != HUB->watch)) {
-        described (st);                         /* (Said, unless it goes on as it was) */
+    st = st && (!k || n || g != HUB->gait || wa != HUB->watch);    /* (Said, unless it goes on as it was) */
+    if (g != 0xFF) {
+        HUB->gait = g;
+    }
+    HUB->watch = wa;
+    if (st) {
+        described (1);
     }
     d = c.dir;
     if (nw > 1 && !strcmp (w[0], "back") && !strcmp (w[1], "up")) {

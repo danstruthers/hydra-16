@@ -371,9 +371,9 @@ struct hub {                                    /* Bank 0, at $8000 */
     /* The theme's puzzle (theme.h: the theme in THEME_BANK): the way out opened (the UI's, as the mission's done) */
     volatile unsigned char way_open;
     struct sway     sway;                       /* The character's way with a denizen (the UI's request) */
-    /* The character's pace and watchfulness (DUNGEON.md: moving; the referee's to set, RS_DESCRIBE b 3, as the UI
-    ** asks, and to keep with the sheet), and the pace it's going at now (the world's: as a move starts, till it's
-    ** there and has looked about) */
+    /* The character's pace and watchfulness (DUNGEON.md: moving; the UI's to set, as the player says, the referee's
+    ** to word, RS_DESCRIBE b 3, and to keep with the sheet, till the world keeps the character's state), and the pace
+    ** it's going at now (the world's: as a move starts, till it's there and has looked about) */
     unsigned char   gait;                       /* rs.h's GA_* */
     unsigned char   watch;                      /* WA_* */
     volatile unsigned char pc_going;            /* The pace it's going at plus 1 (0: not moving), | GOING_DARK: by
@@ -392,10 +392,6 @@ struct hub {                                    /* Bank 0, at $8000 */
 #define WA_MAP          0x04                    /* Mapping as it goes (the map's side the orientation's: its
                                                 **   materials to hand) */
 #define GOING_DARK      0x80
-/* (RS_DESCRIBE b 3's a: the pace, its GA_* plus 1 (0: as it is); the watchfulness set, WA_* times ST_WATCH; ST_CLEAR,
-** all of it cleared first) */
-#define ST_WATCH        8
-#define ST_CLEAR        0x80
 
 #define HUB     ((struct hub*) HUB_WINDOW)
 typedef char hub_fits[sizeof (struct hub) <= 0x2000 ? 1 : -1];   /* (The header in bank 0) */

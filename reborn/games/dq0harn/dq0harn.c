@@ -12,7 +12,7 @@
 ** its injuries and all, and the creatures' sheets), RS_NEW_ACTOR (a creature's sheet, by its kind's key: made the
 ** first time, kept in a bank after), RS_ATTACK (a blow struck, HarnMaster's melee: by the character, or at it),
 ** RS_MORALE, RS_TIME (bleeding), RS_EXERT (fatigue, by the pace moved at, and rest); RS_DESCRIBE b 3 (its state,
-** the status command's, its pace and watchfulness set first).  Its summary gives each pace's step, and the notice
+** the status command's, the hub's pace and watchfulness).  Its summary gives each pace's step, and the notice
 ** tests go by the character's pace and state.  The sheet's words and the harm are overlay 1's (sheet.c), the fights
 ** overlay 2's (fight.c): DIR/dq0harn.ovl, read into banks of its own as it starts.  Its slots: the hub's two (the world's, the
 ** UI's), and the denizens' task's in the denizens' bank (DSLOT_AT: copied out, answered, copied back).
@@ -458,19 +458,12 @@ static unsigned char __fastcall__ speaks (const char* t)
     return 0;
 }
 
-/* The character's state in words (RS_DESCRIBE b 3: overlay 1's), its pace and watchfulness changed first as a says
-** (hub.h's ST_*): what the words need copied for the overlay (the hub's not in the window while it is) */
+/* The character's state in words (RS_DESCRIBE b 3: overlay 1's; a 1, its pace and watchfulness only, the hub's): what
+** the words need copied for the overlay (the hub's not in the window while it is) */
 struct pstate ps;
 
 static void __fastcall__ pace_set (unsigned char a)
 {
-    if (a & ST_CLEAR) {
-        HUB->watch = 0;
-    }
-    HUB->watch |= a / ST_WATCH & (WA_TRAPS | WA_LISTEN | WA_MAP);
-    if (a & 7) {
-        HUB->gait = (a & 7) - 1;
-    }
     status ();                                  /* (Listening: its hearing) */
     ps.gait = HUB->gait;
     ps.watch = HUB->watch;

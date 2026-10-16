@@ -212,7 +212,7 @@ enum {
     RS_MORALE,
     RS_EXPERIENCE,                              /* Something that counts to advancement */
     RS_DESCRIBE,                                /* An actor's sheet, wounds, or a line -> words (b 3: its state, the
-                                                **   pace and watchfulness changed first as a says: hub.h's ST_*) */
+                                                **   hub's pace and watchfulness its first lines; a 1, those only) */
     RS_POWER,                                   /* (Later: spells and psionics, a generic power) */
     RS_EXPORT,                                  /* The character as a neutral one (struct rs_neutral) */
     RS_IMPORT,                                  /* A neutral character made one of this ruleset's */
