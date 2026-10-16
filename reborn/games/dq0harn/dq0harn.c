@@ -15,7 +15,8 @@
 ** (fight.c): DIR/dq0harn.ovl, read into banks of its own as it starts.  Its slots: the hub's two (the world's, the
 ** UI's), and the denizens' task's in the denizens' bank (DSLOT_AT: copied out, answered, copied back).  hmchar's file
 ** read and written, and the creatures' sheets kept, are swapped part 1's (../dq0/swap.inc: run in the main RAM's top,
-** a part at a time, copied there from overlay 4's bank as it's called; harnfile.c), the names part 2's (harnname.c).
+** a part at a time, copied there from overlay 4's bank as it's called; harnfile.c), the names part 2's (harnname.c),
+** with the tool a dig takes.
 **
 ** The game's own choices in using the book (not the book's rules): a purpose names the skill (or attribute times 5)
 ** a GM would call for; a skill not opened is tested at its OML, as if opened on first use.
@@ -37,6 +38,7 @@
 void __fastcall__ load_pc (struct req* r);      /* (Part 1's stubs: bank.s's) */
 void __fastcall__ save_pc (struct req* r);
 void __fastcall__ beasts (unsigned char back);
+unsigned char __fastcall__ dig_tool (unsigned char m);     /* (Part 2's) */
 
 harn_char pc;                                   /* The character */
 char name[16], calling[20];
@@ -161,9 +163,12 @@ unsigned char __fastcall__ has (const char* key)
     return 0;
 }
 
+#pragma code-name (push, "SW2CODE")
+#pragma rodata-name (push, "SW2RODATA")
+
 /* The tool to hand that suits the material best (bare hands, digger's 0, if none does better; of two as good, the
 ** one it wears less): its digger's number */
-static unsigned char __fastcall__ dig_tool (unsigned char m)
+unsigned char __fastcall__ s_dig_tool (unsigned char m)
 {
     unsigned char k, t, best = 0, r, br = digger[0].rate[m];
 
@@ -181,6 +186,9 @@ static unsigned char __fastcall__ dig_tool (unsigned char m)
     }
     return best;
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- A purpose: the skill a GM would call for, or an attribute (an attribute | 0x80: tested times 5) */
 

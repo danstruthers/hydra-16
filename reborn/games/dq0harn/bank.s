@@ -160,7 +160,7 @@ ovl_out:
             .include    "../dq0/swap.inc"
 
             SWPART      1, 4                ; hmchar's file read and written (harnfile.c), the creatures' sheets kept
-            SWPART      2, 4                ; The names (harnname.c)
+            SWPART      2, 4                ; The names (harnname.c), the tool a dig takes
 
             SWFN        load_pc, 1
             SWFN        save_pc, 1
@@ -170,3 +170,4 @@ ovl_out:
             SWFN        harn_sex_name, 2
             SWFN        harn_month_name, 2
             SWFN        harn_sunsign_name, 2
+            SWFN        dig_tool, 2
