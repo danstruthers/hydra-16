@@ -455,7 +455,7 @@ static void start_world (unsigned long seed)
         hub_map (0);
     }
     start ("dq0d", T_DENIZENS, libdir);         /* (Its denizens, its world) */
-    start ("dq0w", T_WORLD, 0);
+    start ("dq0w", T_WORLD, libdir);
 }
 
 /* The game's end: its tasks told to stop (the world first), and waited for */
