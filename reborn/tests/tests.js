@@ -2813,6 +2813,75 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0veraplain', what: 'Dingus Quest Zero on the Vera X as the browser page has it with its keyboard on (the user\'s, 2026-10-16: plain dq0 typed at the Vera X\'s keyboard "switched (on its own) back to the serial terminal"): the terminals chosen once as dq0 starts (terminal both, and consctl\'s keyboard screen: the screen alone) and kept through hmchar\'s questions and the game, put back (terminal both) only as it ends; typed at the SMC\'s keyboard, the normal pace',
+      init: 't_rc', cycles: 2000e6,
+      // (SNAP: the screen and the serial port's output so far, as the keyboard's typing comes to it: smc.type's, wrapped)
+      start(m) {
+        const type = m.smc.type, snaps = this.snaps = [];
+        m.smc.type = ch => ch === 'Ѐ' ? snaps.push({ text: m.vera.text(), out: m.out }) : type(ch);
+      },
+      get machine() {
+        const P = 'Ā', SNAP = 'Ѐ', hm = ['k', '1', 'sw', 'shield', 'dag', 'climb', '', 'Dorn'];
+        return { vera: true, smc: true, input: 'ābind -a /sd/0/games /bin\rāĂdq0 -s 3\r' + P.repeat(60) + 'n\r' + P.repeat(60) +
+          SNAP + hm.map(l => l + '\r' + P.repeat(30)).join('') + P.repeat(150) + SNAP + 'look\r' + P.repeat(40) + SNAP + 'quit\r' + P.repeat(40) +
+          'ăcat /dev/consctl\rāecho do^ne\r' };
+      },
+      expect: ['\ndone\n', '\nterminal both\n'],
+      check(m, out) {
+        const f = [], s = this.snaps || [];
+        if (s.length < 3) return ['the snapshots: ' + s.length + ' (3 wanted)'];
+        const [hm, game, last] = s, at = out.indexOf('dq0 -s 3');
+        if (at < 0) return ['no "dq0 -s 3" on the serial port'];
+        // (hmchar's questions on the screen alone: none of them on the serial port, as it asks or after)
+        if (!hm.text.some(l => l.startsWith('Keep this character'))) f.push('hmchar\'s first question isn\'t on the screen');
+        const ser = last.out.slice(at);
+        if (/Keep this character|An occupation|Three weapon skills/.test(ser)) f.push('hmchar\'s questions went to the serial port (the terminals both again)');
+        if (/UP 0 +facing|> look/.test(ser)) f.push('the game went to the serial port (the terminals both again)');
+        // (The game on the screen alone: the window 57 rows, its status line the first, the line typed its last)
+        if (!/^ \S+ +UP 0 +facing /.test(game.text[2] || '')) f.push('the status line (row 2): ' + JSON.stringify(game.text[2]));
+        if ((game.text[58] || '') !== '>') f.push('the line typed (row 58), the screen alone: ' + JSON.stringify(game.text[58]));
+        // (Put back as it ends: the serial port's terminal painted again, consctl's terminal both)
+        if (!out.slice(at).includes('\nterminal both\n')) f.push('the terminals not both after the game');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0veraserial', what: 'Dingus Quest Zero on the Vera X with no keyboard there (the browser page\'s defaults: the screen, no SMC), typed on the serial port: plain dq0 (hmchar inside it) stays on both terminals (no consctl keyboard screen: the serial terminal, the only keyboard, isn\'t left blind), hmchar\'s questions and the game on the serial port and the screen, the terminals both as it ends',
+      init: 't_rc', cycles: 2000e6,
+      // (When the game's first question and hmchar's first came out on the serial port: the first as it was asked, not
+      // painted at once with what the window had as the serial port's terminal was turned on again for hmchar)
+      start(m) {
+        const run = m.run, at = this.at = {};
+        m.run = limit => {
+          run(limit);
+          if (!at.pace && m.out.includes('How fast does the dungeon move')) at.pace = m.cpu.cyc;
+          if (!at.hm && m.out.includes('Keep this character')) at.hm = m.cpu.cyc;
+        };
+      },
+      get machine() {
+        const P = 'Ā', hm = ['k', '1', 'sw', 'shield', 'dag', 'climb', '', 'Dorn'];
+        return { vera: true, input: 'ābind -a /sd/0/games /bin\rādq0 -s 3\r' + P.repeat(60) + 'n\r' + P.repeat(60) +
+          hm.map(l => l + '\r' + P.repeat(30)).join('') + P.repeat(150) + 'look\r' + P.repeat(40) + 'quit\r' + P.repeat(40) +
+          'cat /dev/consctl\rāecho do^ne\r' };
+      },
+      expect: ['\ndone\n', '\nterminal both\n'],
+      check(m, out) {
+        const f = [], at = out.indexOf('dq0 -s 3'), text = m.vera.text();
+        if (at < 0) return ['no "dq0 -s 3" on the serial port'];
+        const ser = out.slice(at);
+        const a = this.at || {};
+        if (!a.pace || !a.hm || a.hm - a.pace < 50e6) f.push('the game\'s first question not on the serial port as it was asked (the screen taken alone): at ' + a.pace + ', hmchar\'s at ' + a.hm);
+        if (!ser.includes('Keep this character')) f.push('hmchar\'s questions not on the serial port');
+        if (!/UP 0 +facing/.test(ser)) f.push('the game\'s status line not on the serial port');
+        if (!/> look/.test(ser)) f.push('the line typed not on the serial port');
+        if (/keyboard screen/.test(ser)) f.push('consctl said keyboard screen with no keyboard');
+        if (!text.some(l => l.startsWith('> look'))) f.push('the game not on the screen too');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0hands', what: 'Dingus Quest Zero\'s doors battered with bare hands (the user\'s, 2026-10-16: "model it after unarmed combat": a blow at a thing an attack it ignores, by Unarmed, its impact less the door\'s resistance off its body; the fist hurt as a blow goes wrong, less with skill and armour): at seed 19\'s rotten wooden door a character of middling Unarmed marking it, the hand fractured as punches go wrong, stopping when hurt enough, the injuries on the sheet; one of Unarmed 95 (hmchar\'s file) breaking it down unhurt; gauntlets worn; at seed 14\'s sound iron-bound door the fists making no mark, the hand fractured',
       init: 't_rc', cycles: 1400e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rāhmchar -q -s 5 -o /ram/u.hm\rāecho ml una 95 >> /ram/u.hm\r' +
@@ -4206,6 +4275,20 @@ module.exports = {
         const font = fs.readFileSync(path.join(__dirname, '..', 'romfs', 'lib', 'font', 'cp437'));
         if (!Buffer.from(m.vera.vram.subarray(0x1F000, 0x1F800)).equals(font)) f.push('VRAM\'s font isn\'t /lib/font/cp437');
         this.notes = ['the screen\'s last rows: ' + JSON.stringify(text.filter(l => l).slice(-3))];
+        return f;
+      },
+    },
+    {
+      name: 'kbinclock', what: 'the console\'s keyboard (the Vera X\'s, the SMC\'s: kdev\'s input writing #c/kbin) typed at slowly as the bar\'s clock turns a minute (the user\'s, 2026-10-16, in the browser: "only printed about 3/4 of the text and then froze"): the chrome drawn again in the pump after a /kbin write read #t/time, a call to kdev, busy with its look and waiting for that write\'s answer, the two waiting for each other for good; now the time\'s read a second later.  And consctl\'s keyboard screen once the keyboard\'s typed',
+      init: 't_rc', cycles: 260e6,
+      // (The clock at 15:04:52 as it boots: its minute turns as the keys come, one each 2M cycles)
+      get machine() { return { vera: true, smc: true, rtc: Date.UTC(2026, 9, 16, 15, 4, 52) / 1000,
+        input: 'ācat /dev/consctl\rāĂecho ' + 'kĀ'.repeat(48) + '\răācat /dev/consctl\rāecho do^ne\r' }; },
+      expect: ['\n' + 'k'.repeat(48) + '\n', '\nkeyboard screen\n', '\ndone\n'],
+      check(m, out) {
+        const f = [], first = out.slice(0, out.indexOf('echo k'));
+        if (first.includes('keyboard screen')) f.push('consctl said keyboard screen before the keyboard had typed');
+        if (!/ 15:0[5-9]$/.test(m.vera.text()[0] || '')) f.push('the bar\'s clock didn\'t turn a minute: ' + JSON.stringify(m.vera.text()[0]));
         return f;
       },
     },

@@ -42,7 +42,8 @@ extern char gamedir[40];                        /* Its own directory (hmchar's t
 
 extern unsigned char tw, th;                    /* Its width and height */
 void t_init (void);                             /* The screen made: status, story, the line typed */
-void t_end (void);                              /* As it was (the scrolling region the whole screen again) */
+void t_away (void);                             /* As it was (the scrolling region the whole screen again), a while */
+void t_end (void);                              /* The same, as the game ends: the console's terminals as they were */
 void __fastcall__ say (const char* s);          /* Words into the story, wrapped (\n: a new line) */
 void sayf (const char* fmt, ...);               /* The same, with %s, %d, %u, %c (and %%) */
 void __fastcall__ msg (const char* s);          /* A new line of the story, then s */

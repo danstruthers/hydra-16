@@ -231,7 +231,9 @@ With a Vera X, the console has a second terminal, the screen (`vid`'s `#v/term`)
 | `screen`, `serial` | The windows on one alone.  With `screen` alone, output isn't held back by the serial line |
 | `seats` | Both on, each a **seat** of its own: its own window shown, its own keys (the keyboard's are the screen's), its own Ctrl-C.  A group's windows are sized to the terminals showing it |
 
-`cat /dev/consctl` shows which (`terminal both`).
+`cat /dev/consctl` shows which (`terminal both`), and once the screen's keyboard has typed, a line `keyboard screen`:
+someone is at the screen, so a program may take it alone (Dingus Quest Zero does, with `terminal both`) without
+leaving the serial terminal, then the only keyboard, blind.
 
 ---
 

@@ -52,6 +52,10 @@ With a keyboard, you can type at the screen just as at the terminal. `consctl` c
 | `echo both >/dev/consctl` | On both (as the Hydra starts) |
 | `echo seats >/dev/consctl` | On both, each a **seat** of its own (section 16.9) |
 
+Once you've typed at the screen's keyboard, `cat /dev/consctl` shows one more line, `keyboard screen`. A program that
+takes the whole screen for itself (Dingus Quest Zero does) looks for it first, so it never leaves you at a serial
+terminal that has gone blank.
+
 ## 16.3 /dev/vid/ctl: the screen's settings
 
 | Command | What it does |

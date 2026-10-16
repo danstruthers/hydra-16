@@ -30,7 +30,9 @@
 ;               serial port's terminal's columns and rows: 80 x 24 as it starts; terminal size alone asks it, ESC [
 ;               18 t, and its answer sets it, as the PC tool's report does, ESC [ 8 ; R ; C t, sent as its window
 ;               changes).  It reads as the state, with the window's size (size C R): the smaller of the terminals
-;               it's shown on, each whole (the screen's from vid's ctl, mode CxR), 127 x 64 at most
+;               it's shown on, each whole (the screen's from vid's ctl, mode CxR), 127 x 64 at most; and keyboard
+;               screen once the console's keyboard (/kbin's) has typed: the screen has one, so a program may take
+;               it alone (terminal screen: dq0) without leaving its user blind (none: the serial port's the only one)
 ;   /wctl       new (a window), current N (window N shown); the chrome (W4): bar top, bar bottom, bar off, bar FORMAT
 ;               (console-wide), header FORMAT, footer FORMAT, header on|off, footer on|off, chrome screen|serial|both
 ;               on|off [bar] [header] [footer], status TEXT, monitor on|off (the window's), default header FORMAT,
@@ -144,7 +146,7 @@ SRV_FLUSH       = flush                                     ; (srvlib: a reader'
 SRV_OPENED      = opened                                    ;   (a fid made: its window)
 SRV_CLUNKED     = clunked                                   ;   (a fid forgotten: consctl's counted)
 SRV_PRE         = distribute                                ;   (before each request: the keys to the windows)
-SRV_POST        = pump                                      ;   (and after it: the terminals painted)
+SRV_POST        = post                                      ;   (and after it: the terminals painted)
 
 LINE_MAX        = 127           ; A line's length at most (and its LF)
 HIST_N          = 4             ; Each window's history: its lines ...
@@ -412,6 +414,11 @@ ki_tail:    .res        1                                   ;   and distribute's
 ki_pfx:     .res        1                                   ;   <> 0: h_kbin's last key was the prefix (pfx's, the
                                                             ;   irq entry's, for the keyboard)
 ki_wait:    .res        1                                   ; <> 0: a /kbin writer waits for the ring's room
+ki_in:      .res        1                                   ; <> 0: a /kbin write being served, till its pump's
+                                                            ;   done (its writer, kdev's input, is #t's server:
+                                                            ;   it waits for the answer, so tm_get doesn't call it)
+ki_seen:    .res        1                                   ; <> 0: the keyboard has typed (consctl's keyboard
+                                                            ;   screen: a program may take the screen alone)
 ki_buf:     .res        KI_SIZE                             ; The keyboard's ring
 bell:       .res        1                                   ; <> 0: a BEL the shown window sent (ring's) ...
 bell_st:    .res        1                                   ;   #a/bell: 0 not opened yet, 1 open, 2 none ...
@@ -2811,7 +2818,12 @@ w_room:
 
 ; After each request: /pc's frame out first, all of it (and a request long past its time given up); then the
 ; terminals painted (vt.s: the serial port's as the send ring has room, not while a frame's going out; the screen's,
-; and its bytes to #v/term).  None while the line is /ser's
+; and its bytes to #v/term).  None while the line is /ser's.  post: srvlib's SRV_POST, a /kbin write's answered after it
+post:
+            jsr         pump
+            stz         ki_in                               ; (The time may be read again: h_kbin's)
+            rts
+
 pump:
             lda         ser_rd
             beq         :+
@@ -3648,14 +3660,19 @@ h_kbdin:
 ; taken the write's count done: the kernel sends the rest in the next request.  Each is taken as the irq entry takes
 ; the serial port's: Ctrl-C and Ctrl-\ notes to the shown window's group at once, the rest into the ring (the prefix
 ; and a digit: the digit's window's group the notes' from then on), for distribute.  No room: E_AGAIN, the writer
-; waiting till distribute takes them (ki_wait)
+; waiting till distribute takes them (ki_wait).  Served (ki_in, till post), the time isn't read: the writer is #t's
+; server, kdev, busy with its look while it waits for this answer (a call to it would wait for good, the two each
+; waiting for the other: the user's, 2026-10-16, the console frozen as the chrome was drawn); and the keyboard's
+; been seen (ki_seen: consctl's keyboard screen)
 h_kbin:
             cmp         #R_WRITE
             beq         :+
             clc
             rts
 :
-            lda         ki_tail                             ; The ring's room (a key's place kept free) ...
+            sta         ki_in                               ; (R_WRITE: not 0)
+            sta         ki_seen
+            lda         ki_tail                            ; The ring's room (a key's place kept free) ...
             clc
             sbc         ki_head
             and         #KI_SIZE - 1
@@ -6099,11 +6116,23 @@ fmt_same:
             rts
 
 ; tm_buf: the time ("2026-10-07 20:41:05"), read from #t/time once a drawing (chr_pass); clk_due, the next minute's
-; tick.  Modifies .A, .X, .Y, r0-r2, m
+; tick.  Not while a /kbin write's served (ki_in: its writer, kdev, is #t's server, waiting for the answer): the time
+; read before kept, and the chrome drawn again in a second.  Modifies .A, .X, .Y, r0-r2, m
 tm_get:
             lda         chr_pass
             cmp         tm_pass
             bne         :+
+            rts
+:
+            ldx         ki_in
+            beq         :+
+            jsr         TICKS                               ; (clk_check's, in a second: the time read then)
+            clc
+            adc         #<TICK_HZ
+            sta         clk_due
+            txa
+            adc         #>TICK_HZ
+            sta         clk_due + 1
             rts
 :
             sta         tm_pass
@@ -7258,7 +7287,8 @@ c_group:
             clc
             rts
 
-; consctl's state: "rawon" or "rawoff", "keys ...", "scroll ...", "group N", "window N", "size C R", "terminal ..."
+; consctl's state: "rawon" or "rawoff", "keys ...", "scroll ...", "group N", "window N", "size C R", "terminal ...",
+; "keyboard screen" (once the keyboard's typed)
 gen_consctl:
             lda         z:srv_id
             jsr         load
@@ -7348,6 +7378,12 @@ gen_consctl:
             tax
             pla
             jsr         srv_tputs
+            lda         ki_seen                             ; keyboard screen: the keyboard's typed (h_kbin)
+            beq         :+
+            lda         #<s_keyboard
+            ldx         #>s_keyboard
+            jsr         srv_tputs
+:
             lda         #LF
             jsr         srv_tputc
             clc
@@ -8621,6 +8657,7 @@ s_seats_w:  .byte       "seats", 0
 term_names: .word       s_serial_w, s_screen_w, s_both_w, s_seats_w ; (term 1-3; seats)
 term_bits:  .byte       CH_ALL, CH_ALL << 4, CH_ALL | (CH_ALL << 4) ; (chrome's terminals: serial, screen, both)
 s_terminal: .byte       LF, "terminal ", 0
+s_keyboard: .byte       LF, "keyboard screen", 0
 s_scr:      .byte       "#v/term", 0
 s_scr_ctl:  .byte       "#v/ctl", 0
 s_mode_w:   .byte       "mode ", 0

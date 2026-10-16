@@ -169,8 +169,10 @@ unsigned char t_getkey (void)
 }
 
 /* The window's size: its consctl's size line (C R), else $COLUMNS and $LINES, else 80 by 24; and whether the console
-** shows its terminals both (the serial port's and the Vera X's screen: "terminal both") */
-static unsigned char both, whole;               /* (Both; the screen alone made so by the game, put back at its end) */
+** shows its terminals both (the serial port's and the Vera X's screen: "terminal both"), and whether the screen has a
+** keyboard someone's typed at ("keyboard screen": the console's, the Vera X's) */
+static unsigned char both, kbd, whole;          /* (Both; the keyboard; the screen alone made so by the game, put
+                                                **   back as it ends) */
 static void size (void)
 {
     static char b[100];
@@ -190,6 +192,9 @@ static void size (void)
         }
         if (!strncmp (p, "terminal both", 13)) {
             both = 1;
+        }
+        if (!strncmp (p, "keyboard screen", 15)) {
+            kbd = 1;
         }
         if (!strncmp (p, "size ", 5)) {
             tw = atoi (p + 5);
@@ -218,9 +223,11 @@ void t_init (void)
     size ();
     if (!once) {                                /* (With a Vera X the game takes its whole screen, the user's: the
                                                 **   console's terminals both, as it starts, would make the window
-                                                **   the serial port's 80 by 24; put back as the game ends) */
+                                                **   the serial port's 80 by 24; put back as the game ends, t_end, not
+                                                **   before: hmchar's on it too.  Only if its keyboard's been typed
+                                                **   at: else the serial terminal's the only one, and stays on) */
         once = 1;
-        if (both) {
+        if (both && kbd) {
             consctl ("terminal screen");
             whole = 1;
             size ();
@@ -248,7 +255,7 @@ void t_init (void)
     t_done ();
 }
 
-void t_end (void)
+void t_away (void)
 {
     csi ();
     out ('r');                                  /* The whole screen scrolls again */
@@ -257,6 +264,11 @@ void t_end (void)
     out ('K');
     unhide ();
     flush ();
+}
+
+void t_end (void)
+{
+    t_away ();
     if (whole) {
         consctl ("terminal both");              /* (The console's terminals as they were) */
         whole = 0;

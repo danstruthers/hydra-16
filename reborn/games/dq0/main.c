@@ -149,7 +149,8 @@ void __fastcall__ consctl (const char* what)
     }
 }
 
-/* hmchar run to make one (the console cooked for it, the screen whole), then its file read */
+/* hmchar run to make one (the console cooked for it, the screen whole: on the terminals the game's on), then its file
+** read */
 static char pcfile[64];
 
 #pragma code-name (push, "SW1CODE")
@@ -162,7 +163,7 @@ static void __fastcall__ character (const char* file, unsigned long seed)
 
     if (!file) {
         file = s + 3;                           /* (hmchar -o /ram/dq0.hm -s seed) */
-        t_end ();
+        t_away ();
         consctl ("rawoff");
         ultoa (seed, s + 18, 10);
         s[19 + strlen (s + 18)] = 0;
@@ -170,6 +171,7 @@ static void __fastcall__ character (const char* file, unsigned long seed)
         strcat (s2, "/hmchar");
         task = hub_run (s2, s);
         if (task < 0 || hub_wait (task)) {
+            t_end ();
             hy_exits ("dq0: hmchar didn't make a character");
         }
         consctl ("rawon");
