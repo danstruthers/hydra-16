@@ -1654,6 +1654,37 @@ function hmRun(out, cmd) {
   return a < 0 || b < 0 || e < 0 ? null : { out: out.slice(a, b + 1), file: out.slice(b + 8, e) };
 }
 
+// A built stratum's chunks (dq0m/built.c, uses.c), read from the hub's cache in the shared segments' banks (world.h's
+// struct chunk, three to a bank, 0xAA0 apart): each one's place, rooms (their uses, world.h's U_*), zones (their
+// ceilings), portals, squares and floors, and its passages' ceiling (pceil); those of stratum sn that look whole
+const U_HALL = 1, U_CELL = 2, U_STORE = 7, U_KITCHEN = 8, U_PANTRY = 9, U_QUARTERS = 13, U_GATEHOUSE = 17;
+const PK_PORTCULLIS = 2, T_FLOOR = 1, T_DOOR = 3, T_CORR = 4, T_STEPS = 5;
+function builtChunks(m, sn) {
+  const out = [], C = { room: 8, zone: 56, portal: 219, tile: 443, elev: 1467, pceil: 2555 };
+  for (const b of Object.values(m.sharedBanks())) {
+    for (let k = 0; k < 3; k++) {
+      const o = k * 0xAA0, nr = b[o + 5], nz = b[o + 6], np = b[o + C.portal - 1];
+      const tile = b.subarray(o + C.tile, o + C.tile + 1024);
+      if (b[o] !== sn || !nr || nr > 6 || nz > 12 || b[o + 7] > 6 || np > 16 || tile.some(t => (t & 0x1F) > 9)) continue;
+      const rooms = [], zones = [], portals = [];
+      for (let r = 0; r < nr; r++) {
+        const p = o + C.room + r * 8;
+        if (b[p + 2] < 1 || b[p] + b[p + 2] > 31 || b[p + 1] + b[p + 3] > 31) { rooms.length = 0; break; }
+        rooms.push({ x: b[p], y: b[p + 1], w: b[p + 2], h: b[p + 3], flags: b[p + 4], kind: b[p + 5] });
+      }
+      if (!rooms.length) continue;
+      for (let z = 0; z < nz; z++) {
+        const p = o + C.zone + z * 11;
+        zones.push({ room: b[p + 4], ceil: b[p + 8], cmid: b[p + 9], cwall: b[p + 10] });
+      }
+      for (let i = 0; i < np; i++) { const p = o + C.portal + i * 14; portals.push({ x: b[p], y: b[p + 1], kind: b[p + 2] }); }
+      out.push({ cx: b[o + 1] | b[o + 2] << 8, cy: b[o + 3] | b[o + 4] << 8, rooms, zones, portals, pceil: b[o + C.pceil],
+        tile: Array.from(tile, t => t & 0x1F), elev: Array.from(b.subarray(o + C.elev, o + C.elev + 1024), e => e << 24 >> 24) });
+    }
+  }
+  return out;
+}
+
 module.exports = {
   IRQ_OFF_MAX,
   tests: [
@@ -2928,7 +2959,90 @@ module.exports = {
         'The throne is fixed where it stands.', 'You put the iron crown on the throne.', 'You set the iron crown upon the throne.',
         'The crypt is yours, and all who lie in it.', 'The game is over.', '% echo $status'],
       sdcard: true
+    },    {
+      name: 'dq0plan', what: 'Dingus Quest Zero\'s built strata built to a plan (DUNGEON.md, the user\'s, 2026-10-16: "feast halls near kitchens near pantries and storage"; "Larger rooms tend to have higher ceilings, and corridors and smaller rooms tend to have uniform ceiling heights"; "Prior usage can also inform ... what kinds of detritus"): at seed 3 the crypt\'s Upper Halls (their purpose halls: a domestic suite by the way in), the character beginning in a kitchen, its iron pot lying there (what its use left), and its well (there\'s water); the chunks made, read from the hub\'s cache (world.h\'s struct chunk in the shared segment\'s banks): a hall joined to a kitchen by a passage of its own, through no other room; every hall\'s ceiling higher than the passages\' (the chunk\'s pceil), every storeroom\'s, pantry\'s, cell\'s and bedchamber\'s flat at the passages\' height; every room\'s floor flat, at the stratum\'s one level (but a hall\'s dais, two feet up)',
+      init: 't_rc', cycles: 500e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 3 -c /ram/c.hm\r' +
+        ['look', 'map', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['You are in a small kitchen', 'On the floor ahead lies an iron pot.', '% echo $status'],
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        if (!/lies a well\./.test(o)) f.push('no well in the kitchen');
+        const ks = builtChunks(m, 0);
+        if (!ks.length) return ['no chunks of stratum 0 in the cache'];
+        let joined = 0, halls = 0, level = null;
+        for (const c of ks) {
+          const at = c.cx + ',' + c.cy, inRoom = (x, y) => c.rooms.findIndex(r => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h);
+          for (const [r, p] of c.rooms.entries()) {
+            const zs = c.zones.filter(z => z.room === r);
+            if (p.kind === U_HALL) {
+              halls++;
+              for (const z of zs) if (z.cmid <= c.pceil) f.push(at + ': a hall\'s ceiling ' + z.cmid + ' feet, the passages\' ' + c.pceil);
+            } else if ([U_STORE, U_PANTRY, U_CELL, U_QUARTERS].includes(p.kind)) {
+              for (const z of zs) if (z.ceil !== 0 || z.cmid !== c.pceil) f.push(at + ': a small room\'s ceiling not flat at the passages\' height');
+            }
+            for (let y = p.y; y < p.y + p.h; y++) for (let x = p.x; x < p.x + p.w; x++) {
+              const e = c.elev[y * 32 + x];
+              if (level === null) level = e;
+              if (e !== level && !(p.kind === U_HALL && e > level && e <= level + 2)) f.push(at + ': room ' + r + ' not flat at ' + x + ',' + y);
+            }
+          }
+          // (A hall to a kitchen: from the hall's floor through doors and passages only, into the kitchen's)
+          for (const [h, H] of c.rooms.entries()) {
+            if (H.kind !== U_HALL) continue;
+            const seen = new Set(), q = [];
+            for (let y = H.y; y < H.y + H.h; y++) for (let x = H.x; x < H.x + H.w; x++) { seen.add(y * 32 + x); q.push(y * 32 + x); }
+            while (q.length && !joined) {
+              const i = q.pop(), x = i & 31, y = i >> 5;
+              for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) {
+                const nx = x + dx, ny = y + dy, j = ny * 32 + nx;
+                if (nx < 0 || ny < 0 || nx > 31 || ny > 31 || seen.has(j)) continue;
+                const t = c.tile[j], r = inRoom(nx, ny);
+                if (r >= 0 && c.rooms[r].kind === U_KITCHEN && (t === T_FLOOR || t === T_STEPS)) { joined++; break; }
+                if (r < 0 && (t === T_DOOR || t === T_CORR || t === T_STEPS)) { seen.add(j); q.push(j); }
+              }
+            }
+          }
+        }
+        if (!halls) f.push('no hall in the chunks made');
+        if (!joined) f.push('no hall joined to a kitchen by a passage of its own');
+        this.notes = [ks.length + ' chunk(s) of the Upper Halls in the cache, ' + halls + ' hall(s), ' + joined + ' joined to a kitchen'];
+        return f;
+      },
+      sdcard: true
     },
+    {
+      name: 'dq0gate', what: 'Dingus Quest Zero\'s fortified strata (DUNGEON.md: built to a plan; "Fortified versus not are built differently"): at seed 514 the kobold warren\'s Warren Mouth (its purpose a keep, fortified: theme.h\'s P_FORT), the character beginning in its gatehouse (the room the way in comes out in), told so, a portcullis raised and an arrow slit in its walls; read from the hub\'s cache: the gatehouse\'s every way out a portcullis (none a door, none a bare doorway), murder holes in its vault (R_MURDER), its vault higher than the passages\'',
+      init: 't_rc', cycles: 500e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 514 -c /ram/c.hm\r' +
+        ['look', 'x portcullis', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['You are in a small gatehouse', '> x portcullis', 'A portcullis, some 20 feet off, raised.', '% echo $status'],
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        if (!/There is a portcullis [^.]*\(raised\)\./.test(o)) f.push('no raised portcullis told');
+        if (!/an arrow slit/.test(o)) f.push('no arrow slit told');
+        let gates = 0;
+        for (const c of builtChunks(m, 0)) {
+          for (const p of c.rooms) {
+            if (p.kind !== U_GATEHOUSE) continue;
+            gates++;
+            if (!(p.flags & 0x04)) f.push('the gatehouse without its murder holes');
+            for (const z of c.zones.filter(z => c.rooms[z.room] === p)) if (z.cmid <= c.pceil) f.push('the gatehouse\'s vault no higher than the passages\'');
+            for (let x = p.x - 1; x <= p.x + p.w; x++) for (let y = p.y - 1; y <= p.y + p.h; y++) {
+              if (x >= p.x && x < p.x + p.w && y >= p.y && y < p.y + p.h) continue;
+              if (x < 0 || y < 0 || x > 31 || y > 31 || c.tile[y * 32 + x] !== T_DOOR) continue;
+              const q = c.portals.find(q => q.x === x && q.y === y);
+              if (!q || q.kind !== PK_PORTCULLIS) f.push('the gatehouse\'s way out at ' + x + ',' + y + ' ' + (q ? 'a door' : 'a bare doorway'));
+            }
+          }
+        }
+        if (!gates) f.push('no gatehouse in the chunks made');
+        this.notes = [gates + ' gatehouse(s) in the cache\'s chunks'];
+        return f;
+      },
+      sdcard: true
+    },
+
     {
       name: 'cnum', what: 'the numbers in C and assembly: num.h\'s test (ntest: the number libraries from C, printf\'s and scanf\'s %N and %{base}), calc at rc (its operators, functions, bases, digits, errors, its input a line at a time, long results), the assembly sample nsum (numbers.inc, numlib.s)',
       init: 't_rc', cycles: 150e6,
