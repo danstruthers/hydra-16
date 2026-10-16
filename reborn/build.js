@@ -152,12 +152,53 @@ function clib() {
   return lib;
 }
 
+// A game's swapped parts (its own NAME.cfg's SWn segments: code in the main RAM's area only while it's called,
+// through its stub; games/dq0/swap.inc) checked in the compiler's output (objdir's .s of each .c): no reference to a
+// function or data of one from outside it (the main code's, an overlay's, another part's), which would find another
+// part's there.  The stubs (assembly sources) aren't the compiler's: not checked.  Throws, with each
+function partsChecked(cfiles, objdir) {
+  const part = seg => (/^SW\d+/.exec(seg) || [])[0] || '';
+  const files = cfiles.map(f => {                       // (Each label's segment: a function's own, in its .proc;
+    const lines = fs.readFileSync(path.join(objdir, path.basename(f, '.c') + '.s'), 'latin1').split(/\r?\n/);
+    const defs = new Map(), exported = new Set(), procOf = [];   //   the file's; the program's, exported)
+    let seg = 'CODE', proc = null;
+    lines.forEach((l, i) => {
+      let m;
+      if ((m = /^\s*\.segment\s+"(\w+)"/.exec(l))) seg = m[1];
+      else if ((m = /^\s*\.export\s+(.*)/.exec(l))) m[1].split(',').forEach(n => exported.add(n.trim()));
+      else if ((m = /^\.proc\s+(\w+)/.exec(l))) { defs.set(m[1], seg); proc = new Map(); }
+      else if (/^\.endproc/.test(l)) proc = null;
+      else if ((m = /^(\w+)\s*:/.exec(l))) (proc || defs).set(m[1], seg);
+      procOf[i] = proc;
+    });
+    return { f, lines, defs, exported, procOf };
+  });
+  const global = new Map();
+  for (const { defs, exported } of files) for (const [n, s] of defs) if (exported.has(n)) global.set(n, s);
+  const faults = [];
+  for (const { f, lines, defs, procOf } of files) {
+    let seg = 'CODE';
+    lines.forEach((l, i) => {
+      let m;
+      if ((m = /^\s*\.segment\s+"(\w+)"/.exec(l))) return void (seg = m[1]);
+      if (/^\s*\.(dbg|proc|endproc|export|import|importzp|exportzp|fopt|setcpu|smart|autoimport|case|debuginfo|macpack|forceimport)\b/.test(l)) return;
+      for (const [, n] of l.replace(/^\w+\s*:=?/, '').replace(/;.*/, '').matchAll(/\b(_\w+|[LMS][0-9A-F]{4})\b/g)) {
+        const own = procOf[i], s = own && own.has(n) ? own.get(n) : defs.has(n) ? defs.get(n) : global.get(n), p = part(s || '');
+        if (p && p !== part(seg)) faults.push(path.basename(f) + ': ' + n + ' (' + s + '\'s) used from ' + seg + ' (' +
+          path.basename(f, '.c') + '.s line ' + (i + 1) + ')');
+      }
+    });
+  }
+  if (faults.length) throw new Error('a swapped part\'s code or data reached from outside it, not through its stub:\n  ' + faults.join('\n  '));
+}
+
 // A C program: dir's .c and .s files, linked with the C library and sdk/c/hydra.cfg into out (a RAM program; its
 // map and labels in objdir); or with the folder's own NAME.cfg, if it has one (a game's, with its overlays: files
 // beside out that the cfg names).  OUT: its image
 function cprog(dir, objdir, out, extra) {
   const name = path.basename(out).replace(/\.hyx$/, ''), own = path.join(dir, path.basename(dir) + '.cfg');
   const objs = compileC(csources(dir), objdir, extra);
+  if (fs.existsSync(own)) partsChecked(csources(dir).filter(f => f.endsWith('.c')), objdir);
   run(LD65, ['-C', fs.existsSync(own) ? own : at('sdk', 'c', 'hydra.cfg'), '-o', out, '-m', path.join(objdir, name + '.map'), '-Ln', path.join(objdir, name + '.lbl'),
     ...objs, at('obj', 'sdk', 'c', 'hydra.lib')]);
   const data = fs.readFileSync(out);
