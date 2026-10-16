@@ -2346,7 +2346,7 @@ module.exports = {
       init: 't_rc', cycles: 800e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -d /ram/hurt\r' +
         ['look', 'u', 'map', 'n', 'open the door behind me on my right', 'n', 'look', 'open', 'n', 'e', 'u', 'u', 'turn around', 'jump down', 'sheet', 'map', 'quit', 'cat /ram/hurt/pc.hm', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
-      expect: ['You haul yourself up over the edge.', 'You jump, and drop 7 feet. You land hard: a ', 'Injuries: ', 'IP ', '\ninj ', '% echo $status'],
+      expect: ['You haul yourself up over the edge.', 'You jump, and drop 7 feet.', 'You land hard: a ', 'Injuries: ', 'IP ', '\ninj ', '% echo $status'],
       sdcard: true
     },
     {

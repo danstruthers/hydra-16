@@ -38,7 +38,8 @@ static unsigned char __fastcall__ rnd (unsigned char n)
 
 /* ---- The store kept (back: read again), the save folder's items.dat: its banks a piece at a time, through main
 ** RAM (the window's only the task's own: the kernel's copies want the task's memory) */
-static unsigned char piece[256];               /* (And kit's names, say's words: a buffer in main RAM) */
+unsigned char piece[256];                      /* (And kit's names, say's words, a look's rows (view.c): a buffer
+                                                **   in main RAM) */
 
 /* A thing's record, copied out: the one the functions share that call none that wants it while they use it (others
 ** have their own: make_own's, the recursive ones', light's ...) */

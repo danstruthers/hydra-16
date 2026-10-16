@@ -97,9 +97,9 @@ static signed char __fastcall__ fz (int dz)
 static void __fastcall__ zones_seen (struct room* rp, unsigned char mine, unsigned char face, int myz, unsigned char lx,
     unsigned char ly)
 {
-    unsigned char k, i, j, steps = 0, seen, mx, my;
+    unsigned char k, i, j, steps = 0, seen, mx, my, d, ni, nj;
     struct zone* z;
-    int dz, worst;
+    int dz, worst, v;
 
     for (j = rp->y; j < rp->y + rp->h; ++j) {
         for (i = rp->x; i < rp->x + rp->w; ++i) {
@@ -131,21 +131,13 @@ static void __fastcall__ zones_seen (struct room* rp, unsigned char mine, unsign
         worst = 0;                              /* (The worst step across its edge with the character's zone) */
         for (j = z->y; j < z->y + z->h; ++j) {
             for (i = z->x; i < z->x + z->w; ++i) {
-                if (i + 1 < CW && zone_index (i + 1, j) == mine) {
-                    worst = worst > abs_ (C->elev[j][i + 1] - C->elev[j][i]) ? worst :
-                        abs_ (C->elev[j][i + 1] - C->elev[j][i]);
-                }
-                if (i && zone_index (i - 1, j) == mine) {
-                    worst = worst > abs_ (C->elev[j][i - 1] - C->elev[j][i]) ? worst :
-                        abs_ (C->elev[j][i - 1] - C->elev[j][i]);
-                }
-                if (j + 1 < CW && zone_index (i, j + 1) == mine) {
-                    worst = worst > abs_ (C->elev[j + 1][i] - C->elev[j][i]) ? worst :
-                        abs_ (C->elev[j + 1][i] - C->elev[j][i]);
-                }
-                if (j && zone_index (i, j - 1) == mine) {
-                    worst = worst > abs_ (C->elev[j - 1][i] - C->elev[j][i]) ? worst :
-                        abs_ (C->elev[j - 1][i] - C->elev[j][i]);
+                for (d = 0; d < 4; ++d) {       /* (The four beside it, in the chunk) */
+                    ni = i + dir_x[d];
+                    nj = j + dir_y[d];
+                    if (ni < CW && nj < CW && zone_index (ni, nj) == mine &&
+                        (v = abs_ (C->elev[nj][ni] - C->elev[j][i])) > worst) {
+                        worst = v;
+                    }
                 }
             }
         }

@@ -5,7 +5,8 @@
 ** height, its sight's range, lit, its night vision and ultravision), and what it perceives recorded in the hub for
 ** the UI to word (sight.c); and the things (things.c: the catalogue, the items, moved and listed as the UI asks).
 ** (The denizens will see through it too, each through its own senses.)  It waits on its
-** doorbell (costing nothing) between looks.
+** doorbell (costing nothing) between looks; a look under way, it answers what the UI asks that wants none between
+** the look's rows (look_pause).
 */
 
 #include <stdlib.h>
@@ -38,6 +39,21 @@ static void __fastcall__ look (unsigned char again)
     things_lamps (sn, x, y);                    /* (The lit things lying about: a torch put down) */
     view (sn, x, y, face, light, sight, dark);
     perceive (sn, x, y, face, own, first);
+}
+
+/* Between the rows of a look (view.c's): what the UI asks that wants no look and no squares seen (what's carried,
+** the tools, a tool's wear) answered at once, so the UI isn't kept waiting for the look */
+void look_pause (void)
+{
+    unsigned char op;
+
+    hub_map (0);
+    op = HUB->ireq.op;
+    if (HUB->ireq.state == REQ_POSTED && (op == IO_LIST || op == IO_TOOLS || op == IO_WEAR)) {
+        things_serve ();
+        hub_map (0);
+        HUB->ireq.state = REQ_DONE;
+    }
 }
 
 /* A number, an argument's (atoi's, without the C library's ctype) */

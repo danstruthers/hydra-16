@@ -24,10 +24,11 @@
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
 #define HUB_VERSION     1
-#define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 1)  /* Bank 0: the header, the queues, the
+#define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 2)  /* Bank 0: the header, the queues, the
                                                 **   referee's slots, what the character perceives, the map, the
                                                 **   strata's records; then the plans' banks and the chunks' (world.h);
-                                                **   the catalogue's, and the items' (items.h); the denizens' events */
+                                                **   the catalogue's, and the items' (items.h); the denizens' events;
+                                                **   the senses' look (LOOK_BANK) */
 #define CAT_BANK        (1 + PLAN_BANKS + CACHE_BANKS)
 #define CATALOGUE       ((struct kind*) 0x8000)
 #define ITEM_BANK(i)    (CAT_BANK + 1 + (i) / (0x2000 / sizeof (struct item)))
@@ -41,6 +42,8 @@
                                                 **   first ("a scurrying", 0-ended; "": none): each kind's two (the
                                                 **   denizens' task's kinds by number: its step, its noise), then the
                                                 **   world's; the UI clears it, the sound task puts it there */
+#define LOOK_BANK       (DEN_BANK + 1)  /* The senses' own (dq0p/view.c): the squares round the character as a look
+                                                **   about works them out, a grid of them (cast.s's): no other task's */
 #define SND_REC         32
 #define SND_WORDS       20
 #define SND_KINDS       32
