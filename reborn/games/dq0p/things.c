@@ -33,7 +33,11 @@ unsigned char search (void);
 unsigned char __fastcall__ describe (const char* name);
 unsigned char __fastcall__ get (const char* name);          /* Part 3 */
 void __fastcall__ wear (const char* key, unsigned char by);
+void tools (void);
+void about (void);
 unsigned char __fastcall__ drop (const char* name);
+void list (void);                               /* Part 4 */
+void __fastcall__ thing_words (const struct item* q);
 extern unsigned char ovbank[1];
 
 #define NK      NKINDS                          /* (The catalogue's, and the theme's after them: theme.h) */
@@ -527,7 +531,10 @@ static unsigned char __fastcall__ two (const struct kind* k)
     return k->flags & K_TWO || k->bulk >= 20 ? 2 : 1;
 }
 
-static void about (void)
+#pragma code-name (push, "SW3CODE")             /* (Part 3's: the main RAM's room) */
+#pragma rodata-name (push, "SW3RODATA")
+
+void s_about (void)
 {
     const struct kind* k;
     unsigned i = 0;
@@ -547,6 +554,9 @@ static void about (void)
         }
     }
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* Whether thing n can go in c (or on it: a surface; hung from it: a belt): 0, or the words why not (SA_*): the
 ** catalogue's bank's o_fits */
@@ -591,12 +601,15 @@ static unsigned char __fastcall__ carry (unsigned n, unsigned char hand_first)
     return 0;
 }
 
+#pragma code-name (push, "SW3CODE")
+#pragma rodata-name (push, "SW3RODATA")
+
 /* ---- The tools: the keys of all the character carries (anywhere on it: a skill used, the one that suits takes
 ** itself out), into the hub's things_text, each after its mark (* held, + worn, a space neither: what's held fights,
 ** what's worn guards) and its quality after it (a digit: rs.h's RS_EQUIP), and its load (the weight of all it
 ** carries, worn or not, in quarter pounds: the referee's encumbrance) in the request's x; and one used, worn (the
 ** referee's choice, by its key), its name back in the request (bare hands: "hands") */
-static void tools (void)
+void s_tools (void)
 {
     static char m[2];
     const struct kind* k;
@@ -624,9 +637,6 @@ static void tools (void)
     hub_map (0);
     HUB->ireq.x = i;
 }
-
-#pragma code-name (push, "SW3CODE")
-#pragma rodata-name (push, "SW3RODATA")
 
 /* A tool worn by a spell of work (the dig's: the referee's choice, by its key), by; its name in the request */
 void __fastcall__ s_wear (const char* key, unsigned char by)
@@ -739,7 +749,8 @@ unsigned char __fastcall__ s_hide (const char* name)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ---- What the character carries, worded into the hub's text (things_text): each thing, and what's in it */
+/* ---- What the character carries, worded into the hub's text (things_text): each thing, and what's in it (put the
+** main RAM's, the rest part 4's: the main RAM's room) */
 
 static char* tp;
 static void __fastcall__ put (const char* s)
@@ -751,9 +762,12 @@ static void __fastcall__ put (const char* s)
     *tp = 0;
 }
 
+#pragma code-name (push, "SW4CODE")
+#pragma rodata-name (push, "SW4RODATA")
+
 /* A thing in words: its kind, how many, and what anyone can see of its state (its make and worth are an appraiser's
 ** to judge) */
-static void __fastcall__ thing_words (const struct item* q)
+void __fastcall__ s_thing_words (const struct item* q)
 {
     const struct kind* k = kind_of (q->kind);
     char b[6];
@@ -800,7 +814,7 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
                 " (on it: " : " (in it: ") : ", ");
         }
         first = 0;
-        thing_words (&q);
+        s_thing_words (&q);
         if (!depth) {
             put (q.flags & I_HELD ? (two (kind_of (q.kind)) == 2 ? ", in both hands" : ", in your hand") :
                 q.flags & I_WORN ? ", worn" : "");
@@ -817,7 +831,7 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
     }
 }
 
-static void list (void)
+void s_list (void)
 {
     char b[6];
 
@@ -830,12 +844,16 @@ static void list (void)
     put (" lb.");
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 #pragma code-name (push, "SW2CODE")
 #pragma rodata-name (push, "SW2RODATA")
 
 /* ---- A search for what's concealed about the character (on the squares it sees, within SEARCH_R): the referee's
 ** test for each (its search, at the concealment's difficulty: two steps of it each, from +2), the ones found no
-** longer hidden, and named in the hub's text; but what's hidden by magic (found by magical means only) */
+** longer hidden, and named in the hub's text (by part 4's thing_words, through its stub: each one found costs the
+** two parts' copies); but what's hidden by magic (found by magical means only) */
 #define SEARCH_R        3
 unsigned char s_search (void)
 {

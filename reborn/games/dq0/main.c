@@ -1359,27 +1359,12 @@ void s_finish (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* A line that names: its first word name, call, alias, rename, dub, forget or unname (names.c's) */
-static unsigned char __fastcall__ naming (const char* l)
-{
-    static const char* v;
-    static unsigned char n;
-
-    for (v = "name\0call\0alias\0rename\0dub\0forget\0unname\0"; *v; v += n + 1) {
-        n = strlen (v);
-        if (!strnicmp (l, v, n) && (!l[n] || l[n] == ' ')) {
-            return 1;
-        }
-    }
-    return 0;
-}
-
 int main (int argc, char* argv[])
 {
     unsigned shown = 0, t;
     unsigned long next = 0;
     unsigned char held = 0;
-    unsigned char k;
+    unsigned char k, f;
     char* l;
 
     seed = hy_time () ^ hy_ticks ();
@@ -1425,15 +1410,16 @@ int main (int argc, char* argv[])
             pending[0] = 0;
         }
         if ((l = (char*) t_next ()) != 0 && (!busy || (!held && !(held = !at_once (l))))) {
-            k = naming (l = t_line ()) ? names_line (l) : NL_NONE;     /* (A name given or forgotten: the
-                                                **   names') */
-            if (k == NL_NONE && pace_cmd (l)) {
+            f = names_in (l = t_line ());       /* (The line's first look, in the overlays' banks: a part's
+                                                **   copied in only for a line that may be its; an ordinary
+                                                **   command's only part 2, the commands') */
+            k = f & NI_LINE ? names_line (l) : NL_NONE;     /* (A name given or forgotten: the names') */
+            if (k == NL_NONE && pacing (l) && pace_cmd (l)) {
                 k = NL_DONE;                    /* (The pace's, the state's, a small move's: pace.c's) */
             }
-            if (k == NL_NONE && names_n && (t = names_subst (l)) != 0) {    /* (The things' names in it made
-                                                **   theirs, "#" and the id; a weapon named taken in hand to strike
-                                                **   with: its time, as after ()'s) */
-                to_hand ();
+            if (k == NL_NONE && names_n && (f & NI_THING) && (t = names_subst (l)) != 0) {
+                to_hand ();                     /* (The things' names in it made theirs, "#" and the id; a weapon
+                                                **   named taken in hand to strike with: its time, as after ()'s) */
                 intend2 (I_WAIT, t, 1);
             }
             if (k != NL_DONE) {

@@ -1,7 +1,8 @@
 /*
 ** hub.c - hub.h's shared segment: made (the UI) or attached (the others), put at $8000, its queues and its doorbells.
 ** Each program of the game's compiles this file with its own (games/dq0w ... include it, HUB_ATTACHED defined: they
-** attach to the hub, so they take neither its making nor the spawning of tasks, which takes in stdio).
+** attach to the hub, so they take neither its making nor the spawning of tasks, which takes in stdio).  The UI's
+** making and spawning are its swapped part 1's (the start's and the end's: swap.inc), out of its main RAM.
 */
 
 #include <stdlib.h>
@@ -38,6 +39,8 @@ void __fastcall__ hub_map (unsigned char bank)
 }
 
 #ifndef HUB_ATTACHED
+#pragma code-name (push, "SW1CODE")             /* (The UI's part 1, the start's and the end's: dq0.cfg) */
+#pragma rodata-name (push, "SW1RODATA")
 int __fastcall__ hub_create (unsigned char banks)
 {
     int s = hy_seg_create (banks);
@@ -67,6 +70,8 @@ int __fastcall__ hub_create (unsigned char banks)
     HUB->task[T_UI] = hy_task ();
     return 0;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 #endif
 
 int __fastcall__ hub_attach (unsigned char s, unsigned char me)
@@ -192,6 +197,8 @@ unsigned char __fastcall__ hub_dnext (unsigned* place, struct msg* m)
 #endif
 
 #ifndef HUB_ATTACHED
+#pragma code-name (push, "SW1CODE")             /* (The UI's part 1, the start's and the end's: dq0.cfg) */
+#pragma rodata-name (push, "SW1RODATA")
 /* ---- A task of the game's: path, given the segment and its role (and more, a word or none) */
 
 static struct hy_regs r;
@@ -233,6 +240,8 @@ int __fastcall__ hub_spawn (const char* path, unsigned char t, const char* more)
     hub_map (0);                                /* (A spawn leaves the window on another bank) */
     return s;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 #endif
 
 /* ---- The referee: a request posted in a slot (already written there), its reply waited for (the others run) */

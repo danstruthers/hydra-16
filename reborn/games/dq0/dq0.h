@@ -1,5 +1,5 @@
 /*
-** dq0.h - Dingus Quest Zero: a text adventure in real time, in random dungeons, on a ruleset's rules (HârnMaster's,
+** dq0.h - Dingus Quest Zero: a text adventure in real time, in random dungeons, on a ruleset's rules (HÃ¢rnMaster's,
 ** so far: the referee's, games/dq0harn; the game asks it in rs.h's terms, never naming a skill or a die).
 **
 ** The game's parts, each a file:
@@ -135,6 +135,8 @@ void __fastcall__ parse (char* l, struct pcmd* c);   /* Overlay 3 */
 
 unsigned char __fastcall__ pace_cmd (const char* l);   /* 1 if it was one of them, carried out (else the command's;
                                                 **   but a pace said with a move set first) */
+unsigned char __fastcall__ pacing (const char* l);     /* Overlay 9 (pace.c): 0 if line l can't be one of them (none
+                                                **   of the words pace_cmd acts on: its part not copied in) */
 struct req;
 struct req* __fastcall__ ask_b (unsigned char kind, unsigned char a, unsigned char b);   /* (main.c's) The referee
                                                 **   asked, the UI's slot */
@@ -256,6 +258,10 @@ void save_game (void);                          /* Part 1: the game kept (if it'
 void __fastcall__ command (char* l);            /* Part 2 (main.c): a command, the parser's, carried out */
 void __fastcall__ take (const char* name);      /* Part 2: a thing taken up, by its name */
 enum { NL_NONE, NL_DONE, NL_DEN };
+#define NI_LINE     1                           /* (names_in's: a line that names, names_line's; */
+#define NI_THING    2                           /*   one that may say a thing's name, names_subst's) */
+unsigned char __fastcall__ names_in (const char* l);    /* Overlay 10 (names.c): line l's first look, NI_LINE and
+                                                **   NI_THING (0: neither part's, not copied in) */
 unsigned char __fastcall__ names_line (char* l);    /* Part 5 (names.c): a line that names (name, call, alias ...;
                                                 **   forget, unname), before it's a command: a name given or
                                                 **   forgotten (NL_DONE); a denizen's to name (NL_DEN: names_den

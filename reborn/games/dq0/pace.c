@@ -208,3 +208,46 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
+#pragma code-name (push, "OV9CODE")
+#pragma rodata-name (push, "OV9RODATA")
+
+/* ---- A line's first look (main.c's, in the overlay's bank: the part's copied in only for a line that may be its):
+** 0 if line l has none of the words s_pace_cmd acts on (split's words, the case aside), nor one begun with a figure.
+** s_pace_cmd's words that matter: a pace's (paces), "status", the watchfulness's (without one, wa is the hub's),
+** a small move's, a count's unit (a count is only a square's with one, or a figure at the end); so a word it comes
+** to match must be here too */
+static const char pace_words[] =
+    "creep\0creeping\0sneak\0sneaking\0tiptoe\0crawl\0quietly\0stealthily\0slowly\0slow\0walk\0walking\0normal\0"
+    "normally\0jog\0jogging\0trot\0briskly\0run\0running\0hurry\0sprint\0sprinting\0dash\0"
+    "status\0stop\0trap\0traps\0carefully\0careful\0warily\0listen\0listening\0mapping\0map\0"
+    "step\0sidestep\0shuffle\0back\0"
+    "space\0spaces\0square\0squares\0steps\0pace\0paces\0foot\0feet\0ft\0yard\0yards\0";
+
+unsigned char __fastcall__ o_pacing (const char* l)
+{
+    static const char* p;
+    static unsigned char n;
+
+    for (;;) {
+        while (*l == ' ' || *l == ',' || *l == '.' || *l == '!') {
+            ++l;
+        }
+        if (!*l) {
+            return 0;
+        }
+        if (*l >= '0' && *l <= '9') {
+            return 1;
+        }
+        for (n = 0; l[n] && l[n] != ' ' && l[n] != ',' && l[n] != '.' && l[n] != '!'; ++n) {
+        }
+        for (p = pace_words; *p; p += strlen (p) + 1) {
+            if (strlen (p) == n && !strnicmp (l, p, n)) {
+                return 1;
+            }
+        }
+        l += n;
+    }
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)

@@ -20,7 +20,9 @@
 //                          each socket it fills, in order, as many as it needs; with the hardware test in bank 1
 //                          (from ../os_rom/bin/paged_rom_C02.bin) and the ROMs' checksums for it, and the ROM
 //                          disk's volume after the modules (romfs/romfs.txt: tools/romfs.js), each file read back
-//   5. the budgets         sizes, and room left (../base/tools/budget.js)
+//   5. the budgets         sizes, and room left (../base/tools/budget.js); and the games' room (headroom: each C
+//                          game's main RAM free, its overlays' and swapped parts'): the build failed if one of
+//                          Dingus Quest Zero's tasks has under HEADROOM bytes of main RAM free
 //   6. the SDK             bin/sdk/asm: the assembly SDK whole, to take away (sdk/asm, the generated hydra.inc and
 //                          numbers.inc, asmlib.inc, the samples' sources); the C library, obj/sdk/c/hydra.lib (cc65's none.lib
 //                          with sdk/c/lib's modules), and bin/sdk/c: the C SDK whole (sdk/c, the generated
@@ -192,6 +194,58 @@ function partsChecked(cfiles, objdir) {
   if (faults.length) throw new Error('a swapped part\'s code or data reached from outside it, not through its stub:\n  ' + faults.join('\n  '));
 }
 
+// The games' room: each C program of games/ (its map, obj/games/NAME/NAME.map, and its link, its own NAME.cfg or
+// sdk/c/hydra.cfg): its main RAM free, from its BSS's end to its swapped parts' area (__SWAP_START__: games/dq0/
+// swap.inc), or, with none, to the C stack's least room (__RAMTOP__ - __STACKMIN__); each overlay's bytes free (OVn,
+// of its own size: 8K as a rule) and each swapped part's (SWn, of the area's: __SWAPSIZE__).  One table of them all;
+// a task of Dingus Quest Zero (dq0 and dq0*: they run together, and grow) with under HEADROOM bytes free fails the
+// build; an overlay or a part with under ROOM_LOW free, or another game's program short of HEADROOM (hmchar: run
+// alone, most of it the harn library's), only a warning.  OUT: { text, faults }
+const HEADROOM = 2048, ROOM_LOW = 512;
+function headroom(names) {
+  const rows = [], faults = [], warns = [], lows = [], hex = n => '$' + n.toString(16).toUpperCase();
+  const byNumber = (a, b) => parseInt(a[0].slice(2)) - parseInt(b[0].slice(2));
+  for (const name of names) {
+    const map = at('obj', 'games', name, name + '.map'), own = at('games', name, name + '.cfg');
+    if (!fs.existsSync(map)) continue;
+    const m = fs.readFileSync(map, 'latin1'), cfg = fs.readFileSync(fs.existsSync(own) ? own : at('sdk', 'c', 'hydra.cfg'), 'latin1');
+    const seg = {}, sym = {}, size = {}, load = {}, run = {};
+    const list = (m.split('Segment list:')[1] || '').split('Exports list')[0];
+    for (const [, n, e, z] of list.matchAll(/^(\w+)\s+[0-9A-F]{6}\s+([0-9A-F]{6})\s+([0-9A-F]{6})/gm)) seg[n] = { end: parseInt(e, 16), size: parseInt(z, 16) };
+    for (const [, n, v] of m.matchAll(/\b(__\w+__)\s+([0-9A-F]{6})\s+R/g)) sym[n] = parseInt(v, 16);
+    const block = k => (cfg.split(new RegExp('^' + k + '\\s*\\{', 'm'))[1] || '').split('}')[0];
+    for (const [, n, z] of block('MEMORY').matchAll(/^\s*(\w+):[^;]*\bsize\s*=\s*\$([0-9A-Fa-f]+)/gm)) size[n] = parseInt(z, 16);
+    for (const [, n, l, r] of block('SEGMENTS').matchAll(/^\s*(\w+):\s*load\s*=\s*(\w+)(?:,\s*run\s*=\s*(\w+))?/gm)) { load[n] = l; if (r) run[n] = r; }
+    if (!seg.BSS || sym.__RAMTOP__ === undefined) throw new Error('games/' + name + ': no BSS, or no __RAMTOP__, in its map');
+    const top = sym.__SWAP_START__ !== undefined ? sym.__SWAP_START__ : sym.__RAMTOP__ - sym.__STACKMIN__;
+    const free = top - (seg.BSS.end + 1), task = /^dq0/.test(name);
+    const used = by => { const u = {}; for (const [n, s] of Object.entries(seg)) if (by[n]) u[by[n]] = (u[by[n]] || 0) + s.size; return u; };
+    const ov = Object.entries(used(load)).filter(([a]) => /^OV\d+$/.test(a) && size[a]).sort(byNumber);
+    const sw = Object.entries(used(run)).filter(([a]) => /^SW\d+$/.test(a)).sort(byNumber);
+    const short = [];                                   // (Its overlays and parts under ROOM_LOW)
+    const room = (what, list, of) => {
+      const s = [];
+      const text = list.map(([a, u]) => {
+        const left = of(a) - u;
+        if (left < ROOM_LOW) s.push(a.slice(2));
+        return a.slice(2) + ' ' + left + (of(a) !== 0x2000 && what === 'overlay' ? ' of ' + of(a) : '') + (left < ROOM_LOW ? '!' : '');
+      }).join(', ');
+      if (s.length) short.push(what + (s.length > 1 ? 's ' : ' ') + s.join(', '));
+      return text;
+    };
+    if (free < HEADROOM) (task ? faults : warns).push(name + "'s main RAM: " + free + ' bytes free, under ' + HEADROOM);
+    rows.push('  ' + name.padEnd(9) + String(free).padStart(6) + (free < HEADROOM ? '!' : ' ') + ' (' + hex(seg.BSS.end + 1) + '-' +
+      hex(top - 1) + (sw.length ? '; the swap area ' + hex(top) + ', ' + sym.__SWAPSIZE__ + ' bytes)' : ')'));
+    if (ov.length) rows.push('             overlays (of 8192):  ' + room('overlay', ov, a => size[a]));
+    if (sw.length) rows.push('             parts (of ' + sym.__SWAPSIZE__ + '):' + ' '.repeat(Math.max(1, 6 - String(sym.__SWAPSIZE__).length)) + room('part', sw, () => sym.__SWAPSIZE__));
+    if (short.length) lows.push(name + "'s " + short.join(' and '));
+  }
+  if (lows.length) warns.push('under ' + ROOM_LOW + ' bytes free: ' + lows.join('; '));
+  const text = ["The games' room (bytes free: the main RAM's, from the BSS's end; at least " + HEADROOM + " for dq0's tasks; ! short, or an " +
+    'overlay or a part under ' + ROOM_LOW + '):', ...rows, ...warns.map(w => '  warning: ' + w)].join('\n');
+  return { text, faults };
+}
+
 // A C program: dir's .c and .s files, linked with the C library and sdk/c/hydra.cfg into out (a RAM program; its
 // map and labels in objdir); or with the folder's own NAME.cfg, if it has one (a game's, with its overlays: files
 // beside out that the cfg names).  OUT: its image
@@ -298,6 +352,9 @@ function build(opt = {}) {
       const make = at('games', d.name, 'make.js');                                                          //   it has one
       if (fs.existsSync(make)) require(make).build({ dir: at('games', d.name), objdir: at('obj', 'games', d.name), say });
     }
+  const room = headroom(Object.keys(games));            // (Their room: a dq0 task short of HEADROOM fails the build)
+  say(room.text);
+  if (room.faults.length) throw new Error('a game\'s task short of main RAM (HEADROOM ' + HEADROOM + '): ' + room.faults.join('; '));
   sdk();
   const card = sdcard.build(ROOT);                          // The SD card's image (bin/sdcard.img): the samples, the songs, the benchmarks
   forthlib.build({ root: ROOT, modules, assemble: (files, od, inc) => assemble(files, od, inc, defines), ld65: args => run(LD65, args) });
@@ -366,4 +423,4 @@ if (require.main === module) {
   try { buildBoth(opt); } catch (e) { console.error('build: ' + e.message); process.exit(1); }
 }
 
-module.exports = { build, buildBoth, buildModule, readManifest, hwtest, prog, clib, cprog };
+module.exports = { build, buildBoth, buildModule, readManifest, hwtest, prog, clib, cprog, headroom };

@@ -81,7 +81,8 @@ go:
             SWPART      1, 1                ; The store kept, the kit (their images dq0p.cfg's OV2, but in
                                             ;   _ovbank's first, the task's one bank: the catalogue's is the hub's)
             SWPART      2, 1                ; Hidden, a search, a thing described
-            SWPART      3, 1                ; Taken up, put down, a tool worn
+            SWPART      3, 1                ; Taken up, put down, the tools, a tool worn
+            SWPART      4, 1                ; What's carried listed, a thing in words
 
             SWFN        keep, 1
             SWFN        kit, 1
@@ -91,3 +92,7 @@ go:
             SWFN        get, 3
             SWFN        drop, 3
             SWFN        wear, 3
+            SWFN        tools, 3
+            SWFN        about, 3
+            SWFN        list, 4
+            SWFN        thing_words, 4

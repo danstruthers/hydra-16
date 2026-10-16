@@ -17,7 +17,8 @@
 ** in a line's words (DUNGEON.md's names, for the orientation's travel).
 **
 ** Its table's reading the main code's; its commands a swapped part's (part 5: swap.inc), its words another's (part
-** 6), called through bank.s's stubs; their data and BSS the main RAM's.
+** 6), called through bank.s's stubs; their data and BSS the main RAM's.  A line's first look, whether it may be
+** either part's (names_in: so an ordinary command copies neither in), is overlay 10's.
 */
 
 #include <ctype.h>
@@ -103,12 +104,31 @@ static struct tname* __fastcall__ find (unsigned char what, const char* k)
     return 0;
 }
 
-/* The names given, counted (names_n) */
+/* A word's hash (its letters' case aside, up to a space or a mark at_key ends a name at): a bit of names_bits */
+static unsigned char names_bits[32];            /* (The things' names' first words, hashed: names_in's) */
+static unsigned char __fastcall__ hash (const char* s)
+{
+    static unsigned char h, c;
+
+    for (h = 0; (c = *s) != 0 && !strchr (" ,.!?\"", c); ++s) {
+        h = (h << 3 | h >> 5) ^ (c >= 'a' && c <= 'z' ? c - ('a' - 'A') : c);
+    }
+    return h;
+}
+
+/* The names given, counted (names_n); the things' names' first words, hashed (names_bits) */
 static void count (void)
 {
+    unsigned char h;
+
+    memset (names_bits, 0, sizeof names_bits);
     for (names_n = 0, np = NAMES_AT; np < NAMES_AT + TNAMES; ++np) {
         ent ();
         names_n += e.what != NM_NONE;
+        if (e.what == NM_ITEM) {
+            h = hash (key (e.name));
+            names_bits[h >> 3] |= 1 << (h & 7);
+        }
     }
 }
 
@@ -120,6 +140,40 @@ static unsigned char __fastcall__ at_key (const char* t, const char* k)
     return !strnicmp (t, k, n) && (!t[n] || strchr (" ,.!?\"", t[n])) ? n : 0;
 }
 
+#pragma code-name (push, "OV10CODE")           /* ---- Overlay 10: a line's first look */
+#pragma rodata-name (push, "OV10RODATA")
+
+/* A line's first look (main.c's, before the parts are called: each copied in only for a line that may be its):
+** NI_LINE, a line that names (its first word name, call, alias, rename, dub, forget or unname: s_names_line's);
+** NI_THING, one that may say a thing's name (a "#", or a word where one of the things' names' first words could
+** be, by names_bits: s_names_subst's, which finds none in a line without them).  Overlay code: the main RAM's
+** data only (names_bits; not the hub's table) */
+unsigned char __fastcall__ o_names_in (const char* l)
+{
+    static const char* v;
+    static unsigned char n, r, h;
+
+    r = 0;
+    for (v = "name\0call\0alias\0rename\0dub\0forget\0unname\0"; *v; v += n + 1) {
+        n = strlen (v);
+        if (!strnicmp (l, v, n) && (!l[n] || l[n] == ' ')) {
+            r = NI_LINE;
+            break;
+        }
+    }
+    if (strchr (l, '#')) {
+        return r | NI_THING;
+    }
+    for (v = l; *v; ++v) {
+        if ((v == l || v[-1] == ' ') && (names_bits[(h = hash (v)) >> 3] & 1 << (h & 7))) {
+            return r | NI_THING;
+        }
+    }
+    return r;
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 #pragma code-name (push, "SW5CODE")            /* ---- Part 5: the commands */
 #pragma rodata-name (push, "SW5RODATA")
 
