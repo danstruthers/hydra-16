@@ -168,7 +168,9 @@ unsigned char t_getkey (void)
     return c == '\r' ? '\n' : c;
 }
 
-/* The window's size: its consctl's size line (C R), else $COLUMNS and $LINES, else 80 by 24 */
+/* The window's size: its consctl's size line (C R), else $COLUMNS and $LINES, else 80 by 24; and whether the console
+** shows its terminals both (the serial port's and the Vera X's screen: "terminal both") */
+static unsigned char both, whole;               /* (Both; the screen alone made so by the game, put back at its end) */
 static void size (void)
 {
     static char b[100];
@@ -186,13 +188,18 @@ static void size (void)
         if (*p == '\n') {
             ++p;
         }
+        if (!strncmp (p, "terminal both", 13)) {
+            both = 1;
+        }
         if (!strncmp (p, "size ", 5)) {
             tw = atoi (p + 5);
             if ((p = strchr (p + 5, ' ')) != 0) {
                 th = atoi (p + 1);
             }
-            return;
         }
+    }
+    if (tw != 80 || th != 24) {
+        return;                                 /* (The console's) */
     }
     if ((p = getenv ("COLUMNS")) != 0 && atoi (p) > 0) {
         tw = atoi (p);
@@ -206,7 +213,19 @@ static void size (void)
 
 void t_init (void)
 {
+    static unsigned char once;
+
     size ();
+    if (!once) {                                /* (With a Vera X the game takes its whole screen, the user's: the
+                                                **   console's terminals both, as it starts, would make the window
+                                                **   the serial port's 80 by 24; put back as the game ends) */
+        once = 1;
+        if (both) {
+            consctl ("terminal screen");
+            whole = 1;
+            size ();
+        }
+    }
     if (tw < 40) {
         tw = 40;
     }
@@ -238,6 +257,10 @@ void t_end (void)
     out ('K');
     unhide ();
     flush ();
+    if (whole) {
+        consctl ("terminal both");              /* (The console's terminals as they were) */
+        whole = 0;
+    }
 }
 
 /* The status line: only what's changed since it was last drawn (the clock's last digit, mostly), the cursor hidden
