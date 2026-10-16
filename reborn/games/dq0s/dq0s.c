@@ -158,11 +158,12 @@ static void __fastcall__ off (unsigned char k)
     cs[k].on = 0;
 }
 
-/* Each channel's hits as they fall due: the soonest change's ticks from now (4 at most: the queues looked at again) */
+/* Each channel's hits as they fall due: the soonest change's ticks from now (10 at most, a twentieth of a second: the
+** queues looked at again; the world's events ring it, the denizens' don't, a step heard that much late at most) */
 static unsigned char tend (void)
 {
     struct ch* c;
-    unsigned char k, wait = 4;
+    unsigned char k, wait = 10;
     unsigned d;
 
     for (k = 0; k < nch; ++k) {

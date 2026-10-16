@@ -18,13 +18,13 @@ PER_BANK    = 372                           ; Records a bank (0x2000 / 22)
 NITEMS      = 744                           ; (ITEM_BANKS of them)
 BANK0       = 14                            ; ITEM_BANK (0): CAT_BANK + 1
 LAST_BANK   = BANK0 + 1
+END         = $8000 + PER_BANK * REC      ; (A bank's records' end)
 IN_X        = $80                           ; items ()'s in: its x is x (else any, but IN_FLAGS)
 IN_FLAGS    = $40                           ;   or its flags and x's low byte not 0 (I_LIT ...)
 
             .bss
 _ip:        .res        2                   ; items ()'s record, its bank in the window
 at:         .res        2                   ; (The record's number,
-left:       .res        2                   ;   the records left in its bank, after it and with it,
 bank:       .res        1                   ;   its bank)
 want:       .res        1                   ; (items ()'s in,
 xv:         .res        2                   ;   and x)
@@ -43,8 +43,7 @@ _item_at:
             ldx         _ip + 1
             rts
 
-; Record at's bank in the window, ip the record (at the bank's own: $8000 + its place there times 22), left the
-; records from it to the bank's end
+; Record at's bank in the window, ip the record (at the bank's own: $8000 + its place there times 22)
 find:
             ldx         #BANK0
             lda         at
@@ -63,13 +62,6 @@ find:
             lda         at + 1
             sta         _ip + 1
 @mul:       stx         bank
-            lda         #<PER_BANK          ; left: 372 less its place
-            sec
-            sbc         _ip
-            sta         left
-            lda         #>PER_BANK
-            sbc         _ip + 1
-            sta         left + 1
             asl         _ip                 ; Its place times 2, kept in ptr1,
             rol         _ip + 1
             lda         _ip
@@ -163,23 +155,18 @@ _items:
             sta         ptr1
             bcc         @left
             inc         ptr1 + 1
-@left:      lda         left
-            bne         @dec
-            dec         left + 1
-@dec:       dec         left
-            lda         left
-            ora         left + 1
+@left:      lda         ptr1 + 1            ;   to the bank's end ($8000 + 372 * 22)
+            cmp         #>END
             bne         @look
+            lda         ptr1
+            cmp         #<END
+            bcc         @look
             lda         bank                ;   or the next bank's first
             cmp         #LAST_BANK
             bcs         @none
             inc         bank
             lda         bank
             jsr         _hub_map
-            lda         #<PER_BANK
-            sta         left
-            lda         #>PER_BANK
-            sta         left + 1
             lda         #$00
             sta         ptr1
             lda         #$80

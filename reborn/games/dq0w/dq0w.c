@@ -1575,7 +1575,8 @@ int main (int argc, char* argv[])
             event (E_READY, 0, 0);              /* (The character free again: the UI takes its next line) */
             was_busy = 0;
         }
-        hy_sleep_ticks (2);
+        hy_sleep_ticks (move.on || was_busy ? 2 : 4);  /* (Nothing under way: its intents rung for, the clock
+                                                **   on from the ticks gone, as often as it's worth) */
     }
     event (E_BYE, 0, 0);
     return 0;
