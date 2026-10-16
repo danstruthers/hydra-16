@@ -32,6 +32,40 @@ A theme is data (a file of the game's, one of several, picked by the game's seed
 - **its animals:** the beasts, which Animalcraft can calm, befriend or drive off, and none of the persuasive skills
   can.
 
+Built (2026-10-16), with three stand-in themes for the engine (the real ones are the user's to write): a crypt of a
+dead king (the first, the one the dungeon was grown by before themes were data: the same styles, rooms and light, all
+the bestiary), a drowned temple, a kobold warren.
+
+- **The data:** a text file a theme (games/dq0/themes, in their files' order; the first has the format), made at build
+  time the game's lib/dq0/dq0t.dat (make.js: theme.h's struct theme, 4K a theme with its words).  It says its name and
+  its story (told as the game starts); its mission (escape, rule the place, or either); its strata from the top down,
+  each one's name and the styles its plan may be grown in (one picked by its seed: so the stand-in's dice are as they
+  were); its eight words for rooms (by a room's kind) and its rooms' light; the bestiary's kinds that live in it
+  (dq0d/kinds.txt's keys: the denizens' task populates only those); its own kinds of things (eight at most: the
+  catalogue's last eight, KI_THEME on, written into the hub's catalogue as the game starts), one of them perhaps
+  fixed where it stands (an altar, a throne: never taken up); the puzzle's pieces, each a kind of its own, the strata
+  it may lie in, hidden or in plain view; the rules of what's done with them, each with its words and its effect;
+  the way out's lock in words, shut and open; and the endings' words (escaped, ruled, died).
+- **Picked** by the seed's second byte, counted round the themes (a game's seed is the clock's, so any; the tests'
+  small seeds pick the first), and kept in the save (game.dat, with the puzzle as it stands and the game's ending).
+  The UI reads it into the hub's theme bank (THEME_BANK: every task's to read) and its overlay 5's bank (theme.c's
+  copy: the theme's words, its puzzle).
+- **The pieces placed with the plan** (DUNGEON.md): each one's stratum is picked from the game's seed among those it
+  may lie in; when that stratum's plan is grown its place is decided, a chunk of a region of halls, from the stratum's
+  seed (the maker's, dq0m/plan.c: the same each time it's grown), kept in the theme bank; and it's put down when that
+  chunk is first made, on a square of a room's floor, by the maker's stock path (stock.c), concealed or not, as the
+  theme says.  So it was there all along, and found as anything else is: seen, or searched for.
+- **The rules:** read X (its words: a clue); combine X with Y (both to hand: they become Z, X's record kept, Y's
+  gone); put X on (or in) Y (an offering on an altar, a crown on a throne); use X on the way out (open the way out
+  with X).  The UI matches a command to a rule by the things' kinds (the things task's: what's to hand, IO_FIND;
+  IO_COMBINE), tells its words, keeps it done (a bit each in the save), and does its effect: none more, the way out
+  opened (the hub's way_open: the world lets the character up it, and it's gone: E_LEFT), or the place ruled.
+- **The endings:** escaped (up the way out, opened), ruled (a rule's), or dead (a fatal wound); the theme's words, the
+  game over, and the save marked done (dq0 -d on it again begins a new game).
+- **Still to come:** the theme's say on the strata's ages and sizes, the features it favours, the things lying about
+  by its style (the maker's styles' lists, make.c, as they are), its factions and its animals (the attitudes' work),
+  the pieces' keepers (a guardian, a faction's hoard), and a rule's needing another done first.
+
 ### Populations
 
 The user (2026-10-14): "Initial denizen populations and such should be determined at this time [as a stratum's plan
@@ -198,8 +232,8 @@ words; idle, the CPU 64% busy to 50% (the world's and the sound task's loops slo
 - **In the way:** the character can't walk onto a denizen's square: a walk along a passage, across a room or up to
   a square stops short of one (the way across a room found round them), and one in the very next square is told
   ("A giant rat is in the way.": E_NOWAY's N_DEN, the actor's).
-- **Later:** the referee's sheets (RS_NEW_ACTOR by the kind's key) and fights; their exploring and digging; the theme
-  as data.
+- **Later:** the referee's sheets (RS_NEW_ACTOR by the kind's key) and fights; their exploring and digging; the
+  theme's factions (the theme as data is built: which of the kinds live in it).
 
 ### Attitudes and influence (the second step)
 

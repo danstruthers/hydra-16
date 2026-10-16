@@ -21,7 +21,7 @@
 #include "view.h"
 #include "things.h"
 
-#define NK      KI_COUNT
+#define NK      NKINDS                          /* (The catalogue's, and the theme's after them: theme.h) */
 
 extern const struct kind kinds[];              /* (kinds.c's: in the catalogue's bank) */
 
@@ -881,9 +881,10 @@ void __fastcall__ things_seen (struct sight* s, unsigned char sn, unsigned x, un
 
 /* ---- A thing handled (held, stowed, put in or on another, taken from it, worn, taken off, lit, put out): each
 ** worded into the hub's text (kinds.c's words: % the thing's name, # the other's), and the time it took (took,
-** tenths).  The code's in the catalogue's bank (below); here, what it calls on in the main RAM */
+** tenths; IO_FIND's, the thing's kind and 256 if it's carried).  The code's in the catalogue's bank (below); here,
+** what it calls on in the main RAM */
 static char xn[16], yn[16];                     /* (The two names said: the words asked, then the things') */
-static unsigned char took;
+static unsigned took;
 static struct ireq iq;                          /* (The request, copied: things_serve's) */
 
 /* Item i's record written back (from q); item i's kind (its number); the hub's text begun again */
@@ -1265,7 +1266,7 @@ static unsigned char __fastcall__ light (unsigned char on)
 /* A thing handled, as the request (iq) asks: IR_OK, or IR_NO (refused: the words why) */
 static unsigned char o_handle (void)
 {
-    static unsigned n;
+    static unsigned n, c2;
     static unsigned char op;
 
     op = iq.op;
@@ -1286,6 +1287,25 @@ static unsigned char o_handle (void)
         return no (op == IO_DOFF ? SA_NOT_WORN : afar ? SA_REACH : SA_NO_SUCH);
     }
     name_of (n, 1);
+    if (op == IO_FIND) {                        /* (The puzzle's: its kind, and 256 if it's carried) */
+        took = B (m1 (item_kind, n)) | (unsigned) B (m1 (on_pc, n)) << 8;
+        return IR_OK;
+    }
+    if (op == IO_COMBINE) {                     /* (The other gone, this one made the rule's) */
+        if (!(c2 = other ()) || c2 == n) {
+            return IR_NO;
+        }
+        FETCH (c2);
+        o.kind = 0;
+        m2 (store, (unsigned) &o, c2);
+        FETCH (n);
+        o.kind = iq.to;
+        m2 (store, (unsigned) &o, n);
+        return IR_OK;
+    }
+    if (KIND (n)->keeps & KF_FIXED) {
+        return no (SA_FIXED);                   /* (A theme's altar, its throne) */
+    }
     if (op == IO_HOLD) {
         return hold (n);
     }

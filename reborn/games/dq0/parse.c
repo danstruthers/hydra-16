@@ -51,7 +51,8 @@ static const struct { char w[16]; unsigned char v; } verbs[] = {
     { "raise", V_RAISE }, { "lift", V_RAISE }, { "winch", V_RAISE }, { "lower", V_LOWER },
     { "break", V_BREAK }, { "smash", V_BREAK }, { "bend", V_FORCE }, { "disarm", V_DISARM }, { "disable", V_DISARM },
     { "save", V_SAVE }, { "inventory", V_INVENTORY }, { "inv", V_INVENTORY }, { "i", V_INVENTORY },
-    { "q", V_QUIT },
+    { "q", V_QUIT }, { "read", V_READ }, { "use", V_USE }, { "apply", V_USE }, { "try", V_USE },
+    { "combine", V_COMBINE }, { "join", V_COMBINE }, { "fit", V_COMBINE }, { "mend", V_COMBINE },
     { "talk", V_TALK }, { "speak", V_TALK }, { "chat", V_TALK }, { "greet", V_TALK }, { "hail", V_TALK },
     { "persuade", V_PERSUADE }, { "convince", V_PERSUADE }, { "recruit", V_PERSUADE }, { "reason", V_PERSUADE },
     { "win", V_PERSUADE }, { "bargain", V_PERSUADE }, { "deceive", V_DECEIVE }, { "trick", V_DECEIVE },
@@ -125,7 +126,6 @@ static const struct { char w[8]; unsigned char p; } preps[] = {
 static const char little[][10] = {
     "the", "a", "an", "this", "that", "these", "those", "of", "me", "my", "myself", "self", "off", "side",
     "direction", "dir", "and", "please", "on", "over", "head", "then", "now", "way", "here", "there", "it",
-    "with",
 };
 
 static unsigned char nw;                        /* The line's words */
@@ -209,6 +209,15 @@ void __fastcall__ o_parse (char* l, struct pcmd* c)
     for (; i < nw; ++i) {
         if (c->verb == V_TELL && (k = order_of (word[i])) != OR_NONE) {
             c->order = c->order ? c->order : k;     /* (A request's word: the first) */
+        }
+        if (!strcmp (word[i], "with")) {        /* (The other thing: with it, whatever came before: open the way
+                                                **   out with the key) */
+            c->prep = PR_WITH;
+            continue;
+        }
+        if (!strcmp (word[i], "way") && phrase (i, "way out")) {
+            c->obj = OB_WAY_OUT;                /* ("The way out": the theme's) */
+            ++i;
             continue;
         }
         for (k = 0; c->word[0] && !c->prep && k < sizeof preps / sizeof preps[0] && strcmp (word[i], preps[k].w); ++k) {
@@ -261,10 +270,11 @@ void __fastcall__ o_parse (char* l, struct pcmd* c)
             }
             continue;
         }
-        if (!c->word[0]) {                      /* (The first word not understood) */
+        if (!c->word[0] && c->prep != PR_WITH) {    /* (The first word not understood) */
             strncpy (c->word, word[i], sizeof c->word - 1);
-        } else if (c->verb == V_NAME || ((c->prep || c->verb == V_TELL) && !c->word2[0])) {   /*   (and the other
-                                                **   thing's, a thing fetched; a name given, the last) */
+        } else if (c->verb == V_NAME || ((c->prep || c->verb == V_TELL || c->verb == V_COMBINE) && !c->word2[0])) {
+                                                /*   (and the other thing's, a thing fetched; a name given, the
+                                                **   last) */
             strncpy (c->word2, word[i], sizeof c->word2 - 1);
         }
     }
@@ -297,5 +307,9 @@ void __fastcall__ o_parse (char* l, struct pcmd* c)
     if (c->verb == V_NAME && !c->word2[0]) {    /* ("call it Grub": the one meant the nearest) */
         strcpy (c->word2, c->word);
         c->word[0] = 0;
+    }
+    if (c->prep == PR_WITH && c->verb != V_COMBINE && !c->word[0]) {
+        strcpy (c->word, c->word2);             /* ("open the way out with the key": the key's the thing used) */
+        c->word2[0] = 0;
     }
 }

@@ -42,7 +42,6 @@ enum {
     T_PICK_YOURSELF_UP,
     T_THE_PORTCULLIS_IS,
     T_DOOR_SHUT,
-    T_ATTACK_WHAT,
     T_COUNT
 };
 
