@@ -13,7 +13,8 @@
             .include    "zeropage.inc"
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 3                     ; dq0harn.cfg's overlays
+OVMAX       = 4                     ; dq0harn.cfg's overlays (the 4th the swapped parts' images)
+SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 DEPTH       = 16                    ; Overlay calls in calls, at most
 
             .bss
@@ -152,3 +153,20 @@ ovl_out:
             OVFN        fight, 2
             OVFN        pc_armour, 3
             OVFN        pc_side, 3
+
+; ---- The swapped parts (../dq0/swap.inc: code run in the main RAM's top, dq0harn.cfg's SWAP, a part at a time,
+; copied there from overlay 4's bank as it's called)
+
+            .include    "../dq0/swap.inc"
+
+            SWPART      1, 4                ; hmchar's file read and written (harnfile.c), the creatures' sheets kept
+            SWPART      2, 4                ; The names (harnname.c)
+
+            SWFN        load_pc, 1
+            SWFN        save_pc, 1
+            SWFN        beasts, 1
+            SWFN        harn_attr_name, 2
+            SWFN        harn_species_name, 2
+            SWFN        harn_sex_name, 2
+            SWFN        harn_month_name, 2
+            SWFN        harn_sunsign_name, 2
