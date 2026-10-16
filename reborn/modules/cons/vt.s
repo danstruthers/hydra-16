@@ -5337,7 +5337,8 @@ fc_erase_end:
 :
             rts
 
-; The region's changed: vid's too (DECSTBM; it homes vid's cursor)
+; The region's changed: vid's too (DECSTBM; it homes vid's cursor, to the screen's first row: the chrome's, with
+; chrome, not the window's, so not known)
 fc_region:
             lda         fw_scr
             bne         :+
@@ -5347,8 +5348,8 @@ fc_region:
             sta         out_t
             sta         scr_sync
             jsr         out_region_all
-            stz         scr_x
-            stz         scr_y
+            lda         #$FF
+            sta         scr_y
             rts
 
 ; The cursor shown or not (DECTCEM): vid's too
