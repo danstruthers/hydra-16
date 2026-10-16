@@ -2443,11 +2443,11 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0doors', what: 'Dingus Quest Zero\'s rooms and doors as the user asked (2026-10-15): a room told in general words (a small hall, a flat ceiling), its figures (its size in feet, its ceiling\'s height) only on a close look (look closely, x room); a door examined (its make, size, thickness and features plain, its state and stoutness the appraiser\'s judgement: the referee\'s Timbercraft), and its bar (an item in its brackets: IW_PORTAL), lifted out and taken; a window examined, its pane judged (Glassworking), broken into shards; a strong iron-bound door battered with bare hands holding, a weaker wooden one giving way (each blow the referee\'s impact less the wood\'s resistance, off its body), broken down for good',
+      name: 'dq0doors', what: 'Dingus Quest Zero\'s rooms and doors as the user asked (2026-10-15): a room told in general words (a small hall, a flat ceiling), its figures (its size in feet, its ceiling\'s height) only on a close look (look closely, x room); a door examined (its make, size, thickness and features plain, its state and stoutness the appraiser\'s judgement: the referee\'s Timbercraft), and its bar (an item in its brackets: IW_PORTAL), lifted out and taken; a window examined, its pane judged (Glassworking), broken into shards; a strong iron-bound door battered with bare hands unmarked, the hands hurt till the character stops (the user\'s: dq0hands), a weaker wooden one battered with a pick (dq0 -k pick: the tool to hand that hits hardest) giving way (each blow the referee\'s impact less the wood\'s resistance, off its body), broken down for good',
       init: 't_rc', cycles: 2500e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 3 -c /ram/c.hm\r' +
         ['look', 'look closely', 'x room', 'examine the door behind me on my right', 'break the door behind me on my right', 'break', 'quit'].map(l => 'ā' + l + '\r').join('') +
-        'ādq0 -p t -s 15 -c /ram/c.hm\r' +
+        'ādq0 -p t -s 15 -c /ram/c.hm -k pick\r' +
         ['examine the door ahead to my left', 'examine bar', 'break the door ahead to my left', 'break', 'look', 'close', 'quit'].map(l => 'ā' + l + '\r').join('') +
         'ādq0 -p t -s 4 -c /ram/c.hm\r' + ['take the bar', 'i', 'quit'].map(l => 'ā' + l + '\r').join('') +
         'ādq0 -p t -s 12 -c /ram/c.hm\r' +
@@ -2459,9 +2459,10 @@ module.exports = {
         const o = out.replace(/\x1b\[[0-9;]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
         const want = ['> look You are in a small hall', 'The ceiling is flat. There is a door', '> look closely',
           'It is 10 feet by 10.', 'The ceiling is flat, 8 feet up.', '> x room', 'It is 10 feet by 10.',
-          'A door of iron-bound wood, 3 feet wide and 7 high, 3 inches thick.', 'it\'s marked, but it holds.',
-          'it\'s starting to give.', 'Brackets for a bar are fixed on this side, the bar in them.',
-          'It\'s 4 feet long, 3 inches thick.', 'it\'s starting to give.', 'You batter at it till it gives way, and it crashes open.',
+          'A door of iron-bound wood, 3 feet wide and 7 high, 3 inches thick.', 'Your blows make no mark on it.',
+          'Your knuckles split on it: a minor bruise to', '> break', 'You stop: your hands are too hurt to go on.',
+          'Brackets for a bar are fixed on this side, the bar in them.',
+          'It\'s 4 feet long, 3 inches thick.', 'You batter at it till it gives way, and it crashes open.',
           '(broken down)', 'It\'s broken: it won\'t shut.', 'You lift the bar out of its brackets, and set it down.', 'Taken.',
           'tinderbox, a bar)', 'A window, 2 feet wide and 3 high; its shutters of wood, 2 inches thick. It\'s glazed',
           'It\'s 2 by 3 feet, a quarter inch thick.', 'The glass shatters with a crash.', 'At your feet lie some glass shards.',
@@ -2474,6 +2475,36 @@ module.exports = {
         }
         const g = o.slice(o.indexOf('> look You are'), o.indexOf('> look closely'));
         if (/feet up|feet by/.test(g)) f.push('the glance gives figures: ' + g);
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0hands', what: 'Dingus Quest Zero\'s doors battered with bare hands (the user\'s, 2026-10-15: a blow a d4 and the Strength\'s modifier, the door\'s resistance off it, the hand hurt by the lesser of the blow and the resistance): one character made strong and one weak (hmchar\'s file, its Strength line set after), at seed 10\'s rotting wooden door the strong one marking it, the weak one not, the strong one\'s hands only bruised (minor: a rotten door\'s resistance is little), stopping when hurt enough, the injuries on the sheet; at seed 14\'s sound iron-bound door the strong one\'s hand fractured (serious: a sturdy door hurts more)',
+      init: 't_rc', cycles: 800e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/s.hm\rāecho att str 18 >> /ram/s.hm\r' +
+        'āhmchar -q -s 5 -o /ram/w.hm\rāecho att str 4 >> /ram/w.hm\r' +
+        [['s', 10], ['w', 10], ['s', 14]].map(([c, s]) => 'ādq0 -p t -s ' + s + ' -c /ram/' + c + '.hm\r' +
+          ['break door', 'sheet', 'quit'].map(l => 'ā' + l + '\r').join('')).join('') + 'āecho $status\r' },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        const run = s => { const i = o.indexOf('% dq0 -p t -s ' + s); return o.slice(i, o.indexOf('% ', i + 2)); };
+        const strong = run('10 -c /ram/s'), weak = run('10 -c /ram/w'), sturdy = run('14 -c /ram/s');
+        const want = (r, name, ws) => {
+          let at = 0;
+          for (const w of ws) {
+            const i = r.indexOf(w, at);
+            if (i < 0) { f.push(name + ': not found (in its turn): ' + w); return; }
+            at = i + w.length;
+          }
+        };
+        want(strong, 'strong, rotten door', ['> break door', 'it\'s marked, but it holds.', 'Your knuckles split on it: a minor bruise to',
+          'You stop: your hands are too hurt to go on.', '> sheet', 'Strength 18', 'Injuries:', 'hand M1 (bruise)']);
+        if (/serious/.test(strong)) f.push('the rotten door hurt the hand seriously');
+        want(weak, 'weak, rotten door', ['> break door', 'Your blows make no mark on it.', '> sheet', 'Strength 4']);
+        want(sturdy, 'strong, sturdy door', ['> break door', 'Something gives in your hand:', 'a serious fracture to your', 'hand (S2)',
+          '> sheet', 'Injuries:', 'hand S2 (fracture)']);
         return f;
       },
       sdcard: true

@@ -103,11 +103,16 @@ enum { BP_SKULL, BP_FACE, BP_NECK, BP_SHOULDER, BP_UPPER_ARM, BP_ELBOW, BP_FOREA
 **               "pick" ...; "hands"): b its aspect (AS_BEST: what it does best), c its dice (0: one).  At a thing
 **               (other RS_THING: a door, a portcullis's bars, a chest) only the blow's impact is worked out, the
 **               reply's w1 (b its aspect, the text what struck it: none named, the tool to hand that hits a thing
-**               hardest, but a weapon): what the thing's material and toughness take from it is the world's
+**               hardest, but a weapon): what the thing's material and toughness take from it is the world's; struck
+**               with bare hands (the text "hands"), a d4 and the actor's Strength's (the user's, DUNGEON.md: portals)
+**   HC_HANDS    the actor's own hand hurt by its blow at a thing (the user's: the lesser of the blow and the thing's
+**               resistance): w1 that impact (the hand's armour the referee's to take off), w2 the blow's number in a
+**               run of them (0: its words begun anew, else added to); an automatic blunt hit on a hand, and the
+**               reply's result 1 if it's hurt badly enough to stop (the referee's say)
 ** The reply: its effects (x: up to RS_EFFECTS, X_NONE after the last), b the worst wound's band (0: unhurt), w2 the
 ** tenths the actor's out for (knocked senseless), result 1 a fall stopped (a hold grabbed); its words in the text,
 ** a line (and RS_DESCRIBE b 2's: the last harm's) */
-enum { HC_FALL, HC_STRIKE, HC_FIRE, HC_BLOW };
+enum { HC_FALL, HC_STRIKE, HC_FIRE, HC_BLOW, HC_HANDS };
 enum { AS_BLUNT, AS_EDGE, AS_POINT, AS_FIRE, AS_BEST };     /* (items.h's DM_* in the same order) */
 enum { Z_MID, Z_HIGH, Z_LOW };
 enum { GR_FLOOR, GR_DEEP_WATER, GR_SHALLOW_WATER, GR_SOFT, GR_HARD, GR_ROCKY };    /* Earth; water; mud; paving;

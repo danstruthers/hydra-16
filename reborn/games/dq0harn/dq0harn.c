@@ -5,10 +5,11 @@
 ** effects, summaries and words.
 **
 ** So far: RS_HELLO (its name, its round), RS_LOAD_PC (hmchar's file), RS_TEST (a purpose made a skill or an
-** attribute, the circumstances' steps 5 points each), RS_HARM (a fall, a trap's strike, a burn, a blow: injuries on
-** the sheet), RS_DESCRIBE (the character's sheet, its injuries with it; b 1: its short lines, for the map's panel,
-** each 15 characters at most; b 2: the last harm's words), RS_SAVE (the sheet, its injuries and all).  The sheet's
-** words and the harm are overlay 1's (sheet.c: DIR/dq0harn.ovl, read into a bank of its own as it starts).
+** attribute, the circumstances' steps 5 points each), RS_HARM (a fall, a trap's strike, a burn, a blow, a hand hurt
+** by its blow at a thing: injuries on the sheet), RS_DESCRIBE (the character's sheet, its injuries with it; b 1: its
+** short lines, for the map's panel, each 15 characters at most; b 2: the last harm's words), RS_SAVE (the sheet,
+** its injuries and all).  The sheet's words and the harm are overlay 1's (sheet.c: DIR/dq0harn.ovl, read into a
+** bank of its own as it starts).
 **
 ** The game's own choices in using the book (not the book's rules): a purpose names the skill (or attribute times 5)
 ** a GM would call for; a skill not opened is tested at its OML, as if opened on first use.
@@ -379,7 +380,7 @@ static void __fastcall__ answer (struct req* r)
         strncpy (blow, r->text, sizeof blow - 1);
         harm ((struct req*) rq);
         memcpy (r, rq, sizeof rq);
-        strcpy (r->text, hurt);
+        strcpy (r->text, r->a == HC_BLOW && r->other == RS_THING ? blow : hurt);    /* (At a thing: what struck) */
         status ();
         break;
     case RS_SAVE:                               /* (The sheet into the save: hmchar's format, its own lines) */

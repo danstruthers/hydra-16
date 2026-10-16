@@ -56,17 +56,31 @@ void __fastcall__ o_climb_words (unsigned char how, unsigned char feet)
 ** wounds (in lb), and what they've left the character in (cond: its conditions, rs.h's C_*) */
 void __fastcall__ o_harm_words (unsigned w, unsigned cond)
 {
-    if (w & E_CAUGHT) {
+    static const char* const hands[3] = {       /* (Bare-handed blows: by the worst wound's band) */
+        " Your knuckles split on it: ", " Something gives in your hand: ", " Your hand is crushed against it: "
+    };
+    unsigned char band = w >> 8 & 7;
+
+    if ((w & 0xFF) == HC_HANDS) {
+        if (band) {
+            say (hands[band > 3 ? 2 : band - 1]);
+            say (lb);
+            say (".");
+        }
+        if (w & E_STOPPED) {
+            say (" You stop: your hands are too hurt to go on.");
+        }
+    } else if (w & E_CAUGHT) {
         say (" You snatch at a hold as you go, and it holds: you hang there, and climb on.");
         return;
-    }
-    if (!(w & 0x700)) {
+    } else if (!band) {
         say ((w & 0xFF) == HC_FALL ? " You land, shaken, but unhurt." : " It does you no harm.");
         return;
+    } else {
+        say ((w & 0xFF) == HC_FALL ? " You land hard: " : " It hurts you: ");
+        say (lb);
+        say (".");
     }
-    say ((w & 0xFF) == HC_FALL ? " You land hard: " : " It hurts you: ");
-    say (lb);
-    say (".");
     if (cond & C_DEAD) {
         msg ("You are dead.");
         return;

@@ -98,6 +98,7 @@ enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST };    /* E_DEN's what: a step, a 
 #define I_JUMP          0x80
 #define E_OUT           0x4000                  /* (E_HARM's: knocked senseless a while) */
 #define E_CAUGHT        0x8000                  /*   (and a fall stopped, a hold grabbed) */
+#define E_STOPPED       0x8000                  /*   (an HC_HANDS's: the blows stopped, the hands too hurt) */
 #define O_FELL          8                       /* (E_ARRIVE's link kind, or'd: fallen down it, jumped) */
 
 enum { A_WALKED, A_DOWN, A_UP, A_START, A_DIGGING, A_CROSSED, A_CLIMBING, A_CLIMBED, A_WENT_TO, A_RESUMED,

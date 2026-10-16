@@ -312,16 +312,34 @@ before it fails, by its material, size, thickness and state.  **Breaking** (brea
 glass, bars) goes by it: blows, a dozen at most a time, each the referee's impact (HC_BLOW at RS_THING, with the
 best tool to hand, never a weapon) less its material's resistance to the blow's aspect (the less, the worse its
 state), off its body; the harm kept (PORTAL_HARM); a door broken down open for good (PS_WRECKED: it won't shut).
-Forcing (Strength) is easier on a rotten door, harder on a new one.  Its **parts** are items of their own (items.h's
-IW_PORTAL, put in it as the chunk's stocked): a door's **bar** (in its brackets, on the square on its bar's side;
-some unbarred doors' set aside by them), a window's **pane** and **bars**, each with its material, its state, its
-size and thickness: examined as any thing is, lifted out (take the bar, lift the bar: only from its side; a pane
-worked out whole; bent bars lifted out) and carried; a pane broken is shards at the character's feet.  **Examined**
-(examine the door, the window, the portcullis): its kind, size, material, thickness and features plain to see, its
-state and how stout it is the appraiser's judgement (the referee's Timbercraft, Metalcraft or Masonry, as near the
-truth as the grade).  A room's words are general at a glance (a small hall, a high ceiling, a low, rough one); its
-figures (its size in feet, its ceiling's heights) come with a close look (look closely, examine the room); search is
-search.
+**Bare hands** (the user, 2026-10-15: "Breaking with hands really depends on strength, but could result in damage
+(blunt automatic hit, impact depends on strength of the player, less any armor coverage) to the hands", and "Doors
+should have resistances ("armor" coverage) of some amount, and then strength determines how much damage is done (D4 +
+strength mod + any armor bonus - door resistance to blunt impact) with lesser of door resistance amount and amount of
+damage dealt (minus hand armor coverage) as damage to actor's hand."): with no tool to hand that hits harder, each
+blow is
+
+- the blow: a d4, the Strength's modifier and any armour's bonus (the referee's: HarnMaster's has no Strength
+  modifier as such, so the game's, by the bands of the book's Strength table: 1-5 -2, 6-8 -1, 9-12 none, 13-15 +1,
+  16 and more +2; a gauntlet's bonus none till the items tell the referee what's worn);
+- the door's harm: the blow less its resistance to a blunt blow (its material's, less for a worse state: the same as
+  any blow's), never below nothing, off its body;
+- the hand's harm: the lesser of the blow and that resistance, less the hand's armour (none, so far): an automatic
+  blunt hit on one hand or the other (rs.h's HC_HANDS), the referee's HarnMaster injury, worded ("Your knuckles
+  split on it: a minor bruise to your right hand (M1)"), on the sheet.  So a strong character does more to a door
+  than a weak one, and a sturdy door hurts the hands more than a rotten one.  The character stops when the referee
+  says it's hurt enough (the game's: the hands' injuries three levels or more, a serious one, or the shock of it).
+
+A tool carried (a pick ...) is used instead, sparing the hands.  Forcing (Strength) is easier on a rotten door,
+harder on a new one.  Its **parts** are items of their own (items.h's IW_PORTAL, put in it as the chunk's stocked):
+a door's **bar** (in its brackets, on the square on its bar's side; some unbarred doors' set aside by them), a
+window's **pane** and **bars**, each with its material, its state, its size and thickness: examined as any thing is,
+lifted out (take the bar, lift the bar: only from its side; a pane worked out whole; bent bars lifted out) and
+carried; a pane broken is shards at the character's feet.  **Examined** (examine the door, the window, the
+portcullis): its kind, size, material, thickness and features plain to see, its state and how stout it is the
+appraiser's judgement (the referee's Timbercraft, Metalcraft or Masonry, as near the truth as the grade).  A room's
+words are general at a glance (a small hall, a high ceiling, a low, rough one); its figures (its size in feet, its
+ceiling's heights) come with a close look (look closely, examine the room); search is search.
 
 ### Items: the dungeon's layer of things
 

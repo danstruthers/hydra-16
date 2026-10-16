@@ -17,9 +17,11 @@
 ** Broken by blows (break: the user's, 2026-10-15): a door battered down, a window's shutters, its glass, its bars,
 ** each blow the referee's impact (HC_BLOW at RS_THING, with the best tool to hand) less the material's resistance
 ** to it (the less, the worse its state) taken off its body (fixtures.c's, by its material, size, thickness and
-** state), the harm kept (PORTAL_HARM); a door broken down open for good (PS_WRECKED).  A rotten door forced more
-** easily, a new one less.  A portal's parts are items (items.h's IW_PORTAL: a door's bar, a window's pane and bars):
-** a bar lifted out (lift: only from its side; or as the door's unbarred to open it) and set down at the
+** state), the harm kept (PORTAL_HARM); a door broken down open for good (PS_WRECKED).  Bare hands (the user's: a d4
+** and the Strength's, the referee's) are hurt by every blow, by the lesser of the blow and the resistance (so a
+** sturdy door hurts more than a rotten one), the character stopping when they're hurt enough.  A rotten door forced
+** more easily, a new one less.  A portal's parts are items (items.h's IW_PORTAL: a door's bar, a window's pane and
+** bars): a bar lifted out (lift: only from its side; or as the door's unbarred to open it) and set down at the
 ** character's feet, as a pane is worked out whole, bent bars lifted out, or broken glass left in shards.  Looked at
 ** closely (the UI's, PA_EXAMINE): a portal's record copied into the hub (pview) for the appraiser's words.
 **
@@ -131,7 +133,11 @@ static signed char __fastcall__ test (unsigned char purpose, unsigned char b, si
 }
 
 /* The referee's harm (rs.h's RS_HARM: cause a, and b, c, w1, w2 by it), the UI told (E_HARM), the time it's out for
-** taken; a blow at a thing (HC_BLOW, with bare hands till the world knows what's in them): its impact */
+** taken; a blow at a thing (HC_BLOW, with the best to hand): its impact, and bare 1 if it was bare hands; a hand hurt
+** by it (HC_HANDS, b the blow's number in the run): its worst kept (hb, and hw's E_OUT, E_STOPPED), told the UI once
+** the blows are done (portal's) */
+static unsigned char bare, hb;
+static unsigned hw;
 static void __fastcall__ harm (unsigned char a, unsigned char b, unsigned char c, unsigned char w1)
 {
     struct req* r;
@@ -145,14 +151,19 @@ static void __fastcall__ harm (unsigned char a, unsigned char b, unsigned char c
     r->b = b;
     r->c = c;
     r->w1 = w1;
-    r->w2 = b >> 5;                             /* (A strike's: where, trap_harm's) */
+    r->w2 = a == HC_HANDS ? b : b >> 5;         /* (A strike's: where, trap_harm's) */
     r->b &= a == HC_STRIKE ? 3 : 0xFF;
     r->text[0] = 0;
     r = hub_ask (SLOT_WORLD);
     impact = r->w1;
     aspect = r->b;                              /* (A blow at a thing's: its aspect, AS_*) */
-    if (a != HC_BLOW) {
-        tt += r->w2;
+    tt += r->w2;
+    if (a == HC_BLOW) {
+        bare = !strcmp (r->text, "hands");
+    } else if (a == HC_HANDS) {
+        hb = r->b > hb ? r->b : hb;
+        hw |= (r->w2 ? E_OUT : 0) | (r->result ? E_STOPPED : 0);
+    } else {
         told (E_HARM, a | r->b << 8 | (r->w2 ? E_OUT : 0), 0);
     }
     r->state = REQ_FREE;
@@ -202,31 +213,37 @@ static unsigned char __fastcall__ part_moved (unsigned char k, unsigned x, unsig
 ** that make no mark at all: given up), a few seconds each; each the referee's impact (HC_BLOW at RS_THING: with
 ** the best to hand) less the material's resistance to its aspect (the less, the worse the part's state), the harm
 ** kept (pq.harm's part, its mask hm, its shift hs: a window's shutters' and its bars' a nibble each, a door's the
-** byte): 0 if it gives way, else how it stands (PO_GIVING, PO_HOLDING, PO_NO_MARK) */
+** byte): 0 if it gives way, else how it stands (PO_GIVING, PO_HOLDING, PO_NO_MARK).  Struck with bare hands (the
+** user's, 2026-10-15: DUNGEON.md), each blow hurts the hand too, by the lesser of the blow and the resistance (the
+** referee's HC_HANDS, its armour the referee's), and once the referee says it's hurt enough the blows stop */
 static unsigned char hm, hs;
 static unsigned char __fastcall__ batter (unsigned char mat, unsigned char body)
 {
     static const unsigned char resist[5][4] = {     /* Against blows, edges, points, fire (items.h's DM_*) */
         { 4, 3, 4, 1 }, { 5, 5, 5, 3 }, { 6, 7, 7, 7 }, { 6, 8, 9, 9 }, { 0, 5, 3, 6 }
     };
-    unsigned char n, h = pq.harm >> hs & hm, was = h, r, gone = 0;
+    unsigned char n, h = pq.harm >> hs & hm, was = h, r, i, gone = 0;
 
     if (body > hm) {
         body = hm;
     }
-    for (n = 0; n < 12 && !gone && (n < 4 || h != was); ++n) {
+    for (n = 0; n < 12 && !gone && !(hw & E_STOPPED) && (n < 4 || h != was); ++n) {
         tt += 30;
         harm (HC_BLOW, AS_BEST, 0, 0);
         r = resist[mat][aspect & 3];
         r -= r && pq.qual <= 3 ? (pq.qual <= 1 && r > 1 ? 2 : 1) : 0;
-        if (impact <= r) {
+        i = impact;
+        if (bare) {                             /* (The hand's: the lesser of the two) */
+            harm (HC_HANDS, n, 0, i < r ? i : r);
+        }
+        if (i <= r) {
             continue;
         }
-        if ((unsigned) h + impact - r >= body) {
+        if ((unsigned) h + i - r >= body) {
             gone = 1;
             h = 0;
         } else {
-            h += impact - r;
+            h += i - r;
         }
     }
     pq.harm = (pq.harm & ~(hm << hs)) | h << hs;
@@ -523,6 +540,8 @@ static void __fastcall__ portal (unsigned char what)
         armed = 1 | (tq.state & TS_HIDDEN);
     }
     through = 0;
+    hb = 0;
+    hw = 0;
     if (what == PA_DISARM) {
         if (armed == 1) {
             disarm ();
@@ -628,6 +647,9 @@ static void __fastcall__ portal (unsigned char what)
         }
     }
     told (E_PORTAL, out | pq.kind << 8, 0);
+    if (hb || hw) {                             /* (The hands hurt by bare-handed blows: once, the worst) */
+        told (E_HARM, HC_HANDS | hb << 8 | hw, 0);
+    }
     if (through) {                              /* (On the far side) */
         W->fx = px + dir_x[pd];
         W->fy = py + dir_y[pd];
