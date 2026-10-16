@@ -563,6 +563,18 @@ map is a window on the stratum round the character (one square a character, the 
 into the hub; a floor's height against the character's marked (1-9 tens of feet higher, a-i lower); a zoomed-out map
 (a character for each 4 by 4 squares) for the large strata.
 
+The user (2026-10-16): "descriptions often tell you what lies behind you, which you can't really see ... You should
+only be able to tell details about things you can clearly see.  Examining a door from across the room should only
+tell you its relative size and maybe its construction material.  Closer inspection would need you to move to it ...
+Eyesight score should affect the amount of detail something is described in if it is far enough away."  So the words
+tell nothing behind the character (the senses mark the squares beside it there seen, and the UI still knows them:
+"open the door behind me" turns to it), a room's figures only once it's seen the whole of it (else "its far side is
+lost in the dark"), and what's further off in less detail: a thing more than 1 + sight / 2 + its size squares off
+(the summary's sight, 0-9; the kind's size, how easily it's seen) only by its size ("something small"), a denizen
+more than 3 + sight squares off only as something there; a portal or a thing more than two squares off (NEAR_SQ)
+examined only as it's seen from there (a portal's kind, its size against the character's, a door's material within
+3 + sight squares), "You'd have to go closer to make out more".
+
 ## Steps
 
 1. (Done, 2026-10-14: and with it doors and hidden doors, crossing rooms, climbing ledges, digging, the parser.)

@@ -81,7 +81,8 @@ struct msg {
 /* Intents: what an actor means to do (the UI's for the character, the denizens' for theirs) */
 enum {
     I_NONE, I_WAIT,                             /* w1: tenths (0: a round); w2: 1, quietly (a thing's handling) */
-    I_GO,                                       /* a: a heading (level.h's H_N ... H_NW) */
+    I_GO,                                       /* a: a heading (level.h's H_N ... H_NW); w1, w2: the door or the
+                                                **   passage's mouth that way meant (a square it sees: 0, any) */
     I_CLIMB,                                    /* a: DIR_UP or DIR_DOWN (the stairway or ladder in the room);
                                                 **   | I_JUMP, down: jumped (a ledge, a shaft: a fall) */
     I_TURN,                                     /* a: the heading to face (H_N ... H_NW) */
@@ -89,8 +90,9 @@ enum {
                                                 **   things' already, pc_light: the world takes the time, looks) */
     I_DIG,                                      /* a: a direction (DIR_N ... DIR_W, DIR_DOWN) */
     I_PORTAL,                                   /* a: what's done to the door it faces (PA_*); b: which (PW_*: a
-                                                **   door or a portcullis, a window or a slit, either); w2: PA_BAR's
-                                                **   bar to hand, its width (the things': 0, none) */
+                                                **   door or a portcullis, a window or a slit, either); w1, w2: the
+                                                **   one meant (its square: 0, the one it faces); x[0]: PA_BAR's bar
+                                                **   to hand, its width (the things': 0, none) */
     I_GOTO,                                     /* w1, w2: a square in its room it sees, walked up to */
     I_QUIT,
     I_ATTACK,                                   /* a: the actor struck at (its entry plus 1), b: the aim (Z_*): a
