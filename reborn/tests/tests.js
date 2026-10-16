@@ -2490,12 +2490,13 @@ module.exports = {
         'ĀĀāturn left\rinventory\rāgo north\rĀĀĀĀāquit\rāecho $status\r' },
       expect: ['You carry', 'You can\'t go that way.', '% echo $status'],
       budgets: [{ what: 'inventory answered (Enter to the answer)', from: '> inventory', to: 'You carry', per: 1, max: 720000 },
-        { what: 'a step that can\'t be taken answered (the world\'s)', from: '> go north', to: 'You can\'t go that way.', per: 1, max: 720000 }],
-      // (Both within a fifth of a second of Enter, the user's measure: 720,000 cycles at 3.58 MHz.  The step's answer
-      // takes 380,000 cycles, or 580,000-610,000 when a rat's step falls in it: the UI words what it sees again (its
-      // own cycles in it twice as many), the world and the senses look again.  Whether one falls in it is the
-      // denizens' real time against the tasks' code, any task's code: a budget under that moved with the code's
-      // layout, not with the answer's speed)
+        { what: 'a step that can\'t be taken answered (the world\'s: from the line told into the story)', from: '> go north\x1b[24;1H',
+          to: 'You can\'t go that way.', per: 1, max: 300000 }],
+      // (Each a mark in what the serial line sends: the inventory's from the line typed at the bottom, a fifth of a
+      // second, the user's; the step's from the line entered, as it's told into the story (the line typed's row, 24,
+      // after it): about 219,000 cycles to the answer, a rat's step about then or not.  From the line typed it was
+      // 380,000 or 600,000 cycles, as that echo went out at once or waited behind the words still going out on the
+      // line: when Enter fell against what the line was sending, moved by any task's code, not the answer's speed)
       // (While nothing happens, between the step and quitting, 8M cycles, 2.2 s: the status line's clock, a move up to
       // it a second at most, the cursor hidden for it)
       check(m, out) {
