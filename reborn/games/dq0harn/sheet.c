@@ -310,6 +310,7 @@ signed char __fastcall__ o_noticing (const struct req* r)
 void __fastcall__ o_spent (unsigned t)
 {
     static const unsigned char rate[NGAITS] = { 0, 0, 0, 2, 5, 10 };
+    static unsigned walkt;                      /* (A walk's tenths, toward its next unit) */
     unsigned char a = spent_at, k;
     unsigned n;
 
@@ -334,7 +335,12 @@ void __fastcall__ o_spent (unsigned t)
         }
         rested = 0;
         k = a < NGAITS ? rate[a] : 0;
-        tired += k ? n * k : n / 144;
+        if (!k) {
+            walkt += n;
+            n = walkt / 144;
+            walkt %= 144;
+        }
+        tired += k ? n * k : n;
         while (tired >= LEVEL) {
             tired -= LEVEL;
             if (pc.fl < 99) {

@@ -13,6 +13,7 @@
 #define EYE         5
 
 static struct sight S;
+unsigned char eye;                              /* (The character's sight, 0-9: dq0p.c's look sets it) */
 static unsigned char mx_[SEE_DOORS], my_[SEE_DOORS];     /* (The mouths' squares, as they're counted) */
 static unsigned char seq;
 
@@ -62,11 +63,12 @@ static unsigned char __fastcall__ mouth (unsigned char i, unsigned char j)
     return 1;
 }
 
-/* A seen door's portal (q: or NULL, a doorway): its kind and parts */
+/* A seen door's portal (q: or NULL, a doorway): its kind and parts (a window's; a door's or a portcullis's, its
+** features, as they're seen from afar: two leaves ...) */
 static void __fastcall__ portal_seen (const struct portal* q)
 {
     S.door[S.ndoors].kind = q ? q->kind : PK_DOOR;
-    S.door[S.ndoors].parts = q ? q->parts : 0;
+    S.door[S.ndoors].parts = !q ? 0 : q->kind == PK_WINDOW ? q->parts : q->feat;
 }
 
 /* The traps the character knows of (found, or never hidden: an open pit) on the squares of its chunk it sees now */
@@ -170,6 +172,7 @@ void __fastcall__ perceive (unsigned char sn, unsigned x, unsigned y, unsigned c
     S.dark = !(*p & T_VIS);
     S.first = first;
     S.ceil = C_UNSEEN;
+    S.eye = eye;
     if ((r = room_of (sn, x, y)) != 0xFF) {
         rp = C->room[r];
         S.where = W_ROOM;

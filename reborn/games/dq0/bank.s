@@ -159,15 +159,18 @@ ovl_out:
             OVFN        appraise, 1
             OVFN        tell, 1
             OVFN        words, 2
-            OVFN        stir_words, 2
-            OVFN        heard_words, 2
+            OVFN        stir_words, 7
+            OVFN        heard_words, 7
+            OVFN        seen_words, 7
             OVFN        parse, 3
+            OVFN        pick, 7
+            OVFN        choose, 7
             OVFN        fixt_words, 4
             OVFN        trap_words, 4
-            OVFN        trap_name, 4
+            OVFN        trap_name, 2
             OVFN        den_way, 4
             OVFN        portal_look, 4
-            OVFN        ceiling_glance, 4
+            OVFN        ceiling_glance, 7
             OVFN        theme_load, 5
             OVFN        theme_named, 5
             OVFN        story, 5

@@ -19,6 +19,8 @@ enum { H_N, H_NE, H_E, H_SE, H_S, H_SW, H_W, H_NW };
 #define H_OF(d)         ((d) << 1)
 #define REL8(h, face)   (((h) - (face)) & 7)    /* A heading as the character sees it: 0 ahead, 1 ahead to its
                                                 **   right, 2 its right, 3 behind it to its right, 4 behind it ... */
+#define REL_BEHIND(r)   ((unsigned char) (((r) & 7) - 3) <= 2)  /* A REL8 behind it: out of its sight (the senses
+                                                **   mark a square behind it seen only beside it: known, not seen) */
 extern const signed char head_x[8], head_y[8];
 extern const char* const head_name[8];          /* "north", "northeast" ... */
 extern const char* const head_abbr[8];          /* "N", "NE" ... */
@@ -40,14 +42,19 @@ struct sight {
     unsigned char   kind;                       /* A room's kind (the theme's) */
     unsigned char   size;                       /* S_*: as much as it's seen of it */
     unsigned char   rw, rh;                     /* Its floor, in squares (the figures a close look gives) */
+    unsigned char   eye;                        /* The character's sight (the referee's summary's, 0-9: what it
+                                                **   makes out at a distance) */
     unsigned char   lit;                        /* The room lit by its own light */
-    unsigned char   first;                      /* The first time there */
+    unsigned char   first;                      /* The first time there (the UI's copy | SIGHT_HURRY: looked about
+                                                **   as a run or a sprint ended, worded briefly) */
     unsigned char   up_rel, up_ft;              /* The floor here: the way it rises, and feet in ten (0: level) */
     unsigned char   ceil, cmid, cwall;          /* Its zone's ceiling (ceil C_UNSEEN: not seen) */
     unsigned char   ndoors;                     /* Doors, and passages' mouths (rel | MOUTH) */
     struct { unsigned char rel; signed char dz; unsigned char state; unsigned x, y; unsigned char kind, parts; }
         door[SEE_DOORS];                        /* (state: PS_OPEN ...; x, y its square; a portal's kind and
-                                                **   parts, world.h's PK_* and PP_*: a portcullis, a window, a slit) */
+                                                **   parts, world.h's PK_* and PP_*: a portcullis, a window, a slit;
+                                                **   but a door's or a portcullis's parts its features, PF_*, as
+                                                **   they're seen from afar: SD_DOUBLE) */
     unsigned char   nzones;                     /* The room's other zones seen */
     struct { unsigned char rel, how; signed char dz; } zone[SEE_ZONES];    /* how: Z_* */
     unsigned char   nopen;                      /* Stairways, ladders, shafts, windows seen */
@@ -56,7 +63,8 @@ struct sight {
     struct { unsigned char rel; signed char dz; unsigned char steps; } way[4];
     unsigned char   nitems;                     /* The things it sees lying about (the things', named) */
     struct { char name[14]; unsigned char qty, plural, rel, hid; unsigned n, x, y; } item[SEE_ITEMS];
-                                                /* (hid: 1 it hid it, 2 on the surface before it, 4 lit) */
+                                                /* (hid: 1 it hid it, 2 on the surface before it, 4 lit; its high
+                                                **   four bits its size, how easily it's seen: 0 tiny ... 9 huge) */
     unsigned char   stratum, sname, style;      /* The stratum: its number, its name (the theme's), its style */
     int             z;                          /* The floor where it stands: feet above the way in */
     unsigned        x, y;                       /* Its square */
@@ -65,17 +73,19 @@ struct sight {
     struct { unsigned x, y; unsigned char doing; char name[12]; } den[SEE_DENS];
     unsigned char   ntraps;                     /* The traps it knows of and sees (world.h's TK_*, TT_*, TS_*) */
     struct { unsigned char rel, kind, trigger, state; } trap[SEE_TRAPS];
-    unsigned char   hurry;                      /* Looked about as a run or a sprint ended: worded briefly (the
-                                                **   world's) */
 };
 enum { DO_ROAM, DO_WATCH, DO_COMING, DO_SHY, DO_FOLLOW, DO_WAIT, DO_FIGHT, DO_FLEE, DO_DOWN };  /* A denizen's
                                                 **   doing: going about its own business, watching the character,
                                                 **   coming towards it, keeping its distance; an ally's: following it,
                                                 **   waiting where it was asked; fighting it, fleeing it, lying
                                                 **   senseless */
+#define SIGHT_HURRY     0x80
 #define MOUTH           0x08
 #define DOORWAY         0x83                    /* (A seen door's state: no door in it, a doorway, open; else its
                                                 **   portal's PS_OPEN and PS_WRECKED) */
+#define SD_DOUBLE       0x20                    /* (A seen door's parts: two leaves, world.h's PF_DOUBLE) */
+#define NEAR_SQ         2                       /* Squares: near enough to look a thing over closely (further, only
+                                                **   its look from afar) */
 enum { W_ROOM, W_PASSAGE };
 enum { S_PART, S_SMALL, S_MID, S_LARGE, S_LONG };
 enum { Z_STEPS, Z_SLOPE, Z_LEDGE };

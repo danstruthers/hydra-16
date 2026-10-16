@@ -4,6 +4,9 @@
 ** a warrior's craft, a book of magic by none of theirs); the things task gives what the thing truly is (its make,
 ** its material, its durability, its worth); the judgement's as near to that as the test's grade allows: a critical
 ** success right, a marginal one near, a marginal failure well off, a critical failure wild (and said as surely).
+** A thing further off than NEAR_SQ isn't judged: only what's seen of it from there (the things task's distance and
+** its size, the request's to; the character's sight, the referee's, sight_copy's eye), its kind, or if it's too far
+** to make that out, its size.
 */
 
 #pragma code-name ("OV1CODE")
@@ -67,6 +70,21 @@ void __fastcall__ o_appraise (const struct ireq* q, signed char g)
     unsigned val, dur = q->dur;
     char b[8];
 
+    if ((unsigned char) q->to > NEAR_SQ) {      /* (Seen from afar: no closer look) */
+        lb[0] = 0;
+        life = q->to >> 8;
+        if ((unsigned char) q->to > 1 + sight_copy.eye / 2 + life) {
+            add (life <= 2 ? "Something small" : life >= 5 ? "Something large" : "Something");
+        } else {
+            add (q->qty > 1 ? utoa (q->qty, b, 10) : q->plural ? "Some" : strchr ("aeiou", q->name[0]) ? "An" : "A");
+            add (" ");
+            add (q->name);
+        }
+        add (", some ");
+        add (utoa (5 * (unsigned char) q->to, b, 10));
+        add (" feet off. You'd have to go closer to make out more.");
+        return;
+    }
     val = (q->value * (2 + q->quality) + 3) / 6;      /* (Its worth: its kind's, by its make and how worn it is) */
     life = q->dur_max ? (unsigned char) (dur / (q->dur_max / 10 + 1)) : 10;
     val = (val + 1) / 2 + val * life / 20;

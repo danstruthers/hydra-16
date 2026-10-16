@@ -173,7 +173,7 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
         st |= ST_CLEAR | wa * ST_WATCH;
     }
     if (any ("step\0sidestep\0shuffle\0") == 1 || (nw > 1 && !strcmp (w[0], "back") && !strcmp (w[1], "up"))) {
-        n = n ? n : 0xFF;                       /* (A small move: by the pace, if no count) */
+        n = n ? n : 0xFF;                       /* (A small move: by the pace, if no count, below) */
     }
     if (!st && !n) {
         return 0;                               /* (None of its words: the command's) */
@@ -194,7 +194,11 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
     if (n && d <= H_NW && !c.obj) {             /* (A small move: its facing kept backing up, or a step aside) */
         keep = any ("left\0right\0l\0r\0back\0backward\0backwards\0behind\0b\0aside\0sideways\0sidestep\0") &&
             !any ("forward\0forwards\0fwd\0ahead\0front\0f\0");
-        intend2 (I_STEP, d | (keep ? STEP_KEEP : 0), n == 0xFF ? 0 : n);
+        if (n == 0xFF) {                        /* (By the pace: a square at a walk or slower, two at a jog, three
+                                                **   at a run, four at a sprint; as a search or a map holds it, one) */
+            n = HUB->gait <= GA_WALK || (HUB->watch & (WA_TRAPS | WA_MAP)) ? 1 : HUB->gait - GA_WALK + 1;
+        }
+        intend2 (I_STEP, d | (keep ? STEP_KEEP : 0), n);
         return 1;
     }
     return !k;
