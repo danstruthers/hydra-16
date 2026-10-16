@@ -312,6 +312,19 @@ static unsigned thing (void)
     return fid = thw[0] && othings (IO_DESCRIBE, thw, "", 0) == IR_OK ? HUB->ireq.item : 0;
 }
 
+/* A denizen near named by thw's words (its name's, or its kind's: "the rat" a giant rat, not the rations) */
+static unsigned char denizen (void)
+{
+    static struct actor* a;
+
+    for (a = HUB->actor; a < HUB->actor + NACTORS; ++a) {
+        if (a->name[0] && word_of (a->name, thw)) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 /* A name given ("name my sword Linda", "alias the sword as Linda", "call this room the Mausoleum", "name the rat
 ** Grub"), the line in nb's words */
 static unsigned char __fastcall__ give (char* l)
@@ -366,7 +379,7 @@ static unsigned char __fastcall__ give (char* l)
         }
         return NL_DONE;
     }
-    if (thw[0] && stricmp (thw, "it") && stricmp (thw, "him") && stricmp (thw, "her") && thing ()) {
+    if (thw[0] && !denizen () && stricmp (thw, "it") && stricmp (thw, "him") && stricmp (thw, "her") && thing ()) {
         strncpy (nm, HUB->ireq.name, sizeof e.kind - 1);   /* ---- A thing (carried, or seen): its kind's name */
         nm[sizeof e.kind - 1] = 0;
         if (!taken (dn, self = find (NM_ITEM, 0)) && (self || (self = free_one ()) != 0)) {
