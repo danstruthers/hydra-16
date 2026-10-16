@@ -137,4 +137,5 @@ ovl_out:
 ; The overlays' functions (dq0harn.h has them with their overlays)
             OVFN        sheet, 1
             OVFN        brief, 1
+            OVFN        state, 1
             OVFN        harm, 1

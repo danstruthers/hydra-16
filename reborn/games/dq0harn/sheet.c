@@ -319,3 +319,91 @@ void o_brief (void)
     pair ("UP ", harn_get_up (&pc), "PP ", harn_get_pp (&pc));
     pair ("IP ", harn_get_ip (&pc), "BL ", pc.bl);
 }
+
+/* ---- The character's state (the status command's: RS_DESCRIBE b 3, st's): its pace, what it's held to and its feet
+** a round (the book's rates of its Move, Combat 6; the game's two slower), its watchfulness; then (all of it) its
+** condition (its health, its injuries in brief, its fatigue and its load, the penalties they make) and its light */
+
+static const char* const pace_name[NGAITS] = { "a creep", "a slow walk", "a walk", "a jog", "a run", "a sprint" };
+static const unsigned char feet[NGAITS][2] = { { 5, 6 }, { 5, 4 }, { 5, 2 }, { 5, 1 }, { 10, 1 }, { 15, 1 } };
+
+static void __fastcall__ penalty (unsigned char n, const char* a, const char* b, const char* c, const char* what)
+{
+    if (n) {
+        put ("; ");
+        put (n <= 2 ? a : n <= 4 ? b : c);
+        put (" (");
+        put (what);
+        putn (n);
+        put (")");
+    }
+}
+
+void o_state (void)
+{
+    unsigned char g = st.gait, h = g, k, worst = 0, bleed = 0;
+    const harn_injury* j;
+
+    if (h > GA_SLOW && ((st.watch & WA_TRAPS) || st.dark)) {
+        h = GA_SLOW;
+    } else if (h > GA_WALK && (st.watch & WA_LISTEN)) {
+        h = GA_WALK;
+    }
+    put ("Pace: ");
+    put (pace_name[g]);
+    if (h != g) {
+        put (", held to ");
+        put (pace_name[h]);
+        put (st.watch & WA_TRAPS ? " while you search as you go" : st.dark && h == GA_SLOW ? " in the dark" :
+            " while you listen");
+    }
+    put (" (");
+    putn (harn_move (&pc) * feet[h][0] / feet[h][1]);
+    put (" feet a round).\nWatching: ");
+    put (!st.watch ? "nothing in particular." : st.watch == WA_LISTEN ? "listening as you go." : st.watch & WA_LISTEN ?
+        "for traps and hidden doors as you go, and listening." : "for traps and hidden doors as you go.");
+    if (!st.full) {
+        return;
+    }
+    put ("\nCondition: ");
+    put (pc.state == HARN_DEAD ? "dead" : pc.state == HARN_UNCONSCIOUS ? "senseless" : pc.state == HARN_SHOCK ?
+        "in shock" : !pc.ninj ? "unhurt" : "hurt");
+    for (k = 0; k < pc.ninj; ++k) {
+        j = &pc.inj[k];
+        if (j->sev >= pc.inj[worst].sev) {
+            worst = k;
+        }
+        bleed |= j->flags & HARN_IF_BLEEDER;
+    }
+    if (pc.ninj) {                              /* ("hurt: 2 injuries, the worst a serious gash to your left thigh
+                                                **   (S3), bleeding") */
+        put (": ");
+        putn (pc.ninj);
+        put (pc.ninj == 1 ? " injury, a " : " injuries, the worst a ");
+        j = &pc.inj[worst];
+        put (harn_severity_name (j->sev));
+        put (" ");
+        put (wound_word[j->aspect & 3][j->sev > HARN_GRIEVOUS ? 2 : j->sev - 1]);
+        put (" to your ");
+        put_loc (j->loc);
+        put (j->sev == HARN_MINOR ? " (M" : j->sev == HARN_SERIOUS ? " (S" : " (G");
+        putn (j->il);
+        put (bleed ? "), bleeding" : ")");
+    }
+    penalty (pc.fl, "a little tired", "tired", "exhausted", "fatigue ");
+    penalty (harn_get_ep (&pc), "a little burdened", "heavily burdened", "overloaded", "encumbrance ");
+    put ("; penalties: universal ");
+    putn (harn_get_up (&pc));
+    put (", physical ");
+    putn (harn_get_pp (&pc));
+    put (".\nLight: ");
+    if (st.light) {
+        put ("your ");
+        put (st.lamp);
+        put (" (");
+        putn (5 * st.light);
+        put (" feet).");
+    } else {
+        put (st.dark ? "none: it's dark here, and you feel your way." : "none of your own: this place's own light.");
+    }
+}

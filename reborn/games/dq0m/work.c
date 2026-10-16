@@ -315,10 +315,12 @@ static void __fastcall__ spring (unsigned char on)
     }
 }
 
-/* A trap stepped onto (W_STEP: tq's square; from W's fx, fy): noticed in time (a magical one never), or set off */
+/* A trap stepped onto (W_STEP: tq's square; from W's fx, fy): noticed in time (a magical one never), or set off; the
+** referee's chance by its hiding (a hazard underfoot, P_NOTICE_SIGHT's b 1: a passing glance's, or a search's as the
+** character searches as it goes) */
 static void step (void)
 {
-    if (!(tq.state & TS_MAGIC) && G_OK (test (P_NOTICE_SIGHT, 0, -2 * (signed char) tq.hide - 2))) {
+    if (!(tq.state & TS_MAGIC) && G_OK (test (P_NOTICE_SIGHT, 1, -(signed char) tq.hide))) {
         trap_state (tq.state & ~TS_HIDDEN);
         trap_told (TO_NOTICED);
         return;

@@ -21,7 +21,10 @@
 #define G_CS            2
 #define G_OK(g)         ((signed char) (g) > 0)
 
-/* ---- Purposes: what a test is for (the ruleset picks its skill, attribute or save) */
+/* ---- Purposes: what a test is for (the ruleset picks its skill, attribute or save).  A notice (P_NOTICE_*) is the
+** worse for the actor's state as the ruleset has it, and for its pace while it moves (the hub's pc_going: the
+** referee's steps); P_NOTICE_SIGHT's b 1 a hidden hazard underfoot (a trap stepped onto), its steps the hiding's own:
+** the referee's chance, a passing glance's or (searching as it goes) a search's */
 enum {
     P_NOTICE_SIGHT, P_NOTICE_SOUND, P_NOTICE_SMELL, P_SEARCH,
     P_STEALTH, P_CLIMB, P_JUMP, P_SWIM, P_BALANCE, P_FORCE, P_LIFT,
@@ -59,13 +62,18 @@ enum { AP_WEAPON, AP_ARMOUR, AP_METAL, AP_WOOD, AP_HIDE, AP_CLOTH, AP_POTTERY, A
 ** cut */
 enum { MAT_EARTH, MAT_STONE, MAT_MASONRY, MAT_FLAGS };
 
+/* ---- Paces: how fast an actor goes, the slowest first (a creep, a slow walk, a walk, a jog, a run, a sprint); the
+** summary's gstep each one's time a square; RS_TIME's a the one the time went at (GA_REST: standing still) */
+enum { GA_CREEP, GA_SLOW, GA_WALK, GA_JOG, GA_RUN, GA_SPRINT, NGAITS };
+#define GA_REST         0xFF
+
 /* ---- Conditions (bits): what the world must know of an actor's state */
 #define C_PRONE         0x0001
 #define C_UNCONSCIOUS   0x0002
 #define C_DEAD          0x0004
 #define C_STUNNED       0x0008                  /* (HarnMaster's shock) */
 #define C_BLEEDING      0x0010
-#define C_FATIGUED      0x0020
+#define C_FATIGUED      0x0020                  /* (Tired, or tiring: rest owed it, RS_TIME's) */
 #define C_ARM_USELESS   0x0040
 #define C_LEG_USELESS   0x0080
 #define C_BLINDED       0x0100
@@ -129,7 +137,8 @@ enum { GR_FLOOR, GR_DEEP_WATER, GR_SHALLOW_WATER, GR_SOFT, GR_HARD, GR_ROCKY }; 
 struct rs_summary {
     unsigned        cond;                       /* C_* */
     unsigned char   health;                     /* H_* */
-    unsigned char   step;                       /* Tenths of a second to go 5 feet */
+    unsigned char   step;                       /* Tenths of a second to go 5 feet (walking) */
+    unsigned char   gstep[NGAITS];              /*   and at each pace (GA_*) */
     unsigned char   attacks;                    /* Attacks a round */
     unsigned char   sight, hearing, smell;      /* 0 (none) ... 9 (keen) */
     unsigned char   darkvision;                 /* Ultravision: feet it sees with no light at all (0: none) */
@@ -151,7 +160,9 @@ enum {
     RS_CONTEST,                                 /* Two actors, two purposes -> who won */
     RS_ATTACK,                                  /* Attacker, defender, weapon, mode, range, steps -> the outcome */
     RS_HARM,                                    /* A cause (fall, fire, poison ...) and its dice -> effects */
-    RS_TIME,                                    /* Minutes passed: bleeding, fatigue -> effects */
+    RS_TIME,                                    /* Time passed (w1 tenths) moving at a pace (a: GA_*), or standing
+                                                **   still (GA_REST): fatigue gained, or rested off (its summary
+                                                **   anew); (later: bleeding -> effects) */
     RS_REST,                                    /* Hours resting: healing, advancement -> effects, words */
     RS_TREAT,                                   /* A healer, a patient -> effects */
     RS_EQUIP,                                   /* An item taken up (a 1) or put away (a 0): its key in the text
@@ -163,7 +174,8 @@ enum {
     RS_INITIATIVE,                              /* Actors -> each one's delay as a fight starts */
     RS_MORALE,
     RS_EXPERIENCE,                              /* Something that counts to advancement */
-    RS_DESCRIBE,                                /* An actor's sheet, wounds, or a line -> words */
+    RS_DESCRIBE,                                /* An actor's sheet, wounds, or a line -> words (b 3: its state, the
+                                                **   pace and watchfulness changed first as a says: hub.h's ST_*) */
     RS_POWER,                                   /* (Later: spells and psionics, a generic power) */
     RS_EXPORT,                                  /* The character as a neutral one (struct rs_neutral) */
     RS_IMPORT,                                  /* A neutral character made one of this ruleset's */

@@ -79,6 +79,8 @@ enum {
                                                 **   door or a portcullis, a window or a slit, either); w2: PA_BAR's
                                                 **   bar to hand, its width (the things': 0, none) */
     I_GOTO,                                     /* w1, w2: a square in its room it sees, walked up to */
+    I_STEP,                                     /* w1: a heading (H_N ... H_NW), | STEP_KEEP its facing kept; w2:
+                                                **   squares (0: by the pace) */
     I_QUIT,
     NINTENTS
 };
@@ -116,14 +118,16 @@ enum {
 enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST };    /* E_DEN's what: a step, a noise of its own (a squeak, a
                                                 **   growl), the character sensed, lost (its senses' own) */
 #define I_JUMP          0x80
+#define STEP_KEEP       0x100                   /* (I_STEP's: backing up, a step aside) */
 #define E_OUT           0x4000                  /* (E_HARM's: knocked senseless a while) */
 #define E_CAUGHT        0x8000                  /*   (and a fall stopped, a hold grabbed) */
 #define E_STOPPED       0x8000                  /*   (an HC_HANDS's: the blows stopped, the hands too hurt) */
 #define O_FELL          8                       /* (E_ARRIVE's link kind, or'd: fallen down it, jumped) */
 
 enum { A_WALKED, A_DOWN, A_UP, A_START, A_DIGGING, A_CROSSED, A_CLIMBING, A_CLIMBED, A_WENT_TO, A_RESUMED,
-       A_STOPPED };                             /* E_ARRIVE's how (A_DIGGING, A_CLIMBING: the world's own, a spell
-                                                **   of work, a round's climbing; A_STOPPED: on its way, at a trap) */
+       A_STOPPED, A_STEPPED };                  /* E_ARRIVE's how (A_DIGGING, A_CLIMBING: the world's own, a spell
+                                                **   of work, a round's climbing; A_STOPPED: on its way, at a trap;
+                                                **   A_STEPPED: a small move, I_STEP's) */
 enum { N_NO_EXIT, N_SHUT, N_NO_STAIRS, N_NO_DIG, N_CLOSED, N_DEN, N_DOOR };    /* E_NOWAY's why: no way that way, the way out
                                                 **   shut, no stairs, nothing to dig there, the portcullis that way
                                                 **   down, a denizen in the way (the actor times 256) */
@@ -330,7 +334,21 @@ struct hub {                                    /* Bank 0, at $8000 */
     /* The theme's puzzle (theme.h: the theme in THEME_BANK): the way out opened (the UI's, as the mission's done) */
     volatile unsigned char way_open;
     struct sway     sway;                       /* The character's way with a denizen (the UI's request) */
+    /* The character's pace and watchfulness (DUNGEON.md: moving; the referee's to set, RS_DESCRIBE b 3, as the UI
+    ** asks, and to keep with the sheet), and the pace it's going at now (the world's: as a move starts, till it's
+    ** there and has looked about) */
+    unsigned char   gait;                       /* rs.h's GA_* */
+    unsigned char   watch;                      /* WA_* */
+    volatile unsigned char pc_going;            /* The pace it's going at plus 1 (0: not moving), | GOING_DARK: by
+                                                **   feel */
 };
+#define WA_TRAPS        0x01                    /* Searching as it goes: traps underfoot, hidden doors beside */
+#define WA_LISTEN       0x02                    /* Listening as it goes */
+#define GOING_DARK      0x80
+/* (RS_DESCRIBE b 3's a: the pace, its GA_* plus 1 (0: as it is); the watchfulness set, WA_* times ST_WATCH; ST_CLEAR,
+** all of it cleared first) */
+#define ST_WATCH        8
+#define ST_CLEAR        0x80
 
 #define HUB     ((struct hub*) HUB_WINDOW)
 typedef char hub_fits[sizeof (struct hub) <= 0x2000 ? 1 : -1];   /* (The header in bank 0) */

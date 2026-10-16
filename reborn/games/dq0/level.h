@@ -65,6 +65,8 @@ struct sight {
     struct { unsigned x, y; unsigned char doing; char name[12]; } den[SEE_DENS];
     unsigned char   ntraps;                     /* The traps it knows of and sees (world.h's TK_*, TT_*, TS_*) */
     struct { unsigned char rel, kind, trigger, state; } trap[SEE_TRAPS];
+    unsigned char   hurry;                      /* Looked about as a run or a sprint ended: worded briefly (the
+                                                **   world's) */
 };
 enum { DO_ROAM, DO_WATCH, DO_COMING, DO_SHY, DO_FOLLOW, DO_WAIT };  /* A denizen's doing: going about its own
                                                 **   business, watching the character, coming towards it, keeping its

@@ -206,7 +206,7 @@ static int __fastcall__ kinds_load (const char* dir)
 
 static unsigned long now;
 static unsigned pcx, pcy;
-static unsigned char pcs, pclit, pcbusy;
+static unsigned char pcs, pclit, pcbusy, pcgo;
 
 static unsigned __fastcall__ apart (int dx, int dy)
 {
@@ -557,7 +557,11 @@ static unsigned char __fastcall__ taken (unsigned char me, unsigned x, unsigned 
 }
 
 /* Its senses: whether actor a (the copy) senses the character, dist squares off (dx, dy): seen, by its light (or
-** with none, its darkvision), along a line clear of rock, walls and shut doors; or heard, moving, nearer */
+** with none, its darkvision), along a line clear of rock, walls and shut doors; or heard, moving, nearer (by its pace:
+** creeping half as far as walking, jogging a little further, running or sprinting twice as far: the hub's pc_going) */
+static const unsigned char loud[NGAITS + 1] = { 4, 2, 3, 4, 5, 8, 8 };   /* (Quarters of its hearing: not moving, then
+                                                **   a creep ... a sprint) */
+
 static unsigned char __fastcall__ senses (unsigned dist, int dx, int dy)
 {
     unsigned char* p;
@@ -567,7 +571,7 @@ static unsigned char __fastcall__ senses (unsigned dist, int dx, int dy)
     if (a.sn != pcs) {
         return 0;
     }
-    if (dist <= K.hear && pcbusy) {
+    if (dist <= K.hear * loud[pcgo] / 4 && pcbusy) {
         return 1;
     }
     if (dist > (pclit ? K.sight : K.dark)) {
@@ -1523,6 +1527,8 @@ int main (int argc, char* argv[])
         pcy = HUB->pc_y;
         pcs = HUB->pc_stratum;
         pcbusy = HUB->pc_ready > now;
+        pcgo = HUB->pc_going & ~GOING_DARK;
+        pcgo = pcgo > NGAITS ? 0 : pcgo;
         if (!(pclit = HUB->pc_light != 0) && hd.done[pcs] && (p = at (pcs, pcx, pcy)) != 0) {
             pclit = (*p & T_VIS) != 0;          /* (Lit where it stands: a room's light, a lamp put down) */
         }

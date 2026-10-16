@@ -8,8 +8,10 @@
 ** attribute, the circumstances' steps 5 points each; words to a creature in a tongue, which it must speak: its own,
 ** common, and its file's "language" lines), RS_HARM (a fall, a trap's strike, a burn, a blow, a hand hurt
 ** by its blow at a thing: injuries on the sheet), RS_DESCRIBE (the character's sheet, its injuries with it; b 1: its
-** short lines, for the map's panel, each 15 characters at most; b 2: the last harm's words), RS_SAVE (the sheet,
-** its injuries and all).  The sheet's words and the harm are overlay 1's (sheet.c: DIR/dq0harn.ovl, read into a
+** short lines, for the map's panel, each 15 characters at most; b 2: the last harm's words; b 3: its state, the
+** status command's, its pace and watchfulness set first), RS_TIME (fatigue, by the pace moved at, and rest), RS_SAVE
+** (the sheet, its injuries and all).  Its summary gives each pace's step, and the notice tests go by the
+** character's pace and state.  The sheet's words and the harm are overlay 1's (sheet.c: DIR/dq0harn.ovl, read into a
 ** bank of its own as it starts).
 **
 ** The game's own choices in using the book (not the book's rules): a purpose names the skill (or attribute times 5)
@@ -227,12 +229,54 @@ static unsigned char __fastcall__ sense (unsigned char a)
     return v <= 3 ? 0 : v >= 18 ? 9 : (v - 3) * 3 / 5;
 }
 
+/* ---- Fatigue (DUNGEON.md: moving; the book's movement fatigue, Combat 6: a level a day walking, one each five
+** minutes jogging, each two running, each minute sprinting; ten minutes' rest a level gone, Skills 6).  The game's
+** own: slower than a walk tires as a walk does; the time at each pace added up across moves (exertion toward the next
+** level, a day's walking's worth a level), and rest wears that off before it takes a level off */
+
+#define TIRED   864000UL                        /* A level's exertion: a day's walk, in tenths */
+static unsigned long tired;                     /* Exertion toward the next level */
+static unsigned long rested;                    /* Rest toward the next level gone, tenths */
+static const unsigned exert[NGAITS] = { 1, 1, 1, 288, 720, 1440 };     /* (A tenth's, at each pace) */
+
+/* Time spent (RS_TIME: w1 tenths, a the pace, or GA_REST) */
+static void __fastcall__ spent (const struct req* r)
+{
+    unsigned long e;
+
+    if (r->a == GA_REST) {
+        e = (unsigned long) r->w1 * (TIRED / 6000);     /* (Ten minutes' rest a level's worth) */
+        if (e <= tired) {
+            tired -= e;
+            return;
+        }
+        rested += r->w1 - tired / (TIRED / 6000);
+        tired = 0;
+        while (rested >= 6000 && pc.fl) {
+            rested -= 6000;
+            --pc.fl;
+        }
+        if (!pc.fl) {
+            rested = 0;
+        }
+        return;
+    }
+    rested = 0;
+    tired += (unsigned long) r->w1 * exert[r->a < NGAITS ? r->a : GA_WALK];
+    while (tired >= TIRED) {
+        tired -= TIRED;
+        if (pc.fl < 99) {
+            ++pc.fl;
+        }
+    }
+}
+
 /* Its conditions (rs.h's C_*), as its sheet has them: its state (senseless, in shock, dead), bleeders, limbs made
-** useless */
+** useless; tired, or tiring */
 unsigned conditions (void)
 {
     static const unsigned state[4] = { 0, C_UNCONSCIOUS, C_STUNNED, C_DEAD };
-    unsigned c = state[pc.state & 3];
+    unsigned c = state[pc.state & 3] | (pc.fl || tired ? C_FATIGUED : 0);
     unsigned char k;
     harn_injury* j;
 
@@ -263,7 +307,7 @@ static void status (void)
     static const char* const word[4] = { "", " OUT", " SHOCK", " DEAD" };
     char b[8];
     struct rs_summary* s = &HUB->pcsum;
-    unsigned char ep = harn_get_pp (&pc) - harn_get_up (&pc), k;
+    unsigned char ep = harn_get_pp (&pc) - harn_get_up (&pc), k, w;
 
     strcpy (HUB->pcstatus, "UP ");
     strcat (HUB->pcstatus, utoa (harn_get_up (&pc), b, 10));
@@ -271,10 +315,20 @@ static void status (void)
     strcat (HUB->pcstatus, pc.state ? word[pc.state & 3] : s->cond & C_BLEEDING ? " BLEEDING" : "");
     s->health = health ();
     k = harn_move (&pc);                       /* (Walking: half its Move, squares a round: Combat 6) */
-    s->step = k < 4 ? 50 : 200 / k;
+    s->step = w = k < 4 ? 50 : 200 / k;
+    s->gstep[GA_CREEP] = 3 * w;                 /* (The game's: a sixth of its Move, a quarter; the book's: a jog its
+                                                **   Move, a run twice, a sprint three times) */
+    s->gstep[GA_SLOW] = 2 * w;
+    s->gstep[GA_WALK] = w;
+    s->gstep[GA_JOG] = 100 / k < w ? 100 / k : w;
+    s->gstep[GA_RUN] = k < 50 ? 50 / k : 1;
+    s->gstep[GA_SPRINT] = k < 33 ? 33 / k : 1;
     s->attacks = 1;
     s->sight = sense (HARN_EYE);
-    s->hearing = sense (HARN_HRG);
+    s->hearing = sense (HARN_HRG) + (HUB->watch & WA_LISTEN ? 2 : 0);  /* (Listening as it goes: two better) */
+    if (s->hearing > 9) {
+        s->hearing = 9;
+    }
     s->smell = sense (HARN_SML);
     s->darkvision = 0;                          /* (The species' sight in the dark: the book's, to come) */
     s->nightvision = 1;
@@ -283,11 +337,22 @@ static void status (void)
     s->power = 10;
 }
 
-/* ---- hmchar's file: its own lines, the name and the occupation */
+/* ---- hmchar's file: its own lines, the name and the occupation (and the game's: its pace and watchfulness, "pace 2
+** 1", its exertion toward the next fatigue level, "tired 1200") */
+
+static unsigned char gait = GA_WALK, watch;
 
 static void __fastcall__ own_line (char* l)
 {
-    if (!strncmp (l, "name ", 5)) {
+    char* e;
+
+    if (!strncmp (l, "pace ", 5)) {
+        gait = (unsigned char) strtoul (l + 5, &e, 10);
+        watch = (unsigned char) strtoul (e, 0, 10);
+        gait = gait < NGAITS ? gait : GA_WALK;
+    } else if (!strncmp (l, "tired ", 6)) {
+        tired = strtoul (l + 6, 0, 10);
+    } else if (!strncmp (l, "name ", 5)) {
         strncpy (name, l + 5, sizeof name - 1);
     } else if (!strncmp (l, "occupation ", 11)) {
         strncpy (calling, l + 11, sizeof calling - 1);
@@ -308,6 +373,9 @@ static void __fastcall__ load_pc (struct req* r)
     }
     r->result = harn_read (fd, &pc, own_line) < 0;
     close (fd);
+    hub_map (0);
+    HUB->gait = gait;
+    HUB->watch = watch;
     put (name);
     put ("\n");
     put (calling);
@@ -318,6 +386,8 @@ static void __fastcall__ load_pc (struct req* r)
 static void __fastcall__ save_pc (struct req* r)
 {
     static char line[48];
+    char b[12];
+    unsigned char g = HUB->gait, w = HUB->watch;
     char* p;
     char* e;
     int fd;
@@ -332,6 +402,14 @@ static void __fastcall__ save_pc (struct req* r)
     harn_write_line (fd, line);
     strcpy (line, "occupation ");
     strcat (line, calling);
+    harn_write_line (fd, line);
+    strcpy (line, "pace ");                     /* (The game's: its pace and watchfulness, its exertion) */
+    strcat (line, utoa (g, b, 10));
+    strcat (line, " ");
+    strcat (line, utoa (w, b, 10));
+    harn_write_line (fd, line);
+    strcpy (line, "tired ");
+    strcat (line, ultoa (tired, b, 10));
     harn_write_line (fd, line);
     for (p = tongues + 7; *p; p = e) {             /* (Its tongues but its own: "language" lines) */
         e = strchr (p + 1, ' ');
@@ -357,6 +435,58 @@ static unsigned char __fastcall__ speaks (const char* t)
         ++p;
     }
     return 0;
+}
+
+/* ---- What the character notices, by its state (DUNGEON.md: moving; the game's steps): its pace as it moves (a creep
+** or a slow walk a step better, but not by feel in the dark; a jog two worse, a run four, a sprint six); in shock four
+** worse (the book's universal penalty, its injuries' and its fatigue's, is in every test already); listening, a sound
+** two better.  A hazard underfoot (P_NOTICE_SIGHT's b 1, its steps the hiding's) by a search's chance while it
+** searches as it goes, else a passing glance's: twice its hiding's steps, and two more */
+
+static const signed char by_pace[NGAITS] = { 1, 1, 0, -2, -4, -6 };
+
+static signed char __fastcall__ noticing (const struct req* r)
+{
+    unsigned char g = HUB->pc_going & ~GOING_DARK;
+    signed char s = 0, p;
+
+    if (r->a == P_NOTICE_SIGHT && r->b == 1 && !(HUB->watch & WA_TRAPS)) {
+        s = r->steps - 2;
+    }
+    if (g && g <= NGAITS) {
+        p = by_pace[g - 1];
+        s += p > 0 && (HUB->pc_going & GOING_DARK) ? 0 : p;
+    }
+    if (pc.state == HARN_SHOCK) {
+        s -= 4;
+    }
+    if (r->a == P_NOTICE_SOUND && (HUB->watch & WA_LISTEN)) {
+        s += 2;
+    }
+    return s;
+}
+
+/* The character's state in words (RS_DESCRIBE b 3: overlay 1's), its pace and watchfulness changed first as a says
+** (hub.h's ST_*): what the words need copied for the overlay (the hub's not in the window while it is) */
+struct stance st;
+
+static void __fastcall__ stance (unsigned char a)
+{
+    if (a & ST_CLEAR) {
+        HUB->watch = 0;
+    }
+    HUB->watch |= a / ST_WATCH & (WA_TRAPS | WA_LISTEN);
+    if (a & 7) {
+        HUB->gait = (a & 7) - 1;
+    }
+    status ();                                  /* (Listening: its hearing) */
+    st.gait = HUB->gait;
+    st.watch = HUB->watch;
+    st.light = HUB->pc_light;
+    st.dark = HUB->sight.dark;
+    st.full = !a;
+    memcpy (st.lamp, HUB->pc_lamp, sizeof st.lamp);
+    state ();
 }
 
 /* ---- A request answered */
@@ -415,7 +545,14 @@ static void __fastcall__ answer (struct req* r)
                 break;
             }
         }
+        if (r->a <= P_NOTICE_SMELL) {
+            r->steps += noticing (r);           /* (By its state: its pace, its shock) */
+        }
         r->grade = test (&pc, r->a, r->steps);
+        break;
+    case RS_TIME:                               /* (Its fatigue: its summary anew) */
+        spent (r);
+        status ();
         break;
     case RS_EQUIP:
         if (r->a == 2) {
@@ -442,6 +579,8 @@ static void __fastcall__ answer (struct req* r)
             brief ();
         } else if (r->b == 2) {
             put (hurt);
+        } else if (r->b == 3) {
+            stance (r->a);
         } else {
             sheet ();
         }

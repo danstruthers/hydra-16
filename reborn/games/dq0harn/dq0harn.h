@@ -15,6 +15,13 @@ void __fastcall__ put (const char* s);          /* (From the overlay too: s may 
 void __fastcall__ putn (int v);
 unsigned conditions (void);                     /* The character's (rs.h's C_*) */
 unsigned char __fastcall__ has (const char* key);   /* A tool to hand, by its key ("pick") */
+struct stance {                                 /* (The character's state's words need, the hub's: copied) */
+    unsigned char   gait, watch;                /* Its pace, its watchfulness (rs.h's GA_*, hub.h's WA_*) */
+    unsigned char   light, dark;                /* Its light's reach (squares), its square unlit (by feel) */
+    unsigned char   full;                       /* 1 all of it; 0 the pace and watchfulness only (changed) */
+    char            lamp[14];                   /* What gives its light */
+};
+extern struct stance st;
 
 /* sheet.c (overlay 1) */
 #define OVLS    1
@@ -22,6 +29,7 @@ extern char hurt[200];                          /* The last harm's words */
 extern char blow[8];                            /* (A blow's: what it's struck with, its key) */
 void sheet (void);                              /* The sheet, into the reply */
 void brief (void);                              /*   its short lines */
+void state (void);                              /*   its state: pace, watchfulness, condition, light (st's) */
 void __fastcall__ harm (struct req* r);         /* A harm (r a copy, in the main RAM, but its text) */
 
 /* bank.s */
