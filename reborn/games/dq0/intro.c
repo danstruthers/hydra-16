@@ -1,5 +1,5 @@
 /*
-** intro.c - (overlay 1) Dingus Quest Zero's title, and its pace asked; the commands' list (help); digging's, climbing's
+** intro.c - (overlay 1) Dingus Quest Zero's title, and its pace asked; digging's, climbing's
 ** and harm's words.  The character is made by hmchar (main.c
 ** runs it), and its file read by the referee.
 */
@@ -115,19 +115,6 @@ void __fastcall__ o_portal_words (unsigned char out)
     };
 
     msg (said[out]);
-}
-
-/* The commands, listed */
-void o_help (void)
-{
-    msg ("Commands: north, northeast, east ... northwest (n, ne, e, se, s, sw, w, nw, or go north ...); forward, "
-         "back, left, right (f, b: as you face); up and down (u, d: the stairs); turn left, right, half left, half "
-         "right or around; face north ...; light and douse (a torch, a candle, a lantern); dig north ... or down (a "
-         "wall, the rock, a shaft); jump down (a ledge, a shaft); open, close, unlock, force (the door ahead), raise, "
-         "lower (a portcullis), break (a door, a window's glass), lift (a bar), climb through (a window), disarm (a trap), search; get, "
-         "drop, hold (wield), stow, put the dagger in the sack (or on the table), take the rope from the pack, hang "
-         "the pouch (on your belt), wear, take off, inventory (i), examine (a thing, a door, the room: look closely), hide; look (l), map (m), sheet (the "
-         "character), wait (z), pause (or Escape), quit (q).");
 }
 
 /* ---- Digging's words: how a spell of work went, and the feet to go */

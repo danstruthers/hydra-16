@@ -10,7 +10,7 @@
 ** in, on, from (out of, off) name another, the thing it goes in or on, or comes from (put the dagger in the sack,
 ** hang the pouch on the belt, take the rope out of the pack).  A relative direction is made the compass's by the way
 ** the character faces (pc_face, the UI's copy of the hub's, for an overlay doesn't see the hub).  What's done with
-** the command is main.c's.
+** the command is main.c's.  The commands listed (help) are here too, with the serial port's rates for playing over it.
 */
 
 #pragma code-name ("OV3CODE")
@@ -253,4 +253,19 @@ void __fastcall__ o_parse (char* l, struct pcmd* c)
     if ((c->verb == V_TURN || c->verb == V_FACE) && c->around && dir == 0xFF) {
         c->dir = (pc_face + 4) & 7;
     }
+}
+
+/* The commands, listed */
+void o_help (void)
+{
+    msg ("Commands: north, northeast, east ... northwest (n, ne, e, se, s, sw, w, nw, or go north ...); forward, "
+         "back, left, right (f, b: as you face); up and down (u, d: the stairs); turn left, right, half left, half "
+         "right or around; face north ...; light and douse (a torch, a candle, a lantern); dig north ... or down (a "
+         "wall, the rock, a shaft); jump down (a ledge, a shaft); open, close, unlock, force (the door ahead), raise, "
+         "lower (a portcullis), break (a door, a window's glass), lift (a bar), climb through (a window), disarm (a trap), search; get, "
+         "drop, hold (wield), stow, put the dagger in the sack (or on the table), take the rope from the pack, hang "
+         "the pouch (on your belt), wear, take off, inventory (i), examine (a thing, a door, the room: look closely), hide; look (l), map (m), sheet (the "
+         "character), wait (z), pause (or Escape), quit (q).");
+    msg ("Played over the serial port, the game answers quickest at 19200 or 115200 baud (echo b115200 "
+         ">/dev/serctl, then the terminal set to match); on the Vera X's screen and keyboard it needs neither.");
 }

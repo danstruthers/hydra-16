@@ -2576,6 +2576,48 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0vera', what: 'Dingus Quest Zero on the Vera X (the user\'s, 2026-10-15: "If the Vera is available, this should be running there, and keyboard would come from the SMC"): typed at the SMC\'s keyboard, on the console shown on the screen and the serial port both (its window the smaller terminal\'s, 80 x 24): the status line at the window\'s top, reversed all the way across (the console\'s fix: a scrolling region set left vid\'s cursor on the bar), the line typed at its bottom, the map; Backspace, Escape (paused, shown on the status line, and on again), the cursor key up (the last line again); the help\'s words on the serial port\'s rates; then on the screen alone (consctl\'s terminal screen: the window the screen\'s, 80 x 57 below and above its chrome), the game drawn to its size',
+      init: 't_rc', cycles: 1000e6,
+      // (Snapshots of the screen as the keyboard's typing comes to SNAP: smc.type's, wrapped; P a wait, W a prompt)
+      start(m) {
+        const type = m.smc.type, snaps = this.snaps = [];
+        m.smc.type = ch => ch === 'Ѐ' ? snaps.push({ text: m.vera.text(), cells: m.vera.cells() }) : type(ch);
+      },
+      get machine() {
+        const W = 'ā', P = 'Ā', SNAP = 'Ѐ', UP = String.fromCharCode(0x200 + 83);
+        return { vera: true, smc: true, input: W + 'bind -a /sd/0/games /bin\r' + W + 'hmchar -q -s 5 -o /ram/c.hm\r' + 'Ă' +
+          W + 'dq0 -p t -s 3 -c /ram/c.hm\r' + W + 'look\r' + W + 'mapx\b\r' + W + SNAP + '\x1b' + P + SNAP + '\x1b' + P + 'lo' + UP + '\r' +
+          W + 'help\r' + W + SNAP + 'quit\r' + W + 'echo terminal screen >/dev/consctl\r' + P.repeat(8) + 'dq0 -p t -s 3 -c /ram/c.hm\r' +
+          P.repeat(150) + SNAP + 'quit\r' + P + 'echo terminal both >/dev/consctl\r' + P.repeat(8) + 'ă' + 'echo do^ne\r' };
+      },
+      expect: ['\ndone\n'],
+      check(m, out) {
+        const f = [], s = this.snaps || [];
+        if (s.length < 4 || s.some(p => !p.cells)) return ['the screen snapshots: ' + s.length + ' (4 wanted, each with a text layer)'];
+        const row = (p, r) => p.text[r] || '', rev = (p, r) => Array.from(p.cells.attrs.subarray(r * 80, r * 80 + 80)).every(a => a === 0x70);
+        const [map, paused, help, alone] = s;
+        // (The window's rows 2-25 below the bar and the header: the status line its first, the line typed its last)
+        if (!/^ Tordan +UP 0 +facing /.test(row(map, 2))) f.push('the status line (row 2): ' + JSON.stringify(row(map, 2)));
+        if (!rev(map, 2)) f.push('the status line isn\'t reversed all the way across');
+        if (row(map, 25) !== '>') f.push('the line typed (row 25): ' + JSON.stringify(row(map, 25)));
+        if (!map.text.some(l => l.startsWith('The map (you face'))) f.push('no map on the screen');
+        // (What's entered is told in the story, on the serial port as on the screen: "> map", then the cursor moved)
+        if (!out.includes('\n> map\x1b[') || out.includes('\n> mapx')) f.push('Backspace: the line entered isn\'t "> map"');
+        if (!/PAUSED/.test(row(paused, 2))) f.push('Escape: the status line doesn\'t say PAUSED: ' + JSON.stringify(row(paused, 2)));
+        if (/PAUSED/.test(row(help, 2))) f.push('Escape again: still PAUSED');
+        if (out.indexOf('The map (you face', out.indexOf('> lo')) < 0) f.push('the cursor key up: the last line ("map") not entered again');
+        const h = help.text.join(' ').replace(/ +/g, ' ');
+        if (!h.includes('19200 or 115200 baud')) f.push('the help doesn\'t give the serial port\'s rates');
+        // (The screen alone: the window rows 2-58, its footer row 59)
+        if (!/^ Tordan +UP 0 +facing /.test(row(alone, 2)) || !rev(alone, 2)) f.push('the screen alone: the status line: ' + JSON.stringify(row(alone, 2)));
+        if (row(alone, 58) !== '>') f.push('the screen alone: the line typed (row 58): ' + JSON.stringify(row(alone, 58)));
+        if (!alone.text.slice(30, 58).some(l => l.startsWith('You are in a small hall'))) f.push('the screen alone: the room not told near its foot');
+        if (!alone.text.slice(27, 58).some(l => l.includes('D I N G U S'))) f.push('the screen alone: the title not below row 26 (the window 57 rows)');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0traps', what: 'Dingus Quest Zero\'s traps (DUNGEON.md: traps; the world\'s walk stops on one, the maker sets it off, the referee judges it): a door\'s blade, set off as the door\'s forced open (seed 16, dq0 -T), dodged; then a plate in a cave\'s floor walked onto, its blade striking (HC_STRIKE: a wound) and the trap seen after, sprung; then (seed 7, a thief, hmchar -s 1) a hidden dart trap on a door found by searching, the door left shut while it\'s known, the trap disarmed (Lockcraft), and the door opened',
       init: 't_rc', cycles: 2000e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 16 -c /ram/c.hm -T\r' +

@@ -111,7 +111,7 @@ void __fastcall__ parse (char* l, struct pcmd* c);   /* Overlay 3 */
 /* ---- The overlays (bank.s: their stubs) */
 
 void title (void);                              /* Overlay 1: the title, the pace asked */
-void help (void);                               /* Overlay 1: the commands, listed */
+void help (void);                               /* Overlay 3: the commands, listed */
 void __fastcall__ dig_words (unsigned char how, unsigned char feet);   /* Overlay 1: digging's, how it goes */
 void __fastcall__ appraise (const struct ireq* q, signed char g);       /* Overlay 1: a thing judged */
 extern char dig_with[16];                       /* The tool a dig's taken up, to name (then ""): main.c's */
