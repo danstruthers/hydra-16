@@ -158,6 +158,12 @@ neighbours ring 1, and so on to 4 and beyond), a few chunks in four taking the n
 | works    | works          | works      | garrison, works     | stores            |
 | halls    | domestic       | stores     | domestic, lord's    | cells             |
 
+Not a formula (the user, 2026-10-16, on the stand-in themes' purposes: "I don't really want it to be too formulaic.
+A temple could sit over the ruin of an older keep, say.  I just want the things on the same strata to make sense."):
+a stratum's purpose is its **first layer of history**, what it was first built for; what came after (ruined,
+reused, built over: a temple over an older keep's ruin) is the strata's histories' work, to come (slice 4.9), each
+stratum making sense in itself.
+
 (A fortified stratum's ring 0 is a gate whatever its purpose.)  A role is a **suite**: its main room (the chunk's
 largest; a gate's, the room the way in comes out in) and the uses along the chain of rooms each side of it, as the
 grower joins them (each room to the next from the west): a domestic suite's hall, then its kitchen, its pantry, its
