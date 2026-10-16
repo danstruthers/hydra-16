@@ -3,7 +3,8 @@
 ** regions (8 by 8 chunks each) in the hub's plans' banks, each region's kind, the lie of the rock at its corner,
 ** and the ways across its edges; and its links down to the stratum below.  Purpose-built strata so far: the regions halls, a few solid rock; the ways a tree
 ** that reaches every hall (a random walk's: the first step into each region is a way), and a few more for loops;
-** the rock's lie a walk too, each region near its neighbours' (a built stratum's level).  The regions none of the halls reach become rock.
+** the rock's lie a walk too, each region near its neighbours' (a built stratum's level).  The regions none of the
+** halls reach become rock.
 ** (The populations, the water and the features come with their steps.)
 **
 ** And a chunk's edges, from the plan (chunk_edges: make.c's): the ways across them, the ground at its corners.

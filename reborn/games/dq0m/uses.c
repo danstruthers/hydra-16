@@ -168,7 +168,8 @@ static const unsigned char ceils[NUSES][3] = {
     { 0xFF, 0, 0 }, { C_BARREL, 4, 6 }, { C_FLAT, 0, 0 }, { C_BARREL, 1, 0 },   /* chamber, hall, cell, vault */
     { C_BARREL, 1, 0 }, { C_BARREL, 2, 0 }, { 0xFF, 0, 0 }, { C_FLAT, 0, 0 },   /* crypt, gallery, cave, storeroom */
     { C_BARREL, 4, 12 }, { C_FLAT, 0, 0 }, { C_FLAT, 0, 0 }, { C_FLAT, 0, 0 },  /* kitchen, pantry, barracks, armoury */
-    { C_CATHEDRAL, 8, 6 }, { C_FLAT, 0, 0 }, { C_BARREL, 3, 10 }, { C_BARREL, 1, 0 },   /* chapel, quarters, solar, well */
+    { C_CATHEDRAL, 8, 6 }, { C_FLAT, 0, 0 }, { C_BARREL, 3, 10 }, { C_BARREL, 1, 0 },   /* chapel, bedchamber,
+                                                **   solar, well room */
     { C_BARREL, 2, 10 }, { C_BARREL, 6, 0 }, { C_FLAT, 0, 0 }, { C_FLAT, 1, 0 },    /* cistern, gatehouse, guardroom,
                                                 **   workshop */
 };
