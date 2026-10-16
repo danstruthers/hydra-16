@@ -1,0 +1,210 @@
+/*
+** pace.c - (swapped part 4) the character's pace, its watchfulness, its state and its small moves, from the line typed
+** (DUNGEON.md: moving; the user's, 2026-10-16), before the parser's command: a pace ("walk", "walk slowly", "creep",
+** "sneak", "jog", "run", "sprint"; "set pace to jog"; "run north" sets it and goes, the move the command's), a
+** watchfulness ("search for traps as I go", "watch for traps", "move carefully", "listen as I go", "map as I go";
+** "stop searching", "stop listening", "stop mapping", "stop running"), "status", and a small move ("move left one
+** space", "step forward", "go north 20 feet", "back up two squares", "sidestep right": a square is 5 feet, a yard 3).
+** The pace and the watchfulness are set in the hub (the hub's gait and watch), the referee's to word (RS_DESCRIBE b
+** 3), the small move the world's (I_STEP).  Its own words matched here; the direction the parser's (a relative one
+** made the compass's).
+*/
+
+#include <stdlib.h>
+#include <string.h>
+#include "dq0.h"
+#include "hub.h"
+#include "rs.h"
+#include "level.h"
+
+#pragma local-strings (on)
+#pragma code-name (push, "SW4CODE")
+#pragma rodata-name (push, "SW4RODATA")
+
+#define NW      12
+static char b[INMAX + 1], b2[INMAX + 1];
+static char* w[NW];
+static unsigned char nw;
+static struct pcmd c;
+
+/* The line's words (lower case), in b */
+static void split (void)
+{
+    char* l = b;
+
+    nw = 0;
+    while (*l && nw < NW) {
+        while (*l == ' ' || *l == ',' || *l == '.' || *l == '!') {
+            *l++ = 0;
+        }
+        if (!*l) {
+            break;
+        }
+        w[nw++] = l;
+        while (*l && *l != ' ' && *l != ',' && *l != '.' && *l != '!') {
+            if (*l >= 'A' && *l <= 'Z') {
+                *l += 'a' - 'A';
+            }
+            ++l;
+        }
+    }
+}
+
+/* Which of the words (0-ended, then an empty one) is among the line's: its place in the line plus 1, or 0 */
+static unsigned char __fastcall__ any (const char* list)
+{
+    unsigned char i;
+    const char* p;
+
+    for (p = list; *p; p += strlen (p) + 1) {
+        for (i = 0; i < nw; ++i) {
+            if (!strcmp (w[i], p)) {
+                return i + 1;
+            }
+        }
+    }
+    return 0;
+}
+
+/* The paces' words (the last said goes: "walk slowly") */
+static const struct { char w[11]; unsigned char g; } paces[] = {
+    { "creep", GA_CREEP }, { "creeping", GA_CREEP }, { "sneak", GA_CREEP }, { "sneaking", GA_CREEP },
+    { "tiptoe", GA_CREEP }, { "crawl", GA_CREEP }, { "quietly", GA_CREEP }, { "stealthily", GA_CREEP },
+    { "slowly", GA_SLOW }, { "slow", GA_SLOW }, { "walk", GA_WALK }, { "walking", GA_WALK }, { "normal", GA_WALK },
+    { "normally", GA_WALK }, { "jog", GA_JOG }, { "jogging", GA_JOG }, { "trot", GA_JOG }, { "briskly", GA_JOG },
+    { "run", GA_RUN }, { "running", GA_RUN }, { "hurry", GA_RUN }, { "sprint", GA_SPRINT }, { "sprinting", GA_SPRINT },
+    { "dash", GA_SPRINT },
+};
+
+/* A count's words: one ... ten (a, an: one), or figures; 0 none */
+static const char counts[] = "a\0one\0two\0three\0four\0five\0six\0seven\0eight\0nine\0ten\0";
+
+static unsigned char __fastcall__ count_of (const char* s)
+{
+    const char* p;
+    unsigned char k;
+
+    if (*s >= '0' && *s <= '9') {
+        k = atoi (s);
+        return k ? k : 1;
+    }
+    for (p = counts, k = 1; *p; p += strlen (p) + 1, ++k) {
+        if (!strcmp (s, p)) {
+            return k == 1 ? 1 : k - 1;
+        }
+    }
+    return 0;
+}
+
+/* The referee's words of the character's state, its pace and watchfulness changed first as a says (0: all of it) */
+static void __fastcall__ described (unsigned char a)
+{
+    struct req* r = ask_b (RS_DESCRIBE, a, 3);
+
+    if (a) {
+        msg (r->text);
+    } else {
+        blank ();
+        say (r->text);
+        blank ();
+    }
+    r->state = REQ_FREE;
+}
+
+/* The line typed, if it's the pace's, the watchfulness's, the state's or a small move's: carried out, 1; else 0 (the
+** command's; but its pace, said with a move, set first: "run north") */
+unsigned char __fastcall__ s_pace_cmd (const char* l)
+{
+    unsigned char i, k, g = 0xFF, wa, st, n = 0, keep, d;
+
+    strncpy (b, l, INMAX);
+    split ();
+    if (!nw) {
+        return 0;
+    }
+    if (nw == 1 && !strcmp (w[0], "status")) {
+        described (0);
+        return 1;
+    }
+    for (i = 0; i < nw; ++i) {
+        for (k = 0; k < sizeof paces / sizeof paces[0]; ++k) {
+            if (!strcmp (w[i], paces[k].w)) {
+                g = paces[k].g;
+            }
+        }
+        if ((d = count_of (w[i])) == 0) {
+            continue;
+        }
+        if (i + 1 == nw) {                      /* (Figures at the end, after a way: squares; alone, a choice's) */
+            n = i && *w[i] >= '0' && *w[i] <= '9' ? d : n;
+        } else if (any ("space\0spaces\0square\0squares\0step\0steps\0pace\0paces\0") == i + 2) {
+            n = d;                              /* (A count and its unit: squares) */
+        } else if (any ("foot\0feet\0ft\0") == i + 2) {
+            n = (d + 2) / 5 ? (d + 2) / 5 : 1;
+        } else if (any ("yard\0yards\0") == i + 2) {
+            n = (3 * d + 2) / 5;
+        }
+    }
+    wa = HUB->watch;
+    if (any ("stop\0")) {                       /* (Stopped: what it names; a pace's, back to a walk) */
+        k = wa;
+        wa &= any ("searching\0search\0watching\0looking\0") ? ~WA_TRAPS : 0xFF;
+        wa &= any ("listening\0listen\0") ? ~WA_LISTEN : 0xFF;
+        wa &= any ("mapping\0map\0") ? ~WA_MAP : 0xFF;
+        if (wa == k && g == 0xFF) {
+            return 0;
+        }
+        g = g == 0xFF ? 0xFF : GA_WALK;
+    } else {
+        k = any ("go\0move\0moving\0walk\0walking\0going\0travel\0as\0while\0proceed\0");
+        if ((any ("trap\0traps\0") && any ("for\0") && (k || !any ("search\0examine\0disarm\0"))) ||
+            any ("carefully\0careful\0warily\0")) {
+            wa |= WA_TRAPS;
+        }
+        if (any ("listen\0listening\0")) {
+            wa |= WA_LISTEN;
+        }
+        if (any ("mapping\0") || (any ("map\0") && k)) {
+            wa |= WA_MAP;                       /* (The map's side, its materials, the orientation's) */
+        }
+    }
+    st = g != 0xFF || wa != HUB->watch;          /* (A pace said, or the watchfulness changed) */
+    if (any ("step\0sidestep\0shuffle\0") == 1 || (nw > 1 && !strcmp (w[0], "back") && !strcmp (w[1], "up"))) {
+        n = n ? n : 0xFF;                       /* (A small move: by the pace, if no count, below) */
+    }
+    if (!st && !n) {
+        return 0;                               /* (None of its words: the command's) */
+    }
+    strcpy (b2, l);                             /* (The direction the parser's) */
+    pc_face = HUB->pc_face;
+    parse (b2, &c);
+    k = (c.verb == V_MOVE || c.verb == V_ENTER || c.verb == V_APPROACH) && (c.dir != 0xFF || c.obj);
+    st = st && (!k || n || g != HUB->gait || wa != HUB->watch);    /* (Said, unless it goes on as it was) */
+    if (g != 0xFF) {
+        HUB->gait = g;
+    }
+    HUB->watch = wa;
+    if (st) {
+        described (1);
+    }
+    d = c.dir;
+    if (nw > 1 && !strcmp (w[0], "back") && !strcmp (w[1], "up")) {
+        d = (HUB->pc_face + 4) & 7;             /* ("Back up": behind it, still facing the way it does) */
+    } else if (d == 0xFF && n) {
+        d = HUB->pc_face;                       /* ("Step": ahead) */
+    }
+    if (n && d <= H_NW && !c.obj) {             /* (A small move: its facing kept backing up, or a step aside) */
+        keep = any ("left\0right\0l\0r\0back\0backward\0backwards\0behind\0b\0aside\0sideways\0sidestep\0") &&
+            !any ("forward\0forwards\0fwd\0ahead\0front\0f\0");
+        if (n == 0xFF) {                        /* (By the pace: a square at a walk or slower, two at a jog, three
+                                                **   at a run, four at a sprint; as a search or a map holds it, one) */
+            n = HUB->gait <= GA_WALK || (HUB->watch & (WA_TRAPS | WA_MAP)) ? 1 : HUB->gait - GA_WALK + 1;
+        }
+        intend2 (I_STEP, d | (keep ? STEP_KEEP : 0), n);
+        return 1;
+    }
+    return !k;
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)

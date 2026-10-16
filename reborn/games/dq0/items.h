@@ -66,6 +66,8 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
                                                 **   key the referee's piece) */
     KI_HELM, KI_SANDALS, KI_SHOES, KI_HOBNAIL, /* (A helm; footwear: its soles the referee's, against a kick) */
     KI_MACE, KI_SPEAR, KI_SHIELD,               /* Weapons (the referee's by their keys) */
+    KI_POT, KI_STRAW, KI_STUBS, KI_WELL,        /* What a room's use left (dq0m/uses.c): a kitchen's pot, a barracks'
+                                                **   straw, a chapel's candle stubs; a well, fixed */
     KI_COUNT };
 
 /* An item */

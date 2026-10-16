@@ -6,7 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const THEME_SIZE = 0x1000, HEAD = 782, NTKINDS = 8, NPIECES = 8, NRULES = 8, TSTRATA = 8;    // theme.h's
+const THEME_SIZE = 0x1000, HEAD = 982, NTKINDS = 8, NPIECES = 8, NRULES = 8, TSTRATA = 8;    // theme.h's
 const KIND = 36;                                                    // items.h's struct kind
 const STYLES = { b: 0, n: 1, m: 2, x: 3 };                          // level.h's ST_*
 const WAYS = { c: [0, 0x01], h: [0, 0x10], t: [0, 0x90], w: [0, 0x08], g: [0, 0x20], p: [0, 0x40],
@@ -17,16 +17,21 @@ const CRAFTS = ['weapon', 'armour', 'metal', 'wood', 'hide', 'cloth', 'pottery',
   'stone', 'glass'];                                                // rs.h's AP_*
 const TR = ['read', 'combine', 'put', 'out'], TE = { '-': 0, open: 1, rule: 2 };   // theme.h's TR_*, TE_*
 const ENDS = { escaped: 1, ruled: 2, died: 3 };                    // theme.h's END_*
+const PURPOSES = ['halls', 'keep', 'temple', 'cellars', 'crypt', 'works'];   // theme.h's P_*
+const USES = ['kitchen', 'pantry', 'barracks', 'armoury', 'chapel', 'bedchamber', 'solar', 'well room', 'cistern',
+  'gatehouse', 'guardroom', 'workshop'];                            // (The uses' words, the theme's if it has them)
 
-// A theme's file read: its lines, each its key and its values (a line begun with a space goes on with the last)
+// A theme's file read: its lines, each its key and its values (a line begun with a space goes on with the last: its
+// last value, or with a bar first, more values)
 function lines(f) {
   const out = [];
   fs.readFileSync(f, 'latin1').split(/\r?\n/).forEach((l, i) => {
     if (!l.trim() || l.startsWith('#')) return;
     if (/^\s/.test(l)) {
       if (!out.length) throw new Error(`${f}: line ${i + 1}: goes on with nothing`);
-      const v = out[out.length - 1].v;
-      v[v.length - 1] += ' ' + l.trim();
+      const v = out[out.length - 1].v, t = l.trim();
+      if (t.startsWith('|')) v.push(...t.slice(1).split('|').map(s => s.trim()));   // (More values)
+      else v[v.length - 1] += ' ' + t;
       return;
     }
     const v = l.split('|').map(s => s.trim());
@@ -50,7 +55,7 @@ function theme(f, keys, count) {
     if (s.length >= max) bad(l, `"${s}" is longer than ${max - 1}`);
     b.write(s, at, 'latin1');
   };
-  const kinds = [], strata = [];
+  const kinds = [], strata = [], uses = USES.slice();
   let npieces = 0, nrules = 0;
   b[0] = count;
   for (const l of lines(f)) {
@@ -63,11 +68,18 @@ function theme(f, keys, count) {
       case 'story': b.writeUInt16LE(text(l, v[0]), 768); break;
       case 'stratum':
         if (strata.length >= TSTRATA || !/^[bnmx]{1,2}$/.test(v[1] || '')) bad(l, 'a name, and one or two styles');
+        if (v[2] && !/^(halls|keep|temple|cellars|crypt|works)( fortified| open)?$/.test(v[2])) {
+          bad(l, 'a purpose: halls, keep, temple, cellars, crypt or works, maybe fortified or open');
+        }
         strata.push(v);
         break;
       case 'rooms':
         if (v.length !== 8) bad(l, 'eight words for rooms');
         v.forEach((w, k) => str(l, w, 212 + 16 * k, 16));
+        break;
+      case 'uses':
+        if (v.length !== USES.length) bad(l, `${USES.length} words for the uses`);
+        v.forEach((w, k) => { uses[k] = w; });
         break;
       case 'light': str(l, v[0], 340, 40); break;
       case 'denizens': {
@@ -149,7 +161,13 @@ function theme(f, keys, count) {
     b.write(s[0], 52 + 20 * k, 'latin1');
     b[36 + 2 * k] = STYLES[s[1][0]];
     b[37 + 2 * k] = STYLES[s[1][s[1].length - 1]];
+    const p = (s[2] || 'halls').split(' ');                         // (Its purpose: a keep fortified, unless open)
+    b[974 + k] = PURPOSES.indexOf(p[0]) | (p[1] === 'fortified' || (p[0] === 'keep' && p[1] !== 'open') ? 0x80 : 0);
   }
+  uses.forEach((w, k) => {
+    if (w.length >= 16) throw new Error(`${path.basename(f)}: "${w}" is longer than 15`);
+    b.write(w, 782 + 16 * k, 'latin1');
+  });
   b[2] = npieces;
   b[3] = nrules;
   return { data: b, used: words };

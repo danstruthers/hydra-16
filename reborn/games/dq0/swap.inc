@@ -16,8 +16,8 @@
 ; data but through a stub (build.js checks it, in the compiler's output).
 ;
 ; Before including it: zeropage.inc, BANKREG, _ovbank (the overlays' banks), ova and ovx (bytes kept), SWDEPTH; after
-; it, the parts, SWPART n, ov (part n's image in overlay ov's bank), in order from 1 (nothing else in RODATA between
-; them), and the stubs.  The main code reads the overlays in before it calls one.
+; it, the parts, SWPART n, ov (part n's image in the bank _ovbank[ov - 1]: overlay ov's, as a rule), in order from 1
+; (nothing else in RODATA between them), and the stubs.  The main code reads the overlays in before it calls one.
 
             .bss
 swapped:   .res        1                   ; The part in the area now (0: none)
@@ -116,7 +116,7 @@ sw_out:
             ldx         ovx
             rts
 
-; A part: its record (the bank its image is in, overlay ov's; where it is in the window; its size: the bytes past
+; A part: its record (the bank its image is in, _ovbank[ov - 1]; where it is in the window; its size: the bytes past
 ; its whole pages, its whole pages), from its link (NAME.cfg's SWn: where its code's linked to run, its size)
 .macro      SWPART      n, ov
             .pushseg

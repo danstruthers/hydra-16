@@ -117,6 +117,8 @@ enum {
                                                 **   one meant (its square: 0, the one it faces); x[0]: PA_BAR's bar
                                                 **   to hand, its width (the things': 0, none) */
     I_GOTO,                                     /* w1, w2: a square in its room it sees, walked up to */
+    I_STEP,                                     /* w1: a heading (H_N ... H_NW), | STEP_KEEP its facing kept; w2:
+                                                **   squares */
     I_QUIT,
     I_ATTACK,                                   /* a: the actor struck at (its entry plus 1), b: the aim (Z_*): a
                                                 **   round's (the world's: the character busy for it; the blow the
@@ -176,14 +178,16 @@ enum { SK_BEST, SK_PUNCH, SK_KICK, SK_HEAD };   /* A blow struck with (the hub's
 #define FF_STOPPED      0x40                    /*   a strike stopped by armour (rs.h's AF_STOPPED, AF_STOPPED_D), */
 #define FF_FUMBLE       0x80                    /*   a weapon fumbled */
 #define I_JUMP          0x80
+#define STEP_KEEP       0x100                   /* (I_STEP's: backing up, a step aside) */
 #define E_OUT           0x4000                  /* (E_HARM's: knocked senseless a while) */
 #define E_CAUGHT        0x8000                  /*   (and a fall stopped, a hold grabbed) */
 #define E_STOPPED       0x8000                  /*   (an HC_STRUCK's: the blows stopped, the striker too hurt) */
 #define O_FELL          8                       /* (E_ARRIVE's link kind, or'd: fallen down it, jumped) */
 
 enum { A_WALKED, A_DOWN, A_UP, A_START, A_DIGGING, A_CROSSED, A_CLIMBING, A_CLIMBED, A_WENT_TO, A_RESUMED,
-       A_STOPPED };                             /* E_ARRIVE's how (A_DIGGING, A_CLIMBING: the world's own, a spell
-                                                **   of work, a round's climbing; A_STOPPED: on its way, at a trap) */
+       A_STOPPED, A_STEPPED };                  /* E_ARRIVE's how (A_DIGGING, A_CLIMBING: the world's own, a spell
+                                                **   of work, a round's climbing; A_STOPPED: on its way, at a trap;
+                                                **   A_STEPPED: a small move, I_STEP's) */
 enum { N_NO_EXIT, N_SHUT, N_NO_STAIRS, N_NO_DIG, N_CLOSED, N_DEN, N_DOOR };    /* E_NOWAY's why: no way that way, the way out
                                                 **   shut, no stairs, nothing to dig there, the portcullis that way
                                                 **   down, a denizen in the way (the actor times 256) */
@@ -390,6 +394,13 @@ struct hub {                                    /* Bank 0, at $8000 */
     /* The theme's puzzle (theme.h: the theme in THEME_BANK): the way out opened (the UI's, as the mission's done) */
     volatile unsigned char way_open;
     struct sway     sway;                       /* The character's way with a denizen (the UI's request) */
+    /* The character's pace and watchfulness (DUNGEON.md: moving; the UI's to set, as the player says, the referee's
+    ** to word, RS_DESCRIBE b 3, and to keep with the sheet, till the world keeps the character's state), and the pace
+    ** it's going at now (the world's: as a move starts, till it's there and has looked about) */
+    unsigned char   gait;                       /* rs.h's GA_* */
+    unsigned char   watch;                      /* WA_* */
+    volatile unsigned char pc_going;            /* The pace it's going at plus 1 (0: not moving), | GOING_DARK: by
+                                                **   feel */
     /* A fight: the character's blow, posted by the world (I_ATTACK) for the denizens' task to strike (it asks the
     ** referee, and tells it: E_FIGHT), and the character's stance (rs.h's D_*: the referee's defence for it) */
     volatile unsigned char pc_foe;              /* The actor struck at, plus 1 (0: none posted) */
@@ -399,6 +410,11 @@ struct hub {                                    /* Bank 0, at $8000 */
     volatile unsigned char den_look;            /* (The denizens' task's: a thing put down, a body: the world looks about
                                                 **   again, the senses seeing it) */
 };
+#define WA_TRAPS        0x01                    /* Searching as it goes: traps underfoot, hidden doors beside */
+#define WA_LISTEN       0x02                    /* Listening as it goes */
+#define WA_MAP          0x04                    /* Mapping as it goes (the map's side the orientation's: its
+                                                **   materials to hand) */
+#define GOING_DARK      0x80
 
 #define HUB     ((struct hub*) HUB_WINDOW)
 typedef char hub_fits[sizeof (struct hub) <= 0x2000 ? 1 : -1];   /* (The header in bank 0) */

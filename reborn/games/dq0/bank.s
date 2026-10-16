@@ -14,7 +14,7 @@
             .include    "zeropage.inc"
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 9                     ; dq0.cfg's overlays
+OVMAX       = 10                    ; dq0.cfg's overlays
 DEPTH       = 16                    ; Overlay calls in calls, at most
 SWDEPTH     = 16                    ; Swapped parts' calls in calls, at most
 
@@ -189,8 +189,9 @@ ovl_out:
                                             ;   started, the game kept, the world stopped
             SWPART      2, 8                ; The commands (main.c)
             SWPART      3, 9                ; The map (look.c)
-            SWPART      4, 9                ; The names given (names.c)
-            SWPART      5, 9                ; The names said (names.c)
+            SWPART      4, 9                ; The pace, the watchfulness, the state, small moves (pace.c)
+            SWPART      5, 10               ; The names given (names.c)
+            SWPART      6, 10               ; The names said (names.c)
 
             SWFN        begin, 1
             SWFN        finish, 1
@@ -198,10 +199,11 @@ ovl_out:
             SWFN        command, 2
             SWFN        take, 2
             SWFN        map, 3
-            SWFN        names_line, 4
-            SWFN        names_den, 5
-            SWFN        names_subst, 5
-            SWFN        names_say, 5
-            SWFN        names_look, 5
-            SWFN        names_keep, 5
-            SWFN        room_named, 5
+            SWFN        pace_cmd, 4
+            SWFN        names_line, 5
+            SWFN        names_den, 6
+            SWFN        names_subst, 6
+            SWFN        names_say, 6
+            SWFN        names_look, 6
+            SWFN        names_keep, 6
+            SWFN        room_named, 6

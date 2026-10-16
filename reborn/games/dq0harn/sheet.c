@@ -268,3 +268,175 @@ void o_brief (void)
     pair ("UP ", harn_get_up (&pc), "PP ", harn_get_pp (&pc));
     pair ("IP ", harn_get_ip (&pc), "BL ", pc.bl);
 }
+
+/* ---- What the character notices, by its state (DUNGEON.md: moving; the game's steps): its pace as it moves (a creep
+** or a slow walk a step better, but not by feel in the dark; a jog two worse, a run four, a sprint six); in shock four
+** worse (the book's universal penalty, its injuries' and its fatigue's, is in every test already); listening, a sound
+** two better.  A hazard underfoot (P_NOTICE_SIGHT's b 1, its steps the hiding's) by a search's chance while it
+** searches as it goes, else a passing glance's: twice its hiding's steps, and two more (r a copy; the hub's pace and
+** watchfulness in ps) */
+
+static const signed char by_pace[NGAITS] = { 1, 1, 0, -2, -4, -6 };
+
+signed char __fastcall__ o_noticing (const struct req* r)
+{
+    unsigned char g = ps.go & ~GOING_DARK;
+    signed char s = 0, p;
+
+    if (r->a == P_NOTICE_SIGHT && r->b == 1 && !(ps.watch & WA_TRAPS)) {
+        s = r->steps - 2;
+    }
+    if (g && g <= NGAITS) {
+        p = by_pace[g - 1];
+        s += p > 0 && (ps.go & GOING_DARK) ? 0 : p;
+    }
+    if (pc.state == HARN_SHOCK) {
+        s -= 4;
+    }
+    if (r->a == P_NOTICE_SOUND && (ps.watch & WA_LISTEN)) {
+        s += 2;
+    }
+    return s;
+}
+
+/* ---- Fatigue (DUNGEON.md: moving; the book's movement fatigue, Combat 6: a level a day walking, one each five
+** minutes jogging, each two running, each minute sprinting; ten minutes' rest a level gone, Skills 6).  The game's
+** own: slower than a walk tires as a walk does; the time at each pace added up across moves (exertion toward the next
+** level, 6000 a level: a sprint's 10 a tenth, a run's 5, a jog's 2, a walk's a 144th), and rest wears that off (1 a
+** tenth) before it takes a level off */
+
+#define LEVEL   6000
+
+void __fastcall__ o_spent (unsigned t)
+{
+    static const unsigned char rate[NGAITS] = { 0, 0, 0, 2, 5, 10 };
+    static unsigned walkt;                      /* (A walk's tenths, toward its next unit) */
+    unsigned char a = spent_at, k;
+    unsigned n;
+
+    while (t) {                                 /* (A minute at a time: in 16 bits) */
+        n = t > 600 ? 600 : t;
+        t -= n;
+        if (a == GA_REST) {
+            if (n <= tired) {
+                tired -= n;
+                continue;
+            }
+            rested += n - tired;
+            tired = 0;
+            while (rested >= LEVEL && pc.fl) {
+                rested -= LEVEL;
+                --pc.fl;
+            }
+            if (!pc.fl) {
+                rested = 0;
+            }
+            continue;
+        }
+        rested = 0;
+        k = a < NGAITS ? rate[a] : 0;
+        if (!k) {
+            walkt += n;
+            n = walkt / 144;
+            walkt %= 144;
+        }
+        tired += k ? n * k : n;
+        while (tired >= LEVEL) {
+            tired -= LEVEL;
+            if (pc.fl < 99) {
+                ++pc.fl;
+            }
+        }
+    }
+}
+
+/* ---- The character's state (the status command's: RS_DESCRIBE b 3, ps's): its pace, what it's held to and its feet
+** a round (the book's rates of its Move, Combat 6; the game's two slower), its watchfulness; then (all of it) its
+** condition (its health, its injuries in brief, its fatigue and its load, the penalties they make) and its light */
+
+static const char* const pace_name[NGAITS] = { "a creep", "a slow walk", "a walk", "a jog", "a run", "a sprint" };
+static const unsigned char feet[NGAITS][2] = { { 5, 6 }, { 5, 4 }, { 5, 2 }, { 5, 1 }, { 10, 1 }, { 15, 1 } };
+
+static void __fastcall__ penalty (unsigned char n, const char* a, const char* b, const char* c, const char* what)
+{
+    if (n) {
+        put ("; ");
+        put (n <= 2 ? a : n <= 4 ? b : c);
+        put (" (");
+        put (what);
+        putn (n);
+        put (")");
+    }
+}
+
+void o_state (void)
+{
+    unsigned char g = ps.gait, h = g, k, worst = 0, bleed = 0;
+    const harn_injury* j;
+
+    if (h > GA_SLOW && ((ps.watch & (WA_TRAPS | WA_MAP)) || ps.dark)) {
+        h = GA_SLOW;
+    } else if (h > GA_WALK && (ps.watch & WA_LISTEN)) {
+        h = GA_WALK;
+    }
+    put ("Pace: ");
+    put (pace_name[g]);
+    if (h != g) {
+        put (", held to ");
+        put (pace_name[h]);
+        put (ps.watch & WA_TRAPS ? " while you search as you go" : ps.watch & WA_MAP ? " while you map as you go" :
+            ps.dark && h == GA_SLOW ? " in the dark" : " while you listen");
+    }
+    put (" (");
+    putn (harn_move (&pc) * feet[h][0] / feet[h][1]);
+    put (" feet a round).\nWatching: ");
+    put (!ps.watch ? "nothing in particular" : ps.watch & WA_TRAPS ? "for traps and hidden doors as you go" : "");
+    put ((ps.watch & WA_TRAPS) && (ps.watch & (WA_LISTEN | WA_MAP)) ? "; " : "");
+    put (ps.watch & WA_LISTEN ? (ps.watch & WA_MAP ? "listening and mapping as you go" : "listening as you go") :
+        ps.watch & WA_MAP ? "mapping as you go" : "");
+    put (".");
+    if (!ps.full) {
+        return;
+    }
+    put ("\nCondition: ");
+    put (pc.state == HARN_DEAD ? "dead" : pc.state == HARN_UNCONSCIOUS ? "senseless" : pc.state == HARN_SHOCK ?
+        "in shock" : !pc.ninj ? "unhurt" : "hurt");
+    for (k = 0; k < pc.ninj; ++k) {
+        j = &pc.inj[k];
+        if (j->sev >= pc.inj[worst].sev) {
+            worst = k;
+        }
+        bleed |= j->flags & HARN_IF_BLEEDER;
+    }
+    if (pc.ninj) {                              /* ("hurt: 2 injuries, the worst a serious gash to your left thigh
+                                                **   (S3), bleeding") */
+        put (": ");
+        putn (pc.ninj);
+        put (pc.ninj == 1 ? " injury, a " : " injuries, the worst a ");
+        j = &pc.inj[worst];
+        put (harn_severity_name (j->sev));
+        put (" ");
+        put (wound_word[j->aspect & 3][j->sev > HARN_GRIEVOUS ? 2 : j->sev - 1]);
+        put (" to your ");
+        put_loc (j->loc);
+        put (j->sev == HARN_MINOR ? " (M" : j->sev == HARN_SERIOUS ? " (S" : " (G");
+        putn (j->il);
+        put (bleed ? "), bleeding" : ")");
+    }
+    penalty (pc.fl, "a little tired", "tired", "exhausted", "fatigue ");
+    penalty (harn_get_ep (&pc), "a little burdened", "heavily burdened", "overloaded", "encumbrance ");
+    put ("; penalties: universal ");
+    putn (harn_get_up (&pc));
+    put (", physical ");
+    putn (harn_get_pp (&pc));
+    put (".\nLight: ");
+    if (ps.light) {
+        put ("your ");
+        put (ps.lamp);
+        put (" (");
+        putn (5 * ps.light);
+        put (" feet).");
+    } else {
+        put (ps.dark ? "none: it's dark here, and you feel your way." : "none of your own: this place's own light.");
+    }
+}

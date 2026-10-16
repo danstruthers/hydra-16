@@ -25,6 +25,11 @@
 
 #define CW              32                      /* A chunk's squares, each way */
 #define CW_BITS         5                       /*   (CW's: a square's chunk by a shift, cc65 dividing slowly) */
+#define INSET(o)        ((o) + (((o) & (CW - 1)) < 2 ? 2 - ((o) & (CW - 1)) : ((o) & (CW - 1)) > CW - 3 ? \
+                         (CW - 3) - ((o) & (CW - 1)) : 0))     /* A link's square (its offset from the stratum's x0, or
+                                                **   y0: a variable, it's read more than once) two squares or more
+                                                **   from its chunk's edges: room for the room it comes out in, inside
+                                                **   the chunk, with the edge's ways */
 #define RCH             8                       /* A region's chunks, each way */
 #define RW              (CW * RCH)              /* A region's squares, each way (256: 1,280 feet) */
 #define MAXSTRATA       8
@@ -68,11 +73,17 @@ struct zone {                                   /* A rectangle of a room's floor
 struct room {
     unsigned char   x, y, w, h;                 /* Its floor (its walls round it) */
     unsigned char   flags;                      /* R_* */
-    unsigned char   kind;                       /* What the theme calls it */
+    unsigned char   kind;                       /* What it was built for (U_*: DUNGEON.md's built to a plan; a
+                                                **   cave's chamber U_CAVE), what the theme calls it by */
     unsigned char   z0, nz;                     /* Its zones */
 };
 #define R_VISITED       0x01
 #define R_LIT           0x02
+#define R_MURDER        0x04                    /* (A gatehouse's: murder holes in its vault) */
+/* A room's use, its kind (the theme's words: its rooms' eight, then its uses'); a cave's chamber U_CAVE (kept in 8
+** bytes, struct room: the tasks index their rooms by a shift) */
+enum { U_CHAMBER, U_HALL, U_CELL, U_VAULT, U_CRYPT, U_GALLERY, U_CAVE, U_STORE, U_KITCHEN, U_PANTRY, U_BARRACKS,
+    U_ARMOURY, U_CHAPEL, U_QUARTERS, U_SOLAR, U_WELL, U_CISTERN, U_GATEHOUSE, U_GUARDROOM, U_WORKSHOP, NUSES };
 struct opening {                                /* An opening that isn't a door */
     unsigned char   kind;                       /* O_* (level.h) */
     unsigned char   x, y;
@@ -178,6 +189,8 @@ struct chunk {
     unsigned char   mat[NROOMS + 1][3];         /* Its rooms' materials (MP_*), and its passages' */
     unsigned char   ntraps;
     struct trap     trap[NTRAPS];
+    unsigned char   pceil;                      /* Its passages' ceiling, feet above their floor (a built one's: its
+                                                **   small rooms' too, the builders' one height) */
 };
 #define CHUNK_SIZE      0x0AA0                  /* Three to a bank */
 typedef char chunk_fits[sizeof (struct chunk) <= CHUNK_SIZE ? 1 : -1];

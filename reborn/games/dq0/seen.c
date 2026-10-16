@@ -193,6 +193,8 @@ void o_stir_words (void)
 void o_seen_words (void)
 {
     S = &sight_copy;
-    items ();
+    if (!(S->first & SIGHT_HURRY)) {                            /* (A run's or a sprint's look: not the things about) */
+        items ();
+    }
     denizens ();
 }

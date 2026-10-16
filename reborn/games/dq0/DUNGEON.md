@@ -117,6 +117,14 @@ features), filling the rest:
 - **mines:** tunnels along a vein, galleries where it widened, shafts and ladders, timbering;
 - **mixed:** built into natural, natural breaking into built.
 
+Natural places are irregular (the user, 2026-10-16: "For natural areas and tunnels, they need to be irregular in
+shape (not straight tunnels, not rectangular rooms).  The dungeon "grower" should take care of that."): dq0m/caves.c's
+tunnels wind from each way across the chunk's edges to its middle, heading a while and bending, now narrower and now
+wider, with pockets in their sides and blind forks off them; its chambers are grown by a wanderer from their middles,
+ragged, each in a box of its own clear of the others', and a chamber's room record is the bounds of its floor (the
+squares in them that are floor are its own: its stock, its traps, the walks across it go by them); a chamber's floor
+is a hollow or a hump on the ground's unevenness, smoothly.  Mines and built places stay hewn straight.
+
 **Every proportion is the style's** (the user, 2026-10-14: "All of the percentages of each type of thing should be
 part of the style (natural caves don't usually have doors, for instance, unless extended by sentient beings)."): how
 often a room is lit, in zones, sloping; its ceilings' kinds; how often a way out has a door, and the doors' states,
@@ -130,6 +138,75 @@ water's made of it (flooded hollows, flowstone), the less is left of what was bu
 Within a chunk, an **area** is a zone of a room, a passage, a stretch of cave: a plane (an elevation, a slope) and a
 ceiling (a kind, its height at the middle and at the walls).  A square's floor elevation is kept square by square
 (the planes made concrete, with the rough floors of caves), so movement and sight can take the floor as it is.
+
+### Built to a plan: a stratum's purpose, its rooms' uses
+
+The user (2026-10-16): "Also remember that purpose-built spaces are normally built to a plan, with a well for water
+somewhere if available.  straight, flat rooms and passages (on the same strata at least), and rooms that make sense
+(feast halls near kitchens near pantries and storage).  Fortified versus not are built differently, etc.  Larger
+rooms tend to have higher ceilings, and corridors and smaller rooms tend to have uniform ceiling heights, depending
+on original use, of course.  These are the kinds of things that make a dungeon feel real.  Prior usage can also
+inform the builder/populater what kinds of detritus or other items may be in the room."  And: "If an area is
+inhabited by denizens, their current use of the space would dictate what kinds of things are to be found there as
+well" (that's the denizens' lairs' stocking, over this one: the lights and tracks' work).
+
+So a stratum grown by the built grower has a **purpose**, the theme's (a stratum's line in its file: a keep, a
+temple, a manor's cellars, a mine's works, a crypt, or plain halls), and is **fortified** or not (a keep is, the
+rest not, unless the theme says so).  The purpose is a plan of **uses** for its rooms, laid out over the stratum by
+how far a chunk is from the **way in** (the stratum's first way up: the way out of the top one, the foot of the way
+down from the stratum above): each chunk has a **role** by its ring (the chunk of the way in its ring 0, its
+neighbours ring 1, and so on to 4 and beyond), a few chunks in four taking the next ring's for variety:
+
+| purpose  | ring 0         | ring 1     | rings 2-3           | ring 4 on         |
+|----------|----------------|------------|---------------------|-------------------|
+| keep     | gate           | garrison   | domestic            | lord's            |
+| temple   | shrine         | cloister   | domestic, cloister  | shrine            |
+| cellars  | stores         | stores     | domestic, stores    | cells             |
+| crypt    | shrine         | tombs      | tombs               | tombs             |
+| works    | works          | works      | garrison, works     | stores            |
+| halls    | domestic       | stores     | domestic, lord's    | cells             |
+
+Not a formula (the user, 2026-10-16, on the stand-in themes' purposes: "I don't really want it to be too formulaic.
+A temple could sit over the ruin of an older keep, say.  I just want the things on the same strata to make sense."):
+a stratum's purpose is its **first layer of history**, what it was first built for; what came after (ruined,
+reused, built over: a temple over an older keep's ruin) is the strata's histories' work, to come (slice 4.9), each
+stratum making sense in itself.
+
+(A fortified stratum's ring 0 is a gate whatever its purpose.)  A role is a **suite**: its main room (the chunk's
+largest; a gate's, the room the way in comes out in) and the uses along the chain of rooms each side of it, as the
+grower joins them (each room to the next from the west): a domestic suite's hall, then its kitchen, its pantry, its
+storerooms on one side, quarters on the other; a gate's gatehouse, guardrooms and barracks each side, an armoury
+beyond; the lord's solar by a chapel and a vault, far from the gate.  So the hall's next to the kitchen, the
+kitchen's next to the pantry, the stores beyond; the barracks by the gate; the lord's quarters as far from it as the
+stratum goes.  The rooms' uses: a chamber (its use lost), a hall, cells, a vault, a crypt, a gallery, a storeroom,
+a kitchen, a pantry, barracks, an armoury, a chapel, quarters, the lord's solar, a well room, a cistern, a gatehouse,
+a guardroom, a workshop: each named by the theme (its rooms' eight words, and the uses' twelve more: a kobold's
+"cookpit" for a kitchen).  A room's kind is its use (struct room's kind, world.h's U_*), the theme's word for it,
+for anyone who reads it (the lights', the denizens', the senses').
+
+- **Water:** a **well** where the stratum has water (the plan's water, to come with the water's step: a hook, for
+  now from the stratum's seed and the region): in a domestic suite's kitchen, or a well room of its own in the
+  stores'; a cistern where the cellars want one.  A well is a fixed thing (its stone curb) on its room's floor.
+- **Flat and straight:** a built stratum's ground is level (the plan's rock lies flat under it), so its rooms and
+  passages are flat, one floor; its zones one plane each, never sloping, all at the room's floor, but a hall's
+  **dais** (its last zone two feet up, a step along its front).  Passages run straight between their doors, a
+  dog-leg at most.  (Mines and mixed strata keep the rock's lie: they follow the vein, the caves.)
+- **Ceilings by size and use:** a great hall's high and vaulted (a barrel vault, a pointed one in a big hall), a
+  chapel's high and pointed (domed if it's square), a gatehouse's high enough for its portcullis and the murder
+  holes over it, a kitchen's high for its smoke; crypts, vaults, galleries and cisterns barrel-vaulted and low; the
+  rest (storerooms, pantries, cells, quarters, barracks, guardrooms, a well room) flat at the stratum's own height,
+  the passages' too: one height for all of them, the builders' (a chunk's passages' ceiling kept with it).  The
+  bigger the room the higher, within its use.
+- **Fortified or not:** a fortified stratum's way in is a **gatehouse** (the room the way in comes out in): its
+  doors portcullises (raised; their winches on its side) and stout iron-bound doors, murder holes in its vault (a
+  room's flag: their words the senses'), arrow slits in its walls and its guardrooms' where a passage runs beside
+  them, covering the way in; its doors thicker and more often iron-bound, fewer of them open, fewer loops among the
+  rooms (a choke point: one way on).  An open plan's the other way: many doors, many standing open, more ways round.
+- **What's left lying about**, by the room's former use and the stratum's age (the stock's): a kitchen's pots, its
+  bones and potsherds; a pantry's sacks and baskets; an armoury's rusted blades and arrows; a chapel's candle stubs;
+  a barracks' or a cell's straw and bones; a guardroom's table and chair; a vault's chest and pennies; a workshop's
+  tools; the theme's word for each where it has one.  Age rots what rots: the older the stratum, the more of the
+  wood, the cloth, the straw and the food gone to dust (bones and potsherds last).
 
 ### Openings and ways between strata
 
@@ -479,6 +556,66 @@ takes the shortest way it can walk to where it's going (around a ledge, by the s
 walk, a window's sill, a shaft or a ladder: a climb, the referee's test (HarnMaster's Climbing: feet of progress each
 test, a test a round; a fall's impact by its height, the landing's surface).
 
+**Pace, watchfulness, and the character's state** (the user, 2026-10-16: "I also want a way to set my current rate of
+travel, and to say something like "actively search for traps as I move", which would slow me down to a slow walk (as
+would carefully moving in the dark).  Faster than normal speed (based on the player's base move) would increase
+fatigue rate, as outlined in the HM rules.  Your current character state (the "status" command) should tell you your
+current rate of speed, active states of awareness (looking for traps, etc.) as well as your current condition
+(wounds, state of shock, etc.) and current status should dictate what information you can gather from the
+environment.  Running people don't see as much as those walking slowly.  Also, when moving about a room, I should be
+able to say something like "move left one space" to move one 10' square at a time, and distance traveled each
+movement should be based on speed and/or distance traveled."):
+
+- **The pace** is the player's, kept in the hub (its gait: creep, walk slowly, walk, jog, run, sprint; "set pace to
+  jog", or a pace's word alone; "run north" sets it and goes), and kept with the sheet in the save.  Each pace's
+  step is the referee's, in its summary (rs.h's gstep, tenths a square): HarnMaster's four from the effective Move
+  (Agility less the physical penalty, so wounds, fatigue and the load all slow it), a walk half of it in squares a
+  round, a jog all of it, a run twice, a sprint three times; and the game's two slower, a slow walk a quarter of Move
+  (twice the walk's time, as feeling one's way in the dark always was) and a creep a sixth (three times).  What the
+  character goes at is the pace held to what it's doing: a slow walk at most while it searches as it goes, or in the
+  dark (no light of its own or the room's: by feel); the world takes that pace's step for every square.
+- **Fatigue** is the referee's (the book's movement fatigue): walking (or slower) a fatigue level a day, jogging one
+  each five minutes, running one each two, sprinting one each minute, the time at each pace added up across moves;
+  standing still (waiting, the time between moves) is rest, a level gone each ten minutes of it.  The world tells the
+  referee the time moved at each pace, and the rest (RS_EXERT), and the referee keeps the levels on the sheet: the
+  book's fatigue penalty, part of the universal penalty every test pays and of the physical (so a tired character's
+  Move, and every pace, slows).  (Not yet: digging's and climbing's strenuous work tiring it, a level each five minutes
+  of it, the book's general rule; a character worn out past its endurance fainting.)  Built: the referee's units a
+  level's 6,000 (a sprint's ten a tenth of a second, a run's five, a jog's two, a walk's a 144th: a day's walking near
+  enough), rest one a tenth; kept with the sheet (pc.hm's "pace" line: the pace, the watchfulness, the exertion).
+- **Watchfulness** (the hub's watch, the player's too): **searching as it goes** ("search for traps as I go", "watch
+  for traps", "move carefully"; "stop searching"), a slow walk at most, and searching as a search would: a trap on
+  its way (the walk stops on the first it would set off, as always) tested by the search's chance (P_SEARCH's: the
+  referee's Awareness, a step a point of its hiding) not the smaller passing chance, and wherever it stops (a walk
+  stops at every door, fork and end, a small move at every square or few) the maker's search about it (the hidden
+  doors and traps within three squares it sees, each the referee's test), quietly and in no more time, found ones told
+  and known from then on (built so: a list of the hidden doors beside every square of the way was too big for the
+  world's room); **listening** ("listen as I go"), a walk at most, its hearing two better (the summary's: the
+  denizens heard further); **moving quietly** ("sneak", "move quietly") is the creep, the denizens hearing its steps at half their
+  hearing (a jog's a little further than a walk's, a run or a sprint twice as far: not yet, no room in the denizens'
+  task; the hub's pc_going says the pace for it).  (To come: Stealth tests against the denizens' Awareness, with the
+  fights' and the denizens' later work.)
+- **What it notices** goes by its state, the referee's: every notice test (P_NOTICE_SIGHT, SOUND, SMELL, whoever asks:
+  a trap underfoot, the senses' look as it arrives) is the worse the faster it was moving (the game's: a creep or a
+  slow walk a step better, a walk none, a jog two worse, a run four, a sprint six), and the worse for its condition:
+  the book's universal penalty (its injuries and its fatigue) in every Awareness test, and in shock or stunned four
+  steps more (the game's); listening, sound two steps better.  A trap underfoot is told by its hiding (rs.h's
+  P_NOTICE_SIGHT b 1), the referee choosing the chance: a search's while it's searching as it goes, else the passing
+  glance's (twice the hiding's steps, two more).  And the look as a run or a sprint ends is worded briefly: the place
+  and its ways out, not its ceiling, its zones or what lies about.
+- **status** says it all in a few lines (the referee's words, RS_DESCRIBE b 3): the pace chosen and what it's held to,
+  its feet a round; the watchfulness; the condition (well or hurt, its wounds in brief, bleeding, shock or senseless;
+  its fatigue levels; its load's encumbrance; the penalties they make); and its light (what gives it, or none: by
+  feel).
+- **Small moves** ("move left one space", "step forward", "go north 20 feet", "back up two squares", "sidestep
+  right"): a square at a time (5 feet: the game's square; "a space", "a square" and "a step" each one, feet and yards
+  made squares, at least one), by the character's facing (forward, back, left, right, between) or the compass; the
+  distance by the words, else by the pace (a square at a walk or slower, two at a jog, three at a run, four at a
+  sprint); the time each square's at the pace (the world's step, slopes, diagonals as across a room).  It faces the
+  way it goes, but backing up and stepping to the side keep its facing.  In a room it goes straight, stopping at the
+  floor's edge, a ledge, a denizen in its way or a trap (as a walk across does: one it knows of stopped short of);
+  in a passage, along it by the four (a corner stops it).  (I_STEP.)
+
 **Harm** (rs.h's RS_HARM, the referee's): a fall (its height, the ground it lands on, whether it's clear or past holds
 to grab), a trap's strike (its aspect, its dice, where it strikes), a burn, a striker's own hurt by its blow at a thing; each
 made the ruleset's injuries on the sheet (HarnMaster's: the book's falling, an impact on a location, its severity and
@@ -539,7 +676,7 @@ finds it by), and "attack the rat with Linda" takes Linda in hand first.  The wo
 your sword, in your hand": the things mark a named thing, `I_NAMED`), a thing seen lying ("At your feet lies Linda,
 your sword."), and a room named, as the character's in it ("You are in the Mausoleum, a crypt ...").
 
-**For the way back** ("go back to the mausoleum": the orientation's travel): the UI's `room_named (text)` (part 5,
+**For the way back** ("go back to the mausoleum": the orientation's travel): the UI's `room_named (text)` (part 6,
 dq0.h) finds a room whose name's words are in a line (the case and its "the" aside), and gives its entry's number
 (0xFF: none) and the entry in `named_room`: `sn` its stratum, `x`, `y` a square in it (its floor's northwest
 corner, the dungeon's frame), `w`, `h` its floor.  Any other task can read the table where it is (the theme bank in

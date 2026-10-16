@@ -18,7 +18,7 @@
 **   seen.c     (overlay 7) more of what the character perceives, in words: a ceiling at a glance, the things
 **              and the denizens it sees, those it hears
 **   choose.c   (overlay 7) the thing the player means, of those it perceives: of several, which, asked
-**   names.c    the names the character gives things, rooms, allies (parts 4 and 5: given, and said)
+**   names.c    the names the character gives things, rooms, allies (parts 5 and 6: given, and said)
 **
 ** Memory: the program's code and data from $0800 (its BSS must end 768 bytes or more under $7F00: dq0.cfg); the
 ** overlays' code in banks of their own, put in the window at $8000 as they're called (bank.s).  Code in an overlay
@@ -130,6 +130,14 @@ struct pcmd {
 extern unsigned char pc_face;                   /* (The hub's, copied for the overlay) */
 void __fastcall__ parse (char* l, struct pcmd* c);   /* Overlay 3 */
 
+/* ---- pace.c (part 4): the pace, the watchfulness, the state, small moves, from the line typed */
+
+unsigned char __fastcall__ pace_cmd (const char* l);   /* 1 if it was one of them, carried out (else the command's;
+                                                **   but a pace said with a move set first) */
+struct req;
+struct req* __fastcall__ ask_b (unsigned char kind, unsigned char a, unsigned char b);   /* (main.c's) The referee
+                                                **   asked, the UI's slot */
+void __fastcall__ intend2 (unsigned char kind, unsigned w1, unsigned w2);   /* (main.c's) An intent to the world */
 /* ---- choose.c (overlay 7): the thing meant, of those the character perceives; of several, which, asked */
 
 #define PICK_TELL   0x80                        /* (pick's obj |: "You see no door here", if there's none) */
@@ -236,7 +244,7 @@ void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
 void __fastcall__ bread (unsigned char bank, const void* from, void* to, unsigned n);
 void __fastcall__ bwrite (unsigned char bank, void* to, const void* from, unsigned n);
-extern unsigned char ovbank[9];
+extern unsigned char ovbank[10];
 
 /* ---- The swapped parts (bank.s's stubs: swap.inc), run in the main RAM's top (dq0.cfg's SWAP), a part at a time */
 
@@ -247,20 +255,20 @@ void save_game (void);                          /* Part 1: the game kept (if it'
 void __fastcall__ command (char* l);            /* Part 2 (main.c): a command, the parser's, carried out */
 void __fastcall__ take (const char* name);      /* Part 2: a thing taken up, by its name */
 enum { NL_NONE, NL_DONE, NL_DEN };
-unsigned char __fastcall__ names_line (char* l);    /* Part 4 (names.c): a line that names (name, call, alias ...;
+unsigned char __fastcall__ names_line (char* l);    /* Part 5 (names.c): a line that names (name, call, alias ...;
                                                 **   forget, unname), before it's a command: a name given or
                                                 **   forgotten (NL_DONE); a denizen's to name (NL_DEN: names_den
                                                 **   after the command) */
-unsigned __fastcall__ names_subst (char* l);    /* Part 5: the things' names in a line made theirs ("#12"); a fight's
+unsigned __fastcall__ names_subst (char* l);    /* Part 6: the things' names in a line made theirs ("#12"); a fight's
                                                 **   "with Linda" held first: the tenths it took, or 0 */
-void names_den (void);                          /* Part 5: a denizen's name given (the hub's sway), recorded */
-const char* __fastcall__ names_say (const char* s); /* Part 5: words with the things' marks ("#12"), as they're said
+void names_den (void);                          /* Part 6: a denizen's name given (the hub's sway), recorded */
+const char* __fastcall__ names_say (const char* s); /* Part 6: words with the things' marks ("#12"), as they're said
                                                 **   ("Linda, your sword"): in the main RAM */
-void __fastcall__ names_look (unsigned char after); /* Part 5: a look's things named marked (0, before its words); the
+void __fastcall__ names_look (unsigned char after); /* Part 6: a look's things named marked (0, before its words); the
                                                 **   room's name in them (1, after) */
-void __fastcall__ names_keep (int fd, unsigned char back);  /* Part 5: the names written to the save (back 0), read
+void __fastcall__ names_keep (int fd, unsigned char back);  /* Part 6: the names written to the save (back 0), read
                                                 **   from it (1; fd -1: none) */
-unsigned char __fastcall__ room_named (const char* text);  /* Part 5: a room whose name is in text: its entry's
+unsigned char __fastcall__ room_named (const char* text);  /* Part 6: a room whose name is in text: its entry's
                                                 **   number (0xFF: none), the entry in named_room (DUNGEON.md) */
 struct tname;
 extern struct tname named_room;

@@ -16,7 +16,8 @@
 **
 ** Its start and its end (part 1) and the commands (part 2) are swapped parts (swap.inc: run in the main RAM's top,
 ** one at a time, copied in as they're called), between #pragma code-name (push, "SWnCODE") and its pop: each called
-** from outside its part only through its stub (bank.s's SWFN: begin, finish, save_game; command, take).
+** from outside its part only through its stub (bank.s's SWFN: begin, finish, save_game; command, take).  A line
+** typed goes first to pace.c's (part 4: the pace, the watchfulness, the state, small moves).
 */
 
 #include <fcntl.h>
@@ -199,7 +200,7 @@ static char* __fastcall__ reply_line (char** at)
 #pragma rodata-name (pop)
 
 /* The referee asked (the UI's slot): its request's kind, and a (a purpose ...) and b, the slot's text already set */
-static struct req* __fastcall__ ask_b (unsigned char kind, unsigned char a, unsigned char b)
+struct req* __fastcall__ ask_b (unsigned char kind, unsigned char a, unsigned char b)
 {
     struct req* r = &HUB->slot[SLOT_UI];
 
@@ -463,7 +464,7 @@ static void start_world (unsigned long seed)
         hub_map (0);
     }
     start ("dq0d", T_DENIZENS, libdir);         /* (Its denizens, its world) */
-    start ("dq0w", T_WORLD, 0);
+    start ("dq0w", T_WORLD, libdir);
 }
 
 /* The game's end: its tasks told to stop (the world first), and waited for */
@@ -523,7 +524,6 @@ static unsigned long heard_at;
 static unsigned char heard_rel = 0xFF;
 char heard_what[20];
 
-static void __fastcall__ intend2 (unsigned char kind, unsigned w1, unsigned w2);
 
 /* A blow (an E_FIGHT: the character's, or one at it), worded (overlay 6's); the character dead of it, the game's
 ** end; knocked senseless, it waits it out */
@@ -591,8 +591,11 @@ static unsigned char events (void)          /* (How many there were) */
             if (m.who == 0) {
                 busy = 0;
                 heard ();                       /* (What came before it, told before the prompt: a blow's words;
-                                                **   knocked senseless by one, busy again) */
-                t_prompt (!busy);
+                                                **   knocked senseless by one, busy again; dead of one, the
+                                                **   game's end: no prompt, however the tasks' timing falls) */
+                if (!quit) {
+                    t_prompt (!busy);
+                }
             }
             break;
         case E_BYE:
@@ -615,7 +618,9 @@ static unsigned char events (void)          /* (How many there were) */
                 } else if ((m.w1 & 0xFF) == A_WENT_TO) {
                     tell (T_YOU_GO_OVER);
                 }
-                look (m.w1 >> 8 & 1);
+                k = m.w1 & 0xFF;               /* (As a run or a sprint ends, briefly: the pace not held) */
+                look ((m.w1 >> 8 & 1) | ((k == A_WALKED || k == A_CROSSED || k == A_WENT_TO || k == A_STEPPED) &&
+                    HUB->gait > GA_JOG && !(HUB->watch & (WA_TRAPS | WA_LISTEN | WA_MAP)) && !HUB->sight.dark ? 4 : 0));
             }
             break;
         case E_VIEW:
@@ -710,7 +715,7 @@ static unsigned char events (void)          /* (How many there were) */
 
 /* ---- The commands (the parser comes later: a word, and the rest) */
 
-static void __fastcall__ intend2 (unsigned char kind, unsigned w1, unsigned w2)
+void __fastcall__ intend2 (unsigned char kind, unsigned w1, unsigned w2)
 {
     static struct msg m;
 
@@ -1064,7 +1069,7 @@ static unsigned char __fastcall__ at_once (const char* l)
 
     strcpy (b, l);
     parse (b, &c);
-    return c.verb == V_INVENTORY || c.verb == V_SHEET || c.verb == V_MAP || c.verb == V_HELP;
+    return c.verb == V_INVENTORY || c.verb == V_SHEET || c.verb == V_MAP || c.verb == V_HELP || !strcmp (b, "status");
 }
 
 #pragma code-name (push, "SW2CODE")
@@ -1420,6 +1425,9 @@ int main (int argc, char* argv[])
         if ((l = (char*) t_next ()) != 0 && (!busy || (!held && !(held = !at_once (l))))) {
             k = naming (l = t_line ()) ? names_line (l) : NL_NONE;     /* (A name given or forgotten: the
                                                 **   names') */
+            if (k == NL_NONE && pace_cmd (l)) {
+                k = NL_DONE;                    /* (The pace's, the state's, a small move's: pace.c's) */
+            }
             if (k == NL_NONE && names_n && (t = names_subst (l)) != 0) {    /* (The things' names in it made
                                                 **   theirs, "#" and the id; a weapon named taken in hand to strike
                                                 **   with: its time, as after ()'s) */

@@ -18,6 +18,17 @@ unsigned __fastcall__ cond_of (const harn_char* c);        /* Its conditions (rs
 #define conditions()    cond_of (&pc)           /* The character's */
 unsigned char __fastcall__ health_of (const harn_char* c); /* Its health (rs.h's H_*) */
 unsigned char __fastcall__ has (const char* key);   /* A tool to hand, by its key ("pick") */
+struct pstate {                                 /* (The character's state's words need, the hub's: copied) */
+    unsigned char   gait, watch;                /* Its pace, its watchfulness (rs.h's GA_*, hub.h's WA_*) */
+    unsigned char   light, dark;                /* Its light's reach (squares), its square unlit (by feel) */
+    unsigned char   full;                       /* 1 all of it; 0 the pace and watchfulness only (changed) */
+    char            lamp[14];                   /* What gives its light */
+    unsigned char   go;                         /* (The pace it's going at: the hub's pc_going, for noticing) */
+};
+extern struct pstate ps;
+extern unsigned tired, rested;                  /* The character's exertion toward the next fatigue level, its rest
+                                                **   toward the next gone (sheet.c's units) */
+extern unsigned char spent_at;
 #define NTOOLS  20
 extern char tools[NTOOLS][8];                   /* What's to hand (RS_EQUIP's): each one's key, */
 extern unsigned char tflag[NTOOLS];             /*   T_HELD, T_WORN, */
@@ -50,10 +61,13 @@ void __fastcall__ sheet_get (unsigned char n);  /* Sheet n into bs */
 void __fastcall__ sheet_put (unsigned char n);  /*   and back */
 
 /* sheet.c (overlay 1) */
-#define OVLS    3
+#define OVLS    4                               /* (The 4th: the swapped parts' images) */
 extern char hurt[200];                          /* The last harm's words */
 void sheet (void);                              /* The sheet, into the reply */
 void brief (void);                              /*   its short lines */
+void state (void);                              /*   its state: pace, watchfulness, condition, light (ps's) */
+signed char __fastcall__ noticing (const struct req* r);  /* A notice's steps by its state (r a copy; ps's) */
+void __fastcall__ spent (unsigned t);           /* Time spent (t tenths) at spent_at's pace (or GA_REST): fatigue */
 void __fastcall__ harm (struct req* r);         /* A harm (r a copy, in the main RAM, but its text) */
 
 /* fight.c (overlay 2) */

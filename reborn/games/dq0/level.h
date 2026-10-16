@@ -45,7 +45,8 @@ struct sight {
     unsigned char   eye;                        /* The character's sight (the referee's summary's, 0-9: what it
                                                 **   makes out at a distance) */
     unsigned char   lit;                        /* The room lit by its own light */
-    unsigned char   first;                      /* The first time there */
+    unsigned char   first;                      /* The first time there (the UI's copy | SIGHT_HURRY: looked about
+                                                **   as a run or a sprint ended, worded briefly) */
     unsigned char   up_rel, up_ft;              /* The floor here: the way it rises, and feet in ten (0: level) */
     unsigned char   ceil, cmid, cwall;          /* Its zone's ceiling (ceil C_UNSEEN: not seen) */
     unsigned char   ndoors;                     /* Doors, and passages' mouths (rel | MOUTH) */
@@ -80,6 +81,7 @@ enum { DO_ROAM, DO_WATCH, DO_COMING, DO_SHY, DO_FOLLOW, DO_WAIT, DO_FIGHT, DO_FL
                                                 **   coming towards it, keeping its distance; an ally's: following it,
                                                 **   waiting where it was asked; fighting it, fleeing it, lying
                                                 **   senseless */
+#define SIGHT_HURRY     0x80
 #define MOUTH           0x08
 #define DOORWAY         0x83                    /* (A seen door's state: no door in it, a doorway, open; else its
                                                 **   portal's PS_OPEN and PS_WRECKED) */

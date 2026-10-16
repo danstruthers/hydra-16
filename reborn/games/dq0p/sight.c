@@ -179,9 +179,9 @@ void __fastcall__ perceive (unsigned char sn, unsigned x, unsigned y, unsigned c
         S.kind = rp.kind;
         S.lit = (rp.flags & R_LIT) != 0;
         whole = 1;
-        for (j = rp.y; j < rp.y + rp.h; ++j) {
-            for (i = rp.x; i < rp.x + rp.w; ++i) {
-                if (!(C->tile[j][i] & T_SEEN)) {
+        for (j = rp.y; j < (unsigned char) (rp.y + rp.h); ++j) {
+            for (i = rp.x; i < (unsigned char) (rp.x + rp.w); ++i) {
+                if ((C->tile[j][i] & (T_SEEN | 0x1F)) == T_FLOOR) {   /* (Its floor's: a cave's bounds take in rock) */
                     whole = 0;
                 }
             }

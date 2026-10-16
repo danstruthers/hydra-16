@@ -9,7 +9,8 @@
 ** ceiling's heights) only on a close look (look closely, examine the room: look's sight_close), and only for what it's
 ** seen (else its far side is lost in the dark).  What's further off is told in less detail, the further it is and the
 ** weaker the character's sight (the referee's: struct sight's eye): a thing too far to make out only by its size
-** ("something small"), a denizen too far to tell what it is only as something there.
+** ("something small"), a denizen too far to tell what it is only as something there.  As a run or a sprint ends (look's
+** SIGHT_HURRY), briefly: the place and its ways out, not its ceiling, its zones or its things.
 **
 ** The words for a room and its light are the theme's (theme.h; theme.c's theme_named, added to lb).
 */
@@ -305,8 +306,10 @@ static void room (void)
         add (relname[S->up_rel & 7]);
         add (".");
     }
-    ceiling ();
-    zones ();
+    if (!(S->first & SIGHT_HURRY)) {                            /* (A run's or a sprint's look: the place and its ways out) */
+        ceiling ();
+        zones ();
+    }
     doors (0);
     doors (MOUTH);
     portals ();

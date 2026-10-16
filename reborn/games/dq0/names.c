@@ -1,7 +1,7 @@
 /*
-** names.c - (part 4) the names the character gives (the user, 2026-10-16: "I would like to be able to reference items
-** by aliases, as long as the alias doesn't clash with something else"): a thing it carries or sees ("name my sword
-** Linda", "alias the sword as Linda", "call the dagger Sting"), the room it's in ("call this room the Mausoleum",
+** names.c - (parts 5, 6) the names the character gives (the user, 2026-10-16: "I would like to be able to reference
+** items by aliases, as long as the alias doesn't clash with something else"): a thing it carries or sees ("name my
+** sword Linda", "alias the sword as Linda", "call the dagger Sting"), the room it's in ("call this room the Mausoleum",
 ** "name this room "The Mausoleum""), an ally (the denizens' task's: "name the rat Grub", recorded here too); and a
 ** name forgotten ("forget the name Linda", "unname Linda", "unname this room").  The names are a table in the hub's
 ** theme bank (hub.h's struct tname, NAMES_AT), kept in the save.  A name's refused if it clashes: with another name
@@ -16,8 +16,8 @@
 ** ("You are in the Mausoleum, a small crypt": names_look's).  A room's name is the way to it: room_named finds one
 ** in a line's words (DUNGEON.md's names, for the orientation's travel).
 **
-** Its table's reading the main code's; its commands a swapped part's (part 4: swap.inc), its words another's (part
-** 5), called through bank.s's stubs; their data and BSS the main RAM's.
+** Its table's reading the main code's; its commands a swapped part's (part 5: swap.inc), its words another's (part
+** 6), called through bank.s's stubs; their data and BSS the main RAM's.
 */
 
 #include <ctype.h>
@@ -120,8 +120,8 @@ static unsigned char __fastcall__ at_key (const char* t, const char* k)
     return !strnicmp (t, k, n) && (!t[n] || strchr (" ,.!?\"", t[n])) ? n : 0;
 }
 
-#pragma code-name (push, "SW4CODE")            /* ---- Part 4: the commands */
-#pragma rodata-name (push, "SW4RODATA")
+#pragma code-name (push, "SW5CODE")            /* ---- Part 5: the commands */
+#pragma rodata-name (push, "SW5RODATA")
 
 /* A free entry (np, e cleared), or 0, told */
 static struct tname* free_one (void)
@@ -463,8 +463,8 @@ unsigned char __fastcall__ s_names_line (char* l)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "SW5CODE")            /* ---- Part 5: the words */
-#pragma rodata-name (push, "SW5RODATA")
+#pragma code-name (push, "SW6CODE")            /* ---- Part 6: the words */
+#pragma rodata-name (push, "SW6RODATA")
 
 /* ---- The words */
 

@@ -36,6 +36,9 @@
 ** chance than a search's: it stops short), found by a search (P_SEARCH, as hidden doors are; magic's only by magical
 ** means); one known of is gone round (the world's walks), its door left shut, and disarmed (P_DISARM; magic only by
 ** magical means; a pit not at all).  Their states kept (TRAP_STATE), a pit's square T_PIT once it's given way.
+**
+** The rarer work is in swapped parts (../dq0/swap.inc, bank.s's stubs): portcullises and windows (part 2); battering,
+** a search, disarming, a close look (part 3).
 */
 
 #include <string.h>
@@ -43,6 +46,16 @@
 #include "../dq0/hub.h"
 #include "../dq0w/world.h"
 #include "grow.h"
+
+#pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
+
+unsigned char __fastcall__ portcullis (unsigned char what);     /* (Part 2's stubs) */
+unsigned char __fastcall__ window (unsigned char what);
+unsigned char __fastcall__ batter (unsigned char mat, unsigned char body);  /* (Part 3's) */
+void disarm (void);
+unsigned char near_trap (void);
+void search (void);
+void look_at (void);
 
 static struct mreq* W;                          /* (The request, the maker's copy: its reply's written into it) */
 static unsigned char sn, pd, ks, kx, ky, res;
@@ -214,7 +227,10 @@ static const unsigned char resist[5][4] = {     /* Against blows, edges, points,
     { 4, 3, 4, 1 }, { 5, 5, 5, 3 }, { 6, 7, 7, 7 }, { 6, 8, 9, 9 }, { 0, 5, 3, 6 }
 };
 
-static unsigned char __fastcall__ batter (unsigned char mat, unsigned char body)
+#pragma code-name (push, "SW3CODE")
+#pragma rodata-name (push, "SW3RODATA")
+
+unsigned char __fastcall__ s_batter (unsigned char mat, unsigned char body)
 {
     struct req* r;
     unsigned char n, h = pq.harm >> hs & hm, was = h, i, k, gone = 0;
@@ -256,6 +272,9 @@ static unsigned char __fastcall__ batter (unsigned char mat, unsigned char body)
     }
     return gone ? 0 : h * 2 >= body ? PO_GIVING : h ? PO_HOLDING : PO_NO_MARK;
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- Traps */
 
@@ -316,10 +335,12 @@ static void __fastcall__ spring (unsigned char on)
     }
 }
 
-/* A trap stepped onto (W_STEP: tq's square; from W's fx, fy): noticed in time (a magical one never), or set off */
+/* A trap stepped onto (W_STEP: tq's square; from W's fx, fy): noticed in time (a magical one never), or set off; the
+** referee's chance by its hiding (a hazard underfoot, P_NOTICE_SIGHT's b 1: a passing glance's, or a search's as the
+** character searches as it goes) */
 static void step (void)
 {
-    if (!(tq.state & TS_MAGIC) && G_OK (test (P_NOTICE_SIGHT, 0, -2 * (signed char) tq.hide - 2))) {
+    if (!(tq.state & TS_MAGIC) && G_OK (test (P_NOTICE_SIGHT, 1, -(signed char) tq.hide))) {
         trap_state (tq.state & ~TS_HIDDEN);
         trap_told (TO_NOTICED);
         return;
@@ -331,10 +352,13 @@ static void step (void)
     }
 }
 
+#pragma code-name (push, "SW3CODE")
+#pragma rodata-name (push, "SW3RODATA")
+
 /* The trap tq (tx, ty) disarmed, a minute's work a try, in two checks (the user's): its mechanism made out first
 ** (P_ASSESS: never deadly; a critical success makes the disarm easier), then the disarm (P_DISARM: a critical failure
 ** sets it off) */
-static void disarm (void)
+void s_disarm (void)
 {
     unsigned char o = TO_PIT;
     signed char g;
@@ -365,7 +389,7 @@ static void disarm (void)
 }
 
 /* A trap the character knows of in its reach (the eight squares round it, its own): into tq, 1; or 0 */
-static unsigned char near_trap (void)
+unsigned char s_near_trap (void)
 {
     signed char i, j;
     unsigned x, y;
@@ -384,9 +408,10 @@ static unsigned char near_trap (void)
 
 /* A search about the character (a minute): the referee's Awareness (P_SEARCH) against each hidden door and each
 ** hidden trap within a few squares that it sees (a trap harder the better it's hidden); a door found is a door like
-** any other from then on, a trap known (told as it's found) */
+** any other from then on, a trap known (told as it's found); or (W's link 1) where the world's character stops as
+** it searches as it goes, quietly and in no more time */
 #define SEARCH_R        3
-static void search (void)
+void s_search (void)
 {
     unsigned i, j;
     unsigned char found = 0, k;
@@ -423,16 +448,29 @@ static void search (void)
             }
         }
     }
-    tt = 600;
+    if (W->link) {                              /* (Searching as it goes, the world's: quietly, in no more time;
+                                                **   res 1 if it found something) */
+        if (!(W->res = found)) {
+            return;
+        }
+    } else {
+        tt = 600;
+    }
     told (E_PORTAL, found & 1 ? PO_FOUND : found ? PO_FOUND_TRAP : PO_NOTHING, 0);
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- Portcullises and windows (0xFF: the door's way); through, climbed through to the far side */
 
 #define SILL            3                       /* A window's sill, feet above the floor */
 static unsigned char through;
 
-static unsigned char __fastcall__ portcullis (unsigned char what)
+#pragma code-name (push, "SW2CODE")
+#pragma rodata-name (push, "SW2RODATA")
+
+unsigned char __fastcall__ s_portcullis (unsigned char what)
 {
     unsigned char up = what == PA_RAISE, mine = pq.bar == ((pd + 2) & 3), g;
 
@@ -483,7 +521,7 @@ static unsigned char __fastcall__ portcullis (unsigned char what)
     return !up ? PO_LOWERED : mine ? PO_RAISED : PO_HEAVED;
 }
 
-static unsigned char __fastcall__ window (unsigned char what)
+unsigned char __fastcall__ s_window (unsigned char what)
 {
     unsigned char shut = (pq.parts & PP_SHUTTERS) && !(pq.state & PS_OPEN), part;
     signed char g;
@@ -555,6 +593,9 @@ static unsigned char __fastcall__ window (unsigned char what)
     W->res = through << 1;                      /* (Somewhere new: the world tells it as arrived) */
     return through ? PO_CLIMBED : g == G_CF ? PO_SLIPPED : PO_NO_CLIMB;
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* The portal on W's cx, cy worked (what: PA_*), the character before it (pd the way to it) */
 static void __fastcall__ portal (unsigned char what)
@@ -706,9 +747,12 @@ static void __fastcall__ portal (unsigned char what)
     }
 }
 
+#pragma code-name (push, "SW3CODE")
+#pragma rodata-name (push, "SW3RODATA")
+
 /* The portal on px, py looked at closely (PA_EXAMINE: the UI's, the square one it sees): its record copied into the
 ** hub's pview, its bar 1 if the character's on its bar's side; W's res 1 if there's none */
-static void look_at (void)
+void s_look_at (void)
 {
     unsigned char k;
 
@@ -726,6 +770,9 @@ static void look_at (void)
         W->res = 0;
     }
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 void __fastcall__ work (struct mreq* q)
 {

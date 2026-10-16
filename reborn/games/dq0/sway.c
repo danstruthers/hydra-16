@@ -151,8 +151,11 @@ void o_help (void)
          "(a door: its bar put back), climb through (a window), disarm (a trap), search; get, "
          "drop, hold (wield), stow, put the dagger in the sack (or on the table), take the rope from the pack, hang "
          "the pouch (on your belt), wear, take off, inventory (i), examine (a thing, a door, the room: look closely), hide; look (l), map (m), sheet (the "
-         "character), wait (z), pause (or Escape), quit (q).  The puzzle's pieces: read (a tablet), combine the one with "
+         "character), status (your pace, what you watch for, your condition), wait (z), pause (or Escape), quit (q).  The puzzle's pieces: read (a tablet), combine the one with "
          "the other, put the one on the other, use the key on the way out (or open the way out with it).");
+    msg ("Pace: creep (sneak), walk slowly, walk, jog, run, sprint (set pace to jog; run north); search for traps as "
+         "you go (move carefully), listen as you go, map as you go; stop searching (listening, mapping, running).  "
+         "Small moves: step forward, move left one space, go north 20 feet, back up two squares (a square 5 feet).");
     msg ("Fights: attack the rat (hit, fight), with what you hold; defend (dodge, block, counter, none, best).");
     msg ("Names: name my sword Linda (alias the sword as Linda), then drop Linda, attack the rat with Linda; call this "
          "room the Mausoleum; forget the name Linda.");

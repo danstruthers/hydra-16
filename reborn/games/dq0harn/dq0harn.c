@@ -11,9 +11,14 @@
 ** short lines, for the map's panel, each 15 characters at most; b 2: the last harm's words), RS_SAVE (the sheet,
 ** its injuries and all, and the creatures' sheets), RS_NEW_ACTOR (a creature's sheet, by its kind's key: made the
 ** first time, kept in a bank after), RS_ATTACK (a blow struck, HarnMaster's melee: by the character, or at it),
-** RS_MORALE, RS_TIME (bleeding).  The sheet's words and the harm are overlay 1's (sheet.c), the fights overlay 2's
-** (fight.c): DIR/dq0harn.ovl, read into banks of its own as it starts.  Its slots: the hub's two (the world's, the
-** UI's), and the denizens' task's in the denizens' bank (DSLOT_AT: copied out, answered, copied back).
+** RS_MORALE, RS_TIME (bleeding), RS_EXERT (fatigue, by the pace moved at, and rest); RS_DESCRIBE b 3 (its state,
+** the status command's, the hub's pace and watchfulness).  Its summary gives each pace's step, and the notice
+** tests go by the character's pace and state.  The sheet's words and the harm are overlay 1's (sheet.c), the
+** fights overlay 2's (fight.c): DIR/dq0harn.ovl, read into banks of its own as it starts.  Its slots: the hub's two
+** (the world's, the UI's), and the denizens' task's in the denizens' bank (DSLOT_AT: copied out, answered, copied
+** back).  hmchar's file read and written, and the creatures' sheets kept, are swapped part 1's (../dq0/swap.inc: run
+** in the main RAM's top, a part at a time, copied there from overlay 4's bank as it's called; harnfile.c), the names
+** part 2's (harnname.c), with the tool a dig takes.
 **
 ** The game's own choices in using the book (not the book's rules): a purpose names the skill (or attribute times 5)
 ** a GM would call for; a skill not opened is tested at its OML, as if opened on first use.
@@ -29,6 +34,13 @@
 #include "../dq0/hub.h"
 #include "../dq0/rs.h"
 #include "dq0harn.h"
+
+#pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
+
+void __fastcall__ load_pc (struct req* r);      /* (Part 1's stubs: bank.s's) */
+void __fastcall__ save_pc (struct req* r);
+void __fastcall__ beasts (unsigned char back);
+unsigned char __fastcall__ dig_tool (unsigned char m);     /* (Part 2's) */
 
 harn_char pc;                                   /* The character */
 char name[16], calling[20];
@@ -153,9 +165,12 @@ unsigned char __fastcall__ has (const char* key)
     return 0;
 }
 
+#pragma code-name (push, "SW2CODE")
+#pragma rodata-name (push, "SW2RODATA")
+
 /* The tool to hand that suits the material best (bare hands, digger's 0, if none does better; of two as good, the
 ** one it wears less): its digger's number */
-static unsigned char __fastcall__ dig_tool (unsigned char m)
+unsigned char __fastcall__ s_dig_tool (unsigned char m)
 {
     unsigned char k, t, best = 0, r, br = digger[0].rate[m];
 
@@ -173,6 +188,9 @@ static unsigned char __fastcall__ dig_tool (unsigned char m)
     }
     return best;
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- A purpose: the skill a GM would call for, or an attribute (an attribute | 0x80: tested times 5) */
 
@@ -239,12 +257,17 @@ static unsigned char __fastcall__ sense (unsigned char a)
     return v <= 3 ? 0 : v >= 18 ? 9 : (v - 3) * 3 / 5;
 }
 
+/* ---- Fatigue (sheet.c's spent: the book's movement fatigue) */
+
+unsigned tired, rested;                         /* Exertion toward the next level, rest toward the next gone */
+unsigned char spent_at;                         /* (The pace the time went at: spent's) */
+
 /* Its conditions (rs.h's C_*), as its sheet has them (the character's, or a creature's): its state (senseless, in
-** shock, dead), bleeders, limbs made useless */
+** shock, dead), bleeders, limbs made useless; tired, or tiring */
 unsigned __fastcall__ cond_of (const harn_char* h)
 {
     static const unsigned state[4] = { 0, C_UNCONSCIOUS, C_STUNNED, C_DEAD };
-    unsigned c = state[h->state & 3];
+    unsigned c = state[h->state & 3] | (h->fl || (h == &pc && tired) ? C_FATIGUED : 0);   /* (Tired, or tiring) */
     unsigned char k;
     const harn_injury* j;
 
@@ -275,7 +298,8 @@ static void status (void)
     static const char* const word[4] = { "", " OUT", " SHOCK", " DEAD" };
     char b[8];
     struct rs_summary* s = &HUB->pcsum;
-    unsigned char ep = harn_get_pp (&pc) - harn_get_up (&pc), k;
+    static const unsigned char rate[3] = { 100, 50, 33 };
+    unsigned char ep = harn_get_pp (&pc) - harn_get_up (&pc), k, w, g, v;
 
     strcpy (HUB->pcstatus, "UP ");
     strcat (HUB->pcstatus, utoa (harn_get_up (&pc), b, 10));
@@ -283,10 +307,21 @@ static void status (void)
     strcat (HUB->pcstatus, pc.state ? word[pc.state & 3] : s->cond & C_BLEEDING ? " BLEEDING" : "");
     s->health = health_of (&pc);
     k = harn_move (&pc);                       /* (Walking: half its Move, squares a round: Combat 6) */
-    s->step = k < 4 ? 50 : 200 / k;
+    s->step = w = k < 4 ? 50 : 200 / k;
+    s->gstep[GA_CREEP] = w + (w << 1);          /* (The game's: a sixth of its Move, a quarter; the book's: a jog its
+                                                **   Move, a run twice, a sprint three times) */
+    s->gstep[GA_SLOW] = w << 1;
+    s->gstep[GA_WALK] = w;
+    for (g = GA_JOG; g < NGAITS; ++g) {
+        v = rate[g - GA_JOG] / k;
+        s->gstep[g] = !v ? 1 : v < w ? v : w;
+    }
     s->attacks = 1;
     s->sight = sense (HARN_EYE);
-    s->hearing = sense (HARN_HRG);
+    s->hearing = sense (HARN_HRG) + (HUB->watch & WA_LISTEN ? 2 : 0);  /* (Listening as it goes: two better) */
+    if (s->hearing > 9) {
+        s->hearing = 9;
+    }
     s->smell = sense (HARN_SML);
     s->darkvision = 0;                          /* (The species' sight in the dark: the book's, to come) */
     s->nightvision = 1;
@@ -295,11 +330,21 @@ static void status (void)
     s->power = 10;
 }
 
-/* ---- hmchar's file: its own lines, the name and the occupation */
+#pragma code-name (push, "SW1CODE")
+#pragma rodata-name (push, "SW1RODATA")
+
+/* ---- hmchar's file: its own lines, the name and the occupation (and the game's: its pace, its watchfulness and its
+** exertion toward the next fatigue level, "pace 2 1 1200") */
+
+static unsigned char gait = GA_WALK, watch;
 
 static void __fastcall__ own_line (char* l)
 {
-    if (!strncmp (l, "name ", 5)) {
+    if (!strncmp (l, "pace ", 5) && strlen (l) >= 10) {
+        gait = l[5] - '0' < NGAITS ? l[5] - '0' : GA_WALK;
+        watch = l[7] - '0';
+        tired = atoi (l + 9);
+    } else if (!strncmp (l, "name ", 5)) {
         strncpy (name, l + 5, sizeof name - 1);
     } else if (!strncmp (l, "occupation ", 11)) {
         strncpy (calling, l + 11, sizeof calling - 1);
@@ -308,7 +353,7 @@ static void __fastcall__ own_line (char* l)
     }
 }
 
-static void __fastcall__ load_pc (struct req* r)
+void __fastcall__ s_load_pc (struct req* r)
 {
     static char path[64];
     int fd;
@@ -320,6 +365,9 @@ static void __fastcall__ load_pc (struct req* r)
     }
     r->result = harn_read (fd, &pc, own_line) < 0;
     close (fd);
+    hub_map (0);
+    HUB->gait = gait;
+    HUB->watch = watch;
     put (name);
     put ("\n");
     put (calling);
@@ -327,9 +375,11 @@ static void __fastcall__ load_pc (struct req* r)
 }
 
 /* The character's sheet written (r's text a path): 0, or 1 */
-static void __fastcall__ save_pc (struct req* r)
+void __fastcall__ s_save_pc (struct req* r)
 {
     static char line[48];
+    char b[12];
+    unsigned char g = HUB->gait, w = HUB->watch;
     char* p;
     char* e;
     int fd;
@@ -345,6 +395,11 @@ static void __fastcall__ save_pc (struct req* r)
     strcpy (line, "occupation ");
     strcat (line, calling);
     harn_write_line (fd, line);
+    strcpy (line, "pace 0 0 ");                 /* (The game's: its pace, its watchfulness, its exertion) */
+    line[5] += g;
+    line[7] += w;
+    strcat (line, utoa (tired, b, 10));
+    harn_write_line (fd, line);
     for (p = tongues + 7; *p; p = e) {             /* (Its tongues but its own: "language" lines) */
         e = strchr (p + 1, ' ');
         e = e ? e : p + strlen (p);
@@ -355,6 +410,9 @@ static void __fastcall__ save_pc (struct req* r)
     close (fd);
     r->result = 0;
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- The creatures' sheets (fight.c's): a bank of the referee's, a sheet a denizen's record (its number the
 ** denizens' task's), kept in the save folder's beasts.dat with the game's other records (read back as the first
@@ -378,8 +436,11 @@ void __fastcall__ sheet_put (unsigned char n)
     bwrite (sb, (struct beast*) 0x8000 + n, &bs, sizeof bs);
 }
 
+#pragma code-name (push, "SW1CODE")
+#pragma rodata-name (push, "SW1RODATA")
+
 /* The bank written to the save folder's beasts.dat (back 1: read from it, or cleared: none there; 2: cleared) */
-static void __fastcall__ beasts (unsigned char back)
+void __fastcall__ s_beasts (unsigned char back)
 {
     static char path[56];
     unsigned off;
@@ -407,6 +468,9 @@ static void __fastcall__ beasts (unsigned char back)
     }
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 /* Whether it speaks tongue t (a word of tongues, a space before it) */
 static unsigned char __fastcall__ speaks (const char* t)
 {
@@ -420,6 +484,22 @@ static unsigned char __fastcall__ speaks (const char* t)
         ++p;
     }
     return 0;
+}
+
+/* The character's state in words (RS_DESCRIBE b 3: overlay 1's; a 1, its pace and watchfulness only, the hub's): what
+** the words need copied for the overlay (the hub's not in the window while it is) */
+struct pstate ps;
+
+static void __fastcall__ pace_set (unsigned char a)
+{
+    status ();                                  /* (Listening: its hearing) */
+    ps.gait = HUB->gait;
+    ps.watch = HUB->watch;
+    ps.light = HUB->pc_light;
+    ps.dark = HUB->sight.dark;
+    ps.full = !a;
+    memcpy (ps.lamp, HUB->pc_lamp, sizeof ps.lamp);
+    state ();
 }
 
 /* ---- A request answered */
@@ -503,7 +583,18 @@ static void __fastcall__ answer (struct req* r)
                 break;
             }
         }
+        if (r->a <= P_NOTICE_SMELL) {           /* (By its state: its pace, its shock; overlay 1's, in a copy) */
+            ps.go = HUB->pc_going;
+            ps.watch = HUB->watch;
+            memcpy (rq, r, sizeof rq);
+            r->steps += noticing ((struct req*) rq);
+        }
         r->grade = test (&pc, r->a, r->steps);
+        break;
+    case RS_EXERT:                              /* (Its fatigue: its summary anew) */
+        spent_at = r->a;
+        spent (r->w1);
+        status ();
         break;
     case RS_EQUIP:
         if (r->a == 2) {
@@ -532,6 +623,8 @@ static void __fastcall__ answer (struct req* r)
             brief ();
         } else if (r->b == 2) {
             put (hurt);
+        } else if (r->b == 3) {
+            pace_set (r->a);
         } else {
             sheet ();
         }
