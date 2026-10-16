@@ -411,7 +411,6 @@ void status (void)
 {
     static char left[48], right[40];
     char n[6];
-    unsigned long s = now / 10;
 
     strcpy (left, P.name[0] ? P.name : "Dingus Quest Zero");
     strcpy (right, paused ? "PAUSED  " : "");
@@ -421,11 +420,8 @@ void status (void)
         strcat (right, head_abbr[HUB->pc_face & 7]);
         strcat (right, "  ");
     }
-    strcat (right, utoa (s / 3600, n, 10));
-    strcat (right, s % 3600 / 60 < 10 ? ":0" : ":");
-    strcat (right, utoa (s % 3600 / 60, n, 10));
-    strcat (right, s % 60 < 10 ? ":0" : ":");
-    strcat (right, utoa (s % 60, n, 10));
+    strcat (right, utoa ((unsigned) (now / 600), n, 10));    /* (The game's minutes gone, the user's: no seconds) */
+    strcat (right, " min");
     t_status (left, right);
 }
 
@@ -1123,10 +1119,10 @@ int main (int argc, char* argv[])
         k = events ();
         heard ();
         now = hub_now ();
-        if (k || ((unsigned) now != lnow && hy_ticks () - shown >= (inn ? 1000 : 200))) {
-            lnow = now;                         /* (The status line as the events change it, and its clock each
-                                                **   real second at most, each five while a line's being typed:
-                                                **   only what's changed drawn, t_status) */
+        if (k || ((unsigned) (now / 600) != lnow && hy_ticks () - shown >= (inn ? 1000 : 200))) {
+            lnow = now / 600;                   /* (The status line as the events change it, and its clock as a
+                                                **   game minute goes, a real second apart at most, five while a
+                                                **   line's being typed: only what's changed drawn, t_status) */
             shown = hy_ticks ();
             status ();
         }
