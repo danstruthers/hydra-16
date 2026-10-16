@@ -56,14 +56,14 @@ static void __fastcall__ open_in (unsigned char x, unsigned char y)
 }
 
 /* The way from (x, y) toward (tx, ty): along the farther, else the nearer, so long as it stays off the edges (or is
-** the end) */
+** the end); always nearer (the tunnel's last stretch straight on to its end) */
 static unsigned char tx, ty;
 static unsigned char __fastcall__ toward (unsigned char x, unsigned char y)
 {
     unsigned char h = x < tx ? DIR_E : DIR_W, v = y < ty ? DIR_S : DIR_N, d;
 
     d = x == tx || (y != ty && (y > ty ? y - ty : ty - y) > (x > tx ? x - tx : tx - x)) ? v : h;
-    if (!inside (x + dir_x[d], y + dir_y[d]) && (x + dir_x[d] != tx || y + dir_y[d] != ty)) {
+    if (!inside (x + dir_x[d], y + dir_y[d]) && (x + dir_x[d] != tx || y + dir_y[d] != ty) && x != tx && y != ty) {
         d = d == h ? v : h;
     }
     return d;
@@ -154,6 +154,9 @@ static void __fastcall__ chamber (unsigned char cx, unsigned char cy, unsigned c
         bx1 = cx + hw < E->x1 ? cx + hw : E->x1 - 1;
         by0 = cy > E->y0 + hh ? cy - hh : E->y0 + 1;
         by1 = cy + hh < E->y1 ? cy + hh : E->y1 - 1;
+        if (bx0 > bx1 || by0 > by1 || bx1 >= CW || by1 >= CW) {
+            return;                             /* (The stratum's bounds too near: no room inside them) */
+        }
         for (r = 0, p = L->room; r < L->nrooms; ++r, ++p) {
             if (bx0 <= p->x + p->w && bx1 + 1 >= p->x && by0 <= p->y + p->h && by1 + 1 >= p->y) {
                 break;
@@ -168,8 +171,8 @@ static void __fastcall__ chamber (unsigned char cx, unsigned char cy, unsigned c
         --hw;
         hh -= hh > 1;
     }
-    x = cx;
-    y = cy;
+    x = cx < bx0 ? bx0 : cx > bx1 ? bx1 : cx; /* (Its middle in its box: a link's square by the chunk's edge) */
+    y = cy < by0 ? by0 : cy > by1 ? by1 : cy;
     carve (x, y);
     for (n = (bx1 - bx0 + 1) * (by1 - by0 + 1) * 2; n; --n) {
         ax = x > cx ? x - cx : cx - x;
@@ -200,6 +203,9 @@ static void __fastcall__ chamber (unsigned char cx, unsigned char cy, unsigned c
                 y1 = y > y1 ? y : y1;
             }
         }
+    }
+    if (x0 == 0xFF) {                           /* (Nothing opened) */
+        return;
     }
     p = &L->room[L->nrooms];
     p->x = x0;
