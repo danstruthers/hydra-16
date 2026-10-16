@@ -131,8 +131,10 @@ but the user's design is the right one for them, and it's this:
   along a clear line: the world adds the actors on them to what it perceives as they change, the hub's den_seq, and
   the UI tells what stirs); by hearing, the UI's, from the event's loudness, its distance and the character's hearing
   (the referee's, 0-9): heard within loudness times (hearing + 3) / 2 squares, of one on a square it doesn't see (one
-  it sees is told as seen, not heard), by the way it lies ("You hear something moving behind you to your left."), the
-  same way not again for half a minute, nor any for five seconds.  A denizen: by hearing, the others' events and the
+  it sees is told as seen, not heard), each square of wall or rock between four squares further, each shut door two
+  (SOUND.md), by the way it lies, in its sound's words ("You hear a scurrying behind you to your left."), the same
+  way not again for half a minute, nor any for five seconds; and played on the chips (the sound task's, SOUND.md: on
+  the side it lies, the loudest at once on the channels there are).  A denizen: by hearing, the others' events and the
   world's (the character's noises: E_NOISE, digging), within its kind's hearing times the loudness over two: it turns
   to face the noise, stands a while, and looks for the character again at once (and so may see it).  Smell, later.
 - **The protocol stays neutral**: the world's events are the character's and the dungeon's, the denizens' events the
@@ -175,8 +177,10 @@ but the user's design is the right one for them, and it's this:
   coming towards it, keeping its distance, going about its business): not at each step.  Not while the character's
   on its way somewhere (it looks about as it gets there); while it digs, yes.
 - **Heard:** what the actors do goes out as the denizens' events (a step quietly, a noise of their own every eighth,
-  loud as a squeak; a dash past the character louder; the character sensed, or lost, silently); the UI tells those
-  the character hears and doesn't see; the actors hear each other's, and the character's digging, and turn to them.
+  loud as a squeak; a dash past the character louder; the character sensed, or lost, silently; what lies between
+  it and the character with each loud one, x[3]); the UI tells those the character hears and doesn't see, in each
+  kind's words, and the sound task plays them (SOUND.md); the actors hear each other's, and the character's digging,
+  and turn to them.
 - **In the way:** the character can't walk onto a denizen's square: a walk along a passage, across a room or up to
   a square stops short of one (the way across a room found round them), and one in the very next square is told
   ("A giant rat is in the way.": E_NOWAY's N_DEN, the actor's).

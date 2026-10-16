@@ -37,6 +37,8 @@ games/lib/dq0/dq0p  ../obj/games/dq0p.hyx
 games/lib/dq0/dq0p.ovl ../obj/games/dq0p.hyx.ovl
 games/lib/dq0/dq0d  ../obj/games/dq0d.hyx
 games/lib/dq0/dq0d.dat ../obj/games/dq0d.dat
+games/lib/dq0/dq0s  ../obj/games/dq0s.hyx
+games/lib/dq0/dq0s.dat ../obj/games/dq0s.dat
 games/hmchar        ../obj/games/hmchar.hyx
 songs/test.zsm      songs/test.zsm              ; Songs (play /sd/0/songs/test.zsm): the old system's test song
 songs/vera.mml      songs/vera.mml              ;   (os_rom/songs/test.mml), and a score for both chips (the PSG's
