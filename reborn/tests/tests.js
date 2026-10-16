@@ -1532,6 +1532,73 @@ function pcReport(m, attaches, naks, repeats) {
   if (h.fsrv.stats.repeats !== repeats) f.push('/pc: ' + h.fsrv.stats.repeats + ' repeated, not ' + repeats);
   return f;
 }
+// A natural stratum's chunks (dq0m/caves.c), read from the hub's cache in the shared segments' banks (world.h's struct
+// chunk, three to a bank, CHUNK_SIZE apart): its chambers ragged (none its bounds filled, some with their rows'
+// ends uneven), its tunnels bending, every open square reached from every other, and a chunk's edges' open squares
+// met by its neighbours' (those in the cache); n chunks of stratum sn at least (CAVEDUMP=1: each one drawn)
+const CHUNK_SIZE = 0xAA0, CK_TILE = 443, CK_ROOM = 8;
+const T_ROCK = 0, T_FLOOR = 1, T_WALL = 2, T_CORR = 4, T_WINDOW = 6;
+function cacheChunks(m, sn) {
+  const out = new Map();
+  for (const b of Object.values(m.sharedBanks())) {
+    for (let k = 0; k < 3; k++) {
+      const o = k * CHUNK_SIZE, nrooms = b[o + 5], tile = b.subarray(o + CK_TILE, o + CK_TILE + 1024);
+      if (b[o] !== sn || !nrooms || nrooms > 6 || b[o + 6] > 12 || b[o + 7] > 6 || tile.some(t => (t & 0x1F) > 9)) continue;
+      const rooms = [];
+      for (let r = 0; r < nrooms; r++) { const p = o + CK_ROOM + r * 8; rooms.push({ x: b[p], y: b[p + 1], w: b[p + 2], h: b[p + 3], kind: b[p + 5] }); }
+      out.set((b[o + 1] | b[o + 2] << 8) + ',' + (b[o + 3] | b[o + 4] << 8), { cx: b[o + 1] | b[o + 2] << 8, cy: b[o + 3] | b[o + 4] << 8, rooms, tile: Array.from(tile, t => t & 0x1F) });
+    }
+  }
+  return out;
+}
+function caveReport(m, sn, n) {
+  const f = [], ks = cacheChunks(m, sn), open = t => t !== T_ROCK && t !== T_WALL && t !== T_WINDOW;
+  if (ks.size < n) f.push('stratum ' + sn + ': ' + ks.size + ' chunk(s) in the cache, not ' + n);
+  let ragged = 0, bends = 0;
+  for (const [at, c] of ks) {
+    const T = (x, y) => x < 0 || y < 0 || x > 31 || y > 31 ? T_ROCK : c.tile[y * 32 + x];
+    for (const r of c.rooms) {
+      if (r.kind !== 6) { f.push(at + ': a room not a cave'); continue; }
+      let fl = 0; const starts = new Set();
+      for (let y = r.y; y < r.y + r.h; y++) {
+        let s = -1;
+        for (let x = r.x; x < r.x + r.w; x++) if (T(x, y) === T_FLOOR) { fl++; if (s < 0) s = x; }
+        starts.add(s);
+      }
+      if (r.w > 2 && r.h > 2 && fl === r.w * r.h) f.push(at + ': a chamber a rectangle (' + r.w + ' by ' + r.h + ')');
+      if (starts.size >= 3 && fl * 10 < r.w * r.h * 9) ragged++;
+    }
+    for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) {
+      if (T(x, y) !== T_CORR) continue;
+      const nb = [open(T(x, y - 1)), open(T(x + 1, y)), open(T(x, y + 1)), open(T(x - 1, y))];
+      if (nb.filter(Boolean).length === 2 && !(nb[0] && nb[2]) && !(nb[1] && nb[3])) bends++;
+    }
+    const seen = new Set(), all = [];
+    for (let i = 0; i < 1024; i++) if (open(c.tile[i])) all.push(i);
+    const q = all.slice(0, 1);
+    seen.add(q[0]);
+    while (q.length) {
+      const i = q.pop(), x = i & 31, y = i >> 5;
+      for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) {
+        const j = (y + dy) * 32 + x + dx;
+        if (x + dx >= 0 && x + dx < 32 && y + dy >= 0 && y + dy < 32 && !seen.has(j) && open(c.tile[j])) { seen.add(j); q.push(j); }
+      }
+    }
+    if (seen.size !== all.length) f.push(at + ': ' + (all.length - seen.size) + ' open square(s) not reached from the rest');
+    for (const [dx, dy] of [[1, 0], [0, 1]]) {
+      const d = ks.get((c.cx + dx) + ',' + (c.cy + dy));
+      if (!d) continue;
+      for (let k = 0; k < 32; k++) {
+        const a = dx ? c.tile[k * 32 + 31] : c.tile[31 * 32 + k], b = dx ? d.tile[k * 32] : d.tile[k];
+        if (open(a) !== open(b)) f.push(at + ': its ' + (dx ? 'east' : 'south') + ' edge\'s square ' + k + ' not met by its neighbour\'s');
+      }
+    }
+  }
+  if (process.env.CAVEDUMP) for (const [at, c] of ks) { console.log(at, JSON.stringify(c.rooms)); for (let y = 0; y < 32; y++) console.log(c.tile.slice(y * 32, y * 32 + 32).map(t => ' .#+,="<>O'[t]).join('')); }
+  if (!ragged) f.push('stratum ' + sn + ': no chamber ragged');
+  if (bends < 4 * ks.size) f.push('stratum ' + sn + ': ' + bends + ' bend(s) in its tunnels, fewer than 4 a chunk');
+  return f;
+}
 
 // The draw test's lines at HyForth (lib video) and hylang (video.hl), and what each prints ('': nothing): vid's
 // /dev/vid/draw on the bitmap at each depth, read back by vpeek; the turtle; rc's lines to the file
@@ -1658,7 +1725,7 @@ function hmRun(out, cmd) {
 // struct chunk, three to a bank, 0xAA0 apart): each one's place, rooms (their uses, world.h's U_*), zones (their
 // ceilings), portals, squares and floors, and its passages' ceiling (pceil); those of stratum sn that look whole
 const U_HALL = 1, U_CELL = 2, U_STORE = 7, U_KITCHEN = 8, U_PANTRY = 9, U_QUARTERS = 13, U_GATEHOUSE = 17;
-const PK_PORTCULLIS = 2, T_FLOOR = 1, T_DOOR = 3, T_CORR = 4, T_STEPS = 5;
+const PK_PORTCULLIS = 2, T_DOOR = 3, T_STEPS = 5;           // (T_FLOOR, T_CORR: the caves' above)
 function builtChunks(m, sn) {
   const out = [], C = { room: 8, zone: 56, portal: 219, tile: 443, elev: 1467, pceil: 2555 };
   for (const b of Object.values(m.sharedBanks())) {
@@ -2317,11 +2384,12 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0deep', what: 'Dingus Quest Zero down a way to the stratum below (dq0 -T: the character begins at the first way down of the top stratum): the stratum below grown in outline as the character first takes the way, its first chunk made (natural, at this seed: caves), looked about and mapped, and along a tunnel',
+      name: 'dq0deep', what: 'Dingus Quest Zero down a way to the stratum below (dq0 -T: the character begins at the first way down of the top stratum): the stratum below grown in outline as the character first takes the way, its first chunk made (natural, at this seed: caves), looked about and mapped, and along a tunnel; the caves irregular (the user\'s, 2026-10-16: "not straight tunnels, not rectangular rooms"): the cache\'s chunks read, their chambers ragged, their tunnels bending, every open square reached, their edges met',
       init: 't_rc', cycles: 500e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T\r' +
         ['look', 'd', 'look', 'map', 'sw', 'look', 'map', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
       expect: ['You come into the', 'A passage leads off', 'The map (you face', '% echo $status'],
+      check: m => caveReport(m, 1, 1),
       sdcard: true
     },
     {
@@ -2396,7 +2464,7 @@ module.exports = {
       init: 't_rc', cycles: 900e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/kept\r' +
         ['drop the dagger', 'd', 'quit', 'ls /ram/kept', 'dq0 -d /ram/kept', 'look', 'inventory', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
-      expect: ['You come into the', 'changes.dat', 'dens.dat', 'game.dat', 'items.dat', 'pc.hm', 'seen.dat', 'takes up where they left off.', 'You stand by a stairway leading up.', 'a belt, worn (on it: a pouch (in it: 12 pennies), a waterskin)', '% echo $status'],
+      expect: ['You come into the', 'changes.dat', 'dens.dat', 'game.dat', 'items.dat', 'pc.hm', 'seen.dat', 'takes up where they left off.', 'You stand by a\nstairway leading up.', 'a belt, worn (on it: a pouch (in it: 12 pennies), a waterskin)', '% echo $status'],
       sdcard: true
     },
     {
@@ -2404,11 +2472,12 @@ module.exports = {
       init: 't_rc', cycles: 900e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T\r' +
         ['look', 'search', 'search', 'look', 'quit'].map(l => '\u0101' + l + '\r').join('') + '\u0101dq0 -p t -s 5 -c /ram/c.hm -T\r' +
-        ['d', 'wait', 'go right', 'go forward', 'look', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
+        ['d', 'map', 'go right', 'go forward', 'look', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
       expect: ['A giant rat is ', ' feet away', 'Something stirs.', 'keeping its', 'A giant rat is in the way.', '% echo $status'],
-      // (The first search's stir told before its prompt (at this seed, out of sight), the second's none: nothing they
-      // do has changed; the way blocked: down the ladder, the rats there cornered, a step towards them told they're
-      // in the way, as it stops short of one crossing to them, and then going on: no step taken)
+      // (The first search's stir told before its prompt (at this seed, out of sight), the second's none: nothing they do has changed; the way
+      // blocked: down the ladder, the map looked at while the rats are by it still (the caves' chamber there
+      // ragged, a tunnel off it: given longer, they're off down it), the rats cornered, a step towards them told
+      // they're in the way, as it stops short of one crossing to them, and then going on: no step taken)
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), s1 = o.indexOf('You search about'), s2 = o.indexOf('You search about', s1 + 1);
         const seg = (a, b) => a < 0 ? '' : o.slice(a, o.indexOf(b, a));
@@ -2453,7 +2522,12 @@ module.exports = {
         'ĀĀāturn left\rinventory\rāgo up\rĀĀĀĀāquit\rāecho $status\r' },
       expect: ['You carry', 'There\'s no way up or down here.', '% echo $status'],
       budgets: [{ what: 'inventory answered (Enter to the answer)', from: '> inventory', to: 'You carry', per: 1, max: 720000 },
-        { what: 'a step that can\'t be taken answered (the world\'s)', from: '> go up', to: 'There\'s no way up or down here.', per: 1, max: 600000 }],
+        { what: 'a step that can\'t be taken answered (the world\'s)', from: '> go up', to: 'There\'s no way up or down here.', per: 1, max: 720000 }],
+      // (Both within a fifth of a second of Enter, the user's measure: 720,000 cycles at 3.58 MHz.  The step's answer
+      // takes 380,000 cycles, or 580,000-610,000 when a rat's step falls in it: the UI words what it sees again (its
+      // own cycles in it twice as many), the world and the senses look again.  Whether one falls in it is the
+      // denizens' real time against the tasks' code, any task's code: a budget under that moved with the code's
+      // layout, not with the answer's speed)
       // (While nothing happens, between the step and quitting, 8M cycles, 2.2 s: the status line's clock, a move up to
       // it a second at most, the cursor hidden for it)
       check(m, out) {
@@ -2473,7 +2547,7 @@ module.exports = {
       name: 'dq0heard', what: 'Dingus Quest Zero\'s denizens\' events perceived by some and not others (DENIZENS.md: events): down the ladder at seed 5, the torch put out: in the dark the giant rats move about unseen (nothing told as stirring, none seen) but heard, near enough for the character\'s hearing, by the way they lie, in their sound\'s words (SOUND.md: "You hear a scurrying to your right."), and played as they\'re heard (the sound task\'s: the YM2151\'s channels 4-6, on the side they lie, a rat to the right of the character facing north on the right speaker); the turns pace, the denizens kept up a slice at a time',
       init: 't_rc', cycles: 900e6,
       machine: { ymLog: true, input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 5 -c /ram/c.hm -T\r' +
-        ['d', 'douse the torch', 'wait', 'wait', 'wait', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+        ['d', 'douse the torch', 'wait', 'wait', 'wait', 'wait', 'wait', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
       expect: ['You put out the torch.', 'You hear a scurrying to your right.', '% echo $status'],
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), a = o.indexOf('You put out the torch.'), b = o.indexOf('> quit', a);
@@ -2485,6 +2559,7 @@ module.exports = {
         if (!ons.some(k => k === '4R' || k === '5R' || k === '6R')) f.push('no rat played on the right: ' + ons.join(' '));
         if (ons.some(k => !/^[456]/.test(k))) f.push('a key-on off the sound task\'s channels: ' + ons.join(' '));
         this.notes = ['the YM2151\'s key-ons: ' + ons.join(' ')];
+        f.push(...caveReport(m, 1, 1));          // (Its cave, seed 5's small stratum: irregular, every square reached)
         return f;
       },
       sdcard: true
@@ -2742,16 +2817,16 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0fight', what: 'Dingus Quest Zero\'s fights (DENIZENS.md: fights; the referee\'s HarnMaster melee, RS_ATTACK, dq0harn/fight.c): a fight with seed 5\'s giant rats won (down its ladder, a sword in hand, dq0 -k sword; the character\'s Sword 80, hmchar\'s file): the blows struck and dodged both ways (the rat struck at, and its lair\'s kin, turn on the character: harmed, both fighting it), a grievous wound knocking one senseless (the size of a man against a rat\'s, a point a die), finished where it lies, its body left (an item, seen as the world looks about again); the other killed outright (a mortal wound, its kill roll: Combat 14); the character\'s own wounds on its sheet',
+      name: 'dq0fight', what: 'Dingus Quest Zero\'s fights (DENIZENS.md: fights; the referee\'s HarnMaster melee, RS_ATTACK, dq0harn/fight.c): a fight with seed 5\'s giant rats won (down its ladder, a sword in hand, dq0 -k sword; the character\'s Sword 80, hmchar\'s file): the blows struck and dodged both ways (the rat struck at, and its lair\'s kin, turn on the character: harmed, both fighting it), a grievous wound knocking one senseless (the size of a man against a rat\'s, a point a die), then the other struck at by the way it lies (the rat ahead to the right) and knocked senseless too (a serious wound), each finished where it lies, their bodies left (items, seen as the world looks about again: the caves irregular since 2026-10-16, the rats stand otherwise and the dice fall otherwise: no mortal blow now); the character\'s own wounds on its sheet',
       init: 't_rc', cycles: 1200e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rāecho ml swd 80 >> /ram/c.hm\rādq0 -p t -s 5 -c /ram/c.hm -k sword -T\r' +
-        ['d', 'wait', 'go right', ...Array(8).fill('attack the rat'), 'look', 'wait', 'look', 'sheet', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+        ['d', 'wait', 'go right', ...Array(4).fill('attack the rat'), 'attack the rat ahead right', 'attack the rat ahead right', 'attack the rat', 'look', 'wait', 'look', 'sheet', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
       expect: ['You strike at the giant rat with your sword; it dodges.', 'The giant rat bites at you',
-        'A giant rat is ahead, 5 feet away, fighting you. A giant rat\nis ahead to your left, 5 feet away, fighting you.',
+        'A giant rat is ahead, 5 feet away, fighting you. A giant rat\nis ahead to your right, 5 feet away, fighting you.',
         'You strike at the giant rat with your sword: a grievous deep gash to its right\nhand (G5). It falls senseless.', 'lying senseless.',
         'You finish the giant rat where it lies. The giant rat falls dead.',
-        'You strike at the giant rat with your sword: a mortal deep gash to its abdomen.\nThe giant rat falls dead.',
-        'On the floor ahead lies a body.', 'On the floor ahead to your left lies a body.', 'Injuries: left knee M1 (stab).', '% echo $status'],
+        'You strike at the giant rat with your sword: a serious gash to its left thigh\n(S3). It falls senseless.',
+        'On the floor ahead to your right lies a body. On the floor ahead lies a\nbody.', 'Injuries: left knee M1 (stab).', '% echo $status'],
       sdcard: true
     },
     {

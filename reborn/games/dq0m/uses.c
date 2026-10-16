@@ -11,12 +11,12 @@
 ** And the styles' proportions (struct style: a stand-in for the theme's data), the chunk's stratum's copied into
 ** make.c's sty (SP) as each chunk is made.
 **
-** (Overlay 6, the maker's: uses () called through bank.s's stub, by built.c (US_PLAN, US_FLOOR), stock.c (US_THING,
+** (Overlay 7, the maker's: uses () called through bank.s's stub, by built.c (US_PLAN, US_FLOOR), stock.c (US_THING,
 ** US_SIGN) and make.c (US_STYLE); its data and BSS in the main RAM, as every overlay's are.)
 */
 
-#pragma code-name ("OV6CODE")
-#pragma rodata-name ("OV6RODATA")
+#pragma code-name ("OV7CODE")
+#pragma rodata-name ("OV7RODATA")
 
 #include <string.h>
 #include "../dq0/hub.h"

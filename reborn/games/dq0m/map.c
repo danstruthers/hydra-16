@@ -4,11 +4,17 @@
 ** character an @.  Only the chunks in the cache are looked at (a chunk that isn't there now was seen, if at all,
 ** before the cache made way for it: its map's laid over it as it's made again, so the character's near ones are
 ** always there).
+**
+** All of it a swapped part's (part 1: ../dq0/swap.inc), draw_map called through its stub (bank.s's).
 */
 
 #include <string.h>
 #include "../dq0/hub.h"
 #include "../dq0w/world.h"
+
+#pragma code-name ("SW1CODE")
+#pragma rodata-name ("SW1RODATA")
+#pragma local-strings (on)
 
 static struct chunk* K;
 static unsigned char kx, ky, lk = 0xFF, lsn;
@@ -96,7 +102,7 @@ static char __fastcall__ glyph (unsigned char sn, unsigned x, unsigned y, int my
     return ' ';
 }
 
-void draw_map (void)
+void s_draw_map (void)
 {
     static char row[MAP_W + 1];
     struct stratum* s;

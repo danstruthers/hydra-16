@@ -117,6 +117,14 @@ features), filling the rest:
 - **mines:** tunnels along a vein, galleries where it widened, shafts and ladders, timbering;
 - **mixed:** built into natural, natural breaking into built.
 
+Natural places are irregular (the user, 2026-10-16: "For natural areas and tunnels, they need to be irregular in
+shape (not straight tunnels, not rectangular rooms).  The dungeon "grower" should take care of that."): dq0m/caves.c's
+tunnels wind from each way across the chunk's edges to its middle, heading a while and bending, now narrower and now
+wider, with pockets in their sides and blind forks off them; its chambers are grown by a wanderer from their middles,
+ragged, each in a box of its own clear of the others', and a chamber's room record is the bounds of its floor (the
+squares in them that are floor are its own: its stock, its traps, the walks across it go by them); a chamber's floor
+is a hollow or a hump on the ground's unevenness, smoothly.  Mines and built places stay hewn straight.
+
 **Every proportion is the style's** (the user, 2026-10-14: "All of the percentages of each type of thing should be
 part of the style (natural caves don't usually have doors, for instance, unless extended by sentient beings)."): how
 often a room is lit, in zones, sloping; its ceilings' kinds; how often a way out has a door, and the doors' states,

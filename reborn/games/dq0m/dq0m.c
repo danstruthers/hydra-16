@@ -18,15 +18,17 @@
 #include "grow.h"
 
 struct stratum strata[MAXSTRATA];               /* (This task's copy of the hub's) */
-#define OVLS    6                               /* Its overlays: built.c, pass.c, caves.c, plan.c, fixtures.c,
-                                                **   uses.c */
+#define OVLS    7                               /* Its overlays: built.c, pass.c, caves.c, plan.c, fixtures.c; the
+                                                **   swapped parts' images (../dq0/swap.inc: map.c's, changes.c's,
+                                                **   work.c's); uses.c */
+extern char _SWAP_START__[];
 
 /* The overlays: dir/dq0m.ovl, an 8K bank each (dq0m.cfg's OV1 ...; the file cut after the last one used: make.js),
 ** read into banks of its own: 0, or -1 */
 static int __fastcall__ ovl_load (const char* dir)
 {
-    static unsigned char b[256];
     static char path[64];
+    unsigned char* b = (unsigned char*) _SWAP_START__;  /* (256 bytes of the swapped parts' area: none in it yet) */
     int fd, first, n;
     unsigned char k;
     unsigned off;
@@ -38,8 +40,8 @@ static int __fastcall__ ovl_load (const char* dir)
     }
     for (k = 0; k < OVLS; ++k) {
         ovbank[k] = first + k;
-        for (off = 0; off < 0x2000; off += sizeof b) {
-            n = read (fd, b, sizeof b);
+        for (off = 0; off < 0x2000; off += 256) {
+            n = read (fd, b, 256);
             if (n <= 0) {
                 break;
             }

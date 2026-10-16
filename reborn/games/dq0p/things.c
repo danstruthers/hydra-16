@@ -21,6 +21,21 @@
 #include "view.h"
 #include "things.h"
 
+#pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
+
+/* ---- The swapped parts' stubs (bank.s's: ../dq0/swap.inc, their code run in the main RAM's top, a part at a time,
+** copied there as it's called from their bank, read in after the catalogue) */
+
+void __fastcall__ keep (unsigned char back);    /* Part 1 */
+void kit (void);
+unsigned char __fastcall__ hide (const char* name);         /* Part 2 */
+unsigned char search (void);
+unsigned char __fastcall__ describe (const char* name);
+unsigned char __fastcall__ get (const char* name);          /* Part 3 */
+void __fastcall__ wear (const char* key, unsigned char by);
+unsigned char __fastcall__ drop (const char* name);
+extern unsigned char ovbank[1];
+
 #define NK      NKINDS                          /* (The catalogue's, and the theme's after them: theme.h) */
 
 extern const struct kind kinds[];              /* (kinds.c's: in the catalogue's bank) */
@@ -45,7 +60,10 @@ unsigned char piece[256];                      /* (And kit's names, say's words,
 ** have their own: make_own's, the recursive ones', light's ...) */
 static struct item rec;
 
-static void __fastcall__ keep (unsigned char back)
+#pragma code-name (push, "SW1CODE")
+#pragma rodata-name (push, "SW1RODATA")
+
+void __fastcall__ s_keep (unsigned char back)
 {
     static char p[48];
     unsigned char b;
@@ -79,7 +97,12 @@ static void __fastcall__ keep (unsigned char back)
     close (fd);
 }
 
-/* The catalogue read into the hub's catalogue bank (dir/dq0p.ovl: kinds.c's, linked at $8000): 0, or -1 */
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* The catalogue read into the hub's catalogue bank (dir/dq0p.ovl: kinds.c's, linked at $8000), then the swapped
+** parts' images into a bank of the task's own (dq0p.cfg's OV2, after it; the file cut after its last byte not $FF:
+** the bank filled with $FF first): 0, or -1 */
 static int __fastcall__ catalogue (const char* dir)
 {
     static char p[48];
@@ -95,6 +118,17 @@ static int __fastcall__ catalogue (const char* dir)
     memset ((void*) 0x8000, 0, 0x2000);
     for (off = 0; off < 0x2000 && (n = read (fd, piece, sizeof piece)) > 0; off += n) {
         hub_map (CAT_BANK);
+        memcpy ((char*) 0x8000 + off, piece, n);
+    }
+    if ((n = hy_banks_alloc (1)) < 0) {
+        close (fd);
+        return -1;
+    }
+    ovbank[0] = n;
+    hy_bank (ovbank[0]);
+    memset ((void*) 0x8000, 0xFF, 0x2000);
+    for (off = 0; off < 0x2000 && (n = read (fd, piece, sizeof piece)) > 0; off += n) {
+        hy_bank (ovbank[0]);
         memcpy ((char*) 0x8000 + off, piece, n);
     }
     close (fd);
@@ -233,6 +267,9 @@ unsigned __fastcall__ item_new (unsigned char kind, unsigned char where, unsigne
     return i;
 }
 
+#pragma code-name (push, "SW1CODE")
+#pragma rodata-name (push, "SW1RODATA")
+
 /* A kind by its name (or a word of it: "sand"; the whole name first, so "sword" isn't a broken one): its number,
 ** or 0 */
 static unsigned char __fastcall__ named (const char* k, const char* w);
@@ -269,7 +306,7 @@ static const unsigned char kit_list[NKIT][4] = {
     { KI_DAGGER, 4, 1, 0 }, { KI_WATERSKIN, 4, 1, 0 }
 };
 
-static void kit (void)
+void s_kit (void)
 {
     static unsigned made[NKIT];
     const unsigned char* e;
@@ -297,6 +334,9 @@ static void kit (void)
         }
     }
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- What's in a thing, or on the character: the bulk and weight (quarter pounds) of what's in it (a thing's own
 ** with what's in it, or on it: a soft thing's bulk its own or what it holds, the more) */
@@ -576,7 +616,11 @@ static void tools (void)
     HUB->ireq.x = i;
 }
 
-static void __fastcall__ wear (const char* key, unsigned char by)
+#pragma code-name (push, "SW3CODE")
+#pragma rodata-name (push, "SW3RODATA")
+
+/* A tool worn by a spell of work (the dig's: the referee's choice, by its key), by; its name in the request */
+void __fastcall__ s_wear (const char* key, unsigned char by)
 {
     static char name[16];
     struct item* p;
@@ -598,7 +642,7 @@ static void __fastcall__ wear (const char* key, unsigned char by)
 
 /* ---- Taken up: into the backpack if it fits (its room, its weight, what it keeps), else in a hand (two, at most);
 ** not within reach: IR_NOT_HERE, and where it is (the hub's ireq's x, y: the UI walks there, and asks again) */
-static unsigned char __fastcall__ get (const char* name)
+unsigned char __fastcall__ s_get (const char* name)
 {
     const struct item* s;
     unsigned n = seen_named (name), x, y;
@@ -622,7 +666,7 @@ static unsigned char __fastcall__ get (const char* name)
 
 /* Put down where the character stands (what's in it with it) */
 static unsigned dropped;                        /* (The last put down) */
-static unsigned char __fastcall__ drop (const char* name)
+unsigned char __fastcall__ s_drop (const char* name)
 {
     unsigned char sn;
     unsigned x, y, n = carried_named (name);
@@ -647,10 +691,16 @@ static unsigned char __fastcall__ drop (const char* name)
     return IR_OK;
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+#pragma code-name (push, "SW2CODE")
+#pragma rodata-name (push, "SW2RODATA")
+
 /* Hidden where the character stands (the user: hiding is a skill, Concealment; a thing's difficulty to find by the
 ** method's quality and the concealer's skill): its difficulty, the method's 1 (a floor's dust and corners) and the
 ** referee's test's (rs.h's P_CONCEAL); known to the character, who hid it */
-static unsigned char __fastcall__ hide (const char* name)
+unsigned char __fastcall__ s_hide (const char* name)
 {
     struct req* r;
     signed char g;
@@ -676,6 +726,9 @@ static unsigned char __fastcall__ hide (const char* name)
     HUB->ireq.qty = d;
     return IR_OK;
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- What the character carries, worded into the hub's text (things_text): each thing, and what's in it */
 
@@ -762,11 +815,14 @@ static void list (void)
     put (" lb.");
 }
 
+#pragma code-name (push, "SW2CODE")
+#pragma rodata-name (push, "SW2RODATA")
+
 /* ---- A search for what's concealed about the character (on the squares it sees, within SEARCH_R): the referee's
 ** test for each (its search, at the concealment's difficulty: two steps of it each, from +2), the ones found no
 ** longer hidden, and named in the hub's text; but what's hidden by magic (found by magical means only) */
 #define SEARCH_R        3
-static unsigned char search (void)
+unsigned char s_search (void)
 {
     struct req* r;
     unsigned char* p;
@@ -816,7 +872,7 @@ static unsigned char search (void)
 /* ---- A thing looked at closely (carried, or seen): what it truly is, in the request, for the appraiser's judgement
 ** (the UI's, by the referee's test of the craft that knows it); and how far off it is, in squares (0 carried), its
 ** kind's size above it (the request's to: the UI's, what it makes out at a distance) */
-static unsigned char __fastcall__ describe (const char* name)
+unsigned char __fastcall__ s_describe (const char* name)
 {
     const struct kind* k;
     struct ireq* r;
@@ -846,6 +902,9 @@ static unsigned char __fastcall__ describe (const char* name)
     r->to = k->size << 8 | seen_d;
     return IR_OK;
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- The things the character sees (sight.c's): on the squares it sees now, not hidden, named, where they lie; a
 ** surface's things after it, seen with it (hid 2: on the one before), and each one's size (hid's high four bits: the

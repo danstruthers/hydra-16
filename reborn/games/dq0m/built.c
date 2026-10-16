@@ -8,7 +8,7 @@
 ** room), its floor running evenly from one door's elevation to the other's, steps where too steep; a few more for
 ** loops; each way across the chunk's edges joined to the nearest room; everything reached from everything, walking,
 ** or the chunk grown again (and at the last, a chunk of passages alone, meeting in its middle).  Some rooms are lit,
-** fewer the deeper the stratum (a stand-in for the theme's say).  Built to a plan (DUNGEON.md; uses.c, overlay 6):
+** fewer the deeper the stratum (a stand-in for the theme's say).  Built to a plan (DUNGEON.md; uses.c, overlay 7):
 ** the rooms given their uses once they're sorted (the hall by its kitchen ...), then their floors flat (a built
 ** stratum's: a hall's dais) and their ceilings by their size and use once they're zoned; a fortified stratum's rooms
 ** joined with fewer loops.
