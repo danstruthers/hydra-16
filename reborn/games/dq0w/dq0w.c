@@ -1014,7 +1014,7 @@ static void begin (void)
     struct stratum* s;
     unsigned long seed;
     unsigned char k;
-    unsigned x, y;
+    struct tplace* p;
 
     hub_map (0);
     if (HUB->resume) {                          /* (Carried on: the save's strata, the maker's records back) */
@@ -1059,16 +1059,14 @@ static void begin (void)
     if (HUB->test_start == 2) {                 /* (dq0 -T -T: on the theme's first piece on the top stratum, put down
                                                 **   as its chunk is made) */
         hub_map (THEME_BANK);
-        for (k = 0; k < NPIECES && THEME_PLACE[k].sn; ++k) {
+        for (k = NPIECES, p = THEME_PLACE; k && p->sn; --k, ++p) {
         }
-        if (k < NPIECES) {
-            x = THEME_PLACE[k].cx * CW + strata[0].x0;
-            y = THEME_PLACE[k].cy * CW + strata[0].y0;
-            at (0, x, y);
+        if (k) {
+            at (0, (p->cx << CW_BITS) + strata[0].x0, (p->cy << CW_BITS) + strata[0].y0);
             hub_map (THEME_BANK);
-            if (THEME_PLACE[k].x) {
-                move.x = THEME_PLACE[k].x;
-                move.y = THEME_PLACE[k].y;
+            if (p->x) {
+                move.x = p->x;
+                move.y = p->y;
             }
         }
         hub_map (0);

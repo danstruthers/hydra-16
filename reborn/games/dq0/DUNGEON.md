@@ -90,7 +90,8 @@ style's rules over the whole stratum at once:
   regions that suit them: their lairs, their numbers, their territories and their ways about (patrols, hunting
   grounds, water they go to), each denizen a record from the start, so that what the character meets was there
   before it came, and goes on living there whether it's met or not;
-- **the puzzle's pieces** this stratum holds, where the theme says they may lie.
+- **the puzzle's pieces** this stratum holds, where the theme says they may lie (built: DENIZENS.md's theme, each
+  piece's chunk decided as its stratum's plan is grown, put down as the chunk is first made).
 
 A 5-mile stratum is about 440 regions: a few K of plan.  **Detail** comes as the dungeon is explored: a region's
 chunks' crossings when anyone first comes near the region, and each chunk's squares when anyone comes near the

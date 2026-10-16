@@ -261,7 +261,8 @@ void __fastcall__ o_place_pieces (unsigned char n)
     static struct tpiece tp;
     static struct tplace pl;
     struct stratum* s = &strata[n];
-    unsigned char p, np, tries, rx, ry, kw, kh, sn[NPIECES];
+    unsigned char p, np, tries, rx, ry, sn[NPIECES];
+    unsigned kw, kh;
 
     hub_get (THEME_BANK, &THEME->npieces, &np, 1);
     rseed (strata[0].seed ^ 0x50494543UL);
