@@ -18,8 +18,8 @@
 /* ---- Harm (rs.h's RS_HARM): a fall (harn.h's harn_fall, Skills 8), a trap's strike, a burn, a blow struck; each
 ** an impact on a location made a HarnMaster injury on the sheet (harn_wound, Combat 13-14: its severity and levels,
 ** the kill and shock rolls, bleeding, a limb made useless), told back as effects and in words (kept for RS_DESCRIBE
-** b 2).  The game's own choices in using the book: a fall strikes where a mid strike would (on its feet, a low one);
-** no armour yet (items will bring it); a tool's impacts, where the book has no weapon like it, the game's; one
+** b 2).  The game's own choices in using the book: a fall strikes where a mid strike would (on its feet, a low one),
+** no armour taken off it; a tool's impacts, where the book has no weapon like it, the game's; one
 ** knocked senseless comes round by the book's shock rolls, a round each, within an hour (then wakes anyway).
 **
 ** Bare hands at a thing (a door battered: the user's, 2026-10-15, DUNGEON.md: portals): the blow a d4, the
@@ -27,11 +27,12 @@
 ** from 9-12's) and the hands' armour's bonus; the world takes the thing's resistance off it, and gives the lesser of
 ** the two back as the hand's own hurt (HC_HANDS): an automatic blunt hit on one hand or the other, less its armour,
 ** made an injury as any is.  Enough, and the character stops: the hands' injuries three levels or more, a serious
-** one, or the shock of it.  Armour on the hands comes with the items' telling the referee what's worn (RS_EQUIP's,
-** to come: harn_armour_at over the pieces): none till then */
+** one, or the shock of it.  Armour on the hands, worn (RS_EQUIP's: fight.c's pc_armour over the pieces), takes its
+** protection off the hand's hurt, and a gauntlet adds a point to the blow (the game's).  A trap's strike and a burn
+** have the armour where they strike taken off them as a blow's would (Combat 13) */
 
-#define HAND_BONUS      0                       /* (A gauntlet's, on a blow) */
-#define HAND_COVER      0                       /* (The hand's armour, against a blunt hit) */
+#define HAND_COVER      pc_armour (HARN_HAND, HARN_BLUNT)  /* (The hand's armour, against a blunt hit) */
+#define HAND_BONUS      (HAND_COVER != 0)       /* (A gauntlet's, on a blow) */
 
 char hurt[200];                                 /* The last harm's words */
 char blow[8];                                   /* (A blow's: what it's struck with, its key) */
@@ -183,6 +184,9 @@ void __fastcall__ o_harm (struct req* r)
     }
     d.loc = loc != 0xFF ? loc : harn_strike_location (zone);
     d.aspect = aspect;
+    if (r->a == HC_STRIKE || r->a == HC_FIRE) {
+        impact -= pc_armour (d.loc, aspect);    /* (The armour there) */
+    }
     w = harn_wound (&pc, d.loc, aspect, impact);
     if (w & HARN_W_DEAD) {
         told (&d, HARN_KILL, e);

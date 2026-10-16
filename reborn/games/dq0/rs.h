@@ -72,11 +72,31 @@ enum { MAT_EARTH, MAT_STONE, MAT_MASONRY, MAT_FLAGS };
 /* ---- Health: how hurt an actor is, in words any ruleset can say */
 enum { H_FINE, H_HURT, H_BADLY, H_CRITICAL, H_DOWN, H_DEAD };
 
-/* ---- How an attack came out, for the words */
-enum { O_MISS, O_DODGED, O_BLOCKED, O_HIT, O_BOTH_HIT, O_COUNTER_HIT, O_FUMBLE, O_STUMBLE, O_ADVANTAGE, O_CRIT };
+/* ---- How an attack came out, for the words (O_DISPATCH: a helpless one finished; O_RISE: the attacker, fallen,
+** only got to its feet) */
+enum { O_MISS, O_DODGED, O_BLOCKED, O_HIT, O_BOTH_HIT, O_COUNTER_HIT, O_FUMBLE, O_STUMBLE, O_ADVANTAGE, O_CRIT,
+    O_DISPATCH, O_RISE };
 
 /* ---- Defences: the stance the player sets (the ruleset decides what each means; auto: its best) */
 enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
+
+/* ---- An attack (RS_ATTACK): actor strikes at other (0 the character, else an actor's entry plus 1) with what it has
+** in hand (the character's: RS_EQUIP's, the best weapon held; else its fists) or its own (a creature's claws, bite
+** ...): a its aim (Z_*), b its aspect (AS_*, AS_BEST: what it does best), c the others engaged with the defender
+** besides the attacker (outnumbered), steps the circumstances.  The defence is the ruleset's: the character's by its
+** stance (the hub's pc_stance, D_*), a creature's by its nature; one senseless is finished.  The reply: result how it
+** came out (O_*; 0xFF: none struck), a whose a fumble or a stumble was (1 the attacker's, 2 the defender's, 3
+** both's), b the defence (D_*), c AF_*, its effects (x: X_WOUND, X_DEATH, X_COND_ON: C_PRONE, C_UNCONSCIOUS;
+** X_DROP: a weapon fumbled), w1 the attacker's health (H_*) and the defender's times 256, w2 the tenths one knocked
+** senseless is out for; its words in the text, four lines: the attacker's weapon ("sword", "bite"), the defender's,
+** what the attacker's strike did ("a serious cut to its left thigh (S2)", "your ring byrnie": the armour that stopped
+** it), and the defender's (a counterstrike's, a block's on a bare arm or a claw) */
+#define AF_STOPPED      0x01                    /* The attacker's strike stopped by armour (its line the armour's) */
+#define AF_STOPPED_D    0x02                    /*   the defender's */
+#define AF_TA           0x04                    /* The defender's tactical advantage: an action more, at once */
+
+/* ---- Morale (RS_MORALE): an actor's courage tested (steps: how its fight goes): the grade, and result its state */
+enum { M_STEADY, M_CAUTIOUS, M_BROKEN, M_DESPERATE, M_BERSERK };
 
 /* An effect of a reply: what happened to whom (up to RS_EFFECTS a reply) */
 #define RS_EFFECTS      4
@@ -140,20 +160,26 @@ struct rs_summary {
 enum {
     RS_HELLO,                                   /* -> its name, its round (tenths), its standard action times */
     RS_LOAD_PC,                                 /* A character file -> its name, calling, summary */
-    RS_NEW_ACTOR,                               /* A creature by key (and its tier, size, kind) -> its summary */
+    RS_NEW_ACTOR,                               /* A creature by key (and its tier, size, kind) -> its summary:
+                                                **   actor its entry plus 1, the key in the text, w1 its record (the
+                                                **   denizens' task's: its sheet's, kept and saved with the game; made
+                                                **   the first time, the same one after) */
     RS_DROP_ACTOR,
     RS_TEST,                                    /* An actor, a purpose, steps -> a grade */
     RS_TEST_MANY,                               /* The same for several (perception) */
     RS_CONTEST,                                 /* Two actors, two purposes -> who won */
     RS_ATTACK,                                  /* Attacker, defender, weapon, mode, range, steps -> the outcome */
     RS_HARM,                                    /* A cause (fall, fire, poison ...) and its dice -> effects */
-    RS_TIME,                                    /* Minutes passed: bleeding, fatigue -> effects */
+    RS_TIME,                                    /* Minutes passed (w1): bleeding, fatigue -> effects (b its health,
+                                                **   result 1 if it died of them) */
     RS_REST,                                    /* Hours resting: healing, advancement -> effects, words */
     RS_TREAT,                                   /* A healer, a patient -> effects */
     RS_EQUIP,                                   /* An item taken up (a 1) or put away (a 0): its key in the text
-                                                **   ("pick"); or all that's to hand anew (a 2: the keys, a space
-                                                **   between): the referee judges tests by it, a skill used taking the
-                                                **   tool that suits */
+                                                **   ("pick"); or all that's to hand anew (a 2: the keys, each after
+                                                **   a mark, * held, + worn, a space neither, and its quality after it,
+                                                **   a digit 0-9: " pick4*blade5+ltunic3"): the referee judges tests
+                                                **   by it, a skill used taking the tool that suits, a fight by what's
+                                                **   held and worn */
     RS_INITIATIVE,                              /* Actors -> each one's delay as a fight starts */
     RS_MORALE,
     RS_EXPERIENCE,                              /* Something that counts to advancement */

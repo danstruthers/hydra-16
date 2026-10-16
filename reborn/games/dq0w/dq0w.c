@@ -8,7 +8,8 @@
 ** the UI to word, by the senses (games/dq0p, asked).  It carries out digging, a spell of work at a time (the referee's tests), and
 ** asks the maker to keep what it changes.  The denizens near the character move themselves (their task, games/dq0d,
 ** by the character's rules: the hub's actors); the world keeps the character out of their squares, and looks again
-** at those it sees as they change (den_seq).
+** at those it sees as they change (den_seq).  A blow of the character's at one (I_ATTACK) takes it a round, and is
+** the denizens' task's to strike (the hub's pc_foe), as theirs at it are.
 **
 ** The clock (main.c's once): each real tick (200 a second) is round tenths of game time over tpr ticks (the pace:
 ** a round in tpr ticks); paused (Escape) or held (the UI asking something), it stands.  At the turns pace (tpr 0)
@@ -1486,6 +1487,12 @@ static void __fastcall__ intent (struct msg* m)
     case I_QUIT:
         HUB->quit = 1;
         break;
+    case I_ATTACK:                              /* (A round's blow: the denizens' task strikes it, and tells it) */
+        busy (HUB->round);
+        HUB->pc_aim = m->b;
+        HUB->pc_foe = m->a;
+        hub_ring (T_DENIZENS);
+        break;
     }
 }
 
@@ -1562,6 +1569,10 @@ int main (int argc, char* argv[])
             was_busy = 1;
         }
         clock_run ();
+        if (HUB->den_look && !move.on) {
+            HUB->den_look = 0;                  /* (A body fallen: looked at again, the things too) */
+            see (0);
+        }
         if (HUB->den_seq != dseq) {
             dseq = HUB->den_seq;
             stirred ();                         /* (The denizens' task's changes: what it sees of them) */

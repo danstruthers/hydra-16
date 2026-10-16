@@ -47,7 +47,9 @@ static const struct { char w[16]; unsigned char v; } verbs[] = {
     { "raise", V_RAISE }, { "lift", V_RAISE }, { "winch", V_RAISE }, { "lower", V_LOWER },
     { "break", V_BREAK }, { "smash", V_BREAK }, { "bend", V_FORCE }, { "disarm", V_DISARM }, { "disable", V_DISARM },
     { "save", V_SAVE }, { "inventory", V_INVENTORY }, { "inv", V_INVENTORY }, { "i", V_INVENTORY },
-    { "q", V_QUIT },
+    { "q", V_QUIT }, { "attack", V_ATTACK }, { "hit", V_ATTACK }, { "fight", V_ATTACK }, { "strike", V_ATTACK },
+    { "kill", V_ATTACK }, { "stab", V_ATTACK }, { "slash", V_ATTACK }, { "punch", V_ATTACK },
+    { "defend", V_DEFEND }, { "stance", V_DEFEND },
 };
 
 /* The directions: by the compass (0-7), as it faces (REL | 0-7), up, down */
@@ -90,7 +92,7 @@ static const struct { char w[8]; unsigned char p; } preps[] = {
 /* The little words, passed over (to, toward, at: up to it; through, into, out: through it) */
 static const char little[][10] = {
     "the", "a", "an", "this", "that", "these", "those", "of", "me", "my", "myself", "self", "off", "side",
-    "direction", "dir", "and", "please", "on", "over", "head", "then", "now", "way", "here", "there", "it",
+    "direction", "dir", "and", "please", "on", "over", "head", "then", "now", "way", "here", "there", "it", "by",
 };
 
 static unsigned char nw;                        /* The line's words */
@@ -264,7 +266,9 @@ void o_help (void)
          "wall, the rock, a shaft); jump down (a ledge, a shaft); open, close, unlock, force (the door ahead), raise, "
          "lower (a portcullis), break (a door, a window's glass), lift (a bar), climb through (a window), disarm (a trap), search; get, "
          "drop, hold (wield), stow, put the dagger in the sack (or on the table), take the rope from the pack, hang "
-         "the pouch (on your belt), wear, take off, inventory (i), examine (a thing, a door, the room: look closely), hide; look (l), map (m), sheet (the "
+         "the pouch (on your belt), wear, take off, inventory (i), examine (a thing, a door, the room: look closely), hide; "
+         "attack (hit, fight: the rat beside you, with what you hold), defend (dodge, block, counter, none, or best); look "
+         "(l), map (m), sheet (the "
          "character), wait (z), pause (or Escape), quit (q).");
     msg ("Played over the serial port, the game answers quickest at 19200 or 115200 baud (echo b115200 "
          ">/dev/serctl, then the terminal set to match); on the Vera X's screen and keyboard it needs neither.");

@@ -346,8 +346,9 @@ static void items (void)
 
 /* The denizens it sees: "A giant rat is ahead to your left, 15 feet away, watching you." (each, as there's room
 ** in lb) */
-static const char* const doing[4] = {
-    " feet away.", " feet away, watching you.", " feet away, coming towards you.", " feet away, keeping its distance."
+static const char* const doing[8] = {
+    " feet away.", " feet away, watching you.", " feet away, coming towards you.", " feet away, keeping its distance.",
+    " feet away, fighting you.", " feet away, fleeing.", " feet away, lying senseless.", " feet away."
 };
 
 static void denizens (void)
@@ -367,7 +368,7 @@ static void denizens (void)
         dx = dx < 0 ? -dx : dx;
         dy = dy < 0 ? -dy : dy;
         addn (5 * (dx > dy ? dx : dy));
-        add (doing[S->den[i].doing & 3]);
+        add (doing[S->den[i].doing & 7]);
     }
 }
 

@@ -321,10 +321,10 @@ blow is
 
 - the blow: a d4, the Strength's modifier and any armour's bonus (the referee's: HarnMaster's has no Strength
   modifier as such, so the game's, by the bands of the book's Strength table: 1-5 -2, 6-8 -1, 9-12 none, 13-15 +1,
-  16 and more +2; a gauntlet's bonus none till the items tell the referee what's worn);
+  16 and more +2; a gauntlet worn a point more: the game's);
 - the door's harm: the blow less its resistance to a blunt blow (its material's, less for a worse state: the same as
   any blow's), never below nothing, off its body;
-- the hand's harm: the lesser of the blow and that resistance, less the hand's armour (none, so far): an automatic
+- the hand's harm: the lesser of the blow and that resistance, less the hand's armour (gauntlets worn): an automatic
   blunt hit on one hand or the other (rs.h's HC_HANDS), the referee's HarnMaster injury, worded ("Your knuckles
   split on it: a minor bruise to your right hand (M1)"), on the sheet.  So a strong character does more to a door
   than a weak one, and a sturdy door hurts the hands more than a rotten one.  The character stops when the referee
@@ -474,7 +474,9 @@ levels, the shock roll, bleeding, a limb made useless), kept in the save, told b
 summary's), the referee's words of the wounds and the UI's of the rest.  A blow at a thing (a door, bars, a chest)
 gives only its impact, for the world to take the thing's resistance and toughness from.  Built: falls, from a climb's
 critical failure (a hold grabbed may stop it) and from jumping down a ledge or a shaft (jump down); a death ends the
-game.  (To come: bleeding and waking as time passes, RS_TIME; armour; the traps' and the blows' callers.)
+game.  Armour worn (the items' armour kinds: a leather cap and tunic, a gambeson, a ring byrnie, a mail hauberk,
+gauntlets) is taken off a trap's strike and a burn where they strike, and off a blow in a fight (DENIZENS.md:
+fights).  (To come: the character's bleeding as time passes, and its treatment.)
 
 ### Seeing, and the map
 

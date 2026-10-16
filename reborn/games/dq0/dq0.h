@@ -9,6 +9,7 @@
 **   bank.s     the RAM banks: the window at $8000, bytes between a bank and the main RAM, the overlays' calls
 **   look.c     what the character perceives, in words (the world's record of it, in the hub: level.h); the map
 **   fixt.c     (overlay 4) the fixtures' words: portcullises, windows and slits worked, traps (an E_TRAP's)
+**   blows.c    (overlay 5) a fight's words: the blows struck, the wounds, a denizen's fall (an E_FIGHT's)
 **   intro.c    (overlay 1) the title and the pace (the character is hmchar's: a program of its own,
 **              games/hmchar, that main.c runs, and whose file the referee reads)
 **
@@ -87,7 +88,8 @@ void __fastcall__ map (const char* rules);      /* The map of what it's seen rou
 enum {
     V_NONE, V_MOVE, V_ENTER, V_APPROACH, V_LOOK, V_EXAMINE, V_SEARCH, V_TURN, V_FACE, V_CLIMB, V_JUMP, V_OPEN, V_CLOSE,
     V_UNLOCK, V_FORCE, V_DIG, V_GET, V_DROP, V_DON, V_DOFF, V_LIGHT, V_DOUSE, V_WAIT, V_MAP, V_SHEET, V_HELP,
-    V_PAUSE, V_QUIT, V_SAVE, V_INVENTORY, V_HIDE, V_HOLD, V_STOW, V_PUT, V_HANG, V_RAISE, V_LOWER, V_BREAK, V_DISARM
+    V_PAUSE, V_QUIT, V_SAVE, V_INVENTORY, V_HIDE, V_HOLD, V_STOW, V_PUT, V_HANG, V_RAISE, V_LOWER, V_BREAK, V_DISARM,
+    V_ATTACK, V_DEFEND
 };
 enum { OB_NONE, OB_DOOR, OB_PASSAGE, OB_STAIRS, OB_LADDER, OB_SHAFT, OB_LEDGE, OB_WAY_OUT, OB_WALL, OB_WINDOW, OB_TRAP,
     OB_PORTC, OB_ROOM };                        /* (OB_ROOM: the room, its ceiling: looked at closely) */
@@ -126,6 +128,15 @@ void __fastcall__ trap_words (unsigned w);      /* Overlay 4: a trap's (an E_TRA
 void __fastcall__ trap_name (unsigned char kind, unsigned char trigger, unsigned char state);  /* Overlay 4: a
                                                 **   trap's name, added to lb */
 void den_way (void);                            /* Overlay 4: a denizen in the way (its name in lb) */
+struct msg;
+struct fight;
+void __fastcall__ fight_words (const struct msg* m, struct fight* f);  /* Overlay 5: a blow (an E_FIGHT, and
+                                                **   its record from the ring, copied into lb's end: FIGHT_LB), into
+                                                **   lb */
+#define FIGHT_LB    ((struct fight*) (lb + sizeof lb) - 1)
+void __fastcall__ fight_note (unsigned char n);  /* Overlay 5: a word of a fight's, into lb: a stance taken (rs.h's
+                                                **   D_*), or why there's no blow (FN_*) */
+enum { FN_AWAY = 5, FN_NONE_LIKE, FN_NONE };
 void __fastcall__ heard_words (unsigned char what, unsigned char rel);  /* Overlay 2: a denizen heard (an E_DEN's
                                                 **   what, | 0x80 muffled, the way it lies as the character faces),
                                                 **   into lb */
@@ -151,6 +162,6 @@ void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
 void __fastcall__ bread (unsigned char bank, const void* from, void* to, unsigned n);
 void __fastcall__ bwrite (unsigned char bank, void* to, const void* from, unsigned n);
-extern unsigned char ovbank[4];
+extern unsigned char ovbank[5];
 
 #endif

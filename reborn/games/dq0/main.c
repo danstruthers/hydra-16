@@ -106,10 +106,10 @@ static void ovl_load (void)
 
     strcpy (path, libdir);
     strcat (path, "/dq0.ovl");
-    if ((fd = open (path, O_RDONLY)) < 0 || (first = hy_banks_alloc (4)) < 0) {
+    if ((fd = open (path, O_RDONLY)) < 0 || (first = hy_banks_alloc (sizeof ovbank)) < 0) {
         hy_exits ("dq0: its overlays (lib/dq0/dq0.ovl) not found, or no RAM banks");
     }
-    for (k = 0; k < 4; ++k) {
+    for (k = 0; k < sizeof ovbank; ++k) {
         ovbank[k] = first + k;
         for (off = 0; off < 0x2000; off += sizeof b) {
             n = read (fd, b, sizeof b);
@@ -235,7 +235,8 @@ static void sheet (void)
 ** and the maker's changes.dat and seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    2                           /* (2: the items' records with their size, the portals' make) */
+#define SAVE_VER    3                           /* (2: the items' records with their size, the portals' make; 3: the
+                                                **   denizens' with their attitudes, the creatures' sheets) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
@@ -448,6 +449,33 @@ static unsigned long heard_at;
 static unsigned char heard_rel = 0xFF;
 char heard_what[20];
 
+static void __fastcall__ intend2 (unsigned char kind, unsigned w1, unsigned w2);
+
+/* A blow (an E_FIGHT: the character's, or one at it), worded (overlay 5's: the referee's words from the ring in the
+** denizens' bank, copied; the denizen named only if the character sees it, else "?": something); the character dead
+** of it, the game's end; knocked senseless, it waits it out */
+static void __fastcall__ blow (const struct msg* m)
+{
+    struct fight* f = FIGHT_LB;
+    unsigned char k;
+
+    hub_map (DEN_BANK);
+    memcpy (f, FIGHT_AT + m->x[3] % NFIGHTS, sizeof (struct fight));
+    hub_map (0);
+    for (k = HUB->sight.ndens; k-- && (HUB->sight.den[k].x != m->w1 || HUB->sight.den[k].y != m->w2); ) {
+    }
+    if (k == 0xFF) {
+        strcpy (m->who ? f->att : f->def, "?");
+    }
+    fight_words (m, FIGHT_LB);
+    msg (lb);
+    if (HUB->pcsum.cond & C_DEAD) {
+        quit = 1;
+    } else if (m->x[2] & (m->who ? FF_D_DOWN : FF_A_DOWN)) {
+        intend2 (I_WAIT, FIGHT_LB->out, 1);     /* (Out: the time it's senseless) */
+    }
+}
+
 static void heard (void)
 {
     static struct msg m;
@@ -455,6 +483,10 @@ static void heard (void)
     unsigned char rel;
 
     while (hub_dnext (&dplace, &m)) {
+        if (m.kind == E_FIGHT && (!m.who || !m.a)) {
+            blow (&m);
+            continue;
+        }
         if (m.kind != E_DEN || !m.b || m.x[2] || m.x[0] != HUB->pc_stratum) {
             continue;
         }
@@ -495,7 +527,9 @@ static unsigned char events (void)          /* (How many there were) */
         case E_READY:
             if (m.who == 0) {
                 busy = 0;
-                t_prompt (1);
+                heard ();                       /* (What came before it, told before the prompt: a blow's words;
+                                                **   knocked senseless by one, busy again) */
+                t_prompt (!busy);
             }
             break;
         case E_BYE:
@@ -917,6 +951,30 @@ static unsigned char __fastcall__ at_once (const char* l)
     return c.verb == V_INVENTORY || c.verb == V_SHEET || c.verb == V_MAP || c.verb == V_HELP;
 }
 
+/* A blow at a denizen beside the character (one whose name has the word w, if it's given; the one that way, dir, if
+** that is): the world's I_ATTACK, a round's (the denizens' task strikes it, and tells it) */
+static void __fastcall__ attack (const char* w, unsigned char dir)
+{
+    struct actor* q = HUB->actor;
+    unsigned char k, away = 0;
+    int dx, dy;
+
+    for (k = 0; k < NACTORS; ++k, ++q) {
+        dx = q->x - HUB->pc_x;
+        dy = q->y - HUB->pc_y;
+        if (q->name[0] && q->sn == HUB->pc_stratum && (!*w || strstr (q->name, w)) &&
+            (dir > H_NW || bearing (dx, dy) == dir)) {
+            if (dx >= -1 && dx <= 1 && dy >= -1 && dy <= 1) {
+                intend (I_ATTACK, k + 1);
+                return;
+            }
+            away = 1;
+        }
+    }
+    fight_note (away ? FN_AWAY : *w ? FN_NONE_LIKE : FN_NONE);
+    msg (lb);
+}
+
 /* A command, the parser's, carried out */
 static void __fastcall__ command (char* l)
 {
@@ -1067,6 +1125,16 @@ portal:
     case V_INVENTORY:
         things (IO_LIST, "");
         msg (HUB->things_text);
+        return;
+    case V_ATTACK:
+        attack (c.word, c.dir);
+        return;
+    case V_DEFEND:                              /* (The stance: the referee's defence for the character) */
+        d = c.word[0];
+        HUB->pc_stance = d == 'd' ? D_DODGE : d == 'b' && c.word[1] == 'l' ? D_BLOCK : d == 'c' ? D_COUNTER : d == 'n' ?
+            D_NONE : D_AUTO;
+        fight_note (HUB->pc_stance);
+        msg (lb);
         return;
     case V_JUMP:
         if (c.dir == GO_DOWN) {

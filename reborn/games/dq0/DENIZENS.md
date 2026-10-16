@@ -198,5 +198,26 @@ words; idle, the CPU 64% busy to 50% (the world's and the sound task's loops slo
 - **In the way:** the character can't walk onto a denizen's square: a walk along a passage, across a room or up to
   a square stops short of one (the way across a room found round them), and one in the very next square is told
   ("A giant rat is in the way.": E_NOWAY's N_DEN, the actor's).
-- **Later:** attitudes, factions and influence; the referee's sheets (RS_NEW_ACTOR by the kind's key) and fights;
-  their exploring and digging; the theme as data.
+- **Sheets:** each actor has the referee's sheet (RS_NEW_ACTOR, by its kind's key, its record's number: dq0harn/fight.c's
+  stand-in bestiary, the game's own numbers, each attribute varied by a die of its own so no die of the referee's is
+  spent on it), made the first time and kept after (its wounds, its state) in a bank of the referee's, saved with
+  the game (beasts.dat).
+- **Attitudes:** each denizen's record has one (hub.h's AT_*, the actor's attitude field: hostile -3 ... devoted 3,
+  neutral 0), its kind's to begin with till the theme's factions say (the bold hostile, those that keep to their lairs
+  unfriendly, the rest wary); one struck at turns hostile, one that flees unfriendly.
+- **Fights** (the user's choice, 2026-10-16; the referee's, HarnMaster's melee, behind rs.h's RS_ATTACK): a hostile
+  actor sensing the character beside it strikes at it, a round at a time (the referee's round: at the turns pace a
+  slice; at the real paces as the clock runs); an unfriendly one only when the character is beside it; a hostile one
+  comes towards it.  The character strikes at one beside it ("attack the rat", "hit", "fight": a round of its
+  time, the world's I_ATTACK, the blow posted for the denizens' task, pc_foe) with the best weapon it holds (else its
+  fists), defending by its stance ("defend dodge", "block", "counter", "none", "best"); its armour is what it wears
+  (the things tell the referee what's held and worn, and how well made: RS_EQUIP's marks).  Each blow is told
+  (E_FIGHT in the denizens' queue, its words in a ring in their bank: the referee's for the wounds and the armour, the
+  UI's for the rest, overlay 5), heard by the others (they turn to it) and played (the sound task's *hit, *swish).
+  A denizen wounded tests its morale (RS_MORALE: the book's Initiative test): broken (or a shy one cautious) it flees
+  a minute; cautious, it holds back a round.  One knocked senseless lies there till it comes round, and is finished
+  if it's struck meanwhile; one bleeding loses blood a minute at a time (RS_TIME) and may die of it; one dead leaves its
+  body (an item: a body, a skeleton's bones) and never comes back.  The character knocked senseless waits it out (it
+  can't defend meanwhile); dead, the game ends.
+- **Later:** factions and influence; allies fighting beside the character; missiles (a bow through an arrow slit);
+  the character's own bleeding and its treatment; their exploring and digging; the theme as data.
