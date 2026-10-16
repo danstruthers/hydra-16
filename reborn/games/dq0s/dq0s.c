@@ -44,7 +44,8 @@ struct dsnd {
 typedef char dsnd_fits[sizeof (struct dsnd) == SND_REC ? 1 : -1];
 #define S_USED          0x01                    /* A sound there */
 #define S_NOISY         0x02                    /* A noise (the PSG's, first) */
-enum { WS_DIG, WS_OPEN, WS_SHUT, WS_BLOW, WS_SMASH, WS_CHAINS, WS_TRAP };     /* The world's (sounds.txt's *dig ...) */
+enum { WS_DIG, WS_OPEN, WS_SHUT, WS_BLOW, WS_SMASH, WS_CHAINS, WS_TRAP, WS_HIT, WS_SWISH };   /* The world's
+                                                **   (sounds.txt's *dig ...; a fight's blow landing, missing) */
 #define WORLD(w)        (2 * SND_KINDS + (w))
 #define NSOUNDS         (2 * SND_KINDS + SND_WORLD)
 
@@ -387,6 +388,9 @@ static void listen (void)
     while (hub_dnext (&dplace, &m)) {
         if (m.kind == E_DEN && m.b && m.x[0] == sn && (m.a == DE_MOVED || m.a == DE_NOISE)) {
             heard (m.who, m.x[1] % SND_KINDS * 2 + (m.a == DE_NOISE), m.b, m.w1 - px, m.w2 - py, m.x[3]);
+        } else if (m.kind == E_FIGHT && m.x[0] == sn && m.x[1] < FO_BLED) {   /* (A blow: landing, or not) */
+            heard (m.who, WORLD (m.x[1] == O_HIT || m.x[1] == O_BOTH_HIT || m.x[1] == O_COUNTER_HIT ||
+                m.x[1] == O_DISPATCH ? WS_HIT : WS_SWISH), m.b, m.w1 - px, m.w2 - py, 0);
         }
     }
     hub_map (0);

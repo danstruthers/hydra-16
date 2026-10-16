@@ -31,7 +31,8 @@ motifs at moments.
   note; the PSG: a waveform, its width and a note), in **hits** (a scurry is three quick ticks, a tread two slow
   thuds, a growl one long one), at a **level** (how loud it is at its loudest).  For now the acts are the denizens'
   events' two loud ones: a step (DE_MOVED: a dash past the character is a louder step) and a noise of its own
-  (DE_NOISE); a fight's, a death's and a voice's come with them.
+  (DE_NOISE); and a fight's blows (E_FIGHT: *hit, a blow landing; *swish, one that doesn't), the world's own sounds
+  played where the attacker is; a death's and a voice's come later.
 - **What a creature hears.**  Each hears by its own kind's hearing (dq0d/kinds.txt's): the denizens' task's, as
   DENIZENS.md says; the character by its own (the referee's, 0-9), as the UI and the sound task say below.  Both by
   the same rule: a noise of loudness L carries L times the hearer's hearing (the character's: (hearing + 3) / 2)

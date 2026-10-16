@@ -543,11 +543,13 @@ static unsigned char __fastcall__ carry (unsigned n, unsigned char hand_first)
 }
 
 /* ---- The tools: the keys of all the character carries (anywhere on it: a skill used, the one that suits takes
-** itself out), into the hub's things_text, a space between, and its load (the weight of all it carries, worn or
-** not, in quarter pounds: the referee's encumbrance) in the request's x; and one used, worn (the referee's choice,
-** by its key), its name back in the request (bare hands: "hands") */
+** itself out), into the hub's things_text, each after its mark (* held, + worn, a space neither: what's held fights,
+** what's worn guards) and its quality after it (a digit: rs.h's RS_EQUIP), and its load (the weight of all it
+** carries, worn or not, in quarter pounds: the referee's encumbrance) in the request's x; and one used, worn (the
+** referee's choice, by its key), its name back in the request (bare hands: "hands") */
 static void tools (void)
 {
+    static char m[2];
     const struct kind* k;
     unsigned i = 0;
     char* t;
@@ -560,9 +562,12 @@ static void tools (void)
         if (k->tool[0] && on_pc (i)) {
             hub_map (0);
             t = HUB->things_text;
-            if (strlen (t) < sizeof HUB->things_text - 10) {
+            if (strlen (t) < sizeof HUB->things_text - 11) {
+                m[0] = rec.flags & I_HELD ? '*' : rec.flags & I_WORN ? '+' : ' ';
+                strcat (t, m);
                 strcat (t, k->tool);
-                strcat (t, " ");
+                m[0] = '0' + rec.quality;
+                strcat (t, m);
             }
         }
     }

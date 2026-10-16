@@ -1,13 +1,13 @@
 /*
-** seen.c - (overlay 6) more of what the character perceives, in words (words.c's overlay is full): a ceiling at a
+** seen.c - (overlay 7) more of what the character perceives, in words (words.c's overlay is full): a ceiling at a
 ** glance; the things it sees lying about and the denizens it sees (words.c's, after the place; as they stir), and
 ** those it hears.  As words.c's: only what it sees now (nothing behind it), and what's further off in less detail,
 ** the further it is and the weaker the character's sight (the referee's: struct sight's eye): a thing too far to make
 ** out only by its size ("something small"), a denizen too far to tell what it is only as something there.
 */
 
-#pragma code-name ("OV6CODE")
-#pragma rodata-name ("OV6RODATA")
+#pragma code-name ("OV7CODE")
+#pragma rodata-name ("OV7RODATA")
 
 #include <stdlib.h>
 #include <string.h>
@@ -118,9 +118,10 @@ static void items (void)
 /* The denizens it sees: "A giant rat is ahead to your left, 15 feet away, watching you." (each, as there's room
 ** in lb; an ally named: "Grub is behind you, 5 feet away, following you."); one too far off to make out (by the
 ** character's sight) only as something there; but none behind it, an ally's but heard close behind it */
-static const char* const doing[6] = {
+static const char* const doing[9] = {
     " feet away.", " feet away, watching you.", " feet away, coming towards you.", " feet away, keeping its distance.",
-    " feet away, following you.", " feet away, waiting."
+    " feet away, following you.", " feet away, waiting.", " feet away, fighting you.", " feet away, fleeing.",
+    " feet away, lying senseless."
 };
 
 static void denizens (void)
@@ -147,7 +148,7 @@ static void denizens (void)
         add (relname[r]);
         add (", ");
         addn (5 * d);
-        add (doing[S->den[i].doing % 6]);
+        add (doing[S->den[i].doing % 9]);
     }
     add (heard ? " You hear something close behind you." : "");
 }

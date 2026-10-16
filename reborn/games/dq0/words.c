@@ -5,7 +5,7 @@
 ** ahead, ahead to its right ... ahead to its left), and how far above or below it; nothing behind it (the user's: "you
 ** can't really see" it), though the senses mark the squares beside it there.  A room's size it knows when it's seen
 ** the whole of it; a ceiling when the light reaches it.  At a glance (the user's), in general words: a small hall, a
-** long gallery, a high ceiling, a low, rough one (overlay 6's ceiling_glance); its figures (its size in feet, its
+** long gallery, a high ceiling, a low, rough one (overlay 7's ceiling_glance); its figures (its size in feet, its
 ** ceiling's heights) only on a close look (look closely, examine the room: look's sight_close), and only for what it's
 ** seen (else its far side is lost in the dark).  What's further off is told in less detail, the further it is and the
 ** weaker the character's sight (the referee's: struct sight's eye): a thing too far to make out only by its size
@@ -214,7 +214,7 @@ static void ceiling (void)
         return;
     }
     if (!sight_close) {
-        ceiling_glance ();                      /* (Overlay 6's: this one's full) */
+        ceiling_glance ();                      /* (Overlay 7's: this one's full) */
         return;
     }
     switch (S->ceil != C_ROUGH && S->cwall >= S->cmid ? C_FLAT : S->ceil) {   /* (A vault no higher in the middle: flat) */
@@ -359,5 +359,5 @@ void o_words (void)
         passage ();
     }
     traps ();
-    seen_words ();                              /* (The things and the denizens it sees: overlay 6's) */
+    seen_words ();                              /* (The things and the denizens it sees: overlay 7's) */
 }

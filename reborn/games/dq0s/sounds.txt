@@ -4,7 +4,8 @@
 # none, then the world's), which it puts in the hub (SND_AT) as it starts: the UI words what's heard by it too.
 #
 # A line a sound, its fields between bars:
-#   key       a kind's (kinds.txt's), or the world's own: *dig, *open, *shut, *blow, *smash, *chains, *trap
+#   key       a kind's (kinds.txt's), or the world's own: *dig, *open, *shut, *blow, *smash, *chains, *trap, *hit (a
+#             fight's blow landing), *swish (one missing, dodged, blocked)
 #   act       a kind's: step (a step, a dash), noise (a noise of its own); the world's: -
 #   words     what the character hears it as, its article first (19 letters at most: "a scurrying"), or - none
 #   ym        the YM2151's: d N, General MIDI's drum N (35 kick ... 81 open triangle); or P N, patch P (0-162: the
@@ -35,3 +36,5 @@ kobold   | noise | a yapping          | 85 76  | p 32 76   | 3-12 | 6    | 100
 *smash   | -     | -                  | d 49   | n 0 127   | 1-0  | 30   | 120
 *chains  | -     | -                  | d 54   | n 0 104   | 6-6  | 2    | 90
 *trap    | -     | -                  | 130 60 | n 0 120   | 1-0  | 4    | 110
+*hit     | -     | -                  | d 36   | n 0 70    | 1-0  | 6    | 110
+*swish   | -     | -                  | 121 90 | n 0 118   | 1-0  | 10   | 80

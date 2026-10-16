@@ -9,8 +9,11 @@
 ** common, and its file's "language" lines), RS_HARM (a fall, a trap's strike, a burn, a blow, a hand hurt
 ** by its blow at a thing: injuries on the sheet), RS_DESCRIBE (the character's sheet, its injuries with it; b 1: its
 ** short lines, for the map's panel, each 15 characters at most; b 2: the last harm's words), RS_SAVE (the sheet,
-** its injuries and all).  The sheet's words and the harm are overlay 1's (sheet.c: DIR/dq0harn.ovl, read into a
-** bank of its own as it starts).
+** its injuries and all, and the creatures' sheets), RS_NEW_ACTOR (a creature's sheet, by its kind's key: made the
+** first time, kept in a bank after), RS_ATTACK (a blow struck, HarnMaster's melee: by the character, or at it),
+** RS_MORALE, RS_TIME (bleeding).  The sheet's words and the harm are overlay 1's (sheet.c), the fights overlay 2's
+** (fight.c): DIR/dq0harn.ovl, read into banks of its own as it starts.  Its slots: the hub's two (the world's, the
+** UI's), and the denizens' task's in the denizens' bank (DSLOT_AT: copied out, answered, copied back).
 **
 ** The game's own choices in using the book (not the book's rules): a purpose names the skill (or attribute times 5)
 ** a GM would call for; a skill not opened is tested at its OML, as if opened on first use.
@@ -71,8 +74,8 @@ void __fastcall__ putn (int v)
 ** masonry); a critical success twice that, a marginal failure half, a critical failure none; bare hands dig only
 ** earth; and the wear a spell does the tool */
 
-#define NTOOLS  12
-static char tools[NTOOLS][8];
+char tools[NTOOLS][8];
+unsigned char tflag[NTOOLS], tqual[NTOOLS];
 
 static const struct { char key[8]; unsigned char rate[4], wear[4]; } digger[] = {    /* Earth, stone, masonry, flags */
     { "hands", { 1, 0, 0, 0 }, { 0, 0, 0, 0 } }, { "shovel", { 3, 0, 0, 1 }, { 0, 0, 0, 0 } },
@@ -81,20 +84,28 @@ static const struct { char key[8]; unsigned char rate[4], wear[4]; } digger[] = 
     { "blade", { 1, 0, 0, 0 }, { 40, 0, 0, 0 } }, { "knife", { 1, 0, 0, 0 }, { 40, 0, 0, 0 } },
 };
 
-/* All that's to hand, anew: the keys in the text, a space between */
+/* All that's to hand, anew: the keys in the text, each after its mark (* held, + worn, a space neither) and its
+** quality after it (a digit) */
 static void __fastcall__ equip_all (const char* keys)
 {
-    unsigned char k = 0, n;
+    unsigned char k = 0, n, f;
 
     memset (tools, 0, sizeof tools);
     while (*keys && k < NTOOLS) {
-        for (n = 0; keys[n] && keys[n] != ' '; ++n) {
+        f = *keys == '*' ? T_HELD : *keys == '+' ? T_WORN : 0;
+        if (*keys < 'a') {
+            ++keys;
+        }
+        for (n = 0; keys[n] >= 'a'; ++n) {
         }
         if (n && n < sizeof tools[0]) {
-            memcpy (tools[k++], keys, n);
+            memcpy (tools[k], keys, n);
+            tflag[k] = f;
+            tqual[k] = keys[n] >= '0' && keys[n] <= '9' ? keys[n] - '0' : 4;
+            ++k;
         }
         keys += n;
-        while (*keys == ' ') {
+        if (*keys >= '0' && *keys <= '9') {
             ++keys;
         }
     }
@@ -108,6 +119,7 @@ static void __fastcall__ equip (const char* key, unsigned char on)
         if (on ? !tools[k][0] : !strcmp (tools[k], key)) {
             if (on) {
                 strncpy (tools[k], key, sizeof tools[k] - 1);
+                tflag[k] = 0;
             } else {
                 tools[k][0] = 0;
             }
@@ -227,17 +239,17 @@ static unsigned char __fastcall__ sense (unsigned char a)
     return v <= 3 ? 0 : v >= 18 ? 9 : (v - 3) * 3 / 5;
 }
 
-/* Its conditions (rs.h's C_*), as its sheet has them: its state (senseless, in shock, dead), bleeders, limbs made
-** useless */
-unsigned conditions (void)
+/* Its conditions (rs.h's C_*), as its sheet has them (the character's, or a creature's): its state (senseless, in
+** shock, dead), bleeders, limbs made useless */
+unsigned __fastcall__ cond_of (const harn_char* h)
 {
     static const unsigned state[4] = { 0, C_UNCONSCIOUS, C_STUNNED, C_DEAD };
-    unsigned c = state[pc.state & 3];
+    unsigned c = state[h->state & 3];
     unsigned char k;
-    harn_injury* j;
+    const harn_injury* j;
 
-    for (k = 0; k < pc.ninj; ++k) {
-        j = &pc.inj[k];
+    for (k = 0; k < h->ninj; ++k) {
+        j = &h->inj[k];
         if (j->flags & HARN_IF_BLEEDER) {
             c |= C_BLEEDING;
         }
@@ -250,11 +262,11 @@ unsigned conditions (void)
 
 /* Its health in words any ruleset can say (the game's: by its injuries' levels against its Endurance; down, in
 ** shock or senseless) */
-static unsigned char health (void)
+unsigned char __fastcall__ health_of (const harn_char* h)
 {
-    unsigned char ip = harn_get_ip (&pc), e = harn_end (&pc);
+    unsigned char ip = harn_get_ip (h), e = harn_end (h);
 
-    return pc.state == HARN_DEAD ? H_DEAD : pc.state != HARN_CONSCIOUS ? H_DOWN : !ip ? H_FINE : 3 * ip < e ? H_HURT :
+    return h->state == HARN_DEAD ? H_DEAD : h->state != HARN_CONSCIOUS ? H_DOWN : !ip ? H_FINE : 3 * ip < e ? H_HURT :
         3 * ip < 2 * e ? H_BADLY : H_CRITICAL;
 }
 
@@ -269,7 +281,7 @@ static void status (void)
     strcat (HUB->pcstatus, utoa (harn_get_up (&pc), b, 10));
     s->cond = conditions ();
     strcat (HUB->pcstatus, pc.state ? word[pc.state & 3] : s->cond & C_BLEEDING ? " BLEEDING" : "");
-    s->health = health ();
+    s->health = health_of (&pc);
     k = harn_move (&pc);                       /* (Walking: half its Move, squares a round: Combat 6) */
     s->step = k < 4 ? 50 : 200 / k;
     s->attacks = 1;
@@ -344,6 +356,57 @@ static void __fastcall__ save_pc (struct req* r)
     r->result = 0;
 }
 
+/* ---- The creatures' sheets (fight.c's): a bank of the referee's, a sheet a denizen's record (its number the
+** denizens' task's), kept in the save folder's beasts.dat with the game's other records (read back as the first
+** creature's asked for, a game carried on) */
+
+static unsigned char sb;                        /* Their bank */
+static unsigned char piece[256];                /* (The bank through the main RAM, a piece at a time) */
+struct beast bs;
+unsigned char aden[NACTORS];
+unsigned long tnow, gseed;
+unsigned char stance;
+char bkey[8];
+
+void __fastcall__ sheet_get (unsigned char n)
+{
+    bread (sb, (struct beast*) 0x8000 + n, &bs, sizeof bs);
+}
+
+void __fastcall__ sheet_put (unsigned char n)
+{
+    bwrite (sb, (struct beast*) 0x8000 + n, &bs, sizeof bs);
+}
+
+/* The bank written to the save folder's beasts.dat (back 1: read from it, or cleared: none there; 2: cleared) */
+static void __fastcall__ beasts (unsigned char back)
+{
+    static char path[56];
+    unsigned off;
+    int fd = -1;
+
+    memset (piece, 0, sizeof piece);
+    if (back < 2 && HUB->savedir[0]) {
+        strcpy (path, HUB->savedir);
+        strcat (path, "/beasts.dat");
+        fd = back ? open (path, O_RDONLY) : open (path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    }
+    for (off = 0; off < 0x2000; off += sizeof piece) {
+        if (!back) {
+            bread (sb, (char*) 0x8000 + off, piece, sizeof piece);
+            write (fd, piece, sizeof piece);
+        } else {
+            if (fd < 0 || read (fd, piece, sizeof piece) != sizeof piece) {
+                memset (piece, 0, sizeof piece);
+            }
+            bwrite (sb, (char*) 0x8000 + off, piece, sizeof piece);
+        }
+    }
+    if (fd >= 0) {
+        close (fd);
+    }
+}
+
 /* Whether it speaks tongue t (a word of tongues, a space before it) */
 static unsigned char __fastcall__ speaks (const char* t)
 {
@@ -362,15 +425,40 @@ static unsigned char __fastcall__ speaks (const char* t)
 /* ---- A request answered */
 
 static unsigned char rq[offsetof (struct req, text)];  /* (A request's copy, for the overlay: but its text) */
+static unsigned tlim = REQ_TEXT;                /* (Its text's room: the denizens' slot's DTEXT) */
+static unsigned char restored;                  /* (The creatures' sheets read back, a game carried on) */
+
+static void sheets_in (void)
+{
+    if (HUB->resume && !restored) {
+        restored = 1;
+        beasts (1);
+    }
+}
 
 static void __fastcall__ answer (struct req* r)
 {
     unsigned char k, m, t;
 
     tp = r->text;
-    tend = r->text + REQ_TEXT - 1;
+    tend = r->text + tlim - 1;
     r->result = 0;
     switch (r->kind) {
+    case RS_NEW_ACTOR:                          /* (The fights': overlay 2's, in a copy, as the harm's) */
+        sheets_in ();
+        strncpy (bkey, r->text, sizeof bkey - 1);
+    case RS_ATTACK:
+    case RS_MORALE:
+    case RS_TIME:
+        tnow = HUB->now;
+        stance = HUB->pc_stance;
+        pc_way = HUB->pc_strike;
+        gseed = HUB->seed;
+        memcpy (rq, r, sizeof rq);
+        fight ((struct req*) rq);
+        memcpy (r, rq, sizeof rq);
+        status ();
+        break;
     case RS_HELLO:
         r->w1 = 100;                            /* (A round: 10 seconds, Combat 7) */
         put ("HarnMaster 3.5");
@@ -428,14 +516,16 @@ static void __fastcall__ answer (struct req* r)
         break;
     case RS_HARM:                               /* (In a copy, the overlay's: its words, a line) */
         memcpy (rq, r, sizeof rq);
-        strncpy (blow, r->text, sizeof blow - 1);
         harm ((struct req*) rq);
         memcpy (r, rq, sizeof rq);
-        strcpy (r->text, r->a == HC_BLOW && r->other == RS_THING ? blow : hurt);    /* (At a thing: what struck) */
+        strcpy (r->text, hurt);
         status ();
         break;
-    case RS_SAVE:                               /* (The sheet into the save: hmchar's format, its own lines) */
+    case RS_SAVE:                               /* (The sheet into the save: hmchar's format, its own lines; and the
+                                                **   creatures', beasts.dat) */
         save_pc (r);
+        sheets_in ();
+        beasts (0);
         break;
     case RS_DESCRIBE:
         if (r->b == 1) {
@@ -454,10 +544,9 @@ static void __fastcall__ answer (struct req* r)
 }
 
 /* The overlays: dir/dq0harn.ovl, an 8K bank each (dq0harn.cfg's OV1 ...; the file cut after the last one used:
-** make.js), read into banks of its own: 0, or -1 */
+** make.js), read into banks of its own, and a bank for the creatures' sheets (cleared): 0, or -1 */
 static int __fastcall__ ovl_load (const char* dir)
 {
-    static unsigned char b[256];
     static char path[64];
     int fd, first, n;
     unsigned char k;
@@ -470,16 +559,69 @@ static int __fastcall__ ovl_load (const char* dir)
     }
     for (k = 0; k < OVLS; ++k) {
         ovbank[k] = first + k;
-        for (off = 0; off < 0x2000; off += sizeof b) {
-            n = read (fd, b, sizeof b);
+        for (off = 0; off < 0x2000; off += sizeof piece) {
+            n = read (fd, piece, sizeof piece);
             if (n <= 0) {
                 break;
             }
-            bwrite (first + k, (void*) (0x8000 + off), b, n);
+            bwrite (first + k, (void*) (0x8000 + off), piece, n);
         }
     }
     close (fd);
+    if ((n = hy_banks_alloc (1)) < 0) {
+        return -1;
+    }
+    sb = n;
     return 0;
+}
+
+/* The denizens' task's request (its slot in the denizens' bank, DSLOT_AT), if it's posted: copied out, answered
+** in the main RAM (DTEXT of its text), copied back */
+static struct { unsigned char h[offsetof (struct req, text)]; char text[DTEXT]; } dq;
+
+/* A blow's words (its reply in dq) put in the denizens' ring, place k (FIGHT_AT: the UI words them): who struck at
+** whom (the actors' names; "" the character), the tenths one's senseless for, whose a fumble or a stumble was, the
+** referee's words */
+static void __fastcall__ ring (unsigned char k)
+{
+    static struct fight f;
+    const struct req* r = (const struct req*) &dq;
+
+    memset (&f, 0, sizeof f);
+    if (r->actor) {
+        strcpy (f.att, HUB->actor[(r->actor - 1) & 7].name);
+    }
+    if (r->other) {
+        strcpy (f.def, HUB->actor[(r->other - 1) & 7].name);
+    }
+    f.out = r->w2;
+    f.which = r->a;
+    strncpy (f.text, dq.text, sizeof f.text - 1);
+    hub_map (DEN_BANK);
+    memcpy (FIGHT_AT + k % NFIGHTS, &f, sizeof f);
+    hub_map (0);
+}
+
+static void den_slot (void)
+{
+    unsigned char k;
+
+    hub_map (DEN_BANK);
+    if (DSLOT_AT->state == REQ_POSTED) {
+        memcpy (&dq, DSLOT_AT, sizeof dq);
+        hub_map (0);
+        k = ((struct req*) &dq)->w1;            /* (RS_ATTACK's: its words' place in the ring) */
+        tlim = DTEXT;
+        answer ((struct req*) &dq);
+        tlim = REQ_TEXT;
+        if (((struct req*) &dq)->kind == RS_ATTACK) {
+            ring (k);
+        }
+        hub_map (DEN_BANK);
+        memcpy (DSLOT_AT, &dq, sizeof dq);
+        DSLOT_AT->state = REQ_DONE;
+    }
+    hub_map (0);
 }
 
 int main (int argc, char* argv[])
@@ -490,6 +632,7 @@ int main (int argc, char* argv[])
         return 1;
     }
     rseed (HUB->seed ^ 0x5245);                 /* (Its own dice: the game's seed, and its role) */
+    beasts (2);
     for (;;) {
         hy_sem_acquire (HUB->sem[T_REFEREE]);   /* (Waiting costs nothing) */
         hub_map (0);
@@ -502,6 +645,7 @@ int main (int argc, char* argv[])
                 HUB->slot[s].state = REQ_DONE;
             }
         }
+        den_slot ();
     }
     return 0;
 }

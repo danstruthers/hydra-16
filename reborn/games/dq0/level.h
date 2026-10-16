@@ -73,9 +73,11 @@ struct sight {
     unsigned char   ntraps;                     /* The traps it knows of and sees (world.h's TK_*, TT_*, TS_*) */
     struct { unsigned char rel, kind, trigger, state; } trap[SEE_TRAPS];
 };
-enum { DO_ROAM, DO_WATCH, DO_COMING, DO_SHY, DO_FOLLOW, DO_WAIT };  /* A denizen's doing: going about its own
-                                                **   business, watching the character, coming towards it, keeping its
-                                                **   distance; an ally's: following it, waiting where it was asked */
+enum { DO_ROAM, DO_WATCH, DO_COMING, DO_SHY, DO_FOLLOW, DO_WAIT, DO_FIGHT, DO_FLEE, DO_DOWN };  /* A denizen's
+                                                **   doing: going about its own business, watching the character,
+                                                **   coming towards it, keeping its distance; an ally's: following it,
+                                                **   waiting where it was asked; fighting it, fleeing it, lying
+                                                **   senseless */
 #define MOUTH           0x08
 #define DOORWAY         0x83                    /* (A seen door's state: no door in it, a doorway, open; else its
                                                 **   portal's PS_OPEN and PS_WRECKED) */
