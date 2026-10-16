@@ -2490,7 +2490,12 @@ module.exports = {
         'ĀĀāturn left\rinventory\rāgo north\rĀĀĀĀāquit\rāecho $status\r' },
       expect: ['You carry', 'You can\'t go that way.', '% echo $status'],
       budgets: [{ what: 'inventory answered (Enter to the answer)', from: '> inventory', to: 'You carry', per: 1, max: 720000 },
-        { what: 'a step that can\'t be taken answered (the world\'s)', from: '> go north', to: 'You can\'t go that way.', per: 1, max: 600000 }],
+        { what: 'a step that can\'t be taken answered (the world\'s)', from: '> go north', to: 'You can\'t go that way.', per: 1, max: 720000 }],
+      // (Both within a fifth of a second of Enter, the user's measure: 720,000 cycles at 3.58 MHz.  The step's answer
+      // takes 380,000 cycles, or 580,000-610,000 when a rat's step falls in it: the UI words what it sees again (its
+      // own cycles in it twice as many), the world and the senses look again.  Whether one falls in it is the
+      // denizens' real time against the tasks' code, any task's code: a budget under that moved with the code's
+      // layout, not with the answer's speed)
       // (While nothing happens, between the step and quitting, 8M cycles, 2.2 s: the status line's clock, a move up to
       // it a second at most, the cursor hidden for it)
       check(m, out) {
