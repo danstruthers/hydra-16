@@ -233,25 +233,9 @@ unsigned __fastcall__ item_new (unsigned char kind, unsigned char where, unsigne
     return i;
 }
 
-/* A kind by its name (or a word of it: "sand"; the whole name first, so "sword" isn't a broken one): its number,
-** or 0 */
 static unsigned char __fastcall__ named (const char* k, const char* w);
-static unsigned char __fastcall__ kind_named (const char* name)
-{
-    unsigned char k;
-
-    for (k = 1; k < NK; ++k) {
-        if (!strcmp (kind_of (k)->name, name)) {
-            return k;
-        }
-    }
-    for (k = 1; k < NK; ++k) {
-        if (named (kind_of (k)->name, name)) {
-            return k;
-        }
-    }
-    return 0;
-}
+static unsigned char __fastcall__ kind_named (const char* name);   /* (The catalogue's bank's: cat_map first) */
+void cat_map (void);
 
 /* ---- The character's kit (a stand-in for the theme's and the occupation's): a torch lit in hand, a backpack worn
 ** (rations, a tinderbox in it), a belt (a pouch of pennies, a dagger, a waterskin hanging from it); and things more
@@ -292,6 +276,7 @@ static void kit (void)
         } else {
             c = more + strlen (more);
         }
+        cat_map ();
         if ((k = kind_named (more)) != 0 && (i = item_new (k, IW_ACTOR, 0, 0, 0, 1)) != 0xFFFF && !carry (i, 1)) {
             place (i, IW_ACTOR, 0, I_HELD);     /* (No room: held all the same) */
         }
@@ -364,6 +349,15 @@ static unsigned char __fastcall__ named (const char* k, const char* w)
     }
 }
 
+/* The thing in rec (fetched) named so: by its kind's name (named's), or by the name the character gave it (the UI's
+** "#" and its id: hub.h's struct tname) */
+static unsigned char __fastcall__ is_named (const char* w)
+{
+    char b[6];
+
+    return *w == '#' ? !strcmp (utoa (rec.id, b, 10), w + 1) : named (kind_of (rec.kind)->name, w);
+}
+
 /* Where a thing lies about: on a square, or on a surface that is (a table's): the record on the square (its own, or
 ** the surface's, copied), or 0 */
 static const struct item* __fastcall__ lying (const struct item* q)
@@ -396,7 +390,7 @@ static unsigned __fastcall__ seen_named (const char* name)
     while ((i = items (i, IN_SQUARE | IN_ITEM | IN_PORTAL, 0)) != 0) {
         fetch (&rec, i);
         if (!(s = lying (&rec)) || s->sn != sn || (rec.flags & (I_HIDDEN | I_KNOWN)) == I_HIDDEN ||
-            !named (kind_of (rec.kind)->name, name) || s->x - x + 20 > 40 || s->y - y + 20 > 40 ||
+            !is_named (name) || s->x - x + 20 > 40 || s->y - y + 20 > 40 ||
             !(p = at (sn, s->x, s->y)) || !(*p & T_VIS)) {
             continue;
         }
@@ -426,7 +420,7 @@ static unsigned __fastcall__ carried_named (const char* name)
 
     while ((i = items (i, IN_ACTOR | IN_ITEM | IN_PORTAL, 0)) != 0) {
         fetch (&rec, i);
-        if (named (kind_of (rec.kind)->name, name) && on_pc (i)) {
+        if (is_named (name) && on_pc (i)) {
             return i;
         }
     }
@@ -694,6 +688,12 @@ static void __fastcall__ thing_words (const struct item* q)
     const struct kind* k = kind_of (q->kind);
     char b[6];
 
+    if (q->flags & I_NAMED) {                   /* (A name the character gave it: its id, marked for the UI, "#12 a
+                                                **   sword", worded "Linda, your sword") */
+        put ("#");
+        put (utoa (q->id, b, 10));
+        put (" ");
+    }
     if (q->qty > 1) {
         put (utoa (q->qty, b, 10));
         put (" ");
@@ -809,37 +809,6 @@ static unsigned char search (void)
         put (".");
     }
     return found;
-}
-
-/* ---- A thing looked at closely (carried, or seen): what it truly is, in the request, for the appraiser's judgement
-** (the UI's, by the referee's test of the craft that knows it) */
-static unsigned char __fastcall__ describe (const char* name)
-{
-    const struct kind* k;
-    struct ireq* r;
-    unsigned n = carried_named (name);
-
-    if (!n && !(n = seen_named (name))) {
-        return IR_NONE;
-    }
-    make_own (n);
-    fetch (&rec, n);
-    k = kind_of (rec.kind);
-    hub_map (0);
-    r = &HUB->ireq;
-    strcpy (r->name, k->name);
-    r->item = rec.id;
-    r->craft = k->craft;
-    r->quality = rec.quality;
-    r->mat = rec.mat;
-    r->plural = (k->flags & K_PLURAL) != 0;
-    r->qty = rec.qty;
-    r->dur = rec.dur;
-    r->dur_max = rec.dur_max;
-    r->value = k->value;
-    r->size = rec.size;
-    r->thick = rec.thick;
-    return IR_OK;
 }
 
 /* ---- The things the character sees (sight.c's): on the squares it sees now, not hidden, named, where they lie; a
@@ -1012,6 +981,53 @@ static unsigned char __fastcall__ yes (unsigned char n, unsigned char t)
     return IR_OK;
 }
 
+/* A kind by its name (or a word of it: "sand"; the whole name first, so "sword" isn't a broken one): its number,
+** or 0 (the kit's things more, as the game starts) */
+static unsigned char __fastcall__ kind_named (const char* name)
+{
+    static unsigned char k;
+
+    for (k = 1; k < NK; ++k) {
+        if (!strcmp (kinds[k].name, name)) {
+            return k;
+        }
+    }
+    for (k = 1; k < NK; ++k) {
+        if (named (kinds[k].name, name)) {
+            return k;
+        }
+    }
+    return 0;
+}
+
+/* ---- A thing looked at closely (carried, or seen): what it truly is, in the request (iq, copied back whole), for
+** the appraiser's judgement (the UI's, by the referee's test of the craft that knows it) */
+static unsigned char o_describe (void)
+{
+    static const struct kind* k;
+    static unsigned n;
+
+    if (!(n = m1 (carried_named, (unsigned) iq.name)) && !(n = m1 (seen_named, (unsigned) iq.name))) {
+        return IR_NONE;
+    }
+    m1 (make_own, n);
+    FETCH (n);
+    k = &kinds[o.kind];
+    strcpy (iq.name, k->name);
+    iq.item = o.id;
+    iq.craft = k->craft;
+    iq.quality = o.quality;
+    iq.mat = o.mat;
+    iq.plural = (k->flags & K_PLURAL) != 0;
+    iq.qty = o.qty;
+    iq.dur = o.dur;
+    iq.dur_max = o.dur_max;
+    iq.value = k->value;
+    iq.size = o.size;
+    iq.thick = o.thick;
+    return IR_OK;
+}
+
 /* A thing's kind's name, as it's said (x: the thing's, else the other's) */
 static void __fastcall__ name_of (unsigned i, unsigned char x)
 {
@@ -1145,15 +1161,22 @@ static unsigned char __fastcall__ stow (unsigned n, unsigned char put)
 /* Taken from the other thing: into the pack, else a hand (from what's on the character: into a hand) */
 static unsigned char take_from (void)
 {
-    static unsigned c, n;
+    static unsigned c, n, id;
     static unsigned char r;
+    static const char* w;
 
     if (!(c = other ())) {
         return IR_NO;
     }
+    id = 0;
+    if (*(w = iq.name) == '#') {                /* (A name the character gave it: the UI's "#" and its id) */
+        while (*++w >= '0' && *w <= '9') {
+            id = id * 10 + *w - '0';
+        }
+    }
     for (n = 1; n < NITEMS; ++n) {
         FETCH (n);
-        if (o.kind && o.where == IW_ITEM && o.x == c && named (kinds[o.kind].name, iq.name)) {
+        if (o.kind && o.where == IW_ITEM && o.x == c && (id ? o.id == id : named (kinds[o.kind].name, iq.name))) {
             break;
         }
     }
@@ -1314,7 +1337,7 @@ static unsigned char o_handle (void)
     if (op == IO_BAR) {
         return bar ();
     }
-    if (op >= IO_LIGHT) {
+    if (op == IO_LIGHT || op == IO_DOUSE) {
         return light (op == IO_LIGHT);
     }
     if (op == IO_TAKE) {
@@ -1322,6 +1345,13 @@ static unsigned char o_handle (void)
     }
     if (!*xn) {
         return no (SA_WHAT);
+    }
+    if (op == IO_NAME) {                        /* (The UI's: a name given it, or taken back; carried, or seen) */
+        if (!(n = m1 (carried_named, (unsigned) xn)) && !(n = m1 (seen_named, (unsigned) xn))) {
+            return IR_NONE;
+        }
+        o_flags (n, iq.to ? I_NAMED : 0, I_NAMED);
+        return IR_OK;
     }
     if (!(n = m1 (op == IO_DOFF ? (void*) carried_named : (void*) at_hand, (unsigned) xn))) {
         return no (op == IO_DOFF ? SA_NOT_WORN : afar ? SA_REACH : SA_NO_SUCH);
@@ -1395,8 +1425,11 @@ unsigned char things_serve (void)
     case IO_SEARCH:
         changed = iq.result = search ();
         break;
-    case IO_DESCRIBE:
-        iq.result = describe (iq.name);
+    case IO_DESCRIBE:                           /* (The catalogue's bank's: the request copied back whole) */
+        cat_map ();
+        iq.result = o_describe ();
+        hub_map (0);
+        memcpy (&HUB->ireq, &iq, sizeof iq);
         break;
     case IO_HIDE:
         iq.result = hide (iq.name);

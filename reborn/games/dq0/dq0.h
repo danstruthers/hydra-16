@@ -15,6 +15,7 @@
 **   theme.c    (overlay 5) the theme's words (its story, its names, its endings) and its puzzle (theme.h)
 **   sway.c     (overlay 6) the character's ways with the denizens, in words (talk, persuade, an ally's requests:
 **              the denizens' task's answers), and the commands listed
+**   names.c    the names the character gives things, rooms, allies (parts 4 and 5: given, and said)
 **
 ** Memory: the program's code and data from $0800 (its BSS must end 768 bytes or more under $7F00: dq0.cfg); the
 ** overlays' code in banks of their own, put in the window at $8000 as they're called (bank.s).  Code in an overlay
@@ -229,6 +230,24 @@ void finish (void);                             /* Part 1: the game kept, the wo
 void save_game (void);                          /* Part 1: the game kept (if it's kept: -d) */
 void __fastcall__ command (char* l);            /* Part 2 (main.c): a command, the parser's, carried out */
 void __fastcall__ take (const char* name);      /* Part 2: a thing taken up, by its name */
+enum { NL_NONE, NL_DONE, NL_DEN };
+unsigned char __fastcall__ names_line (char* l);    /* Part 4 (names.c): a line that names (name, call, alias ...;
+                                                **   forget, unname), before it's a command: a name given or
+                                                **   forgotten (NL_DONE); a denizen's to name (NL_DEN: names_den
+                                                **   after the command) */
+void __fastcall__ names_subst (char* l);        /* Part 5: the things' names in a line made theirs ("#12") */
+void names_den (void);                          /* Part 5: a denizen's name given (the hub's sway), recorded */
+const char* __fastcall__ names_say (const char* s); /* Part 5: words with the things' marks ("#12"), as they're said
+                                                **   ("Linda, your sword"): in the main RAM */
+void __fastcall__ names_look (unsigned char after); /* Part 5: a look's things named marked (0, before its words); the
+                                                **   room's name in them (1, after) */
+void __fastcall__ names_keep (int fd, unsigned char back);  /* Part 5: the names written to the save (back 0), read
+                                                **   from it (1; fd -1: none) */
+unsigned char __fastcall__ room_named (const char* text);  /* Part 5: a room whose name is in text: its entry's
+                                                **   number (0xFF: none), the entry in named_room (DUNGEON.md) */
+struct tname;
+extern struct tname named_room;
+extern unsigned char names_n;                   /* (names.c's: the names given, 0 none) */
 extern char _SWAP_START__[];                    /* (The area: the overlays read in through it, as the game starts) */
 
 #endif

@@ -98,6 +98,8 @@ struct item {
 #define I_HIDDEN        0x08                    /* Hidden (found by searching) */
 #define I_MAGIC         0x10                    /*   by magic (found only by magical means) */
 #define I_KNOWN         0x20                    /* Known to the character (seen, or found) */
+#define I_NAMED         0x40                    /* Named by the character (the UI's names: hub.h's struct tname, by
+                                                **   its id; marked in what's carried, worded: "#id a sword") */
 enum { IW_SQUARE, IW_ACTOR, IW_ITEM,
     IW_PORTAL };                                /* A portal's part (a door's bar, a window's pane or bars: the maker's,
                                                 **   as it stocks a chunk), in it: sn, x, y its square (a bar's, the
@@ -147,6 +149,8 @@ enum { IO_KIT, IO_GET, IO_DROP, IO_LIST, IO_SAVE, IO_RESTORE,
                                                 **   it set in a door's brackets (to 1: the maker's barred it), a
                                                 **   portal's part again, IW_PORTAL, on the request's x, y (the
                                                 **   character's square, the bar's side), its item the stratum */
+#define IO_NAME         (IO_BAR + 1)            /* A thing (carried, or seen) marked named (to 1: I_NAMED), or not
+                                                **   (to 0) */
 enum { IR_OK, IR_NONE, IR_FULL, IR_HEAVY, IR_NOT_HERE, IR_NO, IR_FIXED };    /* (IR_NO: refused, the things' words
                                                 **   why; IR_FIXED: a portal's part, in it) */
 

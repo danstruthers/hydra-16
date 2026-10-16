@@ -302,6 +302,10 @@ void __fastcall__ say (const char* s)
     const char* w;
     unsigned char n;
 
+    if (names_n && (w = strchr (s, '#')) != 0 && w[1] >= '0' && w[1] <= '9') {
+        s = names_say (s);                      /* (A thing the character's named, the things' mark of it: its name,
+                                                **   names.c's) */
+    }
     to_story ();
     while (*s) {
         if (*s == '\n') {

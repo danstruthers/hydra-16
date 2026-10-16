@@ -186,6 +186,8 @@ ovl_out:
                                             ;   started, the game kept, the world stopped
             SWPART      2, 8                ; The commands (main.c)
             SWPART      3, 9                ; The map (look.c)
+            SWPART      4, 9                ; The names given (names.c)
+            SWPART      5, 9                ; The names said (names.c)
 
             SWFN        begin, 1
             SWFN        finish, 1
@@ -193,3 +195,10 @@ ovl_out:
             SWFN        command, 2
             SWFN        take, 2
             SWFN        map, 3
+            SWFN        names_line, 4
+            SWFN        names_den, 5
+            SWFN        names_subst, 5
+            SWFN        names_say, 5
+            SWFN        names_look, 5
+            SWFN        names_keep, 5
+            SWFN        room_named, 5

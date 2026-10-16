@@ -186,6 +186,8 @@ void __fastcall__ perceive (unsigned char sn, unsigned x, unsigned y, unsigned c
         area = rp.w * rp.h;
         S.rw = rp.w;
         S.rh = rp.h;
+        S.rx = x - lx + rp.x;
+        S.ry = y - ly + rp.y;
         S.size = !whole ? S_PART : area <= 8 ? S_SMALL : area >= 30 ? S_LARGE : rp.w >= 3 * rp.h ||
             rp.h >= 3 * rp.w ? S_LONG : S_MID;
         if ((k = zone_index (lx, ly)) != 0xFF) {

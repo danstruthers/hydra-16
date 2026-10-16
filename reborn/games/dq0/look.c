@@ -37,7 +37,13 @@ void __fastcall__ look (unsigned char first)
     sight_light = HUB->pc_light;
     strcpy (sight_lamp, HUB->pc_lamp);
     pc_face = HUB->pc_face;
+    if (names_n) {
+        names_look (0);                         /* (Its things named marked; then the room's name: names.c's) */
+    }
     words ();
+    if (names_n) {
+        names_look (1);
+    }
     msg (lb);
 }
 

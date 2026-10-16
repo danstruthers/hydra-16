@@ -500,6 +500,39 @@ map is a window on the stratum round the character (one square a character, the 
 into the hub; a floor's height against the character's marked (1-9 tens of feet higher, a-i lower); a zoomed-out map
 (a character for each 4 by 4 squares) for the large strata.
 
+### Names
+
+The user (2026-10-16): "I would like to be able to reference items by aliases, as long as the alias doesn't clash
+with something else.  I would like to be able to say "alias sword as Linda" or "name my sword Linda" and then later
+say "Attack the goblin with Linda".  Aliases should be allowed for rooms (name this room "The Mausoleum") and then
+you could say "I want to go back to the mausoleum" and you would be on your way ..."
+
+Built (dq0/names.c): one table of the names the character gives, in the hub's theme bank (hub.h's `struct tname`,
+`NAMES_AT`, 48 of them, at $9800 there), kept in the save (game.dat's end):
+
+- **a thing** ("name my sword Linda", "alias the sword as Linda", "call the dagger Sting"), carried or seen, by its
+  item's id (never another's), its kind's name kept beside the name;
+- **a room** ("call this room the Mausoleum", "name this room "The Mausoleum""), the one the character's in, by
+  its stratum and its floor's northwest square (the senses put it in what the character perceives: `struct
+  sight`'s `rx`, `ry`, with `rw`, `rh` its floor), so a square in it and its size;
+- **an ally**: its name the denizens' task's own (DENIZENS.md: "name the rat Grub"), recorded here too, so no other
+  name takes it.
+
+A name is refused if it clashes: with another name ("That name is taken by your sword."), a kind of thing's (a word
+of it, or its start: "sw" would be a sword's), a kind of creature's (dq0d.dat's), a denizen's in sight, or (a name of
+one word) a word the parser needs ("north", "take": the parser asked).  "forget the name Linda", "unname my
+sword", "unname this room" take one back (an ally keeps its name).  A thing's name works in every command that names
+a thing: the line's names are made the thing's own word before it's parsed ("#" and its id, which the things task
+finds it by), and "attack the rat with Linda" takes Linda in hand first.  The words say it: what's carried ("Linda,
+your sword, in your hand": the things mark a named thing, `I_NAMED`), a thing seen lying ("At your feet lies Linda,
+your sword."), and a room named, as the character's in it ("You are in the Mausoleum, a crypt ...").
+
+**For the way back** ("go back to the mausoleum": the orientation's travel): the UI's `room_named (text)` (part 5,
+dq0.h) finds a room whose name's words are in a line (the case and its "the" aside), and gives its entry's number
+(0xFF: none) and the entry in `named_room`: `sn` its stratum, `x`, `y` a square in it (its floor's northwest
+corner, the dungeon's frame), `w`, `h` its floor.  Any other task can read the table where it is (the theme bank in
+the window: `NAMES_AT[i].what == NM_ROOM`).
+
 ## Steps
 
 1. (Done, 2026-10-14: and with it doors and hidden doors, crossing rooms, climbing ledges, digging, the parser.)

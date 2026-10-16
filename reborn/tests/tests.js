@@ -2368,6 +2368,30 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0names', what: 'Dingus Quest Zero\'s names (the user, 2026-10-16: "I would like to be able to reference items by aliases, as long as the alias doesn\'t clash with something else"; names.c): a sword named Linda (dq0 -k sword), shown in what the character carries ("Linda, your sword"), names that clash refused (another name, a kind of thing\'s, a kind of creature\'s, a word the parser needs), Linda used in commands (dropped, seen lying there by its name, taken up, examined, taken in hand to strike a rat with), the room named the Mausoleum and said so as it\'s looked at; the game kept and carried on, the names with it; then a name forgotten',
+      init: 't_rc', cycles: 1200e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 3 -c /ram/c.hm -T -k sword -d /ram/kept\r' +
+        ['name my sword Linda', 'inventory', 'alias the dagger as linda', 'name the dagger Torch', 'name the dagger kobold', 'name the dagger north',
+         'drop Linda', 'look', 'take Linda', 'examine Linda', 'attack the rat with Linda', 'call this room the mausoleum', 'look', 'quit',
+         'dq0 -d /ram/kept', 'look', 'inventory', 'forget the name Linda', 'inventory', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['You name your sword Linda.', 'Linda, your sword', 'That name is taken by your sword.', 'That name is taken by a kind of thing (torch).',
+        'That name is taken by a kind of creature (kobold).', 'That name is taken: it\'s a word your commands need.',
+        'You name this room the Mausoleum.', 'You are in the Mausoleum, a', 'takes up where they left off.', 'You are in the Mausoleum, a',
+        'Linda, your sword', 'You forget the name Linda.', '% echo $status'],
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        const seg = (a, b, from = 0) => { const i = o.indexOf(a, from); return i < 0 ? '' : o.slice(i, o.indexOf(b, i + a.length)); };
+        if (/#\d/.test(o)) f.push('a thing\'s mark ("#12") said');
+        if (!seg('> look', '> take Linda').includes('lies Linda, your sword.')) f.push('Linda not seen lying there by its name');
+        if (!seg('> attack the rat', '> call this').includes('You take the sword in your hand.')) f.push('Linda not taken in hand to strike with');
+        if (!seg('> forget the name Linda', '> quit').includes('a sword')) f.push('the sword not its own again once its name\'s forgotten');
+        if (seg('> forget the name Linda', '> quit').includes('Linda,')) f.push('Linda still said once forgotten');
+        if (!/You (take|pick)|Taken/.test(seg('> take Linda', '> examine Linda'))) f.push('Linda not taken up by its name');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0denizens', what: 'Dingus Quest Zero\'s denizens (dq0d: the populations decided as a stratum is grown, from a stand-in theme\'s kinds, kinds.txt): the giant rats that lair by the top stratum\'s ways placed round the way down as the character starts there (dq0 -T), seen (the world\'s actors, in what it perceives), and moving about as time passes (their own task deciding): at the turns pace through all the time a minute\'s search takes (the clock on a slice at a time as they keep up, told as they stir before it\'s done), told only as what they do changes (keeping their distance), not again when nothing has; then (seed 5, down its ladder) the rats there cornered, and in the character\'s way: the world stops it short of them, and won\'t let it walk onto a rat\'s square',
       init: 't_rc', cycles: 900e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T\r' +

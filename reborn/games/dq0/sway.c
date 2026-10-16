@@ -154,6 +154,8 @@ void o_help (void)
          "character), wait (z), pause (or Escape), quit (q).  The puzzle's pieces: read (a tablet), combine the one with "
          "the other, put the one on the other, use the key on the way out (or open the way out with it).");
     msg ("Fights: attack the rat (hit, fight), with what you hold; defend (dodge, block, counter, none, best).");
+    msg ("Names: name my sword Linda (alias the sword as Linda), then drop Linda, attack the rat with Linda; call this "
+         "room the Mausoleum; forget the name Linda.");
     msg ("With the denizens: talk to the kobold, persuade, deceive, threaten; calm, befriend (an animal); examine one "
          "(how it seems); an ally's requests: follow me, stay here, tell Grub to wait, dismiss it; name the rat Grub.");
     msg ("Played over the serial port, the game answers quickest at 19200 or 115200 baud (echo b115200 "

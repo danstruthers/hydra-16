@@ -46,7 +46,9 @@
 #define LOOK_BANK       (DEN_BANK + 1)  /* The senses' own (dq0p/view.c): the squares round the character as a look
                                                 **   about works them out, a grid of them (cast.s's): no other task's */
 #define THEME_BANK      (LOOK_BANK + 1)  /* The game's theme (theme.h: the UI's, read in as it starts), and its pieces'
-                                                **   places (the maker's) */
+                                                **   places (the maker's), and the names given (NAMES_AT) */
+#define NAMES_AT        ((struct tname*) 0x9800)    /* The names the character's given (the UI's: struct tname, TNAMES
+                                                **   of them), in the theme bank after its pieces' places */
 #define SND_REC         32
 #define SND_WORDS       20
 #define SND_KINDS       32
@@ -64,6 +66,27 @@ struct fight {
     unsigned char   which;                      /* Whose a fumble or a stumble was (RS_ATTACK's a) */
     char            text[DTEXT - 27];           /* The referee's words (RS_ATTACK's four lines) */
 };
+
+/* A name the character's given (the UI's, dq0/names.c: DUNGEON.md's names), in the theme bank (NAMES_AT): a thing
+** ("name my sword Linda": by its id, struct item's, never another's), a room ("call this room the Mausoleum": by
+** its floor), an ally (the denizens' task's own name, "name the rat Grub", recorded here too, so no other name takes
+** it).  Kept in the save (game.dat's end).  Any task may read it (the theme bank in the window): a room's name the
+** way to it (the UI's room_named finds one in a line's words) */
+#define TNAMES          48
+#define NAME_LEN        20
+struct tname {
+    unsigned char   what;                       /* NM_* (NM_NONE: a free entry) */
+    unsigned char   sn;                         /* A room's: its stratum, */
+    unsigned        x, y;                       /*   its floor's northwest square (the frame's: struct sight's rx,
+                                                **   ry), a square in it; a thing's: x its id */
+    unsigned char   w, h;                       /*   its floor, in squares (struct sight's rw, rh) */
+    char            kind[14];                   /* What it is: a thing's kind's name ("sword"), an ally's ("giant
+                                                **   rat") */
+    char            name[NAME_LEN];             /* The name as it's said ("Linda", "the Mausoleum"): its words
+                                                **   capitalised; matched without its "the", the case aside */
+};
+enum { NM_NONE, NM_ITEM, NM_ROOM, NM_DEN };
+typedef char names_fit[TNAMES * sizeof (struct tname) <= 0x800 ? 1 : -1];  /* (The theme bank's last 2K) */
 
 /* The tasks, and so their doorbells */
 enum { T_UI, T_WORLD, T_DENIZENS, T_REFEREE, T_SOUND, T_MAKER, T_SENSES, NTASKS };

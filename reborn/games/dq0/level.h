@@ -55,7 +55,7 @@ struct sight {
     unsigned char   nways;                      /* A passage's ways on */
     struct { unsigned char rel; signed char dz; unsigned char steps; } way[4];
     unsigned char   nitems;                     /* The things it sees lying about (the things', named) */
-    struct { char name[14]; unsigned char qty, plural, rel, hid; unsigned n, x, y; } item[SEE_ITEMS];
+    struct sitem { char name[14]; unsigned char qty, plural, rel, hid; unsigned n, x, y; } item[SEE_ITEMS];
                                                 /* (hid: 1 it hid it, 2 on the surface before it, 4 lit) */
     unsigned char   stratum, sname, style;      /* The stratum: its number, its name (the theme's), its style */
     int             z;                          /* The floor where it stands: feet above the way in */
@@ -65,6 +65,8 @@ struct sight {
     struct { unsigned x, y; unsigned char doing; char name[12]; } den[SEE_DENS];
     unsigned char   ntraps;                     /* The traps it knows of and sees (world.h's TK_*, TT_*, TS_*) */
     struct { unsigned char rel, kind, trigger, state; } trap[SEE_TRAPS];
+    unsigned        rx, ry;                     /* A room's: its floor's northwest square (the room known by it: the
+                                                **   UI's names, hub.h's struct tname) */
 };
 enum { DO_ROAM, DO_WATCH, DO_COMING, DO_SHY, DO_FOLLOW, DO_WAIT, DO_FIGHT, DO_FLEE, DO_DOWN };  /* A denizen's
                                                 **   doing: going about its own business, watching the character,

@@ -263,9 +263,10 @@ static void sheet (void)
 ** and the maker's changes.dat and seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    5                           /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    6                           /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
-                                                **   the names given; 5, the creatures' sheets) */
+                                                **   the names given; 5, the creatures' sheets; 6, the names the
+                                                **   character's given, after the strata's: names.c's) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
@@ -351,11 +352,12 @@ void s_save_game (void)
     if ((fd = open (save_path ("game.dat"), O_WRONLY | O_CREAT | O_TRUNC, 0644)) >= 0) {
         write (fd, &sv, sizeof sv);
         write (fd, HUB->strata, sizeof HUB->strata);
+        names_keep (fd, 0);                     /* (The names given: the theme bank's) */
         close (fd);
     }
 }
 
-/* The saved strata's records into the hub (after the save's header) */
+/* The saved strata's records into the hub (after the save's header), and the names given */
 static void __fastcall__ load_strata (void)
 {
     int fd = open (save_path ("game.dat"), O_RDONLY);
@@ -363,6 +365,9 @@ static void __fastcall__ load_strata (void)
     if (fd >= 0) {
         read (fd, &sv, sizeof sv);
         read (fd, HUB->strata, sizeof HUB->strata);
+    }
+    names_keep (fd, 1);
+    if (fd >= 0) {
         close (fd);
     }
 }
@@ -439,6 +444,8 @@ static void start_world (unsigned long seed)
         HUB->pc_y = sv.y;
         HUB->pc_face = sv.face;
         HUB->pc_light = sv.light;
+    } else {
+        names_keep (-1, 1);                     /* (No names given yet) */
     }
     start ("dq0m", T_MAKER, libdir);            /* (Its maker, its senses) */
     start ("dq0p", T_SENSES, libdir);
@@ -1362,6 +1369,21 @@ void s_finish (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
+/* A line that names: its first word name, call, alias, rename, dub, forget or unname (names.c's) */
+static unsigned char __fastcall__ naming (const char* l)
+{
+    static const char* v;
+    static unsigned char n;
+
+    for (v = "name\0call\0alias\0rename\0dub\0forget\0unname\0"; *v; v += n + 1) {
+        n = strlen (v);
+        if (!strnicmp (l, v, n) && (!l[n] || l[n] == ' ')) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 int main (int argc, char* argv[])
 {
     unsigned shown = 0;
@@ -1413,8 +1435,18 @@ int main (int argc, char* argv[])
             pending[0] = 0;
         }
         if ((l = (char*) t_next ()) != 0 && (!busy || (!held && !(held = !at_once (l))))) {
-            command (t_line ());              /* (The character free; or a command that wants nothing of it:
+            k = naming (l = t_line ()) ? names_line (l) : NL_NONE;     /* (A name given or forgotten: the
+                                                **   names') */
+            if (k == NL_NONE && names_n) {
+                names_subst (l);                /* (The things' names in it made theirs, "#" and the id) */
+            }
+            if (k != NL_DONE) {
+                command (l);                    /* (The character free; or a command that wants nothing of it:
                                                 **   held, the next waits for it to be free, not parsed again) */
+                if (k == NL_DEN) {
+                    names_den ();               /* (A denizen named: its name recorded) */
+                }
+            }
             held = 0;
             status ();
         }
