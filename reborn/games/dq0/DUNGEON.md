@@ -474,6 +474,61 @@ takes the shortest way it can walk to where it's going (around a ledge, by the s
 walk, a window's sill, a shaft or a ladder: a climb, the referee's test (HarnMaster's Climbing: feet of progress each
 test, a test a round; a fall's impact by its height, the landing's surface).
 
+**Pace, watchfulness, and the character's state** (the user, 2026-10-16: "I also want a way to set my current rate of
+travel, and to say something like "actively search for traps as I move", which would slow me down to a slow walk (as
+would carefully moving in the dark).  Faster than normal speed (based on the player's base move) would increase
+fatigue rate, as outlined in the HM rules.  Your current character state (the "status" command) should tell you your
+current rate of speed, active states of awareness (looking for traps, etc.) as well as your current condition
+(wounds, state of shock, etc.) and current status should dictate what information you can gather from the
+environment.  Running people don't see as much as those walking slowly.  Also, when moving about a room, I should be
+able to say something like "move left one space" to move one 10' square at a time, and distance traveled each
+movement should be based on speed and/or distance traveled."):
+
+- **The pace** is the player's, kept in the hub (its gait: creep, walk slowly, walk, jog, run, sprint; "set pace to
+  jog", or a pace's word alone; "run north" sets it and goes), and kept with the sheet in the save.  Each pace's
+  step is the referee's, in its summary (rs.h's gstep, tenths a square): HarnMaster's four from the effective Move
+  (Agility less the physical penalty, so wounds, fatigue and the load all slow it), a walk half of it in squares a
+  round, a jog all of it, a run twice, a sprint three times; and the game's two slower, a slow walk a quarter of Move
+  (twice the walk's time, as feeling one's way in the dark always was) and a creep a sixth (three times).  What the
+  character goes at is the pace held to what it's doing: a slow walk at most while it searches as it goes, or in the
+  dark (no light of its own or the room's: by feel); the world takes that pace's step for every square.
+- **Fatigue** is the referee's (the book's movement fatigue): walking (or slower) a fatigue level a day, jogging one
+  each five minutes, running one each two, sprinting one each minute, the time at each pace added up across moves;
+  standing still (waiting, the time between moves) is rest, a level gone each ten minutes of it.  The world tells the
+  referee the time moved at each pace, and the rest (RS_TIME), and the referee keeps the levels on the sheet: the
+  book's fatigue penalty, part of the universal penalty every test pays and of the physical (so a tired character's
+  Move, and every pace, slows).  (Not yet: digging's and climbing's strenuous work tiring it, a level each five minutes
+  of it, the book's general rule; a character worn out past its endurance fainting.)
+- **Watchfulness** (the hub's watch, the player's too): **searching as it goes** ("search for traps as I go", "watch
+  for traps", "move carefully"; "stop searching"), a slow walk at most, and every square it passes searched as a
+  search would: a trap on its way (the walk stops on the first it would set off, as always) tested by the search's
+  chance (P_SEARCH's: the referee's Awareness, a step a point of its hiding) not the smaller passing chance, and each
+  hidden door beside its way searched for (P_SEARCH, one test a door) as it passes, found ones told and known from
+  then on; **listening** ("listen as I go"), a walk at most, its hearing two better (the summary's: the denizens heard
+  further); **moving quietly** ("sneak", "move quietly") is the creep, the denizens hearing its steps at half their
+  hearing (a jog's a little further than a walk's, a run or a sprint twice as far).  (To come: Stealth tests against
+  the denizens' Awareness, with the fights' and the denizens' later work.)
+- **What it notices** goes by its state, the referee's: every notice test (P_NOTICE_SIGHT, SOUND, SMELL, whoever asks:
+  a trap underfoot, the senses' look as it arrives) is the worse the faster it was moving (the game's: a creep or a
+  slow walk a step better, a walk none, a jog two worse, a run four, a sprint six), and the worse for its condition:
+  the book's universal penalty (its injuries and its fatigue) in every Awareness test, and in shock or stunned four
+  steps more (the game's); listening, sound two steps better.  A trap underfoot is told by its hiding (rs.h's
+  P_NOTICE_SIGHT b 1), the referee choosing the chance: a search's while it's searching as it goes, else the passing
+  glance's (twice the hiding's steps, two more).  And the look as a run or a sprint ends is worded briefly: the place
+  and its ways out, not its ceiling, its zones or what lies about.
+- **status** says it all in a few lines (the referee's words, RS_DESCRIBE b 3): the pace chosen and what it's held to,
+  its feet a round; the watchfulness; the condition (well or hurt, its wounds in brief, bleeding, shock or senseless;
+  its fatigue levels; its load's encumbrance; the penalties they make); and its light (what gives it, or none: by
+  feel).
+- **Small moves** ("move left one space", "step forward", "go north 20 feet", "back up two squares", "sidestep
+  right"): a square at a time (5 feet: the game's square; "a space", "a square" and "a step" each one, feet and yards
+  made squares, at least one), by the character's facing (forward, back, left, right, between) or the compass; the
+  distance by the words, else by the pace (a square at a walk or slower, two at a jog, three at a run, four at a
+  sprint); the time each square's at the pace (the world's step, slopes, diagonals as across a room).  It faces the
+  way it goes, but backing up and stepping to the side keep its facing.  In a room it goes straight, stopping at the
+  floor's edge, a ledge, a denizen in its way or a trap (as a walk across does: one it knows of stopped short of);
+  in a passage, along it by the four (a corner stops it).  (I_STEP.)
+
 **Harm** (rs.h's RS_HARM, the referee's): a fall (its height, the ground it lands on, whether it's clear or past holds
 to grab), a trap's strike (its aspect, its dice, where it strikes), a burn, a blow struck with what's in hand; each
 made the ruleset's injuries on the sheet (HarnMaster's: the book's falling, an impact on a location, its severity and
