@@ -827,7 +827,7 @@ static void __fastcall__ grow_below (unsigned char n)
     struct link* l;
     struct link* k;
     unsigned lx0 = 0xFFFF, ly0 = 0xFFFF, lx1 = 0, ly1 = 0, x, y;
-    unsigned char i;
+    unsigned char i, st;
 
     hub_map (0);
     b = &HUB->strata[n + 1];
@@ -835,9 +835,14 @@ static void __fastcall__ grow_below (unsigned char n)
     memset (b, 0, sizeof *b);
     b->n = n + 1;
     b->seed = s->seed * 69069UL + 1;
-    b->style = random (2) ? ST_NATURAL : ST_BUILT;    /* (A stand-in for the theme's say) */
+    i = random (2);                             /* (The theme's say: one of the stratum's styles) */
+    hub_map (THEME_BANK);
+    st = THEME->style[n + 1][i];
+    hub_map (0);
+    b->style = st;
     b->age = 1 + random (40);
-    b->name = random (8);
+    random (8);                                 /* (Its name the theme's, by its depth: the dice as they were) */
+    b->name = n + 1;
     b->datum = s->datum - 30 - random (40);
     for (i = s->nlinks, l = s->link, k = b->link; i; --i, ++l) {   /* (A link up under each link down to it) */
         if (l->to != n + 1) {
@@ -916,8 +921,12 @@ static void __fastcall__ climb (unsigned char d)
     }
     hub_map (0);
     lk = &strata[sn_].link[l];
-    if (lk->kind == O_WAY_OUT) {
-        no_way (N_SHUT);                        /* (The way out: the puzzle's, later) */
+    if (lk->kind == O_WAY_OUT) {                /* (The way out: shut, till the theme's mission opens it) */
+        if (HUB->way_open) {
+            event (E_LEFT, 0, 0);
+        } else {
+            no_way (N_SHUT);
+        }
         return;
     }
     if (!strata[lk->to].made) {
@@ -1014,6 +1023,8 @@ static void begin (void)
 {
     struct stratum* s;
     unsigned long seed;
+    unsigned char k;
+    struct tplace* p;
 
     hub_map (0);
     if (HUB->resume) {                          /* (Carried on: the save's strata, the maker's records back) */
@@ -1031,9 +1042,12 @@ static void begin (void)
     rseed (seed ^ 0x57524C44UL);
     memset (s, 0, sizeof *s);
     s->seed = seed * 2654435761UL + 12345;
-    s->style = ST_BUILT;
+    hub_map (THEME_BANK);                       /* (The theme's say: its top stratum's first style) */
+    k = THEME->style[0][0];
+    hub_map (0);
+    s->style = k;
     s->age = 1 + random (20);
-    s->name = random (8);
+    random (8);                                 /* (Its name the theme's first: the dice as they were) */
     s->w = 120 + random (180);
     s->h = 80 + random (120);
     s->x0 = 32768U - s->w / 2;
@@ -1051,6 +1065,21 @@ static void begin (void)
     if (HUB->test_start && strata[0].nlinks > 1) {  /* (dq0 -T: at the first way down, for the tests) */
         move.x = strata[0].link[1].x;
         move.y = strata[0].link[1].y;
+    }
+    if (HUB->test_start == 2) {                 /* (dq0 -T -T: on the theme's first piece on the top stratum, put down
+                                                **   as its chunk is made) */
+        hub_map (THEME_BANK);
+        for (k = NPIECES, p = THEME_PLACE; k && p->sn; --k, ++p) {
+        }
+        if (k) {
+            at (0, (p->cx << CW_BITS) + strata[0].x0, (p->cy << CW_BITS) + strata[0].y0);
+            hub_map (THEME_BANK);
+            if (p->x) {
+                move.x = p->x;
+                move.y = p->y;
+            }
+        }
+        hub_map (0);
     }
 }
 

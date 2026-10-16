@@ -7,8 +7,7 @@
 ** hall, a long gallery, a high ceiling, a low, rough one (overlay 4's ceiling_glance); its figures (its size in feet,
 ** its ceiling's heights) only on a close look (look closely, examine the room: look's sight_close).
 **
-** The words are a stand-in theme's, till themes are data: a room's kind one of eight names, a lit room's light
-** torches.
+** The words for a room and its light are the theme's (theme.h; theme.c's theme_named, added to lb).
 */
 
 #pragma code-name ("OV2CODE")
@@ -22,9 +21,6 @@
 
 #define PS_OPEN_        0x01                    /* (A portal's state: open: dq0w/world.h's PS_OPEN) */
 
-static const char* const kindname[8] = {
-    "chamber", "hall", "cell", "vault", "crypt", "gallery", "cave", "storeroom"
-};
 static const char* const relname[8] = {
     "ahead", "ahead to your right", "to your right", "behind you to your right", "behind you",
     "behind you to your left", "to your left", "ahead to your left"
@@ -252,9 +248,13 @@ static void room (void)
     }
     add (S->size != S_PART ? "You are in a" : "You can see part of a");
     add (S->size == S_SMALL ? " small " : S->size == S_LARGE ? " large " : S->size == S_LONG ? " long " : " ");
-    add (kindname[S->kind & 7]);
+    theme_named (TN_ROOM, S->kind);
     if (S->lit || !sight_light) {
-        add (S->lit ? ", lit by torches in iron brackets." : ".");
+        if (S->lit) {
+            add (", ");
+            theme_named (TN_LIGHT, 0);
+        }
+        add (".");
     } else {
         add (", by the light of your ");
         add (sight_lamp);

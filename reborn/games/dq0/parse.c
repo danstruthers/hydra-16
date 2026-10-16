@@ -48,7 +48,8 @@ static const struct { char w[16]; unsigned char v; } verbs[] = {
     { "break", V_BREAK }, { "smash", V_BREAK }, { "bend", V_BEND }, { "disarm", V_DISARM }, { "disable", V_DISARM },
     { "bar", V_BAR }, { "rebar", V_BAR },
     { "save", V_SAVE }, { "inventory", V_INVENTORY }, { "inv", V_INVENTORY }, { "i", V_INVENTORY },
-    { "q", V_QUIT },
+    { "q", V_QUIT }, { "read", V_READ }, { "use", V_USE }, { "apply", V_USE }, { "try", V_USE },
+    { "combine", V_COMBINE }, { "join", V_COMBINE }, { "fit", V_COMBINE }, { "mend", V_COMBINE },
 };
 
 /* The directions: by the compass (0-7), as it faces (REL | 0-7), up, down */
@@ -173,6 +174,16 @@ void __fastcall__ o_parse (char* l, struct pcmd* c)
         c->verb = V_MOVE;                       /* (A way, or a thing, alone: going there) */
     }
     for (; i < nw; ++i) {
+        if (!strcmp (word[i], "with")) {        /* (The other thing: with it, whatever came before: open the way
+                                                **   out with the key) */
+            c->prep = PR_WITH;
+            continue;
+        }
+        if (!strcmp (word[i], "way") && phrase (i, "way out")) {
+            c->obj = OB_WAY_OUT;                /* ("The way out": the theme's) */
+            ++i;
+            continue;
+        }
         for (k = 0; c->word[0] && !c->prep && k < sizeof preps / sizeof preps[0] && strcmp (word[i], preps[k].w); ++k) {
         }
         if (c->word[0] && !c->prep && k < sizeof preps / sizeof preps[0]) {
@@ -226,9 +237,9 @@ void __fastcall__ o_parse (char* l, struct pcmd* c)
             }
             continue;
         }
-        if (!c->word[0]) {                      /* (The first word not understood) */
+        if (!c->word[0] && c->prep != PR_WITH) {    /* (The first word not understood) */
             strncpy (c->word, word[i], sizeof c->word - 1);
-        } else if (c->prep && !c->word2[0]) {   /*   (and the other thing's) */
+        } else if ((c->prep || c->verb == V_COMBINE) && !c->word2[0]) {   /*   (and the other thing's) */
             strncpy (c->word2, word[i], sizeof c->word2 - 1);
         }
     }
@@ -261,6 +272,10 @@ void __fastcall__ o_parse (char* l, struct pcmd* c)
     if ((c->verb == V_TURN || c->verb == V_FACE) && c->around && dir == 0xFF) {
         c->dir = (pc_face + 4) & 7;
     }
+    if (c->prep == PR_WITH && c->verb != V_COMBINE && !c->word[0]) {
+        strcpy (c->word, c->word2);             /* ("open the way out with the key": the key's the thing used) */
+        c->word2[0] = 0;
+    }
 }
 
 /* The commands, listed */
@@ -274,7 +289,8 @@ void o_help (void)
          "(a door: its bar put back), climb through (a window), disarm (a trap), search; get, "
          "drop, hold (wield), stow, put the dagger in the sack (or on the table), take the rope from the pack, hang "
          "the pouch (on your belt), wear, take off, inventory (i), examine (a thing, a door, the room: look closely), hide; look (l), map (m), sheet (the "
-         "character), wait (z), pause (or Escape), quit (q).");
+         "character), wait (z), pause (or Escape), quit (q).  The puzzle's pieces: read (a tablet), combine the one with "
+         "the other, put the one on the other, use the key on the way out (or open the way out with it).");
     msg ("Played over the serial port, the game answers quickest at 19200 or 115200 baud (echo b115200 "
          ">/dev/serctl, then the terminal set to match); on the Vera X's screen and keyboard it needs neither.");
 }

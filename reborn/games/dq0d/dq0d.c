@@ -88,6 +88,8 @@ typedef char pop_fits[sizeof (struct pop) <= 0x2000 ? 1 : -1];
 
 static unsigned char kb, pb;                    /* Its banks: the kinds', the records' */
 static unsigned char nkinds;
+static unsigned long tdens;                     /* The kinds that live in the game's theme's dungeon (theme.h's: a bit
+                                                **   each, by kinds.txt's order): only those are populated */
 static struct head hd;                          /* (The records' head, kept in the main RAM) */
 static struct dkind K;                          /* (A kind, a lair, a denizen: copied out) */
 static struct lair L;
@@ -178,7 +180,7 @@ static void __fastcall__ populate (unsigned char n)
     rseed (s->seed ^ 0x44454E5AUL);
     for (k = 1; k < nkinds; ++k) {
         kind_get (k);
-        if (!(K.styles & (1 << s->style)) || n < K.deep0 || n > K.deep1) {
+        if (!(K.styles & (1 << s->style)) || n < K.deep0 || n > K.deep1 || !(tdens & 1UL << k)) {
             continue;
         }
         m = K.flags & K_WAYS ? K.lairs : random (K.lairs + 1);
@@ -968,6 +970,8 @@ int main (int argc, char* argv[])
     if (kinds_load (argv[3])) {
         return 1;
     }
+    hub_map (THEME_BANK);                       /* (The theme's denizens: which of the kinds) */
+    tdens = THEME->dens;
     chunks_init (ASK_DENIZENS);
     hy_bank (pb);
     memset (POP, 0, 0x2000);

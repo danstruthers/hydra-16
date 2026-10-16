@@ -2728,6 +2728,32 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0theme', what: 'Dingus Quest Zero\'s themes (theme.h: data, games/dq0/themes, made dq0t.dat): the theme picked by the seed (its second byte: seed 3 the first theme, the crypt; seed 259 the second, the drowned temple), its name and story told, its strata named by it, kept in the save and the game carried on in it; the way out shut by its lock (its words, the theme\'s); then the crypt\'s puzzle\'s pieces (dq0 -k: the sunstone and the moonstone to hand) combined into the king\'s seal (its rule\'s words), the seal used on the way out (it opens), the way out examined, and taken: the game ended (escaped, the theme\'s ending), and the save marked done (a new game begun in its folder, not carried on)',
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 259 -c /ram/c.hm -d /ram/t\r' +
+        ['look', 'u', 'quit', 'dq0 -d /ram/t', 'map', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone -d /ram/q', 'u',
+          'combine the sunstone with the moonstone', 'i', 'use the seal on the way out', 'x the way out', 'u', 'echo $status',
+          'dq0 -p t -c /ram/c.hm -d /ram/q', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['The Drowned Temple.\nThe temple of the Deep Mother sank', 'enters the dungeon.', 'part of a nave', 'The temple\'s\ndoors are sealed with green bronze',
+        'The Drowned Temple.\n', 'takes up where they left off.', 'Temple Steps',
+        'The Crypt of the Dead King.\nAldric, last of the kings', 'The way out is shut fast. Whatever opens it is somewhere below. A door of',
+        'You fit the two stones together', 'a king\'s seal', 'You press the seal into the hollow in the black door.',
+        'The black door stands open on the stair up to the daylight: go up to leave.', 'You climb the stair into the light of day',
+        'You have escaped.', 'The game is over.', '% echo $status', 'Tordan, Hunter/Trapper, enters the dungeon.'],
+      sdcard: true
+    },
+    {
+      name: 'dq0pieces', what: 'Dingus Quest Zero\'s puzzle\'s pieces placed with the plan (theme.h: each one\'s stratum from the seed, its chunk in the stratum\'s halls as its plan is grown, put down as the chunk is made, by the maker\'s stock): the crypt\'s stone tablet on the top stratum (dq0 -T -T: the character begins on it), seen, taken and read (the parser\'s read, its rule\'s words); then the crown and the throne (dq0 -k), the throne put down and not taken up again (fixed where it stands), the crown put on it: the place ruled, the game ended (ruled, the theme\'s ending)',
+      init: 't_rc', cycles: 1200e6,
+      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T -T\r' +
+        ['look', 'take the tablet', 'read the tablet', 'read the dagger', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -k crown,throne', 'drop the throne',
+          'take the throne', 'put the crown on the throne', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['stone tablet', 'Taken.', 'The tablet is cut with the old letters: "Here lies Aldric', 'There\'s nothing written on the dagger.',
+        'The throne is fixed where it stands.', 'You put the iron crown on the throne.', 'You set the iron crown upon the throne.',
+        'The crypt is yours, and all who lie in it.', 'The game is over.', '% echo $status'],
+      sdcard: true
+    },
+    {
       name: 'cnum', what: 'the numbers in C and assembly: num.h\'s test (ntest: the number libraries from C, printf\'s and scanf\'s %N and %{base}), calc at rc (its operators, functions, bases, digits, errors, its input a line at a time, long results), the assembly sample nsum (numbers.inc, numlib.s)',
       init: 't_rc', cycles: 150e6,
       // (Each line typed at its prompt, as the C test's)

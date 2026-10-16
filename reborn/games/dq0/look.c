@@ -7,8 +7,8 @@
 ** faces (one of eight: ahead, ahead to its right ... ahead to its left), and how far above or below it.  A room's
 ** size it knows when it's seen the whole of it; a ceiling when the light reaches it.
 **
-** The words are a stand-in theme's, till themes are data: a room's kind one of eight names, a stratum's one of
-** eight, a lit room's light torches.
+** The words for the places are the theme's (theme.h: a stratum's name, a room's by its kind, a lit room's light;
+** theme.c's).
 */
 
 #include <stdlib.h>
@@ -17,11 +17,6 @@
 #include "dq0.h"
 #include "hub.h"
 #include "level.h"
-
-const char* const stratum_name[8] = {
-    "Upper Halls", "Old Cellars", "Cisterns", "Long Galleries", "Bone Vaults", "Sunken Ways", "Deep Halls",
-    "Black Crypts"
-};
 
 char lb[400];                                   /* The words, as they're made (words.c's) */
 struct sight sight_copy;                        /* The hub's record, copied for the overlay */
@@ -91,7 +86,8 @@ static void __fastcall__ make_panel (const char* rules)
     unsigned char n;
 
     np = 0;
-    pline (stratum_name[HUB->sight.sname & 7]);
+    theme_named (TN_STRATUM, HUB->sight.sname);
+    pline (tname);
     num ("Depth ", -HUB->sight.z, " ft");
     num ("Sq ", (int) (HUB->pc_x - 32768U), ",");
     strcat (panel[np - 1], itoa ((int) (HUB->pc_y - 32768U), b, 10));

@@ -76,6 +76,7 @@ static void __fastcall__ serve (unsigned char i)
     case M_PLAN:
         plan_stratum (q.sn);
         links_down (q.sn);
+        place_pieces (q.sn);                    /* (The theme's pieces in it: theme.h) */
         hub_map (0);
         memcpy (&HUB->strata[q.sn], &strata[q.sn], sizeof strata[0]);
         break;
@@ -90,6 +91,7 @@ static void __fastcall__ serve (unsigned char i)
         for (q.sn = 0; q.sn < MAXSTRATA; ++q.sn) {
             if (strata[q.sn].made) {
                 plan_stratum (q.sn);
+                place_pieces (q.sn);
             }
         }
         break;
@@ -115,6 +117,7 @@ int main (int argc, char* argv[])
         return 1;
     }
     changes_init ();
+    hub_set (THEME_BANK, THEME_PLACE, 0xFF, NPIECES * sizeof (struct tplace));     /* (No piece placed yet) */
     for (;;) {
         hub_map (0);                            /* (The hub's header: its own banks may be in the window) */
         hy_sem_acquire (HUB->sem[T_MAKER]);     /* (Waiting costs nothing) */
