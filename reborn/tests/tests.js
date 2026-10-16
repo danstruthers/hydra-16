@@ -1532,6 +1532,73 @@ function pcReport(m, attaches, naks, repeats) {
   if (h.fsrv.stats.repeats !== repeats) f.push('/pc: ' + h.fsrv.stats.repeats + ' repeated, not ' + repeats);
   return f;
 }
+// A natural stratum's chunks (dq0m/caves.c), read from the hub's cache in the shared segments' banks (world.h's struct
+// chunk, three to a bank, CHUNK_SIZE apart): its chambers ragged (none its bounds filled, some with their rows'
+// ends uneven), its tunnels bending, every open square reached from every other, and a chunk's edges' open squares
+// met by its neighbours' (those in the cache); n chunks of stratum sn at least (CAVEDUMP=1: each one drawn)
+const CHUNK_SIZE = 0xAA0, CK_TILE = 443, CK_ROOM = 8;
+const T_ROCK = 0, T_FLOOR = 1, T_WALL = 2, T_CORR = 4, T_WINDOW = 6;
+function cacheChunks(m, sn) {
+  const out = new Map();
+  for (const b of Object.values(m.sharedBanks())) {
+    for (let k = 0; k < 3; k++) {
+      const o = k * CHUNK_SIZE, nrooms = b[o + 5], tile = b.subarray(o + CK_TILE, o + CK_TILE + 1024);
+      if (b[o] !== sn || !nrooms || nrooms > 6 || b[o + 6] > 12 || b[o + 7] > 6 || tile.some(t => (t & 0x1F) > 9)) continue;
+      const rooms = [];
+      for (let r = 0; r < nrooms; r++) { const p = o + CK_ROOM + r * 8; rooms.push({ x: b[p], y: b[p + 1], w: b[p + 2], h: b[p + 3], kind: b[p + 5] }); }
+      out.set((b[o + 1] | b[o + 2] << 8) + ',' + (b[o + 3] | b[o + 4] << 8), { cx: b[o + 1] | b[o + 2] << 8, cy: b[o + 3] | b[o + 4] << 8, rooms, tile: Array.from(tile, t => t & 0x1F) });
+    }
+  }
+  return out;
+}
+function caveReport(m, sn, n) {
+  const f = [], ks = cacheChunks(m, sn), open = t => t !== T_ROCK && t !== T_WALL && t !== T_WINDOW;
+  if (ks.size < n) f.push('stratum ' + sn + ': ' + ks.size + ' chunk(s) in the cache, not ' + n);
+  let ragged = 0, bends = 0;
+  for (const [at, c] of ks) {
+    const T = (x, y) => x < 0 || y < 0 || x > 31 || y > 31 ? T_ROCK : c.tile[y * 32 + x];
+    for (const r of c.rooms) {
+      if (r.kind !== 6) { f.push(at + ': a room not a cave'); continue; }
+      let fl = 0; const starts = new Set();
+      for (let y = r.y; y < r.y + r.h; y++) {
+        let s = -1;
+        for (let x = r.x; x < r.x + r.w; x++) if (T(x, y) === T_FLOOR) { fl++; if (s < 0) s = x; }
+        starts.add(s);
+      }
+      if (r.w > 2 && r.h > 2 && fl === r.w * r.h) f.push(at + ': a chamber a rectangle (' + r.w + ' by ' + r.h + ')');
+      if (starts.size >= 3 && fl * 10 < r.w * r.h * 9) ragged++;
+    }
+    for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) {
+      if (T(x, y) !== T_CORR) continue;
+      const nb = [open(T(x, y - 1)), open(T(x + 1, y)), open(T(x, y + 1)), open(T(x - 1, y))];
+      if (nb.filter(Boolean).length === 2 && !(nb[0] && nb[2]) && !(nb[1] && nb[3])) bends++;
+    }
+    const seen = new Set(), all = [];
+    for (let i = 0; i < 1024; i++) if (open(c.tile[i])) all.push(i);
+    const q = all.slice(0, 1);
+    seen.add(q[0]);
+    while (q.length) {
+      const i = q.pop(), x = i & 31, y = i >> 5;
+      for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) {
+        const j = (y + dy) * 32 + x + dx;
+        if (x + dx >= 0 && x + dx < 32 && y + dy >= 0 && y + dy < 32 && !seen.has(j) && open(c.tile[j])) { seen.add(j); q.push(j); }
+      }
+    }
+    if (seen.size !== all.length) f.push(at + ': ' + (all.length - seen.size) + ' open square(s) not reached from the rest');
+    for (const [dx, dy] of [[1, 0], [0, 1]]) {
+      const d = ks.get((c.cx + dx) + ',' + (c.cy + dy));
+      if (!d) continue;
+      for (let k = 0; k < 32; k++) {
+        const a = dx ? c.tile[k * 32 + 31] : c.tile[31 * 32 + k], b = dx ? d.tile[k * 32] : d.tile[k];
+        if (open(a) !== open(b)) f.push(at + ': its ' + (dx ? 'east' : 'south') + ' edge\'s square ' + k + ' not met by its neighbour\'s');
+      }
+    }
+  }
+  if (process.env.CAVEDUMP) for (const [at, c] of ks) { console.log(at, JSON.stringify(c.rooms)); for (let y = 0; y < 32; y++) console.log(c.tile.slice(y * 32, y * 32 + 32).map(t => ' .#+,="<>O'[t]).join('')); }
+  if (!ragged) f.push('stratum ' + sn + ': no chamber ragged');
+  if (bends < 4 * ks.size) f.push('stratum ' + sn + ': ' + bends + ' bend(s) in its tunnels, fewer than 4 a chunk');
+  return f;
+}
 
 // The draw test's lines at HyForth (lib video) and hylang (video.hl), and what each prints ('': nothing): vid's
 // /dev/vid/draw on the bitmap at each depth, read back by vpeek; the turtle; rc's lines to the file
@@ -2285,11 +2352,12 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0deep', what: 'Dingus Quest Zero down a way to the stratum below (dq0 -T: the character begins at the first way down of the top stratum): the stratum below grown in outline as the character first takes the way, its first chunk made (natural, at this seed: caves), looked about and mapped, and along a tunnel',
+      name: 'dq0deep', what: 'Dingus Quest Zero down a way to the stratum below (dq0 -T: the character begins at the first way down of the top stratum): the stratum below grown in outline as the character first takes the way, its first chunk made (natural, at this seed: caves), looked about and mapped, and along a tunnel; the caves irregular (the user\'s, 2026-10-16: "not straight tunnels, not rectangular rooms"): the cache\'s chunks read, their chambers ragged, their tunnels bending, every open square reached, their edges met',
       init: 't_rc', cycles: 500e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T\r' +
         ['look', 'd', 'look', 'map', 'sw', 'look', 'map', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
       expect: ['You come into the', 'A passage leads off', 'The map (you face', '% echo $status'],
+      check: m => caveReport(m, 1, 1),
       sdcard: true
     },
     {
