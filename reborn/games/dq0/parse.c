@@ -9,8 +9,11 @@
 ** passed over ("off" and "on" are the verb's in take off, put on: a word's sense goes by its place); after the thing,
 ** in, on, from (out of, off) name another, the thing it goes in or on, or comes from (put the dagger in the sack,
 ** hang the pouch on the belt, take the rope out of the pack).  A relative direction is made the compass's by the way
-** the character faces (pc_face, the UI's copy of the hub's, for an overlay doesn't see the hub).  What's done with
-** the command is main.c's.  The commands listed (help) are here too, with the serial port's rates for playing over it.
+** the character faces (pc_face, the UI's copy of the hub's, for an overlay doesn't see the hub).  A denizen's spoken
+** to (talk to the kobold, persuade, deceive, threaten, calm the bear, befriend the rat: the one meant the first word
+** not understood), asked (tell Grub to wait, ask the rat to follow me, follow me, stay here, dismiss Grub, tell Grub
+** to fetch the key: the request's word, and the thing), named (name the rat Grub).  What's done with the command is
+** main.c's.
 */
 
 #pragma code-name ("OV3CODE")
@@ -19,6 +22,7 @@
 #include <string.h>
 #include "dq0.h"
 #include "level.h"
+#include "hub.h"
 
 /* The verbs: a word (or words) and its verb; several words first, so "look closely" is examining */
 static const struct { char w[16]; unsigned char v; } verbs[] = {
@@ -48,7 +52,37 @@ static const struct { char w[16]; unsigned char v; } verbs[] = {
     { "break", V_BREAK }, { "smash", V_BREAK }, { "bend", V_FORCE }, { "disarm", V_DISARM }, { "disable", V_DISARM },
     { "save", V_SAVE }, { "inventory", V_INVENTORY }, { "inv", V_INVENTORY }, { "i", V_INVENTORY },
     { "q", V_QUIT },
+    { "talk", V_TALK }, { "speak", V_TALK }, { "chat", V_TALK }, { "greet", V_TALK }, { "hail", V_TALK },
+    { "persuade", V_PERSUADE }, { "convince", V_PERSUADE }, { "recruit", V_PERSUADE }, { "reason", V_PERSUADE },
+    { "win", V_PERSUADE }, { "bargain", V_PERSUADE }, { "deceive", V_DECEIVE }, { "trick", V_DECEIVE },
+    { "bluff", V_DECEIVE }, { "fool", V_DECEIVE }, { "lie", V_DECEIVE }, { "threaten", V_THREATEN },
+    { "intimidate", V_THREATEN }, { "scare", V_THREATEN }, { "frighten", V_THREATEN }, { "menace", V_THREATEN },
+    { "calm", V_CALM }, { "soothe", V_CALM }, { "placate", V_CALM }, { "pacify", V_CALM }, { "befriend", V_BEFRIEND },
+    { "tame", V_BEFRIEND }, { "coax", V_BEFRIEND }, { "attack", V_ATTACK }, { "hit", V_ATTACK }, { "strike", V_ATTACK },
+    { "kick", V_ATTACK }, { "punch", V_ATTACK }, { "tell", V_TELL }, { "ask", V_TELL }, { "order", V_TELL },
+    { "command", V_TELL }, { "follow", V_TELL }, { "come", V_TELL }, { "heel", V_TELL }, { "stay", V_TELL },
+    { "halt", V_TELL }, { "dismiss", V_TELL }, { "name", V_NAME }, { "call", V_NAME },
 };
+
+/* A request's words (tell Grub to wait: the verb's own too, "follow me", "stay here") */
+static const struct { char w[9]; unsigned char o; } orders[] = {
+    { "follow", OR_FOLLOW }, { "come", OR_FOLLOW }, { "heel", OR_FOLLOW }, { "wait", OR_WAIT }, { "stay", OR_WAIT },
+    { "halt", OR_WAIT }, { "stop", OR_WAIT }, { "remain", OR_WAIT }, { "guard", OR_WAIT }, { "go", OR_HOME },
+    { "leave", OR_HOME }, { "home", OR_HOME }, { "dismiss", OR_HOME }, { "fetch", OR_FETCH }, { "bring", OR_FETCH },
+    { "get", OR_FETCH }, { "retrieve", OR_FETCH },
+};
+
+static unsigned char __fastcall__ order_of (const char* w)
+{
+    unsigned char k;
+
+    for (k = 0; k < sizeof orders / sizeof orders[0]; ++k) {
+        if (!strcmp (w, orders[k].w)) {
+            return orders[k].o;
+        }
+    }
+    return OR_NONE;
+}
 
 /* The directions: by the compass (0-7), as it faces (REL | 0-7), up, down */
 #define REL     0x10
@@ -91,6 +125,7 @@ static const struct { char w[8]; unsigned char p; } preps[] = {
 static const char little[][10] = {
     "the", "a", "an", "this", "that", "these", "those", "of", "me", "my", "myself", "self", "off", "side",
     "direction", "dir", "and", "please", "on", "over", "head", "then", "now", "way", "here", "there", "it",
+    "with",
 };
 
 static unsigned char nw;                        /* The line's words */
@@ -164,6 +199,7 @@ void __fastcall__ o_parse (char* l, struct pcmd* c)
         if ((n = phrase (0, verbs[k].w)) != 0) {
             c->verb = verbs[k].v;
             i = n;
+            c->order = c->verb == V_TELL ? order_of (word[0]) : OR_NONE;     /* (follow me, stay here) */
             break;
         }
     }
@@ -171,6 +207,10 @@ void __fastcall__ o_parse (char* l, struct pcmd* c)
         c->verb = V_MOVE;                       /* (A way, or a thing, alone: going there) */
     }
     for (; i < nw; ++i) {
+        if (c->verb == V_TELL && (k = order_of (word[i])) != OR_NONE) {
+            c->order = c->order ? c->order : k;     /* (A request's word: the first) */
+            continue;
+        }
         for (k = 0; c->word[0] && !c->prep && k < sizeof preps / sizeof preps[0] && strcmp (word[i], preps[k].w); ++k) {
         }
         if (c->word[0] && !c->prep && k < sizeof preps / sizeof preps[0]) {
@@ -223,7 +263,8 @@ void __fastcall__ o_parse (char* l, struct pcmd* c)
         }
         if (!c->word[0]) {                      /* (The first word not understood) */
             strncpy (c->word, word[i], sizeof c->word - 1);
-        } else if (c->prep && !c->word2[0]) {   /*   (and the other thing's) */
+        } else if (c->verb == V_NAME || ((c->prep || c->verb == V_TELL) && !c->word2[0])) {   /*   (and the other
+                                                **   thing's, a thing fetched; a name given, the last) */
             strncpy (c->word2, word[i], sizeof c->word2 - 1);
         }
     }
@@ -253,19 +294,8 @@ void __fastcall__ o_parse (char* l, struct pcmd* c)
     if ((c->verb == V_TURN || c->verb == V_FACE) && c->around && dir == 0xFF) {
         c->dir = (pc_face + 4) & 7;
     }
-}
-
-/* The commands, listed */
-void o_help (void)
-{
-    msg ("Commands: north, northeast, east ... northwest (n, ne, e, se, s, sw, w, nw, or go north ...); forward, "
-         "back, left, right (f, b: as you face); up and down (u, d: the stairs); turn left, right, half left, half "
-         "right or around; face north ...; light and douse (a torch, a candle, a lantern); dig north ... or down (a "
-         "wall, the rock, a shaft); jump down (a ledge, a shaft); open, close, unlock, force (the door ahead), raise, "
-         "lower (a portcullis), break (a door, a window's glass), lift (a bar), climb through (a window), disarm (a trap), search; get, "
-         "drop, hold (wield), stow, put the dagger in the sack (or on the table), take the rope from the pack, hang "
-         "the pouch (on your belt), wear, take off, inventory (i), examine (a thing, a door, the room: look closely), hide; look (l), map (m), sheet (the "
-         "character), wait (z), pause (or Escape), quit (q).");
-    msg ("Played over the serial port, the game answers quickest at 19200 or 115200 baud (echo b115200 "
-         ">/dev/serctl, then the terminal set to match); on the Vera X's screen and keyboard it needs neither.");
+    if (c->verb == V_NAME && !c->word2[0]) {    /* ("call it Grub": the one meant the nearest) */
+        strcpy (c->word2, c->word);
+        c->word[0] = 0;
+    }
 }

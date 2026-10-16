@@ -345,9 +345,10 @@ static void items (void)
 }
 
 /* The denizens it sees: "A giant rat is ahead to your left, 15 feet away, watching you." (each, as there's room
-** in lb) */
-static const char* const doing[4] = {
-    " feet away.", " feet away, watching you.", " feet away, coming towards you.", " feet away, keeping its distance."
+** in lb; an ally named: "Grub is behind you, 5 feet away, following you.") */
+static const char* const doing[6] = {
+    " feet away.", " feet away, watching you.", " feet away, coming towards you.", " feet away, keeping its distance.",
+    " feet away, following you.", " feet away, waiting."
 };
 
 static void denizens (void)
@@ -359,7 +360,7 @@ static void denizens (void)
     for (i = 0; i < S->ndens && strlen (lb) < sizeof lb - 80; ++i) {
         dx = S->den[i].x - S->x;
         dy = S->den[i].y - S->y;
-        add (strchr ("aeiou", S->den[i].name[0]) ? " An " : " A ");
+        add (S->den[i].name[0] < 'a' ? " " : strchr ("aeiou", S->den[i].name[0]) ? " An " : " A ");
         add (S->den[i].name);
         add (" is ");
         add (relname[REL8 (bearing (dx, dy), pc_face)]);
@@ -367,7 +368,7 @@ static void denizens (void)
         dx = dx < 0 ? -dx : dx;
         dy = dy < 0 ? -dy : dy;
         addn (5 * (dx > dy ? dx : dy));
-        add (doing[S->den[i].doing & 3]);
+        add (doing[S->den[i].doing % 6]);
     }
 }
 

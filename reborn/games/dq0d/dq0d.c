@@ -14,8 +14,11 @@
 ** the world waits for it (a slice of the clock at a time: hub.h's TURN_SLICE), so they act through all the time what
 ** the character does takes: those out of its sight and not sensing it coarsely, a few squares a while.  Those out
 ** but away from the character (not actors) move coarsely too, to squares about their lairs in chunks that are made
-** (roam).  No two are on a square, nor any on the character's or where it's going.  (Attitudes, factions and
-** influence, and the denizens' own exploring come later.)
+** (roam).  No two are on a square, nor any on the character's or where it's going.  Each has an attitude to the
+** character, its faction's to begin with (factions.txt's, a stand-in theme's: a theme's will take their place),
+** moved by what happens and by the character's words (the UI's request, the hub's sway: the referee's test), and acts
+** by it: the hostile come at the character, an ally follows it and takes its requests; factions hostile to one
+** another keep off one another.  (Their own exploring comes later.)
 **
 ** Its records (the lairs, the denizens) are in a bank of its own, a record at a time copied out; kept with the game
 ** (dq0 -d: the UI asks, the hub's den_state), the save folder's dens.dat.
@@ -424,7 +427,7 @@ static unsigned long alert[NACTORS];            /* (Each actor still and facing 
 static unsigned char steps[NACTORS];            /* (Each one's steps: a noise of its own every eighth) */
 static unsigned char aorder[NACTORS];           /* (Each one's request, an ally's: its record's while it's an actor) */
 static unsigned lsx[NACTORS], lsy[NACTORS];     /* (Where each last sensed the character: an ally follows it there) */
-static unsigned char intr[NACTORS];             /* (Each one's lair intruded on, and not yet left: its attitude fallen) */
+static unsigned char intr[NACTORS];             /* (Each one's lair intruded on, not yet left: its attitude fallen) */
 static unsigned char seenfoe[NACTORS];          /* (Each one's seen the character with an enemy of its faction's) */
 static unsigned char anear[NACTORS];            /* (Each one beside the character as it last acted: an ally comes
                                                 **   along as the character goes up or down) */
@@ -845,7 +848,7 @@ static unsigned char __fastcall__ keep_off (unsigned char k)
 }
 
 /* An ally's (actor k's, the copy's) turn: waiting where it was asked; else following the character, to where it last
-** sensed it, till it's within two squares.  The step, or 0xFE (its time added) */
+** sensed it, till it's beside it.  The step, or 0xFE (its time added) */
 static unsigned char __fastcall__ ally (unsigned char k)
 {
     unsigned char d = 0xFE;
@@ -859,7 +862,7 @@ static unsigned char __fastcall__ ally (unsigned char k)
         return d;
     }
     a.doing = DO_FOLLOW;
-    if ((lsx[k] || lsy[k]) && apart (a.x - lsx[k], a.y - lsy[k]) > 2) {
+    if ((lsx[k] || lsy[k]) && apart (a.x - lsx[k], a.y - lsy[k]) > 1) {
         refx = lsx[k];
         refy = lsy[k];
         d = step_for (k, 0xFFFF, S_TOWARD);
@@ -1261,7 +1264,7 @@ static void __fastcall__ influence (unsigned char k)
         sw.result = SR_BEAST;
         return;
     }
-    if (dist > (sw.beast ? 4 : 12)) {
+    if (dist > (sw.beast ? 8 : 12)) {
         sw.result = SR_FAR;
         return;
     }
@@ -1416,8 +1419,8 @@ static void sway (void)
     }
     hub_map (0);
     ++HUB->den_seq;
-    sw.state = REQ_DONE;
-    memcpy (&HUB->sway, &sw, sizeof sw);
+    memcpy (&HUB->sway, &sw, sizeof sw);       /* (The reply whole, then the state that shows it) */
+    HUB->sway.state = REQ_DONE;
 }
 
 /* ---- The records kept (back: read again), the save folder's dens.dat: the bank a piece at a time, through the

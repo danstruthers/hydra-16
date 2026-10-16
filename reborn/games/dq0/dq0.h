@@ -11,6 +11,8 @@
 **   fixt.c     (overlay 4) the fixtures' words: portcullises, windows and slits worked, traps (an E_TRAP's)
 **   intro.c    (overlay 1) the title and the pace (the character is hmchar's: a program of its own,
 **              games/hmchar, that main.c runs, and whose file the referee reads)
+**   sway.c     (overlay 5) the character's ways with the denizens, in words (talk, persuade, an ally's requests:
+**              the denizens' task's answers), and the commands listed
 **
 ** Memory: the program's code and data from $0800 (its BSS must end 768 bytes or more under $7F00: dq0.cfg); the
 ** overlays' code in banks of their own, put in the window at $8000 as they're called (bank.s).  Code in an overlay
@@ -87,7 +89,10 @@ void __fastcall__ map (const char* rules);      /* The map of what it's seen rou
 enum {
     V_NONE, V_MOVE, V_ENTER, V_APPROACH, V_LOOK, V_EXAMINE, V_SEARCH, V_TURN, V_FACE, V_CLIMB, V_JUMP, V_OPEN, V_CLOSE,
     V_UNLOCK, V_FORCE, V_DIG, V_GET, V_DROP, V_DON, V_DOFF, V_LIGHT, V_DOUSE, V_WAIT, V_MAP, V_SHEET, V_HELP,
-    V_PAUSE, V_QUIT, V_SAVE, V_INVENTORY, V_HIDE, V_HOLD, V_STOW, V_PUT, V_HANG, V_RAISE, V_LOWER, V_BREAK, V_DISARM
+    V_PAUSE, V_QUIT, V_SAVE, V_INVENTORY, V_HIDE, V_HOLD, V_STOW, V_PUT, V_HANG, V_RAISE, V_LOWER, V_BREAK, V_DISARM,
+    V_TALK, V_PERSUADE, V_DECEIVE, V_THREATEN, V_CALM, V_BEFRIEND,     /* (A denizen swayed: hub.h's SW_TALK ... in
+                                                **   order) */
+    V_ATTACK, V_TELL, V_NAME                    /* (A blow, a request to an ally, a name given) */
 };
 enum { OB_NONE, OB_DOOR, OB_PASSAGE, OB_STAIRS, OB_LADDER, OB_SHAFT, OB_LEDGE, OB_WAY_OUT, OB_WALL, OB_WINDOW, OB_TRAP,
     OB_PORTC, OB_ROOM };                        /* (OB_ROOM: the room, its ceiling: looked at closely) */
@@ -104,7 +109,9 @@ struct pcmd {
     unsigned char   half, around;               /* (turn half left; turn around, look around) */
     char            word[16];                   /* The first word not understood */
     unsigned char   prep;                       /* PR_*: a word for the other thing (put X in Y, take X from Y) */
-    char            word2[16];                  /*   and the first not understood after it (the other thing) */
+    char            word2[16];                  /*   and the first not understood after it (the other thing; a
+                                                **   thing fetched; a name given, the last) */
+    unsigned char   order;                      /* A request to an ally (V_TELL's: hub.h's OR_*) */
 };
 extern unsigned char pc_face;                   /* (The hub's, copied for the overlay) */
 void __fastcall__ parse (char* l, struct pcmd* c);   /* Overlay 3 */
@@ -112,7 +119,10 @@ void __fastcall__ parse (char* l, struct pcmd* c);   /* Overlay 3 */
 /* ---- The overlays (bank.s: their stubs) */
 
 void title (void);                              /* Overlay 1: the title, the pace asked */
-void help (void);                               /* Overlay 3: the commands, listed */
+void help (void);                               /* Overlay 5: the commands, listed */
+struct sway;
+void __fastcall__ sway_words (const struct sway* s);   /* Overlay 5: the character's way with a denizen, the
+                                                **   denizens' task's answer (the hub's sway, copied), into lb */
 void __fastcall__ dig_words (unsigned char how, unsigned char feet);   /* Overlay 1: digging's, how it goes */
 void __fastcall__ appraise (const struct ireq* q, signed char g);       /* Overlay 1: a thing judged */
 extern char dig_with[16];                       /* The tool a dig's taken up, to name (then ""): main.c's */
@@ -151,6 +161,6 @@ void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
 void __fastcall__ bread (unsigned char bank, const void* from, void* to, unsigned n);
 void __fastcall__ bwrite (unsigned char bank, void* to, const void* from, unsigned n);
-extern unsigned char ovbank[4];
+extern unsigned char ovbank[5];
 
 #endif

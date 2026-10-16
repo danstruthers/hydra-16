@@ -106,10 +106,10 @@ static void ovl_load (void)
 
     strcpy (path, libdir);
     strcat (path, "/dq0.ovl");
-    if ((fd = open (path, O_RDONLY)) < 0 || (first = hy_banks_alloc (4)) < 0) {
+    if ((fd = open (path, O_RDONLY)) < 0 || (first = hy_banks_alloc (5)) < 0) {
         hy_exits ("dq0: its overlays (lib/dq0/dq0.ovl) not found, or no RAM banks");
     }
-    for (k = 0; k < 4; ++k) {
+    for (k = 0; k < 5; ++k) {
         ovbank[k] = first + k;
         for (off = 0; off < 0x2000; off += sizeof b) {
             n = read (fd, b, sizeof b);
@@ -235,7 +235,8 @@ static void sheet (void)
 ** and the maker's changes.dat and seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    2                           /* (2: the items' records with their size, the portals' make) */
+#define SAVE_VER    3                           /* (2: the items' records with their size, the portals' make; 3:
+                                                **   the denizens' attitudes, the factions', the names given) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
@@ -863,6 +864,37 @@ static void __fastcall__ hide (const char* w)
     }
 }
 
+/* The character's way with a denizen (how: hub.h's SW_*; the parser's words, the one meant and a name or a thing,
+** and its request): asked of the denizens' task (the hub's sway: it lends the UI's slot to the referee meanwhile),
+** waited for, worded (overlay 5: but none found, if SW_QUIET), and the time it took the character's.  Its result */
+#define SW_QUIET    0x80
+static struct sway dealt;
+static unsigned char __fastcall__ deal (unsigned char how, const struct pcmd* c)
+{
+    struct sway* s = &HUB->sway;
+
+    s->how = how & ~SW_QUIET;
+    s->order = c->order;
+    strcpy (s->word, c->word);
+    strcpy (s->word2, c->word2);
+    s->state = REQ_POSTED;
+    hub_ring (T_DENIZENS);
+    while (s->state != REQ_DONE) {
+        hy_sleep_ticks (1);
+        hub_map (0);
+    }
+    memcpy (&dealt, s, sizeof dealt);
+    s->state = REQ_FREE;
+    if (!(how & SW_QUIET) || dealt.result != SR_NONE) {
+        sway_words (&dealt);
+        msg (lb);
+    }
+    if (dealt.t) {
+        intend2 (I_WAIT, dealt.t, 0);
+    }
+    return dealt.result;
+}
+
 /* The commands that want nothing but their verb (unoptimised: cc65 2.19's optimiser takes a branch here for a short
 ** one that isn't, an assembler's range error) */
 #pragma optimize (push, off)
@@ -1000,6 +1032,9 @@ portal:
         return;
     case V_EXAMINE:                             /* (A thing looked at closely: judged, by the craft that knows it; a
                                                 **   portal, or its part if it's not there; else the room) */
+        if (c.word[0] && !c.obj && deal (SW_LOOK | SW_QUIET, &c) != SR_NONE) {
+            return;                             /* (A denizen it sees: how it seems) */
+        }
         if (!c.word[0] || things (IO_DESCRIBE, c.word) != IR_OK) {
             if (c.obj == OB_DOOR || c.obj == OB_WINDOW || c.obj == OB_PORTC) {
                 inspect (c.obj, c.orel);
@@ -1074,6 +1109,25 @@ portal:
         } else {
             tell (T_YOU_JUMP_AND);
         }
+        return;
+    case V_TALK:
+    case V_PERSUADE:
+    case V_DECEIVE:
+    case V_THREATEN:
+    case V_CALM:
+    case V_BEFRIEND:
+        deal (c.verb - V_TALK + SW_TALK, &c);
+        return;
+    case V_ATTACK:                              /* (A stand-in for the fights': a denizen named) */
+        if (c.word[0]) {
+            deal (SW_ATTACK, &c);
+        } else {
+            tell (T_ATTACK_WHAT);
+        }
+        return;
+    case V_TELL:
+    case V_NAME:
+        deal (c.verb == V_TELL ? SW_ORDER : SW_NAME, &c);
         return;
     default:                                    /* (The rest: chores) */
         chores (c.verb);

@@ -1,7 +1,7 @@
 # kinds.txt - (dq0d) the denizens' kinds: a stand-in theme's bestiary, till themes are data of their own.  make.js
 # makes it the denizens' task's data file (lib/dq0/dq0d.dat: 40 bytes a kind, the first none; then the factions,
-# factions.txt's), which it reads into a bank of its own as it starts.  The numbers are the game's own, not a ruleset's: the referee's sheet for a creature
-# comes from its key (later).
+# factions.txt's), which it reads into a bank of its own as it starts.  The numbers are the game's own, not a
+# ruleset's: the referee's sheet for a creature comes from its key (later).
 #
 # A line a kind, its fields between bars:
 #   name      what the character sees it as (11 letters at most)

@@ -2390,6 +2390,34 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0sway', what: 'Dingus Quest Zero\'s attitudes and influence (DENIZENS.md; the user: "skills like animal husbandry could influence animals encountered"): a character good with animals (Animalcraft 90, hmchar\'s file) at seed 3\'s giant rats (wary, the vermin faction\'s), words refused (an animal: persuasion doesn\'t reach it), how one seems (examined), befriended (the referee\'s Animalcraft, a test at a time, the attitude a step or two each success: won over, then asked no more), named Grub, asked to wait and seen waiting as the character crosses the room, then to follow, following it across the room and down the stairway (come along to the stratum below); the game kept (dq0 -d) and carried on, Grub its ally still; then a fresh game, a rat struck (the fights\' stand-in): it turns on the character, and its lair\'s kin with it (hostile: coming at it, not keeping their distance)',
+      init: 't_rc', cycles: 1800e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/a.hm\rāecho ml ani 90 >> /ram/a.hm\rādq0 -p t -s 3 -c /ram/a.hm -T -d /ram/kept\r' +
+        ['persuade the rat', 'examine the rat', ...Array(8).fill('befriend the rat'),
+         'name the rat grub', 'tell grub to wait', 'go west', 'follow me', 'go east', 'wait', 'd', 'look',
+         'quit', 'dq0 -d /ram/kept', 'examine grub', 'quit',
+         'dq0 -p t -s 3 -c /ram/a.hm -T', 'look', 'attack the rat', 'look', 'examine the rat', 'quit',
+         'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['words won\'t reach it', 'The giant rat seems wary of you.', 'You coax the giant rat.', 'It\'s won over: it will follow you now.',
+        'The giant rat is Grub now.', 'Grub waits here.', 'Grub follows you.', 'You come into the Sunken Ways.', 'Grub seems your ally.',
+        'You lash out at the giant rat: it turns on you.', 'The giant rat seems hostile.', '% echo $status'],
+      // (The tests' dice the referee's, its requests' order the tasks' timing: so as many tries as it takes to win the
+      // rat over.  Waiting: seen so as the character crosses the room; following: behind it once it's crossed back,
+      // and beside it as it comes down the stairway; the kin of the rat struck coming at the character, none keeping
+      // its distance)
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        const seg = (a, b, from = 0) => { const i = o.indexOf(a, from); return i < 0 ? '' : o.slice(i, o.indexOf(b, i + a.length)); };
+        if (!/Grub is [^.]*, waiting\./.test(seg('> go west', '> follow me'))) f.push('Grub not seen waiting');
+        if (!/Grub is [^.]*, following you\./.test(seg('> wait', '> d'))) f.push('Grub not seen following across the room');
+        if (!/Grub is [^.]*, following you\./.test(seg('You come into the Sunken Ways.', '> quit'))) f.push('Grub not come along down the stairway');
+        const struck = seg('> attack the rat', '> examine the rat', o.indexOf('% dq0 -p t -s 3 -c /ram/a.hm -T '));
+        if (!struck.includes('coming towards you') || struck.includes('keeping its distance')) f.push('the rat\'s kin not turned on the character');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0prompt', what: 'Dingus Quest Zero answering at once at the normal pace while the denizens act (DENIZENS.md: events; the user: "the UI is slow to respond"): the giant rats by the way down moving about on their own (their task\'s, in the background), a while waited, then a turn and what the character carries asked for at once, while the senses look about after the turn (the character still busy): told within a fifth of a second of Enter, before the look\'s done (the senses answer it between the look\'s rows, the UI a command that wants nothing of the character at once), and a step that can\'t be taken told as quickly (the world\'s answer); the status line drawn only where it changed, a second at most (the user: the cursor flickered), the cursor hidden while it\'s there',
       init: 't_rc', cycles: 900e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p n -s 3 -c /ram/c.hm -T\r' +

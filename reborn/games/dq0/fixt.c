@@ -106,7 +106,7 @@ void o_den_way (void)
 {
     static char b[32];
 
-    strcpy (b, strchr ("aeiou", lb[0]) ? "An " : "A ");
+    strcpy (b, lb[0] < 'a' ? "" : strchr ("aeiou", lb[0]) ? "An " : "A ");    /* (A name: Grub) */
     strcat (b, lb);
     strcat (b, " is in the way.");
     msg (b);
