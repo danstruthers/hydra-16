@@ -13,7 +13,7 @@
             .include    "zeropage.inc"
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 6                     ; dq0.cfg's overlays
+OVMAX       = 7                     ; dq0.cfg's overlays
 DEPTH       = 16                    ; Overlay calls in calls, at most
 
             .bss
@@ -160,6 +160,8 @@ ovl_out:
             OVFN        heard_words, 6
             OVFN        seen_words, 6
             OVFN        parse, 3
+            OVFN        pick, 7
+            OVFN        choose, 7
             OVFN        fixt_words, 4
             OVFN        trap_words, 4
             OVFN        trap_name, 2

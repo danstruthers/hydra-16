@@ -2304,7 +2304,7 @@ module.exports = {
       name: 'dq0talk', what: 'Dingus Quest Zero understanding the player (parse.c, after the user Language.txt): synonyms, several words to a verb, directions as the character faces and two together, things it sees walked up to and gone through, the little words passed over',
       init: 't_rc', cycles: 600e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T\r' +
-        ['take a gander', 'turn half left', 'face north and east', 'walk to the door on my right', 'look closely', 'pick up the sword', 'take off my coat', 'saunter off to the left', 'foo', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
+        ['take a gander', 'turn half left', 'face north and east', 'walk to the door on my right', '1', 'look closely', 'pick up the sword', 'take off my coat', 'saunter off to the left', 'foo', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
       expect: ['You turn to face east', 'You turn to face northeast', 'You go over to it.', 'feet by', 'You see none of those here.', "You aren't wearing any coat.", "I don't know how to foo.", '% echo $status'],
       sdcard: true
     },
@@ -2541,7 +2541,7 @@ module.exports = {
       name: 'dq0doors', what: 'Dingus Quest Zero\'s rooms and doors as the user asked (2026-10-15): a room told in general words (a small hall, a flat ceiling), its figures (its size in feet, its ceiling\'s height) only on a close look (look closely, x room); a door examined (its make, size, thickness and features plain, its state and stoutness the appraiser\'s judgement: the referee\'s Timbercraft), and its bar (an item in its brackets: IW_PORTAL), lifted out and taken; a window examined, its pane judged (Glassworking), broken into shards; a strong iron-bound door battered with bare hands unmarked, the hands hurt till the character stops (the user\'s: dq0hands), a weaker wooden one battered with a pick (dq0 -k pick: the tool to hand that hits hardest) giving way (each blow the referee\'s impact less the wood\'s resistance, off its body), broken down for good',
       init: 't_rc', cycles: 2500e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 3 -c /ram/c.hm\r' +
-        ['look', 'look closely', 'x room', 'examine the door behind me on my right', 'break the door behind me on my right', 'break', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        ['look', 'look closely', 'x room', 'examine the door behind me on my right', 'break the door ahead', 'break', 'quit'].map(l => 'ā' + l + '\r').join('') +
         'ādq0 -p t -s 15 -c /ram/c.hm -k pick\r' +
         ['examine the door ahead to my left', 'examine bar', 'break the door ahead to my left', 'break', 'look', 'close', 'quit'].map(l => 'ā' + l + '\r').join('') +
         'ādq0 -p t -s 4 -c /ram/c.hm\r' + ['take the bar', 'i', 'quit'].map(l => 'ā' + l + '\r').join('') +
@@ -2612,12 +2612,43 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0hands',what: 'Dingus Quest Zero\'s doors battered with bare hands (the user\'s, 2026-10-15: a blow a d4 and the Strength\'s modifier, the door\'s resistance off it, the hand hurt by the lesser of the blow and the resistance): one character made strong and one weak (hmchar\'s file, its Strength line set after), at seed 10\'s rotting wooden door the strong one marking it, the weak one not, the strong one\'s hands only bruised (minor: a rotten door\'s resistance is little), stopping when hurt enough, the injuries on the sheet; at seed 14\'s sound iron-bound door the strong one\'s hand fractured (serious: a sturdy door hurts more)',
+      name: 'dq0choose', what: 'Dingus Quest Zero asking which, of several (the user\'s, 2026-10-16: "If I say open door and there are three closed doors in the room, it should give me a numbered list of choices if one is not directly in front of me"): at seed 4, three doors on the hall\'s north and west walls, none ahead: open door lists them, numbered, from the character\'s left round (each where it lies, its state), and 3 opens the one behind it to its right (turned to: that one, the world given its square); then a fresh game, examine door asked again, answered with a way (right: the one to its right, examined); go through the door asked, a command not a choice (look) letting it go, asked again and 1 going through the one ahead to its right; at seed 3 (dq0 -T) two doors to the right as far off, told apart (further back, further ahead)',
+      init: 't_rc', cycles: 2000e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 4 -c /ram/c.hm\r' +
+        ['open door', '3', 'look', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        'ādq0 -p t -s 4 -c /ram/c.hm\r' + ['examine door', 'right', 'go through the door', 'look', '1', 'go through the door', '1',
+          'quit'].map(l => 'ā' + l + '\r').join('') +
+        'ādq0 -p t -s 3 -c /ram/c.hm -T\r' + ['face north and east', 'walk to the door on my right', '1', 'quit', 'echo $status']
+          .map(l => 'ā' + l + '\r').join('') },
+      expect: ['% echo $status'],
+      // (Its words checked with the lines' wrapping taken out, each in its turn)
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        const list = 'Which door: 1. the door ahead to your right (open), 2. the one to your right (closed), or 3. the one ' +
+          'behind you to your right (closed)?';
+        const want = ['> open door ' + list, '> 3', 'You turn to face north.', 'You open the door.', '> look You are in a small hall',
+          'There is a door ahead (open), one to your left (open) and one ahead to your left (closed).',
+          '> examine door ' + list, '> right A door of iron-bound wood, 4 feet wide and 8 high', '> go through the door ' + list,
+          '> look You are in a small hall', '> 1 I don\'t know how to 1.', '> go through the door ' + list,
+          '> 1', 'You are in a small chamber', 'Which door: 1. the door to your right, further back (open), or 2. the one to ' +
+          'your right, further ahead (closed)?', '> 1', 'You go over to it.', '% echo $status'];
+        let at = 0;
+        for (const w of want) {
+          const i = o.indexOf(w, at);
+          if (i < 0) { f.push('not found (in its turn): ' + w); break; }
+          at = i + w.length;
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0hands', what: 'Dingus Quest Zero\'s doors battered with bare hands (the user\'s, 2026-10-15: a blow a d4 and the Strength\'s modifier, the door\'s resistance off it, the hand hurt by the lesser of the blow and the resistance): one character made strong and one weak (hmchar\'s file, its Strength line set after), at seed 10\'s rotting wooden door the strong one marking it, the weak one not, the strong one\'s hands only bruised (minor: a rotten door\'s resistance is little), stopping when hurt enough, the injuries on the sheet; at seed 14\'s sound iron-bound door the strong one\'s hand fractured (serious: a sturdy door hurts more)',
       init: 't_rc', cycles: 800e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/s.hm\rāecho att str 18 >> /ram/s.hm\r' +
         'āhmchar -q -s 5 -o /ram/w.hm\rāecho att str 4 >> /ram/w.hm\r' +
-        [['s', 10], ['w', 10], ['s', 14]].map(([c, s]) => 'ādq0 -p t -s ' + s + ' -c /ram/' + c + '.hm\r' +
-          ['break door', 'sheet', 'quit'].map(l => 'ā' + l + '\r').join('')).join('') + 'āecho $status\r' },
+        [['s', 10, 'break the door behind me on my left'], ['w', 10, 'break the door behind me on my left'], ['s', 14, 'break door']]
+          .map(([c, s, b]) => 'ādq0 -p t -s ' + s + ' -c /ram/' + c + '.hm\r' + [b, 'sheet', 'quit'].map(l => 'ā' + l + '\r').join('')).join('') + 'āecho $status\r' },
       expect: ['% echo $status'],
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
@@ -2631,10 +2662,10 @@ module.exports = {
             at = i + w.length;
           }
         };
-        want(strong, 'strong, rotten door', ['> break door', 'it\'s marked, but it holds.', 'Your knuckles split on it: a minor bruise to',
+        want(strong, 'strong, rotten door', ['> break the door', 'it\'s marked, but it holds.', 'Your knuckles split on it: a minor bruise to',
           'You stop: your hands are too hurt to go on.', '> sheet', 'Strength 18', 'Injuries:', 'hand M1 (bruise)']);
         if (/serious/.test(strong)) f.push('the rotten door hurt the hand seriously');
-        want(weak, 'weak, rotten door', ['> break door', 'Your blows make no mark on it.', '> sheet', 'Strength 4']);
+        want(weak, 'weak, rotten door', ['> break the door', 'Your blows make no mark on it.', '> sheet', 'Strength 4']);
         want(sturdy, 'strong, sturdy door', ['> break door', 'Something gives in your hand:', 'a serious fracture to your', 'hand (S2)',
           '> sheet', 'Injuries:', 'hand S2 (fracture)']);
         return f;

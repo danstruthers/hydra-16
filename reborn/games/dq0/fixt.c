@@ -184,7 +184,8 @@ static void __fastcall__ portal_far (const struct portal* p, unsigned char d)
     if (k == PK_DOOR || k == PK_PORTCULLIS) {
         a = h <= 5 ? " low" : h >= 8 ? " tall" : "";
         add (a);
-        add (w <= 2 ? (*a ? ", narrow" : " narrow") : w >= 5 && !(p->feat & PF_DOUBLE) ? (*a ? ", wide" : " wide") : "");
+        add (w <= 2 ? (*a ? ", narrow" : " narrow") : w >= 5 && !(p->feat & PF_DOUBLE) ? (*a ? ", wide" : " wide") :
+             "");
     }
     add (k == PK_PORTCULLIS ? " portcullis" : k == PK_WINDOW ? " window" : k == PK_SLIT ? "" : p->feat & PF_DOUBLE ?
          " double door" : " door");
@@ -195,8 +196,8 @@ static void __fastcall__ portal_far (const struct portal* p, unsigned char d)
     add (", some ");
     addn (5 * d);
     add (" feet off");
-    add (p->state & PS_WRECKED ? ", broken down." : k == PK_PORTCULLIS ? (p->state & PS_OPEN ? ", raised." : ", down.") :
-         p->state & PS_OPEN ? ", standing open." : ".");
+    add (p->state & PS_WRECKED ? ", broken down." : k == PK_PORTCULLIS ? (p->state & PS_OPEN ? ", raised." :
+         ", down.") : p->state & PS_OPEN ? ", standing open." : ".");
     add (" You'd have to go closer to make out more.");
 }
 

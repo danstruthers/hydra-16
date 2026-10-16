@@ -14,7 +14,9 @@
 **   theme.c    (overlay 5) the theme's words (its story, its names, its endings) and its puzzle (theme.h)
 **   sway.c     (overlay 6) the character's ways with the denizens, in words (talk, persuade, an ally's requests:
 **              the denizens' task's answers), and the commands listed
-**   seen.c     (overlay 6) more of what the character perceives, in words: a ceiling at a glance
+**   seen.c     (overlay 6) more of what the character perceives, in words: a ceiling at a glance, the things
+**              and the denizens it sees, those it hears
+**   choose.c   (overlay 7) the thing the player means, of those it perceives: of several, which, asked
 **
 ** Memory: the program's code and data from $0800 (its BSS must end 768 bytes or more under $7F00: dq0.cfg); the
 ** overlays' code in banks of their own, put in the window at $8000 as they're called (bank.s).  Code in an overlay
@@ -121,6 +123,17 @@ struct pcmd {
 extern unsigned char pc_face;                   /* (The hub's, copied for the overlay) */
 void __fastcall__ parse (char* l, struct pcmd* c);   /* Overlay 3 */
 
+/* ---- choose.c (overlay 7): the thing meant, of those the character perceives; of several, which, asked */
+
+#define PICK_TELL   0x80                        /* (pick's obj |: "You see no door here", if there's none) */
+#define PICK_ANY    0x40                        /* (Any one: none asked) */
+unsigned char __fastcall__ pick (unsigned char obj, unsigned char orel);   /* The thing of kind obj (OB_*), lying
+                                                **   orel (or 0xFF: any way): 1, its square in tx, ty (the one there
+                                                **   is, the one chosen, the nearest ahead); 0, none; 2, several and
+                                                **   none ahead: they're listed, which asked */
+void __fastcall__ choose (struct pcmd* c);      /* The command (parsed) a choice's answer (its number, its way)?
+                                                **   Then c is the command asked about again, pick's the one chosen */
+
 /* ---- theme.c (overlay 5): the theme's words and its puzzle (theme.h), from its copy in the overlay's bank */
 
 #define TCOPY       ((struct theme*) 0x9000)    /* (The theme, in overlay 5's bank: main.c reads it in) */
@@ -201,6 +214,6 @@ void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
 void __fastcall__ bread (unsigned char bank, const void* from, void* to, unsigned n);
 void __fastcall__ bwrite (unsigned char bank, void* to, const void* from, unsigned n);
-extern unsigned char ovbank[6];
+extern unsigned char ovbank[7];
 
 #endif
