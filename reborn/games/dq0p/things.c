@@ -122,18 +122,8 @@ int __fastcall__ things_init (const char* dir)
     return 0;
 }
 
-struct item* __fastcall__ item_at (unsigned i)
-{
-    unsigned char b = ITEM_BANK (0);
-
-    while (i >= 0x2000 / sizeof (struct item)) {    /* (ITEM_BANK's and ITEM_AT's, a bank at a time: cc65 divides
-                                                    **   slowly, and a look about reads every record) */
-        i -= 0x2000 / sizeof (struct item);
-        ++b;
-    }
-    hub_map (b);
-    return (struct item*) 0x8000 + i;
-}
+/* (item_at and items are items.s's, in assembly: its store's layout as here) */
+typedef char store_fits[sizeof (struct item) == 22 && ITEM_BANK (0) == 14 && ITEM_BANKS == 2 ? 1 : -1];
 
 /* A kind's record, copied out of the catalogue's bank (into one of four, in turn: an expression may want two at
 ** once): the catalogue's bank left in the window */
@@ -323,14 +313,10 @@ static unsigned __fastcall__ weight_of (unsigned i)
 
 static unsigned __fastcall__ weight_in (unsigned where, unsigned x)
 {
-    struct item* p;
-    unsigned i, w = 0;
+    unsigned i = 0, w = 0;
 
-    for (i = 1; i < NITEMS; ++i) {
-        p = item_at (i);
-        if (p->kind && p->where == where && p->x == x) {
-            w += weight_of (i);
-        }
+    while ((i = items (i, IN_X | 1 << where, x)) != 0) {
+        w += weight_of (i);
     }
     return w;
 }
@@ -350,16 +336,12 @@ static unsigned __fastcall__ bulk_of (unsigned i)
 
 static unsigned __fastcall__ bulk_in (unsigned x)
 {
-    struct item* p;
-    unsigned i, b = 0;
+    unsigned i = 0, b = 0;
     unsigned char n = 0;
 
-    for (i = 1; i < NITEMS; ++i) {
-        p = item_at (i);
-        if (p->kind && p->where == IW_ITEM && p->x == x) {
-            b += bulk_of (i);
-            ++n;
-        }
+    while ((i = items (i, IN_X | IN_ITEM, x)) != 0) {
+        b += bulk_of (i);
+        ++n;
     }
     nin = n;                                    /* (The outermost call's, set last) */
     return b;
@@ -402,7 +384,7 @@ static const struct item* __fastcall__ lying (const struct item* q)
 static unsigned __fastcall__ seen_named (const char* name)
 {
     const struct item* s;
-    unsigned i, best = 0, bd = 0xFFFF, d, x, y;
+    unsigned i = 0, best = 0, bd = 0xFFFF, d, x, y;
     unsigned char sn;
     unsigned char* p;
 
@@ -410,9 +392,9 @@ static unsigned __fastcall__ seen_named (const char* name)
     sn = HUB->pc_stratum;
     x = HUB->pc_x;
     y = HUB->pc_y;
-    for (i = 1; i < NITEMS; ++i) {
+    while ((i = items (i, IN_SQUARE | IN_ITEM | IN_PORTAL, 0)) != 0) {
         fetch (&rec, i);
-        if (!rec.kind || !(s = lying (&rec)) || s->sn != sn || (rec.flags & (I_HIDDEN | I_KNOWN)) == I_HIDDEN ||
+        if (!(s = lying (&rec)) || s->sn != sn || (rec.flags & (I_HIDDEN | I_KNOWN)) == I_HIDDEN ||
             !named (kind_of (rec.kind)->name, name) || s->x - x + 20 > 40 || s->y - y + 20 > 40 ||
             !(p = at (sn, s->x, s->y)) || !(*p & T_VIS)) {
             continue;
@@ -439,11 +421,11 @@ static unsigned char __fastcall__ on_pc (unsigned i)
 /* The first thing named the character carries: its number, or 0 */
 static unsigned __fastcall__ carried_named (const char* name)
 {
-    unsigned i;
+    unsigned i = 0;
 
-    for (i = 1; i < NITEMS; ++i) {
+    while ((i = items (i, IN_ACTOR | IN_ITEM | IN_PORTAL, 0)) != 0) {
         fetch (&rec, i);
-        if (rec.kind && rec.where != IW_SQUARE && named (kind_of (rec.kind)->name, name) && on_pc (i)) {
+        if (named (kind_of (rec.kind)->name, name) && on_pc (i)) {
             return i;
         }
     }
@@ -496,22 +478,20 @@ static unsigned char __fastcall__ two (const struct kind* k)
 static void about (void)
 {
     const struct kind* k;
-    unsigned i;
+    unsigned i = 0;
 
     pack = belt = hands = 0;
-    for (i = 1; i < NITEMS; ++i) {
+    while ((i = items (i, IN_X | IN_ACTOR, 0)) != 0) {
         fetch (&rec, i);
-        if (rec.kind && rec.where == IW_ACTOR && !rec.x) {
-            k = kind_of (rec.kind);
-            if ((rec.flags & I_WORN) && (k->flags & K_CONTAINER) && !pack) {
-                pack = i;
-            }
-            if ((rec.flags & I_WORN) && (k->flags & K_BELT) && !belt) {
-                belt = i;
-            }
-            if (rec.flags & I_HELD) {
-                hands += two (k);
-            }
+        k = kind_of (rec.kind);
+        if ((rec.flags & I_WORN) && (k->flags & K_CONTAINER) && !pack) {
+            pack = i;
+        }
+        if ((rec.flags & I_WORN) && (k->flags & K_BELT) && !belt) {
+            belt = i;
+        }
+        if (rec.flags & I_HELD) {
+            hands += two (k);
         }
     }
 }
@@ -565,15 +545,15 @@ static unsigned char __fastcall__ carry (unsigned n, unsigned char hand_first)
 static void tools (void)
 {
     const struct kind* k;
-    unsigned i;
+    unsigned i = 0;
     char* t;
 
     hub_map (0);
     HUB->things_text[0] = 0;
-    for (i = 1; i < NITEMS; ++i) {
+    while ((i = items (i, IN_ACTOR | IN_ITEM | IN_PORTAL, 0)) != 0) {
         fetch (&rec, i);
         k = kind_of (rec.kind);                   /* (Copied: the hub's text is in another bank) */
-        if (rec.kind && rec.where != IW_SQUARE && k->tool[0] && on_pc (i)) {
+        if (k->tool[0] && on_pc (i)) {
             hub_map (0);
             t = HUB->things_text;
             if (strlen (t) < sizeof HUB->things_text - 10) {
@@ -588,12 +568,12 @@ static void __fastcall__ wear (const char* key, unsigned char by)
 {
     static char name[16];
     struct item* p;
-    unsigned i;
+    unsigned i = 0;
 
     strcpy (name, key);
-    for (i = 1; i < NITEMS; ++i) {
+    while ((i = items (i, IN_ACTOR | IN_ITEM | IN_PORTAL, 0)) != 0) {
         fetch (&rec, i);
-        if (rec.kind && rec.where != IW_SQUARE && !strcmp (kind_of (rec.kind)->tool, key) && on_pc (i)) {
+        if (!strcmp (kind_of (rec.kind)->tool, key) && on_pc (i)) {
             p = item_at (i);
             p->wear = p->wear + by < p->wear ? 255 : p->wear + by;
             strcpy (name, kind_of (rec.kind)->name);
@@ -728,14 +708,11 @@ static void __fastcall__ thing_words (const struct item* q)
 static void __fastcall__ contents (unsigned char where, unsigned x, unsigned char depth)
 {
     static struct item q;
-    unsigned i;
+    unsigned i = 0;
     unsigned char first = 1;
 
-    for (i = 1; i < NITEMS; ++i) {
+    while ((i = items (i, IN_X | 1 << where, x)) != 0) {
         fetch (&q, i);
-        if (!q.kind || q.where != where || q.x != x) {
-            continue;
-        }
         if (!depth) {
             put (first ? "You carry " : "; ");
         } else {
@@ -781,7 +758,7 @@ static unsigned char search (void)
 {
     struct req* r;
     unsigned char* p;
-    unsigned i, x, y;
+    unsigned i = 0, x, y;
     unsigned char sn, found = 0;
     signed char g;
 
@@ -791,9 +768,9 @@ static unsigned char search (void)
     y = HUB->pc_y;
     tp = HUB->things_text;
     *tp = 0;
-    for (i = 1; i < NITEMS; ++i) {
+    while ((i = items (i, IN_SQUARE, 0)) != 0) {
         fetch (&rec, i);
-        if (!rec.kind || rec.where != IW_SQUARE || rec.sn != sn ||
+        if (rec.sn != sn ||
             (rec.flags & (I_HIDDEN | I_MAGIC | I_KNOWN)) != I_HIDDEN ||
             rec.x - x + SEARCH_R > 2 * SEARCH_R || rec.y - y + SEARCH_R > 2 * SEARCH_R || !(p = at (sn, rec.x, rec.y)) ||
             !(*p & T_VIS)) {
@@ -879,15 +856,13 @@ static void __fastcall__ seen_one (struct sight* s, unsigned i, unsigned char on
 void __fastcall__ things_seen (struct sight* s, unsigned char sn, unsigned x, unsigned y, unsigned char face)
 {
     static struct item q;
-    struct item* r;
-    unsigned i, j;
+    unsigned i = 0, j;
     unsigned char* p;
 
     s->nitems = 0;
-    for (i = 1; i < NITEMS && s->nitems < SEE_ITEMS; ++i) {
+    while (s->nitems < SEE_ITEMS && (i = items (i, IN_SQUARE, 0)) != 0) {
         fetch (&q, i);
-        if (!q.kind || q.where != IW_SQUARE || q.sn != sn || (q.flags & (I_HIDDEN | I_KNOWN)) == I_HIDDEN ||
-            q.x - x + 20 > 40 ||
+        if (q.sn != sn || (q.flags & (I_HIDDEN | I_KNOWN)) == I_HIDDEN || q.x - x + 20 > 40 ||
             q.y - y + 20 > 40 || !(p = at (sn, q.x, q.y)) || !(*p & T_VIS)) {
             continue;
         }
@@ -896,11 +871,8 @@ void __fastcall__ things_seen (struct sight* s, unsigned char sn, unsigned x, un
         se.y = q.y;
         seen_one (s, i, 0);
         if (kind_of (q.kind)->keeps & KF_ON) {
-            for (j = 1; j < NITEMS && s->nitems < SEE_ITEMS; ++j) {
-                r = item_at (j);
-                if (r->kind && r->where == IW_ITEM && r->x == i) {
-                    seen_one (s, j, 1);
-                }
+            for (j = 0; s->nitems < SEE_ITEMS && (j = items (j, IN_X | IN_ITEM, i)) != 0; ) {
+                seen_one (s, j, 1);
             }
         }
     }
@@ -937,13 +909,13 @@ static void light_now (void)
 {
     static char lamp[14];
     const struct kind* k;
-    unsigned i;
+    unsigned i = 0;
     unsigned char best = 0;
 
     lamp[0] = 0;
-    for (i = 1; i < NITEMS; ++i) {
+    while ((i = items (i, IN_FLAGS | IN_ACTOR | IN_ITEM | IN_PORTAL, I_LIT)) != 0) {
         fetch (&rec, i);
-        if (rec.kind && (rec.flags & I_LIT) && on_pc (i)) {
+        if (on_pc (i)) {
             k = kind_of (rec.kind);
             if (k->light > best) {
                 best = k->light;
@@ -963,12 +935,12 @@ void __fastcall__ things_lamps (unsigned char sn, unsigned x, unsigned y)
 {
     const struct item* s;
     struct lamp* l = lamp;
-    unsigned i;
+    unsigned i = 0;
 
     nlamps = 0;
-    for (i = 1; i < NITEMS && nlamps < NLAMPS; ++i) {
+    while (nlamps < NLAMPS && (i = items (i, IN_FLAGS | IN_SQUARE | IN_ITEM | IN_PORTAL, I_LIT)) != 0) {
         fetch (&rec, i);
-        if (!rec.kind || !(rec.flags & I_LIT) || !(s = lying (&rec)) || s->sn != sn || s->x - x + LAMP_R > 2 * LAMP_R ||
+        if (!(s = lying (&rec)) || s->sn != sn || s->x - x + LAMP_R > 2 * LAMP_R ||
             s->y - y + LAMP_R > 2 * LAMP_R) {
             continue;
         }
