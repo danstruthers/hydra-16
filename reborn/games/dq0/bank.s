@@ -5,7 +5,8 @@
 ; (OVFN): the bank there now kept on a little stack of its own, the overlay's put in, its function called, the bank
 ; put back.  So an overlay can call the main code and other overlays alike, and the main code can call them.  The
 ; rule that keeps it right: a function here that changes the window (bread, bwrite) never reads or writes the
-; caller's memory in it, only the main RAM ($0800-$7EFF).
+; caller's memory in it, only the main RAM ($0800-$7EFF).  And the swapped parts' calls (swap.inc): code run in the
+; main RAM's top, a part at a time, copied there from its overlay's bank as it's called.
 
             .export     _setbank, _getbank, _bread, _bwrite, _ovbank
             .import     popa, popax
@@ -13,8 +14,9 @@
             .include    "zeropage.inc"
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 6                     ; dq0.cfg's overlays
+OVMAX       = 9                     ; dq0.cfg's overlays
 DEPTH       = 16                    ; Overlay calls in calls, at most
+SWDEPTH     = 16                    ; Swapped parts' calls in calls, at most
 
             .bss
 _ovbank:    .res        OVMAX       ; Overlay n's bank: _ovbank[n - 1] (main.c's ovl_load sets them)
@@ -175,3 +177,19 @@ ovl_out:
             OVFN        fixed, 5
             OVFN        fight_words, 6
             OVFN        fight_target, 6
+
+; ---- The swapped parts (swap.inc; dq0.cfg's SWn: each in the main RAM's area as it's called)
+
+            .include    "swap.inc"
+
+            SWPART      1, 8                ; The start and the end (main.c): the task's arguments, the world
+                                            ;   started, the game kept, the world stopped
+            SWPART      2, 8                ; The commands (main.c)
+            SWPART      3, 9                ; The map (look.c)
+
+            SWFN        begin, 1
+            SWFN        finish, 1
+            SWFN        save_game, 1
+            SWFN        command, 2
+            SWFN        take, 2
+            SWFN        map, 3

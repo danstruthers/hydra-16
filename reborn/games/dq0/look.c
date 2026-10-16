@@ -9,6 +9,8 @@
 **
 ** The words for the places are the theme's (theme.h: a stratum's name, a room's by its kind, a lit room's light;
 ** theme.c's).
+**
+** The map's code is a swapped part's (part 3: swap.inc), called through its stub (bank.s's map).
 */
 
 #include <stdlib.h>
@@ -17,6 +19,8 @@
 #include "dq0.h"
 #include "hub.h"
 #include "level.h"
+
+#pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 
 char lb[400];                                   /* The words, as they're made (words.c's) */
 struct sight sight_copy;                        /* The hub's record, copied for the overlay */
@@ -57,6 +61,9 @@ void stir (void)
 #define PLINES      18
 static char panel[PLINES][PANEL + 1];
 static unsigned char np;
+
+#pragma code-name (push, "SW3CODE")
+#pragma rodata-name (push, "SW3RODATA")
 
 static void __fastcall__ pline (const char* s)
 {
@@ -113,7 +120,7 @@ static void __fastcall__ make_panel (const char* rules)
     }
 }
 
-void __fastcall__ map (const char* rules)
+void __fastcall__ s_map (const char* rules)
 {
     static char line[MAP_W + PANEL + 3];
     unsigned char x, y, n, side, k;
@@ -155,3 +162,6 @@ void __fastcall__ map (const char* rules)
     }
     blank ();
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)

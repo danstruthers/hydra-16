@@ -19,7 +19,11 @@
 ** Memory: the program's code and data from $0800 (its BSS must end 768 bytes or more under $7F00: dq0.cfg); the
 ** overlays' code in banks of their own, put in the window at $8000 as they're called (bank.s).  Code in an overlay
 ** can call any function; but what's in the window goes away while bread and bwrite work, so they're only ever
-** given the main RAM's addresses.
+** given the main RAM's addresses.  And the swapped parts (swap.inc): code that runs in the main RAM's top (dq0.cfg's
+** SWAP, under the C stack's least room), a part at a time, copied there from its overlay's bank (8, 9) as it's
+** called: main.c's start and end (part 1) and its commands (part 2), look.c's map (part 3).  A part's code reads and
+** writes the hub as the main code does: a command more goes in a part (a new one, or one with room), at no cost to
+** the main RAM.
 */
 
 #ifndef _DQ0_H
@@ -82,8 +86,8 @@ extern struct pc P;
 
 void __fastcall__ look (unsigned char first);   /* Where the character is (first: the first time there) */
 void stir (void);                               /* The denizens it sees, told as they move */
-void __fastcall__ map (const char* rules);      /* The map of what it's seen round it, and the character's
-                                                **   state beside it (rules: the referee's short lines) */
+void __fastcall__ map (const char* rules);      /* Part 3: the map of what it's seen round it, and the
+                                                **   character's state beside it (rules: the referee's short lines) */
 
 /* ---- parse.c (overlay 3): a command understood */
 
@@ -215,6 +219,16 @@ void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
 void __fastcall__ bread (unsigned char bank, const void* from, void* to, unsigned n);
 void __fastcall__ bwrite (unsigned char bank, void* to, const void* from, unsigned n);
-extern unsigned char ovbank[6];
+extern unsigned char ovbank[9];
+
+/* ---- The swapped parts (bank.s's stubs: swap.inc), run in the main RAM's top (dq0.cfg's SWAP), a part at a time */
+
+void __fastcall__ begin (int argc, char* argv[]);   /* Part 1 (main.c): the arguments, the world started, the game
+                                                **   begun */
+void finish (void);                             /* Part 1: the game kept, the world stopped */
+void save_game (void);                          /* Part 1: the game kept (if it's kept: -d) */
+void __fastcall__ command (char* l);            /* Part 2 (main.c): a command, the parser's, carried out */
+void __fastcall__ take (const char* name);      /* Part 2: a thing taken up, by its name */
+extern char _SWAP_START__[];                    /* (The area: the overlays read in through it, as the game starts) */
 
 #endif
