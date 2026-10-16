@@ -1417,7 +1417,7 @@ static unsigned char o_handle (void)
     static unsigned n, c2;
     static unsigned char op;
 
-    op = iq.op;
+    op = iq.kind;
     m0 (text_new);
     took = 0;
     strcpy (xn, iq.name);
@@ -1488,7 +1488,7 @@ unsigned char things_serve (void)
     hub_map (0);
     memcpy (&iq, &HUB->ireq, sizeof iq);
     iq.result = IR_OK;
-    switch (iq.op) {
+    switch (iq.kind) {
     case IO_KIT:
         kit ();
         break;
@@ -1526,11 +1526,11 @@ unsigned char things_serve (void)
         HUB->ireq.x = took;
         break;
     }
-    if (iq.op == IO_KIT || iq.op == IO_GET || iq.op == IO_DROP || iq.op == IO_HIDE || iq.op >= IO_HOLD) {
+    if (iq.kind == IO_KIT || iq.kind == IO_GET || iq.kind == IO_DROP || iq.kind == IO_HIDE || iq.kind >= IO_HOLD) {
         light_now ();                           /* (Its light: what it holds lit) */
         changed |= iq.result == IR_OK;
     }
     hub_map (0);
     HUB->ireq.result = iq.result;
-    return changed && iq.op != IO_KIT;
+    return changed && iq.kind != IO_KIT;
 }

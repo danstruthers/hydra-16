@@ -53,7 +53,7 @@ static void __fastcall__ seeming (const char* before, const char* after)
 
 void __fastcall__ o_sway_words (const struct sway* s)
 {
-    unsigned char h = s->how;
+    unsigned char h = s->kind;
 
     S = s;
     lb[0] = 0;

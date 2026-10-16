@@ -213,8 +213,40 @@ K_PAUSE:
             plp
             rts
 
-; WAKE: task .A, if it's waiting, can run; if it isn't, its next PAUSE won't wait (TK_WOKEN).  From any task, or
-; an irq entry.  Keeps everything
+; TPAUSE: PAUSE till a time: wait until woken (WAKE), or till the wake time in the kernel task's table (K_WAKE_LO/HI,
+; as SLEEP_UNTIL's: the caller's, set already); at once if a wake came since the last.  A sleep the scheduler ends at
+; the time, and WAKE too (TF_TIMED: set and cleared by TSB and TRB, a byte others change too).  OUT: C = 1 if it's
+; still before the time (woken).  Modifies .A, .Y
+K_TPAUSE:
+            php
+            sei
+            lda         TK_WOKEN
+            bne         @woken
+            lda         #TF_TIMED
+            tsb         TK_FLAGS
+            lda         #ST_SLEEP
+            sta         TK_STATE
+            jsr         K_YIELD
+@woken:
+            stz         TK_WOKEN
+            plp
+            lda         #TF_TIMED
+            trb         TK_FLAGS
+            php
+            sei
+            ldy         T_REGISTER
+            stz         T_REGISTER                          ; ---- The kernel task's: the wake time, and now
+            lda         K0_TICKS
+            cmp         K_WAKE_LO,Y
+            lda         K0_TICKS + 1
+            sbc         K_WAKE_HI,Y
+            sty         T_REGISTER                          ; ---- Back
+            plp
+            cmp         #$80                                ; (Now - the time below 0: C = 1)
+            rts
+
+; WAKE: task .A, if it's waiting, can run; if it isn't, its next PAUSE won't wait (TK_WOKEN).  A task asleep in a
+; timed wait (TF_TIMED: TPAUSE's) is waiting too.  From any task, or an irq entry.  Keeps everything
 K_WAKE:
             php
             sei
@@ -227,17 +259,22 @@ K_WAKE:
             stx         T_REGISTER                          ; A quick look
             lda         TK_STATE
             cmp         #ST_WAIT
-            beq         :+
+            beq         @ready
             cmp         #ST_EVENT
-            bne         :++
-:
+            beq         @ready
+            cmp         #ST_SLEEP
+            bne         @not
+            lda         TK_FLAGS                            ; (A timed wait's sleep)
+            and         #TF_TIMED
+            beq         @not
+@ready:
             lda         #ST_READY
             sta         TK_STATE
-            bra         :++
-:
+            bra         @back
+@not:
             lda         #1
             sta         TK_WOKEN
-:
+@back:
             sty         T_REGISTER
             pla
             ply

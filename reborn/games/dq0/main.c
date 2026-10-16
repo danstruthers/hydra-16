@@ -170,7 +170,7 @@ static void __fastcall__ character (const char* file, unsigned long seed)
         strcpy (s2, gamedir);
         strcat (s2, "/hmchar");
         task = hub_run (s2, s);
-        if (task < 0 || hub_wait (task)) {
+        if (task < 0 || hub_join (task)) {
             t_end ();
             hy_exits ("dq0: hmchar didn't make a character");
         }
@@ -324,22 +324,12 @@ void s_save_game (void)
     r->state = REQ_FREE;
     q = &HUB->mreq[ASK_UI];                     /* (The maker's records: asked, and waited for) */
     q->kind = M_SAVE;
-    q->state = REQ_POSTED;
-    hub_ring (T_MAKER);
-    while (q->state != REQ_DONE) {
-        hy_yield ();
-        hub_map (0);
-    }
+    hub_call (q, T_MAKER);
     q->state = REQ_FREE;
     things (IO_SAVE, "");                       /* (The things': items.dat) */
     if (task_[T_DENIZENS] > 0) {                /* (The denizens': dens.dat) */
-        HUB->den_state = REQ_POSTED;
-        hub_ring (T_DENIZENS);
-        while (HUB->den_state != REQ_DONE) {
-            hy_yield ();
-            hub_map (0);
-        }
-        HUB->den_state = REQ_FREE;
+        hub_call (&HUB->dsave, T_DENIZENS);
+        HUB->dsave.state = REQ_FREE;
     }
     sv.magic = SAVE_MAGIC;
     sv.version = SAVE_VER;
@@ -483,7 +473,7 @@ static void stop_world (void)
     for (t = T_WORLD; t < NTASKS; ++t) {
         if (task_[t] > 0) {
             hub_ring (t);
-            hub_wait (task_[t]);
+            hub_join (task_[t]);
         }
     }
 }
@@ -785,15 +775,10 @@ static unsigned char __fastcall__ things (unsigned char op, const char* name)
 {
     struct ireq* q = &HUB->ireq;
 
-    q->op = op;
+    q->kind = op;
     strncpy (q->name, name, sizeof q->name - 1);
     q->name[sizeof q->name - 1] = 0;
-    q->state = REQ_POSTED;
-    hub_ring (T_SENSES);
-    while (q->state != REQ_DONE) {
-        hy_sleep_ticks (1);                     /* (The CPU left to the senses, not spun away) */
-        hub_map (0);
-    }
+    hub_call (q, T_SENSES);                     /* (Asleep till the senses ring with the reply) */
     q->state = REQ_FREE;
     return q->result;
 }
@@ -954,12 +939,7 @@ static void __fastcall__ inspect (unsigned char obj, unsigned char orel)
     q->sn = HUB->pc_stratum;
     q->cx = tx;
     q->cy = ty;
-    q->state = REQ_POSTED;
-    hub_ring (T_MAKER);
-    while (q->state != REQ_DONE) {
-        hy_yield ();
-        hub_map (0);
-    }
+    hub_call (q, T_MAKER);
     q->state = REQ_FREE;
     if (q->res) {
         msg ("An open doorway: there's no door in it.");
@@ -1004,14 +984,9 @@ static unsigned char __fastcall__ deal (unsigned char how, const struct pcmd* c)
 {
     struct sway* s = &HUB->sway;
 
-    s->how = how & ~SW_QUIET;
+    s->kind = how & ~SW_QUIET;
     memcpy (s->word, c->word, sizeof c->word + 1 + sizeof c->word2 + 1);   /* (word, prep, word2, order) */
-    s->state = REQ_POSTED;
-    hub_ring (T_DENIZENS);
-    while (s->state != REQ_DONE) {
-        hy_sleep_ticks (1);
-        hub_map (0);
-    }
+    hub_call (s, T_DENIZENS);
     memcpy (&dealt, s, sizeof dealt);
     s->state = REQ_FREE;
     if (!(how & SW_QUIET) || dealt.result != SR_NONE) {

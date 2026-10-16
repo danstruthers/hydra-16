@@ -88,6 +88,8 @@ in small letters, with `-` for `_`:
 
 **`EXEC`** ($F87B). Run another program in this task, in this one's place. *In:* r0 = the program's path (as SPAWN's); r1 = its arguments (as SPAWN's: 176 bytes at most), or 0. *Out:* (doesn't return, once the program is found: it runs in this task's place). *Errors:* E_NOENT, E_NOEXEC, E_TOOBIG, E_PERM, E_INTR. *It can wait.*
 
+**`SEM_WAIT`** ($F87E). Take one from a semaphore, waiting a given number of ticks at most for it. *In:* A = a semaphore; X = the most ticks to wait (TICK_HZ a second; 0: none, as SEM_TRY). *Errors:* E_AGAIN, E_INVAL, E_BUSY, E_INTR. *It can wait.*
+
 
 ## K.3 Memory
 

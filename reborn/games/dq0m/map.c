@@ -1,5 +1,5 @@
 /*
-** map.c - (dq0m) the map's window round the character (the UI asks: the hub's map_state), drawn into the hub: each
+** map.c - (dq0m) the map's window round the character (the UI asks: the hub's mapq), drawn into the UI bank: each
 ** square the character has seen, a floor's height against its own marked (1-9 tens of feet higher, a-i lower), the
 ** character an @.  Only the chunks in the cache are looked at (a chunk that isn't there now was seen, if at all,
 ** before the cache made way for it: its map's laid over it as it's made again, so the character's near ones are

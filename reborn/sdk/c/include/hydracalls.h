@@ -42,6 +42,7 @@
 #define HY_SEM_RELEASE          0xF875
 #define HY_SEM_FREE             0xF878
 #define HY_EXEC                 0xF87B
+#define HY_SEM_WAIT             0xF87E
 
 /* ---- memory: Memory: the break, pages, banks, shared segments (phase 1.8) */
 #define HY_BREAK                0xF890

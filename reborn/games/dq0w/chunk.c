@@ -53,12 +53,7 @@ void __fastcall__ ask_maker (unsigned char kind, unsigned char sn, unsigned cx, 
     q->sn = sn;
     q->cx = cx;
     q->cy = cy;
-    q->state = REQ_POSTED;
-    hub_ring (T_MAKER);
-    while (q->state != REQ_DONE) {
-        hy_yield ();
-        hub_map (0);
-    }
+    hub_call (q, T_MAKER);                      /* (Asleep till the maker rings with it) */
     q->state = REQ_FREE;
     if (kind != M_CHUNK) {
         sync_strata ();

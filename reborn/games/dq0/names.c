@@ -574,7 +574,7 @@ void s_names_den (void)
 {
     struct sway* s = &HUB->sway;
 
-    if (s->how != SW_NAME || s->result != SR_OK || !s->word2[0]) {
+    if (s->kind != SW_NAME || s->result != SR_OK || !s->word2[0]) {
         return;
     }
     if (!find (NM_DEN, s->name)) {

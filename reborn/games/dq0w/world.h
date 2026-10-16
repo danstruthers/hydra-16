@@ -242,8 +242,7 @@ struct cslot {
 
 /* A request to the maker (one for each task that asks: the world's, the denizens') */
 struct mreq {
-    volatile unsigned char state;               /* REQ_* (hub.h) */
-    unsigned char   kind;                       /* M_* */
+    RQH;                                        /* (hub.h's protocol; kind: M_*) */
     unsigned char   sn;
     unsigned        cx, cy;                     /* M_CHUNK's chunk; M_CHANGE's square */
     unsigned char   tile;                       /* M_CHANGE's: what the square becomes, */

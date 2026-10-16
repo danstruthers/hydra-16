@@ -107,8 +107,7 @@ static void __fastcall__ serve (unsigned char i)
         memcpy (&HUB->mreq[i], &q, sizeof q);
         break;
     }
-    hub_map (0);
-    HUB->mreq[i].state = REQ_DONE;
+    hub_reply (&HUB->mreq[i]);
 }
 
 int main (int argc, char* argv[])
@@ -128,14 +127,14 @@ int main (int argc, char* argv[])
             break;
         }
         for (i = 0; i < NASK; ++i) {
-            if (HUB->mreq[i].state == REQ_POSTED) {
+            if (hub_posted (&HUB->mreq[i])) {
                 serve (i);
             }
         }
-        if (HUB->map_state == REQ_POSTED) {     /* (The UI's asked for the map) */
+        if (hub_posted (&HUB->mapq)) {          /* (The UI's asked for the map) */
             hub_get (WORLD_BANK, WREC->strata, strata, sizeof strata);
             draw_map ();
-            HUB->map_state = REQ_DONE;
+            hub_reply (&HUB->mapq);
         }
     }
     return 0;

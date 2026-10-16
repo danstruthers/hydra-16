@@ -86,7 +86,7 @@ module.exports = {
       init: 't_mem', modules: ['t_child'], cycles: 30e6,
     },
     {
-      name: 'sem', what: 'semaphores: counts and mutexes, waits ended by a release, a free and a note, a task\'s end; GETPPID',
+      name: 'sem', what: 'semaphores: counts and mutexes, waits ended by a release, a free and a note, a task\'s end; a timed wait (SEM_WAIT), its time come and ended by a release; GETPPID',
       init: 't_sem', cycles: 30e6,
     },
     {

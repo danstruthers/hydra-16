@@ -21,7 +21,7 @@
 ** another keep off one another.  (Their own exploring comes later.)
 **
 ** Its records (the lairs, the denizens) are in a bank of its own, a record at a time copied out; kept with the game
-** (dq0 -d: the UI asks, the hub's den_state), the save folder's dens.dat.
+** (dq0 -d: the UI asks, the hub's dsave), the save folder's dens.dat.
 **
 ** Its code that's seldom called is in swapped parts (../dq0/swap.inc: run in the main RAM's top, a part at a time,
 ** copied there from the overlays' file's bank, LIBDIR/dq0d.ovl, as it's called; bank.s's stubs): part 1, the kinds
@@ -323,7 +323,7 @@ static void grow (void)
         hub_map (WORLD_BANK);
         m = WREC->strata[n].made;
         hub_map (0);
-        if (m && !hd.done[n] && HUB->mreq[ASK_WORLD].state != REQ_POSTED) {
+        if (m && !hd.done[n] && !hub_posted (&HUB->mreq[ASK_WORLD])) {
             sync_strata ();
             populate (n);
         }
@@ -467,9 +467,9 @@ static unsigned char steps[NACTORS];            /* (Each one's steps: a noise of
 static unsigned char fled[NACTORS];             /* (Each one fleeing the character: its turns of it left) */
 static unsigned char bleeds;                    /* (The actors bleeding: bit k, entry k: fights') */
 
-/* ---- The referee, asked in this task's own slot (in the denizens' bank, DSLOT_AT): the request (rq, in the main
-** RAM: its kind, who and whom here, the rest the caller's) copied in whole, posted, the referee rung and waited for
-** (the CPU yielded to it meanwhile), the reply copied out; the hub's header in the window after */
+/* ---- The referee, asked in this task's own slot (DSLOT, in the hub's header): the request (rq, in the main RAM:
+** its kind, who and whom here, the rest the caller's) copied in whole, posted, waited for (asleep on the doorbell),
+** the reply copied out; the hub's header in the window after */
 #define RQ_SIZE (offsetof (struct req, text) + DTEXT)  /* (Its text DTEXT long: no more) */
 static unsigned char rqb[RQ_SIZE];
 #define rq      (*(struct req*) rqb)
@@ -479,28 +479,16 @@ static void __fastcall__ ask (unsigned char kind, unsigned char actor, unsigned 
     rq.kind = kind;
     rq.actor = actor;
     rq.other = other;
-    rq.state = REQ_FREE;
-    hub_map (DEN_BANK);
-    memcpy (DSLOT_AT, &rq, RQ_SIZE);
-    DSLOT_AT->state = REQ_POSTED;               /* (Posted once it's whole) */
     hub_map (0);
-    hub_ring (T_REFEREE);
-    for (;;) {
-        hub_map (DEN_BANK);
-        if (DSLOT_AT->state == REQ_DONE) {
-            break;
-        }
-        hub_map (0);
-        if (HUB->quit) {
-            rq.result = 0xFF;                   /* (The game's ending: the referee may be gone) */
-            memset (rq.x, 0, sizeof rq.x);
-            return;
-        }
-        hy_yield ();                            /* (The referee's turn: back as soon as it's answered) */
+    memcpy (DSLOT, &rq, RQ_SIZE);
+    hub_call (DSLOT, T_REFEREE);                /* (Posted once it's whole) */
+    if (HUB->quit) {
+        rq.result = 0xFF;                       /* (The game's ending: the referee may be gone) */
+        memset (rq.x, 0, sizeof rq.x);
+        return;
     }
-    memcpy (&rq, DSLOT_AT, RQ_SIZE);
-    DSLOT_AT->state = REQ_FREE;
-    hub_map (0);
+    memcpy (&rq, DSLOT, RQ_SIZE);
+    DSLOT->state = REQ_FREE;
 }
 static unsigned char aorder[NACTORS];           /* (Each one's request, an ally's: its record's while it's an actor) */
 static unsigned lsx[NACTORS], lsy[NACTORS];     /* (Where each last sensed the character: an ally follows it there) */
@@ -1561,7 +1549,7 @@ static void __fastcall__ influence (unsigned char k)
 {
     struct req* r;
     signed char m, st;
-    unsigned char t = sw.was, h = sw.how, p;
+    unsigned char t = sw.was, h = sw.kind, p;
 
     if (K.mind == M_MINDLESS) {
         sw.result = SR_MINDLESS;
@@ -1587,7 +1575,7 @@ static void __fastcall__ influence (unsigned char k)
         --st;                                   /* (Hard to reason with) */
     }
     hub_map (0);
-    r = &HUB->slot[SLOT_UI];
+    r = DSLOT;                                  /* (This task's own slot: DTEXT of text, a tongue's name) */
     r->text[0] = 0;
     if (!sw.beast && h != SW_THREATEN) {        /* (Words: in its tongue, if it has one) */
         if (!ftongue[K.faction & (NFACT - 1)][0]) {
@@ -1601,7 +1589,7 @@ static void __fastcall__ influence (unsigned char k)
     r->a = p;
     r->b = 0;
     r->steps = st;
-    r = hub_ask (SLOT_UI);
+    r = hub_call (r, T_REFEREE);
     sw.grade = r->grade;
     p = r->result;
     r->state = REQ_FREE;
@@ -1683,7 +1671,7 @@ void s_sway (void)
     sw.t = 0;
     sw.name[0] = 0;
     sw.beast = 0;
-    if (sw.how == SW_ORDER && !sw.word[0]) {    /* (To every ally in earshot) */
+    if (sw.kind == SW_ORDER && !sw.word[0]) {   /* (To every ally in earshot) */
         for (k = 0; k < NACTORS; ++k) {
             hub_map (0);
             q = &HUB->actor[k];
@@ -1702,7 +1690,7 @@ void s_sway (void)
         sw.was = sw.now = q->attitude;
         kind_get (akind[k]);
         sw.beast = K.mind == M_BEAST;
-        switch (sw.how) {
+        switch (sw.kind) {
         case SW_LOOK:
             break;
         case SW_NAME:
@@ -1722,7 +1710,7 @@ void s_sway (void)
     hub_map (0);
     ++HUB->den_seq;
     memcpy (&HUB->sway, &sw, sizeof sw);       /* (The reply whole, then the state that shows it) */
-    HUB->sway.state = REQ_DONE;
+    hub_reply (&HUB->sway);
 }
 
 #pragma code-name (pop)
@@ -1842,10 +1830,9 @@ int main (int argc, char* argv[])
     while (hub_map (0), !HUB->quit) {
         while (hy_sem_try (HUB->sem[T_DENIZENS]) == 0) {
         }
-        if (HUB->den_state == REQ_POSTED) {     /* (The UI's asked for a save) */
+        if (hub_posted (&HUB->dsave)) {         /* (The UI's asked for a save) */
             keep (0);
-            hub_map (0);
-            HUB->den_state = REQ_DONE;
+            hub_reply (&HUB->dsave);
         }
         now = hub_now ();
         pcx = HUB->pc_x;
@@ -1865,7 +1852,7 @@ int main (int argc, char* argv[])
                 sense_gen = 1;
             }
         }
-        if (HUB->sway.state == REQ_POSTED) {    /* (The UI's: the character's way with a denizen) */
+        if (hub_posted (&HUB->sway)) {          /* (The UI's: the character's way with a denizen) */
             sway ();
         }
         turns = !HUB->tpr;
@@ -1882,10 +1869,10 @@ int main (int argc, char* argv[])
             if (hub_now () != now) {
                 hy_yield ();
             } else {
-                hy_sleep_ticks (1);
+                hub_sleep (1);
             }
         } else {
-            hy_sleep_ticks (10);
+            hub_sleep (10);                     /* (Asleep on the doorbell: a request, an event, wakes it at once) */
         }
     }
     return 0;

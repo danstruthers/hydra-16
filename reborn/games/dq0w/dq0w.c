@@ -420,21 +420,18 @@ static void stirred (void)
 }
 
 /* What the character sees, made again, and what it perceives recorded: the senses asked (dq0p), and waited for (the
-** clock going on meanwhile, at the real paces; the CPU left to the senses, a tick at a time), the denizens it sees
-** added (the hub's header in the window as it ends) */
+** clock going on meanwhile, at the real paces: asleep on the doorbell a tick at a time), the denizens it sees added
+** (the hub's header in the window as it ends) */
 static void clock_run (void);
 static void __fastcall__ see (unsigned char first)
 {
     hub_map (0);
-    HUB->look_first = first;
-    HUB->look_state = REQ_POSTED;
-    hub_ring (T_SENSES);
-    while (HUB->look_state != REQ_DONE) {
-        hy_sleep_ticks (1);
-        hub_map (0);
+    HUB->look.first = first;
+    hub_post (&HUB->look, T_SENSES);
+    while (!hub_wait_t (&HUB->look, 1)) {
         clock_run ();
     }
-    HUB->look_state = REQ_FREE;
+    HUB->look.state = REQ_FREE;
     dens_seen ();
     sn_ = HUB->pc_stratum;
 }
@@ -1852,8 +1849,8 @@ int main (int argc, char* argv[])
             event (E_READY, 0, 0);              /* (The character free again: the UI takes its next line) */
             was_busy = 0;
         }
-        hy_sleep_ticks (move.on || was_busy ? 2 : 4);  /* (Nothing under way: its intents rung for, the clock
-                                                **   on from the ticks gone, as often as it's worth) */
+        hub_sleep (move.on || was_busy ? 2 : 4);  /* (Nothing under way: asleep on the doorbell, an intent
+                                                **   waking it at once; the clock on from the ticks gone) */
     }
     event (E_BYE, 0, 0);
     return 0;

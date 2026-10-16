@@ -149,12 +149,7 @@ void __fastcall__ s_map (const char* rules)
     unsigned char x, y, n, side, k;
 
     make_panel (rules);
-    HUB->map_state = REQ_POSTED;                /* (The maker draws it into the hub) */
-    hub_ring (T_MAKER);
-    while (HUB->map_state != REQ_DONE) {
-        hy_yield ();
-        hub_map (0);
-    }
+    hub_call (&HUB->mapq, T_MAKER);             /* (The maker draws it into the UI bank) */
     blank ();
     sayf ("The map (you face %s; heights in tens of feet against yours):", head_name[HUB->pc_face & 7]);
     hub_map (UI_BANK);                          /* (The map's the UI bank's: its rows copied out one by one) */
@@ -178,7 +173,7 @@ void __fastcall__ s_map (const char* rules)
         }
         say_raw (line);
     }
-    HUB->map_state = REQ_FREE;
+    HUB->mapq.state = REQ_FREE;
     if (!side) {
         blank ();
         for (k = 0; k < np; ++k) {

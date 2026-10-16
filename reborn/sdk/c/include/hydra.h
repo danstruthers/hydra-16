@@ -87,6 +87,8 @@ int __fastcall__ hy_sem_new (unsigned char count, unsigned char flags);  /* One:
 int __fastcall__ hy_sem_acquire (unsigned char sem);        /* Take one, waiting till there's one (a note ends
                                                             **   the wait: -1, EINTR) */
 int __fastcall__ hy_sem_try (unsigned char sem);            /* Take one if there's one (none: -1, EAGAIN) */
+int __fastcall__ hy_sem_wait (unsigned char sem, unsigned char ticks);  /* Take one, waiting ticks at most (the
+                                                            **   time come with none: -1, EAGAIN; a note: EINTR) */
 int __fastcall__ hy_sem_release (unsigned char sem);        /* Give one back, and wake its waiters */
 int __fastcall__ hy_sem_free (unsigned char sem);           /* Free it (its waiters' waits end: -1) */
 

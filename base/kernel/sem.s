@@ -3,7 +3,8 @@
 ;
 ; A semaphore is a count and the tasks waiting for it, in the kernel task's tables (K_SEM_*: layout.inc), so every
 ; task sees the same ones, by number (0 to SEM_MAX - 1).  SEM_ACQUIRE takes one of the count, or waits (using no
-; CPU) till SEM_RELEASE gives one back; SEM_TRY takes one or answers E_AGAIN.  A mutex (SEM_MUTEX) is a semaphore
+; CPU) till SEM_RELEASE gives one back; SEM_TRY takes one or answers E_AGAIN; SEM_WAIT waits a while at most (a
+; timed sleep, TPAUSE: the time, a release or a note ends it; then E_AGAIN).  A mutex (SEM_MUTEX) is a semaphore
 ; of 1 with a holder: only the task that took it gives it back, and it can't take it twice (E_BUSY).
 ;   Each call is a KCALL, so the tables need no locks.  A wait is the kernel's usual one: the task's bit in the
 ; semaphore's waiters, PAUSE, then a look again; a release wakes every waiter (WAKE), the first to run takes it, and
@@ -60,6 +61,71 @@ K_SEM_ACQUIRE:
 
 ; SEM_TRY: take one of semaphore .A, if there's one.  OUT: C = 0; or C = 1, .A = E_INVAL, E_BUSY, E_AGAIN (none)
 K_SEM_TRY:
+            ldx         #0
+            KCALL_FAR   K_SEM_TAKE_K
+            rts
+
+; SEM_WAIT: take one of semaphore .A, waiting till there's one, or .X ticks at most (0: SEM_TRY).  SEM_ACQUIRE's wait,
+; but a timed one (TPAUSE: the task asleep till its wake time, which a release or a note ends sooner); the time come,
+; one more look, then no longer a waiter.  OUT: C = 0; or C = 1, .A = E_AGAIN (the time came, none taken), E_INVAL,
+; E_BUSY, E_INTR (a note came: the far call's stub takes it on the way out)
+K_SEM_WAIT:
+            pha                                             ; The semaphore, on the stack throughout
+            txa
+            bne         @timed
+            jmp         @last                               ; (0 ticks: a look, no more)
+@timed:
+            php
+            sei
+            ldy         T_REGISTER
+            stz         T_REGISTER                          ; ---- The kernel task's: the wake time, now + .X
+            clc
+            adc         K0_TICKS
+            sta         K_WAKE_LO,Y
+            lda         K0_TICKS + 1
+            adc         #0
+            sta         K_WAKE_HI,Y
+            sty         T_REGISTER                          ; ---- Back
+            plp
+@take:
+            stz         TK_WOKEN                            ; (A release from here on: the wait won't wait)
+            pla
+            pha
+            ldx         #1                                  ; (None to take: this task a waiter)
+            KCALL_FAR   K_SEM_TAKE_K
+            bcs         @none
+            plx                                             ; Taken
+            rts
+
+@none:
+            cmp         #E_AGAIN
+            beq         @wait
+            plx                                             ; (E_INVAL, E_BUSY: .A and C kept)
+            sec
+            rts
+
+@wait:
+            lda         TK_NOTED
+            bne         @intr
+            FARCALL     K_TPAUSE                            ; Till a release wakes it, a note, or the time
+            bcc         @time
+            lda         TK_NOTED
+            bne         @intr
+            jmp         @take
+
+@intr:
+            pla                                             ; A note: no longer a waiter
+            KCALL_FAR   K_SEM_UNWAIT_K
+            lda         #E_INTR
+            sec
+            rts
+
+@time:
+            pla                                             ; The time: no longer a waiter, and a last look
+            pha
+            KCALL_FAR   K_SEM_UNWAIT_K
+@last:
+            pla
             ldx         #0
             KCALL_FAR   K_SEM_TAKE_K
             rts
