@@ -1,0 +1,43 @@
+# 2temple.txt - (dq0) a stand-in theme: a drowned temple, built strata over flooded caves (1crypt.txt has the
+# format).  Its mission to escape: the way out opens to an offering on the altar below.
+
+theme    | the Drowned Temple
+mission  | escape
+story    | The temple of the Deep Mother sank into the marsh a lifetime ago, and its priests with it.  Its doors
+           were sealed against the water, and sealed they stay: the Mother opens them, the songs say, only to the
+           pearl of the deep laid on her altar in her chalice.
+stratum  | Temple Steps | b
+stratum  | Flooded Nave | b
+stratum  | Sunken Cloister | bn
+stratum  | Drowned Grottoes | n
+stratum  | Black Water | n
+stratum  | the Mother's Deep | n
+rooms    | chapel | nave | cell | vault | shrine | cloister | grotto | sacristy
+light    | lit by lamps of green glass
+denizens | rat spider ghoul skel
+
+kind     | scroll | - | 1 | 1 | 1 | other | book | 20
+kind     | pearl | - | 1 | 0 | 1 | other | jewel | 600
+kind     | chalice | h | 2 | 1 | 2 | silver | jewel | 300
+kind     | full chalice | h | 3 | 1 | 2 | silver | jewel | 900
+kind     | altar | sf | 400 | 400 | 8 | stone | stone | 0 | 60 | 400
+
+piece    | scroll | 0-0 | - | 1
+piece    | chalice | 1-1 | 2 | 1
+piece    | pearl | 1-2 | 3 | 1
+piece    | altar | 1-1 | - | 1
+
+rule     | read | scroll | The scroll is swollen with damp, but you make it out: "The Mother takes her pearl in her
+           cup, and gives back the way.  Lay them on her altar, together."
+rule     | combine | pearl + chalice = full chalice | You drop the pearl into the chalice.  It rolls, and settles, and
+           shines there like a drop of the moon.
+rule     | put | full chalice | altar | open | You set the chalice on the altar.  Water wells up round its foot and
+           runs away down the steps; far above, a great door groans as it opens.
+rule     | out | full chalice | - | The chalice is the Mother's: it belongs on her altar, not here.
+
+lock     | The way out is shut fast. Whatever opens it is somewhere below.  The temple's doors are sealed with green
+           bronze, the water's mark high on them.
+opened   | The bronze doors stand open on the marsh: go up to leave.
+ending   | escaped | You climb out into the reeds and the grey light over the marsh.  Behind you the Drowned Temple
+           sinks back into the water.  You have escaped.
+ending   | died | The water closes over you, and the Mother has one more of her own.

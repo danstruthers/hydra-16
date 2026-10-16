@@ -1,0 +1,45 @@
+# 3warren.txt - (dq0) a stand-in theme: a kobold warren, mines under a ruin (1crypt.txt has the format).  Its
+# mission either: out by the warren's own key, or to rule the kobolds by their totem on the chieftain's throne.
+
+theme    | the Kobold Warren
+mission  | both
+story    | You fell through the floor of a ruin into the warren of the kobolds, and the hole has been stopped up
+           behind you.  The warren's gate is locked with brass, and the kobolds keep its key in pieces; and they
+           obey whoever sets their totem on the bone throne of their chieftains.
+stratum  | Warren Mouth | x
+stratum  | Dung Tunnels | m
+stratum  | Kobold Mines | mx
+stratum  | the Chieftain's Den | mn
+stratum  | Old Diggings | mn
+rooms    | den | burrow | pen | midden | lair | gallery | cave | storeroom
+light    | lit by smoky tallow lamps
+denizens | kobold rat spider bear
+
+kind     | map scrap | - | 0 | 0 | 1 | other | book | 2
+kind     | key bow | - | 1 | 0 | 1 | bronze | metal | 10
+kind     | key blade | - | 1 | 0 | 1 | bronze | metal | 10
+kind     | brass key | - | 1 | 0 | 1 | bronze | metal | 30
+kind     | totem | h | 6 | 4 | 3 | wood | wood | 50
+kind     | bone throne | sf | 120 | 120 | 7 | bone | bone | 0 | 30 | 150
+
+piece    | map scrap | 0-0 | - | 1
+piece    | key bow | 1-1 | 2 | 1
+piece    | key blade | 1-2 | - | 1
+piece    | totem | 2-3 | 4 | 1
+piece    | bone throne | 3-3 | - | 1
+
+rule     | read | map scrap | Scratched on the hide in soot: the gate, a key in two pieces, the bow and the blade;
+           and far below, a throne with a stick-figure on it, kneeling kobolds round.
+rule     | combine | key bow + key blade = brass key | The bow and the blade of the key screw together into one
+           brass key.
+rule     | out | brass key | open | The brass key turns in the gate's lock with a squeal, and the gate swings open.
+rule     | put | totem | bone throne | rule | You set the totem on the bone throne.  From every tunnel comes the
+           yapping of the kobolds, and then a hush: they come, one by one, and kneel.
+
+lock     | The way out is shut fast. Whatever opens it is somewhere below.  A gate of iron bars, its lock of brass.
+opened   | The gate stands open on the ruin above: go up to leave.
+ending   | escaped | You climb up through the gate and out of the ruin into the open air.  The Kobold Warren yaps
+           behind you.  You have escaped.
+ending   | ruled | The kobolds are yours, every one, and the warren and all its diggings with them.  Long live the
+           chieftain!
+ending   | died | The kobolds pick your bones, and argue over your boots.

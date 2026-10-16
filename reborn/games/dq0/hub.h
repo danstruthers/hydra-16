@@ -21,14 +21,15 @@
 #include "level.h"
 #include "../dq0w/world.h"
 #include "items.h"
+#include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
 #define HUB_VERSION     1
-#define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 2)  /* Bank 0: the header, the queues, the
+#define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 3)  /* Bank 0: the header, the queues, the
                                                 **   referee's slots, what the character perceives, the map, the
                                                 **   strata's records; then the plans' banks and the chunks' (world.h);
                                                 **   the catalogue's, and the items' (items.h); the denizens' events;
-                                                **   the senses' look (LOOK_BANK) */
+                                                **   the senses' look (LOOK_BANK); the theme (THEME_BANK) */
 #define CAT_BANK        (1 + PLAN_BANKS + CACHE_BANKS)
 #define CATALOGUE       ((struct kind*) 0x8000)
 #define ITEM_BANK(i)    (CAT_BANK + 1 + (i) / (0x2000 / sizeof (struct item)))
@@ -44,6 +45,8 @@
                                                 **   world's; the UI clears it, the sound task puts it there */
 #define LOOK_BANK       (DEN_BANK + 1)  /* The senses' own (dq0p/view.c): the squares round the character as a look
                                                 **   about works them out, a grid of them (cast.s's): no other task's */
+#define THEME_BANK      (LOOK_BANK + 1)  /* The game's theme (theme.h: the UI's, read in as it starts), and its pieces'
+                                                **   places (the maker's) */
 #define SND_REC         32
 #define SND_WORDS       20
 #define SND_KINDS       32
@@ -106,6 +109,7 @@ enum {
                                                 **   between it and the character, of a loud one on its stratum (the
                                                 **   squares of wall and rock on the line, 15 at most, and the shut
                                                 **   doors times 16: SOUND.md) */
+    E_LEFT,                                     /* who's gone up the way out, open (theme.h: the mission's, escaped) */
     NEVENTS
 };
 enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST };    /* E_DEN's what: a step, a noise of its own (a squeak, a
@@ -216,7 +220,8 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned        tpr;                        /* Real ticks a round, at the pace (0: turns) */
     volatile unsigned char paused, hold, quit;  /* The UI's: paused (Escape), held (a question), ending */
     unsigned char   pace;
-    unsigned char   test_start;                 /* (dq0 -T: the character begins at a way down, for the tests) */
+    unsigned char   test_start;                 /* (dq0 -T: the character begins at a way down, for the tests; 2,
+                                                **   -T twice: by the theme's first piece on the top stratum) */
     unsigned char   resume;                     /* A game carried on from its save (the world restores, not begins) */
     char            savedir[40];                /* The save's folder (dq0 -d), or "" (none) */
     unsigned long   seed;
@@ -274,6 +279,8 @@ struct hub {                                    /* Bank 0, at $8000 */
     ** reader keeps its own place, as in the world's; nobody waits for them, and each perceives them or not by its own
     ** senses (DENIZENS.md) */
     volatile unsigned dq_head;                  /* Events written so far (the denizens' task's) */
+    /* The theme's puzzle (theme.h: the theme in THEME_BANK): the way out opened (the UI's, as the mission's done) */
+    volatile unsigned char way_open;
 };
 
 #define HUB     ((struct hub*) HUB_WINDOW)

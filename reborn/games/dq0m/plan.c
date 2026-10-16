@@ -251,6 +251,50 @@ void __fastcall__ o_links_down (unsigned char n)
     }
 }
 
+/* ---- The theme's puzzle's pieces (theme.h): each one's stratum picked from the game's seed (the top stratum's: the
+** same whichever stratum's grown first), and those in stratum n given their places as its plan is grown (its links
+** down too): a chunk of a region of its halls, from the stratum's seed, so the same each time it's grown (a game
+** carried on); in the hub's theme bank, where the stock finds them as it first makes a chunk (stock.c).  A piece
+** whose stratum isn't grown yet has none.  (The places' own dice: the plan's and the links' are done) */
+void __fastcall__ o_place_pieces (unsigned char n)
+{
+    static struct tpiece tp;
+    static struct tplace pl;
+    struct stratum* s = &strata[n];
+    unsigned char p, np, tries, rx, ry, kw, kh, sn[NPIECES];
+
+    hub_get (THEME_BANK, &THEME->npieces, &np, 1);
+    rseed (strata[0].seed ^ 0x50494543UL);
+    for (p = 0; p < np && p < NPIECES; ++p) {
+        hub_get (THEME_BANK, &THEME->piece[p], &tp, sizeof tp);
+        sn[p] = tp.d0 + random (tp.d1 - tp.d0 + 1);
+    }
+    for (p = 0; p < np && p < NPIECES; ++p) {
+        if (sn[p] != n) {
+            continue;
+        }
+        rseed (s->seed ^ (0x51554553UL + p * 7919UL));
+        memset (&pl, 0, sizeof pl);
+        pl.sn = n;
+        if (s->nlinks) {                        /* (At worst, the chunk of its first link: halls) */
+            pl.cx = (s->link[0].x - s->x0) / CW;
+            pl.cy = (s->link[0].y - s->y0) / CW;
+        }
+        for (tries = 0; tries < 40; ++tries) {
+            rx = random (s->rw);
+            ry = random (s->rh);
+            if (rg (n, rx, ry)->kind == RG_HALLS) {
+                kw = (s->w - (unsigned) rx * RW + CW - 1) / CW;      /* (Its chunks in the stratum, each way) */
+                kh = (s->h - (unsigned) ry * RW + CW - 1) / CW;
+                pl.cx = (unsigned) rx * RCH + random (kw > RCH ? RCH : kw);
+                pl.cy = (unsigned) ry * RCH + random (kh > RCH ? RCH : kh);
+                break;
+            }
+        }
+        hub_put (THEME_BANK, &THEME_PLACE[p], &pl, sizeof pl);
+    }
+}
+
 /* ---- A region's own ways between its chunks: (the last asked for's) each chunk's north and west edges', kept in
 ** the cache's bank (detail_bank: changes.c's), a place for each region by its number */
 

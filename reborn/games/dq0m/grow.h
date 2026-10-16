@@ -44,6 +44,8 @@ unsigned char crossings (void);
 void __fastcall__ grow_built (struct chunk* c, const struct edges* e, unsigned long seed);  /* (Overlay 1's) */
 void __fastcall__ grow_caves (struct chunk* c, const struct edges* e, unsigned long seed);  /* (Overlay 3's) */
 void __fastcall__ fixtures (struct chunk* c);   /* Its materials, windows, portcullises, traps (overlay 5's) */
+void __fastcall__ place_pieces (unsigned char n);   /* The theme's pieces in stratum n given their places, as its plan
+                                                **   is grown (overlay 4's: plan.c) */
 
 /* changes.c: what's changed, and what's been seen, kept */
 void changes_init (void);

@@ -13,7 +13,7 @@
             .include    "zeropage.inc"
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 4                     ; dq0.cfg's overlays
+OVMAX       = 5                     ; dq0.cfg's overlays
 DEPTH       = 16                    ; Overlay calls in calls, at most
 
             .bss
@@ -164,3 +164,10 @@ ovl_out:
             OVFN        den_way, 4
             OVFN        portal_look, 4
             OVFN        ceiling_glance, 4
+            OVFN        theme_load, 5
+            OVFN        theme_named, 5
+            OVFN        story, 5
+            OVFN        way_words, 5
+            OVFN        ending, 5
+            OVFN        puzzle, 5
+            OVFN        fixed, 5
