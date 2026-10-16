@@ -1752,6 +1752,18 @@ function builtChunks(m, sn) {
   return out;
 }
 
+// The dq0 tests' story: the output with its escapes and the lines' wrapping taken out; and its words looked for each
+// in its turn (after the one before), what isn't found pushed on f (its name first)
+const dq0Story = out => out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' ');
+function inTurn(o, want, f, name = '') {
+  let at = 0;
+  for (const w of want) {
+    const i = o.indexOf(w, at);
+    if (i < 0) { f.push(name + 'not found (in its turn): ' + w); return; }
+    at = i + w.length;
+  }
+}
+
 module.exports = {
   IRQ_OFF_MAX,
   tests: [
@@ -2447,6 +2459,15 @@ module.exports = {
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 517 -c /ram/c.hm -d /ram/hurt\r' +
         ['look', 'ne', 'e', 'u', 'u', 'turn around', 'jump down', 'sheet', 'map', 'quit', 'cat /ram/hurt/pc.hm', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
       expect: ['You haul yourself up over the edge.', 'You jump, and drop 10 feet.', 'You land hard: a ', 'Injuries: ', 'IP ', '\ninj ', '% echo $status'],
+      // (The referee's dice the commands', in their order, at the turns pace (the same with the typing's timing
+      // changed): at seed 517 the first climb's test a critical failure, a fall from its foot (Climbing 85 fell
+      // too), the second up)
+      check(m, out) {
+        const f = [];
+        inTurn(dq0Story(out), ['> u', 'Your hold gives way: you fall 0 feet. You land, shaken, but unhurt.', '> u',
+          'You haul yourself up over the edge.', '> jump down', 'You jump, and drop 10 feet.'], f);
+        return f;
+      },
       sdcard: true
     },
     {
@@ -2498,7 +2519,8 @@ module.exports = {
         ['look', 'search', 'search', 'look', 'quit'].map(l => '\u0101' + l + '\r').join('') + '\u0101dq0 -p t -s 5 -c /ram/c.hm -T\r' +
         ['d', 'map', 'go right', 'go forward', 'look', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
       expect: ['A giant rat is ', ' feet away', 'Something stirs.', 'keeping its', 'A giant rat is in the way.', '% echo $status'],
-      // (The first search's stir told before its prompt (at this seed, out of sight), the second's none: nothing they do has changed; the way
+      // (The first search's stir told before its prompt (at this seed the rats gone out of sight: the referee's and the
+      // denizens' dice the same at the turns pace whatever the timing), the second's none: nothing they do has changed; the way
       // blocked: down the ladder, the map looked at while the rats are by it still (the caves' chamber there
       // ragged, a tunnel off it: given longer, they're off down it), the rats cornered, a step towards them told
       // they're in the way, as it stops short of one crossing to them, and then going on: no step taken)
@@ -2506,7 +2528,7 @@ module.exports = {
         const o = out.replace(/\x1b\[[0-9;]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), s1 = o.indexOf('You search about'), s2 = o.indexOf('You search about', s1 + 1);
         const seg = (a, b) => a < 0 ? '' : o.slice(a, o.indexOf(b, a));
         const f = [];
-        if (!/Something stirs\.|Nothing stirs in sight now\./.test(seg(s1, '> look'))) f.push('the rats not told stirring while the first search went on');
+        if (!seg(s1, '> look').includes('Nothing stirs in sight now.')) f.push('the rats not told gone out of sight while the first search went on');
         if (seg(s2, '> look').includes('Something stirs.')) f.push('the rats told stirring again, with nothing changed');
         const g = seg(o.indexOf('> go forward', o.indexOf('> go forward') + 1), '> look');
         if (!g.includes('A giant rat is in the way.') || g.includes('You cross')) f.push('the character not stopped by the rat in its way');
@@ -2518,7 +2540,7 @@ module.exports = {
       name: 'dq0sway', what: 'Dingus Quest Zero\'s attitudes and influence (DENIZENS.md; the user: "skills like animal husbandry could influence animals encountered"): a character good with animals (Animalcraft 90, hmchar\'s file) at seed 21\'s giant rats (wary, the vermin faction\'s), words refused (an animal: persuasion doesn\'t reach it), how one seems (examined), befriended (the referee\'s Animalcraft, a test at a time, the attitude a step or two each success: won over, then asked no more), named Grub, asked to wait and seen waiting as the character turns round, then to follow, following it across the room (seen as it turns round again) and down the stairway (come along to the stratum below); the game kept (dq0 -d) and carried on, Grub its ally still; then a fresh game, a blow at a rat out of reach not struck (the fights\', dq0fight, have the harm done: the rat and its kin turned on the character)',
       init: 't_rc', cycles: 1800e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/a.hm\rāecho ml ani 90 >> /ram/a.hm\rādq0 -p t -s 21 -c /ram/a.hm -T -d /ram/kept\r' +
-        ['persuade the rat', 'examine the rat', ...Array(8).fill('befriend the rat'),
+        ['persuade the rat', 'examine the rat', ...Array(3).fill('befriend the rat'),
          'name the rat grub', 'tell grub to wait', 'turn around', 'follow me', 'go east', 'turn around', 'wait', 'd', 'look',
          'quit', 'dq0 -d /ram/kept', 'examine grub', 'quit',
          'dq0 -p t -s 3 -c /ram/a.hm -T', 'look', 'attack the rat', 'look', 'examine the rat', 'quit',
@@ -2526,8 +2548,10 @@ module.exports = {
       expect: ['words won\'t reach it', 'The giant rat seems wary of you.', 'You coax the giant rat.', 'It\'s won over: it will follow you now.',
         'The giant rat is Grub now.', 'Grub waits here.', 'Grub follows you.', 'You come into the ', 'Grub seems your ally.',
         'It\'s out of reach: go up to it first.', 'The giant rat seems wary of you.', '% echo $status'],
-      // (The tests' dice the referee's, its requests' order the tasks' timing: so as many tries as it takes to win the
-      // rat over.  Waiting: seen so as the character turns round; following: as it turns round again once it's crossed
+      // (The referee's dice the commands', in their order, at the turns pace (the denizens' asking nothing of it
+      // here; the same story with pauses at every prompt, keys held before Enter, the RAM's seed changed): at seed
+      // 21 the first coaxing sways the rat to indifferent, the second wins it over, the third is refused (asked no
+      // more).  Waiting: seen so as the character turns round; following: as it turns round again once it's crossed
       // the room, and beside it as it comes down the stairway)
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
@@ -2535,6 +2559,9 @@ module.exports = {
         if (!/Grub is [^.]*, waiting\./.test(seg('> tell grub to wait', '> follow me'))) f.push('Grub not seen waiting');
         if (!/Grub is [^.]*, following you\./.test(seg('> go east', '> d'))) f.push('Grub not seen following across the room');
         if (!/Grub is [^.]*, following you\./.test(seg('You come into the ', '> quit'))) f.push('Grub not come along down the stairway');
+        inTurn(o, ['> befriend the rat', 'You coax the giant rat. It\'s swayed: it seems indifferent to you now.', '> befriend the rat',
+          'You coax the giant rat. It\'s won over: it will follow you now.', '> befriend the rat',
+          'The giant rat seems your ally already: that won\'t move it further.', '> name the rat grub'], f);
         return f;
       },
       sdcard: true
@@ -2573,12 +2600,15 @@ module.exports = {
       name: 'dq0heard', what: 'Dingus Quest Zero\'s denizens\' events perceived by some and not others (DENIZENS.md: events): down the ladder at seed 5, the torch put out: in the dark the giant rats move about unseen (nothing told as stirring, none seen) but heard, near enough for the character\'s hearing, by the way they lie, in their sound\'s words (SOUND.md: "You hear a scurrying to your right."), and played as they\'re heard (the sound task\'s: the YM2151\'s channels 4-6, on the side they lie, a rat to the right of the character facing north on the right speaker); the turns pace, the denizens kept up a slice at a time',
       init: 't_rc', cycles: 900e6,
       machine: { ymLog: true, input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 5 -c /ram/c.hm -T\r' +
-        ['d', 'douse the torch', 'wait', 'wait', 'wait', 'wait', 'wait', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+        ['d', 'douse the torch', 'wait', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
       expect: ['You put out the torch.', 'You hear a scurrying to your right.', '% echo $status'],
+      // (The rats heard as the torch goes out, to the right, and again as the character waits, behind it to the right:
+      // the denizens' dice the same whatever the timing, at the turns pace)
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), a = o.indexOf('You put out the torch.'), b = o.indexOf('> quit', a);
         const seg = a < 0 || b < 0 ? '' : o.slice(a, b), f = [], ons = YM_KEYPANS(m);
         if (!seg.includes('You hear a scurrying')) f.push('the rats not heard in the dark');
+        inTurn(seg, ['You put out the torch.', 'You hear a scurrying to your right.', '> wait', 'You hear a scurrying behind you to your right.'], f);
         if (seg.includes('Something stirs') || seg.includes('A giant rat is')) f.push('a rat seen in the dark');
         if (o.includes('You hear something')) f.push('a sound told without its words (the sound task\'s table not in the hub)');
         if (!o.includes('facing N')) f.push('the character not facing north');
@@ -2639,7 +2669,8 @@ module.exports = {
     },
     {
       // (East three times, waiting between: the giant rats by the way down in the way, keeping their distance till
-      // they're cornered, then darting past)
+      // they're cornered, then darting past: at seed 12 in the way twice, then gone, the denizens' moves the same
+      // whatever the timing at the turns pace)
       name: 'dq0portc', what: 'Dingus Quest Zero\'s portcullises (DUNGEON.md: portals; the maker works them, dq0m/work.c): through one raised (seed 12, dq0 -T: east of the first way down) into a storeroom, seen and worded as a portcullis, lowered by its winch on the storeroom\'s side (faced first), never walked through while it\'s down, raised again by the winch, and gone back through',
       init: 't_rc', cycles: 900e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 12 -c /ram/c.hm -T\r' +
@@ -2647,6 +2678,12 @@ module.exports = {
       expect: ['There is a portcullis ahead (raised).', 'You loose the winch: the portcullis crashes down.',
         'The portcullis is down: raise it first.', 'There is a portcullis ahead (down).',
         'You wind the winch beside it, and the portcullis grinds up.', 'You are in a long vault', '% echo $status'],
+      check(m, out) {
+        const f = [];
+        inTurn(dq0Story(out), ['A giant rat is in the way.', 'Time passes.', 'A giant rat is in the way.', 'Time passes.',
+          'You are in a small storeroom', '> turn around', 'There is a portcullis ahead (raised).'], f);
+        return f;
+      },
       sdcard: true
     },
     {
@@ -2678,21 +2715,21 @@ module.exports = {
       name: 'dq0doors', what: 'Dingus Quest Zero\'s rooms and doors as the user asked (2026-10-15): a room told in general words (a small kitchen, a barrel vault high overhead), its figures (its size in feet, its ceiling\'s height) only on a close look (look closely, x room); a door examined (its make, size, thickness and features plain, its state and stoutness the appraiser\'s judgement: the referee\'s Timbercraft), and its bar (an item in its brackets: IW_PORTAL), lifted out and taken; a window examined, its pane judged (Glassworking), broken into shards; a strong iron-bound door battered with bare hands unmarked, the hands hurt till the character stops (the user\'s: dq0hands), a weaker wooden one battered with a pick (dq0 -k pick: the tool to hand that hits hardest) giving way (each blow the referee\'s impact less the wood\'s resistance, off its body), broken down for good',
       init: 't_rc', cycles: 2500e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 3 -c /ram/c.hm\r' +
-        ['look', 'look closely', 'x room', 'examine the door behind me on my right', 'break the door ahead', 'break', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        ['look', 'look closely', 'x room', 'examine the door behind me on my right', 'break the door ahead', 'quit'].map(l => 'ā' + l + '\r').join('') +
         'ādq0 -p t -s 15 -c /ram/c.hm -k pick\r' +
-        ['examine the door ahead to my left', 'examine bar', 'break the door ahead to my left', 'break', 'look', 'close', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        ['examine the door ahead to my left', 'examine bar', 'break the door ahead to my left', 'look', 'close', 'quit'].map(l => 'ā' + l + '\r').join('') +
         'ādq0 -p t -s 4 -c /ram/c.hm\r' + ['take the bar', 'i', 'quit'].map(l => 'ā' + l + '\r').join('') +
         'ādq0 -p t -s 12 -c /ram/c.hm\r' +
         ['n', 'examine the window', 'x glass', 'break window', 'look', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
       expect: ['% echo $status'],
       // (Its words checked with the lines' wrapping taken out, each in its turn: the glance with no figures, the close
-      // looks with them)
+      // looks with them; a door battered once each: bare hands till they're too hurt, the pick till it gives way)
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
         const want = ['> look You are in a small kitchen', 'A barrel vault arches high overhead. There is a door', '> look closely',
           'It is 10 feet by 10.', 'A barrel vault rises to 13 feet, 9 at the walls.', '> x room', 'It is 10 feet by 10.',
           'A door of iron-bound wood, 3 feet wide and 7 high, 3 inches thick.', 'You batter at it a while: it\'s marked, but it holds.',
-          'Something gives as you strike it:', 'You stop: you are too hurt to go on.', '> break',
+          'Something gives as you strike it:', 'You stop: you are too hurt to go on.', '% dq0 -p t -s 15',
           'Brackets for a bar are fixed on this side, the bar in them.',
           'It\'s 4 feet long, 3 inches thick.', 'You batter at it till it gives way, and it crashes open.',
           '(broken down)', 'It\'s broken: it won\'t shut.', 'You lift the bar out of its brackets, and set it down.', 'Taken.',
@@ -2921,15 +2958,33 @@ module.exports = {
         'You finish the giant rat where it lies. The giant rat falls dead.',
         'You strike at the giant rat with your sword: a serious gash to its left thigh\n(S3). It falls senseless.',
         'On the floor ahead to your right lies a body. On the floor ahead lies a\nbody.', 'Injuries: left knee M1 (stab).', '% echo $status'],
+      // (The referee's dice the commands', in their order, at the turns pace, the rats' blows asked in the slices the
+      // world waits for (the same with the typing's timing changed): at seed 5 three blows dodged, the fourth felling
+      // the rat ahead, one felling the other, each finished)
+      check(m, out) {
+        const f = [], d = 'You strike at the giant rat with your sword; it dodges.';
+        inTurn(dq0Story(out), ['> attack the rat', d, '> attack the rat', d, '> attack the rat', d, '> attack the rat',
+          'a grievous deep gash to its right hand (G5). It falls senseless.', '> attack the rat ahead right',
+          'a serious gash to its left thigh (S3). It falls senseless.', '> attack the rat ahead right', 'You finish the giant rat where it lies.',
+          '> attack the rat', 'You finish the giant rat where it lies.'], f);
+        return f;
+      },
       sdcard: true
     },
     {
       name: 'dq0ghoul', what: 'Dingus Quest Zero\'s denizens fighting (DENIZENS.md: fights): a ghoul (its faction hostile to the character) down the stairway at seed 7 comes up to the character and claws at it, a round at a time as it waits (its own turns: the referee\'s round), dodged (the character\'s stance: defend dodge) and wounding it (HarnMaster\'s injuries on its sheet)',
       init: 't_rc', cycles: 1200e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 7 -c /ram/c.hm -T\r' +
-        ['d', 'defend dodge', 'wait', 'wait', 'wait', 'sheet', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+        ['d', 'defend dodge', 'wait', 'wait', 'sheet', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
       expect: ['A ghoul is ahead to your left, 10 feet away.', 'You will dodge.', 'The ghoul claws at you; you dodge.', 'fighting you.',
         'The ghoul claws at you: a serious gash to your thorax (S2).', 'Injuries: thorax S2 (gash).', '% echo $status'],
+      // (At seed 7 the ghoul's first claw dodged, its second a wound: the referee's dice the same whatever the timing,
+      // at the turns pace)
+      check(m, out) {
+        const f = [];
+        inTurn(dq0Story(out), ['> wait', 'The ghoul claws at you; you dodge.', '> wait', 'The ghoul claws at you: a serious gash to your thorax (S2).', '> sheet'], f);
+        return f;
+      },
       sdcard: true
     },
     {
@@ -2940,6 +2995,13 @@ module.exports = {
       expect: ['You put on the gambeson.', 'You put on the mail hauberk.', 'You will not defend yourself.', 'The ghoul claws at you: a serious gash to your left calf (S2).',
         'The ghoul claws at you: a minor cut to your left thigh (M1).', 'The ghoul claws at you, but your mail hauberk turns the blow.',
         'You are dead.', '% echo $status'],
+      // (At seed 7 the ghoul's four claws, a wait each, in their turn: the referee's dice the same whatever the timing)
+      check(m, out) {
+        const f = [];
+        inTurn(dq0Story(out), ['> wait', 'a serious gash to your left calf (S2).', '> wait', 'a minor cut to your left thigh (M1).', '> wait',
+          'but your mail hauberk turns the blow.', '> wait', 'a mortal deep gash to your skull. You are dead.'], f);
+        return f;
+      },
       sdcard: true
     },
     {
@@ -2949,11 +3011,16 @@ module.exports = {
         ['d', 'wait', 'go right', ...Array(6).fill('punch the rat'), 'look', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
       expect: ['You strike at the giant rat with your fists', 'It falls senseless.', 'You finish the giant rat where it lies.',
         'It\'s out of reach: go up to it first.', '% echo $status'],
-      // (Its kin gone at once: out of sight as the one falls, fighting the character no more)
+      // (Its kin gone at once: out of sight as the one falls, fighting the character no more.  At seed 5 three punches
+      // dodged, the fourth felling the rat, the fifth finishing it, the sixth at its kin, gone: the referee's dice the
+      // commands', in their order, at the turns pace)
       check(m, out) {
-        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), i = o.indexOf('It falls senseless.');
+        const o = dq0Story(out), i = o.indexOf('It falls senseless.'), f = [], d = 'You strike at the giant rat with your fists; it dodges.';
         const after = i < 0 ? '' : o.slice(i, o.indexOf('> look', i));
-        return !after || after.includes('fighting you') || after.includes('A giant rat is ahead to your left') ? ['its kin not fled'] : [];
+        if (!after || after.includes('fighting you') || after.includes('A giant rat is ahead to your left')) f.push('its kin not fled');
+        inTurn(o, ['> punch the rat', d, '> punch the rat', d, '> punch the rat', d, '> punch the rat', 'a grievous crush to its right hand (G5). It falls senseless.',
+          '> punch the rat', 'You finish the giant rat where it lies.', '> punch the rat', 'It\'s out of reach: go up to it first.', '> look'], f);
+        return f;
       },
       sdcard: true
     },
@@ -2991,18 +3058,31 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0traps', what: 'Dingus Quest Zero\'s traps (DUNGEON.md: traps; the world\'s walk stops on one, the maker sets it off, the referee judges it): a door\'s blade, set off as the door\'s forced open (seed 16, dq0 -T), dodged; then a plate in a storeroom\'s floor walked onto, its blade striking (HC_STRIKE: a wound) and the trap seen after, sprung; then (seed 7, a thief, hmchar -s 1) a hidden dart trap on a door found by searching, the door left shut while it\'s known, the trap disarmed (Lockcraft), and the door opened',
+      name: 'dq0traps', what: 'Dingus Quest Zero\'s traps (DUNGEON.md: traps; the world\'s walk stops on one, the maker sets it off, the referee judges it): a door\'s blade, set off as the door\'s forced open (seed 16, dq0 -T), dodged; then a plate in a storeroom\'s floor walked onto, its blade striking (HC_STRIKE: a wound) and the trap seen after, sprung; then (seed 7, a thief, hmchar -s 1, Lockcraft 95) a hidden dart trap on a door found by searching, the door left shut while it\'s known, the trap made out and disarmed (Lockcraft), and the door opened',
       init: 't_rc', cycles: 2000e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 16 -c /ram/c.hm -T\r' +
         ['face east', 'force', 'e', 'force', 'force', 'e', 'e', 'look', 'quit'].map(l => 'ā' + l + '\r').join('') +
-        'āhmchar -q -s 1 -o /ram/t.hm\rādq0 -p t -s 7 -c /ram/t.hm\r' +
-        ['search', 'search', 'search', 'search', 'search', 'search', 'x dagger', 'x dagger', 'x dagger', 'x dagger', 'x dagger', 'x dagger', 'x dagger', 'x dagger', 'face south', 'open', 'disarm', 'disarm', 'disarm', 'disarm', 'disarm', 'open', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+        'āhmchar -q -s 1 -o /ram/t.hm\rāecho ml lck 95 >> /ram/t.hm\rādq0 -p t -s 7 -c /ram/t.hm\r' +
+        ['search', 'search', 'search', 'face south', 'open', 'disarm', 'disarm', 'open', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
       expect: ['As the door opens, something clicks. A blade scythes out of the wall! You throw\nyourself clear.',
         'A plate sinks under your foot with a click. A blade scythes out of the wall! It\nhurts you: ',
         'scything blade, set off by a plate in the floor, at your feet (sprung).',
         'You find a trap: a dart trap, set to go off as its door opens.',
         'There\'s a trap on that door you know of: disarm it before you open it.',
         'You study the mechanism a while, and make out how it works', 'You work at the trap a while, and disarm it.', 'You open the door.', '% echo $status'],
+      // (The referee's dice the commands', in their order, at the turns pace (the same with the typing's timing
+      // changed): at seed 16 the door's blade dodged, the next door holding at the first try, bursting at the
+      // second; at seed 7 the third search finding the trap; the mechanism made out at the first try, disarmed at
+      // the second (two checks: the user's))
+      check(m, out) {
+        const f = [];
+        inTurn(dq0Story(out), ['> force', 'You throw yourself clear.', '> force', 'The door holds.', '> force', 'With a crack the door bursts open.',
+          '> e', '> e', 'A plate sinks under your foot', '% dq0 -p t -s 7', '> search', 'You search about, and find nothing hidden.', '> search',
+          'You search about, and find nothing hidden.', '> search', 'You find a trap: a dart trap', '> open',
+          'There\'s a trap on that door you know of', '> disarm', 'and make out how it works: now to disarm it.', '> disarm',
+          'You work at the trap a while, and disarm it.', '> open', 'You open the door.'], f);
+        return f;
+      },
       sdcard: true
     },
     {
@@ -3063,10 +3143,14 @@ module.exports = {
       expect: ['% echo $status'],
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
-        const want = ['You loose the winch: the portcullis crashes down.', '> break portcullis', 'The bars buckle and break under your blows: there\'s a gap to get through.', '> break',
+        // (At seed 12 the rats in the way twice, then gone, as dq0portc's; the bars bent at the second try, the
+        // referee's dice the commands' at the turns pace)
+        const want = ['A giant rat is in the way.', 'Time passes.', 'A giant rat is in the way.', 'Time passes.', 'You are in a small storeroom',
+          'You loose the winch: the portcullis crashes down.', '> break portcullis', 'The bars buckle and break under your blows: there\'s a gap to get through.', '> break',
           'Its bars are forced apart, and it\'s jammed where it is', '> look',
           'There is a portcullis ahead (its bars forced apart).', '> x portcullis', 'Its bars are forced apart: there\'s a gap to get through.',
           '> lower portcullis', 'Its bars are forced apart, and it\'s jammed where it is', '> w', 'You are in a long vault',
+          'A giant rat is in the way.', 'Time passes.', 'A giant rat is in the way.', 'Time passes.', 'You are in a small storeroom',
           'You loose the winch: the portcullis crashes down.', '> bend the bars', 'The bars won\'t give.', '> bend bars',
           'You strain at the bars, and bend them apart: there\'s room to get through.', '> look',
           'There is a portcullis ahead (its bars forced apart).', '> w', 'You are in a long vault', '% echo $status'];
@@ -3175,8 +3259,10 @@ module.exports = {
       expect: ['% echo $status'],
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
-        const want = ['% dq0 -p t -s 16 -c /ram/c.hm -T', 'A plate sinks under your foot with a click.', '> quit',
-          '% dq0 -p t -s 16 -c /ram/c.hm -T', '> search for traps as I go', 'held to a slow walk while you search as you go',
+        // (At seed 16 the passage's door holding at the first try, bursting at the second, as dq0traps's: the referee's
+        // dice the commands', in their order, at the turns pace)
+        const want = ['% dq0 -p t -s 16 -c /ram/c.hm -T', 'The door holds.', 'With a crack the door bursts open.', 'A plate sinks under your foot with a click.', '> quit',
+          '% dq0 -p t -s 16 -c /ram/c.hm -T', 'The door holds.', 'With a crack the door bursts open.', '> search for traps as I go', 'held to a slow walk while you search as you go',
           'You find a trap: a scything blade, set off by a plate in the floor.', '> quit',
           '% dq0 -p t -s 16 -c /ram/t.hm -T', '> status', 'Pace: a run (150 feet a round).', 'a little tired (fatigue 1)',
           'penalties: universal 1, physical 2.', '> e', '> status', 'Pace: a run (140 feet a round).', 'a little tired (fatigue 2)',
