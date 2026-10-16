@@ -5,8 +5,8 @@
 	(uuid "68425311-a4b4-4b0b-ab3e-48554695469d")
 	(paper "A4")
 	(title_block
-		(date "2025-10-27")
-		(rev "1.8C")
+		(date "2026-10-09")
+		(rev "1.8D")
 		(company "Data Tuning")
 		(comment 1 "Hydra 16")
 	)
@@ -227,6 +227,170 @@
 						)
 					)
 					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
+		(symbol "Device:C_Polarized_Small_US"
+			(pin_numbers
+				(hide yes)
+			)
+			(pin_names
+				(offset 0.254)
+				(hide yes)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "C"
+				(at 0.254 1.778 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left)
+				)
+			)
+			(property "Value" "C_Polarized_Small_US"
+				(at 0.254 -2.032 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left)
+				)
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" "~"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "Polarized capacitor, small US symbol"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "cap capacitor"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_fp_filters" "CP_*"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "C_Polarized_Small_US_0_1"
+				(polyline
+					(pts
+						(xy -1.524 0.508) (xy 1.524 0.508)
+					)
+					(stroke
+						(width 0.3048)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.27 1.524) (xy -0.762 1.524)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.016 1.27) (xy -1.016 1.778)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start -1.524 -0.762)
+					(mid 0 -0.3734)
+					(end 1.524 -0.762)
+					(stroke
+						(width 0.3048)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "C_Polarized_Small_US_1_1"
+				(pin passive line
+					(at 0 2.54 270)
+					(length 2.032)
+					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 0 -2.54 90)
+					(length 2.032)
+					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -3288,6 +3452,28 @@
 			(embedded_fonts no)
 		)
 	)
+	(text "Decoupling (1.8D): C80 at the YM2151, C81 at the YM3012, C82/C83 at U42's\n+12 V/-12 V, C84/C85 at IC9's. R29 (0 ohms, or a ferrite bead) joins GNDA\nto GND here, beside the YM3012: before, they met only inside the supply."
+		(exclude_from_sim no)
+		(at 110.49 130.81 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left top)
+		)
+		(uuid "9d2e852f-5648-4470-89d9-a1b9c4961128")
+	)
+	(text "1.8D: the mixer. IC9 an NJM4556A (the LF353's pinout; it drives headphones: the\nLF353 needs 2K or more). C90/C91 keep the YM3012's 2.5 V of DC out of the summer.\nEach output: 33 ohms (stable into a cable), 220 uF non-polar, a 10K pull-down."
+		(exclude_from_sim no)
+		(at 20.32 170.18 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left top)
+		)
+		(uuid "e3b0307e-8190-4e12-9b41-343f29ffcce2")
+	)
 	(junction
 		(at 177.8 80.01)
 		(diameter 0)
@@ -3301,28 +3487,16 @@
 		(uuid "054cfdee-dc2e-44ea-9a68-f6ed86c74960")
 	)
 	(junction
-		(at 217.17 97.79)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "0b607bc4-3fa8-485b-a967-ad00c00cfbfa")
-	)
-	(junction
 		(at 101.6 81.28)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "180c15e0-9473-44ef-ba76-68753111f2e4")
 	)
 	(junction
-		(at 217.17 67.31)
+		(at 217.17 102.87)
 		(diameter 0)
 		(color 0 0 0 0)
-		(uuid "19da085a-a95d-4870-86b8-e4be22f3f6f4")
-	)
-	(junction
-		(at 217.17 57.15)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "2d65695b-fb53-48d7-aeb6-da3e98b52d46")
+		(uuid "1fdc2deb-5124-4cb1-a931-9784a30d9f78")
 	)
 	(junction
 		(at 187.96 72.39)
@@ -3349,12 +3523,6 @@
 		(uuid "58bfbee1-a9f3-4113-a7d8-2f246ac58a3c")
 	)
 	(junction
-		(at 217.17 92.71)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "5b5afed7-1d68-4b08-a029-2dc56f05c764")
-	)
-	(junction
 		(at 186.69 88.9)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -3373,18 +3541,6 @@
 		(uuid "7056cce9-b216-49a8-bdab-3ed322170919")
 	)
 	(junction
-		(at 217.17 62.23)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "707c9ec6-0346-4d1c-9d30-540827e6678e")
-	)
-	(junction
-		(at 217.17 64.77)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "738e3ec1-f687-4d84-b726-d6f3c2f27b21")
-	)
-	(junction
 		(at 165.1 82.55)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -3397,16 +3553,16 @@
 		(uuid "7d088424-713a-48c5-814e-f13a272a8a91")
 	)
 	(junction
-		(at 217.17 54.61)
+		(at 217.17 59.69)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "7f96cc56-881d-4383-bb06-11212c97c85d")
 	)
 	(junction
-		(at 217.17 95.25)
+		(at 217.17 67.31)
 		(diameter 0)
 		(color 0 0 0 0)
-		(uuid "82ec3d46-2bdc-48b9-b643-391470c204f2")
+		(uuid "8643bc98-5ffe-4955-aeb5-2c2e9312f0a5")
 	)
 	(junction
 		(at 138.43 114.3)
@@ -3451,12 +3607,6 @@
 		(uuid "a6550e68-d3ca-4f36-bb29-cf763991e683")
 	)
 	(junction
-		(at 217.17 100.33)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "aac16abf-7659-4c75-ae76-f1bc1fd31f75")
-	)
-	(junction
 		(at 153.67 52.07)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -3493,28 +3643,10 @@
 		(uuid "dbcb42aa-5e6e-4ed8-a177-0ae9b30d08be")
 	)
 	(junction
-		(at 217.17 90.17)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "dfcbf613-51ff-4ade-a7bb-3d346f1f30ed")
-	)
-	(junction
-		(at 217.17 102.87)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "efede391-4518-471b-bf0c-dbe90e87e74d")
-	)
-	(junction
 		(at 166.37 91.44)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "f1cacb76-24f7-48b0-be7b-cf7088b055fc")
-	)
-	(junction
-		(at 217.17 59.69)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "f2f3141c-b2c0-4d61-8948-567f6a7e02c8")
 	)
 	(bus_entry
 		(at 45.72 85.09)
@@ -3600,13 +3732,13 @@
 	)
 	(wire
 		(pts
-			(xy 213.36 59.69) (xy 217.17 59.69)
+			(xy 226.06 124.46) (xy 231.14 124.46)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "0238d2a8-861f-464f-86c7-cbbe3041a22e")
+		(uuid "02b5b656-03a2-49ea-984c-258e485909df")
 	)
 	(wire
 		(pts
@@ -3670,13 +3802,13 @@
 	)
 	(wire
 		(pts
-			(xy 190.5 69.85) (xy 205.74 69.85)
+			(xy 210.82 142.24) (xy 215.9 142.24)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "091c4220-2794-4703-8451-3bb261e59874")
+		(uuid "0abd51cb-1656-45ab-9ff7-e6cc79748ac7")
 	)
 	(wire
 		(pts
@@ -3690,16 +3822,6 @@
 	)
 	(wire
 		(pts
-			(xy 213.36 92.71) (xy 217.17 92.71)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "0b450e6f-ae31-4ea2-b9c6-0f8638ac554f")
-	)
-	(wire
-		(pts
 			(xy 102.87 67.31) (xy 104.14 67.31)
 		)
 		(stroke
@@ -3710,6 +3832,16 @@
 	)
 	(wire
 		(pts
+			(xy 213.36 67.31) (xy 217.17 67.31)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "0e3d3546-8553-4919-9fcb-4166be09c401")
+	)
+	(wire
+		(pts
 			(xy 167.64 85.09) (xy 167.64 76.2)
 		)
 		(stroke
@@ -3717,6 +3849,16 @@
 			(type default)
 		)
 		(uuid "0e518d17-80f9-4dcb-9f57-e8d9c9e98e5b")
+	)
+	(wire
+		(pts
+			(xy 144.78 147.32) (xy 144.78 144.78)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "0e9ffd6d-d1e6-40e2-810f-b9aed68a7e19")
 	)
 	(wire
 		(pts
@@ -3780,13 +3922,13 @@
 	)
 	(wire
 		(pts
-			(xy 217.17 95.25) (xy 217.17 97.79)
+			(xy 165.1 147.32) (xy 165.1 144.78)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "1894ee62-8c23-4157-8f80-41d268b3e4eb")
+		(uuid "18be3354-abc7-4f40-b0a9-383ba8b6b93d")
 	)
 	(wire
 		(pts
@@ -3807,6 +3949,16 @@
 			(type default)
 		)
 		(uuid "19f53fa0-c679-402f-a931-2e946717804d")
+	)
+	(wire
+		(pts
+			(xy 144.78 152.4) (xy 144.78 154.94)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1bd5b3e8-f93c-4e66-a110-5ddbce58ca2a")
 	)
 	(wire
 		(pts
@@ -3847,16 +3999,6 @@
 			(type default)
 		)
 		(uuid "1cfc4338-e829-47d1-9caa-06d9d1e4e86b")
-	)
-	(wire
-		(pts
-			(xy 217.17 69.85) (xy 217.17 67.31)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "1d3e4379-077e-401f-b373-9b99a1beee34")
 	)
 	(wire
 		(pts
@@ -3950,16 +4092,6 @@
 	)
 	(wire
 		(pts
-			(xy 213.36 102.87) (xy 217.17 102.87)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "2cccad25-d094-484d-a7b5-d3e8340e2263")
-	)
-	(wire
-		(pts
 			(xy 162.56 92.71) (xy 162.56 100.33)
 		)
 		(stroke
@@ -4050,23 +4182,13 @@
 	)
 	(wire
 		(pts
-			(xy 217.17 100.33) (xy 217.17 102.87)
+			(xy 114.3 147.32) (xy 114.3 144.78)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "3c0649db-a828-4e4f-8909-debff5dc6aa8")
-	)
-	(wire
-		(pts
-			(xy 217.17 64.77) (xy 217.17 67.31)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "3e77bcd7-24b5-4362-8e62-688d7e2b6ed8")
+		(uuid "3f747f86-b3d8-4f9f-aa74-5caf6cd3cfdc")
 	)
 	(wire
 		(pts
@@ -4080,23 +4202,13 @@
 	)
 	(wire
 		(pts
-			(xy 213.36 95.25) (xy 217.17 95.25)
+			(xy 134.62 152.4) (xy 134.62 154.94)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "41cc452d-c990-45ac-b3db-87431cc4ee84")
-	)
-	(wire
-		(pts
-			(xy 217.17 87.63) (xy 217.17 90.17)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "425ca909-a5aa-4e55-a409-9f014fa0d55d")
+		(uuid "42c03d4a-b6c2-4ba5-8d6e-e0382ebf8706")
 	)
 	(wire
 		(pts
@@ -4150,23 +4262,13 @@
 	)
 	(wire
 		(pts
-			(xy 213.36 67.31) (xy 217.17 67.31)
+			(xy 124.46 147.32) (xy 124.46 144.78)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "4cbe3134-5e16-4ee0-897d-5d51f221085c")
-	)
-	(wire
-		(pts
-			(xy 213.36 69.85) (xy 217.17 69.85)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "4edccd9a-d1a8-46bf-ac52-b8e3d11f594f")
+		(uuid "4dd6f468-9b42-46cd-bdee-ec15ffc7579a")
 	)
 	(bus
 		(pts
@@ -4187,6 +4289,16 @@
 			(type default)
 		)
 		(uuid "4fa82277-e41d-4dbf-b3f7-647e9ddecf99")
+	)
+	(wire
+		(pts
+			(xy 195.58 105.41) (xy 205.74 105.41)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "509e501a-b737-4680-a573-9dc4297a802f")
 	)
 	(wire
 		(pts
@@ -4230,7 +4342,17 @@
 	)
 	(wire
 		(pts
-			(xy 262.89 54.61) (xy 224.79 54.61)
+			(xy 210.82 124.46) (xy 215.9 124.46)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "574d3c62-14d6-4703-b531-1516f6eccb0e")
+	)
+	(wire
+		(pts
+			(xy 264.16 54.61) (xy 224.79 54.61)
 		)
 		(stroke
 			(width 0)
@@ -4270,6 +4392,16 @@
 	)
 	(wire
 		(pts
+			(xy 203.2 142.24) (xy 200.66 142.24)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "5f80e74d-584a-4354-83e3-7da697cf6d40")
+	)
+	(wire
+		(pts
 			(xy 49.53 106.68) (xy 53.34 106.68)
 		)
 		(stroke
@@ -4287,6 +4419,16 @@
 			(type default)
 		)
 		(uuid "640bafb9-9135-4bb7-a349-a331024bd42e")
+	)
+	(wire
+		(pts
+			(xy 220.98 142.24) (xy 226.06 142.24)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "6578d7a6-e9d4-46b9-ab95-7f64645daae9")
 	)
 	(wire
 		(pts
@@ -4340,7 +4482,7 @@
 	)
 	(wire
 		(pts
-			(xy 260.35 67.31) (xy 262.89 67.31)
+			(xy 260.35 67.31) (xy 264.16 67.31)
 		)
 		(stroke
 			(width 0)
@@ -4377,16 +4519,6 @@
 			(type default)
 		)
 		(uuid "701dab4a-46b7-4131-b9a8-84cca9b1bfe5")
-	)
-	(wire
-		(pts
-			(xy 213.36 64.77) (xy 217.17 64.77)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "70f99005-dfe6-4bd8-9844-09a1bed7ca35")
 	)
 	(wire
 		(pts
@@ -4430,13 +4562,23 @@
 	)
 	(wire
 		(pts
-			(xy 190.5 69.85) (xy 190.5 88.9)
+			(xy 190.5 67.31) (xy 190.5 88.9)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
 		(uuid "7398aa4c-0ac3-4331-9973-e8ca1f77419a")
+	)
+	(wire
+		(pts
+			(xy 226.06 149.86) (xy 226.06 152.4)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "75e572f3-97e1-4a1b-becb-1004f5846c25")
 	)
 	(wire
 		(pts
@@ -4490,16 +4632,6 @@
 	)
 	(wire
 		(pts
-			(xy 213.36 97.79) (xy 217.17 97.79)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "7c3298c5-de9f-4021-967e-1bbf3e3de42c")
-	)
-	(wire
-		(pts
 			(xy 170.18 86.36) (xy 168.91 86.36)
 		)
 		(stroke
@@ -4550,6 +4682,16 @@
 	)
 	(wire
 		(pts
+			(xy 114.3 152.4) (xy 114.3 154.94)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7ecad5cd-ed60-45ad-8b8c-13ea69e00684")
+	)
+	(wire
+		(pts
 			(xy 254 39.37) (xy 254 64.77)
 		)
 		(stroke
@@ -4577,16 +4719,6 @@
 			(type default)
 		)
 		(uuid "812e2568-1fd8-4b68-a51e-69b229846df2")
-	)
-	(wire
-		(pts
-			(xy 213.36 90.17) (xy 217.17 90.17)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "816a3521-0872-4144-b122-30e1df58261c")
 	)
 	(wire
 		(pts
@@ -4630,7 +4762,7 @@
 	)
 	(wire
 		(pts
-			(xy 193.04 48.26) (xy 193.04 102.87)
+			(xy 193.04 50.8) (xy 193.04 102.87)
 		)
 		(stroke
 			(width 0)
@@ -4660,16 +4792,6 @@
 	)
 	(wire
 		(pts
-			(xy 213.36 57.15) (xy 217.17 57.15)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "8a0ca14d-8dcb-40e1-8ced-13486fddfb23")
-	)
-	(wire
-		(pts
 			(xy 54.61 140.97) (xy 36.83 140.97)
 		)
 		(stroke
@@ -4687,16 +4809,6 @@
 			(type default)
 		)
 		(uuid "8d270a25-9c06-406b-aee0-bfa06bc13045")
-	)
-	(wire
-		(pts
-			(xy 217.17 92.71) (xy 217.17 95.25)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "8d77ab78-e1d9-4f8a-96e2-4b31230e8b47")
 	)
 	(wire
 		(pts
@@ -4720,6 +4832,16 @@
 	)
 	(wire
 		(pts
+			(xy 154.94 152.4) (xy 154.94 154.94)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9427dc22-0ca9-4eea-bc87-37f861924249")
+	)
+	(wire
+		(pts
 			(xy 153.67 52.07) (xy 153.67 58.42)
 		)
 		(stroke
@@ -4740,7 +4862,17 @@
 	)
 	(wire
 		(pts
-			(xy 217.17 52.07) (xy 217.17 54.61)
+			(xy 226.06 132.08) (xy 226.06 134.62)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "96c2a8f3-3eb1-4ba1-86cb-8e267bb13c68")
+	)
+	(wire
+		(pts
+			(xy 217.17 57.15) (xy 217.17 59.69)
 		)
 		(stroke
 			(width 0)
@@ -4880,13 +5012,23 @@
 	)
 	(wire
 		(pts
-			(xy 213.36 87.63) (xy 217.17 87.63)
+			(xy 213.36 95.25) (xy 217.17 95.25)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
 		(uuid "a8c77dfe-201a-4b67-887d-21d6cbd572ef")
+	)
+	(wire
+		(pts
+			(xy 201.93 67.31) (xy 205.74 67.31)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a93b142d-0567-4024-a0bd-12c72d387603")
 	)
 	(wire
 		(pts
@@ -4897,26 +5039,6 @@
 			(type default)
 		)
 		(uuid "a944b30d-4b4a-4088-ad9a-ced63dc3b0c3")
-	)
-	(wire
-		(pts
-			(xy 217.17 90.17) (xy 217.17 92.71)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "aa390666-f59f-4a8d-8ec1-7bd965abd12f")
-	)
-	(wire
-		(pts
-			(xy 217.17 57.15) (xy 217.17 59.69)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "aaa1fa1e-934e-4085-a3f3-a0efb9ab99a8")
 	)
 	(wire
 		(pts
@@ -4937,16 +5059,6 @@
 			(type default)
 		)
 		(uuid "abdf482d-a72b-4b1d-890d-7ce8a0497518")
-	)
-	(wire
-		(pts
-			(xy 217.17 62.23) (xy 217.17 64.77)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "abee9355-336c-4d0b-9eef-69706e57d079")
 	)
 	(wire
 		(pts
@@ -4980,13 +5092,23 @@
 	)
 	(wire
 		(pts
-			(xy 213.36 54.61) (xy 217.17 54.61)
+			(xy 213.36 59.69) (xy 217.17 59.69)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
 		(uuid "ae7519ea-34e4-4994-8c59-bb7a6aad8827")
+	)
+	(wire
+		(pts
+			(xy 134.62 147.32) (xy 134.62 144.78)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ae906bbc-2d7d-4239-915a-ff3a9da330d5")
 	)
 	(wire
 		(pts
@@ -5000,7 +5122,7 @@
 	)
 	(wire
 		(pts
-			(xy 195.58 52.07) (xy 195.58 48.26)
+			(xy 195.58 57.15) (xy 195.58 50.8)
 		)
 		(stroke
 			(width 0)
@@ -5080,6 +5202,16 @@
 	)
 	(wire
 		(pts
+			(xy 165.1 152.4) (xy 165.1 154.94)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b9937ade-52a0-409c-8a98-18c2e2f5baac")
+	)
+	(wire
+		(pts
 			(xy 254 69.85) (xy 257.81 69.85)
 		)
 		(stroke
@@ -5090,13 +5222,23 @@
 	)
 	(wire
 		(pts
-			(xy 195.58 52.07) (xy 205.74 52.07)
+			(xy 195.58 57.15) (xy 205.74 57.15)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
 		(uuid "bb0198e8-1e80-49c5-b0f9-1540d54286fb")
+	)
+	(wire
+		(pts
+			(xy 124.46 152.4) (xy 124.46 154.94)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "bbca4bdb-4fea-47c3-a4a8-67a25c5b83b8")
 	)
 	(bus
 		(pts
@@ -5107,26 +5249,6 @@
 			(type default)
 		)
 		(uuid "bc5df94a-c1b7-4ec0-9b9d-5bdcbefa8cf0")
-	)
-	(wire
-		(pts
-			(xy 213.36 62.23) (xy 217.17 62.23)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "bfcdfbad-1246-40f0-84cc-d540186c8d6f")
-	)
-	(wire
-		(pts
-			(xy 217.17 54.61) (xy 217.17 57.15)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "c03dc59c-6599-4ffd-94b3-a26d96fa2477")
 	)
 	(wire
 		(pts
@@ -5150,6 +5272,16 @@
 	)
 	(wire
 		(pts
+			(xy 226.06 142.24) (xy 231.14 142.24)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c62ced79-4c95-450e-aee4-156f73073d03")
+	)
+	(wire
+		(pts
 			(xy 153.67 106.68) (xy 177.8 106.68)
 		)
 		(stroke
@@ -5157,6 +5289,26 @@
 			(type default)
 		)
 		(uuid "c6b191eb-a47c-45aa-9bd2-73f2e19e20e1")
+	)
+	(wire
+		(pts
+			(xy 190.5 67.31) (xy 196.85 67.31)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c7129127-7fe2-42cc-bb9d-fb61b6136846")
+	)
+	(wire
+		(pts
+			(xy 213.36 102.87) (xy 217.17 102.87)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c8698c18-b30f-4d6b-8cc9-a059cd742105")
 	)
 	(wire
 		(pts
@@ -5250,6 +5402,16 @@
 	)
 	(wire
 		(pts
+			(xy 220.98 124.46) (xy 226.06 124.46)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "dac22ffb-ad37-410d-ade2-d722c7a4110b")
+	)
+	(wire
+		(pts
 			(xy 163.83 78.74) (xy 163.83 68.58)
 		)
 		(stroke
@@ -5300,16 +5462,6 @@
 	)
 	(wire
 		(pts
-			(xy 190.5 105.41) (xy 205.74 105.41)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "e01559f3-5dc0-4969-ba43-32c52317fa5d")
-	)
-	(wire
-		(pts
 			(xy 224.79 54.61) (xy 224.79 59.69)
 		)
 		(stroke
@@ -5317,6 +5469,26 @@
 			(type default)
 		)
 		(uuid "e0b8830d-65e7-468a-9f68-a4e012f7b5d0")
+	)
+	(wire
+		(pts
+			(xy 217.17 95.25) (xy 217.17 102.87)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e0baba26-a1a1-4ef6-902d-00ba842c8751")
+	)
+	(wire
+		(pts
+			(xy 177.8 153.67) (xy 177.8 156.21)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e1159378-b028-44b9-8ad8-c3a2c092ddae")
 	)
 	(wire
 		(pts
@@ -5400,7 +5572,7 @@
 	)
 	(wire
 		(pts
-			(xy 213.36 52.07) (xy 217.17 52.07)
+			(xy 213.36 57.15) (xy 217.17 57.15)
 		)
 		(stroke
 			(width 0)
@@ -5417,6 +5589,16 @@
 			(type default)
 		)
 		(uuid "ec4335be-7af4-4666-8bbb-186bb3db4e2b")
+	)
+	(wire
+		(pts
+			(xy 203.2 124.46) (xy 200.66 124.46)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ec7e02d5-1e36-4de4-9f16-5689f75565bd")
 	)
 	(wire
 		(pts
@@ -5520,13 +5702,13 @@
 	)
 	(wire
 		(pts
-			(xy 217.17 59.69) (xy 217.17 62.23)
+			(xy 154.94 147.32) (xy 154.94 144.78)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "f766adc8-bad3-49e8-8d74-1e1a536c3761")
+		(uuid "f72ac0ba-0747-41a0-9fec-59c789cc4eaf")
 	)
 	(wire
 		(pts
@@ -5560,13 +5742,13 @@
 	)
 	(wire
 		(pts
-			(xy 217.17 97.79) (xy 217.17 100.33)
+			(xy 177.8 146.05) (xy 177.8 143.51)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "ff04f56b-c7c4-4651-9098-2c06a1fef3a6")
+		(uuid "fdd0fcea-83c6-4d7d-ad7d-6e34fd6540d1")
 	)
 	(wire
 		(pts
@@ -5580,13 +5762,13 @@
 	)
 	(wire
 		(pts
-			(xy 213.36 100.33) (xy 217.17 100.33)
+			(xy 217.17 59.69) (xy 217.17 67.31)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "ffa45bb7-05bd-44ea-8219-b4f5c3e4a5a4")
+		(uuid "fff924e6-45e1-4386-b0a3-3849bd8fbc83")
 	)
 	(label "D4"
 		(at 48.26 92.71 0)
@@ -5668,53 +5850,9 @@
 		)
 		(uuid "fb6258d0-f933-4a15-b60c-ed45ba54fd1d")
 	)
-	(global_label "SND_CL5"
-		(shape input)
-		(at 205.74 67.31 180)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "02e7fa6c-85d9-49d7-87ed-74263c2626bc")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 194.4696 67.31 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-				(hide yes)
-			)
-		)
-	)
-	(global_label "SND_CL3"
-		(shape input)
-		(at 205.74 62.23 180)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "03008ea1-611f-4266-82c8-c0794becca94")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 194.4696 62.23 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-				(hide yes)
-			)
-		)
-	)
 	(global_label "SND_CR0"
 		(shape input)
-		(at 205.74 87.63 180)
+		(at 205.74 95.25 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -5724,7 +5862,7 @@
 		)
 		(uuid "20e12a13-f4fe-4e46-9b49-8d912d5897ff")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 194.2277 87.63 0)
+			(at 194.2277 95.25 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5778,28 +5916,6 @@
 			)
 		)
 	)
-	(global_label "SND_CL4"
-		(shape input)
-		(at 205.74 64.77 180)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "336d2a12-5af5-4e71-8177-23e458b7a1e1")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 194.4696 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-				(hide yes)
-			)
-		)
-	)
 	(global_label "A0"
 		(shape input)
 		(at 49.53 106.68 180)
@@ -5813,28 +5929,6 @@
 		(uuid "3f763780-df87-428e-8bbf-6c51c5aeb7f9")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 44.2467 106.68 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-				(hide yes)
-			)
-		)
-	)
-	(global_label "SND_CL1"
-		(shape input)
-		(at 205.74 57.15 180)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "4207ab3f-e187-40b1-937c-2d48f5ccf662")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 194.4696 57.15 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5866,9 +5960,9 @@
 			)
 		)
 	)
-	(global_label "SND_CR1"
+	(global_label "AUDIO_R_AMP"
 		(shape input)
-		(at 205.74 90.17 180)
+		(at 200.66 142.24 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -5876,9 +5970,9 @@
 			)
 			(justify right)
 		)
-		(uuid "54f9f350-6d1c-41ca-b0bc-3b6ae18f4068")
+		(uuid "492d8425-cfe3-4462-9d49-61b3944a2d1b")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 194.2277 90.17 0)
+			(at 200.66 142.24 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5890,7 +5984,29 @@
 	)
 	(global_label "AUDIO_L"
 		(shape output)
-		(at 262.89 54.61 0)
+		(at 231.14 124.46 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "592edd45-113d-41dc-9f39-6fe3ad3ce2b1")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 231.14 124.46 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "AUDIO_L_AMP"
+		(shape output)
+		(at 264.16 54.61 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -5900,51 +6016,7 @@
 		)
 		(uuid "65072f55-ed6b-4fa5-8ea3-6bf425a383b0")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 252.2847 54.61 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-				(hide yes)
-			)
-		)
-	)
-	(global_label "SND_CR4"
-		(shape input)
-		(at 205.74 97.79 180)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "65298aff-9fbf-4a9e-ab07-906fc778e3b3")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 194.2277 97.79 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-				(hide yes)
-			)
-		)
-	)
-	(global_label "SND_CR5"
-		(shape input)
-		(at 205.74 100.33 180)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "6a4d7faa-207d-4181-8316-01398153f1b7")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 194.2277 100.33 0)
+			(at 253.5547 54.61 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5976,9 +6048,9 @@
 			)
 		)
 	)
-	(global_label "AUDIO_R"
+	(global_label "AUDIO_R_AMP"
 		(shape output)
-		(at 262.89 67.31 0)
+		(at 264.16 67.31 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -5988,7 +6060,29 @@
 		)
 		(uuid "9741afdb-a060-4e22-b1d8-39b11d008f01")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 273.7372 67.31 0)
+			(at 275.0072 67.31 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "AUDIO_R"
+		(shape output)
+		(at 231.14 142.24 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "9759d59d-a28d-4cf1-96b2-6b0b9b533c4f")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 231.14 142.24 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6000,7 +6094,7 @@
 	)
 	(global_label "SND_CL0"
 		(shape input)
-		(at 205.74 54.61 180)
+		(at 205.74 59.69 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -6010,7 +6104,7 @@
 		)
 		(uuid "9a29c37f-b8c8-4ec8-a7a5-aa85070688bb")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 194.4696 54.61 0)
+			(at 194.4696 59.69 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6042,9 +6136,9 @@
 			)
 		)
 	)
-	(global_label "SND_CL2"
+	(global_label "AUDIO_L_AMP"
 		(shape input)
-		(at 205.74 59.69 180)
+		(at 200.66 124.46 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -6052,53 +6146,9 @@
 			)
 			(justify right)
 		)
-		(uuid "dfa52fd5-c98d-44ae-8fcb-910a197ede7c")
+		(uuid "ba544c77-1867-4a03-8013-69deb2c37fd2")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 194.4696 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-				(hide yes)
-			)
-		)
-	)
-	(global_label "SND_CR2"
-		(shape input)
-		(at 205.74 92.71 180)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "ee223570-fff0-4ed1-be0f-e928817c31b1")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 194.2277 92.71 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-				(hide yes)
-			)
-		)
-	)
-	(global_label "SND_CR3"
-		(shape input)
-		(at 205.74 95.25 180)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "f8a2cad6-fd36-472b-bceb-e83e8795cef4")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 194.2277 95.25 0)
+			(at 200.66 124.46 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -6216,6 +6266,70 @@
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
 					(reference "C52")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:+5V")
+		(at 114.3 144.78 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "08e49ad5-956a-444e-bcf0-cf50e42b60c5")
+		(property "Reference" "#PWR091"
+			(at 114.3 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "+5V"
+			(at 114.3 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 114.3 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 114.3 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 114.3 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "c12bf5a7-365d-4b4a-9cf8-836fb5e3e390")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR091")
 					(unit 1)
 				)
 			)
@@ -6435,6 +6549,70 @@
 		)
 	)
 	(symbol
+		(lib_id "power:GND")
+		(at 177.8 156.21 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "0bac86ce-dff8-4e25-b48e-7947a131e848")
+		(property "Reference" "#PWR0104"
+			(at 177.8 156.21 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 177.8 161.29 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 177.8 156.21 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 177.8 156.21 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 177.8 156.21 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "f17ba1c9-b606-46a4-8914-b19224faec11")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR0104")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Device:R")
 		(at 146.05 81.28 90)
 		(unit 1)
@@ -6502,6 +6680,70 @@
 		)
 	)
 	(symbol
+		(lib_id "power:GNDA")
+		(at 154.94 154.94 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "12579f8d-4963-464c-86fa-fa5904c9f5ea")
+		(property "Reference" "#PWR0100"
+			(at 154.94 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GNDA"
+			(at 154.94 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 154.94 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 154.94 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 154.94 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "7af322ea-5e64-4544-9483-94d86d78df41")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR0100")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "LF353:LF353P")
 		(at 226.06 64.77 0)
 		(unit 1)
@@ -6518,7 +6760,7 @@
 				)
 			)
 		)
-		(property "Value" "LF353P"
+		(property "Value" "NJM4556AD"
 			(at 240.03 60.452 0)
 			(effects
 				(font
@@ -6633,6 +6875,337 @@
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
 					(reference "IC9")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C_Small")
+		(at 218.44 142.24 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "24147d9d-093e-41e6-803c-ad00b690f536")
+		(property "Reference" "C93"
+			(at 218.44 139.7 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "227 NP"
+			(at 218.44 144.78 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Capacitor_THT:CP_Radial_D8.0mm_P3.50mm"
+			(at 218.44 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 218.44 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "The right output's coupling capacitor (1.8D): 220 uF, non-polarised (bipolar electrolytic)"
+			(at 218.44 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "b016542b-096e-4aea-8ec2-a78392bfdd64")
+		)
+		(pin "2"
+			(uuid "85685854-c885-4ffb-9a42-4b7074bf491d")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "C93")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:-12V")
+		(at 165.1 154.94 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "27100ae4-6de5-4179-9868-dff44e1e8614")
+		(property "Reference" "#PWR0102"
+			(at 165.1 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "-12V"
+			(at 165.1 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 165.1 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 165.1 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 165.1 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "623ac84e-b56a-477b-b444-ce6c70dbc4bc")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR0102")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:+12V")
+		(at 154.94 144.78 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "2948900f-85ee-4eeb-adfb-91473e2ee66c")
+		(property "Reference" "#PWR099"
+			(at 154.94 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "+12V"
+			(at 154.94 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 154.94 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 154.94 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 154.94 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "14d86e95-3b33-4142-b653-b26b3723e21b")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR099")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C_Small")
+		(at 165.1 149.86 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "2e8c35f4-1d98-414c-8b3e-019acd2e1f69")
+		(property "Reference" "C85"
+			(at 166.37 148.59 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "104"
+			(at 166.37 151.13 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
+			(at 165.1 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 165.1 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Decoupling (1.8D) at IC9 (LF353), -12 V"
+			(at 165.1 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "94109478-23d7-4688-aaba-fa6e5f0bd296")
+		)
+		(pin "2"
+			(uuid "007bcd4e-f0d9-4a45-9011-bb88234b4468")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "C85")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 207.01 124.46 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "30ca106c-c860-473b-952c-b23ba28aac10")
+		(property "Reference" "R30"
+			(at 207.01 121.92 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "330"
+			(at 207.01 127 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
+			(at 207.01 124.46 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 207.01 124.46 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 207.01 124.46 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "ee682adc-62c7-48bd-9c58-59d767e15780")
+		)
+		(pin "2"
+			(uuid "31ad580b-89c5-449b-8e1e-11310cd3accb")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "R30")
 					(unit 1)
 				)
 			)
@@ -6917,6 +7490,134 @@
 		)
 	)
 	(symbol
+		(lib_id "power:GND")
+		(at 114.3 154.94 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "3ac4aac4-cb0d-4ad6-83a5-3a384f28ee80")
+		(property "Reference" "#PWR092"
+			(at 114.3 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 114.3 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 114.3 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 114.3 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 114.3 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "1b883859-eb7e-48e1-a6bd-8a86b6441bce")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR092")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GNDA")
+		(at 226.06 152.4 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "3c9b9b17-da48-4fef-ab88-fec332f38bf1")
+		(property "Reference" "#PWR0113"
+			(at 226.06 152.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GNDA"
+			(at 226.06 157.48 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 226.06 152.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 226.06 152.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 226.06 152.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "bdd3f25c-9bde-4b60-9a20-46d9eaa99313")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR0113")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Device:C_Small")
 		(at 97.79 69.85 0)
 		(unit 1)
@@ -7090,6 +7791,73 @@
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
 					(reference "U41")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 207.01 142.24 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "4ed9328a-569e-447b-9815-38031508a20b")
+		(property "Reference" "R31"
+			(at 207.01 139.7 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "330"
+			(at 207.01 144.78 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
+			(at 207.01 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 207.01 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 207.01 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "f5520ec9-105f-4945-8c05-f7e0bd950793")
+		)
+		(pin "2"
+			(uuid "1da3f680-104b-4491-bd03-2b2b36cd6fa0")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "R31")
 					(unit 1)
 				)
 			)
@@ -7309,32 +8077,16 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:R")
-		(at 209.55 95.25 90)
+		(lib_id "power:GNDA")
+		(at 165.1 144.78 180)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
-		(uuid "50314bff-d442-45ac-9330-805e518d690e")
-		(property "Reference" "R16"
-			(at 209.55 95.25 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "103"
-			(at 214.376 93.98 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
-			(at 209.55 97.028 90)
+		(uuid "56ea6e21-d909-4dad-82f2-e02ec94440c0")
+		(property "Reference" "#PWR0101"
+			(at 165.1 144.78 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7342,8 +8094,16 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" "~"
-			(at 209.55 95.25 0)
+		(property "Value" "GNDA"
+			(at 165.1 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 165.1 144.78 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7351,8 +8111,8 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
-			(at 209.55 95.25 0)
+		(property "Datasheet" ""
+			(at 165.1 144.78 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7360,217 +8120,21 @@
 				(hide yes)
 			)
 		)
-		(pin "2"
-			(uuid "c028802e-7331-4894-b67f-f627c9a0c613")
+		(property "Description" ""
+			(at 165.1 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
 		)
 		(pin "1"
-			(uuid "e449eb3e-e790-42e5-a91d-f266b3d02d68")
+			(uuid "3e1e26f5-f8f9-4d45-b6ca-bcad8fbedd6f")
 		)
 		(instances
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "R16")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:R")
-		(at 209.55 67.31 90)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "5b91ec19-6018-4e4c-adee-79d7806d0c64")
-		(property "Reference" "R12"
-			(at 209.55 67.31 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "103"
-			(at 214.376 66.04 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
-			(at 209.55 69.088 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 209.55 67.31 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Resistor"
-			(at 209.55 67.31 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "2"
-			(uuid "094a7f04-e35b-484f-a059-02c573373a81")
-		)
-		(pin "1"
-			(uuid "0bd85ec7-13fb-405d-b5da-48ee6b47d02d")
-		)
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "R12")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:R")
-		(at 209.55 64.77 90)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "5dc0de79-001f-474c-9cb3-9c995f77839e")
-		(property "Reference" "R11"
-			(at 209.55 64.77 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "103"
-			(at 214.376 63.5 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
-			(at 209.55 66.548 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 209.55 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Resistor"
-			(at 209.55 64.77 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "2"
-			(uuid "997a576a-a957-42fe-b955-dfec78ef1b03")
-		)
-		(pin "1"
-			(uuid "dc8d5c02-9af5-414f-bbfe-1a24a41db7f9")
-		)
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "R11")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:R")
-		(at 209.55 90.17 90)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "60ef2a82-d7a1-4c53-8798-c4322b4ace8b")
-		(property "Reference" "R14"
-			(at 209.55 90.17 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "103"
-			(at 214.376 88.9 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
-			(at 209.55 91.948 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 209.55 90.17 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Resistor"
-			(at 209.55 90.17 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "2"
-			(uuid "0d3c04a7-9e8d-46af-a49d-0ca938640bb8")
-		)
-		(pin "1"
-			(uuid "fb1a82c8-9a0c-4204-9701-df8d4b19b890")
-		)
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "R14")
+					(reference "#PWR0101")
 					(unit 1)
 				)
 			)
@@ -7708,6 +8272,70 @@
 		)
 	)
 	(symbol
+		(lib_id "power:GNDA")
+		(at 226.06 134.62 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "6776804f-367f-43d0-af8b-d7ac80bd9182")
+		(property "Reference" "#PWR0112"
+			(at 226.06 134.62 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GNDA"
+			(at 226.06 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 226.06 134.62 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 226.06 134.62 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 226.06 134.62 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "bd8b6fbb-3f25-4850-b742-446da76e21dd")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR0112")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "power:GND")
 		(at 34.29 156.21 0)
 		(unit 1)
@@ -7774,32 +8402,34 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:R")
-		(at 209.55 100.33 90)
+		(lib_id "Device:C_Small")
+		(at 154.94 149.86 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
-		(uuid "6e1a9d03-9d86-4b14-91e9-bf00fb8031a0")
-		(property "Reference" "R18"
-			(at 209.55 100.33 90)
+		(uuid "83308762-e670-4383-8051-43e03581860b")
+		(property "Reference" "C84"
+			(at 156.21 148.59 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(justify left)
 			)
 		)
-		(property "Value" "103"
-			(at 214.376 99.06 90)
+		(property "Value" "104"
+			(at 156.21 151.13 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(justify left)
 			)
 		)
-		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
-			(at 209.55 102.108 90)
+		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
+			(at 154.94 149.86 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7808,7 +8438,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 209.55 100.33 0)
+			(at 154.94 149.86 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7816,57 +8446,121 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
-			(at 209.55 100.33 0)
+		(property "Description" "Decoupling (1.8D) at IC9 (LF353), +12 V"
+			(at 154.94 149.86 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
 				(hide yes)
 			)
-		)
-		(pin "2"
-			(uuid "c8bb8778-0590-4324-8f36-4019b453b237")
 		)
 		(pin "1"
-			(uuid "dc2d5ddf-36a9-4812-abff-006c4e566118")
+			(uuid "2655ce20-e429-49c3-8961-bfe1289d42a1")
+		)
+		(pin "2"
+			(uuid "dcf9dbad-43d7-48c8-8ea1-4cd20cbec5de")
 		)
 		(instances
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "R18")
+					(reference "C84")
 					(unit 1)
 				)
 			)
 		)
 	)
 	(symbol
-		(lib_id "Device:R")
-		(at 209.55 57.15 90)
+		(lib_id "power:GNDA")
+		(at 134.62 154.94 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
-		(uuid "88c94f97-b0c7-4058-a768-31bf730f9407")
-		(property "Reference" "R8"
-			(at 209.55 57.15 90)
+		(uuid "857c6ce0-eaf5-4ed8-a1c2-97411b63649e")
+		(property "Reference" "#PWR096"
+			(at 134.62 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GNDA"
+			(at 134.62 160.02 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
 			)
 		)
-		(property "Value" "103"
-			(at 214.376 55.88 90)
+		(property "Footprint" ""
+			(at 134.62 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 134.62 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 134.62 154.94 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
 			)
 		)
-		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
-			(at 209.55 58.928 90)
+		(pin "1"
+			(uuid "b1cf9f4c-81ea-4695-8f05-c22fcb8a01e2")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR096")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C_Small")
+		(at 218.44 124.46 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "86a663b8-2f27-48db-bb87-a57525a50d29")
+		(property "Reference" "C92"
+			(at 218.44 121.92 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "227 NP"
+			(at 218.44 127 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Capacitor_THT:CP_Radial_D8.0mm_P3.50mm"
+			(at 218.44 124.46 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7875,7 +8569,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 209.55 57.15 0)
+			(at 218.44 124.46 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7883,25 +8577,25 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
-			(at 209.55 57.15 0)
+		(property "Description" "The left output's coupling capacitor (1.8D): 220 uF, non-polarised (bipolar electrolytic)"
+			(at 218.44 124.46 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
 				(hide yes)
 			)
-		)
-		(pin "2"
-			(uuid "dae7bcb6-2ea6-4c90-b636-97bbd32f6847")
 		)
 		(pin "1"
-			(uuid "78abcded-cdac-4f21-a6e6-58c18e5bd354")
+			(uuid "fe56e1bf-3c31-4b1a-8d7a-2751feb9cf14")
+		)
+		(pin "2"
+			(uuid "cf2aacce-eb05-4248-a86e-2d4f7b57070b")
 		)
 		(instances
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "R8")
+					(reference "C92")
 					(unit 1)
 				)
 			)
@@ -8136,7 +8830,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 209.55 87.63 90)
+		(at 209.55 95.25 90)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -8144,7 +8838,7 @@
 		(dnp no)
 		(uuid "8fc38ae9-c4d9-491b-ad7b-266f257f2e05")
 		(property "Reference" "R13"
-			(at 209.55 87.63 90)
+			(at 209.55 95.25 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8152,7 +8846,7 @@
 			)
 		)
 		(property "Value" "103"
-			(at 214.376 86.36 90)
+			(at 214.376 93.98 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8160,7 +8854,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
-			(at 209.55 89.408 90)
+			(at 209.55 97.028 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8169,7 +8863,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 209.55 87.63 0)
+			(at 209.55 95.25 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8178,7 +8872,7 @@
 			)
 		)
 		(property "Description" "Resistor"
-			(at 209.55 87.63 0)
+			(at 209.55 95.25 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8224,6 +8918,7 @@
 				(font
 					(size 1.27 1.27)
 				)
+				(hide yes)
 			)
 		)
 		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
@@ -8263,6 +8958,137 @@
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
 					(reference "R19")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C_Polarized_Small_US")
+		(at 193.04 105.41 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "934f4ee3-d80e-4af2-8de4-c203390e6978")
+		(property "Reference" "C91"
+			(at 193.04 109.22 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "106"
+			(at 193.04 111.76 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Capacitor_THT:CP_Radial_D5.0mm_P2.50mm"
+			(at 193.04 105.41 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 193.04 105.41 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "The YM3012's DC (its COM, about 2.5 V) kept out of the summer (1.8D), in series with R4"
+			(at 193.04 105.41 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "61bcc133-71af-4046-910d-15a754eeb62c")
+		)
+		(pin "2"
+			(uuid "28776321-73f8-4a74-923b-dd95158f635d")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "C91")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:-12V")
+		(at 144.78 154.94 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "9c896828-a1c9-4208-9aa5-abd4d3460f80")
+		(property "Reference" "#PWR098"
+			(at 144.78 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "-12V"
+			(at 144.78 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 144.78 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 144.78 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 144.78 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "4f4f5603-fe7d-4dcb-926e-5a1f5b13d738")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR098")
 					(unit 1)
 				)
 			)
@@ -8337,32 +9163,32 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:R")
-		(at 209.55 54.61 90)
+		(lib_id "Device:C_Polarized_Small_US")
+		(at 199.39 67.31 90)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
-		(uuid "a4199c65-f782-4995-ba98-4afa4fa43493")
-		(property "Reference" "R7"
-			(at 209.55 54.61 90)
+		(uuid "a2104240-0888-4d01-9dbb-e06a2fd1c180")
+		(property "Reference" "C90"
+			(at 199.39 63.5 90)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
 			)
 		)
-		(property "Value" "103"
-			(at 214.376 53.34 90)
+		(property "Value" "106"
+			(at 199.39 71.12 90)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
 			)
 		)
-		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
-			(at 209.55 56.388 90)
+		(property "Footprint" "Capacitor_THT:CP_Radial_D5.0mm_P2.50mm"
+			(at 199.39 67.31 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8371,7 +9197,74 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 209.55 54.61 0)
+			(at 199.39 67.31 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "The YM3012's DC (its COM, about 2.5 V) kept out of the summer (1.8D), in series with R5"
+			(at 199.39 67.31 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "94ad6651-579c-4800-8965-dbbd5cfe3412")
+		)
+		(pin "2"
+			(uuid "3c7d8549-7af6-46ba-aac9-7c99ba5a768b")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "C90")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 209.55 59.69 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "a4199c65-f782-4995-ba98-4afa4fa43493")
+		(property "Reference" "R7"
+			(at 209.55 59.69 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "103"
+			(at 214.376 58.42 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
+			(at 209.55 61.468 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 209.55 59.69 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8380,7 +9273,7 @@
 			)
 		)
 		(property "Description" "Resistor"
-			(at 209.55 54.61 0)
+			(at 209.55 59.69 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8398,6 +9291,70 @@
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
 					(reference "R7")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GNDA")
+		(at 177.8 143.51 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "a8a7b3f7-7b7e-475a-9616-eae54f7ad6ac")
+		(property "Reference" "#PWR0103"
+			(at 177.8 143.51 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GNDA"
+			(at 177.8 138.43 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 177.8 143.51 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 177.8 143.51 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 177.8 143.51 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "6190e9ad-5ce2-4353-9a74-d4f7a85a1aa7")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR0103")
 					(unit 1)
 				)
 			)
@@ -8607,31 +9564,166 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 209.55 97.79 90)
+		(at 226.06 146.05 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
-		(uuid "ba22e051-442a-4d55-9669-07e20be85d55")
-		(property "Reference" "R17"
-			(at 209.55 97.79 90)
+		(uuid "b59fe402-89db-4726-9a7a-1c40e84e10ff")
+		(property "Reference" "R33"
+			(at 228.6 146.05 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(justify left)
 			)
 		)
 		(property "Value" "103"
-			(at 214.376 96.52 90)
+			(at 228.6 148.59 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
+			(at 226.06 146.05 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 226.06 146.05 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 226.06 146.05 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "cee558db-1bdb-4c21-ad07-642241512c22")
+		)
+		(pin "2"
+			(uuid "c1adb379-151a-4527-9e63-3f39dde7c988")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "R33")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 124.46 154.94 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "bd99a6d0-4e00-4469-b732-32779dfb5581")
+		(property "Reference" "#PWR094"
+			(at 124.46 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 124.46 160.02 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
 			)
 		)
-		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
-			(at 209.55 99.568 90)
+		(property "Footprint" ""
+			(at 124.46 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 124.46 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 124.46 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "87037255-6f6c-4124-9397-a5345d4e8c30")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR094")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C_Small")
+		(at 114.3 149.86 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "be460c1c-779d-45b8-924e-d884490acc4e")
+		(property "Reference" "C80"
+			(at 115.57 148.59 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "104"
+			(at 115.57 151.13 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
+			(at 114.3 149.86 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8640,7 +9732,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 209.55 97.79 0)
+			(at 114.3 149.86 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8648,25 +9740,25 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
-			(at 209.55 97.79 0)
+		(property "Description" "Decoupling (1.8D) at U38 (YM2151)"
+			(at 114.3 149.86 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
 				(hide yes)
 			)
-		)
-		(pin "2"
-			(uuid "21586ea6-7dc6-4fe4-9a98-8e2488f53232")
 		)
 		(pin "1"
-			(uuid "80bd8081-5ef1-48e9-8d1f-95655e0dd236")
+			(uuid "d9533a05-452c-43eb-bcf9-a92a60176f48")
+		)
+		(pin "2"
+			(uuid "cad837b8-0fc8-40ed-8590-f2d5a54ca691")
 		)
 		(instances
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "R17")
+					(reference "C80")
 					(unit 1)
 				)
 			)
@@ -8674,31 +9766,102 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 209.55 62.23 90)
+		(at 226.06 128.27 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
-		(uuid "bdaa2ed9-fcdb-4fc1-93db-f1fcc6861d96")
-		(property "Reference" "R10"
-			(at 209.55 62.23 90)
+		(uuid "c10c0ea1-8efa-483e-90fd-e6b486b5bc8a")
+		(property "Reference" "R32"
+			(at 228.6 128.27 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(justify left)
 			)
 		)
 		(property "Value" "103"
-			(at 214.376 60.96 90)
+			(at 228.6 130.81 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(justify left)
 			)
 		)
 		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
-			(at 209.55 64.008 90)
+			(at 226.06 128.27 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 226.06 128.27 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 226.06 128.27 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "6218808b-b704-4bb3-993a-afa59c156ba1")
+		)
+		(pin "2"
+			(uuid "fc7162a4-cdd2-4e8f-9020-cf4c529634f5")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "R32")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C_Small")
+		(at 124.46 149.86 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "c6aff8d6-36d5-4ede-9cd0-07cc04ceac16")
+		(property "Reference" "C81"
+			(at 125.73 148.59 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "104"
+			(at 125.73 151.13 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
+			(at 124.46 149.86 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8707,7 +9870,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 209.55 62.23 0)
+			(at 124.46 149.86 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8715,25 +9878,25 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor"
-			(at 209.55 62.23 0)
+		(property "Description" "Decoupling (1.8D) at U41 (YM3012)"
+			(at 124.46 149.86 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
 				(hide yes)
 			)
-		)
-		(pin "2"
-			(uuid "f4052fd1-fe73-428e-9e2d-57f71410c3fb")
 		)
 		(pin "1"
-			(uuid "48247a14-2892-4d9d-93bb-411f79f778ee")
+			(uuid "8cbe000b-14c5-43af-9d70-a951387bf33d")
+		)
+		(pin "2"
+			(uuid "ed525b34-8d43-43c6-93f7-a933d4f1a2ce")
 		)
 		(instances
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "R10")
+					(reference "C81")
 					(unit 1)
 				)
 			)
@@ -8741,141 +9904,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 209.55 92.71 90)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "c457be07-17e0-4dbb-95ae-91a29833a0f1")
-		(property "Reference" "R15"
-			(at 209.55 92.71 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "103"
-			(at 214.376 91.44 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
-			(at 209.55 94.488 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 209.55 92.71 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Resistor"
-			(at 209.55 92.71 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "2"
-			(uuid "c3a2a29c-a129-4fb2-901c-85ff142d21f1")
-		)
-		(pin "1"
-			(uuid "8217ce7d-f4c1-49a5-bc8d-12086215d827")
-		)
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "R15")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:R")
-		(at 209.55 59.69 90)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "c581fbcb-4a88-4635-9ec8-3cf5a88ae7e7")
-		(property "Reference" "R9"
-			(at 209.55 59.69 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "103"
-			(at 214.376 58.42 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
-			(at 209.55 61.468 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 209.55 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Resistor"
-			(at 209.55 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "2"
-			(uuid "3ff696db-c0c4-4db7-adb7-483dddd8c471")
-		)
-		(pin "1"
-			(uuid "855e1961-de66-4d58-a880-02c0bf5e3f6b")
-		)
-		(instances
-			(project "hydra-16"
-				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
-					(reference "R9")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:R")
-		(at 209.55 69.85 90)
+		(at 209.55 67.31 90)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -8883,7 +9912,7 @@
 		(dnp no)
 		(uuid "c8c7d24e-80a3-46dc-8e2e-3252a5faaaee")
 		(property "Reference" "R5"
-			(at 209.55 69.85 90)
+			(at 209.55 67.31 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8891,7 +9920,7 @@
 			)
 		)
 		(property "Value" "103"
-			(at 214.376 68.58 90)
+			(at 214.376 66.04 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8899,7 +9928,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
-			(at 209.55 71.628 90)
+			(at 209.55 69.09 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8908,7 +9937,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 209.55 69.85 0)
+			(at 209.55 67.31 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8917,7 +9946,7 @@
 			)
 		)
 		(property "Description" "Resistor"
-			(at 209.55 69.85 0)
+			(at 209.55 67.31 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9004,6 +10033,75 @@
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
 					(reference "C50")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 177.8 149.86 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "cdbe1acd-d4a5-4490-9e4a-722929eaccc2")
+		(property "Reference" "R29"
+			(at 180.34 148.59 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "0"
+			(at 180.34 151.13 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
+			(at 177.8 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 177.8 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 177.8 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "5aeeeadb-5971-4543-bbfa-8aba5d034383")
+		)
+		(pin "2"
+			(uuid "05000dbf-4be4-4c1c-adfc-6d8d95e4943e")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "R29")
 					(unit 1)
 				)
 			)
@@ -9140,6 +10238,203 @@
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
 					(reference "U38")
 					(unit 2)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:+5V")
+		(at 124.46 144.78 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "d570eefe-caa6-4001-a0ff-9543e058d2da")
+		(property "Reference" "#PWR093"
+			(at 124.46 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "+5V"
+			(at 124.46 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 124.46 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 124.46 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 124.46 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "2c4277dd-0f95-42bc-8ed3-d59ad7b111fc")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR093")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C_Small")
+		(at 134.62 149.86 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "e5c7f175-13a2-4099-8125-043ebcec163e")
+		(property "Reference" "C82"
+			(at 135.89 148.59 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "104"
+			(at 135.89 151.13 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
+			(at 134.62 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 134.62 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Decoupling (1.8D) at U42 (TL074), +12 V"
+			(at 134.62 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "2a58e768-5ab2-45ed-8e57-5117f1ab4d21")
+		)
+		(pin "2"
+			(uuid "cb84076e-d7e3-448f-8771-7d747bb5614b")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "C82")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:+12V")
+		(at 134.62 144.78 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "e5d068ec-42e4-4f20-960d-6451054edc5e")
+		(property "Reference" "#PWR095"
+			(at 134.62 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "+12V"
+			(at 134.62 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 134.62 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 134.62 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 134.62 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "8c2ab4d7-5c29-42f9-bba8-ccfd49f2fe9f")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR095")
+					(unit 1)
 				)
 			)
 		)
@@ -9358,8 +10653,77 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:C_Small")
+		(at 144.78 149.86 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "eee81596-8c37-4060-a9e0-6f72add274c2")
+		(property "Reference" "C83"
+			(at 146.05 148.59 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "104"
+			(at 146.05 151.13 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
+			(at 144.78 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 144.78 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Decoupling (1.8D) at U42 (TL074), -12 V"
+			(at 144.78 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "655da1d7-6d20-4114-a361-510f9b5abc22")
+		)
+		(pin "2"
+			(uuid "3d47776c-cfdc-4266-a144-59fcaef42468")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "C83")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "dk_Rectangular-Connectors-Headers-Male-Pins:22-23-2021")
-		(at 195.58 45.72 180)
+		(at 195.58 48.26 180)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -9367,7 +10731,7 @@
 		(dnp no)
 		(uuid "f30e661b-e06f-40c0-b07d-c14d8470431c")
 		(property "Reference" "J29"
-			(at 192.532 42.164 0)
+			(at 192.532 44.704 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9375,8 +10739,8 @@
 				(justify right)
 			)
 		)
-		(property "Value" "Audio In 6"
-			(at 197.612 44.196 0)
+		(property "Value" "Audio In"
+			(at 197.612 46.736 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9385,16 +10749,6 @@
 			)
 		)
 		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_2x01_P2.54mm_Vertical"
-			(at 190.5 50.8 0)
-			(effects
-				(font
-					(size 1.524 1.524)
-				)
-				(justify left)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "https://media.digikey.com/pdf/Data%20Sheets/Molex%20PDFs/A-6373-N_Series_Dwg_2010-12-03.pdf"
 			(at 190.5 53.34 0)
 			(effects
 				(font
@@ -9404,16 +10758,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "CONN HEADER VERT 2POS 2.54MM"
-			(at 195.58 45.72 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Digi-Key_PN" "WM4200-ND"
+		(property "Datasheet" "https://media.digikey.com/pdf/Data%20Sheets/Molex%20PDFs/A-6373-N_Series_Dwg_2010-12-03.pdf"
 			(at 190.5 55.88 0)
 			(effects
 				(font
@@ -9423,7 +10768,16 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "22-23-2021"
+		(property "Description" "CONN HEADER VERT 2POS 2.54MM"
+			(at 195.58 48.26 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digi-Key_PN" "WM4200-ND"
 			(at 190.5 58.42 0)
 			(effects
 				(font
@@ -9433,7 +10787,7 @@
 				(hide yes)
 			)
 		)
-		(property "Category" "Connectors, Interconnects"
+		(property "MPN" "22-23-2021"
 			(at 190.5 60.96 0)
 			(effects
 				(font
@@ -9443,7 +10797,7 @@
 				(hide yes)
 			)
 		)
-		(property "Family" "Rectangular Connectors - Headers, Male Pins"
+		(property "Category" "Connectors, Interconnects"
 			(at 190.5 63.5 0)
 			(effects
 				(font
@@ -9453,7 +10807,7 @@
 				(hide yes)
 			)
 		)
-		(property "DK_Datasheet_Link" "https://media.digikey.com/pdf/Data%20Sheets/Molex%20PDFs/A-6373-N_Series_Dwg_2010-12-03.pdf"
+		(property "Family" "Rectangular Connectors - Headers, Male Pins"
 			(at 190.5 66.04 0)
 			(effects
 				(font
@@ -9463,7 +10817,7 @@
 				(hide yes)
 			)
 		)
-		(property "DK_Detail_Page" "/product-detail/en/molex/22-23-2021/WM4200-ND/26667"
+		(property "DK_Datasheet_Link" "https://media.digikey.com/pdf/Data%20Sheets/Molex%20PDFs/A-6373-N_Series_Dwg_2010-12-03.pdf"
 			(at 190.5 68.58 0)
 			(effects
 				(font
@@ -9473,7 +10827,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description_1" "CONN HEADER VERT 2POS 2.54MM"
+		(property "DK_Detail_Page" "/product-detail/en/molex/22-23-2021/WM4200-ND/26667"
 			(at 190.5 71.12 0)
 			(effects
 				(font
@@ -9483,7 +10837,7 @@
 				(hide yes)
 			)
 		)
-		(property "Manufacturer" "Molex"
+		(property "Description_1" "CONN HEADER VERT 2POS 2.54MM"
 			(at 190.5 73.66 0)
 			(effects
 				(font
@@ -9493,8 +10847,18 @@
 				(hide yes)
 			)
 		)
-		(property "Status" "Active"
+		(property "Manufacturer" "Molex"
 			(at 190.5 76.2 0)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+		(property "Status" "Active"
+			(at 190.5 78.74 0)
 			(effects
 				(font
 					(size 1.524 1.524)
@@ -9513,6 +10877,70 @@
 			(project "hydra-16"
 				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
 					(reference "J29")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GNDA")
+		(at 144.78 144.78 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "feaaef81-fa8a-4121-9415-006f7f1bd1c0")
+		(property "Reference" "#PWR097"
+			(at 144.78 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GNDA"
+			(at 144.78 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 144.78 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 144.78 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 144.78 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "ace3672d-a206-47ac-86f6-bed3a8e28292")
+		)
+		(instances
+			(project "hydra-16"
+				(path "/ef29fc71-3fec-48b5-8a1a-46bee537a98c/18057e61-facc-4a14-82c5-5f534ac6d8bb"
+					(reference "#PWR097")
 					(unit 1)
 				)
 			)
@@ -9587,7 +11015,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 209.55 52.07 90)
+		(at 209.55 57.15 90)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -9595,7 +11023,7 @@
 		(dnp no)
 		(uuid "ff86cf95-2cb9-4058-b5c3-2c535f525d4d")
 		(property "Reference" "R6"
-			(at 209.55 52.07 90)
+			(at 209.55 57.15 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9603,7 +11031,7 @@
 			)
 		)
 		(property "Value" "103"
-			(at 214.376 50.8 90)
+			(at 214.376 55.88 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9611,7 +11039,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P5.08mm_Horizontal"
-			(at 209.55 53.848 90)
+			(at 209.55 58.928 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9620,7 +11048,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 209.55 52.07 0)
+			(at 209.55 57.15 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9629,7 +11057,7 @@
 			)
 		)
 		(property "Description" "Resistor"
-			(at 209.55 52.07 0)
+			(at 209.55 57.15 0)
 			(effects
 				(font
 					(size 1.27 1.27)
