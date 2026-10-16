@@ -5,7 +5,8 @@
 ** effects, summaries and words.
 **
 ** So far: RS_HELLO (its name, its round), RS_LOAD_PC (hmchar's file), RS_TEST (a purpose made a skill or an
-** attribute, the circumstances' steps 5 points each), RS_HARM (a fall, a trap's strike, a burn, a blow, a hand hurt
+** attribute, the circumstances' steps 5 points each; words to a creature in a tongue, which it must speak: its own,
+** common, and its file's "language" lines), RS_HARM (a fall, a trap's strike, a burn, a blow, a hand hurt
 ** by its blow at a thing: injuries on the sheet), RS_DESCRIBE (the character's sheet, its injuries with it; b 1: its
 ** short lines, for the map's panel, each 15 characters at most; b 2: the last harm's words), RS_SAVE (the sheet,
 ** its injuries and all).  The sheet's words and the harm are overlay 1's (sheet.c: DIR/dq0harn.ovl, read into a
@@ -28,6 +29,8 @@
 
 harn_char pc;                                   /* The character */
 char name[16], calling[20];
+static char tongues[32] = " common";             /* The tongues it speaks, a space before each: its own (the game's
+                                                **   stand-in for every character's), and its file's "language" lines */
 
 /* ---- Words into a reply (from the overlay too: s may be in the window, where the hub is, so each character's
 ** taken with s's bank in, and put with the hub's) */
@@ -160,6 +163,7 @@ static const unsigned char purpose[P_THEME] = {
     HARN_WEA,                                                           /* Appraising: by its craft (appraiser) */
     HARN_STL,                                                           /* Concealment: HarnMaster's Stealth */
     HARN_LCK,                                                           /* A mechanism made out: Lockcraft (traps) */
+    HARN_NTR,                                                           /* Guile: Intrigue */
 };
 
 /* The skill that knows a thing (rs.h's AP_*): weapons and armour Weaponcraft, metal Metalcraft, wood Timbercraft,
@@ -275,6 +279,8 @@ static void __fastcall__ own_line (char* l)
         strncpy (name, l + 5, sizeof name - 1);
     } else if (!strncmp (l, "occupation ", 11)) {
         strncpy (calling, l + 11, sizeof calling - 1);
+    } else if (!strncmp (l, "language ", 9) && strlen (tongues) + strlen (l + 8) < sizeof tongues) {
+        strcat (tongues, l + 8);
     }
 }
 
@@ -300,6 +306,8 @@ static void __fastcall__ load_pc (struct req* r)
 static void __fastcall__ save_pc (struct req* r)
 {
     static char line[48];
+    char* p;
+    char* e;
     int fd;
 
     r->result = 1;
@@ -313,8 +321,30 @@ static void __fastcall__ save_pc (struct req* r)
     strcpy (line, "occupation ");
     strcat (line, calling);
     harn_write_line (fd, line);
+    for (p = tongues + 7; *p; p = e) {             /* (Its tongues but its own: "language" lines) */
+        e = strchr (p + 1, ' ');
+        e = e ? e : p + strlen (p);
+        strcpy (line, "language");
+        strncat (line, p, e - p);
+        harn_write_line (fd, line);
+    }
     close (fd);
     r->result = 0;
+}
+
+/* Whether it speaks tongue t (a word of tongues, a space before it) */
+static unsigned char __fastcall__ speaks (const char* t)
+{
+    char* p = tongues;
+    unsigned char n = strlen (t);
+
+    while ((p = strstr (p, t)) != 0) {
+        if (p[-1] == ' ' && (!p[n] || p[n] == ' ')) {
+            return 1;
+        }
+        ++p;
+    }
+    return 0;
 }
 
 /* ---- A request answered */
@@ -365,6 +395,13 @@ static void __fastcall__ answer (struct req* r)
         if (r->a == P_PICKLOCK && !has ("picks")) {    /* (Lockcraft wants its tools: Skills 23) */
             r->result = 1;
             break;
+        }
+        if ((r->a == P_PERSUADE || r->a == P_INTIMIDATE || r->a == P_DECEIVE) && r->text[0]) {   /* (Words in a
+                                                **   tongue: one it speaks, or nothing) */
+            if (!speaks (r->text)) {
+                r->result = 2;
+                break;
+            }
         }
         r->grade = test (&pc, r->a, r->steps);
         break;

@@ -199,11 +199,41 @@ struct actor {
     unsigned char   attitude;                   /* Its attitude to the character (AT_*, its record's: the denizens'
                                                 **   task's; a hostile one fights it) */
     unsigned char   faction;                    /* Its faction (the denizens' task's: kinds.txt's, the theme's) */
+    unsigned char   foe;                        /* An actor of a faction hostile to its own, met (near, sensed): it
+                                                **   plus 1, or 0 (till they fight, they keep off one another) */
 };
 enum { AT_HOSTILE, AT_UNFRIENDLY, AT_WARY, AT_INDIFFERENT, AT_FRIENDLY, AT_ALLIED };   /* An attitude, the worst
                                                 **   first (DENIZENS.md): attacks on sight; threatens, keeps off;
                                                 **   watches, won't help; minds its own business; talks, helps; comes
                                                 **   with the character, takes its requests */
+
+/* The character's way with a denizen (the UI asks the denizens' task: the hub's sway, REQ_*, its doorbell; the
+** denizens' task finds the one meant, among those the character sees, by its name or its kind's, and asks the
+** referee in the UI's slot, lent it while the UI waits): words to sway it (the referee's test, by the kind's mind:
+** an animal's by Animalcraft alone; words want a tongue in common), a request to an ally, a name given to one, a
+** look at how it seems, a blow (a stand-in for the fights) */
+enum { SW_LOOK, SW_TALK, SW_PERSUADE, SW_DECEIVE, SW_THREATEN, SW_CALM, SW_BEFRIEND, SW_ORDER, SW_NAME, SW_ATTACK };
+enum { OR_NONE, OR_FOLLOW, OR_WAIT, OR_HOME, OR_FETCH };   /* An ally's request (SW_ORDER's): follow the character,
+                                                **   wait where it is, go back to its own ways, fetch a thing */
+enum { SR_OK, SR_NONE, SR_FAR, SR_TONGUE, SR_BEAST, SR_MINDLESS, SR_AS_FAR, SR_NOT_ALLY, SR_CANT };   /* A sway's
+                                                **   result: done (a test's: grade, was, now), none such in sight,
+                                                **   too far (an animal's out of reach), no tongue in common, an
+                                                **   animal (words don't reach it), mindless, as far as that way
+                                                **   goes, not an ally, it can't (yet) */
+struct sway {
+    volatile unsigned char state;               /* REQ_* */
+    unsigned char   how;                        /* SW_* */
+    unsigned char   order;                      /* OR_* (SW_ORDER's) */
+    char            word[16];                   /* The one meant (a name, a kind's word; "": the nearest, or every
+                                                **   ally, an order's) */
+    char            word2[16];                  /* A name given; a thing to fetch */
+    unsigned char   result;                     /* (The reply's:) SR_* */
+    signed char     grade;                      /*   the referee's (G_*: 0, no test) */
+    unsigned char   was, now;                   /*   its attitude before and after (AT_*) */
+    unsigned char   beast;                      /*   its mind: 1 an animal */
+    char            name[12];                   /*   its name (an ally's own, capitalised; else its kind's) */
+    unsigned        t;                          /*   the tenths it took the character */
+};
 
 #define IQ_SIZE         16                      /* The UI's intents */
 #define EQ_SIZE         128                     /* The world's events (each reader its own place) */
@@ -281,6 +311,7 @@ struct hub {                                    /* Bank 0, at $8000 */
     ** reader keeps its own place, as in the world's; nobody waits for them, and each perceives them or not by its own
     ** senses (DENIZENS.md) */
     volatile unsigned dq_head;                  /* Events written so far (the denizens' task's) */
+    struct sway     sway;                       /* The character's way with a denizen (the UI's request) */
 };
 
 #define HUB     ((struct hub*) HUB_WINDOW)

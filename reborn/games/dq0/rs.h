@@ -39,6 +39,10 @@ enum {
                                                 **   a search */
     P_ASSESS,                                   /* A mechanism made out (a trap's, before it's disarmed: never
                                                 **   deadly, however it goes) */
+    P_DECEIVE,                                  /* Guile: a creature talked round by a tale, a bluff (the persuading
+                                                **   is P_PERSUADE's, a threat P_INTIMIDATE's, an animal P_ANIMALS's;
+                                                **   any of them in words: the text the tongue they're said in, the
+                                                **   reply's result 2 if the character doesn't speak it) */
     P_THEME,                                    /* A theme's own, P_THEME + n (named in its data) */
 };
 

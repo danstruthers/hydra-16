@@ -1,0 +1,18 @@
+# factions.txt - (dq0d) the denizens' factions: a stand-in theme's, till themes are data of their own (a theme's
+# factions take their place: kinds.txt names each kind's).  make.js puts them in the denizens' task's data file after
+# the kinds (lib/dq0/dq0d.dat: 32 bytes a faction, the first none), 7 at most.
+#
+# A line a faction, its fields between bars:
+#   name       as kinds.txt names it (11 letters at most)
+#   tongue     the tongue it speaks (7 at most: the referee's word for it, which the character may speak), or - none
+#   attitude   its attitude to the character as it first meets it: h hostile, u unfriendly, w wary, i indifferent,
+#              f friendly
+#   others     how it stands with the other factions, by name: h hostile, w wary, f friendly (the rest indifferent);
+#              each pair the worse of the two ways it's said
+#
+# name     | tongue | attitude | others
+vermin     | -      | w        | crawlers h, kobolds h, beasts w
+crawlers   | -      | h        | vermin h, kobolds w
+dead       | -      | h        | vermin h, crawlers h, beasts h, kobolds h
+beasts     | -      | w        | kobolds w
+kobolds    | kobold | u        | vermin h, dead h
