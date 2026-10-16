@@ -146,7 +146,7 @@ SRV_FLUSH       = flush                                     ; (srvlib: a reader'
 SRV_OPENED      = opened                                    ;   (a fid made: its window)
 SRV_CLUNKED     = clunked                                   ;   (a fid forgotten: consctl's counted)
 SRV_PRE         = distribute                                ;   (before each request: the keys to the windows)
-SRV_POST        = post                                      ;   (and after it: the terminals painted)
+SRV_POST        = pump                                      ;   (and after it: the terminals painted)
 
 LINE_MAX        = 127           ; A line's length at most (and its LF)
 HIST_N          = 4             ; Each window's history: its lines ...
@@ -380,9 +380,8 @@ cr_ga:      .res        1                                   ;   and the renditio
 cr_gf:      .res        1
 cr_k:       .res        1                                   ; (Scratch)
 chr_pass:   .res        1                                   ; A drawing of the chrome (vt.s's: the time read once)
-tm_pass:    .res        1                                   ; The time read (#t/time): the drawing it's for ...
+tm_pass:    .res        1                                   ; The time made (tm_get): the drawing it's for ...
 tm_buf:     .res        TM_LEN + 1                          ;   its text ...
-tm_fd:      .res        1
 clk_on:     .res        1                                   ; <> 0: the chrome has shown the time (drawn again as the
 clk_due:    .res        2                                   ;   minute changes: this tick)
 ti_buf:     .res        TI_SIZE                             ; A task's TASKINFO (%p: its name)
@@ -414,9 +413,6 @@ ki_tail:    .res        1                                   ;   and distribute's
 ki_pfx:     .res        1                                   ;   <> 0: h_kbin's last key was the prefix (pfx's, the
                                                             ;   irq entry's, for the keyboard)
 ki_wait:    .res        1                                   ; <> 0: a /kbin writer waits for the ring's room
-ki_in:      .res        1                                   ; <> 0: a /kbin write being served, till its pump's
-                                                            ;   done (its writer, kdev's input, is #t's server:
-                                                            ;   it waits for the answer, so tm_get doesn't call it)
 ki_seen:    .res        1                                   ; <> 0: the keyboard has typed (consctl's keyboard
                                                             ;   screen: a program may take the screen alone)
 ki_buf:     .res        KI_SIZE                             ; The keyboard's ring
@@ -2818,12 +2814,7 @@ w_room:
 
 ; After each request: /pc's frame out first, all of it (and a request long past its time given up); then the
 ; terminals painted (vt.s: the serial port's as the send ring has room, not while a frame's going out; the screen's,
-; and its bytes to #v/term).  None while the line is /ser's.  post: srvlib's SRV_POST, a /kbin write's answered after it
-post:
-            jsr         pump
-            stz         ki_in                               ; (The time may be read again: h_kbin's)
-            rts
-
+; and its bytes to #v/term).  None while the line is /ser's
 pump:
             lda         ser_rd
             beq         :+
@@ -3660,18 +3651,16 @@ h_kbdin:
 ; taken the write's count done: the kernel sends the rest in the next request.  Each is taken as the irq entry takes
 ; the serial port's: Ctrl-C and Ctrl-\ notes to the shown window's group at once, the rest into the ring (the prefix
 ; and a digit: the digit's window's group the notes' from then on), for distribute.  No room: E_AGAIN, the writer
-; waiting till distribute takes them (ki_wait).  Served (ki_in, till post), the time isn't read: the writer is #t's
-; server, kdev, busy with its look while it waits for this answer (a call to it would wait for good, the two each
-; waiting for the other: the user's, 2026-10-16, the console frozen as the chrome was drawn); and the keyboard's
-; been seen (ki_seen: consctl's keyboard screen)
+; waiting till distribute takes them (ki_wait); and the keyboard's been seen (ki_seen: consctl's keyboard screen).
+; Its writer is kdev, busy with its look while it waits for the answer: so the console calls kdev for nothing, ever
+; (the time's the kernel's: tm_get), or the two could each wait for the other for good
 h_kbin:
             cmp         #R_WRITE
             beq         :+
             clc
             rts
 :
-            sta         ki_in                               ; (R_WRITE: not 0)
-            sta         ki_seen
+            sta         ki_seen                             ; (R_WRITE: not 0)
             lda         ki_tail                            ; The ring's room (a key's place kept free) ...
             clc
             sbc         ki_head
@@ -6021,6 +6010,192 @@ cr_progx:                                                   ; Window .X's progra
 
 .code
 
+; tm_buf: the time ("2026-10-07 20:41:05"), once a drawing (chr_pass), from the kernel's clock (TIME: seconds since
+; 2000), the calendar kdev's #t/time has (a leap year every fourth, but 2100; 2000-2199); clk_due, the next minute's
+; tick.  Not #t/time itself: kdev's input, busy with its look, writes /kbin, and a call to kdev then (from the pump
+; after any request: the chrome drawn again as the clock's minute passes) would have each waiting for the other for
+; good (the user's freezes, 2026-10-16: one in the pump after the /kbin write, one after dq0's consctl write).
+; Modifies .A, .X, .Y, r0-r3 (TIME's), m
+tm_get:
+            lda         chr_pass
+            cmp         tm_pass
+            bne         :+
+            rts
+:
+            sta         tm_pass
+            ldx         #TM_LEN - 1                         ; (The separators)
+:
+            lda         s_tm_none,X
+            sta         tm_buf,X
+            dex
+            bpl         :-
+            jsr         TIME                                ; (r0, r1: the seconds, 32 bits)
+            lda         #60
+            jsr         tm_div
+            ldy         #17                                 ; The seconds ...
+            jsr         tm_two
+            lda         #60
+            jsr         tm_div
+            ldy         #14                                 ;   the minutes ...
+            jsr         tm_two
+            lda         #24
+            jsr         tm_div
+            ldy         #11                                 ;   the hours; r0 the days
+            jsr         tm_two
+            ldx         #0                                  ; The year (.X since 2000): each one's days off
+@year:
+            ldy         #0                                  ; (m + 1: 1 in a leap year)
+            txa
+            and         #3
+            bne         :+
+            cpx         #100
+            beq         :+
+            iny
+:
+            sty         m + 1
+            tya
+            clc
+            adc         #<365
+            sta         m
+            lda         r0
+            cmp         m
+            lda         r0 + 1
+            sbc         #>365
+            bcc         @mon
+            lda         r0
+            sbc         m
+            sta         r0
+            lda         r0 + 1
+            sbc         #>365
+            sta         r0 + 1
+            inx
+            bra         @year
+@mon:
+            lda         #'2'                                ; (20YY, 21YY)
+            sta         tm_buf
+            txa
+            ldy         #'0'
+            cmp         #100
+            bcc         :+
+            sbc         #100
+            ldy         #'1'
+:
+            sty         tm_buf + 1
+            ldy         #2
+            jsr         tm_two
+            ldx         #0                                  ; The month (.X from 0): the same way
+@month:
+            lda         tm_mdays,X
+            cpx         #1
+            bne         :+
+            clc
+            adc         m + 1                               ; (February's, a leap year's 29)
+:
+            sta         m
+            lda         r0 + 1
+            bne         :+
+            lda         r0
+            cmp         m
+            bcc         @date
+:
+            lda         r0
+            sec
+            sbc         m
+            sta         r0
+            bcs         :+
+            dec         r0 + 1
+:
+            inx
+            bra         @month
+@date:
+            inx
+            txa
+            ldy         #5
+            jsr         tm_two
+            lda         r0
+            inc         a
+            ldy         #8
+            jsr         tm_two
+@due:
+            lda         tm_buf + 17                         ; The next minute: (60 - its seconds) seconds on
+            and         #$0F
+            asl
+            sta         m
+            asl
+            asl
+            adc         m
+            sta         m
+            lda         tm_buf + 18
+            and         #$0F
+            adc         m
+            cmp         #60
+            bcc         :+
+            lda         #59
+:
+            eor         #$FF
+            sec
+            adc         #60                                 ; (60 - it: 1-60)
+            tax
+            stz         m                                   ; (* TICK_HZ)
+            stz         m + 1
+:
+            clc
+            lda         m
+            adc         #<TICK_HZ
+            sta         m
+            lda         m + 1
+            adc         #>TICK_HZ
+            sta         m + 1
+            dex
+            bne         :-
+            jsr         TICKS
+            clc
+            adc         m
+            sta         clk_due
+            txa
+            adc         m + 1
+            sta         clk_due + 1
+@done:
+            rts
+
+; r0-r1 (32 bits) /= .A (2-255); the remainder in .A.  Modifies .X, m
+tm_div:
+            sta         m
+            lda         #0
+            ldx         #32
+@bit:
+            asl         r0
+            rol         r0 + 1
+            rol         r1
+            rol         r1 + 1
+            rol         a
+            cmp         m
+            bcc         :+
+            sbc         m
+            inc         r0
+:
+            dex
+            bne         @bit
+            rts
+
+; .A (0-99) as two digits at tm_buf + .Y.  Keeps .X, .Y
+tm_two:
+            phx
+            ldx         #'0' - 1
+            sec
+:
+            inx
+            sbc         #10
+            bcs         :-
+            adc         #10 + '0'
+            sta         tm_buf + 1,Y
+            txa
+            sta         tm_buf,Y
+            plx
+            rts
+
+.code
+
 ; m = window .A's label (lbl_buf: LBL_SIZE a window)
 lbl_ptr:
             stz         m + 1
@@ -6113,86 +6288,6 @@ fmt_same:
             cmp         #0
             bne         :-
 :
-            rts
-
-; tm_buf: the time ("2026-10-07 20:41:05"), read from #t/time once a drawing (chr_pass); clk_due, the next minute's
-; tick.  Not while a /kbin write's served (ki_in: its writer, kdev, is #t's server, waiting for the answer): the time
-; read before kept, and the chrome drawn again in a second.  Modifies .A, .X, .Y, r0-r2, m
-tm_get:
-            lda         chr_pass
-            cmp         tm_pass
-            bne         :+
-            rts
-:
-            ldx         ki_in
-            beq         :+
-            jsr         TICKS                               ; (clk_check's, in a second: the time read then)
-            clc
-            adc         #<TICK_HZ
-            sta         clk_due
-            txa
-            adc         #>TICK_HZ
-            sta         clk_due + 1
-            rts
-:
-            sta         tm_pass
-            ldx         #TM_LEN - 1                         ; (Not read: ?s)
-:
-            lda         s_tm_none,X
-            sta         tm_buf,X
-            dex
-            bpl         :-
-            LDR         r0, s_time
-            lda         #O_READ
-            jsr         OPEN
-            bcs         @due
-            sta         tm_fd
-            LDR         r0, tm_buf
-            LDR         r1, TM_LEN
-            lda         tm_fd
-            jsr         READ
-            lda         tm_fd
-            jsr         CLOSE
-@due:
-            lda         tm_buf + 17                         ; The next minute: (60 - its seconds) seconds on
-            and         #$0F
-            asl
-            sta         m
-            asl
-            asl
-            adc         m
-            sta         m
-            lda         tm_buf + 18
-            and         #$0F
-            adc         m
-            cmp         #60
-            bcc         :+
-            lda         #59
-:
-            eor         #$FF
-            sec
-            adc         #60                                 ; (60 - it: 1-60)
-            tax
-            stz         m                                   ; (* TICK_HZ)
-            stz         m + 1
-:
-            clc
-            lda         m
-            adc         #<TICK_HZ
-            sta         m
-            lda         m + 1
-            adc         #>TICK_HZ
-            sta         m + 1
-            dex
-            bne         :-
-            jsr         TICKS
-            clc
-            adc         m
-            sta         clk_due
-            txa
-            adc         m + 1
-            sta         clk_due + 1
-@done:
             rts
 
 ; The chrome's time: drawn again once its minute's past (clk_due); timer 2's rounds bring the readers back meanwhile
@@ -8630,14 +8725,15 @@ s_m_vt:     .byte       " vt", 0
 s_m_mods:   .byte       " mods", 0
 s_m_held:   .byte       " held", 0
 .rodata
-s_time:     .byte       "#t/time", 0
-s_tm_none:  .byte       "????-??-?? ??:??:??"
 s_bar_def:  .byte       "%[7] %G%=%t"                       ; The chrome's formats as the console starts (as
             .res        FMT_SIZE - (* - s_bar_def), 0       ;   /rom/lib/windows has them)
 s_head_def: .byte       "%[1]%n %l%=%w"
             .res        FMT_SIZE - (* - s_head_def), 0
 s_foot_def: .byte       "%s"
             .res        FMT_SIZE - (* - s_foot_def), 0
+.rodata
+s_tm_none:  .byte       "????-??-?? ??:??:??"                ; (tm_get's separators)
+tm_mdays:   .byte       31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
 .segment "RODATA3"
 cr_codes:   .byte       "nglpswGcrmtdL=[%y"                 ; chr_render's codes, and theirs
 CRC_N       = * - cr_codes

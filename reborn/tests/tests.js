@@ -4367,7 +4367,7 @@ module.exports = {
       },
     },
     {
-      name: 'kbinclock', what: 'the console\'s keyboard (the Vera X\'s, the SMC\'s: kdev\'s input writing #c/kbin) typed at slowly as the bar\'s clock turns a minute (the user\'s, 2026-10-16, in the browser: "only printed about 3/4 of the text and then froze"): the chrome drawn again in the pump after a /kbin write read #t/time, a call to kdev, busy with its look and waiting for that write\'s answer, the two waiting for each other for good; now the time\'s read a second later.  And consctl\'s keyboard screen once the keyboard\'s typed',
+      name: 'kbinclock', what: 'the console\'s keyboard (the Vera X\'s, the SMC\'s: kdev\'s input writing #c/kbin) typed at slowly as the bar\'s clock turns a minute (the user\'s, 2026-10-16, in the browser: "only printed about 3/4 of the text and then froze"): the chrome drawn again in the pump after a /kbin write read #t/time, a call to kdev, busy with its look and waiting for that write\'s answer, the two waiting for each other for good; now the console makes the time from the kernel\'s clock (TIME), no call to kdev.  And consctl\'s keyboard screen once the keyboard\'s typed',
       init: 't_rc', cycles: 260e6,
       // (The clock at 15:04:52 as it boots: its minute turns as the keys come, one each 2M cycles)
       get machine() { return { vera: true, smc: true, rtc: Date.UTC(2026, 9, 16, 15, 4, 52) / 1000,
@@ -4377,6 +4377,56 @@ module.exports = {
         const f = [], first = out.slice(0, out.indexOf('echo k'));
         if (first.includes('keyboard screen')) f.push('consctl said keyboard screen before the keyboard had typed');
         if (!/ 15:0[5-9]$/.test(m.vera.text()[0] || '')) f.push('the bar\'s clock didn\'t turn a minute: ' + JSON.stringify(m.vera.text()[0]));
+        return f;
+      },
+    },
+    {
+      name: 'kbinstatus', what: 'the console\'s keyboard (kdev\'s input writing #c/kbin) typed at while a loop writes the window\'s status (wctl\'s status, its footer %s %t: each write\'s pump draws the chrome again, the time with it): the console, serving rc\'s write, read #t/time (a call to kdev) while kdev\'s input, busy with its look, waited to write /kbin to it, each waiting for the other for good (the second freeze, 2026-10-16: dq0\'s consctl write as hmchar began; the first, kbinclock\'s, the pump after the /kbin write itself); the time the kernel\'s now (TIME), no call to kdev at all',
+      init: 't_rc', cycles: 400e6,
+      get machine() { return { vera: true, smc: true, rtc: Date.UTC(2026, 9, 16, 15, 4, 0) / 1000,
+        input: '\u0101echo footer %s %t >/dev/wctl\r\u0101d=(0 1 2 3 4 5 6 7 8 9); for(i in 0 1 2) for(j in $d) for(k in $d) echo status $i$j$k >/dev/wctl\r' +
+          '\u0102echo ' + 'k\u0100'.repeat(40) + '\r\u0103' + '\u0100'.repeat(20) + 'echo do^ne\r' }; },
+      expect: ['\n' + 'k'.repeat(40) + '\n', '\ndone\n'],
+      check(m) {
+        const foot = m.vera.text().filter(l => l).pop() || '';
+        return /^299 15:0\d$/.test(foot) ? [] : ['the footer, the loop done: ' + JSON.stringify(foot) + ' ("299 15:0N" wanted)'];
+      },
+    },
+    {
+      name: 'chrometime', what: 'the bar\'s date and time (%d %t) made by the console from the kernel\'s clock (TIME), not #t/time (a call to kdev, which could wait for good on kdev\'s input writing #c/kbin): its calendar kdev\'s, a leap day\'s last seconds and the next day\'s first, as /dev/time has them',
+      init: 't_rc', cycles: 120e6,
+      // (SNAP: the screen's bar, as the keyboard's typing comes to it; nothing typed)
+      start(m) {
+        const type = m.smc.type, snaps = this.snaps = [];
+        m.smc.type = ch => ch === 'Ѐ' ? snaps.push(m.vera.text()[0]) : type(ch);
+      },
+      get machine() { return { vera: true, smc: true, rtc: Date.UTC(2028, 1, 29, 23, 59, 50) / 1000,
+        input: 'āecho bar %d %t >/dev/wctl\rācat /dev/time\rāĂЀă' + 'Ā'.repeat(20) + 'cat /dev/time\rāĂЀăecho do^ne\r' }; },
+      expect: ['\n2028-02-29 23:59:5', '\n2028-03-01 00:00:', '\ndone\n'],
+      check(m, out) {
+        const f = [], s = this.snaps || [];
+        if (s.length < 2) return ['the snapshots: ' + s.length + ' (2 wanted)'];
+        if (!/^2028-02-29 23:59 *$/.test(s[0])) f.push('the bar before midnight: ' + JSON.stringify(s[0]));
+        if (!/^2028-03-01 00:00 *$/.test(s[1])) f.push('the bar after midnight: ' + JSON.stringify(s[1]));
+        return f;
+      },
+    },
+    {
+      name: 'chrometime2', what: 'the bar\'s date and time (chrometime\'s) in 2100, not a leap year (a century): its February\'s last seconds and March\'s first; the date and time (%d %t) made by the console from the kernel\'s clock (TIME), not #t/time (a call to kdev, which could wait for good on kdev\'s input writing #c/kbin): its calendar kdev\'s, a leap day\'s last seconds and the next day\'s first, as /dev/time has them',
+      init: 't_rc', cycles: 120e6,
+      // (SNAP: the screen's bar, as the keyboard's typing comes to it; nothing typed)
+      start(m) {
+        const type = m.smc.type, snaps = this.snaps = [];
+        m.smc.type = ch => ch === 'Ѐ' ? snaps.push(m.vera.text()[0]) : type(ch);
+      },
+      get machine() { return { vera: true, smc: true, rtc: Date.UTC(2100, 1, 28, 23, 59, 50) / 1000,
+        input: 'āecho bar %d %t >/dev/wctl\rācat /dev/time\rāĂЀă' + 'Ā'.repeat(20) + 'cat /dev/time\rāĂЀăecho do^ne\r' }; },
+      expect: ['\n2100-02-28 23:59:5', '\n2100-03-01 00:00:', '\ndone\n'],
+      check(m, out) {
+        const f = [], s = this.snaps || [];
+        if (s.length < 2) return ['the snapshots: ' + s.length + ' (2 wanted)'];
+        if (!/^2100-02-28 23:59 *$/.test(s[0])) f.push('the bar before midnight: ' + JSON.stringify(s[0]));
+        if (!/^2100-03-01 00:00 *$/.test(s[1])) f.push('the bar after midnight: ' + JSON.stringify(s[1]));
         return f;
       },
     },
