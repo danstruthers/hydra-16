@@ -130,7 +130,12 @@ enum { IO_KIT, IO_GET, IO_DROP, IO_LIST, IO_SAVE, IO_RESTORE,
     IO_PUT,                                     /* Put in into (to 0) or on it (to 1: a surface's; a belt's: hung) */
     IO_TAKE,                                    /* Taken from into: into the pack, else a hand */
     IO_DON, IO_DOFF,                            /* Worn; taken off (into a hand, else the pack) */
-    IO_LIGHT, IO_DOUSE };                       /* Lit (a tinderbox carried, or a flame); put out ("": the first) */
+    IO_LIGHT, IO_DOUSE,                         /* Lit (a tinderbox carried, or a flame); put out ("": the first) */
+    IO_BAR };                                   /* A door's bar to hand (carried, or within reach, not in brackets):
+                                                **   the widest's width back in x (to 0: result IR_NO, x 0 none); or
+                                                **   it set in a door's brackets (to 1: the maker's barred it), a
+                                                **   portal's part again, IW_PORTAL, on the request's x, y (the
+                                                **   character's square, the bar's side), its item the stratum */
 enum { IR_OK, IR_NONE, IR_FULL, IR_HEAVY, IR_NOT_HERE, IR_NO, IR_FIXED };    /* (IR_NO: refused, the things' words
                                                 **   why; IR_FIXED: a portal's part, in it) */
 

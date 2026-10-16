@@ -113,6 +113,18 @@ static void __fastcall__ equip (const char* key, unsigned char on)
     }
 }
 
+/* The load the character carries (the game's things, all told: quarter pounds), its equipment as harn.h has it, one
+** entry its whole weight (tenths of a pound): so its encumbrance (EP, the load over endurance) is the book's, and
+** with it the physical penalty that tests of the body and its move are the worse for (Skills 6, Combat 6) */
+static harn_equip carried = { "load", "load", 0, 0xFF, 0 };
+
+static void __fastcall__ set_load (unsigned qp)
+{
+    carried.wt = qp > 13000U ? 65000U : qp * 5 / 2;
+    pc.eq[0] = &carried;
+    pc.neq = 1;
+}
+
 /* A tool equipped (sheet.c's too: a blow at a thing struck with the best to hand) */
 unsigned char __fastcall__ has (const char* key)
 {
@@ -263,7 +275,7 @@ static void status (void)
     s->darkvision = 0;                          /* (The species' sight in the dark: the book's, to come) */
     s->nightvision = 1;
     s->morale = pc.att[HARN_MOR];
-    s->load = ep > 3 ? 3 : ep;
+    s->load = !ep ? 0 : ep <= 2 ? 1 : ep <= 4 ? 2 : 3;   /* (Its encumbrance: a little burdened, heavily, overloaded) */
     s->power = 10;
 }
 
@@ -371,6 +383,8 @@ static void __fastcall__ answer (struct req* r)
     case RS_EQUIP:
         if (r->a == 2) {
             equip_all (r->text);
+            set_load (r->w1);                   /* (And its load: its summary anew) */
+            status ();
         } else {
             equip (r->text, r->a);
         }

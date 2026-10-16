@@ -541,8 +541,9 @@ static unsigned char __fastcall__ carry (unsigned n, unsigned char hand_first)
 }
 
 /* ---- The tools: the keys of all the character carries (anywhere on it: a skill used, the one that suits takes
-** itself out), into the hub's things_text, a space between; and one used, worn (the referee's choice, by its key),
-** its name back in the request (bare hands: "hands") */
+** itself out), into the hub's things_text, a space between, and its load (the weight of all it carries, worn or
+** not, in quarter pounds: the referee's encumbrance) in the request's x; and one used, worn (the referee's choice,
+** by its key), its name back in the request (bare hands: "hands") */
 static void tools (void)
 {
     const struct kind* k;
@@ -563,6 +564,9 @@ static void tools (void)
             }
         }
     }
+    i = weight_in (IW_ACTOR, 0);
+    hub_map (0);
+    HUB->ireq.x = i;
 }
 
 static void __fastcall__ wear (const char* key, unsigned char by)
@@ -746,7 +750,7 @@ static void list (void)
     tp = HUB->things_text;
     *tp = 0;
     contents (IW_ACTOR, 0, 0);
-    put (" In all, ");                          /* (Its load: the referee's encumbrance, to come) */
+    put (" In all, ");                          /* (Its load: the referee's encumbrance of it, the UI's to word) */
     put (utoa ((weight_in (IW_ACTOR, 0) + 2) / 4, b, 10));
     put (" lb.");
 }
@@ -1262,6 +1266,34 @@ static unsigned char __fastcall__ light (unsigned char on)
     return yes (SA_LIGHT, 0);
 }
 
+/* A door's bar to hand (carried, or within reach: not one in another's brackets), the widest: its width (took's,
+** the request's x) and IR_NO (nothing about it changed); or (iq's to 1) it set in the door's brackets, a portal's part
+** again on iq's square, the bar's side (the maker's barred the door) */
+static unsigned char bar (void)
+{
+    static unsigned n, best;
+
+    for (best = 0, n = 1; n < NITEMS; ++n) {
+        FETCH (n);
+        if (o.kind == KI_BAR && o.where != IW_PORTAL && (o.size & 15) > took && (B (m1 (on_pc, n)) ||
+            B (m1 (in_reach, n)))) {
+            best = n;
+            took = o.size & 15;
+        }
+    }
+    if (!best || !iq.to) {
+        return IR_NO;
+    }
+    FETCH (best);
+    o.where = IW_PORTAL;
+    o.sn = iq.item;
+    o.x = iq.x;
+    o.y = iq.y;
+    o.flags &= ~(I_HELD | I_WORN | I_HIDDEN);
+    m2 (store, (unsigned) &o, best);
+    return IR_OK;
+}
+
 /* A thing handled, as the request (iq) asks: IR_OK, or IR_NO (refused: the words why) */
 static unsigned char o_handle (void)
 {
@@ -1273,6 +1305,9 @@ static unsigned char o_handle (void)
     took = 0;
     strcpy (xn, iq.name);
     strcpy (yn, iq.into);
+    if (op == IO_BAR) {
+        return bar ();
+    }
     if (op >= IO_LIGHT) {
         return light (op == IO_LIGHT);
     }

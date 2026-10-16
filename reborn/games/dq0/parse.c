@@ -45,7 +45,8 @@ static const struct { char w[16]; unsigned char v; } verbs[] = {
     { "skills", V_SHEET }, { "help", V_HELP }, { "?", V_HELP }, { "pause", V_PAUSE }, { "quit", V_QUIT },
     { "hide", V_HIDE }, { "conceal", V_HIDE }, { "stash", V_HIDE },
     { "raise", V_RAISE }, { "lift", V_RAISE }, { "winch", V_RAISE }, { "lower", V_LOWER },
-    { "break", V_BREAK }, { "smash", V_BREAK }, { "bend", V_FORCE }, { "disarm", V_DISARM }, { "disable", V_DISARM },
+    { "break", V_BREAK }, { "smash", V_BREAK }, { "bend", V_BEND }, { "disarm", V_DISARM }, { "disable", V_DISARM },
+    { "bar", V_BAR }, { "rebar", V_BAR },
     { "save", V_SAVE }, { "inventory", V_INVENTORY }, { "inv", V_INVENTORY }, { "i", V_INVENTORY },
     { "q", V_QUIT },
 };
@@ -76,7 +77,8 @@ static const struct { char w[12]; unsigned char o; } things[] = {
     { "hole", OB_SHAFT }, { "ledge", OB_LEDGE }, { "exit", OB_WAY_OUT }, { "wall", OB_WALL },
     { "portcullis", OB_PORTC }, { "window", OB_WINDOW }, { "shutters", OB_WINDOW }, { "shutter", OB_WINDOW },
     { "glass", OB_WINDOW | PART }, { "bars", OB_WINDOW | PART }, { "pane", OB_WINDOW | PART },
-    { "bar", OB_DOOR | PART }, { "slit", OB_WINDOW }, { "room", OB_ROOM }, { "chamber", OB_ROOM },
+    { "bar", OB_DOOR | PART }, { "brackets", OB_DOOR }, { "bracket", OB_DOOR }, { "slit", OB_WINDOW },
+    { "room", OB_ROOM }, { "chamber", OB_ROOM },
     { "hall", OB_ROOM }, { "cave", OB_ROOM }, { "cell", OB_ROOM }, { "vault", OB_ROOM }, { "ceiling", OB_ROOM }, { "trap", OB_TRAP }, { "plate", OB_TRAP },
     { "wire", OB_TRAP }, { "tripwire", OB_TRAP }, { "pit", OB_TRAP },
 };
@@ -90,7 +92,7 @@ static const struct { char w[8]; unsigned char p; } preps[] = {
 /* The little words, passed over (to, toward, at: up to it; through, into, out: through it) */
 static const char little[][10] = {
     "the", "a", "an", "this", "that", "these", "those", "of", "me", "my", "myself", "self", "off", "side",
-    "direction", "dir", "and", "please", "on", "over", "head", "then", "now", "way", "here", "there", "it",
+    "direction", "dir", "and", "please", "on", "over", "head", "then", "now", "way", "here", "there", "it", "its",
 };
 
 static unsigned char nw;                        /* The line's words */
@@ -181,6 +183,9 @@ void __fastcall__ o_parse (char* l, struct pcmd* c)
             c->verb = V_STOW;                   /* ("put the dagger away") */
             continue;
         }
+        if (c->verb == V_PUT && !strcmp (word[i], "back")) {
+            continue;                           /* ("put the bar back": not behind) */
+        }
         if (!strcmp (word[i], "to") || !strcmp (word[i], "toward") || !strcmp (word[i], "towards") ||
             !strcmp (word[i], "at") || !strcmp (word[i], "near") || !strcmp (word[i], "by")) {
             c->how = HOW_TO;
@@ -245,6 +250,9 @@ void __fastcall__ o_parse (char* l, struct pcmd* c)
     if (c->verb == V_PUT && !c->word2[0] && dir == GO_DOWN) {
         c->verb = V_DROP;                       /* ("put the dagger down") */
     }
+    if (c->verb == V_PUT && !strcmp (c->word, "bar") && c->obj == OB_DOOR && !c->word2[0]) {
+        c->verb = V_BAR;                        /* ("put the bar on the door", "put the bar back in its brackets") */
+    }
     if (c->verb == V_DOFF && c->prep == PR_FROM && c->word2[0]) {
         c->verb = V_GET;                        /* ("remove the dagger from the sack") */
     } else if (c->verb == V_GET && c->prep == PR_FROM && !c->word2[0]) {
@@ -262,7 +270,8 @@ void o_help (void)
          "back, left, right (f, b: as you face); up and down (u, d: the stairs); turn left, right, half left, half "
          "right or around; face north ...; light and douse (a torch, a candle, a lantern); dig north ... or down (a "
          "wall, the rock, a shaft); jump down (a ledge, a shaft); open, close, unlock, force (the door ahead), raise, "
-         "lower (a portcullis), break (a door, a window's glass), lift (a bar), climb through (a window), disarm (a trap), search; get, "
+         "lower (a portcullis), break (a door, a window's glass, a portcullis's bars), bend (bars), lift (a bar), bar "
+         "(a door: its bar put back), climb through (a window), disarm (a trap), search; get, "
          "drop, hold (wield), stow, put the dagger in the sack (or on the table), take the rope from the pack, hang "
          "the pouch (on your belt), wear, take off, inventory (i), examine (a thing, a door, the room: look closely), hide; look (l), map (m), sheet (the "
          "character), wait (z), pause (or Escape), quit (q).");

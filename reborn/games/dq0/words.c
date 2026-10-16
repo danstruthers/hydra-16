@@ -130,7 +130,8 @@ static void portals (void)
              p & PP_SHUTTERS ? " There is a shuttered window " : " There is an empty window frame ");
         add (relname[S->door[i].rel & 7]);
         if (k == PK_PORTCULLIS) {
-            add (S->door[i].state & PS_OPEN_ ? " (raised)" : " (down)");
+            add (S->door[i].state & PS_WRECKED ? " (its bars forced apart)" : S->door[i].state & PS_OPEN_ ? " (raised)" :
+                 " (down)");
         } else if (k == PK_WINDOW && (p & PP_SHUTTERS)) {
             add (S->door[i].state & PS_OPEN_ ? " (its shutters open)" : " (its shutters closed)");
         }
