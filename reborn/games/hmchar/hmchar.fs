@@ -187,8 +187,8 @@ create improved 91 allot   variable op   variable cost
 : err ( c-addr u -- ) 2 write-file drop ;
 : usage ( -- ) s" usage: hmchar.fs [-s seed] [-o file] [-q] [-p species]" 2 write-line drop  1 0 sys-exits ;
 : species-of ( c-addr u -- sp )                   \ -p's: h a human, e or s an elf, d or k a dwarf: 0-2, or -1
-  0= if drop -1 exit then  c@ lower-c >r
-  5 0 do s" hesdk" drop i + c@ r@ = if r> drop i 1+ 2/ unloop exit then loop  r> drop -1 ;
+  0= if drop -1 exit then  c@ lower-c
+  5 0 do s" hesdk" drop i + c@ over = if drop i 1+ 2/ unloop exit then loop  drop -1 ;
 variable ai
 : option ( -- )                                   \ The option at ai, ai past it (and its value)
   ai @ arg
