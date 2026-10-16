@@ -2513,8 +2513,8 @@ module.exports = {
       name: 'dq0portc', what: 'Dingus Quest Zero\'s portcullises (DUNGEON.md: portals; the maker works them, dq0m/work.c): through one raised (seed 12, dq0 -T: east of the first way down) into a cell, seen and worded as a portcullis, lowered by its winch on the cell\'s side (faced first), never walked through while it\'s down, raised again by the winch, and gone back through',
       init: 't_rc', cycles: 900e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 12 -c /ram/c.hm -T\r' +
-        ['e', 'wait', 'e', 'wait', 'e', 'lower portcullis', 'w', 'look', 'raise portcullis', 'w', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
-      expect: ['There is a portcullis behind you (raised).', 'You loose the winch: the portcullis crashes down.',
+        ['e', 'wait', 'e', 'wait', 'e', 'turn around', 'lower portcullis', 'w', 'look', 'raise portcullis', 'w', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['There is a portcullis ahead\n(raised).','You loose the winch: the portcullis crashes down.',
         'The portcullis is down: raise it first.', 'There is a portcullis ahead\n(down).',
         'You wind the winch beside it, and the portcullis grinds up.', 'You are in a long vault', '% echo $status'],
       sdcard: true
@@ -2523,10 +2523,10 @@ module.exports = {
       name: 'dq0window', what: 'Dingus Quest Zero\'s windows (DUNGEON.md: portals): one looked through and worded (seed 12: in the second room\'s wall, glazed, its shutters open), not climbed through while its glass is in it, the glass broken (the referee\'s blow at a thing, HC_BLOW at RS_THING), then climbed through (its sill, P_CLIMB) into the passage beyond, the window seen from there',
       init: 't_rc', cycles: 900e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 12 -c /ram/c.hm\r' +
-        ['n', 'climb through window', 'break window', 'climb through window', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
-      expect: ['There is a glazed window behind you to your right (its shutters\nopen).', 'You can\'t climb through: it\'s shut, glazed or barred.',
+        ['n', 'turn around', 'climb through window', 'break window', 'climb through window', 'turn around', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['There is a glazed\nwindow ahead to your left (its shutters open).','You can\'t climb through: it\'s shut, glazed or barred.',
         'The glass shatters with a crash.', 'You climb up onto the sill, and through.', 'You are in a passage.',
-        'There is a shuttered window behind you (its shutters open).', '% echo $status'],
+        'There is a shuttered window ahead (its shutters open).', '% echo $status'],
       sdcard: true
     },
     {
@@ -2575,7 +2575,44 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0hands', what: 'Dingus Quest Zero\'s doors battered with bare hands (the user\'s, 2026-10-15: a blow a d4 and the Strength\'s modifier, the door\'s resistance off it, the hand hurt by the lesser of the blow and the resistance): one character made strong and one weak (hmchar\'s file, its Strength line set after), at seed 10\'s rotting wooden door the strong one marking it, the weak one not, the strong one\'s hands only bruised (minor: a rotten door\'s resistance is little), stopping when hurt enough, the injuries on the sheet; at seed 14\'s sound iron-bound door the strong one\'s hand fractured (serious: a sturdy door hurts more)',
+      name: 'dq0sense', what: 'Dingus Quest Zero telling only what the character sees, as well as it sees it (the user\'s, 2026-10-16: "descriptions often tell you what lies behind you, which you can\'t really see"; "Eyesight score should affect the amount of detail"): at seed 3 the door behind it not told, then told as it turns round; at seed 5 a close look at a room whose far side is dark giving no figures, its far side lost in the dark; at seed 11 a door across the gallery examined (only its look from afar: tall, of wood, how far, go closer), then one beside it (its full examination); at seed 6 potsherds 20 feet off named by a sharp-eyed character (Eyesight 18), examined only from afar, and only something small to a weak-eyed one (Eyesight 4), who can\'t make out the far door\'s wood either',
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rācp /ram/c.hm /ram/s.hm\rāecho att eye 18 >> /ram/s.hm\r' +
+        'ācp /ram/c.hm /ram/w.hm\rāecho att eye 4 >> /ram/w.hm\r' +
+        'ādq0 -p t -s 3 -c /ram/c.hm\r' + ['look', 'turn around', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        'ādq0 -p t -s 5 -c /ram/c.hm\r' + ['x room', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        'ādq0 -p t -s 11 -c /ram/c.hm\r' + ['examine the door ahead to my left', 'examine the door on my left', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        'ādq0 -p t -s 6 -c /ram/s.hm\r' + ['look', 'x potsherds', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        'ādq0 -p t -s 6 -c /ram/w.hm\r' + ['look', 'x potsherds', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        'ādq0 -p t -s 11 -c /ram/w.hm\r' + ['examine the door ahead to my left', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['% echo $status'],
+      // (Its words checked with the lines' wrapping taken out, each in its turn)
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        const want = ['> look You are in a small hall', 'There is a door ahead to your left (open).', '> turn around',
+          'There is a door ahead to your left (closed).',
+          '> x room You can see part of a chamber, by the light of your torch. Its far side is lost in the dark.',
+          'A tall door of wood, some 20 feet off. You\'d have to go closer to make out more.',
+          'A door of iron-bound wood, 3 feet wide and 8 high',
+          'On the floor ahead to your left lie some potsherds.', 'Some potsherds, some 20 feet off. You\'d have to go closer',
+          'On the floor ahead to your left lies something small.', 'Something small, some 20 feet off.',
+          'A tall door, some 20 feet off.', '% echo $status'];
+        let at = 0;
+        for (const w of want) {
+          const i = o.indexOf(w, at);
+          if (i < 0) { f.push('not found (in its turn): ' + w); break; }
+          at = i + w.length;
+        }
+        const g = o.slice(o.indexOf('> look You are'), o.indexOf('> turn around'));
+        if (/behind you/.test(g)) f.push('the glance tells what\'s behind: ' + g);
+        const r = o.slice(o.indexOf('> x room'), o.indexOf('lost in the dark'));
+        if (/feet by/.test(r)) f.push('the dark room\'s figures given: ' + r);
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0hands',what: 'Dingus Quest Zero\'s doors battered with bare hands (the user\'s, 2026-10-15: a blow a d4 and the Strength\'s modifier, the door\'s resistance off it, the hand hurt by the lesser of the blow and the resistance): one character made strong and one weak (hmchar\'s file, its Strength line set after), at seed 10\'s rotting wooden door the strong one marking it, the weak one not, the strong one\'s hands only bruised (minor: a rotten door\'s resistance is little), stopping when hurt enough, the injuries on the sheet; at seed 14\'s sound iron-bound door the strong one\'s hand fractured (serious: a sturdy door hurts more)',
       init: 't_rc', cycles: 800e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/s.hm\rāecho att str 18 >> /ram/s.hm\r' +
         'āhmchar -q -s 5 -o /ram/w.hm\rāecho att str 4 >> /ram/w.hm\r' +
@@ -2651,7 +2688,7 @@ module.exports = {
         ['search', 'search', 'search', 'search', 'search', 'search', 'x dagger', 'x dagger', 'x dagger', 'x dagger', 'x dagger', 'x dagger', 'x dagger', 'x dagger', 'face south', 'open', 'disarm', 'disarm', 'disarm', 'disarm', 'disarm', 'open', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
       expect: ['As the door opens, something clicks. A blade scythes out of the wall! You throw\nyourself clear.',
         'A plate sinks under your foot with a click. A blade scythes out of the wall! It\nhurts you: ',
-        'scything blade, set off by a plate in the floor, at your feet (sprung).',
+        'scything blade, set off by a plate in the floor, at your\nfeet (sprung).',
         'You find a trap: a dart trap, set to go off as its door opens.',
         'There\'s a trap on that door you know of: disarm it before you open it.',
         'You study the mechanism a while, and make out how it works', 'You work at the trap a while, and disarm it.', 'You open the door.', '% echo $status'],

@@ -1,8 +1,8 @@
 /*
 ** fixt.c - (overlay 4) the words of the dungeon's fixtures (DUNGEON.md: portals; traps, pits and other nasty
 ** surprises): what came of working a portcullis, a window or a slit (an E_PORTAL's: a door's are intro.c's), what a
-** trap did, or what came of finding or disarming one (an E_TRAP's), and a trap's name (words.c's too); what came of
-** blows at a portal, of a part lifted out of one; and a portal looked at closely, judged
+** trap did, or what came of finding or disarming one (an E_TRAP's: a trap's name is words.c's); what came of blows
+** at a portal, of a part lifted out of one; and a portal looked at closely, judged (or from afar, only seen)
 */
 
 #pragma code-name ("OV4CODE")
@@ -13,25 +13,6 @@
 #include <dice.h>
 #include "dq0.h"
 #include "hub.h"
-
-/* A trap's name, added to lb: "a scything blade, set off by a tripwire" (kind, trigger, state: world.h's TK_*,
-** TT_*, TS_*: a pit that's given way an open one) */
-void __fastcall__ o_trap_name (unsigned char kind, unsigned char trigger, unsigned char state)
-{
-    static const char* const name[8] = {
-        "an open pit", "a covered pit", "a covered pit, spikes in it", "a deadfall", "a scything blade",
-        "a dart trap", "a gas trap", "an alarm"
-    };
-
-    if (kind <= TK_SPIKED) {
-        strcat (lb, kind == TK_SPIKED ? (state & TS_SPRUNG ? "a pit, spikes in it" : name[kind]) :
-            state & TS_SPRUNG ? name[TK_PIT] : name[kind]);
-        return;
-    }
-    strcat (lb, name[kind & 7]);
-    strcat (lb, trigger == TT_PLATE ? ", set off by a plate in the floor" : trigger == TT_WIRE ?
-        ", set off by a tripwire" : ", set to go off as its door opens");
-}
 
 /* What a trap did, or what came of it (w: an E_TRAP's) */
 void __fastcall__ o_trap_words (unsigned w)
@@ -188,33 +169,46 @@ static void __fastcall__ addn (unsigned v)
     add (utoa (v, b, 10));
 }
 
-/* ---- The ceiling in general words (the user's: a high ceiling, a low, rough one), as it's seen at a glance: its kind,
-** and how high it is (low, under 8 feet; high, over 12; lofty, over 20); words.c's, added to lb (its record
-** sight_copy) */
-void o_ceiling_glance (void)
-{
-#define S sight_copy
-    static const char* const and[4] = { " and low.", ".", " and high.", " and very high." };
-    static const char* const over[4] = { " low overhead.", " overhead.", " high overhead.", " far overhead." };
-    unsigned char k = S.ceil != C_ROUGH && S.ceil != C_SLOPED && S.cwall >= S.cmid ? C_FLAT : S.ceil, h;
+static const char* const matname[4] = { "wood", "iron-bound wood", "iron", "stone" };
 
-    h = S.cmid < 8 ? 0 : S.cmid <= 12 ? 1 : S.cmid <= 20 ? 2 : 3;
-    add (k == C_FLAT ? " The ceiling is flat" : k == C_BARREL ? " A barrel vault arches" : k == C_DOME ?
-         " The ceiling is a dome," : k == C_CATHEDRAL ? " A pointed vault rises" : k == C_SLOPED ?
-         " The ceiling slopes" : " The ceiling is rough stone");
-    add (k == C_SLOPED ? (S.cmid >= S.cwall + 6 ? " steeply, high on one side and low on the other." :
-         ", higher on one side.") : k == C_FLAT || k == C_ROUGH ? and[h] : over[h]);
-#undef S
+/* ---- A portal looked at from further off than NEAR_SQ (d squares; p the maker's record of it): only what's seen
+** from afar (the user's: "its relative size and maybe its construction material"), its kind, its size against the
+** character's (low, tall; narrow, wide), a door's material if its sight is sharp enough (the referee's, sight_copy's
+** eye), whether it stands open; the rest wants a closer look */
+static void __fastcall__ portal_far (const struct portal* p, unsigned char d)
+{
+    unsigned char k = p->kind, w = p->size & 15, h = p->size >> 4;
+    const char* a;
+
+    add (k == PK_SLIT ? "An arrow slit" : "A");  /* ("A tall, narrow door of wood") */
+    if (k == PK_DOOR || k == PK_PORTCULLIS) {
+        a = h <= 5 ? " low" : h >= 8 ? " tall" : "";
+        add (a);
+        add (w <= 2 ? (*a ? ", narrow" : " narrow") : w >= 5 && !(p->feat & PF_DOUBLE) ? (*a ? ", wide" : " wide") : "");
+    }
+    add (k == PK_PORTCULLIS ? " portcullis" : k == PK_WINDOW ? " window" : k == PK_SLIT ? "" : p->feat & PF_DOUBLE ?
+         " double door" : " door");
+    if (k == PK_DOOR && d <= 3 + sight_copy.eye) {
+        add (" of ");
+        add (matname[p->mat & 3]);
+    }
+    add (", some ");
+    addn (5 * d);
+    add (" feet off");
+    add (p->state & PS_WRECKED ? ", broken down." : k == PK_PORTCULLIS ? (p->state & PS_OPEN ? ", raised." : ", down.") :
+         p->state & PS_OPEN ? ", standing open." : ".");
+    add (" You'd have to go closer to make out more.");
 }
 
 /* ---- A portal looked at closely (p: the maker's record of it, copied, its bar 1 if the character's on its bar's
 ** side), judged at the appraiser's grade g (the referee's test of the craft that knows its material): its kind, its
 ** size, its material, its thickness and its features (a grille, a spy-hole, studs, its hinges, a bar's brackets on
 ** this side, a lock) plain to see; its state (rotten ... new) and how stout it is (its body left), judged: a critical
-** success right, a marginal one near, a marginal failure well off, a critical failure wild (and said as surely) */
+** success right, a marginal one near, a marginal failure well off, a critical failure wild (and said as surely).
+** Further off than NEAR_SQ (from the character's square at its last look to main.c's find's), only its look from
+** afar */
 void __fastcall__ o_portal_look (const struct portal* p, signed char g)
 {
-    static const char* const matname[4] = { "wood", "iron-bound wood", "iron", "stone" };
     static const char* const low[3][4] = {      /* (Its state, the worse half: wood's, iron's, stone's) */
         { "rotten", "rotting", "decayed", "worn" }, { "rusted through", "rusting away", "badly rusted", "rusty" },
         { "crumbling", "crumbling", "cracked", "weathered" }
@@ -223,8 +217,15 @@ void __fastcall__ o_portal_look (const struct portal* p, signed char g)
     unsigned char k = p->kind, m = p->mat & 3, mine = p->bar, f = p->feat, h = k == PK_DOOR ? p->harm : p->harm & 15;
     signed char q = p->qual;
     unsigned body = p->tough > h ? p->tough - h : 1;   /* (Its body left: a window's, its shutters') */
+    unsigned dx = tx - sight_copy.x, dy = ty - sight_copy.y;
 
     lb[0] = 0;
+    dx = (int) dx < 0 ? -dx : dx;
+    dy = (int) dy < 0 ? -dy : dy;
+    if ((dx = dx > dy ? dx : dy) > NEAR_SQ) {
+        portal_far (p, dx > 99 ? 99 : dx);
+        return;
+    }
     add (k == PK_PORTCULLIS ? "A portcullis of iron bars, " : k == PK_SLIT ? "An arrow slit, a hand's breadth wide" :
          k == PK_WINDOW ? "A window, " : f & PF_DOUBLE ? "A double door of " : "A door of ");
     if (k == PK_DOOR) {

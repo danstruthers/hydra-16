@@ -837,7 +837,7 @@ static void show_map (void)
 
 /* A thing it sees, the parser's (its kind, and the heading it lies, if one was said): its square, in tx, ty (1),
 ** or 0 */
-static unsigned tx, ty;
+unsigned tx, ty;
 static unsigned char __fastcall__ find (unsigned char obj, unsigned char orel)
 {
     struct sight* s = &HUB->sight;

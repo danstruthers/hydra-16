@@ -14,6 +14,7 @@
 **   theme.c    (overlay 5) the theme's words (its story, its names, its endings) and its puzzle (theme.h)
 **   sway.c     (overlay 6) the character's ways with the denizens, in words (talk, persuade, an ally's requests:
 **              the denizens' task's answers), and the commands listed
+**   seen.c     (overlay 6) more of what the character perceives, in words: a ceiling at a glance
 **
 ** Memory: the program's code and data from $0800 (its BSS must end 768 bytes or more under $7F00: dq0.cfg); the
 ** overlays' code in banks of their own, put in the window at $8000 as they're called (bank.s).  Code in an overlay
@@ -170,21 +171,23 @@ void __fastcall__ harm_words (unsigned w, unsigned cond);               /* Overl
 void __fastcall__ fixt_words (unsigned w);      /* Overlay 4: a portal worked's (an E_PORTAL's w1: a door's,
                                                 **   portal_words) */
 void __fastcall__ trap_words (unsigned w);      /* Overlay 4: a trap's (an E_TRAP's w1) */
-void __fastcall__ trap_name (unsigned char kind, unsigned char trigger, unsigned char state);  /* Overlay 4: a
+void __fastcall__ trap_name (unsigned char kind, unsigned char trigger, unsigned char state);  /* Overlay 2: a
                                                 **   trap's name, added to lb */
 void den_way (void);                            /* Overlay 4: a denizen in the way (its name in lb) */
-void __fastcall__ heard_words (unsigned char what, unsigned char rel);  /* Overlay 2: a denizen heard (an E_DEN's
+void __fastcall__ heard_words (unsigned char what, unsigned char rel);  /* Overlay 6: a denizen heard (an E_DEN's
                                                 **   what, | 0x80 muffled, the way it lies as the character faces),
                                                 **   into lb */
 extern char heard_what[20];                     /* Its sound's words (SOUND.md: the sound task's, "a scurrying"; "":
                                                 **   none), main.c's */
 struct portal;
+extern unsigned tx, ty;                         /* (main.c's: the square of the thing its find found) */
 void __fastcall__ portal_look (const struct portal* p, signed char g);  /* Overlay 4: a portal looked at closely
                                                 **   (the maker's record of it, the hub's pview, copied), judged at
                                                 **   the appraiser's grade g, into lb */
-void ceiling_glance (void);                     /* Overlay 4: a ceiling at a glance (sight_copy's), added to lb */
+void ceiling_glance (void);                     /* Overlay 6: a ceiling at a glance (sight_copy's), added to lb */
 void words (void);                              /* Overlay 2: what the character perceives, into lb */
-void stir_words (void);                         /* Overlay 2: the denizens it sees, moving, into lb (or "": as
+void seen_words (void);                         /* Overlay 6: the things and the denizens it sees, added to lb */
+void stir_words (void);                         /* Overlay 6: the denizens it sees, moving, into lb (or "": as
                                                 **   they were told last) */
 extern char lb[400];
 extern struct sight sight_copy;
