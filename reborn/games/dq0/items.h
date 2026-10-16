@@ -22,7 +22,7 @@ struct material {
 };
 
 /* A kind of thing (the catalogue's: a stand-in for the theme's data) */
-#define NKINDS          48
+#define NKINDS          64
 struct kind {
     char            name[14];                   /* "torch", "backpack" ... */
     unsigned char   flags;                      /* K_* */
@@ -59,8 +59,14 @@ struct kind {
 enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKIN, KI_RATIONS, KI_TINDERBOX, KI_PICK,
     KI_SHOVEL, KI_LOCKPICKS, KI_CHISEL, KI_ROPE, KI_BONES, KI_PENNIES, KI_KEY, KI_CANDLE, KI_LANTERN, KI_SACK, KI_CHEST,
     KI_SKULL, KI_BROKEN_SWORD, KI_CLOAK, KI_POTSHERDS, KI_SWORD, KI_BASKET, KI_SAND, KI_TABLE, KI_CHAIR, KI_QUIVER,
-    KI_ARROWS, KI_BAR, KI_PANE, KI_BARS, KI_SHARDS, KI_COUNT };   /* (A door's bar, a window's pane and its bars: a
-                                                **   portal's parts, IW_PORTAL; a pane broken, its shards) */
+    KI_ARROWS, KI_BAR, KI_PANE, KI_BARS, KI_SHARDS,  /* (A door's bar, a window's pane and its bars: a portal's parts,
+                                                **   IW_PORTAL; a pane broken, its shards) */
+    KI_BODY,                                    /* (A denizen dead: the denizens' task's) */
+    KI_LEATHER_CAP, KI_LEATHER_TUNIC, KI_GAMBESON, KI_RING_BYRNIE, KI_MAIL_HAUBERK, KI_GAUNTLETS, KI_BOOTS,  /* Armour (its
+                                                **   key the referee's piece) */
+    KI_HELM, KI_SANDALS, KI_SHOES, KI_HOBNAIL, /* (A helm; footwear: its soles the referee's, against a kick) */
+    KI_MACE, KI_SPEAR, KI_SHIELD,               /* Weapons (the referee's by their keys) */
+    KI_COUNT };
 
 /* An item */
 #define NITEMS          (ITEM_BANKS * (0x2000 / sizeof (struct item)))

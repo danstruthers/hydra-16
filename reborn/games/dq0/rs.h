@@ -63,7 +63,7 @@ enum { AP_WEAPON, AP_ARMOUR, AP_METAL, AP_WOOD, AP_HIDE, AP_CLOTH, AP_POTTERY, A
 enum { MAT_EARTH, MAT_STONE, MAT_MASONRY, MAT_FLAGS };
 
 /* ---- Paces: how fast an actor goes, the slowest first (a creep, a slow walk, a walk, a jog, a run, a sprint); the
-** summary's gstep each one's time a square; RS_TIME's a the one the time went at (GA_REST: standing still) */
+** summary's gstep each one's time a square; RS_EXERT's a the one the time went at (GA_REST: standing still) */
 enum { GA_CREEP, GA_SLOW, GA_WALK, GA_JOG, GA_RUN, GA_SPRINT, NGAITS };
 #define GA_REST         0xFF
 
@@ -73,7 +73,7 @@ enum { GA_CREEP, GA_SLOW, GA_WALK, GA_JOG, GA_RUN, GA_SPRINT, NGAITS };
 #define C_DEAD          0x0004
 #define C_STUNNED       0x0008                  /* (HarnMaster's shock) */
 #define C_BLEEDING      0x0010
-#define C_FATIGUED      0x0020                  /* (Tired, or tiring: rest owed it, RS_TIME's) */
+#define C_FATIGUED      0x0020                  /* (Tired, or tiring: rest owed it, RS_EXERT's) */
 #define C_ARM_USELESS   0x0040
 #define C_LEG_USELESS   0x0080
 #define C_BLINDED       0x0100
@@ -84,11 +84,47 @@ enum { GA_CREEP, GA_SLOW, GA_WALK, GA_JOG, GA_RUN, GA_SPRINT, NGAITS };
 /* ---- Health: how hurt an actor is, in words any ruleset can say */
 enum { H_FINE, H_HURT, H_BADLY, H_CRITICAL, H_DOWN, H_DEAD };
 
-/* ---- How an attack came out, for the words */
-enum { O_MISS, O_DODGED, O_BLOCKED, O_HIT, O_BOTH_HIT, O_COUNTER_HIT, O_FUMBLE, O_STUMBLE, O_ADVANTAGE, O_CRIT };
+/* ---- How an attack came out, for the words (O_DISPATCH: a helpless one finished; O_RISE: the attacker, fallen,
+** only got to its feet) */
+enum { O_MISS, O_DODGED, O_BLOCKED, O_HIT, O_BOTH_HIT, O_COUNTER_HIT, O_FUMBLE, O_STUMBLE, O_ADVANTAGE, O_CRIT,
+    O_DISPATCH, O_RISE };
 
 /* ---- Defences: the stance the player sets (the ruleset decides what each means; auto: its best) */
 enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
+
+/* ---- An attack (RS_ATTACK): actor strikes at other (0 the character, else an actor's entry plus 1) with what it has
+** in hand (the character's: RS_EQUIP's, the best weapon held; else its fists) or its own (a creature's claws, bite
+** ...): a its aim (Z_*), b its aspect (AS_*, AS_BEST: what it does best), c the others engaged with the defender
+** besides the attacker (outnumbered), steps the circumstances.  The defence is the ruleset's: the character's by its
+** stance (the hub's pc_stance, D_*), a creature's by its nature; one senseless is finished.  The reply: result how it
+** came out (O_*; 0xFF: none struck), a whose a fumble or a stumble was (1 the attacker's, 2 the defender's, 3
+** both's), b the defence (D_*), c AF_*, its effects (x: X_WOUND, X_DEATH, X_COND_ON: C_PRONE, C_UNCONSCIOUS;
+** X_DROP: a weapon fumbled), w1 the attacker's health (H_*) and the defender's times 256, w2 the tenths one knocked
+** senseless is out for; its words in the text, four lines: the attacker's weapon ("sword", "bite"), the defender's,
+** what the attacker's strike did ("a serious cut to its left thigh (S2)", "your ring byrnie": the armour that stopped
+** it), and the defender's (a counterstrike's, a block's on a bare arm or a claw).  For the denizens' task (its slot):
+** the request's w1 the place in its ring for the words (the referee puts them there: hub.h's FIGHT_AT), w2 1 if the
+** creature is shy (a shaken one flees); the reply's grade what it left them in (hub.h's FF_*: the creature's courage
+** tested if it was wounded and stands, RS_MORALE's: FF_FLEES, or AF_CAUTIOUS).  The character strikes with what the
+** hub's pc_strike says (SK_*: the best to hand, a fist, a foot, the head: Unarmed's, the book's hand, foot and head).
+**
+** At a thing (other RS_THING: a door, a portcullis's bars, a window's shutters or glass; the maker's), which ignores it
+** (the book's Ignore defence): x[0..3] the thing's resistance to blunt, edge, point and fire (its armour), c the blow's
+** number in a run of them; the character's best to hand the tool that hits a thing hardest (not a weapon), else its
+** fists.  The reply: w1 the harm the thing takes (the impact past its resistance, its aspect the best against it: b),
+** result 2 if a part of the striker struck it (its words in the text, the striker's weapon), and its own hurt if the
+** blow went wrong (a part only: the attack's marginal failure a d6, its critical failure 2d6, the book's H2 for a part
+** that meets something hard, Combat 12; and half the thing's blunt resistance; less the part's armour, a kick's the
+** soles'): HC_STRUCK's, c its worst band, w2 the tenths it's out for, result | 1 if it's hurt enough to stop, its words
+** RS_DESCRIBE b 2's */
+#define AF_STOPPED      0x01                    /* The attacker's strike stopped by armour (its line the armour's) */
+#define AF_STOPPED_D    0x02                    /*   the defender's */
+#define AF_TA           0x04                    /* The defender's tactical advantage: an action more, at once */
+#define AF_CAUTIOUS     0x08                    /* The creature in it, wounded, holds back a round (its courage) */
+#define AF_BLEEDING     0x10                    /*   bleeding (the referee's RS_TIME a minute at a time) */
+
+/* ---- Morale (RS_MORALE): an actor's courage tested (steps: how its fight goes): the grade, and result its state */
+enum { M_STEADY, M_CAUTIOUS, M_BROKEN, M_DESPERATE, M_BERSERK };
 
 /* An effect of a reply: what happened to whom (up to RS_EFFECTS a reply) */
 #define RS_EFFECTS      4
@@ -111,20 +147,14 @@ enum { BP_SKULL, BP_FACE, BP_NECK, BP_SHOULDER, BP_UPPER_ARM, BP_ELBOW, BP_FOREA
 **   HC_STRIKE   a trap's (a blade, darts, spikes, a deadfall), or any blow with no one behind it: b its aspect
 **               (AS_*), c its dice (d6s), w1 impact more, w2 where it strikes (Z_*)
 **   HC_FIRE     a burn: c its dice, w1 more, w2 where
-**   HC_BLOW     a blow the actor strikes at the other, with what it has in hand (its key in the text: "blade",
-**               "pick" ...; "hands"): b its aspect (AS_BEST: what it does best), c its dice (0: one).  At a thing
-**               (other RS_THING: a door, a portcullis's bars, a chest) only the blow's impact is worked out, the
-**               reply's w1 (b its aspect, the text what struck it: none named, the tool to hand that hits a thing
-**               hardest, but a weapon): what the thing's material and toughness take from it is the world's; struck
-**               with bare hands (the text "hands"), a d4 and the actor's Strength's (the user's, DUNGEON.md: portals)
-**   HC_HANDS    the actor's own hand hurt by its blow at a thing (the user's: the lesser of the blow and the thing's
-**               resistance): w1 that impact (the hand's armour the referee's to take off), w2 the blow's number in a
-**               run of them (0: its words begun anew, else added to); an automatic blunt hit on a hand, and the
-**               reply's result 1 if it's hurt badly enough to stop (the referee's say)
+**   HC_STRUCK   the actor's own part hurt by its blow at a thing (an RS_ATTACK at RS_THING's: the referee's own):
+**               c the part (BP_HAND, BP_FOOT, BP_SKULL), w1 its impact (its armour off it), w2 the blow's number in a
+**               run of them (0: its words begun anew, else added to); a blunt hit on it, and the reply's result 1 if
+**               it's hurt badly enough to stop (the referee's say)
 ** The reply: its effects (x: up to RS_EFFECTS, X_NONE after the last), b the worst wound's band (0: unhurt), w2 the
 ** tenths the actor's out for (knocked senseless), result 1 a fall stopped (a hold grabbed); its words in the text,
 ** a line (and RS_DESCRIBE b 2's: the last harm's) */
-enum { HC_FALL, HC_STRIKE, HC_FIRE, HC_BLOW, HC_HANDS };
+enum { HC_FALL, HC_STRIKE, HC_FIRE, HC_STRUCK };
 enum { AS_BLUNT, AS_EDGE, AS_POINT, AS_FIRE, AS_BEST };     /* (items.h's DM_* in the same order) */
 enum { Z_MID, Z_HIGH, Z_LOW };
 enum { GR_FLOOR, GR_DEEP_WATER, GR_SHALLOW_WATER, GR_SOFT, GR_HARD, GR_ROCKY };    /* Earth; water; mud; paving;
@@ -153,22 +183,29 @@ struct rs_summary {
 enum {
     RS_HELLO,                                   /* -> its name, its round (tenths), its standard action times */
     RS_LOAD_PC,                                 /* A character file -> its name, calling, summary */
-    RS_NEW_ACTOR,                               /* A creature by key (and its tier, size, kind) -> its summary */
+    RS_NEW_ACTOR,                               /* A creature by key (and its tier, size, kind) -> its summary:
+                                                **   actor its entry plus 1, the key in the text, w1 its record (the
+                                                **   denizens' task's: its sheet's, kept and saved with the game; made
+                                                **   the first time, the same one after) */
     RS_DROP_ACTOR,
     RS_TEST,                                    /* An actor, a purpose, steps -> a grade */
     RS_TEST_MANY,                               /* The same for several (perception) */
     RS_CONTEST,                                 /* Two actors, two purposes -> who won */
     RS_ATTACK,                                  /* Attacker, defender, weapon, mode, range, steps -> the outcome */
     RS_HARM,                                    /* A cause (fall, fire, poison ...) and its dice -> effects */
-    RS_TIME,                                    /* Time passed (w1 tenths) moving at a pace (a: GA_*), or standing
+    RS_TIME,                                    /* Minutes passed (w1): bleeding, fatigue -> effects (b its health,
+                                                **   result 1 if it died of them) */
+    RS_EXERT,                                   /* Time passed (w1 tenths) moving at a pace (a: GA_*), or standing
                                                 **   still (GA_REST): fatigue gained, or rested off (its summary
-                                                **   anew); (later: bleeding -> effects) */
+                                                **   anew) */
     RS_REST,                                    /* Hours resting: healing, advancement -> effects, words */
     RS_TREAT,                                   /* A healer, a patient -> effects */
     RS_EQUIP,                                   /* An item taken up (a 1) or put away (a 0): its key in the text
-                                                **   ("pick"); or all that's to hand anew (a 2: the keys, a space
-                                                **   between): the referee judges tests by it, a skill used taking the
-                                                **   tool that suits; a 2's w1 the load, all the actor carries, in
+                                                **   ("pick"); or all that's to hand anew (a 2: the keys, each after
+                                                **   a mark, * held, + worn, a space neither, and its quality after it,
+                                                **   a digit 0-9: " pick4*blade5+ltunic3"): the referee judges tests
+                                                **   by it, a skill used taking the tool that suits, a fight by what's
+                                                **   held and worn; a 2's w1 the load, all the actor carries, in
                                                 **   quarter pounds: its encumbrance the referee's, in the summary (its
                                                 **   load, its step) and its tests */
     RS_INITIATIVE,                              /* Actors -> each one's delay as a fight starts */

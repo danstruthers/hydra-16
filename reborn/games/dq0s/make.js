@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 
 const SND_KINDS = 32, SND_WORLD = 16, SND_REC = 32, SND_WORDS = 20;    // hub.h's
-const WORLD = ['*dig', '*open', '*shut', '*blow', '*smash', '*chains', '*trap'];   // dq0s.c's WS_*
+const WORLD = ['*dig', '*open', '*shut', '*blow', '*smash', '*chains', '*trap', '*hit', '*swish'];   // dq0s.c's WS_*
 const WAVES = { p: 0, s: 1, t: 2, n: 3 };       // snd.h's SND_WAVE_*
 const S_USED = 1, S_NOISY = 2;                  // dq0s.c's S_*
 

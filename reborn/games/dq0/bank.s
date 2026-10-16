@@ -151,6 +151,7 @@ ovl_out:
             OVFN        sway_words, 6
             OVFN        dig_words, 1
             OVFN        climb_words, 1
+            OVFN        entered, 1
             OVFN        portal_words, 1
             OVFN        harm_words, 1
             OVFN        appraise, 1
@@ -172,3 +173,5 @@ ovl_out:
             OVFN        ending, 5
             OVFN        puzzle, 5
             OVFN        fixed, 5
+            OVFN        fight_words, 6
+            OVFN        fight_target, 6

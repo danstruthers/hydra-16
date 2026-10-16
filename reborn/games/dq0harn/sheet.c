@@ -15,33 +15,19 @@
 #include "../dq0/rs.h"
 #include "dq0harn.h"
 
-/* ---- Harm (rs.h's RS_HARM): a fall (harn.h's harn_fall, Skills 8), a trap's strike, a burn, a blow struck; each
+/* ---- Harm (rs.h's RS_HARM): a fall (harn.h's harn_fall, Skills 8), a trap's strike, a burn, a striker's own hurt; each
 ** an impact on a location made a HarnMaster injury on the sheet (harn_wound, Combat 13-14: its severity and levels,
 ** the kill and shock rolls, bleeding, a limb made useless), told back as effects and in words (kept for RS_DESCRIBE
-** b 2).  The game's own choices in using the book: a fall strikes where a mid strike would (on its feet, a low one);
-** no armour yet (items will bring it); a tool's impacts, where the book has no weapon like it, the game's; one
-** knocked senseless comes round by the book's shock rolls, a round each, within an hour (then wakes anyway).
+** b 2).  The game's own choices in using the book: a fall strikes where a mid strike would (on its feet, a low one),
+** no armour taken off it; one knocked senseless comes round by the book's shock rolls, a round each, within an
+** hour (then wakes anyway).  A trap's strike and a burn have the armour where they strike taken off them (Combat
+** 13: gear.c's pc_armour).
 **
-** Bare hands at a thing (a door battered: the user's, 2026-10-15, DUNGEON.md: portals): the blow a d4, the
-** Strength's modifier (the game's, by the bands of the book's Strength table, Combat 3: a point of impact a band
-** from 9-12's) and the hands' armour's bonus; the world takes the thing's resistance off it, and gives the lesser of
-** the two back as the hand's own hurt (HC_HANDS): an automatic blunt hit on one hand or the other, less its armour,
-** made an injury as any is.  Enough, and the character stops: the hands' injuries three levels or more, a serious
-** one, or the shock of it.  Armour on the hands comes with the items' telling the referee what's worn (RS_EQUIP's,
-** to come: harn_armour_at over the pieces): none till then */
-
-#define HAND_BONUS      0                       /* (A gauntlet's, on a blow) */
-#define HAND_COVER      0                       /* (The hand's armour, against a blunt hit) */
+** The striker's own part hurt by its blow at a thing (HC_STRUCK: fight.c's, the impact its own, its armour taken
+** off already): a blunt hit on it, made an injury as any is; enough, and it stops (the game's: that part's injuries
+** three levels or more, a serious one, or the shock of it) */
 
 char hurt[200];                                 /* The last harm's words */
-char blow[8];                                   /* (A blow's: what it's struck with, its key) */
-
-/* What a blow's struck with (a thing's key for the referee): its blunt, edge and point impact (-1: none); a knife
-** and a blade the book's dagger and broadsword (Combat 3) */
-static const struct { char key[8]; signed char imp[3]; } striker[] = {
-    { "hands", { 0, -1, -1 } }, { "knife", { 1, 2, 5 } }, { "blade", { 3, 5, 3 } }, { "pick", { 2, -1, 5 } },
-    { "mattock", { 3, 4, 4 } }, { "shovel", { 2, 3, -1 } }, { "spade", { 2, 3, -1 } }, { "chisel", { 1, -1, 2 } },
-};
 
 /* An injury's words, by its aspect and severity (minor, serious, grievous or worse) */
 static const char* const wound_word[4][3] = {
@@ -82,46 +68,36 @@ static void __fastcall__ told (const harn_injury* j, unsigned char sev, struct r
     }
 }
 
-/* The Strength's modifier to a bare-handed blow (the bands of Combat 3's Strength table: 1-5, 6-8, 9-12, 13-15, 16+) */
-static signed char str_mod (void)
-{
-    unsigned char s = pc.att[HARN_STR];
-
-    return s <= 5 ? -2 : s <= 8 ? -1 : s <= 12 ? 0 : s <= 15 ? 1 : 2;
-}
-
-/* The levels of the injuries to the hands, all told */
-static unsigned char hand_levels (void)
+/* The levels of the injuries to a part (a hand, a foot, the skull), all told */
+static unsigned char __fastcall__ part_levels (unsigned char part)
 {
     unsigned char k, l = 0;
 
     for (k = 0; k < pc.ninj; ++k) {
-        if (HARN_LOC (pc.inj[k].loc) == HARN_HAND) {
+        if (HARN_LOC (pc.inj[k].loc) == part) {
             l += pc.inj[k].il;
         }
     }
     return l;
 }
 
-/* r a copy of the request, in the main RAM (but its text: blow has the key in it, and a blow at a thing's put back
-** in it, what struck) */
+/* r a copy of the request, in the main RAM (but its text) */
 void __fastcall__ o_harm (struct req* r)
 {
     static harn_injury d;
     struct rs_effect* e = (struct rs_effect*) r->x;
     unsigned char how = 0, aspect, zone = HARN_MID, n = pc.ninj, k, w, loc = 0xFF;
-    const signed char* imp;
     int impact;
 
     memset (r->x, 0, sizeof r->x);
     tend = hurt + sizeof hurt - 1;
-    if ((r->a == HC_BLOW && r->other == RS_THING) || (r->a == HC_HANDS && r->w2)) {
-        tp = hurt + strlen (hurt);              /* (A run of blows: the hands' words added to) */
+    if (r->a == HC_STRUCK && r->w2) {
+        tp = hurt + strlen (hurt);              /* (A run of blows: the part's words added to) */
     } else {
         tp = hurt;
         *tp = 0;
     }
-    if ((r->other && r->other != RS_THING) || pc.state == HARN_DEAD) {
+    if (r->other || pc.state == HARN_DEAD) {
         r->result = 1;                          /* (Only the character has a sheet, so far) */
         return;
     }
@@ -135,40 +111,10 @@ void __fastcall__ o_harm (struct req* r)
         }
         aspect = HARN_BLUNT;
         break;
-    case HC_BLOW:                               /* (With what's in hand: unknown, bare hands) */
-        for (k = sizeof striker / sizeof striker[0] - 1; k && strcmp (striker[k].key, blow); --k) {
-        }
-        if (!*blow && r->other == RS_THING) {   /* (At a thing, none named: the tool to hand that hits it hardest,
-                                                **   but a weapon, which a thing would spoil) */
-            for (w = 3, aspect = 0; w < sizeof striker / sizeof striker[0]; ++w) {
-                if (has (striker[w].key) && striker[w].imp[0] + striker[w].imp[1] + striker[w].imp[2] > aspect) {
-                    aspect = striker[w].imp[0] + striker[w].imp[1] + striker[w].imp[2];
-                    k = w;
-                }
-            }
-        }
-        imp = striker[k].imp;
-        aspect = r->b;
-        if (aspect > AS_POINT || imp[aspect] < 0) {
-            for (aspect = AS_BLUNT, w = 1; w < 3; ++w) {    /* (Its best) */
-                aspect = imp[w] > imp[aspect] ? w : aspect;
-            }
-        }
-        impact = imp[aspect] + dice (r->c ? r->c : 1, 6);
-        if (r->other == RS_THING) {
-            if (!k) {                           /* (Bare hands: the user's d4, the Strength's, the armour's) */
-                impact = dice (1, 4) + str_mod () + HAND_BONUS;
-            }
-            r->w1 = impact < 0 ? 0 : impact;    /* (A thing's: what it takes of it is the world's, by its aspect, */
-            r->b = aspect;                      /*   b, and what struck it, the text) */
-            strcpy (blow, striker[k].key);
-            return;
-        }
-        break;
-    case HC_HANDS:                              /* (Its own hand, by its blow at a thing: either one) */
-        impact = (int) r->w1 - HAND_COVER;
+    case HC_STRUCK:                             /* (Its own part, by its blow at a thing: c which, a limb either one) */
+        impact = r->w1;
         aspect = HARN_BLUNT;
-        loc = HARN_HAND | (dice (1, 2) == 2 ? HARN_RIGHT : 0);
+        loc = r->c | (harn_is_limb (r->c) && dice (1, 2) == 2 ? HARN_RIGHT : 0);
         break;
     default:                                    /* (A strike, or fire: its dice, and more, where it's aimed) */
         impact = dice (r->c, 6) + (int) r->w1;
@@ -183,6 +129,9 @@ void __fastcall__ o_harm (struct req* r)
     }
     d.loc = loc != 0xFF ? loc : harn_strike_location (zone);
     d.aspect = aspect;
+    if (r->a == HC_STRIKE || r->a == HC_FIRE) {
+        impact -= pc_armour (d.loc, aspect);    /* (The armour there) */
+    }
     w = harn_wound (&pc, d.loc, aspect, impact);
     if (w & HARN_W_DEAD) {
         told (&d, HARN_KILL, e);
@@ -204,8 +153,8 @@ void __fastcall__ o_harm (struct req* r)
         }
         r->w2 = k * 100;
     }
-    if (r->a == HC_HANDS) {                     /* (Enough: the referee's say) */
-        r->result = pc.state != HARN_CONSCIOUS || r->w2 || r->b >= HARN_SERIOUS || hand_levels () >= 3;
+    if (r->a == HC_STRUCK) {                    /* (Enough: the referee's say) */
+        r->result = pc.state != HARN_CONSCIOUS || r->w2 || r->b >= HARN_SERIOUS || part_levels (HARN_LOC (loc)) >= 3;
     }
 }
 
@@ -320,7 +269,82 @@ void o_brief (void)
     pair ("IP ", harn_get_ip (&pc), "BL ", pc.bl);
 }
 
-/* ---- The character's state (the status command's: RS_DESCRIBE b 3, st's): its pace, what it's held to and its feet
+/* ---- What the character notices, by its state (DUNGEON.md: moving; the game's steps): its pace as it moves (a creep
+** or a slow walk a step better, but not by feel in the dark; a jog two worse, a run four, a sprint six); in shock four
+** worse (the book's universal penalty, its injuries' and its fatigue's, is in every test already); listening, a sound
+** two better.  A hazard underfoot (P_NOTICE_SIGHT's b 1, its steps the hiding's) by a search's chance while it
+** searches as it goes, else a passing glance's: twice its hiding's steps, and two more (r a copy; the hub's pace and
+** watchfulness in ps) */
+
+static const signed char by_pace[NGAITS] = { 1, 1, 0, -2, -4, -6 };
+
+signed char __fastcall__ o_noticing (const struct req* r)
+{
+    unsigned char g = ps.go & ~GOING_DARK;
+    signed char s = 0, p;
+
+    if (r->a == P_NOTICE_SIGHT && r->b == 1 && !(ps.watch & WA_TRAPS)) {
+        s = r->steps - 2;
+    }
+    if (g && g <= NGAITS) {
+        p = by_pace[g - 1];
+        s += p > 0 && (ps.go & GOING_DARK) ? 0 : p;
+    }
+    if (pc.state == HARN_SHOCK) {
+        s -= 4;
+    }
+    if (r->a == P_NOTICE_SOUND && (ps.watch & WA_LISTEN)) {
+        s += 2;
+    }
+    return s;
+}
+
+/* ---- Fatigue (DUNGEON.md: moving; the book's movement fatigue, Combat 6: a level a day walking, one each five
+** minutes jogging, each two running, each minute sprinting; ten minutes' rest a level gone, Skills 6).  The game's
+** own: slower than a walk tires as a walk does; the time at each pace added up across moves (exertion toward the next
+** level, 6000 a level: a sprint's 10 a tenth, a run's 5, a jog's 2, a walk's a 144th), and rest wears that off (1 a
+** tenth) before it takes a level off */
+
+#define LEVEL   6000
+
+void __fastcall__ o_spent (unsigned t)
+{
+    static const unsigned char rate[NGAITS] = { 0, 0, 0, 2, 5, 10 };
+    unsigned char a = spent_at, k;
+    unsigned n;
+
+    while (t) {                                 /* (A minute at a time: in 16 bits) */
+        n = t > 600 ? 600 : t;
+        t -= n;
+        if (a == GA_REST) {
+            if (n <= tired) {
+                tired -= n;
+                continue;
+            }
+            rested += n - tired;
+            tired = 0;
+            while (rested >= LEVEL && pc.fl) {
+                rested -= LEVEL;
+                --pc.fl;
+            }
+            if (!pc.fl) {
+                rested = 0;
+            }
+            continue;
+        }
+        rested = 0;
+        k = a < NGAITS ? rate[a] : 0;
+        tired += k ? n * k : n / 144;
+        while (tired >= LEVEL) {
+            tired -= LEVEL;
+            if (pc.fl < 99) {
+                ++pc.fl;
+            }
+        }
+    }
+}
+
+/* ---- The character's state (the status command's: RS_DESCRIBE b 3, ps's): its pace, what it's held to and its feet
 ** a round (the book's rates of its Move, Combat 6; the game's two slower), its watchfulness; then (all of it) its
 ** condition (its health, its injuries in brief, its fatigue and its load, the penalties they make) and its light */
 
@@ -341,12 +365,12 @@ static void __fastcall__ penalty (unsigned char n, const char* a, const char* b,
 
 void o_state (void)
 {
-    unsigned char g = st.gait, h = g, k, worst = 0, bleed = 0;
+    unsigned char g = ps.gait, h = g, k, worst = 0, bleed = 0;
     const harn_injury* j;
 
-    if (h > GA_SLOW && ((st.watch & WA_TRAPS) || st.dark)) {
+    if (h > GA_SLOW && ((ps.watch & WA_TRAPS) || ps.dark)) {
         h = GA_SLOW;
-    } else if (h > GA_WALK && (st.watch & WA_LISTEN)) {
+    } else if (h > GA_WALK && (ps.watch & WA_LISTEN)) {
         h = GA_WALK;
     }
     put ("Pace: ");
@@ -354,15 +378,15 @@ void o_state (void)
     if (h != g) {
         put (", held to ");
         put (pace_name[h]);
-        put (st.watch & WA_TRAPS ? " while you search as you go" : st.dark && h == GA_SLOW ? " in the dark" :
+        put (ps.watch & WA_TRAPS ? " while you search as you go" : ps.dark && h == GA_SLOW ? " in the dark" :
             " while you listen");
     }
     put (" (");
     putn (harn_move (&pc) * feet[h][0] / feet[h][1]);
     put (" feet a round).\nWatching: ");
-    put (!st.watch ? "nothing in particular." : st.watch == WA_LISTEN ? "listening as you go." : st.watch & WA_LISTEN ?
+    put (!ps.watch ? "nothing in particular." : ps.watch == WA_LISTEN ? "listening as you go." : ps.watch & WA_LISTEN ?
         "for traps and hidden doors as you go, and listening." : "for traps and hidden doors as you go.");
-    if (!st.full) {
+    if (!ps.full) {
         return;
     }
     put ("\nCondition: ");
@@ -397,13 +421,13 @@ void o_state (void)
     put (", physical ");
     putn (harn_get_pp (&pc));
     put (".\nLight: ");
-    if (st.light) {
+    if (ps.light) {
         put ("your ");
-        put (st.lamp);
+        put (ps.lamp);
         put (" (");
-        putn (5 * st.light);
+        putn (5 * ps.light);
         put (" feet).");
     } else {
-        put (st.dark ? "none: it's dark here, and you feel your way." : "none of your own: this place's own light.");
+        put (ps.dark ? "none: it's dark here, and you feel your way." : "none of your own: this place's own light.");
     }
 }

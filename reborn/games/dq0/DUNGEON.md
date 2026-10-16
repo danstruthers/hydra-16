@@ -312,29 +312,34 @@ later), a **thickness**, a **state** (0 rotten ... 4 sound ... 9 new: as made, b
 stratum's age, wood fastest, stone hardly), a door's **features** (a little window with a grille, a spy-hole, a
 bar's brackets, iron studs, which side its hinges are, two leaves), and so a **body**: the net harm it takes
 before it fails, by its material, size, thickness and state.  **Breaking** (break the door; a window's shutters,
-glass, bars) goes by it: blows, a dozen at most a time, each the referee's impact (HC_BLOW at RS_THING, with the
-best tool to hand, never a weapon) less its material's resistance to the blow's aspect (the less, the worse its
-state), off its body; the harm kept (PORTAL_HARM); a door broken down open for good (PS_WRECKED: it won't shut).
-**Bare hands** (the user, 2026-10-15: "Breaking with hands really depends on strength, but could result in damage
-(blunt automatic hit, impact depends on strength of the player, less any armor coverage) to the hands", and "Doors
-should have resistances ("armor" coverage) of some amount, and then strength determines how much damage is done (D4 +
-strength mod + any armor bonus - door resistance to blunt impact) with lesser of door resistance amount and amount of
-damage dealt (minus hand armor coverage) as damage to actor's hand."): with no tool to hand that hits harder, each
-blow is
+glass, bars) goes by it: blows, a dozen at most a time, each an attack the thing ignores (the referee's RS_ATTACK at
+RS_THING) with what the character strikes with: the best tool to hand (never a weapon, which a thing would spoil), or
+a fist, a foot, its head (punch, kick, head butt the door), its impact less the material's resistance to the blow's
+aspect (the less, the worse its state), off its body; the harm kept (PORTAL_HARM); a door broken down open for good
+(PS_WRECKED: it won't shut).  **Bare hands, feet and heads** (the user, 2026-10-16: "Ignore how the current system
+does battering of doors. Once unarmed combat is built, model it after that. There is info in the HarnMaster rules
+about this."; this supersedes the user's formula of 2026-10-15, "D4 + strength mod + any armor bonus - door
+resistance to blunt impact", the hand hurt by "lesser of door resistance amount and amount of damage dealt (minus hand
+armor coverage)"): each blow is HarnMaster's unarmed attack (DENIZENS.md: fights; the referee's dq0harn/fight.c and
+gear.c), the thing ignoring it:
 
-- the blow: a d4, the Strength's modifier and any armour's bonus (the referee's: HarnMaster's has no Strength
-  modifier as such, so the game's, by the bands of the book's Strength table: 1-5 -2, 6-8 -1, 9-12 none, 13-15 +1,
-  16 and more +2; a gauntlet's bonus none till the items tell the referee what's worn);
-- the door's harm: the blow less its resistance to a blunt blow (its material's, less for a worse state: the same as
-  any blow's), never below nothing, off its body;
-- the hand's harm: the lesser of the blow and that resistance, less the hand's armour (none, so far): an automatic
-  blunt hit on one hand or the other (rs.h's HC_HANDS), the referee's HarnMaster injury, worded ("Your knuckles
-  split on it: a minor bruise to your right hand (M1)"), on the sheet.  So a strong character does more to a door
-  than a weak one, and a sturdy door hurts the hands more than a rotten one.  The character stops when the referee
-  says it's hurt enough (the game's: the hands' injuries three levels or more, a serious one, or the shock of it).
+- the attack: the striker's Unarmed tested (the book's hand, foot and head, Combat 3: their attack classes and
+  impacts; a tool's skill and its attack class), the Ignore table's strike (Combat 12: a critical failure none, a
+  marginal failure a die, a success three, a critical success four), the impact the dice and the weapon's (a gauntlet
+  a point more on a punch, hobnailed boots on a kick: the book's "enhanced", Skills 18; the game's numbers);
+- the thing's harm: the impact less its resistance to that aspect (its armour), never below nothing, off its body;
+- the striker's own: only as a blow goes wrong (the book's H2 on a bare part that meets something hard, Combat 12; the
+  user remembered self-harm on a failure only: the book has no rule for striking things, so the game's, after it), a
+  marginal failure a d6, a critical failure 2d6, and half the thing's resistance to a blunt blow, less the part's
+  armour (gauntlets a hand's, a helm the skull's, a kick the soles of its footwear: sandals little, shoes and boots
+  more, hobnailed boots most): a blunt hit on it (rs.h's HC_STRUCK), the referee's HarnMaster injury, worded ("You
+  hurt yourself on it: a minor bruise to your right foot (M1)"), on the sheet.  So skill spares the striker (an
+  Unarmed 95 batters a rotten door down unhurt), armour and boots spare it, and a sturdy door hurts more than a rotten
+  one.  The character stops when the referee says it's hurt enough (the game's: that part's injuries three levels or
+  more, a serious one, or the shock of it).
 
-A tool carried (a pick ...) is used instead, sparing the hands.  Forcing (Strength) is easier on a rotten door,
-harder on a new one.  Its **parts** are items of their own (items.h's IW_PORTAL, put in it as the chunk's stocked):
+A tool carried (a pick ...) is used instead (break the door), sparing the hands.  Forcing (Strength) is easier on a
+rotten door, harder on a new one.  Its **parts** are items of their own (items.h's IW_PORTAL, put in it as the chunk's stocked):
 a door's **bar** (in its brackets, on the square on its bar's side; some unbarred doors' set aside by them), a
 window's **pane** and **bars**, each with its material, its state, its size and thickness: examined as any thing is,
 lifted out (take the bar, lift the bar: only from its side; a pane worked out whole; bent bars lifted out) and
@@ -495,19 +500,24 @@ movement should be based on speed and/or distance traveled."):
 - **Fatigue** is the referee's (the book's movement fatigue): walking (or slower) a fatigue level a day, jogging one
   each five minutes, running one each two, sprinting one each minute, the time at each pace added up across moves;
   standing still (waiting, the time between moves) is rest, a level gone each ten minutes of it.  The world tells the
-  referee the time moved at each pace, and the rest (RS_TIME), and the referee keeps the levels on the sheet: the
+  referee the time moved at each pace, and the rest (RS_EXERT), and the referee keeps the levels on the sheet: the
   book's fatigue penalty, part of the universal penalty every test pays and of the physical (so a tired character's
   Move, and every pace, slows).  (Not yet: digging's and climbing's strenuous work tiring it, a level each five minutes
-  of it, the book's general rule; a character worn out past its endurance fainting.)
+  of it, the book's general rule; a character worn out past its endurance fainting.)  Built: the referee's units a
+  level's 6,000 (a sprint's ten a tenth of a second, a run's five, a jog's two, a walk's a 144th: a day's walking near
+  enough), rest one a tenth; kept with the sheet (pc.hm's "pace" line: the pace, the watchfulness, the exertion).
 - **Watchfulness** (the hub's watch, the player's too): **searching as it goes** ("search for traps as I go", "watch
-  for traps", "move carefully"; "stop searching"), a slow walk at most, and every square it passes searched as a
-  search would: a trap on its way (the walk stops on the first it would set off, as always) tested by the search's
-  chance (P_SEARCH's: the referee's Awareness, a step a point of its hiding) not the smaller passing chance, and each
-  hidden door beside its way searched for (P_SEARCH, one test a door) as it passes, found ones told and known from
-  then on; **listening** ("listen as I go"), a walk at most, its hearing two better (the summary's: the denizens heard
-  further); **moving quietly** ("sneak", "move quietly") is the creep, the denizens hearing its steps at half their
-  hearing (a jog's a little further than a walk's, a run or a sprint twice as far).  (To come: Stealth tests against
-  the denizens' Awareness, with the fights' and the denizens' later work.)
+  for traps", "move carefully"; "stop searching"), a slow walk at most, and searching as a search would: a trap on
+  its way (the walk stops on the first it would set off, as always) tested by the search's chance (P_SEARCH's: the
+  referee's Awareness, a step a point of its hiding) not the smaller passing chance, and wherever it stops (a walk
+  stops at every door, fork and end, a small move at every square or few) the maker's search about it (the hidden
+  doors and traps within three squares it sees, each the referee's test), quietly and in no more time, found ones told
+  and known from then on (built so: a list of the hidden doors beside every square of the way was too big for the
+  world's room); **listening** ("listen as I go"), a walk at most, its hearing two better (the summary's: the
+  denizens heard further); **moving quietly** ("sneak", "move quietly") is the creep, the denizens hearing its steps at half their
+  hearing (a jog's a little further than a walk's, a run or a sprint twice as far: not yet, no room in the denizens'
+  task; the hub's pc_going says the pace for it).  (To come: Stealth tests against the denizens' Awareness, with the
+  fights' and the denizens' later work.)
 - **What it notices** goes by its state, the referee's: every notice test (P_NOTICE_SIGHT, SOUND, SMELL, whoever asks:
   a trap underfoot, the senses' look as it arrives) is the worse the faster it was moving (the game's: a creep or a
   slow walk a step better, a walk none, a jog two worse, a run four, a sprint six), and the worse for its condition:
@@ -530,13 +540,15 @@ movement should be based on speed and/or distance traveled."):
   in a passage, along it by the four (a corner stops it).  (I_STEP.)
 
 **Harm** (rs.h's RS_HARM, the referee's): a fall (its height, the ground it lands on, whether it's clear or past holds
-to grab), a trap's strike (its aspect, its dice, where it strikes), a burn, a blow struck with what's in hand; each
+to grab), a trap's strike (its aspect, its dice, where it strikes), a burn, a striker's own hurt by its blow at a thing; each
 made the ruleset's injuries on the sheet (HarnMaster's: the book's falling, an impact on a location, its severity and
 levels, the shock roll, bleeding, a limb made useless), kept in the save, told back as effects and conditions (the
-summary's), the referee's words of the wounds and the UI's of the rest.  A blow at a thing (a door, bars, a chest)
-gives only its impact, for the world to take the thing's resistance and toughness from.  Built: falls, from a climb's
+summary's), the referee's words of the wounds and the UI's of the rest.  A blow at a thing (a door, bars, shutters) is
+an attack (RS_ATTACK at RS_THING: above, portals) the thing's resistance taken off by the referee.  Built: falls, from a climb's
 critical failure (a hold grabbed may stop it) and from jumping down a ledge or a shaft (jump down); a death ends the
-game.  (To come: bleeding and waking as time passes, RS_TIME; armour; the traps' and the blows' callers.)
+game.  Armour worn (the items' armour kinds: a leather cap, an iron helm, a leather tunic, a gambeson, a ring
+byrnie, a mail hauberk, gauntlets, sandals, shoes, knee boots, hobnailed boots) is taken off a trap's strike and a burn where they strike, and off a blow in a fight (DENIZENS.md:
+fights).  (To come: the character's bleeding as time passes, and its treatment.)
 
 ### Seeing, and the map
 
