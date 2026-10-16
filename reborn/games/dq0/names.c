@@ -86,15 +86,21 @@ static unsigned char __fastcall__ same (const char* a, const char* b)
 ** of id fid, the room the character's in: in np, copied into e; or 0 */
 static struct tname* __fastcall__ find (unsigned char what, const char* k)
 {
-    struct sight* s = &HUB->sight;
+    static unsigned char sn;
+    static unsigned rxy[2];
 
+    if (what == NM_ROOM && !k) {                /* (The room's: the senses' record's, copied out; not sight_copy,
+                                                **   a look's words may be using it) */
+        hub_mem (SIGHT_BANK, &sn, &SIGHT->stratum, 1);
+        hub_mem (SIGHT_BANK, rxy, &SIGHT->rx, sizeof rxy);
+    }
     for (np = NAMES_AT; np < NAMES_AT + TNAMES; ++np) {
         ent ();
         if (what == NM_ANY ? !e.what : e.what != what) {
             continue;
         }
-        if (k ? same (e.name, k) : what == NM_ITEM ? e.x == fid : what != NM_ROOM || (e.sn == s->stratum &&
-            e.x == s->rx && e.y == s->ry)) {
+        if (k ? same (e.name, k) : what == NM_ITEM ? e.x == fid : what != NM_ROOM || (e.sn == sn &&
+            e.x == rxy[0] && e.y == rxy[1])) {
             if (!what) {
                 memset (&e, 0, sizeof e);
             }
@@ -417,7 +423,7 @@ static unsigned char __fastcall__ give (char* l)
         return NL_DONE;
     }
     if (i < a && ROOM (wd[i])) {                /* ---- A room (the one the character's in) */
-        s = &HUB->sight;
+        s = sight_get ();
         if (s->where != W_ROOM) {
             msg ("You can only name a room you're in.");
         } else if (!taken (dn, self = find (NM_ROOM, 0)) && (self || (self = free_one ()) != 0)) {
@@ -568,7 +574,7 @@ void s_names_den (void)
 {
     struct sway* s = &HUB->sway;
 
-    if (s->how != SW_NAME || s->result != SR_OK || !s->word2[0]) {
+    if (s->kind != SW_NAME || s->result != SR_OK || !s->word2[0]) {
         return;
     }
     if (!find (NM_DEN, s->name)) {

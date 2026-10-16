@@ -14,9 +14,9 @@
 ** RS_MORALE, RS_TIME (bleeding), RS_EXERT (fatigue, by the pace moved at, and rest); RS_DESCRIBE b 3 (its state,
 ** the status command's, the hub's pace and watchfulness).  Its summary gives each pace's step, and the notice
 ** tests go by the character's pace and state.  The sheet's words and the harm are overlay 1's (sheet.c), the
-** fights overlay 2's (fight.c): DIR/dq0harn.ovl, read into banks of its own as it starts.  Its slots: the hub's two
-** (the world's, the UI's), and the denizens' task's in the denizens' bank (DSLOT_AT: copied out, answered, copied
-** back).  hmchar's file read and written, and the creatures' sheets kept, are swapped part 1's (../dq0/swap.inc: run
+** fights overlay 2's (fight.c): DIR/dq0harn.ovl, read into banks of its own as it starts.  Its slots: the hub's
+** three (the world's, the UI's, and the denizens' task's: DSLOT, a short one), each rung for, answered in place, the
+** asker rung with the reply (hub.h's protocol).  hmchar's file read and written, and the creatures' sheets kept, are swapped part 1's (../dq0/swap.inc: run
 ** in the main RAM's top, a part at a time, copied there from overlay 4's bank as it's called; harnfile.c), the names
 ** part 2's (harnname.c), with the tool a dig takes.
 **
@@ -498,9 +498,11 @@ static void __fastcall__ pace_set (unsigned char a)
     ps.gait = HUB->gait;
     ps.watch = HUB->watch;
     ps.light = HUB->pc_light;
-    ps.dark = HUB->sight.dark;
     ps.full = !a;
     memcpy (ps.lamp, HUB->pc_lamp, sizeof ps.lamp);
+    hub_map (SIGHT_BANK);                       /* (The senses' record's, in their bank) */
+    ps.dark = SIGHT->dark;
+    hub_map (0);
     state ();
 }
 
@@ -670,17 +672,13 @@ static int __fastcall__ ovl_load (const char* dir)
     return 0;
 }
 
-/* The denizens' task's request (its slot in the denizens' bank, DSLOT_AT), if it's posted: copied out, answered
-** in the main RAM (DTEXT of its text), copied back */
-static struct { unsigned char h[offsetof (struct req, text)]; char text[DTEXT]; } dq;
-
-/* A blow's words (its reply in dq) put in the denizens' ring, place k (FIGHT_AT: the UI words them): who struck at
-** whom (the actors' names; "" the character), the tenths one's senseless for, whose a fumble or a stumble was, the
-** referee's words */
+/* A blow's words (its reply in the denizens' slot, DSLOT) put in the denizens' ring, place k (FIGHT_AT: the UI words
+** them): who struck at whom (the actors' names; "" the character), the tenths one's senseless for, whose a fumble or a
+** stumble was, the referee's words */
 static void __fastcall__ ring (unsigned char k)
 {
     static struct fight f;
-    const struct req* r = (const struct req*) &dq;
+    const struct req* r = DSLOT;
 
     memset (&f, 0, sizeof f);
     if (r->actor) {
@@ -691,32 +689,29 @@ static void __fastcall__ ring (unsigned char k)
     }
     f.out = r->w2;
     f.which = r->a;
-    strncpy (f.text, dq.text, sizeof f.text - 1);
+    strncpy (f.text, r->text, sizeof f.text - 1);
     hub_map (DEN_BANK);
     memcpy (FIGHT_AT + k % NFIGHTS, &f, sizeof f);
     hub_map (0);
 }
 
+/* The denizens' task's request (its own slot, DSLOT), if it's posted: answered (DTEXT of its text) */
 static void den_slot (void)
 {
     unsigned char k;
 
-    hub_map (DEN_BANK);
-    if (DSLOT_AT->state == REQ_POSTED) {
-        memcpy (&dq, DSLOT_AT, sizeof dq);
-        hub_map (0);
-        k = ((struct req*) &dq)->w1;            /* (RS_ATTACK's: its words' place in the ring) */
+    hub_map (0);
+    if (hub_posted (DSLOT)) {
+        k = DSLOT->w1;                          /* (RS_ATTACK's: its words' place in the ring) */
         tlim = DTEXT;
-        answer ((struct req*) &dq);
+        answer (DSLOT);
         tlim = REQ_TEXT;
-        if (((struct req*) &dq)->kind == RS_ATTACK) {
+        hub_map (0);
+        if (DSLOT->kind == RS_ATTACK) {
             ring (k);
         }
-        hub_map (DEN_BANK);
-        memcpy (DSLOT_AT, &dq, sizeof dq);
-        DSLOT_AT->state = REQ_DONE;
+        hub_reply (DSLOT);
     }
-    hub_map (0);
 }
 
 int main (int argc, char* argv[])
@@ -735,9 +730,9 @@ int main (int argc, char* argv[])
             break;
         }
         for (s = 0; s < NSLOTS; ++s) {
-            if (HUB->slot[s].state == REQ_POSTED) {
+            if (hub_posted (&HUB->slot[s])) {
                 answer (&HUB->slot[s]);
-                HUB->slot[s].state = REQ_DONE;
+                hub_reply (&HUB->slot[s]);
             }
         }
         den_slot ();

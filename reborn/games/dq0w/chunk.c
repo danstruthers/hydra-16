@@ -38,8 +38,9 @@ void __fastcall__ chunks_init (unsigned char who)
 void sync_strata (void)
 {
     at_sn = 0xFF;                               /* (at ()'s quick way: the bounds found again) */
+    hub_map (WORLD_BANK);                       /* (The records the world bank's: copied out, the header back) */
+    memcpy (strata, WREC->strata, sizeof strata);
     hub_map (0);
-    memcpy (strata, HUB->strata, sizeof strata);
 }
 
 void __fastcall__ ask_maker (unsigned char kind, unsigned char sn, unsigned cx, unsigned cy)
@@ -52,30 +53,24 @@ void __fastcall__ ask_maker (unsigned char kind, unsigned char sn, unsigned cx, 
     q->sn = sn;
     q->cx = cx;
     q->cy = cy;
-    q->state = REQ_POSTED;
-    hub_ring (T_MAKER);
-    while (q->state != REQ_DONE) {
-        hy_yield ();
-        hub_map (0);
-    }
+    hub_call (q, T_MAKER);                      /* (Asleep till the maker rings with it) */
     q->state = REQ_FREE;
     if (kind != M_CHUNK) {
-        at_sn = 0xFF;
-        memcpy (strata, HUB->strata, sizeof strata);
+        sync_strata ();
     }
 }
 
-/* The slot holding chunk (cx, cy) of stratum sn, or 0xFF: the hub's header in the window */
+/* The slot holding chunk (cx, cy) of stratum sn, or 0xFF: the world bank in the window (the cache's table) */
 static unsigned char __fastcall__ find (unsigned char sn, unsigned cx, unsigned cy)
 {
     unsigned char k;
-    struct cslot* s = HUB->cslot;
+    struct cslot* s = WREC->cslot;
 
-    hub_map (0);
+    hub_map (WORLD_BANK);
     for (k = 0; k < NCSLOTS; ++k, ++s) {
         if (s->used && s->sn == sn && s->cx == cx && s->cy == cy) {
-            s->stamp = ++HUB->stamp;
-            HUB->inuse[me] = k;
+            s->stamp = ++WREC->stamp;
+            WREC->inuse[me] = k;
             return k;
         }
     }

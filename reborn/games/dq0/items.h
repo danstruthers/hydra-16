@@ -112,8 +112,7 @@ enum { IW_SQUARE, IW_ACTOR, IW_ITEM,
 
 /* A request to the things (one at a time, the hub's): what's done, to which item, by whom, and what came of it */
 struct ireq {
-    volatile unsigned char state;               /* REQ_* */
-    unsigned char   op;                         /* IO_* */
+    RQH;                                        /* (hub.h's protocol; kind: IO_*) */
     unsigned        item, to;                   /* The item; where it goes (a container's number) */
     unsigned char   result;                     /* IR_* */
     char            name[16];                   /* A thing's name (IO_GET's, IO_DROP's; IO_KIT's things more are in

@@ -356,6 +356,18 @@ call EXEC task impl=K_EXEC
   doc:    program's file cut short), the task ends with the error as its code.  rc runs the last command of rc -c this
   doc:    way, and its exec built-in.
 
+call SEM_WAIT task impl=K_SEM_WAIT far
+  in:     .A = a semaphore; .X = the most ticks to wait (TICK_HZ a second; 0: none, as SEM_TRY)
+  out:    -
+  errors: E_AGAIN (the time came and none to take), E_INVAL (not a semaphore, or freed while this task waited),
+  errors: E_BUSY (a mutex this task holds already), E_INTR (a note came: taken on the way out)
+  blocks: yes
+  hl:     .A=n .X=n ->
+  doc:    SEM_ACQUIRE with a time limit: take one of a semaphore's count; if there's none, wait (using no CPU) till
+  doc:    SEM_RELEASE gives one back or the ticks have passed, whichever comes first.  A doorbell with a timeout: a
+  doc:    task with work of its own to do every so often (a clock to keep) sleeps on its semaphore, and is woken at
+  doc:    once when it's rung.
+
 # ---- memory (BIOS ROM page 1)
 
 call BREAK memory impl=K_BRK far

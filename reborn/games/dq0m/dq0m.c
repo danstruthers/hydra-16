@@ -59,29 +59,28 @@ static void __fastcall__ cached (const struct mreq* q)
     unsigned cx = (q->cx - s->x0) / CW, cy = (q->cy - s->y0) / CW;
     unsigned char k;
 
-    hub_map (0);
+    hub_map (WORLD_BANK);                       /* (The cache's table the world bank's) */
     for (k = 0; k < NCSLOTS; ++k) {
-        if (HUB->cslot[k].used && HUB->cslot[k].sn == q->sn && HUB->cslot[k].cx == cx && HUB->cslot[k].cy == cy) {
+        if (WREC->cslot[k].used && WREC->cslot[k].sn == q->sn && WREC->cslot[k].cx == cx && WREC->cslot[k].cy == cy) {
             change_cached (k, (q->cx - s->x0) % CW, (q->cy - s->y0) % CW, q->tile, q->elev, q->link);
             break;
         }
     }
 }
 
-/* Request i answered: the strata's records copied first (the hub's are the truth), and back if they changed */
+/* Request i answered: the strata's records copied first (the world bank's are the truth), and back if they changed */
 static void __fastcall__ serve (unsigned char i)
 {
     static struct mreq q;
 
     memcpy (&q, &HUB->mreq[i], sizeof q);
-    memcpy (strata, HUB->strata, sizeof strata);
+    hub_get (WORLD_BANK, WREC->strata, strata, sizeof strata);
     switch (q.kind) {
     case M_PLAN:
         plan_stratum (q.sn);
         links_down (q.sn);
         place_pieces (q.sn);                    /* (The theme's pieces in it: theme.h) */
-        hub_map (0);
-        memcpy (&HUB->strata[q.sn], &strata[q.sn], sizeof strata[0]);
+        hub_put (WORLD_BANK, &WREC->strata[q.sn], &strata[q.sn], sizeof strata[0]);
         break;
     case M_CHUNK:
         make_chunk (q.sn, q.cx, q.cy);
@@ -108,8 +107,7 @@ static void __fastcall__ serve (unsigned char i)
         memcpy (&HUB->mreq[i], &q, sizeof q);
         break;
     }
-    hub_map (0);
-    HUB->mreq[i].state = REQ_DONE;
+    hub_reply (&HUB->mreq[i]);
 }
 
 int main (int argc, char* argv[])
@@ -129,14 +127,14 @@ int main (int argc, char* argv[])
             break;
         }
         for (i = 0; i < NASK; ++i) {
-            if (HUB->mreq[i].state == REQ_POSTED) {
+            if (hub_posted (&HUB->mreq[i])) {
                 serve (i);
             }
         }
-        if (HUB->map_state == REQ_POSTED) {     /* (The UI's asked for the map) */
-            memcpy (strata, HUB->strata, sizeof strata);
+        if (hub_posted (&HUB->mapq)) {          /* (The UI's asked for the map) */
+            hub_get (WORLD_BANK, WREC->strata, strata, sizeof strata);
             draw_map ();
-            HUB->map_state = REQ_DONE;
+            hub_reply (&HUB->mapq);
         }
     }
     return 0;

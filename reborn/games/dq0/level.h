@@ -8,6 +8,11 @@
 #ifndef _LEVEL_H
 #define _LEVEL_H
 
+/* A request's header (hub.h's protocol: struct rqh), every request's first, the hub's and world.h's and items.h's:
+** its state (REQ_*), its kind (the owner's: what's asked), the task that asked (its doorbell rung with the reply),
+** and the asker's number for it */
+#define RQH             volatile unsigned char state; unsigned char kind, from, seq
+
 /* Directions: the four of the walls and the passages, then up and down */
 enum { DIR_N, DIR_E, DIR_S, DIR_W, DIR_UP, DIR_DOWN };
 extern const signed char dir_x[4], dir_y[4];

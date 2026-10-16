@@ -26,53 +26,54 @@ const struct style* SP;
 ** as it was: the hub reached from an overlay's code (which the hub's bank in the window would put out) */
 void __fastcall__ hub_get (unsigned char bank, const void* from, void* to, unsigned n)
 {
-    unsigned char b = getbank ();
+    unsigned b = hub_here ();
 
     hub_map (bank);
     memcpy (to, from, n);
-    setbank (b);
+    hub_back (b);
 }
 
 void __fastcall__ hub_put (unsigned char bank, void* to, const void* from, unsigned n)
 {
-    unsigned char b = getbank ();
+    unsigned b = hub_here ();
 
     hub_map (bank);
     memcpy (to, from, n);
-    setbank (b);
+    hub_back (b);
 }
 
 void __fastcall__ hub_set (unsigned char bank, void* to, unsigned char c, unsigned n)
 {
-    unsigned char b = getbank ();
+    unsigned b = hub_here ();
 
     hub_map (bank);
     memset (to, c, n);
-    setbank (b);
+    hub_back (b);
 }
 
 /* The slot a new chunk goes in: an empty one, or the least lately found that no task is reading and isn't beside
-** the character's chunk (the hub's header in the window) */
+** the character's chunk (the hub's header in the window; the world bank after, the cache's table its) */
 static unsigned char pick (void)
 {
-    unsigned char k, best = 0xFF, i, busy;
+    unsigned char k, best = 0xFF, i, busy, psn = HUB->pc_stratum;
     struct cslot* c;
-    struct stratum* s = &strata[HUB->pc_stratum];
+    struct stratum* s = &strata[psn];
     unsigned pcx = (HUB->pc_x - s->x0) / CW, pcy = (HUB->pc_y - s->y0) / CW;
 
+    hub_map (WORLD_BANK);
     for (k = 0; k < NCSLOTS; ++k) {
-        c = &HUB->cslot[k];
+        c = &WREC->cslot[k];
         if (!c->used) {
             return k;
         }
         for (i = 0, busy = 0; i < NASK; ++i) {
-            busy |= HUB->inuse[i] == k;
+            busy |= WREC->inuse[i] == k;
         }
-        if (busy || (c->sn == HUB->pc_stratum && c->cx + 1 >= pcx && c->cx <= pcx + 1 && c->cy + 1 >= pcy &&
+        if (busy || (c->sn == psn && c->cx + 1 >= pcx && c->cx <= pcx + 1 && c->cy + 1 >= pcy &&
             c->cy <= pcy + 1)) {
             continue;
         }
-        if (best == 0xFF || c->stamp < HUB->cslot[best].stamp) {
+        if (best == 0xFF || c->stamp < WREC->cslot[best].stamp) {
             best = k;
         }
     }
@@ -91,16 +92,17 @@ unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned c
     chunk_edges (sn, cx, cy, &e);
     hub_map (0);
     k = pick ();
-    if (HUB->cslot[k].used) {                   /* (What's been seen of the one made way for, kept) */
+    if (WREC->cslot[k].used) {                  /* (What's been seen of the one made way for, kept) */
         seen_keep (k);
-        hub_map (0);
+        hub_map (WORLD_BANK);
     }
-    sl = &HUB->cslot[k];
+    sl = &WREC->cslot[k];
     sl->used = 1;
     sl->sn = sn;
     sl->cx = cx;
     sl->cy = cy;
-    sl->stamp = ++HUB->stamp;
+    sl->stamp = ++WREC->stamp;
+    hub_map (0);
     c = &cb;
     memset (c, 0, sizeof *c);
     c->sn = sn;

@@ -1,10 +1,12 @@
 ; ****************************************************************************
 ; t_sem - semaphores and GETPPID, run as init: counting semaphores and mutexes taken, tried, released and freed;
 ; tasks waiting for one (using no CPU), woken by a release one at a time, by a free (E_INVAL), by a note (E_INTR);
-; a task's end freeing what it made and giving back the mutexes it held; the limits.  Its children are itself,
-; started with an argument: a letter, then a hex byte (hh), as t_child's:
+; a timed wait (SEM_WAIT): its time come (E_AGAIN), or ended at once by a release; a task's end freeing what it made
+; and giving back the mutexes it held; the limits.  Its children are itself, started with an argument: a letter,
+; then a hex byte (hh), as t_child's:
 ;   "a" hh      SEM_ACQUIRE hh: end with "a" ($E0 + the error, if one)
-;   "i" hh      the same, with a note handler that keeps the note and goes on
+;   "w" hh      SEM_WAIT hh, 100 ticks at most: the same
+;   "i" hh      the same as "a", with a note handler that keeps the note and goes on
 ;   "r" hh      SEM_RELEASE hh: end with 0 ($E0 + the error, if one)
 ;   "m"         SEM_NEW 1: end with the semaphore (it's freed as this task ends)
 ;   "h" hh      SEM_ACQUIRE mutex hh and end holding it (its end gives it back)
@@ -20,6 +22,7 @@
 
 ST_FREE         = 0                                         ; TASKINFO's states
 ST_WAIT         = 2
+ST_SLEEP        = 6
 
 .zeropage
 argp:       .res        2
@@ -29,6 +32,8 @@ mutex:      .res        1
 kid:        .res        1                                   ; A child
 kid2:       .res        1
 n:          .res        1
+t0:         .res        2                                   ; A tick count
+el:         .res        1                                   ; The ticks since ($FF: 255 or more)
 
 .bss
 args:       .res        5                                   ; A child's argument: "xhh", its 0, the empty one
@@ -169,6 +174,53 @@ parent:
             jsr         SEM_TRY
             EXPECT_OK   "and a release after it isn't taken by the task that left"
 
+; ---- SEM_WAIT: a wait of a few ticks at most, E_AGAIN as its time comes; a release ends it at once
+            lda         sem
+            ldx         #0
+            jsr         SEM_WAIT
+            EXPECT_ERR  E_AGAIN, "SEM_WAIT of 0 ticks with none to take: E_AGAIN at once"
+            jsr         since
+            lda         sem
+            ldx         #10
+            jsr         SEM_WAIT
+            jsr         elapsed
+            EXPECT_ERR  E_AGAIN, "SEM_WAIT of 10 ticks with none to take: E_AGAIN"
+            lda         #10
+            jsr         within
+            EXPECT_A    1, "and its time was 10 ticks, about"
+            lda         sem
+            jsr         SEM_RELEASE
+            lda         sem
+            ldx         #10
+            jsr         SEM_WAIT
+            EXPECT_OK   "SEM_WAIT with one to take: at once"
+            lda         #'w'
+            ldx         sem
+            jsr         spawn
+            sta         kid
+            jsr         settle
+            jsr         kid_state
+            EXPECT_A    ST_SLEEP, "a child's SEM_WAIT sleeps, its time to come"
+            jsr         since
+            lda         sem
+            jsr         SEM_RELEASE
+            jsr         wait_kid
+            jsr         elapsed
+            EXPECT_A    'a', "a release wakes it at once: it takes it, and ends"
+            lda         #0
+            jsr         within
+            EXPECT_A    1, "long before its time"
+            lda         #'w'
+            ldx         sem
+            jsr         spawn
+            jsr         wait_kid
+            EXPECT_A    $E0 + E_AGAIN, "none given back: its time comes, E_AGAIN"
+            lda         sem
+            jsr         SEM_RELEASE
+            lda         sem
+            jsr         SEM_TRY
+            EXPECT_OK   "and a release after it isn't taken by the task that gave up"
+
 ; ---- SEM_FREE wakes the waiters, to E_INVAL
             lda         #'a'
             ldx         sem
@@ -261,6 +313,46 @@ wait_kid:
             txa
             rts
 
+; The tick count now, in t0
+since:
+            jsr         TICKS
+            sta         t0
+            stx         t0 + 1
+            rts
+
+; The ticks since t0, in el ($FF: 255 or more).  Keeps .A and C (a call's answer, for the EXPECT after)
+elapsed:
+            php
+            pha
+            jsr         TICKS
+            sec
+            sbc         t0
+            tay
+            txa
+            sbc         t0 + 1
+            beq         :+
+            ldy         #$FF
+:
+            sty         el
+            pla
+            plp
+            rts
+
+; .A = 1 if el is .A to .A + 3, else 0
+within:
+            sta         n
+            lda         el
+            sec
+            sbc         n
+            cmp         #4
+            bcs         @no
+            lda         #1
+            rts
+
+@no:
+            lda         #0
+            rts
+
 ; Sleep a few ticks: the children run meanwhile
 settle:
             lda         #4
@@ -311,6 +403,8 @@ child:
             beq         c_acquire
             cmp         #'h'
             beq         c_acquire
+            cmp         #'w'
+            beq         c_wait
             cmp         #'i'
             beq         c_note
             cmp         #'r'
@@ -328,6 +422,14 @@ c_note:
 c_acquire:
             lda         param
             jsr         SEM_ACQUIRE
+            bcs         error
+            lda         #'a'
+            bra         end
+
+c_wait:
+            lda         param
+            ldx         #100
+            jsr         SEM_WAIT
             bcs         error
             lda         #'a'
             bra         end

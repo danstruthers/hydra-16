@@ -78,8 +78,8 @@ static unsigned char* __fastcall__ sq (unsigned x, unsigned y)
     }
     kx = ox % CW;
     ky = oy % CW;
-    hub_map (0);
-    for (ks = 0, c = HUB->cslot; ks < NCSLOTS && !(c->used && c->sn == sn && c->cx == cx && c->cy == cy); ++ks, ++c) {
+    hub_map (WORLD_BANK);                       /* (The cache's table the world bank's) */
+    for (ks = 0, c = WREC->cslot; ks < NCSLOTS && !(c->used && c->sn == sn && c->cx == cx && c->cy == cy); ++ks, ++c) {
     }
     if (ks == NCSLOTS) {
         ks = make_chunk (sn, cx, cy);

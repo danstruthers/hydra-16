@@ -292,6 +292,7 @@ The kernel keeps **16 semaphores**, every task's by number.  Each is a count and
 | `SEM_ACQUIRE` | Take one of its count, waiting (using no CPU) until there's one.  A note ends the wait (`E_INTR`) |
 | `SEM_TRY` | The same without the wait: `E_AGAIN` if there's none |
 | `SEM_RELEASE` | Give one back; the waiters wake, and the first to run takes it |
+| `SEM_WAIT` | `SEM_ACQUIRE` with a time limit (`.X` ticks): `E_AGAIN` if the time comes first; a release ends the wait at once |
 | `SEM_FREE` | Free it; its waiters wake with `E_INVAL` |
 
 A task's end frees the semaphores it made and gives back the mutexes it holds.  A mutex's holder that asks again gets

@@ -1,8 +1,8 @@
 /*
 ** dq0p.c - Dingus Quest Zero's senses: a task of its own, started by the UI (dq0p SEG ROLE: the hub's segment and its
-** role there, hub.h), that looks about for the character as the world asks (the hub's look_state): the squares it
-** sees now marked in the dungeon's chunks (view.c: in front of it and to its sides, a clear line in plan and in
-** height, its sight's range, lit, its night vision and ultravision), and what it perceives recorded in the hub for
+** role there, hub.h), that looks about for the character as the world asks (the hub's look): the squares it sees
+** now marked in the dungeon's chunks (view.c: in front of it and to its sides, a clear line in plan and in height,
+** its sight's range, lit, its night vision and ultravision), and what it perceives recorded in the hub for
 ** the UI to word (sight.c); and the things (things.c: the catalogue, the items, moved and listed as the UI asks).
 ** (The denizens will see through it too, each through its own senses.)  It waits on its
 ** doorbell (costing nothing) between looks; a look under way, it answers what the UI asks that wants none between
@@ -35,8 +35,8 @@ static void __fastcall__ look (unsigned char again)
     sn = HUB->pc_stratum;
     x = HUB->pc_x;
     y = HUB->pc_y;
-    first = again ? 0 : HUB->look_first;
-    memcpy (strata, HUB->strata, sizeof strata);
+    first = again ? 0 : HUB->look.first;
+    sync_strata ();                             /* (The strata's records, the world bank's) */
     things_lamps (sn, x, y);                    /* (The lit things lying about: a torch put down) */
     view (sn, x, y, face, light, sight, dark);
     perceive (sn, x, y, face, own, first);
@@ -49,11 +49,10 @@ void look_pause (void)
     unsigned char op;
 
     hub_map (0);
-    op = HUB->ireq.op;
-    if (HUB->ireq.state == REQ_POSTED && (op == IO_LIST || op == IO_TOOLS || op == IO_WEAR)) {
+    op = HUB->ireq.kind;
+    if (hub_posted (&HUB->ireq) && (op == IO_LIST || op == IO_TOOLS || op == IO_WEAR)) {
         things_serve ();
-        hub_map (0);
-        HUB->ireq.state = REQ_DONE;
+        hub_reply (&HUB->ireq);
     }
 }
 
@@ -84,18 +83,16 @@ int main (int argc, char* argv[])
         if (HUB->quit) {
             break;
         }
-        if (HUB->ireq.state == REQ_POSTED) {
+        if (hub_posted (&HUB->ireq)) {
             if (things_serve ()) {
                 look (1);
             }
-            hub_map (0);
-            HUB->ireq.state = REQ_DONE;
+            hub_reply (&HUB->ireq);
         }
         hub_map (0);
-        if (HUB->look_state == REQ_POSTED) {
+        if (hub_posted (&HUB->look)) {
             look (0);
-            hub_map (0);
-            HUB->look_state = REQ_DONE;
+            hub_reply (&HUB->look);
         }
     }
     return 0;

@@ -145,7 +145,7 @@ unsigned char __fastcall__ o_pick (unsigned char obj, unsigned char orel)
     unsigned x, y;
 
     obj &= ~(PICK_TELL | PICK_ANY);
-    hub_mem (0, s, &HUB->sight, sizeof *s);     /* (The hub's record as it is now) */
+    hub_mem (SIGHT_BANK, s, SIGHT, sizeof *s);  /* (The senses' record as it is now) */
     for (i = 0; i < s->ndoors + s->nopen && n < NPICK; ++i) {
         if (i < s->ndoors) {
             r = s->door[i].rel;

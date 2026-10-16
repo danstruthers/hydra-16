@@ -20,7 +20,7 @@ function gives.
 
 <!-- calls:begin -->
 
-Made from `base/spec/api.def` and `base/spec/errors.def` by `node docs/build/callref.js`: 92 calls in 9 groups.
+Made from `base/spec/api.def` and `base/spec/errors.def` by `node docs/build/callref.js`: 93 calls in 9 groups.
 
 **The groups:** [system](#system-f800), [task](#task-f830), [memory](#memory-f890), [file](#file-f8c0), [name](#name-f920), [cons](#cons-f950), [time](#time-f980), [server](#server-f9b0), [dbg](#dbg-fa10); [the error codes](#the-error-codes); [the constants](#the-constants).
 
@@ -115,7 +115,7 @@ Call a routine in another bank of the paged ROM (a library module's: HT_LIBRARY,
 
 ## task (`$F830`)
 
-Tasks: starting and ending them, waiting, scheduling, ticks: 32 slots from `$F830`, 26 used.
+Tasks: starting and ending them, waiting, scheduling, ticks: 32 slots from `$F830`, 27 used.
 
 | Call | Address | What it does |
 | :--- | :------ | :----------- |
@@ -145,6 +145,7 @@ Tasks: starting and ending them, waiting, scheduling, ticks: 32 slots from `$F83
 | [`SEM_RELEASE`](#sem_release) | `$F875` | Give one back to a semaphore's count, and wake the tasks waiting for it. |
 | [`SEM_FREE`](#sem_free) | `$F878` | Free a semaphore (any task may). |
 | [`EXEC`](#exec) | `$F87B` | Run a program in this task, in place of the one that calls it (Plan 9's exec). |
+| [`SEM_WAIT`](#sem_wait) | `$F87E` | SEM_ACQUIRE with a time limit. |
 
 ### EXITS
 
@@ -533,6 +534,21 @@ Free a semaphore (any task may): its number can be made again, and the tasks wai
 | **hylang** | `sys-exec r0=s r1=args? ->` |
 
 Run a program in this task, in place of the one that calls it (Plan 9's exec): the program is found as SPAWN finds it (a module of the paged ROM runs in place; any other is read into this task's RAM at its load address), and starts at its entry point with r0 pointing to its arguments, its name the header's.  The task keeps what isn't the old program's: its number, its parent (whose WAIT gets the new program's exit status), its note group, every fd (a RAM program's file takes fd 15 as it loads), its current directory, its namespace and its environment, and its CPU time.  What was the old program's goes as at its end: its IRQ lines, shared segments, semaphores (and the mutexes it holds), and the device letters it served; its note handler; its pages and banks.  A note that comes meanwhile waits for the new program.  If the program can't be found or isn't one, EXEC returns the error and the caller goes on; if it's found but can't be read (a RAM program's file cut short), the task ends with the error as its code.  rc runs the last command of rc -c this way, and its exec built-in.
+
+### SEM_WAIT
+
+`$F87E`, a far call (its routine on another BIOS page).
+
+| | |
+| :-- | :-- |
+| **In** | .A = a semaphore; .X = the most ticks to wait (TICK_HZ a second; 0: none, as SEM_TRY) |
+| **Out** | - |
+| **Errors** | E_AGAIN (the time came and none to take), E_INVAL (not a semaphore, or freed while this task waited), E_BUSY (a mutex this task holds already), E_INTR (a note came: taken on the way out) |
+| **Waits** | yes |
+| **HyForth** | `sys-sem-wait ( .A .X -- ior )` |
+| **hylang** | `sys-sem-wait .A=n .X=n ->` |
+
+SEM_ACQUIRE with a time limit: take one of a semaphore's count; if there's none, wait (using no CPU) till SEM_RELEASE gives one back or the ticks have passed, whichever comes first.  A doorbell with a timeout: a task with work of its own to do every so often (a clock to keep) sleeps on its semaphore, and is woken at once when it's rung.
 
 ---
 

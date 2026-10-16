@@ -4,9 +4,9 @@
 ** at a time as anyone comes near, from the stratum's seed and the chunk's place.  The maker (games/dq0m, a task of
 ** its own: plan.c, make.c, built.c) grows the plans and makes the chunks, into the hub's shared segment (the plans
 ** two to a bank, the chunks' cache three to a bank), so the world and the denizens read them (chunk.c's at ()),
-** asking the maker for a chunk that isn't there yet.  The strata's records, the cache's table and the requests are
-** in the hub's header (hub.h); each task keeps a copy of the strata's records of its own (strata[], sync_strata)
-** for when a chunk is in the window.
+** asking the maker for a chunk that isn't there yet.  The strata's records and the cache's table are in the hub's
+** world bank (hub.h's WORLD_BANK, struct wrec), the requests in its header; each task keeps a copy of the strata's
+** records of its own (strata[], sync_strata) for when a chunk is in the window.
 **
 ** The frame: every stratum's squares are in one frame, 16 bits each way, so that a way down comes out under where
 ** it went in.  A stratum's bounds are a rectangle in it (x0, y0, w, h); its regions and chunks are counted from its
@@ -231,7 +231,7 @@ struct stratum {
     struct link     link[NLINKS];
 };
 extern struct stratum strata[MAXSTRATA];         /* (This task's copy of the hub's) */
-void sync_strata (void);                        /* The hub's copied (the hub's header in the window after) */
+void sync_strata (void);                        /* The world bank's copied (the hub's header in the window after) */
 
 /* The chunks' cache: what each slot holds (the hub's) */
 struct cslot {
@@ -242,8 +242,7 @@ struct cslot {
 
 /* A request to the maker (one for each task that asks: the world's, the denizens') */
 struct mreq {
-    volatile unsigned char state;               /* REQ_* (hub.h) */
-    unsigned char   kind;                       /* M_* */
+    RQH;                                        /* (hub.h's protocol; kind: M_*) */
     unsigned char   sn;
     unsigned        cx, cy;                     /* M_CHUNK's chunk; M_CHANGE's square */
     unsigned char   tile;                       /* M_CHANGE's: what the square becomes, */

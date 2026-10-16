@@ -138,7 +138,7 @@ static unsigned char near_out (void)
     static struct { unsigned x, y; } w;
 
     hub_mem (0, &pc, (const void*) &HUB->pc_stratum, sizeof pc);
-    hub_mem (0, &w, &HUB->strata[0].link[0].x, sizeof w);
+    hub_mem (WORLD_BANK, &w, &WREC->strata[0].link[0].x, sizeof w);
     return !pc.sn && w.x - pc.x + 2 <= 4 && w.y - pc.y + 2 <= 4;
 }
 

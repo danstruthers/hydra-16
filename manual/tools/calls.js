@@ -43,6 +43,7 @@ const WHAT = {
   SEM_TRY: 'Take one from a semaphore, but don\'t wait if it has none.',
   SEM_RELEASE: 'Give one back to a semaphore, waking a task that\'s waiting for it.',
   SEM_FREE: 'Free a semaphore.',
+  SEM_WAIT: 'Take one from a semaphore, waiting a given number of ticks at most for it.',
   EXEC: 'Run another program in this task, in this one\'s place.',
   BREAK: 'Move the end of the program\'s memory (its **break**), or ask where it is.',
   PAGES_ALLOC: 'Take some pages (256 bytes each) of the task\'s memory, above the break.',
