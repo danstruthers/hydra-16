@@ -151,7 +151,7 @@ ovl_out:
             OVFN        join, 2
             OVFN        crossings, 2
             OVFN        grow_caves, 3
-            OVFN        stock, 3
+            OVFN        stock, 5
             OVFN        plan_stratum, 4
             OVFN        links_down, 4
             OVFN        chunk_edges, 4

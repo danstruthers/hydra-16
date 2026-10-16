@@ -4,8 +4,8 @@
 ** things' records taken from the hub's item store under its lock (the things task, dq0p, keeps them after).  A
 ** chunk stocked is marked among the change records (STOCKED), so a chunk made again isn't stocked twice.
 **
-** (stock () is overlay 3's, the maker's, called through bank.s's stub; put_down the main code's, that maps the
-** hub's banks, the window put back as it was after.)
+** (stock () is overlay 5's, the maker's, beside the fixtures (overlay 3 the caves' room), called through bank.s's
+** stub; put_down the main code's, that maps the hub's banks, the window put back as it was after.)
 */
 
 #include <string.h>
@@ -72,8 +72,8 @@ static void __fastcall__ part (unsigned char kind, unsigned char sn, unsigned x,
     }
 }
 
-#pragma code-name ("OV3CODE")
-#pragma rodata-name ("OV3RODATA")
+#pragma code-name ("OV5CODE")
+#pragma rodata-name ("OV5RODATA")
 
 /* The theme's piece i put down in the chunk, on a square of a room's floor (else of its passages'), and its place
 ** given its square */
