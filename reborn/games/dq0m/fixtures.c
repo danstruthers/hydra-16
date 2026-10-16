@@ -155,39 +155,51 @@ static void portcullises (void)
     }
 }
 
-/* A fortified stratum's doors (uses.c's ufort): its gatehouse's portcullises, raised (their winches on its side),
-** murder holes in its vault; the rest stouter (more iron-bound) and fewer open */
+/* A fortified stratum's doors (uses.c's ufort): its gatehouse's ways out portcullises, every one (a doorway given
+** one), raised (their winches on its side), murder holes in its vault; the rest stouter (more iron-bound) and fewer
+** open */
 static void fortify (void)
 {
     struct portal* p;
     struct room* q;
-    unsigned char i, r, d, x, y;
+    unsigned char i, r, d, x, y, k, len;
 
     if (!ufort) {
         return;
     }
-    for (i = 0, p = L->portal; i < L->nportals; ++i, ++p) {
-        if (p->kind != PK_DOOR || (p->state & PS_HIDDEN)) {
+    for (r = 0, q = L->room; r < L->nrooms; ++r, ++q) {
+        if (q->kind != U_GATEHOUSE) {
             continue;
         }
-        dseed (7, p->x << 5 | p->y);
-        for (r = 0; r < L->nrooms; ++r) {
-            q = &L->room[r];
-            for (d = 0; d < 4 && q->kind == U_GATEHOUSE; ++d) {
-                x = p->x + dir_x[d];
-                y = p->y + dir_y[d];
-                if (x >= q->x && x < q->x + q->w && y >= q->y && y < q->y + q->h) {
-                    q->flags |= R_MURDER;
-                    p->kind = PK_PORTCULLIS;
-                    p->state = PS_OPEN;
-                    p->lock = 0;
-                    p->mat = PM_IRON;
-                    p->parts = PP_BARS;
-                    p->bar = d;
+        q->flags |= R_MURDER;
+        for (d = 0; d < 4; ++d) {               /* (Its walls, each side's squares: a way out's) */
+            len = d == DIR_N || d == DIR_S ? q->w : q->h;
+            for (k = 0; k < len; ++k) {
+                x = d == DIR_N || d == DIR_S ? q->x + k : d == DIR_W ? q->x - 1 : q->x + q->w;
+                y = d == DIR_W || d == DIR_E ? q->y + k : d == DIR_N ? q->y - 1 : q->y + q->h;
+                if (x >= CW || y >= CW || TILE (L->tile[y][x]) != T_DOOR) {
+                    continue;
                 }
+                for (i = 0, p = L->portal; i < L->nportals && (p->x != x || p->y != y); ++i, ++p) {
+                }
+                if (i == L->nportals && !(p = portal (x, y, PK_PORTCULLIS))) {
+                    continue;                   /* (A doorway: given one, if there's room) */
+                }
+                if (p->state & PS_HIDDEN) {
+                    continue;
+                }
+                p->kind = PK_PORTCULLIS;
+                p->state = PS_OPEN;
+                p->lock = 0;
+                p->mat = PM_IRON;
+                p->parts = PP_BARS;
+                p->bar = (d + 2) & 3;           /* (Its winch on the gatehouse's side) */
             }
         }
-        if (p->kind == PK_DOOR) {
+    }
+    for (i = 0, p = L->portal; i < L->nportals; ++i, ++p) {
+        dseed (7, p->x << 5 | p->y);
+        if (p->kind == PK_DOOR && !(p->state & PS_HIDDEN)) {
             if (p->mat == PM_WOOD && dr (2)) {
                 p->mat = PM_IRONBOUND;
             }

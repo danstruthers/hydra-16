@@ -908,11 +908,15 @@ static void __fastcall__ climb (unsigned char d)
     here ();
     face = HUB->pc_face;
     d &= ~I_JUMP;
+    if ((d == DIR_UP || jump) && start_ledge (d == DIR_UP, face, jump)) {
+        return;                                 /* (A ledge just ahead, faced: climbed (as its words say, u) or jumped
+                                                **   down, before the room's way up or down) */
+    }
     l = link_here (d, &t);
     if (l == 0xFF || t == 0xFFFFFFFFUL) {
-        if (!start_ledge (d == DIR_UP, face, jump)) { /* (No way up or down here: a ledge ahead, climbed) */
+        if (d == DIR_UP || jump || !start_ledge (0, face, 0)) {
             hub_map (0);
-            no_way (N_NO_STAIRS);
+            no_way (N_NO_STAIRS);               /* (No way up or down here: a ledge ahead, climbed down) */
         }
         return;
     }
