@@ -251,7 +251,8 @@ unsigned char __fastcall__ names_line (char* l);    /* Part 4 (names.c): a line 
                                                 **   forget, unname), before it's a command: a name given or
                                                 **   forgotten (NL_DONE); a denizen's to name (NL_DEN: names_den
                                                 **   after the command) */
-void __fastcall__ names_subst (char* l);        /* Part 5: the things' names in a line made theirs ("#12") */
+unsigned __fastcall__ names_subst (char* l);    /* Part 5: the things' names in a line made theirs ("#12"); a fight's
+                                                **   "with Linda" held first: the tenths it took, or 0 */
 void names_den (void);                          /* Part 5: a denizen's name given (the hub's sway), recorded */
 const char* __fastcall__ names_say (const char* s); /* Part 5: words with the things' marks ("#12"), as they're said
                                                 **   ("Linda, your sword"): in the main RAM */

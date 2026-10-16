@@ -379,7 +379,7 @@ static unsigned char __fastcall__ give (char* l)
         }
         return NL_DONE;
     }
-    if (thw[0] && !denizen () && stricmp (thw, "it") && stricmp (thw, "him") && stricmp (thw, "her") && thing ()) {
+    if (thw[0] && !denizen () && thing ()) {
         strncpy (nm, HUB->ireq.name, sizeof e.kind - 1);   /* ---- A thing (carried, or seen): its kind's name */
         nm[sizeof e.kind - 1] = 0;
         if (!taken (dn, self = find (NM_ITEM, 0)) && (self || (self = free_one ()) != 0)) {
@@ -395,7 +395,7 @@ static unsigned char __fastcall__ give (char* l)
         return NL_DONE;
     }
     if (strchr (dn, ' ') || strlen (dn) > 11) {  /* ---- A denizen (the denizens' task's: its name a word) */
-        msg ("A creature's name is one word, eleven letters at most.");
+        msg ("An ally's name is a word of 11 letters at most.");
         return NL_DONE;
     }
     if (taken (dn, 0)) {
@@ -469,8 +469,9 @@ unsigned char __fastcall__ s_names_line (char* l)
 /* ---- The words */
 
 /* The things' names in line l made the things' own ("#" and the id: the things task finds it by that), each where
-** it's a word or words (the case aside); a fight's "with Linda" taken in hand first */
-void __fastcall__ s_names_subst (char* l)
+** it's a word or words (the case aside); a fight's "with Linda" taken in hand first: the tenths that took (main.c
+** charges them), or 0 */
+unsigned __fastcall__ s_names_subst (char* l)
 {
     static char id[8];
     static char* p;
@@ -499,10 +500,12 @@ void __fastcall__ s_names_subst (char* l)
             }
             if (othings (IO_HOLD, id, "", 0) == IR_OK) {
                 msg (lb);
+                return othings_x;
             }
             break;
         }
     }
+    return 0;
 }
 
 /* After a denizen's naming (NL_DEN's command): the name the denizens' task gave it, recorded (its old name's entry,

@@ -302,7 +302,8 @@ static int load_save (void)
     }
     n = read (fd, &sv, sizeof sv);
     close (fd);
-    return n == sizeof sv && sv.magic == SAVE_MAGIC && sv.version == SAVE_VER && !sv.q.done ? 0 : -1;
+    return n == sizeof sv && sv.magic == SAVE_MAGIC && (sv.version == SAVE_VER || sv.version == 5) && !sv.q.done ? 0 :
+        -1;                                     /* (5's the same, but for the names after the strata: none) */
 }
 
 /* The game kept: the referee's sheet, the maker's records, and the game's state (the hub's header in the window) */
@@ -1368,7 +1369,7 @@ static unsigned char __fastcall__ naming (const char* l)
 
 int main (int argc, char* argv[])
 {
-    unsigned shown = 0;
+    unsigned shown = 0, t;
     unsigned long next = 0;
     unsigned char held = 0;
     unsigned char k;
@@ -1419,8 +1420,11 @@ int main (int argc, char* argv[])
         if ((l = (char*) t_next ()) != 0 && (!busy || (!held && !(held = !at_once (l))))) {
             k = naming (l = t_line ()) ? names_line (l) : NL_NONE;     /* (A name given or forgotten: the
                                                 **   names') */
-            if (k == NL_NONE && names_n) {
-                names_subst (l);                /* (The things' names in it made theirs, "#" and the id) */
+            if (k == NL_NONE && names_n && (t = names_subst (l)) != 0) {    /* (The things' names in it made
+                                                **   theirs, "#" and the id; a weapon named taken in hand to strike
+                                                **   with: its time, as after ()'s) */
+                to_hand ();
+                intend2 (I_WAIT, t, 1);
             }
             if (k != NL_DONE) {
                 command (l);                    /* (The character free; or a command that wants nothing of it:
