@@ -108,7 +108,7 @@ static const struct piece {
     { "gambson", "gambeson", HARN_QUILT, HAUBERK }, { "ringbyr", "ring byrnie", HARN_RING, TUNIC },
     { "mailhbk", "mail hauberk", HARN_MAIL, HAUBERK }, { "gauntlt", "gauntlets", HARN_LEATHER, L (HAND) },
 };
-#define NPIECES         (sizeof pieces / sizeof pieces[0])
+#define NARMOUR         (sizeof pieces / sizeof pieces[0])
 
 /* An injury's words, by its aspect and severity (minor, serious, grievous or worse: sheet.c's) */
 static const char* const wound_word[4][3] = {
@@ -257,7 +257,7 @@ unsigned char __fastcall__ o_pc_armour (unsigned char loc, unsigned char aspect)
         if (!tools[k][0] || !(tflag[k] & T_WORN)) {
             continue;
         }
-        for (j = 0, p = pieces; j < NPIECES; ++j, ++p) {
+        for (j = 0, p = pieces; j < NARMOUR; ++j, ++p) {
             if ((p->cover & bit) && !strcmp (p->key, tools[k])) {
                 v = harn_protection[p->mat][aspect & 3] + (tqual[k] <= 2 ? -1 : tqual[k] >= 7);
                 sum += v > 0 ? v : 0;

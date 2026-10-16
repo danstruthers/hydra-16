@@ -9,9 +9,10 @@
 **   bank.s     the RAM banks: the window at $8000, bytes between a bank and the main RAM, the overlays' calls
 **   look.c     what the character perceives, in words (the world's record of it, in the hub: level.h); the map
 **   fixt.c     (overlay 4) the fixtures' words: portcullises, windows and slits worked, traps (an E_TRAP's)
-**   blows.c    (overlay 5) a fight's words: the blows struck, the wounds, a denizen's fall (an E_FIGHT's)
+**   blows.c    (overlay 6) a fight's words: the blows struck, the wounds, a denizen's fall (an E_FIGHT's)
 **   intro.c    (overlay 1) the title and the pace (the character is hmchar's: a program of its own,
 **              games/hmchar, that main.c runs, and whose file the referee reads)
+**   theme.c    (overlay 5) the theme's words (its story, its names, its endings) and its puzzle (theme.h)
 **
 ** Memory: the program's code and data from $0800 (its BSS must end 768 bytes or more under $7F00: dq0.cfg); the
 ** overlays' code in banks of their own, put in the window at $8000 as they're called (bank.s).  Code in an overlay
@@ -79,7 +80,6 @@ extern struct pc P;
 
 void __fastcall__ look (unsigned char first);   /* Where the character is (first: the first time there) */
 void stir (void);                               /* The denizens it sees, told as they move */
-extern const char* const stratum_name[8];       /* (A stand-in theme's names of the strata) */
 void __fastcall__ map (const char* rules);      /* The map of what it's seen round it, and the character's
                                                 **   state beside it (rules: the referee's short lines) */
 
@@ -89,12 +89,13 @@ enum {
     V_NONE, V_MOVE, V_ENTER, V_APPROACH, V_LOOK, V_EXAMINE, V_SEARCH, V_TURN, V_FACE, V_CLIMB, V_JUMP, V_OPEN, V_CLOSE,
     V_UNLOCK, V_FORCE, V_DIG, V_GET, V_DROP, V_DON, V_DOFF, V_LIGHT, V_DOUSE, V_WAIT, V_MAP, V_SHEET, V_HELP,
     V_PAUSE, V_QUIT, V_SAVE, V_INVENTORY, V_HIDE, V_HOLD, V_STOW, V_PUT, V_HANG, V_RAISE, V_LOWER, V_BREAK, V_DISARM,
-    V_ATTACK, V_DEFEND
+    V_READ, V_USE, V_COMBINE,                   /* (The theme's puzzle's: theme.c) */
+    V_ATTACK, V_DEFEND                          /* (A fight's: blows.c) */
 };
 enum { OB_NONE, OB_DOOR, OB_PASSAGE, OB_STAIRS, OB_LADDER, OB_SHAFT, OB_LEDGE, OB_WAY_OUT, OB_WALL, OB_WINDOW, OB_TRAP,
     OB_PORTC, OB_ROOM };                        /* (OB_ROOM: the room, its ceiling: looked at closely) */
 enum { HOW_ANY, HOW_TO, HOW_THROUGH };
-enum { PR_NONE, PR_IN, PR_ON, PR_FROM };         /* (The other thing: in it, on it, from it) */
+enum { PR_NONE, PR_IN, PR_ON, PR_FROM, PR_WITH };    /* (The other thing: in it, on it, from it, with it) */
 #define GO_UP       8                           /* (A direction: up, down; else a heading, H_N ...) */
 #define GO_DOWN     9
 struct pcmd {
@@ -110,6 +111,39 @@ struct pcmd {
 };
 extern unsigned char pc_face;                   /* (The hub's, copied for the overlay) */
 void __fastcall__ parse (char* l, struct pcmd* c);   /* Overlay 3 */
+
+/* ---- theme.c (overlay 5): the theme's words and its puzzle (theme.h), from its copy in the overlay's bank */
+
+#define TCOPY       ((struct theme*) 0x9000)    /* (The theme, in overlay 5's bank: main.c reads it in) */
+struct quest {                                  /* The puzzle as it stands (kept in the save) */
+    unsigned char   theme;                      /* The theme's number (the save's: the one it began with) */
+    unsigned char   done;                       /* The game's ending (theme.h's END_*: 0 not yet) */
+    unsigned char   open;                       /* The way out opened */
+    unsigned char   flags;                      /* The theme's rules done, a bit each */
+};
+extern struct quest Q;                          /* (main.c's) */
+extern char tname[32];                          /* A theme's name for something (theme_named's) */
+enum { TN_THEME, TN_STRATUM, TN_ROOM, TN_LIGHT };
+enum { Q_NONE, Q_TOLD, Q_DONE, Q_OPEN, Q_RULED };   /* (puzzle's: not its; words only; a rule done; the way out
+                                                **   opened; the place ruled) */
+void __fastcall__ theme_load (unsigned char t);     /* Overlay 5: the theme (its number: the file's counted round)
+                                                **   read in: into the hub's theme bank and the overlay's; its kinds
+                                                **   into the hub's catalogue (the things' read in first) */
+void __fastcall__ theme_named (unsigned char what, unsigned char n);   /* Overlay 5: its name, a stratum's (n its
+                                                **   number) into tname; a room's (n its kind), its light, added to
+                                                **   lb */
+void __fastcall__ story (unsigned char resumed);    /* Overlay 5: the theme's name (and its story, a new game's) */
+void way_words (void);                          /* Overlay 5: the way out, shut or open */
+void __fastcall__ ending (unsigned char how);   /* Overlay 5: an ending's words (END_*) */
+unsigned char __fastcall__ puzzle (struct pcmd* c);     /* Overlay 5: a command the puzzle's (Q_*) */
+unsigned char __fastcall__ fixed (const char* name);    /* Overlay 5: a thing to hand fixed where it stands: 1, told */
+unsigned char __fastcall__ othings (unsigned char op, const char* name, const char* into, unsigned char to);
+                                                /* (main.c's) The things asked (from an overlay: the names in the
+                                                **   main RAM): the result; the request's x in othings_x,
+                                                **   the things' words in lb */
+extern unsigned othings_x;
+void __fastcall__ hub_mem (unsigned char bank, void* to, const void* from, unsigned n);    /* (main.c's) Bytes
+                                                **   between a hub's bank and the main RAM, from an overlay */
 
 /* ---- The overlays (bank.s: their stubs) */
 
@@ -130,13 +164,13 @@ void __fastcall__ trap_name (unsigned char kind, unsigned char trigger, unsigned
 void den_way (void);                            /* Overlay 4: a denizen in the way (its name in lb) */
 struct msg;
 struct fight;
-void __fastcall__ fight_words (const struct msg* m, struct fight* f);  /* Overlay 5: a blow (an E_FIGHT, and
-                                                **   its record from the ring, copied into lb's end: FIGHT_LB), into
-                                                **   lb */
+void __fastcall__ fight_words (const struct msg* m);    /* Overlay 6: a blow (an E_FIGHT; its record from the
+                                                **   ring copied into lb's end: FIGHT_LB), into lb */
 #define FIGHT_LB    ((struct fight*) (lb + sizeof lb) - 1)
-void __fastcall__ fight_note (unsigned char n);  /* Overlay 5: a word of a fight's, into lb: a stance taken (rs.h's
-                                                **   D_*), or why there's no blow (FN_*) */
-enum { FN_AWAY = 5, FN_NONE_LIKE, FN_NONE };
+unsigned char __fastcall__ fight_target (const char* w, unsigned char dir);   /* Overlay 6: the denizen beside the
+                                                **   character to strike at (its name has w; it lies dir): its entry
+                                                **   plus 1, or 0 and why not in lb */
+void __fastcall__ fight_stance (const char* w); /* Overlay 6: the character's stance set by its word, told in lb */
 void __fastcall__ heard_words (unsigned char what, unsigned char rel);  /* Overlay 2: a denizen heard (an E_DEN's
                                                 **   what, | 0x80 muffled, the way it lies as the character faces),
                                                 **   into lb */
@@ -162,6 +196,6 @@ void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
 void __fastcall__ bread (unsigned char bank, const void* from, void* to, unsigned n);
 void __fastcall__ bwrite (unsigned char bank, void* to, const void* from, unsigned n);
-extern unsigned char ovbank[5];
+extern unsigned char ovbank[6];
 
 #endif

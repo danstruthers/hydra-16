@@ -53,6 +53,7 @@ struct kind {
 #define KF_LIQUID       0x04                    /*   a liquid; */
 #define KF_GAS          0x08                    /*   a gas */
 #define KF_ON           0x10                    /* (A kind's keeps: a surface, a table's, a chair's) */
+#define KF_FIXED        0x80                    /* (And fixed where it stands, never taken up: a theme's altar) */
 
 /* The catalogue's kinds, by number (things.c's order: the maker puts them down by these) */
 enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKIN, KI_RATIONS, KI_TINDERBOX, KI_PICK,
@@ -129,6 +130,10 @@ enum { IO_KIT, IO_GET, IO_DROP, IO_LIST, IO_SAVE, IO_RESTORE,
                                                 **   in the request (for the appraiser's judgement: the UI's) */
     IO_HIDE,                                    /* A thing carried hidden where it stands (Concealment, the referee's
                                                 **   test): its difficulty back in qty */
+    IO_FIND,                                    /* The thing named that's to hand (carried, or within reach: the
+                                                **   theme's puzzle's): its kind back in x, and 256 if carried */
+    IO_COMBINE,                                 /* The things named (name, into) to hand made one: name's becomes kind
+                                                **   to (a theme's: its rule's), into's gone */
     /* A thing handled (name; into the other): each worded into things_text, the time it took back in x (tenths) */
     IO_HOLD,                                    /* Taken into a hand (two at most; a two-handed thing both) */
     IO_STOW,                                    /* Put in the pack (its room, its weight, what it keeps) */

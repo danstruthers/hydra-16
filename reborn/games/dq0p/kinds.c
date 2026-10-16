@@ -16,7 +16,7 @@
 /* The catalogue: name, flags, weight (quarter pounds), bulk (pints), its room (pints, pounds), slots, light, size,
 ** tool's key, material, the craft that knows it, its worth (pennies); what it keeps (KF_*: a surface KF_ON), its own
 ** form (0 a thing whole) */
-const struct kind kinds[KI_COUNT] = {
+const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, theme.h: the UI's, as it starts) */
     { "", 0 },
     { "torch", K_LIGHT | K_HAND, 4, 2, 0, 0, 0, 4, 3, "torch", MT_WOOD, AP_WOOD, 1 },
     { "backpack", K_CONTAINER | K_WEAR, 8, 20, 32, 40, 0, 0, 5, "", MT_LEATHER, AP_HIDE, 24, SS },
@@ -110,4 +110,5 @@ const char* const said[SA_COUNT] = {
     "Which thing? Name it (hold the dagger, put on the cloak ...).",
     " It's in your hand.",
     " It's in your #.",
+    "The % is fixed where it stands.",
 };

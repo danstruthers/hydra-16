@@ -75,9 +75,40 @@ static void __fastcall__ part (unsigned char kind, unsigned char sn, unsigned x,
 #pragma code-name ("OV3CODE")
 #pragma rodata-name ("OV3RODATA")
 
+/* The theme's piece i put down in the chunk, on a square of a room's floor (else of its passages'), and its place
+** given its square */
+static struct tplace pl;
+static void __fastcall__ piece_down (const struct chunk* c, unsigned char i, unsigned x0, unsigned y0)
+{
+    static struct tpiece tp;
+    const struct room* r;
+    unsigned char lx, ly, tries, t;
+
+    hub_get (THEME_BANK, &THEME->piece[i], &tp, sizeof tp);
+    for (tries = 0; tries < 80; ++tries) {
+        if (tries < 40 && c->nrooms) {
+            r = &c->room[random (c->nrooms)];
+            lx = r->x + random (r->w);
+            ly = r->y + random (r->h);
+        } else {
+            lx = random (CW);
+            ly = random (CW);
+        }
+        t = TILE (c->tile[ly][lx]);
+        if (t == T_FLOOR || (tries >= 40 && t == T_CORR)) {
+            pl.x = x0 + lx;
+            pl.y = y0 + ly;
+            hub_put (THEME_BANK, &THEME_PLACE[i], &pl, sizeof pl);
+            put_down (KI_THEME + tp.kind, c->sn, pl.x, pl.y, tp.qty, tp.hide);
+            return;
+        }
+    }
+}
+
 /* The chunk (in the main RAM; its first square x0, y0 in the frame) stocked: two tries a room, each a thing at the
-** style's odds, at a square of its floor; then its portals' parts (a barred door's bar in its brackets, some unbarred
-** doors' set aside by them, one in four; a window's pane, its bars), with no dice: nothing else moves for them */
+** style's odds, at a square of its floor; the theme's pieces whose place it is; then its portals' parts (a barred
+** door's bar in its brackets, some unbarred doors' set aside by them, one in four; a window's pane, its bars), with
+** no dice: nothing else moves for them */
 void __fastcall__ o_stock (const struct chunk* c, unsigned x0, unsigned y0)
 {
     const struct room* r;
@@ -101,6 +132,12 @@ void __fastcall__ o_stock (const struct chunk* c, unsigned x0, unsigned y0)
             k = hidden ? SP->hide_kinds[random (4)] : SP->kinds[random (8)];
             put_down (k, c->sn, x0 + lx, y0 + ly, k == KI_PENNIES ? 2 + random (20) : 1,
                 hidden ? SP->h_lo + random (SP->h_span) : 0xFF);
+        }
+    }
+    for (i = 0; i < NPIECES; ++i) {             /* (The theme's pieces whose place is the chunk: on a room's floor) */
+        hub_get (THEME_BANK, &THEME_PLACE[i], &pl, sizeof pl);
+        if (pl.sn == c->sn && pl.cx == c->cx && pl.cy == c->cy) {
+            piece_down (c, i, x0, y0);
         }
     }
     for (i = 0, p = c->portal; i < c->nportals; ++i, ++p) {

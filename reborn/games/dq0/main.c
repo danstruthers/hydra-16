@@ -1,7 +1,7 @@
 /*
 ** main.c - Dingus Quest Zero: the UI's task, its start and its loop.
 **
-** dq0 [-s seed] [-p pace] [-c file] [-d folder] [-k things] [-T]: -d keeps the game in a folder (on any card), and
+** dq0 [-s seed] [-p pace] [-c file] [-d folder] [-k things] [-T [-T]]: -d keeps the game in a folder (on any card), and
 ** carries on the game kept there if there is one; without it nothing's kept. the seed makes the same game each time (the dice: dice.h's rseed); the pace is
 ** r, n, m (relaxed, normal, menacing: asked at the start if it isn't given) or t (turns: the world moves only as
 ** the character acts, for tests); the file a character made already (hmchar's).  Without one, hmchar is run to make
@@ -55,6 +55,8 @@ static char pending[16];                        /* A thing to take up, walked ov
 static char lifting[16];                        /* (A portal's part being lifted out, to take up after) */
 
 struct pc P;
+struct quest Q;                                 /* The theme's puzzle, as it stands (theme.c's; the save's) */
+char tname[32];
 static volatile unsigned char quit;
 
 static void interrupted (int sig)
@@ -235,8 +237,9 @@ static void sheet (void)
 ** and the maker's changes.dat and seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    3                           /* (2: the items' records with their size, the portals' make; 3: the
-                                                **   denizens' with their attitudes, the creatures' sheets) */
+#define SAVE_VER    4                           /* (2: the items' records with their size, the portals' make; 3, the
+                                                **   theme and its puzzle; 4, the denizens' with their attitudes, the
+                                                **   creatures' sheets) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
@@ -244,6 +247,8 @@ static struct save {
     unsigned char   stratum, face, light;
     unsigned        x, y;
     struct pc       pc;
+    struct quest    q;                          /* (Its theme, its puzzle, and its ending: a game done isn't carried
+                                                **   on, but a new one begun) */
 } sv;
 static unsigned char resumed;
 
@@ -267,7 +272,7 @@ static int load_save (void)
     }
     n = read (fd, &sv, sizeof sv);
     close (fd);
-    return n == sizeof sv && sv.magic == SAVE_MAGIC && sv.version == SAVE_VER ? 0 : -1;
+    return n == sizeof sv && sv.magic == SAVE_MAGIC && sv.version == SAVE_VER && !sv.q.done ? 0 : -1;
 }
 
 /* The game kept: the referee's sheet, the maker's records, and the game's state (the hub's header in the window) */
@@ -313,6 +318,7 @@ static void save_game (void)
     sv.face = HUB->pc_face;
     sv.light = HUB->pc_light;
     sv.pc = P;
+    sv.q = Q;
     if ((fd = open (save_path ("game.dat"), O_WRONLY | O_CREAT | O_TRUNC, 0644)) >= 0) {
         write (fd, &sv, sizeof sv);
         write (fd, HUB->strata, sizeof HUB->strata);
@@ -332,7 +338,18 @@ static void __fastcall__ load_strata (void)
     }
 }
 
-/* ---- The hub; the referee started, the character loaded, and the world started */
+/* ---- The hub; the referee started, the character loaded, the theme read in, and the world started */
+
+/* Bytes copied between one of the hub's banks and the main RAM (to or from in the window), the window put back as it
+** was: the hub reached from an overlay's code (theme.c's) */
+void __fastcall__ hub_mem (unsigned char bank, void* to, const void* from, unsigned n)
+{
+    unsigned char b = getbank ();
+
+    hub_map (bank);
+    memcpy (to, from, n);
+    setbank (b);
+}
 
 /* A task of the game's started, libdir/name in role t (more: its third argument, or none); or the game's over (but
 ** for the sound's: the game goes on silent) */
@@ -365,6 +382,7 @@ static void start_world (unsigned long seed)
     HUB->pace = pace;
     HUB->seed = seed;
     HUB->test_start = test_start;
+    HUB->way_open = Q.open;
     hub_map (DEN_BANK);                         /* (The sounds' words: none till the sound task's put them there) */
     memset (SND_AT, 0, (2 * SND_KINDS + SND_WORLD) * SND_REC);
     hub_map (0);
@@ -389,6 +407,8 @@ static void start_world (unsigned long seed)
     }
     start ("dq0m", T_MAKER, libdir);            /* (Its maker, its senses) */
     start ("dq0p", T_SENSES, libdir);
+    things (IO_TOOLS, "");                      /* (The things' catalogue read in: the theme's kinds after it) */
+    theme_load (resumed ? Q.theme : (unsigned char) (seed >> 8));     /* (The seed's second byte: theme.h) */
     if (!resumed) {                             /* (The character's kit: a new game's, -k's things too) */
         strcpy (HUB->things_text, kit ? kit : "");    /* (Its things more, commas between) */
         things (IO_KIT, "");
@@ -437,6 +457,14 @@ void status (void)
     t_status (left, right);
 }
 
+/* The game's end (theme.h's END_*): its words, the theme's; the save marked so (a game done isn't carried on) */
+static void __fastcall__ end (unsigned char how)
+{
+    ending (how);
+    Q.done = how;
+    quit = 1;
+}
+
 /* ---- The world's events, worded */
 
 /* ---- The denizens' events (DENIZENS.md: events), as the character hears them: by its hearing (the referee's, 0-9),
@@ -451,23 +479,11 @@ char heard_what[20];
 
 static void __fastcall__ intend2 (unsigned char kind, unsigned w1, unsigned w2);
 
-/* A blow (an E_FIGHT: the character's, or one at it), worded (overlay 5's: the referee's words from the ring in the
-** denizens' bank, copied; the denizen named only if the character sees it, else "?": something); the character dead
-** of it, the game's end; knocked senseless, it waits it out */
+/* A blow (an E_FIGHT: the character's, or one at it), worded (overlay 6's); the character dead of it, the game's
+** end; knocked senseless, it waits it out */
 static void __fastcall__ blow (const struct msg* m)
 {
-    struct fight* f = FIGHT_LB;
-    unsigned char k;
-
-    hub_map (DEN_BANK);
-    memcpy (f, FIGHT_AT + m->x[3] % NFIGHTS, sizeof (struct fight));
-    hub_map (0);
-    for (k = HUB->sight.ndens; k-- && (HUB->sight.den[k].x != m->w1 || HUB->sight.den[k].y != m->w2); ) {
-    }
-    if (k == 0xFF) {
-        strcpy (m->who ? f->att : f->def, "?");
-    }
-    fight_words (m, FIGHT_LB);
+    fight_words (m);
     msg (lb);
     if (HUB->pcsum.cond & C_DEAD) {
         quit = 1;
@@ -543,7 +559,8 @@ static unsigned char events (void)          /* (How many there were) */
                         k == O_SHAFT_DOWN ? T_YOU_CLIMB_DOWN_2 : k & O_FELL ? T_PICK_YOURSELF_UP : T_YOU_GO_DOWN) :
                         k == O_LADDER_UP ? T_YOU_CLIMB_THE : k == O_SHAFT_UP ? T_YOU_CLIMB_UP :
                         T_YOU_CLIMB_THE_2);
-                    sayf (" You come into the %s.", stratum_name[HUB->sight.sname & 7]);
+                    theme_named (TN_STRATUM, HUB->sight.sname);
+                    sayf (" You come into the %s.", tname);
                     save_game ();               /* (Kept as it comes into a stratum) */
                 }
                 if ((m.w1 & 0xFF) == A_CROSSED) {
@@ -570,6 +587,8 @@ static unsigned char events (void)          /* (How many there were) */
             if (m.who == 0 && (m.w1 & 0xFF) == N_DEN) {
                 strcpy (lb, HUB->actor[(m.w1 >> 8) & 7].name);  /* (A denizen's: its name, for overlay 4) */
                 den_way ();
+            } else if (m.who == 0 && m.w1 == N_SHUT) {
+                way_words ();                   /* (The theme's: its lock) */
             } else if (m.who == 0) {
                 tell (m.w1 == N_SHUT ? T_THE_WAY_OUT :
                      m.w1 == N_NO_STAIRS ? T_THERE_S_NO : m.w1 == N_NO_DIG ?
@@ -607,7 +626,7 @@ static unsigned char events (void)          /* (How many there were) */
                 r->state = REQ_FREE;
                 harm_words (m.w1, HUB->pcsum.cond);
                 if (HUB->pcsum.cond & C_DEAD) {
-                    quit = 1;                   /* (The game's end) */
+                    end (END_DIED);             /* (The game's end) */
                 }
             }
             break;
@@ -630,6 +649,11 @@ static unsigned char events (void)          /* (How many there were) */
         case E_TRAP:
             if (m.who == 0) {
                 trap_words (m.w1);
+            }
+            break;
+        case E_LEFT:                            /* (Up the way out, open: the theme's mission's) */
+            if (m.who == 0) {
+                end (END_ESCAPED);
             }
             break;
         }
@@ -700,6 +724,22 @@ static unsigned char __fastcall__ things (unsigned char op, const char* name)
     }
     q->state = REQ_FREE;
     return q->result;
+}
+
+/* The things asked from an overlay (theme.c's): the hub's header put in the window for it, then the overlay back */
+unsigned othings_x;
+unsigned char __fastcall__ othings (unsigned char op, const char* name, const char* into, unsigned char to)
+{
+    unsigned char b = getbank (), r;
+
+    hub_map (0);
+    strcpy (HUB->ireq.into, into);
+    HUB->ireq.to = to;
+    r = things (op, name);
+    othings_x = HUB->ireq.x;
+    strcpy (lb, HUB->things_text);
+    setbank (b);
+    return r;
 }
 
 /* What's to hand, told the referee (the keys of the tools it carries): a skill used takes the tool that suits */
@@ -774,7 +814,13 @@ static void __fastcall__ lift (const char* name)
 /* A thing taken up, by its name (walked over to first, if it's out of reach; a portal's part lifted out first) */
 static void __fastcall__ take (const char* name)
 {
-    unsigned char was = HUB->pc_light, r = things (IO_GET, name);
+    unsigned char was = HUB->pc_light, r;
+
+    if (fixed (name)) {                         /* (A theme's altar, its throne) */
+        pending[0] = 0;
+        return;
+    }
+    r = things (IO_GET, name);
 
     if (r == IR_NOT_HERE) {
         strcpy (pending, name);
@@ -951,30 +997,6 @@ static unsigned char __fastcall__ at_once (const char* l)
     return c.verb == V_INVENTORY || c.verb == V_SHEET || c.verb == V_MAP || c.verb == V_HELP;
 }
 
-/* A blow at a denizen beside the character (one whose name has the word w, if it's given; the one that way, dir, if
-** that is): the world's I_ATTACK, a round's (the denizens' task strikes it, and tells it) */
-static void __fastcall__ attack (const char* w, unsigned char dir)
-{
-    struct actor* q = HUB->actor;
-    unsigned char k, away = 0;
-    int dx, dy;
-
-    for (k = 0; k < NACTORS; ++k, ++q) {
-        dx = q->x - HUB->pc_x;
-        dy = q->y - HUB->pc_y;
-        if (q->name[0] && q->sn == HUB->pc_stratum && (!*w || strstr (q->name, w)) &&
-            (dir > H_NW || bearing (dx, dy) == dir)) {
-            if (dx >= -1 && dx <= 1 && dy >= -1 && dy <= 1) {
-                intend (I_ATTACK, k + 1);
-                return;
-            }
-            away = 1;
-        }
-    }
-    fight_note (away ? FN_AWAY : *w ? FN_NONE_LIKE : FN_NONE);
-    msg (lb);
-}
-
 /* A command, the parser's, carried out */
 static void __fastcall__ command (char* l)
 {
@@ -986,6 +1008,16 @@ static void __fastcall__ command (char* l)
     parse (l, &c);
     if (c.word[0] && c.verb == V_MOVE && c.dir == 0xFF && !c.obj) {
         sayf ("\nI don't know how to %s.", c.word);
+        return;
+    }
+    if ((d = puzzle (&c)) != Q_NONE) {          /* (The theme's puzzle's: theme.c) */
+        if (d >= Q_DONE) {
+            HUB->way_open = Q.open;
+            intend2 (I_WAIT, 50, 1);
+        }
+        if (d == Q_RULED) {
+            end (END_RULED);
+        }
         return;
     }
     switch (c.verb) {
@@ -1126,14 +1158,15 @@ portal:
         things (IO_LIST, "");
         msg (HUB->things_text);
         return;
-    case V_ATTACK:
-        attack (c.word, c.dir);
+    case V_ATTACK:                              /* (A blow at a denizen beside it: overlay 6's choice) */
+        if ((d = fight_target (c.word, c.dir)) != 0) {
+            intend (I_ATTACK, d);
+            return;
+        }
+        msg (lb);
         return;
     case V_DEFEND:                              /* (The stance: the referee's defence for the character) */
-        d = c.word[0];
-        HUB->pc_stance = d == 'd' ? D_DODGE : d == 'b' && c.word[1] == 'l' ? D_BLOCK : d == 'c' ? D_COUNTER : d == 'n' ?
-            D_NONE : D_AUTO;
-        fight_note (HUB->pc_stance);
+        fight_stance (c.word);
         msg (lb);
         return;
     case V_JUMP:
@@ -1169,7 +1202,8 @@ int main (int argc, char* argv[])
         } else if (!strcmp (argv[i], "-k") && i + 1 < argc) {
             kit = argv[++i];                    /* (A tool to begin with: till the items layer, the tests') */
         } else if (!strcmp (argv[i], "-T")) {
-            test_start = 1;                     /* (For the tests: the character begins at a way down) */
+            ++test_start;                       /* (For the tests: the character begins at a way down; -T twice, by
+                                                **   the theme's first piece) */
         } else if (!strcmp (argv[i], "-c") && i + 1 < argc) {
             file = argv[++i];
         } else if (!strcmp (argv[i], "-p") && i + 1 < argc) {
@@ -1177,12 +1211,13 @@ int main (int argc, char* argv[])
             pace = argv[i][0] == 'r' ? PACE_RELAXED : argv[i][0] == 'm' ? PACE_MENACING :
                 argv[i][0] == 't' ? PACE_TURNS : PACE_NORMAL;
         } else {
-            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d folder] [-k things] [-T]");
+            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d folder] [-k things] [-T [-T]]");
         }
     }
     if (savedir && !load_save ()) {             /* (A game kept there: carried on) */
         resumed = 1;
         seed = sv.seed;
+        Q = sv.q;
         if (pace == 0xFF) {
             pace = sv.pace;
         }
@@ -1199,6 +1234,7 @@ int main (int argc, char* argv[])
     character (file, seed);
     start_world (seed);
     status ();
+    story (resumed);                            /* (The theme's) */
     blank ();
     sayf (resumed ? "%s, %s, takes up where they left off." : "%s, %s, enters the dungeon.", P.name, P.occupation);
     blank ();
