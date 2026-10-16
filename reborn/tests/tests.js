@@ -2709,16 +2709,16 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0fight', what: 'Dingus Quest Zero\'s fights (DENIZENS.md: fights; the referee\'s HarnMaster melee, RS_ATTACK, dq0harn/fight.c): a fight with seed 5\'s giant rats won (down its ladder, a sword in hand, dq0 -k sword; the character\'s Sword 80, hmchar\'s file): the blows struck and dodged both ways (the rat struck at, and its lair\'s kin, turn on the character: harmed, both fighting it), a grievous wound knocking one senseless (the size of a man against a rat\'s, a point a die), finished where it lies, its body left (an item, seen as the world looks about again); the other killed outright (a mortal wound, its kill roll: Combat 14); the character\'s own wounds on its sheet',
+      name: 'dq0fight', what: 'Dingus Quest Zero\'s fights (DENIZENS.md: fights; the referee\'s HarnMaster melee, RS_ATTACK, dq0harn/fight.c): a fight with seed 5\'s giant rats won (down its ladder, a sword in hand, dq0 -k sword; the character\'s Sword 80, hmchar\'s file): the blows struck and dodged both ways (the rat struck at, and its lair\'s kin, turn on the character: harmed, both fighting it), a grievous wound knocking one senseless (the size of a man against a rat\'s, a point a die), then the other struck at by the way it lies (the rat ahead to the right) and knocked senseless too (a serious wound), each finished where it lies, their bodies left (items, seen as the world looks about again: the caves irregular since 2026-10-16, the rats stand otherwise and the dice fall otherwise: no mortal blow now); the character\'s own wounds on its sheet',
       init: 't_rc', cycles: 1200e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rāecho ml swd 80 >> /ram/c.hm\rādq0 -p t -s 5 -c /ram/c.hm -k sword -T\r' +
-        ['d', 'wait', 'go right', ...Array(8).fill('attack the rat'), 'look', 'wait', 'look', 'sheet', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+        ['d', 'wait', 'go right', ...Array(4).fill('attack the rat'), 'attack the rat ahead right', 'attack the rat ahead right', 'attack the rat', 'look', 'wait', 'look', 'sheet', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
       expect: ['You strike at the giant rat with your sword; it dodges.', 'The giant rat bites at you',
-        'A giant rat is ahead, 5 feet away, fighting you. A giant rat\nis ahead to your left, 5 feet away, fighting you.',
+        'A giant rat is ahead, 5 feet away, fighting you. A giant rat\nis ahead to your right, 5 feet away, fighting you.',
         'You strike at the giant rat with your sword: a grievous deep gash to its right\nhand (G5). It falls senseless.', 'lying senseless.',
         'You finish the giant rat where it lies. The giant rat falls dead.',
-        'You strike at the giant rat with your sword: a mortal deep gash to its abdomen.\nThe giant rat falls dead.',
-        'On the floor ahead lies a body.', 'On the floor ahead to your left lies a body.', 'Injuries: left knee M1 (stab).', '% echo $status'],
+        'You strike at the giant rat with your sword: a serious gash to its left thigh\n(S3). It falls senseless.',
+        'On the floor ahead to your right lies a body. On the floor ahead lies a\nbody.', 'Injuries: left knee M1 (stab).', '% echo $status'],
       sdcard: true
     },
     {
