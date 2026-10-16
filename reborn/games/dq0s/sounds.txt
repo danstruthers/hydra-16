@@ -1,0 +1,37 @@
+# sounds.txt - (dq0s) the sounds (SOUND.md): each kind's (the denizens' kinds, dq0d/kinds.txt, by key), and the
+# world's, as the character hears them and the chips play them; a stand-in theme's, as the kinds are.  make.js makes
+# it the sound task's data file (lib/dq0/dq0s.dat: 32 bytes a sound: each kind's two in kinds.txt's order, the first
+# none, then the world's), which it puts in the hub (SND_AT) as it starts: the UI words what's heard by it too.
+#
+# A line a sound, its fields between bars:
+#   key       a kind's (kinds.txt's), or the world's own: *dig, *open, *shut, *blow, *smash, *chains, *trap
+#   act       a kind's: step (a step, a dash), noise (a noise of its own); the world's: -
+#   words     what the character hears it as, its article first (19 letters at most: "a scurrying"), or - none
+#   ym        the YM2151's: d N, General MIDI's drum N (35 kick ... 81 open triangle); or P N, patch P (0-162: the
+#             driver's) at MIDI note N
+#   psg       the Vera X's PSG's: a waveform (p pulse, s saw, t triangle, n noise), its width (0-63, a pulse's), a
+#             MIDI note (noise too: its pitch); a noise is played on the PSG first, with a Vera X
+#   hits      how many, and the ticks (200 a second) from one's start to the next's: N-T
+#   hold      ticks each hit is held
+#   level     how loud at its loudest, 0-127 (the chips' level, as heard from beside it)
+#
+# key    | act   | words              | ym     | psg       | hits | hold | level
+rat      | step  | a scurrying        | d 69   | n 0 110   | 3-5  | 2    | 80
+rat      | noise | a squeak           | 123 96 | p 20 100  | 2-9  | 5    | 100
+spider   | step  | a skittering       | d 42   | n 0 120   | 4-3  | 1    | 60
+spider   | noise | a dry hiss         | 121 84 | n 0 124   | 1-0  | 40   | 70
+ghoul    | step  | a shuffling tread  | d 73   | n 0 80    | 2-24 | 10   | 85
+ghoul    | noise | a low moan         | 52 45  | t 0 45    | 1-0  | 80   | 100
+skel     | step  | a dry clatter      | d 76   | n 0 100   | 3-4  | 2    | 90
+skel     | noise | a rattle of bones  | d 77   | n 0 96    | 6-3  | 1    | 100
+bear     | step  | a heavy tread      | d 41   | n 0 60    | 2-30 | 6    | 110
+bear     | noise | a low growl        | 30 28  | s 0 33    | 1-0  | 90   | 120
+kobold   | step  | light footsteps    | d 37   | n 0 90    | 2-18 | 2    | 75
+kobold   | noise | a yapping          | 85 76  | p 32 76   | 3-12 | 6    | 100
+*dig     | -     | -                  | d 80   | n 0 116   | 1-0  | 3    | 100
+*open    | -     | -                  | 120 50 | s 8 50    | 1-0  | 40   | 90
+*shut    | -     | -                  | d 35   | n 0 40    | 1-0  | 6    | 110
+*blow    | -     | -                  | 116 40 | n 0 50    | 1-0  | 8    | 120
+*smash   | -     | -                  | d 49   | n 0 127   | 1-0  | 30   | 120
+*chains  | -     | -                  | d 54   | n 0 104   | 6-6  | 2    | 90
+*trap    | -     | -                  | 130 60 | n 0 120   | 1-0  | 4    | 110

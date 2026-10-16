@@ -1061,6 +1061,17 @@ function ZSM_KEYONS(song) {
   return { rate: (b[12] | b[13] << 8) || 60, ticks };
 }
 
+// The YM2151's key-ons in a machine's log (machine: { ymLog: true }), each its channel and its speakers as it came
+// on (the register $20 + ch's RL bits): '4R', '5B', '6L' (B both, - none) in order
+function YM_KEYPANS(m) {
+  const r = new Uint8Array(256), ons = [];
+  for (const [, reg, v] of m.ym.writes) {
+    r[reg] = v;
+    if (reg === 0x08 && (v & 0x78)) ons.push((v & 7) + '-LRB'[r[0x20 + (v & 7)] >> 6]);
+  }
+  return ons;
+}
+
 // The /pc tests' folder (the emulator as the PC tool: sim/lib/pchost.js), and the pc test's lines (as the tools
 // test's): a listing, a file read, a file made by a redirect, a copy to the PC compared (its 512-byte writes go in
 // frames of 128 bytes: the rest of each in the same request block, a fid other than the first's, as another /pc
@@ -2283,7 +2294,7 @@ module.exports = {
     },
     {
       name: 'dq0dig', what: 'Dingus Quest Zero digging (dq0 -k pick -T: a pick in hand, the tool the referee takes (the room\'s floor earth, the maker\'s), named as it is first used): a shaft down from a room by its stairway, spell by spell (Mining tests, the referee asked), through to the stratum below (grown round it then), and down it; the rats by the stairway living through every spell of it (the turns pace: some eleven hours, the denizens kept up a slice at a time)',
-      init: 't_rc', cycles: 1100e6,
+      init: 't_rc', cycles: 1500e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -k pick -T\r' +
         ['dig down', 'look', 'd', 'look', 'map', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
       expect: ['You set to digging', 'You dig with your pick.', 'feet to go.', 'the shaft is through.', 'You climb down the shaft.', 'The map (you face', '% echo $status'],
@@ -2392,22 +2403,77 @@ module.exports = {
         const a = out.indexOf('You can\'t go that way.'), b = out.indexOf('> quit', a), seg = a < 0 || b < 0 ? '' : out.slice(a, b);
         const top = (seg.match(/\x1b\[1;\d+H/g) || []).length, f = [];
         if (top > 4) f.push(top + ' moves up to the status line while nothing happened (a second at most each)');
-        if (top && !seg.includes('\x1b[?25l')) f.push('the cursor not hidden while the status line was drawn');
+        for (const s of seg.matchAll(/\x1b\[1;\d+H/g)) {      // (Hidden as it moved there: hidden last, here or before)
+          const at = a + s.index;
+          if (out.lastIndexOf('\x1b[?25l', at) <= out.lastIndexOf('\x1b[?25h', at)) { f.push('the cursor not hidden while the status line was drawn'); break; }
+        }
         return f;
       },
       sdcard: true
     },
     {
-      name: 'dq0heard', what: 'Dingus Quest Zero\'s denizens\' events perceived by some and not others (DENIZENS.md: events): down the ladder at seed 5, the torch put out: in the dark the giant rats move about unseen (nothing told as stirring, none seen) but heard, near enough for the character\'s hearing, by the way they lie ("You hear something moving ..."); the turns pace, the denizens kept up a slice at a time',
+      name: 'dq0heard', what: 'Dingus Quest Zero\'s denizens\' events perceived by some and not others (DENIZENS.md: events): down the ladder at seed 5, the torch put out: in the dark the giant rats move about unseen (nothing told as stirring, none seen) but heard, near enough for the character\'s hearing, by the way they lie, in their sound\'s words (SOUND.md: "You hear a scurrying to your right."), and played as they\'re heard (the sound task\'s: the YM2151\'s channels 4-6, on the side they lie, a rat to the right of the character facing north on the right speaker); the turns pace, the denizens kept up a slice at a time',
       init: 't_rc', cycles: 900e6,
-      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 5 -c /ram/c.hm -T\r' +
+      machine: { ymLog: true, input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 5 -c /ram/c.hm -T\r' +
         ['d', 'douse the torch', 'wait', 'wait', 'wait', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
-      expect: ['You put out the torch.', 'You hear something moving ', '% echo $status'],
+      expect: ['You put out the torch.', 'You hear a scurrying to your right.', '% echo $status'],
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), a = o.indexOf('You put out the torch.'), b = o.indexOf('> quit', a);
-        const seg = a < 0 || b < 0 ? '' : o.slice(a, b), f = [];
-        if (!seg.includes('You hear something moving')) f.push('the rats not heard in the dark');
+        const seg = a < 0 || b < 0 ? '' : o.slice(a, b), f = [], ons = YM_KEYPANS(m);
+        if (!seg.includes('You hear a scurrying')) f.push('the rats not heard in the dark');
         if (seg.includes('Something stirs') || seg.includes('A giant rat is')) f.push('a rat seen in the dark');
+        if (o.includes('You hear something')) f.push('a sound told without its words (the sound task\'s table not in the hub)');
+        if (!o.includes('facing N')) f.push('the character not facing north');
+        if (!ons.some(k => k === '4R' || k === '5R' || k === '6R')) f.push('no rat played on the right: ' + ons.join(' '));
+        if (ons.some(k => !/^[456]/.test(k))) f.push('a key-on off the sound task\'s channels: ' + ons.join(' '));
+        this.notes = ['the YM2151\'s key-ons: ' + ons.join(' ')];
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      // (The sound task's scene, dq0s -t: the character faces north, its hearing 5; then the YM2151's key-ons, each
+      // with its speakers: the rat's three hits on the right, the squeak on the left, the growl on both, the
+      // yapping on the right, the bear's tread in its place on the left; nothing on 0-3 or 7, the music's and bell's)
+      name: 'dq0sound', what: 'Dingus Quest Zero\'s sound (SOUND.md, the user: "if I am facing N and the sound is coming from the E, then I hear it in my right ear"; dq0s -t, its scene): a giant rat\'s step two squares east of a character facing north played on the right speaker (the YM2151\'s channel 4, its RL bits); then five sources at once, more than the three channels: the three loudest played (the squeak to the left on the left, the growl ahead on both, the yapping behind a shut door muffled, on the right), the two quietest not; and a bear\'s tread beside it, louder, in the quietest\'s place; the music\'s and the bell\'s channels left alone',
+      init: 't_rc', cycles: 200e6,
+      machine: { ymLog: true, input: 'ā/sd/0/games/lib/dq0/dq0s -t /sd/0/games/lib/dq0\rāecho $status\r' },
+      expect: ['1 a scurrying: channel 4, right, level 48\n3 a squeak: channel 4, left, level 76\n' +
+        '2 a low growl: channel 5, both, level 64\n6 a yapping: channel 6, right, muffled, level 52\n' +
+        '4 a shuffling tread: not played, level 39\n5 a dry clatter: not played, level 36\n' +
+        '7 a heavy tread: channel 6, left, in place of 6, level 97\n%', '% echo $status\n\n%'],
+      check(m) {
+        const ons = YM_KEYPANS(m), f = [], want = ['4R', '4L', '5B', '6R', '6L'];
+        let i = 0;
+        for (const o of ons) if (o === want[i]) i++;
+        if (ons[0] !== '4R') f.push('the rat to the east not first, on the right: ' + ons.join(' '));
+        if (i < want.length) f.push('the key-ons not ' + want.join(', ') + ' in turn: ' + ons.join(' '));
+        if (ons.some(o => !/^[456]/.test(o))) f.push('a key-on off the sound task\'s channels: ' + ons.join(' '));
+        if (m.ym.lost) f.push(m.ym.lost + ' writes to the YM2151 while it was busy');
+        this.notes = ['the YM2151\'s key-ons: ' + ons.join(' ')];
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      // (With a Vera X: the noises on the PSG's voices first (20-23: voices 12-15), so all five played and the
+      // bear's tread on a voice free; the voices' speakers as they were last: the rat east's 12, then the
+      // tread's behind (both); the clatter's (east: right) on 13, the bear's tread (west: left) on 14)
+      name: 'dq0soundx', what: 'Dingus Quest Zero\'s sound with a Vera X (dq0s -t): the PSG\'s voices 12-15 the sound task\'s too, seven channels: a rat\'s scurrying to the east on voice 12 on the right, the five sources at once all played (the noises on the PSG, the tones on the YM2151), the bear\'s tread on a voice free, on the left',
+      init: 't_rc', cycles: 200e6,
+      machine: { ymLog: true, vera: true, input: 'ā/sd/0/games/lib/dq0/dq0s -t /sd/0/games/lib/dq0\rāecho $status\r' },
+      expect: ['1 a scurrying: channel 20, right, level 48\n3 a squeak: channel 4, left, level 76\n' +
+        '2 a low growl: channel 5, both, level 64\n6 a yapping: channel 6, right, muffled, level 52\n' +
+        '4 a shuffling tread: channel 20, both, level 39\n5 a dry clatter: channel 21, right, level 36\n' +
+        '7 a heavy tread: channel 22, left, level 97\n%', '% echo $status\n\n%'],
+      check(m) {
+        const f = [], lr = v => '-LRB'[m.vera.psg[4 * v + 2] >> 6], ons = v => m.vera.psgOns.filter(k => k.startsWith('voice ' + v + ' ')).length;
+        for (const [v, n, s] of [[12, 4, 'B'], [13, 3, 'R'], [14, 2, 'L']]) {
+          if (ons(v) < n) f.push('PSG voice ' + v + ' on ' + ons(v) + ' times, not ' + n);
+          if (lr(v) !== s) f.push('PSG voice ' + v + '\'s speakers ' + lr(v) + ', not ' + s);
+        }
+        if (ons(15)) f.push('PSG voice 15 on: nothing played there');
+        this.notes = ['the PSG\'s voices on: ' + m.vera.psgOns.map(k => k.split(' ')[1]).join(' ')];
         return f;
       },
       sdcard: true

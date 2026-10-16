@@ -605,12 +605,41 @@ static unsigned char __fastcall__ dart (unsigned char k)
 static struct msg ev;
 static unsigned wplace, dplace;                 /* (Its places in the world's events, and in its own) */
 
+/* What lies between actor a (the copy) and the character, for those who hear it (SOUND.md: E_DEN's x[3]): the squares
+** of wall and rock on the line (15 at most), and the shut doors times 16; 0 off its stratum, or more than 24 squares
+** off (beyond anyone's hearing of a step) */
+static unsigned char between (void)
+{
+    unsigned char* p;
+    struct portal* q;
+    unsigned char solid = 0, doors = 0;
+    unsigned i, dist;
+    int dx = pcx - a.x, dy = pcy - a.y;
+
+    if (a.sn != pcs || (dist = apart (dx, dy)) > 24) {
+        return 0;
+    }
+    for (i = 1; i < dist; ++i) {
+        p = at (a.sn, a.x + dx * (int) i / (int) dist, a.y + dy * (int) i / (int) dist);
+        if (!p || !T_CLEAR (*p)) {
+            if (solid < 15) {
+                ++solid;
+            }
+        } else if (TILE (*p) == T_DOOR && (q = portal_at (cx_, cy_)) != 0 && !(q->state & PS_OPEN) && doors < 15) {
+            ++doors;
+        }
+    }
+    return solid | doors << 4;
+}
+
 /* Actor k (the copy, a) did what, how loud (0-9): published, where it is (and whether the character sees its square
-** now, the senses' marks), the hub's header in the window after */
+** now, the senses' marks; what lies between, if it's heard), the hub's header in the window after */
 static void __fastcall__ publish (unsigned char k, unsigned char what, unsigned char loud)
 {
-    unsigned char* p = at (a.sn, a.x, a.y);
+    unsigned char* p;
 
+    ev.x[3] = loud ? between () : 0;
+    p = at (a.sn, a.x, a.y);
     ev.x[2] = p && (*p & T_VIS);
     ev.kind = E_DEN;
     ev.who = k + 1;
