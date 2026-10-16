@@ -25,11 +25,13 @@
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
 #define HUB_VERSION     1
-#define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 3)  /* Bank 0: the header, the queues, the
-                                                **   referee's slots, what the character perceives, the map, the
-                                                **   strata's records; then the plans' banks and the chunks' (world.h);
-                                                **   the catalogue's, and the items' (items.h); the denizens' events;
-                                                **   the senses' look (LOOK_BANK); the theme (THEME_BANK) */
+#define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6)  /* Bank 0: the header, the clock, the
+                                                **   doorbells, the rings and the requests' slots; then the plans'
+                                                **   banks and the chunks' (world.h); the catalogue's, and the items'
+                                                **   (items.h); the denizens' events; the senses' look (LOOK_BANK); the
+                                                **   theme (THEME_BANK); the records the tasks share, each bank its
+                                                **   keeper's: the senses' (SIGHT_BANK), the UI's (UI_BANK), the
+                                                **   world's (WORLD_BANK) */
 #define CAT_BANK        (1 + PLAN_BANKS + CACHE_BANKS)
 #define CATALOGUE       ((struct kind*) 0x8000)
 #define ITEM_BANK(i)    (CAT_BANK + 1 + (i) / (0x2000 / sizeof (struct item)))
@@ -87,6 +89,20 @@ struct tname {
 };
 enum { NM_NONE, NM_ITEM, NM_ROOM, NM_DEN };
 typedef char names_fit[TNAMES * sizeof (struct tname) <= 0x800 ? 1 : -1];  /* (The theme bank's last 2K) */
+
+/* The records the tasks share, out of bank 0 (it keeps the header, the clock, the doorbells, the rings and the
+** requests' slots), each in a bank of its own at $8000: a reader copies out what it needs (hub_get's, or its own
+** hub_mem ...: the bank in the window, the bytes copied, the header back), so no pointer into one outlives the next
+** hub_map; a writer puts it back the same way, or writes it in place with the bank in the window and nothing else
+** read meanwhile */
+#define SIGHT_BANK      (THEME_BANK + 1)        /* The senses': what the character perceives (struct sight: the
+                                                **   senses' after each look about, the denizens it sees the world's) */
+#define SIGHT           ((struct sight*) HUB_WINDOW)
+#define UI_BANK         (SIGHT_BANK + 1)        /* The UI's (struct uirec): the map, the things' words */
+#define UIREC           ((struct uirec*) HUB_WINDOW)
+#define WORLD_BANK      (UI_BANK + 1)           /* The world's (struct wrec): the strata's records, the chunks' cache's
+                                                **   table */
+#define WREC            ((struct wrec*) HUB_WINDOW)
 
 /* The tasks, and so their doorbells */
 enum { T_UI, T_WORLD, T_DENIZENS, T_REFEREE, T_SOUND, T_MAKER, T_SENSES, NTASKS };
@@ -345,27 +361,19 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   the things' (dq0p), from the lit things it holds), */
     char            pc_lamp[14];                /*   and the brightest of them, named */
     struct rs_summary pcsum;                    /* The character's summary (the referee's: its senses ...) */
-    struct sight    sight;                      /* What it perceives (the senses', after each look about) */
     /* A look about asked of the senses (dq0p: the world asks, as the character's moved, turned, lit a light): the
     ** squares it sees marked, what it perceives recorded in sight */
     volatile unsigned char look_state;          /* REQ_* */
     unsigned char   look_first;                 /* The first time there */
     /* The map: the UI asks (map_state REQ_POSTED, the maker's doorbell), the maker draws its window round the
-    ** character into map (each row a line, 0-ended) and says REQ_DONE */
+    ** character into the UI bank's map (each row a line, 0-ended) and says REQ_DONE */
     volatile unsigned char map_state;
-    char            map[MAP_H][MAP_W + 1];
-    /* The dungeon (world.h): the strata's records, the chunks' cache's table, the maker's requests, and the slot
-    ** each task that reads the chunks is reading (the maker never makes way for it) */
-    struct stratum  strata[MAXSTRATA];
-    struct cslot    cslot[NCSLOTS];
-    unsigned        stamp;
+    /* The dungeon (world.h): the maker's requests (the strata's records and the cache's table the world bank's) */
     struct mreq     mreq[NASK];
-    unsigned char   inuse[NASK];
     /* The things (items.h): the store's lock (a semaphore: the maker and the things both take its records), a
     ** request to the things (dq0p), and their words for the UI (what's carried) */
     unsigned char   item_lock;
-    struct ireq     ireq;
-    char            things_text[400];
+    struct ireq     ireq;                       /* (Their words the UI bank's things_text) */
     struct portal   pview;                      /* A portal looked at closely (PA_EXAMINE's: the maker's record of
                                                 **   it, but bar: 1 the character's on its bar's side) */
     char            dig_tool[4][8];             /* A dig's spells' tools, the referee's choices (their keys), in turn */
@@ -416,14 +424,35 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   materials to hand) */
 #define GOING_DARK      0x80
 
+/* The UI's bank's records (UI_BANK) */
+struct uirec {
+    char            map[MAP_H][MAP_W + 1];      /* The map's rows (the maker's, as the UI asks: map_state) */
+    char            things_text[400];           /* The things' words for the UI (what's carried: ireq's reply), and
+                                                **   the UI's to the things (dq0 -k's: the things more) */
+};
+
+/* The world's bank's records (WORLD_BANK): the dungeon's (world.h) */
+struct wrec {
+    struct stratum  strata[MAXSTRATA];          /* The strata's records (each task keeps a copy: sync_strata) */
+    struct cslot    cslot[NCSLOTS];             /* The chunks' cache's table */
+    unsigned        stamp;
+    unsigned char   inuse[NASK];                /* The slot each task that reads the chunks is reading (the maker
+                                                **   never makes way for it) */
+};
+
 #define HUB     ((struct hub*) HUB_WINDOW)
-typedef char hub_fits[sizeof (struct hub) <= 0x2000 ? 1 : -1];   /* (The header in bank 0) */
+#define HUB_FREE        2048                    /* (Bank 0's room kept free, at least) */
+typedef char hub_fits[sizeof (struct hub) + HUB_FREE <= 0x2000 ? 1 : -1];   /* (The header in bank 0) */
+typedef char recs_fit[sizeof (struct sight) <= 0x2000 && sizeof (struct uirec) <= 0x2000 &&
+                      sizeof (struct wrec) <= 0x2000 ? 1 : -1];
 typedef char snd_fits[(char*) (FIGHT_AT + NFIGHTS) - (char*) 0x8000 <= 0x2000 ? 1 : -1];   /* (DEN_BANK's) */
 
 /* hub.c */
 int __fastcall__ hub_create (unsigned char banks);      /* The UI's: the segment, its doorbells: 0, or -1 */
 int __fastcall__ hub_attach (unsigned char seg, unsigned char me);    /* A child's: 0, or -1 */
 void __fastcall__ hub_map (unsigned char bank);         /* The hub's bank at $8000 */
+unsigned hub_here (void);                               /* Where the window is (for hub_back) */
+void __fastcall__ hub_back (unsigned w);                /* The window put back where hub_here found it */
 unsigned long hub_now (void);                           /* The clock, read whole */
 void __fastcall__ hub_ring (unsigned char t);           /* Task t's doorbell rung */
 unsigned char __fastcall__ hub_send (const struct msg* m);  /* An intent to the world (the UI's): 1 sent, 0 full */

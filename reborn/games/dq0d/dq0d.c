@@ -314,14 +314,16 @@ void __fastcall__ s_populate (unsigned char n)
 #pragma rodata-name (pop)
 
 /* The strata grown since the last look, populated (none while the world's asking the maker: a plan may be half
-** copied into the hub) */
+** copied into the world bank) */
 static void grow (void)
 {
-    unsigned char n;
+    unsigned char n, m;
 
     for (n = 0; n < MAXSTRATA; ++n) {
+        hub_map (WORLD_BANK);
+        m = WREC->strata[n].made;
         hub_map (0);
-        if (HUB->strata[n].made && !hd.done[n] && HUB->mreq[ASK_WORLD].state != REQ_POSTED) {
+        if (m && !hd.done[n] && HUB->mreq[ASK_WORLD].state != REQ_POSTED) {
             sync_strata ();
             populate (n);
         }
@@ -402,19 +404,18 @@ void __fastcall__ s_place (unsigned char i)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* Chunk (cx, cy) of stratum sn made already (in the cache: the hub's header in the window) */
+/* Chunk (cx, cy) of stratum sn made already (in the cache: its table the world bank's; the hub's header in the
+** window after) */
 static unsigned char __fastcall__ made (unsigned char sn, unsigned cx, unsigned cy)
 {
-    struct cslot* q = HUB->cslot;
+    struct cslot* q = WREC->cslot;
     unsigned char k;
 
-    hub_map (0);
-    for (k = 0; k < NCSLOTS; ++k, ++q) {
-        if (q->used && q->sn == sn && q->cx == cx && q->cy == cy) {
-            return 1;
-        }
+    hub_map (WORLD_BANK);
+    for (k = NCSLOTS; k && !(q->used && q->sn == sn && q->cx == cx && q->cy == cy); --k, ++q) {
     }
-    return 0;
+    hub_map (0);
+    return k != 0;
 }
 
 /* Square x, y of stratum sn in a chunk that's made already */

@@ -319,8 +319,9 @@ void s_kit (void)
     char* c;
     char* more = (char*) piece;
 
+    hub_map (UI_BANK);
+    strncpy (more, UIREC->things_text, 63);     /* (The things more: the UI's -k, in the UI bank's text) */
     hub_map (0);
-    strncpy (more, HUB->things_text, 63);       /* (The things more: the UI's -k, in the hub's text) */
     more[63] = 0;
     for (k = 0; k < NKIT; ++k) {
         e = kit_list[k];
@@ -616,15 +617,15 @@ void s_tools (void)
     unsigned i = 0;
     char* t;
 
-    hub_map (0);
-    HUB->things_text[0] = 0;
+    hub_map (UI_BANK);
+    UIREC->things_text[0] = 0;
     while ((i = items (i, IN_ACTOR | IN_ITEM | IN_PORTAL, 0)) != 0) {
         fetch (&rec, i);
         k = kind_of (rec.kind);                   /* (Copied: the hub's text is in another bank) */
         if (k->tool[0] && on_pc (i)) {
-            hub_map (0);
-            t = HUB->things_text;
-            if (strlen (t) < sizeof HUB->things_text - 11) {
+            hub_map (UI_BANK);
+            t = UIREC->things_text;
+            if (strlen (t) < sizeof UIREC->things_text - 11) {
                 m[0] = rec.flags & I_HELD ? '*' : rec.flags & I_WORN ? '+' : ' ';
                 strcat (t, m);
                 strcat (t, k->tool);
@@ -755,11 +756,12 @@ unsigned char __fastcall__ s_hide (const char* name)
 static char* tp;
 static void __fastcall__ put (const char* s)
 {
-    hub_map (0);
-    while (*s && tp < HUB->things_text + sizeof HUB->things_text - 1) {
+    hub_map (UI_BANK);                          /* (The text the UI bank's: the header back after) */
+    while (*s && tp < UIREC->things_text + sizeof UIREC->things_text - 1) {
         *tp++ = *s++;
     }
     *tp = 0;
+    hub_map (0);
 }
 
 #pragma code-name (push, "SW4CODE")
@@ -835,9 +837,10 @@ void s_list (void)
 {
     char b[6];
 
-    hub_map (0);
-    tp = HUB->things_text;
+    hub_map (UI_BANK);
+    tp = UIREC->things_text;
     *tp = 0;
+    hub_map (0);
     contents (IW_ACTOR, 0, 0);
     put (" In all, ");                          /* (Its load: the referee's encumbrance of it, the UI's to word) */
     put (utoa ((weight_in (IW_ACTOR, 0) + 2) / 4, b, 10));
@@ -867,8 +870,10 @@ unsigned char s_search (void)
     sn = HUB->pc_stratum;
     x = HUB->pc_x;
     y = HUB->pc_y;
-    tp = HUB->things_text;
+    hub_map (UI_BANK);
+    tp = UIREC->things_text;
     *tp = 0;
+    hub_map (0);
     while ((i = items (i, IN_SQUARE, 0)) != 0) {
         fetch (&rec, i);
         if (rec.sn != sn ||
@@ -1007,9 +1012,10 @@ static unsigned __fastcall__ item_kind (unsigned i)
 
 static void text_new (void)
 {
-    hub_map (0);
-    tp = HUB->things_text;
+    hub_map (UI_BANK);
+    tp = UIREC->things_text;
     *tp = 0;
+    hub_map (0);
 }
 
 /* The character's light: the brightest lit thing it carries (in a hand, worn, hung from its belt: one stowed is

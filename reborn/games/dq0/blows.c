@@ -71,10 +71,10 @@ unsigned __fastcall__ o_fight_words (const struct msg* m)
     char* s;
 
     hub_mem (DEN_BANK, f, FIGHT_AT + m->x[3] % NFIGHTS, sizeof *f);
-    hub_mem (0, &n, &HUB->sight.ndens, 1);
+    hub_mem (SIGHT_BANK, &n, &SIGHT->ndens, 1);
     s = pc ? f->def : f->att;
     for (k = n; k--; ) {
-        hub_mem (0, at, HUB->sight.den[k].name, sizeof at);
+        hub_mem (SIGHT_BANK, at, SIGHT->den[k].name, sizeof at);
         if (!strcmp (at, s)) {
             break;
         }

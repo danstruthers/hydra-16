@@ -237,6 +237,8 @@ void stir_words (void);                         /* Overlay 7: the denizens it se
                                                 **   they were told last) */
 extern char lb[400];
 extern struct sight sight_copy;
+struct sight* sight_get (void);                 /* The senses' record copied into sight_copy (look.c's): it */
+const char* tt (void);                          /* The things' words (the UI bank's) copied into lb (look.c's): it */
 extern unsigned char sight_light;
 extern char sight_lamp[14];                     /* (What gives its light, named: the hub's pc_lamp) */
 extern unsigned char sight_close;               /* (A close look: the room's figures, its size and its ceiling's) */

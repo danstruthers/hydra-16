@@ -28,12 +28,26 @@ unsigned char sight_light;                      /*   and the character's light, 
 char sight_lamp[14];                            /*   what gives it, named */
 unsigned char sight_close;                      /*   and a close look (look's first 2) */
 
+/* The senses' record (their bank's) copied out, into sight_copy: what reads it reads the copy */
+struct sight* sight_get (void)
+{
+    hub_mem (SIGHT_BANK, &sight_copy, SIGHT, sizeof sight_copy);
+    return &sight_copy;
+}
+
+/* The things' words (the UI bank's things_text) copied out, into lb */
+const char* tt (void)
+{
+    hub_mem (UI_BANK, lb, UIREC->things_text, sizeof lb);
+    return lb;
+}
+
 /* What the character perceives (first: the first time there; 2, a close look, the room's figures with it; | 4, as a
-** run or a sprint ends: briefly): the hub's record copied, worded (overlay 2) */
+** run or a sprint ends: briefly): the senses' record copied, worded (overlay 2) */
 void __fastcall__ look (unsigned char first)
 {
     sight_close = first == 2;                   /* (The theme's words for a place's first sight: later) */
-    memcpy (&sight_copy, &HUB->sight, sizeof sight_copy);
+    sight_get ();
     sight_copy.first |= first & 4 ? SIGHT_HURRY : 0;
     sight_light = HUB->pc_light;
     strcpy (sight_lamp, HUB->pc_lamp);
@@ -48,11 +62,11 @@ void __fastcall__ look (unsigned char first)
     msg (lb);
 }
 
-/* A denizen the character sees has moved (the world's E_VIEW, V_STIR): the hub's record copied, worded (overlay 2),
-** and told if what it sees of them has changed */
+/* A denizen the character sees has moved (the world's E_VIEW, V_STIR): the senses' record copied, worded (overlay
+** 2), and told if what it sees of them has changed */
 void stir (void)
 {
-    memcpy (&sight_copy, &HUB->sight, sizeof sight_copy);
+    sight_get ();
     pc_face = HUB->pc_face;
     stir_words ();
     if (lb[0]) {
@@ -96,13 +110,15 @@ static void __fastcall__ num (const char* a, int v, const char* z)
 static void __fastcall__ make_panel (const char* rules)
 {
     static char b[PANEL + 1];
+    static struct { unsigned char sname, style; int z; } w;
     const char* e;
     unsigned char n;
 
     np = 0;
-    theme_named (TN_STRATUM, HUB->sight.sname);
+    hub_mem (SIGHT_BANK, &w, &SIGHT->sname, sizeof w);   /* (The senses' record's: the stratum's name, the depth) */
+    theme_named (TN_STRATUM, w.sname);
     pline (tname);
-    num ("Depth ", -HUB->sight.z, " ft");
+    num ("Depth ", -w.z, " ft");
     num ("Sq ", (int) (HUB->pc_x - 32768U), ",");
     strcat (panel[np - 1], itoa ((int) (HUB->pc_y - 32768U), b, 10));
     strcpy (b, "Facing ");
@@ -141,16 +157,18 @@ void __fastcall__ s_map (const char* rules)
     }
     blank ();
     sayf ("The map (you face %s; heights in tens of feet against yours):", head_name[HUB->pc_face & 7]);
-    for (n = 0; n < MAP_H - 1 && !HUB->map[n][0]; ++n) {
+    hub_map (UI_BANK);                          /* (The map's the UI bank's: its rows copied out one by one) */
+    for (n = 0; n < MAP_H - 1 && !UIREC->map[n][0]; ++n) {
     }
-    for (y = MAP_H - 1; y > n && !HUB->map[y][0]; --y) {
+    for (y = MAP_H - 1; y > n && !UIREC->map[y][0]; --y) {
     }
+    hub_map (0);
     side = tw > MAP_W + PANEL + 1;
     for (k = 0; n + k <= y || (side && k < np); ++k) {  /* (The rows from the first seen to the last, the panel's
                                                 **   beside them) */
         line[0] = 0;
         if (n + k <= y && n + k < MAP_H) {
-            strcpy (line, HUB->map[n + k]);
+            hub_mem (UI_BANK, line, UIREC->map[n + k], MAP_W + 1);
         }
         if (side && k < np) {
             for (x = strlen (line); x < MAP_W + 1; ++x) {

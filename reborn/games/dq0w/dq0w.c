@@ -395,8 +395,8 @@ static unsigned char dens_seen (void)
         memcpy (&a, &HUB->actor[k], sizeof a);
         s = 0;
         if (a.name[0] && a.sn == HUB->pc_stratum && n < SEE_DENS && (p = at (a.sn, a.x, a.y)) != 0 && (*p & T_VIS)) {
-            hub_map (0);
-            memcpy (&HUB->sight.den[n++], &a.x, sizeof HUB->sight.den[0]);
+            hub_map (SIGHT_BANK);               /* (The senses' record's, in their bank) */
+            memcpy (&SIGHT->den[n++], &a.x, sizeof SIGHT->den[0]);
             s = 0x8000U | a.doing << 8 | a.den;
         }
         if (s != sig[k]) {
@@ -404,8 +404,9 @@ static unsigned char dens_seen (void)
             ch = 1;
         }
     }
+    hub_map (SIGHT_BANK);
+    SIGHT->ndens = n;
     hub_map (0);
-    HUB->sight.ndens = n;
     return ch;
 }
 
@@ -952,8 +953,8 @@ void __fastcall__ s_grow_below (unsigned char n)
     unsigned lx0 = 0xFFFF, ly0 = 0xFFFF, lx1 = 0, ly1 = 0, x, y;
     unsigned char i, st;
 
-    hub_map (0);
-    b = &HUB->strata[n + 1];
+    hub_map (WORLD_BANK);                       /* (The strata's records the world bank's: it in the window) */
+    b = &WREC->strata[n + 1];
     rseed (s->seed + 977);
     memset (b, 0, sizeof *b);
     b->n = n + 1;
@@ -961,7 +962,7 @@ void __fastcall__ s_grow_below (unsigned char n)
     i = random (2);                             /* (The theme's say: one of the stratum's styles) */
     hub_map (THEME_BANK);
     st = THEME->style[n + 1][i];
-    hub_map (0);
+    hub_map (WORLD_BANK);
     b->style = st;
     b->age = 1 + random (40);
     random (8);                                 /* (Its name the theme's, by its depth: the dice as they were) */
@@ -1202,14 +1203,15 @@ void s_begin (void)
         ask_maker (M_RESTORE, 0, 0, 0);
         return;
     }
-    s = &HUB->strata[0];
     seed = HUB->seed;
+    hub_map (WORLD_BANK);                       /* (The strata's records the world bank's: it in the window) */
+    s = &WREC->strata[0];
     rseed (seed ^ 0x57524C44UL);
     memset (s, 0, sizeof *s);
     s->seed = seed * 2654435761UL + 12345;
     hub_map (THEME_BANK);                       /* (The theme's say: its top stratum's first style) */
     k = THEME->style[0][0];
-    hub_map (0);
+    hub_map (WORLD_BANK);
     s->style = k;
     s->age = 1 + random (20);
     random (8);                                 /* (Its name the theme's first: the dice as they were) */
@@ -1336,15 +1338,15 @@ static void __fastcall__ change (unsigned char sn, unsigned x, unsigned y, unsig
 #pragma code-name (push, "SW1CODE")
 #pragma rodata-name (push, "SW1RODATA")
 
-/* A link added to stratum sn's record (the hub's), its index */
+/* A link added to stratum sn's record (the world bank's: it in the window after), its index */
 static unsigned char __fastcall__ add_link (unsigned char sn, unsigned char kind, unsigned char to, unsigned x,
     unsigned y)
 {
     struct stratum* s;
     struct link* l;
 
-    hub_map (0);
-    s = &HUB->strata[sn];
+    hub_map (WORLD_BANK);
+    s = &WREC->strata[sn];
     if (s->nlinks >= NLINKS) {
         return 0xFF;
     }

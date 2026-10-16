@@ -36,7 +36,7 @@ static void __fastcall__ look (unsigned char again)
     x = HUB->pc_x;
     y = HUB->pc_y;
     first = again ? 0 : HUB->look_first;
-    memcpy (strata, HUB->strata, sizeof strata);
+    sync_strata ();                             /* (The strata's records, the world bank's) */
     things_lamps (sn, x, y);                    /* (The lit things lying about: a torch put down) */
     view (sn, x, y, face, light, sight, dark);
     perceive (sn, x, y, face, own, first);

@@ -12,6 +12,7 @@
 
 static unsigned char seg;
 static unsigned char u[HUB_BANKS], x[HUB_BANKS];   /* Each bank's U and $00 (SEG_MAP's), found once */
+static unsigned char cur;                       /* The bank hub_map put in the window last */
 
 /* Each bank's U and $00, kept, and bank 0 put at $8000 */
 static int find_banks (void)
@@ -34,9 +35,28 @@ static int find_banks (void)
 
 void __fastcall__ hub_map (unsigned char bank)
 {
+    cur = bank;
     *(volatile unsigned char*) 0xFFF1 = u[bank];    /* U, then the bank (hydra.h's hy_seg_map, without the call) */
     *(volatile unsigned char*) 0 = x[bank];
 }
+
+#if !defined (HUB_ATTACHED) || defined (HUB_BACK)  /* (The UI's and the maker's: the others' room) */
+/* Where the window is (the hub's bank hub_map put there last, and the bank register), and the window put back there:
+** U as that bank of the hub's had it, then the bank register (the hub's banks may be in more than one of the shared
+** RAM's macro-pages: the bank register alone, under another's U, would give another bank; an overlay's bank, the
+** task's own, isn't U's, but the stub that put it in puts the hub's bank back by the bank register alone) */
+unsigned hub_here (void)
+{
+    return (unsigned) cur << 8 | *(volatile unsigned char*) 0;
+}
+
+void __fastcall__ hub_back (unsigned w)
+{
+    cur = w >> 8;
+    *(volatile unsigned char*) 0xFFF1 = u[cur];
+    *(volatile unsigned char*) 0 = w;
+}
+#endif
 
 #ifndef HUB_ATTACHED
 #pragma code-name (push, "SW1CODE")             /* (The UI's part 1, the start's and the end's: dq0.cfg) */
@@ -53,6 +73,11 @@ int __fastcall__ hub_create (unsigned char banks)
     if (find_banks ()) {
         return -1;
     }
+    for (t = SIGHT_BANK; t <= WORLD_BANK; ++t) {   /* (The shared records' banks, cleared) */
+        hub_map (t);
+        memset (HUB_WINDOW, 0, 0x2000);
+    }
+    hub_map (0);
     memset (HUB, 0, sizeof (struct hub));
     HUB->magic = HUB_MAGIC;
     HUB->version = HUB_VERSION;

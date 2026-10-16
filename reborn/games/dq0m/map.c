@@ -36,9 +36,9 @@ static unsigned char* __fastcall__ peek (unsigned char sn, unsigned x, unsigned 
     kx = ox % CW;
     ky = oy % CW;
     if (lk == 0xFF || lsn != sn || lcx != cx || lcy != cy) {
-        hub_map (0);
+        hub_map (WORLD_BANK);                   /* (The cache's table the world bank's) */
         for (k = 0; k < NCSLOTS; ++k) {
-            c = &HUB->cslot[k];
+            c = &WREC->cslot[k];
             if (c->used && c->sn == sn && c->cx == cx && c->cy == cy) {
                 break;
             }
@@ -130,8 +130,9 @@ void s_draw_map (void)
             }
         }
         row[n] = 0;
-        hub_map (0);
-        strcpy (HUB->map[j], row);
+        hub_map (UI_BANK);                      /* (The map the UI bank's) */
+        strcpy (UIREC->map[j], row);
     }
+    hub_map (0);
     lk = 0xFF;                                  /* (The cache may change before the next) */
 }

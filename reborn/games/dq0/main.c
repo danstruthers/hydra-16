@@ -355,7 +355,9 @@ void s_save_game (void)
     sv.q = Q;
     if ((fd = open (save_path ("game.dat"), O_WRONLY | O_CREAT | O_TRUNC, 0644)) >= 0) {
         write (fd, &sv, sizeof sv);
-        write (fd, HUB->strata, sizeof HUB->strata);
+        hub_map (WORLD_BANK);                   /* (The strata's records, the world bank's) */
+        write (fd, WREC->strata, sizeof WREC->strata);
+        hub_map (0);
         names_keep (fd, 0);                     /* (The names given: the theme bank's) */
         close (fd);
     }
@@ -368,7 +370,9 @@ static void __fastcall__ load_strata (void)
 
     if (fd >= 0) {
         read (fd, &sv, sizeof sv);
-        read (fd, HUB->strata, sizeof HUB->strata);
+        hub_map (WORLD_BANK);
+        read (fd, WREC->strata, sizeof WREC->strata);
+        hub_map (0);
     }
     names_keep (fd, 1);
     if (fd >= 0) {
@@ -385,11 +389,11 @@ static void __fastcall__ load_strata (void)
 ** was: the hub reached from an overlay's code (theme.c's) */
 void __fastcall__ hub_mem (unsigned char bank, void* to, const void* from, unsigned n)
 {
-    unsigned char b = getbank ();
+    unsigned b = hub_here ();
 
     hub_map (bank);
     memcpy (to, from, n);
-    setbank (b);
+    hub_back (b);
 }
 
 #pragma code-name (push, "SW1CODE")
@@ -456,7 +460,8 @@ static void start_world (unsigned long seed)
     things (IO_TOOLS, "");                      /* (The things' catalogue read in: the theme's kinds after it) */
     theme_load (resumed ? Q.theme : (unsigned char) (seed >> 8));     /* (The seed's second byte: theme.h) */
     if (!resumed) {                             /* (The character's kit: a new game's, -k's things too) */
-        strcpy (HUB->things_text, kit ? kit : "");    /* (Its things more, commas between) */
+        hub_mem (UI_BANK, UIREC->things_text, kit ? kit : "", kit ? strlen (kit) + 1 : 1);  /* (Its things more,
+                                                **   commas between) */
         things (IO_KIT, "");
     }
     to_hand ();
@@ -611,7 +616,7 @@ static unsigned char events (void)          /* (How many there were) */
                         k == O_SHAFT_DOWN ? T_YOU_CLIMB_DOWN_2 : k & O_FELL ? T_PICK_YOURSELF_UP : T_YOU_GO_DOWN) :
                         k == O_LADDER_UP ? T_YOU_CLIMB_THE : k == O_SHAFT_UP ? T_YOU_CLIMB_UP :
                         T_YOU_CLIMB_THE_2);
-                    theme_named (TN_STRATUM, HUB->sight.sname);
+                    theme_named (TN_STRATUM, sight_get ()->sname);
                     sayf (" You come into the %s.", tname);
                     save_game ();               /* (Kept as it comes into a stratum) */
                 }
@@ -622,7 +627,8 @@ static unsigned char events (void)          /* (How many there were) */
                 }
                 k = m.w1 & 0xFF;               /* (As a run or a sprint ends, briefly: the pace not held) */
                 look ((m.w1 >> 8 & 1) | ((k == A_WALKED || k == A_CROSSED || k == A_WENT_TO || k == A_STEPPED) &&
-                    HUB->gait > GA_JOG && !(HUB->watch & (WA_TRAPS | WA_LISTEN | WA_MAP)) && !HUB->sight.dark ? 4 : 0));
+                    HUB->gait > GA_JOG && !(HUB->watch & (WA_TRAPS | WA_LISTEN | WA_MAP)) && !sight_get ()->dark ? 4 :
+                    0));
             }
             break;
         case E_VIEW:
@@ -695,7 +701,7 @@ static unsigned char events (void)          /* (How many there were) */
                 lifting[0] = 0;
                 rebar |= k == PO_REBARRED;
                 if (finds && (m.w1 == PO_FOUND || m.w1 == PO_NOTHING || m.w1 == PO_FOUND_TRAP)) {
-                    msg (HUB->things_text);     /* (What its search turned up besides) */
+                    msg (tt ());                /* (What its search turned up besides) */
                     finds = 0;
                 }
             }
@@ -796,15 +802,16 @@ static unsigned char __fastcall__ things (unsigned char op, const char* name)
 unsigned othings_x;
 unsigned char __fastcall__ othings (unsigned char op, const char* name, const char* into, unsigned char to)
 {
-    unsigned char b = getbank (), r;
+    unsigned b = hub_here ();
+    unsigned char r;
 
     hub_map (0);
     strcpy (HUB->ireq.into, into);
     HUB->ireq.to = to;
     r = things (op, name);
     othings_x = HUB->ireq.x;
-    strcpy (lb, HUB->things_text);
-    setbank (b);
+    tt ();
+    hub_back (b);
     return r;
 }
 
@@ -813,7 +820,7 @@ unsigned char __fastcall__ othings (unsigned char op, const char* name, const ch
 static void to_hand (void)
 {
     things (IO_TOOLS, "");
-    strcpy (HUB->slot[SLOT_UI].text, HUB->things_text);
+    strcpy (HUB->slot[SLOT_UI].text, tt ());
     HUB->slot[SLOT_UI].w1 = HUB->ireq.x;
     referee (RS_EQUIP, 2)->state = REQ_FREE;
 }
@@ -854,7 +861,7 @@ static void __fastcall__ handle (unsigned char op, const char* x, const char* y,
     strcpy (HUB->ireq.into, y);
     HUB->ireq.to = on;
     things (op, x);
-    msg (HUB->things_text);
+    msg (tt ());
     if (HUB->ireq.result == IR_OK) {
         after (was, HUB->ireq.x, op);
     }
@@ -865,7 +872,7 @@ static void __fastcall__ handle (unsigned char op, const char* x, const char* y,
 ** up (E_PORTAL's) */
 static void __fastcall__ lift (const char* name)
 {
-    struct sight* s = &HUB->sight;
+    struct sight* s = sight_get ();
     unsigned char i, d;
 
     for (i = 0; i < s->ndoors; ++i) {
@@ -1252,7 +1259,7 @@ portal:
         return;
     case V_INVENTORY:
         things (IO_LIST, "");
-        msg (HUB->things_text);
+        msg (tt ());
         if ((d = HUB->pcsum.load) != 0) {
             tell (T_BURDENED - 1 + d);          /* (Its load, as the referee has it: its encumbrance) */
         }

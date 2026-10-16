@@ -498,9 +498,11 @@ static void __fastcall__ pace_set (unsigned char a)
     ps.gait = HUB->gait;
     ps.watch = HUB->watch;
     ps.light = HUB->pc_light;
-    ps.dark = HUB->sight.dark;
     ps.full = !a;
     memcpy (ps.lamp, HUB->pc_lamp, sizeof ps.lamp);
+    hub_map (SIGHT_BANK);                       /* (The senses' record's, in their bank) */
+    ps.dark = SIGHT->dark;
+    hub_map (0);
     state ();
 }
 

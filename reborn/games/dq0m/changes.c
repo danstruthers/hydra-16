@@ -252,8 +252,8 @@ int s_changes_save (void)
     int fd;
 
     for (k = 0; k < NCSLOTS; ++k) {             /* (The seen squares of what's in the cache, kept) */
-        hub_map (0);
-        if (HUB->cslot[k].used) {
+        hub_map (WORLD_BANK);                   /* (The cache's table the world bank's) */
+        if (WREC->cslot[k].used) {
             seen_keep (k);
         }
     }
