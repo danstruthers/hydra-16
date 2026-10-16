@@ -18,9 +18,9 @@
 #include "grow.h"
 
 struct stratum strata[MAXSTRATA];               /* (This task's copy of the hub's) */
-#define OVLS    6                               /* Its overlays: built.c, pass.c, caves.c, plan.c, fixtures.c; and
-                                                **   the swapped parts' images (../dq0/swap.inc: map.c's, changes.c's,
-                                                **   work.c's) */
+#define OVLS    7                               /* Its overlays: built.c, pass.c, caves.c, plan.c, fixtures.c; the
+                                                **   swapped parts' images (../dq0/swap.inc: map.c's, changes.c's,
+                                                **   work.c's); uses.c */
 extern char _SWAP_START__[];
 
 /* The overlays: dir/dq0m.ovl, an 8K bank each (dq0m.cfg's OV1 ...; the file cut after the last one used: make.js),

@@ -955,6 +955,10 @@ void __fastcall__ s_climb (unsigned char d)
     here ();
     face = HUB->pc_face;
     d &= ~I_JUMP;
+    if (d == DIR_UP && start_ledge (1, face, 0)) {
+        return;                                 /* (A ledge just ahead, faced: climbed before the room's way up, as its
+                                                **   words say, u) */
+    }
     l = link_here (d, &t);
     if (l == 0xFF || t == 0xFFFFFFFFUL) {
         if (!start_ledge (d == DIR_UP, face, jump)) { /* (No way up or down here: a ledge ahead, climbed) */
@@ -1077,6 +1081,7 @@ void s_begin (void)
     struct stratum* s;
     unsigned long seed;
     unsigned char k;
+    unsigned o;
     struct tplace* p;
 
     hub_map (0);
@@ -1107,8 +1112,10 @@ void s_begin (void)
     s->y0 = 32768U - s->h / 2;
     s->nlinks = 1;
     s->link[0].kind = O_WAY_OUT;
-    s->link[0].x = s->x0 + 4 + random (s->w - 8);
-    s->link[0].y = s->y0 + 4 + random (s->h - 8);
+    o = 4 + random (s->w - 8);                  /* (Off its chunk's edges: world.h's INSET) */
+    s->link[0].x = s->x0 + INSET (o);
+    o = 4 + random (s->h - 8);
+    s->link[0].y = s->y0 + INSET (o);
     ask_maker (M_PLAN, 0, 0, 0);
     move.how = A_START;                         /* (The character at the foot of the way in) */
     move.sn = 0;

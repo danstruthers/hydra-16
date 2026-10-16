@@ -69,6 +69,12 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "mace", K_HAND | K_HANG, 16, 3, 0, 0, 0, 0, 3, "mace", MT_IRON, AP_WEAPON, 84 },     /* (Weapons) */
     { "spear", K_HAND, 20, 6, 0, 0, 0, 0, 5, "spear", MT_WOOD, AP_WEAPON, 60 },
     { "round shield", K_HAND, 24, 12, 0, 0, 0, 0, 4, "shield", MT_WOOD, AP_WEAPON, 42 },
+    { "iron pot", K_CONTAINER, 32, 8, 6, 12, 0, 0, 3, "", MT_IRON, AP_METAL, 10, SS | KF_LIQUID }, /* (A room's use's
+                                                **   leavings: the stock's, dq0m/uses.c) */
+    { "heap of straw", 0, 4, 8, 0, 0, 0, 0, 3, "", MT_OTHER, AP_WOOD, 0 },
+    { "candle stubs", K_PLURAL, 1, 1, 0, 0, 0, 0, 1, "", MT_OTHER, AP_FOOD, 0 },
+    { "well", 0, 255, 255, 0, 0, 0, 0, 8, "", MT_STONE, AP_STONE, 0, KF_FIXED },   /* (Its stone curb: never taken
+                                                **   up; its water the water's work's, to come) */
 };
 
 /* The things' words (things.h's SA_*): % the thing's name, # the other's (the pack's, the belt's, a container's) */

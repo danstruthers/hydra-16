@@ -8,7 +8,9 @@
 ** bank (theme.c's copy, at $9000 there).
 **
 ** A theme says: its name and its story; its strata from the top down (each one's name, and the styles its plan may
-** be grown in, picked from by its seed); its words for the rooms (by a room's kind, world.h's) and their light; the
+** be grown in, picked from by its seed, and its purpose: a keep, a temple ..., fortified or not, its built rooms'
+** uses' plan, the maker's); its words for the rooms (by a room's kind, world.h's: eight, then the uses') and their
+** light; the
 ** bestiary's kinds that live in it (dq0d/kinds.txt's, a bit each); its own kinds of things (the catalogue's last
 ** NTKINDS, KI_THEME on: the UI writes them into the hub's catalogue as the game starts); its puzzle: the pieces (a
 ** kind of its own each, the strata it may lie in, hidden or not), each one's stratum picked from the seed and its
@@ -23,7 +25,7 @@
 #define _THEME_H
 
 #define THEME_SIZE      0x1000                  /* A theme's bytes in dq0t.dat (its record, then its words) */
-#define THEME_HEAD      782                     /* (struct theme's: make.js lays it out the same) */
+#define THEME_HEAD      982                     /* (struct theme's: make.js lays it out the same) */
 #define NTKINDS         8                       /* Its own kinds of things, */
 #define KI_THEME        (NKINDS - NTKINDS)      /*   the catalogue's from here (items.h's NKINDS) */
 #define NPIECES         8                       /* The puzzle's pieces (and its fixtures: an altar, a throne) */
@@ -48,6 +50,9 @@ enum { TE_NONE, TE_OPEN, TE_RULE };             /* Nothing more; the way out ope
 #define TM_ESCAPE       0x01                    /* The mission: to escape, */
 #define TM_RULE         0x02                    /*   to rule the place (either, if both) */
 enum { END_NONE, END_ESCAPED, END_RULED, END_DIED };
+enum { P_HALLS, P_KEEP, P_TEMPLE, P_CELLARS, P_CRYPT, P_WORKS };  /* A stratum's purpose (DUNGEON.md: built to a plan) */
+#define P_FORT          0x80                    /*   and fortified */
+#define TUSES           12                      /* The uses' words past the rooms' eight (world.h's U_KITCHEN on) */
 
 struct theme {
     unsigned char   count;                      /* The themes in the file (the first one's) */
@@ -66,6 +71,8 @@ struct theme {
     unsigned        story, lock, opened;        /* Its words (offsets in the theme; 0 none): its story; the way out
                                                 **   shut (tried, examined), and open; */
     unsigned        end[4];                     /*   the endings' (END_*) */
+    char            uses[TUSES][16];            /* A room's words by its use, past the eight (U_KITCHEN ...) */
+    unsigned char   purpose[TSTRATA];           /* Each stratum's purpose (P_*, P_FORT) */
 };
 #define THEME           ((struct theme*) 0x8000)    /* (In the hub's theme bank) */
 typedef char theme_head[sizeof (struct theme) == THEME_HEAD ? 1 : -1];

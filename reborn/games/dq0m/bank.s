@@ -13,7 +13,7 @@
             .include    "zeropage.inc"
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 6                     ; dq0m.cfg's overlays (the 6th the swapped parts' images)
+OVMAX       = 7                     ; dq0m.cfg's overlays (the 6th the swapped parts' images, the 7th uses.c)
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 DEPTH       = 16                    ; Overlay calls in calls, at most
 
@@ -151,12 +151,13 @@ ovl_out:
             OVFN        join, 2
             OVFN        crossings, 2
             OVFN        grow_caves, 3
-            OVFN        stock, 5
+            OVFN        stock, 7
             OVFN        plan_stratum, 4
             OVFN        links_down, 4
             OVFN        chunk_edges, 4
             OVFN        place_pieces, 4
             OVFN        fixtures, 5
+            OVFN        uses, 7
 
 ; ---- The swapped parts (../dq0/swap.inc: code run in the main RAM's top, dq0m.cfg's SWAP, a part at a time, copied
 ; there from overlay 6's bank as it's called)
