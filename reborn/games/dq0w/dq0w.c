@@ -1,15 +1,15 @@
 /*
-** dq0w.c - Dingus Quest Zero's world: a task of its own, started by the UI (dq0w SEG ROLE: the hub's segment and its
-** role there, hub.h; and the game's lib folder, for its overlays' file).  It owns the game's clock, takes the actors' intents and carries them out, and tells what
-** happened as events.  It keeps the dungeon (world.h: strata grown whole in outline as anyone first comes to them,
-** plan.c; made a chunk at a time as anyone comes near, chunk.c and built.c), and moves the character through it: a
-** move takes its time (the referee's walking rate, the slopes), and the character's there when the time's up.  What
-** it sees is worked out as it gets there, turns, or its light changes, and what it perceives recorded in the hub for
-** the UI to word, by the senses (games/dq0p, asked).  It carries out digging, a spell of work at a time (the referee's tests), and
-** asks the maker to keep what it changes.  The denizens near the character move themselves (their task, games/dq0d,
-** by the character's rules: the hub's actors); the world keeps the character out of their squares, and looks again
-** at those it sees as they change (den_seq).  A blow of the character's at one (I_ATTACK) takes it a round, and is
-** the denizens' task's to strike (the hub's pc_foe), as theirs at it are.
+** dq0w.c - Dingus Quest Zero's world: a task of its own, started by the UI (dq0w SEG ROLE LIBDIR: the hub's segment,
+** its role there, hub.h, and the game's lib folder, for its overlays' file).  It owns the game's clock, takes the
+** actors' intents and carries them out, and tells what happened as events.  It keeps the dungeon (world.h: strata grown
+** whole in outline as anyone first comes to them, plan.c; made a chunk at a time as anyone comes near, chunk.c and
+** built.c), and moves the character through it: a move takes its time (the referee's walking rate, the slopes), and the
+** character's there when the time's up.  What it sees is worked out as it gets there, turns, or its light changes, and
+** what it perceives recorded in the hub for the UI to word, by the senses (games/dq0p, asked).  It carries out digging,
+** a spell of work at a time (the referee's tests), and asks the maker to keep what it changes.  The denizens near the
+** character move themselves (their task, games/dq0d, by the character's rules: the hub's actors); the world keeps the
+** character out of their squares, and looks again at those it sees as they change (den_seq).  A blow of the character's
+** at one (I_ATTACK) takes it a round, and is the denizens' task's to strike (the hub's pc_foe), as theirs at it are.
 **
 ** The clock (main.c's once): each real tick (200 a second) is round tenths of game time over tpr ticks (the pace:
 ** a round in tpr ticks); paused (Escape) or held (the UI asking something), it stands.  At the turns pace (tpr 0)
