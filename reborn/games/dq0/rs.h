@@ -177,6 +177,8 @@ struct rs_summary {
     unsigned char   morale;
     unsigned char   load;                       /* Encumbrance: 0 none, 1 a little burdened, 2 heavily, 3 overloaded */
     unsigned char   power;                      /* 0-100: how mighty, the same scale whatever the ruleset */
+    unsigned char   northsense;                 /* 1: it always knows which way north is underground (its species':
+                                                **   a dwarf's); 0: it can lose its bearings (DUNGEON.md, to come) */
 };
 
 /* ---- The requests (the hub's referee areas carry one, and its reply) */

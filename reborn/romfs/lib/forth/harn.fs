@@ -12,7 +12,8 @@
 \ and harn-psysev, harn-sexuality, harn-ml ( sk -- addr ) (a skill's mastery level, 0 not opened), the volatiles
 \ harn-fl harn-bl harn-dp harn-state harn-shockhr.  harn-load is what it carries, in pounds.  Injuries aren't kept.
 \
-\   harn-create ( -- )             a character made at random (harn.h's harn_create)
+\   harn-create ( -- )             a character made at random (harn.h's harn_create); of the species
+\                                  harn-species holds, if it's set (0-2: harn_template's; -1, rolled, at first)
 \   harn-sb harn-oml ( sk -- n )   a skill's base and opening mastery; harn-open ( sk -- ) opens it
 \   harn-end harn-size harn-move ( -- n )   endurance, size (1-10), move
 \   harn-test ( eml -- level )     d100 against an EML: 0 CF, 1 MF, 2 MS, 3 CS; harn-eml ( sk -- eml ) and
@@ -400,9 +401,10 @@ create size-t 65 , 75 , 90 , 110 , 135 , 165 , 200 , 240 , 285 , 9999 ,
 
 \ ---- A new character (Character 2-12), in harn_create's order (harngen.c's): birth, culture and class, family,
 \ appearance, the physical attributes, the medical traits, the personality, piety; then the automatic skills opened
+variable harn-species  -1 harn-species !
 : harn-create ( -- )
   harn-c /harn erase  0 int-bonus !
-  d100 species-t 4 htable harn-sp harn!
+  d100 species-t 4 htable  harn-species @ 0< 0= if drop harn-species @ then  harn-sp harn!
   d100 harn-sp harn@ cells sex-t + @ > 0= 1 and harn-sx harn!
   12 die 30 die  over 8 lshift over or harn-bd harn!  harn-sunsign-of harn-ss harn!
   harn-sp harn@ culture-t + c@ harn-culture c!

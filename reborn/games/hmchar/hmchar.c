@@ -2,11 +2,14 @@
 ** hmchar.c - a HârnMaster character made, as the book's Character article makes one (harn.h), and written to a file
 ** (harn_write's text) for a game, Dingus Quest Zero's or any other, to read.  Standalone or run by a game.
 **
-** hmchar [-s seed] [-o file] [-q]
+** hmchar [-s seed] [-o file] [-q] [-p species]
 **   -s seed    the same character each time
 **   -o file    where it's written (default: NAME.hm, in the current directory, NAME the character's)
 **   -q         no questions: the first roll kept, an occupation, weapons and option points chosen at random, a
 **              name made up
+**   -p species the character's species, not rolled (Character 2's 97 in 100 human): human, elf (Sindarin) or
+**              dwarf (Khuzdul), by its first letter (h, e or s, d or k); the book's changes to its attributes, its
+**              culture and the rest made by harn_create
 **
 ** The steps (Character 1): the attributes rolled (kept, or rolled again); an occupation, its skills opened as the
 ** Occupational Skills table has them (Character 15; a few of the book's, those of use in a dungeon; "three weapons
@@ -22,7 +25,7 @@
 #include <unistd.h>
 #include <harn.h>
 
-static harn_char h;
+static harn_char h, t;
 static char name[24];
 static unsigned char quiet, occ;
 
@@ -399,12 +402,26 @@ static void make_name (void)
     strcat (name, b[random (sizeof b / sizeof b[0])]);
 }
 
+/* -p's species, by its first letter (h a human; e or s an elf, Sindarin; d or k a dwarf, Khuzdul): it, or 0xFF */
+static unsigned char __fastcall__ species (const char* w)
+{
+    switch (w[0] | 0x20) {
+    case 'h':
+        return HARN_HUM;
+    case 'e': case 's':
+        return HARN_SIN;
+    case 'd': case 'k':
+        return HARN_KHU;
+    }
+    return 0xFF;
+}
+
 /* (The occupation into the file, by name, a line of hmchar's own) */
 int main (int argc, char* argv[])
 {
     static char b[40], path[64], line[48];
     const char* out = 0;
-    unsigned char i;
+    unsigned char i, sp = 0xFF;
     int fd;
 
     for (i = 1; i < argc; ++i) {
@@ -414,14 +431,17 @@ int main (int argc, char* argv[])
             out = argv[++i];
         } else if (!strcmp (argv[i], "-q")) {
             quiet = 1;
+        } else if (!strcmp (argv[i], "-p") && i + 1 < argc && (sp = species (argv[++i])) != 0xFF) {
         } else {
-            err ("usage: hmchar [-s seed] [-o file] [-q]\n");
+            err ("usage: hmchar [-s seed] [-o file] [-q] [-p species]\n");
             return 1;
         }
     }
+    harn_template (&t);                         /* (A species asked for, the rest rolled) */
+    t.att[HARN_SP] = sp != 0xFF ? sp : HARN_ANY;
     occ = 0xFF;
     for (;;) {
-        harn_create (&h, 0);
+        harn_create (&h, &t);
         if (quiet) {
             break;
         }

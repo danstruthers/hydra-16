@@ -1,4 +1,7 @@
-     EIU h1       1043"
+     2041"
+sk" alc  Alchemy            MIU j3i2k2   1046"
+sk" ani  Animalcraft        AVW a1b1     1041"
+sk" ast  Astrology          EIU h1       1043"
 sk" bre  Brewing            DMM j3i2k2   2041"
 sk" cer  Ceramics           DDE a2b2     2042"
 sk" coo  Cookery            DMM j1       3040"
@@ -104,9 +107,10 @@ create size-t 65 , 75 , 90 , 110 , 135 , 165 , 200 , 240 , 285 , 9999 ,
 
 \ ---- A new character (Character 2-12), in harn_create's order (harngen.c's): birth, culture and class, family,
 \ appearance, the physical attributes, the medical traits, the personality, piety; then the automatic skills opened
+variable harn-species  -1 harn-species !
 : harn-create ( -- )
   harn-c /harn erase  0 int-bonus !
-  d100 species-t 4 htable harn-sp harn!
+  d100 species-t 4 htable  harn-species @ 0< 0= if drop harn-species @ then  harn-sp harn!
   d100 harn-sp harn@ cells sex-t + @ > 0= 1 and harn-sx harn!
   12 die 30 die  over 8 lshift over or harn-bd harn!  harn-sunsign-of harn-ss harn!
   harn-sp harn@ culture-t + c@ harn-culture c!
@@ -146,10 +150,11 @@ variable harn-fd
 : harn-write ( fileid -- ior )
   harn-fd !  s" harn 1" harn-fd @ write-line
   harn-nattrs 0 do line{ s" att " line+ i harn-att-key line+ i harn@ line+n line} or loop
-  line{ s" fam" line+ harn-culture 7 line+bytes line} or
-  line{ s" look" line+ harn-complexion 3 line+bytes line} or
-  line{ s" med" line+ 4 0 do i harn-med c@ ?dup if line+n else leave then loop line} or
-  3 0 do i harn-psy c@ ?dup if line{ s" psy" line+ line+n i harn-psyc, 50 c, 40 c, 52 c,   54 c, 51 c, 40 c, 54 c,     \ (Female, then male: and 4d6)
+  line{ s" fam" line+ harn-culture 7 line+bytes line} estrange-t 10 , 40 , 60 , 95 , 100 ,
+create clanhead-t 50 , 75 , 85 , 100 ,
+
+\ ---- Appearance (Character 6)
+create height-t 52 c, 50 c, 40 c, 52 c,   54 c, 51 c, 40 c, 54 c,     \ (Female, then male: and 4d6)
 create frame-t 5 , 8 , 12 , 15 , 99 ,
 \ The Height/Weight table: 75 pounds at 40", 2 more an inch to 51", 3 from 52", 4 from 64", 3 at 70", 5 from 71"
 \ (to 89": 255); then the frame's -20% ... +20%, rounded
@@ -289,10 +294,7 @@ sk" spr  Spear              SSD b1c1a1   3030"
 sk" swd  Sword              SDD e3d1f1   3030"
 sk" whp  Whip               DDE g1f1     1030"
 sk" dge  Dodge              AAA          5130"
-sk" agr  Agriculture        STW a2b2     2041"
-sk" alc  Alchemy            MIU j3i2k2   1046"
-sk" ani  Animalcraft        AVW a1b1     1041"
-sk" ast  Astrology     ver the kernel starts at boot
+sk" agr  Agriculture        STW a2b2ver the kernel starts at boot
 $00 constant me_bank         \ MODINFO's answer (ME_SIZE bytes): the module's first paged ROM bank
 $01 constant me_banks        \ MODINFO: the banks it spans
 $02 constant me_type         \ MODINFO: its type (HT_*)
@@ -414,7 +416,10 @@ $28 constant sr_length       \ Stat: the length (4)
 $2C constant sr_mtime        \ Stat: the time it changed (4: seconds since 2000)
 $30 constant sr_dev          \ Stat: the device letter
 $31 constant sr_inst         \ Stat: the device's instance (its spec's first character)
-$40 constant sr_size         \sev c@ line+n line} or then loop
+$40 constant sr_size         \or
+  line{ s" look" line+ harn-complexion 3 line+bytes line} or
+  line{ s" med" line+ 4 0 do i harn-med c@ ?dup if line+n else leave then loop line} or
+  3 0 do i harn-psy c@ ?dup if line{ s" psy" line+ line+n i harn-psysev c@ line+n line} or then loop
   line{ s" sexuality" line+ harn-sexuality 1 line+bytes line} or
   100 0 do i harn-ml@ ?dup if
     line{ s" ml " line+ i harn-nskills < if i harn-skill-key line+ else i 0 <# #s #> line+ then line+n line} or
@@ -454,7 +459,7 @@ create harn-in 102 allot   create harn-rest 2 cells allot
   begin harn-in 100 r@ read-line ?dup if nip nip r> drop exit then
   while harn-in swap harn-read-line repeat
   drop r> drop 0 ;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   HYFL.ÅÊ(¶ÿÿé h…rh…s ß«œëœìœí ±rğÈ±rñÈ±rïÈ±r…o¥oğÆoÈ±r„l ˆ ¤l€î„l†n¬í®ì­ë … ëìŒíhî¦n¤lÈ±r…o¥oğÆoÈ±r„l Æ ¤l€î,ï
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       HYFL.ÅÊ(¶ÿÿé h…rh…s ß«œëœìœí ±rğÈ±rñÈ±rïÈ±r…o¥oğÆoÈ±r„l ˆ ¤l€î„l†n¬í®ì­ë … ëìŒíhî¦n¤lÈ±r…o¥oğÆoÈ±r„l Æ ¤l€î,ï
 ­îJ­ëLÍ`lğÉ ° É	)H ™ h:
 i…tduµ"’t µB‘tè`É#ğ
 )¨µ"™ëè`µ"ëµBìè`¨­îJ˜°BÉ ° É)H Ş h
@@ -2439,8 +2444,10 @@ tJxŠâ|
   =(s (harn.sunsign-signs ss))
   (list (char-at "abcdefghijkl" (fst s)) (char-at "abcdefghijkl" (snd s)))}))
 
+(def {harn.species} NIL)                        ; A species fixed (0-2, harn_template's), or NIL: rolled
 (def {harn.create} (fn {} {do
-  =(sp (harn.table {97 98 99 100} (harn.d 100)))
+  =(rolled (harn.table {97 98 99 100} (harn.d 100)))
+  =(sp ?((nil? harn.species) rolled harn.species))
   =(sx ?((<= (harn.d 100) (nth sp {48 45 75 48})) 1 0))
   =(m (harn.d 12))
   =(d (harn.d 30))
@@ -2533,7 +2540,7 @@ tJxŠâ|
   ?((eq k "inj") (hash-put ch [:inj (join (ch :inj) (list n))])
   ?((or (eq k "harn") (eq k "")) NIL
   (hash-put ch [:other (join (ch :other) (list l))])))))))))))}))
-                                                                                                                                                                                                                                                         ; harntest.hl - HarnMaster's tests, penalties and development (Skills 5-6, 21-22), for harn.hl's characters: (use
+                                                                                         ; harntest.hl - HarnMaster's tests, penalties and development (Skills 5-6, 21-22), for harn.hl's characters: (use
 ; "harntest"), which uses harn.  Kept apart from harn.hl, as harn.h's harntest.c is, so a program that only makes a
 ; character (hmchar.hl) doesn't wait for hylang to read them.  A test's result is 0 CF, 1 MF, 2 MS or 3 CS.
 
