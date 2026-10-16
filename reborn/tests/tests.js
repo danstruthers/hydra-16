@@ -2509,7 +2509,7 @@ module.exports = {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
         const seg = (a, b, from = 0) => { const i = o.indexOf(a, from); return i < 0 ? '' : o.slice(i, o.indexOf(b, i + a.length)); };
         if (!/Grub is [^.]*, waiting\./.test(seg('> tell grub to wait', '> follow me'))) f.push('Grub not seen waiting');
-        if (!/Grub is [^.]*, following you\./.test(seg('> wait', '> d'))) f.push('Grub not seen following across the room');
+        if (!/Grub is [^.]*, following you\./.test(seg('> go east', '> d'))) f.push('Grub not seen following across the room');
         if (!/Grub is [^.]*, following you\./.test(seg('You come into the ', '> quit'))) f.push('Grub not come along down the stairway');
         return f;
       },
@@ -2686,23 +2686,22 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0sense', what: 'Dingus Quest Zero telling only what the character sees, as well as it sees it (the user\'s, 2026-10-16: "descriptions often tell you what lies behind you, which you can\'t really see"; "Eyesight score should affect the amount of detail"): at seed 3 the door behind it not told, then told as it turns round; at seed 5 a close look at a room whose far side is dark giving no figures, its far side lost in the dark; at seed 11 a door across the gallery examined (only its look from afar: tall, of wood, how far, go closer), then one beside it (its full examination); a weak-eyed character (Eyesight 4) can\'t make out the far door\'s wood (the potsherds once seen 20 feet off at seed 6 gone with the built strata\'s plan: what lies about there is by the rooms\' uses now)',
+      name: 'dq0sense', what: 'Dingus Quest Zero telling only what the character sees, as well as it sees it (the user\'s, 2026-10-16: "descriptions often tell you what lies behind you, which you can\'t really see"; "Eyesight score should affect the amount of detail"): at seed 3 the door behind it not told, then told as it turns round; at seed 5 a close look at a room whose far side is dark giving no figures, its far side lost in the dark; at seed 3 the door beside it, turned round to, examined (its full examination); at seed 11 a door across the pantry examined (only its look from afar: tall, of wood, how far, go closer); a weak-eyed character (Eyesight 4) can\'t make out the far door\'s wood (the potsherds once seen 20 feet off at seed 6 gone with the built strata\'s plan: what lies about there is by the rooms\' uses now)',
       init: 't_rc', cycles: 2500e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rācp /ram/c.hm /ram/s.hm\rāecho att eye 18 >> /ram/s.hm\r' +
         'ācp /ram/c.hm /ram/w.hm\rāecho att eye 4 >> /ram/w.hm\r' +
-        'ādq0 -p t -s 3 -c /ram/c.hm\r' + ['look', 'turn around', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        'ādq0 -p t -s 3 -c /ram/c.hm\r' + ['look', 'turn around', 'examine the door ahead to my left', 'quit'].map(l => 'ā' + l + '\r').join('') +
         'ādq0 -p t -s 5 -c /ram/c.hm\r' + ['x room', 'quit'].map(l => 'ā' + l + '\r').join('') +
-        'ādq0 -p t -s 11 -c /ram/c.hm\r' + ['examine the door ahead to my left', 'examine the door on my left', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        'ādq0 -p t -s 11 -c /ram/c.hm\r' + ['examine the door ahead to my left', 'quit'].map(l => 'ā' + l + '\r').join('') +
         'ādq0 -p t -s 11 -c /ram/w.hm\r' + ['examine the door ahead to my left', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
       expect: ['% echo $status'],
       // (Its words checked with the lines' wrapping taken out, each in its turn)
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
         const want = ['> look You are in a small kitchen', 'There is a door ahead to your left (open).', '> turn around',
-          'There is a door ahead to your left (closed).',
+          'There is a door ahead to your left (closed).', 'A door of iron-bound wood, 3 feet wide and 7 high',
           '> x room You can see part of a hall, by the light of your torch. Its far side is lost in the dark.',
           'A tall door of wood, some 20 feet off. You\'d have to go closer to make out more.',
-          'A door of iron-bound wood, 3 feet wide and 8 high',
           'A tall door, some 20 feet off.', '% echo $status'];
         let at = 0;
         for (const w of want) {
