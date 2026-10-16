@@ -3,10 +3,12 @@
 ; (harnfile.c's text) for a game, Dingus Quest Zero's or any other, to read: C's hmchar (games/hmchar) in hylang, the
 ; same questions, the same profile, the same file.
 ;
-; hmchar.hl [-o file] [-q]
+; hmchar.hl [-o file] [-q] [-p species]
 ;   -o file    where it's written (default: NAME.hm, in the current directory, NAME the character's)
 ;   -q         no questions: the first roll kept, an occupation, weapons and option points chosen at random, a
 ;              name made up
+;   -p species the character's species, not rolled: human, elf (Sindarin) or dwarf (Khuzdul), by its first letter
+;              (h, e or s, d or k)
 ; (C's -s seed, the same character each time, isn't here: hylang's random can't be seeded.  HyForth's hmchar.fs has
 ; it, and gives the character C's hmchar does)
 ;
@@ -19,19 +21,26 @@
 ; The options (before the library: a wrong one is said at once)
 (def {quiet} NIL)
 (def {out} NIL)
+(def {species} NIL)
+(def {species-of} (fn {w} {do                   ; -p's: h a human, e or s an elf, d or k a dwarf: 0-2, or NIL
+  =(c ?((eq w "") "" (str-lower (substring w 0 1))))
+  ?((eq c "h") 0 ?((or (eq c "e") (eq c "s")) 1 ?((or (eq c "d") (eq c "k")) 2 NIL)))}))
 (def {a} (tail args))
 (while {a} {do
   =(o (fst a))
   ?((and (eq o "-o") (tail a)) (do (set! {out} (snd a)) (set! {a} (tail a)))
+  ?((and (eq o "-p") (and (tail a) (not (nil? (species-of (snd a)))))) (do (set! {species} (species-of (snd a)))
+    (set! {a} (tail a)))
   ?((eq o "-q") (set! {quiet} T)
     (do
       ?((eq o "-s")
         (print-to stderr "hmchar.hl: -s: hylang's random can't be seeded (hmchar.fs and C's hmchar have -s)") NIL)
-      (print-to stderr "usage: hmchar.hl [-o file] [-q]")
-      (exit 1))))
+      (print-to stderr "usage: hmchar.hl [-o file] [-q] [-p species]")
+      (exit 1)))))
   (set! {a} (tail a))})
 
 (use "harn")
+(set! {harn.species} species)
 
 (def {occ} NIL)
 (def {name} "")

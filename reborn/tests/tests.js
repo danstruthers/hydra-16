@@ -3004,14 +3004,15 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'hmcharhl', what: 'hmchar.hl (games/hmchar: hmchar in hylang, harn.hl in the ROM disk\'s /lib/hylang) at rc: -q, its profile and its file (harnfile.c\'s lines) agreeing, the automatic skills open; then as a player answers (a roll again, an occupation out of range, weapons by a beginning of their names, one ambiguous, one twice, an option point\'s second improvement and a third, a skill there isn\'t), the skills it says as they should be; -s refused (hylang\'s random can\'t be seeded); harntest.hl\'s tests of the character it read back',
+      name: 'hmcharhl', what: 'hmchar.hl (games/hmchar: hmchar in hylang, harn.hl in the ROM disk\'s /lib/hylang) at rc: -q, its profile and its file (harnfile.c\'s lines) agreeing, the automatic skills open; then as a player answers (a roll again, an occupation out of range, weapons by a beginning of their names, one ambiguous, one twice, an option point\'s second improvement and a third, a skill there isn\'t), the skills it says as they should be; -s refused (hylang\'s random can\'t be seeded); harntest.hl\'s tests of the character it read back; -p elf, a Sindarin (Character 2: not rolled), its profile and file as they should be',
       init: 't_rc', cycles: 500e6,
       machine: { input: 'ābind -a /sd/0/games /bin\r' + 'ācd /ram; hmchar.hl -q -o q.hm; ' + HM_FILE('q.hm') + '\r' + 'āhmchar.hl\r' + HM_PLAY + 'ā' + HM_FILE('Dorn.hm') + '\r' +
+        'ācd /ram; hmchar.hl -q -p elf -o e.hm; ' + HM_FILE('e.hm') + '\r' +
         'āhmchar.hl -s 3; echo $status\r' + 'āecho \'(do (use "harntest") (def {c} (harn.read "Dorn.hm")) (list (c :other) (harn.eml c 1)))\' | hylang\r' },
       expect: ['Written to q.hm\n', 'Which (1-6)? 7\nWhich (1-6)? 1\n', 'The second: s\nWhich? More than one begins so.\n',
         'The third: shield\nThat one\'s chosen already.\n', 'Points left: 4. A skill: climb\nNo more than two points in a skill: that one\'s had its share.\n',
         'A skill: zzz\nThere\'s no such skill.\n', 'Written to Dorn.hm\n',
-        'hmchar.hl: -s: hylang\'s random can\'t be seeded (hmchar.fs and C\'s hmchar have -s)\nusage: hmchar.hl [-o file] [-q]\n1\n%',
+        'hmchar.hl: -s: hylang\'s random can\'t be seeded (hmchar.fs and C\'s hmchar have -s)\nusage: hmchar.hl [-o file] [-q] [-p species]\n1\n%',
         '=> {{"name Dorn" "occupation Gladiator"} ', 'hylang> => exit'],
       check(m, out) {
         const f = [], q = hmRun(out, 'cd /ram; hmchar.hl -q -o q.hm; ' + HM_FILE('q.hm')), d = hmRun(out, HM_FILE('Dorn.hm'));
@@ -3028,13 +3029,17 @@ module.exports = {
         if (!/occupation Gladiator\n/.test(d.file) || !['ml dag ', 'ml shd ', 'ml swd '].every(k => d.file.includes(k))) f.push('Dorn.hm: not a Gladiator with Dagger, Shield and Sword');
         const eml = out.match(/=> \{\{"name Dorn" "occupation Gladiator"\} (\d+)\}/);
         if (!eml || +eml[1] !== c[0]) f.push('harntest.hl\'s eml of Climbing: ' + (eml && eml[1]) + ', not ' + c[0]);
+        const e = hmRun(out, 'cd /ram; hmchar.hl -q -p elf -o e.hm; ' + HM_FILE('e.hm'));
+        if (!e) return [...f, '-p elf: its output or its file not found'];
+        f.push(...hmcharCheck(e.out, e.file).map(e => '-p elf: ' + e));
+        if (!/, Sindarin (Male|Female), .*; Sindarin /.test(e.out) || !/^att sp 1$/m.test(e.file)) f.push('-p elf: not a Sindarin of the Sindarin culture');
         this.notes = ['-q: ' + q.out.split('\n')[2]];
         return f;
       },
       sdcard: true
     },
     {
-      name: 'hmcharfs', what: 'hmchar.fs (games/hmchar: hmchar in HyForth, harn.fs in the ROM disk\'s /lib/forth) at rc, against C\'s hmchar: -q from a seed, its profile and its file the same as C\'s from it (the dice in the same order), the two agreeing and as they should be; then the same seed answered as a player would (a roll again, an occupation out of range, weapons by a beginning, one ambiguous, one twice, an option point\'s improvements, a skill there isn\'t), its questions, profile and file the same as C\'s; a bad option; harn.fs\'s harn-read of the file, harn-eml and harn-end',
+      name: 'hmcharfs', what: 'hmchar.fs (games/hmchar: hmchar in HyForth, harn.fs in the ROM disk\'s /lib/forth) at rc, against C\'s hmchar: -q from a seed, its profile and its file the same as C\'s from it (the dice in the same order), the two agreeing and as they should be; then the same seed answered as a player would (a roll again, an occupation out of range, weapons by a beginning, one ambiguous, one twice, an option point\'s improvements, a skill there isn\'t), its questions, profile and file the same as C\'s; a bad option; harn.fs\'s harn-read of the file, harn-eml and harn-end; a dwarf (-p: a species not rolled, Character 2), the same from C and HyForth, a Khuzdul of the Khuzan culture, its file as it should be; -p refused a species there isn\'t',
       init: 't_rc', cycles: 700e6,
       machine: { input: 'ābind -a /sd/0/games /bin\r' + 'ācd /ram; hmchar.fs -q -s 5 -o x.hm >f.out; cp x.hm f.hm\r' +
         'āhmchar -q -s 5 -o x.hm >c.out; cmp f.out c.out && cmp f.hm x.hm && echo same\r' +
@@ -3043,8 +3048,12 @@ module.exports = {
         'āhmchar -s 5 -o x.hm >ci.out\r' + HM_PLAY + 'ācmp fi.out ci.out && cmp fi.hm x.hm && echo the same\r' +
         'ācat fi.out; ' + HM_FILE('fi.hm') + '\r' + 'āhmchar.fs -s; echo $status\r' +
         'āecho \'require harn.fs s" fi.hm" r/o open-file throw harn-read . 1 harn-eml . harn-end .\' | forth\r' +
+        'āhmchar.fs -q -s 9 -p dwarf -o x.hm >fd.out; cp x.hm fd.hm\r' +
+        'āhmchar -q -s 9 -p k -o x.hm >cd.out; cmp fd.out cd.out && cmp fd.hm x.hm && echo the dwarf the same\r' +
+        'ācat cd.out; ' + HM_FILE('fd.hm') + '\r' + 'āhmchar -p z; echo $status\r' +
         'āecho end of test\r' },
-      expect: ['\nsame\n%', '\nthe same\n%', 'usage: hmchar.fs [-s seed] [-o file] [-q]\n1\n%', '% echo end of test\nend of test\n'],
+      expect: ['\nsame\n%', '\nthe same\n%', 'usage: hmchar.fs [-s seed] [-o file] [-q] [-p species]\n1\n%', '\nthe dwarf the same\n%',
+        'usage: hmchar [-s seed] [-o file] [-q] [-p species]\n1\n%', '% echo end of test\nend of test\n'],
       check(m, out) {
         const f = [], q = hmRun(out, 'cat f.out; ' + HM_FILE('f.hm')), d = hmRun(out, 'cat fi.out; ' + HM_FILE('fi.hm'));
         if (!q || !d) return ['the runs\' output or files not found'];
@@ -3055,7 +3064,11 @@ module.exports = {
         // (harn-read's ior, then Climbing's EML: its ML, no penalty; Endurance: the profile's)
         const r = out.match(/\| forth\n0 (\d+) (\d+) /), cli = d.file.match(/^ml cli (\d+)$/m), end = d.out.match(/.*Endurance (\d+),/s);
         if (!r || !cli || !end || r[1] !== cli[1] || r[2] !== end[1]) f.push('harn-read, harn-eml, harn-end: ' + (r ? r.slice(1).join(' ') : 'nothing') + ', not ' + (cli && cli[1]) + ' ' + (end && end[1]));
-        this.notes = ['-s 5 -q: ' + q.out.split('\n')[2]];
+        const w = hmRun(out, 'cat cd.out; ' + HM_FILE('fd.hm'));
+        if (!w) return [...f, '-p dwarf: its output or its file not found'];
+        f.push(...hmcharCheck(w.out, w.file).map(e => '-p dwarf: ' + e));
+        if (!/, Khuzdul (Male|Female), .*; Khuzan /.test(w.out) || !/^att sp 2$/m.test(w.file)) f.push('-p dwarf: not a Khuzdul of the Khuzan culture');
+        this.notes = ['-s 5 -q: ' + q.out.split('\n')[2], '-s 9 -p dwarf: ' + w.out.split('\n')[2]];
         return f;
       },
       sdcard: true

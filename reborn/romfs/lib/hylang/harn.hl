@@ -358,8 +358,10 @@ woo  Woodcraft          DDW a2b1l1   2041
   =(s (harn.sunsign-signs ss))
   (list (char-at "abcdefghijkl" (fst s)) (char-at "abcdefghijkl" (snd s)))}))
 
+(def {harn.species} NIL)                        ; A species fixed (0-2, harn_template's), or NIL: rolled
 (def {harn.create} (fn {} {do
-  =(sp (harn.table {97 98 99 100} (harn.d 100)))
+  =(rolled (harn.table {97 98 99 100} (harn.d 100)))
+  =(sp ?((nil? harn.species) rolled harn.species))
   =(sx ?((<= (harn.d 100) (nth sp {48 45 75 48})) 1 0))
   =(m (harn.d 12))
   =(d (harn.d 30))

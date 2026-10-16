@@ -4,11 +4,13 @@
 \ (games/hmchar) in HyForth, the same questions, the same profile, the same file; and from the same seed the same
 \ character, its dice rolled in the same order.
 \
-\ hmchar.fs [-s seed] [-o file] [-q]
+\ hmchar.fs [-s seed] [-o file] [-q] [-p species]
 \   -s seed    the same character each time
 \   -o file    where it's written (default: NAME.hm, in the current directory, NAME the character's)
 \   -q         no questions: the first roll kept, an occupation, weapons and option points chosen at random, a
 \              name made up
+\   -p species the character's species, not rolled: human, elf (Sindarin) or dwarf (Khuzdul), by its first letter
+\              (h, e or s, d or k)
 \
 \ The steps (Character 1): the attributes rolled (kept, or rolled again); an occupation, its skills opened as the
 \ Occupational Skills table has them (Character 15; a few of the book's, those of use in a dungeon; "three weapons at
@@ -183,13 +185,17 @@ create improved 91 allot   variable op   variable cost
 
 \ ---- The program
 : err ( c-addr u -- ) 2 write-file drop ;
-: usage ( -- ) s" usage: hmchar.fs [-s seed] [-o file] [-q]" 2 write-line drop  1 0 sys-exits ;
+: usage ( -- ) s" usage: hmchar.fs [-s seed] [-o file] [-q] [-p species]" 2 write-line drop  1 0 sys-exits ;
+: species-of ( c-addr u -- sp )                   \ -p's: h a human, e or s an elf, d or k a dwarf: 0-2, or -1
+  0= if drop -1 exit then  c@ lower-c >r
+  5 0 do s" hesdk" drop i + c@ r@ = if r> drop i 1+ 2/ unloop exit then loop  r> drop -1 ;
 variable ai
 : option ( -- )                                   \ The option at ai, ai past it (and its value)
   ai @ arg
   2dup s" -q" word= if 2drop true to quiet  1 ai +! exit then
   ai @ 1+ argc < 0= if 2drop usage then
   2dup s" -s" word= if 2drop ai @ 1+ arg 0 0 2swap >number 2drop rseed  2 ai +! exit then
+  2dup s" -p" word= if 2drop ai @ 1+ arg species-of dup 0< if usage then harn-species !  2 ai +! exit then
   s" -o" word= if ai @ 1+ arg 63 min dup to out-n out swap move  2 ai +! exit then
   usage ;
 : options ( -- ) 1 ai !  begin ai @ argc < while option repeat ;
