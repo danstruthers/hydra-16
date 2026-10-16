@@ -142,7 +142,7 @@ static void here (void)
 }
 
 /* The pace a move goes at (dk: in the dark), the hub's pc_going from now till it's there and has looked about: the
-** player's, held to a slow walk while it searches as it goes or feels its way, a walk while it listens; its step
+** player's, held to a slow walk while it searches or maps as it goes or feels its way, a walk while it listens; its step
 ** (pst: a slower pace's a walk's, its time mul_ times as much, so a slow walk's twice a walk's as the dark's always
 ** was) */
 static unsigned char pace_, mul_ = 1, searching;
@@ -157,7 +157,7 @@ static void __fastcall__ paced (unsigned char dk)
     g = HUB->gait;
     w = HUB->watch;
     searching = w & WA_TRAPS;
-    if ((dk || searching) && g > GA_SLOW) {
+    if ((dk || (w & (WA_TRAPS | WA_MAP))) && g > GA_SLOW) {
         g = GA_SLOW;
     } else if ((w & WA_LISTEN) && g > GA_WALK) {
         g = GA_WALK;

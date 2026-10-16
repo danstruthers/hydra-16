@@ -13,6 +13,11 @@
 ** The loop: each key goes to the line being typed (term.c); a line entered is the character's next command, made an
 ** intent for the world when the character's free (the world says so: E_READY); the world's events are worded into
 ** the story.  Escape pauses the game and goes on again.
+**
+** Its start and its end (part 1) and the commands (part 2) are swapped parts (swap.inc: run in the main RAM's top,
+** one at a time, copied in as they're called), between #pragma code-name (push, "SWnCODE") and its pop: each called
+** from outside its part only through its stub (bank.s's SWFN: begin, finish, save_game; command, take).  A line
+** typed goes first to pace.c's (part 4: the pace, the watchfulness, the state, small moves).
 */
 
 #include <fcntl.h>
@@ -28,6 +33,8 @@
 #include "hub.h"
 #include "rs.h"
 #include "level.h"
+
+#pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 
 unsigned long now;                              /* The game's time, as the world's clock last said */
 unsigned char pc_face;                          /* (The character's facing, copied for the parser's overlay) */
@@ -103,8 +110,8 @@ static void find_dirs (void)
 
 static void ovl_load (void)
 {
-    static unsigned char b[512];
     static char path[56];
+    unsigned char* b = (unsigned char*) _SWAP_START__;  /* (512 bytes of the swapped parts' area: none in it yet) */
     int fd, first, n;
     unsigned char k;
     unsigned off;
@@ -116,8 +123,8 @@ static void ovl_load (void)
     }
     for (k = 0; k < sizeof ovbank; ++k) {
         ovbank[k] = first + k;
-        for (off = 0; off < 0x2000; off += sizeof b) {
-            n = read (fd, b, sizeof b);
+        for (off = 0; off < 0x2000; off += 512) {
+            n = read (fd, b, 512);
             if (n <= 0) {
                 break;
             }
@@ -144,6 +151,9 @@ void __fastcall__ consctl (const char* what)
 
 /* hmchar run to make one (the console cooked for it, the screen whole), then its file read */
 static char pcfile[64];
+
+#pragma code-name (push, "SW1CODE")
+#pragma rodata-name (push, "SW1RODATA")
 
 static void __fastcall__ character (const char* file, unsigned long seed)
 {
@@ -186,8 +196,11 @@ static char* __fastcall__ reply_line (char** at)
     return l;
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 /* The referee asked (the UI's slot): its request's kind, and a (a purpose ...) and b, the slot's text already set */
-static struct req* __fastcall__ ask_b (unsigned char kind, unsigned char a, unsigned char b)
+struct req* __fastcall__ ask_b (unsigned char kind, unsigned char a, unsigned char b)
 {
     struct req* r = &HUB->slot[SLOT_UI];
 
@@ -200,6 +213,9 @@ static struct req* __fastcall__ ask_b (unsigned char kind, unsigned char a, unsi
 }
 
 #define referee(kind, a)    ask_b ((kind), (a), 0)
+
+#pragma code-name (push, "SW1CODE")
+#pragma rodata-name (push, "SW1RODATA")
 
 /* The character's file read by the referee: its name and its calling */
 static void load_pc (void)
@@ -224,6 +240,11 @@ static void load_pc (void)
     r->state = REQ_FREE;
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "SW2CODE")
+#pragma rodata-name (push, "SW2RODATA")
+
 /* The character's sheet, the referee's words */
 static void sheet (void)
 {
@@ -234,6 +255,9 @@ static void sheet (void)
     blank ();
     r->state = REQ_FREE;
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- The save (DUNGEON.md): game.dat, the UI's (the game's state, the strata's records), beside the things' items.dat
 ** (dq0p's), the referee's pc.hm
@@ -254,6 +278,9 @@ static struct save {
                                                 **   on, but a new one begun) */
 } sv;
 static unsigned char resumed;
+
+#pragma code-name (push, "SW1CODE")
+#pragma rodata-name (push, "SW1RODATA")
 
 static char* __fastcall__ save_path (const char* name)
 {
@@ -279,7 +306,7 @@ static int load_save (void)
 }
 
 /* The game kept: the referee's sheet, the maker's records, and the game's state (the hub's header in the window) */
-static void save_game (void)
+void s_save_game (void)
 {
     struct req* r;
     struct mreq* q;
@@ -341,6 +368,9 @@ static void __fastcall__ load_strata (void)
     }
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 /* ---- The hub; the referee started, the character loaded, the theme read in, and the world started */
 
 /* Bytes copied between one of the hub's banks and the main RAM (to or from in the window), the window put back as it
@@ -353,6 +383,9 @@ void __fastcall__ hub_mem (unsigned char bank, void* to, const void* from, unsig
     memcpy (to, from, n);
     setbank (b);
 }
+
+#pragma code-name (push, "SW1CODE")
+#pragma rodata-name (push, "SW1RODATA")
 
 /* A task of the game's started, libdir/name in role t (more: its third argument, or none); or the game's over (but
 ** for the sound's: the game goes on silent) */
@@ -440,6 +473,9 @@ static void stop_world (void)
     }
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 /* ---- The status line */
 
 void status (void)
@@ -480,7 +516,6 @@ static unsigned long heard_at;
 static unsigned char heard_rel = 0xFF;
 char heard_what[20];
 
-static void __fastcall__ intend2 (unsigned char kind, unsigned w1, unsigned w2);
 
 /* A blow (an E_FIGHT: the character's, or one at it), worded (overlay 6's); the character dead of it, the game's
 ** end; knocked senseless, it waits it out */
@@ -667,7 +702,7 @@ static unsigned char events (void)          /* (How many there were) */
 
 /* ---- The commands (the parser comes later: a word, and the rest) */
 
-static void __fastcall__ intend2 (unsigned char kind, unsigned w1, unsigned w2)
+void __fastcall__ intend2 (unsigned char kind, unsigned w1, unsigned w2)
 {
     static struct msg m;
 
@@ -681,6 +716,9 @@ static void __fastcall__ intend2 (unsigned char kind, unsigned w1, unsigned w2)
         t_prompt (0);
     }
 }
+
+#pragma code-name (push, "SW2CODE")
+#pragma rodata-name (push, "SW2RODATA")
 
 /* A portal (or a trap) worked: what's done (PA_*), to what (the parser's thing: a door, a window, or either) */
 static void __fastcall__ work (unsigned char what, unsigned char obj)
@@ -712,6 +750,9 @@ static void __fastcall__ intend (unsigned char kind, unsigned char a)
         t_prompt (0);
     }
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- The things (items.h): a request to the things task (dq0p), waited for: its result */
 static unsigned char __fastcall__ things (unsigned char op, const char* name)
@@ -769,6 +810,9 @@ static void __fastcall__ dig_used (unsigned char n)
     }
 }
 
+#pragma code-name (push, "SW2CODE")
+#pragma rodata-name (push, "SW2RODATA")
+
 /* After a thing's handled (taken up, put down ...): its light changed (lit, put out, a torch put down), the world's
 ** look about in the new light; else the time it took (t tenths), quietly */
 static void __fastcall__ after (unsigned char was, unsigned t, unsigned char op)
@@ -819,7 +863,7 @@ static void __fastcall__ lift (const char* name)
 }
 
 /* A thing taken up, by its name (walked over to first, if it's out of reach; a portal's part lifted out first) */
-static void __fastcall__ take (const char* name)
+void __fastcall__ s_take (const char* name)
 {
     unsigned char was = HUB->pc_light, r;
 
@@ -1023,6 +1067,9 @@ static void __fastcall__ chores (unsigned char verb)
 }
 #pragma optimize (pop)
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 /* A command that takes no time and wants nothing of the character (what it carries, its sheet, the map, the help):
 ** carried out at once, the character busy or not (on its way somewhere, looking about: the user, "the UI is slow to
 ** respond"), if it's the next one typed */
@@ -1033,11 +1080,14 @@ static unsigned char __fastcall__ at_once (const char* l)
 
     strcpy (b, l);
     parse (b, &c);
-    return c.verb == V_INVENTORY || c.verb == V_SHEET || c.verb == V_MAP || c.verb == V_HELP;
+    return c.verb == V_INVENTORY || c.verb == V_SHEET || c.verb == V_MAP || c.verb == V_HELP || !strcmp (b, "status");
 }
 
+#pragma code-name (push, "SW2CODE")
+#pragma rodata-name (push, "SW2RODATA")
+
 /* A command, the parser's, carried out */
-static void __fastcall__ command (char* l)
+void __fastcall__ s_command (char* l)
 {
     static struct pcmd c;
     struct req* r;
@@ -1239,14 +1289,18 @@ portal:
     }
 }
 
-int main (int argc, char* argv[])
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "SW1CODE")
+#pragma rodata-name (push, "SW1RODATA")
+
+/* The game begun: its arguments, a game kept carried on, the title, the character, the world started */
+static unsigned long seed;                      /* (Its seed: the clock's, as the task starts, but for -s's) */
+
+void __fastcall__ s_begin (int argc, char* argv[])
 {
-    unsigned long seed = hy_time () ^ hy_ticks ();
-    unsigned shown = 0;
-    unsigned long next = 0;
-    unsigned char held = 0;
     const char* file = 0;
-    unsigned char k, i;
+    unsigned char i;
     char* l;
 
     for (i = 1; i < argc; ++i) {
@@ -1284,8 +1338,6 @@ int main (int argc, char* argv[])
     }
     rseed (seed);
     signal (SIGINT, interrupted);
-    find_dirs ();
-    ovl_load ();
     t_init ();
     title ();
     character (file, seed);
@@ -1297,6 +1349,31 @@ int main (int argc, char* argv[])
     blank ();
     tell (T_TYPE_HELP_FOR);
     t_done ();
+}
+
+/* The game's end: kept (as it ends: the game's quit, not lost), the world stopped */
+void s_finish (void)
+{
+    save_game ();
+    stop_world ();
+    t_end ();
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+int main (int argc, char* argv[])
+{
+    unsigned shown = 0;
+    unsigned long next = 0;
+    unsigned char held = 0;
+    unsigned char k;
+    char* l;
+
+    seed = hy_time () ^ hy_ticks ();
+    find_dirs ();                               /* (The overlays read in, and the swapped parts with them, first) */
+    ovl_load ();
+    begin (argc, argv);
     while (!quit) {
         hub_map (0);                            /* (The hub at $8000 again: a call may have moved the window) */
         while (t_haskey ()) {
@@ -1336,16 +1413,16 @@ int main (int argc, char* argv[])
             pending[0] = 0;
         }
         if ((l = (char*) t_next ()) != 0 && (!busy || (!held && !(held = !at_once (l))))) {
-            command (t_line ());              /* (The character free; or a command that wants nothing of it:
+            if (!pace_cmd (l = t_line ())) {    /* (The pace's, the state's, a small move's: pace.c's) */
+                command (l);                    /* (The character free; or a command that wants nothing of it:
                                                 **   held, the next waits for it to be free, not parsed again) */
+            }
             held = 0;
             status ();
         }
         t_done ();
         hy_sleep_ticks (2);
     }
-    save_game ();                               /* (Kept as it ends: the game's quit, not lost) */
-    stop_world ();
-    t_end ();
+    finish ();
     return 0;
 }

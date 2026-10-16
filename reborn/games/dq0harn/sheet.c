@@ -368,7 +368,7 @@ void o_state (void)
     unsigned char g = ps.gait, h = g, k, worst = 0, bleed = 0;
     const harn_injury* j;
 
-    if (h > GA_SLOW && ((ps.watch & WA_TRAPS) || ps.dark)) {
+    if (h > GA_SLOW && ((ps.watch & (WA_TRAPS | WA_MAP)) || ps.dark)) {
         h = GA_SLOW;
     } else if (h > GA_WALK && (ps.watch & WA_LISTEN)) {
         h = GA_WALK;
@@ -378,14 +378,17 @@ void o_state (void)
     if (h != g) {
         put (", held to ");
         put (pace_name[h]);
-        put (ps.watch & WA_TRAPS ? " while you search as you go" : ps.dark && h == GA_SLOW ? " in the dark" :
-            " while you listen");
+        put (ps.watch & WA_TRAPS ? " while you search as you go" : ps.watch & WA_MAP ? " while you map as you go" :
+            ps.dark && h == GA_SLOW ? " in the dark" : " while you listen");
     }
     put (" (");
     putn (harn_move (&pc) * feet[h][0] / feet[h][1]);
     put (" feet a round).\nWatching: ");
-    put (!ps.watch ? "nothing in particular." : ps.watch == WA_LISTEN ? "listening as you go." : ps.watch & WA_LISTEN ?
-        "for traps and hidden doors as you go, and listening." : "for traps and hidden doors as you go.");
+    put (!ps.watch ? "nothing in particular" : ps.watch & WA_TRAPS ? "for traps and hidden doors as you go" : "");
+    put ((ps.watch & WA_TRAPS) && (ps.watch & (WA_LISTEN | WA_MAP)) ? "; " : "");
+    put (ps.watch & WA_LISTEN ? (ps.watch & WA_MAP ? "listening and mapping as you go" : "listening as you go") :
+        ps.watch & WA_MAP ? "mapping as you go" : "");
+    put (".");
     if (!ps.full) {
         return;
     }

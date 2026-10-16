@@ -387,6 +387,8 @@ struct hub {                                    /* Bank 0, at $8000 */
 };
 #define WA_TRAPS        0x01                    /* Searching as it goes: traps underfoot, hidden doors beside */
 #define WA_LISTEN       0x02                    /* Listening as it goes */
+#define WA_MAP          0x04                    /* Mapping as it goes (the map's side the orientation's: its
+                                                **   materials to hand) */
 #define GOING_DARK      0x80
 /* (RS_DESCRIBE b 3's a: the pace, its GA_* plus 1 (0: as it is); the watchfulness set, WA_* times ST_WATCH; ST_CLEAR,
 ** all of it cleared first) */

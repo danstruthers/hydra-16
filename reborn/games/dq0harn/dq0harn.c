@@ -467,7 +467,7 @@ static void __fastcall__ pace_set (unsigned char a)
     if (a & ST_CLEAR) {
         HUB->watch = 0;
     }
-    HUB->watch |= a / ST_WATCH & (WA_TRAPS | WA_LISTEN);
+    HUB->watch |= a / ST_WATCH & (WA_TRAPS | WA_LISTEN | WA_MAP);
     if (a & 7) {
         HUB->gait = (a & 7) - 1;
     }

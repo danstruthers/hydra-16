@@ -2832,6 +2832,97 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0pace', what: 'Dingus Quest Zero\'s pace and watchfulness (the user\'s, 2026-10-16: DUNGEON.md, moving): status (the pace, its feet a round by HarnMaster\'s rates of the Move, what it watches for, its condition, its light); a jog set, then searching for traps as it goes (held to a slow walk), listening (a walk at most, while it\'s not searching), mapping as it goes (a slow walk), each stopped; a sprint set; "run north" setting the run as it goes (the move the command\'s); "run south" going on at it, unsaid; kept with the sheet (dq0 -d: pc.hm\'s pace line) and the game carried on at it; the help\'s words',
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 3 -c /ram/c.hm -d /ram/p\r' +
+        ['status', 'jog', 'search for traps as I go', 'listen as I go', 'stop searching', 'stop listening', 'map as I go',
+          'stop mapping', 'set pace to sprint', 'walk slowly', 'run north', 'run south', 'creep', 'listen as I go',
+          'quit', 'grep pace /ram/p/pc.hm', 'dq0 -p t -d /ram/p', 'status', 'help', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        const want = ['> status', 'Pace: a walk (40 feet a round). Watching: nothing in particular. Condition: unhurt; a little burdened (encumbrance 1); penalties: universal 0, physical 1. Light: your torch (20 feet).',
+          '> jog', 'Pace: a jog (80 feet a round). Watching: nothing in particular.',
+          '> search for traps as I go', 'Pace: a jog, held to a slow walk while you search as you go (20 feet a round). Watching: for traps and hidden doors as you go.',
+          '> listen as I go', 'Watching: for traps and hidden doors as you go; listening as you go.',
+          '> stop searching', 'Pace: a jog, held to a walk while you listen (40 feet a round). Watching: listening as you go.',
+          '> stop listening', 'Pace: a jog (80 feet a round). Watching: nothing in particular.',
+          '> map as I go', 'Pace: a jog, held to a slow walk while you map as you go (20 feet a round). Watching: mapping as you go.',
+          '> stop mapping', 'Pace: a jog (80', '> set pace to sprint', 'Pace: a sprint (240 feet a round).',
+          '> walk slowly', 'Pace: a slow walk (20 feet a round).', '> run north', 'Pace: a run (160 feet a round).',
+          '> run south', '> creep', 'Pace: a creep (13 feet a round).', '> listen as I go', 'Watching: listening as you go.',
+          '% grep pace /ram/p/pc.hm', 'pace 0 2 ', '% dq0 -p t -d /ram/p', '> status', 'Pace: a creep (13 feet a round). Watching: listening as you go.',
+          '> help', 'Pace: creep (sneak), walk slowly, walk, jog, run, sprint', '% echo $status'];
+        let at = 0;
+        for (const w of want) {
+          const i = o.indexOf(w, at);
+          if (i < 0) { f.push('not found (in its turn): ' + w); break; }
+          at = i + w.length;
+        }
+        const door = o.slice(o.indexOf('> run south'), o.indexOf('> creep'));
+        if (/Pace:/.test(door)) f.push('the pace said again going on as it was: ' + door);
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0steps', what: 'Dingus Quest Zero\'s small moves (the user\'s, 2026-10-16: "move left one space"; a square 5 feet, the game\'s): at seed 12\'s cell, facing northeast, a step forward (a square that way, its facing so), a move to the right three spaces stopped by the wall, backing up 10 feet (two squares behind it, but the cell\'s one: still facing northeast), a sidestep left into the wall; turned about, "run 2 squares east" (its pace set to a run, east one square to the wall, facing east, its look as a run ends brief: no barrel vault); then at seed 3 (dq0 -T) a step forward stopped by a giant rat in the way',
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 12 -c /ram/c.hm\r' +
+        ['map', 'step forward', 'map', 'move right 3 spaces', 'back up 10 feet', 'map', 'sidestep left', 'turn around',
+          'run 2 squares east', 'map', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'set pace to sprint', 'step forward', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        const want = ['> map', 'Sq -68,-30', 'Facing NE', '> step forward', '> map', 'Sq -67,-31', 'Facing NE', '> move right 3 spaces',
+          'You can\'t go that way.', '> back up 10 feet', '> map', 'Sq -68,-30', 'Facing NE', '> sidestep left', 'You can\'t go that way.',
+          '> run 2 squares east', 'Pace: a run', 'You are in a small cell, by the light of your torch. There is a door', '> map',
+          'Sq -67,-30', 'Facing E', '% dq0 -p t -s 3', '> step forward', 'A giant rat is in the way.', '% echo $status'];
+        let at = 0;
+        for (const w of want) {
+          const i = o.indexOf(w, at);
+          if (i < 0) { f.push('not found (in its turn): ' + w); break; }
+          at = i + w.length;
+        }
+        const run = o.slice(o.indexOf('> run 2 squares east'), o.lastIndexOf('> map'));
+        if (/barrel vault/.test(run)) f.push('the look as a run ends not brief: ' + run);
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0watch', what: 'Dingus Quest Zero\'s watchfulness and fatigue (the user\'s, 2026-10-16): a keen-eyed character (Awareness 95, hmchar\'s file) at seed 16 (dq0 -T) walking onto the cave\'s hidden plate (a passing glance\'s chance: it misses it, the blade set off); then searching for traps as it goes, the search where it stops finding the plate first, and the walk going round it; then fatigue, the book\'s: a character a level tired and nearly another (pc.hm\'s vol and pace lines) running down a passage, tired a level more (its penalties one more, its Move and so its pace\'s feet a round less); one two levels tired resting ten minutes (61 rounds waited), a level gone',
+      init: 't_rc', cycles: 4000e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rācp /ram/c.hm /ram/r.hm\rāecho ml awa 95 >> /ram/c.hm\r' +
+        ['dq0 -p t -s 16 -c /ram/c.hm -T', 'face east', 'force', 'e', 'force', 'force', 'e', 'e', 'quit',
+          'dq0 -p t -s 16 -c /ram/c.hm -T', 'face east', 'force', 'e', 'force', 'force', 'search for traps as I go', 'e', 'e', 'quit',
+          'cp /ram/r.hm /ram/t.hm', 'echo vol 1 0 0 0 0 >> /ram/t.hm', 'echo pace 4 0 5990 >> /ram/t.hm',
+          'dq0 -p t -s 16 -c /ram/t.hm -T', 'status', 'face east', 'force', 'e', 'status', 'quit',
+          'echo vol 2 0 0 0 0 >> /ram/r.hm', 'dq0 -p t -s 16 -c /ram/r.hm -T', 'status', ...Array(61).fill('z'), 'status', 'quit',
+          'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        const want = ['% dq0 -p t -s 16 -c /ram/c.hm -T', 'A plate sinks under your foot with a click.', '> quit',
+          '% dq0 -p t -s 16 -c /ram/c.hm -T', '> search for traps as I go', 'held to a slow walk while you search as you go',
+          'You find a trap: a scything blade, set off by a plate in the floor.', '> quit',
+          '% dq0 -p t -s 16 -c /ram/t.hm -T', '> status', 'Pace: a run (150 feet a round).', 'a little tired (fatigue 1)',
+          'penalties: universal 1, physical 2.', '> e', '> status', 'Pace: a run (140 feet a round).', 'a little tired (fatigue 2)',
+          'penalties: universal 2, physical 3.', '% dq0 -p t -s 16 -c /ram/r.hm -T', '> status', 'a little tired (fatigue 2)',
+          '> status', 'a little tired (fatigue 1)', 'penalties: universal 1, physical 2.', '% echo $status'];
+        let at = 0;
+        for (const w of want) {
+          const i = o.indexOf(w, at);
+          if (i < 0) { f.push('not found (in its turn): ' + w); break; }
+          at = i + w.length;
+        }
+        const sought = o.slice(o.indexOf('> search for traps as I go'));
+        if (/A plate sinks under your foot/.test(sought.slice(0, sought.indexOf('> quit')))) f.push('the plate set off searching');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0theme', what: 'Dingus Quest Zero\'s themes (theme.h: data, games/dq0/themes, made dq0t.dat): the theme picked by the seed (its second byte: seed 3 the first theme, the crypt; seed 259 the second, the drowned temple), its name and story told, its strata named by it, kept in the save and the game carried on in it; the way out shut by its lock (its words, the theme\'s); then the crypt\'s puzzle\'s pieces (dq0 -k: the sunstone and the moonstone to hand) combined into the king\'s seal (its rule\'s words), the seal used on the way out (it opens), the way out examined, and taken: the game ended (escaped, the theme\'s ending), and the save marked done (a new game begun in its folder, not carried on)',
       init: 't_rc', cycles: 1500e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 259 -c /ram/c.hm -d /ram/t\r' +
