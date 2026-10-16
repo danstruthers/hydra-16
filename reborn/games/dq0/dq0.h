@@ -126,7 +126,10 @@ void __fastcall__ trap_name (unsigned char kind, unsigned char trigger, unsigned
                                                 **   trap's name, added to lb */
 void den_way (void);                            /* Overlay 4: a denizen in the way (its name in lb) */
 void __fastcall__ heard_words (unsigned char what, unsigned char rel);  /* Overlay 2: a denizen heard (an E_DEN's
-                                                **   what, the way it lies as the character faces), into lb */
+                                                **   what, | 0x80 muffled, the way it lies as the character faces),
+                                                **   into lb */
+extern char heard_what[20];                     /* Its sound's words (SOUND.md: the sound task's, "a scurrying"; "":
+                                                **   none), main.c's */
 struct portal;
 void __fastcall__ portal_look (const struct portal* p, signed char g);  /* Overlay 4: a portal looked at closely
                                                 **   (the maker's record of it, the hub's pview, copied), judged at

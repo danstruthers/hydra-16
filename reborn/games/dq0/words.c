@@ -371,11 +371,28 @@ static void denizens (void)
     }
 }
 
-/* A denizen heard, not seen (main.c's heard: one of the denizens' events), into lb: "You hear something moving
-** behind you to your left." */
+/* A denizen heard, not seen (main.c's heard: one of the denizens' events), into lb, in its sound's words (the sound
+** task's, SOUND.md: heard_what) if it has them: "You hear a scurrying to your right.", "You hear a muffled squeak
+** behind you." (what | 0x80: walls or a door between); else "You hear something moving behind you to your left." */
 void __fastcall__ o_heard_words (unsigned char what, unsigned char rel)
 {
-    strcpy (lb, what == DE_NOISE ? "You hear a noise " : "You hear something moving ");
+    if (heard_what[0]) {
+        strcpy (lb, "You hear ");
+        if (what & 0x80) {
+            if (heard_what[0] == 'a' && heard_what[1] == ' ') {
+                strcat (lb, "a muffled ");      /* ("a muffled squeak") */
+                strcat (lb, heard_what + 2);
+            } else {
+                strcat (lb, "muffled ");
+                strcat (lb, heard_what);
+            }
+        } else {
+            strcat (lb, heard_what);
+        }
+        strcat (lb, " ");
+    } else {
+        strcpy (lb, (what & 0x7F) == DE_NOISE ? "You hear a noise " : "You hear something moving ");
+    }
     strcat (lb, relname[rel & 7]);
     strcat (lb, ".");
 }

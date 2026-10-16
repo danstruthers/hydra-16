@@ -98,9 +98,13 @@ words in the hub if it can and ends, and the game goes on silent; without the so
 
 - **The denizens' task** publishes its actors' steps and noises (DENIZENS.md), and with each loud one on the
   character's stratum what lies between it and the character (x[3]).
-- **The sound task** (games/dq0s: dq0s SEG ROLE LIBDIR, started by the UI before the world) puts the sounds' table in
-  the hub (the denizens' events' bank, after their ring: SND_AT, so the UI has the words), reads the world's events
-  and the denizens', and plays what the character hears on its channels, panned by the way each lies.
+- **The sound task** (games/dq0s: dq0s SEG ROLE LIBDIR, started by the UI first of its tasks: the denizens and the
+  world wait till its table's in the hub, a second at most) puts the sounds' table in the hub (the denizens' events'
+  bank, after their ring: SND_AT, so the UI has the words), reads the world's events and the denizens', and plays
+  what the character hears on its channels, panned by the way each lies.  With it the game is seven tasks (the UI,
+  the world, the denizens, the referee, the maker, the senses, the sound): at the login shell's prompt HydraOS has six
+  standing (the kernel, the shell, snd, kdev, storage, cons; vid too with a Vera X), so with the game running 13 of
+  the 16 are taken (14 with a Vera X): room for a second window's shell and a program in it.
 - **The UI** tells what the character hears and doesn't see, in the sound's words (main.c's heard; words.c's
   heard_words), by the same reach, walls and doors as what's played: the same way not again for half a minute, nor any
   for five seconds, so the words are fewer than the sounds.

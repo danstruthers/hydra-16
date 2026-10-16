@@ -36,6 +36,15 @@
 #define DEN_BANK        (CAT_BANK + 1 + ITEM_BANKS)     /* The denizens' events (DQ_SIZE of them, a ring) */
 #define DQ_SIZE         64
 #define DQ_AT           ((struct msg*) 0x8000)
+#define SND_AT          ((char*) 0x8000 + DQ_SIZE * sizeof (struct msg))    /* The sounds (SOUND.md), after them: the
+                                                **   sound task's table (dq0s.dat), SND_REC bytes a sound, its words
+                                                **   first ("a scurrying", 0-ended; "": none): each kind's two (the
+                                                **   denizens' task's kinds by number: its step, its noise), then the
+                                                **   world's; the UI clears it, the sound task puts it there */
+#define SND_REC         32
+#define SND_WORDS       20
+#define SND_KINDS       32
+#define SND_WORLD       16
 
 /* The tasks, and so their doorbells */
 enum { T_UI, T_WORLD, T_DENIZENS, T_REFEREE, T_SOUND, T_MAKER, T_SENSES, NTASKS };
@@ -90,7 +99,10 @@ enum {
                                                 **   denizen's done something: who the actor plus 1, a what (DE_*),
                                                 **   b how loud (0 silent ... 9), w1 w2 its square, x[0] its stratum,
                                                 **   x[1] its kind (the denizens' task's), x[2] 1 if it's on a square
-                                                **   the character sees now (the senses' marks) */
+                                                **   the character sees now (the senses' marks), x[3] what lies
+                                                **   between it and the character, of a loud one on its stratum (the
+                                                **   squares of wall and rock on the line, 15 at most, and the shut
+                                                **   doors times 16: SOUND.md) */
     NEVENTS
 };
 enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST };    /* E_DEN's what: a step, a noise of its own (a squeak, a
@@ -262,6 +274,7 @@ struct hub {                                    /* Bank 0, at $8000 */
 
 #define HUB     ((struct hub*) HUB_WINDOW)
 typedef char hub_fits[sizeof (struct hub) <= 0x2000 ? 1 : -1];   /* (The header in bank 0) */
+typedef char snd_fits[DQ_SIZE * sizeof (struct msg) + (2 * SND_KINDS + SND_WORLD) * SND_REC <= 0x2000 ? 1 : -1];
 
 /* hub.c */
 int __fastcall__ hub_create (unsigned char banks);      /* The UI's: the segment, its doorbells: 0, or -1 */

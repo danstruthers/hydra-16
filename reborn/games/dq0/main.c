@@ -9,10 +9,10 @@
 **
 ** The game is tasks that meet in the hub (hub.h): this one, the UI, makes it and starts the others (the world,
 ** libdir/dq0w; the referee, libdir/dq0harn: the rules, asked in rs.h's terms; the maker, libdir/dq0m: the
-** dungeon grown, as the world asks; the senses, libdir/dq0p; the denizens, libdir/dq0d).  The loop: each key goes
-** to the line being typed (term.c); a line entered is the character's next command, made an intent for the world
-** when the character's free (the world says so: E_READY); the world's events are worded into the story.  Escape
-** pauses the game and goes on again.
+** dungeon grown, as the world asks; the senses, libdir/dq0p; the denizens, libdir/dq0d; the sound, libdir/dq0s).
+** The loop: each key goes to the line being typed (term.c); a line entered is the character's next command, made an
+** intent for the world when the character's free (the world says so: E_READY); the world's events are worded into
+** the story.  Escape pauses the game and goes on again.
 */
 
 #include <fcntl.h>
@@ -333,7 +333,8 @@ static void __fastcall__ load_strata (void)
 
 /* ---- The hub; the referee started, the character loaded, and the world started */
 
-/* A task of the game's started, libdir/name in role t (more: its third argument, or none); or the game's over */
+/* A task of the game's started, libdir/name in role t (more: its third argument, or none); or the game's over (but
+** for the sound's: the game goes on silent) */
 static void __fastcall__ start (const char* name, unsigned char t, const char* more)
 {
     static char path[56];
@@ -341,7 +342,7 @@ static void __fastcall__ start (const char* name, unsigned char t, const char* m
     strcpy (path, libdir);
     strcat (path, "/");
     strcat (path, name);
-    if ((task_[t] = hub_spawn (path, t, more)) < 0) {
+    if ((task_[t] = hub_spawn (path, t, more)) < 0 && t != T_SOUND) {
         t_end ();
         strcpy (path, "dq0: this can't be started: lib/dq0/");
         strcat (path, name);
@@ -352,6 +353,7 @@ static void __fastcall__ start (const char* name, unsigned char t, const char* m
 static void start_world (unsigned long seed)
 {
     struct req* r;
+    unsigned char k;
 
     if (hub_create (HUB_BANKS)) {
         t_end ();
@@ -362,6 +364,10 @@ static void start_world (unsigned long seed)
     HUB->pace = pace;
     HUB->seed = seed;
     HUB->test_start = test_start;
+    hub_map (DEN_BANK);                         /* (The sounds' words: none till the sound task's put them there) */
+    memset (SND_AT, 0, (2 * SND_KINDS + SND_WORLD) * SND_REC);
+    hub_map (0);
+    start ("dq0s", T_SOUND, libdir);            /* (Its sound: SOUND.md) */
     start ("dq0harn", T_REFEREE, libdir);       /* (Its rules: its folder, for its overlay) */
     r = referee (RS_HELLO, 0);
     HUB->round = r->w1;                         /* (The ruleset's round, in tenths) */
@@ -387,6 +393,11 @@ static void start_world (unsigned long seed)
         things (IO_KIT, "");
     }
     to_hand ();
+    for (k = 0; task_[T_SOUND] > 0 && !HUB->beat[T_SOUND] && k < 100; ++k) {   /* (The sounds' words in the hub
+                                                **   before anything's heard: a second at most) */
+        hy_sleep_ticks (2);
+        hub_map (0);
+    }
     start ("dq0d", T_DENIZENS, libdir);         /* (Its denizens, its world) */
     start ("dq0w", T_WORLD, 0);
 }
@@ -433,11 +444,13 @@ void status (void)
 
 /* ---- The denizens' events (DENIZENS.md: events), as the character hears them: by its hearing (the referee's, 0-9),
 ** a step or a noise within its loudness times (hearing + 3) / 2 squares, on its stratum, of one on a square it doesn't
-** see (one it sees is told as seen: the world's V_STIR), told by the way it lies; not the same way again for half a
-** minute, nor any for five seconds.  The rest pass it by */
+** see (one it sees is told as seen: the world's V_STIR), told by the way it lies, in its sound's words (the sound
+** task's table, SOUND.md: each square of wall or rock between four squares further, each shut door two, as it's
+** played); not the same way again for half a minute, nor any for five seconds.  The rest pass it by */
 static unsigned dplace;
 static unsigned long heard_at;
 static unsigned char heard_rel = 0xFF;
+char heard_what[20];
 
 static void heard (void)
 {
@@ -454,12 +467,17 @@ static void heard (void)
         rel = (bearing ((int) dx, (int) dy) - HUB->pc_face) & 7;
         dx = (int) dx < 0 ? -dx : dx;
         dy = (int) dy < 0 ? -dy : dy;
-        if ((dx > dy ? dx : dy) * 2 > m.b * (HUB->pcsum.hearing + 3) || m.t < heard_at + (rel == heard_rel ? 300 : 50)) {
+        dx = (dx > dy ? dx : dy) + 4 * (m.x[3] & 15) + 2 * (m.x[3] >> 4);
+        if (dx * 2 > m.b * (HUB->pcsum.hearing + 3) || m.t < heard_at + (rel == heard_rel ? 300 : 50)) {
             continue;
         }
         heard_at = m.t;
         heard_rel = rel;
-        heard_words (m.a, rel);
+        hub_map (DEN_BANK);                     /* (Its sound's words: the sound task's, if it's put them there) */
+        memcpy (heard_what, SND_AT + (m.x[1] % SND_KINDS * 2 + (m.a == DE_NOISE)) * SND_REC, sizeof heard_what);
+        hub_map (0);
+        heard_what[sizeof heard_what - 1] = 0;
+        heard_words (m.a | (m.x[3] ? 0x80 : 0), rel);
         msg (lb);
     }
 }
