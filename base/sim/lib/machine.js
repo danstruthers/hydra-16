@@ -295,7 +295,9 @@ function createMachine(opt) {
 
   // (A task's RAM bank b, as it is: undefined if it was never written; tools/hysnap.js reads hylang's heap with it)
   const taskBankMem = (t, b) => taskBank[t * 256 + b];
-  Object.assign(m, { cpu, acia, via, i2c, smc, ym, vera, audio, rtc, taskRam, vecRam, pcHist, iOffTop, stackLow, stackLowAt, profHist, profCyc, profTask, run, hwReset, rd, taskBankMem });
+  // (The shared segments' banks, as they are: { U * 16 + bank: its bytes }, those ever reached; the dq0 tests read the hub's)
+  const sharedBanks = () => sharedBank;
+  Object.assign(m, { cpu, acia, via, i2c, smc, ym, vera, audio, rtc, taskRam, vecRam, pcHist, iOffTop, stackLow, stackLowAt, profHist, profCyc, profTask, run, hwReset, rd, taskBankMem, sharedBanks });
   Object.defineProperties(m, {                                // (The pseudo-registers, the trace and the profile's count, as they are now)
     trace: { get: () => {                                     // (The ring, oldest first: [W, T, PC, A, X, Y, S, P] each)
       const out = [];

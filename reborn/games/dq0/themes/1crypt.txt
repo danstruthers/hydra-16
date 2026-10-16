@@ -5,14 +5,20 @@
 # as it starts.  The real themes are the user's to write; these are for the engine.
 #
 # A line a field, a key and its values between bars; a line that starts with a space goes on with the line before
-# (its last value, a space between).  The keys:
+# (its last value, a space between; or, its first character past the spaces a bar, more values).  The keys:
 #   theme     its name, as the story and the endings say it
 #   mission   escape, rule, or both: what ends the game well (the way out opened and taken; the place ruled)
 #   story     what the character knows of the place as it comes in (told after the title)
 #   stratum   a stratum, from the top down (8 at most; past the last, the last again): its name, and the styles its
 #             plan may be grown in, one or two letters (b built, n natural, m mine, x mixed), one picked by its seed
-#             (the top stratum's first)
-#   rooms     the eight words for a room, by its kind (the growers': a cave's chamber the seventh)
+#             (the top stratum's first); and its purpose, what its builders built it for (DUNGEON.md: built to a
+#             plan): halls, keep, temple, cellars, crypt or works (halls if it's not given), and fortified or open
+#             after it (a keep's fortified, unless it's open; the rest open, unless they're fortified)
+#   rooms     the eight words for a room, by its kind (the growers': a chamber whose use is lost, a hall, cells, a
+#             vault, a crypt, a gallery, a cave's chamber, a storeroom)
+#   uses      the twelve words for a built room's use past those (a kitchen, a pantry, barracks, an armoury, a
+#             chapel, a bedchamber, the lord's solar, a well room, a cistern, a gatehouse, a guardroom, a workshop), if
+#             the theme has words of its own for them
 #   light     a room lit by its own light: by what
 #   denizens  the bestiary's kinds that live here (dq0d/kinds.txt's keys, spaces between), or * all
 #   kind      a kind of thing of its own (8 at most): its name (13 letters at most), its ways (letters: h held in a
@@ -37,14 +43,14 @@ mission  | both
 story    | Aldric, last of the kings under the hill, was laid in his crypt with his crown and his seal, and the hill
            shut after him.  The door at the top of the stair answers only to his seal; and they say that whoever
            sets his crown upon his throne below will rule his house of the dead after him.
-stratum  | Upper Halls | b
-stratum  | Old Cellars | bn
-stratum  | Bone Vaults | bn
-stratum  | Black Crypts | bn
-stratum  | Sunken Ways | bn
-stratum  | Cisterns | bn
-stratum  | Deep Halls | bn
-stratum  | the King's Rest | bn
+stratum  | Upper Halls | b | halls
+stratum  | Old Cellars | bn | cellars
+stratum  | Bone Vaults | bn | crypt
+stratum  | Black Crypts | bn | crypt
+stratum  | Sunken Ways | bn | halls
+stratum  | Cisterns | bn | cellars
+stratum  | Deep Halls | bn | keep
+stratum  | the King's Rest | bn | crypt
 rooms    | chamber | hall | cell | vault | crypt | gallery | cave | storeroom
 light    | lit by torches in iron brackets
 denizens | *

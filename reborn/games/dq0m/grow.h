@@ -4,7 +4,7 @@
 */
 
 /* A style's proportions (DUNGEON.md): what its growers make, and how often; each a chance in so many (its own die's
-** sides, as noted), or weights.  The maker's records (make.c's styles), till the theme's data gives them */
+** sides, as noted), or weights.  The maker's records (uses.c's styles), till the theme's data gives them */
 struct style {
     unsigned char   lit;                        /* A room lit by its own light: in 8, one fewer each stratum down */
     unsigned char   zones, zones3;              /* A long room (6 squares) in zones: in 10; three (9 squares): in 3 */
@@ -33,7 +33,17 @@ struct style {
     unsigned char   t_hidden, t_magic;          /* A trap hidden: in 10; of those, by magic: in 10 */
     unsigned char   d_trap;                     /* A closed door trapped: in 20 */
 };
-extern const struct style* SP;                  /* The chunk's stratum's (make.c's) */
+extern const struct style* SP;                  /* The chunk's stratum's (make.c's: sty) */
+extern struct style sty;
+
+/* uses.c (overlay 7's): a built stratum's plan of uses (DUNGEON.md: built to a plan) */
+unsigned char __fastcall__ uses (unsigned char step, unsigned char arg);
+enum { US_STYLE, US_PLAN, US_FLOOR, US_THING, US_SIGN };   /* The style arg's copied into sty (make.c's, for each
+                                                **   chunk); the chunk's rooms given their uses (built.c's, sorted);
+                                                **   their floors and ceilings by them (once they're zoned); what room
+                                                **   arg & 7 has lying about (its die arg >> 3: a kind, or 0), its use's
+                                                **   mark (and arg's 0x80, a kitchen's well) (stock.c's) */
+extern unsigned char ufort, uwater;             /* (The chunk's stratum fortified (P_FORT), the chunk's water) */
 
 extern struct chunk* L;
 extern const struct edges* E;
@@ -49,8 +59,8 @@ void __fastcall__ place_pieces (unsigned char n);   /* The theme's pieces in str
 
 /* changes.c: what's changed, and what's been seen, kept */
 void changes_init (void);
-int changes_save (void);                        /* The records into the save's folder: 0, or -1 */
-int changes_restore (void);                     /* And back */
+int changes_save (void);                        /* The records into the save's folder: 0, or -1 (part 2's) */
+int changes_restore (void);                     /* And back (part 2's) */
 void __fastcall__ change_keep (unsigned char sn, unsigned x, unsigned y, unsigned char tile, signed char elev,
     unsigned char link);
 unsigned char __fastcall__ changes_over (struct chunk* k, unsigned x, unsigned y);     /* 1: it's been stocked */
@@ -62,7 +72,7 @@ void __fastcall__ seen_keep (unsigned char s);
 void __fastcall__ seen_over (struct chunk* k);
 
 /* map.c */
-void draw_map (void);
+void draw_map (void);                           /* (Part 1's: ../dq0/swap.inc) */
 
 /* work.c: a portal or a trap worked, for the world (M_WORK: its reply written into q); a portal's leaf's body (its
 ** material PM_*, its size, its thickness, its state: fixtures.c's too) */
@@ -74,7 +84,7 @@ void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
 void __fastcall__ bread (unsigned char bank, const void* from, void* to, unsigned n);
 void __fastcall__ bwrite (unsigned char bank, void* to, const void* from, unsigned n);
-extern unsigned char ovbank[5];
+extern unsigned char ovbank[7];
 
 /* make.c: a hub's bank reached from an overlay (its bytes copied to the main RAM, or from it, or set) */
 void __fastcall__ hub_get (unsigned char bank, const void* from, void* to, unsigned n);

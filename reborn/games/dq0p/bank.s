@@ -8,15 +8,27 @@
 ;   unsigned __fastcall__ m0 (void* f);                         f ()
 ;   unsigned __fastcall__ m1 (void* f, unsigned a);             f (a)
 ;   unsigned __fastcall__ m2 (void* f, unsigned a, unsigned b); f (a, b)
+;
+; And the things' swapped parts (../dq0/swap.inc): code run in the main RAM's top (dq0p.cfg's SWAP), a part at a time,
+; copied there as it's called from the bank its images are in (things.c's catalogue reads them in after the kinds:
+; dq0p.cfg's OV2); a call of a part's function goes through its stub here (SWFN).
 
-            .export     _m0, _m1, _m2
+            .export     _m0, _m1, _m2, _ovbank
             .import     popax, pushax, _cat_map
+
+            .include    "zeropage.inc"
+
+BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
+SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 
             .bss
 fn:         .res        2                   ; The function called
 keepa:      .res        1                   ; (.A and .X kept)
 keepx:      .res        1
 arga:       .res        2                   ; (m2's a)
+_ovbank:    .res        1                   ; The parts' images' bank (dq0p.cfg's OV2)
+ova:        .res        1                   ; (.A and .X kept through a stub)
+ovx:        .res        1
 
             .code
 
@@ -61,3 +73,21 @@ call:
             rts
 go:
             jmp         (fn)
+
+; ---- The swapped parts
+
+            .include    "../dq0/swap.inc"
+
+            SWPART      1, 1                ; The store kept, the kit (their images dq0p.cfg's OV2, but in
+                                            ;   _ovbank's first, the task's one bank: the catalogue's is the hub's)
+            SWPART      2, 1                ; Hidden, a search, a thing described
+            SWPART      3, 1                ; Taken up, put down, a tool worn
+
+            SWFN        keep, 1
+            SWFN        kit, 1
+            SWFN        hide, 2
+            SWFN        search, 2
+            SWFN        describe, 2
+            SWFN        get, 3
+            SWFN        drop, 3
+            SWFN        wear, 3

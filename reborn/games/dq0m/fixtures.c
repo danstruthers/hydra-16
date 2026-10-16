@@ -5,7 +5,10 @@
 ** walls the rock; a mine's all stone); windows (glass, shutters, bars: any of them) and arrow slits in a room's
 ** walls where a passage runs beside them; portcullises for some doors; traps (pits, open or hidden; deadfalls,
 ** blades, darts, gas, alarms, a trodden plate's or a wire's; a door's, set off as it's opened).  Every proportion the
-** style's (no windows, portcullises or set traps in a natural cave: only its pits).
+** style's (no windows, portcullises or set traps in a natural cave: only its pits).  A fortified stratum's (DUNGEON.md:
+** built to a plan; uses.c's ufort): its gatehouse's doors portcullises (raised, their winches on its side), murder
+** holes in its vault, arrow slits in its walls and its guardrooms' where a passage runs beside them, covering the
+** way in; its doors stouter (more of them iron-bound, an inch thicker) and fewer of them open.
 **
 ** Each with its own dice, from the chunk's place and the fixture's (as pass.c's doors' are), so the grower's layout
 ** never moves for them; and nothing that would part a chunk's ways: an open pit only where the squares round it
@@ -91,12 +94,12 @@ static void __fastcall__ windows (unsigned char r)
 {
     struct room* q = &L->room[r];
     struct portal* p;
-    unsigned char d, k, len, x, y, t;
+    unsigned char d, k, len, x, y, t, fort = ufort && (q->kind == U_GATEHOUSE || q->kind == U_GUARDROOM);
 
     for (d = 0; d < 4; ++d) {
         len = d == DIR_N || d == DIR_S ? q->w : q->h;
         dseed (2, r << 2 | d);
-        if (dr (20) >= SP->windows) {
+        if (dr (20) >= SP->windows && !fort) {  /* (A fortified gate's: slits wherever they cover a way) */
             continue;
         }
         for (k = dr (len), t = 0; t < len; ++t, k = k + 1 < len ? k + 1 : 0) {
@@ -107,7 +110,7 @@ static void __fastcall__ windows (unsigned char r)
                 TILE (L->tile[y + dir_y[d]][x + dir_x[d]]) != T_CORR) {
                 continue;
             }
-            if (!(p = portal (x, y, dr (20) < SP->slits ? PK_SLIT : PK_WINDOW))) {
+            if (!(p = portal (x, y, fort || dr (20) < SP->slits ? PK_SLIT : PK_WINDOW))) {
                 return;
             }
             L->tile[y][x] = T_WINDOW;
@@ -152,6 +155,61 @@ static void portcullises (void)
     }
 }
 
+/* A fortified stratum's doors (uses.c's ufort): its gatehouse's ways out portcullises, every one (a doorway given
+** one), raised (their winches on its side), murder holes in its vault; the rest stouter (more iron-bound) and fewer
+** open */
+static void fortify (void)
+{
+    struct portal* p;
+    struct room* q;
+    unsigned char i, r, d, x, y, k, len;
+
+    if (!ufort) {
+        return;
+    }
+    for (r = 0, q = L->room; r < L->nrooms; ++r, ++q) {
+        if (q->kind != U_GATEHOUSE) {
+            continue;
+        }
+        q->flags |= R_MURDER;
+        for (d = 0; d < 4; ++d) {               /* (Its walls, each side's squares: a way out's) */
+            len = d == DIR_N || d == DIR_S ? q->w : q->h;
+            for (k = 0; k < len; ++k) {
+                x = d == DIR_N || d == DIR_S ? q->x + k : d == DIR_W ? q->x - 1 : q->x + q->w;
+                y = d == DIR_W || d == DIR_E ? q->y + k : d == DIR_N ? q->y - 1 : q->y + q->h;
+                if (x >= CW || y >= CW || TILE (L->tile[y][x]) != T_DOOR) {
+                    continue;
+                }
+                for (i = 0, p = L->portal; i < L->nportals && (p->x != x || p->y != y); ++i, ++p) {
+                }
+                if (i == L->nportals && !(p = portal (x, y, PK_PORTCULLIS))) {
+                    continue;                   /* (A doorway: given one, if there's room) */
+                }
+                if (p->state & PS_HIDDEN) {
+                    continue;
+                }
+                p->kind = PK_PORTCULLIS;
+                p->state = PS_OPEN;
+                p->lock = 0;
+                p->mat = PM_IRON;
+                p->parts = PP_BARS;
+                p->bar = (d + 2) & 3;           /* (Its winch on the gatehouse's side) */
+            }
+        }
+    }
+    for (i = 0, p = L->portal; i < L->nportals; ++i, ++p) {
+        dseed (7, p->x << 5 | p->y);
+        if (p->kind == PK_DOOR && !(p->state & PS_HIDDEN)) {
+            if (p->mat == PM_WOOD && dr (2)) {
+                p->mat = PM_IRONBOUND;
+            }
+            if ((p->state & PS_OPEN) && dr (2)) {
+                p->state &= ~PS_OPEN;
+            }
+        }
+    }
+}
+
 /* ---- The portals' make (each with its own dice, the sixth decision's: its square's): its size (a built place's
 ** doors much alike, the stratum's own, a few odd; a cave's, a mixed place's, each its own, added later), its
 ** thickness, its state (as made, by the style; then worn by the stratum's age, the faster the softer its material:
@@ -185,6 +243,8 @@ static void make (void)
             t = 2;                              /* (Its bars) */
         } else if (p->mat == PM_IRON) {
             t = 1;                              /* (A plate) */
+        } else if (ufort && p->kind == PK_DOOR) {
+            ++t;                                /* (A fortified place's: an inch thicker) */
         }
         q = alike ? 4 + dr (4) : 2 + dr (6);    /* (As made) */
         h = h > 15 ? 15 : h;
@@ -304,6 +364,7 @@ void __fastcall__ o_fixtures (struct chunk* c)
         windows (r);
     }
     portcullises ();
+    fortify ();
     make ();
     traps ();
 }

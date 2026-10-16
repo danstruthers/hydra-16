@@ -6,8 +6,8 @@
 ** "stop searching", "stop listening", "stop mapping", "stop running"), "status", and a small move ("move left one
 ** space", "step forward", "go north 20 feet", "back up two squares", "sidestep right": a square is 5 feet, a yard 3).
 ** The pace and the watchfulness are set in the hub (the hub's gait and watch), the referee's to word (RS_DESCRIBE b
-** 3), the small move the world's (I_STEP).  Its own words matched here; the direction the parser's (a relative one made the
-** compass's).
+** 3), the small move the world's (I_STEP).  Its own words matched here; the direction the parser's (a relative one
+** made the compass's).
 */
 
 #include <stdlib.h>

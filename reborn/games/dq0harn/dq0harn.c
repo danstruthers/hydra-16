@@ -13,9 +13,12 @@
 ** first time, kept in a bank after), RS_ATTACK (a blow struck, HarnMaster's melee: by the character, or at it),
 ** RS_MORALE, RS_TIME (bleeding), RS_EXERT (fatigue, by the pace moved at, and rest); RS_DESCRIBE b 3 (its state,
 ** the status command's, the hub's pace and watchfulness).  Its summary gives each pace's step, and the notice
-** tests go by the character's pace and state.  The sheet's words and the harm are overlay 1's (sheet.c), the fights
-** overlay 2's (fight.c): DIR/dq0harn.ovl, read into banks of its own as it starts.  Its slots: the hub's two (the world's, the
-** UI's), and the denizens' task's in the denizens' bank (DSLOT_AT: copied out, answered, copied back).
+** tests go by the character's pace and state.  The sheet's words and the harm are overlay 1's (sheet.c), the
+** fights overlay 2's (fight.c): DIR/dq0harn.ovl, read into banks of its own as it starts.  Its slots: the hub's two
+** (the world's, the UI's), and the denizens' task's in the denizens' bank (DSLOT_AT: copied out, answered, copied
+** back).  hmchar's file read and written, and the creatures' sheets kept, are swapped part 1's (../dq0/swap.inc: run
+** in the main RAM's top, a part at a time, copied there from overlay 4's bank as it's called; harnfile.c), the names
+** part 2's (harnname.c), with the tool a dig takes.
 **
 ** The game's own choices in using the book (not the book's rules): a purpose names the skill (or attribute times 5)
 ** a GM would call for; a skill not opened is tested at its OML, as if opened on first use.
@@ -31,6 +34,13 @@
 #include "../dq0/hub.h"
 #include "../dq0/rs.h"
 #include "dq0harn.h"
+
+#pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
+
+void __fastcall__ load_pc (struct req* r);      /* (Part 1's stubs: bank.s's) */
+void __fastcall__ save_pc (struct req* r);
+void __fastcall__ beasts (unsigned char back);
+unsigned char __fastcall__ dig_tool (unsigned char m);     /* (Part 2's) */
 
 harn_char pc;                                   /* The character */
 char name[16], calling[20];
@@ -155,9 +165,12 @@ unsigned char __fastcall__ has (const char* key)
     return 0;
 }
 
+#pragma code-name (push, "SW2CODE")
+#pragma rodata-name (push, "SW2RODATA")
+
 /* The tool to hand that suits the material best (bare hands, digger's 0, if none does better; of two as good, the
 ** one it wears less): its digger's number */
-static unsigned char __fastcall__ dig_tool (unsigned char m)
+unsigned char __fastcall__ s_dig_tool (unsigned char m)
 {
     unsigned char k, t, best = 0, r, br = digger[0].rate[m];
 
@@ -175,6 +188,9 @@ static unsigned char __fastcall__ dig_tool (unsigned char m)
     }
     return best;
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- A purpose: the skill a GM would call for, or an attribute (an attribute | 0x80: tested times 5) */
 
@@ -314,6 +330,9 @@ static void status (void)
     s->power = 10;
 }
 
+#pragma code-name (push, "SW1CODE")
+#pragma rodata-name (push, "SW1RODATA")
+
 /* ---- hmchar's file: its own lines, the name and the occupation (and the game's: its pace, its watchfulness and its
 ** exertion toward the next fatigue level, "pace 2 1 1200") */
 
@@ -334,7 +353,7 @@ static void __fastcall__ own_line (char* l)
     }
 }
 
-static void __fastcall__ load_pc (struct req* r)
+void __fastcall__ s_load_pc (struct req* r)
 {
     static char path[64];
     int fd;
@@ -356,7 +375,7 @@ static void __fastcall__ load_pc (struct req* r)
 }
 
 /* The character's sheet written (r's text a path): 0, or 1 */
-static void __fastcall__ save_pc (struct req* r)
+void __fastcall__ s_save_pc (struct req* r)
 {
     static char line[48];
     char b[12];
@@ -392,6 +411,9 @@ static void __fastcall__ save_pc (struct req* r)
     r->result = 0;
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 /* ---- The creatures' sheets (fight.c's): a bank of the referee's, a sheet a denizen's record (its number the
 ** denizens' task's), kept in the save folder's beasts.dat with the game's other records (read back as the first
 ** creature's asked for, a game carried on) */
@@ -414,8 +436,11 @@ void __fastcall__ sheet_put (unsigned char n)
     bwrite (sb, (struct beast*) 0x8000 + n, &bs, sizeof bs);
 }
 
+#pragma code-name (push, "SW1CODE")
+#pragma rodata-name (push, "SW1RODATA")
+
 /* The bank written to the save folder's beasts.dat (back 1: read from it, or cleared: none there; 2: cleared) */
-static void __fastcall__ beasts (unsigned char back)
+void __fastcall__ s_beasts (unsigned char back)
 {
     static char path[56];
     unsigned off;
@@ -442,6 +467,9 @@ static void __fastcall__ beasts (unsigned char back)
         close (fd);
     }
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* Whether it speaks tongue t (a word of tongues, a space before it) */
 static unsigned char __fastcall__ speaks (const char* t)

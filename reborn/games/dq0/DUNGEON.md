@@ -117,6 +117,14 @@ features), filling the rest:
 - **mines:** tunnels along a vein, galleries where it widened, shafts and ladders, timbering;
 - **mixed:** built into natural, natural breaking into built.
 
+Natural places are irregular (the user, 2026-10-16: "For natural areas and tunnels, they need to be irregular in
+shape (not straight tunnels, not rectangular rooms).  The dungeon "grower" should take care of that."): dq0m/caves.c's
+tunnels wind from each way across the chunk's edges to its middle, heading a while and bending, now narrower and now
+wider, with pockets in their sides and blind forks off them; its chambers are grown by a wanderer from their middles,
+ragged, each in a box of its own clear of the others', and a chamber's room record is the bounds of its floor (the
+squares in them that are floor are its own: its stock, its traps, the walks across it go by them); a chamber's floor
+is a hollow or a hump on the ground's unevenness, smoothly.  Mines and built places stay hewn straight.
+
 **Every proportion is the style's** (the user, 2026-10-14: "All of the percentages of each type of thing should be
 part of the style (natural caves don't usually have doors, for instance, unless extended by sentient beings)."): how
 often a room is lit, in zones, sloping; its ceilings' kinds; how often a way out has a door, and the doors' states,
@@ -130,6 +138,75 @@ water's made of it (flooded hollows, flowstone), the less is left of what was bu
 Within a chunk, an **area** is a zone of a room, a passage, a stretch of cave: a plane (an elevation, a slope) and a
 ceiling (a kind, its height at the middle and at the walls).  A square's floor elevation is kept square by square
 (the planes made concrete, with the rough floors of caves), so movement and sight can take the floor as it is.
+
+### Built to a plan: a stratum's purpose, its rooms' uses
+
+The user (2026-10-16): "Also remember that purpose-built spaces are normally built to a plan, with a well for water
+somewhere if available.  straight, flat rooms and passages (on the same strata at least), and rooms that make sense
+(feast halls near kitchens near pantries and storage).  Fortified versus not are built differently, etc.  Larger
+rooms tend to have higher ceilings, and corridors and smaller rooms tend to have uniform ceiling heights, depending
+on original use, of course.  These are the kinds of things that make a dungeon feel real.  Prior usage can also
+inform the builder/populater what kinds of detritus or other items may be in the room."  And: "If an area is
+inhabited by denizens, their current use of the space would dictate what kinds of things are to be found there as
+well" (that's the denizens' lairs' stocking, over this one: the lights and tracks' work).
+
+So a stratum grown by the built grower has a **purpose**, the theme's (a stratum's line in its file: a keep, a
+temple, a manor's cellars, a mine's works, a crypt, or plain halls), and is **fortified** or not (a keep is, the
+rest not, unless the theme says so).  The purpose is a plan of **uses** for its rooms, laid out over the stratum by
+how far a chunk is from the **way in** (the stratum's first way up: the way out of the top one, the foot of the way
+down from the stratum above): each chunk has a **role** by its ring (the chunk of the way in its ring 0, its
+neighbours ring 1, and so on to 4 and beyond), a few chunks in four taking the next ring's for variety:
+
+| purpose  | ring 0         | ring 1     | rings 2-3           | ring 4 on         |
+|----------|----------------|------------|---------------------|-------------------|
+| keep     | gate           | garrison   | domestic            | lord's            |
+| temple   | shrine         | cloister   | domestic, cloister  | shrine            |
+| cellars  | stores         | stores     | domestic, stores    | cells             |
+| crypt    | shrine         | tombs      | tombs               | tombs             |
+| works    | works          | works      | garrison, works     | stores            |
+| halls    | domestic       | stores     | domestic, lord's    | cells             |
+
+Not a formula (the user, 2026-10-16, on the stand-in themes' purposes: "I don't really want it to be too formulaic.
+A temple could sit over the ruin of an older keep, say.  I just want the things on the same strata to make sense."):
+a stratum's purpose is its **first layer of history**, what it was first built for; what came after (ruined,
+reused, built over: a temple over an older keep's ruin) is the strata's histories' work, to come (slice 4.9), each
+stratum making sense in itself.
+
+(A fortified stratum's ring 0 is a gate whatever its purpose.)  A role is a **suite**: its main room (the chunk's
+largest; a gate's, the room the way in comes out in) and the uses along the chain of rooms each side of it, as the
+grower joins them (each room to the next from the west): a domestic suite's hall, then its kitchen, its pantry, its
+storerooms on one side, quarters on the other; a gate's gatehouse, guardrooms and barracks each side, an armoury
+beyond; the lord's solar by a chapel and a vault, far from the gate.  So the hall's next to the kitchen, the
+kitchen's next to the pantry, the stores beyond; the barracks by the gate; the lord's quarters as far from it as the
+stratum goes.  The rooms' uses: a chamber (its use lost), a hall, cells, a vault, a crypt, a gallery, a storeroom,
+a kitchen, a pantry, barracks, an armoury, a chapel, quarters, the lord's solar, a well room, a cistern, a gatehouse,
+a guardroom, a workshop: each named by the theme (its rooms' eight words, and the uses' twelve more: a kobold's
+"cookpit" for a kitchen).  A room's kind is its use (struct room's kind, world.h's U_*), the theme's word for it,
+for anyone who reads it (the lights', the denizens', the senses').
+
+- **Water:** a **well** where the stratum has water (the plan's water, to come with the water's step: a hook, for
+  now from the stratum's seed and the region): in a domestic suite's kitchen, or a well room of its own in the
+  stores'; a cistern where the cellars want one.  A well is a fixed thing (its stone curb) on its room's floor.
+- **Flat and straight:** a built stratum's ground is level (the plan's rock lies flat under it), so its rooms and
+  passages are flat, one floor; its zones one plane each, never sloping, all at the room's floor, but a hall's
+  **dais** (its last zone two feet up, a step along its front).  Passages run straight between their doors, a
+  dog-leg at most.  (Mines and mixed strata keep the rock's lie: they follow the vein, the caves.)
+- **Ceilings by size and use:** a great hall's high and vaulted (a barrel vault, a pointed one in a big hall), a
+  chapel's high and pointed (domed if it's square), a gatehouse's high enough for its portcullis and the murder
+  holes over it, a kitchen's high for its smoke; crypts, vaults, galleries and cisterns barrel-vaulted and low; the
+  rest (storerooms, pantries, cells, quarters, barracks, guardrooms, a well room) flat at the stratum's own height,
+  the passages' too: one height for all of them, the builders' (a chunk's passages' ceiling kept with it).  The
+  bigger the room the higher, within its use.
+- **Fortified or not:** a fortified stratum's way in is a **gatehouse** (the room the way in comes out in): its
+  doors portcullises (raised; their winches on its side) and stout iron-bound doors, murder holes in its vault (a
+  room's flag: their words the senses'), arrow slits in its walls and its guardrooms' where a passage runs beside
+  them, covering the way in; its doors thicker and more often iron-bound, fewer of them open, fewer loops among the
+  rooms (a choke point: one way on).  An open plan's the other way: many doors, many standing open, more ways round.
+- **What's left lying about**, by the room's former use and the stratum's age (the stock's): a kitchen's pots, its
+  bones and potsherds; a pantry's sacks and baskets; an armoury's rusted blades and arrows; a chapel's candle stubs;
+  a barracks' or a cell's straw and bones; a guardroom's table and chair; a vault's chest and pennies; a workshop's
+  tools; the theme's word for each where it has one.  Age rots what rots: the older the stratum, the more of the
+  wood, the cloth, the straw and the food gone to dust (bones and potsherds last).
 
 ### Openings and ways between strata
 

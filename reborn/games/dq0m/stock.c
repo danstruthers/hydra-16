@@ -1,11 +1,14 @@
 /*
 ** stock.c - (dq0m) a chunk's ordinary things put down, once, as it's first made (DUNGEON.md: items): in its rooms
-** (a cave's chambers), by its stratum's style's say (how often, which kinds, how many concealed, and how well); the
+** (a cave's chambers), by its stratum's style's say (how often, how many concealed, and how well), what lies about
+** by each room's former use (uses.c's: a kitchen's pots and bones; a chamber's, a cave's, the style's kinds), the
+** stratum's age rotting what rots, and each use's mark (a kitchen's pot, a chapel's candle stubs, a well); the
 ** things' records taken from the hub's item store under its lock (the things task, dq0p, keeps them after).  A
 ** chunk stocked is marked among the change records (STOCKED), so a chunk made again isn't stocked twice.
 **
-** (stock () is overlay 3's, the maker's, called through bank.s's stub; put_down the main code's, that maps the
-** hub's banks, the window put back as it was after.)
+** (stock () is overlay 7's, the maker's, beside uses.c, whose leavings it asks for (overlays 3 and 5 the caves' and
+** the fixtures' room), called through bank.s's
+** stub; put_down the main code's, that maps the hub's banks, the window put back as it was after.)
 */
 
 #include <string.h>
@@ -72,8 +75,8 @@ static void __fastcall__ part (unsigned char kind, unsigned char sn, unsigned x,
     }
 }
 
-#pragma code-name ("OV3CODE")
-#pragma rodata-name ("OV3RODATA")
+#pragma code-name ("OV7CODE")
+#pragma rodata-name ("OV7RODATA")
 
 /* The theme's piece i put down in the chunk, on a square of a room's floor (else of its passages'), and its place
 ** given its square */
@@ -105,15 +108,17 @@ static void __fastcall__ piece_down (const struct chunk* c, unsigned char i, uns
     }
 }
 
-/* The chunk (in the main RAM; its first square x0, y0 in the frame) stocked: two tries a room, each a thing at the
-** style's odds, at a square of its floor; the theme's pieces whose place it is; then its portals' parts (a barred
+/* The chunk (in the main RAM, the growers' L; its first square x0, y0 in the frame) stocked: two tries a room, each a
+** thing at the style's odds, at a square of its floor, of a kind its use left; its use's mark, in its middle (and a
+** kitchen's well, where there's water, by its west wall); the theme's pieces whose place it is; then its portals'
+** parts (a barred
 ** door's bar in its brackets, some unbarred doors' set aside by them, one in four; a window's pane, its bars), with
 ** no dice: nothing else moves for them */
 void __fastcall__ o_stock (const struct chunk* c, unsigned x0, unsigned y0)
 {
     const struct room* r;
     const struct portal* p;
-    unsigned char i, n, lx, ly, k, hidden;
+    unsigned char i, n, lx, ly, k, hidden, d, q, h;
     unsigned x, y;
 
     rseed (strata[c->sn].seed ^ ((unsigned long) c->cx << 16 | c->cy) * 69069UL ^ 0x5EED);
@@ -129,9 +134,24 @@ void __fastcall__ o_stock (const struct chunk* c, unsigned x0, unsigned y0)
                 continue;
             }
             hidden = random (20) < SP->hidden;
-            k = hidden ? SP->hide_kinds[random (4)] : SP->kinds[random (8)];
-            put_down (k, c->sn, x0 + lx, y0 + ly, k == KI_PENNIES ? 2 + random (20) : 1,
-                hidden ? SP->h_lo + random (SP->h_span) : 0xFF);
+            d = random (hidden ? 4 : 8);
+            k = hidden ? SP->hide_kinds[d] : uses (US_THING, i | d << 3);
+            q = (hidden ? k : SP->kinds[d]) == KI_PENNIES ? 2 + random (20) : 3;    /* (The style's kind's draws:
+                                                **   the stock's dice as they were before its uses) */
+            h = hidden ? SP->h_lo + random (SP->h_span) : 0xFF;
+            if (k) {                            /* (Else rotted away) */
+                put_down (k, c->sn, x0 + lx, y0 + ly, k == KI_PENNIES ? q : 1, h);
+            }
+        }
+    }
+    for (i = 0; i < c->nrooms; ++i) {           /* (Each room's use's mark, and a kitchen's well: no dice) */
+        r = &c->room[i];
+        for (n = 0; n < 2; ++n) {
+            lx = n ? r->x : r->x + r->w / 2;
+            ly = r->y + r->h / 2;
+            if ((k = uses (US_SIGN, i | (n ? 0x80 : 0))) && TILE (c->tile[ly][lx]) == T_FLOOR) {
+                put_down (k, c->sn, x0 + lx, y0 + ly, 1, 0xFF);
+            }
         }
     }
     for (i = 0; i < NPIECES; ++i) {             /* (The theme's pieces whose place is the chunk: on a room's floor) */
