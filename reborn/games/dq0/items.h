@@ -64,6 +64,7 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
     KI_BODY,                                    /* (A denizen dead: the denizens' task's) */
     KI_LEATHER_CAP, KI_LEATHER_TUNIC, KI_GAMBESON, KI_RING_BYRNIE, KI_MAIL_HAUBERK, KI_GAUNTLETS, KI_BOOTS,  /* Armour (its
                                                 **   key the referee's piece) */
+    KI_HELM, KI_SANDALS, KI_SHOES, KI_HOBNAIL, /* (A helm; footwear: its soles the referee's, against a kick) */
     KI_MACE, KI_SPEAR, KI_SHIELD,               /* Weapons (the referee's by their keys) */
     KI_COUNT };
 

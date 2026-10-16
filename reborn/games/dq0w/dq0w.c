@@ -1553,8 +1553,9 @@ static unsigned char turns_run (void)
         return 0;
     }
     if (BEHIND && !late) {
-        while (BEHIND && hy_ticks () - waited < 100) {
-            hy_sleep_ticks (1);                 /* (Waited for here: the rest of the round's no use) */
+        while (BEHIND && hy_ticks () - waited < 1000) {
+            hy_sleep_ticks (1);                 /* (Waited for here, five seconds at most: the rest of the round's no
+                                                **   use; a fight's blows ask the referee a few times over) */
         }
         late = BEHIND;
         return 1;

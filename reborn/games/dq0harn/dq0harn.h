@@ -50,17 +50,39 @@ void __fastcall__ sheet_get (unsigned char n);  /* Sheet n into bs */
 void __fastcall__ sheet_put (unsigned char n);  /*   and back */
 
 /* sheet.c (overlay 1) */
-#define OVLS    2
+#define OVLS    3
 extern char hurt[200];                          /* The last harm's words */
-extern char blow[8];                            /* (A blow's: what it's struck with, its key) */
 void sheet (void);                              /* The sheet, into the reply */
 void brief (void);                              /*   its short lines */
 void __fastcall__ harm (struct req* r);         /* A harm (r a copy, in the main RAM, but its text) */
 
 /* fight.c (overlay 2) */
 void __fastcall__ fight (struct req* r);        /* RS_NEW_ACTOR, RS_ATTACK, RS_MORALE, RS_TIME (r a copy, as harm's) */
-unsigned char __fastcall__ pc_armour (unsigned char loc, unsigned char aspect);    /* The character's armour at loc
-                                                **   against an aspect (HARN_*), all its worn pieces' */
+
+/* A side of a fight, as a blow wants it (fight.c's; gear.c's for the character) */
+struct bkind;
+struct side {
+    harn_char*      c;
+    unsigned char   who;                        /* 0 the character, else an actor's entry plus 1 */
+    unsigned char   size;
+    int             aml, dml, dodge;            /* Its attack's EML, its block's (with what it holds), its dodge's */
+    signed char     imp[3];                     /* Its weapon's impacts */
+    unsigned char   part;                       /* (Its weapon a part of it: the part it strikes with; else 0xFF) */
+    unsigned char   bare;                       /* (Its block a bare arm's) */
+    const struct bkind* b;                      /* (A creature's entry; 0: the character) */
+    char            word[8];                    /* Its weapon, in a word */
+};
+
+/* gear.c (overlay 3): the character's weapons and armour */
+void __fastcall__ pc_side (struct side* s);     /* Its side of a fight: what it strikes with (pc_way's), blocks with,
+                                                **   dodges */
+unsigned char __fastcall__ pc_armour (unsigned char loc, unsigned char aspect);    /* Its armour at loc against an
+                                                **   aspect (HARN_*), all its worn pieces', the last named in arm
+                                                **   (""); loc SOLE: its soles' (a kick at a thing) */
+#define SOLE    0x7F
+extern char arm[16];
+extern unsigned char pc_way;                    /* (The hub's pc_strike, as a request's answered: SK_*) */
+extern unsigned char at_thing;                  /* (Its blow at a thing: its best the tool that hits it hardest) */
 
 /* bank.s */
 void __fastcall__ setbank (unsigned char b);

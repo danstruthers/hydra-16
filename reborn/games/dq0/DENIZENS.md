@@ -236,15 +236,13 @@ words; idle, the CPU 64% busy to 50% (the world's and the sound task's loops slo
   stand-in bestiary, the game's own numbers, each attribute varied by a die of its own so no die of the referee's is
   spent on it), made the first time and kept after (its wounds, its state) in a bank of the referee's, saved with
   the game (beasts.dat).
-- **Attitudes:** each denizen's record has one (hub.h's AT_*, the actor's attitude field: hostile -3 ... devoted 3,
-  neutral 0), its kind's to begin with till the theme's factions say (the bold hostile, those that keep to their lairs
-  unfriendly, the rest wary); one struck at turns hostile, one that flees unfriendly.
 - **Fights** (the user's choice, 2026-10-16; the referee's, HarnMaster's melee, behind rs.h's RS_ATTACK): a hostile
-  actor sensing the character beside it strikes at it, a round at a time (the referee's round: at the turns pace a
+  actor (its attitude: the second step's, below) sensing the character beside it strikes at it, a round at a time (the referee's round: at the turns pace a
   slice; at the real paces as the clock runs); an unfriendly one only when the character is beside it; a hostile one
   comes towards it.  The character strikes at one beside it ("attack the rat", "hit", "fight": a round of its
   time, the world's I_ATTACK, the blow posted for the denizens' task, pc_foe) with the best weapon it holds (else its
-  fists), defending by its stance ("defend dodge", "block", "counter", "none", "best"); its armour is what it wears
+  fists; or a fist, a foot, its head as it says: punch, kick, head butt the rat, by Unarmed, the book's hand, foot
+  and head), defending by its stance ("defend dodge", "block", "counter", "none", "best"); its armour is what it wears
   (the things tell the referee what's held and worn, and how well made: RS_EQUIP's marks).  Each blow is told
   (E_FIGHT in the denizens' queue, its words in a ring in their bank: the referee's for the wounds and the armour, the
   UI's for the rest, overlay 6), heard by the others (they turn to it) and played (the sound task's *hit, *swish).
@@ -253,6 +251,43 @@ words; idle, the CPU 64% busy to 50% (the world's and the sound task's loops slo
   if it's struck meanwhile; one bleeding loses blood a minute at a time (RS_TIME) and may die of it; one dead leaves its
   body (an item: a body, a skeleton's bones) and never comes back.  The character knocked senseless waits it out (it
   can't defend meanwhile); dead, the game ends.
-- **Later:** factions and influence; allies fighting beside the character; missiles (a bow through an arrow slit);
-  the character's own bleeding and its treatment; their exploring and digging; the theme's factions (the theme as
-  data is built: which of the kinds live in it).
+- **Later:** allies fighting beside the character, and factions fighting each other; missiles (a bow through an
+  arrow slit); the character's own bleeding and its treatment; their exploring and digging; the theme's factions
+  (the theme as data is built: which of the kinds live in it).
+
+### Attitudes and influence (the second step)
+
+- **Factions:** a stand-in theme's (dq0d/factions.txt, made part of the denizens' data file, where a theme's will take
+  their place): each one's tongue, its attitude to the character as it first meets it, and how it stands with each
+  other one (hostile, wary, indifferent, friendly: the worse of the two ways it's said).  Each kind (kinds.txt) has
+  its faction, its mind (mindless, a beast, low, average, cunning) and its own steps for or against swaying it.  The
+  denizens' head keeps each faction's attitude now (its newcomers': a stratum populated later starts from it).
+- **Attitudes:** each denizen's in its record (hub.h's AT_HOSTILE ... AT_ALLIED, saved with them), and an actor's in
+  the hub's (struct actor's attitude and faction: the fights read them, a hostile one fights; its foe, an actor of a
+  faction hostile to its own within four squares).  They move by what happens: a lair intruded on (a kind that keeps
+  to its lair, the character beside its home: a step down, once a visit), the character seen with an ally of a
+  faction hostile to its own (a step down, once), harm done (the one harmed hostile, its lair's kin two steps down,
+  the rest of its faction one, the faction's own attitude one; those of factions hostile to it that sense it a step
+  up, to friendly at most).  And each acts by its attitude: a hostile one comes at the character (to its side); an
+  unfriendly one keeps three squares off, a bold one coming that near; a wary or indifferent one by its kind's ways (a
+  shy one keeps its distance); a friendly one doesn't shy from it.  Denizens of factions hostile to one another keep
+  off one another (a step away within three squares) till the fights come.
+- **Influence:** the character's words (talk to, persuade, deceive, threaten; calm and befriend an animal) are the
+  UI's request to the denizens' task (the hub's sway): it finds the one meant (a word of its name or its kind's, the
+  nearest seen, or within four squares), and asks the referee in the UI's slot, lent it while the UI waits: a test of
+  Rhetoric (P_PERSUADE, P_INTIMIDATE), Intrigue (P_DECEIVE) or, for a beast, Animalcraft (P_ANIMALS) at steps by its
+  attitude (hostile -3 ... friendly +1), its kind's own and its mind (the low easily fooled and hard to reason with,
+  the cunning hard to fool).  Words want a tongue in common: its faction's, said to the referee, which knows the
+  character's (common, its own, and its file's "language" lines); a threat doesn't.  Nothing sways the mindless; words
+  don't reach a beast (Animalcraft within eight squares); a critical success moves the attitude two steps, a success
+  one, a critical failure a step back (a lie found out two, a threat laughed at hostile), as far as that way goes
+  (talk and deceit to friendly, a threat to wary, calming to indifferent, persuasion and befriending to an ally).  A
+  round's work (a threat half that).
+- **Allies:** one won over follows the character by its own senses (to where it last sensed it, till it's beside it),
+  comes along with it up and down a way (beside it as it goes: put on a square beside the character on the stratum it
+  comes to), waits where it's asked, goes its own way when it's dismissed (friendly then).  Its requests are the
+  parser's: follow me, stay here (every ally in earshot), tell Grub to wait, ask the rat to follow me, dismiss Grub,
+  tell Grub to fetch the key (not yet: fetching things wants the things' store); a name given it (name the rat Grub:
+  the head's names, kept) is its own from then on.  Left waiting out of the character's reach an hour, it goes its
+  own way; harmed, it's hostile.
+- **A blow** (the fights', above) is harm done, as above; one that flees is unfriendly after.

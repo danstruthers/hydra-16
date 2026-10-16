@@ -62,6 +62,10 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "mail hauberk", K_WEAR, 132, 10, 0, 0, 0, 0, 4, "mailhbk", MT_IRON, AP_ARMOUR, 990 },
     { "gauntlets", K_WEAR | K_PLURAL, 3, 1, 0, 0, 0, 0, 2, "gauntlt", MT_LEATHER, AP_ARMOUR, 16 },
     { "knee boots", K_WEAR | K_PLURAL, 15, 4, 0, 0, 0, 0, 3, "boots", MT_LEATHER, AP_ARMOUR, 76 },
+    { "iron helm", K_WEAR, 13, 4, 0, 0, 0, 0, 3, "helm", MT_IRON, AP_ARMOUR, 100 },
+    { "sandals", K_WEAR | K_PLURAL, 3, 1, 0, 0, 0, 0, 2, "sandals", MT_LEATHER, AP_ARMOUR, 8 },
+    { "shoes", K_WEAR | K_PLURAL, 5, 2, 0, 0, 0, 0, 2, "shoes", MT_LEATHER, AP_ARMOUR, 24 },
+    { "hobnail boots", K_WEAR | K_PLURAL, 20, 4, 0, 0, 0, 0, 3, "hobnail", MT_LEATHER, AP_ARMOUR, 120 },
     { "mace", K_HAND | K_HANG, 16, 3, 0, 0, 0, 0, 3, "mace", MT_IRON, AP_WEAPON, 84 },     /* (Weapons) */
     { "spear", K_HAND, 20, 6, 0, 0, 0, 0, 5, "spear", MT_WOOD, AP_WEAPON, 60 },
     { "round shield", K_HAND, 24, 12, 0, 0, 0, 0, 4, "shield", MT_WOOD, AP_WEAPON, 42 },

@@ -13,7 +13,7 @@
             .include    "zeropage.inc"
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 2                     ; dq0harn.cfg's overlays
+OVMAX       = 3                     ; dq0harn.cfg's overlays
 DEPTH       = 16                    ; Overlay calls in calls, at most
 
             .bss
@@ -150,4 +150,5 @@ ovl_out:
             OVFN        brief, 1
             OVFN        harm, 1
             OVFN        fight, 2
-            OVFN        pc_armour, 2
+            OVFN        pc_armour, 3
+            OVFN        pc_side, 3

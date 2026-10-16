@@ -27,6 +27,7 @@
 #pragma code-name ("OV2CODE")
 #pragma rodata-name ("OV2RODATA")
 
+#include <stddef.h>
 #include <string.h>
 #include <dice.h>
 #include <harn.h>
@@ -53,7 +54,7 @@ static const struct bkind {
     unsigned char   flags;
     struct nweapon  w[2];
 } bestiary[] = {
-    { "rat", { 5, 8, 10, 14, 6 }, 3, 2, 30, 60, { 1, 1, 0, 1 }, 0,
+    { "rat", { 5, 8, 10, 14, 6 }, 3, 2, 30, 50, { 1, 1, 0, 1 }, 0,
       { { "bite", 45, 2, HARN_POINT, HARN_FACE }, { "" } } },
     { "spider", { 6, 9, 12, 15, 8 }, 4, 3, 40, 55, { 2, 3, 1, 0 }, 0,
       { { "bite", 50, 3, HARN_POINT, HARN_FACE }, { "" } } },
@@ -67,49 +68,6 @@ static const struct bkind {
       { { "spear", 45, 5, HARN_POINT, 0xFF }, { "" } } },
 };
 #define NBEASTS         (sizeof bestiary / sizeof bestiary[0])
-
-/* The character's weapons, by what it holds (the tools' keys): a word, its skill, its attack and defence classes, its
-** blunt, edge and point impacts (-1: none; the book's weapons where it has them: a knife the dagger, a blade the
-** broadsword, a torch a stick, Combat 3; the tools' the game's); its fists first, its shield last */
-static const struct weapon {
-    char            key[8];
-    char            word[8];
-    unsigned char   sk, wac, wdc;
-    signed char     imp[3];
-} weapons[] = {
-    { "hands", "fists", HARN_UNA, 0, 15, { 0, -1, -1 } },
-    { "knife", "dagger", HARN_DAG, 5, 5, { 1, 2, 5 } },
-    { "blade", "sword", HARN_SWD, 15, 10, { 3, 5, 3 } },
-    { "mace", "mace", HARN_CLU, 15, 5, { 6, -1, -1 } },
-    { "spear", "spear", HARN_SPR, 20, 10, { 4, -1, 7 } },
-    { "pick", "pick", HARN_AXE, 10, 5, { 2, -1, 5 } },
-    { "mattock", "mattock", HARN_AXE, 15, 5, { 3, 4, 4 } },
-    { "shovel", "shovel", HARN_SPR, 10, 10, { 2, 3, -1 } },
-    { "spade", "spade", HARN_SPR, 10, 10, { 2, 3, -1 } },
-    { "chisel", "chisel", HARN_DAG, 0, 0, { 1, -1, 2 } },
-    { "torch", "torch", HARN_CLU, 5, 5, { 2, -1, -1 } },
-    { "shield", "shield", HARN_SHD, 5, 20, { 2, -1, -1 } },
-};
-#define NWEAPONS        (sizeof weapons / sizeof weapons[0])
-#define SHIELD          (NWEAPONS - 1)
-
-/* The armour the character can wear, by the tools' keys: its name, its material, the locations it covers (the book's
-** pieces, Combat 4) */
-#define L(x)            (1u << HARN_ ## x)
-#define TUNIC           (L (UPPERARM) | L (SHOULDER) | L (THORAX) | L (ABDOMEN) | L (HIP) | L (GROIN))
-#define HAUBERK         (TUNIC | L (FOREARM) | L (ELBOW) | L (THIGH))
-static const struct piece {
-    char            key[8];
-    char            name[14];
-    unsigned char   mat;
-    unsigned        cover;
-} pieces[] = {
-    { "lcap", "leather cap", HARN_LEATHER, L (SKULL) }, { "ltunic", "leather tunic", HARN_LEATHER, TUNIC },
-    { "gambson", "gambeson", HARN_QUILT, HAUBERK }, { "ringbyr", "ring byrnie", HARN_RING, TUNIC },
-    { "mailhbk", "mail hauberk", HARN_MAIL, HAUBERK }, { "gauntlt", "gauntlets", HARN_LEATHER, L (HAND) },
-    { "boots", "knee boots", HARN_LEATHER, L (KNEE) | L (CALF) | L (FOOT) },
-};
-#define NARMOUR         (sizeof pieces / sizeof pieces[0])
 
 /* An injury's words, by its aspect and severity (minor, serious, grievous or worse: sheet.c's) */
 static const char* const wound_word[4][3] = {
@@ -159,67 +117,10 @@ static void pack (void)
     sheet_put (crn);
 }
 
-/* ---- A side of a fight, as a blow wants it */
-
-static struct side {
-    harn_char*      c;
-    unsigned char   who;                        /* 0 the character, else an actor's entry plus 1 */
-    unsigned char   size;
-    int             aml, dml, dodge;            /* Its attack's EML, its block's (with what it holds), its dodge's */
-    signed char     imp[3];                     /* Its weapon's impacts */
-    unsigned char   part;                       /* (A creature's own weapon: the part it strikes with; else 0xFF) */
-    unsigned char   bare;                       /* (Its block a bare arm's) */
-    const struct bkind* b;                      /* (A creature's entry; 0: the character) */
-    char            word[8];                    /* Its weapon, in a word */
-} A, D;
-
+static struct side A, D;
 static struct req* R;                           /* The request (a copy) */
 static unsigned char nfx;                       /* Its effects so far */
 static char line[2][72];                        /* What the attacker's strike did, and the defender's */
-
-static int __fastcall__ eml (harn_char* c, unsigned char sk)
-{
-    return c->ml[sk] ? harn_eml (c, sk) : harn_get_oml (c, sk) - 5 * harn_get_pp (c);
-}
-
-static void __fastcall__ pc_side (struct side* s)
-{
-    const struct weapon* w;
-    unsigned char k, j, best = 0;
-    int v, att = 0, blk = 0;
-
-    s->c = &pc;
-    s->size = 4;
-    s->part = 0xFF;
-    s->b = 0;
-    s->dodge = eml (&pc, HARN_DGE);
-    for (k = 0; k < NTOOLS; ++k) {              /* (What it holds that's a weapon: its best to strike with, its best
-                                                **   to block with) */
-        if (!tools[k][0] || !(tflag[k] & T_HELD)) {
-            continue;
-        }
-        for (j = 1; j < NWEAPONS && strcmp (weapons[j].key, tools[k]); ++j) {
-        }
-        if (j == NWEAPONS) {
-            continue;
-        }
-        w = &weapons[j];
-        v = eml (&pc, w->sk);
-        if (v + w->wdc > blk) {
-            blk = v + w->wdc;
-        }
-        if (j != SHIELD && v + w->wac > att) {
-            att = v + w->wac;
-            best = j;
-        }
-    }
-    w = &weapons[best];
-    s->aml = best ? att : eml (&pc, HARN_UNA);
-    s->bare = !blk;
-    s->dml = blk ? blk : eml (&pc, HARN_UNA) + weapons[0].wdc;
-    memcpy (s->imp, w->imp, sizeof s->imp);
-    strcpy (s->word, w->word);
-}
 
 static void __fastcall__ beast_side (struct side* s, unsigned char who)
 {
@@ -240,43 +141,14 @@ static void __fastcall__ beast_side (struct side* s, unsigned char who)
     strcpy (s->word, w->word);
 }
 
-/* ---- Armour */
-
-static const char* arm_name;                    /* (The last piece that guards there, named) */
-
-/* The character's at loc against aspect: its worn pieces' protection there, summed (a poor piece, quality 0-2, a
-** point less, a fine one, 7-9, a point more: the game's) */
-unsigned char __fastcall__ o_pc_armour (unsigned char loc, unsigned char aspect)
-{
-    const struct piece* p;
-    unsigned bit = 1u << HARN_LOC (loc);
-    unsigned char k, j, sum = 0;
-    signed char v;
-
-    arm_name = 0;
-    for (k = 0; k < NTOOLS; ++k) {
-        if (!tools[k][0] || !(tflag[k] & T_WORN)) {
-            continue;
-        }
-        for (j = 0, p = pieces; j < NARMOUR; ++j, ++p) {
-            if ((p->cover & bit) && !strcmp (p->key, tools[k])) {
-                v = harn_protection[p->mat][aspect & 3] + (tqual[k] <= 2 ? -1 : tqual[k] >= 7);
-                sum += v > 0 ? v : 0;
-                arm_name = p->name;
-            }
-        }
-    }
-    return sum;
-}
-
 /* What guards side t at loc against aspect: the character's armour, a creature's hide */
 static unsigned char __fastcall__ guard (const struct side* t, unsigned char loc, unsigned char aspect)
 {
     if (t->b) {
-        arm_name = t->b->arm[aspect & 3] ? "hide" : 0;
+        strcpy (arm, t->b->arm[aspect & 3] ? "hide" : "");
         return t->b->arm[aspect & 3];
     }
-    return o_pc_armour (loc, aspect);
+    return pc_armour (loc, aspect);
 }
 
 /* ---- A blow's effects and words */
@@ -381,9 +253,9 @@ static void __fastcall__ strike (struct side* s, struct side* t, unsigned char n
     loc = part != 0xFF ? (harn_is_limb (part) && random (2) ? part | HARN_RIGHT : part) : harn_strike_location (z);
     p = guard (t, loc, aspect);
     if (impact - p < 1) {                       /* (Stopped by its armour, or no harm) */
-        if (impact >= 1 && arm_name) {
+        if (impact >= 1 && arm[0]) {
             strcpy (w, t->who ? "its " : "your ");
-            strcat (w, arm_name);
+            strcat (w, arm);
             R->c |= stop;
         }
         return;
@@ -537,7 +409,7 @@ static void attack (void)
         R->c |= AF_TA;
         break;
     default:
-        R->result = def == HARN_DODGE ? O_DODGED : O_MISS;
+        R->result = def == HARN_DODGE && al >= HARN_MS ? O_DODGED : O_MISS;    /* (Dodged: a blow that was good) */
         break;
     }
     R->b = def == HARN_BLOCK ? D_BLOCK : def == HARN_COUNTER ? D_COUNTER : def == HARN_DODGE ? D_DODGE : D_NONE;
@@ -596,61 +468,168 @@ static void new_beast (void)
     s->power = 3 * b->size * b->size + b->w[0].ml / 10;    /* (The game's: by its size, its weapon's skill) */
 }
 
-/* Morale (RS_MORALE, Combat 18's Initiative test: the creature's courage, its injuries its penalty, the steps its
-** situation): steady, cautious this turn (a marginal failure), or a critical failure's breakdown (berserk, desperate,
-** broken, cautious: the book's table's odds) */
-static void morale (void)
+/* A creature's courage tested (Combat 18's Initiative test: its injuries its penalty, steps its situation): steady,
+** cautious this turn (a marginal failure), or a critical failure's breakdown (berserk, desperate, broken, cautious:
+** the book's table's odds); its grade in the reply.  The creature's sheet unpacked (cr), b its entry */
+static unsigned char __fastcall__ courage (const struct bkind* b, signed char steps)
 {
-    const struct bkind* b;
     unsigned char lv;
 
     R->grade = G_MS;
-    R->result = M_STEADY;
-    if (!R->actor || ((b = unpack (R->actor))->flags & BF_MINDLESS)) {
-        return;                                 /* (The character's the player's own; bones fear nothing) */
+    if (b->flags & BF_MINDLESS) {
+        return M_STEADY;                        /* (Bones fear nothing) */
     }
-    lv = harn_test (b->ini - 5 * harn_get_pp (&cr) + 5 * (signed char) R->steps);
+    lv = harn_test (b->ini - 5 * harn_get_pp (&cr) + 5 * steps);
     R->grade = lv == HARN_CF ? G_CF : lv == HARN_MF ? G_MF : lv == HARN_MS ? G_MS : G_CS;
     if (lv == HARN_MF) {
-        R->result = M_CAUTIOUS;
-    } else if (lv == HARN_CF) {
-        lv = d100 ();
-        R->result = lv <= 25 ? M_BERSERK : lv <= 50 ? M_DESPERATE : lv <= 75 ? M_BROKEN : M_CAUTIOUS;
+        return M_CAUTIOUS;
+    }
+    if (lv != HARN_CF) {
+        return M_STEADY;
+    }
+    lv = d100 ();
+    return lv <= 25 ? M_BERSERK : lv <= 50 ? M_DESPERATE : lv <= 75 ? M_BROKEN : M_CAUTIOUS;
+}
+
+/* Morale (RS_MORALE): an actor's courage, the result its state (the character's the player's own: steady) */
+static void morale (void)
+{
+    R->result = M_STEADY;
+    R->grade = G_MS;
+    if (R->actor) {
+        R->result = courage (unpack (R->actor), (signed char) R->steps);
     }
 }
 
-/* Time passed (RS_TIME, w1 minutes): its bleeders' bloodloss, a point a minute each, death past its endurance
-** (Combat 14: harn.h's harn_bleed, here, for its file brings all the healing with it) */
-static void bleed (void)
+/* Time passed (RS_TIME, w1 minutes): the bleeders' bloodloss, a point a minute each, death past the endurance (Combat
+** 14: harn.h's harn_bleed, here, for its file brings all the healing with it): of actor (0 the character), or, actor
+** 0xFF, of each actor in w2's bits (bit k: entry k), w1 back its bits of those dead of it */
+static unsigned char __fastcall__ bled (harn_char* c)
 {
-    harn_char* c = &pc;
     unsigned char k, n = 0;
     unsigned v;
 
-    if (R->actor) {
-        unpack (R->actor);
-        c = &cr;
-    }
     for (k = 0; k < c->ninj; ++k) {
         n += (c->inj[k].flags & HARN_IF_BLEEDER) != 0;
     }
     v = c->bl + n * R->w1;
     c->bl = v > 255 ? 255 : v;
-    if (c->bl > harn_end (c)) {
+    if (n && c->bl > harn_end (c)) {
         c->state = HARN_DEAD;
     }
-    if ((R->result = c->state == HARN_DEAD) != 0) {
-        effect (R->actor, X_DEATH, C_DEAD, 0, 0, 0);
+    return c->state == HARN_DEAD;
+}
+
+static void bleed (void)
+{
+    unsigned char k, dead = 0;
+
+    if (R->actor != 0xFF) {
+        R->result = R->actor ? (unpack (R->actor), bled (&cr)) : bled (&pc);
+        R->b = health_of (R->actor ? &cr : &pc);
+        if (R->actor) {
+            pack ();
+        }
+        return;
     }
-    R->b = health_of (c);
-    if (R->actor) {
-        pack ();
+    for (k = 0; k < NACTORS; ++k) {
+        if (R->w2 & 1 << k) {
+            unpack (k + 1);
+            dead |= bled (&cr) << k;
+            pack ();
+        }
     }
+    R->w1 = dead;
+}
+
+/* What a blow left them in, for the denizens' task (rs.h's AF_*: the reply's grade as hub.h's FF_*), and the
+** creature's courage if it was wounded and stands (shy, w2's bit 0 in the request: a cautious one flees too) */
+static void __fastcall__ left (unsigned char shy)
+{
+    const struct rs_effect* e = (const struct rs_effect*) R->x;
+    const struct side* s = A.who ? &A : &D;
+    unsigned char k, f = R->c & (AF_STOPPED | AF_STOPPED_D) ? FF_STOPPED : 0, hurt = 0, m;
+
+    for (k = 0; k < RS_EFFECTS && e->kind; ++k, ++e) {
+        if (e->kind == X_DEATH) {
+            f |= e->target == A.who ? FF_A_DEAD : FF_D_DEAD;
+        } else if (e->kind == X_COND_ON) {
+            f |= e->cond & C_UNCONSCIOUS ? (e->target == A.who ? FF_A_DOWN : FF_D_DOWN) : FF_PRONE;
+        } else if (e->kind == X_DROP) {
+            f |= FF_FUMBLE;
+        }
+        hurt |= e->kind == X_WOUND && e->target == s->who;
+    }
+    if (hurt && cr.state == HARN_CONSCIOUS) {
+        m = courage (s->b, 0);
+        if (m == M_BROKEN || (m == M_CAUTIOUS && shy)) {
+            f |= FF_FLEES;
+        } else if (m == M_CAUTIOUS) {
+            R->c |= AF_CAUTIOUS;
+        }
+    }
+    if (cond_of (&cr) & C_BLEEDING) {
+        R->c |= AF_BLEEDING;
+    }
+    R->grade = f;
+}
+
+/* A blow at a thing (RS_ATTACK at RS_THING: rs.h's), which ignores it: the character's attack tested (its weapon's
+** attack mastery, or Unarmed's), the Ignore table's strike (Combat 12: a critical failure none), its impact (the
+** dice, the weapon's for the aspect that does the thing most harm), the thing's resistance off it; and a part that
+** struck it hurt if the blow went wrong (rs.h's: the book's H2 on a bare part meeting something hard, the game's
+** numbers), HC_STRUCK's harm (sheet.c's) */
+static void thing (void)
+{
+    static unsigned char hq[offsetof (struct req, text)];   /* (The harm's request: but its text) */
+#define h   (*(struct req*) hq)
+    unsigned char res[4], k, lv, n, asp = 0, run = R->c;
+    int imp, v, top = -100;
+
+    memcpy (res, R->x, sizeof res);
+    memset (R->x, 0, sizeof R->x);
+    at_thing = 1;
+    pc_side (&A);
+    at_thing = 0;
+    for (k = 0; k < 3; ++k) {
+        if (A.imp[k] >= 0 && (v = A.imp[k] - res[k]) > top) {
+            top = v;
+            asp = k;
+        }
+    }
+    lv = harn_test (A.aml);
+    n = HARN_R_DICE (harn_melee_result (HARN_IGNORE, lv, 0));
+    imp = n ? dice (n, 6) + A.imp[asp] : 0;
+    R->w1 = imp > res[asp] ? imp - res[asp] : 0;
+    R->b = asp;
+    R->c = 0;
+    R->w2 = 0;
+    R->result = A.part != 0xFF ? 2 : 0;
+    put (A.word);
+    if (A.part != 0xFF && lv <= HARN_MF) {      /* (Gone wrong: the part hurt) */
+        v = dice (lv == HARN_CF ? 2 : 1, 6) + res[0] / 2 -
+            (A.part == HARN_FOOT ? pc_armour (SOLE, 0) : pc_armour (A.part, HARN_BLUNT));
+        if (v > 0) {
+            memset (hq, 0, sizeof hq);
+            h.kind = RS_HARM;
+            h.a = HC_STRUCK;
+            h.c = A.part;
+            h.w1 = v;
+            h.w2 = run;
+            harm (&h);
+            R->c = h.b;
+            R->w2 = h.w2;
+            R->result |= h.result;
+        }
+    }
+#undef h
 }
 
 /* r a copy of the request, in the main RAM (but its text: its words put into it) */
 void __fastcall__ o_fight (struct req* r)
 {
+    unsigned char shy = r->w2 & 1;
+
     R = r;
     nfx = 0;
     switch (r->kind) {
@@ -661,8 +640,11 @@ void __fastcall__ o_fight (struct req* r)
         morale ();
         return;
     case RS_TIME:
-        memset (r->x, 0, sizeof r->x);
         bleed ();
+        return;
+    }
+    if (r->other == RS_THING) {
+        thing ();
         return;
     }
     memset (r->x, 0, sizeof r->x);              /* (RS_ATTACK) */
@@ -689,5 +671,8 @@ void __fastcall__ o_fight (struct req* r)
     put ("\n");
     put (line[1]);
     r->w1 = health_of (A.c) | health_of (D.c) << 8;
+    if (r->result != 0xFF) {
+        left (shy);
+    }
     pack ();
 }

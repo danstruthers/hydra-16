@@ -120,8 +120,11 @@ unsigned __fastcall__ o_fight_words (const struct msg* m)
     } else {
         who (aname, 1);                         /* (The blow: "You strike at the giant rat with your sword", "The
                                                 **   ghoul claws at you", "The kobold strikes at you with its spear") */
-        if (pc) {
-            add (" strike at ");
+        if (pc && !strcmp (aw, "foot")) {
+            add (" kick at ");                  /* ("You kick at the giant rat") */
+            who (dname, 0);
+        } else if (pc) {
+            add (*aw == 'h' ? " butt at " : " strike at ");
             who (dname, 0);
             add (" with your ");
             add (aw);
@@ -175,7 +178,7 @@ unsigned __fastcall__ o_fight_words (const struct msg* m)
                     pc ? "; it stumbles" : "; you stumble");
             }
             if ((fl & FF_PRONE) && out == O_STUMBLE) {
-                add (" and fall");
+                add ((k & 2 ? !pc : pc) ? " and fall" : " and falls");   /* (The last named) */
             }
             break;
         case O_ADVANTAGE:
@@ -224,8 +227,10 @@ static void __fastcall__ stance (const char* w)
 }
 
 /* V_ATTACK's denizen beside the character to strike at (one whose name has the command's word, if it's given; the
-** one that way, a heading, if that is): its entry plus 1; or 0, and why not in lb.  V_DEFEND's stance set (0) */
-unsigned char __fastcall__ o_fight_target (const struct pcmd* c)
+** one that way, a heading, if that is), struck with what the verb says (the parser's, in its half: SK_*, to the hub's
+** pc_strike): its entry plus 1; or 0, and why not in lb; at a door, a window, a portcullis, FT_THING: a blow at it
+** (main.c's: broken).  V_DEFEND's stance set (0) */
+unsigned char __fastcall__ o_fight_target (struct pcmd* c)
 {
     static struct actor q;
     static struct { unsigned char sn; unsigned x, y; } pc;
@@ -236,6 +241,10 @@ unsigned char __fastcall__ o_fight_target (const struct pcmd* c)
     if (c->verb == V_DEFEND) {
         stance (w);
         return 0;
+    }
+    hub_mem (0, &HUB->pc_strike, &c->half, 1);
+    if (c->obj == OB_DOOR || c->obj == OB_WINDOW || c->obj == OB_PORTC) {
+        return FT_THING;
     }
     hub_mem (0, &pc.sn, (const void*) &HUB->pc_stratum, 1);
     hub_mem (0, &pc.x, (const void*) &HUB->pc_x, 4);

@@ -16,6 +16,7 @@
 */
 
 #include <fcntl.h>
+#include <stddef.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>
@@ -111,7 +112,7 @@ static void ovl_load (void)
     strcpy (path, libdir);
     strcat (path, "/dq0.ovl");
     if ((fd = open (path, O_RDONLY)) < 0 || (first = hy_banks_alloc (sizeof ovbank)) < 0) {
-        hy_exits ("dq0: its overlays (lib/dq0/dq0.ovl) not found, or no RAM banks");
+        hy_exits ("dq0: no overlays (lib/dq0/dq0.ovl), or no RAM banks");
     }
     for (k = 0; k < sizeof ovbank; ++k) {
         ovbank[k] = first + k;
@@ -239,9 +240,9 @@ static void sheet (void)
 ** and the maker's changes.dat and seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    4                           /* (2: the items' records with their size, the portals' make; 3, the
-                                                **   theme and its puzzle; 4, the denizens' with their attitudes, the
-                                                **   creatures' sheets) */
+#define SAVE_VER    5                           /* (2: the items' records with their size, the portals' make; 3, the
+                                                **   theme and its puzzle; 4, the denizens' attitudes, the factions',
+                                                **   the names given; 5, the creatures' sheets) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
@@ -377,7 +378,7 @@ static void start_world (unsigned long seed)
 
     if (hub_create (HUB_BANKS)) {
         t_end ();
-        hy_exits ("dq0: no shared segment, or no semaphores, for the game's tasks");
+        hy_exits ("dq0: no shared segment or semaphores for its tasks");
     }
     HUB->round = ROUND;                         /* (The ruleset's: HarnMaster's 10 seconds, till the referee says) */
     HUB->tpr = tpr[pace];
@@ -613,8 +614,7 @@ static unsigned char events (void)          /* (How many there were) */
         case E_LEDGE:
             if (m.who == 0) {
                 k = (signed char) m.w1 > 0 ? (signed char) m.w1 : -(signed char) m.w1;
-                sayf ((signed char) m.w1 > 0 ? "\nThe floor rises %u feet at a ledge ahead: climb it (u) to go on." :
-                      "\nThe floor falls %u feet at a ledge ahead: climb down it (d) to go on.", k);
+                climb_words ((signed char) m.w1 > 0 ? CW_RISES : CW_FALLS, k);
             }
             break;
         case E_CLIMB:
@@ -950,6 +950,38 @@ static void __fastcall__ hide (const char* w)
     }
 }
 
+/* The character's way with a denizen (how: hub.h's SW_*; the parser's words, the one meant and a name or a thing,
+** and its request): asked of the denizens' task (the hub's sway: it lends the UI's slot to the referee meanwhile),
+** waited for, worded (overlay 6: but none found, if SW_QUIET), and the time it took the character's.  Its result */
+#define SW_QUIET    0x80
+typedef char sway_copies[offsetof (struct sway, order) - offsetof (struct sway, word) ==
+    offsetof (struct pcmd, order) - offsetof (struct pcmd, word) ? 1 : -1];   /* (The same, word to order) */
+#define dealt       (*(struct sway*) (lb + sizeof lb - sizeof (struct sway)))  /* (Its copy at lb's end: the
+                                                **   words, a line or two, go at its start) */
+static unsigned char __fastcall__ deal (unsigned char how, const struct pcmd* c)
+{
+    struct sway* s = &HUB->sway;
+
+    s->how = how & ~SW_QUIET;
+    memcpy (s->word, c->word, sizeof c->word + 1 + sizeof c->word2 + 1);   /* (word, prep, word2, order) */
+    s->state = REQ_POSTED;
+    hub_ring (T_DENIZENS);
+    while (s->state != REQ_DONE) {
+        hy_sleep_ticks (1);
+        hub_map (0);
+    }
+    memcpy (&dealt, s, sizeof dealt);
+    s->state = REQ_FREE;
+    if (!(how & SW_QUIET) || dealt.result != SR_NONE) {
+        sway_words (&dealt);
+        msg (lb);
+    }
+    if (dealt.t) {
+        intend2 (I_WAIT, dealt.t, 0);
+    }
+    return dealt.result;
+}
+
 /* The commands that want nothing but their verb (unoptimised: cc65 2.19's optimiser takes a branch here for a short
 ** one that isn't, an assembler's range error) */
 #pragma optimize (push, off)
@@ -1090,6 +1122,7 @@ static void __fastcall__ command (char* l)
         } else if (c.obj == OB_WINDOW && !strcmp (c.word, "bars") && !find (OB_WINDOW, c.orel)) {
             c.obj = OB_PORTC;                   /* ("Bend the bars": a portcullis's, with no window there) */
         }
+        HUB->pc_strike = SK_BEST;               /* (Broken with the best to hand) */
 portal:
         if (c.obj && c.orel == 0xFF && find (c.obj, 0xFF)) {
             c.orel = bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y);    /* (The one it sees: faced) */
@@ -1103,6 +1136,9 @@ portal:
         return;
     case V_EXAMINE:                             /* (A thing looked at closely: judged, by the craft that knows it; a
                                                 **   portal, or its part if it's not there; else the room) */
+        if (c.word[0] && !c.obj && deal (SW_LOOK | SW_QUIET, &c) != SR_NONE) {
+            return;                             /* (A denizen it sees: how it seems) */
+        }
         if (!c.word[0] || things (IO_DESCRIBE, c.word) != IR_OK) {
             if (c.obj == OB_DOOR || c.obj == OB_WINDOW || c.obj == OB_PORTC) {
                 inspect (c.obj, c.orel);
@@ -1176,7 +1212,11 @@ portal:
         return;
     case V_ATTACK:                              /* (A blow at a denizen beside it, overlay 6's choice; or the stance */
     case V_DEFEND:                              /*   set, the referee's defence for the character) */
-        if ((d = fight_target (&c)) != 0) {
+        if ((d = fight_target (&c)) == FT_THING) {
+            pa = PA_BREAK;                      /* (A blow at a thing: broken by it) */
+            goto portal;
+        }
+        if (d) {
             intend (I_ATTACK, d);
             return;
         }
@@ -1189,8 +1229,12 @@ portal:
             tell (T_YOU_JUMP_AND);
         }
         return;
-    default:                                    /* (The rest: chores) */
-        chores (c.verb);
+    default:                                    /* (A denizen's: V_TALK ... in SW_TALK's order; the rest chores) */
+        if (c.verb >= V_TALK) {
+            deal (c.verb - V_TALK + SW_TALK, &c);
+        } else {
+            chores (c.verb);
+        }
         return;
     }
 }
@@ -1249,7 +1293,7 @@ int main (int argc, char* argv[])
     status ();
     story (resumed);                            /* (The theme's) */
     blank ();
-    sayf (resumed ? "%s, %s, takes up where they left off." : "%s, %s, enters the dungeon.", P.name, P.occupation);
+    entered (resumed);
     blank ();
     tell (T_TYPE_HELP_FOR);
     t_done ();

@@ -39,6 +39,10 @@ enum {
                                                 **   a search */
     P_ASSESS,                                   /* A mechanism made out (a trap's, before it's disarmed: never
                                                 **   deadly, however it goes) */
+    P_DECEIVE,                                  /* Guile: a creature talked round by a tale, a bluff (the persuading
+                                                **   is P_PERSUADE's, a threat P_INTIMIDATE's, an animal P_ANIMALS's;
+                                                **   any of them in words: the text the tongue they're said in, the
+                                                **   reply's result 2 if the character doesn't speak it) */
     P_THEME,                                    /* A theme's own, P_THEME + n (named in its data) */
 };
 
@@ -90,10 +94,26 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
 ** X_DROP: a weapon fumbled), w1 the attacker's health (H_*) and the defender's times 256, w2 the tenths one knocked
 ** senseless is out for; its words in the text, four lines: the attacker's weapon ("sword", "bite"), the defender's,
 ** what the attacker's strike did ("a serious cut to its left thigh (S2)", "your ring byrnie": the armour that stopped
-** it), and the defender's (a counterstrike's, a block's on a bare arm or a claw) */
+** it), and the defender's (a counterstrike's, a block's on a bare arm or a claw).  For the denizens' task (its slot):
+** the request's w1 the place in its ring for the words (the referee puts them there: hub.h's FIGHT_AT), w2 1 if the
+** creature is shy (a shaken one flees); the reply's grade what it left them in (hub.h's FF_*: the creature's courage
+** tested if it was wounded and stands, RS_MORALE's: FF_FLEES, or AF_CAUTIOUS).  The character strikes with what the
+** hub's pc_strike says (SK_*: the best to hand, a fist, a foot, the head: Unarmed's, the book's hand, foot and head).
+**
+** At a thing (other RS_THING: a door, a portcullis's bars, a window's shutters or glass; the maker's), which ignores it
+** (the book's Ignore defence): x[0..3] the thing's resistance to blunt, edge, point and fire (its armour), c the blow's
+** number in a run of them; the character's best to hand the tool that hits a thing hardest (not a weapon), else its
+** fists.  The reply: w1 the harm the thing takes (the impact past its resistance, its aspect the best against it: b),
+** result 2 if a part of the striker struck it (its words in the text, the striker's weapon), and its own hurt if the
+** blow went wrong (a part only: the attack's marginal failure a d6, its critical failure 2d6, the book's H2 for a part
+** that meets something hard, Combat 12; and half the thing's blunt resistance; less the part's armour, a kick's the
+** soles'): HC_STRUCK's, c its worst band, w2 the tenths it's out for, result | 1 if it's hurt enough to stop, its words
+** RS_DESCRIBE b 2's */
 #define AF_STOPPED      0x01                    /* The attacker's strike stopped by armour (its line the armour's) */
 #define AF_STOPPED_D    0x02                    /*   the defender's */
 #define AF_TA           0x04                    /* The defender's tactical advantage: an action more, at once */
+#define AF_CAUTIOUS     0x08                    /* The creature in it, wounded, holds back a round (its courage) */
+#define AF_BLEEDING     0x10                    /*   bleeding (the referee's RS_TIME a minute at a time) */
 
 /* ---- Morale (RS_MORALE): an actor's courage tested (steps: how its fight goes): the grade, and result its state */
 enum { M_STEADY, M_CAUTIOUS, M_BROKEN, M_DESPERATE, M_BERSERK };
@@ -119,20 +139,14 @@ enum { BP_SKULL, BP_FACE, BP_NECK, BP_SHOULDER, BP_UPPER_ARM, BP_ELBOW, BP_FOREA
 **   HC_STRIKE   a trap's (a blade, darts, spikes, a deadfall), or any blow with no one behind it: b its aspect
 **               (AS_*), c its dice (d6s), w1 impact more, w2 where it strikes (Z_*)
 **   HC_FIRE     a burn: c its dice, w1 more, w2 where
-**   HC_BLOW     a blow the actor strikes at the other, with what it has in hand (its key in the text: "blade",
-**               "pick" ...; "hands"): b its aspect (AS_BEST: what it does best), c its dice (0: one).  At a thing
-**               (other RS_THING: a door, a portcullis's bars, a chest) only the blow's impact is worked out, the
-**               reply's w1 (b its aspect, the text what struck it: none named, the tool to hand that hits a thing
-**               hardest, but a weapon): what the thing's material and toughness take from it is the world's; struck
-**               with bare hands (the text "hands"), a d4 and the actor's Strength's (the user's, DUNGEON.md: portals)
-**   HC_HANDS    the actor's own hand hurt by its blow at a thing (the user's: the lesser of the blow and the thing's
-**               resistance): w1 that impact (the hand's armour the referee's to take off), w2 the blow's number in a
-**               run of them (0: its words begun anew, else added to); an automatic blunt hit on a hand, and the
-**               reply's result 1 if it's hurt badly enough to stop (the referee's say)
+**   HC_STRUCK   the actor's own part hurt by its blow at a thing (an RS_ATTACK at RS_THING's: the referee's own):
+**               c the part (BP_HAND, BP_FOOT, BP_SKULL), w1 its impact (its armour off it), w2 the blow's number in a
+**               run of them (0: its words begun anew, else added to); a blunt hit on it, and the reply's result 1 if
+**               it's hurt badly enough to stop (the referee's say)
 ** The reply: its effects (x: up to RS_EFFECTS, X_NONE after the last), b the worst wound's band (0: unhurt), w2 the
 ** tenths the actor's out for (knocked senseless), result 1 a fall stopped (a hold grabbed); its words in the text,
 ** a line (and RS_DESCRIBE b 2's: the last harm's) */
-enum { HC_FALL, HC_STRIKE, HC_FIRE, HC_BLOW, HC_HANDS };
+enum { HC_FALL, HC_STRIKE, HC_FIRE, HC_STRUCK };
 enum { AS_BLUNT, AS_EDGE, AS_POINT, AS_FIRE, AS_BEST };     /* (items.h's DM_* in the same order) */
 enum { Z_MID, Z_HIGH, Z_LOW };
 enum { GR_FLOOR, GR_DEEP_WATER, GR_SHALLOW_WATER, GR_SOFT, GR_HARD, GR_ROCKY };    /* Earth; water; mud; paving;

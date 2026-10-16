@@ -137,6 +137,9 @@ enum {
 };
 enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST };    /* E_DEN's what: a step, a noise of its own (a squeak, a
                                                 **   growl), the character sensed, lost (its senses' own) */
+enum { SK_BEST, SK_PUNCH, SK_KICK, SK_HEAD };   /* A blow struck with (the hub's pc_strike): the best to hand (the
+                                                **   best weapon held at a denizen, the tool that hits hardest at a
+                                                **   thing; else the fists), a fist, a foot, the head */
 #define FO_GONE         0xFF
 #define FO_BLED         0xFE                    /* (E_FIGHT's x[1]: no blow, but the attacker dead of its bleeding) */
 #define FF_A_DOWN       0x01                    /* E_FIGHT's x[2]: the attacker knocked senseless, */
@@ -150,7 +153,7 @@ enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST };    /* E_DEN's what: a step, a 
 #define I_JUMP          0x80
 #define E_OUT           0x4000                  /* (E_HARM's: knocked senseless a while) */
 #define E_CAUGHT        0x8000                  /*   (and a fall stopped, a hold grabbed) */
-#define E_STOPPED       0x8000                  /*   (an HC_HANDS's: the blows stopped, the hands too hurt) */
+#define E_STOPPED       0x8000                  /*   (an HC_STRUCK's: the blows stopped, the striker too hurt) */
 #define O_FELL          8                       /* (E_ARRIVE's link kind, or'd: fallen down it, jumped) */
 
 enum { A_WALKED, A_DOWN, A_UP, A_START, A_DIGGING, A_CROSSED, A_CLIMBING, A_CLIMBED, A_WENT_TO, A_RESUMED,
@@ -241,12 +244,46 @@ struct actor {
     unsigned char   doing;                      /* What it's doing (DO_*: watching, coming, keeping off: it senses the
                                                 **   character) */
     char            name[12];                   /* ("": the entry free) */
-    signed char     attitude;                   /* To the character (AT_*: hostile ones fight it on sight) */
-    unsigned char   health;                     /* How hurt it is (rs.h's H_*, the referee's) */
+    unsigned char   attitude;                   /* Its attitude to the character (AT_*, its record's: the denizens'
+                                                **   task's; a hostile one fights it) */
+    unsigned char   faction;                    /* Its faction (the denizens' task's: kinds.txt's, the theme's) */
+    unsigned char   foe;                        /* An actor of a faction hostile to its own, met (near, sensed): it
+                                                **   plus 1, or 0 (till they fight, they keep off one another) */
 };
-enum { AT_HOSTILE = -3, AT_UNFRIENDLY, AT_WARY, AT_NEUTRAL, AT_FRIENDLY, AT_ALLY, AT_DEVOTED };   /* (DENIZENS.md:
-                                                **   attitudes; hostile attacks on sight, unfriendly if pressed, beside
-                                                **   it) */
+enum { AT_HOSTILE, AT_UNFRIENDLY, AT_WARY, AT_INDIFFERENT, AT_FRIENDLY, AT_ALLIED };   /* An attitude, the worst
+                                                **   first (DENIZENS.md): attacks on sight; threatens, keeps off;
+                                                **   watches, won't help; minds its own business; talks, helps; comes
+                                                **   with the character, takes its requests */
+
+/* The character's way with a denizen (the UI asks the denizens' task: the hub's sway, REQ_*, its doorbell; the
+** denizens' task finds the one meant, among those the character sees, by its name or its kind's, and asks the
+** referee in the UI's slot, lent it while the UI waits): words to sway it (the referee's test, by the kind's mind:
+** an animal's by Animalcraft alone; words want a tongue in common), a request to an ally, a name given to one, a
+** look at how it seems, a blow (a stand-in for the fights) */
+enum { SW_LOOK, SW_TALK, SW_PERSUADE, SW_DECEIVE, SW_THREATEN, SW_CALM, SW_BEFRIEND, SW_ATTACK, SW_ORDER, SW_NAME };
+                                                /* (dq0.h's V_TALK ... V_NAME in the same order) */
+enum { OR_NONE, OR_FOLLOW, OR_WAIT, OR_HOME, OR_FETCH };   /* An ally's request (SW_ORDER's): follow the character,
+                                                **   wait where it is, go back to its own ways, fetch a thing */
+enum { SR_OK, SR_NONE, SR_FAR, SR_TONGUE, SR_BEAST, SR_MINDLESS, SR_AS_FAR, SR_NOT_ALLY, SR_CANT };   /* A sway's
+                                                **   result: done (a test's: grade, was, now), none such in sight,
+                                                **   too far (an animal's out of reach), no tongue in common, an
+                                                **   animal (words don't reach it), mindless, as far as that way
+                                                **   goes, not an ally, it can't (yet) */
+struct sway {
+    volatile unsigned char state;               /* REQ_* */
+    unsigned char   how;                        /* SW_* */
+    char            word[16];                   /* The one meant (a name, a kind's word; "": the nearest, or every
+                                                **   ally, an order's) */
+    unsigned char   prep;                       /* (dq0.h's struct pcmd's, from word on, copied whole) */
+    char            word2[16];                  /* A name given; a thing to fetch */
+    unsigned char   order;                      /* OR_* (SW_ORDER's) */
+    unsigned char   result;                     /* (The reply's:) SR_* */
+    signed char     grade;                      /*   the referee's (G_*: 0, no test) */
+    unsigned char   was, now;                   /*   its attitude before and after (AT_*) */
+    unsigned char   beast;                      /*   its mind: 1 an animal */
+    char            name[12];                   /*   its name (an ally's own, capitalised; else its kind's) */
+    unsigned        t;                          /*   the tenths it took the character */
+};
 
 #define IQ_SIZE         16                      /* The UI's intents */
 #define EQ_SIZE         128                     /* The world's events (each reader its own place) */
@@ -327,11 +364,13 @@ struct hub {                                    /* Bank 0, at $8000 */
     volatile unsigned dq_head;                  /* Events written so far (the denizens' task's) */
     /* The theme's puzzle (theme.h: the theme in THEME_BANK): the way out opened (the UI's, as the mission's done) */
     volatile unsigned char way_open;
+    struct sway     sway;                       /* The character's way with a denizen (the UI's request) */
     /* A fight: the character's blow, posted by the world (I_ATTACK) for the denizens' task to strike (it asks the
     ** referee, and tells it: E_FIGHT), and the character's stance (rs.h's D_*: the referee's defence for it) */
     volatile unsigned char pc_foe;              /* The actor struck at, plus 1 (0: none posted) */
     unsigned char   pc_aim;                     /* Its aim (Z_*) */
     unsigned char   pc_stance;
+    unsigned char   pc_strike;                  /* What it strikes with (SK_*: the parser's, as it's told) */
     volatile unsigned char den_look;            /* (The denizens' task's: a thing put down, a body: the world looks about
                                                 **   again, the senses seeing it) */
 };

@@ -14,8 +14,11 @@
 ** the world waits for it (a slice of the clock at a time: hub.h's TURN_SLICE), so they act through all the time what
 ** the character does takes: those out of its sight and not sensing it coarsely, a few squares a while.  Those out
 ** but away from the character (not actors) move coarsely too, to squares about their lairs in chunks that are made
-** (roam).  No two are on a square, nor any on the character's or where it's going.  (Attitudes, factions and
-** influence, and the denizens' own exploring come later.)
+** (roam).  No two are on a square, nor any on the character's or where it's going.  Each has an attitude to the
+** character, its faction's to begin with (factions.txt's, a stand-in theme's: a theme's will take their place),
+** moved by what happens and by the character's words (the UI's request, the hub's sway: the referee's test), and acts
+** by it: the hostile come at the character, an ally follows it and takes its requests; factions hostile to one
+** another keep off one another.  (Their own exploring comes later.)
 **
 ** Its records (the lairs, the denizens) are in a bank of its own, a record at a time copied out; kept with the game
 ** (dq0 -d: the UI asks, the hub's den_state), the save folder's dens.dat.
@@ -47,12 +50,36 @@ struct dkind {
     unsigned char   sight, dark;                /* Squares it sees the character by its light, and with none */
     unsigned char   hear;                       /* Squares it hears it moving */
     unsigned char   step;                       /* Tenths of a second a square */
+    unsigned char   faction;                    /* Its faction (factions.txt's, by number: 1 the first) */
+    unsigned char   mind;                       /* M_* */
+    signed char     sway;                       /* Steps for (or against) swaying it, besides its attitude and mind */
+    unsigned char   spare[5];
 };
 #define K_SHY           0x01                    /* It keeps its distance from the character */
 #define K_LAIR          0x02                    /* It keeps to its lair */
 #define K_WAYS          0x04                    /* Its lairs are by the stratum's ways in and out */
 #define K_BOLD          0x08                    /* It comes towards the character */
+enum { M_MINDLESS, M_BEAST, M_LOW, M_AVERAGE, M_CUNNING };   /* Its mind: nothing sways it; Animalcraft only; easily
+                                                **   fooled, hard to reason with; neither; hard to fool */
 #define KINDS           ((struct dkind*) 0x8000)
+typedef char dkind_fits[sizeof (struct dkind) == 40 ? 1 : -1];     /* (make.js's records) */
+
+/* The factions (factions.txt's: a stand-in theme's, after the kinds in the data file, the first none): each one's
+** tongue, its attitude to the character as it first meets it, how it stands with each other one (AT_HOSTILE,
+** AT_WARY, AT_INDIFFERENT, AT_FRIENDLY), copied out into the main RAM as it starts */
+#define NFACT           8
+struct faction {
+    char            name[12];
+    char            tongue[8];                  /* ("": none) */
+    unsigned char   att;                        /* AT_* */
+    unsigned char   rel[NFACT];                 /* AT_*: each faction's, by number */
+    unsigned char   spare[3];
+};
+typedef char faction_fits[sizeof (struct faction) == 32 ? 1 : -1];
+static unsigned char nfacts;
+static char ftongue[NFACT][8];
+static unsigned char fatt0[NFACT], frel[NFACT][NFACT];
+static unsigned char kfact[SND_KINDS];          /* (Each kind's faction: for the records, without their kinds) */
 
 /* ---- The records: the lairs and the denizens, in a bank of their own */
 
@@ -72,14 +99,19 @@ struct den {
     unsigned char   sn, face;
     unsigned        x, y;                       /* Its square (placed) */
     unsigned long   ready;                      /* When it can act again */
-    signed char     att;                        /* Its attitude to the character (hub.h's AT_*) */
+    unsigned char   attitude;                   /* To the character (hub.h's AT_*) */
+    unsigned char   order;                      /* An ally's request (hub.h's OR_*) */
 };
 #define D_OUT           0x01                    /* On a square of its own */
 #define D_ACTOR         0x02                    /* An actor now (the hub's entry the truth while it is) */
 #define D_DEAD          0x04                    /* Dead (its body left where it fell: an item) */
+#define NNAMES          8
 struct head {
     unsigned char   done[MAXSTRATA];            /* Each stratum's populations decided */
     unsigned char   nlairs, ndens;
+    unsigned char   fatt[NFACT];                /* Each faction's attitude to the character now (its newcomers') */
+    struct { unsigned char den; char name[12]; } names[NNAMES];    /* The names the character's given (den 0xFF:
+                                                **   none) */
 };
 struct pop {
     struct head     h;
@@ -139,6 +171,7 @@ static void __fastcall__ den_put (unsigned char i)
 static int __fastcall__ kinds_load (const char* dir)
 {
     static char path[64];
+    struct faction* f;
     unsigned off;
     int fd, n;
 
@@ -152,10 +185,24 @@ static int __fastcall__ kinds_load (const char* dir)
         memcpy ((char*) 0x8000 + off, piece, n);
     }
     close (fd);
+    hy_bank (kb);                               /* (The first record's the counts; the factions after the kinds) */
+    nkinds = KINDS[0].flags;
+    nfacts = KINDS[0].styles < NFACT ? KINDS[0].styles : NFACT;
+    for (n = 0; n < nkinds && n < SND_KINDS; ++n) {
+        kfact[n] = KINDS[n].faction;
+    }
+    for (n = 0; n < nfacts; ++n) {
+        f = (struct faction*) (KINDS + nkinds) + n;
+        memcpy (ftongue[n], f->tongue, sizeof ftongue[0]);
+        fatt0[n] = n ? f->att : AT_INDIFFERENT;
+        memcpy (frel[n], f->rel, NFACT);
+    }
     hub_map (0);
-    nkinds = off / sizeof (struct dkind);
     return 0;
 }
+
+/* How factions f and g stand (AT_*: indifferent, either none) */
+#define REL(f, g)       frel[(f) & (NFACT - 1)][(g) & (NFACT - 1)]
 
 /* ---- The character, as the hub has it (each time round) */
 
@@ -168,13 +215,6 @@ static unsigned __fastcall__ apart (int dx, int dy)
     dx = dx < 0 ? -dx : dx;
     dy = dy < 0 ? -dy : dy;
     return dx > dy ? dx : dy;
-}
-
-/* A kind's attitude to the character as it first meets it (K the kind's: till the theme's factions say, the bold
-** hostile, those that keep to their lairs unfriendly, the rest wary) */
-static signed char first_attitude (void)
-{
-    return K.flags & K_BOLD ? AT_HOSTILE : K.flags & K_LAIR ? AT_UNFRIENDLY : AT_WARY;
 }
 
 /* ---- Populations: stratum n's decided as its plan is grown (its record and links whole: the hub's strata[n],
@@ -235,7 +275,7 @@ static void __fastcall__ populate (unsigned char n)
             D.kind = k;
             D.lair = hd.nlairs;
             D.sn = n;
-            D.att = first_attitude ();
+            D.attitude = hd.fatt[K.faction & (NFACT - 1)];    /* (Its faction's, as the character stands with it) */
             for (i = 0; i < L.n; ++i) {
                 den_put (hd.ndens++);
             }
@@ -389,14 +429,15 @@ static unsigned char sgen[NACTORS], sres[NACTORS];  /* (Each actor's senses as t
 static unsigned sax[NACTORS], say[NACTORS];
 static unsigned long alert[NACTORS];            /* (Each actor still and facing a noise it heard till then) */
 static unsigned char steps[NACTORS];            /* (Each one's steps: a noise of its own every eighth) */
-static unsigned long fled[NACTORS];             /* (Each one fleeing the character till then) */
-static unsigned long bled[NACTORS];             /* (Each one bleeding: its bloodloss reckoned to then; 0 not) */
+static unsigned char fled[NACTORS];             /* (Each one fleeing the character: its turns of it left) */
+static unsigned char bleeds;                    /* (The actors bleeding: bit k, entry k: fights') */
 
 /* ---- The referee, asked in this task's own slot (in the denizens' bank, DSLOT_AT): the request (rq, in the main
 ** RAM: its kind, who and whom here, the rest the caller's) copied in whole, posted, the referee rung and waited for
-** (the CPU left to it a tick at a time), the reply copied out; the hub's header in the window after */
-static struct req rq;
+** (the CPU yielded to it meanwhile), the reply copied out; the hub's header in the window after */
 #define RQ_SIZE (offsetof (struct req, text) + DTEXT)  /* (Its text DTEXT long: no more) */
+static unsigned char rqb[RQ_SIZE];
+#define rq      (*(struct req*) rqb)
 
 static void __fastcall__ ask (unsigned char kind, unsigned char actor, unsigned char other)
 {
@@ -420,14 +461,22 @@ static void __fastcall__ ask (unsigned char kind, unsigned char actor, unsigned 
             memset (rq.x, 0, sizeof rq.x);
             return;
         }
-        hy_sleep_ticks (1);
+        hy_yield ();                            /* (The referee's turn: back as soon as it's answered) */
     }
     memcpy (&rq, DSLOT_AT, RQ_SIZE);
     DSLOT_AT->state = REQ_FREE;
     hub_map (0);
 }
+static unsigned char aorder[NACTORS];           /* (Each one's request, an ally's: its record's while it's an actor) */
+static unsigned lsx[NACTORS], lsy[NACTORS];     /* (Where each last sensed the character: an ally follows it there) */
+static unsigned char intr[NACTORS];             /* (Each one's lair intruded on, not yet left: its attitude fallen) */
+static unsigned char seenfoe[NACTORS];          /* (Each one's seen the character with an enemy of its faction's) */
+static unsigned char anear[NACTORS];            /* (Each one beside the character as it last acted: an ally comes
+                                                **   along as the character goes up or down) */
+static unsigned refx, refy;                     /* (The square step_for's S_AWAY and S_TOWARD go by: the character's,
+                                                **   a foe's, the one an ally follows to) */
 
-/* Actor k's place and time written back to its record */
+/* Actor k's place, time, attitude and request written back to its record */
 static void __fastcall__ write_back (unsigned char k)
 {
     hub_map (0);
@@ -438,7 +487,18 @@ static void __fastcall__ write_back (unsigned char k)
     D.y = a.y;
     D.face = a.face;
     D.ready = a.ready;
-    D.att = a.attitude;
+    D.attitude = a.attitude;
+    D.order = aorder[k];
+}
+
+/* The name the character gave denizen i (its entry in the head's names), or NNAMES */
+static unsigned char __fastcall__ name_of (unsigned char i)
+{
+    unsigned char n;
+
+    for (n = 0; n < NNAMES && hd.names[n].den != i; ++n) {
+    }
+    return n;
 }
 
 /* Actor k no longer one (far from the character): its record its own again, the entry free */
@@ -446,6 +506,9 @@ static void __fastcall__ retire (unsigned char k)
 {
     write_back (k);
     D.flags &= ~D_ACTOR;
+    if (D.attitude == AT_ALLIED && D.order == OR_WAIT) {
+        D.ready = now + 36000;                  /* (An ally left waiting: it waits an hour, then goes its own way) */
+    }
     den_put (a.den);
     HUB->actor[k].name[0] = 0;
     ++HUB->den_seq;
@@ -472,20 +535,19 @@ static void __fastcall__ enlist (unsigned char i, unsigned char k)
     a.y = D.y;
     a.ready = D.ready > now ? D.ready : now;
     a.step = K.step;
-    a.attitude = D.att;
+    a.attitude = D.attitude;
+    a.faction = K.faction;
+    aorder[k] = D.order;
     sgen[k] = 0;
     alert[k] = 0;
+    intr[k] = seenfoe[k] = anear[k] = 0;
+    lsx[k] = lsy[k] = 0;
     fled[k] = 0;
     strcpy (rq.text, K.key);
     rq.w1 = i;
     ask (RS_NEW_ACTOR, k + 1, 0);
-    a.health = s->health;
-    bled[k] = s->cond & C_BLEEDING ? now : 0;
-    if (s->cond & C_UNCONSCIOUS) {
-        a.doing = DO_DOWN;                      /* (Senseless still: a while yet) */
-        a.ready = now + 300;
-    }
-    strcpy (a.name, K.name);
+    bleeds = s->cond & C_BLEEDING ? bleeds | 1 << k : bleeds & ~(1 << k);
+    strcpy (a.name, (i = name_of (i)) < NNAMES ? hd.names[i].name : K.name);
     hub_map (0);
     memcpy (&HUB->actor[k], &a, sizeof a);      /* (Its name last: the entry used once it's whole) */
     ++HUB->den_seq;
@@ -570,20 +632,27 @@ static unsigned char __fastcall__ senses (unsigned dist, int dx, int dy)
 }
 
 /* A step for actor k (the copy): a way it can walk to a square no one's on, within lim squares of its home; how:
-** S_ANY (the way it faces, or another), S_AWAY (only one that takes it further from the character: the furthest;
-** close by it, cornered, one no nearer: a way round it, out), S_TOWARD (only one that takes it nearer: the nearest).
-** Its direction, or 0xFF */
+** S_ANY (the way it faces, or another), S_AWAY (only one that takes it further from refx, refy (the character, or a
+** foe): the furthest; close by it, cornered, one no nearer: a way round it, out), S_TOWARD (only one that takes it
+** nearer, by the squares across and down together, so a step that's no nearer as the crow flies still counts: the
+** nearest).  Its direction, or 0xFF */
 enum { S_ANY, S_AWAY, S_TOWARD };
+static unsigned __fastcall__ toward (int dx, int dy)
+{
+    return (dx < 0 ? -dx : dx) + (dy < 0 ? -dy : dy);
+}
+
 static unsigned char __fastcall__ step_for (unsigned char k, unsigned lim, unsigned char how)
 {
     unsigned char d, j, best = 0xFF, s = random (2) ? a.face >> 1 : random (4);
-    unsigned nx, ny, f, bf = apart (a.x - pcx, a.y - pcy);
+    unsigned nx, ny, f, bf = how == S_TOWARD ? toward (a.x - refx, a.y - refy) : apart (a.x - refx, a.y - refy);
 
     for (j = 0; j < 4; ++j) {
         d = (s + j) & 3;
         nx = a.x + dir_x[d];
         ny = a.y + dir_y[d];
-        f = apart (nx - pcx, ny - pcy);         /* (The walk's own test last: it's the dearest) */
+        f = how == S_TOWARD ? toward (nx - refx, ny - refy) : apart (nx - refx, ny - refy);   /* (The walk's own
+                                                **   test last: it's the dearest) */
         if (apart (nx - ahx[k], ny - ahy[k]) > lim || (how == S_AWAY && (f < bf || (f == bf && bf > 2))) ||
             (how == S_TOWARD && f >= bf) || taken (k, nx, ny) || !step_ok (a.sn, a.x, a.y, d)) {
             continue;
@@ -734,9 +803,8 @@ static void hear (void)
             src = 0;
             sn = pcs;
             loud = m.a;
-        } else if (hub_dnext (&dplace, &m)) {   /* (Its own: an actor's, not heard by itself; a fight's, not by
-                                                **   those in it) */
-            if ((m.kind != E_DEN && m.kind != E_FIGHT) || !m.b) {
+        } else if (hub_dnext (&dplace, &m)) {   /* (Its own: an actor's, not heard by itself) */
+            if (m.kind != E_DEN || !m.b) {
                 continue;
             }
             src = m.who;
@@ -749,7 +817,7 @@ static void hear (void)
             hub_map (0);
             q = &HUB->actor[k];
             if (!q->name[0] || k + 1 == src || q->sn != sn || (m.w1 == q->x && m.w2 == q->y) ||
-                q->doing >= DO_FIGHT || (m.kind == E_FIGHT && k + 1 == m.a)) {
+                q->doing >= DO_FIGHT) {
                 continue;                       /* (Not those fighting, fleeing, or senseless: nothing turns them) */
             }
             kind_get (akind[k]);
@@ -770,36 +838,23 @@ static void hear (void)
 /* ---- Fights (the referee's, RS_ATTACK: HarnMaster's melee).  A hostile actor beside the character, sensing it,
 ** strikes at it a round at a time (the referee's round: the hub's), as the character strikes at one (its blow
 ** posted by the world, I_ATTACK: the hub's pc_foe, struck here as it's seen); each blow told (E_FIGHT, in this task's
-** queue: the referee's words in the ring, FIGHT_AT, for the UI), heard (loud: the others turn to it), and what it
-** did taken: a denizen dead (its record so, its body left where it fell: an item), knocked senseless (it lies there
-** till it comes round: the referee's time), wounded (its morale tested, RS_MORALE: broken, or a shy one cautious, it
-** flees a minute, and fights after only if it's pressed; cautious, it holds back a round), its tactical advantage (it
-** strikes again at once).  One struck at turns on the character, unless it flees.  One bleeding has its bloodloss
-** reckoned a minute at a time (RS_TIME), and may die of it */
+** queue: the referee's words in the ring, FIGHT_AT, put there by the referee, for the UI; played, the sound task's),
+** and what it did taken (the referee's say: hub.h's FF_*): a denizen dead (its record so, its body left where it
+** fell: an item), knocked senseless (it lies there till it comes round: the referee's time), its courage broken (or
+** a shy one's shaken: it flees a while, and fights after only if it's pressed), shaken (it holds back a round); its
+** kin, as one falls, test their courage too (dismay).  One struck at turns on the character (harmed), unless it
+** flees.  The bleeding have their bloodloss reckoned a minute at a time (RS_TIME, all at once), and may die of it */
 
-#define FLEE_T          600                     /* Tenths a broken one flees for */
+#define FLEE_T          24                      /* Turns a broken one flees for (a step each, or a moment) */
 #define LOUD_FIGHT      5
 
 static unsigned char fring;                     /* (The ring's next) */
-static struct fight fw;                         /* (A blow's words, as they go into the ring) */
-
-/* The referee's words of a blow (its reply in rq) kept for the ring (fw) */
-static void keep_words (void)
-{
-    memset (&fw, 0, sizeof fw);
-    fw.out = rq.w2;
-    fw.which = rq.a;
-    strncpy (fw.text, rq.text, sizeof fw.text - 1);
-}
+static unsigned bled_at;                        /* (When their bloodloss was last reckoned: the clock's low word) */
 
 /* A blow told: attacker att, defender def (0 the character, else an actor's entry plus 1; actor a, the copy, the one
-** in it), how it came out (O_*, FO_GONE, FO_BLED), what it left them in (FF_*); its words fw's */
+** in it), how it came out (O_*, FO_BLED), what it left them in (FF_*); its words the ring's, fring; the ring on */
 static void __fastcall__ told (unsigned char att, unsigned char def, unsigned char out, unsigned char f)
 {
-    strcpy (att ? fw.att : fw.def, a.name);
-    hub_map (DEN_BANK);
-    memcpy (FIGHT_AT + fring, &fw, sizeof fw);
-    hub_map (0);
     ev.kind = E_FIGHT;
     ev.who = att;
     ev.a = def;
@@ -829,7 +884,6 @@ static void __fastcall__ body (unsigned char kind)
         if (!p->kind) {
             memset (p, 0, sizeof *p);
             p->kind = kind;
-            p->where = IW_SQUARE;
             p->sn = a.sn;
             p->x = a.x;
             p->y = a.y;
@@ -855,64 +909,63 @@ static void __fastcall__ kill (unsigned char k)
     HUB->den_look = 1;                          /* (The world's to look about again: the body seen) */
 }
 
-/* What a blow did (the referee's reply in rq), taken for actor k (a, the copy; K its kind): att and def as told's,
-** and told; 1 if the actor's dead */
-static unsigned char __fastcall__ fought (unsigned char att, unsigned char def, unsigned char k)
+/* Actor k fallen (dead, senseless): its kin among the actors test their courage (RS_MORALE, a bad situation: the book's
+** "seeing a friend slain", Combat 18), and those it breaks (or shakes, a shy kind) flee */
+static void __fastcall__ dismay (unsigned char k)
 {
-    const struct rs_effect* e = (const struct rs_effect*) rq.x;
-    unsigned char i, f = 0, hurt = 0, me = k + 1, out = rq.result, dead;
+    unsigned char j;
 
-    keep_words ();
-    for (i = 0; i < RS_EFFECTS && e->kind; ++i, ++e) {
-        if (e->kind == X_DEATH) {
-            f |= e->target == att ? FF_A_DEAD : FF_D_DEAD;
-        } else if (e->kind == X_COND_ON) {
-            f |= e->cond & C_UNCONSCIOUS ? (e->target == att ? FF_A_DOWN : FF_D_DOWN) : FF_PRONE;
-        } else if (e->kind == X_DROP) {
-            f |= FF_FUMBLE;
-        }
-        if (e->target != me) {
-            continue;
-        }
-        if (e->kind == X_WOUND) {
-            hurt = 1;
-            if ((e->cond & C_BLEEDING) && !bled[k]) {
-                bled[k] = now ? now : 1;
+    for (j = 0; j < NACTORS; ++j) {
+        if (j != k && akind[j] == akind[k] && !fled[j]) {
+            rq.steps = -2;
+            ask (RS_MORALE, j + 1, 0);
+            if (rq.result == M_BROKEN || (rq.result == M_CAUTIOUS && (K.flags & K_SHY))) {
+                fled[j] = FLEE_T;               /* (Its doing and its attitude its next turn's: fleeing) */
             }
-        } else if (e->kind == X_COND_ON && (e->cond & C_UNCONSCIOUS)) {
-            a.doing = DO_DOWN;                  /* (Senseless: it lies there till it comes round) */
-            a.ready = now + rq.w2;
         }
     }
-    if (rq.c & (AF_STOPPED | AF_STOPPED_D)) {
-        f |= FF_STOPPED;
-    }
-    a.health = att ? rq.w1 : rq.w1 >> 8;
-    if ((rq.c & AF_TA) && def == me) {
-        a.ready = now;                          /* (Its tactical advantage: it strikes again at once) */
-    }
-    if (!att && a.attitude > AT_HOSTILE) {
-        a.attitude = AT_HOSTILE;                /* (Struck at: it turns on the character) */
-    }
-    dead = (f & (me == att ? FF_A_DEAD : FF_D_DEAD)) != 0;
-    if (hurt && !dead && a.doing != DO_DOWN) {
-        rq.steps = 0;
-        ask (RS_MORALE, me, 0);
-        if (rq.result == M_BROKEN || (rq.result == M_CAUTIOUS && (K.flags & K_SHY))) {
-            fled[k] = now + FLEE_T;             /* (Broken: it flees, and won't seek the fight again) */
-            a.doing = DO_FLEE;
-            a.attitude = AT_UNFRIENDLY;
-            f |= FF_FLEES;
-        } else if (rq.result == M_CAUTIOUS) {
-            a.ready += HUB->round;              /* (Cautious: it holds back a round) */
-        }
-    }
-    told (att, def, out, f);
-    return dead;
 }
 
-/* The character's blow at actor k (the world's, posted: the hub's pc_foe), struck if the actor's still beside it;
-** else told it's out of reach */
+/* A blow at or by actor k (a, the copy; K its kind), the referee asked (its words to the ring's fring), and what it did
+** taken and told: att and def as told's; 1 if the actor's dead (0xFF: no blow) */
+static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, unsigned char k)
+{
+    unsigned char f, me = k + 1;
+
+    rq.b = AS_BEST;
+    rq.steps = 0;
+    rq.w1 = fring;
+    rq.w2 = (K.flags & K_SHY) != 0;
+    ask (RS_ATTACK, att, def);
+    if (rq.result == 0xFF) {
+        return 0xFF;                            /* (It can't: senseless, dead) */
+    }
+    f = rq.grade;
+    if (f & (me == att ? FF_A_DOWN : FF_D_DOWN)) {
+        a.doing = DO_DOWN;                      /* (Senseless: it lies there till it comes round) */
+        a.ready = now + rq.w2;
+    }
+    if (f & FF_FLEES) {
+        fled[k] = FLEE_T;                 /* (Broken: it flees, and won't seek the fight again) */
+        a.doing = DO_FLEE;
+        a.attitude = AT_UNFRIENDLY;
+    } else if (rq.c & AF_CAUTIOUS) {
+        a.ready += HUB->round;                  /* (Shaken: it holds back a round) */
+    }
+    if (rq.c & AF_BLEEDING) {
+        bleeds |= 1 << k;
+    }
+    told (att, def, rq.result, f);
+    if (f & (me == att ? FF_A_DEAD | FF_A_DOWN : FF_D_DEAD | FF_D_DOWN)) {
+        dismay (k);
+    }
+    return (f & (me == att ? FF_A_DEAD : FF_D_DEAD)) != 0;
+}
+
+static void __fastcall__ harmed (unsigned char k);
+
+/* The character's blow at actor k (the world's, posted: the hub's pc_foe), struck if the actor's still beside it
+** (gone, nothing: the UI found it there) */
 static void __fastcall__ pc_strike (unsigned char k)
 {
     unsigned char dead;
@@ -920,139 +973,228 @@ static void __fastcall__ pc_strike (unsigned char k)
     hub_map (0);
     memcpy (&a, &HUB->actor[k], sizeof a);
     if (!a.name[0] || a.sn != pcs || apart (a.x - pcx, a.y - pcy) > 1) {
-        memset (&fw, 0, sizeof fw);
-        told (0, k + 1, FO_GONE, 0);
         return;
     }
     kind_get (akind[k]);
     rq.a = HUB->pc_aim;
-    rq.b = AS_BEST;
     rq.c = 0;
-    rq.steps = 0;
-    ask (RS_ATTACK, 0, k + 1);
-    if (rq.result == 0xFF) {
-        return;                                 /* (It can't: senseless, dead) */
+    if ((dead = blow (0, k + 1, k)) == 0xFF) {
+        return;
     }
-    dead = fought (0, k + 1, k);
     hub_map (0);
     memcpy (&HUB->actor[k], &a, sizeof a);
     ++HUB->den_seq;
+    harmed (k);                                 /* (Its own, and their foes, think again of the character) */
     if (dead) {
         kill (k);
     }
 }
 
-/* Actor a (the copy, entry k) strikes at the character beside it (the others beside it fighting it too: it's
-** outnumbered), a round's turn: 1 if it died of it (a counterstrike) */
+/* Actor a (the copy, entry k) strikes at the character beside it (outnumbering it: later), a round's turn: 1 if it died of it (a counterstrike) */
 static unsigned char __fastcall__ den_strike (unsigned char k)
 {
-    struct actor* q = HUB->actor;
-    unsigned char j, n = 0;
-
-    hub_map (0);
-    for (j = 0; j < NACTORS; ++j, ++q) {
-        if (j != k && q->name[0] && q->doing == DO_FIGHT && q->sn == pcs && apart (q->x - pcx, q->y - pcy) <= 1) {
-            ++n;
-        }
-    }
     rq.a = Z_MID;
-    rq.b = AS_BEST;
-    rq.c = n;
-    rq.steps = 0;
-    ask (RS_ATTACK, k + 1, 0);
+    rq.c = 0;
     a.doing = DO_FIGHT;
     a.ready += HUB->round;
-    return rq.result != 0xFF && fought (k + 1, 0, k);
+    return blow (k + 1, 0, k) == 1;
 }
 
-/* Actor k (the hub's entry) bleeding: its bloodloss reckoned a minute at a time (RS_TIME); dead of it, told if the
-** character sees it */
-static void __fastcall__ bleeding (unsigned char k)
+/* The actors bleeding, their bloodloss reckoned a minute at a time (RS_TIME, all at once); those dead of it told (as
+** the UI says, as the character sees them: the ring's names theirs) and their records so */
+static void bleeding (void)
 {
-    unsigned char* p;
-    unsigned m;
+    unsigned char k, dead;
 
-    if (!bled[k] || (m = (unsigned) ((now - bled[k]) / 600)) == 0) {
+    if (!bleeds || (unsigned) now - bled_at < 600) {
         return;
     }
-    bled[k] += m * 600UL;
-    hub_map (0);
-    memcpy (&a, &HUB->actor[k], sizeof a);
-    rq.w1 = m;
-    ask (RS_TIME, k + 1, 0);
-    HUB->actor[k].health = rq.b;
-    if (rq.result == 1) {
-        if ((p = at (a.sn, a.x, a.y)) != 0 && (*p & T_VIS)) {
-            memset (&fw, 0, sizeof fw);
-            told (k + 1, 0, FO_BLED, FF_A_DEAD);
+    bled_at = (unsigned) now;
+    rq.w1 = 1;
+    rq.w2 = bleeds;
+    ask (RS_TIME, 0xFF, 0);
+    dead = rq.w1;
+    for (k = 0; k < NACTORS; ++k) {
+        if (dead & 1 << k) {
+            hub_map (0);
+            memcpy (&a, &HUB->actor[k], sizeof a);
+            hub_map (DEN_BANK);
+            strcpy (FIGHT_AT[fring].att, a.name);
+            hub_map (0);
+            told (k + 1, 0, FO_BLED, FF_A_DEAD);    /* (The UI's to say as it sees it) */
+            kill (k);
         }
-        kill (k);
     }
     hub_map (0);
 }
 
-/* Actor a (the copy) can strike the character dx, dy off, beside it: square on, or a corner between them open */
-static unsigned char __fastcall__ reach (int dx, int dy)
-{
-    unsigned char* p;
 
-    if (!dx || !dy) {
-        return 1;
+/* ---- Attitudes (DENIZENS.md): each denizen's to the character (hub.h's AT_*), its faction's to begin with, moved by
+** what happens: its lair intruded on (a kind that keeps to it: the character beside its home), the character seen
+** with an ally of a faction hostile to its own, harm done to it or its own (harmed), words (sway); and what it means
+** to do by it.  A hostile one comes at the character (and fights it: the fights'); an unfriendly one keeps a few
+** squares off, a bold one coming that near; a wary one watches (a shy one keeps its distance, as an indifferent one
+** does); a friendly one doesn't shy from it; an ally follows it (by its own senses: to where it last sensed it),
+** waits where it's asked, comes along up and down with it.  Denizens of factions hostile to one another keep off
+** one another (the actor's foe: the fights' to fight, when they come) */
+
+static int ddx, ddy;                            /* (The character from the actor deciding, and how far) */
+static unsigned dist;
+
+/* Actor k's (the copy's) attitude moved by what it senses of the character (it senses it now) */
+static void __fastcall__ feel (unsigned char k)
+{
+    struct actor* q = HUB->actor;
+    unsigned char j;
+
+    if ((K.flags & K_LAIR) && apart (pcx - ahx[k], pcy - ahy[k]) <= 2) {
+        if (!intr[k] && a.attitude > AT_HOSTILE && a.attitude < AT_FRIENDLY) {
+            --a.attitude;                       /* (Its lair intruded on) */
+        }
+        intr[k] = 1;
+    } else if (apart (pcx - ahx[k], pcy - ahy[k]) > 4) {
+        intr[k] = 0;
     }
-    return ((p = at (a.sn, a.x + dx, a.y)) != 0 && T_CLEAR (*p)) || ((p = at (a.sn, a.x, a.y + dy)) != 0 &&
-        T_CLEAR (*p));
+    hub_map (0);
+    for (j = 0; j < NACTORS && !seenfoe[k] && a.attitude > AT_HOSTILE && a.attitude < AT_ALLIED; ++j, ++q) {
+        if (j != k && q->name[0] && q->attitude == AT_ALLIED && q->sn == pcs && apart (q->x - pcx, q->y - pcy) <= 3 &&
+            REL (a.faction, q->faction) == AT_HOSTILE) {
+            seenfoe[k] = 1;                     /* (Seen with an enemy: once) */
+            --a.attitude;
+        }
+    }
+}
+
+/* Actor k (the copy) near an actor of a faction hostile to its own (its foe: the nearest, within 4 squares): kept off
+** it, a step away while it's within 3.  The step, or 0xFF */
+static unsigned char __fastcall__ keep_off (unsigned char k)
+{
+    struct actor* q = HUB->actor;
+    unsigned char j, d = 0xFF;
+    unsigned f, best = 5;
+
+    hub_map (0);
+    a.foe = 0;
+    for (j = 0; j < NACTORS; ++j, ++q) {
+        if (j != k && q->name[0] && q->sn == a.sn && REL (a.faction, q->faction) == AT_HOSTILE &&
+            (f = apart (q->x - a.x, q->y - a.y)) < best) {
+            best = f;
+            a.foe = j + 1;
+            refx = q->x;
+            refy = q->y;
+        }
+    }
+    if (a.foe && best <= 3) {
+        d = step_for (k, a.attitude == AT_ALLIED ? 0xFFFF : 2 * K.range, S_AWAY);
+    }
+    refx = pcx;
+    refy = pcy;
+    return d;
+}
+
+/* An ally's (actor k's, the copy's) turn: waiting where it was asked; else following the character, to where it last
+** sensed it, till it's beside it.  The step, or 0xFE (its time added) */
+static unsigned char __fastcall__ ally (unsigned char k)
+{
+    unsigned char d = 0xFE;
+
+    if (sres[k]) {
+        a.face = bearing (ddx, ddy);
+    }
+    if (aorder[k] == OR_WAIT) {
+        a.doing = DO_WAIT;
+        a.ready += 20 + random (20);
+        return d;
+    }
+    a.doing = DO_FOLLOW;
+    if ((lsx[k] || lsy[k]) && apart (a.x - lsx[k], a.y - lsy[k]) > 1) {
+        refx = lsx[k];
+        refy = lsy[k];
+        d = step_for (k, 0xFFFF, S_TOWARD);
+        refx = pcx;
+        refy = pcy;
+    }
+    if (d >= 4) {
+        a.ready += 5 + random (10);
+        d = 0xFE;
+    }
+    return d;
+}
+
+/* What actor k (the copy) does as it senses the character, by its attitude and its kind.  The step, 0xFD (darted
+** past it), or 0xFF (none) */
+static unsigned char __fastcall__ meets (unsigned char k, unsigned char was)
+{
+    unsigned char d = 0xFF, t = a.attitude;
+
+    a.face = bearing (ddx, ddy);
+    a.doing = DO_WATCH;
+    if (t == AT_HOSTILE || ((K.flags & K_BOLD) && t <= AT_INDIFFERENT)) {
+        if (dist > (t == AT_HOSTILE ? 1 : 3) &&
+            (d = step_for (k, 2 * K.range + (t == AT_HOSTILE ? 8 : 0), S_TOWARD)) != 0xFF) {
+            a.doing = DO_COMING;                /* (At it, or to threaten it) */
+        }
+    } else if ((K.flags & K_SHY) && t <= AT_INDIFFERENT && dist < (was == DO_SHY ? 7 : 5)) {
+        a.doing = DO_SHY;
+        if ((d = step_for (k, 2 * K.range, S_AWAY)) == 0xFF && dist == 1 && dart (k)) {
+            d = 0xFD;                           /* (Cornered: past the character) */
+        }
+    } else if (t == AT_UNFRIENDLY && dist < 3) {
+        a.doing = DO_SHY;                       /* (A few squares off, threatening) */
+        d = step_for (k, 2 * K.range, S_AWAY);
+    }
+    return d;
 }
 
 /* What actor k means to do, by its kind, its attitude and what it senses, and done (or a while waited), by the
-** character's rules (step_here: the world's own, as they were when it moved them).  Fleeing, it goes away from the
-** character (cornered beside it, it fights).  Watching the character: a foe beside it (hostile; unfriendly, and
-** pressed) strikes at it; a shy one keeps its distance (till it's a few squares further; cornered beside it, it darts
-** past), a bold or hostile one comes towards it; else it wanders about its lair (or keeps to it) */
+** character's rules (step_here: the world's own, as they were when it moved them): kept off a foe; an ally's way;
+** as it senses the character, meets's; a noise heard, still a while; else it wanders about its lair (or keeps to it) */
 static void __fastcall__ decide (unsigned char k)
 {
     unsigned char d = 0xFF, was, foe, dead = 0;
-    unsigned dist;
-    int dx, dy;
 
     kind_get (akind[k]);
     memcpy (&a, &HUB->actor[k], sizeof a);
     if (!turns && a.ready + CATCHUP < now) {
         a.ready = now - CATCHUP;
     }
+    refx = pcx;
+    refy = pcy;
     was = a.doing;
-    dx = pcx - a.x;
-    dy = pcy - a.y;
-    dist = apart (dx, dy);
+    ddx = pcx - a.x;
+    ddy = pcy - a.y;
+    dist = apart (ddx, ddy);
     a.doing = DO_ROAM;
     if (sgen[k] != sense_gen || sax[k] != a.x || say[k] != a.y) {
         sgen[k] = sense_gen;                    /* (Sensed again only as it or the character has changed) */
         sax[k] = a.x;
         say[k] = a.y;
-        sres[k] = senses (dist, dx, dy);
+        sres[k] = senses (dist, ddx, ddy);
     }
-    foe = !pcdead && (a.attitude <= AT_HOSTILE || (a.attitude == AT_UNFRIENDLY && dist <= 1));
-    if (fled[k] > now) {
+    foe = !pcdead && (a.attitude == AT_HOSTILE || (a.attitude == AT_UNFRIENDLY && dist <= 1));
+    if (sres[k]) {
+        lsx[k] = pcx;
+        lsy[k] = pcy;
+        feel (k);
+    }
+    anear[k] = a.sn == pcs && dist <= 3;
+    if (fled[k]) {
+        --fled[k];
         a.doing = DO_FLEE;                      /* (Fleeing: away; cornered beside the character, it fights) */
-        if ((d = step_for (k, 4 * K.range + 8, S_AWAY)) == 0xFF && dist == 1 && sres[k] && !pcdead &&
-            reach (dx, dy)) {
+        if ((d = step_for (k, 4 * K.range + 8, S_AWAY)) == 0xFF && dist == 1 && sres[k] && !pcdead) {
             dead = den_strike (k);
             d = 0xFC;
         }
+    } else if (sres[k] && foe && dist == 1) {
+        a.face = bearing (ddx, ddy);            /* (A foe beside it: it strikes) */
+        dead = den_strike (k);
+        d = 0xFC;
+    } else if ((d = keep_off (k)) != 0xFF) {
+        a.doing = sres[k] ? DO_WATCH : DO_ROAM;
+    } else if (a.attitude == AT_ALLIED) {
+        d = ally (k);
     } else if (sres[k]) {
-        a.face = bearing (dx, dy);
-        a.doing = DO_WATCH;
-        if (foe && dist == 1 && reach (dx, dy)) {
-            dead = den_strike (k);
-            d = 0xFC;
-        } else if ((K.flags & K_SHY) && !foe && dist < (was == DO_SHY ? 7 : 5)) {
-            a.doing = DO_SHY;
-            if ((d = step_for (k, 2 * K.range, S_AWAY)) == 0xFF && dist == 1 && dart (k)) {
-                d = 0xFD;                       /* (Cornered: past the character) */
-            }
-        } else if (((K.flags & K_BOLD) || (foe && a.attitude <= AT_HOSTILE)) && dist > 1 &&
-            (d = step_for (k, 2 * K.range, S_TOWARD)) != 0xFF) {
-            a.doing = DO_COMING;
-        }
+        d = meets (k, was);
     } else if (alert[k] > now) {
         d = 0xFE;                               /* (A noise heard: still, facing the way it came, a while) */
         a.ready += 10 + random (20);
@@ -1133,10 +1275,15 @@ static unsigned char roam (void)
         den_get (i);
         kind_get (D.kind);
         lair_get (D.lair);
-        lim = K.flags & K_LAIR ? 2 : K.range;
+        if (D.attitude == AT_ALLIED && D.order == OR_WAIT) {
+            D.order = OR_NONE;                  /* (Left waiting an hour: it goes its own way, an ally no more) */
+            D.attitude = AT_FRIENDLY;
+        }
+        lim = D.sn == L.sn ? (K.flags & K_LAIR ? 2 : K.range) : 0;    /* (Come along with the character off its
+                                                **   lair's stratum: it stays where it is) */
         x = L.hx + random (2 * lim + 1) - lim;
         y = L.hy + random (2 * lim + 1) - lim;
-        if (made_at (D.sn, x, y) && open_sq (at (D.sn, x, y)) && !taken (0xFF, x, y) && !rec_on (D.sn, x, y)) {
+        if (lim && made_at (D.sn, x, y) && open_sq (at (D.sn, x, y)) && !taken (0xFF, x, y) && !rec_on (D.sn, x, y)) {
             D.x = x;
             D.y = y;
             D.face = random (4) * 2;
@@ -1150,6 +1297,32 @@ static unsigned char roam (void)
     }
     hub_map (0);
     return n;
+}
+
+/* Ally k come along with the character, up or down: on a square beside it, open, no one's on it.  1 if it is */
+static unsigned char __fastcall__ along (unsigned char k)
+{
+    struct actor* q;
+    unsigned char h;
+    unsigned x, y;
+
+    for (h = 0; h < 8; ++h) {
+        x = pcx + head_x[h];
+        y = pcy + head_y[h];
+        if (open_sq (at (pcs, x, y)) && !taken (k, x, y)) {
+            hub_map (0);
+            q = &HUB->actor[k];
+            q->sn = pcs;
+            q->x = x;
+            q->y = y;
+            q->ready = now + 10;
+            sgen[k] = 0;
+            ++HUB->den_seq;
+            return 1;
+        }
+    }
+    hub_map (0);
+    return 0;
 }
 
 /* Each actor tended: what the world's done taken, those far from the character retired, those free to act set
@@ -1171,6 +1344,7 @@ static void tend (void)
         pc_strike ((k - 1) & 7);
         again = 1;
     }
+    bleeding ();
     if (pcx != lx || pcy != ly || pcs != ls) {
         lx = pcx;
         ly = pcy;
@@ -1210,14 +1384,14 @@ static void tend (void)
             q->ready = now + 1 + random (10);   /* (The character's changed: a watcher sees to it soon; not one
                                                 **   fighting, fleeing or senseless: its own time) */
         }
+        if (q->sn != pcs && anear[k] && q->attitude == AT_ALLIED && aorder[k] != OR_WAIT && !along (k) && fresh) {
+            continue;                           /* (An ally beside the character as it went up or down: with it,
+                                                **   as soon as there's a square beside it) */
+        }
         if (q->sn != pcs || apart (q->x - pcx, q->y - pcy) > ACT_R + 8) {
             retire (k);
             again = 1;
             continue;
-        }
-        bleeding (k);
-        if (!q->name[0]) {
-            continue;                           /* (Dead of it) */
         }
         for (n = 0; q->ready <= now && n < (turns ? 64 : 1); ++n) {
             decide (k);
@@ -1227,6 +1401,291 @@ static void tend (void)
     if (again) {
         enlist_near ();
     }
+}
+
+/* ---- The character's ways with a denizen (the UI's request, the hub's sway: hub.h): the one meant found among those
+** it sees (or that are near), by a word of its name or its kind's; and words to sway it (the referee's test, in the
+** UI's slot, lent while the UI waits), a request to an ally, a name given, a look at how it seems, a blow (harmed) */
+
+static struct sway sw;
+
+/* Whether name n (an actor's, or a kind's) is meant by w (the parser's word, in lower case): the start of one of its
+** words ("rat", "giant", "grub") */
+static unsigned char __fastcall__ called (const char* n, const char* w)
+{
+    static char b[12];
+    unsigned char i, m = strlen (w);
+
+    for (i = 0; i < sizeof b - 1 && n[i]; ++i) {
+        b[i] = n[i] >= 'A' && n[i] <= 'Z' ? n[i] + 'a' - 'A' : n[i];
+    }
+    b[i] = 0;
+    for (i = 0; b[i]; ++i) {
+        if ((!i || b[i - 1] == ' ') && !strncmp (b + i, w, m)) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* The actor meant by w ("": any): the nearest of them on the character's stratum, on a square it sees or within four
+** of it; its distance in dist.  The actor, or 0xFF */
+static unsigned char __fastcall__ meant (const char* w)
+{
+    struct actor* q;
+    unsigned char k, best = 0xFF;
+    unsigned char* p;
+    unsigned f, x, y;
+
+    dist = 0xFFFF;
+    for (k = 0; k < NACTORS; ++k) {
+        hub_map (0);
+        q = &HUB->actor[k];
+        if (!q->name[0] || q->sn != pcs || (f = apart (q->x - pcx, q->y - pcy)) >= dist ||
+            (*w && !called (q->name, w) && (kind_get (akind[k]), !called (K.name, w)))) {
+            continue;
+        }
+        x = q->x;
+        y = q->y;
+        if (f > 4 && ((p = at (pcs, x, y)) == 0 || !(*p & T_VIS))) {
+            continue;
+        }
+        dist = f;
+        best = k;
+    }
+    hub_map (0);
+    return best;
+}
+
+/* Actor k harmed by the character (a blow: the fights', and the stand-in's): it's hostile, an ally no more; its own
+** turn against it, its lair's two steps, the rest of its faction one (and the faction's newcomers); those of factions
+** hostile to its own that sense it think the better of it, a step (to friendly at most) */
+static void __fastcall__ harmed (unsigned char k)
+{
+    struct actor* q = HUB->actor;
+    struct den* r = POP->den;
+    unsigned char j, f, l, n;
+
+    hub_map (0);
+    f = q[k].faction;
+    den_get (q[k].den);
+    l = D.lair;
+    for (j = 0; j < NACTORS; ++j, ++q) {
+        if (!q->name[0]) {
+            continue;
+        }
+        if (j == k) {
+            q->attitude = q->doing == DO_FLEE ? AT_UNFRIENDLY : AT_HOSTILE;    /* (Fled from it: it won't seek it) */
+        } else if (q->faction == f) {
+            den_get (q->den);
+            n = D.lair == l ? 2 : 1;
+            q->attitude = q->attitude > n ? q->attitude - n : AT_HOSTILE;
+        } else if (REL (f, q->faction) == AT_HOSTILE && sres[j] && q->attitude < AT_FRIENDLY) {
+            ++q->attitude;
+        } else {
+            continue;
+        }
+        if (q->attitude < AT_ALLIED) {
+            aorder[j] = OR_NONE;
+        }
+        if (q->doing < DO_FIGHT && q->ready > now) {
+            q->ready = now;                     /* (At once: not one fighting, its own time; not put off) */
+        }
+        sgen[j] = 0;
+    }
+    for (j = 0; j < hd.ndens; ++j, ++r) {
+        hy_bank (pb);
+        if (!(r->flags & D_ACTOR) && kfact[r->kind % SND_KINDS] == f) {
+            n = r->lair == l ? 2 : 1;
+            r->attitude = r->attitude > n ? r->attitude - n : AT_HOSTILE;
+            if (r->attitude < AT_ALLIED) {
+                r->order = OR_NONE;
+            }
+        }
+    }
+    hub_map (0);
+    if (hd.fatt[f & (NFACT - 1)] > AT_HOSTILE) {
+        --hd.fatt[f & (NFACT - 1)];
+    }
+    ++HUB->den_seq;
+}
+
+/* Words to sway actor k (sw's how): by its mind (nothing sways the mindless; an animal only by Animalcraft, within
+** reach), in its faction's tongue (but a threat), a test of the referee's (P_PERSUADE, P_DECEIVE, P_INTIMIDATE,
+** P_ANIMALS) at steps by its attitude, its kind and its mind; the attitude moved by the grade, as far as that way of
+** swaying goes (a critical success two steps, a success one, a critical failure a step back: a lie found out two, a
+** threat laughed at hostile) */
+static const signed char att_steps[AT_ALLIED + 1] = { -3, -2, -1, 0, 1, 2 };
+static const unsigned char cap[SW_BEFRIEND + 1] = {
+    0, AT_FRIENDLY, AT_ALLIED, AT_FRIENDLY, AT_WARY, AT_INDIFFERENT, AT_ALLIED
+};
+
+static void __fastcall__ influence (unsigned char k)
+{
+    struct req* r;
+    signed char m, st;
+    unsigned char t = sw.was, h = sw.how, p;
+
+    if (K.mind == M_MINDLESS) {
+        sw.result = SR_MINDLESS;
+        return;
+    }
+    if (sw.beast && h <= SW_DECEIVE) {
+        sw.result = SR_BEAST;
+        return;
+    }
+    if (dist > (sw.beast ? 8 : 12)) {
+        sw.result = SR_FAR;
+        return;
+    }
+    if (t >= cap[h]) {
+        sw.result = SR_AS_FAR;
+        return;
+    }
+    st = att_steps[t] + K.sway;
+    p = sw.beast ? P_ANIMALS : h == SW_THREATEN ? P_INTIMIDATE : h == SW_DECEIVE ? P_DECEIVE : P_PERSUADE;
+    if (h == SW_DECEIVE) {
+        st += K.mind == M_LOW ? 2 : K.mind == M_CUNNING ? -2 : 0;
+    } else if (!sw.beast && h != SW_THREATEN && K.mind == M_LOW) {
+        --st;                                   /* (Hard to reason with) */
+    }
+    hub_map (0);
+    r = &HUB->slot[SLOT_UI];
+    r->text[0] = 0;
+    if (!sw.beast && h != SW_THREATEN) {        /* (Words: in its tongue, if it has one) */
+        if (!ftongue[K.faction & (NFACT - 1)][0]) {
+            sw.result = SR_TONGUE;
+            return;
+        }
+        strcpy (r->text, ftongue[K.faction & (NFACT - 1)]);
+    }
+    r->kind = RS_TEST;
+    r->actor = 0;
+    r->a = p;
+    r->b = 0;
+    r->steps = st;
+    r = hub_ask (SLOT_UI);
+    sw.grade = r->grade;
+    p = r->result;
+    r->state = REQ_FREE;
+    if (p == 2) {
+        sw.result = SR_TONGUE;                  /* (Not one the character speaks) */
+        sw.grade = 0;
+        return;
+    }
+    sw.t = h == SW_THREATEN ? 50 : 100;
+    m = sw.grade == G_CS ? 2 : sw.grade == G_MS ? 1 : sw.grade != G_CF ? 0 : h == SW_DECEIVE ? -2 :
+        h == SW_THREATEN ? -AT_ALLIED : -1;
+    m += t;
+    t = m < 0 ? AT_HOSTILE : m > cap[h] ? cap[h] : m;
+    hub_map (0);
+    HUB->actor[k].attitude = sw.now = t;
+    if (t == AT_ALLIED) {
+        aorder[k] = OR_FOLLOW;                  /* (Won over: it comes with the character) */
+    }
+}
+
+/* A request to ally k (sw's order): follow, wait, go its own way (an ally no more); fetching, not yet */
+static void __fastcall__ order (unsigned char k)
+{
+    struct actor* q;
+
+    hub_map (0);
+    q = &HUB->actor[k];
+    if (q->attitude != AT_ALLIED) {
+        sw.result = SR_NOT_ALLY;
+        return;
+    }
+    if (sw.order == OR_FETCH || !sw.order) {
+        sw.result = SR_CANT;
+        return;
+    }
+    sw.t = 20;
+    if (sw.order == OR_HOME) {
+        q->attitude = sw.now = AT_FRIENDLY;
+        aorder[k] = OR_NONE;
+    } else {
+        aorder[k] = sw.order;
+    }
+}
+
+/* A name given actor k (sw's word2, capitalised): a friend's or an ally's, kept in the head's names */
+static void __fastcall__ give_name (unsigned char k)
+{
+    struct actor* q = &HUB->actor[k];
+    unsigned char n;
+
+    if (sw.was < AT_FRIENDLY || !sw.word2[0]) {
+        sw.result = sw.word2[0] ? SR_NOT_ALLY : SR_CANT;
+        return;
+    }
+    if ((n = name_of (q->den)) == NNAMES && (n = name_of (0xFF)) == NNAMES) {
+        sw.result = SR_CANT;                    /* (Names enough given) */
+        return;
+    }
+    sw.word2[sizeof hd.names[0].name - 1] = 0;
+    if (sw.word2[0] >= 'a' && sw.word2[0] <= 'z') {
+        sw.word2[0] += 'A' - 'a';
+    }
+    hd.names[n].den = q->den;
+    strcpy (hd.names[n].name, sw.word2);
+    hub_map (0);
+    strcpy (q->name, sw.word2);
+}
+
+/* The UI's request answered */
+static void sway (void)
+{
+    struct actor* q;
+    unsigned char k, n = 0;
+
+    hub_map (0);
+    memcpy (&sw, &HUB->sway, sizeof sw);
+    sw.result = SR_OK;
+    sw.grade = 0;
+    sw.t = 0;
+    sw.name[0] = 0;
+    sw.beast = 0;
+    if (sw.how == SW_ORDER && !sw.word[0]) {    /* (To every ally in earshot) */
+        for (k = 0; k < NACTORS; ++k) {
+            hub_map (0);
+            q = &HUB->actor[k];
+            if (q->name[0] && q->attitude == AT_ALLIED && q->sn == pcs && apart (q->x - pcx, q->y - pcy) <= 12) {
+                strcpy (sw.name, ++n == 1 ? q->name : "");
+                order (k);
+                q->ready = now + 1;
+            }
+        }
+        sw.result = n ? sw.result : SR_NONE;
+    } else if ((k = meant (sw.word)) == 0xFF) {
+        sw.result = SR_NONE;
+    } else {
+        q = &HUB->actor[k];
+        strcpy (sw.name, q->name);
+        sw.was = sw.now = q->attitude;
+        kind_get (akind[k]);
+        sw.beast = K.mind == M_BEAST;
+        switch (sw.how) {
+        case SW_LOOK:
+            break;
+        case SW_NAME:
+            give_name (k);
+            break;
+        case SW_ORDER:
+            order (k);
+            break;
+        default:
+            influence (k);
+            break;
+        }
+        hub_map (0);
+        HUB->actor[k].ready = now + 1;          /* (It sees to what's changed at once) */
+        sgen[k] = 0;
+    }
+    hub_map (0);
+    ++HUB->den_seq;
+    memcpy (&HUB->sway, &sw, sizeof sw);       /* (The reply whole, then the state that shows it) */
+    HUB->sway.state = REQ_DONE;
 }
 
 /* ---- The records kept (back: read again), the save folder's dens.dat: the bank a piece at a time, through the
@@ -1305,6 +1764,8 @@ int main (int argc, char* argv[])
     hy_bank (pb);
     memset (POP, 0, 0x2000);
     hub_map (0);
+    memcpy (hd.fatt, fatt0, sizeof hd.fatt);    /* (A new game's: the factions as the character first meets them) */
+    memset (hd.names, 0xFF, sizeof hd.names);
     if (HUB->resume) {
         keep (1);
     }
@@ -1335,6 +1796,9 @@ int main (int argc, char* argv[])
             if (!++sense_gen) {
                 sense_gen = 1;
             }
+        }
+        if (HUB->sway.state == REQ_POSTED) {    /* (The UI's: the character's way with a denizen) */
+            sway ();
         }
         turns = !HUB->tpr;
         grow ();

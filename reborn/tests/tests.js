@@ -2390,6 +2390,31 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0sway', what: 'Dingus Quest Zero\'s attitudes and influence (DENIZENS.md; the user: "skills like animal husbandry could influence animals encountered"): a character good with animals (Animalcraft 90, hmchar\'s file) at seed 3\'s giant rats (wary, the vermin faction\'s), words refused (an animal: persuasion doesn\'t reach it), how one seems (examined), befriended (the referee\'s Animalcraft, a test at a time, the attitude a step or two each success: won over, then asked no more), named Grub, asked to wait and seen waiting as the character crosses the room, then to follow, following it across the room and down the stairway (come along to the stratum below); the game kept (dq0 -d) and carried on, Grub its ally still; then a fresh game, a blow at a rat out of reach not struck (the fights\', dq0fight, have the harm done: the rat and its kin turned on the character)',
+      init: 't_rc', cycles: 1800e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/a.hm\rāecho ml ani 90 >> /ram/a.hm\rādq0 -p t -s 3 -c /ram/a.hm -T -d /ram/kept\r' +
+        ['persuade the rat', 'examine the rat', ...Array(8).fill('befriend the rat'),
+         'name the rat grub', 'tell grub to wait', 'go west', 'follow me', 'go east', 'wait', 'd', 'look',
+         'quit', 'dq0 -d /ram/kept', 'examine grub', 'quit',
+         'dq0 -p t -s 3 -c /ram/a.hm -T', 'look', 'attack the rat', 'look', 'examine the rat', 'quit',
+         'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['words won\'t reach it', 'The giant rat seems wary of you.', 'You coax the giant rat.', 'It\'s won over: it will follow you now.',
+        'The giant rat is Grub now.', 'Grub waits here.', 'Grub follows you.', 'You come into the ', 'Grub seems your ally.',
+        'It\'s out of reach: go up to it first.', 'The giant rat seems wary of you.', '% echo $status'],
+      // (The tests' dice the referee's, its requests' order the tasks' timing: so as many tries as it takes to win the
+      // rat over.  Waiting: seen so as the character crosses the room; following: behind it once it's crossed back,
+      // and beside it as it comes down the stairway)
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        const seg = (a, b, from = 0) => { const i = o.indexOf(a, from); return i < 0 ? '' : o.slice(i, o.indexOf(b, i + a.length)); };
+        if (!/Grub is [^.]*, waiting\./.test(seg('> go west', '> follow me'))) f.push('Grub not seen waiting');
+        if (!/Grub is [^.]*, following you\./.test(seg('> wait', '> d'))) f.push('Grub not seen following across the room');
+        if (!/Grub is [^.]*, following you\./.test(seg('You come into the ', '> quit'))) f.push('Grub not come along down the stairway');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0prompt', what: 'Dingus Quest Zero answering at once at the normal pace while the denizens act (DENIZENS.md: events; the user: "the UI is slow to respond"): the giant rats by the way down moving about on their own (their task\'s, in the background), a while waited, then a turn and what the character carries asked for at once, while the senses look about after the turn (the character still busy): told within a fifth of a second of Enter, before the look\'s done (the senses answer it between the look\'s rows, the UI a command that wants nothing of the character at once), and a step that can\'t be taken told as quickly (the world\'s answer); the status line drawn only where it changed, a second at most (the user: the cursor flickered), the cursor hidden while it\'s there',
       init: 't_rc', cycles: 900e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p n -s 3 -c /ram/c.hm -T\r' +
@@ -2526,8 +2551,8 @@ module.exports = {
         const o = out.replace(/\x1b\[[0-9;]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
         const want = ['> look You are in a small hall', 'The ceiling is flat. There is a door', '> look closely',
           'It is 10 feet by 10.', 'The ceiling is flat, 8 feet up.', '> x room', 'It is 10 feet by 10.',
-          'A door of iron-bound wood, 3 feet wide and 7 high, 3 inches thick.', 'Your blows make no mark on it.',
-          'Your knuckles split on it: a minor bruise to', '> break', 'You stop: your hands are too hurt to go on.',
+          'A door of iron-bound wood, 3 feet wide and 7 high, 3 inches thick.', 'You batter at it a while: it\'s marked, but it holds.',
+          'Something gives as you strike it:', 'You stop: you are too hurt to go on.', '> break',
           'Brackets for a bar are fixed on this side, the bar in them.',
           'It\'s 4 feet long, 3 inches thick.', 'You batter at it till it gives way, and it crashes open.',
           '(broken down)', 'It\'s broken: it won\'t shut.', 'You lift the bar out of its brackets, and set it down.', 'Taken.',
@@ -2542,36 +2567,6 @@ module.exports = {
         }
         const g = o.slice(o.indexOf('> look You are'), o.indexOf('> look closely'));
         if (/feet up|feet by/.test(g)) f.push('the glance gives figures: ' + g);
-        return f;
-      },
-      sdcard: true
-    },
-    {
-      name: 'dq0hands', what: 'Dingus Quest Zero\'s doors battered with bare hands (the user\'s, 2026-10-15: a blow a d4 and the Strength\'s modifier, the door\'s resistance off it, the hand hurt by the lesser of the blow and the resistance): one character made strong and one weak (hmchar\'s file, its Strength line set after), at seed 10\'s rotting wooden door the strong one marking it, the weak one not, the strong one\'s hands only bruised (minor: a rotten door\'s resistance is little), stopping when hurt enough, the injuries on the sheet; at seed 14\'s sound iron-bound door the strong one\'s hand fractured (serious: a sturdy door hurts more)',
-      init: 't_rc', cycles: 800e6,
-      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/s.hm\rāecho att str 18 >> /ram/s.hm\r' +
-        'āhmchar -q -s 5 -o /ram/w.hm\rāecho att str 4 >> /ram/w.hm\r' +
-        [['s', 10], ['w', 10], ['s', 14]].map(([c, s]) => 'ādq0 -p t -s ' + s + ' -c /ram/' + c + '.hm\r' +
-          ['break door', 'sheet', 'quit'].map(l => 'ā' + l + '\r').join('')).join('') + 'āecho $status\r' },
-      expect: ['% echo $status'],
-      check(m, out) {
-        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
-        const run = s => { const i = o.indexOf('% dq0 -p t -s ' + s); return o.slice(i, o.indexOf('% ', i + 2)); };
-        const strong = run('10 -c /ram/s'), weak = run('10 -c /ram/w'), sturdy = run('14 -c /ram/s');
-        const want = (r, name, ws) => {
-          let at = 0;
-          for (const w of ws) {
-            const i = r.indexOf(w, at);
-            if (i < 0) { f.push(name + ': not found (in its turn): ' + w); return; }
-            at = i + w.length;
-          }
-        };
-        want(strong, 'strong, rotten door', ['> break door', 'it\'s marked, but it holds.', 'Your knuckles split on it: a minor bruise to',
-          'You stop: your hands are too hurt to go on.', '> sheet', 'Strength 18', 'Injuries:', 'hand M1 (bruise)']);
-        if (/serious/.test(strong)) f.push('the rotten door hurt the hand seriously');
-        want(weak, 'weak, rotten door', ['> break door', 'Your blows make no mark on it.', '> sheet', 'Strength 4']);
-        want(sturdy, 'strong, sturdy door', ['> break door', 'Something gives in your hand:', 'a serious fracture to your', 'hand (S2)',
-          '> sheet', 'Injuries:', 'hand S2 (fracture)']);
         return f;
       },
       sdcard: true
@@ -2615,39 +2610,112 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0fight', what: 'Dingus Quest Zero\'s fights (DENIZENS.md: fights; the referee\'s HarnMaster melee, RS_ATTACK): a fight with a giant rat won (seed 5, down its ladder, a sword in hand: dq0 -k sword): the blows struck and dodged both ways (the rat turns on the character as it\'s struck at: it bites back, on its own turn), a grievous wound knocking it senseless (the size of a man against a rat\'s, a point a die), finished where it lies, its body left (an item, seen as the world looks about again); then one out of reach, and the character\'s sheet unhurt',
-      init: 't_rc', cycles: 900e6,
-      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 5 -c /ram/c.hm -k sword -T\r' +
-        ['d', 'wait', 'go right', 'attack the rat', 'attack the rat', 'attack the rat', 'attack the rat', 'look', 'hit the rat', 'sheet', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
-      expect: ['You strike at the giant rat with your sword; it dodges.', 'The giant rat bites at you; you dodge.', 'fighting you.',
-        'You strike at the giant rat with your sword: a grievous deep gash to its right\nshoulder (G4). It falls senseless.', 'lying senseless.',
-        'You finish the giant rat where it lies. The giant rat falls dead.', 'On the floor ahead lies a body.',
-        'It\'s out of reach: go up to it first.', 'No injuries.', '% echo $status'],
+      name: 'dq0hands', what: 'Dingus Quest Zero\'s doors battered with bare hands (the user\'s, 2026-10-16: "model it after unarmed combat": a blow at a thing an attack it ignores, by Unarmed, its impact less the door\'s resistance off its body; the fist hurt as a blow goes wrong, less with skill and armour): at seed 10\'s rotting wooden door a character of middling Unarmed marking it, the hand fractured as punches go wrong, stopping when hurt enough, the injuries on the sheet; one of Unarmed 95 (hmchar\'s file) breaking it down unhurt; gauntlets worn; at seed 14\'s sound iron-bound door the fists making no mark, the hand fractured',
+      init: 't_rc', cycles: 1400e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rāhmchar -q -s 5 -o /ram/u.hm\rāecho ml una 95 >> /ram/u.hm\r' +
+        [['c', 10, ''], ['u', 10, ''], ['c', 10, ' -k gauntlets'], ['c', 14, '']].map(([c, s, k]) => 'ādq0 -p t -s ' + s + ' -c /ram/' + c + '.hm' + k + '\r' +
+          (k ? 'āwear the gauntlets\r' : '') + ['punch the door', 'sheet', 'quit'].map(l => 'ā' + l + '\r').join('')).join('') + 'āecho $status\r' },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        const runs = o.split('% dq0 -p t -s ').slice(1);
+        const want = (r, name, ws) => {
+          let at = 0;
+          for (const w of ws) {
+            const i = (r || '').indexOf(w, at);
+            if (i < 0) { f.push(name + ': not found (in its turn): ' + w); return; }
+            at = i + w.length;
+          }
+        };
+        want(runs[0], 'middling, rotten door', ['> punch the door', 'it\'s marked, but it holds.', 'Something gives as you strike it:',
+          'fracture to your right hand (S2)', 'You stop: you are too hurt to go on.', '> sheet', 'Injuries:', 'right hand S2 (fracture)']);
+        want(runs[1], 'skilled, rotten door', ['> punch the door', 'You batter at it till it gives way, and it crashes open.', '> sheet',
+          'Unarmed 90', 'No injuries.']);
+        want(runs[2], 'gauntlets', ['You put on the gauntlets.', '> punch the door', 'You batter at it a while', '> sheet']);
+        want(runs[3], 'sturdy door', ['> punch the door', 'Your blows make no mark on it.', 'Something gives as you strike it:', 'hand (S2)',
+          '> sheet', 'Injuries:', 'right hand S2 (fracture)']);
+        return f;
+      },
       sdcard: true
     },
     {
-      name: 'dq0ghoul', what: 'Dingus Quest Zero\'s denizens fighting (DENIZENS.md: fights): a ghoul (hostile, its kind\'s attitude) down the stairway at seed 7 comes towards the character and claws at it, a round at a time while it waits, wounding it (HarnMaster\'s injuries on its sheet, its universal penalty); the character\'s stance set (defend dodge)',
+      name: 'dq0fight', what: 'Dingus Quest Zero\'s fights (DENIZENS.md: fights; the referee\'s HarnMaster melee, RS_ATTACK, dq0harn/fight.c): a fight with seed 5\'s giant rats won (down its ladder, a sword in hand, dq0 -k sword; the character\'s Sword 80, hmchar\'s file): the blows struck and dodged both ways (the rat struck at, and its lair\'s kin, turn on the character: harmed, both fighting it), a grievous wound knocking one senseless (the size of a man against a rat\'s, a point a die), finished where it lies, its body left (an item, seen as the world looks about again); the other killed outright (a mortal wound, its kill roll: Combat 14); the character\'s own wounds on its sheet',
+      init: 't_rc', cycles: 1200e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rāecho ml swd 80 >> /ram/c.hm\rādq0 -p t -s 5 -c /ram/c.hm -k sword -T\r' +
+        ['d', 'wait', 'go right', ...Array(8).fill('attack the rat'), 'look', 'wait', 'look', 'sheet', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['You strike at the giant rat with your sword; it dodges.', 'The giant rat bites at you',
+        'A giant rat is ahead, 5 feet away, fighting you. A giant rat\nis ahead to your left, 5 feet away, fighting you.',
+        'You strike at the giant rat with your sword: a grievous deep gash to its right\nhand (G5). It falls senseless.', 'lying senseless.',
+        'You finish the giant rat where it lies. The giant rat falls dead.',
+        'You strike at the giant rat with your sword: a mortal deep gash to its abdomen.\nThe giant rat falls dead.',
+        'On the floor ahead lies a body.', 'On the floor ahead to your left lies a body.', 'Injuries: left knee M1 (stab).', '% echo $status'],
+      sdcard: true
+    },
+    {
+      name: 'dq0ghoul', what: 'Dingus Quest Zero\'s denizens fighting (DENIZENS.md: fights): a ghoul (its faction hostile to the character) down the stairway at seed 7 comes up to the character and claws at it, a round at a time as it waits (its own turns: the referee\'s round), dodged (the character\'s stance: defend dodge) and wounding it (HarnMaster\'s injuries on its sheet)',
       init: 't_rc', cycles: 1200e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 7 -c /ram/c.hm -T\r' +
         ['d', 'defend dodge', 'wait', 'wait', 'wait', 'sheet', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
-      expect: ['A ghoul is ahead to your left, 10 feet away.', 'You will dodge.', 'The ghoul claws at you', 'fighting you.',
-        'Injuries: ', '% echo $status'],
+      expect: ['A ghoul is ahead to your left, 10 feet away.', 'You will dodge.', 'The ghoul claws at you; you dodge.', 'fighting you.',
+        'The ghoul claws at you: a serious gash to your thorax (S2).', 'Injuries: thorax S2 (gash).', '% echo $status'],
       sdcard: true
     },
     {
-      name: 'dq0armour', what: 'Dingus Quest Zero\'s armour (the catalogue\'s armour kinds, worn: the things tell the referee what\'s worn and how well made, RS_EQUIP\'s marks; HarnMaster\'s protection by location, layers summed, Combat 4-5): a gambeson under a mail hauberk (dq0 -k), worn, the character standing undefended (defend none) as seed 7\'s ghoul claws at it: a blow turned by the armour, a wound where it doesn\'t cover',
+      name: 'dq0armour', what: 'Dingus Quest Zero\'s armour (the catalogue\'s armour kinds, worn: the things tell the referee what\'s worn and how well made, RS_EQUIP\'s marks; HarnMaster\'s protection by location, the layers summed, Combat 4-5): a gambeson under a mail hauberk (dq0 -k), worn, the character standing undefended (defend none) as seed 7\'s ghoul claws at it: wounds where they don\'t cover (a calf) and through them (a thigh: a lesser wound), a blow turned by the armour, and its head, bare, struck a mortal blow: the character\'s death, the game\'s end',
       init: 't_rc', cycles: 1400e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 7 -c /ram/c.hm -k \'gambeson,mail hauberk\' -T\r' +
-        ['wear the gambeson', 'wear the mail hauberk', 'd', 'defend none', 'wait', 'wait', 'wait', 'wait', 'wait', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
-      expect: ['You put on the gambeson.', 'You put on the mail hauberk.', 'You will not defend yourself.', 'your mail hauberk turns the blow', '% echo $status'],
+        ['wear the gambeson', 'wear the mail hauberk', 'd', 'defend none', 'wait', 'wait', 'wait', 'wait', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['You put on the gambeson.', 'You put on the mail hauberk.', 'You will not defend yourself.', 'The ghoul claws at you: a serious gash to your left calf (S2).',
+        'The ghoul claws at you: a minor cut to your left thigh (M1).', 'The ghoul claws at you, but your mail hauberk turns the blow.',
+        'You are dead.', '% echo $status'],
       sdcard: true
     },
     {
-      name: 'dq0flee', what: 'Dingus Quest Zero\'s morale (RS_MORALE, HarnMaster\'s Initiative test): a giant rat struck with bare fists (seed 5, the torch put down), wounded but standing, its courage tested and failed, flees (shy, cautious: broken), seen fleeing',
+      name: 'dq0flee', what: 'Dingus Quest Zero\'s morale (RS_MORALE, HarnMaster\'s Initiative test, Combat 18): one of seed 5\'s giant rats felled by a punch (bare fists: the character\'s Unarmed 80), its lair\'s kin seeing it fall (the book\'s friend slain: a bad situation) shaken and, shy, fleeing (gone from sight at once, fighting no more), and the one down finished; the other gone out of reach',
+      init: 't_rc', cycles: 1400e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rāecho ml una 80 >> /ram/c.hm\rādq0 -p t -s 5 -c /ram/c.hm -T\r' +
+        ['d', 'wait', 'go right', ...Array(6).fill('punch the rat'), 'look', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['You strike at the giant rat with your fists', 'It falls senseless.', 'You finish the giant rat where it lies.',
+        'It\'s out of reach: go up to it first.', '% echo $status'],
+      // (Its kin gone at once: out of sight as the one falls, fighting the character no more)
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), i = o.indexOf('It falls senseless.');
+        const after = i < 0 ? '' : o.slice(i, o.indexOf('> look', i));
+        return !after || after.includes('fighting you') || after.includes('A giant rat is ahead to your left') ? ['its kin not fled'] : [];
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0unarmed', what: 'Dingus Quest Zero\'s unarmed blows (the user\'s, 2026-10-16: punching, kicking, head butts; the referee\'s gear.c, the book\'s hand, foot and head, Combat 3, by Unarmed): at seed 5\'s giant rats, a punch, a kick, a head butt (punch the rat, kick the rat, head butt the rat: the hub\'s pc_strike), each worded as it\'s struck',
       init: 't_rc', cycles: 1200e6,
-      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 5 -c /ram/c.hm -T\r' +
-        ['d', 'wait', 'go right', 'drop the torch', 'attack the rat', 'attack the rat', 'attack the rat', 'attack the rat', 'attack the rat', 'attack the rat', 'look', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
-      expect: ['with your fists', 'It flees.', '% echo $status'],
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rāecho ml una 80 >> /ram/c.hm\rādq0 -p t -s 5 -c /ram/c.hm -T\r' +
+        ['d', 'wait', 'go right', 'punch the rat', 'kick the rat', 'head butt the rat', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['> punch the rat', 'You strike at the giant rat with your fists', '> kick the rat', 'You kick at the giant rat', '> head butt the rat',
+        'You butt at the giant rat with your head', '% echo $status'],
+      sdcard: true
+    },
+    {
+      name: 'dq0kick', what: 'Dingus Quest Zero\'s doors kicked and butted (the user\'s, 2026-10-16: battering a thing an attack it ignores, modelled after unarmed combat; boots for a kick, a helm for a head butt): at seed 14\'s sound iron-bound door, kicked barefoot (the foot fractured as a kick goes wrong) and in knee boots (their soles: bruises only), butted bare-headed (the skull fractured) and in an iron helm (bruises only), the blows stopping as the character\'s hurt enough',
+      init: 't_rc', cycles: 1600e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\r' +
+        'ādq0 -p t -s 14 -c /ram/c.hm\r' + ['kick the door', 'sheet', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        'ādq0 -p t -s 14 -c /ram/c.hm -k \'knee boots\'\r' + ['wear the knee boots', 'kick the door', 'sheet', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        'ādq0 -p t -s 14 -c /ram/c.hm\r' + ['head butt the door', 'sheet', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        'ādq0 -p t -s 14 -c /ram/c.hm -k \'iron helm\'\r' + ['wear the iron helm', 'head butt the door', 'sheet', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        'āecho $status\r' },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        const runs = o.split('% dq0 -p t -s 14').slice(1);
+        const inj = r => (r.match(/Injuries: ([^>]*)/) || [])[1] || '';
+        if (runs.length !== 4) return ['the four games not played'];
+        if (!runs[0].includes('You batter at it') || !/right foot S\d/.test(inj(runs[0]))) f.push('the bare foot not hurt seriously');
+        if (!runs[1].includes('You put on the knee boots.') || /S\d|G\d/.test(inj(runs[1])) || !/foot M1/.test(inj(runs[1]))) f.push('the booted foot not spared');
+        if (!/skull S\d/.test(inj(runs[2]))) f.push('the bare head not hurt seriously');
+        if (!runs[3].includes('You put on the iron helm.') || /S\d|G\d/.test(inj(runs[3])) || !/skull M1/.test(inj(runs[3]))) f.push('the helmed head not spared');
+        if (!o.includes('You stop: you are too hurt to go on.')) f.push('the blows not stopped');
+        return f;
+      },
       sdcard: true
     },
     {
@@ -2723,8 +2791,8 @@ module.exports = {
       expect: ['% echo $status'],
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
-        const want = ['You loose the winch: the portcullis crashes down.', '> break portcullis', 'You batter at it a while: it\'s starting to give.',
-          '> break', 'The bars buckle and break under your blows: there\'s a gap to get through.', '> look',
+        const want = ['You loose the winch: the portcullis crashes down.', '> break portcullis', 'The bars buckle and break under your blows: there\'s a gap to get through.', '> break',
+          'Its bars are forced apart, and it\'s jammed where it is', '> look',
           'There is a portcullis ahead (its bars forced apart).', '> x portcullis', 'Its bars are forced apart: there\'s a gap to get through.',
           '> lower portcullis', 'Its bars are forced apart, and it\'s jammed where it is', '> w', 'You are in a long vault',
           'You loose the winch: the portcullis crashes down.', '> bend the bars', 'The bars won\'t give.', '> bend bars',
