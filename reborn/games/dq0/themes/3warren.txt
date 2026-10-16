@@ -12,8 +12,8 @@ stratum  | Kobold Mines | mx | works
 stratum  | the Chieftain's Den | mn | keep
 stratum  | Old Diggings | mn | works
 rooms    | den | burrow | pen | midden | lair | gallery | cave | storeroom
-uses     | cookpit | larder | warriors' den | armoury | shrine | sleeping burrow | chieftain's den | well | cistern | gatehouse
-           | guardroom | workshop
+uses     | cookpit | larder | warriors' den | armoury | shrine | sleeping burrow | chieftain's den | well | cistern
+           | gatehouse | guardroom | workshop
 light    | lit by smoky tallow lamps
 denizens | kobold rat spider bear
 

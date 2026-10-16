@@ -13,7 +13,7 @@ stratum  | Drowned Grottoes | n
 stratum  | Black Water | n
 stratum  | the Mother's Deep | n
 rooms    | chapel | nave | cell | vault | shrine | cloister | grotto | sacristy
-uses     | kitchen | larder | dormitory | armoury | lady chapel | priest's cell | high priest's | well room | cistern
+uses     | kitchen | larder | dormitory | armoury | lady chapel | priest's cell | abbot's lodging | well room | cistern
            | gatehouse | porter's lodge | scriptorium
 light    | lit by lamps of green glass
 denizens | rat spider ghoul skel
