@@ -2573,11 +2573,11 @@ module.exports = {
         'ĀĀāturn left\rinventory\rāgo up\rĀĀĀĀāquit\rāecho $status\r' },
       expect: ['You carry', 'There\'s no way up or down here.', '% echo $status'],
       budgets: [{ what: 'inventory answered (Enter to the answer)', from: '> inventory', to: 'You carry', per: 1, max: 720000 },
-        { what: 'a step that can\'t be taken answered (the world\'s: from the line told into the story)', from: '> go up\x1b[24;1H',
+        { what: 'a step that can\'t be taken answered (the world\'s: from the line told into the story)', from: '\n> go up',
           to: 'There\'s no way up or down here.', per: 1, max: 400000 }],
       // (Each a mark in what the serial line sends: the inventory's from the line typed at the bottom, a fifth of a
-      // second, the user's; the step's from the line entered, as it's told into the story (the line typed's row, 24,
-      // after it): about 290,000 cycles to "go up"'s answer (the world's climbing part swapped in for it), a rat's step
+      // second, the user's; the step's from the line entered, as it's told into the story (on a line of its own: the
+      // line typed's row, 24, after it, or the status line's clock first, as the second falls): about 290,000 cycles to "go up"'s answer (the world's climbing part swapped in for it), a rat's step
       // about then or not.  From the line typed it was
       // 380,000 or 600,000 cycles, as that echo went out at once or waited behind the words still going out on the
       // line: when Enter fell against what the line was sending, moved by any task's code, not the answer's speed)

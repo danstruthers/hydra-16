@@ -200,7 +200,10 @@ function partsChecked(cfiles, objdir) {
 // of its own size: 8K as a rule) and each swapped part's (SWn, of the area's: __SWAPSIZE__).  One table of them all;
 // a task of Dingus Quest Zero (dq0 and dq0*: they run together, and grow) with under HEADROOM bytes free fails the
 // build; an overlay or a part with under ROOM_LOW free, or another game's program short of HEADROOM (hmchar: run
-// alone, most of it the harn library's), only a warning.  OUT: { text, faults }
+// alone, most of it the harn library's), only a warning.  Nothing else of a task's is past its BSS's end: no heap
+// (a dq0 task that takes in malloc fails: cc65's heap runs from the BSS's end to the stack's, over the swap area,
+// and isn't counted), the C stack's least room (__STACKMIN__) above the measure's top, its arguments at TASK_ARGS
+// ($0350).  OUT: { text, faults }
 const HEADROOM = 2048, ROOM_LOW = 512;
 function headroom(names) {
   const rows = [], faults = [], warns = [], lows = [], hex = n => '$' + n.toString(16).toUpperCase();
@@ -219,6 +222,8 @@ function headroom(names) {
     if (!seg.BSS || sym.__RAMTOP__ === undefined) throw new Error('games/' + name + ': no BSS, or no __RAMTOP__, in its map');
     const top = sym.__SWAP_START__ !== undefined ? sym.__SWAP_START__ : sym.__RAMTOP__ - sym.__STACKMIN__;
     const free = top - (seg.BSS.end + 1), task = /^dq0/.test(name);
+    if (/\((_heap|malloc|calloc|realloc|free|_heapadd)\.o\)/.test(m) && task)   // (cc65's heap: from the BSS's end
+      faults.push(name + ' takes in the heap (malloc: from its BSS\'s end up, into the swap area, uncounted)');   //   to the stack's)
     const used = by => { const u = {}; for (const [n, s] of Object.entries(seg)) if (by[n]) u[by[n]] = (u[by[n]] || 0) + s.size; return u; };
     const ov = Object.entries(used(load)).filter(([a]) => /^OV\d+$/.test(a) && size[a]).sort(byNumber);
     const sw = Object.entries(used(run)).filter(([a]) => /^SW\d+$/.test(a)).sort(byNumber);
