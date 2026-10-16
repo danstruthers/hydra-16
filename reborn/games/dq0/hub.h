@@ -196,7 +196,14 @@ struct actor {
     unsigned char   doing;                      /* What it's doing (DO_*: watching, coming, keeping off: it senses the
                                                 **   character) */
     char            name[12];                   /* ("": the entry free) */
+    unsigned char   attitude;                   /* Its attitude to the character (AT_*, its record's: the denizens'
+                                                **   task's; a hostile one fights it) */
+    unsigned char   faction;                    /* Its faction (the denizens' task's: kinds.txt's, the theme's) */
 };
+enum { AT_HOSTILE, AT_UNFRIENDLY, AT_WARY, AT_INDIFFERENT, AT_FRIENDLY, AT_ALLIED };   /* An attitude, the worst
+                                                **   first (DENIZENS.md): attacks on sight; threatens, keeps off;
+                                                **   watches, won't help; minds its own business; talks, helps; comes
+                                                **   with the character, takes its requests */
 
 #define IQ_SIZE         16                      /* The UI's intents */
 #define EQ_SIZE         128                     /* The world's events (each reader its own place) */
