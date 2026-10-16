@@ -26,7 +26,7 @@
 
 /* The verbs: a word (or words) and its verb; several words first, so "look closely" is examining */
 static const struct { char w[16]; unsigned char v; } verbs[] = {
-    { "take a gander", V_LOOK }, { "look closely", V_EXAMINE }, { "look close", V_EXAMINE },
+    { "take a gander", V_LOOK }, { "head butt", V_ATTACK }, { "look closely", V_EXAMINE }, { "look close", V_EXAMINE },
     { "look in detail", V_EXAMINE }, { "close look", V_EXAMINE }, { "pick up", V_GET }, { "put out", V_DOUSE },
     { "take off", V_DOFF }, { "put on", V_DON },          /* ("off" and "on" the verb's, here; else little words) */
     { "put down", V_DROP }, { "set down", V_DROP }, { "put away", V_STOW },
@@ -61,7 +61,9 @@ static const struct { char w[16]; unsigned char v; } verbs[] = {
     { "intimidate", V_THREATEN }, { "scare", V_THREATEN }, { "frighten", V_THREATEN }, { "menace", V_THREATEN },
     { "calm", V_CALM }, { "soothe", V_CALM }, { "placate", V_CALM }, { "pacify", V_CALM }, { "befriend", V_BEFRIEND },
     { "tame", V_BEFRIEND }, { "coax", V_BEFRIEND }, { "attack", V_ATTACK }, { "hit", V_ATTACK }, { "strike", V_ATTACK },
-    { "kick", V_ATTACK }, { "punch", V_ATTACK }, { "tell", V_TELL }, { "ask", V_TELL }, { "order", V_TELL },
+    { "kick", V_ATTACK }, { "punch", V_ATTACK }, { "fight", V_ATTACK }, { "kill", V_ATTACK },
+    { "headbutt", V_ATTACK },
+    { "defend", V_DEFEND }, { "tell", V_TELL }, { "ask", V_TELL }, { "order", V_TELL },
     { "command", V_TELL }, { "follow", V_TELL }, { "come", V_TELL }, { "heel", V_TELL }, { "stay", V_TELL },
     { "halt", V_TELL }, { "dismiss", V_TELL }, { "name", V_NAME }, { "call", V_NAME },
 };
@@ -128,6 +130,7 @@ static const struct { char w[8]; unsigned char p; } preps[] = {
 static const char little[][10] = {
     "the", "a", "an", "this", "that", "these", "those", "of", "me", "my", "myself", "self", "off", "side",
     "direction", "dir", "and", "please", "on", "over", "head", "then", "now", "way", "here", "there", "it", "its",
+    "by",
 };
 
 static unsigned char nw;                        /* The line's words */
@@ -319,5 +322,9 @@ void __fastcall__ o_parse (char* l, struct pcmd* c)
     if (c->prep == PR_WITH && c->verb != V_COMBINE && !c->word[0]) {
         strcpy (c->word, c->word2);             /* ("open the way out with the key": the key's the thing used) */
         c->word2[0] = 0;
+    }
+    if (c->verb == V_ATTACK) {                  /* (A blow: struck with what its verb says, SK_*: blows.c's) */
+        c->half = *word[0] == 'p' ? SK_PUNCH : word[0][1] == 'i' && word[0][2] == 'c' ? SK_KICK : *word[0] == 'h' &&
+            word[0][1] == 'e' ? SK_HEAD : SK_BEST;
     }
 }

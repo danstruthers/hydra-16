@@ -95,8 +95,6 @@ void __fastcall__ o_sway_words (const struct sway* s)
     case SR_CANT:
         if (h == SW_NAME) {
             add (s->word2[0] ? "You've given names enough." : "Name it what?");
-        } else if (h == SW_ATTACK) {
-            add ("Attack whom?");
         } else if (s->order) {
             who (1);
             add (" doesn't know how to do that.");
@@ -109,11 +107,6 @@ void __fastcall__ o_sway_words (const struct sway* s)
     case SW_LOOK:
         who (1);
         seeming (" seems ", ".");
-        return;
-    case SW_ATTACK:                             /* (The fights' stand-in) */
-        add ("You lash out at ");
-        who (0);
-        add (": it turns on you.");
         return;
     case SW_NAME:
         who (1);
@@ -160,6 +153,7 @@ void o_help (void)
          "the pouch (on your belt), wear, take off, inventory (i), examine (a thing, a door, the room: look closely), hide; look (l), map (m), sheet (the "
          "character), wait (z), pause (or Escape), quit (q).  The puzzle's pieces: read (a tablet), combine the one with "
          "the other, put the one on the other, use the key on the way out (or open the way out with it).");
+    msg ("Fights: attack the rat (hit, fight), with what you hold; defend (dodge, block, counter, none, best).");
     msg ("With the denizens: talk to the kobold, persuade, deceive, threaten; calm, befriend (an animal); examine one "
          "(how it seems); an ally's requests: follow me, stay here, tell Grub to wait, dismiss it; name the rat Grub.");
     msg ("Played over the serial port, the game answers quickest at 19200 or 115200 baud (echo b115200 "

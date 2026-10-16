@@ -111,10 +111,10 @@ static void ovl_load (void)
 
     strcpy (path, libdir);
     strcat (path, "/dq0.ovl");
-    if ((fd = open (path, O_RDONLY)) < 0 || (first = hy_banks_alloc (6)) < 0) {
-        hy_exits ("dq0: its overlays (lib/dq0/dq0.ovl) not found, or no RAM banks");
+    if ((fd = open (path, O_RDONLY)) < 0 || (first = hy_banks_alloc (sizeof ovbank)) < 0) {
+        hy_exits ("dq0: no overlays (lib/dq0/dq0.ovl), or no RAM banks");
     }
-    for (k = 0; k < 6; ++k) {
+    for (k = 0; k < sizeof ovbank; ++k) {
         ovbank[k] = first + k;
         for (off = 0; off < 0x2000; off += sizeof b) {
             n = read (fd, b, sizeof b);
@@ -240,9 +240,9 @@ static void sheet (void)
 ** and the maker's changes.dat and seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    4                           /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    5                           /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
-                                                **   the names given) */
+                                                **   the names given; 5, the creatures' sheets) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
@@ -378,7 +378,7 @@ static void start_world (unsigned long seed)
 
     if (hub_create (HUB_BANKS)) {
         t_end ();
-        hy_exits ("dq0: no shared segment, or no semaphores, for the game's tasks");
+        hy_exits ("dq0: no shared segment or semaphores for its tasks");
     }
     HUB->round = ROUND;                         /* (The ruleset's: HarnMaster's 10 seconds, till the referee says) */
     HUB->tpr = tpr[pace];
@@ -480,6 +480,22 @@ static unsigned long heard_at;
 static unsigned char heard_rel = 0xFF;
 char heard_what[20];
 
+static void __fastcall__ intend2 (unsigned char kind, unsigned w1, unsigned w2);
+
+/* A blow (an E_FIGHT: the character's, or one at it), worded (overlay 6's); the character dead of it, the game's
+** end; knocked senseless, it waits it out */
+static void __fastcall__ blow (const struct msg* m)
+{
+    unsigned out = fight_words (m);
+
+    msg (lb);
+    if (HUB->pcsum.cond & C_DEAD) {
+        quit = 1;
+    } else if (out) {
+        intend2 (I_WAIT, out, 1);               /* (Out: the time it's senseless) */
+    }
+}
+
 static void heard (void)
 {
     static struct msg m;
@@ -487,6 +503,10 @@ static void heard (void)
     unsigned char rel;
 
     while (hub_dnext (&dplace, &m)) {
+        if (m.kind == E_FIGHT && (!m.who || !m.a)) {
+            blow (&m);
+            continue;
+        }
         if (m.kind != E_DEN || !m.b || m.x[2] || m.x[0] != HUB->pc_stratum) {
             continue;
         }
@@ -527,7 +547,9 @@ static unsigned char events (void)          /* (How many there were) */
         case E_READY:
             if (m.who == 0) {
                 busy = 0;
-                t_prompt (1);
+                heard ();                       /* (What came before it, told before the prompt: a blow's words;
+                                                **   knocked senseless by one, busy again) */
+                t_prompt (!busy);
             }
             break;
         case E_BYE:
@@ -592,8 +614,7 @@ static unsigned char events (void)          /* (How many there were) */
         case E_LEDGE:
             if (m.who == 0) {
                 k = (signed char) m.w1 > 0 ? (signed char) m.w1 : -(signed char) m.w1;
-                sayf ((signed char) m.w1 > 0 ? "\nThe floor rises %u feet at a ledge ahead: climb it (u) to go on." :
-                      "\nThe floor falls %u feet at a ledge ahead: climb down it (d) to go on.", k);
+                climb_words ((signed char) m.w1 > 0 ? CW_RISES : CW_FALLS, k);
             }
             break;
         case E_CLIMB:
@@ -1101,6 +1122,7 @@ static void __fastcall__ command (char* l)
         } else if (c.obj == OB_WINDOW && !strcmp (c.word, "bars") && !find (OB_WINDOW, c.orel)) {
             c.obj = OB_PORTC;                   /* ("Bend the bars": a portcullis's, with no window there) */
         }
+        HUB->pc_strike = SK_BEST;               /* (Broken with the best to hand) */
 portal:
         if (c.obj && c.orel == 0xFF && find (c.obj, 0xFF)) {
             c.orel = bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y);    /* (The one it sees: faced) */
@@ -1188,6 +1210,18 @@ portal:
             tell (T_BURDENED - 1 + d);          /* (Its load, as the referee has it: its encumbrance) */
         }
         return;
+    case V_ATTACK:                              /* (A blow at a denizen beside it, overlay 6's choice; or the stance */
+    case V_DEFEND:                              /*   set, the referee's defence for the character) */
+        if ((d = fight_target (&c)) == FT_THING) {
+            pa = PA_BREAK;                      /* (A blow at a thing: broken by it) */
+            goto portal;
+        }
+        if (d) {
+            intend (I_ATTACK, d);
+            return;
+        }
+        msg (lb);
+        return;
     case V_JUMP:
         if (c.dir == GO_DOWN) {
             intend (I_CLIMB, DIR_DOWN | I_JUMP);    /* (Down a ledge, or a shaft: a fall) */
@@ -1259,7 +1293,7 @@ int main (int argc, char* argv[])
     status ();
     story (resumed);                            /* (The theme's) */
     blank ();
-    sayf (resumed ? "%s, %s, takes up where they left off." : "%s, %s, enters the dungeon.", P.name, P.occupation);
+    entered (resumed);
     blank ();
     tell (T_TYPE_HELP_FOR);
     t_done ();

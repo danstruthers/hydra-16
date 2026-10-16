@@ -27,10 +27,21 @@ void o_title (void)
     blank ();
 }
 
-/* Climbing's words: how a round went, and the feet to go */
+/* The character come into the dungeon (or back to it: a game carried on) */
+void __fastcall__ o_entered (unsigned char resumed)
+{
+    sayf (resumed ? "%s, %s, takes up where they left off." : "%s, %s, enters the dungeon.", P.name, P.occupation);
+}
+
+/* Climbing's words: how a round went, and the feet to go (and a ledge come to: CW_RISES, CW_FALLS, its feet) */
 void __fastcall__ o_climb_words (unsigned char how, unsigned char feet)
 {
     switch (how) {
+    case CW_RISES:
+    case CW_FALLS:
+        sayf (how == CW_RISES ? "\nThe floor rises %u feet at a ledge ahead: climb it (u) to go on." :
+              "\nThe floor falls %u feet at a ledge ahead: climb down it (d) to go on.", feet);
+        return;
     case K_BEGUN:
         sayf ("\nYou set to climbing: %u feet of it.", feet);
         return;
@@ -56,19 +67,19 @@ void __fastcall__ o_climb_words (unsigned char how, unsigned char feet)
 ** wounds (in lb), and what they've left the character in (cond: its conditions, rs.h's C_*) */
 void __fastcall__ o_harm_words (unsigned w, unsigned cond)
 {
-    static const char* const hands[3] = {       /* (Bare-handed blows: by the worst wound's band) */
-        " Your knuckles split on it: ", " Something gives in your hand: ", " Your hand is crushed against it: "
+    static const char* const self[3] = {        /* (Blows at a thing gone wrong: by the worst wound's band) */
+        " You hurt yourself on it: ", " Something gives as you strike it: ", " You are crushed against it: "
     };
     unsigned char band = w >> 8 & 7;
 
-    if ((w & 0xFF) == HC_HANDS) {
+    if ((w & 0xFF) == HC_STRUCK) {
         if (band) {
-            say (hands[band > 3 ? 2 : band - 1]);
+            say (self[band > 3 ? 2 : band - 1]);
             say (lb);
             say (".");
         }
         if (w & E_STOPPED) {
-            say (" You stop: your hands are too hurt to go on.");
+            say (" You stop: you are too hurt to go on.");
         }
     } else if (w & E_CAUGHT) {
         say (" You snatch at a hold as you go, and it holds: you hang there, and climb on.");

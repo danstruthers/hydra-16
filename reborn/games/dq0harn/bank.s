@@ -1,19 +1,19 @@
 ; ****************************************************************************
 ; bank.s - (dq0harn) the referee's RAM banks, as the UI's (games/dq0/bank.s): the window at $8000 set and read;
-; bytes copied into a bank from the main RAM; and the overlays' calls.  An overlay is code linked at $8000
+; bytes copied between a bank and the main RAM; and the overlays' calls.  An overlay is code linked at $8000
 ; (dq0harn.cfg: OV1 ...), read into a bank of its own as the referee starts (ovbank: overlay n's bank); a call of an
 ; overlay's function goes through its stub here (OVFN): the bank there now kept on a little stack of its own, the
 ; overlay's put in, its function called, the bank put back.  So an overlay can call the main code and other overlays
 ; alike, and the main code can call them.  The rule that keeps it right: a function here that changes the window
-; (bwrite) never reads or writes the caller's memory in it, only the main RAM ($0800-$7EFF).
+; (bread, bwrite) never reads or writes the caller's memory in it, only the main RAM ($0800-$7EFF).
 
-            .export     _setbank, _getbank, _bwrite, _ovbank
+            .export     _setbank, _getbank, _bread, _bwrite, _ovbank
             .import     popa, popax
 
             .include    "zeropage.inc"
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 1                     ; dq0harn.cfg's overlays
+OVMAX       = 3                     ; dq0harn.cfg's overlays
 DEPTH       = 16                    ; Overlay calls in calls, at most
 
             .bss
@@ -37,6 +37,17 @@ _getbank:
             ldx         #0
             rts
 
+; void __fastcall__ bread (unsigned char bank, const void* from, void* to, unsigned n): n bytes from bank's from
+; (in the window) to to (in the main RAM), the window put back as it was
+_bread:
+            jsr         args                ; ptr1 from, ptr2 to, ptr3 n, tmp1 the bank
+            ldy         BANKREG
+            lda         tmp1
+            sta         BANKREG
+            jsr         copy
+            sty         BANKREG
+            rts
+
 ; void __fastcall__ bwrite (unsigned char bank, void* to, const void* from, unsigned n): n bytes from from (in the
 ; main RAM) to bank's to (in the window), the window put back as it was
 _bwrite:
@@ -56,7 +67,7 @@ _bwrite:
             sty         BANKREG
             rts
 
-; bwrite's arguments: n (.A, .X) in ptr3, then the two addresses in ptr2 and ptr1, the bank in tmp1
+; bread's and bwrite's arguments: n (.A, .X) in ptr3, then the two addresses in ptr2 and ptr1, the bank in tmp1
 args:
             sta         ptr3
             stx         ptr3 + 1
@@ -138,3 +149,6 @@ ovl_out:
             OVFN        sheet, 1
             OVFN        brief, 1
             OVFN        harm, 1
+            OVFN        fight, 2
+            OVFN        pc_armour, 3
+            OVFN        pc_side, 3

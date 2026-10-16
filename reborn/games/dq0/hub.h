@@ -51,6 +51,19 @@
 #define SND_WORDS       20
 #define SND_KINDS       32
 #define SND_WORLD       16
+#define DSLOT_AT        ((struct req*) (SND_AT + (2 * SND_KINDS + SND_WORLD) * SND_REC))    /* The denizens' task's
+                                                **   referee slot (in DEN_BANK, after the sounds: the referee copies a
+                                                **   request out, answers it, and copies it back; DTEXT of its text) */
+#define DTEXT           160
+#define NFIGHTS         8                       /* The fights' words (the denizens' task's, after its slot: a ring of
+                                                **   them, an E_FIGHT's x[3] which; the UI words what it reads) */
+#define FIGHT_AT        ((struct fight*) (DSLOT_AT + 1))
+struct fight {
+    char            att[12], def[12];           /* The attacker's name and the defender's ("": the character) */
+    unsigned        out;                        /* The tenths one knocked senseless is out for */
+    unsigned char   which;                      /* Whose a fumble or a stumble was (RS_ATTACK's a) */
+    char            text[DTEXT - 27];           /* The referee's words (RS_ATTACK's four lines) */
+};
 
 /* The tasks, and so their doorbells */
 enum { T_UI, T_WORLD, T_DENIZENS, T_REFEREE, T_SOUND, T_MAKER, T_SENSES, NTASKS };
@@ -80,6 +93,9 @@ enum {
                                                 **   bar to hand, its width (the things': 0, none) */
     I_GOTO,                                     /* w1, w2: a square in its room it sees, walked up to */
     I_QUIT,
+    I_ATTACK,                                   /* a: the actor struck at (its entry plus 1), b: the aim (Z_*): a
+                                                **   round's (the world's: the character busy for it; the blow the
+                                                **   denizens' task's, posted it in the hub's pc_foe) */
     NINTENTS
 };
 
@@ -111,14 +127,33 @@ enum {
                                                 **   squares of wall and rock on the line, 15 at most, and the shut
                                                 **   doors times 16: SOUND.md) */
     E_LEFT,                                     /* who's gone up the way out, open (theme.h: the mission's, escaped) */
+    E_FIGHT,                                    /* (The denizens' too, their queue's) A blow struck: who the attacker
+                                                **   (0 the character, else the actor plus 1), a the defender (the
+                                                **   same), b how loud, w1 w2 the attacker's square, x[0] its stratum,
+                                                **   x[1] how it came out (O_*; FO_GONE: the one struck at out of
+                                                **   reach), x[2] what it left them in (FF_*), x[3] its words (the
+                                                **   ring's: FIGHT_AT) */
     NEVENTS
 };
 enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST };    /* E_DEN's what: a step, a noise of its own (a squeak, a
                                                 **   growl), the character sensed, lost (its senses' own) */
+enum { SK_BEST, SK_PUNCH, SK_KICK, SK_HEAD };   /* A blow struck with (the hub's pc_strike): the best to hand (the
+                                                **   best weapon held at a denizen, the tool that hits hardest at a
+                                                **   thing; else the fists), a fist, a foot, the head */
+#define FO_GONE         0xFF
+#define FO_BLED         0xFE                    /* (E_FIGHT's x[1]: no blow, but the attacker dead of its bleeding) */
+#define FF_A_DOWN       0x01                    /* E_FIGHT's x[2]: the attacker knocked senseless, */
+#define FF_A_DEAD       0x02                    /*   dead, */
+#define FF_D_DOWN       0x04                    /*   the defender senseless, */
+#define FF_D_DEAD       0x08                    /*   dead, */
+#define FF_FLEES        0x10                    /*   a denizen in it fleeing now, */
+#define FF_PRONE        0x20                    /*   one fallen (a stumble), */
+#define FF_STOPPED      0x40                    /*   a strike stopped by armour (rs.h's AF_STOPPED, AF_STOPPED_D), */
+#define FF_FUMBLE       0x80                    /*   a weapon fumbled */
 #define I_JUMP          0x80
 #define E_OUT           0x4000                  /* (E_HARM's: knocked senseless a while) */
 #define E_CAUGHT        0x8000                  /*   (and a fall stopped, a hold grabbed) */
-#define E_STOPPED       0x8000                  /*   (an HC_HANDS's: the blows stopped, the hands too hurt) */
+#define E_STOPPED       0x8000                  /*   (an HC_STRUCK's: the blows stopped, the striker too hurt) */
 #define O_FELL          8                       /* (E_ARRIVE's link kind, or'd: fallen down it, jumped) */
 
 enum { A_WALKED, A_DOWN, A_UP, A_START, A_DIGGING, A_CROSSED, A_CLIMBING, A_CLIMBED, A_WENT_TO, A_RESUMED,
@@ -330,11 +365,19 @@ struct hub {                                    /* Bank 0, at $8000 */
     /* The theme's puzzle (theme.h: the theme in THEME_BANK): the way out opened (the UI's, as the mission's done) */
     volatile unsigned char way_open;
     struct sway     sway;                       /* The character's way with a denizen (the UI's request) */
+    /* A fight: the character's blow, posted by the world (I_ATTACK) for the denizens' task to strike (it asks the
+    ** referee, and tells it: E_FIGHT), and the character's stance (rs.h's D_*: the referee's defence for it) */
+    volatile unsigned char pc_foe;              /* The actor struck at, plus 1 (0: none posted) */
+    unsigned char   pc_aim;                     /* Its aim (Z_*) */
+    unsigned char   pc_stance;
+    unsigned char   pc_strike;                  /* What it strikes with (SK_*: the parser's, as it's told) */
+    volatile unsigned char den_look;            /* (The denizens' task's: a thing put down, a body: the world looks about
+                                                **   again, the senses seeing it) */
 };
 
 #define HUB     ((struct hub*) HUB_WINDOW)
 typedef char hub_fits[sizeof (struct hub) <= 0x2000 ? 1 : -1];   /* (The header in bank 0) */
-typedef char snd_fits[DQ_SIZE * sizeof (struct msg) + (2 * SND_KINDS + SND_WORLD) * SND_REC <= 0x2000 ? 1 : -1];
+typedef char snd_fits[(char*) (FIGHT_AT + NFIGHTS) - (char*) 0x8000 <= 0x2000 ? 1 : -1];   /* (DEN_BANK's) */
 
 /* hub.c */
 int __fastcall__ hub_create (unsigned char banks);      /* The UI's: the segment, its doorbells: 0, or -1 */
