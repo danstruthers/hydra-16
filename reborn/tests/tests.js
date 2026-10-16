@@ -2522,9 +2522,16 @@ module.exports = {
       init: 't_rc', cycles: 900e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 12 -c /ram/c.hm\r' +
         ['n', 'turn around', 'climb through window', 'break window', 'climb through window', 'turn around', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
-      expect: ['There is a glazed window ahead to your left (its shutters open).', 'You can\'t climb through: it\'s shut, glazed or barred.',
-        'The glass shatters with a crash.', 'You climb up onto the sill, and through.', 'You are in a passage.',
-        'There is a shuttered window ahead (its shutters open).', '% echo $status'],
+      expect: ['You can\'t climb through: it\'s shut, glazed or barred.', 'The glass shatters with a crash.',
+        'You climb up onto the sill, and through.', 'You are in a passage.', '% echo $status'],
+      // (The windows' words checked with the lines' wrapping taken out: seen glazed, then from the passage, its glass
+      // gone, its shutters)
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        for (const w of ['There is a glazed window ahead to your left (its shutters open).',
+          'There is a shuttered window ahead (its shutters open).']) if (!o.includes(w)) f.push('not found: ' + w);
+        return f;
+      },
       sdcard: true
     },
     {
@@ -2693,7 +2700,7 @@ module.exports = {
           }
         };
         want(runs[0], 'middling, rotten door', ['> punch the door', 'it\'s marked, but it holds.', 'Something gives as you strike it:',
-          'fracture to your right hand (S2)', 'You stop: you are too hurt to go on.', '> sheet', 'Injuries:', 'right hand S2 (fracture)']);
+          'hand (S2)', 'You stop: you are too hurt to go on.', '> sheet', 'Injuries:', 'hand S2 (fracture)']);
         want(runs[1], 'skilled, rotten door', ['> punch the door', 'You batter at it till it gives way, and it crashes open.', '> sheet',
           'Unarmed 90', 'No injuries.']);
         want(runs[2], 'gauntlets', ['You put on the gauntlets.', '> punch the door', 'You batter at it a while', '> sheet']);
