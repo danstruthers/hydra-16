@@ -29,7 +29,8 @@ static void __fastcall__ look (unsigned char again)
     face = HUB->pc_face;
     own = HUB->pc_light;
     light = HUB->pc_light * (HUB->pcsum.nightvision ? HUB->pcsum.nightvision : 1);  /* (Night vision: further) */
-    sight = HUB->pcsum.cond & C_BLINDED ? 0xFF : HUB->pcsum.sight;
+    eye = HUB->pcsum.sight;                     /* (What it makes out at a distance: sight.c's, things.c's) */
+    sight = HUB->pcsum.cond & C_BLINDED ? 0xFF : eye;
     dark = HUB->pcsum.darkvision / 5;           /* (Ultravision's reach, in squares) */
     sn = HUB->pc_stratum;
     x = HUB->pc_x;

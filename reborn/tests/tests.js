@@ -2372,7 +2372,7 @@ module.exports = {
       name: 'dq0talk', what: 'Dingus Quest Zero understanding the player (parse.c, after the user Language.txt): synonyms, several words to a verb, directions as the character faces and two together, things it sees walked up to and gone through, the little words passed over',
       init: 't_rc', cycles: 600e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T\r' +
-        ['take a gander', 'turn half left', 'face north and east', 'walk to the door on my right', 'look closely', 'pick up the sword', 'take off my coat', 'saunter off to the left', 'foo', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
+        ['take a gander', 'turn half left', 'face north and east', 'walk to the door on my right', '1', 'look closely', 'pick up the sword', 'take off my coat', 'saunter off to the left', 'foo', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
       expect: ['You turn to face east', 'You turn to face northeast', 'You go over to it.', 'feet by', 'You see none of those here.', "You aren't wearing any coat.", "I don't know how to foo.", '% echo $status'],
       sdcard: true
     },
@@ -2580,8 +2580,8 @@ module.exports = {
       name: 'dq0portc', what: 'Dingus Quest Zero\'s portcullises (DUNGEON.md: portals; the maker works them, dq0m/work.c): through one raised (seed 12, dq0 -T: east of the first way down) into a cell, seen and worded as a portcullis, lowered by its winch on the cell\'s side (faced first), never walked through while it\'s down, raised again by the winch, and gone back through',
       init: 't_rc', cycles: 900e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 12 -c /ram/c.hm -T\r' +
-        ['e', 'wait', 'e', 'wait', 'e', 'lower portcullis', 'w', 'look', 'raise portcullis', 'w', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
-      expect: ['There is a portcullis behind you (raised).', 'You loose the winch: the portcullis crashes down.',
+        ['e', 'wait', 'e', 'wait', 'e', 'turn around', 'lower portcullis', 'w', 'look', 'raise portcullis', 'w', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['There is a portcullis ahead\n(raised).', 'You loose the winch: the portcullis crashes down.',
         'The portcullis is down: raise it first.', 'There is a portcullis ahead\n(down).',
         'You wind the winch beside it, and the portcullis grinds up.', 'You are in a long vault', '% echo $status'],
       sdcard: true
@@ -2590,10 +2590,10 @@ module.exports = {
       name: 'dq0window', what: 'Dingus Quest Zero\'s windows (DUNGEON.md: portals): one looked through and worded (seed 12: in the second room\'s wall, glazed, its shutters open), not climbed through while its glass is in it, the glass broken (the referee\'s blow at a thing, HC_BLOW at RS_THING), then climbed through (its sill, P_CLIMB) into the passage beyond, the window seen from there',
       init: 't_rc', cycles: 900e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 12 -c /ram/c.hm\r' +
-        ['n', 'climb through window', 'break window', 'climb through window', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
-      expect: ['There is a glazed window behind you to your right (its shutters\nopen).', 'You can\'t climb through: it\'s shut, glazed or barred.',
+        ['n', 'turn around', 'climb through window', 'break window', 'climb through window', 'turn around', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['There is a glazed\nwindow ahead to your left (its shutters open).', 'You can\'t climb through: it\'s shut, glazed or barred.',
         'The glass shatters with a crash.', 'You climb up onto the sill, and through.', 'You are in a passage.',
-        'There is a shuttered window behind you (its shutters open).', '% echo $status'],
+        'There is a shuttered window ahead (its shutters open).', '% echo $status'],
       sdcard: true
     },
     {
@@ -2608,7 +2608,7 @@ module.exports = {
       name: 'dq0doors', what: 'Dingus Quest Zero\'s rooms and doors as the user asked (2026-10-15): a room told in general words (a small hall, a flat ceiling), its figures (its size in feet, its ceiling\'s height) only on a close look (look closely, x room); a door examined (its make, size, thickness and features plain, its state and stoutness the appraiser\'s judgement: the referee\'s Timbercraft), and its bar (an item in its brackets: IW_PORTAL), lifted out and taken; a window examined, its pane judged (Glassworking), broken into shards; a strong iron-bound door battered with bare hands unmarked, the hands hurt till the character stops (the user\'s: dq0hands), a weaker wooden one battered with a pick (dq0 -k pick: the tool to hand that hits hardest) giving way (each blow the referee\'s impact less the wood\'s resistance, off its body), broken down for good',
       init: 't_rc', cycles: 2500e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 3 -c /ram/c.hm\r' +
-        ['look', 'look closely', 'x room', 'examine the door behind me on my right', 'break the door behind me on my right', 'break', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        ['look', 'look closely', 'x room', 'examine the door behind me on my right', 'break the door ahead', 'break', 'quit'].map(l => 'ā' + l + '\r').join('') +
         'ādq0 -p t -s 15 -c /ram/c.hm -k pick\r' +
         ['examine the door ahead to my left', 'examine bar', 'break the door ahead to my left', 'break', 'look', 'close', 'quit'].map(l => 'ā' + l + '\r').join('') +
         'ādq0 -p t -s 4 -c /ram/c.hm\r' + ['take the bar', 'i', 'quit'].map(l => 'ā' + l + '\r').join('') +
@@ -2642,7 +2642,75 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0vera', what: 'Dingus Quest Zero on the Vera X (the user\'s, 2026-10-15: "If the Vera is available, this should be running there, and keyboard would come from the SMC"; 2026-10-16: "Full screen is fine"): started with the console\'s terminals both, the game takes the screen alone (consctl\'s terminal screen: its window 57 rows) and puts them back as it ends; typed at the SMC\'s keyboard: the status line reversed on the window\'s first row, the line typed on its last, the map, Backspace, Escape pausing and going on, the cursor key up recalling the last line, the help\'s word on the serial port\'s rates',
+      name: 'dq0sense', what: 'Dingus Quest Zero telling only what the character sees, as well as it sees it (the user\'s, 2026-10-16: "descriptions often tell you what lies behind you, which you can\'t really see"; "Eyesight score should affect the amount of detail"): at seed 3 the door behind it not told, then told as it turns round; at seed 5 a close look at a room whose far side is dark giving no figures, its far side lost in the dark; at seed 11 a door across the gallery examined (only its look from afar: tall, of wood, how far, go closer), then one beside it (its full examination); at seed 6 potsherds 20 feet off named by a sharp-eyed character (Eyesight 18), examined only from afar, and only something small to a weak-eyed one (Eyesight 4), who can\'t make out the far door\'s wood either',
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rācp /ram/c.hm /ram/s.hm\rāecho att eye 18 >> /ram/s.hm\r' +
+        'ācp /ram/c.hm /ram/w.hm\rāecho att eye 4 >> /ram/w.hm\r' +
+        'ādq0 -p t -s 3 -c /ram/c.hm\r' + ['look', 'turn around', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        'ādq0 -p t -s 5 -c /ram/c.hm\r' + ['x room', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        'ādq0 -p t -s 11 -c /ram/c.hm\r' + ['examine the door ahead to my left', 'examine the door on my left', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        'ādq0 -p t -s 6 -c /ram/s.hm\r' + ['look', 'x potsherds', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        'ādq0 -p t -s 6 -c /ram/w.hm\r' + ['look', 'x potsherds', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        'ādq0 -p t -s 11 -c /ram/w.hm\r' + ['examine the door ahead to my left', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['% echo $status'],
+      // (Its words checked with the lines' wrapping taken out, each in its turn)
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        const want = ['> look You are in a small hall', 'There is a door ahead to your left (open).', '> turn around',
+          'There is a door ahead to your left (closed).',
+          '> x room You can see part of a chamber, by the light of your torch. Its far side is lost in the dark.',
+          'A tall door of wood, some 20 feet off. You\'d have to go closer to make out more.',
+          'A door of iron-bound wood, 3 feet wide and 8 high',
+          'On the floor ahead to your left lie some potsherds.', 'Some potsherds, some 20 feet off. You\'d have to go closer',
+          'On the floor ahead to your left lies something small.', 'Something small, some 20 feet off.',
+          'A tall door, some 20 feet off.', '% echo $status'];
+        let at = 0;
+        for (const w of want) {
+          const i = o.indexOf(w, at);
+          if (i < 0) { f.push('not found (in its turn): ' + w); break; }
+          at = i + w.length;
+        }
+        const g = o.slice(o.indexOf('> look You are'), o.indexOf('> turn around'));
+        if (/behind you/.test(g)) f.push('the glance tells what\'s behind: ' + g);
+        const r = o.slice(o.indexOf('> x room'), o.indexOf('lost in the dark'));
+        if (/feet by/.test(r)) f.push('the dark room\'s figures given: ' + r);
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0choose', what: 'Dingus Quest Zero asking which, of several (the user\'s, 2026-10-16: "If I say open door and there are three closed doors in the room, it should give me a numbered list of choices if one is not directly in front of me"): at seed 4, three doors on the hall\'s north and west walls, none ahead: open door lists them, numbered, from the character\'s left round (each where it lies, its state), and 3 opens the one behind it to its right (turned to: that one, the world given its square); then a fresh game, examine door asked again, answered with a way (right: the one to its right, examined); go through the door asked, a command not a choice (look) letting it go, asked again and 1 going through the one ahead to its right; at seed 3 (dq0 -T) two doors to the right as far off, told apart (further back, further ahead)',
+      init: 't_rc', cycles: 2000e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 4 -c /ram/c.hm\r' +
+        ['open door', '3', 'look', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        'ādq0 -p t -s 4 -c /ram/c.hm\r' + ['examine door', 'right', 'go through the door', 'look', '1', 'go through the door', '1',
+          'quit'].map(l => 'ā' + l + '\r').join('') +
+        'ādq0 -p t -s 3 -c /ram/c.hm -T\r' + ['face north and east', 'walk to the door on my right', '1', 'quit', 'echo $status']
+          .map(l => 'ā' + l + '\r').join('') },
+      expect: ['% echo $status'],
+      // (Its words checked with the lines' wrapping taken out, each in its turn)
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        const list = 'Which door: 1. the door ahead to your right (open), 2. the one to your right (closed), or 3. the one ' +
+          'behind you to your right (closed)?';
+        const want = ['> open door ' + list, '> 3', 'You turn to face north.', 'You open the door.', '> look You are in a small hall',
+          'There is a door ahead (open), one to your left (open) and one ahead to your left (closed).',
+          '> examine door ' + list, '> right A door of iron-bound wood, 4 feet wide and 8 high', '> go through the door ' + list,
+          '> look You are in a small hall', '> 1 I don\'t know how to 1.', '> go through the door ' + list,
+          '> 1', 'You are in a small chamber', 'Which door: 1. the door to your right, further back (open), or 2. the one to ' +
+          'your right, further ahead (closed)?', '> 1', 'You go over to it.', '% echo $status'];
+        let at = 0;
+        for (const w of want) {
+          const i = o.indexOf(w, at);
+          if (i < 0) { f.push('not found (in its turn): ' + w); break; }
+          at = i + w.length;
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0vera',what: 'Dingus Quest Zero on the Vera X (the user\'s, 2026-10-15: "If the Vera is available, this should be running there, and keyboard would come from the SMC"; 2026-10-16: "Full screen is fine"): started with the console\'s terminals both, the game takes the screen alone (consctl\'s terminal screen: its window 57 rows) and puts them back as it ends; typed at the SMC\'s keyboard: the status line reversed on the window\'s first row, the line typed on its last, the map, Backspace, Escape pausing and going on, the cursor key up recalling the last line, the help\'s word on the serial port\'s rates',
       init: 't_rc', cycles: 1400e6,
       // (Snapshots of the screen as the keyboard's typing comes to SNAP: smc.type's, wrapped; P a wait, W a prompt: the
       // serial port's, so W only while it shows the window)
@@ -2684,7 +2752,7 @@ module.exports = {
       init: 't_rc', cycles: 1400e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rāhmchar -q -s 5 -o /ram/u.hm\rāecho ml una 95 >> /ram/u.hm\r' +
         [['c', 10, ''], ['u', 10, ''], ['c', 10, ' -k gauntlets'], ['c', 14, '']].map(([c, s, k]) => 'ādq0 -p t -s ' + s + ' -c /ram/' + c + '.hm' + k + '\r' +
-          (k ? 'āwear the gauntlets\r' : '') + ['punch the door', 'sheet', 'quit'].map(l => 'ā' + l + '\r').join('')).join('') + 'āecho $status\r' },
+          (k ? 'āwear the gauntlets\r' : '') + [s === 10 ? 'punch the door behind me on my left' : 'punch the door', 'sheet', 'quit'].map(l => 'ā' + l + '\r').join('')).join('') + 'āecho $status\r' },
       expect: ['% echo $status'],
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
@@ -2797,7 +2865,7 @@ module.exports = {
         ['search', 'search', 'search', 'search', 'search', 'search', 'x dagger', 'x dagger', 'x dagger', 'x dagger', 'x dagger', 'x dagger', 'x dagger', 'x dagger', 'face south', 'open', 'disarm', 'disarm', 'disarm', 'disarm', 'disarm', 'open', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
       expect: ['As the door opens, something clicks. A blade scythes out of the wall! You throw\nyourself clear.',
         'A plate sinks under your foot with a click. A blade scythes out of the wall! It\nhurts you: ',
-        'scything blade, set off by a plate in the floor, at your feet (sprung).',
+        'scything blade, set off by a plate in the floor, at your\nfeet (sprung).',
         'You find a trap: a dart trap, set to go off as its door opens.',
         'There\'s a trap on that door you know of: disarm it before you open it.',
         'You study the mechanism a while, and make out how it works', 'You work at the trap a while, and disarm it.', 'You open the door.', '% echo $status'],
