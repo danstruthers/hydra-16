@@ -293,6 +293,8 @@ static void status (void)
     s->morale = pc.att[HARN_MOR];
     s->load = !ep ? 0 : ep <= 2 ? 1 : ep <= 4 ? 2 : 3;   /* (Its encumbrance: a little burdened, heavily, overloaded) */
     s->power = 10;
+    s->northsense = pc.att[HARN_SP] == HARN_KHU;    /* (The species' trait: the Khuzdul live below, and always know
+                                                **   north there) */
 }
 
 /* ---- hmchar's file: its own lines, the name and the occupation */
