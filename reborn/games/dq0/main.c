@@ -583,8 +583,11 @@ static unsigned char events (void)          /* (How many there were) */
             if (m.who == 0) {
                 busy = 0;
                 heard ();                       /* (What came before it, told before the prompt: a blow's words;
-                                                **   knocked senseless by one, busy again) */
-                t_prompt (!busy);
+                                                **   knocked senseless by one, busy again; dead of one, the
+                                                **   game's end: no prompt, however the tasks' timing falls) */
+                if (!quit) {
+                    t_prompt (!busy);
+                }
             }
             break;
         case E_BYE:

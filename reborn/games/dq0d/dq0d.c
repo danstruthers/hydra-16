@@ -22,6 +22,10 @@
 **
 ** Its records (the lairs, the denizens) are in a bank of its own, a record at a time copied out; kept with the game
 ** (dq0 -d: the UI asks, the hub's den_state), the save folder's dens.dat.
+**
+** Its code that's seldom called is in swapped parts (../dq0/swap.inc: run in the main RAM's top, a part at a time,
+** copied there from the overlays' file's bank, LIBDIR/dq0d.ovl, as it's called; bank.s's stubs): part 1, the kinds
+** read in, the populations, the placing, the records kept; part 2, the character's ways with a denizen, and harmed.
 */
 
 #include <fcntl.h>
@@ -35,6 +39,18 @@
 #include "../dq0w/world.h"
 
 #pragma static-locals (on)                      /* (Its locals static: quicker, and nothing here is reentered) */
+#pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
+
+/* ---- The swapped parts' stubs (bank.s's) */
+
+int __fastcall__ kinds_load (const char* dir);  /* Part 1 */
+void __fastcall__ populate (unsigned char n);
+void __fastcall__ place (unsigned char i);
+void __fastcall__ keep (unsigned char back);
+void __fastcall__ harmed (unsigned char k);     /* Part 2 */
+void sway (void);
+extern unsigned char ovbank[1];
+extern char _SWAP_START__[];
 
 /* ---- The kinds: the data file's (make.js's, from kinds.txt), in a bank of their own */
 
@@ -167,8 +183,11 @@ static void __fastcall__ den_put (unsigned char i)
     hub_map (0);
 }
 
+#pragma code-name (push, "SW1CODE")
+#pragma rodata-name (push, "SW1RODATA")
+
 /* The kinds read in (dir/dq0d.dat): 0, or -1 */
-static int __fastcall__ kinds_load (const char* dir)
+int __fastcall__ s_kinds_load (const char* dir)
 {
     static char path[64];
     struct faction* f;
@@ -201,6 +220,9 @@ static int __fastcall__ kinds_load (const char* dir)
     return 0;
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 /* How factions f and g stand (AT_*: indifferent, either none) */
 #define REL(f, g)       frel[(f) & (NFACT - 1)][(g) & (NFACT - 1)]
 
@@ -220,7 +242,10 @@ static unsigned __fastcall__ apart (int dx, int dy)
 /* ---- Populations: stratum n's decided as its plan is grown (its record and links whole: the hub's strata[n],
 ** copied): for each kind that lives in its style at its depth, its lairs (by the stratum's ways, if it lairs there;
 ** else in a region of halls, a chunk of it), and the denizens in each, a record each */
-static void __fastcall__ populate (unsigned char n)
+#pragma code-name (push, "SW1CODE")
+#pragma rodata-name (push, "SW1RODATA")
+
+void __fastcall__ s_populate (unsigned char n)
 {
     struct stratum* s = &strata[n];
     struct region* r;
@@ -285,6 +310,9 @@ static void __fastcall__ populate (unsigned char n)
     hd.done[n] = 1;
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 /* The strata grown since the last look, populated (none while the world's asking the maker: a plan may be half
 ** copied into the hub) */
 static void grow (void)
@@ -312,7 +340,10 @@ static unsigned char __fastcall__ open_sq (unsigned char* p)
     return p && (TILE (*p) == T_FLOOR || TILE (*p) == T_CORR || TILE (*p) == T_STEPS);
 }
 
-static void __fastcall__ place (unsigned char i)
+#pragma code-name (push, "SW1CODE")
+#pragma rodata-name (push, "SW1RODATA")
+
+void __fastcall__ s_place (unsigned char i)
 {
     struct stratum* s;
     struct room* q;
@@ -367,6 +398,9 @@ static void __fastcall__ place (unsigned char i)
     L.flags |= L_PLACED;
     lair_put (i);
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* Chunk (cx, cy) of stratum sn made already (in the cache: the hub's header in the window) */
 static unsigned char __fastcall__ made (unsigned char sn, unsigned cx, unsigned cy)
@@ -962,7 +996,6 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     return (f & (me == att ? FF_A_DEAD : FF_D_DEAD)) != 0;
 }
 
-static void __fastcall__ harmed (unsigned char k);
 
 /* The character's blow at actor k (the world's, posted: the hub's pc_foe), struck if the actor's still beside it
 ** (gone, nothing: the UI found it there) */
@@ -1409,6 +1442,9 @@ static void tend (void)
 
 static struct sway sw;
 
+#pragma code-name (push, "SW2CODE")
+#pragma rodata-name (push, "SW2RODATA")
+
 /* Whether name n (an actor's, or a kind's) is meant by w (the parser's word, in lower case): the start of one of its
 ** words ("rat", "giant", "grub") */
 static unsigned char __fastcall__ called (const char* n, const char* w)
@@ -1460,7 +1496,7 @@ static unsigned char __fastcall__ meant (const char* w)
 /* Actor k harmed by the character (a blow: the fights', and the stand-in's): it's hostile, an ally no more; its own
 ** turn against it, its lair's two steps, the rest of its faction one (and the faction's newcomers); those of factions
 ** hostile to its own that sense it think the better of it, a step (to friendly at most) */
-static void __fastcall__ harmed (unsigned char k)
+void __fastcall__ s_harmed (unsigned char k)
 {
     struct actor* q = HUB->actor;
     struct den* r = POP->den;
@@ -1634,7 +1670,7 @@ static void __fastcall__ give_name (unsigned char k)
 }
 
 /* The UI's request answered */
-static void sway (void)
+void s_sway (void)
 {
     struct actor* q;
     unsigned char k, n = 0;
@@ -1688,9 +1724,15 @@ static void sway (void)
     HUB->sway.state = REQ_DONE;
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 /* ---- The records kept (back: read again), the save folder's dens.dat: the bank a piece at a time, through the
 ** main RAM (the actors' places written back first; read back, none an actor yet) */
-static void __fastcall__ keep (unsigned char back)
+#pragma code-name (push, "SW1CODE")
+#pragma rodata-name (push, "SW1RODATA")
+
+void __fastcall__ s_keep (unsigned char back)
 {
     static char p[56];
     unsigned off;
@@ -1743,6 +1785,30 @@ static void __fastcall__ keep (unsigned char back)
     hub_map (0);
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* The swapped parts' images read into a bank of its own (dir/dq0d.ovl: dq0d.cfg's OV1): 0, or -1 */
+static int __fastcall__ ovl_load (const char* dir)
+{
+    unsigned char* b = (unsigned char*) _SWAP_START__;  /* (Through the parts' area: none in it yet) */
+    unsigned off;
+    int fd, n;
+
+    strcpy ((char*) b, dir);
+    strcat ((char*) b, "/dq0d.ovl");
+    if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (1)) < 0) {
+        return -1;
+    }
+    ovbank[0] = n;
+    for (off = 0; off < 0x2000 && (n = read (fd, b, 512)) > 0; off += n) {
+        hy_bank (ovbank[0]);
+        memcpy ((void*) (0x8000 + off), b, n);
+    }
+    close (fd);
+    return 0;
+}
+
 int main (int argc, char* argv[])
 {
     static unsigned lpx, lpy;
@@ -1750,7 +1816,8 @@ int main (int argc, char* argv[])
     unsigned char* p;
     int b;
 
-    if (argc < 4 || (b = hy_banks_alloc (2)) < 0 || hub_attach (atoi (argv[1]), atoi (argv[2]))) {
+    if (argc < 4 || ovl_load (argv[3]) || (b = hy_banks_alloc (2)) < 0 ||
+        hub_attach (atoi (argv[1]), atoi (argv[2]))) {
         return 1;
     }
     kb = b;

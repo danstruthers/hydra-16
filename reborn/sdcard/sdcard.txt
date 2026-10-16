@@ -37,6 +37,7 @@ games/lib/dq0/dq0m.ovl ../obj/games/dq0m.hyx.ovl
 games/lib/dq0/dq0p  ../obj/games/dq0p.hyx
 games/lib/dq0/dq0p.ovl ../obj/games/dq0p.hyx.ovl
 games/lib/dq0/dq0d  ../obj/games/dq0d.hyx
+games/lib/dq0/dq0d.ovl ../obj/games/dq0d.hyx.ovl
 games/lib/dq0/dq0d.dat ../obj/games/dq0d.dat
 games/lib/dq0/dq0s  ../obj/games/dq0s.hyx
 games/lib/dq0/dq0s.dat ../obj/games/dq0s.dat
