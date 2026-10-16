@@ -190,6 +190,30 @@ static unsigned char __fastcall__ dr (unsigned char n)
     return (unsigned char) ((dh >> 8) % n);
 }
 
+/* The door at (x, y) is a way out of a room a link comes out in (a stairway's, a ladder's: the way in's): never hidden,
+** so nobody begins shut in */
+static unsigned char __fastcall__ by_link (unsigned char x, unsigned char y)
+{
+    unsigned char d, i, r, nx, ny;
+    const struct room* p;
+
+    for (d = 0; d < 4; ++d) {
+        nx = x + dir_x[d];
+        ny = y + dir_y[d];
+        for (r = 0, p = L->room; r < L->nrooms; ++r, ++p) {
+            if (nx < p->x || nx >= p->x + p->w || ny < p->y || ny >= p->y + p->h) {
+                continue;
+            }
+            for (i = 0; i < E->nland; ++i) {
+                if (E->lx[i] >= p->x && E->lx[i] < p->x + p->w && E->ly[i] >= p->y && E->ly[i] < p->y + p->h) {
+                    return 1;
+                }
+            }
+        }
+    }
+    return 0;
+}
+
 static void __fastcall__ door (unsigned char x, unsigned char y, int z)
 {
     struct portal* p;
@@ -214,7 +238,7 @@ static void __fastcall__ door (unsigned char x, unsigned char y, int z)
     } else if (k >= 20 - SP->d_barred) {
         p->state = PS_BARRED;
     }
-    if (dr (15) < SP->d_hidden) {               /* (A secret door: closed, like the wall; some by magic) */
+    if (dr (15) < SP->d_hidden && !by_link (x, y)) {    /* (A secret door: closed, like the wall; some by magic) */
         p->state = PS_HIDDEN | (dr (4) < SP->d_magic ? PS_MAGIC : 0);
     }
     k = dr (10);

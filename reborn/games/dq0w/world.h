@@ -25,6 +25,10 @@
 
 #define CW              32                      /* A chunk's squares, each way */
 #define CW_BITS         5                       /*   (CW's: a square's chunk by a shift, cc65 dividing slowly) */
+#define INSET(o)        ((o) + (((o) & (CW - 1)) < 2 ? 2 - ((o) & (CW - 1)) : ((o) & (CW - 1)) > CW - 3 ?                          (CW - 3) - ((o) & (CW - 1)) : 0))     /* A link's square (its offset from the stratum's x0, or
+                                                **   y0: a variable, it's read more than once) two squares or more
+                                                **   from its chunk's edges: room for the room it comes out in, inside
+                                                **   the chunk, with the edge's ways */
 #define RCH             8                       /* A region's chunks, each way */
 #define RW              (CW * RCH)              /* A region's squares, each way (256: 1,280 feet) */
 #define MAXSTRATA       8

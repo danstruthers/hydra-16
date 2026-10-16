@@ -233,6 +233,7 @@ void __fastcall__ o_links_down (unsigned char n)
 {
     struct stratum* s = &strata[n];
     unsigned char k, tries;
+    unsigned o;
     struct link* l;
 
     if (n + 1 >= MAXSTRATA) {
@@ -241,8 +242,10 @@ void __fastcall__ o_links_down (unsigned char n)
     for (k = 1 + random (2); k && s->nlinks < NLINKS; --k) {
         for (tries = 0; tries < 30; ++tries) {
             l = &s->link[s->nlinks];
-            l->x = s->x0 + 2 + random (s->w - 4);
-            l->y = s->y0 + 2 + random (s->h - 4);
+            o = 2 + random (s->w - 4);          /* (Off its chunk's edges, room for its rooms: world.h's INSET) */
+            l->x = s->x0 + INSET (o);
+            o = 2 + random (s->h - 4);
+            l->y = s->y0 + INSET (o);
             if (rg (n, (l->x - s->x0) >> 8, (l->y - s->y0) >> 8)->kind == RG_HALLS) {
                 l->kind = random (10) < 7 ? O_STAIRS_DOWN : O_LADDER_DOWN;
                 l->to = n + 1;

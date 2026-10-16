@@ -3041,7 +3041,29 @@ module.exports = {
         return f;
       },
       sdcard: true
-    },
+    },    // dq0start0, dq0start1: the seeds (of 1-200) whose start was a dead end before the links were kept off their
+    // chunks' edges (38 of them): each start in a room, by the stairs up to the way out, with a way on
+    ...[[1, 2, 23, 24, 30, 33, 36, 37, 64, 66, 69, 74, 82, 86, 93, 99, 105, 111, 112],
+      [115, 122, 130, 135, 138, 144, 148, 152, 153, 158, 161, 164, 169, 171, 177, 187, 189, 196, 197]].map((seeds, k) => ({
+      name: 'dq0start' + k, what: 'Dingus Quest Zero\'s starts (dq0m/plan.c\'s links and the world\'s way out off their chunks\' edges, world.h\'s INSET: room for the room each comes out in, built.c\'s tries all failing else, a quarter of the starts a dead end of a passage): seeds ' + seeds[0] + '-' + seeds[seeds.length - 1] + ' that began at a dead end, each beginning in a room by the stairs up to the way out, with a door, a portcullis or a passage seen on (turned round too: what lies behind isn\'t told)',
+      init: 't_rc', cycles: seeds.length * 200e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\r' +
+        seeds.map(s => 'ādq0 -p t -s ' + s + ' -c /ram/c.hm\rāturn around\rāquit\r').join('') + 'āecho $status\r' },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [], games = o.split('% dq0 -p t -s ').slice(1);
+        if (games.length !== seeds.length) f.push(games.length + ' games, not ' + seeds.length);
+        for (const g of games) {
+          const s = g.split(' ')[0], start = g.slice(g.indexOf('Type help for the commands.'), g.indexOf('> quit'));
+          if (/The passage ends here/.test(start)) f.push('seed ' + s + ': a dead end');
+          else if (!/(You are in|You can see part of) [^.]*\..*You stand by the stairs up to the way out\./.test(start)) f.push('seed ' + s + ': not in a room by the way out');
+          else if (!/door|portcullis|passage/.test(start)) f.push('seed ' + s + ': no way on seen');
+        }
+        return f;
+      },
+      sdcard: true
+    })),
+
 
     {
       name: 'cnum', what: 'the numbers in C and assembly: num.h\'s test (ntest: the number libraries from C, printf\'s and scanf\'s %N and %{base}), calc at rc (its operators, functions, bases, digits, errors, its input a line at a time, long results), the assembly sample nsum (numbers.inc, numlib.s)',
