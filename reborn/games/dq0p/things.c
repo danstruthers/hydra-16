@@ -375,11 +375,12 @@ static const struct item* __fastcall__ lying (const struct item* q)
 }
 
 /* The thing named that the character sees, the nearest (on a square it sees now, or on a surface there): its number,
-** or 0 */
+** or 0; how far it is, in squares, in seen_d */
+static unsigned seen_d;
 static unsigned __fastcall__ seen_named (const char* name)
 {
     const struct item* s;
-    unsigned i = 0, best = 0, bd = 0xFFFF, d, x, y;
+    unsigned i = 0, best = 0, bd = 0xFFFF, d, x, y, e;
     unsigned char sn;
     unsigned char* p;
 
@@ -394,9 +395,10 @@ static unsigned __fastcall__ seen_named (const char* name)
             !(p = at (sn, s->x, s->y)) || !(*p & T_VIS)) {
             continue;
         }
-        d = (s->x > x ? s->x - x : x - s->x) + (s->y > y ? s->y - y : y - s->y);
-        if (d < bd) {
-            bd = d;
+        d = s->x > x ? s->x - x : x - s->x;
+        e = s->y > y ? s->y - y : y - s->y;
+        if ((d = d > e ? d : e) < bd) {
+            seen_d = bd = d;
             best = i;
         }
     }
@@ -812,7 +814,8 @@ static unsigned char search (void)
 }
 
 /* ---- The things the character sees (sight.c's): on the squares it sees now, not hidden, named, where they lie; a
-** surface's things after it, seen with it (hid 2: on the one before).  Each entry made in se (struct sight's item's
+** surface's things after it, seen with it (hid 2: on the one before), and each one's size (hid's high four bits: the
+** kind's, how easily it's seen, for the UI's words at a distance).  Each entry made in se (struct sight's item's
 ** layout: its way and square the square's), then copied in */
 static struct { char name[14]; unsigned char qty, plural, rel, hid; unsigned n, x, y; } se;
 typedef char se_fits[sizeof se == sizeof ((struct sight*) 0)->item[0] ? 1 : -1];
@@ -827,7 +830,7 @@ static void __fastcall__ seen_one (struct sight* s, unsigned i, unsigned char on
     se.plural = (k->flags & K_PLURAL) != 0;
     se.qty = item_at (i)->qty;
     on = on ? 2 : (item_at (i)->flags & I_HIDDEN) != 0;
-    se.hid = item_at (i)->flags & I_LIT ? on | 4 : on;
+    se.hid = (item_at (i)->flags & I_LIT ? on | 4 : on) | k->size << 4;
     se.n = i;
     memcpy (&s->item[s->nitems++], &se, sizeof se);
 }
@@ -1001,12 +1004,14 @@ static unsigned char __fastcall__ kind_named (const char* name)
 }
 
 /* ---- A thing looked at closely (carried, or seen): what it truly is, in the request (iq, copied back whole), for
-** the appraiser's judgement (the UI's, by the referee's test of the craft that knows it) */
+** the appraiser's judgement (the UI's, by the referee's test of the craft that knows it); and how far off it is, in
+** squares (0 carried), its kind's size above it (the request's to: the UI's, what it makes out at a distance) */
 static unsigned char o_describe (void)
 {
     static const struct kind* k;
     static unsigned n;
 
+    seen_d = 0;
     if (!(n = m1 (carried_named, (unsigned) iq.name)) && !(n = m1 (seen_named, (unsigned) iq.name))) {
         return IR_NONE;
     }
@@ -1025,6 +1030,7 @@ static unsigned char o_describe (void)
     iq.value = k->value;
     iq.size = o.size;
     iq.thick = o.thick;
+    iq.to = k->size << 8 | seen_d;
     return IR_OK;
 }
 

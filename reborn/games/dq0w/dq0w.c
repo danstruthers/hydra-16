@@ -685,9 +685,15 @@ static void climb_on (void)
 static void __fastcall__ change (unsigned char sn, unsigned x, unsigned y, unsigned char tile, signed char elev,
     unsigned char link);
 
+/* The door or the passage's mouth the UI means (I_GO's and I_PORTAL's w1, w2: its square, the frame's; tgx 0, any:
+** the nearest that way, the one faced) */
+static unsigned tgx, tgy;
+#define TARGET(x, y)    (tgx ? (x) != tgx || (y) != tgy : 0)   /* (Square x, y not the one meant) */
+
 /* The character sets out on heading h (north, northeast ...): its time, and where it'll be.  From a room: north,
 ** east, south or west by a door in that wall (the nearest it can walk to); a diagonal, by the door that lies that
-** way; across the room by the way it can walk.  A passage goes only by the four */
+** way; across the room by the way it can walk; the UI's door or mouth, if it means one (tgx).  A passage goes only by
+** the four */
 static void __fastcall__ go (unsigned char h)
 {
     unsigned char r, d = h >> 1, k, best = 0xFF, slow, bx = 0, by = 0, wx, wy;
@@ -705,9 +711,9 @@ static void __fastcall__ go (unsigned char h)
         wy = cy_;
         for (k = 0; k < 4; ++k) {               /* (The doors that way: the quickest to walk to) */
             for (d = 0; wall_tile (&C->room[r], k, d); ++d) {
-                if (TILE (C->tile[wall_y][wall_x]) != T_DOOR || ((h & 1) ? bearing ((int) wall_x - wx,
-                    (int) wall_y - wy) != h : k != (h >> 1)) || (portal_at (wall_x, wall_y) &&
-                    (portal_at (wall_x, wall_y)->state & PS_HIDDEN))) {
+                if (TILE (C->tile[wall_y][wall_x]) != T_DOOR || (tgx ? TARGET (ox + wall_x, oy + wall_y) : (h & 1) ?
+                    bearing ((int) wall_x - wx, (int) wall_y - wy) != h : k != (h >> 1)) ||
+                    (portal_at (wall_x, wall_y) && (portal_at (wall_x, wall_y)->state & PS_HIDDEN))) {
                     continue;
                 }
                 if ((t = cross_room (r, wx, wy, wall_x, wall_y, slow)) < bt) {
@@ -721,7 +727,8 @@ static void __fastcall__ go (unsigned char h)
         if (best == 0xFF) {                     /* (No door that way: a passage's mouth that way, the quickest) */
             for (by = C->room[r].y ? C->room[r].y - 1 : 0; by <= C->room[r].y + C->room[r].h && by < CW; ++by) {
                 for (bx = C->room[r].x ? C->room[r].x - 1 : 0; bx <= C->room[r].x + C->room[r].w && bx < CW; ++bx) {
-                    if (TILE (C->tile[by][bx]) != T_CORR || bearing ((int) bx - wx, (int) by - wy) != h ||
+                    if (TILE (C->tile[by][bx]) != T_CORR || (tgx ? TARGET (ox + bx, oy + by) : bearing ((int) bx - wx,
+                        (int) by - wy) != h) ||
                         (t = cross_room (r, wx, wy, bx, by, slow)) >= bt) {
                         continue;
                     }
@@ -1320,7 +1327,7 @@ static void dig_on (void)
 static unsigned px_, py_;                       /* (The door's square, in the frame) */
 static unsigned char pd_;                       /* (The way from where the character stands to it) */
 static unsigned char want_;                     /* (What's to be worked, I_PORTAL's b: PW_*) */
-static unsigned char barw_;                     /* (A bar to set in a door's brackets, I_PORTAL's w2: its width) */
+static unsigned char barw_;                     /* (A bar to set in a door's brackets, I_PORTAL's x[0]: its width) */
 #define WANTED(t)       ((TILE (t) == T_DOOR && want_ != PW_WINDOW) || (TILE (t) == T_WINDOW && want_ != PW_DOOR))
 
 /* The door the character faces, walked up to (its time), its square in px_, py_: the door's record (in the window),
@@ -1341,6 +1348,7 @@ static struct portal* __fastcall__ door_ahead (unsigned long* tt)
         for (k = 0; k < 4; ++k) {
             d = (k + (face >> 1)) & 3;
             if ((p = at (sn_, mx + dir_x[d], my + dir_y[d])) != 0 && WANTED (*p) &&
+                !TARGET (mx + dir_x[d], my + dir_y[d]) &&
                 !(portal_at (cx_, cy_) && (portal_at (cx_, cy_)->state & PS_HIDDEN))) {
                 px_ = mx + dir_x[d];
                 py_ = my + dir_y[d];
@@ -1357,8 +1365,9 @@ static struct portal* __fastcall__ door_ahead (unsigned long* tt)
     wy = cy_;
     for (k = 0; k < 4; ++k) {                   /* (Its room's doors that way: the quickest to walk up to) */
         for (d = 0; wall_tile (&C->room[r], k, d); ++d) {
-            if (!WANTED (C->tile[wall_y][wall_x]) || (bearing ((int) wall_x - wx, (int) wall_y - wy) != face &&
-                k != (face >> 1)) || (portal_at (wall_x, wall_y) && (portal_at (wall_x, wall_y)->state & PS_HIDDEN))) {
+            if (!WANTED (C->tile[wall_y][wall_x]) || (tgx ? TARGET (ox + wall_x, oy + wall_y) :
+                bearing ((int) wall_x - wx, (int) wall_y - wy) != face && k != (face >> 1)) ||
+                (portal_at (wall_x, wall_y) && (portal_at (wall_x, wall_y)->state & PS_HIDDEN))) {
                 continue;
             }
             if ((t = cross_room (r, wx, wy, wall_x - dir_x[k], wall_y - dir_y[k], slow)) < bt) {
@@ -1499,6 +1508,8 @@ static void __fastcall__ intent (struct msg* m)
         }
         break;
     case I_GO:
+        tgx = m->w1;
+        tgy = m->w2;
         go (m->a & 7);
         break;
     case I_CLIMB:
@@ -1518,7 +1529,9 @@ static void __fastcall__ intent (struct msg* m)
         break;
     case I_PORTAL:
         want_ = m->b;
-        barw_ = m->w2;
+        tgx = m->w1;
+        tgy = m->w2;
+        barw_ = m->x[0];
         door_work (m->a);
         break;
     case I_LIGHT:

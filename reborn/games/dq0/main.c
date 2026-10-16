@@ -736,8 +736,9 @@ static void __fastcall__ work (unsigned char what, unsigned char obj)
     m.who = 0;
     m.a = what;
     m.b = obj == OB_DOOR || obj == OB_PORTC ? PW_DOOR : obj == OB_WINDOW ? PW_WINDOW : PW_ANY;
-    m.w1 = 0;
-    m.w2 = barw;
+    m.w1 = tx;                                  /* (The one meant, if it was found: else 0, the one it faces) */
+    m.w2 = ty;
+    m.x[0] = barw;
     if (hub_send (&m)) {
         busy = 1;
         t_prompt (0);
@@ -751,7 +752,11 @@ static void __fastcall__ intend (unsigned char kind, unsigned char a)
     m.kind = kind;
     m.who = 0;
     m.a = a;
-    m.w1 = 0;
+    m.w1 = m.w2 = 0;
+    if (kind == I_GO) {                         /* (Through the one meant, if it was found) */
+        m.w1 = tx;
+        m.w2 = ty;
+    }
     if (hub_send (&m)) {
         busy = 1;
         t_prompt (0);
@@ -862,6 +867,8 @@ static void __fastcall__ lift (const char* name)
                 intend (I_TURN, d);
             }
             strcpy (lifting, name);
+            tx = s->door[i].x;                  /* (That one) */
+            ty = s->door[i].y;
             work (PA_LIFT, s->door[i].kind == PK_WINDOW ? OB_WINDOW : OB_DOOR);
             return;
         }
@@ -907,43 +914,10 @@ static void show_map (void)
     r->state = REQ_FREE;
 }
 
-/* A thing it sees, the parser's (its kind, and the heading it lies, if one was said): its square, in tx, ty (1),
-** or 0 */
-static unsigned tx, ty;
-static unsigned char __fastcall__ find (unsigned char obj, unsigned char orel)
-{
-    struct sight* s = &HUB->sight;
-    unsigned char i, k, h;
-
-    for (i = 0; i < s->ndoors; ++i) {
-        h = (pc_face + (s->door[i].rel & 7)) & 7;
-        k = s->door[i].kind == PK_WINDOW || s->door[i].kind == PK_SLIT;    /* (A window, or a slit) */
-        if ((obj == OB_DOOR ? !(s->door[i].rel & MOUTH) && !k : obj == OB_WINDOW ? k : obj == OB_PORTC ?
-            s->door[i].kind == PK_PORTCULLIS : obj == OB_PASSAGE && (s->door[i].rel & MOUTH)) &&
-            (orel == 0xFF || h == orel)) {
-            tx = s->door[i].x;
-            ty = s->door[i].y;
-            return 1;
-        }
-    }
-    for (i = 0; i < s->nopen; ++i) {
-        k = s->open[i].kind;
-        h = s->open[i].rel == 0xFF ? 0xFF : (pc_face + (s->open[i].rel & 7)) & 7;
-        if ((obj == OB_STAIRS && (k == O_STAIRS_UP || k == O_STAIRS_DOWN || k == O_WAY_OUT)) ||
-            (obj == OB_LADDER && (k == O_LADDER_UP || k == O_LADDER_DOWN)) ||
-            (obj == OB_SHAFT && (k == O_SHAFT_UP || k == O_SHAFT_DOWN)) || (obj == OB_WAY_OUT && k == O_WAY_OUT)) {
-            if (orel == 0xFF || h == orel) {
-                tx = s->open[i].x;
-                ty = s->open[i].y;
-                return 1;
-            }
-        }
-    }
-    return 0;
-}
-
-static const char* const thing[] = { "", "door", "way on", "stairs", "ladder", "shaft", "ledge", "way out", "wall",
-    "window", "trap", "portcullis", "room" };
+/* A thing it sees, the parser's (its kind, | PICK_TELL to say so if there's none; and the heading it lies, if one
+** was said): 1, its square in tx, ty; 0, none; 2, several and none ahead, which asked (overlay 7's pick) */
+unsigned tx, ty;
+#define find(obj, orel) pick ((obj), (orel))
 
 /* A portal it sees looked at closely (the parser's thing, the way it lies): the maker's record of it (ASK_UI's
 ** M_WORK, PA_EXAMINE: a doorway has none), judged by the craft that knows its material (the referee's test: wood
@@ -954,9 +928,11 @@ static void __fastcall__ inspect (unsigned char obj, unsigned char orel)
     struct req* r;
     signed char g;
 
-    if (!find (obj, orel)) {
-        sayf ("\nYou see no %s here.", thing[obj]);
+    if (find (obj | PICK_TELL, orel) != 1) {
         return;
+    }
+    if (REL_BEHIND (REL8 (g = bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y), HUB->pc_face))) {
+        intend (I_TURN, g);                     /* (One behind it, that it knows of: turned to, to see it) */
     }
     q->kind = M_WORK;
     q->tile = PA_EXAMINE;
@@ -1102,6 +1078,8 @@ void __fastcall__ s_command (char* l)
 
     pc_face = HUB->pc_face;
     parse (l, &c);
+    choose (&c);                                /* (A choice asked for: this line's, the command again) */
+    tx = 0;
     if (c.word[0] && c.verb == V_MOVE && c.dir == 0xFF && !c.obj) {
         sayf ("\nI don't know how to %s.", c.word);
         return;
@@ -1123,9 +1101,10 @@ void __fastcall__ s_command (char* l)
     case V_ENTER:
     case V_APPROACH:
         if (c.obj) {                            /* (A thing: up to it, or through it) */
-            if (!find (c.obj, c.orel)) {
-                sayf ("\nYou see no %s %s.", thing[c.obj], c.orel == 0xFF ? "here" : "that way");
-            } else if (c.obj == OB_WINDOW && (c.how == HOW_THROUGH || c.verb == V_ENTER)) {
+            if (find (c.obj | PICK_TELL, c.orel) != 1) {
+                return;                         /* (None, told; or which, asked) */
+            }
+            if (c.obj == OB_WINDOW && (c.how == HOW_THROUGH || c.verb == V_ENTER)) {
                 pa = PA_THROUGH;                /* (Climbed through) */
                 goto portal;
             } else if ((c.how == HOW_THROUGH || c.verb == V_ENTER) && (c.obj == OB_DOOR || c.obj == OB_PASSAGE)) {
@@ -1176,12 +1155,15 @@ void __fastcall__ s_command (char* l)
             pa = PA_LIFT;                       /* ("Lift the bar": a portal's part lifted out) */
         } else if (pa == PA_RAISE || pa == PA_LOWER) {
             c.obj = OB_PORTC;
-        } else if (c.obj == OB_WINDOW && !strcmp (c.word, "bars") && !find (OB_WINDOW, c.orel)) {
+        } else if (c.obj == OB_WINDOW && !strcmp (c.word, "bars") && !find (OB_WINDOW | PICK_ANY, c.orel)) {
             c.obj = OB_PORTC;                   /* ("Bend the bars": a portcullis's, with no window there) */
         }
         HUB->pc_strike = SK_BEST;               /* (Broken with the best to hand) */
 portal:
-        if (c.obj && c.orel == 0xFF && find (c.obj, 0xFF)) {
+        if (c.obj && (d = find (c.obj, c.orel)) == 2) {
+            return;                             /* (Which, asked) */
+        }
+        if (c.obj && d) {
             c.orel = bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y);    /* (The one it sees: faced) */
         }
         if (c.orel != 0xFF && c.orel <= H_NW && c.orel != HUB->pc_face) {
