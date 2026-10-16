@@ -47,6 +47,7 @@ extern char inl[INMAX + 1];                     /* The line being typed, */
 extern unsigned char inn;                       /*   its length */
 void __fastcall__ t_key (unsigned char k);      /* A key for the line being typed */
 char* t_line (void);                            /* A line that's been entered (Enter), or NULL */
+const char* t_next (void);                      /* The next t_line will give, left in the queue, or NULL */
 unsigned char __fastcall__ ask (const char* keys);      /* One of keys typed, waiting (the world stopped): which */
 unsigned char t_haskey (void);                  /* A key's come (conio's kbhit) */
 unsigned char t_getkey (void);                  /* The next key, waiting (conio's cgetc: Enter '

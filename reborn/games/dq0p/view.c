@@ -49,6 +49,7 @@ unsigned char nlamps;
 static unsigned char vs;                        /* The stratum */
 static unsigned bx0, by0, bx1, by1;             /* The squares the last view looked at (bx1 0: none) */
 static unsigned gx0, gx1;                       /* (The grid's: the view's and the lamps' more) */
+static struct chunk* lc;                        /* (run's lit rooms: the chunk they're its, 0 each look) */
 
 
 /* The squares from x (n of them, in one column of chunks: the stratum's chunks are counted from its x0) at row y,
@@ -56,7 +57,8 @@ static unsigned gx0, gx1;                       /* (The grid's: the view's and t
 ** walls); a shut door or shutters (but a portcullis's); outside the stratum, nothing */
 static void __fastcall__ run (unsigned x, unsigned y, unsigned char n)
 {
-    static unsigned char k, a, b, doors;
+    static unsigned char k, a, b, doors, nl, lx;
+    static unsigned char ly0[NROOMS], ly1[NROOMS], la[NROOMS], lb[NROOMS];
     static unsigned char* p;
     static struct room* r;
     static struct portal* d;
@@ -71,9 +73,21 @@ static void __fastcall__ run (unsigned x, unsigned y, unsigned char n)
     run_q = &C->elev[cy_][cx_];
     run_g = piece;
     doors = run_in (n);
-    for (k = C->nrooms, r = C->room; k; --k, ++r) {
-        if ((r->flags & R_LIT) && cy_ + 1 >= r->y && cy_ <= r->y + r->h && r->x + r->w >= cx_) {
-            for (a = r->x > cx_ + 1 ? r->x - 1 - cx_ : 0, b = r->x + r->w - cx_; a <= b && a < n; ++a) {
+    if (C != lc || cx_ != lx) {                 /* (The lit rooms' squares in the run, its chunk's: found once) */
+        lc = C;
+        lx = cx_;
+        for (k = C->nrooms, r = C->room, nl = 0; k; --k, ++r) {
+            if ((r->flags & R_LIT) && r->x + r->w >= cx_) {
+                ly0[nl] = r->y ? r->y - 1 : 0;
+                ly1[nl] = r->y + r->h;
+                la[nl] = r->x > cx_ + 1 ? r->x - 1 - cx_ : 0;
+                lb[nl++] = r->x + r->w - cx_;
+            }
+        }
+    }
+    for (k = 0; k < nl; ++k) {
+        if (cy_ >= ly0[k] && cy_ <= ly1[k]) {
+            for (a = la[k], b = lb[k]; a <= b && a < n; ++a) {
                 piece[2 * a] |= G_LIT;
             }
         }
@@ -130,6 +144,7 @@ void __fastcall__ view (unsigned char sn, unsigned x, unsigned y, unsigned char 
     static int z;
     static struct lamp* l;
 
+    lc = 0;
     own = at (sn, x, y) != 0;
     z = (own ? C->elev[cy_][cx_] : 0) + EYE;
     if (bx1) {                                  /* The last view's seen now unmarked: this one's are marked after */

@@ -490,6 +490,11 @@ void __fastcall__ t_key (unsigned char k)
     }
 }
 
+const char* t_next (void)
+{
+    return qlen ? queue : 0;
+}
+
 char* t_line (void)
 {
     static char taken[INMAX + 1];

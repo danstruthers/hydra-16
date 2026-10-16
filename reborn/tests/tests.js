@@ -2390,10 +2390,10 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0prompt', what: 'Dingus Quest Zero answering at once at the normal pace while the denizens act (DENIZENS.md: events; the user: "the UI is slow to respond"): the giant rats by the way down moving about on their own (their task\'s, in the background), a while waited, then what the character carries asked for and told within a fifth of a second of Enter, and a step that can\'t be taken told as quickly (the world\'s answer); the status line drawn only where it changed, a second at most (the user: the cursor flickered), the cursor hidden while it\'s there',
+      name: 'dq0prompt', what: 'Dingus Quest Zero answering at once at the normal pace while the denizens act (DENIZENS.md: events; the user: "the UI is slow to respond"): the giant rats by the way down moving about on their own (their task\'s, in the background), a while waited, then a turn and what the character carries asked for at once, while the senses look about after the turn (the character still busy): told within a fifth of a second of Enter, before the look\'s done (the senses answer it between the look\'s rows, the UI a command that wants nothing of the character at once), and a step that can\'t be taken told as quickly (the world\'s answer); the status line drawn only where it changed, a second at most (the user: the cursor flickered), the cursor hidden while it\'s there',
       init: 't_rc', cycles: 900e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p n -s 3 -c /ram/c.hm -T\r' +
-        'ĀĀāinventory\rāgo north\rĀĀĀĀāquit\rāecho $status\r' },
+        'ĀĀāturn left\rinventory\rāgo north\rĀĀĀĀāquit\rāecho $status\r' },
       expect: ['You carry', 'You can\'t go that way.', '% echo $status'],
       budgets: [{ what: 'inventory answered (Enter to the answer)', from: '> inventory', to: 'You carry', per: 1, max: 720000 },
         { what: 'a step that can\'t be taken answered (the world\'s)', from: '> go north', to: 'You can\'t go that way.', per: 1, max: 600000 }],
@@ -2403,6 +2403,7 @@ module.exports = {
         const a = out.indexOf('You can\'t go that way.'), b = out.indexOf('> quit', a), seg = a < 0 || b < 0 ? '' : out.slice(a, b);
         const top = (seg.match(/\x1b\[1;\d+H/g) || []).length, f = [];
         if (top > 4) f.push(top + ' moves up to the status line while nothing happened (a second at most each)');
+        if (out.indexOf('You carry') > out.indexOf('You turn to face')) f.push('what it carries told only after the turn\'s look');
         for (const s of seg.matchAll(/\x1b\[1;\d+H/g)) {      // (Hidden as it moved there: hidden last, here or before)
           const at = a + s.index;
           if (out.lastIndexOf('\x1b[?25l', at) <= out.lastIndexOf('\x1b[?25h', at)) { f.push('the cursor not hidden while the status line was drawn'); break; }

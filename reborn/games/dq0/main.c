@@ -904,6 +904,19 @@ static void __fastcall__ chores (unsigned char verb)
 }
 #pragma optimize (pop)
 
+/* A command that takes no time and wants nothing of the character (what it carries, its sheet, the map, the help):
+** carried out at once, the character busy or not (on its way somewhere, looking about: the user, "the UI is slow to
+** respond"), if it's the next one typed */
+static unsigned char __fastcall__ at_once (const char* l)
+{
+    static struct pcmd c;
+    static char b[INMAX + 1];
+
+    strcpy (b, l);
+    parse (b, &c);
+    return c.verb == V_INVENTORY || c.verb == V_SHEET || c.verb == V_MAP || c.verb == V_HELP;
+}
+
 /* A command, the parser's, carried out */
 static void __fastcall__ command (char* l)
 {
@@ -1071,7 +1084,9 @@ portal:
 int main (int argc, char* argv[])
 {
     unsigned long seed = hy_time () ^ hy_ticks ();
-    unsigned shown = 0, lnow = 0;
+    unsigned shown = 0;
+    unsigned long next = 0;
+    unsigned char held = 0;
     const char* file = 0;
     unsigned char k, i;
     char* l;
@@ -1137,10 +1152,11 @@ int main (int argc, char* argv[])
         k = events ();
         heard ();
         now = hub_now ();
-        if (k || ((unsigned) (now / 600) != lnow && hy_ticks () - shown >= (inn ? 1000 : 200))) {
-            lnow = now / 600;                   /* (The status line as the events change it, and its clock as a
+        if (k || ((now >= next || now < next - 600) && hy_ticks () - shown >= (inn ? 1000 : 200))) {
+            next = (now / 600 + 1) * 600;       /* (The status line as the events change it, and its clock as a
                                                 **   game minute goes, a real second apart at most, five while a
-                                                **   line's being typed: only what's changed drawn, t_status) */
+                                                **   line's being typed: only what's changed drawn, t_status; the
+                                                **   minute's end kept, not divided for each time round) */
             shown = hy_ticks ();
             status ();
         }
@@ -1148,8 +1164,10 @@ int main (int argc, char* argv[])
             take (pending);
             pending[0] = 0;
         }
-        if (!busy && (l = t_line ()) != 0) {
-            command (l);
+        if ((l = (char*) t_next ()) != 0 && (!busy || (!held && !(held = !at_once (l))))) {
+            command (t_line ());              /* (The character free; or a command that wants nothing of it:
+                                                **   held, the next waits for it to be free, not parsed again) */
+            held = 0;
             status ();
         }
         t_done ();
