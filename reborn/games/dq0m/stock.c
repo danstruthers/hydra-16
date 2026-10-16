@@ -117,7 +117,7 @@ void __fastcall__ o_stock (const struct chunk* c, unsigned x0, unsigned y0)
 {
     const struct room* r;
     const struct portal* p;
-    unsigned char i, n, lx, ly, k, hidden;
+    unsigned char i, n, lx, ly, k, hidden, d, q, h;
     unsigned x, y;
 
     rseed (strata[c->sn].seed ^ ((unsigned long) c->cx << 16 | c->cy) * 69069UL ^ 0x5EED);
@@ -133,12 +133,14 @@ void __fastcall__ o_stock (const struct chunk* c, unsigned x0, unsigned y0)
                 continue;
             }
             hidden = random (20) < SP->hidden;
-            k = hidden ? SP->hide_kinds[random (4)] : uses (US_THING, i | random (8) << 3);
-            if (!k) {
-                continue;                       /* (Rotted away) */
+            d = random (hidden ? 4 : 8);
+            k = hidden ? SP->hide_kinds[d] : uses (US_THING, i | d << 3);
+            q = (hidden ? k : SP->kinds[d]) == KI_PENNIES ? 2 + random (20) : 3;    /* (The style's kind's draws:
+                                                **   the stock's dice as they were before its uses) */
+            h = hidden ? SP->h_lo + random (SP->h_span) : 0xFF;
+            if (k) {                            /* (Else rotted away) */
+                put_down (k, c->sn, x0 + lx, y0 + ly, k == KI_PENNIES ? q : 1, h);
             }
-            put_down (k, c->sn, x0 + lx, y0 + ly, k == KI_PENNIES ? 2 + random (20) : 1,
-                hidden ? SP->h_lo + random (SP->h_span) : 0xFF);
         }
     }
     for (i = 0; i < c->nrooms; ++i) {           /* (Each room's use's mark, and a kitchen's well: no dice) */
