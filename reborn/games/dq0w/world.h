@@ -68,14 +68,15 @@ struct zone {                                   /* A rectangle of a room's floor
 struct room {
     unsigned char   x, y, w, h;                 /* Its floor (its walls round it) */
     unsigned char   flags;                      /* R_* */
-    unsigned char   kind;                       /* What the theme calls it (a built room's: its use) */
+    unsigned char   kind;                       /* What it was built for (U_*: DUNGEON.md's built to a plan; a
+                                                **   cave's chamber U_CAVE), what the theme calls it by */
     unsigned char   z0, nz;                     /* Its zones */
-    unsigned char   use;                        /* What it was built for (U_*: DUNGEON.md's built to a plan) */
 };
 #define R_VISITED       0x01
 #define R_LIT           0x02
 #define R_MURDER        0x04                    /* (A gatehouse's: murder holes in its vault) */
-/* A room's use (the theme's words: its rooms' eight, then its uses'); a cave's chamber U_CAVE */
+/* A room's use, its kind (the theme's words: its rooms' eight, then its uses'); a cave's chamber U_CAVE (kept in 8
+** bytes, struct room: the tasks index their rooms by a shift) */
 enum { U_CHAMBER, U_HALL, U_CELL, U_VAULT, U_CRYPT, U_GALLERY, U_CAVE, U_STORE, U_KITCHEN, U_PANTRY, U_BARRACKS,
     U_ARMOURY, U_CHAPEL, U_QUARTERS, U_SOLAR, U_WELL, U_CISTERN, U_GATEHOUSE, U_GUARDROOM, U_WORKSHOP, NUSES };
 struct opening {                                /* An opening that isn't a door */

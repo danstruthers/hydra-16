@@ -94,7 +94,7 @@ static void __fastcall__ windows (unsigned char r)
 {
     struct room* q = &L->room[r];
     struct portal* p;
-    unsigned char d, k, len, x, y, t, fort = ufort && (q->use == U_GATEHOUSE || q->use == U_GUARDROOM);
+    unsigned char d, k, len, x, y, t, fort = ufort && (q->kind == U_GATEHOUSE || q->kind == U_GUARDROOM);
 
     for (d = 0; d < 4; ++d) {
         len = d == DIR_N || d == DIR_S ? q->w : q->h;
@@ -173,7 +173,7 @@ static void fortify (void)
         dseed (7, p->x << 5 | p->y);
         for (r = 0; r < L->nrooms; ++r) {
             q = &L->room[r];
-            for (d = 0; d < 4 && q->use == U_GATEHOUSE; ++d) {
+            for (d = 0; d < 4 && q->kind == U_GATEHOUSE; ++d) {
                 x = p->x + dir_x[d];
                 y = p->y + dir_y[d];
                 if (x >= q->x && x < q->x + q->w && y >= q->y && y < q->y + q->h) {

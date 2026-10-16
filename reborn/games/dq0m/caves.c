@@ -101,7 +101,6 @@ static void __fastcall__ chamber (unsigned char cx, unsigned char cy, unsigned c
     p->h = y1 - y0 + 1;
     p->flags = random (10) < SP->glow ? R_LIT : 0;    /* (A glow: the style's say) */
     p->kind = 6;                                /* (A cave) */
-    p->use = U_CAVE;
     p->z0 = L->nzones;
     p->nz = 1;
     z = &L->zone[L->nzones++];

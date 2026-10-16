@@ -156,7 +156,7 @@ static void plan (void)
         if ((u == U_WELL || u == U_CISTERN) && !uwater) {
             u = U_STORE;                        /* (No water: no well) */
         }
-        L->room[r].use = L->room[r].kind = u;
+        L->room[r].kind = u;
     }
 }
 
@@ -193,7 +193,7 @@ static void floors (void)
         for (i = p->z0, z = &L->zone[i]; i < p->z0 + p->nz; ++i, ++z) {
             if (s->style == ST_BUILT) {         /* (Flat: one plane, the stratum's level) */
                 z->gx = z->gy = 0;
-                z->z = base + (p->use == U_HALL && i && i + 1 == p->z0 + p->nz ? 2 : 0);
+                z->z = base + (p->kind == U_HALL && i && i + 1 == p->z0 + p->nz ? 2 : 0);
                 for (y = z->y; y < z->y + z->h; ++y) {
                     for (x = z->x; x < z->x + z->w; ++x) {
                         L->tile[y][x] = T_FLOOR;
@@ -209,12 +209,12 @@ static void floors (void)
                     }
                 }
             }
-            c = ceils[p->use][0];
+            c = ceils[p->kind][0];
             if (c == 0xFF || s->style == ST_MINE) {
                 continue;                       /* (The style's, as it was grown: a mine's timbering) */
             }
-            h = std + ceils[p->use][1] + (ceils[p->use][2] ? area / ceils[p->use][2] : 0);
-            if (c == C_BARREL && p->use == U_HALL && area >= 40 && (L->cx + L->cy + r) % 3) {
+            h = std + ceils[p->kind][1] + (ceils[p->kind][2] ? area / ceils[p->kind][2] : 0);
+            if (c == C_BARREL && p->kind == U_HALL && area >= 40 && (L->cx + L->cy + r) % 3) {
                 c = C_CATHEDRAL;                /* (A great hall's pointed vault) */
             } else if (c == C_CATHEDRAL && p->w == p->h && z->w >= 3 && z->h >= 3) {
                 c = C_DOME;                     /* (A square chapel's dome) */
@@ -264,7 +264,7 @@ static unsigned char __fastcall__ rots (unsigned char k)
 ** (US_SIGN) its use's mark, and (arg's 0x80) a kitchen's well, where there's water */
 static unsigned char __fastcall__ thing (unsigned char sign, unsigned char arg)
 {
-    unsigned char r = arg & 7, u = L->room[r].use, k;
+    unsigned char r = arg & 7, u = L->room[r].kind, k;
 
     if (sign) {
         k = arg & 0x80 ? (u == U_KITCHEN && uwater ? KI_WELL : 0) : signs[u];

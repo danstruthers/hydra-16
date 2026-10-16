@@ -167,8 +167,8 @@ kitchen's next to the pantry, the stores beyond; the barracks by the gate; the l
 stratum goes.  The rooms' uses: a chamber (its use lost), a hall, cells, a vault, a crypt, a gallery, a storeroom,
 a kitchen, a pantry, barracks, an armoury, a chapel, quarters, the lord's solar, a well room, a cistern, a gatehouse,
 a guardroom, a workshop: each named by the theme (its rooms' eight words, and the uses' twelve more: a kobold's
-"cookpit" for a kitchen).  A room's kind (the theme's word) is its use; struct room's use keeps it for anyone who
-reads it (the lights' and the denizens').
+"cookpit" for a kitchen).  A room's kind is its use (struct room's kind, world.h's U_*), the theme's word for it,
+for anyone who reads it (the lights', the denizens', the senses').
 
 - **Water:** a **well** where the stratum has water (the plan's water, to come with the water's step: a hook, for
   now from the stratum's seed and the region): in a domestic suite's kitchen, or a well room of its own in the
