@@ -135,6 +135,11 @@ static void __fastcall__ walls_round (unsigned x, unsigned y)
     }
 }
 
+/* The squares, 0 to the longest range (4 + 2 times 9): no multiplying, square by square */
+static const unsigned sq[23] = {
+    0, 1, 4, 9, 16, 25, 36, 49, 64, 81, 100, 121, 144, 169, 196, 225, 256, 289, 324, 361, 400, 441, 484
+};
+
 void __fastcall__ view (unsigned char sn, unsigned x, unsigned y, unsigned char face, unsigned char light,
     unsigned char sight, unsigned char dark)
 {
@@ -142,6 +147,7 @@ void __fastcall__ view (unsigned char sn, unsigned x, unsigned y, unsigned char 
     unsigned i, j, d2, r2, l2, u2 = dark * dark;
     unsigned char range, t;
     unsigned char* p;
+    signed char hx = head_x[face], hy = head_y[face];
 
     for (j = by0; j <= by1 && bx1; ++j) {       /* (What the last view saw, unseen now) */
         for (i = bx0; i <= bx1; ++i) {
@@ -180,11 +186,11 @@ void __fastcall__ view (unsigned char sn, unsigned x, unsigned y, unsigned char 
             tz = C->elev[cy_][cx_];
             dx = (int) (i - x);
             dy = (int) (j - y);
-            d2 = dx * dx + dy * dy;
+            d2 = sq[dx < 0 ? -dx : dx] + sq[dy < 0 ? -dy : dy];
             if (!d2 || d2 > r2) {
                 continue;
             }
-            if (dx * head_x[face] + dy * head_y[face] < 0 && d2 > 2) {
+            if ((hx < 0 ? -dx : hx ? dx : 0) + (hy < 0 ? -dy : hy ? dy : 0) < 0 && d2 > 2) {
                 continue;                       /* (Behind: but for what's next to it) */
             }
             if (d2 > l2 && d2 > u2 && !lit (i, j) && !lamplit (i, j, tz)) {

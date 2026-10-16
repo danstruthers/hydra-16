@@ -24,7 +24,7 @@
 #include "world.h"
 
 static unsigned last;                           /* The tick count at the last look */
-static unsigned long acc;                       /* Real ticks times round, not yet game time */
+static unsigned acc;                            /* Real ticks times round, not yet game time */
 
 /* The clock moved on by d tenths, written so that a reader sees it whole (hub_now) */
 static void __fastcall__ advance (unsigned long d)
@@ -1524,10 +1524,15 @@ static void clock_run (void)
     if (HUB->paused || HUB->hold || !HUB->tpr) {
         return;
     }
-    acc += (unsigned long) d * HUB->round;
-    if (acc >= HUB->tpr) {
-        advance (acc / HUB->tpr);
-        acc %= HUB->tpr;
+    while (d) {                                 /* (64 ticks at a time: in 16 bits, cc65's longs slow, and this
+                                                **   each time round) */
+        t = d > 64 ? 64 : d;
+        d -= t;
+        acc += t * HUB->round;
+        if (acc >= HUB->tpr) {
+            advance (acc / HUB->tpr);
+            acc %= HUB->tpr;
+        }
     }
 }
 

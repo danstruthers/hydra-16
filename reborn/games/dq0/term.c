@@ -33,6 +33,7 @@ static unsigned char shown;                     /* How much of the line typed is
 static char queue[QMAX];                        /*   each ends with a 0, */
 static unsigned qlen;                           /*   so many bytes of them */
 static char last[INMAX + 1];                    /* The last line entered (cursor up brings it back) */
+static char sl[128], sn[128];                   /* The status line as it's shown, and as it's to be */
 
 /* ---- Output */
 
@@ -82,10 +83,33 @@ static void __fastcall__ go (unsigned char r, unsigned char c)
     out ('H');
 }
 
+/* The cursor hidden while it's away from the line typed (ESC [ ? 25 l: the console's, and its terminals'), and
+** shown again as it's back (t_done, inl_show) */
+static unsigned char hid;
+
+static void hide (void)
+{
+    if (!hid) {
+        csi ();
+        outs ("?25l");
+        hid = 1;
+    }
+}
+
+static void unhide (void)
+{
+    if (hid) {
+        csi ();
+        outs ("?25h");
+        hid = 0;
+    }
+}
+
 /* The cursor to the story's next place (its last row, at col), if it isn't there */
 static void to_story (void)
 {
     if (away != 2) {
+        hide ();
         go (th - 1, col + 1);
         away = 2;
     }
@@ -199,6 +223,7 @@ void t_init (void)
     col = gap = 0;
     blanked = 1;
     away = 1;
+    memset (sl, 0, sizeof sl);                  /* (The status line drawn whole) */
     status ();
     inl_show ();
     t_done ();
@@ -211,23 +236,37 @@ void t_end (void)
     go (th, 1);
     csi ();
     out ('K');
+    unhide ();
     flush ();
 }
 
+/* The status line: only what's changed since it was last drawn (the clock's last digit, mostly), the cursor hidden
+** while it's away from the line typed (the user: the cursor flickered, the line drawn whole each game second); nothing
+** at all, the cursor left where it is, if nothing has */
+
 void __fastcall__ t_status (const char* left, const char* right)
 {
-    unsigned char n = strlen (left), m = strlen (right), k;
+    unsigned char n = strlen (left), m = strlen (right), k, a, b;
 
-    go (1, 1);
+    memset (sn, ' ', tw);
+    memcpy (sn + 1, left, n < tw - 2 ? n : tw - 2);
+    if (m + n + 3 <= tw) {
+        memcpy (sn + tw - 1 - m, right, m);
+    }
+    for (a = 0; a < tw && sn[a] == sl[a]; ++a) {
+    }
+    if (a == tw) {
+        return;
+    }
+    for (b = tw - 1; sn[b] == sl[b]; --b) {
+    }
+    hide ();
+    go (1, a + 1);
     csi ();
     outs ("7m");
-    out (' ');
-    outs (left);
-    for (k = n + 1; k + m + 1 < tw; ++k) {
-        out (' ');
+    for (k = a; k <= b; ++k) {
+        out (sl[k] = sn[k]);
     }
-    outs (right);
-    out (' ');
     csi ();
     outs ("0m");
     away = 1;
@@ -367,8 +406,10 @@ void inl_show (void)
     unsigned char from = inn > tw - 4 ? inn - (tw - 4) : 0;
 
     go (th, 1);                                 /* (Cleared first: with nothing typed, "> " is the last thing out,
-    csi ();                                     /*   a prompt for a test to wait for) */
+                                                **   a prompt for a test to wait for) */
+    csi ();
     out ('K');
+    unhide ();
     outs (t_ready ? "> " : "  ");
     outs (inl + from);
     shown = inn - from;
@@ -380,10 +421,12 @@ void t_done (void)
     if (away) {
         if (shown) {
             go (th, 3 + shown);
+            unhide ();
         } else {
             go (th, 1);                         /* (Nothing typed: "> " again, the last thing out, a prompt) */
             csi ();
             out ('K');
+            unhide ();
             outs (t_ready ? "> " : "  ");
         }
         away = 0;
@@ -409,7 +452,8 @@ static void enter (void)
     inn = 0;
     inl[0] = 0;
     shown = 0;                                  /* (The line typed drawn again by t_done, once the command's done:
-    away = 1;                                   /*   its "> " a prompt only when the game's ready) */
+                                                **   its "> " a prompt only when the game's ready) */
+    away = 1;
 }
 
 void __fastcall__ t_key (unsigned char k)

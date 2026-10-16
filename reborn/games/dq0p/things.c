@@ -151,7 +151,14 @@ static const struct kind* __fastcall__ kind_of (unsigned char k)
 /* Item i's record copied out (into q); item i's kind's record (kind_of's) */
 static void __fastcall__ fetch (struct item* q, unsigned i)
 {
-    memcpy (q, item_at (i), sizeof *q);
+    struct item* p = item_at (i);
+
+    if (!p->kind) {                             /* (A free record: only its kind, none, the rest unread; a look
+                                                **   about goes through every record, and most are free) */
+        q->kind = 0;
+        return;
+    }
+    memcpy (q, p, sizeof *q);
 }
 
 static const struct kind* __fastcall__ kind_at (unsigned i)

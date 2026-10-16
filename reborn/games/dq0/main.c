@@ -431,13 +431,14 @@ void status (void)
 
 /* ---- The world's events, worded */
 
-static void events (void)
+static unsigned char events (void)          /* (How many there were) */
 {
     static struct msg m;
-    unsigned char k;
+    unsigned char k, n = 0;
     struct req* r;
 
     while (!quit && hub_next (&place, &m)) {
+        ++n;
         switch (m.kind) {
         case E_TIME:
             if (m.who == 0) {
@@ -552,6 +553,7 @@ static void events (void)
             break;
         }
     }
+    return n;
 }
 
 /* ---- The commands (the parser comes later: a word, and the rest) */
@@ -1021,7 +1023,7 @@ portal:
 
 int main (int argc, char* argv[])
 {
-    unsigned long seed = hy_time () ^ hy_ticks (), was = 0;
+    unsigned long seed = hy_time () ^ hy_ticks ();
     unsigned shown = 0, lnow = 0;
     const char* file = 0;
     unsigned char k, i;
@@ -1085,16 +1087,14 @@ int main (int argc, char* argv[])
                 t_key (k);
             }
         }
-        events ();
+        k = events ();
         now = hub_now ();
-        if ((unsigned) now != lnow && (HUB->tpr || !busy || hy_ticks () - shown >= 100)) {
-            lnow = now;                         /* (The clock on the status line, each game second; the turns
-                                                **   pace's, as the character's busy, each half a real second) */
-            if (now / 10 != was) {
-                was = now / 10;
-                shown = hy_ticks ();
-                status ();
-            }
+        if (k || ((unsigned) now != lnow && hy_ticks () - shown >= (inn ? 1000 : 200))) {
+            lnow = now;                         /* (The status line as the events change it, and its clock each
+                                                **   real second at most, each five while a line's being typed:
+                                                **   only what's changed drawn, t_status) */
+            shown = hy_ticks ();
+            status ();
         }
         if (!busy && pending[0]) {              /* (Walked over: now taken up) */
             take (pending);
