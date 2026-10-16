@@ -661,7 +661,7 @@ static unsigned char __fastcall__ things (unsigned char op, const char* name)
     q->state = REQ_POSTED;
     hub_ring (T_SENSES);
     while (q->state != REQ_DONE) {
-        hy_yield ();
+        hy_sleep_ticks (1);                     /* (The CPU left to the senses, not spun away) */
         hub_map (0);
     }
     q->state = REQ_FREE;

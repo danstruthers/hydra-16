@@ -356,8 +356,10 @@ static void stirred (void)
     }
 }
 
-/* What the character sees, made again, and what it perceives recorded: the senses asked (dq0p), and waited for, the
-** denizens it sees added (the hub's header in the window as it ends) */
+/* What the character sees, made again, and what it perceives recorded: the senses asked (dq0p), and waited for (the
+** clock going on meanwhile, at the real paces; the CPU left to the senses, a tick at a time), the denizens it sees
+** added (the hub's header in the window as it ends) */
+static void clock_run (void);
 static void __fastcall__ see (unsigned char first)
 {
     hub_map (0);
@@ -365,8 +367,9 @@ static void __fastcall__ see (unsigned char first)
     HUB->look_state = REQ_POSTED;
     hub_ring (T_SENSES);
     while (HUB->look_state != REQ_DONE) {
-        hy_yield ();
+        hy_sleep_ticks (1);
         hub_map (0);
+        clock_run ();
     }
     HUB->look_state = REQ_FREE;
     dens_seen ();
