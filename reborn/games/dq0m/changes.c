@@ -14,6 +14,8 @@
 #include "../dq0w/world.h"
 #include "grow.h"
 
+#pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
+
 #define CH_BANKS        2
 #define CH_PER_BANK     (0x2000 / sizeof (struct change))
 #define SEEN_BANKS      2
@@ -230,6 +232,9 @@ void __fastcall__ seen_over (struct chunk* k)
 
 static char path[48];
 
+#pragma code-name (push, "SW2CODE")
+#pragma rodata-name (push, "SW2RODATA")
+
 static int __fastcall__ open_in (const char* name, int how)
 {
     hub_map (0);
@@ -239,7 +244,7 @@ static int __fastcall__ open_in (const char* name, int how)
     return open (path, how, 0644);
 }
 
-int changes_save (void)
+int s_changes_save (void)
 {
     static unsigned char b[256];
     unsigned i, n;
@@ -277,7 +282,7 @@ int changes_save (void)
     return 0;
 }
 
-int changes_restore (void)
+int s_changes_restore (void)
 {
     static unsigned char b[sizeof (struct seen)];
     unsigned i;
@@ -305,3 +310,6 @@ int changes_restore (void)
     }
     return 0;
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
