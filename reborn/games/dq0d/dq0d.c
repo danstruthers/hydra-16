@@ -374,6 +374,8 @@ static unsigned nearx[NEAR], neary[NEAR];
 static unsigned char sense_gen = 1;            /* (Bumped as the character changes: where it is, its light, busy) */
 static unsigned char sgen[NACTORS], sres[NACTORS];  /* (Each actor's senses as they were last: of sense_gen, there) */
 static unsigned sax[NACTORS], say[NACTORS];
+static unsigned long alert[NACTORS];            /* (Each actor still and facing a noise it heard till then) */
+static unsigned char steps[NACTORS];            /* (Each one's steps: a noise of its own every eighth) */
 
 /* Actor k's place and time written back to its record */
 static void __fastcall__ write_back (unsigned char k)
@@ -417,6 +419,7 @@ static void __fastcall__ enlist (unsigned char i, unsigned char k)
     a.ready = D.ready > now ? D.ready : now;
     a.step = K.step;
     sgen[k] = 0;
+    alert[k] = 0;
     strcpy (a.name, K.name);
     hub_map (0);
     memcpy (&HUB->actor[k], &a, sizeof a);      /* (Its name last: the entry used once it's whole) */
@@ -594,6 +597,80 @@ static unsigned char __fastcall__ dart (unsigned char k)
     return 1;
 }
 
+/* ---- Its events (DENIZENS.md: events): what its actors do, published (the hub's denizens' events: nobody waits
+** for them, and each perceives them or not by its own senses); and the noises they hear, their own and the world's
+** (the character's: digging), each by every actor within its kind's hearing times the noise's loudness over two:
+** it turns to face the noise, stands a while, and looks for the character again at once */
+
+static struct msg ev;
+static unsigned wplace, dplace;                 /* (Its places in the world's events, and in its own) */
+
+/* Actor k (the copy, a) did what, how loud (0-9): published, where it is (and whether the character sees its square
+** now, the senses' marks), the hub's header in the window after */
+static void __fastcall__ publish (unsigned char k, unsigned char what, unsigned char loud)
+{
+    unsigned char* p = at (a.sn, a.x, a.y);
+
+    ev.x[2] = p && (*p & T_VIS);
+    ev.kind = E_DEN;
+    ev.who = k + 1;
+    ev.a = what;
+    ev.b = loud;
+    ev.w1 = a.x;
+    ev.w2 = a.y;
+    ev.t = now;
+    ev.x[0] = a.sn;
+    ev.x[1] = akind[k];
+    hub_map (0);
+    hub_devent (&ev);
+}
+
+static void hear (void)
+{
+    static struct msg m;
+    static struct actor* q;
+    static unsigned char k, src, sn, loud;
+
+    for (;;) {
+        hub_map (0);
+        if (hub_next (&wplace, &m)) {           /* (The world's: a noise of the character's, on its stratum) */
+            if (m.kind != E_NOISE) {
+                continue;
+            }
+            src = 0;
+            sn = pcs;
+            loud = m.a;
+        } else if (hub_dnext (&dplace, &m)) {   /* (Its own: an actor's, not heard by itself) */
+            if (m.kind != E_DEN || !m.b) {
+                continue;
+            }
+            src = m.who;
+            sn = m.x[0];
+            loud = m.b;
+        } else {
+            break;
+        }
+        for (k = 0; k < NACTORS; ++k) {
+            hub_map (0);
+            q = &HUB->actor[k];
+            if (!q->name[0] || k + 1 == src || q->sn != sn || (m.w1 == q->x && m.w2 == q->y)) {
+                continue;
+            }
+            kind_get (akind[k]);
+            if (apart (q->x - m.w1, q->y - m.w2) > K.hear * loud / 2) {
+                continue;
+            }
+            q->face = bearing (m.w1 - q->x, m.w2 - q->y);
+            alert[k] = now + 100;
+            sgen[k] = 0;                        /* (It senses again: the character, if it's there to be sensed) */
+            if (q->ready > now + 1) {
+                q->ready = now + 1;
+            }
+        }
+    }
+    hub_map (0);
+}
+
 /* What actor k means to do, by its kind and what it senses, and done (or a while waited), by the character's rules
 ** (step_here: the world's own, as they were when it moved them).  Watching the character, a shy one keeps its distance (till it's a few squares further; cornered beside
 ** it, it darts past), a bold one comes towards it; else it wanders about its lair (or keeps to it) */
@@ -630,6 +707,9 @@ static void __fastcall__ decide (unsigned char k)
         } else if ((K.flags & K_BOLD) && dist > 1 && (d = step_for (k, 2 * K.range, S_TOWARD)) != 0xFF) {
             a.doing = DO_COMING;
         }
+    } else if (alert[k] > now) {
+        d = 0xFE;                               /* (A noise heard: still, facing the way it came, a while) */
+        a.ready += 10 + random (20);
     } else if (turns && !(*at (a.sn, a.x, a.y) & T_VIS)) {
         coarse (k, K.flags & K_LAIR ? 2 : K.range);
         d = 0xFE;                               /* (Unseen, unaware: a coarse move) */
@@ -640,6 +720,12 @@ static void __fastcall__ decide (unsigned char k)
         a.ready += a.doing ? 60 + random (60) : 10 + random (40);    /* (Watching: a while, unless it changes) */
     } else if (d < 4) {
         step_here (d);
+    }
+    if (d < 4 || d == 0xFD) {                   /* (Published: a step, now and then a noise of its own; a dash) */
+        publish (k, d == 0xFD || ++steps[k] & 7 ? DE_MOVED : DE_NOISE, d == 0xFD ? 2 : steps[k] & 7 ? 1 : 3);
+    }
+    if (a.doing != was && (!was || !a.doing)) {
+        publish (k, a.doing ? DE_NOTICED : DE_LOST, 0);
     }
     hub_map (0);
     memcpy (&HUB->actor[k], &a, sizeof a);
@@ -860,6 +946,8 @@ int main (int argc, char* argv[])
     if (HUB->resume) {
         keep (1);
     }
+    wplace = HUB->eq_head;                      /* (Its events from now on) */
+    dplace = HUB->dq_head;
     while (hub_map (0), !HUB->quit) {
         while (hy_sem_try (HUB->sem[T_DENIZENS]) == 0) {
         }
@@ -888,6 +976,7 @@ int main (int argc, char* argv[])
         turns = !HUB->tpr;
         grow ();
         if (hd.done[pcs]) {
+            hear ();
             tend ();
         }
         hub_map (0);

@@ -90,13 +90,54 @@ allies.
 
 ### In the tasks
 
-- **The world** keeps each denizen's place and state, carries out its intents as it does the character's, and tells
-  what happened as events.
+- **The world** keeps the character out of the denizens' squares, adds those it sees to what it perceives, and
+  tells what happened to the character and the dungeon as events.
 - **The denizens' task** decides what each denizen means to do, by its kind, its attitude, its faction's goals and
   what it senses (each denizen sees and hears through its own senses, as the character does); allies by the
-  character's requests.
+  character's requests; and does it, by the character's rules, publishing what they do (events, above).
 - **The referee** answers the tests and contests (influence, morale, combat), and keeps each creature's sheet.
 - **The UI** words it all, and parses the player's influence and requests ("persuade the goblin", "tell Grub to wait").
+
+### Events: the denizens in the background
+
+The user (2026-10-15, playing): "the UI is slow to respond in many cases. The cursor flickers constantly, and that is
+a problem; probably an artifact of time sharing with the other tasks.  I was thinking that an event-driven system
+might work better, where the denizens task is doing work in the backend, and it publishes changes as events, which
+may or may not be perceived by the other denizens or player depending on the perceptions of each."
+
+What was slow (measured in the emulator, the normal pace): a command the UI answers by itself took a fifth of a
+second to start and most of a second to finish, and a move or a turn seven to nine seconds; with nothing happening
+the CPU was busy 70% of the time, and the status line went out whole three times a second (a third of what the
+serial line carries), the cursor jumping to it and back each time.  The time went: to the senses' look about after
+every move and turn (some 18 million cycles: the squares round each wall looked at again from every wall, a square's
+chunk found by multiplying, every thing's record copied twice), the world waiting for it, the clock standing; to the
+status line on the line; to the tasks' loops (the world's clock in long arithmetic a hundred times a second; at the
+turns pace the denizens' task spinning while it waited for the clock).  So the denizens weren't what held the UI up;
+but the user's design is the right one for them, and it's this:
+
+- **The denizens' task moves its own**, at every pace, by the character's rules (a step it can walk, its time by its
+  pace and the slope; never onto the character's square, nor where its move ends, nor another's), on its own time:
+  it reads the world's clock (the hub's now) as it goes, and the world never asks it anything, nor waits for it.  At
+  the real paces it keeps up as it can (one fallen behind makes up a few seconds at most).  At the turns pace the
+  world still moves the clock on a slice at a time once the denizens have caught up (den_at), so the game is the
+  same whatever the tasks' timing: the tests' pace.
+- **It publishes what they do as events**: its own queue in the hub (the denizens' events: one writer, each reader
+  its own place, as with the world's; in a bank of their own, DEN_BANK), each an E_DEN: who (the actor), what (a step,
+  a noise of its own, the character sensed, lost), how loud (0, silent, to 9), where (its stratum, its square), when,
+  its kind, and whether the character sees that square now (the senses' marks: a hint for its perceiver).  An event
+  doesn't say who perceives it.  Nobody waits for one, nor is rung: whoever reads them reads them as it goes, late
+  or not at all, and holds nothing up.
+- **Each perceives them by its own senses.**  The character: by sight, the senses' look (the squares it sees, lit,
+  along a clear line: the world adds the actors on them to what it perceives as they change, the hub's den_seq, and
+  the UI tells what stirs); by hearing, the UI's, from the event's loudness, its distance and the character's hearing
+  (the referee's, 0-9): heard within loudness times (hearing + 3) / 2 squares, of one on a square it doesn't see (one
+  it sees is told as seen, not heard), by the way it lies ("You hear something moving behind you to your left."), the
+  same way not again for half a minute, nor any for five seconds.  A denizen: by hearing, the others' events and the
+  world's (the character's noises: E_NOISE, digging), within its kind's hearing times the loudness over two: it turns
+  to face the noise, stands a while, and looks for the character again at once (and so may see it).  Smell, later.
+- **The protocol stays neutral**: the world's events are the character's and the dungeon's, the denizens' events the
+  denizens'; a perceiver (the UI, the senses, the sound task, an ally's task one day) reads either and applies its
+  own senses, and the hub only carries them.
 
 ### So far (the first step)
 
@@ -115,16 +156,16 @@ allies.
   shut doors; heard moving, nearer), and wanders about its lair (a few squares, or its range), keeps to it, watches
   the character, keeps its distance (a shy one: till it's a few squares further; cornered close by, a step no
   nearer, a way round; cornered beside the character, it darts past it), or comes towards it (a bold one);
-  and asks the world, which moves it a square at a time by the character's rules (a step it can walk, its time by
-  its pace and the slope).  No two denizens share a square, and none goes onto the character's, nor where the
-  character's move ends (the hub's pc_tx, pc_ty).
+  and moves it a square at a time by the character's rules (a step it can walk, its time by its pace and the slope),
+  itself, at every pace (the world once did, as it asked).  No two denizens share a square, and none goes onto the
+  character's, nor where the character's move ends (the hub's pc_tx, pc_ty).
 - **Time:** at the turns pace the world moves the clock on through what the character does a slice at a time (ten
   seconds: TURN_SLICE), each once the denizens' task has caught up with it (the hub's den_at; a task slow to, for a
   while, is left to catch up as it can), so the denizens act through all of it: a ten-minute spell of digging gives
   them ten minutes, and they may come and go while it lasts.  As it catches up the denizens' task moves its actors
   itself (the world waiting, by the same rules), cheaply: those out of the character's sight and not sensing it a
   few squares at a time (coarse), a watcher left a while unless the character changes (moves, its light, busy or
-  not).  At the real paces they're the world's to move, as the clock runs.
+  not).  At the real paces it moves them as the clock runs, the world never waiting for it.
 - **Away:** the denizens out but not actors move coarsely, every half minute to a minute and a half, to a square of
   their range about their lairs (in a chunk that's made: none is made for them), so the dungeon goes on where the
   character isn't; their records stay in the denizens' bank.
@@ -133,6 +174,9 @@ allies.
   and the UI says what stirs only when one has come into sight, gone from it, or is doing something else (watching,
   coming towards it, keeping its distance, going about its business): not at each step.  Not while the character's
   on its way somewhere (it looks about as it gets there); while it digs, yes.
+- **Heard:** what the actors do goes out as the denizens' events (a step quietly, a noise of their own every eighth,
+  loud as a squeak; a dash past the character louder; the character sensed, or lost, silently); the UI tells those
+  the character hears and doesn't see; the actors hear each other's, and the character's digging, and turn to them.
 - **In the way:** the character can't walk onto a denizen's square: a walk along a passage, across a room or up to
   a square stops short of one (the way across a room found round them), and one in the very next square is told
   ("A giant rat is in the way.": E_NOWAY's N_DEN, the actor's).

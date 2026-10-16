@@ -371,6 +371,15 @@ static void denizens (void)
     }
 }
 
+/* A denizen heard, not seen (main.c's heard: one of the denizens' events), into lb: "You hear something moving
+** behind you to your left." */
+void __fastcall__ o_heard_words (unsigned char what, unsigned char rel)
+{
+    strcpy (lb, what == DE_NOISE ? "You hear a noise " : "You hear something moving ");
+    strcat (lb, relname[rel & 7]);
+    strcat (lb, ".");
+}
+
 /* The denizens it sees, as one comes into sight, goes from it, or does something else (the world's V_STIR: into
 ** lb): "Something stirs. A giant rat is ..." */
 void o_stir_words (void)

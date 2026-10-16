@@ -195,7 +195,7 @@ unsigned char __fastcall__ room_of (unsigned char sn, unsigned x, unsigned y)
     return 0xFF;
 }
 
-#ifndef CHUNK_NO_ZONES                          /* (A task that never asks: its room) */
+#ifdef CHUNK_ZONES                              /* (Only for a task that asks: none yet, its room the others') */
 unsigned char __fastcall__ zone_of (unsigned char sn, unsigned x, unsigned y)
 {
     unsigned char z;

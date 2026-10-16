@@ -156,6 +156,7 @@ ovl_out:
             OVFN        tell, 1
             OVFN        words, 2
             OVFN        stir_words, 2
+            OVFN        heard_words, 2
             OVFN        parse, 3
             OVFN        fixt_words, 4
             OVFN        trap_words, 4

@@ -24,15 +24,18 @@
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
 #define HUB_VERSION     1
-#define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS)  /* Bank 0: the header, the queues, the
+#define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 1)  /* Bank 0: the header, the queues, the
                                                 **   referee's slots, what the character perceives, the map, the
                                                 **   strata's records; then the plans' banks and the chunks' (world.h);
-                                                **   the catalogue's, and the items' (items.h) */
+                                                **   the catalogue's, and the items' (items.h); the denizens' events */
 #define CAT_BANK        (1 + PLAN_BANKS + CACHE_BANKS)
 #define CATALOGUE       ((struct kind*) 0x8000)
 #define ITEM_BANK(i)    (CAT_BANK + 1 + (i) / (0x2000 / sizeof (struct item)))
 #define ITEM_AT(i)      ((struct item*) 0x8000 + (i) % (0x2000 / sizeof (struct item)))
 #define HUB_WINDOW      ((unsigned char*) 0x8000)
+#define DEN_BANK        (CAT_BANK + 1 + ITEM_BANKS)     /* The denizens' events (DQ_SIZE of them, a ring) */
+#define DQ_SIZE         64
+#define DQ_AT           ((struct msg*) 0x8000)
 
 /* The tasks, and so their doorbells */
 enum { T_UI, T_WORLD, T_DENIZENS, T_REFEREE, T_SOUND, T_MAKER, T_SENSES, NTASKS };
@@ -83,8 +86,15 @@ enum {
                                                 **   its worst wound's band times 256 (0: unhurt), E_OUT, E_CAUGHT */
     E_TRAP,                                     /* A trap and who: w1 its kind (TK_*) and its trigger (TT_*) times
                                                 **   16, what came of it (TO_*) times 256 */
+    E_DEN,                                      /* (The denizens' own, their queue's: DENIZENS.md's events) A
+                                                **   denizen's done something: who the actor plus 1, a what (DE_*),
+                                                **   b how loud (0 silent ... 9), w1 w2 its square, x[0] its stratum,
+                                                **   x[1] its kind (the denizens' task's), x[2] 1 if it's on a square
+                                                **   the character sees now (the senses' marks) */
     NEVENTS
 };
+enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST };    /* E_DEN's what: a step, a noise of its own (a squeak, a
+                                                **   growl), the character sensed, lost (its senses' own) */
 #define I_JUMP          0x80
 #define E_OUT           0x4000                  /* (E_HARM's: knocked senseless a while) */
 #define E_CAUGHT        0x8000                  /*   (and a fall stopped, a hold grabbed) */
@@ -244,6 +254,10 @@ struct hub {                                    /* Bank 0, at $8000 */
     volatile unsigned char den_seq;             /* Bumped as it changes what the character may see of its actors */
     volatile unsigned pc_tx, pc_ty;             /* Where the character's move ends (the world's: no denizen goes
                                                 **   there, nor onto the character) */
+    /* The denizens' events (E_DEN), to everyone: the denizens' task writes them in their own bank (DEN_BANK), each
+    ** reader keeps its own place, as in the world's; nobody waits for them, and each perceives them or not by its own
+    ** senses (DENIZENS.md) */
+    volatile unsigned dq_head;                  /* Events written so far (the denizens' task's) */
 };
 
 #define HUB     ((struct hub*) HUB_WINDOW)
@@ -259,6 +273,8 @@ unsigned char __fastcall__ hub_send (const struct msg* m);  /* An intent to the 
 unsigned char __fastcall__ hub_take (struct msg* m);    /* An intent (the world's): 1, or 0 none */
 void __fastcall__ hub_event (const struct msg* m);      /* An event (the world's) */
 unsigned char __fastcall__ hub_next (unsigned* place, struct msg* m);  /* The next event after place: 1, or 0 */
+void __fastcall__ hub_devent (const struct msg* m);     /* A denizens' event (the denizens' task's) */
+unsigned char __fastcall__ hub_dnext (unsigned* place, struct msg* m);  /* The next denizens' event: 1, or 0 */
 int __fastcall__ hub_spawn (const char* path, unsigned char t, const char* more);   /* A task of the game's */
 int __fastcall__ hub_run (const char* path, const char* args);  /* A program (its arguments each 0-ended, then an
                                                         **   empty one): its task, or -1 (hy_spawn without stdio) */

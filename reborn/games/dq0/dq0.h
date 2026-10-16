@@ -125,6 +125,8 @@ void __fastcall__ trap_words (unsigned w);      /* Overlay 4: a trap's (an E_TRA
 void __fastcall__ trap_name (unsigned char kind, unsigned char trigger, unsigned char state);  /* Overlay 4: a
                                                 **   trap's name, added to lb */
 void den_way (void);                            /* Overlay 4: a denizen in the way (its name in lb) */
+void __fastcall__ heard_words (unsigned char what, unsigned char rel);  /* Overlay 2: a denizen heard (an E_DEN's
+                                                **   what, the way it lies as the character faces), into lb */
 struct portal;
 void __fastcall__ portal_look (const struct portal* p, signed char g);  /* Overlay 4: a portal looked at closely
                                                 **   (the maker's record of it, the hub's pview, copied), judged at

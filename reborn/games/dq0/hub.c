@@ -156,6 +156,39 @@ unsigned char __fastcall__ hub_next (unsigned* place, struct msg* m)
     ++*place;
     return 1;
 }
+
+#if !defined (HUB_ATTACHED) || defined (HUB_DENQ)  /* (The UI's and the denizens': the others' room) */
+/* ---- The denizens' events (their task's), in their own bank: an entry copied in or out whole, between the main RAM
+** and the bank (m is the main RAM's), the header in the window after (a reader that falls DQ_SIZE behind loses the
+** oldest) */
+
+void __fastcall__ hub_devent (const struct msg* m)
+{
+    unsigned h = HUB->dq_head;
+
+    hub_map (DEN_BANK);
+    memcpy (DQ_AT + h % DQ_SIZE, m, sizeof *m);
+    hub_map (0);
+    HUB->dq_head = h + 1;                       /* (Written whole, then shown: nobody's rung, nobody waits) */
+}
+
+unsigned char __fastcall__ hub_dnext (unsigned* place, struct msg* m)
+{
+    unsigned h = HUB->dq_head;
+
+    if (*place == h) {
+        return 0;
+    }
+    if (h - *place > DQ_SIZE) {
+        *place = h - DQ_SIZE;
+    }
+    hub_map (DEN_BANK);
+    memcpy (m, DQ_AT + *place % DQ_SIZE, sizeof *m);
+    hub_map (0);
+    ++*place;
+    return 1;
+}
+#endif
 #endif
 
 #ifndef HUB_ATTACHED

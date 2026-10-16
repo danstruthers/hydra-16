@@ -431,6 +431,39 @@ void status (void)
 
 /* ---- The world's events, worded */
 
+/* ---- The denizens' events (DENIZENS.md: events), as the character hears them: by its hearing (the referee's, 0-9),
+** a step or a noise within its loudness times (hearing + 3) / 2 squares, on its stratum, of one on a square it doesn't
+** see (one it sees is told as seen: the world's V_STIR), told by the way it lies; not the same way again for half a
+** minute, nor any for five seconds.  The rest pass it by */
+static unsigned dplace;
+static unsigned long heard_at;
+static unsigned char heard_rel = 0xFF;
+
+static void heard (void)
+{
+    static struct msg m;
+    unsigned dx, dy;
+    unsigned char rel;
+
+    while (hub_dnext (&dplace, &m)) {
+        if (m.kind != E_DEN || !m.b || m.x[2] || m.x[0] != HUB->pc_stratum) {
+            continue;
+        }
+        dx = m.w1 - HUB->pc_x;
+        dy = m.w2 - HUB->pc_y;
+        rel = (bearing ((int) dx, (int) dy) - HUB->pc_face) & 7;
+        dx = (int) dx < 0 ? -dx : dx;
+        dy = (int) dy < 0 ? -dy : dy;
+        if ((dx > dy ? dx : dy) * 2 > m.b * (HUB->pcsum.hearing + 3) || m.t < heard_at + (rel == heard_rel ? 300 : 50)) {
+            continue;
+        }
+        heard_at = m.t;
+        heard_rel = rel;
+        heard_words (m.a, rel);
+        msg (lb);
+    }
+}
+
 static unsigned char events (void)          /* (How many there were) */
 {
     static struct msg m;
@@ -1088,6 +1121,7 @@ int main (int argc, char* argv[])
             }
         }
         k = events ();
+        heard ();
         now = hub_now ();
         if (k || ((unsigned) now != lnow && hy_ticks () - shown >= (inn ? 1000 : 200))) {
             lnow = now;                         /* (The status line as the events change it, and its clock each
