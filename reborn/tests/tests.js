@@ -2630,6 +2630,104 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0stairtrap', what: 'Dingus Quest Zero\'s walks to stairs and ladders checking their way for traps, as the other walks do (the user\'s, 2026-10-16): at seed 38 the character goes round to the gallery\'s far door, clear of the covered pit hidden between it and the stairs up to the way out, then up (u): the walk back to the stairs stops on the pit, which gives way under it (a fall, a climb out begun); then from the window the stairs again, the pit it knows of now gone round, and the way out reached (shut fast), no second fall',
+      init: 't_rc', cycles: 600e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 38 -c /ram/c.hm\r' +
+        ['se', 'walk to the door east', 'u', 'look', 'walk to the window', 'u', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        const want = ['> walk to the door east', 'You go over to it.', '> u', 'The floor gives way beneath you: a pit!',
+          'You set to climbing', '> look', 'There is an open pit at your feet.', '> walk to the window', '> u',
+          'The way out is shut fast.', '% echo $status'];
+        let at = 0;
+        for (const w of want) {
+          const i = o.indexOf(w, at);
+          if (i < 0) { f.push('not found (in its turn): ' + w); break; }
+          at = i + w.length;
+        }
+        if ((o.match(/gives way beneath you/g) || []).length !== 1) f.push('the pit gave way more than once (not gone round)');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0rebar', what: 'Dingus Quest Zero\'s doors barred again (the user\'s, 2026-10-16): at seed 4 the door\'s bar lifted out of its brackets and taken, then put back (bar the door: from its side, the door shut): out of the pack (the load lighter), in its brackets again (examined), the door barred (opened, the bar lifted out again, at its feet); not while the door stands open; put back from the floor (put the bar back in its brackets); kept (dq0 -d), the door still barred and the bar in it as the game carries on',
+      init: 't_rc', cycles: 1000e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 4 -c /ram/c.hm -d /ram/g\r' +
+        ['take the bar', 'bar the door', 'i', 'x door', 'open', 'look', 'bar the door', 'close', 'put the bar back in its brackets', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        'ādq0 -p t -d /ram/g\r' + ['x door', 'i', 'open', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        const want = ['> take the bar', 'You lift the bar out of its brackets, and set it down.', 'Taken.', '> bar the door',
+          'You set the bar in its brackets: the door is barred.', '> i', 'a tinderbox); a belt', 'In all, 7 lb.', '> x door',
+          'Brackets for a bar are fixed on this side, the bar in them.', '> open', 'You lift the bar and open the door.',
+          'At your feet lies a bar.', '> bar the door', 'It stands open: shut it first, then bar it.', '> close',
+          '> put the bar back in its brackets', 'You set the bar in its brackets: the door is barred.',
+          'takes up where they left off.', '> x door', 'Brackets for a bar are fixed on this side, the bar in them.', '> i',
+          'In all, 7 lb.', '> open', 'You lift the bar and open the door.', '% echo $status'];
+        let at = 0;
+        for (const w of want) {
+          const i = o.indexOf(w, at);
+          if (i < 0) { f.push('not found (in its turn): ' + w); break; }
+          at = i + w.length;
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0portcbreak', what: 'Dingus Quest Zero\'s portcullises broken (the user\'s, 2026-10-16): at seed 12 (dq0 -T) the cell\'s portcullis lowered by its winch, then battered with a pick (dq0 -k pick: blows at its iron bars off their body, as a door\'s) till they break, a gap through for good (seen and examined so, jammed: it won\'t lower), and gone through; then a strong character (Strength 18) bending its bars apart (P_FORCE: once they hold, then they give), and through',
+      init: 't_rc', cycles: 1400e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 12 -c /ram/c.hm -T -k pick\r' +
+        ['e', 'wait', 'e', 'wait', 'e', 'lower portcullis', 'break portcullis', 'break', 'look', 'x portcullis', 'lower portcullis', 'w', 'quit'].map(l => 'ā' + l + '\r').join('') +
+        'āhmchar -q -s 5 -o /ram/s.hm\rāecho att str 18 >> /ram/s.hm\rādq0 -p t -s 12 -c /ram/s.hm -T\r' +
+        ['e', 'wait', 'e', 'wait', 'e', 'lower portcullis', 'bend the bars', 'bend bars', 'look', 'w', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        const want = ['You loose the winch: the portcullis crashes down.', '> break portcullis', 'You batter at it a while: it\'s starting to give.',
+          '> break', 'The bars buckle and break under your blows: there\'s a gap to get through.', '> look',
+          'There is a portcullis ahead (its bars forced apart).', '> x portcullis', 'Its bars are forced apart: there\'s a gap to get through.',
+          '> lower portcullis', 'Its bars are forced apart, and it\'s jammed where it is', '> w', 'You are in a long vault',
+          'You loose the winch: the portcullis crashes down.', '> bend the bars', 'The bars won\'t give.', '> bend bars',
+          'You strain at the bars, and bend them apart: there\'s room to get through.', '> look',
+          'There is a portcullis ahead (its bars forced apart).', '> w', 'You are in a long vault', '% echo $status'];
+        let at = 0;
+        for (const w of want) {
+          const i = o.indexOf(w, at);
+          if (i < 0) { f.push('not found (in its turn): ' + w); break; }
+          at = i + w.length;
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0load', what: 'Dingus Quest Zero\'s load (the user\'s, 2026-10-16): the things\' weight, all the character carries, given the referee, its HarnMaster encumbrance (the load over its endurance) its physical penalty: the kit alone 7 lb, a little burdened (the inventory\'s words; the sheet\'s load and encumbrance 1, its move 16, the skills of the body 5 less); with a pick, a shovel, a rope, a sword and bones (dq0 -k) 33 lb, heavily burdened (encumbrance 3, its move 14, its climbing and dodging 10 less again, its awareness not); some put down, a little burdened again',
+      init: 't_rc', cycles: 900e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 3 -c /ram/c.hm\r' +
+        ['i', 'sheet', 'quit'].map(l => 'ā' + l + '\r').join('') + 'ādq0 -p t -s 3 -c /ram/c.hm -k pick,shovel,rope,sword,bones\r' +
+        ['i', 'sheet', 'drop rope', 'drop shovel', 'drop sword', 'i', 'sheet', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        const want = ['> i', 'In all, 7 lb. You\'re a little burdened.', '> sheet', 'Move 16; load 7 lb, encumbrance 1;',
+          'Climbing 55', 'Awareness 44', 'Dodge 80', '> i', 'In all, 33 lb. You\'re heavily burdened.', '> sheet',
+          'Move 14; load 33 lb, encumbrance 3;', 'Climbing 45', 'Awareness 44', 'Dodge 70', '> drop sword', '> i',
+          'In all, 15 lb. You\'re a little burdened.', '> sheet', 'Move 16; load 15 lb, encumbrance 1;', 'Dodge 80', '% echo $status'];
+        let at = 0;
+        for (const w of want) {
+          const i = o.indexOf(w, at);
+          if (i < 0) { f.push('not found (in its turn): ' + w); break; }
+          at = i + w.length;
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'cnum', what: 'the numbers in C and assembly: num.h\'s test (ntest: the number libraries from C, printf\'s and scanf\'s %N and %{base}), calc at rc (its operators, functions, bases, digits, errors, its input a line at a time, long results), the assembly sample nsum (numbers.inc, numlib.s)',
       init: 't_rc', cycles: 150e6,
       // (Each line typed at its prompt, as the C test's)
