@@ -463,7 +463,7 @@ Empty.
 ```session
 /> df
 disk  kind   size        free        label
-0     sdhc   16380 KB    15624 KB    HYDRA-16
+0     sdhc   16380 KB    15628 KB    HYDRA-16
 x     rom    671 KB      2 KB        ROM
 r     ram    255 KB      253 KB      RAM
 s     sram   511 KB      510 KB      SRAM
