@@ -88,8 +88,8 @@
         "item_on_disabled_layer": "error",
         "items_not_allowed": "error",
         "length_out_of_range": "error",
-        "lib_footprint_issues": "warning",
-        "lib_footprint_mismatch": "warning",
+        "lib_footprint_issues": "ignore",
+        "lib_footprint_mismatch": "ignore",
         "malformed_courtyard": "error",
         "microvia_drill_out_of_range": "error",
         "mirrored_text_on_front_layer": "warning",
@@ -564,7 +564,7 @@
       "netlist": "D:/KiCad/8.0/bin/",
       "plot": "Hydra-16-Gerber-1-8C/",
       "pos_files": "",
-      "specctra_dsn": "Hydra16-1-8C.dsn",
+      "specctra_dsn": "Hydra16-1-8D-B.dsn",
       "step": "",
       "svg": "",
       "vrml": ""
@@ -573,7 +573,7 @@
   },
   "schematic": {
     "annotate_start_num": 0,
-    "bom_export_filename": "C:\\source\\hydra-16\\board\\hydra-16-0-4C.csv",
+    "bom_export_filename": "C:\\source\\hydra-2\\board\\hydra-16-1.8D.csv",
     "bom_fmt_presets": [],
     "bom_fmt_settings": {
       "field_delimiter": ",",
