@@ -76,7 +76,8 @@ enum {
                                                 **   things' already, pc_light: the world takes the time, looks) */
     I_DIG,                                      /* a: a direction (DIR_N ... DIR_W, DIR_DOWN) */
     I_PORTAL,                                   /* a: what's done to the door it faces (PA_*); b: which (PW_*: a
-                                                **   door or a portcullis, a window or a slit, either) */
+                                                **   door or a portcullis, a window or a slit, either); w2: PA_BAR's
+                                                **   bar to hand, its width (the things': 0, none) */
     I_GOTO,                                     /* w1, w2: a square in its room it sees, walked up to */
     I_QUIT,
     NINTENTS
@@ -135,8 +136,10 @@ enum { PA_OPEN, PA_CLOSE, PA_UNLOCK, PA_FORCE, PA_SEARCH,     /* I_PORTAL's: wha
        PA_RAISE, PA_LOWER, PA_BREAK, PA_THROUGH, PA_DISARM,    /*   a portcullis raised, a window's glass broken,
                                                 **   climbed through, a trap disarmed: one in reach, or the door's; */
        PA_LIFT,                                 /*   a door's bar lifted out, a window's pane or its bent bars; */
-       PA_EXAMINE };                            /*   looked at closely: the UI's own M_WORK, ASK_UI's, cx, cy its
-                                                **   square: its record copied into the hub's pview) */
+       PA_EXAMINE,                              /*   looked at closely: the UI's own M_WORK, ASK_UI's, cx, cy its
+                                                **   square: its record copied into the hub's pview; */
+       PA_BAR, PA_BEND };                       /*   a door barred again (a bar carried, or in reach, set in its
+                                                **   brackets); bars bent (a portcullis's; a window's, forced) */
 enum { PW_ANY, PW_DOOR, PW_WINDOW };            /* I_PORTAL's b: a door or a portcullis, a window or a slit */
 enum { PO_NONE, PO_OPENED, PO_CLOSED, PO_IS_OPEN, PO_IS_SHUT, PO_LOCKED, PO_BARRED, PO_UNBARRED, PO_PICKED,
        PO_NOT_PICKED, PO_NO_PICKS, PO_NO_LOCK, PO_FORCED, PO_HELD, PO_FOUND, PO_NOTHING,   /* E_PORTAL's (a door's, */
@@ -148,10 +151,16 @@ enum { PO_NONE, PO_OPENED, PO_CLOSED, PO_IS_OPEN, PO_IS_SHUT, PO_LOCKED, PO_BARR
        PO_TRAPPED, PO_FOUND_TRAP,               /*   a known trap on a door; a search's traps, told as found; */
        PO_BROKE_DOWN, PO_GIVING, PO_HOLDING, PO_NO_MARK,   /*   blows at it: it gives way, it's giving, it holds
                                                 **   (marked), they make no mark; */
-       PO_WRECKED, PO_LIFTED, PO_BAR_FAR, PO_NO_BAR, PO_SET_FAST, PO_PANE_OUT, PO_BARS_OUT, PO_BARS_BROKEN };
+       PO_WRECKED, PO_LIFTED, PO_BAR_FAR, PO_NO_BAR, PO_SET_FAST, PO_PANE_OUT, PO_BARS_OUT, PO_BARS_BROKEN,
                                                 /*   broken down: it won't shut; a bar lifted out, one on the far
                                                 **   side, none to lift; bars set fast; a pane worked out, bent bars
-                                                **   lifted out, bars broken out) */
+                                                **   lifted out, bars broken out; */
+       PO_REBARRED, PO_NO_BRACKETS, PO_IS_BARRED, PO_SHUT_FIRST, PO_BURST, PO_NO_BAR_HELD, PO_BAR_SHORT,
+                                                /*   a bar set in its brackets again, none this side, barred already,
+                                                **   open, burst open once (it won't bar), no bar to hand, one too
+                                                **   short to span it; */
+       PO_GAP, PO_JAMMED };                     /*   a portcullis's bars broken through, its bars forced apart (it
+                                                **   won't move) */
 enum { TO_SPRUNG, TO_DODGED, TO_RESISTED, TO_CHOKED, TO_OPENED, TO_NOTICED, TO_FOUND, TO_DISARMED, TO_NOT_YET,
        TO_FUMBLED, TO_CANT, TO_PIT, TO_NONE, TO_ASSESSED, TO_PUZZLED };  /* E_TRAP's: set off, dodged, its gas resisted or choked on, a pit's
                                                 **   cover fallen in (no one on it); noticed in passing, found by a
@@ -228,10 +237,11 @@ enum { SR_OK, SR_NONE, SR_FAR, SR_TONGUE, SR_BEAST, SR_MINDLESS, SR_AS_FAR, SR_N
 struct sway {
     volatile unsigned char state;               /* REQ_* */
     unsigned char   how;                        /* SW_* */
-    unsigned char   order;                      /* OR_* (SW_ORDER's) */
     char            word[16];                   /* The one meant (a name, a kind's word; "": the nearest, or every
                                                 **   ally, an order's) */
+    unsigned char   prep;                       /* (dq0.h's struct pcmd's, from word on, copied whole) */
     char            word2[16];                  /* A name given; a thing to fetch */
+    unsigned char   order;                      /* OR_* (SW_ORDER's) */
     unsigned char   result;                     /* (The reply's:) SR_* */
     signed char     grade;                      /*   the referee's (G_*: 0, no test) */
     unsigned char   was, now;                   /*   its attitude before and after (AT_*) */

@@ -245,6 +245,10 @@ void o_sheet (void)
     putn (harn_end (&pc));
     put (", Move ");
     putn (harn_move (&pc));
+    put ("; load ");
+    putn (harn_get_load (&pc));
+    put (" lb, encumbrance ");
+    putn (harn_get_ep (&pc));
     put ("; universal penalty ");
     putn (harn_get_up (&pc));
     put (", physical ");

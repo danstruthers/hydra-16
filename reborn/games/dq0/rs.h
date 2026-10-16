@@ -136,7 +136,7 @@ struct rs_summary {
     unsigned char   nightvision;                /* Night vision: how far faint light carries for it, times (1: as
                                                 **   anyone's) */
     unsigned char   morale;
-    unsigned char   load;                       /* Encumbrance: 0 none ... 3 overloaded */
+    unsigned char   load;                       /* Encumbrance: 0 none, 1 a little burdened, 2 heavily, 3 overloaded */
     unsigned char   power;                      /* 0-100: how mighty, the same scale whatever the ruleset */
 };
 
@@ -157,7 +157,9 @@ enum {
     RS_EQUIP,                                   /* An item taken up (a 1) or put away (a 0): its key in the text
                                                 **   ("pick"); or all that's to hand anew (a 2: the keys, a space
                                                 **   between): the referee judges tests by it, a skill used taking the
-                                                **   tool that suits */
+                                                **   tool that suits; a 2's w1 the load, all the actor carries, in
+                                                **   quarter pounds: its encumbrance the referee's, in the summary (its
+                                                **   load, its step) and its tests */
     RS_INITIATIVE,                              /* Actors -> each one's delay as a fight starts */
     RS_MORALE,
     RS_EXPERIENCE,                              /* Something that counts to advancement */

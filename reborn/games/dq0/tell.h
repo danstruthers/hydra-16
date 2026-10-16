@@ -42,6 +42,9 @@ enum {
     T_PICK_YOURSELF_UP,
     T_THE_PORTCULLIS_IS,
     T_DOOR_SHUT,
+    T_BURDENED,                                 /* (The load: the summary's 1, 2, 3) */
+    T_HEAVILY_BURDENED,
+    T_OVERLOADED,
     T_COUNT
 };
 

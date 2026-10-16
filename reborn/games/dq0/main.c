@@ -16,6 +16,7 @@
 */
 
 #include <fcntl.h>
+#include <stddef.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>
@@ -53,6 +54,8 @@ static struct ireq judged;                      /* (A thing looked at closely: w
 static struct portal viewed;                    /* (A portal looked at closely: the maker's record of it) */
 static char pending[16];                        /* A thing to take up, walked over to first (or lifted out) */
 static char lifting[16];                        /* (A portal's part being lifted out, to take up after) */
+static unsigned char barw, rebar;               /* (A bar to hand to bar a door with, its width; and the door barred:
+                                                **   the bar to set in its brackets, as the character's free) */
 
 struct pc P;
 struct quest Q;                                 /* The theme's puzzle, as it stands (theme.c's; the save's) */
@@ -619,6 +622,7 @@ static unsigned char events (void)          /* (How many there were) */
                     strcpy (pending, lifting);
                 }
                 lifting[0] = 0;
+                rebar |= k == PO_REBARRED;
                 if (finds && (m.w1 == PO_FOUND || m.w1 == PO_NOTHING || m.w1 == PO_FOUND_TRAP)) {
                     msg (HUB->things_text);     /* (What its search turned up besides) */
                     finds = 0;
@@ -667,6 +671,7 @@ static void __fastcall__ work (unsigned char what, unsigned char obj)
     m.a = what;
     m.b = obj == OB_DOOR || obj == OB_PORTC ? PW_DOOR : obj == OB_WINDOW ? PW_WINDOW : PW_ANY;
     m.w1 = 0;
+    m.w2 = barw;
     if (hub_send (&m)) {
         busy = 1;
         t_prompt (0);
@@ -721,11 +726,13 @@ unsigned char __fastcall__ othings (unsigned char op, const char* name, const ch
     return r;
 }
 
-/* What's to hand, told the referee (the keys of the tools it carries): a skill used takes the tool that suits */
+/* What's to hand, told the referee (the keys of the tools it carries: a skill used takes the tool that suits), and
+** the load it carries (the things' weight, all told: the referee's encumbrance, in its summary) */
 static void to_hand (void)
 {
     things (IO_TOOLS, "");
     strcpy (HUB->slot[SLOT_UI].text, HUB->things_text);
+    HUB->slot[SLOT_UI].w1 = HUB->ireq.x;
     referee (RS_EQUIP, 2)->state = REQ_FREE;
 }
 
@@ -924,17 +931,18 @@ static void __fastcall__ hide (const char* w)
 
 /* The character's way with a denizen (how: hub.h's SW_*; the parser's words, the one meant and a name or a thing,
 ** and its request): asked of the denizens' task (the hub's sway: it lends the UI's slot to the referee meanwhile),
-** waited for, worded (overlay 5: but none found, if SW_QUIET), and the time it took the character's.  Its result */
+** waited for, worded (overlay 6: but none found, if SW_QUIET), and the time it took the character's.  Its result */
 #define SW_QUIET    0x80
-static struct sway dealt;
+typedef char sway_copies[offsetof (struct sway, order) - offsetof (struct sway, word) ==
+    offsetof (struct pcmd, order) - offsetof (struct pcmd, word) ? 1 : -1];   /* (The same, word to order) */
+#define dealt       (*(struct sway*) (lb + sizeof lb - sizeof (struct sway)))  /* (Its copy at lb's end: the
+                                                **   words, a line or two, go at its start) */
 static unsigned char __fastcall__ deal (unsigned char how, const struct pcmd* c)
 {
     struct sway* s = &HUB->sway;
 
     s->how = how & ~SW_QUIET;
-    s->order = c->order;
-    strcpy (s->word, c->word);
-    strcpy (s->word2, c->word2);
+    memcpy (s->word, c->word, sizeof c->word + 1 + sizeof c->word2 + 1);   /* (word, prep, word2, order) */
     s->state = REQ_POSTED;
     hub_ring (T_DENIZENS);
     while (s->state != REQ_DONE) {
@@ -1081,13 +1089,17 @@ static void __fastcall__ command (char* l)
     case V_LOWER:
     case V_BREAK:
     case V_DISARM:
+    case V_BAR:
+    case V_BEND:
         pa = c.verb == V_OPEN ? PA_OPEN : c.verb == V_CLOSE ? PA_CLOSE : c.verb == V_FORCE ? PA_FORCE :
             c.verb == V_RAISE ? PA_RAISE : c.verb == V_LOWER ? PA_LOWER : c.verb == V_BREAK ? PA_BREAK :
-            c.verb == V_DISARM ? PA_DISARM : PA_UNLOCK;
+            c.verb == V_DISARM ? PA_DISARM : c.verb == V_BAR ? PA_BAR : c.verb == V_BEND ? PA_BEND : PA_UNLOCK;
         if (pa == PA_RAISE && c.word[0]) {
             pa = PA_LIFT;                       /* ("Lift the bar": a portal's part lifted out) */
         } else if (pa == PA_RAISE || pa == PA_LOWER) {
             c.obj = OB_PORTC;
+        } else if (c.obj == OB_WINDOW && !strcmp (c.word, "bars") && !find (OB_WINDOW, c.orel)) {
+            c.obj = OB_PORTC;                   /* ("Bend the bars": a portcullis's, with no window there) */
         }
 portal:
         if (c.obj && c.orel == 0xFF && find (c.obj, 0xFF)) {
@@ -1096,6 +1108,8 @@ portal:
         if (c.orel != 0xFF && c.orel <= H_NW && c.orel != HUB->pc_face) {
             intend (I_TURN, c.orel);            /* (The door that way: faced first) */
         }
+        HUB->ireq.to = 0;
+        barw = pa == PA_BAR && things (IO_BAR, "") == IR_NO ? HUB->ireq.x : 0;    /* (The widest bar to hand) */
         work (pa, c.obj);
         return;
     case V_EXAMINE:                             /* (A thing looked at closely: judged, by the craft that knows it; a
@@ -1170,6 +1184,9 @@ portal:
     case V_INVENTORY:
         things (IO_LIST, "");
         msg (HUB->things_text);
+        if ((d = HUB->pcsum.load) != 0) {
+            tell (T_BURDENED - 1 + d);          /* (Its load, as the referee has it: its encumbrance) */
+        }
         return;
     case V_JUMP:
         if (c.dir == GO_DOWN) {
@@ -1269,6 +1286,16 @@ int main (int argc, char* argv[])
                                                 **   minute's end kept, not divided for each time round) */
             shown = hy_ticks ();
             status ();
+        }
+        if (!busy && rebar) {                   /* (A door barred: its bar set in its brackets, on the square the
+                                                **   character stands on, beside it; what it carries anew) */
+            rebar = 0;
+            HUB->ireq.to = 1;
+            HUB->ireq.x = HUB->pc_x;
+            HUB->ireq.y = HUB->pc_y;
+            HUB->ireq.item = HUB->pc_stratum;
+            things (IO_BAR, "");
+            to_hand ();
         }
         if (!busy && pending[0]) {              /* (Walked over: now taken up) */
             take (pending);

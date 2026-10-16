@@ -90,6 +90,7 @@ enum {
     V_NONE, V_MOVE, V_ENTER, V_APPROACH, V_LOOK, V_EXAMINE, V_SEARCH, V_TURN, V_FACE, V_CLIMB, V_JUMP, V_OPEN, V_CLOSE,
     V_UNLOCK, V_FORCE, V_DIG, V_GET, V_DROP, V_DON, V_DOFF, V_LIGHT, V_DOUSE, V_WAIT, V_MAP, V_SHEET, V_HELP,
     V_PAUSE, V_QUIT, V_SAVE, V_INVENTORY, V_HIDE, V_HOLD, V_STOW, V_PUT, V_HANG, V_RAISE, V_LOWER, V_BREAK, V_DISARM,
+    V_BAR, V_BEND,
     V_READ, V_USE, V_COMBINE,                   /* (The theme's puzzle's: theme.c) */
     V_TALK, V_PERSUADE, V_DECEIVE, V_THREATEN, V_CALM, V_BEFRIEND,     /* (A denizen swayed: hub.h's SW_TALK ... in
                                                 **   order) */
@@ -113,7 +114,8 @@ struct pcmd {
     unsigned char   prep;                       /* PR_*: a word for the other thing (put X in Y, take X from Y) */
     char            word2[16];                  /*   and the first not understood after it (the other thing; a
                                                 **   thing fetched; a name given, the last) */
-    unsigned char   order;                      /* A request to an ally (V_TELL's: hub.h's OR_*) */
+    unsigned char   order;                      /* A request to an ally (V_TELL's: hub.h's OR_*; word to here
+                                                **   struct sway's, copied whole) */
 };
 extern unsigned char pc_face;                   /* (The hub's, copied for the overlay) */
 void __fastcall__ parse (char* l, struct pcmd* c);   /* Overlay 3 */
