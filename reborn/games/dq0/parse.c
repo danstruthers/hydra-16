@@ -25,7 +25,8 @@
 #include "hub.h"
 
 /* The verbs: a word (or words) and its verb; several words first, so "look closely" is examining */
-static const struct { char w[16]; unsigned char v; } verbs[] = {
+static const struct verb { char w[15]; unsigned char v; } verbs[] = {    /* (16 bytes each: "look in detail" the
+                                                **   longest) */
     { "take a gander", V_LOOK }, { "head butt", V_ATTACK }, { "look closely", V_EXAMINE }, { "look close", V_EXAMINE },
     { "look in detail", V_EXAMINE }, { "close look", V_EXAMINE }, { "pick up", V_GET }, { "put out", V_DOUSE },
     { "take off", V_DOFF }, { "put on", V_DON },          /* ("off" and "on" the verb's, here; else little words) */
@@ -193,6 +194,7 @@ static unsigned char __fastcall__ between (unsigned char a, unsigned char b)
 
 void __fastcall__ o_parse (char* l, struct pcmd* c)
 {
+    const struct verb* vp;
     unsigned char i = 0, k, n, d, dir = 0xFF;
 
     memset (c, 0, sizeof *c);
@@ -201,9 +203,10 @@ void __fastcall__ o_parse (char* l, struct pcmd* c)
     if (!nw) {
         return;
     }
-    for (k = 0; k < sizeof verbs / sizeof verbs[0]; ++k) {      /* (The verb, if the line starts with one) */
-        if ((n = phrase (0, verbs[k].w)) != 0) {
-            c->verb = verbs[k].v;
+    for (k = sizeof verbs / sizeof verbs[0], vp = verbs; k; --k, ++vp) {    /* (The verb, if the line starts with
+                                                **   one: its first letter first) */
+        if (vp->w[0] == *word[0] && (n = phrase (0, vp->w)) != 0) {
+            c->verb = vp->v;
             i = n;
             c->order = c->verb == V_TELL ? order_of (word[0]) : OR_NONE;     /* (follow me, stay here) */
             break;

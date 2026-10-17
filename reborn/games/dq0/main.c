@@ -1061,14 +1061,17 @@ static void __fastcall__ chores (unsigned char verb)
 /* A command that takes no time and wants nothing of the character (what it carries, its sheet, the map, the help):
 ** carried out at once, the character busy or not (on its way somewhere, looking about: the user, "the UI is slow to
 ** respond"), if it's the next one typed */
+static struct pcmd at_c;                        /* (at_once's command, parsed: the line's, taken at once, at_hit, for
+                                                **   command, not parsed again: none of its verbs a direction's) */
+static unsigned char at_hit;
 static unsigned char __fastcall__ at_once (const char* l)
 {
-    static struct pcmd c;
     static char b[INMAX + 1];
 
     strcpy (b, l);
-    parse (b, &c);
-    return c.verb == V_INVENTORY || c.verb == V_SHEET || c.verb == V_MAP || c.verb == V_HELP || !strcmp (b, "status");
+    parse (b, &at_c);
+    return at_hit = at_c.verb == V_INVENTORY || at_c.verb == V_SHEET || at_c.verb == V_MAP || at_c.verb == V_HELP ||
+        !strcmp (b, "status");
 }
 
 #pragma code-name (push, "SW2CODE")
@@ -1082,7 +1085,11 @@ void __fastcall__ s_command (char* l)
     unsigned char d, pa;
 
     pc_face = HUB->pc_face;
-    parse (l, &c);
+    if (at_hit) {
+        memcpy (&c, &at_c, sizeof c);           /* (at_once's: this line's, parsed already) */
+    } else {
+        parse (l, &c);
+    }
     choose (&c);                                /* (A choice asked for: this line's, the command again) */
     tx = 0;
     if (c.word[0] && c.verb == V_MOVE && c.dir == 0xFF && !c.obj) {
@@ -1438,7 +1445,7 @@ int main (int argc, char* argv[])
                     names_den ();               /* (A denizen named: its name recorded) */
                 }
             }
-            held = 0;
+            held = at_hit = 0;
             status ();
             hub_map (0);
             HUB->ui_cmd = 0;
