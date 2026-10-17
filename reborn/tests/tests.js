@@ -2624,7 +2624,7 @@ module.exports = {
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p n -s 3 -c /ram/c.hm -T\r' +
         'ĀĀāturn left\rinventory\rāgo up\rĀĀĀĀāquit\rāecho $status\r' },
       expect: ['You carry', 'There\'s no way up or down here.', '% echo $status'],
-      budgets: [{ what: 'inventory answered (Enter to the answer)', from: '> inv', to: 'You carry', per: 1, max: 3200000 },
+      budgets: [{ what: 'inventory answered (Enter to the answer)', from: '> inv', to: 'You carry', per: 1, max: 720000 },
         { what: 'a step that can\'t be taken answered (the world\'s: from the line told into the story)', from: '\n> go up',
           to: 'There\'s no way up or down here.', per: 1, max: 330000 }],
       // (Each a mark in what the serial line sends: the inventory's from the line typed at the bottom, a fifth of a
@@ -2642,6 +2642,10 @@ module.exports = {
       // from the line typed it was some 3.3M cycles since move 2.3 (the world's answer, its swapped part's words,
       // about 1.1M of it, the UI's parsing and words the rest), 2.6M now, the senses' look giving way to the command
       // in hand at the real paces: a fifth of a second (1.6M) not met yet, the world's words for it to quicken)
+      // (The speed pass: 690,000 now, a fifth of a second met again: the UI's loop looking at the keys every four ticks,
+      // not two; the world's list in one pass of the store, part 11 alone; the line a command in hand (the look giving
+      // way) from its first parse, at_once's, which command takes as it is; the verbs' and the paces' words looked for
+      // by their first letters; the look giving way at more of its stages)
       check(m, out) {
         const a = out.indexOf('There\'s no way up or down here.'), b = out.indexOf('> quit', a), seg = a < 0 || b < 0 ? '' : out.slice(a, b);
         const top = (seg.match(/\x1b\[1;\d+H/g) || []).length, f = [];
