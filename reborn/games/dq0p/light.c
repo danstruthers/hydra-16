@@ -47,6 +47,7 @@ unsigned char nls;
 static struct lsrc ln[NLS];                     /*   and as this one finds them */
 static unsigned char nln;
 static unsigned place;                          /* (Its place in the world's events: E_LIGHT) */
+unsigned char lgen;                             /* (light.h's) */
 
 static unsigned char k;
 static struct lslot* q;
@@ -96,6 +97,7 @@ void light_events (void)
     for (; place != HUB->eq_head; ++place) {    /* (hub.c's hub_next, its reading alone: the senses send none) */
         m = &HUB->eq[place % EQ_SIZE];
         if (m->kind == E_LIGHT) {
+            ++lgen;
             stale (m->a, m->w1, m->w2, LREACH);
         }
     }
@@ -228,6 +230,7 @@ static void make (void)
     static struct lsrc* l;
 
     part_ = 0;
+    ++lgen;
     at (sn_, x0_, y0_);                         /* (The rooms lit by their own light: their floors and walls) */
     for (a = C->nrooms, r = C->room, n = 0; a; --a, ++r) {
         if (r->flags & R_LIT) {

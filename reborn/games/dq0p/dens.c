@@ -18,16 +18,18 @@ unsigned char dens_seen (void)
     static unsigned char k, n, ch;
     static unsigned char* p;
     static unsigned s;
+    static struct actor* a;
 
-    for (k = n = ch = 0; k < NACTORS; ++k) {
+    for (k = n = ch = 0, a = HUB->actor; k < NACTORS; ++k, ++a) {
         hub_map (0);
-        memcpy (&bd, &HUB->actor[k], sizeof bd);
         s = 0;
-        if (bd.state && bd.sn == HUB->pc_stratum && n < SEE_DENS && (p = at (bd.sn, bd.x, bd.y)) != 0 &&
-            (*p & T_VIS)) {
-            hub_map (SIGHT_BANK);
-            memcpy (&SIGHT->den[n++], &bd.x, sizeof SIGHT->den[0]);
-            s = 0x8000U | bd.doing << 8 | bd.den;
+        if (a->state) {                         /* (Its body copied out only if it's one: most aren't) */
+            memcpy (&bd, a, sizeof bd);
+            if (bd.sn == HUB->pc_stratum && n < SEE_DENS && (p = at (bd.sn, bd.x, bd.y)) != 0 && (*p & T_VIS)) {
+                hub_map (SIGHT_BANK);
+                memcpy (&SIGHT->den[n++], &bd.x, sizeof SIGHT->den[0]);
+                s = 0x8000U | bd.doing << 8 | bd.den;
+            }
         }
         if (s != sig[k]) {
             sig[k] = s;

@@ -67,6 +67,13 @@ static const struct item* __fastcall__ lying (const struct item* q)
     return s.where == IW_SQUARE && (kind_of (s.kind)->keeps & KF_ON) ? &s : 0;
 }
 
+/* The records lying on squares near the character (stratum near_sn, 20 squares each way of near_x, near_y), as the
+** look's lamps found them (things_lamps's pass of the store), in order, for things_seen's (near_ok: the list whole,
+** the store as it was: the world waits for the look, and writes the store meanwhile only as a chunk's stocked) */
+#define NNEAR           24
+static unsigned nearv[NNEAR], near_x, near_y;
+static unsigned char nnear, near_ok, near_sn;
+
 /* The chunks the maker's stocked that the world hasn't put the things of down yet (their slots CS_FRESH): the world
 ** asked to, and waited for (it's waiting for the look meanwhile) */
 void things_stocked (void)
@@ -81,6 +88,7 @@ void things_stocked (void)
     if (k) {
         hub_call (&HUB->stock, T_WORLD);
         HUB->stock.state = REQ_FREE;
+        near_ok = 0;                            /* (Things put down: the store gone through again) */
     }
 }
 
@@ -109,16 +117,27 @@ static void __fastcall__ seen_one (struct sight* s, unsigned i, unsigned char on
 void __fastcall__ things_seen (struct sight* s, unsigned char sn, unsigned x, unsigned y, unsigned char face)
 {
     static struct item q;
+    static unsigned char k, listed;
+    static struct item* r;
+    static unsigned qx, qy;
     unsigned i = 0, j;
     unsigned char* p;
 
     s->nitems = 0;
-    while (s->nitems < SEE_ITEMS && (i = items (i, IN_SQUARE, 0)) != 0) {
-        fetch (&q, i);
-        if (q.sn != sn || (q.flags & (I_HIDDEN | I_KNOWN)) == I_HIDDEN || q.x - x + 20 > 40 ||
-            q.y - y + 20 > 40 || !(p = at (sn, q.x, q.y)) || !(*p & T_VIS)) {
+    listed = near_ok && near_sn == sn && near_x == x && near_y == y;    /* (The look's list of those near, or the
+                                                **   store gone through) */
+    k = 0;
+    while (s->nitems < SEE_ITEMS && (i = listed ? (k < nnear ? nearv[k++] : 0) : items (i, IN_SQUARE, 0)) != 0) {
+        r = item_at (i);                        /* (Looked at in place, copied out only if it's seen) */
+        if (r->sn != sn || (r->flags & (I_HIDDEN | I_KNOWN)) == I_HIDDEN || r->x - x + 20 > 40 || r->y - y + 20 > 40) {
             continue;
         }
+        qx = r->x;
+        qy = r->y;
+        if (!(p = at (sn, qx, qy)) || !(*p & T_VIS)) {
+            continue;
+        }
+        fetch (&q, i);
         se.rel = q.x == x && q.y == y ? 0xFF : REL8 (bearing ((int) (q.x - x), (int) (q.y - y)), face);
         se.x = q.x;
         se.y = q.y;
@@ -132,7 +151,8 @@ void __fastcall__ things_seen (struct sight* s, unsigned char sn, unsigned x, un
 }
 
 /* The lit things lying about (on squares within LAMP_FAR of (x, y), on surfaces there), the light layer's lamps
-** (light.c's: their squares, their reach); and those within LAMP_R, view.c's (the chunks round them reached) */
+** (light.c's: their squares, their reach); and those within LAMP_R, view.c's (the chunks round them reached); and
+** in the same pass of the store, the records lying on squares near it, for things_seen (nearv) */
 #define LAMP_R          28
 #pragma code-name (push, "SW1CODE")             /* (Part 1's: once a look, bank.s's stub) */
 #pragma rodata-name (push, "SW1RODATA")
@@ -147,7 +167,22 @@ void __fastcall__ s_things_lamps (unsigned char sn, unsigned x, unsigned y)
     give_way ();
     nlamps = 0;
     light_lamps_begin ();
-    while ((i = items (i, IN_FLAGS | IN_SQUARE | IN_ITEM | IN_PORTAL, I_LIT)) != 0) {
+    nnear = 0;
+    near_ok = 1;
+    near_sn = sn;
+    near_x = x;
+    near_y = y;
+    while ((i = items (i, IN_SQUARE | IN_ITEM | IN_PORTAL, 0)) != 0) {
+        if (ip->where == IW_SQUARE && ip->sn == sn && ip->x - x + 20 <= 40 && ip->y - y + 20 <= 40) {
+            if (nnear < NNEAR) {                /* (One near: things_seen's) */
+                nearv[nnear++] = i;
+            } else {
+                near_ok = 0;
+            }
+        }
+        if (!(ip->flags & I_LIT)) {
+            continue;
+        }
         fetch (&rec, i);
         if (!(s = lying (&rec)) || s->sn != sn || s->x - x + LAMP_FAR > 2 * LAMP_FAR ||
             s->y - y + LAMP_FAR > 2 * LAMP_FAR) {

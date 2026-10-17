@@ -1792,6 +1792,29 @@ function chunkDiff(a, b) {
   return d;
 }
 
+// The senses' looks (dq0looks's): at each reply the senses give (dq0p's hub_reply: a look's, a denizen's senses'), the
+// request (its first 16 bytes), the senses' record (SIGHT_BANK's first 2K) and each live chunk's seen and visible marks
+// (its squares' T_SEEN, T_VIS, its rooms' R_VISITED; a chunk with none left out), hashed: a line each, "game request
+// its-hash sight-hash sn:cx,cy=hash ...", game the games' count of "> quit" told before it
+const LOOKS_REF = path.join(__dirname, 'dq0', 'looks.ref');
+const lookHash = b => require('crypto').createHash('sha1').update(b).digest('hex').slice(0, 8);
+function lookSnap(m, ptr, game) {
+  const banks = m.sharedBanks(), keys = Object.keys(banks).map(Number).sort((a, b) => a - b);
+  const hub = keys.find(k => banks[k][0] === 0x44 && banks[k][1] === 0x51);
+  if (hub === undefined) return null;
+  const w = banks[hub + WORLD_BANK_N], ch = [];
+  for (let k = 0; k < 24; k++) {
+    const s = CSLOT_AT + k * 8, b = banks[hub + 5 + Math.floor(k / 3)];
+    if (!w[s] || !b) continue;
+    const o = (k % 3) * CHUNK_SIZE, t = Buffer.alloc(1024 + 6);
+    for (let i = 0; i < 1024; i++) t[i] = b[o + CK_TILE + i] & 0xC0;
+    for (let r = 0; r < 6; r++) t[1024 + r] = b[o + CK_ROOM + r * 8 + 4] & 1;
+    if (t.some(v => v)) ch.push(w[s + 1] + ':' + (w[s + 2] | w[s + 3] << 8) + ',' + (w[s + 4] | w[s + 5] << 8) + '=' + lookHash(t));
+  }
+  return [game, ptr.toString(16), lookHash(banks[hub].subarray(ptr - 0x8000, ptr - 0x8000 + 16)), lookHash(banks[hub + 19].subarray(0, 0x800)),
+    ...ch.sort()].join(' ');
+}
+
 // The dq0 tests' story: the output with its escapes and the lines' wrapping taken out; and its words looked for each
 // in its turn (after the one before), what isn't found pushed on f (its name first)
 const dq0Story = out => out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' ');
@@ -2679,6 +2702,39 @@ module.exports = {
         for (const s of seg.matchAll(/\x1b\[1;\d+H/g)) {      // (Hidden as it moved there: hidden last, here or before)
           const at = a + s.index;
           if (out.lastIndexOf('\x1b[?25l', at) <= out.lastIndexOf('\x1b[?25h', at)) { f.push('the cursor not hidden while the status line was drawn'); break; }
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0looks', what: 'Dingus Quest Zero\'s looks the same as they were (the look quickened, reborn-game-look: its grid kept and moved, its marks put only where they reach, the store gone through once): eight games at the turns pace (seeds 3, 5, 7, 12, 4, 517: turns, steps, walks, a walk\'s chosen door, a stairway down, a torch put out and lit again, one put down and taken up, a portcullis lowered and raised, a window broken and climbed through, a weak-eyed character), every reply the senses give (a look\'s, the denizens\' senses\') with the same request, the same record of what the character perceives and the same squares seen and visible in every live chunk as tests/dq0/looks.ref, the old code\'s (DQ0LOOKS=write: written afresh from this run)',
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rācp /ram/c.hm /ram/w.hm\rāecho att eye 4 >> /ram/w.hm\r' +
+        [['dq0 -p t -s 3 -c /ram/c.hm -T -k sword',['look','turn left','turn right','walk to the door ahead to my left','2','look','turn around','turn left','turn right','map','d','look','sw','look']],['dq0 -p t -s 5 -c /ram/c.hm -T',['d','wait','go right','turn left','look','turn around','wait','look']],['dq0 -p t -s 7 -c /ram/w.hm',['open the door behind me','s','move south 4 squares','face north','look','douse the torch','z','z','z','look','light the torch','z','look','turn around','n']],['dq0 -p t -s 3 -c /ram/c.hm -T',['drop the torch','turn around','step forward','look','turn around','step forward','get torch','look']],['dq0 -p t -s 12 -c /ram/c.hm -T',['e','wait','e','wait','e','turn around','lower portcullis','w','look','raise portcullis','w','turn left']],['dq0 -p t -s 12 -c /ram/c.hm',['n','turn around','break window','climb through window','turn around','look','turn right']],['dq0 -p t -s 4 -c /ram/c.hm',['open door','3','look','go through the door','look','turn left']],['dq0 -p t -s 517 -c /ram/c.hm',['look','turn left','turn right','turn around','look']]].map(([g, c]) => 'ā' + g + '\r' + c.concat('quit').map(l => 'ā' + l + '\r').join('')).join('') + 'āecho $status\r' },
+      expect: ['% echo $status'],
+      // (The senses' task found by its code, dq0p.hyx's at its main; its hub_reply's calls snapped, as the game it's in
+      // the quits told so far)
+      start(m) {
+        const dir = path.join(__dirname, '..', 'obj', 'games'), hyx = fs.readFileSync(path.join(dir, 'dq0p.hyx'));
+        const lbl = fs.readFileSync(path.join(dir, 'dq0p', 'dq0p.lbl'), 'latin1'), at = n => parseInt(new RegExp('^al ([0-9A-F]+) \\.' + n + '$', 'm').exec(lbl)[1], 16);
+        const main = at('_main'), reply = at('_hub_reply'), lines = this.lines = [], cpu = m.cpu, step = cpu.step.bind(cpu);
+        let lastT = -1, isP = false, game = 0, qpos = 0, out = m.out;
+        cpu.step = v => {
+          const T = m.T;
+          if (T !== lastT) { lastT = T; const r = m.taskRam[T]; isP = true; for (let i = 0; i < 24; i++) if (r[main + i] !== hyx[main - 0x800 + i]) { isP = false; break; } }
+          if (isP && cpu.PC === reply) { const l = lookSnap(m, cpu.A | cpu.X << 8, game); if (l) lines.push(l); }
+          step(v);
+        };
+        Object.defineProperty(m, 'out', { get: () => out, set: v => { let i; while ((i = v.indexOf('> quit', qpos)) >= 0) { game++; qpos = i + 6; } out = v; } });
+      },
+      check(m, out) {
+        const now = this.lines || [];
+        if (process.env.DQ0LOOKS === 'write') { fs.writeFileSync(LOOKS_REF, now.join('\n') + '\n'); return []; }
+        const ref = fs.readFileSync(LOOKS_REF, 'utf8').split(/\r?\n/).filter(l => l), f = [];
+        if (now.length !== ref.length) f.push(now.length + ' replies, ' + ref.length + ' in tests/dq0/looks.ref');
+        for (let i = 0; i < Math.min(now.length, ref.length) && f.length < 4; i++) {
+          if (now[i] !== ref[i]) f.push('reply ' + i + ': ' + now[i].slice(0, 120) + ' (looks.ref: ' + ref[i].slice(0, 120) + ')');
         }
         return f;
       },

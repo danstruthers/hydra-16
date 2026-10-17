@@ -14,6 +14,8 @@
 #pragma code-name ("SW2CODE")                   /* (Part 2's, all of it: swapped, bank.s's stubs, once a look) */
 #pragma rodata-name ("SW2RODATA")
 #pragma local-strings (on)
+#pragma static-locals (on)                      /* (Its locals static: quicker, the code the less; none of it called
+                                                **   in itself) */
 
 #define EYE         5
 

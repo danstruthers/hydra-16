@@ -15,7 +15,8 @@
 ; but nothing outside part n (the main code, an overlay, another part) may call one of its functions or read its
 ; data but through a stub (build.js checks it, in the compiler's output).
 ;
-; Before including it: zeropage.inc, BANKREG, _ovbank (the overlays' banks), ova and ovx (bytes kept), SWDEPTH; after
+; Before including it: zeropage.inc, BANKREG, _ovbank (the overlays' banks), ova and ovx (bytes kept), SWDEPTH (and
+; SWFAST, if the parts are copied four pages a pass: a byte some 10 cycles, not 14, for 90 bytes more code); after
 ; it, the parts, SWPART n, ov (part n's image in the bank _ovbank[ov - 1]: overlay ov's, as a rule), in order from 1
 ; (nothing else in RODATA between them), and the stubs.  The main code reads the overlays in before it calls one.
 
@@ -59,7 +60,66 @@ swload:
             tax
             ldy         #0
             txa
+.ifdef SWFAST
+            bne         @quad
+            jmp         @part
+@quad:      cpx         #4                  ; (Four pages a pass, while there are four: SWFAST's)
+            bcc         @src
+            lda         @src + 1
+            sta         @s0 + 1
+            sta         @s1 + 1
+            sta         @s2 + 1
+            sta         @s3 + 1
+            lda         @dst + 1
+            sta         @d0 + 1
+            sta         @d1 + 1
+            sta         @d2 + 1
+            sta         @d3 + 1
+            lda         @src + 2
+            sta         @s0 + 2
+            inc         a
+            sta         @s1 + 2
+            inc         a
+            sta         @s2 + 2
+            inc         a
+            sta         @s3 + 2
+            lda         @dst + 2
+            sta         @d0 + 2
+            inc         a
+            sta         @d1 + 2
+            inc         a
+            sta         @d2 + 2
+            inc         a
+            sta         @d3 + 2
+@s0:        lda         $FFFF,y
+@d0:        sta         $FFFF,y
+@s1:        lda         $FFFF,y
+@d1:        sta         $FFFF,y
+@s2:        lda         $FFFF,y
+@d2:        sta         $FFFF,y
+@s3:        lda         $FFFF,y
+@d3:        sta         $FFFF,y
+            iny
+            bne         @s0
+            lda         @src + 2            ; (Four pages on)
+            clc
+            adc         #4
+            sta         @src + 2
+            sta         @src2 + 2
+            lda         @dst + 2
+            clc
+            adc         #4
+            sta         @dst + 2
+            sta         @dst2 + 2
+            txa
+            sec
+            sbc         #4
+            tax
+            bne         @quad
             beq         @part
+.else
+            beq         @part
+.endif
 @src:       lda         $FFFF,y             ; (A page)
 @dst:       sta         $FFFF,y
             iny

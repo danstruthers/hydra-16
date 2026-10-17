@@ -60,28 +60,48 @@ unsigned char __fastcall__ glow_reach (const struct eyes* e, unsigned char b)
 }
 
 /* A clear line from x, y on stratum sn, dx, dy across (dist squares, the most of them), between: no rock, wall nor
-** shut door on it (the squares a step at a time, dx i / dist; mk 0: a chunk not made is in the way, none made) */
+** shut door on it (the squares a step at a time, dx i / dist toward 0: worked out a step at a time, without dividing;
+** mk 0: a chunk not made is in the way, none made: the cache asked once a chunk) */
 unsigned char __fastcall__ clear_line (unsigned char sn, unsigned x, unsigned y, int dx, int dy, unsigned dist,
     unsigned char mk)
 {
     static unsigned char* p;
     static struct portal* q;
-    static unsigned i, sx, sy;
+    static unsigned i, sx, sy, ax, ay, qx, qy, rx, ry, kx, ky, ox, oy;
+    static unsigned char ok;
 
+    ax = dx < 0 ? -dx : dx;
+    ay = dy < 0 ? -dy : dy;
+    qx = qy = rx = ry = 0;
+    kx = 0xFFFF;
     for (i = 1; i < dist; ++i) {
-        sx = x + dx * (int) i / (int) dist;
-        sy = y + dy * (int) i / (int) dist;
-        if ((!mk && !cached (sn, sx, sy)) || !(p = at (sn, sx, sy)) || !T_CLEAR (*p) ||
+        for (rx += ax; rx >= dist; rx -= dist) {   /* (|dx| i / dist, its rest rx) */
+            ++qx;
+        }
+        for (ry += ay; ry >= dist; ry -= dist) {
+            ++qy;
+        }
+        sx = dx < 0 ? x - qx : x + qx;
+        sy = dy < 0 ? y - qy : y + qy;
+        if (!mk) {
+            ox = (sx - strata[sn].x0) >> CW_BITS;   /* (Its chunk in the cache: asked once a chunk) */
+            oy = (sy - strata[sn].y0) >> CW_BITS;
+            if (ox != kx || oy != ky) {
+                kx = ox;
+                ky = oy;
+                ok = cached (sn, sx, sy);
+            }
+            if (!ok) {
+                return 0;
+            }
+        }
+        if (!(p = at (sn, sx, sy)) || !T_CLEAR (*p) ||
             (TILE (*p) == T_DOOR && (q = portal_at (cx_, cy_)) != 0 && !(q->state & PS_OPEN))) {
             return 0;
         }
     }
     return 1;
 }
-
-/* ---- Part 1's (swapped: bank.s's stubs, once a look, with the look's squares) */
-#pragma code-name ("SW1CODE")
-#pragma rodata-name ("SW1RODATA")
 
 /* The lights the character sees far off (beyond range, the look's), into G: the lit things lying about (the
 ** light layer's lamps), the lit rooms in chunks the cache has; ahead or beside it, a clear line to each (the brightest
@@ -118,7 +138,7 @@ static void __fastcall__ source (unsigned sx, unsigned sy, unsigned char b)
 }
 
 void give_way (void);                           /* (dq0p.c's: the look giving way to the UI's command in hand) */
-void __fastcall__ s_glows (unsigned char sn, unsigned x, unsigned y, unsigned char face, unsigned char range,
+void __fastcall__ glows (unsigned char sn, unsigned x, unsigned y, unsigned char face, unsigned char range,
     unsigned char light)
 {
     static unsigned char k, n, a, lx, ly;
@@ -127,6 +147,8 @@ void __fastcall__ s_glows (unsigned char sn, unsigned x, unsigned y, unsigned ch
     static struct room* r;
     static unsigned cx, cy, ox, oy;
     static struct { unsigned x, y; } rs[8];
+    static struct room rm[NROOMS];              /* (A chunk's rooms, copied out: the lines from them go elsewhere) */
+    static unsigned char nr;
 
     give_way ();
     e_ = light_at (sn, x, y);                   /* (The light where the eyes are: the layer's, its own) */
@@ -160,14 +182,15 @@ void __fastcall__ s_glows (unsigned char sn, unsigned x, unsigned y, unsigned ch
     }
     while (n--) {
         at (sn, rs[n].x, rs[n].y);
+        nr = C->nrooms;
+        memcpy (rm, C->room, nr * sizeof (struct room));
         ox = x - rs[n].x;
         oy = y - rs[n].y;
-        for (a = C->nrooms, r = C->room; a; --a, ++r) {
+        for (a = nr, r = rm; a; --a, ++r) {
             if (r->flags & R_LIT) {
                 lx = (int) ox < (int) r->x - 1 ? r->x - 1 : (int) ox > r->x + r->w ? r->x + r->w : ox;
                 ly = (int) oy < (int) r->y - 1 ? r->y - 1 : (int) oy > r->y + r->h ? r->y + r->h : oy;
                 source (rs[n].x + lx, rs[n].y + ly, L_ROOM);
-                at (sn, rs[n].x, rs[n].y);
             }
         }
     }

@@ -10,6 +10,7 @@
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
 SWDEPTH     = 4                     ; Swapped parts' calls in calls, at most
+SWFAST      = 1                     ; (The parts copied four pages a pass: two copied each look)
 
             .bss
 _ovbank:    .res        2           ; The parts' images' banks (dq0p.cfg's OV1 ...)
@@ -18,8 +19,7 @@ ovx:        .res        1
 
             .include    "../dq0/swap.inc"
 
-            SWPART      1, 1                ; A look's squares seen (view.c, cast.s), its walk felt, its lamps (things.c),
-                                            ;   the lights far off (eyes.c)
+            SWPART      1, 1                ; A look's squares seen (view.c, cast.s), its walk felt, its lamps (things.c)
             SWPART      2, 2                ; What the character perceives made (sight.c)
 
             SWFN        view, 1
@@ -27,4 +27,3 @@ ovx:        .res        1
             SWFN        things_lamps, 1
             SWFN        lamp_on, 1
             SWFN        perceive, 2
-            SWFN        glows, 1
