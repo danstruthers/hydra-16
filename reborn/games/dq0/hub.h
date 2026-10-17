@@ -38,7 +38,7 @@
 #define ITEM_BANK(i)    (CAT_BANK + 1 + (i) / (0x2000 / sizeof (struct item)))
 #define ITEM_AT(i)      ((struct item*) 0x8000 + (i) % (0x2000 / sizeof (struct item)))
 #define HUB_WINDOW      ((unsigned char*) 0x8000)
-#define DEN_BANK        (CAT_BANK + 1 + ITEM_BANKS)     /* The denizens' events (DQ_SIZE of them, a ring) */
+#define DEN_BANK        (CAT_BANK + 1 + ITEM_BANKS)     /* The denizens' events (DQ_SIZE of them, a ring: the world's) */
 #define DQ_SIZE         64
 #define DQ_AT           ((struct msg*) 0x8000)
 #define SND_AT          ((char*) 0x8000 + DQ_SIZE * sizeof (struct msg))    /* The sounds (SOUND.md), after them: the
@@ -57,8 +57,8 @@
 #define SND_KINDS       32
 #define SND_WORLD       16
 #define DTEXT           160                     /* (The denizens' referee slot's text: hub.h's dslot) */
-#define NFIGHTS         8                       /* The fights' words (the denizens' task's, after the sounds: a ring
-                                                **   of them, an E_FIGHT's x[3] which; the UI words what it reads) */
+#define NFIGHTS         8                       /* The fights' words (the world's, after the sounds: a ring of them,
+                                                **   an E_FIGHT's x[3] which; the UI words what it reads) */
 #define FIGHT_AT        ((struct fight*) (SND_AT + (2 * SND_KINDS + SND_WORLD) * SND_REC))
 struct fight {
     char            att[12], def[12];           /* The attacker's name and the defender's ("": the character) */
@@ -137,15 +137,15 @@ enum {
                                                 **   squares */
     I_QUIT,
     I_ATTACK,                                   /* a: the actor struck at (its entry plus 1), b: the aim (Z_*): a
-                                                **   round's (the world's: the character busy for it; the blow the
-                                                **   denizens' task's, posted it in the hub's pc_foe) */
+                                                **   round's (the world's: the character busy for it, the blow posted
+                                                **   in the hub's pc_foe, and struck: the referee asked, E_FIGHT) */
     I_BODY,                                     /* (The denizens' own, their ring's: the hub's di) A body put down
                                                 **   where it fell: a its kind (items.h's KI_*), w1 w2 its square,
                                                 **   x[0] its stratum (the world's item store's to keep) */
     I_ENTER,                                    /* (The denizens' own, below) A body come into the world's keeping */
     I_LEAVE,                                    /*   gone from it (no longer an actor) */
     I_ROUSE,                                    /*   its wait cut short */
-    I_DONE,                                     /*   the denizens' intents in, as far as the clock (t) */
+    I_DONE,                                     /*   the denizens' turn done (the turns pace's: the hub's den_go) */
     NINTENTS
 };
 /* The denizens' intents (their ring, the hub's di: the minds', for their actors' bodies, the world's to carry out
@@ -156,8 +156,8 @@ enum {
 ** as I_STEP's; I_CLIMB: come along with the character up or down, to w1 w2 beside it, x[2] its stratum; I_WAIT: w1
 ** tenths; I_ATTACK: a the one struck at (0 the character), b the aim (Z_*); I_ENTER: w1 w2 its square, x[2] its
 ** stratum, a its step, b 1 if it's bleeding, t when it's ready; I_LEAVE; I_ROUSE: free w1 tenths from now (w2 1:
-** whenever it was free; 0: if it was later); I_DONE (who 0): t the clock they've caught up with (the turns pace's:
-** the world moves it on) */
+** whenever it was free; 0: if it was later); I_DONE (who 0): w1 the turn it's done (the hub's den_go: the turns
+** pace's, the world going on once it's in), t the clock then */
 #define STEP_COARSE     0x200
 
 /* Events: what's happened, in the world's terms (the UI words them; the denizens and the sound hear them) */
@@ -297,13 +297,16 @@ struct req {
 };
 enum { SLOT_WORLD, SLOT_UI, NSLOTS };
 
-/* An actor: a denizen near the character, put here by the denizens' task (dq0d: its records are its own, in its
-** own banks) for the world to keep the character out of its way and the senses to see.  The denizens' task moves
-** its actors itself, by the character's rules (a square at a time, its time added to ready), and bumps den_seq as
-** it changes what the character may see of them (moved, what they're doing).  (state, intent, a and result: the
-** world's moves of them, once; unused.)  At the turns pace the world moves the clock on through what the character
-** does a slice at a time (TURN_SLICE tenths), each once the denizens' task has caught up with it (den_at the
-** clock), the world waiting */
+/* An actor: a denizen near the character, a mind and a body.  Its mind is the denizens' task's (dq0d: its records
+** its own, in its own banks): it decides what the actor means to do, and says so (its intents, the hub's di: hub.h's
+** the denizens' intents).  Its body is the world's, as the character's is: the world carries out its intents by the
+** character's rules (a square at a time, its time added to ready; a blow, the referee asked), keeps the character
+** out of its way, adds it to what the character perceives, tells what it does (the denizens' events), and bumps
+** den_seq as it changes what the character may see of them.  At the turns pace the world moves the clock on through
+** what the character does a slice at a time (TURN_SLICE tenths), and gives the denizens their turn (the hub's
+** den_go, rung) at each, and at the same clock after work of its own (events told: the character arrived, its work
+** done); they act only then, and say when they've done (I_DONE), the world carrying out their intents meanwhile and
+** going on once it's in: the same game whatever the tasks' timing */
 #define NACTORS         8
 #define TURN_SLICE      100
 struct actor {
@@ -440,13 +443,14 @@ struct hub {                                    /* Bank 0, at $8000 */
     struct actor    actor[NACTORS];
     struct rqh      dsave;
     volatile unsigned long den_at;              /* The clock as the denizens' task last caught up with it */
-    volatile unsigned char den_seq;             /* Bumped as it changes what the character may see of its actors */
+    volatile unsigned char den_seq;             /* Bumped as the world changes what the character may see of the
+                                                **   actors */
     volatile unsigned pc_tx, pc_ty;             /* Where the character's move ends (the world's: no denizen goes
                                                 **   there, nor onto the character) */
-    /* The denizens' events (E_DEN), to everyone: the denizens' task writes them in their own bank (DEN_BANK), each
-    ** reader keeps its own place, as in the world's; nobody waits for them, and each perceives them or not by its own
-    ** senses (DENIZENS.md) */
-    volatile unsigned dq_head;                  /* Events written so far (the denizens' task's) */
+    /* The denizens' events (E_DEN, E_FIGHT: what their bodies do), to everyone: the world writes them in their own
+    ** bank (DEN_BANK), each reader keeps its own place, as in the world's; nobody waits for them, and each perceives
+    ** them or not by its own senses (DENIZENS.md) */
+    volatile unsigned dq_head;                  /* Events written so far (the world's) */
     /* The theme's puzzle (theme.h: the theme in THEME_BANK): the way out opened (the UI's, as the mission's done) */
     volatile unsigned char way_open;
     struct sway     sway;                       /* The character's way with a denizen (the UI's request) */
@@ -457,18 +461,21 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned char   watch;                      /* WA_* */
     volatile unsigned char pc_going;            /* The pace it's going at plus 1 (0: not moving), | GOING_DARK: by
                                                 **   feel */
-    /* A fight: the character's blow, posted by the world (I_ATTACK) for the denizens' task to strike (it asks the
-    ** referee, and tells it: E_FIGHT), and the character's stance (rs.h's D_*: the referee's defence for it) */
+    /* A fight: the character's blow, posted by the world (I_ATTACK) as it takes the round for it, and struck (the
+    ** referee asked, E_FIGHT told), and the character's stance (rs.h's D_*: the referee's defence for it) */
     volatile unsigned char pc_foe;              /* The actor struck at, plus 1 (0: none posted) */
     unsigned char   pc_aim;                     /* Its aim (Z_*) */
     unsigned char   pc_stance;
     unsigned char   pc_strike;                  /* What it strikes with (SK_*: the parser's, as it's told) */
     volatile unsigned char den_look;            /* (The denizens' task's: a thing put down, a body: the world looks about
                                                 **   again, the senses seeing it) */
-    /* The denizens' intents to the world (I_BODY: a body put down, the world's item store's), a ring: written at
-    ** di_head (the denizens' task: a full one waited on), read at di_tail (the world) */
+    /* The denizens' intents to the world (their actors' bodies': hub.h's the denizens' intents), a ring: written at
+    ** di_head (the denizens' task: a full one waited on), read at di_tail as each is carried out (the world: it rings
+    ** the denizens as it has) */
     volatile unsigned char di_head, di_tail;
     struct msg      di[DI_SIZE];
+    volatile unsigned char den_go;              /* The denizens' turn, at the turns pace (the world's: bumped as it
+                                                **   gives them one, a slice's or its own work's) */
 };
 #define WA_TRAPS        0x01                    /* Searching as it goes: traps underfoot, hidden doors beside */
 #define WA_LISTEN       0x02                    /* Listening as it goes */
@@ -517,7 +524,9 @@ struct wrec {
 ** The moves (the plan's): 2.2 the maker made pure (done: M_WORK and the change records the world's, the plans'
 ** strata records the world's to write back, from the maker's wrec.grown); 2.3 the item store the world's (done: the
 ** items' banks, the catalogue, pc_light and pc_lamp; a chunk's things the maker's list, wrec.stock, a body the
-** denizens' intent); 2.4 bodies and blows (the actors, den_seq, pc_foe, the fights' words in DEN_BANK);
+** denizens' intent); 2.4 bodies and blows (done: the actors' bodies the world's, the denizens their minds, saying
+** what each means to do, their intents; den_seq, pc_foe, every blow struck, the denizens' events and the fights'
+** words in DEN_BANK);
 ** 2.5 the senses for every actor, by layers, and their memory (the chunks' tiles' seen and visible marks, R_VISITED,
 ** the denizens seen in sight); 2.6 game logic out of the UI (way_open); 2.7 the character's state home (gait, watch,
 ** pc_stance, pc_strike, and the UI's writes as the game starts, resumes, pauses and quits: round, tpr, pace, paused,
@@ -572,24 +581,27 @@ struct wrec {
 **   own hub.slot[SLOT_WORLD] referee +world
 **   own hub.slot[SLOT_UI] referee +ui +world +denizens         (The UI's, lent to those asking for it)
 **   own hub.dslot referee +denizens
-**   own hub.actor[*] world 2.4:denizens                        (A denizen's body: the world's)
-**   own hub.actor[*].den denizens                              (Its mind, its record: the denizens')
-**   own hub.actor[*].name denizens
+**   own hub.actor[*] world                                     (A denizen's body: the world's)
+**   own hub.actor[*].name denizens                             (Its mind, its record: the denizens')
+**   own hub.actor[*].den denizens
 **   own hub.actor[*].attitude denizens
 **   own hub.actor[*].faction denizens
 **   own hub.actor[*].foe denizens
+**   own hub.actor[*].kind denizens
+**   own hub.actor[*].remains denizens
+**   own hub.actor[*].timid denizens
 **   own hub.dsave denizens +ui
 **   own hub.den_at denizens
-**   own hub.den_seq world 2.4:denizens
+**   own hub.den_seq world
 **   own hub.pc_tx world
 **   own hub.pc_ty world
-**   own hub.dq_head denizens
+**   own hub.dq_head world                                      (The denizens' events: the world's)
 **   own hub.way_open world 2.6:ui
 **   own hub.sway denizens +ui
 **   own hub.gait world 2.7:ui,referee
 **   own hub.watch world 2.7:ui,referee
 **   own hub.pc_going world
-**   own hub.pc_foe world 2.4:denizens
+**   own hub.pc_foe world
 **   own hub.pc_aim world
 **   own hub.pc_stance world 2.7:ui
 **   own hub.pc_strike world 2.7:ui
@@ -597,6 +609,7 @@ struct wrec {
 **   own hub.di_head denizens                                   (The denizens' intents: their ring)
 **   own hub.di denizens
 **   own hub.di_tail world                                      (Its reader's place)
+**   own hub.den_go world                                       (The denizens' turn: the turns pace's)
 **   own banks(1,PLAN_BANKS) maker                              (The plans: grown from the seed)
 **   own banks(CACHE_BANK(0),CACHE_BANKS) none                  (The chunks' cache: its room past three chunks)
 **   own chunk maker                                            (A chunk: made from the seed)
@@ -609,9 +622,9 @@ struct wrec {
 **   own chunk.open maker +world
 **   own bank(CAT_BANK) world                                   (The catalogue: the world's, the theme's kinds)
 **   own banks(CAT_BANK+1,ITEM_BANKS) world                     (The items' places and states)
-**   own bank(DEN_BANK) denizens                                (The denizens' events)
+**   own bank(DEN_BANK) world                                   (The denizens' events)
 **   own bank(DEN_BANK,SND_AT,FIGHT_AT) sound +ui               (The sounds: the UI clears them)
-**   own bank(DEN_BANK,FIGHT_AT,FIGHT_AT+NFIGHTS) denizens 2.4:referee   (The fights' words)
+**   own bank(DEN_BANK,FIGHT_AT,FIGHT_AT+NFIGHTS) world         (The fights' words)
 **   own bank(LOOK_BANK) senses
 **   own bank(THEME_BANK) ui                                    (The theme, and the names given)
 **   own bank(THEME_BANK,THEME_PLACE,NAMES_AT) maker            (The pieces' places)
