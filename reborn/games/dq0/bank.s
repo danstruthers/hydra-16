@@ -177,7 +177,6 @@ ovl_out:
             OVFN        way_words, 5
             OVFN        ending, 5
             OVFN        puzzle, 5
-            OVFN        fixed, 5
             OVFN        fight_words, 6
             OVFN        fight_target, 6
             OVFN        pacing, 9
@@ -200,6 +199,7 @@ ovl_out:
             SWFN        save_game, 1
             SWFN        command, 2
             SWFN        take, 2
+            SWFN        took_up, 2
             SWFN        map, 3
             SWFN        pace_cmd, 4
             SWFN        names_line, 5

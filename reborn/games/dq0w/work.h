@@ -12,6 +12,8 @@ void __fastcall__ change (unsigned char sn, unsigned x, unsigned y, unsigned cha
     unsigned char link);                        /* Kept, and made in its chunk (the window moved) */
 void stocks (void);                             /* The chunks the maker stocked marked so (STOCKED) */
 void answer (void);                             /* The hub's wreq answered (part 4's) */
+void world_keep (void);                         /* (Part 16's: wgame.c) The world's part of the save, world.dat */
+void pc_asked (void);                           /* (Part 16's) The hub's wreq, WQ_START's or WQ_SET's, answered */
 void __fastcall__ store_begin (unsigned char resume);   /* The game's generation; a save's records (a version 6
                                                 **   save's changes.dat, read in) (part 4's) */
 

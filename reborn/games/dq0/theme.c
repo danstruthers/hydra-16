@@ -1,12 +1,13 @@
 /*
 ** theme.c - (overlay 5) Dingus Quest Zero's theme (theme.h), the UI's: its words (its name and story, its strata's
-** and rooms' names, the way out shut and open, the endings) and its puzzle, from the theme's copy in this overlay's
-** own bank (TCOPY: main.c reads the theme into it as the game starts, for the hub isn't in the window while an
-** overlay is).  The puzzle: a command for a piece (read the tablet, combine the sunstone with the moonstone, put the
-** crown on the throne, use the seal on the way out), matched against the theme's rules by the things' kinds (the
-** item store's: what's to hand, IO_FIND), done (the things made one, IO_COMBINE; put, IO_PUT), its words told and
-** its effect given back for main.c to carry out (the way out opened, the place ruled).  What's been done is the
-** quest's (main.c's Q, kept in the save).
+** and rooms' names, the way out shut and open, the endings) and its puzzle's words, from the theme's copy in this
+** overlay's own bank (TCOPY: main.c reads the theme into it as the game starts, for the hub isn't in the window while
+** an overlay is).  The puzzle: a command for a piece (read the tablet, combine the sunstone with the moonstone, put
+** the crown on the throne, use the seal on the way out) is the world's to judge by the theme's rules (items.h's
+** IO_PUZZLE: the things found to hand, the rule for their kinds, done: the things made one, put, the way out opened,
+** the hub's way_open), its words told here and its effect given back for main.c to word (the place ruled: the
+** ending).  What's been done is the world's to keep (with the game, its world.dat); the ending the quest's (main.c's
+** Q, kept in the save).
 */
 
 #pragma code-name ("OV5CODE")
@@ -88,7 +89,10 @@ void __fastcall__ o_story (unsigned char resumed)
 /* The way out: shut (the lock's words), or open */
 void o_way_words (void)
 {
-    words_at (Q.open ? T->opened : T->lock);
+    unsigned char o;
+
+    hub_mem (0, &o, (const void*) &HUB->way_open, 1);   /* (The world's: the puzzle's rules) */
+    words_at (o ? T->opened : T->lock);
 }
 
 /* An ending's words (END_*), and the game's end */
@@ -101,54 +105,14 @@ void __fastcall__ o_ending (unsigned char how)
     blank ();
 }
 
-/* The thing named that's to hand (carried, or within reach): its kind, the theme's (0 ...), or 0xFE (a thing of
-** the catalogue's); 0xFF if there's none (the things' words why said) */
-static unsigned char __fastcall__ kind_of (const char* name)
-{
-    unsigned char k;
-
-    if (othings (IO_FIND, name, name, 0) != IR_OK) {
-        msg (lb);
-        return 0xFF;
-    }
-    k = othings_x;
-    return k >= KI_THEME ? k - KI_THEME : 0xFE;
-}
-
-/* The rule (verb, a, b) in the theme's: its number, or 0xFF */
-static unsigned char __fastcall__ rule (unsigned char verb, unsigned char a, unsigned char b)
-{
-    unsigned char r;
-    const struct trule* p = T->rule;
-
-    for (r = 0; r < T->nrules; ++r, ++p) {
-        if (p->verb == verb && p->a == a && (b == 0xFF || p->b == b)) {
-            return r;
-        }
-    }
-    return 0xFF;
-}
-
-/* The way out within reach: the character on the top stratum, a square or two from it (its first link's) */
-static unsigned char near_out (void)
-{
-    static struct { unsigned char sn; unsigned x, y; } pc;
-    static struct { unsigned x, y; } w;
-
-    hub_mem (0, &pc, (const void*) &HUB->pc_stratum, sizeof pc);
-    hub_mem (WORLD_BANK, &w, &WREC->strata[0].link[0].x, sizeof w);
-    return !pc.sn && w.x - pc.x + 2 <= 4 && w.y - pc.y + 2 <= 4;
-}
-
-/* Rule r done: its words told, kept as done, and its effect (Q_*) */
+/* Rule r done (the world's judgement, IO_PUZZLE's, and its keeping: the way out opened, the rules done): its words
+** told, and its effect (Q_*) */
 static unsigned char __fastcall__ done (unsigned char r)
 {
     const struct trule* p = &T->rule[r];
 
     words_at (p->words);
-    Q.flags |= 1 << r;
     if (p->effect == TE_OPEN) {
-        Q.open = 1;
         return Q_OPEN;
     }
     return p->effect == TE_RULE ? Q_RULED : Q_DONE;
@@ -156,87 +120,60 @@ static unsigned char __fastcall__ done (unsigned char r)
 
 /* A command the puzzle's (read X; combine X with Y; put X on Y, use X on Y; use X on the way out, open or unlock it
 ** with X, examine it): Q_NONE (not the puzzle's: main.c carries it out as ever), Q_TOLD (words only), or what came
-** of a rule done (Q_DONE, Q_OPEN, Q_RULED) */
+** of a rule done (Q_DONE, Q_OPEN, Q_RULED).  Its words here; whether it's done the world's, by the theme's rules
+** (the things' request, IO_PUZZLE: the things found to hand, the rule for their kinds, the things made one or put,
+** the way out opened) */
 unsigned char __fastcall__ o_puzzle (struct pcmd* c)
 {
-    unsigned char v = c->verb, a, b, r;
-    char* x = tname;                            /* (The name of the one that becomes the whole: in the main RAM) */
+    unsigned char v = c->verb, t, r;
 
     if (v == V_READ) {
         if (!c->word[0]) {
             msg ("Read what?");
-        } else if ((a = kind_of (c->word)) != 0xFF) {
-            if ((r = rule (TR_READ, a, 0xFF)) != 0xFF) {
-                return done (r);
-            }
-            sayf ("\nThere's nothing written on the %s.", c->word);
+            return Q_TOLD;
         }
-        return Q_TOLD;
-    }
-    if (v == V_COMBINE) {
+        t = TR_READ;
+    } else if (v == V_COMBINE) {
         if (!c->word[0] || !c->word2[0]) {
             msg ("Combine what with what? (combine the one with the other)");
-        } else if ((a = kind_of (c->word)) != 0xFF && (b = kind_of (c->word2)) != 0xFF) {
-            r = rule (TR_COMBINE, a, b);
-            strcpy (x, c->word);                /* (The one that becomes the whole: the rule's first) */
-            if (r == 0xFF && (r = rule (TR_COMBINE, b, a)) != 0xFF) {
-                strcpy (x, c->word2);
-                strcpy (c->word2, c->word);
-            }
-            if (r == 0xFF) {
-                msg ("Those don't go together.");
-            } else if (othings (IO_COMBINE, x, c->word2, KI_THEME + T->rule[r].c) == IR_OK) {
-                return done (r);
-            } else {
-                msg (lb);
-            }
+            return Q_TOLD;
         }
-        return Q_TOLD;
-    }
-    if (c->obj == OB_WAY_OUT && (v == V_USE || v == V_UNLOCK || v == V_OPEN || v == V_EXAMINE)) {
+        t = TR_COMBINE;
+    } else if (c->obj == OB_WAY_OUT && (v == V_USE || v == V_UNLOCK || v == V_OPEN || v == V_EXAMINE)) {
         if (v == V_EXAMINE || !c->word[0]) {
             o_way_words ();
-        } else if (!near_out ()) {
-            msg ("The way out is out of reach: go over to it first.");
-        } else if ((a = kind_of (c->word)) != 0xFF) {
-            if ((r = rule (TR_OUT, a, 0xFF)) != 0xFF) {
-                return done (r);
-            }
-            sayf ("\nNothing comes of trying the %s on it.", c->word);
-        }
-        return Q_TOLD;
-    }
-    if ((v == V_PUT || v == V_USE) && c->word[0] && c->word2[0]) {
-        if ((a = kind_of (c->word)) == 0xFF || (b = kind_of (c->word2)) == 0xFF) {
             return Q_TOLD;
         }
-        if ((r = rule (TR_PUT, a, b)) == 0xFF) {
-            if (v == V_PUT) {
-                return Q_NONE;                  /* (A thing put as any other) */
-            }
-            sayf ("\nNothing comes of using the %s on the %s.", c->word, c->word2);
+        t = TR_OUT;
+    } else if ((v == V_PUT || v == V_USE) && c->word[0] && c->word2[0]) {
+        t = TR_PUT;
+    } else {
+        if (v == V_USE) {
+            msg ("Use what, and on what? (use the key on the way out ...)");
             return Q_TOLD;
         }
-        a = othings (IO_PUT, c->word, c->word2, (T->kind[b].keeps & KF_ON) != 0);
-        msg (lb);                               /* (The things' words of it) */
-        return a == IR_OK ? done (r) : Q_TOLD;
+        return Q_NONE;
     }
-    if (v == V_USE) {
-        msg ("Use what, and on what? (use the key on the way out ...)");
-        return Q_TOLD;
+    r = othings (IO_PUZZLE, c->word, c->word2, t);
+    if (lb[0]) {
+        msg (lb);                               /* (The things' words: one not to hand, one put) */
     }
-    return Q_NONE;
-}
-
-/* A thing named, to hand, that's fixed where it stands (a theme's altar: never taken up): 1, told so; else 0 */
-unsigned char __fastcall__ o_fixed (const char* name)
-{
-    unsigned char k;
-
-    if (othings (IO_FIND, name, name, 0) != IR_OK || (k = othings_x) < KI_THEME ||
-        !(T->kind[k - KI_THEME].keeps & KF_FIXED)) {
-        return 0;
+    if (r == PZ_DONE) {
+        return done (othings_x);
     }
-    sayf ("\nThe %s is fixed where it stands.", T->kind[k - KI_THEME].name);
-    return 1;
+    if (r == PZ_FAR) {
+        msg ("The way out is out of reach: go over to it first.");
+    } else if (r == PZ_NONE) {
+        if (t == TR_PUT && v == V_PUT) {
+            return Q_NONE;                      /* (A thing put as any other) */
+        }
+        if (t == TR_COMBINE) {
+            msg ("Those don't go together.");
+        } else {
+            sayf (t == TR_READ ? "\nThere's nothing written on the %s." : t == TR_OUT ?
+                "\nNothing comes of trying the %s on it." : "\nNothing comes of using the %s on the %s.", c->word,
+                c->word2);
+        }
+    }
+    return Q_TOLD;
 }

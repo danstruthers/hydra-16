@@ -47,7 +47,8 @@ the bestiary), a drowned temple, a kobold warren.
   it may lie in, hidden or in plain view; the rules of what's done with them, each with its words and its effect;
   the way out's lock in words, shut and open; and the endings' words (escaped, ruled, died).
 - **Picked** by the seed's second byte, counted round the themes (a game's seed is the clock's, so any; the tests'
-  small seeds pick the first), and kept in the save (game.dat, with the puzzle as it stands and the game's ending).
+  small seeds pick the first), and kept in the save (game.dat, with the game's ending; the puzzle as it stands the
+  world's, its world.dat).
   The UI reads it into the hub's theme bank (THEME_BANK: every task's to read) and its overlay 5's bank (theme.c's
   copy: the theme's words, its puzzle).
 - **The pieces placed with the plan** (DUNGEON.md): each one's stratum is picked from the game's seed among those it
@@ -57,9 +58,10 @@ the bestiary), a drowned temple, a kobold warren.
   theme says.  So it was there all along, and found as anything else is: seen, or searched for.
 - **The rules:** read X (its words: a clue); combine X with Y (both to hand: they become Z, X's record kept, Y's
   gone); put X on (or in) Y (an offering on an altar, a crown on a throne); use X on the way out (open the way out
-  with X).  The UI matches a command to a rule by the things' kinds (the world's item store's: what's to hand,
-  IO_FIND; IO_COMBINE), tells its words, keeps it done (a bit each in the save), and does its effect: none more, the
-  way out opened (the hub's way_open: the world lets the character up it, and it's gone: E_LEFT), or the place ruled.
+  with X).  The world judges a command of the puzzle's by the rules (the UI's request, IO_PUZZLE: the things found to
+  hand by the item store, IO_FIND, the rule for their kinds, done: IO_COMBINE, IO_PUT), keeps it done (a bit each in
+  its world.dat), and does its effect: none more, the way out opened (the hub's way_open: the world lets the
+  character up it, and it's gone: E_LEFT), or the place ruled (the UI's to end the game); the UI tells its words.
 - **The endings:** escaped (up the way out, opened), ruled (a rule's), or dead (a fatal wound); the theme's words, the
   game over, and the save marked done (dq0 -d on it again begins a new game).
 - **Still to come:** the theme's say on the strata's ages and sizes, the features it favours, the things lying about

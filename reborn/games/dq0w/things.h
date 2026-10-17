@@ -28,6 +28,16 @@ void __fastcall__ stock_down (unsigned char k); /* (Part 13) Cache slot k's chun
                                                 **   list, the world bank's stock) */
 void __fastcall__ lay_body (unsigned char kind, unsigned char sn, unsigned x, unsigned y);   /* (Part 13) A denizen's
                                                 **   remains put down where it fell (KI_BODY, KI_BONES) */
+unsigned char puzzle (void);                    /* (Part 16: wgame.c) The hub's ireq, IO_PUZZLE's, answered (but its
+                                                **   state): 1 if what lies about has changed */
+void __fastcall__ take_go (const struct msg* m);    /* (Part 16) I_TAKE's walk begun */
+unsigned char take_up (void);                   /* (Part 16) Its thing taken up, the walk done: 0 not (E_READY to
+                                                **   tell), 1 taken (the UI's to go on), 2 walking on to it */
+extern unsigned take_n;                         /* (I_TAKE's thing, its item: 0 none) */
+unsigned char __fastcall__ in_reach (unsigned n);
+unsigned char __fastcall__ carry (unsigned n, unsigned char hand_first);
+void light_now (void);
+void __fastcall__ go_to (unsigned x, unsigned y);
 
 /* The things' words (kinds.c's said, in the catalogue's bank: % the thing's name, # the other's) */
 enum {

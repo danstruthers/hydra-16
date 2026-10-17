@@ -92,6 +92,7 @@ go:
             SWPART      13, 3               ; The item store's rarer work: begun, kept, the kit, a chunk's things
             SWPART      14, 6               ; The denizens' bodies: their intents carried out (wbody.c)
             SWPART      15, 2               ; The blows, the bleeding (wfight.c)
+            SWPART      16, 6               ; The game's own rules: the puzzle judged, a thing walked to (wgame.c)
 
             SWFN        start_dig, 1
             SWFN        dig_on, 1
@@ -145,3 +146,8 @@ go:
             SWFN        pc_blow, 15
             SWFN        den_blow, 15
             SWFN        bled, 15
+            SWFN        puzzle, 16
+            SWFN        take_go, 16
+            SWFN        take_up, 16
+            SWFN        world_keep, 16
+            SWFN        pc_asked, 16

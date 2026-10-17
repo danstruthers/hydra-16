@@ -458,14 +458,17 @@ static void look_at (void)
     HUB->wreq.res = r;
 }
 
-/* The hub's wreq answered (the UI's: the save, a close look) */
+/* The hub's wreq answered (the UI's: the save, a close look; the game begun, the character's state set: part 16's) */
 void s_answer (void)
 {
     hub_map (0);
     if (HUB->wreq.kind == WQ_SAVE) {
         store_save ();
-    } else {
+        world_keep ();                          /* (The world's own: world.dat) */
+    } else if (HUB->wreq.kind == WQ_EXAMINE) {
         look_at ();
+    } else {
+        pc_asked ();
     }
     hub_reply (&HUB->wreq);
 }

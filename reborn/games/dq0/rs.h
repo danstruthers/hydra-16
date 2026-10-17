@@ -104,7 +104,10 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
 ** what the attacker's strike did ("a serious cut to its left thigh (S2)", "your ring byrnie": the armour that stopped
 ** it), and the defender's (a counterstrike's, a block's on a bare arm or a claw).  A creature's blow and the
 ** character's at one (the world's, its slot: it keeps what the blow did, and puts the words in the fights' ring,
-** hub.h's FIGHT_AT): the request's w2 1 if the creature is shy (a shaken one flees); the reply's grade what it left
+** hub.h's FIGHT_AT): the request's w2 1 if the creature is shy (a shaken one flees), and RS_PRONE_A if the attacker
+** lies prone, RS_PRONE_D the defender (their bodies' positions, the world's: one prone is the easier to strike, and gets
+** up as its turn, O_RISE, the world's to stand it up; one that falls, a stumble, a leg giving way, an X_COND_ON
+** C_PRONE effect, the world's to lay it down); the reply's grade what it left
 ** them in (hub.h's FF_*: the creature's courage tested if it was wounded and stands, RS_MORALE's: FF_FLEES, or
 ** AF_CAUTIOUS).  The character strikes with what the
 ** hub's pc_strike says (SK_*: the best to hand, a fist, a foot, the head: Unarmed's, the book's hand, foot and head).
@@ -118,6 +121,8 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
 ** that meets something hard, Combat 12; and half the thing's blunt resistance; less the part's armour, a kick's the
 ** soles'): HC_STRUCK's, c its worst band, w2 the tenths it's out for, result | 1 if it's hurt enough to stop, its words
 ** RS_DESCRIBE b 2's */
+#define RS_PRONE_A      0x02                    /* (RS_ATTACK's w2: the attacker lies prone, */
+#define RS_PRONE_D      0x04                    /*   the defender) */
 #define AF_STOPPED      0x01                    /* The attacker's strike stopped by armour (its line the armour's) */
 #define AF_STOPPED_D    0x02                    /*   the defender's */
 #define AF_TA           0x04                    /* The defender's tactical advantage: an action more, at once */
@@ -185,7 +190,9 @@ struct rs_summary {
 /* ---- The requests (the hub's referee areas carry one, and its reply) */
 enum {
     RS_HELLO,                                   /* -> its name, its round (tenths), its standard action times */
-    RS_LOAD_PC,                                 /* A character file -> its name, calling, summary */
+    RS_LOAD_PC,                                 /* A character file -> its name, calling, summary; a and b the pace
+                                                **   and the watchfulness its file says (GA_WALK and 0 if none: the
+                                                **   world's to set, a new game's) */
     RS_NEW_ACTOR,                               /* A creature by key (and its tier, size, kind) -> its summary:
                                                 **   actor its entry plus 1, the key in the text, w1 its record (the
                                                 **   denizens' task's: its sheet's, kept and saved with the game; made

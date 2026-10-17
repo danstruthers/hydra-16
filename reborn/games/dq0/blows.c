@@ -214,22 +214,21 @@ static void __fastcall__ note (unsigned char n)
     strcpy (lb, say[n & 7]);
 }
 
-/* The character's stance (the hub's pc_stance, rs.h's D_*: the referee's defence for it) set by its word (dodge,
-** block, counter, none; else the best), told in lb */
+/* The character's stance (the hub's pc_stance, rs.h's D_*: the referee's defence for it, the world's to set: wset)
+** set by its word (dodge, block, counter, none; else the best), told in lb */
 static void __fastcall__ stance (const char* w)
 {
-    static unsigned char s;
     unsigned char d = *w;
 
-    s = d == 'd' ? D_DODGE : d == 'b' && w[1] == 'l' ? D_BLOCK : d == 'c' ? D_COUNTER : d == 'n' ? D_NONE : D_AUTO;
-    hub_mem (0, &HUB->pc_stance, &s, 1);
-    note (s);
+    d = d == 'd' ? D_DODGE : d == 'b' && w[1] == 'l' ? D_BLOCK : d == 'c' ? D_COUNTER : d == 'n' ? D_NONE : D_AUTO;
+    wset (WS_STANCE, d, 0);
+    note (d);
 }
 
 /* V_ATTACK's denizen beside the character to strike at (one whose name has the command's word, if it's given; the
-** one that way, a heading, if that is), struck with what the verb says (the parser's, in its half: SK_*, to the hub's
-** pc_strike): its entry plus 1; or 0, and why not in lb; at a door, a window, a portcullis, FT_THING: a blow at it
-** (main.c's: broken).  V_DEFEND's stance set (0) */
+** one that way, a heading, if that is), struck with what the verb says (the parser's, in its half: SK_*, main.c's
+** strike, sent with the blow for the hub's pc_strike): its entry plus 1; or 0, and why not in lb; at a door, a
+** window, a portcullis, FT_THING: a blow at it (main.c's: broken).  V_DEFEND's stance set (0) */
 unsigned char __fastcall__ o_fight_target (struct pcmd* c)
 {
     static struct actor q;
@@ -242,7 +241,7 @@ unsigned char __fastcall__ o_fight_target (struct pcmd* c)
         stance (w);
         return 0;
     }
-    hub_mem (0, &HUB->pc_strike, &c->half, 1);
+    strike = c->half;                           /* (Sent with the blow: I_ATTACK's x[1]) */
     if (c->obj == OB_DOOR || c->obj == OB_WINDOW || c->obj == OB_PORTC) {
         return FT_THING;
     }

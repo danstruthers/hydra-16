@@ -120,7 +120,7 @@ struct ireq {
     unsigned char   result;                     /* IR_* */
     char            name[16];                   /* A thing's name (IO_GET's, IO_DROP's; IO_KIT's things more are in
                                                 **   things_text, commas between) */
-    unsigned        x, y;                       /* IR_NOT_HERE's: where it is */
+    unsigned        x, y;                       /* IR_NOT_HERE's: where it is (and item the thing: I_TAKE's) */
     unsigned char   craft, quality, mat, plural, qty;   /* IO_DESCRIBE's: what it is (its kind's name in name) */
     unsigned        dur, dur_max, value;
     unsigned char   size, thick;                /*   (and its size, its thickness: the item's) */
@@ -158,6 +158,16 @@ enum { IO_KIT, IO_GET, IO_DROP, IO_LIST, IO_SAVE, IO_RESTORE,
 #define IO_THEME        (IO_BAR + 2)            /* The theme's kinds (the theme bank's, the UI's) into the catalogue */
 #define IO_BEGIN        (IO_BAR + 3)            /* The game begun (the UI's last as it starts: the world's on to its
                                                 **   dungeon, the things asked so far, the kit) */
+#define IO_PUZZLE       (IO_BAR + 4)            /* A command of the theme's puzzle's (theme.h), judged by its rules
+                                                **   (the world's): to its verb (TR_*), name the thing (into the other:
+                                                **   combine name with into, put name on into; read name; use name on
+                                                **   the way out); each found to hand (IO_FIND's), the rule for their
+                                                **   kinds looked for, and done (the things made one, IO_COMBINE's;
+                                                **   put, IO_PUT's; the way out opened, the hub's way_open): result
+                                                **   PZ_*, x the rule done; the things' words of it in things_text
+                                                **   (a thing not found, put: "" none) */
+enum { PZ_DONE, PZ_NONE, PZ_NO, PZ_FAR };       /* (IO_PUZZLE's: a rule done; none for those kinds; not done, the
+                                                **   things' words why; the way out out of reach) */
 enum { IR_OK, IR_NONE, IR_FULL, IR_HEAVY, IR_NOT_HERE, IR_NO, IR_FIXED };    /* (IR_NO: refused, the things' words
                                                 **   why; IR_FIXED: a portal's part, in it) */
 

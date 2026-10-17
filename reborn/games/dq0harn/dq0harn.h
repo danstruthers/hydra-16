@@ -46,13 +46,13 @@ struct beast {
     unsigned char   kind;                       /* Its bestiary entry plus 1 (0: none yet) */
     unsigned char   att[5];                     /* Strength, Stamina, Dexterity, Agility, Will */
     unsigned char   wt;                         /* Its weight, in 4 lb */
-    unsigned char   state;                      /* HARN_CONSCIOUS ... (| B_PRONE: fallen) */
+    unsigned char   state;                      /* HARN_CONSCIOUS ... (a version 7 save's | 0x80: fallen, its body's
+                                                **   position the world's now) */
     unsigned char   bl;                         /* Bloodloss */
     unsigned char   ninj;
     harn_injury     inj[3];                     /* (More: the last takes their levels) */
     unsigned long   out;                        /* Senseless till then (the clock's tenths) */
 };
-#define B_PRONE         0x80
 #define NSHEETS         256
 typedef char beast_fits[sizeof (struct beast) * NSHEETS <= 0x2000 ? 1 : -1];
 extern struct beast bs;                         /* (A sheet, copied out of the bank) */

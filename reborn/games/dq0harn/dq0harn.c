@@ -336,7 +336,8 @@ static void status (void)
 #pragma rodata-name (push, "SW1RODATA")
 
 /* ---- hmchar's file: its own lines, the name and the occupation (and the game's: its pace, its watchfulness and its
-** exertion toward the next fatigue level, "pace 2 1 1200") */
+** exertion toward the next fatigue level, "pace 2 1 1200": the pace and the watchfulness the world's, said in the reply
+** to RS_LOAD_PC and written back as the hub has them, the exertion the referee's own) */
 
 static unsigned char gait = GA_WALK, watch;
 
@@ -368,8 +369,6 @@ void __fastcall__ s_load_pc (struct req* r)
     r->result = harn_read (fd, &pc, own_line) < 0;
     close (fd);
     hub_map (0);
-    HUB->gait = gait;
-    HUB->watch = watch;
     put (name);
     put ("\n");
     put (calling);
@@ -549,6 +548,8 @@ static void __fastcall__ answer (struct req* r)
         break;
     case RS_LOAD_PC:
         load_pc (r);
+        r->a = gait;                            /* (Its file's pace and watchfulness: the world's to set) */
+        r->b = watch;
         break;
     case RS_TEST:
         if (r->a == P_DIG) {                    /* (Judged by the tool to hand that suits it best) */

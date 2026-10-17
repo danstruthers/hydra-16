@@ -5,9 +5,9 @@
 ** watchfulness ("search for traps as I go", "watch for traps", "move carefully", "listen as I go", "map as I go";
 ** "stop searching", "stop listening", "stop mapping", "stop running"), "status", and a small move ("move left one
 ** space", "step forward", "go north 20 feet", "back up two squares", "sidestep right": a square is 5 feet, a yard 3).
-** The pace and the watchfulness are set in the hub (the hub's gait and watch), the referee's to word (RS_DESCRIBE b
-** 3), the small move the world's (I_STEP).  Its own words matched here; the direction the parser's (a relative one
-** made the compass's).
+** The pace and the watchfulness are the world's to set (the hub's gait and watch: its request, WQ_SET), the
+** referee's to word (RS_DESCRIBE b 3), the small move the world's (I_STEP).  Its own words matched here; the direction
+** the parser's (a relative one made the compass's).
 */
 
 #include <stdlib.h>
@@ -180,10 +180,7 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
     parse (b2, &c);
     k = (c.verb == V_MOVE || c.verb == V_ENTER || c.verb == V_APPROACH) && (c.dir != 0xFF || c.obj);
     st = st && (!k || n || g != HUB->gait || wa != HUB->watch);    /* (Said, unless it goes on as it was) */
-    if (g != 0xFF) {
-        HUB->gait = g;
-    }
-    HUB->watch = wa;
+    wset (WS_PACE, g, wa);                      /* (The world's, set: its request) */
     if (st) {
         described (1);
     }

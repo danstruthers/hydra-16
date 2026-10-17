@@ -131,18 +131,26 @@ enum {
     I_PORTAL,                                   /* a: what's done to the door it faces (PA_*); b: which (PW_*: a
                                                 **   door or a portcullis, a window or a slit, either); w1, w2: the
                                                 **   one meant (its square: 0, the one it faces); x[0]: PA_BAR's bar
-                                                **   to hand, its width (the things': 0, none) */
+                                                **   to hand, its width (the things': 0, none); x[1] what it strikes
+                                                **   a thing with (SK_*: the hub's pc_strike, the world's to set) */
     I_GOTO,                                     /* w1, w2: a square in its room it sees, walked up to */
     I_STEP,                                     /* w1: a heading (H_N ... H_NW), | STEP_KEEP its facing kept; w2:
                                                 **   squares */
-    I_QUIT,
+    I_QUIT,                                     /* The game's end (the UI's: the hub's quit, the world's to set; every
+                                                **   task ends, the world first) */
     I_ATTACK,                                   /* a: the actor struck at (its entry plus 1), b: the aim (Z_*): a
                                                 **   round's (the world's: the character busy for it, the blow posted
-                                                **   in the hub's pc_foe, and struck: the referee asked, E_FIGHT) */
+                                                **   in the hub's pc_foe, and struck: the referee asked, E_FIGHT); x[1]
+                                                **   what it strikes with (SK_*: the hub's pc_strike) */
     I_ENTER,                                    /* (The denizens' own, below) A body come into the world's keeping */
     I_LEAVE,                                    /*   gone from it (no longer an actor) */
     I_ROUSE,                                    /*   its wait cut short */
     I_DONE,                                     /*   the denizens' turn done (the turns pace's: the hub's den_go) */
+    I_TAKE,                                     /* A thing taken up, walked over to first (the UI's, the thing out of
+                                                **   reach: IO_GET's IR_NOT_HERE): w1, w2 the square it lies on (as
+                                                **   I_GOTO's), t the thing (its item: the reply's); the world walks
+                                                **   there (again, as long as the walk gets it nearer) and takes it up,
+                                                **   E_TAKEN */
     NINTENTS
 };
 /* The denizens' intents (their ring, the hub's di: the minds', for their actors' bodies, the world's to carry out
@@ -195,6 +203,11 @@ enum {
                                                 **   date near it: DUNGEON.md's perception as layers): a door opened
                                                 **   or shut, a square dug (the world's change records), a its
                                                 **   stratum, w1 w2 its square */
+    E_TAKEN,                                    /* who's walked over to a thing and taken it up (I_TAKE's): w1 how it
+                                                **   went (items.h's IR_*: IR_OK taken, its time and its light the UI's
+                                                **   to ask, as for any thing handled, no E_READY till then; IR_FIXED a
+                                                **   portal's part, or a thing fixed where it stands, the UI's to see
+                                                **   to), w2 the light it carried before (the hub's pc_light) */
     NEVENTS
 };
 enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST };    /* E_DEN's what: a step, a noise of its own (a squeak, a
@@ -239,7 +252,10 @@ enum { PA_OPEN, PA_CLOSE, PA_UNLOCK, PA_FORCE, PA_SEARCH,     /* I_PORTAL's: wha
                                                 **   its record copied into the hub's pview); */
        PA_BAR, PA_BEND };                       /*   a door barred again (a bar carried, or in reach, set in its
                                                 **   brackets); bars bent (a portcullis's; a window's, forced) */
-enum { WQ_SAVE, WQ_EXAMINE };                  /* The hub's wreq's kinds */
+enum { WQ_SAVE, WQ_EXAMINE, WQ_START, WQ_SET }; /* The hub's wreq's kinds */
+enum { WS_PACE, WS_STANCE, WS_PAUSE };          /* WQ_SET's what: the character's pace (x, GA_*: 0xFF as it is) and its
+                                                **   watchfulness (y, WA_*); its stance (x, rs.h's D_*); the game
+                                                **   paused (x 1) or going on (x 0) */
 enum { PW_ANY, PW_DOOR, PW_WINDOW };            /* I_PORTAL's b: a door or a portcullis, a window or a slit */
 enum { PO_NONE, PO_OPENED, PO_CLOSED, PO_IS_OPEN, PO_IS_SHUT, PO_LOCKED, PO_BARRED, PO_UNBARRED, PO_PICKED,
        PO_NOT_PICKED, PO_NO_PICKS, PO_NO_LOCK, PO_FORCED, PO_HELD, PO_FOUND, PO_NOTHING,   /* E_PORTAL's (a door's, */
@@ -317,6 +333,8 @@ struct actor {
     unsigned char   sn, face;
     unsigned long   ready;                      /* When it can act again */
     unsigned char   step;                       /* Tenths of a second to go 5 feet */
+    unsigned char   pos;                        /* Its body's position (POS_*: standing, prone ...) */
+    unsigned char   gait;                       /* The pace it goes at (rs.h's GA_*: a walk, till their paces come) */
     unsigned        x, y;                       /* (These, its doing and its name as struct sight's den: copied whole) */
     unsigned char   doing;                      /* What it's doing (DO_*: watching, coming, keeping off: it senses the
                                                 **   character) */
@@ -383,7 +401,8 @@ struct hub {                                    /* Bank 0, at $8000 */
     volatile unsigned long pc_ready;            /* When the character can act again */
     unsigned        round;                      /* The ruleset's round, tenths of a second */
     unsigned        tpr;                        /* Real ticks a round, at the pace (0: turns) */
-    volatile unsigned char paused, hold, quit;  /* The UI's: paused (Escape), held (a question), ending */
+    volatile unsigned char paused, hold, quit;  /* Paused (Escape: the UI's request, WQ_SET), held (a question), ending
+                                                **   (the UI's I_QUIT): the world's */
     unsigned char   pace;
     unsigned char   test_start;                 /* (dq0 -T: the character begins at a way down, for the tests; 2,
                                                 **   -T twice: by the theme's first piece on the top stratum) */
@@ -423,13 +442,18 @@ struct hub {                                    /* Bank 0, at $8000 */
     struct portal   pview;                      /* A portal looked at closely (PA_EXAMINE's: the world's record of
                                                 **   it, but bar: 1 the character's on its bar's side) */
     /* The change records' lock (a semaphore: the world writes them, the maker reads them: world.h's), and a request
-    ** to the world (the UI's: WQ_*): its change records written to the save folder; a portal looked at closely (x,
-    ** y its square on the character's stratum: its record into pview; res 1 if there's none there) */
+    ** to the world (the UI's: WQ_*): the game kept (WQ_SAVE: the change records, and the world's own, world.dat,
+    ** written to the save folder); a portal looked at closely (WQ_EXAMINE: x, y its square on the character's stratum,
+    ** its record into pview; res 1 if there's none there); the game begun (WQ_START, before the UI's things: x the
+    ** ruleset's round, y the pace, a and b a new game's pace and watchfulness, the character's file's: the world
+    ** sets the clock's, and a game carried on, the hub's resume, is the save's world.dat's); the character's state
+    ** or the game's set (WQ_SET: a what, WS_*, x and y its values) */
     unsigned char   change_lock;
     struct {
         RQH;
         unsigned    x, y;
         unsigned char res;
+        unsigned char a, b;
     }               wreq;
     char            dig_tool[4][8];             /* A dig's spells' tools, the referee's choices (their keys), in turn */
     unsigned char   dig_wear[4];                /*   and the wear each spell did (E_DIG's b, which: the world runs on */
@@ -455,22 +479,26 @@ struct hub {                                    /* Bank 0, at $8000 */
     ** bank (DEN_BANK), each reader keeps its own place, as in the world's; nobody waits for them, and each perceives
     ** them or not by its own senses (DENIZENS.md) */
     volatile unsigned dq_head;                  /* Events written so far (the world's) */
-    /* The theme's puzzle (theme.h: the theme in THEME_BANK): the way out opened (the UI's, as the mission's done) */
+    /* The theme's puzzle (theme.h: the theme in THEME_BANK): the way out opened (the world's, as it judges a command
+    ** of the puzzle's by the theme's rules: items.h's IO_PUZZLE) */
     volatile unsigned char way_open;
     struct sway     sway;                       /* The character's way with a denizen (the UI's request) */
-    /* The character's pace and watchfulness (DUNGEON.md: moving; the UI's to set, as the player says, the referee's
-    ** to word, RS_DESCRIBE b 3, and to keep with the sheet, till the world keeps the character's state), and the pace
-    ** it's going at now (the world's: as a move starts, till it's there and has looked about) */
+    /* The character's pace and watchfulness (DUNGEON.md: moving; the world's, set as the player says, the UI's request
+    ** WQ_SET, and kept with the game, world.dat; the referee's to word, RS_DESCRIBE b 3), the pace it's going at now
+    ** (the world's: as a move starts, till it's there and has looked about), and its body's position (the world's, as
+    ** the referee says it's fallen, or got up: POS_*) */
     unsigned char   gait;                       /* rs.h's GA_* */
     unsigned char   watch;                      /* WA_* */
+    unsigned char   pc_pos;                     /* POS_* */
     volatile unsigned char pc_going;            /* The pace it's going at plus 1 (0: not moving), | GOING_DARK: by
                                                 **   feel */
     /* A fight: the character's blow, posted by the world (I_ATTACK) as it takes the round for it, and struck (the
     ** referee asked, E_FIGHT told), and the character's stance (rs.h's D_*: the referee's defence for it) */
     volatile unsigned char pc_foe;              /* The actor struck at, plus 1 (0: none posted) */
     unsigned char   pc_aim;                     /* Its aim (Z_*) */
-    unsigned char   pc_stance;
-    unsigned char   pc_strike;                  /* What it strikes with (SK_*: the parser's, as it's told) */
+    unsigned char   pc_stance;                  /* (The world's: the UI's request, WQ_SET) */
+    unsigned char   pc_strike;                  /* What it strikes with (SK_*: the parser's, as it's told: the world's,
+                                                **   from the blow's intent, I_ATTACK's, I_PORTAL's x[1]) */
     /* The denizens' intents to the world (their actors' bodies': hub.h's the denizens' intents), a ring: written at
     ** di_head (the denizens' task: a full one waited on), read at di_tail as each is carried out (the world: it rings
     ** the denizens as it has) */
@@ -504,6 +532,10 @@ struct hub {                                    /* Bank 0, at $8000 */
 #define WA_MAP          0x04                    /* Mapping as it goes (the map's side the orientation's: its
                                                 **   materials to hand) */
 #define GOING_DARK      0x80
+enum { POS_STANDING, POS_PRONE, POS_CROUCHED, POS_KNEELING, POS_SITTING };   /* A body's position (the hub's pc_pos,
+                                                **   an actor's pos: the world's; the referee's to judge by, and to
+                                                **   say it's fallen, rs.h's RS_ATTACK; crouched, kneeling and
+                                                **   sitting to come) */
 
 enum { LK_LOOK, LK_DENS, LK_EYES };              /* The look's kinds: a look about; the denizens seen looked at again;
                                                 **   the eyes only, as time's gone (the lights seen far off: a wait's) */
@@ -533,6 +565,23 @@ struct wrec {
                                                 **   slot CS_FRESH, the world puts them down) */
 };
 
+/* The world's part of the save (DUNGEON.md: the save; save version 8 on): world.dat in the save folder, the world's to
+** write (WQ_SAVE) and read back (WQ_START, the hub's resume): this record, then its strata's records (struct wrec's
+** strata).  A save of version 5 to 7 kept them in the UI's game.dat: the UI writes them out as a world.dat (its
+** reader) before the world's begun */
+#define WSAVE_MAGIC     0x5744                  /* "DW" */
+struct wsave {
+    unsigned        magic;
+    unsigned char   version;                    /* (1) */
+    unsigned char   sn, face, pos;              /* The character's place (its stratum, its facing, its body's
+                                                **   position), */
+    unsigned        x, y;                       /*   its square, */
+    unsigned char   gait, watch;                /*   its pace and watchfulness; */
+    unsigned char   open, done;                 /* the theme's puzzle: the way out opened, its rules done (a bit
+                                                **   each); */
+    unsigned long   now;                        /* the clock */
+};
+
 /* Who writes what (Phase 2: one authority on state).  Each region of the hub has an owner, the one task that writes
 ** it; another changes it by asking the owner (an intent, a request), never by writing it.  The test runner holds the
 ** game to it: every write to the hub's banks in a dq0 test, by the task that made it, checked against these lines
@@ -556,9 +605,11 @@ struct wrec {
 ** 2.5 the senses for every actor, by layers, and their memory (done: the chunks' tiles' seen and visible marks and
 ** R_VISITED the senses', the world's changes to a square keeping them; the denizens seen the senses' to decide, in
 ** sight; each denizen's senses asked of them, dsense; DUNGEON.md's perception as layers); 2.6 game logic out of the UI
-** (way_open); 2.7 the character's state home (gait, watch, pc_stance, pc_strike, and the UI's writes as the game
-** starts, resumes, pauses and quits: round, tpr, pace, paused, quit, now, the character's place on resuming, the
-** strata's records read back).
+** (done: way_open, the theme's puzzle judged by the world, IO_PUZZLE; a thing walked over to and taken up, I_TAKE); 2.7
+** the character's state home (done: gait, watch, pc_stance, pc_strike, the UI's requests, WQ_SET, and the blow's
+** intents; the body's position the world's, pc_pos and each actor's; the game begun, WQ_START: round, tpr, pace; a
+** game carried on the world's to read back, its world.dat: now, the character's place, the strata's records; paused,
+** WQ_SET; quit, I_QUIT).  The known ones are none: Phase 2's goal for the writer check.
 **
 **   own bank(0) none                                           (The header's room: what no line below names)
 **   own hub.magic ui
@@ -568,24 +619,25 @@ struct wrec {
 **   own hub.task[*] each                                       (Each task's own number, as it attaches)
 **   own hub.beat[*] each
 **   own hub.tick world                                         (The clock: the world's alone)
-**   own hub.now world 2.7:ui
+**   own hub.now world
 **   own hub.pc_ready world
-**   own hub.round world 2.7:ui
-**   own hub.tpr world 2.7:ui
-**   own hub.paused world 2.7:ui                                (The UI's pause, hold and quit: requests to it)
+**   own hub.round world                                        (The game begun: the UI's WQ_START)
+**   own hub.tpr world
+**   own hub.paused world                                       (The UI's pause and quit: its requests, WQ_SET, I_QUIT)
 **   own hub.hold world
-**   own hub.quit world 2.7:ui
-**   own hub.pace world 2.7:ui
+**   own hub.quit world
+**   own hub.pace world
 **   own hub.test_start ui                                      (The game's start: dq0's arguments)
 **   own hub.resume ui
 **   own hub.savedir ui
 **   own hub.seed ui
 **   own hub.pcstatus referee                                   (The referee's words)
-**   own hub.pc_stratum world 2.7:ui                            (The character's body: the world's)
-**   own hub.pc_x world 2.7:ui
-**   own hub.pc_y world 2.7:ui
-**   own hub.pc_face world 2.7:ui
-**   own hub.pc_light world 2.7:ui
+**   own hub.pc_stratum world                                   (The character's body: the world's; a game carried
+**                                                                on, its world.dat's)
+**   own hub.pc_x world
+**   own hub.pc_y world
+**   own hub.pc_face world
+**   own hub.pc_light world
 **   own hub.pc_lamp world
 **   own hub.pcsum referee
 **   own hub.look senses +world                                 (The world's look asked)
@@ -623,15 +675,16 @@ struct wrec {
 **   own hub.pc_tx world
 **   own hub.pc_ty world
 **   own hub.dq_head world                                      (The denizens' events: the world's)
-**   own hub.way_open world 2.6:ui
+**   own hub.way_open world                                     (The puzzle's: the world's, by the theme's rules)
 **   own hub.sway denizens +ui
-**   own hub.gait world 2.7:ui,referee
-**   own hub.watch world 2.7:ui,referee
+**   own hub.gait world                                         (The character's state: the world's, WQ_SET)
+**   own hub.watch world
+**   own hub.pc_pos world                                       (Its body's position: the world's, as the referee says)
 **   own hub.pc_going world
 **   own hub.pc_foe world
 **   own hub.pc_aim world
-**   own hub.pc_stance world 2.7:ui
-**   own hub.pc_strike world 2.7:ui
+**   own hub.pc_stance world
+**   own hub.pc_strike world                                    (The blow's intent's)
 **   own hub.di_head denizens                                   (The denizens' intents: their ring)
 **   own hub.di denizens
 **   own hub.di_tail world                                      (Its reader's place)
@@ -663,7 +716,7 @@ struct wrec {
 **   own uirec.map maker +ui
 **   own uirec.things_text world +ui
 **   own bank(WORLD_BANK) maker                                 (The cache's table)
-**   own wrec.strata world 2.7:ui                               (The strata's records: the world's dungeon)
+**   own wrec.strata world                                    (The strata's records: the world's dungeon)
 **   own wrec.grown maker                                       (A stratum's record as its plan's grown: M_PLAN's)
 **   own wrec.stock maker                                       (A chunk's things: the maker's list, the world's)
 **   own wrec.cpage world                                       (The change records' pages: the world's, store.c)
