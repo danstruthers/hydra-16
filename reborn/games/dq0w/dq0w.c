@@ -464,7 +464,9 @@ static unsigned char __fastcall__ looked (unsigned char first)
     hub_map (0);
     HUB->look.first = first;
     hub_post (&HUB->look, T_SENSES);
-    while (!hub_wait_t (&HUB->look, 1)) {
+    while (!hub_wait_t (&HUB->look, 4)) {      /* (Asleep meanwhile, a request rung waking it: the senses' stock,
+                                                **   the UI's things; else four ticks, the clock on from the ticks
+                                                **   gone: a tick's, a fifth of the CPU a look took from it) */
         waiting ();
     }
     HUB->look.state = REQ_FREE;
