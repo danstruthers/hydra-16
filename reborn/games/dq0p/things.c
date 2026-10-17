@@ -119,6 +119,7 @@ void __fastcall__ things_seen (struct sight* s, unsigned char sn, unsigned x, un
     static struct item q;
     static unsigned char k, listed;
     static struct item* r;
+    static unsigned qx, qy;
     unsigned i = 0, j;
     unsigned char* p;
 
@@ -131,10 +132,12 @@ void __fastcall__ things_seen (struct sight* s, unsigned char sn, unsigned x, un
         if (r->sn != sn || (r->flags & (I_HIDDEN | I_KNOWN)) == I_HIDDEN || r->x - x + 20 > 40 || r->y - y + 20 > 40) {
             continue;
         }
-        fetch (&q, i);
-        if (!(p = at (sn, q.x, q.y)) || !(*p & T_VIS)) {
+        qx = r->x;
+        qy = r->y;
+        if (!(p = at (sn, qx, qy)) || !(*p & T_VIS)) {
             continue;
         }
+        fetch (&q, i);
         se.rel = q.x == x && q.y == y ? 0xFF : REL8 (bearing ((int) (q.x - x), (int) (q.y - y)), face);
         se.x = q.x;
         se.y = q.y;
