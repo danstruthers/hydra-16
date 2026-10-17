@@ -22,10 +22,36 @@ static const char* const relname[8] = {
 
 static struct sight* S;
 
+/* words.c's: the words so far said (a look's, streamed), and out */
+static void lb_out (void)
+{
+    if (lbn) {
+        say (lb);
+    } else {
+        msg (lb);
+    }
+    lbn += lbe - lb;
+    *(lbe = lb) = 0;
+    t_flush ();
+}
+
+#pragma register-vars (push, on)
 static void __fastcall__ add (const char* s)
 {
-    strcat (lb, s);
+    register const char* q = s;
+    register char* e = lbe;
+
+    if (*q == ' ' && lb_stream && e != lb && e[-1] == '.') {
+        lb_out ();
+        e = lb;
+    }
+    while ((*e = *q) != 0) {
+        ++e;
+        ++q;
+    }
+    lbe = e;
 }
+#pragma register-vars (pop)
 
 static void __fastcall__ addn (int v)
 {
@@ -129,7 +155,8 @@ static void denizens (void)
     unsigned char i, r, d, ally, heard = 0;
     char* n;
 
-    for (i = 0; i < S->ndens && strlen (lb) < sizeof lb - 80; ++i) {
+    for (i = 0; i < S->ndens && lbn + (lbe - lb) < sizeof lb - 80; ++i) {     /* (lb's room: a look's said so far
+                                                **   counted) */
         n = S->den[i].name;
         r = REL8 (bearing (S->den[i].x - S->x, S->den[i].y - S->y), pc_face);
         d = apart (S->den[i].x, S->den[i].y);
@@ -183,7 +210,8 @@ void __fastcall__ o_heard_words (unsigned char what, unsigned char rel)
 ** lb): "Something stirs. A giant rat is ..." */
 void o_stir_words (void)
 {
-    lb[0] = 0;
+    *(lbe = lb) = 0;
+    lbn = 0;
     S = &sight_copy;
     add (S->ndens ? "Something stirs." : "Nothing stirs in sight now.");
     denizens ();

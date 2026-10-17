@@ -4,9 +4,10 @@
 ** wrapped to the screen's width, and the line being typed on the bottom row, outside the region, so whatever the
 ** dungeon does while the player types scrolls past above it and the line stays whole.
 **
-** Everything goes out through a buffer of this file's, written to fd 1 at t_done (and when it's full): no stdio, no
-** printf (sayf is this file's own, with %s %d %u %c).  The keys are this file's too (conio's kbhit and cgetc, and
-** its screensize, without the stdio they take in): read raw from the window's console.
+** Everything goes out through a buffer of this file's, written to fd 1 at t_done (and when it's full, as a line's
+** entered, as a look's sentences are made, and an answer's first words: t_flush, so they're out while the rest is
+** worked out): no stdio, no printf (sayf is this file's own, with %s %d %u %c).  The keys are this file's too
+** (conio's kbhit and cgetc, and its screensize, without the stdio they take in): read raw from the window's console.
 */
 
 #include <fcntl.h>
@@ -29,6 +30,8 @@ static unsigned char gap;                       /* A space is owed before the ne
 static unsigned char blanked;                   /* The story's last line is empty */
 static unsigned char away;                      /* The cursor isn't at the end of the line typed */
 static unsigned char shown;                     /* How much of the line typed is shown */
+static unsigned char soon;                      /* The next words said the first since t_done: their first few out
+                                                **   at once, if more follow (the console's a letter at a time) */
 #define QMAX        256                         /* Lines entered and not yet taken (typed ahead): */
 static char queue[QMAX];                        /*   each ends with a 0, */
 static unsigned qlen;                           /*   so many bytes of them */
@@ -37,7 +40,7 @@ static char sl[128], sn[128];                   /* The status line as it's shown
 
 /* ---- Output */
 
-static void flush (void)
+void t_flush (void)
 {
     if (on) {
         write (1, ob, on);
@@ -48,7 +51,7 @@ static void flush (void)
 static void __fastcall__ out (char c)
 {
     if (on == sizeof ob) {
-        flush ();
+        t_flush ();
     }
     ob[on++] = c;
 }
@@ -263,7 +266,7 @@ void t_away (void)
     csi ();
     out ('K');
     unhide ();
-    flush ();
+    t_flush ();
 }
 
 void t_end (void)
@@ -309,28 +312,31 @@ void __fastcall__ t_status (const char* left, const char* right)
 
 /* ---- The story */
 
+#pragma register-vars (push, on)                /* (Its pointers in the zero page: a look's hundreds of letters) */
 void __fastcall__ say (const char* s)
 {
-    const char* w;
-    unsigned char n;
+    register const char* p;
+    register const char* w;
+    static unsigned char n, c, lim;
 
     if (names_n && (w = strchr (s, '#')) != 0 && w[1] >= '0' && w[1] <= '9') {
         s = names_say (s);                      /* (A thing the character's named, the things' mark of it: its name,
                                                 **   names.c's) */
     }
     to_story ();
-    while (*s) {
-        if (*s == '\n') {
+    lim = tw - 1;
+    for (p = s; *p; ) {
+        if (*p == '\n') {
             newline ();
-            ++s;
+            ++p;
             continue;
         }
-        if (*s == ' ') {
-            ++s;
+        if (*p == ' ') {
+            ++p;
             gap = col != 0;
             continue;
         }
-        for (w = s, n = 0; *s && *s != ' ' && *s != '\n'; ++s) {
+        for (w = p, n = 0; *p && *p != ' ' && *p != '\n'; ++p) {
             ++n;
         }
         if (col && col + gap + n >= tw) {       /* (The word doesn't fit: the next line) */
@@ -341,16 +347,28 @@ void __fastcall__ say (const char* s)
             ++col;
             gap = 0;
         }
-        while (w < s) {
-            if (col >= tw - 1) {                /* (A word longer than the line) */
+        while (w < p) {
+            if (col >= lim) {                   /* (A word longer than the line) */
                 newline ();
             }
-            out (*w++);
+            if (on == sizeof ob) {              /* (out's, in line) */
+                t_flush ();
+            }
+            c = *w;
+            ob[on] = c;
+            ++on;
+            ++w;
             ++col;
         }
         blanked = 0;
+        if (soon && on >= 24 && strlen (p) > 24) {  /* (The first words of more, out now: the console takes some
+                                                **   900 cycles a letter, the line 311) */
+            soon = 0;
+            t_flush ();
+        }
     }
 }
+#pragma register-vars (pop)
 
 /* A line of the story as it is (the map's): not wrapped, cut at the screen's width */
 void __fastcall__ say_raw (const char* s)
@@ -470,7 +488,8 @@ void t_done (void)
         }
         away = 0;
     }
-    flush ();
+    t_flush ();
+    soon = 1;
 }
 
 /* A line entered: into the story as the player typed it, then queued for t_line (no room: the line stays on the
@@ -493,6 +512,7 @@ static void enter (void)
     shown = 0;                                  /* (The line typed drawn again by t_done, once the command's done:
                                                 **   its "> " a prompt only when the game's ready) */
     away = 1;
+    t_flush ();                                 /* (Out at once: the answer's words, when they come, the first out) */
 }
 
 void __fastcall__ t_key (unsigned char k)

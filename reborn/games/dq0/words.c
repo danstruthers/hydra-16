@@ -13,6 +13,9 @@
 ** SIGHT_HURRY), briefly: the place and its ways out, not its ceiling, its zones or its things.
 **
 ** The words for a room and its light are the theme's (theme.h; theme.c's theme_named, added to lb).
+**
+** A look's words (lb_stream) are said as they're made: each sentence as the next begins (lb_out), so its first is out
+** while the rest is worked out; and added at lb's end as it's kept (lbe), not looked for each time.
 */
 
 #pragma code-name ("OV2CODE")
@@ -34,10 +37,37 @@ static const char* const count[5] = { "", "one", "two", "three", "four" };
 
 static struct sight* S;
 
+/* The words so far said (the first on a line of its own, as msg says a look), and out: lb begun again */
+static void lb_out (void)
+{
+    if (lbn) {
+        say (lb);
+    } else {
+        msg (lb);
+    }
+    lbn += lbe - lb;
+    *(lbe = lb) = 0;
+    t_flush ();
+}
+
+/* Words added to lb: a sentence begun (a look's, streamed), those before it said first */
+#pragma register-vars (push, on)
 static void __fastcall__ add (const char* s)
 {
-    strcat (lb, s);
+    register const char* q = s;
+    register char* e = lbe;
+
+    if (*q == ' ' && lb_stream && e != lb && e[-1] == '.') {
+        lb_out ();
+        e = lb;
+    }
+    while ((*e = *q) != 0) {
+        ++e;
+        ++q;
+    }
+    lbe = e;
 }
+#pragma register-vars (pop)
 
 static void __fastcall__ addn (int v)
 {
@@ -172,6 +202,7 @@ static void traps (void)
         }
         add (" There is ");
         o_trap_name (S->trap[i].kind, S->trap[i].trigger, S->trap[i].state);   /* (Here: its stub's overlay 2) */
+        lbe += strlen (lbe);
         add (S->trap[i].kind <= TK_SPIKED ? " " : ", ");
         add (S->trap[i].rel == 0xFF ? "at your feet" : relname[S->trap[i].rel & 7]);
         add (S->trap[i].state & TS_DISARMED ? " (disarmed)." : S->trap[i].kind > TK_SPIKED &&
@@ -196,7 +227,8 @@ static void glows (void)
 
 static void zones (void)
 {
-    unsigned char i, at;
+    unsigned char i;
+    unsigned at;
     signed char dz;
 
     for (i = 0; i < S->nzones; ++i) {
@@ -205,7 +237,7 @@ static void zones (void)
         }
         dz = S->zone[i].dz;
         add (" ");
-        at = strlen (lb);
+        at = lbe - lb;
         add (relname[S->zone[i].rel & 7]);
         lb[at] &= ~0x20;                        /* (Its first letter a capital) */
         if (dz >= 3 || dz <= -3) {
@@ -295,10 +327,12 @@ static void room (void)
     add (S->size != S_PART ? "You are in a" : "You can see part of a");
     add (S->size == S_SMALL ? " small " : S->size == S_LARGE ? " large " : S->size == S_LONG ? " long " : " ");
     theme_named (TN_ROOM, S->kind);
+    lbe += strlen (lbe);                        /* (The theme's, put at lb's end) */
     if (S->lit || !sight_light) {
         if (S->lit) {
             add (", ");
             theme_named (TN_LIGHT, 0);
+            lbe += strlen (lbe);
         }
         add (".");
     } else {
@@ -369,7 +403,8 @@ static void passage (void)
 /* What the character perceives, in words, into lb (from look.c's copy of the hub's record) */
 void o_words (void)
 {
-    lb[0] = 0;
+    *(lbe = lb) = 0;
+    lbn = 0;
     S = &sight_copy;
     if (S->where == W_ROOM) {
         room ();
@@ -379,4 +414,7 @@ void o_words (void)
     traps ();
     glows ();
     seen_words ();                              /* (The things and the denizens it sees: overlay 7's) */
+    if (lb_stream) {
+        lb_out ();                              /* (The last of it said) */
+    }
 }

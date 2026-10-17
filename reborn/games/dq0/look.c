@@ -22,7 +22,11 @@
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 
-char lb[400];                                   /* The words, as they're made (words.c's) */
+char lb[400];                                   /* The words, as they're made (words.c's), */
+char* lbe;                                      /*   their end, */
+unsigned lbn;                                   /*   and how many a look's said already (streamed: lb_stream) */
+unsigned char lb_stream;                        /* A look's words said a sentence at a time as they're made (words.c's
+                                                **   add): its first out while the rest is worked out */
 struct sight sight_copy;                        /* The hub's record, copied for the overlay */
 unsigned char sight_light;                      /*   and the character's light, */
 char sight_lamp[14];                            /*   what gives it, named */
@@ -55,11 +59,14 @@ void __fastcall__ look (unsigned char first)
     if (names_n) {
         names_look (0);                         /* (Its things named marked; then the room's name: names.c's) */
     }
+    lb_stream = !names_n;                       /* (Said as it's made, but with names: made whole, the room's name
+                                                **   put in it after) */
     words ();
-    if (names_n) {
+    if (!lb_stream) {
         names_look (1);
+        msg (lb);
     }
-    msg (lb);
+    lb_stream = 0;
 }
 
 /* A denizen the character sees has moved (the world's E_VIEW, V_STIR): the senses' record copied, worded (overlay

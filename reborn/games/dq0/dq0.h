@@ -50,6 +50,7 @@ void __fastcall__ msg (const char* s);          /* A new line of the story, then
 void __fastcall__ say_raw (const char* s);      /* A line of the story as it is (not wrapped) */
 void blank (void);                              /* An empty line in the story (only one in a row) */
 void t_done (void);                             /* The cursor back to the line typed, and everything out */
+void t_flush (void);                            /* What's said so far out now (the cursor left where it is) */
 void __fastcall__ t_status (const char* left, const char* right);  /* The status line drawn */
 void status (void);                             /* (main.c) The status line, as the game is now */
 void inl_show (void);                           /* The line typed drawn again */
@@ -242,6 +243,9 @@ void seen_words (void);                         /* Overlay 7: the things and the
 void stir_words (void);                         /* Overlay 7: the denizens it sees, moving, into lb (or "": as
                                                 **   they were told last) */
 extern char lb[400];
+extern char* lbe;                               /* (lb's end: words.c's and seen.c's add) */
+extern unsigned lbn;                            /* (What a look's said of its words already: lb's before) */
+extern unsigned char lb_stream;                 /* (A look's words said a sentence at a time, as they're made) */
 extern struct sight sight_copy;
 struct sight* sight_get (void);                 /* The senses' record copied into sight_copy (look.c's): it */
 const char* tt (void);                          /* The things' words (the UI bank's) copied into lb (look.c's): it */
