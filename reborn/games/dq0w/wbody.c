@@ -1,0 +1,269 @@
+/*
+** wbody.c - (dq0w) the denizens' bodies (DENIZENS.md: in the tasks), the world's as the character's is.  The
+** denizens' task (games/dq0d) is their minds: it decides what each actor means to do and says so (the hub's di, a
+** ring: hub.h's the denizens' intents), and the world carries it out by the character's rules: a square at a time
+** (one it can walk, step_ok: no wall, no shut door; no one on it, nor the character, nor where the character's move
+** ends), its time its step's, more uphill, steeply down, on steps (as the world's cost () has the character's); a
+** dash past the character; a wait; come along with the character up or down; a blow (wfight.c's); a body come into
+** its keeping, gone from it.  What the bodies do is told in the denizens' events (E_DEN: a step, a noise, the
+** character noticed or lost), the world's to write; and those on squares the character sees are added to what it
+** perceives (dens_seen: the senses' record's).
+**
+** All of it swapped part 14's (../dq0/swap.inc: dq0w.cfg's SW14), called through its stubs (bank.s's).
+*/
+
+#include <stddef.h>
+#include <string.h>
+#include <hydra.h>
+#include "../dq0/hub.h"
+#include "world.h"
+#include "wbody.h"
+
+#pragma local-strings (on)
+
+#define CATCHUP         30                      /* Tenths an actor makes up, at most, that it's fallen behind the clock
+                                                **   (the real paces': the denizens' task late) */
+
+struct actor bd;                                /* (wbody.h's: the main RAM's) */
+unsigned char bk;
+unsigned bpx, bpy;
+unsigned char bps;
+struct msg bev;
+unsigned char bleeds;
+unsigned bled_at;
+static unsigned sig[NACTORS];                   /* (Each body as it was seen: its record, what it's doing) */
+
+#pragma code-name ("SW14CODE")
+#pragma rodata-name ("SW14RODATA")
+
+static unsigned __fastcall__ apart (int dx, int dy)
+{
+    dx = dx < 0 ? -dx : dx;
+    dy = dy < 0 ? -dy : dy;
+    return dx > dy ? dx : dy;
+}
+
+/* Anyone but body bk on square x, y: the character, where its move ends, another body (the hub's header in the
+** window after) */
+static unsigned char __fastcall__ taken (unsigned x, unsigned y)
+{
+    struct actor* q = HUB->actor;
+    unsigned char k;
+
+    hub_map (0);
+    if ((x == bpx && y == bpy) || (x == HUB->pc_tx && y == HUB->pc_ty)) {
+        return 1;
+    }
+    for (k = 0; k < NACTORS; ++k, ++q) {
+        if (k != bk && q->state && q->x == x && q->y == y) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static unsigned char __fastcall__ open_sq (unsigned char* p)
+{
+    return p && (TILE (*p) == T_FLOOR || TILE (*p) == T_CORR || TILE (*p) == T_STEPS);
+}
+
+/* What lies between body bd and the character, for those who hear it (SOUND.md: E_DEN's x[3]): the squares of wall
+** and rock on the line (15 at most), and the shut doors times 16; 0 off its stratum, or more than 24 squares off
+** (beyond anyone's hearing of a step) */
+static unsigned char between (void)
+{
+    unsigned char* p;
+    struct portal* q;
+    unsigned char solid = 0, doors = 0;
+    unsigned i, dist;
+    int dx = bpx - bd.x, dy = bpy - bd.y;
+
+    if (bd.sn != bps || (dist = apart (dx, dy)) > 24) {
+        return 0;
+    }
+    for (i = 1; i < dist; ++i) {
+        p = at (bd.sn, bd.x + dx * (int) i / (int) dist, bd.y + dy * (int) i / (int) dist);
+        if (!p || !T_CLEAR (*p)) {
+            if (solid < 15) {
+                ++solid;
+            }
+        } else if (TILE (*p) == T_DOOR && (q = portal_at (cx_, cy_)) != 0 && !(q->state & PS_OPEN) && doors < 15) {
+            ++doors;
+        }
+    }
+    return solid | doors << 4;
+}
+
+/* Body bd did what (DE_*), how loud (0-9): told (E_DEN), where it is, whether the character sees its square now (the
+** senses' marks), what lies between, if it's heard; the hub's header in the window after */
+static void __fastcall__ told_den (unsigned char what, unsigned char loud)
+{
+    unsigned char* p;
+
+    bev.x[3] = loud ? between () : 0;
+    p = at (bd.sn, bd.x, bd.y);
+    bev.x[2] = p && (*p & T_VIS);
+    bev.kind = E_DEN;
+    bev.who = bk + 1;
+    bev.a = what;
+    bev.b = loud;
+    bev.w1 = bd.x;
+    bev.w2 = bd.y;
+    bev.x[0] = bd.sn;
+    bev.x[1] = bd.kind;
+    hub_map (0);
+    bev.t = HUB->now;
+    hub_devent (&bev);
+}
+
+/* The denizens' intents carried out, in turn, each taken from the ring once it's done (the bleeding seen to first:
+** wfight.c's); the denizens rung after (they wait for them), unless all there was was their turn's end */
+void s_den_intents (void)
+{
+    static struct msg m;
+    static unsigned char t, was, d, any;
+    static unsigned x, y, c;
+    static unsigned char* p;
+    static int z;
+
+    for (any = 0, hub_map (0); (t = HUB->di_tail) != HUB->di_head; hub_map (0), HUB->di_tail = (t + 1) % DI_SIZE) {
+        memcpy (&m, &HUB->di[t], sizeof m);
+        if (bleeds && (unsigned) HUB->now - bled_at >= 600) {
+            bled ();
+        }
+        if (m.kind == I_DONE) {
+            den_done = m.w1;                    /* (Their turn done: the turns pace goes on) */
+            continue;
+        }
+        any = 1;
+        BD_GET ((m.who - 1) & 7);
+        was = bd.doing;
+        if (m.x[0] != 0xFF) {
+            bd.doing = m.x[0];
+        }
+        if (m.x[1] != 0xFF) {
+            bd.face = m.x[1];
+        }
+        if (HUB->tpr && (m.kind == I_STEP || m.kind == I_GOTO || m.kind == I_WAIT || m.kind == I_ATTACK) &&
+            bd.ready + CATCHUP < HUB->now) {
+            bd.ready = HUB->now - CATCHUP;      /* (Fallen behind the clock: a few seconds made up at most) */
+        }
+        switch (m.kind) {
+        case I_ENTER:                           /* (A denizen come near the character: its body's from its record) */
+            bd.state = 1;
+            bd.sn = m.x[2];
+            bd.x = m.w1;
+            bd.y = m.w2;
+            bd.ready = m.t;
+            bd.step = m.a;
+            bleeds = m.b ? bleeds | 1 << bk : bleeds & ~(1 << bk);
+            was = bd.doing;
+            break;
+        case I_LEAVE:
+            bd.state = 0;
+            bleeds &= ~(1 << bk);
+            was = bd.doing;
+            break;
+        case I_STEP:                            /* (A square, by the character's rules: refused, it waits a moment) */
+            d = (m.w1 & 7) >> 1;
+            x = bd.x + dir_x[d];
+            y = bd.y + dir_y[d];
+            if (taken (x, y) || !step_ok (bd.sn, bd.x, bd.y, d)) {
+                bd.ready += 10;
+                break;
+            }
+            if (!(m.w1 & STEP_COARSE)) {        /* (Its time: its step, uphill and steeply down more, on steps more) */
+                z = elev_at (bd.sn, bd.x, bd.y);
+                p = at (bd.sn, x, y);
+                z = C->elev[cy_][cx_] - z;
+                c = bd.step;
+                if (z > 0) {
+                    c += bd.step * z / 2;
+                } else if (z < -1) {
+                    c += bd.step * (-z - 1) / 4;
+                }
+                if (TILE (*p) == T_STEPS) {
+                    c += bd.step / 2;
+                }
+                bd.ready += c;
+            }
+            bd.x = x;
+            bd.y = y;
+            bd.face = m.w1 & 7;
+            if (!(m.w1 & STEP_COARSE)) {
+                told_den (m.a, m.b);
+            }
+            break;
+        case I_GOTO:                            /* (A dash past the character: a moment's) */
+            if (!open_sq (at (bd.sn, m.w1, m.w2)) || apart (m.w1 - bd.x, m.w2 - bd.y) > 2 || taken (m.w1, m.w2)) {
+                bd.ready += 10;
+                break;
+            }
+            bd.x = m.w1;
+            bd.y = m.w2;
+            bd.ready += 2 * bd.step;
+            told_den (m.a, m.b);
+            break;
+        case I_CLIMB:                           /* (An ally come along with the character: beside it) */
+            if (open_sq (at (m.x[2], m.w1, m.w2)) && !taken (m.w1, m.w2)) {
+                bd.sn = m.x[2];
+                bd.x = m.w1;
+                bd.y = m.w2;
+                bd.ready = HUB->now + 10;
+            }
+            break;
+        case I_WAIT:
+            bd.ready += m.w1;
+            break;
+        case I_ROUSE:
+            if (m.w2 || bd.ready > HUB->now + m.w1) {
+                bd.ready = HUB->now + m.w1;
+            }
+            break;
+        case I_ATTACK:                          /* (A round's blow) */
+            bd.ready += HUB->round;
+            den_blow (m.a, m.b);
+            break;
+        }
+        if (bd.doing != was && (!was || !bd.doing)) {
+            told_den (bd.doing ? DE_NOTICED : DE_LOST, 0);
+        }
+        BD_PUT ();
+        if (m.kind != I_WAIT || bd.doing != was) {
+            ++HUB->den_seq;                     /* (Changed: the world looks again at what the character sees) */
+        }
+    }
+    if (any) {
+        hub_ring (T_DENIZENS);
+    }
+}
+
+/* The bodies the character sees (on squares it sees now), added to what it perceives (the senses' record's, in their
+** bank: SEE_DENS at most): 1 if one's come into sight since it was last looked at, gone from it, or is doing
+** something else.  (Body bd's room: none's at hand meanwhile) */
+unsigned char s_dens_seen (void)
+{
+    static unsigned char k, n, ch;
+    static unsigned char* p;
+    static unsigned s;
+
+    for (k = n = ch = 0; k < NACTORS; ++k) {
+        hub_map (0);
+        memcpy (&bd, &HUB->actor[k], sizeof bd);
+        s = 0;
+        if (bd.state && bd.sn == HUB->pc_stratum && n < SEE_DENS && (p = at (bd.sn, bd.x, bd.y)) != 0 &&
+            (*p & T_VIS)) {
+            hub_map (SIGHT_BANK);
+            memcpy (&SIGHT->den[n++], &bd.x, sizeof SIGHT->den[0]);
+            s = 0x8000U | bd.doing << 8 | bd.den;
+        }
+        if (s != sig[k]) {
+            sig[k] = s;
+            ch = 1;
+        }
+    }
+    hub_map (SIGHT_BANK);
+    SIGHT->ndens = n;
+    hub_map (0);
+    return ch;
+}

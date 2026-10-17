@@ -12,10 +12,12 @@
 ** requests of it (the hub's wreq: the save, a close look at a portal).  It keeps the item store (things.c: the
 ** things, their places and states, its alone to write), answering the UI's requests of the things (the hub's ireq:
 ** what's carried, a thing taken up, put down, handled), putting down a chunk's things as the maker listed them
-** stocking it, and a denizen's body as its task intends it (the hub's di).  The denizens near the
-** character move themselves (their task, games/dq0d, by the character's rules: the hub's actors); the world keeps the
-** character out of their squares, and looks again at those it sees as they change (den_seq).  A blow of the character's
-** at one (I_ATTACK) takes it a round, and is the denizens' task's to strike (the hub's pc_foe), as theirs at it are.
+** stocking it.  The denizens near the character are minds (their task, games/dq0d) and bodies, the bodies the world's
+** (the hub's actors, wbody.c, wfight.c): the denizens say what each means to do (their intents, the hub's di) and
+** the world does it by the character's rules, as it does the character's, and tells what they do (the denizens'
+** events); it keeps the character out of their squares, and looks again at those it sees as they change (den_seq).
+** Every blow is the world's to strike, the character's at one (I_ATTACK: a round of its time, the hub's pc_foe) and
+** theirs at it (the referee asked, in the world's slot).
 **
 ** The pace (DUNGEON.md: moving): the player's (the hub's gait), held to a slow walk while it searches as it goes or
 ** in the dark, a walk while it listens; a square's time that pace's step (the referee's), the time moved at it and
@@ -35,7 +37,8 @@
 ** (store.c); the work: part 5 doors (wdoor.c), 6 blows (wblow.c), 7 portcullises and windows (wwin.c), 8 traps and
 ** searches (wtrap.c), a command's work all in one of them; part 9, the walks (go, go_to, step_to: I_GO, I_GOTO,
 ** I_STEP, each a command's one part); the item store's, parts 10, 11 and 13 (things.c); part 12, a door's work begun
-** (door_work: the door walked up to, its part's work asked).
+** (door_work: the door walked up to, its part's work asked); part 14, the denizens' bodies (wbody.c), part 15 the
+** blows (wfight.c).
 */
 
 #include <fcntl.h>
@@ -48,6 +51,7 @@
 #include "world.h"
 #include "work.h"
 #include "things.h"
+#include "wbody.h"
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 
@@ -63,10 +67,12 @@ void __fastcall__ go (unsigned char h);         /* Part 9 */
 void __fastcall__ go_to (unsigned x, unsigned y);
 void __fastcall__ step_to (unsigned char h, unsigned char n, unsigned char keep);
 void __fastcall__ door_work (unsigned char what);   /* Part 12 */
-#define OVBANKS         5                       /* (dq0w.cfg's OV1 ...: the parts' images) */
+#define OVBANKS         6                       /* (dq0w.cfg's OV1 ...: the parts' images) */
 extern unsigned char ovbank[OVBANKS];
 struct work wk;
 extern char _SWAP_START__[];
+unsigned char den_done;                         /* (wbody.h's) */
+unsigned char den_saw;
 
 static unsigned last;                           /* The tick count at the last look */
 static unsigned acc;                            /* Real ticks times round, not yet game time */
@@ -129,7 +135,7 @@ static void dens_where (void)
 
     hub_map (0);
     for (k = nden = 0, q = HUB->actor; k < NACTORS; ++k, ++q) {
-        if (q->name[0] && q->sn == HUB->pc_stratum) {
+        if (q->state && q->sn == HUB->pc_stratum) {
             dk[nden] = k;
             dsx[nden] = q->x;
             dsy[nden++] = q->y;
@@ -397,37 +403,6 @@ static unsigned char dark (void)
     return !(*at (sn_, mx, my) & T_VIS);
 }
 
-/* The denizens the character sees (the hub's actors, on squares it sees now), added to what it perceives: 1 if
-** one's come into sight since it was last looked at, gone from it, or is doing something else */
-static unsigned sig[NACTORS];                   /* (Each actor as it was seen: its record, what it's doing) */
-
-static unsigned char dens_seen (void)
-{
-    static struct actor a;
-    static unsigned char k, n, ch;
-    static unsigned char* p;
-    static unsigned s;
-
-    for (k = n = ch = 0; k < NACTORS; ++k) {
-        hub_map (0);
-        memcpy (&a, &HUB->actor[k], sizeof a);
-        s = 0;
-        if (a.name[0] && a.sn == HUB->pc_stratum && n < SEE_DENS && (p = at (a.sn, a.x, a.y)) != 0 && (*p & T_VIS)) {
-            hub_map (SIGHT_BANK);               /* (The senses' record's, in their bank) */
-            memcpy (&SIGHT->den[n++], &a.x, sizeof SIGHT->den[0]);
-            s = 0x8000U | a.doing << 8 | a.den;
-        }
-        if (s != sig[k]) {
-            sig[k] = s;
-            ch = 1;
-        }
-    }
-    hub_map (SIGHT_BANK);
-    SIGHT->ndens = n;
-    hub_map (0);
-    return ch;
-}
-
 /* The denizens the character sees looked at again, as they've changed (their task's den_seq, or a step of one's the
 ** world made), the UI told if it sees them otherwise (not on its way somewhere: it looks about as it gets there) */
 static void stirred (void)
@@ -437,19 +412,16 @@ static void stirred (void)
     }
 }
 
-/* ---- The things (the item store: things.c): the UI's request of them answered (the chunks stocked and the bodies
-** put down first: what it asks about there), looked about again if what lies about has changed (as the senses did,
-** a look's alone: no denizen seen again); while a look's waited for, the senses' request (a chunk's things put down,
-** before they see them) and what the UI asks that wants no look (what's carried, the tools, a tool's wear: the hub's
-** header in the window after each) */
+/* ---- The things (the item store: things.c): the UI's request of them answered (the chunks stocked first: what it
+** asks about there), looked about again if what lies about has changed (as the senses did, a look's alone: no
+** denizen seen again); while a look's waited for, the senses' request (a chunk's things put down, before they see
+** them) and what the UI asks that wants no look (what's carried, the tools, a tool's wear: the hub's header in the
+** window after each) */
 static void clock_run (void);
 static void __fastcall__ looked (unsigned char first);
 static void things (void)
 {
     stocks ();
-    if (BODIES ()) {
-        bodies ();
-    }
     if (serve ()) {
         looked (0);
     }
@@ -472,13 +444,10 @@ static void waiting (void)
     }
 }
 
-/* The senses asked to look about, and waited for, the things it saw made their own (the bodies put down first) */
+/* The senses asked to look about, and waited for, the things it saw made their own */
 static void __fastcall__ looked (unsigned char first)
 {
     hub_map (0);
-    if (BODIES ()) {
-        bodies ();
-    }
     HUB->look.first = first;
     hub_post (&HUB->look, T_SENSES);
     while (!hub_wait_t (&HUB->look, 1)) {
@@ -1838,21 +1807,48 @@ static void __fastcall__ intent (struct msg* m)
     case I_QUIT:
         HUB->quit = 1;
         break;
-    case I_ATTACK:                              /* (A round's blow: the denizens' task strikes it, and tells it) */
+    case I_ATTACK:                              /* (A round's blow, struck: at once; at the turns pace, as the clock
+                                                **   moves on, the denizens' slice's first: turns_run) */
         busy (HUB->round);
         HUB->pc_aim = m->b;
         HUB->pc_foe = m->a;
-        hub_ring (T_DENIZENS);
+        if (HUB->tpr) {
+            pc_blow ();
+        }
         break;
     }
 }
 
-/* At the turns pace, the character busy: the clock moved on to when it's free, TURN_SLICE tenths at a time, each
-** once the denizens' task has caught up with it (den_at), so they act through all the time what it does takes (a
-** task slow to, a while, is left to catch up as it can).  1 while it waits for them */
-static unsigned waited;
+/* At the turns pace, the character busy: the clock moved on to when it's free, TURN_SLICE tenths at a time, the
+** denizens given their turn at each (the hub's den_go, rung: they act, and say when they've done, I_DONE), and at the
+** same clock after work of its own (an event told since their last: the character arrived, its work done, free
+** again), so they act through all the time what it does takes, and the game's the same whatever the tasks' timing;
+** waited for each time (their intents carried out as they come, the world asleep on its doorbell between; one slow to
+** is left to catch up as it can, late, till the character's next command).  The character's blow struck as the clock
+** moves on, before it (its round's: the slice's first, seen by the denizens as they see the slice).  1 if it moved it
+** on or gave them a turn */
+static unsigned waited, go_eq;
 
-#define BEHIND          ((unsigned) HUB->den_at != (unsigned) HUB->now)    /* (The low words enough: a slice apart) */
+#define BEHIND          (den_done != HUB->den_go)
+
+static void turn (void)
+{
+    go_eq = HUB->eq_head;
+    ++HUB->den_go;
+    hub_ring (T_DENIZENS);
+    for (waited = 0; !late && BEHIND && waited < 1000; ++waited) {
+        hub_sleep (1);                          /* (Waited for here, a thousand wakes at most, a tick each at most:
+                                                **   five seconds; the rest of the round's no use, and a fight's blows
+                                                **   ask the referee a few times over) */
+        if (DEN_INTENTS ()) {
+            den_intents ();                     /* (Their intents carried out as they come) */
+        }
+        if (hub_posted (&HUB->ireq)) {
+            things ();                          /* (The UI's things meanwhile: what's carried ...) */
+        }
+    }
+    late = BEHIND;
+}
 
 static unsigned char turns_run (void)
 {
@@ -1861,25 +1857,19 @@ static unsigned char turns_run (void)
     if (HUB->tpr || HUB->paused || HUB->hold) {
         return 0;
     }
-    if (BEHIND && !late) {
-        while (BEHIND && hy_ticks () - waited < 1000) {
-            hy_sleep_ticks (1);                 /* (Waited for here, five seconds at most: the rest of the round's no
-                                                **   use; a fight's blows ask the referee a few times over) */
-            if (BODIES ()) {
-                bodies ();                      /* (Their bodies put down meanwhile: their ring's room) */
-            }
-            if (hub_posted (&HUB->ireq)) {
-                things ();                      /* (The UI's things meanwhile: what's carried ...) */
-            }
-        }
-        late = BEHIND;
+    if (HUB->eq_head != go_eq) {
+        turn ();                                /* (Its own work told: the denizens' turn at it, at this clock) */
         return 1;
     }
     if ((d = (unsigned) HUB->pc_ready - (unsigned) HUB->now) == 0 || d > 60000U) {
         return 0;                               /* (Free: busy () takes 60,000 tenths at most) */
     }
+    if (HUB->pc_foe) {
+        pc_blow ();
+    }
+    hub_map (0);
     advance (d < TURN_SLICE ? d : TURN_SLICE);
-    waited = hy_ticks ();
+    turn ();
     return 1;
 }
 
@@ -1961,8 +1951,8 @@ int main (int argc, char* argv[])
         while (hy_sem_try (HUB->sem[T_WORLD]) == 0) {
         }
         stocks ();                              /* (The chunks the maker stocked: their things put down, marked so) */
-        if (BODIES ()) {
-            bodies ();                          /* (The denizens' bodies put down) */
+        if (DEN_INTENTS ()) {
+            den_intents ();                     /* (The denizens' intents carried out) */
         }
         while (hub_take (&m)) {
             intent (&m);
@@ -1972,13 +1962,13 @@ int main (int argc, char* argv[])
             answer ();                          /* (The UI's: the save, a close look) */
         }
         clock_run ();
-        if (HUB->den_look && !move.on) {
-            HUB->den_look = 0;                  /* (A body fallen: looked at again, the things too) */
+        if (den_saw && !move.on) {
+            den_saw = 0;                        /* (A body fallen: looked at again, the things too) */
             see (0);
         }
         if (HUB->den_seq != dseq) {
             dseq = HUB->den_seq;
-            stirred ();                         /* (The denizens' task's changes: what it sees of them) */
+            stirred ();                         /* (The denizens' bodies' changes: what it sees of them) */
             hub_map (0);
         }
         ++HUB->beat[T_WORLD];

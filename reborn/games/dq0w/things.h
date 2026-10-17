@@ -25,9 +25,8 @@ void __fastcall__ items_begin (const char* dir);    /* (Part 13) The catalogue i
                                                 **   emptied, a game carried on its read, its light */
 void __fastcall__ stock_down (unsigned char k); /* (Part 13) Cache slot k's chunk's things put down (the maker's
                                                 **   list, the world bank's stock) */
-void bodies (void);                             /* (Part 13) The denizens' bodies put down (their intents, the hub's
-                                                **   di) */
-#define BODIES()        (HUB->di_tail != HUB->di_head)  /* (Some to put down: the hub's header in the window) */
+void __fastcall__ lay_body (unsigned char kind, unsigned char sn, unsigned x, unsigned y);   /* (Part 13) A denizen's
+                                                **   remains put down where it fell (KI_BODY, KI_BONES) */
 
 /* The things' words (kinds.c's said, in the catalogue's bank: % the thing's name, # the other's) */
 enum {

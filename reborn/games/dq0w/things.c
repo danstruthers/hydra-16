@@ -6,7 +6,7 @@
 ** surface, hung from the belt, taken out again, worn, taken off; lit, put out), listed (what the character carries,
 ** worded into the hub's text for the UI to say); the character's light, from the lit things it carries (the hub's
 ** pc_light and pc_lamp); a chunk's things put down as the maker listed them stocking it (the world bank's stock, its
-** slot CS_FRESH), a denizen's body as its task intends it (the hub's di); the things a look saw made their own.  The
+** slot CS_FRESH), a denizen's remains as it dies (the world's: wbody.c); the things a look saw made their own.  The
 ** senses read the records (what the character perceives: dq0p/things.c), the UI a thing's it sees; only the world
 ** writes them, so there's no lock.  Kept with the game (dq0 -d): the store's banks as they are, the save folder's
 ** items.dat.  A kind's record copied out of the catalogue's bank as it's wanted; the code that handles things is
@@ -16,7 +16,7 @@
 ** hub's text); the rest is swapped parts' (../dq0/swap.inc, bank.s's stubs): part 10, the requests answered and a
 ** thing handled (a thing's name matched, where it lies, whose it is: what the catalogue's bank's code calls on there,
 ** through its stubs); part 11, what's carried listed, a tool's wear, a search, a thing described, hidden, made its
-** own; part 13 the rarer work (the store begun, kept, the kit, the theme's kinds, a chunk's things and the bodies
+** own; part 13 the rarer work (the store begun, kept, the kit, the theme's kinds, a chunk's things and the remains
 ** put down).
 **
 ** The store's records are a fixed number (NITEMS) in the hub's item banks, found by their place: the room for move
@@ -877,8 +877,8 @@ unsigned char __fastcall__ s_hide (const char* name)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 13: the store's rarer work: begun, kept, the kit, the theme's kinds, a chunk's things and the bodies put
-** down */
+/* ==== Part 13: the store's rarer work: begun, kept, the kit, the theme's kinds, a chunk's things and the remains
+** put down */
 #pragma code-name (push, "SW13CODE")
 #pragma rodata-name (push, "SW13RODATA")
 
@@ -1119,20 +1119,11 @@ void __fastcall__ s_stock_down (unsigned char k)
     hub_map (0);
 }
 
-/* The denizens' bodies put down where they fell (their intents, the hub's di: I_BODY), in turn */
-void s_bodies (void)
+/* A denizen's remains put down where it fell (kind: KI_BODY, KI_BONES; the world's, wbody.c's: it died) */
+void __fastcall__ s_lay_body (unsigned char kind, unsigned char sn, unsigned x, unsigned y)
 {
-    struct msg m;
-    unsigned char t;
-
-    for (hub_map (0); (t = HUB->di_tail) != HUB->di_head; ) {
-        memcpy (&m, &HUB->di[t], sizeof m);
-        HUB->di_tail = (t + 1) % DI_SIZE;
-        if (m.kind == I_BODY) {
-            put_down (m.a, IW_SQUARE, m.x[0], m.w1, m.w2, 1);
-        }
-        hub_map (0);
-    }
+    put_down (kind, IW_SQUARE, sn, x, y, 1);
+    hub_map (0);
 }
 
 #pragma code-name (pop)

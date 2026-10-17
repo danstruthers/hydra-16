@@ -7,18 +7,21 @@
 ** character comes near a lair (its chunk, or one beside it), its denizens are placed in it, each on a square of its
 ** own (the chunk made, the maker's, if it isn't yet); and those near the character are actors (the hub's: the world
 ** keeps the character out of their way, the senses see them), each deciding what it means to do by its kind and what
-** it senses, and doing it by the character's rules: to wander about its lair (a few squares, or a wide range), to keep to it, to watch the character,
-** to keep its distance from it (a shy one), to come towards it (a bold one).  It senses through its own senses: it
-** sees the character as far as its sight goes by the character's light (or its darkvision, with none), along a line
-** clear of rock, walls and shut doors; it hears it moving, nearer.  At the turns pace it keeps up with the clock, as
-** the world waits for it (a slice of the clock at a time: hub.h's TURN_SLICE), so they act through all the time what
-** the character does takes: those out of its sight and not sensing it coarsely, a few squares a while.  Those out
-** but away from the character (not actors) move coarsely too, to squares about their lairs in chunks that are made
-** (roam).  No two are on a square, nor any on the character's or where it's going.  Each has an attitude to the
-** character, its faction's to begin with (factions.txt's, a stand-in theme's: a theme's will take their place),
-** moved by what happens and by the character's words (the UI's request, the hub's sway: the referee's test), and acts
-** by it: the hostile come at the character, an ally follows it and takes its requests; factions hostile to one
-** another keep off one another.  (Their own exploring comes later.)
+** it senses, saying so (its intents, the hub's di: the world moves their bodies, by the character's rules, and
+** strikes their blows): to wander about its lair (a few squares, or a wide range), to keep to it, to watch the
+** character, to keep its distance from it (a shy one), to come towards it (a bold one), to strike at it.  It senses
+** through its own senses: it sees the character as far as its sight goes by the character's light (or its
+** darkvision, with none), along a line clear of rock, walls and shut doors; it hears it moving, nearer.  At the turns
+** pace it acts only in its turn (the hub's den_go: the world's, at each slice of the clock, hub.h's TURN_SLICE, and
+** after the world's own work), and says when it's done (I_DONE), so they act through all the time what the
+** character does takes, the same whatever the tasks' timing: those out of its sight and not sensing it coarsely, a
+** few squares a while.  Those out but away from the character (not actors) move coarsely too, to squares about their
+** lairs in chunks that are made (roam): their records are its own.  No two are on a square, nor any on the
+** character's or where it's going.  Each has an attitude to the character, its faction's to begin with
+** (factions.txt's, a stand-in theme's: a theme's will take their place), moved by what happens and by the character's
+** words (the UI's request, the hub's sway: the referee's test), and acts by it: the hostile come at the character, an
+** ally follows it and takes its requests; factions hostile to one another keep off one another.  (Their own exploring
+** comes later.)
 **
 ** Its records (the lairs, the denizens) are in a bank of its own, a record at a time copied out; kept with the game
 ** (dq0 -d: the UI asks, the hub's dsave), the save folder's dens.dat.
@@ -26,6 +29,8 @@
 ** Its code that's seldom called is in swapped parts (../dq0/swap.inc: run in the main RAM's top, a part at a time,
 ** copied there from the overlays' file's bank, LIBDIR/dq0d.ovl, as it's called; bank.s's stubs): part 1, the kinds
 ** read in, the populations, the placing, the records kept; part 2, the character's ways with a denizen, and harmed.
+** The blows its actors strike and take are the world's, told as the denizens' events (E_FIGHT): it takes them to heart
+** (fought: fleeing, dismay, harmed, a death recorded).
 */
 
 #include <fcntl.h>
@@ -448,14 +453,12 @@ static unsigned char nearby (void)
 /* ---- The actors: the denizens near the character, in the hub for the world and the senses */
 
 #define ACT_R           24                      /* Squares from the character a denizen's an actor */
-#define CATCHUP         30                      /* Tenths an actor makes up, at most, that it's fallen behind the
-                                                **   clock (the real paces': this task's late) */
 #define NEAR            16
 
 static struct actor a;
 static unsigned char akind[NACTORS];            /* Each actor's kind, and its lair's home */
 static unsigned ahx[NACTORS], ahy[NACTORS];
-static unsigned char turns;                     /* The turns pace: this task moves its actors itself */
+static unsigned char turns;                     /* The turns pace */
 static unsigned char nnear;                     /* The denizens out near the character but not actors (more than
                                                 **   there are entries for): their squares, each time round */
 static unsigned nearx[NEAR], neary[NEAR];
@@ -465,7 +468,8 @@ static unsigned sax[NACTORS], say[NACTORS];
 static unsigned long alert[NACTORS];            /* (Each actor still and facing a noise it heard till then) */
 static unsigned char steps[NACTORS];            /* (Each one's steps: a noise of its own every eighth) */
 static unsigned char fled[NACTORS];             /* (Each one fleeing the character: its turns of it left) */
-static unsigned char bleeds;                    /* (The actors bleeding: bit k, entry k: fights') */
+static unsigned wt;                             /* (The wait an actor's decided on, tenths) */
+static unsigned dsx, dsy;                       /* (The square a cornered one darts to) */
 
 /* ---- The referee, asked in this task's own slot (DSLOT, in the hub's header): the request (rq, in the main RAM:
 ** its kind, who and whom here, the rest the caller's) copied in whole, posted, waited for (asleep on the doorbell),
@@ -490,6 +494,66 @@ static void __fastcall__ ask (unsigned char kind, unsigned char actor, unsigned 
     memcpy (&rq, DSLOT, RQ_SIZE);
     DSLOT->state = REQ_FREE;
 }
+
+/* ---- Its intents (hub.h's the denizens' intents: the minds', for their actors' bodies, which are the world's, as the
+** character's is): each posted in the hub's di, a ring (written whole, then shown; a full one waited on), and those
+** posted waited for (settle: the world rung, and ringing back as it's carried them out), each actor's entry the
+** world's then; the hub's header in the window after.  A wait (I_WAIT) changes nothing another actor's decision
+** reads, so it needn't be waited for: it goes with the next that is, or with the turn's end (I_DONE, which rings).
+** The intent at hand im (its own fields the caller's) */
+static struct msg im;
+static unsigned char stirs;                     /* (An intent posted since the last settle that isn't a wait) */
+static unsigned char rface = 0xFF;             /* (The way a roused one faces: 0xFF as it does) */
+#define ROUSE_SET       0x8000                  /* (rouse's: free then, whenever it was) */
+
+static void __fastcall__ post (unsigned char kind, unsigned char who)
+{
+    unsigned char h;
+
+    im.kind = kind;
+    im.who = who;
+    while (hub_map (0), ((h = HUB->di_head) + 1) % DI_SIZE == HUB->di_tail && !HUB->quit) {
+        hub_ring (T_WORLD);
+        hub_sleep (1);
+    }
+    memcpy (&HUB->di[h], &im, sizeof im);
+    HUB->di_head = (h + 1) % DI_SIZE;
+    stirs |= kind != I_WAIT;
+    if (kind == I_DONE) {
+        hub_ring (T_WORLD);
+    }
+}
+
+static void settle (void)
+{
+    stirs = 0;
+    if (hub_map (0), HUB->di_tail != HUB->di_head) {
+        hub_ring (T_WORLD);
+        while (hub_map (0), HUB->di_tail != HUB->di_head && !HUB->quit) {
+            hub_sleep (1);
+        }
+    }
+}
+
+/* Actor k's (the copy a's) intent: what it's doing, and the way it faces, with it */
+static void __fastcall__ act (unsigned char kind, unsigned char k)
+{
+    im.x[0] = a.doing;
+    im.x[1] = a.face;
+    post (kind, k + 1);
+}
+
+/* Actor k roused: free w tenths from now at the latest (| ROUSE_SET: then, whenever it was), facing rface */
+static void __fastcall__ rouse (unsigned char k, unsigned w)
+{
+    im.x[0] = 0xFF;
+    im.x[1] = rface;
+    rface = 0xFF;
+    im.w1 = w & ~ROUSE_SET;
+    im.w2 = w >> 15;
+    post (I_ROUSE, k + 1);
+}
+
 static unsigned char aorder[NACTORS];           /* (Each one's request, an ally's: its record's while it's an actor) */
 static unsigned lsx[NACTORS], lsy[NACTORS];     /* (Where each last sensed the character: an ally follows it there) */
 static unsigned char intr[NACTORS];             /* (Each one's lair intruded on, not yet left: its attitude fallen) */
@@ -524,7 +588,8 @@ static unsigned char __fastcall__ name_of (unsigned char i)
     return n;
 }
 
-/* Actor k no longer one (far from the character): its record its own again, the entry free */
+/* Actor k no longer one (far from the character): its record its own again, its body gone from the world's keeping
+** (I_LEAVE), the entry free */
 static void __fastcall__ retire (unsigned char k)
 {
     write_back (k);
@@ -533,12 +598,15 @@ static void __fastcall__ retire (unsigned char k)
         D.ready = now + 36000;                  /* (An ally left waiting: it waits an hour, then goes its own way) */
     }
     den_put (a.den);
+    im.x[0] = im.x[1] = 0xFF;
+    post (I_LEAVE, k + 1);
+    settle ();
     HUB->actor[k].name[0] = 0;
-    ++HUB->den_seq;
 }
 
-/* Denizen i made an actor, in free entry k (its time from now: the coarse moves have kept it while it wasn't one);
-** its sheet the referee's (RS_NEW_ACTOR, by its kind's key: made the first time, the same one after) */
+/* Denizen i made an actor, in free entry k (its time from now: the coarse moves have kept it while it wasn't one):
+** its mind's fields written, its body given the world (I_ENTER: its place, its step, its time, bleeding or not); its
+** sheet the referee's (RS_NEW_ACTOR, by its kind's key: made the first time, the same one after) */
 static void __fastcall__ enlist (unsigned char i, unsigned char k)
 {
     struct rs_summary* s = (struct rs_summary*) rq.x;
@@ -569,11 +637,22 @@ static void __fastcall__ enlist (unsigned char i, unsigned char k)
     strcpy (rq.text, K.key);
     rq.w1 = i;
     ask (RS_NEW_ACTOR, k + 1, 0);
-    bleeds = s->cond & C_BLEEDING ? bleeds | 1 << k : bleeds & ~(1 << k);
+    im.b = (s->cond & C_BLEEDING) != 0;
     strcpy (a.name, (i = name_of (i)) < NNAMES ? hd.names[i].name : K.name);
+    a.kind = D.kind;
+    a.remains = strcmp (K.key, "skel") ? KI_BODY : KI_BONES;    /* (A skeleton's its bones: the stand-in theme's) */
+    a.timid = (K.flags & K_SHY) != 0;
     hub_map (0);
-    memcpy (&HUB->actor[k], &a, sizeof a);      /* (Its name last: the entry used once it's whole) */
-    ++HUB->den_seq;
+    memcpy (HUB->actor[k].name, a.name, sizeof a - offsetof (struct actor, name));
+    im.x[0] = 0;
+    im.x[1] = a.face;
+    im.x[2] = a.sn;
+    im.w1 = a.x;
+    im.w2 = a.y;
+    im.a = a.step;
+    im.t = a.ready;
+    post (I_ENTER, k + 1);
+    settle ();
 }
 
 /* The denizens out near the character made actors, as there are entries free; those left over noted (nearx ...) */
@@ -689,33 +768,9 @@ static unsigned char __fastcall__ step_for (unsigned char k, unsigned lim, unsig
     return best;
 }
 
-/* Actor a (the copy) a square on heading d, as the world would move the character: a step step_for's found it can
-** walk, to a square no one's on; its time by its pace and the slope (the world's cost ()) */
-static void __fastcall__ step_here (unsigned char d)
-{
-    unsigned nx = a.x + dir_x[d], ny = a.y + dir_y[d], c = a.step;
-    unsigned char* p;
-    int z;
-
-    z = elev_at (a.sn, a.x, a.y);
-    p = at (a.sn, nx, ny);
-    z = C->elev[cy_][cx_] - z;
-    if (z > 0) {
-        c += a.step * z / 2;
-    } else if (z < -1) {
-        c += a.step * (-z - 1) / 4;
-    }
-    if (TILE (*p) == T_STEPS) {
-        c += a.step / 2;
-    }
-    a.ready += c;
-    a.x = nx;
-    a.y = ny;
-    a.face = H_OF (d);
-}
-
 /* Actor a (the copy), out of the character's sight and not sensing it, moved coarsely (the turns pace's, catching
-** up): a few squares' wander at a time, a while for them (stopped as it comes into the character's sight) */
+** up): a few squares' wander at a time, each a step of no time (I_STEP's STEP_COARSE: the world's), a while for them
+** after (stopped as it comes into the character's sight) */
 static void __fastcall__ coarse (unsigned char k, unsigned lim)
 {
     unsigned char t, d;
@@ -732,84 +787,32 @@ static void __fastcall__ coarse (unsigned char k, unsigned lim)
         a.x = x;
         a.y = y;
         a.face = H_OF (d);
+        im.w1 = H_OF (d) | STEP_COARSE;
+        im.w2 = 1;
+        act (I_STEP, k);
         if ((p = at (a.sn, x, y)) != 0 && (*p & T_VIS)) {
             break;
         }
     }
-    a.ready += 60 + random (60);
+    wt = 60 + random (60);
 }
 
 /* Actor a (the copy), shy and cornered beside the character: it darts past it, to the square beyond (open, no one
-** on it), a moment's dash; 1 if it did */
+** on it: dsx, dsy), a moment's dash; 1 if it can */
 static unsigned char __fastcall__ dart (unsigned char k)
 {
-    unsigned x = pcx + (pcx - a.x), y = pcy + (pcy - a.y);
-
-    if (!open_sq (at (a.sn, x, y)) || taken (k, x, y)) {
-        return 0;
-    }
-    a.x = x;
-    a.y = y;
-    a.ready += 2 * a.step;
-    return 1;
+    dsx = pcx + (pcx - a.x);
+    dsy = pcy + (pcy - a.y);
+    return open_sq (at (a.sn, dsx, dsy)) && !taken (k, dsx, dsy);
 }
 
-/* ---- Its events (DENIZENS.md: events): what its actors do, published (the hub's denizens' events: nobody waits
-** for them, and each perceives them or not by its own senses); and the noises they hear, their own and the world's
-** (the character's: digging), each by every actor within its kind's hearing times the noise's loudness over two:
-** it turns to face the noise, stands a while, and looks for the character again at once */
+/* ---- Its events (DENIZENS.md: events): what its actors do, the world's to tell as it does it (the hub's denizens'
+** events: nobody waits for them, and each perceives them or not by its own senses); and the noises they hear, their
+** own and the world's (the character's: digging), each by every actor within its kind's hearing times the noise's
+** loudness over two: it turns to face the noise, stands a while, and looks for the character again at once */
 
-static struct msg ev;
-static unsigned wplace, dplace;                 /* (Its places in the world's events, and in its own) */
-
-/* What lies between actor a (the copy) and the character, for those who hear it (SOUND.md: E_DEN's x[3]): the squares
-** of wall and rock on the line (15 at most), and the shut doors times 16; 0 off its stratum, or more than 24 squares
-** off (beyond anyone's hearing of a step) */
-static unsigned char between (void)
-{
-    unsigned char* p;
-    struct portal* q;
-    unsigned char solid = 0, doors = 0;
-    unsigned i, dist;
-    int dx = pcx - a.x, dy = pcy - a.y;
-
-    if (a.sn != pcs || (dist = apart (dx, dy)) > 24) {
-        return 0;
-    }
-    for (i = 1; i < dist; ++i) {
-        p = at (a.sn, a.x + dx * (int) i / (int) dist, a.y + dy * (int) i / (int) dist);
-        if (!p || !T_CLEAR (*p)) {
-            if (solid < 15) {
-                ++solid;
-            }
-        } else if (TILE (*p) == T_DOOR && (q = portal_at (cx_, cy_)) != 0 && !(q->state & PS_OPEN) && doors < 15) {
-            ++doors;
-        }
-    }
-    return solid | doors << 4;
-}
-
-/* Actor k (the copy, a) did what, how loud (0-9): published, where it is (and whether the character sees its square
-** now, the senses' marks; what lies between, if it's heard), the hub's header in the window after */
-static void __fastcall__ publish (unsigned char k, unsigned char what, unsigned char loud)
-{
-    unsigned char* p;
-
-    ev.x[3] = loud ? between () : 0;
-    p = at (a.sn, a.x, a.y);
-    ev.x[2] = p && (*p & T_VIS);
-    ev.kind = E_DEN;
-    ev.who = k + 1;
-    ev.a = what;
-    ev.b = loud;
-    ev.w1 = a.x;
-    ev.w2 = a.y;
-    ev.t = now;
-    ev.x[0] = a.sn;
-    ev.x[1] = akind[k];
-    hub_map (0);
-    hub_devent (&ev);
-}
+static unsigned wplace, dplace, fplace;         /* (Its places in the world's events, and in the denizens': the noises',
+                                                **   the blows') */
 
 static void hear (void)
 {
@@ -826,7 +829,7 @@ static void hear (void)
             src = 0;
             sn = pcs;
             loud = m.a;
-        } else if (hub_dnext (&dplace, &m)) {   /* (Its own: an actor's, not heard by itself) */
+        } else if (hub_dnext (&dplace, &m)) {   /* (The denizens': an actor's, not heard by itself) */
             if (m.kind != E_DEN || !m.b) {
                 continue;
             }
@@ -847,87 +850,33 @@ static void hear (void)
             if (apart (q->x - m.w1, q->y - m.w2) > K.hear * loud / 2) {
                 continue;
             }
-            q->face = bearing (m.w1 - q->x, m.w2 - q->y);
+            rface = bearing (m.w1 - q->x, m.w2 - q->y);
             alert[k] = now + 100;
             sgen[k] = 0;                        /* (It senses again: the character, if it's there to be sensed) */
-            if (q->ready > now + 1) {
-                q->ready = now + 1;
-            }
+            rouse (k, 1);
         }
     }
-    hub_map (0);
+    settle ();
 }
 
-/* ---- Fights (the referee's, RS_ATTACK: HarnMaster's melee).  A hostile actor beside the character, sensing it,
-** strikes at it a round at a time (the referee's round: the hub's), as the character strikes at one (its blow
-** posted by the world, I_ATTACK: the hub's pc_foe, struck here as it's seen); each blow told (E_FIGHT, in this task's
-** queue: the referee's words in the ring, FIGHT_AT, put there by the referee, for the UI; played, the sound task's),
-** and what it did taken (the referee's say: hub.h's FF_*): a denizen dead (its record so, its body left where it
-** fell: an item), knocked senseless (it lies there till it comes round: the referee's time), its courage broken (or
-** a shy one's shaken: it flees a while, and fights after only if it's pressed), shaken (it holds back a round); its
-** kin, as one falls, test their courage too (dismay).  One struck at turns on the character (harmed), unless it
-** flees.  The bleeding have their bloodloss reckoned a minute at a time (RS_TIME, all at once), and may die of it */
+/* ---- Fights (the referee's, RS_ATTACK: HarnMaster's melee): the world's to strike, every blow.  A hostile actor
+** beside the character, sensing it, strikes at it a round at a time (its intent, I_ATTACK: the referee's round), as
+** the character strikes at one (the world's own, I_ATTACK: the hub's pc_foe); each blow told (E_FIGHT, in the
+** denizens' events: its words in their ring, FIGHT_AT, the world's, for the UI; played, the sound task's) and what it
+** left the body in kept (senseless, fleeing, holding back, bleeding, dead: its remains the world's to put down); and
+** here taken to heart (fought): one broken flees a while (or a shy one shaken), and fights after only if it's
+** pressed; its kin, as one falls, test their courage too (dismay); one the character struck at turns on it
+** (harmed), unless it flees; one dead, its record so, out of the dungeon for good */
 
 #define FLEE_T          24                      /* Turns a broken one flees for (a step each, or a moment) */
-#define LOUD_FIGHT      5
 
-static unsigned char fring;                     /* (The ring's next) */
-static unsigned bled_at;                        /* (When their bloodloss was last reckoned: the clock's low word) */
-
-/* A blow told: attacker att, defender def (0 the character, else an actor's entry plus 1; actor a, the copy, the one
-** in it), how it came out (O_*, FO_BLED), what it left them in (FF_*); its words the ring's, fring; the ring on */
-static void __fastcall__ told (unsigned char att, unsigned char def, unsigned char out, unsigned char f)
-{
-    ev.kind = E_FIGHT;
-    ev.who = att;
-    ev.a = def;
-    ev.b = LOUD_FIGHT;
-    ev.w1 = a.x;
-    ev.w2 = a.y;
-    ev.t = now;
-    ev.x[0] = a.sn;
-    ev.x[1] = out;
-    ev.x[2] = f;
-    ev.x[3] = fring;
-    hub_devent (&ev);
-    fring = (fring + 1) % NFIGHTS;
-}
-
-/* A body put down where actor a (the copy) fell: an item of the store's, the world's to put down (an intent, I_BODY:
-** the hub's di, a ring; full, waited on, the world taking its intents as it waits for this task) */
-static void __fastcall__ body (unsigned char kind)
-{
-    static struct msg m;
-    unsigned char h;
-
-    m.kind = I_BODY;
-    m.a = kind;
-    m.w1 = a.x;
-    m.w2 = a.y;
-    m.x[0] = a.sn;
-    while (hub_map (0), ((h = HUB->di_head) + 1) % DI_SIZE == HUB->di_tail) {
-        if (HUB->quit) {
-            return;
-        }
-        hy_sleep_ticks (1);
-    }
-    memcpy (&HUB->di[h], &m, sizeof m);
-    HUB->di_head = (h + 1) % DI_SIZE;           /* (Written whole, then shown) */
-    hub_ring (T_WORLD);
-}
-
-/* Actor k dead (the hub's entry as it is): its record so, out of the dungeon for good, its body where it fell (a
-** skeleton's its bones: the stand-in theme's), the entry free */
+/* Actor k dead (the hub's entry as it is: its body the world's, gone): its record so, the entry free */
 static void __fastcall__ kill (unsigned char k)
 {
     write_back (k);
     D.flags = (D.flags & ~(D_ACTOR | D_OUT)) | D_DEAD;
     den_put (a.den);
-    kind_get (akind[k]);
-    body (strcmp (K.key, "skel") ? KI_BODY : KI_BONES);
     HUB->actor[k].name[0] = 0;
-    ++HUB->den_seq;
-    HUB->den_look = 1;                          /* (The world's to look about again: the body seen) */
 }
 
 /* Actor k fallen (dead, senseless): its kin among the actors test their courage (RS_MORALE, a bad situation: the book's
@@ -947,107 +896,40 @@ static void __fastcall__ dismay (unsigned char k)
     }
 }
 
-/* A blow at or by actor k (a, the copy; K its kind), the referee asked (its words to the ring's fring), and what it did
-** taken and told: att and def as told's; 1 if the actor's dead (0xFF: no blow) */
-static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, unsigned char k)
+/* The blows the world's struck since the last look (E_FIGHT, the denizens' events), taken to heart, in turn: 1 if
+** there were any */
+static unsigned char fought (void)
 {
-    unsigned char f, me = k + 1;
+    static struct msg m;
+    unsigned char k, f, att, n = 0;
 
-    rq.b = AS_BEST;
-    rq.steps = 0;
-    rq.w1 = fring;
-    rq.w2 = (K.flags & K_SHY) != 0;
-    ask (RS_ATTACK, att, def);
-    if (rq.result == 0xFF) {
-        return 0xFF;                            /* (It can't: senseless, dead) */
-    }
-    f = rq.grade;
-    if (f & (me == att ? FF_A_DOWN : FF_D_DOWN)) {
-        a.doing = DO_DOWN;                      /* (Senseless: it lies there till it comes round) */
-        a.ready = now + rq.w2;
-    }
-    if (f & FF_FLEES) {
-        fled[k] = FLEE_T;                 /* (Broken: it flees, and won't seek the fight again) */
-        a.doing = DO_FLEE;
-        a.attitude = AT_UNFRIENDLY;
-    } else if (rq.c & AF_CAUTIOUS) {
-        a.ready += HUB->round;                  /* (Shaken: it holds back a round) */
-    }
-    if (rq.c & AF_BLEEDING) {
-        bleeds |= 1 << k;
-    }
-    told (att, def, rq.result, f);
-    if (f & (me == att ? FF_A_DEAD | FF_A_DOWN : FF_D_DEAD | FF_D_DOWN)) {
-        dismay (k);
-    }
-    return (f & (me == att ? FF_A_DEAD : FF_D_DEAD)) != 0;
-}
-
-
-/* The character's blow at actor k (the world's, posted: the hub's pc_foe), struck if the actor's still beside it
-** (gone, nothing: the UI found it there) */
-static void __fastcall__ pc_strike (unsigned char k)
-{
-    unsigned char dead;
-
-    hub_map (0);
-    memcpy (&a, &HUB->actor[k], sizeof a);
-    if (!a.name[0] || a.sn != pcs || apart (a.x - pcx, a.y - pcy) > 1) {
-        return;
-    }
-    kind_get (akind[k]);
-    rq.a = HUB->pc_aim;
-    rq.c = 0;
-    if ((dead = blow (0, k + 1, k)) == 0xFF) {
-        return;
-    }
-    hub_map (0);
-    memcpy (&HUB->actor[k], &a, sizeof a);
-    ++HUB->den_seq;
-    harmed (k);                                 /* (Its own, and their foes, think again of the character) */
-    if (dead) {
-        kill (k);
-    }
-}
-
-/* Actor a (the copy, entry k) strikes at the character beside it (outnumbering it: later), a round's turn: 1 if it died of it (a counterstrike) */
-static unsigned char __fastcall__ den_strike (unsigned char k)
-{
-    rq.a = Z_MID;
-    rq.c = 0;
-    a.doing = DO_FIGHT;
-    a.ready += HUB->round;
-    return blow (k + 1, 0, k) == 1;
-}
-
-/* The actors bleeding, their bloodloss reckoned a minute at a time (RS_TIME, all at once); those dead of it told (as
-** the UI says, as the character sees them: the ring's names theirs) and their records so */
-static void bleeding (void)
-{
-    unsigned char k, dead;
-
-    if (!bleeds || (unsigned) now - bled_at < 600) {
-        return;
-    }
-    bled_at = (unsigned) now;
-    rq.w1 = 1;
-    rq.w2 = bleeds;
-    ask (RS_TIME, 0xFF, 0);
-    dead = rq.w1;
-    for (k = 0; k < NACTORS; ++k) {
-        if (dead & 1 << k) {
-            hub_map (0);
-            memcpy (&a, &HUB->actor[k], sizeof a);
-            hub_map (DEN_BANK);
-            strcpy (FIGHT_AT[fring].att, a.name);
-            hub_map (0);
-            told (k + 1, 0, FO_BLED, FF_A_DEAD);    /* (The UI's to say as it sees it) */
+    while (hub_dnext (&fplace, &m)) {
+        if (m.kind != E_FIGHT) {
+            continue;
+        }
+        n = 1;
+        f = m.x[2];
+        att = m.who;
+        k = ((att ? att : m.a) - 1) & 7;        /* (The actor in it: the character fights them one at a time) */
+        if (m.x[1] != FO_BLED) {
+            if (f & FF_FLEES) {
+                fled[k] = FLEE_T;               /* (Broken: it flees, and won't seek the fight again) */
+                HUB->actor[k].attitude = AT_UNFRIENDLY;
+            }
+            if (f & (att ? FF_A_DEAD | FF_A_DOWN : FF_D_DEAD | FF_D_DOWN)) {
+                kind_get (akind[k]);
+                dismay (k);
+            }
+            if (!att) {
+                harmed (k);                     /* (Its own, and their foes, think again of the character) */
+            }
+        }
+        if (f & (att ? FF_A_DEAD : FF_D_DEAD)) {
             kill (k);
         }
     }
-    hub_map (0);
+    return n;
 }
-
 
 /* ---- Attitudes (DENIZENS.md): each denizen's to the character (hub.h's AT_*), its faction's to begin with, moved by
 ** what happens: its lair intruded on (a kind that keeps to it: the character beside its home), the character seen
@@ -1113,7 +995,7 @@ static unsigned char __fastcall__ keep_off (unsigned char k)
 }
 
 /* An ally's (actor k's, the copy's) turn: waiting where it was asked; else following the character, to where it last
-** sensed it, till it's beside it.  The step, or 0xFE (its time added) */
+** sensed it, till it's beside it.  The step, or 0xFE (its wait, wt) */
 static unsigned char __fastcall__ ally (unsigned char k)
 {
     unsigned char d = 0xFE;
@@ -1123,7 +1005,7 @@ static unsigned char __fastcall__ ally (unsigned char k)
     }
     if (aorder[k] == OR_WAIT) {
         a.doing = DO_WAIT;
-        a.ready += 20 + random (20);
+        wt = 20 + random (20);
         return d;
     }
     a.doing = DO_FOLLOW;
@@ -1135,14 +1017,14 @@ static unsigned char __fastcall__ ally (unsigned char k)
         refy = pcy;
     }
     if (d >= 4) {
-        a.ready += 5 + random (10);
+        wt = 5 + random (10);
         d = 0xFE;
     }
     return d;
 }
 
-/* What actor k (the copy) does as it senses the character, by its attitude and its kind.  The step, 0xFD (darted
-** past it), or 0xFF (none) */
+/* What actor k (the copy) does as it senses the character, by its attitude and its kind.  The step, 0xFD (darting
+** past it: dart's square), or 0xFF (none) */
 static unsigned char __fastcall__ meets (unsigned char k, unsigned char was)
 {
     unsigned char d = 0xFF, t = a.attitude;
@@ -1166,18 +1048,18 @@ static unsigned char __fastcall__ meets (unsigned char k, unsigned char was)
     return d;
 }
 
-/* What actor k means to do, by its kind, its attitude and what it senses, and done (or a while waited), by the
-** character's rules (step_here: the world's own, as they were when it moved them): kept off a foe; an ally's way;
-** as it senses the character, meets's; a noise heard, still a while; else it wanders about its lair (or keeps to it) */
-static void __fastcall__ decide (unsigned char k)
+/* What actor k means to do, by its kind, its attitude and what it senses, said (its intent: the world does it, by the
+** character's rules, or strikes its blow) and waited for, and the blows struck taken to heart (fought): kept off a
+** foe; an ally's way; as it senses the character, meets's (a foe beside it: a blow); a noise heard, still a while;
+** else it wanders about its lair (or keeps to it).  1 if all it said was a wait, not waited for (a.ready the time it
+** will be free, as the world will have it) */
+static unsigned char __fastcall__ decide (unsigned char k)
 {
-    unsigned char d = 0xFF, was, foe, dead = 0;
+    unsigned char d = 0xFF, was, foe;
 
     kind_get (akind[k]);
     memcpy (&a, &HUB->actor[k], sizeof a);
-    if (!turns && a.ready + CATCHUP < now) {
-        a.ready = now - CATCHUP;
-    }
+    wt = 0;
     refx = pcx;
     refy = pcy;
     was = a.doing;
@@ -1202,12 +1084,10 @@ static void __fastcall__ decide (unsigned char k)
         --fled[k];
         a.doing = DO_FLEE;                      /* (Fleeing: away; cornered beside the character, it fights) */
         if ((d = step_for (k, 4 * K.range + 8, S_AWAY)) == 0xFF && dist == 1 && sres[k] && !pcdead) {
-            dead = den_strike (k);
             d = 0xFC;
         }
     } else if (sres[k] && foe && dist == 1) {
         a.face = bearing (ddx, ddy);            /* (A foe beside it: it strikes) */
-        dead = den_strike (k);
         d = 0xFC;
     } else if ((d = keep_off (k)) != 0xFF) {
         a.doing = sres[k] ? DO_WATCH : DO_ROAM;
@@ -1217,32 +1097,48 @@ static void __fastcall__ decide (unsigned char k)
         d = meets (k, was);
     } else if (alert[k] > now) {
         d = 0xFE;                               /* (A noise heard: still, facing the way it came, a while) */
-        a.ready += 10 + random (20);
+        wt = 10 + random (20);
     } else if (turns && !(*at (a.sn, a.x, a.y) & T_VIS)) {
         coarse (k, K.flags & K_LAIR ? 2 : K.range);
         d = 0xFE;                               /* (Unseen, unaware: a coarse move) */
     } else if (K.flags & K_LAIR ? !random (4) : random (3)) {
         d = step_for (k, K.flags & K_LAIR ? 2 : K.range, S_ANY);
     }
-    if (d == 0xFF) {
-        a.ready += a.doing == DO_FLEE ? 10 + random (20) : a.doing ? 60 + random (60) : 10 + random (40);
-    } else if (d < 4) {                         /* (Watching: a while, unless it changes; fleeing, a moment) */
-        step_here (d);
-    }
-    if (d < 4 || d == 0xFD) {                   /* (Published: a step, now and then a noise of its own; a dash) */
-        publish (k, d == 0xFD || ++steps[k] & 7 ? DE_MOVED : DE_NOISE, d == 0xFD ? 2 : steps[k] & 7 ? 1 : 3);
-    }
-    if (a.doing != was && (!was || !a.doing)) {
-        publish (k, a.doing ? DE_NOTICED : DE_LOST, 0);
+    if (d == 0xFF) {                            /* (Watching: a while, unless it changes; fleeing, a moment) */
+        wt = a.doing == DO_FLEE ? 10 + random (20) : a.doing ? 60 + random (60) : 10 + random (40);
     }
     hub_map (0);
-    memcpy (&HUB->actor[k], &a, sizeof a);
-    if (a.doing != was || d < 4 || d >= 0xFC) {
-        ++HUB->den_seq;                         /* (Changed: the world looks again at what the character sees) */
+    HUB->actor[k].attitude = a.attitude;        /* (Its mind's own, as it decides) */
+    HUB->actor[k].foe = a.foe;
+    if (d < 4) {                                /* (A step, now and then a noise of its own) */
+        im.w1 = H_OF (d);
+        im.w2 = 1;
+        im.a = ++steps[k] & 7 ? DE_MOVED : DE_NOISE;
+        im.b = steps[k] & 7 ? 1 : 3;
+        act (I_STEP, k);
+    } else if (d == 0xFD) {                     /* (A dash past the character, louder) */
+        im.w1 = dsx;
+        im.w2 = dsy;
+        im.a = DE_MOVED;
+        im.b = 2;
+        act (I_GOTO, k);
+    } else if (d == 0xFC) {                     /* (A round's blow: outnumbering it, later) */
+        a.doing = DO_FIGHT;
+        im.a = 0;
+        im.b = Z_MID;
+        act (I_ATTACK, k);
     }
-    if (dead) {
-        kill (k);
+    if (wt) {
+        im.w1 = wt;
+        act (I_WAIT, k);
     }
+    if (!stirs) {
+        a.ready += wt;
+        return 1;
+    }
+    settle ();
+    fought ();
+    return 0;
 }
 
 /* ---- The denizens away from the character (out, but not actors): moved coarsely, a while at a time, each to a
@@ -1319,10 +1215,10 @@ static unsigned char roam (void)
     return n;
 }
 
-/* Ally k come along with the character, up or down: on a square beside it, open, no one's on it.  1 if it is */
+/* Ally k come along with the character, up or down: on a square beside it, open, no one's on it (its intent,
+** I_CLIMB: the world puts it there).  1 if it is */
 static unsigned char __fastcall__ along (unsigned char k)
 {
-    struct actor* q;
     unsigned char h;
     unsigned x, y;
 
@@ -1330,41 +1226,37 @@ static unsigned char __fastcall__ along (unsigned char k)
         x = pcx + head_x[h];
         y = pcy + head_y[h];
         if (open_sq (at (pcs, x, y)) && !taken (k, x, y)) {
-            hub_map (0);
-            q = &HUB->actor[k];
-            q->sn = pcs;
-            q->x = x;
-            q->y = y;
-            q->ready = now + 10;
+            im.x[0] = im.x[1] = 0xFF;
+            im.x[2] = pcs;
+            im.w1 = x;
+            im.w2 = y;
+            post (I_CLIMB, k + 1);
+            settle ();
             sgen[k] = 0;
-            ++HUB->den_seq;
-            return 1;
+            return HUB->actor[k].sn == pcs;
         }
     }
     hub_map (0);
     return 0;
 }
 
-/* Each actor tended: what the world's done taken, those far from the character retired, those free to act set
-** going (at the turns pace, each caught up with the clock: moved here, the world waiting); the denizens near it
-** placed (for a while after it moves: the chunks round it made as it looks about) and enlisted; those away from it
-** moved, coarsely.  Nothing, if nothing's changed (the clock, the character, the world's work) */
+/* Each actor tended: those far from the character retired, those free to act deciding (at the turns pace, each
+** caught up with the clock: its intents carried out, the world waiting for them); the denizens near it placed (for a
+** while after it moves: the chunks round it made as it looks about) and enlisted; those away from it moved,
+** coarsely.  Nothing, if nothing's changed (the clock, the character, a blow) */
+static unsigned char struck;                    /* (Blows taken to heart since: fought's) */
+
 static void tend (void)
 {
     static unsigned lx, ly;
     static unsigned long lnow;
     static unsigned char ls = 0xFF, fresh, lgen;
     struct actor* q;
-    unsigned char k, n, again = 0, woke = lgen != sense_gen;
+    unsigned long r;
+    unsigned char k, n, again = struck, woke = lgen != sense_gen;
 
     lgen = sense_gen;
-    hub_map (0);
-    if ((k = HUB->pc_foe) != 0) {               /* (The character's blow, posted: struck first) */
-        HUB->pc_foe = 0;
-        pc_strike ((k - 1) & 7);
-        again = 1;
-    }
-    bleeding ();
+    struck = 0;
     if (pcx != lx || pcy != ly || pcs != ls) {
         lx = pcx;
         ly = pcy;
@@ -1376,12 +1268,6 @@ static void tend (void)
         --fresh;
         again |= nearby ();
     }
-    hub_map (0);
-    for (k = 0, q = HUB->actor; k < NACTORS && !again && now == lnow; ++k, ++q) {
-        if (q->state == REQ_DONE) {
-            again = 1;
-        }
-    }
     if (!again && !woke && now == lnow) {
         return;
     }
@@ -1391,18 +1277,13 @@ static void tend (void)
     lnow = now;
     for (k = 0, q = HUB->actor; k < NACTORS; ++k, ++q) {
         hub_map (0);
-        if (q->state == REQ_DONE) {             /* (Done; or it couldn't, and it waits a moment) */
-            if (q->result) {
-                q->ready += 10;
-            }
-            q->state = REQ_FREE;
-        }
-        if (!q->name[0] || q->state != REQ_FREE) {
+        if (!q->name[0]) {
             continue;
         }
         if (woke && q->doing && q->doing < DO_FIGHT && q->ready > now + 10) {
-            q->ready = now + 1 + random (10);   /* (The character's changed: a watcher sees to it soon; not one
+            rouse (k, 1 + random (10));         /* (The character's changed: a watcher sees to it soon; not one
                                                 **   fighting, fleeing or senseless: its own time) */
+            settle ();
         }
         if (q->sn != pcs && anear[k] && q->attitude == AT_ALLIED && aorder[k] != OR_WAIT && !along (k) && fresh) {
             continue;                           /* (An ally beside the character as it went up or down: with it,
@@ -1413,9 +1294,12 @@ static void tend (void)
             again = 1;
             continue;
         }
-        for (n = 0; q->ready <= now && n < (turns ? 64 : 1); ++n) {
-            decide (k);
-            hub_map (0);
+        for (n = 0, r = q->ready; r <= now && q->name[0] && n < (turns ? 64 : 1); ++n) {
+            if (decide (k) && (r = a.ready) > now) {
+                break;                          /* (A wait only, the world's to carry out with the rest) */
+            }
+            settle ();                          /* (Its record the world's, as it is now) */
+            r = q->ready;
         }
     }
     if (again) {
@@ -1512,10 +1396,11 @@ void __fastcall__ s_harmed (unsigned char k)
             aorder[j] = OR_NONE;
         }
         if (q->doing < DO_FIGHT && q->ready > now) {
-            q->ready = now;                     /* (At once: not one fighting, its own time; not put off) */
+            rouse (j, 0);                       /* (At once: not one fighting, its own time; not put off) */
         }
         sgen[j] = 0;
     }
+    settle ();
     for (j = 0; j < hd.ndens; ++j, ++r) {
         hy_bank (pb);
         if (!(r->flags & D_ACTOR) && kfact[r->kind % SND_KINDS] == f) {
@@ -1530,7 +1415,6 @@ void __fastcall__ s_harmed (unsigned char k)
     if (hd.fatt[f & (NFACT - 1)] > AT_HOSTILE) {
         --hd.fatt[f & (NFACT - 1)];
     }
-    ++HUB->den_seq;
 }
 
 /* Words to sway actor k (sw's how): by its mind (nothing sways the mindless; an animal only by Animalcraft, within
@@ -1676,7 +1560,7 @@ void s_sway (void)
             if (q->name[0] && q->attitude == AT_ALLIED && q->sn == pcs && apart (q->x - pcx, q->y - pcy) <= 12) {
                 strcpy (sw.name, ++n == 1 ? q->name : "");
                 order (k);
-                q->ready = now + 1;
+                rouse (k, 1 | ROUSE_SET);
             }
         }
         sw.result = n ? sw.result : SR_NONE;
@@ -1701,12 +1585,10 @@ void s_sway (void)
             influence (k);
             break;
         }
-        hub_map (0);
-        HUB->actor[k].ready = now + 1;          /* (It sees to what's changed at once) */
+        rouse (k, 1 | ROUSE_SET);               /* (It sees to what's changed at once) */
         sgen[k] = 0;
     }
-    hub_map (0);
-    ++HUB->den_seq;
+    settle ();
     memcpy (&HUB->sway, &sw, sizeof sw);       /* (The reply whole, then the state that shows it) */
     hub_reply (&HUB->sway);
 }
@@ -1800,6 +1682,8 @@ int main (int argc, char* argv[])
 {
     static unsigned lpx, lpy;
     static unsigned char lpl;
+    static unsigned long done_at;
+    static unsigned char gone, g, act;
     unsigned char* p;
     int b;
 
@@ -1824,25 +1708,31 @@ int main (int argc, char* argv[])
         keep (1);
     }
     wplace = HUB->eq_head;                      /* (Its events from now on) */
-    dplace = HUB->dq_head;
+    dplace = fplace = HUB->dq_head;
     while (hub_map (0), !HUB->quit) {
         while (hy_sem_try (HUB->sem[T_DENIZENS]) == 0) {
         }
+        settle ();                              /* (Its intents the world's, as it goes on) */
         if (hub_posted (&HUB->dsave)) {         /* (The UI's asked for a save) */
             keep (0);
             hub_reply (&HUB->dsave);
         }
-        now = hub_now ();
-        pcx = HUB->pc_x;
-        pcy = HUB->pc_y;
-        pcs = HUB->pc_stratum;
-        pcbusy = HUB->pc_ready > now;
-        pcdead = (HUB->pcsum.cond & C_DEAD) != 0;
-        if (!(pclit = HUB->pc_light != 0) && hd.done[pcs] && (p = at (pcs, pcx, pcy)) != 0) {
-            pclit = (*p & T_VIS) != 0;          /* (Lit where it stands: a room's light, a lamp put down) */
+        turns = !HUB->tpr;
+        g = HUB->den_go;
+        act = !turns || g != gone;              /* (At the turns pace, only in its turn: the world's word, den_go) */
+        if (act || hub_posted (&HUB->sway)) {
+            now = hub_now ();
+            pcx = HUB->pc_x;
+            pcy = HUB->pc_y;
+            pcs = HUB->pc_stratum;
+            pcbusy = HUB->pc_ready > now;
+            pcdead = (HUB->pcsum.cond & C_DEAD) != 0;
+            if (!(pclit = HUB->pc_light != 0) && hd.done[pcs] && (p = at (pcs, pcx, pcy)) != 0) {
+                pclit = (*p & T_VIS) != 0;      /* (Lit where it stands: a room's light, a lamp put down) */
+            }
+            hub_map (0);
         }
-        hub_map (0);
-        if (pcx != lpx || pcy != lpy || (pclit | pcbusy << 1) != lpl) {
+        if (act && (pcx != lpx || pcy != lpy || (pclit | pcbusy << 1) != lpl)) {
             lpx = pcx;                          /* (The character changed: each actor senses it again) */
             lpy = pcy;
             lpl = pclit | pcbusy << 1;
@@ -1853,25 +1743,26 @@ int main (int argc, char* argv[])
         if (hub_posted (&HUB->sway)) {          /* (The UI's: the character's way with a denizen) */
             sway ();
         }
-        turns = !HUB->tpr;
-        grow ();
-        if (hd.done[pcs]) {
-            hear ();
-            tend ();
+        if (act) {
+            grow ();
+            struck |= fought ();                /* (The character's blows: the slice's first, the world's) */
+            if (hd.done[pcs]) {
+                hear ();
+                tend ();
+            }
+            if (turns || now - done_at >= 50) {
+                gone = g;                       /* (Its turn done, its intents in: the turns pace goes on; at the
+                                                **   others, now and then, the world's bleeding seen to) */
+                done_at = now;
+                im.w1 = g;
+                im.t = now;
+                post (I_DONE, 0);
+            }
         }
         hub_map (0);
-        HUB->den_at = now;                      /* (Caught up: the turns pace's clock goes on) */
         ++HUB->beat[T_DENIZENS];
-        if (turns && HUB->pc_ready > now) {     /* (The turns pace's clock moving: kept up with, a tick at a time,
-                                                **   never spinning: the others' work goes on meanwhile) */
-            if (hub_now () != now) {
-                hy_yield ();
-            } else {
-                hub_sleep (1);
-            }
-        } else {
-            hub_sleep (10);                     /* (Asleep on the doorbell: a request, an event, wakes it at once) */
-        }
+        hub_sleep (10);                         /* (Asleep on the doorbell: a request, an event, the clock moved on
+                                                **   at the turns pace, wakes it at once) */
     }
     return 0;
 }

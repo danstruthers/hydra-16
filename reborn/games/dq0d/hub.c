@@ -3,6 +3,5 @@
 */
 
 #define HUB_ATTACHED                            /* (Attached, not made: no hub_create, no hub_spawn) */
-#define HUB_DENQ                                /* (The denizens' events: theirs to hear, */
-#define HUB_DWRITE                              /*   and to write) */
+#define HUB_DENQ                                /* (The denizens' events: theirs to hear, the world's to write) */
 #include "../dq0/hub.c"

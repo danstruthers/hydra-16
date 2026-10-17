@@ -3,4 +3,5 @@
 */
 
 #define HUB_ATTACHED                            /* (Attached, not made: no hub_create, no hub_spawn) */
+#define HUB_DWRITE                              /* (The denizens' events: the world's to write, its bodies') */
 #include "../dq0/hub.c"

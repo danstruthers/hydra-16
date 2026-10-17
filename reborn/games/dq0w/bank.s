@@ -23,7 +23,7 @@ BANKREG     = $00                   ; The task's RAM bank register (written: the
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 
             .bss
-_ovbank:    .res        5           ; The parts' images' banks (dq0w.cfg's OV1 ...: dq0w.c's OVBANKS)
+_ovbank:    .res        6           ; The parts' images' banks (dq0w.cfg's OV1 ...: dq0w.c's OVBANKS)
 ova:        .res        1           ; (.A and .X kept through a stub)
 ovx:        .res        1
 fn:         .res        2           ; (m0 ...: the function called,
@@ -90,6 +90,8 @@ go:
             SWPART      11, 5               ; The things listed, searched for, described, hidden
             SWPART      12, 4               ; A door's work begun (dq0w.c's door_work)
             SWPART      13, 3               ; The item store's rarer work: begun, kept, the kit, a chunk's things
+            SWPART      14, 6               ; The denizens' bodies: their intents carried out (wbody.c)
+            SWPART      15, 2               ; The blows, the bleeding (wfight.c)
 
             SWFN        start_dig, 1
             SWFN        dig_on, 1
@@ -138,4 +140,9 @@ go:
             SWFN        theme_kinds, 13
             SWFN        items_begin, 13
             SWFN        stock_down, 13
-            SWFN        bodies, 13
+            SWFN        lay_body, 13
+            SWFN        den_intents, 14
+            SWFN        dens_seen, 14
+            SWFN        pc_blow, 15
+            SWFN        den_blow, 15
+            SWFN        bled, 15

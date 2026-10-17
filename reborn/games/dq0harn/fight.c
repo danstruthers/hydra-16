@@ -542,7 +542,7 @@ static void bleed (void)
     R->w1 = dead;
 }
 
-/* What a blow left them in, for the denizens' task (rs.h's AF_*: the reply's grade as hub.h's FF_*), and the
+/* What a blow left them in, for the world (rs.h's AF_*: the reply's grade as hub.h's FF_*: it keeps it), and the
 ** creature's courage if it was wounded and stands (shy, w2's bit 0 in the request: a cautious one flees too) */
 static void __fastcall__ left (unsigned char shy)
 {

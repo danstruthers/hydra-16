@@ -672,44 +672,14 @@ static int __fastcall__ ovl_load (const char* dir)
     return 0;
 }
 
-/* A blow's words (its reply in the denizens' slot, DSLOT) put in the denizens' ring, place k (FIGHT_AT: the UI words
-** them): who struck at whom (the actors' names; "" the character), the tenths one's senseless for, whose a fumble or a
-** stumble was, the referee's words */
-static void __fastcall__ ring (unsigned char k)
-{
-    static struct fight f;
-    const struct req* r = DSLOT;
-
-    memset (&f, 0, sizeof f);
-    if (r->actor) {
-        strcpy (f.att, HUB->actor[(r->actor - 1) & 7].name);
-    }
-    if (r->other) {
-        strcpy (f.def, HUB->actor[(r->other - 1) & 7].name);
-    }
-    f.out = r->w2;
-    f.which = r->a;
-    strncpy (f.text, r->text, sizeof f.text - 1);
-    hub_map (DEN_BANK);
-    memcpy (FIGHT_AT + k % NFIGHTS, &f, sizeof f);
-    hub_map (0);
-}
-
 /* The denizens' task's request (its own slot, DSLOT), if it's posted: answered (DTEXT of its text) */
 static void den_slot (void)
 {
-    unsigned char k;
-
     hub_map (0);
     if (hub_posted (DSLOT)) {
-        k = DSLOT->w1;                          /* (RS_ATTACK's: its words' place in the ring) */
         tlim = DTEXT;
         answer (DSLOT);
         tlim = REQ_TEXT;
-        hub_map (0);
-        if (DSLOT->kind == RS_ATTACK) {
-            ring (k);
-        }
         hub_reply (DSLOT);
     }
 }
