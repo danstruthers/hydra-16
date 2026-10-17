@@ -2665,6 +2665,49 @@ module.exports = {
       sdcard: true
     },
     {
+      // (Seed 7: the kitchen the character begins in lit by its own torches; its south door's dart trap set off as
+      // it's opened (the character knocked senseless a while), then down the passage into a dark hall and to its far
+      // side, 14 squares from the kitchen's door, facing back up the passage: a weak-eyed character's look reaches 4)
+      name: 'dq0glow', what: 'Dingus Quest Zero\'s lights seen far off (DUNGEON.md: perception as layers; the user\'s, 2026-10-16: "if I am standing in the dark, I should be able to see other light sources from much further away"): at seed 7, a weak-eyed character (Eyesight 4: its look reaches 4 squares) in a dark hall 14 squares from the lit kitchen\'s open door, up a straight passage: holding its torch, no light far off (its eyes used to the torch\'s light: the kitchen\'s within 7 squares only); its torch put out and some minutes waited, the kitchen\'s light far off ahead (16 b / (4 + a): 19 squares, its eyes used to the dark); its torch lit again, dazzled a moment, and the light lost',
+      init: 't_rc', cycles: 600e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rācp /ram/c.hm /ram/w.hm\rāecho att eye 4 >> /ram/w.hm\r' +
+        ['dq0 -p t -s 7 -c /ram/w.hm', 'open the door behind me', 's', 'move south 4 squares', 'face north', 'look', 'douse the torch',
+         ...Array(30).fill('z'), 'look', 'light the torch', 'z', 'look', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['You put out the torch.', 'You light the torch.', '% echo $status'],
+      check(m, out) {
+        const o = dq0Story(out), f = [], a = o.indexOf('> face north'), b = o.indexOf('> douse the torch', a), c = o.indexOf('> light the torch', b);
+        const d = o.indexOf('> quit', c);
+        if (a < 0 || b < 0 || c < 0 || d < 0) return ['the commands not all told'];
+        if (o.slice(a, b).includes('shows far off')) f.push('a light far off seen while holding the torch');
+        inTurn(o.slice(b, c), ['You put out the torch.', 'It is dark.', '> look', 'A light shows far off ahead.'], f, 'in the dark: ');
+        inTurn(o.slice(c, d), ['You light the torch.', 'The light dazzles you.', '> look'], f, 'the torch lit again: ');
+        if (o.slice(o.indexOf('> look', c), d).includes('shows far off')) f.push('the light far off still seen, the torch lit');
+        if (o.slice(o.indexOf('> look', c), d).includes('dazzles')) f.push('still dazzled a round after');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      // (dq0glow's place: the torch put out, the kitchen's light far off looked for as the minutes go, a round 10 s)
+      name: 'dq0dark', what: 'Dingus Quest Zero\'s eyes adapting to the dark (DUNGEON.md: perception as layers; the user\'s, 2026-10-16: eyes take minutes to the dark): at dq0glow\'s place, 14 squares from the lit kitchen\'s door, the torch put out: at once nothing far off (its eyes still used to the torch), after 2 minutes still nothing, after 3 minutes and 20 seconds a faint glow far off ahead, after 5 minutes a light; the eyes the senses\', a 16th of a light level each 1.9 s darker (a torch\'s 9 to the dark\'s 0 in some 4.5 minutes)',
+      init: 't_rc', cycles: 600e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rācp /ram/c.hm /ram/w.hm\rāecho att eye 4 >> /ram/w.hm\r' +
+        ['dq0 -p t -s 7 -c /ram/w.hm', 'open the door behind me', 's', 'move south 4 squares', 'face north', 'douse the torch', 'look',
+         ...Array(12).fill('z'), 'look', ...Array(8).fill('z'), 'look', ...Array(10).fill('z'), 'look', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['You put out the torch.', '% echo $status'],
+      check(m, out) {
+        const o = dq0Story(out), f = [], a = o.indexOf('You put out the torch.'), looks = [];
+        for (let i = o.indexOf('> look > look', a); i >= 0; i = o.indexOf('> look > look', i + 1)) looks.push(i);   // (Each typed, then told)
+        if (a < 0 || looks.length !== 4) return ['the torch not put out, or not four looks: ' + looks.length];
+        const seg = k => o.slice(looks[k], k + 1 < looks.length ? looks[k + 1] : o.indexOf('> quit', looks[k]));
+        if (seg(0).includes('far off') || seg(1).includes('far off')) f.push('a light far off seen before its eyes were used to the dark');
+        if (!seg(2).includes('A faint glow shows far off ahead.')) f.push('no faint glow after 3 minutes 20');
+        if (!seg(3).includes('A light shows far off ahead.')) f.push('no light far off after 5 minutes');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       // (The sound task's scene, dq0s -t: the character faces north, its hearing 5; then the YM2151's key-ons, each
       // with its speakers: the rat's three hits on the right, the squeak on the left, the growl on both, the
       // yapping on the right, the bear's tread in its place on the left; nothing on 0-3 or 7, the music's and bell's)

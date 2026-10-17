@@ -49,14 +49,12 @@ void __fastcall__ adapt (struct eyes* e, unsigned char lv, unsigned char rate)
     e->a = d >= e->a - t ? t : e->a - (unsigned char) d;
 }
 
-/* How far eyes e see a light of brightness b far off (0: dazzled) */
+/* How far eyes e see a light of brightness b far off (the caller's to say if they're dazzled: no hub_now here, the
+** window a chunk's as a look goes) */
 unsigned char __fastcall__ glow_reach (const struct eyes* e, unsigned char b)
 {
     static unsigned r;
 
-    if (hub_now () < e->dz) {
-        return 0;
-    }
     r = 16 * b / (4 + (e->a >> 4));
     return r > GLOW_MAX ? GLOW_MAX : r;
 }
@@ -136,8 +134,8 @@ void __fastcall__ s_glows (unsigned char sn, unsigned x, unsigned y, unsigned ch
     adapt (&E[0], e_, PC_DARK);
     memset (&G, 0, sizeof G);
     G.dazzled = hub_now () < E[0].dz;
-    if (range == 0xFF) {
-        return;
+    if (range == 0xFF || G.dazzled) {
+        return;                                 /* (Blinded, or dazzled: none) */
     }
     sn_ = sn;
     x_ = x;
