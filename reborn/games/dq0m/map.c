@@ -23,7 +23,7 @@ static unsigned lcx, lcy;
 /* A square of a chunk in the cache, or NULL (outside the stratum, or not in the cache) */
 static unsigned char* __fastcall__ peek (unsigned char sn, unsigned x, unsigned y)
 {
-    struct stratum* s = &strata[sn];
+    struct stratum* s = &STRATUM (sn);
     unsigned ox = x - s->x0, oy = y - s->y0, cx, cy;
     unsigned char k;
     struct cslot* c;
@@ -115,7 +115,7 @@ void s_draw_map (void)
     sn = HUB->pc_stratum;
     x = HUB->pc_x;
     y = HUB->pc_y;
-    s = &strata[sn];
+    s = &STRATUM (sn);
     myz = (p = peek (sn, x, y)) != 0 ? K->elev[ky][kx] : 0;
     left = s->w <= MAP_W ? s->x0 : x - MAP_W / 2 < s->x0 ? s->x0 : x - MAP_W / 2 > s->x0 + s->w - MAP_W ?
         s->x0 + s->w - MAP_W : x - MAP_W / 2;

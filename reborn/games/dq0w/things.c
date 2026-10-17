@@ -1084,8 +1084,8 @@ void __fastcall__ s_stock_down (unsigned char k)
     y0 = WREC->cslot[k].cy;
     it_need (sn, x0, y0);                       /* (Its chunk's things in the store: none yet, as a rule) */
     hub_map (WORLD_BANK);
-    x0 = WREC->strata[sn].x0 + (WREC->cslot[k].cx << CW_BITS);
-    y0 = WREC->strata[sn].y0 + (WREC->cslot[k].cy << CW_BITS);
+    x0 = WREC->strata[SLOT (sn)].x0 + (WREC->cslot[k].cx << CW_BITS);
+    y0 = WREC->strata[SLOT (sn)].y0 + (WREC->cslot[k].cy << CW_BITS);
     n = WREC->stock[k].n;
     for (j = 0; j < n; ++j) {
         hub_map (WORLD_BANK);
@@ -1111,7 +1111,7 @@ void __fastcall__ s_stock_down (unsigned char k)
 /* A denizen's remains put down where it fell (kind: KI_BODY, KI_BONES; the world's, wbody.c's: it died) */
 void __fastcall__ s_lay_body (unsigned char kind, unsigned char sn, unsigned x, unsigned y)
 {
-    it_need (sn, (x - strata[sn].x0) >> CW_BITS, (y - strata[sn].y0) >> CW_BITS);  /* (Its chunk's things in the
+    it_need (sn, (x - STRATUM (sn).x0) >> CW_BITS, (y - STRATUM (sn).y0) >> CW_BITS);  /* (Its chunk's things in the
                                                 **   store first) */
     put_down (kind, IW_SQUARE, sn, x, y, 1);
     hub_map (0);

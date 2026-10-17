@@ -978,7 +978,7 @@ static void __fastcall__ planned (unsigned char n)
 {
     ask_maker (M_PLAN, n, 0, 0);
     hub_map (WORLD_BANK);
-    memcpy (&WREC->strata[n], &WREC->grown, sizeof WREC->grown);
+    memcpy (&WREC->strata[SLOT (n)], &WREC->grown, sizeof WREC->grown);
     sync_strata ();
 }
 
@@ -1003,26 +1003,71 @@ static void __fastcall__ bounds (struct stratum* s, unsigned lx0, unsigned ly0, 
     s->y0 = ly0 - 3 - random (h - (ly1 - ly0) - 6);
 }
 
+/* Stratum m's slot in the hub's strata's records (world.h's MAXSTRATA: m & 7) made way for: the stratum there, if
+** it's another's and made, put out (the chunks the maker's stocked marked first; its things' chunks out of the item
+** store, it_flush; its record to its file, st_out: stSS.dat), the slot free: 1, or 0 (no save folder: it stays) */
+static unsigned char __fastcall__ slot_for (unsigned char m)
+{
+    struct stratum* s = &STRATUM (m);
+    unsigned char o = s->n;
+
+    if (!s->made || o == m) {
+        return 1;
+    }
+    hub_map (0);
+    if (!HUB->savedir[0]) {
+        return 0;
+    }
+    stocks ();
+    it_flush (o);
+    if (!st_out (o)) {
+        return 0;
+    }
+    hub_map (WORLD_BANK);
+    WREC->strata[SLOT (m)].made = 0;
+    sync_strata ();
+    return 1;
+}
+
+/* Stratum m in its slot (the character or a shaft come to it): its record read back from its file if it's been put
+** out (the one there put out for it: slot_for; the maker told, its plan grown again, M_SLOT): 1, or 0 (not made yet,
+** the slot free for it: the caller grows it; or no room, no folder) */
+unsigned char __fastcall__ s_stratum_in (unsigned char m)
+{
+    if (STRATUM (m).made && STRATUM (m).n == m) {
+        return 1;
+    }
+    if (!slot_for (m) || !st_in (m)) {
+        return 0;
+    }
+    sync_strata ();
+    ask_maker (M_SLOT, m, 0, 0);
+    return 1;
+}
+
 /* Stratum n + 1 begun, under stratum n's links down: its record (in the hub: its bounds round them, a link up at
-** each), then its plan the maker's */
+** each, in its slot: the stratum there put out first), then its plan the maker's */
 void __fastcall__ s_grow_below (unsigned char n)
 {
-    struct stratum* s = &strata[n];
+    struct stratum* s = &STRATUM (n);
     struct stratum* b;
     struct link* l;
     struct link* k;
     unsigned lx0 = 0xFFFF, ly0 = 0xFFFF, lx1 = 0, ly1 = 0, x, y;
     unsigned char i, st;
 
+    if (!slot_for (n + 1)) {
+        return;
+    }
     hub_map (WORLD_BANK);                       /* (The strata's records the world bank's: it in the window) */
-    b = &WREC->strata[n + 1];
+    b = &WREC->strata[SLOT (n + 1)];
     rseed (s->seed + 977);
     memset (b, 0, sizeof *b);
     b->n = n + 1;
     b->seed = s->seed * 69069UL + 1;
     i = random (2);                             /* (The theme's say: one of the stratum's styles) */
     hub_map (THEME_BANK);
-    st = THEME->style[n + 1][i];
+    st = THEME->style[n + 1 < TSTRATA ? n + 1 : TSTRATA - 1][i];   /* (Past the theme's strata, its deepest's) */
     hub_map (WORLD_BANK);
     b->style = st;
     b->age = 1 + random (40);
@@ -1117,7 +1162,7 @@ void __fastcall__ s_climb (unsigned char d)
         return;
     }
     hub_map (0);
-    lk = &strata[sn_].link[l];
+    lk = &STRATUM (sn_).link[l];
     if (lk->kind == O_WAY_OUT) {                /* (The way out: shut, till the theme's mission opens it) */
         if (HUB->way_open) {
             event (E_LEFT, 0, 0);
@@ -1126,7 +1171,7 @@ void __fastcall__ s_climb (unsigned char d)
         }
         return;
     }
-    if (!strata[lk->to].made) {
+    if (!stratum_in (lk->to)) {                 /* (Its record in its slot: from its file, or grown now) */
         grow_below (sn_);
     }
     move.on = 1;
@@ -1137,7 +1182,7 @@ void __fastcall__ s_climb (unsigned char d)
     move.face = HUB->pc_face;
     move.dir = lk->kind;
     /* (The flight: the drop between the floors, a step's time a foot on a stairway, twice on a ladder) */
-    feet = abs (strata[sn_].datum - strata[lk->to].datum);
+    feet = abs (STRATUM (sn_).datum - STRATUM (lk->to).datum);
     t += (unsigned long) (feet + 1) * stept *
         (lk->kind == O_LADDER_DOWN || lk->kind == O_LADDER_UP ? 2 : lk->kind == O_SHAFT_DOWN ||
         lk->kind == O_SHAFT_UP ? 3 : 1) / (d == DIR_UP ? 1 : 2);
@@ -1282,7 +1327,7 @@ void s_begin (void)
     store_begin (0);                            /* (A new game's generation: the folder's files of another not read) */
     seed = HUB->seed;
     hub_map (WORLD_BANK);                       /* (The strata's records the world bank's: it in the window) */
-    s = &WREC->strata[0];
+    s = &WREC->strata[SLOT (0)];
     rseed (seed ^ 0x57524C44UL);
     memset (s, 0, sizeof *s);
     s->seed = seed * 2654435761UL + 12345;
@@ -1305,12 +1350,12 @@ void s_begin (void)
     planned (0);
     move.how = A_START;                         /* (The character at the foot of the way in) */
     move.sn = 0;
-    move.x = strata[0].link[0].x;
-    move.y = strata[0].link[0].y;
+    move.x = STRATUM (0).link[0].x;
+    move.y = STRATUM (0).link[0].y;
     hub_map (0);
-    if (HUB->test_start && strata[0].nlinks > 1) {  /* (dq0 -T: at the first way down, for the tests) */
-        move.x = strata[0].link[1].x;
-        move.y = strata[0].link[1].y;
+    if (HUB->test_start && STRATUM (0).nlinks > 1) {  /* (dq0 -T: at the first way down, for the tests) */
+        move.x = STRATUM (0).link[1].x;
+        move.y = STRATUM (0).link[1].y;
     }
     if (HUB->test_start == 2) {                 /* (dq0 -T -T: on the theme's first piece on the top stratum, put down
                                                 **   as its chunk is made) */
@@ -1318,13 +1363,26 @@ void s_begin (void)
         for (k = NPIECES, p = THEME_PLACE; k && p->sn; --k, ++p) {
         }
         if (k) {
-            at (0, (p->cx << CW_BITS) + strata[0].x0, (p->cy << CW_BITS) + strata[0].y0);
+            at (0, (p->cx << CW_BITS) + STRATUM (0).x0, (p->cy << CW_BITS) + STRATUM (0).y0);
             hub_map (THEME_BANK);
             if (p->x) {
                 move.x = p->x;
                 move.y = p->y;
             }
         }
+        hub_map (0);
+    }
+    if (HUB->test_start == 3) {                 /* (dq0 -T -T -T: four strata grown below the top, one under
+                                                **   another, then the character at the foot of the second's way up:
+                                                **   with dq0 -C's two slots, the deepest two in them, the second's
+                                                **   record read back into its slot, the fourth's put out) */
+        for (k = 0; k < 3 && STRATUM (k).made && STRATUM (k).n == k; ++k) {
+            s_grow_below (k);
+        }
+        s_stratum_in (1);
+        move.sn = 1;
+        move.x = STRATUM (1).link[0].x;
+        move.y = STRATUM (1).link[0].y;
         hub_map (0);
     }
 }
@@ -1442,7 +1500,7 @@ static unsigned char __fastcall__ add_link (unsigned char sn, unsigned char kind
     struct link* l;
 
     hub_map (WORLD_BANK);
-    s = &WREC->strata[sn];
+    s = &WREC->strata[SLOT (sn)];
     if (s->nlinks >= NLINKS) {
         return 0xFF;
     }
@@ -1464,7 +1522,8 @@ void __fastcall__ s_start_dig (unsigned char d)
     dig.d = d;
     dig.done = 0;
     if (d == DIR_DOWN) {
-        if (sn_ + 1 >= MAXSTRATA || room_of (sn_, mx, my) == 0xFF) {
+        if (sn_ == 0xFE || sn_ + 1 >= MAXSTRATA && (hub_map (0), !HUB->savedir[0]) ||
+            room_of (sn_, mx, my) == 0xFF) {    /* (Past the hub's strata's slots, none to put out without a folder) */
             hub_map (0);
             no_way (N_NO_DIG);                  /* (A shaft from a room's floor, and not from the deepest) */
             return;
@@ -1491,12 +1550,12 @@ void __fastcall__ s_start_dig (unsigned char d)
         }
         dig.mat = C->mat[room_of (sn_, dig.x, dig.y)][MP_FLOOR];    /* (The room's floor: the maker's) */
         dig.top = dig.mat == MAT_EARTH ? 2 : dig.mat == MAT_STONE ? 0 : 1;   /* (Earth two feet, flags or masonry one) */
-        if (!strata[sn_ + 1].made) {
+        if (!stratum_in (sn_ + 1)) {
             grow_below (sn_);                   /* (Grown now: the shaft goes down to its floors, if it reaches under) */
             mx = dig.x;
             my = dig.y;
         }
-        dig.need = abs (strata[sn_].datum - strata[sn_ + 1].datum);
+        dig.need = abs (STRATUM (sn_).datum - STRATUM (sn_ + 1).datum);
     } else {
         dig.x = mx + dir_x[d];
         dig.y = my + dir_y[d];
@@ -1554,7 +1613,8 @@ void s_dig_on (void)
         return;
     }
     /* The shaft: a way down, if the stratum below reaches under it */
-    b = &strata[sn_ + 1];
+    stratum_in (sn_ + 1);
+    b = &STRATUM (sn_ + 1);
     if (b->made && (dig.x - b->x0 >= b->w || dig.y - b->y0 >= b->h)) {
         hub_map (0);
         event (E_DIG, 0, D_SOLID << 8);
@@ -1784,7 +1844,7 @@ void __fastcall__ s_door_work (unsigned char what)
 ** frame's), to be set off as it gets there (or noticed in time: wtrap.c's) */
 static void on_way (void)
 {
-    unsigned ox = strata[sn_].x0 + C->cx * CW, oy = strata[sn_].y0 + C->cy * CW;
+    unsigned ox = STRATUM (sn_).x0 + C->cx * CW, oy = STRATUM (sn_).y0 + C->cy * CW;
 
     tx_ += ox;
     ty_ += oy;

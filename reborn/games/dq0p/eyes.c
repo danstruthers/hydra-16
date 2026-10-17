@@ -84,8 +84,8 @@ unsigned char __fastcall__ clear_line (unsigned char sn, unsigned x, unsigned y,
         sx = dx < 0 ? x - qx : x + qx;
         sy = dy < 0 ? y - qy : y + qy;
         if (!mk) {
-            ox = (sx - strata[sn].x0) >> CW_BITS;   /* (Its chunk in the cache: asked once a chunk) */
-            oy = (sy - strata[sn].y0) >> CW_BITS;
+            ox = (sx - STRATUM (sn).x0) >> CW_BITS;   /* (Its chunk in the cache: asked once a chunk) */
+            oy = (sy - STRATUM (sn).y0) >> CW_BITS;
             if (ox != kx || oy != ky) {
                 kx = ox;
                 ky = oy;
@@ -169,15 +169,15 @@ void __fastcall__ glows (unsigned char sn, unsigned x, unsigned y, unsigned char
     for (k = nls, l = ls; k; --k, ++l) {
         source (l->x, l->y, 2 * l->r + 1);
     }
-    cx = x - strata[sn].x0 - GLOW_MAX;          /* (The lit rooms in the chunks round it the cache has: each one's
+    cx = x - STRATUM (sn).x0 - GLOW_MAX;          /* (The lit rooms in the chunks round it the cache has: each one's
                                                 **   lit square nearest the eyes) */
-    cy = y - strata[sn].y0 - GLOW_MAX;
+    cy = y - STRATUM (sn).y0 - GLOW_MAX;
     hub_map (WORLD_BANK);
     for (k = NCSLOTS, s = WREC->cslot, n = 0; k && n < 8; --k, ++s) {
         if (s->used && s->sn == sn && (s->cx << CW_BITS) + CW - 1 - cx < CW + 2 * GLOW_MAX &&
             (s->cy << CW_BITS) + CW - 1 - cy < CW + 2 * GLOW_MAX) {
-            rs[n].x = strata[sn].x0 + (s->cx << CW_BITS);
-            rs[n++].y = strata[sn].y0 + (s->cy << CW_BITS);
+            rs[n].x = STRATUM (sn).x0 + (s->cx << CW_BITS);
+            rs[n++].y = STRATUM (sn).y0 + (s->cy << CW_BITS);
         }
     }
     while (n--) {

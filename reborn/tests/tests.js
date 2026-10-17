@@ -2603,6 +2603,29 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0strata', what: 'Dingus Quest Zero\'s strata out of the hub\'s slots (move 2.8: no fixed count of strata; world.h\'s STRATUM, a stratum\'s record in its slot, the rest in the save folder, stSS.dat): dq0 -T -T -T (three strata grown below the top, the character at the foot of the second\'s way up) and -C (two slots, so each stratum made puts out the one two above it, and the second, read back into its slot as the character starts there, the fourth): up (the top\'s record read back into the slot the third had, its plan grown again, the third\'s put out), down again, seeing there what it saw first; quit and carried on, the same again',
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 3 -c /ram/c.hm -T -T -T -C -d /ram/kept\r' +
+        ['look', 'u', 'look', 'd', 'look', 'quit', 'ls /ram/kept', 'dq0 -C -d /ram/kept', 'look', 'u', 'd', 'look', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      expect: ['You climb', 'You go down', 'takes up where they left off.', '% echo $status'],
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        const looks = o.split('> look ').slice(1).map(x => x.slice(0, x.indexOf('> ')).replace(/(A giant rat|Something stirs)[^.]*\./g, '').replace(/\s+/g, ' ').trim())
+          .filter(x => x);                     // (Each look's words, but the rats': they go their own ways meanwhile)
+        if (looks.length < 5) f.push('fewer looks than five');
+        else {
+          if (looks[0] !== looks[2]) f.push('the second stratum not as it was, down again: "' + looks[0] + '" then "' + looks[2] + '"');
+          if (looks[0] !== looks[3] || looks[0] !== looks[4]) f.push('the second stratum not as it was, carried on');
+        }
+        if ((o.match(/You climb/g) || []).length < 2) f.push('not up, twice');
+        if ((o.match(/You go down/g) || []).length < 2) f.push('not down, twice');
+        const ls = o.slice(o.indexOf('% ls /ram/kept'), o.indexOf('% dq0 -C'));
+        if (!/st[0-9a-f]0000\.da/.test(ls)) f.push('no stratum\'s record put out (st...)');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0names', what: 'Dingus Quest Zero\'s names (the user, 2026-10-16: "I would like to be able to reference items by aliases, as long as the alias doesn\'t clash with something else"; names.c): a sword named Linda (dq0 -k sword), shown in what the character carries ("Linda, your sword"), names that clash refused (another name, a kind of thing\'s, a kind of creature\'s, a word the parser needs), Linda used in commands (dropped, seen lying there by its name, taken up, examined, taken in hand to strike a rat with), the room named the Mausoleum and said so as it\'s looked at; the game kept and carried on, the names with it; then a name forgotten',
       init: 't_rc', cycles: 1200e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 3 -c /ram/c.hm -T -k sword -d /ram/kept\r' +

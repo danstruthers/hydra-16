@@ -129,7 +129,7 @@ unsigned char __fastcall__ cached (unsigned char sn, unsigned x, unsigned y)
     static struct stratum* t;
     static unsigned cx, cy;
 
-    t = &strata[sn];
+    t = &STRATUM (sn);
     if ((cx = x - t->x0) >= t->w || (cy = y - t->y0) >= t->h) {
         return 0;
     }
@@ -172,7 +172,7 @@ unsigned char* __fastcall__ light_grid (unsigned char sn, unsigned x, unsigned y
     static struct lslot* f;
     static unsigned ox, oy, old;
 
-    t = &strata[sn];
+    t = &STRATUM (sn);
     if ((ox = x - t->x0) >= t->w || (oy = y - t->y0) >= t->h) {
         return 0;
     }
@@ -213,9 +213,9 @@ unsigned char __fastcall__ light_at (unsigned char sn, unsigned x, unsigned y)
     if (!(p = light_grid (sn, x, y, 1))) {
         return 0;
     }
-    i = (x - strata[sn].x0) & (CW - 1);
+    i = (x - STRATUM (sn).x0) & (CW - 1);
     hy_bank (lbank);
-    v = p[(((y - strata[sn].y0) & (CW - 1)) << 4) + (i >> 1)];
+    v = p[(((y - STRATUM (sn).y0) & (CW - 1)) << 4) + (i >> 1)];
     hub_map (0);
     return i & 1 ? v >> 4 : v & 0x0F;
 }

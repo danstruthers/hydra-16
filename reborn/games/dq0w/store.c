@@ -61,8 +61,8 @@ void store_put (void)
     unsigned char p, i, n, room, had, tries;
 
     rsn = rec.sn;
-    rrx = (rec.x - strata[rsn].x0) >> 8;        /* (RW squares a region) */
-    rry = (rec.y - strata[rsn].y0) >> 8;
+    rrx = (rec.x - STRATUM (rsn).x0) >> 8;        /* (RW squares a region) */
+    rry = (rec.y - STRATUM (rsn).y0) >> 8;
     hub_map (0);
     hy_sem_acquire (HUB->change_lock);
     for (tries = 0; ; ++tries) {
@@ -157,7 +157,7 @@ void __fastcall__ change (unsigned char sn, unsigned x, unsigned y, unsigned cha
             C->elev[cy_][cx_] = elev;
             if (link != 0xFF && C->nopen < NOPEN) {
                 o = &C->open[C->nopen++];
-                o->kind = strata[sn].link[link].kind;
+                o->kind = STRATUM (sn).link[link].kind;
                 o->x = cx_;
                 o->y = cy_;
                 o->sill = 0;
@@ -220,8 +220,8 @@ void s_stocked (void)
         c = &WREC->cslot[k];
         {
             rec.sn = c->sn;
-            rec.x = WREC->strata[c->sn].x0 + (c->cx << CW_BITS);
-            rec.y = WREC->strata[c->sn].y0 + (c->cy << CW_BITS);
+            rec.x = WREC->strata[SLOT (c->sn)].x0 + (c->cx << CW_BITS);
+            rec.y = WREC->strata[SLOT (c->sn)].y0 + (c->cy << CW_BITS);
             rec.tile = 0;
             rec.elev = 0;
             rec.link = STOCKED;

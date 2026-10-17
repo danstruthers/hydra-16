@@ -78,7 +78,7 @@ static void __fastcall__ put_room (unsigned char x, unsigned char y, unsigned ch
     r->y = y;
     r->w = w;
     r->h = h;
-    r->flags = random (8) + strata[L->sn].n < SP->lit ? R_LIT : 0;
+    r->flags = random (8) + STRATUM (L->sn).n < SP->lit ? R_LIT : 0;
     r->kind = random (8);
     for (j = y - 1; j <= y + h; ++j) {
         for (i = x - 1; i <= x + w; ++i) {
@@ -344,7 +344,7 @@ static void clear (void)
 
 void __fastcall__ o_grow_built (struct chunk* c, const struct edges* e, unsigned long seed)
 {
-    struct stratum* s = &strata[c->sn];
+    struct stratum* s = &STRATUM (c->sn);
     unsigned char i, r, tries, ok, x, y, k;
 
     L = c;

@@ -89,7 +89,7 @@ static void __fastcall__ change_put (struct chunk* k, unsigned char lx, unsigned
     k->tile[ly][lx] = (k->tile[ly][lx] & T_SEEN) | tile;
     k->elev[ly][lx] = elev;
     if (link != 0xFF && k->nopen < NOPEN) {
-        k->open[k->nopen].kind = strata[k->sn].link[link].kind;
+        k->open[k->nopen].kind = STRATUM (k->sn).link[link].kind;
         k->open[k->nopen].x = lx;
         k->open[k->nopen].y = ly;
         k->open[k->nopen].sill = 0;
@@ -125,8 +125,8 @@ unsigned char __fastcall__ changes_over (struct chunk* k, unsigned x, unsigned y
     unsigned left;
     int fd;
 
-    rx = (x - strata[sn].x0) >> 8;              /* (Its region: RW squares each way) */
-    ry = (y - strata[sn].y0) >> 8;
+    rx = (x - STRATUM (sn).x0) >> 8;              /* (Its region: RW squares each way) */
+    ry = (y - STRATUM (sn).y0) >> 8;
     hub_map (0);
     hy_sem_acquire (HUB->change_lock);
     for (p = 0; p < NCPAGES; ++p) {

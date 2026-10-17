@@ -55,6 +55,27 @@ static int __fastcall__ ovl_load (const char* dir)
 }
 
 /* Request i answered: the strata's records copied first (the world bank's are the truth), and back if they changed */
+/* The chunks in the cache of strata no longer in the hub's records (their slots made way for another's: M_PLAN's,
+** M_SLOT's) theirs no more, what's been seen of them kept (but those a task's reading, or stocked, not yet marked) */
+static void stale (void)
+{
+    struct cslot c;
+    unsigned char k, j, busy;
+
+    for (k = 0; k < NCSLOTS; ++k) {
+        hub_get (WORLD_BANK, &WREC->cslot[k], &c, sizeof c);
+        for (j = 0, busy = c.used == CS_FRESH; j < NASK; ++j) {
+            hub_map (WORLD_BANK);
+            busy |= WREC->inuse[j] == k;
+        }
+        hub_map (0);
+        if (c.used && !busy && (STRATUM (c.sn).n != c.sn || !STRATUM (c.sn).made)) {
+            seen_keep (k);
+            hub_set (WORLD_BANK, &WREC->cslot[k].used, 0, 1);
+        }
+    }
+}
+
 static void __fastcall__ serve (unsigned char i)
 {
     static struct mreq q;
@@ -62,11 +83,17 @@ static void __fastcall__ serve (unsigned char i)
     memcpy (&q, &HUB->mreq[i], sizeof q);
     hub_get (WORLD_BANK, WREC->strata, strata, sizeof strata);
     switch (q.kind) {
+    case M_SLOT:                                /* (Its record read back into its slot: its plan grown again) */
+        stale ();
+        plan_stratum (q.sn);
+        place_pieces (q.sn);
+        break;
     case M_PLAN:
+        stale ();
         plan_stratum (q.sn);
         links_down (q.sn);
         place_pieces (q.sn);                    /* (The theme's pieces in it: theme.h) */
-        hub_put (WORLD_BANK, &WREC->grown, &strata[q.sn], sizeof strata[0]);    /* (Its record grown: the world's
+        hub_put (WORLD_BANK, &WREC->grown, &STRATUM (q.sn), sizeof STRATUM (0));    /* (Its record grown: the world's
                                                 **   to write into the strata's) */
         break;
     case M_CHUNK:
@@ -78,10 +105,10 @@ static void __fastcall__ serve (unsigned char i)
     case M_RESTORE:                             /* (The seen maps back, each stratum made grown again: the same
                                                 **   plan) */
         changes_restore ();
-        for (q.sn = 0; q.sn < MAXSTRATA; ++q.sn) {
-            if (strata[q.sn].made) {
-                plan_stratum (q.sn);
-                place_pieces (q.sn);
+        for (q.cx = 0; q.cx < MAXSTRATA; ++q.cx) {     /* (The slots: each its stratum's, by its number) */
+            if (strata[q.cx].made) {
+                plan_stratum (strata[q.cx].n);
+                place_pieces (strata[q.cx].n);
             }
         }
         break;

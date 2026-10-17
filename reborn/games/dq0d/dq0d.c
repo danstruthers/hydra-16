@@ -24,8 +24,8 @@
 ** comes later.)
 **
 ** Its records (the lairs, the denizens) are in a bank of its own, a record at a time copied out, a cache (move 2.8:
-** no fixed count of them): each region's (the plan's, 8 by 8 chunks: a lair's by its chunk, a denizen's by its square,
-** or, not placed yet, its lair's) all in it or none, those round the character's always (one each way), the rest in
+** no fixed count of them): each region's (the frame's, 256 squares each way: a lair's by its chunk's first square, a
+** denizen's by its square, or, not placed yet, its lair's; no stratum's record wanted to find it) all in it or none, those round the character's always (one each way), the rest in
 ** the save folder (dnSXXYY.dat, a version each time it's written: ../dq0/vfile.inc's), read in as they're wanted,
 ** put out (the one least lately wanted) as a record's wanted and there's none free; each denizen and each lair known
 ** by a number of its own, never another's (a name given, a denizen's lair), its record's place the cache's.  Kept
@@ -127,6 +127,8 @@ struct lair {
     unsigned        id;                         /* Its number (1 on: the order the lairs were decided in) */
     unsigned        cx, cy;                     /* Its chunk (from the stratum's x0, y0) */
     unsigned        hx, hy;                     /* Its home square (placed) */
+    unsigned char   rx, ry;                     /* Its region (its chunk's first square's, the frame's: 0xFF not
+                                                **   known yet, a version 8 save's) */
 };
 #define L_PLACED        0x01                    /* Its denizens placed */
 struct den {
@@ -138,7 +140,8 @@ struct den {
     unsigned long   ready;                      /* When it can act again */
     unsigned char   attitude;                   /* To the character (hub.h's AT_*) */
     unsigned char   order;                      /* An ally's request (hub.h's OR_*) */
-    unsigned char   lsn, lrx, lry;              /* Its lair's stratum, and its region (its own, not placed yet) */
+    unsigned char   lsn, lrx, lry;              /* Its lair's stratum, and its region (its own, not placed yet: the
+                                                **   lair's rx, ry) */
     unsigned        hx, hy;                     /* Its lair's home square (placed) */
 };
 #define D_OUT           0x01                    /* On a square of its own */
@@ -270,7 +273,7 @@ static unsigned char pcs, pclit, pcbusy, pcdead;
 unsigned __fastcall__ apart (int dx, int dy);  /* |dx| or |dy|, the more (apart.s: in assembly, asked of every
                                                 **   square the minds weigh) */
 
-/* ---- Populations: stratum n's decided as its plan is grown (its record and links whole: the hub's strata[n],
+/* ---- Populations: stratum n's decided as its plan is grown (its record and links whole: the hub's STRATUM (n),
 ** copied): for each kind that lives in its style at its depth, its lairs (by the stratum's ways, if it lairs there;
 ** else in a region of halls, a chunk of it), and the denizens in each, a record each */
 #pragma code-name (push, "SW1CODE")
@@ -278,7 +281,7 @@ unsigned __fastcall__ apart (int dx, int dy);  /* |dx| or |dy|, the more (apart.
 
 void __fastcall__ s_populate (unsigned char n)
 {
-    struct stratum* s = &strata[n];
+    struct stratum* s = &STRATUM (n);
     struct region* r;
     unsigned char k, j, m, i, rx = 0, ry = 0, t, u;
     unsigned w = (s->w + CW - 1) / CW, h = (s->h + CW - 1) / CW;
@@ -323,7 +326,9 @@ void __fastcall__ s_populate (unsigned char n)
                 L.cy = L.cy < h ? L.cy : h - 1;
             }
             L.n = K.nmin + random (K.nmax - K.nmin + 1);
-            if (!reg_need (n, L.cx >> 3, L.cy >> 3) || (t = rec_new (1)) == 0xFF) {
+            L.rx = (s->x0 + (L.cx << CW_BITS)) >> 8;
+            L.ry = (s->y0 + (L.cy << CW_BITS)) >> 8;
+            if (!reg_need (n, L.rx, L.ry) || (t = rec_new (1)) == 0xFF) {
                 break;                          /* (Its region in the cache first: no room, no folder) */
             }
             L.id = ++hd.lids;
@@ -331,8 +336,8 @@ void __fastcall__ s_populate (unsigned char n)
             D.kind = k;
             D.lid = L.id;
             D.sn = D.lsn = n;
-            D.lrx = L.cx >> 3;
-            D.lry = L.cy >> 3;
+            D.lrx = L.rx;
+            D.lry = L.ry;
             D.attitude = hd.fatt[K.faction & (NFACT - 1)];    /* (Its faction's, as the character stands with it) */
             for (i = 0; i < L.n && (u = rec_new (0)) != 0xFF; ++i) {
                 D.id = ++hd.ids;
@@ -352,11 +357,12 @@ void __fastcall__ s_populate (unsigned char n)
 ** copied into the world bank) */
 static void grow (void)
 {
-    unsigned char n, m;
+    unsigned char n, m, k;
 
-    for (n = 0; n < MAXSTRATA; ++n) {
+    for (k = 0; k < MAXSTRATA; ++k) {           /* (The hub's slots: each one's stratum, its own number) */
         hub_map (WORLD_BANK);
-        m = WREC->strata[n].made;
+        m = WREC->strata[k].made;
+        n = WREC->strata[k].n;
         hub_map (0);
         if (m && !DONE (n) && !hub_posted (&HUB->mreq[ASK_WORLD])) {
             sync_strata ();
@@ -388,7 +394,7 @@ void __fastcall__ s_place (unsigned char i)
     unsigned char w = 7, h = 7, j, t, k;
 
     lair_get (i);
-    s = &strata[L.sn];
+    s = &STRATUM (L.sn);
     rseed (s->seed + (unsigned long) (L.id - 1) * 7919UL);     /* (By its number: wherever its record is) */
     ox = s->x0 + L.cx * CW;
     oy = s->y0 + L.cy * CW;
@@ -463,7 +469,7 @@ static unsigned char __fastcall__ made (unsigned char sn, unsigned cx, unsigned 
 /* Square x, y of stratum sn in a chunk that's made already */
 static unsigned char __fastcall__ made_at (unsigned char sn, unsigned x, unsigned y)
 {
-    struct stratum* s = &strata[sn];
+    struct stratum* s = &STRATUM (sn);
 
     return x - s->x0 < s->w && y - s->y0 < s->h && made (sn, (x - s->x0) >> CW_BITS, (y - s->y0) >> CW_BITS);
 }
@@ -472,7 +478,7 @@ static unsigned char __fastcall__ made_at (unsigned char sn, unsigned x, unsigne
 ** surroundings detailed: this task never makes a chunk to place a lair), placed: 1 if any was */
 static unsigned char nearby (void)
 {
-    struct stratum* s = &strata[pcs];
+    struct stratum* s = &STRATUM (pcs);
     unsigned cx = (pcx - s->x0) / CW, cy = (pcy - s->y0) / CW;
     unsigned char i, n = 0;
 
@@ -1333,11 +1339,11 @@ static void tend (void)
         }
     }
     if (again) {
-        if (pcs != lrs || (pcx - strata[pcs].x0) >> 8 != lrx || (pcy - strata[pcs].y0) >> 8 != lry) {
+        if (pcs != lrs || (pcx - STRATUM (pcs).x0) >> 8 != lrx || (pcy - STRATUM (pcs).y0) >> 8 != lry) {
             lrs = pcs;                          /* (Come into a region: those round it wanted, in the cache, the
                                                 **   actors far from it retired first) */
-            lrx = (pcx - strata[pcs].x0) >> 8;
-            lry = (pcy - strata[pcs].y0) >> 8;
+            lrx = (pcx - STRATUM (pcs).x0) >> 8;
+            lry = (pcy - STRATUM (pcs).y0) >> 8;
             dneed ();
         }
         enlist_near ();
@@ -1703,7 +1709,12 @@ int main (int argc, char* argv[])
             now = hub_now ();
             pcx = HUB->pc_x;
             pcy = HUB->pc_y;
-            pcs = HUB->pc_stratum;
+            if (pcs != HUB->pc_stratum) {
+                pcs = HUB->pc_stratum;
+                sync_strata ();                 /* (Its stratum's record in its slot: the world may have made way for
+                                                **   it there) */
+                hub_map (0);
+            }
             pcbusy = HUB->pc_ready > now;
             pcdead = (HUB->pcsum.cond & C_DEAD) != 0;
             if (!(pclit = HUB->pc_light != 0) && DONE (pcs) && (p = at (pcs, pcx, pcy)) != 0) {
@@ -1763,8 +1774,8 @@ static void den_region (void)
 {
     if (D.flags & (D_OUT | D_ACTOR | D_DEAD)) {
         rsn = D.sn;
-        rrx = (D.x - strata[D.sn].x0) >> 8;
-        rry = (D.y - strata[D.sn].y0) >> 8;
+        rrx = D.x >> 8;
+        rry = D.y >> 8;
     } else {
         rsn = D.lsn;
         rrx = D.lrx;
@@ -1822,7 +1833,7 @@ static unsigned char __fastcall__ reg_out (unsigned char k)
     }
     for (i = 0, tag = 0; i < hd.nlairs; ++i) {
         lair_get (i);
-        if (L.kind && L.sn == sn && L.cx >> 3 == rx && L.cy >> 3 == ry) {
+        if (L.kind && L.sn == sn && L.rx == rx && L.ry == ry) {
             write (fd, &tag, 1);
             write (fd, &L, sizeof L);
             ++n;
@@ -1853,8 +1864,7 @@ static struct lair sl;
 static struct den sd;
 static unsigned char make_room (void)
 {
-    struct stratum* s = &strata[pcs];
-    unsigned char k, b = 0xFF, cx = (pcx - s->x0) >> 8, cy = (pcy - s->y0) >> 8, r;
+    unsigned char k, b = 0xFF, cx = pcx >> 8, cy = pcy >> 8, r;
     unsigned t;
 
     hub_map (0);
@@ -1963,8 +1973,8 @@ static void den_region4 (void)
 {
     if (D.flags & (D_OUT | D_ACTOR | D_DEAD)) {
         rsn = D.sn;
-        rrx = (D.x - strata[D.sn].x0) >> 8;
-        rry = (D.y - strata[D.sn].y0) >> 8;
+        rrx = D.x >> 8;
+        rry = D.y >> 8;
     } else {
         rsn = D.lsn;
         rrx = D.lrx;
@@ -2011,14 +2021,20 @@ static void rebuild (void)
     for (i = 0; i < hd.nlairs; ++i) {
         lair_get (i);
         rsn = L.sn;
-        rrx = L.cx >> 3;
-        rry = L.cy >> 3;
+        rrx = L.rx = (STRATUM (L.sn).x0 + (L.cx << CW_BITS)) >> 8;     /* (Its region, the frame's: the strata
+                                                **   it knew, at most eight, all in the cache) */
+        rry = L.ry = (STRATUM (L.sn).y0 + (L.cy << CW_BITS)) >> 8;
+        lair_put (i);
         if (L.kind && reg_find4 () == 0xFF && rfree != 0xFF) {
             reg_add4 (rfree);
         }
     }
     for (i = 0; i < hd.ndens; ++i) {
         den_get (i);
+        lair_get (D.lid - 1);                   /* (Its lair: its record's place its number less 1, the old layout's) */
+        D.lrx = L.rx;
+        D.lry = L.ry;
+        den_put (i);
         den_region4 ();
         if (D.kind && reg_find4 () == 0xFF && rfree != 0xFF) {
             reg_add4 (rfree);
@@ -2030,16 +2046,15 @@ static void rebuild (void)
 ** records first, the regions they're in made the table's (keep's rebuild) */
 void s_dneed (void)
 {
-    struct stratum* s = &strata[pcs];
-    unsigned char x, y, cx = (pcx - s->x0) >> 8, cy = (pcy - s->y0) >> 8, r;
+    unsigned char x, y, cx = pcx >> 8, cy = pcy >> 8, r;
 
     if (hd.rebuild) {
         rebuild ();
     }
     hub_map (0);
     r = !HUB->small;                            /* (dq0 -C: its own region alone) */
-    for (y = cy >= r ? cy - r : 0; y <= cy + r && y < s->rh; ++y) {
-        for (x = cx >= r ? cx - r : 0; x <= cx + r && x < s->rw; ++x) {
+    for (y = cy >= r ? cy - r : 0; y <= cy + r && y >= cy - r; ++y) {
+        for (x = cx >= r ? cx - r : 0; x <= cx + r && x >= cx - r; ++x) {
             reg_need (pcs, x, y);
         }
     }
@@ -2167,8 +2182,6 @@ static void __fastcall__ old_dens (int fd)
         D.lid = piece[1] + 1;
         lair_get (piece[1]);
         D.lsn = L.sn;
-        D.lrx = L.cx >> 3;
-        D.lry = L.cy >> 3;
         D.hx = L.hx;
         D.hy = L.hy;
         den_put (i);

@@ -125,6 +125,6 @@ void s_portals (void)
         wk.fx = wk.px + dir_x[wk.pd];
         wk.fy = wk.py + dir_y[wk.pd];
     } else if (out == PO_SLIPPED) {
-        harm (HC_FALL, strata[wk.sn].style == ST_BUILT ? GR_HARD : GR_ROCKY, HF_CLEAR, SILL);
+        harm (HC_FALL, STRATUM (wk.sn).style == ST_BUILT ? GR_HARD : GR_ROCKY, HF_CLEAR, SILL);
     }
 }

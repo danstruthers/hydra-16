@@ -285,8 +285,8 @@ static void rebuild (void)
     IPG->rebuild = 0;
     while ((i = items (i, IN_SQUARE | IN_PORTAL, 0)) != 0) {
         sn = ip->sn;
-        cx = (ip->x - strata[sn].x0) >> CW_BITS;
-        cy = (ip->y - strata[sn].y0) >> CW_BITS;
+        cx = (ip->x - STRATUM (sn).x0) >> CW_BITS;
+        cy = (ip->y - STRATUM (sn).y0) >> CW_BITS;
         hy_bank (ovbank[OVBANKS]);
         for (k = 0, f = 0xFF, r = IPG->r; k < NIRES; ++k, ++r) {
             if (r->used && r->sn == sn && r->cx == cx && r->cy == cy) {

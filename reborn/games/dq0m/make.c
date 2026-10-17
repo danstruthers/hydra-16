@@ -62,7 +62,7 @@ static unsigned char pick (void)
 {
     unsigned char k, best = 0xFF, i, busy, psn = HUB->pc_stratum;
     struct cslot* c;
-    struct stratum* s = &strata[psn];
+    struct stratum* s = &STRATUM (psn);
     unsigned pcx = (HUB->pc_x - s->x0) / CW, pcy = (HUB->pc_y - s->y0) / CW;
 
     hub_map (WORLD_BANK);
@@ -88,7 +88,7 @@ static unsigned char pick (void)
 unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned cy)
 {
     static struct edges e;
-    struct stratum* s = &strata[sn];
+    struct stratum* s = &STRATUM (sn);
     unsigned x = s->x0 + cx * CW, y = s->y0 + cy * CW;
     unsigned char k, u = 1;
     struct chunk* c;

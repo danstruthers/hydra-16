@@ -56,6 +56,12 @@ unsigned char __fastcall__ it_out (unsigned char sn, unsigned cx, unsigned cy); 
                                                 **   written to its region's file, their records freed: 1, or 0 */
 unsigned char __fastcall__ it_in (unsigned char sn, unsigned cx, unsigned cy);    /* (Part 20's) Read in: 1 (2, its region
                                                 **   has no file), or 0 */
+void __fastcall__ it_flush (unsigned char sn);   /* (Part 17's) Stratum sn's chunks' things all put out (its slot
+                                                **   made way for: dq0w.c's slot_for) */
+unsigned char __fastcall__ st_out (unsigned char sn);   /* (Part 22's: sfile.c) A stratum's record to its file */
+unsigned char __fastcall__ st_in (unsigned char sn);    /* (Part 22's) Read back into its slot: 1, or 0 none */
+unsigned char __fastcall__ stratum_in (unsigned char m);    /* (Part 3's: dq0w.c) Stratum m in its slot: 1, or 0
+                                                **   (not made yet) */
 void it_near (void);                              /* The chunks round the character's in the store, as it comes into
                                                 **   one (dq0w.c's see, as it's moved) */
 void __fastcall__ start (const char* dir);      /* (Part 3's: dq0w.c) The world's start, once it's attached */

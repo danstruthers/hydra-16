@@ -34,7 +34,7 @@ static unsigned char rb;
 static struct region* __fastcall__ rg (unsigned char sn, unsigned char rx, unsigned char ry)
 {
     rb = PLAN_BANK (sn);
-    ra = PLAN_AT (sn) + (unsigned) ry * strata[sn].rw + rx;
+    ra = PLAN_AT (sn) + (unsigned) ry * STRATUM (sn).rw + rx;
     hub_get (rb, ra, &R, sizeof R);
     return &R;
 }
@@ -47,7 +47,7 @@ static void rp (void)
 /* A region's corner's lie (feet), the plan's edge's for a corner past it */
 static int __fastcall__ corner (unsigned char sn, unsigned char rx, unsigned char ry)
 {
-    struct stratum* s = &strata[sn];
+    struct stratum* s = &STRATUM (sn);
 
     return 2 * rg (sn, rx < s->rw ? rx : s->rw - 1, ry < s->rh ? ry : s->rh - 1)->z;
 }
@@ -55,7 +55,7 @@ static int __fastcall__ corner (unsigned char sn, unsigned char rx, unsigned cha
 /* The lie of the rock at a square (feet above the datum: the regions' corners, between them evenly) */
 static int __fastcall__ ground (unsigned char sn, unsigned x, unsigned y)
 {
-    struct stratum* s = &strata[sn];
+    struct stratum* s = &STRATUM (sn);
     unsigned ox = x - s->x0, oy = y - s->y0;
     unsigned char rx = ox >> 8, ry = oy >> 8, fx = ox & 0xFF, fy = oy & 0xFF;
     long a = corner (sn, rx, ry), b = corner (sn, rx + 1, ry), c = corner (sn, rx, ry + 1), d = corner (sn, rx + 1, ry + 1);
@@ -86,7 +86,7 @@ static unsigned char __fastcall__ way_at (unsigned char len)
 
 void __fastcall__ o_plan_stratum (unsigned char n)
 {
-    struct stratum* s = &strata[n];
+    struct stratum* s = &STRATUM (n);
     struct region* r;
     unsigned char rx, ry, i, k, nx, ny, d;
     unsigned todo, steps;
@@ -231,13 +231,15 @@ void __fastcall__ o_plan_stratum (unsigned char n)
 /* Stratum n's own links down (one or two, in its halls; none from the deepest), to stratum n + 1 */
 void __fastcall__ o_links_down (unsigned char n)
 {
-    struct stratum* s = &strata[n];
+    struct stratum* s = &STRATUM (n);
     unsigned char k, tries;
     unsigned o;
     struct link* l;
 
-    if (n + 1 >= MAXSTRATA) {
-        return;
+    hub_get (0, HUB->savedir, &k, 1);
+    if (n == 0xFE || n + 1 >= MAXSTRATA && !k) {
+        return;                                 /* (The deepest: the hub's slots all wanted, without a save folder for
+                                                **   those made way for, or the stratum's number a byte's) */
     }
     for (k = 1 + random (2); k && s->nlinks < NLINKS; --k) {
         for (tries = 0; tries < 30; ++tries) {
@@ -265,12 +267,12 @@ void __fastcall__ o_place_pieces (unsigned char n)
 {
     static struct tpiece tp;
     static struct tplace pl;
-    struct stratum* s = &strata[n];
+    struct stratum* s = &STRATUM (n);
     unsigned char p, np, tries, rx, ry, sn[NPIECES];
     unsigned kw, kh;
 
     hub_get (THEME_BANK, &THEME->npieces, &np, 1);
-    rseed (strata[0].seed ^ 0x50494543UL);
+    rseed (STRATUM (0).seed ^ 0x50494543UL);
     for (p = 0; p < np && p < NPIECES; ++p) {
         hub_get (THEME_BANK, &THEME->piece[p], &tp, sizeof tp);
         sn[p] = tp.d0 + random (tp.d1 - tp.d0 + 1);
@@ -312,7 +314,7 @@ static struct detail {
 
 static void __fastcall__ detail (unsigned char sn, unsigned char rx, unsigned char ry)
 {
-    struct stratum* s = &strata[sn];
+    struct stratum* s = &STRATUM (sn);
     struct detail* at = (struct detail*) 0x8000 + ((unsigned) rx * 31 + (unsigned) ry * 17 + sn * 7) % DCACHE;
     unsigned char ix, iy, nx, ny, d, kw, kh, seen[RCH];
     unsigned todo, steps;
@@ -381,7 +383,7 @@ static void __fastcall__ detail (unsigned char sn, unsigned char rx, unsigned ch
 /* The way across chunk (cx, cy)'s north edge (west: across its west), or NO_WAY */
 static unsigned char __fastcall__ edge_way (unsigned char sn, unsigned cx, unsigned cy, unsigned char west)
 {
-    struct stratum* s = &strata[sn];
+    struct stratum* s = &STRATUM (sn);
     unsigned char rx = cx / RCH, ry = cy / RCH, ix = cx % RCH, iy = cy % RCH, p;
     unsigned len;
 
@@ -412,7 +414,7 @@ static unsigned char __fastcall__ edge_way (unsigned char sn, unsigned cx, unsig
 ** it (x1 and y1 0xFF: solid rock, nothing to grow) */
 void __fastcall__ o_chunk_edges (unsigned char sn, unsigned cx, unsigned cy, struct edges* e)
 {
-    struct stratum* s = &strata[sn];
+    struct stratum* s = &STRATUM (sn);
     unsigned x = s->x0 + cx * CW, y = s->y0 + cy * CW, w;
     unsigned char i;
 

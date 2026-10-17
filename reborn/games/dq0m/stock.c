@@ -109,7 +109,7 @@ void __fastcall__ o_stock (const struct chunk* c, unsigned x0, unsigned y0)
     sk.n = 0;
     sx0 = x0;
     sy0 = y0;
-    rseed (strata[c->sn].seed ^ ((unsigned long) c->cx << 16 | c->cy) * 69069UL ^ 0x5EED);
+    rseed (STRATUM (c->sn).seed ^ ((unsigned long) c->cx << 16 | c->cy) * 69069UL ^ 0x5EED);
     for (i = 0; i < c->nrooms; ++i) {
         r = &c->room[i];
         for (n = 0; n < 2; ++n) {

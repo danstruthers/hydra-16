@@ -59,8 +59,8 @@ static void pc_chunk (void)
 {
     hub_map (0);
     pcs = HUB->pc_stratum;
-    pcx = (HUB->pc_x - strata[pcs].x0) >> CW_BITS;
-    pcy = (HUB->pc_y - strata[pcs].y0) >> CW_BITS;
+    pcx = (HUB->pc_x - STRATUM (pcs).x0) >> CW_BITS;
+    pcy = (HUB->pc_y - STRATUM (pcs).y0) >> CW_BITS;
     rad = HUB->small ? 0 : 2;
 }
 
@@ -187,6 +187,27 @@ unsigned char __fastcall__ s_it_need (unsigned char sn, unsigned cx, unsigned cy
     return 1;
 }
 
+/* Stratum sn's chunks' things all put out of the store (its slot in the strata's records made way for another's:
+** in_chunk's square's chunk wants its record), their entries free */
+void __fastcall__ s_it_flush (unsigned char sn)
+{
+    unsigned char k;
+    unsigned cx, cy;
+
+    for (k = 0; k < NIRES; ++k) {
+        own ();
+        if (IPG->r[k].used && IPG->r[k].sn == sn) {
+            cx = IPG->r[k].cx;
+            cy = IPG->r[k].cy;
+            if (it_out (sn, cx, cy)) {
+                own ();
+                IPG->r[k].used = 0;
+            }
+        }
+    }
+    hub_map (0);
+}
+
 /* The chunks round the character's (two each way, in its stratum) in the store, as it comes into a chunk (as it's
 ** moved: the chunk it was in last in the table's) */
 void s_it_near (void)
@@ -204,7 +225,7 @@ void s_it_near (void)
     IPG->lsn = pcs + 1;
     IPG->lcx = pcx;
     IPG->lcy = pcy;
-    s = &strata[pcs];
+    s = &STRATUM (pcs);
     w = (s->w + CW - 1) >> CW_BITS;
     h = (s->h + CW - 1) >> CW_BITS;
     for (y = -rad; y <= rad; ++y) {
@@ -261,8 +282,8 @@ static unsigned __fastcall__ mget (unsigned k)
 static unsigned char __fastcall__ at_hand (unsigned char sn, unsigned cx, unsigned cy)
 {
     hsn = sn;
-    hx0 = strata[sn].x0 + (cx << CW_BITS);
-    hy0 = strata[sn].y0 + (cy << CW_BITS);
+    hx0 = STRATUM (sn).x0 + (cx << CW_BITS);
+    hy0 = STRATUM (sn).y0 + (cy << CW_BITS);
     hat = (cx & 7) | (cy & 7) << 3;
     return vf_name (path, "it", sn, cx >> 3, cy >> 3);
 }

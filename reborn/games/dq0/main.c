@@ -1394,7 +1394,7 @@ void __fastcall__ s_begin (int argc, char* argv[])
             small = 1;                          /* (For the tests: the caches small, paged to the save folder soon) */
         } else if (!strcmp (argv[i], "-T")) {
             ++test_start;                       /* (For the tests: the character begins at a way down; -T twice, by
-                                                **   the theme's first piece) */
+                                                **   the theme's first piece; three times, four strata down) */
         } else if (!strcmp (argv[i], "-c") && i + 1 < argc) {
             file = argv[++i];
         } else if (!strcmp (argv[i], "-p") && i + 1 < argc) {

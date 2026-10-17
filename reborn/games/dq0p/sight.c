@@ -159,7 +159,7 @@ static void __fastcall__ zones_seen (struct room* rp, unsigned char mine, unsign
 unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y, unsigned char face,
     unsigned char light, unsigned char first)
 {
-    struct stratum* s = &strata[sn];
+    struct stratum* s = &STRATUM (sn);
     struct room rp;
     struct zone* z;
     unsigned char* p = at (sn, x, y);

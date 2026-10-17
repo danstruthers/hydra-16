@@ -103,7 +103,7 @@ static unsigned char __fastcall__ way_in (const struct stratum* s)
 /* The chunk's rooms given their uses (the grower's rooms, sorted from the west, each to be joined to the next) */
 static void plan (void)
 {
-    const struct stratum* s = &strata[L->sn];
+    const struct stratum* s = &STRATUM (L->sn);
     const unsigned char* q;
     struct room* p;
     unsigned char purpose, in, ring, a, r, k, u, i;
@@ -178,7 +178,7 @@ static const unsigned char ceils[NUSES][3] = {
 ** step along its front); and their ceilings by their size and use, the passages' the builders' height */
 static void floors (void)
 {
-    const struct stratum* s = &strata[L->sn];
+    const struct stratum* s = &STRATUM (L->sn);
     struct room* p;
     struct zone* z;
     unsigned char r, i, x, y, h, k, across, std = 8 + ((unsigned char) (s->seed >> 3) & 3), c;
@@ -274,7 +274,7 @@ static unsigned char __fastcall__ thing (unsigned char sign, unsigned char arg)
             return SP->kinds[arg >> 3 & 7];     /* (A chamber's, a cave's: the style's) */
         }
     }
-    if (k && rots (k) && (unsigned char) (L->cx * 5 + L->cy * 3 + arg * 7) % 40 < strata[L->sn].age) {
+    if (k && rots (k) && (unsigned char) (L->cx * 5 + L->cy * 3 + arg * 7) % 40 < STRATUM (L->sn).age) {
         k = 0;                                  /* (Gone to dust) */
     }
     return k;

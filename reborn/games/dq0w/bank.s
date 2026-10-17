@@ -99,6 +99,7 @@ go:
             SWPART      19, 8               ; The game's files begun, the item store kept (wfile.c)
             SWPART      20, 7               ; The things' files: a chunk's put out, read in (ipage.c)
             SWPART      21, 5               ; The ways across a room worked out (dq0w.c's ways)
+            SWPART      22, 8               ; The strata's records out of the hub, back (sfile.c)
 
             SWFN        start_dig, 1
             SWFN        dig_on, 1
@@ -154,6 +155,10 @@ go:
             SWFN        it_out, 20
             SWFN        it_in, 20
             SWFN        ways_go, 21
+            SWFN        it_flush, 17
+            SWFN        st_out, 22
+            SWFN        st_in, 22
+            SWFN        stratum_in, 3
             SWFN        stock_down, 13
             SWFN        lay_body, 13
             SWFN        den_intents, 14
