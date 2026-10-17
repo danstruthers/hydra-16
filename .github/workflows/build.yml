@@ -1,7 +1,8 @@
 # Build everything and run the regression tests in the emulator, on every push and pull request.
-# cc65 is built from its source, at the commit of the snapshot the project builds with (C:\source\cc65\win64_snapshot:
-# ca65 V2.19, Git 1d1dd42, July 2024), so the images in Git are the build's.  Later cc65 took WAI and STP out of
-# --cpu 65C02 (they're W65C02's since 2025), which the snapshot doesn't name; build.js finds it through CC65_HOME.
+# cc65 is built from its source as the project builds with it (C:\source\cc65\win64_hydra, base/build.js's CC65_DIR):
+# upstream's 6bd01e8a5 (October 2026) with the fixes in base/tools/cc65 (four of its code generator and optimizer's),
+# so the images in Git are the build's; build.js finds it through CC65_HOME.  (Its ca65 has WAI and STP as the
+# W65C02's, which the build names.)
 # The runner is pinned (ubuntu-24.04, not ubuntu-latest, which moves to 26.04 in late 2026), and the actions are the
 # ones that run on Node 24 (v7: GitHub's Node 20 is gone).
 name: build
@@ -17,8 +18,9 @@ jobs:
       - name: cc65
         run: |
           git init -q "$RUNNER_TEMP/cc65"
-          git -C "$RUNNER_TEMP/cc65" fetch -q --depth 1 https://github.com/cc65/cc65.git 1d1dd425c1148e02dbe0af72b9d11959e20101fb
+          git -C "$RUNNER_TEMP/cc65" fetch -q --depth 1 https://github.com/cc65/cc65.git 6bd01e8a5b0e86389734fe22c679792214c01dc6
           git -C "$RUNNER_TEMP/cc65" checkout -q FETCH_HEAD
+          git -C "$RUNNER_TEMP/cc65" apply "$GITHUB_WORKSPACE"/base/tools/cc65/*.patch
           make -C "$RUNNER_TEMP/cc65" -j4
           echo "CC65_HOME=$RUNNER_TEMP/cc65" >> "$GITHUB_ENV"
       - name: The base (the kernel, ser, kdev, the monitor), build and test

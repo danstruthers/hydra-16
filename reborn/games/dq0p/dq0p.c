@@ -104,7 +104,6 @@ static int __fastcall__ ovl_load (const char* dir)
 {
     unsigned char* b = (unsigned char*) _SWAP_START__;  /* (Through the parts' area: none in it yet) */
     unsigned off;
-    unsigned char k;
     int fd, n;
 
     strcpy ((char*) b, dir);
@@ -114,12 +113,10 @@ static int __fastcall__ ovl_load (const char* dir)
     }
     ovbank[0] = n;                              /* (In a run: n, n + 1 ...) */
     ovbank[1] = n + 1;
-    for (k = 0, n = 1; k < OVBANKS && n > 0; ++k) {     /* (A bank at a time: cc65's optimizer loses the high
-                                                **   byte of a bank's offset worked out from the file's) */
-        for (off = 0; off < 0x2000 && (n = read (fd, b, 512)) > 0; off += n) {
-            hy_bank (ovbank[0] + k);
-            memcpy ((void*) (0x8000 + off), b, n);
-        }
+    for (off = 0; (n = read (fd, b, 512)) > 0; off += n) {    /* (The file the build made: OVBANKS banks at most,
+                                                **   64K at most, off back at 0 only as it ends) */
+        hy_bank (ovbank[off >> 13]);
+        memcpy ((void*) (0x8000 + (off & 0x1FFF)), b, n);
     }
     close (fd);
     return 0;

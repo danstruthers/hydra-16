@@ -102,8 +102,7 @@ function evaluate(exprs) {
   try {
     const c = path.join(dir, 'own.c'), s = path.join(dir, 'own.s');
     fs.writeFileSync(c, '#include <stddef.h>\n#include "hub.h"\n' + exprs.map((e, i) => 'const unsigned long v' + i + ' = (unsigned long) (' + e + ');\n').join(''));
-    const bin = [process.env.CC65_BIN, process.env.CC65_HOME && path.join(process.env.CC65_HOME, 'bin'), 'C:/source/cc65/win64_snapshot/bin']
-      .filter(Boolean).flatMap(d => [path.join(d, 'cc65.exe'), path.join(d, 'cc65')]).find(fs.existsSync) || 'cc65';
+    const bin = require('../../../base/build.js').tool('cc65');     // (The build's cc65)
     const home = process.env.CC65_HOME || path.dirname(path.dirname(bin));
     execFileSync(bin, ['-t', 'none', '--cpu', '65C02', '-I', path.join(ROOT, 'sdk', 'c', 'include'), '-I', path.join(home, 'include'),
       '-I', DQ0, '-o', s, c], { stdio: ['ignore', 'pipe', 'pipe'] });

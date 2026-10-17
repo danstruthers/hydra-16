@@ -44,3 +44,5 @@ manual/tools/*.sh text eol=lf
 reborn/tests/dq0/v7save/** binary
 # And its version 8 save (reborn/tests/dq0/v8save: a version 8 save folder, kept by the game before move 2.8): bytes
 reborn/tests/dq0/v8save/** binary
+# cc65's fixes the build's cc65 has (base/tools/cc65, applied by the CI to upstream's source): cc65's own LF bytes
+base/tools/cc65/*.patch binary

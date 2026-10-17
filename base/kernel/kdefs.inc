@@ -6,7 +6,7 @@
 .include "layout.inc"
 .include "errors.inc"
 
-.setcpu "65C02"
+.setcpu "W65C02"
 
 ; ---- reset.s: boot
 .global     BOOT, BOOT_DONE, RESET_ENTRY

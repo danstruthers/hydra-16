@@ -33,8 +33,8 @@ T1 00>
 
 ### **Building, running and testing it**
 
-With Node.js 18 or later and cc65 (`ca65`, `ld65`: `$CC65_BIN`, `$CC65_HOME/bin`, `C:\source\cc65\win64_snapshot\bin`, or
-the PATH):
+With Node.js 18 or later and cc65 (`ca65`, `ld65`: `$CC65_BIN`, `$CC65_HOME/bin`, `C:\source\cc65\win64_hydra\bin`, or
+the PATH; build.js's `CC65_DIR` names that folder: cc65 upstream with the fixes in `tools/cc65`):
 
 ```
 node build.js            the kernel (bin/bios_*.bin), the modules (ser, kdev, wozmon), the paged ROM (bin/prom0.bin),

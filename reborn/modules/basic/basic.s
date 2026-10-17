@@ -12,7 +12,7 @@
 ; once, filled a half on average: a bank's code calls another's with FARN, so whole banks were merged.)  What every bank calls is in the task's RAM
 ; (ram.inc).
 
-.setcpu "65C02"
+.setcpu "W65C02"
 
 .include "hydra.inc"
 .include "hyx2.inc"

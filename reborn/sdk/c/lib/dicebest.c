@@ -5,15 +5,10 @@
 
 #include <dice.h>
 
-/* (Not *out++ = f (): cc65 2.19's optimizer drops the ++ there) */
 void __fastcall__ roll (int* out, unsigned char n, int (*f) (void))
 {
-    unsigned char i;
-    int v;
-
-    for (i = 0; i < n; ++i) {
-        v = f ();
-        out[i] = v;
+    while (n--) {
+        *out++ = f ();
     }
 }
 
