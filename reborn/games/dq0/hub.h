@@ -766,6 +766,7 @@ unsigned char __fastcall__ hub_wait_t (void* q, unsigned char ticks);   /* Its r
 #define hub_posted(q)   ((q)->state == REQ_POSTED)      /* (The owner's: a request there to answer) */
 void __fastcall__ hub_reply (void* q);                  /* A request answered (the owner's): the asker rung */
 void __fastcall__ hub_sleep (unsigned char ticks);      /* This task asleep on its doorbell, ticks at most */
+void __fastcall__ hub_nap (unsigned char ticks);        /* (The UI's) The same, the rings that came with it taken */
 void* __fastcall__ hub_call (void* q, unsigned char t);  /* hub_post, then hub_wait: the request (set REQ_FREE
                                                         **   when its reply's taken) */
 #define hub_ask(s)      ((struct req*) hub_call (&HUB->slot[s], T_REFEREE))     /* (The referee asked, slot s) */

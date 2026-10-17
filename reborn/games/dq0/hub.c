@@ -176,7 +176,8 @@ void __fastcall__ hub_event (const struct msg* m)
 
     memcpy (&HUB->eq[h % EQ_SIZE], m, sizeof *m);
     HUB->eq_head = h + 1;
-    for (t = T_DENIZENS; t < NTASKS; ++t) {     /* (Those that wait for them: the UI looks as it goes) */
+    hub_ring (T_UI);                            /* (The UI woken to tell it: its loop's nap, hub_nap) */
+    for (t = T_DENIZENS; t < NTASKS; ++t) {     /* (Those that wait for them) */
         if (t != T_REFEREE && HUB->task[t]) {
             hub_ring (t);
         }
@@ -330,6 +331,19 @@ unsigned char __fastcall__ hub_wait_t (void* q, unsigned char ticks)
     }
     return 1;
 }
+
+#ifndef HUB_ATTACHED
+/* The UI asleep on its doorbell, ticks at most: woken at once by the world's events (hub_event rings it), a reply's
+** ring, or one put back (hub_wait_t's); those that came with it taken, its loop seeing to them all at once */
+void __fastcall__ hub_nap (unsigned char ticks)
+{
+    hub_map (0);
+    if (!hy_sem_wait (HUB->sem[T_UI], ticks)) {
+        while (!hy_sem_try (HUB->sem[T_UI])) {
+        }
+    }
+}
+#endif
 
 #ifdef HUB_ATTACHED                             /* (Not the UI's: it answers no requests; its own loop's naps) */
 /* A request answered (its owner's): the state that shows the reply, then the asker rung */
