@@ -136,6 +136,7 @@ void __fastcall__ things_seen (struct sight* s, unsigned char sn, unsigned x, un
 #define LAMP_R          28
 #pragma code-name (push, "SW1CODE")             /* (Part 1's: once a look, bank.s's stub) */
 #pragma rodata-name (push, "SW1RODATA")
+void give_way (void);                           /* (dq0p.c's: the look giving way to the UI's command in hand) */
 void __fastcall__ s_things_lamps (unsigned char sn, unsigned x, unsigned y)
 {
     const struct item* s;
@@ -143,6 +144,7 @@ void __fastcall__ s_things_lamps (unsigned char sn, unsigned x, unsigned y)
     unsigned i = 0;
     unsigned char r;
 
+    give_way ();
     nlamps = 0;
     light_lamps_begin ();
     while ((i = items (i, IN_FLAGS | IN_SQUARE | IN_ITEM | IN_PORTAL, I_LIT)) != 0) {

@@ -64,7 +64,6 @@ static struct chunk* lck;                       /*   bank and place, as at () fo
 static unsigned char* lgp;
 
 void give_way (void);                           /* (dq0p.c's: the look giving way to the UI's command in hand) */
-extern unsigned char gw;
 
 
 /* The squares from x (n of them, in one column of chunks: the stratum's chunks are counted from its x0) at row y,
@@ -173,6 +172,7 @@ static void __fastcall__ mark (unsigned char unmark)
     static unsigned char n, m;
 
     for (x = bx0, c = 2 * g_m; x <= bx1; x += n, c += 2 * n) {
+        give_way ();
         n = band (x, bx1);
         for (y = by0, m = g_m; y <= by1; ++y, ++m) {
             if (!unmark) {
@@ -199,7 +199,6 @@ void __fastcall__ s_view (unsigned char sn, unsigned x, unsigned y, unsigned cha
     static int z;
     static struct lamp* l;
 
-    gw = 0;
     own = at (sn, x, y) != 0;
     z = (own ? C->elev[cy_][cx_] : 0) + EYE;
     if (bx1) {                                  /* The last view's seen now unmarked: this one's are marked after */
@@ -244,6 +243,7 @@ void __fastcall__ s_view (unsigned char sn, unsigned x, unsigned y, unsigned cha
     gy0 = y - range;
     for (yy = gy0; yy < gy0 + w; yy += CW - ((yy - strata[sn].y0) & (CW - 1))) {
         for (xx = gx0; xx <= gx1; xx += band (xx, gx1)) {
+            give_way ();
             light_grid (sn, xx, yy, 1);
         }
     }

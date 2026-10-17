@@ -49,11 +49,14 @@ static void pc (void)
     range = sight == 0xFF ? 0xFF : 4 + 2 * (sight > 9 ? 9 : sight);   /* (view.c's) */
 }
 
+extern unsigned char gw;                        /* (give_way's, below) */
+void give_way (void);
 static void look (void)
 {
     unsigned char first, wd, wn;
     unsigned wx, wy;
 
+    gw = 0;                                     /* (Its giving way: GIVE_WAY ticks a look at most) */
     pc ();
     first = HUB->look.first;
     wx = HUB->look.wx;
@@ -67,6 +70,7 @@ static void look (void)
     things_lamps (sn, x, y);                    /* (The lit things lying about: a torch put down) */
     view (sn, x, y, face, light, sight, dark);
     glows (sn, x, y, face, range, own);         /* (Its eyes adapted, the lights it sees far off: eyes.c's) */
+    give_way ();
     first = perceive (sn, x, y, face, own, first);
     sees = dens_seen ();                        /* (The denizens it sees with it: the world's bodies) */
     hub_map (0);
@@ -79,7 +83,7 @@ static void look (void)
 ** (a request of the things but what's carried, the tools, a tool's wear; the world's own, wreq: dq0w.c's waiting);
 ** the hub's header in the window after */
 #define GIVE_WAY        100
-unsigned char gw;                               /* (view.c's: reset as a look begins) */
+unsigned char gw;                               /* (Reset as a look begins: its ticks given) */
 static unsigned char gk;
 void give_way (void)
 {

@@ -117,6 +117,7 @@ static void __fastcall__ source (unsigned sx, unsigned sy, unsigned char b)
     }
 }
 
+void give_way (void);                           /* (dq0p.c's: the look giving way to the UI's command in hand) */
 void __fastcall__ s_glows (unsigned char sn, unsigned x, unsigned y, unsigned char face, unsigned char range,
     unsigned char light)
 {
@@ -127,6 +128,7 @@ void __fastcall__ s_glows (unsigned char sn, unsigned x, unsigned y, unsigned ch
     static unsigned cx, cy, ox, oy;
     static struct { unsigned x, y; } rs[8];
 
+    give_way ();
     e_ = light_at (sn, x, y);                   /* (The light where the eyes are: the layer's, its own) */
     if (light && 2 * light + 1 > e_) {
         e_ = 2 * light + 1;
