@@ -155,6 +155,8 @@ void s_den_intents (void)
             bd.y = m.w2;
             bd.ready = m.t;
             bd.step = m.a;
+            bd.pos = POS_STANDING;              /* (On its feet, walking: its body's, the world's) */
+            bd.gait = GA_WALK;
             bleeds = m.b ? bleeds | 1 << bk : bleeds & ~(1 << bk);
             was = bd.doing;
             break;

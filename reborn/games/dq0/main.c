@@ -1,7 +1,3 @@
-/* Real ticks (200 a second) a combat round takes, by pace: 5, 3 and 2 real seconds, whatever the ruleset's round
-** (the turns pace: 0) */
-static const unsigned tpr[4] = { 1000, 600, 400, 0 };
-
 /*
 ** main.c - Dingus Quest Zero: the UI's task, its start and its loop.
 **
@@ -65,6 +61,8 @@ static char taking[16];                         /* (The thing taken up last name
 static char lifting[16];                        /* (A portal's part being lifted out, to take up after) */
 static unsigned char barw, rebar;               /* (A bar to hand to bar a door with, its width; and the door barred:
                                                 **   the bar to set in its brackets, as the character's free) */
+unsigned char strike;                           /* (What it strikes with: the parser's, SK_*, sent with each blow) */
+static unsigned char pc_gait, pc_watch;         /* (The character's file's pace and watchfulness: the referee's) */
 
 struct pc P;
 struct quest Q;                                 /* The theme's puzzle, as it stands (theme.c's; the save's) */
@@ -241,6 +239,8 @@ static void load_pc (void)
     if ((l = reply_line (&at)) != 0) {
         strncpy (P.occupation, l, sizeof P.occupation - 1);
     }
+    pc_gait = r->a;                             /* (A new game's, the world's to set) */
+    pc_watch = r->b;
     r->state = REQ_FREE;
 }
 
@@ -268,16 +268,20 @@ static void sheet (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    7                           /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    8                           /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
                                                 **   records the world's, by region: its changes.dat, then rg*.dat,
-                                                **   a version 6 changes.dat read in as the game's carried on) */
+                                                **   a version 6 changes.dat read in as the game's carried on; 8, the
+                                                **   world's own, world.dat: the clock, the character's place, state
+                                                **   and position, the puzzle's, the strata's records, no longer
+                                                **   here, the names after the header: a save of 5 to 7 made into
+                                                **   one, old_world, as the game's carried on) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
-    unsigned long   seed, now;
+    unsigned long   seed, now;                  /* (now ... y: a version 7 save's, world.dat's since) */
     unsigned char   stratum, face, light;
     unsigned        x, y;
     struct pc       pc;
@@ -311,7 +315,8 @@ static int load_save (void)
     close (fd);
     return n == sizeof sv && sv.magic == SAVE_MAGIC && sv.version >= 5 && sv.version <= SAVE_VER && !sv.q.done ? 0 :
         -1;                                     /* (5's the same, but for the names after the strata: none; 6's, but
-                                                **   for its changes.dat, the world's to read) */
+                                                **   for its changes.dat, the world's to read; 5 to 7, the world's
+                                                **   world.dat in it, old_world's) */
 }
 
 /* The game kept: the referee's sheet, the maker's seen maps, the world's change records, and the game's state (the
@@ -348,34 +353,58 @@ void s_save_game (void)
     sv.version = SAVE_VER;
     sv.pace = pace;
     sv.seed = HUB->seed;
-    sv.now = hub_now ();
-    sv.stratum = HUB->pc_stratum;
-    sv.x = HUB->pc_x;
-    sv.y = HUB->pc_y;
-    sv.face = HUB->pc_face;
-    sv.light = HUB->pc_light;
     sv.pc = P;
     sv.q = Q;
     if ((fd = open (save_path ("game.dat"), O_WRONLY | O_CREAT | O_TRUNC, 0644)) >= 0) {
         write (fd, &sv, sizeof sv);
-        hub_map (WORLD_BANK);                   /* (The strata's records, the world bank's) */
-        write (fd, WREC->strata, sizeof WREC->strata);
-        hub_map (0);
         names_keep (fd, 0);                     /* (The names given: the theme bank's) */
         close (fd);
     }
 }
 
-/* The saved strata's records into the hub (after the save's header), and the names given */
-static void __fastcall__ load_strata (void)
+/* A save of version 5 to 7 (game.dat at its strata's records, fd): the world's part of it made a world.dat (hub.h's
+** struct wsave, then the records), for the world to read back as it's begun (through lb) */
+static void __fastcall__ old_world (int fd)
+{
+    struct wsave* w = (struct wsave*) lb;
+    unsigned n;
+    int k, out;
+
+    if ((out = open (save_path ("world.dat"), O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0) {
+        return;
+    }
+    memset (w, 0, sizeof *w);
+    w->magic = WSAVE_MAGIC;
+    w->version = 1;
+    w->sn = sv.stratum;
+    w->face = sv.face;
+    w->x = sv.x;
+    w->y = sv.y;
+    w->gait = pc_gait;                          /* (Its pace and watchfulness: pc.hm's, the referee's) */
+    w->watch = pc_watch;
+    w->open = sv.q.open;
+    w->done = sv.q.flags;
+    w->now = sv.now;
+    write (out, w, sizeof *w);
+    for (n = sizeof ((struct wrec*) 0)->strata; n; n -= k) {
+        if ((k = read (fd, lb, n < sizeof lb ? n : sizeof lb)) <= 0) {
+            break;
+        }
+        write (out, lb, k);
+    }
+    close (out);
+}
+
+/* The save's names given (after its header; a save of 5 to 7, after the strata's records: its world.dat made) */
+static void __fastcall__ load_names (void)
 {
     int fd = open (save_path ("game.dat"), O_RDONLY);
 
     if (fd >= 0) {
         read (fd, &sv, sizeof sv);
-        hub_map (WORLD_BANK);
-        read (fd, WREC->strata, sizeof WREC->strata);
-        hub_map (0);
+        if (sv.version < 8) {
+            old_world (fd);
+        }
     }
     names_keep (fd, 1);
     if (fd >= 0) {
@@ -423,39 +452,31 @@ static void start_world (unsigned long seed)
 {
     struct req* r;
     unsigned char k;
+    unsigned round;
     int w;
 
     if (hub_create (HUB_BANKS)) {
         t_end ();
         hy_exits ("dq0: no shared segment or semaphores for its tasks");
     }
-    HUB->round = ROUND;                         /* (The ruleset's: HarnMaster's 10 seconds, till the referee says) */
-    HUB->tpr = tpr[pace];
-    HUB->pace = pace;
     HUB->seed = seed;
     HUB->test_start = test_start;
-    HUB->way_open = Q.open;
     hub_map (DEN_BANK);                         /* (The sounds' words: none till the sound task's put them there) */
     memset (SND_AT, 0, (2 * SND_KINDS + SND_WORLD) * SND_REC);
     hub_map (0);
     start ("dq0s", T_SOUND, libdir);            /* (Its sound: SOUND.md) */
     start ("dq0harn", T_REFEREE, libdir);       /* (Its rules: its folder, for its overlay) */
     r = referee (RS_HELLO, 0);
-    HUB->round = r->w1;                         /* (The ruleset's round, in tenths) */
+    round = r->w1;                              /* (The ruleset's round, in tenths: the world's to keep) */
     r->state = REQ_FREE;
     load_pc ();                                 /* (Its senses the referee's, before the world looks through them) */
     if (savedir) {
         strncpy (HUB->savedir, savedir, sizeof HUB->savedir - 1);
     }
-    if (resumed) {                              /* (Carried on: where it was, and when, the strata as they were) */
-        load_strata ();
+    if (resumed) {                              /* (Carried on: where it was, and when, the strata as they were: the
+                                                **   world's, its world.dat) */
+        load_names ();
         HUB->resume = 1;
-        HUB->now = sv.now;
-        HUB->pc_stratum = sv.stratum;
-        HUB->pc_x = sv.x;
-        HUB->pc_y = sv.y;
-        HUB->pc_face = sv.face;
-        HUB->pc_light = sv.light;
     } else {
         names_keep (-1, 1);                     /* (No names given yet) */
     }
@@ -465,6 +486,14 @@ static void start_world (unsigned long seed)
     start ("dq0w", T_WORLD, libdir);
     w = task_[T_WORLD];
     task_[T_WORLD] = 0;                         /* (Not begun yet: the status line's) */
+    HUB->wreq.kind = WQ_START;                  /* (Its clock's round and pace, the character's pace and watchfulness:
+                                                **   a game carried on, its save's, the world's) */
+    HUB->wreq.x = round;
+    HUB->wreq.y = pace;
+    HUB->wreq.a = pc_gait;
+    HUB->wreq.b = pc_watch;
+    hub_call (&HUB->wreq, T_WORLD);
+    HUB->wreq.state = REQ_FREE;
     things (IO_TOOLS, "");                      /* (The world's catalogue read in: the theme's kinds after it) */
     theme_load (resumed ? Q.theme : (unsigned char) (seed >> 8));     /* (The seed's second byte: theme.h) */
     things (IO_THEME, "");
@@ -484,12 +513,14 @@ static void start_world (unsigned long seed)
     task_[T_WORLD] = w;
 }
 
-/* The game's end: its tasks told to stop (the world first), and waited for */
+/* The game's end: its tasks told to stop (the world first: its I_QUIT, the hub's quit its to set), and waited for */
 static void stop_world (void)
 {
+    static struct msg m;
     unsigned char t;
 
-    HUB->quit = 1;
+    m.kind = I_QUIT;
+    hub_send (&m);
     for (t = T_WORLD; t < NTASKS; ++t) {
         if (task_[t] > 0) {
             hub_ring (t);
@@ -768,6 +799,7 @@ static void __fastcall__ work (unsigned char what, unsigned char obj)
     m.w1 = tx;                                  /* (The one meant, if it was found: else 0, the one it faces) */
     m.w2 = ty;
     m.x[0] = barw;
+    m.x[1] = strike;
     if (hub_send (&m)) {
         busy = 1;
         t_prompt (0);
@@ -782,6 +814,7 @@ static void __fastcall__ intend (unsigned char kind, unsigned char a)
     m.who = 0;
     m.a = a;
     m.w1 = m.w2 = 0;
+    m.x[1] = strike;                            /* (I_ATTACK's: what it strikes with) */
     if (kind == I_GO) {                         /* (Through the one meant, if it was found) */
         m.w1 = tx;
         m.w2 = ty;
@@ -794,6 +827,21 @@ static void __fastcall__ intend (unsigned char kind, unsigned char a)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
+
+/* The character's state, or the game's, set: the world's (its request, WQ_SET, waited for: the window put back) */
+void __fastcall__ wset (unsigned char what, unsigned char x, unsigned char y)
+{
+    unsigned b = hub_here ();
+
+    hub_map (0);
+    HUB->wreq.kind = WQ_SET;
+    HUB->wreq.a = what;
+    HUB->wreq.x = x;
+    HUB->wreq.y = y;
+    hub_call (&HUB->wreq, T_WORLD);
+    HUB->wreq.state = REQ_FREE;
+    hub_back (b);
+}
 
 /* ---- The things (items.h): a request to the world's item store, waited for: its result */
 static unsigned char __fastcall__ things (unsigned char op, const char* name)
@@ -1057,7 +1105,7 @@ static void __fastcall__ chores (unsigned char verb)
         sheet ();
         return;
     case V_PAUSE:
-        HUB->paused = paused = 1;
+        wset (WS_PAUSE, paused = 1, 0);
         tell (T_PAUSED);
         status ();
         return;
@@ -1186,7 +1234,7 @@ void __fastcall__ s_command (char* l)
         } else if (c.obj == OB_WINDOW && !strcmp (c.word, "bars") && !find (OB_WINDOW | PICK_ANY, c.orel)) {
             c.obj = OB_PORTC;                   /* ("Bend the bars": a portcullis's, with no window there) */
         }
-        HUB->pc_strike = SK_BEST;               /* (Broken with the best to hand) */
+        strike = SK_BEST;                       /* (Broken with the best to hand) */
 portal:
         if (c.obj && (d = find (c.obj, c.orel)) == 2) {
             return;                             /* (Which, asked) */
@@ -1396,7 +1444,7 @@ int main (int argc, char* argv[])
         while (t_haskey ()) {
             k = t_getkey ();
             if (k == CH_ESC) {
-                HUB->paused = paused = !paused;
+                wset (WS_PAUSE, paused = !paused, 0);
                 status ();
             } else if (k == CH_RESIZE) {
                 t_init ();

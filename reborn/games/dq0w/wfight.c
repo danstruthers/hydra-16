@@ -85,6 +85,8 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     static struct fight* f;
     static unsigned char ff, c, out, me, wh, n, i;
     static unsigned w2;
+    static unsigned char pa, pd;
+    static const struct rs_effect* e;
 
     me = bk + 1;
     hub_map (0);
@@ -96,12 +98,28 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     r->b = AS_BEST;
     r->c = 0;
     r->steps = 0;
-    r->w2 = bd.timid;
+    pa = att ? bd.pos : HUB->pc_pos;           /* (Their bodies' positions, the world's: prone, the easier struck) */
+    pd = att ? HUB->pc_pos : bd.pos;
+    r->w2 = bd.timid | (pa == POS_PRONE ? RS_PRONE_A : 0) | (pd == POS_PRONE ? RS_PRONE_D : 0);
     r = hub_ask (SLOT_WORLD);
     if ((out = r->result) == 0xFF) {
         r->state = REQ_FREE;
         return 0xFF;
     }
+    if (out == O_RISE) {                        /* (The attacker got up, its turn spent) */
+        pa = POS_STANDING;
+    }
+    for (i = 0, e = (const struct rs_effect*) r->x; i < RS_EFFECTS && e->kind; ++i, ++e) {
+        if (e->kind == X_COND_ON && (e->cond & C_PRONE)) {
+            if (e->target == att) {             /* (Fallen: a stumble, a leg's.  Not *(c ? &pa : &pd): cc65 2.19
+                pa = POS_PRONE;                 /*   stores it at the target's number, in the zero page) */
+            } else {
+                pd = POS_PRONE;
+            }
+        }
+    }
+    HUB->pc_pos = att ? pd : pa;
+    bd.pos = att ? pa : pd;
     ff = r->grade;
     c = r->c;
     w2 = r->w2;

@@ -141,6 +141,11 @@ struct req;
 struct req* __fastcall__ ask_b (unsigned char kind, unsigned char a, unsigned char b);   /* (main.c's) The referee
                                                 **   asked, the UI's slot */
 void __fastcall__ intend2 (unsigned char kind, unsigned w1, unsigned w2);   /* (main.c's) An intent to the world */
+void __fastcall__ wset (unsigned char what, unsigned char x, unsigned char y);  /* (main.c's) The character's state, or
+                                                **   the game's, set (the world's: the hub's wreq, WQ_SET, WS_*), from
+                                                **   anywhere (the window put back) */
+extern unsigned char strike;                    /* (main.c's) What the character strikes with (SK_*: the parser's), sent
+                                                **   with each blow (I_ATTACK's, I_PORTAL's x[1]) */
 /* ---- choose.c (overlay 7): the thing meant, of those the character perceives; of several, which, asked */
 
 #define PICK_TELL   0x80                        /* (pick's obj |: "You see no door here", if there's none) */
@@ -155,11 +160,12 @@ void __fastcall__ choose (struct pcmd* c);      /* The command (parsed) a choice
 /* ---- theme.c (overlay 5): the theme's words and its puzzle (theme.h), from its copy in the overlay's bank */
 
 #define TCOPY       ((struct theme*) 0x9000)    /* (The theme, in overlay 5's bank: main.c reads it in) */
-struct quest {                                  /* The puzzle as it stands (kept in the save) */
+struct quest {                                  /* The game's theme and its end (kept in the save) */
     unsigned char   theme;                      /* The theme's number (the save's: the one it began with) */
     unsigned char   done;                       /* The game's ending (theme.h's END_*: 0 not yet) */
-    unsigned char   open;                       /* The way out opened */
-    unsigned char   flags;                      /* The theme's rules done, a bit each */
+    unsigned char   open;                       /* (A version 7 save's: the way out opened, and the theme's rules done,
+                                                **   a bit each; now the world's, its world.dat's) */
+    unsigned char   flags;
 };
 extern struct quest Q;                          /* (main.c's) */
 extern char tname[32];                          /* A theme's name for something (theme_named's) */

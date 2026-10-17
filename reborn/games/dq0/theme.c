@@ -6,7 +6,8 @@
 ** the crown on the throne, use the seal on the way out) is the world's to judge by the theme's rules (items.h's
 ** IO_PUZZLE: the things found to hand, the rule for their kinds, done: the things made one, put, the way out opened,
 ** the hub's way_open), its words told here and its effect given back for main.c to word (the place ruled: the
-** ending).  What's been done is the quest's (main.c's Q, kept in the save).
+** ending).  What's been done is the world's to keep (with the game, its world.dat); the ending the quest's (main.c's
+** Q, kept in the save).
 */
 
 #pragma code-name ("OV5CODE")
@@ -88,7 +89,10 @@ void __fastcall__ o_story (unsigned char resumed)
 /* The way out: shut (the lock's words), or open */
 void o_way_words (void)
 {
-    words_at (Q.open ? T->opened : T->lock);
+    unsigned char o;
+
+    hub_mem (0, &o, (const void*) &HUB->way_open, 1);   /* (The world's: the puzzle's rules) */
+    words_at (o ? T->opened : T->lock);
 }
 
 /* An ending's words (END_*), and the game's end */
@@ -101,15 +105,14 @@ void __fastcall__ o_ending (unsigned char how)
     blank ();
 }
 
-/* Rule r done (the world's judgement: IO_PUZZLE's): its words told, kept as done, and its effect (Q_*) */
+/* Rule r done (the world's judgement, IO_PUZZLE's, and its keeping: the way out opened, the rules done): its words
+** told, and its effect (Q_*) */
 static unsigned char __fastcall__ done (unsigned char r)
 {
     const struct trule* p = &T->rule[r];
 
     words_at (p->words);
-    Q.flags |= 1 << r;
     if (p->effect == TE_OPEN) {
-        Q.open = 1;
         return Q_OPEN;
     }
     return p->effect == TE_RULE ? Q_RULED : Q_DONE;

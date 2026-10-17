@@ -19,9 +19,9 @@
 ** the weapon's impact for its aspect, the sizes' difference a point a die, the book's bestiary's; the location by the
 ** aim; the armour there off it: the character's worn pieces, Combat 4-5, a poor piece a point less, a fine one a point
 ** more; a creature's hide), the wound (harn_wound: Combat 13-14), fumbles and stumbles (a fallen one's next turn
-** spent getting up), the defender's tactical advantage.  One senseless is finished where it lies (the book's
-** dispatch, a grope).  Bones that move (BF_MINDLESS) feel no shock, bleed nothing, fear nothing, and fall apart as
-** their injuries reach their endurance (the game's).
+** spent getting up: the world's bodies' positions, the request's), the defender's tactical advantage.  One senseless
+** is finished where it lies (the book's dispatch, a grope).  Bones that move (BF_MINDLESS) feel no shock, bleed
+** nothing, fear nothing, and fall apart as their injuries reach their endurance (the game's).
 */
 
 #pragma code-name ("OV2CODE")
@@ -80,7 +80,8 @@ static const char* const wound_word[4][3] = {
 static harn_char cr;                            /* (The creature in the fight) */
 static unsigned char crn;                       /*   and its sheet's number */
 static unsigned long pc_out;                    /* (The character senseless till then: it can't defend) */
-static unsigned char pc_prone;                  /* (The character fallen: its next turn spent getting up) */
+static unsigned char prones;                    /* (The request's: the attacker prone, RS_PRONE_A; the defender,
+                                                **   RS_PRONE_D: their bodies' positions, the world's) */
 
 static const struct bkind* __fastcall__ unpack (unsigned char who)
 {
@@ -110,7 +111,7 @@ static void pack (void)
         cr.inj[2].il += cr.inj[k].il;
         cr.inj[2].flags |= cr.inj[k].flags;
     }
-    bs.state = (bs.state & B_PRONE) | cr.state;
+    bs.state = cr.state;
     bs.bl = cr.bl;
     bs.ninj = cr.ninj > 3 ? 3 : cr.ninj;
     memcpy (bs.inj, cr.inj, sizeof bs.inj);
@@ -193,14 +194,9 @@ static void __fastcall__ wound_words (char* w, unsigned char sev, unsigned char 
     }
 }
 
-/* Side s fallen (a stumble), or got up */
+/* Side s fallen (a stumble: an effect, the world's to lay it down), or got up (O_RISE's: the world's to stand it up) */
 static void __fastcall__ prone (const struct side* s, unsigned char on)
 {
-    if (!s->who) {
-        pc_prone = on;
-    } else {
-        bs.state = on ? bs.state | B_PRONE : bs.state & ~B_PRONE;
-    }
     if (on) {
         effect (s->who, X_COND_ON, C_PRONE, 0, 0, 0);
     }
@@ -208,7 +204,7 @@ static void __fastcall__ prone (const struct side* s, unsigned char on)
 
 static unsigned char __fastcall__ is_prone (const struct side* s)
 {
-    return s->who ? (bs.state & B_PRONE) != 0 : pc_prone;
+    return (prones & (s == &A ? RS_PRONE_A : RS_PRONE_D)) != 0;
 }
 
 /* Side t senseless (its shock roll failed): the rounds till it comes round (the book's shock rolls, a round each,
@@ -630,6 +626,7 @@ void __fastcall__ o_fight (struct req* r)
 {
     unsigned char shy = r->w2 & 1;
 
+    prones = r->w2;
     R = r;
     nfx = 0;
     switch (r->kind) {

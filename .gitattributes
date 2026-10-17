@@ -40,3 +40,5 @@ reborn/tests/basic/** -text
 reborn/tests/speed/** -text
 # The manual's shell tools (manual/tools: figures.sh, shot.sh): LF line ends on every checkout, as sh needs
 manual/tools/*.sh text eol=lf
+# Dingus Quest Zero's old save for the tests (reborn/tests/dq0/v7save: a version 7 save folder, as the game wrote it): bytes
+reborn/tests/dq0/v7save/** binary

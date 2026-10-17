@@ -104,8 +104,8 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
 ** what the attacker's strike did ("a serious cut to its left thigh (S2)", "your ring byrnie": the armour that stopped
 ** it), and the defender's (a counterstrike's, a block's on a bare arm or a claw).  A creature's blow and the
 ** character's at one (the world's, its slot: it keeps what the blow did, and puts the words in the fights' ring,
-** hub.h's FIGHT_AT): the request's w2 1 if the creature is shy (a shaken one flees), and RS_PRONE_A if the attacker lies
-** prone, RS_PRONE_D the defender (their bodies' positions, the world's: one prone is the easier to strike, and gets
+** hub.h's FIGHT_AT): the request's w2 1 if the creature is shy (a shaken one flees), and RS_PRONE_A if the attacker
+** lies prone, RS_PRONE_D the defender (their bodies' positions, the world's: one prone is the easier to strike, and gets
 ** up as its turn, O_RISE, the world's to stand it up; one that falls, a stumble, a leg giving way, an X_COND_ON
 ** C_PRONE effect, the world's to lay it down); the reply's grade what it left
 ** them in (hub.h's FF_*: the creature's courage tested if it was wounded and stands, RS_MORALE's: FF_FLEES, or

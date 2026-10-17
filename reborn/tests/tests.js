@@ -2529,6 +2529,16 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0oldsave', what: 'Dingus Quest Zero carrying on a version 7 save (tests/dq0/v7save: dq0save\'s game, kept by the game before move 2.7 of Phase 2, its strata\'s records and the character\'s place in game.dat): copied from /pc into /ram/kept and carried on, its world\'s part made a world.dat (the UI\'s reader of a save of 5 to 7) and read back by the world, in the stratum below, where it stood, with what it carried; quit (kept, version 8) and carried on again',
+      init: 't_rc', cycles: 1100e6,
+      pc: { files: () => Object.fromEntries(fs.readdirSync(path.join(__dirname, 'dq0', 'v7save')).map(n => [n, fs.readFileSync(path.join(__dirname, 'dq0', 'v7save', n))])) },
+      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101mkdir /ram/kept; for (f in `{ls /pc}) cp /pc/$f /ram/kept/$f\r' +
+        ['dq0 -d /ram/kept', 'look', 'inventory', 'quit', 'ls /ram/kept', 'dq0 -d /ram/kept', 'look', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['takes up where they left off.', 'You stand by a\nstairway leading up.', 'a belt, worn (on it: a pouch (in it: 12 pennies), a waterskin)',
+        'world.dat', 'takes up where they left off.', 'You stand by a\nstairway leading up.', '% echo $status'],
+      sdcard: true
+    },
+    {
       name: 'dq0names', what: 'Dingus Quest Zero\'s names (the user, 2026-10-16: "I would like to be able to reference items by aliases, as long as the alias doesn\'t clash with something else"; names.c): a sword named Linda (dq0 -k sword), shown in what the character carries ("Linda, your sword"), names that clash refused (another name, a kind of thing\'s, a kind of creature\'s, a word the parser needs), Linda used in commands (dropped, seen lying there by its name, taken up, examined, taken in hand to strike a rat with), the room named the Mausoleum and said so as it\'s looked at; the game kept and carried on, the names with it; then a name forgotten',
       init: 't_rc', cycles: 1200e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 3 -c /ram/c.hm -T -k sword -d /ram/kept\r' +

@@ -149,3 +149,5 @@ go:
             SWFN        puzzle, 16
             SWFN        take_go, 16
             SWFN        take_up, 16
+            SWFN        world_keep, 16
+            SWFN        pc_asked, 16

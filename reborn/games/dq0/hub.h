@@ -577,7 +577,8 @@ struct wsave {
                                                 **   position), */
     unsigned        x, y;                       /*   its square, */
     unsigned char   gait, watch;                /*   its pace and watchfulness; */
-    unsigned char   open, done;                 /* the theme's puzzle: the way out opened, its rules done (a bit each); */
+    unsigned char   open, done;                 /* the theme's puzzle: the way out opened, its rules done (a bit
+                                                **   each); */
     unsigned long   now;                        /* the clock */
 };
 
@@ -604,9 +605,11 @@ struct wsave {
 ** 2.5 the senses for every actor, by layers, and their memory (done: the chunks' tiles' seen and visible marks and
 ** R_VISITED the senses', the world's changes to a square keeping them; the denizens seen the senses' to decide, in
 ** sight; each denizen's senses asked of them, dsense; DUNGEON.md's perception as layers); 2.6 game logic out of the UI
-** (done: way_open, the theme's puzzle judged by the world, IO_PUZZLE; a thing walked over to and taken up, I_TAKE); 2.7 the character's state home (gait, watch, pc_stance, pc_strike, and the UI's writes as the game
-** starts, resumes, pauses and quits: round, tpr, pace, paused, quit, now, the character's place on resuming, the
-** strata's records read back).
+** (done: way_open, the theme's puzzle judged by the world, IO_PUZZLE; a thing walked over to and taken up, I_TAKE); 2.7
+** the character's state home (done: gait, watch, pc_stance, pc_strike, the UI's requests, WQ_SET, and the blow's
+** intents; the body's position the world's, pc_pos and each actor's; the game begun, WQ_START: round, tpr, pace; a
+** game carried on the world's to read back, its world.dat: now, the character's place, the strata's records; paused,
+** WQ_SET; quit, I_QUIT).  The known ones are none: Phase 2's goal for the writer check.
 **
 **   own bank(0) none                                           (The header's room: what no line below names)
 **   own hub.magic ui
@@ -616,24 +619,25 @@ struct wsave {
 **   own hub.task[*] each                                       (Each task's own number, as it attaches)
 **   own hub.beat[*] each
 **   own hub.tick world                                         (The clock: the world's alone)
-**   own hub.now world 2.7:ui
+**   own hub.now world
 **   own hub.pc_ready world
-**   own hub.round world 2.7:ui
-**   own hub.tpr world 2.7:ui
-**   own hub.paused world 2.7:ui                                (The UI's pause, hold and quit: requests to it)
+**   own hub.round world                                        (The game begun: the UI's WQ_START)
+**   own hub.tpr world
+**   own hub.paused world                                       (The UI's pause and quit: its requests, WQ_SET, I_QUIT)
 **   own hub.hold world
-**   own hub.quit world 2.7:ui
-**   own hub.pace world 2.7:ui
+**   own hub.quit world
+**   own hub.pace world
 **   own hub.test_start ui                                      (The game's start: dq0's arguments)
 **   own hub.resume ui
 **   own hub.savedir ui
 **   own hub.seed ui
 **   own hub.pcstatus referee                                   (The referee's words)
-**   own hub.pc_stratum world 2.7:ui                            (The character's body: the world's)
-**   own hub.pc_x world 2.7:ui
-**   own hub.pc_y world 2.7:ui
-**   own hub.pc_face world 2.7:ui
-**   own hub.pc_light world 2.7:ui
+**   own hub.pc_stratum world                                   (The character's body: the world's; a game carried
+**                                                                on, its world.dat's)
+**   own hub.pc_x world
+**   own hub.pc_y world
+**   own hub.pc_face world
+**   own hub.pc_light world
 **   own hub.pc_lamp world
 **   own hub.pcsum referee
 **   own hub.look senses +world                                 (The world's look asked)
@@ -671,16 +675,16 @@ struct wsave {
 **   own hub.pc_tx world
 **   own hub.pc_ty world
 **   own hub.dq_head world                                      (The denizens' events: the world's)
-**   own hub.way_open world 2.7:ui                              (The puzzle's, by the theme's rules; 2.7: as it's resumed)
+**   own hub.way_open world                                     (The puzzle's: the world's, by the theme's rules)
 **   own hub.sway denizens +ui
-**   own hub.gait world 2.7:ui,referee
-**   own hub.watch world 2.7:ui,referee
+**   own hub.gait world                                         (The character's state: the world's, WQ_SET)
+**   own hub.watch world
 **   own hub.pc_pos world                                       (Its body's position: the world's, as the referee says)
 **   own hub.pc_going world
 **   own hub.pc_foe world
 **   own hub.pc_aim world
-**   own hub.pc_stance world 2.7:ui
-**   own hub.pc_strike world 2.7:ui
+**   own hub.pc_stance world
+**   own hub.pc_strike world                                    (The blow's intent's)
 **   own hub.di_head denizens                                   (The denizens' intents: their ring)
 **   own hub.di denizens
 **   own hub.di_tail world                                      (Its reader's place)
@@ -712,7 +716,7 @@ struct wsave {
 **   own uirec.map maker +ui
 **   own uirec.things_text world +ui
 **   own bank(WORLD_BANK) maker                                 (The cache's table)
-**   own wrec.strata world 2.7:ui                               (The strata's records: the world's dungeon)
+**   own wrec.strata world                                    (The strata's records: the world's dungeon)
 **   own wrec.grown maker                                       (A stratum's record as its plan's grown: M_PLAN's)
 **   own wrec.stock maker                                       (A chunk's things: the maker's list, the world's)
 **   own wrec.cpage world                                       (The change records' pages: the world's, store.c)

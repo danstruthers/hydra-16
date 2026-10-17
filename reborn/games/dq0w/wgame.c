@@ -3,13 +3,20 @@
 ** (theme.h: the UI's command of it, items.h's IO_PUZZLE, the things found to hand and the rule for their kinds
 ** looked for, done as it says: the things made one, put, the way out opened, the hub's way_open; the UI words it), and
 ** a thing walked over to and taken up (I_TAKE: the walk the world's go_to, again as long as it gets nearer; then the
-** thing taken up as the item store's IO_GET takes it, E_TAKEN told).
+** thing taken up as the item store's IO_GET takes it, E_TAKEN told).  And the character's state and the game's (move
+** 2.7): the game begun (the UI's WQ_START: the ruleset's round, the pace and its real ticks a round, the character's
+** pace and watchfulness), the character's pace and watchfulness, its stance, the game paused (WQ_SET), and the world's
+** part of the save (world.dat, hub.h's struct wsave: the clock, the character's place, its pace, its watchfulness and
+** its body's position, the puzzle's, the strata's records), written with the game (WQ_SAVE) and read back as it's
+** carried on.
 **
 ** All of it swapped part 16's (../dq0/swap.inc: dq0w.cfg's SW16), called through its stubs (bank.s's).
 */
 
+#include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <hydra.h>
 #include "../dq0/hub.h"
 #include "world.h"
@@ -180,4 +187,121 @@ void __fastcall__ s_take_go (const struct msg* m)
     take_fx = HUB->pc_x;
     take_fy = HUB->pc_y;
     go_to (take_x, take_y);
+}
+
+/* ---- The character's state, and the game's (move 2.7: the character's state home): the UI's requests of them (the
+** hub's wreq: WQ_START, as the game's begun; WQ_SET, as the player says), and the world's part of the save (world.dat:
+** hub.h's struct wsave, then the strata's records) */
+
+static const unsigned tprs[4] = { 1000, 600, 400, 0 };  /* Real ticks (200 a second) a round takes, by pace: 5, 3 and 2
+                                                **   real seconds, whatever the ruleset's round (the turns pace: 0) */
+
+/* The save folder's world.dat opened (out: to write it), or -1 (no folder) */
+static int __fastcall__ world_dat (unsigned char out)
+{
+    char p[56];
+
+    hub_map (0);
+    if (!HUB->savedir[0]) {
+        return -1;
+    }
+    strcpy (p, HUB->savedir);
+    strcat (p, "/world.dat");
+    return out ? open (p, O_WRONLY | O_CREAT | O_TRUNC, 0644) : open (p, O_RDONLY);
+}
+
+/* The world's part of the game kept (WQ_SAVE's, after the change records) */
+void s_world_keep (void)
+{
+    struct wsave w;
+    int fd = world_dat (1);
+
+    if (fd < 0) {
+        return;
+    }
+    hub_map (0);
+    w.magic = WSAVE_MAGIC;
+    w.version = 1;
+    w.sn = HUB->pc_stratum;
+    w.face = HUB->pc_face;
+    w.pos = HUB->pc_pos;
+    w.x = HUB->pc_x;
+    w.y = HUB->pc_y;
+    w.gait = HUB->gait;
+    w.watch = HUB->watch;
+    w.open = HUB->way_open;
+    w.done = done_;
+    w.now = HUB->now;
+    write (fd, &w, sizeof w);
+    hub_map (WORLD_BANK);                       /* (The strata's records, the world bank's) */
+    write (fd, WREC->strata, sizeof WREC->strata);
+    hub_map (0);
+    close (fd);
+}
+
+/* A game carried on: the world's part of its save read back (the clock, the character's place and state, the
+** puzzle's, the strata's records: the world begins from them, s_begin) */
+static void world_back (void)
+{
+    struct wsave w;
+    int fd = world_dat (0);
+
+    if (fd < 0) {
+        return;
+    }
+    if (read (fd, &w, sizeof w) == sizeof w && w.magic == WSAVE_MAGIC) {
+        hub_map (0);
+        ++HUB->tick;                            /* (The clock, as advance () writes it) */
+        HUB->now = w.now;
+        ++HUB->tick;
+        HUB->pc_stratum = w.sn;
+        HUB->pc_x = w.x;
+        HUB->pc_y = w.y;
+        HUB->pc_face = w.face;
+        HUB->pc_pos = w.pos;
+        HUB->gait = w.gait;
+        HUB->watch = w.watch;
+        HUB->way_open = w.open;
+        done_ = w.done;
+        hub_map (WORLD_BANK);
+        read (fd, WREC->strata, sizeof WREC->strata);
+    }
+    hub_map (0);
+    close (fd);
+}
+
+/* The hub's wreq, WQ_START's or WQ_SET's, answered (but its reply, the caller's): the game begun (the ruleset's round,
+** the pace and its real ticks a round, the character's pace and watchfulness; a game carried on, its save's); the
+** character's pace and watchfulness set, its stance, the game paused or going on */
+void s_pc_asked (void)
+{
+    unsigned x;
+
+    hub_map (0);
+    x = HUB->wreq.x;
+    if (HUB->wreq.kind == WQ_START) {
+        HUB->round = x;
+        HUB->pace = HUB->wreq.y;
+        HUB->tpr = tprs[HUB->wreq.y & 3];
+        HUB->gait = HUB->wreq.a;
+        HUB->watch = HUB->wreq.b;
+        if (HUB->resume) {
+            world_back ();
+        }
+        return;
+    }
+    switch (HUB->wreq.a) {
+    case WS_PACE:
+        if (x != 0xFF) {
+            HUB->gait = x;
+        }
+        HUB->watch = HUB->wreq.y;
+        break;
+    case WS_STANCE:
+        HUB->pc_stance = x;
+        break;
+    case WS_PAUSE:
+        HUB->paused = x;
+        break;
+    }
 }

@@ -39,7 +39,7 @@
 ** I_STEP, each a command's one part); the item store's, parts 10, 11 and 13 (things.c); part 12, a door's work begun
 ** (door_work: the door walked up to, its part's work asked); part 14, the denizens' bodies (wbody.c), part 15 the
 ** blows (wfight.c); part 16, the game's own rules (wgame.c: the theme's puzzle judged, IO_PUZZLE; a thing walked over
-** to and taken up, I_TAKE).
+** to and taken up, I_TAKE; the game begun, the character's state set, the UI's WQ_START and WQ_SET; world.dat).
 */
 
 #include <fcntl.h>
@@ -1827,6 +1827,7 @@ static void __fastcall__ intent (struct msg* m)
         step_to (m->w1 & 7, m->w2, (m->w1 & STEP_KEEP) != 0);
         break;
     case I_PORTAL:
+        HUB->pc_strike = m->x[1];               /* (What it strikes with: the parser's) */
         want_ = m->b;
         tgx = m->w1;
         tgy = m->w2;
@@ -1844,6 +1845,7 @@ static void __fastcall__ intent (struct msg* m)
     case I_ATTACK:                              /* (A round's blow, struck: at once; at the turns pace, as the clock
                                                 **   moves on, the denizens' slice's first: turns_run) */
         busy (HUB->round);
+        HUB->pc_strike = m->x[1];
         HUB->pc_aim = m->b;
         HUB->pc_foe = m->a;
         if (HUB->tpr) {
@@ -1972,6 +1974,9 @@ int main (int argc, char* argv[])
         if (hub_posted (&HUB->ireq)) {
             dseq = HUB->ireq.kind;
             things ();
+        }
+        if (hub_posted (&HUB->wreq)) {
+            answer ();                          /* (The game begun: WQ_START, its pace, a game carried on) */
         }
     }
     dseq = 0;
