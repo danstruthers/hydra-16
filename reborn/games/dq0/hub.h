@@ -25,13 +25,14 @@
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
 #define HUB_VERSION     1
-#define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6)  /* Bank 0: the header, the clock, the
-                                                **   doorbells, the rings and the requests' slots; then the plans'
-                                                **   banks and the chunks' (world.h); the catalogue's, and the items'
-                                                **   (items.h); the denizens' events; the senses' look (LOOK_BANK); the
-                                                **   theme (THEME_BANK); the records the tasks share, each bank its
-                                                **   keeper's: the senses' (SIGHT_BANK), the UI's (UI_BANK), the
-                                                **   world's (WORLD_BANK) */
+#define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS)   /* Bank 0: the header, the
+                                                **   clock, the doorbells, the rings and the requests' slots; then the
+                                                **   plans' banks and the chunks' (world.h); the catalogue's, and the
+                                                **   items' (items.h); the denizens' events; the senses' look
+                                                **   (LOOK_BANK); the theme (THEME_BANK); the records the tasks share,
+                                                **   each bank its keeper's: the senses' (SIGHT_BANK), the UI's
+                                                **   (UI_BANK), the world's (WORLD_BANK); the change records' pages
+                                                **   (CHANGE_BANK: world.h's, the world's) */
 #define CAT_BANK        (1 + PLAN_BANKS + CACHE_BANKS)
 #define CATALOGUE       ((struct kind*) 0x8000)
 #define ITEM_BANK(i)    (CAT_BANK + 1 + (i) / (0x2000 / sizeof (struct item)))
@@ -100,6 +101,8 @@ typedef char names_fit[TNAMES * sizeof (struct tname) <= 0x800 ? 1 : -1];  /* (T
 #define WORLD_BANK      (UI_BANK + 1)           /* The world's (struct wrec): the strata's records, the chunks' cache's
                                                 **   table */
 #define WREC            ((struct wrec*) HUB_WINDOW)
+#define CHANGE_BANK(p)  (WORLD_BANK + 1 + (p) / 32)    /* The change records' page p's bank (world.h's CHANGE_AT: the
+                                                **   world writes them, under the hub's change_lock) */
 
 /* The tasks, and so their doorbells */
 enum { T_UI, T_WORLD, T_DENIZENS, T_REFEREE, T_SOUND, T_MAKER, T_SENSES, NTASKS };
@@ -213,10 +216,11 @@ enum { PA_OPEN, PA_CLOSE, PA_UNLOCK, PA_FORCE, PA_SEARCH,     /* I_PORTAL's: wha
        PA_RAISE, PA_LOWER, PA_BREAK, PA_THROUGH, PA_DISARM,    /*   a portcullis raised, a window's glass broken,
                                                 **   climbed through, a trap disarmed: one in reach, or the door's; */
        PA_LIFT,                                 /*   a door's bar lifted out, a window's pane or its bent bars; */
-       PA_EXAMINE,                              /*   looked at closely: the UI's own M_WORK, ASK_UI's, cx, cy its
-                                                **   square: its record copied into the hub's pview; */
+       PA_EXAMINE,                              /*   looked at closely: the UI's own (the hub's wreq, WQ_EXAMINE:
+                                                **   its record copied into the hub's pview); */
        PA_BAR, PA_BEND };                       /*   a door barred again (a bar carried, or in reach, set in its
                                                 **   brackets); bars bent (a portcullis's; a window's, forced) */
+enum { WQ_SAVE, WQ_EXAMINE };                  /* The hub's wreq's kinds */
 enum { PW_ANY, PW_DOOR, PW_WINDOW };            /* I_PORTAL's b: a door or a portcullis, a window or a slit */
 enum { PO_NONE, PO_OPENED, PO_CLOSED, PO_IS_OPEN, PO_IS_SHUT, PO_LOCKED, PO_BARRED, PO_UNBARRED, PO_PICKED,
        PO_NOT_PICKED, PO_NO_PICKS, PO_NO_LOCK, PO_FORCED, PO_HELD, PO_FOUND, PO_NOTHING,   /* E_PORTAL's (a door's, */
@@ -382,8 +386,17 @@ struct hub {                                    /* Bank 0, at $8000 */
     ** request to the things (dq0p), and their words for the UI (what's carried) */
     unsigned char   item_lock;
     struct ireq     ireq;                       /* (Their words the UI bank's things_text) */
-    struct portal   pview;                      /* A portal looked at closely (PA_EXAMINE's: the maker's record of
+    struct portal   pview;                      /* A portal looked at closely (PA_EXAMINE's: the world's record of
                                                 **   it, but bar: 1 the character's on its bar's side) */
+    /* The change records' lock (a semaphore: the world writes them, the maker reads them: world.h's), and a request
+    ** to the world (the UI's: WQ_*): its change records written to the save folder; a portal looked at closely (x,
+    ** y its square on the character's stratum: its record into pview; res 1 if there's none there) */
+    unsigned char   change_lock;
+    struct {
+        RQH;
+        unsigned    x, y;
+        unsigned char res;
+    }               wreq;
     char            dig_tool[4][8];             /* A dig's spells' tools, the referee's choices (their keys), in turn */
     unsigned char   dig_wear[4];                /*   and the wear each spell did (E_DIG's b, which: the world runs on */
                                                 /*   ahead of the UI's reading of its events, the turns pace) */
@@ -447,6 +460,10 @@ struct wrec {
     unsigned        stamp;
     unsigned char   inuse[NASK];                /* The slot each task that reads the chunks is reading (the maker
                                                 **   never makes way for it) */
+    struct cpage    cpage[NCPAGES];             /* The change records' pages (world.h's: the world's) */
+    unsigned        cstamp;                     /*   their regions' clock, */
+    unsigned        cgen;                       /*   and the game's generation (a region's file of another game's
+                                                **   in the folder isn't read) */
 };
 
 #define HUB     ((struct hub*) HUB_WINDOW)

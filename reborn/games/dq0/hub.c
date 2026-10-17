@@ -96,6 +96,10 @@ int __fastcall__ hub_create (unsigned char banks)
         return -1;
     }
     HUB->item_lock = s;
+    if ((s = hy_sem_new (1, 0)) < 0) {          /* (The change records' lock) */
+        return -1;
+    }
+    HUB->change_lock = s;
     HUB->task[T_UI] = hy_task ();
     self = T_UI;
     return 0;
