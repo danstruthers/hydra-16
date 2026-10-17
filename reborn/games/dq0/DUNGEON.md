@@ -47,7 +47,7 @@ the character and the denizens, so the world, the denizens and the senses read t
 goes out of the cache is dropped; what changed there (doors opened, traps set off, rock dug) is kept as a small
 record and laid over the chunk when it's made again, and what the character's seen of it as a map of bits.
 
-**One authority on state** (Phase 2, moves 2.2 to 2.5, 2026-10-16): the **maker** (dq0m) is pure, generation only,
+**One authority on state** (Phase 2, moves 2.2 to 2.7, 2026-10-16 and 17): the **maker** (dq0m) is pure, generation only,
 the same seed always the same chunk: it grows a stratum's plan and makes a chunk when it's asked (M_PLAN, M_CHUNK),
 lays the change records over a chunk it makes again (reading them, never writing them), and lists a chunk's things
 the first time it's made (its stock, a list beside the chunk's slot in the world bank, items.h's struct stock; the
@@ -128,13 +128,47 @@ RAM; between its rows the look gives way to a command the UI has in hand (the hu
 most; not to one waiting for an answer of the world's that waits for the look), so the world's answers and the UI's
 words aren't shared with it.
 
+**The game's own rules** (move 2.6) are the world's too, not the UI's: the **theme's puzzle** (theme.h) is judged by
+the world (dq0w/wgame.c, its swapped part 16): the UI parses a command of the puzzle's (read the tablet, combine the
+sunstone with the moonstone, put the crown on the throne, use the seal on the way out) and asks the things' request
+of it (IO_PUZZLE: the verb, TR_*, and the things named), and the world finds them to hand (the item store's IO_FIND),
+looks for the theme's rule for their kinds, and does it (the things made one, IO_COMBINE's; put, IO_PUT's; the way
+out opened, the hub's way_open, which E_LEFT goes by), keeping the rules done; its reply is how it went (PZ_DONE and
+the rule, PZ_NONE, PZ_NO with the things' words, PZ_FAR), which theme.c only words (the rule's words, the endings).
+**A thing walked over to** is the world's walk and its taking: a thing out of reach (IO_GET's IR_NOT_HERE, its square
+and its item) is the UI's I_TAKE, and the world walks there (again, as long as the walk gets it nearer: a denizen in
+the way, a trap that stopped it), takes it up as IO_GET would, and tells it (E_TAKEN: taken, the UI then asking its
+time and its light as for any thing handled; its hands full; a portal's part, or a thing fixed where it stands, the
+UI's to lift out or to word as the character's free).  A thing fixed where it stands (a theme's altar) the item
+store refuses itself, with its words (IO_GET's IR_NO).
+
+**The character's state** (move 2.7) is the world's: its pace and watchfulness (the hub's gait and watch: the UI's
+request as the player says, the hub's wreq, WQ_SET's WS_PACE; the referee words them, RS_DESCRIBE b 3, and reads a
+character's file's for a new game, RS_LOAD_PC's reply), its stance (WS_STANCE), what it strikes with (sent with the
+blow, I_ATTACK's and I_PORTAL's x[1]: the hub's pc_strike), and its **body's position**: standing or prone (later
+crouched, kneeling, sitting: slice 4.6), the hub's pc_pos for the character and each actor's pos (and its gait) for
+the denizens' bodies, the world's records.  The referee reads the positions as it judges (the world puts them in the
+request, RS_ATTACK's RS_PRONE_A and RS_PRONE_D: a prone defender the easier to strike, a prone attacker only getting
+up, its turn spent) and reports a fall (a stumble, a leg giving way: an X_COND_ON C_PRONE effect) and a getting up
+(O_RISE), which the world applies; it keeps no position of its own (the same dice, in the same order, as when it
+did).  The game's start, pause and end are the world's to set as the UI asks: begun (WQ_START, before the UI's
+things: the ruleset's round, the pace and its real ticks a round, a new game's pace and watchfulness), paused and
+going on (WS_PAUSE), ended (I_QUIT: the hub's quit, the world first, the others after it).  The writer check's known
+list is empty: every region of the hub is written only by its owner, and those that ask it by design.
+
 **The save** is on the SD card the player chooses (the user: "the games should write to the SD card of choice to
 save the dungeon, game state, etc."): a folder of the game's (asked for as a new game starts, or given: dq0 -d
 /sd/1/dq0), holding the game's state (the clock, the character, the referee's sheets), each stratum's plan and
 populations, and the chunks' records, written as they change (so a game quit is saved, and a game whose machine
 is switched off loses little).  Death is still permanent: the save goes with it.  (Built: dq0 -d FOLDER, a game
 there carried on; kept as the game ends, on save, and as the character comes into a stratum; the plans not kept,
-but grown again from their seeds, the same.)
+but grown again from their seeds, the same.)  The world keeps its own part with the rest (save version 8: world.dat,
+hub.h's struct wsave: the clock, the character's place, its pace and watchfulness, its body's position, the puzzle's
+way out and rules done, then the strata's records), written as the UI asks the save (WQ_SAVE) and read back by the
+world as a game's carried on (WQ_START, the hub's resume); the UI's game.dat keeps the seed, the pace chosen, the
+character's name and the theme, and the names given.  A save of version 5 to 7 (the world's part in game.dat) is made
+into a world.dat by the UI as it's carried on (main.c's old_world), before the world's begun: tests/dq0/v7save, the
+test dq0oldsave.
 
 ### A stratum's plan: grown whole, then detailed as explored
 
@@ -651,7 +685,8 @@ able to say something like "move left one space" to move one 10' square at a tim
 movement should be based on speed and/or distance traveled."):
 
 - **The pace** is the player's, kept in the hub (its gait: creep, walk slowly, walk, jog, run, sprint; "set pace to
-  jog", or a pace's word alone; "run north" sets it and goes), and kept with the sheet in the save.  Each pace's
+  jog", or a pace's word alone; "run north" sets it and goes: the world's to set, as the UI asks, WQ_SET), and kept
+  with the game in the save (the world's world.dat).  Each pace's
   step is the referee's, in its summary (rs.h's gstep, tenths a square): HarnMaster's four from the effective Move
   (Agility less the physical penalty, so wounds, fatigue and the load all slow it), a walk half of it in squares a
   round, a jog all of it, a run twice, a sprint three times; and the game's two slower, a slow walk a quarter of Move
