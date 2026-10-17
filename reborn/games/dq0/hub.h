@@ -634,7 +634,7 @@ struct wrec {
 **   own hub.pc_tx world
 **   own hub.pc_ty world
 **   own hub.dq_head world                                      (The denizens' events: the world's)
-**   own hub.way_open world 2.6:ui
+**   own hub.way_open world 2.7:ui                              (The puzzle's, by the theme's rules; 2.7: as it's resumed)
 **   own hub.sway denizens +ui
 **   own hub.gait world 2.7:ui,referee
 **   own hub.watch world 2.7:ui,referee

@@ -1,3 +1,7 @@
+/* Real ticks (200 a second) a combat round takes, by pace: 5, 3 and 2 real seconds, whatever the ruleset's round
+** (the turns pace: 0) */
+static const unsigned tpr[4] = { 1000, 600, 400, 0 };
+
 /*
 ** main.c - Dingus Quest Zero: the UI's task, its start and its loop.
 **
@@ -41,10 +45,6 @@ unsigned char pc_face;                          /* (The character's facing, copi
 unsigned char pace = 0xFF, paused;
 const char* const pacename[4] = { "relaxed", "normal", "menacing", "turns" };
 
-/* Real ticks (200 a second) a combat round takes, by pace: 5, 3 and 2 real seconds, whatever the ruleset's round
-** (the turns pace: 0) */
-static const unsigned tpr[4] = { 1000, 600, 400, 0 };
-
 static unsigned char busy = 1;                  /* The character's doing something: no command till it's free (nor
                                                 **   till the world's started, and says so: E_READY) */
 static unsigned place;                          /* Where this task is in the world's events */
@@ -59,7 +59,9 @@ static char dug_with[16];                       /* (The tool a dig took, named) 
 static unsigned char finds;                     /* (Things a search turned up, told as it ends: the hub's text) */
 static struct ireq judged;                      /* (A thing looked at closely: what it is, for the appraiser) */
 static struct portal viewed;                    /* (A portal looked at closely: the world's record of it) */
-static char pending[16];                        /* A thing to take up, walked over to first (or lifted out) */
+static char pending[16];                        /* A thing to take up as the character's free (a portal's part lifted
+                                                **   out; one the world's walk found fixed: E_TAKEN's) */
+static char taking[16];                         /* (The thing taken up last named) */
 static char lifting[16];                        /* (A portal's part being lifted out, to take up after) */
 static unsigned char barw, rebar;               /* (A bar to hand to bar a door with, its width; and the door barred:
                                                 **   the bar to set in its brackets, as the character's free) */
@@ -719,6 +721,11 @@ static unsigned char events (void)          /* (How many there were) */
                 trap_words (m.w1);
             }
             break;
+        case E_TAKEN:                           /* (A thing walked over to and taken up: the world's, I_TAKE) */
+            if (m.who == 0) {
+                took_up (m.w1 | m.w2 << 8);
+            }
+            break;
         case E_LEFT:                            /* (Up the way out, open: the theme's mission's) */
             if (m.who == 0) {
                 end (END_ESCAPED);
@@ -894,30 +901,47 @@ static void __fastcall__ lift (const char* name)
     tell (T_YOU_SEE_NONE);
 }
 
-/* A thing taken up, by its name (walked over to first, if it's out of reach; a portal's part lifted out first) */
+/* A thing taken up, or not (r: IR_*, and the light carried before times 256): told, and its time (the world's
+** E_TAKEN's too, a thing it walked over to and took up: a portal's part, or one fixed where it stands, seen to as the
+** character's free) */
+void __fastcall__ s_took_up (unsigned r)
+{
+    if ((unsigned char) r == IR_FIXED) {
+        strcpy (pending, taking);
+        return;
+    }
+    if ((unsigned char) r != IR_NOT_HERE) {     /* (Out of reach still: the walk's words told why) */
+        tell ((unsigned char) r == IR_OK ? T_TAKEN : (unsigned char) r == IR_FULL ? T_YOUR_HANDS_ARE : T_YOU_SEE_NONE);
+    }
+    if ((unsigned char) r == IR_OK) {
+        after (r >> 8, 20, IO_GET);
+    }
+}
+
+/* A thing taken up, by its name (out of reach, the world walks over to it first, and takes it up: I_TAKE; a portal's
+** part lifted out first; one fixed where it stands, the things' words) */
 void __fastcall__ s_take (const char* name)
 {
-    unsigned char was = HUB->pc_light, r;
+    static struct msg m;
+    unsigned char was = HUB->pc_light, r = things (IO_GET, name);
 
-    if (fixed (name)) {                         /* (A theme's altar, its throne) */
-        pending[0] = 0;
-        return;
-    }
-    r = things (IO_GET, name);
-
-    if (r == IR_NOT_HERE) {
-        strcpy (pending, name);
-        intend2 (I_GOTO, HUB->ireq.x, HUB->ireq.y);
-        return;
-    }
+    strcpy (taking, name);
     pending[0] = 0;
-    if (r == IR_FIXED) {
-        lift (name);
-        return;
-    }
-    tell (r == IR_OK ? T_TAKEN : r == IR_FULL ? T_YOUR_HANDS_ARE : T_YOU_SEE_NONE);
-    if (r == IR_OK) {
-        after (was, 20, IO_GET);
+    if (r == IR_NOT_HERE) {
+        m.kind = I_TAKE;
+        m.w1 = HUB->ireq.x;
+        m.w2 = HUB->ireq.y;
+        m.t = HUB->ireq.item;
+        if (hub_send (&m)) {
+            busy = 1;
+            t_prompt (0);
+        }
+    } else if (r == IR_FIXED) {
+        lift (taking);
+    } else if (r == IR_NO) {
+        msg (tt ());                            /* (A theme's altar, its throne: fixed where it stands) */
+    } else {
+        s_took_up (r | was << 8);
     }
 }
 
@@ -1091,8 +1115,7 @@ void __fastcall__ s_command (char* l)
     }
     if ((d = puzzle (&c)) != Q_NONE) {          /* (The theme's puzzle's: theme.c) */
         if (d >= Q_DONE) {
-            HUB->way_open = Q.open;
-            intend2 (I_WAIT, 50, 1);
+            intend2 (I_WAIT, 50, 1);            /* (Its time: the way out opened the world's already) */
         }
         if (d == Q_RULED) {
             end (END_RULED);
@@ -1402,7 +1425,7 @@ int main (int argc, char* argv[])
             things (IO_BAR, "");
             to_hand ();
         }
-        if (!busy && pending[0]) {              /* (Walked over: now taken up) */
+        if (!busy && pending[0]) {              /* (Lifted out, or come to: now taken up) */
             take (pending);
             pending[0] = 0;
         }

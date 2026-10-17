@@ -175,8 +175,8 @@ void __fastcall__ theme_named (unsigned char what, unsigned char n);   /* Overla
 void __fastcall__ story (unsigned char resumed);    /* Overlay 5: the theme's name (and its story, a new game's) */
 void way_words (void);                          /* Overlay 5: the way out, shut or open */
 void __fastcall__ ending (unsigned char how);   /* Overlay 5: an ending's words (END_*) */
-unsigned char __fastcall__ puzzle (struct pcmd* c);     /* Overlay 5: a command the puzzle's (Q_*) */
-unsigned char __fastcall__ fixed (const char* name);    /* Overlay 5: a thing to hand fixed where it stands: 1, told */
+unsigned char __fastcall__ puzzle (struct pcmd* c);     /* Overlay 5: a command the puzzle's (Q_*: the world's
+                                                **   judgement, IO_PUZZLE, worded) */
 unsigned char __fastcall__ othings (unsigned char op, const char* name, const char* into, unsigned char to);
                                                 /* (main.c's) The things asked (from an overlay: the names in the
                                                 **   main RAM): the result; the request's x in othings_x,
@@ -259,6 +259,8 @@ void finish (void);                             /* Part 1: the game kept, the wo
 void save_game (void);                          /* Part 1: the game kept (if it's kept: -d) */
 void __fastcall__ command (char* l);            /* Part 2 (main.c): a command, the parser's, carried out */
 void __fastcall__ take (const char* name);      /* Part 2: a thing taken up, by its name */
+void __fastcall__ took_up (unsigned r);         /* Part 2: a thing taken up, or not, told (an E_TAKEN's: IR_*, the
+                                                **   light before times 256) */
 enum { NL_NONE, NL_DONE, NL_DEN };
 #define NI_LINE     1                           /* (names_in's: a line that names, names_line's; */
 #define NI_THING    2                           /*   one that may say a thing's name, names_subst's) */

@@ -464,13 +464,15 @@ static unsigned char __fastcall__ get (const char* name)
     hub_map (0);
     x = HUB->pc_x;
     y = HUB->pc_y;
-    HUB->ireq.x = s->x;                         /* (Where it is: IR_NOT_HERE's, IR_FIXED's) */
+    HUB->ireq.x = s->x;                         /* (Where it is: IR_NOT_HERE's, IR_FIXED's; and which, I_TAKE's) */
     HUB->ireq.y = s->y;
+    HUB->ireq.item = n;
     if (s->x - x + 1 > 2 || s->y - y + 1 > 2) {
         return IR_NOT_HERE;
     }
-    return rec.where == IW_PORTAL ? IR_FIXED : s_carry (n, 0) ? IR_OK : IR_FULL;    /* (A portal's part: lifted out
-                                                **   first, the world's) */
+    return rec.where == IW_PORTAL ? IR_FIXED : kind_of (rec.kind)->keeps & KF_FIXED ? IR_NO : s_carry (n, 0) ?
+        IR_OK : IR_FULL;                        /* (A portal's part: lifted out first, the world's; a theme's altar,
+                                                **   never: its words the handling's) */
 }
 
 /* Put down where the character stands (what's in it with it) */
@@ -539,7 +541,10 @@ unsigned char s_serve (void)
         kit ();
         break;
     case IO_GET:
-        iq.result = get (iq.name);
+        if ((iq.result = get (iq.name)) == IR_NO) {
+            cat_map ();                         /* (Fixed where it stands: the words why) */
+            o_handle ();
+        }
         break;
     case IO_DROP:
         iq.result = s_drop (iq.name);
