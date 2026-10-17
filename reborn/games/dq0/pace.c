@@ -223,7 +223,7 @@ static const char pace_words[] =
 unsigned char __fastcall__ o_pacing (const char* l)
 {
     static const char* p;
-    static unsigned char n;
+    static unsigned char n, k;
 
     for (;;) {
         while (*l == ' ' || *l == ',' || *l == '.' || *l == '!') {
@@ -237,8 +237,8 @@ unsigned char __fastcall__ o_pacing (const char* l)
         }
         for (n = 0; l[n] && l[n] != ' ' && l[n] != ',' && l[n] != '.' && l[n] != '!'; ++n) {
         }
-        for (p = pace_words; *p; p += strlen (p) + 1) {
-            if (strlen (p) == n && !strnicmp (l, p, n)) {
+        for (p = pace_words; *p; p += k + 1) {   /* (Each word's length once, its first letter first) */
+            if ((k = strlen (p)) == n && *p == (*l | 0x20) && !strnicmp (l, p, n)) {
                 return 1;
             }
         }
