@@ -478,7 +478,28 @@ struct hub {                                    /* Bank 0, at $8000 */
     struct msg      di[DI_SIZE];
     volatile unsigned char den_go;              /* The denizens' turn, at the turns pace (the world's: bumped as it
                                                 **   gives them one, a slice's or its own work's) */
+    /* An actor's senses (DUNGEON.md's perception as layers: the senses answer for every actor; the denizens ask, for
+    ** their minds, as one decides): whether it senses the character, seen by the light layer (the character lit,
+    ** by its own light or where it stands: the kind's sight, else its darkvision, the less as its eyes are still
+    ** used to more light than is there; a line clear), heard (as it works, within the kind's hearing), or its light
+    ** seen far off (the eyes' adapting, the senses' to keep: the kind's rate); and how far it may move with the
+    ** answer standing (a far one's: the coarse answer, no line cast) */
+    struct {
+        RQH;
+        unsigned char who;                      /* The actor (its entry) */
+        unsigned char sight, dark, hear, eyes;  /* Its kind's (kinds.txt's): squares it sees the character lit, and
+                                                **   unlit; it hears it; its eyes' adapting to the dark (tenths to a
+                                                **   16th of a level darker; 0: at once) */
+        unsigned char res;                      /* (The reply's) SN_* */
+        unsigned char slack;                    /* (The reply's) squares it may go, the answer standing (0: none) */
+    }               dsense;
+    volatile unsigned char ui_cmd;              /* The UI's: a line taken and its command in hand (its words not yet
+                                                **   all out): the senses' look gives way to it a while (dq0prompt:
+                                                **   the UI answering at once, the world's answers its) */
 };
+#define SN_SEEN         0x01                    /* (dsense's res: the character seen, */
+#define SN_HEARD        0x02                    /*   heard, */
+#define SN_GLOW         0x04                    /*   its light seen far off) */
 #define WA_TRAPS        0x01                    /* Searching as it goes: traps underfoot, hidden doors beside */
 #define WA_LISTEN       0x02                    /* Listening as it goes */
 #define WA_MAP          0x04                    /* Mapping as it goes (the map's side the orientation's: its
@@ -614,6 +635,8 @@ struct wrec {
 **   own hub.di denizens
 **   own hub.di_tail world                                      (Its reader's place)
 **   own hub.den_go world                                       (The denizens' turn: the turns pace's)
+**   own hub.dsense senses +denizens                            (An actor's senses: the denizens' request)
+**   own hub.ui_cmd ui                                          (A command in hand: the senses' look gives way)
 **   own banks(1,PLAN_BANKS) maker                              (The plans: grown from the seed)
 **   own banks(CACHE_BANK(0),CACHE_BANKS) none                  (The chunks' cache: its room past three chunks)
 **   own chunk maker                                            (A chunk: made from the seed)
