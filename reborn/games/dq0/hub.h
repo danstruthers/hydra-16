@@ -553,10 +553,12 @@ struct wrec {
 ** denizens' intent); 2.4 bodies and blows (done: the actors' bodies the world's, the denizens their minds, saying
 ** what each means to do, their intents; den_seq, pc_foe, every blow struck, the denizens' events and the fights'
 ** words in DEN_BANK);
-** 2.5 the senses for every actor, by layers, and their memory (the chunks' tiles' seen and visible marks, R_VISITED,
-** the denizens seen in sight); 2.6 game logic out of the UI (way_open); 2.7 the character's state home (gait, watch,
-** pc_stance, pc_strike, and the UI's writes as the game starts, resumes, pauses and quits: round, tpr, pace, paused,
-** quit, now, the character's place on resuming, the strata's records read back).
+** 2.5 the senses for every actor, by layers, and their memory (done: the chunks' tiles' seen and visible marks and
+** R_VISITED the senses', the world's changes to a square keeping them; the denizens seen the senses' to decide, in
+** sight; each denizen's senses asked of them, dsense; DUNGEON.md's perception as layers); 2.6 game logic out of the UI
+** (way_open); 2.7 the character's state home (gait, watch, pc_stance, pc_strike, and the UI's writes as the game
+** starts, resumes, pauses and quits: round, tpr, pace, paused, quit, now, the character's place on resuming, the
+** strata's records read back).
 **
 **   own bank(0) none                                           (The header's room: what no line below names)
 **   own hub.magic ui
