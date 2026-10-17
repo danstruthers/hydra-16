@@ -15,6 +15,7 @@ static unsigned char seg;
 static unsigned char u[HUB_BANKS], x[HUB_BANKS];   /* Each bank's U and $00 (SEG_MAP's), found once */
 static unsigned char cur;                       /* The bank hub_map put in the window last */
 static unsigned char self;                      /* This task's role (T_*: its doorbell) */
+unsigned char smask = MAXSTRATA - 1;            /* (world.h's SLOT: the strata's slots, less one) */
 static unsigned char seq;                       /* Its requests, counted (each one's seq) */
 static unsigned char pend;                      /* A ring taken while it waited for a reply, not the reply's */
 
@@ -113,6 +114,7 @@ int __fastcall__ hub_attach (unsigned char s, unsigned char me)
     }
     HUB->task[me] = hy_task ();
     self = me;
+    smask = HUB->small ? 1 : MAXSTRATA - 1;     /* (dq0 -C: two of the strata's slots) */
     return 0;
 }
 #endif

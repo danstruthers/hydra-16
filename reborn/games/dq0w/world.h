@@ -32,11 +32,19 @@
                                                 **   the chunk, with the edge's ways */
 #define RCH             8                       /* A region's chunks, each way */
 #define RW              (CW * RCH)              /* A region's squares, each way (256: 1,280 feet) */
-#define MAXSTRATA       8
-#define PLAN_BANKS      4                       /* The hub's banks for the plans (two to a bank), */
+#define MAXSTRATA       8                       /* The strata's records in the hub (struct wrec's, every task's copy),
+                                                **   a cache (move 2.8: no fixed count of strata, but the stratum's
+                                                **   number, a byte's): stratum n's in its slot n & 7 (STRATUM (n), its
+                                                **   n there to say so), the rest in the save folder (stSS.dat: the
+                                                **   world's, as it makes way for one) */
+#define SLOT(n)         ((n) & smask)            /* (Its slot: smask MAXSTRATA - 1, but dq0 -C's 1, two slots, the tests'
+                                                **   strata put out soon: hub.c's, set as a task attaches) */
+#define STRATUM(n)      strata[SLOT (n)]
+extern unsigned char smask;
+#define PLAN_BANKS      4                       /* The hub's banks for the plans (two to a bank: a slot's), */
 #define CACHE_BANKS     8                       /*   and for the chunks (three to a bank) */
 #define NCSLOTS         (CACHE_BANKS * 3)
-#define PLAN_BANK(n)    (1 + ((n) >> 1))        /* (Banks of the hub's segment) */
+#define PLAN_BANK(n)    (1 + (SLOT (n) >> 1))   /* (Banks of the hub's segment: stratum n's slot's) */
 #define PLAN_AT(n)      ((struct region*) (0x8000 + ((n) & 1) * 0x1000))
 #define PLAN_MAX        (0x1000 / sizeof (struct region))   /* Regions in a plan, at most */
 #define CACHE_BANK(k)   (1 + PLAN_BANKS + (k) / 3)
@@ -233,7 +241,7 @@ struct stratum {
     unsigned char   nlinks;
     struct link     link[NLINKS];
 };
-extern struct stratum strata[MAXSTRATA];         /* (This task's copy of the hub's) */
+extern struct stratum strata[MAXSTRATA];         /* (This task's copy of the hub's: STRATUM (n), by its slot) */
 void sync_strata (void);                        /* The world bank's copied (the hub's header in the window after) */
 
 /* The chunks' cache: what each slot holds (the hub's) */
@@ -313,8 +321,11 @@ struct mreq {
     unsigned char   sn;
     unsigned        cx, cy;                     /* M_CHUNK's chunk */
 };
-enum { M_PLAN, M_CHUNK, M_SAVE, M_RESTORE };    /* A stratum's plan and links down (its record set), a chunk; the seen
-                                                **   maps written to the save, read back (the plans grown again) */
+enum { M_PLAN, M_CHUNK, M_SAVE, M_RESTORE,     /* A stratum's plan and links down (its record set), a chunk; the seen
+                                                **   maps written to the save, read back (the plans grown again); */
+       M_SLOT };                                /* stratum sn's slot made way for (its chunks in the cache theirs no
+                                                **   more, what's seen of them kept) and its plan grown again (its
+                                                **   record in the slot already, made: none of its links added) */
 #define NO_SQ           0xFFFF
 #define W_STEP          0xFF                    /* (The world's work: a trap stepped onto, from where it came) */
 enum { ASK_WORLD, ASK_DENIZENS, ASK_SENSES, ASK_UI, NASK };
