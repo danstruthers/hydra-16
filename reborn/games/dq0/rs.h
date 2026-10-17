@@ -102,10 +102,11 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
 ** X_DROP: a weapon fumbled), w1 the attacker's health (H_*) and the defender's times 256, w2 the tenths one knocked
 ** senseless is out for; its words in the text, four lines: the attacker's weapon ("sword", "bite"), the defender's,
 ** what the attacker's strike did ("a serious cut to its left thigh (S2)", "your ring byrnie": the armour that stopped
-** it), and the defender's (a counterstrike's, a block's on a bare arm or a claw).  For the denizens' task (its slot):
-** the request's w1 the place in its ring for the words (the referee puts them there: hub.h's FIGHT_AT), w2 1 if the
-** creature is shy (a shaken one flees); the reply's grade what it left them in (hub.h's FF_*: the creature's courage
-** tested if it was wounded and stands, RS_MORALE's: FF_FLEES, or AF_CAUTIOUS).  The character strikes with what the
+** it), and the defender's (a counterstrike's, a block's on a bare arm or a claw).  A creature's blow and the
+** character's at one (the world's, its slot: it keeps what the blow did, and puts the words in the fights' ring,
+** hub.h's FIGHT_AT): the request's w2 1 if the creature is shy (a shaken one flees); the reply's grade what it left
+** them in (hub.h's FF_*: the creature's courage tested if it was wounded and stands, RS_MORALE's: FF_FLEES, or
+** AF_CAUTIOUS).  The character strikes with what the
 ** hub's pc_strike says (SK_*: the best to hand, a fist, a foot, the head: Unarmed's, the book's hand, foot and head).
 **
 ** At a thing (other RS_THING: a door, a portcullis's bars, a window's shutters or glass; the maker's), which ignores it

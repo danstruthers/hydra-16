@@ -4,7 +4,7 @@
 ** the referee), and the items themselves, each a record of what it is and where: on a square of the dungeon, an
 ** actor's (carried, worn, held), or inside another item.  Both in the hub's banks (after the dungeon's), the world's
 ** alone (hub.h's who writes what: games/dq0w/things.c, its item store): the maker lists a chunk's ordinary things as
-** it first makes it (struct stock), the world puts them down; a body is the denizens' intent (I_BODY); the others
+** it first makes it (struct stock), the world puts them down, and a denizen's remains as it dies; the others
 ** read them (the senses, what the character perceives; the UI, a thing's record seen) and ask the world (ireq).
 */
 

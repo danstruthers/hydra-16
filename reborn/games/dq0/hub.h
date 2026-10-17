@@ -139,9 +139,6 @@ enum {
     I_ATTACK,                                   /* a: the actor struck at (its entry plus 1), b: the aim (Z_*): a
                                                 **   round's (the world's: the character busy for it, the blow posted
                                                 **   in the hub's pc_foe, and struck: the referee asked, E_FIGHT) */
-    I_BODY,                                     /* (The denizens' own, their ring's: the hub's di) A body put down
-                                                **   where it fell: a its kind (items.h's KI_*), w1 w2 its square,
-                                                **   x[0] its stratum (the world's item store's to keep) */
     I_ENTER,                                    /* (The denizens' own, below) A body come into the world's keeping */
     I_LEAVE,                                    /*   gone from it (no longer an actor) */
     I_ROUSE,                                    /*   its wait cut short */
@@ -316,8 +313,6 @@ struct actor {
     unsigned char   sn, face;
     unsigned long   ready;                      /* When it can act again */
     unsigned char   step;                       /* Tenths of a second to go 5 feet */
-    unsigned char   intent, a;                  /* (Unused) */
-    unsigned char   result;
     unsigned        x, y;                       /* (These, its doing and its name as struct sight's den: copied whole) */
     unsigned char   doing;                      /* What it's doing (DO_*: watching, coming, keeping off: it senses the
                                                 **   character) */
@@ -438,11 +433,10 @@ struct hub {                                    /* Bank 0, at $8000 */
     /* The referee's slots: the world's, the UI's, and the denizens' task's (a short one: DTEXT of its text) */
     struct req      slot[NSLOTS];
     unsigned char   dslot[sizeof (struct req) - REQ_TEXT + DTEXT];
-    /* The denizens near the character (the denizens' task's, moved by the world), and a save asked of the denizens'
-    ** task (its records written to the save folder's dens.dat) */
+    /* The denizens near the character (their minds the denizens' task's, their bodies the world's), and a save asked
+    ** of the denizens' task (its records written to the save folder's dens.dat) */
     struct actor    actor[NACTORS];
     struct rqh      dsave;
-    volatile unsigned long den_at;              /* The clock as the denizens' task last caught up with it */
     volatile unsigned char den_seq;             /* Bumped as the world changes what the character may see of the
                                                 **   actors */
     volatile unsigned pc_tx, pc_ty;             /* Where the character's move ends (the world's: no denizen goes
@@ -467,8 +461,6 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned char   pc_aim;                     /* Its aim (Z_*) */
     unsigned char   pc_stance;
     unsigned char   pc_strike;                  /* What it strikes with (SK_*: the parser's, as it's told) */
-    volatile unsigned char den_look;            /* (The denizens' task's: a thing put down, a body: the world looks about
-                                                **   again, the senses seeing it) */
     /* The denizens' intents to the world (their actors' bodies': hub.h's the denizens' intents), a ring: written at
     ** di_head (the denizens' task: a full one waited on), read at di_tail as each is carried out (the world: it rings
     ** the denizens as it has) */
@@ -591,7 +583,6 @@ struct wrec {
 **   own hub.actor[*].remains denizens
 **   own hub.actor[*].timid denizens
 **   own hub.dsave denizens +ui
-**   own hub.den_at denizens
 **   own hub.den_seq world
 **   own hub.pc_tx world
 **   own hub.pc_ty world
@@ -605,7 +596,6 @@ struct wrec {
 **   own hub.pc_aim world
 **   own hub.pc_stance world 2.7:ui
 **   own hub.pc_strike world 2.7:ui
-**   own hub.den_look denizens +world                           (Asked of the world, cleared by it)
 **   own hub.di_head denizens                                   (The denizens' intents: their ring)
 **   own hub.di denizens
 **   own hub.di_tail world                                      (Its reader's place)
