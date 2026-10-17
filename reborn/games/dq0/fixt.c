@@ -171,7 +171,7 @@ static void __fastcall__ addn (unsigned v)
 
 static const char* const matname[4] = { "wood", "iron-bound wood", "iron", "stone" };
 
-/* ---- A portal looked at from further off than NEAR_SQ (d squares; p the maker's record of it): only what's seen
+/* ---- A portal looked at from further off than NEAR_SQ (d squares; p the world's record of it): only what's seen
 ** from afar (the user's: "its relative size and maybe its construction material"), its kind, its size against the
 ** character's (low, tall; narrow, wide), a door's material if its sight is sharp enough (the referee's, sight_copy's
 ** eye), whether it stands open; the rest wants a closer look */
@@ -201,7 +201,7 @@ static void __fastcall__ portal_far (const struct portal* p, unsigned char d)
     add (" You'd have to go closer to make out more.");
 }
 
-/* ---- A portal looked at closely (p: the maker's record of it, copied, its bar 1 if the character's on its bar's
+/* ---- A portal looked at closely (p: the world's record of it, copied, its bar 1 if the character's on its bar's
 ** side), judged at the appraiser's grade g (the referee's test of the craft that knows its material): its kind, its
 ** size, its material, its thickness and its features (a grille, a spy-hole, studs, its hinges, a bar's brackets on
 ** this side, a lock) plain to see; its state (rotten ... new) and how stout it is (its body left), judged: a critical

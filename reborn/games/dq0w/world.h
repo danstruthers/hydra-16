@@ -141,6 +141,9 @@ enum { PM_WOOD, PM_IRONBOUND, PM_IRON, PM_STONE };
                                                 **   elev its parts) */
 #define PORTAL_HARM     0xFB                    /* (And for the harm it's taken: tile it) */
 #define TRAP_STATE      0xFC                    /* (And for a trap's: tile its state) */
+#define STOCKED         0xFD                    /* (And a chunk's things put down: x, y its first square; the record
+                                                **   only a mark) */
+#define CH_TILE(l)      ((l) < PORTAL_HARM || (l) == 0xFF)  /* (A square's record: its kind, its floor, its link) */
 /* A window (T_WINDOW, PK_WINDOW) and an arrow slit (T_WINDOW, PK_SLIT, always open) are seen through (the senses'),
 ** but a window's closed shutters; a portcullis (T_DOOR, PK_PORTCULLIS) is seen through, up or down.  A window's glass
 ** and bars are items of their own (a pane, bars: items.h's IW_PORTAL, on its square), as a door's bar is (on the
@@ -240,27 +243,59 @@ struct cslot {
     unsigned        stamp;                      /* When it was last found */
 };
 
-/* A request to the maker (one for each task that asks: the world's, the denizens') */
+#define CS_FRESH        2                       /* (A slot's used: stocked as it was made, its STOCKED record not yet
+                                                **   the world's; the maker never makes way for it till it is) */
+
+/* ---- The change records (DUNGEON.md: changing the dungeon): what's changed in the dungeon, each a record (its
+** stratum, its square, what it became: its kind, its floor, the link it is; or a portal's state, its harm, a trap's
+** state, a chunk stocked), written by the world only (dq0w/store.c), read by the maker as it makes a chunk again
+** (dq0m/changes.c: laid over it).  Kept by region (RW squares each way, from the stratum's x0, y0: a chunk's in one),
+** in pages of the hub's change banks (CHANGE_BANKS, CH_PER_PAGE records a page, a region's in as many pages as it
+** needs), the pages' table the world bank's (struct wrec's cpage); a region's records all in its pages, or none of
+** them.  With a save folder (the hub's savedir) the pages are a cache: a region that falls out of it written to its
+** file there (rgSXXYY.dat: S its stratum, XX YY its region, in hex; a header, then its records) and read again as
+** it's wanted, so no count of records limits the dungeon, only the card; without one, a full cache keeps no more */
+struct change {
+    unsigned char   sn;
+    unsigned        x, y;
+    unsigned char   tile;                       /* Its kind (but the seen bit); a portal's, a trap's state ... */
+    signed char     elev;                       /* Its floor; a portal's parts */
+    unsigned char   link;                       /* The stratum's link it is (an opening), or 0xFF; or what it is:
+                                                **   PORTAL_STATE, PORTAL_HARM, TRAP_STATE, STOCKED */
+};
+#define CHANGE_BANKS    2
+#define CH_PAGE         256                     /* A page's bytes */
+#define CH_PER_PAGE     (CH_PAGE / sizeof (struct change))
+#define NCPAGES         (CHANGE_BANKS * (0x2000 / CH_PAGE))
+#define CHANGE_AT(p)    ((struct change*) (0x8000 + ((p) & 31) * CH_PAGE))  /* (Page p in its bank, CHANGE_BANK (p):
+                                                **   hub.h's) */
+struct cpage {                                  /* A page of the change records (struct wrec's) */
+    unsigned char   used;                       /* (0: free) */
+    unsigned char   sn, rx, ry;                 /* Its region */
+    unsigned char   n;                          /* Its records */
+    unsigned char   dirty;                      /* Changed since its region's file was written (or read) */
+    unsigned        stamp;                      /* When its region was last wanted */
+};
+#define CH_MAGIC        0x4843                  /* "CH": the save's changes.dat (the store's: CH_MAGIC, CH_VER, its
+                                                **   generation), a region's file (CH_MAGIC, the generation, its count) */
+#define CH_VER          1
+struct chead {
+    unsigned        magic;
+    unsigned        gen;                        /* (changes.dat's: CH_VER, then it) */
+    unsigned        n;
+};
+typedef char change_fits[sizeof (struct change) == 8 && CH_PER_PAGE == 32 ? 1 : -1];
+
+/* A request to the maker (one for each task that asks: the world's, the denizens', the senses', the UI's) */
 struct mreq {
     RQH;                                        /* (hub.h's protocol; kind: M_*) */
     unsigned char   sn;
-    unsigned        cx, cy;                     /* M_CHUNK's chunk; M_CHANGE's square */
-    unsigned char   tile;                       /* M_CHANGE's: what the square becomes, */
-    signed char     elev;                       /*   its floor, */
-    unsigned char   link;                       /*   and the link it is (an opening), or 0xFF */
-    unsigned        fx, fy;                     /* M_WORK's: where the character stands (or came from), and the
-                                                **   reply's where it is after (a pit's: where it climbs out to); */
-    unsigned        t;                          /*   the reply's tenths it took (and it was out for), */
-    unsigned char   climb, res;                 /*   a pit's climb out (feet, or 0), 1 if nothing was there */
+    unsigned        cx, cy;                     /* M_CHUNK's chunk */
 };
-enum { M_PLAN, M_CHUNK, M_CHANGE, M_SAVE, M_RESTORE, M_WORK };   /* A stratum's plan and links down (its record
-                                                **   set), a chunk, a square changed (and kept: the maker's records);
-                                                **   the records written to the save, read back (the plans grown
-                                                **   again); a portal or a trap worked (dq0m/work.c: cx, cy its square,
-                                                **   or NO_SQ, about the character; tile what's done, hub.h's PA_* or
-                                                **   W_STEP; elev the way from fx, fy to it) */
+enum { M_PLAN, M_CHUNK, M_SAVE, M_RESTORE };    /* A stratum's plan and links down (its record set), a chunk; the seen
+                                                **   maps written to the save, read back (the plans grown again) */
 #define NO_SQ           0xFFFF
-#define W_STEP          0xFF                    /* (M_WORK's: a trap stepped onto, from fx, fy) */
+#define W_STEP          0xFF                    /* (The world's work: a trap stepped onto, from where it came) */
 enum { ASK_WORLD, ASK_DENIZENS, ASK_SENSES, ASK_UI, NASK };
 
 /* ---- plan.c (the maker's): a stratum grown whole, in outline */

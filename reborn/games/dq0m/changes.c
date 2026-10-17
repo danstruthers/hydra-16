@@ -1,9 +1,10 @@
 /*
-** changes.c - (dq0m) what's changed in the dungeon, kept (DUNGEON.md: changing the dungeon): each change a record (a
-** stratum, a square, what it became: its kind, its floor, the link it is), in banks of the maker's own, laid over a
-** chunk each time it's made again; and the squares the character has seen, each chunk's as a map of bits, kept as
-** the cache makes way for the chunk and laid over it when it's made again.  (The save, on the card, is the next
-** step's: these are what it will write.)
+** changes.c - (dq0m) what's changed in the dungeon laid over a chunk each time it's made again (DUNGEON.md: changing
+** the dungeon): the change records (world.h's), the world's to write (dq0w/store.c), read here only: its region's in
+** the hub's change pages, or, if none of them are there, in its file in the save folder (rgSXXYY.dat, this game's
+** generation's), under the hub's change_lock.  And the squares the character has seen, each chunk's as a map of bits,
+** kept as the cache makes way for the chunk and laid over it when it's made again, in banks of the maker's own, and
+** in the save (seen.dat: the UI asks, M_SAVE; back as the game's carried on, M_RESTORE).
 */
 
 #include <fcntl.h>
@@ -16,18 +17,8 @@
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 
-#define CH_BANKS        2
-#define CH_PER_BANK     (0x2000 / sizeof (struct change))
 #define SEEN_BANKS      2
 #define SEEN_PER_BANK   (0x2000 / sizeof (struct seen))
-
-struct change {
-    unsigned char   sn;
-    unsigned        x, y;
-    unsigned char   tile;                       /* Its kind (but the seen bit) */
-    signed char     elev;
-    unsigned char   link;                       /* The stratum's link it is (an opening), or 0xFF */
-};
 
 struct seen {
     unsigned char   used, sn;
@@ -36,17 +27,16 @@ struct seen {
     unsigned char   bits[CW * CW / 8];
 };
 
-static unsigned char chb, seb;                  /* The first banks */
+static unsigned char seb;                       /* The first bank */
 unsigned char detail_bank;                      /* (The regions' details' cache: plan.c's, emptied here) */
-static unsigned nch;                            /* Changes kept */
-static unsigned char nseen, nexts;              /* Seen maps kept, the next made way for */
+static unsigned char nexts;                     /* The next seen map made way for */
+static char path[56];
 
 void changes_init (void)
 {
-    int b = hy_banks_alloc (CH_BANKS + SEEN_BANKS + 1);
+    int b = hy_banks_alloc (SEEN_BANKS + 1);
 
-    chb = b;
-    seb = b + CH_BANKS;
+    seb = b;
     detail_bank = seb + SEEN_BANKS;
     for (nexts = 0; nexts <= SEEN_BANKS; ++nexts) {
         setbank (seb + nexts);
@@ -55,34 +45,10 @@ void changes_init (void)
     nexts = 0;
 }
 
-static struct change* __fastcall__ change_at (unsigned i)
-{
-    setbank (chb + i / CH_PER_BANK);
-    return (struct change*) 0x8000 + i % CH_PER_BANK;
-}
-
 static struct seen* __fastcall__ seen_at (unsigned char i)
 {
     setbank (seb + i / SEEN_PER_BANK);
     return (struct seen*) 0x8000 + i % SEEN_PER_BANK;
-}
-
-/* A change kept (the window moved) */
-void __fastcall__ change_keep (unsigned char sn, unsigned x, unsigned y, unsigned char tile, signed char elev,
-    unsigned char link)
-{
-    struct change* c;
-
-    if (nch >= CH_BANKS * CH_PER_BANK) {
-        return;                                 /* (Full: the save's, the next step's, will hold more) */
-    }
-    c = change_at (nch++);
-    c->sn = sn;
-    c->x = x;
-    c->y = y;
-    c->tile = tile;
-    c->elev = elev;
-    c->link = link;
 }
 
 /* The change on a chunk (in the main RAM, at x, y in the frame): its square, and (a link) its opening */
@@ -127,34 +93,82 @@ static void __fastcall__ change_put (struct chunk* k, unsigned char lx, unsigned
     }
 }
 
-/* The changes laid over a chunk just made (in the main RAM; its first square x, y in the frame): 1 if it's been
-** stocked */
-unsigned char __fastcall__ changes_over (struct chunk* k, unsigned x, unsigned y)
+/* The records read (n of them, in the main RAM) laid over chunk k (its first square x, y in the frame): 1 if one
+** says it's been stocked */
+static struct change rb[8];
+static unsigned char __fastcall__ over (struct chunk* k, unsigned x, unsigned y, unsigned char n)
 {
-    static struct change c;
-    unsigned i;
-    unsigned char b = getbank (), stocked = 0;
+    struct change* c;
+    unsigned char stocked = 0;
 
-    for (i = 0; i < nch; ++i) {
-        memcpy (&c, change_at (i), sizeof c);
-        if (c.sn == k->sn && c.x - x < CW && c.y - y < CW) {
-            change_put (k, c.x - x, c.y - y, c.tile, c.elev, c.link);
-            stocked |= c.link == STOCKED;
+    for (c = rb; n; --n, ++c) {
+        if (c->sn == k->sn && c->x - x < CW && c->y - y < CW) {
+            change_put (k, c->x - x, c->y - y, c->tile, c->elev, c->link);
+            stocked |= c->link == STOCKED;
         }
     }
-    setbank (b);
     return stocked;
 }
 
-/* A change on a chunk in the cache (slot s: the hub's bank in the window after) */
-void __fastcall__ change_cached (unsigned char s, unsigned char lx, unsigned char ly, unsigned char tile,
-    signed char elev, unsigned char link)
+/* The change records laid over a chunk just made (in the main RAM; its first square x, y in the frame): its region's,
+** from the hub's change pages, else from its file (the window as it was after): 1 if it's been stocked */
+unsigned char __fastcall__ changes_over (struct chunk* k, unsigned x, unsigned y)
 {
-    static struct chunk* k;
+    static struct chead hd;
+    static const char hex[] = "0123456789abcdef";
+    struct cpage* q;
+    unsigned w = hub_here ();
+    unsigned char stocked = 0, p, i, m, had = 0, sn = k->sn, rx, ry;
+    unsigned left;
+    int fd;
 
-    hub_map (CACHE_BANK (s));
-    k = CHUNK_AT (s);
-    change_put (k, lx, ly, tile, elev, link);
+    rx = (x - strata[sn].x0) >> 8;              /* (Its region: RW squares each way) */
+    ry = (y - strata[sn].y0) >> 8;
+    hub_map (0);
+    hy_sem_acquire (HUB->change_lock);
+    for (p = 0; p < NCPAGES; ++p) {
+        hub_map (WORLD_BANK);
+        q = &WREC->cpage[p];
+        if (!q->used || q->sn != sn || q->rx != rx || q->ry != ry) {
+            continue;
+        }
+        had = 1;
+        for (i = 0, left = q->n; left; i += m, left -= m) {
+            m = left > 8 ? 8 : left;
+            hub_map (CHANGE_BANK (p));
+            memcpy (rb, CHANGE_AT (p) + i, m * sizeof (struct change));
+            stocked |= over (k, x, y, m);
+            hub_map (WORLD_BANK);
+        }
+    }
+    hub_map (0);
+    if (!had && HUB->savedir[0]) {              /* (None in the pages: its file's, if this game has one) */
+        strcpy (path, HUB->savedir);
+        strcat (path, "/rg0xxyy.dat");
+        m = strlen (path) - 9;                  /* (Its stratum's digit) */
+        path[m] = hex[sn & 15];
+        path[m + 1] = hex[rx >> 4];
+        path[m + 2] = hex[rx & 15];
+        path[m + 3] = hex[ry >> 4];
+        path[m + 4] = hex[ry & 15];
+        if ((fd = open (path, O_RDONLY)) >= 0) {
+            hub_map (WORLD_BANK);
+            if (read (fd, &hd, sizeof hd) == sizeof hd && hd.magic == CH_MAGIC && hd.gen == WREC->cgen) {
+                for (left = hd.n; left; left -= m) {
+                    m = left > 8 ? 8 : left;
+                    if (read (fd, rb, m * sizeof (struct change)) != m * sizeof (struct change)) {
+                        break;
+                    }
+                    stocked |= over (k, x, y, m);
+                }
+            }
+            close (fd);
+        }
+    }
+    hub_map (0);
+    hy_sem_release (HUB->change_lock);
+    hub_back (w);
+    return stocked;
 }
 
 /* ---- The squares seen: a chunk's kept as the cache makes way for it (slot s), laid over it when it's made again */
@@ -227,10 +241,9 @@ void __fastcall__ seen_over (struct chunk* k)
     }
 }
 
-/* ---- The save (the hub's savedir): changes.dat (its count, then the records), seen.dat (the seen maps); the
-** squares seen in the chunks in the cache kept first (seen_keep), so nothing seen is lost.  0, or -1 */
-
-static char path[48];
+/* ---- The save (the hub's savedir): seen.dat (the seen maps); the squares seen in the chunks in the cache kept first
+** (seen_keep), so nothing seen is lost.  (The change records are the world's: its changes.dat and the regions'
+** files.)  0, or -1 */
 
 #pragma code-name (push, "SW2CODE")
 #pragma rodata-name (push, "SW2RODATA")
@@ -246,8 +259,7 @@ static int __fastcall__ open_in (const char* name, int how)
 
 int s_changes_save (void)
 {
-    static unsigned char b[256];
-    unsigned i, n;
+    static unsigned char b[sizeof (struct seen)];
     unsigned char k;
     int fd;
 
@@ -257,22 +269,11 @@ int s_changes_save (void)
             seen_keep (k);
         }
     }
-    if ((fd = open_in ("changes.dat", O_WRONLY | O_CREAT | O_TRUNC)) < 0) {
-        return -1;
-    }
-    write (fd, &nch, sizeof nch);
-    for (i = 0; i < nch; i += n) {              /* (Through the main RAM: a bank isn't seen while write works) */
-        n = nch - i > sizeof b / sizeof (struct change) ? sizeof b / sizeof (struct change) : nch - i;
-        for (k = 0; k < n; ++k) {
-            memcpy (b + k * sizeof (struct change), change_at (i + k), sizeof (struct change));
-        }
-        write (fd, b, n * sizeof (struct change));
-    }
-    close (fd);
     if ((fd = open_in ("seen.dat", O_WRONLY | O_CREAT | O_TRUNC)) < 0) {
         return -1;
     }
-    for (k = 0; k < SEEN_BANKS * SEEN_PER_BANK; ++k) {
+    for (k = 0; k < SEEN_BANKS * SEEN_PER_BANK; ++k) {   /* (Through the main RAM: a bank isn't seen while write
+                                                **   works) */
         memcpy (b, seen_at (k), sizeof (struct seen));
         if (((struct seen*) b)->used) {
             write (fd, b, sizeof (struct seen));
@@ -285,29 +286,17 @@ int s_changes_save (void)
 int s_changes_restore (void)
 {
     static unsigned char b[sizeof (struct seen)];
-    unsigned i;
     unsigned char k;
     int fd;
 
-    if ((fd = open_in ("changes.dat", O_RDONLY)) < 0) {
+    if ((fd = open_in ("seen.dat", O_RDONLY)) < 0) {
         return -1;
     }
-    nch = 0;
-    read (fd, &i, sizeof i);
-    for (; nch < i && nch < CH_BANKS * CH_PER_BANK; ++nch) {
-        if (read (fd, b, sizeof (struct change)) != sizeof (struct change)) {
-            break;
-        }
-        memcpy (change_at (nch), b, sizeof (struct change));
+    for (k = 0; k < SEEN_BANKS * SEEN_PER_BANK && read (fd, b, sizeof (struct seen)) == sizeof (struct seen); ++k) {
+        memcpy (seen_at (k), b, sizeof (struct seen));
     }
+    nexts = k % (SEEN_BANKS * SEEN_PER_BANK);
     close (fd);
-    if ((fd = open_in ("seen.dat", O_RDONLY)) >= 0) {
-        for (k = 0; k < SEEN_BANKS * SEEN_PER_BANK && read (fd, b, sizeof (struct seen)) == sizeof (struct seen); ++k) {
-            memcpy (seen_at (k), b, sizeof (struct seen));
-        }
-        nexts = k % (SEEN_BANKS * SEEN_PER_BANK);
-        close (fd);
-    }
     return 0;
 }
 

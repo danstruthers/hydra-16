@@ -228,7 +228,7 @@ extern char heard_what[20];                     /* Its sound's words (SOUND.md: 
 struct portal;
 extern unsigned tx, ty;                         /* (main.c's: the square of the thing its find found) */
 void __fastcall__ portal_look (const struct portal* p, signed char g);  /* Overlay 4: a portal looked at closely
-                                                **   (the maker's record of it, the hub's pview, copied), judged at
+                                                **   (the world's record of it, the hub's pview, copied), judged at
                                                 **   the appraiser's grade g, into lb */
 void ceiling_glance (void);                     /* Overlay 7: a ceiling at a glance (sight_copy's), added to lb */
 void words (void);                              /* Overlay 2: what the character perceives, into lb */

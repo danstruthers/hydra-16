@@ -165,16 +165,8 @@ ovl_out:
             .include    "../dq0/swap.inc"
 
             SWPART      1, 6                ; The map (map.c)
-            SWPART      2, 6                ; The save (changes.c), portcullises and windows (work.c)
-            SWPART      3, 6                ; Battering, a search, disarming, a close look (work.c)
+            SWPART      2, 6                ; The seen maps' save (changes.c)
 
             SWFN        draw_map, 1
             SWFN        changes_save, 2
             SWFN        changes_restore, 2
-            SWFN        portcullis, 2
-            SWFN        window, 2
-            SWFN        batter, 3
-            SWFN        disarm, 3
-            SWFN        near_trap, 3
-            SWFN        search, 3
-            SWFN        look_at, 3

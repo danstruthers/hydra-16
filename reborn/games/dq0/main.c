@@ -58,7 +58,7 @@ static void __fastcall__ dig_used (unsigned char n);
 static char dug_with[16];                       /* (The tool a dig took, named) */
 static unsigned char finds;                     /* (Things a search turned up, told as it ends: the hub's text) */
 static struct ireq judged;                      /* (A thing looked at closely: what it is, for the appraiser) */
-static struct portal viewed;                    /* (A portal looked at closely: the maker's record of it) */
+static struct portal viewed;                    /* (A portal looked at closely: the world's record of it) */
 static char pending[16];                        /* A thing to take up, walked over to first (or lifted out) */
 static char lifting[16];                        /* (A portal's part being lifted out, to take up after) */
 static unsigned char barw, rebar;               /* (A bar to hand to bar a door with, its width; and the door barred:
@@ -262,14 +262,16 @@ static void sheet (void)
 #pragma rodata-name (pop)
 
 /* ---- The save (DUNGEON.md): game.dat, the UI's (the game's state, the strata's records), beside the things' items.dat
-** (dq0p's), the referee's pc.hm
-** and the maker's changes.dat and seen.dat */
+** (dq0p's), the referee's pc.hm, the world's change records (changes.dat and the regions' rg*.dat: world.h's) and
+** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    6                           /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    7                           /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
-                                                **   character's given, after the strata's: names.c's) */
+                                                **   character's given, after the strata's: names.c's; 7, the change
+                                                **   records the world's, by region: its changes.dat, then rg*.dat,
+                                                **   a version 6 changes.dat read in as the game's carried on) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
@@ -305,11 +307,13 @@ static int load_save (void)
     }
     n = read (fd, &sv, sizeof sv);
     close (fd);
-    return n == sizeof sv && sv.magic == SAVE_MAGIC && (sv.version == SAVE_VER || sv.version == 5) && !sv.q.done ? 0 :
-        -1;                                     /* (5's the same, but for the names after the strata: none) */
+    return n == sizeof sv && sv.magic == SAVE_MAGIC && sv.version >= 5 && sv.version <= SAVE_VER && !sv.q.done ? 0 :
+        -1;                                     /* (5's the same, but for the names after the strata: none; 6's, but
+                                                **   for its changes.dat, the world's to read) */
 }
 
-/* The game kept: the referee's sheet, the maker's records, and the game's state (the hub's header in the window) */
+/* The game kept: the referee's sheet, the maker's seen maps, the world's change records, and the game's state (the
+** hub's header in the window) */
 void s_save_game (void)
 {
     struct req* r;
@@ -322,10 +326,15 @@ void s_save_game (void)
     strcpy (HUB->slot[SLOT_UI].text, save_path ("pc.hm"));
     r = referee (RS_SAVE, 0);
     r->state = REQ_FREE;
-    q = &HUB->mreq[ASK_UI];                     /* (The maker's records: asked, and waited for) */
+    q = &HUB->mreq[ASK_UI];                     /* (The maker's seen maps: asked, and waited for) */
     q->kind = M_SAVE;
     hub_call (q, T_MAKER);
     q->state = REQ_FREE;
+    if (task_[T_WORLD] > 0) {                   /* (The world's change records) */
+        HUB->wreq.kind = WQ_SAVE;
+        hub_call (&HUB->wreq, T_WORLD);
+        HUB->wreq.state = REQ_FREE;
+    }
     things (IO_SAVE, "");                       /* (The things': items.dat) */
     if (task_[T_DENIZENS] > 0) {                /* (The denizens': dens.dat) */
         hub_call (&HUB->dsave, T_DENIZENS);
@@ -919,12 +928,11 @@ static void show_map (void)
 unsigned tx, ty;
 #define find(obj, orel) pick ((obj), (orel))
 
-/* A portal it sees looked at closely (the parser's thing, the way it lies): the maker's record of it (ASK_UI's
-** M_WORK, PA_EXAMINE: a doorway has none), judged by the craft that knows its material (the referee's test: wood
+/* A portal it sees looked at closely (the parser's thing, the way it lies): the world's record of it (the hub's
+** wreq, WQ_EXAMINE: a doorway has none), judged by the craft that knows its material (the referee's test: wood
 ** Timbercraft, iron Metalcraft, stone Masonry), in words (overlay 4); a few seconds' looking */
 static void __fastcall__ inspect (unsigned char obj, unsigned char orel)
 {
-    struct mreq* q = &HUB->mreq[ASK_UI];
     struct req* r;
     signed char g;
 
@@ -934,14 +942,12 @@ static void __fastcall__ inspect (unsigned char obj, unsigned char orel)
     if (REL_BEHIND (REL8 (g = bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y), HUB->pc_face))) {
         intend (I_TURN, g);                     /* (One behind it, that it knows of: turned to, to see it) */
     }
-    q->kind = M_WORK;
-    q->tile = PA_EXAMINE;
-    q->sn = HUB->pc_stratum;
-    q->cx = tx;
-    q->cy = ty;
-    hub_call (q, T_MAKER);
-    q->state = REQ_FREE;
-    if (q->res) {
+    HUB->wreq.kind = WQ_EXAMINE;
+    HUB->wreq.x = tx;
+    HUB->wreq.y = ty;
+    hub_call (&HUB->wreq, T_WORLD);
+    HUB->wreq.state = REQ_FREE;
+    if (HUB->wreq.res) {
         msg ("An open doorway: there's no door in it.");
         return;
     }

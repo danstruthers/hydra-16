@@ -6,16 +6,19 @@
 ** built.c), and moves the character through it: a move takes its time (the referee's walking rate, the slopes), and the
 ** character's there when the time's up.  What it sees is worked out as it gets there, turns, or its light changes, and
 ** what it perceives recorded in the hub for the UI to word, by the senses (games/dq0p, asked).  It carries out digging,
-** a spell of work at a time (the referee's tests), and asks the maker to keep what it changes.  The denizens near the
+** a spell of work at a time (the referee's tests), and keeps what it changes: the change records (store.c, world.h's),
+** its alone to write, which the maker lays over a chunk it makes again.  It works the portals and the traps (work.h:
+** doors, portcullises, windows, a trap set off, disarmed, a search; the referee asked), and answers the UI's
+** requests of it (the hub's wreq: the save, a close look at a portal).  The denizens near the
 ** character move themselves (their task, games/dq0d, by the character's rules: the hub's actors); the world keeps the
 ** character out of their squares, and looks again at those it sees as they change (den_seq).  A blow of the character's
 ** at one (I_ATTACK) takes it a round, and is the denizens' task's to strike (the hub's pc_foe), as theirs at it are.
 **
 ** The pace (DUNGEON.md: moving): the player's (the hub's gait), held to a slow walk while it searches as it goes or
 ** in the dark, a walk while it listens; a square's time that pace's step (the referee's), the time moved at it and
-** the time stood still the referee's to tire the character by and rest it (RS_EXERT).  Searching as it goes, the
-** maker searches about each place it stops (its search's, quietly, in no more time); a trap underfoot the maker's to
-** notice, by the referee's chance (a search's).  A small move (I_STEP): a square at a time, by the heading, as far
+** the time stood still the referee's to tire the character by and rest it (RS_EXERT).  Searching as it goes, it
+** searches about each place it stops (a search's, quietly, in no more time); a trap underfoot noticed, by the
+** referee's chance (a search's).  A small move (I_STEP): a square at a time, by the heading, as far
 ** as it's told or its pace takes it.
 **
 ** The clock (main.c's once): each real tick (200 a second) is round tenths of game time over tpr ticks (the pace:
@@ -24,8 +27,11 @@
 ** keep up (turns_run).
 **
 ** Its code that's seldom called is in swapped parts (../dq0/swap.inc: run in the main RAM's top, a part at a time,
-** copied there from the overlays' file's bank, LIBDIR/dq0w.ovl, as it's called; bank.s's stubs): part 1, digging;
-** part 2, climbing; part 3, the dungeon begun and the strata below grown.
+** copied there from the overlays' file's banks, LIBDIR/dq0w.ovl, as it's called; bank.s's stubs): part 1, digging;
+** part 2, climbing; part 3, the dungeon begun and the strata below grown; part 4, the change records' rarer work
+** (store.c); the work: part 5 doors (wdoor.c), 6 blows (wblow.c), 7 portcullises and windows (wwin.c), 8 traps and
+** searches (wtrap.c), a command's work all in one of them; part 9, the walks (go, go_to, step_to: I_GO, I_GOTO,
+** I_STEP, each a command's one part).
 */
 
 #include <fcntl.h>
@@ -36,6 +42,7 @@
 #include <hydra.h>
 #include "../dq0/hub.h"
 #include "world.h"
+#include "work.h"
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 
@@ -47,7 +54,12 @@ void __fastcall__ climb (unsigned char d);      /* Part 2 */
 void climb_on (void);
 void begin (void);                              /* Part 3 */
 void __fastcall__ grow_below (unsigned char n);
-extern unsigned char ovbank[1];
+void __fastcall__ go (unsigned char h);         /* Part 9 */
+void __fastcall__ go_to (unsigned x, unsigned y);
+void __fastcall__ step_to (unsigned char h, unsigned char n, unsigned char keep);
+#define OVBANKS         4                       /* (dq0w.cfg's OV1 ...: the parts' images) */
+extern unsigned char ovbank[OVBANKS];
+struct work wk;
 extern char _SWAP_START__[];
 
 static unsigned last;                           /* The tick count at the last look */
@@ -266,7 +278,7 @@ static void den_way (void)
     no_way (N_DEN | (unsigned) (blocked - 1) << 8);
 }
 
-/* ---- Traps on the way (DUNGEON.md: traps; the maker sets them off, dq0m/work.c): a walk worked out stops at the
+/* ---- Traps on the way (DUNGEON.md: traps; set off by the world's work, wtrap.c): a walk worked out stops at the
 ** first it would set off (a plate's, a wire's, on a room's floor), and goes round one the character knows of */
 
 static unsigned tx_, ty_, fx_, fy_;             /* (The trap's square, and the one it's walked onto from) */
@@ -532,9 +544,12 @@ static void __fastcall__ across (unsigned char h, unsigned char r)
     bound_for (mx, my);
 }
 
+#pragma code-name (push, "SW9CODE")
+#pragma rodata-name (push, "SW9RODATA")
+
 /* Up to square (x, y) of the character's room (a door's or a passage's mouth: the room's square before it), by the
 ** way it can walk */
-static void __fastcall__ go_to (unsigned x, unsigned y)
+void __fastcall__ s_go_to (unsigned x, unsigned y)
 {
     unsigned char r, tx, ty, d, t, fx, fy;
     unsigned long tt;
@@ -595,6 +610,9 @@ static void __fastcall__ go_to (unsigned x, unsigned y)
     bound_for (move.x, move.y);
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 /* ---- Climbing a ledge (HarnMaster's Climbing, Skills 8: feet of progress a test, a test a round, the game's
 ** choice; a hard climb, rough stone: 20 feet on a critical success, 10 on a success, 5 back on a marginal failure,
 ** and on a critical failure a fall, the referee's harm); or jumping down one */
@@ -643,10 +661,12 @@ static struct {
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* The referee asked about the character (kind, a, b; its w1 ww1): the reply's grade (wres its result) */
-static unsigned char wres;
+/* The referee asked about the character (kind, a, b; its w1 ww1, its steps wsteps, 0 after): the reply's grade (wres
+** its result) */
+unsigned char wres;
+signed char wsteps;
 static unsigned ww1;
-static signed char __fastcall__ ask_w (unsigned char kind, unsigned char a, unsigned char b)
+signed char __fastcall__ ask_w (unsigned char kind, unsigned char a, unsigned char b)
 {
     struct req* r;
     signed char g;
@@ -658,7 +678,8 @@ static signed char __fastcall__ ask_w (unsigned char kind, unsigned char a, unsi
     r->a = a;
     r->b = b;
     r->w1 = ww1;
-    r->steps = 0;
+    r->steps = wsteps;
+    wsteps = 0;
     r = hub_ask (SLOT_WORLD);
     g = r->grade;
     wres = r->result;
@@ -761,9 +782,6 @@ void s_climb_on (void)
     see (0);
 }
 
-static void __fastcall__ change (unsigned char sn, unsigned x, unsigned y, unsigned char tile, signed char elev,
-    unsigned char link);
-
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
@@ -772,11 +790,14 @@ static void __fastcall__ change (unsigned char sn, unsigned x, unsigned y, unsig
 static unsigned tgx, tgy;
 #define TARGET(x, y)    (tgx ? (x) != tgx || (y) != tgy : 0)   /* (Square x, y not the one meant) */
 
+#pragma code-name (push, "SW9CODE")
+#pragma rodata-name (push, "SW9RODATA")
+
 /* The character sets out on heading h (north, northeast ...): its time, and where it'll be.  From a room: north,
 ** east, south or west by a door in that wall (the nearest it can walk to); a diagonal, by the door that lies that
 ** way; across the room by the way it can walk; the UI's door or mouth, if it means one (tgx).  A passage goes only by
 ** the four */
-static void __fastcall__ go (unsigned char h)
+void __fastcall__ s_go (unsigned char h)
 {
     unsigned char r, d = h >> 1, k, best = 0xFF, bx = 0, by = 0, wx, wy;
     unsigned long t, bt = 0xFFFFFFFFUL;
@@ -889,7 +910,7 @@ set_out:
 ** kept if keep (backing up, a step aside); in a room straight
 ** across its floor (across's rules: its edge, a ledge, a denizen or a trap stops it), in a passage along it (go's,
 ** walk's: a fork, a door or a denizen stops it) */
-static void __fastcall__ step_to (unsigned char h, unsigned char n, unsigned char keep)
+void __fastcall__ s_step_to (unsigned char h, unsigned char n, unsigned char keep)
 {
     unsigned char r;
 
@@ -901,7 +922,7 @@ static void __fastcall__ step_to (unsigned char h, unsigned char n, unsigned cha
     if ((r = room_of (sn_, mx, my)) != 0xFF) {
         across (h, r);
     } else {
-        go (h);
+        s_go (h);                               /* (Its own part's) */
     }
     lim_ = 250;
     hub_map (0);
@@ -912,6 +933,9 @@ static void __fastcall__ step_to (unsigned char h, unsigned char n, unsigned cha
         }
     }
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- The strata: the one below a link, begun when anyone first takes it */
 
@@ -1111,9 +1135,9 @@ static void __fastcall__ spend (unsigned char a, unsigned long t)
     ww1 = 0;
 }
 
-/* Searching as it went (the hub's watch, WA_TRAPS): about where it's stopped, the maker's search (the hidden doors
-** and traps within a few squares it sees, each the referee's P_SEARCH), quietly (told only if it finds something) and
-** in no more time (the slow walk paid for it) */
+/* Searching as it went (the hub's watch, WA_TRAPS): about where it's stopped, a search (the hidden doors and traps
+** within a few squares it sees, each the referee's P_SEARCH: wtrap.c's), quietly (told only if it finds something)
+** and in no more time (the slow walk paid for it) */
 static unsigned char barw_;
 static unsigned char __fastcall__ work (unsigned char what, unsigned x, unsigned y, unsigned char d);
 
@@ -1156,7 +1180,7 @@ static void arrive (void)
     bound_for (mx, my);
     see (first);
     if (searching && (unsigned char) (how - A_DOWN) > A_UP - A_DOWN && how != A_STOPPED) {   /* (Not up or down) */
-        barw_ = 1;                              /* (Quietly: the maker's search's link; what it finds seen) */
+        barw_ = 1;                              /* (Quietly: the search's link; what it finds seen) */
         if (work (PA_SEARCH, NO_SQ, NO_SQ, 0)) {
             see (first);
         }
@@ -1190,16 +1214,19 @@ void s_begin (void)
     struct tplace* p;
 
     hub_map (0);
-    if (HUB->resume) {                          /* (Carried on: the save's strata, the maker's records back) */
+    if (HUB->resume) {                          /* (Carried on: the save's strata, the change records' generation,
+                                                **   the maker's seen maps back) */
         move.how = A_RESUMED;
         move.sn = HUB->pc_stratum;
         move.x = HUB->pc_x;
         move.y = HUB->pc_y;
         move.face = HUB->pc_face;
         sync_strata ();
+        store_begin (1);
         ask_maker (M_RESTORE, 0, 0, 0);
         return;
     }
+    store_begin (0);                            /* (A new game's generation: the folder's files of another not read) */
     seed = HUB->seed;
     hub_map (WORLD_BANK);                       /* (The strata's records the world bank's: it in the window) */
     s = &WREC->strata[0];
@@ -1320,17 +1347,6 @@ static void spell (void)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-
-/* A change asked of the maker (kept, and made in the chunk) */
-static void __fastcall__ change (unsigned char sn, unsigned x, unsigned y, unsigned char tile, signed char elev,
-    unsigned char link)
-{
-    hub_map (0);
-    HUB->mreq[ASK_WORLD].tile = tile;
-    HUB->mreq[ASK_WORLD].elev = elev;
-    HUB->mreq[ASK_WORLD].link = link;
-    ask_maker (M_CHANGE, sn, x, y);
-}
 
 #pragma code-name (push, "SW1CODE")
 #pragma rodata-name (push, "SW1RODATA")
@@ -1494,8 +1510,8 @@ void s_dig_on (void)
 #pragma rodata-name (pop)
 
 /* ---- Doors (DUNGEON.md: portals), and the other portals (portcullises, windows, arrow slits) and the traps: the one
-** the character faces walked up to, and worked by the maker, which keeps them (dq0m/work.c: opened, closed, a lock
-** picked, forced; raised, lowered; broken, climbed through; a trap disarmed, a search), while the world waits */
+** the character faces walked up to, and worked (work.h's parts: opened, closed, a lock picked, forced; raised,
+** lowered; broken, climbed through; a trap disarmed, a search), its changes kept (store.c's) */
 
 static unsigned px_, py_;                       /* (The door's square, in the frame) */
 static unsigned char pd_;                       /* (The way from where the character stands to it) */
@@ -1566,40 +1582,65 @@ static struct portal* __fastcall__ door_ahead (unsigned long* tt)
     return portal_at (cx_, cy_);
 }
 
-/* The maker asked to work what (PA_*, or W_STEP) at x, y (or about the character, NO_SQ) from where the character
-** stands (mx, my), d the way from there to it: 1 if there was nothing there to work */
+/* What (PA_*, or W_STEP) worked at x, y (or about the character, NO_SQ) from where the character stands (mx, my), d
+** the way from there to it, by the part whose work it is (a command's all one part's: a door's, its shutters', a
+** bar's the doors'; any portal's blows the blows'; a portcullis's, a window's the portals'; a trap's, a search's the
+** traps'): 1 if there was nothing there to work */
 static unsigned char __fastcall__ work (unsigned char what, unsigned x, unsigned y, unsigned char d)
 {
-    struct mreq* q;
+    struct portal* p;
+    unsigned char k, shut;
 
+    wk.sn = sn_;
+    wk.pd = d;
+    wk.px = x;
+    wk.py = y;
+    wk.fx = mx;
+    wk.fy = my;
+    wk.link = barw_;                            /* (PA_BAR's: the bar to hand, its width; 0 none) */
+    wk.tt = 0;
+    wk.climb = 0;
+    wk.res = 0;
+    if (x == NO_SQ || what == W_STEP || what == PA_SEARCH || what == PA_DISARM) {
+        wk.what = what;
+        traps ();
+    } else {
+        at (sn_, x, y);
+        p = portal_at (cx_, cy_);               /* (The world found it: it's there) */
+        k = p->kind;
+        shut = (p->parts & PP_SHUTTERS) && !(p->state & PS_OPEN);
+        if (what == PA_BEND && k != PK_PORTCULLIS) {
+            what = PA_FORCE;                    /* (A window's bars bent, a door: forced) */
+        }
+        wk.what = what;
+        if (what == PA_BREAK || (k != PK_DOOR && k != PK_PORTCULLIS && what == PA_FORCE && !shut &&
+            !(p->parts & PP_BARS))) {
+            blows ();                           /* (Broken; a window forced, nothing shut or barred: its glass) */
+        } else if (k == PK_DOOR || what == PA_BAR || (k != PK_PORTCULLIS && (what <= PA_UNLOCK || (what == PA_FORCE &&
+            shut)))) {
+            doors ();                           /* (A door's; a window's shutters, as a door's) */
+        } else {
+            portals ();
+        }
+    }
     hub_map (0);
-    q = &HUB->mreq[ASK_WORLD];
-    q->tile = what;
-    q->elev = d;
-    q->link = barw_;                            /* (PA_BAR's: the bar to hand, its width; 0 none) */
-    q->fx = mx;
-    q->fy = my;
-    ask_maker (M_WORK, sn_, x, y);
-    return q->res;
+    return wk.res;
 }
 
-/* What came of it (the maker's reply): the character where it says, busy t more and the time it took; or in a pit,
+/* What came of it (the work's): the character where it says, busy t more and the time it took; or in a pit,
 ** climbing out to there */
 static void __fastcall__ worked (unsigned long t)
 {
-    struct mreq* q;
-
     hub_map (0);
-    q = &HUB->mreq[ASK_WORLD];
-    t += q->t;
-    HUB->pc_x = q->fx;
-    HUB->pc_y = q->fy;
-    if (q->climb) {
+    t += wk.tt > 60000UL ? 60000U : (unsigned) wk.tt;
+    HUB->pc_x = wk.fx;
+    HUB->pc_y = wk.fy;
+    if (wk.climb) {
         cl.up = 1;
-        cl.need = q->climb;
+        cl.need = wk.climb;
         cl.done = 0;
-        cl.x = q->fx;
-        cl.y = q->fy;
+        cl.x = wk.fx;
+        cl.y = wk.fy;
         HUB->pc_x = tx_;                        /* (At the pit's foot) */
         HUB->pc_y = ty_;
         event (E_CLIMB, 0, K_BEGUN << 8 | cl.need);
@@ -1609,7 +1650,7 @@ static void __fastcall__ worked (unsigned long t)
     if (t) {
         busy (t);
     }
-    t = q->res;
+    t = wk.res;
     see (0);
     if (t) {
         event (E_ARRIVE, 0, A_CLIMBED);         /* (Through a window: somewhere new) */
@@ -1644,7 +1685,7 @@ static void __fastcall__ door_work (unsigned char what)
 }
 
 /* The walk worked out last stops at the trap on its way (tx_, ty_, from fx_, fy_: its chunk's, C's, made the
-** frame's), to be set off as it gets there (or noticed in time: the maker's) */
+** frame's), to be set off as it gets there (or noticed in time: wtrap.c's) */
 static void on_way (void)
 {
     unsigned ox = strata[sn_].x0 + C->cx * CW, oy = strata[sn_].y0 + C->cy * CW;
@@ -1663,7 +1704,7 @@ static void on_way (void)
     busy (cut_t);
 }
 
-/* On the trap on its way (A_STOPPED): the maker's to set off */
+/* On the trap on its way (A_STOPPED): set off (wtrap.c's) */
 static void stopped (void)
 {
     mx = fx_;
@@ -1785,22 +1826,28 @@ static void clock_run (void)
     }
 }
 
-/* The swapped parts' images read into a bank of its own (dir/dq0w.ovl: dq0w.cfg's OV1): 0, or -1 */
+/* The swapped parts' images read into banks of its own (dir/dq0w.ovl: dq0w.cfg's OV1 ..., 8K each): 0, or -1 */
 static int __fastcall__ ovl_load (const char* dir)
 {
     unsigned char* b = (unsigned char*) _SWAP_START__;  /* (Through the parts' area: none in it yet) */
     unsigned off;
+    unsigned char k, first;
     int fd, n;
 
     strcpy ((char*) b, dir);
     strcat ((char*) b, "/dq0w.ovl");
-    if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (1)) < 0) {
+    if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (OVBANKS)) < 0) {
         return -1;
     }
-    ovbank[0] = n;
-    for (off = 0; off < 0x2000 && (n = read (fd, b, 512)) > 0; off += n) {
-        hy_bank (ovbank[0]);
-        memcpy ((void*) (0x8000 + off), b, n);
+    for (k = 0, first = n; k < OVBANKS; ++k) {
+        ovbank[k] = first + k;
+    }
+    for (k = 0, n = 1; k < OVBANKS && n > 0; ++k) {     /* (A bank at a time: cc65's optimizer can lose an index,
+                                                **   ovbank[i]'s or off's in a bank) */
+        for (off = 0; off < 0x2000 && (n = read (fd, b, 512)) > 0; off += n) {
+            hy_bank (first + k);
+            memcpy ((void*) (0x8000 + off), b, n);
+        }
     }
     close (fd);
     return 0;
@@ -1828,6 +1875,10 @@ int main (int argc, char* argv[])
             intent (&m);
             was_busy = 1;
         }
+        if (hub_posted (&HUB->wreq)) {
+            answer ();                          /* (The UI's: the save, a close look) */
+        }
+        stocks ();                              /* (The chunks the maker stocked marked so) */
         clock_run ();
         if (HUB->den_look && !move.on) {
             HUB->den_look = 0;                  /* (A body fallen: looked at again, the things too) */

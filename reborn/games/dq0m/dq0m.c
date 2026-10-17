@@ -2,10 +2,12 @@
 ** dq0m.c - Dingus Quest Zero's maker: a task of its own, started by the UI (dq0m SEG ROLE: the hub's segment and
 ** its role there, hub.h), that grows the dungeon (DUNGEON.md) for whoever asks, the world or the denizens (each its
 ** request in the hub: world.h's struct mreq): a stratum's plan and its links down (plan.c: its record set by the
-** asker), a chunk (make.c, built.c), into the hub's shared banks, where they read it; and it works the fixtures it
-** grew, the portals and the traps, for the world (work.c).  It waits on its doorbell
-** (costing nothing) between requests.  Its growers are overlays (built.c, pass.c, caves.c, plan.c ...), read as it
-** starts from the game's lib folder (its third argument, the UI's) into banks of its own.
+** asker), a chunk (make.c, built.c), into the hub's shared banks, where they read it.  Generation only: the same
+** seed always the same chunk, the change records (the world's: dq0w/store.c) laid over it as it's made again
+** (changes.c), and nothing kept of its own but the squares seen as the cache makes way for a chunk (and the map,
+** drawn for the UI from the cache).  It waits on its doorbell (costing nothing) between requests.  Its growers are
+** overlays (built.c, pass.c, caves.c, plan.c ...), read as it starts from the game's lib folder (its third argument,
+** the UI's) into banks of its own.
 */
 
 #include <fcntl.h>
@@ -19,8 +21,8 @@
 
 struct stratum strata[MAXSTRATA];               /* (This task's copy of the hub's) */
 #define OVLS    7                               /* Its overlays: built.c, pass.c, caves.c, plan.c, fixtures.c; the
-                                                **   swapped parts' images (../dq0/swap.inc: map.c's, changes.c's,
-                                                **   work.c's); uses.c */
+                                                **   swapped parts' images (../dq0/swap.inc: map.c's, changes.c's);
+                                                **   uses.c */
 extern char _SWAP_START__[];
 
 /* The overlays: dir/dq0m.ovl, an 8K bank each (dq0m.cfg's OV1 ...; the file cut after the last one used: make.js),
@@ -52,22 +54,6 @@ static int __fastcall__ ovl_load (const char* dir)
     return 0;
 }
 
-/* A change made in its chunk, if it's in the cache */
-static void __fastcall__ cached (const struct mreq* q)
-{
-    struct stratum* s = &strata[q->sn];
-    unsigned cx = (q->cx - s->x0) / CW, cy = (q->cy - s->y0) / CW;
-    unsigned char k;
-
-    hub_map (WORLD_BANK);                       /* (The cache's table the world bank's) */
-    for (k = 0; k < NCSLOTS; ++k) {
-        if (WREC->cslot[k].used && WREC->cslot[k].sn == q->sn && WREC->cslot[k].cx == cx && WREC->cslot[k].cy == cy) {
-            change_cached (k, (q->cx - s->x0) % CW, (q->cy - s->y0) % CW, q->tile, q->elev, q->link);
-            break;
-        }
-    }
-}
-
 /* Request i answered: the strata's records copied first (the world bank's are the truth), and back if they changed */
 static void __fastcall__ serve (unsigned char i)
 {
@@ -88,7 +74,8 @@ static void __fastcall__ serve (unsigned char i)
     case M_SAVE:
         changes_save ();
         break;
-    case M_RESTORE:                             /* (The records back, each stratum made grown again: the same plan) */
+    case M_RESTORE:                             /* (The seen maps back, each stratum made grown again: the same
+                                                **   plan) */
         changes_restore ();
         for (q.sn = 0; q.sn < MAXSTRATA; ++q.sn) {
             if (strata[q.sn].made) {
@@ -96,15 +83,6 @@ static void __fastcall__ serve (unsigned char i)
                 place_pieces (q.sn);
             }
         }
-        break;
-    case M_CHANGE:                              /* (Kept, and made in the chunk if it's in the cache) */
-        change_keep (q.sn, q.cx, q.cy, q.tile, q.elev, q.link);
-        cached (&q);
-        break;
-    case M_WORK:                                /* (A portal or a trap worked: the reply's back in the request) */
-        work (&q);
-        hub_map (0);
-        memcpy (&HUB->mreq[i], &q, sizeof q);
         break;
     }
     hub_reply (&HUB->mreq[i]);

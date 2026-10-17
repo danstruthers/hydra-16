@@ -7,8 +7,10 @@
 ** chunk_edges (overlay 4); the chunk grown by its style's grower (built.c, caves.c: overlays 1 and 3) in the main
 ** RAM, and given its materials and its fixtures (fixtures.c), then copied into the cache.
 **
-** What's changed in a chunk (changes.c's records: a square dug, a link made) is laid over it each time it's made,
-** and what the character's seen of it is kept as the cache makes way for it, and laid over it again.
+** What's changed in a chunk (the change records, the world's: a square dug, a link made, a door opened) is laid
+** over it each time it's made (changes.c), and what the character's seen of it is kept as the cache makes way for
+** it, and laid over it again.  A chunk stocked as it's made (its things put down: stock.c) has its slot CS_FRESH,
+** for the world to mark it stocked among the change records; the maker never makes way for it till it has.
 */
 
 #include <string.h>
@@ -51,8 +53,9 @@ void __fastcall__ hub_set (unsigned char bank, void* to, unsigned char c, unsign
     hub_back (b);
 }
 
-/* The slot a new chunk goes in: an empty one, or the least lately found that no task is reading and isn't beside
-** the character's chunk (the hub's header in the window; the world bank after, the cache's table its) */
+/* The slot a new chunk goes in: an empty one, or the least lately found that no task is reading, isn't beside the
+** character's chunk, and isn't one stocked that the world hasn't marked yet (CS_FRESH) (the hub's header in the
+** window; the world bank after, the cache's table its) */
 static unsigned char pick (void)
 {
     unsigned char k, best = 0xFF, i, busy, psn = HUB->pc_stratum;
@@ -69,7 +72,7 @@ static unsigned char pick (void)
         for (i = 0, busy = 0; i < NASK; ++i) {
             busy |= WREC->inuse[i] == k;
         }
-        if (busy || (c->sn == psn && c->cx + 1 >= pcx && c->cx <= pcx + 1 && c->cy + 1 >= pcy &&
+        if (busy || c->used == CS_FRESH || (c->sn == psn && c->cx + 1 >= pcx && c->cx <= pcx + 1 && c->cy + 1 >= pcy &&
             c->cy <= pcy + 1)) {
             continue;
         }
@@ -85,7 +88,7 @@ unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned c
     static struct edges e;
     struct stratum* s = &strata[sn];
     unsigned x = s->x0 + cx * CW, y = s->y0 + cy * CW;
-    unsigned char k;
+    unsigned char k, u = 1;
     struct chunk* c;
     struct cslot* sl;
 
@@ -119,12 +122,15 @@ unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned c
         fixtures (c);                           /* (Its materials, its windows, its traps ...) */
     }
     if (!changes_over (c, x, y) && e.x1 != 0xFF) {
-        stock (c, x, y);                        /* (Its things put down, the first time it's made) */
-        change_keep (sn, x, y, 0, 0, STOCKED);
+        stock (c, x, y);                        /* (Its things put down, the first time it's made: the world marks it
+                                                **   so, STOCKED, as it finds its slot CS_FRESH) */
+        u = CS_FRESH;
     }
     seen_over (c);
     hub_map (CACHE_BANK (k));
     memcpy (CHUNK_AT (k), c, sizeof *c);
+    hub_map (WORLD_BANK);
+    WREC->cslot[k].used = u;
     hub_map (0);
     return k;
 }

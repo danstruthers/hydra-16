@@ -1752,6 +1752,46 @@ function builtChunks(m, sn) {
   return out;
 }
 
+// The hub's live chunks of stratum sn (dq0pure's): its world bank's cslot table (hub.h's struct wrec: the strata's
+// records, 8 of 79 bytes, then the slots, 8 bytes each: used, sn, cx, cy, stamp), each slot used holding a chunk of sn
+// read from its cache bank (world.h's CACHE_BANK: 5 + k / 3, CHUNK_AT: (k % 3) * 0xAA0), its 2,556 bytes (struct
+// chunk's), by its place: { 'cx,cy': bytes }; the hub's banks the shared ones from its bank 0's (its magic "DQ") on
+const CHUNK_BYTES = 2556, WORLD_BANK_N = 21, CSLOT_AT = 8 * 79;
+function liveChunks(m, sn) {
+  const banks = m.sharedBanks(), keys = Object.keys(banks).map(Number).sort((a, b) => a - b);
+  const hub = keys.find(k => banks[k][0] === 0x44 && banks[k][1] === 0x51), out = {};
+  if (hub === undefined || !banks[hub + WORLD_BANK_N]) return out;
+  const w = banks[hub + WORLD_BANK_N];
+  for (let k = 0; k < 24; k++) {
+    const s = CSLOT_AT + k * 8, b = banks[hub + 5 + Math.floor(k / 3)];
+    if (!w[s] || w[s + 1] !== sn || !b) continue;
+    const o = (k % 3) * 0xAA0;
+    out[(w[s + 2] | w[s + 3] << 8) + ',' + (w[s + 4] | w[s + 5] << 8)] = Buffer.from(b.subarray(o, o + CHUNK_BYTES));
+  }
+  return out;
+}
+// Two chunks' bytes compared (struct chunk's: rooms from 8, 8 bytes each, their flags the 5th; openings 188-217, their
+// count at 7; portals from 219, 14 bytes each, their state, parts, harm the 4th, 9th and 14th; squares from 443, their
+// floors from 1467; traps from 2513, 7 bytes each, their state the 5th): the squares' seen and visible bits (T_SEEN,
+// T_VIS) and the rooms' visited (R_VISITED) aside, each byte that differs by what it is: portal, trap, square,
+// opening, or other (none should be: the maker's own)
+function chunkDiff(a, b) {
+  const d = { portal: 0, trap: 0, square: 0, opening: 0, other: [] };
+  for (let i = 0; i < CHUNK_BYTES; i++) {
+    let x = a[i], y = b[i];
+    if (i >= 443 && i < 1467) { x &= 0x3F; y &= 0x3F; }
+    if (i >= 8 && i < 56 && (i - 8) % 8 === 4) { x &= ~1; y &= ~1; }
+    if (x === y) continue;
+    if (i >= 219 && i < 443 && [3, 8, 13].includes((i - 219) % 14)) d.portal++;
+    else if (i >= 2513 && i < 2555 && (i - 2513) % 7 === 4) d.trap++;
+    else if (i >= 443 && i < 1467) d.square++;
+    else if (i >= 1467 && i < 2491 && (a[i - 1024] & 0x1F) !== (b[i - 1024] & 0x1F)) d.square++;   // (A changed square's floor)
+    else if (i === 7 || (i >= 188 && i < 218)) d.opening++;
+    else d.other.push(i);
+  }
+  return d;
+}
+
 // The dq0 tests' story: the output with its escapes and the lines' wrapping taken out; and its words looked for each
 // in its turn (after the one before), what isn't found pushed on f (its name first)
 const dq0Story = out => out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' ');
@@ -2481,7 +2521,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0save', what: 'Dingus Quest Zero kept (dq0 -d: the save on a card, here /ram): a thing put down, down a stairway, quit (kept as it ends), the folder listed (the UI game, the things, the referee sheet, the maker records), then the game carried on: in the stratum below, where it stood, with what it carried',
+      name: 'dq0save', what: 'Dingus Quest Zero kept (dq0 -d: the save on a card, here /ram): a thing put down, down a stairway, quit (kept as it ends), the folder listed (the UI game, the things, the referee sheet, the world\'s change records, by region, and the maker\'s seen maps), then the game carried on: in the stratum below, where it stood, with what it carried',
       init: 't_rc', cycles: 900e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/kept\r' +
         ['drop the dagger', 'd', 'quit', 'ls /ram/kept', 'dq0 -d /ram/kept', 'look', 'inventory', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
@@ -2673,7 +2713,7 @@ module.exports = {
       // (East three times, waiting between: the giant rats by the way down in the way, keeping their distance till
       // they're cornered, then darting past: at seed 12 in the way twice, then gone, the denizens' moves the same
       // whatever the timing at the turns pace)
-      name: 'dq0portc', what: 'Dingus Quest Zero\'s portcullises (DUNGEON.md: portals; the maker works them, dq0m/work.c): through one raised (seed 12, dq0 -T: east of the first way down) into a storeroom, seen and worded as a portcullis, lowered by its winch on the storeroom\'s side (faced first), never walked through while it\'s down, raised again by the winch, and gone back through',
+      name: 'dq0portc', what: 'Dingus Quest Zero\'s portcullises (DUNGEON.md: portals; the world works them, dq0w/wwin.c): through one raised (seed 12, dq0 -T: east of the first way down) into a storeroom, seen and worded as a portcullis, lowered by its winch on the storeroom\'s side (faced first), never walked through while it\'s down, raised again by the winch, and gone back through',
       init: 't_rc', cycles: 900e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 12 -c /ram/c.hm -T\r' +
         ['e', 'wait', 'e', 'wait', 'e', 'turn around', 'lower portcullis', 'w', 'look', 'raise portcullis', 'w', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
@@ -3060,7 +3100,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0traps', what: 'Dingus Quest Zero\'s traps (DUNGEON.md: traps; the world\'s walk stops on one, the maker sets it off, the referee judges it): a door\'s blade, set off as the door\'s forced open (seed 16, dq0 -T), dodged; then a plate in a storeroom\'s floor walked onto, its blade striking (HC_STRIKE: a wound) and the trap seen after, sprung; then (seed 7, a thief, hmchar -s 1, Lockcraft 95) a hidden dart trap on a door found by searching, the door left shut while it\'s known, the trap made out and disarmed (Lockcraft), and the door opened',
+      name: 'dq0traps', what: 'Dingus Quest Zero\'s traps (DUNGEON.md: traps; the world\'s walk stops on one and sets it off, the referee judges it): a door\'s blade, set off as the door\'s forced open (seed 16, dq0 -T), dodged; then a plate in a storeroom\'s floor walked onto, its blade striking (HC_STRIKE: a wound) and the trap seen after, sprung; then (seed 7, a thief, hmchar -s 1, Lockcraft 95) a hidden dart trap on a door found by searching, the door left shut while it\'s known, the trap made out and disarmed (Lockcraft), and the door opened',
       init: 't_rc', cycles: 2000e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 16 -c /ram/c.hm -T\r' +
         ['face east', 'force', 'e', 'force', 'force', 'e', 'e', 'look', 'quit'].map(l => 'ā' + l + '\r').join('') +
@@ -3083,6 +3123,51 @@ module.exports = {
           'You search about, and find nothing hidden.', '> search', 'You find a trap: a dart trap', '> open',
           'There\'s a trap on that door you know of', '> disarm', 'and make out how it works: now to disarm it.', '> disarm',
           'You work at the trap a while, and disarm it.', '> open', 'You open the door.'], f);
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0pure', what: 'Dingus Quest Zero\'s maker pure (move 2.2 of Phase 2, "one authority on state": generation only, the same seed always the same chunk; the change records the world\'s, dq0w/store.c, laid over a chunk the maker makes again): at seed 16 (dq0 -T -k pick) the chunks the maker made at once, read from the hub\'s cache; then a game played and kept (dq0 -d: a door forced open, the blade trap on it set off, the rock dug through beside the passage), and carried on (its chunks made again by a fresh maker from the seed, the records laid over them from the save\'s region files): each chunk made again the same as it was live before the game was kept, and the same as the maker first made it but for what the records say (a portal\'s state, a trap\'s, a square\'s kind and floor, an opening), and the records saying each of them',
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 16 -c /ram/c.hm -T -k pick\r' +
+        ['look', 'quit', 'echo pure-a'].map(l => '\u0101' + l + '\r').join('') + '\u0101dq0 -p t -s 16 -c /ram/c.hm -T -k pick -d /ram/p\r' +
+        ['face east', 'force', 'e', 'dig north', 'quit', 'echo pure-b'].map(l => '\u0101' + l + '\r').join('') + '\u0101dq0 -p t -d /ram/p\r' +
+        ['look', 'quit', 'echo pure-c', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['As the door opens, something clicks.', 'You break through.', 'takes up where they left off.', '% echo $status'],
+      // (The hub's live chunks taken as each game has ended, its echo typed: the maker's first (a), the game's as it
+      // was kept (b), the ones made again as it's carried on (c))
+      start(m) {
+        const run = m.run, snaps = this.snaps = {};
+        m.run = lim => {
+          run(lim);
+          for (const k of ['a', 'b', 'c']) if (!snaps[k] && m.out.includes('pure-' + k)) snaps[k] = liveChunks(m, 0);
+        };
+      },
+      check(m, out) {
+        const f = [], { a, b, c } = this.snaps;
+        if (!a || !b || !c) return ['the chunks not read as each game ended: ' + ['a', 'b', 'c'].filter(k => !this.snaps[k]).join(', ')];
+        const sum = { portal: 0, trap: 0, square: 0, opening: 0 };
+        let same = 0, made = 0;
+        for (const [at, k] of Object.entries(c)) {
+          if (b[at]) {
+            const d = chunkDiff(b[at], k), n = d.portal + d.trap + d.square + d.opening + d.other.length;
+            if (n) f.push(at + ': made again not as it was kept: ' + JSON.stringify(d));
+            else same++;
+          }
+          if (a[at]) {
+            const d = chunkDiff(a[at], k);
+            if (d.other.length) f.push(at + ': made again, its bytes ' + d.other.slice(0, 8).join(', ') + ' not the maker\'s first');
+            for (const w of Object.keys(sum)) sum[w] += d[w];
+            made++;
+          }
+        }
+        if (!same) f.push('no chunk both live as the game was kept and made again');
+        if (!made) f.push('no chunk both made first and made again');
+        if (!sum.portal) f.push('no portal\'s state changed (the door forced)');
+        if (!sum.trap) f.push('no trap\'s state changed (the blade set off)');
+        if (!sum.square) f.push('no square changed (the rock dug)');
+        this.notes = [Object.keys(c).length + ' chunk(s) made again, ' + same + ' as kept, ' + made + ' against the maker\'s first: ' + JSON.stringify(sum)];
         return f;
       },
       sdcard: true

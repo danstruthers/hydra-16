@@ -57,27 +57,17 @@ void __fastcall__ fixtures (struct chunk* c);   /* Its materials, windows, portc
 void __fastcall__ place_pieces (unsigned char n);   /* The theme's pieces in stratum n given their places, as its plan
                                                 **   is grown (overlay 4's: plan.c) */
 
-/* changes.c: what's changed, and what's been seen, kept */
+/* changes.c: the change records (world.h's: the world's) laid over a chunk made again; what's been seen, kept */
 void changes_init (void);
-int changes_save (void);                        /* The records into the save's folder: 0, or -1 (part 2's) */
+int changes_save (void);                        /* The seen maps into the save's folder: 0, or -1 (part 2's) */
 int changes_restore (void);                     /* And back (part 2's) */
-void __fastcall__ change_keep (unsigned char sn, unsigned x, unsigned y, unsigned char tile, signed char elev,
-    unsigned char link);
 unsigned char __fastcall__ changes_over (struct chunk* k, unsigned x, unsigned y);     /* 1: it's been stocked */
-#define STOCKED         0xFD                    /* (A change record's link: the chunk at x, y stocked) */
 void __fastcall__ stock (const struct chunk* c, unsigned x0, unsigned y0);              /* stock.c's */
-void __fastcall__ change_cached (unsigned char s, unsigned char lx, unsigned char ly, unsigned char tile,
-    signed char elev, unsigned char link);
 void __fastcall__ seen_keep (unsigned char s);
 void __fastcall__ seen_over (struct chunk* k);
 
 /* map.c */
 void draw_map (void);                           /* (Part 1's: ../dq0/swap.inc) */
-
-/* work.c: a portal or a trap worked, for the world (M_WORK: its reply written into q); a portal's leaf's body (its
-** material PM_*, its size, its thickness, its state: fixtures.c's too) */
-void __fastcall__ work (struct mreq* q);
-unsigned char __fastcall__ part_body (unsigned char mat, unsigned char size, unsigned char thick, unsigned char qual);
 
 /* bank.s */
 void __fastcall__ setbank (unsigned char b);

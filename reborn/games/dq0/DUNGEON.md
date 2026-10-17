@@ -42,10 +42,28 @@ at a time, 32 by 32 squares (160 feet), as the character comes near, from the st
 so the same game always makes the same chunk.  A chunk is about 2.5K (each square's kind and floor elevation, its
 areas, its openings), three to an 8K bank.
 
-The chunks are kept in the **world task's own RAM banks** (its 384K on a board with three modules; the UI never
-reads them, so they needn't be shared): those near the character, a few dozen.  A chunk that goes out of the cache
-is dropped; what changed there (what the character's seen, doors opened, things moved, rock dug) is kept as a small
-record and laid over the chunk when it's made again.
+The chunks are kept in a **cache in the hub's shared banks** (dq0w/world.h: 24 of them, three to a bank), those near
+the character and the denizens, so the world, the denizens and the senses read them where they are.  A chunk that
+goes out of the cache is dropped; what changed there (doors opened, traps set off, rock dug) is kept as a small
+record and laid over the chunk when it's made again, and what the character's seen of it as a map of bits.
+
+**One authority on state** (Phase 2, move 2.2, 2026-10-16): the **maker** (dq0m) is pure, generation only, the same
+seed always the same chunk: it grows a stratum's plan and makes a chunk when it's asked (M_PLAN, M_CHUNK), lays the
+change records over a chunk it makes again (reading them, never writing them), and puts down a chunk's things the
+first time it's made (its slot marked CS_FRESH, for the world to mark it stocked); it keeps nothing of its own but
+the squares seen as the cache makes way for a chunk (seen.dat), and draws the map for the UI from the cache.  The
+**world** (dq0w) owns the portals, the traps and their working (opened, forced, battered, raised, climbed through; set
+off, found, disarmed; a search: its swapped parts, dq0w/wdoor.c, wblow.c, wwin.c, wtrap.c, a command's work all in
+one of them), asks the referee for its judgements itself (its slot), and writes the **change records** (dq0w/store.c),
+the only one to: each a record (a stratum, a square, what it became: its kind, its floor, the link it is; or a
+portal's state, its harm, a trap's state; a chunk stocked), a square's record of a kind replacing the one before it,
+kept by **region** (256 squares each way, the plan's) in pages of the hub's two change banks, under the hub's
+change_lock (the maker reads them meanwhile).  With a save folder the pages are a cache: a region's records are in its
+file there (rgSXXYY.dat), read in as they're wanted and written back as the region's pages make way for another's, so
+no count of records limits the dungeon, only the card (the user, 2026-10-16: no fixed maximum dungeon size); without
+a folder, a full cache keeps no more.  Each game's files carry its generation (changes.dat's), so a new game in an old
+game's folder never reads the old one's.  (Not yet, move 2.8's: a crash between a region written back and the next
+save leaves the folder's regions ahead of game.dat; stale regions of an old game are left in the folder, unread.)
 
 **The save** is on the SD card the player chooses (the user: "the games should write to the SD card of choice to
 save the dungeon, game state, etc."): a folder of the game's (asked for as a new game starts, or given: dq0 -d
@@ -281,8 +299,9 @@ a shovel is taken (bare hands before a sword, which the work would dull), comes 
 floors and walls (dq0 -k shovel digs an earth floor, and lifts flags, till the rock under them stops it).
 
 Each change is a **record** (a stratum, a square, what it became: its kind, its floor, its openings; who made it and
-when), kept by the maker: laid over a chunk each time it's made again, and in the save.  Seen squares are kept the
-same way, a chunk's map of them kept when the cache makes way for it.  A change that makes a way between strata adds
+when), written by the world (dq0w/store.c: by region, the cache's pages and the save folder's files), laid over a
+chunk by the maker each time it makes it again, and in the save.  Seen squares are kept the same way, a chunk's map
+of them kept by the maker when the cache makes way for it.  A change that makes a way between strata adds
 a link to both strata's records.
 
 ### Portals
@@ -306,8 +325,8 @@ them by the same rules.  (First: doors, their states, opening, closing, unlockin
 items and powers.  Grown as data, by the style's say (dq0m/fixtures.c): windows, their parts any of glass,
 shutters and bars, and arrow slits, in a room's wall where a passage runs beside it (world.h's PK_WINDOW, PK_SLIT
 on a T_WINDOW square); portcullises for some doors (PK_PORTCULLIS); none in a natural cave.  Seen through as the
-table says (a window's shutters closed not; a portcullis up or down), and worked (dq0m/work.c: the maker keeps the
-fixtures it grew, so it works them for the world, which walks the character up to them and waits): a portcullis
+table says (a window's shutters closed not; a portcullis up or down), and worked (the world's, since move 2.2: dq0w/wdoor.c,
+wblow.c, wwin.c; it walks the character up to them, works them, and keeps their changes): a portcullis
 raised and lowered by its winch, on its room's side, or heaved up from the far side (Strength), never walked
 through while it's down, but its bars bent apart (bend the bars: Strength, harder the thicker they are) or broken
 through by blows (break the portcullis: as a door's, off their body, iron's resistances), and it's a way through for
@@ -362,7 +381,7 @@ already, by the style's say (dq0m/fixtures.c, world.h's struct trap): pits, open
 its depth) or covered, spiked or not (hidden), where the squares round it are floor and as level as a walk, so a
 chunk's ways are never parted; deadfalls, blades, darts, gas and alarms, a plate's or a wire's, and a closed
 door's, set off as it's opened; hidden (a search's steps) or by magic; a natural cave's only pits.  And now set
-off (dq0m/work.c, for the world): a walk worked out stops on the first it would set off, a plate's or a wire's,
+off (the world's: dq0w/wtrap.c): a walk worked out stops on the first it would set off, a plate's or a wire's,
 and one the character knows of is gone round (a walk to the stairs or a ladder too, the user's, 2026-10-16); a door's goes off as it's opened or forced, and a door with one it
 knows of is left shut.  Stepping on one, the character may notice it in time (Awareness, a smaller chance than a
 search's; never a magical one); else a pit's cover gives way (a fall, its depth; a spiked one's spikes a strike),
@@ -372,7 +391,7 @@ hidden ones as it finds hidden doors; one known of is disarmed in two checks (th
 mechanism, and one to disarm.  Assess is not deadly, disarm could be if fumbled"): its mechanism made out first
 (P_ASSESS, Lockcraft, a minute a try, never deadly; a critical success makes the disarm easier), then disarmed
 (Lockcraft, a minute a try; a fumble sets it off, and fumbles can be deadly); magic only by magical means; a pit not
-at all).  Their states (sprung, disarmed, found) kept in the maker's change
+at all).  Their states (sprung, disarmed, found) kept in the world's change
 records (TRAP_STATE), a pit's square a pit once it's given way; the ones it knows of in what it perceives.)
 
 **Doors on the way** (the user: "auto-opening a door is OK as long as it has been opened previously, but I would say
@@ -587,7 +606,7 @@ movement should be based on speed and/or distance traveled."):
   for traps", "move carefully"; "stop searching"), a slow walk at most, and searching as a search would: a trap on
   its way (the walk stops on the first it would set off, as always) tested by the search's chance (P_SEARCH's: the
   referee's Awareness, a step a point of its hiding) not the smaller passing chance, and wherever it stops (a walk
-  stops at every door, fork and end, a small move at every square or few) the maker's search about it (the hidden
+  stops at every door, fork and end, a small move at every square or few) a search about it (the hidden
   doors and traps within three squares it sees, each the referee's test), quietly and in no more time, found ones told
   and known from then on (built so: a list of the hidden doors beside every square of the way was too big for the
   world's room); **listening** ("listen as I go"), a walk at most, its hearing two better (the summary's: the
@@ -691,7 +710,8 @@ the window: `NAMES_AT[i].what == NM_ROOM`).
    strata; the save folder on a card; movement by the referee's rate and the slopes; the perception record and the
    words; the map's window and heights.  (The populations' records with step 4's denizens, placed when the plan is
    grown.)
-1b. **Changes**: the change records and the seen squares' maps, kept by the maker, laid over a chunk made again;
+1b. **Changes**: the change records (the world's since move 2.2, by region, paged to the save folder) and the seen
+   squares' maps (the maker's), laid over a chunk made again;
    digging (a tunnel, a shaft down to the stratum below: a new link) with the referee's tests and the work's time,
    and the noise of it as an event.  (Breaking and accidents with the items that make them; tunnellers with the
    denizens.)

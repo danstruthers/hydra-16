@@ -23,6 +23,7 @@
 #include "../dq0/rs.h"
 #include "../dq0w/world.h"
 #include "grow.h"
+#include "../dq0w/body.h"
 
 /* The fixtures' dice: from the chunk's place, what's being decided (a), and where (b) */
 static unsigned long dh;
@@ -214,7 +215,7 @@ static void fortify (void)
 ** doors much alike, the stratum's own, a few odd; a cave's, a mixed place's, each its own, added later), its
 ** thickness, its state (as made, by the style; then worn by the stratum's age, the faster the softer its material:
 ** wood rots, iron rusts, stone hardly wears), a door's features (a grille, a spy-hole, a bar's brackets, studs, which
-** side its hinges are), and so its body (work.c's part_body) */
+** side its hinges are), and so its body (../dq0w/body.h's part_body) */
 
 static void make (void)
 {
@@ -265,7 +266,7 @@ static void make (void)
         p->harm = 0;
         p->tough = part_body (p->mat, p->size, t, q) >> (p->kind == PK_PORTCULLIS);   /* (Bars half a plate) */
         if (p->kind == PK_WINDOW && p->tough > 15) {
-            p->tough = 15;                      /* (A window's parts' harm a nibble each: work.c's) */
+            p->tough = 15;                      /* (A window's parts' harm a nibble each: the world's, wblow.c) */
         }
     }
 }
