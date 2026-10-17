@@ -191,6 +191,10 @@ enum {
                                                 **   x[1] how it came out (O_*; FO_GONE: the one struck at out of
                                                 **   reach), x[2] what it left them in (FF_*), x[3] its words (the
                                                 **   ring's: FIGHT_AT) */
+    E_LIGHT,                                    /* A light or an obstruction changed (the senses' light layer out of
+                                                **   date near it: DUNGEON.md's perception as layers): a door opened
+                                                **   or shut, a square dug (the world's change records), a its
+                                                **   stratum, w1 w2 its square */
     NEVENTS
 };
 enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST };    /* E_DEN's what: a step, a noise of its own (a squeak, a
