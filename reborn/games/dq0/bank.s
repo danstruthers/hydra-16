@@ -198,6 +198,7 @@ ovl_out:
             SWFN        finish, 1
             SWFN        save_game, 1
             SWFN        command, 2
+            SWFN        ready, 2
             SWFN        take, 2
             SWFN        took_up, 2
             SWFN        map, 3

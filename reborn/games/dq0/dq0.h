@@ -268,6 +268,7 @@ void __fastcall__ begin (int argc, char* argv[]);   /* Part 1 (main.c): the argu
 void finish (void);                             /* Part 1: the game kept, the world stopped */
 void save_game (void);                          /* Part 1: the game kept (if it's kept: -d) */
 void __fastcall__ command (char* l);            /* Part 2 (main.c): a command, the parser's, carried out */
+void ready (void);                              /* Part 2 (main.c): nothing, the part copied in for the next */
 void __fastcall__ take (const char* name);      /* Part 2: a thing taken up, by its name */
 void __fastcall__ took_up (unsigned r);         /* Part 2: a thing taken up, or not, told (an E_TAKEN's: IR_*, the
                                                 **   light before times 256) */

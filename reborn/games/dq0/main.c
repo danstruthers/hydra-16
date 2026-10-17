@@ -1152,6 +1152,12 @@ static unsigned char __fastcall__ at_once (const char* l)
 #pragma code-name (push, "SW2CODE")
 #pragma rodata-name (push, "SW2RODATA")
 
+/* Nothing: part 2 copied in (main's, while no line's in hand: the next command's part there for it, its copy's 50,000
+** cycles not between its Enter and its answer) */
+void s_ready (void)
+{
+}
+
 /* A command, the parser's, carried out */
 void __fastcall__ s_command (char* l)
 {
@@ -1524,6 +1530,8 @@ int main (int argc, char* argv[])
             status ();
             hub_map (0);
             HUB->ui_cmd = 0;
+        } else {
+            ready ();                           /* (The commands' part back, if another's in) */
         }
         t_done ();
         hub_nap (quick ? (--quick, 2) : 4);     /* (A fiftieth of a second: the keys looked for, the world's
