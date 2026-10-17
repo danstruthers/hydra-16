@@ -47,10 +47,11 @@ the character and the denizens, so the world, the denizens and the senses read t
 goes out of the cache is dropped; what changed there (doors opened, traps set off, rock dug) is kept as a small
 record and laid over the chunk when it's made again, and what the character's seen of it as a map of bits.
 
-**One authority on state** (Phase 2, move 2.2, 2026-10-16): the **maker** (dq0m) is pure, generation only, the same
-seed always the same chunk: it grows a stratum's plan and makes a chunk when it's asked (M_PLAN, M_CHUNK), lays the
-change records over a chunk it makes again (reading them, never writing them), and puts down a chunk's things the
-first time it's made (its slot marked CS_FRESH, for the world to mark it stocked); it keeps nothing of its own but
+**One authority on state** (Phase 2, moves 2.2 and 2.3, 2026-10-16): the **maker** (dq0m) is pure, generation only,
+the same seed always the same chunk: it grows a stratum's plan and makes a chunk when it's asked (M_PLAN, M_CHUNK),
+lays the change records over a chunk it makes again (reading them, never writing them), and lists a chunk's things
+the first time it's made (its stock, a list beside the chunk's slot in the world bank, items.h's struct stock; the
+slot marked CS_FRESH, for the world to put them down and mark it stocked); it keeps nothing of its own but
 the squares seen as the cache makes way for a chunk (seen.dat), and draws the map for the UI from the cache.  The
 **world** (dq0w) owns the portals, the traps and their working (opened, forced, battered, raised, climbed through; set
 off, found, disarmed; a search: its swapped parts, dq0w/wdoor.c, wblow.c, wwin.c, wtrap.c, a command's work all in
@@ -64,6 +65,31 @@ no count of records limits the dungeon, only the card (the user, 2026-10-16: no 
 a folder, a full cache keeps no more.  Each game's files carry its generation (changes.dat's), so a new game in an old
 game's folder never reads the old one's.  (Not yet, move 2.8's: a crash between a region written back and the next
 save leaves the folder's regions ahead of game.dat; stale regions of an old game are left in the folder, unread.)
+
+**The item store** (move 2.3, the user's D2) is the world's too, its only writer, so it has no lock: the catalogue
+(read into the hub's catalogue bank as the world starts, from its own file, dq0w.cat; the theme's kinds copied in
+after it as the UI asks, IO_THEME) and every item's place and state (dq0w/things.c, its code in the world's swapped
+parts 10, 11 and 13 and, for a thing handled, in the catalogue's bank).  The others ask, or say what they mean: the
+**UI** asks the world for what's carried and for every command about things (the hub's ireq: take, drop, put, light,
+wear, the kit, a search ...), the world answering in its loop (and, while it waits for a look, what wants none:
+what's carried, the tools, a tool's wear); the **maker**'s stocking is a list the world puts down, in the order the
+chunks were stocked (before anyone looks for them: the world as it takes its intents, answers the UI, or works a
+door; the **senses**, as a look comes to a chunk stocked that isn't put down yet, ask it first, the hub's stock); the
+**denizens**' bodies are their intents (I_BODY, a ring of their own to the world, the hub's di); the senses read the
+records for what the character perceives, and the world makes a thing its own (its number, its make: no two alike)
+as a look first sees it, after the look, in the order seen (so the things' own dice fall as they did when the senses
+made them).  The character's light (pc_light, pc_lamp) is worked out by the world as what it carries changes.  The
+records are a fixed number in two of the hub's banks (744), found by their place in them, and kept with the game
+whole (items.dat).  **Paged to the card** (move 2.8's, decided with this one: no fixed count, only the card): the
+records kept by region, as the change records are (store.c's manner: pages of the banks, each a region's; a region's
+in its file of the save folder, read in as it's wanted, written back as its pages make way), what the character
+carries in pages of their own, never paged out.  What's there for it now: a chunk's things come down at once, its
+region's, from the maker's list; every thing that comes to a square comes through the world (a chunk's, a body, one
+put down, a bar or a pane moved), and every reader looks for things lying about only near the character (a look's,
+a search's: its regions).  What's left: the pages and their table (a page a region's, the carried's), a record moved
+between them as it changes region (taken up, put down, put in a container lying elsewhere: its number changing, and
+its contents' with it), a container's contents held by their place in its region (a region's file keeping them by
+their place in it, renumbered as it's read in), the readers going down only their regions' pages.
 
 **The save** is on the SD card the player chooses (the user: "the games should write to the SD card of choice to
 save the dungeon, game state, etc."): a folder of the game's (asked for as a new game starts, or given: dq0 -d
@@ -440,7 +466,7 @@ a door's **bar** (in its brackets, on the square on its bar's side; some unbarre
 window's **pane** and **bars**, each with its material, its state, its size and thickness: examined as any thing is,
 lifted out (take the bar, lift the bar: only from its side; a pane worked out whole; bent bars lifted out) and
 carried; a bar put back (bar the door, put the bar on the door: from its side, the door shut, a bar carried or in
-reach that spans it, the widest; the maker's state barred, the things' bar in its brackets again); a pane broken is shards at the character's feet.  **Examined** (examine the door, the window, the
+reach that spans it, the widest; the maker's state barred, the world's bar in its brackets again); a pane broken is shards at the character's feet.  **Examined** (examine the door, the window, the
 portcullis): its kind, size, material, thickness and features plain to see, its state and how stout it is the
 appraiser's judgement (the referee's Timbercraft, Metalcraft or Masonry, as near the truth as the grade).  A room's
 words are general at a glance (a small hall, a high ceiling, a low, rough one); its figures (its size in feet, its
@@ -466,16 +492,17 @@ its space (bulk) and the weight it bears, and holds items up to both; what it ho
 counting toward its carrier's load.  Some hold only some things (a quiver arrows, a scabbard its blade, a bowl
 what's poured or small); a **belt** holds in its own way: things hang from it (a pouch, a scabbard, a quiver, a
 tool), each in a slot of its own, by how many it has room for and what each will bear, not by space inside it.
-Built (dq0p's things.c, its code in the catalogue's bank): held in a hand (hold, wield, ready: two hands at most, a
-two-handed thing or a big one both), stowed in the pack, put in a container (by its room and the weight it bears;
-a container in another, by its own bulk or what it holds, the more; never into itself or what's in it), taken from
-it (into the pack, else a hand), hung from the belt (by its slots; only what hangs: a pouch, a sheath, a quiver, a
-blade), worn and taken off (one of a kind worn); the inventory says which hand (both), what's worn, what's in or on
-what, and the load.  Taking up still fills the pack first, then a hand.  **The load** (all the character carries,
-worn or not, its armour too) is the referee's to judge: the things give it with the tools to hand (RS_EQUIP), and
-the referee makes it HarnMaster's encumbrance (the load over the endurance, its physical penalty: the body's tests
-harder, its move less, so the world's step slower), worded on the sheet (the load, the encumbrance) and in the
-inventory ("You're heavily burdened.").  (To come: a scabbard's one blade, a quiver's arrows only.)
+Built (dq0w's things.c, the world's item store, its code in swapped parts and the catalogue's bank): held in a
+hand (hold, wield, ready: two hands at most, a two-handed thing or a big one both), stowed in the pack, put in a
+container (by its room and the weight it bears; a container in another, by its own bulk or what it holds, the more;
+never into itself or what's in it), taken from it (into the pack, else a hand), hung from the belt (by its slots;
+only what hangs: a pouch, a sheath, a quiver, a blade), worn and taken off (one of a kind worn); the inventory says
+which hand (both), what's worn, what's in or on what, and the load.  Taking up still fills the pack first, then a
+hand.  **The load** (all the character carries, worn or not, its armour too) is the referee's to judge: the things
+give it with the tools to hand (RS_EQUIP), and the referee makes it HarnMaster's encumbrance (the load over the
+endurance, its physical penalty: the body's tests harder, its move less, so the world's step slower), worded on the
+sheet (the load, the encumbrance) and in the inventory ("You're heavily burdened.").  (To come: a scabbard's one
+blade, a quiver's arrows only.)
 
 **Surfaces, and what a container keeps in** (the user: "a table or chair is a type of container as well.  Some
 containers cannot hold liquids (wicker baskets), but hold clothes just fine; same with gasses (a balloon or a cloth
@@ -494,7 +521,7 @@ lantern 30: the kinds'), in a hand, worn or hung from the belt; lit (light X, or
 carried or another flame (one carried, or lit within reach), put out (douse X); a thing lit in the pack taken into a
 hand first.  Put down lit, it lights the squares round it it has a clear line to (dq0p's view.c, its lamps), seen
 from where the character stands; the room's words name what gives its light ("by the light of your candle").  The
-things keep it in the hub (pc_light, pc_lamp); the world takes the time and looks again (I_LIGHT).
+world keeps it in the hub (pc_light, pc_lamp), its item store's; it takes the time and looks again (I_LIGHT).
 
 An item is **found** through the character's senses, as everything else is: only on a square it sees now, lit;
 noticed by the referee's test of its sight (rs.h: P_NOTICE_SIGHT, or P_SEARCH when it searches), the steps from the
@@ -539,7 +566,7 @@ number, never another's; its quality (0 crude ... 9 a master's, most middling); 
 but a blade of steel if it's well made, of bronze if crudely), whose resistances to each kind of harm (blows, edges,
 points, fire, cold, acid, 0-9) are its; and its durability, the harm it can take, and what's left of it, its most
 by its material's toughness, its weight and its quality (a thing found in the dungeon the worse for its years).
-Built: each made its own as the things task first comes to it (items.h).
+Built: each made its own as the world first comes to it (items.h: as a look first sees it, a search, a close look).
 
 **Appraising** (the user: "Examining an object (using a skill) would return some estimation (possibly way off) of
 the quality, value, etc. based on expertise in the item judged by the appraiser.  Warriors would do well assessing
@@ -690,10 +717,10 @@ A name is refused if it clashes: with another name ("That name is taken by your 
 of it, or its start: "sw" would be a sword's), a kind of creature's (dq0d.dat's), a denizen's in sight, or (a name of
 one word) a word the parser needs ("north", "take": the parser asked).  "forget the name Linda", "unname my
 sword", "unname this room" take one back (an ally keeps its name).  A thing's name works in every command that names
-a thing: the line's names are made the thing's own word before it's parsed ("#" and its id, which the things task
-finds it by), and "attack the rat with Linda" takes Linda in hand first.  The words say it: what's carried ("Linda,
-your sword, in your hand": the things mark a named thing, `I_NAMED`), a thing seen lying ("At your feet lies Linda,
-your sword."), and a room named, as the character's in it ("You are in the Mausoleum, a crypt ...").
+a thing: the line's names are made the thing's own word before it's parsed ("#" and its id, which the world's item
+store finds it by), and "attack the rat with Linda" takes Linda in hand first.  The words say it: what's carried
+("Linda, your sword, in your hand": the things mark a named thing, `I_NAMED`), a thing seen lying ("At your feet lies
+Linda, your sword."), and a room named, as the character's in it ("You are in the Mausoleum, a crypt ...").
 
 **For the way back** ("go back to the mausoleum": the orientation's travel): the UI's `room_named (text)` (part 6,
 dq0.h) finds a room whose name's words are in a line (the case and its "the" aside), and gives its entry's number

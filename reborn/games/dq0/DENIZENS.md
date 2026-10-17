@@ -57,9 +57,9 @@ the bestiary), a drowned temple, a kobold warren.
   theme says.  So it was there all along, and found as anything else is: seen, or searched for.
 - **The rules:** read X (its words: a clue); combine X with Y (both to hand: they become Z, X's record kept, Y's
   gone); put X on (or in) Y (an offering on an altar, a crown on a throne); use X on the way out (open the way out
-  with X).  The UI matches a command to a rule by the things' kinds (the things task's: what's to hand, IO_FIND;
-  IO_COMBINE), tells its words, keeps it done (a bit each in the save), and does its effect: none more, the way out
-  opened (the hub's way_open: the world lets the character up it, and it's gone: E_LEFT), or the place ruled.
+  with X).  The UI matches a command to a rule by the things' kinds (the world's item store's: what's to hand,
+  IO_FIND; IO_COMBINE), tells its words, keeps it done (a bit each in the save), and does its effect: none more, the
+  way out opened (the hub's way_open: the world lets the character up it, and it's gone: E_LEFT), or the place ruled.
 - **The endings:** escaped (up the way out, opened), ruled (a rule's), or dead (a fatal wound); the theme's words, the
   game over, and the save marked done (dq0 -d on it again begins a new game).
 - **Still to come:** the theme's say on the strata's ages and sizes, the features it favours, the things lying about
@@ -182,9 +182,10 @@ the rays in C), an inventory two (every record of the item store gone through a 
 multiplying); and the UI took no command till the character was free, so what was typed during a move or a look
 waited for both.  Now the look is worked out in a grid of its own (the hub's LOOK_BANK: the squares round the
 character copied in a chunk's run at a time, the lines cast in assembly, dq0p/cast.s, the same squares seen as
-before), 0.29 seconds; the item store is gone down in assembly (dq0p/items.s), an inventory 0.14; a command that
-wants nothing of the character (what it carries, its sheet, the map, the help) is carried out at once even while
-it's busy, and the senses answer it between the look's rows: what's carried, asked for during a turn's look, told in
+before), 0.29 seconds; the item store is gone down in assembly (items.s, the world's now), an inventory 0.14; a
+command that wants nothing of the character (what it carries, its sheet, the map, the help) is carried out at once
+even while it's busy, and answered while the look goes on (the senses between its rows then; since move 2.3 the
+world, the item store's, as it waits for the look): what's carried, asked for during a turn's look, told in
 87,000 cycles from Enter (24 million before); the clock goes on while the world waits for a look; a turn three and
 three quarter seconds to the prompt to one and a third, a walk across the room five and a half to three, with the
 words; idle, the CPU 64% busy to 50% (the world's and the sound task's loops slower with nothing under way).
@@ -249,8 +250,8 @@ words; idle, the CPU 64% busy to 50% (the world's and the sound task's loops slo
   A denizen wounded tests its morale (RS_MORALE: the book's Initiative test): broken (or a shy one cautious) it flees
   a minute; cautious, it holds back a round.  One knocked senseless lies there till it comes round, and is finished
   if it's struck meanwhile; one bleeding loses blood a minute at a time (RS_TIME) and may die of it; one dead leaves its
-  body (an item: a body, a skeleton's bones) and never comes back.  The character knocked senseless waits it out (it
-  can't defend meanwhile); dead, the game ends.
+  body (an item: a body, a skeleton's bones: the denizens' intent, I_BODY, the world's to put down) and never comes
+  back.  The character knocked senseless waits it out (it can't defend meanwhile); dead, the game ends.
 - **Later:** allies fighting beside the character, and factions fighting each other; missiles (a bow through an
   arrow slit); the character's own bleeding and its treatment; their exploring and digging; the theme's factions
   (the theme as data is built: which of the kinds live in it).
