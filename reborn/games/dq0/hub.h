@@ -524,6 +524,13 @@ struct hub {                                    /* Bank 0, at $8000 */
     volatile unsigned char ui_cmd;              /* The UI's: a line taken and its command in hand (its words not yet
                                                 **   all out): the senses' look gives way to it a while (dq0prompt:
                                                 **   the UI answering at once, the world's answers its) */
+    /* The save folder's region files' versions (world.h's struct vfh: DUNGEON.md's no fixed size), the world's, as it
+    ** begins a game and as it keeps one (WQ_SAVE, the save's last step): every file stamped up to vsaved is the last
+    ** save's, every one stamped past vbase (this session's floor, the stamps an earlier session may have given at
+    ** most) this session's, any other a session's that ended without its save (a crash): never read.  A writer (the
+    ** world, the denizens, the maker) stamps a file past vlo, up to vhi (vfile.c's) */
+    unsigned long   vsaved, vbase, vlo, vhi;
+    unsigned char   small;                      /* dq0 -C (the tests'): the caches small, so a short game pages them */
 };
 #define SN_SEEN         0x01                    /* (dsense's res: the character seen, */
 #define SN_HEARD        0x02                    /*   heard) */
@@ -691,6 +698,11 @@ struct wsave {
 **   own hub.den_go world                                       (The denizens' turn: the turns pace's)
 **   own hub.dsense senses +denizens                            (An actor's senses: the denizens' request)
 **   own hub.ui_cmd ui                                          (A command in hand: the senses' look gives way)
+**   own hub.vsaved world                                       (The region files' versions: the world's, as it
+**   own hub.vbase world                                        (begins and keeps a game)
+**   own hub.vlo world
+**   own hub.vhi world
+**   own hub.small ui                                           (dq0 -C)
 **   own banks(1,PLAN_BANKS) maker                              (The plans: grown from the seed)
 **   own banks(CACHE_BANK(0),CACHE_BANKS) none                  (The chunks' cache: its room past three chunks)
 **   own chunk maker                                            (A chunk: made from the seed)
