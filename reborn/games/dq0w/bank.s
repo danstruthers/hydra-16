@@ -89,7 +89,7 @@ go:
             SWPART      10, 5               ; The things: the requests answered, a thing handled (things.c)
             SWPART      11, 5               ; The things listed, searched for, described, hidden
             SWPART      12, 4               ; A door's work begun (dq0w.c's door_work)
-            SWPART      13, 3               ; The item store's rarer work: begun, kept, the kit, a chunk's things
+            SWPART      13, 6               ; The item store's rarer work: begun, kept, the kit, a chunk's things
             SWPART      14, 6               ; The denizens' bodies: their intents carried out (wbody.c)
             SWPART      15, 2               ; The blows, the bleeding (wfight.c)
             SWPART      16, 6               ; The game's own rules: the puzzle judged, a thing walked to (wgame.c)
@@ -130,8 +130,8 @@ go:
             SWFN        drop, 10
             SWFN        list, 11
             SWFN        wear, 11
-            SWFN        make_own, 11
-            SWFN        seen_owned, 11
+            SWFN        make_own, 13
+            SWFN        seen_owned, 13
             SWFN        search, 11
             SWFN        describe, 11
             SWFN        hide, 13

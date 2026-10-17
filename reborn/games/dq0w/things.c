@@ -16,9 +16,9 @@
 ** hub's text); the rest is swapped parts' (../dq0/swap.inc, bank.s's stubs): part 10, the requests answered and a
 ** thing handled (a thing's name matched, where it lies, whose it is: what the catalogue's bank's code calls on there,
 ** through its stubs); part 11, what's carried listed, a tool's wear (those two called from the main RAM at once,
-** not through part 10's serve: an inventory's, a dig's every spell's), a search, a thing described, made its own;
-** part 13 the rarer work (the store begun, kept, the kit, the theme's kinds, a chunk's things and the remains put
-** down, a thing hidden).
+** not through part 10's serve: an inventory's, a dig's every spell's), a search, a thing described; part 13 the
+** rarer work (the store begun, kept, the kit, the theme's kinds, a chunk's things and the remains put down, a thing
+** hidden), and a thing made its own (the kit's ten, the things a look saw).
 **
 ** The store's records are a fixed number (NITEMS) in the hub's item banks, found by their place: the room for move
 ** 2.8's paging (a region's things in a file of the save folder, the banks a cache, as the change records are:
@@ -55,12 +55,12 @@ unsigned char __fastcall__ carry (unsigned n, unsigned char hand_first);
 void about (void);
 void list (void);                               /* Part 11 */
 void __fastcall__ wear (const char* key, unsigned char by);
-void __fastcall__ make_own (unsigned i);
-void seen_owned (void);
 unsigned char search (void);
 unsigned char __fastcall__ describe (const char* name);
 unsigned char __fastcall__ hide (const char* name);
 void __fastcall__ keep (unsigned char back);    /* Part 13 */
+void __fastcall__ make_own (unsigned i);
+void seen_owned (void);
 void kit (void);
 void theme_kinds (void);
 
@@ -652,71 +652,6 @@ void __fastcall__ s_wear (const char* key, unsigned char by)
     strcpy (HUB->ireq.name, name);
 }
 
-/* The materials' toughness (items.h's MT_*) */
-static const unsigned char tough[NMATS] = MAT_TOUGH;
-
-/* Its own numbers, for the things' differences (not the game's: those are the referee's and the maker's) */
-static unsigned rs = 0x2545;
-static unsigned char __fastcall__ rnd (unsigned char n)
-{
-    rs = rs * 25173U + 13849U;
-    return (rs >> 8) % n;
-}
-
-/* ---- A thing made its own, as the world first comes to it (no two alike): its number (record 0 keeps the last
-** given), its quality (most are middling), its material (a blade of iron, of steel if it's well made, of bronze if
-** crudely), its durability's most (its material's toughness, its weight, its quality) and what's left of it (a thing
-** found lying in the dungeon is the worse for its years there); a portal's part's material and quality the maker's
-** already (its portal's) */
-void __fastcall__ s_make_own (unsigned i)
-{
-    struct item q;
-    struct item* p;
-    const struct kind* k;
-    unsigned id;
-    unsigned char m;
-
-    fetch (&q, i);
-    if (q.id || !q.kind) {
-        return;
-    }
-    p = item_at (0);
-    id = ++p->x;
-    q.id = id;
-    k = kind_of (q.kind);
-    if (!(m = q.mat)) {
-        q.quality = rnd (4) + rnd (4) + rnd (3);
-        if (rnd (8) == 0) {
-            ++q.quality;
-        }
-        m = k->mat;
-        if (m == MT_IRON && !strcmp (k->tool, "blade")) {
-            m = q.quality >= 7 ? MT_STEEL : q.quality <= 1 ? MT_BRONZE : MT_IRON;
-        }
-        q.mat = m;
-    }
-    q.dur_max = tough[m] * (k->weight + 4) * (5 + q.quality) / 5;
-    q.dur = q.where == IW_SQUARE ? q.dur_max - q.dur_max / 10 * rnd (7) : q.dur_max;
-    if (!q.dur) {
-        q.dur = 1;
-    }
-    memcpy (item_at (i), &q, sizeof q);
-}
-
-/* The things a look saw (the senses' record's, in the order they're in it), each made its own (as the senses did as
-** they saw them: the things' numbers, rnd's, the same) */
-void s_seen_owned (void)
-{
-    unsigned char k, n;
-    unsigned i;
-
-    for (k = 0; hub_map (SIGHT_BANK), n = SIGHT->nitems, k < n; ++k) {
-        i = SIGHT->item[k].n;
-        s_make_own (i);
-    }
-    hub_map (0);
-}
-
 /* ---- What the character carries, worded into the hub's text (things_text): each thing, and what's in it */
 
 /* A thing in words: its kind, how many, and what anyone can see of its state (its make and worth are an appraiser's
@@ -870,7 +805,7 @@ unsigned char s_search (void)
             !(*p & T_VIS)) {
             continue;
         }
-        s_make_own (i);
+        make_own (i);
         fetch (&rec, i);
         hub_map (0);
         r = &HUB->slot[SLOT_UI];                /* (The UI's: it waits on this request meanwhile) */
@@ -908,7 +843,7 @@ unsigned char __fastcall__ s_describe (const char* name)
     if (!n && !(n = seen_named (name))) {
         return IR_NONE;
     }
-    s_make_own (n);
+    make_own (n);
     fetch (&rec, n);
     k = kind_of (rec.kind);
     hub_map (0);
@@ -936,6 +871,72 @@ unsigned char __fastcall__ s_describe (const char* name)
 ** put down */
 #pragma code-name (push, "SW13CODE")
 #pragma rodata-name (push, "SW13RODATA")
+
+/* (Part 13's, with the kit that makes its things its own, ten at a time: once part 11's, the kit put out and in
+** again for each) The materials' toughness (items.h's MT_*) */
+static const unsigned char tough[NMATS] = MAT_TOUGH;
+
+/* Its own numbers, for the things' differences (not the game's: those are the referee's and the maker's) */
+static unsigned rs = 0x2545;
+static unsigned char __fastcall__ rnd (unsigned char n)
+{
+    rs = rs * 25173U + 13849U;
+    return (rs >> 8) % n;
+}
+
+/* ---- A thing made its own, as the world first comes to it (no two alike): its number (record 0 keeps the last
+** given), its quality (most are middling), its material (a blade of iron, of steel if it's well made, of bronze if
+** crudely), its durability's most (its material's toughness, its weight, its quality) and what's left of it (a thing
+** found lying in the dungeon is the worse for its years there); a portal's part's material and quality the maker's
+** already (its portal's) */
+void __fastcall__ s_make_own (unsigned i)
+{
+    struct item q;
+    struct item* p;
+    const struct kind* k;
+    unsigned id;
+    unsigned char m;
+
+    fetch (&q, i);
+    if (q.id || !q.kind) {
+        return;
+    }
+    p = item_at (0);
+    id = ++p->x;
+    q.id = id;
+    k = kind_of (q.kind);
+    if (!(m = q.mat)) {
+        q.quality = rnd (4) + rnd (4) + rnd (3);
+        if (rnd (8) == 0) {
+            ++q.quality;
+        }
+        m = k->mat;
+        if (m == MT_IRON && !strcmp (k->tool, "blade")) {
+            m = q.quality >= 7 ? MT_STEEL : q.quality <= 1 ? MT_BRONZE : MT_IRON;
+        }
+        q.mat = m;
+    }
+    q.dur_max = tough[m] * (k->weight + 4) * (5 + q.quality) / 5;
+    q.dur = q.where == IW_SQUARE ? q.dur_max - q.dur_max / 10 * rnd (7) : q.dur_max;
+    if (!q.dur) {
+        q.dur = 1;
+    }
+    memcpy (item_at (i), &q, sizeof q);
+}
+
+/* The things a look saw (the senses' record's, in the order they're in it), each made its own (as the senses did as
+** they saw them: the things' numbers, rnd's, the same) */
+void s_seen_owned (void)
+{
+    unsigned char k, n;
+    unsigned i;
+
+    for (k = 0; hub_map (SIGHT_BANK), n = SIGHT->nitems, k < n; ++k) {
+        i = SIGHT->item[k].n;
+        s_make_own (i);
+    }
+    hub_map (0);
+}
 
 /* A free record taken, its thing put down (where, sn, x, y, qty: the rest none, not yet its own): its number, or 0
 ** (the store full) */
@@ -1089,7 +1090,7 @@ static unsigned __fastcall__ item_new (unsigned char kind, unsigned char where, 
     if (!i) {
         return 0xFFFF;
     }
-    make_own (i);
+    s_make_own (i);
     return i;
 }
 
