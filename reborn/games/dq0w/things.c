@@ -15,9 +15,10 @@
 ** Its main RAM's code is what everything calls on (a record copied out and back, a kind's, its words put in the
 ** hub's text); the rest is swapped parts' (../dq0/swap.inc, bank.s's stubs): part 10, the requests answered and a
 ** thing handled (a thing's name matched, where it lies, whose it is: what the catalogue's bank's code calls on there,
-** through its stubs); part 11, what's carried listed, a tool's wear, a search, a thing described, hidden, made its
-** own; part 13 the rarer work (the store begun, kept, the kit, the theme's kinds, a chunk's things and the remains
-** put down).
+** through its stubs); part 11, what's carried listed, a tool's wear (those two called from the main RAM at once,
+** not through part 10's serve: an inventory's, a dig's every spell's), a search, a thing described, made its own;
+** part 13 the rarer work (the store begun, kept, the kit, the theme's kinds, a chunk's things and the remains put
+** down, a thing hidden).
 **
 ** The store's records are a fixed number (NITEMS) in the hub's item banks, found by their place: the room for move
 ** 2.8's paging (a region's things in a file of the save folder, the banks a cache, as the change records are:
@@ -118,6 +119,26 @@ static unsigned char __fastcall__ two (const struct kind* k)
 void cat_map (void)
 {
     hub_map (CAT_BANK);
+}
+
+/* The UI's request answered (serve's, part 10's; but what's carried listed, and a tool's wear, by their own part,
+** 11, alone: an inventory's, a dig's every spell's) */
+unsigned char things_req (void)
+{
+    unsigned char k;
+
+    hub_map (0);
+    if ((k = HUB->ireq.kind) == IO_WEAR) {
+        strcpy (tbuf, HUB->ireq.name);          /* (Copied: the hub's window moves) */
+        wear (tbuf, HUB->ireq.to);
+    } else if (k == IO_LIST) {
+        list ();
+    } else {
+        return serve ();
+    }
+    hub_map (0);
+    HUB->ireq.result = IR_OK;
+    return 0;
 }
 
 /* The things a look saw (the senses' record's) made their own, as the senses did as they saw them (part 11's, if
@@ -594,6 +615,17 @@ unsigned char s_serve (void)
 #pragma code-name (push, "SW11CODE")
 #pragma rodata-name (push, "SW11RODATA")
 
+/* The character's (on it, or in what it carries): part 10's on_pc, here too (wear's: a dig's every spell's, the
+** parts not swapped for it) */
+static unsigned char __fastcall__ on_me (unsigned i)
+{
+    unsigned j;
+
+    for (j = i; item_at (j)->where == IW_ITEM; j = item_at (j)->x) {
+    }
+    return item_at (j)->where == IW_ACTOR && !item_at (j)->x;
+}
+
 /* A tool worn by a spell of work (the dig's: the referee's choice, by its key), by; its name in the request */
 void __fastcall__ s_wear (const char* key, unsigned char by)
 {
@@ -604,7 +636,7 @@ void __fastcall__ s_wear (const char* key, unsigned char by)
     strcpy (name, key);
     while ((i = items (i, IN_ACTOR | IN_ITEM | IN_PORTAL, 0)) != 0) {
         fetch (&rec, i);
-        if (!strcmp (kind_of (rec.kind)->tool, key) && on_pc (i)) {
+        if (!strcmp (kind_of (rec.kind)->tool, key) && on_me (i)) {
             p = item_at (i);
             p->wear = p->wear + by < p->wear ? 255 : p->wear + by;
             strcpy (name, kind_of (rec.kind)->name);
@@ -716,14 +748,45 @@ void __fastcall__ s_thing_words (const struct item* q)
     }
 }
 
+/* What the character carries gathered first, in one pass of the store (the records on an actor, and every record in
+** or on a thing: what's in what it carries among them), its list and its load worded from that: each thing's
+** contents found there, not by a pass each (a pass some 25,000 cycles: an inventory's passes were a third of a
+** million); more than GOT_MAX of them, the passes as before (ngot 0xFF) */
+#define GOT_MAX         48
+static struct got { unsigned n, x; unsigned char where; }* got;
+static unsigned char ngot;
+
+/* The next record after i at where, x (IN_X's: items ()'s order, the records' own) */
+static unsigned __fastcall__ next_in (unsigned i, unsigned char where, unsigned x)
+{
+    struct got* g = got;
+    unsigned char k;
+
+    if (ngot == 0xFF) {
+        return items (i, IN_X | 1 << where, x);
+    }
+    for (k = ngot; k; --k, ++g) {
+        if (g->n > i && g->where == where && g->x == x) {
+            return g->n;
+        }
+    }
+    return 0;
+}
+
+/* Each thing at where, x worded, and what's in it, or on it; its weight (quarter pounds) added to load's, the
+** things it goes into the same as weight_in's (part 10's): what it all weighs */
+static unsigned load;
 static void __fastcall__ contents (unsigned char where, unsigned x, unsigned char depth)
 {
+    const struct kind* k;
     struct item q;
     unsigned i = 0;
     unsigned char first = 1;
 
-    while ((i = items (i, IN_X | 1 << where, x)) != 0) {
+    while ((i = next_in (i, where, x)) != 0) {
         fetch (&q, i);
+        k = kind_of (q.kind);
+        load += (unsigned) k->weight * (k->flags & K_PLURAL ? 1 : q.qty);
         if (!depth) {
             put (first ? "You carry " : "; ");
         } else {
@@ -733,10 +796,11 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
         first = 0;
         s_thing_words (&q);
         if (!depth) {
-            put (q.flags & I_HELD ? (two (kind_of (q.kind)) == 2 ? ", in both hands" : ", in your hand") :
+            put (q.flags & I_HELD ? (two (k) == 2 ? ", in both hands" : ", in your hand") :
                 q.flags & I_WORN ? ", worn" : "");
         }
-        if (kind_of (q.kind)->flags & (K_CONTAINER | K_BELT) || kind_of (q.kind)->keeps & KF_ON) {
+        if (k->flags & (K_CONTAINER | K_BELT) || k->keeps & KF_ON) {     /* (k kind_of's still: three more
+                                                **   since, of its four) */
             contents (IW_ITEM, i, depth + 1);
         }
     }
@@ -750,12 +814,29 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
 
 void s_list (void)
 {
+    struct got g[GOT_MAX];
+    struct got* p = g;
     char b[6];
+    unsigned i = 0;
 
+    got = g;
+    ngot = 0;
+    while ((i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0) {
+        if (ngot == GOT_MAX) {
+            ngot = 0xFF;
+            break;
+        }
+        p->n = i;
+        p->x = ip->x;
+        p->where = ip->where;
+        ++p;
+        ++ngot;
+    }
     text_new ();
+    load = 0;
     contents (IW_ACTOR, 0, 0);
     put (" In all, ");                          /* (Its load: the referee's encumbrance of it, the UI's to word) */
-    put (utoa ((weight_in (IW_ACTOR, 0) + 2) / 4, b, 10));
+    put (utoa ((load + 2) / 4, b, 10));
     put (" lb.");
 }
 
@@ -840,37 +921,6 @@ unsigned char __fastcall__ s_describe (const char* name)
     r->size = rec.size;
     r->thick = rec.thick;
     r->to = k->size << 8 | seen_d;
-    return IR_OK;
-}
-
-/* Hidden where the character stands (the user: hiding is a skill, Concealment; a thing's difficulty to find by the
-** method's quality and the concealer's skill): its difficulty, the method's 1 (a floor's dust and corners) and the
-** referee's test's (rs.h's P_CONCEAL); known to the character, who hid it */
-unsigned char __fastcall__ drop (const char* name);
-unsigned char __fastcall__ s_hide (const char* name)
-{
-    struct req* r;
-    signed char g;
-    unsigned char d;
-
-    if (drop (name) != IR_OK) {
-        return IR_NONE;
-    }
-    hub_map (0);
-    r = &HUB->slot[SLOT_UI];                    /* (The UI's: it waits on this request meanwhile) */
-    r->kind = RS_TEST;
-    r->actor = 0;
-    r->a = P_CONCEAL;
-    r->b = 0;
-    r->steps = 0;
-    r = hub_ask (SLOT_UI);
-    g = r->grade;
-    r->state = REQ_FREE;
-    d = 1 + (g == G_CS ? 6 : g == G_MS ? 3 : g == G_MF ? 1 : 0);
-    item_at (dropped)->flags |= I_HIDDEN | I_KNOWN;
-    item_at (dropped)->hide = d;
-    hub_map (0);
-    HUB->ireq.qty = d;
     return IR_OK;
 }
 
@@ -1124,6 +1174,37 @@ void __fastcall__ s_lay_body (unsigned char kind, unsigned char sn, unsigned x, 
 {
     put_down (kind, IW_SQUARE, sn, x, y, 1);
     hub_map (0);
+}
+
+/* (Part 13's: a rare command's) Hidden where the character stands (the user: hiding is a skill, Concealment; a thing's difficulty to find by the
+** method's quality and the concealer's skill): its difficulty, the method's 1 (a floor's dust and corners) and the
+** referee's test's (rs.h's P_CONCEAL); known to the character, who hid it */
+unsigned char __fastcall__ drop (const char* name);
+unsigned char __fastcall__ s_hide (const char* name)
+{
+    struct req* r;
+    signed char g;
+    unsigned char d;
+
+    if (drop (name) != IR_OK) {
+        return IR_NONE;
+    }
+    hub_map (0);
+    r = &HUB->slot[SLOT_UI];                    /* (The UI's: it waits on this request meanwhile) */
+    r->kind = RS_TEST;
+    r->actor = 0;
+    r->a = P_CONCEAL;
+    r->b = 0;
+    r->steps = 0;
+    r = hub_ask (SLOT_UI);
+    g = r->grade;
+    r->state = REQ_FREE;
+    d = 1 + (g == G_CS ? 6 : g == G_MS ? 3 : g == G_MF ? 1 : 0);
+    item_at (dropped)->flags |= I_HIDDEN | I_KNOWN;
+    item_at (dropped)->hide = d;
+    hub_map (0);
+    HUB->ireq.qty = d;
+    return IR_OK;
 }
 
 #pragma code-name (pop)

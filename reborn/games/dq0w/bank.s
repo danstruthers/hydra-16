@@ -133,7 +133,7 @@ go:
             SWFN        seen_owned, 11
             SWFN        search, 11
             SWFN        describe, 11
-            SWFN        hide, 11
+            SWFN        hide, 13
             SWFN        door_work, 12
             SWFN        keep, 13
             SWFN        kit, 13

@@ -435,7 +435,7 @@ static void __fastcall__ see (unsigned char first);
 static void things (void)
 {
     stocks ();
-    if (serve ()) {
+    if (things_req ()) {
         see (0);
     }
     hub_reply (&HUB->ireq);
@@ -452,7 +452,7 @@ static void waiting (void)
     }
     op = HUB->ireq.kind;
     if (hub_posted (&HUB->ireq) && (op == IO_LIST || op == IO_TOOLS || op == IO_WEAR)) {
-        serve ();
+        things_req ();
         hub_reply (&HUB->ireq);
     }
 }

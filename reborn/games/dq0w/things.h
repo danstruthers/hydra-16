@@ -21,6 +21,7 @@ void owned (void);                              /* The things a look saw (the se
 /* ---- The swapped parts' (bank.s's stubs) */
 unsigned char serve (void);                     /* (Part 10) The hub's ireq answered (but its state): 1 if what lies
                                                 **   about has changed (the world looks again) */
+unsigned char things_req (void);                /* The same, what's carried listed, a tool's wear, by part 11 alone */
 void __fastcall__ items_begin (const char* dir);    /* (Part 13) The catalogue into the hub (dir's dq0w.cat), the store
                                                 **   emptied, a game carried on its read, its light */
 void __fastcall__ stock_down (unsigned char k); /* (Part 13) Cache slot k's chunk's things put down (the maker's
