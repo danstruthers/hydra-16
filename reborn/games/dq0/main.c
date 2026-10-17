@@ -1406,9 +1406,19 @@ int main (int argc, char* argv[])
             take (pending);
             pending[0] = 0;
         }
-        if ((l = (char*) t_next ()) != 0 && (!busy || (!held && !(held = !at_once (l))))) {
+        if ((l = (char*) t_next ()) != 0 && (!busy || !held)) {
             hub_map (0);
-            HUB->ui_cmd = 1;                    /* (A command in hand: the senses' look gives way meanwhile) */
+            HUB->ui_cmd = 1;                    /* (A command in hand: the senses' look gives way meanwhile, from
+                                                **   its first look, at_once's, on: a line typed as a look began
+                                                **   waited for it, its parsing a third of the CPU) */
+            if (busy && (held = !at_once (l))) {
+                HUB->ui_cmd = 0;                /* (Held: the next waits for the character, not parsed again) */
+                l = 0;
+            }
+        } else {
+            l = 0;
+        }
+        if (l) {
             f = names_in (l = t_line ());       /* (The line's first look, in the overlays' banks: a part's
                                                 **   copied in only for a line that may be its; an ordinary
                                                 **   command's only part 2, the commands') */

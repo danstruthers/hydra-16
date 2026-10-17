@@ -162,7 +162,8 @@ static unsigned char __fastcall__ phrase (unsigned char i, const char* p)
     unsigned char n = 0, k;
 
     while (*p) {
-        if (i + n >= nw) {
+        if (i + n >= nw || *word[i + n] != *p) {   /* (Its first letter first: a line's verb looked for
+                                                **   through every phrase, a tenth of a second at the normal pace) */
             return 0;
         }
         k = strlen (word[i + n]);
