@@ -113,7 +113,9 @@ done:
 }
 
 /* A change kept, and made in its chunk (the cache's: its chunk there first, so one made now, laid over with what's
-** kept, hasn't this one yet); the hub's header in the window after */
+** kept, hasn't this one yet), and told (E_LIGHT: a square's, or a portal's state, may change the light about it,
+** the senses'); the hub's header in the window after */
+static struct msg lm;
 void __fastcall__ change (unsigned char sn, unsigned x, unsigned y, unsigned char tile, signed char elev,
     unsigned char link)
 {
@@ -162,6 +164,14 @@ void __fastcall__ change (unsigned char sn, unsigned x, unsigned y, unsigned cha
         }
     }
     hub_map (0);
+    if (link != TRAP_STATE && link != PORTAL_HARM && link != STOCKED) {
+        lm.kind = E_LIGHT;
+        lm.a = sn;
+        lm.w1 = x;
+        lm.w2 = y;
+        lm.t = HUB->now;
+        hub_event (&lm);
+    }
 }
 
 /* The chunks the maker stocked as it made them (their slots CS_FRESH), if there are any, their things put down and

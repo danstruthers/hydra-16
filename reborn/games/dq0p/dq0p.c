@@ -16,6 +16,7 @@
 #include "view.h"
 #include "sight.h"
 #include "things.h"
+#include "light.h"
 
 static unsigned char sees;                      /* (The denizens seen changed: the look's reply's ch) */
 
@@ -70,6 +71,7 @@ int main (int argc, char* argv[])
         return 1;
     }
     chunks_init (ASK_SENSES);
+    light_init ();
     for (;;) {
         hub_map (0);
         hy_sem_acquire (HUB->sem[T_SENSES]);    /* (Waiting costs nothing) */
@@ -78,6 +80,8 @@ int main (int argc, char* argv[])
             break;
         }
         if (hub_posted (&HUB->look)) {
+            light_events ();                    /* (The world's lights and doors changed: the light layer's out of
+                                                **   date near them) */
             if (HUB->look.kind == LK_DENS) {
                 sees = dens_seen ();            /* (Only the denizens seen, looked at again: their bodies changed) */
             } else {

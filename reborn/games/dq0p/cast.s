@@ -13,9 +13,12 @@
 ;   void __fastcall__ cast_row (unsigned char j);   the view's row j (0 to 2 g_r)
 ;   void cast_own (void);                           the character's own square: seen if anything lights it (else
 ;                                                   ;   remembered), the walls round it
+;   void __fastcall__ cast_lamp (unsigned char w);  the light layer's (light.c): a lamp's squares, w each way round
+;                                                   ;   it (the lamp g_li[0], g_lj[0], its reach g_lr[0]), each it
+;                                                   ;   lights marked G_LAMP (its own, or a clear line to it)
 
             .macpack    longbranch
-            .export     _cast_row, _cast_own
+            .export     _cast_row, _cast_own, _cast_lamp
             .export     _g_r, _g_m, _g_r2, _g_l2, _g_u2, _g_hx, _g_hy, _g_ez, _g_bright
             .export     _g_nl, _g_li, _g_lj, _g_lr, _g_lzl, _g_lzh
             .importzp   ptr1, ptr2
@@ -25,6 +28,7 @@ G_SKIP      = $02                           ;   nothing to see on it (rock, or n
 G_LIT       = $04                           ;   a room's light reaches it,
 G_INSIDE    = $08                           ;   a room's floor,
 G_WALL      = $10                           ;   a wall, a door, a window,
+G_LAMP      = $20                           ;   lit by the lamp (cast_lamp's),
 G_VIS       = $40                           ;   seen now, seen: the chunks' T_VIS, T_SEEN)
 G_SEEN      = $80
 
@@ -146,6 +150,38 @@ _cast_own:
             beq         @done
             jmp         walls
 @done:      rts
+
+; cast_lamp (w): w in .A
+_cast_lamp:
+            sta         wlim
+            lda         #0
+            sta         rj
+@row:       lda         #0
+            sta         ri
+@sq:        ldx         ri
+            lda         rj
+            jsr         square
+            sta         ptr2
+            sty         ptr2 + 1
+            ldy         #0
+            lda         (ptr2),y
+            and         #G_SKIP
+            bne         @next
+            jsr         lamps
+            bcc         @next
+            ldy         #0
+            lda         (ptr2),y
+            ora         #G_LAMP
+            sta         (ptr2),y
+@next:      inc         ri
+            lda         ri
+            cmp         wlim
+            bcc         @sq
+            inc         rj
+            lda         rj
+            cmp         wlim
+            bcc         @row
+            rts
 
 ; cast_row (j): j in .A
 _cast_row:

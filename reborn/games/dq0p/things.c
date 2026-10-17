@@ -12,6 +12,7 @@
 #include "../dq0/hub.h"
 #include "../dq0w/world.h"
 #include "view.h"
+#include "light.h"
 #include "things.h"
 
 #define NK      NKINDS                          /* (The catalogue's, and the theme's after them: theme.h) */
@@ -130,26 +131,33 @@ void __fastcall__ things_seen (struct sight* s, unsigned char sn, unsigned x, un
     }
 }
 
-/* The lit things lying about (on squares within LAMP_R of (x, y), on surfaces there), into view.c's lamps: their
-** squares, their reach */
+/* The lit things lying about (on squares within LAMP_FAR of (x, y), on surfaces there), the light layer's lamps
+** (light.c's: their squares, their reach); and those within LAMP_R, view.c's (the chunks round them reached) */
 #define LAMP_R          28
 void __fastcall__ things_lamps (unsigned char sn, unsigned x, unsigned y)
 {
     const struct item* s;
     struct lamp* l = lamp;
     unsigned i = 0;
+    unsigned char r;
 
     nlamps = 0;
-    while (nlamps < NLAMPS && (i = items (i, IN_FLAGS | IN_SQUARE | IN_ITEM | IN_PORTAL, I_LIT)) != 0) {
+    light_lamps_begin ();
+    while ((i = items (i, IN_FLAGS | IN_SQUARE | IN_ITEM | IN_PORTAL, I_LIT)) != 0) {
         fetch (&rec, i);
-        if (!(s = lying (&rec)) || s->sn != sn || s->x - x + LAMP_R > 2 * LAMP_R ||
-            s->y - y + LAMP_R > 2 * LAMP_R) {
+        if (!(s = lying (&rec)) || s->sn != sn || s->x - x + LAMP_FAR > 2 * LAMP_FAR ||
+            s->y - y + LAMP_FAR > 2 * LAMP_FAR) {
             continue;
         }
-        l->x = s->x;
-        l->y = s->y;
-        l->r = kind_of (rec.kind)->light;
-        ++l;
-        ++nlamps;
+        r = kind_of (rec.kind)->light;
+        light_lamp (s->x, s->y, r);
+        if (nlamps < NLAMPS && s->x - x + LAMP_R <= 2 * LAMP_R && s->y - y + LAMP_R <= 2 * LAMP_R) {
+            l->x = s->x;
+            l->y = s->y;
+            l->r = r;
+            ++l;
+            ++nlamps;
+        }
     }
+    light_lamps_end (sn);
 }
