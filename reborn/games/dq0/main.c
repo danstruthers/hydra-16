@@ -678,8 +678,11 @@ static unsigned char events (void)          /* (How many there were) */
                     stir ();                    /* (A denizen it sees moved) */
                     break;
                 }
-                if (m.w1 == V_TURNED) {          /* (A light lit or put out: the things' words, said) */
+                if (m.w1 == V_FACING) {         /* (A turn's first words, as it's begun: out at once, its look
+                                                **   after, V_TURNED's) */
                     sayf ("\nYou turn to face %s.", head_name[HUB->pc_face & 7]);
+                    t_flush ();
+                    break;
                 }
                 look (0);
             }

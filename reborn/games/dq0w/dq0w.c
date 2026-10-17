@@ -100,6 +100,12 @@ static void __fastcall__ event (unsigned char kind, unsigned char who, unsigned 
     hub_event (&m);
 }
 
+/* What the character sees, changed (E_VIEW's why: V_*), told the UI */
+static void __fastcall__ view (unsigned w)
+{
+    event (E_VIEW, 0, w);
+}
+
 /* The character busy for t tenths: free again at pc_ready (the turns pace: the clock moved on to it a slice at a
 ** time, turns_run), standing where it is unless a move says where it's going (bound_for) */
 static unsigned char late;                      /* (The turns pace's: the denizens' task slow to keep up) */
@@ -421,7 +427,7 @@ static unsigned char __fastcall__ ask_look (unsigned char kind)
 static void stirred (void)
 {
     if ((!move.on || move.how == A_DIGGING) && dens_seen ()) {
-        event (E_VIEW, 0, V_STIR);
+        view (V_STIR);
     }
 }
 
@@ -1813,8 +1819,9 @@ static void __fastcall__ intent (struct msg* m)
     case I_TURN:
         HUB->pc_face = m->a & 7;
         busy (stept);
+        view (V_FACING);                        /* (Its first words told at once, the look after: V_TURNED's) */
         see (0);
-        event (E_VIEW, 0, V_TURNED);
+        view (V_TURNED);
         break;
     case I_DIG:
         start_dig (m->a);
@@ -1839,7 +1846,7 @@ static void __fastcall__ intent (struct msg* m)
     case I_LIGHT:
         busy (m->a ? 3 * stept : stept);
         see (0);
-        event (E_VIEW, 0, m->a ? V_LIT : V_DARK);
+        view (m->a ? V_LIT : V_DARK);
         break;
     case I_QUIT:
         HUB->quit = 1;
