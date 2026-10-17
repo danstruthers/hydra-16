@@ -2558,8 +2558,10 @@ module.exports = {
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T\r' +
         ['look', 'search', 'search', 'look', 'quit'].map(l => '\u0101' + l + '\r').join('') + '\u0101dq0 -p t -s 5 -c /ram/c.hm -T\r' +
         ['d', 'map', 'go right', 'go forward', 'look', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
-      expect: ['A giant rat is ', ' feet away', 'Something stirs.', 'keeping its', 'A giant rat is in the way.', '% echo $status'],
-      // (The first search's stir told before its prompt (at this seed the rats gone out of sight: the referee's and the
+      expect: ['A giant rat is ', ' feet away', 'stirs', 'keeping its', 'ladder going up. A giant rat is', 'A giant rat is in the way.', '% echo $status'],
+      // (The rats by the ladder at seed 5 in the look as the character comes down: since move 2.4 the world gives the
+      // denizens their turn as it gets somewhere, before what it sees is told, so they're there, not told stirring after
+      // it.  The first search's stir told before its prompt (at this seed the rats gone out of sight: the referee's and the
       // denizens' dice the same at the turns pace whatever the timing), the second's none: nothing they do has changed; the way
       // blocked: down the ladder, the map looked at while the rats are by it still (the caves' chamber there
       // ragged, a tunnel off it: given longer, they're off down it), the rats cornered, a step towards them told

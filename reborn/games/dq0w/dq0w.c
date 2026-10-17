@@ -413,17 +413,18 @@ static void stirred (void)
 }
 
 /* ---- The things (the item store: things.c): the UI's request of them answered (the chunks stocked first: what it
-** asks about there), looked about again if what lies about has changed (as the senses did, a look's alone: no
-** denizen seen again); while a look's waited for, the senses' request (a chunk's things put down, before they see
+** asks about there), looked about again if what lies about has changed (as the senses did; the denizens it sees
+** with it); while a look's waited for, the senses' request (a chunk's things put down, before they see
 ** them) and what the UI asks that wants no look (what's carried, the tools, a tool's wear: the hub's header in the
 ** window after each) */
 static void clock_run (void);
 static void __fastcall__ looked (unsigned char first);
+static void __fastcall__ see (unsigned char first);
 static void things (void)
 {
     stocks ();
     if (serve ()) {
-        looked (0);
+        see (0);
     }
     hub_reply (&HUB->ireq);
 }
@@ -1172,6 +1173,8 @@ static unsigned char __fastcall__ work (unsigned char what, unsigned x, unsigned
 
 
 /* A move done: the character there, what it saw seen, and the UI told; the time it took at its pace the referee's */
+static void turn (void);
+
 static void arrive (void)
 {
     unsigned char r, first = 0, how = move.how;
@@ -1207,7 +1210,14 @@ static void arrive (void)
     HUB->pc_y = my;
     HUB->pc_face = move.face;
     bound_for (mx, my);
-    see (first);
+    looked (first);                             /* (What it sees: the denizens there, at the turns pace, given their
+                                                **   turn first, the chunks round it made, so it sees them as it gets
+                                                **   there) */
+    if (!HUB->tpr && !HUB->paused && !HUB->hold) {
+        turn ();
+    }
+    dens_seen ();
+    sn_ = HUB->pc_stratum;
     if (searching && (unsigned char) (how - A_DOWN) > A_UP - A_DOWN && how != A_STOPPED) {   /* (Not up or down) */
         barw_ = 1;                              /* (Quietly: the search's link; what it finds seen) */
         if (work (PA_SEARCH, NO_SQ, NO_SQ, 0)) {
