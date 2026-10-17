@@ -126,10 +126,14 @@ allies.
 
 - **The world** owns every body, the character's and the denizens' near it (the actors) alike: it carries out what
   each means to do by the same rules, strikes every blow (the referee asked), keeps the character out of the
-  denizens' squares, adds those it sees to what it perceives, and tells what happened as events (the character's
-  and the dungeon's; the denizens' bodies', their own queue's).
+  denizens' squares, and tells what happened as events (the character's and the dungeon's; the denizens' bodies',
+  their own queue's).
+- **The senses** (move 2.5) answer for every actor (DUNGEON.md: perception as layers): which bodies the character
+  sees, added to what it perceives (the world reports the bodies, the senses decide); and, as each denizen's mind
+  asks, whether it senses the character.
 - **The denizens' task** is their minds: it decides what each denizen means to do, by its kind, its attitude, its
-  faction's goals and what it senses (each denizen sees and hears through its own senses, as the character does);
+  faction's goals and what it senses (the senses tell it, by the same layers as the character's: its kind's sight,
+  darkvision, hearing and eyes);
   allies by the character's requests; and says so, its intents to the world, as the UI says the character's (move
   2.4, below).  The populations, the records and the denizens away from the character are its own.
 - **The referee** answers the tests and contests (influence, morale, combat), and keeps each creature's sheet.
@@ -206,8 +210,11 @@ words; idle, the CPU 64% busy to 50% (the world's and the sound task's loops slo
   none on the way or beside it, nor beside the character (it comes out there, and isn't boxed in).  No lair is by
   the dungeon's way in (the top stratum's first: where the character begins).
 - **Acting:** those within about 24 squares of the character are actors (the hub's, eight at most): each, as it's
-  free, senses the character (seen by its light, or with none by darkvision, along a line clear of rock, walls and
-  shut doors; heard moving, nearer), and wanders about its lair (a few squares, or its range), keeps to it, watches
+  free, senses the character (the senses asked, the hub's dsense: seen lit, by its own light or the light layer's
+  where it stands, within the kind's sight, or unlit within its darkvision, the less as its eyes are still used to
+  more light than there is, along a line clear of rock, walls and shut doors; heard working, nearer; a far one
+  answered coarsely, how far it may go with the answer standing, no line cast), and wanders about its lair (a few
+  squares, or its range), keeps to it, watches
   the character, keeps its distance (a shy one: till it's a few squares further; cornered close by, a step no
   nearer, a way round; cornered beside the character, it darts past it), or comes towards it (a bold one);
   and it's moved a square at a time by the character's rules (a step it can walk, its time by its pace and the
@@ -225,8 +232,9 @@ words; idle, the CPU 64% busy to 50% (the world's and the sound task's loops slo
 - **Away:** the denizens out but not actors move coarsely, every half minute to a minute and a half, to a square of
   their range about their lairs (in a chunk that's made: none is made for them), so the dungeon goes on where the
   character isn't; their records stay in the denizens' bank.
-- **Seen:** the world adds the actors on squares the character sees to what it perceives, after each look; and as
-  they change (the world bumps the hub's den_seq as it moves one, or what one's doing changes) it looks at them again,
+- **Seen:** the senses add the actors on squares the character sees to what it perceives, after each look; and as
+  they change (the world bumps the hub's den_seq as it moves one, or what one's doing changes) the world asks them
+  to look at them again (LK_DENS),
   and the UI says what stirs only when one has come into sight, gone from it, or is doing something else (watching,
   coming towards it, keeping its distance, going about its business): not at each step.  Not while the character's
   on its way somewhere (it looks about as it gets there); while it digs, yes.
@@ -305,8 +313,8 @@ words; idle, the CPU 64% busy to 50% (the world's and the sound task's loops slo
 One authority on state (DUNGEON.md): every body is the world's, the character's and the denizens' alike, and every
 blow.  The denizens' task is their minds.
 
-- **The minds:** the denizens' task decides for each actor, as before, from what it perceives (its own checks still:
-  move 2.5 gives it the senses' layers), its attitude, its faction and its plans (an ally's request, a noise heard,
+- **The minds:** the denizens' task decides for each actor, as before, from what it perceives (the senses', since
+  move 2.5), its attitude, its faction and its plans (an ally's request, a noise heard,
   fleeing), and says what it means to do, as the UI says the character's: its intents, a ring of their own in the
   hub (di) that the world reads.  I_STEP a square (H_*; STEP_COARSE, a coarse move's: no time, nothing heard),
   I_GOTO a dash (past the character, two squares), I_CLIMB along with the character up or down (to a square beside
@@ -322,8 +330,9 @@ blow.  The denizens' task is their minds.
   intents in turn by the character's rules (dq0w/wbody.c, a swapped part): a square it can walk (step_ok: no wall,
   no shut door), no one on it, nor the character, nor where the character's move ends; its time its step's, more
   uphill, steeply down, on steps, as the character's.  It tells what the bodies do (E_DEN, the denizens' events:
-  the world's queue now), adds those the character sees to what it perceives, and bumps den_seq for its own look
-  again.  (Not yet: a trap under a denizen's foot; a denizen at a door it can't walk through, opening it.)
+  the world's queue now), and bumps den_seq for the senses to look at them again (those the character sees in what it
+  perceives: the senses', move 2.5).  (Not yet: a trap under a denizen's foot; a denizen at a door it can't walk
+  through, opening it.)
 - **The blows** (dq0w/wfight.c): the character's (I_ATTACK, the hub's pc_foe: struck at once at the real paces; at
   the turns pace as the clock moves on, before it, so the denizens see it first in the slice) and a denizen's (its
   I_ATTACK) alike, the referee asked RS_ATTACK in the world's own slot.  The world keeps what the blow left the body

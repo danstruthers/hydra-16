@@ -47,12 +47,14 @@ the character and the denizens, so the world, the denizens and the senses read t
 goes out of the cache is dropped; what changed there (doors opened, traps set off, rock dug) is kept as a small
 record and laid over the chunk when it's made again, and what the character's seen of it as a map of bits.
 
-**One authority on state** (Phase 2, moves 2.2 to 2.4, 2026-10-16): the **maker** (dq0m) is pure, generation only,
+**One authority on state** (Phase 2, moves 2.2 to 2.5, 2026-10-16): the **maker** (dq0m) is pure, generation only,
 the same seed always the same chunk: it grows a stratum's plan and makes a chunk when it's asked (M_PLAN, M_CHUNK),
 lays the change records over a chunk it makes again (reading them, never writing them), and lists a chunk's things
 the first time it's made (its stock, a list beside the chunk's slot in the world bank, items.h's struct stock; the
 slot marked CS_FRESH, for the world to put them down and mark it stocked); it keeps nothing of its own but
-the squares seen as the cache makes way for a chunk (seen.dat), and draws the map for the UI from the cache.  The
+a copy of the senses' memory, the squares seen and the rooms come into, as the cache makes way for a chunk (seen.dat:
+laid over the chunk as it's made again, so the map it draws for the UI from the cache has them), and draws the map.
+The
 **world** (dq0w) owns the portals, the traps and their working (opened, forced, battered, raised, climbed through; set
 off, found, disarmed; a search: its swapped parts, dq0w/wdoor.c, wblow.c, wwin.c, wtrap.c, a command's work all in
 one of them), asks the referee for its judgements itself (its slot), and writes the **change records** (dq0w/store.c),
@@ -93,8 +95,9 @@ their place in it, renumbered as it's read in), the readers going down only thei
 
 **The bodies and the blows** (move 2.4) are the world's too: every body in the dungeon, the character's and the
 denizens' near it (the hub's actors, their body halves: place, facing, when free, step, what each is doing), and every
-blow struck.  The **denizens**' task (dq0d) is their minds: it decides what each means to do, by its own senses, its
-attitude, its faction and its plans, and says so, as the UI says the character's: its intents, a ring of their own to
+blow struck.  The **denizens**' task (dq0d) is their minds: it decides what each means to do, by what the senses tell
+it each perceives (move 2.5, below), its attitude, its faction and its plans, and says so, as the UI says the
+character's: its intents, a ring of their own to
 the world (the hub's di: I_STEP, I_GOTO, I_CLIMB, I_WAIT, I_ATTACK, I_ROUSE, I_ENTER, I_LEAVE; DENIZENS.md).  The
 **world** carries them out by the character's rules (dq0w/wbody.c: a square it can walk, no one on it, its time by its
 step and the slopes), tells what the bodies do in the denizens' events (its queue now: E_DEN, E_FIGHT), and strikes
@@ -106,6 +109,24 @@ slot; their attitudes).  At the **turns pace** the world gives the denizens thei
 clock and after its own work at the same clock, and waits for their I_DONE (no den_at polling), carrying out their
 intents meanwhile: the same game whatever the tasks' timing, the referee's one stream of dice seeing the same
 requests in the same order.
+
+**The senses** (move 2.5, the user's D3) answer for every actor, and own every actor's memory of what it has
+perceived: what the character sees (the look, as the world asks: the hub's look) and what each denizen senses (the
+denizens ask, for their minds, as one decides: the hub's dsense), by the layers below (perception as layers); the
+squares the character has seen and sees now (the chunks' tiles' T_SEEN and T_VIS: the senses' alone to write, the
+squares a walk went felt and remembered as the senses go them again, the world passing the walk in the look), the
+rooms it's come into (R_VISITED: the world asks with LF_ARRIVE and takes the first time from the reply), and which
+of the world's bodies it sees (the look's end, and LK_DENS as the bodies change: the world reports, the senses
+decide).  The worked-out layers (the light layer's grids) and each actor's eyes (adapted to the dark) are the
+senses' cache, in their own bank and main RAM, rebuilt as wanted, never another task's and never saved (a game
+carried on begins with eyes used to the light where the character stands).  The world's own changes to a chunk's
+squares (a square dug, a pit opened: store.c's change) keep the seen mark; the maker keeps a copy of the memory for
+the chunks out of the cache (seen.dat, above).  The senses' look (dq0p) is a task of swapped parts (as the world's
+is): its squares seen (view.c, cast.s), its walk, its lamps and the lights far off in part 1, what it perceives
+(sight.c) in part 2, the light layer's grids worked out in part 3, so what it answers the denizens stays in the main
+RAM; between its rows the look gives way to a command the UI has in hand (the hub's ui_cmd, half a second a look at
+most; not to one waiting for an answer of the world's that waits for the look), so the world's answers and the UI's
+words aren't shared with it.
 
 **The save** is on the SD card the player chooses (the user: "the games should write to the SD card of choice to
 save the dungeon, game state, etc."): a folder of the game's (asked for as a new game starts, or given: dq0 -d
@@ -535,8 +556,9 @@ as things in their own right (a skin's water, a flask's oil, lamp fuel) come wit
 **Light** (the character's): from the lit things it carries, the brightest's reach (a torch 20 feet, a candle 10, a
 lantern 30: the kinds'), in a hand, worn or hung from the belt; lit (light X, or the first unlit) with a tinderbox
 carried or another flame (one carried, or lit within reach), put out (douse X); a thing lit in the pack taken into a
-hand first.  Put down lit, it lights the squares round it it has a clear line to (dq0p's view.c, its lamps), seen
-from where the character stands; the room's words name what gives its light ("by the light of your candle").  The
+hand first.  Put down lit, it lights the squares round it it has a clear line to (the senses' light layer: dq0p's
+light.c, below), seen from where the character stands, and its own glow is seen much further off in the dark; the room's
+words name what gives its light ("by the light of your candle").  The
 world keeps it in the hub (pc_light, pc_lamp), its item store's; it takes the time and looks again (I_LIGHT).
 
 An item is **found** through the character's senses, as everything else is: only on a square it sees now, lit;
@@ -689,11 +711,59 @@ game.  Armour worn (the items' armour kinds: a leather cap, an iron helm, a leat
 byrnie, a mail hauberk, gauntlets, sandals, shoes, knee boots, hobnailed boots) is taken off a trap's strike and a burn where they strike, and off a blow in a fight (DENIZENS.md:
 fights).  (To come: the character's bleeding as time passes, and its treatment.)
 
+### Perception as layers
+
+The user (2026-10-16): the world has **layers**, one for each kind of perception.  Everything that affects a layer
+contributes to it where it is (its **emitters**), and each sense samples it like a directional antenna: by its
+facing, its acuity and its threshold; what it reads becomes the circumstances (the steps) of the referee's test, so
+the referee stays neutral.  "If I am standing in the dark, I should be able to see other light sources from much
+further away."
+
+- **Who owns what.**  The emitters are the world's (the bodies, the things lit, the fires, the doors, the rooms'
+  own light: its records); the worked-out layers are the senses' cache, always rebuildable; the senses answer every
+  actor's sampling (the character's look, the denizens' asking); the referee judges.
+- **Kept by how each spreads, none on a clock.**  **Light** (instant, in straight lines) is a grid, half a byte a
+  square (0 dark ... 15), 512 bytes a chunk, worked out as it's first wanted and again only near a change (built:
+  dq0p/light.c, 16 chunks' grids in a bank of the senses' own).  **Sound** (a pulse round corners over the graph of
+  rooms and openings) is slice 4.5's; **smell, smoke and tracks** (deposits fading with age) slice 4.1's; **morale**
+  (built from the others) slice 4.7's.
+- **The light layer.**  Its emitters now: a lit room's own light (R_LIT, for now its floor and walls, 6) and the lit
+  things lying about (a lamp of reach r, its kind's light: the squares within r each way it has a clear line to from
+  two feet above its floor, 2 (r - d) + 1 at d squares off: a torch 9 by it, 1 at its reach).  A chunk's grid is
+  worked out again only as something changes near it: a lamp lit, put out, put down or taken up (each look's lamps
+  against the last's), a door opened or shut or a square dug (the world's E_LIGHT, from its change records), the
+  stratum left.  The look takes what's lit from it (the character's own light folded in as it carries it), and seeing
+  a square is still a line from the eyes to a lit square (cast.s).
+- **Seeing a light isn't being lit by it.**  A light far off is its source in view, whose reach is far greater than
+  the light it casts: a source of brightness b (a lamp's 2 r + 1, a lit room's 6) is seen d squares off, beyond the
+  look's range, if d <= 16 b / (4 + a), a the light level the eyes are used to (31 squares at most), only against a
+  darker place than itself (the light where the eyes are), ahead or beside, a line clear: "A light shows far off
+  ahead" (a faint glow, if it barely stands out or is near its reach).  So a torch's light is seen 31 squares off by
+  eyes used to the dark, 11 by eyes holding one; a lit room's 24 and 7.
+- **The eyes adapt.**  Each actor's eyes are the senses' (the character's, each denizen's): at once to a brighter
+  light, dazzled a while by one six levels brighter than they're used to (half a second a level: "The light dazzles
+  you", no lights far off meanwhile), slowly to the dark: a 16th of a level each 1.9 s for a man (a torch's 9 to the
+  dark's 0 in some 4.5 minutes).  A wait's end asks the senses for the eyes alone (LK_EYES), so a wait in the dark
+  lets the lights far off show.  A kind's eyes are its data (kinds.txt's eyes: the tenths to a 16th of a level; a
+  rat's 4, a bear's 12, a kobold's 6, the dead's 0, at once); its darkvision (sight's second figure) is the less, by
+  4 / (4 + e), as its eyes are still e levels used to more light than there is.  For HOUSE.md (Phase 3): the
+  character's rate (19), the dazzle (6 levels, 5 tenths a level), the reach (16 b / (4 + a), 31 at most), a room's
+  light (6), a lamp's brightness (2 r + 1).
+- **The denizens' senses** are the senses' (the user's D3): each actor's mind asks (the hub's dsense, its kind's
+  sight, darkvision, hearing and eyes with it) as it decides, and is told whether it sees the character (lit, by its
+  own light or the light layer where it stands, within the kind's sight; else within its darkvision, as its eyes
+  allow; a line clear) or hears it (working, within its hearing: the sound layer's later), and how far it may go with
+  the answer standing: a far one's **coarse answer**, beyond all of them, no line cast, till it's gone further or the
+  character changes.  Its eyes adapt to the light it stands in (the layer's, and the character's light near it).
+  (What's left: a mind's use for a light seen far off; smell, slice 4.1's.)  The cost: dq0dig's eleven hours, 490
+  answers, some 40,000 cycles each (dq0dig 1,470.6M cycles of its 1,500M, 1,424.8M before the move).
+
 ### Seeing, and the map
 
-The world works out what the character sees (in front of it and to its sides, a clear line in plan and over the
-floors between in height, from its eyes five feet above its floor, within its sight's range, lit) and keeps a
-record of it in the hub, which the UI words: the place, the openings and where they lie (as it faces) and how far
+The senses work out what the character sees (in front of it and to its sides, a clear line in plan and over the
+floors between in height, from its eyes five feet above its floor, within its sight's range, lit: perception as
+layers, above) and keep a record of it in the hub, which the UI words: the place, the openings and where they lie (as it
+faces) and how far
 above or below, the other zones of the room, the ways on and whether they climb, the water it sees and hears.  The
 map is a window on the stratum round the character (one square a character, the screen's size), drawn by the world
 into the hub; a floor's height against the character's marked (1-9 tens of feet higher, a-i lower); a zoomed-out map
