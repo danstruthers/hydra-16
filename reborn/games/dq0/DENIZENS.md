@@ -124,11 +124,14 @@ allies.
 
 ### In the tasks
 
-- **The world** keeps the character out of the denizens' squares, adds those it sees to what it perceives, and
-  tells what happened to the character and the dungeon as events.
-- **The denizens' task** decides what each denizen means to do, by its kind, its attitude, its faction's goals and
-  what it senses (each denizen sees and hears through its own senses, as the character does); allies by the
-  character's requests; and does it, by the character's rules, publishing what they do (events, above).
+- **The world** owns every body, the character's and the denizens' near it (the actors) alike: it carries out what
+  each means to do by the same rules, strikes every blow (the referee asked), keeps the character out of the
+  denizens' squares, adds those it sees to what it perceives, and tells what happened as events (the character's
+  and the dungeon's; the denizens' bodies', their own queue's).
+- **The denizens' task** is their minds: it decides what each denizen means to do, by its kind, its attitude, its
+  faction's goals and what it senses (each denizen sees and hears through its own senses, as the character does);
+  allies by the character's requests; and says so, its intents to the world, as the UI says the character's (move
+  2.4, below).  The populations, the records and the denizens away from the character are its own.
 - **The referee** answers the tests and contests (influence, morale, combat), and keeps each creature's sheet.
 - **The UI** words it all, and parses the player's influence and requests ("persuade the goblin", "tell Grub to wait").
 
@@ -149,14 +152,14 @@ status line on the line; to the tasks' loops (the world's clock in long arithmet
 turns pace the denizens' task spinning while it waited for the clock).  So the denizens weren't what held the UI up;
 but the user's design is the right one for them, and it's this:
 
-- **The denizens' task moves its own**, at every pace, by the character's rules (a step it can walk, its time by its
-  pace and the slope; never onto the character's square, nor where its move ends, nor another's), on its own time:
-  it reads the world's clock (the hub's now) as it goes, and the world never asks it anything, nor waits for it.  At
-  the real paces it keeps up as it can (one fallen behind makes up a few seconds at most).  At the turns pace the
-  world still moves the clock on a slice at a time once the denizens have caught up (den_at), so the game is the
-  same whatever the tasks' timing: the tests' pace.
-- **It publishes what they do as events**: its own queue in the hub (the denizens' events: one writer, each reader
-  its own place, as with the world's; in a bank of their own, DEN_BANK), each an E_DEN: who (the actor), what (a step,
+- **The denizens' task decides for its own**, at every pace, on its own time: it reads the world's clock (the hub's
+  now) as it goes, and the world never asks it anything.  (It moved them itself, by the character's rules, till move
+  2.4: now it says what each means to do and the world moves them, below.)  At the real paces it keeps up as it can
+  (one fallen behind makes up a few seconds at most: the world's to see to).  At the turns pace it acts in its turn,
+  the world's word at each slice of the clock, so the game is the same whatever the tasks' timing: the tests' pace.
+- **What they do is published as events**: a queue of their own in the hub (the denizens' events: one writer, the
+  world since move 2.4, each reader its own place, as with the world's; in a bank of their own, DEN_BANK), each an
+  E_DEN: who (the actor), what (a step,
   a noise of its own, the character sensed, lost), how loud (0, silent, to 9), where (its stratum, its square), when,
   its kind, and whether the character sees that square now (the senses' marks: a hint for its perceiver).  An event
   doesn't say who perceives it.  Nobody waits for one, nor is rung: whoever reads them reads them as it goes, late
@@ -207,29 +210,31 @@ words; idle, the CPU 64% busy to 50% (the world's and the sound task's loops slo
   shut doors; heard moving, nearer), and wanders about its lair (a few squares, or its range), keeps to it, watches
   the character, keeps its distance (a shy one: till it's a few squares further; cornered close by, a step no
   nearer, a way round; cornered beside the character, it darts past it), or comes towards it (a bold one);
-  and moves it a square at a time by the character's rules (a step it can walk, its time by its pace and the slope),
-  itself, at every pace (the world once did, as it asked).  No two denizens share a square, and none goes onto the
-  character's, nor where the character's move ends (the hub's pc_tx, pc_ty).
+  and it's moved a square at a time by the character's rules (a step it can walk, its time by its pace and the
+  slope): by the world, as the denizens' task says (move 2.4: before it, the task moved them itself).  No two
+  denizens share a square, and none goes onto the character's, nor where the character's move ends (the hub's
+  pc_tx, pc_ty).
 - **Time:** at the turns pace the world moves the clock on through what the character does a slice at a time (ten
-  seconds: TURN_SLICE), each once the denizens' task has caught up with it (the hub's den_at; a task slow to, for a
-  while, is left to catch up as it can), so the denizens act through all of it: a ten-minute spell of digging gives
-  them ten minutes, and they may come and go while it lasts.  As it catches up the denizens' task moves its actors
-  itself (the world waiting, by the same rules), cheaply: those out of the character's sight and not sensing it a
-  few squares at a time (coarse), a watcher left a while unless the character changes (moves, its light, busy or
-  not).  At the real paces it moves them as the clock runs, the world never waiting for it.
+  seconds: TURN_SLICE), the denizens given their turn at each (since move 2.4: the hub's den_go; before it, once the
+  task had caught up with the clock, den_at; a task slow to, for a while, is left to catch up as it can), so the
+  denizens act through all of it: a ten-minute spell of digging gives them ten minutes, and they may come and go
+  while it lasts.  In its turn the denizens' task decides for its actors, the world carrying it out as it goes,
+  cheaply: those out of the character's sight and not sensing it a few squares at a time (coarse), a watcher left a
+  while unless the character changes (moves, its light, busy or not).  At the real paces they act as the clock runs,
+  the world never waiting for them.
 - **Away:** the denizens out but not actors move coarsely, every half minute to a minute and a half, to a square of
   their range about their lairs (in a chunk that's made: none is made for them), so the dungeon goes on where the
   character isn't; their records stay in the denizens' bank.
 - **Seen:** the world adds the actors on squares the character sees to what it perceives, after each look; and as
-  they change (the denizens' task bumps the hub's den_seq, or the world moves one it sees) it looks at them again,
+  they change (the world bumps the hub's den_seq as it moves one, or what one's doing changes) it looks at them again,
   and the UI says what stirs only when one has come into sight, gone from it, or is doing something else (watching,
   coming towards it, keeping its distance, going about its business): not at each step.  Not while the character's
   on its way somewhere (it looks about as it gets there); while it digs, yes.
-- **Heard:** what the actors do goes out as the denizens' events (a step quietly, a noise of their own every eighth,
-  loud as a squeak; a dash past the character louder; the character sensed, or lost, silently; what lies between
-  it and the character with each loud one, x[3]); the UI tells those the character hears and doesn't see, in each
-  kind's words, and the sound task plays them (SOUND.md); the actors hear each other's, and the character's digging,
-  and turn to them.
+- **Heard:** what the actors do goes out as the denizens' events (the world's: a step quietly, a noise of their own
+  every eighth, loud as a squeak; a dash past the character louder; the character sensed, or lost, silently; what
+  lies between it and the character with each loud one, x[3]); the UI tells those the character hears and doesn't
+  see, in each kind's words, and the sound task plays them (SOUND.md); the actors hear each other's, and the
+  character's digging, and turn to them.
 - **In the way:** the character can't walk onto a denizen's square: a walk along a passage, across a room or up to
   a square stops short of one (the way across a room found round them), and one in the very next square is told
   ("A giant rat is in the way.": E_NOWAY's N_DEN, the actor's).
@@ -238,19 +243,21 @@ words; idle, the CPU 64% busy to 50% (the world's and the sound task's loops slo
   spent on it), made the first time and kept after (its wounds, its state) in a bank of the referee's, saved with
   the game (beasts.dat).
 - **Fights** (the user's choice, 2026-10-16; the referee's, HarnMaster's melee, behind rs.h's RS_ATTACK): a hostile
-  actor (its attitude: the second step's, below) sensing the character beside it strikes at it, a round at a time (the referee's round: at the turns pace a
-  slice; at the real paces as the clock runs); an unfriendly one only when the character is beside it; a hostile one
-  comes towards it.  The character strikes at one beside it ("attack the rat", "hit", "fight": a round of its
-  time, the world's I_ATTACK, the blow posted for the denizens' task, pc_foe) with the best weapon it holds (else its
+  actor (its attitude: the second step's, below) sensing the character beside it strikes at it, a round at a time
+  (the referee's round: at the turns pace a slice; at the real paces as the clock runs); an unfriendly one only when
+  the character is beside it; a hostile one comes towards it.  The character strikes at one beside it ("attack the
+  rat", "hit", "fight": a round of its time, the world's I_ATTACK, the blow posted, pc_foe) with the best weapon it
+  holds (else its
   fists; or a fist, a foot, its head as it says: punch, kick, head butt the rat, by Unarmed, the book's hand, foot
   and head), defending by its stance ("defend dodge", "block", "counter", "none", "best"); its armour is what it wears
-  (the things tell the referee what's held and worn, and how well made: RS_EQUIP's marks).  Each blow is told
-  (E_FIGHT in the denizens' queue, its words in a ring in their bank: the referee's for the wounds and the armour, the
-  UI's for the rest, overlay 6), heard by the others (they turn to it) and played (the sound task's *hit, *swish).
-  A denizen wounded tests its morale (RS_MORALE: the book's Initiative test): broken (or a shy one cautious) it flees
-  a minute; cautious, it holds back a round.  One knocked senseless lies there till it comes round, and is finished
-  if it's struck meanwhile; one bleeding loses blood a minute at a time (RS_TIME) and may die of it; one dead leaves its
-  body (an item: a body, a skeleton's bones: the denizens' intent, I_BODY, the world's to put down) and never comes
+  (the things tell the referee what's held and worn, and how well made: RS_EQUIP's marks).  Every blow is the
+  world's to strike (since move 2.4: the denizens' task's before), the referee asked in the world's slot; each is
+  told (E_FIGHT in the denizens' queue, its words in a ring in their bank: the referee's for the wounds and the
+  armour, the UI's for the rest, overlay 6), heard by the others (they turn to it) and played (the sound task's *hit,
+  *swish).  A denizen wounded tests its morale (RS_MORALE: the book's Initiative test): broken (or a shy one
+  cautious) it flees a minute; cautious, it holds back a round.  One knocked senseless lies there till it comes round,
+  and is finished if it's struck meanwhile; one bleeding loses blood a minute at a time (RS_TIME) and may die of it;
+  one dead leaves its body (an item: a body, a skeleton's bones: the world's, put down as it dies) and never comes
   back.  The character knocked senseless waits it out (it can't defend meanwhile); dead, the game ends.
 - **Later:** allies fighting beside the character, and factions fighting each other; missiles (a bow through an
   arrow slit); the character's own bleeding and its treatment; their exploring and digging; the theme's factions
@@ -292,3 +299,54 @@ words; idle, the CPU 64% busy to 50% (the world's and the sound task's loops slo
   the head's names, kept) is its own from then on.  Left waiting out of the character's reach an hour, it goes its
   own way; harmed, it's hostile.
 - **A blow** (the fights', above) is harm done, as above; one that flees is unfriendly after.
+
+### Minds and bodies (Phase 2's move 2.4, 2026-10-16)
+
+One authority on state (DUNGEON.md): every body is the world's, the character's and the denizens' alike, and every
+blow.  The denizens' task is their minds.
+
+- **The minds:** the denizens' task decides for each actor, as before, from what it perceives (its own checks still:
+  move 2.5 gives it the senses' layers), its attitude, its faction and its plans (an ally's request, a noise heard,
+  fleeing), and says what it means to do, as the UI says the character's: its intents, a ring of their own in the
+  hub (di) that the world reads.  I_STEP a square (H_*; STEP_COARSE, a coarse move's: no time, nothing heard),
+  I_GOTO a dash (past the character, two squares), I_CLIMB along with the character up or down (to a square beside
+  it), I_WAIT, I_ATTACK a blow (the one struck at, the aim), I_ROUSE its wait cut short (a noise, a word, harm), and
+  I_ENTER and I_LEAVE as it becomes an actor (its body handed the world from its record: its place, its step, its
+  time, whether it bleeds) and stops being one; each with what it's doing (the world keeps it, and tells as one
+  notices the character or loses it) and the way it faces.  The populations, the records (their places while they
+  aren't actors: the coarse moves away from the character are the task's own), the attitudes, the memories, the
+  sway, the names, the KEPT and records banks stay the task's.
+- **The bodies:** an actor's record in the hub is two halves, its body the world's (state: a body there, its
+  stratum, square, facing, when it's free, its step, what it's doing) and its mind the denizens' (its name, its
+  record, attitude, faction, foe, kind, its remains, timid), each written by its own.  The world carries out the
+  intents in turn by the character's rules (dq0w/wbody.c, a swapped part): a square it can walk (step_ok: no wall,
+  no shut door), no one on it, nor the character, nor where the character's move ends; its time its step's, more
+  uphill, steeply down, on steps, as the character's.  It tells what the bodies do (E_DEN, the denizens' events:
+  the world's queue now), adds those the character sees to what it perceives, and bumps den_seq for its own look
+  again.  (Not yet: a trap under a denizen's foot; a denizen at a door it can't walk through, opening it.)
+- **The blows** (dq0w/wfight.c): the character's (I_ATTACK, the hub's pc_foe: struck at once at the real paces; at
+  the turns pace as the clock moves on, before it, so the denizens see it first in the slice) and a denizen's (its
+  I_ATTACK) alike, the referee asked RS_ATTACK in the world's own slot.  The world keeps what the blow left the body
+  in (senseless, the time it's out; fleeing; shaken, a round held back; bleeding; dead: its remains, a body or a
+  skeleton's bones, put down at once, and looked at again), puts the fights' words in their ring (FIGHT_AT, in the
+  denizens' events' bank: the actors' names, the referee's lines) and tells it (E_FIGHT).  The referee answers and
+  writes nothing of the hub's (its words its reply's).  The denizens take each blow to heart as they read it
+  (fought): one broken flees a while, unfriendly; its kin, as one falls, test their courage (RS_MORALE, in their own
+  slot); one the character struck at turns on it with its own (harmed); one dead, its record so.  The bleeding lose
+  blood a minute at a time (RS_TIME, the world's), seen to as the denizens' intents come in (and their turns' ends,
+  every five seconds at the real paces).  The referee sees the requests in the order it did when the denizens struck:
+  the character's blow, the morale tests it brings, the bleeding, the denizens' blows.
+- **The turns pace's handshake:** the world gives the denizens their turn (the hub's den_go, bumped, their doorbell
+  rung) at each slice of the clock, and at the same clock after work of its own (an event told since their last: the
+  character arrived somewhere, its work done, free again), and as the character gets somewhere, after the look and
+  before the denizens it sees are told (so those placed there, as the look's chunks are made, are in it).  They act
+  only in their turn, and say when they've done (I_DONE, the turn's number); the world carries out their intents as
+  they come, asleep on its doorbell between, and goes on once the I_DONE is in (one slow to, five seconds, is left to
+  catch up as it can).  So the game is the same whatever the tasks' timing: before it, the denizens took a pass as any
+  event woke them, at whatever the clock was then, and a blow's or a stratum's arrival could fall either side of a
+  slice.  The intents that change what another's decision reads (a step, a dash, a blow, a rouse, an entry) are waited
+  for; a wait isn't, but goes with the next, the ring's order the world's (so a dig's eleven hours cost the emulator
+  1.41 billion cycles, against 1.28 before: the handshakes).
+- **On the way:** the world's look again after a thing's handled now adds the denizens it sees (it left them out
+  since the item store's move); a body dead or gone from the world's keeping no longer has its bleeding reckoned (the
+  referee told it dead again each minute).

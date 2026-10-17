@@ -7,7 +7,7 @@
 ** kind's own sound) and the world's (the character's digging, the doors it works, a trap sprung), each read as it
 ** comes, by its own place in each queue (nobody waits for it, nor it for anyone).  A source is heard within its
 ** loudness times (hearing + 3) / 2 squares (the character's hearing, the referee's), each square of wall or rock
-** between four squares further, each shut door two (the denizens' task says what's between: E_DEN's x[3]), as the
+** between four squares further, each shut door two (the world says what's between: E_DEN's x[3]), as the
 ** UI tells it; its level falling off with the distance, a quarter less behind, muffled lower; on the speaker of the
 ** side it lies on as the character faces (ahead or behind: both).  Each pass the latest of each source is kept,
 ** and played loudest first: on the channel already playing that source, else a free one (a noise the PSG's first),

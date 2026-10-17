@@ -50,8 +50,9 @@ place in each (nobody waits for it, nor it for anyone), and for each source it h
 - **How far it carries**, by the character's hearing: heard within L times (hearing + 3) / 2 squares (as the UI
   tells it: DENIZENS.md's events), counted as the sound goes: each square of wall or rock on the line between it and
   the character as four squares further, each shut door as two (DUNGEON.md's: "a door, closed ... sound dulled").
-  What lies between is the denizens' task's to say (it reads the squares: the event's x[3], walls and rock in the low
-  four bits, shut doors in the high), since it has the dungeon's squares at hand and the sound task needn't.
+  What lies between is the event's teller's to say (the world's since move 2.4, as it moves the denizens' bodies: it
+  reads the squares, the event's x[3], walls and rock in the low four bits, shut doors in the high), since it has the
+  dungeon's squares at hand and the sound task needn't.
 - **How loud it is**: the sound's level, falling off as it goes: (reach - distance + 1) / (reach + 1) of it, never
   below a whisper; a quarter less from behind (ahead or behind: the chips can't tell the two apart by the speakers,
   so behind is softer); muffled (anything between) a few semitones lower too, duller.
@@ -97,8 +98,9 @@ words in the hub if it can and ends, and the game goes on silent; without the so
 
 ### In the tasks
 
-- **The denizens' task** publishes its actors' steps and noises (DENIZENS.md), and with each loud one on the
-  character's stratum what lies between it and the character (x[3]).
+- **The world** publishes the denizens' steps and noises as it moves their bodies (DENIZENS.md: the denizens' task
+  says what each means to do, a noise of its own with it, since move 2.4), and with each loud one on the character's
+  stratum what lies between it and the character (x[3]).
 - **The sound task** (games/dq0s: dq0s SEG ROLE LIBDIR, started by the UI first of its tasks: the denizens and the
   world wait till its table's in the hub, a second at most) puts the sounds' table in the hub (the denizens' events'
   bank, after their ring: SND_AT, so the UI has the words), reads the world's events and the denizens', and plays

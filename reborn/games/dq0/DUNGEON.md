@@ -47,7 +47,7 @@ the character and the denizens, so the world, the denizens and the senses read t
 goes out of the cache is dropped; what changed there (doors opened, traps set off, rock dug) is kept as a small
 record and laid over the chunk when it's made again, and what the character's seen of it as a map of bits.
 
-**One authority on state** (Phase 2, moves 2.2 and 2.3, 2026-10-16): the **maker** (dq0m) is pure, generation only,
+**One authority on state** (Phase 2, moves 2.2 to 2.4, 2026-10-16): the **maker** (dq0m) is pure, generation only,
 the same seed always the same chunk: it grows a stratum's plan and makes a chunk when it's asked (M_PLAN, M_CHUNK),
 lays the change records over a chunk it makes again (reading them, never writing them), and lists a chunk's things
 the first time it's made (its stock, a list beside the chunk's slot in the world bank, items.h's struct stock; the
@@ -74,8 +74,8 @@ parts 10, 11 and 13 and, for a thing handled, in the catalogue's bank).  The oth
 wear, the kit, a search ...), the world answering in its loop (and, while it waits for a look, what wants none:
 what's carried, the tools, a tool's wear); the **maker**'s stocking is a list the world puts down, in the order the
 chunks were stocked (before anyone looks for them: the world as it takes its intents, answers the UI, or works a
-door; the **senses**, as a look comes to a chunk stocked that isn't put down yet, ask it first, the hub's stock); the
-**denizens**' bodies are their intents (I_BODY, a ring of their own to the world, the hub's di); the senses read the
+door; the **senses**, as a look comes to a chunk stocked that isn't put down yet, ask it first, the hub's stock); a
+**denizen**'s remains the world puts down itself as it dies (move 2.4: the blow's the world's); the senses read the
 records for what the character perceives, and the world makes a thing its own (its number, its make: no two alike)
 as a look first sees it, after the look, in the order seen (so the things' own dice fall as they did when the senses
 made them).  The character's light (pc_light, pc_lamp) is worked out by the world as what it carries changes.  The
@@ -90,6 +90,22 @@ a search's: its regions).  What's left: the pages and their table (a page a regi
 between them as it changes region (taken up, put down, put in a container lying elsewhere: its number changing, and
 its contents' with it), a container's contents held by their place in its region (a region's file keeping them by
 their place in it, renumbered as it's read in), the readers going down only their regions' pages.
+
+**The bodies and the blows** (move 2.4) are the world's too: every body in the dungeon, the character's and the
+denizens' near it (the hub's actors, their body halves: place, facing, when free, step, what each is doing), and every
+blow struck.  The **denizens**' task (dq0d) is their minds: it decides what each means to do, by its own senses, its
+attitude, its faction and its plans, and says so, as the UI says the character's: its intents, a ring of their own to
+the world (the hub's di: I_STEP, I_GOTO, I_CLIMB, I_WAIT, I_ATTACK, I_ROUSE, I_ENTER, I_LEAVE; DENIZENS.md).  The
+**world** carries them out by the character's rules (dq0w/wbody.c: a square it can walk, no one on it, its time by its
+step and the slopes), tells what the bodies do in the denizens' events (its queue now: E_DEN, E_FIGHT), and strikes
+every blow (dq0w/wfight.c), the character's (I_ATTACK, pc_foe) and a denizen's alike: the **referee** asked in the
+world's slot, what the blow did kept by the world (senseless, fleeing, bleeding, dead: the remains an item), its words
+put by the world in the fights' ring; the referee writes nothing of the hub's but its own replies and records (the
+sheets, pcstatus, pcsum).  The denizens take each blow to heart as they read it (their courage, RS_MORALE in their own
+slot; their attitudes).  At the **turns pace** the world gives the denizens their turn (den_go) at each slice of the
+clock and after its own work at the same clock, and waits for their I_DONE (no den_at polling), carrying out their
+intents meanwhile: the same game whatever the tasks' timing, the referee's one stream of dice seeing the same
+requests in the same order.
 
 **The save** is on the SD card the player chooses (the user: "the games should write to the SD card of choice to
 save the dungeon, game state, etc."): a folder of the game's (asked for as a new game starts, or given: dq0 -d
