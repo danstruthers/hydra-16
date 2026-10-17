@@ -142,7 +142,6 @@ go:
             SWFN        stock_down, 13
             SWFN        lay_body, 13
             SWFN        den_intents, 14
-            SWFN        dens_seen, 14
             SWFN        pc_blow, 15
             SWFN        den_blow, 15
             SWFN        bled, 15

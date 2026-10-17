@@ -17,11 +17,14 @@
 #include "sight.h"
 #include "things.h"
 
-/* A look about for the character, from what the hub has of it (its square, its facing, its light, its senses) */
+static unsigned char sees;                      /* (The denizens seen changed: the look's reply's ch) */
+
+/* A look about for the character, from what the hub has of it (its square, its facing, its light, its senses; the
+** squares it walked to get there), the denizens it sees with it */
 static void look (void)
 {
-    unsigned char face, light, sight, dark, sn, first, own;
-    unsigned x, y;
+    unsigned char face, light, sight, dark, sn, first, own, wd, wn;
+    unsigned x, y, wx, wy;
 
     hub_map (0);
     face = HUB->pc_face;
@@ -34,10 +37,20 @@ static void look (void)
     x = HUB->pc_x;
     y = HUB->pc_y;
     first = HUB->look.first;
+    wx = HUB->look.wx;
+    wy = HUB->look.wy;
+    wd = HUB->look.wd;
+    wn = HUB->look.wn;
     sync_strata ();                             /* (The strata's records, the world bank's) */
+    if (wn) {
+        felt (sn, wx, wy, wd, wn);              /* (The squares walked, remembered: felt in the dark) */
+    }
     things_lamps (sn, x, y);                    /* (The lit things lying about: a torch put down) */
     view (sn, x, y, face, light, sight, dark);
-    perceive (sn, x, y, face, own, first);
+    first = perceive (sn, x, y, face, own, first);
+    sees = dens_seen ();                        /* (The denizens it sees with it: the world's bodies) */
+    hub_map (0);
+    HUB->look.first = first;
 }
 
 /* A number, an argument's (atoi's, without the C library's ctype) */
@@ -65,7 +78,13 @@ int main (int argc, char* argv[])
             break;
         }
         if (hub_posted (&HUB->look)) {
-            look ();
+            if (HUB->look.kind == LK_DENS) {
+                sees = dens_seen ();            /* (Only the denizens seen, looked at again: their bodies changed) */
+            } else {
+                look ();
+            }
+            hub_map (0);
+            HUB->look.ch = sees;
             hub_reply (&HUB->look);
         }
     }

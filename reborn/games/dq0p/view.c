@@ -100,6 +100,32 @@ static void __fastcall__ run (unsigned x, unsigned y, unsigned char n)
     }
 }
 
+/* The squares a walk went (the world's: from x, y its first way d, n squares; the look's walk), felt in the dark,
+** remembered (T_SEEN): as dq0w.c's walk goes them, along a passage, on at its bends, through a door, into a room */
+void __fastcall__ felt (unsigned char sn, unsigned x, unsigned y, unsigned char d, unsigned char n)
+{
+    unsigned char* p;
+    unsigned char k, w;
+
+    while (n--) {
+        x += dir_x[d];
+        y += dir_y[d];
+        if (!(p = at (sn, x, y))) {
+            return;
+        }
+        *p |= T_SEEN;
+        if (!n || TILE (*p) == T_DOOR) {
+            continue;
+        }
+        for (k = 0, w = d; k < 4; ++k) {        /* (On: the one way that isn't back, the walk's) */
+            if (k != ((d + 2) & 3) && step_ok (sn, x, y, k)) {
+                w = k;
+            }
+        }
+        d = w;
+    }
+}
+
 /* The squares in the chunk's column from x, to x1 at most: how many */
 static unsigned char __fastcall__ band (unsigned x, unsigned x1)
 {

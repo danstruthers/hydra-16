@@ -233,9 +233,10 @@ static unsigned __fastcall__ cost (int dz, unsigned char steps)
     return c * mul_;
 }
 
-/* From (mx, my), heading d, to the next place: the time it takes (mx, my where it ends, mface its heading); see:
-** the squares walked seen (felt, in the dark) */
-static unsigned long __fastcall__ walk (unsigned char d, unsigned char see)
+/* From (mx, my), heading d, to the next place: the time it takes (mx, my where it ends, mface its heading; walked
+** its squares: the senses remember them felt, the look's walk) */
+static unsigned char walked;
+static unsigned long __fastcall__ walk (unsigned char d)
 {
     unsigned long t = 0;
     unsigned char n = 0, w, k, nd, inside;
@@ -252,9 +253,6 @@ static unsigned long __fastcall__ walk (unsigned char d, unsigned char see)
         ++n;
         p = at (sn_, mx, my);
         t += cost (C->elev[cy_][cx_] - z, TILE (*p) == T_STEPS);
-        if (see) {
-            *p |= T_SEEN;
-        }
         inside = TILE (*p) != T_DOOR && room_of (sn_, mx, my) != 0xFF;
         if (inside) {                           /* (Through a door, into a room) */
             break;
@@ -274,6 +272,7 @@ static unsigned long __fastcall__ walk (unsigned char d, unsigned char see)
         d = w;
     }
     mface = d;
+    walked = n;
     return t;
 }
 
@@ -403,6 +402,18 @@ static unsigned char dark (void)
     return !(*at (sn_, mx, my) & T_VIS);
 }
 
+/* The denizens the character sees looked at again (the senses asked: their bodies the world's, which are seen the
+** senses' to decide, into what it perceives): 1 if one's come into sight, gone from it, or doing otherwise */
+static unsigned char dens_seen (void)
+{
+    hub_map (0);
+    HUB->look.kind = LK_DENS;
+    hub_call (&HUB->look, T_SENSES);
+    HUB->look.state = REQ_FREE;
+    HUB->look.kind = LK_LOOK;
+    return HUB->look.ch;
+}
+
 /* The denizens the character sees looked at again, as they've changed (their task's den_seq, or a step of one's the
 ** world made), the UI told if it sees them otherwise (not on its way somewhere: it looks about as it gets there) */
 static void stirred (void)
@@ -418,7 +429,7 @@ static void stirred (void)
 ** them) and what the UI asks that wants no look (what's carried, the tools, a tool's wear: the hub's header in the
 ** window after each) */
 static void clock_run (void);
-static void __fastcall__ looked (unsigned char first);
+static unsigned char __fastcall__ looked (unsigned char first);
 static void __fastcall__ see (unsigned char first);
 static void things (void)
 {
@@ -445,8 +456,9 @@ static void waiting (void)
     }
 }
 
-/* The senses asked to look about, and waited for, the things it saw made their own */
-static void __fastcall__ looked (unsigned char first)
+/* The senses asked to look about (the denizens it sees with it), and waited for, the things it saw made their own;
+** the first time there, the reply's (LF_ARRIVE: by the senses' memory of the room) */
+static unsigned char __fastcall__ looked (unsigned char first)
 {
     hub_map (0);
     HUB->look.first = first;
@@ -455,7 +467,10 @@ static void __fastcall__ looked (unsigned char first)
         waiting ();
     }
     HUB->look.state = REQ_FREE;
+    HUB->look.wn = 0;
+    first = HUB->look.first;
     owned ();
+    return first;
 }
 
 /* What the character sees, made again, and what it perceives recorded: the senses asked (dq0p), and waited for (the
@@ -464,7 +479,6 @@ static void __fastcall__ looked (unsigned char first)
 static void __fastcall__ see (unsigned char first)
 {
     looked (first);
-    dens_seen ();
     sn_ = HUB->pc_stratum;
 }
 
@@ -497,7 +511,7 @@ static void __fastcall__ across (unsigned char h, unsigned char r)
                 move.sn = sn_;
                 move.x = mx;
                 move.y = my;
-                t += walk (h >> 1, 0);
+                t += walk (h >> 1);
                 move.face = H_OF (mface);
                 hub_map (0);
                 if (!n && blocked && mx == move.x && my == move.y) {
@@ -874,7 +888,7 @@ void __fastcall__ s_go (unsigned char h)
             d = best;
             move.x = mx;
             move.y = my;
-            t = bt + walk (d, 0);
+            t = bt + walk (d);
             goto set_out;
         }
         if ((q = portal_at (bx, by)) != 0 && !(q->state & PS_OPEN)) {
@@ -900,7 +914,7 @@ void __fastcall__ s_go (unsigned char h)
         d = best;
         move.x = mx;
         move.y = my;
-        t = bt + walk (d, 0);
+        t = bt + walk (d);
     } else if ((h & 1) || !step_ok (sn_, mx, my, d)) {
         hub_map (0);
         no_way (N_NO_EXIT);
@@ -908,7 +922,7 @@ void __fastcall__ s_go (unsigned char h)
     } else {
         move.x = mx;
         move.y = my;
-        t = walk (d, 0);
+        t = walk (d);
         if (blocked && mx == move.x && my == move.y) {
             hub_map (0);
             den_way ();
@@ -1177,7 +1191,7 @@ static void turn (void);
 
 static void arrive (void)
 {
-    unsigned char r, first = 0, how = move.how;
+    unsigned char first, how = move.how;
 
     move.on = 0;
     if (how == A_DIGGING) {                     /* (A spell of digging done) */
@@ -1194,25 +1208,28 @@ static void arrive (void)
     my = move.y;
     dens_where ();
     if (how == A_WALKED) {
-        walk (move.dir, 1);                     /* (Stopped short, if a denizen's come into its way) */
+        walk (move.dir);                        /* (Stopped short, if a denizen's come into its way; its squares the
+                                                **   senses', felt: the look's walk) */
     } else if ((how == A_CROSSED || how == A_STEPPED) && move.den) {
         blocked = den_on (mx + head_x[move.face], my + head_y[move.face]);
     } else if (how <= A_START) {                /* (Down, up, begun: looking into the room) */
         move.face = toward_middle ();
     }
-    if ((r = room_of (sn_, mx, my)) != 0xFF) {
-        first = !(C->room[r].flags & R_VISITED);
-        C->room[r].flags |= R_VISITED;
-    }
     hub_map (0);
+    if (how == A_WALKED) {
+        HUB->look.wx = move.x;
+        HUB->look.wy = move.y;
+        HUB->look.wd = move.dir;
+        HUB->look.wn = walked;
+    }
     HUB->pc_stratum = sn_;
     HUB->pc_x = mx;
     HUB->pc_y = my;
     HUB->pc_face = move.face;
     bound_for (mx, my);
-    looked (first);                             /* (What it sees: the denizens there, at the turns pace, given their
+    first = looked (LF_ARRIVE);                 /* (What it sees: the denizens there, at the turns pace, given their
                                                 **   turn first, the chunks round it made, so it sees them as it gets
-                                                **   there) */
+                                                **   there; the first time in a room, the senses' memory's) */
     if (!HUB->tpr && !HUB->paused && !HUB->hold) {
         turn ();
     }

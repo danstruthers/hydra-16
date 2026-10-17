@@ -6,8 +6,8 @@
 ** ends), its time its step's, more uphill, steeply down, on steps (as the world's cost () has the character's); a
 ** dash past the character; a wait; come along with the character up or down; a blow (wfight.c's); a body come into
 ** its keeping, gone from it.  What the bodies do is told in the denizens' events (E_DEN: a step, a noise, the
-** character noticed or lost), the world's to write; and those on squares the character sees are added to what it
-** perceives (dens_seen: the senses' record's).
+** character noticed or lost), the world's to write.  Which the character sees is the senses' to decide (dq0p's
+** dens.c, the world asking: dq0w.c's dens_seen).
 **
 ** All of it swapped part 14's (../dq0/swap.inc: dq0w.cfg's SW14), called through its stubs (bank.s's).
 */
@@ -31,7 +31,6 @@ unsigned char bps;
 struct msg bev;
 unsigned char bleeds;
 unsigned bled_at;
-static unsigned sig[NACTORS];                   /* (Each body as it was seen: its record, what it's doing) */
 
 #pragma code-name ("SW14CODE")
 #pragma rodata-name ("SW14RODATA")
@@ -236,34 +235,4 @@ void s_den_intents (void)
     if (any) {
         hub_ring (T_DENIZENS);
     }
-}
-
-/* The bodies the character sees (on squares it sees now), added to what it perceives (the senses' record's, in their
-** bank: SEE_DENS at most): 1 if one's come into sight since it was last looked at, gone from it, or is doing
-** something else.  (Body bd's room: none's at hand meanwhile) */
-unsigned char s_dens_seen (void)
-{
-    static unsigned char k, n, ch;
-    static unsigned char* p;
-    static unsigned s;
-
-    for (k = n = ch = 0; k < NACTORS; ++k) {
-        hub_map (0);
-        memcpy (&bd, &HUB->actor[k], sizeof bd);
-        s = 0;
-        if (bd.state && bd.sn == HUB->pc_stratum && n < SEE_DENS && (p = at (bd.sn, bd.x, bd.y)) != 0 &&
-            (*p & T_VIS)) {
-            hub_map (SIGHT_BANK);
-            memcpy (&SIGHT->den[n++], &bd.x, sizeof SIGHT->den[0]);
-            s = 0x8000U | bd.doing << 8 | bd.den;
-        }
-        if (s != sig[k]) {
-            sig[k] = s;
-            ch = 1;
-        }
-    }
-    hub_map (SIGHT_BANK);
-    SIGHT->ndens = n;
-    hub_map (0);
-    return ch;
 }

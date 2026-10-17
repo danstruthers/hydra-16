@@ -1,7 +1,7 @@
 /*
 ** wbody.h - (dq0w) the denizens' bodies (DENIZENS.md: in the tasks), the world's as the character's is: what the
-** main code (dq0w.c) and their swapped parts share, in the main RAM: wbody.c's part 14 (their intents carried out,
-** the bodies the character sees), wfight.c's part 15 (the blows, the bleeding).
+** main code (dq0w.c) and their swapped parts share, in the main RAM: wbody.c's part 14 (their intents carried out),
+** wfight.c's part 15 (the blows, the bleeding).
 */
 
 #ifndef _WBODY_H
@@ -27,8 +27,6 @@ extern unsigned char den_saw;                   /* A body fallen: the world to l
 void den_intents (void);                        /* (Part 14) The denizens' intents carried out (the hub's di), they
                                                 **   rung after */
 #define DEN_INTENTS()   (HUB->di_tail != HUB->di_head)  /* (Some to carry out: the hub's header in the window) */
-unsigned char dens_seen (void);                 /* (Part 14) The bodies the character sees, added to what it
-                                                **   perceives: 1 if one's come into sight, gone, or doing otherwise */
 void pc_blow (void);                            /* (Part 15) The character's blow at the actor it's posted (the hub's
                                                 **   pc_foe) */
 void __fastcall__ den_blow (unsigned char def, unsigned char z);  /* (Part 15) Body bd's blow at def (I_ATTACK's) */

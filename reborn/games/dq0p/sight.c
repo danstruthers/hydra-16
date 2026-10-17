@@ -149,7 +149,7 @@ static void __fastcall__ zones_seen (struct room* rp, unsigned char mine, unsign
     }
 }
 
-void __fastcall__ perceive (unsigned char sn, unsigned x, unsigned y, unsigned char face, unsigned char light,
+unsigned char __fastcall__ perceive (unsigned char sn, unsigned x, unsigned y, unsigned char face, unsigned char light,
     unsigned char first)
 {
     struct stratum* s = &strata[sn];
@@ -157,7 +157,7 @@ void __fastcall__ perceive (unsigned char sn, unsigned x, unsigned y, unsigned c
     struct zone* z;
     unsigned char* p = at (sn, x, y);
     struct portal* q;
-    unsigned char r, k, i, j, lx = cx_, ly = cy_, whole, d;
+    unsigned char r, k, i, j, lx = cx_, ly = cy_, whole, d, arrive = first & LF_ARRIVE;
     int myz = C->elev[ly][lx], dz;
     unsigned area;
 
@@ -170,11 +170,18 @@ void __fastcall__ perceive (unsigned char sn, unsigned x, unsigned y, unsigned c
     S.y = y;
     S.z = s->datum + myz;
     S.dark = !(*p & T_VIS);
-    S.first = first;
     S.ceil = C_UNSEEN;
+    if (arrive) {
+        first = 0;                              /* (Come in: the first time in a room the senses don't remember, and
+                                                **   remembered from now on) */
+    }
     S.eye = eye;
     if ((r = room_of (sn, x, y)) != 0xFF) {
         rp = C->room[r];
+        if (arrive) {
+            first = !(rp.flags & R_VISITED);
+            C->room[r].flags |= R_VISITED;
+        }
         S.where = W_ROOM;
         S.kind = rp.kind;
         S.lit = (rp.flags & R_LIT) != 0;
@@ -267,10 +274,12 @@ void __fastcall__ perceive (unsigned char sn, unsigned x, unsigned y, unsigned c
             }
         }
     }
+    S.first = first;
     traps_seen (sn, x, y, face);
     things_stocked ();                          /* (A chunk the maker's stocked: its things put down, the world's) */
     things_seen (&S, sn, x, y, face);           /* (The things it sees lying about) */
     hub_map (SIGHT_BANK);                       /* (The record the senses' bank's) */
     memcpy (SIGHT, &S, sizeof S);
     hub_map (0);
+    return first;
 }
