@@ -24,14 +24,14 @@ function build({ dir, objdir, say = () => {} }) {
   out[21] = facs.length + 1;
   kinds.forEach((f, i) => {
     const at = KREC * (i + 1), pair = s => s.split('-').map(Number), fac = names.indexOf(f[11]) + 1;
-    if (f.length !== 14 || f[0].length > 11 || f[1].length > 7 || !fac || !(f[12] in MINDS))
+    if (f.length !== 15 || f[0].length > 11 || f[1].length > 7 || !fac || !(f[12] in MINDS))
       throw new Error(`dq0d/kinds.txt: line ${i + 1}: ${f.join(' | ')}`);
     out.write(f[0], at, 'latin1');
     out.write(f[1], at + 12, 'latin1');
     const [d0, d1] = pair(f[4]), [n0, n1] = pair(f[5]), [sl, sd] = pair(f[8]);
     const flags = [...f[2]].reduce((a, c) => a | (WAYS[c] || 0), 0);
     const styles = [...f[3]].reduce((a, c) => a | (1 << STYLES[c]), 0);
-    [flags, styles, d0, d1, n0, n1, +f[6], +f[7], sl, sd, +f[9], +f[10], fac, MINDS[f[12]], +f[13] & 0xFF]
+    [flags, styles, d0, d1, n0, n1, +f[6], +f[7], sl, sd, +f[9], +f[10], fac, MINDS[f[12]], +f[13] & 0xFF, +f[14]]
       .forEach((v, k) => { out[at + 20 + k] = v; });
   });
   const rel = names.map(() => names.map(() => AT.i)), base = KREC * (kinds.length + 1);

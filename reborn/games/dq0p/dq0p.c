@@ -20,6 +20,7 @@
 #include "things.h"
 #include "light.h"
 #include "eyes.h"
+void sense_actor (void);                        /* (sense.c's: the hub's dsense answered) */
 
 static unsigned char sees;                      /* (The denizens seen changed: the look's reply's ch) */
 
@@ -122,6 +123,12 @@ int main (int argc, char* argv[])
         hub_map (0);
         if (HUB->quit) {
             break;
+        }
+        if (hub_posted (&HUB->dsense)) {      /* (A denizen's senses, its mind asking: sense.c's) */
+            light_events ();
+            sense_actor ();
+            hub_reply (&HUB->dsense);
+            hub_map (0);
         }
         if (hub_posted (&HUB->look)) {
             light_events ();                    /* (The world's lights and doors changed: the light layer's out of

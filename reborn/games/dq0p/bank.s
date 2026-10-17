@@ -18,9 +18,10 @@ ovx:        .res        1
 
             .include    "../dq0/swap.inc"
 
-            SWPART      1, 1                ; A look's squares seen (view.c, cast.s), its walk felt, its lamps (things.c)
+            SWPART      1, 1                ; A look's squares seen (view.c, cast.s), its walk felt, its lamps (things.c),
+                                            ;   the lights far off (eyes.c)
             SWPART      2, 2                ; What the character perceives made (sight.c)
-            SWPART      3, 3                ; The light layer's grids worked out (light.c), the lights far off (eyes.c)
+            SWPART      3, 3                ; The light layer's grids worked out (light.c)
 
             SWFN        view, 1
             SWFN        felt, 1
@@ -28,4 +29,4 @@ ovx:        .res        1
             SWFN        lamp_on, 1
             SWFN        perceive, 2
             SWFN        make, 3
-            SWFN        glows, 3
+            SWFN        glows, 1

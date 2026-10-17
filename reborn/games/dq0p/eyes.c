@@ -81,9 +81,9 @@ unsigned char __fastcall__ clear_line (unsigned char sn, unsigned x, unsigned y,
     return 1;
 }
 
-/* ---- Part 3's (swapped: bank.s's stubs, once a look) */
-#pragma code-name ("SW3CODE")
-#pragma rodata-name ("SW3RODATA")
+/* ---- Part 1's (swapped: bank.s's stubs, once a look, with the look's squares) */
+#pragma code-name ("SW1CODE")
+#pragma rodata-name ("SW1RODATA")
 
 /* The lights the character sees far off (beyond range, the look's), into G: the lit things lying about (the
 ** light layer's lamps), the lit rooms in chunks the cache has; ahead or beside it, a clear line to each (the brightest

@@ -1407,6 +1407,8 @@ int main (int argc, char* argv[])
             pending[0] = 0;
         }
         if ((l = (char*) t_next ()) != 0 && (!busy || (!held && !(held = !at_once (l))))) {
+            hub_map (0);
+            HUB->ui_cmd = 1;                    /* (A command in hand: the senses' look gives way meanwhile) */
             f = names_in (l = t_line ());       /* (The line's first look, in the overlays' banks: a part's
                                                 **   copied in only for a line that may be its; an ordinary
                                                 **   command's only part 2, the commands') */
@@ -1428,6 +1430,8 @@ int main (int argc, char* argv[])
             }
             held = 0;
             status ();
+            hub_map (0);
+            HUB->ui_cmd = 0;
         }
         t_done ();
         hy_sleep_ticks (2);

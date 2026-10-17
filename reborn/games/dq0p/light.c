@@ -30,6 +30,7 @@ extern unsigned char g_m, g_nl, g_li[NLAMPS], g_lj[NLAMPS], g_lr[NLAMPS], g_lzl[
 void __fastcall__ cast_lamp (unsigned char w);
 void __fastcall__ s_grid (unsigned char sn, unsigned gx, unsigned gy, unsigned char w, unsigned char lm);
 extern unsigned char piece[256];
+extern unsigned char run_lb;                    /* (cast.s's light_in: the senses' bank) */
 
 static unsigned char lbank;                     /* The senses' own bank */
 static struct lslot {                           /* Each grid's: */
@@ -52,7 +53,7 @@ static struct lslot* q;
 
 void light_init (void)
 {
-    lbank = hy_banks_alloc (1);
+    run_lb = lbank = hy_banks_alloc (1);
     for (k = 0, q = L; k < LSLOTS; ++k, ++q) {
         q->g = (unsigned char*) 0x8000 + ((unsigned) k << 9);
     }
@@ -217,25 +218,6 @@ unsigned char __fastcall__ light_at (unsigned char sn, unsigned x, unsigned y)
     return i & 1 ? v >> 4 : v & 0x0F;
 }
 
-/* A run of n squares from i, j of grid p (view.c's run, a look's): G_LIT into the look's row (g: 2 bytes a square)
-** where light reaches; the senses' bank left in the window */
-void __fastcall__ light_run (unsigned char* p, unsigned char i, unsigned char j, unsigned char n, unsigned char* g)
-{
-    static unsigned char v;
-
-    hy_bank (lbank);
-    p += (j << 4) + (i >> 1);
-    for (; n; --n, ++i, g += 2) {
-        v = *p;
-        if (i & 1) {
-            v >>= 4;
-            ++p;
-        }
-        if (v & 0x0F) {
-            *g |= 0x04;                         /* (G_LIT) */
-        }
-    }
-}
 
 /* ---- Part 3's (swapped: bank.s's stub, as a grid's to be worked out): a chunk's grid worked out */
 #pragma code-name (push, "SW3CODE")

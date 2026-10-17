@@ -18,5 +18,3 @@ unsigned char __fastcall__ cached (unsigned char sn, unsigned x, unsigned y);  /
 unsigned char* __fastcall__ light_grid (unsigned char sn, unsigned x, unsigned y, unsigned char mk);  /* Its chunk's
                                                 **   grid, in the senses' bank (mk: worked out if it isn't), or 0 */
 unsigned char __fastcall__ light_at (unsigned char sn, unsigned x, unsigned y);    /* How bright it is: 0-15 */
-void __fastcall__ light_run (unsigned char* p, unsigned char i, unsigned char j, unsigned char n, unsigned char* g);
-                                                /* (view.c's run: G_LIT where light reaches, into a look's row) */

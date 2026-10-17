@@ -46,6 +46,11 @@ unsigned char __fastcall__ run_in (unsigned char n);
 void __fastcall__ run_out (unsigned char n);
 void __fastcall__ run_clear (unsigned char n);
 extern unsigned char piece[256];                /* (things.c's buffer in main RAM: a row of the grid) */
+extern unsigned char* run_l;                    /* (cast.s's light_in: the light layer's squares into a run's) */
+extern unsigned char run_lo, run_lb;
+void __fastcall__ light_in (unsigned char n);
+extern unsigned char at_bank;                   /* (chunk.c's: the chunk at () found last, its slot's bank and place) */
+extern struct chunk* at_chunk;
 
 struct lamp lamp[NLAMPS];
 unsigned char nlamps;
@@ -54,6 +59,23 @@ static unsigned char vs;                        /* The stratum */
 static unsigned bx0, by0, bx1, by1;             /* The squares the last view looked at (bx1 0: none) */
 static unsigned gx0, gx1;                       /* (The grid's: the view's) */
 static unsigned char lmode;                     /* (grid's: for the light layer, its lamps' lines) */
+static unsigned char lbk = 0xFF;                /* (run's: the chunk its light's grid is of, the cache's slot: its */
+static struct chunk* lck;                       /*   bank and place, as at () found it; the grid) */
+static unsigned char* lgp;
+
+/* The look giving way to the UI's command in hand (the hub's ui_cmd: its answer, the world's, the UI's words; a
+** fifth of a second a look at most), a tick at a time; the hub's header in the window after */
+#define GIVE_WAY        40
+static unsigned char gw;
+void give_way (void)
+{
+    hub_map (0);
+    while (HUB->ui_cmd && gw < GIVE_WAY) {
+        ++gw;
+        hy_sleep_ticks (1);
+        hub_map (0);
+    }
+}
 
 
 /* The squares from x (n of them, in one column of chunks: the stratum's chunks are counted from its x0) at row y,
@@ -63,7 +85,7 @@ static unsigned char lmode;                     /* (grid's: for the light layer,
 static void __fastcall__ run (unsigned x, unsigned y, unsigned char n)
 {
     static unsigned char k, a, doors;
-    static unsigned char* p, * l;
+    static unsigned char* p;
     static struct portal* d;
 
     if ((lmode && !cached (vs, x, y)) || !(run_p = p = at (vs, x, y))) {
@@ -83,8 +105,18 @@ static void __fastcall__ run (unsigned x, unsigned y, unsigned char n)
             piece[2 * k] |= G_OPAQUE;
         }
     }
-    if (!lmode && (l = light_grid (vs, x, y, 0)) != 0) {
-        light_run (l, cx_, cy_, n, piece);
+    if (lmode) {
+        return;
+    }
+    if (at_bank != lbk || at_chunk != lck) {    /* (Its chunk's grid: found once a chunk, each look) */
+        lbk = at_bank;
+        lck = at_chunk;
+        lgp = light_grid (vs, x, y, 0);
+    }
+    if (lgp) {
+        run_l = lgp + (cy_ << 4) + (cx_ >> 1);
+        run_lo = cx_ & 1;
+        light_in (n);
     }
 }
 
@@ -133,6 +165,7 @@ void __fastcall__ s_grid (unsigned char sn, unsigned gx, unsigned gy, unsigned c
     lmode = lm;
     g1 = gx + w - 1;
     for (xx = gx, c = 0; xx <= g1; xx += n, c += 2 * n) {
+        give_way ();
         n = band (xx, g1);
         for (j = 0, yy = gy; j < w; ++j, ++yy) {
             run (xx, yy, n);
@@ -177,6 +210,7 @@ void __fastcall__ s_view (unsigned char sn, unsigned x, unsigned y, unsigned cha
     static int z;
     static struct lamp* l;
 
+    gw = 0;
     own = at (sn, x, y) != 0;
     z = (own ? C->elev[cy_][cx_] : 0) + EYE;
     if (bx1) {                                  /* The last view's seen now unmarked: this one's are marked after */
@@ -224,12 +258,15 @@ void __fastcall__ s_view (unsigned char sn, unsigned x, unsigned y, unsigned cha
             light_grid (sn, xx, yy, 1);
         }
     }
+    lbk = 0xFF;
     s_grid (sn, gx0, gy0, w, 0);
     g_m = g_nl = 0;
     if (own) {
         cast_own ();                            /* (Its own square: seen if anything lights it, else remembered) */
     }
-    for (j = 0, w = 2 * range; j <= w; ++j) {  /* The lines cast, a row at a time */
+    for (j = 0, w = 2 * range; j <= w; ++j) {  /* The lines cast, a row at a time (giving way to the UI's command
+                                                **   between) */
+        give_way ();
         hub_map (LOOK_BANK);
         cast_row (j);
     }

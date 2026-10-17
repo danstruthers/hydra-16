@@ -74,7 +74,9 @@ struct dkind {
     unsigned char   faction;                    /* Its faction (factions.txt's, by number: 1 the first) */
     unsigned char   mind;                       /* M_* */
     signed char     sway;                       /* Steps for (or against) swaying it, besides its attitude and mind */
-    unsigned char   spare[5];
+    unsigned char   eyes;                       /* Its eyes' adapting to the dark: tenths to a 16th of a level (the
+                                                **   senses', who keep them: DUNGEON.md's perception as layers) */
+    unsigned char   spare[4];
 };
 #define K_SHY           0x01                    /* It keeps its distance from the character */
 #define K_LAIR          0x02                    /* It keeps to its lair */
@@ -706,31 +708,22 @@ static unsigned char __fastcall__ taken (unsigned char me, unsigned x, unsigned 
     return 0;
 }
 
-/* Its senses: whether actor a (the copy) senses the character, dist squares off (dx, dy): seen, by its light (or
-** with none, its darkvision), along a line clear of rock, walls and shut doors; or heard, moving, nearer */
-static unsigned char __fastcall__ senses (unsigned dist, int dx, int dy)
+/* Its senses: whether actor k (the copy a, its kind K's) senses the character: the senses asked (the hub's dsense:
+** DUNGEON.md's perception as layers, the senses answering for every actor): seen by the light layer and its eyes,
+** heard, as they find it; and how far it may go with the answer standing (slk: a far one's, the coarse answer) */
+static unsigned char slk[NACTORS];
+static unsigned char __fastcall__ senses (unsigned char k)
 {
-    unsigned char* p;
-    struct portal* q;
-    unsigned i;
-
-    if (a.sn != pcs) {
-        return 0;
-    }
-    if (dist <= K.hear && pcbusy) {
-        return 1;
-    }
-    if (dist > (pclit ? K.sight : K.dark)) {
-        return 0;
-    }
-    for (i = 1; i < dist; ++i) {
-        p = at (a.sn, a.x + dx * (int) i / (int) dist, a.y + dy * (int) i / (int) dist);
-        if (!p || !T_CLEAR (*p) || (TILE (*p) == T_DOOR && (q = portal_at (cx_, cy_)) != 0 &&
-            !(q->state & PS_OPEN))) {
-            return 0;
-        }
-    }
-    return 1;
+    hub_map (0);
+    HUB->dsense.who = k;
+    HUB->dsense.sight = K.sight;
+    HUB->dsense.dark = K.dark;
+    HUB->dsense.hear = K.hear;
+    HUB->dsense.eyes = K.eyes;
+    hub_call (&HUB->dsense, T_SENSES);
+    HUB->dsense.state = REQ_FREE;
+    slk[k] = HUB->dsense.slack;
+    return (HUB->dsense.res & (SN_SEEN | SN_HEARD)) != 0;
 }
 
 /* A step for actor k (the copy): a way it can walk to a square no one's on, within lim squares of its home; how:
@@ -1067,11 +1060,12 @@ static unsigned char __fastcall__ decide (unsigned char k)
     ddy = pcy - a.y;
     dist = apart (ddx, ddy);
     a.doing = DO_ROAM;
-    if (sgen[k] != sense_gen || sax[k] != a.x || say[k] != a.y) {
-        sgen[k] = sense_gen;                    /* (Sensed again only as it or the character has changed) */
+    if (sgen[k] != sense_gen || apart (a.x - sax[k], a.y - say[k]) > slk[k]) {
+        sgen[k] = sense_gen;                    /* (Sensed again only as the character has changed, or it's gone
+                                                **   further than the senses' answer stands for) */
         sax[k] = a.x;
         say[k] = a.y;
-        sres[k] = senses (dist, ddx, ddy);
+        sres[k] = senses (k);
     }
     foe = !pcdead && (a.attitude == AT_HOSTILE || (a.attitude == AT_UNFRIENDLY && dist <= 1));
     if (sres[k]) {

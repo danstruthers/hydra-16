@@ -574,13 +574,16 @@ walls:
 ; ---- A chunk's run of squares (run_p its squares, run_q their floors) into a row of the grid's (run_g, two bytes
 ; a square), or the marks back from it into the chunk
 
-            .export     _run_in, _run_out, _run_clear, _run_p, _run_q, _run_g
+            .export     _run_in, _run_out, _run_clear, _run_p, _run_q, _run_g, _light_in, _run_l, _run_lo, _run_lb
             .importzp   ptr3
 
             .bss
 _run_p:     .res        2
 _run_q:     .res        2
 _run_g:     .res        2
+_run_l:     .res        2                   ; (light_in's: the light layer's grid, the run's first square's byte,
+_run_lo:    .res        1                   ;   1 if it's that byte's high half; the senses' bank)
+_run_lb:    .res        1
 cnt:        .res        1
 doors:      .res        1
 
@@ -664,6 +667,50 @@ _run_clear:
             sta         (ptr1),y
             iny
             dex
+            bne         @sq
+            rts
+
+; void __fastcall__ light_in (unsigned char n): the light layer's squares (light.c's grid, at run_l: half a byte
+; each) into the run's (run_g): G_LIT where light reaches; the senses' bank (run_lb) left in the window
+_light_in:
+            sta         cnt
+            lda         _run_lb
+            sta         $00                 ; (The task's bank register)
+            lda         _run_l
+            sta         ptr1
+            lda         _run_l + 1
+            sta         ptr1 + 1
+            lda         _run_g
+            sta         ptr3
+            lda         _run_g + 1
+            sta         ptr3 + 1
+            ldx         _run_lo
+@sq:        lda         (ptr1)
+            cpx         #0
+            beq         @lo
+            lsr         a                   ; (The high half: the byte after it next)
+            lsr         a
+            lsr         a
+            lsr         a
+            inc         ptr1
+            bne         @hi
+            inc         ptr1 + 1
+@hi:        ldx         #0
+            cmp         #0
+            bra         @t
+@lo:        ldx         #1                  ; (The low half: the high half next)
+            and         #$0F
+@t:         beq         @next
+            lda         (ptr3)
+            ora         #G_LIT
+            sta         (ptr3)
+@next:      lda         ptr3
+            clc
+            adc         #2
+            sta         ptr3
+            bcc         @n
+            inc         ptr3 + 1
+@n:         dec         cnt
             bne         @sq
             rts
 
