@@ -394,11 +394,17 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   the world's, from the lit things it holds: its item store's), */
     char            pc_lamp[14];                /*   and the brightest of them, named */
     struct rs_summary pcsum;                    /* The character's summary (the referee's: its senses ...) */
-    /* A look about asked of the senses (dq0p: the world asks, as the character's moved, turned, lit a light): the
-    ** squares it sees marked, what it perceives recorded in the senses' bank's sight */
+    /* A look about asked of the senses (dq0p: the world asks, as the character's moved, turned, lit a light; kind
+    ** LK_*): the squares it sees marked, what it perceives recorded in the senses' bank's sight, the denizens it sees
+    ** with it (the world's bodies, the senses deciding which are seen); the senses' memory theirs to keep (the
+    ** squares seen, a room come into, R_VISITED: DUNGEON.md's perception as layers) */
     struct {
         RQH;
-        unsigned char first;                    /* The first time there */
+        unsigned char first;                    /* The first time there (| LF_ARRIVE: come into a room, the senses
+                                                **   to say if it's the first time, by their memory; the reply's) */
+        unsigned char ch;                       /* (The reply's: 1 a denizen come into sight, gone, doing otherwise) */
+        unsigned    wx, wy;                     /* A walk's start (the squares walked felt, remembered: LK_LOOK's), */
+        unsigned char wd, wn;                   /*   its first way (DIR_*) and its squares (0: none) */
     }               look;
     /* The map: the UI asks the maker, which draws its window round the character into the UI bank's map (each row a
     ** line, 0-ended) */
@@ -474,6 +480,9 @@ struct hub {                                    /* Bank 0, at $8000 */
 #define WA_MAP          0x04                    /* Mapping as it goes (the map's side the orientation's: its
                                                 **   materials to hand) */
 #define GOING_DARK      0x80
+
+enum { LK_LOOK, LK_DENS };                       /* The look's kinds: a look about; the denizens seen looked at again */
+#define LF_ARRIVE       0x40                    /* (The look's first: arrived, R_VISITED the senses') */
 
 /* The UI's bank's records (UI_BANK) */
 struct uirec {
@@ -603,8 +612,10 @@ struct wrec {
 **   own banks(1,PLAN_BANKS) maker                              (The plans: grown from the seed)
 **   own banks(CACHE_BANK(0),CACHE_BANKS) none                  (The chunks' cache: its room past three chunks)
 **   own chunk maker                                            (A chunk: made from the seed)
-**   own chunk.tile maker 2.5:senses,world                      (Its squares: the senses' seen marks in them)
-**   own chunk.room[*].flags maker 2.5:world                  (A room's: R_VISITED, the world's as it's come into)
+**   own chunk.tile maker +senses +world                        (Its squares: the senses' memory in them, seen and
+**                                                                seen now; the world's changes, a square dug, a pit
+**                                                                opened, store.c's change, the seen mark kept)
+**   own chunk.room[*].flags maker +senses                      (A room's: R_VISITED, the senses' memory, come into)
 **   own chunk.portal maker +world                              (Made from the seed; worked by the world, each change
 **   own chunk.trap maker +world                                (made in the chunk as it keeps its record: a state,
 **   own chunk.elev maker +world                                (a harm, a square dug, an opening: dq0w/store.c)
@@ -618,7 +629,7 @@ struct wrec {
 **   own bank(LOOK_BANK) senses
 **   own bank(THEME_BANK) ui                                    (The theme, and the names given)
 **   own bank(THEME_BANK,THEME_PLACE,NAMES_AT) maker            (The pieces' places)
-**   own bank(SIGHT_BANK) senses 2.5:world                      (What the character perceives)
+**   own bank(SIGHT_BANK) senses                                (What the character perceives, the denizens seen too)
 **   own bank(UI_BANK) ui
 **   own uirec.map maker +ui
 **   own uirec.things_text world +ui
