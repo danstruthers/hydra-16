@@ -1438,7 +1438,7 @@ int main (int argc, char* argv[])
 {
     unsigned shown = 0, t;
     unsigned long next = 0;
-    unsigned char held = 0;
+    unsigned char held = 0, quick = 0;
     unsigned char k, f;
     char* l;
 
@@ -1517,15 +1517,17 @@ int main (int argc, char* argv[])
                 }
             }
             held = at_hit = 0;
+            quick = 25;                         /* (Its answer looked for twice as often, a quarter second) */
             status ();
             hub_map (0);
             HUB->ui_cmd = 0;
         }
         t_done ();
-        hy_sleep_ticks (4);                     /* (A fiftieth of a second: the keys looked for, the world's
+        hy_sleep_ticks (quick ? (--quick, 2) : 4);  /* (A fiftieth of a second: the keys looked for, the world's
                                                 **   events told; each look at the keys a call of the console's,
                                                 **   some 9,000 cycles with its own, a quarter of the CPU at two
-                                                **   ticks while nothing happened) */
+                                                **   ticks while nothing happened; a hundredth just after a command,
+                                                **   its answer told the sooner) */
     }
     finish ();
     return 0;
