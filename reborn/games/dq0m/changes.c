@@ -1,13 +1,14 @@
 /*
 ** changes.c - (dq0m) what's changed in the dungeon laid over a chunk each time it's made again (DUNGEON.md: changing
 ** the dungeon): the change records (world.h's), the world's to write (dq0w/store.c), read here only: its region's in
-** the hub's change pages, or, if none of them are there, in its file in the save folder (rgSXXYY.dat, this game's
-** generation's), under the hub's change_lock.  And the squares the character has seen, each chunk's as a map of bits,
+** the hub's change pages, or, if none of them are there, in its file in the save folder (rgSXXYY.dat, its newest
+** valid version: ../dq0/vfile.inc's), under the hub's change_lock.  And the squares the character has seen, each chunk's as a map of bits,
 ** kept as the cache makes way for the chunk and laid over it when it's made again, in banks of the maker's own, and
 ** in the save (seen.dat: the UI asks, M_SAVE; back as the game's carried on, M_RESTORE).
 */
 
 #include <fcntl.h>
+#include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <hydra.h>
@@ -16,6 +17,9 @@
 #include "grow.h"
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
+
+#define VF_STATIC       static
+#include "../dq0/vfile.inc"
 
 #define SEEN_BANKS      2
 #define SEEN_PER_BANK   (0x2000 / sizeof (struct seen))
@@ -114,8 +118,7 @@ static unsigned char __fastcall__ over (struct chunk* k, unsigned x, unsigned y,
 ** from the hub's change pages, else from its file (the window as it was after): 1 if it's been stocked */
 unsigned char __fastcall__ changes_over (struct chunk* k, unsigned x, unsigned y)
 {
-    static struct chead hd;
-    static const char hex[] = "0123456789abcdef";
+    static struct vfh hd;
     struct cpage* q;
     unsigned w = hub_here ();
     unsigned char stocked = 0, p, i, m, had = 0, sn = k->sn, rx, ry;
@@ -142,28 +145,16 @@ unsigned char __fastcall__ changes_over (struct chunk* k, unsigned x, unsigned y
         }
     }
     hub_map (0);
-    if (!had && HUB->savedir[0]) {              /* (None in the pages: its file's, if this game has one) */
-        strcpy (path, HUB->savedir);
-        strcat (path, "/rg0xxyy.dat");
-        m = strlen (path) - 9;                  /* (Its stratum's digit) */
-        path[m] = hex[sn & 15];
-        path[m + 1] = hex[rx >> 4];
-        path[m + 2] = hex[rx & 15];
-        path[m + 3] = hex[ry >> 4];
-        path[m + 4] = hex[ry & 15];
-        if ((fd = open (path, O_RDONLY)) >= 0) {
-            hub_map (WORLD_BANK);
-            if (read (fd, &hd, sizeof hd) == sizeof hd && hd.magic == CH_MAGIC && hd.gen == WREC->cgen) {
-                for (left = hd.n; left; left -= m) {
-                    m = left > 8 ? 8 : left;
-                    if (read (fd, rb, m * sizeof (struct change)) != m * sizeof (struct change)) {
-                        break;
-                    }
-                    stocked |= over (k, x, y, m);
-                }
+    if (!had && vf_name (path, "rg", sn, rx, ry) && (fd = vf_open (path, 2, &hd)) >= 0) {
+        for (left = hd.n; left; left -= m) {    /* (None in the pages: its file's newest version, if this game has
+                                                **   one) */
+            m = left > 8 ? 8 : left;
+            if (read (fd, rb, m * sizeof (struct change)) != m * sizeof (struct change)) {
+                break;
             }
-            close (fd);
+            stocked |= over (k, x, y, m);
         }
+        close (fd);
     }
     hub_map (0);
     hy_sem_release (HUB->change_lock);

@@ -46,6 +46,7 @@ static unsigned char busy = 1;                  /* The character's doing somethi
 static unsigned place;                          /* Where this task is in the world's events */
 static int task_[NTASKS];                       /* Each task's number, as it was started (0: not) */
 static unsigned char test_start;
+static unsigned char small;                     /* (dq0 -C: the caches small, the tests') */
 static const char* kit;                         /* (dq0 -k: things more, as the game starts: a tool, ...) */
 static const char* savedir;                     /* (dq0 -d: the save's folder) */
 static unsigned char __fastcall__ things (unsigned char op, const char* name);
@@ -268,7 +269,7 @@ static void sheet (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    8                           /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    9                           /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -277,7 +278,12 @@ static void sheet (void)
                                                 **   world's own, world.dat: the clock, the character's place, state
                                                 **   and position, the puzzle's, the strata's records, no longer
                                                 **   here, the names after the header: a save of 5 to 7 made into
-                                                **   one, old_world, as the game's carried on) */
+                                                **   one, old_world, as the game's carried on; 9, no fixed size, the
+                                                **   stores paged to the folder: the region files in versions,
+                                                **   changes.dat their stamps, items.dat its chunks' table after its
+                                                **   banks; the save's last step the world's, so the region files
+                                                **   written back since the last are the save's only once it's
+                                                **   whole: a save of 8 read as it was) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
@@ -319,8 +325,9 @@ static int load_save (void)
                                                 **   world.dat in it, old_world's) */
 }
 
-/* The game kept: the referee's sheet, the maker's seen maps, the world's change records, and the game's state (the
-** hub's header in the window) */
+/* The game kept: the referee's sheet, the maker's seen maps, the denizens' records, the world's (its change records,
+** its things, its own: its last step, the region files written made the save's), and the game's state (the hub's
+** header in the window) */
 void s_save_game (void)
 {
     struct req* r;
@@ -337,17 +344,15 @@ void s_save_game (void)
     q->kind = M_SAVE;
     hub_call (q, T_MAKER);
     q->state = REQ_FREE;
-    if (task_[T_WORLD] > 0) {                   /* (The world's change records) */
-        HUB->wreq.kind = WQ_SAVE;
-        hub_call (&HUB->wreq, T_WORLD);
-        HUB->wreq.state = REQ_FREE;
-    }
-    if (task_[T_WORLD] > 0) {
-        things (IO_SAVE, "");                   /* (The things': items.dat, the world's) */
-    }
     if (task_[T_DENIZENS] > 0) {                /* (The denizens': dens.dat) */
         hub_call (&HUB->dsave, T_DENIZENS);
         HUB->dsave.state = REQ_FREE;
+    }
+    if (task_[T_WORLD] > 0) {                   /* (The world's: its change records, its things, items.dat, its
+                                                **   own, world.dat; then the save's versions, its last step) */
+        HUB->wreq.kind = WQ_SAVE;
+        hub_call (&HUB->wreq, T_WORLD);
+        HUB->wreq.state = REQ_FREE;
     }
     sv.magic = SAVE_MAGIC;
     sv.version = SAVE_VER;
@@ -461,6 +466,7 @@ static void start_world (unsigned long seed)
     }
     HUB->seed = seed;
     HUB->test_start = test_start;
+    HUB->small = small;
     hub_map (DEN_BANK);                         /* (The sounds' words: none till the sound task's put them there) */
     memset (SND_AT, 0, (2 * SND_KINDS + SND_WORLD) * SND_REC);
     hub_map (0);
@@ -1384,6 +1390,8 @@ void __fastcall__ s_begin (int argc, char* argv[])
             savedir = argv[++i];                /* (The save's folder) */
         } else if (!strcmp (argv[i], "-k") && i + 1 < argc) {
             kit = argv[++i];                    /* (A tool to begin with: till the items layer, the tests') */
+        } else if (!strcmp (argv[i], "-C")) {
+            small = 1;                          /* (For the tests: the caches small, paged to the save folder soon) */
         } else if (!strcmp (argv[i], "-T")) {
             ++test_start;                       /* (For the tests: the character begins at a way down; -T twice, by
                                                 **   the theme's first piece) */
@@ -1394,7 +1402,7 @@ void __fastcall__ s_begin (int argc, char* argv[])
             pace = argv[i][0] == 'r' ? PACE_RELAXED : argv[i][0] == 'm' ? PACE_MENACING :
                 argv[i][0] == 't' ? PACE_TURNS : PACE_NORMAL;
         } else {
-            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d folder] [-k things] [-T [-T]]");
+            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d folder] [-k things] [-T [-T]] [-C]");
         }
     }
     if (savedir && !load_save ()) {             /* (A game kept there: carried on) */

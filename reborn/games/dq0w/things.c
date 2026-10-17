@@ -8,8 +8,9 @@
 ** pc_light and pc_lamp); a chunk's things put down as the maker listed them stocking it (the world bank's stock, its
 ** slot CS_FRESH), a denizen's remains as it dies (the world's: wbody.c); the things a look saw made their own.  The
 ** senses read the records (what the character perceives: dq0p/things.c), the UI a thing's it sees; only the world
-** writes them, so there's no lock.  Kept with the game (dq0 -d): the store's banks as they are, the save folder's
-** items.dat.  A kind's record copied out of the catalogue's bank as it's wanted; the code that handles things is
+** writes them, so there's no lock.  Paged (ipage.c): the records a cache of the things carried and the chunks'
+** round the character, the rest by region in the save folder (no fixed count of things); kept with the game (dq0 -d):
+** the store's banks as they are, and their chunks' table, the save folder's items.dat.  A kind's record copied out of the catalogue's bank as it's wanted; the code that handles things is
 ** there too (at the end, its words with it).
 **
 ** Its main RAM's code is what everything calls on (a record copied out and back, a kind's, its words put in the
@@ -18,11 +19,8 @@
 ** through its stubs); part 11, what's carried listed, a tool's wear (those two called from the main RAM at once,
 ** not through part 10's serve: an inventory's, a dig's every spell's), a search, a thing described; part 13 the
 ** rarer work (the store begun, kept, the kit, the theme's kinds, a chunk's things and the remains put down, a thing
-** hidden), and a thing made its own (the kit's ten, the things a look saw).
-**
-** The store's records are a fixed number (NITEMS) in the hub's item banks, found by their place: the room for move
-** 2.8's paging (a region's things in a file of the save folder, the banks a cache, as the change records are:
-** store.c) is in how they're put down (a chunk's at once, a region's) and read (a look's, round the character).
+** hidden), and a thing made its own (the kit's ten, the things a look saw); part 17 the store's paging (ipage.c:
+** its chunks' things read in, put out; begun, kept).
 */
 
 #include <fcntl.h>
@@ -58,8 +56,7 @@ void __fastcall__ wear (const char* key, unsigned char by);
 unsigned char search (void);
 unsigned char __fastcall__ describe (const char* name);
 unsigned char __fastcall__ hide (const char* name);
-void __fastcall__ keep (unsigned char back);    /* Part 13 */
-void __fastcall__ make_own (unsigned i);
+void __fastcall__ make_own (unsigned i);         /* Part 13 */
 void seen_owned (void);
 void kit (void);
 void theme_kinds (void);
@@ -573,9 +570,6 @@ unsigned char s_serve (void)
     case IO_LIST:
         list ();
         break;
-    case IO_SAVE:
-        keep (0);
-        break;
     case IO_TOOLS:
         tools ();
         break;
@@ -881,11 +875,11 @@ unsigned char __fastcall__ s_describe (const char* name)
 static const unsigned char tough[NMATS] = MAT_TOUGH;
 
 /* Its own numbers, for the things' differences (not the game's: those are the referee's and the maker's) */
-static unsigned rs = 0x2545;
+unsigned irs = 0x2545;                          /* (ipage.c's begun: the game's seed's) */
 static unsigned char __fastcall__ rnd (unsigned char n)
 {
-    rs = rs * 25173U + 13849U;
-    return (rs >> 8) % n;
+    irs = irs * 25173U + 13849U;
+    return (irs >> 8) % n;
 }
 
 /* ---- A thing made its own, as the world first comes to it (no two alike): its number (record 0 keeps the last
@@ -943,14 +937,15 @@ void s_seen_owned (void)
 }
 
 /* A free record taken, its thing put down (where, sn, x, y, qty: the rest none, not yet its own): its number, or 0
-** (the store full) */
+** (the store full: a chunk of it put out, ipage.c's, if one can be) */
+unsigned ilim = NITEMS;                         /* (The store's records used, at most: dq0 -C's fewer) */
 static unsigned __fastcall__ put_down (unsigned char kind, unsigned char where, unsigned char sn, unsigned x,
     unsigned y, unsigned char qty)
 {
     struct item* p;
     unsigned i;
 
-    for (i = 1; i < NITEMS; ++i) {              /* (Record 0 is never one: "none") */
+    for (i = 1; i < ilim || it_room () && (i = 1); ++i) {   /* (Record 0 is never one: "none") */
         p = item_at (i);
         if (!p->kind) {
             memset (p, 0, sizeof *p);
@@ -964,76 +959,6 @@ static unsigned __fastcall__ put_down (unsigned char kind, unsigned char where, 
         }
     }
     return 0;
-}
-
-/* ---- The store kept (back: read again), the save folder's items.dat: its banks a piece at a time, through main
-** RAM (the window's only the task's own: the kernel's copies want the task's memory) */
-#define PIECE   64
-void __fastcall__ s_keep (unsigned char back)
-{
-    char p[48];
-    unsigned char b;
-    unsigned off;
-    int fd;
-
-    hub_map (0);
-    if (!HUB->savedir[0]) {
-        return;
-    }
-    strcpy (p, HUB->savedir);
-    strcat (p, "/items.dat");
-    if ((fd = back ? open (p, O_RDONLY) : open (p, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0) {
-        return;
-    }
-    for (b = 0; b < ITEM_BANKS; ++b) {
-        for (off = 0; off < 0x2000; off += PIECE) {
-            if (back) {
-                if (read (fd, tbuf, PIECE) != PIECE) {
-                    memset (tbuf, 0, PIECE);
-                }
-                hub_map (CAT_BANK + 1 + b);
-                memcpy ((char*) 0x8000 + off, tbuf, PIECE);
-            } else {
-                hub_map (CAT_BANK + 1 + b);
-                memcpy (tbuf, (char*) 0x8000 + off, PIECE);
-                write (fd, tbuf, PIECE);
-            }
-        }
-    }
-    close (fd);
-}
-
-/* The store begun: the catalogue read into the hub's catalogue bank (dir/dq0w.cat: kinds.c's and the code that
-** handles things, linked at $8000), the store emptied; a game carried on, its kept read in, and the character's light
-** from it */
-void __fastcall__ s_items_begin (const char* dir)
-{
-    char p[48];
-    unsigned off;
-    unsigned char b;
-    int fd, n;
-
-    strcpy (p, dir);
-    strcat (p, "/dq0w.cat");
-    hub_map (CAT_BANK);
-    memset ((void*) 0x8000, 0, 0x2000);
-    if ((fd = open (p, O_RDONLY)) >= 0) {
-        for (off = 0; off < 0x2000 && (n = read (fd, tbuf, sizeof tbuf)) > 0; off += n) {
-            hub_map (CAT_BANK);
-            memcpy ((char*) 0x8000 + off, tbuf, n);
-        }
-        close (fd);
-    }
-    for (b = 0; b < ITEM_BANKS; ++b) {          /* (The store empty; a game carried on, its kept) */
-        hub_map (CAT_BANK + 1 + b);
-        memset ((void*) 0x8000, 0, 0x2000);
-    }
-    hub_map (0);
-    rs = (unsigned) HUB->seed | 1;
-    if (HUB->resume) {
-        s_keep (1);
-        light_now ();
-    }
 }
 
 /* The theme's kinds (the theme bank's, the UI's: theme.h) into the catalogue, after its own */
@@ -1155,6 +1080,10 @@ void __fastcall__ s_stock_down (unsigned char k)
 
     hub_map (WORLD_BANK);
     sn = WREC->cslot[k].sn;
+    x0 = WREC->cslot[k].cx;
+    y0 = WREC->cslot[k].cy;
+    it_need (sn, x0, y0);                       /* (Its chunk's things in the store: none yet, as a rule) */
+    hub_map (WORLD_BANK);
     x0 = WREC->strata[sn].x0 + (WREC->cslot[k].cx << CW_BITS);
     y0 = WREC->strata[sn].y0 + (WREC->cslot[k].cy << CW_BITS);
     n = WREC->stock[k].n;
@@ -1182,6 +1111,8 @@ void __fastcall__ s_stock_down (unsigned char k)
 /* A denizen's remains put down where it fell (kind: KI_BODY, KI_BONES; the world's, wbody.c's: it died) */
 void __fastcall__ s_lay_body (unsigned char kind, unsigned char sn, unsigned x, unsigned y)
 {
+    it_need (sn, (x - strata[sn].x0) >> CW_BITS, (y - strata[sn].y0) >> CW_BITS);  /* (Its chunk's things in the
+                                                **   store first) */
     put_down (kind, IW_SQUARE, sn, x, y, 1);
     hub_map (0);
 }

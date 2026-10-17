@@ -23,7 +23,8 @@ BANKREG     = $00                   ; The task's RAM bank register (written: the
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 
             .bss
-_ovbank:    .res        6           ; The parts' images' banks (dq0w.cfg's OV1 ...: dq0w.c's OVBANKS)
+_ovbank:    .res        10          ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
+                                    ;   world's own banks (its paging's tables: ipage.c's; the ways across a room)
 ova:        .res        1           ; (.A and .X kept through a stub)
 ovx:        .res        1
 fn:         .res        2           ; (m0 ...: the function called,
@@ -93,6 +94,11 @@ go:
             SWPART      14, 6               ; The denizens' bodies: their intents carried out (wbody.c)
             SWPART      15, 2               ; The blows, the bleeding (wfight.c)
             SWPART      16, 6               ; The game's own rules: the puzzle judged, a thing walked to (wgame.c)
+            SWPART      17, 8               ; The things' files: their chunks paged (ipage.c)
+            SWPART      18, 7               ; The change records' files, the save's stamps (wfile.c)
+            SWPART      19, 8               ; The game's files begun, the item store kept (wfile.c)
+            SWPART      20, 7               ; The things' files: a chunk's put out, read in (ipage.c)
+            SWPART      21, 5               ; The ways across a room worked out (dq0w.c's ways)
 
             SWFN        start_dig, 1
             SWFN        dig_on, 1
@@ -100,10 +106,12 @@ go:
             SWFN        climb_on, 2
             SWFN        begin, 3
             SWFN        grow_below, 3
-            SWFN        store_in, 4
-            SWFN        store_page, 4
-            SWFN        store_save, 4
-            SWFN        store_begin, 4
+            SWFN        start, 3
+            SWFN        store_in, 18
+            SWFN        store_page, 18
+            SWFN        store_save, 18
+            SWFN        store_begin, 19
+            SWFN        store_commit, 19
             SWFN        answer, 4
             SWFN        stocked, 4
             SWFN        doors, 5
@@ -136,10 +144,16 @@ go:
             SWFN        describe, 11
             SWFN        hide, 13
             SWFN        door_work, 12
-            SWFN        keep, 13
+            SWFN        keep, 19
             SWFN        kit, 13
             SWFN        theme_kinds, 13
-            SWFN        items_begin, 13
+            SWFN        items_begin, 19
+            SWFN        it_room, 17
+            SWFN        it_need, 17
+            SWFN        it_near, 17
+            SWFN        it_out, 20
+            SWFN        it_in, 20
+            SWFN        ways_go, 21
             SWFN        stock_down, 13
             SWFN        lay_body, 13
             SWFN        den_intents, 14

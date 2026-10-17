@@ -304,12 +304,8 @@ struct vfh {
 };
 #define VF_MAGIC        0x4656                  /* "VF" */
 #define VF_BLOCK        0x10000UL               /* (The stamps a session or a save may give: hub.h's vlo to vhi) */
-int __fastcall__ vf_open (char* path, unsigned char slots, struct vfh* h);  /* path (its slot letter last, the
-                                                **   window anywhere) read: its newest valid version's fd, past its
-                                                **   header (in h), or -1 (none: the window the hub's header after) */
-int __fastcall__ vf_make (char* path, unsigned char slots);     /* A new version begun: its fd, past a header to come
-                                                **   (vf_done's), or -1 */
-void __fastcall__ vf_done (int fd, unsigned n);     /* Its header written (n records, stamped), and it closed */
+/* (vfile.inc's calls, its includer's own: vf_name, a region's file's name; vf_open, its newest valid version's fd,
+** past its header; vf_make, a new version begun; vf_done, its header written, and it closed) */
 
 /* A request to the maker (one for each task that asks: the world's, the denizens', the senses', the UI's) */
 struct mreq {

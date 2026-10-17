@@ -2539,6 +2539,28 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0page', what: 'Dingus Quest Zero\'s stores paged to the save folder (DUNGEON.md: no fixed size; the user, 2026-10-16: "It should be as big as it needs to be, given there is enough disk space to hold it"), eviction and write-back: dq0 -C (the caches small: a page of change records, the item store 64 records, only the character\'s chunk kept round it) and -d /ram/kept: the dagger put down on the top stratum, down the stairway (the stratum below\'s records want the change page, the top\'s region written back, rg0...; its things put out of the store as the stratum below\'s are stocked, it0...), up again (the top\'s region read back in, its chunk\'s things too: the dagger lying where it was put down), quit and carried on (the dagger there still); then the game\'s game.dat gone and a new game begun in the folder (seed 5): the old game\'s region files gone from it, none of its things or changes seen',
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T -C -d /ram/kept\r' +
+        ['drop the dagger', 'look', 'd', 'look', 'u', 'look', 'quit', 'ls /ram/kept', 'dq0 -C -d /ram/kept', 'look', 'quit', 'rm /ram/kept/game.dat',
+         'dq0 -p t -s 5 -c /ram/c.hm -T -C -d /ram/kept', 'quit', 'ls /ram/kept', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['Put down.', 'You come into the', 'takes up where they left off.', '% echo $status'],
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        const seg = (a, b, from = 0) => { const i = o.indexOf(a, from); return i < 0 ? '' : o.slice(i, o.indexOf(b, i + a.length)); };
+        if (!seg('> drop the dagger', '> d ').includes('At your feet lies a dagger.')) f.push('the dagger not seen lying where it was put down');
+        if (!seg('> u ', '> quit').includes('At your feet lies a dagger.')) f.push('the dagger not seen again, up the stairway (its chunk\'s things read back in)');
+        if (!seg('% dq0 -C -d /ram/kept', '> quit').includes('At your feet lies a dagger.')) f.push('the dagger not seen as the game\'s carried on');
+        const ls1 = seg('% ls /ram/kept', '% dq0'), ls2 = seg('% ls /ram/kept', '% echo', o.indexOf('% ls /ram/kept') + 5);
+        if (!/rg0\w{4}\.da/.test(ls1) || !/rg1\w{4}\.da/.test(ls1)) f.push('no change records written back (rg0..., rg1...)');
+        if (!/it0\w{4}\.da/.test(ls1)) f.push('no things of the top stratum put out (it0...)');
+        if (/rg1\w{4}\.da/.test(ls2)) f.push('the old game\'s region files left in the folder for the new game (its stratum below\'s)');
+        if (seg('% dq0 -p t -s 5', '% ls').includes('dagger')) f.push('the old game\'s dagger seen in the new game');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0names', what: 'Dingus Quest Zero\'s names (the user, 2026-10-16: "I would like to be able to reference items by aliases, as long as the alias doesn\'t clash with something else"; names.c): a sword named Linda (dq0 -k sword), shown in what the character carries ("Linda, your sword"), names that clash refused (another name, a kind of thing\'s, a kind of creature\'s, a word the parser needs), Linda used in commands (dropped, seen lying there by its name, taken up, examined, taken in hand to strike a rat with), the room named the Mausoleum and said so as it\'s looked at; the game kept and carried on, the names with it; then a name forgotten',
       init: 't_rc', cycles: 1200e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 3 -c /ram/c.hm -T -k sword -d /ram/kept\r' +

@@ -14,8 +14,9 @@ void stocks (void);                             /* The chunks the maker stocked 
 void answer (void);                             /* The hub's wreq answered (part 4's) */
 void world_keep (void);                         /* (Part 16's: wgame.c) The world's part of the save, world.dat */
 void pc_asked (void);                           /* (Part 16's) The hub's wreq, WQ_START's or WQ_SET's, answered */
-void __fastcall__ store_begin (unsigned char resume);   /* The game's generation; a save's records (a version 6
-                                                **   save's changes.dat, read in) (part 4's) */
+void __fastcall__ store_begin (unsigned char resume);   /* The game's generation, its stamps; a save's records (a
+                                                **   version 6 save's changes.dat, read in) (part 18's: wfile.c) */
+void store_put (void);                          /* (The record in rec kept: wfile.c's, a version 6 save's) */
 
 /* ---- The work: what's to be done (dq0w.c's work () sets it), and what came of it (the parts') */
 struct work {
