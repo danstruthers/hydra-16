@@ -155,39 +155,61 @@ function clib() {
 }
 
 // A game's swapped parts (its own NAME.cfg's SWn segments: code in the main RAM's area only while it's called,
-// through its stub; games/dq0/swap.inc) checked in the compiler's output (objdir's .s of each .c): no reference to a
+// through its stub; games/dq0/swap.inc) checked in its sources: the compiler's output (objdir's .s of each .c) and
+// its own assembly (the folder's .s, and what they .include of its own: ../dq0w/at.s ...): no reference to a
 // function or data of one from outside it (the main code's, an overlay's, another part's), which would find another
-// part's there.  The stubs (assembly sources) aren't the compiler's: not checked.  Throws, with each
-function partsChecked(cfiles, objdir) {
+// part's there; a label's part the segment it's defined in, the C's and the assembly's together (a C function in
+// the main RAM calling a part's assembly, cast.s's, or the assembly a part's C).  The stubs (swap.inc's SWFN: the
+// macro builds the part's name) and what's in a macro's body aren't references.  Throws, with each
+function partsChecked(sources, objdir) {
   const part = seg => (/^SW\d+/.exec(seg) || [])[0] || '';
-  const files = cfiles.map(f => {                       // (Each label's segment: a function's own, in its .proc;
-    const lines = fs.readFileSync(path.join(objdir, path.basename(f, '.c') + '.s'), 'latin1').split(/\r?\n/);
-    const defs = new Map(), exported = new Set(), procOf = [];   //   the file's; the program's, exported)
-    let seg = 'CODE', proc = null;
-    lines.forEach((l, i) => {
+  const read = (file, seen) => {                        // (An assembly source's lines, its own .includes in place)
+    if (seen.has(file)) return [];
+    seen.add(file);
+    const out = [];
+    fs.readFileSync(file, 'latin1').split(/\r?\n/).forEach((l, i) => {
+      const m = /^\s*\.include\s+"([^"]+)"/.exec(l), inc = m && path.resolve(path.dirname(file), m[1]);
+      if (inc && fs.existsSync(inc)) out.push(...read(inc, seen));
+      else out.push({ l, at: path.basename(file) + ' line ' + (i + 1) });
+    });
+    return out;
+  };
+  const files = sources.map(f => {                      // (Each label's segment: a C function's own, in its .proc;
+    const asm = f.endsWith('.s');                       //   the file's; the program's, exported)
+    const lines = asm ? read(f, new Set()) : fs.readFileSync(path.join(objdir, path.basename(f, '.c') + '.s'), 'latin1').split(/\r?\n/)
+      .map((l, i) => ({ l, at: path.basename(f, '.c') + '.s line ' + (i + 1) }));
+    const defs = new Map(), exported = new Set(), procOf = [], segOf = [], stack = [];
+    let seg = 'CODE', proc = null, inMacro = false;
+    lines.forEach(({ l }, i) => {
       let m;
+      if (/^\s*\.macro\b/i.test(l)) inMacro = true;
+      else if (/^\s*\.endmacro\b/i.test(l)) { inMacro = false; segOf[i] = null; return; }
+      if (inMacro) { segOf[i] = null; return; }
       if ((m = /^\s*\.segment\s+"(\w+)"/.exec(l))) seg = m[1];
-      else if ((m = /^\s*\.export\s+(.*)/.exec(l))) m[1].split(',').forEach(n => exported.add(n.trim()));
+      else if ((m = /^\s*\.(code|rodata|data|bss|zeropage)\b/i.exec(l))) seg = m[1].toUpperCase();
+      else if (/^\s*\.pushseg\b/i.test(l)) stack.push(seg);
+      else if (/^\s*\.popseg\b/i.test(l)) seg = stack.pop() || 'CODE';
+      else if ((m = /^\s*\.export\s+(.*)/.exec(l))) m[1].replace(/;.*/, '').split(',').forEach(n => exported.add(n.trim()));
       else if ((m = /^\.proc\s+(\w+)/.exec(l))) { defs.set(m[1], seg); proc = new Map(); }
       else if (/^\.endproc/.test(l)) proc = null;
       else if ((m = /^(\w+)\s*:/.exec(l))) (proc || defs).set(m[1], seg);
       procOf[i] = proc;
+      segOf[i] = seg;
     });
-    return { f, lines, defs, exported, procOf };
+    return { f, asm, lines, defs, exported, procOf, segOf };
   });
   const global = new Map();
   for (const { defs, exported } of files) for (const [n, s] of defs) if (exported.has(n)) global.set(n, s);
   const faults = [];
-  for (const { f, lines, defs, procOf } of files) {
-    let seg = 'CODE';
-    lines.forEach((l, i) => {
-      let m;
-      if ((m = /^\s*\.segment\s+"(\w+)"/.exec(l))) return void (seg = m[1]);
-      if (/^\s*\.(dbg|proc|endproc|export|import|importzp|exportzp|fopt|setcpu|smart|autoimport|case|debuginfo|macpack|forceimport)\b/.test(l)) return;
-      for (const [, n] of l.replace(/^\w+\s*:=?/, '').replace(/;.*/, '').matchAll(/\b(_\w+|[LMS][0-9A-F]{4})\b/g)) {
+  for (const { f, asm, lines, defs, procOf, segOf } of files) {
+    lines.forEach(({ l, at: where }, i) => {
+      const seg = segOf[i];
+      if (seg === null || /^\s*\.(dbg|proc|endproc|export|import|importzp|exportzp|fopt|setcpu|smart|autoimport|case|debuginfo|macpack|forceimport|segment|include|global|globalzp)\b/i.test(l)) return;
+      const body = l.replace(/^\w+\s*:=?/, '').replace(/^\s*@\w+\s*:/, '').replace(/;.*/, '').replace(/"[^"]*"/g, '');
+      if (asm && /^\s*(SWFN|SWPART)\b/.test(body)) return;      // (The stubs, the parts' records: swap.inc's)
+      for (const [, n] of body.matchAll(asm ? /\b([A-Za-z_]\w*)\b/g : /\b(_\w+|[LMS][0-9A-F]{4})\b/g)) {
         const own = procOf[i], s = own && own.has(n) ? own.get(n) : defs.has(n) ? defs.get(n) : global.get(n), p = part(s || '');
-        if (p && p !== part(seg)) faults.push(path.basename(f) + ': ' + n + ' (' + s + '\'s) used from ' + seg + ' (' +
-          path.basename(f, '.c') + '.s line ' + (i + 1) + ')');
+        if (p && p !== part(seg)) faults.push(path.basename(f) + ': ' + n + ' (' + s + '\'s) used from ' + seg + ' (' + where + ')');
       }
     });
   }
@@ -257,7 +279,7 @@ function headroom(names) {
 function cprog(dir, objdir, out, extra) {
   const name = path.basename(out).replace(/\.hyx$/, ''), own = path.join(dir, path.basename(dir) + '.cfg');
   const objs = compileC(csources(dir), objdir, extra);
-  if (fs.existsSync(own)) partsChecked(csources(dir).filter(f => f.endsWith('.c')), objdir);
+  if (fs.existsSync(own)) partsChecked(csources(dir), objdir);
   run(LD65, ['-C', fs.existsSync(own) ? own : at('sdk', 'c', 'hydra.cfg'), '-o', out, '-m', path.join(objdir, name + '.map'), '-Ln', path.join(objdir, name + '.lbl'),
     ...objs, at('obj', 'sdk', 'c', 'hydra.lib')]);
   const data = fs.readFileSync(out);
