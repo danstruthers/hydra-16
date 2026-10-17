@@ -87,12 +87,14 @@ static void __fastcall__ serve (unsigned char i)
         stale ();
         plan_stratum (q.sn);
         place_pieces (q.sn);
+        pl_flush ();
         break;
     case M_PLAN:
         stale ();
         plan_stratum (q.sn);
         links_down (q.sn);
         place_pieces (q.sn);                    /* (The theme's pieces in it: theme.h) */
+        pl_flush ();                            /* (A big plan's pages in its file: the denizens read it) */
         hub_put (WORLD_BANK, &WREC->grown, &STRATUM (q.sn), sizeof STRATUM (0));    /* (Its record grown: the world's
                                                 **   to write into the strata's) */
         break;
@@ -111,6 +113,7 @@ static void __fastcall__ serve (unsigned char i)
                 place_pieces (strata[q.cx].n);
             }
         }
+        pl_flush ();
         break;
     }
     hub_reply (&HUB->mreq[i]);

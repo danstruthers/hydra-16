@@ -79,7 +79,7 @@ go:
             .include    "../dq0/swap.inc"
 
             SWPART      1, 1                ; Digging
-            SWPART      2, 1                ; Climbing
+            SWPART      2, 3                ; Climbing
             SWPART      3, 1                ; The dungeon begun, the strata below grown
             SWPART      4, 2                ; The change records' rarer work (store.c), the UI's requests
             SWPART      5, 2                ; Doors (wdoor.c)

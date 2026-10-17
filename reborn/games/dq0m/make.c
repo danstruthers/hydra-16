@@ -64,9 +64,10 @@ static unsigned char pick (void)
     struct cslot* c;
     struct stratum* s = &STRATUM (psn);
     unsigned pcx = (HUB->pc_x - s->x0) / CW, pcy = (HUB->pc_y - s->y0) / CW;
+    unsigned char lim = HUB->small ? 12 : NCSLOTS;     /* (dq0 -C: twelve slots, the tests' cache made way in soon) */
 
     hub_map (WORLD_BANK);
-    for (k = 0; k < NCSLOTS; ++k) {
+    for (k = 0; k < lim; ++k) {
         c = &WREC->cslot[k];
         if (!c->used) {
             return k;

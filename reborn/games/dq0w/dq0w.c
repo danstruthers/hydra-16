@@ -982,6 +982,8 @@ static void __fastcall__ planned (unsigned char n)
     sync_strata ();
 }
 
+static unsigned char vast;                      /* (dq0 -T -T -T -T's: the strata below vast) */
+
 /* A stand-in for the theme's say: a stratum's bounds round the squares it must hold (the links down to it), its
 ** size picked from a few classes: a cellar (a few squares), a modest one (a few hundred feet), a great one (a mile
 ** or two) */
@@ -991,6 +993,10 @@ static void __fastcall__ bounds (struct stratum* s, unsigned lx0, unsigned ly0, 
     unsigned w = k < 5 ? 4 + random (5) : k < 12 ? 60 + random (140) : 400 + random (1600), h;
 
     h = k < 5 ? 4 + random (5) : k < 12 ? 60 + random (140) : 400 + random (1600);
+    if (vast) {
+        w = h = 27 * RW;                        /* (dq0 -T -T -T -T: the stratum below the top 27 regions each way,
+                                                **   its plan more than PLAN_MAX: paged, the maker's) */
+    }
     if (w < lx1 - lx0 + 8) {
         w = lx1 - lx0 + 8;
     }
@@ -1372,6 +1378,7 @@ void s_begin (void)
         }
         hub_map (0);
     }
+    vast = HUB->test_start == 4;
     if (HUB->test_start == 3) {                 /* (dq0 -T -T -T: four strata grown below the top, one under
                                                 **   another, then the character at the foot of the second's way up:
                                                 **   with dq0 -C's two slots, the deepest two in them, the second's

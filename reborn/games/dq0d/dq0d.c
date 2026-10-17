@@ -279,10 +279,49 @@ unsigned __fastcall__ apart (int dx, int dy);  /* |dx| or |dy|, the more (apart.
 #pragma code-name (push, "SW1CODE")
 #pragma rodata-name (push, "SW1RODATA")
 
+/* Stratum n's plan's region idx's kind: in its plan bank, or (a big plan: more regions than PLAN_MAX, the maker's
+** paged to the save folder) in its file there, plSS0000.dat, its regions in order */
+static unsigned char __fastcall__ plan_kind (unsigned char n, unsigned idx)
+{
+    static const char hex[] = "0123456789abcdef";
+    struct stratum* s = &STRATUM (n);
+    struct region r;
+    char* p;
+    int fd;
+
+    r.kind = RG_ROCK;
+    if ((unsigned) s->rw * s->rh <= PLAN_MAX) {
+        hub_map (PLAN_BANK (n));
+        r.kind = (PLAN_AT (n) + idx)->kind;
+    } else {
+        hub_map (0);
+        strcpy ((char*) piece, HUB->savedir);
+        p = (char*) piece + strlen ((char*) piece);
+        if (n > 15) {
+            *p++ = '/';
+            *p++ = 'p';
+            *p++ = 'l';
+            *p++ = hex[n >> 4];
+        } else {
+            *p++ = '/';
+            *p++ = 'p';
+            *p++ = 'l';
+        }
+        *p++ = hex[n & 15];
+        strcpy (p, "0000.dat");
+        if ((fd = open ((char*) piece, O_RDONLY)) >= 0) {
+            lseek (fd, (long) idx * sizeof r, SEEK_SET);
+            read (fd, &r, sizeof r);
+            close (fd);
+        }
+    }
+    hub_map (0);
+    return r.kind;
+}
+
 void __fastcall__ s_populate (unsigned char n)
 {
     struct stratum* s = &STRATUM (n);
-    struct region* r;
     unsigned char k, j, m, i, rx = 0, ry = 0, t, u;
     unsigned w = (s->w + CW - 1) / CW, h = (s->h + CW - 1) / CW;
 
@@ -310,9 +349,7 @@ void __fastcall__ s_populate (unsigned char n)
                 for (t = 0; t < 8; ++t) {       /* (A region of halls, a chunk of it) */
                     rx = random (s->rw);
                     ry = random (s->rh);
-                    hub_map (PLAN_BANK (n));
-                    r = PLAN_AT (n) + (unsigned) ry * s->rw + rx;
-                    if (r->kind == RG_HALLS) {
+                    if (plan_kind (n, (unsigned) ry * s->rw + rx) == RG_HALLS) {
                         break;
                     }
                 }

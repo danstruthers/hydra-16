@@ -29,19 +29,34 @@
 
 static struct region R;                         /* (A region copied out of its plan: rg's, put back by rp) */
 static struct region* ra;
-static unsigned char rb;
+static unsigned char rb, rsn, rbig;
+static unsigned ri;
+
+/* (A plan of more regions than PLAN_MAX, with a save folder: paged to its file, changes.c's pl_get, pl_put: move 2.8's
+** no fixed size) */
+#define BIG(s)          ((unsigned) (s)->rw * (s)->rh > PLAN_MAX)
 
 static struct region* __fastcall__ rg (unsigned char sn, unsigned char rx, unsigned char ry)
 {
-    rb = PLAN_BANK (sn);
-    ra = PLAN_AT (sn) + (unsigned) ry * STRATUM (sn).rw + rx;
-    hub_get (rb, ra, &R, sizeof R);
+    ri = (unsigned) ry * STRATUM (sn).rw + rx;
+    rsn = sn;
+    if ((rbig = BIG (&STRATUM (sn))) != 0) {
+        pl_get (sn, ri, &R);
+    } else {
+        rb = PLAN_BANK (sn);
+        ra = PLAN_AT (sn) + ri;
+        hub_get (rb, ra, &R, sizeof R);
+    }
     return &R;
 }
 
 static void rp (void)
 {
-    hub_put (rb, ra, &R, sizeof R);
+    if (rbig) {
+        pl_put (rsn, ri, &R);
+    } else {
+        hub_put (rb, ra, &R, sizeof R);
+    }
 }
 
 /* A region's corner's lie (feet), the plan's edge's for a corner past it */
@@ -94,7 +109,9 @@ void __fastcall__ o_plan_stratum (unsigned char n)
 
     s->rw = (s->w + RW - 1) / RW;
     s->rh = (s->h + RW - 1) / RW;
-    while ((unsigned) s->rw * s->rh > PLAN_MAX) {     /* (A plan as big as its bank's half holds) */
+    hub_get (0, HUB->savedir, &k, 1);
+    while (!k && (unsigned) s->rw * s->rh > PLAN_MAX) {  /* (Without a save folder, a plan as big as its bank's
+                                                **   half holds; with one, any: its file's) */
         if (s->rw > s->rh) {
             --s->rw;
             s->w = s->rw * RW;
@@ -104,7 +121,11 @@ void __fastcall__ o_plan_stratum (unsigned char n)
         }
     }
     rseed (s->seed);
-    hub_set (PLAN_BANK (n), PLAN_AT (n), 0, 0x1000);
+    if (BIG (s)) {
+        pl_new (n);
+    } else {
+        hub_set (PLAN_BANK (n), PLAN_AT (n), 0, 0x1000);
+    }
     /* Kinds, and the rock's lie: each region near the average of those north and west of it */
     for (ry = 0; ry < s->rh; ++ry) {
         for (rx = 0; rx < s->rw; ++rx) {
