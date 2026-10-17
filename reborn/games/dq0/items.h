@@ -2,9 +2,10 @@
 ** items.h - Dingus Quest Zero's things (DUNGEON.md: items, the dungeon's layer of things): a catalogue of kinds (what
 ** a thing is: its name, its weight and bulk, a container's room, a belt's slots, a light's reach, a tool's key for
 ** the referee), and the items themselves, each a record of what it is and where: on a square of the dungeon, an
-** actor's (carried, worn, held), or inside another item.  Both in the hub's banks (after the dungeon's); the senses
-** and things task (games/dq0p) keeps them, the maker puts a chunk's ordinary things down as it first makes it.
-** Their owner (hub.h's who writes what): the world's, the catalogue and the items (move 2.3 makes them its alone).
+** actor's (carried, worn, held), or inside another item.  Both in the hub's banks (after the dungeon's), the world's
+** alone (hub.h's who writes what: games/dq0w/things.c, its item store): the maker lists a chunk's ordinary things as
+** it first makes it (struct stock), the world puts them down; a body is the denizens' intent (I_BODY); the others
+** read them (the senses, what the character perceives; the UI, a thing's record seen) and ask the world (ireq).
 */
 
 #ifndef _ITEMS_H
@@ -85,7 +86,7 @@ struct item {
     unsigned char   wear;                       /* Its wear, 0 new ... 255 (a blade dug with, dulled) */
     unsigned char   hide;                       /* Concealed on purpose (I_HIDDEN): how hard to find, 0-9 (the
                                                 **   method's quality and the concealer's skill) */
-    /* Its own (no two alike: the things task's, as it first comes to it; id 0 till then) */
+    /* Its own (no two alike: the world's, as it first comes to it, a look's; id 0 till then) */
     unsigned        id;                         /* Its number, never another's (record 0's x the last given) */
     unsigned char   quality;                    /* How well it's made: 0 crude ... 9 a master's */
     unsigned char   mat;                        /* What it's made of (MT_*: its resistances) */
@@ -111,7 +112,8 @@ enum { IW_SQUARE, IW_ACTOR, IW_ITEM,
 
 #define ITEM_BANKS      2
 
-/* A request to the things (one at a time, the hub's): what's done, to which item, by whom, and what came of it */
+/* A request to the things (the world's item store: one at a time, the hub's): what's done, to which item, by whom, and
+** what came of it */
 struct ireq {
     RQH;                                        /* (hub.h's protocol; kind: IO_*) */
     unsigned        item, to;                   /* The item; where it goes (a container's number) */
@@ -153,6 +155,9 @@ enum { IO_KIT, IO_GET, IO_DROP, IO_LIST, IO_SAVE, IO_RESTORE,
                                                 **   character's square, the bar's side), its item the stratum */
 #define IO_NAME         (IO_BAR + 1)            /* A thing (carried, or seen) marked named (to 1: I_NAMED), or not
                                                 **   (to 0) */
+#define IO_THEME        (IO_BAR + 2)            /* The theme's kinds (the theme bank's, the UI's) into the catalogue */
+#define IO_BEGIN        (IO_BAR + 3)            /* The game begun (the UI's last as it starts: the world's on to its
+                                                **   dungeon, the things asked so far, the kit) */
 enum { IR_OK, IR_NONE, IR_FULL, IR_HEAVY, IR_NOT_HERE, IR_NO, IR_FIXED };    /* (IR_NO: refused, the things' words
                                                 **   why; IR_FIXED: a portal's part, in it) */
 
@@ -166,6 +171,28 @@ struct carried {
         unsigned    item;                       /* Its number */
     } e[NCARRY];
     unsigned        weight;                     /* In quarter pounds, all told */
+};
+
+/* A chunk's things, as the maker stocks it the first time it's made (dq0m/stock.c: from the seed), each one's kind, its
+** square, its make; the world puts them down (the world bank's stock, a slot's: struct wrec's, as the slot's CS_FRESH,
+** world.h's) in the order the maker stocked the chunks */
+#define NSTOCK          38
+struct sthing {
+    unsigned char   kind;
+    signed char     x, y;                       /* Its square, from the chunk's first (a portal's part's may be in the
+                                                **   next chunk: a bar's by its door) */
+    unsigned char   qty;
+    unsigned char   hide;                       /* Concealed: how hard to find, 0-9; ST_SHOWN not; ST_PORTAL a portal's
+                                                **   part in it (else a part lies by it) */
+    unsigned char   make;                       /* A portal's part's: its material (MT_*) times 16, and its quality */
+    unsigned char   size;                       /*   and its size (its portal's opening, a bar's its width) */
+};
+#define ST_SHOWN        0xFF
+#define ST_PORTAL       0xFE
+struct stock {
+    unsigned        seq;                        /* The chunks the maker's stocked, counted, as it stocked this one */
+    unsigned char   n;
+    struct sthing   e[NSTOCK];
 };
 
 #endif

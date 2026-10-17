@@ -12,11 +12,12 @@
 ** uses' plan, the maker's); its words for the rooms (by a room's kind, world.h's: eight, then the uses') and their
 ** light; the
 ** bestiary's kinds that live in it (dq0d/kinds.txt's, a bit each); its own kinds of things (the catalogue's last
-** NTKINDS, KI_THEME on: the UI writes them into the hub's catalogue as the game starts); its puzzle: the pieces (a
-** kind of its own each, the strata it may lie in, hidden or not), each one's stratum picked from the seed and its
-** place (a chunk of that stratum's halls) as the stratum's plan is grown, the maker's (dq0m/plan.c), put down as
-** the chunk is first made (dq0m/stock.c); and the rules of what's done with them (read, combine, put one on or in
-** another, use one on the way out), each with its words and what it does (the way out opened, the place ruled);
+** NTKINDS, KI_THEME on: the world copies them into the hub's catalogue as the game starts, the UI asking); its
+** puzzle: the pieces (a kind of its own each, the strata it may lie in, hidden or not), each one's stratum picked
+** from the seed and its place (a chunk of that stratum's halls) as the stratum's plan is grown, the maker's
+** (dq0m/plan.c), put down as the chunk is first made (dq0m/stock.c's list, the world's to put down); and the rules
+** of what's done with them (read, combine, put one on or in another, use one on the way out), each with its words
+** and what it does (the way out opened, the place ruled);
 ** its mission (to escape, to rule the place, or either); the way out's lock in words, shut and open; and the
 ** endings' words (escaped, ruled, dead).
 */

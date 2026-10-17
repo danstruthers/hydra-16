@@ -139,6 +139,9 @@ enum {
     I_ATTACK,                                   /* a: the actor struck at (its entry plus 1), b: the aim (Z_*): a
                                                 **   round's (the world's: the character busy for it; the blow the
                                                 **   denizens' task's, posted it in the hub's pc_foe) */
+    I_BODY,                                     /* (The denizens' own, their ring's: the hub's di) A body put down
+                                                **   where it fell: a its kind (items.h's KI_*), w1 w2 its square,
+                                                **   x[0] its stratum (the world's item store's to keep) */
     NINTENTS
 };
 
@@ -249,13 +252,13 @@ enum { TO_SPRUNG, TO_DODGED, TO_RESISTED, TO_CHOKED, TO_OPENED, TO_NOTICED, TO_F
                                                 **   (magic), a pit (gone round, not disarmed), none in reach */
 
 /* The requests between the tasks: one protocol.  Each request is in bank 0, its owner's slot (the referee's slots,
-** the maker's mreq, the things' ireq, the senses' look, the denizens' sway and dsave, the maker's mapq), and begins
-** with the same header (struct rqh: level.h's RQH).  The asker writes the request, then hub_post: from (itself), its
-** seq, state REQ_POSTED, and the owner's doorbell rung; then hub_wait: asleep on its own doorbell (never spinning)
-** till the reply's there (a ring for something else, taken meanwhile, rung again once it's there).  The owner,
-** rung, answers what's posted (hub_posted), then hub_reply: REQ_DONE, and the asker's doorbell rung.  The asker
-** takes the reply and sets REQ_FREE.  A task that asks on another's behalf, in its slot, while that one waits (the
-** maker in the world's referee slot, the things in the UI's) is the one rung */
+** the maker's mreq, the world's ireq and stock, the senses' look, the denizens' sway and dsave, the maker's mapq),
+** and begins with the same header (struct rqh: level.h's RQH).  The asker writes the request, then hub_post: from
+** (itself), its seq, state REQ_POSTED, and the owner's doorbell rung; then hub_wait: asleep on its own doorbell
+** (never spinning) till the reply's there (a ring for something else, taken meanwhile, rung again once it's there).
+** The owner, rung, answers what's posted (hub_posted), then hub_reply: REQ_DONE, and the asker's doorbell rung.  The
+** asker takes the reply and sets REQ_FREE.  A task that asks on another's behalf, in its slot, while that one waits
+** (the maker in the world's referee slot, the world's things in the UI's) is the one rung */
 #define REQ_FREE        0
 #define REQ_POSTED      1
 #define REQ_DONE        2
@@ -341,6 +344,7 @@ struct sway {
 };
 
 #define IQ_SIZE         16                      /* The UI's intents */
+#define DI_SIZE         4                       /* The denizens' (I_BODY) */
 #define EQ_SIZE         128                     /* The world's events (each reader its own place) */
 
 struct hub {                                    /* Bank 0, at $8000 */
@@ -368,7 +372,7 @@ struct hub {                                    /* Bank 0, at $8000 */
     volatile unsigned pc_x, pc_y;               /*   its square (the dungeon's frame, world.h's), */
     volatile unsigned char pc_face;             /*   the way it faces (a heading: H_N ... H_NW), */
     volatile unsigned char pc_light;            /*   the light it carries: how far it reaches, in tiles (0: none:
-                                                **   the things' (dq0p), from the lit things it holds), */
+                                                **   the world's, from the lit things it holds: its item store's), */
     char            pc_lamp[14];                /*   and the brightest of them, named */
     struct rs_summary pcsum;                    /* The character's summary (the referee's: its senses ...) */
     /* A look about asked of the senses (dq0p: the world asks, as the character's moved, turned, lit a light): the
@@ -382,10 +386,11 @@ struct hub {                                    /* Bank 0, at $8000 */
     struct rqh      mapq;
     /* The dungeon (world.h): the maker's requests (the strata's records and the cache's table the world bank's) */
     struct mreq     mreq[NASK];
-    /* The things (items.h): the store's lock (a semaphore: the maker and the things both take its records), a
-    ** request to the things (dq0p), and their words for the UI (what's carried) */
-    unsigned char   item_lock;
+    /* The things (items.h: the item store, the world's alone): a request of them (the UI's: what's carried, a thing
+    ** handled ...), their words for the UI (what's carried); and a chunk's things put down (the senses' request, as a
+    ** look comes to one the maker's stocked and the world hasn't yet: the world bank's stock) */
     struct ireq     ireq;                       /* (Their words the UI bank's things_text) */
+    struct rqh      stock;
     struct portal   pview;                      /* A portal looked at closely (PA_EXAMINE's: the world's record of
                                                 **   it, but bar: 1 the character's on its bar's side) */
     /* The change records' lock (a semaphore: the world writes them, the maker reads them: world.h's), and a request
@@ -439,6 +444,10 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned char   pc_strike;                  /* What it strikes with (SK_*: the parser's, as it's told) */
     volatile unsigned char den_look;            /* (The denizens' task's: a thing put down, a body: the world looks about
                                                 **   again, the senses seeing it) */
+    /* The denizens' intents to the world (I_BODY: a body put down, the world's item store's), a ring: written at
+    ** di_head (the denizens' task: a full one waited on), read at di_tail (the world) */
+    volatile unsigned char di_head, di_tail;
+    struct msg      di[DI_SIZE];
 };
 #define WA_TRAPS        0x01                    /* Searching as it goes: traps underfoot, hidden doors beside */
 #define WA_LISTEN       0x02                    /* Listening as it goes */
@@ -466,6 +475,8 @@ struct wrec {
                                                 **   in the folder isn't read) */
     struct stratum  grown;                      /* A stratum's record as the maker's grown its plan (M_PLAN's: the
                                                 **   world writes it into strata) */
+    struct stock    stock[NCSLOTS];             /* Each slot's chunk's things, as the maker stocked it (items.h's: its
+                                                **   slot CS_FRESH, the world puts them down) */
 };
 
 /* Who writes what (Phase 2: one authority on state).  Each region of the hub has an owner, the one task that writes
@@ -483,8 +494,9 @@ struct wrec {
 ** isn't the owner's, a + task's or a known one fails the test, and the moves shrink the known ones to none.  The
 ** UI's hub_create (the hub's banks cleared, its header made) and a task's own task[] entry aren't counted.
 ** The moves (the plan's): 2.2 the maker made pure (done: M_WORK and the change records the world's, the plans'
-** strata records the world's to write back, from the maker's wrec.grown); 2.3 the item store the world's (the items' banks, the
-** catalogue, pc_light and pc_lamp); 2.4 bodies and blows (the actors, den_seq, pc_foe, the fights' words in DEN_BANK);
+** strata records the world's to write back, from the maker's wrec.grown); 2.3 the item store the world's (done: the
+** items' banks, the catalogue, pc_light and pc_lamp; a chunk's things the maker's list, wrec.stock, a body the
+** denizens' intent); 2.4 bodies and blows (the actors, den_seq, pc_foe, the fights' words in DEN_BANK);
 ** 2.5 the senses for every actor, by layers, and their memory (the chunks' tiles' seen and visible marks, R_VISITED,
 ** the denizens seen in sight); 2.6 game logic out of the UI (way_open); 2.7 the character's state home (gait, watch,
 ** pc_stance, pc_strike, and the UI's writes as the game starts, resumes, pauses and quits: round, tpr, pace, paused,
@@ -515,8 +527,8 @@ struct wrec {
 **   own hub.pc_x world 2.7:ui
 **   own hub.pc_y world 2.7:ui
 **   own hub.pc_face world 2.7:ui
-**   own hub.pc_light world 2.3:senses 2.7:ui
-**   own hub.pc_lamp world 2.3:senses
+**   own hub.pc_light world 2.7:ui
+**   own hub.pc_lamp world
 **   own hub.pcsum referee
 **   own hub.look senses +world                                 (The world's look asked)
 **   own hub.mapq maker +ui
@@ -524,10 +536,10 @@ struct wrec {
 **   own hub.mreq[ASK_DENIZENS] maker +denizens
 **   own hub.mreq[ASK_SENSES] maker +senses
 **   own hub.mreq[ASK_UI] maker +ui
-**   own hub.item_lock ui
 **   own hub.change_lock ui                                     (The change records' lock: made with the hub)
 **   own hub.wreq world +ui                                     (The UI's requests of the world)
-**   own hub.ireq senses +ui
+**   own hub.ireq world +ui                                     (The UI's requests of the things)
+**   own hub.stock world +senses                                (The senses' request: a chunk's things put down)
 **   own hub.pview world                                        (A portal looked at closely: the UI's wreq's)
 **   own hub.dig_tool world
 **   own hub.dig_wear world
@@ -537,7 +549,7 @@ struct wrec {
 **   own hub.eq_head world                                      (The world's events)
 **   own hub.eq world
 **   own hub.slot[SLOT_WORLD] referee +world
-**   own hub.slot[SLOT_UI] referee +ui +senses +denizens        (The UI's, lent to those asking for it)
+**   own hub.slot[SLOT_UI] referee +ui +world +denizens         (The UI's, lent to those asking for it)
 **   own hub.dslot referee +denizens
 **   own hub.actor[*] world 2.4:denizens                        (A denizen's body: the world's)
 **   own hub.actor[*].den denizens                              (Its mind, its record: the denizens')
@@ -561,6 +573,9 @@ struct wrec {
 **   own hub.pc_stance world 2.7:ui
 **   own hub.pc_strike world 2.7:ui
 **   own hub.den_look denizens +world                           (Asked of the world, cleared by it)
+**   own hub.di_head denizens                                   (The denizens' intents: their ring)
+**   own hub.di denizens
+**   own hub.di_tail world                                      (Its reader's place)
 **   own banks(1,PLAN_BANKS) maker                              (The plans: grown from the seed)
 **   own banks(CACHE_BANK(0),CACHE_BANKS) none                  (The chunks' cache: its room past three chunks)
 **   own chunk maker                                            (A chunk: made from the seed)
@@ -571,8 +586,8 @@ struct wrec {
 **   own chunk.elev maker +world                                (a harm, a square dug, an opening: dq0w/store.c)
 **   own chunk.nopen maker +world
 **   own chunk.open maker +world
-**   own bank(CAT_BANK) world 2.3:senses,ui                     (The catalogue: the things', the theme's kinds)
-**   own banks(CAT_BANK+1,ITEM_BANKS) world 2.3:senses,maker,denizens   (The items' places and states)
+**   own bank(CAT_BANK) world                                   (The catalogue: the world's, the theme's kinds)
+**   own banks(CAT_BANK+1,ITEM_BANKS) world                     (The items' places and states)
 **   own bank(DEN_BANK) denizens                                (The denizens' events)
 **   own bank(DEN_BANK,SND_AT,FIGHT_AT) sound +ui               (The sounds: the UI clears them)
 **   own bank(DEN_BANK,FIGHT_AT,FIGHT_AT+NFIGHTS) denizens 2.4:referee   (The fights' words)
@@ -582,10 +597,11 @@ struct wrec {
 **   own bank(SIGHT_BANK) senses 2.5:world                      (What the character perceives)
 **   own bank(UI_BANK) ui
 **   own uirec.map maker +ui
-**   own uirec.things_text senses +ui
+**   own uirec.things_text world +ui
 **   own bank(WORLD_BANK) maker                                 (The cache's table)
 **   own wrec.strata world 2.7:ui                               (The strata's records: the world's dungeon)
 **   own wrec.grown maker                                       (A stratum's record as its plan's grown: M_PLAN's)
+**   own wrec.stock maker                                       (A chunk's things: the maker's list, the world's)
 **   own wrec.cpage world                                       (The change records' pages: the world's, store.c)
 **   own wrec.cstamp world
 **   own wrec.cgen world
