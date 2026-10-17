@@ -143,6 +143,11 @@ enum {
     I_LEAVE,                                    /*   gone from it (no longer an actor) */
     I_ROUSE,                                    /*   its wait cut short */
     I_DONE,                                     /*   the denizens' turn done (the turns pace's: the hub's den_go) */
+    I_TAKE,                                     /* A thing taken up, walked over to first (the UI's, the thing out of
+                                                **   reach: IO_GET's IR_NOT_HERE): w1, w2 the square it lies on (as
+                                                **   I_GOTO's), t the thing (its item: the reply's); the world walks
+                                                **   there (again, as long as the walk gets it nearer) and takes it up,
+                                                **   E_TAKEN */
     NINTENTS
 };
 /* The denizens' intents (their ring, the hub's di: the minds', for their actors' bodies, the world's to carry out
@@ -195,6 +200,11 @@ enum {
                                                 **   date near it: DUNGEON.md's perception as layers): a door opened
                                                 **   or shut, a square dug (the world's change records), a its
                                                 **   stratum, w1 w2 its square */
+    E_TAKEN,                                    /* who's walked over to a thing and taken it up (I_TAKE's): w1 how it
+                                                **   went (items.h's IR_*: IR_OK taken, its time and its light the UI's
+                                                **   to ask, as for any thing handled, no E_READY till then; IR_FIXED a
+                                                **   portal's part, or a thing fixed where it stands, the UI's to see
+                                                **   to), w2 the light it carried before (the hub's pc_light) */
     NEVENTS
 };
 enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST };    /* E_DEN's what: a step, a noise of its own (a squeak, a
@@ -455,7 +465,8 @@ struct hub {                                    /* Bank 0, at $8000 */
     ** bank (DEN_BANK), each reader keeps its own place, as in the world's; nobody waits for them, and each perceives
     ** them or not by its own senses (DENIZENS.md) */
     volatile unsigned dq_head;                  /* Events written so far (the world's) */
-    /* The theme's puzzle (theme.h: the theme in THEME_BANK): the way out opened (the UI's, as the mission's done) */
+    /* The theme's puzzle (theme.h: the theme in THEME_BANK): the way out opened (the world's, as it judges a command
+    ** of the puzzle's by the theme's rules: items.h's IO_PUZZLE) */
     volatile unsigned char way_open;
     struct sway     sway;                       /* The character's way with a denizen (the UI's request) */
     /* The character's pace and watchfulness (DUNGEON.md: moving; the UI's to set, as the player says, the referee's
@@ -556,7 +567,7 @@ struct wrec {
 ** 2.5 the senses for every actor, by layers, and their memory (done: the chunks' tiles' seen and visible marks and
 ** R_VISITED the senses', the world's changes to a square keeping them; the denizens seen the senses' to decide, in
 ** sight; each denizen's senses asked of them, dsense; DUNGEON.md's perception as layers); 2.6 game logic out of the UI
-** (way_open); 2.7 the character's state home (gait, watch, pc_stance, pc_strike, and the UI's writes as the game
+** (done: way_open, the theme's puzzle judged by the world, IO_PUZZLE; a thing walked over to and taken up, I_TAKE); 2.7 the character's state home (gait, watch, pc_stance, pc_strike, and the UI's writes as the game
 ** starts, resumes, pauses and quits: round, tpr, pace, paused, quit, now, the character's place on resuming, the
 ** strata's records read back).
 **
