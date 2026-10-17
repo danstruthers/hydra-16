@@ -143,7 +143,7 @@ unsigned char __fastcall__ cached (unsigned char sn, unsigned x, unsigned y)
 static unsigned char sn_, part_;
 static unsigned x0_, y0_;                       /* (Its first square, the frame's) */
 static unsigned char* g_;                       /* (Its place in the bank, in the window) */
-void make (void);                               /* (Part 3's: worked out) */
+static void make (void);                        /* (Worked out: the main RAM's, below) */
 void __fastcall__ lamp_on (const struct lsrc* l);   /* (Part 1's: a lamp's light on it) */
 
 /* Square i, j of the grid at least lv bright */
@@ -219,11 +219,9 @@ unsigned char __fastcall__ light_at (unsigned char sn, unsigned x, unsigned y)
 }
 
 
-/* ---- Part 3's (swapped: bank.s's stub, as a grid's to be worked out): a chunk's grid worked out */
-#pragma code-name (push, "SW3CODE")
-#pragma rodata-name (push, "SW3RODATA")
-
-void s_make (void)
+/* ---- A chunk's grid worked out (the main RAM's: once part 3's, swapped in as a grid was wanted, the look's part 1
+** put out for it, and in again after, part 3 out for its lamps' part 1 between: a look into new chunks copied 22K) */
+static void make (void)
 {
     static unsigned char a, b, i, j, n, rx0[NROOMS], ry0[NROOMS], rx1[NROOMS], ry1[NROOMS];
     static struct room* r;
@@ -255,9 +253,6 @@ void s_make (void)
     }
     hub_map (0);
 }
-
-#pragma code-name (pop)
-#pragma rodata-name (pop)
 
 /* ---- Part 1's (swapped: with the look's grid and its lines, view.c's and cast.s's, the lamps found, things.c's):
 ** the lamps against the last look's; a lamp's light on a chunk (bank.s's stub) */

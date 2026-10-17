@@ -93,7 +93,7 @@ void give_way (void)
 }
 
 /* The swapped parts' images read into banks of its own (dir/dq0p.ovl: dq0p.cfg's OV1 ..., 8K each): 0, or -1 */
-#define OVBANKS         3
+#define OVBANKS         2
 extern unsigned char ovbank[OVBANKS];
 extern char _SWAP_START__[];
 static int __fastcall__ ovl_load (const char* dir)
@@ -110,7 +110,6 @@ static int __fastcall__ ovl_load (const char* dir)
     }
     ovbank[0] = n;                              /* (In a run: n, n + 1 ...) */
     ovbank[1] = n + 1;
-    ovbank[2] = n + 2;
     for (k = 0, n = 1; k < OVBANKS && n > 0; ++k) {     /* (A bank at a time: cc65's optimizer loses the high
                                                 **   byte of a bank's offset worked out from the file's) */
         for (off = 0; off < 0x2000 && (n = read (fd, b, 512)) > 0; off += n) {
