@@ -1434,7 +1434,10 @@ int main (int argc, char* argv[])
             HUB->ui_cmd = 0;
         }
         t_done ();
-        hy_sleep_ticks (2);
+        hy_sleep_ticks (4);                     /* (A fiftieth of a second: the keys looked for, the world's
+                                                **   events told; each look at the keys a call of the console's,
+                                                **   some 9,000 cycles with its own, a quarter of the CPU at two
+                                                **   ticks while nothing happened) */
     }
     finish ();
     return 0;
