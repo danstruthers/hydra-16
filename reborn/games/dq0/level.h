@@ -40,6 +40,7 @@ unsigned char __fastcall__ bearing (int dx, int dy);    /* The heading nearest t
 #define SEE_ITEMS       6
 #define SEE_DENS        4
 #define SEE_TRAPS       3
+#define SEE_GLOWS       2
 struct sight {
     unsigned char   seq;                        /* Bumped as it's made again */
     unsigned char   where;                      /* W_* */
@@ -80,7 +81,14 @@ struct sight {
     struct { unsigned char rel, kind, trigger, state; } trap[SEE_TRAPS];
     unsigned        rx, ry;                     /* A room's: its floor's northwest square (the room known by it: the
                                                 **   UI's names, hub.h's struct tname) */
+    unsigned char   nglows;                     /* Lights seen far off (DUNGEON.md's perception as layers: a light's
+                                                **   own glow, beyond what it lights and the eyes' range; the dimmer
+                                                **   against brighter surroundings, the further in the eyes' dark):
+                                                **   each one's way (REL8), how far (squares), how it shows (GL_*) */
+    struct { unsigned char rel, dist, how; } glow[SEE_GLOWS];
+    unsigned char   dazzled;                    /* The eyes dazzled (a bright light after the dark: a while) */
 };
+enum { GL_GLOW, GL_LIGHT };                     /* A light far off: a faint glow, a light */
 enum { DO_ROAM, DO_WATCH, DO_COMING, DO_SHY, DO_FOLLOW, DO_WAIT, DO_FIGHT, DO_FLEE, DO_DOWN };  /* A denizen's
                                                 **   doing: going about its own business, watching the character,
                                                 **   coming towards it, keeping its distance; an ally's: following it,

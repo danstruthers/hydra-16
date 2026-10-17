@@ -485,7 +485,8 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   materials to hand) */
 #define GOING_DARK      0x80
 
-enum { LK_LOOK, LK_DENS };                       /* The look's kinds: a look about; the denizens seen looked at again */
+enum { LK_LOOK, LK_DENS, LK_EYES };              /* The look's kinds: a look about; the denizens seen looked at again;
+                                                **   the eyes only, as time's gone (the lights seen far off: a wait's) */
 #define LF_ARRIVE       0x40                    /* (The look's first: arrived, R_VISITED the senses') */
 
 /* The UI's bank's records (UI_BANK) */
