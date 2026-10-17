@@ -4,6 +4,7 @@
 ** the referee), and the items themselves, each a record of what it is and where: on a square of the dungeon, an
 ** actor's (carried, worn, held), or inside another item.  Both in the hub's banks (after the dungeon's); the senses
 ** and things task (games/dq0p) keeps them, the maker puts a chunk's ordinary things down as it first makes it.
+** Their owner (hub.h's who writes what): the world's, the catalogue and the items (move 2.3 makes them its alone).
 */
 
 #ifndef _ITEMS_H

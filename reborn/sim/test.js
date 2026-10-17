@@ -3,9 +3,12 @@
 // test.js - HydraOS's regression tests (tests/tests.js), and the base's before them: the base's runner
 // (../../base/sim/test.js: its options, -v, -j N, --seed, --build, --dl, are there) with HydraOS's images (its
 // modules/rom.txt's modules, less a test's without, and the test's own; the ROM disk), its PC folders (/pc: a test's
-// pc), the danlang emulator (sim/dl) and its build.
+// pc), the danlang emulator (sim/dl) and its build; and the hub writers' check (sim/lib/hubown.js: hub.h's owners'
+// table) in every Dingus Quest Zero test (dq0...): a write to the hub's banks by a task its region doesn't allow, and
+// not known (the table's moves), fails the test.  HUBOWN=1: each test's every violation said, known or not, and a
+// summary of them all after the tests (grouped by the move that's to end them); HUBOWN=0: no check.
 //
-// Usage: node sim/test.js [NAME ...] [--build] [-v] [--seed N] [-j N] [--dl]
+// Usage: [HUBOWN=0|1] node sim/test.js [NAME ...] [--build] [-v] [--seed N] [-j N] [--dl]
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -17,6 +20,7 @@ const images = require('../../base/tools/images.js');
 const romfs = require('../tools/romfs.js');
 const { readManifest, hwtest } = require('../build.js');
 const { tests, IRQ_OFF_MAX } = require('../tests/tests.js');
+const hubown = require('./lib/hubown.js');
 
 const ROOT = path.join(__dirname, '..');
 const bin = (dir, n) => fs.readFileSync(path.join(ROOT, 'obj', dir, n + '.bin'));
@@ -75,7 +79,52 @@ function pcFolder(t, opt) {
   return { dir, host };
 }
 
-runner.setup({ root: ROOT, tests, IRQ_OFF_MAX, image, pcFolder, self: __filename,
+// The hub writers' check, a dq0 test's (HUBOWN=0: none): its violations each in obj/hubown/NAME.json, for the summary
+const HUBOWN = process.env.HUBOWN || '';
+const hubDir = path.join(ROOT, 'obj', 'hubown');
+function instrument(t) {
+  if (HUBOWN === '0' || !/^dq0/.test(t.name)) return null;
+  const M = hubown.map(), c = hubown.createCheck(M);
+  return { boot: { sharedWrite: c.hook }, attach: c.attach, judge: () => {
+    const r = c.result(), { known, fresh } = hubown.judge(r), notes = [], failures = fresh.map(e => 'hub: ' + hubown.line(e));
+    try { fs.mkdirSync(hubDir, { recursive: true }); fs.writeFileSync(path.join(hubDir, t.name + '.json'), JSON.stringify(r)); } catch (e) { /* (No summary) */ }
+    if (!r.found) return { failures, notes: ['hub writers: no hub made'] };
+    const moves = [...new Set(known.map(e => e.known))].sort();
+    notes.push('hub writers: ' + r.writes + ' writes checked, ' + known.length + ' known violation(s)' + (moves.length ? ' (moves ' + moves.join(', ') + ')' : '') +
+      ', ' + fresh.length + ' new' + (r.stray.length ? '; ' + r.stray.map(e => e.count + ' by ' + e.task).join(', ') + ' (no role)' : ''));
+    if (HUBOWN === '1') for (const e of known) notes.push('  ' + hubown.line(e));
+    return { failures, notes };
+  } };
+}
+// After the tests (HUBOWN=1): every violation seen, the tests' together, by the move that's to end it (NEW: none),
+// and the table's known ones none of the tests showed
+function summary(list) {
+  if (HUBOWN !== '1') return;
+  const all = new Map();
+  for (const t of list) {
+    let r = null;
+    try { r = JSON.parse(fs.readFileSync(path.join(hubDir, t.name + '.json'), 'utf8')); } catch (e) { continue; }
+    for (const e of r.regions) {
+      const k = e.line + ' ' + e.region.replace(/\[\d+\]/g, '[*]') + ' ' + e.writer, a = all.get(k);
+      if (a) { a.count += e.count; a.tests.add(t.name); if (!a.pcs.includes(e.pc)) a.pcs.push(e.pc); }
+      else all.set(k, Object.assign({}, e, { region: e.region.replace(/\[\d+\]/g, '[*]'), tests: new Set([t.name]), pcs: [e.pc] }));
+    }
+  }
+  const by = new Map();
+  for (const e of all.values()) { const k = e.known || 'NEW'; if (!by.has(k)) by.set(k, []); by.get(k).push(e); }
+  console.log('hub writers: ' + all.size + ' violation(s) over ' + list.filter(t => /^dq0/.test(t.name)).length + ' dq0 tests');
+  for (const k of [...by.keys()].sort()) {
+    console.log('  ' + (k === 'NEW' ? 'NEW (not in hub.h\'s table)' : 'move ' + k) + ':');
+    for (const e of by.get(k).sort((x, y) => x.line - y.line || x.writer.localeCompare(y.writer)))
+      console.log('    ' + e.region + ' (' + e.owner + '\'s) by the ' + e.writer + ': ' + e.count + ' writes in ' + e.tests.size +
+        ' test(s), at ' + e.pcs.slice(0, 4).join(', ') + (e.pcs.length > 4 ? ' ...' : ''));
+  }
+  const seen = new Set([...all.values()].map(e => e.line + ' ' + e.writer));
+  const idle = hubown.table().flatMap(l => l.known.filter(k => !seen.has(l.line + ' ' + k.task)).map(k => l.region + ' by the ' + k.task + ' (move ' + k.move + ')'));
+  if (idle.length) console.log('  known, but none of these tests wrote it: ' + idle.join('; '));
+}
+
+runner.setup({ root: ROOT, tests, IRQ_OFF_MAX, image, pcFolder, self: __filename, instrument, summary,
   build: () => require('../build.js').buildBoth({ quiet: true }),
   runDl: (...a) => require('./dl/bridge.js').runDl(...a) });
 

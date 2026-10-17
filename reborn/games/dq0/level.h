@@ -31,9 +31,9 @@ extern const char* const head_name[8];          /* "north", "northeast" ... */
 extern const char* const head_abbr[8];          /* "N", "NE" ... */
 unsigned char __fastcall__ bearing (int dx, int dy);    /* The heading nearest the way (dx, dy) goes */
 
-/* What the character perceives (the world's, after each look about; in the hub's header, struct hub's sight): the
-** UI's words are made from it alone.  A way is REL8's (0xFF: where it stands); a height in feet, against the floor
-** where the character stands */
+/* What the character perceives (the senses', after each look about, the world asking; in the hub's SIGHT_BANK: its
+** owner the senses, hub.h's who writes what): the UI's words are made from it alone.  A way is REL8's (0xFF: where
+** it stands); a height in feet, against the floor where the character stands */
 #define SEE_DOORS       8
 #define SEE_ZONES       4
 #define SEE_OPEN        4

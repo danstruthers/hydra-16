@@ -23,7 +23,10 @@
 // sends.  opt.pcHist: count the instructions run at each page:PC (pcHist).  run(limit) runs to a cycle; the rest is
 // its state, for a report.  For a debugger: opt.breaks ({ pc, page, bank, banks }: -1 for any; bank, the first of
 // banks of the task's paged ROM bank): run stops before the instruction at one, m.breakHit says which, and m.skipBreak = true goes past it the next
-// time; opt.readWatches ({ addr, task }), as opt.watches are for writes; opt.calls (a Map: a jump table slot's
+// time; opt.readWatches ({ addr, task }), as opt.watches are for writes; opt.sharedWrite(id, offset, value, task,
+// pc, page): called with each write to a shared bank before it's made (its ID, U * 16 + the bank's low four bits, as
+// sharedBanks keys it; the offset in it, the byte; the task, T, writing it; the instruction's PC and BIOS page: the
+// test runner's hub writers' check, reborn/sim/lib/hubown.js); opt.calls (a Map: a jump table slot's
 // address -> its call's name), opt.errNames (code -> name) and opt.callFilter (a Set of names and "tN", or none):
 // each call a program makes logged, with its registers, and what it gives back as it returns.  The loop that runs each instruction allocates nothing, so the emulator runs as fast as the
 // host can (about 20 MHz of the Hydra's cycles on a 2019 desktop): keep it that way.
@@ -106,7 +109,7 @@ function createMachine(opt) {
     if (!f || !sameChip(b, f.bank)) return o;
     return f.high ? o | f.mask : o & ~f.mask;
   }
-  const readWatches = opt.readWatches || [], rWatch = readWatches.length > 0;
+  const readWatches = opt.readWatches || [], rWatch = readWatches.length > 0, sharedWrite = opt.sharedWrite || null;
   function rd(a) {
     if (a < 0x8000) {
       if (rWatch) for (const w of readWatches) if (w.addr === a && (w.task < 0 || w.task === tsel(a)))
@@ -136,7 +139,12 @@ function createMachine(opt) {
       if (rtc && a >= RTC_REGS && tsel(a) === RTC_TASK) return rtc.write(a - RTC_REGS, v);
       taskRam[tsel(a)][a] = v; return;
     }
-    if (a < 0xA000) { const b = taskRam[tsel(0)][0]; if (bankInstalled(b)) bankMem(b)[ramOfs(b, a)] = v; return; }
+    if (a < 0xA000) {
+      const b = taskRam[tsel(0)][0];
+      if (!bankInstalled(b)) return;
+      if (sharedWrite && b >= 0xF0) sharedWrite(U * 16 + (b & 15), ramOfs(b, a), v, T, cpu.lastPC, W);
+      bankMem(b)[ramOfs(b, a)] = v; return;
+    }
     if (a < 0xFF00) return;
     const t = cpu.ioAt;
     if (a < 0xFFF0) sync(t);                                    // (The devices, as of this access's cycle)

@@ -18,7 +18,9 @@
 //             jsOnly (its reason: the sound, which sim/dl doesn't make) is skipped there, and said so (SKIP)
 // From Node: setup(env) gives the runner a system: { root (its folder: obj/build.json's options), tests, IRQ_OFF_MAX,
 // image(t) (its own; the base's tests still the base's), build(), pcFolder(t, opt), runDl(t, machine, opt, extra),
-// self (the file a test's process runs: its --one) }; then main(argv).
+// self (the file a test's process runs: its --one), instrument(t, opt) (or none: a test's own watch on the machine,
+// { boot: its boot's options, attach(m) as it's booted, judge(m) -> { failures, notes } }, sim/lib's emulator's
+// alone), summary(list, opt) (after the tests, before the count) }; then main(argv).
 // The emulator runs as fast as the host can, never paced to the Hydra's clock (run.js -i is): the cycles a test
 // reports, and its budgets, are the emulated machine's.
 'use strict';
@@ -31,7 +33,8 @@ const { readManifest, hwtest } = require('../build.js');
 
 const BASE = path.join(__dirname, '..');
 // The system the tests are run for (setup): the base's own, unless a system on it says otherwise
-const env = { root: BASE, tests: null, IRQ_OFF_MAX: 200, image: null, build: null, pcFolder: null, runDl: null, self: __filename };
+const env = { root: BASE, tests: null, IRQ_OFF_MAX: 200, image: null, build: null, pcFolder: null, runDl: null, self: __filename,
+  instrument: null, summary: null };
 function setup(e) { Object.assign(env, e); }
 const baseTests = () => require('../tests/tests.js').tests.map(t => Object.assign(t, { system: 'base' }));
 
@@ -73,10 +76,11 @@ function runTest(t, opt) {
     if (!(name in marks)) marks[name] = at;
     if (t.send && name === t.send.after) m.acia.send(t.send.bytes);
   };
-  const pc = t.pc ? env.pcFolder(t, opt) : null;
+  const pc = t.pc ? env.pcFolder(t, opt) : null, ins = env.instrument ? env.instrument(t, opt) : null;
   m = boot(Object.assign({ root: env.root, acia: built().acia, prom: image(t), seed: opt.seed, marks: markNames, log, trace: 0,
-    pcWatches: bootDone === undefined ? [] : [{ pc: bootDone, page: 0 }] }, t.machine || {}, pc ? { pcHost: pc.host } : {}));
+    pcWatches: bootDone === undefined ? [] : [{ pc: bootDone, page: 0 }] }, t.machine || {}, pc ? { pcHost: pc.host } : {}, ins ? ins.boot : {}));
   m.pc = pc;
+  if (ins) ins.attach(m);
   if (t.start) t.start(m);
   const done = new RegExp('^' + t.init + ': (PASS|FAIL)', 'm');
   const target = t.expect ? null : done;
@@ -87,7 +91,7 @@ function runTest(t, opt) {
     if (target) { const r = out.match(target); if (r) { status = r[1]; break; } }
     else if (t.expect.every(e => out.includes(e))) { status = 'PASS'; break; }
   }
-  return judge(t, m, marks, pc, status);
+  return judge(t, m, marks, pc, status, ins);
 }
 
 // Test t run in the danlang emulator (sim/dl: bridge.js runs it), judged as runTest's is.  OUT: (a promise) runTest's
@@ -105,9 +109,9 @@ async function runTestDl(t, opt) {
 }
 
 // A test's run judged (m the machine afterwards, marks the cycles of its marks, status PASS, FAIL or '' as its result
-// came out): its "ok" lines, its result, a halt, its budgets, the longest IRQs-off stretch, its own checks.
-// OUT: { m, out, lines, failures, budgets, notes }
-function judge(t, m, marks, pc, status) {
+// came out): its "ok" lines, its result, a halt, its budgets, the longest IRQs-off stretch, its own checks, an
+// instrument's (ins: env.instrument's).  OUT: { m, out, lines, failures, budgets, notes }
+function judge(t, m, marks, pc, status, ins) {
   const failures = [], lines = [];
   const out = m.out.replace(/\r/g, '');
   for (const line of out.split('\n')) if (/^(not )?ok - /.test(line)) lines.push(line);
@@ -130,6 +134,7 @@ function judge(t, m, marks, pc, status) {
   if (m.acia.txLost) failures.push(m.acia.txLost + ' byte(s) lost on the WDC ACIA: written while one was going and another waiting (two writers, or the pacing)');
   if (t.check) failures.push(...t.check(m, out));
   const notes = [...(t.notes || []), ...(pc ? [pc.host.report() + '; ' + m.acia.pcLost + ' reply byte(s) lost'] : [])];
+  if (ins) { const x = ins.judge(m); failures.push(...x.failures); notes.push(...x.notes); }
   return { m, out, lines, failures, budgets, notes };
 }
 
@@ -222,6 +227,7 @@ async function main(argv) {
       if (!r.ok) failed++;
     }
   }
+  if (env.summary) env.summary(list, opt);
   console.log(failed ? failed + ' of ' + list.length + ' tests failed' : 'all ' + list.length + ' tests passed');
   process.exit(failed ? 1 : 0);
 }
