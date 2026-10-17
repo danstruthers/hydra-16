@@ -1827,6 +1827,91 @@ function inTurn(o, want, f, name = '') {
   }
 }
 
+// Dingus Quest Zero's answers timed (dq0answer's): each command's Enter (the CR as the ACIA has it) to its answer's first
+// letter in the story (want: the words it begins with), and to the story's last letter before the prompt ("> " on
+// the line typed's row) comes back; the status line (reverse video) and the escapes not the story's.  dq0Timer(m),
+// as the machine's made, listens (each byte's cycle, each CR's), and gives a function of the lines typed and of cmds
+// ({ line, want }: each the line's first time typed after the one before) giving { line, first, whole } for each
+function dq0Timer(m) {
+  const at = [], enters = [];
+  let out = m.out;
+  for (let i = 0; i < out.length; i++) at.push(0);
+  Object.defineProperty(m, 'out', { get: () => out, set: v => { const c = m.cpu.cyc; for (let i = out.length; i < v.length; i++) at.push(c); out = v; } });
+  const a = m.acia, read = a.read;
+  a.read = (r, t) => { if (r === 0 && a.rdrf && a.rx === 13) enters.push({ t: a.rxAt, pos: out.length }); return read(r, t); };
+  return (lines, cmds) => {
+    const res = [];
+    let li = 0;
+    for (const c of cmds) {
+      while (li < lines.length && lines[li] !== c.line) li++;
+      const e = enters[li], e2 = enters[li + 1];
+      li++;
+      if (!e) { res.push({ line: c.line, first: null, whole: null }); continue; }
+      const end = e2 ? e2.pos : out.length;
+      let story = '', idx = [], rev = 0, prompt = -1;
+      for (let i = e.pos; i < end; i++) {
+        if (out[i] === '\x1b') {
+          const q = /^\x1b\[([0-9;?]*)([A-Za-z])/.exec(out.slice(i, i + 12));
+          if (q) {
+            if (q[2] === 'm') rev = q[1] === '7';
+            if (q[2] === 'H' && /;1$/.test(q[1]) && q[1] !== '1;1' && /^\x1b\[K(\x1b\[\?25h)?> /.test(out.slice(i + q[0].length, i + q[0].length + 12)) &&
+              story.includes(c.want) && prompt < 0) prompt = idx.length;
+            i += q[0].length - 1;
+            continue;
+          }
+        }
+        if (rev || out[i] < ' ') continue;
+        story += out[i];
+        idx.push(i);
+      }
+      const w = story.indexOf(c.want);
+      let last = prompt < 0 ? idx.length - 1 : prompt - 1;
+      while (last > 0 && story[last] === ' ') last--;
+      res.push({ line: c.line, first: w < 0 ? null : at[idx[w]] - e.t, whole: w < 0 || last < w ? null : at[idx[last]] - e.t });
+    }
+    return res;
+  };
+}
+
+// dq0answer's commands: at seed 3 (-T: by the way down), the turns pace, then the normal pace; each a line, the words
+// its answer begins with, and at 115,200 baud its budgets (the user's targets, D17), its first letter's and its
+// whole's, from Enter: a turn's first words (as it begins, V_FACING) and a look's under half a second, 1.79M; what's
+// carried, a door examined and a step that can't be taken a fifth, 720,000.  (Not a step's or a walk's, their answer
+// the look as they get there: at the turns pace the denizens given their turn a slice at a time through the time the
+// move takes, at the normal pace the move taking its own time, a step a second, then the senses' look)
+const DQ0_ANSWERS = [['turn left', 'You turn to face', 1790000], ['turn right', 'You turn to face', 1790000],
+  ['step forward', 'You'], ['inventory', 'You carry', 720000], ['examine the door', 'A door', 720000],
+  ['look', 'You', 1790000, 1790000], ['go up', 'There\'s no way up or down here.', 720000],
+  ['walk to the door ahead to my left', 'You']];
+function dq0AnswerTest(baud) {
+  const wait = +(process.env.DQ0ANS_WAIT || 0);   // (Each line typed after 0-2 waits of 2M cycles: the timing moved, for an average)
+  const games = ['dq0 -p t -s 3 -c /ram/c.hm -T', 'dq0 -p n -s 3 -c /ram/c.hm -T'];
+  const lines = ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', ...(baud === 115200 ? ['echo b115200 >/dev/serctl'] : []),
+    ...games.flatMap(g => [g, ...DQ0_ANSWERS.map(c => c[0]), 'quit']), 'echo $status'];
+  return {
+    name: baud === 115200 ? 'dq0answer' : 'dq0answer96', what: 'Dingus Quest Zero\'s answers timed at ' + baud + ' baud (the user\'s D17: the responsiveness targets at 115,200; a command answered in a fifth of a second, 720,000 cycles, a look in half, 1.79M): from Enter to the answer\'s first letter, and to its last, for a turn left and right at seed 3, a step, what the character carries, a door examined, a look, a step that can\'t be taken and a walk, at the turns pace and the normal pace',
+    init: 't_rc', cycles: 1500e6,
+    machine: { input: lines.map((l, i) => '\u0101' + '\u0100'.repeat(wait * (i + 1) % 3) + l + '\r').join('') },
+    expect: ['% echo $status'],
+    start(m) { this.timer = dq0Timer(m); },
+    check(m, out) {
+      const f = [], notes = this.notes = [], li = lines.indexOf(games[1]);
+      const over = (r, name, what, v, max) => {
+        if (baud === 115200 && max && !(v !== null && v <= max)) f.push(name + ' ' + r.line + ': ' + what + ' ' + v + ' cycles from Enter (budget ' + max + ')');
+      };
+      const pace = (from, to, name) => this.timer(lines.slice(0, to).map((l, i) => i < from ? '' : l), DQ0_ANSWERS.map(c => ({ line: c[0], want: c[1] }))).forEach((r, k) => {
+        notes.push(name + ' ' + r.line + ': first letter ' + r.first + ', whole ' + r.whole);
+        over(r, name, 'its first letter', r.first, DQ0_ANSWERS[k][2]);
+        over(r, name, 'its whole', r.whole, DQ0_ANSWERS[k][3]);
+      });
+      pace(0, li, 'turns');
+      pace(li, lines.length, 'normal');
+      return f;
+    },
+    sdcard: true
+  };
+}
+
 module.exports = {
   IRQ_OFF_MAX,
   tests: [
@@ -2647,9 +2732,9 @@ module.exports = {
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p n -s 3 -c /ram/c.hm -T\r' +
         'ĀĀāturn left\rinventory\rāgo up\rĀĀĀĀāquit\rāecho $status\r' },
       expect: ['You carry', 'There\'s no way up or down here.', '% echo $status'],
-      budgets: [{ what: 'inventory answered (Enter to the answer)', from: '> inv', to: 'You carry', per: 1, max: 1000000 },
+      budgets: [{ what: 'inventory answered (Enter to the answer)', from: '> inv', to: 'You carry', per: 1, max: 1450000 },
         { what: 'a step that can\'t be taken answered (the world\'s: from the line told into the story)', from: '\n> go up',
-          to: 'There\'s no way up or down here.', per: 1, max: 330000 }],
+          to: 'There\'s no way up or down here.', per: 1, max: 600000 }],
       // (Each a mark in what the serial line sends: the inventory's from the line typed at the bottom, a fifth of a
       // second, the user's; the step's from the line entered, as it's told into the story (on a line of its own: the
       // line typed's row, 24, after it, or the status line's clock first, as the second falls): about 285,000 cycles to "go up"'s answer since the world sleeps on its
@@ -2672,11 +2757,19 @@ module.exports = {
       // stages.  What's left: the line typed while the UI still says the turn (its words wait for the serial line,
       // full of the rats' stirring at 9,600 baud), the typed echo's last letters with the answer, 600,000 cycles after
       // its first; and the world's list, 200,000 of its own)
+      // (reborn-game-stream: these at 9,600 baud, the user's D17 (the targets are 115,200's: dq0answer).  The turn's first
+      // words told as it begins (V_FACING), ahead of what it carries now, and the cursor's moves to the line typed and
+      // back round them, some 60 characters at 3,730 cycles each: the inventory 1,157,000 from its typed letters (887,000
+      // before), a budget of 1,450,000; and the line entered told into the story as it's entered, not with the answer,
+      // so from it the step's answer has the UI's parse and the world's climb in it: 456,000, a budget of 600,000 (from
+      // Enter it's quicker: dq0answer96's go up, some 560,000, 575,000 before).  What it carries is still told before
+      // the turn's look, its words after its first)
       check(m, out) {
         const a = out.indexOf('There\'s no way up or down here.'), b = out.indexOf('> quit', a), seg = a < 0 || b < 0 ? '' : out.slice(a, b);
         const top = (seg.match(/\x1b\[1;\d+H/g) || []).length, f = [];
         if (top > 4) f.push(top + ' moves up to the status line while nothing happened (a second at most each)');
-        if (out.indexOf('You carry') > out.indexOf('You turn to face')) f.push('what it carries told only after the turn\'s look');
+        const turned = out.indexOf('You turn to face'), looked = turned < 0 ? -1 : turned + out.slice(turned).search(/You (can see|are in)/);
+        if (looked < turned || out.indexOf('You carry') > looked) f.push('what it carries told only after the turn\'s look');
         for (const s of seg.matchAll(/\x1b\[1;\d+H/g)) {      // (Hidden as it moved there: hidden last, here or before)
           const at = a + s.index;
           if (out.lastIndexOf('\x1b[?25l', at) <= out.lastIndexOf('\x1b[?25h', at)) { f.push('the cursor not hidden while the status line was drawn'); break; }
@@ -2685,6 +2778,8 @@ module.exports = {
       },
       sdcard: true
     },
+    dq0AnswerTest(115200),
+    dq0AnswerTest(9600),
     {
       name: 'dq0looks', what: 'Dingus Quest Zero\'s looks the same as they were (the look quickened, reborn-game-look: its grid kept and moved, its marks put only where they reach, the store gone through once): eight games at the turns pace (seeds 3, 5, 7, 12, 4, 517: turns, steps, walks, a walk\'s chosen door, a stairway down, a torch put out and lit again, one put down and taken up, a portcullis lowered and raised, a window broken and climbed through, a weak-eyed character), every reply the senses give (a look\'s, the denizens\' senses\') with the same request, the same record of what the character perceives and the same squares seen and visible in every live chunk as tests/dq0/looks.ref, the old code\'s (DQ0LOOKS=write: written afresh from this run)',
       init: 't_rc', cycles: 2500e6,
