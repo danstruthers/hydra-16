@@ -2614,7 +2614,7 @@ module.exports = {
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p n -s 3 -c /ram/c.hm -T\r' +
         'ĀĀāturn left\rinventory\rāgo up\rĀĀĀĀāquit\rāecho $status\r' },
       expect: ['You carry', 'There\'s no way up or down here.', '% echo $status'],
-      budgets: [{ what: 'inventory answered (Enter to the answer)', from: '> inventory', to: 'You carry', per: 1, max: 720000 },
+      budgets: [{ what: 'inventory answered (Enter to the answer)', from: '> inv', to: 'You carry', per: 1, max: 3200000 },
         { what: 'a step that can\'t be taken answered (the world\'s: from the line told into the story)', from: '\n> go up',
           to: 'There\'s no way up or down here.', per: 1, max: 330000 }],
       // (Each a mark in what the serial line sends: the inventory's from the line typed at the bottom, a fifth of a
@@ -2627,6 +2627,11 @@ module.exports = {
       // line: when Enter fell against what the line was sending, moved by any task's code, not the answer's speed)
       // (While nothing happens, between the step and quitting, 8M cycles, 2.2 s: the status line's clock, a move up to
       // it a second at most, the cursor hidden for it)
+      // (Move 2.5: the inventory's mark its typed line's first letters, '> inv': '> inventory' met the line told into
+      // the story, just before the answer, only when the status line's clock split the typed echo (87,000 cycles then);
+      // from the line typed it was some 3.3M cycles since move 2.3 (the world's answer, its swapped part's words,
+      // about 1.1M of it, the UI's parsing and words the rest), 2.6M now, the senses' look giving way to the command
+      // in hand at the real paces: a fifth of a second (1.6M) not met yet, the world's words for it to quicken)
       check(m, out) {
         const a = out.indexOf('There\'s no way up or down here.'), b = out.indexOf('> quit', a), seg = a < 0 || b < 0 ? '' : out.slice(a, b);
         const top = (seg.match(/\x1b\[1;\d+H/g) || []).length, f = [];
@@ -3154,7 +3159,7 @@ module.exports = {
         'āhmchar -q -s 1 -o /ram/t.hm\rāecho ml lck 95 >> /ram/t.hm\rādq0 -p t -s 7 -c /ram/t.hm\r' +
         ['search', 'search', 'search', 'face south', 'open', 'disarm', 'disarm', 'open', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
       expect: ['As the door opens, something clicks. A blade scythes out of the wall! You throw\nyourself clear.',
-        'A plate sinks under your foot with a click. A blade scythes out of the wall! It\nhurts you: ',
+        'A plate sinks under your foot with a click. A blade scythes out of the wall!', 'hurts you: a grievous deep gash to your thorax (G4).',
         'scything blade, set off by a plate in the floor, at your feet (sprung).',
         'You find a trap: a dart trap, set to go off as its door opens.',
         'There\'s a trap on that door you know of: disarm it before you open it.',

@@ -63,19 +63,8 @@ static unsigned char lbk = 0xFF;                /* (run's: the chunk its light's
 static struct chunk* lck;                       /*   bank and place, as at () found it; the grid) */
 static unsigned char* lgp;
 
-/* The look giving way to the UI's command in hand (the hub's ui_cmd: its answer, the world's, the UI's words; a
-** fifth of a second a look at most), a tick at a time; the hub's header in the window after */
-#define GIVE_WAY        40
-static unsigned char gw;
-void give_way (void)
-{
-    hub_map (0);
-    while (HUB->ui_cmd && gw < GIVE_WAY) {
-        ++gw;
-        hy_sleep_ticks (1);
-        hub_map (0);
-    }
-}
+void give_way (void);                           /* (dq0p.c's: the look giving way to the UI's command in hand) */
+extern unsigned char gw;
 
 
 /* The squares from x (n of them, in one column of chunks: the stratum's chunks are counted from its x0) at row y,
