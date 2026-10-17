@@ -481,9 +481,9 @@ struct hub {                                    /* Bank 0, at $8000 */
     /* An actor's senses (DUNGEON.md's perception as layers: the senses answer for every actor; the denizens ask, for
     ** their minds, as one decides): whether it senses the character, seen by the light layer (the character lit,
     ** by its own light or where it stands: the kind's sight, else its darkvision, the less as its eyes are still
-    ** used to more light than is there; a line clear), heard (as it works, within the kind's hearing), or its light
-    ** seen far off (the eyes' adapting, the senses' to keep: the kind's rate); and how far it may move with the
-    ** answer standing (a far one's: the coarse answer, no line cast) */
+    ** used to more light than is there, its eyes' adapting the senses' to keep at the kind's rate; a line clear),
+    ** heard (as it works, within the kind's hearing); and how far it may move with the answer standing (a far one's:
+    ** the coarse answer, no line cast) */
     struct {
         RQH;
         unsigned char who;                      /* The actor (its entry) */
@@ -498,8 +498,7 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   the UI answering at once, the world's answers its) */
 };
 #define SN_SEEN         0x01                    /* (dsense's res: the character seen, */
-#define SN_HEARD        0x02                    /*   heard, */
-#define SN_GLOW         0x04                    /*   its light seen far off) */
+#define SN_HEARD        0x02                    /*   heard) */
 #define WA_TRAPS        0x01                    /* Searching as it goes: traps underfoot, hidden doors beside */
 #define WA_LISTEN       0x02                    /* Listening as it goes */
 #define WA_MAP          0x04                    /* Mapping as it goes (the map's side the orientation's: its
