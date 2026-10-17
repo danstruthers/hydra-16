@@ -3018,13 +3018,15 @@ module.exports = {
       init: 't_rc', cycles: 1200e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 7 -c /ram/c.hm -T\r' +
         ['d', 'defend dodge', 'wait', 'wait', 'sheet', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
-      expect: ['A ghoul is ahead to your left, 10 feet away.', 'You will dodge.', 'The ghoul claws at you; you dodge.', 'fighting you.',
+      expect: ['A ghoul is', 'You will dodge.', 'The ghoul claws at you; you dodge.', 'fighting you.',
         'The ghoul claws at you: a serious gash to your thorax (S2).', 'Injuries: thorax S2 (gash).', '% echo $status'],
       // (At seed 7 the ghoul's first claw dodged, its second a wound: the referee's dice the same whatever the timing,
-      // at the turns pace)
+      // at the turns pace.  The ghoul seen as the character comes down, in the room's look or as it stirs after it:
+      // the denizens' task enlists it as the character's stratum changes, beside the look, whichever's first; the
+      // words wrapped where they fall)
       check(m, out) {
         const f = [];
-        inTurn(dq0Story(out), ['> wait', 'The ghoul claws at you; you dodge.', '> wait', 'The ghoul claws at you: a serious gash to your thorax (S2).', '> sheet'], f);
+        inTurn(dq0Story(out), ['> d', 'A ghoul is ahead to your left, 10 feet away.', '> wait', 'The ghoul claws at you; you dodge.', '> wait', 'The ghoul claws at you: a serious gash to your thorax (S2).', '> sheet'], f);
         return f;
       },
       sdcard: true
