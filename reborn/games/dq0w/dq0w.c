@@ -942,6 +942,16 @@ void __fastcall__ s_step_to (unsigned char h, unsigned char n, unsigned char kee
 #pragma code-name (push, "SW3CODE")
 #pragma rodata-name (push, "SW3RODATA")
 
+/* Stratum n's plan grown by the maker (its record set in the world bank's strata first), and its record as grown
+** (the maker's wrec.grown) written into the strata's, the world's (the hub's header in the window after) */
+static void __fastcall__ planned (unsigned char n)
+{
+    ask_maker (M_PLAN, n, 0, 0);
+    hub_map (WORLD_BANK);
+    memcpy (&WREC->strata[n], &WREC->grown, sizeof WREC->grown);
+    sync_strata ();
+}
+
 /* A stand-in for the theme's say: a stratum's bounds round the squares it must hold (the links down to it), its
 ** size picked from a few classes: a cellar (a few squares), a modest one (a few hundred feet), a great one (a mile
 ** or two) */
@@ -1007,7 +1017,7 @@ void __fastcall__ s_grow_below (unsigned char n)
         ++b->nlinks;
     }
     bounds (b, lx0, ly0, lx1, ly1);
-    ask_maker (M_PLAN, n + 1, 0, 0);
+    planned (n + 1);
 }
 
 #pragma code-name (pop)
@@ -1249,7 +1259,7 @@ void s_begin (void)
     s->link[0].x = s->x0 + INSET (o);
     o = 4 + random (s->h - 8);
     s->link[0].y = s->y0 + INSET (o);
-    ask_maker (M_PLAN, 0, 0, 0);
+    planned (0);
     move.how = A_START;                         /* (The character at the foot of the way in) */
     move.sn = 0;
     move.x = strata[0].link[0].x;

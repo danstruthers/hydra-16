@@ -66,7 +66,8 @@ static void __fastcall__ serve (unsigned char i)
         plan_stratum (q.sn);
         links_down (q.sn);
         place_pieces (q.sn);                    /* (The theme's pieces in it: theme.h) */
-        hub_put (WORLD_BANK, &WREC->strata[q.sn], &strata[q.sn], sizeof strata[0]);
+        hub_put (WORLD_BANK, &WREC->grown, &strata[q.sn], sizeof strata[0]);    /* (Its record grown: the world's
+                                                **   to write into the strata's) */
         break;
     case M_CHUNK:
         make_chunk (q.sn, q.cx, q.cy);

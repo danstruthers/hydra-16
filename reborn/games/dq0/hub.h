@@ -464,6 +464,8 @@ struct wrec {
     unsigned        cstamp;                     /*   their regions' clock, */
     unsigned        cgen;                       /*   and the game's generation (a region's file of another game's
                                                 **   in the folder isn't read) */
+    struct stratum  grown;                      /* A stratum's record as the maker's grown its plan (M_PLAN's: the
+                                                **   world writes it into strata) */
 };
 
 /* Who writes what (Phase 2: one authority on state).  Each region of the hub has an owner, the one task that writes
@@ -480,8 +482,8 @@ struct wrec {
 ** stamps).  2.N:TASK: one that writes it still, till Phase 2's move 2.N makes it the owner's alone: a write that
 ** isn't the owner's, a + task's or a known one fails the test, and the moves shrink the known ones to none.  The
 ** UI's hub_create (the hub's banks cleared, its header made) and a task's own task[] entry aren't counted.
-** The moves (the plan's): 2.2 the maker made pure (M_WORK: the chunks' portals and traps, pview, the maker's events,
-** batter's referee slot, the maker's strata written back); 2.3 the item store the world's (the items' banks, the
+** The moves (the plan's): 2.2 the maker made pure (done: M_WORK and the change records the world's, the plans'
+** strata records the world's to write back, from the maker's wrec.grown); 2.3 the item store the world's (the items' banks, the
 ** catalogue, pc_light and pc_lamp); 2.4 bodies and blows (the actors, den_seq, pc_foe, the fights' words in DEN_BANK);
 ** 2.5 the senses for every actor, by layers, and their memory (the chunks' tiles' seen and visible marks, R_VISITED,
 ** the denizens seen in sight); 2.6 game logic out of the UI (way_open); 2.7 the character's state home (gait, watch,
@@ -523,16 +525,18 @@ struct wrec {
 **   own hub.mreq[ASK_SENSES] maker +senses
 **   own hub.mreq[ASK_UI] maker +ui
 **   own hub.item_lock ui
+**   own hub.change_lock ui                                     (The change records' lock: made with the hub)
+**   own hub.wreq world +ui                                     (The UI's requests of the world)
 **   own hub.ireq senses +ui
-**   own hub.pview world 2.2:maker
+**   own hub.pview world                                        (A portal looked at closely: the UI's wreq's)
 **   own hub.dig_tool world
 **   own hub.dig_wear world
 **   own hub.iq_head ui                                         (The UI's intents: its ring)
 **   own hub.iq ui
 **   own hub.iq_tail world                                      (Its reader's place)
-**   own hub.eq_head world 2.2:maker                            (The world's events)
-**   own hub.eq world 2.2:maker
-**   own hub.slot[SLOT_WORLD] referee +world 2.2:maker
+**   own hub.eq_head world                                      (The world's events)
+**   own hub.eq world
+**   own hub.slot[SLOT_WORLD] referee +world
 **   own hub.slot[SLOT_UI] referee +ui +senses +denizens        (The UI's, lent to those asking for it)
 **   own hub.dslot referee +denizens
 **   own hub.actor[*] world 2.4:denizens                        (A denizen's body: the world's)
@@ -562,10 +566,11 @@ struct wrec {
 **   own chunk maker                                            (A chunk: made from the seed)
 **   own chunk.tile maker 2.5:senses,world                      (Its squares: the senses' seen marks in them)
 **   own chunk.room[*].flags maker 2.5:world                  (A room's: R_VISITED, the world's as it's come into)
-**   own chunk.nportals world 2.2:maker                         (Portals and traps and their working: the world's)
-**   own chunk.portal world 2.2:maker
-**   own chunk.ntraps world 2.2:maker
-**   own chunk.trap world 2.2:maker
+**   own chunk.portal maker +world                              (Made from the seed; worked by the world, each change
+**   own chunk.trap maker +world                                (made in the chunk as it keeps its record: a state,
+**   own chunk.elev maker +world                                (a harm, a square dug, an opening: dq0w/store.c)
+**   own chunk.nopen maker +world
+**   own chunk.open maker +world
 **   own bank(CAT_BANK) world 2.3:senses,ui                     (The catalogue: the things', the theme's kinds)
 **   own banks(CAT_BANK+1,ITEM_BANKS) world 2.3:senses,maker,denizens   (The items' places and states)
 **   own bank(DEN_BANK) denizens                                (The denizens' events)
@@ -579,7 +584,13 @@ struct wrec {
 **   own uirec.map maker +ui
 **   own uirec.things_text senses +ui
 **   own bank(WORLD_BANK) maker                                 (The cache's table)
-**   own wrec.strata world 2.2:maker 2.7:ui                     (The strata's records: the world's dungeon)
+**   own wrec.strata world 2.7:ui                               (The strata's records: the world's dungeon)
+**   own wrec.grown maker                                       (A stratum's record as its plan's grown: M_PLAN's)
+**   own wrec.cpage world                                       (The change records' pages: the world's, store.c)
+**   own wrec.cstamp world
+**   own wrec.cgen world
+**   own banks(CHANGE_BANK(0),CHANGE_BANKS) world
+**   own wrec.cslot[*].used maker +world                        (A chunk stocked, CS_FRESH: the world's mark taken)
 **   own wrec.cslot[*].stamp maker +world +denizens +senses +ui     (Each chunk's reader's stamp, as it finds it)
 **   own wrec.stamp maker +world +denizens +senses +ui
 **   own wrec.inuse[ASK_WORLD] world
