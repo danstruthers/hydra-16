@@ -42,9 +42,9 @@
 //        node build.js prog DIR
 //   a RAM program from DIR/*.s (with the SDK: sdk/asm/README.md), or DIR/*.c and *.s (a C program: sdk/c/README.md),
 //   into DIR/NAME.hyx, NAME the folder's
-// The cc65 tools: $CC65_BIN, else $CC65_HOME/bin (as the repository's CI sets it), else
-// C:/source/cc65/win64_snapshot/bin, else the PATH; cc65's own folders (include, asminc, lib): $CC65_HOME, else the
-// folder above its tools'.
+// The cc65 tools: the base's (../base/build.js's tool (): $CC65_BIN, else $CC65_HOME/bin, else its CC65_DIR's bin,
+// C:/source/cc65/win64_hydra/bin, else the PATH); cc65's own folders (include, asminc, lib): $CC65_HOME, else the
+// folder above its tools'.  The assembler's CPU is the W65C02 (WAI, STP), the compiler's the 65C02.
 // From Node: require('./build.js').buildBoth(opts) does the same, and gives what the last build made; build(opts)
 // builds for opts.acia alone, its images bin/bios.bin, prom0.bin ... (buildBoth names them).
 'use strict';
@@ -65,13 +65,7 @@ const ROOT = __dirname;
 const at = (...p) => path.join(ROOT, ...p);
 const atBase = (...p) => path.join(base.ROOT, ...p);
 
-function tool(name) {
-  for (const dir of [process.env.CC65_BIN, process.env.CC65_HOME && path.join(process.env.CC65_HOME, 'bin'), 'C:/source/cc65/win64_snapshot/bin']) {
-    if (!dir) continue;
-    for (const f of [path.join(dir, name + '.exe'), path.join(dir, name)]) if (fs.existsSync(f)) return f;
-  }
-  return name;
-}
+const tool = base.tool;
 const CA65 = tool('ca65'), LD65 = tool('ld65'), CC65 = tool('cc65'), AR65 = tool('ar65');
 
 // cc65's home: $CC65_HOME, else the folder above the one its tools are in
@@ -97,7 +91,7 @@ function assemble(files, objdir, includes, defines) {
   mkdir(objdir);
   return files.map(f => {
     const o = path.join(objdir, path.basename(f, '.s') + '.o');
-    run(CA65, ['--cpu', '65C02', '-g', ...includes.flatMap(i => ['-I', i]), ...defines.flatMap(d => ['-D', d]),
+    run(CA65, ['--cpu', 'W65C02', '-g', ...includes.flatMap(i => ['-I', i]), ...defines.flatMap(d => ['-D', d]),
       '-l', o.replace(/\.o$/, '.lst'), '-o', o, f]);
     return o;
   });
@@ -119,7 +113,7 @@ function cflags() {
   const home = cc65Home(), own = d => fs.existsSync(path.join(home, d)) ? ['-I', path.join(home, d)] : [];
   return {
     cc: ['-g', '-t', 'none', '--cpu', '65C02', '-O', '-I', at('sdk', 'c', 'include'), ...own('include')],
-    as: ['-g', '--cpu', '65C02', '-I', at('sdk', 'asm'), '-I', atBase('sdk', 'asm'), '-I', at('sdk', 'c', 'lib'), '-I', at('sdk', 'c', 'include'), ...own('asminc')],
+    as: ['-g', '--cpu', 'W65C02', '-I', at('sdk', 'asm'), '-I', atBase('sdk', 'asm'), '-I', at('sdk', 'c', 'lib'), '-I', at('sdk', 'c', 'include'), ...own('asminc')],
   };
 }
 

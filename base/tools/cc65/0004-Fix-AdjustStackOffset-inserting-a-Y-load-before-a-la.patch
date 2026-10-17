@@ -1,0 +1,125 @@
+From 0b7049883b69bd9663082bc8663e0427a8c8d356 Mon Sep 17 00:00:00 2001
+From: Dan Struthers <dan.struthers@gmail.com>
+Date: Sat, 17 Oct 2026 08:59:33 -0700
+Subject: [PATCH 4/4] Fix AdjustStackOffset() inserting a Y load before a label
+
+When AdjustStackOffset() corrects a stack access that is not just after
+a constant load of Y, it inserts a new load of Y before it. If the
+stack access has a label, the label stayed on the stack access, so code
+jumping there skipped the new load and used the old offset. The load,
+now only reached by falling through, could even be dead code after an
+unconditional jump and be removed. With
+
+    e = f (...);
+    if (e) {
+        e->m = (kind == 0x21 ? 10 : kind == 0x20 && q->n <= 1 ? 1 : 2) << 4;
+        ...
+
+OptPtrStore4 removed the push of e and corrected the two loads of kind,
+but the second one, at the label of the ":" branch, read the stack
+location two bytes above kind. Reachable since 6bce4a213 (the split of
+OptStackOps()); cc65 2.19 compiled this correctly.
+
+Move the stack access's labels to the inserted load.
+
+Test: test/val/stackoffs-label.c.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/cc65/codeoptutil.c     |  6 +++-
+ test/val/stackoffs-label.c | 63 ++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 68 insertions(+), 1 deletion(-)
+ create mode 100644 test/val/stackoffs-label.c
+
+diff --git a/src/cc65/codeoptutil.c b/src/cc65/codeoptutil.c
+index ec9f6bcf8..aa95eff11 100644
+--- a/src/cc65/codeoptutil.c
++++ b/src/cc65/codeoptutil.c
+@@ -926,10 +926,14 @@ void AdjustStackOffset (StackOpData* D, unsigned Offs)
+                 /* The Y load is just before the stack access, adjust it */
+                 CE_SetNumArg (P, P->Num - Offs);
+             } else {
+-                /* Insert a new load instruction before the stack access */
++                /* Insert a new load instruction before the stack access. If
++                ** the stack access has a label, move it to the new load, so
++                ** that code jumping there gets the load as well.
++                */
+                 const char* Arg = MakeHexArg (E->RI->In.RegY - Offs);
+                 CodeEntry* X = NewCodeEntry (OP65_LDY, AM65_IMM, Arg, 0, E->LI);
+                 InsertEntry (D, X, I++);
++                CS_MoveLabels (D->Code, E, X);
+             }
+ 
+             /* If we need the value of Y later, be sure to reload it */
+diff --git a/test/val/stackoffs-label.c b/test/val/stackoffs-label.c
+new file mode 100644
+index 000000000..35ef17fa6
+--- /dev/null
++++ b/test/val/stackoffs-label.c
+@@ -0,0 +1,63 @@
++
++/* When AdjustStackOffset() inserts a load of Y before a stack access that has
++** a label, the label must move to the load, else code jumping there skips it
++** and reads the wrong stack location. Here OptPtrStore4 removes the push of
++** "e" and adjusts the second load of "kind", which follows a label.
++*/
++
++#include <stdio.h>
++#include <stdlib.h>
++
++static int fail = 0;
++
++struct portal { unsigned char a, b, c, d, e, mat, f, g, h, size, i, qual; };
++struct thing { unsigned char a, b, c, d, e, make, size; };
++
++static struct thing t;
++
++static struct thing* put_down (unsigned char kind, unsigned char sn, unsigned x, unsigned y, unsigned char n,
++    unsigned char hide)
++{
++    (void) kind; (void) sn; (void) x; (void) y; (void) n; (void) hide;
++    return &t;
++}
++
++static void part (unsigned char kind, unsigned char sn, unsigned x, unsigned y, const struct portal* q,
++    unsigned char where)
++{
++    struct thing* e = put_down (kind, sn, x, y, 1, where == 3 ? 0xFE : 0xFF);
++
++    if (e) {
++        e->make = (kind == 0x21 ? 10 : kind == 0x20 && q->mat <= 1 ? 1 : 2) << 4 | q->qual;
++        e->size = kind == 0x20 ? (q->size & 15) + 1 : q->size;
++    }
++}
++
++static void check (unsigned char kind, unsigned char mat, unsigned char make, unsigned char size)
++{
++    static struct portal p;
++
++    p.mat = mat;
++    p.qual = 5;
++    p.size = 0x13;
++    part (kind, 0, 0, 0, &p, 3);
++    if (t.make != make || t.size != size) {
++        ++fail;
++        printf ("part (%02X, mat %u): make %02X, size %02X; expected %02X, %02X\n", kind, mat, t.make, t.size, make,
++            size);
++    }
++}
++
++int main (void)
++{
++    check (0x21, 0, 0xA5, 0x13);
++    check (0x20, 0, 0x15, 0x04);
++    check (0x20, 1, 0x15, 0x04);
++    check (0x20, 2, 0x25, 0x04);
++    check (0x22, 0, 0x25, 0x13);
++
++    if (fail) {
++        printf ("stackoffs-label: %d failures\n", fail);
++    }
++    return fail ? EXIT_FAILURE : EXIT_SUCCESS;
++}
+-- 
+2.46.2.windows.1
+

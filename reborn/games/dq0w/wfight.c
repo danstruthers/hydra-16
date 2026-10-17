@@ -111,8 +111,8 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     }
     for (i = 0, e = (const struct rs_effect*) r->x; i < RS_EFFECTS && e->kind; ++i, ++e) {
         if (e->kind == X_COND_ON && (e->cond & C_PRONE)) {
-            if (e->target == att) {             /* (Fallen: a stumble, a leg's.  Not *(c ? &pa : &pd): cc65 2.19
-                pa = POS_PRONE;                 /*   stores it at the target's number, in the zero page) */
+            if (e->target == att) {             /* (Fallen: a stumble, a leg's.  An if, not *(c ? &pa : &pd): 13
+                pa = POS_PRONE;                 /*   bytes the less) */
             } else {
                 pd = POS_PRONE;
             }

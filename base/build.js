@@ -20,8 +20,12 @@
 // HydraOS (../reborn/build.js) runs this first, and builds its modules, its paged ROM and its SDKs with what this
 // gives: buildModule (a module, or a RAM program, with the base's includes: sdk/asm, include, obj/gen, lib),
 // assemble, the cc65 tools, the hardware test, readManifest (a rom.txt).
-// The cc65 tools: $CC65_BIN, else $CC65_HOME/bin (as the repository's CI sets it), else
-// C:/source/cc65/win64_snapshot/bin, else the PATH.
+// The cc65 tools: $CC65_BIN, else $CC65_HOME/bin (as the repository's CI sets it), else CC65_DIR/bin, else the PATH.
+// CC65_DIR (below) is the one place the toolchain's folder is named: C:/source/cc65/win64_hydra, cc65 as the Hydra
+// builds with it, upstream's 6bd01e8a5 (October 2026) with four fixes of its code generator and optimizer
+// (tools/cc65/*.patch: the cc65 clone's branch hydra-optfix; the folder's VERSION.txt says so).  Its ca65 knows WAI
+// and STP as the W65C02's (--cpu W65C02), not the 65C02's (Rockwell's) as 2.19's did.  reborn/build.js and its tools
+// (sim/lib/hubown.js, sim/tools/nprof.js) find the tools by tool () here.
 //
 // Usage: node build.js [--clock 1|2] [--acia rockwell|wdc] [--quiet]
 //   --clock 2: for a 7.16 MHz board (jumper J8); --acia: the chip whose build is the last, its objects left in obj/
@@ -42,8 +46,10 @@ const images = require('./tools/images.js');
 const ROOT = __dirname;
 const at = (...p) => path.join(ROOT, ...p);
 
+const CC65_DIR = 'C:/source/cc65/win64_hydra';
+
 function tool(name) {
-  for (const dir of [process.env.CC65_BIN, process.env.CC65_HOME && path.join(process.env.CC65_HOME, 'bin'), 'C:/source/cc65/win64_snapshot/bin']) {
+  for (const dir of [process.env.CC65_BIN, process.env.CC65_HOME && path.join(process.env.CC65_HOME, 'bin'), path.join(CC65_DIR, 'bin')]) {
     if (!dir) continue;
     for (const f of [path.join(dir, name + '.exe'), path.join(dir, name)]) if (fs.existsSync(f)) return f;
   }
@@ -63,7 +69,7 @@ function assemble(files, objdir, includes, defines) {
   mkdir(objdir);
   return files.map(f => {
     const o = path.join(objdir, path.basename(f, '.s') + '.o');
-    run(CA65, ['--cpu', '65C02', '-g', ...includes.flatMap(i => ['-I', i]), ...defines.flatMap(d => ['-D', d]),
+    run(CA65, ['--cpu', 'W65C02', '-g', ...includes.flatMap(i => ['-I', i]), ...defines.flatMap(d => ['-D', d]),
       '-l', o.replace(/\.o$/, '.lst'), '-o', o, f]);
     return o;
   });
@@ -255,4 +261,4 @@ if (require.main === module) {
   }
   try { buildBoth(opt); } catch (e) { console.error('build: ' + e.message); process.exit(1); }
 }
-module.exports = { build, buildBoth, fixSums, kernelDefines, takeImages, IMAGE_NAMES, buildModule, packable, relinkModule, assemble, run, tool, sources, readManifest, hwtest, definesOf, moduleCfg, INCLUDES, CA65, LD65, ROOT, HWTEST_IMAGE };
+module.exports = { build, buildBoth, fixSums, kernelDefines, takeImages, IMAGE_NAMES, buildModule, packable, relinkModule, assemble, run, tool, sources, readManifest, hwtest, definesOf, moduleCfg, INCLUDES, CA65, LD65, ROOT, HWTEST_IMAGE, CC65_DIR };

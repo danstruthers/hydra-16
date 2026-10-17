@@ -1095,9 +1095,7 @@ static unsigned char __fastcall__ deal (unsigned char how, const struct pcmd* c)
     return dealt.result;
 }
 
-/* The commands that want nothing but their verb (unoptimised: cc65 2.19's optimiser takes a branch here for a short
-** one that isn't, an assembler's range error) */
-#pragma optimize (push, off)
+/* The commands that want nothing but their verb */
 static void __fastcall__ chores (unsigned char verb)
 {
     switch (verb) {
@@ -1134,7 +1132,6 @@ static void __fastcall__ chores (unsigned char verb)
         return;
     }
 }
-#pragma optimize (pop)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)

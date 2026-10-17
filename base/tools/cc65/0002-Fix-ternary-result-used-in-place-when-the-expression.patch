@@ -1,0 +1,152 @@
+From 5ca0da2196e547da268d48a6f4559cb2c518c214 Mon Sep 17 00:00:00 2001
+From: Dan Struthers <dan.struthers@gmail.com>
+Date: Sat, 17 Oct 2026 08:39:42 -0700
+Subject: [PATCH 2/4] Fix ternary result used in place when the expression
+ result is unused
+
+hieQuest() passes the E_NEED_NONE flag of an expression whose result
+is unused (an expression statement) on to the second and third
+operands. With a non-constant condition they are then not loaded, but
+the result is still marked as loaded into the primary. If the ternary
+is in parentheses and used in place by an operator outside of them,
+its "value" is whatever is left in A/X from the condition, as in
+
+    *(c ? &a : &b) = 1;         /* store to $0000 or $0001 */
+    *(c ? p : q) = 1;
+    (c ? &s : &t)->m = 1;
+    (c ? a1 : a2)[i] = 1;
+    (c ? f : g) ();             /* jsr callax to anywhere */
+
+with or without optimization. The unary '*', the postfix operators and
+casts all work on the operand's ExprDesc in place, so its flags are
+those of the whole expression.
+
+Don't pass E_NEED_NONE on to the operands when the condition is not
+constant. (With a constant condition the selected operand is not
+loaded, but kept in the result as is, which is fine.) Results really
+unused cost at most a load: "c ? f () : g ();" is unchanged.
+
+Test: test/val/ternary-lvalue.c.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/cc65/expr.c           | 16 +++++++--
+ test/val/ternary-lvalue.c | 76 +++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 90 insertions(+), 2 deletions(-)
+ create mode 100644 test/val/ternary-lvalue.c
+
+diff --git a/src/cc65/expr.c b/src/cc65/expr.c
+index 36485f1b4..eebd74d65 100644
+--- a/src/cc65/expr.c
++++ b/src/cc65/expr.c
+@@ -3919,11 +3919,23 @@ static void hieQuest (ExprDesc* Expr)
+         /* The constant condition must be compile-time known as well */
+         int ConstantCond = ED_IsConstBool (Expr);
+         unsigned Flags   = Expr->Flags & E_MASK_KEEP_RESULT;
++        unsigned SubFlags = Flags;
++
++        /* With a non-constant condition, the branches are loaded into the
++        ** primary and the result is marked as loaded there. Even if the
++        ** result seems to be unused, it may still be used in place by an
++        ** operator outside of the parentheses around this expression, as
++        ** in "*(c ? p : q) = 0" or "(c ? f : g) ()", so the branches must
++        ** be loaded in any case.
++        */
++        if (!ConstantCond) {
++            SubFlags &= ~E_NEED_NONE;
++        }
+ 
+         ED_Init (&Expr2);
+-        Expr2.Flags = Flags;
++        Expr2.Flags = SubFlags;
+         ED_Init (&Expr3);
+-        Expr3.Flags = Flags;
++        Expr3.Flags = SubFlags;
+ 
+         if (!ConstantCond) {
+             /* Condition codes not set, request a test */
+diff --git a/test/val/ternary-lvalue.c b/test/val/ternary-lvalue.c
+new file mode 100644
+index 000000000..5392f6454
+--- /dev/null
++++ b/test/val/ternary-lvalue.c
+@@ -0,0 +1,76 @@
++
++/* The result of a ternary operator with a non-constant condition, used in
++** place by an operator outside of its parentheses ("*(c ? p : q) = x",
++** "(c ? s : t)->m = x", "(c ? a : b)[i] = x", "(c ? f : g) ()"), must be
++** loaded even when the whole expression's result is unused.
++*/
++
++#include <stdio.h>
++#include <stdlib.h>
++
++static int fail = 0;
++
++struct s { unsigned char x, y; } s1, s2;
++unsigned char a1[4], a2[4];
++unsigned char ga, gd;
++int gi, gj;
++unsigned char* p = &ga;
++unsigned char* q = &gd;
++unsigned char called;
++
++static void f1 (void) { called = 1; }
++static void f2 (void) { called = 2; }
++
++static void check (const char* what, unsigned char got, unsigned char want)
++{
++    if (got != want) {
++        ++fail;
++        printf ("%s: %u, expected %u\n", what, got, want);
++    }
++}
++
++static void test (unsigned char c)
++{
++    static unsigned char sa, sd;
++    unsigned char la = 0, ld = 0;
++
++    ga = gd = sa = sd = 0;
++    gi = gj = 0;
++    s1.y = s2.y = 0;
++    a1[1] = a2[1] = 0;
++    called = 0;
++
++    *(c ? &ga : &gd) = 3;
++    *(c ? &sa : &sd) = 4;
++    *(c ? &la : &ld) = 5;
++    *(c ? &gi : &gj) = 6;
++    *(c ? p : q) += 7;
++    (c ? &s1 : &s2)->y = 8;
++    (c ? a1 : a2)[1] = 9;
++    (c ? f1 : f2) ();
++
++    check ("*(c ? &ga : &gd)", c ? ga : gd, 10);
++    check ("other of ga, gd", c ? gd : ga, 0);
++    check ("*(c ? &sa : &sd)", c ? sa : sd, 4);
++    check ("other of sa, sd", c ? sd : sa, 0);
++    check ("*(c ? &la : &ld)", c ? la : ld, 5);
++    check ("other of la, ld", c ? ld : la, 0);
++    check ("*(c ? &gi : &gj)", (unsigned char) (c ? gi : gj), 6);
++    check ("other of gi, gj", (unsigned char) (c ? gj : gi), 0);
++    check ("(c ? &s1 : &s2)->y", c ? s1.y : s2.y, 8);
++    check ("other of s1, s2", c ? s2.y : s1.y, 0);
++    check ("(c ? a1 : a2)[1]", c ? a1[1] : a2[1], 9);
++    check ("other of a1, a2", c ? a2[1] : a1[1], 0);
++    check ("(c ? f1 : f2) ()", called, c ? 1 : 2);
++}
++
++int main (void)
++{
++    test (1);
++    test (0);
++
++    if (fail) {
++        printf ("ternary-lvalue: %d failures\n", fail);
++    }
++    return fail ? EXIT_FAILURE : EXIT_SUCCESS;
++}
+-- 
+2.46.2.windows.1
+

@@ -1,0 +1,169 @@
+From e8d89da8fc5f830fc7c37ad5b06f7174becda12b Mon Sep 17 00:00:00 2001
+From: Dan Struthers <dan.struthers@gmail.com>
+Date: Sat, 17 Oct 2026 08:39:40 -0700
+Subject: [PATCH 1/4] Fix lost post-inc/dec before a call through a function
+ pointer
+
+When a function pointer variable or expression (anything but a constant
+address), not fastcall or without parameters, is called with no arguments,
+FunctionCall() pushes the pointer, and then, seeing that there are no
+arguments, removes the push again with RemoveCode(), since the pointer
+is still in the primary. But FunctionArgList() emits the deferred
+operations still pending at that point (the sequence point before the
+call) after the push, and RemoveCode() removed them along with it. So in
+
+    *out++ = f ();
+
+with f a function pointer (local, parameter or global), the increment
+of out was lost, with or without optimization.
+
+Remove the push only if nothing was emitted after it; otherwise load
+the pointer from its copy on the stack, as with arguments.
+
+Test: test/val/funcptr-postinc.c.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/cc65/expr.c            | 13 ++++--
+ test/val/funcptr-postinc.c | 90 ++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 99 insertions(+), 4 deletions(-)
+ create mode 100644 test/val/funcptr-postinc.c
+
+diff --git a/src/cc65/expr.c b/src/cc65/expr.c
+index 2939ab1cc..36485f1b4 100644
+--- a/src/cc65/expr.c
++++ b/src/cc65/expr.c
+@@ -975,6 +975,7 @@ static void FunctionCall (ExprDesc* Expr)
+     int           IsFuncPtr;      /* Flag */
+     unsigned      ArgSize;        /* Number of arguments bytes */
+     CodeMark      Mark;
++    CodeMark      PushEnd;        /* Code position after the pointer push */
+     int           PtrOffs = 0;    /* Offset of function pointer on stack */
+     int           IsFastcall = 0; /* True if we are fast-calling the function */
+     int           PtrOnStack = 0; /* True if a pointer copy is on stack */
+@@ -1021,6 +1022,7 @@ static void FunctionCall (ExprDesc* Expr)
+             /* Push the pointer onto the stack and remember the offset */
+             g_push (CF_PTR, 0);
+             PtrOffs = StackPtr;
++            GetCodePos (&PushEnd);
+         }
+ 
+     } else {
+@@ -1064,11 +1066,14 @@ static void FunctionCall (ExprDesc* Expr)
+ 
+             /* Not a fastcall function - we may use the primary */
+             if (PtrOnStack) {
+-                /* If we have no arguments, the pointer is still in the
+-                ** primary. Remove the code to push it and correct the
+-                ** stack pointer.
++                /* If we have no arguments, and no code (such as deferred
++                ** post-inc/dec operations) was added after the push, the
++                ** pointer is still in the primary. Remove the code to push
++                ** it and correct the stack pointer.
+                 */
+-                if (ArgSize == 0) {
++                CodeMark Here;
++                GetCodePos (&Here);
++                if (ArgSize == 0 && CodeRangeIsEmpty (&PushEnd, &Here)) {
+                     RemoveCode (&Mark);
+                     PtrOnStack = 0;
+                 } else {
+diff --git a/test/val/funcptr-postinc.c b/test/val/funcptr-postinc.c
+new file mode 100644
+index 000000000..ef753e786
+--- /dev/null
++++ b/test/val/funcptr-postinc.c
+@@ -0,0 +1,90 @@
++
++/* A post-increment or post-decrement pending when a function pointer is called
++** with no arguments, as in "*out++ = f ()", must not be lost: the code that
++** pushes the pointer for the call is removed when there are no arguments, and
++** the deferred operation was emitted after the push.
++*/
++
++#include <stdio.h>
++#include <stdlib.h>
++
++static int fail = 0;
++
++static int n = 0;
++
++static int count (void)
++{
++    return ++n;
++}
++
++static unsigned char count8 (void)
++{
++    return (unsigned char) ++n;
++}
++
++int (*fp) (void) = count;
++
++static void roll (int* out, unsigned char k, int (*f) (void))
++{
++    while (k--) {
++        *out++ = f ();
++    }
++}
++
++static void roll8 (unsigned char* out, unsigned char k, unsigned char (*f) (void))
++{
++    while (k--) {
++        *out++ = (*f) ();
++    }
++}
++
++int main (void)
++{
++    int a[4] = { 0, 0, 0, 0 };
++    unsigned char b[4] = { 0, 0, 0, 0 };
++    int* p;
++    int* q;
++    unsigned char i;
++
++    roll (a, 4, count);
++    for (i = 0; i < 4; ++i) {
++        if (a[i] != i + 1) {
++            ++fail;
++            printf ("roll: a[%u] = %d, expected %d\n", i, a[i], i + 1);
++        }
++    }
++
++    n = 0;
++    roll8 (b, 4, count8);
++    for (i = 0; i < 4; ++i) {
++        if (b[i] != i + 1) {
++            ++fail;
++            printf ("roll8: b[%u] = %u, expected %u\n", i, b[i], i + 1);
++        }
++    }
++
++    /* A global function pointer, a global post-decrement */
++    n = 10;
++    p = a + 3;
++    *p-- = fp ();
++    *p-- = fp ();
++    if (p != a + 1 || a[3] != 11 || a[2] != 12) {
++        ++fail;
++        printf ("*p-- = fp (): p = a + %d, a[3] = %d, a[2] = %d\n", (int) (p - a), a[3], a[2]);
++    }
++
++    /* Two pending operations */
++    n = 20;
++    p = a;
++    q = a + 3;
++    *p++ = *q-- = fp ();
++    if (p != a + 1 || q != a + 2 || a[0] != 21 || a[3] != 21) {
++        ++fail;
++        printf ("*p++ = *q-- = fp (): fail\n");
++    }
++
++    if (fail) {
++        printf ("funcptr-postinc: %d failures\n", fail);
++    }
++    return fail ? EXIT_FAILURE : EXIT_SUCCESS;
++}
+-- 
+2.46.2.windows.1
+

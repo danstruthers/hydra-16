@@ -1,0 +1,121 @@
+From 1334b690939e93ebee7394b18f38b4248b585450 Mon Sep 17 00:00:00 2001
+From: Dan Struthers <dan.struthers@gmail.com>
+Date: Sat, 17 Oct 2026 08:39:44 -0700
+Subject: [PATCH 3/4] Fix OptPtrStore1/2 taking A/X from before a label
+
+LoadAXZP() and LoadAXImm() look at the instructions preceeding the
+sequence that OptPtrStore1 and OptPtrStore2 replace for the load of
+the pointer in A/X, to use the location loaded instead of ptr1. But
+they did not check whether the first instruction of the sequence has a
+label: if it has, it may be reached from elsewhere, and the load found
+is only one of the values A/X can have there. For
+
+    x = (c ? a1 : a2)[i] = 9;
+
+the code after the two branches of the ternary was taken to store
+through a2 only ("sta _a2,y"), and the branch loading a1 was removed
+later as unused.
+
+Make both functions fail if the entry at the start of the sequence has
+a label. (LoadAXImm()'s check of known register values is unaffected:
+it takes the label into account.)
+
+Test: test/val/ptrstore-label.c.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/cc65/coptptrstore.c   | 11 +++++++++
+ test/val/ptrstore-label.c | 51 +++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 62 insertions(+)
+ create mode 100644 test/val/ptrstore-label.c
+
+diff --git a/src/cc65/coptptrstore.c b/src/cc65/coptptrstore.c
+index 721775380..1f0cbe3ce 100644
+--- a/src/cc65/coptptrstore.c
++++ b/src/cc65/coptptrstore.c
+@@ -104,7 +104,11 @@ static const char* LoadAXZP (CodeSeg* S, unsigned I)
+     CodeEntry* L[2];
+     unsigned Len;
+ 
++    /* If the entry at I has a label, it may be reached from elsewhere, so
++    ** the instructions preceeding it are not the only source of A/X.
++    */
+     if (I >= 2                                                  &&
++        !CE_HasLabel (CS_GetEntry (S, I))                       &&
+         CS_GetEntries (S, L, I-2, 2)                            &&
+         L[0]->OPC == OP65_LDA                                   &&
+         L[0]->AM == AM65_ZP                                     &&
+@@ -161,6 +165,13 @@ static const char* LoadAXImm (CodeSeg* S, unsigned I)
+ 
+     }
+ 
++    /* If the entry at I has a label, it may be reached from elsewhere, so
++    ** the instructions preceeding it are not the only source of A/X.
++    */
++    if (L[0] == 0 || CE_HasLabel (L[0])) {
++        return 0;
++    }
++
+     /* Search back for the two instructions loading A and X. Abort
+     ** the search if the registers are changed in any other way or
+     ** if a label is reached while we don't have both loads.
+diff --git a/test/val/ptrstore-label.c b/test/val/ptrstore-label.c
+new file mode 100644
+index 000000000..0a9d0fb6b
+--- /dev/null
++++ b/test/val/ptrstore-label.c
+@@ -0,0 +1,51 @@
++
++/* OptPtrStore1 and OptPtrStore2 must not take the load of A/X just before
++** the sequence they replace as the pointer's only value when the sequence
++** begins at a label, as after the branches of "(c ? a1 : a2)[i] = v".
++*/
++
++#include <stdio.h>
++#include <stdlib.h>
++
++static int fail = 0;
++
++unsigned char a1[4], a2[4];
++unsigned char i = 2;
++unsigned char x;
++
++static void check (const char* what, unsigned char got, unsigned char want)
++{
++    if (got != want) {
++        ++fail;
++        printf ("%s: %u, expected %u\n", what, got, want);
++    }
++}
++
++static void test (unsigned char c)
++{
++    a1[i] = a2[i] = 0;
++    a1[1] = a2[1] = 0;
++
++    x = (c ? a1 : a2)[i] = 9;
++    check ("(c ? a1 : a2)[i]", c ? a1[i] : a2[i], 9);
++    check ("other of a1, a2 [i]", c ? a2[i] : a1[i], 0);
++
++    x = (c ? a1 : a2)[1] = 7;
++    check ("(c ? a1 : a2)[1]", c ? a1[1] : a2[1], 7);
++    check ("other of a1, a2 [1]", c ? a2[1] : a1[1], 0);
++
++    x = *((c ? a1 : a2) + i) += 3;
++    check ("*((c ? a1 : a2) + i)", c ? a1[i] : a2[i], 12);
++    check ("other of a1, a2 + i", c ? a2[i] : a1[i], 0);
++}
++
++int main (void)
++{
++    test (1);
++    test (0);
++
++    if (fail) {
++        printf ("ptrstore-label: %d failures\n", fail);
++    }
++    return fail ? EXIT_FAILURE : EXIT_SUCCESS;
++}
+-- 
+2.46.2.windows.1
+

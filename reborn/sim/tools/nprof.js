@@ -28,11 +28,7 @@ const os = require('os');
 const { execFileSync } = require('child_process');
 
 function ld65() {
-  for (const dir of [process.env.CC65_BIN, process.env.CC65_HOME && path.join(process.env.CC65_HOME, 'bin'), 'C:/source/cc65/win64_snapshot/bin']) {
-    if (!dir) continue;
-    for (const f of [path.join(dir, 'ld65.exe'), path.join(dir, 'ld65')]) if (fs.existsSync(f)) return f;
-  }
-  return 'ld65';
+  return require('../../../base/build.js').tool('ld65');            // (The build's ld65)
 }
 
 function profile(o) {
