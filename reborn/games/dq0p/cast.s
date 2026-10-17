@@ -16,11 +16,15 @@
 ;   void __fastcall__ cast_lamp (unsigned char w);  the light layer's (light.c): a lamp's squares, w each way round
 ;                                                   ;   it (the lamp g_li[0], g_lj[0], its reach g_lr[0]), each it
 ;                                                   ;   lights marked G_LAMP (its own, or a clear line to it)
+;
+; Each square cast_row and cast_own mark, the row's marks reach it: g_lo[j] and g_hi[j], the first and the last
+; column of row j marked (the view's; g_lo 0xFF, none: view.c sets them so first), so that view.c marks the chunks'
+; squares only there.
 
             .macpack    longbranch
             .export     _cast_row, _cast_own, _cast_lamp
             .export     _g_r, _g_m, _g_r2, _g_l2, _g_u2, _g_hx, _g_hy, _g_ez, _g_bright
-            .export     _g_nl, _g_li, _g_lj, _g_lr, _g_lzl, _g_lzh
+            .export     _g_nl, _g_li, _g_lj, _g_lr, _g_lzl, _g_lzh, _g_lo, _g_hi
             .importzp   ptr1, ptr2
 
 G_OPAQUE    = $01                           ; (view.c's: the eye doesn't see past it,
@@ -48,6 +52,8 @@ _g_lj:      .res        4
 _g_lr:      .res        4
 _g_lzl:     .res        4
 _g_lzh:     .res        4
+_g_lo:      .res        45                  ; Each row's marks: the first column, the last (the view's 2 g_r + 1 at
+_g_hi:      .res        45                  ;   most, 45)
 rj:         .res        1                   ; (The square: its row and column in the grid,
 ri:         .res        1
 dy:         .res        1                   ;   from the eyes, each way,
@@ -57,6 +63,10 @@ adx:        .res        1
 sqy:        .res        2
 d2:         .res        2
 fy:         .res        1                   ;   ahead (the row's part: behind if less than 0))
+ilo:        .res        1                   ; (cast_row's columns that may be seen: the view's, ilo to ihi,
+ihi:        .res        1                   ;   iend after them; e, fy as a square next to the eyes is seen
+iend:       .res        1                   ;   behind)
+ef:         .res        1
 wlim:       .res        1                   ; (The view's squares each way: 2 g_r + 1)
 eye:        .res        2                   ; (The eyes' square in the grid)
 reye:       .res        2                   ; (A line's: from its square, its height, to the square at ptr2
@@ -140,11 +150,14 @@ _cast_own:
             lda         (ptr2),y
             ora         #G_SEEN
             sta         (ptr2),y
-            rts
+            jmp         noted
 @lit:       ldy         #0
             lda         (ptr2),y
             ora         #G_VIS | G_SEEN
             sta         (ptr2),y
+            jsr         noted
+            ldy         #0
+            lda         (ptr2),y
             and         #G_INSIDE
             beq         @done
             jmp         walls
@@ -210,17 +223,101 @@ _cast_row:
             sec
             sbc         dy
 @fy:        sta         fy
+            ldx         _g_r                ; The columns that may be seen: in range (|dx| at most dxm, sq[dxm] +
+@dm:        txa                             ;   sqy within r2),
+            asl         a
+            tay
+            lda         sq,y
+            clc
+            adc         sqy
+            sta         d2
+            lda         sq + 1,y
+            adc         sqy + 1
+            sta         d2 + 1
+            lda         _g_r2
+            cmp         d2
+            lda         _g_r2 + 1
+            sbc         d2 + 1
+            bcs         @dmok
+            dex
+            bpl         @dm
+            rts                             ; (None)
+@dmok:      stx         adx
+            lda         _g_r
+            sec
+            sbc         adx
+            sta         ilo
+            lda         _g_r
+            clc
+            adc         adx
+            sta         ihi
+            lda         fy                  ;   and not behind (hx dx + fy at least 0), but next to the eyes
+            ldx         ady                 ;   (|dx|, |dy| 1 at most): ef, fy or (next to them) 1 if more
+            cpx         #2
+            bcs         @ef
+            cmp         #1
+            bpl         @ef
+            lda         #1
+@ef:        sta         ef
+            lda         _g_hx
+            beq         @hx0
+            bmi         @hxn
+            lda         _g_r                ; (hx 1: dx at least -ef)
+            sec
+            sbc         ef
+            bmi         @in
+            cmp         ilo
+            bcc         @in
+            sta         ilo
+            jmp         @in
+@hxn:       lda         _g_r                ; (hx -1: dx at most ef)
+            clc
+            adc         ef
+            bmi         @none
+            cmp         ihi
+            bcs         @in
+            sta         ihi
+            jmp         @in
+@hx0:       lda         fy                  ; (hx 0: all if fy at least 0, else those next to the eyes)
+            bpl         @in
+            lda         ady
+            cmp         #2
+            bcs         @none
+            lda         _g_r
+            sec
+            sbc         #1
+            cmp         ilo
+            bcc         @hx1
+            sta         ilo
+@hx1:       lda         _g_r
+            clc
+            adc         #1
+            cmp         ihi
+            bcs         @in
+            sta         ihi
+@in:        lda         ihi
+            cmp         ilo
+            bcc         @none
+            clc
+            adc         #1
+            sta         iend
             lda         dy                  ; Its first square
             clc
             adc         _g_r
             clc
             adc         _g_m
             sta         rj
-            ldx         _g_m
-            stx         ri
+            lda         ilo
+            clc
+            adc         _g_m
+            sta         ri
+            tax
+            lda         rj
             jsr         square
             sta         ptr2
             sty         ptr2 + 1
+            jmp         @sq
+@none:      rts
 @sq:        ldy         #0                  ; Each square: something to see,
             lda         (ptr2),y
             and         #G_SKIP
@@ -306,6 +403,9 @@ _cast_row:
             lda         (ptr2),y
             ora         #G_VIS | G_SEEN
             sta         (ptr2),y
+            jsr         noted
+            ldy         #0
+            lda         (ptr2),y
             and         #G_INSIDE
             beq         @next
             jsr         walls
@@ -317,7 +417,7 @@ _cast_row:
             lda         ri
             sec
             sbc         _g_m
-            cmp         wlim
+            cmp         iend
             jcc         @sq
             rts
 
@@ -567,15 +667,53 @@ walls:
             beq         @skip
             ora         #G_VIS | G_SEEN
             sta         (ptr1),y
+            lda         rj                  ; (Noted: its row and column, the view's)
+            clc
+            adc         wdy,x
+            sec
+            sbc         _g_m
+            tay
+            lda         ri
+            clc
+            adc         wdx,x
+            sec
+            sbc         _g_m
+            jsr         note
 @skip:      dex
             bpl         @w
             rts
 
-; ---- A chunk's run of squares (run_p its squares, run_q their floors) into a row of the grid's (run_g, two bytes
-; a square), or the marks back from it into the chunk
+; The square at ri, rj marked: its row's marks reach it (noted: the view's column and row, its own)
+noted:
+            lda         rj
+            sec
+            sbc         _g_m
+            tay
+            lda         ri
+            sec
+            sbc         _g_m
+; Column .A of row .Y marked: g_lo[.Y] and g_hi[.Y] reach it (.X kept)
+note:
+            cmp         _g_lo,y
+            bcs         @lo
+            sta         _g_lo,y
+@lo:        cmp         _g_hi,y
+            bcc         @hi
+            sta         _g_hi,y
+@hi:        rts
+
+; ---- A chunk's run of squares (run_p its squares, run_q their floors) into piece (main RAM's: things.c's; their
+; flags, then their floors from piece + 128), the light layer's light on them (light_in), and into a row of the
+; grid's (grid_put: run_g, two bytes a square, the grid in the window); or the marks back from the grid's (copied
+; into piece as they are) into the chunk
 
             .export     _run_in, _run_out, _run_clear, _run_p, _run_q, _run_g, _light_in, _run_l, _run_lo, _run_lb
+            .export     _grid_put, _grid_fill, _grid_clr
+            .import     _piece
             .importzp   ptr3
+
+G_DOOR      = $20                           ; (run_in's in piece: a door or a window, view.c's to look at; G_LAMP
+                                            ;   is the grid's alone)
 
             .bss
 _run_p:     .res        2
@@ -588,50 +726,81 @@ cnt:        .res        1
 doors:      .res        1
 
             .segment    "SW1RODATA"
-kind:       .byte       G_OPAQUE | G_SKIP, G_INSIDE, G_OPAQUE | G_WALL, G_WALL, 0, G_INSIDE, G_WALL, G_INSIDE
-            .byte       G_INSIDE, G_INSIDE                      ; (world.h's T_ROCK ... T_PIT; the rest 0)
+kind:       .byte       G_OPAQUE | G_SKIP, G_INSIDE, G_OPAQUE | G_WALL, G_WALL | G_DOOR, 0, G_INSIDE
+            .byte       G_WALL | G_DOOR, G_INSIDE, G_INSIDE, G_INSIDE           ; (world.h's T_ROCK ... T_PIT;
+            .res        22, 0                                   ;   the rest 0)
 
             .segment    "SW1CODE"
-; unsigned char __fastcall__ run_in (unsigned char n): its squares' flags (what each is: kind) and floors; 1 if a
-; door or a window is among them
+; unsigned char __fastcall__ run_in (unsigned char n): its squares' flags (what each is: kind; G_DOOR, a door or a
+; window) into piece, their floors into piece + 128; not 0 if a door or a window is among them
 _run_in:
             sta         cnt
             jsr         ptrs
-            lda         #0
-            sta         doors
-@sq:        ldy         #0
-            lda         (ptr1),y
+            stz         doors
+            ldy         #0
+@sq:        lda         (ptr1),y
             and         #$1F
             tax
-            cpx         #3                  ; (T_DOOR, T_WINDOW)
-            beq         @door
-            cpx         #6
-            bne         @kind
-@door:      inc         doors
-@kind:      lda         #0
-            cpx         #10
-            bcs         @put
             lda         kind,x
-@put:       sta         (ptr3),y
+            sta         _piece,y
+            tsb         doors
             lda         (ptr2),y
+            sta         _piece + 128,y
             iny
-            sta         (ptr3),y
-            inc         ptr1
-            bne         @q
-            inc         ptr1 + 1
-@q:         inc         ptr2
-            bne         @g
-            inc         ptr2 + 1
-@g:         lda         ptr3
-            clc
-            adc         #2
-            sta         ptr3
-            bcc         @n
-            inc         ptr3 + 1
-@n:         dec         cnt
+            cpy         cnt
             bne         @sq
             lda         doors
+            and         #G_DOOR
             ldx         #0
+            rts
+
+; void __fastcall__ grid_put (unsigned char n): piece's squares (their flags, their floors) into the grid's at run_g
+_grid_put:
+            sta         cnt
+            jsr         ptrs
+            ldx         #0
+            ldy         #0
+@sq:        lda         _piece,x
+            sta         (ptr3),y
+            iny
+            lda         _piece + 128,x
+            sta         (ptr3),y
+            iny
+            inx
+            cpx         cnt
+            bne         @sq
+            rts
+
+; void __fastcall__ grid_fill (unsigned char n): the grid's squares at run_g nothing (outside the stratum, or a chunk
+; not made for the lamps' lines)
+_grid_fill:
+            asl         a
+            sta         cnt
+            jsr         ptrs
+            ldy         #0
+@sq:        lda         #G_OPAQUE | G_SKIP
+            sta         (ptr3),y
+            iny
+            lda         #0
+            sta         (ptr3),y
+            iny
+            cpy         cnt
+            bne         @sq
+            rts
+
+; void __fastcall__ grid_clr (unsigned char n): the grid's squares at run_g not marked (the last view's marks out)
+_grid_clr:
+            asl         a
+            sta         cnt
+            jsr         ptrs
+            ldy         #0
+@sq:        lda         (ptr3),y
+            and         #<~(G_VIS | G_SEEN)
+            sta         (ptr3),y
+            iny
+            iny
+            cpy         cnt
+            bne         @sq
             rts
 
 ; void __fastcall__ run_out (unsigned char n): the grid's marks (G_VIS, G_SEEN) into its squares
@@ -671,7 +840,8 @@ _run_clear:
             rts
 
 ; void __fastcall__ light_in (unsigned char n): the light layer's squares (light.c's grid, at run_l: half a byte
-; each) into the run's (run_g): G_LIT where light reaches; the senses' bank (run_lb) left in the window
+; each, from its low half, or its high, run_lo) into the run's flags (piece): G_LIT where light reaches; the senses'
+; bank (run_lb) left in the window
 _light_in:
             sta         cnt
             lda         _run_lb
@@ -680,39 +850,31 @@ _light_in:
             sta         ptr1
             lda         _run_l + 1
             sta         ptr1 + 1
-            lda         _run_g
-            sta         ptr3
-            lda         _run_g + 1
-            sta         ptr3 + 1
+            ldy         #0
             ldx         _run_lo
-@sq:        lda         (ptr1)
-            cpx         #0
-            beq         @lo
-            lsr         a                   ; (The high half: the byte after it next)
-            lsr         a
-            lsr         a
-            lsr         a
-            inc         ptr1
             bne         @hi
-            inc         ptr1 + 1
-@hi:        ldx         #0
-            cmp         #0
-            bra         @t
-@lo:        ldx         #1                  ; (The low half: the high half next)
+@lo:        lda         (ptr1)              ; (The low half: the high half next)
             and         #$0F
-@t:         beq         @next
-            lda         (ptr3)
+            beq         @n1
+            lda         _piece,y
             ora         #G_LIT
-            sta         (ptr3)
-@next:      lda         ptr3
-            clc
-            adc         #2
-            sta         ptr3
-            bcc         @n
-            inc         ptr3 + 1
-@n:         dec         cnt
-            bne         @sq
-            rts
+            sta         _piece,y
+@n1:        iny
+            cpy         cnt
+            beq         @done
+@hi:        lda         (ptr1)              ; (The high half: the byte after it next)
+            and         #$F0
+            beq         @n2
+            lda         _piece,y
+            ora         #G_LIT
+            sta         _piece,y
+@n2:        inc         ptr1
+            bne         @n3
+            inc         ptr1 + 1
+@n3:        iny
+            cpy         cnt
+            bne         @lo
+@done:      rts
 
 ptrs:
             lda         _run_p

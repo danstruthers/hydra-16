@@ -18,3 +18,6 @@ unsigned char __fastcall__ cached (unsigned char sn, unsigned x, unsigned y);  /
 unsigned char* __fastcall__ light_grid (unsigned char sn, unsigned x, unsigned y, unsigned char mk);  /* Its chunk's
                                                 **   grid, in the senses' bank (mk: worked out if it isn't), or 0 */
 unsigned char __fastcall__ light_at (unsigned char sn, unsigned x, unsigned y);    /* How bright it is: 0-15 */
+extern unsigned char lgen;                      /* Counted on as a grid's worked out, the world's lights or squares
+                                                **   change (E_LIGHT), a lamp's lines are cast in the look's grid
+                                                **   (view.c's: its grid kept while it's the same) */

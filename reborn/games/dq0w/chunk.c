@@ -102,8 +102,11 @@ unsigned char* __fastcall__ at_find (unsigned char sn, unsigned x, unsigned y)
         lsn = sn;
         lcx = cx;
         lcy = cy;
-        lbank = CACHE_BANK (k);                 /* (Worked out once a slot: cc65 divides slowly) */
-        lchunk = CHUNK_AT (k);
+        for (lbank = CACHE_BANK (0); k >= 3; k -= 3) {     /* (CACHE_BANK (k) and CHUNK_AT (k) without dividing or
+                                                **   multiplying: cc65's slow) */
+            ++lbank;
+        }
+        lchunk = (struct chunk*) (0x8000 + (k == 0 ? 0 : k == 1 ? CHUNK_SIZE : 2 * CHUNK_SIZE));
     }
     hub_map (lbank);
     C = lchunk;
