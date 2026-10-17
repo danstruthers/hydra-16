@@ -239,12 +239,8 @@ static unsigned long now;
 static unsigned pcx, pcy;
 static unsigned char pcs, pclit, pcbusy, pcdead;
 
-static unsigned __fastcall__ apart (int dx, int dy)
-{
-    dx = dx < 0 ? -dx : dx;
-    dy = dy < 0 ? -dy : dy;
-    return dx > dy ? dx : dy;
-}
+unsigned __fastcall__ apart (int dx, int dy);  /* |dx| or |dy|, the more (apart.s: in assembly, asked of every
+                                                **   square the minds weigh) */
 
 /* ---- Populations: stratum n's decided as its plan is grown (its record and links whole: the hub's strata[n],
 ** copied): for each kind that lives in its style at its depth, its lairs (by the stratum's ways, if it lairs there;
