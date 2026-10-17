@@ -449,6 +449,127 @@ struct wrec {
                                                 **   never makes way for it) */
 };
 
+/* Who writes what (Phase 2: one authority on state).  Each region of the hub has an owner, the one task that writes
+** it; another changes it by asking the owner (an intent, a request), never by writing it.  The test runner holds the
+** game to it: every write to the hub's banks in a dq0 test, by the task that made it, checked against these lines
+** (sim/lib/hubown.js reads them; sim/test.js, HUBOWN=1 for every violation and a summary).  A line, its words apart:
+**   own REGION OWNER [+TASK ...] [2.N:TASK,...] (words)
+** REGION: hub.FIELD (bank 0's struct hub; FIELD as offsetof takes it, [*] each element), sight.FIELD, uirec.FIELD,
+** wrec.FIELD (their banks' records), chunk.FIELD (each slot of the chunks' cache), item.FIELD (each item), and
+** bank(B), bank(B,FROM,TO) (bank B's whole window, or its bytes from FROM up to TO), banks(B,N) (N banks from B):
+** C's expressions, no spaces.  A line laid over those before it.  OWNER, TASK: ui world denizens referee sound maker
+** senses, or each (element i of a [*] the task T_* i's), or none.  +TASK: one that writes it by design (a request's
+** asker: the protocol's header and its request; a ring's reader: its own place; a chunk's reader: the cache's
+** stamps).  2.N:TASK: one that writes it still, till Phase 2's move 2.N makes it the owner's alone: a write that
+** isn't the owner's, a + task's or a known one fails the test, and the moves shrink the known ones to none.  The
+** UI's hub_create (the hub's banks cleared, its header made) and a task's own task[] entry aren't counted.
+** The moves: 2.2 M_WORK the world's (the maker works no portal nor trap: the chunks' portals and traps, pview, the
+** world's events and its referee slot); 2.3 the item store the world's (the catalogue, the items, the light the
+** character carries); 2.4 the senses' memory their own (the squares seen, marked in the chunks' tiles; the denizens
+** seen, in sight); 2.5 the UI's requests to the world (the game's start and its resuming, the pace, pause and quit,
+** gait and watchfulness, stance and strike, the way out opened: the world sets them, asked); 2.6 the denizens'
+** bodies the world's (their moves and the blows: the actors, den_seq, pc_foe, the fights' words).
+**
+**   own bank(0) none                                           (The header's room: what no line below names)
+**   own hub.magic ui
+**   own hub.version ui
+**   own hub.seg ui
+**   own hub.sem ui
+**   own hub.task[*] each                                       (Each task's own number, as it attaches)
+**   own hub.beat[*] each
+**   own hub.tick world                                         (The clock: the world's alone)
+**   own hub.now world 2.5:ui
+**   own hub.pc_ready world
+**   own hub.round world 2.5:ui
+**   own hub.tpr world 2.5:ui
+**   own hub.paused world 2.5:ui                                (The UI's pause, hold and quit: requests to it)
+**   own hub.hold world
+**   own hub.quit world 2.5:ui
+**   own hub.pace world 2.5:ui
+**   own hub.test_start ui                                      (The game's start: dq0's arguments)
+**   own hub.resume ui
+**   own hub.savedir ui
+**   own hub.seed ui
+**   own hub.pcstatus referee                                   (The referee's words)
+**   own hub.pc_stratum world 2.5:ui                            (The character's body: the world's)
+**   own hub.pc_x world 2.5:ui
+**   own hub.pc_y world 2.5:ui
+**   own hub.pc_face world 2.5:ui
+**   own hub.pc_light world 2.3:senses 2.5:ui
+**   own hub.pc_lamp world 2.3:senses
+**   own hub.pcsum referee
+**   own hub.look senses +world                                 (The world's look asked)
+**   own hub.mapq maker +ui
+**   own hub.mreq[ASK_WORLD] maker +world
+**   own hub.mreq[ASK_DENIZENS] maker +denizens
+**   own hub.mreq[ASK_SENSES] maker +senses
+**   own hub.mreq[ASK_UI] maker +ui
+**   own hub.item_lock ui
+**   own hub.ireq senses +ui
+**   own hub.pview world 2.2:maker
+**   own hub.dig_tool world
+**   own hub.dig_wear world
+**   own hub.iq_head ui                                         (The UI's intents: its ring)
+**   own hub.iq ui
+**   own hub.iq_tail world                                      (Its reader's place)
+**   own hub.eq_head world 2.2:maker                            (The world's events)
+**   own hub.eq world 2.2:maker
+**   own hub.slot[SLOT_WORLD] referee +world 2.2:maker
+**   own hub.slot[SLOT_UI] referee +ui +senses +denizens        (The UI's, lent to those asking for it)
+**   own hub.dslot referee +denizens
+**   own hub.actor[*] world 2.6:denizens                        (A denizen's body: the world's)
+**   own hub.actor[*].den denizens                              (Its mind, its record: the denizens')
+**   own hub.actor[*].name denizens
+**   own hub.actor[*].attitude denizens
+**   own hub.actor[*].faction denizens
+**   own hub.actor[*].foe denizens
+**   own hub.dsave denizens +ui
+**   own hub.den_at denizens
+**   own hub.den_seq world 2.6:denizens
+**   own hub.pc_tx world
+**   own hub.pc_ty world
+**   own hub.dq_head denizens
+**   own hub.way_open world 2.5:ui
+**   own hub.sway denizens +ui
+**   own hub.gait world 2.5:ui,referee
+**   own hub.watch world 2.5:ui,referee
+**   own hub.pc_going world
+**   own hub.pc_foe world 2.6:denizens
+**   own hub.pc_aim world
+**   own hub.pc_stance world 2.5:ui
+**   own hub.pc_strike world 2.5:ui
+**   own hub.den_look denizens +world                           (Asked of the world, cleared by it)
+**   own banks(1,PLAN_BANKS) maker                              (The plans: grown from the seed)
+**   own banks(CACHE_BANK(0),CACHE_BANKS) none                  (The chunks' cache: its room past three chunks)
+**   own chunk maker                                            (A chunk: made from the seed)
+**   own chunk.tile maker 2.4:senses,world                      (Its squares: the senses' seen marks in them)
+**   own chunk.room[*].flags maker 2.4:world                  (A room's: R_VISITED, the world's as it's come into)
+**   own chunk.nportals world 2.2:maker                         (Portals and traps and their working: the world's)
+**   own chunk.portal world 2.2:maker
+**   own chunk.ntraps world 2.2:maker
+**   own chunk.trap world 2.2:maker
+**   own bank(CAT_BANK) world 2.3:senses,ui                     (The catalogue: the things', the theme's kinds)
+**   own banks(CAT_BANK+1,ITEM_BANKS) world 2.3:senses,maker,denizens   (The items' places and states)
+**   own bank(DEN_BANK) denizens                                (The denizens' events)
+**   own bank(DEN_BANK,SND_AT,FIGHT_AT) sound +ui               (The sounds: the UI clears them)
+**   own bank(DEN_BANK,FIGHT_AT,FIGHT_AT+NFIGHTS) denizens 2.6:referee   (The fights' words)
+**   own bank(LOOK_BANK) senses
+**   own bank(THEME_BANK) ui                                    (The theme, and the names given)
+**   own bank(THEME_BANK,THEME_PLACE,NAMES_AT) maker            (The pieces' places)
+**   own bank(SIGHT_BANK) senses 2.4:world                      (What the character perceives)
+**   own bank(UI_BANK) ui
+**   own uirec.map maker +ui
+**   own uirec.things_text senses +ui
+**   own bank(WORLD_BANK) maker                                 (The cache's table)
+**   own wrec.strata world 2.2:maker 2.5:ui                     (The strata's records: the world's dungeon)
+**   own wrec.cslot[*].stamp maker +world +denizens +senses +ui     (Each chunk's reader's stamp, as it finds it)
+**   own wrec.stamp maker +world +denizens +senses +ui
+**   own wrec.inuse[ASK_WORLD] world
+**   own wrec.inuse[ASK_DENIZENS] denizens
+**   own wrec.inuse[ASK_SENSES] senses
+**   own wrec.inuse[ASK_UI] ui
+*/
+
 #define HUB     ((struct hub*) HUB_WINDOW)
 #define DSLOT   ((struct req*) HUB->dslot)
 #define HUB_FREE        2048                    /* (Bank 0's room kept free, at least) */
