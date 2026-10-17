@@ -11,7 +11,7 @@ BANKREG     = $00                   ; The task's RAM bank register (written: the
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 
             .bss
-_ovbank:    .res        1           ; The parts' images' bank (dq0d.cfg's OV1)
+_ovbank:    .res        2           ; The parts' images' banks (dq0d.cfg's OV1, OV2)
 ova:        .res        1           ; (.A and .X kept through a stub)
 ovx:        .res        1
 
@@ -19,10 +19,15 @@ ovx:        .res        1
 
             SWPART      1, 1                ; The kinds read in, the populations, the placing, the records kept
             SWPART      2, 1                ; The character's ways with a denizen (the UI's sway), and harmed
+            SWPART      3, 2                ; The records paged
+            SWPART      4, 2                ; The regions round the character wanted, the records kept
 
             SWFN        kinds_load, 1
             SWFN        populate, 1
             SWFN        place, 1
-            SWFN        keep, 1
+            SWFN        keep, 4
+            SWFN        rec_new, 3
+            SWFN        reg_need, 3
+            SWFN        dneed, 4
             SWFN        harmed, 2
             SWFN        sway, 2
