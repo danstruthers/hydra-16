@@ -142,8 +142,23 @@ enum {
     I_BODY,                                     /* (The denizens' own, their ring's: the hub's di) A body put down
                                                 **   where it fell: a its kind (items.h's KI_*), w1 w2 its square,
                                                 **   x[0] its stratum (the world's item store's to keep) */
+    I_ENTER,                                    /* (The denizens' own, below) A body come into the world's keeping */
+    I_LEAVE,                                    /*   gone from it (no longer an actor) */
+    I_ROUSE,                                    /*   its wait cut short */
+    I_DONE,                                     /*   the denizens' intents in, as far as the clock (t) */
     NINTENTS
 };
+/* The denizens' intents (their ring, the hub's di: the minds', for their actors' bodies, the world's to carry out
+** by the character's rules): who the actor's entry plus 1; x[0] what it's doing now (DO_*: the world keeps it, and
+** tells as one notices the character or loses it), x[1] the heading it faces (0xFF: either, as it is).  I_STEP: a
+** square (w1 the heading, H_*, | STEP_COARSE: no time, nothing heard, a coarse move's; w2 1), a what it's heard as
+** (DE_MOVED, DE_NOISE), b how loud; I_GOTO: a dash, to w1 w2 (two squares off at most: past the character), a and b
+** as I_STEP's; I_CLIMB: come along with the character up or down, to w1 w2 beside it, x[2] its stratum; I_WAIT: w1
+** tenths; I_ATTACK: a the one struck at (0 the character), b the aim (Z_*); I_ENTER: w1 w2 its square, x[2] its
+** stratum, a its step, b 1 if it's bleeding, t when it's ready; I_LEAVE; I_ROUSE: free w1 tenths from now (w2 1:
+** whenever it was free; 0: if it was later); I_DONE (who 0): t the clock they've caught up with (the turns pace's:
+** the world moves it on) */
+#define STEP_COARSE     0x200
 
 /* Events: what's happened, in the world's terms (the UI words them; the denizens and the sound hear them) */
 enum {
@@ -292,22 +307,28 @@ enum { SLOT_WORLD, SLOT_UI, NSLOTS };
 #define NACTORS         8
 #define TURN_SLICE      100
 struct actor {
-    volatile unsigned char state;               /* REQ_* */
-    unsigned char   den;                        /* Its record (the denizens' task's) */
+    /* Its body (the world's) */
+    volatile unsigned char state;               /* 1: a body in the dungeon (from the denizens' I_ENTER till it's
+                                                **   gone: I_LEAVE, or dead); 0 none */
     unsigned char   sn, face;
     unsigned long   ready;                      /* When it can act again */
     unsigned char   step;                       /* Tenths of a second to go 5 feet */
-    unsigned char   intent, a;                  /* I_* (I_GO: a heading, H_N, H_E ...) */
-    unsigned char   result;                     /* 0 done, or N_* */
-    unsigned        x, y;                       /* (These last as struct sight's den: copied whole) */
+    unsigned char   intent, a;                  /* (Unused) */
+    unsigned char   result;
+    unsigned        x, y;                       /* (These, its doing and its name as struct sight's den: copied whole) */
     unsigned char   doing;                      /* What it's doing (DO_*: watching, coming, keeping off: it senses the
                                                 **   character) */
+    /* Its mind (the denizens') */
     char            name[12];                   /* ("": the entry free) */
+    unsigned char   den;                        /* Its record (the denizens' task's) */
     unsigned char   attitude;                   /* Its attitude to the character (AT_*, its record's: the denizens'
                                                 **   task's; a hostile one fights it) */
     unsigned char   faction;                    /* Its faction (the denizens' task's: kinds.txt's, the theme's) */
     unsigned char   foe;                        /* An actor of a faction hostile to its own, met (near, sensed): it
                                                 **   plus 1, or 0 (till they fight, they keep off one another) */
+    unsigned char   kind;                       /* Its kind (kinds.txt's, by number: the sounds' table's, SND_AT) */
+    unsigned char   remains;                    /* What it leaves dead (items.h's KI_BODY, KI_BONES) */
+    unsigned char   timid;                      /* 1: a shy kind (the referee's: shaken, it flees) */
 };
 enum { AT_HOSTILE, AT_UNFRIENDLY, AT_WARY, AT_INDIFFERENT, AT_FRIENDLY, AT_ALLIED };   /* An attitude, the worst
                                                 **   first (DENIZENS.md): attacks on sight; threatens, keeps off;
@@ -344,7 +365,7 @@ struct sway {
 };
 
 #define IQ_SIZE         16                      /* The UI's intents */
-#define DI_SIZE         4                       /* The denizens' (I_BODY) */
+#define DI_SIZE         8                       /* The denizens' (their actors': hub.h's struct actor) */
 #define EQ_SIZE         128                     /* The world's events (each reader its own place) */
 
 struct hub {                                    /* Bank 0, at $8000 */
