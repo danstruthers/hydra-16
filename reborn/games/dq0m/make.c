@@ -9,8 +9,9 @@
 **
 ** What's changed in a chunk (the change records, the world's: a square dug, a link made, a door opened) is laid
 ** over it each time it's made (changes.c), and what the character's seen of it is kept as the cache makes way for
-** it, and laid over it again.  A chunk stocked as it's made (its things put down: stock.c) has its slot CS_FRESH,
-** for the world to mark it stocked among the change records; the maker never makes way for it till it has.
+** it, and laid over it again.  A chunk stocked as it's made (its things listed: stock.c, the list the world bank's
+** stock beside its slot) has its slot CS_FRESH, for the world to put them down and mark it stocked among the change
+** records; the maker never makes way for it till it has.
 */
 
 #include <string.h>
@@ -20,6 +21,7 @@
 #include "grow.h"
 
 static struct chunk cb;                         /* (A chunk grown in the main RAM: the grower's an overlay) */
+static unsigned stocks;                         /* (The chunks stocked, counted: each list's seq) */
 
 struct style sty;                               /* (The chunk's stratum's: uses.c copies it from its styles) */
 const struct style* SP;
@@ -122,8 +124,11 @@ unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned c
         fixtures (c);                           /* (Its materials, its windows, its traps ...) */
     }
     if (!changes_over (c, x, y) && e.x1 != 0xFF) {
-        stock (c, x, y);                        /* (Its things put down, the first time it's made: the world marks it
-                                                **   so, STOCKED, as it finds its slot CS_FRESH) */
+        stock (c, x, y);                        /* (Its things listed, the first time it's made: the world puts them
+                                                **   down and marks it so, STOCKED, as it finds its slot CS_FRESH, in
+                                                **   the order they were stocked) */
+        sk.seq = ++stocks;
+        hub_put (WORLD_BANK, &WREC->stock[k], &sk, sizeof sk - sizeof sk.e + sk.n * sizeof sk.e[0]);
         u = CS_FRESH;
     }
     seen_over (c);

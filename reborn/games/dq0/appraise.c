@@ -1,10 +1,11 @@
 /*
 ** appraise.c - (overlay 1) a thing looked at closely, in words: the appraiser's judgement of it (DUNGEON.md: items),
 ** not the thing as it is.  The referee tests the skill that knows that kind of thing (rs.h's P_APPRAISE: a weapon by
-** a warrior's craft, a book of magic by none of theirs); the things task gives what the thing truly is (its make,
-** its material, its durability, its worth); the judgement's as near to that as the test's grade allows: a critical
-** success right, a marginal one near, a marginal failure well off, a critical failure wild (and said as surely).
-** A thing further off than NEAR_SQ isn't judged: only what's seen of it from there (the things task's distance and
+** a warrior's craft, a book of magic by none of theirs); the world's item store gives what the thing truly is (its
+** make, its material, its durability, its worth); the judgement's as near to that as the test's grade allows: a
+** critical success right, a marginal one near, a marginal failure well off, a critical failure wild (and said as
+** surely).
+** A thing further off than NEAR_SQ isn't judged: only what's seen of it from there (the item store's distance and
 ** its size, the request's to; the character's sight, the referee's, sight_copy's eye), its kind, or if it's too far
 ** to make that out, its size.
 */

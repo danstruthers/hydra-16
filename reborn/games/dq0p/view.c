@@ -13,8 +13,7 @@
 ** It's worked out in a grid of its own (the hub's LOOK_BANK): the squares round the character (and the lamps' reach
 ** more, for their lines) copied in a row at a time, a chunk's run of them at once (what each is, its floor, a lit
 ** room's light on it, a shut door); the lines cast there (cast.s, in assembly); then the squares seen marked in the
-** chunks (the last look's unmarked) once they're all known.  Between the rows, the senses answer what the UI asks
-** that wants no look (look_pause: dq0p.c's).
+** chunks (the last look's unmarked) once they're all known.
 */
 
 #include <string.h>
@@ -204,12 +203,9 @@ void __fastcall__ view (unsigned char sn, unsigned x, unsigned y, unsigned char 
     if (own) {
         cast_own ();                            /* (Its own square: seen if anything lights it, else remembered) */
     }
-    for (j = 0, w = 2 * range; j <= w; ++j) {  /* The lines cast, a row at a time, the UI answered between */
+    for (j = 0, w = 2 * range; j <= w; ++j) {  /* The lines cast, a row at a time */
         hub_map (LOOK_BANK);
         cast_row (j);
-        if ((j & 3) == 3) {
-            look_pause ();
-        }
     }
     bx0 = x - range;                            /* Seen: marked in the chunks */
     by0 = y - range;

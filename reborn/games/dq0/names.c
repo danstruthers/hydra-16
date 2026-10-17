@@ -9,8 +9,8 @@
 ** of one word) a word the parser needs ("north", "take").
 **
 ** A thing's name works wherever a command names a thing ("attack the goblin with Linda", "drop Linda", "put Linda in
-** the pack"): the line's names made the things' own before it's parsed ("#" and the thing's id, a word the senses
-** and things task finds it by: dq0p/things.c's is_named), and a fight's "with Linda" taken in hand first.  The words
+** the pack"): the line's names made the things' own before it's parsed ("#" and the thing's id, a word the world's
+** item store finds it by: dq0w/things.c's is_named), and a fight's "with Linda" taken in hand first.  The words
 ** say it: the things' list marks a thing named ("#12 a sword": I_NAMED's) and a look's things are marked here, each
 ** worded as it's said ("Linda, your sword": names_say, from term.c's say); a room named, as the character's in it
 ** ("You are in the Mausoleum, a small crypt": names_look's).  A room's name is the way to it: room_named finds one
@@ -528,7 +528,7 @@ unsigned char __fastcall__ s_names_line (char* l)
 
 /* ---- The words */
 
-/* The things' names in line l made the things' own ("#" and the id: the things task finds it by that), each where
+/* The things' names in line l made the things' own ("#" and the id: the item store finds it by that), each where
 ** it's a word or words (the case aside); a fight's "with Linda" taken in hand first: the tenths that took (main.c
 ** charges them), or 0 */
 unsigned __fastcall__ s_names_subst (char* l)

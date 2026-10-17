@@ -31,12 +31,12 @@ games/lib/dq0/dq0.ovl ../obj/games/dq0.hyx.ovl  ;   have the reader make): Dingu
 games/lib/dq0/dq0t.dat ../obj/games/dq0t.dat
 games/lib/dq0/dq0w  ../obj/games/dq0w.hyx       ;   tasks: its world, its rules (HarnMaster's referee) and its maker
 games/lib/dq0/dq0w.ovl ../obj/games/dq0w.hyx.ovl
+games/lib/dq0/dq0w.cat ../obj/games/dq0w.hyx.cat
 games/lib/dq0/dq0harn ../obj/games/dq0harn.hyx ;   (the dungeon grown); /sd/0/games/dq0, or dq0 with bind -a
 games/lib/dq0/dq0harn.ovl ../obj/games/dq0harn.hyx.ovl
 games/lib/dq0/dq0m  ../obj/games/dq0m.hyx       ;   /sd/0/games /bin; and hmchar, a HarnMaster character made
 games/lib/dq0/dq0m.ovl ../obj/games/dq0m.hyx.ovl
 games/lib/dq0/dq0p  ../obj/games/dq0p.hyx
-games/lib/dq0/dq0p.ovl ../obj/games/dq0p.hyx.ovl
 games/lib/dq0/dq0d  ../obj/games/dq0d.hyx
 games/lib/dq0/dq0d.ovl ../obj/games/dq0d.hyx.ovl
 games/lib/dq0/dq0d.dat ../obj/games/dq0d.dat

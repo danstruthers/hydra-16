@@ -1,12 +1,12 @@
 /*
-** kinds.c - (dq0p) the catalogue (items.h's struct kind: a stand-in for the theme's data, till themes are data): not
-** in the task's RAM but its overlay's, dq0p.ovl, which the things read as they start into the hub's catalogue bank
-** (CAT_BANK), where the kinds are at $8000 as they're linked; a kind's record copied out as it's wanted (things.c).
-** Its order is items.h's KI_* (the maker puts things down by those).  After it, the things' words (things.h's SA_*),
-** in the bank too, each copied out as it's said.
+** kinds.c - (dq0w) the catalogue (items.h's struct kind: a stand-in for the theme's data, till themes are data): not
+** in the task's RAM but its own file's, dq0w.cat (dq0w.cfg's CAT), which the world reads as it starts into the hub's
+** catalogue bank (CAT_BANK), where the kinds are at $8000 as they're linked; a kind's record copied out as it's
+** wanted (things.c; the senses', the UI's too).  Its order is items.h's KI_* (the maker lists things by those).
+** After it, the things' words (things.h's SA_*), in the bank too, each copied out as it's said.
 */
 
-#pragma rodata-name ("OV1RODATA")
+#pragma rodata-name ("CATRODATA")
 
 #include "../dq0/hub.h"
 #include "things.h"

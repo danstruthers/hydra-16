@@ -2,13 +2,14 @@
 ** stock.c - (dq0m) a chunk's ordinary things put down, once, as it's first made (DUNGEON.md: items): in its rooms
 ** (a cave's chambers), by its stratum's style's say (how often, how many concealed, and how well), what lies about
 ** by each room's former use (uses.c's: a kitchen's pots and bones; a chamber's, a cave's, the style's kinds), the
-** stratum's age rotting what rots, and each use's mark (a kitchen's pot, a chapel's candle stubs, a well); the
-** things' records taken from the hub's item store under its lock (the things task, dq0p, keeps them after).  A
-** chunk stocked is marked among the change records (STOCKED), so a chunk made again isn't stocked twice.
+** stratum's age rotting what rots, and each use's mark (a kitchen's pot, a chapel's candle stubs, a well): a list
+** of them (items.h's struct stock, in the main RAM: sk), which make.c puts in the world bank's stock beside the
+** chunk's slot, for the world to put down (the item store is the world's alone: hub.h's who writes what).  A chunk
+** stocked is marked among the change records (STOCKED, the world's as it puts its things down), so a chunk made
+** again isn't stocked twice.
 **
 ** (stock () is overlay 7's, the maker's, beside uses.c, whose leavings it asks for (overlays 3 and 5 the caves' and
-** the fixtures' room), called through bank.s's
-** stub; put_down the main code's, that maps the hub's banks, the window put back as it was after.)
+** the fixtures' room), called through bank.s's stub; put_down the main code's.)
 */
 
 #include <string.h>
@@ -18,60 +19,45 @@
 #include "../dq0w/world.h"
 #include "grow.h"
 
-/* A thing put down on a square (concealed: hide, its difficulty 0-9; else 0xFF): its record's number, or 0 (the
-** window as it was) */
-static unsigned __fastcall__ put_down (unsigned char kind, unsigned char sn, unsigned x, unsigned y, unsigned char qty,
-    unsigned char hide)
-{
-    struct item* p;
-    unsigned i;
-    unsigned char b = getbank ();
+/* The chunk's things, listed (make.c's to put in the world bank: its first square sx0, sy0, in the frame) */
+struct stock sk;
+static unsigned sx0, sy0;
 
-    hub_map (0);
-    hy_sem_acquire (HUB->item_lock);
-    for (i = 1; i < NITEMS; ++i) {
-        hub_map (ITEM_BANK (i));
-        p = ITEM_AT (i);
-        if (!p->kind) {
-            memset (p, 0, sizeof *p);
-            p->kind = kind;
-            p->where = IW_SQUARE;
-            p->sn = sn;
-            p->x = x;
-            p->y = y;
-            p->qty = qty;
-            if (hide != 0xFF) {
-                p->flags = I_HIDDEN;
-                p->hide = hide;
-            }
-            break;
-        }
+/* A thing put down on a square (concealed: hide, its difficulty 0-9; else ST_SHOWN), listed: its entry, or 0 (the
+** list full) */
+static struct sthing* __fastcall__ put_down (unsigned char kind, unsigned char sn, unsigned x, unsigned y,
+    unsigned char qty, unsigned char hide)
+{
+    struct sthing* e;
+
+    (void) sn;                                  /* (The chunk's) */
+    if (sk.n >= NSTOCK) {
+        return 0;
     }
-    hub_map (0);
-    hy_sem_release (HUB->item_lock);
-    setbank (b);
-    return i < NITEMS ? i : 0;
+    e = &sk.e[sk.n++];
+    e->kind = kind;
+    e->x = x - sx0;
+    e->y = y - sy0;
+    e->qty = qty;
+    e->hide = hide;
+    e->make = 0;
+    e->size = 0;
+    return e;
 }
 
 /* A portal's part put in it (where IW_PORTAL) or by it (IW_SQUARE: a bar set aside), its make the portal's: its
 ** material (a wooden door's bar wood, else iron; a pane glass; bars iron), its state, its size (a bar the door's width
-** and a foot more; a pane, bars, the window's opening), its thickness (eighths of an inch) */
+** and a foot more; a pane, bars, the window's opening); its thickness the world's, by its kind and material (eighths
+** of an inch) */
 static void __fastcall__ part (unsigned char kind, unsigned char sn, unsigned x, unsigned y, const struct portal* q,
     unsigned char where)
 {
-    struct item* p;
-    unsigned i = put_down (kind, sn, x, y, 1, 0xFF);
-    unsigned char b = getbank ();
+    struct sthing* e = put_down (kind, sn, x, y, 1, where == IW_PORTAL ? ST_PORTAL : ST_SHOWN);
 
-    if (i) {
-        hub_map (ITEM_BANK (i));
-        p = ITEM_AT (i);
-        p->where = where;
-        p->mat = kind == KI_PANE ? MT_GLASS : kind == KI_BAR && q->mat <= PM_IRONBOUND ? MT_WOOD : MT_IRON;
-        p->quality = q->qual;
-        p->size = kind == KI_BAR ? (q->size & 15) + 1 : q->size;
-        p->thick = kind == KI_PANE ? 2 : kind == KI_BARS ? 8 : p->mat == MT_WOOD ? 24 : 12;
-        setbank (b);
+    if (e) {
+        e->make = (kind == KI_PANE ? MT_GLASS : kind == KI_BAR && q->mat <= PM_IRONBOUND ? MT_WOOD : MT_IRON) << 4 |
+            q->qual;
+        e->size = kind == KI_BAR ? (q->size & 15) + 1 : q->size;
     }
 }
 
@@ -108,12 +94,11 @@ static void __fastcall__ piece_down (const struct chunk* c, unsigned char i, uns
     }
 }
 
-/* The chunk (in the main RAM, the growers' L; its first square x0, y0 in the frame) stocked: two tries a room, each a
-** thing at the style's odds, at a square of its floor, of a kind its use left; its use's mark, in its middle (and a
-** kitchen's well, where there's water, by its west wall); the theme's pieces whose place it is; then its portals'
-** parts (a barred
-** door's bar in its brackets, some unbarred doors' set aside by them, one in four; a window's pane, its bars), with
-** no dice: nothing else moves for them */
+/* The chunk (in the main RAM, the growers' L; its first square x0, y0 in the frame) stocked, listed in sk: two tries
+** a room, each a thing at the style's odds, at a square of its floor, of a kind its use left; its use's mark, in its
+** middle (and a kitchen's well, where there's water, by its west wall); the theme's pieces whose place it is; then
+** its portals' parts (a barred door's bar in its brackets, some unbarred doors' set aside by them, one in four; a
+** window's pane, its bars), with no dice: nothing else moves for them */
 void __fastcall__ o_stock (const struct chunk* c, unsigned x0, unsigned y0)
 {
     const struct room* r;
@@ -121,6 +106,9 @@ void __fastcall__ o_stock (const struct chunk* c, unsigned x0, unsigned y0)
     unsigned char i, n, lx, ly, k, hidden, d, q, h;
     unsigned x, y;
 
+    sk.n = 0;
+    sx0 = x0;
+    sy0 = y0;
     rseed (strata[c->sn].seed ^ ((unsigned long) c->cx << 16 | c->cy) * 69069UL ^ 0x5EED);
     for (i = 0; i < c->nrooms; ++i) {
         r = &c->room[i];
@@ -138,7 +126,7 @@ void __fastcall__ o_stock (const struct chunk* c, unsigned x0, unsigned y0)
             k = hidden ? SP->hide_kinds[d] : uses (US_THING, i | d << 3);
             q = (hidden ? k : SP->kinds[d]) == KI_PENNIES ? 2 + random (20) : 3;    /* (The style's kind's draws:
                                                 **   the stock's dice as they were before its uses) */
-            h = hidden ? SP->h_lo + random (SP->h_span) : 0xFF;
+            h = hidden ? SP->h_lo + random (SP->h_span) : ST_SHOWN;
             if (k) {                            /* (Else rotted away) */
                 put_down (k, c->sn, x0 + lx, y0 + ly, k == KI_PENNIES ? q : 1, h);
             }
@@ -150,7 +138,7 @@ void __fastcall__ o_stock (const struct chunk* c, unsigned x0, unsigned y0)
             lx = n ? r->x : r->x + r->w / 2;
             ly = r->y + r->h / 2;
             if ((k = uses (US_SIGN, i | (n ? 0x80 : 0))) && TILE (c->tile[ly][lx]) == T_FLOOR) {
-                put_down (k, c->sn, x0 + lx, y0 + ly, 1, 0xFF);
+                put_down (k, c->sn, x0 + lx, y0 + ly, 1, ST_SHOWN);
             }
         }
     }

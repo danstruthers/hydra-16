@@ -6,9 +6,10 @@
 ** a cache: a region's records are in its file there (rgSXXYY.dat), read in as they're wanted, written back as the
 ** region's pages make way for another's (the one least lately wanted), and the save writes the rest; a region's file
 ** of another game's in the folder (its generation not this game's, the world bank's cgen) is never read.  Without a
-** folder, a full cache keeps no more.  The chunks the maker stocked as it made them (their slots CS_FRESH) are marked
-** so here (STOCKED), so none is stocked twice.  All under the hub's change_lock (the maker reads them meanwhile),
-** never held while the maker's asked for anything.
+** folder, a full cache keeps no more.  The chunks the maker stocked as it made them (their slots CS_FRESH) have their
+** things put down (the maker's lists, the world bank's stock: things.c's) and are marked so here (STOCKED), so none is
+** stocked twice.  All under the hub's change_lock (the maker reads them meanwhile), never held while the maker's asked
+** for anything.
 **
 ** The rarer work is swapped part 4's (../dq0/swap.inc, bank.s's stubs): a region read in, a page made room for (a
 ** region written back), the save (the UI's request: the hub's wreq), the game begun (its generation; a version 6
@@ -22,6 +23,7 @@
 #include "../dq0/hub.h"
 #include "world.h"
 #include "work.h"
+#include "things.h"
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 #pragma static-locals (on)                      /* (Smaller: none of it's called again before it returns) */
@@ -162,7 +164,8 @@ void __fastcall__ change (unsigned char sn, unsigned x, unsigned y, unsigned cha
     hub_map (0);
 }
 
-/* The chunks the maker stocked as it made them (their slots CS_FRESH), if there are any, marked so (part 4's) */
+/* The chunks the maker stocked as it made them (their slots CS_FRESH), if there are any, their things put down and
+** marked so (part 4's) */
 void stocks (void)
 {
     unsigned char k;
@@ -180,17 +183,30 @@ void stocks (void)
 #pragma code-name (push, "SW4CODE")
 #pragma rodata-name (push, "SW4RODATA")
 
-/* The chunks the maker stocked (their slots CS_FRESH) marked so: a record each (STOCKED, its first square), and their
-** slots as any other's (the hub's header in the window after) */
+/* The chunks the maker stocked (their slots CS_FRESH), in the order it stocked them (each one's list's seq): their
+** things put down (things.c's), and marked so, a record each (STOCKED, its first square), their slots as any other's
+** (the hub's header in the window after) */
 void s_stocked (void)
 {
     struct cslot* c;
-    unsigned char k;
+    unsigned char k, i;
+    unsigned s;
 
-    for (k = 0; k < NCSLOTS; ++k) {
+    for (;;) {
+        hub_map (WORLD_BANK);
+        for (i = 0, k = 0xFF; i < NCSLOTS; ++i) {
+            if (WREC->cslot[i].used == CS_FRESH && (k == 0xFF || (int) (WREC->stock[i].seq - s) < 0)) {
+                k = i;
+                s = WREC->stock[i].seq;
+            }
+        }
+        if (k == 0xFF) {
+            break;
+        }
+        stock_down (k);
         hub_map (WORLD_BANK);
         c = &WREC->cslot[k];
-        if (c->used == CS_FRESH) {
+        {
             rec.sn = c->sn;
             rec.x = WREC->strata[c->sn].x0 + (c->cx << CW_BITS);
             rec.y = WREC->strata[c->sn].y0 + (c->cy << CW_BITS);

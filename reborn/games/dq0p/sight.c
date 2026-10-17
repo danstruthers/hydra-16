@@ -268,6 +268,7 @@ void __fastcall__ perceive (unsigned char sn, unsigned x, unsigned y, unsigned c
         }
     }
     traps_seen (sn, x, y, face);
+    things_stocked ();                          /* (A chunk the maker's stocked: its things put down, the world's) */
     things_seen (&S, sn, x, y, face);           /* (The things it sees lying about) */
     hub_map (SIGHT_BANK);                       /* (The record the senses' bank's) */
     memcpy (SIGHT, &S, sizeof S);

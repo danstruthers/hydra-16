@@ -1,10 +1,10 @@
 ; ****************************************************************************
-; items.s - (dq0p) the item store's records reached quickly (things.c's): item_at (), a record's bank in the window
-; and the record, without cc65's multiplying (22 bytes a record); and items (), the next record after one that's
-; in use and where it's asked for (in a thing, on a square ...: a bit of each, IN_*), by the x it's at (or by its
-; flags), found by going down the banks in assembly (a look about, an inventory, went through every record in C a
-; few times over: two seconds of an inventory).  hub.h's ITEM_BANK, ITEM_AT and items.h's struct item (things.c
-; checks they're as here).
+; items.s - (dq0w) the item store's records reached quickly (things.c's; the senses' too): item_at (), a record's
+; bank in the window and the record, without cc65's multiplying (22 bytes a record); and items (), the next record
+; after one that's in use and where it's asked for (in a thing, on a square ...: a bit of each, IN_*), by the x it's
+; at (or by its flags), found by going down the banks in assembly (a look about, an inventory, went through every
+; record in C a few times over: two seconds of an inventory).  hub.h's ITEM_BANK, ITEM_AT and items.h's struct item
+; (things.c checks they're as here).
 ;
 ;   struct item* __fastcall__ item_at (unsigned i);                         item i's record, its bank in the window
 ;   unsigned __fastcall__ items (unsigned i, unsigned char in, unsigned x); the next after i (0: none), ip its record

@@ -92,10 +92,6 @@ int __fastcall__ hub_create (unsigned char banks)
         }
         HUB->sem[t] = s;
     }
-    if ((s = hy_sem_new (1, 0)) < 0) {          /* (The item store's lock) */
-        return -1;
-    }
-    HUB->item_lock = s;
     if ((s = hy_sem_new (1, 0)) < 0) {          /* (The change records' lock) */
         return -1;
     }

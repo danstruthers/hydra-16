@@ -893,29 +893,27 @@ static void __fastcall__ told (unsigned char att, unsigned char def, unsigned ch
     fring = (fring + 1) % NFIGHTS;
 }
 
-/* A body put down where actor a (the copy) fell: an item of the store's (under its lock, as the maker's are) */
+/* A body put down where actor a (the copy) fell: an item of the store's, the world's to put down (an intent, I_BODY:
+** the hub's di, a ring; full, waited on, the world taking its intents as it waits for this task) */
 static void __fastcall__ body (unsigned char kind)
 {
-    struct item* p;
-    unsigned i;
+    static struct msg m;
+    unsigned char h;
 
-    hub_map (0);
-    hy_sem_acquire (HUB->item_lock);
-    for (i = 1; i < NITEMS; ++i) {
-        hub_map (ITEM_BANK (i));
-        p = ITEM_AT (i);
-        if (!p->kind) {
-            memset (p, 0, sizeof *p);
-            p->kind = kind;
-            p->sn = a.sn;
-            p->x = a.x;
-            p->y = a.y;
-            p->qty = 1;
-            break;
+    m.kind = I_BODY;
+    m.a = kind;
+    m.w1 = a.x;
+    m.w2 = a.y;
+    m.x[0] = a.sn;
+    while (hub_map (0), ((h = HUB->di_head) + 1) % DI_SIZE == HUB->di_tail) {
+        if (HUB->quit) {
+            return;
         }
+        hy_sleep_ticks (1);
     }
-    hub_map (0);
-    hy_sem_release (HUB->item_lock);
+    memcpy (&HUB->di[h], &m, sizeof m);
+    HUB->di_head = (h + 1) % DI_SIZE;           /* (Written whole, then shown) */
+    hub_ring (T_WORLD);
 }
 
 /* Actor k dead (the hub's entry as it is): its record so, out of the dungeon for good, its body where it fell (a

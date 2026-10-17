@@ -335,7 +335,9 @@ void s_save_game (void)
         hub_call (&HUB->wreq, T_WORLD);
         HUB->wreq.state = REQ_FREE;
     }
-    things (IO_SAVE, "");                       /* (The things': items.dat) */
+    if (task_[T_WORLD] > 0) {
+        things (IO_SAVE, "");                   /* (The things': items.dat, the world's) */
+    }
     if (task_[T_DENIZENS] > 0) {                /* (The denizens': dens.dat) */
         hub_call (&HUB->dsave, T_DENIZENS);
         HUB->dsave.state = REQ_FREE;
@@ -419,6 +421,7 @@ static void start_world (unsigned long seed)
 {
     struct req* r;
     unsigned char k;
+    int w;
 
     if (hub_create (HUB_BANKS)) {
         t_end ();
@@ -454,10 +457,15 @@ static void start_world (unsigned long seed)
     } else {
         names_keep (-1, 1);                     /* (No names given yet) */
     }
-    start ("dq0m", T_MAKER, libdir);            /* (Its maker, its senses) */
+    start ("dq0m", T_MAKER, libdir);            /* (Its maker, its senses, its world: the world's item store first,
+                                                **   the things asked as the game starts, till it's begun) */
     start ("dq0p", T_SENSES, libdir);
-    things (IO_TOOLS, "");                      /* (The things' catalogue read in: the theme's kinds after it) */
+    start ("dq0w", T_WORLD, libdir);
+    w = task_[T_WORLD];
+    task_[T_WORLD] = 0;                         /* (Not begun yet: the status line's) */
+    things (IO_TOOLS, "");                      /* (The world's catalogue read in: the theme's kinds after it) */
     theme_load (resumed ? Q.theme : (unsigned char) (seed >> 8));     /* (The seed's second byte: theme.h) */
+    things (IO_THEME, "");
     if (!resumed) {                             /* (The character's kit: a new game's, -k's things too) */
         hub_mem (UI_BANK, UIREC->things_text, kit ? kit : "", kit ? strlen (kit) + 1 : 1);  /* (Its things more,
                                                 **   commas between) */
@@ -469,8 +477,9 @@ static void start_world (unsigned long seed)
         hy_sleep_ticks (2);
         hub_map (0);
     }
-    start ("dq0d", T_DENIZENS, libdir);         /* (Its denizens, its world) */
-    start ("dq0w", T_WORLD, libdir);
+    start ("dq0d", T_DENIZENS, libdir);         /* (Its denizens; then its world begun) */
+    things (IO_BEGIN, "");
+    task_[T_WORLD] = w;
 }
 
 /* The game's end: its tasks told to stop (the world first), and waited for */
@@ -779,7 +788,7 @@ static void __fastcall__ intend (unsigned char kind, unsigned char a)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ---- The things (items.h): a request to the things task (dq0p), waited for: its result */
+/* ---- The things (items.h): a request to the world's item store, waited for: its result */
 static unsigned char __fastcall__ things (unsigned char op, const char* name)
 {
     struct ireq* q = &HUB->ireq;
@@ -787,7 +796,7 @@ static unsigned char __fastcall__ things (unsigned char op, const char* name)
     q->kind = op;
     strncpy (q->name, name, sizeof q->name - 1);
     q->name[sizeof q->name - 1] = 0;
-    hub_call (q, T_SENSES);                     /* (Asleep till the senses ring with the reply) */
+    hub_call (q, T_WORLD);                      /* (Asleep till the world rings with the reply) */
     q->state = REQ_FREE;
     return q->result;
 }

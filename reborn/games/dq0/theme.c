@@ -4,7 +4,7 @@
 ** own bank (TCOPY: main.c reads the theme into it as the game starts, for the hub isn't in the window while an
 ** overlay is).  The puzzle: a command for a piece (read the tablet, combine the sunstone with the moonstone, put the
 ** crown on the throne, use the seal on the way out), matched against the theme's rules by the things' kinds (the
-** things task's: what's to hand, IO_FIND), done (the things made one, IO_COMBINE; put, IO_PUT), its words told and
+** item store's: what's to hand, IO_FIND), done (the things made one, IO_COMBINE; put, IO_PUT), its words told and
 ** its effect given back for main.c to carry out (the way out opened, the place ruled).  What's been done is the
 ** quest's (main.c's Q, kept in the save).
 */
@@ -22,8 +22,8 @@
 #define T               TCOPY
 
 /* The theme read in: libdir/dq0t.dat's t'th (counted round: the file's first says how many) into this overlay's bank
-** (TCOPY) and the hub's theme bank (THEME), through the main RAM (lb); then its kinds of things into the hub's
-** catalogue, after the catalogue's own (the things task has read them in) */
+** (TCOPY) and the hub's theme bank (THEME), through the main RAM (lb); its kinds of things the world's to put
+** in the hub's catalogue, after the catalogue's own (the UI's IO_THEME, after) */
 void __fastcall__ o_theme_load (unsigned char t)
 {
     char* path = lb + 300;
@@ -50,9 +50,7 @@ void __fastcall__ o_theme_load (unsigned char t)
         }
     }
     close (fd);
-    Q.theme = t;
-    memcpy (lb, T->kind, sizeof T->kind);
-    hub_mem (CAT_BANK, CATALOGUE + KI_THEME, lb, sizeof T->kind);
+    Q.theme = t;                                /* (Its kinds the world's to put in the catalogue: IO_THEME) */
 }
 
 /* A theme's name for something (TN_*): its own, a stratum's by its number, into tname; a room's by its kind, a lit

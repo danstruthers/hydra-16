@@ -62,7 +62,8 @@ void changes_init (void);
 int changes_save (void);                        /* The seen maps into the save's folder: 0, or -1 (part 2's) */
 int changes_restore (void);                     /* And back (part 2's) */
 unsigned char __fastcall__ changes_over (struct chunk* k, unsigned x, unsigned y);     /* 1: it's been stocked */
-void __fastcall__ stock (const struct chunk* c, unsigned x0, unsigned y0);              /* stock.c's */
+void __fastcall__ stock (const struct chunk* c, unsigned x0, unsigned y0);              /* stock.c's: listed in sk */
+extern struct stock sk;
 void __fastcall__ seen_keep (unsigned char s);
 void __fastcall__ seen_over (struct chunk* k);
 

@@ -9,7 +9,10 @@
 ** a spell of work at a time (the referee's tests), and keeps what it changes: the change records (store.c, world.h's),
 ** its alone to write, which the maker lays over a chunk it makes again.  It works the portals and the traps (work.h:
 ** doors, portcullises, windows, a trap set off, disarmed, a search; the referee asked), and answers the UI's
-** requests of it (the hub's wreq: the save, a close look at a portal).  The denizens near the
+** requests of it (the hub's wreq: the save, a close look at a portal).  It keeps the item store (things.c: the
+** things, their places and states, its alone to write), answering the UI's requests of the things (the hub's ireq:
+** what's carried, a thing taken up, put down, handled), putting down a chunk's things as the maker listed them
+** stocking it, and a denizen's body as its task intends it (the hub's di).  The denizens near the
 ** character move themselves (their task, games/dq0d, by the character's rules: the hub's actors); the world keeps the
 ** character out of their squares, and looks again at those it sees as they change (den_seq).  A blow of the character's
 ** at one (I_ATTACK) takes it a round, and is the denizens' task's to strike (the hub's pc_foe), as theirs at it are.
@@ -31,7 +34,8 @@
 ** part 2, climbing; part 3, the dungeon begun and the strata below grown; part 4, the change records' rarer work
 ** (store.c); the work: part 5 doors (wdoor.c), 6 blows (wblow.c), 7 portcullises and windows (wwin.c), 8 traps and
 ** searches (wtrap.c), a command's work all in one of them; part 9, the walks (go, go_to, step_to: I_GO, I_GOTO,
-** I_STEP, each a command's one part).
+** I_STEP, each a command's one part); the item store's, parts 10, 11 and 13 (things.c); part 12, a door's work begun
+** (door_work: the door walked up to, its part's work asked).
 */
 
 #include <fcntl.h>
@@ -43,6 +47,7 @@
 #include "../dq0/hub.h"
 #include "world.h"
 #include "work.h"
+#include "things.h"
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 
@@ -57,7 +62,8 @@ void __fastcall__ grow_below (unsigned char n);
 void __fastcall__ go (unsigned char h);         /* Part 9 */
 void __fastcall__ go_to (unsigned x, unsigned y);
 void __fastcall__ step_to (unsigned char h, unsigned char n, unsigned char keep);
-#define OVBANKS         4                       /* (dq0w.cfg's OV1 ...: the parts' images) */
+void __fastcall__ door_work (unsigned char what);   /* Part 12 */
+#define OVBANKS         5                       /* (dq0w.cfg's OV1 ...: the parts' images) */
 extern unsigned char ovbank[OVBANKS];
 struct work wk;
 extern char _SWAP_START__[];
@@ -431,19 +437,63 @@ static void stirred (void)
     }
 }
 
-/* What the character sees, made again, and what it perceives recorded: the senses asked (dq0p), and waited for (the
-** clock going on meanwhile, at the real paces: asleep on the doorbell a tick at a time), the denizens it sees added
-** (the hub's header in the window as it ends) */
+/* ---- The things (the item store: things.c): the UI's request of them answered (the chunks stocked and the bodies
+** put down first: what it asks about there), looked about again if what lies about has changed (as the senses did,
+** a look's alone: no denizen seen again); while a look's waited for, the senses' request (a chunk's things put down,
+** before they see them) and what the UI asks that wants no look (what's carried, the tools, a tool's wear: the hub's
+** header in the window after each) */
 static void clock_run (void);
-static void __fastcall__ see (unsigned char first)
+static void __fastcall__ looked (unsigned char first);
+static void things (void)
+{
+    stocks ();
+    if (BODIES ()) {
+        bodies ();
+    }
+    if (serve ()) {
+        looked (0);
+    }
+    hub_reply (&HUB->ireq);
+}
+
+static void waiting (void)
+{
+    unsigned char op;
+
+    clock_run ();
+    if (hub_posted (&HUB->stock)) {
+        stocks ();
+        hub_reply (&HUB->stock);
+    }
+    op = HUB->ireq.kind;
+    if (hub_posted (&HUB->ireq) && (op == IO_LIST || op == IO_TOOLS || op == IO_WEAR)) {
+        serve ();
+        hub_reply (&HUB->ireq);
+    }
+}
+
+/* The senses asked to look about, and waited for, the things it saw made their own (the bodies put down first) */
+static void __fastcall__ looked (unsigned char first)
 {
     hub_map (0);
+    if (BODIES ()) {
+        bodies ();
+    }
     HUB->look.first = first;
     hub_post (&HUB->look, T_SENSES);
     while (!hub_wait_t (&HUB->look, 1)) {
-        clock_run ();
+        waiting ();
     }
     HUB->look.state = REQ_FREE;
+    owned ();
+}
+
+/* What the character sees, made again, and what it perceives recorded: the senses asked (dq0p), and waited for (the
+** clock going on meanwhile, at the real paces: asleep on the doorbell a tick at a time), the denizens it sees added
+** (the hub's header in the window as it ends) */
+static void __fastcall__ see (unsigned char first)
+{
+    looked (first);
     dens_seen ();
     sn_ = HUB->pc_stratum;
 }
@@ -1530,6 +1580,9 @@ static unsigned char want_;                     /* (What's to be worked, I_PORTA
                                                 **   1, a search's quietly) */
 #define WANTED(t)       ((TILE (t) == T_DOOR && want_ != PW_WINDOW) || (TILE (t) == T_WINDOW && want_ != PW_DOOR))
 
+#pragma code-name (push, "SW12CODE")             /* (Part 12's: the main RAM's room) */
+#pragma rodata-name (push, "SW12RODATA")
+
 /* The door the character faces, walked up to (its time), its square in px_, py_: the door's record (in the window),
 ** or NULL */
 static struct portal* __fastcall__ door_ahead (unsigned long* tt)
@@ -1591,6 +1644,9 @@ static struct portal* __fastcall__ door_ahead (unsigned long* tt)
     at (sn_, px_, py_);
     return portal_at (cx_, cy_);
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* What (PA_*, or W_STEP) worked at x, y (or about the character, NO_SQ) from where the character stands (mx, my), d
 ** the way from there to it, by the part whose work it is (a command's all one part's: a door's, its shutters', a
@@ -1668,8 +1724,11 @@ static void __fastcall__ worked (unsigned long t)
 }
 
 /* A door (or a portcullis, a window, a slit) the character faces worked, walked up to first; or about it: a search,
-** a trap in reach disarmed (else the door ahead's) */
-static void __fastcall__ door_work (unsigned char what)
+** a trap in reach disarmed (else the door ahead's) (part 12's) */
+#pragma code-name (push, "SW12CODE")
+#pragma rodata-name (push, "SW12RODATA")
+
+void __fastcall__ s_door_work (unsigned char what)
 {
     unsigned long t;
 
@@ -1693,6 +1752,9 @@ static void __fastcall__ door_work (unsigned char what)
     HUB->pc_face = H_OF (pd_);
     worked (t);
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* The walk worked out last stops at the trap on its way (tx_, ty_, from fx_, fy_: its chunk's, C's, made the
 ** frame's), to be set off as it gets there (or noticed in time: wtrap.c's) */
@@ -1803,6 +1865,12 @@ static unsigned char turns_run (void)
         while (BEHIND && hy_ticks () - waited < 1000) {
             hy_sleep_ticks (1);                 /* (Waited for here, five seconds at most: the rest of the round's no
                                                 **   use; a fight's blows ask the referee a few times over) */
+            if (BODIES ()) {
+                bodies ();                      /* (Their bodies put down meanwhile: their ring's room) */
+            }
+            if (hub_posted (&HUB->ireq)) {
+                things ();                      /* (The UI's things meanwhile: what's carried ...) */
+            }
         }
         late = BEHIND;
         return 1;
@@ -1872,6 +1940,17 @@ int main (int argc, char* argv[])
         return 1;
     }
     chunks_init (ASK_WORLD);
+    items_begin (argv[3]);                      /* (The item store: the catalogue, a game carried on its things) */
+    for (dseq = 0; hub_map (0), !HUB->quit && dseq != IO_BEGIN; ) {
+        hy_sem_wait (HUB->sem[T_WORLD], 4);     /* (The things asked as the game starts: the theme's kinds, the kit
+                                                **   ..., till the UI's begun it) */
+        hub_map (0);
+        if (hub_posted (&HUB->ireq)) {
+            dseq = HUB->ireq.kind;
+            things ();
+        }
+    }
+    dseq = 0;
     hub_map (0);
     stept = HUB->pcsum.step ? HUB->pcsum.step : 10;
     begin ();
@@ -1881,6 +1960,10 @@ int main (int argc, char* argv[])
     while (hub_map (0), !HUB->quit) {         /* (The hub at $8000 again, each time round) */
         while (hy_sem_try (HUB->sem[T_WORLD]) == 0) {
         }
+        stocks ();                              /* (The chunks the maker stocked: their things put down, marked so) */
+        if (BODIES ()) {
+            bodies ();                          /* (The denizens' bodies put down) */
+        }
         while (hub_take (&m)) {
             intent (&m);
             was_busy = 1;
@@ -1888,7 +1971,6 @@ int main (int argc, char* argv[])
         if (hub_posted (&HUB->wreq)) {
             answer ();                          /* (The UI's: the save, a close look) */
         }
-        stocks ();                              /* (The chunks the maker stocked marked so) */
         clock_run ();
         if (HUB->den_look && !move.on) {
             HUB->den_look = 0;                  /* (A body fallen: looked at again, the things too) */
@@ -1909,6 +1991,10 @@ int main (int argc, char* argv[])
         if (was_busy && !move.on && HUB->now >= HUB->pc_ready) {
             event (E_READY, 0, 0);              /* (The character free again: the UI takes its next line) */
             was_busy = 0;
+        }
+        if (hub_posted (&HUB->ireq)) {
+            things ();                          /* (The UI's: the things; after the clock's moved on for an intent,
+                                                **   so the denizens see it moved, as before the things were here) */
         }
         hub_sleep (move.on || was_busy ? 2 : 4);  /* (Nothing under way: asleep on the doorbell, an intent
                                                 **   waking it at once; the clock on from the ticks gone) */

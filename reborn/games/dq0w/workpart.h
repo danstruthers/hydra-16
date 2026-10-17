@@ -77,8 +77,6 @@ static unsigned char __fastcall__ part_moved (unsigned char k, unsigned x, unsig
     struct item* p;
     unsigned i;
 
-    hub_map (0);
-    hy_sem_acquire (HUB->item_lock);
     for (i = 1; i < NITEMS; ++i) {
         hub_map (ITEM_BANK (i));
         p = ITEM_AT (i);
@@ -91,7 +89,6 @@ static unsigned char __fastcall__ part_moved (unsigned char k, unsigned x, unsig
         }
     }
     hub_map (0);
-    hy_sem_release (HUB->item_lock);
     return i < NITEMS;
 }
 #endif
