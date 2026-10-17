@@ -656,6 +656,7 @@ void __fastcall__ s_wear (const char* key, unsigned char by)
 
 /* A thing in words: its kind, how many, and what anyone can see of its state (its make and worth are an appraiser's
 ** to judge) */
+#pragma static-locals (push, on)                /* (Called again by nothing before it's done: quicker) */
 void __fastcall__ s_thing_words (const struct item* q)
 {
     const struct kind* k = kind_of (q->kind);
@@ -687,6 +688,7 @@ void __fastcall__ s_thing_words (const struct item* q)
             " (worn)");
     }
 }
+#pragma static-locals (pop)
 
 /* What the character carries gathered first, in one pass of the store (the records on an actor, and every record in
 ** or on a thing: what's in what it carries among them), its list and its load worded from that: each thing's
@@ -697,6 +699,7 @@ static struct got { unsigned n, x; unsigned char where; }* got;
 static unsigned char ngot;
 
 /* The next record after i at where, x (IN_X's: items ()'s order, the records' own) */
+#pragma static-locals (push, on)
 static unsigned __fastcall__ next_in (unsigned i, unsigned char where, unsigned x)
 {
     struct got* g = got;
@@ -712,6 +715,7 @@ static unsigned __fastcall__ next_in (unsigned i, unsigned char where, unsigned 
     }
     return 0;
 }
+#pragma static-locals (pop)
 
 /* Each thing at where, x worded, and what's in it, or on it; its weight (quarter pounds) added to load's, the
 ** things it goes into the same as weight_in's (part 10's): what it all weighs */
