@@ -66,6 +66,10 @@ void __fastcall__ stock (const struct chunk* c, unsigned x0, unsigned y0);      
 extern struct stock sk;
 void __fastcall__ seen_keep (unsigned char s);
 void __fastcall__ seen_over (struct chunk* k);
+void __fastcall__ pl_get (unsigned char sn, unsigned idx, struct region* to);      /* A big plan's region (plan.c's: */
+void __fastcall__ pl_put (unsigned char sn, unsigned idx, const struct region* from);  /*   changes.c's pages) */
+void __fastcall__ pl_new (unsigned char sn);
+void pl_flush (void);
 
 /* map.c */
 void draw_map (void);                           /* (Part 1's: ../dq0/swap.inc) */

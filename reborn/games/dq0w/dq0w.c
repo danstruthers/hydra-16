@@ -68,8 +68,6 @@ void __fastcall__ go (unsigned char h);         /* Part 9 */
 void __fastcall__ go_to (unsigned x, unsigned y);
 void __fastcall__ step_to (unsigned char h, unsigned char n, unsigned char keep);
 void __fastcall__ door_work (unsigned char what);   /* Part 12 */
-#define OVBANKS         6                       /* (dq0w.cfg's OV1 ...: the parts' images) */
-extern unsigned char ovbank[OVBANKS];
 struct work wk;
 extern char _SWAP_START__[];
 unsigned char den_done;                         /* (wbody.h's) */
@@ -133,7 +131,7 @@ static void __fastcall__ bound_for (unsigned x, unsigned y)
 
 static unsigned char nden, dk[NACTORS], blocked;    /* (blocked: the actor that stopped it, plus 1; or 0) */
 static unsigned dsx[NACTORS], dsy[NACTORS];
-static unsigned rx0, ry0;                       /* (The room's chunk's first square, in the frame: can ()'s) */
+static unsigned rx0, ry0;                       /* (The room's chunk's first square, in the frame: the ways') */
 
 static void dens_where (void)
 {
@@ -320,86 +318,68 @@ static struct trap* __fastcall__ trap_at (unsigned char x, unsigned char y)
 }
 
 /* ---- The way across a room, round its ledges: the squares of its chunk (in the window) from the room's floor to
-** one of its doors or openings, by steps that can be walked; the time it takes */
+** one of its doors or openings, by steps that can be walked; the time it takes.  The ways from a square of the room
+** to all its squares (its floor and its walls, as big as the chunk lets it be: no fixed room's size) worked out at
+** once (ways: as the first of them is looked up, part 21's ways_go, a search of the squares a step at a time, the
+** first way to each found kept, each square's time from the start and the first trap on its way, in the world's own
+** bank: struct wcell), then each way the caller wants to know looked up there (way) */
 
-#define BW      14
-#define BH      9
-static unsigned char bq[BW * BH], bfrom[BH][BW];
+struct wcell {
+    unsigned char   from;                       /* The way it was come into from the one before (4: the start; 0xFF
+                                                **   none: not reached) */
+    unsigned        t;                          /* Its time from the start (tenths, at most 0xFFFE) */
+    unsigned        trap;                       /* The first square on its way with a trap that's set (that would
+                                                **   be set off: its place in the chunk, y times 32 and x; 0xFFFF
+                                                **   none) */
+};
+#define WAYS_AT         ((struct wcell*) 0x8000)    /* (The ways' bank, the world's own: ovbank[OVBANKS + 1]: the
+                                                **   chunk's squares' cells, then the search's queue) */
+#define WAYS_Q          ((unsigned*) (WAYS_AT + CW * CW))
+typedef char ways_fit[CW * CW * (sizeof (struct wcell) + 2) <= 0x2000 ? 1 : -1];
+static unsigned char wox, woy, wow, woh;        /* (The ways' room: its walls' first square, its size with them) */
+extern unsigned char at_bank;                   /* (chunk.c's: at ()'s chunk's bank, C's) */
+static unsigned char last_d;                    /* (way's: the way into its square) */
+void __fastcall__ ways_go (unsigned char r, unsigned char fx, unsigned char fy);    /* (Part 21's) */
+static unsigned char wr, wfx, wfy, wneed;       /* (The ways wanted: worked out as the first is looked up) */
 
-static unsigned char __fastcall__ can (unsigned char x, unsigned char y, unsigned char d)
+static void __fastcall__ ways (unsigned char r, unsigned char fx, unsigned char fy)
 {
-    unsigned char nx = x + dir_x[d], ny = y + dir_y[d], t = C->tile[y][x], u;
-    struct trap* q;
-    int dz;
-
-    if (nx >= CW || ny >= CW) {
-        return 0;
-    }
-    u = C->tile[ny][nx];
-    if (!T_PASS (u) || den_on (rx0 + nx, ry0 + ny) || ((q = trap_at (nx, ny)) != 0 && !(q->state & TS_HIDDEN))) {
-        return 0;                               /* (Nor onto a denizen, nor a trap it knows of: it goes round) */
-    }
-    dz = C->elev[ny][nx] - C->elev[y][x];
-    if (dz < 0) {
-        dz = -dz;
-    }
-    return dz <= (TILE (t) == T_STEPS || TILE (u) == T_STEPS ? STAIR_MAX : STEP_MAX);
+    wr = r;
+    wfx = fx;
+    wfy = fy;
+    wneed = 1;
 }
 
-/* From (fx, fy) to (tx, ty) within room r's floor and walls (chunk squares): its time, or 0xFFFFFFFF (no way) */
-static unsigned char last_d;                    /* (cross_room's way into its last square) */
-
-static unsigned long __fastcall__ cross_room (unsigned char r, unsigned char fx, unsigned char fy, unsigned char tx,
-    unsigned char ty)
+/* The way worked out (ways) to (tx, ty) of the room's floor and walls (chunk squares): its time, or 0xFFFFFFFF (no
+** way); cut 1 if a trap's on it (the first on it: tx_, ty_ its square, fx_, fy_ the one before, cut_t the time to
+** it), last_d the way into its square; the chunk back in the window after */
+static unsigned long __fastcall__ way (unsigned char tx, unsigned char ty)
 {
-    struct room* p = &C->room[r];
-    unsigned char ox = p->x - 1, oy = p->y - 1, w = p->w + 2, h = p->h + 2, head = 0, tail = 0, x, y, d, nx, ny;
-    unsigned long t = 0;
+    struct wcell* w = &WAYS_AT[(unsigned) ty * CW + tx];
+    unsigned long t = 0xFFFFFFFFUL;
+    unsigned q;
 
-    cut = 0;
-    if (w > BW || h > BH) {
-        return 0xFFFFFFFFUL;
+    if (wneed) {                                /* (Worked out as the first is wanted: none, if none's wanted) */
+        wneed = 0;
+        ways_go (wr, wfx, wfy);
     }
-    memset (bfrom, 0xFF, sizeof bfrom);
-    bfrom[fy - oy][fx - ox] = 4;
-    bq[tail++] = (fy - oy) * BW + (fx - ox);
-    while (head < tail) {
-        x = bq[head] % BW;
-        y = bq[head++] / BW;
-        if (x + ox == tx && y + oy == ty) {
-            break;
-        }
-        for (d = 0; d < 4; ++d) {
-            nx = x + dir_x[d];
-            ny = y + dir_y[d];
-            if (nx < w && ny < h && bfrom[ny][nx] == 0xFF && can (x + ox, y + oy, d)) {
-                bfrom[ny][nx] = d;
-                bq[tail++] = ny * BW + nx;
+    cut = 0;
+    if ((unsigned char) (tx - wox) < wow && (unsigned char) (ty - woy) < woh) {
+        hy_bank (ovbank[OVBANKS + 1]);
+        if ((last_d = w->from) != 0xFF) {
+            t = w->t;
+            if ((q = w->trap) != 0xFFFF) {
+                cut = 1;
+                cut_t = WAYS_AT[q].t;
+                tx_ = q & (CW - 1);
+                ty_ = q >> CW_BITS;
+                q = WAYS_AT[q].from;
+                fx_ = tx_ - dir_x[q];
+                fy_ = ty_ - dir_y[q];
             }
         }
+        hub_map (at_bank);
     }
-    x = tx - ox;
-    y = ty - oy;
-    if (x >= w || y >= h || bfrom[y][x] == 0xFF) {
-        return 0xFFFFFFFFUL;
-    }
-    last_d = bfrom[y][x];                       /* (The way it came into the square: a mouth's way on) */
-    while ((d = bfrom[y][x]) != 4) {           /* (Back along the way, its steps' times) */
-        nx = x - dir_x[d];
-        ny = y - dir_y[d];
-        if (trap_at (x + ox, y + oy)) {
-            cut = 1;                            /* (A trap it would set off: the first on the way, the last found) */
-            cut_t = t;
-            tx_ = x + ox;
-            ty_ = y + oy;
-            fx_ = nx + ox;
-            fy_ = ny + oy;
-        }
-        t += cost (C->elev[y + oy][x + ox] - C->elev[ny + oy][nx + ox], TILE (C->tile[y + oy][x + ox]) == T_STEPS);
-        x = nx;
-        y = ny;
-    }
-    cut_t = t - cut_t;                          /* (The time to the trap, from where it set out) */
     return t;
 }
 
@@ -466,9 +446,17 @@ static void waiting (void)
 
 /* The senses asked to look about (the denizens it sees with it), and waited for, the things it saw made their own;
 ** the first time there, the reply's (LF_ARRIVE: by the senses' memory of the room) */
+static unsigned npx, npy;
+static unsigned char nps;
 static unsigned char __fastcall__ looked (unsigned char first)
 {
     hub_map (0);
+    if (HUB->pc_x != npx || HUB->pc_y != npy || HUB->pc_stratum != nps) {
+        npx = HUB->pc_x;
+        npy = HUB->pc_y;
+        nps = HUB->pc_stratum;
+        it_near ();
+    }
     HUB->look.first = first;
     hub_post (&HUB->look, T_SENSES);
     while (!hub_wait_t (&HUB->look, 4)) {      /* (Asleep meanwhile, a request rung waking it: the senses' stock,
@@ -485,7 +473,8 @@ static unsigned char __fastcall__ looked (unsigned char first)
 
 /* What the character sees, made again, and what it perceives recorded: the senses asked (dq0p), and waited for (the
 ** clock going on meanwhile, at the real paces: asleep on the doorbell a tick at a time), the denizens it sees added
-** (the hub's header in the window as it ends) */
+** (the hub's header in the window as it ends); moved, the things round it in the item store first (its paging's, as
+** it comes into a chunk: ipage.c) */
 static void __fastcall__ see (unsigned char first)
 {
     looked (first);
@@ -624,10 +613,12 @@ void __fastcall__ s_go_to (unsigned x, unsigned y)
             }
         }
     }
-    if ((tt = cross_room (r, fx, fy, tx, ty)) == 0xFFFFFFFFUL) {
+    ways (r, fx, fy);
+    if ((tt = way (tx, ty)) == 0xFFFFFFFFUL) {
         d = nden;                               /* (A way, but for the denizens: one's in the way) */
         nden = 0;
-        tt = cross_room (r, fx, fy, tx, ty);
+        ways (r, fx, fy);
+        tt = way (tx, ty);
         nden = d;
         blocked = d ? dk[0] + 1 : 0;
         hub_map (0);
@@ -856,6 +847,7 @@ void __fastcall__ s_go (unsigned char h)
         ry0 = oy = my - cy_;
         wx = cx_;
         wy = cy_;
+        ways (r, wx, wy);
         for (k = 0; k < 4; ++k) {               /* (The doors that way: the quickest to walk to) */
             for (d = 0; wall_tile (&C->room[r], k, d); ++d) {
                 if (TILE (C->tile[wall_y][wall_x]) != T_DOOR || (tgx ? TARGET (ox + wall_x, oy + wall_y) : (h & 1) ?
@@ -863,7 +855,7 @@ void __fastcall__ s_go (unsigned char h)
                     (portal_at (wall_x, wall_y) && (portal_at (wall_x, wall_y)->state & PS_HIDDEN))) {
                     continue;
                 }
-                if ((t = cross_room (r, wx, wy, wall_x, wall_y)) < bt) {
+                if ((t = way (wall_x, wall_y)) < bt) {
                     bt = t;
                     best = k;
                     bx = wall_x;
@@ -876,7 +868,7 @@ void __fastcall__ s_go (unsigned char h)
                 for (bx = C->room[r].x ? C->room[r].x - 1 : 0; bx <= C->room[r].x + C->room[r].w && bx < CW; ++bx) {
                     if (TILE (C->tile[by][bx]) != T_CORR || (tgx ? TARGET (ox + bx, oy + by) : bearing ((int) bx - wx,
                         (int) by - wy) != h) ||
-                        (t = cross_room (r, wx, wy, bx, by)) >= bt) {
+                        (t = way (bx, by)) >= bt) {
                         continue;
                     }
                     bt = t;
@@ -889,7 +881,7 @@ void __fastcall__ s_go (unsigned char h)
                 across (h, r);
                 return;
             }
-            if (cross_room (r, wx, wy, k, d), cut) {
+            if (way (k, d), cut) {
                 on_way ();                      /* (A trap on its way to it) */
                 return;
             }
@@ -915,7 +907,7 @@ void __fastcall__ s_go (unsigned char h)
             event (E_PORTAL, 0, PO_OPENED);
             bt += 2 * stept;
         }
-        if (cross_room (r, wx, wy, bx, by), cut) {
+        if (way (bx, by), cut) {
             on_way ();
             return;
         }
@@ -992,9 +984,11 @@ static void __fastcall__ planned (unsigned char n)
 {
     ask_maker (M_PLAN, n, 0, 0);
     hub_map (WORLD_BANK);
-    memcpy (&WREC->strata[n], &WREC->grown, sizeof WREC->grown);
+    memcpy (&WREC->strata[SLOT (n)], &WREC->grown, sizeof WREC->grown);
     sync_strata ();
 }
+
+static unsigned char vast;                      /* (dq0 -T -T -T -T's: the strata below vast) */
 
 /* A stand-in for the theme's say: a stratum's bounds round the squares it must hold (the links down to it), its
 ** size picked from a few classes: a cellar (a few squares), a modest one (a few hundred feet), a great one (a mile
@@ -1005,6 +999,10 @@ static void __fastcall__ bounds (struct stratum* s, unsigned lx0, unsigned ly0, 
     unsigned w = k < 5 ? 4 + random (5) : k < 12 ? 60 + random (140) : 400 + random (1600), h;
 
     h = k < 5 ? 4 + random (5) : k < 12 ? 60 + random (140) : 400 + random (1600);
+    if (vast) {
+        w = h = 27 * RW;                        /* (dq0 -T -T -T -T: the stratum below the top 27 regions each way,
+                                                **   its plan more than PLAN_MAX: paged, the maker's) */
+    }
     if (w < lx1 - lx0 + 8) {
         w = lx1 - lx0 + 8;
     }
@@ -1017,26 +1015,71 @@ static void __fastcall__ bounds (struct stratum* s, unsigned lx0, unsigned ly0, 
     s->y0 = ly0 - 3 - random (h - (ly1 - ly0) - 6);
 }
 
+/* Stratum m's slot in the hub's strata's records (world.h's MAXSTRATA: m & 7) made way for: the stratum there, if
+** it's another's and made, put out (the chunks the maker's stocked marked first; its things' chunks out of the item
+** store, it_flush; its record to its file, st_out: stSS.dat), the slot free: 1, or 0 (no save folder: it stays) */
+static unsigned char __fastcall__ slot_for (unsigned char m)
+{
+    struct stratum* s = &STRATUM (m);
+    unsigned char o = s->n;
+
+    if (!s->made || o == m) {
+        return 1;
+    }
+    hub_map (0);
+    if (!HUB->savedir[0]) {
+        return 0;
+    }
+    stocks ();
+    it_flush (o);
+    if (!st_out (o)) {
+        return 0;
+    }
+    hub_map (WORLD_BANK);
+    WREC->strata[SLOT (m)].made = 0;
+    sync_strata ();
+    return 1;
+}
+
+/* Stratum m in its slot (the character or a shaft come to it): its record read back from its file if it's been put
+** out (the one there put out for it: slot_for; the maker told, its plan grown again, M_SLOT): 1, or 0 (not made yet,
+** the slot free for it: the caller grows it; or no room, no folder) */
+unsigned char __fastcall__ s_stratum_in (unsigned char m)
+{
+    if (STRATUM (m).made && STRATUM (m).n == m) {
+        return 1;
+    }
+    if (!slot_for (m) || !st_in (m)) {
+        return 0;
+    }
+    sync_strata ();
+    ask_maker (M_SLOT, m, 0, 0);
+    return 1;
+}
+
 /* Stratum n + 1 begun, under stratum n's links down: its record (in the hub: its bounds round them, a link up at
-** each), then its plan the maker's */
+** each, in its slot: the stratum there put out first), then its plan the maker's */
 void __fastcall__ s_grow_below (unsigned char n)
 {
-    struct stratum* s = &strata[n];
+    struct stratum* s = &STRATUM (n);
     struct stratum* b;
     struct link* l;
     struct link* k;
     unsigned lx0 = 0xFFFF, ly0 = 0xFFFF, lx1 = 0, ly1 = 0, x, y;
     unsigned char i, st;
 
+    if (!slot_for (n + 1)) {
+        return;
+    }
     hub_map (WORLD_BANK);                       /* (The strata's records the world bank's: it in the window) */
-    b = &WREC->strata[n + 1];
+    b = &WREC->strata[SLOT (n + 1)];
     rseed (s->seed + 977);
     memset (b, 0, sizeof *b);
     b->n = n + 1;
     b->seed = s->seed * 69069UL + 1;
     i = random (2);                             /* (The theme's say: one of the stratum's styles) */
     hub_map (THEME_BANK);
-    st = THEME->style[n + 1][i];
+    st = THEME->style[n + 1 < TSTRATA ? n + 1 : TSTRATA - 1][i];   /* (Past the theme's strata, its deepest's) */
     hub_map (WORLD_BANK);
     b->style = st;
     b->age = 1 + random (40);
@@ -1081,12 +1124,13 @@ static unsigned char __fastcall__ link_here (unsigned char d, unsigned long* t)
     if ((r = room_of (sn_, mx, my)) == 0xFF) {
         return 0xFF;
     }
+    ways (r, cx_, cy_);
     for (k = 0; k < C->nopen; ++k) {
         kind = C->open[k].kind;
         if ((d == DIR_UP) != (kind == O_STAIRS_UP || kind == O_LADDER_UP || kind == O_WAY_OUT || kind == O_SHAFT_UP)) {
             continue;
         }
-        if ((u = cross_room (r, cx_, cy_, C->open[k].x, C->open[k].y)) < bt) {
+        if ((u = way (C->open[k].x, C->open[k].y)) < bt) {
             bt = u;
             best = C->open[k].link;
             bk = k;
@@ -1094,7 +1138,7 @@ static unsigned char __fastcall__ link_here (unsigned char d, unsigned long* t)
         at (sn_, mx, my);                       /* (Its chunk in the window again) */
     }
     if (best != 0xFF) {
-        cross_room (r, cx_, cy_, C->open[bk].x, C->open[bk].y);    /* (Its way again: a trap on it?) */
+        way (C->open[bk].x, C->open[bk].y);     /* (Its way again: a trap on it?) */
         at (sn_, mx, my);
     }
     *t = bt;
@@ -1130,7 +1174,7 @@ void __fastcall__ s_climb (unsigned char d)
         return;
     }
     hub_map (0);
-    lk = &strata[sn_].link[l];
+    lk = &STRATUM (sn_).link[l];
     if (lk->kind == O_WAY_OUT) {                /* (The way out: shut, till the theme's mission opens it) */
         if (HUB->way_open) {
             event (E_LEFT, 0, 0);
@@ -1139,7 +1183,7 @@ void __fastcall__ s_climb (unsigned char d)
         }
         return;
     }
-    if (!strata[lk->to].made) {
+    if (!stratum_in (lk->to)) {                 /* (Its record in its slot: from its file, or grown now) */
         grow_below (sn_);
     }
     move.on = 1;
@@ -1150,7 +1194,7 @@ void __fastcall__ s_climb (unsigned char d)
     move.face = HUB->pc_face;
     move.dir = lk->kind;
     /* (The flight: the drop between the floors, a step's time a foot on a stairway, twice on a ladder) */
-    feet = abs (strata[sn_].datum - strata[lk->to].datum);
+    feet = abs (STRATUM (sn_).datum - STRATUM (lk->to).datum);
     t += (unsigned long) (feet + 1) * stept *
         (lk->kind == O_LADDER_DOWN || lk->kind == O_LADDER_UP ? 2 : lk->kind == O_SHAFT_DOWN ||
         lk->kind == O_SHAFT_UP ? 3 : 1) / (d == DIR_UP ? 1 : 2);
@@ -1295,7 +1339,7 @@ void s_begin (void)
     store_begin (0);                            /* (A new game's generation: the folder's files of another not read) */
     seed = HUB->seed;
     hub_map (WORLD_BANK);                       /* (The strata's records the world bank's: it in the window) */
-    s = &WREC->strata[0];
+    s = &WREC->strata[SLOT (0)];
     rseed (seed ^ 0x57524C44UL);
     memset (s, 0, sizeof *s);
     s->seed = seed * 2654435761UL + 12345;
@@ -1318,12 +1362,12 @@ void s_begin (void)
     planned (0);
     move.how = A_START;                         /* (The character at the foot of the way in) */
     move.sn = 0;
-    move.x = strata[0].link[0].x;
-    move.y = strata[0].link[0].y;
+    move.x = STRATUM (0).link[0].x;
+    move.y = STRATUM (0).link[0].y;
     hub_map (0);
-    if (HUB->test_start && strata[0].nlinks > 1) {  /* (dq0 -T: at the first way down, for the tests) */
-        move.x = strata[0].link[1].x;
-        move.y = strata[0].link[1].y;
+    if (HUB->test_start && STRATUM (0).nlinks > 1) {  /* (dq0 -T: at the first way down, for the tests) */
+        move.x = STRATUM (0).link[1].x;
+        move.y = STRATUM (0).link[1].y;
     }
     if (HUB->test_start == 2) {                 /* (dq0 -T -T: on the theme's first piece on the top stratum, put down
                                                 **   as its chunk is made) */
@@ -1331,7 +1375,7 @@ void s_begin (void)
         for (k = NPIECES, p = THEME_PLACE; k && p->sn; --k, ++p) {
         }
         if (k) {
-            at (0, (p->cx << CW_BITS) + strata[0].x0, (p->cy << CW_BITS) + strata[0].y0);
+            at (0, (p->cx << CW_BITS) + STRATUM (0).x0, (p->cy << CW_BITS) + STRATUM (0).y0);
             hub_map (THEME_BANK);
             if (p->x) {
                 move.x = p->x;
@@ -1340,6 +1384,50 @@ void s_begin (void)
         }
         hub_map (0);
     }
+    vast = HUB->test_start == 4;
+    if (HUB->test_start == 3) {                 /* (dq0 -T -T -T: four strata grown below the top, one under
+                                                **   another, then the character at the foot of the second's way up:
+                                                **   with dq0 -C's two slots, the deepest two in them, the second's
+                                                **   record read back into its slot, the fourth's put out) */
+        for (k = 0; k < 3 && STRATUM (k).made && STRATUM (k).n == k; ++k) {
+            s_grow_below (k);
+        }
+        s_stratum_in (1);
+        move.sn = 1;
+        move.x = STRATUM (1).link[0].x;
+        move.y = STRATUM (1).link[0].y;
+        hub_map (0);
+    }
+}
+
+/* The world's start (main's, dir its lib folder: the item store's catalogue there), once it's attached: the things
+** asked as the game starts (the theme's kinds, the kit ...) till the UI's begun it, then the dungeon begun, the
+** character arrived, and the UI told (part 3's: the main RAM's room) */
+static void things (void);
+void __fastcall__ s_start (const char* dir)
+{
+    unsigned char k;
+
+    chunks_init (ASK_WORLD);
+    items_begin (dir);                          /* (The item store: the catalogue, a game carried on its things) */
+    for (k = 0; hub_map (0), !HUB->quit && k != IO_BEGIN; ) {
+        hy_sem_wait (HUB->sem[T_WORLD], 4);
+        hub_map (0);
+        if (hub_posted (&HUB->ireq)) {
+            k = HUB->ireq.kind;
+            things ();
+        }
+        if (hub_posted (&HUB->wreq)) {
+            answer ();                          /* (The game begun: WQ_START, its pace, a game carried on) */
+        }
+    }
+    hub_map (0);
+    stept = HUB->pcsum.step ? HUB->pcsum.step : 10;
+    s_begin ();
+    arrive ();                                  /* (Its look the first: the things round it in the item store first, its
+                                                **   paging's) */
+    event (E_READY, 0, 0);                      /* (The UI waits for it: its commands, the world started) */
+    last = hy_ticks ();
 }
 
 #pragma code-name (pop)
@@ -1425,7 +1513,7 @@ static unsigned char __fastcall__ add_link (unsigned char sn, unsigned char kind
     struct link* l;
 
     hub_map (WORLD_BANK);
-    s = &WREC->strata[sn];
+    s = &WREC->strata[SLOT (sn)];
     if (s->nlinks >= NLINKS) {
         return 0xFF;
     }
@@ -1447,7 +1535,8 @@ void __fastcall__ s_start_dig (unsigned char d)
     dig.d = d;
     dig.done = 0;
     if (d == DIR_DOWN) {
-        if (sn_ + 1 >= MAXSTRATA || room_of (sn_, mx, my) == 0xFF) {
+        if (sn_ == 0xFE || sn_ + 1 >= MAXSTRATA && (hub_map (0), !HUB->savedir[0]) ||
+            room_of (sn_, mx, my) == 0xFF) {    /* (Past the hub's strata's slots, none to put out without a folder) */
             hub_map (0);
             no_way (N_NO_DIG);                  /* (A shaft from a room's floor, and not from the deepest) */
             return;
@@ -1474,12 +1563,12 @@ void __fastcall__ s_start_dig (unsigned char d)
         }
         dig.mat = C->mat[room_of (sn_, dig.x, dig.y)][MP_FLOOR];    /* (The room's floor: the maker's) */
         dig.top = dig.mat == MAT_EARTH ? 2 : dig.mat == MAT_STONE ? 0 : 1;   /* (Earth two feet, flags or masonry one) */
-        if (!strata[sn_ + 1].made) {
+        if (!stratum_in (sn_ + 1)) {
             grow_below (sn_);                   /* (Grown now: the shaft goes down to its floors, if it reaches under) */
             mx = dig.x;
             my = dig.y;
         }
-        dig.need = abs (strata[sn_].datum - strata[sn_ + 1].datum);
+        dig.need = abs (STRATUM (sn_).datum - STRATUM (sn_ + 1).datum);
     } else {
         dig.x = mx + dir_x[d];
         dig.y = my + dir_y[d];
@@ -1537,7 +1626,8 @@ void s_dig_on (void)
         return;
     }
     /* The shaft: a way down, if the stratum below reaches under it */
-    b = &strata[sn_ + 1];
+    stratum_in (sn_ + 1);
+    b = &STRATUM (sn_ + 1);
     if (b->made && (dig.x - b->x0 >= b->w || dig.y - b->y0 >= b->h)) {
         hub_map (0);
         event (E_DIG, 0, D_SOLID << 8);
@@ -1622,6 +1712,7 @@ static struct portal* __fastcall__ door_ahead (unsigned long* tt)
     ry0 = oy = my - cy_;
     wx = cx_;
     wy = cy_;
+    ways (r, wx, wy);
     for (k = 0; k < 4; ++k) {                   /* (Its room's doors that way: the quickest to walk up to) */
         for (d = 0; wall_tile (&C->room[r], k, d); ++d) {
             if (!WANTED (C->tile[wall_y][wall_x]) || (tgx ? TARGET (ox + wall_x, oy + wall_y) :
@@ -1629,7 +1720,7 @@ static struct portal* __fastcall__ door_ahead (unsigned long* tt)
                 (portal_at (wall_x, wall_y) && (portal_at (wall_x, wall_y)->state & PS_HIDDEN))) {
                 continue;
             }
-            if ((t = cross_room (r, wx, wy, wall_x - dir_x[k], wall_y - dir_y[k])) < bt) {
+            if ((t = way (wall_x - dir_x[k], wall_y - dir_y[k])) < bt) {
                 bt = t;
                 bx = wall_x;
                 by = wall_y;
@@ -1640,7 +1731,7 @@ static struct portal* __fastcall__ door_ahead (unsigned long* tt)
     if (bt == 0xFFFFFFFFUL) {
         return 0;
     }
-    cross_room (r, wx, wy, bx - dir_x[bd], by - dir_y[bd]);   /* (Its way again: a trap on it?) */
+    way (bx - dir_x[bd], by - dir_y[bd]);   /* (Its way again: a trap on it?) */
     *tt = bt;
     px_ = ox + bx;
     py_ = oy + by;
@@ -1766,7 +1857,7 @@ void __fastcall__ s_door_work (unsigned char what)
 ** frame's), to be set off as it gets there (or noticed in time: wtrap.c's) */
 static void on_way (void)
 {
-    unsigned ox = strata[sn_].x0 + C->cx * CW, oy = strata[sn_].y0 + C->cy * CW;
+    unsigned ox = STRATUM (sn_).x0 + C->cx * CW, oy = STRATUM (sn_).y0 + C->cy * CW;
 
     tx_ += ox;
     ty_ += oy;
@@ -1949,10 +2040,10 @@ static int __fastcall__ ovl_load (const char* dir)
 
     strcpy ((char*) b, dir);
     strcat ((char*) b, "/dq0w.ovl");
-    if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (OVBANKS)) < 0) {
+    if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (OVBANKS + 2)) < 0) {
         return -1;
     }
-    for (k = 0, first = n; k < OVBANKS; ++k) {
+    for (k = 0, first = n; k < OVBANKS + 2; ++k) {
         ovbank[k] = first + k;
     }
     for (k = 0, n = 1; k < OVBANKS && n > 0; ++k) {     /* (A bank at a time: cc65's optimizer can lose an index,
@@ -1974,27 +2065,7 @@ int main (int argc, char* argv[])
     if (argc < 4 || ovl_load (argv[3]) || hub_attach (atoi (argv[1]), atoi (argv[2]))) {
         return 1;
     }
-    chunks_init (ASK_WORLD);
-    items_begin (argv[3]);                      /* (The item store: the catalogue, a game carried on its things) */
-    for (dseq = 0; hub_map (0), !HUB->quit && dseq != IO_BEGIN; ) {
-        hy_sem_wait (HUB->sem[T_WORLD], 4);     /* (The things asked as the game starts: the theme's kinds, the kit
-                                                **   ..., till the UI's begun it) */
-        hub_map (0);
-        if (hub_posted (&HUB->ireq)) {
-            dseq = HUB->ireq.kind;
-            things ();
-        }
-        if (hub_posted (&HUB->wreq)) {
-            answer ();                          /* (The game begun: WQ_START, its pace, a game carried on) */
-        }
-    }
-    dseq = 0;
-    hub_map (0);
-    stept = HUB->pcsum.step ? HUB->pcsum.step : 10;
-    begin ();
-    arrive ();
-    event (E_READY, 0, 0);                      /* (The UI waits for it: its commands, the world started) */
-    last = hy_ticks ();
+    start (argv[3]);                            /* (The things asked as the game starts, the dungeon begun: part 3's) */
     while (hub_map (0), !HUB->quit) {         /* (The hub at $8000 again, each time round) */
         while (hy_sem_try (HUB->sem[T_WORLD]) == 0) {
         }
@@ -2049,3 +2120,96 @@ int main (int argc, char* argv[])
     event (E_BYE, 0, 0);
     return 0;
 }
+
+/* ==== Part 21: the ways across a room worked out (way's: see the way across a room, above) */
+#pragma code-name (push, "SW21CODE")
+#pragma rodata-name (push, "SW21RODATA")
+
+/* The step from chunk square x, y the way d, if it can be walked (into the room's walls and floor: wox ...): its
+** time, or 0xFFFF (it can't: rock, a wall, a ledge too high, a denizen on it, a trap known of); wtrap 1 if there's
+** one that's set on the square stepped onto (the chunk in the window) */
+static unsigned char wtrap;
+static unsigned __fastcall__ step_by (unsigned char x, unsigned char y, unsigned char d)
+{
+    unsigned char nx = x + dir_x[d], ny = y + dir_y[d], t = C->tile[y][x], u;
+    struct trap* q;
+    int dz;
+
+    if (nx >= CW || ny >= CW || (unsigned char) (nx - wox) >= wow || (unsigned char) (ny - woy) >= woh) {
+        return 0xFFFF;
+    }
+    u = C->tile[ny][nx];
+    q = trap_at (nx, ny);
+    if (!T_PASS (u) || den_on (rx0 + nx, ry0 + ny) || (q && !(q->state & TS_HIDDEN))) {
+        return 0xFFFF;                          /* (Nor onto a denizen, nor a trap it knows of: it goes round) */
+    }
+    wtrap = q != 0;
+    dz = C->elev[ny][nx] - C->elev[y][x];
+    if ((dz < 0 ? -dz : dz) > (TILE (t) == T_STEPS || TILE (u) == T_STEPS ? STAIR_MAX : STEP_MAX)) {
+        return 0xFFFF;
+    }
+    return cost (dz, TILE (u) == T_STEPS);
+}
+
+/* The ways from (fx, fy) to every square of room r's floor and walls it can walk to (a search a step at a time, in the
+** four ways' order: the first way to each found kept, as the one way's search was), in the ways' bank; the chunk in
+** the window after */
+void __fastcall__ s_ways_go (unsigned char r, unsigned char fx, unsigned char fy)
+{
+    static unsigned c[4];
+    static unsigned char tr[4];
+    struct room* p = &C->room[r];
+    struct wcell* w;
+    unsigned head = 0, tail = 0, i, n, t, q;
+    unsigned char x, y, d, b = ovbank[OVBANKS + 1];
+
+    wox = p->x - 1;
+    woy = p->y - 1;
+    wow = p->w + 2;
+    woh = p->h + 2;
+    hy_bank (b);
+    for (y = 0; y < woh; ++y) {                 /* (None reached yet) */
+        for (x = 0; x < wow; ++x) {
+            if ((unsigned char) (wox + x) < CW && (unsigned char) (woy + y) < CW) {
+                WAYS_AT[(unsigned) (woy + y) * CW + wox + x].from = 0xFF;
+            }
+        }
+    }
+    i = (unsigned) fy * CW + fx;
+    w = &WAYS_AT[i];
+    w->from = 4;
+    w->t = 0;
+    w->trap = 0xFFFF;
+    WAYS_Q[tail++] = i;
+    while (head < tail) {
+        i = WAYS_Q[head++];
+        t = WAYS_AT[i].t;
+        q = WAYS_AT[i].trap;
+        x = i & (CW - 1);
+        y = i >> CW_BITS;
+        hub_map (at_bank);
+        for (d = 0; d < 4; ++d) {
+            c[d] = step_by (x, y, d);
+            tr[d] = wtrap;
+        }
+        hy_bank (b);
+        for (d = 0; d < 4; ++d) {
+            if (c[d] == 0xFFFF) {
+                continue;
+            }
+            n = i + dir_x[d] + (int) dir_y[d] * CW;
+            w = &WAYS_AT[n];
+            if (w->from != 0xFF) {
+                continue;
+            }
+            w->from = d;
+            w->t = t + c[d] < t || t + c[d] > 0xFFFE ? 0xFFFE : t + c[d];
+            w->trap = q != 0xFFFF ? q : tr[d] ? n : 0xFFFF;
+            WAYS_Q[tail++] = n;
+        }
+    }
+    hub_map (at_bank);
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)

@@ -32,11 +32,19 @@
                                                 **   the chunk, with the edge's ways */
 #define RCH             8                       /* A region's chunks, each way */
 #define RW              (CW * RCH)              /* A region's squares, each way (256: 1,280 feet) */
-#define MAXSTRATA       8
-#define PLAN_BANKS      4                       /* The hub's banks for the plans (two to a bank), */
+#define MAXSTRATA       8                       /* The strata's records in the hub (struct wrec's, every task's copy),
+                                                **   a cache (move 2.8: no fixed count of strata, but the stratum's
+                                                **   number, a byte's): stratum n's in its slot n & 7 (STRATUM (n), its
+                                                **   n there to say so), the rest in the save folder (stSS.dat: the
+                                                **   world's, as it makes way for one) */
+#define SLOT(n)         ((n) & smask)            /* (Its slot: smask MAXSTRATA - 1, but dq0 -C's 1, two slots, the tests'
+                                                **   strata put out soon: hub.c's, set as a task attaches) */
+#define STRATUM(n)      strata[SLOT (n)]
+extern unsigned char smask;
+#define PLAN_BANKS      4                       /* The hub's banks for the plans (two to a bank: a slot's), */
 #define CACHE_BANKS     8                       /*   and for the chunks (three to a bank) */
 #define NCSLOTS         (CACHE_BANKS * 3)
-#define PLAN_BANK(n)    (1 + ((n) >> 1))        /* (Banks of the hub's segment) */
+#define PLAN_BANK(n)    (1 + (SLOT (n) >> 1))   /* (Banks of the hub's segment: stratum n's slot's) */
 #define PLAN_AT(n)      ((struct region*) (0x8000 + ((n) & 1) * 0x1000))
 #define PLAN_MAX        (0x1000 / sizeof (struct region))   /* Regions in a plan, at most */
 #define CACHE_BANK(k)   (1 + PLAN_BANKS + (k) / 3)
@@ -233,7 +241,7 @@ struct stratum {
     unsigned char   nlinks;
     struct link     link[NLINKS];
 };
-extern struct stratum strata[MAXSTRATA];         /* (This task's copy of the hub's) */
+extern struct stratum strata[MAXSTRATA];         /* (This task's copy of the hub's: STRATUM (n), by its slot) */
 void sync_strata (void);                        /* The world bank's copied (the hub's header in the window after) */
 
 /* The chunks' cache: what each slot holds (the hub's) */
@@ -253,8 +261,8 @@ struct cslot {
 ** in pages of the hub's change banks (CHANGE_BANKS, CH_PER_PAGE records a page, a region's in as many pages as it
 ** needs), the pages' table the world bank's (struct wrec's cpage); a region's records all in its pages, or none of
 ** them.  With a save folder (the hub's savedir) the pages are a cache: a region that falls out of it written to its
-** file there (rgSXXYY.dat: S its stratum, XX YY its region, in hex; a header, then its records) and read again as
-** it's wanted, so no count of records limits the dungeon, only the card; without one, a full cache keeps no more */
+** file there (rgSXXYY.dat, a version of it: the region files, below; a header, then its records) and read again
+** as it's wanted, so no count of records limits the dungeon, only the card; without one, a full cache keeps no more */
 struct change {
     unsigned char   sn;
     unsigned        x, y;
@@ -276,9 +284,11 @@ struct cpage {                                  /* A page of the change records 
     unsigned char   dirty;                      /* Changed since its region's file was written (or read) */
     unsigned        stamp;                      /* When its region was last wanted */
 };
-#define CH_MAGIC        0x4843                  /* "CH": the save's changes.dat (the store's: CH_MAGIC, CH_VER, its
-                                                **   generation), a region's file (CH_MAGIC, the generation, its count) */
-#define CH_VER          1
+#define CH_MAGIC        0x4843                  /* "CH": the save's changes.dat (the store's: CH_MAGIC, its generation,
+                                                **   CH_VER; then, CH_VER 2, the region files' stamps: the save's and
+                                                **   the most given, hub.h's vsaved and vhi), a version 8 save's region
+                                                **   file (CH_MAGIC, the generation, its count: struct vfh's start) */
+#define CH_VER          2
 struct chead {
     unsigned        magic;
     unsigned        gen;                        /* (changes.dat's: CH_VER, then it) */
@@ -286,14 +296,36 @@ struct chead {
 };
 typedef char change_fits[sizeof (struct change) == 8 && CH_PER_PAGE == 32 ? 1 : -1];
 
+/* ---- The save folder's region files (DUNGEON.md: no fixed size): a store's records for a region (the change
+** records', rgSXXYY.dat; the things', itSXXYY.dat; the denizens', dnSXXYY.dat; the seen maps', smSXXYY.dat: S its
+** stratum, XX YY its region, in hex), each written whole as a new version of it, the name's last letter its slot (t,
+** 1, 2: ".dat", ".da1", ".da2"), its header first (struct vfh: the game's generation, its stamp; a version 8 save's
+** change file, struct chead's, stamped 0).  Read: the newest version that's valid, by the hub's vsaved and vbase (the
+** last save's, or this session's: never one a session wrote and ended without its save); written: over a version
+** that's neither the save's nor (with three slots: the things', read as they're written) the newest, so a crash
+** loses no more than the save didn't have (vfile.c, every writer's and reader's) */
+struct vfh {
+    unsigned        magic;                      /* VF_MAGIC (CH_MAGIC: a version 8 save's, its stamp 0) */
+    unsigned        gen;                        /* The game's (wrec's cgen) */
+    unsigned        n;                          /* Its records */
+    unsigned long   stamp;                      /* When it was written: past the hub's vlo, up to its vhi */
+};
+#define VF_MAGIC        0x4656                  /* "VF" */
+#define VF_BLOCK        0x10000UL               /* (The stamps a session or a save may give: hub.h's vlo to vhi) */
+/* (vfile.inc's calls, its includer's own: vf_name, a region's file's name; vf_open, its newest valid version's fd,
+** past its header; vf_make, a new version begun; vf_done, its header written, and it closed) */
+
 /* A request to the maker (one for each task that asks: the world's, the denizens', the senses', the UI's) */
 struct mreq {
     RQH;                                        /* (hub.h's protocol; kind: M_*) */
     unsigned char   sn;
     unsigned        cx, cy;                     /* M_CHUNK's chunk */
 };
-enum { M_PLAN, M_CHUNK, M_SAVE, M_RESTORE };    /* A stratum's plan and links down (its record set), a chunk; the seen
-                                                **   maps written to the save, read back (the plans grown again) */
+enum { M_PLAN, M_CHUNK, M_SAVE, M_RESTORE,     /* A stratum's plan and links down (its record set), a chunk; the seen
+                                                **   maps written to the save, read back (the plans grown again); */
+       M_SLOT };                                /* stratum sn's slot made way for (its chunks in the cache theirs no
+                                                **   more, what's seen of them kept) and its plan grown again (its
+                                                **   record in the slot already, made: none of its links added) */
 #define NO_SQ           0xFFFF
 #define W_STEP          0xFF                    /* (The world's work: a trap stepped onto, from where it came) */
 enum { ASK_WORLD, ASK_DENIZENS, ASK_SENSES, ASK_UI, NASK };

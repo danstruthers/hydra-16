@@ -45,7 +45,9 @@ areas, its openings), three to an 8K bank.
 The chunks are kept in a **cache in the hub's shared banks** (dq0w/world.h: 24 of them, three to a bank), those near
 the character and the denizens, so the world, the denizens and the senses read them where they are.  A chunk that
 goes out of the cache is dropped; what changed there (doors opened, traps set off, rock dug) is kept as a small
-record and laid over the chunk when it's made again, and what the character's seen of it as a map of bits.
+record and laid over the chunk when it's made again, and what the character's seen of it as a map of bits.  Every
+store that grows as the dungeon's explored is a cache of what's near, the rest in files on the card (move 2.8, below:
+no fixed size).
 
 **One authority on state** (Phase 2, moves 2.2 to 2.7, 2026-10-16 and 17): the **maker** (dq0m) is pure, generation only,
 the same seed always the same chunk: it grows a stratum's plan and makes a chunk when it's asked (M_PLAN, M_CHUNK),
@@ -65,8 +67,9 @@ change_lock (the maker reads them meanwhile).  With a save folder the pages are 
 file there (rgSXXYY.dat), read in as they're wanted and written back as the region's pages make way for another's, so
 no count of records limits the dungeon, only the card (the user, 2026-10-16: no fixed maximum dungeon size); without
 a folder, a full cache keeps no more.  Each game's files carry its generation (changes.dat's), so a new game in an old
-game's folder never reads the old one's.  (Not yet, move 2.8's: a crash between a region written back and the next
-save leaves the folder's regions ahead of game.dat; stale regions of an old game are left in the folder, unread.)
+game's folder never reads the old one's, and a new game rids the folder of an old game's region files; each region
+file is written in versions, so a crash between a region written back and the next save never leaves the folder
+ahead of the save (move 2.8, below: no fixed size).
 
 **The item store** (move 2.3, the user's D2) is the world's too, its only writer, so it has no lock: the catalogue
 (read into the hub's catalogue bank as the world starts, from its own file, dq0w.cat; the theme's kinds copied in
@@ -81,17 +84,9 @@ door; the **senses**, as a look comes to a chunk stocked that isn't put down yet
 records for what the character perceives, and the world makes a thing its own (its number, its make: no two alike)
 as a look first sees it, after the look, in the order seen (so the things' own dice fall as they did when the senses
 made them).  The character's light (pc_light, pc_lamp) is worked out by the world as what it carries changes.  The
-records are a fixed number in two of the hub's banks (744), found by their place in them, and kept with the game
-whole (items.dat).  **Paged to the card** (move 2.8's, decided with this one: no fixed count, only the card): the
-records kept by region, as the change records are (store.c's manner: pages of the banks, each a region's; a region's
-in its file of the save folder, read in as it's wanted, written back as its pages make way), what the character
-carries in pages of their own, never paged out.  What's there for it now: a chunk's things come down at once, its
-region's, from the maker's list; every thing that comes to a square comes through the world (a chunk's, a body, one
-put down, a bar or a pane moved), and every reader looks for things lying about only near the character (a look's,
-a search's: its regions).  What's left: the pages and their table (a page a region's, the carried's), a record moved
-between them as it changes region (taken up, put down, put in a container lying elsewhere: its number changing, and
-its contents' with it), a container's contents held by their place in its region (a region's file keeping them by
-their place in it, renumbered as it's read in), the readers going down only their regions' pages.
+records in two of the hub's banks (744) are a cache (move 2.8, below: **paged to the card**, no fixed count of
+things): what the character carries, and the things of the chunks round it, a chunk's all or none, the rest in the
+save folder by region; kept with the game (items.dat: the banks as they are, and their chunks' table).
 
 **The bodies and the blows** (move 2.4) are the world's too: every body in the dungeon, the character's and the
 denizens' near it (the hub's actors, their body halves: place, facing, when free, step, what each is doing), and every
@@ -162,13 +157,83 @@ save the dungeon, game state, etc."): a folder of the game's (asked for as a new
 populations, and the chunks' records, written as they change (so a game quit is saved, and a game whose machine
 is switched off loses little).  Death is still permanent: the save goes with it.  (Built: dq0 -d FOLDER, a game
 there carried on; kept as the game ends, on save, and as the character comes into a stratum; the plans not kept,
-but grown again from their seeds, the same.)  The world keeps its own part with the rest (save version 8: world.dat,
+but grown again from their seeds, the same.)  The world keeps its own part with the rest (save version 8 on: world.dat,
 hub.h's struct wsave: the clock, the character's place, its pace and watchfulness, its body's position, the puzzle's
 way out and rules done, then the strata's records), written as the UI asks the save (WQ_SAVE) and read back by the
 world as a game's carried on (WQ_START, the hub's resume); the UI's game.dat keeps the seed, the pace chosen, the
 character's name and the theme, and the names given.  A save of version 5 to 7 (the world's part in game.dat) is made
 into a world.dat by the UI as it's carried on (main.c's old_world), before the world's begun: tests/dq0/v7save, the
-test dq0oldsave.
+test dq0oldsave.  Since version 9 (move 2.8, below) the save's region files are in versions, the save's last step the
+world's (WQ_SAVE: its change records, its things, its own, then the versions written made the save's), the denizens'
+and the maker's before it; a version 8 save (tests/dq0/v8save, the test dq0v8save) is carried on as it was.
+
+### No fixed size
+
+The user (2026-10-16): "I also don't want some fixed maximum size to the dungeon. It should be as big as it needs to
+be, given there is enough disk space to hold it."  So every store that grows as the dungeon's explored (Phase 2's move
+2.8) is a cache in the banks of what's near, and the rest is in the save folder on the card, a file for each of its
+regions, read in as it's wanted and written back as the cache makes way for another's.  Without a save folder each
+cache keeps what it can hold, as before.
+
+**The region files** (dq0/vfile.inc, every writer's and reader's: the world's, the denizens', the maker's): a store's
+region (rgSXXYY.dat the change records', itSXXYY.dat the things', dnSXXYY.dat the denizens', smSXXYY.dat the seen
+maps', stSS0000.dat a stratum's record, plSS0000.dat a big plan; S or SS the stratum, XX YY the region, in hex) is
+written whole, as a new version, into one of its file's slots (.dat, .da1, .da2), its header (the game's generation, a
+stamp) written last, so a version cut short is no version.  It's written over a slot that's neither the last save's
+version nor (three slots: the things', a region's file read as its next version's written) the newest.  Read, it's
+the newest valid version: one stamped up to the last save (the hub's vsaved) or in this session (past its vbase);
+one a session wrote and ended without its save (a crash, stamped between them) is never read, so the folder is
+never ahead of the save.  changes.dat keeps the stamps (the save's, and the most a session may give: written again
+as a session begins, before anything else is), and the save's last step, the world's, makes every version written so
+far the save's.  A new game in an old game's folder deletes the old one's region files first (wfile.c's tidy), and
+its generation keeps them from being read in any case.
+
+**The change records** (move 2.2): by region in the hub's 64 pages, a region's all in them or none (dq0w/store.c,
+wfile.c: swapped part 18).  **The things** (dq0w/ipage.c, swapped parts 17 and 20): the store's 744 records hold what
+the character carries (never paged out) and the things of the chunks in its table (in the world's own bank, 64
+chunks): the 25 round the character's always (as it moves, its looks: it_near), a chunk's as its things are put down
+(stocked, a denizen's remains); a chunk's things all in the store or none, a region's file holding a group for each of
+its chunks (its place in the region, its count, its things, a thing in another its container's place in the group),
+renumbered as they're read in.  A chunk goes out (its group written, a new version of its region's file, the other
+groups as they were; its records freed) as a record's wanted and there's none, the one least lately wanted that
+isn't round the character.  Every reader looks for things lying about only near the character, so the numbers the
+others hold (the senses' record's, a thing walked over to) are of things that stay.  **The denizens** (dq0d, its
+parts 3 and 4): its bank of records a cache by region (the frame's regions, 256 squares each way, so no stratum's
+record is wanted to find one: a lair's by its chunk, a denizen's by its square, or its lair's till it's placed), those
+round the character's region always (one each way), a region's all in it or none, the least lately wanted put out
+(never one an actor is in) as a record's place is wanted; each denizen and each lair has a number of its own (a name
+given is by it, a denizen's lair by it, a lair's placing by its dice), its record's place the cache's.  **The
+strata** (world.h's STRATUM: every task's strata[] by slot): the hub's eight records a cache, stratum n's in slot
+n & 7 (the stratum's number a byte: 255 of them); as a slot's wanted for another, the world puts out the one there
+(its things' chunks first, it_flush; its record to stSS0000.dat: sfile.c, swapped part 22) and reads one back as the
+character or a shaft comes to it (stratum_in), the maker growing its plan again (M_SLOT, the chunks of a stratum no
+longer in the hub dropped from the cache, their seen squares kept).  **The plans** (dq0m/plan.c, changes.c): a plan
+of more regions than its half of a plan bank holds (PLAN_MAX, 682) is grown into its file in the save folder,
+through a bank of the maker's own (32 pages of 42 regions, the least lately wanted written back), and read from it
+(the denizens' populations too); without a folder it's cut to PLAN_MAX, as before.  **The seen maps** (dq0m/changes.c,
+the maker's: the senses' memory of the chunks out of the cache): by region, its maps all in the maker's banks or none,
+the least lately wanted written to its file.  They stay the maker's: it keeps a chunk's seen squares as the cache
+makes way for it and lays them over it as it's made, both in the middle of making a chunk; were they the senses',
+the maker would ask the senses then, as the senses wait on the maker for that chunk (the deadlock move 2.5 found).
+
+**Rooms across a room's squares** (dq0w.c's ways, swapped part 21): the ways from a square to every square of a room
+are worked out at once in the world's own bank (no fixed room size, as large as its chunk), so a room is walked
+across whatever its size.  A cavern across many chunks wants more than that: rooms are a chunk's (struct room's
+squares, 0-31), so it wants the maker's growers to grow a feature that spans chunks (the plan's features bigger than
+a chunk, above: a cavern's outline in the plan, each chunk carving its piece, the chunks' rooms of it one room by
+its number) and the walks to follow a room from chunk to chunk.
+
+**dq0 -C** (the tests'): the caches small, so a short game pages them (twelve of the chunks' slots; a change page; 24 of the store's records,
+only the character's chunk kept round it; two of the denizens' regions, only the character's kept; two strata's
+slots; two seen maps, one region; 16 of a big plan's pages); dq0 -T -T -T, three strata grown below the top and
+the character on the second (its record read back into its slot); dq0 -T -T -T -T, the stratum below the top 27
+regions each way.  The tests: dq0page (eviction and write-back, a new game in an old folder), dq0strata, dq0vast,
+dq0v8save, and dq0soak (every cache filled several times over, kept and carried on).
+
+**What's still a fixed size:** a stratum's number is a byte (255 strata) and the frame is 16 bits each way (65,535
+squares), as before; a region's change records must fit in the change pages (2,048), the things of the 25 chunks
+round the character in the item store (744), the denizens of the regions round its own in their bank (240 records,
+64 lairs).
 
 ### A stratum's plan: grown whole, then detailed as explored
 

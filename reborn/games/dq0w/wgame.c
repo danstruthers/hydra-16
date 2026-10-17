@@ -74,7 +74,7 @@ static unsigned char __fastcall__ rule (unsigned char verb, unsigned char a, uns
 static unsigned char near_out (void)
 {
     hub_map (0);
-    return !HUB->pc_stratum && strata[0].link[0].x - HUB->pc_x + 2 <= 4 && strata[0].link[0].y - HUB->pc_y + 2 <= 4;
+    return !HUB->pc_stratum && STRATUM (0).link[0].x - HUB->pc_x + 2 <= 4 && STRATUM (0).link[0].y - HUB->pc_y + 2 <= 4;
 }
 
 /* The hub's ireq, IO_PUZZLE's, answered (but its state, the caller's): its verb's rule for the things named looked

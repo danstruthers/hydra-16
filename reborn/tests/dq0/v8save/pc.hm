@@ -1,0 +1,56 @@
+harn 1
+att sp 0
+att sx 1
+att bd 540
+att ss 4
+att ht 65
+att fr 3
+att owt 155
+att wt 155
+att cml 13
+att str 11
+att sta 11
+att dex 12
+att agl 17
+att eye 13
+att hrg 9
+att sml 12
+att voi 7
+att int 10
+att aur 9
+att wil 13
+att mor 11
+att dty 10
+att pty 19
+fam 2 1 1 4 3 3 1
+look 1 0 0
+med
+sexuality 0
+ml cli 60
+ml cnd 72
+ml jmp 60
+ml stl 52
+ml thr 48
+ml awa 44
+ml ntr 33
+ml ora 20
+ml rhe 30
+ml sng 24
+ml lan 70
+ml ini 56
+ml una 52
+ml blo 48
+ml bow 36
+ml spr 48
+ml swd 48
+ml dge 85
+ml fle 24
+ml for 52
+ml hid 52
+ml hun 45
+ml sur 60
+ml trk 80
+vol 0 0 0 0 0
+name Tordan
+occupation Hunter/Trapper
+pace 2 0 2

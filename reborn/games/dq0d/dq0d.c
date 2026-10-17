@@ -23,17 +23,25 @@
 ** ally follows it and takes its requests; factions hostile to one another keep off one another.  (Their own exploring
 ** comes later.)
 **
-** Its records (the lairs, the denizens) are in a bank of its own, a record at a time copied out; kept with the game
-** (dq0 -d: the UI asks, the hub's dsave), the save folder's dens.dat.
+** Its records (the lairs, the denizens) are in a bank of its own, a record at a time copied out, a cache (move 2.8:
+** no fixed count of them): each region's (the frame's, 256 squares each way: a lair's by its chunk's first square, a
+** denizen's by its square, or, not placed yet, its lair's; no stratum's record wanted to find it) all in it or none, those round the character's always (one each way), the rest in
+** the save folder (dnSXXYY.dat, a version each time it's written: ../dq0/vfile.inc's), read in as they're wanted,
+** put out (the one least lately wanted) as a record's wanted and there's none free; each denizen and each lair known
+** by a number of its own, never another's (a name given, a denizen's lair), its record's place the cache's.  Kept
+** with the game (dq0 -d: the UI asks, the hub's dsave), the save folder's dens.dat: the bank as it is, its regions'
+** table in its head (a version 8 save's, its records in the old layout, made the new).
 **
 ** Its code that's seldom called is in swapped parts (../dq0/swap.inc: run in the main RAM's top, a part at a time,
-** copied there from the overlays' file's bank, LIBDIR/dq0d.ovl, as it's called; bank.s's stubs): part 1, the kinds
-** read in, the populations, the placing, the records kept; part 2, the character's ways with a denizen, and harmed.
+** copied there from the overlays' file's banks, LIBDIR/dq0d.ovl, as it's called; bank.s's stubs): part 1, the kinds
+** read in, the populations, the placing; part 2, the character's ways with a denizen, and harmed; part 3, the
+** records paged and kept.
 ** The blows its actors strike and take are the world's, told as the denizens' events (E_FIGHT): it takes them to heart
 ** (fought: fleeing, dismay, harmed, a death recorded).
 */
 
 #include <fcntl.h>
+#include <stdio.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
@@ -51,10 +59,13 @@
 int __fastcall__ kinds_load (const char* dir);  /* Part 1 */
 void __fastcall__ populate (unsigned char n);
 void __fastcall__ place (unsigned char i);
-void __fastcall__ keep (unsigned char back);
+void __fastcall__ keep (unsigned char back);    /* Part 3 */
+unsigned char __fastcall__ rec_new (unsigned char lair);
+unsigned char __fastcall__ reg_need (unsigned char sn, unsigned char rx, unsigned char ry);
+void dneed (void);
 void __fastcall__ harmed (unsigned char k);     /* Part 2 */
 void sway (void);
-extern unsigned char ovbank[1];
+extern unsigned char ovbank[2];
 extern char _SWAP_START__[];
 
 /* ---- The kinds: the data file's (make.js's, from kinds.txt), in a bank of their own */
@@ -104,38 +115,58 @@ static char ftongue[NFACT][8];
 static unsigned char fatt0[NFACT], frel[NFACT][NFACT];
 static unsigned char kfact[SND_KINDS];          /* (Each kind's faction: for the records, without their kinds) */
 
-/* ---- The records: the lairs and the denizens, in a bank of their own */
+/* ---- The records: the lairs and the denizens, in a bank of their own (a cache: its records' places free, kind 0,
+** or a region's that's in it) */
 
 #define NLAIRS          64
 #define NDENS           240
 struct lair {
-    unsigned char   sn, kind, n, first;         /* Its stratum, its kind, its denizens (n records from first) */
+    unsigned char   sn, kind, n;                /* Its stratum, its kind, its denizens */
     unsigned char   flags;                      /* L_* */
     unsigned char   link;                       /* The stratum's link it's by, or 0xFF (a room of its chunk) */
+    unsigned        id;                         /* Its number (1 on: the order the lairs were decided in) */
     unsigned        cx, cy;                     /* Its chunk (from the stratum's x0, y0) */
     unsigned        hx, hy;                     /* Its home square (placed) */
+    unsigned char   rx, ry;                     /* Its region (its chunk's first square's, the frame's: 0xFF not
+                                                **   known yet, a version 8 save's) */
 };
 #define L_PLACED        0x01                    /* Its denizens placed */
 struct den {
-    unsigned char   kind, lair;
+    unsigned char   kind;
     unsigned char   flags;                      /* D_* */
     unsigned char   sn, face;
+    unsigned        id, lid;                    /* Its number (1 on), its lair's */
     unsigned        x, y;                       /* Its square (placed) */
     unsigned long   ready;                      /* When it can act again */
     unsigned char   attitude;                   /* To the character (hub.h's AT_*) */
     unsigned char   order;                      /* An ally's request (hub.h's OR_*) */
+    unsigned char   lsn, lrx, lry;              /* Its lair's stratum, and its region (its own, not placed yet: the
+                                                **   lair's rx, ry) */
+    unsigned        hx, hy;                     /* Its lair's home square (placed) */
 };
 #define D_OUT           0x01                    /* On a square of its own */
 #define D_ACTOR         0x02                    /* An actor now (the hub's entry the truth while it is) */
 #define D_DEAD          0x04                    /* Dead (its body left where it fell: an item) */
 #define NNAMES          8
+#define NDREG           32
+#define DN_MAGIC        0x4E44                  /* "DN": dens.dat's (a version 8 save's: none, its old layout) */
 struct head {
-    unsigned char   done[MAXSTRATA];            /* Each stratum's populations decided */
-    unsigned char   nlairs, ndens;
+    unsigned        magic;
+    unsigned char   nlairs, ndens;              /* The records' places used, up to the last in use */
     unsigned char   fatt[NFACT];                /* Each faction's attitude to the character now (its newcomers') */
-    struct { unsigned char den; char name[12]; } names[NNAMES];    /* The names the character's given (den 0xFF:
-                                                **   none) */
+    struct { unsigned id; char name[12]; } names[NNAMES];    /* The names the character's given (a denizen's
+                                                **   number; 0: none) */
+    unsigned        ids, lids;                  /* The denizens' and the lairs' numbers given */
+    unsigned char   done[32];                   /* Each stratum's populations decided (a bit each: DONE) */
+    unsigned char   rebuild;                    /* (A version 8 save's records: their regions not yet in the table) */
+    struct {
+        unsigned char sn, rx, ry;
+        unsigned    stamp;
+    }               reg[NDREG];                 /* The regions whose records are in the cache (sn its stratum plus 1:
+                                                **   0 the entry free) */
+    unsigned        rstamp;
 };
+#define DONE(n)         (hd.done[(n) >> 3] & 1 << ((n) & 7))
 struct pop {
     struct head     h;
     struct lair     lair[NLAIRS];
@@ -242,16 +273,55 @@ static unsigned char pcs, pclit, pcbusy, pcdead;
 unsigned __fastcall__ apart (int dx, int dy);  /* |dx| or |dy|, the more (apart.s: in assembly, asked of every
                                                 **   square the minds weigh) */
 
-/* ---- Populations: stratum n's decided as its plan is grown (its record and links whole: the hub's strata[n],
+/* ---- Populations: stratum n's decided as its plan is grown (its record and links whole: the hub's STRATUM (n),
 ** copied): for each kind that lives in its style at its depth, its lairs (by the stratum's ways, if it lairs there;
 ** else in a region of halls, a chunk of it), and the denizens in each, a record each */
 #pragma code-name (push, "SW1CODE")
 #pragma rodata-name (push, "SW1RODATA")
 
+/* Stratum n's plan's region idx's kind: in its plan bank, or (a big plan: more regions than PLAN_MAX, the maker's
+** paged to the save folder) in its file there, plSS0000.dat, its regions in order */
+static unsigned char __fastcall__ plan_kind (unsigned char n, unsigned idx)
+{
+    static const char hex[] = "0123456789abcdef";
+    struct stratum* s = &STRATUM (n);
+    struct region r;
+    char* p;
+    int fd;
+
+    r.kind = RG_ROCK;
+    if ((unsigned) s->rw * s->rh <= PLAN_MAX) {
+        hub_map (PLAN_BANK (n));
+        r.kind = (PLAN_AT (n) + idx)->kind;
+    } else {
+        hub_map (0);
+        strcpy ((char*) piece, HUB->savedir);
+        p = (char*) piece + strlen ((char*) piece);
+        if (n > 15) {
+            *p++ = '/';
+            *p++ = 'p';
+            *p++ = 'l';
+            *p++ = hex[n >> 4];
+        } else {
+            *p++ = '/';
+            *p++ = 'p';
+            *p++ = 'l';
+        }
+        *p++ = hex[n & 15];
+        strcpy (p, "0000.dat");
+        if ((fd = open ((char*) piece, O_RDONLY)) >= 0) {
+            lseek (fd, (long) idx * sizeof r, SEEK_SET);
+            read (fd, &r, sizeof r);
+            close (fd);
+        }
+    }
+    hub_map (0);
+    return r.kind;
+}
+
 void __fastcall__ s_populate (unsigned char n)
 {
-    struct stratum* s = &strata[n];
-    struct region* r;
+    struct stratum* s = &STRATUM (n);
     unsigned char k, j, m, i, rx = 0, ry = 0, t, u;
     unsigned w = (s->w + CW - 1) / CW, h = (s->h + CW - 1) / CW;
 
@@ -262,7 +332,7 @@ void __fastcall__ s_populate (unsigned char n)
             continue;
         }
         m = K.flags & K_WAYS ? K.lairs : random (K.lairs + 1);
-        for (j = 0; j < m && hd.nlairs < NLAIRS; ++j) {
+        for (j = 0; j < m; ++j) {
             memset (&L, 0, sizeof L);
             L.sn = n;
             L.kind = k;
@@ -279,9 +349,7 @@ void __fastcall__ s_populate (unsigned char n)
                 for (t = 0; t < 8; ++t) {       /* (A region of halls, a chunk of it) */
                     rx = random (s->rw);
                     ry = random (s->rh);
-                    hub_map (PLAN_BANK (n));
-                    r = PLAN_AT (n) + (unsigned) ry * s->rw + rx;
-                    if (r->kind == RG_HALLS) {
+                    if (plan_kind (n, (unsigned) ry * s->rw + rx) == RG_HALLS) {
                         break;
                     }
                 }
@@ -295,22 +363,28 @@ void __fastcall__ s_populate (unsigned char n)
                 L.cy = L.cy < h ? L.cy : h - 1;
             }
             L.n = K.nmin + random (K.nmax - K.nmin + 1);
-            if (hd.ndens + L.n > NDENS) {
-                break;
+            L.rx = (s->x0 + (L.cx << CW_BITS)) >> 8;
+            L.ry = (s->y0 + (L.cy << CW_BITS)) >> 8;
+            if (!reg_need (n, L.rx, L.ry) || (t = rec_new (1)) == 0xFF) {
+                break;                          /* (Its region in the cache first: no room, no folder) */
             }
-            L.first = hd.ndens;
+            L.id = ++hd.lids;
             memset (&D, 0, sizeof D);
             D.kind = k;
-            D.lair = hd.nlairs;
-            D.sn = n;
+            D.lid = L.id;
+            D.sn = D.lsn = n;
+            D.lrx = L.rx;
+            D.lry = L.ry;
             D.attitude = hd.fatt[K.faction & (NFACT - 1)];    /* (Its faction's, as the character stands with it) */
-            for (i = 0; i < L.n; ++i) {
-                den_put (hd.ndens++);
+            for (i = 0; i < L.n && (u = rec_new (0)) != 0xFF; ++i) {
+                D.id = ++hd.ids;
+                den_put (u);
             }
-            lair_put (hd.nlairs++);
+            L.n = i;
+            lair_put (t);
         }
     }
-    hd.done[n] = 1;
+    hd.done[n >> 3] |= 1 << (n & 7);
 }
 
 #pragma code-name (pop)
@@ -320,13 +394,14 @@ void __fastcall__ s_populate (unsigned char n)
 ** copied into the world bank) */
 static void grow (void)
 {
-    unsigned char n, m;
+    unsigned char n, m, k;
 
-    for (n = 0; n < MAXSTRATA; ++n) {
+    for (k = 0; k < MAXSTRATA; ++k) {           /* (The hub's slots: each one's stratum, its own number) */
         hub_map (WORLD_BANK);
-        m = WREC->strata[n].made;
+        m = WREC->strata[k].made;
+        n = WREC->strata[k].n;
         hub_map (0);
-        if (m && !hd.done[n] && !hub_posted (&HUB->mreq[ASK_WORLD])) {
+        if (m && !DONE (n) && !hub_posted (&HUB->mreq[ASK_WORLD])) {
             sync_strata ();
             populate (n);
         }
@@ -353,11 +428,11 @@ void __fastcall__ s_place (unsigned char i)
     struct stratum* s;
     struct room* q;
     unsigned x0, y0, x, y, ox, oy;
-    unsigned char w = 7, h = 7, j, t;
+    unsigned char w = 7, h = 7, j, t, k;
 
     lair_get (i);
-    s = &strata[L.sn];
-    rseed (s->seed + (unsigned long) i * 7919UL);
+    s = &STRATUM (L.sn);
+    rseed (s->seed + (unsigned long) (L.id - 1) * 7919UL);     /* (By its number: wherever its record is) */
     ox = s->x0 + L.cx * CW;
     oy = s->y0 + L.cy * CW;
     if (L.link != 0xFF) {
@@ -380,7 +455,9 @@ void __fastcall__ s_place (unsigned char i)
         L.hx = ox + 16;
         L.hy = oy + 16;
     }
-    for (j = 0; j < L.n; ++j) {
+    for (j = 0, k = 0; j < L.n; ++j, ++k) {
+        for (; k < hd.ndens && (den_get (k), D.lid != L.id || !D.kind); ++k) {
+        }                                       /* (Its next denizen, in its records' order) */
         for (t = 0; t < 32; ++t) {
             x = x0 + random (w);
             y = y0 + random (h);
@@ -390,15 +467,20 @@ void __fastcall__ s_place (unsigned char i)
                                                 **   beside them: the character comes out there, not boxed in) */
             }
         }
-        den_get (L.first + j);
+        if (k == hd.ndens) {
+            break;
+        }
+        den_get (k);
+        D.hx = L.hx;                            /* (Its home, its record's own: its lair's may be out of the cache) */
+        D.hy = L.hy;
         if (t < 32) {
             D.x = x;
             D.y = y;
             D.flags |= D_OUT;
             D.face = random (4) * 2;
             D.ready = now + random (50);
-            den_put (L.first + j);
         }
+        den_put (k);
     }
     L.flags |= L_PLACED;
     lair_put (i);
@@ -424,7 +506,7 @@ static unsigned char __fastcall__ made (unsigned char sn, unsigned cx, unsigned 
 /* Square x, y of stratum sn in a chunk that's made already */
 static unsigned char __fastcall__ made_at (unsigned char sn, unsigned x, unsigned y)
 {
-    struct stratum* s = &strata[sn];
+    struct stratum* s = &STRATUM (sn);
 
     return x - s->x0 < s->w && y - s->y0 < s->h && made (sn, (x - s->x0) >> CW_BITS, (y - s->y0) >> CW_BITS);
 }
@@ -433,13 +515,13 @@ static unsigned char __fastcall__ made_at (unsigned char sn, unsigned x, unsigne
 ** surroundings detailed: this task never makes a chunk to place a lair), placed: 1 if any was */
 static unsigned char nearby (void)
 {
-    struct stratum* s = &strata[pcs];
+    struct stratum* s = &STRATUM (pcs);
     unsigned cx = (pcx - s->x0) / CW, cy = (pcy - s->y0) / CW;
     unsigned char i, n = 0;
 
     for (i = 0; i < hd.nlairs; ++i) {
         lair_get (i);
-        if (L.sn == pcs && !(L.flags & L_PLACED) && L.cx + 1 - cx <= 2 && L.cy + 1 - cy <= 2 &&
+        if (L.kind && L.sn == pcs && !(L.flags & L_PLACED) && L.cx + 1 - cx <= 2 && L.cy + 1 - cy <= 2 &&
             made (L.sn, L.cx, L.cy)) {
             place (i);
             n = 1;
@@ -576,12 +658,12 @@ static void __fastcall__ write_back (unsigned char k)
     D.order = aorder[k];
 }
 
-/* The name the character gave denizen i (its entry in the head's names), or NNAMES */
-static unsigned char __fastcall__ name_of (unsigned char i)
+/* The name the character gave denizen number id (its entry in the head's names; id 0: a free one), or NNAMES */
+static unsigned char __fastcall__ name_of (unsigned id)
 {
     unsigned char n;
 
-    for (n = 0; n < NNAMES && hd.names[n].den != i; ++n) {
+    for (n = 0; n < NNAMES && hd.names[n].id != id; ++n) {
     }
     return n;
 }
@@ -612,10 +694,9 @@ static void __fastcall__ enlist (unsigned char i, unsigned char k)
     D.flags |= D_ACTOR;
     den_put (i);
     kind_get (D.kind);
-    lair_get (D.lair);
     akind[k] = D.kind;
-    ahx[k] = L.hx;
-    ahy[k] = L.hy;
+    ahx[k] = D.hx;
+    ahy[k] = D.hy;
     memset (&a, 0, sizeof a);
     a.den = i;
     a.sn = D.sn;
@@ -636,7 +717,7 @@ static void __fastcall__ enlist (unsigned char i, unsigned char k)
     rq.w1 = i;
     ask (RS_NEW_ACTOR, k + 1, 0);
     im.b = (s->cond & C_BLEEDING) != 0;
-    strcpy (a.name, (i = name_of (i)) < NNAMES ? hd.names[i].name : K.name);
+    strcpy (a.name, (i = name_of (D.id)) < NNAMES ? hd.names[i].name : K.name);
     a.kind = D.kind;
     a.remains = strcmp (K.key, "skel") ? KI_BODY : KI_BONES;    /* (A skeleton's its bones: the stand-in theme's) */
     a.timid = (K.flags & K_SHY) != 0;
@@ -1180,15 +1261,14 @@ static unsigned char roam (void)
         }
         den_get (i);
         kind_get (D.kind);
-        lair_get (D.lair);
         if (D.attitude == AT_ALLIED && D.order == OR_WAIT) {
             D.order = OR_NONE;                  /* (Left waiting an hour: it goes its own way, an ally no more) */
             D.attitude = AT_FRIENDLY;
         }
-        lim = D.sn == L.sn ? (K.flags & K_LAIR ? 2 : K.range) : 0;    /* (Come along with the character off its
+        lim = D.sn == D.lsn ? (K.flags & K_LAIR ? 2 : K.range) : 0;  /* (Come along with the character off its
                                                 **   lair's stratum: it stays where it is) */
-        x = L.hx + random (2 * lim + 1) - lim;
-        y = L.hy + random (2 * lim + 1) - lim;
+        x = D.hx + random (2 * lim + 1) - lim;
+        y = D.hy + random (2 * lim + 1) - lim;
         if (lim && made_at (D.sn, x, y) && open_sq (at (D.sn, x, y)) && !taken (0xFF, x, y) && !rec_on (D.sn, x, y)) {
             D.x = x;
             D.y = y;
@@ -1236,6 +1316,9 @@ static unsigned char __fastcall__ along (unsigned char k)
 ** coarsely.  Nothing, if nothing's changed (the clock, the character, a blow) */
 static unsigned char struck;                    /* (Blows taken to heart since: fought's) */
 
+static unsigned char lrs = 0xFF;                /* (The region the character's in, as the cache last had those round
+                                                **   it) */
+static unsigned lrx, lry;
 static void tend (void)
 {
     static unsigned lx, ly;
@@ -1293,6 +1376,13 @@ static void tend (void)
         }
     }
     if (again) {
+        if (pcs != lrs || (pcx - STRATUM (pcs).x0) >> 8 != lrx || (pcy - STRATUM (pcs).y0) >> 8 != lry) {
+            lrs = pcs;                          /* (Come into a region: those round it wanted, in the cache, the
+                                                **   actors far from it retired first) */
+            lrx = (pcx - STRATUM (pcs).x0) >> 8;
+            lry = (pcy - STRATUM (pcs).y0) >> 8;
+            dneed ();
+        }
         enlist_near ();
     }
 }
@@ -1361,12 +1451,13 @@ void __fastcall__ s_harmed (unsigned char k)
 {
     struct actor* q = HUB->actor;
     struct den* r = POP->den;
-    unsigned char j, f, l, n;
+    unsigned char j, f, n;
+    unsigned l;
 
     hub_map (0);
     f = q[k].faction;
     den_get (q[k].den);
-    l = D.lair;
+    l = D.lid;
     for (j = 0; j < NACTORS; ++j, ++q) {
         if (!q->name[0]) {
             continue;
@@ -1375,7 +1466,7 @@ void __fastcall__ s_harmed (unsigned char k)
             q->attitude = q->doing == DO_FLEE ? AT_UNFRIENDLY : AT_HOSTILE;    /* (Fled from it: it won't seek it) */
         } else if (q->faction == f) {
             den_get (q->den);
-            n = D.lair == l ? 2 : 1;
+            n = D.lid == l ? 2 : 1;
             q->attitude = q->attitude > n ? q->attitude - n : AT_HOSTILE;
         } else if (REL (f, q->faction) == AT_HOSTILE && sres[j] && q->attitude < AT_FRIENDLY) {
             ++q->attitude;
@@ -1393,8 +1484,8 @@ void __fastcall__ s_harmed (unsigned char k)
     settle ();
     for (j = 0; j < hd.ndens; ++j, ++r) {
         hy_bank (pb);
-        if (!(r->flags & D_ACTOR) && kfact[r->kind % SND_KINDS] == f) {
-            n = r->lair == l ? 2 : 1;
+        if (r->kind && !(r->flags & D_ACTOR) && kfact[r->kind % SND_KINDS] == f) {
+            n = r->lid == l ? 2 : 1;
             r->attitude = r->attitude > n ? r->attitude - n : AT_HOSTILE;
             if (r->attitude < AT_ALLIED) {
                 r->order = OR_NONE;
@@ -1516,7 +1607,8 @@ static void __fastcall__ give_name (unsigned char k)
         sw.result = sw.word2[0] ? SR_NOT_ALLY : SR_CANT;
         return;
     }
-    if ((n = name_of (q->den)) == NNAMES && (n = name_of (0xFF)) == NNAMES) {
+    den_get (q->den);
+    if ((n = name_of (D.id)) == NNAMES && (n = name_of (0)) == NNAMES) {
         sw.result = SR_CANT;                    /* (Names enough given) */
         return;
     }
@@ -1524,7 +1616,7 @@ static void __fastcall__ give_name (unsigned char k)
     if (sw.word2[0] >= 'a' && sw.word2[0] <= 'z') {
         sw.word2[0] += 'A' - 'a';
     }
-    hd.names[n].den = q->den;
+    hd.names[n].id = D.id;
     strcpy (hd.names[n].name, sw.word2);
     hub_map (0);
     strcpy (q->name, sw.word2);
@@ -1586,68 +1678,7 @@ void s_sway (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ---- The records kept (back: read again), the save folder's dens.dat: the bank a piece at a time, through the
-** main RAM (the actors' places written back first; read back, none an actor yet) */
-#pragma code-name (push, "SW1CODE")
-#pragma rodata-name (push, "SW1RODATA")
-
-void __fastcall__ s_keep (unsigned char back)
-{
-    static char p[56];
-    unsigned off;
-    unsigned char k;
-    int fd;
-
-    hub_map (0);
-    if (!HUB->savedir[0]) {
-        return;
-    }
-    strcpy (p, HUB->savedir);
-    strcat (p, "/dens.dat");
-    if ((fd = back ? open (p, O_RDONLY) : open (p, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0) {
-        return;
-    }
-    if (!back) {
-        for (k = 0; k < NACTORS; ++k) {
-            hub_map (0);
-            if (HUB->actor[k].name[0]) {
-                write_back (k);
-                den_put (a.den);
-            }
-        }
-        hy_bank (pb);
-        memcpy (POP, &hd, sizeof hd);
-    }
-    for (off = 0; off < 0x2000; off += sizeof piece) {
-        if (back) {
-            if (read (fd, piece, sizeof piece) != sizeof piece) {
-                memset (piece, 0, sizeof piece);
-            }
-            hy_bank (pb);
-            memcpy ((char*) 0x8000 + off, piece, sizeof piece);
-        } else {
-            hy_bank (pb);
-            memcpy (piece, (char*) 0x8000 + off, sizeof piece);
-            write (fd, piece, sizeof piece);
-        }
-    }
-    close (fd);
-    if (back) {
-        hy_bank (pb);
-        memcpy (&hd, POP, sizeof hd);
-        for (k = 0; k < hd.ndens; ++k) {
-            den_get (k);
-            D.flags &= ~D_ACTOR;
-            den_put (k);
-        }
-    }
-    hub_map (0);
-}
-
-#pragma code-name (pop)
-#pragma rodata-name (pop)
-
-/* The swapped parts' images read into a bank of its own (dir/dq0d.ovl: dq0d.cfg's OV1): 0, or -1 */
+/* The swapped parts' images read into banks of its own (dir/dq0d.ovl: dq0d.cfg's OV1, OV2): 0, or -1 */
 static int __fastcall__ ovl_load (const char* dir)
 {
     unsigned char* b = (unsigned char*) _SWAP_START__;  /* (Through the parts' area: none in it yet) */
@@ -1656,13 +1687,14 @@ static int __fastcall__ ovl_load (const char* dir)
 
     strcpy ((char*) b, dir);
     strcat ((char*) b, "/dq0d.ovl");
-    if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (1)) < 0) {
+    if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (2)) < 0) {
         return -1;
     }
     ovbank[0] = n;
-    for (off = 0; off < 0x2000 && (n = read (fd, b, 512)) > 0; off += n) {
-        hy_bank (ovbank[0]);
-        memcpy ((void*) (0x8000 + off), b, n);
+    ovbank[1] = n + 1;
+    for (off = 0; off < 0x4000 && (n = read (fd, b, 512)) > 0; off += n) {
+        hy_bank (ovbank[off >> 13]);
+        memcpy ((void*) (0x8000 + (off & 0x1FFF)), b, n);
     }
     close (fd);
     return 0;
@@ -1693,7 +1725,7 @@ int main (int argc, char* argv[])
     memset (POP, 0, 0x2000);
     hub_map (0);
     memcpy (hd.fatt, fatt0, sizeof hd.fatt);    /* (A new game's: the factions as the character first meets them) */
-    memset (hd.names, 0xFF, sizeof hd.names);
+    hd.magic = DN_MAGIC;
     if (HUB->resume) {
         keep (1);
     }
@@ -1714,10 +1746,15 @@ int main (int argc, char* argv[])
             now = hub_now ();
             pcx = HUB->pc_x;
             pcy = HUB->pc_y;
-            pcs = HUB->pc_stratum;
+            if (pcs != HUB->pc_stratum) {
+                pcs = HUB->pc_stratum;
+                sync_strata ();                 /* (Its stratum's record in its slot: the world may have made way for
+                                                **   it there) */
+                hub_map (0);
+            }
             pcbusy = HUB->pc_ready > now;
             pcdead = (HUB->pcsum.cond & C_DEAD) != 0;
-            if (!(pclit = HUB->pc_light != 0) && hd.done[pcs] && (p = at (pcs, pcx, pcy)) != 0) {
+            if (!(pclit = HUB->pc_light != 0) && DONE (pcs) && (p = at (pcs, pcx, pcy)) != 0) {
                 pclit = (*p & T_VIS) != 0;      /* (Lit where it stands: a room's light, a lamp put down) */
             }
             hub_map (0);
@@ -1736,7 +1773,7 @@ int main (int argc, char* argv[])
         if (act) {
             grow ();
             struck |= fought ();                /* (The character's blows: the slice's first, the world's) */
-            if (hd.done[pcs]) {
+            if (DONE (pcs)) {
                 hear ();
                 tend ();
             }
@@ -1756,3 +1793,439 @@ int main (int argc, char* argv[])
     }
     return 0;
 }
+
+/* ==== Part 3: the records paged (see its head), and kept */
+#pragma code-name (push, "SW3CODE")
+#pragma rodata-name (push, "SW3RODATA")
+
+#define VF_STATIC       static
+#include "../dq0/vfile.inc"
+
+unsigned char rsn, rrx, rry;                    /* (A region: found, written, read) */
+static unsigned char ksn, krx, kry;             /* (The region at hand: not put out to make room for its own) */
+char vpth[56];
+static struct vfh vf;
+
+/* The region of the denizen in D (its square's; not placed, its lair's) into rsn, rrx, rry */
+static void den_region (void)
+{
+    if (D.flags & (D_OUT | D_ACTOR | D_DEAD)) {
+        rsn = D.sn;
+        rrx = D.x >> 8;
+        rry = D.y >> 8;
+    } else {
+        rsn = D.lsn;
+        rrx = D.lrx;
+        rry = D.lry;
+    }
+}
+
+/* Region rsn, rrx, rry's entry in the table, or 0xFF (a free one, rfree: 0xFF none) */
+unsigned char rfree;
+static unsigned char reg_find (void)
+{
+    unsigned char k, f = 0xFF, rlim;
+
+    hub_map (0);
+    rlim = HUB->small ? 2 : NDREG;              /* (dq0 -C: two, the tests' put out soon) */
+    for (k = 0, rfree = 0xFF; k < NDREG; ++k) {
+        if (!hd.reg[k].sn) {
+            if (rfree == 0xFF && k < rlim) {
+                rfree = k;
+            }
+        } else if (hd.reg[k].sn == rsn + 1 && hd.reg[k].rx == rrx && hd.reg[k].ry == rry) {
+            f = k;
+        }
+    }
+    return f;
+}
+
+/* The table's entry for region rsn ... made (its stamp the newest) */
+static void __fastcall__ reg_add (unsigned char k)
+{
+    hd.reg[k].sn = rsn + 1;
+    hd.reg[k].rx = rrx;
+    hd.reg[k].ry = rry;
+    hd.reg[k].stamp = ++hd.rstamp;
+}
+
+/* Region k of the table put out: its lairs and its denizens written (dnSXXYY.dat, a new version: each record after its
+** tag, 0 a lair's, 1 a denizen's), their places freed, its entry too: 1, or 0 (no folder) */
+static unsigned char __fastcall__ reg_out (unsigned char k)
+{
+    static unsigned char tag;
+    unsigned char sn = hd.reg[k].sn - 1, rx = hd.reg[k].rx, ry = hd.reg[k].ry, i;
+    unsigned n = 0;
+    int fd;
+
+    for (i = 0; i < hd.ndens; ++i) {
+        den_get (i);
+        den_region ();
+        if ((D.flags & D_ACTOR) && rsn == sn && rrx == rx && rry == ry) {
+            return 0;                           /* (An actor's: kept) */
+        }
+    }
+    if (!vf_name (vpth, "dn", sn, rx, ry) || (fd = vf_make (vpth, 2)) < 0) {
+        return 0;
+    }
+    for (i = 0, tag = 0; i < hd.nlairs; ++i) {
+        lair_get (i);
+        if (L.kind && L.sn == sn && L.rx == rx && L.ry == ry) {
+            write (fd, &tag, 1);
+            write (fd, &L, sizeof L);
+            ++n;
+            L.kind = 0;
+            lair_put (i);
+        }
+    }
+    for (i = 0, tag = 1; i < hd.ndens; ++i) {
+        den_get (i);
+        den_region ();
+        if (D.kind && rsn == sn && rrx == rx && rry == ry) {
+            write (fd, &tag, 1);
+            write (fd, &D, sizeof D);
+            ++n;
+            D.kind = 0;
+            den_put (i);
+        }
+    }
+    vf_done (fd, n);
+    hd.reg[k].sn = 0;
+    return 1;
+}
+
+/* The table's entry least lately wanted that isn't round the character's region (one each way, on its stratum) nor
+** the region at hand, put out: 1, or 0 */
+/* (make_room's: the lair and the denizen at hand kept, the records put out read through L and D) */
+static struct lair sl;
+static struct den sd;
+static unsigned char make_room (void)
+{
+    unsigned char k, b = 0xFF, cx = pcx >> 8, cy = pcy >> 8, r;
+    unsigned t;
+
+    hub_map (0);
+    r = !HUB->small;                            /* (Those one each way kept; dq0 -C, its own alone) */
+    for (k = 0; k < NDREG; ++k) {
+        if (hd.reg[k].sn && (hd.reg[k].sn != pcs + 1 || (unsigned char) (hd.reg[k].rx - cx + r) > 2 * r ||
+            (unsigned char) (hd.reg[k].ry - cy + r) > 2 * r) &&
+            (hd.reg[k].sn != ksn + 1 || hd.reg[k].rx != krx || hd.reg[k].ry != kry) &&
+            (b == 0xFF || hd.reg[k].stamp - t > 0x8000U)) {
+            b = k;
+            t = hd.reg[k].stamp;
+        }
+    }
+    if (b == 0xFF) {
+        return 0;
+    }
+    memcpy (&sl, &L, sizeof L);
+    memcpy (&sd, &D, sizeof D);
+    b = reg_out (b);
+    memcpy (&L, &sl, sizeof L);
+    memcpy (&D, &sd, sizeof D);
+    return b;
+}
+
+/* A free record's place (lair 1: a lair's, else a denizen's), the first: its place (the records used up to it), or
+** 0xFF (none to be made: no folder) */
+unsigned char __fastcall__ s_rec_new (unsigned char lair)
+{
+    unsigned char i, n = lair ? NLAIRS : NDENS;
+
+    do {
+        for (i = 0; i < n; ++i) {
+            hy_bank (pb);
+            if (!(lair ? POP->lair[i].kind : POP->den[i].kind)) {
+                hub_map (0);
+                if (lair && i >= hd.nlairs) {
+                    hd.nlairs = i + 1;
+                } else if (!lair && i >= hd.ndens) {
+                    hd.ndens = i + 1;
+                }
+                return i;
+            }
+        }
+        hub_map (0);
+    } while (make_room ());
+    return 0xFF;
+}
+
+/* Region sn, rx, ry wanted: in the cache (its file's records read in, if it has one, and it's not in the cache yet;
+** an entry for it in the table, one put out for it if it must), its stamp the newest: 1, or 0 (no room) */
+unsigned char __fastcall__ s_reg_need (unsigned char sn, unsigned char rx, unsigned char ry)
+{
+    static unsigned char tag;
+    unsigned char k, i;
+    int fd;
+
+    rsn = sn;
+    rrx = rx;
+    rry = ry;
+    if ((k = reg_find ()) != 0xFF) {
+        hd.reg[k].stamp = ++hd.rstamp;
+        return 1;
+    }
+    ksn = sn;
+    krx = rx;
+    kry = ry;
+    if (rfree == 0xFF && (!make_room () || (rsn = sn, rrx = rx, rry = ry, reg_find (), rfree == 0xFF))) {
+        return 0;
+    }
+    k = rfree;
+    rsn = sn;
+    rrx = rx;
+    rry = ry;
+    reg_add (k);
+    if (vf_name (vpth, "dn", sn, rx, ry) && (fd = vf_open (vpth, 2, &vf)) >= 0) {
+        while (read (fd, &tag, 1) == 1) {
+            if (tag) {
+                if (read (fd, &D, sizeof D) != sizeof D || (i = s_rec_new (0)) == 0xFF) {
+                    break;
+                }
+                D.flags &= ~D_ACTOR;
+                den_put (i);
+            } else {
+                if (read (fd, &L, sizeof L) != sizeof L || (i = s_rec_new (1)) == 0xFF) {
+                    break;
+                }
+                lair_put (i);
+            }
+        }
+        close (fd);
+    }
+    hub_map (0);
+    return 1;
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part 4: the regions round the character wanted, and the records kept */
+#pragma code-name (push, "SW4CODE")
+#pragma rodata-name (push, "SW4RODATA")
+
+/* (Part 3's, a copy of its own) */
+/* The region of the denizen in D (its square's; not placed, its lair's) into rsn, rrx, rry */
+static void den_region4 (void)
+{
+    if (D.flags & (D_OUT | D_ACTOR | D_DEAD)) {
+        rsn = D.sn;
+        rrx = D.x >> 8;
+        rry = D.y >> 8;
+    } else {
+        rsn = D.lsn;
+        rrx = D.lrx;
+        rry = D.lry;
+    }
+}
+
+/* Region rsn, rrx, rry's entry in the table, or 0xFF (a free one, rfree: 0xFF none) */
+unsigned char rfree;
+static unsigned char reg_find4 (void)
+{
+    unsigned char k, f = 0xFF, rlim;
+
+    hub_map (0);
+    rlim = HUB->small ? 2 : NDREG;              /* (dq0 -C: two, the tests' put out soon) */
+    for (k = 0, rfree = 0xFF; k < NDREG; ++k) {
+        if (!hd.reg[k].sn) {
+            if (rfree == 0xFF && k < rlim) {
+                rfree = k;
+            }
+        } else if (hd.reg[k].sn == rsn + 1 && hd.reg[k].rx == rrx && hd.reg[k].ry == rry) {
+            f = k;
+        }
+    }
+    return f;
+}
+
+/* The table's entry for region rsn ... made (its stamp the newest) */
+static void __fastcall__ reg_add4 (unsigned char k)
+{
+    hd.reg[k].sn = rsn + 1;
+    hd.reg[k].rx = rrx;
+    hd.reg[k].ry = rry;
+    hd.reg[k].stamp = ++hd.rstamp;
+}
+
+/* A version 8 save's records (keep's: hd's rebuild): the regions they're in made the table's (as the character
+** first comes into one: dneed's) */
+static void rebuild (void)
+{
+    unsigned char i;
+
+    hd.rebuild = 0;
+    for (i = 0; i < hd.nlairs; ++i) {
+        lair_get (i);
+        rsn = L.sn;
+        rrx = L.rx = (STRATUM (L.sn).x0 + (L.cx << CW_BITS)) >> 8;     /* (Its region, the frame's: the strata
+                                                **   it knew, at most eight, all in the cache) */
+        rry = L.ry = (STRATUM (L.sn).y0 + (L.cy << CW_BITS)) >> 8;
+        lair_put (i);
+        if (L.kind && reg_find4 () == 0xFF && rfree != 0xFF) {
+            reg_add4 (rfree);
+        }
+    }
+    for (i = 0; i < hd.ndens; ++i) {
+        den_get (i);
+        lair_get (D.lid - 1);                   /* (Its lair: its record's place its number less 1, the old layout's) */
+        D.lrx = L.rx;
+        D.lry = L.ry;
+        den_put (i);
+        den_region4 ();
+        if (D.kind && reg_find4 () == 0xFF && rfree != 0xFF) {
+            reg_add4 (rfree);
+        }
+    }
+}
+
+/* The regions round the character's (one each way, on its stratum) wanted, as it comes into one; a version 8 save's
+** records first, the regions they're in made the table's (keep's rebuild) */
+void s_dneed (void)
+{
+    unsigned char x, y, cx = pcx >> 8, cy = pcy >> 8, r;
+
+    if (hd.rebuild) {
+        rebuild ();
+    }
+    hub_map (0);
+    r = !HUB->small;                            /* (dq0 -C: its own region alone) */
+    for (y = cy >= r ? cy - r : 0; y <= cy + r && y >= cy - r; ++y) {
+        for (x = cx >= r ? cx - r : 0; x <= cx + r && x >= cx - r; ++x) {
+            reg_need (pcs, x, y);
+        }
+    }
+}
+
+/* ---- The records kept (back: read again), the save folder's dens.dat: the bank a piece at a time, through the
+** main RAM (the actors' places written back first; read back, none an actor yet); a version 8 save's (its records in
+** the old layout, no magic: old_dens) made the new */
+static void __fastcall__ old_dens (int fd);
+void __fastcall__ s_keep (unsigned char back)
+{
+    unsigned off;
+    unsigned char k;
+    int fd;
+
+    hub_map (0);
+    if (!HUB->savedir[0]) {
+        return;
+    }
+    strcpy (vpth, HUB->savedir);
+    strcat (vpth, "/dens.dat");
+    if ((fd = back ? open (vpth, O_RDONLY) : open (vpth, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0) {
+        return;
+    }
+    if (!back) {
+        for (k = 0; k < NACTORS; ++k) {
+            hub_map (0);
+            if (HUB->actor[k].name[0]) {
+                write_back (k);
+                den_put (a.den);
+            }
+        }
+        hy_bank (pb);
+        memcpy (POP, &hd, sizeof hd);
+    } else if (read (fd, piece, 2) != 2 || *(unsigned*) piece != DN_MAGIC) {
+        old_dens (fd);
+        close (fd);
+        return;
+    } else {
+        lseek (fd, 0, SEEK_SET);
+    }
+    for (off = 0; off < 0x2000; off += sizeof piece) {
+        if (back) {
+            if (read (fd, piece, sizeof piece) != sizeof piece) {
+                memset (piece, 0, sizeof piece);
+            }
+            hy_bank (pb);
+            memcpy ((char*) 0x8000 + off, piece, sizeof piece);
+        } else {
+            hy_bank (pb);
+            memcpy (piece, (char*) 0x8000 + off, sizeof piece);
+            write (fd, piece, sizeof piece);
+        }
+    }
+    close (fd);
+    if (back) {
+        hy_bank (pb);
+        memcpy (&hd, POP, sizeof hd);
+        for (k = 0; k < hd.ndens; ++k) {
+            den_get (k);
+            D.flags &= ~D_ACTOR;
+            den_put (k);
+        }
+    }
+    hub_map (0);
+}
+
+/* A version 8 save's dens.dat (fd): its head (each stratum's populations decided, a byte each of 8; its records'
+** counts; the factions' attitudes; the names, by the record's place), its lairs (12 bytes each, 64: a lair's
+** denizens a run of records), its denizens (15 bytes each, 240), each read where it is and made the new (a lair's
+** number its place plus 1, a denizen's the same; its lair's stratum, region and home its own), the regions they're in
+** made the table's as the character first comes into one (hd's rebuild, dneed's) */
+#define O_HEAD          122
+#define O_LAIR          12
+#define O_DEN           15
+static void __fastcall__ old_dens (int fd)
+{
+    static struct lair m;
+    unsigned char i, n, nl, j;
+
+    lseek (fd, 0, SEEK_SET);
+    read (fd, piece, O_HEAD);
+    for (i = 0; i < 8; ++i) {
+        if (piece[i]) {
+            hd.done[0] |= 1 << i;
+        }
+    }
+    nl = piece[8];
+    n = piece[9];
+    memcpy (hd.fatt, piece + 10, NFACT);
+    for (i = 0; i < NNAMES; ++i) {
+        j = piece[18 + 13 * i];
+        hd.names[i].id = j == 0xFF ? 0 : j + 1;
+        memcpy (hd.names[i].name, piece + 19 + 13 * i, 12);
+    }
+    hd.nlairs = nl;
+    hd.ndens = n;
+    hd.lids = nl;
+    hd.ids = n;
+    for (i = 0; i < nl; ++i) {                  /* (A lair: sn, kind, n, first, flags, link, cx, cy, hx, hy) */
+        lseek (fd, O_HEAD + (unsigned) i * O_LAIR, SEEK_SET);
+        read (fd, piece, O_LAIR);
+        memset (&L, 0, sizeof L);
+        L.sn = piece[0];
+        L.kind = piece[1];
+        L.n = piece[2];
+        L.flags = piece[4];
+        L.link = piece[5];
+        L.id = i + 1;
+        memcpy (&L.cx, piece + 6, 8);           /* (cx, cy, hx, hy) */
+        lair_put (i);
+    }
+    for (i = 0; i < n; ++i) {                   /* (A denizen: kind, lair, flags, sn, face, x, y, ready, attitude, order) */
+        lseek (fd, O_HEAD + NLAIRS * O_LAIR + (unsigned) i * O_DEN, SEEK_SET);
+        read (fd, piece, O_DEN);
+        memset (&D, 0, sizeof D);
+        D.kind = piece[0];
+        D.flags = piece[2] & ~D_ACTOR;
+        D.sn = piece[3];
+        D.face = piece[4];
+        memcpy (&D.x, piece + 5, 8);            /* (x, y, ready) */
+        D.attitude = piece[13];
+        D.order = piece[14];
+        D.id = i + 1;
+        D.lid = piece[1] + 1;
+        lair_get (piece[1]);
+        D.lsn = L.sn;
+        D.hx = L.hx;
+        D.hy = L.hy;
+        den_put (i);
+    }
+    hd.rebuild = 1;
+    hub_map (0);
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)

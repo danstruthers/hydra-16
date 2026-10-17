@@ -249,7 +249,7 @@ static void __fastcall__ hollow (const struct room* p)
 
 void __fastcall__ o_grow_caves (struct chunk* c, const struct edges* e, unsigned long seed)
 {
-    struct stratum* s = &strata[c->sn];
+    struct stratum* s = &STRATUM (c->sn);
     unsigned char i, j, k, x, y, n;
 
     L = c;

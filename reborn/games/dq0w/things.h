@@ -18,6 +18,61 @@ extern struct item* ip;
 void owned (void);                              /* The things a look saw (the senses' record's) made their own, as
                                                 **   the senses did as they saw them (make_own: no two alike) */
 
+/* ---- The item store's paging (ipage.c, part 17's: bank.s's stubs): the chunks whose things are in the store, a
+** table in the world's own bank (ovbank[OVBANKS]), and a chunk's things' records as they're read in or written out
+** (the map); a chunk's things in its region's file, a group (its place in the region: x, and y times 8; its count) */
+#define NIRES           64
+#define NNONE           16
+struct ires {
+    unsigned char   used, sn;
+    unsigned        cx, cy;
+    unsigned        stamp;                      /* When it was last wanted */
+};
+struct ipg {
+    struct ires     r[NIRES];
+    unsigned        stamp;
+    unsigned char   rebuild;                    /* (A version 8 save's store, its table not yet made: it_near's) */
+    unsigned char   lsn;                        /* (The chunk the character was in, as it_near last looked: its
+                                                **   stratum plus 1, 0 none yet) */
+    unsigned        lcx, lcy;
+    struct {
+        unsigned char sn, rx, ry;
+    }               none[NNONE];                /* (Regions known to have no file of things yet: none read in
+                                                **   for them, a part's swap spared; a region put out, none: sn its
+                                                **   stratum plus 1, 0 the entry free) */
+    unsigned char   nnext;
+    unsigned        map[NITEMS];
+};
+#define IPG             ((struct ipg*) 0x8000)
+#define IP_MAGIC        0x5049                  /* "IP": items.dat's table, after the store's banks */
+struct igroup {
+    unsigned char   at;
+    unsigned        n;
+};
+unsigned char it_room (void);                   /* A record made free (a chunk's things put out): 1, or 0 */
+unsigned char __fastcall__ it_need (unsigned char sn, unsigned cx, unsigned cy);    /* A chunk's things in the store
+                                                **   (read in, if they aren't): 1, or 0 */
+unsigned char __fastcall__ it_out (unsigned char sn, unsigned cx, unsigned cy);   /* (Part 20's) A chunk's things
+                                                **   written to its region's file, their records freed: 1, or 0 */
+unsigned char __fastcall__ it_in (unsigned char sn, unsigned cx, unsigned cy);    /* (Part 20's) Read in: 1 (2, its region
+                                                **   has no file), or 0 */
+void __fastcall__ it_flush (unsigned char sn);   /* (Part 17's) Stratum sn's chunks' things all put out (its slot
+                                                **   made way for: dq0w.c's slot_for) */
+unsigned char __fastcall__ st_out (unsigned char sn);   /* (Part 22's: sfile.c) A stratum's record to its file */
+unsigned char __fastcall__ st_in (unsigned char sn);    /* (Part 22's) Read back into its slot: 1, or 0 none */
+unsigned char __fastcall__ stratum_in (unsigned char m);    /* (Part 3's: dq0w.c) Stratum m in its slot: 1, or 0
+                                                **   (not made yet) */
+void it_near (void);                              /* The chunks round the character's in the store, as it comes into
+                                                **   one (dq0w.c's see, as it's moved) */
+void __fastcall__ start (const char* dir);      /* (Part 3's: dq0w.c) The world's start, once it's attached */
+void __fastcall__ keep (unsigned char back);    /* The store kept (items.dat), or read back */
+extern unsigned ilim;                           /* (things.c's: the records used, at most) */
+extern unsigned irs;                            /* (things.c's: a thing's own numbers, made) */
+#define OVBANKS         8                       /* (dq0w.cfg's OV1 ...: the parts' images; and two more, the world's
+                                                **   own: ipage.c's, ovbank[OVBANKS]; the ways across a room's,
+                                                **   dq0w.c's, ovbank[OVBANKS + 1]) */
+extern unsigned char ovbank[OVBANKS + 2];
+
 /* ---- The swapped parts' (bank.s's stubs) */
 unsigned char serve (void);                     /* (Part 10) The hub's ireq answered (but its state): 1 if what lies
                                                 **   about has changed (the world looks again) */

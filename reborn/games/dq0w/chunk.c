@@ -82,7 +82,7 @@ static unsigned char __fastcall__ find (unsigned char sn, unsigned cx, unsigned 
 ** for it */
 unsigned char* __fastcall__ at_find (unsigned char sn, unsigned x, unsigned y)
 {
-    struct stratum* s = &strata[sn];
+    struct stratum* s = &STRATUM (sn);
     unsigned ox = x - s->x0, oy = y - s->y0, cx, cy;
     unsigned char k;
 

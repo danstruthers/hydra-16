@@ -44,7 +44,7 @@ static unsigned char __fastcall__ dr (unsigned char n)
 
 static void materials (void)
 {
-    struct stratum* s = &strata[L->sn];
+    struct stratum* s = &STRATUM (L->sn);
     unsigned char r, bare = s->style == ST_BUILT || s->style == ST_MIXED ? MAT_FLAGS : MAT_STONE;    /* (A floor's) */
     unsigned char old = s->age / 4;
     unsigned char* m;
@@ -220,7 +220,7 @@ static void fortify (void)
 static void make (void)
 {
     static const unsigned char rot[4] = { 2, 2, 1, 0 };    /* (PM_*: tenths of a step of wear a century) */
-    struct stratum* s = &strata[L->sn];
+    struct stratum* s = &STRATUM (L->sn);
     struct portal* p;
     unsigned char i, w, h, t, q, f, alike = s->style == ST_BUILT || s->style == ST_MINE;
     unsigned char sd = (unsigned char) (s->seed >> 5);

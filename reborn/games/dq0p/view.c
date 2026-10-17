@@ -93,7 +93,7 @@ static void __fastcall__ stratum (unsigned char sn)
 {
     static struct stratum* s;
 
-    s = &strata[sn];
+    s = &STRATUM (sn);
     v_sn = sn;
     v_x0 = s->x0;
     v_y0 = s->y0;
@@ -126,7 +126,7 @@ static void __fastcall__ view_grid (unsigned gx, unsigned gy, unsigned char w)
     static int dx, dy;
     static unsigned char j, ax, ay;
 
-    s = &strata[v_sn];
+    s = &STRATUM (v_sn);
     v_lmode = 0;
     dx = gx - gx_;
     dy = gy - gy_;
