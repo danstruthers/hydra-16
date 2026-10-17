@@ -79,7 +79,7 @@ line:       .res        2                   ;   and the line's height there
 el:         .res        2                   ;   (a square's floor, 16 bits))
 lk:         .res        1                   ; (A lamp)
 
-            .rodata
+            .segment    "SW1RODATA"
 sq:         .word       0, 1, 4, 9, 16, 25, 36, 49, 64, 81, 100, 121, 144, 169, 196, 225, 256, 289, 324, 361
             .word       400, 441, 484
 wdx:        .byte       $FF, 0, 1, $FF, 1, $FF, 0, 1            ; (The eight round a square)
@@ -88,8 +88,7 @@ wol:        .byte       <-130, <-128, <-126, <-2, <2, <126, <128, <130
 woh:        .byte       >-130, >-128, >-126, >-2, >2, >126, >128, >130
 wall:       .byte       G_WALL
 
-            .code
-
+            .segment    "SW1CODE"
 ; The grid's square (column .X, row .A) in .A (low) and .Y (high): $8000 + row * 128 + column * 2
 square:
             lsr         a
@@ -585,12 +584,11 @@ _run_g:     .res        2
 cnt:        .res        1
 doors:      .res        1
 
-            .rodata
+            .segment    "SW1RODATA"
 kind:       .byte       G_OPAQUE | G_SKIP, G_INSIDE, G_OPAQUE | G_WALL, G_WALL, 0, G_INSIDE, G_WALL, G_INSIDE
             .byte       G_INSIDE, G_INSIDE                      ; (world.h's T_ROCK ... T_PIT; the rest 0)
 
-            .code
-
+            .segment    "SW1CODE"
 ; unsigned char __fastcall__ run_in (unsigned char n): its squares' flags (what each is: kind) and floors; 1 if a
 ; door or a window is among them
 _run_in:

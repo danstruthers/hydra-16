@@ -179,6 +179,21 @@ static void traps (void)
     }
 }
 
+/* The lights seen far off: "A light shows far off ahead." (the senses', struct sight's glows), and the eyes dazzled */
+static void glows (void)
+{
+    unsigned char i;
+
+    if (S->dazzled) {
+        add (" The light dazzles you.");
+    }
+    for (i = 0; i < S->nglows; ++i) {
+        add (S->glow[i].how == GL_LIGHT ? " A light shows far off " : " A faint glow shows far off ");
+        add (relname[S->glow[i].rel & 7]);
+        add (".");
+    }
+}
+
 static void zones (void)
 {
     unsigned char i, at;
@@ -362,5 +377,6 @@ void o_words (void)
         passage ();
     }
     traps ();
+    glows ();
     seen_words ();                              /* (The things and the denizens it sees: overlay 7's) */
 }

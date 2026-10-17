@@ -404,15 +404,16 @@ static unsigned char dark (void)
 
 /* The denizens the character sees looked at again (the senses asked: their bodies the world's, which are seen the
 ** senses' to decide, into what it perceives): 1 if one's come into sight, gone from it, or doing otherwise */
-static unsigned char dens_seen (void)
+static unsigned char __fastcall__ ask_look (unsigned char kind)
 {
     hub_map (0);
-    HUB->look.kind = LK_DENS;
+    HUB->look.kind = kind;
     hub_call (&HUB->look, T_SENSES);
     HUB->look.state = REQ_FREE;
     HUB->look.kind = LK_LOOK;
     return HUB->look.ch;
 }
+#define dens_seen()     ask_look (LK_DENS)
 
 /* The denizens the character sees looked at again, as they've changed (their task's den_seq, or a step of one's the
 ** world made), the UI told if it sees them otherwise (not on its way somewhere: it looks about as it gets there) */
@@ -1781,6 +1782,7 @@ static void stopped (void)
     worked (0);
 }
 
+static unsigned char pc_waited;
 static void __fastcall__ intent (struct msg* m)
 {
     if ((HUB->pcsum.cond & C_FATIGUED) && HUB->now > free_at) {
@@ -1790,6 +1792,7 @@ static void __fastcall__ intent (struct msg* m)
     free_at = HUB->now;
     switch (m->kind) {
     case I_WAIT:
+        pc_waited = 1;                             /* (Its eyes looked to as it ends: the senses') */
         busy (m->w1 ? m->w1 : HUB->round);
         free_at = HUB->now;                     /* (Waiting: rest) */
         if (!m->w2) {
@@ -2006,6 +2009,10 @@ int main (int argc, char* argv[])
             arrive ();
         }
         if (was_busy && !move.on && HUB->now >= HUB->pc_ready) {
+            if (pc_waited) {
+                pc_waited = 0;
+                ask_look (LK_EYES);             /* (A wait's end: its eyes, as time's gone, the senses') */
+            }
             event (E_READY, 0, 0);              /* (The character free again: the UI takes its next line) */
             was_busy = 0;
         }

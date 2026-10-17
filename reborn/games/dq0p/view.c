@@ -24,6 +24,9 @@
 #include "view.h"
 #include "light.h"
 
+#pragma code-name ("SW1CODE")                   /* (Part 1's, all of it: swapped, bank.s's stubs, once a look) */
+#pragma rodata-name ("SW1RODATA")
+
 #define EYE         5                           /* The eyes, feet above the floor */
 #define GRID        ((unsigned char*) 0x8000)   /* The grid (cast.s's): a row 128 bytes, a square two (its flags, its
                                                 **   floor) */
@@ -87,7 +90,7 @@ static void __fastcall__ run (unsigned x, unsigned y, unsigned char n)
 
 /* The squares a walk went (the world's: from x, y its first way d, n squares; the look's walk), felt in the dark,
 ** remembered (T_SEEN): as dq0w.c's walk goes them, along a passage, on at its bends, through a door, into a room */
-void __fastcall__ felt (unsigned char sn, unsigned x, unsigned y, unsigned char d, unsigned char n)
+void __fastcall__ s_felt (unsigned char sn, unsigned x, unsigned y, unsigned char d, unsigned char n)
 {
     unsigned char* p;
     unsigned char k, w;
@@ -121,7 +124,7 @@ static unsigned char __fastcall__ band (unsigned x, unsigned x1)
 
 /* The grid made (LOOK_BANK's, cast.s's) of stratum sn's squares from gx, gy, w each way, a column of chunks at a
 ** time (lm: the light layer's, for its lamps' lines) */
-void __fastcall__ grid (unsigned char sn, unsigned gx, unsigned gy, unsigned char w, unsigned char lm)
+void __fastcall__ s_grid (unsigned char sn, unsigned gx, unsigned gy, unsigned char w, unsigned char lm)
 {
     static unsigned xx, yy, c, g1;
     static unsigned char j, n;
@@ -166,7 +169,7 @@ static void __fastcall__ mark (unsigned char unmark)
     }
 }
 
-void __fastcall__ view (unsigned char sn, unsigned x, unsigned y, unsigned char face, unsigned char light,
+void __fastcall__ s_view (unsigned char sn, unsigned x, unsigned y, unsigned char face, unsigned char light,
     unsigned char sight, unsigned char dark)
 {
     static unsigned char range, own, j, k, w, m;
@@ -221,7 +224,7 @@ void __fastcall__ view (unsigned char sn, unsigned x, unsigned y, unsigned char 
             light_grid (sn, xx, yy, 1);
         }
     }
-    grid (sn, gx0, gy0, w, 0);
+    s_grid (sn, gx0, gy0, w, 0);
     g_m = g_nl = 0;
     if (own) {
         cast_own ();                            /* (Its own square: seen if anything lights it, else remembered) */

@@ -8,8 +8,10 @@
 ** between looks.
 */
 
+#include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <hydra.h>
 #include "../dq0/hub.h"
 #include "../dq0w/world.h"
@@ -17,16 +19,18 @@
 #include "sight.h"
 #include "things.h"
 #include "light.h"
+#include "eyes.h"
 
 static unsigned char sees;                      /* (The denizens seen changed: the look's reply's ch) */
 
 /* A look about for the character, from what the hub has of it (its square, its facing, its light, its senses; the
 ** squares it walked to get there), the denizens it sees with it */
-static void look (void)
-{
-    unsigned char face, light, sight, dark, sn, first, own, wd, wn;
-    unsigned x, y, wx, wy;
+static unsigned char face, light, sight, dark, sn, own, range;
+static unsigned x, y;
 
+/* The character as the hub has it */
+static void pc (void)
+{
     hub_map (0);
     face = HUB->pc_face;
     own = HUB->pc_light;
@@ -37,6 +41,15 @@ static void look (void)
     sn = HUB->pc_stratum;
     x = HUB->pc_x;
     y = HUB->pc_y;
+    range = sight == 0xFF ? 0xFF : 4 + 2 * (sight > 9 ? 9 : sight);   /* (view.c's) */
+}
+
+static void look (void)
+{
+    unsigned char first, wd, wn;
+    unsigned wx, wy;
+
+    pc ();
     first = HUB->look.first;
     wx = HUB->look.wx;
     wy = HUB->look.wy;
@@ -48,10 +61,41 @@ static void look (void)
     }
     things_lamps (sn, x, y);                    /* (The lit things lying about: a torch put down) */
     view (sn, x, y, face, light, sight, dark);
+    glows (sn, x, y, face, range, own);         /* (Its eyes adapted, the lights it sees far off: eyes.c's) */
     first = perceive (sn, x, y, face, own, first);
     sees = dens_seen ();                        /* (The denizens it sees with it: the world's bodies) */
     hub_map (0);
     HUB->look.first = first;
+}
+
+/* The swapped parts' images read into banks of its own (dir/dq0p.ovl: dq0p.cfg's OV1 ..., 8K each): 0, or -1 */
+#define OVBANKS         3
+extern unsigned char ovbank[OVBANKS];
+extern char _SWAP_START__[];
+static int __fastcall__ ovl_load (const char* dir)
+{
+    unsigned char* b = (unsigned char*) _SWAP_START__;  /* (Through the parts' area: none in it yet) */
+    unsigned off;
+    unsigned char k;
+    int fd, n;
+
+    strcpy ((char*) b, dir);
+    strcat ((char*) b, "/dq0p.ovl");
+    if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (OVBANKS)) < 0) {
+        return -1;
+    }
+    ovbank[0] = n;                              /* (In a run: n, n + 1 ...) */
+    ovbank[1] = n + 1;
+    ovbank[2] = n + 2;
+    for (k = 0, n = 1; k < OVBANKS && n > 0; ++k) {     /* (A bank at a time: cc65's optimizer loses the high
+                                                **   byte of a bank's offset worked out from the file's) */
+        for (off = 0; off < 0x2000 && (n = read (fd, b, 512)) > 0; off += n) {
+            hy_bank (ovbank[0] + k);
+            memcpy ((void*) (0x8000 + off), b, n);
+        }
+    }
+    close (fd);
+    return 0;
 }
 
 /* A number, an argument's (atoi's, without the C library's ctype) */
@@ -67,7 +111,7 @@ static unsigned char __fastcall__ num (const char* s)
 
 int main (int argc, char* argv[])
 {
-    if (argc < 3 || hub_attach (num (argv[1]), num (argv[2]))) {
+    if (argc < 4 || ovl_load (argv[3]) || hub_attach (num (argv[1]), num (argv[2]))) {
         return 1;
     }
     chunks_init (ASK_SENSES);
@@ -84,6 +128,12 @@ int main (int argc, char* argv[])
                                                 **   date near them) */
             if (HUB->look.kind == LK_DENS) {
                 sees = dens_seen ();            /* (Only the denizens seen, looked at again: their bodies changed) */
+            } else if (HUB->look.kind == LK_EYES) {
+                pc ();                          /* (Only its eyes, as time's gone: the lights far off) */
+                sync_strata ();
+                glows (sn, x, y, face, range, own);
+                hub_map (SIGHT_BANK);
+                memcpy (&SIGHT->nglows, &G, sizeof G);
             } else {
                 look ();
             }

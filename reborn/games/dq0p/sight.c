@@ -9,6 +9,11 @@
 #include "../dq0w/world.h"
 #include "sight.h"
 #include "things.h"
+#include "eyes.h"
+
+#pragma code-name ("SW2CODE")                   /* (Part 2's, all of it: swapped, bank.s's stubs, once a look) */
+#pragma rodata-name ("SW2RODATA")
+#pragma local-strings (on)
 
 #define EYE         5
 
@@ -149,8 +154,8 @@ static void __fastcall__ zones_seen (struct room* rp, unsigned char mine, unsign
     }
 }
 
-unsigned char __fastcall__ perceive (unsigned char sn, unsigned x, unsigned y, unsigned char face, unsigned char light,
-    unsigned char first)
+unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y, unsigned char face,
+    unsigned char light, unsigned char first)
 {
     struct stratum* s = &strata[sn];
     struct room rp;
@@ -275,6 +280,7 @@ unsigned char __fastcall__ perceive (unsigned char sn, unsigned x, unsigned y, u
         }
     }
     S.first = first;
+    memcpy (&S.nglows, &G, sizeof G);           /* (The lights far off: eyes.c's) */
     traps_seen (sn, x, y, face);
     things_stocked ();                          /* (A chunk the maker's stocked: its things put down, the world's) */
     things_seen (&S, sn, x, y, face);           /* (The things it sees lying about) */
