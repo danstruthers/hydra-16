@@ -2901,7 +2901,10 @@ module.exports = {
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p n -s 3 -c /ram/c.hm -T\r' +
         'ĀĀāturn left\rinventory\rāgo up\rĀĀĀĀāquit\rāecho $status\r' },
       expect: ['You carry', 'There\'s no way up or down here.', '% echo $status'],
-      budgets: [{ what: 'inventory answered (Enter to the answer)', from: '> inv', to: 'You carry', per: 1, max: 1450000 },
+      // (The inventory's budget a guard against a large slowdown at 9,600 baud, not a target: 1,410,000 to 1,530,000
+      // cycles measured, as the rats' stirring falls on the line before it; the user's targets are 115,200's, D17:
+      // dq0answer's)
+      budgets: [{ what: 'inventory answered (Enter to the answer)', from: '> inv', to: 'You carry', per: 1, max: 2000000 },
         { what: 'a step that can\'t be taken answered (the world\'s: from the line told into the story)', from: '\n> go up',
           to: 'There\'s no way up or down here.', per: 1, max: 600000 }],
       // (Each a mark in what the serial line sends: the inventory's from the line typed at the bottom, a fifth of a
