@@ -227,7 +227,7 @@ unsigned char __fastcall__ fight_target (struct pcmd* c);   /* Overlay 6: V_ATTA
                                                 **   told in lb (0); a blow at a door, a window, a portcullis:
                                                 **   FT_THING */
 #define FT_THING    0xFE
-void __fastcall__ heard_words (unsigned char what, unsigned char rel);  /* Overlay 7: a denizen heard (an E_DEN's
+void __fastcall__ heard_words (unsigned char what, unsigned char rel);  /* Overlay 9: a denizen heard (an E_DEN's
                                                 **   what, | 0x80 muffled, the way it lies as the character faces),
                                                 **   into lb */
 extern char heard_what[20];                     /* Its sound's words (SOUND.md: the sound task's, "a scurrying"; "":
@@ -240,8 +240,10 @@ void __fastcall__ portal_look (const struct portal* p, signed char g);  /* Overl
 void ceiling_glance (void);                     /* Overlay 7: a ceiling at a glance (sight_copy's), added to lb */
 void words (void);                              /* Overlay 2: what the character perceives, into lb */
 void seen_words (void);                         /* Overlay 7: the things and the denizens it sees, added to lb */
-void stir_words (void);                         /* Overlay 7: the denizens it sees, moving, into lb (or "": as
-                                                **   they were told last) */
+void stir_words (void);                         /* Overlay 9: the denizens it sees, moving, into lb: what's
+                                                **   changed since they were told (or "": as they were told last) */
+void den_words (void);                          /* Overlay 9: the denizens it sees, added to lb (seen_words's), and
+                                                **   kept as told */
 extern char lb[400];
 extern char* lbe;                               /* (lb's end: words.c's and seen.c's add) */
 extern unsigned lbn;                            /* (What a look's said of its words already: lb's before) */

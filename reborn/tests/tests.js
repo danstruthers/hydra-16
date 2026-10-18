@@ -1827,6 +1827,69 @@ function inTurn(o, want, f, name = '') {
   }
 }
 
+// Nothing told twice in one answer (the user's, 2026-10-17: "some messages are duplicated, like when describing a
+// trap, it is shown twice in the 'look' results"): every dq0 test's answers (dq0Answers: the story between one line
+// entered, the game's "> " or rc's "% ", and the next; the status line (reverse video), the line typed as it's drawn
+// and the escapes out, its lines' wrapping undone), each sentence in one of them once (dq0Repeats: those said more,
+// { test, cmd, sentence, n }), but those DQ0_REPEATS allows, each by its words (and the tests it's in, if only some),
+// with its reason; and the hub's live chunks (dq0Doubled) with no two portals or traps on one square (a door made
+// twice, its trap twice: the look told it twice).  sim/test.js's dq0 check, in every dq0 test (HUBOWN=0 too)
+const DQ0_REPEATS = [
+  { what: /^\(\d+ feet to go\.\)/, why: 'a dig\'s spells, each told as it ends (dig down: many spells to an answer)' },
+  { what: /^(The|A) .* (bites|claws|strikes|swings|lunges|thrusts)\b.*\bat you\b|^You (strike|swing|thrust|punch|kick|lunge)\b/,
+    why: 'a fight\'s rounds, each blow told as it falls (attack: the rounds till it ends, the same words some of them)' },
+  { what: /^You hear /, why: 'a sound heard each time it\'s made (main.c\'s heard: half a minute apart the same way, five seconds any; a search\'s or a wait\'s minute hears several)' },
+  { what: /^Something stirs\.$/, why: 'each stir\'s first words: one for each time what it sees of the denizens changes (a long command\'s answer has several)' },
+];
+function dq0Answers(out) {
+  const s = out.replace(/\r/g, '').replace(/\x1b\[7m[\s\S]*?\x1b\[0m/g, '')
+    .replace(/\x1b\[\d+;1H\x1b\[K(?:\x1b\[\?25h)?[^\x1b\n]*/g, '').replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '');
+  const res = [];
+  let cmd = '', ans = [];
+  for (const l of s.split('\n')) {
+    const p = l.match(/^[>%] (.*)$/);
+    if (p) { res.push({ cmd, text: ans.join(' ').replace(/\s+/g, ' ').trim() }); cmd = p[1].trim(); ans = []; continue; }
+    ans.push(l);
+  }
+  res.push({ cmd, text: ans.join(' ').replace(/\s+/g, ' ').trim() });
+  return res;
+}
+function dq0Repeats(name, out) {
+  const found = [];
+  for (const a of dq0Answers(out)) {
+    const n = new Map();
+    for (const t of a.text.split(/(?<=[.!?])\s+/)) if (t.length > 8 && /[a-z]{2}/i.test(t)) n.set(t, (n.get(t) || 0) + 1);
+    for (const [sentence, c] of n) {
+      if (c < 2 || DQ0_REPEATS.some(r => r.what.test(sentence) && (!r.tests || r.tests.test(name)))) continue;
+      found.push({ test: name, cmd: a.cmd, sentence, n: c });
+    }
+  }
+  return found;
+}
+// The hub's live chunks (world.h's struct chunk: portals from 219, 14 bytes each, their count at 218; traps from 2513,
+// 7 bytes each, their count at 2512), each with two portals or two traps on one square: 'sn:cx,cy: 2 portals at x,y'
+function dq0Doubled(m) {
+  const banks = m.sharedBanks(), keys = Object.keys(banks).map(Number).sort((a, b) => a - b), f = [];
+  const hub = keys.find(k => banks[k][0] === 0x44 && banks[k][1] === 0x51);
+  if (hub === undefined || !banks[hub + WORLD_BANK_N]) return f;
+  const w = banks[hub + WORLD_BANK_N];
+  for (let k = 0; k < 24; k++) {
+    const s = CSLOT_AT + k * 8, b = banks[hub + 5 + Math.floor(k / 3)];
+    if (!w[s] || !b) continue;
+    const o = (k % 3) * 0xAA0, at = w[s + 1] + ':' + (w[s + 2] | w[s + 3] << 8) + ',' + (w[s + 4] | w[s + 5] << 8);
+    for (const [what, n, from, size, max] of [['portals', b[o + 218], 219, 14, 16], ['traps', b[o + 2512], 2513, 7, 6]]) {
+      const on = new Map();
+      for (let i = 0; i < n && i < max; i++) { const p = o + from + i * size, sq = b[p] + ',' + b[p + 1]; on.set(sq, (on.get(sq) || 0) + 1); }
+      for (const [sq, c] of on) if (c > 1) f.push(at + ': ' + c + ' ' + what + ' at ' + sq);
+    }
+  }
+  return f;
+}
+function dq0Check(name, m) {
+  return [...dq0Repeats(name, m.out).map(r => 'told ' + r.n + ' times in one answer (> ' + r.cmd + '): ' + JSON.stringify(r.sentence)),
+    ...dq0Doubled(m).map(s => 'a chunk\'s fixtures doubled: ' + s)];
+}
+
 // Dingus Quest Zero's answers timed (dq0answer's): each command's Enter (the CR as the ACIA has it) to its answer's first
 // letter in the story (want: the words it begins with), and to the story's last letter before the prompt ("> " on
 // the line typed's row) comes back; the status line (reverse video) and the escapes not the story's.  dq0Timer(m),
@@ -5439,6 +5502,8 @@ module.exports = {
     },
   ],
 };
+
+module.exports.dq0Check = dq0Check;
 
 // The tests that run a sample, or play a song of the SD card's: its image in SD device 0
 for (const t of module.exports.tests) if (t.sdcard) sdcardOf(t);

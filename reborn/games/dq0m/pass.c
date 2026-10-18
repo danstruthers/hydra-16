@@ -221,10 +221,17 @@ static void __fastcall__ door (unsigned char x, unsigned char y, int z)
 
     L->tile[y][x] = T_DOOR;
     L->elev[y][x] = z;
+    for (k = 0, p = L->portal; k < L->nportals; ++k, ++p) {
+        if (p->x == x && p->y == y) {
+            return;                             /* (Its door made already, by another way into the room (door_in
+                                                **   chose its square again): one portal a door, or the fixtures put
+                                                **   a trap on it twice, the senses saw it twice) */
+        }
+    }
     if (L->nportals >= NPORTALS) {
         return;
     }
-    dh = ((unsigned long) L->cx << 20 ^ (unsigned long) L->cy << 8 ^ (unsigned) x << 5 ^ y) * 2654435761UL + 1;
+    dh =((unsigned long) L->cx << 20 ^ (unsigned long) L->cy << 8 ^ (unsigned) x << 5 ^ y) * 2654435761UL + 1;
     k = dr (20);
     p = &L->portal[L->nportals++];
     p->x = x;

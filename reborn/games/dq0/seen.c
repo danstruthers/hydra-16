@@ -1,9 +1,10 @@
 /*
 ** seen.c - (overlay 7) more of what the character perceives, in words (words.c's overlay is full): a ceiling at a
-** glance; the things it sees lying about and the denizens it sees (words.c's, after the place; as they stir), and
-** those it hears.  As words.c's: only what it sees now (nothing behind it), and what's further off in less detail,
-** the further it is and the weaker the character's sight (the referee's: struct sight's eye): a thing too far to make
-** out only by its size ("something small"), a denizen too far to tell what it is only as something there.
+** glance; the things it sees lying about (words.c's, after the place; then the denizens it sees, dens.c's, overlay
+** 9).  As words.c's: only what it sees now (nothing behind it), and what's further off in less detail, the further
+** it is and the weaker the character's sight (the referee's: struct sight's eye): a thing too far to make out only by
+** its size ("something small").  Things alike told together ("On the floor ahead lie two iron pots."), not each
+** the same words again.
 */
 
 #pragma code-name ("OV7CODE")
@@ -92,17 +93,59 @@ void o_ceiling_glance (void)
 
 /* ---- The things and the denizens it sees (words.c's o_words, after the place), into lb */
 
+static const char* const few[SEE_ITEMS + 1] = { "", "one", "two", "three", "four", "five", "six" };
+
+/* A kind's name, more than one: "iron pots", "heaps of sand" (added to lb) */
+static void __fastcall__ plural (const char* n)
+{
+    char b[20];
+    unsigned char k, c;
+
+    for (k = 0; n[k] && (n[k] != ' ' || n[k + 1] != 'o' || n[k + 2] != 'f' || n[k + 3] != ' '); ++k) {
+    }                                           /* (Its first word's before " of ": "heaps of sand") */
+    c = k ? n[k - 1] : 0;
+
+    memcpy (b, n, k);
+    if (c == 'y' && k > 1 && !strchr ("aeiou", n[k - 2])) {
+        strcpy (b + k - 1, "ies");
+    } else {
+        strcpy (b + k, c == 's' || c == 'x' || c == 'z' || (c == 'h' && k > 1 && strchr ("cs", n[k - 2])) ? "es" : "s");
+    }
+    add (b);
+    add (n + k);
+}
+
+/* Thing i too far off to make out (by its size, hid's high bits, and the character's sight) */
+static unsigned char __fastcall__ afar (unsigned char i)
+{
+    return !(S->item[i].hid & 1) && apart (S->item[i].x, S->item[i].y) > 1 + S->eye / 2 + (S->item[i].hid >> 4);
+}
+
+/* Thing k one to be told with thing i (both lying about, nothing on them, one of their kind, not named; the same
+** kind, where they lie, as easily made out): "On the floor ahead lie two iron pots." */
+static unsigned char __fastcall__ alike (unsigned char i, unsigned char k)
+{
+    const struct sitem* p = &S->item[i];
+    const struct sitem* q = &S->item[k];
+
+    return i != k && !(q->hid & 2) && !(p->hid & 2) && (k + 1 >= S->nitems || !(q[1].hid & 2)) &&
+        (i + 1 >= S->nitems || !(p[1].hid & 2)) && q->qty <= 1 && !q->plural && q->name[0] != '#' &&
+        q->rel == p->rel && q->hid == p->hid && p->qty <= 1 && !p->plural && !strcmp (q->name, p->name) &&
+        afar (i) == afar (k);
+}
+
 /* The things it sees lying about: "On the floor ahead lies a pick." "At your feet lie some bones." "On the table
 ** lies a candle." (a surface's things after it, hid 2); "At your feet lies a lit torch." (hid 4); one too far off to
 ** make out (by its size, hid's high bits, and the character's sight), only by its size: "On the floor ahead lies
 ** something small." (and nothing on it told); none behind it */
 static void items (void)
 {
-    unsigned char i, on = 0, sz, b, skip = 0;
+    unsigned char i, k, n, on = 0, sz, b, skip = 0;
 
     for (i = 0; i < S->nitems; ++i) {
         sz = S->item[i].hid >> 4;
-        b = !(S->item[i].hid & 1) && apart (S->item[i].x, S->item[i].y) > 1 + S->eye / 2 + sz;
+        b = afar (i);
+        n = 1;
         if (S->item[i].hid & 2) {
             if (skip) {
                 continue;                       /* (On a thing behind it, or too far to make out) */
@@ -116,12 +159,34 @@ static void items (void)
                 continue;
             }
             skip = b;
+            for (k = 0; k < S->nitems; ++k) {   /* (Those alike told together: with the first of them) */
+                if (alike (i, k)) {
+                    if (k < i) {
+                        break;
+                    }
+                    ++n;
+                }
+            }
+            if (k < S->nitems) {
+                continue;
+            }
             add (S->item[i].hid & 1 ? (S->item[i].rel == 0xFF ? " Hidden at your feet " : " Hidden on the floor ") :
                 S->item[i].rel == 0xFF ? " At your feet " : " On the floor ");
             if (S->item[i].rel != 0xFF) {
                 add (relname[S->item[i].rel & 7]);
                 add (" ");
             }
+        }
+        if (n > 1) {
+            add ("lie ");
+            add (few[n]);
+            add (b ? (sz <= 2 ? " small things." : sz >= 5 ? " large things." : " things.") :
+                S->item[i].hid & 4 ? " lit " : " ");
+            if (!b) {
+                plural (S->item[i].name);
+                add (".");
+            }
+            continue;
         }
         if (b) {
             add (sz <= 2 ? "lies something small." : sz >= 5 ? "lies something large." : "lies something.");
@@ -141,82 +206,6 @@ static void items (void)
     }
 }
 
-/* The denizens it sees: "A giant rat is ahead to your left, 15 feet away, watching you." (each, as there's room
-** in lb; an ally named: "Grub is behind you, 5 feet away, following you."); one too far off to make out (by the
-** character's sight) only as something there; but none behind it, an ally's but heard close behind it */
-static const char* const doing[9] = {
-    " feet away.", " feet away, watching you.", " feet away, coming towards you.", " feet away, keeping its distance.",
-    " feet away, following you.", " feet away, waiting.", " feet away, fighting you.", " feet away, fleeing.",
-    " feet away, lying senseless."
-};
-
-static void denizens (void)
-{
-    unsigned char i, r, d, ally, heard = 0;
-    char* n;
-
-    for (i = 0; i < S->ndens && lbn + (lbe - lb) < sizeof lb - 80; ++i) {     /* (lb's room: a look's said so far
-                                                **   counted) */
-        n = S->den[i].name;
-        r = REL8 (bearing (S->den[i].x - S->x, S->den[i].y - S->y), pc_face);
-        d = apart (S->den[i].x, S->den[i].y);
-        ally = n[0] < 'a';
-        if (REL_BEHIND (r) && !ally) {
-            heard |= d <= 2;
-            continue;
-        }
-        if (!ally && d > 3 + S->eye) {
-            add (" Something");
-        } else {
-            add (ally ? " " : strchr ("aeiou", n[0]) ? " An " : " A ");
-            add (n);
-        }
-        add (" is ");
-        add (relname[r]);
-        add (", ");
-        addn (5 * d);
-        add (doing[S->den[i].doing % 9]);
-    }
-    add (heard ? " You hear something close behind you." : "");
-}
-
-/* A denizen heard, not seen (main.c's heard: one of the denizens' events), into lb, in its sound's words (the sound
-** task's, SOUND.md: heard_what) if it has them: "You hear a scurrying to your right.", "You hear a muffled squeak
-** behind you." (what | 0x80: walls or a door between); else "You hear something moving behind you to your left." */
-void __fastcall__ o_heard_words (unsigned char what, unsigned char rel)
-{
-    if (heard_what[0]) {
-        strcpy (lb, "You hear ");
-        if (what & 0x80) {
-            if (heard_what[0] == 'a' && heard_what[1] == ' ') {
-                strcat (lb, "a muffled ");      /* ("a muffled squeak") */
-                strcat (lb, heard_what + 2);
-            } else {
-                strcat (lb, "muffled ");
-                strcat (lb, heard_what);
-            }
-        } else {
-            strcat (lb, heard_what);
-        }
-        strcat (lb, " ");
-    } else {
-        strcpy (lb, (what & 0x7F) == DE_NOISE ? "You hear a noise " : "You hear something moving ");
-    }
-    strcat (lb, relname[rel & 7]);
-    strcat (lb, ".");
-}
-
-/* The denizens it sees, as one comes into sight, goes from it, or does something else (the world's V_STIR: into
-** lb): "Something stirs. A giant rat is ..." */
-void o_stir_words (void)
-{
-    *(lbe = lb) = 0;
-    lbn = 0;
-    S = &sight_copy;
-    add (S->ndens ? "Something stirs." : "Nothing stirs in sight now.");
-    denizens ();
-}
-
 /* The things and the denizens it sees, added to lb (words.c's, from look.c's copy of the hub's record) */
 void o_seen_words (void)
 {
@@ -224,5 +213,5 @@ void o_seen_words (void)
     if (!(S->first & SIGHT_HURRY)) {                            /* (A run's or a sprint's look: not the things about) */
         items ();
     }
-    denizens ();
+    den_words ();                               /* (The denizens it sees: overlay 9's, dens.c) */
 }

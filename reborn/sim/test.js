@@ -6,7 +6,8 @@
 // pc), the danlang emulator (sim/dl) and its build; and the hub writers' check (sim/lib/hubown.js: hub.h's owners'
 // table) in every Dingus Quest Zero test (dq0...): a write to the hub's banks by a task its region doesn't allow, and
 // not known (the table's moves), fails the test.  HUBOWN=1: each test's every violation said, known or not, and a
-// summary of them all after the tests (grouped by the move that's to end them); HUBOWN=0: no check.
+// summary of them all after the tests (grouped by the move that's to end them); HUBOWN=0: no check.  And in every dq0
+// test (HUBOWN=0 too), nothing told twice in one answer, nor a chunk's door or trap made twice (tests.js's dq0Check).
 //
 // Usage: [HUBOWN=0|1] node sim/test.js [NAME ...] [--build] [-v] [--seed N] [-j N] [--dl]
 'use strict';
@@ -19,7 +20,7 @@ const romimg = require('../tools/romimg.js');
 const images = require('../../base/tools/images.js');
 const romfs = require('../tools/romfs.js');
 const { readManifest, hwtest } = require('../build.js');
-const { tests, IRQ_OFF_MAX } = require('../tests/tests.js');
+const { tests, IRQ_OFF_MAX, dq0Check } = require('../tests/tests.js');
 const hubown = require('./lib/hubown.js');
 
 const ROOT = path.join(__dirname, '..');
@@ -83,10 +84,11 @@ function pcFolder(t, opt) {
 const HUBOWN = process.env.HUBOWN || '';
 const hubDir = path.join(ROOT, 'obj', 'hubown');
 function instrument(t) {
-  if (HUBOWN === '0' || !/^dq0/.test(t.name)) return null;
+  if (!/^dq0/.test(t.name)) return null;
+  if (HUBOWN === '0') return { boot: {}, attach: () => {}, judge: m => ({ failures: dq0Check(t.name, m), notes: [] }) };
   const M = hubown.map(), c = hubown.createCheck(M);
-  return { boot: { sharedWrite: c.hook }, attach: c.attach, judge: () => {
-    const r = c.result(), { known, fresh } = hubown.judge(r), notes = [], failures = fresh.map(e => 'hub: ' + hubown.line(e));
+  return { boot: { sharedWrite: c.hook }, attach: c.attach, judge: m => {
+    const r = c.result(), { known, fresh } = hubown.judge(r), notes = [], failures = [...fresh.map(e => 'hub: ' + hubown.line(e)), ...dq0Check(t.name, m)];
     try { fs.mkdirSync(hubDir, { recursive: true }); fs.writeFileSync(path.join(hubDir, t.name + '.json'), JSON.stringify(r)); } catch (e) { /* (No summary) */ }
     if (!r.found) return { failures, notes: ['hub writers: no hub made'] };
     const moves = [...new Set(known.map(e => e.known))].sort();
