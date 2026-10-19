@@ -9,12 +9,12 @@
 // byte under 128, else two bytes with the top bit of the first set, counted from the tag, so a reader steps over the
 // node without walking it. A leaf (name, word list, quote) has no size: its length is in its tag or count.
 // Alias layout: magic "DQ0A", version 1; the count; per alias: the word, the verb, and a flag (1: stands anywhere).
-//   node sim/tools/commandtables.js [grammar.bin] [aliases.bin]   write the tables and print their sizes
+//   node sim/tools/commandtables.js [grammar.bin] [aliases.bin] [index.bin]   write the tables and print their sizes
 //   node sim/tools/commandtables.js --check                       encode, decode, and run the corpus through the tables
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { loadRules, Compiler, buildContext, DEFAULT_WORLD, checkCorpus, DEFAULT_ALIASES, DEFAULT_ANYWHERE } = require('./commandcompile.js');
+const { loadRules, Compiler, buildContext, DEFAULT_WORLD, checkCorpus, DEFAULT_ALIASES, DEFAULT_ANYWHERE, LEXICON } = require('./commandcompile.js');
 
 const GAME = path.join(__dirname, '..', '..', 'games', 'dq0');
 const MAGIC = [0x44, 0x51, 0x30, 0x47]; // "DQ0G"
@@ -173,18 +173,213 @@ function decodeAliases(buf) {
   return { aliases, anywhere };
 }
 
-module.exports = { encodeGrammar, decodeGrammar, encodeAliases, decodeAliases, openNames, grammarNames, OPEN_KIND };
+// ---- The index table: what the 65C02 matcher uses to find words, and to skip what can't match -------------------------
+// Index layout (version 1): magic "DQ0I", the version; the rule count and the word count (the grammar table's); the
+// hash table's permutation (256 bytes: a Pearson hash, the matcher's and this file's); each grammar word's hash (a byte
+// a word); each rule's first words as a 64-bit Bloom filter (eight rows of a byte a rule: word w sets bit w & 63) and
+// its first open-name kinds (two rows of a byte a rule: the K_ bits, and in the second row's top bit, whether the rule
+// can match nothing); the lexicon (the count, then each word's length, letters and flags: the words the open names
+// look for, LX_*); then the large alternations' indexes: the count, and for each the alternation's offset in the
+// grammar table, its options' offsets, its first words (the count, then word and option: sorted by word), and its
+// options that can begin with an open name or match nothing (the count, then option and kinds, bit 15 for nothing).
+const INDEX_MAGIC = [0x44, 0x51, 0x30, 0x49]; // "DQ0I"
+const INDEX_VERSION = 1;
+const ALT_INDEX_MIN = 8;          // an alternation of this many options or more is indexed by its first words
+const K_QUOTED = 10;              // the matcher's kind for quoted text (cmdmatch.c's K_QUOTED)
+const LX = { adj: 1, task: 2, ordinal: 4, number: 8, notspell: 16, notobject: 32 };   // cmdmatch.c's LX_*
+
+// The hash: Pearson's, a byte from a byte at a time through a permutation of 0..255 (fixed: from a seeded shuffle).
+const PEARSON = (() => {
+  const t = [...Array(256).keys()];
+  let x = 20261019;
+  for (let i = 255; i > 0; i--) {
+    x = (Math.imul(x, 1103515245) + 12345) >>> 0;
+    const j = x % (i + 1);
+    [t[i], t[j]] = [t[j], t[i]];
+  }
+  return t;
+})();
+function wordHash(w) {
+  let h = 0;
+  for (const c of w) h = PEARSON[h ^ c.charCodeAt(0)];
+  return PEARSON[h ^ w.length];
+}
+
+// The grammar table's words, in their order (their numbers)
+function tableWords(buf) {
+  let p = 5;
+  const u16 = () => { const v = buf[p] | (buf[p + 1] << 8); p += 2; return v; };
+  u16(); u16();
+  const n = u16(), words = [];
+  for (let i = 0; i < n; i++) {
+    const len = buf[p++];
+    let w = '';
+    for (let c = 0; c < len; c++) {
+      const bit = 5 * c, b = bit >> 3, sh = bit & 7;
+      w += PACK[((buf[p + b] | (buf[p + b + 1] << 8)) >> sh) & 31];
+    }
+    p += Math.ceil(5 * len / 8);
+    words.push(w);
+  }
+  return words;
+}
+
+// Where each node of the rules is in the grammar table: walked as the matcher walks it
+function nodeOffsets(buf, rules) {
+  let p = 5;
+  const rd = q => buf[q] | (buf[q + 1] << 8);
+  const nrules = rd(p), nnames = rd(p + 2), nwords = rd(p + 4);
+  p += 6;
+  for (let i = 0; i < nwords; i++) p += 1 + Math.ceil(5 * buf[p] / 8);
+  p += nnames - nrules;
+  const head = q => (buf[q + 1] & 0x80) ? q + 3 : q + 2;
+  const next = q => {
+    switch (buf[q]) {
+      case TAG.seq: case TAG.alt: case TAG.opt: case TAG.rep:
+        return q + ((buf[q + 1] & 0x80) ? (((buf[q + 1] & 0x7F) << 8) | buf[q + 2]) : buf[q + 1]);
+      case TAG.nt: return q + 3;
+      case TAG.term: return q + 2 + 2 * buf[q + 1];
+      default: return q + 1;
+    }
+  };
+  const at = new Map();
+  const visit = (n, q) => {
+    if (buf[q] !== TAG[n.t]) throw new Error('the grammar table and the rules differ at ' + q);
+    at.set(n, q);
+    if (n.t === 'seq' || n.t === 'alt') {
+      let c = head(q) + 1;
+      for (const k of n.t === 'seq' ? n.items : n.opts) { visit(k, c); c = next(c); }
+    } else if (n.t === 'opt' || n.t === 'rep') visit(n.x, head(q));
+  };
+  for (const tree of rules.values()) { visit(tree, p); p = next(p); }
+  if (p !== buf.length) throw new Error('the grammar table has bytes after its rules');
+  return at;
+}
+
+// The first words of the rules (and of any node): the words a match can begin with, the open-name kinds it can begin
+// with (a bit each, K_QUOTED for quoted text), and whether it can match nothing. The rules' are worked out to a fixed
+// point, as a rule may begin with one defined after it. As the matcher has them: quoted-text is a kind, not a rule.
+function firstSets(rules) {
+  const R = new Map([...rules.keys()].map(k => [k, { words: new Set(), kinds: 0, nullable: false }]));
+  const of = n => {
+    switch (n.t) {
+      case 'term': return { words: new Set([n.words[0]]), kinds: 0, nullable: false };
+      case 'quote': return { words: new Set(), kinds: 1 << K_QUOTED, nullable: false };
+      case 'nt':
+        if (n.name === 'quoted-text') return { words: new Set(), kinds: 1 << K_QUOTED, nullable: false };
+        if (!rules.has(n.name)) {
+          if (!(n.name in OPEN_KIND)) throw new Error('no matcher kind for the open name ' + n.name);
+          return { words: new Set(), kinds: 1 << OPEN_KIND[n.name], nullable: false };
+        }
+        return R.get(n.name);
+      case 'seq': {
+        const f = { words: new Set(), kinds: 0, nullable: true };
+        for (const it of n.items) {
+          const g = of(it);
+          for (const w of g.words) f.words.add(w);
+          f.kinds |= g.kinds;
+          if (!g.nullable) { f.nullable = false; break; }
+        }
+        return f;
+      }
+      case 'alt': {
+        const f = { words: new Set(), kinds: 0, nullable: false };
+        for (const o of n.opts) {
+          const g = of(o);
+          for (const w of g.words) f.words.add(w);
+          f.kinds |= g.kinds;
+          f.nullable = f.nullable || g.nullable;
+        }
+        return f;
+      }
+      case 'opt': case 'rep': { const g = of(n.x); return { words: new Set(g.words), kinds: g.kinds, nullable: true }; }
+      default: throw new Error('bad node ' + n.t);
+    }
+  };
+  for (let changed = true; changed;) {
+    changed = false;
+    for (const [k, tree] of rules) {
+      const f = of(tree), cur = R.get(k);
+      if (f.words.size !== cur.words.size || f.kinds !== cur.kinds || f.nullable !== cur.nullable) { R.set(k, f); changed = true; }
+    }
+  }
+  return { R, of };
+}
+
+// The lexicon: the words the open names look for (commandcompile.js's lists), each with its LX_ flags
+function lexiconWords() {
+  const m = new Map();
+  const add = (words, flag) => { for (const w of words) m.set(w, (m.get(w) || 0) | flag); };
+  add(LEXICON.adj, LX.adj);
+  add(LEXICON.tasks, LX.task);
+  add(LEXICON.ordinals, LX.ordinal);
+  add(LEXICON.numbers, LX.number);
+  add(LEXICON.spellStop, LX.notspell);
+  add(LEXICON.invocations, LX.notspell);
+  add(LEXICON.notObject, LX.notobject);
+  return m;
+}
+
+function encodeIndex(rules, gbuf) {
+  const u16 = v => [v & 255, v >> 8];
+  const words = tableWords(gbuf), wid = new Map(words.map((w, i) => [w, i]));
+  const at = nodeOffsets(gbuf, rules);
+  const { R, of } = firstSets(rules);
+  const names = [...rules.keys()], n = names.length;
+  const bloom = Array.from({ length: 8 }, () => new Array(n).fill(0));
+  const klo = [], khi = [];
+  names.forEach((k, r) => {
+    const f = R.get(k);
+    for (const w of f.words) { const b = wid.get(w) & 63; bloom[b >> 3][r] |= 1 << (b & 7); }
+    klo.push(f.kinds & 255);
+    khi.push(((f.kinds >> 8) & 0x7F) | (f.nullable ? 0x80 : 0));
+  });
+  const out = [...INDEX_MAGIC, INDEX_VERSION, ...u16(n), ...u16(words.length), ...PEARSON, ...words.map(wordHash),
+    ...bloom.flat(), ...klo, ...khi];
+  const lex = [...lexiconWords()];
+  if (lex.length > 255) throw new Error('too many lexicon words');
+  out.push(lex.length);
+  for (const [w, f] of lex) out.push(w.length, ...[...w].map(c => c.charCodeAt(0)), f);
+  const alts = [];
+  const walk = t => {
+    if (t.t === 'alt') { if (t.opts.length >= ALT_INDEX_MIN) alts.push(t); t.opts.forEach(walk); }
+    else if (t.t === 'seq') t.items.forEach(walk);
+    else if (t.t === 'opt' || t.t === 'rep') walk(t.x);
+  };
+  for (const t of rules.values()) walk(t);
+  if (alts.length > 255) throw new Error('too many indexed alternations');
+  out.push(alts.length);
+  for (const a of alts) {
+    if (a.opts.length > 255) throw new Error('an alternation of more than 255 options');
+    const ents = [], wild = [];
+    a.opts.forEach((o, i) => {
+      const f = of(o);
+      if (f.nullable || f.kinds) wild.push([i, f.kinds | (f.nullable ? 0x8000 : 0)]);
+      if (!f.nullable) for (const w of f.words) ents.push([wid.get(w), i]);
+    });
+    ents.sort((x, y) => x[0] - y[0] || x[1] - y[1]);
+    if (wild.length > 255) throw new Error('too many open options');
+    out.push(...u16(at.get(a)), a.opts.length, ...a.opts.flatMap(o => u16(at.get(o))), ...u16(ents.length),
+      ...ents.flatMap(([w, i]) => [...u16(w), i]), wild.length, ...wild.flatMap(([i, k]) => [i, ...u16(k)]));
+  }
+  return Buffer.from(out);
+}
+
+module.exports = { encodeGrammar, decodeGrammar, encodeAliases, decodeAliases, openNames, grammarNames, OPEN_KIND, encodeIndex, firstSets, wordHash, PEARSON };
 
 if (require.main === module) {
   const grammar = path.join(GAME, 'commands.ebnf');
   const rules = loadRules(grammar);
   const gbytes = encodeGrammar(rules, openNames(grammar));
   const abytes = encodeAliases();
+  const ibytes = encodeIndex(rules, gbytes);
   const args = process.argv.slice(2);
   console.log('grammar table: ' + gbytes.length + ' bytes for ' + rules.size + ' rules');
   console.log('alias table: ' + abytes.length + ' bytes for ' + DEFAULT_ALIASES.size + ' default aliases');
+  console.log('index table: ' + ibytes.length + ' bytes');
   if (args[0] && args[0] !== '--check') fs.writeFileSync(args[0], gbytes);
   if (args[1] && args[1] !== '--check') fs.writeFileSync(args[1], abytes);
+  if (args[2] && args[2] !== '--check') fs.writeFileSync(args[2], ibytes);
   if (args.includes('--check')) {
     const decoded = decodeGrammar(gbytes, grammarNames(rules, openNames(grammar)));
     const same = [...rules.keys()].every(k => JSON.stringify(rules.get(k)) === JSON.stringify(decoded.get(k)));

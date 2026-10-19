@@ -1143,7 +1143,11 @@ function checkCorpus(compiler, corpusFile, log) {
   return { pass, total };
 }
 
-module.exports = { Compiler, loadRules, buildContext, tokenize, DEFAULT_WORLD, checkCorpus, matchRule, countRule, DEFAULT_ALIASES, DEFAULT_ANYWHERE, segmentAliases };
+// The open names' word lists, for the 65C02 matcher's index table (commandtables.js's lexicon)
+const LEXICON = { adj: [...ADJ], tasks: TASKS, ordinals: ORDINALS, numbers: Object.keys(NUMWORDS), spellStop: [...SPELL_STOP],
+  invocations: INVOCATION_WORDS, notObject: [...NOT_OBJECT] };
+
+module.exports = { Compiler, loadRules, buildContext, tokenize, DEFAULT_WORLD, checkCorpus, matchRule, countRule, DEFAULT_ALIASES, DEFAULT_ANYWHERE, segmentAliases, LEXICON };
 
 if (require.main === module) {
   const compiler = new Compiler(loadRules(path.join(GAME, 'commands.ebnf')));
