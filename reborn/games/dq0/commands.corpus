@@ -333,7 +333,7 @@ sit down	ERROR:ENGAGED	-	engaged=goblin	sitting is a rest
 sneak north	ERROR:ENGAGED	-	engaged=goblin	a sneak is a move
 flee north	VB_DISENGAGE	direction=N;pace=run	engaged=goblin	fleeing while engaged is a run out of the zone
 pass	VB_PASS	-	engaged=goblin	forfeit the turn, defend normally
-pass	ERROR:NOT_ENGAGED	-	-	nothing to pass in
+pass	VB_WAIT	duration=1min	-	not engaged, pass is the same as wait
 wrestle the goblin	ERROR:NOT_ENGAGED	-	near=goblin	a grapple needs an engaged opponent
 tackle the goblin	VB_GRAPPLE_OBJECT	object=goblin;maneuver=tackle	near=goblin;engaged=goblin	a grapple maneuver
 pin the goblin	VB_GRAPPLE_OBJECT	object=goblin;maneuver=pin	near=goblin;engaged=goblin	pin
@@ -346,3 +346,4 @@ hold the torch	VB_HOLD_OBJECT	object=torch	near=torch;engaged=goblin	hold an ite
 grab the goblin	VB_GRAPPLE_OBJECT	object=goblin;maneuver=grab	near=goblin;engaged=goblin	grab a creature engaged
 grab the sword	VB_RETRIEVE_OBJECT	object=sword	near=sword;engaged=goblin	grab an item: get it
 hold the goblin	VB_HOLD_OBJECT	object=goblin	near=goblin	hold a creature not engaged: no grapple, so it is carried (the runtime may refuse a creature)
+wait	ERROR:ENGAGED	-	engaged=goblin	wait is a long idle: not in combat

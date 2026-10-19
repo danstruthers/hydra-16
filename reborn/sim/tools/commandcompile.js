@@ -706,7 +706,8 @@ function phraseSem(spec, env, ctx) {
       const d = kidsOf(spec, 'direction')[0];
       return act('VB_DISENGAGE', { direction: d ? dirCode(d, env) : undefined });
     }
-    case 'pass': return ctx.engaged.length ? act('VB_PASS', {}) : err('NOT_ENGAGED');
+    // Pass forfeits the turn when engaged; when not engaged it is the same as wait.
+    case 'pass': return ctx.engaged.length ? act('VB_PASS', {}) : act('VB_WAIT', { duration: '1min' });
     case 'posture': return act(own(POSTURE, spec.kids[0].rule), {});
     case 'pretend': return act('VB_PRETEND', { state: textOf(findFirst(spec, 'pretense'), env) });
     default: return err('NOT_UNDERSTOOD');
@@ -759,7 +760,7 @@ const engageFlag = (target, ctx) => (ctx.engaged.includes(target) ? undefined : 
 
 // While engaged, a character moves only by disengaging, and rests or sits only when unengaged (Combat 6-7).
 const NEEDS_FREE = new Set(['VB_MOVE_DIRECTION', 'VB_MOVE_TOWARD', 'VB_STEP_DIRECTION', 'VB_CHARGE', 'VB_SLEEP',
-  'VB_SNEAK', 'VB_ENTER', 'VB_LEAVE', 'VB_CLIMB', 'VB_SWIM', 'VB_JUMP', 'VB_HIDE', 'VB_SIT', 'VB_LIE_DOWN', 'VB_CROUCH']);
+  'VB_SNEAK', 'VB_ENTER', 'VB_LEAVE', 'VB_CLIMB', 'VB_SWIM', 'VB_JUMP', 'VB_HIDE', 'VB_SIT', 'VB_LIE_DOWN', 'VB_CROUCH', 'VB_WAIT']);
 function engagementCheck(res, ctx) {
   if (res.error || res.question || !ctx.engaged.length) return res;
   if (res.action === 'VB_FLEE') return act('VB_DISENGAGE', { direction: res.roles.direction, pace: 'run' });
