@@ -5,30 +5,26 @@
    <name> a nonterminal; [ x ] optional; { x } zero or more; ( x | y ) a choice.
    A rule may continue on following lines. Comments are (* ... *).
 
-   open: unique-name kind-name fixture-name place-name known-alias alias adj number ordinal task-name meta-topic name-word spell-word pretense-word deity-name text
+   open: name alias adj number ordinal task-name meta-topic name-word spell-word pretense-word deity-name text
    (the open names come from the game's data: see the design doc, "The grammar"; the checker reads this line) *)
 
 (* ---- Entry ---- *)
-<line>           ::= <alias-cmd> | <answer> | <quoted-speech> | <command> | <bare-direction> | <bare-verb> | <sequence>
+<line>           ::= <alias-cmd> | <quoted-speech> | <command> | <sequence>
 <quoted-speech> ::= [ <VOLUME> ] <quoted-text> [ "!" ]   (* question 11: quoted text alone is said aloud; ending in "!" it is
                                                     yelled; w"..." whispers, y"..." yells *)
 <VOLUME>        ::= "w" | "y"                          (* attached to the quote: w"Psst" *)
 <quoted-text>    ::= '"' <text> '"'
-<bare-direction> ::= <direction> [ <number> ]           (* "north", "n": move that way at pace; "f 1": one square forward *)
-<bare-verb>      ::= <GET> | <LOOK> | <SEARCH> | <LISTEN> | <TRACK> | <WAIT> | <REST> | <SLEEP> | <STOP> | <META-WORD> | <AGAIN>
-<answer>         ::= <yes-no> | <number> | <selector> | <alias> | <unique-name>
                                                                 (* only while a question is pending (question 13) *)
-<yes-no>         ::= "yes" | "y" | "no" | "n"
-<command>        ::= <phrase> { <adjunct> }
-<phrase>         ::= <look> | <examine> | <move> | <face> | <get> | <drop> | <put> | <use>
+<command>        ::= <phrase>
+<phrase>         ::= <look> | <examine> | <move> | <face> | <get> | <grab> | <drop> | <put> | <use>
                    | <equip> | <unequip> | <open> | <close> | <attack> | <grapple>
                    | <throw> | <shoot> | <load> | <jump> | <say> | <tell> | <cast> | <eat>
                    | <drink> | <swim> | <find> | <search> | <listen> | <smell> | <track>
                    | <target> | <wait> | <rest> | <sleep> | <stop> | <naming> | <meta>
                    | <step> | <pace-set> | <charge> | <light> | <extinguish> | <posture> | <pretend>
                    | <enter> | <leave> | <climb> | <dig> | <wake> | <hide> | <sneak>
-                   | <knock> | <push> | <pull> | <give> | <hold> | <lock> | <unlock> | <fill> | <read> | <taste> | <touch>
-                   | <defend> | <flee> | <follow> | <where>
+                   | <knock> | <push> | <pull> | <give> | <lock> | <unlock> | <fill> | <read> | <taste> | <touch>
+                   | <defend> | <flee> | <follow> | <where> | <again>
                    | <knock-out> | <engage> | <disengage> | <pass>
                    | <pray> | <intervene> | <invoke> | <learn-invocation> | <fasting>
                    | <memorize> | <unmemorize> | <learn-spell> | <research> | <dispel> | <counter> | <release>
@@ -38,10 +34,10 @@
 (* ---- Observing (question 3: "look at" is a glance; question 4: "take a look" is a look) ---- *)
 <look>           ::= <LOOK> [ <look-target> ]
 <look-target>    ::= <direction> | <locale-ref> | [ <look-prep> ] <object>
-<locale-ref>     ::= "around" [ <here-ref> ] | "about" | "here"
+<locale-ref>     ::= "around" [ <here-ref> ] | "about" | "here" | "this place"
 <look-prep>      ::= "at" | "through" | "toward" | "towards" | "around" | "in" | "under" | "behind" | "beside" | "near"
 <examine>        ::= <EXAMINE> [ [ "at" ] <object> ]
-<EXAMINE>        ::= "examine" | "inspect" | [ "take a" ] <DETAIL> <LOOK> | <LOOK> <DETAIL>
+<EXAMINE>        ::= "examine" | "inspect" | [ "take a" ] <DETAIL> <LOOK>   (* "look closely" is an alias of examine: commands.aliases *)
 
 (* ---- Moving and facing ---- *)
 <move>           ::= [ <pace-word> ] [ <MOVE> ] <move-dir> [ <number> [ "space" | "spaces" | "square" | "squares" ] ]   (* "run north": this move at run; "walk north": the verb *)
@@ -56,8 +52,8 @@
 <use>            ::= <USE> <object> [ "on" <object> ]
 <equip>          ::= <EQUIP> <object>
 <unequip>        ::= <UNEQUIP> <object> | "put" <object> "away"   (* "put away the sword" and "put the sword away" *)
-<open>           ::= "open" <object>
-<close>          ::= "close" <object>                           (* "close look" is <DETAIL> <LOOK>, not this *)
+<open>           ::= "open" <object> [ <manner> ]
+<close>          ::= "close" <object> [ <manner> ]                           (* "close look" is <DETAIL> <LOOK>, not this *)
 <from-phrase>    ::= "from" <object>
 <off-phrase>     ::= "off" <object>
 
@@ -95,8 +91,8 @@
                                               is only given to override it *)
 <stop>           ::= <STOP> [ <task-name> ]                     (* question 9: "stop" alone, or "stop digging" *)
 <step>           ::= "step" <direction>                 (* one square; facing unchanged: "step r" *)
-<pace-set>       ::= "pace" [ <pace-word> ] | "double time" [ "!" ]  (* sets the default pace; "double time!" is a run *)
-<pace-word>      ::= "crawl" | "slow walk" | "walk" | "trot" | "run" | "sprint"
+<pace-set>       ::= "pace" [ <pace-word> | "walk" ] | "double time" [ "!" ]  (* sets the default pace; "double time!" is a run *)
+<pace-word>      ::= "crawl" | "slow walk" | "trot" | "run" | "sprint"
 <charge>         ::= [ "fast" ] "charge" [ "!" ]        (* run at the closest enemy ahead, attack it, shout "Charge!"; fast: a sprint *)
 
 (* ---- Naming and meta-commands (question 15: naming things is "name" or "call") ---- *)
@@ -109,14 +105,12 @@
 <substitution>   ::= <line>                                          (* one command line; no alias definition inside it *)
 
 (* ---- Adjuncts ---- *)
-<adjunct>        ::= <manner> | <with-phrase> | <from-phrase> | <at-phrase> | <locative> | <direction>
-<with-phrase>    ::= "with" <object>
 <locative>       ::= <loc-prep> <object>
 <loc-prep>       ::= "in" | "on" | "at" | "under" | "behind" | "beside" | "near" | "by" | "against"
                    | "through" | "around" | "over" | "across"
 <manner>         ::= "carefully" | "slowly" | "quickly" | "quietly" | "hard" | "gently" | "lightly" | "firmly"
 <duration>       ::= <number> ( "minute" | "minutes" | "hour" | "hours" ) | "an hour" | "a minute"
-<here-ref>       ::= "me" | "myself" | "here" | "this place"        (* question 14: "me" only, never "you" *)
+<here-ref>       ::= "me" | "myself"        (* question 14: "me" only, never "you" *)
 
 (* ---- Objects ---- *)
 <object>         ::= <object-one> { "and" <object-one> }
@@ -125,18 +119,18 @@
 <det>            ::= "a" | "an" | "the" | "this" | "that" | "these" | "those" | "my"
 <selector>       ::= <number> | "all" | "every" | "each" | "any" | <ordinal>
                    | "closest" | "nearest" | "largest" | "smallest" | "lead"
-<head>           ::= <unique-name> | <alias> | <kind-name> | <fixture-name> | <place-name>
+<head>           ::= <name>                          (* one name: every word a thing can be called *)
 <pronoun>        ::= "it" | "them" | "that" | "this" | "one"      (* question 7: "it" is the last thing of any kind *)
 <me-phrase>      ::= <here-ref> | "my" <np>
 <everything>     ::= "everything" [ "near" | "here" ] | "all"
 
 (* ---- Directions (question 5: the single letters are commands) ---- *)
-<direction>      ::= <compass> | <relative> | <vertical> | <TOWARD> <object>
+<direction>      ::= <compass> | <relative> | <vertical>
 <compass>        ::= [ <offto> ] <NS> [ [ "and" ] <EW> ] [ <ofme> ]
                    | [ <offto> ] <EW> [ <ofme> ]
 <NS>             ::= "n" | "north" | "s" | "south"
 <EW>             ::= "e" | "east" | "w" | "west"
-<offto>          ::= [ "off" ] [ "to the" | "to" ]
+<offto>          ::= "off" [ "to the" | "to" ] | "to the" | "to"   (* at least one word: a nullable part would parse two ways *)
 <ofme>           ::= "of" <here-ref>
 <relative>       ::= <FB> [ [ "and" ] <LR> ] | <LR>
 <FB>             ::= "f" | "fwd" | "forward" | "ahead" | [ "to the" ] "front" [ <ofme> ] | "in front of" [ <here-ref> ]
@@ -148,9 +142,9 @@
 (* ---- Lexicon: the classes. Each is one abstract meaning; the words are its synonyms. ---- *)
 <LOOK>       ::= "look" | "take a gander" | "take a look"
 <DETAIL>     ::= "close" | "closely" | "in detail" | "detail" | "detailed" | "really"
-<MOVE>       ::= "move" | "walk" | "run" | "crawl" | "go" | "head"
+<MOVE>       ::= "move" | "walk" | "go" | "head"
 <TOWARD>     ::= "to" | "towards" | "toward" | "in the direction of"
-<GET>        ::= "get" | "take" | "grab" | "pick up" | "pick"
+<GET>        ::= "get" | "take" | "pick up" | "pick"
 <DROP>       ::= "drop" | "put down"
 <PUT>        ::= "put" | "place"
 <USE>        ::= "use" | "make use of"
@@ -158,7 +152,7 @@
 <UNEQUIP>    ::= "doff" | "take off" | "put away"
 <ATTACK>     ::= "fight" | "attack" | "hit" | "strike" | "swing" | "slice" | "slash" | "chop" | "bash" | "bludgeon"
                  | "thump" | "club" | "stab" | "poke" | "pierce" | "punch" | "kick" | "bite" | "headbutt" | "elbow" | "knee" | "slap" | "butt"
-<GRAPPLE>    ::= "grapple" | "wrestle" | "tackle" | "pin" | "choke" | "hold" | "grab"
+<GRAPPLE>    ::= "grapple" | "wrestle" | "tackle" | "pin" | "choke"
 <THROW>      ::= "throw" | "sling"
 <SHOOT>      ::= "fire"
 <LOAD>       ::= "draw"
@@ -175,7 +169,7 @@
 <FIND>       ::= "find" | "where is"
 <SEARCH>     ::= "search"
 <LISTEN>     ::= "listen"
-<SMELL>      ::= "smell" | "sniff" [ "at" ]
+<SMELL>      ::= "smell" | "sniff"
 <TRACK>      ::= "track"
 <TARGET>     ::= "target" | "aim at"
 <WAIT>       ::= "wait"
@@ -188,8 +182,8 @@
 <META-WORD>  ::= "status" | "help" | "inventory" | "i" | "map" | "save" | "quit"
 
 (* ---- Fire (added 2026-10-19) ---- *)
-<light>          ::= <LIGHT> [ "a" ] ( "fire" | <object> )   (* "light the torch", "start a fire" *)
-<extinguish>     ::= <EXTINGUISH> ( "fire" | <object> )      (* "quench the fire", "put out the torch" *)
+<light>          ::= <LIGHT> [ "a" ] "fire" | <LIGHT> <object>   (* "light the torch", "start a fire" *)
+<extinguish>     ::= <EXTINGUISH> [ "the" ] "fire" | <EXTINGUISH> <object>      (* "quench the fire", "put out the torch" *)
 (* ---- Posture and pretence (added 2026-10-19) ---- *)
 <posture>        ::= <SIT> | <STAND> | <LIE-DOWN> | <CROUCH>          (* a change of the standing state; no object *)
 <SIT>            ::= "sit" [ "down" ]
@@ -211,7 +205,7 @@
 <WAKE>           ::= "wake" [ "up" ] | "rouse" | "awaken"
 (* ---- Stealth ---- *)
 <CROUCH>         ::= "crouch" | "kneel" [ "down" ] | "squat"
-<hide>           ::= "hide" [ <object> ]                        (* "hide behind the table": the locative adjunct *)
+<hide>           ::= "hide" [ <locative> ]                        (* "hide behind the table": the locative adjunct *)
 <sneak>          ::= <SNEAK> [ <direction> ]
 <SNEAK>          ::= "sneak"
 (* ---- Handling and senses ---- *)
@@ -222,8 +216,7 @@
 <PULL>           ::= "pull"
 <give>           ::= <GIVE> <object> ( "to" | "for" ) <object>
 <GIVE>           ::= "give"
-<hold>           ::= <HOLD> <object>
-<HOLD>           ::= "hold"
+<grab>           ::= ( "grab" | "hold" ) <object> [ <from-phrase> ]   (* a grapple when the object is engaged; else a get, or a carry for hold *)
 <lock>           ::= "lock" <object>
 <unlock>         ::= "unlock" <object> [ "with" <object> ]
 <fill>           ::= "fill" <object> [ <from-phrase> ]
@@ -236,6 +229,7 @@
 <flee>           ::= ( "flee" | "escape" | "run" "away" ) [ <direction> ]
 <follow>         ::= ( "follow" | "tail" ) <object>
 (* ---- Repeating and place ---- *)
+<again>          ::= <AGAIN>                                    (* repeat the last command *)
 <AGAIN>          ::= "again"
 <where>          ::= "where" "am" "i"
 
@@ -243,7 +237,7 @@
 <sequence>       ::= <seq-part> "then" <seq-part> { "then" <seq-part> }   (* a list of actions, done in order; each part
                                                                               is a whole command, and the runtime may
                                                                               interrupt between parts *)
-<seq-part>       ::= <command> | <bare-direction> | <bare-verb> | <quoted-speech> | <object>   (* an object alone repeats the verb before: "attack the rat then the goblin" *)
+<seq-part>       ::= <command> | <quoted-speech> | <object>   (* an object alone repeats the verb before: "attack the rat then the goblin" *)
 (* ---- Unarmed blows (HarnMaster Combat 8-9: unarmed combat is a melee attack) ---- *)
 <knock-out>      ::= "knock" "out" <object> | "knock" "the" <slang> "out" "of" <object>
 <slang>          ::= "shit" | "daylights" | "living" "daylights" | "crap"

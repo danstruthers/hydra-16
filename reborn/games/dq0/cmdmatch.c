@@ -71,7 +71,7 @@ static int tokk[MAXTOK], tokw[MAXTOK], tokoff[MAXTOK], toklen[MAXTOK];
 static unsigned tokmask[MAXTOK];   /* bit k set: the token fits the open-name kind k (computed once a line) */
 static int ntok;
 static const char *cur_world, *cur_names, *cur_deities;
-static int adjcount, best, steps, aborted;
+static int adjcount, best, steps, aborted, found;
 
 static int same(const unsigned char *a, int alen, const char *b)
 {
@@ -203,6 +203,7 @@ int cmd_init(const unsigned char *t)
     if (i < nrules && !same(namep[i], n, "quoted-text")) { namekind[i] = K_NONE; continue; }
     if (same(namep[i], n, "unique-name") || same(namep[i], n, "kind-name") || same(namep[i], n, "fixture-name") ||
         same(namep[i], n, "place-name") || same(namep[i], n, "known-alias") || same(namep[i], n, "alias")) k = K_OBJ;
+    else if (same(namep[i], n, "name")) k = K_OBJ;
     else if (same(namep[i], n, "adj")) k = K_ADJ;
     else if (same(namep[i], n, "number")) k = K_NUMBER;
     else if (same(namep[i], n, "ordinal")) k = K_ORDINAL;
@@ -231,24 +232,56 @@ static int word_index(const char *t, int len)
   return -1;
 }
 
-/* The default aliases at the start of a command, or of a part after "then", stand for their verbs (in place). */
+/* Does the key (words separated by single spaces) match the tokens from t on? n: how many tokens it takes. */
+static int key_match(int t, const unsigned char *key, int klen, int *n)
+{
+  int pos = 0, count = 0, j = t, s0, wl;
+  while (pos < klen) {
+    s0 = pos;
+    while (pos < klen && key[pos] != 32) pos++;
+    wl = pos - s0;
+    if (j >= ntok || tokk[j] != 0 || toklen[j] != wl || memcmp(tbuf + tokoff[j], key + s0, wl) != 0) return 0;
+    j++;
+    count++;
+    if (pos < klen) pos++;
+  }
+  *n = count;
+  return count > 0;
+}
+
+/* Remove count tokens from t on (their words are gone, the line is shorter). */
+static void drop_tokens(int t, int count)
+{
+  int k;
+  for (k = t; k + count < ntok; k++) {
+    tokk[k] = tokk[k + count];
+    tokw[k] = tokw[k + count];
+    tokoff[k] = tokoff[k + count];
+    toklen[k] = toklen[k + count];
+  }
+  ntok -= count;
+}
+
+/* The default aliases at the start of a command, or of a part after "then", stand for their verbs (in place).
+   The longest alias whose words start here wins; a key may be several words ("look closely"). */
 static void apply_aliases(void)
 {
-  int t, i, j;
+  int t, i, n, bi, bn, vl, j;
   for (t = 0; t < ntok; t++) {
     int seg = (t == 0) || (tokk[t - 1] == 0 && toklen[t - 1] == 4 && memcmp(tbuf + tokoff[t - 1], "then", 4) == 0);
     if (!seg || tokk[t] != 0) continue;
-    for (i = 0; i < nalias; i++) {
-      if (aliaswl[i] == toklen[t] && memcmp(aliasw[i], tbuf + tokoff[t], toklen[t]) == 0) {
-        int vl = aliasvl[i];
-        tokoff[t] = tbn;
-        toklen[t] = vl;
-        for (j = 0; j < vl; j++) tbuf[tbn++] = aliasv[i][j];
-        tbuf[tbn++] = 0;
-        tokw[t] = word_index(tbuf + tokoff[t], vl);
-        break;
-      }
-    }
+    bi = -1;
+    bn = 0;
+    for (i = 0; i < nalias; i++)
+      if (key_match(t, aliasw[i], aliaswl[i], &n) && n > bn) { bi = i; bn = n; }
+    if (bi < 0) continue;
+    vl = aliasvl[bi];
+    tokoff[t] = tbn;
+    toklen[t] = vl;
+    for (j = 0; j < vl; j++) tbuf[tbn++] = aliasv[bi][j];
+    tbuf[tbn++] = 0;
+    tokw[t] = word_index(tbuf + tokoff[t], vl);
+    drop_tokens(t + 1, bn - 1);
   }
 }
 
@@ -351,7 +384,7 @@ static int match(const unsigned char *p, int pos, Cont *k)
         if (adj) adjcount++;
         r = match(rulep[id], pos, &c);
         if (adj) adjcount--;
-        if (!reached && !aborted) dead[id][pos >> 3] |= 1 << (pos & 7);
+        if (!reached && !aborted && !found) dead[id][pos >> 3] |= 1 << (pos & 7);
         return r;
       }
       return (pos < ntok && ((tokmask[pos] >> namekind[id]) & 1u)) ? run(k, pos + 1) : 0;
@@ -397,8 +430,11 @@ static int run(Cont *k, int pos)
 {
   switch (k->kind) {
     case C_END:
+      /* the grammar is unambiguous: the first parse is the parse, so the search stops here */
       if (pos == ntok) {
+        found = 1;
         if (best < 0 || adjcount < best) best = adjcount;
+        return 1;
       }
       return 0;
     case C_RULE:
@@ -443,6 +479,7 @@ int cmd_match(const char *line, const char *world, const char *names, const char
   memset(dead, 0, sizeof dead);
   steps = 0;
   aborted = 0;
+  found = 0;
   end.kind = C_END;
   end.node = 0;
   end.count = 0;
@@ -450,7 +487,7 @@ int cmd_match(const char *line, const char *world, const char *names, const char
   end.next = 0;
   match(rulep[rule_line], 0, &end);
   if (aborted) return -1;
-  if (best < 0) return 0;
+  if (!found) return 0;
   *fewest = best;
   return 1;
 }

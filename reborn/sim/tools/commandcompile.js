@@ -18,7 +18,7 @@ function loadAliases(file) {
     const t = line.trim();
     if (!t || t.startsWith('#')) continue;
     const parts = t.split(' ');
-    m.set(parts[0], parts[1]);
+    m.set(parts.slice(0, -1).join(' '), parts[parts.length - 1]);
   }
   return m;
 }
@@ -103,7 +103,7 @@ function tokenize(line) {
 const own = (o, k) => (Object.prototype.hasOwnProperty.call(o, k) ? o[k] : undefined);
 const LIMIT = 200;
 // Open names: their words come from the game's data; openOK says which words fit each one.
-const OPEN = new Set(['deity-name', 'pretense-word', 'unique-name', 'kind-name', 'fixture-name', 'place-name', 'known-alias', 'alias', 'adj',
+const OPEN = new Set(['deity-name', 'pretense-word', 'name', 'alias', 'adj',
   'number', 'ordinal', 'task-name', 'meta-topic', 'name-word', 'spell-word', 'text', 'quoted-text']);
 const ADJ = new Set(['right', 'far', 'wooden', 'iron', 'large', 'small', 'closed', 'open', 'old', 'rusty',
   'bottom', 'top', 'heavy', 'near', 'left']);
@@ -131,7 +131,7 @@ const numWord = v => own(NUMWORDS, v);
 
 // Default world: the names of things the game knows. A word not here is "no such thing"; one here but not perceived is
 // "not perceived".
-const DEFAULT_WORLD = ['dragon', 'pit', 'torch', 'fire', 'spell', 'bank', 'grating', 'smoke', 'rats', 'lamp',
+const DEFAULT_WORLD = ['dragon', 'pit', 'torch', 'spell', 'bank', 'grating', 'smoke', 'rats', 'lamp',
   'hook', 'helm', 'apple', 'sword', 'stone', 'chest', 'lid', 'corner', 'bow', 'crossbow', 'club', 'dagger', 'key',
   'door', 'box', 'window', 'wall', 'table', 'goblin', 'rat', 'rations', 'waterskin', 'potion', 'room', 'linda',
   'rope', 'lever', 'stairs', 'ladder', 'sign', 'shield', 'gate', 'bed', 'stream', 'spring'];
@@ -145,7 +145,7 @@ function openOK(name, tk, env) {
     case 'ordinal': return ORDINALS.includes(v);
     case 'adj': return ADJ.has(v);
     case 'task-name': return TASKS.includes(v);
-    case 'spell-word': return !SPELL_STOP.has(v);
+    case 'spell-word': return !SPELL_STOP.has(v) && !INVOCATION_WORDS.includes(v);   // "learn divination" is an invocation
     case 'pretense-word': return !env.reserved.has(v);
     case 'deity-name': return env.deities.has(v);
     case 'text': case 'meta-topic': return true;
@@ -447,6 +447,7 @@ function phraseSem(spec, env, ctx) {
     if (o.stop) return o.stop;
     return act(action, { target: o.value });
   };
+  const manner = (node, e) => (kidsOf(node, 'manner')[0] ? wordsOf(kidsOf(node, 'manner')[0], e)[0] : undefined);
   const adjOf = () => (findFirst(spec, 'adj') ? wordsOf(findFirst(spec, 'adj'), env)[0] : undefined);
   switch (r) {
     case 'look': {
@@ -507,8 +508,8 @@ function phraseSem(spec, env, ctx) {
     }
     case 'equip': return withObj('VB_EQUIP_OBJECT');
     case 'unequip': return withObj('VB_UNEQUIP_OBJECT', null, true);
-    case 'open': return withObj('VB_OPEN_OBJECT', { adj: adjOf() });
-    case 'close': return withObj('VB_CLOSE_OBJECT', { adj: adjOf() });
+    case 'open': return withObj('VB_OPEN_OBJECT', { adj: adjOf(), manner: manner(spec, env) });
+    case 'close': return withObj('VB_CLOSE_OBJECT', { adj: adjOf(), manner: manner(spec, env) });
     case 'attack': {
       const a = objOf(0);
       if (a.stop) return a.stop;
@@ -639,6 +640,7 @@ function phraseSem(spec, env, ctx) {
       if (wordsOf(spec, env)[0] === 'double') return act('VB_SET_PACE', { pace: 'run' });
       const pw = kidsOf(spec, 'pace-word')[0];
       if (pw) return act('VB_SET_PACE', { pace: paceOf(pw, env) });
+      if (wordsOf(spec, env).includes('walk')) return act('VB_SET_PACE', { pace: 'walk' });
       return act('VB_PACE_SHOW', { pace: ctx.pace || 'walk' });
     }
     case 'charge': {
@@ -664,7 +666,12 @@ function phraseSem(spec, env, ctx) {
       return withObj(action, { direction: d ? dirCode(d, env) : undefined });
     }
     case 'wake': return direct[0] ? withObj('VB_WAKE') : act('VB_WAKE', {});
-    case 'hide': return direct[0] ? withObj('VB_HIDE') : act('VB_HIDE', {});
+    case 'hide': {
+      const loc = kidsOf(spec, 'locative')[0];
+      const c = loc ? objRole(findFirst(loc, 'object'), env, ctx) : { value: undefined };
+      if (c.stop) return c.stop;
+      return act('VB_HIDE', { container: c.value });
+    }
     case 'sneak': case 'flee': {
       const d = kidsOf(spec, 'direction')[0];
       const action = r === 'sneak' ? 'VB_SNEAK' : 'VB_FLEE';
@@ -700,6 +707,7 @@ function phraseSem(spec, env, ctx) {
     }
     case 'defend': return act('VB_DEFEND', { defence: wordsOf(spec, env)[0] });
     case 'where': return act('VB_WHERE', {});
+    case 'again': return act('VB_REPEAT', {});
     case 'knock-out': {
       const a = objOf(0);
       if (a.stop) return a.stop;
@@ -711,11 +719,17 @@ function phraseSem(spec, env, ctx) {
       if (!ctx.engaged.includes(o.value)) return err('NOT_ENGAGED');
       return act('VB_GRAPPLE_OBJECT', { object: o.value, maneuver: own(GRAPPLE_MANEUVER, wordsOf(spec, env)[0]) });
     }
-    case 'hold': {
+    // grab and hold: a grapple on an engaged object; otherwise a get, or a carry for hold (the grammar has one phrase).
+    case 'grab': {
+      const word = wordsOf(spec, env)[0];
       const o = objOf(0);
       if (o.stop) return o.stop;
-      if (ctx.engaged.includes(o.value)) return err('ENGAGED');
-      return act('VB_HOLD_OBJECT', { object: o.value });
+      if (ctx.engaged.includes(o.value)) return act('VB_GRAPPLE_OBJECT', { object: o.value, maneuver: word });
+      if (word === 'hold') return act('VB_HOLD_OBJECT', { object: o.value });
+      const from = kidsOf(spec, 'from-phrase')[0];
+      const src = from ? objRole(findFirst(from, 'object'), env, ctx) : { value: undefined };
+      if (src.stop) return src.stop;
+      return act('VB_RETRIEVE_OBJECT', { object: o.value, source: src.value });
     }
     case 'engage': {
       const o = objOf(0);
@@ -879,11 +893,21 @@ function replaceObject(spec, obj) {
 }
 
 // A single-word alias at the start of a command, or of a part after "then", stands for its verb (in place).
+// A default or player alias at the start of a command, or of a part after "then", stands for its verb (in place).
+// The longest alias whose words start here wins; a key may be several words ("look closely").
 function segmentAliases(toks, ctx) {
   for (let i = 0; i < toks.length; i++) {
-    if (toks[i].k !== 'w' || !(i === 0 || (toks[i - 1].k === 'w' && toks[i - 1].v === 'then'))) continue;
-    const verb = ctx.aliases.get(toks[i].v);
-    if (verb && verb.indexOf(' ') < 0 && ['alias', 'unalias', 'forget'].indexOf(toks[i].v) < 0) toks[i] = { k: 'w', v: verb };
+    if (!(i === 0 || (toks[i - 1].k === 'w' && toks[i - 1].v === 'then'))) continue;
+    let best = null;
+    for (const key of ctx.aliases.keys()) {
+      const kw = key.split(' ');
+      if (['alias', 'unalias', 'forget'].indexOf(kw[0]) >= 0 || i + kw.length > toks.length) continue;
+      if (!kw.every((w, j) => toks[i + j].k === 'w' && toks[i + j].v === w)) continue;
+      if (!best || kw.length > best.n) best = { key, n: kw.length };
+    }
+    if (!best) continue;
+    const verb = ctx.aliases.get(best.key);
+    if (verb.indexOf(' ') < 0) toks.splice(i, best.n, { k: 'w', v: verb });
   }
   return toks;
 }
