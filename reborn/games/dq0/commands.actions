@@ -46,7 +46,7 @@ VB_TRACK                object
 VB_TARGET_SET           object
 VB_TARGET_CLEAR
 VB_WAIT                 duration
-VB_SLEEP                              (* length from fatigue, injury and sickness; optional duration *)
+VB_SLEEP                              short (* length from fatigue, injury and sickness; optional duration; short: a 30-60 minute try *)
 VB_STOP                 task
 VB_NAME_OBJECT          object name
 VB_NAME_PLACE           place name
