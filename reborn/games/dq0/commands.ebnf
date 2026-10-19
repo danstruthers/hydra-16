@@ -5,7 +5,7 @@
    <name> a nonterminal; [ x ] optional; { x } zero or more; ( x | y ) a choice.
    A rule may continue on following lines. Comments are (* ... *).
 
-   open: unique-name kind-name fixture-name place-name known-alias alias adj number ordinal task-name meta-topic name-word spell-word pretense-word text
+   open: unique-name kind-name fixture-name place-name known-alias alias adj number ordinal task-name meta-topic name-word spell-word pretense-word deity-name text
    (the open names come from the game's data: see the design doc, "The grammar"; the checker reads this line) *)
 
 (* ---- Entry ---- *)
@@ -256,7 +256,7 @@
 (* ---- Religion (HarnMaster Religion: prayer, divine intervention, performing invocations) ---- *)
 <pray>            ::= "pray" [ "for" <text> { <text> } ]        (* alone: an hour of prayer, for piety; "for": a prayer that spends piety on an endeavour *)
 <intervene>       ::= ( "call" "on" | "beseech" ) <DEITY> [ "for" <text> { <text> } ]   (* a call for divine intervention *)
-<DEITY>           ::= "peoni" | "larani" | "agrik" | "halea" | "ilvir" | "morgath" | "naveh" | "sarajin" | "siem" | "save-k'nor"
+<DEITY>           ::= <deity-name>                 (* the world's deities: an open name, given by the world, not the grammar *)
 <invoke>          ::= ( "invoke" | "perform" | "chant" ) <INVOCATION> [ "on" ] [ <object> ] [ "to" <DEITY> ]   (* clerics perform a ritual; the deity acts *)
 <INVOCATION>      ::= "divination" | "baptism" | "passage" "of" "the" "soul" | "consecration" | "exorcism" | "curse" | "blessing" | "balefire"
 <learn-invocation> ::= "learn" <INVOCATION> [ "from" <object> ]  (* from a mentor or scripture; 5 piety per circle *)

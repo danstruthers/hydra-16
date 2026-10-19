@@ -351,13 +351,13 @@ pass the time	VB_WAIT	duration=1min	-	pass the time is a wait
 pass the time	ERROR:ENGAGED	-	engaged=goblin	so is wait: not in combat
 pray	VB_PRAY	-	-	an hour of prayer: piety
 pray for a bonus to climbing	VB_PRAY_FOR	task=a bonus to climbing	-	a prayer that spends piety on an endeavour
-call on peoni for help	VB_CALL_INTERVENTION	deity=peoni;intent=help	-	a call for divine intervention
-beseech larani	VB_CALL_INTERVENTION	deity=larani	-	beseech is a call
+call on peoni for help	VB_CALL_INTERVENTION	deity=peoni;intent=help	deities=peoni	a call for divine intervention
+beseech larani	VB_CALL_INTERVENTION	deity=larani	deities=larani	beseech is a call
 invoke divination	VB_INVOKE	invocation=divination	-	a ritual, not a spell
 perform blessing	VB_INVOKE	invocation=blessing	-	perform: a synonym of invoke
 chant exorcism on the goblin	VB_INVOKE	invocation=exorcism;target=goblin	near=goblin	an invocation on a target
 baptise the goblin	VB_INVOKE	invocation=baptism;target=goblin	near=goblin	baptism: converting a willing convert
-convert the goblin to peoni	VB_INVOKE	invocation=baptism;target=goblin;deity=peoni	near=goblin	convert is baptism
+convert the goblin to peoni	VB_INVOKE	invocation=baptism;target=goblin;deity=peoni	near=goblin;deities=peoni	convert is baptism
 learn divination	VB_LEARN_INVOCATION	invocation=divination	-	learned, not cast
 learn divination from the goblin	VB_LEARN_INVOCATION	invocation=divination;source=goblin	near=goblin	from a mentor
 fast	VB_FASTING	-	-	a day of fasting
@@ -388,3 +388,4 @@ taunt the goblin	VB_TAUNT	target=goblin	near=goblin	Rhetoric: persuade them to a
 taunt the goblin to attack	VB_TAUNT	target=goblin;topic=attack	near=goblin	the same, with the words
 judge the goblin	VB_JUDGE_SINCERITY	target=goblin	near=goblin	Diplomacy: is it bluffing?
 sense a lie from the goblin	VB_JUDGE_SINCERITY	target=goblin	near=goblin	the same, another word
+call on peoni for help	ERROR:NOT_UNDERSTOOD	-	-	no deity in this world: no call

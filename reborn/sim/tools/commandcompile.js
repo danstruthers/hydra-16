@@ -89,7 +89,7 @@ function tokenize(line) {
 const own = (o, k) => (Object.prototype.hasOwnProperty.call(o, k) ? o[k] : undefined);
 const LIMIT = 200;
 // Open names: their words come from the game's data; openOK says which words fit each one.
-const OPEN = new Set(['pretense-word', 'unique-name', 'kind-name', 'fixture-name', 'place-name', 'known-alias', 'alias', 'adj',
+const OPEN = new Set(['deity-name', 'pretense-word', 'unique-name', 'kind-name', 'fixture-name', 'place-name', 'known-alias', 'alias', 'adj',
   'number', 'ordinal', 'task-name', 'meta-topic', 'name-word', 'spell-word', 'text', 'quoted-text']);
 const ADJ = new Set(['right', 'far', 'wooden', 'iron', 'large', 'small', 'closed', 'open', 'old', 'rusty',
   'bottom', 'top', 'heavy', 'near', 'left']);
@@ -133,6 +133,7 @@ function openOK(name, tk, env) {
     case 'task-name': return TASKS.includes(v);
     case 'spell-word': return !SPELL_STOP.has(v);
     case 'pretense-word': return !env.reserved.has(v);
+    case 'deity-name': return env.deities.has(v);
     case 'text': case 'meta-topic': return true;
     case 'name-word': return !env.reserved.has(v) || env.world.has(v);
     default: // unique-name, kind-name, fixture-name, place-name, known-alias, alias: a name of a thing
@@ -273,7 +274,7 @@ function parsePending(v) {
 // pending question. Keys: near last facing pending distances names target pace; any other key is an alias.
 function buildContext(spec, world) {
   const ctx = { near: [], last: [], facing: null, pending: null, target: null, pace: 'walk', names: new Map(),
-    dist: new Map(), aliases: new Map(), world: new Set(world), engaged: [] };
+    dist: new Map(), aliases: new Map(), world: new Set(world), engaged: [], deities: new Set() };
   const addName = (key, id) => {
     const k = key.toLowerCase();
     if (!ctx.names.has(k)) ctx.names.set(k, []);
@@ -293,6 +294,7 @@ function buildContext(spec, world) {
     else if (k === 'pending') ctx.pending = parsePending(v);
     else if (k === 'distances') distances = v.split(',').map(Number);
     else if (k === 'engaged') ctx.engaged = v.split(',');
+    else if (k === 'deities') ctx.deities = new Set(v.split(','));
     else if (k === 'target') ctx.target = v;
     else if (k === 'pace') ctx.pace = own(PACE, v) || v;
     else ctx.aliases.set(k, v);
@@ -869,7 +871,7 @@ class Compiler {
   }
 
   envFor(toks, ctx) {
-    return { rules: this.rules, toks, memo: new Map(), reserved: this.reserved, world: ctx.world, names: ctx.names };
+    return { rules: this.rules, toks, memo: new Map(), reserved: this.reserved, world: ctx.world, names: ctx.names, deities: ctx.deities };
   }
 
   // Compile one line in a context: returns {action, roles} | {question, roles} | {error, roles}.
