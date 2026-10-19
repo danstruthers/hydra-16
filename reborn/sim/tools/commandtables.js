@@ -1,16 +1,20 @@
 // commandtables.js - the grammar as a table, the form the 65C02 compiler reads (host side, in node).
-// encodeGrammar turns the rules of commands.ebnf into bytes; decodeGrammar reads them back to the same trees that
-// commandcompile.js uses. The corpus must give the same results from the bytes as from the text: that is the check.
+// encodeGrammar turns the rules of commands.ebnf, and the default aliases (commands.aliases), into bytes;
+// decodeGrammar reads them back to the same trees that commandcompile.js uses. The corpus must give the same results
+// from the bytes as from the text: that is the check.
+// Layout: magic "DQ0G", version 2; the names (rules, then open names); the words (every literal word of the grammar);
+// the default aliases (word and verb); the rule offsets; the rules. A child of a sequence, alternative, option or repeat
+// is preceded by its size in bytes (one byte under 128, two above), so a reader can step over it without walking it.
 //   node sim/tools/commandtables.js [out.bin]    write the table and print its size
 //   node sim/tools/commandtables.js --check      encode, decode, and run the corpus through the decoded table
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { loadRules, Compiler, buildContext, DEFAULT_WORLD, checkCorpus } = require('./commandcompile.js');
+const { loadRules, Compiler, buildContext, DEFAULT_WORLD, checkCorpus, DEFAULT_ALIASES } = require('./commandcompile.js');
 
 const GAME = path.join(__dirname, '..', '..', 'games', 'dq0');
 const MAGIC = [0x44, 0x51, 0x30, 0x47]; // "DQ0G"
-const VERSION = 1;
+const VERSION = 3;
 const TAG = { seq: 1, alt: 2, opt: 3, rep: 4, nt: 5, term: 6, quote: 7 };
 
 // The open names are declared on the header line of the grammar: "open: ...".
@@ -19,7 +23,7 @@ function openNames(file) {
   return m ? m[1].trim().split(/\s+/).filter(Boolean) : [];
 }
 
-function encodeGrammar(rules, open) {
+function encodeGrammar(rules, open, aliases = DEFAULT_ALIASES) {
   const names = [...rules.keys(), ...open.filter(n => !rules.has(n))];
   const nameId = new Map(names.map((n, i) => [n, i]));
   const words = [];
@@ -28,42 +32,48 @@ function encodeGrammar(rules, open) {
     if (!wordId.has(w)) { wordId.set(w, words.length); words.push(w); }
     return wordId.get(w);
   };
-  const out = [];
-  const u8 = v => { if (v < 0 || v > 255) throw new Error('byte out of range: ' + v); out.push(v); };
-  const u16 = v => { u8(v & 255); u8(v >> 8); };
+  const u16 = v => [v & 255, v >> 8];
+  // A node's bytes; its children are sized slots.
   const node = n => {
     switch (n.t) {
-      case 'seq': u8(TAG.seq); u8(n.items.length); n.items.forEach(node); break;
-      case 'alt': u8(TAG.alt); u8(n.opts.length); n.opts.forEach(node); break;
-      case 'opt': u8(TAG.opt); node(n.x); break;
-      case 'rep': u8(TAG.rep); node(n.x); break;
-      case 'nt': {
+      case 'seq': return [TAG.seq, n.items.length, ...n.items.flatMap(slot)];
+      case 'alt': return [TAG.alt, n.opts.length, ...n.opts.flatMap(slot)];
+      case 'opt': return [TAG.opt, ...slot(n.x)];
+      case 'rep': return [TAG.rep, ...slot(n.x)];
+      case 'nt':
         if (!nameId.has(n.name)) throw new Error('undefined name <' + n.name + '>');
-        u8(TAG.nt); u16(nameId.get(n.name)); break;
-      }
-      case 'term': u8(TAG.term); u8(n.words.length); n.words.forEach(w => u16(wid(w))); break;
-      case 'quote': u8(TAG.quote); break;
+        return [TAG.nt, ...u16(nameId.get(n.name))];
+      case 'term':
+        if (n.words.length > 255) throw new Error('term too long');
+        return [TAG.term, n.words.length, ...n.words.flatMap(w => u16(wid(w)))];
+      case 'quote': return [TAG.quote];
       default: throw new Error('bad node ' + n.t);
     }
   };
-  // Rules are written in order, each with its offset, so a C reader can jump to any rule.
+  // A slot: the child's size (one byte under 128; two bytes, the first with its top bit set, above), then the child.
+  const slot = child => {
+    const body = node(child);
+    if (body.length > 32767) throw new Error('node too large');
+    const size = body.length < 128 ? [body.length] : [0x80 | (body.length >> 8), body.length & 255];
+    return [...size, ...body];
+  };
+  const ruleBytes = [];
   const offsets = [];
-  for (const [name, tree] of rules) {
-    offsets.push(out.length);
-    node(tree);
+  for (const tree of rules.values()) {
+    offsets.push(ruleBytes.length);
+    ruleBytes.push(...node(tree));
   }
-  const rulesBytes = out.splice(0);
-  // The name table: the rules' names, then the open names. The word table: every literal word.
-  const head = [];
-  const h8 = v => head.push(v & 255);
-  const h16 = v => { h8(v); h8(v >> 8); };
-  MAGIC.forEach(h8); h8(VERSION);
-  h16(rules.size); h16(names.length);
-  for (const n of names) { h8(n.length); for (const c of n) h8(c.charCodeAt(0)); }
-  h16(words.length);
-  for (const w of words) { h8(w.length); for (const c of w) h8(c.charCodeAt(0)); }
-  offsets.forEach(o => h16(o));
-  return Buffer.from(head.concat(rulesBytes));
+  const text = s => { if (s.length > 255) throw new Error('word too long: ' + s); return [s.length, ...[...s].map(c => c.charCodeAt(0))]; };
+  const head = [...MAGIC, VERSION, ...u16(rules.size), ...u16(names.length)];
+  for (const n of names) head.push(...text(n));
+  head.push(...u16(words.length));
+  for (const w of words) head.push(...text(w));
+  const al = [...aliases.entries()];
+  if (al.length > 255) throw new Error('too many aliases');
+  head.push(al.length);
+  for (const [w, verb] of al) head.push(...text(w), ...text(verb));
+  for (const o of offsets) head.push(...u16(o));
+  return Buffer.from([...head, ...ruleBytes]);
 }
 
 function decodeGrammar(buf) {
@@ -79,27 +89,39 @@ function decodeGrammar(buf) {
   const wordCount = u16();
   const words = [];
   for (let i = 0; i < wordCount; i++) words.push(str());
+  const aliasCount = u8();
+  const aliases = new Map();
+  for (let i = 0; i < aliasCount; i++) { const w = str(); aliases.set(w, str()); }
   const offsets = [];
   for (let i = 0; i < ruleCount; i++) offsets.push(u16());
   const rulesStart = p;
   const node = () => {
     const tag = u8();
     switch (tag) {
-      case TAG.seq: { const n = u8(); const items = []; for (let i = 0; i < n; i++) items.push(node()); return { t: 'seq', items }; }
-      case TAG.alt: { const n = u8(); const opts = []; for (let i = 0; i < n; i++) opts.push(node()); return { t: 'alt', opts }; }
-      case TAG.opt: return { t: 'opt', x: node() };
-      case TAG.rep: return { t: 'rep', x: node() };
+      case TAG.seq: { const n = u8(); const items = []; for (let i = 0; i < n; i++) items.push(slot()); return { t: 'seq', items }; }
+      case TAG.alt: { const n = u8(); const opts = []; for (let i = 0; i < n; i++) opts.push(slot()); return { t: 'alt', opts }; }
+      case TAG.opt: return { t: 'opt', x: slot() };
+      case TAG.rep: return { t: 'rep', x: slot() };
       case TAG.nt: return { t: 'nt', name: names[u16()] };
       case TAG.term: { const n = u8(); const ws = []; for (let i = 0; i < n; i++) ws.push(words[u16()]); return { t: 'term', words: ws }; }
       case TAG.quote: return { t: 'quote' };
       default: throw new Error('bad tag ' + tag + ' at ' + (p - 1));
     }
   };
+  const slot = () => {
+    const b = u8();
+    const size = (b & 0x80) ? (((b & 0x7F) << 8) | u8()) : b;
+    const end = p + size;
+    const n = node();
+    p = end;
+    return n;
+  };
   const rules = new Map();
   for (let i = 0; i < ruleCount; i++) {
     p = rulesStart + offsets[i];
     rules.set(names[i], node());
   }
+  rules.aliases = aliases;
   return rules;
 }
 
@@ -110,14 +132,15 @@ if (require.main === module) {
   const rules = loadRules(grammar);
   const bytes = encodeGrammar(rules, openNames(grammar));
   const args = process.argv.slice(2);
-  console.log(`grammar table: ${bytes.length} bytes for ${rules.size} rules`);
+  console.log(`grammar table: ${bytes.length} bytes for ${rules.size} rules, ${DEFAULT_ALIASES.size} default aliases`);
   if (args[0] && args[0] !== '--check') fs.writeFileSync(args[0], bytes);
   if (args.includes('--check')) {
     const decoded = decodeGrammar(bytes);
     const same = [...rules.keys()].every(k => JSON.stringify(rules.get(k)) === JSON.stringify(decoded.get(k)));
-    console.log(`decoded rules identical to the text: ${same}`);
+    const aliasSame = [...DEFAULT_ALIASES].every(([k, v]) => decoded.aliases.get(k) === v) && decoded.aliases.size === DEFAULT_ALIASES.size;
+    console.log(`decoded rules identical to the text: ${same}; aliases identical: ${aliasSame}`);
     const { pass, total } = checkCorpus(new Compiler(decoded), path.join(GAME, 'commands.corpus'), console.log);
     console.log(`corpus through the table: ${pass}/${total} cases pass`);
-    process.exit(same && pass === total ? 0 : 1);
+    process.exit(same && aliasSame && pass === total ? 0 : 1);
   }
 }

@@ -146,30 +146,30 @@
                    | "d" | "down" | "below" | "underneath" | "under" [ <here-ref> | "my feet" ]
 
 (* ---- Lexicon: the classes. Each is one abstract meaning; the words are its synonyms. ---- *)
-<LOOK>       ::= "look" | "peer" | "gaze" | "gander" | "take a gander" | "take a look"
+<LOOK>       ::= "look" | "take a gander" | "take a look"
 <DETAIL>     ::= "close" | "closely" | "in detail" | "detail" | "detailed" | "really"
-<MOVE>       ::= "move" | "mv" | "walk" | "trundle" | "mosey" | "saunter" | "run" | "crawl" | "go" | "head"
+<MOVE>       ::= "move" | "walk" | "run" | "crawl" | "go" | "head"
 <TOWARD>     ::= "to" | "towards" | "toward" | "in the direction of"
 <GET>        ::= "get" | "take" | "grab" | "pick up" | "pick"
 <DROP>       ::= "drop" | "put down"
 <PUT>        ::= "put" | "place"
 <USE>        ::= "use" | "make use of"
-<EQUIP>      ::= "equip" | "ready" | "don" | "wear" | "wield"
-<UNEQUIP>    ::= "doff" | "remove" | "store" | "take off" | "unwield" | "stow" | "put away"
+<EQUIP>      ::= "equip"
+<UNEQUIP>    ::= "doff" | "take off" | "put away"
 <ATTACK>     ::= "fight" | "attack" | "hit" | "strike" | "swing" | "slice" | "slash" | "chop" | "bash" | "bludgeon"
                  | "thump" | "club" | "stab" | "poke" | "pierce" | "punch" | "kick" | "bite" | "headbutt" | "elbow" | "knee" | "slap" | "butt"
 <GRAPPLE>    ::= "grapple" | "wrestle" | "tackle" | "pin" | "choke" | "hold" | "grab"
-<THROW>      ::= "throw" | "chuck" | "hurl" | "sling" | "toss"
-<SHOOT>      ::= "fire" | "shoot"
-<LOAD>       ::= "draw" | "load"
-<JUMP>       ::= "jump" | "leap"
+<THROW>      ::= "throw" | "sling"
+<SHOOT>      ::= "fire"
+<LOAD>       ::= "draw"
+<JUMP>       ::= "jump"
 <SAY>        ::= "say"
 <VOLUME-SAY>  ::= "yell" | "scream" | "shout" | "whisper"
-<TELL>       ::= "tell" | "ask"
-<CAST>       ::= "cast" | "prepare" | "concentrate"
-<EAT>        ::= "eat" | "consume"
-<DRINK>      ::= "drink" | "quaff"
-<LIGHT>      ::= "light" | "start"
+<TELL>       ::= "tell"
+<CAST>       ::= "cast"
+<EAT>        ::= "eat"
+<DRINK>      ::= "drink"
+<LIGHT>      ::= "light"
 <EXTINGUISH> ::= "quench" | "put out"
 <SWIM>       ::= "swim"
 <FIND>       ::= "find" | "where is"
@@ -197,33 +197,33 @@
 <LIE-DOWN>       ::= "lie" [ "down" | "prone" ] | "lay" [ "down" ] | "go" "prone" | "prone"
 <pretend>        ::= <PRETEND> [ "to" "be" ] <pretense>     (* a state the player does not have: "pretend dead",
                                                              "feign ignorance", "pretend to be asleep" *)
-<PRETEND>        ::= "pretend" | "feign" | "fake"
+<PRETEND>        ::= "pretend"
 <pretense>       ::= <pretense-word> { <pretense-word> }     (* the words of the state, none of them a command word *)
 (* ---- Movement, climbing and digging (added 2026-10-19: the gaps the probes found) ---- *)
 <enter>          ::= "enter" [ <object> ]
 <leave>          ::= <LEAVE> [ <object> | <direction> ]
-<LEAVE>          ::= "exit" | "leave"
+<LEAVE>          ::= "exit"
 <climb>          ::= <CLIMB> [ <direction> ] [ <object> ]
-<CLIMB>          ::= "climb" | "scale"
+<CLIMB>          ::= "climb"
 <dig>            ::= <DIG> [ <direction> | <object> ]           (* "dig down", "dig the wall" *)
-<DIG>            ::= "dig" | "tunnel"
+<DIG>            ::= "dig"
 <wake>           ::= <WAKE> [ <object> ]                        (* the end of a sleep; "wake the goblin" wakes another *)
 <WAKE>           ::= "wake" [ "up" ] | "rouse" | "awaken"
 (* ---- Stealth ---- *)
 <CROUCH>         ::= "crouch" | "kneel" [ "down" ] | "squat"
 <hide>           ::= "hide" [ <object> ]                        (* "hide behind the table": the locative adjunct *)
 <sneak>          ::= <SNEAK> [ <direction> ]
-<SNEAK>          ::= "sneak" | "creep" | "tiptoe"
+<SNEAK>          ::= "sneak"
 (* ---- Handling and senses ---- *)
 <knock>          ::= "knock" [ "on" ] <object>
 <push>           ::= <PUSH> <object>
-<PUSH>           ::= "push" | "shove"
+<PUSH>           ::= "push"
 <pull>           ::= <PULL> <object>
-<PULL>           ::= "pull" | "drag"
+<PULL>           ::= "pull"
 <give>           ::= <GIVE> <object> ( "to" | "for" ) <object>
-<GIVE>           ::= "give" | "hand" | "offer"
+<GIVE>           ::= "give"
 <hold>           ::= <HOLD> <object>
-<HOLD>           ::= "hold" | "carry"
+<HOLD>           ::= "hold"
 <lock>           ::= "lock" <object>
 <unlock>         ::= "unlock" <object> [ "with" <object> ]
 <fill>           ::= "fill" <object> [ <from-phrase> ]
@@ -236,7 +236,7 @@
 <flee>           ::= ( "flee" | "escape" | "run" "away" ) [ <direction> ]
 <follow>         ::= ( "follow" | "tail" ) <object>
 (* ---- Repeating and place ---- *)
-<AGAIN>          ::= "again" | "repeat"
+<AGAIN>          ::= "again"
 <where>          ::= "where" "am" "i"
 
 (* ---- Sequences (added 2026-10-19: the user, VB_SEQUENCE) ---- *)

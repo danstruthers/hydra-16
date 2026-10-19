@@ -10,6 +10,20 @@ const path = require('path');
 
 const GAME = path.join(__dirname, '..', '..', 'games', 'dq0');
 
+// The default aliases (commands.aliases): each word and the verb it means, added to every player's list.
+function loadAliases(file) {
+  const CR = String.fromCharCode(13), NL = String.fromCharCode(10);
+  const m = new Map();
+  for (const line of fs.readFileSync(file, 'utf8').split(CR).join('').split(NL)) {
+    const t = line.trim();
+    if (!t || t.startsWith('#')) continue;
+    const parts = t.split(' ');
+    m.set(parts[0], parts[1]);
+  }
+  return m;
+}
+const DEFAULT_ALIASES = loadAliases(path.join(GAME, 'commands.aliases'));
+
 // ---- the grammar ----------------------------------------------------------------------------------------------------
 
 // The rules of commands.ebnf as trees: alt / seq / opt / rep / nt (a rule or open name) / term (words) / quote.
@@ -274,7 +288,7 @@ function parsePending(v) {
 // pending question. Keys: near last facing pending distances names target pace; any other key is an alias.
 function buildContext(spec, world) {
   const ctx = { near: [], last: [], facing: null, pending: null, target: null, pace: 'walk', names: new Map(),
-    dist: new Map(), aliases: new Map(), world: new Set(world), engaged: [], deities: new Set() };
+    dist: new Map(), aliases: new Map(DEFAULT_ALIASES), world: new Set(world), engaged: [], deities: new Set() };
   const addName = (key, id) => {
     const k = key.toLowerCase();
     if (!ctx.names.has(k)) ctx.names.set(k, []);
@@ -864,6 +878,21 @@ function replaceObject(spec, obj) {
   }) });
 }
 
+// A single-word alias at the start of a command, or of a part after "then", stands for its verb (in place).
+function segmentAliases(toks, ctx) {
+  for (let i = 0; i < toks.length; i++) {
+    if (toks[i].k !== 'w' || !(i === 0 || (toks[i - 1].k === 'w' && toks[i - 1].v === 'then'))) continue;
+    const verb = ctx.aliases.get(toks[i].v);
+    if (verb && verb.indexOf(' ') < 0 && ['alias', 'unalias', 'forget'].indexOf(toks[i].v) < 0) toks[i] = { k: 'w', v: verb };
+  }
+  return toks;
+}
+
+// The text of some tokens, as a line would type them (words, and quoted text with its w or y).
+function tokensText(ts) {
+  return ts.map(t => (t.k === 'w' ? t.v : (t.vol || '') + '"' + t.text + '"')).join(' ');
+}
+
 class Compiler {
   constructor(rules) {
     this.rules = rules;
@@ -888,16 +917,32 @@ class Compiler {
       const expanded = ctx.aliases.get(toks[0].v) + ' ' + toks.slice(1).map(t => (t.k === 'w' ? t.v : `"${t.text}"`)).join(' ');
       return this.compile(expanded.trim(), Object.assign({}, ctx, { aliases: new Map() }));
     }
+    segmentAliases(toks, ctx);
     const aliasResult = this.alias(toks, ctx);
     if (aliasResult) return aliasResult;
     const env = this.envFor(toks, ctx);
     const parses = matchRule('line', 0, env).filter(r => r.end === toks.length);
-    if (!parses.length) return this.fallback(toks, env);
+    if (!parses.length) return this.verbAnd(toks, ctx) || this.fallback(toks, env);
     // A parse that puts fewer words in adjuncts is the reading the grammar means: "look at the wall" is a look at a
     // thing, not a look with an "at the wall" adjunct.
     parses.sort((a, b) => countAdjuncts(a) - countAdjuncts(b));
     const results = parses.map(p => this.semantics(p.kids[0], env, ctx));
     return results.find(r => !r.error) || results[0];
+  }
+
+  // Two verbs with one object: "take and stow the sword" is "take the sword", then "stow the sword" (a sequence).
+  verbAnd(toks, ctx) {
+    // The verbs are the words at even places, joined by "and"; the object follows them all, once.
+    let groups = 0;
+    while (2 * groups + 2 < toks.length && toks[2 * groups + 1].k === 'w' && toks[2 * groups + 1].v === 'and' && toks[2 * groups + 2].k === 'w') groups++;
+    for (let k = groups; k >= 1; k--) {
+      if (toks.length <= 2 * k + 1) continue;
+      const rest = tokensText(toks.slice(2 * k + 1));
+      const steps = [];
+      for (let i = 0; i <= k; i++) steps.push(this.compile(toks[2 * i].v + " " + rest, ctx));
+      if (steps.every(r => !r.error && !r.question)) return sequenceOf(steps);
+    }
+    return null;
   }
 
   // Lines with no parse: the few that have a reason of their own.
@@ -1043,7 +1088,7 @@ function checkCorpus(compiler, corpusFile, log) {
   return { pass, total };
 }
 
-module.exports = { Compiler, loadRules, buildContext, tokenize, DEFAULT_WORLD, checkCorpus, matchRule, countRule };
+module.exports = { Compiler, loadRules, buildContext, tokenize, DEFAULT_WORLD, checkCorpus, matchRule, countRule, DEFAULT_ALIASES, segmentAliases };
 
 if (require.main === module) {
   const compiler = new Compiler(loadRules(path.join(GAME, 'commands.ebnf')));

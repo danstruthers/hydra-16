@@ -389,3 +389,7 @@ taunt the goblin to attack	VB_TAUNT	target=goblin;topic=attack	near=goblin	the s
 judge the goblin	VB_JUDGE_SINCERITY	target=goblin	near=goblin	Diplomacy: is it bluffing?
 sense a lie from the goblin	VB_JUDGE_SINCERITY	target=goblin	near=goblin	the same, another word
 call on peoni for help	ERROR:NOT_UNDERSTOOD	-	-	no deity in this world: no call
+take and stow the sword	VB_SEQUENCE	steps=VB_RETRIEVE_OBJECT,VB_UNEQUIP_OBJECT;1.object=sword;2.object=sword	near=sword	two verbs, one object, in order
+take and drop the sword	VB_SEQUENCE	steps=VB_RETRIEVE_OBJECT,VB_DROP_OBJECT;1.object=sword;2.object=sword	near=sword	take, then drop
+take and stow and drop the sword	VB_SEQUENCE	steps=VB_RETRIEVE_OBJECT,VB_UNEQUIP_OBJECT,VB_DROP_OBJECT;3.object=sword	near=sword	a chain of verbs
+take and the shield	ERROR:NOT_UNDERSTOOD	-	near=shield	the second word is no verb

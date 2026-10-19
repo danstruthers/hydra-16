@@ -8,7 +8,7 @@ const BS = String.fromCharCode(92);
 const Q = String.fromCharCode(34);
 const fs = require('fs');
 const path = require('path');
-const { loadRules, Compiler, buildContext, tokenize, DEFAULT_WORLD, matchRule, countRule } = require('./commandcompile.js');
+const { loadRules, Compiler, buildContext, tokenize, DEFAULT_WORLD, matchRule, countRule, DEFAULT_ALIASES, segmentAliases } = require('./commandcompile.js');
 const { encodeGrammar, openNames } = require('./commandtables.js');
 
 const GAME = path.join(__dirname, '..', '..', 'games', 'dq0');
@@ -37,7 +37,9 @@ function main() {
     const [input, , , context] = raw.split('\t');
     const ctx = buildContext(context || '-', DEFAULT_WORLD);
     const toks = tokenize(input);
-    if (ctx.pending || ctx.aliases.size || !toks.length || (toks[0].k === 'w' && NOT_PLAIN.includes(toks[0].v))) continue;
+    const userAliases = [...ctx.aliases.keys()].some(k => !DEFAULT_ALIASES.has(k));
+    if (ctx.pending || userAliases || !toks.length || (toks[0].k === 'w' && NOT_PLAIN.includes(toks[0].v))) continue;
+    segmentAliases(toks, ctx);
     const env = compiler.envFor(toks, ctx);
     const parses = matchRule('line', 0, env).filter(r => r.end === toks.length);
     const adj = parses.length ? Math.min(...parses.map(p => countRule(p.kids[0], 'adjunct'))) : -1;

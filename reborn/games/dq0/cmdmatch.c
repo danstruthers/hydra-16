@@ -31,6 +31,7 @@
 #define MAXWORDS 400
 #define MAXTOK 24
 #define MAXREP 12
+#define MAXALIAS 64
 #define STEP_LIMIT 30000
 
 /* Continuations: what remains to be matched after the node in hand */
@@ -56,7 +57,12 @@ static const unsigned char *wordp[MAXWORDS];
 static unsigned char wordlen[MAXWORDS];
 static int nrules, nnames, nwords, rule_line, rule_adjunct;
 
-static char tbuf[120];
+static char tbuf[200];
+static int tbn;
+static int nalias;
+static const unsigned char *aliasw[MAXALIAS], *aliasv[MAXALIAS];
+static unsigned char aliaswl[MAXALIAS], aliasvl[MAXALIAS];
+static int word_index(const char *t, int len);
 static int tokk[MAXTOK], tokw[MAXTOK], tokoff[MAXTOK], toklen[MAXTOK];
 static unsigned tokmask[MAXTOK];   /* bit k set: the token fits the open-name kind k (computed once a line) */
 static int ntok;
@@ -133,27 +139,17 @@ static int open_ok(int kind, int t)
   }
 }
 
-/* The table's rule nodes: skip one node, to the byte after it */
-static const unsigned char *skip(const unsigned char *p)
+/* A slot is a child: its size (one byte under 128; two bytes above, the first with its top bit set), then the child.
+   The size lets a reader step over a child without walking it. */
+static const unsigned char *slot_body(const unsigned char *s)
 {
-  unsigned n, i;
-  switch (*p) {
-    case T_SEQ:
-    case T_ALT:
-      n = p[1];
-      p += 2;
-      for (i = 0; i < n; i++) p = skip(p);
-      return p;
-    case T_OPT:
-    case T_REP:
-      return skip(p + 1);
-    case T_NT:
-      return p + 3;
-    case T_TERM:
-      return p + 2 + 2 * p[1];
-    default:
-      return p + 1;
-  }
+  return (s[0] & 0x80) ? s + 2 : s + 1;
+}
+
+static const unsigned char *slot_next(const unsigned char *s)
+{
+  unsigned size = (s[0] & 0x80) ? (((unsigned)(s[0] & 0x7F) << 8) | s[1]) : s[0];
+  return slot_body(s) + size;
 }
 
 static unsigned rd16(const unsigned char *p)
@@ -166,7 +162,7 @@ int cmd_init(const unsigned char *t)
 {
   const unsigned char *p = t;
   unsigned i, n;
-  if (p[0] != 'D' || p[1] != 'Q' || p[2] != '0' || p[3] != 'G' || p[4] != 1) return 0;
+  if (p[0] != 'D' || p[1] != 'Q' || p[2] != '0' || p[3] != 'G' || p[4] != 3) return 0;
   p += 5;
   nrules = rd16(p); p += 2;
   nnames = rd16(p); p += 2;
@@ -179,6 +175,16 @@ int cmd_init(const unsigned char *t)
   for (i = 0; i < nwords; i++) {
     wordlen[i] = p[0];
     wordp[i] = p + 1;
+    p += 1 + p[0];
+  }
+  nalias = p[0];
+  p++;
+  for (i = 0; i < (unsigned)nalias; i++) {
+    aliaswl[i] = p[0];
+    aliasw[i] = p + 1;
+    p += 1 + p[0];
+    aliasvl[i] = p[0];
+    aliasv[i] = p + 1;
     p += 1 + p[0];
   }
   {
@@ -210,6 +216,35 @@ int cmd_init(const unsigned char *t)
     if (same(namep[i], namelen[i], "adjunct")) rule_adjunct = i;
   }
   return 1;
+}
+
+static int word_index(const char *t, int len)
+{
+  int w;
+  for (w = 0; w < nwords; w++)
+    if (wordlen[w] == len && memcmp(wordp[w], t, len) == 0) return w;
+  return -1;
+}
+
+/* The default aliases at the start of a command, or of a part after "then", stand for their verbs (in place). */
+static void apply_aliases(void)
+{
+  int t, i, j;
+  for (t = 0; t < ntok; t++) {
+    int seg = (t == 0) || (tokk[t - 1] == 0 && toklen[t - 1] == 4 && memcmp(tbuf + tokoff[t - 1], "then", 4) == 0);
+    if (!seg || tokk[t] != 0) continue;
+    for (i = 0; i < nalias; i++) {
+      if (aliaswl[i] == toklen[t] && memcmp(aliasw[i], tbuf + tokoff[t], toklen[t]) == 0) {
+        int vl = aliasvl[i];
+        tokoff[t] = tbn;
+        toklen[t] = vl;
+        for (j = 0; j < vl; j++) tbuf[tbn++] = aliasv[i][j];
+        tbuf[tbn++] = 0;
+        tokw[t] = word_index(tbuf + tokoff[t], vl);
+        break;
+      }
+    }
+  }
 }
 
 /* Tokenize a line: words (lower case, with ! and =), quoted text (with a w or y prefix), and nothing else. */
@@ -262,6 +297,8 @@ static void tokenize(const char *s)
     }
     tbuf[nb++] = 0;
   }
+  tbn = nb;
+  apply_aliases();
   for (t = 0; t < ntok; t++) {
     int k;
     tokmask[t] = 0;
@@ -320,14 +357,14 @@ static int match(const unsigned char *p, int pos, Cont *k)
       unsigned n = p[1], i;
       const unsigned char *o = p + 2;
       for (i = 0; i < n; i++) {
-        if (match(o, pos, k)) return 1;
-        o = skip(o);
+        if (match(slot_body(o), pos, k)) return 1;
+        o = slot_next(o);
       }
       return 0;
     }
     case T_OPT:
       if (run(k, pos)) return 1;
-      return match(p + 1, pos, k);
+      return match(slot_body(p + 1), pos, k);
     case T_REP: {
       Cont c;
       if (run(k, pos)) return 1;
@@ -336,7 +373,7 @@ static int match(const unsigned char *p, int pos, Cont *k)
       c.count = 1;
       c.start = pos;
       c.next = k;
-      return match(p + 1, pos, &c);
+      return match(slot_body(p + 1), pos, &c);
     }
     default:
       return 0;
@@ -357,11 +394,11 @@ static int run(Cont *k, int pos)
       Cont c;
       if (k->count == 0) return run(k->next, pos);
       c.kind = C_SEQ;
-      c.node = skip(k->node);
+      c.node = slot_next(k->node);
       c.count = k->count - 1;
       c.start = 0;
       c.next = k->next;
-      return match(k->node, pos, &c);
+      return match(slot_body(k->node), pos, &c);
     }
     case C_REP: {
       Cont c;
@@ -373,7 +410,7 @@ static int run(Cont *k, int pos)
       c.count = k->count + 1;
       c.start = pos;
       c.next = k->next;
-      return match(k->node, pos, &c);
+      return match(slot_body(k->node), pos, &c);
     }
     default:
       return 0;

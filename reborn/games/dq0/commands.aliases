@@ -1,0 +1,44 @@
+# Dingus Quest Zero: the default aliases, added to every player's list when a game starts (the player may change or
+# remove them). Each line: the word, then the verb it means. Only single words that no other rule uses, and whose
+# verb's meaning does not depend on the word itself (manner, blow, maneuver, defence are read from the word, so they
+# stay in the grammar). Multi-word synonyms ("take off", "put away", "pick up") stay in the grammar.
+peer look
+gaze look
+gander look
+mv move
+trundle move
+mosey move
+saunter move
+ready equip
+don equip
+wear equip
+wield equip
+remove doff
+store doff
+unwield doff
+stow doff
+leave exit
+scale climb
+tunnel dig
+creep sneak
+tiptoe sneak
+shove push
+drag pull
+hand give
+offer give
+carry hold
+feign pretend
+fake pretend
+leap jump
+load draw
+shoot fire
+chuck throw
+hurl throw
+toss throw
+consume eat
+quaff drink
+start light
+prepare cast
+concentrate cast
+ask tell
+repeat again
