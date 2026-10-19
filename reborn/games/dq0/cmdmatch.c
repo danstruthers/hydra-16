@@ -9,6 +9,7 @@
    corpus, so no parse is ranked; the first answer is the answer. */
 #include <string.h>
 #include "cmdmatch.h"
+#include "cmd_ids.h"
 
 /* Node tags in the grammar table */
 #define T_SEQ 1
@@ -34,20 +35,17 @@
 #define K_QUOTED 10
 
 #define MAXRULES 240
-#define MAXNAMES 260
 #define MAXWORDS 400
-#define MAXALIAS 80
+#define MAXALIAS 96     /* the default aliases: 86 of them, and room to add more */
 #define MAXTOK 14        /* positions 0..14 fit a 16-bit mask; the corpus is at most 12 words */
 #define MAXREP 12
 #define UNKNOWN 0xFFFF   /* a memo entry not yet computed */
 
 static const unsigned char *rulep[MAXRULES];
-static const unsigned char *namep[MAXNAMES];
-static unsigned char namelen[MAXNAMES];
-static int namekind[MAXNAMES];
+static const unsigned char *kindp;   /* one kind byte per open name (commandtables.js OPEN_KIND) */
 static const unsigned char *wordp[MAXWORDS];   /* the packed letters of each word */
 static unsigned char wordlen[MAXWORDS];
-static int nrules, nnames, nwords, rule_line, rule_adjunct, rule_sequence;
+static int nrules, nnames, nwords;
 static unsigned int memo[MAXRULES][MAXTOK + 1];
 /* The first words of each rule: the words it can begin with (a bit each), its open-name kinds, quoted text, and
    whether it can match nothing. Built from the grammar at start-up; rule_ends skips a rule the token cannot begin. */
@@ -91,35 +89,45 @@ static int word_is(int w, const char *text, int len)
   return 1;
 }
 
-static int same(const unsigned char *a, int alen, const char *b)
-{
-  int n = strlen(b);
-  return alen == n && memcmp(a, b, n) == 0;
-}
-
 static unsigned rd16(const unsigned char *p)
 {
   return p[0] | ((unsigned)p[1] << 8);
 }
 
-/* A slot is a child: its size (one byte under 128; two bytes above, the first with its top bit set), then the child.
-   The size lets a reader step over a child without walking it. */
-static const unsigned char *slot_body(const unsigned char *s)
+/* A composite node (sequence, alternative, option, repeat) is [tag, size, ...]: its size counts from the tag, one byte
+   under 128, else two bytes with the top bit of the first set. A leaf has no size: its length is in its tag or count. */
+static const unsigned char *head_of(const unsigned char *p)
 {
-  return (s[0] & 0x80) ? s + 2 : s + 1;
+  return (p[1] & 0x80) ? p + 3 : p + 2;   /* the byte after the size: a sequence's or alternative's count, or a child */
 }
 
-static const unsigned char *slot_next(const unsigned char *s)
+/* The node after the one at p: a composite is stepped over by its size, a leaf by its length. */
+static const unsigned char *node_next(const unsigned char *p)
 {
-  unsigned size = (s[0] & 0x80) ? (((unsigned)(s[0] & 0x7F) << 8) | s[1]) : s[0];
-  return slot_body(s) + size;
+  switch (*p) {
+    case T_SEQ:
+    case T_ALT:
+    case T_OPT:
+    case T_REP:
+      return p + ((p[1] & 0x80) ? (((unsigned)(p[1] & 0x7F) << 8) | p[2]) : p[1]);
+    case T_NT: return p + 3;
+    case T_TERM: return p + 2 + 2 * p[1];
+    default: return p + 1;   /* T_QUOTE */
+  }
+}
+
+/* The open-name kind of a name (K_NONE for a rule). quoted-text is a rule, but it matches quoted text: K_QUOTED. */
+static int kind_of(unsigned id)
+{
+  if (id < (unsigned)nrules) return id == CMD_QUOTED ? K_QUOTED : K_NONE;
+  return kindp[id - nrules];
 }
 
 /* The first words of a node, into rule r. Returns 1 if the node can match nothing. */
 static int first_node(const unsigned char *p, int r)
 {
   unsigned i, w, bit, nk, id;
-  int nul;
+  int nul, k;
   const unsigned char *s;
   switch (*p) {
     case T_TERM:
@@ -132,8 +140,9 @@ static int first_node(const unsigned char *p, int r)
       return 0;
     case T_NT:
       id = rd16(p + 1);
-      if (namekind[id] != K_NONE) {
-        nk = 1u << namekind[id];
+      k = kind_of(id);
+      if (k != K_NONE) {
+        nk = 1u << k;
         if (!(firstK[r] & nk)) { firstK[r] |= nk; fchanged = 1; }
         return 0;
       }
@@ -146,24 +155,24 @@ static int first_node(const unsigned char *p, int r)
       if (firstQ[id] && !firstQ[r]) { firstQ[r] = 1; fchanged = 1; }
       return nullable[id];
     case T_SEQ:
-      s = p + 2;
-      for (i = 0; i < p[1]; i++) {
-        nul = first_node(slot_body(s), r);
+      s = head_of(p) + 1;
+      for (i = 0; i < head_of(p)[0]; i++) {
+        nul = first_node(s, r);
         if (!nul) return 0;
-        s = slot_next(s);
+        s = node_next(s);
       }
       return 1;
     case T_ALT:
       nul = 0;
-      s = p + 2;
-      for (i = 0; i < p[1]; i++) {
-        if (first_node(slot_body(s), r)) nul = 1;
-        s = slot_next(s);
+      s = head_of(p) + 1;
+      for (i = 0; i < head_of(p)[0]; i++) {
+        if (first_node(s, r)) nul = 1;
+        s = node_next(s);
       }
       return nul;
     case T_OPT:
     case T_REP:
-      first_node(slot_body(p + 1), r);
+      first_node(head_of(p), r);
       return 1;
     default:
       return 0;
@@ -185,53 +194,27 @@ static void ensure_first(unsigned r)
   fstate[r] = 2;
 }
 
-/* Read the grammar table: the names (rules first, then open names), the packed words, and the rule bodies. */
+/* Read the grammar table: the counts, the packed words, the kind of each open name, and the rule bodies in order. */
 int cmd_init(const unsigned char *t)
 {
   const unsigned char *p = t;
-  unsigned i, n;
-  if (p[0] != 'D' || p[1] != 'Q' || p[2] != '0' || p[3] != 'G' || p[4] != 6) return 0;
+  unsigned i;
+  if (p[0] != 'D' || p[1] != 'Q' || p[2] != '0' || p[3] != 'G' || p[4] != 7) return 0;
   p += 5;
   nrules = rd16(p); p += 2;
   nnames = rd16(p); p += 2;
-  for (i = 0; i < nnames; i++) {
-    namelen[i] = p[0];
-    namep[i] = p + 1;
-    p += 1 + p[0];
-  }
   nwords = rd16(p); p += 2;
   for (i = 0; i < nwords; i++) {
     wordlen[i] = p[0];
     wordp[i] = p + 1;
     p += 1 + ((5 * p[0] + 7) >> 3);
   }
-  {
-    const unsigned char *offs = p;
-    const unsigned char *rules = p + 2 * nrules;
-    for (i = 0; i < nrules; i++) rulep[i] = rules + rd16(offs + 2 * i);
-  }
-  /* The open names and their kinds; quoted-text is a rule in the grammar but an open name to the host */
-  for (i = 0; i < nnames; i++) {
-    n = namelen[i];
-    namekind[i] = K_NONE;
-    if (i < (unsigned)nrules && !same(namep[i], n, "quoted-text")) continue;
-    if (same(namep[i], n, "name")) namekind[i] = K_OBJ;
-    else if (same(namep[i], n, "alias")) namekind[i] = K_OBJ;
-    else if (same(namep[i], n, "adj")) namekind[i] = K_ADJ;
-    else if (same(namep[i], n, "number")) namekind[i] = K_NUMBER;
-    else if (same(namep[i], n, "ordinal")) namekind[i] = K_ORDINAL;
-    else if (same(namep[i], n, "task-name")) namekind[i] = K_TASK;
-    else if (same(namep[i], n, "spell-word")) namekind[i] = K_SPELL;
-    else if (same(namep[i], n, "text") || same(namep[i], n, "meta-topic")) namekind[i] = K_TEXT;
-    else if (same(namep[i], n, "name-word")) namekind[i] = K_NAMEWORD;
-    else if (same(namep[i], n, "deity-name")) namekind[i] = K_DEITY;
-    else if (same(namep[i], n, "pretense-word")) namekind[i] = K_PRETENSE;
-    else if (same(namep[i], n, "quoted-text")) namekind[i] = K_QUOTED;
-  }
+  kindp = p;   /* one kind byte per open name */
+  p += nnames - nrules;
+  /* the rules follow one after another: each starts where the one before it ends */
   for (i = 0; i < (unsigned)nrules; i++) {
-    if (same(namep[i], namelen[i], "line")) rule_line = i;
-    if (same(namep[i], namelen[i], "adjunct")) rule_adjunct = i;
-    if (same(namep[i], namelen[i], "sequence")) rule_sequence = i;
+    rulep[i] = p;
+    p = node_next(p);
   }
   return 1;
 }
@@ -243,6 +226,7 @@ int cmd_init_aliases(const unsigned char *t)
   int i;
   if (p[0] != 'D' || p[1] != 'Q' || p[2] != '0' || p[3] != 'A' || p[4] != 1) return 0;
   nalias = p[5];
+  if (nalias > MAXALIAS) return 0;
   p += 6;
   for (i = 0; i < nalias; i++) {
     aliaswl[i] = p[0];
@@ -388,7 +372,7 @@ static void apply_aliases(void)
    the open-name kinds of each token. */
 static void tokenize(const char *s)
 {
-  int nb = 0, t, w;
+  int nb = 0, t;
   ntok = 0;
   while (*s && ntok < MAXTOK) {
     char c = *s;
@@ -464,7 +448,7 @@ static unsigned rule_ends(int id, int pos)
 {
   unsigned m;
   if (memo[id][pos] != UNKNOWN) return memo[id][pos];
-  if ((int)id == rule_sequence && !has_then) return memo[id][pos] = 0;   /* a sequence needs a then */
+  if ((int)id == CMD_SEQUENCE && !has_then) return memo[id][pos] = 0;   /* a sequence needs a then */
   if (!can_start(id, pos)) return memo[id][pos] = 0;
   memo[id][pos] = 0;
   m = ends(rulep[id], pos);
@@ -488,37 +472,38 @@ static unsigned ends(const unsigned char *p, int pos)
       return (pos < ntok && tokk[pos] == 1) ? 1u << (pos + 1) : 0;
     case T_NT: {
       unsigned id = rd16(p + 1);
-      if (namekind[id] == K_NONE) return rule_ends(id, pos);
-      return (pos < ntok && ((tokmask[pos] >> namekind[id]) & 1u)) ? 1u << (pos + 1) : 0;
+      int k = kind_of(id);
+      if (k == K_NONE) return rule_ends(id, pos);
+      return (pos < ntok && ((tokmask[pos] >> k) & 1u)) ? 1u << (pos + 1) : 0;
     }
     case T_SEQ:
       /* the positions so far, passed through each item in turn */
       m = 1u << pos;
-      s = p + 2;
-      for (i = 0; i < p[1] && m; i++) {
+      s = head_of(p) + 1;
+      for (i = 0; i < head_of(p)[0] && m; i++) {
         out = 0;
         for (q = 0; q <= ntok; q++)
-          if (m & (1u << q)) out |= ends(slot_body(s), q);
+          if (m & (1u << q)) out |= ends(s, q);
         m = out;
-        s = slot_next(s);
+        s = node_next(s);
       }
       return m;
     case T_ALT:
-      s = p + 2;
-      for (i = 0; i < p[1]; i++) {
-        out |= ends(slot_body(s), pos);
-        s = slot_next(s);
+      s = head_of(p) + 1;
+      for (i = 0; i < head_of(p)[0]; i++) {
+        out |= ends(s, pos);
+        s = node_next(s);
       }
       return out;
     case T_OPT:
-      return (1u << pos) | ends(slot_body(p + 1), pos);
+      return (1u << pos) | ends(head_of(p), pos);
     case T_REP: {
       /* zero or more: the positions reached by repeating the child, each repetition moving on */
       unsigned frontier = 1u << pos, seen = 1u << pos, nxt;
       for (n = 0; n < MAXREP && frontier; n++) {
         nxt = 0;
         for (q = 0; q <= ntok; q++)
-          if (frontier & (1u << q)) nxt |= ends(slot_body(p + 1), q);
+          if (frontier & (1u << q)) nxt |= ends(head_of(p), q);
         nxt &= ~seen;
         seen |= nxt;
         frontier = nxt;
@@ -542,7 +527,7 @@ int cmd_match(const char *line, const char *world, const char *names, const char
   if (ntok > MAXTOK) return -1;
   for (r = 0; r < nrules; r++)
     for (i = 0; i <= MAXTOK; i++) memo[r][i] = UNKNOWN;
-  m = rule_ends(rule_line, 0);
+  m = rule_ends(CMD_LINE, 0);
   *fewest = 0;
   return (m >> ntok) & 1u ? 1 : 0;
 }
