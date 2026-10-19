@@ -14,7 +14,25 @@ const { loadRules, Compiler, buildContext, DEFAULT_WORLD, checkCorpus, DEFAULT_A
 
 const GAME = path.join(__dirname, '..', '..', 'games', 'dq0');
 const MAGIC = [0x44, 0x51, 0x30, 0x47]; // "DQ0G"
-const VERSION = 5;
+const VERSION = 6;
+// The words are packed: 5 bits a letter (a to z, then ! = - ') and a length byte.
+const PACK = "abcdefghijklmnopqrstuvwxyz!=-'";
+function packWord(w) {
+  const bits = [];
+  for (const c of w) {
+    const v = PACK.indexOf(c);
+    if (v < 0) throw new Error('a letter the word alphabet lacks: ' + c);
+    for (let i = 0; i < 5; i++) bits.push((v >> i) & 1);
+  }
+  const out = [w.length];
+  for (let k = 0; k < bits.length; k += 8) {
+    let b = 0;
+    for (let i = 0; i < 8 && k + i < bits.length; i++) b |= bits[k + i] << i;
+    out.push(b);
+  }
+  return out;
+}
+
 const MAGIC_ALIAS = [0x44, 0x51, 0x30, 0x41]; // "DQ0A"
 const VERSION_ALIAS = 1;
 const TAG = { seq: 1, alt: 2, opt: 3, rep: 4, nt: 5, term: 6, quote: 7 };
@@ -69,7 +87,7 @@ function encodeGrammar(rules, open) {
   const head = [...MAGIC, VERSION, ...u16(rules.size), ...u16(names.length)];
   for (const n of names) head.push(...text(n));
   head.push(...u16(words.length));
-  for (const w of words) head.push(...text(w));
+  for (const w of words) head.push(...packWord(w));
   for (const o of offsets) head.push(...u16(o));
   return Buffer.from([...head, ...ruleBytes]);
 }
@@ -108,7 +126,14 @@ function decodeGrammar(buf) {
   for (let i = 0; i < nameCount; i++) names.push(str());
   const wordCount = u16();
   const words = [];
-  for (let i = 0; i < wordCount; i++) words.push(str());
+  for (let i = 0; i < wordCount; i++) {
+    const n = u8();
+    const bits = [];
+    for (let k = 0; k < Math.ceil(5 * n / 8); k++) { const b = u8(); for (let j = 0; j < 8; j++) bits.push((b >> j) & 1); }
+    let w = '';
+    for (let c = 0; c < n; c++) { let v = 0; for (let j = 0; j < 5; j++) v |= bits[5 * c + j] << j; w += PACK[v]; }
+    words.push(w);
+  }
   const offsets = [];
   for (let i = 0; i < ruleCount; i++) offsets.push(u16());
   const rulesStart = p;

@@ -37,7 +37,7 @@
 <locale-ref>     ::= "around" [ <here-ref> ] | "about" | "here" | "this place"
 <look-prep>      ::= "at" | "through" | "toward" | "towards" | "around" | "in" | "under" | "behind" | "beside" | "near"
 <examine>        ::= <EXAMINE> [ [ "at" ] <object> ]
-<EXAMINE>        ::= "examine" | "inspect" | [ "take a" ] <DETAIL> <LOOK>   (* "look closely" is an alias of examine: commands.aliases *)
+<EXAMINE>        ::= "examine" | [ "take a" ] <DETAIL> <LOOK>   (* "look closely" is an alias of examine: commands.aliases *)
 
 (* ---- Moving and facing ---- *)
 <move>           ::= [ <pace-word> ] [ <MOVE> ] <move-dir> [ <number> [ "space" | "spaces" | "square" | "squares" ] ]   (* "run north": this move at run; "walk north": the verb *)
@@ -141,8 +141,8 @@
 
 (* ---- Lexicon: the classes. Each is one abstract meaning; the words are its synonyms. ---- *)
 <LOOK>       ::= "look" | "take a gander" | "take a look"
-<DETAIL>     ::= "close" | "closely" | "in detail" | "detail" | "detailed" | "really"
-<MOVE>       ::= "move" | "walk" | "go" | "head"
+<DETAIL>     ::= "close" | "in detail"
+<MOVE>       ::= "move" | "walk" | "go"
 <TOWARD>     ::= "to" | "towards" | "toward" | "in the direction of"
 <GET>        ::= "get" | "take" | "pick up" | "pick"
 <DROP>       ::= "drop" | "put down"
@@ -150,15 +150,14 @@
 <USE>        ::= "use" | "make use of"
 <EQUIP>      ::= "equip"
 <UNEQUIP>    ::= "doff" | "take off" | "put away"
-<ATTACK>     ::= "fight" | "attack" | "hit" | "strike" | "swing" | "slice" | "slash" | "chop" | "bash" | "bludgeon"
-                 | "thump" | "club" | "stab" | "poke" | "pierce" | "punch" | "kick" | "bite" | "headbutt" | "elbow" | "knee" | "slap" | "butt"
+<ATTACK>     ::= "fight" | "slash" | "bash" | "stab" | "punch" | "kick" | "bite" | "headbutt" | "elbow" | "knee" | "slap" | "butt"
 <GRAPPLE>    ::= "grapple" | "wrestle" | "tackle" | "pin" | "choke"
 <THROW>      ::= "throw" | "sling"
 <SHOOT>      ::= "fire"
 <LOAD>       ::= "draw"
 <JUMP>       ::= "jump"
 <SAY>        ::= "say"
-<VOLUME-SAY>  ::= "yell" | "scream" | "shout" | "whisper"
+<VOLUME-SAY>  ::= "yell" | "whisper"
 <TELL>       ::= "tell"
 <CAST>       ::= "cast"
 <EAT>        ::= "eat"
@@ -179,7 +178,7 @@
 <NAME>       ::= "name" | "call"
 <ALIAS>      ::= "alias"
 <UNALIAS>    ::= "unalias" | "forget alias"
-<META-WORD>  ::= "status" | "help" | "inventory" | "i" | "map" | "save" | "quit"
+<META-WORD>  ::= "status" | "help" | "i" | "map" | "save" | "quit"
 
 (* ---- Fire (added 2026-10-19) ---- *)
 <light>          ::= <LIGHT> [ "a" ] "fire" | <LIGHT> <object>   (* "light the torch", "start a fire" *)
