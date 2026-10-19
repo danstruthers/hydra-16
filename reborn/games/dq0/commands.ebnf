@@ -78,7 +78,9 @@
 <target>         ::= <TARGET> <object> | "clear target" | "untarget"
 <wait>           ::= <WAIT> [ <duration> ]  (* VB_WAIT: idle for a while; a long task, stopped by "stop" or "stop waiting", interrupted as a walk is *)
 <rest>           ::= <REST>                 (* rest and sleep are the same: VB_SLEEP, the player unaware *)
-<sleep>          ::= <SLEEP>                (* VB_SLEEP: interrupted by an awareness check *)
+<sleep>          ::= <SLEEP>                (* VB_SLEEP: interrupted by an awareness check. Its length is not typed: it
+                                              depends on fatigue, injury and sickness (the user, 2026-10-19), so a duration
+                                              is only given to override it *)
 <stop>           ::= <STOP> [ <task-name> ]                     (* question 9: "stop" alone, or "stop digging" *)
 <step>           ::= "step" <direction>                 (* one square; facing unchanged: "step r" *)
 <pace-set>       ::= "pace" <pace-word> | "double time"  (* sets the default pace; "double time!" is a run *)

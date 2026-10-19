@@ -222,3 +222,4 @@ sleep for an hour	VB_SLEEP	duration=60min	-	sleep with a duration
 wait 10 minutes	VB_WAIT	duration=10min	-	a long task, stopped by stop
 wait	VB_WAIT	duration=1min	-	bare wait: a minute
 stop waiting	VB_STOP	task=waiting	-	stops the wait
+sleep	VB_SLEEP	-	-	length not typed: the rest is set by the character's state
