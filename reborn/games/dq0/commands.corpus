@@ -226,3 +226,5 @@ sleep	VB_SLEEP	-	-	length not typed: the rest is set by the character's state
 short rest	VB_SLEEP	short=yes	-	a short rest: 30 to 60 minutes, may become a full sleep
 short sleep	VB_SLEEP	short=yes	-	the same as short rest
 rest	VB_SLEEP	short=no	-	a full rest, not short
+chuck the apple north	QUESTION:DISTANCE	object=apple;direction=N	near=apple	chuck: a synonym of throw
+hurl the stone at the goblin	VB_THROW_OBJECT	object=stone;target=goblin	near=stone,goblin	hurl: a synonym of throw

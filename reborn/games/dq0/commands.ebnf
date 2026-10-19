@@ -148,7 +148,7 @@
 <ATTACK>     ::= "fight" | "attack" | "strike" | "swing" | "slice" | "slash" | "chop" | "bash" | "bludgeon"
                  | "thump" | "club" | "stab" | "poke" | "pierce" | "punch" | "kick" | "bite" | "headbutt"
 <GRAPPLE>    ::= "grapple" | "wrestle"
-<THROW>      ::= "throw" | "sling"
+<THROW>      ::= "throw" | "chuck" | "hurl" | "sling"
 <SHOOT>      ::= "fire" | "shoot"
 <LOAD>       ::= "draw" | "load"
 <JUMP>       ::= "jump" | "leap"
