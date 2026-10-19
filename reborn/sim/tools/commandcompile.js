@@ -986,16 +986,20 @@ class Compiler {
       return act('ALIAS:REMOVE', { alias: w[0] === 'unalias' ? w[1] : w[2] });
     }
     if (w[0] !== 'alias') return null;
-    if (toks.length === 1) return act('ALIAS:LIST', {});
+    if (toks.length === 1) return act('ALIAS:LIST', Object.fromEntries(ctx.aliases));
     const sep = w.findIndex((x, i) => i >= 2 && (x === 'is' || x === '='));
     if (sep < 0 && w.includes('as')) return err('USE_NAME');
     if (sep < 0) {
       if (this.reserved.has(w[1]) && !ctx.world.has(w[1])) return err('BUILT_IN_WORD', { alias: w[1] });
-      return act('ALIAS:SHOW', { alias: w[1] });
+      return act('ALIAS:SHOW', { alias: w[1], substitution: ctx.aliases.get(w[1]) });
     }
     const name = w[1];
     if (this.reserved.has(name) && !ctx.world.has(name)) return err('BUILT_IN_WORD', { alias: name });
-    const substitution = toks.slice(sep + 1).map(t => (t.k === 'w' ? t.v : `"${t.text}"`)).join(' ');
+    const substitution0 = toks.slice(sep + 1).map(t => (t.k === 'w' ? t.v : `"${t.text}"`)).join(' ');
+    // An alias of an alias points at the core word, as it is now: "alias yyy is x" means what x means.
+    const first = substitution0.split(' ')[0];
+    const substitution = ctx.aliases.has(first) && first !== name
+      ? [ctx.aliases.get(first), substitution0.slice(first.length + 1)].filter(Boolean).join(' ') : substitution0;
     if (ctx.aliases.has(name)) return question('OVERWRITE', { alias: name, current: ctx.aliases.get(name), new: substitution });
     return act('ALIAS:DEFINE', { alias: name, substitution });
   }

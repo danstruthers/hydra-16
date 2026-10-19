@@ -393,3 +393,7 @@ take and stow the sword	VB_SEQUENCE	steps=VB_RETRIEVE_OBJECT,VB_UNEQUIP_OBJECT;1
 take and drop the sword	VB_SEQUENCE	steps=VB_RETRIEVE_OBJECT,VB_DROP_OBJECT;1.object=sword;2.object=sword	near=sword	take, then drop
 take and stow and drop the sword	VB_SEQUENCE	steps=VB_RETRIEVE_OBJECT,VB_UNEQUIP_OBJECT,VB_DROP_OBJECT;3.object=sword	near=sword	a chain of verbs
 take and the shield	ERROR:NOT_UNDERSTOOD	-	near=shield	the second word is no verb
+alias yyy is x	ALIAS:DEFINE	alias=yyy;substitution=take	x=take	an alias of an alias points at the core word
+alias x	ALIAS:SHOW	alias=x;substitution=take	x=take	show a meaning
+alias	ALIAS:LIST	x=take;yyy=take	x=take;yyy=take	list: the core word, not the alias
+yyy sword	VB_RETRIEVE_OBJECT	object=sword	near=sword;yyy=take	the chained alias takes the core verb
