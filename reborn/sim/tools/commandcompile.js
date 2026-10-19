@@ -706,8 +706,8 @@ function phraseSem(spec, env, ctx) {
       const d = kidsOf(spec, 'direction')[0];
       return act('VB_DISENGAGE', { direction: d ? dirCode(d, env) : undefined });
     }
-    // Pass forfeits the turn when engaged; when not engaged it is the same as wait.
-    case 'pass': return ctx.engaged.length ? act('VB_PASS', {}) : act('VB_WAIT', { duration: '1min' });
+    // Pass forfeits the turn: only when engaged. "pass the time" is a wait, in the wait rule.
+    case 'pass': return ctx.engaged.length ? act('VB_PASS', {}) : err('NOT_ENGAGED');
     case 'posture': return act(own(POSTURE, spec.kids[0].rule), {});
     case 'pretend': return act('VB_PRETEND', { state: textOf(findFirst(spec, 'pretense'), env) });
     default: return err('NOT_UNDERSTOOD');

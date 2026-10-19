@@ -82,7 +82,7 @@
 <smell>          ::= <SMELL> [ <look-target> ]
 <track>          ::= <TRACK> [ "for" ] [ <object> ]
 <target>         ::= <TARGET> [ <object> ] | "clear target" | "untarget"
-<wait>           ::= <WAIT> [ <duration> ]  (* VB_WAIT: idle for a while; a long task, stopped by "stop" or "stop waiting", interrupted as a walk is *)
+<wait>           ::= <WAIT> [ <duration> ] | "pass" "the" "time"   (* "pass the time" is a wait *)  (* VB_WAIT: idle for a while; a long task, stopped by "stop" or "stop waiting", interrupted as a walk is *)
 <rest>           ::= [ "short" ] <REST>     (* rest and sleep are the same: VB_SLEEP, the player unaware. "short rest" is a
                                               sleep meant for 30 to 60 minutes, which fatigue, illness and injury may turn into a
                                               full sleep; the wake-up test uses Will, and a high Will helps *)
