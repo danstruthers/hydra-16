@@ -1043,7 +1043,7 @@ function checkCorpus(compiler, corpusFile, log) {
   return { pass, total };
 }
 
-module.exports = { Compiler, loadRules, buildContext, tokenize, DEFAULT_WORLD, checkCorpus };
+module.exports = { Compiler, loadRules, buildContext, tokenize, DEFAULT_WORLD, checkCorpus, matchRule, countRule };
 
 if (require.main === module) {
   const compiler = new Compiler(loadRules(path.join(GAME, 'commands.ebnf')));
