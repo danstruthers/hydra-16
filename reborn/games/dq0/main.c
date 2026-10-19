@@ -470,6 +470,7 @@ static void start_world (unsigned long seed)
     hub_map (DEN_BANK);                         /* (The sounds' words: none till the sound task's put them there) */
     memset (SND_AT, 0, (2 * SND_KINDS + SND_WORLD) * SND_REC);
     hub_map (0);
+    start ("dq0c", T_COMMANDS, libdir);         /* (Its command parser: its tables read as the others start) */
     start ("dq0s", T_SOUND, libdir);            /* (Its sound: SOUND.md) */
     start ("dq0harn", T_REFEREE, libdir);       /* (Its rules: its folder, for its overlay) */
     r = referee (RS_HELLO, 0);
@@ -1161,6 +1162,23 @@ void s_ready (void)
 {
 }
 
+/* The command parser's verdict on a line (dq0c, the hub's cq: the line in CMD_BANK, the reply's res 1 it parses, 0
+** not, -1 too long): asked as each command is carried out, not used yet (the round trip's cost measured: the
+** dq0answer tests), till its verdict and the command's meaning take the old parser's place */
+static void __fastcall__ cq_ask (const char* l)
+{
+    static unsigned n;
+
+    n = strlen (l);
+    hub_map (CMD_BANK);
+    memcpy (HUB_WINDOW, l, n + 1);
+    hub_map (0);
+    HUB->cq.kind = CQ_MATCH;
+    HUB->cq.len = n;
+    hub_call (&HUB->cq, T_COMMANDS);
+    HUB->cq.state = REQ_FREE;
+}
+
 /* A command, the parser's, carried out */
 void __fastcall__ s_command (char* l)
 {
@@ -1168,6 +1186,7 @@ void __fastcall__ s_command (char* l)
     struct req* r;
     unsigned char d, pa;
 
+    cq_ask (l);
     pc_face = HUB->pc_face;
     if (at_hit) {
         memcpy (&c, &at_c, sizeof c);           /* (at_once's: this line's, parsed already) */

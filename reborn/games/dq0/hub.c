@@ -98,6 +98,7 @@ int __fastcall__ hub_create (unsigned char banks)
     }
     HUB->change_lock = s;
     HUB->task[T_UI] = hy_task ();
+    HUB->cq.bank = CMD_BANK;                    /* (Where the command parser finds the commands' text) */
     self = T_UI;
     return 0;
 }

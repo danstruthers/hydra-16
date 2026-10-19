@@ -23,8 +23,8 @@ const { execFileSync } = require('child_process');
 const ROOT = path.join(__dirname, '..', '..');                // (reborn/)
 const DQ0 = path.join(ROOT, 'games', 'dq0');
 const HEADERS = ['hub.h', 'items.h', 'level.h', 'theme.h', 'rs.h', path.join('..', 'dq0w', 'world.h')];
-const TASKS = ['ui', 'world', 'denizens', 'referee', 'sound', 'maker', 'senses'];   // (hub.h's T_*)
-const PROGS = ['dq0', 'dq0w', 'dq0d', 'dq0harn', 'dq0s', 'dq0m', 'dq0p'];         // (Each role's program)
+const TASKS = ['ui', 'world', 'denizens', 'referee', 'sound', 'maker', 'senses', 'commands'];   // (hub.h's T_*)
+const PROGS = ['dq0', 'dq0w', 'dq0d', 'dq0harn', 'dq0s', 'dq0m', 'dq0p', 'dq0c'];  // (Each role's program)
 const TA_NAME = 0x0230;                                       // (A task's name in its RAM: base/sim/run.js's)
 
 // The records a region names (REC.FIELD): their struct, their bank and place (n of them: k's)

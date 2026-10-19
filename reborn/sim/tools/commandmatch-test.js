@@ -1,10 +1,13 @@
-// commandmatch-test.js - Dingus Quest Zero's command matcher (games/dq0/cmdmatch.s, 65C02 assembly) against the
+// commandmatch-test.js - Dingus Quest Zero's command matcher (games/dq0c/cmdmatch.s, 65C02 assembly) against the
 // host's results on the corpus (commandcompile.js's, as commandmatch-gen.js writes them):
 //   node sim/tools/commandmatch-test.js           on sim65, cc65's 6502 simulator (cmdmatch/cmdtest.c): each command's
 //                                                 result and cycles, the slowest, cmd_init's and cmd_world's
 //   node sim/tools/commandmatch-test.js --hydra   on the Hydra emulator under HydraOS (cmdmatch/cmdhy.c): the grammar
 //                                                 in a RAM bank, the index and the aliases in the main RAM, the corpus
 //                                                 read from /pc, timed by the tick (the system's interrupts with it)
+//   node sim/tools/commandmatch-test.js --task    the parser's task (games/dq0c) under HydraOS, through the hub's
+//                                                 protocol (cmdmatch/cmdtask.c the UI's part): its start, an empty
+//                                                 request's round trip, a command's, each result the host's
 // Its files go in obj/cmdmatch.  Exit status 0 if every command agrees.
 'use strict';
 const fs = require('fs');
@@ -14,7 +17,7 @@ const { tool } = require('../../../base/build.js');
 
 const REB = path.join(__dirname, '..', '..');
 const OUT = path.join(REB, 'obj', 'cmdmatch');
-const GAME = path.join(REB, 'games', 'dq0');
+const GAME = path.join(REB, 'games', 'dq0c');
 const HERE = path.join(__dirname, 'cmdmatch');
 const run = (exe, args, opt = {}) => cp.execFileSync(exe, args, Object.assign({ encoding: 'utf8', maxBuffer: 1 << 26 }, opt));
 
@@ -29,8 +32,8 @@ const ok = block('cmd_ok').split(',').map(s => s.trim()).filter(Boolean).map(Num
 
 function sim65() {
   const bin = path.join(OUT, 'cmdtest.bin');
-  run(tool('cl65'), ['--cpu', '65C02', '-t', 'sim65c02', '-O', '-I', OUT, '-I', GAME, '-o', bin,
-    path.join(HERE, 'cmdtest.c'), path.join(GAME, 'cmdmatch.s')], { cwd: OUT, stdio: ['ignore', 'pipe', 'pipe'] });   // (Its warnings: the test data's unused arrays)
+  run(tool('cl65'), ['--cpu', '65C02', '-t', 'sim65c02', '-O', '-I', OUT, '-I', HERE, '-o', bin,
+    path.join(HERE, 'cmdtest.c'), path.join(GAME, 'cmdmatch.s'), path.join(HERE, 'cmdmatch_c.s')], { cwd: OUT, stdio: ['ignore', 'pipe', 'pipe'] });   // (Its warnings: the test data's unused arrays)
   const out = run(tool('sim65'), ['--cpu', '65C02', '-x', '4000000000', bin], { cwd: OUT }).split(/\r?\n/);
   let init = 0, worlds = [], bad = 0;
   const each = [];
@@ -54,11 +57,9 @@ function sim65() {
   return bad === 0;
 }
 
-function hydra() {
-  const pc = path.join(OUT, 'pc'), prog = path.join(OUT, 'cmdhy');
-  fs.mkdirSync(pc, { recursive: true });
-  fs.mkdirSync(prog, { recursive: true });
-  run(process.execPath, [path.join(__dirname, 'commandtables.js'), path.join(pc, 'grammar.bin'), path.join(pc, 'aliases.bin'), path.join(pc, 'index.bin')]);
+// The corpus for a run under HydraOS (cmdhy.c and cmdtask.c read it): the world's words as they change (W, N, D),
+// each command with the host's result (C)
+function corpusFile(pc) {
   const lines = [];
   let w, n, d;
   text.forEach((t, i) => {
@@ -68,17 +69,48 @@ function hydra() {
     lines.push('C ' + ok[i] + ' ' + t);
   });
   fs.writeFileSync(path.join(pc, 'corpus.txt'), lines.join('\n') + '\n');
-  fs.copyFileSync(path.join(HERE, 'cmdhy.c'), path.join(prog, 'cmdhy.c'));
-  for (const f of ['cmdmatch.s', 'cmdmatch.h']) fs.copyFileSync(path.join(GAME, f), path.join(prog, f));
-  run(process.execPath, ['build.js', 'prog', prog], { cwd: REB });
-  fs.copyFileSync(path.join(prog, 'cmdhy.hyx'), path.join(pc, 'cmdhy'));
-  const B = String.fromCharCode(92), keys = B + 'w' + B + 'w' + B + 'w/pc/cmdhy' + B + 'r';   // (Typed once the shell is up)
-  const r = cp.spawnSync(process.execPath, ['sim/run.js', '--pc-dir', pc, '--input', keys, '--cycles', '900000000'],
-    { cwd: REB, encoding: 'utf8', maxBuffer: 1 << 26 });
-  const o = r.stdout || '', at = o.indexOf('/pc/cmdhy'), end = o.indexOf('\n/>', at);
-  const said = o.slice(at, end < 0 ? at + 4000 : end).split('\n').slice(1).filter(l => /^[ -~]*$/.test(l));
-  console.log(said.join('\n') || '(nothing: ' + (o.split('\n').find(l => /stopped/.test(l)) || 'no run') + ')');
-  return said.some(l => / 0 differ$/.test(l));
 }
 
-process.exit((process.argv.includes('--hydra') ? hydra() : sim65()) ? 0 : 1);
+// A program built (build.js prog) from its files in a folder of its own under OUT, into pc as NAME
+function prog(name, files, pc, env = {}) {
+  const dir = path.join(OUT, name);
+  fs.rmSync(dir, { recursive: true, force: true });
+  fs.mkdirSync(dir, { recursive: true });
+  for (const f of files) fs.copyFileSync(f, path.join(dir, path.basename(f)));
+  run(process.execPath, ['build.js', 'prog', dir], { cwd: REB, env: Object.assign({}, process.env, env) });
+  fs.copyFileSync(path.join(dir, name + '.hyx'), path.join(pc, name));
+}
+
+// pc/NAME run in the emulator, at the shell once it's up; what it says (its lines up to the next prompt)
+function emulate(pc, name) {
+  const B = String.fromCharCode(92), keys = B + 'w' + B + 'w' + B + 'w/pc/' + name + B + 'r';   // (Typed once the shell is up)
+  const r = cp.spawnSync(process.execPath, ['sim/run.js', '--pc-dir', pc, '--input', keys, '--cycles', '900000000'],
+    { cwd: REB, encoding: 'utf8', maxBuffer: 1 << 26 });
+  const o = r.stdout || '', at = o.indexOf('/pc/' + name), end = o.indexOf('\n/>', at);
+  const said = o.slice(at, end < 0 ? at + 4000 : end).split('\n').slice(1).filter(l => /^[ -~]*$/.test(l));
+  console.log(said.join('\n') || '(nothing: ' + (o.split('\n').find(l => /stopped/.test(l)) || 'no run') + ')');
+  return said;
+}
+
+// The matcher alone under HydraOS (cmdhy.c: the grammar in a RAM bank)
+function hydra() {
+  const pc = path.join(OUT, 'pc');
+  fs.mkdirSync(pc, { recursive: true });
+  run(process.execPath, [path.join(__dirname, 'commandtables.js'), path.join(pc, 'grammar.bin'), path.join(pc, 'aliases.bin'), path.join(pc, 'index.bin')]);
+  corpusFile(pc);
+  prog('cmdhy', [path.join(HERE, 'cmdhy.c'), path.join(HERE, 'cmdmatch.h'), path.join(HERE, 'cmdmatch_c.s'), path.join(GAME, 'cmdmatch.s')], pc);
+  return emulate(pc, 'cmdhy').some(l => / 0 differ$/.test(l));
+}
+
+// The parser's task (dq0c) under HydraOS, through the hub's protocol (cmdtask.c the UI's part): its round trips
+function task() {
+  const pc = path.join(OUT, 'pc');
+  fs.mkdirSync(pc, { recursive: true });
+  require(path.join(GAME, 'make.js')).build({ dir: GAME, objdir: path.join(pc, 'dq0c-obj') });   // (pc/dq0c.dat)
+  corpusFile(pc);
+  prog('dq0c', ['dq0c.s', 'cmdmatch.s', 'hub.inc'].map(f => path.join(GAME, f)), pc);
+  prog('cmdtask', [path.join(HERE, 'cmdtask.c')], pc, { HYC_CFLAGS: '-I ' + path.join(REB, 'games', 'dq0') });
+  return emulate(pc, 'cmdtask').some(l => / 0 differ$/.test(l));
+}
+
+process.exit((process.argv.includes('--task') ? task() : process.argv.includes('--hydra') ? hydra() : sim65()) ? 0 : 1);

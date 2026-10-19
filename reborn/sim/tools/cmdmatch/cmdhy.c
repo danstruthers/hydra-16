@@ -1,4 +1,4 @@
-/* cmdhy.c - Dingus Quest Zero's command matcher (games/dq0/cmdmatch.s) under HydraOS, timed (built and run in the
+/* cmdhy.c - Dingus Quest Zero's command matcher (games/dq0c/cmdmatch.s) under HydraOS, timed (built and run in the
    emulator by sim/tools/commandmatch-test.js --hydra, its files in /pc): the grammar table in a RAM bank (at $8000
    while it matches), the index and the aliases in the main RAM, the corpus read a line at a time.
    /pc/grammar.bin, /pc/index.bin, /pc/aliases.bin, /pc/corpus.txt (W, N and D lines: the world's words when they

@@ -1,4 +1,4 @@
-/* cmdtest.c - the command matcher (games/dq0/cmdmatch.s) on sim65, cc65's 6502 simulator: each corpus command's
+/* cmdtest.c - the command matcher (games/dq0c/cmdmatch.s) on sim65, cc65's 6502 simulator: each corpus command's
    result and cycles, and cmd_init's and cmd_world's, for sim/tools/commandmatch-test.js (the cmd_*.h files are
    commandmatch-gen.js's).  The world is set only when a command's differs from the one before. */
 #include <stdio.h>

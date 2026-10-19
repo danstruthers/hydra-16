@@ -3,14 +3,20 @@
 ; host's reference is sim/tools/commandcompile.js; the tables are sim/tools/commandtables.js's (the grammar, DQ0G
 ; version 7; its index, DQ0I version 2; the default aliases, DQ0A version 1); the test data, commandmatch-gen.js's.
 ;
-; From C (cmdmatch.h): cmd_init (grammar, index, aliases), cmd_world (world, names, deities), cmd_match (line).
+; Its calls (the parser's task, dq0c.s, makes them; C's cmdmatch.h, sim/tools/cmdmatch/cmdmatch_c.s, wraps them):
+;   cm_init     the tables: cm_g the grammar, cm_i its index, cm_a the default aliases (each where it stays).  C = 0,
+;               or C = 1: one is not a dq0 table, they don't belong together, or one is too large for the matcher
+;   cm_world    the world's words, when they change: cm_g the words the world names things by, cm_i the names
+;               given, cm_a the deities' names (space-separated lists, each to stay as it is till the next cm_world)
+;   cm_match    a line (.A/.X, zero-ended): .A 1 if it parses, 0 if not, $FF (and .X $FF) if it is too long or
+;               nests too deep
 ;
 ; The matcher returns, for a node at a position, the positions where it can end, as a 16-bit mask (bit p: the match
 ; ends before token p).  It walks the grammar as it stands in its table; nothing is built from it but each rule's
 ; address.  What keeps it quick:
 ; - The words are found in the index's dictionary: a Pearson hash of the word picks its bucket, and the bucket's words
 ;   are compared.  Each entry has its lexicon flags (LX_*: the words the open names look for), the world's marks
-;   (W_*: cmd_world, when the world changes), and heads the chain of the aliases that begin with its word: the
+;   (W_*: cm_world, when the world changes), and heads the chain of the aliases that begin with its word: the
 ;   aliases are a trie of words, the first by the hash, the rest compared.
 ; - A rule is entered only if the token can begin it: its first words as a 64-bit Bloom filter, and its first kinds.
 ;   An alternation of many options (the phrases) tries only the options the token begins: its first words, sorted, by
@@ -29,9 +35,7 @@
 
             .setcpu     "65C02"
             .macpack    longbranch
-            .export     _cmd_init, _cmd_world, _cmd_match
-            .import     popax
-            .include    "zeropage.inc"
+            .export     cm_init, cm_world, cm_match, cm_g, cm_i, cm_a
 
 ; Node tags in the grammar table
 T_SEQ       = 1
@@ -104,7 +108,7 @@ pperm:      .res        2           ; The hash's permutation
 pkind:      .res        2           ; The open names' kinds
 pklo:       .res        2           ; The rules' first kinds, and (pkhi's top bit) whether they can match nothing
 pkhi:       .res        2
-lnp:        .res        2           ; tokenize's line; cmd_world's list; cmd_init's aliases
+lnp:        .res        2           ; tokenize's line; cm_world's list; cm_init's aliases
 te:         .res        2           ; lookup: the bucket's end
 
             .bss
@@ -176,15 +180,15 @@ cml:        .res        CACHE
 cmh:        .res        CACHE
 fsp:        .res        1           ; The working values' stack
 fstk:       .res        256
-savedsp:    .res        1           ; The 6502's stack as cmd_match found it
+savedsp:    .res        1           ; The 6502's stack as cm_match found it
 gen:        .res        1           ; The line's generation in the cache (its top four bits), and its position with it
 posg:       .res        1
 li:         .res        1           ; tokenize: where in the line, where in tbuf, a word's start
 nb:         .res        1
 tstart:     .res        1
-alist:      .res        2           ; cmd_init's tables, cmd_world's lists
-ilist:      .res        2
-glist:      .res        2
+cm_a:       .res        2           ; cm_init's tables, cm_world's lists (their callers')
+cm_i:       .res        2
+cm_g:       .res        2
 lflag:      .res        1
 bestn:      .res        1           ; aliases: the longest key matched, its alias
 besta:      .res        1
@@ -1004,7 +1008,7 @@ nexttok:    inx
             sta         v
 .endmacro
 
-; abort: the line nests too deep for the stacks: back to cmd_match's caller with -1
+; abort: the line nests too deep for the stacks: back to cm_match's caller with -1
 .proc abort
             ldx         savedsp
             txs
@@ -1779,8 +1783,8 @@ over:       jmp         abort
 
 ; ---- The calls -----------------------------------------------------------------------------------------------------
 
-; int __fastcall__ cmd_match (const char *line): 1 if it parses, 0 if not, -1 if it is too long or nests too deep
-.proc _cmd_match
+; cm_match: line .A/.X: 1 if it parses, 0 if not, -1 ($FF, .X $FF) if it is too long or nests too deep
+.proc cm_match
             sta         lnp
             stx         lnp+1
             tsx
@@ -1824,38 +1828,30 @@ long:       lda         #$FF
             rts
 .endproc
 
-; void __fastcall__ cmd_world (const char *world, const char *names, const char *deities): the world's words marked on
-; the dictionary, the last world's gone.  The lists must stay as they are until the next cmd_world.
-.proc _cmd_world
-            sta         alist           ; (the deities)
-            stx         alist+1
-            jsr         popax           ; (the names)
-            sta         ilist
-            stx         ilist+1
-            jsr         popax           ; (the world)
-            sta         glist
-            stx         glist+1
+; cm_world: the world's words (cm_g, cm_i, cm_a's lists) marked on the dictionary, the last world's gone.  The lists
+; must stay as they are until the next cm_world.
+.proc cm_world
             lda         #<lmark
             sta         tp
             lda         #>lmark
             sta         tp+1
             jsr         zeroent
             stz         ndyn
-            lda         glist
+            lda         cm_g
             sta         lnp
-            lda         glist+1
+            lda         cm_g+1
             sta         lnp+1
             lda         #W_WORLD
             jsr         marklist
-            lda         ilist
+            lda         cm_i
             sta         lnp
-            lda         ilist+1
+            lda         cm_i+1
             sta         lnp+1
             lda         #W_NAME
             jsr         marklist
-            lda         alist
+            lda         cm_a
             sta         lnp
-            lda         alist+1
+            lda         cm_a+1
             sta         lnp+1
             lda         #W_DEITY
             jmp         marklist
@@ -1929,17 +1925,9 @@ mark:       clc                         ; lmark[entry] |= the flag
             bra         spaces
 .endproc
 
-; int __fastcall__ cmd_init (const unsigned char *grammar, const unsigned char *index, const unsigned char *aliases):
-; 1, or 0 if a table is not a dq0 table, or they don't belong together, or one is too large for the matcher
-.proc _cmd_init
-            sta         alist
-            stx         alist+1
-            jsr         popax
-            sta         ilist
-            stx         ilist+1
-            jsr         popax
-            sta         glist
-            stx         glist+1
+; cm_init: the tables (cm_g, cm_i, cm_a) read: C = 0; or C = 1 if a table is not a dq0 table, they don't belong
+; together, or one is too large for the matcher
+.proc cm_init
             jsr         rdgrammar
             bcs         fail
             jsr         rdindex
@@ -1958,11 +1946,9 @@ mark:       clc                         ; lmark[entry] |= the flag
 :           sta         ckp,x
             dex
             bpl         :-
-            lda         #1
-            ldx         #0
+            clc
             rts
-fail:       lda         #0
-            tax
+fail:       sec
             rts
 .endproc
 
@@ -1995,10 +1981,10 @@ no:         sec
 
 ; rdgrammar: the counts, past the words, the open names' kinds, and each rule's body (each where the last ended)
 .proc rdgrammar
-            lda         glist
+            lda         cm_g
             sta         tp
             sta         gbase
-            lda         glist+1
+            lda         cm_g+1
             sta         tp+1
             sta         gbase+1
             lda         #'G'
@@ -2083,9 +2069,9 @@ bad:        sec
 ; rdindex: the counts (the grammar's), the rules treated by name, the dictionary's parts, the Bloom rows, the first
 ; kinds, and each indexed alternation's parts; "then" found, and the line's node made
 .proc rdindex
-            lda         ilist
+            lda         cm_i
             sta         tp
-            lda         ilist+1
+            lda         cm_i+1
             sta         tp+1
             lda         #'I'
             ldx         #2
@@ -2326,9 +2312,9 @@ bad:        sec
 ; rdaliases: each default alias: its first word's entry heads its chain; the rest of its key, whether it stands
 ; anywhere, and its verb's entry kept
 .proc rdaliases
-            lda         alist
+            lda         cm_a
             sta         tp
-            lda         alist+1
+            lda         cm_a+1
             sta         tp+1
             lda         #'A'
             ldx         #1

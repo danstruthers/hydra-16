@@ -226,7 +226,7 @@ function headroom(names) {
   const byNumber = (a, b) => parseInt(a[0].slice(2)) - parseInt(b[0].slice(2));
   for (const name of names) {
     const map = at('obj', 'games', name, name + '.map'), own = at('games', name, name + '.cfg');
-    if (!fs.existsSync(map)) continue;
+    if (!fs.existsSync(map) || !isC(at('games', name))) continue;   // (An assembly program's room: its own, hyx2.cfg's)
     const m = fs.readFileSync(map, 'latin1'), cfg = fs.readFileSync(fs.existsSync(own) ? own : at('sdk', 'c', 'hydra.cfg'), 'latin1');
     const seg = {}, sym = {}, size = {}, load = {}, run = {};
     const list = (m.split('Segment list:')[1] || '').split('Exports list')[0];

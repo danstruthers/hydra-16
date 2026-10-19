@@ -1,5 +1,7 @@
-/* cmdmatch.h - Dingus Quest Zero's command matcher (cmdmatch.s, 65C02 assembly): does a line parse by the command
-   grammar? It reads the tables sim/tools/commandtables.js writes: the grammar, its index, and the default aliases. */
+/* cmdmatch.h - Dingus Quest Zero's command matcher (games/dq0c/cmdmatch.s, 65C02 assembly) for C: does a line parse
+   by the command grammar? It reads the tables sim/tools/commandtables.js writes: the grammar, its index, and the
+   default aliases. Its calls through cmdmatch_c.s, for the tests' harnesses; the game's parser (dq0c) is a task of its
+   own, asked through the hub (hub.h's cq). */
 #ifndef CMDMATCH_H
 #define CMDMATCH_H
 

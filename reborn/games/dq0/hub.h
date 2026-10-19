@@ -6,9 +6,10 @@
 **
 ** The tasks (each a program): the UI (dq0: the screen, the keys, the words), the world (dq0w: the clock, the
 ** dungeon, the rules of the place), the denizens (dq0d), the referee (a program a ruleset: dq0harn ...: every rules
-** question), the sound (dq0s).  Each queue has one task that writes it and one that reads it, so none needs a lock:
-** an entry is written whole, then the index that shows it.  A task waiting for its queues waits on its doorbell, a
-** counting semaphore its writers release.
+** question), the sound (dq0s), the maker (dq0m), the senses (dq0p), the command parser (dq0c: assembly, a line's
+** verdict).  Each queue has one task that writes it and one that reads it, so none needs a lock: an entry is written
+** whole, then the index that shows it.  A task waiting for its queues waits on its doorbell, a counting semaphore its
+** writers release.
 **
 ** The clock is the world's: now, in tenths of a second of game time; a round of the ruleset's (round tenths) takes
 ** tpr real ticks (200 a second) at the pace the player chose.
@@ -17,6 +18,7 @@
 #ifndef _HUB_H
 #define _HUB_H
 
+#include <stddef.h>
 #include "rs.h"
 #include "level.h"
 #include "../dq0w/world.h"
@@ -24,15 +26,16 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     1
-#define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS)   /* Bank 0: the header, the
+#define HUB_VERSION     2                       /* (2: the command parser's role and request, dq0c) */
+#define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
                                                 **   items' (items.h); the denizens' events; the senses' look
                                                 **   (LOOK_BANK); the theme (THEME_BANK); the records the tasks share,
                                                 **   each bank its keeper's: the senses' (SIGHT_BANK), the UI's
                                                 **   (UI_BANK), the world's (WORLD_BANK); the change records' pages
-                                                **   (CHANGE_BANK: world.h's, the world's) */
+                                                **   (CHANGE_BANK: world.h's, the world's); the commands' text (CMD_BANK:
+                                                **   the UI's, the command parser's to read) */
 #define CAT_BANK        (1 + PLAN_BANKS + CACHE_BANKS)
 #define CATALOGUE       ((struct kind*) 0x8000)
 #define ITEM_BANK(i)    (CAT_BANK + 1 + (i) / (0x2000 / sizeof (struct item)))
@@ -103,9 +106,11 @@ typedef char names_fit[TNAMES * sizeof (struct tname) <= 0x800 ? 1 : -1];  /* (T
 #define WREC            ((struct wrec*) HUB_WINDOW)
 #define CHANGE_BANK(p)  (WORLD_BANK + 1 + (p) / 32)    /* The change records' page p's bank (world.h's CHANGE_AT: the
                                                 **   world writes them, under the hub's change_lock) */
+#define CMD_BANK        (WORLD_BANK + 1 + CHANGE_BANKS)    /* The commands' text (the hub's cq: a line, or the world's
+                                                **   words, at $8000: the UI writes it, dq0c reads it) */
 
 /* The tasks, and so their doorbells */
-enum { T_UI, T_WORLD, T_DENIZENS, T_REFEREE, T_SOUND, T_MAKER, T_SENSES, NTASKS };
+enum { T_UI, T_WORLD, T_DENIZENS, T_REFEREE, T_SOUND, T_MAKER, T_SENSES, T_COMMANDS, NTASKS };
 
 /* An entry of a queue: an intent (to the world), or an event (from it) */
 struct msg {
@@ -299,6 +304,19 @@ struct rqh {
     RQH;
 };
 
+/* The command parser's request (dq0c, games/dq0c: assembly, its offsets games/dq0c/hub.inc's, held to these below):
+** the UI's.  Its text is in CMD_BANK at $8000 (len bytes, a 0 after): a line to match (CQ_MATCH), the world's words
+** (CQ_WORLD: three lists, each 0-ended: the words the world names things by, the names given, the deities'), or
+** nothing (CQ_NONE: the round trip alone, timed).  The reply's res: 1 the line parses, 0 it doesn't, -1 too long
+** or nesting too deep; 0 for the others */
+enum { CQ_NONE, CQ_MATCH, CQ_WORLD };
+struct cq {
+    RQH;                                        /* (kind: CQ_*) */
+    unsigned char   bank;                       /* CMD_BANK (the UI's, as it makes the hub: dq0c finds it here) */
+    unsigned        len;                        /* The text's bytes */
+    signed char     res;                        /* The reply's */
+};
+
 /* A referee slot: a request (rs.h's RS_*) and its reply, and the reply's words.  Slot 0 is the world's (its
 ** requests change things), slot 1 the UI's; the denizens' task's its own (dslot: DSLOT, DTEXT of its text) */
 #define REQ_TEXT        1024
@@ -396,6 +414,7 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned char   sem[NTASKS];                /* Each task's doorbell */
     unsigned char   task[NTASKS];               /* Each task's number (0: none) */
     unsigned char   beat[NTASKS];               /* Each task's heartbeat: bumped as it works */
+    struct cq       cq;                         /* The command parser's request (dq0c's: hub.inc's offsets) */
     /* The clock (the world's: tick, then now, then tick again, so a reader sees it whole: hub_now) */
     volatile unsigned char tick;
     volatile unsigned long now;
@@ -626,6 +645,7 @@ struct wsave {
 **   own hub.sem ui
 **   own hub.task[*] each                                       (Each task's own number, as it attaches)
 **   own hub.beat[*] each
+**   own hub.cq commands +ui                                    (The command parser's: the UI's request)
 **   own hub.tick world                                         (The clock: the world's alone)
 **   own hub.now world
 **   own hub.pc_ready world
@@ -736,6 +756,7 @@ struct wsave {
 **   own wrec.cstamp world
 **   own wrec.cgen world
 **   own banks(CHANGE_BANK(0),CHANGE_BANKS) world
+**   own bank(CMD_BANK) ui                                      (The commands text: the UI writes it, dq0c reads it)
 **   own wrec.cslot[*].used maker +world                        (A chunk stocked, CS_FRESH: the world's mark taken)
 **   own wrec.cslot[*].stamp maker +world +denizens +senses +ui     (Each chunk's reader's stamp, as it finds it)
 **   own wrec.stamp maker +world +denizens +senses +ui
@@ -749,6 +770,20 @@ struct wsave {
 #define DSLOT   ((struct req*) HUB->dslot)
 #define HUB_FREE        2048                    /* (Bank 0's room kept free, at least) */
 typedef char hub_fits[sizeof (struct hub) + HUB_FREE <= 0x2000 ? 1 : -1];   /* (The header in bank 0) */
+/* What dq0c (assembly) reads of the hub, where it is (games/dq0c/hub.inc's HUBO_* and CQO_*: its make.js holds them
+** to these numbers, and these hold them to the structs) */
+#define HUBO_SEM        4
+#define HUBO_TASK       12
+#define HUBO_BEAT       20
+#define HUBO_CQ         28
+#define HUBO_QUIT       51
+#define CQO_BANK        4
+#define CQO_LEN         5
+#define CQO_RES         7
+typedef char dq0c_fits[offsetof (struct hub, sem) == HUBO_SEM && offsetof (struct hub, task) == HUBO_TASK &&
+                       offsetof (struct hub, beat) == HUBO_BEAT && offsetof (struct hub, cq) == HUBO_CQ &&
+                       offsetof (struct hub, quit) == HUBO_QUIT && offsetof (struct cq, bank) == CQO_BANK &&
+                       offsetof (struct cq, len) == CQO_LEN && offsetof (struct cq, res) == CQO_RES && NTASKS == 8 ? 1 : -1];
 typedef char recs_fit[sizeof (struct sight) <= 0x2000 && sizeof (struct uirec) <= 0x2000 &&
                       sizeof (struct wrec) <= 0x2000 ? 1 : -1];
 typedef char snd_fits[(char*) (FIGHT_AT + NFIGHTS) - (char*) 0x8000 <= 0x2000 ? 1 : -1];   /* (DEN_BANK's) */
