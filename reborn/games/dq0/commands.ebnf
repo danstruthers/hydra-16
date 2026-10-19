@@ -29,6 +29,7 @@
                    | <enter> | <leave> | <climb> | <dig> | <wake> | <hide> | <sneak>
                    | <knock> | <push> | <pull> | <give> | <hold> | <lock> | <unlock> | <fill> | <read> | <taste> | <touch>
                    | <defend> | <flee> | <follow> | <where>
+                   | <knock-out> | <engage> | <disengage> | <pass>
 
 (* ---- Observing (question 3: "look at" is a glance; question 4: "take a look" is a look) ---- *)
 <look>           ::= <LOOK> [ <look-target> ]
@@ -58,7 +59,7 @@
 
 (* ---- Fighting ---- *)
 <attack>         ::= <ATTACK> <object> [ "with" <object> ]
-<grapple>        ::= <GRAPPLE> <object>
+<grapple>        ::= <GRAPPLE> <object> | <THROW> <object> | "put" <object> "in" [ "a" ] ( "head" "lock" | "headlock" )   (* a grapple maneuver: the object is engaged; "toss" and "throw" a creature are grapples too *)
 <throw>          ::= <THROW> [ <object> ] [ <manner> ] <at-phrase>          (* at something: a target *)
                    | <THROW> [ <object> ] [ <manner> ] <throw-dir>
                    | <THROW>          (* in a direction: a floor square, distance asked *)
@@ -152,9 +153,9 @@
 <EQUIP>      ::= "equip" | "ready" | "don" | "wear" | "wield"
 <UNEQUIP>    ::= "doff" | "remove" | "store" | "take off" | "unwield" | "stow" | "put away"
 <ATTACK>     ::= "fight" | "attack" | "hit" | "strike" | "swing" | "slice" | "slash" | "chop" | "bash" | "bludgeon"
-                 | "thump" | "club" | "stab" | "poke" | "pierce" | "punch" | "kick" | "bite" | "headbutt"
-<GRAPPLE>    ::= "grapple" | "wrestle"
-<THROW>      ::= "throw" | "chuck" | "hurl" | "sling"
+                 | "thump" | "club" | "stab" | "poke" | "pierce" | "punch" | "kick" | "bite" | "headbutt" | "elbow" | "knee" | "slap" | "butt"
+<GRAPPLE>    ::= "grapple" | "wrestle" | "tackle" | "pin" | "choke" | "hold" | "grab"
+<THROW>      ::= "throw" | "chuck" | "hurl" | "sling" | "toss"
 <SHOOT>      ::= "fire" | "shoot"
 <LOAD>       ::= "draw" | "load"
 <JUMP>       ::= "jump" | "leap"
@@ -238,4 +239,12 @@
 <sequence>       ::= <seq-part> "then" <seq-part> { "then" <seq-part> }   (* a list of actions, done in order; each part
                                                                               is a whole command, and the runtime may
                                                                               interrupt between parts *)
-<seq-part>       ::= <command> | <bare-direction> | <bare-verb> | <quoted-speech>
+<seq-part>       ::= <command> | <bare-direction> | <bare-verb> | <quoted-speech> | <object>   (* an object alone repeats the verb before: "attack the rat then the goblin" *)
+(* ---- Unarmed blows (HarnMaster Combat 8-9: unarmed combat is a melee attack) ---- *)
+<knock-out>      ::= "knock" "out" <object> | "knock" "the" <slang> "out" "of" <object>
+<slang>          ::= "shit" | "daylights" | "living" "daylights" | "crap"
+(* ---- Engagement (HarnMaster Combat 6-7): engage, disengage and pass ---- *)
+<engage>         ::= "engage" <object>                          (* an Engage option: a half-move, then a melee attack *)
+<disengage>      ::= <DISENGAGE> [ <direction> ]
+<DISENGAGE>      ::= "disengage" | "withdraw" | "break" "off"   (* one hex, then a half-move if now unengaged; no attack *)
+<pass>           ::= "pass"                                     (* an engaged character forfeits the turn *)

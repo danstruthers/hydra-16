@@ -29,8 +29,8 @@ VB_CHARGE              direction pace text
 VB_THROW_DIRECTION     object direction distance manner
 VB_JUMP                 direction object
 VB_SWIM                 direction object
-VB_ATTACK_OBJECT        object instrument manner
-VB_GRAPPLE_OBJECT       object
+VB_ATTACK_OBJECT        object instrument manner blow engage (* blow: the unarmed blow, or knock out; engage: the target must be engaged first *)
+VB_GRAPPLE_OBJECT       object maneuver (* grapple, wrestle, tackle, pin, choke, hold, grab, headlock, throw: the target must be engaged *)
 VB_THROW_OBJECT         object target instrument manner
 VB_SHOOT_OBJECT         object target instrument
 VB_LOAD_OBJECT          object
@@ -88,6 +88,10 @@ VB_FLEE                 direction
 VB_FOLLOW_OBJECT        object
 VB_REPEAT               
 VB_WHERE                
+VB_ATTACK_SPLIT          targets (* one attack per turn, split between the targets in turn; each engaged in turn if not already *)
+VB_ENGAGE               object
+VB_DISENGAGE            direction pace
+VB_PASS
 VB_SEQUENCE            steps (* the steps in order, each a whole action; the runtime runs one, then checks for an interrupt (a stop cancels the rest) before the next *)
 
 [results]
@@ -99,6 +103,9 @@ ERROR:USE_NAME
 ERROR:BUILT_IN_WORD
 ERROR:NOTHING_HERE
 ERROR:NO_TARGET
+ERROR:ENGAGED
+ERROR:NOT_ENGAGED
+ERROR:ALREADY_ENGAGED
 ERROR:BAD_ROLE
 QUESTION:WHICH
 QUESTION:DIRECTION

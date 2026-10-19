@@ -108,8 +108,10 @@ const META = { status: 'VB_META_STATUS', help: 'VB_META_HELP', inventory: 'VB_ME
   map: 'VB_META_MAP', save: 'VB_META_SAVE', quit: 'VB_META_QUIT' };
 const ATTACK_MANNER = { slash: 'edge', slice: 'edge', chop: 'edge', swing: 'edge', bash: 'blunt', bludgeon: 'blunt',
   thump: 'blunt', club: 'blunt', stab: 'point', poke: 'point', pierce: 'point', punch: 'unarmed', kick: 'unarmed',
-  headbutt: 'unarmed', bite: 'unarmed' };
+  headbutt: 'unarmed', bite: 'unarmed', elbow: 'unarmed', knee: 'unarmed', slap: 'unarmed', butt: 'unarmed' };
 const POSTURE = { SIT: 'VB_SIT', STAND: 'VB_STAND', 'LIE-DOWN': 'VB_LIE_DOWN', CROUCH: 'VB_CROUCH' };
+const GRAPPLE_MANEUVER = { grapple: 'grapple', wrestle: 'wrestle', tackle: 'tackle', pin: 'pin', choke: 'choke',
+  hold: 'hold', grab: 'grab', put: 'headlock', toss: 'throw', throw: 'throw', chuck: 'throw', hurl: 'throw', sling: 'throw' };
 const LOOK_PREP_ACTION = { through: 'VB_OBSERVE_THROUGH', around: 'VB_OBSERVE_AROUND' };
 const numWord = v => own(NUMWORDS, v);
 
@@ -271,7 +273,7 @@ function parsePending(v) {
 // pending question. Keys: near last facing pending distances names target pace; any other key is an alias.
 function buildContext(spec, world) {
   const ctx = { near: [], last: [], facing: null, pending: null, target: null, pace: 'walk', names: new Map(),
-    dist: new Map(), aliases: new Map(), world: new Set(world) };
+    dist: new Map(), aliases: new Map(), world: new Set(world), engaged: [] };
   const addName = (key, id) => {
     const k = key.toLowerCase();
     if (!ctx.names.has(k)) ctx.names.set(k, []);
@@ -290,6 +292,7 @@ function buildContext(spec, world) {
     else if (k === 'facing') ctx.facing = v;
     else if (k === 'pending') ctx.pending = parsePending(v);
     else if (k === 'distances') distances = v.split(',').map(Number);
+    else if (k === 'engaged') ctx.engaged = v.split(',');
     else if (k === 'target') ctx.target = v;
     else if (k === 'pace') ctx.pace = own(PACE, v) || v;
     else ctx.aliases.set(k, v);
@@ -464,6 +467,7 @@ function phraseSem(spec, env, ctx) {
         if (s.stop) return s.stop;
         source = s.value;
       }
+      if (ctx.engaged.includes(value)) return err('ENGAGED');
       return act('VB_RETRIEVE_OBJECT', { object: value, source });
     }
     case 'drop': return withObj('VB_DROP_OBJECT');
@@ -492,9 +496,10 @@ function phraseSem(spec, env, ctx) {
         if (b.stop) return b.stop;
         instrument = b.value;
       }
-      return act('VB_ATTACK_OBJECT', { object: a.value, instrument, manner: own(ATTACK_MANNER, wordsOf(spec, env)[0]) });
+      const verb = wordsOf(spec, env)[0];
+      return act('VB_ATTACK_OBJECT', { object: a.value, instrument, manner: own(ATTACK_MANNER, verb),
+        blow: own(ATTACK_MANNER, verb) === 'unarmed' ? verb : undefined, engage: engageFlag(a.value, ctx) });
     }
-    case 'grapple': return withObj('VB_GRAPPLE_OBJECT');
     case 'throw': {
       const td = kidsOf(spec, 'throw-dir')[0];
       const at = kidsOf(spec, 'at-phrase')[0];
@@ -646,7 +651,6 @@ function phraseSem(spec, env, ctx) {
     case 'knock': return withObj('VB_KNOCK_OBJECT');
     case 'push': return withObj('VB_PUSH_OBJECT');
     case 'pull': return withObj('VB_PULL_OBJECT');
-    case 'hold': return withObj('VB_HOLD_OBJECT');
     case 'lock': return withObj('VB_LOCK_OBJECT');
     case 'read': return withObj('VB_READ_OBJECT');
     case 'taste': return withObj('VB_TASTE_OBJECT');
@@ -674,6 +678,35 @@ function phraseSem(spec, env, ctx) {
     }
     case 'defend': return act('VB_DEFEND', { defence: wordsOf(spec, env)[0] });
     case 'where': return act('VB_WHERE', {});
+    case 'knock-out': {
+      const a = objOf(0);
+      if (a.stop) return a.stop;
+      return act('VB_ATTACK_OBJECT', { object: a.value, manner: 'unarmed', blow: 'knock out', engage: engageFlag(a.value, ctx) });
+    }
+    case 'grapple': {
+      const o = objOf(0);
+      if (o.stop) return o.stop;
+      if (!ctx.engaged.includes(o.value)) return err('NOT_ENGAGED');
+      return act('VB_GRAPPLE_OBJECT', { object: o.value, maneuver: own(GRAPPLE_MANEUVER, wordsOf(spec, env)[0]) });
+    }
+    case 'hold': {
+      const o = objOf(0);
+      if (o.stop) return o.stop;
+      if (ctx.engaged.includes(o.value)) return err('ENGAGED');
+      return act('VB_HOLD_OBJECT', { object: o.value });
+    }
+    case 'engage': {
+      const o = objOf(0);
+      if (o.stop) return o.stop;
+      if (ctx.engaged.includes(o.value)) return err('ALREADY_ENGAGED');
+      return act('VB_ENGAGE', { object: o.value });
+    }
+    case 'disengage': {
+      if (!ctx.engaged.length) return err('NOT_ENGAGED');
+      const d = kidsOf(spec, 'direction')[0];
+      return act('VB_DISENGAGE', { direction: d ? dirCode(d, env) : undefined });
+    }
+    case 'pass': return ctx.engaged.length ? act('VB_PASS', {}) : err('NOT_ENGAGED');
     case 'posture': return act(own(POSTURE, spec.kids[0].rule), {});
     case 'pretend': return act('VB_PRETEND', { state: textOf(findFirst(spec, 'pretense'), env) });
     default: return err('NOT_UNDERSTOOD');
@@ -719,6 +752,27 @@ function numberOfTok(tk) {
   if (!tk || tk.k !== 'w') return null;
   if (/^\d+$/.test(tk.v)) return Number(tk.v);
   return numWord(tk.v) ?? null;
+}
+
+// An attack on an enemy not yet engaged is an Engage option: a half-move in, then the blow (Combat 7).
+const engageFlag = (target, ctx) => (ctx.engaged.includes(target) ? undefined : 'yes');
+
+// While engaged, a character moves only by disengaging, and rests or sits only when unengaged (Combat 6-7).
+const NEEDS_FREE = new Set(['VB_MOVE_DIRECTION', 'VB_MOVE_TOWARD', 'VB_STEP_DIRECTION', 'VB_CHARGE', 'VB_SLEEP',
+  'VB_SNEAK', 'VB_ENTER', 'VB_LEAVE', 'VB_CLIMB', 'VB_SWIM', 'VB_JUMP', 'VB_HIDE', 'VB_SIT', 'VB_LIE_DOWN', 'VB_CROUCH']);
+function engagementCheck(res, ctx) {
+  if (res.error || res.question || !ctx.engaged.length) return res;
+  if (res.action === 'VB_FLEE') return act('VB_DISENGAGE', { direction: res.roles.direction, pace: 'run' });
+  return NEEDS_FREE.has(res.action) ? err('ENGAGED') : res;
+}
+
+// The phrase with its first object replaced: the verb is kept, the object is new.
+function replaceObject(spec, obj) {
+  let done = false;
+  return Object.assign({}, spec, { kids: spec.kids.map(k => {
+    if (!done && k.rule === 'object') { done = true; return obj; }
+    return k;
+  }) });
 }
 
 class Compiler {
@@ -814,7 +868,21 @@ class Compiler {
 
   // A sequence: each part is a whole action, in order; a part that does not compile stops the line with its error.
   sequenceSem(node, env, ctx) {
-    return sequenceOf(kidsOf(node, 'seq-part').map(p => this.nodeSem(p.kids[0], env, ctx)));
+    const results = [];
+    let prev = null;
+    for (const p of kidsOf(node, 'seq-part')) {
+      const part = p.kids[0];
+      if (part.rule === 'object') {
+        // An object alone repeats the verb of the part before it: "attack the rat then the goblin".
+        if (!prev) return err('NOT_UNDERSTOOD');
+        const steps = expandLists(replaceObject(prev, part)).map(x => engagementCheck(phraseSem(x, env, ctx), ctx));
+        results.push(sequenceOf(steps));
+      } else {
+        prev = part.rule === 'command' ? part.kids[0].kids[0] : null;
+        results.push(this.nodeSem(part, env, ctx));
+      }
+    }
+    return sequenceOf(results);
   }
 
   semantics(line, env, ctx) {
@@ -822,10 +890,21 @@ class Compiler {
   }
 
   nodeSem(child, env, ctx) {
+    return engagementCheck(this.rawSem(child, env, ctx), ctx);
+  }
+
+  rawSem(child, env, ctx) {
     switch (child.rule) {
       case 'command': {
-        const steps = expandLists(child.kids[0].kids[0]).map(spec => withAdjuncts(phraseSem(spec, env, ctx), child, env, ctx));
-        return steps.length === 1 ? steps[0] : sequenceOf(steps);
+        const spec = child.kids[0].kids[0];
+        const steps = expandLists(spec).map(s => withAdjuncts(phraseSem(s, env, ctx), child, env, ctx));
+        if (steps.length === 1) return steps[0];
+        // A list of attacks is one attack a turn, split between the targets (Combat 9); other lists are sequences.
+        if (spec.rule === 'attack' || spec.rule === 'knock-out') {
+          const bad = steps.find(r => r.error || r.question);
+          return bad || act('VB_ATTACK_SPLIT', { targets: steps.map(r => r.roles.object).join(',') });
+        }
+        return sequenceOf(steps);
       }
       case 'bare-direction': return act('VB_MOVE_DIRECTION', { direction: dirCode(findFirst(child, 'direction'), env),
         distance: numberOf(findFirst(child, 'number'), env) });
