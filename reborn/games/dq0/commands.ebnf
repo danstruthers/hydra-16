@@ -10,9 +10,11 @@
 
 (* ---- Entry ---- *)
 <line>           ::= <alias-cmd> | <answer> | <quoted-speech> | <command> | <bare-direction> | <bare-verb>
-<quoted-speech>  ::= <quoted-text>                              (* question 11: quoted text alone is said aloud *)
+<quoted-speech> ::= [ <VOLUME> ] <quoted-text> [ "!" ]   (* question 11: quoted text alone is said aloud; ending in "!" it is
+                                                    yelled; w"..." whispers, y"..." yells *)
+<VOLUME>        ::= "w" | "y"                          (* attached to the quote: w"Psst" *)
 <quoted-text>    ::= '"' <text> '"'
-<bare-direction> ::= <direction>                                (* "north", "n": move that way at pace *)
+<bare-direction> ::= <direction> [ <number> ]           (* "north", "n": move that way at pace; "f 1": one square forward *)
 <bare-verb>      ::= <GET> | <LOOK> | <SEARCH> | <LISTEN> | <TRACK> | <WAIT> | <REST> | <SLEEP> | <STOP> | <META-WORD>
 <answer>         ::= <yes-no> | <number> | <selector> | <alias> | <unique-name>
                                                                 (* only while a question is pending (question 13) *)
@@ -23,6 +25,7 @@
                    | <throw> | <shoot> | <load> | <jump> | <say> | <tell> | <cast> | <eat>
                    | <drink> | <swim> | <find> | <search> | <listen> | <smell> | <track>
                    | <target> | <wait> | <rest> | <sleep> | <stop> | <naming> | <meta>
+                   | <step> | <pace-set> | <charge>
 
 (* ---- Observing (question 3: "look at" is a glance; question 4: "take a look" is a look) ---- *)
 <look>           ::= <LOOK> [ <look-target> ]
@@ -33,7 +36,7 @@
 <EXAMINE>        ::= "examine" | "inspect" | [ "take a" ] <DETAIL> <LOOK> | <LOOK> <DETAIL>
 
 (* ---- Moving and facing ---- *)
-<move>           ::= [ <MOVE> ] <move-dir>
+<move>           ::= [ <pace-word> ] [ <MOVE> ] <move-dir>   (* "run north": this move at run; "walk north": the verb *)
 <move-dir>       ::= <direction> | <TOWARD> <object>
 <face>           ::= [ "change" ] ( "face" | "facing" | "turn" ) [ "to" ] <direction>
 
@@ -52,14 +55,16 @@
 (* ---- Fighting ---- *)
 <attack>         ::= <ATTACK> <object> [ "with" <object> ]
 <grapple>        ::= <GRAPPLE> <object>
-<throw>          ::= <THROW> <object> [ <at-phrase> ]
+<throw>          ::= <THROW> [ <object> ] <at-phrase>          (* at something: a target *)
+                   | <THROW> [ <object> ] <throw-dir>          (* in a direction: a floor square, distance asked *)
+<throw-dir>      ::= <direction> | "around the corner"
 <shoot>          ::= <SHOOT> <object> [ <at-phrase> ]           (* the bow is the instrument: "fire the bow at the goblin" *)
 <load>           ::= <LOAD> <object>
 <at-phrase>      ::= ( "at" | "toward" | "towards" | "to" ) <object>
 
 (* ---- Other actions ---- *)
 <jump>           ::= <JUMP> [ <direction> | ( "over" | "onto" ) <object> ]
-<say>            ::= <SAY> <quoted-text>
+<say>            ::= <SAY> <quoted-text> | <VOLUME-SAY> <quoted-text> [ "!" ]   (* yell, scream, whisper *)
 <tell>           ::= <TELL> <object> [ "to" | "about" ] ( <quoted-text> | <object> | <phrase> )
 <cast>           ::= <CAST> [ <object> ] [ <at-phrase> ]       (* "concentrate" alone: the spell in use *)
 <eat>            ::= <EAT> <object>
@@ -75,6 +80,10 @@
 <rest>           ::= <REST>
 <sleep>          ::= <SLEEP>
 <stop>           ::= <STOP> [ <task-name> ]                     (* question 9: "stop" alone, or "stop digging" *)
+<step>           ::= "step" <direction>                 (* one square; facing unchanged: "step r" *)
+<pace-set>       ::= "pace" <pace-word> | "double time"  (* sets the default pace; "double time!" is a run *)
+<pace-word>      ::= "crawl" | "slow walk" | "walk" | "trot" | "run" | "sprint"
+<charge>         ::= [ "fast" ] "charge" [ "!" ]        (* run at the closest enemy ahead, attack it, shout "Charge!"; fast: a sprint *)
 
 (* ---- Naming and meta-commands (question 15: naming things is "name" or "call") ---- *)
 <naming>         ::= <NAME> ( <object> | "room" | "place" ) [ "as" | "the" ] <name-word>
@@ -140,6 +149,7 @@
 <LOAD>       ::= "draw" | "load"
 <JUMP>       ::= "jump" | "leap"
 <SAY>        ::= "say"
+<VOLUME-SAY>  ::= "yell" | "scream" | "whisper"
 <TELL>       ::= "tell" | "ask"
 <CAST>       ::= "cast" | "prepare" | "concentrate"
 <EAT>        ::= "eat" | "consume"

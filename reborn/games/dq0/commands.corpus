@@ -183,3 +183,35 @@ go	QUESTION:DIRECTION	-	-	move with no direction
 take the moon	ERROR:NO_SUCH_THING	-	-	no such thing exists
 xyzzy	ERROR:NOT_UNDERSTOOD	-	-	no reading at all
 wait the sword	ERROR:BAD_ROLE	-	-	wait takes no object
+throw n	QUESTION:DISTANCE	direction=N	-	no object: the thing in hand; distance asked (QUESTION:DISTANCE) (the distance is asked first)
+throw f	QUESTION:DISTANCE	direction=F	facing=N	forward, a floor square some distance off (the distance is asked first)
+throw it around the corner	QUESTION:DISTANCE	object=it;direction=around-corner	last=apple	round a corner (the distance is asked first)
+throw the apple north	QUESTION:DISTANCE	object=apple;direction=N	near=apple	named object, a direction (the distance is asked first)
+throw the apple hard north	QUESTION:DISTANCE	object=apple;direction=N;manner=hard	near=apple	manner (the distance is asked first)
+throw the apple at the goblin	VB_THROW_OBJECT	object=apple;target=goblin	near=apple,goblin	still a target
+throw	QUESTION:WHICH	-	near=apple,stone	no object and no direction: which thing
+3	VB_THROW_DIRECTION	distance=3	pending=distance:throw:max=6	the answer to the distance question (5 ft squares, up to the strength limit)
+f 1	VB_MOVE_DIRECTION	direction=F;distance=1	facing=N	one square forward
+n 3	VB_MOVE_DIRECTION	direction=N;distance=3	-	three squares north
+left 2	VB_MOVE_DIRECTION	direction=L;distance=2	facing=N	two squares left
+f	VB_MOVE_DIRECTION	direction=F	facing=N	no distance: until something changes
+step r	VB_STEP_DIRECTION	direction=R	facing=N	one square right, still facing north
+step north	VB_STEP_DIRECTION	direction=N	-	one square north
+pace run	VB_SET_PACE	pace=run	-	sets the default pace
+pace crawl	VB_SET_PACE	pace=crawl	-	the quarter speed
+pace slow walk	VB_SET_PACE	pace=slowwalk	-	half speed
+pace trot	VB_SET_PACE	pace=trot	-	one and a half
+pace sprint	VB_SET_PACE	pace=sprint	-	three times
+trot north	VB_MOVE_DIRECTION	direction=N;pace=trot	-	this move only
+slow walk north	VB_MOVE_DIRECTION	direction=N;pace=slowwalk	-	this move only
+double time!	VB_SET_PACE	pace=run	-	change to a run
+charge!	VB_CHARGE	direction=facing;pace=run;text=Charge!	facing=N;near=goblin	the closest enemy ahead
+charge!	ERROR:NO_TARGET	-	facing=N	no enemy ahead
+fast charge!	VB_CHARGE	direction=facing;pace=sprint;text=Charge!	facing=N;near=goblin	fast is a sprint
+yell "Help!"	VB_SAY	text=Help!;volume=loud	-	yell
+scream "Help!"	VB_SAY	text=Help!;volume=loud	-	scream, as loud as yell
+whisper "Psst"	VB_SAY	text=Psst;volume=quiet	-	whisper
+w"You are doomed."	VB_SAY	text=You are doomed.;volume=quiet	-	whisper by prefix
+y"Here we come!"	VB_SAY	text=Here we come!;volume=loud	-	yell by prefix
+"Charge!"	VB_SAY	text=Charge!;volume=loud	-	ending in ! is yelled
+"Hello."	VB_SAY	text=Hello.;volume=normal	-	plain quoted text: said aloud

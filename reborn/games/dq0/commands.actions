@@ -19,9 +19,13 @@ VB_EQUIP_OBJECT         object
 VB_UNEQUIP_OBJECT       object
 VB_OPEN_OBJECT          object
 VB_CLOSE_OBJECT         object
-VB_MOVE_DIRECTION       direction manner distance
+VB_MOVE_DIRECTION       direction pace distance
 VB_MOVE_TOWARD          object
 VB_FACE_DIRECTION       direction
+VB_STEP_DIRECTION      direction
+VB_SET_PACE            pace
+VB_CHARGE              direction pace text
+VB_THROW_DIRECTION     object direction distance manner
 VB_JUMP                 direction object
 VB_SWIM                 direction object
 VB_ATTACK_OBJECT        object instrument manner
@@ -29,7 +33,7 @@ VB_GRAPPLE_OBJECT       object
 VB_THROW_OBJECT         object target instrument manner
 VB_SHOOT_OBJECT         object target instrument
 VB_LOAD_OBJECT          object
-VB_SAY                  text
+VB_SAY                 text volume
 VB_TELL_OBJECT          object text topic
 VB_CAST_SPELL           spell target
 VB_EAT_OBJECT           object
@@ -62,9 +66,11 @@ ERROR:QUOTES_REQUIRED
 ERROR:USE_NAME
 ERROR:BUILT_IN_WORD
 ERROR:NOTHING_HERE
+ERROR:NO_TARGET
 ERROR:BAD_ROLE
 QUESTION:WHICH
 QUESTION:DIRECTION
+QUESTION:DISTANCE
 QUESTION:OVERWRITE
 ALIAS:DEFINE
 ALIAS:SHOW
