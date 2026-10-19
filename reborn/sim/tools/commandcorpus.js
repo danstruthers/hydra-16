@@ -88,7 +88,7 @@ corpus.split('\n').forEach((line, i) => {
   for (const [label, v] of [['roles', roles], ['context', ctx]]) {
     if (v === '-') continue;
     for (const pair of v.split(';')) {
-      if (!/^[A-Za-z_-]+=\S/.test(pair) && !(label === 'roles' && /^[A-Za-z_-]+=/.test(pair)))
+      if (!/^[A-Za-z0-9_.-]+=\S/.test(pair) && !(label === 'roles' && /^[A-Za-z0-9_.-]+=/.test(pair)))
         fail('commands.corpus', i + 1, `${label} "${pair}" is not key=value`);
     }
   }

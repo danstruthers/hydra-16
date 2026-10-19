@@ -295,3 +295,12 @@ follow the goblin	VB_FOLLOW_OBJECT	object=goblin	near=goblin	follow
 again	VB_REPEAT	-	-	repeat the last command
 repeat	VB_REPEAT	-	-	repeat, a synonym of again
 where am I	VB_WHERE	-	-	where am I
+eat the rations then north	VB_SEQUENCE	steps=VB_EAT_OBJECT,VB_MOVE_DIRECTION;1.object=rations;2.direction=N	near=rations	two steps, in order
+take the sword then wait	VB_SEQUENCE	steps=VB_RETRIEVE_OBJECT,VB_WAIT;1.object=sword;2.duration=1min	near=sword	a take, then a wait
+n then f 1	VB_SEQUENCE	steps=VB_MOVE_DIRECTION,VB_MOVE_DIRECTION;1.direction=N;2.direction=F;2.distance=1	facing=N	two bare directions
+go north then charge!	VB_SEQUENCE	steps=VB_MOVE_DIRECTION,VB_CHARGE;1.direction=N;2.pace=run	facing=N;near=goblin	a move, then a charge
+"hello" then north	VB_SEQUENCE	steps=VB_SAY,VB_MOVE_DIRECTION;1.text=hello;2.direction=N	-	speech is a part too
+stop then pace run	VB_SEQUENCE	steps=VB_STOP,VB_SET_PACE;2.pace=run	-	a stop, then a pace
+eat the rations then north then eat the apple	VB_SEQUENCE	steps=VB_EAT_OBJECT,VB_MOVE_DIRECTION,VB_EAT_OBJECT;3.object=apple	near=rations,apple	three steps
+wait then	ERROR:NOT_UNDERSTOOD	-	-	a then with nothing after is not a sequence
+throw then north	ERROR:NOTHING_HERE	-	-	a part that fails stops the line with its error

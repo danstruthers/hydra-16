@@ -88,6 +88,7 @@ VB_FLEE                 direction
 VB_FOLLOW_OBJECT        object
 VB_REPEAT               
 VB_WHERE                
+VB_SEQUENCE            steps (* the steps in order, each a whole action; the runtime runs one, then checks for an interrupt (a stop cancels the rest) before the next *)
 
 [results]
 ERROR:NOT_UNDERSTOOD

@@ -9,7 +9,7 @@
    (the open names come from the game's data: see the design doc, "The grammar"; the checker reads this line) *)
 
 (* ---- Entry ---- *)
-<line>           ::= <alias-cmd> | <answer> | <quoted-speech> | <command> | <bare-direction> | <bare-verb>
+<line>           ::= <alias-cmd> | <answer> | <quoted-speech> | <command> | <bare-direction> | <bare-verb> | <sequence>
 <quoted-speech> ::= [ <VOLUME> ] <quoted-text> [ "!" ]   (* question 11: quoted text alone is said aloud; ending in "!" it is
                                                     yelled; w"..." whispers, y"..." yells *)
 <VOLUME>        ::= "w" | "y"                          (* attached to the quote: w"Psst" *)
@@ -232,3 +232,9 @@
 (* ---- Repeating and place ---- *)
 <AGAIN>          ::= "again" | "repeat"
 <where>          ::= "where" "am" "i"
+
+(* ---- Sequences (added 2026-10-19: the user, VB_SEQUENCE) ---- *)
+<sequence>       ::= <seq-part> "then" <seq-part> { "then" <seq-part> }   (* a list of actions, done in order; each part
+                                                                              is a whole command, and the runtime may
+                                                                              interrupt between parts *)
+<seq-part>       ::= <command> | <bare-direction> | <bare-verb> | <quoted-speech>

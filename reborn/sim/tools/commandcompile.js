@@ -786,14 +786,29 @@ class Compiler {
     return act('ALIAS:DEFINE', { alias: name, substitution });
   }
 
+  // A sequence: each part is a whole action, in order; a part that does not compile stops the line with its error.
+  sequenceSem(node, env, ctx) {
+    const steps = [];
+    for (const p of kidsOf(node, 'seq-part')) {
+      const r = this.nodeSem(p.kids[0], env, ctx);
+      if (r.error || r.question) return r;
+      steps.push(r);
+    }
+    return { action: 'VB_SEQUENCE', roles: { steps: steps.map(x => x.action).join(',') }, steps };
+  }
+
   semantics(line, env, ctx) {
-    const child = line.kids[0];
+    return this.nodeSem(line.kids[0], env, ctx);
+  }
+
+  nodeSem(child, env, ctx) {
     switch (child.rule) {
       case 'command': return withAdjuncts(phraseSem(child.kids[0].kids[0], env, ctx), child, env, ctx);
       case 'bare-direction': return act('VB_MOVE_DIRECTION', { direction: dirCode(findFirst(child, 'direction'), env),
         distance: numberOf(findFirst(child, 'number'), env) });
       case 'bare-verb': return bareVerb(child, env, ctx);
       case 'quoted-speech': return sayRoles(child, env, null);
+      case 'sequence': return this.sequenceSem(child, env, ctx);
       default: return err('NOT_UNDERSTOOD');
     }
   }
@@ -821,7 +836,9 @@ function checkCorpus(compiler, corpusFile, log) {
     total++;
     const got = compiler.compile(input, buildContext(context || '-', DEFAULT_WORLD));
     const gotCode = got.error ? 'ERROR:' + got.error : got.question ? 'QUESTION:' + got.question : got.action;
-    const have = got.roles || {};
+    // A sequence's roles are also checked per step: 2.object is the object of the second step.
+    const have = Object.assign({}, got.roles || {});
+    (got.steps || []).forEach((st, i) => Object.entries(st.roles).forEach(([k, v]) => { have[`${i + 1}.${k}`] = v; }));
     const bad = [];
     if (gotCode !== expect) bad.push(`action ${gotCode} (want ${expect})`);
     for (const [k, want] of Object.entries(kv(roles))) {
