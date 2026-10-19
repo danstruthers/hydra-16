@@ -271,6 +271,8 @@ void finish (void);                             /* Part 1: the game kept, the wo
 void save_game (void);                          /* Part 1: the game kept (if it's kept: -d) */
 void __fastcall__ command (char* l);            /* Part 2 (main.c): a command, the parser's, carried out */
 void ready (void);                              /* Part 2 (main.c): nothing, the part copied in for the next */
+void __fastcall__ cq_post (const char* l);      /* Part 2 (main.c): a line posted to the command parser (dq0c) */
+signed char cq_take (void);                     /* Part 2 (main.c): its verdict, waited for if it isn't there yet */
 void __fastcall__ take (const char* name);      /* Part 2: a thing taken up, by its name */
 void __fastcall__ took_up (unsigned r);         /* Part 2: a thing taken up, or not, told (an E_TAKEN's: IR_*, the
                                                 **   light before times 256) */

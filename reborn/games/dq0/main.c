@@ -539,6 +539,8 @@ static void stop_world (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
+static unsigned char cq_out;                    /* A line posted to the command parser, its verdict not taken */
+
 /* ---- The status line */
 
 void status (void)
@@ -1162,21 +1164,41 @@ void s_ready (void)
 {
 }
 
-/* The command parser's verdict on a line (dq0c, the hub's cq: the line in CMD_BANK, the reply's res 1 it parses, 0
-** not, -1 too long): asked as each command is carried out, not used yet (the round trip's cost measured: the
-** dq0answer tests), till its verdict and the command's meaning take the old parser's place */
-static void __fastcall__ cq_ask (const char* l)
+/* The command parser (dq0c, the hub's cq): each line posted to it as it's taken (cq_post), its work done while the
+** UI sees to the line (the names', the pace's), and its verdict taken where the command's carried out (cq_take:
+** waited for only if it isn't there yet), or once the line's seen to some other way */
+void __fastcall__ s_cq_post (const char* l)
 {
     static unsigned n;
 
+    if (cq_out) {
+        return;                                 /* (A held line's: posted as it was typed) */
+    }
     n = strlen (l);
     hub_map (CMD_BANK);
     memcpy (HUB_WINDOW, l, n + 1);
     hub_map (0);
     HUB->cq.kind = CQ_MATCH;
     HUB->cq.len = n;
-    hub_call (&HUB->cq, T_COMMANDS);
+    hub_post (&HUB->cq, T_COMMANDS);
+    cq_out = 1;
+}
+
+/* The verdict on the line posted: 1 it parses, 0 it doesn't, -1 too long; -2 none (none posted, or the game ending
+** before it came) */
+signed char s_cq_take (void)
+{
+    static signed char r;
+
+    if (!cq_out) {
+        return -2;
+    }
+    hub_wait (&HUB->cq);
+    hub_map (0);
+    r = HUB->cq.state == REQ_DONE ? HUB->cq.res : -2;
     HUB->cq.state = REQ_FREE;
+    cq_out = 0;
+    return r;
 }
 
 /* A command, the parser's, carried out */
@@ -1186,7 +1208,7 @@ void __fastcall__ s_command (char* l)
     struct req* r;
     unsigned char d, pa;
 
-    cq_ask (l);
+    s_cq_take ();                               /* (The command parser's verdict: dq0c's, here once it's used) */
     pc_face = HUB->pc_face;
     if (at_hit) {
         memcpy (&c, &at_c, sizeof c);           /* (at_once's: this line's, parsed already) */
@@ -1518,6 +1540,7 @@ int main (int argc, char* argv[])
             pending[0] = 0;
         }
         if ((l = (char*) t_next ()) != 0 && (!busy || !held)) {
+            cq_post (l);                        /* (The command parser at work on it meanwhile) */
             hub_map (0);
             HUB->ui_cmd = 1;                    /* (A command in hand: the senses' look gives way meanwhile, from
                                                 **   its first look, at_once's, on: a line typed as a look began
@@ -1549,6 +1572,7 @@ int main (int argc, char* argv[])
                     names_den ();               /* (A denizen named: its name recorded) */
                 }
             }
+            cq_take ();                         /* (Its verdict, if the line wasn't a command's: not left there) */
             held = at_hit = 0;
             quick = 25;                         /* (Its answer looked for twice as often, a quarter second) */
             status ();
