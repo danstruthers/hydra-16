@@ -128,13 +128,13 @@
 <direction>      ::= <compass> | <relative> | <vertical>
 <compass>        ::= [ <offto> ] <NS> [ [ "and" ] <EW> ] [ <ofme> ]
                    | [ <offto> ] <EW> [ <ofme> ]
-<NS>             ::= "n" | "north" | "s" | "south"
-<EW>             ::= "e" | "east" | "w" | "west"
+<NS>             ::= "n" | "s"                       (* the short forms; "north" is an alias: commands.aliases *)
+<EW>             ::= "e" | "w"
 <offto>          ::= "off" [ "to the" | "to" ] | "to the" | "to"   (* at least one word: a nullable part would parse two ways *)
 <ofme>           ::= "of" <here-ref>
 <relative>       ::= <FB> [ [ "and" ] <LR> ] | <LR>
-<FB>             ::= "f" | "fwd" | "forward" | "ahead" | [ "to the" ] "front" [ <ofme> ] | "in front of" [ <here-ref> ]
-                   | "b" | "back" | "behind" [ <here-ref> ]
+<FB>             ::= "f" | [ "to the" ] "front" [ <ofme> ] | "in front of" [ <here-ref> ]
+                   | "b" | "behind" [ <here-ref> ]
 <LR>             ::= "l" | "left" | "r" | "right"
 <vertical>       ::= "u" | "up" | "over my head" | "above" [ <here-ref> ]
                    | "d" | "down" | "below" | "underneath" | "under" [ <here-ref> | "my feet" ]

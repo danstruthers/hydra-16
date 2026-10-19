@@ -14,14 +14,20 @@ const GAME = path.join(__dirname, '..', '..', 'games', 'dq0');
 function loadAliases(file) {
   const CR = String.fromCharCode(13), NL = String.fromCharCode(10);
   const m = new Map();
+  DEFAULT_ANYWHERE.clear();
   for (const line of fs.readFileSync(file, 'utf8').split(CR).join('').split(NL)) {
     const t = line.trim();
     if (!t || t.startsWith('#')) continue;
-    const parts = t.split(' ');
+    let parts = t.split(' ');
+    // a leading * is an alias that stands anywhere in a line (a direction word), not only at the start of a command
+    const anywhere = parts[0].charAt(0) === '*';
+    if (anywhere) parts[0] = parts[0].slice(1);
     m.set(parts.slice(0, -1).join(' '), parts[parts.length - 1]);
+    if (anywhere) DEFAULT_ANYWHERE.add(parts.slice(0, -1).join(' '));
   }
   return m;
 }
+const DEFAULT_ANYWHERE = new Set();
 const DEFAULT_ALIASES = loadAliases(path.join(GAME, 'commands.aliases'));
 
 // ---- the grammar ----------------------------------------------------------------------------------------------------
@@ -893,13 +899,16 @@ function replaceObject(spec, obj) {
 }
 
 // A single-word alias at the start of a command, or of a part after "then", stands for its verb (in place).
-// A default or player alias at the start of a command, or of a part after "then", stands for its verb (in place).
+// A default or player alias at the start of a command, or of a part after "then", stands for its verb (in place);
+// a direction alias (DEFAULT_ANYWHERE) stands for its short form anywhere.
 // The longest alias whose words start here wins; a key may be several words ("look closely").
 function segmentAliases(toks, ctx) {
   for (let i = 0; i < toks.length; i++) {
-    if (!(i === 0 || (toks[i - 1].k === 'w' && toks[i - 1].v === 'then'))) continue;
+    const segStart = i === 0 || (toks[i - 1].k === 'w' && toks[i - 1].v === 'then');
     let best = null;
     for (const key of ctx.aliases.keys()) {
+      // a command's verb is aliased at its start; a direction word (DEFAULT_ANYWHERE) anywhere
+      if (!segStart && !DEFAULT_ANYWHERE.has(key)) continue;
       const kw = key.split(' ');
       if (['alias', 'unalias', 'forget'].indexOf(kw[0]) >= 0 || i + kw.length > toks.length) continue;
       if (!kw.every((w, j) => toks[i + j].k === 'w' && toks[i + j].v === w)) continue;
@@ -936,10 +945,12 @@ class Compiler {
       const a = this.answer(toks, ctx);
       if (a) return a;
     }
-    // A word that is an alias expands once, with the rest of the line added.
-    if (toks[0].k === 'w' && ctx.aliases.has(toks[0].v) && !['alias', 'unalias', 'forget'].includes(toks[0].v)) {
-      const expanded = ctx.aliases.get(toks[0].v) + ' ' + toks.slice(1).map(t => (t.k === 'w' ? t.v : `"${t.text}"`)).join(' ');
-      return this.compile(expanded.trim(), Object.assign({}, ctx, { aliases: new Map() }));
+    // A word that stands for several words expands once, with the rest of the line added (the rest keeps its aliases).
+    // A single word is handled by segmentAliases below.
+    if (toks[0].k === 'w' && ctx.aliases.has(toks[0].v) && ctx.aliases.get(toks[0].v).indexOf(' ') >= 0 && ['alias', 'unalias', 'forget'].indexOf(toks[0].v) < 0) {
+      const key = toks[0].v;
+      const expanded = ctx.aliases.get(key) + ' ' + toks.slice(1).map(t => (t.k === 'w' ? t.v : '"' + t.text + '"')).join(' ');
+      return this.compile(expanded.trim(), Object.assign({}, ctx, { aliases: new Map([...ctx.aliases].filter(([k]) => k !== key)) }));
     }
     segmentAliases(toks, ctx);
     const aliasResult = this.alias(toks, ctx);
@@ -1116,7 +1127,7 @@ function checkCorpus(compiler, corpusFile, log) {
   return { pass, total };
 }
 
-module.exports = { Compiler, loadRules, buildContext, tokenize, DEFAULT_WORLD, checkCorpus, matchRule, countRule, DEFAULT_ALIASES, segmentAliases };
+module.exports = { Compiler, loadRules, buildContext, tokenize, DEFAULT_WORLD, checkCorpus, matchRule, countRule, DEFAULT_ALIASES, DEFAULT_ANYWHERE, segmentAliases };
 
 if (require.main === module) {
   const compiler = new Compiler(loadRules(path.join(GAME, 'commands.ebnf')));

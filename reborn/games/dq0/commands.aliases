@@ -43,3 +43,11 @@ concentrate cast
 ask tell
 repeat again
 look closely examine
+*north n
+*south s
+*east e
+*west w
+*forward f
+*fwd f
+*ahead f
+*back b

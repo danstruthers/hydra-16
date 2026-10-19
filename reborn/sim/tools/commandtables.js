@@ -10,11 +10,11 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { loadRules, Compiler, buildContext, DEFAULT_WORLD, checkCorpus, DEFAULT_ALIASES } = require('./commandcompile.js');
+const { loadRules, Compiler, buildContext, DEFAULT_WORLD, checkCorpus, DEFAULT_ALIASES, DEFAULT_ANYWHERE } = require('./commandcompile.js');
 
 const GAME = path.join(__dirname, '..', '..', 'games', 'dq0');
 const MAGIC = [0x44, 0x51, 0x30, 0x47]; // "DQ0G"
-const VERSION = 3;
+const VERSION = 4;
 const TAG = { seq: 1, alt: 2, opt: 3, rep: 4, nt: 5, term: 6, quote: 7 };
 
 // The open names are declared on the header line of the grammar: "open: ...".
@@ -71,7 +71,7 @@ function encodeGrammar(rules, open, aliases = DEFAULT_ALIASES) {
   const al = [...aliases.entries()];
   if (al.length > 255) throw new Error('too many aliases');
   head.push(al.length);
-  for (const [w, verb] of al) head.push(...text(w), ...text(verb));
+  for (const [w, verb] of al) head.push(...text(w), ...text(verb), DEFAULT_ANYWHERE.has(w) ? 1 : 0);
   for (const o of offsets) head.push(...u16(o));
   return Buffer.from([...head, ...ruleBytes]);
 }
@@ -91,7 +91,8 @@ function decodeGrammar(buf) {
   for (let i = 0; i < wordCount; i++) words.push(str());
   const aliasCount = u8();
   const aliases = new Map();
-  for (let i = 0; i < aliasCount; i++) { const w = str(); aliases.set(w, str()); }
+  const anywhere = new Set();
+  for (let i = 0; i < aliasCount; i++) { const w = str(); aliases.set(w, str()); if (u8()) anywhere.add(w); }
   const offsets = [];
   for (let i = 0; i < ruleCount; i++) offsets.push(u16());
   const rulesStart = p;
@@ -122,6 +123,7 @@ function decodeGrammar(buf) {
     rules.set(names[i], node());
   }
   rules.aliases = aliases;
+  rules.anywhere = anywhere;
   return rules;
 }
 
@@ -137,7 +139,8 @@ if (require.main === module) {
   if (args.includes('--check')) {
     const decoded = decodeGrammar(bytes);
     const same = [...rules.keys()].every(k => JSON.stringify(rules.get(k)) === JSON.stringify(decoded.get(k)));
-    const aliasSame = [...DEFAULT_ALIASES].every(([k, v]) => decoded.aliases.get(k) === v) && decoded.aliases.size === DEFAULT_ALIASES.size;
+    const aliasSame = [...DEFAULT_ALIASES].every(([k, v]) => decoded.aliases.get(k) === v) && decoded.aliases.size === DEFAULT_ALIASES.size &&
+      decoded.anywhere.size === DEFAULT_ANYWHERE.size && [...DEFAULT_ANYWHERE].every(k => decoded.anywhere.has(k));
     console.log(`decoded rules identical to the text: ${same}; aliases identical: ${aliasSame}`);
     const { pass, total } = checkCorpus(new Compiler(decoded), path.join(GAME, 'commands.corpus'), console.log);
     console.log(`corpus through the table: ${pass}/${total} cases pass`);
