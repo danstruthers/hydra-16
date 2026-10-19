@@ -14,7 +14,9 @@ const { loadRules, Compiler, buildContext, DEFAULT_WORLD, checkCorpus, DEFAULT_A
 
 const GAME = path.join(__dirname, '..', '..', 'games', 'dq0');
 const MAGIC = [0x44, 0x51, 0x30, 0x47]; // "DQ0G"
-const VERSION = 4;
+const VERSION = 5;
+const MAGIC_ALIAS = [0x44, 0x51, 0x30, 0x41]; // "DQ0A"
+const VERSION_ALIAS = 1;
 const TAG = { seq: 1, alt: 2, opt: 3, rep: 4, nt: 5, term: 6, quote: 7 };
 
 // The open names are declared on the header line of the grammar: "open: ...".
@@ -23,7 +25,7 @@ function openNames(file) {
   return m ? m[1].trim().split(/\s+/).filter(Boolean) : [];
 }
 
-function encodeGrammar(rules, open, aliases = DEFAULT_ALIASES) {
+function encodeGrammar(rules, open) {
   const names = [...rules.keys(), ...open.filter(n => !rules.has(n))];
   const nameId = new Map(names.map((n, i) => [n, i]));
   const words = [];
@@ -68,12 +70,30 @@ function encodeGrammar(rules, open, aliases = DEFAULT_ALIASES) {
   for (const n of names) head.push(...text(n));
   head.push(...u16(words.length));
   for (const w of words) head.push(...text(w));
-  const al = [...aliases.entries()];
-  if (al.length > 255) throw new Error('too many aliases');
-  head.push(al.length);
-  for (const [w, verb] of al) head.push(...text(w), ...text(verb), DEFAULT_ANYWHERE.has(w) ? 1 : 0);
   for (const o of offsets) head.push(...u16(o));
   return Buffer.from([...head, ...ruleBytes]);
+}
+
+function encodeAliases(aliases = DEFAULT_ALIASES, anywhere = DEFAULT_ANYWHERE) {
+  const text = s => { if (s.length > 255) throw new Error('word too long: ' + s); return [s.length, ...[...s].map(c => c.charCodeAt(0))]; };
+  const al = [...aliases.entries()];
+  if (al.length > 255) throw new Error('too many aliases');
+  const out = [...MAGIC_ALIAS, VERSION_ALIAS, al.length];
+  for (const [w, verb] of al) out.push(...text(w), ...text(verb), anywhere.has(w) ? 1 : 0);
+  return Buffer.from(out);
+}
+
+function decodeAliases(buf) {
+  let p = 0;
+  const u8 = () => buf[p++];
+  const str = () => { const n = u8(); let s = ''; for (let i = 0; i < n; i++) s += String.fromCharCode(u8()); return s; };
+  for (const m of MAGIC_ALIAS) if (u8() !== m) throw new Error('not a dq0 alias table');
+  if (u8() !== VERSION_ALIAS) throw new Error('alias table version');
+  const count = u8();
+  const aliases = new Map();
+  const anywhere = new Set();
+  for (let i = 0; i < count; i++) { const w = str(); aliases.set(w, str()); if (u8()) anywhere.add(w); }
+  return { aliases, anywhere };
 }
 
 function decodeGrammar(buf) {
@@ -89,10 +109,6 @@ function decodeGrammar(buf) {
   const wordCount = u16();
   const words = [];
   for (let i = 0; i < wordCount; i++) words.push(str());
-  const aliasCount = u8();
-  const aliases = new Map();
-  const anywhere = new Set();
-  for (let i = 0; i < aliasCount; i++) { const w = str(); aliases.set(w, str()); if (u8()) anywhere.add(w); }
   const offsets = [];
   for (let i = 0; i < ruleCount; i++) offsets.push(u16());
   const rulesStart = p;
@@ -122,28 +138,30 @@ function decodeGrammar(buf) {
     p = rulesStart + offsets[i];
     rules.set(names[i], node());
   }
-  rules.aliases = aliases;
-  rules.anywhere = anywhere;
   return rules;
 }
 
-module.exports = { encodeGrammar, decodeGrammar, openNames };
+module.exports = { encodeGrammar, decodeGrammar, encodeAliases, decodeAliases, openNames };
 
 if (require.main === module) {
   const grammar = path.join(GAME, 'commands.ebnf');
   const rules = loadRules(grammar);
-  const bytes = encodeGrammar(rules, openNames(grammar));
+  const gbytes = encodeGrammar(rules, openNames(grammar));
+  const abytes = encodeAliases();
   const args = process.argv.slice(2);
-  console.log(`grammar table: ${bytes.length} bytes for ${rules.size} rules, ${DEFAULT_ALIASES.size} default aliases`);
-  if (args[0] && args[0] !== '--check') fs.writeFileSync(args[0], bytes);
+  console.log('grammar table: ' + gbytes.length + ' bytes for ' + rules.size + ' rules');
+  console.log('alias table: ' + abytes.length + ' bytes for ' + DEFAULT_ALIASES.size + ' default aliases');
+  if (args[0] && args[0] !== '--check') fs.writeFileSync(args[0], gbytes);
+  if (args[1] && args[1] !== '--check') fs.writeFileSync(args[1], abytes);
   if (args.includes('--check')) {
-    const decoded = decodeGrammar(bytes);
+    const decoded = decodeGrammar(gbytes);
     const same = [...rules.keys()].every(k => JSON.stringify(rules.get(k)) === JSON.stringify(decoded.get(k)));
-    const aliasSame = [...DEFAULT_ALIASES].every(([k, v]) => decoded.aliases.get(k) === v) && decoded.aliases.size === DEFAULT_ALIASES.size &&
-      decoded.anywhere.size === DEFAULT_ANYWHERE.size && [...DEFAULT_ANYWHERE].every(k => decoded.anywhere.has(k));
-    console.log(`decoded rules identical to the text: ${same}; aliases identical: ${aliasSame}`);
+    const al = decodeAliases(abytes);
+    const aliasSame = [...DEFAULT_ALIASES].every(([k, v]) => al.aliases.get(k) === v) && al.aliases.size === DEFAULT_ALIASES.size &&
+      al.anywhere.size === DEFAULT_ANYWHERE.size && [...DEFAULT_ANYWHERE].every(k => al.anywhere.has(k));
+    console.log('decoded rules identical to the text: ' + same + '; aliases identical: ' + aliasSame);
     const { pass, total } = checkCorpus(new Compiler(decoded), path.join(GAME, 'commands.corpus'), console.log);
-    console.log(`corpus through the table: ${pass}/${total} cases pass`);
+    console.log('corpus through the grammar table: ' + pass + '/' + total + ' cases pass');
     process.exit(same && aliasSame && pass === total ? 0 : 1);
   }
 }
