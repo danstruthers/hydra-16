@@ -161,18 +161,18 @@ save	VB_META_SAVE	-	-	save
 quit	VB_META_QUIT	-	-	quit
 
 # --- aliases (question 15, the alias design) ---
-alias x is take off	ALIAS:DEFINE	alias=x;substitution=take off	-	define with 'is'
-alias x = take off	ALIAS:DEFINE	alias=x;substitution=take off	-	define with '='
+alias zz is take off	ALIAS:DEFINE	alias=zz;substitution=take off	-	define with 'is'
+alias zz = take off	ALIAS:DEFINE	alias=zz;substitution=take off	-	define with '='
 alias look	ERROR:BUILT_IN_WORD	alias=look	-	a built-in word
-alias x	ALIAS:SHOW	alias=x	-	show a meaning
+alias zz	ALIAS:SHOW	alias=zz	-	show a meaning
 alias	ALIAS:LIST	-	-	list all
-unalias x	ALIAS:REMOVE	alias=x	-	remove
-forget alias x	ALIAS:REMOVE	alias=x	-	remove, the longer form
-alias x is take off	QUESTION:OVERWRITE	alias=x;current=take up;new=take off	x=take up	overwrite asks first
-yes	ALIAS:REPLACE	alias=x	pending=overwrite:x:take up:take off	the answer to the overwrite question
-no	ALIAS:KEEP	alias=x	pending=overwrite:x:take up:take off	the answer to the overwrite question
-n	ALIAS:KEEP	alias=x	pending=overwrite:x:take up:take off	'n' answers the question, not north
-x sword	VB_UNEQUIP_OBJECT	object=sword	x=take off	an alias expands once, trailing words added
+unalias zz	ALIAS:REMOVE	alias=zz	-	remove
+forget alias zz	ALIAS:REMOVE	alias=zz	-	remove, the longer form
+alias zz is take off	QUESTION:OVERWRITE	alias=zz;current=take up;new=take off	zz=take up	overwrite asks first
+yes	ALIAS:REPLACE	alias=zz	pending=overwrite:zz:take up:take off	the answer to the overwrite question
+no	ALIAS:KEEP	alias=zz	pending=overwrite:zz:take up:take off	the answer to the overwrite question
+n	ALIAS:KEEP	alias=zz	pending=overwrite:zz:take up:take off	'n' answers the question, not north
+zz sword	VB_UNEQUIP_OBJECT	object=sword	zz=take off	an alias expands once, trailing words added
 
 # --- answers, pronouns, selectors, and questions ---
 take it	VB_RETRIEVE_OBJECT	object=sword	last=sword	it: the last thing of any kind (question 7)
@@ -393,7 +393,7 @@ take and stow the sword	VB_SEQUENCE	steps=VB_RETRIEVE_OBJECT,VB_UNEQUIP_OBJECT;1
 take and drop the sword	VB_SEQUENCE	steps=VB_RETRIEVE_OBJECT,VB_DROP_OBJECT;1.object=sword;2.object=sword	near=sword	take, then drop
 take and stow and drop the sword	VB_SEQUENCE	steps=VB_RETRIEVE_OBJECT,VB_UNEQUIP_OBJECT,VB_DROP_OBJECT;3.object=sword	near=sword	a chain of verbs
 take and the shield	ERROR:NOT_UNDERSTOOD	-	near=shield	the second word is no verb
-alias yyy is x	ALIAS:DEFINE	alias=yyy;substitution=take	x=take	an alias of an alias points at the core word
-alias x	ALIAS:SHOW	alias=x;substitution=take	x=take	show a meaning
-alias	ALIAS:LIST	x=take;yyy=take	x=take;yyy=take	list: the core word, not the alias
+alias yyy is zz	ALIAS:DEFINE	alias=yyy;substitution=take	zz=take	an alias of an alias points at the core word
+alias zz	ALIAS:SHOW	alias=zz;substitution=take	zz=take	show a meaning
+alias	ALIAS:LIST	zz=take;yyy=take	zz=take;yyy=take	list: the core word, not the alias
 yyy sword	VB_RETRIEVE_OBJECT	object=sword	near=sword;yyy=take	the chained alias takes the core verb

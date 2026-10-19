@@ -125,13 +125,13 @@ const SPEECH_WORDS = new Set(['say', 'yell', 'scream', 'shout', 'whisper']);
 const INTRANSITIVE = new Set(['wait', 'rest', 'sleep', 'stop']);
 const PACE = { crawl: 'crawl', 'slow walk': 'slowwalk', walk: 'walk', trot: 'trot', run: 'run', sprint: 'sprint' };
 const META = { status: 'VB_META_STATUS', help: 'VB_META_HELP', inventory: 'VB_META_INVENTORY', i: 'VB_META_INVENTORY',
-  map: 'VB_META_MAP', save: 'VB_META_SAVE', quit: 'VB_META_QUIT' };
+  map: 'VB_META_MAP', save: 'VB_META_SAVE', quit: 'VB_META_QUIT', q: 'VB_META_QUIT' };
 const ATTACK_MANNER = { slash: 'edge', slice: 'edge', chop: 'edge', swing: 'edge', bash: 'blunt', bludgeon: 'blunt',
   thump: 'blunt', club: 'blunt', stab: 'point', poke: 'point', pierce: 'point', punch: 'unarmed', kick: 'unarmed',
   headbutt: 'unarmed', bite: 'unarmed', elbow: 'unarmed', knee: 'unarmed', slap: 'unarmed', butt: 'unarmed' };
 const POSTURE = { SIT: 'VB_SIT', STAND: 'VB_STAND', 'LIE-DOWN': 'VB_LIE_DOWN', CROUCH: 'VB_CROUCH' };
 const GRAPPLE_MANEUVER = { grapple: 'grapple', wrestle: 'wrestle', tackle: 'tackle', pin: 'pin', choke: 'choke',
-  hold: 'hold', grab: 'grab', put: 'headlock', toss: 'throw', throw: 'throw', chuck: 'throw', hurl: 'throw', sling: 'throw' };
+  hold: 'hold', grab: 'grab', put: 'headlock', toss: 'throw', throw: 'throw', chuck: 'throw', hurl: 'throw', sling: 'throw', t: 'throw' };
 const LOOK_PREP_ACTION = { through: 'VB_OBSERVE_THROUGH', around: 'VB_OBSERVE_AROUND' };
 const numWord = v => own(NUMWORDS, v);
 

@@ -37,7 +37,7 @@
 <locale-ref>     ::= "around" [ <here-ref> ] | "about" | "here" | "this place"
 <look-prep>      ::= "at" | "through" | "toward" | "towards" | "around" | "in" | "under" | "behind" | "beside" | "near"
 <examine>        ::= <EXAMINE> [ [ "at" ] <object> ]
-<EXAMINE>        ::= "examine" | [ "take a" ] <DETAIL> <LOOK>   (* "look closely" is an alias of examine: commands.aliases *)
+<EXAMINE>        ::= "x" | [ "take a" ] <DETAIL> <LOOK>   (* "look closely" is an alias of examine: commands.aliases *)
 
 (* ---- Moving and facing ---- *)
 <move>           ::= [ <pace-word> ] [ <MOVE> ] <move-dir> [ <number> [ "space" | "spaces" | "square" | "squares" ] ]   (* "run north": this move at run; "walk north": the verb *)
@@ -52,7 +52,7 @@
 <use>            ::= <USE> <object> [ "on" <object> ]
 <equip>          ::= <EQUIP> <object>
 <unequip>        ::= <UNEQUIP> <object> | "put" <object> "away"   (* "put away the sword" and "put the sword away" *)
-<open>           ::= "open" <object> [ <manner> ]
+<open>           ::= "o" <object> [ <manner> ]
 <close>          ::= "close" <object> [ <manner> ]                           (* "close look" is <DETAIL> <LOOK>, not this *)
 <from-phrase>    ::= "from" <object>
 <off-phrase>     ::= "off" <object>
@@ -142,7 +142,7 @@
 (* ---- Lexicon: the classes. Each is one abstract meaning; the words are its synonyms. ---- *)
 <LOOK>       ::= "look" | "take a gander" | "take a look"
 <DETAIL>     ::= "close" | "in detail"
-<MOVE>       ::= "move" | "walk" | "go"
+<MOVE>       ::= "m" | "walk" | "go"
 <TOWARD>     ::= "to" | "towards" | "toward" | "in the direction of"
 <GET>        ::= "get" | "take" | "pick up" | "pick"
 <DROP>       ::= "drop" | "put down"
@@ -152,14 +152,14 @@
 <UNEQUIP>    ::= "doff" | "take off" | "put away"
 <ATTACK>     ::= "fight" | "slash" | "bash" | "stab" | "punch" | "kick" | "bite" | "headbutt" | "elbow" | "knee" | "slap" | "butt"
 <GRAPPLE>    ::= "grapple" | "wrestle" | "tackle" | "pin" | "choke"
-<THROW>      ::= "throw" | "sling"
+<THROW>      ::= "t" | "sling"
 <SHOOT>      ::= "fire"
 <LOAD>       ::= "draw"
-<JUMP>       ::= "jump"
+<JUMP>       ::= "j"
 <SAY>        ::= "say"
 <VOLUME-SAY>  ::= "yell" | "whisper"
 <TELL>       ::= "tell"
-<CAST>       ::= "cast"
+<CAST>       ::= "c"
 <EAT>        ::= "eat"
 <DRINK>      ::= "drink"
 <LIGHT>      ::= "light"
@@ -178,7 +178,7 @@
 <NAME>       ::= "name" | "call"
 <ALIAS>      ::= "alias"
 <UNALIAS>    ::= "unalias" | "forget alias"
-<META-WORD>  ::= "status" | "help" | "i" | "map" | "save" | "quit"
+<META-WORD>  ::= "status" | "help" | "i" | "map" | "save" | "q"
 
 (* ---- Fire (added 2026-10-19) ---- *)
 <light>          ::= <LIGHT> [ "a" ] "fire" | <LIGHT> <object>   (* "light the torch", "start a fire" *)
@@ -204,7 +204,7 @@
 <WAKE>           ::= "wake" [ "up" ] | "rouse" | "awaken"
 (* ---- Stealth ---- *)
 <CROUCH>         ::= "crouch" | "kneel" [ "down" ] | "squat"
-<hide>           ::= "hide" [ <locative> ]                        (* "hide behind the table": the locative adjunct *)
+<hide>           ::= "h" [ <locative> ]                        (* "hide behind the table": the locative adjunct *)
 <sneak>          ::= <SNEAK> [ <direction> ]
 <SNEAK>          ::= "sneak"
 (* ---- Handling and senses ---- *)
@@ -214,7 +214,7 @@
 <pull>           ::= <PULL> <object>
 <PULL>           ::= "pull"
 <give>           ::= <GIVE> <object> ( "to" | "for" ) <object>
-<GIVE>           ::= "give"
+<GIVE>           ::= "g"
 <grab>           ::= ( "grab" | "hold" ) <object> [ <from-phrase> ]   (* a grapple when the object is engaged; else a get, or a carry for hold *)
 <lock>           ::= "lock" <object>
 <unlock>         ::= "unlock" <object> [ "with" <object> ]
