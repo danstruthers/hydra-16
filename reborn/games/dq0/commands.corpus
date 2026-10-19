@@ -228,3 +228,10 @@ short sleep	VB_SLEEP	short=yes	-	the same as short rest
 rest	VB_SLEEP	short=no	-	a full rest, not short
 chuck the apple north	QUESTION:DISTANCE	object=apple;direction=N	near=apple	chuck: a synonym of throw
 hurl the stone at the goblin	VB_THROW_OBJECT	object=stone;target=goblin	near=stone,goblin	hurl: a synonym of throw
+quaff the potion	VB_DRINK	object=potion	near=potion	quaff: a synonym of drink
+light the torch	VB_LIGHT_OBJECT	object=torch	near=torch	light
+start the torch	VB_LIGHT_OBJECT	object=torch	near=torch	start
+start a fire	VB_LIGHT_OBJECT	object=fire	-	start a fire
+light a fire	VB_LIGHT_OBJECT	object=fire	-	light a fire
+put out the torch	VB_EXTINGUISH_OBJECT	object=torch	near=torch	put out
+quench the fire	VB_EXTINGUISH_OBJECT	object=fire	-	quench

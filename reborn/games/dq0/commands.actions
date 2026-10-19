@@ -37,7 +37,9 @@ VB_SAY                 text volume
 VB_TELL_OBJECT          object text topic
 VB_CAST_SPELL           spell target
 VB_EAT_OBJECT           object
-VB_DRINK                object
+VB_DRINK
+VB_LIGHT_OBJECT            object
+VB_EXTINGUISH_OBJECT       object                object
 VB_FIND_OBJECT          object
 VB_SEARCH               object
 VB_LISTEN               object direction

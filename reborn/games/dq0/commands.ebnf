@@ -25,7 +25,7 @@
                    | <throw> | <shoot> | <load> | <jump> | <say> | <tell> | <cast> | <eat>
                    | <drink> | <swim> | <find> | <search> | <listen> | <smell> | <track>
                    | <target> | <wait> | <rest> | <sleep> | <stop> | <naming> | <meta>
-                   | <step> | <pace-set> | <charge>
+                   | <step> | <pace-set> | <charge> | <light> | <extinguish>
 
 (* ---- Observing (question 3: "look at" is a glance; question 4: "take a look" is a look) ---- *)
 <look>           ::= <LOOK> [ <look-target> ]
@@ -157,7 +157,9 @@
 <TELL>       ::= "tell" | "ask"
 <CAST>       ::= "cast" | "prepare" | "concentrate"
 <EAT>        ::= "eat" | "consume"
-<DRINK>      ::= "drink"
+<DRINK>      ::= "drink" | "quaff"
+<LIGHT>      ::= "light" | "start"
+<EXTINGUISH> ::= "quench" | "put out"
 <SWIM>       ::= "swim"
 <FIND>       ::= "find" | "where is"
 <SEARCH>     ::= "search"
@@ -173,3 +175,7 @@
 <ALIAS>      ::= "alias"
 <UNALIAS>    ::= "unalias" | "forget alias"
 <META-WORD>  ::= "status" | "help" | "inventory" | "i" | "map" | "save" | "quit"
+
+(* ---- Fire (added 2026-10-19) ---- *)
+<light>          ::= <LIGHT> [ "a" ] ( "fire" | <object> )   (* "light the torch", "start a fire" *)
+<extinguish>     ::= <EXTINGUISH> ( "fire" | <object> )      (* "quench the fire", "put out the torch" *)
