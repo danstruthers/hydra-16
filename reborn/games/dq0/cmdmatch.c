@@ -42,6 +42,7 @@
 
 typedef struct Cont Cont;
 struct Cont {
+  unsigned char *reached;
   int kind;
   const unsigned char *node;
   int count;
@@ -55,7 +56,10 @@ static unsigned char namelen[MAXNAMES];
 static int namekind[MAXNAMES];
 static const unsigned char *wordp[MAXWORDS];
 static unsigned char wordlen[MAXWORDS];
-static int nrules, nnames, nwords, rule_line, rule_adjunct;
+static int nrules, nnames, nwords, rule_line, rule_adjunct, rule_sequence;
+static int has_then;
+/* dead[rule][pos]: the rule has no match at pos (its continuation was never reached); only failures are remembered */
+static unsigned char dead[MAXRULES][4];
 
 static char tbuf[200];
 static int tbn;
@@ -214,6 +218,7 @@ int cmd_init(const unsigned char *t)
   for (i = 0; i < nrules; i++) {
     if (same(namep[i], namelen[i], "line")) rule_line = i;
     if (same(namep[i], namelen[i], "adjunct")) rule_adjunct = i;
+    if (same(namep[i], namelen[i], "sequence")) rule_sequence = i;
   }
   return 1;
 }
@@ -298,6 +303,9 @@ static void tokenize(const char *s)
     tbuf[nb++] = 0;
   }
   tbn = nb;
+  has_then = 0;
+  for (t = 0; t < ntok; t++)
+    if (tokk[t] == 0 && toklen[t] == 4 && memcmp(tbuf + tokoff[t], "then", 4) == 0) has_then = 1;
   apply_aliases();
   for (t = 0; t < ntok; t++) {
     int k;
@@ -328,17 +336,22 @@ static int match(const unsigned char *p, int pos, Cont *k)
       return (pos < ntok && tokk[pos] == 1) ? run(k, pos + 1) : 0;
     case T_NT: {
       unsigned id = rd16(p + 1);
+      if ((int)id == rule_sequence && !has_then) return 0;   /* a sequence needs a then: no need to try one */
       if (namekind[id] == K_NONE) {
         Cont c;
+        unsigned char reached = 0;
         int adj = (int)id == rule_adjunct, r;
+        if (dead[id][pos >> 3] & (1 << (pos & 7))) return 0;
         c.kind = C_RULE;
         c.node = 0;
         c.count = 0;
         c.start = 0;
         c.next = k;
+        c.reached = &reached;
         if (adj) adjcount++;
         r = match(rulep[id], pos, &c);
         if (adj) adjcount--;
+        if (!reached && !aborted) dead[id][pos >> 3] |= 1 << (pos & 7);
         return r;
       }
       return (pos < ntok && ((tokmask[pos] >> namekind[id]) & 1u)) ? run(k, pos + 1) : 0;
@@ -389,6 +402,7 @@ static int run(Cont *k, int pos)
       }
       return 0;
     case C_RULE:
+      *k->reached = 1;
       return run(k->next, pos);
     case C_SEQ: {
       Cont c;
@@ -426,6 +440,7 @@ int cmd_match(const char *line, const char *world, const char *names, const char
   tokenize(line);
   best = -1;
   adjcount = 0;
+  memset(dead, 0, sizeof dead);
   steps = 0;
   aborted = 0;
   end.kind = C_END;
