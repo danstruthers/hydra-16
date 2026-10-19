@@ -3,8 +3,9 @@
 
    The matcher returns, for a rule (or a node) at a position, the set of positions where it can end, as a bit mask
    (bit p: the match ends before token p). Nothing is pushed on the stack for a step, so the stack grows with the
-   grammar's nesting, not with the length of a parse. Rules are memoised per position (memo[rule][pos]), which is the
-   RAM this costs. A line parses when the rule "line" can end after its last token. The grammar is unambiguous on the
+   grammar's nesting, not with the length of a parse. Rules are memoised per position (memo[rule][pos]), and a rule the token cannot begin
+   is skipped: each rule's first words are worked out once, when first needed (firstbits: about 10 KB of RAM).
+   Together with the memo that is about 16 KB of RAM for the full grammar. A line parses when the rule "line" can end after its last token. The grammar is unambiguous on the
    corpus, so no parse is ranked; the first answer is the answer. */
 #include <string.h>
 #include "cmdmatch.h"
@@ -48,6 +49,15 @@ static const unsigned char *wordp[MAXWORDS];   /* the packed letters of each wor
 static unsigned char wordlen[MAXWORDS];
 static int nrules, nnames, nwords, rule_line, rule_adjunct, rule_sequence;
 static unsigned int memo[MAXRULES][MAXTOK + 1];
+/* The first words of each rule: the words it can begin with (a bit each), its open-name kinds, quoted text, and
+   whether it can match nothing. Built from the grammar at start-up; rule_ends skips a rule the token cannot begin. */
+static unsigned char firstbits[MAXRULES][(MAXWORDS + 7) / 8];
+static unsigned int firstK[MAXRULES];
+static unsigned char firstQ[MAXRULES], nullable[MAXRULES];
+static int fchanged;
+static unsigned char fstate[MAXRULES];   /* 0: not yet, 1: being worked out, 2: done */
+static void ensure_first(unsigned r);
+
 
 static const unsigned char *aliasw[MAXALIAS], *aliasv[MAXALIAS];
 static unsigned char aliaswl[MAXALIAS], aliasvl[MAXALIAS], aliasany[MAXALIAS];
@@ -103,6 +113,76 @@ static const unsigned char *slot_next(const unsigned char *s)
 {
   unsigned size = (s[0] & 0x80) ? (((unsigned)(s[0] & 0x7F) << 8) | s[1]) : s[0];
   return slot_body(s) + size;
+}
+
+/* The first words of a node, into rule r. Returns 1 if the node can match nothing. */
+static int first_node(const unsigned char *p, int r)
+{
+  unsigned i, w, bit, nk, id;
+  int nul;
+  const unsigned char *s;
+  switch (*p) {
+    case T_TERM:
+      w = rd16(p + 2);
+      bit = 1u << (w & 7);
+      if (!(firstbits[r][w >> 3] & bit)) { firstbits[r][w >> 3] |= bit; fchanged = 1; }
+      return 0;
+    case T_QUOTE:
+      if (!firstQ[r]) { firstQ[r] = 1; fchanged = 1; }
+      return 0;
+    case T_NT:
+      id = rd16(p + 1);
+      if (namekind[id] != K_NONE) {
+        nk = 1u << namekind[id];
+        if (!(firstK[r] & nk)) { firstK[r] |= nk; fchanged = 1; }
+        return 0;
+      }
+      ensure_first(id);
+      for (i = 0; i < sizeof firstbits[r]; i++) {
+        unsigned char merged = firstbits[r][i] | firstbits[id][i];
+        if (merged != firstbits[r][i]) { firstbits[r][i] = merged; fchanged = 1; }
+      }
+      if ((firstK[r] | firstK[id]) != firstK[r]) { firstK[r] |= firstK[id]; fchanged = 1; }
+      if (firstQ[id] && !firstQ[r]) { firstQ[r] = 1; fchanged = 1; }
+      return nullable[id];
+    case T_SEQ:
+      s = p + 2;
+      for (i = 0; i < p[1]; i++) {
+        nul = first_node(slot_body(s), r);
+        if (!nul) return 0;
+        s = slot_next(s);
+      }
+      return 1;
+    case T_ALT:
+      nul = 0;
+      s = p + 2;
+      for (i = 0; i < p[1]; i++) {
+        if (first_node(slot_body(s), r)) nul = 1;
+        s = slot_next(s);
+      }
+      return nul;
+    case T_OPT:
+    case T_REP:
+      first_node(slot_body(p + 1), r);
+      return 1;
+    default:
+      return 0;
+  }
+}
+
+/* The first words of a rule, worked out the first time it is needed (a rule that refers to itself gets what it has so
+   far, which is enough for this grammar: no rule starts with itself). */
+static void ensure_first(unsigned r)
+{
+  int nul;
+  if (fstate[r]) return;
+  fstate[r] = 1;
+  memset(firstbits[r], 0, sizeof firstbits[r]);
+  firstK[r] = 0;
+  firstQ[r] = 0;
+  nul = first_node(rulep[r], r);
+  nullable[r] = nul ? 1 : 0;
+  fstate[r] = 2;
 }
 
 /* Read the grammar table: the names (rules first, then open names), the packed words, and the rule bodies. */
@@ -365,6 +445,19 @@ static void tokenize(const char *s)
 /* The positions a node can end at, from pos: a bit mask (bit p). */
 static unsigned ends(const unsigned char *p, int pos);
 
+/* Can the rule begin with the token at pos (or match nothing)? */
+static int can_start(unsigned id, int pos)
+{
+  int w;
+  ensure_first(id);
+  if (nullable[id]) return 1;
+  if (pos >= ntok) return 0;
+  if (tokk[pos] == 1) return firstQ[id] || ((tokmask[pos] & firstK[id]) != 0);   /* quoted text is an open name too */
+  w = tokw[pos];
+  if (w >= 0 && (firstbits[id][w >> 3] >> (w & 7)) & 1) return 1;
+  return (tokmask[pos] & firstK[id]) != 0;
+}
+
 /* A rule's ends from pos, memoised. A rule that is entered again at the same position (left recursion) gives nothing
    the second time, so the search always finishes. */
 static unsigned rule_ends(int id, int pos)
@@ -372,6 +465,7 @@ static unsigned rule_ends(int id, int pos)
   unsigned m;
   if (memo[id][pos] != UNKNOWN) return memo[id][pos];
   if ((int)id == rule_sequence && !has_then) return memo[id][pos] = 0;   /* a sequence needs a then */
+  if (!can_start(id, pos)) return memo[id][pos] = 0;
   memo[id][pos] = 0;
   m = ends(rulep[id], pos);
   memo[id][pos] = m;
