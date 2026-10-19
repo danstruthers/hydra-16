@@ -5,7 +5,7 @@
    <name> a nonterminal; [ x ] optional; { x } zero or more; ( x | y ) a choice.
    A rule may continue on following lines. Comments are (* ... *).
 
-   open: unique-name kind-name fixture-name place-name known-alias alias adj number ordinal task-name meta-topic name-word text
+   open: unique-name kind-name fixture-name place-name known-alias alias adj number ordinal task-name meta-topic name-word spell-word pretense-word text
    (the open names come from the game's data: see the design doc, "The grammar"; the checker reads this line) *)
 
 (* ---- Entry ---- *)
@@ -15,7 +15,7 @@
 <VOLUME>        ::= "w" | "y"                          (* attached to the quote: w"Psst" *)
 <quoted-text>    ::= '"' <text> '"'
 <bare-direction> ::= <direction> [ <number> ]           (* "north", "n": move that way at pace; "f 1": one square forward *)
-<bare-verb>      ::= <GET> | <LOOK> | <SEARCH> | <LISTEN> | <TRACK> | <WAIT> | <REST> | <SLEEP> | <STOP> | <META-WORD>
+<bare-verb>      ::= <GET> | <LOOK> | <SEARCH> | <LISTEN> | <TRACK> | <WAIT> | <REST> | <SLEEP> | <STOP> | <META-WORD> | <AGAIN>
 <answer>         ::= <yes-no> | <number> | <selector> | <alias> | <unique-name>
                                                                 (* only while a question is pending (question 13) *)
 <yes-no>         ::= "yes" | "y" | "no" | "n"
@@ -25,7 +25,10 @@
                    | <throw> | <shoot> | <load> | <jump> | <say> | <tell> | <cast> | <eat>
                    | <drink> | <swim> | <find> | <search> | <listen> | <smell> | <track>
                    | <target> | <wait> | <rest> | <sleep> | <stop> | <naming> | <meta>
-                   | <step> | <pace-set> | <charge> | <light> | <extinguish>
+                   | <step> | <pace-set> | <charge> | <light> | <extinguish> | <posture> | <pretend>
+                   | <enter> | <leave> | <climb> | <dig> | <wake> | <hide> | <sneak>
+                   | <knock> | <push> | <pull> | <give> | <hold> | <lock> | <unlock> | <fill> | <read> | <taste> | <touch>
+                   | <defend> | <flee> | <follow> | <where>
 
 (* ---- Observing (question 3: "look at" is a glance; question 4: "take a look" is a look) ---- *)
 <look>           ::= <LOOK> [ <look-target> ]
@@ -36,12 +39,12 @@
 <EXAMINE>        ::= "examine" | "inspect" | [ "take a" ] <DETAIL> <LOOK> | <LOOK> <DETAIL>
 
 (* ---- Moving and facing ---- *)
-<move>           ::= [ <pace-word> ] [ <MOVE> ] <move-dir>   (* "run north": this move at run; "walk north": the verb *)
+<move>           ::= [ <pace-word> ] [ <MOVE> ] <move-dir> [ <number> [ "space" | "spaces" | "square" | "squares" ] ]   (* "run north": this move at run; "walk north": the verb *)
 <move-dir>       ::= <direction> | <TOWARD> <object>
 <face>           ::= [ "change" ] ( "face" | "facing" | "turn" ) [ "to" ] <direction>
 
 (* ---- Handling things (question 2: CLOSE and OPEN are actions) ---- *)
-<get>            ::= <GET> [ <object> ] [ <from-phrase> ]       (* bare: the last thing named, else things near (question 8) *)
+<get>            ::= <GET> [ <object> ] [ <from-phrase> ] | <GET> <object> <off-phrase>       (* bare: the last thing named, else things near (question 8) *)
 <drop>           ::= <DROP> <object>
 <put>            ::= <PUT> <object> <put-prep> <object>
 <put-prep>       ::= "in" | "into" | "inside" | "on" | "onto" | "on top of" | "under" | "against"
@@ -51,12 +54,14 @@
 <open>           ::= "open" <object>
 <close>          ::= "close" <object>                           (* "close look" is <DETAIL> <LOOK>, not this *)
 <from-phrase>    ::= "from" <object>
+<off-phrase>     ::= "off" <object>
 
 (* ---- Fighting ---- *)
 <attack>         ::= <ATTACK> <object> [ "with" <object> ]
 <grapple>        ::= <GRAPPLE> <object>
-<throw>          ::= <THROW> [ <object> ] <at-phrase>          (* at something: a target *)
-                   | <THROW> [ <object> ] <throw-dir>          (* in a direction: a floor square, distance asked *)
+<throw>          ::= <THROW> [ <object> ] [ <manner> ] <at-phrase>          (* at something: a target *)
+                   | <THROW> [ <object> ] [ <manner> ] <throw-dir>
+                   | <THROW>          (* in a direction: a floor square, distance asked *)
 <throw-dir>      ::= <direction> | "around the corner"
 <shoot>          ::= <SHOOT> <object> [ <at-phrase> ]           (* the bow is the instrument: "fire the bow at the goblin" *)
 <load>           ::= <LOAD> <object>
@@ -66,7 +71,7 @@
 <jump>           ::= <JUMP> [ <direction> | ( "over" | "onto" ) <object> ]
 <say>            ::= <SAY> <quoted-text> | <VOLUME-SAY> <quoted-text> [ "!" ]   (* yell, scream, whisper *)
 <tell>           ::= <TELL> <object> [ "to" | "about" ] ( <quoted-text> | <object> | <phrase> )
-<cast>           ::= <CAST> [ <object> ] [ <at-phrase> ]       (* "concentrate" alone: the spell in use *)
+<cast>           ::= <CAST> [ <det> ] [ <spell-word> ] [ "spell" ] [ <at-phrase> ]       (* "concentrate" alone: the spell in use *)
 <eat>            ::= <EAT> <object>
 <drink>          ::= <DRINK> [ "from" <object> | <object> ]
 <swim>           ::= <SWIM> [ <move-dir> ]
@@ -75,17 +80,17 @@
 <listen>         ::= <LISTEN> [ <look-target> ]
 <smell>          ::= <SMELL> [ <look-target> ]
 <track>          ::= <TRACK> [ "for" ] [ <object> ]
-<target>         ::= <TARGET> <object> | "clear target" | "untarget"
+<target>         ::= <TARGET> [ <object> ] | "clear target" | "untarget"
 <wait>           ::= <WAIT> [ <duration> ]  (* VB_WAIT: idle for a while; a long task, stopped by "stop" or "stop waiting", interrupted as a walk is *)
 <rest>           ::= [ "short" ] <REST>     (* rest and sleep are the same: VB_SLEEP, the player unaware. "short rest" is a
                                               sleep meant for 30 to 60 minutes, which fatigue, illness and injury may turn into a
                                               full sleep; the wake-up test uses Will, and a high Will helps *)
-<sleep>          ::= [ "short" ] <SLEEP>    (* VB_SLEEP: interrupted by an awareness check. Its length is not typed: it
+<sleep>          ::= [ "short" ] <SLEEP> [ "for" <duration> ]    (* VB_SLEEP: interrupted by an awareness check. Its length is not typed: it
                                               depends on fatigue, injury and sickness (the user, 2026-10-19), so a duration
                                               is only given to override it *)
 <stop>           ::= <STOP> [ <task-name> ]                     (* question 9: "stop" alone, or "stop digging" *)
 <step>           ::= "step" <direction>                 (* one square; facing unchanged: "step r" *)
-<pace-set>       ::= "pace" <pace-word> | "double time"  (* sets the default pace; "double time!" is a run *)
+<pace-set>       ::= "pace" [ <pace-word> ] | "double time" [ "!" ]  (* sets the default pace; "double time!" is a run *)
 <pace-word>      ::= "crawl" | "slow walk" | "walk" | "trot" | "run" | "sprint"
 <charge>         ::= [ "fast" ] "charge" [ "!" ]        (* run at the closest enemy ahead, attack it, shout "Charge!"; fast: a sprint *)
 
@@ -145,7 +150,7 @@
 <USE>        ::= "use" | "make use of"
 <EQUIP>      ::= "equip" | "ready" | "don" | "wear" | "wield"
 <UNEQUIP>    ::= "doff" | "remove" | "store" | "take off" | "unwield" | "stow" | "put away"
-<ATTACK>     ::= "fight" | "attack" | "strike" | "swing" | "slice" | "slash" | "chop" | "bash" | "bludgeon"
+<ATTACK>     ::= "fight" | "attack" | "hit" | "strike" | "swing" | "slice" | "slash" | "chop" | "bash" | "bludgeon"
                  | "thump" | "club" | "stab" | "poke" | "pierce" | "punch" | "kick" | "bite" | "headbutt"
 <GRAPPLE>    ::= "grapple" | "wrestle"
 <THROW>      ::= "throw" | "chuck" | "hurl" | "sling"
@@ -153,7 +158,7 @@
 <LOAD>       ::= "draw" | "load"
 <JUMP>       ::= "jump" | "leap"
 <SAY>        ::= "say"
-<VOLUME-SAY>  ::= "yell" | "scream" | "whisper"
+<VOLUME-SAY>  ::= "yell" | "scream" | "shout" | "whisper"
 <TELL>       ::= "tell" | "ask"
 <CAST>       ::= "cast" | "prepare" | "concentrate"
 <EAT>        ::= "eat" | "consume"
@@ -179,3 +184,51 @@
 (* ---- Fire (added 2026-10-19) ---- *)
 <light>          ::= <LIGHT> [ "a" ] ( "fire" | <object> )   (* "light the torch", "start a fire" *)
 <extinguish>     ::= <EXTINGUISH> ( "fire" | <object> )      (* "quench the fire", "put out the torch" *)
+(* ---- Posture and pretence (added 2026-10-19) ---- *)
+<posture>        ::= <SIT> | <STAND> | <LIE-DOWN> | <CROUCH>          (* a change of the standing state; no object *)
+<SIT>            ::= "sit" [ "down" ]
+<STAND>          ::= "stand" [ "up" ] | "get" "up"          (* "get up" is a stand, not a get with a direction *)
+<LIE-DOWN>       ::= "lie" [ "down" | "prone" ] | "lay" [ "down" ] | "go" "prone" | "prone"
+<pretend>        ::= <PRETEND> [ "to" "be" ] <pretense>     (* a state the player does not have: "pretend dead",
+                                                             "feign ignorance", "pretend to be asleep" *)
+<PRETEND>        ::= "pretend" | "feign" | "fake"
+<pretense>       ::= <pretense-word> { <pretense-word> }     (* the words of the state, none of them a command word *)
+(* ---- Movement, climbing and digging (added 2026-10-19: the gaps the probes found) ---- *)
+<enter>          ::= "enter" [ <object> ]
+<leave>          ::= <LEAVE> [ <object> | <direction> ]
+<LEAVE>          ::= "exit" | "leave"
+<climb>          ::= <CLIMB> [ <direction> ] [ <object> ]
+<CLIMB>          ::= "climb" | "scale"
+<dig>            ::= <DIG> [ <direction> | <object> ]           (* "dig down", "dig the wall" *)
+<DIG>            ::= "dig" | "tunnel"
+<wake>           ::= <WAKE> [ <object> ]                        (* the end of a sleep; "wake the goblin" wakes another *)
+<WAKE>           ::= "wake" [ "up" ] | "rouse" | "awaken"
+(* ---- Stealth ---- *)
+<CROUCH>         ::= "crouch" | "kneel" [ "down" ] | "squat"
+<hide>           ::= "hide" [ <object> ]                        (* "hide behind the table": the locative adjunct *)
+<sneak>          ::= <SNEAK> [ <direction> ]
+<SNEAK>          ::= "sneak" | "creep" | "tiptoe"
+(* ---- Handling and senses ---- *)
+<knock>          ::= "knock" [ "on" ] <object>
+<push>           ::= <PUSH> <object>
+<PUSH>           ::= "push" | "shove"
+<pull>           ::= <PULL> <object>
+<PULL>           ::= "pull" | "drag"
+<give>           ::= <GIVE> <object> ( "to" | "for" ) <object>
+<GIVE>           ::= "give" | "hand" | "offer"
+<hold>           ::= <HOLD> <object>
+<HOLD>           ::= "hold" | "carry"
+<lock>           ::= "lock" <object>
+<unlock>         ::= "unlock" <object> [ "with" <object> ]
+<fill>           ::= "fill" <object> [ <from-phrase> ]
+<read>           ::= "read" <object>
+<taste>          ::= "taste" <object>
+<touch>          ::= ( "touch" | "feel" ) <object>
+(* ---- Defence, fleeing and following ---- *)
+<defend>         ::= <DEFEND>                                   (* a stance for the next blow: dodge, block, parry, duck *)
+<DEFEND>         ::= "dodge" | "block" | "parry" | "duck"
+<flee>           ::= ( "flee" | "escape" | "run" "away" ) [ <direction> ]
+<follow>         ::= ( "follow" | "tail" ) <object>
+(* ---- Repeating and place ---- *)
+<AGAIN>          ::= "again" | "repeat"
+<where>          ::= "where" "am" "i"

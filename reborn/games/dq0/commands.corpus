@@ -46,7 +46,7 @@ grab the sword	VB_RETRIEVE_OBJECT	object=sword	near=sword	grab
 pick up the sword	VB_RETRIEVE_OBJECT	object=sword	near=sword	pick up is one token
 get the sword from the chest	VB_RETRIEVE_OBJECT	object=sword;source=chest	near=sword,chest	from a source
 take the lamp off the hook	VB_RETRIEVE_OBJECT	object=lamp;source=hook	near=lamp,hook	from, with 'off'
-take	VB_RETRIEVE_OBJECT	object=last	last=sword	bare take, last named (question 8)
+take	VB_RETRIEVE_OBJECT	object=sword	last=sword	bare take, last named (question 8)
 take	ERROR:NOTHING_HERE	-	-	bare take, nothing near (question 8)
 take all	VB_RETRIEVE_OBJECT	object=all-near	near=sword,rat	take all
 drop the sword	VB_DROP_OBJECT	object=sword	near=sword	drop
@@ -78,8 +78,8 @@ north	VB_MOVE_DIRECTION	direction=N	-	bare direction
 n	VB_MOVE_DIRECTION	direction=N	-	question 5: single letter
 f	VB_MOVE_DIRECTION	direction=F	facing=N	question 5
 move left one space	VB_MOVE_DIRECTION	direction=L;distance=1	facing=N	one square
-run north	VB_MOVE_DIRECTION	direction=N;manner=run	-	run
-crawl north	VB_MOVE_DIRECTION	direction=N;manner=crawl	-	crawl
+run north	VB_MOVE_DIRECTION	direction=N;pace=run	-	run
+crawl north	VB_MOVE_DIRECTION	direction=N;pace=crawl	-	crawl
 move to the door	VB_MOVE_TOWARD	object=door	near=door	toward
 walk toward the goblin	VB_MOVE_TOWARD	object=goblin	near=goblin	toward
 turn left	VB_FACE_DIRECTION	direction=L	facing=N	turn
@@ -188,7 +188,7 @@ xyzzy	ERROR:NOT_UNDERSTOOD	-	-	no reading at all
 wait the sword	ERROR:BAD_ROLE	-	-	wait takes no object
 throw n	QUESTION:DISTANCE	direction=N	-	no object: the thing in hand; distance asked (QUESTION:DISTANCE) (the distance is asked first)
 throw f	QUESTION:DISTANCE	direction=F	facing=N	forward, a floor square some distance off (the distance is asked first)
-throw it around the corner	QUESTION:DISTANCE	object=it;direction=around-corner	last=apple	round a corner (the distance is asked first)
+throw it around the corner	QUESTION:DISTANCE	object=apple;direction=around-corner	last=apple	round a corner (the distance is asked first)
 throw the apple north	QUESTION:DISTANCE	object=apple;direction=N	near=apple	named object, a direction (the distance is asked first)
 throw the apple hard north	QUESTION:DISTANCE	object=apple;direction=N;manner=hard	near=apple	manner (the distance is asked first)
 throw the apple at the goblin	VB_THROW_OBJECT	object=apple;target=goblin	near=apple,goblin	still a target
@@ -235,3 +235,63 @@ start a fire	VB_LIGHT_OBJECT	object=fire	-	start a fire
 light a fire	VB_LIGHT_OBJECT	object=fire	-	light a fire
 put out the torch	VB_EXTINGUISH_OBJECT	object=torch	near=torch	put out
 quench the fire	VB_EXTINGUISH_OBJECT	object=fire	-	quench
+target	VB_TARGET_SHOW	target=goblin	target=goblin	alone: echoes the current target
+target	VB_TARGET_SHOW	target=none	-	alone with no target: says there is none
+pace	VB_PACE_SHOW	pace=run	pace=run	alone: shows the current pace
+pace	VB_PACE_SHOW	pace=walk	-	alone with no pace set: the default is walk
+sit	VB_SIT	-	-	posture
+sit down	VB_SIT	-	-	posture, down
+stand	VB_STAND	-	-	posture
+stand up	VB_STAND	-	-	posture, up
+get up	VB_STAND	-	-	a stand, not a get with a direction
+lie down	VB_LIE_DOWN	-	-	posture
+lay down	VB_LIE_DOWN	-	-	the same, lay
+go prone	VB_LIE_DOWN	-	-	prone is lying down
+pretend dead	VB_PRETEND	state=dead	-	a state the player does not have
+feign ignorance	VB_PRETEND	state=ignorance	-	feign, a stated state
+pretend to be asleep	VB_PRETEND	state=asleep	-	the to be form
+stop pretending	VB_STOP	task=pretending	-	stops a pretence
+hit the rat	VB_ATTACK_OBJECT	object=rat	near=rat	hit: a synonym of attack
+shout "Help!"	VB_SAY	text=Help!;volume=loud	-	shout: a synonym of yell
+
+enter the room	VB_ENTER	object=room	near=room	enter a place
+enter	VB_ENTER	-	-	enter with no place named
+exit north	VB_LEAVE	direction=N	-	exit by a direction
+leave	VB_LEAVE	-	-	leave, no place
+leave the room	VB_LEAVE	object=room	near=room	leave a place
+climb the wall	VB_CLIMB	object=wall	near=wall	climb an object
+climb up the rope	VB_CLIMB	direction=U;object=rope	near=rope	climb a direction and an object
+dig down	VB_DIG	direction=D	-	dig in a direction
+dig	VB_DIG	-	-	dig, here
+dig the wall	VB_DIG	object=wall	near=wall	dig an object
+wake up	VB_WAKE	-	-	wake oneself
+wake the goblin	VB_WAKE	object=goblin	near=goblin	wake another
+crouch	VB_CROUCH	-	-	posture
+kneel down	VB_CROUCH	-	-	posture, kneel
+hide	VB_HIDE	-	-	hide, no cover named
+hide behind the table	VB_HIDE	container=table	near=table	the locative as cover
+sneak north	VB_SNEAK	direction=N	-	sneak a way
+creep west	VB_SNEAK	direction=W	-	creep, a synonym of sneak
+knock on the door	VB_KNOCK_OBJECT	object=door	near=door	knock with on
+push the door	VB_PUSH_OBJECT	object=door	near=door	push
+pull the lever	VB_PULL_OBJECT	object=lever	near=lever	pull
+give the apple to the goblin	VB_GIVE_OBJECT	object=apple;target=goblin	near=apple,goblin	give
+hold the torch	VB_HOLD_OBJECT	object=torch	near=torch	hold
+lock the door	VB_LOCK_OBJECT	object=door	near=door	lock
+unlock the door with the key	VB_UNLOCK_OBJECT	object=door;instrument=key	near=door,key	unlock with a key
+fill the waterskin	VB_FILL_OBJECT	object=waterskin	near=waterskin	fill
+fill the waterskin from the chest	VB_FILL_OBJECT	object=waterskin;source=chest	near=waterskin,chest	fill from a source
+read the sign	VB_READ_OBJECT	object=sign	near=sign	read
+taste the potion	VB_TASTE_OBJECT	object=potion	near=potion	taste
+touch the wall	VB_TOUCH_OBJECT	object=wall	near=wall	touch
+feel the wall	VB_TOUCH_OBJECT	object=wall	near=wall	feel, a synonym of touch
+dodge	VB_DEFEND	defence=dodge	-	a defence stance
+parry	VB_DEFEND	defence=parry	-	parry
+flee	VB_FLEE	-	-	flee, no way
+flee north	VB_FLEE	direction=N	-	flee a way
+run away	VB_FLEE	-	-	run away is flee, not a move
+run north	VB_MOVE_DIRECTION	direction=N;pace=run	-	run is still a move
+follow the goblin	VB_FOLLOW_OBJECT	object=goblin	near=goblin	follow
+again	VB_REPEAT	-	-	repeat the last command
+repeat	VB_REPEAT	-	-	repeat, a synonym of again
+where am I	VB_WHERE	-	-	where am I

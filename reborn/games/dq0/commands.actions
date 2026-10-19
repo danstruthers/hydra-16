@@ -24,6 +24,7 @@ VB_MOVE_TOWARD          object
 VB_FACE_DIRECTION       direction
 VB_STEP_DIRECTION      direction
 VB_SET_PACE            pace
+VB_PACE_SHOW            pace
 VB_CHARGE              direction pace text
 VB_THROW_DIRECTION     object direction distance manner
 VB_JUMP                 direction object
@@ -47,8 +48,13 @@ VB_SMELL                object direction
 VB_TRACK                object
 VB_TARGET_SET           object
 VB_TARGET_CLEAR
+VB_TARGET_SHOW          target
 VB_WAIT                 duration
 VB_SLEEP                              short (* length from fatigue, injury and sickness; optional duration; short: a 30-60 minute try *)
+VB_SIT
+VB_STAND
+VB_LIE_DOWN
+VB_PRETEND             state
 VB_STOP                 task
 VB_NAME_OBJECT          object name
 VB_NAME_PLACE           place name
@@ -58,6 +64,30 @@ VB_META_INVENTORY
 VB_META_MAP
 VB_META_SAVE
 VB_META_QUIT
+VB_ENTER                object
+VB_LEAVE                object direction
+VB_CLIMB                object direction
+VB_DIG                  direction object
+VB_WAKE                 object
+VB_CROUCH               
+VB_HIDE                 object container
+VB_SNEAK                direction
+VB_KNOCK_OBJECT         object
+VB_PUSH_OBJECT          object
+VB_PULL_OBJECT          object
+VB_GIVE_OBJECT          object target
+VB_HOLD_OBJECT          object
+VB_LOCK_OBJECT          object
+VB_UNLOCK_OBJECT        object instrument
+VB_FILL_OBJECT          object source
+VB_READ_OBJECT          object
+VB_TASTE_OBJECT         object
+VB_TOUCH_OBJECT         object
+VB_DEFEND               defence
+VB_FLEE                 direction
+VB_FOLLOW_OBJECT        object
+VB_REPEAT               
+VB_WHERE                
 
 [results]
 ERROR:NOT_UNDERSTOOD

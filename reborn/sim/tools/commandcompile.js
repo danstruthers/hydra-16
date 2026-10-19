@@ -1,0 +1,849 @@
+// commandcompile.js - the reference command compiler for Dingus Quest Zero (host side, in node).
+// It reads games/dq0/commands.ebnf, parses a typed line by backtracking over the grammar, turns the parse into an
+// abstract action (games/dq0/commands.actions) with its roles, and checks the corpus (commands.corpus).
+//   node sim/tools/commandcompile.js               check the corpus; prints each failure and a summary
+//   node sim/tools/commandcompile.js look north    compile one line with no context
+// The 65C02 compiler will be built from this design; this file is the behaviour to match.
+'use strict';
+const fs = require('fs');
+const path = require('path');
+
+const GAME = path.join(__dirname, '..', '..', 'games', 'dq0');
+
+// ---- the grammar ----------------------------------------------------------------------------------------------------
+
+// The rules of commands.ebnf as trees: alt / seq / opt / rep / nt (a rule or open name) / term (words) / quote.
+function loadRules(file) {
+  const text = fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n').replace(/\(\*[\s\S]*?\*\)/g, ' ');
+  const bodies = new Map();
+  let cur = null;
+  for (const line of text.split('\n')) {
+    const m = line.match(/^\s*<([^>]+)>\s*::=(.*)$/);
+    if (m) { cur = m[1]; bodies.set(cur, m[2]); }
+    else if (cur && line.trim() && /^\s/.test(line)) bodies.set(cur, bodies.get(cur) + ' ' + line);
+    else if (!line.trim()) cur = null;
+  }
+  const rules = new Map();
+  for (const [name, body] of bodies) rules.set(name, parseBody(body, name));
+  return rules;
+}
+
+function parseBody(s, name) {
+  const toks = s.match(/"[^"]*"|'[^']*'|<[^>]+>|[\[\]{}()|]/g) || [];
+  let i = 0;
+  const alt = () => {
+    const opts = [seq()];
+    while (toks[i] === '|') { i++; opts.push(seq()); }
+    return opts.length === 1 ? opts[0] : { t: 'alt', opts };
+  };
+  const seq = () => {
+    const items = [];
+    while (i < toks.length && !['|', ')', ']', '}'].includes(toks[i])) items.push(item());
+    return { t: 'seq', items };
+  };
+  const item = () => {
+    const k = toks[i++];
+    if (k === '[') { const a = alt(); i++; return { t: 'opt', x: a }; }
+    if (k === '{') { const a = alt(); i++; return { t: 'rep', x: a }; }
+    if (k === '(') { const a = alt(); i++; return a; }
+    if (k[0] === '<') return { t: 'nt', name: k.slice(1, -1) };
+    if (k === "'\"'") return { t: 'quote' };
+    if (k[0] === '"') return { t: 'term', words: k.slice(1, -1).toLowerCase().split(/\s+/).filter(Boolean) };
+    throw new Error(`${name}: bad token ${k}`);
+  };
+  return alt();
+}
+
+// Every word the grammar writes as a literal: these are reserved, so they can't be names of things.
+function literalWords(rules) {
+  const out = new Set();
+  const walk = n => {
+    if (!n) return;
+    if (n.t === 'term') n.words.forEach(w => out.add(w));
+    if (n.items) n.items.forEach(walk);
+    if (n.opts) n.opts.forEach(walk);
+    if (n.x) walk(n.x);
+  };
+  for (const r of rules.values()) walk(r);
+  return out;
+}
+
+// ---- the tokens of a line -------------------------------------------------------------------------------------------
+
+// Words (lower case), "!" and "=" as their own tokens, and quoted text: {k:'q', text, vol} with vol 'w' or 'y' when
+// the quote is attached to a w or y prefix (w"..." whispers, y"..." yells).
+function tokenize(line) {
+  const out = [];
+  const re = /([wy]?)"([^"]*)"|([A-Za-z0-9][A-Za-z0-9'\-]*)|(!)|(=)/g;
+  let m;
+  while ((m = re.exec(line))) {
+    if (m[2] !== undefined) out.push({ k: 'q', text: m[2], vol: m[1] || null });
+    else if (m[3]) out.push({ k: 'w', v: m[3].toLowerCase() });
+    else out.push({ k: 'w', v: m[4] || m[5] });
+  }
+  return out;
+}
+
+// ---- the tables -----------------------------------------------------------------------------------------------------
+
+const own = (o, k) => (Object.prototype.hasOwnProperty.call(o, k) ? o[k] : undefined);
+const LIMIT = 200;
+// Open names: their words come from the game's data; openOK says which words fit each one.
+const OPEN = new Set(['pretense-word', 'unique-name', 'kind-name', 'fixture-name', 'place-name', 'known-alias', 'alias', 'adj',
+  'number', 'ordinal', 'task-name', 'meta-topic', 'name-word', 'spell-word', 'text', 'quoted-text']);
+const ADJ = new Set(['right', 'far', 'wooden', 'iron', 'large', 'small', 'closed', 'open', 'old', 'rusty',
+  'bottom', 'top', 'heavy', 'near', 'left']);
+const NUMWORDS = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
+const ORDINALS = ['first', 'second', 'third', 'fourth', 'fifth'];
+const TASKS = ['digging', 'crawling', 'waiting', 'searching', 'climbing', 'sleeping', 'resting', 'working', 'pretending'];
+// Words no object may be: the player is "me", never "you" (question 14).
+const NOT_OBJECT = new Set(['you', 'character', 'yourself']);
+const SPELL_STOP = new Set(['at', 'toward', 'towards', 'to', 'spell', 'the', 'a', 'an', 'my', 'this', 'that', 'these', 'those']);
+const MOVE_WORDS = new Set(['move', 'mv', 'walk', 'trundle', 'mosey', 'saunter', 'run', 'crawl', 'go', 'head']);
+const SPEECH_WORDS = new Set(['say', 'yell', 'scream', 'shout', 'whisper']);
+// These take no object: "wait the sword" is a role error, not a parse error.
+const INTRANSITIVE = new Set(['wait', 'rest', 'sleep', 'stop']);
+const PACE = { crawl: 'crawl', 'slow walk': 'slowwalk', walk: 'walk', trot: 'trot', run: 'run', sprint: 'sprint' };
+const META = { status: 'VB_META_STATUS', help: 'VB_META_HELP', inventory: 'VB_META_INVENTORY', i: 'VB_META_INVENTORY',
+  map: 'VB_META_MAP', save: 'VB_META_SAVE', quit: 'VB_META_QUIT' };
+const ATTACK_MANNER = { slash: 'edge', slice: 'edge', chop: 'edge', swing: 'edge', bash: 'blunt', bludgeon: 'blunt',
+  thump: 'blunt', club: 'blunt', stab: 'point', poke: 'point', pierce: 'point', punch: 'unarmed', kick: 'unarmed',
+  headbutt: 'unarmed', bite: 'unarmed' };
+const POSTURE = { SIT: 'VB_SIT', STAND: 'VB_STAND', 'LIE-DOWN': 'VB_LIE_DOWN', CROUCH: 'VB_CROUCH' };
+const LOOK_PREP_ACTION = { through: 'VB_OBSERVE_THROUGH', around: 'VB_OBSERVE_AROUND' };
+const numWord = v => own(NUMWORDS, v);
+
+// Default world: the names of things the game knows. A word not here is "no such thing"; one here but not perceived is
+// "not perceived".
+const DEFAULT_WORLD = ['dragon', 'pit', 'torch', 'fire', 'spell', 'bank', 'grating', 'smoke', 'rats', 'lamp',
+  'hook', 'helm', 'apple', 'sword', 'stone', 'chest', 'lid', 'corner', 'bow', 'crossbow', 'club', 'dagger', 'key',
+  'door', 'box', 'window', 'wall', 'table', 'goblin', 'rat', 'rations', 'waterskin', 'potion', 'room', 'linda',
+  'rope', 'lever', 'stairs', 'ladder', 'sign', 'shield', 'gate', 'bed', 'stream', 'spring'];
+
+function openOK(name, tk, env) {
+  if (name === 'quoted-text') return tk.k === 'q';
+  if (tk.k !== 'w') return false;
+  const v = tk.v;
+  switch (name) {
+    case 'number': return /^\d+$/.test(v) || numWord(v) !== undefined;
+    case 'ordinal': return ORDINALS.includes(v);
+    case 'adj': return ADJ.has(v);
+    case 'task-name': return TASKS.includes(v);
+    case 'spell-word': return !SPELL_STOP.has(v);
+    case 'pretense-word': return !env.reserved.has(v);
+    case 'text': case 'meta-topic': return true;
+    case 'name-word': return !env.reserved.has(v) || env.world.has(v);
+    default: // unique-name, kind-name, fixture-name, place-name, known-alias, alias: a name of a thing
+      return !NOT_OBJECT.has(v) && (!env.reserved.has(v) || env.world.has(v) || env.names.has(v));
+  }
+}
+
+// ---- matching -------------------------------------------------------------------------------------------------------
+
+function matchNode(node, pos, env) {
+  switch (node.t) {
+    case 'term': {
+      let p = pos;
+      for (const w of node.words) {
+        const tk = env.toks[p];
+        if (!tk || tk.k !== 'w' || tk.v !== w) return [];
+        p++;
+      }
+      return [{ end: p, kids: [] }];
+    }
+    case 'quote': return env.toks[pos] && env.toks[pos].k === 'q' ? [{ end: pos + 1, kids: [] }] : [];
+    case 'nt': return matchRule(node.name, pos, env);
+    case 'seq': {
+      let st = [{ end: pos, kids: [] }];
+      for (const it of node.items) {
+        const nx = [];
+        for (const s of st) for (const r of matchNode(it, s.end, env)) nx.push({ end: r.end, kids: s.kids.concat(r.kids) });
+        st = nx.slice(0, LIMIT);
+        if (!st.length) return [];
+      }
+      return st;
+    }
+    case 'alt': {
+      let out = [];
+      for (const o of node.opts) out = out.concat(matchNode(o, pos, env));
+      return out.slice(0, LIMIT);
+    }
+    case 'opt': return [{ end: pos, kids: [] }].concat(matchNode(node.x, pos, env));
+    case 'rep': {
+      let out = [{ end: pos, kids: [] }];
+      let frontier = out.slice();
+      for (let g = 0; g < 12 && frontier.length; g++) {
+        const nx = [];
+        for (const s of frontier) for (const r of matchNode(node.x, s.end, env)) {
+          if (r.end !== s.end) nx.push({ end: r.end, kids: s.kids.concat(r.kids) });
+        }
+        frontier = nx.slice(0, LIMIT);
+        out = out.concat(frontier);
+      }
+      return out.slice(0, LIMIT);
+    }
+    default: throw new Error('bad node ' + node.t);
+  }
+}
+
+// A rule (or open name) at a position. Results are {end, kids:[node]}; a node is {rule, start, end, kids}.
+function matchRule(name, pos, env) {
+  const key = name + '@' + pos;
+  if (env.memo.has(key)) return env.memo.get(key);
+  env.memo.set(key, []);
+  let res;
+  if (OPEN.has(name)) {
+    const tk = env.toks[pos];
+    res = tk && openOK(name, tk, env) ? [{ end: pos + 1, kids: [{ rule: name, start: pos, end: pos + 1, kids: [] }] }] : [];
+  } else {
+    const body = env.rules.get(name);
+    if (!body) throw new Error('no rule <' + name + '>');
+    res = matchNode(body, pos, env).map(r => ({ end: r.end, kids: [{ rule: name, start: pos, end: r.end, kids: r.kids }] }));
+  }
+  env.memo.set(key, res);
+  return res;
+}
+
+// ---- the tree -------------------------------------------------------------------------------------------------------
+
+function findFirst(node, rule) {
+  if (!node) return null;
+  for (const k of node.kids) {
+    if (k.rule === rule) return k;
+    const f = findFirst(k, rule);
+    if (f) return f;
+  }
+  return null;
+}
+const kidsOf = (node, rule) => (node ? node.kids.filter(k => k.rule === rule) : []);
+const countRule = (node, rule) => node.kids.reduce((n, k) => n + (k.rule === rule ? 1 : 0) + countRule(k, rule), 0);
+const wordsOf = (node, env) => (node ? env.toks.slice(node.start, node.end).filter(t => t.k === 'w').map(t => t.v) : []);
+const textOf = (node, env) => wordsOf(node, env).join(' ');
+const quoteOf = (node, env) => env.toks[node.start].text;
+
+// Direction in the player's frame: compass letters, or F B L R U D; "around the corner" is a throw's direction.
+function dirCode(node, env) {
+  const w = new Set(wordsOf(node, env));
+  const ns = w.has('north') || w.has('n') ? 'N' : w.has('south') || w.has('s') ? 'S' : '';
+  const ew = w.has('east') || w.has('e') ? 'E' : w.has('west') || w.has('w') ? 'W' : '';
+  if (ns || ew) return ns + ew;
+  if (w.has('around') && w.has('corner')) return 'around-corner';
+  if (['f', 'fwd', 'forward', 'ahead', 'front'].some(x => w.has(x))) return 'F';
+  if (['b', 'back', 'behind'].some(x => w.has(x))) return 'B';
+  if (['l', 'left'].some(x => w.has(x))) return 'L';
+  if (['r', 'right'].some(x => w.has(x))) return 'R';
+  if (['u', 'up', 'above'].some(x => w.has(x)) || (w.has('over') && w.has('head'))) return 'U';
+  if (['d', 'down', 'below', 'under', 'underneath'].some(x => w.has(x))) return 'D';
+  return '?';
+}
+
+const paceOf = (node, env) => own(PACE, textOf(node, env)) || null;
+
+function numberOf(node, env) {
+  if (!node) return null;
+  const w = wordsOf(node, env)[0];
+  if (w === undefined) return null;
+  if (/^\d+$/.test(w)) return Number(w);
+  return numWord(w) ?? null;
+}
+
+// Minutes of a duration: "10 minutes", "2 hours", "an hour", "a minute".
+function minutesOf(node, env) {
+  const t = textOf(node, env);
+  if (t === 'an hour') return 60;
+  if (t === 'a minute') return 1;
+  const n = numberOf(node, env) ?? 1;
+  const unit = wordsOf(node, env).find(w => /^(hour|minute)/.test(w));
+  return n * (unit && unit.startsWith('hour') ? 60 : 1);
+}
+
+// ---- the context ----------------------------------------------------------------------------------------------------
+
+function parsePending(v) {
+  const parts = v.split(':');
+  if (parts[0] === 'which') return { kind: 'which', verb: parts[1], choices: parts[2].split(',') };
+  if (parts[0] === 'distance') return { kind: 'distance', max: Number(parts[2].replace('max=', '')) };
+  if (parts[0] === 'overwrite') return { kind: 'overwrite', alias: parts[1], current: parts[2], next: parts[3] };
+  return { kind: parts[0] };
+}
+
+// The context: what is perceived, the last things named, the target and pace, the aliases, the names given, the
+// pending question. Keys: near last facing pending distances names target pace; any other key is an alias.
+function buildContext(spec, world) {
+  const ctx = { near: [], last: [], facing: null, pending: null, target: null, pace: 'walk', names: new Map(),
+    dist: new Map(), aliases: new Map(), world: new Set(world) };
+  const addName = (key, id) => {
+    const k = key.toLowerCase();
+    if (!ctx.names.has(k)) ctx.names.set(k, []);
+    if (!ctx.names.get(k).includes(id)) ctx.names.get(k).push(id);
+  };
+  let distances = null;
+  for (const pair of (!spec || spec === '-' ? [] : spec.split(';'))) {
+    const eq = pair.indexOf('=');
+    if (eq < 0) continue;
+    const k = pair.slice(0, eq), v = pair.slice(eq + 1);
+    if (k === 'near') {
+      ctx.near = v.split(',');
+      ctx.near.forEach(id => { addName(id, id); addName(id.replace(/\d+$/, ''), id); ctx.world.add(id.replace(/\d+$/, '')); });
+    } else if (k === 'names') v.split(',').forEach(n => addName(n, n));
+    else if (k === 'last') ctx.last = v.split(',');
+    else if (k === 'facing') ctx.facing = v;
+    else if (k === 'pending') ctx.pending = parsePending(v);
+    else if (k === 'distances') distances = v.split(',').map(Number);
+    else if (k === 'target') ctx.target = v;
+    else if (k === 'pace') ctx.pace = own(PACE, v) || v;
+    else ctx.aliases.set(k, v);
+  }
+  if (distances) {
+    const list = ctx.pending && ctx.pending.kind === 'which' ? ctx.pending.choices : ctx.near;
+    list.forEach((id, i) => ctx.dist.set(id, distances[i]));
+  }
+  return ctx;
+}
+
+// ---- resolving objects ----------------------------------------------------------------------------------------------
+
+// Returns {value} or {error: CODE} or {which: [ids]}. A remote object (in the inventory, or known by name) need not be
+// perceived: its word is its value.
+function resolveObject(node, env, ctx, remote) {
+  if (!node) return { value: undefined };
+  if (findFirst(node, 'pronoun')) {
+    if (!ctx.last.length) return { error: 'NOTHING_HERE' };
+    return { value: ctx.last[0] };
+  }
+  const mine = findFirst(node, 'me-phrase');
+  if (mine && ['me', 'myself'].includes(wordsOf(mine, env)[0])) return { value: 'me' };
+  if (findFirst(node, 'everything')) return { value: 'all-near' };
+  const head = findFirst(node, 'head');
+  if (!head) return { error: 'NOT_UNDERSTOOD' };
+  const h = wordsOf(head, env)[0];
+  if (h === 'fire') return { value: 'fire' };
+  const sel = textOf(findFirst(node, 'selector'), env);
+  const cands = ctx.names.get(h) || [];
+  if (!cands.length) {
+    if (remote) return { value: h };
+    return { error: ctx.world.has(h) ? 'NOT_PERCEIVED' : 'NO_SUCH_THING' };
+  }
+  if (sel === 'closest' || sel === 'nearest') {
+    return { value: cands.slice().sort((a, b) => (ctx.dist.get(a) ?? 0) - (ctx.dist.get(b) ?? 0))[0] };
+  }
+  if (['all', 'every', 'each', 'any'].includes(sel)) return { value: 'all-' + h };
+  if (cands.length > 1 && !sel) return { which: cands };
+  const ord = ORDINALS.indexOf(sel);
+  const selNum = numWord(sel) ?? (/^\d+$/.test(sel) ? Number(sel) : null);
+  if (ord >= 0 && cands[ord]) return { value: cands[ord] };
+  if (selNum && cands[selNum - 1]) return { value: cands[selNum - 1] };
+  return { value: cands[0] };
+}
+
+// ---- results --------------------------------------------------------------------------------------------------------
+
+function clean(roles) {
+  const o = {};
+  for (const k of Object.keys(roles || {})) if (roles[k] !== undefined && roles[k] !== null) o[k] = String(roles[k]);
+  return o;
+}
+const act = (action, roles) => ({ action, roles: clean(roles) });
+const err = (code, roles) => ({ error: code, roles: clean(roles) });
+const question = (kind, roles) => ({ question: kind, roles: clean(roles) });
+
+// An object role: its value, or the result (an error or a which-question) that stops the command.
+function objRole(node, env, ctx, remote) {
+  const r = resolveObject(node, env, ctx, remote);
+  if (r.error) return { stop: err(r.error) };
+  if (r.which) return { stop: question('WHICH', { choices: r.which.join(',') }) };
+  return { value: r.value };
+}
+
+// The target of a look, listen or smell: a locale, a direction, or an object with its preposition.
+function targetOf(tgt, env, ctx, remote) {
+  if (!tgt) return { kind: 'locale' };
+  if (findFirst(tgt, 'locale-ref')) return { kind: 'locale' };
+  const dir = findFirst(tgt, 'direction');
+  if (dir && !findFirst(dir, 'object')) return { kind: 'direction', direction: dirCode(dir, env) };
+  const o = objRole(findFirst(tgt, 'object'), env, ctx, remote);
+  if (o.stop) return { stop: o.stop };
+  return { kind: 'object', prep: wordsOf(tgt, env)[0], object: o.value };
+}
+
+const lookAction = prep => own(LOOK_PREP_ACTION, prep) || 'VB_OBSERVE_OBJECT';
+
+// The adjuncts of a command (manner, with, from, at, locative, direction) fill roles the phrase left empty.
+function withAdjuncts(res, cmd, env, ctx) {
+  if (!res.action || !res.action.startsWith('VB_')) return res;
+  const put = (key, v) => { if (v !== undefined && res.roles[key] === undefined) res.roles[key] = String(v); };
+  const ROLE_OF = { 'with-phrase': 'instrument', 'from-phrase': 'source', 'at-phrase': 'target', locative: 'container' };
+  for (const adj of kidsOf(cmd, 'adjunct')) {
+    const inner = adj.kids[0];
+    if (inner.rule === 'manner') put('manner', wordsOf(inner, env)[0]);
+    else if (inner.rule === 'direction') put('direction', dirCode(inner, env));
+    else if (own(ROLE_OF, inner.rule)) {
+      const o = objRole(findFirst(inner, 'object'), env, ctx);
+      if (o.stop) return o.stop;
+      put(ROLE_OF[inner.rule], o.value);
+    }
+  }
+  return res;
+}
+
+// The phrase's own meaning: spec is the rule named by its kind (look, get, move, ...).
+function phraseSem(spec, env, ctx) {
+  const r = spec.rule;
+  const direct = kidsOf(spec, 'object');
+  const objOf = (i, remote) => objRole(direct[i], env, ctx, remote);
+  const withObj = (action, extra, remote) => {
+    const o = objOf(0, remote);
+    if (o.stop) return o.stop;
+    return act(action, Object.assign({ object: o.value }, extra || {}));
+  };
+  const adjOf = () => (findFirst(spec, 'adj') ? wordsOf(findFirst(spec, 'adj'), env)[0] : undefined);
+  switch (r) {
+    case 'look': {
+      const t = targetOf(kidsOf(spec, 'look-target')[0], env, ctx, false);
+      if (t.stop) return t.stop;
+      if (t.kind === 'locale') return act('VB_OBSERVE_LOCALE', { place: 'here' });
+      if (t.kind === 'direction') return act('VB_OBSERVE_DIRECTION', { direction: t.direction });
+      return act(lookAction(t.prep), { object: t.object });
+    }
+    case 'examine': return direct[0] ? withObj('VB_EXAMINE_OBJECT') : act('VB_EXAMINE_LOCALE', { place: 'here' });
+    case 'move': {
+      const md = kidsOf(spec, 'move-dir')[0];
+      const pw = kidsOf(spec, 'pace-word')[0];
+      const first = wordsOf(spec, env)[0];
+      const pace = pw ? paceOf(pw, env) : (['run', 'crawl'].includes(first) ? first : undefined);
+      if (md && findFirst(md, 'object') && ['to', 'towards', 'toward', 'in'].includes(wordsOf(md, env)[0])) {
+        const o = objRole(findFirst(md, 'object'), env, ctx);
+        if (o.stop) return o.stop;
+        return act('VB_MOVE_TOWARD', { object: o.value });
+      }
+      return act('VB_MOVE_DIRECTION', { direction: dirCode(findFirst(md, 'direction') || md, env), pace,
+        distance: numberOf(kidsOf(spec, 'number')[0], env) });
+    }
+    case 'face': return act('VB_FACE_DIRECTION', { direction: dirCode(findFirst(spec, 'direction'), env) });
+    case 'get': {
+      let value;
+      if (!direct[0]) {
+        if (ctx.last.length) value = ctx.last[0];
+        else if (ctx.near.length) return question('WHICH', { choices: ctx.near.join(',') });
+        else return err('NOTHING_HERE');
+      } else {
+        const o = objOf(0);
+        if (o.stop) return o.stop;
+        value = o.value;
+      }
+      const from = kidsOf(spec, 'from-phrase')[0] || kidsOf(spec, 'off-phrase')[0];
+      let source;
+      if (from) {
+        const s = objRole(findFirst(from, 'object'), env, ctx);
+        if (s.stop) return s.stop;
+        source = s.value;
+      }
+      return act('VB_RETRIEVE_OBJECT', { object: value, source });
+    }
+    case 'drop': return withObj('VB_DROP_OBJECT');
+    case 'put': {
+      const a = objOf(0), b = objOf(1);
+      if (a.stop) return a.stop;
+      if (b.stop) return b.stop;
+      return act('VB_PUT_OBJECT', { object: a.value, container: b.value });
+    }
+    case 'use': {
+      const a = objOf(0), b = objOf(1);
+      if (a.stop) return a.stop;
+      if (b.stop) return b.stop;
+      return act('VB_USE_OBJECT', { object: a.value, target: b.value });
+    }
+    case 'equip': return withObj('VB_EQUIP_OBJECT');
+    case 'unequip': return withObj('VB_UNEQUIP_OBJECT', null, true);
+    case 'open': return withObj('VB_OPEN_OBJECT', { adj: adjOf() });
+    case 'close': return withObj('VB_CLOSE_OBJECT', { adj: adjOf() });
+    case 'attack': {
+      const a = objOf(0);
+      if (a.stop) return a.stop;
+      let instrument;
+      if (direct[1]) {
+        const b = objOf(1);
+        if (b.stop) return b.stop;
+        instrument = b.value;
+      }
+      return act('VB_ATTACK_OBJECT', { object: a.value, instrument, manner: own(ATTACK_MANNER, wordsOf(spec, env)[0]) });
+    }
+    case 'grapple': return withObj('VB_GRAPPLE_OBJECT');
+    case 'throw': {
+      const td = kidsOf(spec, 'throw-dir')[0];
+      const at = kidsOf(spec, 'at-phrase')[0];
+      const mn = kidsOf(spec, 'manner')[0];
+      const manner = mn ? textOf(mn, env) : undefined;
+      const instrument = wordsOf(spec, env)[0] === 'sling' ? 'sling' : undefined;
+      if (td) {
+        const o = objOf(0);
+        if (o.stop) return o.stop;
+        return question('DISTANCE', { object: o.value, direction: dirCode(td, env), manner, instrument });
+      }
+      if (at) {
+        const o = objOf(0);
+        if (o.stop) return o.stop;
+        const t = objRole(findFirst(at, 'object'), env, ctx);
+        if (t.stop) return t.stop;
+        return act('VB_THROW_OBJECT', { object: o.value, target: t.value, manner, instrument });
+      }
+      if (ctx.near.length) return question('WHICH', { choices: ctx.near.join(',') });
+      return err('NOTHING_HERE');
+    }
+    case 'shoot': {
+      const at = kidsOf(spec, 'at-phrase')[0];
+      const o = objOf(0);
+      if (o.stop) return o.stop;
+      if (!at) return act('VB_SHOOT_OBJECT', { target: o.value });
+      const t = objRole(findFirst(at, 'object'), env, ctx);
+      if (t.stop) return t.stop;
+      return act('VB_SHOOT_OBJECT', { instrument: o.value, target: t.value });
+    }
+    case 'load': return withObj('VB_LOAD_OBJECT');
+    case 'jump': {
+      const d = kidsOf(spec, 'direction')[0];
+      if (d) return act('VB_JUMP', { direction: dirCode(d, env) });
+      if (direct[0]) return withObj('VB_JUMP');
+      return act('VB_JUMP', {});
+    }
+    case 'say': return sayRoles(spec, env, wordsOf(spec, env)[0]);
+    case 'tell': {
+      const a = objOf(0);
+      if (a.stop) return a.stop;
+      let topic;
+      if (direct[1]) {
+        const b = objOf(1);
+        if (b.stop) return b.stop;
+        topic = b.value;
+      }
+      const ph = kidsOf(spec, 'phrase')[0];
+      if (ph) topic = textOf(ph, env);
+      const q = findFirst(spec, 'quoted-text');
+      return act('VB_TELL_OBJECT', { object: a.value, text: q ? quoteOf(q, env) : undefined, topic });
+    }
+    case 'cast': {
+      const sw = findFirst(spec, 'spell-word');
+      const at = kidsOf(spec, 'at-phrase')[0];
+      const t = at ? objRole(findFirst(at, 'object'), env, ctx) : { value: undefined };
+      if (t.stop) return t.stop;
+      return act('VB_CAST_SPELL', { spell: sw ? textOf(sw, env) : undefined, target: t.value });
+    }
+    case 'eat': return withObj('VB_EAT_OBJECT');
+    case 'drink': return direct[0] ? withObj('VB_DRINK') : act('VB_DRINK', {});
+    case 'swim': {
+      const md = kidsOf(spec, 'move-dir')[0];
+      if (!md) return act('VB_SWIM', {});
+      if (findFirst(md, 'object')) {
+        const o = objRole(findFirst(md, 'object'), env, ctx);
+        if (o.stop) return o.stop;
+        return act('VB_SWIM', { object: o.value });
+      }
+      return act('VB_SWIM', { direction: dirCode(findFirst(md, 'direction') || md, env) });
+    }
+    case 'find': return withObj('VB_FIND_OBJECT', null, true);
+    case 'search': return direct[0] ? withObj('VB_SEARCH') : act('VB_SEARCH', {});
+    case 'listen': case 'smell': {
+      const t = targetOf(kidsOf(spec, 'look-target')[0], env, ctx, r === 'smell');
+      if (t.stop) return t.stop;
+      const action = r === 'listen' ? 'VB_LISTEN' : 'VB_SMELL';
+      if (t.kind === 'direction') return act(action, { direction: t.direction });
+      if (t.kind === 'object') return act(action, { object: t.object });
+      return act(action, {});
+    }
+    case 'track': return direct[0] ? withObj('VB_TRACK', null, true) : act('VB_TRACK', {});
+    case 'target': {
+      const words = wordsOf(spec, env);
+      if (words.includes('clear') || words.includes('untarget')) return act('VB_TARGET_CLEAR', {});
+      if (direct[0]) return withObj('VB_TARGET_SET');
+      return act('VB_TARGET_SHOW', { target: ctx.target || 'none' });
+    }
+    case 'wait': {
+      const d = kidsOf(spec, 'duration')[0];
+      return act('VB_WAIT', { duration: (d ? minutesOf(d, env) : 1) + 'min' });
+    }
+    case 'rest':
+    case 'sleep': {
+      const d = kidsOf(spec, 'duration')[0];
+      return act('VB_SLEEP', { short: wordsOf(spec, env).includes('short') ? 'yes' : 'no',
+        duration: d ? minutesOf(d, env) + 'min' : undefined });
+    }
+    case 'stop': {
+      const t = findFirst(spec, 'task-name');
+      return act('VB_STOP', { task: t ? wordsOf(t, env)[0] : 'current' });
+    }
+    case 'naming': {
+      const words = wordsOf(spec, env);
+      const name = words[words.length - 1];
+      if (words.includes('room') || words.includes('place')) return act('VB_NAME_PLACE', { place: 'room', name });
+      return withObj('VB_NAME_OBJECT', { name });
+    }
+    case 'meta': {
+      const topic = findFirst(spec, 'meta-topic');
+      return act(own(META, wordsOf(spec, env)[0]), topic ? { topic: wordsOf(topic, env)[0] } : {});
+    }
+    case 'step': return act('VB_STEP_DIRECTION', { direction: dirCode(findFirst(spec, 'direction'), env) });
+    case 'pace-set': {
+      if (wordsOf(spec, env)[0] === 'double') return act('VB_SET_PACE', { pace: 'run' });
+      const pw = kidsOf(spec, 'pace-word')[0];
+      if (pw) return act('VB_SET_PACE', { pace: paceOf(pw, env) });
+      return act('VB_PACE_SHOW', { pace: ctx.pace || 'walk' });
+    }
+    case 'charge': {
+      if (!ctx.near.length) return err('NO_TARGET');
+      const fast = wordsOf(spec, env).includes('fast');
+      return act('VB_CHARGE', { direction: 'facing', pace: fast ? 'sprint' : 'run', text: 'Charge!' });
+    }
+    case 'light': case 'extinguish': {
+      const action = r === 'light' ? 'VB_LIGHT_OBJECT' : 'VB_EXTINGUISH_OBJECT';
+      if (!direct[0]) return act(action, { object: 'fire' });
+      return withObj(action, null, true);
+    }
+    case 'enter': return direct[0] ? withObj('VB_ENTER') : act('VB_ENTER', {});
+    case 'leave': {
+      const d = kidsOf(spec, 'direction')[0];
+      if (d) return act('VB_LEAVE', { direction: dirCode(d, env) });
+      return direct[0] ? withObj('VB_LEAVE') : act('VB_LEAVE', {});
+    }
+    case 'climb': case 'dig': {
+      const d = kidsOf(spec, 'direction')[0];
+      const action = r === 'climb' ? 'VB_CLIMB' : 'VB_DIG';
+      if (!direct[0]) return act(action, { direction: d ? dirCode(d, env) : undefined });
+      return withObj(action, { direction: d ? dirCode(d, env) : undefined });
+    }
+    case 'wake': return direct[0] ? withObj('VB_WAKE') : act('VB_WAKE', {});
+    case 'hide': return direct[0] ? withObj('VB_HIDE') : act('VB_HIDE', {});
+    case 'sneak': case 'flee': {
+      const d = kidsOf(spec, 'direction')[0];
+      const action = r === 'sneak' ? 'VB_SNEAK' : 'VB_FLEE';
+      return act(action, { direction: d ? dirCode(d, env) : undefined });
+    }
+    case 'knock': return withObj('VB_KNOCK_OBJECT');
+    case 'push': return withObj('VB_PUSH_OBJECT');
+    case 'pull': return withObj('VB_PULL_OBJECT');
+    case 'hold': return withObj('VB_HOLD_OBJECT');
+    case 'lock': return withObj('VB_LOCK_OBJECT');
+    case 'read': return withObj('VB_READ_OBJECT');
+    case 'taste': return withObj('VB_TASTE_OBJECT');
+    case 'touch': return withObj('VB_TOUCH_OBJECT');
+    case 'follow': return withObj('VB_FOLLOW_OBJECT');
+    case 'give': {
+      const a = objOf(0), b = objOf(1);
+      if (a.stop) return a.stop;
+      if (b.stop) return b.stop;
+      return act('VB_GIVE_OBJECT', { object: a.value, target: b.value });
+    }
+    case 'unlock': {
+      const a = objOf(0), b = objOf(1);
+      if (a.stop) return a.stop;
+      if (b.stop) return b.stop;
+      return act('VB_UNLOCK_OBJECT', { object: a.value, instrument: b.value });
+    }
+    case 'fill': {
+      const o = objOf(0);
+      if (o.stop) return o.stop;
+      const from = kidsOf(spec, 'from-phrase')[0];
+      const s = from ? objRole(findFirst(from, 'object'), env, ctx) : { value: undefined };
+      if (s.stop) return s.stop;
+      return act('VB_FILL_OBJECT', { object: o.value, source: s.value });
+    }
+    case 'defend': return act('VB_DEFEND', { defence: wordsOf(spec, env)[0] });
+    case 'where': return act('VB_WHERE', {});
+    case 'posture': return act(own(POSTURE, spec.kids[0].rule), {});
+    case 'pretend': return act('VB_PRETEND', { state: textOf(findFirst(spec, 'pretense'), env) });
+    default: return err('NOT_UNDERSTOOD');
+  }
+}
+
+// A bare verb (no phrase): the class it belongs to decides the action.
+function bareVerb(node, env, ctx) {
+  const cls = node.kids[0].rule;
+  switch (cls) {
+    case 'GET': return phraseSem({ rule: 'get', start: 0, end: 0, kids: [] }, env, ctx);
+    case 'LOOK': return act('VB_OBSERVE_LOCALE', { place: 'here' });
+    case 'SEARCH': return act('VB_SEARCH', {});
+    case 'LISTEN': return act('VB_LISTEN', {});
+    case 'TRACK': return act('VB_TRACK', {});
+    case 'WAIT': return act('VB_WAIT', { duration: '1min' });
+    case 'REST': case 'SLEEP': return act('VB_SLEEP', { short: 'no' });
+    case 'STOP': return act('VB_STOP', { task: 'current' });
+    case 'META-WORD': return act(own(META, wordsOf(node, env)[0]), {});
+    case 'AGAIN': return act('VB_REPEAT', {});
+    default: return err('NOT_UNDERSTOOD');
+  }
+}
+
+// Volume: the w or y prefix, a trailing "!", or yell/scream/whisper.
+function sayRoles(node, env, verbWord) {
+  const q = node.rule === 'quoted-text' ? node : findFirst(node, 'quoted-text');
+  const tk = env.toks[q.start];
+  let volume = 'normal';
+  if (tk.vol === 'w') volume = 'quiet';
+  else if (tk.vol === 'y') volume = 'loud';
+  else if (tk.text.endsWith('!')) volume = 'loud';
+  if (verbWord === 'whisper') volume = 'quiet';
+  else if (['yell', 'scream', 'shout'].includes(verbWord)) volume = 'loud';
+  return act('VB_SAY', { text: tk.text, volume });
+}
+
+// ---- lines ----------------------------------------------------------------------------------------------------------
+
+const countAdjuncts = p => countRule(p.kids[0], 'adjunct');
+
+function numberOfTok(tk) {
+  if (!tk || tk.k !== 'w') return null;
+  if (/^\d+$/.test(tk.v)) return Number(tk.v);
+  return numWord(tk.v) ?? null;
+}
+
+class Compiler {
+  constructor(rules) {
+    this.rules = rules;
+    this.reserved = literalWords(rules);
+  }
+
+  envFor(toks, ctx) {
+    return { rules: this.rules, toks, memo: new Map(), reserved: this.reserved, world: ctx.world, names: ctx.names };
+  }
+
+  // Compile one line in a context: returns {action, roles} | {question, roles} | {error, roles}.
+  compile(line, ctx) {
+    const toks = tokenize(line);
+    if (!toks.length) return err('NOT_UNDERSTOOD');
+    // A pending question is answered first: "n" answers a yes-or-no question, it is not north.
+    if (ctx.pending) {
+      const a = this.answer(toks, ctx);
+      if (a) return a;
+    }
+    // A word that is an alias expands once, with the rest of the line added.
+    if (toks[0].k === 'w' && ctx.aliases.has(toks[0].v) && !['alias', 'unalias', 'forget'].includes(toks[0].v)) {
+      const expanded = ctx.aliases.get(toks[0].v) + ' ' + toks.slice(1).map(t => (t.k === 'w' ? t.v : `"${t.text}"`)).join(' ');
+      return this.compile(expanded.trim(), Object.assign({}, ctx, { aliases: new Map() }));
+    }
+    const aliasResult = this.alias(toks, ctx);
+    if (aliasResult) return aliasResult;
+    const env = this.envFor(toks, ctx);
+    const parses = matchRule('line', 0, env).filter(r => r.end === toks.length);
+    if (!parses.length) return this.fallback(toks, env);
+    // A parse that puts fewer words in adjuncts is the reading the grammar means: "look at the wall" is a look at a
+    // thing, not a look with an "at the wall" adjunct.
+    parses.sort((a, b) => countAdjuncts(a) - countAdjuncts(b));
+    const results = parses.map(p => this.semantics(p.kids[0], env, ctx));
+    return results.find(r => !r.error) || results[0];
+  }
+
+  // Lines with no parse: the few that have a reason of their own.
+  fallback(toks, env) {
+    const w = toks.map(t => (t.k === 'w' ? t.v : null));
+    if (toks.length === 1 && MOVE_WORDS.has(w[0])) return question('DIRECTION', {});
+    if (SPEECH_WORDS.has(w[0]) && !toks.some(t => t.k === 'q')) return err('QUOTES_REQUIRED');
+    if (INTRANSITIVE.has(w[0]) && toks.length > 1) {
+      const rest = Object.assign({}, env, { toks: toks.slice(1), memo: new Map() });
+      if (matchRule('object', 0, rest).some(r => r.end === toks.length - 1)) return err('BAD_ROLE');
+    }
+    return err('NOT_UNDERSTOOD');
+  }
+
+  // The answer to a pending question, or null when the line is a fresh command.
+  answer(toks, ctx) {
+    const p = ctx.pending;
+    const text = toks.map(t => (t.k === 'w' ? t.v : t.text)).join(' ');
+    const n = toks.length === 1 ? numberOfTok(toks[0]) : null;
+    if (p.kind === 'overwrite') {
+      if (['yes', 'y'].includes(text)) return act('ALIAS:REPLACE', { alias: p.alias, substitution: p.next });
+      if (['no', 'n'].includes(text)) return act('ALIAS:KEEP', { alias: p.alias });
+      return null;
+    }
+    if (p.kind === 'distance') return n === null ? null : act('VB_THROW_DIRECTION', { distance: n });
+    if (p.kind === 'which') {
+      let pick = null;
+      if (n !== null) pick = p.choices[n - 1];
+      else if (/^(the )?(closest|nearest)$/.test(text)) {
+        pick = p.choices.slice().sort((a, b) => (ctx.dist.get(a) ?? 0) - (ctx.dist.get(b) ?? 0))[0];
+      } else pick = p.choices.find(c => c.toLowerCase() === text);
+      return pick ? act('VB_ATTACK_OBJECT', { object: pick }) : null;
+    }
+    return null;
+  }
+
+  // Alias commands: define (is or =), show, list, remove; the built-in and use-a-name refusals.
+  alias(toks, ctx) {
+    const w = toks.map(t => (t.k === 'w' ? t.v : null));
+    if (w[0] === 'unalias' || (w[0] === 'forget' && w[1] === 'alias')) {
+      return act('ALIAS:REMOVE', { alias: w[0] === 'unalias' ? w[1] : w[2] });
+    }
+    if (w[0] !== 'alias') return null;
+    if (toks.length === 1) return act('ALIAS:LIST', {});
+    const sep = w.findIndex((x, i) => i >= 2 && (x === 'is' || x === '='));
+    if (sep < 0 && w.includes('as')) return err('USE_NAME');
+    if (sep < 0) {
+      if (this.reserved.has(w[1]) && !ctx.world.has(w[1])) return err('BUILT_IN_WORD', { alias: w[1] });
+      return act('ALIAS:SHOW', { alias: w[1] });
+    }
+    const name = w[1];
+    if (this.reserved.has(name) && !ctx.world.has(name)) return err('BUILT_IN_WORD', { alias: name });
+    const substitution = toks.slice(sep + 1).map(t => (t.k === 'w' ? t.v : `"${t.text}"`)).join(' ');
+    if (ctx.aliases.has(name)) return question('OVERWRITE', { alias: name, current: ctx.aliases.get(name), new: substitution });
+    return act('ALIAS:DEFINE', { alias: name, substitution });
+  }
+
+  semantics(line, env, ctx) {
+    const child = line.kids[0];
+    switch (child.rule) {
+      case 'command': return withAdjuncts(phraseSem(child.kids[0].kids[0], env, ctx), child, env, ctx);
+      case 'bare-direction': return act('VB_MOVE_DIRECTION', { direction: dirCode(findFirst(child, 'direction'), env),
+        distance: numberOf(findFirst(child, 'number'), env) });
+      case 'bare-verb': return bareVerb(child, env, ctx);
+      case 'quoted-speech': return sayRoles(child, env, null);
+      default: return err('NOT_UNDERSTOOD');
+    }
+  }
+}
+
+// ---- the corpus -----------------------------------------------------------------------------------------------------
+
+function kv(s) {
+  const o = {};
+  if (!s || s === '-') return o;
+  for (const pair of s.split(';')) {
+    const eq = pair.indexOf('=');
+    if (eq > 0) o[pair.slice(0, eq)] = pair.slice(eq + 1);
+  }
+  return o;
+}
+
+// Each corpus case: the input, its expected code, the roles it must have (others are not checked), and the context.
+function checkCorpus(compiler, corpusFile, log) {
+  const lines = fs.readFileSync(corpusFile, 'utf8').replace(/\r\n/g, '\n').split('\n');
+  let pass = 0, total = 0;
+  for (const raw of lines) {
+    if (!raw.trim() || raw.startsWith('#')) continue;
+    const [input, expect, roles, context] = raw.split('\t');
+    total++;
+    const got = compiler.compile(input, buildContext(context || '-', DEFAULT_WORLD));
+    const gotCode = got.error ? 'ERROR:' + got.error : got.question ? 'QUESTION:' + got.question : got.action;
+    const have = got.roles || {};
+    const bad = [];
+    if (gotCode !== expect) bad.push(`action ${gotCode} (want ${expect})`);
+    for (const [k, want] of Object.entries(kv(roles))) {
+      if (want === '-' || k === 'choices') continue;
+      const h = have[k] === undefined ? '' : String(have[k]).toLowerCase();
+      if (h !== want.toLowerCase()) bad.push(`${k}=${h || '(none)'} (want ${want})`);
+    }
+    if (!bad.length) pass++;
+    else log(`${input}  ->  ${bad.join('; ')}`);
+  }
+  return { pass, total };
+}
+
+module.exports = { Compiler, loadRules, buildContext, tokenize, DEFAULT_WORLD, checkCorpus };
+
+if (require.main === module) {
+  const compiler = new Compiler(loadRules(path.join(GAME, 'commands.ebnf')));
+  if (process.argv.length > 2) {
+    console.log(JSON.stringify(compiler.compile(process.argv.slice(2).join(' '), buildContext('-', DEFAULT_WORLD))));
+  } else {
+    const { pass, total } = checkCorpus(compiler, path.join(GAME, 'commands.corpus'), console.log);
+    console.log(`corpus: ${pass}/${total} cases pass`);
+    process.exit(pass === total ? 0 : 1);
+  }
+}
