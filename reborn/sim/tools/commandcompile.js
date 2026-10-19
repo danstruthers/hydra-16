@@ -425,6 +425,12 @@ function phraseSem(spec, env, ctx) {
     if (o.stop) return o.stop;
     return act(action, Object.assign({ object: o.value }, extra || {}));
   };
+  // The verbs whose one object is a target, not an object.
+  const onTarget = (action, remote) => {
+    const o = objOf(0, remote);
+    if (o.stop) return o.stop;
+    return act(action, { target: o.value });
+  };
   const adjOf = () => (findFirst(spec, 'adj') ? wordsOf(findFirst(spec, 'adj'), env)[0] : undefined);
   switch (r) {
     case 'look': {
@@ -708,6 +714,76 @@ function phraseSem(spec, env, ctx) {
     }
     // Pass forfeits the turn: only when engaged. "pass the time" is a wait, in the wait rule.
     case 'pass': return ctx.engaged.length ? act('VB_PASS', {}) : err('NOT_ENGAGED');
+    // Religion: prayer, intervention, invocations (performed, not cast); baptism is the invocation that converts.
+    case 'pray': {
+      const t = topicAfter(spec, env, ['for']);
+      return t ? act('VB_PRAY_FOR', { task: t }) : act('VB_PRAY', {});
+    }
+    case 'intervene': return act('VB_CALL_INTERVENTION', { deity: textOf(findFirst(spec, 'DEITY'), env), intent: topicAfter(spec, env, ['for']) });
+    case 'invoke': case 'baptise': {
+      const o = direct[0] ? objOf(0) : { value: undefined };
+      if (o.stop) return o.stop;
+      if (r === 'baptise') return act('VB_INVOKE', { invocation: 'baptism', target: o.value, deity: textOf(findFirst(spec, 'DEITY'), env) || undefined });
+      return act('VB_INVOKE', { invocation: textOf(findFirst(spec, 'INVOCATION'), env), target: o.value, deity: textOf(findFirst(spec, 'DEITY'), env) || undefined });
+    }
+    case 'learn-invocation': {
+      const o = direct[0] ? objOf(0) : { value: undefined };
+      if (o.stop) return o.stop;
+      return act('VB_LEARN_INVOCATION', { invocation: textOf(findFirst(spec, 'INVOCATION'), env), source: o.value });
+    }
+    case 'fasting': return act('VB_FASTING', {});
+    // Magic: spells are memorized, learned, researched, countered; dispelling and releasing are the item cases.
+    case 'memorize': return act('VB_MEMORIZE', { spell: textOf(findFirst(spec, 'spell-word'), env) });
+    case 'unmemorize': return act('VB_UNMEMORIZE', { spell: textOf(findFirst(spec, 'spell-word'), env) });
+    case 'research': return act('VB_RESEARCH', { spell: textOf(findFirst(spec, 'spell-word'), env) });
+    case 'counter': return act('VB_COUNTER', { spell: textOf(findFirst(spec, 'spell-word'), env) });
+    case 'learn-spell': {
+      const spell = textOf(findFirst(spec, 'spell-word'), env);
+      if (INVOCATION_WORDS.includes(spell)) return err('NOT_UNDERSTOOD');   // "learn divination" is an invocation
+      const o = direct[0] ? objOf(0) : { value: undefined };
+      if (o.stop) return o.stop;
+      return act('VB_LEARN_SPELL', { spell, source: o.value });
+    }
+    case 'dispel': return onTarget('VB_DISPEL', true);
+    case 'release': return withObj('VB_RELEASE_PRINCIPLE');
+    // Psionics: a talent is used on a target; mental conflict and artifacts.
+    case 'talent': {
+      const o = direct[0] ? objOf(0) : { value: undefined };
+      if (o.stop) return o.stop;
+      return act('VB_USE_TALENT', { talent: textOf(findFirst(spec, 'TALENT'), env), target: o.value });
+    }
+    case 'possess': return onTarget('VB_POSSESS');
+    case 'link-mind': return onTarget('VB_LINK_MIND');
+    case 'activate': return withObj('VB_ACTIVATE');
+    // Influence: Rhetoric and its specialties. Taunt and fast-talk are Rhetoric: persuade to attack, or to believe you.
+    case 'intimidate': return onTarget('VB_INTIMIDATE');
+    case 'order': {
+      const o = objOf(0);
+      if (o.stop) return o.stop;
+      return act('VB_ORDER', { target: o.value, action: topicAfter(spec, env, ['to']) });
+    }
+    case 'persuade': {
+      const o = objOf(0);
+      if (o.stop) return o.stop;
+      return act('VB_PERSUADE', { target: o.value, topic: topicAfter(spec, env, ['to']) });
+    }
+    case 'orate': {
+      const o = direct[0] ? objOf(0) : { value: undefined };
+      if (o.stop) return o.stop;
+      return act('VB_ORATE', { audience: o.value, topic: topicAfter(spec, env, ['about']) });
+    }
+    case 'negotiate': return direct[0] ? onTarget('VB_NEGOTIATE') : act('VB_NEGOTIATE', {});
+    case 'fast-talk': {
+      const o = objOf(0);
+      if (o.stop) return o.stop;
+      return act('VB_FAST_TALK', { target: o.value, topic: topicAfter(spec, env, ['about']) });
+    }
+    case 'taunt': {
+      const o = objOf(0);
+      if (o.stop) return o.stop;
+      return act('VB_TAUNT', { target: o.value, topic: topicAfter(spec, env, ['to']) });
+    }
+    case 'judge': return onTarget('VB_JUDGE_SINCERITY');
     case 'posture': return act(own(POSTURE, spec.kids[0].rule), {});
     case 'pretend': return act('VB_PRETEND', { state: textOf(findFirst(spec, 'pretense'), env) });
     default: return err('NOT_UNDERSTOOD');
@@ -766,6 +842,16 @@ function engagementCheck(res, ctx) {
   if (res.action === 'VB_FLEE') return act('VB_DISENGAGE', { direction: res.roles.direction, pace: 'run' });
   return NEEDS_FREE.has(res.action) ? err('ENGAGED') : res;
 }
+
+// The words after the first marker word ("for", "to", "about"): a prayer's endeavour, an order's action, a topic.
+function topicAfter(spec, env, markers) {
+  const words = wordsOf(spec, env);
+  const i = words.findIndex(w => markers.includes(w));
+  return i < 0 || i === words.length - 1 ? undefined : words.slice(i + 1).join(' ');
+}
+
+// The named invocations (HarnMaster Religion); "learn" with one of these is an invocation, not a spell.
+const INVOCATION_WORDS = ['divination', 'baptism', 'passage', 'consecration', 'exorcism', 'curse', 'blessing', 'balefire'];
 
 // The phrase with its first object replaced: the verb is kept, the object is new.
 function replaceObject(spec, obj) {

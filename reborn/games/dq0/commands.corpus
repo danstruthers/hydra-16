@@ -349,3 +349,42 @@ hold the goblin	VB_HOLD_OBJECT	object=goblin	near=goblin	hold a creature not eng
 wait	ERROR:ENGAGED	-	engaged=goblin	wait is a long idle: not in combat
 pass the time	VB_WAIT	duration=1min	-	pass the time is a wait
 pass the time	ERROR:ENGAGED	-	engaged=goblin	so is wait: not in combat
+pray	VB_PRAY	-	-	an hour of prayer: piety
+pray for a bonus to climbing	VB_PRAY_FOR	task=a bonus to climbing	-	a prayer that spends piety on an endeavour
+call on peoni for help	VB_CALL_INTERVENTION	deity=peoni;intent=help	-	a call for divine intervention
+beseech larani	VB_CALL_INTERVENTION	deity=larani	-	beseech is a call
+invoke divination	VB_INVOKE	invocation=divination	-	a ritual, not a spell
+perform blessing	VB_INVOKE	invocation=blessing	-	perform: a synonym of invoke
+chant exorcism on the goblin	VB_INVOKE	invocation=exorcism;target=goblin	near=goblin	an invocation on a target
+baptise the goblin	VB_INVOKE	invocation=baptism;target=goblin	near=goblin	baptism: converting a willing convert
+convert the goblin to peoni	VB_INVOKE	invocation=baptism;target=goblin;deity=peoni	near=goblin	convert is baptism
+learn divination	VB_LEARN_INVOCATION	invocation=divination	-	learned, not cast
+learn divination from the goblin	VB_LEARN_INVOCATION	invocation=divination;source=goblin	near=goblin	from a mentor
+fast	VB_FASTING	-	-	a day of fasting
+memorize the light spell	VB_MEMORIZE	spell=light	-	a mage memorizes a spell
+unmemorize light	VB_UNMEMORIZE	spell=light	-	instant
+learn the light spell	VB_LEARN_SPELL	spell=light	-	a spell, learned
+research the light spell	VB_RESEARCH	spell=light	-	research a new spell
+counter the light spell	VB_COUNTER	spell=light	-	a defensive counter
+dispel the door	VB_DISPEL	target=door	near=door	dispel an enchantment
+release the stone	VB_RELEASE_PRINCIPLE	object=stone	near=stone	let a stored principle out
+heal the goblin	VB_USE_TALENT	talent=heal;target=goblin	near=goblin	a psionic talent
+mental bolt the goblin	VB_USE_TALENT	talent=mental bolt;target=goblin	near=goblin	a talent of two words
+telepathy the goblin	VB_USE_TALENT	talent=telepathy;target=goblin	near=goblin	a talent
+possess the rat	VB_POSSESS	target=rat	near=rat	mental conflict
+link minds with the goblin	VB_LINK_MIND	target=goblin	near=goblin	the benign mind link
+activate the lamp	VB_ACTIVATE	object=lamp	near=lamp	an artifact may resist
+intimidate the goblin	VB_INTIMIDATE	target=goblin	near=goblin	Intimidation
+command the goblin to wait	VB_ORDER	target=goblin;action=wait	near=goblin	Command
+persuade the goblin to surrender	VB_PERSUADE	target=goblin;topic=surrender	near=goblin	Rhetoric: to do something
+convince the goblin to leave	VB_PERSUADE	target=goblin;topic=leave	near=goblin	convince is persuade
+orate about the bridge	VB_ORATE	topic=the bridge	-	Oratory: a speech
+address the goblin	VB_ORATE	audience=goblin	near=goblin	address an audience
+negotiate with the goblin	VB_NEGOTIATE	target=goblin	near=goblin	Diplomacy
+fast talk the goblin about the key	VB_FAST_TALK	target=goblin;topic=the key	near=goblin	Rhetoric: persuade them to believe you
+bluff the goblin	VB_FAST_TALK	target=goblin	near=goblin	bluff is fast-talk
+lie to the goblin about the key	VB_FAST_TALK	target=goblin;topic=the key	near=goblin	a lie is fast-talk
+taunt the goblin	VB_TAUNT	target=goblin	near=goblin	Rhetoric: persuade them to attack
+taunt the goblin to attack	VB_TAUNT	target=goblin;topic=attack	near=goblin	the same, with the words
+judge the goblin	VB_JUDGE_SINCERITY	target=goblin	near=goblin	Diplomacy: is it bluffing?
+sense a lie from the goblin	VB_JUDGE_SINCERITY	target=goblin	near=goblin	the same, another word

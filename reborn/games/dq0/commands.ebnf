@@ -30,6 +30,10 @@
                    | <knock> | <push> | <pull> | <give> | <hold> | <lock> | <unlock> | <fill> | <read> | <taste> | <touch>
                    | <defend> | <flee> | <follow> | <where>
                    | <knock-out> | <engage> | <disengage> | <pass>
+                   | <pray> | <intervene> | <invoke> | <learn-invocation> | <fasting>
+                   | <memorize> | <unmemorize> | <learn-spell> | <research> | <dispel> | <counter> | <release>
+                   | <talent> | <possess> | <link-mind> | <activate> | <baptise>
+                   | <intimidate> | <order> | <persuade> | <orate> | <negotiate> | <fast-talk> | <taunt> | <judge>
 
 (* ---- Observing (question 3: "look at" is a glance; question 4: "take a look" is a look) ---- *)
 <look>           ::= <LOOK> [ <look-target> ]
@@ -248,3 +252,41 @@
 <disengage>      ::= <DISENGAGE> [ <direction> ]
 <DISENGAGE>      ::= "disengage" | "withdraw" | "break" "off"   (* one hex, then a half-move if now unengaged; no attack *)
 <pass>           ::= "pass"                                     (* an engaged character forfeits the turn *)
+
+(* ---- Religion (HarnMaster Religion: prayer, divine intervention, performing invocations) ---- *)
+<pray>            ::= "pray" [ "for" <text> { <text> } ]        (* alone: an hour of prayer, for piety; "for": a prayer that spends piety on an endeavour *)
+<intervene>       ::= ( "call" "on" | "beseech" ) <DEITY> [ "for" <text> { <text> } ]   (* a call for divine intervention *)
+<DEITY>           ::= "peoni" | "larani" | "agrik" | "halea" | "ilvir" | "morgath" | "naveh" | "sarajin" | "siem" | "save-k'nor"
+<invoke>          ::= ( "invoke" | "perform" | "chant" ) <INVOCATION> [ "on" ] [ <object> ] [ "to" <DEITY> ]   (* clerics perform a ritual; the deity acts *)
+<INVOCATION>      ::= "divination" | "baptism" | "passage" "of" "the" "soul" | "consecration" | "exorcism" | "curse" | "blessing" | "balefire"
+<learn-invocation> ::= "learn" <INVOCATION> [ "from" <object> ]  (* from a mentor or scripture; 5 piety per circle *)
+<fasting>         ::= "fast"                                       (* a day of fasting: piety accrues each day *)
+(* ---- Baptism is the invocation that converts a willing convert: "baptise", "convert" ---- *)
+<baptise>         ::= ( "baptise" | "baptize" | "convert" ) <object> [ "to" <DEITY> ]
+(* ---- Magic (HarnMaster Magic: memorization, learning, research, dispelling, countering) ---- *)
+<spell>           ::= [ <det> ] <spell-word> [ "spell" ]          (* a spell by name *)
+<memorize>        ::= "memorize" <spell>
+<unmemorize>      ::= "unmemorize" <spell>                         (* instant *)
+<learn-spell>     ::= "learn" <spell> [ "from" <object> ]
+<research>        ::= "research" <spell>
+<dispel>          ::= "dispel" <object>                            (* removes a temporary enchantment *)
+<counter>         ::= "counter" <spell>                            (* a defensive spell against one being cast *)
+<release>         ::= "release" <object>                           (* a principle stored in a jorum, let out into the mundane world *)
+(* ---- Psionic talents (HarnMaster core, Psionics: latent until found; the GM generates them) ---- *)
+<talent>          ::= <TALENT> [ "on" ] [ <object> ]          (* the talent is used on the object, if any *)
+<TALENT>          ::= "charm" | "clairvoyance" | "disembodiment" | "heal" | "healing" | "hex" | "medium" | "mental" "bolt" | "bolt"
+                    | "negation" | "negate" | "prescience" | "foresee" | "psychometry" | "pyrokinesis" | "ignite" | "sensitivity"
+                    | "telekinesis" | "telepathy" | "transference" | "transmutation" | "transmute"
+(* ---- Mental conflict (HarnMaster core, Mental Conflict: the battle of wills) ---- *)
+<possess>         ::= "possess" <object>                         (* an alien spirit takes a body by winning a conflict *)
+<link-mind>       ::= "link" [ "minds" ] [ "with" ] <object>      (* the benign mind link *)
+<activate>        ::= "activate" <object>                        (* an artifact's powers: it may resist *)
+(* ---- Influence: Rhetoric and its specialties (HarnMaster core, Skills 12): taunt and fast-talk are kinds of Rhetoric ---- *)
+<intimidate>      ::= "intimidate" <object>                      (* Intimidation: establish dominance *)
+<order>           ::= "command" <object> [ "to" <text> { <text> } ]   (* Command: a subordinate accepts leadership *)
+<persuade>        ::= ( "persuade" | "convince" ) <object> [ "to" <text> { <text> } ]   (* Rhetoric: to do something *)
+<orate>           ::= ( "orate" [ "to" <object> ] | "address" <object> ) [ "about" <text> { <text> } ]   (* Oratory: a speech *)
+<negotiate>       ::= "negotiate" [ "with" <object> ]            (* Diplomacy *)
+<fast-talk>       ::= ( "fast" "talk" | "bluff" | "lie" [ "to" ] ) <object> [ "about" <text> { <text> } ]   (* Rhetoric: persuade them to believe you *)
+<taunt>           ::= "taunt" <object> [ "to" <text> { <text> } ]   (* Rhetoric: persuade them to attack *)
+<judge>           ::= "judge" <object> | "sense" "a" "lie" "from" <object>   (* Diplomacy: is the speaker bluffing *)

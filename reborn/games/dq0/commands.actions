@@ -93,6 +93,31 @@ VB_ENGAGE               object
 VB_DISENGAGE            direction pace
 VB_PASS
 VB_SEQUENCE            steps (* the steps in order, each a whole action; the runtime runs one, then checks for an interrupt (a stop cancels the rest) before the next *)
+VB_PRAY                 
+VB_PRAY_FOR             task
+VB_CALL_INTERVENTION    deity intent
+VB_INVOKE               invocation target deity
+VB_LEARN_INVOCATION     invocation source
+VB_FASTING              
+VB_MEMORIZE             spell
+VB_UNMEMORIZE           spell
+VB_LEARN_SPELL          spell source
+VB_RESEARCH             spell
+VB_DISPEL               target
+VB_COUNTER              spell
+VB_RELEASE_PRINCIPLE    object
+VB_USE_TALENT           talent target
+VB_POSSESS              target
+VB_LINK_MIND            target
+VB_ACTIVATE             object
+VB_INTIMIDATE           target
+VB_ORDER                target action
+VB_PERSUADE             target topic
+VB_ORATE                audience topic
+VB_NEGOTIATE            target
+VB_FAST_TALK            target topic
+VB_TAUNT                target topic
+VB_JUDGE_SINCERITY      target
 
 [results]
 ERROR:NOT_UNDERSTOOD
