@@ -61,6 +61,8 @@ equip the helm	VB_EQUIP_OBJECT	object=helm	near=helm	equip
 doff the helm	VB_UNEQUIP_OBJECT	object=helm	-	doff
 take off the helm	VB_UNEQUIP_OBJECT	object=helm	-	take off is one token
 store the sword	VB_UNEQUIP_OBJECT	object=sword	-	store
+stow the sword	VB_UNEQUIP_OBJECT	object=sword	-	stow, a synonym of unequip
+put away the sword	VB_UNEQUIP_OBJECT	object=sword	-	put away, a synonym of unequip
 open the door	VB_OPEN_OBJECT	object=door	near=door	question 2
 open the right door	VB_OPEN_OBJECT	object=door;adj=right	near=door	adjective, not direction
 close the door	VB_CLOSE_OBJECT	object=door	near=door	question 2: a close action

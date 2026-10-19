@@ -140,7 +140,7 @@
 <PUT>        ::= "put" | "place"
 <USE>        ::= "use" | "make use of"
 <EQUIP>      ::= "equip" | "ready" | "don" | "wear" | "wield"
-<UNEQUIP>    ::= "doff" | "remove" | "store" | "take off" | "unwield"
+<UNEQUIP>    ::= "doff" | "remove" | "store" | "take off" | "unwield" | "stow" | "put away"
 <ATTACK>     ::= "fight" | "attack" | "strike" | "swing" | "slice" | "slash" | "chop" | "bash" | "bludgeon"
                  | "thump" | "club" | "stab" | "poke" | "pierce" | "punch" | "kick" | "bite" | "headbutt"
 <GRAPPLE>    ::= "grapple" | "wrestle"
