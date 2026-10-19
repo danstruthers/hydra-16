@@ -1,0 +1,74 @@
+# Dingus Quest Zero: the action catalogue. One abstract action per line: NAME then its roles.
+# Roles: object, instrument, target, container, source, place, direction, text, manner, topic,
+# spell, name, duration, task, distance. Defaults for unsaid roles are in the design doc's action table.
+# The result codes at the end are the non-action results of compile().
+
+[actions]
+VB_OBSERVE_LOCALE       place
+VB_OBSERVE_DIRECTION    direction
+VB_OBSERVE_OBJECT       object
+VB_OBSERVE_THROUGH      object
+VB_OBSERVE_AROUND       object
+VB_EXAMINE_OBJECT       object
+VB_EXAMINE_LOCALE       place
+VB_RETRIEVE_OBJECT      object source
+VB_DROP_OBJECT          object
+VB_PUT_OBJECT           object container
+VB_USE_OBJECT           object target
+VB_EQUIP_OBJECT         object
+VB_UNEQUIP_OBJECT       object
+VB_OPEN_OBJECT          object
+VB_CLOSE_OBJECT         object
+VB_MOVE_DIRECTION       direction manner distance
+VB_MOVE_TOWARD          object
+VB_FACE_DIRECTION       direction
+VB_JUMP                 direction object
+VB_SWIM                 direction object
+VB_ATTACK_OBJECT        object instrument manner
+VB_GRAPPLE_OBJECT       object
+VB_THROW_OBJECT         object target instrument manner
+VB_SHOOT_OBJECT         object target instrument
+VB_LOAD_OBJECT          object
+VB_SAY                  text
+VB_TELL_OBJECT          object text topic
+VB_CAST_SPELL           spell target
+VB_EAT_OBJECT           object
+VB_DRINK                object
+VB_FIND_OBJECT          object
+VB_SEARCH               object
+VB_LISTEN               object direction
+VB_SMELL                object direction
+VB_TRACK                object
+VB_TARGET_SET           object
+VB_TARGET_CLEAR
+VB_WAIT                 duration
+VB_REST
+VB_SLEEP
+VB_STOP                 task
+VB_NAME_OBJECT          object name
+VB_NAME_PLACE           place name
+VB_META_STATUS
+VB_META_HELP            topic
+VB_META_INVENTORY
+VB_META_MAP
+VB_META_SAVE
+VB_META_QUIT
+
+[results]
+ERROR:NOT_UNDERSTOOD
+ERROR:NOT_PERCEIVED
+ERROR:NO_SUCH_THING
+ERROR:QUOTES_REQUIRED
+ERROR:USE_NAME
+ERROR:BUILT_IN_WORD
+ERROR:NOTHING_HERE
+ERROR:BAD_ROLE
+QUESTION:WHICH
+QUESTION:DIRECTION
+QUESTION:OVERWRITE
+ALIAS:DEFINE
+ALIAS:SHOW
+ALIAS:LIST
+ALIAS:REMOVE
+ALIAS:REPLACE
+ALIAS:KEEP

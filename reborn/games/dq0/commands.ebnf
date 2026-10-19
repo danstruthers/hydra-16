@@ -1,0 +1,161 @@
+(* Dingus Quest Zero: the command grammar. Source for the command compiler.
+   Revised 2026-10-19 after the user's answers, and including command aliases.
+
+   Notation: ::= defines a rule; "word" is a terminal, matched case-insensitively after normalisation;
+   <name> a nonterminal; [ x ] optional; { x } zero or more; ( x | y ) a choice.
+   A rule may continue on following lines. Comments are (* ... *).
+
+   open: unique-name kind-name fixture-name place-name known-alias alias adj number ordinal task-name meta-topic name-word text
+   (the open names come from the game's data: see the design doc, "The grammar"; the checker reads this line) *)
+
+(* ---- Entry ---- *)
+<line>           ::= <alias-cmd> | <answer> | <quoted-speech> | <command> | <bare-direction> | <bare-verb>
+<quoted-speech>  ::= <quoted-text>                              (* question 11: quoted text alone is said aloud *)
+<quoted-text>    ::= '"' <text> '"'
+<bare-direction> ::= <direction>                                (* "north", "n": move that way at pace *)
+<bare-verb>      ::= <GET> | <LOOK> | <SEARCH> | <LISTEN> | <TRACK> | <WAIT> | <REST> | <SLEEP> | <STOP> | <META-WORD>
+<answer>         ::= <yes-no> | <number> | <selector> | <alias> | <unique-name>
+                                                                (* only while a question is pending (question 13) *)
+<yes-no>         ::= "yes" | "y" | "no" | "n"
+<command>        ::= <phrase> { <adjunct> }
+<phrase>         ::= <look> | <examine> | <move> | <face> | <get> | <drop> | <put> | <use>
+                   | <equip> | <unequip> | <open> | <close> | <attack> | <grapple>
+                   | <throw> | <shoot> | <load> | <jump> | <say> | <tell> | <cast> | <eat>
+                   | <drink> | <swim> | <find> | <search> | <listen> | <smell> | <track>
+                   | <target> | <wait> | <rest> | <sleep> | <stop> | <naming> | <meta>
+
+(* ---- Observing (question 3: "look at" is a glance; question 4: "take a look" is a look) ---- *)
+<look>           ::= <LOOK> [ <look-target> ]
+<look-target>    ::= <direction> | <locale-ref> | [ <look-prep> ] <object>
+<locale-ref>     ::= "around" [ <here-ref> ] | "about" | "here"
+<look-prep>      ::= "at" | "through" | "toward" | "towards" | "around" | "in" | "under" | "behind" | "beside" | "near"
+<examine>        ::= <EXAMINE> [ [ "at" ] <object> ]
+<EXAMINE>        ::= "examine" | "inspect" | [ "take a" ] <DETAIL> <LOOK> | <LOOK> <DETAIL>
+
+(* ---- Moving and facing ---- *)
+<move>           ::= [ <MOVE> ] <move-dir>
+<move-dir>       ::= <direction> | <TOWARD> <object>
+<face>           ::= [ "change" ] ( "face" | "facing" | "turn" ) [ "to" ] <direction>
+
+(* ---- Handling things (question 2: CLOSE and OPEN are actions) ---- *)
+<get>            ::= <GET> [ <object> ] [ <from-phrase> ]       (* bare: the last thing named, else things near (question 8) *)
+<drop>           ::= <DROP> <object>
+<put>            ::= <PUT> <object> <put-prep> <object>
+<put-prep>       ::= "in" | "into" | "inside" | "on" | "onto" | "on top of" | "under" | "against"
+<use>            ::= <USE> <object> [ "on" <object> ]
+<equip>          ::= <EQUIP> <object>
+<unequip>        ::= <UNEQUIP> <object>
+<open>           ::= "open" <object>
+<close>          ::= "close" <object>                           (* "close look" is <DETAIL> <LOOK>, not this *)
+<from-phrase>    ::= "from" <object>
+
+(* ---- Fighting ---- *)
+<attack>         ::= <ATTACK> <object> [ "with" <object> ]
+<grapple>        ::= <GRAPPLE> <object>
+<throw>          ::= <THROW> <object> [ <at-phrase> ]
+<shoot>          ::= <SHOOT> <object> [ <at-phrase> ]           (* the bow is the instrument: "fire the bow at the goblin" *)
+<load>           ::= <LOAD> <object>
+<at-phrase>      ::= ( "at" | "toward" | "towards" | "to" ) <object>
+
+(* ---- Other actions ---- *)
+<jump>           ::= <JUMP> [ <direction> | ( "over" | "onto" ) <object> ]
+<say>            ::= <SAY> <quoted-text>
+<tell>           ::= <TELL> <object> [ "to" | "about" ] ( <quoted-text> | <object> | <phrase> )
+<cast>           ::= <CAST> [ <object> ] [ <at-phrase> ]       (* "concentrate" alone: the spell in use *)
+<eat>            ::= <EAT> <object>
+<drink>          ::= <DRINK> [ "from" <object> | <object> ]
+<swim>           ::= <SWIM> [ <move-dir> ]
+<find>           ::= <FIND> <object>                            (* question 10: FIND locates a known thing *)
+<search>         ::= <SEARCH> [ <object> ]                      (* question 10: SEARCH looks for hidden things; a long task *)
+<listen>         ::= <LISTEN> [ <look-target> ]
+<smell>          ::= <SMELL> [ <look-target> ]
+<track>          ::= <TRACK> [ "for" ] [ <object> ]
+<target>         ::= <TARGET> <object> | "clear target" | "untarget"
+<wait>           ::= <WAIT> [ <duration> ]
+<rest>           ::= <REST>
+<sleep>          ::= <SLEEP>
+<stop>           ::= <STOP> [ <task-name> ]                     (* question 9: "stop" alone, or "stop digging" *)
+
+(* ---- Naming and meta-commands (question 15: naming things is "name" or "call") ---- *)
+<naming>         ::= <NAME> ( <object> | "room" | "place" ) [ "as" | "the" ] <name-word>
+<meta>           ::= <META-WORD> [ <meta-topic> ]
+<alias-cmd>      ::= <ALIAS> <alias> ( "is" | "=" ) <substitution>   (* define, or overwrite after a question *)
+                   | <ALIAS> <alias>                                   (* show its meaning *)
+                   | <ALIAS>                                           (* list them all *)
+                   | <UNALIAS> <alias>                                 (* remove *)
+<substitution>   ::= <line>                                          (* one command line; no alias definition inside it *)
+
+(* ---- Adjuncts ---- *)
+<adjunct>        ::= <manner> | <with-phrase> | <from-phrase> | <at-phrase> | <locative> | <direction>
+<with-phrase>    ::= "with" <object>
+<locative>       ::= <loc-prep> <object>
+<loc-prep>       ::= "in" | "on" | "at" | "under" | "behind" | "beside" | "near" | "by" | "against"
+                   | "through" | "around" | "over" | "across"
+<manner>         ::= "carefully" | "slowly" | "quickly" | "quietly" | "hard" | "gently" | "lightly" | "firmly"
+<duration>       ::= <number> ( "minute" | "minutes" | "hour" | "hours" ) | "an hour" | "a minute"
+<here-ref>       ::= "me" | "myself" | "here" | "this place"        (* question 14: "me" only, never "you" *)
+
+(* ---- Objects ---- *)
+<object>         ::= <np> | <pronoun> | <me-phrase> | <everything>
+<np>             ::= [ <det> ] [ <selector> ] { <adj> } <head>
+<det>            ::= "a" | "an" | "the" | "this" | "that" | "these" | "those" | "my"
+<selector>       ::= <number> | "all" | "every" | "each" | "any" | <ordinal>
+                   | "closest" | "nearest" | "largest" | "smallest" | "lead"
+<head>           ::= <unique-name> | <alias> | <kind-name> | <fixture-name> | <place-name>
+<pronoun>        ::= "it" | "them" | "that" | "this" | "one"      (* question 7: "it" is the last thing of any kind *)
+<me-phrase>      ::= <here-ref> | "my" <np>
+<everything>     ::= "everything" [ "near" | "here" ] | "all"
+
+(* ---- Directions (question 5: the single letters are commands) ---- *)
+<direction>      ::= <compass> | <relative> | <vertical> | <TOWARD> <object>
+<compass>        ::= [ <offto> ] <NS> [ [ "and" ] <EW> ] [ <ofme> ]
+                   | [ <offto> ] <EW> [ <ofme> ]
+<NS>             ::= "n" | "north" | "s" | "south"
+<EW>             ::= "e" | "east" | "w" | "west"
+<offto>          ::= [ "off" ] [ "to the" | "to" ]
+<ofme>           ::= "of" <here-ref>
+<relative>       ::= <FB> [ [ "and" ] <LR> ] | <LR>
+<FB>             ::= "f" | "fwd" | "forward" | "ahead" | [ "to the" ] "front" [ <ofme> ] | "in front of" [ <here-ref> ]
+                   | "b" | "back" | "behind" [ <here-ref> ]
+<LR>             ::= "l" | "left" | "r" | "right"
+<vertical>       ::= "u" | "up" | "over my head" | "above" [ <here-ref> ]
+                   | "d" | "down" | "below" | "underneath" | "under" [ <here-ref> | "my feet" ]
+
+(* ---- Lexicon: the classes. Each is one abstract meaning; the words are its synonyms. ---- *)
+<LOOK>       ::= "look" | "peer" | "gaze" | "gander" | "take a gander" | "take a look"
+<DETAIL>     ::= "close" | "closely" | "in detail" | "detail" | "detailed" | "really"
+<MOVE>       ::= "move" | "mv" | "walk" | "trundle" | "mosey" | "saunter" | "run" | "crawl" | "go" | "head"
+<TOWARD>     ::= "to" | "towards" | "toward" | "in the direction of"
+<GET>        ::= "get" | "take" | "grab" | "pick up" | "pick"
+<DROP>       ::= "drop" | "put down"
+<PUT>        ::= "put" | "place"
+<USE>        ::= "use" | "make use of"
+<EQUIP>      ::= "equip" | "ready" | "don" | "wear" | "wield"
+<UNEQUIP>    ::= "doff" | "remove" | "store" | "take off" | "unwield"
+<ATTACK>     ::= "fight" | "attack" | "strike" | "swing" | "slice" | "slash" | "chop" | "bash" | "bludgeon"
+                 | "thump" | "club" | "stab" | "poke" | "pierce" | "punch" | "kick" | "bite" | "headbutt"
+<GRAPPLE>    ::= "grapple" | "wrestle"
+<THROW>      ::= "throw" | "sling"
+<SHOOT>      ::= "fire" | "shoot"
+<LOAD>       ::= "draw" | "load"
+<JUMP>       ::= "jump" | "leap"
+<SAY>        ::= "say"
+<TELL>       ::= "tell" | "ask"
+<CAST>       ::= "cast" | "prepare" | "concentrate"
+<EAT>        ::= "eat" | "consume"
+<DRINK>      ::= "drink"
+<SWIM>       ::= "swim"
+<FIND>       ::= "find" | "where is"
+<SEARCH>     ::= "search"
+<LISTEN>     ::= "listen"
+<SMELL>      ::= "smell" | "sniff" [ "at" ]
+<TRACK>      ::= "track"
+<TARGET>     ::= "target" | "aim at"
+<WAIT>       ::= "wait"
+<REST>       ::= "rest"
+<SLEEP>      ::= "sleep"
+<STOP>       ::= "stop"
+<NAME>       ::= "name" | "call"
+<ALIAS>      ::= "alias"
+<UNALIAS>    ::= "unalias" | "forget alias"
+<META-WORD>  ::= "status" | "help" | "inventory" | "i" | "map" | "save" | "quit"

@@ -1,0 +1,185 @@
+# Dingus Quest Zero: the command corpus. One case per line, five tab-separated fields:
+#   input <TAB> expected <TAB> roles <TAB> context <TAB> note
+# expected: a VB_* action from commands.actions, or ERROR:/QUESTION:/ALIAS: codes from its [results].
+# roles: key=value pairs separated by ';' ('-' for none). context: key=value pairs separated by ';':
+#   last=<thing>  near=<a,b,...>  facing=<N|E|S|W|...>  pending=<kind:...>  ('-' for none).
+# The checker (sim/tools/commandcorpus.js) checks the format, the actions and codes, and coverage.
+
+# --- looking ---
+look	VB_OBSERVE_LOCALE	place=here	-	bare look
+look around	VB_OBSERVE_LOCALE	place=here	-	around the place
+look here	VB_OBSERVE_LOCALE	place=here	-	here is the place
+peer	VB_OBSERVE_LOCALE	place=here	-	synonym
+gaze	VB_OBSERVE_LOCALE	place=here	-	synonym
+gander	VB_OBSERVE_LOCALE	place=here	-	synonym
+take a gander	VB_OBSERVE_LOCALE	place=here	-	gander as a phrase
+take a look	VB_OBSERVE_LOCALE	place=here	-	question 4
+look north	VB_OBSERVE_DIRECTION	direction=N	-	a compass look
+look to the north	VB_OBSERVE_DIRECTION	direction=N	-	with 'to the'
+look left	VB_OBSERVE_DIRECTION	direction=L	facing=N	relative to facing
+look ahead	VB_OBSERVE_DIRECTION	direction=F	facing=N	relative
+look down	VB_OBSERVE_DIRECTION	direction=D	-	vertical
+look at the wall	VB_OBSERVE_OBJECT	object=wall	near=wall	question 3: a glance
+look at me	VB_OBSERVE_OBJECT	object=me	-	'me' only
+look through the window	VB_OBSERVE_THROUGH	object=window	near=window	through an opening
+look around the corner	VB_OBSERVE_AROUND	object=corner	near=corner	orientation point
+look under the table	VB_OBSERVE_OBJECT	object=table	near=table	locative look
+look at the dragon	ERROR:NOT_PERCEIVED	-	near=wall	not in sight
+look at you	ERROR:NOT_UNDERSTOOD	-	-	question 14: 'you' is refused
+
+# --- examining (question 1, 2) ---
+examine the box	VB_EXAMINE_OBJECT	object=box	near=box	synonym of inspect
+inspect the box	VB_EXAMINE_OBJECT	object=box	near=box	synonym of examine
+look closely at the box	VB_EXAMINE_OBJECT	object=box	near=box	close look
+close look at the box	VB_EXAMINE_OBJECT	object=box	near=box	close look, adjective order
+take a close look at the box	VB_EXAMINE_OBJECT	object=box	near=box	close look
+really look at the box	VB_EXAMINE_OBJECT	object=box	near=box	question 1: 'really' kept
+examine	VB_EXAMINE_LOCALE	place=here	-	examine the place
+look closely	VB_EXAMINE_LOCALE	place=here	-	close look, the place
+examine me	VB_EXAMINE_OBJECT	object=me	-	self
+examine you	ERROR:NOT_UNDERSTOOD	-	-	question 14
+
+# --- handling (question 2: close and open) ---
+get the sword	VB_RETRIEVE_OBJECT	object=sword	near=sword	the core case
+take the sword	VB_RETRIEVE_OBJECT	object=sword	near=sword	take
+grab the sword	VB_RETRIEVE_OBJECT	object=sword	near=sword	grab
+pick up the sword	VB_RETRIEVE_OBJECT	object=sword	near=sword	pick up is one token
+get the sword from the chest	VB_RETRIEVE_OBJECT	object=sword;source=chest	near=sword,chest	from a source
+take the lamp off the hook	VB_RETRIEVE_OBJECT	object=lamp;source=hook	near=lamp,hook	from, with 'off'
+take	VB_RETRIEVE_OBJECT	object=last	last=sword	bare take, last named (question 8)
+take	ERROR:NOTHING_HERE	-	-	bare take, nothing near (question 8)
+take all	VB_RETRIEVE_OBJECT	object=all-near	near=sword,rat	take all
+drop the sword	VB_DROP_OBJECT	object=sword	near=sword	drop
+put down the sword	VB_DROP_OBJECT	object=sword	near=sword	put down
+put the sword in the chest	VB_PUT_OBJECT	object=sword;container=chest	near=sword,chest	put in
+put the apple under the table	VB_PUT_OBJECT	object=apple;container=table	near=apple,table	under as a container
+use the key	VB_USE_OBJECT	object=key	near=key	use
+use the key on the door	VB_USE_OBJECT	object=key;target=door	near=key,door	use on
+make use of the key	VB_USE_OBJECT	object=key	near=key	make use of
+ready the sword	VB_EQUIP_OBJECT	object=sword	near=sword	question 6: ready is equip
+equip the helm	VB_EQUIP_OBJECT	object=helm	near=helm	equip
+doff the helm	VB_UNEQUIP_OBJECT	object=helm	-	doff
+take off the helm	VB_UNEQUIP_OBJECT	object=helm	-	take off is one token
+store the sword	VB_UNEQUIP_OBJECT	object=sword	-	store
+open the door	VB_OPEN_OBJECT	object=door	near=door	question 2
+open the right door	VB_OPEN_OBJECT	object=door;adj=right	near=door	adjective, not direction
+close the door	VB_CLOSE_OBJECT	object=door	near=door	question 2: a close action
+close the lid	VB_CLOSE_OBJECT	object=lid	near=lid	question 2
+close the door carefully	VB_CLOSE_OBJECT	object=door;manner=carefully	near=door	manner
+
+# --- moving and facing ---
+move north	VB_MOVE_DIRECTION	direction=N	-	move
+walk north	VB_MOVE_DIRECTION	direction=N	-	walk
+go north	VB_MOVE_DIRECTION	direction=N	-	go
+north	VB_MOVE_DIRECTION	direction=N	-	bare direction
+n	VB_MOVE_DIRECTION	direction=N	-	question 5: single letter
+f	VB_MOVE_DIRECTION	direction=F	facing=N	question 5
+move left one space	VB_MOVE_DIRECTION	direction=L;distance=1	facing=N	one square
+run north	VB_MOVE_DIRECTION	direction=N;manner=run	-	run
+crawl north	VB_MOVE_DIRECTION	direction=N;manner=crawl	-	crawl
+move to the door	VB_MOVE_TOWARD	object=door	near=door	toward
+walk toward the goblin	VB_MOVE_TOWARD	object=goblin	near=goblin	toward
+turn left	VB_FACE_DIRECTION	direction=L	facing=N	turn
+face north	VB_FACE_DIRECTION	direction=N	-	face
+change facing to the east	VB_FACE_DIRECTION	direction=E	-	change facing
+facing south	VB_FACE_DIRECTION	direction=S	-	facing
+jump	VB_JUMP	-	-	jump
+jump north	VB_JUMP	direction=N	-	jump with a direction
+jump over the pit	VB_JUMP	object=pit	near=pit	jump over
+swim north	VB_SWIM	direction=N	-	swim
+swim to the far bank	VB_SWIM	object=bank	near=bank	swim toward
+
+# --- fighting and throwing ---
+attack the rat	VB_ATTACK_OBJECT	object=rat	near=rat	attack
+fight the rat	VB_ATTACK_OBJECT	object=rat	near=rat	fight
+slash the rat with the sword	VB_ATTACK_OBJECT	object=rat;instrument=sword;manner=edge	near=rat,sword	edge
+bash the rat with the club	VB_ATTACK_OBJECT	object=rat;instrument=club;manner=blunt	near=rat,club	blunt
+stab the goblin with the dagger	VB_ATTACK_OBJECT	object=goblin;instrument=dagger;manner=point	near=goblin,dagger	point
+punch the rat	VB_ATTACK_OBJECT	object=rat;manner=unarmed	near=rat	unarmed
+kick the door	VB_ATTACK_OBJECT	object=door;manner=unarmed	near=door	kick
+bite the rat	VB_ATTACK_OBJECT	object=rat;manner=unarmed	near=rat	bite, no instrument
+headbutt the rat	VB_ATTACK_OBJECT	object=rat;manner=unarmed	near=rat	headbutt
+attack the rat with Linda	VB_ATTACK_OBJECT	object=rat;instrument=Linda	near=rat;names=Linda	a named weapon
+grapple the goblin	VB_GRAPPLE_OBJECT	object=goblin	near=goblin	grapple
+wrestle the goblin	VB_GRAPPLE_OBJECT	object=goblin	near=goblin	wrestle
+throw the apple hard at the goblin	VB_THROW_OBJECT	object=apple;target=goblin;manner=hard	near=apple,goblin	throw with manner
+sling the stone at the goblin	VB_THROW_OBJECT	object=stone;target=goblin;instrument=sling	near=stone,goblin	sling
+fire the bow at the goblin	VB_SHOOT_OBJECT	instrument=bow;target=goblin	near=bow,goblin	fire
+shoot the goblin	VB_SHOOT_OBJECT	target=goblin	near=goblin	shoot
+draw the bow	VB_LOAD_OBJECT	object=bow	near=bow	draw
+load the crossbow	VB_LOAD_OBJECT	object=crossbow	near=crossbow	load
+
+# --- speech and the other actions ---
+say "hello"	VB_SAY	text=hello	-	say with quotes
+"hello"	VB_SAY	text=hello	-	quoted alone is said aloud (question 11)
+say hello	ERROR:QUOTES_REQUIRED	-	-	question 11: no quotes
+tell the goblin to wait	VB_TELL_OBJECT	object=goblin;topic=wait	near=goblin	a phrase as the words
+tell the goblin "wait"	VB_TELL_OBJECT	object=goblin;text=wait	near=goblin	quoted words
+ask the goblin about the key	VB_TELL_OBJECT	object=goblin;topic=key	near=goblin,key	ask about
+cast the light spell	VB_CAST_SPELL	spell=light	-	cast
+prepare the spell	VB_CAST_SPELL	-	-	prepare, the spell in use
+concentrate	VB_CAST_SPELL	-	-	concentrate, the spell in use
+eat the rations	VB_EAT_OBJECT	object=rations	near=rations	eat
+consume the rations	VB_EAT_OBJECT	object=rations	near=rations	consume
+drink	VB_DRINK	-	-	drink
+drink from the waterskin	VB_DRINK	object=waterskin	near=waterskin	from
+find the key	VB_FIND_OBJECT	object=key	-	find (question 10)
+where is the key	VB_FIND_OBJECT	object=key	-	where is
+search	VB_SEARCH	-	-	search (question 10)
+search the wall	VB_SEARCH	object=wall	near=wall	search an object
+listen	VB_LISTEN	-	-	listen
+listen at the door	VB_LISTEN	object=door	near=door	listen at
+listen north	VB_LISTEN	direction=N	-	listen a way
+sniff at the grating	VB_SMELL	object=grating	near=grating	sniff at
+smell the smoke	VB_SMELL	object=smoke	-	smell
+track	VB_TRACK	-	-	track
+track the rats	VB_TRACK	object=rats	-	track things
+target the goblin	VB_TARGET_SET	object=goblin	near=goblin	target
+aim at the goblin	VB_TARGET_SET	object=goblin	near=goblin	aim at
+clear target	VB_TARGET_CLEAR	-	-	clear
+wait	VB_WAIT	duration=1min	-	wait, a minute
+wait an hour	VB_WAIT	duration=60min	-	wait with duration
+rest	VB_REST	-	-	rest
+sleep	VB_SLEEP	-	-	sleep
+stop	VB_STOP	task=current	-	stop, any task (question 9)
+stop digging	VB_STOP	task=digging	-	stop, named (question 9)
+
+# --- naming and meta-commands (question 15) ---
+name the sword Linda	VB_NAME_OBJECT	object=sword;name=Linda	near=sword	name a thing
+call the room the Mausoleum	VB_NAME_PLACE	place=room;name=Mausoleum	-	call a place
+alias the sword as Linda	ERROR:USE_NAME	-	near=sword	question 15: refused, points to name
+status	VB_META_STATUS	-	-	status
+help	VB_META_HELP	-	-	help
+help fighting	VB_META_HELP	topic=fighting	-	help by topic
+inventory	VB_META_INVENTORY	-	-	inventory
+i	VB_META_INVENTORY	-	-	short inventory
+map	VB_META_MAP	-	-	map
+save	VB_META_SAVE	-	-	save
+quit	VB_META_QUIT	-	-	quit
+
+# --- aliases (question 15, the alias design) ---
+alias x is take off	ALIAS:DEFINE	alias=x;substitution=take off	-	define with 'is'
+alias x = take off	ALIAS:DEFINE	alias=x;substitution=take off	-	define with '='
+alias look	ERROR:BUILT_IN_WORD	alias=look	-	a built-in word
+alias x	ALIAS:SHOW	alias=x	-	show a meaning
+alias	ALIAS:LIST	-	-	list all
+unalias x	ALIAS:REMOVE	alias=x	-	remove
+forget alias x	ALIAS:REMOVE	alias=x	-	remove, the longer form
+alias x is take off	QUESTION:OVERWRITE	alias=x;current=take up;new=take off	x=take up	overwrite asks first
+yes	ALIAS:REPLACE	alias=x	pending=overwrite:x:take up:take off	the answer to the overwrite question
+no	ALIAS:KEEP	alias=x	pending=overwrite:x:take up:take off	the answer to the overwrite question
+n	ALIAS:KEEP	alias=x	pending=overwrite:x:take up:take off	'n' answers the question, not north
+x sword	VB_UNEQUIP_OBJECT	object=sword	x=take off	an alias expands once, trailing words added
+
+# --- answers, pronouns, selectors, and questions ---
+take it	VB_RETRIEVE_OBJECT	object=sword	last=sword	it: the last thing of any kind (question 7)
+take them	VB_RETRIEVE_OBJECT	object=group	last=group	them: the last group
+attack the goblin	QUESTION:WHICH	choices=goblin1,goblin2	near=goblin1,goblin2	two goblins: which?
+2	VB_ATTACK_OBJECT	object=goblin2	pending=which:attack:goblin1,goblin2	a number answers the question (question 13)
+the closest	VB_ATTACK_OBJECT	object=goblin1	pending=which:attack:goblin1,goblin2;distances=3,9	a selector answers the question
+Grub	VB_ATTACK_OBJECT	object=Grub	pending=which:attack:goblin1,Grub	a name answers the question
+attack the closest goblin	VB_ATTACK_OBJECT	object=goblin1	near=goblin1,goblin2;distances=3,9	selector without a question
+go	QUESTION:DIRECTION	-	-	move with no direction
+take the moon	ERROR:NO_SUCH_THING	-	-	no such thing exists
+xyzzy	ERROR:NOT_UNDERSTOOD	-	-	no reading at all
+wait the sword	ERROR:BAD_ROLE	-	-	wait takes no object
