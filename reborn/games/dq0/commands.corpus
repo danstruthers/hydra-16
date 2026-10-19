@@ -397,3 +397,35 @@ alias yyy is zz	ALIAS:DEFINE	alias=yyy;substitution=take	zz=take	an alias of an 
 alias zz	ALIAS:SHOW	alias=zz;substitution=take	zz=take	show a meaning
 alias	ALIAS:LIST	zz=take;yyy=take	zz=take;yyy=take	list: the core word, not the alias
 yyy sword	VB_RETRIEVE_OBJECT	object=sword	near=sword;yyy=take	the chained alias takes the core verb
+pick the sword up	VB_RETRIEVE_OBJECT	object=sword	near=sword	the particle after the object
+put the sword down	VB_DROP_OBJECT	object=sword	near=sword	put down with the object between
+take the helm off	VB_UNEQUIP_OBJECT	object=helm	near=helm	take off with the object between
+wake the goblin up	VB_WAKE	object=goblin	near=goblin	wake up with the object between
+turn it on	VB_LIGHT_OBJECT	object=lamp	last=lamp	turn on, a pronoun
+turn it off	VB_EXTINGUISH_OBJECT	object=lamp	last=lamp	turn off, a pronoun
+use the key with the lock	VB_USE_OBJECT	object=key;target=lock	near=key,lock	use with
+shoot at the goblin	VB_SHOOT_OBJECT	target=goblin	near=goblin	shoot at, with no object first
+cast light on the goblin	VB_CAST_SPELL	spell=light;target=goblin	near=goblin	cast on
+listen to the door	VB_LISTEN	object=door	near=door	listen to
+look for the key	VB_FIND_OBJECT	object=key	near=key	look for is find
+search for the key	VB_SEARCH	object=key	near=key	search for
+wait for 10 minutes	VB_WAIT	duration=10min	-	wait for a duration
+rest for an hour	VB_SLEEP	short=no;duration=60min	-	rest for a duration
+sit on the bed	VB_SIT	-	near=bed	sit on a surface
+climb over the wall	VB_CLIMB	object=wall	near=wall	climb over
+go into the cave	VB_MOVE_TOWARD	object=cave	near=cave	into
+walk past the goblin	VB_MOVE_TOWARD	object=goblin	near=goblin	past
+tell the goblin that the bridge is out	VB_TELL_OBJECT	object=goblin;topic=the bridge is out	near=goblin	tell that
+go northeast	VB_MOVE_DIRECTION	direction=NE	-	a diagonal, long form
+ne	VB_MOVE_DIRECTION	direction=NE	-	a diagonal, short form
+go north east	VB_MOVE_DIRECTION	direction=NE	-	a diagonal, two words
+turn around	VB_FACE_DIRECTION	direction=B	facing=N	a half turn
+take the sword out of the chest	VB_RETRIEVE_OBJECT	object=sword;source=chest	near=sword,chest	out of
+hit him	VB_ATTACK_OBJECT	object=goblin	near=goblin;person=goblin	a pronoun for a person
+talk to her	VB_TELL_OBJECT	object=goblin	near=goblin;person=goblin	talk to, a pronoun
+put the lamp out	VB_EXTINGUISH_OBJECT	object=lamp	near=lamp	put out, the object between
+w"hello"	VB_SAY	text=hello;volume=quiet	-	a w prefix is part of the quote
+y"Here!"	VB_SAY	text=Here!;volume=loud	-	a y prefix is part of the quote
+"Hello"!	VB_SAY	text=Hello;volume=loud	-	a bang after the quote is a yell
+sleep in the bed	VB_SLEEP	short=no	near=bed	sleep in
+drop it	VB_DROP_OBJECT	object=sword	last=sword	it

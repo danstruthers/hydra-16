@@ -80,3 +80,11 @@ move m
 open o
 quit q
 throw t
+*northeast ne
+*northwest nw
+*southeast se
+*southwest sw
+*north east ne
+*north west nw
+*south east se
+*south west sw

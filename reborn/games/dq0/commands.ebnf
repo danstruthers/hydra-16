@@ -10,9 +10,8 @@
 
 (* ---- Entry ---- *)
 <line>           ::= <alias-cmd> | <quoted-speech> | <command> | <sequence>
-<quoted-speech> ::= [ <VOLUME> ] <quoted-text> [ "!" ]   (* question 11: quoted text alone is said aloud; ending in "!" it is
-                                                    yelled; w"..." whispers, y"..." yells *)
-<VOLUME>        ::= "w" | "y"                          (* attached to the quote: w"Psst" *)
+<quoted-speech> ::= <quoted-text> [ "!" ]   (* said aloud. A w or y directly before the quote is part of the quote token:
+                                                 w"Psst" whispers, y"Here!" yells; a quote ending in ! (inside it, or after it) is yelled *)
 <quoted-text>    ::= '"' <text> '"'
                                                                 (* only while a question is pending (question 13) *)
 <command>        ::= <phrase>
@@ -29,32 +28,34 @@
                    | <pray> | <intervene> | <invoke> | <learn-invocation> | <fasting>
                    | <memorize> | <unmemorize> | <learn-spell> | <research> | <dispel> | <counter> | <release>
                    | <talent> | <possess> | <link-mind> | <activate> | <baptise>
+                   | <talk>
+                   | <sit-on>
                    | <intimidate> | <order> | <persuade> | <orate> | <negotiate> | <fast-talk> | <taunt> | <judge>
 
 (* ---- Observing (question 3: "look at" is a glance; question 4: "take a look" is a look) ---- *)
 <look>           ::= <LOOK> [ <look-target> ]
 <look-target>    ::= <direction> | <locale-ref> | [ <look-prep> ] <object>
 <locale-ref>     ::= "around" [ <here-ref> ] | "about" | "here" | "this place"
-<look-prep>      ::= "at" | "through" | "toward" | "towards" | "around" | "in" | "under" | "behind" | "beside" | "near"
+<look-prep>      ::= "at" | "through" | "toward" | "towards" | "around" | "in" | "under" | "behind" | "beside" | "near" | "to" | "on" | "for"
 <examine>        ::= <EXAMINE> [ [ "at" ] <object> ]
 <EXAMINE>        ::= "x" | [ "take a" ] <DETAIL> <LOOK>   (* "look closely" is an alias of examine: commands.aliases *)
 
 (* ---- Moving and facing ---- *)
 <move>           ::= [ <pace-word> ] [ <MOVE> ] <move-dir> [ <number> [ "space" | "spaces" | "square" | "squares" ] ]   (* "run north": this move at run; "walk north": the verb *)
 <move-dir>       ::= <direction> | <TOWARD> <object>
-<face>           ::= [ "change" ] ( "face" | "facing" | "turn" ) [ "to" ] <direction>
+<face>           ::= [ "change" ] ( "face" | "facing" | "turn" ) [ "to" ] <direction> | "turn" "around"   (* "turn around" is a half turn: facing back *)
 
 (* ---- Handling things (question 2: CLOSE and OPEN are actions) ---- *)
-<get>            ::= <GET> [ <object> ] [ <from-phrase> ] | <GET> <object> <off-phrase>       (* bare: the last thing named, else things near (question 8) *)
-<drop>           ::= <DROP> <object>
+<get>            ::= <GET> [ <object> ] [ <from-phrase> ] | <GET> <object> <off-phrase> | <GET> <object> "up"   (* bare: the last thing named, else things near (question 8); "pick the sword up" *)
+<drop>           ::= <DROP> <object> | "put" <object> "down"
 <put>            ::= <PUT> <object> <put-prep> <object>
 <put-prep>       ::= "in" | "into" | "inside" | "on" | "onto" | "on top of" | "under" | "against"
-<use>            ::= <USE> <object> [ "on" <object> ]
+<use>            ::= <USE> <object> [ ( "on" | "with" ) <object> ]
 <equip>          ::= <EQUIP> <object>
-<unequip>        ::= <UNEQUIP> <object> | "put" <object> "away"   (* "put away the sword" and "put the sword away" *)
+<unequip>        ::= <UNEQUIP> <object> | "put" <object> "away" | "take" <object> "off"   (* "put away the sword", "put the sword away", "take the helm off" *)
 <open>           ::= "o" <object> [ <manner> ]
 <close>          ::= "close" <object> [ <manner> ]                           (* "close look" is <DETAIL> <LOOK>, not this *)
-<from-phrase>    ::= "from" <object>
+<from-phrase>    ::= "from" <object> | "out" "of" <object>
 <off-phrase>     ::= "off" <object>
 
 (* ---- Fighting ---- *)
@@ -64,31 +65,27 @@
                    | <THROW> [ <object> ] [ <manner> ] <throw-dir>
                    | <THROW>          (* in a direction: a floor square, distance asked *)
 <throw-dir>      ::= <direction> | "around the corner"
-<shoot>          ::= <SHOOT> <object> [ <at-phrase> ]           (* the bow is the instrument: "fire the bow at the goblin" *)
+<shoot>          ::= <SHOOT> [ <object> ] [ <at-phrase> ]   (* "fire the bow at the goblin", "shoot at the goblin", "shoot the goblin" *)
 <load>           ::= <LOAD> <object>
-<at-phrase>      ::= ( "at" | "toward" | "towards" | "to" ) <object>
+<at-phrase>      ::= ( "at" | "toward" | "towards" | "to" | "on" ) <object>
 
 (* ---- Other actions ---- *)
 <jump>           ::= <JUMP> [ <direction> | ( "over" | "onto" ) <object> ]
 <say>            ::= <SAY> <quoted-text> | <VOLUME-SAY> <quoted-text> [ "!" ]   (* yell, scream, whisper *)
-<tell>           ::= <TELL> <object> [ "to" | "about" ] ( <quoted-text> | <object> | <phrase> )
+<tell>           ::= <TELL> <object> [ "to" | "about" ] ( <quoted-text> | <object> | <phrase> ) | <TELL> <object> "that" <text> { <text> }   (* "tell the goblin that the bridge is out" *)
 <cast>           ::= <CAST> [ <det> ] [ <spell-word> ] [ "spell" ] [ <at-phrase> ]       (* "concentrate" alone: the spell in use *)
 <eat>            ::= <EAT> <object>
 <drink>          ::= <DRINK> [ "from" <object> | <object> ]
 <swim>           ::= <SWIM> [ <move-dir> ]
 <find>           ::= <FIND> <object>                            (* question 10: FIND locates a known thing *)
-<search>         ::= <SEARCH> [ <object> ]                      (* question 10: SEARCH looks for hidden things; a long task *)
+<search>         ::= <SEARCH> [ "for" ] [ <object> ]   (* question 10: SEARCH looks for hidden things; a long task *)
 <listen>         ::= <LISTEN> [ <look-target> ]
 <smell>          ::= <SMELL> [ <look-target> ]
 <track>          ::= <TRACK> [ "for" ] [ <object> ]
 <target>         ::= <TARGET> [ <object> ] | "clear target" | "untarget"
-<wait>           ::= <WAIT> [ <duration> ] | "pass" "the" "time"   (* "pass the time" is a wait *)  (* VB_WAIT: idle for a while; a long task, stopped by "stop" or "stop waiting", interrupted as a walk is *)
-<rest>           ::= [ "short" ] <REST>     (* rest and sleep are the same: VB_SLEEP, the player unaware. "short rest" is a
-                                              sleep meant for 30 to 60 minutes, which fatigue, illness and injury may turn into a
-                                              full sleep; the wake-up test uses Will, and a high Will helps *)
-<sleep>          ::= [ "short" ] <SLEEP> [ "for" <duration> ]    (* VB_SLEEP: interrupted by an awareness check. Its length is not typed: it
-                                              depends on fatigue, injury and sickness (the user, 2026-10-19), so a duration
-                                              is only given to override it *)
+<wait>           ::= <WAIT> [ "for" ] [ <duration> ] | "pass" "the" "time"   (* "wait", "wait for 10 minutes"; "pass the time" is a wait *)
+<rest>           ::= [ "short" ] <REST> [ "for" <duration> ]   (* rest and sleep are the same: VB_SLEEP, the player unaware. "short rest" is a sleep of 30 to 60 minutes, which fatigue, illness and injury may turn into a full sleep *)
+<sleep>          ::= [ "short" ] <SLEEP> [ "for" <duration> | ( "in" | "on" ) <object> ]   (* VB_SLEEP: its length is not typed (fatigue, injury, sickness); a duration overrides it *)
 <stop>           ::= <STOP> [ <task-name> ]                     (* question 9: "stop" alone, or "stop digging" *)
 <step>           ::= "step" <direction>                 (* one square; facing unchanged: "step r" *)
 <pace-set>       ::= "pace" [ <pace-word> | "walk" ] | "double time" [ "!" ]  (* sets the default pace; "double time!" is a run *)
@@ -120,7 +117,7 @@
 <selector>       ::= <number> | "all" | "every" | "each" | "any" | <ordinal>
                    | "closest" | "nearest" | "largest" | "smallest" | "lead"
 <head>           ::= <name>                          (* one name: every word a thing can be called *)
-<pronoun>        ::= "it" | "them" | "that" | "this" | "one"      (* question 7: "it" is the last thing of any kind *)
+<pronoun>        ::= "it" | "them" | "that" | "this" | "one" | "he" | "she" | "him" | "her"   (* "it": the last thing of any kind (question 7); he, she, him, her: the last person named (context "person=") *)
 <me-phrase>      ::= <here-ref> | "my" <np>
 <everything>     ::= "everything" [ "near" | "here" ] | "all"
 
@@ -128,8 +125,10 @@
 <direction>      ::= <compass> | <relative> | <vertical>
 <compass>        ::= [ <offto> ] <NS> [ [ "and" ] <EW> ] [ <ofme> ]
                    | [ <offto> ] <EW> [ <ofme> ]
+                   | [ <offto> ] <DIAG> [ <ofme> ]   (* ne, nw, se, sw; "northeast" and "north east" are aliases *)
 <NS>             ::= "n" | "s"                       (* the short forms; "north" is an alias: commands.aliases *)
 <EW>             ::= "e" | "w"
+<DIAG>           ::= "ne" | "nw" | "se" | "sw"
 <offto>          ::= "off" [ "to the" | "to" ] | "to the" | "to"   (* at least one word: a nullable part would parse two ways *)
 <ofme>           ::= "of" <here-ref>
 <relative>       ::= <FB> [ [ "and" ] <LR> ] | <LR>
@@ -143,7 +142,7 @@
 <LOOK>       ::= "look" | "take a gander" | "take a look"
 <DETAIL>     ::= "close" | "in detail"
 <MOVE>       ::= "m" | "walk" | "go"
-<TOWARD>     ::= "to" | "towards" | "toward" | "in the direction of"
+<TOWARD>     ::= "to" | "towards" | "toward" | "in the direction of" | "into" | "onto" | "past"
 <GET>        ::= "get" | "take" | "pick up" | "pick"
 <DROP>       ::= "drop" | "put down"
 <PUT>        ::= "put" | "place"
@@ -162,8 +161,8 @@
 <CAST>       ::= "c"
 <EAT>        ::= "eat"
 <DRINK>      ::= "drink"
-<LIGHT>      ::= "light"
-<EXTINGUISH> ::= "quench" | "put out"
+<LIGHT>      ::= "light" | "turn on"
+<EXTINGUISH> ::= "quench" | "put out" | "turn off"
 <SWIM>       ::= "swim"
 <FIND>       ::= "find" | "where is"
 <SEARCH>     ::= "search"
@@ -181,11 +180,12 @@
 <META-WORD>  ::= "status" | "help" | "i" | "map" | "save" | "q"
 
 (* ---- Fire (added 2026-10-19) ---- *)
-<light>          ::= <LIGHT> [ "a" ] "fire" | <LIGHT> <object>   (* "light the torch", "start a fire" *)
-<extinguish>     ::= <EXTINGUISH> [ "the" ] "fire" | <EXTINGUISH> <object>      (* "quench the fire", "put out the torch" *)
+<light>          ::= <LIGHT> [ "a" ] "fire" | <LIGHT> <object> | "turn" <object> "on"   (* "light the torch", "start a fire", "turn it on" *)
+<extinguish>     ::= <EXTINGUISH> [ "the" ] "fire" | <EXTINGUISH> <object> | "put" <object> "out" | "turn" <object> "off"   (* "quench the fire", "put out the torch", "put the torch out", "turn it off" *)
 (* ---- Posture and pretence (added 2026-10-19) ---- *)
 <posture>        ::= <SIT> | <STAND> | <LIE-DOWN> | <CROUCH>          (* a change of the standing state; no object *)
 <SIT>            ::= "sit" [ "down" ]
+<sit-on>        ::= "sit" [ "down" ] "on" <object>   (* sitting on a surface: VB_SIT *)
 <STAND>          ::= "stand" [ "up" ] | "get" "up"          (* "get up" is a stand, not a get with a direction *)
 <LIE-DOWN>       ::= "lie" [ "down" | "prone" ] | "lay" [ "down" ] | "go" "prone" | "prone"
 <pretend>        ::= <PRETEND> [ "to" "be" ] <pretense>     (* a state the player does not have: "pretend dead",
@@ -196,11 +196,11 @@
 <enter>          ::= "enter" [ <object> ]
 <leave>          ::= <LEAVE> [ <object> | <direction> ]
 <LEAVE>          ::= "exit"
-<climb>          ::= <CLIMB> [ <direction> ] [ <object> ]
+<climb>          ::= <CLIMB> [ <direction> ] [ <object> ] | <CLIMB> ( "over" | "onto" | "into" ) <object>
 <CLIMB>          ::= "climb"
-<dig>            ::= <DIG> [ <direction> | <object> ]           (* "dig down", "dig the wall" *)
+<dig>            ::= <DIG> [ <direction> | "for" <object> | <object> ]   (* "dig down", "dig the wall", "dig for treasure" *)
 <DIG>            ::= "dig"
-<wake>           ::= <WAKE> [ <object> ]                        (* the end of a sleep; "wake the goblin" wakes another *)
+<wake>           ::= <WAKE> [ <object> ] | "wake" <object> "up"   (* "wake the goblin", "wake the goblin up" *)
 <WAKE>           ::= "wake" [ "up" ] | "rouse" | "awaken"
 (* ---- Stealth ---- *)
 <CROUCH>         ::= "crouch" | "kneel" [ "down" ] | "squat"
@@ -266,6 +266,7 @@
 <counter>         ::= "counter" <spell>                            (* a defensive spell against one being cast *)
 <release>         ::= "release" <object>                           (* a principle stored in a jorum, let out into the mundane world *)
 (* ---- Psionic talents (HarnMaster core, Psionics: latent until found; the GM generates them) ---- *)
+<talk>            ::= "talk" [ "to" | "with" ] <object> [ "about" <text> { <text> } ]   (* a conversation: VB_TELL_OBJECT *)
 <talent>          ::= <TALENT> [ "on" ] [ <object> ]          (* the talent is used on the object, if any *)
 <TALENT>          ::= "charm" | "clairvoyance" | "disembodiment" | "heal" | "healing" | "hex" | "medium" | "mental" "bolt" | "bolt"
                     | "negation" | "negate" | "prescience" | "foresee" | "psychometry" | "pyrokinesis" | "ignite" | "sensitivity"

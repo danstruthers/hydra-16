@@ -132,7 +132,7 @@ const ATTACK_MANNER = { slash: 'edge', slice: 'edge', chop: 'edge', swing: 'edge
 const POSTURE = { SIT: 'VB_SIT', STAND: 'VB_STAND', 'LIE-DOWN': 'VB_LIE_DOWN', CROUCH: 'VB_CROUCH' };
 const GRAPPLE_MANEUVER = { grapple: 'grapple', wrestle: 'wrestle', tackle: 'tackle', pin: 'pin', choke: 'choke',
   hold: 'hold', grab: 'grab', put: 'headlock', toss: 'throw', throw: 'throw', chuck: 'throw', hurl: 'throw', sling: 'throw', t: 'throw' };
-const LOOK_PREP_ACTION = { through: 'VB_OBSERVE_THROUGH', around: 'VB_OBSERVE_AROUND' };
+const LOOK_PREP_ACTION = { through: 'VB_OBSERVE_THROUGH', around: 'VB_OBSERVE_AROUND', for: 'VB_FIND_OBJECT' };
 const numWord = v => own(NUMWORDS, v);
 
 // Default world: the names of things the game knows. A word not here is "no such thing"; one here but not perceived is
@@ -247,6 +247,8 @@ const quoteOf = (node, env) => env.toks[node.start].text;
 // Direction in the player's frame: compass letters, or F B L R U D; "around the corner" is a throw's direction.
 function dirCode(node, env) {
   const w = new Set(wordsOf(node, env));
+  const diag = ['ne', 'nw', 'se', 'sw'].find(x => w.has(x));
+  if (diag) return diag.toUpperCase();
   const ns = w.has('north') || w.has('n') ? 'N' : w.has('south') || w.has('s') ? 'S' : '';
   const ew = w.has('east') || w.has('e') ? 'E' : w.has('west') || w.has('w') ? 'W' : '';
   if (ns || ew) return ns + ew;
@@ -294,7 +296,7 @@ function parsePending(v) {
 // pending question. Keys: near last facing pending distances names target pace; any other key is an alias.
 function buildContext(spec, world) {
   const ctx = { near: [], last: [], facing: null, pending: null, target: null, pace: 'walk', names: new Map(),
-    dist: new Map(), aliases: new Map(DEFAULT_ALIASES), world: new Set(world), engaged: [], deities: new Set() };
+    dist: new Map(), aliases: new Map(DEFAULT_ALIASES), world: new Set(world), engaged: [], deities: new Set(), person: null };
   const addName = (key, id) => {
     const k = key.toLowerCase();
     if (!ctx.names.has(k)) ctx.names.set(k, []);
@@ -315,6 +317,7 @@ function buildContext(spec, world) {
     else if (k === 'distances') distances = v.split(',').map(Number);
     else if (k === 'engaged') ctx.engaged = v.split(',');
     else if (k === 'deities') ctx.deities = new Set(v.split(','));
+    else if (k === 'person') ctx.person = v;
     else if (k === 'target') ctx.target = v;
     else if (k === 'pace') ctx.pace = own(PACE, v) || v;
     else ctx.aliases.set(k, v);
@@ -332,7 +335,10 @@ function buildContext(spec, world) {
 // perceived: its word is its value.
 function resolveObject(node, env, ctx, remote) {
   if (!node) return { value: undefined };
-  if (findFirst(node, 'pronoun')) {
+  const pron = findFirst(node, 'pronoun');
+  if (pron) {
+    // he, she, him, her: the last person named (context "person="); it, them, that, this, one: the last thing of any kind
+    if (['he', 'she', 'him', 'her'].indexOf(wordsOf(pron, env)[0]) >= 0) return ctx.person ? { value: ctx.person } : { error: 'NOTHING_HERE' };
     if (!ctx.last.length) return { error: 'NOTHING_HERE' };
     return { value: ctx.last[0] };
   }
@@ -469,7 +475,7 @@ function phraseSem(spec, env, ctx) {
       const pw = kidsOf(spec, 'pace-word')[0];
       const first = wordsOf(spec, env)[0];
       const pace = pw ? paceOf(pw, env) : (['run', 'crawl'].includes(first) ? first : undefined);
-      if (md && findFirst(md, 'object') && ['to', 'towards', 'toward', 'in'].includes(wordsOf(md, env)[0])) {
+      if (md && findFirst(md, 'object') && ['to', 'towards', 'toward', 'in', 'into', 'onto', 'past'].includes(wordsOf(md, env)[0])) {
         const o = objRole(findFirst(md, 'object'), env, ctx);
         if (o.stop) return o.stop;
         return act('VB_MOVE_TOWARD', { object: o.value });
@@ -477,7 +483,7 @@ function phraseSem(spec, env, ctx) {
       return act('VB_MOVE_DIRECTION', { direction: dirCode(findFirst(md, 'direction') || md, env), pace,
         distance: numberOf(kidsOf(spec, 'number')[0], env) });
     }
-    case 'face': return act('VB_FACE_DIRECTION', { direction: dirCode(findFirst(spec, 'direction'), env) });
+    case 'face': return act('VB_FACE_DIRECTION', { direction: wordsOf(spec, env).includes('around') ? 'B' : dirCode(findFirst(spec, 'direction'), env) });
     case 'get': {
       let value;
       if (!direct[0]) {
@@ -570,6 +576,10 @@ function phraseSem(spec, env, ctx) {
     case 'tell': {
       const a = objOf(0);
       if (a.stop) return a.stop;
+      if (wordsOf(spec, env).indexOf('that') >= 0 && !kidsOf(spec, 'quoted-text').length) {
+        const ws = wordsOf(spec, env);
+        return act('VB_TELL_OBJECT', { object: a.value, topic: ws.slice(ws.indexOf('that') + 1).join(' ') });
+      }
       let topic;
       if (direct[1]) {
         const b = objOf(1);
@@ -820,6 +830,12 @@ function phraseSem(spec, env, ctx) {
       return act('VB_TAUNT', { target: o.value, topic: topicAfter(spec, env, ['to']) });
     }
     case 'judge': return onTarget('VB_JUDGE_SINCERITY');
+    case 'talk': {
+      const o = objOf(0);
+      if (o.stop) return o.stop;
+      return act('VB_TELL_OBJECT', { object: o.value, topic: topicAfter(spec, env, ['about']) });
+    }
+    case 'sit-on': return act('VB_SIT', {});
     case 'posture': return act(own(POSTURE, spec.kids[0].rule), {});
     case 'pretend': return act('VB_PRETEND', { state: textOf(findFirst(spec, 'pretense'), env) });
     default: return err('NOT_UNDERSTOOD');
@@ -851,7 +867,7 @@ function sayRoles(node, env, verbWord) {
   let volume = 'normal';
   if (tk.vol === 'w') volume = 'quiet';
   else if (tk.vol === 'y') volume = 'loud';
-  else if (tk.text.endsWith('!')) volume = 'loud';
+  else if (tk.text.endsWith('!') || (node.rule === 'quoted-speech' && env.toks[node.end - 1].k === 'w' && env.toks[node.end - 1].v === '!')) volume = 'loud';
   if (verbWord === 'whisper') volume = 'quiet';
   else if (['yell', 'scream', 'shout'].includes(verbWord)) volume = 'loud';
   return act('VB_SAY', { text: tk.text, volume });
