@@ -142,7 +142,7 @@ aim at the goblin	VB_TARGET_SET	object=goblin	near=goblin	aim at
 clear target	VB_TARGET_CLEAR	-	-	clear
 wait	VB_WAIT	duration=1min	-	wait, a minute
 wait an hour	VB_WAIT	duration=60min	-	wait with duration
-rest	VB_REST	-	-	rest
+rest	VB_SLEEP	-	-	rest is sleep: the player unaware
 sleep	VB_SLEEP	-	-	sleep
 stop	VB_STOP	task=current	-	stop, any task (question 9)
 stop digging	VB_STOP	task=digging	-	stop, named (question 9)
@@ -218,3 +218,7 @@ w"You are doomed."	VB_SAY	text=You are doomed.;volume=quiet	-	whisper by prefix
 y"Here we come!"	VB_SAY	text=Here we come!;volume=loud	-	yell by prefix
 "Charge!"	VB_SAY	text=Charge!;volume=loud	-	ending in ! is yelled
 "Hello."	VB_SAY	text=Hello.;volume=normal	-	plain quoted text: said aloud
+sleep for an hour	VB_SLEEP	duration=60min	-	sleep with a duration
+wait 10 minutes	VB_WAIT	duration=10min	-	a long task, stopped by stop
+wait	VB_WAIT	duration=1min	-	bare wait: a minute
+stop waiting	VB_STOP	task=waiting	-	stops the wait

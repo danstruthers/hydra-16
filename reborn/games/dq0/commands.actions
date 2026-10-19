@@ -46,7 +46,6 @@ VB_TRACK                object
 VB_TARGET_SET           object
 VB_TARGET_CLEAR
 VB_WAIT                 duration
-VB_REST
 VB_SLEEP
 VB_STOP                 task
 VB_NAME_OBJECT          object name
