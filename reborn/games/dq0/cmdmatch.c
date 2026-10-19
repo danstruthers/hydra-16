@@ -1,9 +1,15 @@
-/* cmdmatch.c - the command grammar's matcher, for the 65C02 (cc65). See cmdmatch.h. Host reference: sim/tools/
-   commandcompile.js; the test data and the expected results: sim/tools/commandmatch-gen.js. */
+/* cmdmatch.c - the command grammar's matcher, for the 65C02 (cc65). Host reference: sim/tools/commandcompile.js; the
+   test data and expected results: sim/tools/commandmatch-gen.js; the tables: sim/tools/commandtables.js.
+
+   The matcher returns, for a rule (or a node) at a position, the set of positions where it can end, as a bit mask
+   (bit p: the match ends before token p). Nothing is pushed on the stack for a step, so the stack grows with the
+   grammar's nesting, not with the length of a parse. Rules are memoised per position (memo[rule][pos]), which is the
+   RAM this costs. A line parses when the rule "line" can end after its last token. The grammar is unambiguous on the
+   corpus, so no parse is ranked; the first answer is the answer. */
 #include <string.h>
 #include "cmdmatch.h"
 
-/* Node tags in the table (commandtables.js) */
+/* Node tags in the grammar table */
 #define T_SEQ 1
 #define T_ALT 2
 #define T_OPT 3
@@ -29,49 +35,51 @@
 #define MAXRULES 240
 #define MAXNAMES 260
 #define MAXWORDS 400
-#define MAXTOK 24
+#define MAXALIAS 80
+#define MAXTOK 14        /* positions 0..14 fit a 16-bit mask; the corpus is at most 12 words */
 #define MAXREP 12
-#define MAXALIAS 64
-#define STEP_LIMIT 30000
-
-/* Continuations: what remains to be matched after the node in hand */
-#define C_END 0
-#define C_RULE 1
-#define C_SEQ 2
-#define C_REP 3
-
-typedef struct Cont Cont;
-struct Cont {
-  unsigned char *reached;
-  int kind;
-  const unsigned char *node;
-  int count;
-  int start;
-  Cont *next;
-};
+#define UNKNOWN 0xFFFF   /* a memo entry not yet computed */
 
 static const unsigned char *rulep[MAXRULES];
 static const unsigned char *namep[MAXNAMES];
 static unsigned char namelen[MAXNAMES];
 static int namekind[MAXNAMES];
-static const unsigned char *wordp[MAXWORDS];
+static const unsigned char *wordp[MAXWORDS];   /* the packed letters of each word */
 static unsigned char wordlen[MAXWORDS];
 static int nrules, nnames, nwords, rule_line, rule_adjunct, rule_sequence;
-static int has_then;
-/* dead[rule][pos]: the rule has no match at pos (its continuation was never reached); only failures are remembered */
-static unsigned char dead[MAXRULES][4];
+static unsigned int memo[MAXRULES][MAXTOK + 1];
+
+static const unsigned char *aliasw[MAXALIAS], *aliasv[MAXALIAS];
+static unsigned char aliaswl[MAXALIAS], aliasvl[MAXALIAS], aliasany[MAXALIAS];
+static int nalias;
 
 static char tbuf[200];
 static int tbn;
-static int nalias;
-static const unsigned char *aliasw[MAXALIAS], *aliasv[MAXALIAS];
-static unsigned char aliaswl[MAXALIAS], aliasvl[MAXALIAS];
-static int word_index(const char *t, int len);
-static int tokk[MAXTOK], tokw[MAXTOK], tokoff[MAXTOK], toklen[MAXTOK];
-static unsigned tokmask[MAXTOK];   /* bit k set: the token fits the open-name kind k (computed once a line) */
-static int ntok;
+static int tokk[MAXTOK + 1], tokw[MAXTOK + 1], tokoff[MAXTOK + 1], toklen[MAXTOK + 1];
+static unsigned int tokmask[MAXTOK + 1];   /* bit k: the token fits the open-name kind k */
+static int ntok, has_then;
 static const char *cur_world, *cur_names, *cur_deities;
-static int adjcount, best, steps, aborted, found;
+
+/* The letters of a packed word: 5 bits a letter (a to z, then ! = - ') */
+static const char PACK[] = "abcdefghijklmnopqrstuvwxyz!=-'";
+
+static int letter_at(const unsigned char *packed, int nbytes, int j)
+{
+  int bit = 5 * j, b = bit >> 3, sh = bit & 7;
+  unsigned int window = packed[b];
+  if (b + 1 < nbytes) window |= (unsigned int)packed[b + 1] << 8;
+  return PACK[(window >> sh) & 31];
+}
+
+/* Does word w spell the len letters of text (the text is lower case)? */
+static int word_is(int w, const char *text, int len)
+{
+  int j, nb = (5 * wordlen[w] + 7) >> 3;
+  if (wordlen[w] != len) return 0;
+  for (j = 0; j < len; j++)
+    if (letter_at(wordp[w], nb, j) != text[j]) return 0;
+  return 1;
+}
 
 static int same(const unsigned char *a, int alen, const char *b)
 {
@@ -79,7 +87,105 @@ static int same(const unsigned char *a, int alen, const char *b)
   return alen == n && memcmp(a, b, n) == 0;
 }
 
-/* The word-list test: is the word (tbuf[off..off+len)) one of the space-separated words in list? */
+static unsigned rd16(const unsigned char *p)
+{
+  return p[0] | ((unsigned)p[1] << 8);
+}
+
+/* A slot is a child: its size (one byte under 128; two bytes above, the first with its top bit set), then the child.
+   The size lets a reader step over a child without walking it. */
+static const unsigned char *slot_body(const unsigned char *s)
+{
+  return (s[0] & 0x80) ? s + 2 : s + 1;
+}
+
+static const unsigned char *slot_next(const unsigned char *s)
+{
+  unsigned size = (s[0] & 0x80) ? (((unsigned)(s[0] & 0x7F) << 8) | s[1]) : s[0];
+  return slot_body(s) + size;
+}
+
+/* Read the grammar table: the names (rules first, then open names), the packed words, and the rule bodies. */
+int cmd_init(const unsigned char *t)
+{
+  const unsigned char *p = t;
+  unsigned i, n;
+  if (p[0] != 'D' || p[1] != 'Q' || p[2] != '0' || p[3] != 'G' || p[4] != 6) return 0;
+  p += 5;
+  nrules = rd16(p); p += 2;
+  nnames = rd16(p); p += 2;
+  for (i = 0; i < nnames; i++) {
+    namelen[i] = p[0];
+    namep[i] = p + 1;
+    p += 1 + p[0];
+  }
+  nwords = rd16(p); p += 2;
+  for (i = 0; i < nwords; i++) {
+    wordlen[i] = p[0];
+    wordp[i] = p + 1;
+    p += 1 + ((5 * p[0] + 7) >> 3);
+  }
+  {
+    const unsigned char *offs = p;
+    const unsigned char *rules = p + 2 * nrules;
+    for (i = 0; i < nrules; i++) rulep[i] = rules + rd16(offs + 2 * i);
+  }
+  /* The open names and their kinds; quoted-text is a rule in the grammar but an open name to the host */
+  for (i = 0; i < nnames; i++) {
+    n = namelen[i];
+    namekind[i] = K_NONE;
+    if (i < (unsigned)nrules && !same(namep[i], n, "quoted-text")) continue;
+    if (same(namep[i], n, "name")) namekind[i] = K_OBJ;
+    else if (same(namep[i], n, "alias")) namekind[i] = K_OBJ;
+    else if (same(namep[i], n, "adj")) namekind[i] = K_ADJ;
+    else if (same(namep[i], n, "number")) namekind[i] = K_NUMBER;
+    else if (same(namep[i], n, "ordinal")) namekind[i] = K_ORDINAL;
+    else if (same(namep[i], n, "task-name")) namekind[i] = K_TASK;
+    else if (same(namep[i], n, "spell-word")) namekind[i] = K_SPELL;
+    else if (same(namep[i], n, "text") || same(namep[i], n, "meta-topic")) namekind[i] = K_TEXT;
+    else if (same(namep[i], n, "name-word")) namekind[i] = K_NAMEWORD;
+    else if (same(namep[i], n, "deity-name")) namekind[i] = K_DEITY;
+    else if (same(namep[i], n, "pretense-word")) namekind[i] = K_PRETENSE;
+    else if (same(namep[i], n, "quoted-text")) namekind[i] = K_QUOTED;
+  }
+  for (i = 0; i < (unsigned)nrules; i++) {
+    if (same(namep[i], namelen[i], "line")) rule_line = i;
+    if (same(namep[i], namelen[i], "adjunct")) rule_adjunct = i;
+    if (same(namep[i], namelen[i], "sequence")) rule_sequence = i;
+  }
+  return 1;
+}
+
+/* Read the default aliases (the alias table, commandtables.js): the word, the verb, and whether it stands anywhere. */
+int cmd_init_aliases(const unsigned char *t)
+{
+  const unsigned char *p = t;
+  int i;
+  if (p[0] != 'D' || p[1] != 'Q' || p[2] != '0' || p[3] != 'A' || p[4] != 1) return 0;
+  nalias = p[5];
+  p += 6;
+  for (i = 0; i < nalias; i++) {
+    aliaswl[i] = p[0];
+    aliasw[i] = p + 1;
+    p += 1 + p[0];
+    aliasvl[i] = p[0];
+    aliasv[i] = p + 1;
+    p += 1 + p[0];
+    aliasany[i] = *p;
+    p++;
+  }
+  return 1;
+}
+
+static int word_index(const char *t, int len)
+{
+  int w;
+  for (w = 0; w < nwords; w++)
+    if (word_is(w, t, len)) return w;
+  return -1;
+}
+
+/* Is the word (tbuf[off..off+len)) one of the space-separated words in list? */
 static int in_list(const char *list, int off, int len)
 {
   const char *p = list;
@@ -120,7 +226,7 @@ static int is_number(int off, int len)
   return in_words(off, len, NUM_WORDS, 10);
 }
 
-/* Does the token t fit the open name of this kind? (the host's openOK) */
+/* Does token t fit the open-name kind k? (the host's openOK) */
 static int open_ok(int kind, int t)
 {
   int off = tokoff[t], len = toklen[t];
@@ -137,102 +243,13 @@ static int open_ok(int kind, int t)
     case K_NAMEWORD: return !reserved || in_list(cur_world, off, len);
     case K_DEITY: return in_list(cur_deities, off, len);
     case K_PRETENSE: return !reserved;
-    default: /* an object's name: a thing the world names, or a word no grammar rule uses */
+    default:
       return !in_words(off, len, NOT_OBJECT_WORDS, 3) &&
              (!reserved || in_list(cur_world, off, len) || in_list(cur_names, off, len));
   }
 }
 
-/* A slot is a child: its size (one byte under 128; two bytes above, the first with its top bit set), then the child.
-   The size lets a reader step over a child without walking it. */
-static const unsigned char *slot_body(const unsigned char *s)
-{
-  return (s[0] & 0x80) ? s + 2 : s + 1;
-}
-
-static const unsigned char *slot_next(const unsigned char *s)
-{
-  unsigned size = (s[0] & 0x80) ? (((unsigned)(s[0] & 0x7F) << 8) | s[1]) : s[0];
-  return slot_body(s) + size;
-}
-
-static unsigned rd16(const unsigned char *p)
-{
-  return p[0] | ((unsigned)p[1] << 8);
-}
-
-/* Read the table: the names (rules first, then open names), the words, and the rule nodes. */
-int cmd_init(const unsigned char *t)
-{
-  const unsigned char *p = t;
-  unsigned i, n;
-  if (p[0] != 'D' || p[1] != 'Q' || p[2] != '0' || p[3] != 'G' || p[4] != 3) return 0;
-  p += 5;
-  nrules = rd16(p); p += 2;
-  nnames = rd16(p); p += 2;
-  for (i = 0; i < nnames; i++) {
-    namelen[i] = p[0];
-    namep[i] = p + 1;
-    p += 1 + p[0];
-  }
-  nwords = rd16(p); p += 2;
-  for (i = 0; i < nwords; i++) {
-    wordlen[i] = p[0];
-    wordp[i] = p + 1;
-    p += 1 + p[0];
-  }
-  nalias = p[0];
-  p++;
-  for (i = 0; i < (unsigned)nalias; i++) {
-    aliaswl[i] = p[0];
-    aliasw[i] = p + 1;
-    p += 1 + p[0];
-    aliasvl[i] = p[0];
-    aliasv[i] = p + 1;
-    p += 1 + p[0];
-  }
-  {
-    const unsigned char *offs = p;
-    const unsigned char *rules = p + 2 * nrules;
-    for (i = 0; i < nrules; i++) rulep[i] = rules + rd16(offs + 2 * i);
-  }
-  /* The open names and their kinds; quoted-text is a rule in the grammar but an open name to the host */
-  for (i = 0; i < nnames; i++) {
-    int k = K_NONE;
-    n = namelen[i];
-    if (i < nrules && !same(namep[i], n, "quoted-text")) { namekind[i] = K_NONE; continue; }
-    if (same(namep[i], n, "unique-name") || same(namep[i], n, "kind-name") || same(namep[i], n, "fixture-name") ||
-        same(namep[i], n, "place-name") || same(namep[i], n, "known-alias") || same(namep[i], n, "alias")) k = K_OBJ;
-    else if (same(namep[i], n, "name")) k = K_OBJ;
-    else if (same(namep[i], n, "adj")) k = K_ADJ;
-    else if (same(namep[i], n, "number")) k = K_NUMBER;
-    else if (same(namep[i], n, "ordinal")) k = K_ORDINAL;
-    else if (same(namep[i], n, "task-name")) k = K_TASK;
-    else if (same(namep[i], n, "spell-word")) k = K_SPELL;
-    else if (same(namep[i], n, "text") || same(namep[i], n, "meta-topic")) k = K_TEXT;
-    else if (same(namep[i], n, "name-word")) k = K_NAMEWORD;
-    else if (same(namep[i], n, "deity-name")) k = K_DEITY;
-    else if (same(namep[i], n, "pretense-word")) k = K_PRETENSE;
-    else if (same(namep[i], n, "quoted-text")) k = K_QUOTED;
-    namekind[i] = k;
-  }
-  for (i = 0; i < nrules; i++) {
-    if (same(namep[i], namelen[i], "line")) rule_line = i;
-    if (same(namep[i], namelen[i], "adjunct")) rule_adjunct = i;
-    if (same(namep[i], namelen[i], "sequence")) rule_sequence = i;
-  }
-  return 1;
-}
-
-static int word_index(const char *t, int len)
-{
-  int w;
-  for (w = 0; w < nwords; w++)
-    if (wordlen[w] == len && memcmp(wordp[w], t, len) == 0) return w;
-  return -1;
-}
-
-/* Does the key (words separated by single spaces) match the tokens from t on? n: how many tokens it takes. */
+/* Does the alias key (words separated by single spaces) match the tokens from t on? n: the tokens it takes. */
 static int key_match(int t, const unsigned char *key, int klen, int *n)
 {
   int pos = 0, count = 0, j = t, s0, wl;
@@ -249,7 +266,7 @@ static int key_match(int t, const unsigned char *key, int klen, int *n)
   return count > 0;
 }
 
-/* Remove count tokens from t on (their words are gone, the line is shorter). */
+/* Remove count tokens from t on: the line is shorter. */
 static void drop_tokens(int t, int count)
 {
   int k;
@@ -262,18 +279,20 @@ static void drop_tokens(int t, int count)
   ntok -= count;
 }
 
-/* The default aliases at the start of a command, or of a part after "then", stand for their verbs (in place).
-   The longest alias whose words start here wins; a key may be several words ("look closely"). */
+/* The aliases: a command's verb at the start of a command or of a part after "then"; a direction word anywhere. The
+   longest key wins; a key may be several words ("look closely"). */
 static void apply_aliases(void)
 {
   int t, i, n, bi, bn, vl, j;
   for (t = 0; t < ntok; t++) {
     int seg = (t == 0) || (tokk[t - 1] == 0 && toklen[t - 1] == 4 && memcmp(tbuf + tokoff[t - 1], "then", 4) == 0);
-    if (!seg || tokk[t] != 0) continue;
+    if (tokk[t] != 0) continue;
     bi = -1;
     bn = 0;
-    for (i = 0; i < nalias; i++)
+    for (i = 0; i < nalias; i++) {
+      if (!seg && !aliasany[i]) continue;
       if (key_match(t, aliasw[i], aliaswl[i], &n) && n > bn) { bi = i; bn = n; }
+    }
     if (bi < 0) continue;
     vl = aliasvl[bi];
     tokoff[t] = tbn;
@@ -285,33 +304,33 @@ static void apply_aliases(void)
   }
 }
 
-/* Tokenize a line: words (lower case, with ! and =), quoted text (with a w or y prefix), and nothing else. */
+/* Tokenize a line: words (lower case, with ! and =), quoted text (with a w or y), nothing else; then the aliases, then
+   the open-name kinds of each token. */
 static void tokenize(const char *s)
 {
-  int nb = 0, t;
+  int nb = 0, t, w;
   ntok = 0;
   while (*s && ntok < MAXTOK) {
-    int vol = 0, start, len;
     char c = *s;
+    int start, len;
     if (c == ' ') { s++; continue; }
     if (c == '"' || ((c == 'w' || c == 'y') && s[1] == '"')) {
-      if (c != '"') { vol = c; s++; }
+      if (c != '"') s++;
       s++;
       t = ntok++;
       tokk[t] = 1;
       tokw[t] = -1;
       tokoff[t] = nb;
-      while (*s && *s != '"' && nb < 110) tbuf[nb++] = *s++;
+      while (*s && *s != '"' && nb < 180) tbuf[nb++] = *s++;
       if (*s == '"') s++;
       toklen[t] = nb - tokoff[t];
-      (void)vol;
       tbuf[nb++] = 0;
       continue;
     }
     if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
       start = nb;
       while ((*s >= 'a' && *s <= 'z') || (*s >= 'A' && *s <= 'Z') || (*s >= '0' && *s <= '9') || *s == '\'' || *s == '-') {
-        if (nb < 110) tbuf[nb++] = (*s >= 'A' && *s <= 'Z') ? *s + 32 : *s;
+        if (nb < 180) tbuf[nb++] = (*s >= 'A' && *s <= 'Z') ? *s + 32 : *s;
         s++;
       }
     } else if (c == '!' || c == '=') {
@@ -327,12 +346,7 @@ static void tokenize(const char *s)
     tokk[t] = 0;
     tokoff[t] = start;
     toklen[t] = len;
-    tokw[t] = -1;
-    {
-      int w;
-      for (w = 0; w < nwords; w++)
-        if (wordlen[w] == len && memcmp(wordp[w], tbuf + start, len) == 0) { tokw[t] = w; break; }
-    }
+    tokw[t] = word_index(tbuf + start, len);
     tbuf[nb++] = 0;
   }
   tbn = nb;
@@ -348,146 +362,93 @@ static void tokenize(const char *s)
   }
 }
 
-/* The matcher. match(node, pos, k): the node matched at pos, then k. run(k, pos): k, once something has matched to pos.
-   Both return 1 only to stop the whole search (the step limit); a parse is recorded at the end and the search goes on. */
-static int run(Cont *k, int pos);
+/* The positions a node can end at, from pos: a bit mask (bit p). */
+static unsigned ends(const unsigned char *p, int pos);
 
-static int match(const unsigned char *p, int pos, Cont *k)
+/* A rule's ends from pos, memoised. A rule that is entered again at the same position (left recursion) gives nothing
+   the second time, so the search always finishes. */
+static unsigned rule_ends(int id, int pos)
 {
-  if (++steps > STEP_LIMIT) { aborted = 1; return 1; }
+  unsigned m;
+  if (memo[id][pos] != UNKNOWN) return memo[id][pos];
+  if ((int)id == rule_sequence && !has_then) return memo[id][pos] = 0;   /* a sequence needs a then */
+  memo[id][pos] = 0;
+  m = ends(rulep[id], pos);
+  memo[id][pos] = m;
+  return m;
+}
+
+static unsigned ends(const unsigned char *p, int pos)
+{
+  unsigned m = 0, out = 0;
+  int i, q, n;
+  const unsigned char *s;
   switch (*p) {
-    case T_TERM: {
-      unsigned n = p[1], i;
-      if (pos + (int)n > ntok) return 0;
-      for (i = 0; i < n; i++) {
-        int t = pos + i;
-        if (tokk[t] != 0 || tokw[t] != (int)rd16(p + 2 + 2 * i)) return 0;
-      }
-      return run(k, pos + n);
-    }
+    case T_TERM:
+      n = p[1];
+      if (pos + n > ntok) return 0;
+      for (i = 0; i < n; i++)
+        if (tokk[pos + i] != 0 || tokw[pos + i] != (int)rd16(p + 2 + 2 * i)) return 0;
+      return 1u << (pos + n);
     case T_QUOTE:
-      return (pos < ntok && tokk[pos] == 1) ? run(k, pos + 1) : 0;
+      return (pos < ntok && tokk[pos] == 1) ? 1u << (pos + 1) : 0;
     case T_NT: {
       unsigned id = rd16(p + 1);
-      if ((int)id == rule_sequence && !has_then) return 0;   /* a sequence needs a then: no need to try one */
-      if (namekind[id] == K_NONE) {
-        Cont c;
-        unsigned char reached = 0;
-        int adj = (int)id == rule_adjunct, r;
-        if (dead[id][pos >> 3] & (1 << (pos & 7))) return 0;
-        c.kind = C_RULE;
-        c.node = 0;
-        c.count = 0;
-        c.start = 0;
-        c.next = k;
-        c.reached = &reached;
-        if (adj) adjcount++;
-        r = match(rulep[id], pos, &c);
-        if (adj) adjcount--;
-        if (!reached && !aborted && !found) dead[id][pos >> 3] |= 1 << (pos & 7);
-        return r;
+      if (namekind[id] == K_NONE) return rule_ends(id, pos);
+      return (pos < ntok && ((tokmask[pos] >> namekind[id]) & 1u)) ? 1u << (pos + 1) : 0;
+    }
+    case T_SEQ:
+      /* the positions so far, passed through each item in turn */
+      m = 1u << pos;
+      s = p + 2;
+      for (i = 0; i < p[1] && m; i++) {
+        out = 0;
+        for (q = 0; q <= ntok; q++)
+          if (m & (1u << q)) out |= ends(slot_body(s), q);
+        m = out;
+        s = slot_next(s);
       }
-      return (pos < ntok && ((tokmask[pos] >> namekind[id]) & 1u)) ? run(k, pos + 1) : 0;
-    }
-    case T_SEQ: {
-      Cont c;
-      if (p[1] == 0) return run(k, pos);
-      c.kind = C_SEQ;
-      c.node = p + 2;
-      c.count = p[1];
-      c.start = 0;
-      c.next = k;
-      return run(&c, pos);
-    }
-    case T_ALT: {
-      unsigned n = p[1], i;
-      const unsigned char *o = p + 2;
-      for (i = 0; i < n; i++) {
-        if (match(slot_body(o), pos, k)) return 1;
-        o = slot_next(o);
+      return m;
+    case T_ALT:
+      s = p + 2;
+      for (i = 0; i < p[1]; i++) {
+        out |= ends(slot_body(s), pos);
+        s = slot_next(s);
       }
-      return 0;
-    }
+      return out;
     case T_OPT:
-      if (run(k, pos)) return 1;
-      return match(slot_body(p + 1), pos, k);
+      return (1u << pos) | ends(slot_body(p + 1), pos);
     case T_REP: {
-      Cont c;
-      if (run(k, pos)) return 1;
-      c.kind = C_REP;
-      c.node = p + 1;
-      c.count = 1;
-      c.start = pos;
-      c.next = k;
-      return match(slot_body(p + 1), pos, &c);
-    }
-    default:
-      return 0;
-  }
-}
-
-static int run(Cont *k, int pos)
-{
-  switch (k->kind) {
-    case C_END:
-      /* the grammar is unambiguous: the first parse is the parse, so the search stops here */
-      if (pos == ntok) {
-        found = 1;
-        if (best < 0 || adjcount < best) best = adjcount;
-        return 1;
+      /* zero or more: the positions reached by repeating the child, each repetition moving on */
+      unsigned frontier = 1u << pos, seen = 1u << pos, nxt;
+      for (n = 0; n < MAXREP && frontier; n++) {
+        nxt = 0;
+        for (q = 0; q <= ntok; q++)
+          if (frontier & (1u << q)) nxt |= ends(slot_body(p + 1), q);
+        nxt &= ~seen;
+        seen |= nxt;
+        frontier = nxt;
       }
-      return 0;
-    case C_RULE:
-      *k->reached = 1;
-      return run(k->next, pos);
-    case C_SEQ: {
-      Cont c;
-      if (k->count == 0) return run(k->next, pos);
-      c.kind = C_SEQ;
-      c.node = slot_next(k->node);
-      c.count = k->count - 1;
-      c.start = 0;
-      c.next = k->next;
-      return match(slot_body(k->node), pos, &c);
-    }
-    case C_REP: {
-      Cont c;
-      if (pos == k->start) return 0;          /* an iteration that took nothing: no more */
-      if (run(k->next, pos)) return 1;
-      if (k->count >= MAXREP) return 0;
-      c.kind = C_REP;
-      c.node = k->node;
-      c.count = k->count + 1;
-      c.start = pos;
-      c.next = k->next;
-      return match(slot_body(k->node), pos, &c);
+      return seen;
     }
     default:
       return 0;
   }
 }
 
+/* Match a line: 1 if it parses, 0 if not, -1 if it is too long for the matcher. *fewest is always 0 now (no adjuncts). */
 int cmd_match(const char *line, const char *world, const char *names, const char *deities, int *fewest)
 {
-  Cont end;
+  unsigned m;
+  int r, i;
   cur_world = world;
   cur_names = names;
   cur_deities = deities;
   tokenize(line);
-  best = -1;
-  adjcount = 0;
-  memset(dead, 0, sizeof dead);
-  steps = 0;
-  aborted = 0;
-  found = 0;
-  end.kind = C_END;
-  end.node = 0;
-  end.count = 0;
-  end.start = 0;
-  end.next = 0;
-  match(rulep[rule_line], 0, &end);
-  if (aborted) return -1;
-  if (!found) return 0;
-  *fewest = best;
-  return 1;
+  if (ntok > MAXTOK) return -1;
+  for (r = 0; r < nrules; r++)
+    for (i = 0; i <= MAXTOK; i++) memo[r][i] = UNKNOWN;
+  m = rule_ends(rule_line, 0);
+  *fewest = 0;
+  return (m >> ntok) & 1u ? 1 : 0;
 }
