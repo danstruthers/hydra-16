@@ -304,3 +304,11 @@ stop then pace run	VB_SEQUENCE	steps=VB_STOP,VB_SET_PACE;2.pace=run	-	a stop, th
 eat the rations then north then eat the apple	VB_SEQUENCE	steps=VB_EAT_OBJECT,VB_MOVE_DIRECTION,VB_EAT_OBJECT;3.object=apple	near=rations,apple	three steps
 wait then	ERROR:NOT_UNDERSTOOD	-	-	a then with nothing after is not a sequence
 throw then north	ERROR:NOTHING_HERE	-	-	a part that fails stops the line with its error
+take the sword and the shield	VB_SEQUENCE	steps=VB_RETRIEVE_OBJECT,VB_RETRIEVE_OBJECT;1.object=sword;2.object=shield	near=sword,shield	a list: one take for each object
+attack the rat and the goblin	VB_SEQUENCE	steps=VB_ATTACK_OBJECT,VB_ATTACK_OBJECT;1.object=rat;2.object=goblin	near=rat,goblin	the same attack, once each
+put the apple and the pear in the chest	VB_SEQUENCE	steps=VB_PUT_OBJECT,VB_PUT_OBJECT;1.object=apple;1.container=chest;2.object=pear;2.container=chest	near=apple,pear,chest	a list in the first object
+drop the sword and the lamp	VB_SEQUENCE	steps=VB_DROP_OBJECT,VB_DROP_OBJECT;2.object=lamp	near=sword,lamp	a drop list
+take the sword and the shield then wait	VB_SEQUENCE	steps=VB_RETRIEVE_OBJECT,VB_RETRIEVE_OBJECT,VB_WAIT;3.duration=1min	near=sword,shield	a list inside a sequence is flattened
+take the sword and	ERROR:NOT_UNDERSTOOD	-	near=sword	a dangling and is not a list
+take the sword and the moon	ERROR:NO_SUCH_THING	-	near=sword	a list stops at its first failing object
+take a and b	VB_SEQUENCE	steps=VB_RETRIEVE_OBJECT,VB_RETRIEVE_OBJECT;1.object=a;2.object=b	near=a,b	the user's example: names a and b

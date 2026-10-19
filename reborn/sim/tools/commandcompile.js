@@ -386,6 +386,32 @@ function withAdjuncts(res, cmd, env, ctx) {
   return res;
 }
 
+// An object list ("the sword and the shield") is the same phrase once for each object, in order. Only the first list
+// in a phrase is expanded here; a second list in the same phrase is expanded the same way on the next pass.
+function expandLists(spec) {
+  const listed = kidsOf(spec, 'object').find(o => kidsOf(o, 'object-one').length > 1);
+  if (!listed) return [spec];
+  const out = [];
+  for (const part of kidsOf(listed, 'object-one')) {
+    const single = Object.assign({}, listed, { kids: [part] });
+    const copy = Object.assign({}, spec, { kids: spec.kids.map(k => (k === listed ? single : k)) });
+    out.push(...expandLists(copy));
+  }
+  return out;
+}
+
+// A sequence of results: a step that failed stops the line with its error; a step that is itself a sequence is
+// flattened into the list.
+function sequenceOf(results) {
+  const steps = [];
+  for (const r of results) {
+    if (r.error || r.question) return r;
+    if (r.action === 'VB_SEQUENCE') steps.push(...r.steps);
+    else steps.push(r);
+  }
+  return { action: 'VB_SEQUENCE', roles: { steps: steps.map(x => x.action).join(',') }, steps };
+}
+
 // The phrase's own meaning: spec is the rule named by its kind (look, get, move, ...).
 function phraseSem(spec, env, ctx) {
   const r = spec.rule;
@@ -788,13 +814,7 @@ class Compiler {
 
   // A sequence: each part is a whole action, in order; a part that does not compile stops the line with its error.
   sequenceSem(node, env, ctx) {
-    const steps = [];
-    for (const p of kidsOf(node, 'seq-part')) {
-      const r = this.nodeSem(p.kids[0], env, ctx);
-      if (r.error || r.question) return r;
-      steps.push(r);
-    }
-    return { action: 'VB_SEQUENCE', roles: { steps: steps.map(x => x.action).join(',') }, steps };
+    return sequenceOf(kidsOf(node, 'seq-part').map(p => this.nodeSem(p.kids[0], env, ctx)));
   }
 
   semantics(line, env, ctx) {
@@ -803,7 +823,10 @@ class Compiler {
 
   nodeSem(child, env, ctx) {
     switch (child.rule) {
-      case 'command': return withAdjuncts(phraseSem(child.kids[0].kids[0], env, ctx), child, env, ctx);
+      case 'command': {
+        const steps = expandLists(child.kids[0].kids[0]).map(spec => withAdjuncts(phraseSem(spec, env, ctx), child, env, ctx));
+        return steps.length === 1 ? steps[0] : sequenceOf(steps);
+      }
       case 'bare-direction': return act('VB_MOVE_DIRECTION', { direction: dirCode(findFirst(child, 'direction'), env),
         distance: numberOf(findFirst(child, 'number'), env) });
       case 'bare-verb': return bareVerb(child, env, ctx);

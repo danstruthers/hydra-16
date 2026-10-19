@@ -114,7 +114,8 @@
 <here-ref>       ::= "me" | "myself" | "here" | "this place"        (* question 14: "me" only, never "you" *)
 
 (* ---- Objects ---- *)
-<object>         ::= <np> | <pronoun> | <me-phrase> | <everything>
+<object>         ::= <object-one> { "and" <object-one> }
+<object-one>     ::= <np> | <pronoun> | <me-phrase> | <everything>   (* "the sword and the shield": a list, one command for each *)
 <np>             ::= [ <det> ] [ <selector> ] { <adj> } <head>
 <det>            ::= "a" | "an" | "the" | "this" | "that" | "these" | "those" | "my"
 <selector>       ::= <number> | "all" | "every" | "each" | "any" | <ordinal>
