@@ -217,7 +217,7 @@ unsigned char __fastcall__ o_pick (unsigned char obj, unsigned char orel)
 /* A command (main.c's, the parser's, before it's carried out): if a choice was asked, a number (1 ...) or a way
 ** ("left", "the one on the right": the nearest that way) chooses one, and the command asked about is carried out on
 ** it (c made it again; o_pick gives that one); any other command lets the choice go */
-void __fastcall__ o_choose (struct pcmd* c)
+unsigned char __fastcall__ o_choose (struct pcmd* c)
 {
     unsigned char n = asked, k = 0xFF, j, d, bd = 0xFF;
 
@@ -225,7 +225,7 @@ void __fastcall__ o_choose (struct pcmd* c)
     asked = 0;
     cx = 0;
     if (!n || c->verb != V_MOVE || c->obj) {
-        return;
+        return 0;
     }
     if (c->word[0] >= '1' && c->word[0] < '1' + n && !c->word[1]) {
         k = c->word[0] - '1';
@@ -237,9 +237,11 @@ void __fastcall__ o_choose (struct pcmd* c)
             }
         }
     }
-    if (k != 0xFF) {
-        memcpy (c, &kept, sizeof kept);
-        cx = px[k];
-        cy = py[k];
+    if (k == 0xFF) {
+        return 0;
     }
+    memcpy (c, &kept, sizeof kept);
+    cx = px[k];
+    cy = py[k];
+    return 1;
 }

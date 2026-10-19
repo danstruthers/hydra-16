@@ -1,0 +1,385 @@
+# commands.words - Dingus Quest Zero's words, for what a command means to the game: the parser (games/dq0c, dq0c.s)
+# fills the game's struct pcmd (dq0.h) by them, from the words of a line the grammar (commands.ebnf) has taken, and
+# sim/tools/commandwords.js does the same on the host (the tests' reference).  They began as the old parser's tables
+# (games/dq0/parse.c, 2026-10-19), word for word; what changed is marked "(new)".
+#
+# A section a kind of word; a line a word (or words, for a verb that is several) = its meaning, the names dq0.h,
+# hub.h and level.h give (V_*, OR_*, H_*, OB_*, PR_*, HOW_*, SK_*).  A word is looked for as it was typed, then as
+# the root its alias gives (commands.aliases), so an alias the player makes means what its root means.
+#   [verbs]    the verb, if the line begins with it (several words first: "look closely" is examining)
+#   [orders]   a request to an ally (V_TELL's order: the first)
+#   [dirs]     a way: by the compass (H_*), as the character faces (REL n: an eighth turn n), GO_UP, GO_DOWN; two
+#              together are the way between them
+#   [things]   a kind of thing it can see (OB_*); PART: a part of one, its own word the thing's word too
+#   [preps]    after the first thing, the other's: in it, on it, from it
+#   [how]      up to it (HOW_TO) or through it (HOW_THROUGH)
+#   [special]  words the meaning turns on: WITH (the other thing, used: whatever came before), WAY_OUT (the way out),
+#              AWAY (put away: stowed), BACK (put back: not a way), HALF (a half turn), AROUND (turned or looked
+#              round), BAR (put the bar ...: barred)
+#   [styles]   a blow's verb, and what it strikes with (SK_*: the best to hand, unless one of these)
+#   [little]   passed over
+
+[verbs]
+turn on = V_LIGHT                           # (new: the grammar's light and douse, "turn the torch on" too)
+turn off = V_DOUSE
+take a gander = V_LOOK
+head butt = V_ATTACK
+look closely = V_EXAMINE
+look close = V_EXAMINE
+look in detail = V_EXAMINE
+close look = V_EXAMINE
+pick up = V_GET
+put out = V_DOUSE
+take off = V_DOFF
+put on = V_DON
+put down = V_DROP
+set down = V_DROP
+put away = V_STOW
+move = V_MOVE
+mv = V_MOVE
+walk = V_MOVE
+go = V_MOVE
+trundle = V_MOVE
+mosey = V_MOVE
+saunter = V_MOVE
+run = V_MOVE
+crawl = V_MOVE
+head = V_MOVE
+enter = V_ENTER
+approach = V_APPROACH
+look = V_LOOK
+# l is a way (left), as the grammar has it (new: it was looking)
+peer = V_LOOK
+gaze = V_LOOK
+gander = V_LOOK
+examine = V_EXAMINE
+inspect = V_EXAMINE
+x = V_EXAMINE
+search = V_SEARCH
+turn = V_TURN
+face = V_FACE
+climb = V_CLIMB
+jump = V_JUMP
+open = V_OPEN
+close = V_CLOSE
+shut = V_CLOSE
+unlock = V_UNLOCK
+pick = V_UNLOCK
+force = V_FORCE
+dig = V_DIG
+mine = V_DIG
+don = V_DON
+wear = V_DON
+equip = V_DON
+ready = V_HOLD
+wield = V_HOLD
+hold = V_HOLD
+grip = V_HOLD
+grasp = V_HOLD
+brandish = V_HOLD
+doff = V_DOFF
+remove = V_DOFF
+unequip = V_DOFF
+store = V_STOW
+stow = V_STOW
+pack = V_STOW
+put = V_PUT
+place = V_PUT
+set = V_PUT
+lay = V_PUT
+hang = V_HANG
+sheathe = V_HANG
+get = V_GET
+take = V_GET
+grab = V_GET
+acquire = V_GET
+drop = V_DROP
+light = V_LIGHT
+douse = V_DOUSE
+extinguish = V_DOUSE
+wait = V_WAIT
+z = V_WAIT
+map = V_MAP
+m = V_MOVE                                  # (new: it was the map; the grammar's move)
+sheet = V_SHEET
+skills = V_SHEET
+help = V_HELP
+? = V_HELP
+pause = V_PAUSE
+quit = V_QUIT
+hide = V_HIDE
+conceal = V_HIDE
+stash = V_HIDE
+raise = V_RAISE
+lift = V_RAISE
+winch = V_RAISE
+lower = V_LOWER
+break = V_BREAK
+smash = V_BREAK
+bend = V_BEND
+disarm = V_DISARM
+disable = V_DISARM
+bar = V_BAR
+rebar = V_BAR
+save = V_SAVE
+inventory = V_INVENTORY
+inv = V_INVENTORY
+i = V_INVENTORY
+q = V_QUIT
+read = V_READ
+use = V_USE
+apply = V_USE
+try = V_USE
+combine = V_COMBINE
+join = V_COMBINE
+fit = V_COMBINE
+mend = V_COMBINE
+talk = V_TALK
+speak = V_TALK
+chat = V_TALK
+greet = V_TALK
+hail = V_TALK
+persuade = V_PERSUADE
+convince = V_PERSUADE
+recruit = V_PERSUADE
+reason = V_PERSUADE
+win = V_PERSUADE
+bargain = V_PERSUADE
+deceive = V_DECEIVE
+trick = V_DECEIVE
+bluff = V_DECEIVE
+fool = V_DECEIVE
+lie = V_DECEIVE
+threaten = V_THREATEN
+intimidate = V_THREATEN
+scare = V_THREATEN
+frighten = V_THREATEN
+menace = V_THREATEN
+calm = V_CALM
+soothe = V_CALM
+placate = V_CALM
+pacify = V_CALM
+befriend = V_BEFRIEND
+tame = V_BEFRIEND
+coax = V_BEFRIEND
+attack = V_ATTACK
+hit = V_ATTACK
+strike = V_ATTACK
+kick = V_ATTACK
+punch = V_ATTACK
+fight = V_ATTACK
+kill = V_ATTACK
+headbutt = V_ATTACK
+defend = V_DEFEND
+tell = V_TELL
+ask = V_TELL
+order = V_TELL
+command = V_TELL
+follow = V_TELL
+come = V_TELL
+heel = V_TELL
+stay = V_TELL
+halt = V_TELL
+dismiss = V_TELL
+name = V_NAME
+call = V_NAME
+o = V_OPEN                                  # (new: the grammar's roots)
+h = V_HIDE
+j = V_JUMP
+quench = V_DOUSE
+slash = V_ATTACK                            # (new: the grammar's blows)
+bash = V_ATTACK
+stab = V_ATTACK
+bite = V_ATTACK
+elbow = V_ATTACK
+knee = V_ATTACK
+slap = V_ATTACK
+butt = V_ATTACK
+
+[orders]
+follow = OR_FOLLOW
+come = OR_FOLLOW
+heel = OR_FOLLOW
+wait = OR_WAIT
+stay = OR_WAIT
+halt = OR_WAIT
+stop = OR_WAIT
+remain = OR_WAIT
+guard = OR_WAIT
+go = OR_HOME
+leave = OR_HOME
+home = OR_HOME
+dismiss = OR_HOME
+fetch = OR_FETCH
+bring = OR_FETCH
+get = OR_FETCH
+retrieve = OR_FETCH
+
+[dirs]
+n = H_N
+north = H_N
+ne = H_NE
+northeast = H_NE
+e = H_E
+east = H_E
+se = H_SE
+southeast = H_SE
+s = H_S
+south = H_S
+sw = H_SW
+southwest = H_SW
+w = H_W
+west = H_W
+nw = H_NW
+northwest = H_NW
+f = REL 0
+fwd = REL 0
+forward = REL 0
+forwards = REL 0
+ahead = REL 0
+front = REL 0
+fr = REL 1
+r = REL 2
+right = REL 2
+br = REL 3
+b = REL 4
+back = REL 4
+backward = REL 4
+backwards = REL 4
+behind = REL 4
+bl = REL 5
+l = REL 6
+left = REL 6
+fl = REL 7
+u = GO_UP
+up = GO_UP
+above = GO_UP
+overhead = GO_UP
+upward = GO_UP
+upwards = GO_UP
+d = GO_DOWN
+down = GO_DOWN
+below = GO_DOWN
+under = GO_DOWN
+underneath = GO_DOWN
+beneath = GO_DOWN
+downward = GO_DOWN
+downwards = GO_DOWN
+
+[things]
+door = OB_DOOR
+doors = OB_DOOR
+doorway = OB_DOOR
+gate = OB_DOOR
+portal = OB_DOOR
+passage = OB_PASSAGE
+tunnel = OB_PASSAGE
+corridor = OB_PASSAGE
+opening = OB_PASSAGE
+hallway = OB_PASSAGE
+stairs = OB_STAIRS
+stair = OB_STAIRS
+stairway = OB_STAIRS
+staircase = OB_STAIRS
+steps = OB_STAIRS
+ladder = OB_LADDER
+shaft = OB_SHAFT
+hole = OB_SHAFT
+ledge = OB_LEDGE
+exit = OB_WAY_OUT
+wall = OB_WALL
+portcullis = OB_PORTC
+window = OB_WINDOW
+shutters = OB_WINDOW
+shutter = OB_WINDOW
+glass = OB_WINDOW PART
+bars = OB_WINDOW PART
+pane = OB_WINDOW PART
+bar = OB_DOOR PART
+brackets = OB_DOOR
+bracket = OB_DOOR
+slit = OB_WINDOW
+room = OB_ROOM
+chamber = OB_ROOM
+hall = OB_ROOM
+cave = OB_ROOM
+cell = OB_ROOM
+vault = OB_ROOM
+ceiling = OB_ROOM
+trap = OB_TRAP
+plate = OB_TRAP
+wire = OB_TRAP
+tripwire = OB_TRAP
+pit = OB_TRAP
+
+[preps]
+in = PR_IN
+into = PR_IN
+inside = PR_IN
+on = PR_ON
+onto = PR_ON
+upon = PR_ON
+from = PR_FROM
+out = PR_FROM
+off = PR_FROM
+
+[how]
+to = HOW_TO
+toward = HOW_TO
+towards = HOW_TO
+at = HOW_TO
+near = HOW_TO
+by = HOW_TO
+through = HOW_THROUGH
+into = HOW_THROUGH
+in = HOW_THROUGH
+out = HOW_THROUGH
+thru = HOW_THROUGH
+
+[special]
+with = WITH
+way out = WAY_OUT
+away = AWAY
+back = BACK
+half = HALF
+around = AROUND
+about = AROUND
+bar = BAR
+
+[styles]
+punch = SK_PUNCH
+kick = SK_KICK
+head butt = SK_HEAD
+headbutt = SK_HEAD
+butt = SK_HEAD
+
+[little]
+the
+a
+an
+this
+that
+these
+those
+of
+me
+my
+myself
+self
+off
+side
+direction
+dir
+and
+please
+on
+over
+head
+then
+now
+way
+here
+there
+it
+its
+by

@@ -5,7 +5,7 @@
    <name> a nonterminal; [ x ] optional; { x } zero or more; ( x | y ) a choice.
    A rule may continue on following lines. Comments are (* ... *).
 
-   open: name alias adj number ordinal task-name meta-topic name-word spell-word pretense-word deity-name text
+   open: name noun alias adj number ordinal task-name meta-topic name-word spell-word pretense-word deity-name text
    (the open names come from the game's data: see the design doc, "The grammar"; the checker reads this line) *)
 
 (* ---- Entry ---- *)
@@ -31,35 +31,37 @@
                    | <talk>
                    | <sit-on>
                    | <intimidate> | <order> | <persuade> | <orate> | <negotiate> | <fast-talk> | <taunt> | <judge>
+                   | <break> | <raise> | <lower> | <bend> | <force> | <disarm> | <rebar> | <hang> | <combine>
+                   | <deceive> | <threaten> | <calm> | <befriend> | <approach> | <ally>
 
 (* ---- Observing (question 3: "look at" is a glance; question 4: "take a look" is a look) ---- *)
 <look>           ::= <LOOK> [ <look-target> ]
 <look-target>    ::= <direction> | <locale-ref> | [ <look-prep> ] <object>
 <locale-ref>     ::= "around" [ <here-ref> ] | "about" | "here" | "this place"
 <look-prep>      ::= "at" | "through" | "toward" | "towards" | "around" | "in" | "under" | "behind" | "beside" | "near" | "to" | "on" | "for"
-<examine>        ::= <EXAMINE> [ [ "at" ] <object> ]
+<examine>        ::= <EXAMINE> [ [ "at" ] <thing> ]
 <EXAMINE>        ::= "x" | [ "take a" ] <DETAIL> <LOOK>   (* "look closely" is an alias of examine: commands.aliases *)
 
 (* ---- Moving and facing ---- *)
 <move>           ::= [ <pace-word> ] [ <MOVE> ] <move-dir> [ <number> [ "space" | "spaces" | "square" | "squares" ] ]   (* "run north": this move at run; "walk north": the verb *)
-<move-dir>       ::= <direction> | <TOWARD> <object>
-<face>           ::= [ "change" ] ( "face" | "facing" | "turn" ) [ "to" ] <direction> | "turn" "around"   (* "turn around" is a half turn: facing back *)
+<move-dir>       ::= <direction> | <TOWARD> <thing>
+<face>           ::= [ "change" ] ( "face" | "facing" | "turn" ) [ "half" ] [ "to" ] <direction> | "turn" "around"   (* "turn around" is a half turn: facing back; "turn half left": an eighth *)
 
 (* ---- Handling things (question 2: CLOSE and OPEN are actions) ---- *)
 <get>            ::= <GET> [ <object> ] [ <from-phrase> ] | <GET> <object> <off-phrase> | <GET> <object> "up"   (* bare: the last thing named, else things near (question 8); "pick the sword up" *)
 <drop>           ::= <DROP> <object> | "put" <object> "down"
-<put>            ::= <PUT> <object> <put-prep> <object>
+<put>            ::= <PUT> <thing> <put-prep> <object>   (* "put the bar back in its brackets": back, a way, passed over *)
 <put-prep>       ::= "in" | "into" | "inside" | "on" | "onto" | "on top of" | "under" | "against"
 <use>            ::= <USE> <object> [ ( "on" | "with" ) <object> ]
 <equip>          ::= <EQUIP> <object>
 <unequip>        ::= <UNEQUIP> <object> | "put" <object> "away" | "take" <object> "off"   (* "put away the sword", "put the sword away", "take the helm off" *)
-<open>           ::= "o" <object> [ <manner> ]
-<close>          ::= "close" <object> [ <manner> ]                           (* "close look" is <DETAIL> <LOOK>, not this *)
+<open>           ::= "o" [ <thing> ] [ <manner> ]                (* "open" alone: what's in front *)
+<close>          ::= "close" [ <thing> ] [ <manner> ]           (* "close look" is <DETAIL> <LOOK>, not this *)
 <from-phrase>    ::= "from" <object> | "out" "of" <object>
 <off-phrase>     ::= "off" <object>
 
 (* ---- Fighting ---- *)
-<attack>         ::= <ATTACK> <object> [ "with" <object> ]
+<attack>         ::= <ATTACK> <thing> [ "with" <object> ]
 <grapple>        ::= <GRAPPLE> <object> | <THROW> <object> | "put" <object> "in" [ "a" ] ( "head" "lock" | "headlock" )   (* a grapple maneuver: the object is engaged; "toss" and "throw" a creature are grapples too *)
 <throw>          ::= <THROW> [ <object> ] [ <manner> ] <at-phrase>          (* at something: a target *)
                    | <THROW> [ <object> ] [ <manner> ] <throw-dir>
@@ -111,12 +113,15 @@
 
 (* ---- Objects ---- *)
 <object>         ::= <object-one> { "and" <object-one> }
-<object-one>     ::= <np> | <pronoun> | <me-phrase> | <everything>   (* "the sword and the shield": a list, one command for each *)
+<object-one>     ::= <np> | <pronoun> | <me-phrase> | <everything> | <way-out>   (* "the sword and the shield": a list, one command for each *)
+<way-out>        ::= [ "the" ] "way" "out"          (* the theme's way out of the dungeon *)
 <np>             ::= [ <det> ] [ <selector> ] { <adj> } <head>
-<det>            ::= "a" | "an" | "the" | "this" | "that" | "these" | "those" | "my"
+<thing>          ::= <object> [ <lies> ]            (* a thing in the place, and where it lies: "the door ahead to my left" *)
+<lies>           ::= <compass> | <relative>
+<det>            ::= "a" | "an" | "the" | "this" | "that" | "these" | "those" | "its"   (* "my coat": <me-phrase> *)
 <selector>       ::= <number> | "all" | "every" | "each" | "any" | <ordinal>
                    | "closest" | "nearest" | "largest" | "smallest" | "lead"
-<head>           ::= <name>                          (* one name: every word a thing can be called *)
+<head>           ::= { <noun> } <name>                (* every word a thing can be called: "the mail hauberk" (a noun: no adjective, number or ordinal) *)
 <pronoun>        ::= "it" | "them" | "that" | "this" | "one" | "he" | "she" | "him" | "her"   (* "it": the last thing of any kind (question 7); he, she, him, her: the last person named (context "person=") *)
 <me-phrase>      ::= <here-ref> | "my" <np>
 <everything>     ::= "everything" [ "near" | "here" ] | "all"
@@ -131,7 +136,8 @@
 <DIAG>           ::= "ne" | "nw" | "se" | "sw"
 <offto>          ::= "off" [ "to the" | "to" ] | "to the" | "to"   (* at least one word: a nullable part would parse two ways *)
 <ofme>           ::= "of" <here-ref>
-<relative>       ::= <FB> [ [ "and" ] <LR> ] | <LR>
+<relative>       ::= [ <offto> ] ( <FB> [ [ "and" ] <side> ] | <side> )   (* "ahead to my left", "behind me on my right", "off to the left" *)
+<side>           ::= [ "to my" | "on my" | "on the" ] <LR>
 <FB>             ::= "f" | [ "to the" ] "front" [ <ofme> ] | "in front of" [ <here-ref> ]
                    | "b" | "behind" [ <here-ref> ]
 <LR>             ::= "l" | "left" | "r" | "right"
@@ -142,7 +148,7 @@
 <LOOK>       ::= "look" | "take a gander" | "take a look"
 <DETAIL>     ::= "close" | "in detail"
 <MOVE>       ::= "m" | "walk" | "go"
-<TOWARD>     ::= "to" | "towards" | "toward" | "in the direction of" | "into" | "onto" | "past"
+<TOWARD>     ::= "to" | "towards" | "toward" | "in the direction of" | "into" | "onto" | "past" | "through"
 <GET>        ::= "get" | "take" | "pick up" | "pick"
 <DROP>       ::= "drop" | "put down"
 <PUT>        ::= "put" | "place"
@@ -177,7 +183,7 @@
 <NAME>       ::= "name" | "call"
 <ALIAS>      ::= "alias"
 <UNALIAS>    ::= "unalias" | "forget alias"
-<META-WORD>  ::= "status" | "help" | "i" | "map" | "save" | "q"
+<META-WORD>  ::= "status" | "help" | "i" | "map" | "save" | "q" | "sheet" | "pause"
 
 (* ---- Fire (added 2026-10-19) ---- *)
 <light>          ::= <LIGHT> [ "a" ] "fire" | <LIGHT> <object> | "turn" <object> "on"   (* "light the torch", "start a fire", "turn it on" *)
@@ -196,7 +202,7 @@
 <enter>          ::= "enter" [ <object> ]
 <leave>          ::= <LEAVE> [ <object> | <direction> ]
 <LEAVE>          ::= "exit"
-<climb>          ::= <CLIMB> [ <direction> ] [ <object> ] | <CLIMB> ( "over" | "onto" | "into" ) <object>
+<climb>          ::= <CLIMB> [ <direction> ] [ <object> ] | <CLIMB> ( "over" | "onto" | "into" | "through" ) <object>
 <CLIMB>          ::= "climb"
 <dig>            ::= <DIG> [ <direction> | "for" <object> | <object> ]   (* "dig down", "dig the wall", "dig for treasure" *)
 <DIG>            ::= "dig"
@@ -204,7 +210,7 @@
 <WAKE>           ::= "wake" [ "up" ] | "rouse" | "awaken"
 (* ---- Stealth ---- *)
 <CROUCH>         ::= "crouch" | "kneel" [ "down" ] | "squat"
-<hide>           ::= "h" [ <locative> ]                        (* "hide behind the table": the locative adjunct *)
+<hide>           ::= "h" [ <object> ] [ <locative> ]            (* "hide behind the table": the locative adjunct; "hide the pouch": a thing hidden *)
 <sneak>          ::= <SNEAK> [ <direction> ]
 <SNEAK>          ::= "sneak"
 (* ---- Handling and senses ---- *)
@@ -216,14 +222,14 @@
 <give>           ::= <GIVE> <object> ( "to" | "for" ) <object>
 <GIVE>           ::= "g"
 <grab>           ::= ( "grab" | "hold" ) <object> [ <from-phrase> ]   (* a grapple when the object is engaged; else a get, or a carry for hold *)
-<lock>           ::= "lock" <object>
-<unlock>         ::= "unlock" <object> [ "with" <object> ]
+<lock>           ::= "lock" <thing>
+<unlock>         ::= "unlock" <thing> [ "with" <object> ]
 <fill>           ::= "fill" <object> [ <from-phrase> ]
 <read>           ::= "read" <object>
 <taste>          ::= "taste" <object>
 <touch>          ::= ( "touch" | "feel" ) <object>
 (* ---- Defence, fleeing and following ---- *)
-<defend>         ::= <DEFEND>                                   (* a stance for the next blow: dodge, block, parry, duck *)
+<defend>         ::= <DEFEND> | "defend" [ <DEFEND> | "none" ]   (* a stance for the next blow: dodge, block, parry, duck *)
 <DEFEND>         ::= "dodge" | "block" | "parry" | "duck"
 <flee>           ::= ( "flee" | "escape" | "run" "away" ) [ <direction> ]
 <follow>         ::= ( "follow" | "tail" ) <object>
@@ -265,6 +271,24 @@
 <dispel>          ::= "dispel" <object>                            (* removes a temporary enchantment *)
 <counter>         ::= "counter" <spell>                            (* a defensive spell against one being cast *)
 <release>         ::= "release" <object>                           (* a principle stored in a jorum, let out into the mundane world *)
+(* ---- The game's own (added 2026-10-19: the old parser's commands, games/dq0/parse.c, now dq0c's: what the game does
+   with each is commands.words's, the verb as typed) ---- *)
+<break>           ::= "break" [ <thing> ]                     (* "break the window", "break" alone: what's in front *)
+<raise>           ::= "raise" [ <thing> ]                     (* a portcullis raised *)
+<lower>           ::= "lower" [ <thing> ]
+<bend>            ::= "bend" [ <thing> ]                      (* a window's bars bent *)
+<force>           ::= "force" [ <thing> ]                     (* a door forced *)
+<disarm>          ::= "disarm" [ <thing> ]                    (* a trap disarmed *)
+<rebar>           ::= "rebar" [ <thing> ]                     (* a door barred: "bar the door" (bar an alias) *)
+<hang>            ::= "hang" <object> [ ( "on" | "from" ) <object> ]   (* "hang the quiver on my belt" *)
+<combine>         ::= "combine" <object> [ "with" <object> ]   (* the theme's pieces put together: "combine the sunstone with the moonstone", "join the pieces" *)
+<deceive>         ::= "deceive" <object>                       (* a denizen swayed: deceived, threatened, calmed, befriended *)
+<threaten>        ::= "threaten" <object>
+<calm>            ::= "calm" <object>
+<befriend>        ::= "befriend" <object>
+<approach>        ::= "approach" <thing>                      (* up to it *)
+<ally>            ::= ( "come" | "heel" | "stay" | "halt" ) [ "here" ] | "dismiss" <object>   (* an ally's request *)
+
 (* ---- Psionic talents (HarnMaster core, Psionics: latent until found; the GM generates them) ---- *)
 <talk>            ::= "talk" [ "to" | "with" ] <object> [ "about" <text> { <text> } ]   (* a conversation: VB_TELL_OBJECT *)
 <talent>          ::= <TALENT> [ "on" ] [ <object> ]          (* the talent is used on the object, if any *)
@@ -278,7 +302,7 @@
 (* ---- Influence: Rhetoric and its specialties (HarnMaster core, Skills 12): taunt and fast-talk are kinds of Rhetoric ---- *)
 <intimidate>      ::= "intimidate" <object>                      (* Intimidation: establish dominance *)
 <order>           ::= "command" <object> [ "to" <text> { <text> } ]   (* Command: a subordinate accepts leadership *)
-<persuade>        ::= ( "persuade" | "convince" ) <object> [ "to" <text> { <text> } ]   (* Rhetoric: to do something *)
+<persuade>       ::= ( "persuade" | "convince" ) [ "with" | "over" ] <object> [ "to" <text> { <text> } ]   (* Rhetoric: to do something *)
 <orate>           ::= ( "orate" [ "to" <object> ] | "address" <object> ) [ "about" <text> { <text> } ]   (* Oratory: a speech *)
 <negotiate>       ::= "negotiate" [ "with" <object> ]            (* Diplomacy *)
 <fast-talk>       ::= ( "fast" "talk" | "bluff" | "lie" [ "to" ] ) <object> [ "about" <text> { <text> } ]   (* Rhetoric: persuade them to believe you *)

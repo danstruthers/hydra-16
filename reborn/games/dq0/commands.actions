@@ -118,6 +118,26 @@ VB_NEGOTIATE            target
 VB_FAST_TALK            target topic
 VB_TAUNT                target topic
 VB_JUDGE_SINCERITY      target
+# The game's own (the old parser's commands): a verb alone works on what is in front
+VB_BREAK_OBJECT         object lies
+VB_RAISE_OBJECT         object lies
+VB_LOWER_OBJECT         object lies
+VB_BEND_OBJECT          object lies
+VB_FORCE_OBJECT         object lies
+VB_DISARM_OBJECT        object lies
+VB_BAR_OBJECT           object lies
+VB_HANG_OBJECT          object support
+VB_COMBINE_OBJECT       object other
+VB_APPROACH_OBJECT      object lies
+VB_DECEIVE              target
+VB_THREATEN             target
+VB_CALM                 target
+VB_BEFRIEND             target
+VB_ALLY_COME
+VB_ALLY_STAY
+VB_ALLY_DISMISS         target
+VB_META_SHEET
+VB_META_PAUSE
 
 [results]
 ERROR:NOT_UNDERSTOOD

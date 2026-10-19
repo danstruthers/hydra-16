@@ -306,8 +306,11 @@ static unsigned char __fastcall__ taken (const char* k, struct tname* self)
         }
     }
     if (!strchr (k, ' ') && strlen (k) < sizeof pc.word) {     /* (A word the parser needs: a word of a command) */
-        parse (strcpy (ob, k), &pc);
-        if (pc.verb != V_MOVE || pc.dir != 0xFF || pc.obj || strcmp (pc.word, ob)) {
+        cq_drop ();                             /* (The line's, posted as it was typed, let go: asked again if
+                                                **   it's a command's) */
+        cq_cmd (&pc, k);
+        cq_drop ();
+        if (pc.verb != V_MOVE || pc.dir != 0xFF || pc.obj || stricmp (pc.word, k)) {
             msg ("That name is taken: it's a word your commands need.");
             return 1;
         }
@@ -549,6 +552,7 @@ unsigned __fastcall__ s_names_subst (char* l)
             if ((p == l || p[-1] == ' ') && (n = at_key (p, key (e.name))) != 0 && strlen (l) - n + k <= INMAX) {
                 memmove (p + k, p + n, strlen (p + n) + 1);
                 memcpy (p, id, k);
+                cq_again = 1;                   /* (The command parser's to see it as it is now) */
             }
         }
     }

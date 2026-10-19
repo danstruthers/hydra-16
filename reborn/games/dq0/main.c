@@ -37,7 +37,7 @@
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 
 unsigned long now;                              /* The game's time, as the world's clock last said */
-unsigned char pc_face;                          /* (The character's facing, copied for the parser's overlay) */
+unsigned char pc_face;                          /* (The character's facing, copied for the overlays) */
 unsigned char pace = 0xFF, paused;
 const char* const pacename[4] = { "relaxed", "normal", "menacing", "turns" };
 
@@ -453,6 +453,8 @@ static void __fastcall__ start (const char* name, unsigned char t, const char* m
     }
 }
 
+static void world_words (void);
+
 static void start_world (unsigned long seed)
 {
     struct req* r;
@@ -504,6 +506,7 @@ static void start_world (unsigned long seed)
     things (IO_TOOLS, "");                      /* (The world's catalogue read in: the theme's kinds after it) */
     theme_load (resumed ? Q.theme : (unsigned char) (seed >> 8));     /* (The seed's second byte: theme.h) */
     things (IO_THEME, "");
+    world_words ();
     if (!resumed) {                             /* (The character's kit: a new game's, -k's things too) */
         hub_mem (UI_BANK, UIREC->things_text, kit ? kit : "", kit ? strlen (kit) + 1 : 1);  /* (Its things more,
                                                 **   commas between) */
@@ -518,6 +521,34 @@ static void start_world (unsigned long seed)
     start ("dq0d", T_DENIZENS, libdir);         /* (Its denizens; then its world begun) */
     things (IO_BEGIN, "");
     task_[T_WORLD] = w;
+}
+
+/* The command parser told the world's words: the catalogue's kinds' names (the theme's with them), so a word of its
+** grammar's is a thing's name too where one's called by it ("drop the pick", "wear the knee boots"; the game's own
+** things, "door", "room", it knows).  None given names, no deities yet */
+static void world_words (void)
+{
+    static char nm[sizeof CATALOGUE[0].name + 1];
+    static unsigned n;
+    unsigned char i, k;
+
+    n = 0;
+    for (i = 0; i < NKINDS; ++i) {
+        hub_map (CAT_BANK);
+        memcpy (nm, CATALOGUE[i].name, sizeof CATALOGUE[0].name);
+        hub_map (CMD_BANK);
+        if ((k = strlen (nm)) != 0 && n + k + 2 < CQ_WORDS) {
+            memcpy (HUB_WINDOW + n, nm, k);
+            HUB_WINDOW[n + k] = ' ';
+            n += k + 1;
+        }
+    }
+    HUB_WINDOW[n] = 0;                          /* (Then the names given and the deities: none) */
+    hub_map (0);
+    HUB->cq.kind = CQ_WORLD;
+    HUB->cq.len = n + 1;
+    hub_call (&HUB->cq, T_COMMANDS);
+    HUB->cq.state = REQ_FREE;
 }
 
 /* The game's end: its tasks told to stop (the world first: its I_QUIT, the hub's quit its to set), and waited for */
@@ -539,7 +570,12 @@ static void stop_world (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-static unsigned char cq_out;                    /* A line posted to the command parser, its verdict not taken */
+static unsigned char cq_st;                     /* The line posted to the command parser: none (0), its reply not
+                                                **   taken (CQ_OUT), or taken (CQ_IN: its struct pcmd in CMD_BANK) */
+#define CQ_OUT      1
+#define CQ_IN       2
+static signed char cq_res;                      /* (Its verdict, cq_cmd's) */
+unsigned char cq_again;                         /* The line changed since it was posted (names_subst's): posted again */
 
 /* ---- The status line */
 
@@ -1077,6 +1113,9 @@ static void __fastcall__ hide (const char* w)
 #define SW_QUIET    0x80
 typedef char sway_copies[offsetof (struct sway, order) - offsetof (struct sway, word) ==
     offsetof (struct pcmd, order) - offsetof (struct pcmd, word) ? 1 : -1];   /* (The same, word to order) */
+typedef char pcmd_fits[sizeof (struct pcmd) == PCMD_SIZE && offsetof (struct pcmd, word) == 7 &&
+    offsetof (struct pcmd, prep) == 23 && offsetof (struct pcmd, word2) == 24 && offsetof (struct pcmd, order) == 40 ?
+    1 : -1];                                    /* (dq0c's, games/dq0c/cmdmean.s's PC_*) */
 #define dealt       (*(struct sway*) (lb + sizeof lb - sizeof (struct sway)))  /* (Its copy at lb's end: the
                                                 **   words, a line or two, go at its start) */
 static unsigned char __fastcall__ deal (unsigned char how, const struct pcmd* c)
@@ -1142,17 +1181,12 @@ static void __fastcall__ chores (unsigned char verb)
 /* A command that takes no time and wants nothing of the character (what it carries, its sheet, the map, the help):
 ** carried out at once, the character busy or not (on its way somewhere, looking about: the user, "the UI is slow to
 ** respond"), if it's the next one typed */
-static struct pcmd at_c;                        /* (at_once's command, parsed: the line's, taken at once, at_hit, for
-                                                **   command, not parsed again: none of its verbs a direction's) */
-static unsigned char at_hit;
+static struct pcmd at_c;                        /* (at_once's command: the command parser's, the line's) */
 static unsigned char __fastcall__ at_once (const char* l)
 {
-    static char b[INMAX + 1];
-
-    strcpy (b, l);
-    parse (b, &at_c);
-    return at_hit = at_c.verb == V_INVENTORY || at_c.verb == V_SHEET || at_c.verb == V_MAP || at_c.verb == V_HELP ||
-        !strcmp (b, "status");
+    cq_cmd (&at_c, l);
+    return at_c.verb == V_INVENTORY || at_c.verb == V_SHEET || at_c.verb == V_MAP || at_c.verb == V_HELP ||
+        !strcmp (l, "status");
 }
 
 #pragma code-name (push, "SW2CODE")
@@ -1165,13 +1199,13 @@ void s_ready (void)
 }
 
 /* The command parser (dq0c, the hub's cq): each line posted to it as it's taken (cq_post), its work done while the
-** UI sees to the line (the names', the pace's), and its verdict taken where the command's carried out (cq_take:
-** waited for only if it isn't there yet), or once the line's seen to some other way */
+** UI sees to the line (the names', the pace's), and what it makes of it taken where that's wanted (cq_cmd: waited
+** for only if it isn't there yet; the line posted then, if it wasn't), till the line's seen to (cq_drop) */
 void __fastcall__ s_cq_post (const char* l)
 {
     static unsigned n;
 
-    if (cq_out) {
+    if (cq_st) {
         return;                                 /* (A held line's: posted as it was typed) */
     }
     n = strlen (l);
@@ -1180,25 +1214,58 @@ void __fastcall__ s_cq_post (const char* l)
     hub_map (0);
     HUB->cq.kind = CQ_MATCH;
     HUB->cq.len = n;
+    HUB->cq.face = HUB->pc_face;
     hub_post (&HUB->cq, T_COMMANDS);
-    cq_out = 1;
+    cq_st = CQ_OUT;
 }
 
-/* The verdict on the line posted: 1 it parses, 0 it doesn't, -1 too long; -2 none (none posted, or the game ending
-** before it came) */
-signed char s_cq_take (void)
+/* Its reply, waited for if it's out: its verdict (cq_res: 1 the line parses, 0 it doesn't, -1 too long; -2 none, the
+** game ending before it came) */
+static void cq_wait (void)
 {
-    static signed char r;
+    if (cq_st == CQ_OUT) {
+        hub_wait (&HUB->cq);
+        hub_map (0);
+        cq_res = HUB->cq.state == REQ_DONE ? HUB->cq.res : -2;
+        HUB->cq.state = REQ_FREE;
+        cq_st = CQ_IN;
+    }
+}
 
-    if (!cq_out) {
+/* What line l means (the command parser's: the line posted, if it wasn't), into c: its ways as the character faces
+** made the compass's as it faces now (dq0c's CQ_REL | n), a half turn an eighth ("turn half left").  Its verdict */
+signed char __fastcall__ s_cq_cmd (struct pcmd* c, const char* l)
+{
+    static unsigned char f, d;
+
+    s_cq_post (l);
+    cq_wait ();
+    if (cq_res == -2) {
+        memset (c, 0, sizeof *c);               /* (V_NONE: nothing) */
         return -2;
     }
-    hub_wait (&HUB->cq);
+    hub_map (CMD_BANK);
+    memcpy (c, HUB_WINDOW + CQ_PCMD, sizeof *c);
     hub_map (0);
-    r = HUB->cq.state == REQ_DONE ? HUB->cq.res : -2;
-    HUB->cq.state = REQ_FREE;
-    cq_out = 0;
-    return r;
+    f = HUB->pc_face;
+    if (c->dir != 0xFF && (c->dir & CQ_REL)) {
+        c->dir = (f + c->dir) & 7;
+    }
+    if (c->orel != 0xFF && (c->orel & CQ_REL)) {
+        c->orel = (f + c->orel) & 7;
+    }
+    if (c->verb == V_TURN && c->half && c->dir < GO_UP) {
+        d = (c->dir - f) & 7;
+        c->dir = d == 6 ? (f + 7) & 7 : d == 2 ? (f + 1) & 7 : c->dir;
+    }
+    return cq_res;
+}
+
+/* The line seen to: its reply waited for, if it's out (the next line posted then) */
+void s_cq_drop (void)
+{
+    cq_wait ();
+    cq_st = 0;
 }
 
 /* A command, the parser's, carried out */
@@ -1207,18 +1274,19 @@ void __fastcall__ s_command (char* l)
     static struct pcmd c;
     struct req* r;
     unsigned char d, pa;
+    signed char ok;
 
-    s_cq_take ();                               /* (The command parser's verdict: dq0c's, here once it's used) */
+    ok = s_cq_cmd (&c, l);                      /* (What the command parser made of it: dq0c's, the grammar's
+                                                **   verdict with it) */
     pc_face = HUB->pc_face;
-    if (at_hit) {
-        memcpy (&c, &at_c, sizeof c);           /* (at_once's: this line's, parsed already) */
-    } else {
-        parse (l, &c);
-    }
-    choose (&c);                                /* (A choice asked for: this line's, the command again) */
+    d = choose (&c);                            /* (A choice asked for: this line's, the command again) */
     tx = 0;
     if (c.word[0] && c.verb == V_MOVE && c.dir == 0xFF && !c.obj) {
         sayf ("\nI don't know how to %s.", c.word);
+        return;
+    }
+    if (!d && !ok) {                            /* (Words the game knows, but not a command the grammar has) */
+        sayf ("\nI don't understand that.");
         return;
     }
     if ((d = puzzle (&c)) != Q_NONE) {          /* (The theme's puzzle's: theme.c) */
@@ -1565,6 +1633,10 @@ int main (int argc, char* argv[])
                                                 **   named taken in hand to strike with: its time, as after ()'s) */
                 intend2 (I_WAIT, t, 1);
             }
+            if (cq_again) {
+                cq_again = 0;
+                cq_drop ();                     /* (Its names made theirs: the line as it is now posted again) */
+            }
             if (k != NL_DONE) {
                 command (l);                    /* (The character free; or a command that wants nothing of it:
                                                 **   held, the next waits for it to be free, not parsed again) */
@@ -1572,8 +1644,9 @@ int main (int argc, char* argv[])
                     names_den ();               /* (A denizen named: its name recorded) */
                 }
             }
-            cq_take ();                         /* (Its verdict, if the line wasn't a command's: not left there) */
-            held = at_hit = 0;
+            cq_drop ();                         /* (The command parser's reply, if the line wasn't a command's: not
+                                                **   left there) */
+            held = 0;
             quick = 25;                         /* (Its answer looked for twice as often, a quarter second) */
             status ();
             hub_map (0);

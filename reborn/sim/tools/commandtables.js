@@ -15,6 +15,7 @@
 const fs = require('fs');
 const path = require('path');
 const { loadRules, Compiler, buildContext, DEFAULT_WORLD, checkCorpus, DEFAULT_ALIASES, DEFAULT_ANYWHERE, LEXICON } = require('./commandcompile.js');
+const words = require('./commandwords.js');
 
 const GAME = path.join(__dirname, '..', '..', 'games', 'dq0');
 const MAGIC = [0x44, 0x51, 0x30, 0x47]; // "DQ0G"
@@ -54,7 +55,7 @@ function grammarNames(rules, open) {
 
 // The kind of each open name, one byte: the matcher's K_ codes in cmdmatch.s (quoted-text is a rule, so not listed).
 const OPEN_KIND = { name: 0, alias: 0, adj: 1, number: 2, ordinal: 3, 'task-name': 4, 'spell-word': 5, text: 6,
-  'meta-topic': 6, 'name-word': 7, 'deity-name': 8, 'pretense-word': 9 };
+  'meta-topic': 6, 'name-word': 7, 'deity-name': 8, 'pretense-word': 9, noun: 11 };
 
 function encodeGrammar(rules, open) {
   const names = grammarNames(rules, open);
@@ -346,7 +347,7 @@ function checkLeftRecursion(rules, of) {
   }
 }
 
-function encodeIndex(rules, gbuf, aliases = DEFAULT_ALIASES) {
+function encodeIndex(rules, gbuf, aliases = DEFAULT_ALIASES, game = words.gameWords(words.load())) {
   const u16 = v => [v & 255, v >> 8];
   const words = tableWords(gbuf), wid = new Map(words.map((w, i) => [w, i]));
   const at = nodeOffsets(gbuf, rules);
@@ -354,11 +355,13 @@ function encodeIndex(rules, gbuf, aliases = DEFAULT_ALIASES) {
   checkLeftRecursion(rules, of);
   const names = [...rules.keys()], n = names.length;
   const id = k => { const i = names.indexOf(k); if (i < 0 || i > 255) throw new Error('no rule <' + k + '> for the matcher'); return i; };
-  // The dictionary: the grammar's words (their numbers), then the lexicon's others, then the aliases' first words
+  // The dictionary: the grammar's words (their numbers), then the lexicon's others, then the aliases' first words, then
+  // the game's (commands.words: what dq0c makes of a command)
   const entries = [...words], flags = words.map(() => 0), entryOf = new Map(words.map((w, i) => [w, i]));
   const enter = w => { if (!entryOf.has(w)) { entryOf.set(w, entries.length); entries.push(w); flags.push(0); } return entryOf.get(w); };
   for (const [w, f] of lexiconWords()) flags[enter(w)] |= f;
   for (const key of aliases.keys()) enter(key.split(' ')[0]);
+  for (const w of game) enter(w);
   for (const w of entries) if (!w.length || w.length > 255 || /[^a-z0-9!='-]/.test(w)) throw new Error('a word the matcher cannot hold: ' + w);
   const buckets = Array.from({ length: 256 }, () => []);
   entries.forEach((w, e) => buckets[wordHash(w)].push(e));
@@ -407,8 +410,9 @@ function encodeIndex(rules, gbuf, aliases = DEFAULT_ALIASES) {
 }
 
 // The index's dictionary read back: each word in the bucket of its own hash, the grammar's words first with their
-// own numbers, every entry once.  OUT: the entries, or it throws.
-function checkIndex(ibuf, gbuf) {
+// own numbers, every entry once.  OUT: the entries' count (indexWords: the words, by entry), or it throws.
+const checkIndex = (ibuf, gbuf) => indexWords(ibuf, gbuf).length;
+function indexWords(ibuf, gbuf) {
   const rd = q => ibuf[q] | (ibuf[q + 1] << 8);
   const words = tableWords(gbuf), n = rd(9), seen = new Array(n).fill(null);
   for (let b = 0; b < 256; b++) {
@@ -423,10 +427,10 @@ function checkIndex(ibuf, gbuf) {
     }
   }
   if (seen.includes(null)) throw new Error('the index: an entry in no bucket');
-  return n;
+  return seen;
 }
 
-module.exports = { encodeGrammar, decodeGrammar, encodeAliases, decodeAliases, openNames, grammarNames, OPEN_KIND, encodeIndex, checkIndex, firstSets, wordHash, PEARSON };
+module.exports = { encodeGrammar, decodeGrammar, encodeAliases, decodeAliases, openNames, grammarNames, OPEN_KIND, encodeIndex, checkIndex, indexWords, firstSets, wordHash, PEARSON };
 
 if (require.main === module) {
   const grammar = path.join(GAME, 'commands.ebnf');

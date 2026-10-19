@@ -95,7 +95,7 @@ void stir (void);                               /* The denizens it sees, told as
 void __fastcall__ map (const char* rules);      /* Part 3: the map of what it's seen round it, and the
                                                 **   character's state beside it (rules: the referee's short lines) */
 
-/* ---- parse.c (overlay 3): a command understood */
+/* ---- A command understood: the command parser's (dq0c: games/dq0c, its meaning cmdmean.s's; cq_cmd) */
 
 enum {
     V_NONE, V_MOVE, V_ENTER, V_APPROACH, V_LOOK, V_EXAMINE, V_SEARCH, V_TURN, V_FACE, V_CLIMB, V_JUMP, V_OPEN, V_CLOSE,
@@ -129,8 +129,7 @@ struct pcmd {
     unsigned char   order;                      /* A request to an ally (V_TELL's: hub.h's OR_*; word to here
                                                 **   struct sway's, copied whole) */
 };
-extern unsigned char pc_face;                   /* (The hub's, copied for the overlay) */
-void __fastcall__ parse (char* l, struct pcmd* c);   /* Overlay 3 */
+extern unsigned char pc_face;                   /* (The hub's, copied for the overlays) */
 
 /* ---- pace.c (part 4): the pace, the watchfulness, the state, small moves, from the line typed */
 
@@ -155,8 +154,9 @@ unsigned char __fastcall__ pick (unsigned char obj, unsigned char orel);   /* Th
                                                 **   orel (or 0xFF: any way): 1, its square in tx, ty (the one there
                                                 **   is, the one chosen, the nearest ahead); 0, none; 2, several and
                                                 **   none ahead: they're listed, which asked */
-void __fastcall__ choose (struct pcmd* c);      /* The command (parsed) a choice's answer (its number, its way)?
-                                                **   Then c is the command asked about again, pick's the one chosen */
+unsigned char __fastcall__ choose (struct pcmd* c);    /* The command (parsed) a choice's answer (its number, its
+                                                **   way)?  Then c is the command asked about again, pick's the one
+                                                **   chosen: 1; else 0 */
 
 /* ---- theme.c (overlay 5): the theme's words and its puzzle (theme.h), from its copy in the overlay's bank */
 
@@ -272,7 +272,12 @@ void save_game (void);                          /* Part 1: the game kept (if it'
 void __fastcall__ command (char* l);            /* Part 2 (main.c): a command, the parser's, carried out */
 void ready (void);                              /* Part 2 (main.c): nothing, the part copied in for the next */
 void __fastcall__ cq_post (const char* l);      /* Part 2 (main.c): a line posted to the command parser (dq0c) */
-signed char cq_take (void);                     /* Part 2 (main.c): its verdict, waited for if it isn't there yet */
+signed char __fastcall__ cq_cmd (struct pcmd* c, const char* l);   /* Part 2 (main.c): what line l means, dq0c's (l
+                                                **   posted first, if it isn't), into c, its ways made the compass's
+                                                **   as the character faces now: the grammar's verdict (1 a command;
+                                                **   0 not one; -1 too long; -2 none, the game ending) */
+void cq_drop (void);                            /* Part 2 (main.c): the line posted seen to (its reply waited for) */
+extern unsigned char cq_again;                  /* (The line changed since it was posted: names_subst's) */
 void __fastcall__ take (const char* name);      /* Part 2: a thing taken up, by its name */
 void __fastcall__ took_up (unsigned r);         /* Part 2: a thing taken up, or not, told (an E_TAKEN's: IR_*, the
                                                 **   light before times 256) */

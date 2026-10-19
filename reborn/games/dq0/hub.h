@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     2                       /* (2: the command parser's role and request, dq0c) */
+#define HUB_VERSION     3                       /* (2: the command parser's role and request, dq0c; 3: its meaning) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -308,13 +308,20 @@ struct rqh {
 ** the UI's.  Its text is in CMD_BANK at $8000 (len bytes, a 0 after): a line to match (CQ_MATCH), the world's words
 ** (CQ_WORLD: three lists, each 0-ended: the words the world names things by, the names given, the deities'), or
 ** nothing (CQ_NONE: the round trip alone, timed).  The reply's res: 1 the line parses, 0 it doesn't, -1 too long
-** or nesting too deep; 0 for the others */
+** or nesting too deep; 0 for the others.  A line's reply has what it means too: its struct pcmd (dq0.h's, PCMD_SIZE
+** bytes) in CMD_BANK at $8000 + CQ_PCMD, made as the character faces face (its ways as it faces kept so: CQ_REL | n,
+** the UI's to make the compass's as the command's carried out; but one with a way by the compass, made by face) */
 enum { CQ_NONE, CQ_MATCH, CQ_WORLD };
+#define CQ_WORDS        1024                    /* The world's words' text, at most (dq0c keeps that much) */
+#define CQ_PCMD         0x1000                  /* (Past the text) */
+#define PCMD_SIZE       41
+#define CQ_REL          0x10                    /* A way as the character faces (CQ_REL | 0 ahead, 2 its right ...) */
 struct cq {
     RQH;                                        /* (kind: CQ_*) */
     unsigned char   bank;                       /* CMD_BANK (the UI's, as it makes the hub: dq0c finds it here) */
     unsigned        len;                        /* The text's bytes */
     signed char     res;                        /* The reply's */
+    unsigned char   face;                       /* A line's: the way the character faces (H_N ... H_NW) */
 };
 
 /* A referee slot: a request (rs.h's RS_*) and its reply, and the reply's words.  Slot 0 is the world's (its
@@ -757,6 +764,7 @@ struct wsave {
 **   own wrec.cgen world
 **   own banks(CHANGE_BANK(0),CHANGE_BANKS) world
 **   own bank(CMD_BANK) ui                                      (The commands text: the UI writes it, dq0c reads it)
+**   own bank(CMD_BANK,HUB_WINDOW+CQ_PCMD,HUB_WINDOW+CQ_PCMD+PCMD_SIZE) commands  (dq0c's reply: a line's meaning)
 **   own wrec.cslot[*].used maker +world                        (A chunk stocked, CS_FRESH: the world's mark taken)
 **   own wrec.cslot[*].stamp maker +world +denizens +senses +ui     (Each chunk's reader's stamp, as it finds it)
 **   own wrec.stamp maker +world +denizens +senses +ui
@@ -776,14 +784,16 @@ typedef char hub_fits[sizeof (struct hub) + HUB_FREE <= 0x2000 ? 1 : -1];   /* (
 #define HUBO_TASK       12
 #define HUBO_BEAT       20
 #define HUBO_CQ         28
-#define HUBO_QUIT       51
+#define HUBO_QUIT       52
 #define CQO_BANK        4
 #define CQO_LEN         5
 #define CQO_RES         7
+#define CQO_FACE        8
 typedef char dq0c_fits[offsetof (struct hub, sem) == HUBO_SEM && offsetof (struct hub, task) == HUBO_TASK &&
                        offsetof (struct hub, beat) == HUBO_BEAT && offsetof (struct hub, cq) == HUBO_CQ &&
                        offsetof (struct hub, quit) == HUBO_QUIT && offsetof (struct cq, bank) == CQO_BANK &&
-                       offsetof (struct cq, len) == CQO_LEN && offsetof (struct cq, res) == CQO_RES && NTASKS == 8 ? 1 : -1];
+                       offsetof (struct cq, len) == CQO_LEN && offsetof (struct cq, res) == CQO_RES &&
+                       offsetof (struct cq, face) == CQO_FACE && NTASKS == 8 ? 1 : -1];
 typedef char recs_fit[sizeof (struct sight) <= 0x2000 && sizeof (struct uirec) <= 0x2000 &&
                       sizeof (struct wrec) <= 0x2000 ? 1 : -1];
 typedef char snd_fits[(char*) (FIGHT_AT + NFIGHTS) - (char*) 0x8000 <= 0x2000 ? 1 : -1];   /* (DEN_BANK's) */

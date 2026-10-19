@@ -8,21 +8,25 @@ HUB_WINDOW  = $8000                 ; The hub's bank in the window (hub.h's HUB_
 HUB_U       = $FFF1                 ; The shared RAM's macro-page register, then the bank register (hub.c's hub_map)
 HUB_BANKREG = $00
 HUB_MAGIC   = $5144                 ; "DQ" (hub.h's)
-HUB_VERSION = 2
+HUB_VERSION = 3
 
 HUBO_SEM    = 4                     ; Bank 0: each task's doorbell (a semaphore), by role
 HUBO_TASK   = 12                    ;   each role's task number
 HUBO_BEAT   = 20                    ;   each role's heartbeat (bumped as it works)
 HUBO_CQ     = 28                    ;   the command parser's request (struct cq)
-HUBO_QUIT   = 51                    ;   the game's ending (the world's)
+HUBO_QUIT   = 52                    ;   the game's ending (the world's)
 
 RQ_STATE    = 0                     ; A request's header (level.h's RQH): its state, kind, asker and number
 RQ_KIND     = 1
 RQ_FROM     = 2
 RQ_SEQ      = 3
-CQO_BANK    = 4                     ; struct cq: the text's bank, the text's bytes (two), the reply's result
-CQO_LEN     = 5
+CQO_BANK    = 4                     ; struct cq: the text's bank, the text's bytes (two), the reply's result, the way
+CQO_LEN     = 5                     ;   the character faces
 CQO_RES     = 7
+CQO_FACE    = 8
+CQ_WORDS    = 1024                  ; The world's words' text, at most
+CQ_PCMD     = $1000                 ; A line's reply's struct pcmd (dq0.h's), in the text bank (cmdmean.s's PC_*)
+PCMD_SIZE   = 41
 
 REQ_FREE    = 0                     ; hub.h's request states
 REQ_POSTED  = 1

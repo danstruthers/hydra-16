@@ -22,7 +22,7 @@
 #pragma rodata-name (push, "SW4RODATA")
 
 #define NW      12
-static char b[INMAX + 1], b2[INMAX + 1];
+static char b[INMAX + 1];
 static char* w[NW];
 static unsigned char nw;
 static struct pcmd c;
@@ -175,9 +175,7 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
     if (!st && !n) {
         return 0;                               /* (None of its words: the command's) */
     }
-    strcpy (b2, l);                             /* (The direction the parser's) */
-    pc_face = HUB->pc_face;
-    parse (b2, &c);
+    cq_cmd (&c, l);                             /* (The direction the command parser's) */
     k = (c.verb == V_MOVE || c.verb == V_ENTER || c.verb == V_APPROACH) && (c.dir != 0xFF || c.obj);
     st = st && (!k || n || g != HUB->gait || wa != HUB->watch);    /* (Said, unless it goes on as it was) */
     wset (WS_PACE, g, wa);                      /* (The world's, set: its request) */

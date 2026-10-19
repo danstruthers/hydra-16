@@ -1,0 +1,311 @@
+# lines.txt - lines the 65C02 meaning (games/dq0c/cmdmean.s) is tried on beside the corpus's, held to the host's
+# (sim/tools/commandwords.js): the lines the old parser (parse.c) was tried on, and the game's commands (its tests'
+# and its help's).  One a line; # a comment.
+look
+u
+map
+n
+open the door behind me on my right
+open
+e
+s
+w
+go west
+wait
+help
+foo
+quit
+ne
+k
+2
+bow
+spear
+sword
+Dorn
+sheet
+d
+sw
+dig down
+take a gander
+turn half left
+face north and east
+walk to the door behind me
+look closely
+pick up the sword
+take off my coat
+saunter off to the left
+inventory
+examine the dagger
+x torch
+examine pennies
+examine the moon
+drop the dagger
+get dagger
+drop pick
+walk to the door ahead
+turn around
+take the pick
+i
+drop rocks
+hide the pouch
+take pouch
+drop table
+put the candle on the table
+take the candle from the table
+wear cloak
+hold basket
+put sand in basket
+put the dagger in the waterskin
+hang the quiver on my belt
+put arrows in quiver
+hang the candle
+wield the dagger
+stow basket
+put the backpack in the basket
+take the cloak off
+stow cloak
+douse the torch
+light the candle
+light torch
+drop the torch
+douse candle
+get torch
+jump down
+drop the rations
+name my sword Linda
+alias the dagger as linda
+name the dagger Torch
+name the dagger kobold
+name the dagger north
+drop Linda
+take Linda
+examine Linda
+attack the rat with Linda
+call this room the mausoleum
+forget the name Linda
+search
+go right
+go forward
+persuade the rat
+examine the rat
+befriend the rat
+name the rat grub
+tell grub to wait
+follow me
+go east
+examine grub
+attack the rat
+turn left
+go up
+turn right
+step forward
+examine the door
+walk to the door ahead to my left
+open the door behind me
+move south 4 squares
+face north
+z
+light the torch
+lower portcullis
+raise portcullis
+break window
+climb through window
+open door
+3
+go through the door
+x room
+examine the door behind me on my right
+examine bar
+take the bar
+break the door behind me on my right
+break the door ahead
+examine the door ahead to my left
+break the door ahead to my left
+close
+examine the window
+x glass
+examine door
+right
+1
+cat /dev/consctl
+echo do^ne
+shield
+dag
+climb
+punch the door
+wear the gauntlets
+attack the rat ahead right
+defend dodge
+wear the gambeson
+wear the mail hauberk
+defend none
+echo $status
+punch the rat
+kick the rat
+head butt the rat
+kick the door
+wear the knee boots
+head butt the door
+wear the iron helm
+face east
+force
+face south
+disarm
+dig north
+se
+walk to the door east
+walk to the window
+bar the door
+x door
+put the bar back in its brackets
+break portcullis
+break
+x portcullis
+bend the bars
+bend bars
+drop rope
+drop shovel
+drop sword
+status
+jog
+search for traps as I go
+listen as I go
+stop searching
+stop listening
+map as I go
+stop mapping
+set pace to sprint
+walk slowly
+run north
+run south
+creep
+move right 3 spaces
+back up 10 feet
+sidestep left
+run 2 squares east
+combine the sunstone with the moonstone
+use the seal on the way out
+x the way out
+take the tablet
+read the tablet
+read the dagger
+drop the throne
+take the throne
+put the crown on the throne
+peer
+gaze
+gander
+look closely at the door
+inspect the box
+search the room
+climb the ladder
+climb up
+jump
+jump north
+open the door
+close the door
+shut the door
+unlock the door
+unlock the door with the key
+force the door
+mine the wall
+take the sword
+grab the rope
+acquire the coin
+pick the sword up
+put down the dagger
+set down the dagger
+put the dagger down
+don the cloak
+equip the shield
+ready the sword
+wield the sword
+hold the torch
+grip the sword
+grasp the rope
+brandish the sword
+doff the cloak
+remove the coat
+unequip the helm
+take the coat off
+store the dagger
+stow the dagger
+pack the rope
+put away the sword
+put the sword away
+put the dagger in the sack
+place the coin on the table
+sheathe the sword
+extinguish the candle
+put out the torch
+put the torch out
+turn on the lamp
+turn the lamp on
+turn off the lamp
+skills
+pause
+q
+save
+inv
+hide
+conceal the dagger
+stash the coin
+lift the portcullis
+winch the portcullis
+smash the window
+disarm the trap
+disable the trap
+rebar the door
+read the scroll
+use the key
+apply the salve
+try the key
+join the pieces
+fit the key
+mend the rope
+talk to the kobold
+speak to the rat
+chat with the goblin
+greet the rat
+hail the guard
+convince the goblin
+recruit the rat
+reason with the goblin
+bargain with the merchant
+deceive the goblin
+trick the rat
+bluff the guard
+fool the goblin
+lie to the goblin
+threaten the rat
+intimidate the goblin
+scare the rat
+frighten the rat
+menace the goblin
+calm the bear
+soothe the dog
+placate the goblin
+pacify the rat
+tame the rat
+coax the cat
+hit the rat
+strike the goblin
+fight the goblin
+kill the rat
+headbutt the door
+defend
+ask the rat to follow me
+order grub to stay
+command the goblin to wait
+come
+heel
+stay
+halt
+dismiss grub
+call it Grub
+enter
+enter the room
+approach the door
+walk north
+north
+examine the way out

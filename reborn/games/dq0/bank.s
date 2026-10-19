@@ -163,7 +163,6 @@ ovl_out:
             OVFN        heard_words, 9
             OVFN        den_words, 9
             OVFN        seen_words, 7
-            OVFN        parse, 3
             OVFN        pick, 7
             OVFN        choose, 7
             OVFN        fixt_words, 4
@@ -189,7 +188,7 @@ ovl_out:
 
             SWPART      1, 8                ; The start and the end (main.c): the task's arguments, the world
                                             ;   started, the game kept, the world stopped
-            SWPART      2, 8                ; The commands (main.c)
+            SWPART      2, 3                ; The commands (main.c)
             SWPART      3, 9                ; The map (look.c)
             SWPART      4, 9                ; The pace, the watchfulness, the state, small moves (pace.c)
             SWPART      5, 10               ; The names given (names.c)
@@ -201,7 +200,8 @@ ovl_out:
             SWFN        command, 2
             SWFN        ready, 2
             SWFN        cq_post, 2
-            SWFN        cq_take, 2
+            SWFN        cq_cmd, 2
+            SWFN        cq_drop, 2
             SWFN        take, 2
             SWFN        took_up, 2
             SWFN        map, 3

@@ -429,3 +429,49 @@ y"Here!"	VB_SAY	text=Here!;volume=loud	-	a y prefix is part of the quote
 "Hello"!	VB_SAY	text=Hello;volume=loud	-	a bang after the quote is a yell
 sleep in the bed	VB_SLEEP	short=no	near=bed	sleep in
 drop it	VB_DROP_OBJECT	object=sword	last=sword	it
+# --- the game's own verbs (the old parser's commands) ---
+break the window	VB_BREAK_OBJECT	object=window	near=window	break
+break	VB_BREAK_OBJECT	-	-	break alone: what is in front
+smash the window	VB_BREAK_OBJECT	object=window	near=window	smash an alias of break
+raise the portcullis	VB_RAISE_OBJECT	object=portcullis	near=portcullis	raise
+winch the portcullis	VB_RAISE_OBJECT	object=portcullis	near=portcullis	winch an alias of raise
+lower the portcullis	VB_LOWER_OBJECT	object=portcullis	near=portcullis	lower
+bend the bars	VB_BEND_OBJECT	object=bars	near=bars	bend
+force the door	VB_FORCE_OBJECT	object=door	near=door	force
+force the door ahead	VB_FORCE_OBJECT	object=door;lies=F	near=door	where it lies
+open the door to my left	VB_OPEN_OBJECT	object=door;lies=L	near=door	where it lies, relative
+close the door to the north	VB_CLOSE_OBJECT	object=door;lies=N	near=door	where it lies, compass
+open the door ahead to my right	VB_OPEN_OBJECT	object=door;lies=FR	near=door	ahead and to one side
+open	VB_OPEN_OBJECT	-	-	open alone: what is in front
+disarm the trap	VB_DISARM_OBJECT	object=trap	near=trap	disarm
+disable the trap	VB_DISARM_OBJECT	object=trap	near=trap	disable an alias of disarm
+bar the door	VB_BAR_OBJECT	object=door	near=door	bar an alias of rebar
+hang the quiver on my belt	VB_HANG_OBJECT	object=quiver;support=belt	near=quiver,belt	hang
+sheathe the sword	VB_HANG_OBJECT	object=sword	near=sword	sheathe an alias of hang
+combine the sunstone with the moonstone	VB_COMBINE_OBJECT	object=sunstone;other=moonstone	near=sunstone,moonstone	combine
+join the pieces	VB_COMBINE_OBJECT	object=pieces	near=pieces	join an alias of combine
+approach the altar	VB_APPROACH_OBJECT	object=altar	near=altar	approach
+approach the door to the east	VB_APPROACH_OBJECT	object=door;lies=E	near=door	approach where it lies
+deceive the guard	VB_DECEIVE	target=guard	near=guard	deceive
+trick the guard	VB_DECEIVE	target=guard	near=guard	trick an alias of deceive
+threaten the guard	VB_THREATEN	target=guard	near=guard	threaten
+scare the goblin	VB_THREATEN	target=goblin	near=goblin	scare an alias of threaten
+calm the dog	VB_CALM	target=dog	near=dog	calm
+soothe the dog	VB_CALM	target=dog	near=dog	soothe an alias of calm
+befriend the dog	VB_BEFRIEND	target=dog	near=dog	befriend
+tame the dog	VB_BEFRIEND	target=dog	near=dog	tame an alias of befriend
+come	VB_ALLY_COME	-	-	an ally called
+come here	VB_ALLY_COME	-	-	come here
+heel	VB_ALLY_COME	-	-	heel
+stay	VB_ALLY_STAY	-	-	an ally told to stay
+halt	VB_ALLY_STAY	-	-	halt
+dismiss the dog	VB_ALLY_DISMISS	target=dog	near=dog	an ally dismissed
+sheet	VB_META_SHEET	-	-	the character sheet
+skills	VB_META_SHEET	-	-	skills an alias of sheet
+pause	VB_META_PAUSE	-	-	the clock paused
+turn half left	VB_FACE_DIRECTION	direction=L;half=1	facing=N	an eighth turn
+defend parry	VB_DEFEND	defence=parry	-	defend with a stance
+hide the pouch	VB_HIDE	object=pouch	near=pouch	a thing hidden
+wear the mail hauberk	VB_EQUIP_OBJECT	object=hauberk	near=hauberk	a name of two words: a noun before it
+get the small brass key	VB_RETRIEVE_OBJECT	object=key	near=key	an adjective, then a noun
+drop the brass key	VB_DROP_OBJECT	object=key	near=key	a noun before the name

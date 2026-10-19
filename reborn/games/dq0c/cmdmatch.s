@@ -5,11 +5,16 @@
 ;
 ; Its calls (the parser's task, dq0c.s, makes them; C's cmdmatch.h, sim/tools/cmdmatch/cmdmatch_c.s, wraps them):
 ;   cm_init     the tables: cm_g the grammar, cm_i its index, cm_a the default aliases (each where it stays).  C = 0,
-;               or C = 1: one is not a dq0 table, they don't belong together, or one is too large for the matcher
+;               or C = 1: one is not a dq0 table, they don't belong together, or one is too large for the matcher.
+;               The grammar may be in two parts: cm_r (not 0) its rules, where they are (with the kinds before them),
+;               cm_g its counts and words (the words only cm_init reads; the rules are read as the lines are matched)
 ;   cm_world    the world's words, when they change: cm_g the words the world names things by, cm_i the names
 ;               given, cm_a the deities' names (space-separated lists, each to stay as it is till the next cm_world)
 ;   cm_match    a line (.A/.X, zero-ended): .A 1 if it parses, 0 if not, $FF (and .X $FF) if it is too long or
-;               nests too deep
+;               nests too deep.  Its tokens stay till the next (what the line means is cmdmean.s's, from them): each
+;               its letters as typed (tokoff, toklen in tbuf), its entry as typed (toktl, tokth: $FFFF none), its
+;               entry (tokel, tokeh: an alias's root, if one began there), and whether that alias was several words
+;               (tokmu); quoted text tokq
 ;
 ; The matcher returns, for a node at a position, the positions where it can end, as a 16-bit mask (bit p: the match
 ; ends before token p).  It walks the grammar as it stands in its table; nothing is built from it but each rule's
@@ -35,7 +40,8 @@
 
             .setcpu     "65C02"
             .macpack    longbranch
-            .export     cm_init, cm_world, cm_match, cm_g, cm_i, cm_a
+            .export     cm_init, cm_world, cm_match, cm_g, cm_i, cm_a, cm_r
+            .export     ntok, tokoff, toklen, tokq, toktl, tokth, tokel, tokeh, tokmu, tbuf, nent, lmark   ; (cmdmean.s's)
 
 ; Node tags in the grammar table
 T_SEQ       = 1
@@ -46,7 +52,7 @@ T_NT        = 5
 T_TERM      = 6
 T_QUOTE     = 7
 
-; The open-name kinds, a bit each in a token's mask (tokmlo: kinds 0-7, tokmhi: 8-10)
+; The open-name kinds, a bit each in a token's mask (tokmlo: kinds 0-7, tokmhi: 8-11)
 K_OBJ       = $01                   ; (lo)
 K_ADJ       = $02
 K_NUMBER    = $04
@@ -58,6 +64,7 @@ K_NAMEWORD  = $80
 K_DEITY     = $01                   ; (hi)
 K_PRETENSE  = $02
 K_QUOTED    = $04
+K_NOUN      = $08                   ; (A name's word before its last: "mail" in "mail hauberk")
 
 ; The lexicon's flags (commandtables.js's LX) and the world's marks
 LX_ADJ      = 1
@@ -72,9 +79,9 @@ W_DEITY     = 4                     ; A deity's name
 
 MAXTOK      = 14                    ; Positions 0-14 fit a 16-bit mask
 MAXRULES    = 240                   ; (A rule's number, and a name's, is a byte)
-MAXENT      = 600                   ; The dictionary's entries (the index's, 428 now, then the world's own words)
+MAXENT      = 720                   ; The dictionary's entries (the index's, 566 now, then the world's own words)
 MAXDYN      = 16                    ; The world's own words: deities' names that are no word of the dictionary's
-MAXALIAS    = 96
+MAXALIAS    = 160                   ; (The default aliases: 134 now)
 MAXINDEX    = 24
 ALTMIN      = 8                     ; commandtables.js's ALT_INDEX_MIN: an alternation this large may be indexed
 CACHE       = 128                   ; The rules' ends kept, a line's (a power of two)
@@ -170,6 +177,9 @@ tokwl:      .res        MAXTOK + 1
 tokwh:      .res        MAXTOK + 1
 tokel:      .res        MAXTOK + 1
 tokeh:      .res        MAXTOK + 1
+toktl:      .res        MAXTOK + 1  ; Each token's entry as typed, and whether its alias was several words
+tokth:      .res        MAXTOK + 1
+tokmu:      .res        MAXTOK + 1
 tokmlo:     .res        MAXTOK + 1
 tokmhi:     .res        MAXTOK + 1
 tokbk:      .res        MAXTOK + 1
@@ -189,6 +199,7 @@ tstart:     .res        1
 cm_a:       .res        2           ; cm_init's tables, cm_world's lists (their callers')
 cm_i:       .res        2
 cm_g:       .res        2
+cm_r:       .res        2
 lflag:      .res        1
 bestn:      .res        1           ; aliases: the longest key matched, its alias
 besta:      .res        1
@@ -558,6 +569,8 @@ wyword:     ldy         li
             lda         (lnp),y
 notwy:      jsr         alnum
             jcs         word
+            cmp         #'#'            ; ("#12": a thing named, its id: names.c's)
+            jeq         word
             cmp         #'!'
             beq         punct
             cmp         #'='
@@ -574,6 +587,9 @@ quote:      ldx         ntok
             sta         tokwh,x
             sta         tokel,x
             sta         tokeh,x
+            sta         toktl,x
+            sta         tokth,x
+            stz         tokmu,x
             lda         nb
             sta         tokoff,x
 ql:         ldy         li
@@ -614,6 +630,10 @@ word:       ldx         ntok
             bcs         long
             lda         nb
             sta         tstart
+            ldy         li
+            lda         (lnp),y
+            cmp         #'#'
+            beq         wlow
 wl:         ldy         li
             lda         (lnp),y
             jsr         alnum
@@ -653,8 +673,12 @@ tok:        ldx         ntok            ; the token: tbuf from tstart to nb
             jsr         lookup
             ldy         ntok
             sta         tokel,y
+            sta         toktl,y
             txa
             sta         tokeh,y
+            sta         tokth,y
+            lda         #0
+            sta         tokmu,y
             jsr         wordof
             lda         tokwl,y
             cmp         thenlo
@@ -764,6 +788,7 @@ anext1:     ldy         t1
             dea
             beq         tnext
             ldx         t3
+            sta         tokmu,x         ; (A key of several words: its root the token's meaning)
             jsr         drop
 tnext:      inc         t3
             jmp         tloop
@@ -862,6 +887,12 @@ loop:       txa
             sta         tokel,x
             lda         tokeh,y
             sta         tokeh,x
+            lda         toktl,y
+            sta         toktl,x
+            lda         tokth,y
+            sta         tokth,x
+            lda         tokmu,y
+            sta         tokmu,x
             inx
             bra         loop
 done:       lda         ntok
@@ -969,7 +1000,15 @@ deity:      lda         t2
             beq         store
             lda         #K_DEITY
             tsb         th
-store:      lda         t3
+store:      lda         t3              ; A noun: a name's word, but no adjective, number or ordinal
+            and         #K_OBJ
+            beq         :+
+            lda         t3
+            and         #K_ADJ | K_NUMBER | K_ORDINAL
+            bne         :+
+            lda         #K_NOUN
+            tsb         th
+:           lda         t3
             sta         tokmlo,x
             lda         th
             sta         tokmhi,x
@@ -2001,7 +2040,7 @@ no:         sec
             sta         nrules
             ldy         #8
             lda         (tp),y
-            bne         bad
+            jne         bad
             dey
             lda         (tp),y
             sta         nnames
@@ -2034,7 +2073,27 @@ words:      lda         tq              ; each word: its length and its letters,
             dec         tq+1
 :           dec         tq
             bra         words
-kinds:      lda         tp
+kinds:      lda         cm_r+1          ; (The kinds and the rules elsewhere: cm_r's, the offsets as if they
+            beq         here            ;   followed the words: gbase moved by as much)
+            sec
+            lda         cm_r
+            sbc         tp
+            sta         t1
+            lda         cm_r+1
+            sbc         tp+1
+            sta         t2
+            clc
+            lda         gbase
+            adc         t1
+            sta         gbase
+            lda         gbase+1
+            adc         t2
+            sta         gbase+1
+            lda         cm_r
+            sta         tp
+            lda         cm_r+1
+            sta         tp+1
+here:       lda         tp
             sta         pkind
             lda         tp+1
             sta         pkind+1

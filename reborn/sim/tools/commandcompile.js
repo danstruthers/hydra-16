@@ -92,9 +92,10 @@ function literalWords(rules) {
 
 // Words (lower case), "!" and "=" as their own tokens, and quoted text: {k:'q', text, vol} with vol 'w' or 'y' when
 // the quote is attached to a w or y prefix (w"..." whispers, y"..." yells).
+// (A word may begin with #: a thing the player named, its id, as names.c makes the line: "get #12")
 function tokenize(line) {
   const out = [];
-  const re = /([wy]?)"([^"]*)"|([A-Za-z0-9][A-Za-z0-9'\-]*)|(!)|(=)/g;
+  const re = /([wy]?)"([^"]*)"|(#[A-Za-z0-9'\-]*|[A-Za-z0-9][A-Za-z0-9'\-]*)|(!)|(=)/g;
   let m;
   while ((m = re.exec(line))) {
     if (m[2] !== undefined) out.push({ k: 'q', text: m[2], vol: m[1] || null });
@@ -109,7 +110,7 @@ function tokenize(line) {
 const own = (o, k) => (Object.prototype.hasOwnProperty.call(o, k) ? o[k] : undefined);
 const LIMIT = 200;
 // Open names: their words come from the game's data; openOK says which words fit each one.
-const OPEN = new Set(['deity-name', 'pretense-word', 'name', 'alias', 'adj',
+const OPEN = new Set(['deity-name', 'pretense-word', 'name', 'noun', 'alias', 'adj',
   'number', 'ordinal', 'task-name', 'meta-topic', 'name-word', 'spell-word', 'text', 'quoted-text']);
 const ADJ = new Set(['right', 'far', 'wooden', 'iron', 'large', 'small', 'closed', 'open', 'old', 'rusty',
   'bottom', 'top', 'heavy', 'near', 'left']);
@@ -125,7 +126,8 @@ const SPEECH_WORDS = new Set(['say', 'yell', 'scream', 'shout', 'whisper']);
 const INTRANSITIVE = new Set(['wait', 'rest', 'sleep', 'stop']);
 const PACE = { crawl: 'crawl', 'slow walk': 'slowwalk', walk: 'walk', trot: 'trot', run: 'run', sprint: 'sprint' };
 const META = { status: 'VB_META_STATUS', help: 'VB_META_HELP', inventory: 'VB_META_INVENTORY', i: 'VB_META_INVENTORY',
-  map: 'VB_META_MAP', save: 'VB_META_SAVE', quit: 'VB_META_QUIT', q: 'VB_META_QUIT' };
+  map: 'VB_META_MAP', save: 'VB_META_SAVE', quit: 'VB_META_QUIT', q: 'VB_META_QUIT', sheet: 'VB_META_SHEET',
+  pause: 'VB_META_PAUSE' };
 const ATTACK_MANNER = { slash: 'edge', slice: 'edge', chop: 'edge', swing: 'edge', bash: 'blunt', bludgeon: 'blunt',
   thump: 'blunt', club: 'blunt', stab: 'point', poke: 'point', pierce: 'point', punch: 'unarmed', kick: 'unarmed',
   headbutt: 'unarmed', bite: 'unarmed', elbow: 'unarmed', knee: 'unarmed', slap: 'unarmed', butt: 'unarmed' };
@@ -156,6 +158,9 @@ function openOK(name, tk, env) {
     case 'deity-name': return env.deities.has(v);
     case 'text': case 'meta-topic': return true;
     case 'name-word': return !env.reserved.has(v) || env.world.has(v);
+    case 'noun':                               // (A name's word before its last: no adjective, number or ordinal)
+      return !NOT_OBJECT.has(v) && (!env.reserved.has(v) || env.world.has(v) || env.names.has(v)) && !ADJ.has(v) &&
+        !/^[0-9]+$/.test(v) && numWord(v) === undefined && !ORDINALS.includes(v);
     default: // unique-name, kind-name, fixture-name, place-name, known-alias, alias: a name of a thing
       return !NOT_OBJECT.has(v) && (!env.reserved.has(v) || env.world.has(v) || env.names.has(v));
   }
@@ -238,7 +243,8 @@ function findFirst(node, rule) {
   }
   return null;
 }
-const kidsOf = (node, rule) => (node ? node.kids.filter(k => k.rule === rule) : []);
+const kidsOf = (node, rule) => (node ? node.kids.flatMap(k => k.rule === rule ? [k] :            // (A thing in the place:
+  k.rule === 'thing' ? k.kids.filter(x => x.rule === rule) : []) : []);                         //   its object)
 const countRule = (node, rule) => node.kids.reduce((n, k) => n + (k.rule === rule ? 1 : 0) + countRule(k, rule), 0);
 const wordsOf = (node, env) => (node ? env.toks.slice(node.start, node.end).filter(t => t.k === 'w').map(t => t.v) : []);
 const textOf = (node, env) => wordsOf(node, env).join(' ');
@@ -253,10 +259,9 @@ function dirCode(node, env) {
   const ew = w.has('east') || w.has('e') ? 'E' : w.has('west') || w.has('w') ? 'W' : '';
   if (ns || ew) return ns + ew;
   if (w.has('around') && w.has('corner')) return 'around-corner';
-  if (['f', 'fwd', 'forward', 'ahead', 'front'].some(x => w.has(x))) return 'F';
-  if (['b', 'back', 'behind'].some(x => w.has(x))) return 'B';
-  if (['l', 'left'].some(x => w.has(x))) return 'L';
-  if (['r', 'right'].some(x => w.has(x))) return 'R';
+  const fb = ['f', 'fwd', 'forward', 'ahead', 'front'].some(x => w.has(x)) ? 'F' : ['b', 'back', 'behind'].some(x => w.has(x)) ? 'B' : '';
+  const lr = ['l', 'left'].some(x => w.has(x)) ? 'L' : ['r', 'right'].some(x => w.has(x)) ? 'R' : '';
+  if (fb || lr) return fb + lr;                 // ("ahead to my left": FL)
   if (['u', 'up', 'above'].some(x => w.has(x)) || (w.has('over') && w.has('head'))) return 'U';
   if (['d', 'down', 'below', 'under', 'underneath'].some(x => w.has(x))) return 'D';
   return '?';
@@ -345,9 +350,10 @@ function resolveObject(node, env, ctx, remote) {
   const mine = findFirst(node, 'me-phrase');
   if (mine && ['me', 'myself'].includes(wordsOf(mine, env)[0])) return { value: 'me' };
   if (findFirst(node, 'everything')) return { value: 'all-near' };
+  if (findFirst(node, 'way-out')) return { value: 'way out' };   // (The theme's way out)
   const head = findFirst(node, 'head');
   if (!head) return { error: 'NOT_UNDERSTOOD' };
-  const h = wordsOf(head, env)[0];
+  const hw = wordsOf(head, env), h = hw[hw.length - 1];   // (Its name: the nouns before it say which, "the brass key")
   if (h === 'fire') return { value: 'fire' };
   const sel = textOf(findFirst(node, 'selector'), env);
   const cands = ctx.names.get(h) || [];
@@ -425,7 +431,9 @@ function expandLists(spec) {
   const out = [];
   for (const part of kidsOf(listed, 'object-one')) {
     const single = Object.assign({}, listed, { kids: [part] });
-    const copy = Object.assign({}, spec, { kids: spec.kids.map(k => (k === listed ? single : k)) });
+    const swap = k => (k === listed ? single : k.rule === 'thing' && k.kids.includes(listed) ?   // (A thing's list: in it)
+      Object.assign({}, k, { kids: k.kids.map(x => (x === listed ? single : x)) }) : k);
+    const copy = Object.assign({}, spec, { kids: spec.kids.map(swap) });
     out.push(...expandLists(copy));
   }
   return out;
@@ -448,11 +456,14 @@ function phraseSem(spec, env, ctx) {
   const r = spec.rule;
   const direct = kidsOf(spec, 'object');
   const objOf = (i, remote) => objRole(direct[i], env, ctx, remote);
+  const thing = kidsOf(spec, 'thing')[0] || kidsOf(kidsOf(spec, 'move-dir')[0], 'thing')[0];
+  const lies = thing && kidsOf(thing, 'lies')[0] ? dirCode(kidsOf(thing, 'lies')[0], env) : undefined;   // (Where it lies)
   const withObj = (action, extra, remote) => {
     const o = objOf(0, remote);
     if (o.stop) return o.stop;
-    return act(action, Object.assign({ object: o.value }, extra || {}));
+    return act(action, Object.assign({ object: o.value, lies }, extra || {}));
   };
+  const optObj = action => (direct[0] ? withObj(action) : act(action, {}));   // (A verb alone: what's in front)
   // The verbs whose one object is a target, not an object.
   const onTarget = (action, remote) => {
     const o = objOf(0, remote);
@@ -483,7 +494,8 @@ function phraseSem(spec, env, ctx) {
       return act('VB_MOVE_DIRECTION', { direction: dirCode(findFirst(md, 'direction') || md, env), pace,
         distance: numberOf(kidsOf(spec, 'number')[0], env) });
     }
-    case 'face': return act('VB_FACE_DIRECTION', { direction: wordsOf(spec, env).includes('around') ? 'B' : dirCode(findFirst(spec, 'direction'), env) });
+    case 'face': return act('VB_FACE_DIRECTION', { direction: wordsOf(spec, env).includes('around') ? 'B' : dirCode(findFirst(spec, 'direction'), env),
+      half: wordsOf(spec, env).includes('half') ? 1 : undefined });   // ("turn half left": an eighth)
     case 'get': {
       let value;
       if (!direct[0]) {
@@ -520,8 +532,8 @@ function phraseSem(spec, env, ctx) {
     }
     case 'equip': return withObj('VB_EQUIP_OBJECT');
     case 'unequip': return withObj('VB_UNEQUIP_OBJECT', null, true);
-    case 'open': return withObj('VB_OPEN_OBJECT', { adj: adjOf(), manner: manner(spec, env) });
-    case 'close': return withObj('VB_CLOSE_OBJECT', { adj: adjOf(), manner: manner(spec, env) });
+    case 'open': return direct[0] ? withObj('VB_OPEN_OBJECT', { adj: adjOf(), manner: manner(spec, env) }) : act('VB_OPEN_OBJECT', { manner: manner(spec, env) });
+    case 'close': return direct[0] ? withObj('VB_CLOSE_OBJECT', { adj: adjOf(), manner: manner(spec, env) }) : act('VB_CLOSE_OBJECT', { manner: manner(spec, env) });
     case 'attack': {
       const a = objOf(0);
       if (a.stop) return a.stop;
@@ -686,7 +698,9 @@ function phraseSem(spec, env, ctx) {
       const loc = kidsOf(spec, 'locative')[0];
       const c = loc ? objRole(findFirst(loc, 'object'), env, ctx) : { value: undefined };
       if (c.stop) return c.stop;
-      return act('VB_HIDE', { container: c.value });
+      const o = direct[0] ? objOf(0) : { value: undefined };   // (A thing hidden: "hide the pouch")
+      if (o.stop) return o.stop;
+      return act('VB_HIDE', { object: o.value, container: c.value });
     }
     case 'sneak': case 'flee': {
       const d = kidsOf(spec, 'direction')[0];
@@ -721,7 +735,7 @@ function phraseSem(spec, env, ctx) {
       if (s.stop) return s.stop;
       return act('VB_FILL_OBJECT', { object: o.value, source: s.value });
     }
-    case 'defend': return act('VB_DEFEND', { defence: wordsOf(spec, env)[0] });
+    case 'defend': { const w = wordsOf(spec, env); return act('VB_DEFEND', { defence: w[0] === 'defend' ? w[1] || 'defend' : w[0] }); }
     case 'where': return act('VB_WHERE', {});
     case 'again': return act('VB_REPEAT', {});
     case 'knock-out': {
@@ -837,6 +851,31 @@ function phraseSem(spec, env, ctx) {
     }
     case 'sit-on': return act('VB_SIT', {});
     case 'posture': return act(own(POSTURE, spec.kids[0].rule), {});
+    // The game's own (the old parser's commands: commands.words says what the game does with each)
+    case 'break': return optObj('VB_BREAK_OBJECT');
+    case 'raise': return optObj('VB_RAISE_OBJECT');
+    case 'lower': return optObj('VB_LOWER_OBJECT');
+    case 'bend': return optObj('VB_BEND_OBJECT');
+    case 'force': return optObj('VB_FORCE_OBJECT');
+    case 'disarm': return optObj('VB_DISARM_OBJECT');
+    case 'rebar': return optObj('VB_BAR_OBJECT');
+    case 'approach': return withObj('VB_APPROACH_OBJECT');
+    case 'hang': case 'combine': {
+      const o = objOf(0);
+      if (o.stop) return o.stop;
+      const p = direct[1] ? objOf(1) : { value: undefined };
+      if (p.stop) return p.stop;
+      return r === 'hang' ? act('VB_HANG_OBJECT', { object: o.value, support: p.value }) : act('VB_COMBINE_OBJECT', { object: o.value, other: p.value });
+    }
+    case 'deceive': return onTarget('VB_DECEIVE');
+    case 'threaten': return onTarget('VB_THREATEN');
+    case 'calm': return onTarget('VB_CALM');
+    case 'befriend': return onTarget('VB_BEFRIEND');
+    case 'ally': {
+      const w = wordsOf(spec, env)[0];
+      if (w === 'dismiss') return onTarget('VB_ALLY_DISMISS');
+      return act(w === 'come' || w === 'heel' ? 'VB_ALLY_COME' : 'VB_ALLY_STAY', {});
+    }
     case 'pretend': return act('VB_PRETEND', { state: textOf(findFirst(spec, 'pretense'), env) });
     default: return err('NOT_UNDERSTOOD');
   }
@@ -910,6 +949,7 @@ function replaceObject(spec, obj) {
   let done = false;
   return Object.assign({}, spec, { kids: spec.kids.map(k => {
     if (!done && k.rule === 'object') { done = true; return obj; }
+    if (!done && k.rule === 'thing') { done = true; return Object.assign({}, k, { kids: [obj] }); }   // (A thing in the place: its object new, where it lies with the old)
     return k;
   }) });
 }

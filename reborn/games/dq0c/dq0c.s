@@ -1,13 +1,15 @@
 ; ****************************************************************************
 ; dq0c.s - Dingus Quest Zero's command parser: a task of its own, started by the UI (dq0c SEG ROLE LIBDIR: the hub's
-; segment, its role there, hub.h, and the game's lib folder).  As it starts it reads its tables into its RAM
-; (LIBDIR/dq0c.dat: the grammar, its index and the default aliases, sim/tools/commandtables.js's, made by make.js);
-; then it answers the UI's requests (the hub's cq, hub.h's protocol: posted, the parser's doorbell rung; answered,
-; the asker's rung) as they come: a line matched (CQ_MATCH: the reply's res 1, 0, or -1), the world's words set
-; (CQ_WORLD), nothing (CQ_NONE: the round trip alone, timed).  Between them it waits on its doorbell, costing
-; nothing; it ends when the hub's quit is set (the world's, as the game ends: the UI rings it then).  Assembly
-; throughout (cmdmatch.s the matcher): no C runtime.  Its RAM: the tables (17K), the matcher's (4K), a line, the
-; world's words.
+; segment, its role there, hub.h, and the game's lib folder).  As it starts it reads its tables (LIBDIR/dq0c.dat,
+; made by make.js: the grammar, its index and the default aliases, sim/tools/commandtables.js's; the game's words,
+; commandwords.js's): the grammar's rules into a RAM bank of its own, the rest into its RAM.  Then it answers the
+; UI's requests (the hub's cq, hub.h's protocol: posted, the parser's doorbell rung; answered, the asker's rung) as
+; they come: a line matched and what it means (CQ_MATCH: the reply's res 1, 0, or -1, and its struct pcmd in the text
+; bank at CQ_PCMD, cmdmean.s's, the character facing the cq's face), the world's words set (CQ_WORLD), nothing
+; (CQ_NONE: the round trip alone, timed).  Between them it waits on its doorbell, costing nothing; it ends when the
+; hub's quit is set (the world's, as the game ends: the UI rings it then).  Assembly throughout (cmdmatch.s the
+; matcher, cmdmean.s the meaning): no C runtime.  Its RAM: the tables (15K), the matcher's and the meaning's (5K), a
+; line, the world's words; its bank, the rules (7K).
 ; ****************************************************************************
 
 .include "hydra.inc"
@@ -15,14 +17,19 @@
 .include "macros.inc"
 .include "hub.inc"
 
-            .import     cm_init, cm_world, cm_match, cm_g, cm_i, cm_a
+            .macpack    longbranch
+
+            .import     cm_init, cm_world, cm_match, cm_g, cm_i, cm_a, cm_r
+            .import     cm_winit, cm_mean, cm_wthings, cm_w, cm_cmd
 
             HYX2_PROGRAM "dq0c", main
 
-TABLES_MAX  = 18432                 ; dq0c.dat's room: its header, then the tables (make.js holds the file to it)
-DAT_HEAD    = 11                    ; Its header: "DQ0C", version 1, the grammar's, index's and aliases' lengths
-DAT_VERSION = 1
-WORLD_MAX   = 1024                  ; The world's words kept (their three lists, each 0-ended)
+TABLES_MAX  = 16384                 ; dq0c.dat's room in the RAM: its header, then the tables there; and in the bank,
+RULES_MAX   = 8192                  ;   the rules (make.js holds the file to them)
+DAT_HEAD    = 15                    ; Its header: "DQ0C", version 2, the lengths of the grammar's counts and words, the
+DAT_VERSION = 2                     ;   index, the aliases, the words' table (those in the RAM), and the rules (the bank)
+RULES_AT    = $8000                 ; (The bank in the window)
+WORLD_MAX   = CQ_WORDS              ; The world's words kept (their three lists, each 0-ended: hub.h's most)
 LINE_MAX    = 255                   ; A line's letters kept
 
 .zeropage
@@ -40,6 +47,9 @@ fd:         .res        1
 num:        .res        1
 tmp:        .res        1
 cnt:        .res        2           ; A count: the bytes to copy, or to read
+gbank:      .res        1           ; The rules' bank
+face:       .res        1           ; A line's: the way the character faces
+res:        .res        1           ;   and its verdict
 path:       .res        80
 line:       .res        LINE_MAX + 3
 world:      .res        WORLD_MAX + 3
@@ -47,6 +57,7 @@ tables:     .res        TABLES_MAX
 
 .rodata
 datname:    .byte       "/dq0c.dat", 0
+datmagic:   .byte       "DQ0C", DAT_VERSION
 nohub:      .byte       "dq0c: no hub", 0
 notables:   .byte       "dq0c: no dq0c.dat, or not right", 0
 badtables:  .byte       "dq0c: the tables don't fit", 0
@@ -103,8 +114,12 @@ main:
             sta         HUB_WINDOW + HUBO_TASK,x
             jsr         load            ; The tables
             bcs         tabfail
+            jsr         mapg
             jsr         cm_init
             bcs         tabbad
+            jsr         cm_winit
+            bcs         tabbad
+            jsr         cm_wthings      ; (The game's things, the world's words till it says more)
 loop:       jsr         map0            ; The requests, as they come
             lda         HUB_WINDOW + HUBO_QUIT
             bne         done
@@ -133,14 +148,27 @@ serve:      lda         HUB_WINDOW + HUBO_CQ + RQ_KIND
             cmp         #CQ_WORLD
             beq         words
             lda         #0              ; (CQ_NONE, or one it doesn't know)
-            bra         reply
-match:      LDR         ap, line        ; A line: matched
+            jmp         reply
+match:      lda         HUB_WINDOW + HUBO_CQ + CQO_FACE
+            sta         face
+            LDR         ap, line        ; A line: matched, and what it means
             lda         #<LINE_MAX
             ldx         #>LINE_MAX
             jsr         text
+            jsr         mapg
             lda         #<line
             ldx         #>line
             jsr         cm_match
+            sta         res
+            lda         face
+            jsr         cm_mean
+            jsr         mapc            ; (Its struct pcmd in the text bank)
+            ldx         #PCMD_SIZE - 1
+:           lda         cm_cmd,x
+            sta         HUB_WINDOW + CQ_PCMD,x
+            dex
+            bpl         :-
+            lda         res
             bra         reply
 words:      LDR         ap, world       ; The world's words: its three lists, each after the last's 0
             lda         #<WORLD_MAX
@@ -152,7 +180,9 @@ words:      LDR         ap, world       ; The world's words: its three lists, ea
             MOVR        cm_i, ap
             jsr         pastz
             MOVR        cm_a, ap
+            jsr         mapg
             jsr         cm_world
+            jsr         cm_wthings
             lda         #0
 reply:      pha
             jsr         map0
@@ -167,7 +197,11 @@ reply:      pha
             CALL        SEM_RELEASE
             jmp         loop
 
-; map0, mapc: the hub's bank 0, or its text bank, at $8000 (U, then the bank register: hub.c's hub_map)
+; map0, mapc, mapg: the hub's bank 0, or its text bank, at $8000 (U, then the bank register: hub.c's hub_map); or
+; the rules' bank (this task's own: the bank register alone)
+mapg:       lda         gbank
+            sta         HUB_BANKREG
+            rts
 map0:       lda         u0
             sta         HUB_U
             lda         x0
@@ -269,25 +303,122 @@ end:        jsr         pastz
             rts
 .endproc
 
-; load: dq0c.dat (path) read into tables, its header held to what it should be, and cm_g, cm_i and cm_a set at its
-; three tables: C = 0; or C = 1 (none, or not right: .A 1 for the second)
+; load: dq0c.dat (path) read: its header held to what it should be, the tables in the RAM (cm_g, cm_i, cm_a, cm_w
+; set at them), the rules in a bank of this task's (gbank, cm_r).  C = 0; or C = 1 (none, or not right: .A 1 for
+; the second)
 .proc load
             LDR         r0, path
             lda         #O_READ
             CALL        OPEN
             CHECK       none
             sta         fd
-            LDR         ap, tables
-            LDR         cnt, TABLES_MAX
-read:       MOVR        r0, ap          ; As much as there's room for, a read at a time till it ends
+            LDR         ap, tables      ; The header
+            LDR         cnt, DAT_HEAD
+            jsr         readn
+            jcs         bad
+            ldx         #4              ; "DQ0C", its version
+:           lda         tables,x
+            cmp         datmagic,x
+            jne         bad
+            dex
+            bpl         :-
+            clc                         ; The tables in the RAM: no more than there's room for
+            lda         tables + 5
+            adc         tables + 7
+            sta         cnt
+            lda         tables + 6
+            adc         tables + 8
+            sta         cnt+1
+            clc
+            lda         cnt
+            adc         tables + 9
+            sta         cnt
+            lda         cnt+1
+            adc         tables + 10
+            sta         cnt+1
+            clc
+            lda         cnt
+            adc         tables + 11
+            sta         cnt
+            lda         cnt+1
+            adc         tables + 12
+            sta         cnt+1
+            jcs         bad
+            cmp         #>(TABLES_MAX - DAT_HEAD)
+            bcc         :+
+            jne         bad
+            lda         cnt
+            cmp         #<(TABLES_MAX - DAT_HEAD) + 1
+            jcs         bad
+:           jsr         readn
+            jcs         bad
+            lda         tables + 14     ; The rules: a bank's at most, in a bank of its own
+            cmp         #>RULES_MAX + 1
+            bcs         bad
+            lda         #1
+            CALL        BANKS_ALLOC
+            bcs         bad
+            sta         gbank
+            jsr         mapg
+            LDR         ap, RULES_AT
+            lda         tables + 13
+            sta         cnt
+            lda         tables + 14
+            sta         cnt+1
+            jsr         readn
+            php
+            jsr         map0
+            plp
+            bcs         bad
+            lda         fd
+            CALL        CLOSE
+            LDR         cm_g, tables + DAT_HEAD   ; The grammar's counts and words, the index, the aliases, the words
+            MOVR        ap, cm_g
+            ldx         #5
+            jsr         after
+            MOVR        cm_i, ap
+            ldx         #7
+            jsr         after
+            MOVR        cm_a, ap
+            ldx         #9
+            jsr         after
+            MOVR        cm_w, ap
+            LDR         cm_r, RULES_AT
+            clc
+            rts
+bad:        lda         fd
+            CALL        CLOSE
+            lda         #1
+none:       sec
+            rts
+.endproc
+
+; after: ap past the table whose length is the header's at tables + .X
+.proc after
+            clc
+            lda         ap
+            adc         tables,x
+            sta         ap
+            lda         ap+1
+            adc         tables + 1,x
+            sta         ap+1
+            rts
+.endproc
+
+; readn: cnt bytes read from fd into ap, a read at a time (ap past them): C = 0; or C = 1, the file ending first
+.proc readn
+loop:       lda         cnt
+            ora         cnt+1
+            beq         done
+            MOVR        r0, ap
             MOVR        r1, cnt
             lda         fd
             CALL        READ
-            bcs         shut
+            bcs         short
             sta         tmp
             stx         num
             ora         num
-            beq         shut
+            beq         short
             clc
             lda         ap
             adc         tmp
@@ -302,43 +433,9 @@ read:       MOVR        r0, ap          ; As much as there's room for, a read at
             lda         cnt+1
             sbc         num
             sta         cnt+1
-            ora         cnt
-            bne         read
-shut:       lda         fd
-            CALL        CLOSE
-            lda         tables          ; "DQ0C", its version
-            cmp         #'D'
-            bne         bad
-            lda         tables + 1
-            cmp         #'Q'
-            bne         bad
-            lda         tables + 2
-            cmp         #'0'
-            bne         bad
-            lda         tables + 3
-            cmp         #'C'
-            bne         bad
-            lda         tables + 4
-            cmp         #DAT_VERSION
-            bne         bad
-            LDR         cm_g, tables + DAT_HEAD   ; The grammar, then the index, then the aliases
-            clc
-            lda         cm_g
-            adc         tables + 5
-            sta         cm_i
-            lda         cm_g+1
-            adc         tables + 6
-            sta         cm_i+1
-            clc
-            lda         cm_i
-            adc         tables + 7
-            sta         cm_a
-            lda         cm_i+1
-            adc         tables + 8
-            sta         cm_a+1
-            clc
+            bra         loop
+done:       clc
             rts
-bad:        lda         #1
-none:       sec
+short:      sec
             rts
 .endproc

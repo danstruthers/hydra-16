@@ -5,6 +5,9 @@
 //   node sim/tools/commandmatch-test.js --hydra   on the Hydra emulator under HydraOS (cmdmatch/cmdhy.c): the grammar
 //                                                 in a RAM bank, the index and the aliases in the main RAM, the corpus
 //                                                 read from /pc, timed by the tick (the system's interrupts with it)
+//   node sim/tools/commandmatch-test.js --mean    what each line means (games/dq0c/cmdmean.s, on sim65: cmdmean.c), the
+//                                                 corpus's lines and cmdmatch/lines.txt's, each struct pcmd the host's
+//                                                 (commandwords.js's scan), the character facing the line's number mod 8
 //   node sim/tools/commandmatch-test.js --task    the parser's task (games/dq0c) under HydraOS, through the hub's
 //                                                 protocol (cmdmatch/cmdtask.c the UI's part): its start, an empty
 //                                                 request's round trip, a command's, each result the host's
@@ -54,6 +57,42 @@ function sim65() {
     Math.round(worlds.reduce((a, b) => a + b, 0) / Math.max(1, worlds.length)) + ' (' + worlds.length + ' times)');
   console.log('the slowest:');
   for (const e of [...each].sort((a, b) => b.c - a.c).slice(0, 5)) console.log('  ' + String(e.c).padStart(7) + '  ' + text[e.i]);
+  return bad === 0;
+}
+
+// What each line means on sim65 (cmdmean.c), against the host's (commandwords.js's scan, the default aliases)
+function mean() {
+  const words = require('./commandwords.js');
+  const { DEFAULT_ALIASES, DEFAULT_ANYWHERE } = require('./commandcompile.js');
+  const lines = require('./commandmatch-gen.js').meaningLines(), w = words.load();
+  const bin = path.join(OUT, 'cmdmean.bin');
+  run(tool('cl65'), ['--cpu', '65C02', '-t', 'sim65c02', '-O', '-I', OUT, '-I', HERE, '-o', bin, path.join(HERE, 'cmdmean.c'),
+    path.join(GAME, 'cmdmatch.s'), path.join(GAME, 'cmdmean.s'), path.join(HERE, 'cmdmatch_c.s'), path.join(HERE, 'cmdmean_c.s')],
+    { cwd: OUT, stdio: ['ignore', 'pipe', 'pipe'] });
+  const out = run(tool('sim65'), ['--cpu', '65C02', '-x', '4000000000', bin], { cwd: OUT }).split(/\r?\n/);
+  const F = ['verb', 'dir', 'obj', 'orel', 'how', 'half', 'around', 'prep', 'order'];
+  let n = 0, bad = 0, long = 0, sum = 0, most = 0;
+  for (const l of out) {
+    const m = l.match(/^(\d+) (-?\d+) (\d+) ([\d ]+) \|([^|]*)\|([^|]*)\|$/);
+    if (!m) { if (/not right/.test(l)) console.log(l); continue; }
+    const i = +m[1], v = m[4].split(' ').map(Number);
+    n++;
+    sum += +m[3];
+    most = Math.max(most, +m[3]);
+    if (+m[2] < 0) { long++; continue; }          // (Too long for the matcher: its tokens cut short)
+    const c = words.scan(words.tokens(lines[i], DEFAULT_ALIASES, DEFAULT_ANYWHERE), w, i & 7);
+    const d = F.filter((k, j) => c[k] !== v[j]);
+    if (c.word !== m[5]) d.push('word');
+    if (c.word2 !== m[6]) d.push('word2');
+    if (d.length) {
+      bad++;
+      if (bad <= 30) console.log('differs: ' + JSON.stringify(lines[i]) + ' (facing ' + (i & 7) + '): ' +
+        d.map(k => k + ' ' + (k === 'word' ? m[5] : k === 'word2' ? m[6] : v[F.indexOf(k)]) + ', the host ' + c[k]).join('; '));
+    }
+  }
+  if (n !== lines.length) { console.log('only ' + n + ' of ' + lines.length + ' lines ran'); return false; }
+  console.log(n + ' lines, ' + bad + ' differ from the host' + (long ? ' (' + long + ' too long, not compared)' : ''));
+  console.log('cycles: cm_mean ' + Math.round(sum / n) + ' on average, ' + most + ' the most');
   return bad === 0;
 }
 
@@ -108,9 +147,9 @@ function task() {
   fs.mkdirSync(pc, { recursive: true });
   require(path.join(GAME, 'make.js')).build({ dir: GAME, objdir: path.join(pc, 'dq0c-obj') });   // (pc/dq0c.dat)
   corpusFile(pc);
-  prog('dq0c', ['dq0c.s', 'cmdmatch.s', 'hub.inc'].map(f => path.join(GAME, f)), pc);
+  prog('dq0c', ['dq0c.s', 'cmdmatch.s', 'cmdmean.s', 'hub.inc'].map(f => path.join(GAME, f)), pc);
   prog('cmdtask', [path.join(HERE, 'cmdtask.c')], pc, { HYC_CFLAGS: '-I ' + path.join(REB, 'games', 'dq0') });
   return emulate(pc, 'cmdtask').some(l => / 0 differ$/.test(l));
 }
 
-process.exit((process.argv.includes('--task') ? task() : process.argv.includes('--hydra') ? hydra() : sim65()) ? 0 : 1);
+process.exit((process.argv.includes('--mean') ? mean() : process.argv.includes('--task') ? task() : process.argv.includes('--hydra') ? hydra() : sim65()) ? 0 : 1);
