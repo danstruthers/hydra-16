@@ -47,7 +47,7 @@
 <put-prep>       ::= "in" | "into" | "inside" | "on" | "onto" | "on top of" | "under" | "against"
 <use>            ::= <USE> <object> [ "on" <object> ]
 <equip>          ::= <EQUIP> <object>
-<unequip>        ::= <UNEQUIP> <object>
+<unequip>        ::= <UNEQUIP> <object> | "put" <object> "away"   (* "put away the sword" and "put the sword away" *)
 <open>           ::= "open" <object>
 <close>          ::= "close" <object>                           (* "close look" is <DETAIL> <LOOK>, not this *)
 <from-phrase>    ::= "from" <object>
