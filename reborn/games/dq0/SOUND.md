@@ -22,18 +22,18 @@ DUNGEON.md's.
 
 "Per creature" is two things, and both are the kind's:
 
-- **What a creature makes.**  Each kind has its own sounds, one for each thing it does that can be heard: a giant
-  rat's scurrying and its squeak, a cave spider's skittering and its hiss, a ghoul's shuffling tread and its moan, a
+- **What a creature makes.**  Each kind has its own sounds, one for each thing it does that can be heard: a giant rat's
+  scurrying and its squeak, a cave spider's skittering and its hiss, a ghoul's shuffling tread and its moan, a
   skeleton's dry clatter and the rattle of its bones, a cave bear's heavy tread and its growl, a kobold's light
-  footsteps and its yapping.  A sound is data, the theme's like the kinds: the table (dq0s/sounds.txt, a line a
-  sound, by the kind's key, kinds.txt's; made lib/dq0/dq0s.dat, 32 bytes a sound: kinds.txt's order, two a kind, then
-  the world's) gives its **words** (what the character hears it as: "a scurrying", never the creature's name: a sound
-  doesn't say what made it) and how each chip plays it (the YM2151: a patch or a drum and a note; the PSG: a waveform,
-  its width and a note), in **hits** (a scurry is three quick ticks, a tread two slow thuds, a growl one long one), at
-  a **level** (how loud it is at its loudest).  The acts heard are the denizens' events' two loud ones: a step
-  (DE_MOVED: a dash past the character is a louder step) and a noise of its own (DE_NOISE); and the world's own
-  sounds (dig, open, shut, blow, smash, chains, trap), with a fight's blows (E_FIGHT: *hit, a blow landing; *swish, one
-  that doesn't) played where the attacker is.
+  footsteps and its yapping.  A sound is data, as the kinds are (till themes carry them): the table (dq0s/sounds.txt, a
+  line a sound, by the kind's key, kinds.txt's; made lib/dq0/dq0s.dat, 32 bytes a sound: kinds.txt's order, two a kind,
+  then the world's) gives its **words** (what the character hears it as: "a scurrying", never the creature's name: a
+  sound doesn't say what made it) and how each chip plays it (the YM2151: a patch or a drum and a note; the PSG: a
+  waveform, its width and a note), in **hits** (a scurry is three quick ticks, a tread two slow thuds, a growl one long
+  one), at a **level** (how loud it is at its loudest).  The acts heard are the denizens' events' two loud ones: a step
+  (DE_MOVED: a dash past the character is a louder step) and a noise of its own (DE_NOISE); and the world's own sounds
+  (dig, open, shut, blow, smash, chains, trap), with a fight's blows (E_FIGHT: *hit, a blow landing; *swish, one that
+  doesn't) played where the attacker is.
 - **What a creature hears.**  Each hears by its own kind's hearing (dq0d/kinds.txt's): the denizens' task's, as
   DENIZENS.md says; the character by its own (the referee's, 0-9), as the UI and the sound task say below.  Both by
   the same rule: a noise of loudness L carries L times the hearer's hearing (the character's: (hearing + 3) / 2)
