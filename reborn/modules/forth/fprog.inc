@@ -135,11 +135,104 @@ prog_wait:
             jsr         WAIT
             stx         tmp2
             ldx         xsave
-            bcc         @ended
+            bcs         :+
+            jmp         prog_code
+:
             cmp         #E_INTR
             beq         @wait
             jmp         throw_os
-@ended:
+
+; prog_args's program (pathbuf, argbuf) run in forth's own task, if it's a bank program that runs in place (RUN: kept
+; in a bank of forth's own for the next time), its name without a / looked for as rc's $path has it (. then /bin), the
+; output waiting out first.  OUT: C = 0, tmp2 its status (as prog_wait's); C = 1 if it's not one (rc's, then: none
+; there, or not a bank program)
+prog_run:
+            jsr         flush
+            lda         r0                                  ; (r0 kept round the BREAK)
+            pha
+            lda         r0 + 1
+            pha
+            clc                                             ; The break lowered to what forth uses, HERE and its PAD's
+            lda         here                                ;   room past it: the rest the program's (RUN_LEND)
+            adc         #<(PAD_SIZE + 256)
+            sta         r0
+            lda         here + 1
+            adc         #>(PAD_SIZE + 256)
+            sta         r0 + 1
+            stx         xsave
+            jsr         BREAK
+            ldx         xsave
+            pla
+            sta         r0 + 1
+            pla
+            sta         r0
+            jsr         prog_here
+            php                                             ; (The break back at the dictionary's end)
+            pha
+            LDR         r0, DICT_END
+            stx         xsave
+            jsr         BREAK
+            ldx         xsave
+            pla
+            plp
+            rts
+prog_here:
+            lda         r0 + 1                              ; (/bin/NAME: ./NAME first)
+            cmp         #>pathbuf
+            bne         @path
+            lda         r0
+            cmp         #<pathbuf
+            bne         @path
+            lda         #'.'
+            sta         pathbuf + 3
+            lda         #'/'
+            sta         pathbuf + 4
+            LDR         r0, pathbuf + 3
+            jsr         @run
+            bcc         @code
+            cmp         #E_NOENT
+            sec
+            bne         @done
+            lda         #'n'                                ; (Then /bin/NAME)
+            sta         pathbuf + 3
+            lda         #'/'
+            sta         pathbuf + 4
+            LDR         r0, pathbuf
+@path:
+            jsr         @run
+            bcs         @done
+@code:
+            jmp         prog_code
+@done:
+            rts
+@run:
+            jsr         prog_env
+            LDR         r1, argbuf
+            lda         #RUN_LEND
+            stx         xsave
+            jsr         RUN
+            sta         tmp2
+            ldx         xsave
+            bcs         @rts
+            ldy         #0                                  ; (Its message, as WAIT gives it)
+:
+            lda         (r0),y
+            sta         statbuf,y
+            beq         :+
+            iny
+            cpy         #31
+            bne         :-
+            lda         #0
+            sta         statbuf,y
+:
+            lda         tmp2
+            clc
+@rts:
+            rts
+
+; tmp2 a program's exit code (its message in statbuf): or, if that's 1 and its message is a number (rc's $status), the
+; number.  OUT: C = 0
+prog_code:
             stz         tmp2 + 1
             lda         tmp2
             cmp         #1
@@ -185,6 +278,7 @@ prog_wait:
             iny
             bra         @digit
 @done:
+            clc
             rts
 
 ; The next word of the string at w (tmp chars left) into (w2), zero-terminated, w2 past its 0.  OUT: C = 1 if there
@@ -247,5 +341,38 @@ arg_put:
 :
             rts
 
+; prog = r0's path in forth's environment, the program's while it runs in place (rc gives each program it starts its
+; path so: the C samples find their own file by it).  Keeps r0 and .X; a full environment not said
+prog_env:
+            lda         r0 + 1
+            pha
+            sta         r1 + 1
+            lda         r0
+            pha
+            sta         r1
+            ldy         #0
+:
+            lda         (r1),y
+            beq         :+
+            iny
+            bne         :-
+:
+            iny                                             ; (Its 0 too)
+            sty         r2
+            stz         r2 + 1
+            stz         r3
+            stz         r3 + 1
+            LDR         r0, s_prog
+            lda         #$FF
+            stx         xsave
+            jsr         ENV_PUT
+            ldx         xsave
+            pla
+            sta         r0
+            pla
+            sta         r0 + 1
+            rts
+
 s_binrc:    .byte       "/bin/rc", 0
 s_mrc:      .byte       "#m/rc", 0
+s_prog:     .byte       "prog", 0

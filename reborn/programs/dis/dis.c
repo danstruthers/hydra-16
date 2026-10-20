@@ -2,7 +2,9 @@
 ** dis.c - dis [-cnw] [-l labels] [-o addr] file: the disassembler, the assembler's inverse.  A program (a HYX2 RAM
 ** program, as as and ld65 make them; or with -o, raw bytes from addr, as as -b makes them) written on stdout as a
 ** source in as's language, which as assembles to the same bytes.  Each instruction is the asm library's (asm.h: db's
-** and HyForth's disasm's way too).
+** and HyForth's disasm's way too).  A bank program (most of /bin's tools: HF_BANK, an o65 module after its header)
+** is its module's text and data as ld65 linked them, at $8000, its BSS after them: to read, not to assemble again (as
+** makes no o65 module, and an address an instruction loads a byte at a time is a number here, $8000's).
 **   Its code is found by following it from where it starts (a program's main; -o's addr): an instruction to the next,
 ** and to where it jumps, branches or calls, till one that goes no further (rts, jmp ...); what isn't reached is data
 ** (.byte, its text in quotes).  -c: every byte from the start an instruction, in turn.  A place an instruction names in
@@ -34,6 +36,7 @@
 #define TODO_MAX    256         /* Places to follow the code from, waiting */
 #define SYMS_MAX    128         /* Symbols outside the image (definitions), and labels in the BSS */
 #define HDR         48          /* A HYX2 header */
+#define O65         26          /* An o65 module's header (its options after it) */
 #define DATA_LINE   16          /* A line of data's bytes, at most */
 #define BANK        0x2000
 
@@ -49,7 +52,7 @@ static unsigned base, end;              /* The image: from base to end */
 static unsigned cstart, cend;           /* Its code: from its start (past a header) to its data */
 static unsigned bss, bssend;            /* A program's BSS */
 static unsigned entry;                  /* Where it starts */
-static unsigned char hyx, macro, all, nosys, wide;
+static unsigned char hyx, bankp, macro, all, nosys, wide;
 static const char* ind = "\t";         /* A line's indent, and the room after a directive (-w: the SDK's columns) */
 static const char* dir = " ";
 static unsigned char hdr[HDR];
@@ -436,7 +439,11 @@ static void write_out (void)
     unsigned char f;
     const char* s;
 
-    printf ("; %s, as dis read it: as assembles this to its bytes again\n", file);
+    if (bankp) {
+        printf ("; %s, a bank program, as dis read it: its text as linked, at $8000\n", file);
+    } else {
+        printf ("; %s, as dis read it: as assembles this to its bytes again\n", file);
+    }
     if (!nosys || hyx) {
         puts (".include \"hydra.inc\"");
     }
@@ -489,6 +496,54 @@ static void write_out (void)
 /* ---- Reading it */
 
 /* The file into the image's banks (base on), its length (len) */
+/* fd's next n bytes into buf, all of them */
+static void get (int fd, unsigned n)
+{
+    if (read (fd, buf, n) != (int) n) {
+        fail (file, "not a bank program: too short");
+    }
+}
+
+/* A bank program (its HYX2 header in hdr, its o65 module next in fd): the module's header and options read, then its
+** own HYX2 header, its text's start, into hdr; base to end its text and data, as linked (at $8000) */
+static unsigned bank_program (int fd)
+{
+    unsigned tlen, dlen, blen;
+
+    get (fd, O65);
+    if (memcmp (buf, "\1\0o65\0", 6) || (buf[7] & 0xF0) || buf[8] || buf[9] != 0x80) {
+        fail (file, "not a bank program: not an o65 module at $8000");
+    }
+    tlen = buf[10] | buf[11] << 8;
+    dlen = buf[14] | buf[15] << 8;
+    blen = buf[18] | buf[19] << 8;
+    for (;;) {                                      /* (Its options, each its length, itself counted; then a 0) */
+        get (fd, 1);
+        if (!buf[0]) {
+            break;
+        }
+        if (buf[0] < 2) {
+            fail (file, "not a bank program: its options");
+        }
+        get (fd, buf[0] - 1);
+    }
+    if (tlen < HDR || read (fd, hdr, HDR) != HDR || memcmp (hdr, "HYX2", 4) || word (8) != 0x8000) {
+        fail (file, "not a bank program: no HYX2 header at its text's start");
+    }
+    base = 0x8000;
+    end = base + tlen + dlen;
+    cstart = base + HDR;
+    cend = base + tlen;
+    bss = end;
+    bssend = bss + blen;
+    entry = word (24);
+    macro = hdr[5] == HY_HT_PROGRAM && hdr[6] == HY_HF_BANK && hdr[7] == HY_ABI_VERSION && word (10) == HDR &&
+        !word (12) && !word (14) && !word (16) && !word (18) && !word (20) && !word (22) &&
+        !word (26) && !word (28) && !word (30) && !hdr[32] && hdr[33] == 1 && word (34) == 1 &&
+        entry >= cstart && entry < cend && hdr[36] && !hdr[47];
+    return tlen + dlen;
+}
+
 static void load (int fd, unsigned len)
 {
     unsigned off, n, got;
@@ -573,10 +628,16 @@ int main (int argc, char* argv[])
         len = (unsigned) size;
         end = cend = base + len;
     } else {
-        if (read (fd, hdr, HDR) != HDR || memcmp (hdr, "HYX2", 4) || hdr[4] != HDR || word (8) != 0x0800) {
-            fail (file, "not a HYX2 RAM program (-o addr: raw bytes from addr)");
+        if (read (fd, hdr, HDR) != HDR || memcmp (hdr, "HYX2", 4) || hdr[4] != HDR ||
+            word (8) != (hdr[6] & HY_HF_BANK ? 0x8000 : 0x0800)) {
+            fail (file, "not a HYX2 RAM program nor a bank program (-o addr: raw bytes from addr)");
         }
         hyx = 1;
+        bankp = (hdr[6] & HY_HF_BANK) != 0;
+    }
+    if (bankp) {
+        len = bank_program (fd);
+    } else if (!raw) {
         base = 0x0800;
         len = word (10);
         end = base + len;
@@ -589,12 +650,12 @@ int main (int argc, char* argv[])
             word (18) == word (12) + word (16) && word (22) == bssend && len == word (12) + word (16) - base &&
             !word (26) && !word (28) && !word (30) && !hdr[32] && hdr[33] == 1 && word (34) == 1 &&
             entry >= cstart && entry < cend && hdr[36] && !hdr[47];
-        for (i = 36; macro && i < 47 && hdr[i]; ++i) {
-            macro = hdr[i] > ' ' && hdr[i] < 0x7F && hdr[i] != '"';
-        }
-        for (; macro && i < HDR; ++i) {
-            macro = !hdr[i];
-        }
+    }
+    for (i = 36; macro && i < 47 && hdr[i]; ++i) {     /* (Its name, as HYX2_PROGRAM's would be) */
+        macro = hdr[i] > ' ' && hdr[i] < 0x7F && hdr[i] != '"';
+    }
+    for (; macro && i < HDR; ++i) {
+        macro = !hdr[i];
     }
     load (fd, len);
     close (fd);

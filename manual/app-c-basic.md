@@ -331,7 +331,7 @@ carried on
 
 ```session
 > PRINT DATE$; " "; TIME$
-2000-01-01 00:00:04
+2000-01-01 00:00:05
 > SHELL "echo hello from the shell"
 hello from the shell
 > PRINT STATUS

@@ -23,6 +23,13 @@ it is a file called `-`.
 **Standard input.** The programs that read files read standard input when they are given none, which is how
 they are used in a pipe.
 
+**Where a program runs.** Most of the programs here are bank programs. A plain command that a shell waits for,
+at rc's prompt or HyForth's, runs one in the shell's own task, from a RAM bank where it stays loaded for the next
+time; in a pipeline or in the background it has a task of its own. `as`, `newwin` and `tail` always have a task
+of their own, and the larger programs (`calc`, `db`, `dis`, `ed`, `edit`, `grep`, `sort`) are read into a task
+of their own as they start. None of the programs that run in a shell's task changes its environment, namespace or
+current directory.
+
 ## as
 
 A program: the 65C02 assembler.
@@ -463,8 +470,8 @@ Empty.
 ```session
 /> df
 disk  kind   size        free        label
-0     sdhc   16380 KB    15612 KB    HYDRA-16
-x     rom    671 KB      2 KB        ROM
+0     sdhc   16380 KB    15440 KB    HYDRA-16
+x     rom    735 KB      1 KB        ROM
 r     ram    255 KB      253 KB      RAM
 s     sram   511 KB      510 KB      SRAM
 ```

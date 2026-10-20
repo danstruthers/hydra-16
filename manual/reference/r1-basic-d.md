@@ -1097,8 +1097,9 @@ If *path$* is a file and not a directory, nothing is listed.
 
 ```session
 > FILES "/rom/lib"
-as/             basic/          edit/           font/           forth/
-hylang/         namespace       profile         shell           windows
+as/             bank/           basic/          edit/           font/
+forth/          hylang/         namespace       profile         shell
+windows
 ```
 
 ## FIX

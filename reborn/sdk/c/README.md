@@ -202,11 +202,14 @@ A child's folder (its `.c` and `.s` files) builds into `NAME.bp`: an o65 module 
 (`sdk/c/child.cfg`), what it uses of its caller (cc65's runtime's helpers, the caller's functions and data) its
 imports, its globals its entries.  In this repository a child is `bank/NAME` (its `parents` file names the
 programs that call it: the build fails if one of them hasn't something the child uses), and every C program's
-exports, `NAME.exp`, are written beside its `NAME.hyx`.  As a child's loaded its imports are found in its
-caller's exports by name, its own zero page put where `bank_setup` says, its text and data read into the bank, its
-BSS cleared.  A call maps the child's bank at $8000 (the bank register alone: the hub's shared bank comes back as it
-was) and costs some 60 cycles more than a JSR; when the task has no bank to spare (`BANK_MAX` children, or the
-kernel's banks all taken) the child called least lately is given up, and loaded again as it's next called.
+exports, `NAME.exp`, are written beside its `NAME.hyx`.  The kernel loads a child (`BANK_LOAD`) into the code
+cache it keeps a task's bank programs in (the kernel's "Bank programs", `docs/03-base/kernel.md`): its imports
+found in its caller's exports by name, its own zero page put where `bank_setup` says, its text and data read into
+the first gap they fit in a bank of the cache's (several children to a bank) and relocated there, its BSS cleared.
+A call maps the child's bank at $8000 (the bank register alone: the hub's shared bank comes back as it was), checks
+it's still the load it was, marks it used, and costs some 160 cycles more than a JSR; when the cache has no room
+(`BANK_BANKS` banks, fewer if `bank_limit` says, or the kernel's banks all taken) the child used least lately is
+given up, and loaded again as it's next called.
 
 What a child can't do: it has the $8000 window while it runs, so it can't map another bank there, nor call another
 child; it can call only its caller's main RAM's code (not its overlays nor its swapped parts); its code, data and BSS

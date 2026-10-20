@@ -20,8 +20,8 @@ EXITS           = $F830       ; .A = the exit code (0: success); r0 = a message 
                               ; -> (doesn't return)
 WAIT            = $F833       ; .A = a task this one started, or $FF for any; r0 = a buffer for the message (32 bytes), or 0
                               ; -> .A = the task that ended; .X = its exit code; its message in r0's buffer ("" for none)
-SPAWN           = $F836       ; r0 = the program's path (through the namespace: /bin/NAME; or #m/NAME, a module in the paged ROM); r1 = its arguments (zero-terminated strings, an empty one after the last: 176 bytes at most), or 0; .A = flags (SPAWN_NEWGROUP, SPAWN_NEWNS, SPAWN_FDMAP, SPAWN_NOENV, SPAWN_STOPPED); r2 = an fd map (with SPAWN_FDMAP)
-                              ; -> .A = the new task
+SPAWN           = $F836       ; r0 = the program's path (through the namespace: /bin/NAME; or #m/NAME, a module in the paged ROM); r1 = its arguments (zero-terminated strings, an empty one after the last: 176 bytes at most), or 0; .A = flags (SPAWN_NEWGROUP, SPAWN_NEWNS, SPAWN_FDMAP, SPAWN_NOENV, SPAWN_STOPPED, SPAWN_RUN, RUN_LEND); r2 = an fd map (with SPAWN_FDMAP)
+                              ; -> .A = the new task (SPAWN_RUN: this one, if the program ran in it)
 GETPID          = $F839       ; -
                               ; -> .A = this task's number
 YIELD           = $F83C       ; -
@@ -56,6 +56,8 @@ SEM_FREE        = $F878       ; .A = a semaphore
 EXEC            = $F87B       ; r0 = the program's path (as SPAWN's); r1 = its arguments (as SPAWN's: 176 bytes at most), or 0
                               ; -> (doesn't return, once the program is found: it runs in this task's place)
 SEM_WAIT        = $F87E       ; .A = a semaphore; .X = the most ticks to wait (TICK_HZ a second; 0: none, as SEM_TRY)
+RUN             = $F881       ; r0 = a bank program's path (as SPAWN's); r1 = its arguments (as SPAWN's), or 0; .A = flags (SPAWN_FDMAP, RUN_LEND); r2 = an fd map (with SPAWN_FDMAP, as SPAWN's).  None of them in the window ($8000-$9FFF)
+                              ; -> .A = its exit code; r0 = its exit message (31 characters at most: TA_SCRATCH, "" for none)
 
 ; ---- memory: Memory: the break, pages, banks, shared segments (phase 1.8)
 BREAK           = $F890       ; r0 = the new end of the program's data (the first byte past it), or 0 to ask
@@ -80,6 +82,9 @@ BANKS_ALLOC_IN  = $F8B1       ; .A = how many; .X = the lowest bank it may take;
                               ; -> .A = the first
 SEG_CREATE_IN   = $F8B4       ; .A = how many banks (1-128); .X = the lowest shared bank ID it may take; .Y = the highest (U << 4 | the bank's low nibble; segments have $80-$FF)
                               ; -> .A = the segment
+BANK_LOAD       = $F8B7       ; r0 = a child's path (an o65 module, linked at $8000: sdk/c/child.cfg); r1 = its caller's exports (NAME.exp), or 0; .A = where its zero page goes; .X = the bytes there it may have.  None of them in the window
+                              ; -> .A = its bank; .X = its directory entry (RB_DIR + 16 x .X in its bank: RE_GEN its load, RE_TABLE its table)
+BANK_FLUSH      = $F8BA       ; .A = the banks the code cache may have from now on (RC_BANKS to start with), or 0 (as it was)
 
 ; ---- file: Files (phase 2)
 OPEN            = $F8C0       ; r0 = a path; .A = the mode (O_READ, O_WRITE, O_RDWR; | O_TRUNC, O_NONBLOCK)
@@ -201,6 +206,22 @@ TICK_HZ         = 200         ; Ticks a second
 INIT_TASK       = 1           ; init's task (and its note group: the console's foreground at first)
 PROG_ZP         = $22         ; A program's own zero page: $22-$7F
 PROG_ZP_END     = $80         
+RB_DIR          = $9F00       ; A code cache bank's directory (BANK_LOAD): its entries at RB_DIR + 16 x n, n 1-15
+RE_START        = 0           ; A cache directory entry: where its module is (2)
+RE_END          = 2           ; A cache directory entry: the first byte past it (2)
+RE_TABLE        = 4           ; A cache directory entry: a child's exports' table (2)
+RE_GEN          = 6           ; A cache directory entry: its load's number (0: free)
+RE_FLAGS        = 7           ; A cache directory entry: RF_*
+RE_STAMP        = 8           ; A cache directory entry: when it was last used (TK_RCLOCK) (2)
+TK_RCLOCK       = $EC         ; A task's code cache's uses counted (2): its zero page's
+RC_BANKS        = 8           ; A task's code cache's banks at most, to start with (BANK_FLUSH)
+BL_FILE         = 2           ; BANK_LOAD's why (.X): its file not there, or not read
+BL_FORMAT       = 3           ; BANK_LOAD's why (.X): not a child (o65, linked at $8000, in a bank)
+BL_ZP           = 4           ; BANK_LOAD's why (.X): its zero page more than the caller gives
+BL_EXPORTS      = 5           ; BANK_LOAD's why (.X): the caller's exports' file not there, or not of its form
+BL_IMPORT       = 6           ; BANK_LOAD's why (.X): an import the caller hasn't (its name in TA_SCRATCH)
+BL_BANK         = 7           ; BANK_LOAD's why (.X): no bank, or no room in one
+TA_SCRATCH      = $0280       ; A task's call scratch (32 bytes): an exit message, BANK_LOAD's missing import
 TASK_ARGS       = $0350       ; A task's arguments: zero-terminated strings, an empty one after the last (176 bytes at most)
 ARGS_MAX        = 176         ; SPAWN's arguments: their bytes at most (each string's 0, and the empty one that ends them)
 TASK_NAME       = $0230       ; A task's name, zero-terminated
@@ -213,6 +234,8 @@ HT_DRIVER       = 2
 HT_LIBRARY      = 3           
 HF_INPLACE      = $01         ; HYX2 flags: runs in place in the paged ROM
 HF_BOOT         = $02         ; HYX2 flags: a driver the kernel starts at boot
+HF_BANK         = $04         ; HYX2 flags: a bank program: an o65 module after the header, run in a RAM bank (RUN)
+HF_TASK         = $08         ; HYX2 flags: a bank program that runs only in a task of its own (not in place: RUN)
 HX_MAGIC        = 0           ; The HYX2 header (HX_SIZE bytes, a program's first): HYX2
 HX_HSIZE        = 4           ; HYX2: the header's size (48)
 HX_TYPE         = 5           ; HYX2: the type (HT_*)
@@ -268,6 +291,8 @@ SPAWN_NEWNS     = $02         ; SPAWN's flags: the child starts with an empty na
 SPAWN_FDMAP     = $04         ; SPAWN's flags: the child's fds are r2's map (else the caller's 0, 1 and 2)
 SPAWN_NOENV     = $08         ; SPAWN's flags: the child starts with an empty environment (else a copy of its parent's)
 SPAWN_STOPPED   = $10         ; SPAWN's flags: the child stops at its entry point, for the debugger (/proc/N/ctl's step)
+SPAWN_RUN       = $20         ; SPAWN's flags: a bank program that runs in place does, in this task (RUN), and SPAWN gives this task back
+RUN_LEND        = $40         ; RUN's flags (and SPAWN_RUN's): the program may move the break past the caller's
 ENV_SIZE        = 1024        ; TASKREAD's TR_ENV: its buffer, an environment's first variables, whole, and a 0
 ENV_MAX         = 8192        ; An environment's bytes at most: each variable its name's length, its name, its value's length (2), its value; a 0
 ENV_NAME_MAX    = 31          ; A variable's name's length at most

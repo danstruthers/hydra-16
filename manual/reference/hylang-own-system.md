@@ -133,7 +133,7 @@ hylang> (sh-out "echo hi")
 hylang> (sh-out "cat" "from input")
 => "from input"
 hylang> (str-split (str-trim (sh-out "ls /rom/lib | head -3")) "\n")
-=> {"as/" "basic/" "edit/"}
+=> {"as/" "bank/" "basic/"}
 ```
 
 ## pid

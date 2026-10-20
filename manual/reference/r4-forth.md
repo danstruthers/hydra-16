@@ -2872,7 +2872,7 @@ The commands `df`, `fsck` and `label`; Chapter 14.
 rom 4 MB 8192 blocks
 hydrafs label=ROM
 partition at block 1056
-free 2 KB of 671 KB
+free 1 KB of 735 KB
 /> cards .
 1
 ```
@@ -3039,8 +3039,8 @@ bytes in hex, and then the same bytes as characters, with a dot for any that can
 ```session
 /> create msg  char H c, char y c, char d c, char r c, char a c, 0 c, 1 c, 255 c, 16 c,
 /> msg 9 dump
-3967: 48 79 64 72 61 00 01 FF  Hydra...
-396F: 10                       .
+3A62: 48 79 64 72 61 00 01 FF  Hydra...
+3A6A: 10                       .
 ```
 
 ## ?dup

@@ -53,8 +53,9 @@ read: banana
 
 ```session
 > FILES "/rom/lib"
-as/             basic/          edit/           font/           forth/
-hylang/         namespace       profile         shell           windows
+as/             bank/           basic/          edit/           font/
+forth/          hylang/         namespace       profile         shell
+windows
 ```
 
 ## 24.2 The terminal

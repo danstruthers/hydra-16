@@ -1,10 +1,11 @@
 /*
 ** t_bank.c - bank programs (bankprog.h) tried, the test bankprog's: a child loaded and called, called again (still
-** loaded: its count goes on), a call's cost; words it puts in the caller's RAM, three arguments; BANK_MAX more
-** children loaded (the first given up for them: called again, loaded again, its count from 1); and refused, each
-** with its reason: its zero page more than given, what it uses not the caller's, no such entry, no such file.  Its
-** files in /ram (the test copies them there from /pc): the test children (tests/bank's .bp files: count's under six other names too) and its own exports,
-** t_bank.exp.  An "ok" or "not ok" line each, then "t_bank: PASS" (or FAIL).
+** loaded: its count goes on), a call's cost; words it puts in the caller's RAM, three arguments; with the kernel's
+** code cache one bank (bank_limit), two big children loaded (the second has no room till what was used least lately
+** is given up: count's among it; called again, loaded again, its count from 1); and refused, each with its reason:
+** its zero page more than given, what it uses not the caller's, no such entry, no such file.  Its files in /ram (the
+** test copies them there from /pc): the test children (tests/bank's .bp files: big's under two names, b1 and b2)
+** and its own exports, t_bank.exp.  An "ok" or "not ok" line each, then "t_bank: PASS" (or FAIL).
 */
 
 #include <stdio.h>
@@ -14,9 +15,6 @@
 
 static unsigned char fails;
 static char buf[32];
-static const char* const more[BANK_MAX] = {
-    "/ram/c1.bp", "/ram/c2.bp", "/ram/c3.bp", "/ram/c4.bp", "/ram/c5.bp", "/ram/c6.bp"
-};
 
 static void __fastcall__ ok (unsigned char c, const char* what)
 {
@@ -33,6 +31,7 @@ int main (void)
     int r;
 
     ok (bank_setup ("/ram/t_bank.exp", 0x60, 16) == 0, "bank_setup");
+    bank_limit (1);                             /* (The cache one bank: room for two big children's one) */
     h = bank_fn ("/ram/count.bp", "run");
     ok (h != 0, "a child loaded (count.bp's run)");
     r = h ? bank_call (h, int (*)(int), 10) : 0;
@@ -52,9 +51,10 @@ int main (void)
     ok (f && !strcmp (buf, "from the child"), "its words in the caller's RAM");
     f = bank_fn ("/ram/fill.bp", "sum3");
     ok (f && bank_call (f, int (*)(int, int, int), 1, 20, 300) == 321, "three arguments");
-    for (i = 0; i < BANK_MAX; ++i) {            /* (The first, count.bp, the least lately called: given up) */
-        ok (bank_fn (more[i], "run") != 0, more[i]);
-    }
+    f = bank_fn ("/ram/b1.bp", "run");          /* (The second big one: no room till count.bp, the least lately */
+    ok (f && bank_call (f, int __fastcall__ (*)(int), 5) == 6, "a big child");     /*   called, is given up) */
+    f = bank_fn ("/ram/b2.bp", "run");
+    ok (f && bank_call (f, int __fastcall__ (*)(int), 7) == 8, "another: what was used least lately given up for it");
     r = h ? bank_call (h, int (*)(int), 0) : 0;
     ok (r == 1, "given up, then called: loaded again, its count from 1");
     f = bank_fn ("/ram/bigzp.bp", "run");

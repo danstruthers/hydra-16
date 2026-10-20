@@ -58,7 +58,7 @@ task 3
 PC=0830 A=30 X=FF Y=00 S=FD P=nv--dizc W=0 U=0 RAM=00 ROM=00
 0830  A9 01     lda #$01
 db> l /lib/as/hydra.inc
-108 symbols
+112 symbols
 db> l stars.lbl
 4 symbols
 ```
@@ -301,7 +301,7 @@ task 3
 PC=0830 A=30 X=FF Y=20 S=FD P=nv--dizc W=0 U=0 RAM=00 ROM=00
 0830  B2 02     lda ($02)
 db> l /lib/as/hydra.inc
-108 symbols
+112 symbols
 db> l show1.lbl
 4 symbols
 db> d main+29 3
@@ -353,8 +353,8 @@ task 3
 PC=0830 A=30 X=FF Y=02 S=FD P=nv--dizc W=0 U=0 RAM=00 ROM=00
 0830  9C 95 08  stz $0895
 db> c
-........PC=EB31 A=06 X=0E Y=03 S=FA P=nv--dIzc W=0 U=0 RAM=00 ROM=00 (in a call: its state 6)
-EB31  A5 A2     lda $A2
+........PC=EC3B A=06 X=0E Y=03 S=FA P=nv--dIzc W=0 U=0 RAM=00 ROM=00 (in a call: its state 6)
+EC3B  A5 A2     lda $A2
 db> q
 
 />
@@ -381,8 +381,8 @@ finish and stops after it, and `c` runs on.
 /> sleep 100 &
 /> db -p 2
 task 2
-PC=EB31 A=06 X=51 Y=02 S=F9 P=nv--dIzc W=0 U=0 RAM=00 ROM=00 (in a call: its state 6)
-EB31  A5 A2     lda $A2
+PC=EC3B A=06 X=51 Y=02 S=F9 P=nv--dIzc W=0 U=0 RAM=00 ROM=00 (in a call: its state 6)
+EC3B  A5 A2     lda $A2
 db> q
 ```
 

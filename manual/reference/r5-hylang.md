@@ -1910,7 +1910,7 @@ hylang> (use "disk")
 hylang> (map (fn {d} {d :disk}) (disks))
 => {"0" "r" "s" "x"}
 hylang> (map (fn {d} {list (d :label) (d :size)}) (df))
-=> {{"HYDRA-16" 16380} {"RAM" 255} {"SRAM" 511} {"ROM" 671}}
+=> {{"HYDRA-16" 16380} {"RAM" 255} {"SRAM" 511} {"ROM" 735}}
 hylang> (cards)
 => {0}
 ```
@@ -5547,7 +5547,7 @@ hylang> ((task-env (pid)) "prog")
 hylang> (fst (task-ns (pid)))
 => "bind '#/' /"
 hylang> (hex ((task-regs 1) :pc) 4)
-=> "EAA0"
+=> "EB6F"
 ```
 
 ## qexpr?, sexpr?, function?, error?
@@ -6653,7 +6653,7 @@ hylang> (sh-out "echo hi")
 hylang> (sh-out "cat" "from input")
 => "from input"
 hylang> (str-split (str-trim (sh-out "ls /rom/lib | head -3")) "\n")
-=> {"as/" "basic/" "edit/"}
+=> {"as/" "bank/" "basic/"}
 ```
 
 ## shl, shr, bit?

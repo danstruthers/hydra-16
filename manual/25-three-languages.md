@@ -111,15 +111,17 @@ cd /ram
 /ram> hylang guess.hl
 I'm thinking of a number from 1 to 100.
 Your guess? 50
-Too small.
-Your guess? 75
-Too small.
-Your guess? 88
-Too small.
-Your guess? 94
 Too big.
-Your guess? 91
-Right! You took 5 guesses.
+Your guess? 25
+Too big.
+Your guess? 12
+Too small.
+Your guess? 18
+Too big.
+Your guess? 15
+Too small.
+Your guess? 17
+Right! You took 6 guesses.
 ```
 
 hylang's version is made of **functions**. `ask` prints the question, reads a line, and gives back its value as a
@@ -176,9 +178,7 @@ Too small.
 Your guess? 94
 Too big.
 Your guess? 91
-Too small.
-Your guess? 92
-Right! You took 6 guesses.
+Right! You took 5 guesses.
 ```
 
 HyForth's version is made of small **words**, each built on the ones before, and each passing its values to the
@@ -230,7 +230,7 @@ HyBASIC's `TIMER` is the number of seconds since midnight:
 > 40 NEXT I
 > 50 PRINT C; "in"; TIMER - T; "seconds"
 > RUN
- 10000 in 2.73 seconds
+ 10000 in 2.725 seconds
 ```
 
 hylang's `(clock)` is the number of seconds since hylang started:
@@ -253,7 +253,7 @@ And HyForth's `sys-ticks`, from the `hydra` library, counts the Hydra's **ticks*
 /> : count-up ( n -- count ) 0 swap 0 do 1+ loop ;
 /> : timed ( -- ) sys-ticks 10000 count-up . sys-ticks swap - . ." ticks" cr ;
 /> timed
-10000 40 ticks
+10000 39 ticks
 ```
 
 HyForth takes about a fifth of a second; the other two take more than ten times as long. That's the price of

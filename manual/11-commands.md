@@ -217,8 +217,8 @@ Lists the disks that have started, with each one's kind, size, free space and la
 ```session
 /> df
 disk  kind   size        free        label
-0     sdhc   16380 KB    15612 KB    HYDRA-16
-x     rom    671 KB      2 KB        ROM
+0     sdhc   16380 KB    15440 KB    HYDRA-16
+x     rom    735 KB      1 KB        ROM
 r     ram    255 KB      253 KB      RAM
 s     sram   511 KB      510 KB      SRAM
 ```
@@ -249,13 +249,14 @@ the current directory.
 
 ```session
 /> du /rom/lib
-174     /rom/lib/as
+178     /rom/lib/as
+6       /rom/lib/bank
 1       /rom/lib/basic
 2       /rom/lib/edit
 4       /rom/lib/font
-112     /rom/lib/forth
+114     /rom/lib/forth
 87      /rom/lib/hylang
-386     /rom/lib
+398     /rom/lib
 ```
 
 ## echo: print words
@@ -497,8 +498,8 @@ Prints the first 10 lines of each file (or of its standard input), or the first 
 ```session
 /> ls /rom/bin | head -3
 as
+bankrun
 calc
-cat
 ```
 
 ## hello: say hello
@@ -624,8 +625,8 @@ card before you use it with the Hydra (Chapter 14). The words after the disk's n
 /> mkfs s
 /> df
 disk  kind   size        free        label
-0     sdhc   16380 KB    15612 KB    HYDRA-16
-x     rom    671 KB      2 KB        ROM
+0     sdhc   16380 KB    15440 KB    HYDRA-16
+x     rom    735 KB      1 KB        ROM
 r     ram    255 KB      253 KB      RAM
 s     sram   511 KB      511 KB
 ```
@@ -751,7 +752,7 @@ ps [-a]
 ```
 
 Lists the tasks running: each one's number, state, parent, how much processor time it has had (in seconds), its
-note group, and its program.
+note group, and its program. `ps` itself runs in the shell's task (section 7.5), so it isn't in the list.
 
 | Option | What it does |
 |---|---|
@@ -761,12 +762,11 @@ note group, and its program.
 /> ps -a
 task  state   parent     cpu group  name
    0  ready   -          1.5     0  kernel
-   1  wait    -          0.4     1  forth -l
-   2  ready    1         0.0     1  ps -a
+   1  ready   -          0.5     1  forth -l
   12  idle    -          0.0    12  snd
   13  idle    -          0.1    13  kdev
   14  idle    -          1.4    14  storage
-  15  event   -          0.5    15  cons
+  15  event   -          0.4    15  cons
 ```
 
 | State | Means |
@@ -939,10 +939,10 @@ the middle of a pipeline, to keep a copy of what's passing through.
 
 ```session
 /> ls /rom/bin | tee /ram/progs | wc -l
-     45
+     46
 /> head -2 /ram/progs
 as
-calc
+bankrun
 ```
 
 ## top: the busiest tasks

@@ -35,8 +35,8 @@ can be made from each language:
 | Group | From | Calls |
 |---|---|---|
 | The system | $F800 | `SYSINFO` `ERRSTR` `KMESG` `REBOOT` `XCALL` |
-| Tasks | $F830 | `EXITS` `WAIT` `SPAWN` `GETPID` `YIELD` `SLEEP` `SLEEP_UNTIL` `TICKS` `PREEMPT_OFF` `PREEMPT_ON` `TASKINFO` `NOTIFY` `NOTE` `MODINFO` `ENV_GET` `ENV_PUT` `ENV_DEL` `ENV_NAME` `TASKREAD` `GETPPID` `SEM_NEW` `SEM_ACQUIRE` `SEM_TRY` `SEM_RELEASE` `SEM_FREE` `EXEC` `SEM_WAIT` |
-| Memory | $F890 | `BREAK` `PAGES_ALLOC` `PAGES_FREE` `BANKS` `BANKS_ALLOC` `BANKS_FREE` `SEG_CREATE` `SEG_ATTACH` `SEG_DETACH` `SEG_MAP` `SEGINFO` `BANKS_ALLOC_IN` `SEG_CREATE_IN` |
+| Tasks | $F830 | `EXITS` `WAIT` `SPAWN` `GETPID` `YIELD` `SLEEP` `SLEEP_UNTIL` `TICKS` `PREEMPT_OFF` `PREEMPT_ON` `TASKINFO` `NOTIFY` `NOTE` `MODINFO` `ENV_GET` `ENV_PUT` `ENV_DEL` `ENV_NAME` `TASKREAD` `GETPPID` `SEM_NEW` `SEM_ACQUIRE` `SEM_TRY` `SEM_RELEASE` `SEM_FREE` `EXEC` `SEM_WAIT` `RUN` |
+| Memory | $F890 | `BREAK` `PAGES_ALLOC` `PAGES_FREE` `BANKS` `BANKS_ALLOC` `BANKS_FREE` `SEG_CREATE` `SEG_ATTACH` `SEG_DETACH` `SEG_MAP` `SEGINFO` `BANKS_ALLOC_IN` `SEG_CREATE_IN` `BANK_LOAD` `BANK_FLUSH` |
 | Files | $F8C0 | `OPEN` `CREATE` `CLOSE` `READ` `WRITE` `SEEK` `STAT` `FSTAT` `WSTAT` `FWSTAT` `REMOVE` `DUP` `DUP2` `CHDIR` `GETCWD` `PIPE` `FD2PATH` |
 | Namespaces | $F920 | `BIND` `MOUNT` `UNMOUNT` `NSINFO` |
 | The console | $F950 | `PUTC` `PUTS` `GETC` `PUTHEX` |
@@ -76,7 +76,7 @@ HyForth: `sys-banks`. HyBASIC: `SYS "BANKS"`.
 
 #### See also
 
-The other calls for memory: `BREAK`, `PAGES_ALLOC`, `PAGES_FREE`, `BANKS_ALLOC`, `BANKS_FREE`, `SEG_CREATE`, `SEG_ATTACH`, `SEG_DETACH`, `SEG_MAP`, `SEGINFO`, `BANKS_ALLOC_IN`, `SEG_CREATE_IN`.
+The other calls for memory: `BREAK`, `PAGES_ALLOC`, `PAGES_FREE`, `BANKS_ALLOC`, `BANKS_FREE`, `SEG_CREATE`, `SEG_ATTACH`, `SEG_DETACH`, `SEG_MAP`, `SEGINFO`, `BANKS_ALLOC_IN`, `SEG_CREATE_IN`, `BANK_LOAD`, `BANK_FLUSH`.
 
 ## BANKS_ALLOC
 
@@ -111,7 +111,7 @@ HyForth: `sys-banks-alloc`. HyBASIC: `SYS "BANKS_ALLOC"`.
 
 #### See also
 
-The other calls for memory: `BREAK`, `PAGES_ALLOC`, `PAGES_FREE`, `BANKS`, `BANKS_FREE`, `SEG_CREATE`, `SEG_ATTACH`, `SEG_DETACH`, `SEG_MAP`, `SEGINFO`, `BANKS_ALLOC_IN`, `SEG_CREATE_IN`.
+The other calls for memory: `BREAK`, `PAGES_ALLOC`, `PAGES_FREE`, `BANKS`, `BANKS_FREE`, `SEG_CREATE`, `SEG_ATTACH`, `SEG_DETACH`, `SEG_MAP`, `SEGINFO`, `BANKS_ALLOC_IN`, `SEG_CREATE_IN`, `BANK_LOAD`, `BANK_FLUSH`.
 
 ## BANKS_ALLOC_IN
 
@@ -152,7 +152,7 @@ HyForth: `sys-banks-alloc-in`. HyBASIC: `SYS "BANKS_ALLOC_IN"`.
 
 #### See also
 
-The other calls for memory: `BREAK`, `PAGES_ALLOC`, `PAGES_FREE`, `BANKS`, `BANKS_ALLOC`, `BANKS_FREE`, `SEG_CREATE`, `SEG_ATTACH`, `SEG_DETACH`, `SEG_MAP`, `SEGINFO`, `SEG_CREATE_IN`.
+The other calls for memory: `BREAK`, `PAGES_ALLOC`, `PAGES_FREE`, `BANKS`, `BANKS_ALLOC`, `BANKS_FREE`, `SEG_CREATE`, `SEG_ATTACH`, `SEG_DETACH`, `SEG_MAP`, `SEGINFO`, `SEG_CREATE_IN`, `BANK_LOAD`, `BANK_FLUSH`.
 
 ## BANKS_FREE
 
@@ -188,7 +188,90 @@ HyForth: `sys-banks-free`. HyBASIC: `SYS "BANKS_FREE"`.
 
 #### See also
 
-The other calls for memory: `BREAK`, `PAGES_ALLOC`, `PAGES_FREE`, `BANKS`, `BANKS_ALLOC`, `SEG_CREATE`, `SEG_ATTACH`, `SEG_DETACH`, `SEG_MAP`, `SEGINFO`, `BANKS_ALLOC_IN`, `SEG_CREATE_IN`.
+The other calls for memory: `BREAK`, `PAGES_ALLOC`, `PAGES_FREE`, `BANKS`, `BANKS_ALLOC`, `SEG_CREATE`, `SEG_ATTACH`, `SEG_DETACH`, `SEG_MAP`, `SEGINFO`, `BANKS_ALLOC_IN`, `SEG_CREATE_IN`, `BANK_LOAD`, `BANK_FLUSH`.
+
+## BANK_FLUSH
+
+System call $F8BA, one of those for memory. It can wait.
+
+#### Arguments
+
+A
+: The banks the code cache may have from now on (`RC_BANKS` to start with), or 0 (as it was)
+
+#### Result
+
+Nothing, but the carry: C = 0 for success.
+
+#### Description
+
+Give up every program and child in this task's code cache (but a program running), and free the banks left empty.
+
+#### Errors
+
+None: the call always succeeds.
+
+#### From the languages
+
+hylang: `(sys-bank-flush A)`, where *A* is a number. It returns `NIL`.
+
+HyForth: `sys-bank-flush`. HyBASIC: `SYS "BANK_FLUSH"`.
+
+#### See also
+
+The other calls for memory: `BREAK`, `PAGES_ALLOC`, `PAGES_FREE`, `BANKS`, `BANKS_ALLOC`, `BANKS_FREE`, `SEG_CREATE`, `SEG_ATTACH`, `SEG_DETACH`, `SEG_MAP`, `SEGINFO`, `BANKS_ALLOC_IN`, `SEG_CREATE_IN`, `BANK_LOAD`.
+
+## BANK_LOAD
+
+System call $F8B7, one of those for memory. It can wait.
+
+#### Arguments
+
+r0
+: A child's path (an o65 module, linked at $8000: sdk/c/child.cfg)
+
+r1
+: Its caller's exports (NAME.exp), or 0.
+
+A
+: Where its zero page goes.
+
+X
+: The bytes there it may have. None of them in the window.
+
+#### Result
+
+A
+: Its bank.
+
+X
+: Its directory entry (`RB_DIR` + 16 x X in its bank: `RE_GEN` its load, `RE_TABLE` its table)
+
+#### Description
+
+A child (a bank program of a caller's, bankprog.h's: its functions called by the caller itself) in this task's code cache, as `RUN` keeps programs there (several to a bank, the one used least lately given up when there's no room), loaded if it isn't: its imports found by name in the caller's exports (its NAME.exp, the build's: "BX", 1, then each export its name's length, its name and its address, a 0 after the last), its zero page where the caller says. Its exports' table (`RE_TABLE`: each its name, a 0, its address; a 0 after the last) gives its entries. A call: its bank in the window ($00 alone), the entry's jsr, the bank put back; `RE_GEN`, as it was when it was found, says it's still there (it may have been given up for another meanwhile: then `BANK_LOAD` again), and the caller sets `RE_STAMP` from `TK_RCLOCK` (one more) as it calls. On a failure X says why (`BL_*`), and a missing import's name is in `TA_SCRATCH`.
+
+#### Errors
+
+| Code | Name | Message | Cause |
+|---|---|---|---|
+| $20 | `E_NOENT` | not found | Its file; or an import the exports haven't |
+| $2D | `E_NOEXEC` | not a program | Not a child |
+| $08 | `E_RANGE` | out of range | Its zero page |
+| $2A | `E_IO` | i/o error | The exports |
+| $06 | `E_NOMEM` | out of memory |  |
+| $0B | `E_TOOBIG` | too big | No room |
+| $09 | `E_FAULT` | bad address | A pointer in the window |
+
+#### From the languages
+
+hylang: `(sys-bank-load r0 r1 A X)`, where *r0* is a string; *r1* is a string, or `NIL`; *A* is a number; *X* is a number. It returns a list: A, X.
+
+HyForth: `sys-bank-load`. HyBASIC: `SYS "BANK_LOAD"`.
+
+#### See also
+
+The other calls for memory: `BREAK`, `PAGES_ALLOC`, `PAGES_FREE`, `BANKS`, `BANKS_ALLOC`, `BANKS_FREE`, `SEG_CREATE`, `SEG_ATTACH`, `SEG_DETACH`, `SEG_MAP`, `SEGINFO`, `BANKS_ALLOC_IN`, `SEG_CREATE_IN`, `BANK_FLUSH`.
 
 ## BIND
 
@@ -266,7 +349,7 @@ HyForth: `sys-break`. HyBASIC: `SYS "BREAK"`.
 
 #### See also
 
-The other calls for memory: `PAGES_ALLOC`, `PAGES_FREE`, `BANKS`, `BANKS_ALLOC`, `BANKS_FREE`, `SEG_CREATE`, `SEG_ATTACH`, `SEG_DETACH`, `SEG_MAP`, `SEGINFO`, `BANKS_ALLOC_IN`, `SEG_CREATE_IN`.
+The other calls for memory: `PAGES_ALLOC`, `PAGES_FREE`, `BANKS`, `BANKS_ALLOC`, `BANKS_FREE`, `SEG_CREATE`, `SEG_ATTACH`, `SEG_DETACH`, `SEG_MAP`, `SEGINFO`, `BANKS_ALLOC_IN`, `SEG_CREATE_IN`, `BANK_LOAD`, `BANK_FLUSH`.
 
 ## CHDIR
 
@@ -666,7 +749,7 @@ HyForth: `sys-env-del`. HyBASIC: `SYS "ENV_DEL"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
 
 ## ENV_GET
 
@@ -717,7 +800,7 @@ HyForth: `sys-env-get`. HyBASIC: `SYS "ENV_GET"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
 
 ## ENV_NAME
 
@@ -760,7 +843,7 @@ HyForth: `sys-env-name`. HyBASIC: `SYS "ENV_NAME"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
 
 ## ENV_PUT
 
@@ -809,7 +892,7 @@ HyForth: `sys-env-put`. HyBASIC: `SYS "ENV_PUT"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
 
 ## ERRSTR
 
@@ -885,7 +968,7 @@ HyForth: `sys-exec`. HyBASIC: `SYS "EXEC"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `SEM_WAIT`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `SEM_WAIT`, `RUN`.
 
 ## EXITS
 
@@ -919,7 +1002,7 @@ HyForth: `sys-exits`. HyBASIC: `SYS "EXITS"`.
 
 #### See also
 
-The other calls for tasks: `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`.
+The other calls for tasks: `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
 
 ## FD2PATH
 
@@ -1127,7 +1210,7 @@ HyForth: `sys-getpid`. HyBASIC: `SYS "GETPID"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
 
 ## GETPPID
 
@@ -1158,7 +1241,7 @@ HyForth: `sys-getppid`. HyBASIC: `SYS "GETPPID"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
 
 ## INIT_RUN
 
@@ -1328,7 +1411,7 @@ HyForth: `sys-modinfo`. HyBASIC: `SYS "MODINFO"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
 
 ## MOUNT
 
@@ -1412,7 +1495,7 @@ HyForth: `sys-note`. HyBASIC: `SYS "NOTE"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
 
 ## NOTE_POST
 
@@ -1511,7 +1594,7 @@ Not in the languages: it is a call for drivers, or for the debugger.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
 
 ## NSINFO
 
@@ -1686,7 +1769,7 @@ HyForth: `sys-pages-alloc`. HyBASIC: `SYS "PAGES_ALLOC"`.
 
 #### See also
 
-The other calls for memory: `BREAK`, `PAGES_FREE`, `BANKS`, `BANKS_ALLOC`, `BANKS_FREE`, `SEG_CREATE`, `SEG_ATTACH`, `SEG_DETACH`, `SEG_MAP`, `SEGINFO`, `BANKS_ALLOC_IN`, `SEG_CREATE_IN`.
+The other calls for memory: `BREAK`, `PAGES_FREE`, `BANKS`, `BANKS_ALLOC`, `BANKS_FREE`, `SEG_CREATE`, `SEG_ATTACH`, `SEG_DETACH`, `SEG_MAP`, `SEGINFO`, `BANKS_ALLOC_IN`, `SEG_CREATE_IN`, `BANK_LOAD`, `BANK_FLUSH`.
 
 ## PAGES_FREE
 
@@ -1722,7 +1805,7 @@ HyForth: `sys-pages-free`. HyBASIC: `SYS "PAGES_FREE"`.
 
 #### See also
 
-The other calls for memory: `BREAK`, `PAGES_ALLOC`, `BANKS`, `BANKS_ALLOC`, `BANKS_FREE`, `SEG_CREATE`, `SEG_ATTACH`, `SEG_DETACH`, `SEG_MAP`, `SEGINFO`, `BANKS_ALLOC_IN`, `SEG_CREATE_IN`.
+The other calls for memory: `BREAK`, `PAGES_ALLOC`, `BANKS`, `BANKS_ALLOC`, `BANKS_FREE`, `SEG_CREATE`, `SEG_ATTACH`, `SEG_DETACH`, `SEG_MAP`, `SEGINFO`, `BANKS_ALLOC_IN`, `SEG_CREATE_IN`, `BANK_LOAD`, `BANK_FLUSH`.
 
 ## PAUSE
 
@@ -1819,7 +1902,7 @@ HyForth: `sys-preempt-off`. HyBASIC: `SYS "PREEMPT_OFF"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
 
 ## PREEMPT_ON
 
@@ -1849,7 +1932,7 @@ HyForth: `sys-preempt-on`. HyBASIC: `SYS "PREEMPT_ON"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
 
 ## PUTC
 
@@ -2184,6 +2267,60 @@ HyForth: `sys-rtc`. HyBASIC: `SYS "RTC"`.
 
 The other calls for the clock: `TIME`, `TIME_SET`.
 
+## RUN
+
+System call $F881, one of those for tasks. It can wait.
+
+#### Arguments
+
+r0
+: A bank program's path (as `SPAWN`'s)
+
+r1
+: Its arguments (as `SPAWN`'s), or 0.
+
+A
+: Flags (`SPAWN_FDMAP`, `RUN_LEND`)
+
+r2
+: An fd map (with `SPAWN_FDMAP`, as `SPAWN`'s). None of them in the window ($8000-$9FFF)
+
+#### Result
+
+A
+: Its exit code.
+
+r0
+: Its exit message (31 characters at most: `TA_SCRATCH`, "" for none)
+
+#### Description
+
+Run a bank program in this task, as a subroutine, and wait for it. A bank program (`HF_BANK`, not `HF_TASK`) is kept in this task's code cache: RAM banks of its own (eight at most, `BANKS_ALLOC`'s), several programs to a bank, one above the other, each loaded the first time it's run (its file's o65 module, relocated where it's put) and kept for the next; when there's no room the one run least lately is given up. The program is known by its file (`STAT`'s), so a changed file is loaded again. It runs with its bank at $8000 and its zero page in the program's ($22 up), on this task's stack: its arguments at r0, its fds this task's 0, 1 and 2 (`SPAWN_FDMAP`: the map's), no note handler (the task keeps its name). It ends as a program does (returning from main, `EXITS`, a note's default: Ctrl-C), and then the task is the caller's again: its fds (the program's closed), note handler, zero page, banks at $8000 and $A000 and break; a note that ended the program (but a kill) is posted again, for the caller's own handler. `RUN_LEND` lets the program move the break past the caller's (`BREAK`: memory the caller doesn't use; it's put back after); without it, `BREAK` fails. The banks and pages the program takes (and not gives back) are the task's till it ends. A program running in place can `RUN` another.
+
+#### Errors
+
+| Code | Name | Message | Cause |
+|---|---|---|---|
+| $2D | `E_NOEXEC` | not a program | Not a bank program that runs in place: `SPAWN` it |
+| $20 | `E_NOENT` | not found |  |
+| $07 | `E_BUSY` | busy | Running already |
+| $06 | `E_NOMEM` | out of memory | No bank for it |
+| $0B | `E_TOOBIG` | too big |  |
+| $09 | `E_FAULT` | bad address | A pointer in the window |
+| $05 | `E_INTR` | interrupted |  |
+
+Also what `STAT` and `READ` give.
+
+#### From the languages
+
+hylang: `(sys-run r0 r1 A r2)`, where *r0* is a string; *r1* is a list of strings, or `NIL`; *A* is a number, or left out; *r2* is a list of bytes, or `NIL`. It returns A.
+
+HyForth: `sys-run`. HyBASIC: `SYS "RUN"`.
+
+#### See also
+
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`.
+
 ## SEEK
 
 System call $F8CF, one of those for files. It can wait.
@@ -2260,7 +2397,7 @@ HyForth: `sys-seginfo`. HyBASIC: `SYS "SEGINFO"`.
 
 #### See also
 
-The other calls for memory: `BREAK`, `PAGES_ALLOC`, `PAGES_FREE`, `BANKS`, `BANKS_ALLOC`, `BANKS_FREE`, `SEG_CREATE`, `SEG_ATTACH`, `SEG_DETACH`, `SEG_MAP`, `BANKS_ALLOC_IN`, `SEG_CREATE_IN`.
+The other calls for memory: `BREAK`, `PAGES_ALLOC`, `PAGES_FREE`, `BANKS`, `BANKS_ALLOC`, `BANKS_FREE`, `SEG_CREATE`, `SEG_ATTACH`, `SEG_DETACH`, `SEG_MAP`, `BANKS_ALLOC_IN`, `SEG_CREATE_IN`, `BANK_LOAD`, `BANK_FLUSH`.
 
 ## SEG_ATTACH
 
@@ -2293,7 +2430,7 @@ HyForth: `sys-seg-attach`. HyBASIC: `SYS "SEG_ATTACH"`.
 
 #### See also
 
-The other calls for memory: `BREAK`, `PAGES_ALLOC`, `PAGES_FREE`, `BANKS`, `BANKS_ALLOC`, `BANKS_FREE`, `SEG_CREATE`, `SEG_DETACH`, `SEG_MAP`, `SEGINFO`, `BANKS_ALLOC_IN`, `SEG_CREATE_IN`.
+The other calls for memory: `BREAK`, `PAGES_ALLOC`, `PAGES_FREE`, `BANKS`, `BANKS_ALLOC`, `BANKS_FREE`, `SEG_CREATE`, `SEG_DETACH`, `SEG_MAP`, `SEGINFO`, `BANKS_ALLOC_IN`, `SEG_CREATE_IN`, `BANK_LOAD`, `BANK_FLUSH`.
 
 ## SEG_CREATE
 
@@ -2328,7 +2465,7 @@ HyForth: `sys-seg-create`. HyBASIC: `SYS "SEG_CREATE"`.
 
 #### See also
 
-The other calls for memory: `BREAK`, `PAGES_ALLOC`, `PAGES_FREE`, `BANKS`, `BANKS_ALLOC`, `BANKS_FREE`, `SEG_ATTACH`, `SEG_DETACH`, `SEG_MAP`, `SEGINFO`, `BANKS_ALLOC_IN`, `SEG_CREATE_IN`.
+The other calls for memory: `BREAK`, `PAGES_ALLOC`, `PAGES_FREE`, `BANKS`, `BANKS_ALLOC`, `BANKS_FREE`, `SEG_ATTACH`, `SEG_DETACH`, `SEG_MAP`, `SEGINFO`, `BANKS_ALLOC_IN`, `SEG_CREATE_IN`, `BANK_LOAD`, `BANK_FLUSH`.
 
 ## SEG_CREATE_IN
 
@@ -2369,7 +2506,7 @@ HyForth: `sys-seg-create-in`. HyBASIC: `SYS "SEG_CREATE_IN"`.
 
 #### See also
 
-The other calls for memory: `BREAK`, `PAGES_ALLOC`, `PAGES_FREE`, `BANKS`, `BANKS_ALLOC`, `BANKS_FREE`, `SEG_CREATE`, `SEG_ATTACH`, `SEG_DETACH`, `SEG_MAP`, `SEGINFO`, `BANKS_ALLOC_IN`.
+The other calls for memory: `BREAK`, `PAGES_ALLOC`, `PAGES_FREE`, `BANKS`, `BANKS_ALLOC`, `BANKS_FREE`, `SEG_CREATE`, `SEG_ATTACH`, `SEG_DETACH`, `SEG_MAP`, `SEGINFO`, `BANKS_ALLOC_IN`, `BANK_LOAD`, `BANK_FLUSH`.
 
 ## SEG_DETACH
 
@@ -2402,7 +2539,7 @@ HyForth: `sys-seg-detach`. HyBASIC: `SYS "SEG_DETACH"`.
 
 #### See also
 
-The other calls for memory: `BREAK`, `PAGES_ALLOC`, `PAGES_FREE`, `BANKS`, `BANKS_ALLOC`, `BANKS_FREE`, `SEG_CREATE`, `SEG_ATTACH`, `SEG_MAP`, `SEGINFO`, `BANKS_ALLOC_IN`, `SEG_CREATE_IN`.
+The other calls for memory: `BREAK`, `PAGES_ALLOC`, `PAGES_FREE`, `BANKS`, `BANKS_ALLOC`, `BANKS_FREE`, `SEG_CREATE`, `SEG_ATTACH`, `SEG_MAP`, `SEGINFO`, `BANKS_ALLOC_IN`, `SEG_CREATE_IN`, `BANK_LOAD`, `BANK_FLUSH`.
 
 ## SEG_MAP
 
@@ -2443,7 +2580,7 @@ HyForth: `sys-seg-map`. HyBASIC: `SYS "SEG_MAP"`.
 
 #### See also
 
-The other calls for memory: `BREAK`, `PAGES_ALLOC`, `PAGES_FREE`, `BANKS`, `BANKS_ALLOC`, `BANKS_FREE`, `SEG_CREATE`, `SEG_ATTACH`, `SEG_DETACH`, `SEGINFO`, `BANKS_ALLOC_IN`, `SEG_CREATE_IN`.
+The other calls for memory: `BREAK`, `PAGES_ALLOC`, `PAGES_FREE`, `BANKS`, `BANKS_ALLOC`, `BANKS_FREE`, `SEG_CREATE`, `SEG_ATTACH`, `SEG_DETACH`, `SEGINFO`, `BANKS_ALLOC_IN`, `SEG_CREATE_IN`, `BANK_LOAD`, `BANK_FLUSH`.
 
 ## SEM_ACQUIRE
 
@@ -2478,7 +2615,7 @@ HyForth: `sys-sem-acquire`. HyBASIC: `SYS "SEM_ACQUIRE"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
 
 ## SEM_FREE
 
@@ -2511,7 +2648,7 @@ HyForth: `sys-sem-free`. HyBASIC: `SYS "SEM_FREE"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `EXEC`, `SEM_WAIT`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `EXEC`, `SEM_WAIT`, `RUN`.
 
 ## SEM_NEW
 
@@ -2548,7 +2685,7 @@ HyForth: `sys-sem-new`. HyBASIC: `SYS "SEM_NEW"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
 
 ## SEM_RELEASE
 
@@ -2583,7 +2720,7 @@ HyForth: `sys-sem-release`. HyBASIC: `SYS "SEM_RELEASE"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_FREE`, `EXEC`, `SEM_WAIT`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
 
 ## SEM_TRY
 
@@ -2618,7 +2755,7 @@ HyForth: `sys-sem-try`. HyBASIC: `SYS "SEM_TRY"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
 
 ## SEM_WAIT
 
@@ -2657,7 +2794,7 @@ HyForth: `sys-sem-wait`. HyBASIC: `SYS "SEM_WAIT"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `RUN`.
 
 ## SLEEP
 
@@ -2690,7 +2827,7 @@ HyForth: `sys-sleep`. HyBASIC: `SYS "SLEEP"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
 
 ## SLEEP_UNTIL
 
@@ -2723,7 +2860,7 @@ HyForth: `sys-sleep-until`. HyBASIC: `SYS "SLEEP_UNTIL"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
 
 ## SPAWN
 
@@ -2738,7 +2875,7 @@ r1
 : Its arguments (zero-terminated strings, an empty one after the last: 176 bytes at most), or 0.
 
 A
-: Flags (`SPAWN_NEWGROUP`, `SPAWN_NEWNS`, `SPAWN_FDMAP`, `SPAWN_NOENV`, `SPAWN_STOPPED`)
+: Flags (`SPAWN_NEWGROUP`, `SPAWN_NEWNS`, `SPAWN_FDMAP`, `SPAWN_NOENV`, `SPAWN_STOPPED`, `SPAWN_RUN`, `RUN_LEND`)
 
 r2
 : An fd map (with `SPAWN_FDMAP`)
@@ -2746,11 +2883,11 @@ r2
 #### Result
 
 A
-: The new task.
+: The new task (`SPAWN_RUN`: this one, if the program ran in it)
 
 #### Description
 
-Start a program in a task of its own. `SPAWN` opens the file and reads its HYX2 header (`HX_*`): a module of the paged ROM (`HF_INPLACE`: `#m`'s files) runs in place, in its bank (the module directory's of its name); any other program is read into the new task's RAM at its load address ($0800), by the task itself as it starts, and its BSS cleared (one that can't be read ends at once, with the error as its exit code). It starts at its entry point with r0 pointing to its arguments (at `TASK_ARGS`: the list), its name the header's. Its fds: the caller's 0, 1 and 2; or with `SPAWN_FDMAP`, the map's: a count (`SPAWN_FDS` at most), then for each of the child's fds from 0 the caller's fd that becomes it ($FF, or a closed one: closed). Each shares the caller's channel and offset; the rest are closed. Its parent is the caller, which can `WAIT` for it. It's in the caller's note group unless `SPAWN_NEWGROUP` starts one (its number: the child's), and it shares the caller's namespace unless `SPAWN_NEWNS` gives it an empty one. Its environment is a copy of the caller's (`SPAWN_NOENV`: empty). `SPAWN_STOPPED`: it's stopped at its entry point, for the debugger (`TASKSTEP`; `/proc/N/ctl`'s step, or start).
+Start a program in a task of its own. `SPAWN` opens the file and reads its HYX2 header (`HX_*`): a module of the paged ROM (`HF_INPLACE`: `#m`'s files) runs in place, in its bank (the module directory's of its name); any other program is read into the new task's RAM at its load address ($0800), by the task itself as it starts, and its BSS cleared (one that can't be read ends at once, with the error as its exit code). It starts at its entry point with r0 pointing to its arguments (at `TASK_ARGS`: the list), its name the header's. Its fds: the caller's 0, 1 and 2; or with `SPAWN_FDMAP`, the map's: a count (`SPAWN_FDS` at most), then for each of the child's fds from 0 the caller's fd that becomes it ($FF, or a closed one: closed). Each shares the caller's channel and offset; the rest are closed. Its parent is the caller, which can `WAIT` for it. It's in the caller's note group unless `SPAWN_NEWGROUP` starts one (its number: the child's), and it shares the caller's namespace unless `SPAWN_NEWNS` gives it an empty one. Its environment is a copy of the caller's (`SPAWN_NOENV`: empty). `SPAWN_STOPPED`: it's stopped at its entry point, for the debugger (`TASKSTEP`; `/proc/N/ctl`'s step, or start). A bank program (`HF_BANK`) is loaded into a RAM bank of its task's own and runs there. `SPAWN_RUN`, for a caller that waits for the program at once: a bank program that may run in place (not `HF_TASK`) runs in this task (`RUN`, with the map and `RUN_LEND` as given) before `SPAWN` returns, and the task given back is this one, whose `WAIT` gives the program's exit status; any other program, or with `SPAWN_NEWGROUP`, `SPAWN_NEWNS`, `SPAWN_NOENV` or `SPAWN_STOPPED`, starts in a task of its own as ever. rc runs a simple command this way.
 
 #### Errors
 
@@ -2774,7 +2911,7 @@ HyForth: `sys-spawn`. HyBASIC: `SYS "SPAWN"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`.
+The other calls for tasks: `EXITS`, `WAIT`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
 
 ## SRV_NAP
 
@@ -3013,7 +3150,7 @@ HyForth: `sys-taskinfo`. HyBASIC: `SYS "TASKINFO"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
 
 ## TASKMEM
 
@@ -3108,7 +3245,7 @@ HyForth: `sys-taskread`. HyBASIC: `SYS "TASKREAD"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
 
 ## TASKSTEP
 
@@ -3213,7 +3350,7 @@ HyForth: `sys-ticks`. HyBASIC: `SYS "TICKS"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
 
 ## TIME
 
@@ -3357,7 +3494,7 @@ HyForth: `sys-wait`. HyBASIC: `SYS "WAIT"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`.
+The other calls for tasks: `EXITS`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
 
 ## WAKE
 
@@ -3533,7 +3670,7 @@ HyForth: `sys-yield`. HyBASIC: `SYS "YIELD"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
 
 ## Constants
 
@@ -3546,6 +3683,22 @@ Every constant that `hydra.inc` defines for programs, by family. A value with a 
 | `INIT_TASK` | 1 | init's task (and its note group: the console's foreground at first) |
 | `PROG_ZP` | $22 | A program's own zero page: $22-$7F |
 | `PROG_ZP_END` | $80 |  |
+| `RB_DIR` | $9F00 | A code cache bank's directory (`BANK_LOAD`): its entries at `RB_DIR` + 16 x n, n 1-15 |
+| `RE_START` | 0 | A cache directory entry: where its module is (2) |
+| `RE_END` | 2 | A cache directory entry: the first byte past it (2) |
+| `RE_TABLE` | 4 | A cache directory entry: a child's exports' table (2) |
+| `RE_GEN` | 6 | A cache directory entry: its load's number (0: free) |
+| `RE_FLAGS` | 7 | A cache directory entry: `RF_*` |
+| `RE_STAMP` | 8 | A cache directory entry: when it was last used (`TK_RCLOCK`) (2) |
+| `TK_RCLOCK` | $EC | A task's code cache's uses counted (2): its zero page's |
+| `RC_BANKS` | 8 | A task's code cache's banks at most, to start with (`BANK_FLUSH`) |
+| `BL_FILE` | 2 | `BANK_LOAD`'s why (X): its file not there, or not read |
+| `BL_FORMAT` | 3 | `BANK_LOAD`'s why (X): not a child (o65, linked at $8000, in a bank) |
+| `BL_ZP` | 4 | `BANK_LOAD`'s why (X): its zero page more than the caller gives |
+| `BL_EXPORTS` | 5 | `BANK_LOAD`'s why (X): the caller's exports' file not there, or not of its form |
+| `BL_IMPORT` | 6 | `BANK_LOAD`'s why (X): an import the caller hasn't (its name in `TA_SCRATCH`) |
+| `BL_BANK` | 7 | `BANK_LOAD`'s why (X): no bank, or no room in one |
+| `TA_SCRATCH` | $0280 | A task's call scratch (32 bytes): an exit message, `BANK_LOAD`'s missing import |
 | `TASK_ARGS` | $0350 | A task's arguments: zero-terminated strings, an empty one after the last (176 bytes at most) |
 | `TASK_NAME` | $0230 | A task's name, zero-terminated |
 | `TASK_EVENT` | $BD | A task's event count: a server adds 1 (inc `TASK_EVENT`) when what its clients wait for has happened |
@@ -3560,6 +3713,8 @@ Every constant that `hydra.inc` defines for programs, by family. A value with a 
 | `HT_LIBRARY` | 3 |  |
 | `HF_INPLACE` | $01 | HYX2 flags: runs in place in the paged ROM |
 | `HF_BOOT` | $02 | HYX2 flags: a driver the kernel starts at boot |
+| `HF_BANK` | $04 | HYX2 flags: a bank program: an o65 module after the header, run in a RAM bank (`RUN`) |
+| `HF_TASK` | $08 | HYX2 flags: a bank program that runs only in a task of its own (not in place: `RUN`) |
 | `HX_MAGIC` | 0 | The HYX2 header (`HX_SIZE` bytes, a program's first): HYX2 |
 | `HX_HSIZE` | 4 | HYX2: the header's size (48) |
 | `HX_TYPE` | 5 | HYX2: the type (`HT_*`) |
@@ -3627,7 +3782,9 @@ Every constant that `hydra.inc` defines for programs, by family. A value with a 
 | `SPAWN_FDMAP` | $04 | `SPAWN`'s flags: the child's fds are r2's map (else the caller's 0, 1 and 2) |
 | `SPAWN_NOENV` | $08 | `SPAWN`'s flags: the child starts with an empty environment (else a copy of its parent's) |
 | `SPAWN_STOPPED` | $10 | `SPAWN`'s flags: the child stops at its entry point, for the debugger (`/proc/N/ctl`'s step) |
+| `SPAWN_RUN` | $20 | `SPAWN`'s flags: a bank program that runs in place does, in this task (`RUN`), and `SPAWN` gives this task back |
 | `SPAWN_FDS` | 15 | `SPAWN`'s fd map: the child's fds it can give, at most (its fd 15 is its loader's as it starts) |
+| `RUN_LEND` | $40 | `RUN`'s flags (and `SPAWN_RUN`'s): the program may move the break past the caller's |
 | `ENV_SIZE` | 1024 | `TASKREAD`'s `TR_ENV`: its buffer, an environment's first variables, whole, and a 0 |
 | `ENV_MAX` | 8192 | An environment's bytes at most: each variable its name's length, its name, its value's length (2), its value; a 0 |
 | `ENV_NAME_MAX` | 31 | A variable's name's length at most |

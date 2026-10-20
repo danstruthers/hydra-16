@@ -1,9 +1,13 @@
 # 7. The tools
 
 The programs in `/bin`: the core tools in Plan 9's way, the editors, the task tools, the debugger, the assembler and
-disassembler, and the system's.  They're RAM programs on the ROM disk (`/rom/bin`), each read into its task's RAM as
-it starts (about 50 ms for one of 2.4K): most are near 2K, and the ROM disk keeps them in 1K clusters, where a module
-of the paged ROM took a bank.  The paged ROM keeps what must run in place (the drivers, init, rc, the languages, `play`;
+disassembler, and the system's.  They're on the ROM disk (`/rom/bin`), most near 2K, which keeps them in 1K clusters,
+where a module of the paged ROM took a bank.  Most are **bank programs** ([the kernel](03-base/kernel.md#bank-programs)):
+a command at rc's or HyForth's prompt runs one in the shell's own task, from a RAM bank of the shell's where it stays
+loaded, so it starts at once the next time and takes no task; in a pipeline or the background it gets a task of its
+own, as any program does.  `as`, `newwin` and `tail` are bank programs that always get a task of their own (`as`'s
+library and `tail` use the task's RAM, `newwin` changes the environment); `ed`, `edit`, `dis`, `db`, `calc`, `grep` and
+`sort` are RAM programs, read into their task's RAM as they start (about 50 ms for one of 2.4K).  The paged ROM keeps what must run in place (the drivers, init, rc, the languages, `play`;
 `/dev/mod/NAME`, bound into `/bin` by `#m/bin`).  `/bin` is a union, so a program of your own in `/ram/bin`,
 `/sram/bin` or a card's `/bin` comes before the ROM's of the same name.
 

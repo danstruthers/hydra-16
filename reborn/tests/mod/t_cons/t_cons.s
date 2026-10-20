@@ -336,10 +336,20 @@ main:
             OPEN_       s_c2, O_RDWR
             EXPECT_ERR  E_NOENT, "OPEN #c2/cons, no such window: E_NOENT"
             CHILD_W1
+            ldy         #10                                 ; (Till it waits: a nap at a time, ten at most)
+:
+            phy
             jsr         nap
             LDR         r0, info
             lda         child
             jsr         TASKINFO
+            ply
+            lda         info + TI_STATE
+            cmp         #8
+            beq         :+
+            dey
+            bne         :-
+:
             lda         info + TI_STATE
             EXPECT_A    8, "a child reading window 1 waits (its state: event)"
             PRINT       s_pw                                ; (The harness: Ctrl-] 1, z, Enter, Ctrl-] 0)

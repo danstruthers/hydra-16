@@ -298,7 +298,7 @@ task 3
 PC=0830 A=30 X=FF Y=00 S=FD P=nv--dizc W=0 U=0 RAM=00 ROM=00
 0830  A9 01     lda #$01
 db> l /lib/as/hydra.inc
-108 symbols
+112 symbols
 db> l stars.lbl
 4 symbols
 db> d main 9

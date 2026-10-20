@@ -226,12 +226,11 @@ RAM modules: 03
 /> ps
 task  state   parent     cpu group  name
    0  ready   -          1.5     0  kernel
-   1  wait    -          0.4     1  forth
-   2  ready    1         0.0     1  ps
+   1  ready   -          0.5     1  forth
   12  idle    -          0.0    12  snd
   13  idle    -          0.1    13  kdev
   14  idle    -          1.4    14  storage
-  15  event   -          0.5    15  cons
+  15  event   -          0.4    15  cons
 ```
 
 | Task | Name | What it's for |
@@ -258,9 +257,8 @@ ps
 /> ps
 task  state   parent     cpu group  name
    0  ready   -          2.0     0  kernel
-   1  wait    -          0.4     1  forth
+   1  ready   -          0.5     1  forth
    2  sleep    1         0.0     2  sleep
-   3  ready    1         0.0     1  ps
   12  idle    -          0.0    12  snd
   13  idle    -          0.1    13  kdev
   14  idle    -          1.5    14  storage
@@ -268,12 +266,11 @@ task  state   parent     cpu group  name
 /> kill 2
 /> ps
 task  state   parent     cpu group  name
-   0  ready   -          3.7     0  kernel
-   1  wait    -          0.5     1  forth
-   3  ready    1         0.0     1  ps
+   0  ready   -          3.6     0  kernel
+   1  ready   -          0.7     1  forth
   12  idle    -          0.0    12  snd
   13  idle    -          0.1    13  kdev
-  14  idle    -          1.7    14  storage
+  14  idle    -          1.6    14  storage
   15  event   -          0.6    15  cons
 ```
 
@@ -355,7 +352,7 @@ echo three >>/ram/n.txt
 
 ```session
 % ls /rom/bin | wc -l
-     45
+     46
 % ls /sd/0/sample | wc -l
       6
 % cat /ram/n.txt | sort
@@ -368,7 +365,7 @@ two
 
 ```session
 % echo today is `{date}
-today is 2000-01-01 00:00:04
+today is 2000-01-01 00:00:05
 % now=`{date}
 % echo $#now
 2
@@ -575,8 +572,8 @@ d-r--r--r-- fx        0 2000-01-01 00:00 songs
 ```session
 /> df
 disk  kind   size        free        label
-0     sdhc   16380 KB    15612 KB    HYDRA-16
-x     rom    671 KB      2 KB        ROM
+0     sdhc   16380 KB    15440 KB    HYDRA-16
+x     rom    735 KB      1 KB        ROM
 r     ram    255 KB      253 KB      RAM
 s     sram   511 KB      510 KB      SRAM
 ```
