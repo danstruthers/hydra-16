@@ -833,8 +833,8 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   ("Searching about...").  Built so far (Moving, above): the long tasks, a walk a square at a time, the bar, the
   beats, stop, the hard stops and the soft questions (a denizen new in sight, a sound, tiring); where you are and
   going to places in a room; things out of reach walked to first, a blow's close-in, engagement; the search a long
-  task, its finds told as it ends.  Still to come in it (in hand, 2026-10-20): looking one way, a dig half done kept,
-  battering a long task.
+  task, its finds told as it ends; a dig half done kept (its change record); battering a long task, a blow at a time.
+  Still to come in it (in hand, 2026-10-20): looking one way.
 - **Light and traces** (slice 4.1): lights burning down and refilled (fuel), a spare torch and oil in the kit (D5);
   rooms lit only where denizens keep lights; the deposit layer: tracks in the dust, smells, smoke, fading with age;
   Tracking.

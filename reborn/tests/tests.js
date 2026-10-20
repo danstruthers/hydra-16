@@ -2835,7 +2835,7 @@ module.exports = {
       init: 't_rc', cycles: 1500e6,
       // (A "stop" typed as the dig goes, after a wait: \u0100's 2M cycles each, a spell or so of the wall's, a few of the
       // shaft's, the stratum below grown first)
-      machine: { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T -d /ram/dug',
+      machine: { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T -d /ram/dug',
         'dig south', '!' + '\u0100'.repeat(12) + 'stop', 'dig south', 'dig down', '!' + '\u0100'.repeat(30) + 'stop', 'quit',
         'dq0 -d /ram/dug', 'dig down', '!' + '\u0100'.repeat(15) + 'stop', 'quit', 'echo $status']
         .map(l => (l[0] === '!' ? l.slice(1) : '\u0101' + l) + '\r').join('') },
@@ -3305,7 +3305,7 @@ module.exports = {
     {
       name: 'dq0reach', meaning: true, what: 'Dingus Quest Zero\'s things out of reach walked to first, places in a room, a blow\'s close-in and engagement (slice 4.0; HOUSE.md: out of reach, walked to first, going places, engagement; the user\'s, 2026-10-20), by the hub\'s events, the world\'s replies and where the character ends (the referee\'s dice at these seeds): at seed 3 the pick put down and walked away from, then "stow the pick" walks over to it (the things\' IR_NOT_HERE, I_TAKE\'s walk alone) and stows it as it gets there (the command carried out again: IR_OK); the room\'s centre, its far left corner, its near side and, walking forward, its other side gone to by the facing (I_GOTO: each square the room\'s own); at seed 7 the ghoul down the stairway attacked from two squares off: closed with (I_CLOSE: a walk), its blow back as the character comes beside it not a stop, and the character\'s blow struck; in another game the walk toward the far side stopped as it comes into the ghoul\'s zone (TE_ENGAGED) and, begun in it, after a square (TE_ENGAGED, engaged still)',
       init: 't_rc', cycles: 1800e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T',
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T',
         'drop pick', 'walk to the door ahead', 'turn around', 'stow the pick', 'go to the centre of the room', 'go to the far left corner',
         'go to the near side', 'walk forward to the other side', 'quit', 'echo ml swd 80 >> /ram/c.hm',
         'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'attack the ghoul', 'quit',
@@ -3891,7 +3891,7 @@ module.exports = {
     {
       name: 'dq0battering', what: 'Dingus Quest Zero\'s battering a long task (slice 4.0, HOUSE.md\'s long tasks: a blow at a time as the clock goes, its bar the blows struck, stopped by the player or hard, the harm done kept), by the world\'s events and the long task\'s part done as it went (the hub\'s pc_task: the referee\'s, HarnMaster\'s, at these seeds): at seed 14 a pick battering the sound door a dozen blows, one at a time (LT_BATTER, its length a dozen), leaving it giving, and battered again, broken down; then the same door battered and "stop digging" refused as it goes (it\'s a battering), "stop battering" stopping it part way, how the door stands told, and battered again, broken down in as many blows in all as without the stop (the harm done kept, each blow its own roll as before); with the hand-written theme\'s hostile rats (inhabit.txt) a battering stopped hard by a rat\'s blow',
       init: 't_rc', cycles: 1000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
         'dq0 -p t -s 14 -c /ram/c.hm -k pick', 'break the door', 'break', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -k pick', 'break the door']) +
         'ĀĀstop digging\rstop battering\r' + dq0Typed(['break', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g -k pick', 'break the door ahead', 'quit',
         'echo $status']) },
