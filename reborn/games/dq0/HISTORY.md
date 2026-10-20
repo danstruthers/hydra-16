@@ -132,23 +132,28 @@ takes a stand-in.
 
 The theme file's lines, popgen's to place the denizens by (the record has them too, theme.h's):
 `faction | NAME | KINDS | STRATA | NUMBER | LEADER | LAIR | ATTITUDE | OTHERS` (NUMBER about how many on each stratum
-it lives in); `era | PEOPLE | WORK | ENDING | AGO | LEFT | WORDS` (LEFT what was left: stores, bones, nothing, the
-dead, its people); `layer | STRATUM | ERA | DID | HOW`; `goal | KIND | NAME | STRATUM | GUARDIANS`; and a piece's
-guardians (its sixth value).  The file: a stand-in's lib/dq0/themes/NAME (the record's file), a game's own theme.txt
-in the save's folder (the hub's savedir; /ram/dq0 without one).
+it lives in; OTHERS only the theme's own factions, the bestiary's lists cut to them); `era | PEOPLE | WORK | ENDING |
+AGO | LEFT | WORDS` (LEFT what was left: stores, bones, nothing, the dead, its people); `layer | STRATUM | ERA | DID |
+HOW`; `goal | KIND | NAME | STRATUM | GUARDIANS`; and a piece's guardians (its sixth value).  The file: a game's own
+theme.txt in the save's folder (the hub's savedir; /ram/dq0 without one), where popgen (bank/popgen, the denizens'
+task's: dq0d/pop.h) reads its faction lines, with a save folder; a stand-in's lib/dq0/themes/NAME (the record's
+file), its factions written down there but nothing in the save folder, so its denizens stay the stand-in's.
 
 ### The start's cost
 
-themegen and themec take some 15 seconds of the Hydra's time at a new game, most of it the card: a READ from it
-costs some 24,000 cycles whatever its size, and a byte some 340; themegen's program, its data and its five bank
-programs, and themec, are some 90K.  The bank programs' loading matches each import against every export of the
-caller's (some 5M cycles for themegen's four).  A game carried on reads its theme.dat and makes nothing.
+A game of its own begins some 79M cycles after a stand-in's would (about 22 seconds at 3.58 MHz, on a stand-in's
+148M): themegen's and themec's own work some 40M, the card's as much (some 110K read and written: themegen and themec,
+themegen's data, its bank programs and the exports file read again for each, the theme written, read and compiled).
+A READ from the card costs some 24,000 cycles whatever its size, a byte some 340, and the bank programs' loader reads
+64 bytes at a time and matches each import against every export of the caller's.  The maker loads stratagen as it
+plans its first chunk of a stratum of layers.  A game carried on reads its theme.dat and makes nothing.
 
 ## Still to come
 
-- popgen (the denizens placed from the factions and the history), the Bestiary's kinds and habitats, peoples and
-  their cultures and building styles, the game's own deities (the pop agent's: history.txt's peoples are a stand-in
-  for them).
+- themegen choosing by the bestiary's own columns (each kind's land, climate, light, nature and size), the peoples'
+  builds and words (dq0d/peoples.txt) and the deities' temples, burials, servants and enemies (deities.txt): popgen's
+  data, which history.txt's peoples stand in for till then.
+- popgen for a game with no save folder (its theme.txt in /ram/dq0).
 - Each goal kind played through with denizens: the evil's dead stilled as its curse breaks, the prisoner a denizen
   who follows (an ally), the guardians' lair at the goal's piece.
 - A world of many regions (G2's later), the history's format already a region's.

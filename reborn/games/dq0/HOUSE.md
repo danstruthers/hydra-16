@@ -293,6 +293,10 @@ requests; the house's rules above marked *(every ruleset's)* it plays as HarnMas
   ruin in places, and those who came after mended what they took.
 - **The evil's goal won where it's done:** the relic laid on the curse's altar ends the game, the curse broken (the
   ruled ending's words); its dead aren't stilled first.  Why: the denizens' answer to it is popgen's, to come.
+- **A faction's others are the theme's own:** themegen writes how a faction stands with the factions the region has
+  (the bestiary's factions.txt lists them all), and only a game of its own writes faction lines in the save folder
+  (theme.txt: popgen's), a stand-in's game none.  Why: popgen reads every name it's given, and the stand-ins' games
+  (the tests') keep the stand-in's denizens.
 
 ## Decided, not yet built
 

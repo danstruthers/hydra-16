@@ -379,13 +379,16 @@ static struct bank_fn* __fastcall__ child (unsigned char k, const char* file, co
 static void check_layers (void)
 {
     static struct sgq q;
-    struct bank_fn* sg = child (4, "stratagen.bp", "_layer_of");
+    struct bank_fn* sg = 0;
     unsigned char k, i, seen;
     struct str* s;
 
     for (k = 0, s = st; k < ns; ++k, ++s) {
         if (s->nl < 2) {
             continue;
+        }
+        if (!sg) {
+            sg = child (4, "stratagen.bp", "_layer_of");   /* (Loaded only for a stratum of layers) */
         }
         q.nl = s->nl;
         memcpy (q.l, s->l, sizeof q.l);

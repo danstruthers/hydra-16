@@ -4299,6 +4299,29 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0handtheme', meaning: true, what: 'Dingus Quest Zero\'s hand-written theme (dq0 -t FILE: games/dq0/themes/1crypt.txt\'s format, its history\'s groups): a theme giving its name, its region and its two strata, made into a game\'s own by themegen (its seed\'s history filling the rest: the head\'s mission and story made, line by line; the eras, the inhabitants, the goal and its puzzle), written into the save\'s folder and compiled (theme.txt, theme.dat), even at a small seed (5: a stand-in\'s, but for -t); the game in it: the theme\'s name, its top stratum the one given',
+      init: 't_rc', cycles: 900e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm',
+        'echo \'theme    | the Pit of Echoes\' > /ram/t.txt', 'echo \'region   | the Grey Fells | hills | granite | springs | cold\' >> /ram/t.txt',
+        'echo \'stratum  | the Upper Pit | bx | keep\' >> /ram/t.txt', 'echo \'stratum  | the Echoing Deep | n\' >> /ram/t.txt',
+        'dq0 -p t -s 5 -c /ram/c.hm -t /ram/t.txt -d /ram/y', 'quit', 'cat /ram/y/theme.txt', 'echo done']) },
+      expect: ['% echo done\ndone\n'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], text = saidTheme(out, 'cat /ram/y/theme.txt'), keyed = k => text.split('\n').filter(l => l.startsWith(k.padEnd(9) + '|'));
+        try { DQ0_MAKE().compile(text, 'theme.txt', DQ0_BEASTS(), 1); } catch (e) { f.push('its theme.txt isn\'t a theme: ' + e.message); }
+        const want = { theme: ['theme    | the Pit of Echoes'], region: ['region   | the Grey Fells | hills | granite | springs | cold'],
+          stratum: ['stratum  | the Upper Pit | bx | keep', 'stratum  | the Echoing Deep | n'] };
+        for (const [k, w] of Object.entries(want)) if (keyed(k).join('\n') !== w.join('\n')) f.push('its ' + k + ' lines not the ones given: ' + keyed(k).join(' / '));
+        for (const k of ['mission', 'story', 'era', 'faction', 'goal', 'piece']) if (!keyed(k).length) f.push('no ' + k + ' line made');
+        const s = T.of('dq0 -p t -s 5 -c /ram/c.hm -t /ram/t.txt -d /ram/y').after;
+        if (!s || s.theme !== 'the Pit of Echoes') f.push('the game not in the hand-written theme: ' + (s && s.theme));
+        if (!s || !s.strata || s.strata[0] !== 'the Upper Pit') f.push('the top stratum not the one given: ' + (s && s.strata && s.strata[0]));
+        this.notes = [text.split('\n').filter(l => /^[a-z]/.test(l)).length + ' lines, ' + keyed('era').length + ' eras, ' + keyed('faction').length + ' factions made'];
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0plan', meaning: true, what: 'Dingus Quest Zero\'s built strata built to a plan (DUNGEON.md, the user\'s, 2026-10-16: "feast halls near kitchens near pantries and storage"; "Larger rooms tend to have higher ceilings, and corridors and smaller rooms tend to have uniform ceiling heights"; "Prior usage can also inform ... what kinds of detritus"): at seed 3 the crypt\'s Upper Halls (their purpose halls: a domestic suite by the way in), the character beginning in a kitchen, its iron pot lying there (what its use left), and its well (there\'s water); the chunks made, read from the hub\'s cache (world.h\'s struct chunk in the shared segment\'s banks): a hall joined to a kitchen by a passage of its own, through no other room; every hall\'s ceiling higher than the passages\' (the chunk\'s pceil), every storeroom\'s, pantry\'s, cell\'s and bedchamber\'s flat at the passages\' height; every room\'s floor flat, at the stratum\'s one level (but a hall\'s dais, two feet up)',
       init: 't_rc', cycles: 500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm', 'quit', 'echo $status']) },

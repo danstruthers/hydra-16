@@ -123,19 +123,50 @@ static int __fastcall__ block_end (void)
 
 /* ---- The groups */
 
+static char w[240];                             /* (A line's words: the head's, the history's, the goal's, one at a
+                                                **   time; one for them all, the bank's room) */
+
+/* A hand-written theme's line of the key, if it gives one: written as it is (the head's lines one by one: a name
+** given, its story made) */
+static const char* hkey;
+static unsigned char hhad;
+static void __fastcall__ emit_key (struct line* l)
+{
+    if (!strcmp (l->key, hkey)) {
+        emit (l);
+        hhad = 1;
+    }
+}
+
+static unsigned char __fastcall__ given_key (const char* key)
+{
+    hhad = 0;
+    if (given[GR_HEAD]) {
+        hkey = key;
+        given_each (GR_HEAD, emit_key);
+    }
+    return hhad;
+}
+
 static void head (void)
 {
-    static char w[240];
     char* story = W;                            /* (W: its own words its eras', made apart) */
     unsigned char e, k;
     int j, end;
 
-    begin_line ("theme");
-    val (title);
-    end_line ();
-    begin_line ("mission");
-    val (gmission);
-    end_line ();
+    if (!given_key ("theme")) {
+        begin_line ("theme");
+        val (title);
+        end_line ();
+    }
+    if (!given_key ("mission")) {
+        begin_line ("mission");
+        val (gmission);
+        end_line ();
+    }
+    if (given_key ("story")) {
+        return;
+    }
     SL ('R') = rname;                           /* (Its story: the place, its eras, who has it now, the goal) */
     data (TK_OPEN, 0, 0);
     fill (story, D.v[0], LINE_TEXT);
@@ -183,7 +214,6 @@ static void region_lines (void)
 
 static void hist_lines (void)
 {
-    static char w[240];
     unsigned char e, k;
     struct era* r;
 
@@ -330,7 +360,7 @@ static void dens_lines (void)
 static void goal_lines (void)
 {
     static const char* const keys[TK_THEMES] = { "kind", "piece", "rule", "story", "lock", "opened", "ending" };
-    static char used[NTKINDS][14], w[240];
+    static char used[NTKINDS][14];
     unsigned char nk = 0, nr = 0, e, k, i, cand[TSTRATA], nc;
     int j, end;
     struct str* s;
@@ -443,7 +473,8 @@ void make (void)
     begin_line ("seed");
     val (ultoa (seed, sb, 10));
     end_line ();
-    group (GR_HEAD, head);
+    head ();                                    /* (Its lines one by one: a hand-written theme's name, say, and the
+                                                **   story made) */
     group (GR_REGION, region_lines);
     group (GR_HIST, hist_lines);
     group (GR_STRATA, strata_lines);
