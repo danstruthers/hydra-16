@@ -58,6 +58,8 @@ A step is the game's unit of circumstance everywhere: 5 points on a d100 test (r
   (half its Move in squares a round, the book's walking); a jog 100 / Move, a run 50 / Move, a sprint 33 / Move
   (the book's jog, run and sprint); a slow walk twice a walk's time, a creep three times.  None slower than a walk.
   (dq0harn.c's status.)  Why: the book has no creep or slow walk; they trade speed for quiet and noticing.
+- **A Move under 4 walks as Move 4 does,** 50 tenths of a second a square.  (dq0harn.c's status.)  Why: a pace's
+  time a square is kept in a byte, and a slow walk or a creep at a Move of 1 or 2 wouldn't fit.
 - **A step takes a rise or a drop of 2 feet**, steps or stairs 4; more is a ledge, climbed.  (world.h's STEP_MAX,
   STAIR_MAX.)
 - **Fatigue builds by the time spent at each pace, added up across moves.**  A level of fatigue is 6,000 units of
