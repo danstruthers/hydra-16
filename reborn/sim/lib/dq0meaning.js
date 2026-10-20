@@ -44,7 +44,7 @@ const EXPRS = {
   pcSn: F('struct hub', 'pc_stratum'), pcX: F('struct hub', 'pc_x'), pcY: F('struct hub', 'pc_y'), pcFace: F('struct hub', 'pc_face'),
   pcLight: F('struct hub', 'pc_light'), pcLamp: F('struct hub', 'pc_lamp'), pcsum: F('struct hub', 'pcsum'),
   gait: F('struct hub', 'gait'), watch: F('struct hub', 'watch'), pcPos: F('struct hub', 'pc_pos'), pcGoing: F('struct hub', 'pc_going'),
-  pcStance: F('struct hub', 'pc_stance'), wayOpen: F('struct hub', 'way_open'),
+  pcStance: F('struct hub', 'pc_stance'), wayOpen: F('struct hub', 'way_open'), digTool: F('struct hub', 'dig_tool'),
   sCond: F('struct rs_summary', 'cond'), sHealth: F('struct rs_summary', 'health'), sLoad: F('struct rs_summary', 'load'),
   sSight: F('struct rs_summary', 'sight'), sStep: F('struct rs_summary', 'step'), sGstep: F('struct rs_summary', 'gstep'), ngaits: 'NGAITS',
   actor: F('struct hub', 'actor'), actorSize: 'sizeof (struct actor)', nactors: 'NACTORS',
@@ -167,7 +167,7 @@ function createRecorder() {
     const h = bank(0);
     if (!h || h[0] !== (L.magic & 0xFF) || h[1] !== L.magic >> 8) return null;
     const s = { line: enters, game: games.length - 1, cyc: m.cpu.cyc, now: w32(h, L.now), quit: h[L.quit], wayOpen: h[L.wayOpen],
-      status: str(h, L.pcstatus, 16),
+      status: str(h, L.pcstatus, 16), digTool: [0, 1, 2, 3].map(i => str(h, L.digTool + i * 8, 8)),
       pc: { sn: h[L.pcSn], x: w16(h, L.pcX), y: w16(h, L.pcY), face: h[L.pcFace], light: h[L.pcLight], lamp: str(h, L.pcLamp, 14),
         pos: h[L.pcPos], gait: h[L.gait], watch: h[L.watch], going: h[L.pcGoing], stance: h[L.pcStance] },
       sum: { cond: w16(h, L.pcsum + L.sCond), health: h[L.pcsum + L.sHealth], load: h[L.pcsum + L.sLoad], sight: h[L.pcsum + L.sSight],

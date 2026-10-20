@@ -2712,11 +2712,36 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0dig', what: 'Dingus Quest Zero digging (dq0 -k pick -T: a pick in hand, the tool the referee takes (the room\'s floor earth, the maker\'s), named as it is first used): a shaft down from a room by its stairway, spell by spell (Mining tests, the referee asked), through to the stratum below (grown round it then), and down it; the rats by the stairway living through every spell of it (the turns pace: some eleven hours, the denizens kept up a slice at a time)',
-      init: 't_rc', cycles: 1500e6,
-      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -k pick -T\r' +
-        ['dig down', 'look', 'd', 'look', 'map', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
-      expect: ['You set to digging', 'You dig with your pick.', 'feet to go.', 'the shaft is through.', 'You climb down the shaft.', 'The map (you face', '% echo $status'],
+      name: 'dq0dig', what: 'Dingus Quest Zero digging (the referee\'s: the tools equipped, P_DIG by what\'s dug, Mining tests a spell at a time, HarnMaster\'s; the maker\'s materials: a room\'s floor, then the stratum\'s rock), by the world\'s events: a skilled miner (Mining 95, hmchar\'s file) with a pick (dq0 -k pick -T: the tool the referee takes) digs a shaft down from a room by its stairway, spell by spell, through to the stratum below, and climbs down it (grown round it then); the giant rats by the stairway living through every spell of it (the turns pace: hours of it, the denizens kept up a slice at a time); a shovel digs seed 3\'s earth floor till the rock under it stops it (the user: the floor, then the rock); a sword won\'t dig seed 5\'s flagged floor at all; a shovel lifts its flags, then the rock stops it (dq0earth\'s and dq0tools\' digs, these together)',
+      init: 't_rc', cycles: 2400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'cp /ram/c.hm /ram/m.hm', 'echo ml min 95 >> /ram/m.hm',
+        'dq0 -p t -s 3 -c /ram/m.hm -k pick -T', 'dig down', 'd', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -k shovel -T', 'dig down', 'quit',
+        'dq0 -p t -s 5 -c /ram/c.hm -k sword -T', 'dig down', 'quit', 'dq0 -p t -s 5 -c /ram/c.hm -k shovel -T', 'dig down', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [], digs = T.filter(t => t.line === 'dig down');
+        if (digs.length !== 4) return ['the four digs not typed'];
+        const spells = t => dq0Ev(t, 'E_DIG', { how: h => ['D_GOOD', 'D_POOR', 'D_SLIP'].includes(h) }), dug = t => spells(t).filter(e => e.how !== 'D_SLIP').length;
+        const tool = (t, n) => { if (!t.after || t.after.digTool[0] !== n) f.push(t.k + ': the referee\'s tool ' + (t.after && JSON.stringify(t.after.digTool)) + ', not ' + n); };
+        const [p, s3, sw, s5] = digs;
+        dq0Need(f, p, 'E_DIG', { how: 'D_BEGUN' }, 'the pick\'s dig not begun');
+        if (!dug(p)) f.push('the pick dug nothing');
+        dq0Need(f, p, 'E_DIG', { how: 'D_THROUGH' }, 'the shaft not through');
+        tool(p, 'pick');
+        const rats = s => s ? s.actors.filter(a => a.state && a.name === 'giant rat').length : 0;
+        if (!rats(p.at) || rats(p.after) !== rats(p.at)) f.push('the rats by the stairway not all living through the dig: ' + rats(p.at) + ', then ' + rats(p.after));
+        const d = T.after(p, 'd');
+        dq0Need(f, d, 'E_ARRIVE', { how: 'A_DOWN', first: true }, 'not down the shaft to the stratum below');
+        if (!d.after || d.after.pc.sn !== 1) f.push('not on the stratum below');
+        if (!dug(s3)) f.push('the shovel dug none of the earth floor');
+        dq0Need(f, s3, 'E_DIG', { how: 'D_NO_TOOL' }, 'the shovel not stopped by the rock');
+        tool(s3, 'shovel');
+        dq0Need(f, sw, 'E_DIG', { how: 'D_NO_TOOL' }, 'the sword not refused by the flags');
+        if (spells(sw).length) f.push('the sword dug at the flags');
+        if (!dug(s5)) f.push('the shovel lifted none of the flags');
+        dq0Need(f, s5, 'E_DIG', { how: 'D_NO_TOOL' }, 'the shovel not stopped by the rock under the flags');
+        return f;
+      },
       sdcard: true
     },
     {
@@ -2824,38 +2849,26 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0tools', what: 'Dingus Quest Zero\'s tools to hand (the referee told all the tools the character carries; a skill used takes the one that suits best): a sword (dq0 -k sword) and a dagger won\'t dig a flagged floor (the maker\'s materials: seed 5\'s first room\'s), bare hands won\'t either; what\'s carried listed',
-      init: 't_rc', cycles: 400e6,
-      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 5 -c /ram/c.hm -k sword -T\r' +
-        ['dig down', 'i', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
-      expect: ['You set to digging', 'You have nothing that would bite into it', 'a sword, in your hand', '% echo $status'],
-      sdcard: true
-    },
-    {
-      name: 'dq0harm', what: 'Dingus Quest Zero\'s harm (the referee\'s RS_HARM: HarnMaster\'s falling, Skills 8, and its injuries, Combat 13-14): up a ledge (seed 517, the kobold warren\'s gatehouse: a built stratum\'s floors are flat), then jumped down it, a fall of 10 feet onto paving, the injury it does worded, on the character\'s sheet and its map\'s panel (its injury levels), and kept in the save (pc.hm\'s inj line, hmchar\'s format)',
-      init: 't_rc', cycles: 800e6,
-      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 517 -c /ram/c.hm -d /ram/hurt\r' +
-        ['look', 'ne', 'e', 'u', 'u', 'turn around', 'jump down', 'sheet', 'map', 'quit', 'cat /ram/hurt/pc.hm', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
-      expect: ['You haul yourself up over the edge.', 'You jump, and drop 10 feet.', 'You land hard: a ', 'Injuries: ', 'IP ', '\ninj ', '% echo $status'],
-      // (The referee's dice the commands', in their order, at the turns pace (the same with the typing's timing
-      // changed): at seed 517 the first climb's test a critical failure at its foot, no hold found (nothing to fall:
-      // the soak's, 2026-10-19, "you fall 0 feet" no more), the next round's up; the second u the way out's, shut)
+      name: 'dq0harm', what: 'Dingus Quest Zero\'s climbing and harm (the referee\'s: climbing tests, RS_HARM\'s falling, Skills 8, and its injuries, Combat 13-14: HarnMaster\'s at this seed), by the world\'s events and the referee\'s summary: at seed 517 the kobold warren\'s gatehouse (a built stratum\'s floors flat), a ledge 10 feet up met; climbed (u, its words\' though the way out\'s in the room): the climb\'s test at its foot a critical failure, no hold found yet (nothing to fall: the soak\'s, 2026-10-19, "you fall 0 feet" no more), then up; u again the way out\'s, shut; then jumped down it, a fall of 10 feet onto paving, an injury (the character hurt), and kept in the save (pc.hm\'s inj line, hmchar\'s format)',
+      init: 't_rc', cycles: 600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 517 -c /ram/c.hm -d /ram/hurt', 'ne', 'e', 'u', 'u',
+        'turn around', 'jump down', 'quit', 'cat /ram/hurt/pc.hm', 'echo $status']) },
+      expect: ['% echo $status'],
       check(m, out) {
-        const f = [];
-        inTurn(dq0Story(out), ['> u', 'You find no hold yet (10 feet to go).', 'You haul yourself up over the edge.', '> u',
-          '> jump down', 'You jump, and drop 10 feet.'], f);
+        const T = dq0Turns(m), f = [], e = T.of('e'), u = T.of('u'), u2 = T.after(u, 'u'), j = T.of('jump down');
+        dq0Need(f, e, 'E_LEDGE', { rise: 10 }, 'no ledge 10 feet up met');
+        dq0Need(f, u, 'E_CLIMB', { how: 'K_BEGUN' }, 'the climb not begun');
+        dq0Need(f, u, 'E_CLIMB', { how: 'K_NOHOLD' }, 'the critical failure at its foot not a hold not found');
+        dq0Never(f, u, 'E_CLIMB', { how: 'K_FELL' }, 'a fall from the ledge\'s foot');
+        dq0Never(f, u, 'E_HARM', {}, 'harm from the ledge\'s foot');
+        dq0Need(f, u, 'E_CLIMB', { how: 'K_UP' }, 'not up the ledge');
+        dq0Need(f, u2, 'E_NOWAY', { why: 'N_SHUT' }, 'the second u not the way out\'s, shut');
+        dq0Need(f, j, 'E_CLIMB', { how: 'K_JUMPED', feet: 10 }, 'not jumped down 10 feet');
+        dq0Need(f, j, 'E_HARM', { hc: 'HC_FALL', band: b => b > 0 }, 'the fall did no harm');
+        if (!j.after || !(j.after.sum.health > 0)) f.push('the character not hurt by the fall');
+        if (!/\ninj /.test(out.slice(out.indexOf('% cat /ram/hurt/pc.hm')))) f.push('the injury not kept in the save (pc.hm\'s inj line)');
         return f;
       },
-      sdcard: true
-    },
-    {
-      name: 'dq0earth', what: 'Dingus Quest Zero\'s materials (the maker\'s: dq0m/fixtures.c, a room\'s floor, walls and ceiling by its stratum\'s style and age), the world\'s dig taking the floor\'s from the chunk: a shovel (dq0 -k shovel) digs a room\'s earth floor (seed 3\'s first), the referee taking it, named, till the stratum\'s rock under it stops it (the user: the floor, then the rock); then a flagged floor (seed 5\'s), its flags lifted, then the rock',
-      init: 't_rc', cycles: 900e6,
-      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -k shovel -T\r' +
-        ['dig down', 'quit'].map(l => '\u0101' + l + '\r').join('') + '\u0101dq0 -p t -s 5 -c /ram/c.hm -k shovel -T\r' +
-        ['dig down', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
-      expect: ['You set to digging', 'You dig with your shovel.', 'You have nothing that would bite into it', 'You set to digging',
-        'You have nothing that would bite into it', '% echo $status'],
       sdcard: true
     },
     {
