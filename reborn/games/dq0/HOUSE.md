@@ -55,10 +55,10 @@ but beyond most (a thing hidden cunningly).
 - **A hazard underfoot** (a trap stepped onto) is noticed by a passing glance: twice its hiding's steps worse, and
   two more.  Searching as it goes (watching for traps), the character notices it as a search would: its hiding's
   steps worse.  (sheet.c's o_noticing; wtrap.c.)
-- **A thing lying about is made out** (named) within a square, half the character's sight, and how far off its kind
-  is made out past a speck (the catalogue's, in squares: a key or a coin 1, a sword 4, a chest 7; a theme's written
-  in feet); further off it's only "something", small or large.  (seen.c's afar; appraise.c.)  Why: the bigger the
-  thing, the further it's made out.
+- **A thing lying about is made out** (named) within 1 + sight / 2 + seen squares: the character's sight (0 to 9),
+  and its kind's seen, how far off it's made out past a speck (the catalogue's, in squares: a key or a coin 1, a
+  sword 4, a chest 7; a theme's written in feet); further off it's only "something", small or large.  (seen.c's
+  afar; appraise.c.)  Why: the bigger the thing, the further it's made out.
 - **The Khuzdul always know north underground** (the summary's northsense), a trait of their species.
   (dq0harn.c's status.)
 
