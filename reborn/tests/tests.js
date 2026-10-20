@@ -2828,6 +2828,59 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0dug', meaning: true, what: 'Dingus Quest Zero\'s holes dug part way kept (slice 4.0, HOUSE.md\'s what stopping costs: "a hole half dug stays half dug"; the world\'s change records, DUG: a hole\'s half-feet dug and the way it\'s dug, looked up as a dig begins on its square), by the world\'s events, its change records and its long task: at seed 3 by the stairway (dq0 -T -d, a pick, the character no miner) the wall to the south dug a while and stopped ("stop": its feet dug a DUG record, heading south), then dug again, on from where it was left (E_DIG\'s D_AGAIN, its feet to go the last spell\'s), through; a shaft begun beside the stairway, dug a while, stopped (a DUG record, down); the game kept (quit) and carried on (dq0 -d: the record read back from its region\'s file), the shaft dug again on from where it was left, its bar too (the hub\'s pc_task: its part done the record\'s and more)',
+      init: 't_rc', cycles: 1500e6,
+      // (A "stop" typed as the dig goes, after a wait: \u0100's 2M cycles each, a spell or so of the wall's, a few of the
+      // shaft's, the stratum below grown first)
+      machine: { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T -d /ram/dug',
+        'dig south', '!' + '\u0100'.repeat(12) + 'stop', 'dig south', 'dig down', '!' + '\u0100'.repeat(30) + 'stop', 'quit',
+        'dq0 -d /ram/dug', 'dig down', '!' + '\u0100'.repeat(15) + 'stop', 'quit', 'echo $status']
+        .map(l => (l[0] === '!' ? l.slice(1) : '\u0101' + l) + '\r').join('') },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], digs = T.filter(t => /^dig /.test(t.line)), stops = T.filter(t => t.line === 'stop');
+        if (digs.length !== 4 || stops.length !== 3) return ['the digs and stops not typed: ' + digs.length + ' and ' + stops.length];
+        // (A dig and the stop after it as one turn (the wall's second, to its end, its own); its E_DIG events; its
+        // spells; the feet to go after its last spell; the hole's record, DUG, after a stop: at the square dug, dy south
+        // of where the character stands, dug way d, level.h's DIR_S 2 or DIR_DOWN 5)
+        const [s1, s2, d1, d2] = digs.map((t, i) => i === 1 ? t : T.and(t)), [x1, x2, x3] = stops;
+        const ev = t => dq0Ev(t, 'E_DIG', {}), says = t => ev(t).map(e => e.how + ' ' + e.feet).join(', ');
+        const spells = t => ev(t).filter(e => ['D_GOOD', 'D_POOR', 'D_SLIP'].includes(e.how));
+        const togo = t => { const s = spells(t); return s.length ? s[s.length - 1].feet : -1; };
+        const hole = (t, dy, d) => (t.after ? t.after.changes : []).filter(c => c.what === 'DUG' && c.sn === t.after.pc.sn &&
+          c.x === t.after.pc.x && c.y === t.after.pc.y + dy && c.elev === d)[0];
+        const part = (t, x, d, dy, what) => {             // (Dug a while and stopped: its record, the half-feet dug,
+                                                          //   the last spell's feet to go)
+          const b = ev(t).find(e => e.how === 'D_BEGUN' || e.how === 'D_AGAIN');
+          if (!spells(t).some(e => e.how !== 'D_SLIP')) f.push(what + ' dug nothing before it was stopped (' + says(t) + ')');
+          if (ev(t).some(e => e.how === 'D_THROUGH')) f.push(what + ' through before it was stopped');
+          dq0Need(f, x, 'E_TASK', { te: 'TE_STOPPED', task: 'LT_DIG' }, what + ' not stopped');
+          const h = hole(x, dy, d);
+          if (!h || !h.tile) { f.push(what + ': no record of its hole after the stop (' + JSON.stringify(x.after && x.after.changes.filter(c => c.what === 'DUG')) + ')'); return 0; }
+          if (b && b.how === 'D_BEGUN' && (2 * b.feet - h.tile + 1) >> 1 !== togo(t)) f.push(what + ': its record\'s ' + h.tile + ' half-feet not the ' + togo(t) + ' feet to go of ' + b.feet + ' (' + says(t) + ')');
+          return h.tile;
+        };
+        // (The wall to the south: two feet, dug a while, stopped; dug again, on from where it was left, through)
+        dq0Need(f, s1, 'E_DIG', { how: 'D_BEGUN', feet: 2 }, 'the wall\'s dig not begun (two feet)');
+        part(s1, x1, 2, 1, 'the wall');
+        dq0Need(f, s2, 'E_DIG', { how: 'D_AGAIN', feet: togo(s1) }, 'the wall not dug again from where it was left, ' + togo(s1) + ' feet to go');
+        dq0Never(f, s2, 'E_DIG', { how: 'D_BEGUN' }, 'the wall\'s dig begun afresh');
+        dq0Need(f, s2, 'E_DIG', { how: 'D_THROUGH' }, 'the wall not dug through');
+        // (The shaft: dug a while, stopped, the game kept; carried on, dug again from where it was left, its bar too)
+        const b = ev(d1).find(e => e.how === 'D_BEGUN'), h = part(d1, x2, 5, 0, 'the shaft');
+        if (!b) f.push('the shaft not begun (' + says(d1) + ')');
+        dq0Need(f, d2, 'E_DIG', { how: 'D_AGAIN', feet: togo(d1) }, 'the shaft not dug again from where it was left, carried on (dq0 -d), ' + togo(d1) + ' feet to go');
+        dq0Never(f, d2, 'E_DIG', { how: 'D_BEGUN' }, 'the shaft begun afresh, carried on');
+        const k = x3.at && x3.at.task;
+        if (b && h && (!k || k.kind !== 'LT_DIG' || k.len !== 2 * b.feet || k.done < h)) f.push('the shaft\'s bar not on from where it was left: ' + JSON.stringify(k) + ', its record ' + h + ' half-feet of ' + 2 * b.feet);
+        // (The UI's words for it, both times: the UI's own, whatever the referee)
+        const again = dq0Story(out).match(/You set to digging again where you left off\. \((?:A foot|\d+ feet) to go\.\)/g) || [];
+        if (again.length !== 2) f.push('"You set to digging again where you left off." said ' + again.length + ' times, not 2');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0tasks', asks: true, what: 'Dingus Quest Zero\'s long tasks (slice 4.0, HOUSE.md\'s: the world\'s, the hub\'s pc_task; the user\'s choices: a bar and words, hard stops, soft asks, all wounds hard), by the world\'s events: at seed 3 "stop" with nothing to stop, then a walk east down a passage a square at a time, its beats as it goes (it turns, a quiet stretch) and its bar on the status line; at seed 3 by the way down a dig begun, "stop walking" refused (it\'s a dig), "stop digging" stops it; at seed 21 below, a long wait asked about at a sound heard ("Keep waiting?": the UI\'s, I_ASK), answered yes (it goes on), no (it stops), and with a command (it stops, and the command\'s carried out); and with the hand-written theme\'s hostile rats (inhabit.txt) a long wait stopped hard by a bite',
       init: 't_rc', cycles: 3500e6,
       machine: { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',

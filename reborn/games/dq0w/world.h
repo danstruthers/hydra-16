@@ -153,7 +153,10 @@ enum { PM_WOOD, PM_IRONBOUND, PM_IRON, PM_STONE };
 #define TRAP_STATE      0xFC                    /* (And for a trap's: tile its state) */
 #define STOCKED         0xFD                    /* (And a chunk's things put down: x, y its first square; the record
                                                 **   only a mark) */
-#define CH_TILE(l)      ((l) < PORTAL_HARM || (l) == 0xFF)  /* (A square's record: its kind, its floor, its link) */
+#define DUG             0xFA                    /* (And a hole dug part way, its square's: tile its half-feet dug,
+                                                **   elev the way, DIR_DOWN or the heading into the wall or the rock;
+                                                **   the world's to read, nothing in the chunk) */
+#define CH_TILE(l)      ((l) < DUG || (l) == 0xFF)  /* (A square's record: its kind, its floor, its link) */
 /* A window (T_WINDOW, PK_WINDOW) and an arrow slit (T_WINDOW, PK_SLIT, always open) are seen through (the senses'),
 ** but a window's closed shutters; a portcullis (T_DOOR, PK_PORTCULLIS) is seen through, up or down.  A window's glass
 ** and bars are items of their own (a pane, bars: items.h's IW_PORTAL, on its square), as a door's bar is (on the
@@ -273,7 +276,7 @@ struct change {
     unsigned char   tile;                       /* Its kind (but the seen bit); a portal's, a trap's state ... */
     signed char     elev;                       /* Its floor; a portal's parts */
     unsigned char   link;                       /* The stratum's link it is (an opening), or 0xFF; or what it is:
-                                                **   PORTAL_STATE, PORTAL_HARM, TRAP_STATE, STOCKED */
+                                                **   PORTAL_STATE, PORTAL_HARM, TRAP_STATE, STOCKED, DUG */
 };
 #define CHANGE_BANKS    2
 #define CH_PAGE         256                     /* A page's bytes */

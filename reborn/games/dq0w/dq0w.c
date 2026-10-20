@@ -1604,7 +1604,8 @@ void __fastcall__ s_start (const char* dir)
 ** it makes (a critical success three, a success two, a marginal failure one, a critical failure none), loud (a noise
 ** each spell, for the denizens); through, the square's a passage, or the shaft a way down to the stratum below (a
 ** link, both its ends: the stratum below grown if no one has been there; or solid rock beneath, if the stratum
-** below doesn't reach under it) */
+** below doesn't reach under it).  The feet dug kept as it goes (a change record, DUG: HOUSE.md's what stopping
+** costs, a hole half dug stays half dug), so a dig stopped and begun again on its square, the same way, goes on */
 
 #define SPELL           6000                    /* Tenths: ten minutes' work */
 
@@ -1615,6 +1616,7 @@ static struct {
     unsigned        need, done;                 /* Half-feet (P_DIG's: bare hands half a foot a spell) */
     unsigned        x, y;                       /* The square dug */
 } dig;
+void __fastcall__ dig_kept (unsigned char begin);   /* (Part 19's: the hole's record, DUG) */
 
 #pragma code-name (push, "SW1CODE")
 #pragma rodata-name (push, "SW1RODATA")
@@ -1753,9 +1755,7 @@ void __fastcall__ s_start_dig (unsigned char d)
         dig.mat = C->mat[t == T_WALL && k != 0xFF ? k : NROOMS][MP_WALL];   /* (Its room's walls, or the rock) */
         dig.top = 0xFF;
     }
-    hub_map (0);
-    event (E_DIG, 0, D_BEGUN << 8 | (dig.need > 510 ? 255 : dig.need / 2));    /* (Told in feet) */
-    task (LT_DIG, dig.need);
+    dig_kept (1);                               /* (Told, begun: on from where it was left, a hole begun before) */
     spell ();
 }
 
@@ -1781,6 +1781,7 @@ void s_dig_on (void)
     HUB->pc_task.done = dig.done;
     noise (6);
     if (dig.done < dig.need) {
+        dig_kept (0);                           /* (The feet dug kept: stopped, it goes on from here) */
         event (E_DIG, 0, (g == G_CS || g == G_MS ? D_GOOD : g == G_MF ? D_POOR : D_SLIP) << 8 |
             (dig.need - dig.done > 510 ? 255 : (dig.need - dig.done + 1) / 2));
         spell ();
@@ -1829,6 +1830,41 @@ void s_dig_on (void)
     hub_map (0);
     event (E_DIG, 0, D_THROUGH << 8 | 1);
     see (0);
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+#pragma code-name (push, "SW19CODE")           /* (Part 19's: the room of its bank and its area) */
+#pragma rodata-name (push, "SW19RODATA")
+
+extern struct change rec;                       /* (store.c's: the record written, or found) */
+unsigned char store_get (void);                 /* (Part 19's, wfile.c's) */
+
+/* The hole's record (DUG, a change record: its half-feet dug, the way it's dug), kept as a spell's done (begin 0); or
+** (begin 1) looked up as the dig begins, on from where it was left if it's a hole begun before and dug the same way;
+** and told (E_DIG: D_AGAIN and the feet to go, or D_BEGUN and its feet), its long task begun, its bar the part done
+** (the hub's header in the window after) */
+void __fastcall__ s_dig_kept (unsigned char begin)
+{
+    rec.sn = sn_;
+    rec.x = dig.x;
+    rec.y = dig.y;
+    rec.tile = dig.done < 255 ? dig.done : 255;
+    rec.elev = dig.d;
+    rec.link = DUG;
+    if (!begin) {
+        store_put ();
+        return;
+    }
+    if (store_get () && rec.elev == dig.d && rec.tile < dig.need) {
+        dig.done = rec.tile;
+    }
+    hub_map (0);
+    event (E_DIG, 0, dig.done ? D_AGAIN << 8 | (dig.need - dig.done > 510 ? 255 : (dig.need - dig.done + 1) / 2) :
+        D_BEGUN << 8 | (dig.need > 510 ? 255 : dig.need / 2));     /* (Told in feet: to go, or of it) */
+    task (LT_DIG, dig.need);
+    HUB->pc_task.done = dig.done;
 }
 
 #pragma code-name (pop)
