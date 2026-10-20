@@ -434,14 +434,17 @@ climb's test to hold on).
   unguilded occupations, a guilded one's those and the guilded, a noble's all; Lady for women; -q within them.
   Today any occupation for anyone.
 - **A human's culture rolled, mostly Feudal** (the user's, 2026-10-20), the book's exceptions Imperial, Viking and
-  Tribal (elves Sindarin, dwarves Khuzan), -q too.  Today every human is Feudal.
+  Tribal (elves Sindarin, dwarves Khuzan), -q too; an hmchar flag fixes it (the tests', so their characters keep
+  theirs: the user's).  Today every human is Feudal.
 - **A deity the player's choice** (the user's, 2026-10-20): one of the ten or none, the morality ranges a guide;
   its Ritual opened, as the book has it; -q none.  Today none but a cleric's.
-- **Strenuous work tires** (the user's, 2026-10-20): digging, climbing and battering tire as a run does, a long dig
-  or climb asking.  Today only the pace tires.
+- **Strenuous work tires** (the user's, 2026-10-20: "swimming, climbing, running, battering down a door"): running
+  as now, climbing, battering and digging as a run does, swimming as it comes (slice 4.9); a long one asking.  Today
+  only the pace tires.
 - **The engage initiative test** (the user's, 2026-10-20; the book's optional rule): as a character engages an
   enemy (its walk into the zone, a close-in, an enemy coming at it), both test Initiative, and a defender that
-  does better gains a tactical advantage: it strikes first, or disengages.  Today the close-in strikes at once.
+  does better gains a tactical advantage: it strikes first, or disengages; a dq0 flag turns it off (the tests', so
+  their fights stay the same: the user's).  Today the close-in strikes at once.
 - **A grope while engaged** (the user's, 2026-10-20): taking a thing up, drawing or swapping a weapon, engaged, is a
   Dexterity test; a failure wastes the round.  Today it never fails.
 - **A search cut short covers the part done** (the user's, 2026-10-20): the squares nearest first, each at the full

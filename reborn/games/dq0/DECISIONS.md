@@ -729,4 +729,10 @@ Asked 2026-10-20 ("Prompt me for outstanding decisions"), the user chose:
   every square at a harder one.
 - **Battering's noise:** every blow heard, not only the first.
 
+And the user, after: "Tiring work includes swimming, climbing, running, battering down a door.  Please add a way for
+test to be determinitive if that means turning off initiative rolls with at flag, and fixing culture the same way
+(with flag) sounds necessary."  So: a dq0 flag turns the engage initiative test off (the tests' runner adds it as it
+adds -a, a test of it asking for it on), and an hmchar flag fixes the culture (the tests' characters keep theirs);
+swimming tires when there's water (slice 4.9).
+
 **Design:** HOUSE.md, decided, not yet built (and Open: sight's detail by distance).
