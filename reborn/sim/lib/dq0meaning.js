@@ -157,6 +157,8 @@ function createRecorder() {
         e.stopped = e.hc === 'HC_STRUCK' && e.caught; break;          // (E_CAUGHT a fall's, E_STOPPED a blow's)
       case 'E_TRAP': e.tk = name('TK_PIT', w & 15); e.tt = name('TT_PLATE', w >> 4 & 15); e.to = name('TO_SPRUNG', w >> 8); break;
       case 'E_TAKEN': e.ir = name('IR_OK', w & 0xFF); break;
+      case 'E_TASK': e.te = name('TE_STOPPED', w & 0xFF); e.task = name('LT_NONE', w >> 8); e.named = name('LT_NONE', e.b); break;
+      case 'E_BEAT': e.beat = name('WB_QUIET', w & 0xFF); e.side = name('WS_AHEAD', w >> 8); break;
       case 'E_DEN': e.de = name('DE_MOVED', e.a); e.sn = e.x[0]; e.seen = !!e.x[2]; break;
       case 'E_FIGHT': e.def = e.a; e.sn = e.x[0]; e.out = e.x[1] === 0xFF ? 'FO_GONE' : e.x[1] === 0xFE ? 'FO_BLED' : name('O_MISS', e.x[1]);
         e.ff = e.x[2]; break;

@@ -69,6 +69,7 @@ void __fastcall__ go_to (unsigned x, unsigned y);
 void __fastcall__ step_to (unsigned char h, unsigned char n, unsigned char keep);
 void __fastcall__ door_work (unsigned char what);   /* Part 12 */
 void step_on (void);                            /* Part 23 */
+unsigned char task_news (void);
 void __fastcall__ task_word (const struct msg* m);
 void __fastcall__ path_ways (unsigned char tx, unsigned char ty);
 struct work wk;
@@ -186,7 +187,7 @@ static void __fastcall__ task (unsigned char kind, unsigned len)
 
 /* A walk set out on, its way the path's: the character busy for t tenths, its long task a walk of the path's
 ** squares, stepped as the clock goes (stepping) */
-static unsigned char pquiet, plast, pfull;
+static unsigned char pquiet, plast, pfull, pprev; /* (pprev: the square before, stepped from, in a passage) */
 static void __fastcall__ set_off (unsigned long t)
 {
     busy (t);
@@ -195,6 +196,7 @@ static void __fastcall__ set_off (unsigned long t)
     pquiet = 0;
     pfull = npath;
     pon = 1;
+    pprev = 0;
     pdue = 0;                                   /* (Its first square looked for at once) */
     plast = HUB->pc_face;
 }
@@ -504,6 +506,10 @@ static unsigned char __fastcall__ ask_look (unsigned char kind)
 static void stirred (void)
 {
     if ((!move.on || move.how == A_DIGGING) && dens_seen ()) {
+        hub_map (0);
+        if (HUB->pc_task.kind && !pon && !HUB->pc_task.asking && task_news ()) {
+            return;                             /* (Something new seen as it digs or waits: told, then asked) */
+        }
         view (V_STIR);
     }
 }
@@ -2131,7 +2137,7 @@ static unsigned char __fastcall__ beat (unsigned x, unsigned y, unsigned char h)
     dz = z - pz;
     pz = z;
     if (room_of (sn_, x, y) == 0xFF) {
-        if (h != plast) {
+        if (h != plast && pprev) {         /* (A turn between two squares of the passage walked) */
             b = WB_TURN;
             s = ((h - plast) & 7) < 4 ? WS_RIGHT : WS_LEFT;
         } else if (t == T_DOOR) {
@@ -2141,6 +2147,9 @@ static unsigned char __fastcall__ beat (unsigned x, unsigned y, unsigned char h)
         } else if (++pquiet >= 6) {
             b = WB_QUIET;
         }
+        pprev = 1;
+    } else {
+        pprev = 0;
     }
     plast = h;
     hub_map (0);
@@ -2218,6 +2227,12 @@ void s_step_on (void)
     }
 }
 
+/* Something new seen as a task in place goes (a dig, a wait: the denizens' bodies changed, stirred's) */
+unsigned char s_task_news (void)
+{
+    return news ();
+}
+
 /* The player's stop (I_STOP: a its kind named, or none) and a soft question's answer (I_GO_ON) */
 void __fastcall__ s_task_word (const struct msg* m)
 {
@@ -2225,6 +2240,12 @@ void __fastcall__ s_task_word (const struct msg* m)
 
     hub_map (0);
     k = HUB->pc_task.kind;
+    if (m->kind == I_ASK) {                     /* (A sound the UI heard: asked, if there's a task going) */
+        if (k && !HUB->pc_task.asking) {
+            ask ((unsigned char) m->w1);
+        }
+        return;
+    }
     if (m->kind == I_GO_ON) {
         if (HUB->pc_task.asking) {
             HUB->pc_task.asking = 0;
@@ -2237,6 +2258,7 @@ void __fastcall__ s_task_word (const struct msg* m)
     if (!k) {
         event (E_TASK, 0, TE_IDLE);
     } else if (m->a && m->a != k) {
+        evb = m->a;                             /* (The one named: its b) */
         event (E_TASK, 0, TE_NOT | k << 8);
     } else if (k == LT_CLIMB) {
         event (E_TASK, 0, TE_CANT | k << 8);   /* (Part way up: no stopping) */
@@ -2278,7 +2300,7 @@ void __fastcall__ s_path_ways (unsigned char tx, unsigned char ty)
 static unsigned char pc_waited;
 static void __fastcall__ intent (struct msg* m)
 {
-    if (m->kind == I_STOP || m->kind == I_GO_ON) {
+    if (m->kind == I_STOP || m->kind == I_GO_ON || m->kind == I_ASK) {
         task_word (m);                          /* (The long task's: no rest begun) */
         return;
     }
@@ -2468,6 +2490,7 @@ int main (int argc, char* argv[])
     if (argc < 4 || ovl_load (argv[3]) || hub_attach (atoi (argv[1]), atoi (argv[2]))) {
         return 1;
     }
+    memset (&HUB->pc_task, 0, sizeof HUB->pc_task);     /* (No long task yet) */
     start (argv[3]);                            /* (The things asked as the game starts, the dungeon begun: part 3's) */
     while (hub_map (0), !HUB->quit) {         /* (The hub at $8000 again, each time round) */
         while (hy_sem_try (HUB->sem[T_WORLD]) == 0) {

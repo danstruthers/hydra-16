@@ -15,7 +15,7 @@ static const char* const doing[] = {           /* (By LT_*) */
     "doing anything", "walking", "climbing", "digging", "searching", "waiting", "sleeping", "talking"
 };
 
-/* What came of the character's long task: E_TASK's w (TE_*, its kind times 256); named, the kind its stop named */
+/* What came of the character's long task: E_TASK's w (TE_*, its kind times 256); named, the kind its stop named (b) */
 unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
 {
     unsigned char k = w >> 8;
@@ -28,6 +28,7 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
         sayf ("\nYou stop %s.", d);
         break;
     case TE_ASK_SEEN:
+    case TE_ASK_HEARD:
         sayf ("\nKeep %s?", d);
         break;
     case TE_ASK_TIRED:
@@ -43,7 +44,27 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
         msg ("There's no stopping part way up: you cling on, and climb.");
         break;
     }
-    return (unsigned char) w == TE_ASK_SEEN || (unsigned char) w == TE_ASK_TIRED;     /* (1: a question put) */
+    k = (unsigned char) w;
+    return k == TE_ASK_SEEN || k == TE_ASK_TIRED || k == TE_ASK_HEARD;     /* (1: a question put) */
+}
+
+/* The character's state after a harm, its words (shock, bleeding, a leg or an arm useless: rs.h's C_*, the low
+** byte): each once an answer, then "still" (a second harm's: a door battered, its trap after) */
+void __fastcall__ o_state_words (unsigned char cond)
+{
+    static const unsigned char c_[] = { C_STUNNED, C_BLEEDING, C_LEG_USELESS, C_ARM_USELESS };
+    static const char* const now_[] = { " You are in shock.", " You are bleeding badly.", " Your leg won't bear you.",
+                                        " Your arm hangs useless." };
+    static const char* const still_[] = { " You are still in shock.", " You are still bleeding badly.",
+                                          " Your leg still won't bear you.", " Your arm still hangs useless." };
+    unsigned char i;
+
+    for (i = 0; i < sizeof c_; ++i) {
+        if (cond & c_[i]) {
+            say (harm_told & c_[i] ? still_[i] : now_[i]);
+        }
+    }
+    harm_told |= cond;
 }
 
 /* The bar of a long task's part done, ten cells, put after the status line's right side so far (s) */
@@ -81,6 +102,22 @@ void __fastcall__ o_beat_words (unsigned w)
     }
 }
 
+/* A wait's length, tenths (I_WAIT's w1): line l's duration, n minutes or hours ("wait 10 minutes", "an hour"); 0 a
+** round (nothing said); 100 minutes at most, the world's sixteen bits' */
+unsigned __fastcall__ o_wait_of (const char* l, unsigned char n)
+{
+    unsigned long t;
+
+    if (strstr (l, "hour")) {
+        t = 36000UL * (n ? n : 1);
+    } else if (strstr (l, "minute")) {
+        t = 600UL * (n ? n : 1);
+    } else {
+        return 0;
+    }
+    return t > 60000UL ? 60000U : (unsigned) t;
+}
+
 /* The task a stop names, by its word ("digging"; "": none, LT_NONE) */
 unsigned char __fastcall__ o_stop_kind (const char* word)
 {
@@ -106,7 +143,6 @@ unsigned char __fastcall__ o_answer_of (const char* l)
     static const char* const no[] = { "n", "no", "nope", "stop", "halt" };
     unsigned char i;
 
-    stop_named = LT_NONE;                       /* (A stop for the answer's no names none) */
     for (i = 0; i < sizeof yes / sizeof yes[0]; ++i) {
         if (!stricmp (l, yes[i])) {
             return 1;

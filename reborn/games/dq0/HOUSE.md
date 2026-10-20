@@ -324,6 +324,22 @@ climb's test to hold on).
   side"), the near side, the left or right side, a corner ("the far left corner"), a wall, a feature or a thing seen
   ("the door ahead to my left", the pillar, the body).  The way goes round what's in it through squares the
   character knows; one it doesn't know of is found as it's met.  The small moves stay for fine work.
+- **Out of reach, walked to first** (the user's, 2026-10-20): an action that needs its thing within reach (taking it
+  up, holding it, wearing it, putting it in or on something, opening a chest; a blow) walks over to it first, a long
+  task like any walk, then does it; a blow at a denizen out of reach closes with it first (the walk ends beside it,
+  or as anything engages the character), unless the character's engaged already or strikes with a missile weapon.
+- **Engagement** (the book's engagement zones, Combat 6; the user's reminder, 2026-10-20): an enemy on its feet and
+  conscious (a hostile or unfriendly denizen: one that strikes at a character beside it) has a zone, its own square
+  and the eight round it, but not through a wall or a shut door, nor round a corner (a diagonal with solid squares on
+  both sides).  One lying down has only its own square, one senseless none; a friendly one's or an ally's doesn't
+  count.  The character in an enemy's zone is engaged with it.  Any walk stops as it comes into an enemy's zone, a
+  hard stop ("The giant rat engages you."), and one begun in a zone goes a single square and stops there if it's
+  still in one (the book's one square a turn within them): a walk over to a thing, or past a hostile, stops where it's
+  engaged.  A blow's close-in ends in its target's zone, beside it, and the blow is struck; engaged by another first,
+  no blow, and the player says what next.  Engaged already, a blow at one out of reach isn't closed with (the
+  user's).  The denizens move by the same rule: one coming at the character stops in its zone.  Not used: the book's
+  long-reach weapons' two squares (with the missiles, slice 4.7), its reaction zones (the game's 30 feet stands for
+  them: a hostile seen that near stops a long task) and its engage initiative test.
 - **A long task** is anything the character does that takes more than a round (10 seconds): a walk, a dig, a climb, a
   search, battering a door, a wait.  Its progress is a bar on the status line, ten cells, its part done of its length
   (a walk's squares, a dig's feet, a climb's feet, a wait's time), redrawn at most once a real second; and words as it
@@ -367,6 +383,11 @@ climb's test to hold on).
 - **Bearings and mental maps** (DUNGEON.md: the character's sense of where it is, by Awareness or Mining; a map in
   its head that fades): slices 4.1-4.2.
 
+- **Every occupation the book lists, and one of the player's own** (the user's, 2026-10-20): hmchar offers the book's
+  whole table (Character 15), the soldiers by the character's culture and unit (Character 27) and the clerics by
+  deity (Character 23); the mages (Character 25) come with magic.  The player's own occupation is 11 points (the
+  book's occupations' median, a point opening a skill at its OML, a point for each SB more), at most 2 in a skill
+  and 3 in one, its primary; then the usual 5 option points, 2 a skill at most.  Today hmchar offers six.
 - **A theme's own tests name a purpose** (the user's, 2026-10-20), as the rest of the game's do, which each
   ruleset's referee maps to its own skill.  Today they're an even chance (P_THEME on).
 - **Climbing's rate by the face's grade** (the user's, 2026-10-20): faster up an easy face, slower up a sheer one,
@@ -375,5 +396,9 @@ climb's test to hold on).
 
 ## Open
 
+- **Each occupation's balance** (the user's, 2026-10-20: "we will need to look at game balance for each
+  occupation"): once hmchar offers them all, each one's worth in the game looked at, not only its points (the book's
+  run from 1 to 21; a dungeon favours some skills, a fighter's, a thief's, a miner's, over others), and evened out
+  as the user decides.
 - **D9, hearing:** how far each sound carries and how well each actor hears, tuned by ear once the real
   environmental sounds are in.

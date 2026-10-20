@@ -2828,6 +2828,47 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0tasks', asks: true, what: 'Dingus Quest Zero\'s long tasks (slice 4.0, HOUSE.md\'s: the world\'s, the hub\'s pc_task; the user\'s choices: a bar and words, hard stops, soft asks, all wounds hard), by the world\'s events: at seed 3 "stop" with nothing to stop, then a walk east down a passage a square at a time, its beats as it goes (it turns, a quiet stretch) and its bar on the status line; at seed 3 by the way down a dig begun, "stop walking" refused (it\'s a dig), "stop digging" stops it; at seed 21 below, a long wait asked about at a sound heard ("Keep waiting?": the UI\'s, I_ASK), answered yes (it goes on), no (it stops), and with a command (it stops, and the command\'s carried out); and with the hand-written theme\'s hostile rats (inhabit.txt) a long wait stopped hard by a bite',
+      init: 't_rc', cycles: 3500e6,
+      machine: { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
+        'dq0 -p t -s 3 -c /ram/c.hm', 'stop', 'e', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -k pick -T', 'dig down', '!stop walking', '!stop digging', 'quit',
+        ...['yes', 'no', 'look'].flatMap(ans => ['dq0 -p t -s 21 -c /ram/c.hm -T', 'd', 'wait 30 minutes', ans, 'quit']),
+        'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g', 'wait 10 minutes', 'quit', 'echo done']
+        .map(l => (l[0] === '!' ? l.slice(1) : 'ā' + l) + '\r').join('') },
+      expect: ['% echo done'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], ev = (t, k, want) => dq0Ev(t, k, want);
+        const games = [], g = [];
+        for (const t of T) { if (/^dq0 /.test(t.line)) games.push(g.length ? g.splice(0) : []); g.push(t); }
+        games.push(g.splice(0)); games.shift();
+        if (games.length !== 6) return ['the six games not played: ' + games.length];
+        const all = gm => gm.flatMap(t => t.events), has = (gm, want, what) => { if (!all(gm).some(e => e.kind === 'E_TASK' && Object.entries(want).every(([k, v]) => e[k] === v))) f.push(what + ' (' + all(gm).filter(e => e.kind === 'E_TASK').map(e => e.te + ':' + e.task).join(', ') + ')'); };
+        // (A walk: stop with none, then east down the passage, its beats and its bar)
+        const [w] = [games[0]], stop = w.find(t => t.line === 'stop'), east = w.find(t => t.line === 'e');
+        if (!ev(stop, 'E_TASK', { te: 'TE_IDLE' }).length) f.push('"stop" with nothing to stop not told so');
+        const beats = ev(east, 'E_BEAT', {});
+        if (!beats.some(e => e.beat === 'WB_TURN') || !beats.some(e => e.beat === 'WB_QUIET')) f.push('the walk east not told as it went: ' + beats.map(e => e.beat + ':' + e.side).join(', '));
+        if (!ev(east, 'E_ARRIVE', {}).length) f.push('the walk east not ended');
+        if (!/\[#+\.*\]/.test(out)) f.push('no long task\'s bar on the status line');
+        // (A dig: a stop that names another task refused, then the dig stopped)
+        has(games[1], { te: 'TE_NOT', task: 'LT_DIG', named: 'LT_WALK' }, '"stop walking" not refused as the dig went on');
+        has(games[1], { te: 'TE_STOPPED', task: 'LT_DIG' }, '"stop digging" not the dig stopped');
+        // (A long wait at a sound heard: asked, answered yes, no, and with a command)
+        for (const [k, ans] of [[2, 'yes'], [3, 'no'], [4, 'look']]) {
+          has(games[k], { te: 'TE_ASK_HEARD', task: 'LT_WAIT' }, 'the wait (' + ans + ') not asked about at a sound');
+          if (ans === 'yes') has(games[k], { te: 'TE_ON', task: 'LT_WAIT' }, 'the wait not gone on at yes');
+          else has(games[k], { te: 'TE_STOPPED', task: 'LT_WAIT' }, 'the wait not stopped at ' + ans);
+        }
+        if (!/> look[\s\S]{0,40}\n?[\s\S]*?You stop waiting\.[\s\S]*?You can see part of a cave/.test(dq0Story(out).replace(/> /g, '\n> '))) f.push('the look typed for an answer not carried out after the wait stopped');
+        // (Hostile rats: the wait stopped hard by a bite)
+        if (!all(games[5]).length || !games[5].flatMap(t => t.dens).some(e => e.kind === 'E_FIGHT' && e.def === 0)) f.push('no rat bit at the character as it waited');
+        has(games[5], { te: 'TE_HIT', task: 'LT_WAIT' }, 'the wait not stopped hard by the bite');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0cmd', what: 'Dingus Quest Zero\'s command interpreter (Phase 3C, the user\'s DesignIdeas.md): at seed 3 (-T), three giant rats near, the target set by a choice ("target the rat": which, in their order from the left round to the right, two the same way and as far told apart by their side, answered by number) and shown; a dagger thrown hard at the closest of them (the world\'s throw: its reach, the range bands, the referee\'s Throwing; it misses, and lands beside it); a bare take, the last thing named carried, asking which of the things near, answered by a name, then by a selector; take all (walked over to); a bare drop, the last thing named; it; a throw with no mark, the target lost from sight; a bare attack, out of reach; the target cleared; a look one way (turned to), a look round the corner, N alone going north',
       init: 't_rc', cycles: 1500e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -k pick -T\r' +

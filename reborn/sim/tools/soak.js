@@ -58,8 +58,8 @@ function choose(r, seen) {
     'take', 'take all', 'take it', 'drop', 'drop it', 'take the closest', 'clear target']);
   if (k < 90) return r.pick(['open the door', 'close the door', 'unlock the door', 'force the door', 'kick the door', 'break the window',
     'raise the portcullis', 'lower the portcullis', 'disarm the trap', 'bar the door', 'climb through the window']);
-  return r.pick(['wait', 'wait', 'wait 5 minutes', 'map', 'status', 'sheet', 'rest', 'hide', 'sneak ' + r.pick(['n', 's', 'e', 'w']),
-    'dig down', 'sing a song', 'xyzzy']);
+  return r.pick(['wait', 'wait', 'wait 5 minutes', 'wait 30 minutes', 'map', 'status', 'sheet', 'rest', 'hide', 'sneak ' + r.pick(['n', 's', 'e', 'w']),
+    'dig down', 'dig ' + r.pick(['north', 'east', 'south', 'west']), 'stop', 'stop walking', 'sing a song', 'xyzzy']);
 }
 
 // What the game's words since pos have named: things lying, denizens in sight
@@ -99,7 +99,8 @@ function one(s, turns, verbose) {
         pushed++;
         const now = noticed(since);           // (What the last words named, else what was named before: a new
         for (const k of ['things', 'dens', 'ways']) if (now[k].length || /You come into|You go /.test(since)) seen[k] = now[k];   //   place forgets it)
-        push(choose(r, seen));
+        push(/Keep [a-z]+\?/.test(since) && r.chance(0.7) ? r.pick(['yes', 'yes', 'no', 'go on']) : choose(r, seen));   // (A long task's
+                                              //   question answered, mostly: else a command, which stops it)
       } });
     }
   };

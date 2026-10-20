@@ -162,6 +162,8 @@ enum {
     I_STOP,                                     /* The character's long task stopped (the player's "stop"): a its kind
                                                 **   named (LT_*: "stop digging"; LT_NONE whatever it is); E_TASK */
     I_GO_ON,                                    /* A soft interruption answered: go on (E_TASK's TE_ASK*: "yes") */
+    I_ASK,                                      /* A soft interruption the UI perceived itself (a sound heard): w1 its
+                                                **   kind (TE_ASK_HEARD); the long task paused, asked (E_TASK) */
     NINTENTS
 };
 /* The denizens' intents (their ring, the hub's di: the minds', for their actors' bodies, the world's to carry out
@@ -221,7 +223,7 @@ enum {
                                                 **   portal's part, or a thing fixed where it stands, the UI's to see
                                                 **   to), w2 the light it carried before (the hub's pc_light) */
     E_TASK,                                     /* who's long task (the hub's pc_task): w1 what came of it (TE_*), its
-                                                **   kind (LT_*) times 256 */
+                                                **   kind (LT_*) times 256; b (TE_NOT's) the kind the stop named */
     E_BEAT,                                     /* who's walk, as it goes (DUNGEON.md: moving): w1 the beat (WB_*), its
                                                 **   side (WS_*) times 256 */
     NEVENTS
@@ -259,12 +261,13 @@ enum { V_TURNED, V_LIT, V_DARK, V_STIR, V_FACING };    /* E_VIEW's why (V_STIR: 
                                                 **   from it, or doing something else; V_FACING: a turn begun, its
                                                 **   look to come, V_TURNED) */
 enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL };  /* E_DIG's how */
-enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE_IDLE, TE_CANT };   /* E_TASK's: stopped as
+enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE_IDLE, TE_CANT, TE_ASK_HEARD };   /* E_TASK's: stopped as
                                                 **   the player asked; stopped hard, by a wound or a blow (HOUSE.md:
                                                 **   all wounds), by a hostile in sight within 30 feet; asking, soft
                                                 **   (something new seen, tiring); carried on, the answer yes; not
                                                 **   the task named (its kind the hub's pc_task's); no task to stop;
-                                                **   one that can't be stopped now (a climb part way) */
+                                                **   one that can't be stopped now (a climb part way); asking, a
+                                                **   sound heard (the UI's, I_ASK) */
 enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN };   /* E_BEAT's: a quiet stretch (HOUSE.md:
                                                 **   every 30 feet), the way turns, a side passage, a door passed, it
                                                 **   opens out, it rises, it falls */

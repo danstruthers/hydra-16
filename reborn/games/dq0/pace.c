@@ -146,6 +146,9 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
     }
     wa = HUB->watch;
     if (any ("stop\0")) {                       /* (Stopped: what it names; a pace's, back to a walk) */
+        if (g == GA_WALK) {
+            g = 0xFF;                           /* ("stop walking": the long task's, the parser's: slice 4.0) */
+        }
         k = wa;
         wa &= any ("searching\0search\0watching\0looking\0") ? ~WA_TRAPS : 0xFF;
         wa &= any ("listening\0listen\0") ? ~WA_LISTEN : 0xFF;

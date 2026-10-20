@@ -102,18 +102,7 @@ void __fastcall__ o_harm_words (unsigned w, unsigned cond)
     if (w & E_OUT) {
         say (" Everything goes black; you come to some time later.");
     }
-    if (cond & C_STUNNED) {
-        say (" You are in shock.");
-    }
-    if (cond & C_BLEEDING) {
-        say (" You are bleeding badly.");
-    }
-    if (cond & C_LEG_USELESS) {
-        say (" Your leg won't bear you.");
-    }
-    if (cond & C_ARM_USELESS) {
-        say (" Your arm hangs useless.");
-    }
+    state_words ((unsigned char) cond);         /* (Its state: task.c's) */
 }
 
 /* What came of working a door */

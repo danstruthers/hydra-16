@@ -624,6 +624,19 @@ too steep to walk, a window's sill, a shaft or a ladder: a climb, the referee's 
 test, a test a round; a fall's impact by its height, the landing's floor: HOUSE.md's climbing and falling); a ledge
 or a shaft can be jumped down (jump down: a fall of its height).
 
+- **Long tasks** (HOUSE.md's): whatever the character does that takes more than a round (a walk, a dig, a climb, a
+  wait) is one long task, the world's (the hub's pc_task: its kind, its length and its part done in its own units).
+  A walk's way is worked out as it starts and walked a square at a time as the clock goes, the character on each
+  square in its turn (the denizens see it there, the senses look every third square and at each beat); a dig's
+  spells, a climb's rounds and a wait the same task in place.  Its progress is a bar on the status line, ten cells,
+  and words as it goes: a walk's beats (the passage turns, a doorway, it rises or falls, and on a quiet stretch "You
+  go on down the passage" every 30 feet), a dig's spells, a climb's rounds.  It's stopped hard by any wound or blow,
+  or by a hostile denizen coming into sight within 30 feet ("You stop walking"); anything else new (a denizen seen
+  for the first time in the task, the first sound heard) asks, soft: "Keep waiting?", the clock still at the turns
+  pace till it's answered, yes going on, no stopping it, and any other command stopping it and then carried out.
+  "stop" stops it, and "stop digging" (walking, waiting ...) names it, a task that isn't the one refused ("You aren't
+  walking: you're digging"); a climb can't be stopped part way, and struck or hurt it's a test to keep the grip, a
+  fall if it fails.  (dq0 -a, the tests': every question answered yes, unasked.)
 - **The pace** is the player's, kept in the hub (its gait: creep, walk slowly, walk, jog, run, sprint; "set pace to
   jog", or a pace's word alone; "run north" sets it and goes: the world's to set, as the UI asks, WQ_SET), and kept
   with the game in the save (the world's world.dat).  Each pace's step is the referee's, in its summary (rs.h's
@@ -799,7 +812,10 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   interruptions hard (it stops: any wound taken, a blow, a trap sprung, a fall, the light going out) or soft (it
   asks: "A rat comes into the light. Keep digging?"), by events and by the actor's own state; "stop", "stop
   digging"; looking one way, through what lets sight through ("look north"); whatever a test finds told as found
-  ("Searching about...").
+  ("Searching about...").  Built so far (Moving, above): the long tasks, a walk a square at a time, the bar, the
+  beats, stop, the hard stops and the soft questions (a denizen new in sight, a sound); still to come in it: where
+  you are and going to named places, looking one way, things told as found, tiring as a question, a dig half done
+  kept, searching and battering as long tasks.
 - **Light and traces** (slice 4.1): lights burning down and refilled (fuel), a spare torch and oil in the kit (D5);
   rooms lit only where denizens keep lights; the deposit layer: tracks in the dust, smells, smoke, fading with age;
   Tracking.

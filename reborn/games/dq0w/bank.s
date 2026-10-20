@@ -158,6 +158,7 @@ go:
             SWFN        it_in, 20
             SWFN        ways_go, 21
             SWFN        step_on, 23
+            SWFN        task_news, 23
             SWFN        task_word, 23
             SWFN        path_ways, 23
             SWFN        it_flush, 17

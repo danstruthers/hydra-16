@@ -657,3 +657,44 @@ The user, starting Phase 4 ("On to the next phase then."), at the slice's first 
 - a walk's words at each change, and a line on a quiet stretch about every 30 feet.
 
 **Design:** DUNGEON.md, still to come (slice 4.0).
+
+### Out of reach: walk over first
+
+The user's play note, 2026-10-20: "During play testing, one thing I found annoying was when I was trying to pick
+something up, if the character was not right next to something, it would say I couldn't pick it up because it was
+too far away, but I was not asked if I wanted to walk over to it first.  I think that an auto-walk should happen if I
+specify I want to pick something up that is not right next to me, just as an auto-engage should happen if I target
+something and attack (either by just stating `attack the goblin`, or `target the goblin and attack` or just
+`attack` when there is an active target and not engaged and not using a ranged weapon)."  Built as the general
+kind (the user's standing rule): any action that needs its thing within reach walks over to it first, a long task
+like any walk (its bar, stoppable, stopped by what it meets), then does it; an attack on one out of reach, unengaged
+and not with a missile weapon, closes with it first.
+
+**Design:** DUNGEON.md, moving; HOUSE.md, where you are, going places, and long tasks.
+
+### Engagement zones on every move
+
+The user, 2026-10-20, of the walk over and the close-in: "Don't forget that there are auto-engage rules for movement
+through an active enemy's engagement zone."  Built as the general kind: the book's engagement zones on every walk,
+the character's and the denizens', not only a blow's close-in; a walk that comes into an enemy's zone stops there,
+engaged.
+
+**Design:** HOUSE.md, where you are, going places, and long tasks (engagement).
+
+### Every occupation the book lists, and one of the player's own
+
+The user's play note, 2026-10-20: "Another shortcoming I saw: only 6 character occupations available.  There should
+be any that are listed in the Harn reference, as well as a "build your own" that allows for selecting some number of
+starting skills (based on a fair analysis of other canned occupations), or just by adding a few more skill points (5
+maybe), with the same restrictions on only 2 points for any one skill, except for max 3 in one skill only (a
+primary)."  The analysis: the 55 occupations whose skills the book's table lists in full (Character 15) are worth 1
+to 21 option points each (a point opening a skill at its OML, a point for each SB more; Laborer the least, Hunter/
+Trapper the most), 11 at the median and the mean, over 5 skills at the median, the most in one skill mostly 4.  The
+soldiers (Character 27, by culture and unit), the clerics (Character 23, by deity) and the mages (Character 25, by
+convocation: their skills come with magic, Phase 5) are listed elsewhere in the book.  Asked, the user chose: a
+player's own occupation worth 11 points, the median's (at most 2 in a skill, 3 in one primary: 3+2+2+2+2 over five
+skills, the median occupation's shape), the usual 5 option points on top; the 3-point primary the player's own
+occupation's alone (every character's option points keep 2 a skill).  And, the user: "Please make a note that we
+will need to look at game balance for each occupation" (HOUSE.md, open).
+
+**Design:** HOUSE.md, decided, not yet built.

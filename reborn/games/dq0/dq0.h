@@ -205,7 +205,9 @@ void __fastcall__ beat_words (unsigned w);
 unsigned char __fastcall__ stop_kind (const char* word);
 unsigned char __fastcall__ answer_of (const char* l);
 void __fastcall__ bar_text (char* s, unsigned done, unsigned len);
-extern unsigned char stop_named;                /* (The kind a stop named: main.c's) */
+unsigned __fastcall__ wait_of (const char* l, unsigned char n);
+void __fastcall__ state_words (unsigned char cond);
+extern unsigned char harm_told;                 /* (The states a harm's words told this answer: main.c's) */
 char* __fastcall__ env (const char* name, char* buf, unsigned char size);  /* The environment's (main.c) */
 void __fastcall__ appraise (const struct ireq* q, signed char g);       /* Overlay 1: a thing judged */
 extern char dig_with[16];                       /* The tool a dig's taken up, to name (then ""): main.c's */

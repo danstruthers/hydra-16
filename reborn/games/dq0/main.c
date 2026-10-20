@@ -47,8 +47,10 @@ unsigned char pace = 0xFF, paused;
 const char* const pacename[4] = { "relaxed", "normal", "menacing", "turns" };
 
 static unsigned char asking;                    /* (A long task's soft question put, the answer awaited) */
+static const char* cl;                          /* (The command's line, s_command's: chores' words of it) */
+unsigned char harm_told;                        /* (The states a harm's words told in this answer: intro.c's) */
 static unsigned char autogo;                    /* (dq0 -a: every soft question answered yes, unasked: the tests') */
-unsigned char stop_named;                       /* (The kind a stop named: task.c's) */
+static unsigned char asked;                     /* (A sound's question put in this command's long task) */
 static unsigned bar_done;                       /* (The long task's part done as the bar was last drawn) */
 static unsigned char busy = 1;                  /* The character's doing something: no command till it's free (nor
                                                 **   till the world's started, and says so: E_READY) */
@@ -664,7 +666,8 @@ void status (void)
 
     strcpy (left, P.name[0] ? P.name : "Dingus Quest Zero");
     strcpy (right, paused ? "PAUSED  " : "");
-    if (HUB->pc_task.kind && HUB->pc_task.len) {    /* (A long task's bar: its part done, task.c's) */
+    if (task_[T_WORLD] > 0 && HUB->pc_task.kind && HUB->pc_task.len) {     /* (A long task's bar: its part done,
+                                                **   task.c's) */
         bar_text (right, bar_done = HUB->pc_task.done, HUB->pc_task.len);
     }
     if (task_[T_WORLD] > 0) {
@@ -744,6 +747,11 @@ static void heard (void)
         heard_what[sizeof heard_what - 1] = 0;
         heard_words (m.a | (m.x[3] ? 0x80 : 0), rel);
         msg (lb);
+        if (busy && HUB->pc_task.kind && !asked) {
+            asked = 1;                          /* (The first sound heard as a long task goes: asked, the world's to
+                                                **   pause it) */
+            intend2 (I_ASK, TE_ASK_HEARD, 0);
+        }
     }
 }
 
@@ -829,9 +837,9 @@ static unsigned char events (void)          /* (How many there were) */
         case E_TASK:                            /* (The long task's: stopped, asked, refused; slice 4.0's) */
             if (m.who == 0) {
                 k = (unsigned char) m.w1;
-                if (autogo && (k == TE_ASK_SEEN || k == TE_ASK_TIRED)) {
+                if (autogo && (k == TE_ASK_SEEN || k == TE_ASK_TIRED || k == TE_ASK_HEARD)) {
                     intend2 (I_GO_ON, 0, 0);    /* (dq0 -a's: on, unasked) */
-                } else if ((asking = task_words (m.w1, stop_named)) != 0) {
+                } else if ((asking = task_words (m.w1, m.b)) != 0) {
                     t_prompt (1);               /* (Its answer's prompt: the character still busy) */
                 }
             }
@@ -1252,11 +1260,11 @@ static unsigned char __fastcall__ chores (unsigned char action)
     case VB_META_MAP:
         show_map ();
         break;
-    case VB_WAIT:
-        intend (I_WAIT, 0);
+    case VB_WAIT:                               /* (A round, or as long as it says: "wait 10 minutes") */
+        intend2 (I_WAIT, wait_of (cl, cmd.n), 0);
         break;
     case VB_STOP:                               /* (The long task: "stop", "stop digging") */
-        intend (I_STOP, stop_named = stop_kind (cmd.obj.word));
+        intend (I_STOP, stop_kind (cmd.obj.word));
         break;
     case VB_META_SHEET:
         sheet ();
@@ -1387,6 +1395,7 @@ void __fastcall__ s_command (char* l)
     unsigned char d, pa;
     signed char ok;
 
+    cl = l;
     ok = s_cq_cmd (l);                          /* (The command the parser made: dq0c's, the grammar's verdict with
                                                 **   it) */
     pc_face = HUB->pc_face;
@@ -1783,7 +1792,13 @@ int main (int argc, char* argv[])
         }
         if ((l = (char*) t_next ()) != 0 && (!busy || !held)) {
             cq_post (l);                        /* (The command parser at work on it meanwhile) */
-            ntold = 0;                          /* (Its answer: no look's sentence said yet) */
+            if (!held) {
+                ntold = 0;                      /* (Its answer: no look's sentence said yet, no harm's state; a
+                                                **   line held for the character, taken again, the same answer:
+                                                **   what its task's end told meanwhile not told again) */
+                harm_told = 0;
+            }
+            asked = 0;                          /* (Its long task, if it's one: not asked of a sound yet) */
             hub_map (0);
             HUB->ui_cmd = 1;                    /* (A command in hand: the senses' look gives way meanwhile, from
                                                 **   its first look, at_once's, on: a line typed as a look began

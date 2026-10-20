@@ -41,18 +41,9 @@ static unsigned char nwas = 0, heard_was = 0;
 static unsigned char now_m[SEE_DENS] = { 0 }, was_m[SEE_DENS] = { 0 };   /* (A stir's: told the same, now and then) */
 #define S           sight_copy
 
-/* words.c's: the words so far said (a look's, streamed), and out */
-static void lb_out (void)
-{
-    if (lbn) {
-        say (lb);
-    } else {
-        msg (lb);
-    }
-    lbn += lbe - lb;
-    *(lbe = lb) = 0;
-    t_flush ();
-}
+/* The words so far said (a look's, streamed), and out: lbsaid.s's, as words.c's are (none a look's said already this
+** answer: the sentences before a denizen's, the place's, kept as said too) */
+#define lb_out  lb_said
 
 static void __fastcall__ add (const char* s)
 {

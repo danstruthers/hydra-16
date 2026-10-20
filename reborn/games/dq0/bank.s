@@ -157,6 +157,8 @@ ovl_out:
             OVFN        stop_kind, 3
             OVFN        answer_of, 3
             OVFN        bar_text, 3
+            OVFN        wait_of, 3
+            OVFN        state_words, 3
             OVFN        climb_words, 1
             OVFN        entered, 1
             OVFN        portal_words, 1
