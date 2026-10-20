@@ -95,40 +95,19 @@ void stir (void);                               /* The denizens it sees, told as
 void __fastcall__ map (const char* rules);      /* Part 3: the map of what it's seen round it, and the
                                                 **   character's state beside it (rules: the referee's short lines) */
 
-/* ---- A command understood: the command parser's (dq0c: games/dq0c, its meaning cmdmean.s's; cq_cmd) */
+/* ---- A command: the command parser's (dq0c: games/dq0c, cmdmean.s's, by the verbs, commands.verbs), hub.h's
+** struct cmd: an action (actions.h's VB_*) and its roles; cq_cmd's, the one the UI carries out (cmd) */
 
-enum {
-    V_NONE, V_MOVE, V_ENTER, V_APPROACH, V_LOOK, V_EXAMINE, V_SEARCH, V_TURN, V_FACE, V_CLIMB, V_JUMP, V_OPEN, V_CLOSE,
-    V_UNLOCK, V_FORCE, V_DIG, V_GET, V_DROP, V_DON, V_DOFF, V_LIGHT, V_DOUSE, V_WAIT, V_MAP, V_SHEET, V_HELP,
-    V_PAUSE, V_QUIT, V_SAVE, V_INVENTORY, V_HIDE, V_HOLD, V_STOW, V_PUT, V_HANG, V_RAISE, V_LOWER, V_BREAK, V_DISARM,
-    V_BAR, V_BEND,
-    V_READ, V_USE, V_COMBINE,                   /* (The theme's puzzle's: theme.c) */
-    V_TALK, V_PERSUADE, V_DECEIVE, V_THREATEN, V_CALM, V_BEFRIEND,     /* (A denizen swayed: hub.h's SW_TALK ... in
-                                                **   order) */
-    V_ATTACK, V_TELL, V_NAME,                   /* (A blow, a request to an ally, a name given: the last, SW_* in
-                                                **   order) */
-    V_DEFEND                                    /* (A fight's stance: blows.c) */
-};
+#include "actions.h"
 enum { OB_NONE, OB_DOOR, OB_PASSAGE, OB_STAIRS, OB_LADDER, OB_SHAFT, OB_LEDGE, OB_WAY_OUT, OB_WALL, OB_WINDOW, OB_TRAP,
     OB_PORTC, OB_ROOM };                        /* (OB_ROOM: the room, its ceiling: looked at closely) */
 enum { HOW_ANY, HOW_TO, HOW_THROUGH };
-enum { PR_NONE, PR_IN, PR_ON, PR_FROM, PR_WITH };    /* (The other thing: in it, on it, from it, with it) */
+enum { PR_NONE, PR_IN, PR_ON, PR_FROM, PR_WITH, PR_AT, PR_TO };    /* (The other thing: in it, on it, from it, with
+                                                **   it, at it, to it) */
 #define GO_UP       8                           /* (A direction: up, down; else a heading, H_N ...) */
 #define GO_DOWN     9
-struct pcmd {
-    unsigned char   verb;                       /* V_* */
-    unsigned char   dir;                        /* A heading (the compass's), GO_UP, GO_DOWN, or 0xFF */
-    unsigned char   obj;                        /* OB_* */
-    unsigned char   orel;                       /* The heading the thing lies (or 0xFF: any) */
-    unsigned char   how;                        /* HOW_*: up to it, or through it */
-    unsigned char   half, around;               /* (turn half left; turn around, look around) */
-    char            word[16];                   /* The first word not understood */
-    unsigned char   prep;                       /* PR_*: a word for the other thing (put X in Y, take X from Y) */
-    char            word2[16];                  /*   and the first not understood after it (the other thing; a
-                                                **   thing fetched; a name given, the last) */
-    unsigned char   order;                      /* A request to an ally (V_TELL's: hub.h's OR_*; word to here
-                                                **   struct sway's, copied whole) */
-};
+struct cmd;
+extern struct cmd cmd;                          /* (main.c's: the command being carried out, cq_cmd's) */
 extern unsigned char pc_face;                   /* (The hub's, copied for the overlays) */
 #define TOLD        24                          /* (A look's sentences said this answer: look.c's told, ntold) */
 extern unsigned told[TOLD];
@@ -158,7 +137,7 @@ unsigned char __fastcall__ pick (unsigned char obj, unsigned char orel);   /* Th
                                                 **   orel (or 0xFF: any way): 1, its square in tx, ty (the one there
                                                 **   is, the one chosen, the nearest ahead); 0, none; 2, several and
                                                 **   none ahead: they're listed, which asked */
-unsigned char __fastcall__ choose (struct pcmd* c);    /* The command (parsed) a choice's answer (its number, its
+unsigned char __fastcall__ choose (struct cmd* c);     /* The command (parsed) a choice's answer (its number, its
                                                 **   way)?  Then c is the command asked about again, pick's the one
                                                 **   chosen: 1; else 0 */
 
@@ -183,7 +162,7 @@ void __fastcall__ theme_named (unsigned char what, unsigned char n);   /* Overla
 void __fastcall__ story (unsigned char resumed);    /* Overlay 5: the theme's name (and its story, a new game's) */
 void way_words (void);                          /* Overlay 5: the way out, shut or open */
 void __fastcall__ ending (unsigned char how);   /* Overlay 5: an ending's words (END_*) */
-unsigned char __fastcall__ puzzle (struct pcmd* c);     /* Overlay 5: a command the puzzle's (Q_*: the world's
+unsigned char __fastcall__ puzzle (struct cmd* c);      /* Overlay 5: a command the puzzle's (Q_*: the world's
                                                 **   judgement, IO_PUZZLE, worded) */
 unsigned char __fastcall__ othings (unsigned char op, const char* name, const char* into, unsigned char to);
                                                 /* (main.c's) The things asked (from an overlay: the names in the
@@ -222,10 +201,10 @@ unsigned __fastcall__ fight_words (const struct msg* m);    /* Overlay 6: a blow
                                                 **   ring copied into lb's end: FIGHT_LB), into lb: the tenths the
                                                 **   character's knocked senseless for, or 0 */
 #define FIGHT_LB    ((struct fight*) (lb + sizeof lb) - 1)
-unsigned char __fastcall__ fight_target (struct pcmd* c);   /* Overlay 6: V_ATTACK's denizen beside the
-                                                **   character to strike at (its name has the word; it lies that way):
-                                                **   its entry plus 1, or 0 and why not in lb; V_DEFEND's stance set,
-                                                **   told in lb (0); a blow at a door, a window, a portcullis:
+unsigned char __fastcall__ fight_target (struct cmd* c);    /* Overlay 6: VB_ATTACK_OBJECT's denizen beside
+                                                **   the character to strike at (its name has the word; it lies that
+                                                **   way): its entry plus 1, or 0 and why not in lb; VB_DEFEND's stance
+                                                **   set, told in lb (0); a blow at a door, a window, a portcullis:
                                                 **   FT_THING */
 #define FT_THING    0xFE
 void __fastcall__ heard_words (unsigned char what, unsigned char rel);  /* Overlay 9: a denizen heard (an E_DEN's
@@ -273,13 +252,12 @@ void save_game (void);                          /* Part 1: the game kept (if it'
 void __fastcall__ command (char* l);            /* Part 2 (main.c): a command, the parser's, carried out */
 void ready (void);                              /* Part 2 (main.c): nothing, the part copied in for the next */
 void __fastcall__ cq_post (const char* l);      /* Part 2 (main.c): a line posted to the command parser (dq0c) */
-signed char __fastcall__ cq_cmd (struct pcmd* c, const char* l);   /* Part 2 (main.c): what line l means, dq0c's (l
-                                                **   posted first, if it isn't), into c, its ways made the compass's
-                                                **   as the character faces now: the grammar's verdict (1 a command;
-                                                **   0 not one; -1 too long; -2 none, the game ending) */
+signed char __fastcall__ cq_cmd (const char* l);   /* Part 2 (main.c): the command line l makes, dq0c's (l posted
+                                                **   first, if it isn't), into cmd, its ways made the compass's as the
+                                                **   character faces now: the grammar's verdict (1 a command; 0 not
+                                                **   one; -1 too long; -2 none, the game ending) */
 void cq_drop (void);                            /* Part 2 (main.c): the line posted seen to (its reply waited for) */
 extern unsigned char cq_again;                  /* (The line changed since it was posted: names_subst's) */
-extern unsigned char cq_verb;                   /* (The line's verb, cq_cmd's: with c 0, that alone) */
 void __fastcall__ take (const char* name);      /* Part 2: a thing taken up, by its name */
 void __fastcall__ took_up (unsigned r);         /* Part 2: a thing taken up, or not, told (an E_TAKEN's: IR_*, the
                                                 **   light before times 256) */

@@ -25,7 +25,6 @@
 static char b[INMAX + 1];
 static char* w[NW];
 static unsigned char nw;
-static struct pcmd c;
 
 /* The line's words (lower case), in b */
 static void split (void)
@@ -175,20 +174,21 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
     if (!st && !n) {
         return 0;                               /* (None of its words: the command's) */
     }
-    cq_cmd (&c, l);                             /* (The direction the command parser's) */
-    k = (c.verb == V_MOVE || c.verb == V_ENTER || c.verb == V_APPROACH) && (c.dir != 0xFF || c.obj);
+    cq_cmd (l);                                 /* (The direction the command parser's) */
+    k = (cmd.action == VB_MOVE_DIRECTION || cmd.action == VB_MOVE_TOWARD || cmd.action == VB_ENTER ||
+        cmd.action == VB_APPROACH_OBJECT) && (cmd.dir != 0xFF || cmd.obj.kind);
     st = st && (!k || n || g != HUB->gait || wa != HUB->watch);    /* (Said, unless it goes on as it was) */
     wset (WS_PACE, g, wa);                      /* (The world's, set: its request) */
     if (st) {
         described (1);
     }
-    d = c.dir;
+    d = cmd.dir;
     if (nw > 1 && !strcmp (w[0], "back") && !strcmp (w[1], "up")) {
         d = (HUB->pc_face + 4) & 7;             /* ("Back up": behind it, still facing the way it does) */
     } else if (d == 0xFF && n) {
         d = HUB->pc_face;                       /* ("Step": ahead) */
     }
-    if (n && d <= H_NW && !c.obj) {             /* (A small move: its facing kept backing up, or a step aside) */
+    if (n && d <= H_NW && !cmd.obj.kind) {             /* (A small move: its facing kept backing up, or a step aside) */
         keep = any ("left\0right\0l\0r\0back\0backward\0backwards\0behind\0b\0aside\0sideways\0sidestep\0") &&
             !any ("forward\0forwards\0fwd\0ahead\0front\0f\0");
         if (n == 0xFF) {                        /* (By the pace: a square at a walk or slower, two at a jog, three

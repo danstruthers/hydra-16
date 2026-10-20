@@ -26,7 +26,8 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     3                       /* (2: the command parser's role and request, dq0c; 3: its meaning) */
+#define HUB_VERSION     4                       /* (2: the command parser's role and request, dq0c; 3: its meaning;
+                                                **   4: its command, struct cmd) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -309,13 +310,14 @@ struct rqh {
 ** the UI's.  Its text is in CMD_BANK at $8000 (len bytes, a 0 after): a line to match (CQ_MATCH), the world's words
 ** (CQ_WORLD: three lists, each 0-ended: the words the world names things by, the names given, the deities'), or
 ** nothing (CQ_NONE: the round trip alone, timed).  The reply's res: 1 the line parses, 0 it doesn't, -1 too long
-** or nesting too deep; 0 for the others.  A line's reply has what it means too: its struct pcmd (dq0.h's, PCMD_SIZE
-** bytes) in CMD_BANK at $8000 + CQ_PCMD, made as the character faces face (its ways as it faces kept so: CQ_REL | n,
-** the UI's to make the compass's as the command's carried out; but one with a way by the compass, made by face) */
+** or nesting too deep; 0 for the others.  A line's reply has the command it makes too: its struct cmd (below,
+** CMD_SIZE bytes) in CMD_BANK at $8000 + CQ_CMD, made as the character faces face (its ways as it faces kept so:
+** CQ_REL | n, the UI's to make the compass's as the command's carried out; but one with a way by the compass, made by
+** face) */
 enum { CQ_NONE, CQ_MATCH, CQ_WORLD };
 #define CQ_WORDS        1024                    /* The world's words' text, at most (dq0c keeps that much) */
-#define CQ_PCMD         0x1000                  /* (Past the text) */
-#define PCMD_SIZE       41
+#define CQ_CMD          0x1000                  /* (Past the text) */
+#define CMD_SIZE        61
 #define CQ_REL          0x10                    /* A way as the character faces (CQ_REL | 0 ahead, 2 its right ...) */
 struct cq {
     RQH;                                        /* (kind: CQ_*) */
@@ -324,6 +326,62 @@ struct cq {
     signed char     res;                        /* The reply's */
     unsigned char   face;                       /* A line's: the way the character faces (H_N ... H_NW) */
 };
+
+/* A command: what an actor means to do, one structure whoever's it is (a line the player typed, the command
+** parser's: dq0c, by the verbs, commands.verbs; a denizen's mind's), for the world to apply to what it names, the same
+** way for every actor: an action (actions.h's VB_*, the catalogue's: commands.actions) and its roles.  A thing a role
+** names is said as the player said it (its word, its kind, which of several, where it lies) and found among those
+** the actor perceives as the command's carried out (the UI's, for the character) */
+struct cthing {
+    unsigned char   kind;                       /* OB_* (dq0.h's): a part of the place (a door, the stairs ...);
+                                                **   OB_NONE: a thing, by its word */
+    unsigned char   sel;                        /* SL_*: which of several (SL_THE: none said) */
+    unsigned char   n;                          /*   (SL_NTH's: the second 2) */
+    unsigned char   lies;                       /* The way it lies, if that's said ("the door to my left": CQ_REL | 6;
+                                                **   0xFF: none) */
+    unsigned        x, y;                       /* Its square, once it's found (0, 0: not yet) */
+    char            word[16];                   /* Its word as typed ("sword"; "#12", a thing named: names.c's), or "" */
+};
+enum { SL_THE, SL_ANY, SL_IT, SL_ALL, SL_CLOSEST, SL_LARGEST, SL_SMALLEST, SL_LEAD, SL_NTH, SL_ME };
+                                                /* (Which: the one there is, or the one meant; any one; it, the last
+                                                **   thing named; all of them; the closest, the largest, the smallest,
+                                                **   the one in the lead; the nth; the character) */
+enum { DF_NONE, DF_PLACE, DF_LAST, DF_NEAR, DF_FRONT, DF_TARGET, DF_HAND };   /* The thing a verb takes when none's
+                                                **   said (commands.verbs' unsaid): none (it must be said), where the
+                                                **   character is, the last thing named, that or else what's near
+                                                **   (which, asked), what's in front, the target (else the nearest
+                                                **   foe), what's in hand */
+enum { LT_NONE, LT_WALK, LT_CLIMB, LT_DIG, LT_SEARCH, LT_WAIT, LT_SLEEP, LT_TALK };   /* A long task's kind (a verb's:
+                                                **   commands.verbs' task) */
+#define MN_CAREFUL      0x01                    /* (struct cmd's manner: carefully, slowly, quickly, quietly, hard, */
+#define MN_SLOW         0x02                    /*   gently, firmly) */
+#define MN_QUICK        0x04
+#define MN_QUIET        0x08
+#define MN_HARD         0x10
+#define MN_GENTLE       0x20
+#define MN_FIRM         0x40
+#define CF_NOVERB       0x01                    /* (struct cmd's flags: no verb said: a way, or a thing, alone; */
+#define CF_HALF         0x02                    /*   a half turn, "turn half left": an eighth; */
+#define CF_UNSAID       0x04                    /*   its thing not said: its verb's (dflt) to fill) */
+struct cmd {
+    unsigned char   action;                     /* VB_* */
+    unsigned char   actor;                      /* Whose: 0 the character, an actor's entry plus 1 */
+    unsigned char   flags;                      /* CF_* */
+    unsigned char   dir;                        /* A way: a heading (level.h's H_*), GO_UP, GO_DOWN, CQ_REL | n; 0xFF */
+    unsigned char   how;                        /* HOW_* (dq0.h's): up to the thing, through it */
+    unsigned char   prep;                       /* PR_* (dq0.h's): the other thing's part (in it, on it, from it,
+                                                **   with it, at it, to it) */
+    unsigned char   aux;                        /* The verb's own (commands.verbs' aux): the things' request it is
+                                                **   (IO_*), the denizens' sway (SW_*), what a blow strikes with (SK_*) */
+    unsigned char   manner;                     /* MN_*: how (the adverbs said: "carefully", "hard") */
+    unsigned char   order;                      /* An ally's request (OR_*: the first said) */
+    unsigned char   dflt;                       /* DF_*: the thing its verb takes unsaid */
+    unsigned char   skill;                      /* The skill it tests (rs.h's P_* plus 1; 0 none) */
+    unsigned char   task;                       /* LT_*: a long task's kind */
+    unsigned char   n;                          /* A number said ("move south 4 squares"; "1", a choice) */
+    struct cthing   obj, other;                 /* The thing it's done to, and the other */
+};
+typedef char cmd_fits[sizeof (struct cmd) == CMD_SIZE ? 1 : -1];   /* (dq0c's, games/dq0c/cmdmean.s's CM_*) */
 
 /* A referee slot: a request (rs.h's RS_*) and its reply, and the reply's words.  Slot 0 is the world's (its
 ** requests change things), slot 1 the UI's; the denizens' task's its own (dslot: DSLOT, DTEXT of its text) */
@@ -400,7 +458,7 @@ struct sway {
     RQH;                                        /* (kind: SW_*) */
     char            word[16];                   /* The one meant (a name, a kind's word; "": the nearest, or every
                                                 **   ally, an order's) */
-    unsigned char   prep;                       /* (dq0.h's struct pcmd's, from word on, copied whole) */
+    unsigned char   prep;                       /* (The command's: struct cmd's prep, other's word, order) */
     char            word2[16];                  /* A name given; a thing to fetch */
     unsigned char   order;                      /* OR_* (SW_ORDER's) */
     unsigned char   result;                     /* (The reply's:) SR_* */
@@ -764,7 +822,7 @@ struct wsave {
 **   own wrec.cgen world
 **   own banks(CHANGE_BANK(0),CHANGE_BANKS) world
 **   own bank(CMD_BANK) ui                                      (The commands text: the UI writes it, dq0c reads it)
-**   own bank(CMD_BANK,HUB_WINDOW+CQ_PCMD,HUB_WINDOW+CQ_PCMD+PCMD_SIZE) commands  (dq0c's reply: a line's meaning)
+**   own bank(CMD_BANK,HUB_WINDOW+CQ_CMD,HUB_WINDOW+CQ_CMD+CMD_SIZE) commands  (dq0c's reply: a line's command)
 **   own wrec.cslot[*].used maker +world                        (A chunk stocked, CS_FRESH: the world's mark taken)
 **   own wrec.cslot[*].stamp maker +world +denizens +senses +ui     (Each chunk's reader's stamp, as it finds it)
 **   own wrec.stamp maker +world +denizens +senses +ui

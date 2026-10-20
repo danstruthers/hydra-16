@@ -31,8 +31,8 @@ static const char* const relname[8] = {
 static const char* const thing[] = { "", "door", "way on", "stairs", "ladder", "shaft", "ledge", "way out", "wall",
     "window", "trap", "portcullis", "room" };
 
-static struct pcmd* cmd = 0;                    /* The command being carried out (main.c's: choose's) */
-static struct pcmd kept = { 0 };                /* The command a choice was asked for, */
+static struct cmd* cur = 0;                     /* The command being carried out (main.c's: choose's) */
+static struct cmd kept = { 0 };                 /* The command a choice was asked for, */
 static unsigned char asked = 0;                 /*   its choices (0: none asked), */
 static unsigned px[NPICK] = { 0 }, py[NPICK] = { 0 };   /*   each one's square, */
 static unsigned char ph[NPICK] = { 0 };         /*   the heading it lies, */
@@ -203,7 +203,7 @@ unsigned char __fastcall__ o_pick (unsigned char obj, unsigned char orel)
             }
             add ("?");
             msg (lb);
-            memcpy (&kept, cmd, sizeof kept);
+            memcpy (&kept, cur, sizeof kept);
             asked = n;
             return 2;
         }
@@ -217,18 +217,18 @@ unsigned char __fastcall__ o_pick (unsigned char obj, unsigned char orel)
 /* A command (main.c's, the parser's, before it's carried out): if a choice was asked, a number (1 ...) or a way
 ** ("left", "the one on the right": the nearest that way) chooses one, and the command asked about is carried out on
 ** it (c made it again; o_pick gives that one); any other command lets the choice go */
-unsigned char __fastcall__ o_choose (struct pcmd* c)
+unsigned char __fastcall__ o_choose (struct cmd* c)
 {
     unsigned char n = asked, k = 0xFF, j, d, bd = 0xFF;
 
-    cmd = c;
+    cur = c;
     asked = 0;
     cx = 0;
-    if (!n || c->verb != V_MOVE || c->obj) {
+    if (!n || (c->action != VB_MOVE_DIRECTION && c->action != VB_MOVE_TOWARD) || c->obj.kind) {
         return 0;
     }
-    if (c->word[0] >= '1' && c->word[0] < '1' + n && !c->word[1]) {
-        k = c->word[0] - '1';
+    if (c->n && c->n <= n && !c->obj.word[0]) {
+        k = c->n - 1;
     } else if (c->dir <= H_NW) {
         for (j = 0; j < n; ++j) {
             if (ph[j] == c->dir && (d = apart (px[j], py[j])) < bd) {

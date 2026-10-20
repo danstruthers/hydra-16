@@ -216,33 +216,35 @@ static void __fastcall__ note (unsigned char n)
 
 /* The character's stance (the hub's pc_stance, rs.h's D_*: the referee's defence for it, the world's to set: wset)
 ** set by its word (dodge, block, counter, none; else the best), told in lb */
-static void __fastcall__ stance (const char* w)
+static void __fastcall__ stance (const char* w, unsigned char d)
 {
-    unsigned char d = *w;
-
-    d = d == 'd' ? D_DODGE : d == 'b' && w[1] == 'l' ? D_BLOCK : d == 'c' ? D_COUNTER : d == 'n' ? D_NONE : D_AUTO;
+    if (*w) {
+        d = *w;
+        d = d == 'd' ? D_DODGE : d == 'b' && w[1] == 'l' ? D_BLOCK : d == 'c' ? D_COUNTER : d == 'n' ? D_NONE : D_AUTO;
+    }
     wset (WS_STANCE, d, 0);
     note (d);
 }
 
-/* V_ATTACK's denizen beside the character to strike at (one whose name has the command's word, if it's given; the
-** one that way, a heading, if that is), struck with what the verb says (the parser's, in its half: SK_*, main.c's
-** strike, sent with the blow for the hub's pc_strike): its entry plus 1; or 0, and why not in lb; at a door, a
-** window, a portcullis, FT_THING: a blow at it (main.c's: broken).  V_DEFEND's stance set (0) */
-unsigned char __fastcall__ o_fight_target (struct pcmd* c)
+/* VB_ATTACK_OBJECT's denizen beside the character to strike at (one whose name has the command's word, if it's
+** given; the one that way, a heading, if that is), struck with what the verb says (its aux: SK_*, main.c's strike,
+** sent with the blow for the hub's pc_strike): its entry plus 1; or 0, and why not in lb; at a door, a window, a
+** portcullis, FT_THING: a blow at it (main.c's: broken).  VB_DEFEND's stance set (the word said, else the verb's:
+** "defend dodge", "dodge"): 0 */
+unsigned char __fastcall__ o_fight_target (struct cmd* c)
 {
     static struct actor q;
     static struct { unsigned char sn; unsigned x, y; } pc;
-    const char* w = c->word;
+    const char* w = c->obj.word;
     unsigned char k, away = 0, dir = c->dir;
     int dx, dy;
 
-    if (c->verb == V_DEFEND) {
-        stance (w);
+    if (c->action == VB_DEFEND) {
+        stance (w, c->aux);
         return 0;
     }
-    strike = c->half;                           /* (Sent with the blow: I_ATTACK's x[1]) */
-    if (c->obj == OB_DOOR || c->obj == OB_WINDOW || c->obj == OB_PORTC) {
+    strike = c->aux;                            /* (Sent with the blow: I_ATTACK's x[1]) */
+    if (c->obj.kind == OB_DOOR || c->obj.kind == OB_WINDOW || c->obj.kind == OB_PORTC) {
         return FT_THING;
     }
     hub_mem (0, &pc.sn, (const void*) &HUB->pc_stratum, 1);

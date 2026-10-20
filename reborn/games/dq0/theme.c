@@ -123,38 +123,39 @@ static unsigned char __fastcall__ done (unsigned char r)
 ** of a rule done (Q_DONE, Q_OPEN, Q_RULED).  Its words here; whether it's done the world's, by the theme's rules
 ** (the things' request, IO_PUZZLE: the things found to hand, the rule for their kinds, the things made one or put,
 ** the way out opened) */
-unsigned char __fastcall__ o_puzzle (struct pcmd* c)
+unsigned char __fastcall__ o_puzzle (struct cmd* c)
 {
-    unsigned char v = c->verb, t, r;
+    unsigned char v = c->action, t, r;
 
-    if (v == V_READ) {
-        if (!c->word[0]) {
+    if (v == VB_READ_OBJECT) {
+        if (!c->obj.word[0]) {
             msg ("Read what?");
             return Q_TOLD;
         }
         t = TR_READ;
-    } else if (v == V_COMBINE) {
-        if (!c->word[0] || !c->word2[0]) {
+    } else if (v == VB_COMBINE_OBJECT) {
+        if (!c->obj.word[0] || !c->other.word[0]) {
             msg ("Combine what with what? (combine the one with the other)");
             return Q_TOLD;
         }
         t = TR_COMBINE;
-    } else if (c->obj == OB_WAY_OUT && (v == V_USE || v == V_UNLOCK || v == V_OPEN || v == V_EXAMINE)) {
-        if (v == V_EXAMINE || !c->word[0]) {
+    } else if (c->obj.kind == OB_WAY_OUT && (v == VB_USE_OBJECT || v == VB_UNLOCK_OBJECT || v == VB_OPEN_OBJECT ||
+        v == VB_EXAMINE_OBJECT)) {
+        if (v == VB_EXAMINE_OBJECT || !c->obj.word[0]) {
             o_way_words ();
             return Q_TOLD;
         }
         t = TR_OUT;
-    } else if ((v == V_PUT || v == V_USE) && c->word[0] && c->word2[0]) {
+    } else if ((v == VB_PUT_OBJECT || v == VB_HANG_OBJECT || v == VB_USE_OBJECT) && c->obj.word[0] && c->other.word[0]) {
         t = TR_PUT;
     } else {
-        if (v == V_USE) {
+        if (v == VB_USE_OBJECT) {
             msg ("Use what, and on what? (use the key on the way out ...)");
             return Q_TOLD;
         }
         return Q_NONE;
     }
-    r = othings (IO_PUZZLE, c->word, c->word2, t);
+    r = othings (IO_PUZZLE, c->obj.word, c->other.word, t);
     if (lb[0]) {
         msg (lb);                               /* (The things' words: one not to hand, one put) */
     }
@@ -164,15 +165,15 @@ unsigned char __fastcall__ o_puzzle (struct pcmd* c)
     if (r == PZ_FAR) {
         msg ("The way out is out of reach: go over to it first.");
     } else if (r == PZ_NONE) {
-        if (t == TR_PUT && v == V_PUT) {
+        if (t == TR_PUT && v != VB_USE_OBJECT) {
             return Q_NONE;                      /* (A thing put as any other) */
         }
         if (t == TR_COMBINE) {
             msg ("Those don't go together.");
         } else {
             sayf (t == TR_READ ? "\nThere's nothing written on the %s." : t == TR_OUT ?
-                "\nNothing comes of trying the %s on it." : "\nNothing comes of using the %s on the %s.", c->word,
-                c->word2);
+                "\nNothing comes of trying the %s on it." : "\nNothing comes of using the %s on the %s.", c->obj.word,
+                c->other.word);
         }
     }
     return Q_TOLD;

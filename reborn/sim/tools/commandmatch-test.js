@@ -6,7 +6,7 @@
 //                                                 in a RAM bank, the index and the aliases in the main RAM, the corpus
 //                                                 read from /pc, timed by the tick (the system's interrupts with it)
 //   node sim/tools/commandmatch-test.js --mean    what each line means (games/dq0c/cmdmean.s, on sim65: cmdmean.c), the
-//                                                 corpus's lines and cmdmatch/lines.txt's, each struct pcmd the host's
+//                                                 corpus's lines and cmdmatch/lines.txt's, each struct cmd the host's
 //                                                 (commandwords.js's scan), the character facing the line's number mod 8
 //   node sim/tools/commandmatch-test.js --task    the parser's task (games/dq0c) under HydraOS, through the hub's
 //                                                 protocol (cmdmatch/cmdtask.c the UI's part): its start, an empty
@@ -70,7 +70,9 @@ function mean() {
     path.join(GAME, 'cmdmatch.s'), path.join(GAME, 'cmdmean.s'), path.join(HERE, 'cmdmatch_c.s'), path.join(HERE, 'cmdmean_c.s')],
     { cwd: OUT, stdio: ['ignore', 'pipe', 'pipe'] });
   const out = run(tool('sim65'), ['--cpu', '65C02', '-x', '4000000000', bin], { cwd: OUT }).split(/\r?\n/);
-  const F = ['verb', 'dir', 'obj', 'orel', 'how', 'half', 'around', 'prep', 'order'];
+  const F = ['action', 'actor', 'flags', 'dir', 'how', 'prep', 'aux', 'manner', 'order', 'dflt', 'skill', 'task', 'n',
+    'obj.kind', 'obj.sel', 'obj.n', 'obj.lies', 'other.kind', 'other.sel', 'other.n', 'other.lies'];
+  const field = (c, k) => k.includes('.') ? c[k.split('.')[0]][k.split('.')[1]] : c[k];
   let n = 0, bad = 0, long = 0, sum = 0, most = 0;
   for (const l of out) {
     const m = l.match(/^(\d+) (-?\d+) (\d+) ([\d ]+) \|([^|]*)\|([^|]*)\|$/);
@@ -81,13 +83,13 @@ function mean() {
     most = Math.max(most, +m[3]);
     if (+m[2] < 0) { long++; continue; }          // (Too long for the matcher: its tokens cut short)
     const c = words.scan(words.tokens(lines[i], DEFAULT_ALIASES, DEFAULT_ANYWHERE), w, i & 7);
-    const d = F.filter((k, j) => c[k] !== v[j]);
-    if (c.word !== m[5]) d.push('word');
-    if (c.word2 !== m[6]) d.push('word2');
+    const d = F.filter((k, j) => field(c, k) !== v[j]);
+    if (c.obj.word !== m[5]) d.push('obj.word');
+    if (c.other.word !== m[6]) d.push('other.word');
     if (d.length) {
       bad++;
       if (bad <= 30) console.log('differs: ' + JSON.stringify(lines[i]) + ' (facing ' + (i & 7) + '): ' +
-        d.map(k => k + ' ' + (k === 'word' ? m[5] : k === 'word2' ? m[6] : v[F.indexOf(k)]) + ', the host ' + c[k]).join('; '));
+        d.map(k => k + ' ' + (k === 'obj.word' ? m[5] : k === 'other.word' ? m[6] : v[F.indexOf(k)]) + ', the host ' + field(c, k)).join('; '));
     }
   }
   if (n !== lines.length) { console.log('only ' + n + ' of ' + lines.length + ' lines ran'); return false; }
