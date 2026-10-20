@@ -4,6 +4,8 @@ Every rule the game makes where the book (HarnMaster 3.5) is silent, or where th
 each says, its numbers, where the code applies it, and why.  The book's own rules are the referee's (games/dq0harn,
 on the C SDK's harn.h) and aren't repeated here; their places are given as the book gives them (Skills 8, Combat 6).
 The game's words only: nothing here is the book's text.
+The design the rules serve is DUNGEON.md's, DENIZENS.md's and SOUND.md's; when and why each was decided, in the
+user's words, is DECISIONS.md's.
 
 Drafted 2026-10-19 (Phase 3A, "rules on record") from the code's comments, DUNGEON.md and DENIZENS.md, for the user
 to review.  The last two sections are what's decided but not built yet, and what's still open.
