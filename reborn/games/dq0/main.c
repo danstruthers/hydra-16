@@ -274,7 +274,7 @@ static void sheet (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    12                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    13                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -292,7 +292,8 @@ static void sheet (void)
                                                 **   the world's now with them: till the release, only a save of this
                                                 **   version is carried on; 11, the ruleset's referee: a game carried
                                                 **   on with the ruleset it was made with; 12, a thing's concealment
-                                                **   in steps, rs.h's scale) */
+                                                **   in steps, rs.h's scale; 13, each denizen's record its faction:
+                                                **   the theme's inhabitants) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
@@ -423,6 +424,7 @@ static void __fastcall__ start (const char* name, unsigned char t, const char* m
 }
 
 static void world_words (void);
+static char gods[112];                          /* (The world's deities' names, read as the game starts: world_words') */
 
 static void __fastcall__ start_world (unsigned long seed, const char* file)
 {
@@ -432,6 +434,13 @@ static void __fastcall__ start_world (unsigned long seed, const char* file)
     int w;
     char* l;
 
+    strcat (libdir, "/dq0g.txt");               /* (Read before any of the game's tasks is begun: the time it takes
+                                                **   theirs alike) */
+    w = open (libdir, O_RDONLY);
+    libdir[strlen (libdir) - 9] = 0;
+    k = read (w, gods, sizeof gods - 1);
+    gods[k < sizeof gods ? k : 0] = 0;
+    close (w);
     if (hub_create (HUB_BANKS)) {
         t_end ();
         hy_exits ("dq0: no shared segment or semaphores for its tasks");
@@ -497,7 +506,8 @@ static void __fastcall__ start_world (unsigned long seed, const char* file)
 
 /* The command parser told the world's words: the catalogue's kinds' names (the theme's with them), so a word of its
 ** grammar's is a thing's name too where one's called by it ("drop the pick", "wear the knee boots"; the game's own
-** things, "door", "room", it knows).  None given names, no deities yet */
+** things, "door", "room", it knows); no names given yet; and the world's deities' names, "call on Imma"
+** (libdir/dq0g.txt: the denizens' data's, deities.txt's, spaces between) */
 static void world_words (void)
 {
     static char nm[sizeof CATALOGUE[0].name + 1];
@@ -515,7 +525,13 @@ static void world_words (void)
             n += k + 1;
         }
     }
-    HUB_WINDOW[n] = 0;                          /* (Then the names given and the deities: none) */
+    HUB_WINDOW[n++] = 0;                        /* (Then the names given: none) */
+    HUB_WINDOW[n++] = 0;
+    if (n + (k = strlen (gods)) < CQ_WORDS) {   /* (Then the deities') */
+        memcpy (HUB_WINDOW + n, gods, k);
+        n += k;
+    }
+    HUB_WINDOW[n] = 0;
     hub_map (0);
     HUB->cq.kind = CQ_WORLD;
     HUB->cq.len = n + 1;

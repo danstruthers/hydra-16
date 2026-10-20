@@ -1,0 +1,138 @@
+# peoples.txt - (dq0d) the peoples of the game's own world and their ways of building: who comes to a region in its
+# history, what they build there and how it looks.  make.js makes it lib/dq0/dq0f.dat (lore.h's struct people a
+# people, 64 bytes, the first none, its name the count; their words after), which the history's generator reads: an
+# era's people builds a stratum to its purposes and styles, and the theme's words for it (its rooms, its uses, its
+# light) are that people's; its walls, doors and marks are the stocking's and the clues' words; the kinds of its folk
+# that live on are the inhabitants it can leave.
+#
+# A people's lines, its first a people line; each a key and its values between bars (a line that starts with a space
+# goes on with the line before):
+#   people    its name, as the history says it (23 letters at most) | its key (7 at most)
+#   kinds     its folk among the bestiary's kinds (dq0d/kinds.txt's keys, 4 at most) that may still live where it
+#             built, or -
+#   tongue    the tongue it speaks (7 at most: the referee's word for it)
+#   lands     the lands it lives in: m mountains, h hills, f forest, s marsh, c coast, p open land; * any
+#   climate   c cold, t temperate, w warm; * any
+#   builds    what its works are for (a stratum's purposes, theme.h's): halls keep temple cellars crypt works
+#   styles    the plans it builds to (a stratum's styles, level.h's): b built, n natural, m mine, x mixed
+#   deities   the deities it worships (deities.txt's)
+#   walls     its walls, as they're described
+#   doors     its doors
+#   light     a room lit by its own light: by what
+#   marks     what it carves and paints on its works
+#   rooms     its eight words for a room, by its kind (the theme's rooms: a chamber whose use is lost, a hall, cells,
+#             a vault, a crypt, a gallery, a cave's chamber, a storeroom)
+#   uses      its twelve words for a built room's use (the theme's uses: a kitchen, a pantry, barracks, an armoury, a
+#             chapel, a bedchamber, the lord's solar, a well room, a cistern, a gatehouse, a guardroom, a workshop)
+
+people    | the Ardish | ardish
+kinds     | bandit banlord
+tongue    | common
+lands     | h p f c
+climate   | t
+builds    | keep temple cellars crypt halls
+styles    | b x
+deities   | Aurel Imma Ostrel Dyrra
+walls     | walls of dressed grey stone
+doors     | oak doors bound with iron
+light     | lit by torches in iron brackets
+marks     | carved shields and the banners of old lords
+rooms     | chamber | hall | cell | vault | crypt | gallery | cave | storeroom
+uses      | kitchen | pantry | barracks | armoury | chapel | bedchamber | solar | well room | cistern | gatehouse
+          | guardroom | workshop
+
+people    | the Hethrin hill clans | hethrin
+kinds     | bandit banlord
+tongue    | hethrin
+lands     | h m f
+climate   | c t
+builds    | keep crypt halls
+styles    | x n b
+deities   | Hrothe Ophran
+walls     | walls of rough fieldstone chinked with clay
+doors     | doors of split timber
+light     | lit by fires in stone hearths
+marks     | spirals and antlered beasts cut into the stones
+rooms     | chamber | longhall | pen | storepit | barrow | passage | cave | storeroom
+uses      | firepit | larder | sleeping hall | weapon store | spirit house | sleeping nook | chief's hall | well
+          | cistern | gate | watch post | workshop
+
+people    | the Delvers | delver
+kinds     | -
+tongue    | delver
+lands     | m h
+climate   | *
+builds    | works halls keep crypt
+styles    | m b x
+deities   | Durmak Aethe
+walls     | walls cut smooth from the living rock
+doors     | doors of stone turning on iron pins
+light     | lit by oil lamps in niches cut for them
+marks     | runes cut in straight lines, and hammers
+rooms     | chamber | pillared hall | cell | vault | tomb | gallery | cave | storeroom
+uses      | kitchen | pantry | barracks | armoury | shrine | bedchamber | lord's hall | well room | cistern | gatehouse
+          | guardroom | forge
+
+people    | the Ostari | ostari
+kinds     | -
+tongue    | ostari
+lands     | p c h
+climate   | w t
+builds    | temple cellars crypt halls keep
+styles    | b
+deities   | Dyrra Ugrath Ostrel
+walls     | walls faced with fitted marble, cracked and stained
+doors     | doors sheathed in green bronze
+light     | lit by oil lamps hung on bronze chains
+marks     | mosaics of crowned emperors and their victories
+rooms     | chamber | colonnade | cell | strongroom | sepulchre | arcade | grotto | storeroom
+uses      | kitchen | pantry | barracks | armoury | shrine | bedchamber | audience hall | well room | cistern
+          | gatehouse | guardroom | workshop
+
+people    | the Masked | masked
+kinds     | cultist priest
+tongue    | common
+lands     | *
+climate   | *
+builds    | crypt temple
+styles    | b x
+deities   | Orrun
+walls     | walls of black stone set with niches of bones
+doors     | doors of black iron, a mask cast on each
+light     | lit by candles of black tallow
+marks     | masks, and the black ring of the Hollow King
+rooms     | chamber | ossuary | cell | vault | catacomb | gallery | cave | storeroom
+uses      | kitchen | pantry | barracks | armoury | shrine | bedchamber | master's cell | well room | cistern
+          | gatehouse | guardroom | embalming room
+
+people    | the kobolds | kobold
+kinds     | kobold koblord
+tongue    | kobold
+lands     | m h
+climate   | *
+builds    | works keep
+styles    | m x
+deities   | Vashe Ophran
+walls     | walls of packed earth and dung
+doors     | curtains of greasy hide
+light     | lit by smoky tallow lamps
+marks     | scratched pictures of kobolds, and their kills
+rooms     | den | burrow | pen | midden | lair | gallery | cave | storeroom
+uses      | cookpit | larder | warriors' den | armoury | shrine | sleeping burrow | chieftain's den | well | cistern
+          | gatehouse | guardroom | workshop
+
+people    | the Starkin | starkin
+kinds     | -
+tongue    | starkin
+lands     | f h
+climate   | t
+builds    | halls temple crypt
+styles    | b n
+deities   | Aethe
+walls     | walls of pale stone carved like boughs
+doors     | doors of silver-grey wood that never rots
+light     | lit by pale lamps that never smoke
+marks     | stars and leaves inlaid in silver
+rooms     | chamber | hall | cell | vault | tomb | gallery | grotto | storeroom
+uses      | kitchen | pantry | barracks | armoury | shrine | bedchamber | solar | well room | cistern | gatehouse
+          | guardroom | workshop

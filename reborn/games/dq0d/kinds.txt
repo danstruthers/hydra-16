@@ -1,7 +1,10 @@
-# kinds.txt - (dq0d) the denizens' kinds: a stand-in theme's bestiary, till themes are data of their own.  make.js
-# makes it the denizens' task's data file (lib/dq0/dq0d.dat: 40 bytes a kind, the first none; then the factions,
-# factions.txt's), which it reads into a bank of its own as it starts.  The numbers are the game's own, not a
-# ruleset's: the referee's sheet for a creature comes from its key (later).
+# kinds.txt - (dq0d) the denizens' kinds: the game's bestiary, modelled on the HarnWorld Bestiary's range of creatures
+# that suit a dungeon (its numbers the game's own, in its own words; the referee's sheet for each, a ruleset's, is
+# the referee's: games/dq0harn/fight.c's bestiary, by the key).  make.js makes it the denizens' task's data file
+# (lib/dq0/dq0d.dat: 40 bytes a kind, the first none; then the factions, factions.txt's), which it reads into a bank
+# of its own as it starts; the history's generator chooses a region's inhabitants by the habitats (land, climate,
+# light, the strata and styles), the nature and the size, and the population's generator (popgen) groups them by
+# their lairs.
 #
 # A line a kind, its fields between bars:
 #   name      what the character sees it as (11 letters at most)
@@ -16,8 +19,9 @@
 #   sight     feet it sees the character by the character's light, and with none (its darkvision)
 #   hearing   feet it hears the character
 #   step      tenths of a second it takes to go a square (5 feet)
-#   faction   its faction (factions.txt's): its tongue, its attitude to the character as it first meets it, and to
-#             the other factions
+#   faction   its faction (factions.txt's, a stand-in theme's): its tongue, its attitude to the character as it
+#             first meets it, and to the other factions; a theme's factions (the theme file's inhabitants) take
+#             their place, and speak the tongue of their first kind's
 #   mind      m mindless (nothing sways it), b a beast (the animals' test only), l low (easily fooled, hard to reason
 #             with), a average, c cunning (hard to fool)
 #   sway      steps (rs.h's, each 5%) for or against swaying it, besides its attitude and mind: a bear's hard to calm
@@ -25,11 +29,40 @@
 #             of a second to a 16th of a light level darker (a man's 19: a torch's light to the dark in some 4.5
 #             minutes); 0 at once (the dead's sight isn't the eyes').  Its darkvision (sight's second) is the less as
 #             its eyes are still used to more light than there is
+#   size      1 tiny (a bat), 2 small (a rat, a snake), 3 smaller than a man (a kobold), 4 a man, 5 large (a bear),
+#             6 very large (the greatest beasts)
+#   land      the lands of the regions it's found under: m mountains, h hills, f forest, s marsh, c coast, p open
+#             land (plains, heath); * any
+#   climate   c cold, t temperate, w warm; * any
+#   light     d it keeps to the dark (deep, or out only by night), l it wants light (it carries its own: folk), *
+#             either
+#   nature    a an animal, v vermin, m a monster (a beast of old magic), f folk (it speaks, uses tools and
+#             builds), d the dead
+#   arms      how it fights: bite, claws, sting, crush (it squeezes or hugs), horns (or tusks), talons, touch (a
+#             draining touch), weapon (one held)
+#   remains   what it leaves dead: body, or bones
 #
-# name      | key    | ways | styles | strata | group | lairs | range | sight | hearing | step | faction  | mind | sway | eyes
-giant rat   | rat    | sw   | bnmx   | 0-7    | 2-5   | 2     | 50    | 40-15 | 30      | 6    | vermin   | b    | 0    | 4
-cave spider | spider | l    | nx     | 1-7    | 1-2   | 2     | 15    | 20-20 | 15      | 8    | crawlers | b    | -2   | 4
-ghoul       | ghoul  | a    | bx     | 1-7    | 2-4   | 2     | 120   | 50-40 | 40      | 10   | dead     | l    | -4   | 0
-skeleton    | skel   | l    | b      | 0-7    | 2-5   | 1     | 20    | 40-40 | 20      | 12   | dead     | m    | 0    | 0
-cave bear   | bear   | a    | n      | 1-7    | 1-1   | 1     | 100   | 30-10 | 40      | 9    | beasts   | b    | -2   | 12
-kobold      | kobold | -    | m      | 1-7    | 3-6   | 2     | 150   | 50-30 | 40      | 10   | kobolds  | c    | 0    | 6
+# The kinds after the first six came in with the history (Phase 3D), each modelled on a creature of the HarnWorld
+# Bestiary (the page its entry's on): the bat (Bats 1, p10), the adder (Snakes 3, p88), the basilisk (Dragons 13,
+# p36), the lindworm (Dragons 14, p37), the wight (the death god's mindless dead, Morvrin 5, p78), the shade (its
+# willing dead, Morvrin 3, p76); and folk of the game's own: the kobolds' lord, bandits and their lord, cultists and
+# their priest.
+#
+# name      | key     | ways | styles | strata | group | lairs | range | sight | hearing | step | faction  | mind | sway | eyes | size | land   | climate | light | nature | arms              | remains
+giant rat   | rat     | sw   | bnmx   | 0-7    | 2-5   | 2     | 50    | 40-15 | 30      | 6    | vermin   | b    | 0    | 4    | 2    | *      | *       | *     | v      | bite              | body
+cave spider | spider  | l    | nx     | 1-7    | 1-2   | 2     | 15    | 20-20 | 15      | 8    | crawlers | b    | -2   | 4    | 2    | *      | tw      | d     | v      | bite              | body
+ghoul       | ghoul   | a    | bx     | 1-7    | 2-4   | 2     | 120   | 50-40 | 40      | 10   | dead     | l    | -4   | 0    | 4    | *      | *       | d     | d      | claws bite        | body
+skeleton    | skel    | l    | b      | 0-7    | 2-5   | 1     | 20    | 40-40 | 20      | 12   | dead     | m    | 0    | 0    | 4    | *      | *       | *     | d      | weapon            | bones
+cave bear   | bear    | a    | n      | 1-7    | 1-1   | 1     | 100   | 30-10 | 40      | 9    | beasts   | b    | -2   | 12   | 5    | mhf    | ct      | *     | a      | claws bite        | body
+kobold      | kobold  | -    | m      | 1-7    | 3-6   | 2     | 150   | 50-30 | 40      | 10   | kobolds  | c    | 0    | 6    | 3    | mh     | *       | *     | f      | weapon            | body
+bat         | bat     | s    | nx     | 0-5    | 3-8   | 2     | 100   | 10-30 | 60      | 3    | vermin   | b    | 0    | 0    | 1    | *      | tw      | d     | a      | bite              | body
+cave adder  | adder   | l    | nmx    | 0-4    | 1-2   | 3     | 15    | 30-10 | 15      | 10   | crawlers | b    | -2   | 6    | 2    | mhs    | tw      | *     | a      | bite              | body
+basilisk    | basilsk | la   | bn     | 2-7    | 1-1   | 1     | 40    | 40-30 | 15      | 8    | beasts   | b    | -4   | 8    | 5    | mh     | tw      | d     | m      | bite              | body
+lindworm    | lindwrm | la   | nx     | 3-7    | 1-1   | 1     | 60    | 60-20 | 50      | 6    | beasts   | b    | -4   | 8    | 6    | fsc    | ct      | *     | m      | claws bite crush  | body
+wight       | wight   | la   | bx     | 2-7    | 2-6   | 2     | 30    | 40-40 | 30      | 11   | dead     | m    | 0    | 0    | 4    | *      | *       | d     | d      | touch claws       | body
+shade       | shade   | -    | b      | 3-7    | 1-1   | 1     | 50    | 50-50 | 40      | 10   | dead     | c    | -2   | 0    | 4    | *      | *       | d     | d      | weapon touch      | body
+kobold lord | koblord | -    | m      | 1-7    | 1-1   | 1     | 100   | 50-30 | 40      | 10   | kobolds  | c    | -1   | 6    | 3    | mh     | *       | *     | f      | weapon            | body
+bandit      | bandit  | -    | bx     | 0-2    | 2-5   | 2     | 100   | 50-10 | 40      | 10   | outlaws  | a    | 0    | 19   | 4    | *      | *       | l     | f      | weapon            | body
+bandit lord | banlord | -    | bx     | 0-2    | 1-1   | 1     | 60    | 50-10 | 40      | 10   | outlaws  | c    | -1   | 19   | 4    | *      | *       | l     | f      | weapon            | body
+cultist     | cultist | -    | b      | 1-5    | 2-4   | 2     | 60    | 50-10 | 40      | 10   | cult     | a    | -1   | 19   | 4    | *      | *       | l     | f      | weapon            | body
+high priest | priest  | -    | b      | 1-5    | 1-1   | 1     | 40    | 50-10 | 40      | 10   | cult     | c    | -2   | 19   | 4    | *      | *       | l     | f      | weapon            | body

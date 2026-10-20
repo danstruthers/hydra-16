@@ -1,0 +1,190 @@
+# deities.txt - (dq0d) the deities of the game's own world: its pantheon, the one every region shares (modelled on
+# what HarnMaster Religion's entries cover: a deity's domains, temper, followers, holy days, symbols, temples,
+# servants and enemies; the names and the words the game's own).  make.js makes it lib/dq0/dq0g.dat (lore.h's
+# struct deity a deity, 64 bytes, the first none, its name the count; their words after), which the history's
+# generator reads (who worshipped what, what their temples were like, which of the bestiary serve which god), and the
+# UI (each deity's name a word of the commands': "call on Imma for help").
+#
+# A deity's lines, its first a deity line; each a key and its values between bars (a line that starts with a space
+# goes on with the line before):
+#   deity     its name: one word (11 letters at most), as it's said and called on
+#   title     its title, as the history and the clues give it ("the Hollow King")
+#   domains   what it's god of, words of these: war fire cruelty death undead chaos wealth pleasure bargains beasts
+#             change serpents honour battle protection shadow deceit nightmares thieves healing harvest mercy
+#             courage storms cold knowledge puzzles law dreams magic stars stone
+#   temper    good, neutral or evil | order, balance or chaos
+#   followers who worship it
+#   rite      its monthly rite: the day of the month (1-30), or - none | what's done
+#   feast     its yearly feast, or - none
+#   number    its sacred number
+#   colours   its colours
+#   sign      its sign, as it's carved and painted
+#   temple    what its temples are like (the stocking's and the clues' words)
+#   burial    how its faithful lie: crypt (in a crypt or a tomb), barrow, pyre, earth (a grave), or none
+#   servants  the bestiary's kinds that serve it (dq0d/kinds.txt's keys), or -
+#   enemies   the deities its faith is at war with, or -
+
+deity     | Ugrath
+title     | the Burning Tyrant
+domains   | war fire cruelty
+temper    | evil | chaos
+followers | raiders, torturers, sellswords who love the killing more than the pay
+rite      | 8 | a mass of fire, and a fight to the death on a beam above the pit
+feast     | the Night of Balefires, when everything that will burn is burned
+number    | 8
+colours   | orange and black
+sign      | an eight-sided pit with flames rising from it
+temple    | eight chambers one inside the next, each richer than the last, round a pit of fire at the heart
+burial    | pyre
+servants  | rat
+enemies   | Aurel
+
+deity     | Dyrra
+title     | the Golden Mistress
+domains   | wealth pleasure bargains
+temper    | neutral | balance
+followers | merchants, moneylenders, courtesans, the ambitious
+rite      | 7 | a banquet, and a tithe of silver laid on the altar
+feast     | the Seven Days of Delight
+number    | 7
+colours   | purple, crimson and gold
+sign      | a ring of seven bells
+temple    | round halls one within another, the shrine at their middle, bells at every door
+burial    | crypt
+servants  | -
+enemies   | -
+
+deity     | Ophran
+title     | the Coiled One
+domains   | beasts change serpents
+temper    | neutral | balance
+followers | hermits, beast-tamers, makers of strange things
+rite      | - | none: each worships alone, as it pleases him
+feast     | the Shedding, when the year turns
+number    | 2
+colours   | yellow and brown
+sign      | a serpent biting its own tail
+temple    | few temples: caves and hollows where the beasts he made are kept and fed
+burial    | earth
+servants  | adder basilsk lindwrm spider
+enemies   | -
+
+deity     | Aurel
+title     | the Shield of the Just
+domains   | honour battle protection
+temper    | good | order
+followers | knights, guards and all who keep an oath
+rite      | 17 | a vigil under arms before the altar, from dusk till dawn
+feast     | the Feast of the Oath, with its tournament
+number    | 3
+colours   | red and white
+sign      | a shield checkered red and white
+temple    | a keep's chapel, a hall of banners, a crypt beneath for its knights
+burial    | crypt
+servants  | -
+enemies   | Ugrath Orrun
+
+deity     | Orrun
+title     | the Hollow King
+domains   | death undead chaos
+temper    | evil | chaos
+followers | the masked cult, and all who would cheat death
+rite      | 26 | on the darkest night of the month, a mass in masks, and a sacrifice
+feast     | the Night of Thirteen Masks, the last of the year
+number    | 13
+colours   | brown and black
+sign      | a black ring on brown
+temple    | catacombs under a squat tower, resting places for its dead in every wall, its rites in the deepest vault
+burial    | crypt
+servants  | skel wight shade ghoul
+enemies   | Aurel Imma Aethe
+
+deity     | Vashe
+title     | the Veiled
+domains   | shadow deceit nightmares thieves
+temper    | evil | order
+followers | thieves, assassins and spies; none who'd say so
+rite      | - | none for the many: its clergy meet in secret
+feast     | -
+number    | 9
+colours   | black and scarlet
+sign      | a pale skull with a cat's eyes
+temple    | hidden, behind false walls and secret doors: a dark chapel, and cells for its servants
+burial    | none
+servants  | -
+enemies   | Ostrel
+
+deity     | Imma
+title     | the Gentle Mother
+domains   | healing harvest mercy
+temper    | good | balance
+followers | farmers, healers, the poor and the meek
+rite      | 4 | a blessing of the fields and the sick
+feast     | the Four Turnings, one for each season
+number    | 4
+colours   | white, green, beige and yellow, by the seasons
+sign      | a sheaf of wheat bound with a white ribbon
+temple    | a plain hall with a hospice beside it, a garden of herbs, a well
+burial    | earth
+servants  | -
+enemies   | Orrun
+
+deity     | Hrothe
+title     | the Storm King
+domains   | courage storms cold
+temper    | neutral | chaos
+followers | warriors of the cold north, sailors, the bold and the reckless
+rite      | - | none set: a feast in the hall, and deeds boasted of
+feast     | the Long Night, at midwinter
+number    | 3
+colours   | grey and white
+sign      | a double-bladed axe
+temple    | a long hall with a great hearth, its roof beams carved with storms
+burial    | barrow
+servants  | bear
+enemies   | -
+
+deity     | Ostrel
+title     | the Lantern Sage
+domains   | knowledge puzzles law
+temper    | good | order
+followers | scholars, judges, map-makers and jesters
+rite      | 6 | a reading, and a riddle put to the faithful
+feast     | the Day of Questions
+number    | 6
+colours   | blue and grey
+sign      | a black lantern that gives no light
+temple    | a library with a maze about it, its way in a riddle carved over the door
+burial    | crypt
+servants  | -
+enemies   | Vashe
+
+deity     | Aethe
+title     | the Dreaming Lord
+domains   | dreams magic stars
+temper    | good | balance
+followers | the elder folk, seers and mages
+rite      | 15 | at the full moon, a night of far seeing
+feast     | the Night of Golden Twilight
+number    | 5
+colours   | blue, green and silver
+sign      | a bowl of stars
+temple    | a high hall open to the sky, or none at all: a grove, a hilltop
+burial    | earth
+servants  | -
+enemies   | Orrun
+
+deity     | Durmak
+title     | the Judge of Stones, the Dreaming Lord's servant in the deep
+domains   | stone law
+temper    | good | order
+followers | miners, masons and the delvers, who carve their halls from the rock
+rite      | 30 | at the new moon, a vigil in the deep, every lamp put out
+feast     | the Day of the First Stone
+number    | 1
+colours   | grey and the black of deep rock
+sign      | a hammer upright on a block of stone
+temple    | cut from the living rock: a great hall of pillars, the judge's seat at its end
+burial    | crypt
+servants  | bat
+enemies   | -

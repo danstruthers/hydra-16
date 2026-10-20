@@ -29,6 +29,28 @@ bear     | step  | a heavy tread      | d 41   | n 0 60    | 2-30 | 6    | 110
 bear     | noise | a low growl        | 30 28  | s 0 33    | 1-0  | 90   | 120
 kobold   | step  | light footsteps    | d 37   | n 0 90    | 2-18 | 2    | 75
 kobold   | noise | a yapping          | 85 76  | p 32 76   | 3-12 | 6    | 100
+bat      | step  | a fluttering       | d 70   | n 0 118   | 4-2  | 1    | 55
+bat      | noise | a thin squeaking   | 123 108 | p 16 112 | 3-6  | 3    | 70
+adder    | step  | a dry rustle       | d 70   | n 0 100   | 2-6  | 2    | 50
+adder    | noise | a sharp hiss       | 121 84 | n 0 124   | 1-0  | 30   | 75
+basilsk  | step  | a scraping         | d 69   | n 0 90    | 2-12 | 4    | 80
+basilsk  | noise | a rasping hiss     | 121 80 | n 0 116   | 1-0  | 50   | 95
+lindwrm  | step  | a heavy slither    | d 41   | n 0 70    | 2-20 | 12   | 100
+lindwrm  | noise | a gurgling roar    | 30 26  | s 0 31    | 1-0  | 100  | 120
+wight    | step  | a dragging tread   | d 73   | n 0 76    | 2-26 | 12   | 80
+wight    | noise | a dry whisper      | 121 70 | n 0 100   | 2-20 | 20   | 70
+shade    | step  | soft footfalls     | d 37   | n 0 84    | 2-20 | 2    | 60
+shade    | noise | a cold whisper     | 52 50  | t 0 50    | 1-0  | 70   | 80
+koblord  | step  | stamping feet      | d 37   | n 0 80    | 2-16 | 3    | 85
+koblord  | noise | a harsh barking    | 85 70  | p 32 70   | 3-14 | 7    | 110
+bandit   | step  | footsteps          | d 37   | n 0 86    | 2-18 | 2    | 75
+bandit   | noise | a murmur of voices | 52 55  | t 0 55    | 1-0  | 60   | 90
+banlord  | step  | booted footsteps   | d 37   | n 0 78    | 2-20 | 3    | 85
+banlord  | noise | a gruff voice      | 52 48  | t 0 48    | 1-0  | 50   | 100
+cultist  | step  | soft footsteps     | d 37   | n 0 92    | 2-20 | 2    | 60
+cultist  | noise | a low chanting     | 52 50  | t 0 50    | 1-0  | 90   | 85
+priest   | step  | a slow tread       | d 37   | n 0 82    | 2-28 | 2    | 65
+priest   | noise | a droning prayer   | 52 45  | t 0 45    | 1-0  | 100  | 90
 *dig     | -     | -                  | d 80   | n 0 116   | 1-0  | 3    | 100
 *open    | -     | -                  | 120 50 | s 8 50    | 1-0  | 40   | 90
 *shut    | -     | -                  | d 35   | n 0 40    | 1-0  | 6    | 110

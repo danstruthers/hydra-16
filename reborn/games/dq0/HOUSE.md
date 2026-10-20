@@ -166,18 +166,44 @@ RS_TEST P_DIG.)  *(Every ruleset's.)*
   by magical means; a pit not at all.  (wtrap.c.)
 - **A trap's strike, a burn,** have the armour where they strike taken off them.  (sheet.c's o_harm.)
 
+## Who lives where
+
+A theme's inhabitants (its theme file's faction lines: games/dq0d/pop.h) are placed by popgen (bank/popgen), the
+denizens' task's population generator; with none, the stand-in's (kinds.txt and factions.txt) are.  The book is
+silent on all of it.
+
+- **A faction's number is spread over its strata,** each weighed by how near its lair's stratum it is: the lair's
+  its strata's count and one, each stratum further a step less; each share rounded down, what's left over the lair's.
+  (popgen.c's share.)  Why: a people lives most where it makes its home, and fewer the further they go from it.
+- **On a stratum, its first kind has twice each other kind's share** (what's left over its too).  (popgen.c's
+  pg_stratum.)  Why: a faction's first kind is what it is; the rest go with it (the kobolds' rats).
+- **A kind's share is in lairs of its kind's group's size** (kinds.txt's group), drawn by the stratum's seed; eight
+  lairs of a kind at most on a stratum, the groups the bigger if there are more.  (popgen.c's groups.)
+- **A faction's leader is one, in its home:** the first lair of its first kind on its lair's stratum, the leader
+  with them.  (popgen.c; dq0d.c's lair_add.)
+- **Where a lair lies is its kind's way,** as the stand-in's: by the stratum's ways in and out if its kind lairs
+  there (a theme's lairs in the halls when the ways are all taken), else in a region of halls.  (dq0d.c's lair_add.)
+- **A theme's faction speaks its first kind's tongue** (the stand-in faction's of that kind: kobolds kobold, bandits
+  and cultists common).  (dq0d.c's start.)
+- **How factions stand with one another** is the worse of the two ways it's said; unsaid, indifferent.
+  (popgen.c's faction, as make.js does factions.txt.)
+
 ## Fights
 
-- **The creatures' sheets come from a stand-in bestiary of the game's own** (fight.c's bestiary: its numbers the
-  game's, a theme to bring its own), each attribute varied as the book suggests: less 7, and 2d6, at least 1 and at
-  most twice its own; by a die of its own, the same creature each time.  Why: the HarnWorld Bestiary is to replace
-  it (slice 4.5).
+- **The creatures' sheets come from the referee's bestiary** (fight.c's, by the kinds' keys): the first six (the
+  giant rat, the cave spider, the ghoul, the skeleton, the cave bear, the kobold) a stand-in of the game's own; the
+  rest the HarnWorld Bestiary's averages for the like creature (the page each came from beside it), and for folk the
+  book's for men (attributes about 10 to 12, skills by their trade); each attribute varied as the book suggests: less
+  7, and 2d6, at least 1 and at most twice its own; by a die of its own, the same creature each time.  Why: the game's
+  own world (G3), its creatures modelled on the book's (the user: "for denizens, read the harnmaster bestiary"); the
+  first six keep their numbers till the tests are cut to meaning (the ghoul is the book's grave-wight, the cave bear
+  its black bear: Bestiary pp48, 13).
 - **A creature defends** by dodging, or by counterstriking if it's better at that, as the book advises for animals.
 - **Aiming high or low** is two steps worse (10); **a prone defender** four steps easier to strike (20);
   **outnumbered,** two steps worse for each enemy more.  (fight.c.)
 - **Armour's quality:** a poor piece a point less protection, a fine one a point more.  (fight.c.)
 - **Bones that move** (mindless) feel no shock, bleed nothing, fear nothing, and fall apart when their injuries
-  reach their Endurance.  (fight.c.)
+  reach their Endurance; so too the death god's mindless dead, the wights (the book's: Bestiary p78).  (fight.c.)
 - **A creature's courage** is its Initiative test, its injuries its penalty: a marginal failure holds it back a
   round; a critical failure breaks it, a d100: berserk (1-25), desperate (26-50), broken (51-75), cautious (76-100).
   A wounded creature still standing is tested; a shy one that holds back flees.  (fight.c's courage, left.)

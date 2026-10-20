@@ -1,6 +1,7 @@
-# factions.txt - (dq0d) the denizens' factions: a stand-in theme's, till themes are data of their own (a theme's
-# factions take their place: kinds.txt names each kind's).  make.js puts them in the denizens' task's data file after
-# the kinds (lib/dq0/dq0d.dat: 32 bytes a faction, the first none), 7 at most.
+# factions.txt - (dq0d) the denizens' factions: a stand-in theme's, for the games whose theme has no inhabitants of its
+# own (a theme file's factions take their place, popgen's: kinds.txt names each kind's, and a theme's faction speaks
+# its first kind's faction's tongue).  make.js puts them in the denizens' task's data file after the kinds
+# (lib/dq0/dq0d.dat: 32 bytes a faction, the first none), 7 at most.
 #
 # A line a faction, its fields between bars:
 #   name       as kinds.txt names it (11 letters at most)
@@ -13,6 +14,8 @@
 # name     | tongue | attitude | others
 vermin     | -      | w        | crawlers h, kobolds h, beasts w
 crawlers   | -      | h        | vermin h, kobolds w
-dead       | -      | h        | vermin h, crawlers h, beasts h, kobolds h
-beasts     | -      | w        | kobolds w
-kobolds    | kobold | u        | vermin h, dead h
+dead       | -      | h        | vermin h, crawlers h, beasts h, kobolds h, outlaws h, cult f
+beasts     | -      | w        | kobolds w, outlaws w
+kobolds    | kobold | u        | vermin h, dead h, outlaws h
+outlaws    | common | u        | dead h, kobolds h, cult w
+cult       | common | h        | dead f, outlaws w, vermin w

@@ -3096,6 +3096,42 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0popgen', what: 'Dingus Quest Zero\'s population generator (Phase 3D: popgen, a bank program, bank/popgen; games/dq0d/pop.h) from the shell (bankrun): a theme file\'s inhabitants written by hand (the card\'s games/lib/dq0/inhabit.txt: four factions, one\'s line going on with the next), each faction read (its kinds, its strata, its number, its leader, its lair\'s stratum, its attitude, how it stands with the others, the worse of the two ways it\'s said), and each stratum\'s lairs: each faction\'s number spread over its strata, the most on its lair\'s, shared among its kinds (the first twice each other\'s share) in groups of its kind\'s size, its leader in its home; the same again (its own die, the stratum\'s seed)',
+      init: 't_rc', cycles: 600e6,
+      machine: { input: ['bankrun /sd/0/games/lib/dq0/popgen.bp /sd/0/games/lib/dq0 /sd/0/games/lib/dq0/inhabit.txt 3 >/ram/p1',
+        'bankrun /sd/0/games/lib/dq0/popgen.bp /sd/0/games/lib/dq0 /sd/0/games/lib/dq0/inhabit.txt 3 >/ram/p2',
+        'cat /ram/p1', 'cmp /ram/p1 /ram/p2 && echo same', 'echo done'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['popgen: 4 factions, 17 kinds\n',
+        'Gnawers (rat bat): 40 on strata 0-3, their lair on 0; hostile to you; hostile to Diggers, wary of Brigands\n',
+        'Diggers (kobold rat): 30 on strata 1-4, led by a koblord, their lair on 2; unfriendly to you; hostile to Gnawers, hostile to Brigands, hostile to Hollow\n',
+        'Hollow (skel wight): 24 on strata 2-5, led by a shade, their lair on 4; hostile to you; hostile to Diggers\n',
+        'stratum 0: rat 5 home, rat 4, rat 2, bat 5 (Gnawers); bandit 3 home, banlord 1 leader, bandit 3 (Brigands)\n',
+        'stratum 4: kobold 4, rat 1 (Diggers); skel 4 home, shade 1 leader, skel 2, wight 2 (Hollow)\nstratum 5: skel 4, wight 2 (Hollow)\n',
+        'echo same\nsame', '% echo done'],
+      sdcard: true
+    },
+    {
+      name: 'dq0inhab', what: 'Dingus Quest Zero\'s denizens from a theme\'s inhabitants (Phase 3D: the theme file in the save folder, theme.txt, its faction lines: games/dq0d/pop.h; written by hand here, the card\'s inhabit.txt, copied there before the game\'s begun): popgen (bank/popgen, a bank program of the denizens\' task\'s) places the theme\'s factions as each stratum is grown, in place of the stand-in\'s (kinds.txt\'s, factions.txt\'s): at seed 3 its Gnawers\' home, five giant rats (the stand-in\'s: two to five), by the top stratum\'s way down where the character starts (dq0 -T), and hostile to it (the theme\'s; the stand-in\'s vermin are wary), so they come at it while it searches; the game kept and carried on (dq0 -d), the rat there hostile still (the theme read again, its records the save\'s).  And the world\'s deities\' names (deities.txt\'s, the card\'s lib/dq0/dq0g.txt) the command parser\'s words for them (CQ_WORLD\'s third list, after the things\' words and the names given: dq0c keeps them)',
+      init: 't_rc', cycles: 1200e6,
+      machine: { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g', 'look', 'examine the rat', 'search', 'quit', 'dq0 -d /ram/g', 'examine the rat', 'quit',
+        'echo $status'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['Two giant rats are ahead to your left, 15 feet away.', 'The giant rat seems hostile.', 'The giant rat bites at you',
+        '% dq0 -d /ram/g', 'The giant rat seems hostile.', '% echo $status'],
+      // (The theme's five by the way down, its home: two of them in sight as the game begins, the rest round the
+      // corner; the stand-in's at seed 3 are wary, and keep their distance)
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        inTurn(o, ['> examine the rat', 'The giant rat seems hostile.', '> search', 'The giant rat bites at you', '> quit',
+          '% dq0 -d /ram/g', '> examine the rat', 'The giant rat seems hostile.', '> quit'], f);
+        const want = Buffer.from(' \0\0' + fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0g.txt'), 'latin1') + '\0', 'latin1');
+        if (!m.taskRam.some(r => Buffer.from(r.buffer, r.byteOffset, r.length).includes(want)))
+          f.push('the deities\' names not the command parser\'s words (no task\'s RAM has them as CQ_WORLD\'s third list)');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0sway', what: 'Dingus Quest Zero\'s attitudes and influence (DENIZENS.md; the user: "skills like animal husbandry could influence animals encountered"), by the denizens\' replies to the character\'s ways with them (the hub\'s sway: the result, the attitude before and after) and the actors\' records (the referee\'s Animalcraft tests in their order at this seed: HarnMaster\'s): a character good with animals (Animalcraft 90, hmchar\'s file) at seed 21\'s giant rats (wary, the vermin faction\'s), words refused (an animal: persuasion doesn\'t reach it), how one seems (examined: wary), befriended a test at a time (indifferent, then won over: an ally, following; then asked no more), named Grub, asked to wait and seen waiting as the character turns round, then to follow, following it across the room (seen beside it as it turns round again) and down the stairway (come along to the stratum below); the game kept (dq0 -d) and carried on, Grub its ally still; then a fresh game, a blow at a rat out of reach not struck, the rat as wary as it was',
       init: 't_rc', cycles: 1400e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/a.hm', 'echo ml ani 90 >> /ram/a.hm', 'dq0 -p t -s 21 -c /ram/a.hm -T -d /ram/kept',
