@@ -114,10 +114,10 @@
 
 (* ---- Objects ---- *)
 <object>         ::= <object-one> { "and" <object-one> }
-<object-one>     ::= <np> | <pronoun> | <me-phrase> | <everything> | <way-out> | <chosen>   (* "the sword and the shield": a list, one command for each *)
-<chosen>         ::= [ <det> ] ( "closest" | "nearest" | "largest" | "biggest" | "smallest" | "lead" | <ordinal> ) [ "one" ]   (* "the closest", "the second one": of those it perceives *)
+<object-one>     ::= <np> | <pronoun> | <me-phrase> | <everything> | <way-out>   (* "the sword and the shield": a list, one command for each *)
+<chosen>         ::= ( "closest" | "nearest" | "largest" | "biggest" | "smallest" | "lead" | <ordinal> ) [ "one" ]   (* "the closest", "the second one": of those it perceives *)
 <way-out>        ::= [ "the" ] "way" "out"          (* the theme's way out of the dungeon *)
-<np>             ::= [ <det> ] [ <selector> ] { <adj> } <head>
+<np>             ::= [ <det> ] ( [ <selector> ] { <adj> } <head> | <chosen> )
 <thing>          ::= <object> [ <lies> ]            (* a thing in the place, and where it lies: "the door ahead to my left" *)
 <lies>           ::= <compass> | <relative>
 <det>            ::= "a" | "an" | "the" | "this" | "that" | "these" | "those" | "its"   (* "my coat": <me-phrase> *)
