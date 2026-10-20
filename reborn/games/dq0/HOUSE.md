@@ -4,11 +4,24 @@ Every rule the game makes where the book (HarnMaster 3.5) is silent, or where th
 each says, its numbers, where the code applies it, and why.  The book's own rules are the referee's (games/dq0harn,
 on the C SDK's harn.h) and aren't repeated here; their places are given as the book gives them (Skills 8, Combat 6).
 The game's words only: nothing here is the book's text.
+The design the rules serve is DUNGEON.md's, DENIZENS.md's and SOUND.md's; when and why each was decided, in the
+user's words, is DECISIONS.md's.
 
 Drafted 2026-10-19 (Phase 3A, "rules on record") from the code's comments, DUNGEON.md and DENIZENS.md, for the user
 to review.  The last two sections are what's decided but not built yet, and what's still open.
 
-A step is the game's unit of circumstance everywhere: 5 points on a d100 test (rs.h: the steps of a request).
+One scale each (rs.h's scales and units): every difficulty and every circumstance is in **steps**, 5 points each on a
+d100 test (a request's steps, plus easier, minus harder; a thing's, a lock's or a trap's difficulty the steps worse a
+test of it goes); every size in pints; every weight in quarter pounds (told, and written in the data, in pounds);
+every distance in feet, kept in the map's squares (5 feet each) where the map counts it, a thickness in eighths of
+an inch.  The data files (the themes, the bestiary's kinds) are written in steps, pints, pounds and feet, and their
+compilers make them the game's, once.  As a guide to the steps: 1 or 2 a little harder (haste, a simple lock), 4
+hard (an iron door to force), 6 to 8 very hard (a sound lock, a thing hidden well, a window's bars), 10 or more all
+but beyond most (a thing hidden cunningly).
+
+The rules marked *(every ruleset's)* are the game's own whatever the ruleset: their code is games/dq0/rshouse.h,
+which each referee includes (RULESETS.md), so the null ruleset (dq0 -r null: its own rules are the last section's)
+plays them as HarnMaster's referee does.
 
 ## Tests
 
@@ -38,15 +51,21 @@ A step is the game's unit of circumstance everywhere: 5 points on a d100 test (r
 ## Noticing
 
 - **A sense is 0 to 9** from its attribute: 3 or less none, 18 or more 9, else (attribute - 3) x 3 / 5; an average
-  10 or 11 gives 4.  (dq0harn.c's sense.)  Why: the senses' task (dq0p) works in one scale for every actor.
+  10 or 11 gives 4.  (dq0harn.c's sense.)  Why: the senses' task (dq0p) works in one scale for every actor (a
+  sense's keenness, not a difficulty).
 - **Listening as it goes** makes hearing two better (at most 9), and a sound test two steps better.  (dq0harn.c's
-  status; sheet.c's o_noticing.)
+  status; rshouse.h's house_notice.)  *(Every ruleset's.)*
 - **Pace while noticing:** a creep or a slow walk one step better (but not feeling the way in the dark), a jog two
-  worse, a run four, a sprint six.  (sheet.c's by_pace.)  Why: the faster one goes, the less one takes in.
+  worse, a run four, a sprint six.  (rshouse.h's by_pace.)  Why: the faster one goes, the less one takes in.
+  *(Every ruleset's.)*
 - **In shock, four steps worse** on top of the universal penalty already in every test.  (sheet.c's o_noticing.)
 - **A hazard underfoot** (a trap stepped onto) is noticed by a passing glance: twice its hiding's steps worse, and
   two more.  Searching as it goes (watching for traps), the character notices it as a search would: its hiding's
-  steps worse.  (sheet.c's o_noticing; wtrap.c.)
+  steps worse.  (rshouse.h's house_notice; wtrap.c.)  *(Every ruleset's.)*
+- **A thing lying about is made out** (named) within 1 + sight / 2 + seen squares: the character's sight (0 to 9),
+  and its kind's seen, how far off it's made out past a speck (the catalogue's, in squares: a key or a coin 1, a
+  sword 4, a chest 7; a theme's written in feet); further off it's only "something", small or large.  (seen.c's
+  afar; appraise.c.)  Why: the bigger the thing, the further it's made out.
 - **The Khuzdul always know north underground** (the summary's northsense), a trait of their species.
   (dq0harn.c's status.)
 
@@ -56,6 +75,8 @@ A step is the game's unit of circumstance everywhere: 5 points on a d100 test (r
   (half its Move in squares a round, the book's walking); a jog 100 / Move, a run 50 / Move, a sprint 33 / Move
   (the book's jog, run and sprint); a slow walk twice a walk's time, a creep three times.  None slower than a walk.
   (dq0harn.c's status.)  Why: the book has no creep or slow walk; they trade speed for quiet and noticing.
+- **A Move under 4 walks as Move 4 does,** 50 tenths of a second a square.  (dq0harn.c's status.)  Why: a pace's
+  time a square is kept in a byte, and a slow walk or a creep at a Move of 1 or 2 wouldn't fit.
 - **A step takes a rise or a drop of 2 feet**, steps or stairs 4; more is a ledge, climbed.  (world.h's STEP_MAX,
   STAIR_MAX.)
 - **Fatigue builds by the time spent at each pace, added up across moves.**  A level of fatigue is 6,000 units of
@@ -72,7 +93,8 @@ A step is the game's unit of circumstance everywhere: 5 points on a d100 test (r
 - **A ledge is climbed a round (10 seconds) at a time,** a Climbing test each: a critical success 20 feet, a
   marginal success 10, a marginal failure a slip back of 5 feet (the climb goes on), a critical failure a fall from
   as high as it got (climbing down: to the foot).  Holds may catch the fall: then the climb goes on.  (dq0w.c's
-  s_climb_on.)  Why: the book gives the test, not the rate; 10 feet a round is a careful climber's pace.
+  s_climb_on.)  Why: the book gives the test, not the rate; 10 feet a round is a careful climber's pace.  The round
+  is the ruleset's (RS_HELLO's: HarnMaster's 10 seconds, the null ruleset's the same).
 - **Jumping down a ledge** is a clear fall of its height.  (dq0w.c's start_ledge.)
 - **A fall strikes where a middle strike would,** or low if it lands on its feet, with no armour taken off; the
   book's falling dice and grabbing a hold (Skills 8) otherwise.  (sheet.c's o_harm.)  Why: armour doesn't soften
@@ -98,18 +120,21 @@ marginal success, by material (earth, stone, masonry, a floor's flags), and the 
 | a blade, a knife | 1 | -     | -       | -     | earth 40 (it dulls) |
 
 A critical success digs twice as far, a marginal failure half, a critical failure nothing.  A floor's flags are
-lifted, not cut (the user: a material of their own).  (dq0harn.c's digger table, RS_TEST P_DIG.)
+lifted, not cut (the user: a material of their own).  (rshouse.h's digger table and the tool's choice; dq0harn.c's
+RS_TEST P_DIG.)  *(Every ruleset's.)*
 
 ## Portals
 
-- **Picking a lock:** Lockcraft, two steps worse for each grade of the lock's complexity, a minute a try.
-  (wdoor.c.)
+- **Picking a lock:** Lockcraft, at the lock's difficulty, a minute a try: 2 to 10 steps worse, two a grade of its
+  make (the maker's dice: a simple lock 2 or 4, a sound one 6 to 10; the closer look tells which).  (pass.c;
+  wdoor.c.)
 - **Forcing a door:** Strength, by its material: wood as it is, iron-bound two steps worse, iron four; one worse
   locked or barred; a rotten door (quality 0-1) two better, a worn one (2-3) one better, a new one (8-9) one worse.
   Its lock or bar bursts; it's loud, and takes 10 seconds.  (wdoor.c.)  Why: the book's Strength test, scaled by
   what the door is made of and how it's kept.
 - **Bending a window's bars:** Strength, six steps worse; loud, 10 seconds.  **A portcullis's bars,** down: six
-  worse and one more for each grade of their thickness, and it's a way through for good, jammed.  **Heaving a
+  worse and one more for each inch of their thickness (a portcullis's two), and it's a way through for good,
+  jammed.  **Heaving a
   portcullis up** from the far side: six worse, a round.  A portcullis is never opened: raised by its winch on its
   own side (30 seconds' cranking, loud), lowered by it only (2 seconds, louder).  (wwin.c.)
 - **Battering a thing** (the user, 2026-10-16: "model it after unarmed combat"): a blow the thing ignores (the
@@ -126,12 +151,15 @@ lifted, not cut (the user: a material of their own).  (dq0harn.c's digger table,
 ## Traps, searching and hiding
 
 - **A trap stepped on, if noticed** (see Noticing), stops the character short.  (wtrap.c.)
-- **A search** looks over every square within 3 that the character can see: a hidden trap or door is found by
-  Awareness at its hiding's steps worse; a hidden thing at two steps better, less two for each grade of its hiding.
-  (wtrap.c; things.c.)
+- **A search** looks over every square within 3 that the character can see: a hidden trap or thing is found by
+  Awareness at its hiding's steps worse, a hidden door at no steps.  (wtrap.c; things.c.)
+- **What the dungeon hides:** a trap hidden 2 to 8 steps, a covered pit 1 to 5 if not hidden so (fixtures.c); a
+  thing lying concealed, by the stratum's style, from 2 steps in twos to 12 in built and mixed strata, from 0 to 6
+  in caves, from 2 to 8 in mines (uses.c's styles, stock.c); a theme's piece as its file says (the themes': 2 to 6).
 - **Hiding a thing** where the character stands (the user: hiding is a skill, Concealment; the game's Stealth): its
-  hiding is 1 for the place (a floor's dust and corners) and more by the test: a critical success 6 more, a
-  marginal success 3, a marginal failure 1.  The character knows where it hid it.  (things.c's s_hide.)
+  hiding, in steps, by the test: a critical success 12, a marginal success 6, a marginal failure 2, a critical
+  failure 0 (a floor's dust and corners only).  Told: 10 or more cunningly, 4 or more well, less after a fashion.  The
+  character knows where it hid it.  (things.c's s_hide; main.c's hide.)
 - **Disarming:** first the mechanism is made out (Lockcraft, half its power in steps worse: never deadly, however
   it goes), then disarmed (Lockcraft, half its power worse, two better if it's a keen one known well); magic only
   by magical means; a pit not at all.  (wtrap.c.)
@@ -144,8 +172,8 @@ lifted, not cut (the user: a material of their own).  (dq0harn.c's digger table,
   most twice its own; by a die of its own, the same creature each time.  Why: the HarnWorld Bestiary is to replace
   it (slice 4.5).
 - **A creature defends** by dodging, or by counterstriking if it's better at that, as the book advises for animals.
-- **Aiming high or low** is ten worse; **a prone defender** twenty easier to strike; **outnumbered,** ten worse for
-  each enemy more.  (fight.c.)
+- **Aiming high or low** is two steps worse (10); **a prone defender** four steps easier to strike (20);
+  **outnumbered,** two steps worse for each enemy more.  (fight.c.)
 - **Armour's quality:** a poor piece a point less protection, a fine one a point more.  (fight.c.)
 - **Bones that move** (mindless) feel no shock, bleed nothing, fear nothing, and fall apart when their injuries
   reach their Endurance.  (fight.c.)
@@ -157,6 +185,25 @@ lifted, not cut (the user: a material of their own).  (dq0harn.c's digger table,
 - **Health in words,** for every ruleset: fine with no injuries; hurt while the injury points are under a third of
   the Endurance; badly hurt under two thirds; critical past that; down when senseless or in shock.  (dq0harn.c's
   health_of.)
+
+## The null ruleset (dq0null)
+
+A second referee with no book behind it (Phase 3A: RULESETS.md), to show the game asks a ruleset nothing but rs.h's
+requests; the house's rules above marked *(every ruleset's)* it plays as HarnMaster's referee does.  Its own:
+
+- **A test** succeeds on a d100 of at most 60 and 5 a step (5 to 95); the lowest fifth of the success band is a
+  critical success, the highest fifth of the failure band a critical failure.  No skills, no attributes, no
+  penalties.  Why: flat odds, the steps the only difficulty.
+- **The character takes 10 wounds** (dead at 10), **a creature 6.**  A fall does a wound each 10 feet, a trap's
+  strike or a burn 2.  Health: hurt under a third, badly hurt under two thirds, critical past that.
+- **A blow** is a flat test (a prone defender four steps easier, two harder for each other foe); a hit 2 wounds, a
+  critical 4.  A prone attacker gets up instead.  A creature wounded that stands holds on a flat test (a shy one four
+  steps worse), else it flees.  A blow at a thing does 6, less the thing's least resistance.
+- **No fatigue, no bleeding, no shock, no senselessness, no encumbrance.**  Senses all 5 (hearing 7 listening as it
+  goes); a square takes 4.5, 3, 1.5, 0.8, 0.4 and 0.3 seconds at a creep, a slow walk, a walk, a jog, a run and a
+  sprint.
+- **Its character** is any file's name, occupation, pace and language lines (hmchar's will do), with its wounds;
+  without one it makes its own, Dingus, a wanderer.  It speaks common and its file's tongues.
 
 ## Decided, not yet built
 

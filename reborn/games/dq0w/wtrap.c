@@ -95,7 +95,7 @@ static unsigned char near_trap (void)
     return 0;
 }
 
-/* A search about the character (a minute): the referee's Awareness (P_SEARCH) against each hidden door and each
+/* A search about the character (a minute): the referee's test (P_SEARCH) against each hidden door and each
 ** hidden trap within a few squares that it sees (a trap harder the better it's hidden); a door found is a door like
 ** any other from then on, a trap known (told as it's found); or (link 1) where the world's character stops as it
 ** searches as it goes, quietly and in no more time */

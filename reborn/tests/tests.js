@@ -1908,7 +1908,8 @@ function dq0Turns(m) {
   const r = m.dq0 || { games: [], lines: [], final: () => null }, all = { events: [], dens: [], replies: [], snaps: [] };   // (None: sim/dl's)
   r.games.forEach((g, gi) => { for (const k of Object.keys(all)) for (const e of g[k]) all[k].push(Object.assign({ game: gi }, e)); });
   const fin = r.final(), of = (list, k) => list.filter(e => e.line === k + 1);
-  const T = r.lines.map((line, k) => ({ k, line, events: of(all.events, k), dens: of(all.dens, k), replies: of(all.replies, k),
+  // (A dq0 line as the test wrote it: RULES=NAME's -r NAME, sim/test.js's, after it taken off)
+  const T = r.lines.map(l => l.replace(/^(dq0(?: .*)?) -r \S+$/, '$1')).map((line, k) => ({ k, line, events: of(all.events, k), dens: of(all.dens, k), replies: of(all.replies, k),
     at: all.snaps.find(s => s.line === k + 1) || null }));
   T.forEach((t, k) => {
     t.after = k + 1 < T.length ? T[k + 1].at || fin : fin;
@@ -2025,6 +2026,7 @@ function dq0AnswerTest(baud) {
     ...games.flatMap(g => [g, ...DQ0_ANSWERS.map(c => c[0]), 'quit']), 'echo $status'];
   return {
     name: baud === 115200 ? 'dq0answer' : 'dq0answer96', what: 'Dingus Quest Zero\'s answers timed at ' + baud + ' baud (the user\'s D17: the responsiveness targets at 115,200; a command answered in a fifth of a second, 720,000 cycles, a look in half, 1.79M): from Enter to the answer\'s first letter, and to its last, for a turn left and right at seed 3, a step, what the character carries, a door examined, a look, a step that can\'t be taken and a walk, at the turns pace and the normal pace',
+    meaning: true,
     init: 't_rc', cycles: 1500e6,
     machine: { input: lines.map((l, i) => '\u0101' + '\u0100'.repeat(wait * (i + 1) % 3) + l + '\r').join('') },
     expect: ['% echo $status'],
@@ -2718,7 +2720,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0dig', what: 'Dingus Quest Zero digging (the referee\'s: the tools equipped, P_DIG by what\'s dug, Mining tests a spell at a time, HarnMaster\'s; the maker\'s materials: a room\'s floor, then the stratum\'s rock), by the world\'s events: a skilled miner (Mining 95, hmchar\'s file) with a pick (dq0 -k pick -T: the tool the referee takes) digs a shaft down from a room by its stairway, spell by spell, through to the stratum below, and climbs down it (grown round it then); the giant rats by the stairway living through every spell of it (the turns pace: hours of it, the denizens kept up a slice at a time); a shovel digs seed 3\'s earth floor till the rock under it stops it (the user: the floor, then the rock); a sword won\'t dig seed 5\'s flagged floor at all; a shovel lifts its flags, then the rock stops it (dq0earth\'s and dq0tools\' digs, these together)',
+      name: 'dq0dig', meaning: true, what: 'Dingus Quest Zero digging (the referee\'s: the tools equipped, P_DIG by what\'s dug, Mining tests a spell at a time, HarnMaster\'s; the maker\'s materials: a room\'s floor, then the stratum\'s rock), by the world\'s events: a skilled miner (Mining 95, hmchar\'s file) with a pick (dq0 -k pick -T: the tool the referee takes) digs a shaft down from a room by its stairway, spell by spell, through to the stratum below, and climbs down it (grown round it then); the giant rats by the stairway living through every spell of it (the turns pace: hours of it, the denizens kept up a slice at a time); a shovel digs seed 3\'s earth floor till the rock under it stops it (the user: the floor, then the rock); a sword won\'t dig seed 5\'s flagged floor at all; a shovel lifts its flags, then the rock stops it (dq0earth\'s and dq0tools\' digs, these together)',
       init: 't_rc', cycles: 2400e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'cp /ram/c.hm /ram/m.hm', 'echo ml min 95 >> /ram/m.hm',
         'dq0 -p t -s 3 -c /ram/m.hm -k pick -T', 'dig down', 'd', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -k shovel -T', 'dig down', 'quit',
@@ -2728,7 +2730,8 @@ module.exports = {
         const T = dq0Turns(m), f = [], digs = T.filter(t => t.line === 'dig down');
         if (digs.length !== 4) return ['the four digs not typed'];
         const spells = t => dq0Ev(t, 'E_DIG', { how: h => ['D_GOOD', 'D_POOR', 'D_SLIP'].includes(h) }), dug = t => spells(t).filter(e => e.how !== 'D_SLIP').length;
-        const tool = (t, n) => { if (!t.after || t.after.digTool[0] !== n) f.push(t.k + ': the referee\'s tool ' + (t.after && JSON.stringify(t.after.digTool)) + ', not ' + n); };
+        // (The tools the referee took for the dig's spells, the hub's dig_tool: the one carried among them)
+        const tool = (t, n) => { if (!t.after || !t.after.digTool.includes(n)) f.push(t.k + ': the referee\'s tools ' + (t.after && JSON.stringify(t.after.digTool)) + ', not the ' + n); };
         const [p, s3, sw, s5] = digs;
         dq0Need(f, p, 'E_DIG', { how: 'D_BEGUN' }, 'the pick\'s dig not begun');
         if (!dug(p)) f.push('the pick dug nothing');
@@ -2900,6 +2903,20 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0rules', what: 'Dingus Quest Zero\'s referee\'s unit tests (Phase 3A: tests/ram/t_rules, its cases in rules.txt beside it): the HarnMaster referee (dq0harn) asked rs.h\'s requests by a program playing the world\'s part, its dice fixed (RS_DICE: dice.h\'s hook), each answer held to the book\'s rules and HOUSE.md\'s, and the dice each rolled to the book\'s: the tests\' grades at their edges (critical and marginal, the 5-95 clamp, the penalty each skill takes), noticing by pace and state, falls by height and ground (a landing on the feet, a hold grabbed), injuries by impact, aspect, location and armour (Combat 13-14), the kill, amputation, shock and stumble rolls, senselessness and coming round, bleeding, encumbrance by load, fatigue by exertion and rest, digging and appraising',
+      init: 't_rc', cycles: 1100e6,
+      pc: { files: () => ({ 't_rules.hyx': fs.readFileSync(path.join(__dirname, '..', 'obj', 'tests', 't_rules.hyx')),
+        'rules.txt': fs.readFileSync(path.join(__dirname, 'ram', 't_rules', 'rules.txt')) }) },
+      machine: { input: '\u0101cp /pc/t_rules.hyx /ram/t_rules.hyx; cp /pc/rules.txt /ram/rules.txt\r\u0101/ram/t_rules.hyx /ram/rules.txt\r' },
+      expect: ['t_rules: PASS'],
+      check(m, out) {
+        const t = out.slice(out.indexOf('% /ram/t_rules.hyx'));
+        this.notes = [(t.match(/^ok - /gm) || []).length + ' cases held'];
+        return [...t.matchAll(/^not ok - ([^\r\n]*)/gm)].map(k => k[1]);
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0save', meaning: true, what: 'Dingus Quest Zero kept (dq0 -d: the save on a card, here /ram), by the game\'s state: a thing put down, down a stairway, quit (kept as it ends: the world\'s save), the folder listed (the UI\'s game, the things, the world\'s change records, the denizens\', the maker\'s seen maps), then the game carried on: in the stratum below, where it stood and as it faced, seeing what it saw, carrying what it carried, each thing where it was (worn, held, in what)',
       init: 't_rc', cycles: 800e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/kept', 'drop the dagger',
@@ -3022,7 +3039,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0denizens', what: 'Dingus Quest Zero\'s denizens (dq0d: the populations decided as a stratum is grown, from a stand-in theme\'s kinds, kinds.txt), by the actors\' records, their events and what the character perceives (their kinds\' records the referee\'s, HarnMaster\'s): the giant rats that lair by the top stratum\'s ways placed round the way down as the character starts there (dq0 -T), seen (the world\'s actors, in what it perceives), and moving about as time passes (their own task deciding): at the turns pace through all the time a minute\'s search takes (the clock on a slice at a time as they keep up), their stirring told (the world\'s E_VIEW) as what the character sees of them changes (gone out of sight), not again when nothing has; then (seed 5, down its ladder) the rats there seen, cornered, and in the character\'s way: the world stops it short of them, and won\'t let it walk or step onto a rat\'s square (dq0steps\' rat in the way, a step, in it)',
+      name: 'dq0denizens', meaning: true, what: 'Dingus Quest Zero\'s denizens (dq0d: the populations decided as a stratum is grown, from a stand-in theme\'s kinds, kinds.txt), by the actors\' records, their events and what the character perceives (their kinds\' records the referee\'s, HarnMaster\'s): the giant rats that lair by the top stratum\'s ways placed round the way down as the character starts there (dq0 -T), seen (the world\'s actors, in what it perceives), and moving about as time passes (their own task deciding): at the turns pace through all the time a minute\'s search takes (the clock on a slice at a time as they keep up), their stirring told (the world\'s E_VIEW) as what the character sees of them changes (gone out of sight), not again when nothing has; then (seed 5, down its ladder) the rats there seen, cornered, and in the character\'s way: the world stops it short of them, and won\'t let it walk or step onto a rat\'s square (dq0steps\' rat in the way, a step, in it)',
       init: 't_rc', cycles: 900e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'search', 'search', 'quit',
         'dq0 -p t -s 5 -c /ram/c.hm -T', 'd', 'go right', 'go forward', 'step forward', 'quit', 'echo $status']) },
@@ -3093,6 +3110,7 @@ module.exports = {
     },
     {
       name: 'dq0prompt', what: 'Dingus Quest Zero answering at once at the normal pace while the denizens act (DENIZENS.md: events; the user: "the UI is slow to respond"): the giant rats by the way down moving about on their own (their task\'s, in the background), a while waited, then a turn and what the character carries asked for at once, while the senses look about after the turn (the character still busy): told within a fifth of a second of Enter, before the look\'s done (the senses answer it between the look\'s rows, the UI a command that wants nothing of the character at once), and a step that can\'t be taken (up, with no way up) told as quickly (the world\'s answer); the status line drawn only where it changed, a second at most (the user: the cursor flickered), the cursor hidden while it\'s there',
+      meaning: true,
       init: 't_rc', cycles: 900e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p n -s 3 -c /ram/c.hm -T\r' +
         'ĀĀāturn left\rinventory\rāgo up\rĀĀĀĀāquit\rāecho $status\r' },
@@ -3241,6 +3259,7 @@ module.exports = {
       // with its speakers: the rat's three hits on the right, the squeak on the left, the growl on both, the
       // yapping on the right, the bear's tread in its place on the left; nothing on 0-3 or 7, the music's and bell's)
       name: 'dq0sound', what: 'Dingus Quest Zero\'s sound (SOUND.md, the user: "if I am facing N and the sound is coming from the E, then I hear it in my right ear"; dq0s -t, its scene): a giant rat\'s step two squares east of a character facing north played on the right speaker (the YM2151\'s channel 4, its RL bits); then five sources at once, more than the three channels: the three loudest played (the squeak to the left on the left, the growl ahead on both, the yapping behind a shut door muffled, on the right), the two quietest not; and a bear\'s tread beside it, louder, in the quietest\'s place; the music\'s and the bell\'s channels left alone',
+      meaning: true,
       init: 't_rc', cycles: 200e6,
       machine: { ymLog: true, input: 'ā/sd/0/games/lib/dq0/dq0s -t /sd/0/games/lib/dq0\rāecho $status\r' },
       expect: ['1 a scurrying: channel 4, right, level 48\n3 a squeak: channel 4, left, level 76\n' +
@@ -3265,6 +3284,7 @@ module.exports = {
       // bear's tread on a voice free; the voices' speakers as they were last: the rat east's 12, then the
       // tread's behind (both); the clatter's (east: right) on 13, the bear's tread (west: left) on 14)
       name: 'dq0soundx', what: 'Dingus Quest Zero\'s sound with a Vera X (dq0s -t): the PSG\'s voices 12-15 the sound task\'s too, seven channels: a rat\'s scurrying to the east on voice 12 on the right, the five sources at once all played (the noises on the PSG, the tones on the YM2151), the bear\'s tread on a voice free, on the left',
+      meaning: true,
       init: 't_rc', cycles: 200e6,
       machine: { ymLog: true, vera: true, input: 'ā/sd/0/games/lib/dq0/dq0s -t /sd/0/games/lib/dq0\rāecho $status\r' },
       expect: ['1 a scurrying: channel 20, right, level 48\n3 a squeak: channel 4, left, level 76\n' +
@@ -3497,6 +3517,7 @@ module.exports = {
     },
     {
       name: 'dq0veraplain', what: 'Dingus Quest Zero on the Vera X as the browser page has it with its keyboard on (the user\'s, 2026-10-16: plain dq0 typed at the Vera X\'s keyboard "switched (on its own) back to the serial terminal"): the terminals chosen once as dq0 starts (terminal both, and consctl\'s keyboard screen: the screen alone) and kept through hmchar\'s questions and the game, put back (terminal both) only as it ends; typed at the SMC\'s keyboard, the normal pace',
+      meaning: true,
       init: 't_rc', cycles: 2000e6,
       // (SNAP: the screen and the serial port's output so far, as the keyboard's typing comes to it: smc.type's, wrapped)
       start(m) {
@@ -3709,6 +3730,7 @@ module.exports = {
     },
     {
       name: 'dq0pure', what: 'Dingus Quest Zero\'s maker pure (move 2.2 of Phase 2, "one authority on state": generation only, the same seed always the same chunk; the change records the world\'s, dq0w/store.c, laid over a chunk the maker makes again): at seed 16 (dq0 -T -k pick) the chunks the maker made at once, read from the hub\'s cache; then a game played and kept (dq0 -d: a door forced open, the blade trap on it set off, the rock dug through beside the passage), and carried on (its chunks made again by a fresh maker from the seed, the records laid over them from the save\'s region files): each chunk made again the same as it was live before the game was kept, and the same as the maker first made it but for what the records say (a portal\'s state, a trap\'s, a square\'s kind and floor, an opening), and the records saying each of them',
+      meaning: true,
       init: 't_rc', cycles: 2500e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 16 -c /ram/c.hm -T -k pick\r' +
         ['look', 'quit', 'echo pure-a'].map(l => '\u0101' + l + '\r').join('') + '\u0101dq0 -p t -s 16 -c /ram/c.hm -T -k pick -d /ram/p\r' +
@@ -3753,7 +3775,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0stairtrap', what: 'Dingus Quest Zero\'s walks to stairs and ladders checking their way for traps, as the other walks do (the user\'s, 2026-10-16), by the world\'s events: at seed 38 the character goes round to the kitchen\'s far door, clear of the covered pit hidden between it and the stairs up to the way out (not noticed in passing: the referee\'s, HarnMaster\'s at this seed), then up (u): the walk back to the stairs stops on the pit, which gives way under it (a fall, a climb out begun), the pit seen open; then the stairs again, the pit it knows of gone round, and the way out reached (shut fast), no second fall',
+      name: 'dq0stairtrap', meaning: true, what: 'Dingus Quest Zero\'s walks to stairs and ladders checking their way for traps, as the other walks do (the user\'s, 2026-10-16), by the world\'s events: at seed 38 the character goes round to the kitchen\'s far door, clear of the covered pit hidden between it and the stairs up to the way out (not noticed in passing: the referee\'s, HarnMaster\'s at this seed), then up (u): the walk back to the stairs stops on the pit, which gives way under it (a fall, a climb out begun), the pit seen open; then the stairs again, the pit it knows of gone round, and the way out reached (shut fast), no second fall',
       init: 't_rc', cycles: 600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 38 -c /ram/c.hm', 'se', 'walk to the door east',
         'u', 'u', 'quit', 'echo $status']) },

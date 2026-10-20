@@ -82,7 +82,7 @@ void __fastcall__ o_appraise (const struct ireq* q, signed char g)
             add (q->name);
         }
         add (", some ");
-        add (utoa (5 * (unsigned char) q->to, b, 10));
+        add (utoa (SQ_FT * (unsigned char) q->to, b, 10));
         add (" feet off. You'd have to go closer to make out more.");
         return;
     }

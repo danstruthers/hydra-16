@@ -17,17 +17,17 @@ uses     | cookpit | larder | warriors' den | armoury | shrine | sleeping burrow
 light    | lit by smoky tallow lamps
 denizens | kobold rat spider bear
 
-kind     | map scrap | - | 0 | 0 | 1 | other | book | 2
-kind     | key bow | - | 1 | 0 | 1 | bronze | metal | 10
-kind     | key blade | - | 1 | 0 | 1 | bronze | metal | 10
-kind     | brass key | - | 1 | 0 | 1 | bronze | metal | 30
-kind     | totem | h | 6 | 4 | 3 | wood | wood | 50
-kind     | bone throne | sf | 120 | 120 | 7 | bone | bone | 0 | 30 | 150
+kind     | map scrap | - | 0 | 0 | 5 | other | book | 2
+kind     | key bow | - | 1 | 0 | 5 | bronze | metal | 10
+kind     | key blade | - | 1 | 0 | 5 | bronze | metal | 10
+kind     | brass key | - | 1 | 0 | 5 | bronze | metal | 30
+kind     | totem | h | 6 | 4 | 15 | wood | wood | 50
+kind     | bone throne | sf | 120 | 120 | 35 | bone | bone | 0 | 30 | 150
 
 piece    | map scrap | 0-0 | - | 1
 piece    | key bow | 1-1 | 2 | 1
 piece    | key blade | 1-2 | - | 1
-piece    | totem | 2-3 | 4 | 1
+piece    | totem | 2-3 | 6 | 1
 piece    | bone throne | 3-3 | - | 1
 
 rule     | read | map scrap | Scratched on the hide in soot: the gate, a key in two pieces, the bow and the blade;

@@ -1,10 +1,11 @@
 /*
 ** rs.h - Dingus Quest Zero's rulesets: what the game asks a ruleset, and in what terms it answers, the same whatever
 ** the ruleset (HarnMaster, Castles & Crusades, ...).  The game never names a skill, a class or a die: it asks for a
-** purpose (notice a sound, climb, resist poison), gives the circumstances as steps (each a nudge of about 5%, for the
-** better or the worse), and gets back a grade, conditions, effects and words.  A ruleset is a program of its own,
-** the referee (dq0harn, dq0cc ...), that answers through the hub (hub.h: its request and reply areas), and a
-** character generator (hmchar ...) whose files it reads; its manifest (lib/dq0/rules/NAME) says where they are.
+** purpose (notice a sound, climb, resist poison), gives the circumstances as steps (each 5%, for the better or the
+** worse: the scales below), and gets back a grade, conditions, effects and words.  A ruleset is a program of its own,
+** the referee (dq0harn, dq0null, dq0cc ...: lib/dq0/dq0NAME, dq0 -r NAME's), that answers through the hub (hub.h: its
+** request and reply areas), and a character generator (hmchar ...) whose files it reads, the referee's RS_HELLO
+** naming it (RULESETS.md: what a ruleset answers, and what the game assumes of it).
 **
 ** Converting a character between rulesets goes through a neutral character (struct rs_neutral): each ruleset can
 ** make one of its own characters (RS_EXPORT) and make its own from one (RS_IMPORT).
@@ -12,6 +13,25 @@
 
 #ifndef _RS_H
 #define _RS_H
+
+/* ---- The scales and the units: one each, the game's, for every difficulty, size, weight and distance it keeps, asks
+** a ruleset about or reads from its data (a data file's written in them, or made them by its compiler, once; the
+** game's code converts only to word them, a square's distance told in feet, a weight in pounds)
+**   A difficulty, and every circumstance of a test: steps (a request's steps, + easier, - harder; a record's
+**     difficulty, the steps worse a test of it goes), each 5 points of a d100 test (STEP_PCT: HarnMaster's; a d20's
+**     1).  As a guide: 1 or 2 a little harder (haste, a simple lock), 4 hard (an iron door to force), 6 to 8 very
+**     hard (a sound lock, a thing hidden well, a window's bars), 10 or more all but beyond most (a thing hidden
+**     cunningly)
+**   A size: pints (a thing's bulk, a container's room)
+**   A weight: quarter pounds (WT_LB a pound's: a data file's pounds made quarters by its compiler)
+**   A distance: feet (a height, a depth, a fall, a reach, a door's width), kept in whole feet but where a field says
+**     otherwise: across the map, in its squares (SQ_FT feet each: a light's reach, a creature's sight and hearing,
+**     how far off a thing's made out; a data file's feet made squares by its compiler), a slope in quarter feet a
+**     square, a thickness in eighths of an inch (TH_IN an inch's) */
+#define STEP_PCT        5
+#define WT_LB           4
+#define SQ_FT           5
+#define TH_IN           8
 
 /* ---- Grades: how a test went (HarnMaster's levels one for one; a d20's: a natural 1 CF, a miss MF, a hit MS, a
 ** natural 20 or a hit by 10 or more CS) */
@@ -173,11 +193,11 @@ enum { GR_FLOOR, GR_DEEP_WATER, GR_SHALLOW_WATER, GR_SOFT, GR_HARD, GR_ROCKY }; 
 struct rs_summary {
     unsigned        cond;                       /* C_* */
     unsigned char   health;                     /* H_* */
-    unsigned char   step;                       /* Tenths of a second to go 5 feet (walking) */
+    unsigned char   step;                       /* Tenths of a second to go a square (walking) */
     unsigned char   gstep[NGAITS];              /*   and at each pace (GA_*) */
     unsigned char   attacks;                    /* Attacks a round */
     unsigned char   sight, hearing, smell;      /* 0 (none) ... 9 (keen) */
-    unsigned char   darkvision;                 /* Ultravision: feet it sees with no light at all (0: none) */
+    unsigned char   darkvision;                 /* Ultravision: squares it sees with no light at all (0: none) */
     unsigned char   nightvision;                /* Night vision: how far faint light carries for it, times (1: as
                                                 **   anyone's) */
     unsigned char   morale;
@@ -189,7 +209,10 @@ struct rs_summary {
 
 /* ---- The requests (the hub's referee areas carry one, and its reply) */
 enum {
-    RS_HELLO,                                   /* -> its name, its round (tenths), its standard action times */
+    RS_HELLO,                                   /* -> its name, its round (tenths), its standard action times; its
+                                                **   text a line its name, a line its character generator (a
+                                                **   program in the game's folder, run NAME -o FILE -s SEED; none:
+                                                **   "", RS_LOAD_PC's path empty, the referee's own character) */
     RS_LOAD_PC,                                 /* A character file -> its name, calling, summary; a and b the pace
                                                 **   and the watchfulness its file says (GA_WALK and 0 if none: the
                                                 **   world's to set, a new game's) */
@@ -215,8 +238,8 @@ enum {
                                                 **   a mark, * held, + worn, a space neither, and its quality after it,
                                                 **   a digit 0-9: " pick4*blade5+ltunic3"): the referee judges tests
                                                 **   by it, a skill used taking the tool that suits, a fight by what's
-                                                **   held and worn; a 2's w1 the load, all the actor carries, in
-                                                **   quarter pounds: its encumbrance the referee's, in the summary (its
+                                                **   held and worn; a 2's w1 the load, all the actor carries (its
+                                                **   weight): its encumbrance the referee's, in the summary (its
                                                 **   load, its step) and its tests */
     RS_INITIATIVE,                              /* Actors -> each one's delay as a fight starts */
     RS_MORALE,
@@ -227,6 +250,12 @@ enum {
     RS_EXPORT,                                  /* The character as a neutral one (struct rs_neutral) */
     RS_IMPORT,                                  /* A neutral character made one of this ruleset's */
     RS_SAVE, RS_RESTORE, RS_QUIT,
+    RS_DICE,                                    /* (A test's: the referee's unit tests, tests/ram/t_rules) Its dice
+                                                **   fixed: x the faces the next dice show, in turn, to a 0, and b
+                                                **   every die's after them (0: the dice as they fall); a 1, its dice
+                                                **   seeded anew from w1.  The reply what was rolled since the last:
+                                                **   w1 the dice, c the faces forced but not rolled, x the first
+                                                **   ones' sides (0 past the last) */
 };
 
 /* A neutral character: what carries over between rulesets.  Attributes on a 3-18 scale (HarnMaster's as they are; a
