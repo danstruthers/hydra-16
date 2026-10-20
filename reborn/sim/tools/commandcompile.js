@@ -353,6 +353,13 @@ function resolveObject(node, env, ctx, remote) {
   if (mine && ['me', 'myself'].includes(wordsOf(mine, env)[0])) return { value: 'me' };
   if (findFirst(node, 'everything')) return { value: 'all-near' };
   if (findFirst(node, 'way-out')) return { value: 'way out' };   // (The theme's way out)
+  const chosen = findFirst(node, 'chosen');      // ("the closest", "the second one": of those it perceives)
+  if (chosen) {
+    if (!ctx.near.length) return { error: 'NOTHING_HERE' };
+    const ord = ORDINALS.indexOf(wordsOf(chosen, env).find(x => ORDINALS.includes(x)));
+    if (ord >= 0) return ctx.near[ord] ? { value: ctx.near[ord] } : { error: 'NOTHING_HERE' };
+    return { value: ctx.near.slice().sort((a, b) => (ctx.dist.get(a) ?? 0) - (ctx.dist.get(b) ?? 0))[0] };
+  }
   const head = findFirst(node, 'head');
   if (!head) return { error: 'NOT_UNDERSTOOD' };
   const hw = wordsOf(head, env), h = hw[hw.length - 1];   // (Its name: the nouns before it say which, "the brass key")
@@ -558,7 +565,9 @@ function phraseSem(spec, env, ctx) {
     case 'throw': {
       const td = kidsOf(spec, 'throw-dir')[0];
       const at = kidsOf(spec, 'at-phrase')[0];
-      const mn = kidsOf(spec, 'manner')[0];
+      const tw = kidsOf(spec, 'throwing')[0];   // (What's thrown, and how: "hard the apple", "the apple hard")
+      const mn = kidsOf(tw, 'manner')[0];
+      direct.splice(0, direct.length, ...kidsOf(tw, 'object'));
       const manner = mn ? textOf(mn, env) : undefined;
       const instrument = wordsOf(spec, env)[0] === 'sling' ? 'sling' : undefined;
       if (td) {

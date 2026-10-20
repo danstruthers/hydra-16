@@ -18,6 +18,8 @@
 **   seen.c     (overlay 7) more of what the character perceives, in words: a ceiling at a glance, the things
 **              and the denizens it sees, those it hears
 **   choose.c   (overlay 7) the thing the player means, of those it perceives: of several, which, asked
+**   resolve.c  (overlay 11) the command's things found among those it perceives, its unsaid filled (it, the
+**              target, the things near), which of several; a throw told
 **   names.c    the names the character gives things, rooms, allies (parts 5 and 6: given, and said)
 **
 ** Memory: the program's code and data from $0800 (its BSS must end 768 bytes or more under $7F00: dq0.cfg); the
@@ -100,7 +102,8 @@ void __fastcall__ map (const char* rules);      /* Part 3: the map of what it's 
 
 #include "actions.h"
 enum { OB_NONE, OB_DOOR, OB_PASSAGE, OB_STAIRS, OB_LADDER, OB_SHAFT, OB_LEDGE, OB_WAY_OUT, OB_WALL, OB_WINDOW, OB_TRAP,
-    OB_PORTC, OB_ROOM };                        /* (OB_ROOM: the room, its ceiling: looked at closely) */
+    OB_PORTC, OB_ROOM, OB_CORNER, OB_PILLAR };  /* (OB_ROOM: the room, its ceiling: looked at closely; a corner, a
+                                                **   pillar: looked round, "look around the corner") */
 enum { HOW_ANY, HOW_TO, HOW_THROUGH };
 enum { PR_NONE, PR_IN, PR_ON, PR_FROM, PR_WITH, PR_AT, PR_TO };    /* (The other thing: in it, on it, from it, with
                                                 **   it, at it, to it) */
@@ -140,6 +143,21 @@ unsigned char __fastcall__ pick (unsigned char obj, unsigned char orel);   /* Th
 unsigned char __fastcall__ choose (struct cmd* c);     /* The command (parsed) a choice's answer (its number, its
                                                 **   way)?  Then c is the command asked about again, pick's the one
                                                 **   chosen: 1; else 0 */
+
+/* ---- resolve.c (overlay 11): the command's things found among those the character perceives, its unsaid filled (it,
+** the last thing named, the things near, the target), which of several; of several it must be one of, which, asked */
+
+#define RV_ON       0                           /* (resolve's: the command carried on with; seen to, a question */
+#define RV_DONE     1                           /*   asked, the target set, said why not) */
+unsigned char __fastcall__ answer (unsigned char chosen);   /* The command (cmd) an answer to resolve's question?
+                                                **   Then cmd the command asked about, on the one chosen: 1; else 0
+                                                **   (chosen: choose's answered, the question let go) */
+unsigned char resolve (void);                   /* The command (cmd) resolved: RV_ON or RV_DONE */
+void __fastcall__ taken_next (char* w);         /* "Take all"'s next thing to take up, into w ("": none) */
+void __fastcall__ throw_words (unsigned r);     /* A throw told (the things' IO_THROW's result, its TH_* times 256:
+                                                **   IR_NOT_HERE, no mark it sees; IR_FULL, none said) */
+extern unsigned char untarget;                  /* (main.c's: the target let go at the next command: the character
+                                                **   made to turn, by a trap set off, a blow from one it doesn't see) */
 
 /* ---- theme.c (overlay 5): the theme's words and its puzzle (theme.h), from its copy in the overlay's bank */
 
@@ -241,7 +259,7 @@ void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
 void __fastcall__ bread (unsigned char bank, const void* from, void* to, unsigned n);
 void __fastcall__ bwrite (unsigned char bank, void* to, const void* from, unsigned n);
-extern unsigned char ovbank[10];
+extern unsigned char ovbank[11];
 
 /* ---- The swapped parts (bank.s's stubs: swap.inc), run in the main RAM's top (dq0.cfg's SWAP), a part at a time */
 

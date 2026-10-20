@@ -81,6 +81,7 @@ unsigned __fastcall__ o_fight_words (const struct msg* m)
     }
     if (k == 0xFF) {
         strcpy (s, "?");                        /* (Not seen: something) */
+        untarget |= !pc;                        /* (Struck at by it: the character turns, its target let go) */
     }
     t = lb;
     *t = 0;
@@ -254,7 +255,7 @@ unsigned char __fastcall__ o_fight_target (struct cmd* c)
         dx = q.x - pc.x;
         dy = q.y - pc.y;
         if (q.state && q.name[0] && q.sn == pc.sn && (!*w || strstr (q.name, w)) &&
-            (dir > H_NW || bearing (dx, dy) == dir)) {
+            (dir > H_NW || bearing (dx, dy) == dir) && (!c->obj.x || (q.x == c->obj.x && q.y == c->obj.y))) {
             if (dx >= -1 && dx <= 1 && dy >= -1 && dy <= 1) {
                 return k + 1;
             }

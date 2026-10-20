@@ -18,6 +18,8 @@
 #              round), BAR (put the bar ...: barred)
 #   [selectors] which of several things the thing is (SL_*: the closest, the second, all of them; it, the last thing
 #              named) (new)
+#   [manners]  how it's done (MN_*: carefully, hard ...) (new)
+#   [numbers]  a number in words ("move left one space") (new)
 #   [little]   passed over
 
 [orders]
@@ -135,6 +137,11 @@ plate = OB_TRAP
 wire = OB_TRAP
 tripwire = OB_TRAP
 pit = OB_TRAP
+corner = OB_CORNER                          # (new: "look around the corner", "around the pillar")
+corners = OB_CORNER
+pillar = OB_PILLAR
+pillars = OB_PILLAR
+column = OB_PILLAR
 
 [preps]
 in = PR_IN

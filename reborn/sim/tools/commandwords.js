@@ -198,6 +198,7 @@ function scan(toks, w, face = 0) {
     if (e) { verb = e.v; i = 1; }
   }
   const order = () => (w.rows[verb].flags & RF_ORDER) !== 0;
+  const head = () => !c.prep && !order() && verb !== R.get('name') && verb !== R.get('combine');   // (A later word the head)
   if (verb) c.order = order() ? get(ws[0], w.orders) || 0 : 0;
   else { verb = R.get('move'); c.flags |= CF_NOVERB; }   // (A way, or a thing, alone: going there)
   const first = i;                             // (The word straight after the verb)
@@ -232,10 +233,12 @@ function scan(toks, w, face = 0) {
     }
     if ((k = get(t, w.things)) !== undefined) {
       c.obj.kind = k & ~PART;
-      if ((k & PART) && !word) word = t.typed.slice(0, 15);
+      if ((k & PART) && (!word || head())) word = t.typed.slice(0, 15);
       continue;
     }
-    if (!word && c.prep !== V.PR_WITH) word = t.typed.slice(0, 15);   // (The first word not understood)
+    if (c.prep !== V.PR_WITH && (word ? head() : !c.prep || !c.obj.sel)) word = t.typed.slice(0, 15);   // (A word not
+                                                // understood: the thing's, its last before a preposition its head;
+                                                // after "it" and one, the other's)
     else if (verb === R.get('name') || ((c.prep || order() || verb === R.get('combine')) && !word2)) word2 = t.typed.slice(0, 15);
   }
   // The old parser's rules, on what the words made
@@ -258,8 +261,13 @@ function scan(toks, w, face = 0) {
       [V.OB_STAIRS, V.OB_LADDER, V.OB_SHAFT].includes(c.obj.kind)) c.dir = c.obj.lies;    //   down them, not to them)
   if (c.prep === V.PR_WITH && verb !== R.get('combine') && !word) { word = word2; word2 = ''; }
   c.obj.word = word;
-  if (me && !word && !c.obj.kind && !c.obj.sel && c.dir === NONE) c.obj.sel = V.SL_ME;   // ("examine me")
   c.other.word = word2;
+  if (verb === R.get('throw') && c.how === V.HOW_TO && !c.prep && (c.obj.word || c.obj.sel) && !c.other.word) {
+    c.other = c.obj;                           // ("throw at the rat": the mark; the thing thrown what's in hand)
+    c.obj = thing();
+    c.prep = V.PR_AT;
+  }
+  if (me && !c.obj.word && !c.obj.kind && !c.obj.sel && c.dir === NONE) c.obj.sel = V.SL_ME;   // ("examine me")
   // The action its verb makes of the shape: a thing said (a preposition straight after the verb its own), a way, none
   const r = w.rows[verb];
   c.aux = r.aux;
@@ -290,7 +298,7 @@ function scan(toks, w, face = 0) {
 // prepositions' own actions (a count, then each: the verb, the word's entry, the action)
 const CONSTANTS = ['move', 'put', 'stow', 'doff', 'hang', 'drop', 'bar', 'get', 'turn', 'face', 'light', 'douse', 'unlock',
   'name', 'combine', 'PR_WITH', 'PR_ON', 'PR_FROM', 'OB_WAY_OUT', 'OB_DOOR', 'GO_UP', 'GO_DOWN', 'SL_ME', 'VB_SAY', 'OB_STAIRS',
-  'OB_LADDER', 'OB_SHAFT'];
+  'OB_LADDER', 'OB_SHAFT', 'throw', 'HOW_TO', 'PR_AT'];
 const SPECIAL = { WITH: 1, AWAY: 2, BACK: 3, HALF: 4, AROUND: 5, BAR: 6, WAY_OUT: 7 };   // (cmdmean.s's S_*)
 const COLUMNS = ['verb', 'dir', 'thing', 'prep', 'how', 'special', 'order', 'sel', 'num', 'manner', 'little'];   // (cmdmean.s's C_*)
 const ROW = ['alone', 'thing', 'way', 'unsaid', 'aux', 'skill', 'task', 'flags'];            // (cmdmean.s's R_*)

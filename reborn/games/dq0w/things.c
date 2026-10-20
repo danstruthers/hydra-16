@@ -64,6 +64,8 @@ void theme_kinds (void);
 #define NK      NKINDS                          /* (The catalogue's, and the theme's after them: theme.h) */
 
 extern const struct kind kinds[];               /* (kinds.c's: in the catalogue's bank) */
+extern const unsigned char throws[];            /* (kinds.c's: a kind's reach, thrown) */
+unsigned char __fastcall__ throw_at (const char* name);    /* Part 4 */
 
 /* A buffer in the main RAM (the words said, the kit's names, the store kept a piece at a time) */
 static char tbuf[80];
@@ -567,6 +569,9 @@ unsigned char s_serve (void)
     case IO_DROP:
         iq.result = s_drop (iq.name);
         break;
+    case IO_THROW:
+        iq.result = throw_at (iq.name);
+        break;
     case IO_LIST:
         list ();
         break;
@@ -597,7 +602,7 @@ unsigned char s_serve (void)
         HUB->ireq.x = took;
         break;
     }
-    if (iq.kind == IO_KIT || iq.kind == IO_GET || iq.kind == IO_DROP || iq.kind == IO_HIDE ||
+    if (iq.kind == IO_KIT || iq.kind == IO_GET || iq.kind == IO_DROP || iq.kind == IO_HIDE || iq.kind == IO_THROW ||
         (iq.kind >= IO_HOLD && iq.kind <= IO_NAME)) {
         s_light_now ();                         /* (Its light: what it holds lit) */
         changed |= iq.result == IR_OK;
@@ -605,6 +610,89 @@ unsigned char s_serve (void)
     hub_map (0);
     HUB->ireq.result = iq.result;
     return changed && iq.kind != IO_KIT;
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part 4 (store.c's, its room): a thing thrown */
+#pragma code-name (push, "SW4CODE")
+#pragma rodata-name (push, "SW4RODATA")
+
+/* A thing thrown (the UI's IO_THROW, the character's: the same for every actor, as their minds come to throw), the
+** one named that it carries ("": the first in its hands), at a mark (the request's x, y: a square it sees, a denizen's
+** or a thing's), how (the request's to: struct cmd's manner, MN_HARD), as the plan has it (anything throwable thrown
+** by the same code): a throwable thing's reach (the catalogue's throws: the short band's squares, kinds.c's) and
+** HarnMaster's missile ranges (Combat 15: short, medium, long and extreme, each twice the last, at 0, 20, 40 and 80
+** less; thrown hard, twice as far, and 10 less), the referee's Throwing test (P_THROW, the band's steps): it lands on
+** the mark, hit or missed (a miss falls there, by it), or short of it, beyond the extreme band (along the line to it:
+** squares it sees); out of the thrower's hands.  IR_OK (how it went in the request's qty, TH_*; where it lies in x,
+** y), IR_NONE (none carried), IR_NO (not a thing to throw) */
+unsigned char __fastcall__ s_throw_at (const char* name)
+{
+    static unsigned char reach, band, d, sn;
+    static unsigned px, py;
+    static int dx, dy;
+    static signed char steps, g;
+    struct req* r;
+    unsigned n = 0;
+
+    if (*name) {
+        n = carried_named (name);
+    } else {
+        while ((n = items (n, IN_FLAGS | IN_ACTOR, I_HELD)) != 0 && !on_pc (n)) {
+        }
+    }
+    if (!n) {
+        return IR_NONE;
+    }
+    fetch (&rec, n);
+    cat_map ();
+    reach = throws[rec.kind < KI_COUNT ? rec.kind : 0];
+    if (!reach) {
+        return IR_NO;
+    }
+    hub_map (0);
+    sn = HUB->pc_stratum;
+    px = HUB->pc_x;
+    py = HUB->pc_y;
+    dx = iq.x - px;
+    dy = iq.y - py;
+    d = (dx < 0 ? -dx : dx) > (dy < 0 ? -dy : dy) ? (dx < 0 ? -dx : dx) : (dy < 0 ? -dy : dy);
+    steps = 0;
+    if (iq.to & MN_HARD) {
+        reach <<= 1;
+        steps = -2;
+    }
+    for (band = 0; band < 4 && d > (reach << band); ++band) {
+    }
+    iq.qty = TH_SHORT;
+    if (band == 4) {                            /* (Too far: it falls at the extreme band's end, on the line) */
+        iq.x = px + dx * (reach << 3) / d;
+        iq.y = py + dy * (reach << 3) / d;
+    } else {
+        r = &HUB->slot[SLOT_WORLD];
+        r->kind = RS_TEST;
+        r->actor = 0;
+        r->a = P_THROW;
+        r->b = 0;
+        r->steps = steps - 4 * band;            /* (20 less a band: 4 steps of 5) */
+        r = hub_ask (SLOT_WORLD);
+        g = r->grade;
+        r->state = REQ_FREE;
+        iq.qty = G_OK (g) ? TH_HIT : TH_MISS;
+    }
+    item_at (n)->where = IW_SQUARE;             /* (Out of its hands: where it falls) */
+    item_at (n)->sn = sn;
+    item_at (n)->x = iq.x;
+    item_at (n)->y = iq.y;
+    item_at (n)->flags &= ~(I_HELD | I_WORN);
+    dropped = n;
+    hub_map (0);
+    HUB->ireq.qty = iq.qty;
+    HUB->ireq.x = iq.x;
+    HUB->ireq.y = iq.y;
+    return IR_OK;
 }
 
 #pragma code-name (pop)

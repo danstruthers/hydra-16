@@ -158,6 +158,11 @@ enum { IO_KIT, IO_GET, IO_DROP, IO_LIST, IO_SAVE, IO_RESTORE,
 #define IO_THEME        (IO_BAR + 2)            /* The theme's kinds (the theme bank's, the UI's) into the catalogue */
 #define IO_BEGIN        (IO_BAR + 3)            /* The game begun (the UI's last as it starts: the world's on to its
                                                 **   dungeon, the things asked so far, the kit) */
+#define IO_THROW        (IO_BAR + 5)            /* The thing named carried ("": the first in its hands) thrown at a
+                                                **   mark (x, y: a square it sees), how (to: struct cmd's manner): how
+                                                **   it went back in qty (TH_*), where it lies in x, y (the world's
+                                                **   throw: the catalogue's throws, its reach; the referee's test) */
+enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark, missed it, fell short of it) */
 #define IO_PUZZLE       (IO_BAR + 4)            /* A command of the theme's puzzle's (theme.h), judged by its rules
                                                 **   (the world's): to its verb (TR_*), name the thing (into the other:
                                                 **   combine name with into, put name on into; read name; use name on

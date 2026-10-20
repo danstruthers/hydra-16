@@ -8,6 +8,10 @@
 //   node sim/tools/commandmatch-test.js --mean    what each line means (games/dq0c/cmdmean.s, on sim65: cmdmean.c), the
 //                                                 corpus's lines and cmdmatch/lines.txt's, each struct cmd the host's
 //                                                 (commandwords.js's scan), the character facing the line's number mod 8
+//   node sim/tools/commandmatch-test.js --phrases the phrasing test: cmdmatch/phrases.txt's cases and the corpus's with a
+//                                                 context, each line made a command as the game makes it on the 65C02
+//                                                 (dq0c's meaning, then the UI's resolver, games/dq0/resolve.c: on
+//                                                 sim65, cmdmatch/cmdres.c), held to what each case expects
 //   node sim/tools/commandmatch-test.js --task    the parser's task (games/dq0c) under HydraOS, through the hub's
 //                                                 protocol (cmdmatch/cmdtask.c the UI's part): its start, an empty
 //                                                 request's round trip, a command's, each result the host's
@@ -154,4 +158,88 @@ function task() {
   return emulate(pc, 'cmdtask').some(l => / 0 differ$/.test(l));
 }
 
-process.exit((process.argv.includes('--mean') ? mean() : process.argv.includes('--task') ? task() : process.argv.includes('--hydra') ? hydra() : sim65()) ? 0 : 1);
+// The phrasing test (--phrases): cmdmatch/phrases.txt's cases, and the corpus's with a context, each line made a
+// command on the 65C02 as the game makes it (dq0c's meaning, then the UI's resolver: cmdmatch/cmdres.c on sim65, a run a
+// case), held to what the case expects (phrases.txt's; the corpus's: the grammar's reference, commandcompile.js's
+// action and its object)
+const DENS = new Set(['goblin', 'goblins', 'rat', 'rats', 'orc', 'troll', 'dragon', 'linda', 'grub', 'kobold', 'giant rat']);
+// The corpus's cases the game reads otherwise, by design: "under" a way (the things put in or on only); "follow" an ally's
+// request (the game's: it follows the character); a list of attacks (lists to come)
+const KNOWN = new Set(['put the apple under the table', 'follow the goblin', 'attack the rat and the goblin']);
+function phraseCases() {
+  const cc = require('./commandcompile.js');
+  const comp = new cc.Compiler(cc.loadRules(path.join(REB, 'games', 'dq0', 'commands.ebnf')));
+  const read = f => fs.readFileSync(f, 'utf8').split(/\r?\n/).filter(l => l.trim() && !l.startsWith('#'));
+  const cases = [];
+  for (const l of read(path.join(HERE, 'phrases.txt'))) {
+    const [lines, seen, want] = l.split('\t');
+    const things = seen === '-' ? [] : seen.split(' ').filter(s => !s.startsWith('face='));
+    const face = (seen.match(/face=(\d)/) || [])[1] || 0;
+    cases.push({ what: lines, lines: lines.split(' | ').map(s => s.trim()), face: +face, things: things.map(s => {
+      const m = s.match(/^(\*?)([a-z_']+)@(-?\d+),(-?\d+)(?::(\w+))?$/);
+      if (!m) throw new Error('phrases.txt: ' + s);
+      return { name: m[2].replace(/_/g, ' '), dx: +m[3], dy: +m[4], size: m[5] && m[5] !== 'down' ? +m[5] : 3,
+        den: m[1] ? (m[5] === 'down' ? 2 : 1) : 0 };
+    }), want: want.trim() });
+  }
+  // The corpus's: a context of things near (denizens by their names) and the last thing named (said first: "x" it)
+  for (const l of read(path.join(REB, 'games', 'dq0', 'commands.corpus'))) {
+    const [input, expect, roles, context] = l.split('\t');
+    if (!context || context === '-' || /engaged=|pending=|aliases=|names=|person=|target=|distances=|deities=/.test(context) ||
+      !/^VB_/.test(expect) || expect === 'VB_SEQUENCE' || /[A-Za-z]+=[a-z]/.test(context.replace(/(near|last|facing)=[^;]*/g, ''))) continue;
+    const ctx = Object.fromEntries(context.split(';').map(p => p.split('=')));
+    const r = comp.compile(input, cc.buildContext(context, cc.DEFAULT_WORLD));
+    if (r.action !== expect) continue;
+    const obj = (roles.match(/(?:^|;)object=([^;]*)/) || [])[1];
+    const near = [...new Set([...(ctx.near || '').split(','), ...(ctx.last ? [ctx.last] : [])])].filter(Boolean);   // (The
+                                                // last thing named one it perceives: a bare take's)
+    if (KNOWN.has(input)) continue;
+    cases.push({ what: input + '  (the corpus\'s)', lines: [...(ctx.last ? ['x ' + ctx.last] : []), input], face: 0,
+      things: near.map((n, i) => ({ name: n.replace(/\d+$/, ''), dx: (i % 3) - 1, dy: -1 - Math.floor(i / 3), size: 3,
+        den: DENS.has(n.replace(/\d+$/, '')) ? 1 : 0 })),
+      want: expect + (obj && !/^all|^me$|^way out$|^fire$/.test(obj) ? ' obj~' + obj.replace(/\d+$/, '') : '') });
+  }
+  return cases;
+}
+
+function phrases() {
+  const words = require('./commandwords.js'), V = words.names(), wd = words.load();
+  const cases = phraseCases();
+  const bin = path.join(OUT, 'cmdres.bin');
+  run(tool('cl65'), ['--cpu', '65C02', '-t', 'sim65c02', '-C', path.join(HERE, 'cmdres.cfg'), '-O', '-I', OUT, '-I', HERE, '-I',
+    path.join(REB, 'games', 'dq0'), '-o', bin, path.join(HERE, 'cmdres.c'), path.join(GAME, 'cmdmatch.s'), path.join(GAME, 'cmdmean.s'),
+    path.join(REB, 'games', 'dq0', 'resolve.c'), path.join(HERE, 'cmdmatch_c.s'), path.join(HERE, 'cmdmean_c.s')],
+    { cwd: OUT, stdio: ['ignore', 'pipe', 'pipe'] });
+  const N = (k, n) => n === undefined ? undefined : /^\d+$/.test(n) ? +n : V[n] !== undefined ? V[n] : NaN;
+  let bad = 0, mine = 0;
+  cases.forEach((c, k) => {
+    const out = run(tool('sim65'), ['--cpu', '65C02', '-x', '400000000', bin, c.lines.join('|'), String(c.face),
+      ...c.things.map(t => [t.den, t.dx, t.dy, t.size, t.name].join(' '))], { cwd: OUT }).split(/\r?\n/);
+    const says = out.filter(l => l.startsWith('S ')).map(l => l.slice(2));
+    const m = (out.find(l => l.startsWith('R ')) || '').match(/^R (\d+) (\d+) (\d+) (\d+) (\d+) (\d+) (\d+) \|([^|]*)\|(-?\d+),(-?\d+)\|([^|]*)\|(-?\d+),(-?\d+)\|$/);
+    const f = [];
+    if (!m) f.push('no command (' + out.join(' / ') + ')');
+    else {
+      const got = { action: +m[1], flags: +m[2], dflt: +m[3], prep: +m[4], manner: +m[5], sel: +m[6], kind: +m[7], obj: m[8],
+        objat: m[9] === '99' ? '-' : m[9] + ',' + m[10], other: m[11], otherat: m[12] === '99' ? '-' : m[12] + ',' + m[13] };
+      const ws = [];                           // (Its words: a value of several words, the words after its key's)
+      for (const s of c.want.split(' ')) if (/^VB_|^[a-z]+[=@~]/.test(s) || !ws.length) ws.push(s); else ws[ws.length - 1] += ' ' + s;
+      for (const w of ws) {
+        if (/^VB_/.test(w)) { if (words.actionName(got.action) !== w) f.push('action ' + words.actionName(got.action) + ' (want ' + w + ')'); continue; }
+        const [, key, op, val] = w.match(/^([a-z]+)(=|@|~)(.*)$/) || [];
+        if (key === 'says') { if (!says.some(s => s.startsWith(val))) f.push('says ' + JSON.stringify(says) + ' (want ' + val + ')'); continue; }
+        const g = op === '@' ? got[key + 'at'] : got[key];
+        const ok = op === '~' ? g === val || g.split(' ').pop() === val || (g && val.startsWith(g)) ||   // (A thing by its
+          ((wd.things.get(val) & 0x7F) === got.kind && got.kind > 0) :         //   word, or its kind: the door)
+          key === 'prep' || key === 'manner' || key === 'sel' ? g === N(key, val) : g === val;
+        if (!ok) f.push(key + op + JSON.stringify(g) + ' (want ' + val + ')');
+      }
+    }
+    mine += !c.what.endsWith('(the corpus\'s)');
+    if (f.length) { bad++; if (bad <= 40) console.log('differs: ' + c.what + ': ' + f.join('; ')); }
+  });
+  console.log(cases.length + ' cases (' + mine + ' phrases.txt\'s, ' + (cases.length - mine) + ' the corpus\'s), ' + bad + ' differ');
+  return bad === 0;
+}
+
+process.exit((process.argv.includes('--mean') ? mean() : process.argv.includes('--phrases') ? phrases() : process.argv.includes('--task') ? task() : process.argv.includes('--hydra') ? hydra() : sim65()) ? 0 : 1);

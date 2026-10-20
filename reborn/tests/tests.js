@@ -2630,6 +2630,34 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0cmd', what: 'Dingus Quest Zero\'s command interpreter (Phase 3C, the user\'s DesignIdeas.md): at seed 3 (-T), three giant rats near, the target set by a choice ("target the rat": which, in their order from the left round to the right, two the same way and as far told apart by their side, answered by number) and shown; a dagger thrown hard at the closest of them (the world\'s throw: its reach, the range bands, the referee\'s Throwing; it misses, and lands beside it); a bare take, the last thing named carried, asking which of the things near, answered by a name, then by a selector; take all (walked over to); a bare drop, the last thing named; it; a throw with no mark, the target lost from sight; a bare attack, out of reach; the target cleared; a look one way (turned to), a look round the corner, N alone going north',
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -k pick -T\r' +
+        ['target the rat', '1', 'target', 'throw the dagger hard at the closest rat', 'drop pick', 'examine the torch', 'take', 'the bones', 'take',
+          'the closest', 'take all', 'i', 'drop', 'take it', 'throw the dagger', 'attack', 'clear target', 'target', 'look north',
+          'look around the corner', 'n', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['% echo $status'],
+      // (Its words checked with the screen's codes and the lines' wrapping taken out, each in its turn)
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        const want = ['Which do you mean: 1. the giant rat ahead to your left, on the right, 2. the giant rat ahead to your left, on the ' +
+          'left, or 3. the giant rat ahead?', 'Your target: the giant rat.', 'Your target: the giant rat ahead to your left.',
+          'You throw the dagger hard at the giant rat, and miss: it lands beside it.', 'Put down.',
+          'Which do you mean: 1. the dagger ahead, 2. the bones ahead to your right, or 3. the pick where you stand?', 'Taken.',
+          'Which do you mean: 1. the dagger ahead, or 2. the pick where you stand?', 'Taken.', 'You go over to it.', 'Taken.',
+          'a dagger, a pick, bones', 'Put down.', 'Taken.', 'Throw it at what?', 'It\'s out of reach', 'You have no target now.',
+          'You have no target.', 'You turn to face north.', 'You cross the room.', '% echo $status'];
+        let at = 0;
+        for (const w of want) {
+          const i = o.indexOf(w, at);
+          if (i < 0) { f.push('not found (in its turn): ' + w); break; }
+          at = i + w.length;
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0talk', what: 'Dingus Quest Zero understanding the player (the command parser, dq0c: the grammar and the game\'s words, after the user Language.txt): synonyms, several words to a verb, directions as the character faces and two together, things it sees walked up to and gone through, the little words passed over',
       init: 't_rc', cycles: 600e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T\r' +

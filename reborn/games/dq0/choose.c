@@ -29,7 +29,7 @@ static const char* const relname[8] = {
 };
 
 static const char* const thing[] = { "", "door", "way on", "stairs", "ladder", "shaft", "ledge", "way out", "wall",
-    "window", "trap", "portcullis", "room" };
+    "window", "trap", "portcullis", "room", "corner", "pillar" };
 
 static struct cmd* cur = 0;                     /* The command being carried out (main.c's: choose's) */
 static struct cmd kept = { 0 };                 /* The command a choice was asked for, */

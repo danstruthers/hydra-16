@@ -93,7 +93,7 @@ S_BAR       = 6
 S_WAYOUT    = 7
 P_SPECIAL   = 1
 
-NCONST      = 27                    ; The constants (commandwords.js's CONSTANTS, in order)
+NCONST      = 30                    ; The constants (commandwords.js's CONSTANTS, in order)
 MAXWS       = 15                    ; The words of a line (cmdmatch.s's MAXTOK + 1)
 
             .zeropage
@@ -132,6 +132,9 @@ v_SAY       = kv + 23
 v_STAIRS    = kv + 24               ; OB_STAIRS, OB_LADDER, OB_SHAFT
 v_LADDER    = kv + 25
 v_SHAFT     = kv + 26
+v_THROW     = kv + 27               ; throw; HOW_TO, PR_AT
+v_HOWTO     = kv + 28
+v_AT        = kv + 29
 pgwi:       .res        2           ; Each entry's record
 colpl:      .res        NCOL        ; Each column
 colph:      .res        NCOL
@@ -782,6 +785,9 @@ each:       ldx         wi              ; Each word after the verb
             beq         :+
             lda         #CM_OTHER
 :           sta         thoff
+            lda         trec,x          ; (A word none of the game's: a number, or a thing's word, the rest passed)
+            ora         rrec,x
+            jeq         number
             lda         ordv            ; A request's order, the first
             beq         :+
             ldy         #C_ORDER
@@ -868,7 +874,7 @@ nosel:      ldy         #C_MANNER       ; How it's done ("carefully", "hard")
 :           ldy         #C_LITTLE       ; A little word: nothing
             jsr         get
             jne         next
-            lda         cm_cmd + CM_N   ; A number: in digits, or a word ("one"), the first
+number:     lda         cm_cmd + CM_N   ; A number: in digits, or a word ("one"), the first
             bne         nonum
             jsr         digits
             bcs         :+
@@ -905,16 +911,23 @@ thing:      ldy         #C_THING        ; A thing (a part of one: its word too, 
             lda         kk
             bpl         next
             lda         cm_cmd + CM_OBJ + T_WORD
-            bne         next
-            jsr         setword
+            beq         wset
+            jsr         ishead
+            beq         next
+wset:       jsr         setword
             bra         next
-word:       lda         cm_cmd + CM_OBJ + T_WORD   ; The first word not understood; and the other thing's, after a
-            bne         word2                       ;   prep
-            lda         cm_cmd + CM_PREP
-            cmp         v_WITH
+word:       lda         cm_cmd + CM_PREP   ; A word not understood: the thing's (its last before a prep its head); the
+            cmp         v_WITH          ;   other thing's after a prep (after "it" and a prep, too)
             beq         word2
-            jsr         setword
-            bra         next
+            lda         cm_cmd + CM_OBJ + T_WORD
+            bne         whead
+            lda         cm_cmd + CM_PREP
+            beq         wset
+            lda         cm_cmd + CM_OBJ + T_SEL
+            bne         word2
+            bra         wset
+whead:      jsr         ishead
+            bne         wset
 word2:      lda         verb            ;   (a name given: the last)
             cmp         v_NAME
             beq         w2
@@ -1095,7 +1108,30 @@ down:       lda         cm_cmd + CM_OBJ + T_LIES
             bne         :+
             jsr         toword
             stz         cm_cmd + CM_OTHER + T_WORD
-:           lda         me              ; "me" and nothing else: the character ("examine me")
+:           lda         verb            ; "throw at the rat": the mark the other, the thing thrown what's in hand
+            cmp         v_THROW
+            bne         nomark
+            lda         cm_cmd + CM_HOW
+            cmp         v_HOWTO
+            bne         nomark
+            lda         cm_cmd + CM_PREP
+            bne         nomark
+            lda         cm_cmd + CM_OBJ + T_WORD
+            ora         cm_cmd + CM_OBJ + T_SEL
+            beq         nomark
+            lda         cm_cmd + CM_OTHER + T_WORD
+            bne         nomark
+            ldx         #CM_OTHER - CM_OBJ - 1
+:           lda         cm_cmd + CM_OBJ,x
+            sta         cm_cmd + CM_OTHER,x
+            stz         cm_cmd + CM_OBJ,x
+            dex
+            bpl         :-
+            lda         #NONE
+            sta         cm_cmd + CM_OBJ + T_LIES
+            lda         v_AT
+            sta         cm_cmd + CM_PREP
+nomark:     lda         me              ; "me" and nothing else: the character ("examine me")
             beq         action
             lda         cm_cmd + CM_OBJ + T_WORD
             ora         cm_cmd + CM_OBJ + T_KIND
@@ -1180,6 +1216,24 @@ alone:      ldy         #R_ALONE        ; Nothing: the verb's alone; else the th
             ldy         #R_WAY
             lda         (rp),y
 set:        sta         cm_cmd + CM_ACTION
+            rts
+.endproc
+
+; ishead: is a later word the thing's head (no prep yet, nor a request, a name or things combined)?  Z clear if so.
+; Keeps .X
+.proc ishead
+            lda         cm_cmd + CM_PREP
+            bne         no
+            lda         ordv
+            bne         no
+            lda         verb
+            cmp         v_NAME
+            beq         no
+            cmp         v_COMBINE
+            beq         no
+            lda         #1
+            rts
+no:         lda         #0
             rts
 .endproc
 

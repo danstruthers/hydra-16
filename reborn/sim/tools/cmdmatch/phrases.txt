@@ -1,0 +1,155 @@
+# phrases.txt - the phrasing test (sim/tools/commandmatch-test.js --phrases): what a line makes, in a context, as the
+# game makes it on the 65C02 (games/dq0c's meaning, cmdmean.s, then the UI's resolver, games/dq0/resolve.c: on sim65,
+# cmdres.c).  With them the corpus's own cases (games/dq0/commands.corpus: its context's things perceived, its last
+# thing named), each held to the grammar's reference (commandcompile.js's action and its object).
+#
+# One case a line, three fields a tab apart:
+#   the line typed (several: | between them, each carried out in turn, the resolver's state kept from one to the next)
+#   what the character perceives: things lying about (name@dx,dy, or name@dx,dy:size, 0 tiny ... 9 huge), denizens
+#     (*name@dx,dy, *name@dx,dy:down), its facing (face=0 north ... 7), _ in a name a space; - none.  Squares from the
+#     character's: dy -1 ahead of it, facing north
+#   what it makes: the action (VB_*), then key=value: obj= and other= (the things' words; nothing after = none), obj@
+#     and other@ (the square found, dx,dy; - not found), prep=, manner=, sel= (the thing's selector), says= (what it
+#     says, the start of a line of it)
+
+# --- "it": the last thing named, of any kind (the user's answer 7)
+examine the sword | take it	sword@0,-1	VB_RETRIEVE_OBJECT obj=sword obj@0,-1
+take it	-	says=You haven't named anything yet.
+examine the rat | attack it	*giant_rat@0,-1	VB_ATTACK_OBJECT obj=giant rat obj@0,-1
+look at the dagger | drop it	-	VB_DROP_OBJECT obj=dagger
+examine the book | put it in the chest	book@1,0	VB_PUT_OBJECT obj=book other=chest
+light the torch | douse it	-	VB_EXTINGUISH_OBJECT obj=torch
+
+# --- a bare verb: the thing its verb takes (commands.verbs' unsaid)
+examine the dagger | drop	-	VB_DROP_OBJECT obj=dagger
+drop	-	VB_DROP_OBJECT obj=
+examine the cloak | wear	-	VB_EQUIP_OBJECT obj=cloak
+examine the tablet | read	-	VB_READ_OBJECT obj=tablet
+examine the book | take	book@1,0	VB_RETRIEVE_OBJECT obj=book obj@1,0
+examine the torch | take	book@1,0	VB_RETRIEVE_OBJECT obj=book obj@1,0
+take	book@1,0	VB_RETRIEVE_OBJECT obj=book obj@1,0
+take	book@1,0 apple@-1,0	says=Which do you mean: 1. the apple to your left, or 2. the book to your right?
+take	sword@0,-2 shield@0,-1 helm@2,0	says=Which do you mean: 1. the sword ahead, 10 feet off, 2. the shield ahead, 5 feet off, or 3. the helm to your right?
+take	-	says=There's nothing here to take.
+attack	-	VB_ATTACK_OBJECT obj=
+attack	*goblin@0,-1	VB_ATTACK_OBJECT obj=
+open	-	VB_OPEN_OBJECT obj=
+search	-	VB_SEARCH obj=
+
+# --- questions only when unclear: a number, a selector, a name, a way (the user's answer 13)
+take | 2	book@1,0 apple@-1,0	VB_RETRIEVE_OBJECT obj=book obj@1,0
+take | 1	book@1,0 apple@-1,0	VB_RETRIEVE_OBJECT obj=apple obj@-1,0
+take | the apple	book@1,0 apple@-1,0	VB_RETRIEVE_OBJECT obj=apple obj@-1,0
+take | book	book@1,0 apple@-1,0	VB_RETRIEVE_OBJECT obj=book obj@1,0
+take | the closest	book@3,0 apple@-1,0	VB_RETRIEVE_OBJECT obj=apple obj@-1,0
+take | the second	book@1,0 apple@-1,0	VB_RETRIEVE_OBJECT obj=book obj@1,0
+take | left	book@1,0 apple@-1,0	VB_RETRIEVE_OBJECT obj=apple obj@-1,0
+take | right	book@1,0 apple@-1,0	VB_RETRIEVE_OBJECT obj=book obj@1,0
+take | 3	book@1,0 apple@-1,0	VB_MOVE_DIRECTION
+take | look	book@1,0 apple@-1,0	VB_OBSERVE_LOCALE
+take | look | 1	book@1,0 apple@-1,0	VB_MOVE_DIRECTION
+take | the chair	book@1,0 apple@-1,0	VB_MOVE_TOWARD obj=chair
+take | attack the closest rat	book@1,0 apple@-1,0 *rat@0,-2 *rat@2,2	VB_ATTACK_OBJECT obj=rat obj@0,-2
+throw the dagger at the goblin	*goblin@0,-2 *goblin@0,2	says=Which do you mean: 1. the goblin ahead, or 2. the goblin behind you?
+throw the dagger at the goblin | 2	*goblin@0,-2 *goblin@0,2	VB_THROW_OBJECT obj=dagger other=goblin other@0,2
+throw the dagger at the goblin | ahead	*goblin@0,-2 *goblin@0,2	VB_THROW_OBJECT obj=dagger other=goblin other@0,-2
+target the goblin	*goblin@-1,-1 *goblin@1,0	says=Which do you mean: 1. the goblin ahead to your left, or 2. the goblin to your right?
+target the goblin	*goblin@-1,-2 *goblin@-2,-2	says=Which do you mean: 1. the goblin ahead to your left, on the right, or 2. the goblin ahead to your left, on the left?
+target the goblin | the closest	*goblin@0,-3 *goblin@1,0	says=Your target: the goblin.
+
+# --- take all: everything it sees lying about, the nearest first
+take all	book@1,0 apple@-2,0	VB_RETRIEVE_OBJECT obj=book obj@-
+take all	apple@-2,0 book@1,0 sword@0,-3	VB_RETRIEVE_OBJECT obj=book
+take everything	apple@-2,0	VB_RETRIEVE_OBJECT obj=apple
+take all	-	says=There's nothing here to take.
+take all	*goblin@0,-1	says=There's nothing here to take.
+
+# --- which of several: the closest, the largest, the smallest, the lead, the second, any
+take the closest sword	sword@3,0 sword@0,-1	VB_RETRIEVE_OBJECT obj=sword obj@0,-1
+take the nearest sword	sword@3,0 sword@0,-1	VB_RETRIEVE_OBJECT obj=sword obj@0,-1
+take the largest stone	stone@1,0:2 stone@0,-1:5	VB_RETRIEVE_OBJECT obj=stone obj@0,-1
+take the biggest stone	stone@1,0:2 stone@0,-1:5	VB_RETRIEVE_OBJECT obj=stone obj@0,-1
+take the smallest stone	stone@1,0:2 stone@0,-1:5	VB_RETRIEVE_OBJECT obj=stone obj@1,0
+take the first sword	sword@-1,0 sword@1,0	VB_RETRIEVE_OBJECT obj=sword obj@-1,0
+take the second sword	sword@-1,0 sword@1,0	VB_RETRIEVE_OBJECT obj=sword obj@1,0
+take the third sword	sword@-1,0 sword@1,0	VB_RETRIEVE_OBJECT obj=sword obj@-
+take any sword	sword@3,0 sword@0,-1	VB_RETRIEVE_OBJECT obj=sword obj@0,-1
+take the sword	sword@3,0	VB_RETRIEVE_OBJECT obj=sword obj@3,0
+take the sword	sword@3,0 sword@0,-1	VB_RETRIEVE_OBJECT obj=sword obj@-
+take the closest	sword@3,0 shield@0,-1	VB_RETRIEVE_OBJECT obj=shield obj@0,-1
+take the iron key	iron_key@1,0	VB_RETRIEVE_OBJECT obj=iron key obj@1,0
+take the key	iron_key@1,0	VB_RETRIEVE_OBJECT obj=iron key obj@1,0
+take the keys	iron_key@1,0	VB_RETRIEVE_OBJECT obj=iron key obj@1,0
+take the sword	iron_key@1,0	VB_RETRIEVE_OBJECT obj=sword obj@-
+attack the closest rat	*rat@2,0 *rat@0,-1	VB_ATTACK_OBJECT obj=rat obj@0,-1
+attack the lead goblin	*goblin@0,-3 *goblin@0,-1	VB_ATTACK_OBJECT obj=goblin obj@0,-1
+attack the rat	*giant_rat@1,0	VB_ATTACK_OBJECT obj=giant rat obj@1,0
+attack the rat	*giant_rat@1,0 *giant_rat@-1,0	VB_ATTACK_OBJECT obj=rat obj@-
+attack the closest	*giant_rat@3,0 *orc@0,-1	VB_ATTACK_OBJECT obj=orc obj@0,-1
+throw the dagger at the closest goblin	*goblin@0,-4 *goblin@2,-2	VB_THROW_OBJECT obj=dagger other=goblin other@2,-2 prep=PR_AT
+throw the apple hard at the closest goblin	*goblin@0,-4 *goblin@2,-2	VB_THROW_OBJECT obj=apple other=goblin other@2,-2 manner=MN_HARD
+throw hard the apple at the lead goblin	*goblin@0,-4 *goblin@2,-2	VB_THROW_OBJECT obj=apple other=goblin other@2,-2 manner=MN_HARD
+throw the apple at the largest goblin	*goblin@0,-4 *goblin@2,-2	VB_THROW_OBJECT obj=apple other=goblin other@0,-4
+throw at the goblin	*goblin@0,-2	VB_THROW_OBJECT obj= other=goblin other@0,-2 prep=PR_AT
+throw at the closest goblin	*goblin@0,-4 *goblin@2,-2	VB_THROW_OBJECT obj= other=goblin other@2,-2
+throw the dagger at the goblin	*goblin@0,-2	VB_THROW_OBJECT obj=dagger other=goblin other@0,-2
+throw the dagger at the goblin	-	VB_THROW_OBJECT obj=dagger other=goblin other@-
+throw the dagger	-	VB_THROW_OBJECT obj=dagger other=
+
+# --- the target: set, shown, cleared, taken by a verb that wants one
+target the goblin	*goblin@0,-2	says=Your target: the goblin.
+aim at the goblin	*goblin@0,-2	says=Your target: the goblin.
+target the goblin | target	*goblin@0,-2	says=Your target: the goblin ahead.
+target the goblin | target	*goblin@2,0	says=Your target: the goblin to your right.
+target	-	says=You have no target.
+target the goblin | clear target	*goblin@0,-2	says=You have no target now.
+target the goblin | clear target | target	*goblin@0,-2	says=You have no target.
+target the goblin | untarget | target	*goblin@0,-2	says=You have no target.
+target the goblin | attack	*goblin@0,-2	VB_ATTACK_OBJECT obj=goblin obj@0,-2
+target the goblin | throw the dagger	*goblin@0,-2	VB_THROW_OBJECT obj=dagger other=goblin other@0,-2 prep=PR_AT
+target the goblin | throw the dagger at the rat	*goblin@0,-2 *rat@1,0	VB_THROW_OBJECT obj=dagger other=rat other@1,0
+throw the dagger at the goblin | attack	*goblin@0,-2	VB_ATTACK_OBJECT obj=goblin obj@0,-2
+throw the dagger at the goblin | target	*goblin@0,-2	says=Your target: the goblin ahead.
+target the troll	*goblin@0,-2	says=You see no troll here.
+target the goblin	-	says=You see no goblin here.
+target the dagger | drop the dagger | target	dagger@1,0	says=You have no target.
+target the goblin | throw the goblin	*goblin@0,-2	VB_THROW_OBJECT obj=goblin
+target the goblin | attack	*goblin@0,-2:down *orc@0,-3	VB_ATTACK_OBJECT obj=
+target the goblin | attack	*goblin@0,-2:down	VB_ATTACK_OBJECT obj=goblin obj@0,-2
+attack	*goblin@0,-2	VB_ATTACK_OBJECT obj=
+
+# --- the character, "me"
+examine me	-	VB_EXAMINE_OBJECT sel=SL_ME
+look at me	-	VB_OBSERVE_OBJECT sel=SL_ME
+follow me	-	VB_ALLY_COME sel=SL_ME
+open the door behind me	-	VB_OPEN_OBJECT sel=SL_THE
+
+# --- looking, by the phrase's shape
+look	-	VB_OBSERVE_LOCALE
+look around	-	VB_OBSERVE_LOCALE
+look here	-	VB_OBSERVE_LOCALE
+take a gander	-	VB_OBSERVE_LOCALE
+look north	-	VB_OBSERVE_DIRECTION
+look to the left	-	VB_OBSERVE_DIRECTION
+look at the glass	-	VB_OBSERVE_OBJECT obj=glass
+look at the wall	-	VB_OBSERVE_OBJECT
+look through the window	-	VB_OBSERVE_THROUGH
+look around the corner	-	VB_OBSERVE_AROUND
+look around the pillar	-	VB_OBSERVE_AROUND
+look for the key	-	VB_FIND_OBJECT obj=key
+examine the box	box@1,0	VB_EXAMINE_OBJECT obj=box obj@1,0
+look closely	-	VB_EXAMINE_LOCALE
+really look at the box	box@1,0	VB_EXAMINE_OBJECT obj=box
+
+# --- moving: N alone, a move at the pace, as far as it goes
+n	-	VB_MOVE_DIRECTION
+north	-	VB_MOVE_DIRECTION
+go north	-	VB_MOVE_DIRECTION
+walk to the door	-	VB_MOVE_TOWARD
+go through the door	-	VB_MOVE_TOWARD
+go down the stairs	-	VB_MOVE_DIRECTION
+climb up the ladder	-	VB_CLIMB
+move south 4 squares	-	VB_MOVE_DIRECTION
+walk north quietly	-	VB_MOVE_DIRECTION manner=MN_QUIET
+open the door carefully	-	VB_OPEN_OBJECT manner=MN_CAREFUL
+throw the apple gently at the goblin	*goblin@1,0	VB_THROW_OBJECT manner=MN_GENTLE

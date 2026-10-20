@@ -538,6 +538,7 @@ static unsigned char cq_st;                     /* The line posted to the comman
 static signed char cq_res;                      /* (Its verdict, cq_cmd's) */
 unsigned char cq_again;                         /* The line changed since it was posted (names_subst's): posted again */
 struct cmd cmd;                                 /* The command being carried out (the parser's, cq_cmd's) */
+unsigned char untarget;                         /* (The target let go at the next command: resolve.c's) */
 
 /* ---- The status line */
 
@@ -973,6 +974,7 @@ void __fastcall__ s_took_up (unsigned r)
     }
     if ((unsigned char) r == IR_OK) {
         after (r >> 8, 20, IO_GET);
+        taken_next (pending);                   /* ("Take all": the next, as it's free) */
     }
 }
 
@@ -1102,8 +1104,12 @@ static unsigned char __fastcall__ deal (unsigned char how)
 static unsigned char __fastcall__ chores (unsigned char action)
 {
     switch (action) {
-    case VB_OBSERVE_LOCALE:                     /* (Looked about: one way, at a thing, through it or round it, */
-    case VB_OBSERVE_DIRECTION:                  /*   the same, till slice 4.0's looking one way) */
+    case VB_OBSERVE_DIRECTION:                  /* (Looked one way: turned to it, the turn's look; else, and at a */
+        if (cmd.dir <= H_NW && cmd.dir != HUB->pc_face) {   /*   thing, through it or round it, about, as */
+            intend (I_TURN, cmd.dir);           /*   ever, till slice 4.0's looking one way) */
+            break;
+        }
+    case VB_OBSERVE_LOCALE:
     case VB_OBSERVE_OBJECT:
     case VB_OBSERVE_THROUGH:
     case VB_OBSERVE_AROUND:
@@ -1248,7 +1254,8 @@ void __fastcall__ s_command (char* l)
     ok = s_cq_cmd (l);                          /* (The command the parser made: dq0c's, the grammar's verdict with
                                                 **   it) */
     pc_face = HUB->pc_face;
-    d = choose (&cmd);                          /* (A choice asked for: this line's, the command again) */
+    d = choose (&cmd);                          /* (A choice asked for: this line's, the command again; a fixture's, */
+    d |= answer (d);                            /*   or a thing's) */
     tx = 0;
     if ((cmd.obj.word[0] || cmd.n) && (cmd.action == VB_MOVE_TOWARD || cmd.action == VB_MOVE_DIRECTION) &&
         cmd.dir == 0xFF && !cmd.obj.kind) {     /* (A word alone, or a number, that's no way: "foo", "1") */
@@ -1257,6 +1264,9 @@ void __fastcall__ s_command (char* l)
     }
     if (!d && !ok) {                            /* (Words the game knows, but not a command the grammar has) */
         sayf ("\nI don't understand that.");
+        return;
+    }
+    if (resolve () != RV_ON) {                  /* (Its things found, its unsaid filled; or a question asked) */
         return;
     }
     if ((d = puzzle (&cmd)) != Q_NONE) {        /* (The theme's puzzle's: theme.c) */
@@ -1413,6 +1423,22 @@ portal:
     case VB_LIGHT_OBJECT:
     case VB_EXTINGUISH_OBJECT:
         handle (cmd.aux, cmd.obj.word, cmd.other.word, cmd.prep == PR_ON);
+        return;
+    case VB_THROW_OBJECT:                       /* (Thrown at the thing said, or the target: the world's throw, its
+                                                **   words overlay 11's) */
+        d = HUB->pc_light;
+        if (cmd.other.x) {
+            HUB->ireq.x = cmd.other.x;
+            HUB->ireq.y = cmd.other.y;
+            HUB->ireq.to = cmd.manner;
+            pa = things (IO_THROW, cmd.obj.word);
+        } else {
+            pa = cmd.other.word[0] ? IR_NOT_HERE : IR_FULL;   /* (No mark it sees; none said) */
+        }
+        throw_words (pa | HUB->ireq.qty << 8);
+        if (pa == IR_OK) {
+            after (d, 20, IO_DROP);             /* (Its time; a light thrown, the world's look in the new light) */
+        }
         return;
     case VB_META_INVENTORY:
         things (IO_LIST, "");

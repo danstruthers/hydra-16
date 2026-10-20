@@ -206,6 +206,7 @@ static const unsigned char purpose[P_THEME] = {
     HARN_STL,                                                           /* Concealment: HarnMaster's Stealth */
     HARN_LCK,                                                           /* A mechanism made out: Lockcraft (traps) */
     HARN_NTR,                                                           /* Guile: Intrigue */
+    HARN_THR,                                                           /* A thing thrown: Throwing */
 };
 
 /* The skill that knows a thing (rs.h's AP_*): weapons and armour Weaponcraft, metal Metalcraft, wood Timbercraft,

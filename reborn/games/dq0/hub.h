@@ -340,7 +340,8 @@ struct cthing {
     unsigned char   lies;                       /* The way it lies, if that's said ("the door to my left": CQ_REL | 6;
                                                 **   0xFF: none) */
     unsigned        x, y;                       /* Its square, once it's found (0, 0: not yet) */
-    char            word[16];                   /* Its word as typed ("sword"; "#12", a thing named: names.c's), or "" */
+    char            word[16];                   /* Its word as typed ("sword"; "#12", a thing named: names.c's), or
+                                                **   "" */
 };
 enum { SL_THE, SL_ANY, SL_IT, SL_ALL, SL_CLOSEST, SL_LARGEST, SL_SMALLEST, SL_LEAD, SL_NTH, SL_ME };
                                                 /* (Which: the one there is, or the one meant; any one; it, the last
@@ -372,7 +373,8 @@ struct cmd {
     unsigned char   prep;                       /* PR_* (dq0.h's): the other thing's part (in it, on it, from it,
                                                 **   with it, at it, to it) */
     unsigned char   aux;                        /* The verb's own (commands.verbs' aux): the things' request it is
-                                                **   (IO_*), the denizens' sway (SW_*), what a blow strikes with (SK_*) */
+                                                **   (IO_*), a door's work (PA_*), the denizens' sway (SW_*), what a
+                                                **   blow strikes with (SK_*), a stance (D_*) */
     unsigned char   manner;                     /* MN_*: how (the adverbs said: "carefully", "hard") */
     unsigned char   order;                      /* An ally's request (OR_*: the first said) */
     unsigned char   dflt;                       /* DF_*: the thing its verb takes unsaid */
