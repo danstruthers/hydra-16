@@ -9,9 +9,10 @@
 //
 // createRecorder() gives { hook, attach(m), games, final() }: hook is the machine's opt.sharedWrite (sim/test.js
 // chains it with the hub writers' check in every dq0 test), attach(m) once it's booted; games: each game played (a
-// hub made: its magic written), { events, dens, replies, snaps }, each record with line, the number of lines entered
-// before it.  final(): the state now (the last snapshot, at the test's end).  sim/test.js puts it on the machine as
-// m.dq0; tests.js's dq0Turns reads it a line at a time.
+// hub made: its magic written), { events, dens, replies, snaps, tasks (the character's long task's part done, as it
+// changes: { kind, len, done }) }, each record with line, the number of lines entered before it.  final(): the state
+// now (the last snapshot, at the test's end).  sim/test.js puts it on the machine as m.dq0; tests.js's dq0Turns reads
+// it a line at a time.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -82,6 +83,7 @@ const EXPRS = {
   gRel: F('struct sight', 'glow[0].rel'), gDist: F('struct sight', 'glow[0].dist'), gHow: F('struct sight', 'glow[0].how'),
   tDazzled: F('struct sight', 'dazzled'),
   uiBank: 'UI_BANK', uMap: F('struct uirec', 'map'), mapH: 'MAP_H', mapW: 'MAP_W',
+  pcTask: F('struct hub', 'pc_task'), ltKind: F('struct ltask', 'kind'), ltLen: F('struct ltask', 'len'), ltDone: F('struct ltask', 'done'),
 };
 
 // The headers' enums and #defines with a number: { names: { NAME: value }, blocks: [[NAME ...] an enum's members] }
@@ -175,6 +177,7 @@ function createRecorder() {
       status: str(h, L.pcstatus, 16), digTool: [0, 1, 2, 3].map(i => str(h, L.digTool + i * 8, 8)),
       pc: { sn: h[L.pcSn], x: w16(h, L.pcX), y: w16(h, L.pcY), face: h[L.pcFace], light: h[L.pcLight], lamp: str(h, L.pcLamp, 14),
         pos: h[L.pcPos], gait: h[L.gait], watch: h[L.watch], going: h[L.pcGoing], stance: name('D_NONE', h[L.pcStance]), strike: name('SK_BEST', h[L.pcStrike]) },
+      task: { kind: name('LT_NONE', h[L.pcTask + L.ltKind]), len: w16(h, L.pcTask + L.ltLen), done: w16(h, L.pcTask + L.ltDone) },
       sum: { cond: w16(h, L.pcsum + L.sCond), health: h[L.pcsum + L.sHealth], load: h[L.pcsum + L.sLoad], sight: h[L.pcsum + L.sSight],
         step: h[L.pcsum + L.sStep], gstep: Array.from(h.subarray(L.pcsum + L.sGstep, L.pcsum + L.sGstep + L.ngaits)) },
       actors: [], items: [], names: [], sight: null, theme: '', map: [] };
@@ -230,7 +233,7 @@ function createRecorder() {
       const b = m.sharedBanks()[k];
       if (b && b[0] === (L.magic & 0xFF)) {
         key0 = k;
-        games.push(game = { line: enters, events: [], dens: [], replies: [], snaps: [], eq: 0, dq: 0 });
+        games.push(game = { line: enters, events: [], dens: [], replies: [], snaps: [], tasks: [], eq: 0, dq: 0 });
       }
       return;
     }
@@ -245,6 +248,9 @@ function createRecorder() {
       game.dq = v;
       const b = bank(L.denBank);
       if (b) game.dens.push(decode(b, ((v - 1) & (L.dqSize - 1)) * L.msg, true));
+    } else if (off === L.pcTask + L.ltDone + 1) {               // (The long task's part done, its high byte written last)
+      const kind = name('LT_NONE', h[L.pcTask + L.ltKind]), done = h[off - 1] | v << 8, t = game.tasks[game.tasks.length - 1];
+      if (!t || t.kind !== kind || t.done !== done) game.tasks.push({ line: enters, kind, len: w16(h, L.pcTask + L.ltLen), done, cyc: m.cpu.cyc });
     } else if (v === 2) {                                       // (A reply: its state REQ_DONE, the rest written)
       if (off === L.ireq) game.replies.push({ line: enters, req: 'ireq', kind: name('IO_KIT', h[off + L.irKind]), result: name('IR_OK', h[off + L.irResult]),
         item: w16(h, off + L.irItem), to: w16(h, off + L.irTo), name: str(h, off + L.irName, 16), into: str(h, off + L.irInto, 16),

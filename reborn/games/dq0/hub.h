@@ -389,8 +389,8 @@ enum { DF_NONE, DF_PLACE, DF_LAST, DF_NEAR, DF_FRONT, DF_TARGET, DF_HAND };   /*
                                                 **   character is, the last thing named, that or else what's near
                                                 **   (which, asked), what's in front, the target (else the nearest
                                                 **   foe), what's in hand */
-enum { LT_NONE, LT_WALK, LT_CLIMB, LT_DIG, LT_SEARCH, LT_WAIT, LT_SLEEP, LT_TALK };   /* A long task's kind (a verb's:
-                                                **   commands.verbs' task) */
+enum { LT_NONE, LT_WALK, LT_CLIMB, LT_DIG, LT_SEARCH, LT_WAIT, LT_SLEEP, LT_TALK, LT_BATTER };  /* A long task's kind
+                                                **   (a verb's: commands.verbs' task) */
 #define MN_CAREFUL      0x01                    /* (struct cmd's manner: carefully, slowly, quickly, quietly, hard, */
 #define MN_SLOW         0x02                    /*   gently, firmly) */
 #define MN_QUICK        0x04
@@ -660,10 +660,11 @@ struct hub {                                    /* Bank 0, at $8000 */
     ** to keep for every actor alike, the character's here for the UI: its bar on the status line, its words; the
     ** player's stop and a soft interruption's answer the world's intents (I_STOP, I_GO_ON) */
     struct ltask {
-        unsigned char kind;                     /* LT_*: none, a walk, a climb, a dig, a search, a wait */
+        unsigned char kind;                     /* LT_*: none, a walk, a climb, a dig, a search, a wait, a battering */
         unsigned char asking;                   /* A soft interruption put to the player (E_TASK's TE_ASK*): 1 */
         unsigned    len, done;                  /* Its length and its part done, its own units (a walk's squares, a
-                                                **   dig's half-feet, a climb's feet, a wait's tenths) */
+                                                **   dig's half-feet, a climb's feet, a wait's tenths, a battering's
+                                                **   blows) */
     }               pc_task;
 };
 #define SN_SEEN         0x01                    /* (dsense's res: the character seen, */

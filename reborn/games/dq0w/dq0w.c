@@ -68,6 +68,7 @@ void __fastcall__ go (unsigned char h);         /* Part 9 */
 void __fastcall__ go_to (unsigned x, unsigned y);
 void __fastcall__ step_to (unsigned char h, unsigned char n, unsigned char keep);
 void __fastcall__ door_work (unsigned char what);   /* Part 12 */
+unsigned char batter_on (void);
 void step_on (void);                            /* Part 23 */
 unsigned char task_news (void);
 void __fastcall__ task_word (const struct msg* m);
@@ -2043,6 +2044,28 @@ void __fastcall__ s_door_work (unsigned char what)
     work (what, px_, py_, pd_);
     HUB->pc_face = H_OF (pd_);
     worked (t);
+    if (wk.what == W_BLOW) {
+        task (LT_BATTER, BLOWS);                /* (Battering: a long task, a blow at a time as it's free) */
+    }
+}
+
+/* A battering's next blow as the character's free (the main loop's, while its long task's LT_BATTER: part 6's
+** blows), the character busy its time; or, done, what came of the blows told and seen, the long task over, and the
+** character busy for the time a trap it set off took: 2 while it's busy, 0 once it's free */
+unsigned char s_batter_on (void)
+{
+    wk.tt = 0;
+    blows ();
+    hub_map (0);
+    if (wk.what != W_BLOW && wk.what != W_GONE) {
+        HUB->pc_task.kind = LT_NONE;
+        see (0);
+    }
+    if (!wk.tt) {
+        return 0;
+    }
+    busy (wk.tt);
+    return 2;
 }
 
 #pragma code-name (pop)
@@ -2119,8 +2142,10 @@ static void __fastcall__ halt (unsigned char why)
     }
 }
 
+unsigned char pc_cut;                           /* (work.h's) */
 static void __fastcall__ stop (unsigned char why)
 {
+    pc_cut = 1;
     if (pon) {
         halt (why);
         return;
@@ -2755,6 +2780,9 @@ int main (int argc, char* argv[])
             }
             took = take_n ? take_up () : pfoe ? close_on () : srch ? searched () : 0;  /* (A thing walked over to: taken up, or walked on
                                                 **   to; a blow's close-in: struck, or walked on) */
+            if (!took && HUB->pc_task.kind == LT_BATTER) {
+                took = batter_on ();            /* (A battering's next blow, or what came of it told) */
+            }
             if (took == 1) {
                 see (0);
             } else if (!took) {

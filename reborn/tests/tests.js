@@ -3791,6 +3791,43 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0battering', what: 'Dingus Quest Zero\'s battering a long task (slice 4.0, HOUSE.md\'s long tasks: a blow at a time as the clock goes, its bar the blows struck, stopped by the player or hard, the harm done kept), by the world\'s events and the long task\'s part done as it went (the hub\'s pc_task: the referee\'s, HarnMaster\'s, at these seeds): at seed 14 a pick battering the sound door a dozen blows, one at a time (LT_BATTER, its length a dozen), leaving it giving, and battered again, broken down; then the same door battered and "stop digging" refused as it goes (it\'s a battering), "stop battering" stopping it part way, how the door stands told, and battered again, broken down in as many blows in all as without the stop (the harm done kept, each blow its own roll as before); with the hand-written theme\'s hostile rats (inhabit.txt) a battering stopped hard by a rat\'s blow',
+      init: 't_rc', cycles: 1000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
+        'dq0 -p t -s 14 -c /ram/c.hm -k pick', 'break the door', 'break', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -k pick', 'break the door']) +
+        'ĀĀstop digging\rstop battering\r' + dq0Typed(['break', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g -k pick', 'break the door ahead', 'quit',
+        'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [], tasks = m.dq0.games.flatMap(g => g.tasks);
+        // (A run's part done as it went, from turn t's line to turn u's: the blows struck, one at a time from none)
+        const run = (t, u, what) => {
+          const d = tasks.filter(e => e.kind === 'LT_BATTER' && e.line > t.k && e.line <= u.k).map(e => e.done);
+          if (!d.length || !d.every((v, i) => v === i)) f.push(what + ': its part done not the blows struck one at a time (' + d.join(' ') + ')');
+          return d.length - 1;
+        };
+        const g1 = T.of('dq0 -p t -s 14 -c /ram/c.hm -k pick'), b1 = T.after(g1, 'break the door'), r1 = T.after(b1, 'break'), q1 = T.after(r1, 'quit');
+        const n1 = run(b1, r1, 'the whole run'), m1 = run(r1, q1, 'the run after it');
+        if (n1 !== 12) f.push('the whole run not a dozen blows: ' + n1);
+        if (!tasks.some(e => e.kind === 'LT_BATTER' && e.len === 12)) f.push('the long task\'s length not a dozen blows');
+        dq0Need(f, b1, 'E_PORTAL', { po: 'PO_GIVING' }, 'the pick\'s dozen blows didn\'t leave the door giving');
+        dq0Need(f, r1, 'E_PORTAL', { po: 'PO_BROKE_DOWN' }, 'battered again, the door not broken down');
+        const g2 = T.after(q1, 'dq0 -p t -s 14 -c /ram/c.hm -k pick'), b2 = T.after(g2, 'break the door'), sd = T.after(b2, 'stop digging');
+        const sb = T.after(b2, 'stop battering'), r2 = T.after(sb, 'break'), q2 = T.after(r2, 'quit');
+        dq0Need(f, T.and(sd), 'E_TASK', { te: 'TE_NOT', task: 'LT_BATTER', named: 'LT_DIG' }, '"stop digging" not refused as it battered');
+        dq0Need(f, sb, 'E_TASK', { te: 'TE_STOPPED', task: 'LT_BATTER' }, '"stop battering" didn\'t stop it');
+        const n2 = run(b2, r2, 'the run stopped'), m2 = run(r2, q2, 'the run after the stop');
+        if (!(n2 >= 1 && n2 < 12)) f.push('not stopped part way: ' + n2 + ' blows');
+        dq0Need(f, sb, 'E_PORTAL', { po: p => p === 'PO_HOLDING' || p === 'PO_GIVING' }, 'how the door stood not told as it stopped');
+        dq0Need(f, r2, 'E_PORTAL', { po: 'PO_BROKE_DOWN' }, 'battered again after the stop, the door not broken down');
+        if (n2 + m2 !== n1 + m1) f.push('the harm done before the stop not kept: ' + n2 + ' blows, then ' + m2 + ', not ' + (n1 + m1) + ' in all as without it');
+        const b3 = T.after(T.of('dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g -k pick'), 'break the door ahead');
+        dq0Need(f, b3, 'E_TASK', { te: 'TE_HIT', task: 'LT_BATTER' }, 'the battering not stopped hard by the rat\'s blow');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0fight', what: 'Dingus Quest Zero\'s fights (DENIZENS.md: fights; the referee\'s melee, RS_ATTACK, dq0harn/fight.c), by the blows told (the denizens\' events, E_FIGHT: who struck whom, how it came out, what it left them in; the referee\'s dice the commands\', in their order, at the turns pace: HarnMaster\'s at this seed): a fight with seed 5\'s giant rats won (down its ladder, a sword in hand, dq0 -k sword; the character\'s Sword 80, hmchar\'s file): the rat struck at, and its lair\'s kin, turn on the character, both striking at it; three blows dodged, the fourth knocking the rat senseless; then the other struck at by the way it lies (the rat ahead to the right) and knocked senseless too; each finished where it lies, their bodies left (seen as the world looks about again); the character hurt by their blows',
       init: 't_rc', cycles: 900e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'echo ml swd 80 >> /ram/c.hm', 'dq0 -p t -s 5 -c /ram/c.hm -k sword -T',

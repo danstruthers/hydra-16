@@ -8,7 +8,10 @@
 ** door broken down open for good (PS_WRECKED), a portcullis a way through for good, jammed.  A fist, a foot or a head
 ** that strikes it is hurt by a blow gone wrong (the referee's: more by a sturdy door than a rotten one, less with
 ** gauntlets, boots, a helm), the character stopping when it's hurt enough.  A door's bar, burst, falls where it was;
-** broken glass is left in shards at the character's feet; a door's trap set off as it gives way.
+** broken glass is left in shards at the character's feet; a door's trap set off as it gives way.  A long task
+** (HOUSE.md's: a battering, LT_BATTER, its bar the blows struck): begun by work (), then a blow at a time as the
+** character's free (dq0w.c's batter_on), the harm kept as each lands, what came of them told as they end; stopped,
+** hard or by the player (pc_cut), the harm done so far stays.
 **
 ** All of it swapped part 6's (../dq0/swap.inc: dq0w.cfg's SW6), blows () called through its stub (bank.s's).
 */
@@ -31,12 +34,13 @@
 #include "workpart.h"
 #include "body.h"
 
-/* Blows at the portal's part (its material mat, PM_* or 4 glass; its body): as many as it takes, or a dozen (four
-** that make no mark at all: given up), a few seconds each; each an attack the part ignores, the material's resistance
-** to each aspect its armour (the less, the worse the part's state); the harm past it kept (pq.harm's part, its mask
-** hm, its shift hs: a window's shutters' and its bars' a nibble each, a door's the byte): 0 if it gives way, else
-** how it stands (PO_GIVING, PO_HOLDING, PO_NO_MARK).  A part of the striker hurt by a blow gone wrong (the referee's
-** say, its armour the referee's) is kept (hb, hw), and once it's hurt enough the blows stop */
+/* The next blow at the portal's part (its material mat, PM_* or 4 glass; its body), if the battering goes on: a dozen
+** at most (BLOWS: the hub's pc_task done, those struck), four that make no mark at all given up (its harm as it
+** began, was), none once the striker's hurt enough or the long task's stopped; a few seconds each (tt); an attack
+** the part ignores, the material's resistance to each aspect its armour (the less, the worse the part's state); the
+** harm past it kept as it lands (pq.harm's part, its mask hm, its shift hs: a window's shutters' and its bars' a
+** nibble each, a door's the byte), W_GONE if it gives way.  A part of the striker hurt by a blow gone wrong (the
+** referee's say, its armour the referee's) is kept (hb, hw), the worst.  1 if one was struck */
 static const unsigned char resist[5][4] = {     /* Against blows, edges, points, fire (items.h's DM_*) */
     { 4, 3, 4, 1 }, { 5, 5, 5, 3 }, { 6, 7, 7, 7 }, { 6, 8, 9, 9 }, { 0, 5, 3, 6 }
 };
@@ -44,98 +48,125 @@ static const unsigned char resist[5][4] = {     /* Against blows, edges, points,
 static unsigned char __fastcall__ batter (unsigned char mat, unsigned char body)
 {
     struct req* r;
-    unsigned char n, h = wk.pq.harm >> wk.hs & wk.hm, was = h, i, k, gone = 0;
+    unsigned char n, h = wk.pq.harm >> wk.hs & wk.hm, i, k;
 
-    if (body > wk.hm) {
-        body = wk.hm;
+    hub_map (0);
+    n = (unsigned char) HUB->pc_task.done;
+    if (n >= BLOWS || pc_cut || (wk.hw & E_STOPPED) || (n >= 4 && h == wk.was)) {
+        return 0;
     }
-    for (n = 0; n < 12 && !gone && !(wk.hw & E_STOPPED) && (n < 4 || h != was); ++n) {
-        wk.tt += 30;
-        hub_map (0);
-        r = &HUB->slot[SLOT_WORLD];
-        r->kind = RS_ATTACK;
-        r->actor = 0;
-        r->other = RS_THING;
-        r->c = n;
-        for (k = 0; k < 4; ++k) {
-            i = resist[mat][k];
-            r->x[k] = i - (i && wk.pq.qual <= 3 ? (wk.pq.qual <= 1 && i > 1 ? 2 : 1) : 0);
-        }
-        r = hub_ask (SLOT_WORLD);
-        i = r->w1;
-        wk.tt += r->w2;
-        wk.hb = r->c > wk.hb ? r->c : wk.hb;
-        wk.hw |= (r->w2 ? E_OUT : 0) | (r->result & 1 ? E_STOPPED : 0);
-        r->state = REQ_FREE;
-        if (!i) {
-            continue;
-        }
+    HUB->pc_task.done = n + 1;
+    wk.tt = 30;
+    r = &HUB->slot[SLOT_WORLD];
+    r->kind = RS_ATTACK;
+    r->actor = 0;
+    r->other = RS_THING;
+    r->c = n;
+    for (k = 0; k < 4; ++k) {
+        i = resist[mat][k];
+        r->x[k] = i - (i && wk.pq.qual <= 3 ? (wk.pq.qual <= 1 && i > 1 ? 2 : 1) : 0);
+    }
+    r = hub_ask (SLOT_WORLD);
+    i = r->w1;
+    wk.tt += r->w2;
+    wk.hb = r->c > wk.hb ? r->c : wk.hb;
+    wk.hw |= (r->w2 ? E_OUT : 0) | (r->result & 1 ? E_STOPPED : 0);
+    r->state = REQ_FREE;
+    if (i) {
         if ((unsigned) h + i >= body) {
-            gone = 1;
-            h = 0;
+            wk.what = W_GONE;
+            i = 0;
         } else {
-            h += i;
+            i += h;
+        }
+        if (i != h) {
+            wk.pq.harm = (wk.pq.harm & ~(wk.hm << wk.hs)) | i << wk.hs;
+            keep (wk.px, wk.py, wk.pq.harm, 0, PORTAL_HARM);
         }
     }
-    wk.pq.harm = (wk.pq.harm & ~(wk.hm << wk.hs)) | h << wk.hs;
-    if (h != was) {
-        keep (wk.px, wk.py, wk.pq.harm, 0, PORTAL_HARM);
-    }
-    return gone ? 0 : h * 2 >= body ? PO_GIVING : h ? PO_HOLDING : PO_NO_MARK;
+    return 1;
 }
 
-/* A door's blows (battered down: its body gone, it's open for good); a portcullis's bars, down, broken through (a gap
-** for good); a window's shutters, closed, else its glass, else its bars */
+/* A portal's blows: begun (work ()'s, PA_BREAK: noisily, the first as the character's free), the next of them struck
+** (W_BLOW: its time tt), or what came of them told as they're done (wk.what PA_BREAK after): a door battered down
+** (its body gone, it's open for good); a portcullis's bars, down, broken through (a gap for good); a window's
+** shutters, closed, else its glass, else its bars; else how it stands (PO_GIVING, PO_HOLDING, PO_NO_MARK), unless
+** it was stopped before a blow was struck */
 void s_blows (void)
 {
-    unsigned char out, part, shut;
+    unsigned char out = 0, part = 0, mat, body, h;
 
-    front ();
-    shut = (wk.pq.parts & PP_SHUTTERS) && !(wk.pq.state & PS_OPEN);
+    if (wk.what < W_BLOW) {
+        front ();
+    }
+    mat = wk.pq.mat;
+    body = wk.pq.tough;
     wk.hm = 0xFF;
     wk.hs = 0;
     if (wk.pq.kind == PK_DOOR) {
         if (wk.pq.state & PS_OPEN) {
             out = PO_IS_OPEN;
-        } else {
-            noise (8);
-            if ((out = batter (wk.pq.mat, wk.pq.tough)) == 0) {
-                out = PO_BROKE_DOWN;
-                door_state (PS_WRECKED | PS_BROKEN | PS_OPEN);
-                part_moved (KI_BAR, AT_BAR, KI_BAR, AT_BAR);
-            }
         }
     } else if (wk.pq.kind == PK_PORTCULLIS) {
+        mat = PM_IRON;
         if (wk.pq.state & PS_WRECKED) {
             out = PO_JAMMED;                    /* (Its bars forced apart: it won't move, but it's a way through) */
         } else if (wk.pq.state & PS_OPEN) {
             out = PO_IS_UP;
-        } else {
-            noise (8);
-            if ((out = batter (PM_IRON, wk.pq.tough)) == 0) {
-                out = PO_GAP;
-                door_state (PS_WRECKED | PS_OPEN);
-            }
         }
     } else {                                    /* (A window's: its shutters, closed; else its glass; else its bars) */
-        part = shut ? PP_SHUTTERS : wk.pq.parts & PP_GLASS ? PP_GLASS : wk.pq.parts & PP_BARS;
-        if (!part) {
+        part = (wk.pq.parts & PP_SHUTTERS) && !(wk.pq.state & PS_OPEN) ? PP_SHUTTERS : wk.pq.parts & PP_GLASS ?
+            PP_GLASS : wk.pq.parts & PP_BARS;
+        wk.hm = 15;
+        if (part == PP_GLASS) {
+            mat = 4;
+            body = 1;
+        } else if (part == PP_BARS) {
+            mat = PM_IRON;
+            body = part_body (PM_IRON, wk.pq.size, TH_IN, wk.pq.qual) >> 1;
+            wk.hs = 4;
+        } else if (!part) {
             out = PO_NOTHING_THERE;
-        } else {
-            noise (part == PP_GLASS ? 8 : 7);
-            wk.hm = 15;
-            wk.hs = part == PP_BARS ? 4 : 0;
-            if ((out = batter (part == PP_GLASS ? 4 : part == PP_BARS ? PM_IRON : wk.pq.mat, part == PP_GLASS ? 1 :
-                part == PP_BARS ? part_body (PM_IRON, wk.pq.size, TH_IN, wk.pq.qual) >> 1 : wk.pq.tough)) == 0) {
-                wk.pq.parts &= ~part;
-                door_state (wk.pq.state | PS_OPEN);
-                if (part != PP_SHUTTERS) {      /* (Its glass in shards at the character's feet; its bars broken out) */
-                    part_moved (part == PP_GLASS ? KI_PANE : KI_BARS, wk.px, wk.py, part == PP_GLASS ? KI_SHARDS :
-                        KI_BARS, AT_PC);
-                }
-                out = part == PP_GLASS ? PO_SHATTERED : part == PP_BARS ? PO_BARS_BROKEN : PO_SMASHED;
-            }
         }
     }
+    if (body > wk.hm) {
+        body = wk.hm;
+    }
+    h = wk.pq.harm >> wk.hs & wk.hm;
+    if (wk.what == W_GONE) {                    /* (Given way at the last blow) */
+        if (wk.pq.kind == PK_DOOR) {
+            out = PO_BROKE_DOWN;
+            door_state (PS_WRECKED | PS_BROKEN | PS_OPEN);
+            part_moved (KI_BAR, AT_BAR, KI_BAR, AT_BAR);
+        } else if (wk.pq.kind == PK_PORTCULLIS) {
+            out = PO_GAP;
+            door_state (PS_WRECKED | PS_OPEN);
+        } else {
+            wk.pq.parts &= ~part;
+            door_state (wk.pq.state | PS_OPEN);
+            if (part != PP_SHUTTERS) {          /* (Its glass in shards at the character's feet; its bars broken out) */
+                part_moved (part == PP_GLASS ? KI_PANE : KI_BARS, wk.px, wk.py, part == PP_GLASS ? KI_SHARDS :
+                    KI_BARS, AT_PC);
+            }
+            out = part == PP_GLASS ? PO_SHATTERED : part == PP_BARS ? PO_BARS_BROKEN : PO_SMASHED;
+        }
+    } else if (!out) {
+        if (wk.what < W_BLOW) {                 /* (Begun: the blows as it's free, a long task, dq0w.c's) */
+            noise (part && part != PP_GLASS ? 7 : 8);
+            wk.was = h;
+            wk.what = W_BLOW;
+            pc_cut = 0;
+            return;
+        }
+        if (batter (mat, body)) {
+            return;
+        }
+        wk.what = PA_BREAK;
+        if (!HUB->pc_task.done) {
+            return;                             /* (Stopped before a blow was struck: nothing to tell) */
+        }
+        out = h * 2 >= body ? PO_GIVING : h ? PO_HOLDING : PO_NO_MARK;
+    }
+    wk.what = PA_BREAK;
     tail (out);
 }

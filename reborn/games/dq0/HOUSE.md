@@ -149,7 +149,9 @@ P_DIG.)  *(Every ruleset's.)*
   book's Ignore defence), struck with what hits it hardest to hand (a tool, else a fist, a foot, the head); its
   impact for the aspect that does it most harm, less the material's resistance, worn off the portal's body (its
   material, size, thickness and state), the harm kept.  A door broken down stays open for good; a portcullis
-  broken through is a way through for good, jammed.  (wblow.c; fight.c's thing.)
+  broken through is a way through for good, jammed.  A blow every 3 seconds as the clock goes, a dozen at most (four
+  that make no mark at all: given up), a long task (below), the harm kept as each lands.  (wblow.c; fight.c's
+  thing.)
 - **A part that strikes a thing is hurt by a blow gone wrong:** a marginal failure a d6, a critical failure 2d6, and
   half the thing's blunt resistance, less the part's armour (gauntlets, boots' soles, a helm): a blunt hit on that
   part.  The character stops when it's hurt enough: a serious injury, three levels or more to that part, shock or
@@ -342,8 +344,8 @@ climb's test to hold on).
   them: a hostile seen that near stops a long task) and its engage initiative test.
 - **A long task** is anything the character does that takes more than a round (10 seconds): a walk, a dig, a climb, a
   search, battering a door, a wait.  Its progress is a bar on the status line, ten cells, its part done of its length
-  (a walk's squares, a dig's feet, a climb's feet, a wait's time), redrawn at most once a real second; and words as it
-  goes (the user's: both).
+  (a walk's squares, a dig's feet, a climb's feet, a wait's time, a battering's blows), redrawn at most once a real
+  second; and words as it goes (the user's: both).
 - **A walk's words**: a beat at each change (the way turns, a side passage or a door is passed, it widens or opens
   into a room, the light changes, a sound is heard), and on a quiet stretch a short line every 6 squares (30 feet) of
   none ("You go on down the passage."; the user's: about every 30 feet).
@@ -352,9 +354,9 @@ climb's test to hold on).
   **Soft** (it asks, "A rat comes into the light.  Keep digging?"; yes carries on, anything else stops it, and a new
   command typed instead stops it and runs): something new seen, heard or smelled (a denizen not hostile, a hostile
   one farther off than 30 feet, a sound), a fatigue level more.
-- **Stopping**: "stop" stops what can be stopped; "stop digging" (climbing, searching, walking, waiting) names it, and
-  a name that isn't the task's is refused ("You aren't digging.").  What's imposed can't be stopped: senseless, a fall
-  under way.
+- **Stopping**: "stop" stops what can be stopped; "stop digging" (battering, climbing, searching, walking, waiting)
+  names it, and a name that isn't the task's is refused ("You aren't digging.").  What's imposed can't be stopped:
+  senseless, a fall under way.
 - **What stopping costs**: a walk stops where the character is; a dig keeps the feet dug (the change record: a hole
   half dug stays half dug); battering keeps the harm done; a search or a wait cut short finds and rests for the part
   done; a climb, disturbed hard, is a Climbing test to keep the grip (the plan's holding on), a fall from where it is
