@@ -230,8 +230,8 @@ size.  A room is a chunk's (struct room's squares, 0-31): a cavern across many c
 of the store's records, only the character's chunk kept round it; two of the denizens' regions, only the
 character's kept; two strata's slots; two seen maps, one region; 16 of a big plan's pages); dq0 -T -T -T, three
 strata grown below the top and the character on the second (its record read back into its slot); dq0 -T -T -T -T,
-the stratum below the top 27 regions each way.  The tests: dq0page (eviction and write-back, a new game in an old
-folder), dq0strata, dq0vast and dq0soak (every cache filled several times over, kept and carried on).
+the stratum below the top 27 regions each way.  The tests: dq0vast and dq0soak (every cache filled several times over, kept
+and carried on; eviction and write-back, a new game in an old folder, each stratum the same at every return).
 
 **What's still a fixed size:** a stratum's number is a byte (255 strata) and the frame is 16 bits each way (65,535
 squares); a region's change records must fit in the change pages (2,048), the things of the 25 chunks round the
