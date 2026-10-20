@@ -181,6 +181,8 @@ void __fastcall__ theme_named (unsigned char what, unsigned char n);   /* Overla
                                                 **   lb */
 void __fastcall__ story (unsigned char resumed);    /* Overlay 5: the theme's name (and its story, a new game's) */
 void way_words (void);                          /* Overlay 5: the way out, shut or open */
+unsigned char __fastcall__ history (unsigned long seed);    /* Part 6: a game's own theme made, themegen's (main.c):
+                                                **   1, or 0 (a stand-in theme's) */
 void __fastcall__ ending (unsigned char how);   /* Overlay 5: an ending's words (END_*) */
 unsigned char __fastcall__ puzzle (struct pcmd* c);     /* Overlay 5: a command the puzzle's (Q_*: the world's
                                                 **   judgement, IO_PUZZLE, worded) */

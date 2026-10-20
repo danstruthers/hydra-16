@@ -9,7 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const THEME_SIZE = 0x1000, HEAD = 1305, NTKINDS = 8, NPIECES = 8, NRULES = 8, TSTRATA = 8;   // theme.h's
+const THEME_SIZE = 0x1000, HEAD = 1321, FILE_AT = 1305, NTKINDS = 8, NPIECES = 8, NRULES = 8, TSTRATA = 8;   // theme.h's
 const TLAYERS = 3, TERAS = 6, TFACTIONS = 8, TPEOPLES = 8;
 const KIND = 37;                                                    // items.h's struct kind
 const WT_LB = 4, SQ_FT = 5;                                         // rs.h's units: a pound's quarters, a square's feet
@@ -332,6 +332,10 @@ function build({ dir, objdir, say = () => {} }) {
   const beasts = bestiary(dir);
   const files = fs.readdirSync(path.join(dir, 'themes')).filter(t => t.endsWith('.txt')).sort();
   const themes = files.map(t => compile(fs.readFileSync(path.join(dir, 'themes', t), 'latin1'), t, beasts, files.length));
+  themes.forEach((t, i) => {                                       // (Its file's name, for popgen to read it: theme.h's file)
+    if (files[i].length > 15) throw new Error(files[i] + ': a stand-in\'s name, 15 letters at most');
+    t.data.write(files[i], FILE_AT, 'latin1');
+  });
   const faults = themes.flatMap((t, i) => check(t.t, beasts, files[i]));
   if (faults.length) throw new Error('the theme checker:\n  ' + faults.join('\n  '));
   fs.writeFileSync(path.join(objdir, '..', 'dq0t.dat'), Buffer.concat(themes.map(t => t.data)));

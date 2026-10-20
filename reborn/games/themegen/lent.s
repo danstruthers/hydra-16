@@ -16,3 +16,4 @@
             .forceimport    bnegax, bnegeax, decax2, decsp7, incax4, incax5, incax7, incax8, inceaxy, laddeq1, ldaxidx
             .forceimport    ldeaxi, leaaxsp, regsave, shleax1, shleax4, shreax1, tosadda0, tosdiva0, tosicmp0
             .forceimport    tosmoda0, tosmulax, tosudiva0, tosumoda0, tosumulax, axlong, tosumuleax, shlax1
+            .forceimport    utsteax, incax3, ldeaxidx, pushwidx

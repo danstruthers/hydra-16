@@ -213,3 +213,4 @@ ovl_out:
             SWFN        names_look, 6
             SWFN        names_keep, 6
             SWFN        room_named, 6
+            SWFN        history, 6

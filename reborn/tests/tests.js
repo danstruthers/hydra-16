@@ -3887,6 +3887,33 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0history', what: 'Dingus Quest Zero\'s own theme (theme.h): a game whose seed is past the stand-ins\' (65,536 and on, as a clock\'s is) has its region\'s history and its theme made as it begins (themegen, run by the UI before the world: "The place\'s history is being made"), into its save\'s folder (theme.txt, theme.dat), its story told the theme\'s word for word (its name, then its story: the region, its eras, who has it now, the goal), the top stratum named by it; quit and carried on (dq0 -d), the same theme read back from the folder, not made again',
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 70001 -c /ram/c.hm -d /ram/h', 'map', 'quit',
+        'ls /ram/h', 'cat /ram/h/theme.txt', 'dq0 -d /ram/h', 'quit', 'echo done'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['The place\'s history is being made', 'Under the ', 'theme.dat', 'theme.txt', 'takes up where they left off.', '% echo done\ndone\n'],
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\r/g, ''), f = [], dq0 = DQ0_MAKE();
+        const text = saidTheme(out, 'cat /ram/h/theme.txt');
+        let r;
+        try { r = dq0.compile(text, 'theme.txt', DQ0_BEASTS(), 1); } catch (e) { return ['its theme.txt isn\'t a theme: ' + e.message]; }
+        const words = s => s.replace(/\s+/g, ' ').trim(), name = (text.match(/^theme +\| (.*)/m) || [])[1] || '?';
+        const story = words(r.data.toString('latin1', r.data.readUInt16LE(776), r.data.indexOf(0, r.data.readUInt16LE(776))));
+        const game = words(o.slice(o.indexOf('history is being made'), o.indexOf('enters the dungeon.')));
+        const title = name[0].toUpperCase() + name.slice(1) + '.';
+        if (!game.includes(title)) f.push('its name not told: ' + title);
+        if (!game.includes(story)) f.push('its story not told word for word: ' + story.slice(0, 80) + ' ...');
+        const top = (text.match(/^stratum +\| ([^|]*)\|/m) || [])[1].trim();
+        if (!o.includes(top.slice(0, 14))) f.push('the top stratum not named by it: ' + top);
+        const again = o.slice(o.indexOf('% dq0 -d /ram/h'));
+        if (again.includes('history is being made')) f.push('carried on, its history made again');
+        if (!again.includes(title)) f.push('carried on, its name not told: ' + title);
+        this.notes = [name + ': ' + text.split('\n').filter(l => /^[a-z]/.test(l)).length + ' lines; ' + (story.length) + ' letters of story'];
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0plan', what: 'Dingus Quest Zero\'s built strata built to a plan (DUNGEON.md, the user\'s, 2026-10-16: "feast halls near kitchens near pantries and storage"; "Larger rooms tend to have higher ceilings, and corridors and smaller rooms tend to have uniform ceiling heights"; "Prior usage can also inform ... what kinds of detritus"): at seed 3 the crypt\'s Upper Halls (their purpose halls: a domestic suite by the way in), the character beginning in a kitchen, its iron pot lying there (what its use left), and its well (there\'s water); the chunks made, read from the hub\'s cache (world.h\'s struct chunk in the shared segment\'s banks): a hall joined to a kitchen by a passage of its own, through no other room; every hall\'s ceiling higher than the passages\' (the chunk\'s pceil), every storeroom\'s, pantry\'s, cell\'s and bedchamber\'s flat at the passages\' height; every room\'s floor flat, at the stratum\'s one level (but a hall\'s dais, two feet up)',
       meaning: true,
       init: 't_rc', cycles: 500e6,

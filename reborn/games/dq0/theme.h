@@ -1,11 +1,14 @@
 /*
 ** theme.h - Dingus Quest Zero's themes (DENIZENS.md: the theme): what a dungeon is about, as data the engine reads,
-** not code.  Each a text file (games/dq0/themes, a .txt each: its format in the first), made at build time into the
-** game's lib/dq0/dq0t.dat (make.js: THEME_SIZE bytes a theme, struct theme's layout then its words); one picked by
-** the game's seed as it starts (the seed's second byte, counted round the themes: a game's seed, the clock's, picks
-** any; the tests' small seeds the first, the one they were written against) and kept in the save.  The UI reads it
-** into the hub's theme bank (THEME_BANK, at $8000 there), where every task finds it, and into its own overlay 5's
-** bank (theme.c's copy, at $9000 there).
+** not code: a text file (its format in games/dq0/themes/1crypt.txt), its record (THEME_SIZE bytes: struct theme's
+** layout, then its words) made from it.  A game's own theme is themegen's (games/themegen): as the game begins, its
+** region's history and its theme made from the game's seed into the save's folder (or /ram/dq0 without one),
+** theme.txt, and its record compiled from it, theme.dat (themec's); dq0 -t FILE a theme written by hand, filled out by
+** themegen.  The stand-ins (games/dq0/themes, made at build time into lib/dq0/dq0t.dat by make.js) are the tests': a
+** seed under 65,536 picks one by its second byte, counted round them (the small seeds the first, the one they were
+** written against).  The save keeps which (Q.theme: a stand-in's number, or 0xFF the game's own).  The UI reads the
+** record into the hub's theme bank (THEME_BANK, at $8000 there), where every task finds it, and into its own overlay
+** 5's bank (theme.c's copy, at $9000 there).
 **
 ** A theme says: its name and its story; its strata from the top down (each one's name, and the styles its plan may
 ** be grown in, picked from by its seed, and its purpose: a keep, a temple ..., fortified or not, its built rooms'
@@ -36,7 +39,7 @@
 #define _THEME_H
 
 #define THEME_SIZE      0x1000                  /* A theme's bytes in dq0t.dat (its record, then its words) */
-#define THEME_HEAD      1305                    /* (struct theme's: make.js lays it out the same) */
+#define THEME_HEAD      1321                    /* (struct theme's: make.js lays it out the same) */
 #define NTKINDS         8                       /* Its own kinds of things, */
 #define KI_THEME        (NKINDS - NTKINDS)      /*   the catalogue's from here (items.h's NKINDS) */
 #define NPIECES         8                       /* The puzzle's pieces (and its fixtures: an altar, a throne) */
@@ -95,6 +98,22 @@ struct tfaction {                               /* The inhabitants now (the them
 };
 enum { G_NONE, G_ARTIFACT, G_EVIL, G_PRISONER, G_THROUGH };   /* The goal's kind (G_NONE: the mission's puzzle alone) */
 
+/* stratagen (bank/stratagen: a bank program, the maker's and themegen's): which of a stratum's layers a chunk of it is
+** now, from the layers, the stratum's size in chunks and its way in's chunk, and its seed (HISTORY.md) */
+struct sgq {
+    unsigned char   nl;                         /* Its layers, oldest first (fewer than two: none to plan, 0) */
+    struct tlayer   l[TLAYERS];
+    unsigned        cw, ch;                     /* Its chunks, each way */
+    unsigned        ix, iy;                     /* The way in's chunk */
+    unsigned long   seed;                       /* The stratum's */
+    unsigned        cx, cy;                     /* The chunk asked about */
+};
+#define SG_LAYER        0x03                    /* The layer whose work it is now (its purpose the uses' plan's), */
+#define SG_RUINED       0x04                    /*   left ruined by a ruin after it (the stock's debris), */
+#define SG_UNDER        0x30                    /*   an older layer under it (its remnants the stock's), */
+#define SG_HASUNDER     0x40                    /*   if it has one */
+unsigned char __fastcall__ layer_of (struct sgq* q);   /* (stratagen's entry: bank_call's) */
+
 struct theme {
     unsigned char   count;                      /* The themes in the file (the first one's) */
     unsigned char   mission;                    /* TM_* */
@@ -127,6 +146,10 @@ struct theme {
     unsigned char   pguard[NPIECES];            /*   and its guardians (a faction: 1 ...; 0 none) */
     unsigned char   nfactions;
     struct tfaction faction[TFACTIONS];
+    char            file[16];                   /* Its file, to read (the factions' lines, popgen's): a stand-in's
+                                                **   name in lib/dq0/themes (make.js's: "1crypt.txt"); a game's own,
+                                                **   "": theme.txt in the save's folder (the hub's savedir), or in
+                                                **   /ram/dq0 without one */
 };
 #define THEME           ((struct theme*) 0x8000)    /* (In the hub's theme bank) */
 typedef char theme_head[sizeof (struct theme) == THEME_HEAD ? 1 : -1];

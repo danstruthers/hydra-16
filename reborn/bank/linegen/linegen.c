@@ -44,7 +44,7 @@ static void __fastcall__ era_words (unsigned char e, char* out, unsigned char ag
     }
     fill (t, D.v[1], sizeof t);
     data (TK_ENDED, endings[r->end], 0);
-    strcat (t, strncmp (D.v[1], "and ", 4) ? " " : ", ");
+    strcat (t, ", ");
     fill (t + strlen (t), D.v[1], sizeof t - strlen (t));
     if (ago && r->end != EN_HELD) {
         data (TK_AGO, 0, 0);

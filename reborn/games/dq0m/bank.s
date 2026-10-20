@@ -157,6 +157,10 @@ ovl_out:
             OVFN        chunk_edges, 4
             OVFN        place_pieces, 4
             OVFN        fixtures, 5
+            OVFN        pl_get, 2
+            OVFN        pl_put, 2
+            OVFN        pl_new, 2
+            OVFN        pl_flush, 2
             OVFN        uses, 7
 
 ; ---- The swapped parts (../dq0/swap.inc: code run in the main RAM's top, dq0m.cfg's SWAP, a part at a time, copied
