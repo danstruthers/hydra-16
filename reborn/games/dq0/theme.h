@@ -26,7 +26,7 @@
 #define _THEME_H
 
 #define THEME_SIZE      0x1000                  /* A theme's bytes in dq0t.dat (its record, then its words) */
-#define THEME_HEAD      982                     /* (struct theme's: make.js lays it out the same) */
+#define THEME_HEAD      990                     /* (struct theme's: make.js lays it out the same) */
 #define NTKINDS         8                       /* Its own kinds of things, */
 #define KI_THEME        (NKINDS - NTKINDS)      /*   the catalogue's from here (items.h's NKINDS) */
 #define NPIECES         8                       /* The puzzle's pieces (and its fixtures: an altar, a throne) */
@@ -36,7 +36,7 @@
 struct tpiece {
     unsigned char   kind;                       /* Its kind (0 ...: KI_THEME on) */
     unsigned char   d0, d1;                     /* The strata it may lie in, from the top (0) down */
-    unsigned char   hide;                       /* Concealed, how well (0-9: found by searching); 0xFF in plain view */
+    unsigned char   hide;                       /* Concealed, how well (steps: found by searching); 0xFF in plain view */
     unsigned char   qty;
 };
 struct trule {

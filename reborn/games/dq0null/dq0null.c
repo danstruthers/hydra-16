@@ -71,7 +71,7 @@ static void __fastcall__ putn (int v)
 
 static signed char __fastcall__ flat (signed char steps)
 {
-    int c = BASE + 5 * steps;
+    int c = BASE + STEP_PCT * steps;
     unsigned char r = 1 + random (100);
 
     c = c < 5 ? 5 : c > 95 ? 95 : c;
@@ -424,7 +424,7 @@ static void __fastcall__ state (unsigned char a)
     hub_map (0);
     h = house_pace (HUB->gait, HUB->watch, dark);
     put (" (");
-    putn (5 * HUB->round / step[h]);
+    putn (SQ_FT * HUB->round / step[h]);
     put (" feet a round)");
     house_watching (HUB->watch);
     if (a) {

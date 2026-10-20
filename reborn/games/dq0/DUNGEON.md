@@ -501,7 +501,7 @@ hall, a high ceiling, a low, rough one); its figures (its size in feet, its ceil
 A trap is a hazard of its own, a record in its chunk as a portal is (world.h's struct trap), placed by the grower
 where the style says: its **kind** (TK_*: a pit, open, covered, or spiked and covered; a deadfall, a scything blade,
 darts or needles, gas, an alarm), its **trigger** (TT_*: a plate trodden, a wire tripped, a door opened or forced),
-its **hiding** (0-9, a search's steps: mechanical, found by a search; magical, TS_MAGIC, only by magical means; or
+its **hiding** (in steps, a search's: mechanical, found by a search; magical, TS_MAGIC, only by magical means; or
 none, an open pit in plain sight, its depth), and its **state** (TS_*: set, sprung, disarmed, broken; found; its
 mechanism made out).  Unfound, it's the floor or the door it looks like.  Pits are made where the squares round them
 are floor and as level as a walk, so a chunk's ways are never parted; a closed door's trap goes off as it's opened; a
@@ -565,12 +565,12 @@ pc_lamp), its item store's; it takes the time and looks again (I_LIGHT).  A ligh
 
 An item is **found** through the character's senses, as everything else is: only on a square it sees now, lit;
 noticed by the referee's test of its sight (rs.h: P_NOTICE_SIGHT, or P_SEARCH when it searches), the steps from the
-distance, the light, the item's size, and how it's **hidden**: by nothing, or concealed (its hide, 0-9: found only by
+distance, the light, the item's size, and how it's **hidden**: by nothing, or concealed (its hide, in steps: found only by
 searching, at the hiding's difficulty; HOUSE.md's traps, searching and hiding).  An item found stays known (the
 character's knowledge, the item store's); the perception record lists the items it knows of that it sees now, and the
 UI words them.
 
-**Concealment**: a thing concealed on purpose carries its difficulty, 0-9 (the item record's hide), set as it's
+**Concealment**: a thing concealed on purpose carries its difficulty in steps (the item record's hide), set as it's
 hidden: by the place (a floor's dust and corners) and the concealer's test of the hiding skill.  The skill is
 **Concealment**: one skill for hiding a thing and for hiding oneself, rs.h's P_CONCEAL, which a ruleset's referee
 maps to its own (HarnMaster has no skill of that name: its Stealth).  The character hides a thing where it stands
@@ -730,8 +730,8 @@ marked (1-9 tens of feet higher, a-i lower), the character an @, its state in a 
 
 The words tell nothing behind the character (the senses mark the squares beside it there seen, and the UI still
 knows them: "open the door behind me" turns to it), a room's figures only once it's seen the whole of it (else "its
-far side is lost in the dark"), and what's further off in less detail: a thing more than 1 + sight / 2 + its size
-squares off (the summary's sight, 0-9; the kind's size, how easily it's seen) only by its size ("something small"), a
+far side is lost in the dark"), and what's further off in less detail: a thing more than 1 + sight / 2 + its seen
+squares off (the summary's sight, 0-9; the kind's seen, how far past a speck it's made out) only by its size ("something small"), a
 denizen more than 3 + sight squares off only as something there; a portal or a thing more than two squares off
 (NEAR_SQ) examined only as it's seen from there (a portal's kind, its size against the character's, a door's
 material within 3 + sight squares), "You'd have to go closer to make out more".  Where several things or doors fit a

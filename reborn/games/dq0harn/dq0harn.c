@@ -205,7 +205,7 @@ static signed char __fastcall__ grade (unsigned char level)
 /* A skill's test (or an attribute's: ATTR), at the steps (a skill not learnt: its opening level, less a penalty) */
 static signed char __fastcall__ test_sk (harn_char* c, unsigned char sk, signed char steps)
 {
-    int mod = 5 * steps;
+    int mod = STEP_PCT * steps;
 
     if (sk & ATTR) {
         return grade (harn_test_attr (c, sk & ~ATTR, 5, mod));
@@ -219,7 +219,7 @@ static signed char __fastcall__ test_sk (harn_char* c, unsigned char sk, signed 
 static signed char __fastcall__ test (harn_char* c, unsigned char p, signed char steps)
 {
     if (p >= P_THEME) {
-        return grade (harn_test (50 + 5 * steps));      /* (A theme's own: till themes say, an even chance) */
+        return grade (harn_test (50 + STEP_PCT * steps));   /* (A theme's own: till themes say, an even chance) */
     }
     return test_sk (c, purpose[p], steps);
 }

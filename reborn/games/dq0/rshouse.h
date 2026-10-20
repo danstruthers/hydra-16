@@ -124,7 +124,7 @@ static void __fastcall__ house_light (unsigned char light, const char* lamp, uns
         put ("your ");
         put (lamp);
         put (" (");
-        putn (5 * light);
+        putn (SQ_FT * light);
         put (" feet).");
     } else {
         put (dark ? "none: it's dark here, and you feel your way." : "none of your own: this place's own light.");

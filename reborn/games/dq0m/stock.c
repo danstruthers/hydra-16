@@ -23,7 +23,7 @@
 struct stock sk;
 static unsigned sx0, sy0;
 
-/* A thing put down on a square (concealed: hide, its difficulty 0-9; else ST_SHOWN), listed: its entry, or 0 (the
+/* A thing put down on a square (concealed: hide, its difficulty in steps; else ST_SHOWN), listed: its entry, or 0 (the
 ** list full) */
 static struct sthing* __fastcall__ put_down (unsigned char kind, unsigned char sn, unsigned x, unsigned y,
     unsigned char qty, unsigned char hide)
@@ -126,7 +126,7 @@ void __fastcall__ o_stock (const struct chunk* c, unsigned x0, unsigned y0)
             k = hidden ? SP->hide_kinds[d] : uses (US_THING, i | d << 3);
             q = (hidden ? k : SP->kinds[d]) == KI_PENNIES ? 2 + random (20) : 3;    /* (The style's kind's draws:
                                                 **   the stock's dice as they were before its uses) */
-            h = hidden ? SP->h_lo + random (SP->h_span) : ST_SHOWN;
+            h = hidden ? SP->h_lo + 2 * random (SP->h_span) : ST_SHOWN;
             if (k) {                            /* (Else rotted away) */
                 put_down (k, c->sn, x0 + lx, y0 + ly, k == KI_PENNIES ? q : 1, h);
             }

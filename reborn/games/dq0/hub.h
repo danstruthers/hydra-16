@@ -26,7 +26,8 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     3                       /* (2: the command parser's role and request, dq0c; 3: its meaning) */
+#define HUB_VERSION     4                       /* (2: the command parser's role and request, dq0c; 3: its meaning;
+                                                **   4: the catalogue's kinds in rs.h's units, 37 bytes) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -331,7 +332,7 @@ struct cq {
 struct req {
     RQH;                                        /* (kind: RS_*) */
     unsigned char   actor, other;               /* Who asks about whom */
-    signed char     steps;                      /* The circumstances: + better, - worse */
+    signed char     steps;                      /* The circumstances (rs.h's steps): + better, - worse */
     unsigned char   a, b, c;
     unsigned        w1, w2;
     unsigned char   x[32];                      /* By kind: a reply's effects (rs.h's), a summary ... */
@@ -359,7 +360,7 @@ struct actor {
                                                 **   gone: I_LEAVE, or dead); 0 none */
     unsigned char   sn, face;
     unsigned long   ready;                      /* When it can act again */
-    unsigned char   step;                       /* Tenths of a second to go 5 feet */
+    unsigned char   step;                       /* Tenths of a second to go a square */
     unsigned char   pos;                        /* Its body's position (POS_*: standing, prone ...) */
     unsigned char   gait;                       /* The pace it goes at (rs.h's GA_*: a walk, till their paces come) */
     unsigned        x, y;                       /* (These, its doing and its name as struct sight's den: copied whole) */

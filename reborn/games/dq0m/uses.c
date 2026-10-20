@@ -38,7 +38,7 @@ static const struct style styles[4] = {
       { KI_PENNIES, KI_KEY, KI_LOCKPICKS, KI_POUCH },
       6, 8, 20, 14, 6, 6, 2, 2, 2, 2, 3, 1, 8, 1, 2 },
     { 1, 0, 0, 1, { 0, 0, 0, 0, 0, 20 }, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1, 1,      /* natural */
-      4, 2, 1, 4, { KI_BONES, KI_BONES, KI_SKULL, KI_POTSHERDS, KI_BROKEN_SWORD, KI_PENNIES, KI_ROPE, KI_BONES },
+      4, 2, 0, 4, { KI_BONES, KI_BONES, KI_SKULL, KI_POTSHERDS, KI_BROKEN_SWORD, KI_PENNIES, KI_ROPE, KI_BONES },
       { KI_PENNIES, KI_PENNIES, KI_POUCH, KI_KEY },
       8, 6, 0, 0, 0, 0, 0, 0, 0, 0, 2, 4, 0, 0, 0 },
     { 2, 2, 0, 1, { 12, 4, 0, 0, 2, 2 }, 8, 12, 2, 2, 1, 0, 9, 1, 2, 1, 0,     /* mine */
