@@ -3551,91 +3551,88 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0fight', what: 'Dingus Quest Zero\'s fights (DENIZENS.md: fights; the referee\'s HarnMaster melee, RS_ATTACK, dq0harn/fight.c): a fight with seed 5\'s giant rats won (down its ladder, a sword in hand, dq0 -k sword; the character\'s Sword 80, hmchar\'s file): the blows struck and dodged both ways (the rat struck at, and its lair\'s kin, turn on the character: harmed, both fighting it), a grievous wound knocking one senseless (the size of a man against a rat\'s, a point a die), then the other struck at by the way it lies (the rat ahead to the right) and knocked senseless too (a serious wound), each finished where it lies, their bodies left (items, seen as the world looks about again: the caves irregular since 2026-10-16, the rats stand otherwise and the dice fall otherwise: no mortal blow now); the character\'s own wounds on its sheet',
-      init: 't_rc', cycles: 1200e6,
-      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rāecho ml swd 80 >> /ram/c.hm\rādq0 -p t -s 5 -c /ram/c.hm -k sword -T\r' +
-        ['d', 'wait', 'go right', ...Array(4).fill('attack the rat'), 'attack the rat ahead right', 'attack the rat ahead right', 'attack the rat', 'look', 'wait', 'look', 'sheet', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
-      expect: ['You strike at the giant rat with your sword; it dodges.', 'The giant rat bites at you',
-        'A giant rat is ahead, 5 feet away, fighting you. A giant rat\nis ahead to your right, 5 feet away, fighting you.',
-        'You strike at the giant rat with your sword: a grievous deep gash to its right\nhand (G5). It falls senseless.', 'lying senseless.',
-        'You finish the giant rat where it lies. The giant rat falls dead.',
-        'You strike at the giant rat with your sword: a serious gash to its left thigh\n(S3). It falls senseless.',
-        'On the floor ahead to your right lies a body. On the floor ahead lies a\nbody.', 'Injuries: left knee M1 (stab).', '% echo $status'],
-      // (The referee's dice the commands', in their order, at the turns pace, the rats' blows asked in the slices the
-      // world waits for (the same with the typing's timing changed): at seed 5 three blows dodged, the fourth felling
-      // the rat ahead, one felling the other, each finished)
-      check(m, out) {
-        const f = [], d = 'You strike at the giant rat with your sword; it dodges.';
-        inTurn(dq0Story(out), ['> attack the rat', d, '> attack the rat', d, '> attack the rat', d, '> attack the rat',
-          'a grievous deep gash to its right hand (G5). It falls senseless.', '> attack the rat ahead right',
-          'a serious gash to its left thigh (S3). It falls senseless.', '> attack the rat ahead right', 'You finish the giant rat where it lies.',
-          '> attack the rat', 'You finish the giant rat where it lies.'], f);
+      name: 'dq0fight', what: 'Dingus Quest Zero\'s fights (DENIZENS.md: fights; the referee\'s melee, RS_ATTACK, dq0harn/fight.c), by the blows told (the denizens\' events, E_FIGHT: who struck whom, how it came out, what it left them in; the referee\'s dice the commands\', in their order, at the turns pace: HarnMaster\'s at this seed): a fight with seed 5\'s giant rats won (down its ladder, a sword in hand, dq0 -k sword; the character\'s Sword 80, hmchar\'s file): the rat struck at, and its lair\'s kin, turn on the character, both striking at it; three blows dodged, the fourth knocking the rat senseless; then the other struck at by the way it lies (the rat ahead to the right) and knocked senseless too; each finished where it lies, their bodies left (seen as the world looks about again); the character hurt by their blows',
+      init: 't_rc', cycles: 900e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'echo ml swd 80 >> /ram/c.hm', 'dq0 -p t -s 5 -c /ram/c.hm -k sword -T',
+        'd', 'wait', 'go right', ...Array(4).fill('attack the rat'), 'attack the rat ahead right', 'attack the rat ahead right', 'attack the rat', 'look', 'quit',
+        'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [], FF_D_DOWN = 4, FF_D_DEAD = 8;
+        const mine = t => dq0Ev(t, 'E_FIGHT', { who: 0 }), theirs = t => dq0Ev(t, 'E_FIGHT', { def: 0, who: w => w > 0 });
+        const a = T.filter(t => t.line === 'attack the rat'), r = T.filter(t => t.line === 'attack the rat ahead right');
+        if (a.length !== 5 || r.length !== 2) return ['the attacks not typed'];
+        const first = mine(a[0])[0];
+        if (!first) return ['no blow struck at the rat (' + dq0Evs(a[0]) + ')'];
+        if (new Set(a.slice(0, 3).flatMap(theirs).map(e => e.who)).size < 2) f.push('the rat and its kin not both striking at the character');
+        for (const t of a.slice(0, 3)) if (!mine(t).some(e => e.def === first.def && e.out === 'O_DODGED')) f.push(t.k + ': the blow not dodged (' + dq0Evs(t) + ')');
+        if (!mine(a[3]).some(e => e.def === first.def && e.out === 'O_HIT' && (e.ff & FF_D_DOWN))) f.push('the fourth blow didn\'t knock the rat senseless (' + dq0Evs(a[3]) + ')');
+        const other = mine(r[0])[0];
+        if (!other || other.def === first.def || other.out !== 'O_HIT' || !(other.ff & FF_D_DOWN)) f.push('the rat ahead to the right not struck senseless (' + dq0Evs(r[0]) + ')');
+        if (!mine(r[1]).some(e => other && e.def === other.def && e.out === 'O_DISPATCH' && (e.ff & FF_D_DEAD))) f.push('the rat ahead to the right not finished');
+        if (!mine(a[4]).some(e => e.def === first.def && e.out === 'O_DISPATCH' && (e.ff & FF_D_DEAD))) f.push('the first rat not finished');
+        const lk = T.of('look');
+        if (!lk.after || !lk.after.sight || lk.after.sight.items.filter(i => i.name === 'body').length < 2) f.push('their bodies not seen');
+        if (!lk.after || !(lk.after.sum.health > 0)) f.push('the character not hurt by their blows');
         return f;
       },
       sdcard: true
     },
     {
-      name: 'dq0ghoul', what: 'Dingus Quest Zero\'s denizens fighting (DENIZENS.md: fights): a ghoul (its faction hostile to the character) down the stairway at seed 7 comes up to the character and claws at it, a round at a time as it waits (its own turns: the referee\'s round), dodged (the character\'s stance: defend dodge) and wounding it (HarnMaster\'s injuries on its sheet)',
-      init: 't_rc', cycles: 1200e6,
-      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 7 -c /ram/c.hm -T\r' +
-        ['d', 'defend dodge', 'wait', 'wait', 'sheet', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
-      expect: ['A ghoul is', 'You will dodge.', 'The ghoul claws at you; you dodge.', 'fighting you.',
-        'The ghoul claws at you: a serious gash to your thorax (S2).', 'Injuries: thorax S2 (gash).', '% echo $status'],
-      // (At seed 7 the ghoul's first claw dodged, its second a wound: the referee's dice the same whatever the timing,
-      // at the turns pace.  The ghoul seen as the character comes down, in the room's look or as it stirs after it:
-      // the denizens' task enlists it as the character's stratum changes, beside the look, whichever's first; the
-      // words wrapped where they fall)
-      check(m, out) {
-        const f = [];
-        inTurn(dq0Story(out), ['> d', 'A ghoul is ahead to your left, 10 feet away.', '> wait', 'The ghoul claws at you; you dodge.', '> wait', 'The ghoul claws at you: a serious gash to your thorax (S2).', '> sheet'], f);
+      name: 'dq0armour', what: 'Dingus Quest Zero\'s denizens fighting and armour (DENIZENS.md: fights; the catalogue\'s armour kinds, worn: the things tell the referee what\'s worn and how well made, RS_EQUIP\'s marks; HarnMaster\'s protection by location, the layers summed, Combat 4-5), by the blows told and the character\'s state (the referee\'s dice at this seed): a gambeson under a mail hauberk (dq0 -k) worn; down the stairway at seed 7 a ghoul (its faction hostile to the character) seen as the character comes down, coming up to it and clawing at it a round at a time as it waits (its own turns: the referee\'s round); the character dodging (defend dodge: its stance), a claw dodged, one turned by the armour; then standing undefended (defend none), wounded, worse, knocked senseless and killed: the character\'s death, the game\'s end (dq0ghoul\'s, in it)',
+      init: 't_rc', cycles: 1000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 7 -c /ram/c.hm -k \'gambeson,mail hauberk\' -T',
+        'wear the gambeson', 'wear the mail hauberk', 'd', 'defend dodge', 'wait', 'wait', 'defend none', 'wait', 'wait', 'wait', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [], FF_D_DOWN = 4, FF_D_DEAD = 8, FF_STOPPED = 0x40;
+        const worn = (t, n) => { const i = dq0Thing(t.after, n); if (!i || !(i.flags & DQ0_I.WORN)) f.push(n + ' not worn'); };
+        worn(T.of('wear the gambeson'), 'gambeson');
+        worn(T.of('wear the mail hauberk'), 'mail hauberk');
+        const d = T.of('d'), ghoul = d.after && d.after.actors.find(a => a.name === 'ghoul');
+        if (!d.after || !d.after.sight || !d.after.sight.dens.some(x => x.name === 'ghoul')) f.push('the ghoul not seen as the character came down');
+        const claws = t => dq0Ev(t, 'E_FIGHT', { def: 0, who: w => ghoul && w === ghoul.k + 1 });
+        if (!ghoul) return [...f, 'no ghoul'];
+        const dd = T.of('defend dodge'), dn = T.of('defend none'), w = T.filter(t => t.line === 'wait');
+        if (!dd.after || dd.after.pc.stance !== 'D_DODGE') f.push('the stance not dodging: ' + (dd.after && dd.after.pc.stance));
+        if (!dn.after || dn.after.pc.stance !== 'D_NONE') f.push('the stance not none: ' + (dn.after && dn.after.pc.stance));
+        if (w.length !== 5) return [...f, 'the waits not typed'];
+        if (!claws(w[0]).some(e => e.out === 'O_DODGED')) f.push('the first claw not dodged (' + dq0Evs(w[0]) + ')');
+        if (!claws(w[1]).some(e => e.ff & FF_STOPPED)) f.push('the second claw not turned by the armour (' + dq0Evs(w[1]) + ')');
+        const h = t => t.after ? t.after.sum.health : -1;
+        if (!(claws(w[2]).some(e => e.out === 'O_HIT') && h(w[2]) > h(w[1]))) f.push('undefended, not wounded');
+        if (!(claws(w[3]).some(e => e.out === 'O_HIT') && h(w[3]) > h(w[2]))) f.push('undefended, not wounded worse');
+        if (!claws(w[4]).some(e => e.ff & FF_D_DOWN) || !claws(w[4]).some(e => e.ff & FF_D_DEAD)) f.push('not knocked senseless and killed (' + dq0Evs(w[4]) + ')');
+        if (!w[4].after || !(w[4].after.sum.cond & 4)) f.push('the character not dead (C_DEAD)');
+        dq0Need(f, w[4], 'E_BYE', {}, 'the game not ended by the death');
         return f;
       },
       sdcard: true
     },
     {
-      name: 'dq0armour', what: 'Dingus Quest Zero\'s armour (the catalogue\'s armour kinds, worn: the things tell the referee what\'s worn and how well made, RS_EQUIP\'s marks; HarnMaster\'s protection by location, the layers summed, Combat 4-5): a gambeson under a mail hauberk (dq0 -k), worn, the character standing undefended (defend none) as seed 7\'s ghoul claws at it: wounds where they don\'t cover (a calf) and through them (a thigh: a lesser wound), a blow turned by the armour, and its head, bare, struck a mortal blow: the character\'s death, the game\'s end',
-      init: 't_rc', cycles: 1400e6,
-      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 7 -c /ram/c.hm -k \'gambeson,mail hauberk\' -T\r' +
-        ['wear the gambeson', 'wear the mail hauberk', 'd', 'defend none', 'wait', 'wait', 'wait', 'wait', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
-      expect: ['You put on the gambeson.', 'You put on the mail hauberk.', 'You will not defend yourself.', 'The ghoul claws at you: a serious gash to your left calf (S2).',
-        'The ghoul claws at you: a minor cut to your left thigh (M1).', 'The ghoul claws at you, but your mail hauberk turns the blow.',
-        'You are dead.', '% echo $status'],
-      // (At seed 7 the ghoul's four claws, a wait each, in their turn: the referee's dice the same whatever the timing)
-      check(m, out) {
-        const f = [];
-        inTurn(dq0Story(out), ['> wait', 'a serious gash to your left calf (S2).', '> wait', 'a minor cut to your left thigh (M1).', '> wait',
-          'but your mail hauberk turns the blow.', '> wait', 'a mortal deep gash to your skull. You are dead.'], f);
+      name: 'dq0flee', what: 'Dingus Quest Zero\'s unarmed blows and morale (the user\'s, 2026-10-16: punching, kicking, head butts, the referee\'s gear.c, by Unarmed; RS_MORALE, HarnMaster\'s Initiative test, Combat 18), by the blows told and the denizens\' state (the referee\'s dice at this seed): at seed 5\'s giant rats (bare fists: the character\'s Unarmed 80) a kick, a head butt and a punch (the hub\'s pc_strike each), the rat and its kin turning on the character, a punch felling it; its lair\'s kin seeing it fall (the book\'s friend slain: a bad situation) shaken and, shy, fleeing (fighting no more), the one down finished; the other gone out of reach, a blow at it not struck (dq0unarmed\'s, in it)',
+      init: 't_rc', cycles: 900e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'echo ml una 80 >> /ram/c.hm', 'dq0 -p t -s 5 -c /ram/c.hm -T', 'd',
+        'wait', 'go right', 'kick the rat', 'head butt the rat', 'punch the rat', 'punch the rat', 'punch the rat', 'punch the rat', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [], FF_D_DOWN = 4, FF_D_DEAD = 8, mine = t => dq0Ev(t, 'E_FIGHT', { who: 0 });
+        const k = T.of('kick the rat'), b = T.of('head butt the rat'), p = T.filter(t => t.line === 'punch the rat');
+        if (p.length !== 4) return ['the punches not typed'];
+        for (const [t, sk] of [[k, 'SK_KICK'], [b, 'SK_HEAD'], [p[0], 'SK_PUNCH']]) {
+          if (!mine(t).length) f.push(t.line + ': no blow struck (' + dq0Evs(t) + ')');
+          if (!t.after || t.after.pc.strike !== sk) f.push(t.line + ': struck with ' + (t.after && t.after.pc.strike) + ', not ' + sk);
+        }
+        const rat = (mine(k)[0] || {}).def;
+        if (!k.after || k.after.actors.filter(a => a.doing === 'DO_FIGHT').length < 2) f.push('the rat and its kin not turned on the character');
+        if (!mine(p[1]).some(e => e.def === rat && (e.ff & FF_D_DOWN))) f.push('the second punch didn\'t fell the rat (' + dq0Evs(p[1]) + ')');
+        const kin = p[1].after ? p[1].after.actors.filter(a => a.k + 1 !== rat) : [];
+        if (!kin.length || kin.some(a => a.doing !== 'DO_FLEE')) f.push('its kin not fleeing: ' + kin.map(a => a.doing).join(', '));
+        if (!mine(p[2]).some(e => e.def === rat && e.out === 'O_DISPATCH' && (e.ff & FF_D_DEAD))) f.push('the one down not finished');
+        if (mine(p[3]).length) f.push('a blow struck at the rat fled out of reach');
+        if (p[3].after && p[3].after.sight && p[3].after.sight.dens.some(d => d.doing === 'DO_FIGHT')) f.push('a rat seen fighting still');
         return f;
       },
-      sdcard: true
-    },
-    {
-      name: 'dq0flee', what: 'Dingus Quest Zero\'s morale (RS_MORALE, HarnMaster\'s Initiative test, Combat 18): one of seed 5\'s giant rats felled by a punch (bare fists: the character\'s Unarmed 80), its lair\'s kin seeing it fall (the book\'s friend slain: a bad situation) shaken and, shy, fleeing (gone from sight at once, fighting no more), and the one down finished; the other gone out of reach',
-      init: 't_rc', cycles: 1400e6,
-      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rāecho ml una 80 >> /ram/c.hm\rādq0 -p t -s 5 -c /ram/c.hm -T\r' +
-        ['d', 'wait', 'go right', ...Array(6).fill('punch the rat'), 'look', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
-      expect: ['You strike at the giant rat with your fists', 'It falls senseless.', 'You finish the giant rat where it lies.',
-        'It\'s out of reach: go up to it first.', '% echo $status'],
-      // (Its kin gone at once: out of sight as the one falls, fighting the character no more.  At seed 5 three punches
-      // dodged, the fourth felling the rat, the fifth finishing it, the sixth at its kin, gone: the referee's dice the
-      // commands', in their order, at the turns pace)
-      check(m, out) {
-        const o = dq0Story(out), i = o.indexOf('It falls senseless.'), f = [], d = 'You strike at the giant rat with your fists; it dodges.';
-        const after = i < 0 ? '' : o.slice(i, o.indexOf('> look', i));
-        if (!after || after.includes('fighting you') || after.includes('A giant rat is ahead to your left')) f.push('its kin not fled');
-        inTurn(o, ['> punch the rat', d, '> punch the rat', d, '> punch the rat', d, '> punch the rat', 'a grievous crush to its right hand (G5). It falls senseless.',
-          '> punch the rat', 'You finish the giant rat where it lies.', '> punch the rat', 'It\'s out of reach: go up to it first.', '> look'], f);
-        return f;
-      },
-      sdcard: true
-    },
-    {
-      name: 'dq0unarmed', what: 'Dingus Quest Zero\'s unarmed blows (the user\'s, 2026-10-16: punching, kicking, head butts; the referee\'s gear.c, the book\'s hand, foot and head, Combat 3, by Unarmed): at seed 5\'s giant rats, a punch, a kick, a head butt (punch the rat, kick the rat, head butt the rat: the hub\'s pc_strike), each worded as it\'s struck',
-      init: 't_rc', cycles: 1200e6,
-      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rāecho ml una 80 >> /ram/c.hm\rādq0 -p t -s 5 -c /ram/c.hm -T\r' +
-        ['d', 'wait', 'go right', 'punch the rat', 'kick the rat', 'head butt the rat', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
-      expect: ['> punch the rat', 'You strike at the giant rat with your fists', '> kick the rat', 'You kick at the giant rat', '> head butt the rat',
-        'You butt at the giant rat with your head', '% echo $status'],
       sdcard: true
     },
     {
