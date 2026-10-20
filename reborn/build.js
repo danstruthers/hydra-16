@@ -384,9 +384,9 @@ function buildChild(dir, objdir) {
   fs.writeFileSync(path.join(od, name + '.cfg'), cfg);
   const out = path.join(objdir, name + '.bp');
   run(LD65, ['-C', path.join(od, name + '.cfg'), '-o', out, ...objs]);   // (No map: ld65's fails on an o65's imports)
-  const bp = fs.readFileSync(out);                      // (ld65's o65 header's date of making, option 4, made the
-  for (let at = 26; at < bp.length && bp[at]; at += bp[at]) // same each time: the images the same each build)
-    if (bp[at + 1] === 4) bp.fill(0x20, at + 2, at + bp[at] - 1).write('2026-01-01', at + 2, 'latin1');
+  const bp = o65Bare (fs.readFileSync(out));           // (ld65's options gone: its date of making and its own version,
+                                                        //   "V2.19" or "V2.19 - Git ..." as it was built, the images
+                                                        //   the same each build, on every machine)
   fs.writeFileSync(out, childRelocs(bp));
   const parents = path.join(dir, 'parents');
   if (fs.existsSync(parents)) {
