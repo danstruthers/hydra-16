@@ -723,10 +723,12 @@ void __fastcall__ s_go_to (unsigned x, unsigned y)
     tx = x - (mx - cx_);
     ty = y - (my - cy_);
     t = TILE (C->tile[ty][tx]);
-    if (r != 0xFF && (t == T_DOOR || t == T_CORR || t == T_WINDOW)) {  /* (Up to it: the room's square before it) */
+    if (t == T_DOOR || t == T_WINDOW || (r != 0xFF && t == T_CORR)) {  /* (Up to it: the room's square before it; in a
+                                                **   passage the passage's, on the character's side) */
         for (d = 0; d < 4; ++d) {
             p = &C->tile[ty - dir_y[d]][tx - dir_x[d]];
-            if (T_INSIDE (*p)) {
+            if (r != 0xFF ? T_INSIDE (*p) : TILE (*p) == T_CORR &&
+                abs ((int) (tx - dir_x[d]) - fx) + abs ((int) (ty - dir_y[d]) - fy) < abs ((int) tx - fx) + abs ((int) ty - fy)) {
                 tx -= dir_x[d];
                 ty -= dir_y[d];
                 break;
@@ -2795,7 +2797,7 @@ static unsigned __fastcall__ step_by (unsigned char x, unsigned char y, unsigned
     }
     u = C->tile[ny][nx];
     q = trap_at (nx, ny);
-    if (!T_PASS (u) || den_on (rx0 + nx, ry0 + ny) || (q && !(q->state & TS_HIDDEN))) {
+    if (!T_PASS (u) || den_on (rx0 + nx, ry0 + ny) || (q && !(q->state & TS_HIDDEN)) || (wr == 0xFF && TILE (u) == T_DOOR)) {
         return 0xFFFF;                          /* (Nor onto a denizen, nor a trap it knows of: it goes round) */
     }
     wtrap = q != 0;
@@ -2818,10 +2820,12 @@ void __fastcall__ s_ways_go (unsigned char r, unsigned char fx, unsigned char fy
     unsigned head = 0, tail = 0, i, n, t, q;
     unsigned char x, y, d, b = ovbank[OVBANKS + 1];
 
-    if (r == 0xFF) {                            /* (In a passage: the squares within 12 of it, the chunk's) */
-        wox = fx - 12;
-        woy = fy - 12;
-        wow = woh = 25;
+    if (r == 0xFF) {                            /* (In a passage: the squares within 12 of it, the chunk's: the box kept
+                                                **   in the chunk, its corner never wrapped below it) */
+        wox = fx > 12 ? fx - 12 : 0;
+        woy = fy > 12 ? fy - 12 : 0;
+        wow = wox + 25 > CW ? CW - wox : 25;
+        woh = woy + 25 > CW ? CW - woy : 25;
     } else {
         p = &C->room[r];
         wox = p->x - 1;
