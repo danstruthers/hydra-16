@@ -142,6 +142,12 @@ corners = OB_CORNER
 pillar = OB_PILLAR
 pillars = OB_PILLAR
 column = OB_PILLAR
+centre = OB_CENTRE                          # (new, slice 4.0: a place in the room, "go to the centre of the room")
+center = OB_CENTRE
+middle = OB_CENTRE
+side = OB_SIDE                              # ("the far side", "the other side", "the left side", "the far end")
+sides = OB_SIDE
+end = OB_SIDE
 
 [preps]
 in = PR_IN
@@ -241,7 +247,6 @@ those
 of
 my
 off
-side
 direction
 dir
 and

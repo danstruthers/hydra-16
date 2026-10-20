@@ -55,6 +55,10 @@ void __fastcall__ o_climb_words (unsigned char how, unsigned char feet)
         sayf ("\nYou find no hold yet (%u feet to go).", feet);
         return;
     case K_FELL:
+        if (!feet) {
+            msg ("Your hold gives way before you're off the ground.");
+            return;
+        }
         sayf ("\nYour hold gives way: you fall %u feet.", feet);
         return;
     case K_JUMPED:

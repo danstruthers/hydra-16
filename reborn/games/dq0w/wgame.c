@@ -28,6 +28,7 @@
 unsigned take_n;                                /* (things.h's: I_TAKE's thing, its item; 0 none) */
 static unsigned take_x, take_y;                 /*   its square, */
 static unsigned take_fx, take_fy;               /*   and where the walk to it began */
+static unsigned char take_only;                 /*   1: walked over to alone (I_TAKE's a: the UI's command again) */
 static unsigned char done_;                     /* (The rules done, a bit each: the save's, the UI's quest) */
 static char an[16], bn[16];                     /* (The things named) */
 
@@ -132,6 +133,11 @@ unsigned char s_puzzle (void)
     hub_map (0);
     HUB->ireq.result = res;
     HUB->ireq.x = r;
+    if (res == PZ_FAR) {                        /* (Where the way out is: the UI walks over to it first) */
+        HUB->ireq.x = STRATUM (0).link[0].x;
+        HUB->ireq.y = STRATUM (0).link[0].y;
+        HUB->ireq.item = 0;
+    }
     return changed;
 }
 
@@ -145,6 +151,19 @@ unsigned char s_take_up (void)
     unsigned char r, was, k, w;
     const struct item* p;
 
+    if (take_only) {                            /* (Walked over to alone: within reach of its square, or as near as
+                                                **   it gets; the UI's command again, as the character's free) */
+        hub_map (0);
+        if (((unsigned) (take_x - HUB->pc_x + 1) > 2 || (unsigned) (take_y - HUB->pc_y + 1) > 2) &&
+            (HUB->pc_x != take_fx || HUB->pc_y != take_fy)) {
+            take_fx = HUB->pc_x;
+            take_fy = HUB->pc_y;
+            go_to (take_x, take_y);
+            return 2;
+        }
+        take_n = 0;
+        return 0;
+    }
     hub_map (0);
     was = HUB->pc_light;
     p = item_at (n);
@@ -180,7 +199,8 @@ unsigned char s_take_up (void)
 /* I_TAKE's walk begun (its intent: the square the thing lies on, its item) */
 void __fastcall__ s_take_go (const struct msg* m)
 {
-    take_n = (unsigned) m->t;
+    take_only = m->a;
+    take_n = m->t ? (unsigned) m->t : 1;        /* (Walked over to alone: its square's, perhaps no thing's) */
     take_x = m->w1;
     take_y = m->w2;
     hub_map (0);

@@ -15,12 +15,41 @@ static const char* const doing[] = {           /* (By LT_*) */
     "doing anything", "walking", "climbing", "digging", "searching", "waiting", "sleeping", "talking"
 };
 
+/* An enemy the character's met (E_TASK's b, TE_ENGAGED's, TE_FAR's: its entry plus 1), as it's said: "the giant
+** rat" (the first letter a capital, cap), or "something" if it isn't seen */
+static char fn[20];
+static const char* __fastcall__ foe (unsigned char b, unsigned char cap)
+{
+    static char at[12], seen[12];
+    unsigned char k, n;
+
+    hub_mem (0, at, HUB->actor[(b - 1) & 7].name, sizeof at);
+    hub_mem (SIGHT_BANK, &n, &SIGHT->ndens, 1);
+    for (k = n; k--; ) {
+        hub_mem (SIGHT_BANK, seen, SIGHT->den[k].name, sizeof seen);
+        if (!strcmp (seen, at)) {
+            break;
+        }
+    }
+    strcpy (fn, k == 0xFF ? "something" : at[0] >= 'A' && at[0] <= 'Z' ? "" : "the ");
+    if (k != 0xFF) {
+        strcat (fn, at);
+    }
+    if (cap && fn[0] >= 'a') {
+        fn[0] -= 'a' - 'A';
+    }
+    return fn;
+}
+
 /* What came of the character's long task: E_TASK's w (TE_*, its kind times 256); named, the kind its stop named (b) */
 unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
 {
     unsigned char k = w >> 8;
     const char* d = doing[k < 8 ? k : 0];
 
+    if ((unsigned char) w <= TE_NEAR || (unsigned char) w == TE_ENGAGED) {
+        reach = 0;                              /* (A walk over to a thing stopped: its command dropped) */
+    }
     switch ((unsigned char) w) {
     case TE_STOPPED:
     case TE_HIT:
@@ -42,6 +71,22 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
         break;
     case TE_CANT:
         msg ("There's no stopping part way up: you cling on, and climb.");
+        break;
+    case TE_ENGAGED:                            /* (HOUSE.md's engagement: "The giant rat engages you: you stop
+                                                **   walking."; engaged already, "You're engaged with the giant rat.") */
+        if (named & TE_STILL) {
+            sayf ("\nYou're engaged with %s", foe (named, 0));
+        } else {
+            sayf ("\n%s engages you", foe (named, 1));
+        }
+        if (k) {
+            sayf (": you stop %s.", d);
+        } else {
+            say (".");
+        }
+        break;
+    case TE_FAR:
+        sayf ("\nYou can't get near enough to %s.", foe (named, 0));
         break;
     }
     k = (unsigned char) w;

@@ -481,3 +481,8 @@ climb up the ladder	VB_CLIMB	object=ladder;direction=U	near=ladder	up a ladder: 
 go up the ladder	VB_MOVE_DIRECTION	direction=U	near=ladder	up a ladder, gone
 walk down the corridor	VB_MOVE_TOWARD	object=corridor	near=corridor	along a passage, not down it
 back away	VB_DISENGAGE	-	engaged=goblin	backing away from a fight
+go to the centre of the room	VB_MOVE_TOWARD	object=centre	near=centre	a place in the room (slice 4.0): the room said after it
+go to the far left corner	VB_MOVE_TOWARD	object=corner	near=corner	a corner, by the way it lies as the character faces
+walk forward to the other side	VB_MOVE_TOWARD	object=side;direction=F	near=side	straight ahead to the far wall
+go to the near side	VB_MOVE_TOWARD	object=side	near=side	near: the side behind
+go to the far end of the hall	VB_MOVE_TOWARD	object=end	near=end	the far end: the far side

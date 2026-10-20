@@ -90,7 +90,9 @@ void stir (void)
 
 #define PANEL       14                          /* The panel's width */
 #define PLINES      18
-static char panel[PLINES][PANEL + 1];
+#define panel       ((char (*)[PANEL + 1]) lb)  /* (In lb: no look's being made as the map's shown; 270 bytes of the
+                                                **   main RAM) */
+typedef char panel_fits[PLINES * (PANEL + 1) <= sizeof lb ? 1 : -1];
 static unsigned char np;
 
 #pragma code-name (push, "SW3CODE")
@@ -191,6 +193,106 @@ void __fastcall__ s_map (const char* rules)
         }
     }
     blank ();
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part 8: where in its room the character is, and the things it sees there, in words (HOUSE.md's where you are:
+** by the facing alone, the user's, never the compass; only what's known, the senses' record's copy) */
+
+char where_w[34];
+
+#pragma code-name (push, "SW8CODE")
+#pragma rodata-name (push, "SW8RODATA")
+
+#define SC          sight_copy
+
+/* An actor's square (x, y) in sight, the senses' last look's (blows.c's: one closed with) */
+unsigned char __fastcall__ s_den_seen (unsigned x, unsigned y)
+{
+    unsigned at[2];
+    unsigned char n, k;
+
+    hub_mem (SIGHT_BANK, &n, &SIGHT->ndens, 1);
+    for (k = 0; k < n; ++k) {
+        hub_mem (SIGHT_BANK, at, &SIGHT->den[k].x, sizeof at);
+        if (at[0] == x && at[1] == y) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* The character's place in its room (the floor in thirds each way, far, middle and near, left, middle and right) and
+** the room's size and shape (its floor: small under 150 square feet, large to 2,500, vast beyond; long, twice as long
+** as it's wide, narrow too if 10 feet across or less; wide, 40 feet across or more), into where_w: "You are in the far
+** left corner of a large, long "; the offset just after its article's a (words.c's "an" before a vowel) */
+unsigned char s_room_where (void)
+{
+    static const char* const at_[9] = { "in the far left corner of", "at the far end of", "in the far right corner of",
+                                        "on the left side of", "in the middle of", "on the right side of",
+                                        "in the near left corner of", "at the near end of", "in the near right corner of" };
+    unsigned char dx, dy, q, w, d, f, r, n, mn, lng;
+    unsigned area;
+    char* o = lbe;                              /* (Put at lb's end: words.c's room) */
+
+    dx = SC.x - SC.rx;
+    dy = SC.y - SC.ry;
+    strcpy (o, "You are ");
+    if (dx >= SC.rw || dy >= SC.rh) {
+        strcat (o, "in");                       /* (Not on its floor: in a doorway) */
+    } else {
+        q = ((pc_face + 1) & 7) >> 1;           /* (The nearest of the four it faces) */
+        w = q & 1 ? SC.rh : SC.rw;              /* (Across it, as it faces; its depth) */
+        d = q & 1 ? SC.rw : SC.rh;
+        f = q == 0 ? dy : q == 1 ? SC.rw - 1 - dx : q == 2 ? SC.rh - 1 - dy : dx;     /* (From the far wall, the right) */
+        r = q == 0 ? SC.rw - 1 - dx : q == 1 ? SC.rh - 1 - dy : q == 2 ? dx : dy;
+        strcat (o, at_[(d < 3 ? 1 : f < d / 3 ? 0 : d - 1 - f < d / 3 ? 2 : 1) * 3 +
+            (w < 3 ? 1 : w - 1 - r < w / 3 ? 0 : r < w / 3 ? 2 : 1)]);
+    }
+    strcat (o, " a");
+    n = strlen (o);
+    area = SC.rw * SC.rh;
+    mn = SC.rw < SC.rh ? SC.rw : SC.rh;
+    lng = (SC.rw ^ SC.rh ^ mn) >= 2 * mn;
+    if (lng && mn <= 2) {
+        strcat (o, " long, narrow ");
+    } else {
+        strcat (o, area < 6 ? " small" : area < 24 ? "" : area < 100 ? " large" : " vast");
+        strcat (o, area >= 6 && area < 24 ? (lng ? " long " : " ") : lng ? ", long " : mn >= 8 ? ", wide " : " ");
+    }
+    return n;
+}
+
+/* A thing seen lying in the character's room (sight_copy's item i), not hidden nor at its feet: on the floor's edge,
+** its words for seen.c into where_w (a space before them: "In the far left corner ", "Against the wall to your left "):
+** 1; else 0 */
+unsigned char __fastcall__ s_lie_words (unsigned char i)
+{
+    static const char* const wall_[4] = { "wall ahead ", "wall to your right ", "wall behind you ", "wall to your left " };
+    unsigned char dx, dy, q, k;
+
+    dx = SC.item[i].x - SC.rx;
+    dy = SC.item[i].y - SC.ry;
+    if ((SC.item[i].hid & 1) || SC.item[i].rel == 0xFF || SC.where != W_ROOM || SC.size == S_PART || SC.rw < 3 || SC.rh < 3 || dx >= SC.rw || dy >= SC.rh) {
+        return 0;
+    }
+    q = ((pc_face + 1) & 7) >> 1;
+    k = !dy | (dx == SC.rw - 1) << 1 | (dy == SC.rh - 1) << 2 | !dx << 3;   /* (Against the wall to the north, east,
+                                                **   south, west) */
+    k = (k >> q | k << (4 - q)) & 15;           /* (As it faces: ahead, to its right, behind it, to its left) */
+    if (!k) {
+        return 0;
+    }
+    if ((k & 5) && (k & 10)) {
+        strcpy (where_w, k & 1 ? " In the far " : " In the near ");
+        strcat (where_w, k & 8 ? "left corner " : "right corner ");
+        return 1;
+    }
+    strcpy (where_w, " Against the ");
+    strcat (where_w, wall_[k & 1 ? 0 : k & 2 ? 1 : k & 4 ? 2 : 3]);
+    return 1;
 }
 
 #pragma code-name (pop)

@@ -172,7 +172,7 @@ unsigned char __fastcall__ o_puzzle (struct cmd* c)
         return done (othings_x);
     }
     if (r == PZ_FAR) {
-        msg ("The way out is out of reach: go over to it first.");
+        reach_go ();                            /* (Walked over to it first, then again) */
     } else if (r == PZ_NONE) {
         if (t == TR_PUT && v != VB_USE_OBJECT) {
             return Q_NONE;                      /* (A thing put as any other) */

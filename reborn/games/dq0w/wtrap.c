@@ -113,7 +113,7 @@ static void search (void)
             }
             if ((trap_on (i, j, 0) || trap_on (i, j, 1)) && (wk.tq.state & TS_HIDDEN)) {
                 if (test (P_SEARCH, wk.tq.state & TS_MAGIC ? HIDE_MAGICAL : HIDE_MECHANICAL,
-                    -(signed char) wk.tq.hide) > 0 && !wres) {
+                    -(signed char) (wk.tq.hide + srch_pen)) > 0 && !wres) {
                     trap_state (wk.tq.state & ~TS_HIDDEN);
                     trap_told (TO_FOUND);
                     found |= 2;
@@ -129,7 +129,8 @@ static void search (void)
                 continue;
             }
             wk.pq = C->portal[k];
-            if (test (P_SEARCH, wk.pq.state & PS_MAGIC ? HIDE_MAGICAL : HIDE_MECHANICAL, 0) > 0 && !wres) {
+            if (test (P_SEARCH, wk.pq.state & PS_MAGIC ? HIDE_MAGICAL : HIDE_MECHANICAL, -(signed char) srch_pen) > 0 &&
+                !wres) {
                 wk.px = i;
                 wk.py = j;
                 door_state (wk.pq.state & ~PS_HIDDEN);

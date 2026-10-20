@@ -101,7 +101,7 @@ void __fastcall__ map (const char* rules);      /* Part 3: the map of what it's 
 
 #include "actions.h"
 enum { OB_NONE, OB_DOOR, OB_PASSAGE, OB_STAIRS, OB_LADDER, OB_SHAFT, OB_LEDGE, OB_WAY_OUT, OB_WALL, OB_WINDOW, OB_TRAP,
-    OB_PORTC, OB_ROOM, OB_CORNER, OB_PILLAR };  /* (OB_ROOM: the room, its ceiling: looked at closely; a corner, a
+    OB_PORTC, OB_ROOM, OB_CORNER, OB_PILLAR, OB_CENTRE, OB_SIDE };  /* (OB_ROOM: the room, its ceiling: looked at closely; a corner, a
                                                 **   pillar: looked round, "look around the corner") */
 enum { HOW_ANY, HOW_TO, HOW_THROUGH };
 enum { PR_NONE, PR_IN, PR_ON, PR_FROM, PR_WITH, PR_AT, PR_TO };    /* (The other thing: in it, on it, from it, with
@@ -235,6 +235,7 @@ unsigned char __fastcall__ fight_target (struct cmd* c);    /* Overlay 6: VB_ATT
                                                 **   set, told in lb (0); a blow at a door, a window, a portcullis:
                                                 **   FT_THING */
 #define FT_THING    0xFE
+#define FT_CLOSE    0x40                        /* (| the actor plus 1: out of reach, closed with first, I_CLOSE) */
 void __fastcall__ heard_words (unsigned char what, unsigned char rel);  /* Overlay 9: a denizen heard (an E_DEN's
                                                 **   what, | 0x80 muffled, the way it lies as the character faces),
                                                 **   into lb */
@@ -288,6 +289,13 @@ signed char __fastcall__ cq_cmd (const char* l);   /* Part 2 (main.c): the comma
 void cq_drop (void);                            /* Part 2 (main.c): the line posted seen to (its reply waited for) */
 extern unsigned char cq_again;                  /* (The line changed since it was posted: names_subst's) */
 void __fastcall__ take (const char* name);      /* Part 2: a thing taken up, by its name */
+extern char where_w[34];                        /* (Where in its room a thing lies: part 8's words) */
+extern unsigned char reach;                     /* (main.c's: a command's thing walked over to first) */
+unsigned char room_where (void);
+unsigned char __fastcall__ den_seen (unsigned x, unsigned y);   /* Part 8: an actor's square in sight */                /* Part 8: the character's place in the room, and the room's size */
+unsigned char __fastcall__ lie_words (unsigned char i);   /* Part 8: a thing's place in the room (its sight_copy's) */
+unsigned char reach_go (void);
+unsigned char __fastcall__ place_go (const struct cmd* c);   /* Part 7: a place in the room walked to */                  /* Part 7: a command's thing out of reach walked over to first */
 void __fastcall__ took_up (unsigned r);         /* Part 2: a thing taken up, or not, told (an E_TAKEN's: IR_*, the
                                                 **   light before times 256) */
 enum { NL_NONE, NL_DONE, NL_DEN };

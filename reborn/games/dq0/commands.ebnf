@@ -44,7 +44,7 @@
 
 (* ---- Moving and facing ---- *)
 <move>           ::= [ <pace-word> ] [ <MOVE> ] <move-dir> [ <number> [ "space" | "spaces" | "square" | "squares" ] ]   (* "run north": this move at run; "walk north": the verb *)
-<move-dir>       ::= <direction> | <TOWARD> <thing> | <ALONG> <thing>   (* "go down the stairs", "walk down the corridor" *)
+<move-dir>       ::= <direction> [ <TOWARD> <thing> ] | <TOWARD> <thing> | <ALONG> <thing>   (* "go down the stairs", "walk down the corridor", "walk forward to the other side" *)
 <face>           ::= [ "change" ] ( "face" | "facing" | "turn" ) [ "half" ] [ "to" ] <direction> | "turn" "around"   (* "turn around" is a half turn: facing back; "turn half left": an eighth *)
 
 (* ---- Handling things (question 2: CLOSE and OPEN are actions) ---- *)
@@ -118,7 +118,8 @@
 <chosen>         ::= ( "closest" | "nearest" | "largest" | "biggest" | "smallest" | "lead" | <ordinal> ) [ "one" ]   (* "the closest", "the second one": of those it perceives *)
 <way-out>        ::= [ "the" ] "way" "out"          (* the theme's way out of the dungeon *)
 <np>             ::= [ <det> ] ( [ <selector> ] { <adj> } <head> | <chosen> )
-<thing>          ::= <object> [ <lies> ]            (* a thing in the place, and where it lies: "the door ahead to my left" *)
+<thing>          ::= <object> [ <of-room> ] [ <lies> ]   (* a thing in the place, and where it lies: "the door ahead to my left" *)
+<of-room>        ::= "of" [ "the" | "this" ] ( "room" | "chamber" | "hall" | "cave" | "cavern" )   (* "the centre of the room" *)
 <lies>           ::= <compass> | <relative>
 <det>            ::= "a" | "an" | "the" | "this" | "that" | "these" | "those" | "its"   (* "my coat": <me-phrase> *)
 <selector>       ::= <number> | "all" | "every" | "each" | "any" | <ordinal>

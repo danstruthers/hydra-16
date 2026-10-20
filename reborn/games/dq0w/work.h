@@ -51,6 +51,7 @@ void traps (void);                              /* (Part 8's) A trap stepped ont
 /* dq0w.c's: the referee asked (kind, a, b; its w1 ww1, its steps wsteps, 0 after): its grade, wres its result */
 signed char __fastcall__ ask_w (unsigned char kind, unsigned char a, unsigned char b);
 extern unsigned char wres;
+extern unsigned char srch_pen;                  /* (A search cut short: its tests the harder, steps; dq0w.c's) */
 extern signed char wsteps;
 
 #endif

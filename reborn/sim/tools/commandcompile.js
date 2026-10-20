@@ -502,6 +502,11 @@ function phraseSem(spec, env, ctx) {
         if (o.stop) return o.stop;
         return act('VB_MOVE_TOWARD', { object: o.value });
       }
+      if (md && findFirst(md, 'object') && findFirst(md, 'direction')) {   // ("walk forward to the other side": that way, to it)
+        const o = objRole(findFirst(md, 'object'), env, ctx);
+        if (o.stop) return o.stop;
+        return act('VB_MOVE_TOWARD', { object: o.value, direction: dirCode(findFirst(md, 'direction'), env) });
+      }
       if (md && findFirst(md, 'object') && ['to', 'towards', 'toward', 'in', 'into', 'onto', 'past'].includes(wordsOf(md, env)[0])) {
         const o = objRole(findFirst(md, 'object'), env, ctx);
         if (o.stop) return o.stop;

@@ -621,9 +621,12 @@ static void __fastcall__ answer (struct req* r)
         }
         r->grade = test (&pc, r->a, r->steps);
         break;
-    case RS_EXERT:                              /* (Its fatigue: its summary anew) */
+    case RS_EXERT:                              /* (Its fatigue: its summary anew; result 1, a level more: a long
+                                                **   task's soft question, the world's) */
         spent_at = r->a;
+        k = pc.fl;
         spent (r->w1);
+        r->result = pc.fl > k;
         status ();
         break;
     case RS_EQUIP:

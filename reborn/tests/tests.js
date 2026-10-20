@@ -3549,7 +3549,7 @@ module.exports = {
       expect: ['% echo $status'],
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
-        inTurn(o, ['% dq0 -p t -s 3', '> look You are in a small kitchen', 'A barrel vault arches high overhead. There is a door ahead to your left (open).',
+        inTurn(o, ['% dq0 -p t -s 3', '> look You are in the middle of a small kitchen', 'A barrel vault arches high overhead. There is a door ahead to your left (open).',
           '> look closely', 'It is 10 feet by 10.', 'A barrel vault rises to 13 feet, 9 at the walls.', '> x room', 'It is 10 feet by 10.', '> turn around',
           'There is a door ahead to your left (closed).', '> examine the door ahead to my left', 'A door of iron-bound wood, 3 feet wide and 7 high, 3 inches thick.',
           '% dq0 -p t -s 5', '> x room You can see part of a hall, by the light of your torch. Its far side is lost in the dark.',
@@ -3575,7 +3575,7 @@ module.exports = {
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
         inTurn(o, ['% dq0 -p t -s 4', '> open door Which door: 1. the door ahead to your right (open), 2. the one to your right (closed), or 3. the one behind you to your right (closed)?',
-          '> 3', 'You turn to face north.', 'You open the door.', '> look You are in a small bedchamber',
+          '> 3', 'You turn to face north.', 'You open the door.', '> look You are on the right side of a long, narrow bedchamber',
           'There is a door ahead (open), one to your left (open) and one ahead to your left (closed).', '> take the bar',
           'You lift the bar out of its brackets, and set it down.', 'Taken.', '> i', 'a tinderbox, a bar)', '% dq0 -p t -s 12', '> examine the window',
           'A window, 2 feet wide and 3 high; its shutters of wood, 2 inches thick. It\'s glazed', 'There is a glazed window ahead (its shutters open).', '> x glass',
@@ -3618,7 +3618,7 @@ module.exports = {
           '> foo', 'I don\'t know how to foo.', '> status', 'Pace: a walk (40 feet a round). Watching: nothing in particular. Condition: unhurt; a little burdened (encumbrance 1); penalties: universal 0, physical 1. Light: your torch (20 feet).',
           '> jog', 'Pace: a jog (80 feet a round). Watching: nothing in particular.', '> search for traps as I go',
           'Pace: a jog, held to a slow walk while you search as you go (20 feet a round). Watching: for traps and hidden doors as you go.', '> stop searching',
-          'Pace: a jog (80 feet a round).', '> run north', 'Pace: a run (160 feet a round).', 'You cross the room. You are in a long cell, by the light of your torch.',
+          'Pace: a jog (80 feet a round).', '> run north', 'Pace: a run (160 feet a round).', 'You cross the room. You are in the middle of a long, narrow cell, by the light of your torch.',
           '> run south', '> help', 'Commands: north, northeast, east', 'Pace: creep (sneak), walk slowly, walk, jog, run, sprint', '19200 or 115200 baud', '% echo $status'], f);
         if (/#\d/.test(o)) f.push('a thing\'s mark ("#12") said');
         const rn = o.slice(o.indexOf('> run north'), o.indexOf('> run south')), rs = o.slice(o.indexOf('> run south'), o.indexOf('> help'));
@@ -3846,9 +3846,10 @@ module.exports = {
         if (!(claws(w[2]).some(e => e.out === 'O_HIT') && h(w[2]) > h(w[1]))) f.push('undefended, not wounded');
         if (!(claws(w[3]).some(e => e.out === 'O_HIT') && h(w[3]) > h(w[2]))) f.push('undefended, not wounded worse');
         if (!claws(w[4]).some(e => e.ff & FF_D_DOWN)) f.push('the third undefended claw not knocking the character down (' + dq0Evs(w[4]) + ')');
-        // (Then down, in shock, clawed a round a wait till a blow kills it: the referee's, some fifteen rounds at this seed;
-        // the waits after it the shell's)
-        const k = w.slice(5).find(t => dq0Ev(t, 'E_FIGHT', { ff: x => x & FF_D_DEAD }).length);
+        // (Then down, senseless, clawed a round at a time while it's out, till a blow kills it: the referee's, some
+        // fifteen rounds at this seed; since slice 4.0 the character busy till it comes round, so the death comes in the
+        // knock's own turn, the waits after it the shell's)
+        const k = w.slice(4).find(t => dq0Ev(t, 'E_FIGHT', { ff: x => x & FF_D_DEAD }).length);
         if (!k) f.push('the character, down, not killed by the ghoul\'s claws');
         else {
           if (!k.after || !(k.after.sum.cond & 4)) f.push('the character not dead (C_DEAD)');

@@ -309,15 +309,27 @@ static void __fastcall__ opening (unsigned char i)
 static void room (void)
 {
     unsigned char i;
+    char* art;
 
     if (S->dark) {
         add ("It is dark. You can see nothing, but you feel the floor of a room about you.");
         return;
     }
-    add (S->size != S_PART ? "You are in a" : "You can see part of a");
-    add (S->size == S_SMALL ? " small " : S->size == S_LARGE ? " large " : S->size == S_LONG ? " long " : " ");
+    if (S->size != S_PART) {                    /* (Where in it, its size and shape: slice 4.0's, part 8's) */
+        art = lbe + room_where ();              /* (Its words put in lb, at its end: part 8's) */
+        lbe += strlen (lbe);
+    } else {
+        add ("You can see part of a");
+        art = lbe;
+        add (" ");
+    }
     theme_named (TN_ROOM, S->kind);
     lbe += strlen (lbe);                        /* (The theme's, put at lb's end) */
+    if (art[0] == ' ' && strchr ("aeiou", art[1])) {
+        memmove (art + 1, art, strlen (art) + 1);   /* ("an ossuary") */
+        *art = 'n';
+        ++lbe;
+    }
     if (S->lit || !sight_light) {
         if (S->lit) {
             add (", ");

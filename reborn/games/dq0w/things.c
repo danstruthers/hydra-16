@@ -191,6 +191,7 @@ static unsigned __fastcall__ item_kind (unsigned i)
 static struct ireq iq;
 static unsigned pack, belt, dropped, seen_d, took;
 static unsigned char hands, afar, nin;
+static unsigned far_n, far_x, far_y;            /* (The thing at_hand found out of reach, and where it lies) */
 
 /* ==== Part 10: the requests answered, a thing handled (and what the catalogue's bank's code calls on: its stubs) */
 #pragma code-name (push, "SW10CODE")
@@ -312,6 +313,10 @@ unsigned char __fastcall__ s_in_reach (unsigned n)
     hub_map (0);
     x = HUB->pc_x;
     y = HUB->pc_y;
+    if (s) {
+        far_x = s->x;                           /* (Where it lies: at_hand's, out of reach) */
+        far_y = s->y;
+    }
     return s && s->x - x + 1 <= 2 && s->y - y + 1 <= 2;
 }
 
@@ -330,6 +335,7 @@ unsigned __fastcall__ s_at_hand (const char* name)
     if ((n = s_seen_named (name)) != 0 && !(afar = !s_in_reach (n))) {
         return n;
     }
+    far_n = n;
     return 0;
 }
 
@@ -596,10 +602,18 @@ unsigned char s_serve (void)
     case IO_BEGIN:
         break;
     default:                                    /* (A thing handled: IO_HOLD ...) */
+        afar = 0;
         cat_map ();
         iq.result = o_handle ();
         hub_map (0);
         HUB->ireq.x = took;
+        if (iq.result == IR_NO && afar) {       /* (Its thing out of reach: where it lies, the UI's to walk over to
+                                                **   it first, I_TAKE's walk alone, and ask again) */
+            iq.result = IR_NOT_HERE;
+            HUB->ireq.x = far_x;
+            HUB->ireq.y = far_y;
+            HUB->ireq.item = far_n;
+        }
         break;
     }
     if (iq.kind == IO_KIT || iq.kind == IO_GET || iq.kind == IO_DROP || iq.kind == IO_HIDE || iq.kind == IO_THROW ||
@@ -899,7 +913,7 @@ unsigned char s_search (void)
         r->actor = 0;
         r->a = P_SEARCH;
         r->b = HIDE_MECHANICAL;
-        r->steps = -(signed char) rec.hide;
+        r->steps = -(signed char) (rec.hide + iq.to);   /* (A search cut short: harder, the UI's) */
         r = hub_ask (SLOT_UI);
         g = r->grade;
         r->state = REQ_FREE;

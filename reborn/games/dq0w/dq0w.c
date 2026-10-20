@@ -72,6 +72,9 @@ void step_on (void);                            /* Part 23 */
 unsigned char task_news (void);
 void __fastcall__ task_word (const struct msg* m);
 void __fastcall__ path_ways (unsigned char tx, unsigned char ty);
+void __fastcall__ close_go (const struct msg* m);
+unsigned char close_on (void);
+unsigned char __fastcall__ zone_step (unsigned ox, unsigned oy, unsigned x, unsigned y);
 struct work wk;
 extern char _SWAP_START__[];
 unsigned char den_done;                         /* (wbody.h's) */
@@ -123,6 +126,10 @@ static unsigned char npath, pnext, pwalk0, pon; /* (Its squares; the next to ste
 static unsigned long pt0, pbase, pdue;          /* (When it set out; the time a part of it begins, path_add's; when
                                                 **   its next square comes, stepping's) */
 static void __fastcall__ path_add (unsigned char h, unsigned long t);
+static unsigned pspent;                         /* (A walk's tenths the referee's tired the character by so far) */
+static unsigned char pfoe, paim, pstrike, pfd;  /* (A blow's close-in, I_CLOSE's: its target plus 1, 0 none; the
+                                                **   blow's aim, what it strikes with; how far off it was as the walk
+                                                **   last set out) */
 
 /* The character busy for t tenths: free again at pc_ready (the turns pace: the clock moved on to it a slice at a
 ** time, turns_run), standing where it is unless a move says where it's going (bound_for) */
@@ -198,6 +205,7 @@ static void __fastcall__ set_off (unsigned long t)
     pon = 1;
     pprev = 0;
     pdue = 0;                                   /* (Its first square looked for at once) */
+    pspent = 0;
     plast = HUB->pc_face;
 }
 
@@ -215,7 +223,7 @@ static void dens_where (void)
 
     hub_map (0);
     for (k = nden = 0, q = HUB->actor; k < NACTORS; ++k, ++q) {
-        if (q->state && q->sn == HUB->pc_stratum) {
+        if (q->state && q->sn == HUB->pc_stratum && k + 1 != pfoe) {   /* (Not a close-in's target: walked up to) */
             dk[nden] = k;
             dsx[nden] = q->x;
             dsy[nden++] = q->y;
@@ -416,6 +424,9 @@ static unsigned char wox, woy, wow, woh;        /* (The ways' room: its walls' f
 extern unsigned char at_bank;                   /* (chunk.c's: at ()'s chunk's bank, C's) */
 static unsigned char last_d;                    /* (way's: the way into its square) */
 void __fastcall__ ways_go (unsigned char r, unsigned char fx, unsigned char fy);    /* (Part 21's) */
+unsigned char __fastcall__ ways_near (unsigned char* tx, unsigned char* ty);
+static unsigned char go_near;                   /* (I_GOTO's a: the nearest square the way reaches, if it can't reach
+                                                **   the one said: a place in the room, the UI's) */
 static unsigned char wr, wfx, wfy, wneed;       /* (The ways wanted: worked out as the first is looked up) */
 
 /* ---- The path (above: a move's way, a square at a time) kept in the ways' bank, after their queue: three bytes a
@@ -699,7 +710,8 @@ void __fastcall__ s_go_to (unsigned x, unsigned y)
     here ();
     paced ();
     npath = 0;
-    if ((r = room_of (sn_, mx, my)) == 0xFF || x - (mx - cx_) >= CW || y - (my - cy_) >= CW) {
+    r = room_of (sn_, mx, my);                  /* (0xFF: a passage, the ways about it, ways_go's) */
+    if (x - (mx - cx_) >= CW || y - (my - cy_) >= CW) {
         hub_map (0);
         no_way (N_NO_EXIT);
         return;
@@ -711,7 +723,7 @@ void __fastcall__ s_go_to (unsigned x, unsigned y)
     tx = x - (mx - cx_);
     ty = y - (my - cy_);
     t = TILE (C->tile[ty][tx]);
-    if (t == T_DOOR || t == T_CORR || t == T_WINDOW) {  /* (Up to it: the room's square before it) */
+    if (r != 0xFF && (t == T_DOOR || t == T_CORR || t == T_WINDOW)) {  /* (Up to it: the room's square before it) */
         for (d = 0; d < 4; ++d) {
             p = &C->tile[ty - dir_y[d]][tx - dir_x[d]];
             if (T_INSIDE (*p)) {
@@ -722,7 +734,10 @@ void __fastcall__ s_go_to (unsigned x, unsigned y)
         }
     }
     ways (r, fx, fy);
-    if ((tt = way (tx, ty)) == 0xFFFFFFFFUL) {
+    if ((tt = way (tx, ty)) == 0xFFFFFFFFUL && go_near && ways_near (&tx, &ty)) {
+        tt = way (tx, ty);                      /* (A place it can't stand on itself: the nearest it can) */
+    }
+    if (tt == 0xFFFFFFFFUL) {
         d = nden;                               /* (A way, but for the denizens: one's in the way) */
         nden = 0;
         ways (r, fx, fy);
@@ -1393,7 +1408,9 @@ static void arrive (void)
         climb_on ();
         return;
     }
-    spend (pace_, went);                        /* (As it begins, or carries on: none) */
+    spend (pace_, went > pspent ? went - pspent : 0);    /* (As it begins, or carries on: none; a walk's, what's
+                                                **   left of it) */
+    pspent = 0;
     sn_ = move.sn;
     mx = move.x;
     my = move.y;
@@ -1970,6 +1987,28 @@ static void __fastcall__ worked (unsigned long t)
     }
 }
 
+/* A search's end (the long task's: its time done, or stopped): the walls about it searched, its tests harder by the
+** part not done (HOUSE.md: a search cut short finds for the part done), told (E_PORTAL: the UI's things' search after
+** it, as hard); 0, done */
+static unsigned char srch;
+unsigned char srch_pen;
+static unsigned char searched (void)
+{
+    unsigned l, d;
+
+    srch = 0;
+    hub_map (0);
+    l = HUB->pc_task.len;
+    d = HUB->pc_task.done;
+    srch_pen = d >= l ? 0 : (unsigned char) ((unsigned long) (l - d) * 4 / l);
+    here ();
+    work (PA_SEARCH, NO_SQ, NO_SQ, 0);
+    srch_pen = 0;
+    wk.tt = 0;                                  /* (Its minute spent already, the long task's) */
+    worked (0);
+    return 0;
+}
+
 /* A door (or a portcullis, a window, a slit) the character faces worked, walked up to first; or about it: a search,
 ** a trap in reach disarmed (else the door ahead's) (part 12's) */
 #pragma code-name (push, "SW12CODE")
@@ -1980,7 +2019,13 @@ void __fastcall__ s_door_work (unsigned char what)
     unsigned long t;
 
     here ();
-    if ((what == PA_SEARCH || what == PA_DISARM) && !work (what, NO_SQ, NO_SQ, 0)) {
+    if (what == PA_SEARCH) {                    /* (A long task: a minute's, what it finds told as it ends) */
+        task (LT_SEARCH, 600);
+        busy (600);
+        srch = 1;
+        return;
+    }
+    if (what == PA_DISARM && !work (what, NO_SQ, NO_SQ, 0)) {
         worked (0);
         return;
     }
@@ -2041,7 +2086,7 @@ static void stepping (void)
     if (!HUB->pc_task.kind || HUB->pc_task.asking) {
         return;
     }
-    if (HUB->pc_task.kind == LT_WAIT) {
+    if (HUB->pc_task.kind == LT_WAIT || HUB->pc_task.kind == LT_SEARCH) {
         HUB->pc_task.done = (unsigned) (HUB->now - pt0);
     }
     if (pc_hit || (pon && pnext < npath && HUB->now >= pdue)) {
@@ -2067,6 +2112,9 @@ static void __fastcall__ halt (unsigned char why)
     HUB->pc_ready = HUB->now;
     HUB->pc_task.asking = 0;
     if (why != 0xFF) {
+        take_n = 0;                             /* (Stopped, hard or by the player: what it walked for dropped, a
+                                                **   thing to take up, a blow's close-in) */
+        pfoe = 0;
         event (E_TASK, 0, why | HUB->pc_task.kind << 8);
     }
 }
@@ -2166,8 +2214,8 @@ static unsigned char __fastcall__ beat (unsigned x, unsigned y, unsigned char h)
 ** wait) disturbed hard at once */
 void s_step_on (void)
 {
-    static unsigned char h, b;
-    static unsigned t, x, y;
+    static unsigned char h, b, e;
+    static unsigned t, x, y, ox, oy;
     unsigned char* p;
 
     hub_map (0);
@@ -2213,14 +2261,31 @@ void s_step_on (void)
             pz = elev_at (sn_, HUB->pc_x, HUB->pc_y);
         }
         hub_map (0);
+        ox = HUB->pc_x;
+        oy = HUB->pc_y;
         HUB->pc_x = x;
         HUB->pc_y = y;
         HUB->pc_face = h;
         HUB->pc_task.done = ++pnext;
+        if ((e = zone_step (ox, oy, x, y)) != 0) {    /* (HOUSE.md's engagement, part 24's) */
+            if (e != 0xFF) {
+                evb = e;                        /* (Come into an enemy's zone, or a square on in one: stopped) */
+            }
+            halt (e == 0xFF ? 0xFF : TE_ENGAGED);   /* (0xFF: a close-in beside its target, the blow as it arrives) */
+            return;
+        }
         b = beat (x, y, h);
         if (pnext < npath && (b || pnext % 3 == 0)) {
             see (0);                            /* (Looking about as it goes: what's come into sight) */
             if (news ()) {
+                return;
+            }
+            hub_map (0);
+            t = (unsigned) (HUB->now - pt0);    /* (Its exertion so far the referee's: a fatigue level more, asked) */
+            spend (pace_, t - pspent);
+            pspent = t;
+            if (wres) {
+                ask (TE_ASK_TIRED);
                 return;
             }
         }
@@ -2297,6 +2362,160 @@ void __fastcall__ s_path_ways (unsigned char tx, unsigned char ty)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
+/* ==== Part 24: engagement, and a blow's close-in */
+#pragma code-name (push, "SW24CODE")
+#pragma rodata-name (push, "SW24RODATA")
+
+/* ---- Engagement (HOUSE.md's, the book's engagement zones): an enemy on its feet and conscious (a hostile or
+** unfriendly denizen: one that strikes at a character beside it) has a zone, its square and the eight round it, but
+** not round a corner (a diagonal with solid squares on both sides); one lying down only its own square, one senseless
+** none.  The denizens move a square at a time and a hostile one stops beside the character to strike, so the rule
+** holds for them as they are; the character's walks are stopped by it (step_on) */
+
+/* Square ax, ay beside square x, y, not round a corner (the chunk in the window after) */
+static unsigned char __fastcall__ beside (unsigned x, unsigned y, unsigned ax, unsigned ay)
+{
+    static unsigned char* p;
+    int dx = ax - x, dy = ay - y;
+
+    if (dx < -1 || dx > 1 || dy < -1 || dy > 1 || (!dx && !dy)) {
+        return 0;
+    }
+    if (dx && dy && (!(p = at (sn_, x + dx, y)) || !T_CLEAR (*p)) && (!(p = at (sn_, x, y + dy)) || !T_CLEAR (*p))) {
+        return 0;
+    }
+    return 1;
+}
+
+/* The enemy whose zone square x, y is in: it plus 1, or 0 (the hub in the window after) */
+static unsigned char __fastcall__ engager (unsigned x, unsigned y)
+{
+    static unsigned char k;
+    struct actor* a;
+    unsigned ax, ay;
+
+    for (k = 0; k < NACTORS; ++k) {
+        hub_map (0);
+        a = &HUB->actor[k];
+        if (!a->state || a->sn != HUB->pc_stratum || a->pos == POS_PRONE || a->doing == DO_DOWN ||
+            a->attitude > AT_UNFRIENDLY) {
+            continue;
+        }
+        ax = a->x;
+        ay = a->y;
+        if (beside (x, y, ax, ay)) {
+            hub_map (0);
+            return k + 1;
+        }
+    }
+    hub_map (0);
+    return 0;
+}
+
+/* The close-in's target beside square x, y (on its feet or not: it's walked up to) */
+static unsigned char __fastcall__ near_foe (unsigned x, unsigned y)
+{
+    struct actor* a;
+    unsigned ax, ay;
+
+    hub_map (0);
+    a = &HUB->actor[(pfoe - 1) & 7];
+    if (!a->state || a->sn != HUB->pc_stratum) {
+        return 0;
+    }
+    ax = a->x;
+    ay = a->y;
+    return beside (x, y, ax, ay);
+}
+
+/* A walk's square stepped onto (x, y, from ox, oy: step_on's): 0xFF beside a close-in's target; the enemy whose zone
+** it's come into plus 1, | TE_STILL if it was in it already; 0 neither */
+unsigned char __fastcall__ s_zone_step (unsigned ox, unsigned oy, unsigned x, unsigned y)
+{
+    unsigned char e;
+
+    if (pfoe && near_foe (x, y)) {
+        return 0xFF;
+    }
+    if ((e = engager (x, y)) != 0 && e == engager (ox, oy)) {
+        e |= TE_STILL;
+    }
+    return e;
+}
+
+unsigned char s_close_on (void);
+
+/* A blow's close-in begun (I_CLOSE: walked up to its target, then struck; engaged already, refused, the user's) */
+void __fastcall__ s_close_go (const struct msg* m)
+{
+    unsigned char e;
+
+    hub_map (0);
+    if ((e = engager (HUB->pc_x, HUB->pc_y)) != 0 && e != m->a) {
+        evb = e | TE_STILL;
+        event (E_TASK, 0, TE_ENGAGED);
+        return;
+    }
+    pfoe = m->a;
+    paim = m->b;
+    pstrike = m->x[1];
+    pfd = 0xFF;
+    s_close_on ();
+}
+
+/* The close-in as the character's free (its walk done, or begun): beside its target, the blow struck (I_ATTACK's: a
+** round); nearer than it was as it last set out, on again (it's moved); else out of reach still (told, TE_FAR).  2 if
+** it's walking or striking, 0 if it's done */
+unsigned char s_close_on (void)
+{
+    static unsigned x, y, px, py, dx, dy;
+    static unsigned char k;
+    struct actor* a;
+
+    hub_map (0);
+    k = (pfoe - 1) & 7;
+    a = &HUB->actor[k];
+    px = HUB->pc_x;
+    py = HUB->pc_y;
+    if (a->state && a->sn == HUB->pc_stratum) {
+        x = a->x;
+        y = a->y;
+        if (beside (px, py, x, y)) {
+            hub_map (0);
+            pfoe = 0;
+            HUB->pc_task.kind = LT_NONE;        /* (The walk over: the blow's round) */
+            busy (HUB->round);
+            HUB->pc_strike = pstrike;
+            HUB->pc_aim = paim;
+            HUB->pc_foe = k + 1;
+            if (HUB->tpr) {
+                pc_blow ();
+            }
+            return 2;
+        }
+        dx = x > px ? x - px : px - x;
+        dy = y > py ? y - py : py - y;
+        if (dy > dx) {
+            dx = dy;
+        }
+        if (dx < pfd) {
+            pfd = dx > 0xFE ? 0xFE : (unsigned char) dx;
+            go_to (x, y);                       /* (No way: told, the walk's words) */
+            if (!move.on) {
+                pfoe = 0;
+            }
+            return move.on ? 2 : 0;
+        }
+    }
+    pfoe = 0;
+    evb = k + 1;
+    event (E_TASK, 0, TE_FAR);
+    return 0;
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 static unsigned char pc_waited;
 static void __fastcall__ intent (struct msg* m)
 {
@@ -2340,10 +2559,15 @@ static void __fastcall__ intent (struct msg* m)
         start_dig (m->a);
         break;
     case I_GOTO:
+        go_near = m->a;
         go_to (m->w1, m->w2);
+        go_near = 0;
         break;
     case I_TAKE:
         take_go (m);                            /* (Walked over to it, then taken up: wgame.c) */
+        break;
+    case I_CLOSE:
+        close_go (m);                           /* (Walked up to it, then struck: part 23's) */
         break;
     case I_STEP:
         step_to (m->w1 & 7, m->w2, (m->w1 & STEP_KEEP) != 0);
@@ -2529,7 +2753,8 @@ int main (int argc, char* argv[])
                 pc_waited = 0;
                 ask_look (LK_EYES);             /* (A wait's end: its eyes, as time's gone, the senses') */
             }
-            took = take_n ? take_up () : 0;     /* (A thing walked over to: taken up, or walked on to) */
+            took = take_n ? take_up () : pfoe ? close_on () : srch ? searched () : 0;  /* (A thing walked over to: taken up, or walked on
+                                                **   to; a blow's close-in: struck, or walked on) */
             if (took == 1) {
                 see (0);
             } else if (!took) {
@@ -2586,15 +2811,22 @@ void __fastcall__ s_ways_go (unsigned char r, unsigned char fx, unsigned char fy
 {
     static unsigned c[4];
     static unsigned char tr[4];
-    struct room* p = &C->room[r];
+    struct room* p;
     struct wcell* w;
     unsigned head = 0, tail = 0, i, n, t, q;
     unsigned char x, y, d, b = ovbank[OVBANKS + 1];
 
-    wox = p->x - 1;
-    woy = p->y - 1;
-    wow = p->w + 2;
-    woh = p->h + 2;
+    if (r == 0xFF) {                            /* (In a passage: the squares within 12 of it, the chunk's) */
+        wox = fx - 12;
+        woy = fy - 12;
+        wow = woh = 25;
+    } else {
+        p = &C->room[r];
+        wox = p->x - 1;
+        woy = p->y - 1;
+        wow = p->w + 2;
+        woh = p->h + 2;
+    }
     hy_bank (b);
     for (y = 0; y < woh; ++y) {                 /* (None reached yet) */
         for (x = 0; x < wow; ++x) {
@@ -2637,6 +2869,41 @@ void __fastcall__ s_ways_go (unsigned char r, unsigned char fx, unsigned char fy
         }
     }
     hub_map (at_bank);
+}
+
+/* The square the ways reach nearest chunk square *tx, *ty (go_to's: a place the character can't stand on itself, a
+** cave's rock about its middle): 1, it in *tx, *ty; 0 none (the chunk in the window after) */
+unsigned char __fastcall__ s_ways_near (unsigned char* tx, unsigned char* ty)
+{
+    unsigned char x, y, qx, qy, bx = 0xFF, by = 0, d, dy, best = 0xFF;
+
+    hy_bank (ovbank[OVBANKS + 1]);
+    for (y = 0; y < woh; ++y) {
+        qy = woy + y;
+        for (x = 0; x < wow; ++x) {
+            qx = wox + x;
+            if (qx >= CW || qy >= CW || WAYS_AT[(unsigned) qy * CW + qx].from == 0xFF) {
+                continue;
+            }
+            d = qx > *tx ? qx - *tx : *tx - qx;
+            dy = qy > *ty ? qy - *ty : *ty - qy;
+            if (dy > d) {
+                d = dy;
+            }
+            if (d < best) {
+                best = d;
+                bx = qx;
+                by = qy;
+            }
+        }
+    }
+    hub_map (at_bank);
+    if (bx == 0xFF) {
+        return 0;
+    }
+    *tx = bx;
+    *ty = by;
+    return 1;
 }
 
 #pragma code-name (pop)

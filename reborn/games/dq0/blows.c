@@ -239,8 +239,8 @@ unsigned char __fastcall__ o_fight_target (struct cmd* c)
     static struct actor q;
     static struct { unsigned char sn; unsigned x, y; } pc;
     const char* w = c->obj.word;
-    unsigned char k, away = 0, dir = c->dir;
-    int dx, dy;
+    unsigned char k, away = 0, best = 0, bdist = 0xFF, d, nigh, dir = c->dir;
+    int dx, dy, ex, ey;
 
     if (c->action == VB_DEFEND) {
         stance (w, c->aux);
@@ -257,12 +257,30 @@ unsigned char __fastcall__ o_fight_target (struct cmd* c)
         dx = q.x - pc.x;
         dy = q.y - pc.y;
         if (q.state && q.name[0] && q.sn == pc.sn && (!*w || strstr (q.name, w)) &&
-            (dir > H_NW || bearing (dx, dy) == dir) && (!c->obj.x || (q.x == c->obj.x && q.y == c->obj.y))) {
-            if (dx >= -1 && dx <= 1 && dy >= -1 && dy <= 1) {
-                return k + 1;
+            (dir > H_NW || bearing (dx, dy) == dir)) {
+            nigh = dx >= -1 && dx <= 1 && dy >= -1 && dy <= 1;
+            if (!c->obj.x) {
+                if (nigh) {
+                    return k + 1;
+                }
+                away = 1;
             }
-            away = 1;
+            ex = c->obj.x ? q.x - c->obj.x : dx;   /* (One it sees, said or the target: the one of its name nearest
+                                                **   where it was seen; else, several of its name and none beside it,
+                                                **   the nearest in sight: struck, or closed with first, I_CLOSE; a
+                                                **   missile weapon's shot instead, slice 4.7's) */
+            ey = c->obj.x ? q.y - c->obj.y : dy;
+            ex = ex < 0 ? -ex : ex;
+            ey = ey < 0 ? -ey : ey;
+            d = ex > ey ? (ex > 0xFE ? 0xFE : ex) : (ey > 0xFE ? 0xFE : ey);
+            if (d < bdist && (c->obj.x || (*w && den_seen (q.x, q.y)))) {
+                bdist = d;
+                best = nigh ? k + 1 : (k + 1) | FT_CLOSE;
+            }
         }
+    }
+    if (best) {
+        return best;
     }
     note (away ? FN_AWAY : *w ? FN_NONE_LIKE : FN_NONE);
     return 0;

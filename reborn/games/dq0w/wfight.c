@@ -152,6 +152,10 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
         bd.doing = DO_DOWN;                     /* (Senseless: it lies there till it comes round) */
         bd.ready = HUB->now + w2;
     }
+    if ((ff & (att ? FF_D_DOWN : FF_A_DOWN)) && HUB->pc_ready < HUB->now + w2) {
+        HUB->pc_ready = HUB->now + w2;          /* (The character senseless: busy till it comes round, so nothing's
+                                                **   done meanwhile, however the UI's events come) */
+    }
     if (ff & FF_FLEES) {
         bd.doing = DO_FLEE;                     /* (Broken: it flees) */
     } else if (c & AF_CAUTIOUS) {

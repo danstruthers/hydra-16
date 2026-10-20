@@ -655,6 +655,11 @@ static unsigned char cq_st;                     /* The line posted to the comman
 static signed char cq_res;                      /* (Its verdict, cq_cmd's) */
 unsigned char cq_again;                         /* The line changed since it was posted (names_subst's): posted again */
 struct cmd cmd;                                 /* The command being carried out (the parser's, cq_cmd's) */
+unsigned char reach;                            /* (1: walking over, the command kept (the UI bank's) to carry out
+                                                **   again as it's free; 2: carried out again; 0 again as a long task's
+                                                **   stopped, task.c's) */
+static unsigned char placing;                   /* (A place in the room walked to: place_go's, its arrival not "over
+                                                **   to it") */
 unsigned char untarget;                         /* (The target let go at the next command: resolve.c's) */
 
 /* ---- The status line */
@@ -797,9 +802,10 @@ static unsigned char events (void)          /* (How many there were) */
                 }
                 if ((m.w1 & 0xFF) == A_CROSSED) {
                     tell (T_YOU_CROSS_THE);
-                } else if ((m.w1 & 0xFF) == A_WENT_TO) {
+                } else if ((m.w1 & 0xFF) == A_WENT_TO && !placing) {
                     tell (T_YOU_GO_OVER);
                 }
+                placing = 0;
                 k = m.w1 & 0xFF;               /* (As a run or a sprint ends, briefly: the pace not held) */
                 look ((m.w1 >> 8 & 1) | ((k == A_WALKED || k == A_CROSSED || k == A_WENT_TO || k == A_STEPPED) &&
                     HUB->gait > GA_JOG && !(HUB->watch & (WA_TRAPS | WA_LISTEN | WA_MAP)) && !sight_get ()->dark ? 4 :
@@ -884,6 +890,13 @@ static unsigned char events (void)          /* (How many there were) */
             break;
         case E_PORTAL:
             if (m.who == 0) {
+                if (finds == 0xFF) {            /* (A search's end: the things concealed about it too, as hard as the
+                                                **   walls were, the part of it done) */
+                    k = HUB->pc_task.len > HUB->pc_task.done ? (unsigned char) ((unsigned long) (HUB->pc_task.len -
+                        HUB->pc_task.done) * 4 / HUB->pc_task.len) : 0;
+                    HUB->ireq.to = k;
+                    finds = things (IO_SEARCH, "");
+                }
                 if (!finds || m.w1 != PO_NOTHING) {
                     fixt_words (m.w1);
                 }
@@ -1071,6 +1084,9 @@ static void __fastcall__ handle (unsigned char op, const char* x, const char* y,
     strcpy (HUB->ireq.into, y);
     HUB->ireq.to = on;
     things (op, x);
+    if (HUB->ireq.result == IR_NOT_HERE && reach_go ()) {
+        return;                                 /* (Out of reach: walked over to it first, then again) */
+    }
     msg (tt ());
     if (HUB->ireq.result == IR_OK) {
         after (was, HUB->ireq.x, op);
@@ -1396,6 +1412,13 @@ void __fastcall__ s_command (char* l)
     signed char ok;
 
     cl = l;
+    if (!l) {                                   /* (A command kept, its thing walked over to first: reach_go's) */
+        hub_mem (UI_BANK, &cmd, &UIREC->kept, sizeof cmd);
+        pc_face = HUB->pc_face;
+        tx = 0;
+        cl = "";
+        goto again;
+    }
     ok = s_cq_cmd (l);                          /* (The command the parser made: dq0c's, the grammar's verdict with
                                                 **   it) */
     pc_face = HUB->pc_face;
@@ -1414,6 +1437,7 @@ void __fastcall__ s_command (char* l)
     if (resolve () != RV_ON) {                  /* (Its things found, its unsaid filled; or a question asked) */
         return;
     }
+again:
     if ((d = puzzle (&cmd)) != Q_NONE) {        /* (The theme's puzzle's: theme.c) */
         if (d >= Q_DONE) {
             intend2 (I_WAIT, 50, 1);            /* (Its time: the way out opened the world's already) */
@@ -1430,6 +1454,10 @@ void __fastcall__ s_command (char* l)
     case VB_MOVE_TOWARD:
     case VB_ENTER:
     case VB_APPROACH_OBJECT:
+        d = cmd.obj.kind;
+        if ((d == OB_WALL || (d >= OB_ROOM && d != OB_PILLAR)) && place_go (&cmd)) {
+            return;                             /* (A place in the room: the centre, a side, a corner: part 7's) */
+        }
         if (cmd.obj.kind && cmd.action != VB_MOVE_DIRECTION) {   /* (A thing: up to it, or through it) */
             if (find (cmd.obj.kind | PICK_TELL, cmd.obj.lies) != 1) {
                 return;                         /* (None, told; or which, asked) */
@@ -1525,7 +1553,9 @@ portal:
         msg (lb);
         return;
     case VB_SEARCH:
-        finds = things (IO_SEARCH, "");         /* (Things concealed about it; then the walls) */
+        finds = 0xFF;                           /* (A search, a long task: what it finds told as it ends, the walls'
+                                                **   and the things concealed about it, E_PORTAL's) */
+        msg ("Searching about...");
         intend (I_PORTAL, PA_SEARCH);
         return;
     case VB_DIG:
@@ -1599,7 +1629,7 @@ portal:
             goto portal;
         }
         if (d) {
-            intend (I_ATTACK, d);
+            intend (d & FT_CLOSE ? I_CLOSE : I_ATTACK, d & 0x0F);   /* (Out of reach: closed with first) */
             return;
         }
         msg (lb);
@@ -1649,6 +1679,124 @@ static const char* rules = "harn";              /* (The ruleset, if none's given
 
 #pragma code-name (push, "SW7CODE")
 #pragma rodata-name (push, "SW7RODATA")
+
+/* A command whose thing is out of reach (the things' IR_NOT_HERE, the puzzle's PZ_FAR: where it is in the hub's ireq,
+** its words not said): walked over to it first (I_TAKE's walk alone), the command kept and carried out again as the
+** character's free (HOUSE.md's out of reach, walked to first); 1 if so, or if it's the command again and the thing's
+** out of reach still (told) */
+static struct msg pm;                           /* (reach_go's, place_go's) */
+unsigned char s_reach_go (void)
+{
+    unsigned b = hub_here ();
+    unsigned char r = 1;
+
+    if (reach) {
+        msg ("You can't get any nearer to it.");
+    } else {
+        hub_map (UI_BANK);
+        memcpy (&UIREC->kept, &cmd, sizeof cmd);
+        hub_map (0);
+        pm.kind = I_TAKE;
+        pm.who = 0;
+        pm.a = 1;
+        pm.w1 = HUB->ireq.x;
+        pm.w2 = HUB->ireq.y;
+        pm.t = HUB->ireq.item;
+        if ((r = hub_send (&pm)) != 0) {
+            busy = 1;
+            reach = 1;
+            t_prompt (0);
+        }
+    }
+    hub_back (b);
+    return r;
+}
+
+/* A place in the room the character's in (HOUSE.md's going places), by its facing alone: the centre (the middle); a
+** side, the far one (the other side, the far end, the wall ahead) unless it says which (near, left, right, the way it
+** lies); a corner ("the far left corner"; unsaid, the nearest).  The square there walked to (I_GOTO, a 1: the nearest
+** the way reaches, a cave's rock about it); 1 if it's such a place (walked, or told why not), 0 if it isn't one */
+unsigned char __fastcall__ s_place_go (const struct cmd* c)
+{
+    signed char a, b, fa, ra;
+    unsigned char k, l, q, fy;
+    unsigned x0, x1, y0, y1, px, py, f0, f1, r0, r1, fc, rc;
+    struct sight* s;
+    const char* w = cl;                         /* (Its words: the line's, "the near side" the parser's how) */
+
+    k = c->obj.kind;
+    if (k == OB_ROOM) {                         /* ("The centre of the room": the place, not the room) */
+        k = strstr (w, "corner") ? OB_CORNER : strstr (w, "side") || strstr (w, "end") || strstr (w, "wall") ? OB_SIDE :
+            strstr (w, "cent") || strstr (w, "middle") ? OB_CENTRE : OB_ROOM;
+    }
+    if (k != OB_CENTRE && k != OB_SIDE && k != OB_CORNER && k != OB_WALL) {
+        return 0;
+    }
+    s = sight_get ();
+    if (s->where != W_ROOM || s->dark) {
+        if (k == OB_CORNER || k == OB_WALL) {
+            return 0;                           /* (A passage's corner, a wall: as ever) */
+        }
+        msg ("You aren't in a room.");
+        return 1;
+    }
+    a = b = 2;
+    if (k == OB_CENTRE) {
+        a = b = 0;
+    }
+    a = strstr (w, "far") || strstr (w, "other") || strstr (w, "opposite") ? 1 : strstr (w, "near") ? -1 : a;
+    b = strstr (w, "left") ? -1 : strstr (w, "right") ? 1 : b;
+    l = c->obj.lies != 0xFF ? c->obj.lies : c->dir <= H_NW && a == 2 && b == 2 ? c->dir : 0xFF;
+    if (l != 0xFF) {
+        l = l & CQ_REL ? l & 7 : (l - pc_face) & 7;    /* (As it faces) */
+        a = l == 7 || l <= 1 ? 1 : l >= 3 && l <= 5 ? -1 : a;
+        b = l >= 1 && l <= 3 ? 1 : l >= 5 ? -1 : b;
+    }
+    if (k != OB_CORNER && a == 2 && b == 2) {
+        a = 1;                                  /* (A side, a wall: the far one) */
+    }
+    x0 = s->rx;
+    x1 = s->rx + s->rw - 1;
+    y0 = s->ry;
+    y1 = s->ry + s->rh - 1;
+    px = s->x;
+    py = s->y;
+    q = ((pc_face + 1) & 7) >> 1;               /* (The nearest of the four it faces: its ahead and its right) */
+    fy = !(q & 1);                              /* (Ahead along y: facing north or south) */
+    fa = q == 1 || q == 2 ? 1 : -1;             /* (Ahead the way x or y grows) */
+    ra = q <= 1 ? 1 : -1;                       /* (Its right the way the other grows) */
+    f0 = fy ? y0 : x0;
+    f1 = fy ? y1 : x1;
+    r0 = fy ? x0 : y0;
+    r1 = fy ? x1 : y1;
+    fc = fy ? py : px;
+    rc = fy ? px : py;
+    if (k == OB_CORNER) {                       /* (Unsaid: the nearer end each way) */
+        if (a == 2) {
+            a = (fa > 0 ? f1 - fc <= fc - f0 : fc - f0 <= f1 - fc) ? 1 : -1;
+        }
+        if (b == 2) {
+            b = (ra > 0 ? r1 - rc <= rc - r0 : rc - r0 <= r1 - rc) ? 1 : -1;
+        }
+    }
+    fc = a == 2 ? fc : !a ? (f0 + f1) / 2 : a * fa > 0 ? f1 : f0;
+    rc = b == 2 ? rc : !b ? (r0 + r1) / 2 : b * ra > 0 ? r1 : r0;
+    pm.w1 = fy ? rc : fc;
+    pm.w2 = fy ? fc : rc;
+    if (pm.w1 == px && pm.w2 == py) {
+        msg ("You're there already.");
+        return 1;
+    }
+    pm.kind = I_GOTO;
+    pm.who = 0;
+    pm.a = 1;
+    if (hub_send (&pm)) {
+        busy = 1;
+        placing = 1;
+        t_prompt (0);
+    }
+    return 1;
+}
 
 void __fastcall__ s_args (int argc, char* argv[])
 {
@@ -1789,6 +1937,11 @@ int main (int argc, char* argv[])
         if (!busy && pending[0]) {              /* (Lifted out, or come to: now taken up) */
             take (pending);
             pending[0] = 0;
+        }
+        if (!busy && reach == 1) {
+            reach = 2;                          /* (Walked over to its thing: the command kept carried out again) */
+            command (0);
+            reach = 0;
         }
         if ((l = (char*) t_next ()) != 0 && (!busy || !held)) {
             cq_post (l);                        /* (The command parser at work on it meanwhile) */

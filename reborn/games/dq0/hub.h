@@ -26,10 +26,11 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     6                       /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     7                       /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
-                                                **   character's long task, pc_task, I_STOP, E_TASK) */
+                                                **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
+                                                **   I_TAKE's walk alone, TE_ENGAGED, TE_FAR) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -158,12 +159,19 @@ enum {
                                                 **   reach: IO_GET's IR_NOT_HERE): w1, w2 the square it lies on (as
                                                 **   I_GOTO's), t the thing (its item: the reply's); the world walks
                                                 **   there (again, as long as the walk gets it nearer) and takes it up,
-                                                **   E_TAKEN */
+                                                **   E_TAKEN.  a 1: walked over to it alone (any other command whose
+                                                **   thing is out of reach, IR_NOT_HERE: the UI's to carry it out
+                                                **   again, as the character's free; no E_TAKEN) */
     I_STOP,                                     /* The character's long task stopped (the player's "stop"): a its kind
                                                 **   named (LT_*: "stop digging"; LT_NONE whatever it is); E_TASK */
     I_GO_ON,                                    /* A soft interruption answered: go on (E_TASK's TE_ASK*: "yes") */
     I_ASK,                                      /* A soft interruption the UI perceived itself (a sound heard): w1 its
                                                 **   kind (TE_ASK_HEARD); the long task paused, asked (E_TASK) */
+    I_CLOSE,                                    /* A blow at a denizen out of reach (as I_ATTACK's: a the actor plus
+                                                **   1, b the aim, x[1] what it strikes with): walked up to first, a
+                                                **   walk (HOUSE.md's engagement: it ends beside it, or engaged by
+                                                **   another, no blow), then struck; engaged already, refused (E_TASK
+                                                **   TE_ENGAGED) */
     NINTENTS
 };
 /* The denizens' intents (their ring, the hub's di: the minds', for their actors' bodies, the world's to carry out
@@ -261,13 +269,18 @@ enum { V_TURNED, V_LIT, V_DARK, V_STIR, V_FACING };    /* E_VIEW's why (V_STIR: 
                                                 **   from it, or doing something else; V_FACING: a turn begun, its
                                                 **   look to come, V_TURNED) */
 enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL };  /* E_DIG's how */
-enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE_IDLE, TE_CANT, TE_ASK_HEARD };   /* E_TASK's: stopped as
+enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE_IDLE, TE_CANT, TE_ASK_HEARD,
+       TE_ENGAGED, TE_FAR };                    /* E_TASK's: stopped as
                                                 **   the player asked; stopped hard, by a wound or a blow (HOUSE.md:
                                                 **   all wounds), by a hostile in sight within 30 feet; asking, soft
                                                 **   (something new seen, tiring); carried on, the answer yes; not
                                                 **   the task named (its kind the hub's pc_task's); no task to stop;
                                                 **   one that can't be stopped now (a climb part way); asking, a
-                                                **   sound heard (the UI's, I_ASK) */
+                                                **   sound heard (the UI's, I_ASK); stopped hard, come into an enemy's
+                                                **   zone (HOUSE.md's engagement: b the enemy plus 1, | TE_STILL if it
+                                                **   was engaged with it already, or a close-in refused, engaged); a
+                                                **   close-in's target out of reach still (b it plus 1) */
+#define TE_STILL        0x80
 enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN };   /* E_BEAT's: a quiet stretch (HOUSE.md:
                                                 **   every 30 feet), the way turns, a side passage, a door passed, it
                                                 **   opens out, it rises, it falls */
@@ -674,6 +687,8 @@ struct uirec {
     char            map[MAP_H][MAP_W + 1];      /* The map's rows (the maker's, as the UI asks: mapq) */
     char            things_text[400];           /* The things' words for the UI (what's carried: ireq's reply), and
                                                 **   the UI's to the things (dq0 -k's: the things more) */
+    struct cmd      kept;                       /* A command whose thing was out of reach, kept while the character
+                                                **   walks over to it (the UI's reach_go) */
 };
 
 /* The world's bank's records (WORLD_BANK): the dungeon's (world.h) */

@@ -521,7 +521,8 @@ static void __fastcall__ answer (struct req* r)
         r->w1 = 0;
         r->b = health (wounds, TOUGH);
         break;
-    case RS_EXERT:                              /* (No fatigue) */
+    case RS_EXERT:                              /* (No fatigue: never a level more) */
+        r->result = 0;
         status ();
         break;
     case RS_EQUIP:

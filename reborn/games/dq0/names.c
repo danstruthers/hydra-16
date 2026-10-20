@@ -650,7 +650,7 @@ void __fastcall__ s_names_look (unsigned char after)
     static struct item it;
     static struct sight* s;
     static struct sitem* q;
-    static char* p;
+    static char* p, * p2;
     static unsigned char n;
 
     s = &sight_copy;
@@ -669,12 +669,17 @@ void __fastcall__ s_names_look (unsigned char after)
         }
         return;
     }
-    p = !strncmp (lb, "You are in", 10) ? lb + 10 : !strncmp (lb, "You can see part of", 19) ? lb + 19 : 0;
+    p = !strncmp (lb, "You are ", 8) || !strncmp (lb, "You can see part of", 19) ? strstr (lb, " a ") : 0;   /* (Before
+                                                **   its article: where in it the character is first, slice 4.0's;
+                                                **   "an", if it comes first) */
+    if (p && (p2 = strstr (lb, " an ")) != 0 && p2 < p) {
+        p = p2;
+    }
     if (s->where != W_ROOM || s->dark || !p || !find (NM_ROOM, 0) ||
         strlen (lb) + (n = strlen (e.name) + 2) >= sizeof lb) {
         return;
     }
-    memmove (p + n, p, strlen (p) + 1);         /* ("You are in" the Mausoleum, "a small crypt") */
+    memmove (p + n, p, strlen (p) + 1);         /* ("You are in the middle of" the Mausoleum, "a small crypt") */
     *p = ' ';
     memcpy (p + 1, e.name, n - 2);
     p[n - 1] = ',';

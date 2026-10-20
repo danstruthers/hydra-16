@@ -205,6 +205,7 @@ ovl_out:
             SWPART      5, 10               ; The names given (names.c)
             SWPART      6, 10               ; The names said (names.c)
             SWPART      7, 8                ; The game's arguments, its own theme made (main.c)
+            SWPART      8, 5                ; Where in its room the character is, and the things (look.c)
 
             SWFN        begin, 1
             SWFN        size, 1
@@ -218,6 +219,9 @@ ovl_out:
             SWFN        take, 2
             SWFN        took_up, 2
             SWFN        map, 3
+            SWFN        lie_words, 8
+            SWFN        room_where, 8
+            SWFN        den_seen, 8
             SWFN        pace_cmd, 4
             SWFN        names_line, 5
             SWFN        names_den, 6
@@ -228,3 +232,5 @@ ovl_out:
             SWFN        room_named, 6
             SWFN        history, 7
             SWFN        args, 7
+            SWFN        reach_go, 7
+            SWFN        place_go, 7

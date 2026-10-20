@@ -164,11 +164,15 @@ static void items (void)
             if (k < S->nitems) {
                 continue;
             }
-            add (S->item[i].hid & 1 ? (S->item[i].rel == 0xFF ? " Hidden at your feet " : " Hidden on the floor ") :
-                S->item[i].rel == 0xFF ? " At your feet " : " On the floor ");
-            if (S->item[i].rel != 0xFF) {
-                add (relname[S->item[i].rel & 7]);
-                add (" ");
+            if (lie_words (i)) {
+                add (where_w);                  /* (In a corner, against a wall: part 8's) */
+            } else {
+                add (S->item[i].hid & 1 ? (S->item[i].rel == 0xFF ? " Hidden at your feet " : " Hidden on the floor ") :
+                    S->item[i].rel == 0xFF ? " At your feet " : " On the floor ");
+                if (S->item[i].rel != 0xFF) {
+                    add (relname[S->item[i].rel & 7]);
+                    add (" ");
+                }
             }
         }
         if (n > 1 && !S->item[i].plural && q <= 1) {
