@@ -21,7 +21,7 @@
 :           rts
 .endproc
 
-; const unsigned char *__fastcall__ cmd_mean (unsigned char face): the last line matched's struct pcmd
+; const unsigned char *__fastcall__ cmd_mean (unsigned char face): the last line matched's struct cmd
 .proc _cmd_mean
             jsr         cm_mean
             lda         #<cm_cmd

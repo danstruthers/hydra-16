@@ -609,3 +609,18 @@ trade start-up work for each command's speed.
 
 The design documents say how things are now; this log says when and why, in the user's words; no "Built:" lines in
 the design (the detailed plan's rule for documents, Phase 3A).
+
+### The command interpreter's first build (Phase 3C)
+
+Actions, not verbs, and verbs as data (the user's, 2026-10-18; the game plan's 3C): a line makes one command, an
+action of the catalogue's and its roles, the same structure a denizen's mind is to post; each verb a line of data
+(its actions by the phrase's shape, the thing it takes unsaid, its value for the game, the skill, the long task).
+Built on the grammar's answers: "it" the last thing of any kind named (7), a bare take saying so when there's
+nothing near (8), a question answered by a number, a selector or a name (13).  The choices made in building it, the
+user's to review: a thing's word is its head, its last word before a preposition ("the iron key"); "go down the
+stairs" climbs them; the lead of several is the closest, as yet; several of a name, none said, is the world's
+services' choice as before, but a throw's mark and a target set must be one, so asked; "follow" an ally's request
+still (the game's), not the character following; anything thrown at the book's missile ranges, a kind's reach its
+short band, a hit wounding nothing till the referee's missile attack.
+
+**Design:** DUNGEON.md, who keeps what (the command) and seeing (which, asked); HOUSE.md, throwing and commands.

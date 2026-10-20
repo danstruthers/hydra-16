@@ -8,7 +8,7 @@ HUB_WINDOW  = $8000                 ; The hub's bank in the window (hub.h's HUB_
 HUB_U       = $FFF1                 ; The shared RAM's macro-page register, then the bank register (hub.c's hub_map)
 HUB_BANKREG = $00
 HUB_MAGIC   = $5144                 ; "DQ" (hub.h's)
-HUB_VERSION = 4
+HUB_VERSION = 5
 
 HUBO_SEM    = 4                     ; Bank 0: each task's doorbell (a semaphore), by role
 HUBO_TASK   = 12                    ;   each role's task number
@@ -25,8 +25,8 @@ CQO_LEN     = 5                     ;   the character faces
 CQO_RES     = 7
 CQO_FACE    = 8
 CQ_WORDS    = 1024                  ; The world's words' text, at most
-CQ_PCMD     = $1000                 ; A line's reply's struct pcmd (dq0.h's), in the text bank (cmdmean.s's PC_*)
-PCMD_SIZE   = 41
+CQ_CMD      = $1000                 ; A line's reply's struct cmd (hub.h's), in the text bank (cmdmean.s's CM_*)
+CMD_SIZE    = 61
 
 REQ_FREE    = 0                     ; hub.h's request states
 REQ_POSTED  = 1

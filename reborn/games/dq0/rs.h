@@ -66,6 +66,8 @@ enum {
                                                 **   is P_PERSUADE's, a threat P_INTIMIDATE's, an animal P_ANIMALS's;
                                                 **   any of them in words: the text the tongue they're said in, the
                                                 **   reply's result 2 if the character doesn't speak it) */
+    P_THROW,                                    /* A thing thrown at a mark (its range band in the steps: Throwing,
+                                                **   the book's missile ranges) */
     P_THEME,                                    /* A theme's own, P_THEME + n (named in its data) */
 };
 
