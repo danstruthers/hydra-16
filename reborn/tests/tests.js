@@ -3626,29 +3626,33 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0traps', what: 'Dingus Quest Zero\'s traps (DUNGEON.md: traps; the world\'s walk stops on one and sets it off, the referee judges it): a door\'s blade, set off as the door\'s forced open (seed 16, dq0 -T), dodged; then a plate in a storeroom\'s floor walked onto, its blade striking (HC_STRIKE: a wound) and the trap seen after, sprung; then (seed 7, a thief, hmchar -s 1, Lockcraft 95) a hidden dart trap on a door found by searching, the door left shut while it\'s known, the trap made out and disarmed (Lockcraft), and the door opened',
-      init: 't_rc', cycles: 2000e6,
-      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 16 -c /ram/c.hm -T\r' +
-        ['face east', 'force', 'e', 'force', 'force', 'e', 'e', 'look', 'quit'].map(l => 'ā' + l + '\r').join('') +
-        'āhmchar -q -s 1 -o /ram/t.hm\rāecho ml lck 95 >> /ram/t.hm\rādq0 -p t -s 7 -c /ram/t.hm\r' +
-        ['search', 'search', 'search', 'face south', 'open', 'disarm', 'disarm', 'open', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
-      expect: ['As the door opens, something clicks. A blade scythes out of the wall! You throw\nyourself clear.',
-        'A plate sinks under your foot with a click. A blade scythes out of the wall!', 'hurts you: a grievous deep gash to your thorax (G4).',
-        'scything blade, set off by a plate in the floor, at your feet (sprung).',
-        'You find a trap: a dart trap, set to go off as its door opens.',
-        'There\'s a trap on that door you know of: disarm it before you open it.',
-        'You study the mechanism a while, and make out how it works', 'You work at the trap a while, and disarm it.', 'You open the door.', '% echo $status'],
-      // (The referee's dice the commands', in their order, at the turns pace (the same with the typing's timing
-      // changed): at seed 16 the door's blade dodged, the next door holding at the first try, bursting at the
-      // second; at seed 7 the third search finding the trap; the mechanism made out at the first try, disarmed at
-      // the second (two checks: the user's))
-      check(m, out) {
-        const f = [];
-        inTurn(dq0Story(out), ['> force', 'You throw yourself clear.', '> force', 'The door holds.', '> force', 'With a crack the door bursts open.',
-          '> e', '> e', 'A plate sinks under your foot', '% dq0 -p t -s 7', '> search', 'You search about, and find nothing hidden.', '> search',
-          'You search about, and find nothing hidden.', '> search', 'You find a trap: a dart trap', '> open',
-          'There\'s a trap on that door you know of', '> disarm', 'and make out how it works: now to disarm it.', '> disarm',
-          'You work at the trap a while, and disarm it.', '> open', 'You open the door.'], f);
+      name: 'dq0traps', what: 'Dingus Quest Zero\'s traps (DUNGEON.md: traps; the world\'s walk stops on one and sets it off, the referee judges it), by the world\'s events (the referee\'s dice the commands\', in their order, at the turns pace: HarnMaster\'s at these seeds): a door\'s blade, set off as the door\'s forced open (seed 16, dq0 -T); the next door holding at the first try, bursting at the second; then a plate in a storeroom\'s floor walked onto (the walk stopped on it), its blade striking (HC_STRIKE: a wound), the trap seen after, sprung; then (seed 7, a thief, hmchar -s 1, Lockcraft 95) a hidden dart trap on a door found by the third search, the door left shut while it\'s known, the trap made out (its mechanism assessed), then disarmed (Lockcraft: two checks, the user\'s), and the door opened',
+      init: 't_rc', cycles: 1400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 16 -c /ram/c.hm -T', 'face east', 'force', 'e',
+        'force', 'force', 'e', 'e', 'quit', 'hmchar -q -s 1 -o /ram/t.hm', 'echo ml lck 95 >> /ram/t.hm', 'dq0 -p t -s 7 -c /ram/t.hm', 'search', 'search',
+        'search', 'face south', 'open', 'disarm', 'disarm', 'open', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [], fo = T.of('force');
+        dq0Need(f, fo, 'E_PORTAL', { po: 'PO_FORCED' }, 'the door not forced open');
+        dq0Need(f, fo, 'E_TRAP', { tk: 'TK_BLADE', tt: 'TT_DOOR' }, 'the door\'s blade not set off as it opened');
+        const f2 = T.after(T.after(fo, 'e'), 'force'), f3 = T.after(f2, 'force');
+        dq0Need(f, f2, 'E_PORTAL', { po: 'PO_HELD' }, 'the next door not holding at the first try');
+        dq0Need(f, f3, 'E_PORTAL', { po: 'PO_FORCED' }, 'the next door not bursting at the second');
+        const e2 = T.after(T.after(f3, 'e'), 'e');
+        dq0Need(f, e2, 'E_ARRIVE', { how: 'A_STOPPED' }, 'the walk not stopped on the plate');
+        dq0Need(f, e2, 'E_TRAP', { tk: 'TK_BLADE', tt: 'TT_PLATE', to: 'TO_SPRUNG' }, 'the plate\'s blade not set off');
+        dq0Need(f, e2, 'E_HARM', { hc: 'HC_STRIKE', band: b => b > 0 }, 'the blade not a wound');
+        if (!e2.after || !e2.after.sight || !e2.after.sight.traps.some(p => p.kind === 'TK_BLADE' && (p.state & 1))) f.push('the trap not seen, sprung');
+        const g = T.of('dq0 -p t -s 7 -c /ram/t.hm'), s1 = T.after(g, 'search'), s2 = T.after(s1, 'search'), s3 = T.after(s2, 'search');
+        for (const s of [s1, s2]) dq0Need(f, s, 'E_PORTAL', { po: 'PO_NOTHING' }, 'something found by the first searches');
+        dq0Need(f, s3, 'E_TRAP', { tk: 'TK_DARTS', tt: 'TT_DOOR', to: 'TO_FOUND' }, 'the dart trap not found by the third search');
+        const o = T.after(s3, 'open'), d1 = T.after(o, 'disarm'), d2 = T.after(d1, 'disarm'), o2 = T.after(d2, 'open');
+        dq0Need(f, o, 'E_PORTAL', { po: 'PO_TRAPPED' }, 'the door opened with its known trap on it');
+        dq0Need(f, d1, 'E_TRAP', { to: 'TO_ASSESSED' }, 'the mechanism not made out first');
+        dq0Need(f, d2, 'E_TRAP', { to: 'TO_DISARMED' }, 'the trap not disarmed');
+        dq0Need(f, o2, 'E_PORTAL', { po: 'PO_OPENED' }, 'the door not opened, disarmed');
+        dq0Never(f, o2, 'E_TRAP', {}, 'the trap went off, disarmed');
         return f;
       },
       sdcard: true
@@ -3699,23 +3703,22 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0stairtrap', what: 'Dingus Quest Zero\'s walks to stairs and ladders checking their way for traps, as the other walks do (the user\'s, 2026-10-16): at seed 38 the character goes round to the gallery\'s far door, clear of the covered pit hidden between it and the stairs up to the way out, then up (u): the walk back to the stairs stops on the pit, which gives way under it (a fall, a climb out begun); then from the window the stairs again, the pit it knows of now gone round, and the way out reached (shut fast), no second fall',
+      name: 'dq0stairtrap', what: 'Dingus Quest Zero\'s walks to stairs and ladders checking their way for traps, as the other walks do (the user\'s, 2026-10-16), by the world\'s events: at seed 38 the character goes round to the kitchen\'s far door, clear of the covered pit hidden between it and the stairs up to the way out (not noticed in passing: the referee\'s, HarnMaster\'s at this seed), then up (u): the walk back to the stairs stops on the pit, which gives way under it (a fall, a climb out begun), the pit seen open; then the stairs again, the pit it knows of gone round, and the way out reached (shut fast), no second fall',
       init: 't_rc', cycles: 600e6,
-      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 38 -c /ram/c.hm\r' +
-        ['se', 'walk to the door east', 'u', 'look', 'walk to the window', 'u', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 38 -c /ram/c.hm', 'se', 'walk to the door east',
+        'u', 'u', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
-      check(m, out) {
-        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
-        const want = ['> walk to the door east', 'You go over to it.', '> u', 'The floor gives way beneath you: a pit!',
-          'You set to climbing', '> look', 'There is an open pit at your feet.', '> walk to the window', '> u',
-          'The way out is shut fast.', '% echo $status'];
-        let at = 0;
-        for (const w of want) {
-          const i = o.indexOf(w, at);
-          if (i < 0) { f.push('not found (in its turn): ' + w); break; }
-          at = i + w.length;
-        }
-        if ((o.match(/gives way beneath you/g) || []).length !== 1) f.push('the pit gave way more than once (not gone round)');
+      check(m) {
+        const T = dq0Turns(m), f = [], w = T.of('walk to the door east'), u1 = T.of('u'), u2 = T.after(u1, 'u');
+        dq0Need(f, w, 'E_ARRIVE', { how: 'A_WENT_TO' }, 'not gone round to the far door');
+        dq0Never(f, w, 'E_TRAP', {}, 'a trap set off going round');
+        dq0Need(f, u1, 'E_ARRIVE', { how: 'A_STOPPED' }, 'the walk to the stairs not stopped on the pit');
+        dq0Need(f, u1, 'E_TRAP', { tk: 'TK_COVERED', to: 'TO_SPRUNG' }, 'the covered pit didn\'t give way');
+        dq0Need(f, u1, 'E_HARM', { hc: 'HC_FALL' }, 'no fall into the pit');
+        dq0Need(f, u1, 'E_CLIMB', { how: 'K_BEGUN' }, 'no climb out begun');
+        if (!u1.after || !u1.after.sight || !u1.after.sight.traps.some(p => p.kind === 'TK_COVERED' && (p.state & 1))) f.push('the pit not seen open');
+        dq0Need(f, u2, 'E_NOWAY', { why: 'N_SHUT' }, 'the way out not reached, the pit gone round');
+        dq0Never(f, u2, 'E_TRAP', {}, 'the pit gave way again (not gone round)');
         return f;
       },
       sdcard: true
@@ -3831,35 +3834,26 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0watch', what: 'Dingus Quest Zero\'s watchfulness and fatigue (the user\'s, 2026-10-16): a keen-eyed character (Awareness 95, hmchar\'s file) at seed 16 (dq0 -T) walking onto the cave\'s hidden plate (a passing glance\'s chance: it misses it, the blade set off); then searching for traps as it goes, the search where it stops finding the plate first, and the walk going round it; then fatigue, the book\'s: a character a level tired and nearly another (pc.hm\'s vol and pace lines) running down a passage, tired a level more (its penalties one more, its Move and so its pace\'s feet a round less); one two levels tired resting ten minutes (61 rounds waited), a level gone',
-      init: 't_rc', cycles: 4000e6,
-      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rācp /ram/c.hm /ram/r.hm\rāecho ml awa 95 >> /ram/c.hm\r' +
-        ['dq0 -p t -s 16 -c /ram/c.hm -T', 'face east', 'force', 'e', 'force', 'force', 'e', 'e', 'quit',
-          'dq0 -p t -s 16 -c /ram/c.hm -T', 'face east', 'force', 'e', 'force', 'force', 'search for traps as I go', 'e', 'e', 'quit',
-          'cp /ram/r.hm /ram/t.hm', 'echo vol 1 0 0 0 0 >> /ram/t.hm', 'echo pace 4 0 5990 >> /ram/t.hm',
-          'dq0 -p t -s 16 -c /ram/t.hm -T', 'status', 'face east', 'force', 'e', 'status', 'quit',
-          'echo vol 2 0 0 0 0 >> /ram/r.hm', 'dq0 -p t -s 16 -c /ram/r.hm -T', 'status', ...Array(61).fill('z'), 'status', 'quit',
-          'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      name: 'dq0watch', what: 'Dingus Quest Zero\'s watchfulness and fatigue (the user\'s, 2026-10-16), by the world\'s events and the referee\'s summary (HarnMaster\'s fatigue, the book\'s): a keen-eyed character (Awareness 95, hmchar\'s file) at seed 16 (dq0 -T) searching for traps as it goes, the search where it stops finding the cave\'s hidden plate first (dq0traps\' walk onto it, not searching, sets it off), and the walk going round it; then a character a level tired and nearly another (pc.hm\'s vol and pace lines: the pace a run) running down a passage, tired a level more (its universal penalty one more); one two levels tired resting ten minutes (61 rounds waited), a level gone',
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'cp /ram/c.hm /ram/r.hm', 'cp /ram/c.hm /ram/t.hm', 'echo ml awa 95 >> /ram/c.hm',
+        'dq0 -p t -s 16 -c /ram/c.hm -T', 'face east', 'force', 'e', 'force', 'force', 'search for traps as I go', 'e', 'e', 'quit',
+        'echo vol 1 0 0 0 0 >> /ram/t.hm', 'echo pace 4 0 5990 >> /ram/t.hm', 'dq0 -p t -s 16 -c /ram/t.hm -T', 'face east', 'force', 'e', 'quit',
+        'echo vol 2 0 0 0 0 >> /ram/r.hm', 'dq0 -p t -s 16 -c /ram/r.hm -T', ...Array(61).fill('z'), 'quit', 'echo $status']) },
       expect: ['% echo $status'],
-      check(m, out) {
-        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
-        // (At seed 16 the passage's door holding at the first try, bursting at the second, as dq0traps's: the referee's
-        // dice the commands', in their order, at the turns pace)
-        const want = ['% dq0 -p t -s 16 -c /ram/c.hm -T', 'The door holds.', 'With a crack the door bursts open.', 'A plate sinks under your foot with a click.', '> quit',
-          '% dq0 -p t -s 16 -c /ram/c.hm -T', 'The door holds.', 'With a crack the door bursts open.', '> search for traps as I go', 'held to a slow walk while you search as you go',
-          'You find a trap: a scything blade, set off by a plate in the floor.', '> quit',
-          '% dq0 -p t -s 16 -c /ram/t.hm -T', '> status', 'Pace: a run (150 feet a round).', 'a little tired (fatigue 1)',
-          'penalties: universal 1, physical 2.', '> e', '> status', 'Pace: a run (140 feet a round).', 'a little tired (fatigue 2)',
-          'penalties: universal 2, physical 3.', '% dq0 -p t -s 16 -c /ram/r.hm -T', '> status', 'a little tired (fatigue 2)',
-          '> status', 'a little tired (fatigue 1)', 'penalties: universal 1, physical 2.', '% echo $status'];
-        let at = 0;
-        for (const w of want) {
-          const i = o.indexOf(w, at);
-          if (i < 0) { f.push('not found (in its turn): ' + w); break; }
-          at = i + w.length;
-        }
-        const sought = o.slice(o.indexOf('> search for traps as I go'));
-        if (/A plate sinks under your foot/.test(sought.slice(0, sought.indexOf('> quit')))) f.push('the plate set off searching');
+      check(m) {
+        const T = dq0Turns(m), f = [], s = T.of('search for traps as I go'), e1 = T.after(s, 'e'), e2 = T.after(e1, 'e');
+        if (!s.after || !(s.after.pc.watch & 1)) f.push('not searching for traps as it goes');
+        dq0Need(f, e1, 'E_TRAP', { tk: 'TK_BLADE', tt: 'TT_PLATE', to: 'TO_FOUND' }, 'the plate not found by the search as it went');
+        for (const t of [e1, e2]) dq0Never(f, t, 'E_TRAP', { to: 'TO_SPRUNG' }, 'the plate set off, searching');
+        dq0Need(f, e2, 'E_ARRIVE', {}, 'the walk not gone on round the plate');
+        // (The referee's universal penalty, the status line's "UP n": fatigue's here, no wounds)
+        const up = x => x ? +((x.status.match(/UP (\d+)/) || [])[1]) : NaN;
+        const t0 = T.of('dq0 -p t -s 16 -c /ram/t.hm -T'), te = T.after(t0, 'e');
+        if (!t0.after || t0.after.pc.gait !== 4) f.push('the tired character\'s pace not its file\'s run');
+        if (!(up(t0.after) === 1 && up(te.after) === 2)) f.push('running not tiring a level more: UP ' + up(t0.after) + ', then ' + up(te.after));
+        const r0 = T.of('dq0 -p t -s 16 -c /ram/r.hm -T'), rz = T.of('quit', r0.k + 1);
+        if (!(up(r0.after) === 2 && up(rz.at) === 1)) f.push('resting ten minutes not a level less tired: UP ' + up(r0.after) + ', then ' + up(rz.at));
         return f;
       },
       sdcard: true
