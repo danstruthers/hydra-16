@@ -40,23 +40,35 @@ RS_BP       = RB_SCRATCH + 41           ; (2) The read buffer (rl_byte's): where
 RS_BSZ      = RB_SCRATCH + 43           ; (2)   and its size
 RS_ZPD      = RB_SCRATCH + 45           ; Its zero page's move
 RS_LIM      = RB_SCRATCH + 46           ; (2) Its room's end (its entry's RE_END, as it's placed)
-RS_NIMP     = RB_SCRATCH + 48           ; A child's imports: how many ...
-RS_NAMES    = RB_SCRATCH + 49           ; (2)   their names (past its BSS) ...
-RS_IMPA     = RB_SCRATCH + 51           ; (2)   and their addresses
-RS_XB       = RB_SCRATCH + 53           ; (2) The exports' file's reader (rx_byte's): its buffer ...
-RS_ENAME    = RB_SCRATCH + 55           ; (2)   an export's name read ...
-RS_XP       = RB_SCRATCH + 57           ; (2)   its next byte ...
-RS_XC       = RB_SCRATCH + 59           ;   the bytes left in it ...
-RS_XFD      = RB_SCRATCH + 60           ;   and the file
+RS_NIMP     = RB_SCRATCH + 48           ; A child's imports: how many
+RS_NAMES    = RB_SCRATCH + 49           ; (2) A child's exports' table: where it goes (past its BSS)
 RS_SAVP     = RB_SCRATCH + 61           ; (2) rl_byte's place (K_PTR2, K_CNT) kept meanwhile
 RS_SAVC     = RB_SCRATCH + 63           ; (2)
-RS_MISS     = RB_SCRATCH + 65           ; (2) A missing import's name
 RS_TEND     = RB_SCRATCH + 67           ; (2) A child's table's end
 RS_BUF      = RB_SCRATCH + 80           ; (176) The scratch's own buffer (a file's first bytes, a stat record)
 RS_BUFLEN   = 176
-RX_BUFLEN   = 64                        ; The exports' reader's buffer, and a name in it at most
-RX_NAMEMAX  = 31
-CHILD_ROOM  = 1024                      ; A child's room for its imports' names and addresses, then its exports' table
+RX_NAMEMAX  = 31                        ; A name (an import's, an export's) at most
+CHILD_ROOM  = 512                       ; A child's room past its BSS for its exports' table, at most
+
+; The loader bank: a RAM bank of the task's (BANKS_ALLOC's) a child's load borrows (R_LB), given back as it ends; in
+; the window as its imports are read and found, the module's bank (R_BANK) at all other times
+LB_HEAD     = $8000                     ; (64) The imports' hash chains: each its first import's number + 1 (0: none) ...
+LB_NEXT     = $8040                     ; (256)   each import's next in its chain (+ 1) ...
+LB_NPLO     = $8140                     ; (256)   each one's name: where it is ...
+LB_NPHI     = $8240
+LB_ADLO     = $8340                     ; (256)   and its address ($FFFF till it's found)
+LB_ADHI     = $8440
+LB_ENAME    = $8540                     ; (32) An export's name, read ...
+LB_XFD      = $8560                     ;   the exports' file ...
+LB_LEN      = $8561                     ;   an export's name's length ...
+LB_SUM      = $8562                     ;   its hash ...
+LB_VAL      = $8563                     ; (2)   and its address
+LB_NIMP     = $8565                     ; The imports: how many
+LB_NAMES    = $8580                     ; Their names, up to LB_XBUF
+LB_XBUF     = $9000                     ; (2K) The exports' file's reader's buffer (rx_byte's) ...
+LB_RBUF     = $9800                     ; (2K)   and the child's file's past its text and data (rl_byte's)
+LB_BUFLEN   = $0800
+LB_HMASK    = 63                        ; (The hash: a name's bytes' sum, its low 6 bits)
 
 O65_MODE    = 6                         ; The o65 header: its mode (2) ...
 O65_TBASE   = 8                         ;   text's base and length ...
@@ -1233,6 +1245,8 @@ rl_load:
 ; text and data read there, the rest of the file (its imports, its relocations) read through the room past them (its
 ; BSS and frame, cleared after).  OUT: as rl_load's
 rl_body:
+            lda         #$FF                                ; (No loader bank yet)
+            sta         R_LB
             clc                                             ; Its room: its text, data and BSS ...
             lda         RS_HDR + O65_TLEN
             adc         RS_HDR + O65_DLEN
@@ -1392,15 +1406,18 @@ rl_body:
             beq         :+
             jmp         @bss
 :
-            lda         RS_KIND                             ; The rest: a child's through the scratch's buffer
-            bne         :+                                  ;   (its room past the BSS is its tables')
-            lda         #<RS_BUF
+            lda         RS_KIND                             ; The rest: a child's through the loader bank's buffer
+            bne         :+                                  ;   (its room past the BSS is its exports' table's)
+            jsr         rl_lbank
+            jcs         rl_rts
+            lda         #<LB_RBUF
             sta         RS_BP
-            lda         #>RS_BUF
+            lda         #>LB_RBUF
             sta         RS_BP + 1
-            lda         #RS_BUFLEN
+            lda         #<LB_BUFLEN
             sta         RS_BSZ
-            stz         RS_BSZ + 1
+            lda         #>LB_BUFLEN
+            sta         RS_BSZ + 1
             bra         @buffer
 :
             lda         RS_END                              ; ... a program's through the room past its text and
@@ -1877,7 +1894,19 @@ rl_byte:
             dec         K_CNT + 1
 :
             dec         K_CNT
+            lda         R_LB                                ; (A child's buffer: the loader bank's)
+            cmp         #$FF
+            beq         :+
+            sta         RAM_BANK
             lda         (K_PTR2)
+            pha
+            lda         R_BANK
+            sta         RAM_BANK
+            pla
+            bra         :++
+:
+            lda         (K_PTR2)
+:
             inc         K_PTR2
             bne         :+
             inc         K_PTR2 + 1
@@ -1896,8 +1925,23 @@ rl_byte:
             sta         r1
             lda         RS_BSZ + 1
             sta         r1 + 1
+            lda         R_LB
+            cmp         #$FF
+            beq         :+
+            sta         RAM_BANK
+:
             lda         L_FD
             FARCALL     K_READ
+            php
+            pha
+            lda         R_LB
+            cmp         #$FF
+            beq         :+
+            lda         R_BANK
+            sta         RAM_BANK
+:
+            pla
+            plp
             ply
             bcs         @end
             sta         K_CNT
@@ -1953,29 +1997,27 @@ rl_reloc:
             sta         RS_VAL + 1
             bra         @kind
 @imp:
-            lda         RS_KIND                             ; (An import's: a child's, its index next)
+            lda         RS_KIND                             ; (An import's: a child's, its number next)
             jne         @bad
             jsr         rl_byte
             jcs         @bad
-            sta         RS_VAL
+            tax
             jsr         rl_byte
             jcs         @bad
-            sta         RS_VAL + 1
-            asl         RS_VAL
-            rol         RS_VAL + 1
-            clc
-            lda         RS_VAL
-            adc         RS_IMPA
-            sta         K_PTR
-            lda         RS_VAL + 1
-            adc         RS_IMPA + 1
-            sta         K_PTR + 1
-            ldy         #0
-            lda         (K_PTR),Y
+            cmp         #0
+            jne         @bad
+            cpx         RS_NIMP
+            jcs         @bad
+            lda         R_LB                                ; (Its address: the loader bank's)
+            sta         RAM_BANK
+            lda         LB_ADLO,X
+            ldy         LB_ADHI,X
+            pha
+            lda         R_BANK
+            sta         RAM_BANK
+            pla
             sta         RS_VAL
-            iny
-            lda         (K_PTR),Y
-            sta         RS_VAL + 1
+            sty         RS_VAL + 1
             jmp         @kind
 @zp:
             lda         RS_ZPD
@@ -2063,6 +2105,8 @@ K_BANK_LOAD:
             sta         L_ARGS + 1
             lda         RAM_BANK
             sta         R_RAMB
+            lda         #$FF                                ; (No loader bank)
+            sta         R_LB
             lda         L_PATH + 1                          ; (Its path and the exports' not in the window)
             jsr         rc_window
             bcs         @fault
@@ -2089,6 +2133,7 @@ K_BANK_LOAD:
             pha
             lda         L_FD
             FARCALL     K_CLOSE
+            jsr         rl_lfree
             pla
             plp
             bcs         @why
@@ -2122,27 +2167,9 @@ K_BANK_LOAD:
             beq         @fail
             cmp         #E_TOOBIG
             beq         @fail
-            ldx         #BL_IMPORT
+            ldx         #BL_IMPORT                          ; (Its name in TA_SCRATCH: rl_resolve's)
             cmp         #E_NOENT
-            bne         @other
-            pha                                             ; (Its name, from the place's scratch)
-            lda         RS_MISS
-            sta         K_PTR
-            lda         RS_MISS + 1
-            sta         K_PTR + 1
-            ldy         #0
-:
-            lda         (K_PTR),Y
-            sta         TA_SCRATCH,Y
-            beq         :+
-            iny
-            cpy         #EXIT_MSG_MAX
-            bne         :-
-            lda         #0
-            sta         TA_SCRATCH,Y
-:
-            pla
-            bra         @fail
+            beq         @fail
 @other:
             ldx         #BL_FILE
 @fail:
@@ -2233,10 +2260,9 @@ K_BANK_FLUSH:
             rts
 
 ; Its imports (the o65 list after its data: a count, then each name, zero-terminated).  A program has none.  A child's
-; names go past its BSS (RS_NAMES), and each one's address, found in its caller's exports (the file at L_ARGS), into
-; the table after them (RS_IMPA, 2 bytes each: $FFFF till it's found).  OUT: C = 1, .A = the error (E_NOEXEC: a
-; program's import, or no room; E_IO: the exports' file not there, or not of its form; E_NOENT: an import not in it,
-; RS_MISS its name)
+; go into the loader bank (each its name, its place in a hash chain, its address), and each one's address is found in
+; its caller's exports (rl_resolve).  OUT: C = 1, .A = the error (E_NOEXEC: a program's import, or too many, or too
+; long; E_IO: the exports' file not there, or not of its form; E_NOENT: an import not in it, its name in TA_SCRATCH)
 rl_imports:
             jsr         rl_byte                             ; (Their count: 255 at most)
             jcs         @noexec
@@ -2252,63 +2278,76 @@ rl_imports:
 :
             lda         RS_KIND                             ; (A program's: none)
             jne         @noexec
-            clc                                             ; Their names: past the BSS
-            lda         RS_END
-            adc         RS_HDR + O65_BLEN
-            sta         RS_NAMES
+            lda         RS_NIMP                             ; (Their count, the loader bank's too)
+            pha
+            lda         R_LB
+            sta         RAM_BANK
+            pla
+            sta         LB_NIMP
+            lda         R_BANK
+            sta         RAM_BANK
+            lda         #<LB_NAMES                          ; Each: its name in the loader bank, its address none
             sta         L_LEFT
-            lda         RS_END + 1
-            adc         RS_HDR + O65_BLEN + 1
-            sta         RS_NAMES + 1
+            lda         #>LB_NAMES
             sta         L_LEFT + 1
-            ldx         RS_NIMP
-@name:
-            jsr         rl_byte
-            jcs         @noexec
-            sta         (L_LEFT)
-            jsr         rl_more
-            jcs         @noexec
-            cmp         #0
-            bne         @name
-            dex
-            bne         @name
-            lda         L_LEFT                              ; Their addresses: none found yet
-            sta         RS_IMPA
-            lda         L_LEFT + 1
-            sta         RS_IMPA + 1
-            ldx         RS_NIMP
-:
-            lda         #$FF
-            sta         (L_LEFT)
-            jsr         rl_more
-            jcs         @noexec
-            lda         #$FF
-            sta         (L_LEFT)
-            jsr         rl_more
-            jcs         @noexec
-            dex
-            bne         :-
-            lda         L_LEFT                              ; (The exports' reader's buffer, then a name read)
-            sta         RS_XB
-            lda         L_LEFT + 1
-            sta         RS_XB + 1
-            clc
+            ldx         #0
+@import:
+            lda         R_LB
+            sta         RAM_BANK
             lda         L_LEFT
-            adc         #RX_BUFLEN
-            sta         RS_ENAME
+            sta         LB_NPLO,X
             lda         L_LEFT + 1
-            adc         #0
-            sta         RS_ENAME + 1
+            sta         LB_NPHI,X
+            lda         #$FF
+            sta         LB_ADLO,X
+            sta         LB_ADHI,X
+            lda         R_BANK
+            sta         RAM_BANK
+            ldy         #0
+@char:
+            jsr         rl_byte                             ; (The module's bank in the window: rl_byte's)
+            jcs         @noexec
+            pha
+            lda         R_LB
+            sta         RAM_BANK
+            pla
+            sta         (L_LEFT),Y
+            pha
+            lda         R_BANK
+            sta         RAM_BANK
+            pla
+            iny
+            cmp         #0
+            beq         @named
+            cpy         #RX_NAMEMAX + 1
+            bcc         @char
+            jmp         @noexec
+
+@named:
+            tya                                             ; (Past it)
             clc
-            lda         RS_ENAME
-            adc         #RX_NAMEMAX + 1
-            tax
-            lda         RS_ENAME + 1
-            adc         #0
-            cpx         RS_LIM
-            sbc         RS_LIM + 1
-            bcs         @noexec
-            lda         K_PTR2                              ; (The module's reader's place, kept)
+            adc         L_LEFT
+            sta         L_LEFT
+            bcc         :+
+            inc         L_LEFT + 1
+:
+            lda         R_LB                                ; Its hash chain
+            sta         RAM_BANK
+            jsr         lb_hash
+            tay
+            lda         LB_HEAD,Y
+            sta         LB_NEXT,X
+            inx
+            txa
+            sta         LB_HEAD,Y
+            lda         R_BANK
+            sta         RAM_BANK
+            lda         L_LEFT + 1                          ; (Room for another name)
+            cmp         #>(LB_XBUF - RX_NAMEMAX - 1)
+            jcs         @noexec
+            cpx         RS_NIMP
+            bne         @import
+            lda         K_PTR2                              ; Their addresses (the module's reader's place kept)
             sta         RS_SAVP
             lda         K_PTR2 + 1
             sta         RS_SAVP + 1
@@ -2316,9 +2355,13 @@ rl_imports:
             sta         RS_SAVC
             lda         K_CNT + 1
             sta         RS_SAVC + 1
+            lda         R_LB
+            sta         RAM_BANK
             jsr         rl_resolve
             php
             pha
+            lda         R_BANK
+            sta         RAM_BANK
             lda         RS_SAVP
             sta         K_PTR2
             lda         RS_SAVP + 1
@@ -2329,48 +2372,34 @@ rl_imports:
             sta         K_CNT + 1
             pla
             plp
-            bcs         @rts
-            lda         RS_NAMES                            ; Each found?  (K_PTR its name, L_LEFT its address)
-            sta         K_PTR
-            lda         RS_NAMES + 1
-            sta         K_PTR + 1
-            lda         RS_IMPA
-            sta         L_LEFT
-            lda         RS_IMPA + 1
-            sta         L_LEFT + 1
-            ldx         RS_NIMP
-@check:
-            ldy         #1
-            lda         (L_LEFT),Y
-            and         (L_LEFT)
-            cmp         #$FF
-            beq         @missing
-            jsr         rl_pastname
-            clc
-            lda         L_LEFT
-            adc         #2
-            sta         L_LEFT
-            bcc         :+
-            inc         L_LEFT + 1
-:
-            dex
-            bne         @check
-            clc
-@rts:
-            rts
-
-@missing:
-            lda         K_PTR
-            sta         RS_MISS
-            lda         K_PTR + 1
-            sta         RS_MISS + 1
-            lda         #E_NOENT
-            sec
             rts
 
 @noexec:
+            lda         R_BANK
+            sta         RAM_BANK
             lda         #E_NOEXEC
             sec
+            rts
+
+; Import .X's name's hash (its bytes' sum, LB_HMASK of it), in the loader bank.  OUT: .A.  Keeps .X
+lb_hash:
+            lda         LB_NPLO,X
+            sta         K_PTR
+            lda         LB_NPHI,X
+            sta         K_PTR + 1
+            ldy         #0
+            stz         LB_SUM
+:
+            lda         (K_PTR),Y
+            beq         :+
+            clc
+            adc         LB_SUM
+            sta         LB_SUM
+            iny
+            bne         :-
+:
+            lda         LB_SUM
+            and         #LB_HMASK
             rts
 
 ; L_LEFT on one, within the module's room (RS_LIM).  OUT: C = 1 if it's reached it.  Keeps .A, .X
@@ -2387,25 +2416,10 @@ rl_more:
             pla
             rts
 
-; K_PTR past the name it's at (its 0 too).  Keeps .X
-rl_pastname:
-            ldy         #0
-:
-            lda         (K_PTR),Y
-            iny
-            cmp         #0
-            bne         :-
-            tya
-            clc
-            adc         K_PTR
-            sta         K_PTR
-            bcc         :+
-            inc         K_PTR + 1
-:
-            rts
-
-; The imports' addresses from the caller's exports (the file at L_ARGS, through its own reader: rx_byte).  OUT: C = 1,
-; .A = E_IO (the file not there, not of its form)
+; The imports' addresses from the caller's exports (the file at L_ARGS: "BX", 1, then each export its name's length,
+; its name and its address, a 0 after the last), each export looked for in its hash chain; then each import found.
+; In the loader bank (in the window throughout).  OUT: C = 1, .A = E_IO (the file not there, not of its form), or
+; E_NOENT (an import not in it: its name in TA_SCRATCH)
 rl_resolve:
             lda         L_ARGS
             ora         L_ARGS + 1
@@ -2417,150 +2431,206 @@ rl_resolve:
             lda         #O_READ
             FARCALL     K_OPEN
             jcs         @io
-            sta         RS_XFD
-            stz         RS_XC
+            sta         LB_XFD
+            stz         K_CNT                               ; (rx_byte's buffer empty)
+            stz         K_CNT + 1
             ldx         #0                                  ; "BX", 1
 :
             jsr         rx_byte
-            bcs         @bad
+            jcs         @bad
             cmp         rl_bx,X
-            bne         @bad
+            jne         @bad
             inx
             cpx         #3
             bne         :-
 @export:
-            jsr         rx_byte                             ; An export: its name, its address
-            bcs         @bad
+            jsr         rx_byte                             ; An export: its name ...
+            jcs         @bad
             cmp         #0
-            beq         @done
+            jeq         @done
             cmp         #RX_NAMEMAX + 1
-            bcs         @bad
-            sta         K_TMP2
+            jcs         @bad
+            sta         LB_LEN
+            stz         LB_SUM
             ldy         #0
 :
             jsr         rx_byte
-            bcs         @bad
-            phy
-            pha
-            lda         RS_ENAME
-            sta         K_PTR
-            lda         RS_ENAME + 1
-            sta         K_PTR + 1
-            pla
-            ply
-            sta         (K_PTR),Y
+            jcs         @bad
+            sta         LB_ENAME,Y
+            clc
+            adc         LB_SUM
+            sta         LB_SUM
             iny
-            cpy         K_TMP2
+            cpy         LB_LEN
             bne         :-
             lda         #0
-            sta         (K_PTR),Y
+            sta         LB_ENAME,Y
+            jsr         rx_byte                             ; ... its address ...
+            jcs         @bad
+            sta         LB_VAL
             jsr         rx_byte
-            bcs         @bad
-            sta         RS_VAL
-            jsr         rx_byte
-            bcs         @bad
-            sta         RS_VAL + 1
-            jsr         rl_match
-            bra         @export
+            jcs         @bad
+            sta         LB_VAL + 1
+            lda         LB_SUM                              ; ... and the imports in its hash chain that it names
+            and         #LB_HMASK
+            tay
+            ldx         LB_HEAD,Y
+@chain:
+            jeq         @export
+            dex
+            lda         LB_NPLO,X
+            sta         K_PTR
+            lda         LB_NPHI,X
+            sta         K_PTR + 1
+            ldy         #0
+:
+            lda         (K_PTR),Y
+            cmp         LB_ENAME,Y
+            bne         @next
+            iny
+            cmp         #0
+            bne         :-
+            lda         LB_VAL                              ; (The same: its address)
+            sta         LB_ADLO,X
+            lda         LB_VAL + 1
+            sta         LB_ADHI,X
+@next:
+            lda         LB_NEXT,X
+            tax
+            bra         @chain
 
 @done:
-            lda         RS_XFD
+            lda         LB_XFD
             FARCALL     K_CLOSE
+            ldx         #0                                  ; Each import found?
+@check:
+            lda         LB_ADLO,X
+            and         LB_ADHI,X
+            cmp         #$FF
+            beq         @missing
+            inx
+            cpx         LB_NIMP
+            bne         @check
             clc
             rts
 
+@missing:
+            lda         LB_NPLO,X                           ; (Its name, for BANK_LOAD's caller)
+            sta         K_PTR
+            lda         LB_NPHI,X
+            sta         K_PTR + 1
+            ldy         #0
+:
+            lda         (K_PTR),Y
+            sta         TA_SCRATCH,Y
+            beq         :+
+            iny
+            cpy         #RX_NAMEMAX + 1
+            bne         :-
+:
+            lda         #E_NOENT
+            sec
+            rts
+
 @bad:
-            lda         RS_XFD
+            lda         LB_XFD
             FARCALL     K_CLOSE
 @io:
             lda         #E_IO
             sec
             rts
 
-; Each import named RS_ENAME's name given the address RS_VAL (K_PTR the names, L_LEFT the addresses)
-rl_match:
-            lda         RS_NAMES
-            sta         K_PTR
-            lda         RS_NAMES + 1
-            sta         K_PTR + 1
-            lda         RS_IMPA
-            sta         L_LEFT
-            lda         RS_IMPA + 1
-            sta         L_LEFT + 1
-            lda         RS_ENAME
-            sta         K_PTR2
-            lda         RS_ENAME + 1
-            sta         K_PTR2 + 1
-            ldx         RS_NIMP
-@imp:
-            ldy         #0
-@cmp:
-            lda         (K_PTR),Y
-            cmp         (K_PTR2),Y
-            bne         @no
-            iny
-            cmp         #0
-            bne         @cmp
-            lda         RS_VAL                              ; (The same: its address)
-            sta         (L_LEFT)
-            ldy         #1
-            lda         RS_VAL + 1
-            sta         (L_LEFT),Y
-@no:
-            jsr         rl_pastname
-            clc
-            lda         L_LEFT
-            adc         #2
-            sta         L_LEFT
-            bcc         :+
-            inc         L_LEFT + 1
-:
-            dex
-            bne         @imp
-            rts
-
-; The exports' file's next byte, through its buffer (RS_XB, RX_BUFLEN bytes: RS_XP its next, RS_XC the bytes left).
-; OUT: .A; C = 1 at its end.  Keeps .X, .Y
+; The exports' file's next byte, through the loader bank's buffer (LB_XBUF: K_PTR2 its next byte, K_CNT the bytes
+; left in it).  In the loader bank.  OUT: .A; C = 1 at its end.  Keeps .X, .Y
 rx_byte:
+            lda         K_CNT
+            ora         K_CNT + 1
+            bne         @have
             phx
             phy
-            lda         RS_XC
-            bne         @have
-            lda         RS_XB
+            lda         #<LB_XBUF
             sta         r0
-            sta         RS_XP
-            lda         RS_XB + 1
+            sta         K_PTR2
+            lda         #>LB_XBUF
             sta         r0 + 1
-            sta         RS_XP + 1
-            lda         #RX_BUFLEN
+            sta         K_PTR2 + 1
+            lda         #<LB_BUFLEN
             sta         r1
-            stz         r1 + 1
-            lda         RS_XFD
+            lda         #>LB_BUFLEN
+            sta         r1 + 1
+            lda         LB_XFD
             FARCALL     K_READ
             bcs         @end
-            cmp         #0
-            beq         @end
-            sta         RS_XC
-@have:
-            lda         RS_XP
-            sta         K_PTR
-            lda         RS_XP + 1
-            sta         K_PTR + 1
-            lda         (K_PTR)
-            inc         RS_XP
-            bne         :+
-            inc         RS_XP + 1
-:
-            dec         RS_XC
+            sta         K_CNT
+            stx         K_CNT + 1
             ply
             plx
+            lda         K_CNT
+            ora         K_CNT + 1
+            beq         @none
+@have:
+            lda         K_CNT
+            bne         :+
+            dec         K_CNT + 1
+:
+            dec         K_CNT
+            lda         (K_PTR2)
+            inc         K_PTR2
+            bne         :+
+            inc         K_PTR2 + 1
+:
             clc
             rts
 
 @end:
             ply
             plx
+@none:
             sec
+            rts
+
+; The loader bank (a child's): one of the task's, in R_LB, its hash chains empty; the module's bank in the window.
+; OUT: C = 1, .A = the error (E_NOMEM)
+rl_lbank:
+            lda         #1
+            FARCALL     K_BANKS_ALLOC
+            bcs         @fail
+            sta         R_LB
+            sta         RAM_BANK
+            ldx         #LB_HMASK
+:
+            stz         LB_HEAD,X
+            dex
+            bpl         :-
+            lda         R_BANK
+            sta         RAM_BANK
+            clc
+            rts
+
+@fail:
+            pha
+            lda         R_BANK
+            sta         RAM_BANK
+            pla
+            sec
+            rts
+
+; The loader bank given back, if there's one (R_LB), the module's bank in the window.  Keeps .A and C
+rl_lfree:
+            php
+            pha
+            lda         R_LB
+            cmp         #$FF
+            beq         :+
+            ldx         #1
+            FARCALL     K_BANKS_FREE
+            lda         #$FF
+            sta         R_LB
+            lda         R_BANK
+            sta         RAM_BANK
+:
+            pla
+            plp
             rts
 
 ; A child's exports (the o65 list after its relocations: a count, then each its name, zero-terminated, its segment and

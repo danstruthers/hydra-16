@@ -53,10 +53,61 @@ lib_init:
             sta         pfmt2 + 1
             stz         status_v
             stz         status_v + 1
+            jsr         GETPID                              ; rc's $task, $path and $prompt in the environment, as
+            jsr         num_text                            ;   rc gives them to the programs it starts (a program
+            LDR         r0, s_task                          ;   HyForth runs in its own task sees the same)
+            LDR         r1, numbuf
+            jsr         env_put
+            LDR         r0, s_path
+            LDR         r1, d_path
+            lda         #D_PATH_LEN
+            jsr         env_default
+            LDR         r0, s_rcprompt
+            LDR         r1, d_prompt
+            lda         #D_PROMPT_LEN
+; Variable r0 = the .A bytes at r1 (rc's words: each zero-terminated), if it isn't set.  A failure: no matter
+env_default:
+            pha
+            lda         r1
+            pha
+            lda         r1 + 1
+            pha
+            LDR         r1, numbuf                          ; (Set already?)
+            lda         #1
+            sta         r2
+            stz         r2 + 1
+            stz         r3
+            stz         r3 + 1
+            lda         #$FF
+            stx         xsave
+            jsr         ENV_GET
+            ldx         xsave
+            pla
+            sta         r1 + 1
+            pla
+            sta         r1
+            pla
+            bcc         @rts
+            sta         r2
+            stz         r2 + 1
+            stz         r3
+            stz         r3 + 1
+            lda         #$FF
+            stx         xsave
+            jsr         ENV_PUT
+            ldx         xsave
+@rts:
             rts
 
 s_prompt:   .byte       S_PROMPT_LEN, "%v%d> "
 S_PROMPT_LEN = * - s_prompt - 1
+s_task:     .byte       "task", 0
+s_path:     .byte       "path", 0
+s_rcprompt: .byte       "prompt", 0
+d_path:     .byte       ".", 0, "/bin", 0                   ; (rc's: rc.s's d_path and d_prompt)
+D_PATH_LEN  = * - d_path
+d_prompt:   .byte       "% ", 0, TAB, 0
+D_PROMPT_LEN = * - d_prompt
 
 ; ---- The core's hooks
 

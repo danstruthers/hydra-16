@@ -117,5 +117,16 @@ Measured on the emulator at HyForth's prompt (a line's Enter to the next prompt,
 * **A child's call** (`bank_call`) costs some 160 cycles more than a `jsr`, from 60 in dq0's library: the kernel's
   cache can give a child up for another task's program, so each call checks its entry is still the same load, and
   stamps it used for the cache's choice of what to give up.
-* **ld65's options** (its name and the time) are left out of a bank program's and a child's file, so the build's
-  images are the same each time.
+* **ld65's options** (its name and the time) are left out of a bank program's file, and a child's date option made
+  fixed, so the build's images are the same each time.
+* **Children too big for the first layout.**  A trial merge into `reborn-game` (October 2026) found popgen, histgen
+  and linegen (images of 7,401, 6,808 and 6,755 bytes) fitting a bank's 7,680 but not with their import tables (436 to
+  1,066 bytes) after them.  The kernel now borrows a **loader bank** for a child's load: its imports' names and
+  addresses, 64 hash chains to find each export's imports (not every export against every import), and the child's
+  and the exports' files read 2K at a time (64 bytes and 176 before); only the child's exports' table stays past its
+  BSS.  dq0's tests all pass on the trial (`dq0layers` counts its loads at the kernel's `K_OPEN` now, a `STAT`'s open
+  not counted).
+* **HyForth's environment.**  A program HyForth runs in its own task sees HyForth's environment, so HyForth's shell
+  puts rc's `task`, `path` and `prompt` in it as it starts (rc's defaults, if they aren't set), and `prog` before
+  each run, as rc does: `cat /env/path` sees the same whether HyForth or rc runs it, and a bank program or a RAM
+  program.

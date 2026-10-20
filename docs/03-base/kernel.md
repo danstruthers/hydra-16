@@ -210,8 +210,11 @@ its zero page `$22` up, its relocations kept) after a HYX2 header with `HF_BANK`
 stack (`sdk/c/include/bankprog.h`; Dingus Quest Zero's pieces).  `BANK_LOAD` puts one in the same code cache, its
 imports found by name in the caller's exports file (`NAME.exp`, the build's), its zero page where the caller says,
 and tells the caller its bank and directory entry; the caller maps the bank (`$00` alone), calls the entry and maps
-its own bank back, checking first that the entry is still the same load.  `BANK_FLUSH` empties the cache (and sets how
-many banks it may have).
+its own bank back, checking first that the entry is still the same load.  As it loads a child the kernel borrows a
+RAM bank of the task's, the **loader bank**: the child's imports' names and addresses (each export looked for through
+hash chains), and the child's file and the exports' file read 2K at a time; it's given back at the load's end.  Only
+the child's exports' table stays past its BSS, so a child's code, data and BSS may fill a bank's 7.5K.  `BANK_FLUSH`
+empties the cache (and sets how many banks it may have).
 
 ---
 
