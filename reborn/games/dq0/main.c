@@ -423,7 +423,7 @@ static void __fastcall__ start (const char* name, unsigned char t, const char* m
     }
 }
 
-void world_words (void);                        /* (Part 6's: below) */
+static void world_words (void);
 
 static void __fastcall__ start_world (unsigned long seed, const char* file)
 {
@@ -499,11 +499,8 @@ static void __fastcall__ start_world (unsigned long seed, const char* file)
 /* The command parser told the world's words: the catalogue's kinds' names (the theme's with them), so a word of its
 ** grammar's is a thing's name too where one's called by it ("drop the pick", "wear the knee boots"; the game's own
 ** things, "door", "room", it knows); no names given yet; and the world's deities' names, "call on Imma"
-** (libdir/dq0g.txt: the denizens' data's, deities.txt's, spaces between).  Part 6's (the names said), out of part 1's
-** room */
-#pragma code-name (push, "SW6CODE")
-#pragma rodata-name (push, "SW6RODATA")
-void s_world_words (void)
+** (libdir/dq0g.txt: the denizens' data's, deities.txt's, spaces between) */
+static void world_words (void)
 {
     static char nm[sizeof CATALOGUE[0].name + 1];
     static unsigned n;
@@ -542,8 +539,6 @@ void s_world_words (void)
     hub_call (&HUB->cq, T_COMMANDS);
     HUB->cq.state = REQ_FREE;
 }
-#pragma code-name (pop)
-#pragma rodata-name (pop)
 
 /* The game's end: its tasks told to stop (the world first: its I_QUIT, the hub's quit its to set), and waited for */
 static void stop_world (void)
