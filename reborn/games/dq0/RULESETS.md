@@ -121,24 +121,27 @@ RULES=null node sim/test.js runs the dq0 tests with the null referee (dq0 -r nul
 no test named, those marked meaning: true in tests.js (their checks are about what happened, not the ruleset's words
 or numbers).  The soak too: RULES=null node sim/tools/soak.js.
 
-On 2026-10-19 (Phase 3A) the 57 dq0 tests ran with it.  These 33 pass, and are marked: dq0deep, dq0dig, dq0talk,
-dq0items, dq0equip, dq0tools, dq0earth, dq0save, dq0page, dq0strata, dq0vast, dq0soak, dq0names, dq0denizens,
-dq0prompt, dq0answer, dq0answer96, dq0sound, dq0soundx, dq0portc, dq0look, dq0choose, dq0veraplain, dq0unarmed,
-dq0pure, dq0rebar, dq0steps, dq0theme, dq0pieces, dq0plan, dq0gate, dq0start0, dq0start1.
+On 2026-10-19 (Phase 3A) the 57 dq0 tests ran with it, 33 passing.  Then the tests were cut to meaning (each system's
+tests check what happened, read from the hub: tests.js's dq0Turns, sim/lib/dq0meaning.js; the game's sentences held to
+in three tests about wording alone, dq0words, dq0wordsfix and dq0wordsthings), 48 dq0 tests (dq0cmd, the command
+interpreter's, among them) and the referee's unit tests, dq0rules.  These 29 pass with it, and are marked: dq0,
+dq0deep, dq0dig, dq0talk, dq0items, dq0equip, dq0save, dq0vast, dq0soak, dq0names, dq0denizens, dq0prompt, dq0answer,
+dq0sound, dq0soundx, dq0portc, dq0choose, dq0veraplain, dq0pure, dq0stairtrap, dq0rebar, dq0pace, dq0steps, dq0theme,
+dq0pieces, dq0plan, dq0gate, dq0start0, dq0start1.
 
-The other 24 depend on HarnMaster on purpose, and aren't meaning checks for a second ruleset:
+The other 19 depend on HarnMaster on purpose, and aren't meaning checks for a second ruleset:
 
-- **HarnMaster's words or numbers in the checks:** dq0harm (an injury's words, the panel's IP, pc.hm's inj lines),
-  dq0load and dq0pace (encumbrance, penalties, feet a round by the Move), dq0fight, dq0ghoul, dq0armour, dq0flee
-  (HarnMaster's melee: its wounds' words, senselessness, the armour that turns a blow, an Initiative test),
-  dq0hands, dq0kick, dq0doors, dq0portcbreak (a blow at a thing by Unarmed, the hurt part's injuries, the impact
-  against the door's or the bars' body), dq0traps (a trap's wound's words), dq0looks (its replies against a
-  reference made with HarnMaster's referee), dq0vera (its status line must read "UP 0", the HarnMaster referee's
-  words: with "UP 0 +" optional it would be a meaning check).
-- **The character's file edited for HarnMaster:** dq0sway (Animalcraft 90), dq0watch (Awareness 95, fatigue's vol
-  and pace lines), dq0glow, dq0dark and dq0sense (Eyesight 4 and 18), dq0heard (the character's hearing, 3, from its
-  attributes: the null ruleset hears at 5, and tells a rat the check wants later another way).
-- **HarnMaster's character generator in the game:** dq0 (hmchar run in its window, its sheet's words; its first part
-  passes) and dq0veraserial (hmchar's questions on the screen).
-- **The dice of a test at a seed:** dq0window (the sill climbed at the first try), dq0stairtrap (the pit unnoticed
-  underfoot): with other dice the same thing happens at another try, or not at all; the checks want this one.
+- **HarnMaster's dice at a seed, each outcome in its turn (what happened, but the referee's to decide):** dq0fight,
+  dq0armour, dq0flee (its melee: blows dodged, a rat knocked senseless at the fourth, the armour that turns a claw,
+  the kin fleeing), dq0batter (blows at doors: the striker's hurt by its armour), dq0break (the bars broken and bent,
+  the sill climbed at the first try), dq0traps (a door holding, then bursting; the mechanism made out, then
+  disarmed), dq0sway (Animalcraft 90's coaxing, a step each time), dq0watch (Awareness 95's search as it goes;
+  fatigue's universal penalty, the status line's "UP n"), dq0glow (Eyesight 4's reach, the eyes' adapting by it),
+  dq0load (encumbrance's bands by the load), dq0harm (pc.hm's inj and pace lines: HarnMaster's sheet).
+- **HarnMaster's words:** dq0words and dq0wordsthings (wording alone: the status line's feet a round, a door afar by
+  Eyesight 4; dq0wordsfix passes too, but is about wording, not marked), dq0vera (its status line must read "UP 0"),
+  dq0veraserial (hmchar's questions in the game: HarnMaster's character generator).
+- **A reference made with HarnMaster's referee:** dq0looks.
+- **dq0heard** passes with it, but holds the UI's words of a sound ("You hear ... to your right"): not marked.
+- **dq0cmd** (the command interpreter's words, a command-system test): its dagger thrown at the closest rat misses
+  by HarnMaster's Throwing at this seed, and its words say so.
