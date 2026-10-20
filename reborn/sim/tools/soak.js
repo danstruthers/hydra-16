@@ -94,7 +94,7 @@ function one(s, turns, verbose) {
         if (a.rxQueue.length || quitting) return;
         const since = strip(out.slice(from));
         from = out.length;
-        const over = /You are dead\.|The game is over/.test(since) || (pushed && /\n% $/.test(strip(out.slice(-40))));
+        const over = /You\s+are\s+dead\.|The\s+game\s+is\s+over/.test(since) || (pushed && /\n% $/.test(strip(out.slice(-40))));
         if (over || pushed >= turns) { quitting = true; if (!over) push('quit'); push('echo soaked'); return; }
         pushed++;
         const now = noticed(since);           // (What the last words named, else what was named before: a new
@@ -107,7 +107,7 @@ function one(s, turns, verbose) {
   const res = runTest(t, { verbose: false });
   const o = strip(res.out), problems = [...res.failures.filter(f => !/^missing:/.test(f))];
   const game = o.slice(o.indexOf('% dq0 -p t'));
-  const dead = /You are dead\./.test(game);
+  const dm = /You\s+are\s+dead\./.exec(game), dead = !!dm;           // (Its words wrapped as they may be)
   const quitAt = game.indexOf('> quit'), shellAt = game.indexOf('\n% ', 10);
   if (res.failures.some(f => /^missing:/.test(f)))
     problems.push('hung: no prompt after ' + JSON.stringify(typed[typed.length - 1] || '(the start)') + ' (turn ' + typed.length + ')');
@@ -126,7 +126,7 @@ function one(s, turns, verbose) {
   const refused = [...new Set(game.split(/\n\s*> /).slice(1).filter(a => /I don't (?:understand that|know how to)/.test(a))   // (A prompt
     .map(a => a.split('\n')[0].trim()))];                                                                                 //   indented too)
   const left = /You come into|You go (?:through|down|up|over)|You climb/.test(game);
-  const end = dead ? 'died: ' + (game.slice(Math.max(0, game.indexOf('You are dead.') - 240), game.indexOf('You are dead.')).replace(/\s+/g, ' ').split(/(?<=[.!]) /).slice(-3).join(' ')) : quitAt >= 0 ? 'quit' : 'did not end';
+  const end = dead ? 'died: ' + (game.slice(Math.max(0, dm.index - 240), dm.index).replace(/\s+/g, ' ').split(/(?<=[.!]) /).slice(-3).join(' ')) : quitAt >= 0 ? 'quit' : 'did not end';
   const ok = !problems.length;
   if (!ok || verbose) { fs.mkdirSync(OUT, { recursive: true }); fs.writeFileSync(path.join(OUT, s + '.txt'), res.out); }
   return { seed: s, ok, problems, end, turns: Math.min(typed.length, turns), refused, left, cycles: res.m.cpu.cyc };
