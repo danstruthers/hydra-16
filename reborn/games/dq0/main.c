@@ -588,7 +588,7 @@ static void __fastcall__ blow (const struct msg* m)
 
     msg (lb);
     if (HUB->pcsum.cond & C_DEAD) {
-        quit = 1;
+        end (END_DIED);                         /* (The game's end, as harm's is) */
     } else if (out) {
         intend2 (I_WAIT, out, 1);               /* (Out: the time it's senseless) */
     }
