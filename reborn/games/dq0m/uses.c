@@ -11,6 +11,10 @@
 ** And the styles' proportions (struct style: a stand-in for the theme's data), the chunk's stratum's copied into
 ** make.c's sty (SP) as each chunk is made.
 **
+** And the history's layers (theme.h, HISTORY.md): which of its stratum's layers a chunk is now (stratagen's, a bank
+** program), its purpose that layer's work (a temple's rooms over an older keep's), the older layer under it (its
+** rooms' uses' marks left, the stock's remnants, rotted by that layer's age), a ruin after it (the stock's debris).
+**
 ** (Overlay 7, the maker's: uses () called through bank.s's stub, by built.c (US_PLAN, US_FLOOR), stock.c (US_THING,
 ** US_SIGN) and make.c (US_STYLE); its data and BSS in the main RAM, as every overlay's are.)
 */
@@ -19,11 +23,15 @@
 #pragma rodata-name ("OV7RODATA")
 
 #include <string.h>
+#include <bankprog.h>
 #include "../dq0/hub.h"
 #include "../dq0w/world.h"
 #include "grow.h"
 
 unsigned char ufort, uwater;                    /* (The chunk's stratum fortified, the chunk's water: US_PLAN's) */
+unsigned char ulayer, uruin;                    /* (The chunk's layer, SG_*, and a ruin after it, EN_* or 0xFF) */
+static unsigned char unl, upurpose, uage, uring, ua;    /* (Its stratum's layers, the older one's purpose, its
+                                                **   age; the chunk's ring, its main room: US_UNDER's) */
 
 /* The styles' proportions (a stand-in for the theme's data): purpose-built (rooms and doors, most closed); natural
 ** (caves: no doors, unless sentient hands have been at them: the mixed style's); mines (galleries, few doors,
@@ -100,6 +108,79 @@ static unsigned char __fastcall__ way_in (const struct stratum* s)
     return 0xFF;
 }
 
+/* ---- The history's layers: which of stratum sn's layers chunk (cx, cy) is now (theme.h's SG_*: stratagen's, a bank
+** program, loaded from the game's lib folder the first time a stratum of more than one layer wants it, then called
+** as the bank programs' library has it, kept or given up and loaded again); a stratum of one layer, or none, 0 */
+static struct bank_fn* sg;
+static struct sgq sq;
+static char sgexp[48], sgbp[48], sgent[10];    /* (In the main RAM: the loader has the window at $8000) */
+static unsigned char sgno;
+
+unsigned char __fastcall__ o_layer_at (unsigned char sn, unsigned cx, unsigned cy)
+{
+    const struct stratum* s = &STRATUM (sn);
+    unsigned char k = sn < TSTRATA ? sn : TSTRATA - 1, in;
+
+    hub_get (THEME_BANK, &THEME->nlayers[k], &unl, 1);
+    if (unl < 2 || sgno) {
+        return unl = 0;
+    }
+    if (!sg) {
+        strcpy (sgexp, libpath);
+        strcat (sgexp, "/dq0m.exp");
+        strcpy (sgbp, libpath);
+        strcat (sgbp, "/stratagen.bp");
+        bank_setup (sgexp, 0, 0);
+        strcpy (sgent, "_layer_of");            /* (Its name too: this overlay's own words are at $8000) */
+        if (!(sg = bank_fn_ (sgbp, sgent))) {
+            sgno = 1;                           /* (None to be had: every stratum as one of one layer) */
+            return unl = 0;
+        }
+    }
+    sq.nl = unl;
+    hub_get (THEME_BANK, THEME->layer[k], sq.l, sizeof sq.l);
+    sq.cw = (s->w + CW - 1) / CW;
+    sq.ch = (s->h + CW - 1) / CW;
+    in = way_in (s);
+    sq.ix = in == 0xFF ? 0 : (s->link[in].x - s->x0) / CW;
+    sq.iy = in == 0xFF ? 0 : (s->link[in].y - s->y0) / CW;
+    sq.seed = s->seed;
+    sq.cx = cx;
+    sq.cy = cy;
+    return bank_call (sg, unsigned char __fastcall__ (*)(struct sgq*), &sq);
+}
+
+/* The chunk's layer (ulayer) and what it says: its purpose (the layer's work: purpose, its stratum's, if it has one
+** layer), the older layer under it (upurpose, uage its era's age), a ruin after it (uruin) */
+static unsigned char __fastcall__ layered (unsigned char purpose)
+{
+    static struct tlayer y[TLAYERS];
+    static struct tera e;
+    unsigned char k = L->sn < TSTRATA ? L->sn : TSTRATA - 1, i, cur;
+
+    ulayer = o_layer_at (L->sn, L->cx, L->cy);
+    if (unl < 2) {
+        return purpose;
+    }
+    hub_get (THEME_BANK, THEME->layer[k], y, sizeof y);
+    cur = ulayer & SG_LAYER;
+    if (ulayer & SG_HASUNDER) {
+        i = (ulayer & SG_UNDER) >> 4;
+        upurpose = y[i].work;
+        uage = STRATUM (L->sn).age;
+        if (y[i].era) {
+            hub_get (THEME_BANK, &THEME->era[y[i].era - 1], &e, sizeof e);
+            uage = e.ago >= uage ? e.ago + 1 : uage;
+        }
+    }
+    for (i = cur + 1; i < unl && i < TLAYERS; ++i) {
+        if (y[i].did == TL_RUINED) {
+            uruin = y[i].work;
+        }
+    }
+    return y[cur].work;
+}
+
 /* The chunk's rooms given their uses (the grower's rooms, sorted from the west, each to be joined to the next) */
 static void plan (void)
 {
@@ -110,6 +191,7 @@ static void plan (void)
     unsigned ex, ey, dx, dy, best;
 
     hub_get (THEME_BANK, &THEME->purpose[L->sn < TSTRATA ? L->sn : TSTRATA - 1], &purpose, 1);
+    purpose = layered (purpose);                /* (Its layer's work, a stratum of more than one) */
     ufort = purpose & P_FORT;
     in = way_in (s);
     ring = 2;
@@ -158,6 +240,8 @@ static void plan (void)
         }
         L->room[r].kind = u;
     }
+    uring = ring;                               /* (The older layer's uses: US_UNDER's) */
+    ua = a;
 }
 
 /* ---- Floors and ceilings */
@@ -280,13 +364,31 @@ static unsigned char __fastcall__ thing (unsigned char sign, unsigned char arg)
     return k;
 }
 
+/* What room r's use under the older layer's purpose left (its mark), the years rotting what rots (that layer's
+** years): 0 if nothing, or the use the same as the room's now */
+static unsigned char __fastcall__ under (unsigned char r)
+{
+    const unsigned char* q = suites[rings[upurpose & 7][uring]];
+    unsigned char u = r == ua ? q[0] : r > ua ? (r - ua <= 5 ? q[r - ua] : U_STORE) : (ua - r <= 5 ? q[5 + ua - r] :
+        U_CHAMBER), k = signs[u];
+
+    if (!k || k == KI_WELL || u == L->room[r].kind ||
+        (rots (k) && (unsigned char) (L->cx * 3 + L->cy * 5 + r * 11) % 40 < uage)) {
+        return 0;
+    }
+    return k;
+}
+
 unsigned char __fastcall__ o_uses (unsigned char step, unsigned char arg)
 {
     switch (step) {
     case US_STYLE:
         memcpy (&sty, &styles[arg & 3], sizeof sty);
-        ufort = uwater = 0;
+        ufort = uwater = ulayer = unl = 0;
+        uruin = 0xFF;
         break;
+    case US_UNDER:
+        return under (arg);
     case US_PLAN:
         plan ();
         break;

@@ -1179,8 +1179,9 @@ void __fastcall__ s_climb (unsigned char d)
     }
     hub_map (0);
     lk = &STRATUM (sn_).link[l];
-    if (lk->kind == O_WAY_OUT) {                /* (The way out: shut, till the theme's mission opens it) */
-        if (HUB->way_open) {
+    if (lk->kind == O_WAY_OUT) {                /* (The way out: shut, till the theme's mission opens it; a far exit,
+                                                **   one below the top, the goal's, open: theme.h's G_THROUGH) */
+        if (HUB->way_open || sn_) {
             event (E_LEFT, 0, 0);
         } else {
             no_way (N_SHUT);

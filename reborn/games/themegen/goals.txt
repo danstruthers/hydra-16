@@ -20,7 +20,8 @@
 #   exit     a far exit's name, one picked (%A)
 #   called   the goal's name (its goal line's), its slots filled
 #   title    the theme's name, one picked (31 letters at most; the first that fits)
-#   and the theme's lines: kind, piece, rule, story (said after the history's words), lock, opened, ending
+#   and the theme's lines: kind, piece (the goal's own thing first: dq0 -T -T begins by the first), rule, story (said
+#            after the history's words), lock, opened, ending
 
 goal     | artifact | escape | built
 thing    | a | the Crown of %N | gold crown | w | 3 | 2 | 10 | other | jewel | 2000
@@ -33,8 +34,8 @@ called   | %A
 title    | the Quest for %A
 title    | %A
 kind     | journal | - | 1 | 1 | 5 | other | book | 5
-piece    | journal | 0-0 | - | 1
 piece    | %a | %s-%s | 6 | 1 | %E | %G
+piece    | journal | 0-0 | - | 1
 rule     | read | journal | The journal is a seeker's, %M's, its last pages scrawled in haste: "%A is down there,
            in %S, among the works of %P.  %g keep it.  The door above won't let me out without it: the old wards
            answer to nothing else."
@@ -58,9 +59,9 @@ thing    | b | the idol of %N | bone idol | sf | 300 | 200 | 35 | bone | bone | 
 called   | %B
 title    | the Curse of %N
 kind     | old scroll | - | 1 | 1 | 5 | other | book | 20
-piece    | old scroll | %u-%u | - | 1 | %e
-piece    | %a | %u-%u | 4 | 1 | %e
 piece    | %b | %s-%s | - | 1 | %E | %G
+piece    | %a | %u-%u | 4 | 1 | %e
+piece    | old scroll | %u-%u | - | 1 | %e
 rule     | read | old scroll | The scroll is %M's, who fought %N's curse and lost: "%B is where the curse was
            made, in %S.  Lay %A upon it, and it will be broken, and the dead of %P will sleep."
 rule     | put | %a | %b | rule | You lay %A upon %B.  A cry goes through the dark, far and near, and dies away;

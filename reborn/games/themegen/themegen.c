@@ -347,7 +347,7 @@ void end_line (void)
 
 /* ---- Its arguments; the bank programs called */
 
-static char path[64], expath[64], bp[4][48];
+static char path[64], expath[64], bp[5][48];
 static const char* __fastcall__ in (const char* dir, const char* name)
 {
     strcpy (path, dir);
@@ -371,6 +371,43 @@ static struct bank_fn* __fastcall__ child (unsigned char k, const char* file, co
         exit (1);
     }
     return h;
+}
+
+/* The layers checked (the theme checker's, as the history's made): each stratum of more than one layer planned by
+** stratagen, the bank program the maker plans by, as a stratum of 8 by 6 chunks, its way in at (2, 3): every layer
+** built or reused some chunks of it, so its era's works are there (its clues, its goal among them) */
+static void check_layers (void)
+{
+    static struct sgq q;
+    struct bank_fn* sg = child (4, "stratagen.bp", "_layer_of");
+    unsigned char k, i, seen;
+    struct str* s;
+
+    for (k = 0, s = st; k < ns; ++k, ++s) {
+        if (s->nl < 2) {
+            continue;
+        }
+        q.nl = s->nl;
+        memcpy (q.l, s->l, sizeof q.l);
+        q.cw = 8;
+        q.ch = 6;
+        q.ix = 2;
+        q.iy = 3;
+        q.seed = seed * 69069UL + k;
+        for (seen = 0, q.cy = 0; q.cy < q.ch; ++q.cy) {
+            for (q.cx = 0; q.cx < q.cw; ++q.cx) {
+                seen |= 1 << (bank_call (sg, unsigned char __fastcall__ (*)(struct sgq*), &q) & SG_LAYER);
+            }
+        }
+        for (i = 0; i < s->nl; ++i) {
+            if (s->l[i].did != TL_RUINED && !(seen & 1 << i)) {
+                say ("themegen: the theme checker: stratum ");
+                say (num (k));
+                say (": a layer of it nowhere\n");
+                bad = 1;
+            }
+        }
+    }
 }
 
 int main (int argc, char* argv[])
@@ -442,6 +479,7 @@ int main (int argc, char* argv[])
     bank_call (hist, void (*)(void));           /* (The region, the eras, the strata, the inhabitants) */
     bank_call (goal, void (*)(void));           /* (The goal) */
     bank_call (lines, void (*)(void));          /* (The theme's lines) */
+    check_layers ();
     if (ofd >= 0) {
         close (ofd);
     }

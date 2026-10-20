@@ -54,6 +54,8 @@ games/lib/dq0/histgen.bp ../obj/bank/histgen.bp ;   goal, the lines, names); the
 games/lib/dq0/goalgen.bp ../obj/bank/goalgen.bp ;   its record, the game's (theme.h), and checked; and the
 games/lib/dq0/linegen.bp ../obj/bank/linegen.bp ;   stand-in themes, to read (a game's from a small seed)
 games/lib/dq0/namegen.bp ../obj/bank/namegen.bp
+games/lib/dq0/stratagen.bp ../obj/bank/stratagen.bp ; (the maker's and themegen's: a stratum's layers planned)
+games/lib/dq0/dq0m.exp ../obj/games/dq0m.exp ;   (the maker's exports, for it)
 games/themec        ../obj/games/themec.hyx
 games/lib/dq0/bestiary.dat ../obj/games/bestiary.dat
 games/lib/dq0/themes/1crypt.txt ../games/dq0/themes/1crypt.txt
