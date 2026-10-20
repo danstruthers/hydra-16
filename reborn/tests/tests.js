@@ -2792,11 +2792,11 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0dig', meaning: true, what: 'Dingus Quest Zero digging (the referee\'s: the tools equipped, P_DIG by what\'s dug, Mining tests a spell at a time, HarnMaster\'s; the maker\'s materials: a room\'s floor, then the stratum\'s rock), by the world\'s events: a skilled miner (Mining 95, hmchar\'s file) with a pick (dq0 -k pick -T: the tool the referee takes) digs a shaft down from a room by its stairway, spell by spell, through to the stratum below, and climbs down it (grown round it then); the giant rats by the stairway living through every spell of it (the turns pace: hours of it, the denizens kept up a slice at a time); a shovel digs seed 3\'s earth floor till the rock under it stops it (the user: the floor, then the rock); a sword won\'t dig seed 5\'s flagged floor at all; a shovel lifts its flags, then the rock stops it (dq0earth\'s and dq0tools\' digs, these together)',
+      name: 'dq0dig', meaning: true, what: 'Dingus Quest Zero digging (the referee\'s: the tools equipped, P_DIG by what\'s dug, Mining tests a spell at a time, HarnMaster\'s; the maker\'s materials: a room\'s floor, then the stratum\'s rock), by the world\'s events: a skilled miner (Mining 95, hmchar\'s file) with a pick (dq0 -k pick -T: the tool the referee takes) digs a shaft down from a room by its stairway, spell by spell, through to the stratum below, and climbs down it (grown round it then); the giant rats by the stairway living through every spell of it (the turns pace: hours of it, the denizens kept up a slice at a time); a shovel digs seed 1\'s hard-packed earth floor (untested: the tool\'s rate, a foot and a half a spell) till the rock under it stops it (the user: the floor, then the rock); a sword won\'t dig seed 5\'s flagged floor at all (only a pick lifts flags); bare hands (the dagger in the kit, a knife that would dig it, put down first) make no progress in seed 1\'s hard-packed earth (the user\'s, 2026-10-20: hands only in soft soil) (dq0earth\'s and dq0tools\' digs, these together)',
       init: 't_rc', cycles: 2400e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'cp /ram/c.hm /ram/m.hm', 'echo ml min 95 >> /ram/m.hm',
-        'dq0 -p t -s 3 -c /ram/m.hm -k pick -T', 'dig down', 'd', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -k shovel -T', 'dig down', 'quit',
-        'dq0 -p t -s 5 -c /ram/c.hm -k sword -T', 'dig down', 'quit', 'dq0 -p t -s 5 -c /ram/c.hm -k shovel -T', 'dig down', 'quit', 'echo $status']) },
+        'dq0 -p t -s 3 -c /ram/m.hm -k pick -T', 'dig down', 'd', 'quit', 'dq0 -p t -s 1 -c /ram/c.hm -k shovel -T', 'dig down', 'quit',
+        'dq0 -p t -s 5 -c /ram/c.hm -k sword -T', 'dig down', 'quit', 'dq0 -p t -s 1 -c /ram/c.hm -T', 'drop the dagger', 'dig down', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [], digs = T.filter(t => t.line === 'dig down');
@@ -2804,7 +2804,7 @@ module.exports = {
         const spells = t => dq0Ev(t, 'E_DIG', { how: h => ['D_GOOD', 'D_POOR', 'D_SLIP'].includes(h) }), dug = t => spells(t).filter(e => e.how !== 'D_SLIP').length;
         // (The tools the referee took for the dig's spells, the hub's dig_tool: the one carried among them)
         const tool = (t, n) => { if (!t.after || !t.after.digTool.includes(n)) f.push(t.k + ': the referee\'s tools ' + (t.after && JSON.stringify(t.after.digTool)) + ', not the ' + n); };
-        const [p, s3, sw, s5] = digs;
+        const [p, s1, sw, h1] = digs;
         dq0Need(f, p, 'E_DIG', { how: 'D_BEGUN' }, 'the pick\'s dig not begun');
         if (!dug(p)) f.push('the pick dug nothing');
         dq0Need(f, p, 'E_DIG', { how: 'D_THROUGH' }, 'the shaft not through');
@@ -2814,13 +2814,13 @@ module.exports = {
         const d = T.after(p, 'd');
         dq0Need(f, d, 'E_ARRIVE', { how: 'A_DOWN', first: true }, 'not down the shaft to the stratum below');
         if (!d.after || d.after.pc.sn !== 1) f.push('not on the stratum below');
-        if (!dug(s3)) f.push('the shovel dug none of the earth floor');
-        dq0Need(f, s3, 'E_DIG', { how: 'D_NO_TOOL' }, 'the shovel not stopped by the rock');
-        tool(s3, 'shovel');
+        if (dug(s1) !== 2) f.push('the shovel dug the earth floor\'s two feet in ' + dug(s1) + ' spells, not 2 (a foot and a half a spell)');
+        dq0Need(f, s1, 'E_DIG', { how: 'D_NO_TOOL', feet: 1 + 1 }, 'the shovel not stopped by the rock (MAT_STONE)');
+        tool(s1, 'shovel');
         dq0Need(f, sw, 'E_DIG', { how: 'D_NO_TOOL' }, 'the sword not refused by the flags');
         if (spells(sw).length) f.push('the sword dug at the flags');
-        if (!dug(s5)) f.push('the shovel lifted none of the flags');
-        dq0Need(f, s5, 'E_DIG', { how: 'D_NO_TOOL' }, 'the shovel not stopped by the rock under the flags');
+        if (spells(h1).length) f.push('bare hands dug at the hard-packed earth');
+        dq0Need(f, h1, 'E_DIG', { how: 'D_NO_TOOL', feet: 0 + 1 }, 'bare hands not refused by the hard-packed earth (MAT_EARTH)');
         return f;
       },
       sdcard: true

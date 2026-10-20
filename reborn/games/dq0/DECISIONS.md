@@ -624,3 +624,26 @@ still (the game's), not the character following; anything thrown at the book's m
 short band, a hit wounding nothing till the referee's missile attack.
 
 **Design:** DUNGEON.md, who keeps what (the command) and seeing (which, asked); HOUSE.md, throwing and commands.
+
+## 2026-10-20
+
+### HOUSE.md's open rules
+
+The user's answers to the house rules' open questions (each the recommended one):
+- a theme's own tests name a purpose, which each ruleset's referee maps to a skill of its own, not a skill by name;
+- untrained skills stay open, every test tried at the opening level, only tools gating one (lockpicks);
+- a skill never opened takes its group's penalty, as an opened one does (the book's: the universal for a craft),
+  not the physical one whatever it is;
+- climbing's rate goes by the face's grade, once the maker grades faces;
+- bare hands dig slower than a blade, so "a sword digs earth too, poorly, and dulls" comes about: half a foot of
+  soil a spell, a blade or a knife a foot; and "use of hands for digging should only work in soft soil.  Hard-packed
+  soil or harder should result in a 'you make no progress' result (or the like)": soft soil a material of its own
+  (a natural cave's earthen floors), the rest's earth hard-packed;
+- then: "Hard-packed earth should be harder to dig for any tool (half the soft soil rate)", and "Earth floor take no
+  mining skill, and hard-packed is half the rate of loose soil.  Anything harder uses mining skill, and rate depends
+  on material (only a pick will work for harder materials)": earth dug at the tool's rate, untested; flags, masonry
+  and stone a Mining test each spell, a pick's alone (the mattock, the chisel and the shovel's flags gone).
+
+D9 (hearing) stays open, tuned by ear once the real sounds are in.
+
+**Design:** HOUSE.md, tests, digging, decided but not built.

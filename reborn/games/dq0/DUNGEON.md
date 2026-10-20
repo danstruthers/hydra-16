@@ -375,9 +375,10 @@ made when the character first takes a way down to it: its bounds and style (a st
 The dungeon isn't only what the growers made: those in it change it, and the change stays.
 
 - **Digging** (dq0w.c: I_DIG): a tunnel through rock or a wall, by the compass's four, or a shaft down; by hand and
-  tool (Mining, the tool's rate on the material: HOUSE.md's digging), a test each spell of ten minutes, the work's
-  feet of progress; slow (hours for a wall, days for a shaft), and loud (the denizens hear it: an event).  A shaft
-  dug down goes through the floor (earth two feet, flags or masonry one) and then the stratum's rock, and comes out
+  tool (the tool's rate on the material: HOUSE.md's digging), a spell of ten minutes at a time, earth at the tool's rate
+  and anything harder a Mining test each spell (a pick's alone), the work's
+  feet of progress (kept in half-feet; bare hands half a foot, and only in soft soil); slow (hours for a wall, days for a shaft), and loud (the denizens hear it: an event).  A shaft
+  dug down goes through the floor (earth or soil two feet, flags or masonry one) and then the stratum's rock, and comes out
   in the stratum below (grown then, if no one has been there): a new link between the strata, its two ends' squares
   the same.  A wall is two feet, a square of rock five.
 - **Breaking** (powder, a ram, magic; by accident, a ceiling an old stratum's age has weakened brought down) and
@@ -388,22 +389,23 @@ above) and slanting (an incline, its floor rising or falling square by square) a
 
 **Materials, and who judges them**: the maker gives everything its material as it grows it, by the stratum's style
 and age (dq0m/fixtures.c): each room its floor's, its walls' and its ceiling's (struct chunk's mat), its passages
-theirs (their floors, the rock they're cut in): a built room's walls masonry, its floor flagged or bare earth (the
-more earth the older); a cave's floor earth or stone, its walls the rock; a mine's all stone.  Flags are a material
-of their own (rs.h's MAT_FLAGS: lifted, a pick's or a mattock's quickest, a shovel's slowly, not bare hands).  The
+theirs (their floors, the rock they're cut in): a built room's walls masonry, its floor flagged or bare earth, trodden hard
+(the more earth the older); a cave's floor soft soil or stone, its walls the rock; a mine's all stone (rs.h's MAT_EARTH
+hard-packed, MAT_SOIL soft: bare hands dig only soil, and make no progress in anything harder).  Flags are a material
+of their own (rs.h's MAT_FLAGS: lifted, and only with a pick).  The
 world reads what's there and asks (the dig takes the floor's, or the wall's, from the chunk; a fall lands on the
-floor's material: earth the ground, flags and masonry hard, stone broken rock); the referee judges how what's applied
+floor's material: earth or soil the ground, flags and masonry hard, stone broken rock); the referee judges how what's applied
 to it works on it.
 
 **Tools**, and **tools to hand**: what an actor carries is the referee's to know (rs.h's RS_EQUIP: every tool it
 carries, wherever, sent again as anything is taken up or put down), so nothing is equipped by hand for a skill.  The
-world says what the work is on (digging: earth, stone, masonry, flags), and a skill used takes out the tool that
-suits the work best: by its rate on that material, and of two as good the one the work wears less (bare hands before
-a sword, which the work would dull).  The reply names the tool and the wear the work did it; the item records its
+world says what the work is on (digging: soil, earth, stone, masonry, flags), and a skill used takes out the tool that
+suits the work best: by its rate on that material, and of two as good the one the work wears less (a blade digs earth or soil
+faster than bare hands, and is dulled by it).  The reply names the tool and the wear the work did it; the item records its
 wear (a blade dug with is dulled, then dull: worded in what's carried).  A tool that can't do the work isn't used for
 it (a sword won't dig stone).  The tool's named as it's first taken up ("You dig with your pick").  A game can begin
-with a thing in hand (dq0 -k TOOL: dq0 -k shovel digs an earth floor, and lifts flags, till the rock under them
-stops it).
+with a thing in hand (dq0 -k TOOL: dq0 -k shovel digs an earth floor till the rock under it stops it; only a pick
+lifts flags or cuts rock).
 
 Each change is a **record**, written by the world (dq0w/store.c: by region, the cache's pages and the save folder's
 files), laid over a chunk by the maker each time it makes it again, and in the save.  Seen squares are kept the same

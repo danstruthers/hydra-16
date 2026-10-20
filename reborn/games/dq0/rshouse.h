@@ -9,19 +9,23 @@
 ** (tools[NTOOLS][8], RS_EQUIP's keys).
 */
 
-/* ---- The tools that dig (HOUSE.md: digging; rs.h's P_DIG): each one's key (the things' catalogue's), its feet a
-** spell of work at a marginal success, and the wear a spell does it, by what it's into (rs.h's MAT_*: earth, stone,
-** masonry, a floor's flags); bare hands the first.  A critical success twice the feet, a marginal failure half, a
-** critical failure none */
+/* ---- The tools that dig (HOUSE.md: digging; rs.h's P_DIG): each one's key (the things' catalogue's), its half-feet a
+** spell of work, and the wear a spell does it, by what it's into (rs.h's MAT_*: hard-packed earth, stone, masonry, a
+** floor's flags, soft soil); bare hands the first.  The user's, 2026-10-20: earth is dug at the tool's rate, no test
+** (bare hands half a foot of soft soil, nothing of hard-packed earth; every tool half as far in hard-packed earth
+** as in soil); anything harder only with a pick, a Mining test each spell: its rate at a marginal success, twice at
+** a critical, half at a marginal failure, none at a critical failure */
 #if defined (RS_HOUSE_DIG) && !defined (RS_HOUSE_DIG_DONE)
 #define RS_HOUSE_DIG_DONE
-static const struct { char key[8]; unsigned char rate[4], wear[4]; } digger[] = {    /* Earth, stone, masonry, flags */
-    { "hands", { 1, 0, 0, 0 }, { 0, 0, 0, 0 } }, { "shovel", { 3, 0, 0, 1 }, { 0, 0, 0, 0 } },
-    { "spade", { 3, 0, 0, 1 }, { 0, 0, 0, 0 } }, { "pick", { 2, 2, 1, 3 }, { 0, 1, 1, 1 } },
-    { "mattock", { 3, 2, 1, 3 }, { 0, 1, 1, 1 } }, { "chisel", { 0, 1, 2, 1 }, { 0, 1, 1, 1 } },
-    { "blade", { 1, 0, 0, 0 }, { 40, 0, 0, 0 } }, { "knife", { 1, 0, 0, 0 }, { 40, 0, 0, 0 } },
+static const struct { char key[8]; unsigned char rate[5], wear[5]; } digger[] = {   /* Earth, stone, masonry, flags,
+                                                                                    **   soil */
+    { "hands", { 0, 0, 0, 0, 1 }, { 0, 0, 0, 0, 0 } }, { "shovel", { 3, 0, 0, 0, 6 }, { 0, 0, 0, 0, 0 } },
+    { "spade", { 3, 0, 0, 0, 6 }, { 0, 0, 0, 0, 0 } }, { "pick", { 2, 4, 2, 6, 4 }, { 0, 1, 1, 1, 0 } },
+    { "mattock", { 3, 0, 0, 0, 6 }, { 0, 0, 0, 0, 0 } },
+    { "blade", { 1, 0, 0, 0, 2 }, { 40, 0, 0, 0, 40 } }, { "knife", { 1, 0, 0, 0, 2 }, { 40, 0, 0, 0, 40 } },
 };
 #define NDIGGERS        (sizeof digger / sizeof digger[0])
+#define DIG_TESTED(m)   ((m) != MAT_EARTH && (m) != MAT_SOIL)   /* (Earth dug at the tool's rate; the rest a Mining test) */
 #endif
 
 /* The tool to hand that suits the material best (bare hands, digger's 0, if none does better; of two as good, the

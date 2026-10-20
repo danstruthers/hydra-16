@@ -34,9 +34,10 @@ plays them as HarnMaster's referee does.
   throwing Throwing.
   (dq0harn.c's purpose table.)  Why: the game's code stays the same whatever the ruleset; only the referee knows
   skills.
-- **A skill never opened is tried at its opening level,** less five a point of the physical penalty, as if opened
-  on first use.
-  (dq0harn.c's test_sk.)  Why: a character can try anything a person could.
+- **A skill never opened is tried at its opening level,** less five a point of its group's penalty, as an opened
+  skill is (the physical penalty for a physical or combat skill, the universal for the rest: Skills 6), as if
+  opened on first use.  No test is refused for want of training: only a tool gates one (no lockpicks, no picking).
+  (dq0harn.c's test_sk.)  Why: a character can try anything a person could (the user's, 2026-10-20).
 - **A theme's own purposes** (P_THEME on) are an even chance, 50 and the steps, till themes say what they test.
   (dq0harn.c's test.)
 - **Appraising a thing** uses the craft that knows it: weapons and armour Weaponcraft, metal Metalcraft, wood
@@ -107,22 +108,28 @@ plays them as HarnMaster's referee does.
 
 ## Digging
 
-The book has no digging rules.  A spell of work is ten minutes, a Mining test with the tool to hand that suits the
-material best (bare hands if none does better; of two as good, the one it wears less).  Feet dug a spell at a
-marginal success, by material (earth, stone, masonry, a floor's flags), and the wear a spell does the tool:
+The book has no digging rules.  A spell of work is ten minutes, with the tool to hand that suits the material best
+(bare hands if none does better; of two as good, the one it wears less).  Earth, soft soil or hard-packed, is dug at
+the tool's rate, no test: hard-packed earth half as far as soft soil, and never with bare hands ("you make no
+progress").  Anything harder (a floor's flags, masonry, stone) only a pick bites into, and each spell is a Mining
+test: the rate at a marginal success, twice at a critical, half at a marginal failure, nothing at a critical
+failure.  Feet a spell (kept in half-feet), and the wear a spell does the tool:
 
-| Tool         | Earth | Stone | Masonry | Flags | Wear (each)        |
-|--------------|-------|-------|---------|-------|--------------------|
-| bare hands   | 1     | -     | -       | -     | -                  |
-| shovel, spade| 3     | -     | -       | 1     | none               |
-| pick         | 2     | 2     | 1       | 3     | stone, masonry, flags 1 |
-| mattock      | 3     | 2     | 1       | 3     | stone, masonry, flags 1 |
-| chisel       | -     | 1     | 2       | 1     | stone, masonry, flags 1 |
-| a blade, a knife | 1 | -     | -       | -     | earth 40 (it dulls) |
+| Tool             | Soil | Hard-packed earth | Flags | Stone | Masonry | Wear (each)            |
+|------------------|------|-------------------|-------|-------|---------|------------------------|
+| bare hands       | ½    | -                 | -     | -     | -       | -                      |
+| a blade, a knife | 1    | ½                 | -     | -     | -       | soil, earth 40 (it dulls) |
+| pick             | 2    | 1                 | 3     | 2     | 1       | flags, stone, masonry 1 |
+| shovel, spade    | 3    | 1½                | -     | -     | -       | none                   |
+| mattock          | 3    | 1½                | -     | -     | -       | none                   |
 
-A critical success digs twice as far, a marginal failure half, a critical failure nothing.  A floor's flags are
-lifted, not cut (the user: a material of their own).  (rshouse.h's digger table and the tool's choice; dq0harn.c's
-RS_TEST P_DIG.)  *(Every ruleset's.)*
+A natural cave's earthen floors are soft soil; a built, mined or mixed stratum's are trodden hard (dq0m/fixtures.c).
+A floor's flags are lifted, not cut (the user: a material of their own).  The user's, 2026-10-20: "a sword digs
+earth too, poorly, and dulls"; bare hands "should only work in soft soil.  Hard-packed soil or harder should result
+in a 'you make no progress' result"; "Hard-packed earth should be harder to dig for any tool (half the soft soil
+rate)"; earth takes no Mining, "Anything harder uses mining skill, and rate depends on material (only a pick will
+work for harder materials)".  (rshouse.h's digger table, the tool's choice and DIG_TESTED; dq0harn.c's RS_TEST
+P_DIG.)  *(Every ruleset's.)*
 
 ## Portals
 
@@ -314,13 +321,13 @@ requests; the house's rules above marked *(every ruleset's)* it plays as HarnMas
 - **Bearings and mental maps** (DUNGEON.md: the character's sense of where it is, by Awareness or Mining; a map in
   its head that fades): slices 4.1-4.2.
 
+- **A theme's own tests name a purpose** (the user's, 2026-10-20), as the rest of the game's do, which each
+  ruleset's referee maps to its own skill.  Today they're an even chance (P_THEME on).
+- **Climbing's rate by the face's grade** (the user's, 2026-10-20): faster up an easy face, slower up a sheer one,
+  once the maker gives faces a grade.  Today it's 10 feet a round at a marginal success and 20 at a critical,
+  everywhere.
+
 ## Open
 
 - **D9, hearing:** how far each sound carries and how well each actor hears, tuned by ear once the real
   environmental sounds are in.
-- **The theme's own purposes:** an even chance till each theme says which skill its puzzle's tests use.  Should a
-  theme name a skill, or a purpose the referee maps?  (Recommended: a purpose, as the rest of the game does.)
-- **Untrained skills:** tried at their opening level.  The book lets a GM refuse a test outright (no Lockcraft, no
-  picking).  Keep every test open?  (Recommended: yes, but for tests the tools gate, as lockpicks do now.)
-- **Climbing's rate:** 10 feet a round at a marginal success, 20 at a critical.  Faster for an easy face, slower
-  for a sheer one?  (Recommended: by the ledge's grade, once the maker gives faces a grade.)

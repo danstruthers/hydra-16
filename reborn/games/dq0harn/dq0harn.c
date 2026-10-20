@@ -203,7 +203,8 @@ static signed char __fastcall__ grade (unsigned char level)
     return g[level & 3];
 }
 
-/* A skill's test (or an attribute's: ATTR), at the steps (a skill not learnt: its opening level, less a penalty) */
+/* A skill's test (or an attribute's: ATTR), at the steps (a skill not learnt: its opening level, less its group's
+** penalty, as a learnt one's: harn_eml's, its level 0, the penalty alone; the user's, 2026-10-20) */
 static signed char __fastcall__ test_sk (harn_char* c, unsigned char sk, signed char steps)
 {
     int mod = STEP_PCT * steps;
@@ -212,7 +213,7 @@ static signed char __fastcall__ test_sk (harn_char* c, unsigned char sk, signed 
         return grade (harn_test_attr (c, sk & ~ATTR, 5, mod));
     }
     if (!c->ml[sk]) {
-        return grade (harn_test (harn_get_oml (c, sk) - 5 * harn_get_pp (c) + mod));
+        return grade (harn_test (harn_get_oml (c, sk) + harn_eml (c, sk) + mod));
     }
     return grade (harn_test_skill (c, sk, mod));
 }
@@ -577,7 +578,7 @@ static void __fastcall__ answer (struct req* r)
         break;
     case RS_TEST:
         if (r->a == P_DIG) {                    /* (Judged by the tool to hand that suits it best) */
-            m = r->b > MAT_FLAGS ? MAT_STONE : r->b;
+            m = r->b > MAT_SOIL ? MAT_STONE : r->b;
             t = dig_tool (m);
             k = digger[t].rate[m];
             strcpy (r->text, digger[t].key);
@@ -588,7 +589,7 @@ static void __fastcall__ answer (struct req* r)
                 r->w2 = 0;
                 break;
             }
-            r->grade = test (&pc, r->a, r->steps);
+            r->grade = DIG_TESTED (m) ? test (&pc, r->a, r->steps) : G_MS;    /* (Earth: the tool's rate, untested) */
             r->w1 = r->grade == G_CS ? 2 * k : r->grade == G_MS ? k : r->grade == G_MF ? k / 2 : 0;
             break;
         }

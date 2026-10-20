@@ -46,12 +46,13 @@ static void materials (void)
 {
     struct stratum* s = &STRATUM (L->sn);
     unsigned char r, bare = s->style == ST_BUILT || s->style == ST_MIXED ? MAT_FLAGS : MAT_STONE;    /* (A floor's) */
-    unsigned char old = s->age / 4;
+    unsigned char old = s->age / 4, earth = s->style == ST_NATURAL ? MAT_SOIL : MAT_EARTH;  /* (A cave's soft, the
+                                                **   rest trodden hard) */
     unsigned char* m;
 
     dseed (1, 0xFF);                            /* (The passages': their floors, the rock, their ceilings) */
     m = L->mat[NROOMS];
-    m[MP_FLOOR] = dr (20) < SP->p_earth + (SP->p_earth ? old : 0) ? MAT_EARTH : bare;
+    m[MP_FLOOR] = dr (20) < SP->p_earth + (SP->p_earth ? old : 0) ? earth : bare;
     m[MP_WALL] = MAT_STONE;
     m[MP_CEIL] = MAT_STONE;
     for (r = 0; r < NROOMS; ++r) {
@@ -62,7 +63,7 @@ static void materials (void)
             continue;
         }
         dseed (1, r);
-        m[MP_FLOOR] = dr (20) < SP->f_earth + (SP->f_earth ? old : 0) ? MAT_EARTH : bare;
+        m[MP_FLOOR] = dr (20) < SP->f_earth + (SP->f_earth ? old : 0) ? earth : bare;
         m[MP_WALL] = dr (20) < SP->w_built ? MAT_MASONRY : MAT_STONE;
         m[MP_CEIL] = dr (20) < SP->c_built ? MAT_MASONRY : MAT_STONE;
     }

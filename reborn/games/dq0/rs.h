@@ -53,8 +53,8 @@ enum {
     P_FIRST_AID, P_LORE, P_TRACK, P_PERSUADE, P_INTIMIDATE, P_ANIMALS,
     P_DIG,                                      /* Digging (b: the material, MAT_*): judged by the tool to hand that
                                                 **   suits it best (the referee's choice: its key in the reply's
-                                                **   text, the wear the spell did it in w2); the reply's w1 the feet a
-                                                **   spell of work makes, its result 1 if nothing it has can dig that */
+                                                **   text, the wear the spell did it in w2); the reply's w1 the half-feet
+                                                **   a spell of work makes, its result 1 if nothing it has can dig that */
     P_APPRAISE,                                 /* A thing judged (b: the craft that knows it, AP_*): its make, its
                                                 **   worth; the grade how near the judgement comes */
     P_CONCEAL,                                  /* Concealment: a thing hidden, or oneself (in shadows ...): the
@@ -82,7 +82,8 @@ enum { AP_WEAPON, AP_ARMOUR, AP_METAL, AP_WOOD, AP_HIDE, AP_CLOTH, AP_POTTERY, A
 
 /* What a dig is into (and what a fall lands on): a floor's flags (the user: a material of their own) are lifted, not
 ** cut */
-enum { MAT_EARTH, MAT_STONE, MAT_MASONRY, MAT_FLAGS };
+enum { MAT_EARTH, MAT_STONE, MAT_MASONRY, MAT_FLAGS, MAT_SOIL };    /* (Earth hard-packed, soil soft: the only one
+                                                **   bare hands dig, the user's, 2026-10-20) */
 
 /* ---- Paces: how fast an actor goes, the slowest first (a creep, a slow walk, a walk, a jog, a run, a sprint); the
 ** summary's gstep each one's time a square; RS_EXERT's a the one the time went at (GA_REST: standing still) */

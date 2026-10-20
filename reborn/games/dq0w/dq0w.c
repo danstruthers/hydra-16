@@ -677,7 +677,7 @@ static unsigned __fastcall__ fall (unsigned feet, unsigned char how)
     r->actor = 0;
     r->other = 0;
     r->a = HC_FALL;
-    r->b = m == MAT_EARTH ? GR_FLOOR : m == MAT_STONE ? GR_ROCKY : GR_HARD;
+    r->b = m == MAT_EARTH || m == MAT_SOIL ? GR_FLOOR : m == MAT_STONE ? GR_ROCKY : GR_HARD;
     r->c = how;
     r->w1 = feet;
     r = hub_ask (SLOT_WORLD);
@@ -1451,7 +1451,7 @@ static struct {
     unsigned char   d;                          /* DIR_N ... DIR_W, DIR_DOWN */
     unsigned char   mat;                        /* What it's into (rs.h's MAT_*: the referee judges the tools) */
     unsigned char   top;                        /*   for its first feet (a shaft: the floor's; the rock's below) */
-    unsigned        need, done;                 /* Feet */
+    unsigned        need, done;                 /* Half-feet (P_DIG's: bare hands half a foot a spell) */
     unsigned        x, y;                       /* The square dug */
 } dig;
 
@@ -1567,13 +1567,14 @@ void __fastcall__ s_start_dig (unsigned char d)
             HUB->pc_y = dig.y;
         }
         dig.mat = C->mat[room_of (sn_, dig.x, dig.y)][MP_FLOOR];    /* (The room's floor: the maker's) */
-        dig.top = dig.mat == MAT_EARTH ? 2 : dig.mat == MAT_STONE ? 0 : 1;   /* (Earth two feet, flags or masonry one) */
+        dig.top = dig.mat == MAT_EARTH || dig.mat == MAT_SOIL ? 4 : dig.mat == MAT_STONE ? 0 : 2;  /* (Earth or soil
+                                                **   two feet, flags or masonry one) */
         if (!stratum_in (sn_ + 1)) {
             grow_below (sn_);                   /* (Grown now: the shaft goes down to its floors, if it reaches under) */
             mx = dig.x;
             my = dig.y;
         }
-        dig.need = abs (STRATUM (sn_).datum - STRATUM (sn_ + 1).datum);
+        dig.need = 2 * abs (STRATUM (sn_).datum - STRATUM (sn_ + 1).datum);
     } else {
         dig.x = mx + dir_x[d];
         dig.y = my + dir_y[d];
@@ -1587,12 +1588,12 @@ void __fastcall__ s_start_dig (unsigned char d)
             no_way (N_NO_DIG);
             return;
         }
-        dig.need = t == T_WALL ? 2 : 5;         /* (A wall, two feet; a square of rock, five) */
+        dig.need = t == T_WALL ? 4 : 10;        /* (A wall, two feet; a square of rock, five) */
         dig.mat = C->mat[t == T_WALL && k != 0xFF ? k : NROOMS][MP_WALL];   /* (Its room's walls, or the rock) */
         dig.top = 0xFF;
     }
     hub_map (0);
-    event (E_DIG, 0, D_BEGUN << 8 | (dig.need > 255 ? 255 : dig.need));
+    event (E_DIG, 0, D_BEGUN << 8 | (dig.need > 510 ? 255 : dig.need / 2));    /* (Told in feet) */
     spell ();
 }
 
@@ -1610,7 +1611,7 @@ void s_dig_on (void)
     g = test_dig ();
     if (made == 0xFF) {                         /* (Nothing it has will bite into it) */
         hub_map (0);
-        event (E_DIG, 0, D_NO_TOOL << 8);
+        event (E_DIG, 0, D_NO_TOOL << 8 | (dig.done < dig.top ? dig.mat : MAT_STONE) + 1);   /* (What it's into) */
         return;
     }
     dig.done += made;
@@ -1618,7 +1619,7 @@ void s_dig_on (void)
     noise (6);
     if (dig.done < dig.need) {
         event (E_DIG, 0, (g == G_CS || g == G_MS ? D_GOOD : g == G_MF ? D_POOR : D_SLIP) << 8 |
-            (dig.need - dig.done > 255 ? 255 : dig.need - dig.done));
+            (dig.need - dig.done > 510 ? 255 : (dig.need - dig.done + 1) / 2));
         spell ();
         return;
     }

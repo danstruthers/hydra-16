@@ -480,7 +480,7 @@ static void __fastcall__ answer (struct req* r)
         break;
     case RS_TEST:
         if (r->a == P_DIG) {                    /* (The tool to hand that suits it best: the house's) */
-            m = r->b > MAT_FLAGS ? MAT_STONE : r->b;
+            m = r->b > MAT_SOIL ? MAT_STONE : r->b;
             t = dig_tool (m);
             k = digger[t].rate[m];
             strcpy (r->text, digger[t].key);
@@ -490,7 +490,7 @@ static void __fastcall__ answer (struct req* r)
                 r->w1 = r->w2 = 0;
                 break;
             }
-            g = r->grade = flat (r->steps);
+            g = r->grade = DIG_TESTED (m) ? flat (r->steps) : G_MS;    /* (Earth: the tool's rate, untested) */
             r->w1 = g == G_CS ? 2 * k : g == G_MS ? k : g == G_MF ? k / 2 : 0;
             break;
         }

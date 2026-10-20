@@ -345,13 +345,13 @@ dice 100:39
 ask TEST a=P_JUMP
 want grade=G_MF
 
-# (HOUSE.md: a skill never opened takes the physical penalty, whatever its kind; the book's universal one for a
-# craft would leave Lore 24)
-case a load of 24 lb: Lore not opened, the house's physical penalty on it (14)
-dice 100:14
+# (HOUSE.md: a skill never opened takes its group's penalty, as an opened one does (the user's, 2026-10-20): a
+# craft's the universal one, so the load's physical penalty would have left Lore 14)
+case a load of 24 lb: Lore not opened, a craft's universal penalty on it (24)
+dice 100:24
 ask TEST a=P_LORE
 want grade=G_MS
-dice 100:16
+dice 100:26
 ask TEST a=P_LORE
 want grade=G_MF
 dice
@@ -1662,85 +1662,106 @@ end
 case an arm and a leg made useless, the arm bleeding
 want sum.cond&C_ARM_USELESS=C_ARM_USELESS sum.cond&C_LEG_USELESS=C_LEG_USELESS sum.cond&C_BLEEDING=C_BLEEDING
 
-# ---- Digging (HOUSE.md: Mining (30), a spell's feet by the tool and the material, a critical success twice, a
-# marginal failure half, a critical failure none; the wear it does the tool)
+# ---- Digging (HOUSE.md, the user's, 2026-10-20: earth dug at the tool's rate, untested, hard-packed earth half as far
+# as soft soil and never by bare hands; flags, masonry and stone only with a pick, a Mining test (30) each spell: its
+# rate at a marginal success, twice at a critical, half at a marginal failure, none at a critical failure; the
+# reply's feet in half-feet, and the wear it does the tool)
 
 char
 end
-case bare hands in earth: a foot a spell (MS), 2 (CS), none at half (MF) or a critical failure
-dice 100:29
-ask TEST a=P_DIG b=MAT_EARTH
+case bare hands in soft soil: half a foot a spell (1), untested (no dice)
+dice
+ask TEST a=P_DIG b=MAT_SOIL
 want result=0 grade=G_MS w1=1 w2=0 text="hands"
-dice 100:30
+
+case bare hands in hard-packed earth: no progress, no test (hands only in soft soil)
+dice
 ask TEST a=P_DIG b=MAT_EARTH
-want w1=2
-dice 100:31
-ask TEST a=P_DIG b=MAT_EARTH
-want grade=G_MF w1=0
-dice 100:35
-ask TEST a=P_DIG b=MAT_EARTH
-want grade=G_CF w1=0
+want result=1 w1=0 text="hands"
 
 case bare hands in stone: nothing that would bite into it, no test
 dice
 ask TEST a=P_DIG b=MAT_STONE
 want result=1 w1=0 text="hands"
 
-case a shovel in earth: 3 feet a spell, 6, 1 (half, rounded down), none; no wear
+case a shovel: 3 feet of soil a spell (6), a foot and a half of hard-packed earth (3), untested; no wear; not stone, nor flags
 dice
 ask EQUIP a=2 text=" shovel4"
-dice 100:29
+dice
+ask TEST a=P_DIG b=MAT_SOIL
+want result=0 grade=G_MS w1=6 w2=0 text="shovel"
+dice
 ask TEST a=P_DIG b=MAT_EARTH
-want w1=3 w2=0 text="shovel"
-dice 100:30
-ask TEST a=P_DIG b=MAT_EARTH
-want w1=6
-dice 100:31
-ask TEST a=P_DIG b=MAT_EARTH
-want w1=1
-dice 100:35
-ask TEST a=P_DIG b=MAT_EARTH
-want w1=0
+want result=0 grade=G_MS w1=3 w2=0 text="shovel"
 dice
 ask TEST a=P_DIG b=MAT_STONE
 want result=1
+dice
+ask TEST a=P_DIG b=MAT_FLAGS
+want result=1
 
-case a pick in stone: 2 feet a spell, its wear 1; a pick and a shovel: the shovel in earth, the pick in flags
+case a pick in stone: Mining, 2 feet a spell (4), 4 (CS), 1 (MF), none (CF), its wear 1
 dice
 ask EQUIP a=2 text=" pick4"
 dice 100:29
 ask TEST a=P_DIG b=MAT_STONE
-want w1=2 w2=1 text="pick"
+want grade=G_MS w1=4 w2=1 text="pick"
+dice 100:30
+ask TEST a=P_DIG b=MAT_STONE
+want grade=G_CS w1=8
+dice 100:31
+ask TEST a=P_DIG b=MAT_STONE
+want grade=G_MF w1=2
+dice 100:35
+ask TEST a=P_DIG b=MAT_STONE
+want grade=G_CF w1=0
+
+case a pick and a shovel: the shovel in earth (untested), the pick in flags (3 feet) and masonry (a foot)
 dice
 ask EQUIP a=2 text=" pick4 shovel4"
-dice 100:29
+dice
 ask TEST a=P_DIG b=MAT_EARTH
-want w1=3 text="shovel"
+want grade=G_MS w1=3 text="shovel"
 dice 100:29
 ask TEST a=P_DIG b=MAT_FLAGS
-want w1=3 w2=1 text="pick"
-
-case a chisel and a pick in masonry: the chisel (2 feet); a blade in earth: no better than her hands, which it doesn't dull
-dice
-ask EQUIP a=2 text=" pick4 chisel4"
+want w1=6 w2=1 text="pick"
 dice 100:29
 ask TEST a=P_DIG b=MAT_MASONRY
-want w1=2 w2=1 text="chisel"
+want w1=2 w2=1 text="pick"
+
+case a chisel or a mattock in masonry: neither bites (a pick's alone); a mattock in earth: a foot and a half (3), untested
+dice
+ask EQUIP a=2 text=" chisel4 mattock4"
+dice
+ask TEST a=P_DIG b=MAT_MASONRY
+want result=1
+dice
+ask TEST a=P_DIG b=MAT_EARTH
+want grade=G_MS w1=3 w2=0 text="mattock"
+
+case a blade: half a foot of hard-packed earth (1), a foot of soil (2), better than her hands, and it dulls
 dice
 ask EQUIP a=2 text="*blade4"
-dice 100:29
+dice
 ask TEST a=P_DIG b=MAT_EARTH
-want w1=1 w2=0 text="hands"
+want grade=G_MS w1=1 w2=40 text="blade"
+dice
+ask TEST a=P_DIG b=MAT_SOIL
+want w1=2 w2=40 text="blade"
 dice
 ask EQUIP a=2 text=""
 
 char
 inj 8 0 1 1 0 0
 end
-case Mining with an M1 (a craft, UP 1): 25
+case Mining with an M1 (a craft, UP 1): 25, a pick in stone
+dice
+ask EQUIP a=2 text=" pick4"
 dice 100:25
-ask TEST a=P_DIG b=MAT_EARTH
-want grade=G_CS w1=2
+ask TEST a=P_DIG b=MAT_STONE
+want grade=G_CS w1=8
+dice
+ask EQUIP a=2 text=""
 
 # ---- Appraising (HOUSE.md: the craft that knows the thing)
 

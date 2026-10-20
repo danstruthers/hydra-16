@@ -181,7 +181,8 @@ enum {
                                                 **   and (up or down) the link's kind (O_*) times 4096 */
     E_NOWAY,                                    /* who can't: w1 why (N_*) */
     E_VIEW,                                     /* What who sees has changed: w1 why (V_*) */
-    E_DIG,                                      /* who's digging: w1 how it goes (D_*) times 256, and the feet to go */
+    E_DIG,                                      /* who's digging: w1 how it goes (D_*) times 256, and the feet to go
+                                                **   (D_NO_TOOL: what it's into, MAT_* + 1) */
     E_NOISE,                                    /* A noise: a how loud (0-9), w1 w2 its square (the denizens') */
     E_LEDGE,                                    /* who's come to a ledge: w1 its rise (a signed char: a fall less) */
     E_CLIMB,                                    /* who's climbing: w1 how it goes (K_*) times 256, and the feet to go */
