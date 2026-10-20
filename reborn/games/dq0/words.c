@@ -408,6 +408,10 @@ void o_words (void)
     *(lbe = lb) = 0;
     lbn = 0;
     S = &sight_copy;
+    if (sight_close & 8) {
+        focus_words ();                         /* (A look one way's: what it sees that way, overlay 11's) */
+        return;
+    }
     if (S->where == W_ROOM) {
         room ();
     } else {

@@ -8,7 +8,9 @@
 ; shut door, no floor above the line): Bresenham's line and its heights (ez + (tz - ez) * k / n) as view.c's clear ()
 ; had them, worked out a step at a time without dividing; seen, it's marked (G_VIS, G_SEEN), and the walls, doors
 ; and windows round it too if it's a room's floor (G_INSIDE), those in the view.  (In C, the squares reached
-; through at () thousands of times, a look took some 1.6 s of the senses' CPU.)
+; through at () thousands of times, a look took some 1.6 s of the senses' CPU.)  A look one way's range (view.c's
+; v_way: twice a glance's, 31 squares at most) reaches only the quarter ahead (within 45 degrees of the way the
+; character faces) past a glance's (g_o2, its square: g_r2, a glance's own).
 ;
 ;   void __fastcall__ cast_row (unsigned char j);   the view's row j (0 to 2 g_r)
 ;   void cast_own (void);                           the character's own square: seen if anything lights it (else
@@ -23,7 +25,7 @@
 
             .macpack    longbranch
             .export     _cast_row, _cast_own, _cast_lamp
-            .export     _g_r, _g_m, _g_r2, _g_l2, _g_u2, _g_hx, _g_hy, _g_ez, _g_bright, _g_lmax
+            .export     _g_r, _g_m, _g_r2, _g_l2, _g_u2, _g_hx, _g_hy, _g_ez, _g_bright, _g_lmax, _g_o2
             .export     _g_nl, _g_li, _g_lj, _g_lr, _g_lzl, _g_lzh, _g_lo, _g_hi
             .importzp   ptr1, ptr2
 
@@ -42,6 +44,7 @@ _g_m:       .res        1                   ; The lamps' squares more, each way
 _g_r2:      .res        2                   ; The range's square, the light's (night vision's already),
 _g_l2:      .res        2                   ;   ultravision's
 _g_u2:      .res        2
+_g_o2:      .res        2                   ; A glance's range's square (a look one way's further, the quarter ahead)
 _g_hx:      .res        1                   ; The way the character faces (-1, 0, 1 each way)
 _g_hy:      .res        1
 _g_ez:      .res        2                   ; The eyes' height (its floor's and five feet)
@@ -53,8 +56,8 @@ _g_lj:      .res        4
 _g_lr:      .res        4
 _g_lzl:     .res        4
 _g_lzh:     .res        4
-_g_lo:      .res        45                  ; Each row's marks: the first column, the last (the view's 2 g_r + 1 at
-_g_hi:      .res        45                  ;   most, 45)
+_g_lo:      .res        63                  ; Each row's marks: the first column, the last (the view's 2 g_r + 1 at
+_g_hi:      .res        63                  ;   most, 63: a look one way's)
 rj:         .res        1                   ; (The square: its row and column in the grid,
 ri:         .res        1
 dy:         .res        1                   ;   from the eyes, each way,
@@ -91,10 +94,12 @@ acc:        .res        2                   ;   what's left of it over the steps
 line:       .res        2                   ;   and the line's height there
 el:         .res        2                   ;   (a square's floor, 16 bits))
 lk:         .res        1                   ; (A lamp)
+qf:         .res        1                   ; (quarter's: how far ahead, how far across)
+qc:         .res        1
 
             .segment    "SW1RODATA"
 sq:         .word       0, 1, 4, 9, 16, 25, 36, 49, 64, 81, 100, 121, 144, 169, 196, 225, 256, 289, 324, 361
-            .word       400, 441, 484
+            .word       400, 441, 484, 529, 576, 625, 676, 729, 784, 841, 900, 961
 wdx:        .byte       $FF, 0, 1, $FF, 1, $FF, 0, 1            ; (The eight round a square)
 wdy:        .byte       $FF, $FF, $FF, 0, 0, 1, 1, 1
 wol:        .byte       <-130, <-128, <-126, <-2, <2, <126, <128, <130
@@ -399,12 +404,19 @@ _cast_row:
             sta         d2 + 1
             ora         d2
             jeq         @next
+            lda         _g_o2               ;   (a glance's range: as quick as ever; past it, a look one way's,
+            cmp         d2                  ;   in the quarter ahead),
+            lda         _g_o2 + 1
+            sbc         d2 + 1
+            bcs         @inq
             lda         _g_r2
             cmp         d2
             lda         _g_r2 + 1
             sbc         d2 + 1
             jcc         @next
-            lda         _g_hx               ;   not behind (but beside),
+            jsr         quarter
+            jcc         @next
+@inq:       lda         _g_hx               ;   not behind (but beside),
             beq         @fx
             bmi         @fxn
             lda         dx
@@ -474,6 +486,52 @@ _cast_row:
             sbc         _g_m
             cmp         iend
             jcc         @sq
+            rts
+
+; The square (dx, dy) in the quarter ahead (a look one way's: within 45 degrees of the way it faces, g_hx, g_hy):
+; carry set if |dx hy - dy hx| is at most dx hx + dy hy
+quarter:
+            lda         dx
+            ldx         _g_hx
+            jsr         times
+            sta         qf
+            lda         dy
+            ldx         _g_hy
+            jsr         times
+            clc
+            adc         qf
+            bmi         @no                 ; (Behind)
+            sta         qf
+            lda         dy
+            ldx         _g_hx
+            jsr         times
+            sta         qc
+            lda         dx
+            ldx         _g_hy
+            jsr         times
+            sec
+            sbc         qc
+            bpl         @abs
+            eor         #$FF
+            clc
+            adc         #1
+@abs:       sta         qc
+            lda         qf
+            cmp         qc
+            rts
+@no:        clc
+            rts
+
+; .A times .X (-1, 0 or 1)
+times:
+            cpx         #0
+            beq         @zero
+            bpl         @one
+            eor         #$FF
+            clc
+            adc         #1
+@one:       rts
+@zero:      lda         #0
             rts
 
 ; The square at ptr2 (ri, rj) lit by a lamp: within its reach (a square of it), and its own or a clear line to it
@@ -992,8 +1050,8 @@ lgp:        .res        2
 _bx0:       .res        2                   ; The last view's squares: from bx0, by0, bw each way (0: none), each
 _by0:       .res        2                   ;   row's marks from blo to bhi (0xFF: none)
 _bw:        .res        1
-_blo:       .res        45
-_bhi:       .res        45
+_blo:       .res        63
+_bhi:       .res        63
 _sh_dx:     .res        1                   ; (grid_shift's)
 _sh_dy:     .res        1
 _sh_w:      .res        1

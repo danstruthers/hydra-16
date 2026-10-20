@@ -1597,6 +1597,25 @@ void __fastcall__ s_start (const char* dir)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
+#pragma code-name (push, "SW22CODE")            /* (Part 22's, sfile.c's: its bank's room) */
+#pragma rodata-name (push, "SW22RODATA")
+
+/* A look one way (I_LOOK's: HOUSE.md's looking one way): the senses' look about, and twice as far in the quarter
+** ahead, their own record of it too (LK_WAY), t tenths; told the UI, E_VIEW V_LOOKED */
+void __fastcall__ s_look_way (unsigned t)
+{
+    busy (t);
+    HUB->look.kind = LK_WAY;
+    see (0);
+    hub_map (0);
+    HUB->look.kind = LK_LOOK;
+    view (V_LOOKED);
+}
+void __fastcall__ look_way (unsigned t);        /* (Its stub, bank.s's) */
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 /* ---- Digging (DUNGEON.md: changing the dungeon): a wall or the rock beside the character, or a shaft down through
 ** its floor; a spell of work at a time (ten minutes), the referee's test of it (P_DIG: the house's tools) the feet
 ** it makes (a critical success three, a success two, a marginal failure one, a critical failure none), loud (a noise
@@ -2584,6 +2603,9 @@ static void __fastcall__ intent (struct msg* m)
         busy (m->a ? 3 * stept : stept);
         see (0);
         view (m->a ? V_LIT : V_DARK);
+        break;
+    case I_LOOK:
+        look_way (m->w1);                       /* (A look one way: part 3's) */
         break;
     case I_QUIT:
         HUB->quit = 1;

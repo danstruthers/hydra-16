@@ -72,7 +72,8 @@ static const struct item* __fastcall__ lying (const struct item* q)
 ** the store as it was: the world waits for the look, and writes the store meanwhile only as a chunk's stocked) */
 #define NNEAR           24
 static unsigned nearv[NNEAR], near_x, near_y;
-static unsigned char nnear, near_ok, near_sn;
+static unsigned char nnear, near_ok, near_sn, near_r, near_w;  /* (near_r, near_w: things_seen's reach, a look one
+                                                **   way's further, its whole width) */
 
 /* The chunks the maker's stocked that the world hasn't put the things of down yet (their slots CS_FRESH): the world
 ** asked to, and waited for (it's waiting for the look meanwhile) */
@@ -129,7 +130,8 @@ void __fastcall__ things_seen (struct sight* s, unsigned char sn, unsigned x, un
     k = 0;
     while (s->nitems < SEE_ITEMS && (i = listed ? (k < nnear ? nearv[k++] : 0) : items (i, IN_SQUARE, 0)) != 0) {
         r = item_at (i);                        /* (Looked at in place, copied out only if it's seen) */
-        if (r->sn != sn || (r->flags & (I_HIDDEN | I_KNOWN)) == I_HIDDEN || r->x - x + 20 > 40 || r->y - y + 20 > 40) {
+        if (r->sn != sn || (r->flags & (I_HIDDEN | I_KNOWN)) == I_HIDDEN || r->x - x + near_r > near_w ||
+            r->y - y + near_r > near_w) {
             continue;
         }
         qx = r->x;
@@ -168,7 +170,10 @@ void __fastcall__ s_things_lamps (unsigned char sn, unsigned x, unsigned y)
     nlamps = 0;
     light_lamps_begin ();
     nnear = 0;
-    near_ok = 1;
+    near_ok = !v_way;                           /* (A look one way's further: the store gone through, not the list of
+                                                **   those near) */
+    near_r = v_way ? WAY_R : 20;
+    near_w = 2 * near_r;
     near_sn = sn;
     near_x = x;
     near_y = y;

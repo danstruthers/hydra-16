@@ -77,7 +77,7 @@ struct sight {
     unsigned        x, y;                       /* Its square */
     unsigned char   ndens;                      /* The denizens it sees: each one's square, what it's doing (DO_*),
                                                 **   its name (the hub's actor's, as it lies there) */
-    struct { unsigned x, y; unsigned char doing; char name[12]; } den[SEE_DENS];
+    struct sden { unsigned x, y; unsigned char doing; char name[12]; } den[SEE_DENS];
     unsigned char   ntraps;                     /* The traps it knows of and sees (world.h's TK_*, TT_*, TS_*) */
     struct { unsigned char rel, kind, trigger, state; } trap[SEE_TRAPS];
     unsigned        rx, ry;                     /* A room's: its floor's northwest square (the room known by it: the
@@ -86,7 +86,7 @@ struct sight {
                                                 **   own glow, beyond what it lights and the eyes' range; the dimmer
                                                 **   against brighter surroundings, the further in the eyes' dark):
                                                 **   each one's way (REL8), how far (squares), how it shows (GL_*) */
-    struct { unsigned char rel, dist, how; } glow[SEE_GLOWS];
+    struct sglow { unsigned char rel, dist, how; } glow[SEE_GLOWS];
     unsigned char   dazzled;                    /* The eyes dazzled (a bright light after the dark: a while) */
 };
 enum { GL_GLOW, GL_LIGHT };                     /* A light far off: a faint glow, a light */
@@ -108,6 +108,30 @@ enum { Z_STEPS, Z_SLOPE, Z_LEDGE };
 enum { C_FLAT, C_BARREL, C_DOME, C_CATHEDRAL, C_SLOPED, C_ROUGH, C_UNSEEN };
 enum { O_STAIRS_UP, O_STAIRS_DOWN, O_LADDER_UP, O_LADDER_DOWN, O_WINDOW, O_SHAFT_UP, O_SHAFT_DOWN, O_WAY_OUT };
 enum { ST_BUILT, ST_NATURAL, ST_MINE, ST_MIXED };
+
+/* A look one way's own (HOUSE.md's looking one way: the hub's LK_WAY, the senses', in SIGHT_BANK after the record of
+** what the character perceives, at WAY_SEEN; seq the record's it goes with): what the look sees beyond each opening
+** ahead of it (in its room, a doorway, a door, a window, a portcullis, an arrow slit, a passage's mouth; in a passage,
+** a door beside it and the passage's way on): the opening (what it is, BN_*, and its way, REL8's), what's beyond it
+** (WB_*: nothing seen, the dark; a passage; a room, its kind the theme's and lit; shut, a door or a window's
+** shutters: not seen past), and how far it's seen on beyond it (dist: squares, round a passage's bends); and the
+** record's things, denizens and lights far off that lie ahead (ahead, or ahead to either side: a surface's things
+** with it), as the record has them */
+#define SEE_BEYOND      3
+struct beyond { unsigned char what, noun, rel, dist, kind, lit; };
+struct wayseen {
+    unsigned char   seq;
+    unsigned char   nbeyond;
+    struct beyond   beyond[SEE_BEYOND];
+    unsigned char   nitems;
+    struct sitem    item[SEE_ITEMS];
+    unsigned char   ndens;
+    struct sden     den[SEE_DENS];
+    unsigned char   nglows;
+    struct sglow    glow[SEE_GLOWS];
+};
+enum { WB_DARK, WB_PASSAGE, WB_ROOM, WB_SHUT };
+enum { BN_PASSAGE, BN_DOORWAY, BN_OPEN, BN_BROKEN, BN_DOOR, BN_PORTCULLIS, BN_WINDOW, BN_SLIT };
 
 /* The map's window: the stratum round the character, a square a character, drawn by the world into the hub
 ** (struct hub's map), each row's text and its end */

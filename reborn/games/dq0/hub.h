@@ -26,11 +26,12 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     7                       /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     8                       /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
-                                                **   I_TAKE's walk alone, TE_ENGAGED, TE_FAR) */
+                                                **   I_TAKE's walk alone, TE_ENGAGED, TE_FAR; 8: I_LOOK, V_LOOKED,
+                                                **   LK_WAY, a look one way's record, WAY_SEEN) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -103,6 +104,8 @@ typedef char names_fit[TNAMES * sizeof (struct tname) <= 0x800 ? 1 : -1];  /* (T
 #define SIGHT_BANK      (THEME_BANK + 1)        /* The senses': what the character perceives (struct sight: the
                                                 **   senses' after each look about, the denizens it sees the world's) */
 #define SIGHT           ((struct sight*) HUB_WINDOW)
+#define WAY_AT          0x1000
+#define WAY_SEEN        ((struct wayseen*) (HUB_WINDOW + WAY_AT))  /* (A look one way's own, after it: level.h's) */
 #define UI_BANK         (SIGHT_BANK + 1)        /* The UI's (struct uirec): the map, the things' words */
 #define UIREC           ((struct uirec*) HUB_WINDOW)
 #define WORLD_BANK      (UI_BANK + 1)           /* The world's (struct wrec): the strata's records, the chunks' cache's
@@ -172,6 +175,9 @@ enum {
                                                 **   walk (HOUSE.md's engagement: it ends beside it, or engaged by
                                                 **   another, no blow), then struck; engaged already, refused (E_TASK
                                                 **   TE_ENGAGED) */
+    I_LOOK,                                     /* A look one way (HOUSE.md's, slice 4.0: "look north", "look at the
+                                                **   door"): ahead, as the character faces (the UI turns it first),
+                                                **   w1 tenths; the senses asked (LK_WAY), E_VIEW V_LOOKED */
     NINTENTS
 };
 /* The denizens' intents (their ring, the hub's di: the minds', for their actors' bodies, the world's to carry out
@@ -265,9 +271,10 @@ enum { A_WALKED, A_DOWN, A_UP, A_START, A_DIGGING, A_CROSSED, A_CLIMBING, A_CLIM
 enum { N_NO_EXIT, N_SHUT, N_NO_STAIRS, N_NO_DIG, N_CLOSED, N_DEN, N_DOOR };    /* E_NOWAY's why: no way that way, the way out
                                                 **   shut, no stairs, nothing to dig there, the portcullis that way
                                                 **   down, a denizen in the way (the actor times 256) */
-enum { V_TURNED, V_LIT, V_DARK, V_STIR, V_FACING };    /* E_VIEW's why (V_STIR: a denizen come into sight, gone
-                                                **   from it, or doing something else; V_FACING: a turn begun, its
-                                                **   look to come, V_TURNED) */
+enum { V_TURNED, V_LIT, V_DARK, V_STIR, V_FACING, V_LOOKED = 8 };    /* E_VIEW's why (V_STIR: a denizen come
+                                                **   into sight, gone from it, or doing something else; V_FACING: a
+                                                **   turn begun, its look to come, V_TURNED; V_LOOKED: a look one
+                                                **   way's, I_LOOK's: 8, look.c's look (8)) */
 enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL };  /* E_DIG's how */
 enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE_IDLE, TE_CANT, TE_ASK_HEARD,
        TE_ENGAGED, TE_FAR };                    /* E_TASK's: stopped as
@@ -678,8 +685,10 @@ enum { POS_STANDING, POS_PRONE, POS_CROUCHED, POS_KNEELING, POS_SITTING };   /* 
                                                 **   say it's fallen, rs.h's RS_ATTACK; crouched, kneeling and
                                                 **   sitting to come) */
 
-enum { LK_LOOK, LK_DENS, LK_EYES };              /* The look's kinds: a look about; the denizens seen looked at again;
-                                                **   the eyes only, as time's gone (the lights seen far off: a wait's) */
+enum { LK_LOOK, LK_DENS, LK_EYES, LK_WAY };      /* The look's kinds: a look about; the denizens seen looked at again;
+                                                **   the eyes only, as time's gone (the lights seen far off: a wait's);
+                                                **   a look one way (I_LOOK's: a look about, and twice as far in the
+                                                **   quarter ahead; its own record, WAY_SEEN) */
 #define LF_ARRIVE       0x40                    /* (The look's first: arrived, R_VISITED the senses') */
 
 /* The UI's bank's records (UI_BANK) */
@@ -860,7 +869,8 @@ struct wsave {
 **   own bank(LOOK_BANK) senses
 **   own bank(THEME_BANK) ui                                    (The theme, and the names given)
 **   own bank(THEME_BANK,THEME_PLACE,NAMES_AT) maker            (The pieces' places)
-**   own bank(SIGHT_BANK) senses                                (What the character perceives, the denizens seen too)
+**   own bank(SIGHT_BANK) senses                                (What the character perceives, the denizens seen too;
+**                                                                a look one way's own, WAY_SEEN)
 **   own bank(UI_BANK) ui
 **   own uirec.map maker +ui
 **   own uirec.things_text world +ui
@@ -903,7 +913,7 @@ typedef char dq0c_fits[offsetof (struct hub, sem) == HUBO_SEM && offsetof (struc
                        offsetof (struct hub, quit) == HUBO_QUIT && offsetof (struct cq, bank) == CQO_BANK &&
                        offsetof (struct cq, len) == CQO_LEN && offsetof (struct cq, res) == CQO_RES &&
                        offsetof (struct cq, face) == CQO_FACE && NTASKS == 8 ? 1 : -1];
-typedef char recs_fit[sizeof (struct sight) <= 0x2000 && sizeof (struct uirec) <= 0x2000 &&
+typedef char recs_fit[sizeof (struct sight) <= 0x1000 && sizeof (struct uirec) <= 0x2000 &&
                       sizeof (struct wrec) <= 0x2000 ? 1 : -1];
 typedef char snd_fits[(char*) (FIGHT_AT + NFIGHTS) - (char*) 0x8000 <= 0x2000 ? 1 : -1];   /* (DEN_BANK's) */
 

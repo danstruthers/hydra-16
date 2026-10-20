@@ -27,6 +27,7 @@
 void sense_actor (void);                        /* (sense.c's: the hub's dsense answered) */
 
 static unsigned char sees;                      /* (The denizens seen changed: the look's reply's ch) */
+unsigned char v_way;                            /* (A look one way, the hub's LK_WAY: view.h's) */
 
 /* A look about for the character, from what the hub has of it (its square, its facing, its light, its senses; the
 ** squares it walked to get there), the denizens it sees with it */
@@ -73,6 +74,10 @@ static void look (void)
     give_way ();
     first = perceive (sn, x, y, face, own, first);
     sees = dens_seen ();                        /* (The denizens it sees with it: the world's bodies) */
+    if (v_way) {
+        way_seen (sn, face);                    /* (A look one way's own: what's beyond its openings, what lies
+                                                **   ahead; way.c's) */
+    }
     hub_map (0);
     HUB->look.first = first;
 }
@@ -97,7 +102,7 @@ void give_way (void)
 }
 
 /* The swapped parts' images read into banks of its own (dir/dq0p.ovl: dq0p.cfg's OV1 ..., 8K each): 0, or -1 */
-#define OVBANKS         2
+#define OVBANKS         3
 extern unsigned char ovbank[OVBANKS];
 extern char _SWAP_START__[];
 static int __fastcall__ ovl_load (const char* dir)
@@ -113,6 +118,7 @@ static int __fastcall__ ovl_load (const char* dir)
     }
     ovbank[0] = n;                              /* (In a run: n, n + 1 ...) */
     ovbank[1] = n + 1;
+    ovbank[2] = n + 2;
     for (off = 0; (n = read (fd, b, 512)) > 0; off += n) {    /* (The file the build made: OVBANKS banks at most,
                                                 **   64K at most, off back at 0 only as it ends) */
         hy_bank (ovbank[off >> 13]);
@@ -165,6 +171,8 @@ int main (int argc, char* argv[])
                 hub_map (SIGHT_BANK);
                 memcpy (&SIGHT->nglows, &G, sizeof G);
             } else {
+                v_way = HUB->look.kind == LK_WAY;   /* (A look one way: twice as far in the quarter ahead, and
+                                                **   what's beyond its openings: way.c's) */
                 look ();
             }
             hub_map (0);

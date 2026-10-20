@@ -382,6 +382,10 @@ climb's test to hold on).
 - **D6, bleeding with first aid** (P_FIRST_AID binds a bleeder).  Today nothing stops bleeding.
 - **Bearings and mental maps** (DUNGEON.md: the character's sense of where it is, by Awareness or Mining; a map in
   its head that fades): slices 4.1-4.2.
+- **Sniffing one way** (slice 4.0's looking one way: "sniff at the grating"): the trace layer's (slice 4.1: smells in
+  the deposit layer).  Today a sniff takes its 3 seconds and smells nothing out of the ordinary.
+- **A look one way's twice as far:** it reaches twice a glance's squares, but 31 at most (155 feet: the senses' grid,
+  63 squares across), so a sight of 6 or more (a glance's 16 squares or more) looks one way less than twice as far.
 
 - **Every occupation the book lists, and one of the player's own** (the user's, 2026-10-20): hmchar offers the book's
   whole table (Character 15), the soldiers by the character's culture and unit (Character 27) and the clerics by

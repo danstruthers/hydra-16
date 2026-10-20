@@ -10,6 +10,7 @@
 #include "sight.h"
 #include "things.h"
 #include "eyes.h"
+#include "view.h"
 
 #pragma code-name ("SW2CODE")                   /* (Part 2's, all of it: swapped, bank.s's stubs, once a look) */
 #pragma rodata-name ("SW2RODATA")
@@ -20,6 +21,7 @@
 #define EYE         5
 
 static struct sight S;
+const struct sight* sight_rec = &S;             /* (A look one way's own, way.c's, made from it: the main RAM's) */
 unsigned char eye;                              /* (The character's sight, 0-9: dq0p.c's look sets it) */
 static unsigned char mx_[SEE_DOORS], my_[SEE_DOORS];     /* (The mouths' squares, as they're counted) */
 static unsigned char seq;
@@ -182,7 +184,7 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
         first = 0;                              /* (Come in: the first time in a room the senses don't remember, and
                                                 **   remembered from now on) */
     }
-    S.eye = eye;
+    S.eye = v_way ? 2 * eye + 2 : eye;          /* (A look one way: what it makes out twice as far) */
     if ((r = room_of (sn, x, y)) != 0xFF) {
         rp = C->room[r];
         if (arrive) {
