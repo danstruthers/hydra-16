@@ -18,7 +18,7 @@
 ** three (the world's, the UI's, and the denizens' task's: DSLOT, a short one), each rung for, answered in place, the
 ** asker rung with the reply (hub.h's protocol).  hmchar's file read and written, and the creatures' sheets kept, are swapped part 1's (../dq0/swap.inc: run
 ** in the main RAM's top, a part at a time, copied there from overlay 4's bank as it's called; harnfile.c), the names
-** part 2's (harnname.c), with the tool a dig takes.
+** part 2's (harnname.c), with the tool a dig takes.  And a test's, RS_DICE: its dice fixed (its unit tests').
 **
 ** The game's own choices in using the book (not the book's rules): a purpose names the skill (or attribute times 5)
 ** a GM would call for; a skill not opened is tested at its OML, as if opened on first use.
@@ -41,6 +41,7 @@ void __fastcall__ load_pc (struct req* r);      /* (Part 1's stubs: bank.s's) */
 void __fastcall__ save_pc (struct req* r);
 void __fastcall__ beasts (unsigned char back);
 unsigned char __fastcall__ dig_tool (unsigned char m);     /* (Part 2's) */
+void __fastcall__ dice_set (struct req* r);
 
 harn_char pc;                                   /* The character */
 char name[16], calling[20];
@@ -505,6 +506,50 @@ static void __fastcall__ pace_set (unsigned char a)
     state ();
 }
 
+/* ---- The dice fixed, for a test (RS_DICE: the referee's unit tests, tests/ram/t_rules): dice.h's hook, set by the
+** first, rolls every die after it, the faces given first (then the generator's), and keeps what each was (its sides) */
+
+#define DFIX    sizeof ((struct req*) 0)->x
+static char dface[DFIX + 1];                    /* The faces forced, to a 0, */
+static unsigned char dk, drep;                  /*   the next, and the face after them (0: the generator's) */
+static unsigned char dlog[DFIX], dl;            /* The sides of the first dice rolled, how many kept */
+static unsigned drolled;                        /* The dice rolled */
+
+static int __fastcall__ fixed (unsigned sides)
+{
+    ++drolled;
+    if (dl < DFIX) {
+        dlog[dl++] = sides;
+    }
+    if (dface[dk]) {
+        return dface[dk++];
+    }
+    return drep ? drep : 1 + (int) random (sides);
+}
+
+#pragma code-name (push, "SW2CODE")
+#pragma rodata-name (push, "SW2RODATA")
+
+void __fastcall__ s_dice_set (struct req* r)
+{
+    if (r->a & 1) {
+        rseed (r->w1);
+    }
+    r->w1 = drolled;
+    r->c = strlen (dface + dk);
+    memcpy (dface, r->x, DFIX);
+    dk = 0;
+    drep = r->b;
+    memcpy (r->x, dlog, DFIX);
+    memset (dlog, 0, DFIX);
+    dl = 0;
+    drolled = 0;
+    dice_hook = fixed;
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 /* ---- A request answered */
 
 static unsigned char rq[offsetof (struct req, text)];  /* (A request's copy, for the overlay: but its text) */
@@ -633,6 +678,9 @@ static void __fastcall__ answer (struct req* r)
         } else {
             sheet ();
         }
+        break;
+    case RS_DICE:                               /* (A test's: its dice fixed) */
+        dice_set (r);
         break;
     default:
         r->result = 0xFF;                       /* (Not yet) */

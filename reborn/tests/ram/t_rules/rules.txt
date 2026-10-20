@@ -1,0 +1,1793 @@
+# rules.txt - the referee's unit tests' cases (t_rules.c reads them: the words it knows are there).  Each case asks
+# the HarnMaster referee (games/dq0harn) as the world would, its dice fixed, and holds its answer to the book's
+# rules (HarnMaster 3.5: the places as the book gives them) or the game's own (games/dq0/HOUSE.md); each one's
+# dice are the book's for it, in its order (a d100 the strike's location, the d6s of a fall, a shock roll's).
+#
+# The character: Tess, a human woman born in Ulandus (its sunsign's bonuses: Climbing, Tracking, Masonry ...), her
+# attributes 12 but for EYE 13, HRG 10, SML 9, VOI 10, INT 11, AUR 10 and MOR 10; so Endurance 12 (STR, STA and
+# WIL's average) and Move 12 (AGL); weight 150 lb.  Her skills: Acrobatics 70, Climbing 45, Condition 60, Stealth
+# 40, Awareness 60, Rhetoric 50, Dodge 60, Unarmed 40, Sword 80, Lockcraft 47, Mining 30; no injuries, no fatigue,
+# nothing carried.  "char" makes her afresh (with its lines' changes): a case that hurts her starts with one.
+
+base
+harn 1
+att sp 0
+att sx 0
+att bd 260
+att ss 1
+att ht 64
+att fr 2
+att owt 140
+att wt 150
+att cml 10
+att str 12
+att sta 12
+att dex 12
+att agl 12
+att eye 13
+att hrg 10
+att sml 9
+att voi 10
+att int 11
+att aur 10
+att wil 12
+att mor 10
+att dty 10
+att pty 10
+fam 2 2 1 3 0 2 0
+look 1 0 0
+med
+sexuality 0
+ml acr 70
+ml cli 45
+ml cnd 60
+ml stl 40
+ml awa 60
+ml rhe 50
+ml dge 60
+ml una 40
+ml swd 80
+ml lck 47
+ml min 30
+vol 0 0 0 0 0
+name Tess
+occupation tester
+pace 2 0 0
+end
+
+case the referee says who it is, its round 10 seconds (Combat 7)
+dice
+ask HELLO
+want w1=100 text="HarnMaster 3.5"
+
+char
+end
+case the character loaded: her file's pace (a walk), unhurt, nothing carried
+want result=0 a=GA_WALK b=0 text~"Tess" status="UP 0" sum.health=H_FINE sum.load=0 sum.cond=0
+
+# ---- Tests (Skills 5): d100 at or under the EML succeeds, a roll ending in 0 or 5 is critical; the EML kept from 5
+# to 95 (Skills 4: always a chance either way); each step of circumstance 5 points (rs.h)
+
+case Climbing 45: 45 a critical success, 44 marginal, 46 a marginal failure, 50 critical
+dice 100:45
+ask TEST a=P_CLIMB
+want grade=G_CS
+dice 100:44
+ask TEST a=P_CLIMB
+want grade=G_MS
+dice 100:46
+ask TEST a=P_CLIMB
+want grade=G_MF
+dice 100:50
+ask TEST a=P_CLIMB
+want grade=G_CF
+
+case Climbing 45: 1 a marginal success, 5 critical, 96 a marginal failure, 100 critical
+dice 100:1
+ask TEST a=P_CLIMB
+want grade=G_MS
+dice 100:5
+ask TEST a=P_CLIMB
+want grade=G_CS
+dice 100:96
+ask TEST a=P_CLIMB
+want grade=G_MF
+dice 100:100
+ask TEST a=P_CLIMB
+want grade=G_CF
+
+case a step worse (Climbing 40): 40 a critical success, 41 a marginal failure
+dice 100:40
+ask TEST a=P_CLIMB steps=-1
+want grade=G_CS
+dice 100:41
+ask TEST a=P_CLIMB steps=-1
+want grade=G_MF
+
+case twelve steps better (105) kept to 95: 95 a critical success, 96 a marginal failure, 100 critical
+dice 100:95
+ask TEST a=P_CLIMB steps=12
+want grade=G_CS
+dice 100:96
+ask TEST a=P_CLIMB steps=12
+want grade=G_MF
+dice 100:100
+ask TEST a=P_CLIMB steps=12
+want grade=G_CF
+
+case ten steps worse (-5) kept to 5: 4 a marginal success, 5 critical, 6 a marginal failure, 10 critical
+dice 100:4
+ask TEST a=P_CLIMB steps=-10
+want grade=G_MS
+dice 100:5
+ask TEST a=P_CLIMB steps=-10
+want grade=G_CS
+dice 100:6
+ask TEST a=P_CLIMB steps=-10
+want grade=G_MF
+dice 100:10
+ask TEST a=P_CLIMB steps=-20
+want grade=G_CF
+
+# Each purpose its skill (HOUSE.md: a purpose names one skill), or an attribute times 5 (Skills 21)
+
+case sight, sound, smell and searching are Awareness (60)
+dice 100:60
+ask TEST a=P_NOTICE_SIGHT
+want grade=G_CS
+dice 100:61
+ask TEST a=P_NOTICE_SOUND
+want grade=G_MF
+dice 100:59
+ask TEST a=P_NOTICE_SMELL
+want grade=G_MS
+dice 100:61
+ask TEST a=P_SEARCH
+want grade=G_MF
+
+case stealth and concealment are Stealth (40), balance Acrobatics (70), enduring Condition (60), a hazard Dodge (60)
+dice 100:40
+ask TEST a=P_STEALTH
+want grade=G_CS
+dice 100:41
+ask TEST a=P_CONCEAL
+want grade=G_MF
+dice 100:70
+ask TEST a=P_BALANCE
+want grade=G_CS
+dice 100:71
+ask TEST a=P_BALANCE
+want grade=G_MF
+dice 100:60
+ask TEST a=P_ENDURE
+want grade=G_CS
+dice 100:61
+ask TEST a=P_DODGE_HAZARD
+want grade=G_MF
+
+case forcing and lifting STR times 5, poison END times 5, the mind WIL times 5 (all 60)
+dice 100:60
+ask TEST a=P_FORCE
+want grade=G_CS
+dice 100:61
+ask TEST a=P_LIFT
+want grade=G_MF
+dice 100:60
+ask TEST a=P_RESIST_POISON
+want grade=G_CS
+dice 100:61
+ask TEST a=P_RESIST_POISON
+want grade=G_MF
+dice 100:60
+ask TEST a=P_RESIST_MIND
+want grade=G_CS
+dice 100:61
+ask TEST a=P_RESIST_MIND
+want grade=G_MF
+
+case persuading and intimidating are Rhetoric (50), guile Intrigue (not opened: SB 11 times 3, 33)
+dice 100:50
+ask TEST a=P_PERSUADE
+want grade=G_CS
+dice 100:51
+ask TEST a=P_INTIMIDATE
+want grade=G_MF
+dice 100:33
+ask TEST a=P_DECEIVE
+want grade=G_MS
+dice 100:34
+ask TEST a=P_DECEIVE
+want grade=G_MF
+
+case a skill not opened is tried at its opening level: Jumping SB 12 times 4 (48)
+dice 100:48
+ask TEST a=P_JUMP
+want grade=G_MS
+dice 100:49
+ask TEST a=P_JUMP
+want grade=G_MF
+dice 100:45
+ask TEST a=P_JUMP
+want grade=G_CS
+
+case Tracking not opened: its SB 11 and Ulandus's 3 (Skills 2), times 2 (28)
+dice 100:28
+ask TEST a=P_TRACK
+want grade=G_MS
+dice 100:29
+ask TEST a=P_TRACK
+want grade=G_MF
+
+case Swimming not opened: SB 12 (no Ulandus bonus) times 1 (12); Lore SB 12 times 2 (24)
+dice 100:12
+ask TEST a=P_SWIM
+want grade=G_MS
+dice 100:13
+ask TEST a=P_SWIM
+want grade=G_MF
+dice 100:24
+ask TEST a=P_LORE
+want grade=G_MS
+dice 100:25
+ask TEST a=P_LORE
+want grade=G_CF
+dice 100:26
+ask TEST a=P_LORE
+want grade=G_MF
+
+case first aid is Physician (not opened: SB 12, 12); animals Animalcraft (SB 11 and Ulandus's 1, 12)
+dice 100:12
+ask TEST a=P_FIRST_AID
+want grade=G_MS
+dice 100:13
+ask TEST a=P_FIRST_AID
+want grade=G_MF
+dice 100:12
+ask TEST a=P_ANIMALS
+want grade=G_MS
+dice 100:13
+ask TEST a=P_ANIMALS
+want grade=G_MF
+
+case making out a mechanism and disarming are Lockcraft (47), with no tools wanted
+dice 100:47
+ask TEST a=P_ASSESS
+want grade=G_MS
+dice 100:48
+ask TEST a=P_DISARM b=HIDE_MECHANICAL
+want grade=G_MF
+dice 100:45
+ask TEST a=P_DISARM b=HIDE_MECHANICAL
+want grade=G_CS
+
+case a theme's own purpose is an even chance and the steps (two better: 60)
+dice 100:60
+ask TEST a=P_THEME steps=2
+want grade=G_CS
+dice 100:61
+ask TEST a=P_THEME+3 steps=2
+want grade=G_MF
+
+case picking a lock wants lockpicks (Skills 23): none, no test; with them Lockcraft (47)
+dice
+ask TEST a=P_PICKLOCK
+want result=1
+dice
+ask EQUIP a=2 text=" picks4"
+dice 100:47
+ask TEST a=P_PICKLOCK
+want result=0 grade=G_MS
+dice 100:48
+ask TEST a=P_PICKLOCK
+want grade=G_MF
+dice
+ask EQUIP a=2 text=""
+
+case what magic hid is found or disarmed by magic only: no test
+dice
+ask TEST a=P_SEARCH b=HIDE_MAGICAL
+want result=1
+dice
+ask TEST a=P_DISARM b=HIDE_MAGICAL
+want result=1
+
+case words in a tongue she doesn't speak do nothing; in common, Rhetoric
+dice
+ask TEST a=P_PERSUADE text="elvish"
+want result=2
+dice
+ask TEST a=P_INTIMIDATE text="khuzdul"
+want result=2
+dice 100:50
+ask TEST a=P_PERSUADE text="common"
+want result=0 grade=G_CS
+
+# The penalties (Skills 6): universal (the injuries' and the fatigue's levels) on every test, five a point on a
+# skill's EML, a point on an attribute; physical (and the encumbrance) on physical and combat skills and attributes
+
+case a load of 24 lb (EP 2): Climbing 35, Strength 50, Endurance 50, but Awareness 60 and Will 60
+dice
+ask EQUIP a=2 w1=96
+want sum.load=1
+dice 100:35
+ask TEST a=P_CLIMB
+want grade=G_CS
+dice 100:36
+ask TEST a=P_CLIMB
+want grade=G_MF
+dice 100:50
+ask TEST a=P_FORCE
+want grade=G_CS
+dice 100:51
+ask TEST a=P_FORCE
+want grade=G_MF
+dice 100:51
+ask TEST a=P_RESIST_POISON
+want grade=G_MF
+dice 100:60
+ask TEST a=P_NOTICE_SIGHT
+want grade=G_CS
+dice 100:60
+ask TEST a=P_RESIST_MIND
+want grade=G_CS
+
+case a load of 24 lb: Lockcraft (a craft) 47, Dodge (combat) 50, Jumping not opened 38
+dice 100:47
+ask TEST a=P_ASSESS
+want grade=G_MS
+dice 100:51
+ask TEST a=P_DODGE_HAZARD
+want grade=G_MF
+dice 100:38
+ask TEST a=P_JUMP
+want grade=G_MS
+dice 100:39
+ask TEST a=P_JUMP
+want grade=G_MF
+
+# (HOUSE.md: a skill never opened takes the physical penalty, whatever its kind; the book's universal one for a
+# craft would leave Lore 24)
+case a load of 24 lb: Lore not opened, the house's physical penalty on it (14)
+dice 100:14
+ask TEST a=P_LORE
+want grade=G_MS
+dice 100:16
+ask TEST a=P_LORE
+want grade=G_MF
+dice
+ask EQUIP a=2 w1=0
+want sum.load=0
+
+char
+inj 8 0 1 1 0 0
+end
+case an M1 (UP 1): Awareness 55, Climbing 40, Will 55, Lockcraft 42
+want status="UP 1" sum.health=H_HURT
+dice 100:55
+ask TEST a=P_NOTICE_SIGHT
+want grade=G_CS
+dice 100:56
+ask TEST a=P_NOTICE_SIGHT
+want grade=G_MF
+dice 100:40
+ask TEST a=P_CLIMB
+want grade=G_CS
+dice 100:41
+ask TEST a=P_CLIMB
+want grade=G_MF
+dice 100:55
+ask TEST a=P_RESIST_MIND
+want grade=G_CS
+dice 100:43
+ask TEST a=P_ASSESS
+want grade=G_MF
+
+case an M1 and a load of 24 lb (PP 3): Climbing 30, Awareness 55
+dice
+ask EQUIP a=2 w1=96
+dice 100:30
+ask TEST a=P_CLIMB
+want grade=G_CS
+dice 100:31
+ask TEST a=P_CLIMB
+want grade=G_MF
+dice 100:55
+ask TEST a=P_NOTICE_SIGHT
+want grade=G_CS
+dice
+ask EQUIP a=2 w1=0
+
+char
+vol 2 0 0 0 0
+end
+case two fatigue levels (UP 2): Awareness 50, Climbing 35
+want status="UP 2" sum.cond&C_FATIGUED=C_FATIGUED
+dice 100:50
+ask TEST a=P_NOTICE_SIGHT
+want grade=G_CS
+dice 100:51
+ask TEST a=P_NOTICE_SIGHT
+want grade=G_MF
+dice 100:36
+ask TEST a=P_CLIMB
+want grade=G_MF
+
+# ---- Noticing (HOUSE.md: the pace while noticing, listening, a hazard underfoot, shock)
+
+char
+end
+case noticing as she goes: a creep or a slow walk a step better, a walk as she stands
+set going=GA_CREEP+1
+dice 100:65
+ask TEST a=P_NOTICE_SIGHT
+want grade=G_CS
+dice 100:66
+ask TEST a=P_NOTICE_SIGHT
+want grade=G_MF
+set going=GA_SLOW+1
+dice 100:65
+ask TEST a=P_NOTICE_SOUND
+want grade=G_CS
+set going=GA_WALK+1
+dice 100:60
+ask TEST a=P_NOTICE_SIGHT
+want grade=G_CS
+dice 100:61
+ask TEST a=P_NOTICE_SIGHT
+want grade=G_MF
+
+case noticing as she goes: a jog two steps worse, a run four, a sprint six
+set going=GA_JOG+1
+dice 100:50
+ask TEST a=P_NOTICE_SIGHT
+want grade=G_CS
+dice 100:51
+ask TEST a=P_NOTICE_SIGHT
+want grade=G_MF
+set going=GA_RUN+1
+dice 100:40
+ask TEST a=P_NOTICE_SMELL
+want grade=G_CS
+dice 100:41
+ask TEST a=P_NOTICE_SMELL
+want grade=G_MF
+set going=GA_SPRINT+1
+dice 100:30
+ask TEST a=P_NOTICE_SIGHT
+want grade=G_CS
+dice 100:31
+ask TEST a=P_NOTICE_SIGHT
+want grade=G_MF
+
+case feeling the way in the dark: a creep no better, a jog still worse
+set going=GA_CREEP+1|GOING_DARK
+dice 100:61
+ask TEST a=P_NOTICE_SIGHT
+want grade=G_MF
+dice 100:60
+ask TEST a=P_NOTICE_SIGHT
+want grade=G_CS
+set going=GA_JOG+1|GOING_DARK
+dice 100:51
+ask TEST a=P_NOTICE_SIGHT
+want grade=G_MF
+
+case a search isn't a notice: her pace doesn't touch it
+set going=GA_SPRINT+1
+dice 100:60
+ask TEST a=P_SEARCH
+want grade=G_CS
+set going=0
+
+case listening as she goes: a sound two steps better, a sight not
+set watch=WA_LISTEN
+dice 100:70
+ask TEST a=P_NOTICE_SOUND
+want grade=G_CS
+dice 100:71
+ask TEST a=P_NOTICE_SOUND
+want grade=G_MF
+dice 100:61
+ask TEST a=P_NOTICE_SIGHT
+want grade=G_MF
+set watch=0
+
+case a hazard underfoot hidden 3 steps, at a glance: twice that and two more (20)
+dice 100:20
+ask TEST a=P_NOTICE_SIGHT b=1 steps=-3
+want grade=G_CS
+dice 100:21
+ask TEST a=P_NOTICE_SIGHT b=1 steps=-3
+want grade=G_MF
+dice 100:50
+ask TEST a=P_NOTICE_SIGHT b=1
+want grade=G_CS
+
+case a hazard underfoot hidden 3 steps, searching as she goes: a search's chance (45)
+set watch=WA_TRAPS
+dice 100:45
+ask TEST a=P_NOTICE_SIGHT b=1 steps=-3
+want grade=G_CS
+dice 100:46
+ask TEST a=P_NOTICE_SIGHT b=1 steps=-3
+want grade=G_MF
+set watch=0
+
+case a hazard underfoot at a glance, jogging: its eight steps and the jog's two (10)
+set going=GA_JOG+1
+dice 100:10
+ask TEST a=P_NOTICE_SIGHT b=1 steps=-3
+want grade=G_CS
+dice 100:11
+ask TEST a=P_NOTICE_SIGHT b=1 steps=-3
+want grade=G_MF
+set going=0
+
+char
+vol 0 0 0 2 0
+end
+case in shock: a notice four steps worse (40), a search not (60)
+want status="UP 0 SHOCK" sum.health=H_DOWN sum.cond&C_STUNNED=C_STUNNED
+dice 100:40
+ask TEST a=P_NOTICE_SIGHT
+want grade=G_CS
+dice 100:41
+ask TEST a=P_NOTICE_SIGHT
+want grade=G_MF
+dice 100:60
+ask TEST a=P_SEARCH
+want grade=G_CS
+
+# ---- The senses (HOUSE.md: 0-9 from the attribute, (attribute - 3) times 3 / 5; 3 or less none, 18 or more 9)
+
+char
+end
+case her senses: EYE 13 a sight of 6, HRG 10 a hearing of 4, SML 9 a smell of 3
+want sum.sight=6 sum.hearing=4 sum.smell=3 sum.northsense=0
+
+case listening as she goes: her hearing two better (6)
+set gait=GA_WALK watch=WA_LISTEN
+dice
+ask DESCRIBE b=3 a=1
+want sum.hearing=6 text~"Watching: listening as you go"
+set watch=0
+
+char
+att eye 18
+att hrg 17
+att sml 3
+end
+case EYE 18 a sight of 9, HRG 17 an 8 (listening: 9 at most), SML 3 none
+want sum.sight=9 sum.hearing=8 sum.smell=0
+set watch=WA_LISTEN
+dice
+ask DESCRIBE b=3 a=1
+want sum.hearing=9
+set watch=0
+
+char
+att sp 2
+end
+case a Khuzdul always knows north underground
+want sum.northsense=1
+
+# ---- Paces (Combat 6: a walk half the Move a round, a jog the Move, a run twice it, a sprint three times; HOUSE.md:
+# a creep a third of a walk, a slow walk half)
+
+char
+end
+case Move 12: a square in 16 tenths walking, 48 creeping, 32 slowly, 8 jogging, 4 running, 2 sprinting
+want sum.step=16 sum.g0=48 sum.g1=32 sum.g2=16 sum.g3=8 sum.g4=4 sum.g5=2
+
+case Move 12: a walk 30 feet a round, a jog 60, a run 120, a sprint 180, a creep 10, a slow walk 15
+set gait=GA_WALK
+dice
+ask DESCRIBE b=3 a=1
+want text~"Pace: a walk (30 feet a round)"
+set gait=GA_JOG
+dice
+ask DESCRIBE b=3 a=1
+want text~"Pace: a jog (60 feet a round)"
+set gait=GA_RUN
+dice
+ask DESCRIBE b=3 a=1
+want text~"Pace: a run (120 feet a round)"
+set gait=GA_SPRINT
+dice
+ask DESCRIBE b=3 a=1
+want text~"Pace: a sprint (180 feet a round)"
+set gait=GA_CREEP
+dice
+ask DESCRIBE b=3 a=1
+want text~"Pace: a creep (10 feet a round)"
+set gait=GA_SLOW
+dice
+ask DESCRIBE b=3 a=1
+want text~"Pace: a slow walk (15 feet a round)"
+
+case running while searching as she goes: held to a slow walk; listening: to a walk
+set gait=GA_RUN watch=WA_TRAPS
+dice
+ask DESCRIBE b=3 a=1
+want text~"Pace: a run, held to a slow walk while you search as you go (15 feet a round)"
+set watch=WA_LISTEN
+dice
+ask DESCRIBE b=3 a=1
+want text~"Pace: a run, held to a walk while you listen (30 feet a round)"
+set gait=GA_WALK watch=0
+
+# ---- Encumbrance (Skills 6, Combat 2): the load over Endurance (12), rounded to the nearest; its words (HOUSE.md)
+# none, a little burdened (1-2), heavily burdened (3-4), overloaded (5 or more); the Move less it
+
+case 5 lb: no encumbrance (0.4); 6 lb: EP 1 (0.5 rounds up), a little burdened, Move 11
+dice
+ask EQUIP a=2 w1=20
+want sum.load=0 sum.step=16
+dice
+ask EQUIP a=2 w1=24
+want sum.load=1 sum.step=18 sum.g0=54 sum.g1=36 sum.g3=9 sum.g4=4 sum.g5=3
+
+case 17 lb: EP 1 (1.4); 18 lb: EP 2 (1.5), Move 10
+dice
+ask EQUIP a=2 w1=68
+want sum.load=1 sum.step=18
+dice
+ask EQUIP a=2 w1=72
+want sum.load=1 sum.step=20 sum.g3=10 sum.g4=5 sum.g5=3
+
+case 29 lb: EP 2 (2.4); 30 lb: EP 3, heavily burdened, Move 9
+dice
+ask EQUIP a=2 w1=116
+want sum.load=1 sum.step=20
+dice
+ask EQUIP a=2 w1=120
+want sum.load=2 sum.step=22 sum.g3=11 sum.g4=5 sum.g5=3
+
+case 53 lb: EP 4 (4.4), Move 8; 54 lb: EP 5, overloaded, Move 7
+dice
+ask EQUIP a=2 w1=212
+want sum.load=2 sum.step=25 sum.g3=12 sum.g4=6 sum.g5=4
+dice
+ask EQUIP a=2 w1=216
+want sum.load=3 sum.step=28 sum.g0=84 sum.g1=56 sum.g3=14 sum.g4=7 sum.g5=4
+dice
+ask DESCRIBE
+want text~"Endurance 12, Move 7; load 54 lb, encumbrance 5; universal penalty 0, physical 5"
+
+# (The summary's steps are bytes: a Move under 4 walks as Move 4 does, 50 tenths a square)
+case 108 lb: EP 9, Move 3: a walk 50 tenths a square, the faster paces no slower
+dice
+ask EQUIP a=2 w1=432
+want sum.load=3 sum.step=50 sum.g0=150 sum.g1=100 sum.g2=50 sum.g3=33 sum.g4=16 sum.g5=11
+dice
+ask EQUIP a=2 w1=0
+want sum.load=0 sum.step=16
+
+char
+att str 15
+att sta 15
+att wil 15
+end
+case Endurance 15: 30 lb an EP of 2 (a little burdened), 38 lb 3 (2.5 rounds up)
+dice
+ask EQUIP a=2 w1=120
+want sum.load=1
+dice
+ask EQUIP a=2 w1=152
+want sum.load=2
+dice
+ask EQUIP a=2 w1=0
+
+# ---- Fatigue (Combat 6: a level a day walking, each five minutes jogging, each two running, each minute
+# sprinting; Skills 6: one off each ten minutes resting; HOUSE.md: the times at each pace added up, 6000 units a
+# level, rest wearing the units off first)
+
+char
+end
+case a minute's sprint a fatigue level: UP 1, Move 11
+dice
+ask EXERT a=GA_SPRINT w1=600
+want status="UP 1" sum.cond&C_FATIGUED=C_FATIGUED sum.step=18
+
+char
+end
+case 59.9 seconds' sprint no level yet (but tiring), a tenth more one
+dice
+ask EXERT a=GA_SPRINT w1=599
+want status="UP 0" sum.cond&C_FATIGUED=C_FATIGUED
+dice
+ask EXERT a=GA_SPRINT w1=1
+want status="UP 1"
+
+char
+end
+case two minutes' run a level (119.9 seconds not)
+dice
+ask EXERT a=GA_RUN w1=1199
+want status="UP 0"
+dice
+ask EXERT a=GA_RUN w1=1
+want status="UP 1"
+
+char
+end
+case five minutes' jog a level (299.9 seconds not)
+dice
+ask EXERT a=GA_JOG w1=2999
+want status="UP 0"
+dice
+ask EXERT a=GA_JOG w1=1
+want status="UP 1"
+
+char
+end
+case short dashes add up: half a minute's sprint and a minute's run a level
+dice
+ask EXERT a=GA_SPRINT w1=300
+want status="UP 0"
+dice
+ask EXERT a=GA_RUN w1=600
+want status="UP 1"
+
+char
+end
+case two minutes' sprint two levels
+dice
+ask EXERT a=GA_SPRINT w1=1200
+want status="UP 2" sum.step=20
+
+char
+pace 2 0 5990
+end
+case walking: a unit each 14.4 seconds (a level a day), 10 units 144 seconds
+dice
+ask EXERT a=GA_WALK w1=1439
+want status="UP 0"
+dice
+ask EXERT a=GA_WALK w1=1
+want status="UP 1"
+
+char
+pace 2 0 5990
+end
+case walking: 144 seconds at once 10 units
+dice
+ask EXERT a=GA_WALK w1=1440
+want status="UP 1"
+
+char
+pace 2 0 5999
+end
+case a creep tires as a walk does
+dice
+ask EXERT a=GA_CREEP w1=144
+want status="UP 1"
+
+char
+pace 2 0 5999
+end
+case a slow walk tires as a walk does
+dice
+ask EXERT a=GA_SLOW w1=143
+want status="UP 0"
+dice
+ask EXERT a=GA_SLOW w1=1
+want status="UP 1"
+
+char
+vol 2 0 0 0 0
+end
+case rest: the exertion worn off first, then a level each ten minutes
+dice
+ask EXERT a=GA_JOG w1=1
+dice
+ask EXERT a=GA_REST w1=2
+want status="UP 2"
+dice
+ask EXERT a=GA_REST w1=5999
+want status="UP 2"
+dice
+ask EXERT a=GA_REST w1=1
+want status="UP 1"
+dice
+ask EXERT a=GA_REST w1=6000
+want status="UP 0" sum.cond&C_FATIGUED=0
+
+char
+vol 2 0 0 0 0
+end
+case rest broken by moving starts again
+dice
+ask EXERT a=GA_JOG w1=1
+dice
+ask EXERT a=GA_REST w1=5002
+dice
+ask EXERT a=GA_WALK w1=144
+dice
+ask EXERT a=GA_REST w1=6000
+want status="UP 2"
+dice
+ask EXERT a=GA_REST w1=1
+want status="UP 1"
+
+char
+end
+case fatigue kept to 99 levels (109 minutes' sprint)
+dice
+ask EXERT a=GA_SPRINT w1=65535
+want status="UP 99" sum.step=50
+
+# ---- Falling (Skills 8): more than five feet a blunt strike, a d6 for each ten feet or part of ten; the ground's
+# dice more or less; HOUSE.md: where a mid strike would land (on the feet: a low one), no armour taken off.  The
+# injury (Combat 13): impact 1-4 M1, 5-8 S2, 9-12 S3 on the thorax; a shock roll (Combat 14) of a d6 for each level
+# of universal penalty, the new injury's too, over Endurance (12) senseless
+
+char
+end
+case a fall of 5 feet does nothing (its location still rolled)
+dice 100:50
+ask HARM a=HC_FALL w1=5
+want b=0 e0.kind=X_NONE w2=0 result=0 text=""
+
+case a fall of 6 feet: a d6, a minor bruise to the thorax, a shock roll of a d6
+dice 6:3 100:50 6:1
+ask HARM a=HC_FALL w1=6
+want b=1 e0.kind=X_WOUND e0.band=1 e0.loc=BP_CHEST e0.aspect=AS_BLUNT text="a minor bruise to your thorax (M1)"
+want status="UP 1" sum.health=H_HURT
+
+char
+end
+case a fall of 10 feet: a d6 still; a 6 a serious fracture (S2), a shock roll of 2d6
+dice 6:6 100:50 6:1 6:1
+ask HARM a=HC_FALL w1=10
+want b=2 e0.band=2 text="a serious fracture to your thorax (S2)" status="UP 2"
+dice
+ask DESCRIBE b=2
+want text="a serious fracture to your thorax (S2)"
+dice
+ask DESCRIBE b=1
+want text~"IP   2  BL   0"
+
+char
+end
+case a fall of 11 feet: 2d6
+dice 6:1 6:1 100:50 6:1
+ask HARM a=HC_FALL w1=11
+want b=1 text="a minor bruise to your thorax (M1)"
+
+char
+end
+case a fall of 20 feet: 2d6, 12 a serious fracture (S3)
+dice 6:6 6:6 100:50 6:1 6:1 6:1
+ask HARM a=HC_FALL w1=20
+want b=2 text="a serious fracture to your thorax (S3)" status="UP 3"
+
+char
+end
+case a fall of 21 feet: 3d6
+dice 6:1 6:1 6:1 100:50 6:1
+ask HARM a=HC_FALL w1=21
+want b=1
+
+char
+end
+case a fall of 100 feet: 10d6
+dice 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 100:50 6:1 6:1 6:1
+ask HARM a=HC_FALL w1=100
+want text="a serious fracture to your thorax (S3)"
+
+char
+end
+case onto paving a d6 more, onto broken rock 2d6
+dice 6:2 6:3 100:50 6:1 6:1
+ask HARM a=HC_FALL w1=10 b=GR_HARD
+want text="a serious fracture to your thorax (S2)"
+char
+end
+dice 6:1 6:1 6:2 100:50 6:1
+ask HARM a=HC_FALL w1=10 b=GR_ROCKY
+want text="a minor bruise to your thorax (M1)"
+
+char
+end
+case into mud a d6 less: nothing left, no harm; less than the fall, a bruise
+dice 6:4 6:4 100:50
+ask HARM a=HC_FALL w1=10 b=GR_SOFT
+want b=0 e0.kind=X_NONE
+dice 6:5 6:1 100:50 6:1
+ask HARM a=HC_FALL w1=10 b=GR_SOFT
+want b=1
+
+char
+end
+case into shallow water 2d6 less, deep water 3d6
+dice 6:6 6:1 6:1 100:50 6:1
+ask HARM a=HC_FALL w1=10 b=GR_SHALLOW_WATER
+want text="a minor bruise to your thorax (M1)"
+char
+end
+dice 6:6 6:1 6:1 6:1 100:50 6:1
+ask HARM a=HC_FALL w1=10 b=GR_DEEP_WATER
+want text="a minor bruise to your thorax (M1)"
+char
+end
+dice 6:6 6:2 6:2 6:2 100:50
+ask HARM a=HC_FALL w1=10 b=GR_DEEP_WATER
+want b=0
+
+# A clear fall of more than 15 feet: the better of Acrobatics and Dodge tested to land on the feet (Skills 8's
+# table), a landing on the feet a low strike (HOUSE.md)
+
+char
+end
+case a clear fall of 15 feet: too short to land on her feet, no test
+dice 6:2 6:2 100:50 6:1
+ask HARM a=HC_FALL w1=15 c=HF_CLEAR
+want text="a minor bruise to your thorax (M1)"
+
+char
+end
+case a clear fall of 16 feet, Acrobatics (70) a marginal success: 2d6 less, on her feet (a low strike: the knee)
+dice 6:6 6:6 100:34 6:1 6:2 100:75 6:1 6:1 6:1 6:1 6:1 6:1
+ask HARM a=HC_FALL w1=16 c=HF_CLEAR
+want b=2 e0.loc=BP_KNEE e0.cond&C_PRONE=0 text="a serious fracture to your left knee (S3)"
+
+char
+end
+case a clear fall, Acrobatics a critical success: 3d6 less
+dice 6:6 6:6 100:35 6:4 6:4 6:4 100:75
+ask HARM a=HC_FALL w1=16 c=HF_CLEAR
+want b=0
+
+char
+end
+case a clear fall, Acrobatics a marginal failure: no change, not on her feet
+dice 6:3 6:3 100:71 100:50 6:1 6:1
+ask HARM a=HC_FALL w1=16 c=HF_CLEAR
+want text="a serious fracture to your thorax (S2)"
+
+char
+end
+case a clear fall, Acrobatics a critical failure: a d6 more
+dice 6:2 6:2 100:75 6:1 100:50 6:1 6:1
+ask HARM a=HC_FALL w1=16 c=HF_CLEAR
+want text="a serious fracture to your thorax (S2)"
+
+char
+ml acr 0
+end
+case no Acrobatics: Dodge (60) a marginal success, a d6 less, on her feet; the foot's stumble roll over AGL, prone
+dice 6:5 6:5 100:59 6:2 100:93 6:1 6:1 6:6 6:6 6:6
+ask HARM a=HC_FALL w1=16 c=HF_CLEAR
+want b=2 e0.loc=BP_FOOT e0.cond&C_PRONE=C_PRONE text="a serious fracture to your left foot (S2)"
+
+char
+ml acr 0
+end
+case Dodge a critical success: 2d6 less, on her feet; the stumble roll not over AGL
+dice 6:5 6:5 100:60 6:3 6:3 100:93 6:1 6:1 6:1 6:1
+ask HARM a=HC_FALL w1=16 c=HF_CLEAR
+want b=1 e0.cond&C_PRONE=0 text="a minor bruise to your left foot (M1)"
+
+char
+ml acr 0
+end
+case Dodge a marginal failure a d6 more, a critical failure 2d6
+dice 6:1 6:1 100:61 6:1 100:50 6:1
+ask HARM a=HC_FALL w1=16 c=HF_CLEAR
+want b=1
+char
+ml acr 0
+end
+dice 6:1 6:1 100:65 6:1 6:1 100:50 6:1
+ask HARM a=HC_FALL w1=16 c=HF_CLEAR
+want b=1
+
+char
+ml acr 50
+end
+case Acrobatics (50) worse than Dodge (60): Dodge tested
+dice 6:1 6:1 100:65 6:1 6:1 100:50 6:1
+ask HARM a=HC_FALL w1=16 c=HF_CLEAR
+want b=1
+
+char
+ml acr 60
+end
+case Acrobatics as good as Dodge: Acrobatics tested
+dice 6:1 6:1 100:65 6:1 100:50 6:1
+ask HARM a=HC_FALL w1=16 c=HF_CLEAR
+want b=1
+
+# Holds grabbed (Skills 8): DEX times 5 (60), a critical success 3d6 less, a marginal 2d6, a marginal failure
+# nothing, a critical failure an arm wrenched (a blunt M1); below nothing the fall's stopped
+
+char
+end
+case a hold grabbed (a marginal success): 2d6 less, below nothing: the fall stopped
+dice 6:5 100:44 6:3 6:3 100:50
+ask HARM a=HC_FALL w1=10 c=HF_HOLDS
+want result=1 b=0 e0.kind=X_NONE
+
+case a hold grabbed, not enough: 2d6 less, still a bruise
+dice 6:6 100:44 6:1 6:1 100:50 6:1
+ask HARM a=HC_FALL w1=10 c=HF_HOLDS
+want result=0 b=1
+
+char
+end
+case a hold grabbed leaving nothing (but not less): not stopped, no harm
+dice 6:2 100:44 6:1 6:1 100:50
+ask HARM a=HC_FALL w1=10 c=HF_HOLDS
+want result=0 b=0
+
+case a hold grabbed with a critical success: 3d6 less
+dice 6:6 6:6 100:45 6:1 6:1 6:1 100:50 6:1 6:1 6:1
+ask HARM a=HC_FALL w1=20 c=HF_HOLDS
+want result=0 text="a serious fracture to your thorax (S3)"
+
+char
+end
+case a grab's marginal failure: no slower
+dice 6:3 100:61 100:50 6:1
+ask HARM a=HC_FALL w1=10 c=HF_HOLDS
+want text="a minor bruise to your thorax (M1)"
+
+char
+end
+case a grab's critical failure: an arm wrenched (M1, its shock roll), and the fall lands
+dice 6:4 100:65 6:1 100:50 6:1 6:1
+ask HARM a=HC_FALL w1=10 c=HF_HOLDS
+want b=1 e0.kind=X_WOUND e0.loc&127=BP_SHOULDER e0.band=1 e1.kind=X_WOUND e1.loc=BP_CHEST e2.kind=X_NONE
+want text~"shoulder (M1); a minor bruise to your thorax (M1)" status="UP 2"
+
+char
+end
+case a fall takes no armour off (a leather tunic on: still S2)
+dice
+ask EQUIP a=2 text="+ltunic4"
+dice 6:5 100:50 6:1 6:1
+ask HARM a=HC_FALL w1=10
+want text="a serious fracture to your thorax (S2)"
+dice
+ask EQUIP a=2 text=""
+
+# ---- Strikes (rs.h's HC_STRIKE: a trap's, its dice c d6s and w1 more; here no dice, w1 the impact): the injury
+# table (Combat 13) by location and impact, the words by aspect (bruise, fracture, crush; cut, gash; stab; burn)
+
+char
+end
+case impact 0 no injury
+dice 100:50
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=0
+want b=0 e0.kind=X_NONE
+
+case impact 1 an M1
+dice 100:50 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=1
+want b=1 text="a minor bruise to your thorax (M1)"
+
+char
+end
+case impact 4 an M1
+dice 100:50 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=4
+want text="a minor bruise to your thorax (M1)"
+
+char
+end
+case impact 5 an S2
+dice 100:50 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=5
+want b=2 text="a serious fracture to your thorax (S2)"
+
+char
+end
+case impact 8 an S2
+dice 100:50 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=8
+want text="a serious fracture to your thorax (S2)"
+
+char
+end
+case impact 9 an S3
+dice 100:50 6:1 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=9
+want text="a serious fracture to your thorax (S3)"
+
+char
+end
+case impact 12 an S3
+dice 100:50 6:1 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=12
+want text="a serious fracture to your thorax (S3)"
+
+char
+end
+case impact 13 a G4 (Combat 14: a grievous blunt strike bleeds)
+dice 100:50 6:1 6:1 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=13
+want b=3 text="a grievous crush to your thorax (G4)" e0.cond&C_BLEEDING=C_BLEEDING status="UP 4 BLEEDING"
+
+char
+end
+case impact 16 a G4
+dice 100:50 6:1 6:1 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=16
+want text="a grievous crush to your thorax (G4)"
+
+char
+end
+case impact 17 on the thorax a K5: 5d6 not over Endurance, a G5 (and its shock roll)
+dice 100:50 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=17
+want b=3 text="a grievous crush to your thorax (G5)" status="UP 5 BLEEDING"
+
+char
+end
+case a K5's kill roll at Endurance (12) not over it: she lives
+dice 100:50 6:4 6:4 6:1 6:1 6:2 6:1 6:1 6:1 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=17
+want b=3 e0.kind=X_WOUND
+
+char
+end
+case a K5's kill roll over Endurance: death
+dice 100:50 6:6 6:6 6:1 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=17
+want b=4 e0.kind=X_DEATH text="a mortal crush to your thorax" status="UP 0 DEAD" sum.health=H_DEAD sum.cond&C_DEAD=C_DEAD
+dice
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=5
+want result=1 b=0
+
+char
+end
+case the skull's 13 a K4 (a kill roll of 4d6), the face's a G4 (none)
+dice 100:3 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=13
+want text="a grievous crush to your skull (G4)"
+char
+end
+dice 100:8 6:1 6:1 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=13
+want text="a grievous crush to your face (G4)"
+
+char
+end
+case the neck's edge 17 a K5: the kill roll, then a G5 edge's amputation roll (5d6 over a tenth of her weight)
+dice 100:12 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_EDGE w1=17
+want text="a grievous deep gash to your neck (G5)" e0.loc=BP_NECK e0.aspect=AS_EDGE
+
+# The strike locations (the Combat Tables), a mid strike unless aimed: an odd roll a limb's left, even its right
+
+char
+end
+case mid: 43 the left hand, 40 the right
+dice 100:43 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=1
+want e0.loc=BP_HAND text="a minor bruise to your left hand (M1)"
+char
+end
+dice 100:40 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=1
+want e0.loc=BP_HAND|BP_RIGHT text="a minor bruise to your right hand (M1)"
+
+char
+end
+case mid: 44 and 60 the thorax, 61 the abdomen
+dice 100:44 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=1
+want e0.loc=BP_CHEST
+char
+end
+dice 100:60 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=1
+want e0.loc=BP_CHEST
+char
+end
+dice 100:61 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=1
+want e0.loc=BP_BELLY text="a minor bruise to your abdomen (M1)"
+
+char
+end
+case mid: 5 the skull, 6 the face, 16 the right shoulder
+dice 100:5 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=1
+want e0.loc=BP_SKULL
+char
+end
+dice 100:6 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=1
+want e0.loc=BP_FACE
+char
+end
+dice 100:16 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=1
+want e0.loc=BP_SHOULDER|BP_RIGHT text="a minor bruise to your right shoulder (M1)"
+
+char
+end
+case high (aimed): 15 the skull, 16 the face, 96 the abdomen
+dice 100:15 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=1 w2=Z_HIGH
+want e0.loc=BP_SKULL
+char
+end
+dice 100:16 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=1 w2=Z_HIGH
+want e0.loc=BP_FACE
+char
+end
+dice 100:96 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=1 w2=Z_HIGH
+want e0.loc=BP_BELLY
+
+char
+end
+case low (aimed): 6 the right forearm, 7 the left hand, 50 the right thigh (a leg's stumble roll)
+dice 100:6 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=1 w2=Z_LOW
+want e0.loc=BP_FOREARM|BP_RIGHT
+char
+end
+dice 100:7 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=1 w2=Z_LOW
+want e0.loc=BP_HAND
+char
+end
+dice 100:50 6:1 6:1 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=1 w2=Z_LOW
+want e0.loc=BP_THIGH|BP_RIGHT e0.cond&C_PRONE=0
+
+char
+att sx 1
+end
+case a man's mid 72 the groin
+dice 100:72 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=1
+want e0.loc=BP_GROIN text="a minor bruise to your groin (M1)"
+
+# The aspects' words
+
+char
+end
+case edge: a minor cut, a serious gash, a grievous deep gash (bleeding)
+dice 100:50 6:1
+ask HARM a=HC_STRIKE b=AS_EDGE w1=1
+want text="a minor cut to your thorax (M1)" e0.aspect=AS_EDGE
+char
+end
+dice 100:50 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_EDGE w1=5
+want text="a serious gash to your thorax (S2)"
+char
+end
+dice 100:50 6:1 6:1 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_EDGE w1=13
+want text="a grievous deep gash to your thorax (G4)" e0.cond&C_BLEEDING=C_BLEEDING
+
+char
+end
+case point: a minor stab, a serious stab, a grievous deep stab
+dice 100:50 6:1
+ask HARM a=HC_STRIKE b=AS_POINT w1=1
+want text="a minor stab to your thorax (M1)" e0.aspect=AS_POINT
+char
+end
+dice 100:50 6:1 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_POINT w1=9
+want text="a serious stab to your thorax (S3)"
+char
+end
+dice 100:50 6:1 6:1 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_POINT w1=13
+want text="a grievous deep stab to your thorax (G4)"
+
+char
+end
+case fire: a burn; a grievous one doesn't bleed (Combat 14)
+dice 100:50 6:1 6:1 6:1 6:1
+ask HARM a=HC_FIRE w1=13
+want text="a grievous burn to your thorax (G4)" e0.aspect=AS_FIRE e0.cond&C_BLEEDING=0 status="UP 4"
+
+char
+end
+case the same seed, the same dice: two strikes of 2d6 the same words
+seed 1234
+ask HARM a=HC_STRIKE b=AS_EDGE c=2
+seed 1234
+ask HARM a=HC_STRIKE b=AS_EDGE c=2
+want text=@ text~"to your"
+
+char
+end
+case a strike's dice: 2d6 and 3 more
+dice 6:4 6:5 100:50 6:1 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT c=2 w1=3
+want text="a serious fracture to your thorax (S3)"
+
+# Armour (Combat 5): its material's protection where it covers taken off the impact (a leather tunic: blunt 2,
+# edge 4, point 3, fire 3), layers summed; HOUSE.md: a poor piece (0-2) a point less, a fine one (7-9) a point more
+
+char
+end
+case a leather tunic: blunt 5 an M1 (3), edge 8 an M1 (4), edge 9 an S2 (5)
+dice
+ask EQUIP a=2 text="+ltunic4"
+dice 100:50 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=5
+want text="a minor bruise to your thorax (M1)"
+char
+end
+dice
+ask EQUIP a=2 text="+ltunic4"
+dice 100:50 6:1
+ask HARM a=HC_STRIKE b=AS_EDGE w1=8
+want text="a minor cut to your thorax (M1)"
+char
+end
+dice
+ask EQUIP a=2 text="+ltunic4"
+dice 100:50 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_EDGE w1=9
+want text="a serious gash to your thorax (S2)"
+
+char
+end
+case a leather tunic: point 7 an M1, point 8 an S2; fire 7 an M1, fire 8 an S2
+dice
+ask EQUIP a=2 text="+ltunic4"
+dice 100:50 6:1
+ask HARM a=HC_STRIKE b=AS_POINT w1=7
+want b=1
+char
+end
+dice
+ask EQUIP a=2 text="+ltunic4"
+dice 100:50 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_POINT w1=8
+want b=2
+char
+end
+dice
+ask EQUIP a=2 text="+ltunic4"
+dice 100:50 6:1
+ask HARM a=HC_FIRE w1=7
+want b=1
+char
+end
+dice
+ask EQUIP a=2 text="+ltunic4"
+dice 100:50 6:1 6:1
+ask HARM a=HC_FIRE w1=8
+want text="a serious burn to your thorax (S2)"
+
+char
+end
+case a leather tunic doesn't cover the skull
+dice
+ask EQUIP a=2 text="+ltunic4"
+dice 100:3 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=5
+want text="a serious fracture to your skull (S2)"
+
+char
+end
+case a poor tunic a point less (blunt 6 an S2), a fine one a point more (blunt 7 an M1), a standard one 7 an S2
+dice
+ask EQUIP a=2 text="+ltunic1"
+dice 100:50 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=6
+want b=2
+char
+end
+dice
+ask EQUIP a=2 text="+ltunic8"
+dice 100:50 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=7
+want b=1
+char
+end
+dice
+ask EQUIP a=2 text="+ltunic5"
+dice 100:50 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=7
+want b=2
+
+char
+end
+case layers: a leather tunic over a gambeson the book's leather and quilt (7, 7, 5, 7)
+dice
+ask EQUIP a=2 text="+ltunic4+gambson4"
+dice 100:50 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=11
+want b=1
+char
+end
+dice
+ask EQUIP a=2 text="+ltunic4+gambson4"
+dice 100:50 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=12
+want b=2
+char
+end
+dice
+ask EQUIP a=2 text="+ltunic4+gambson4"
+dice 100:50 6:1
+ask HARM a=HC_STRIKE b=AS_EDGE w1=11
+want b=1
+char
+end
+dice
+ask EQUIP a=2 text="+ltunic4+gambson4"
+dice 100:50 6:1
+ask HARM a=HC_STRIKE b=AS_POINT w1=9
+want b=1
+char
+end
+dice
+ask EQUIP a=2 text="+ltunic4+gambson4"
+dice 100:50 6:1 6:1
+ask HARM a=HC_FIRE w1=12
+want b=2
+
+char
+end
+case a ring byrnie edge 6, a mail hauberk edge 8 and point 5
+dice
+ask EQUIP a=2 text="+ringbyr4"
+dice 100:50 6:1
+ask HARM a=HC_STRIKE b=AS_EDGE w1=10
+want b=1
+char
+end
+dice
+ask EQUIP a=2 text="+mailhbk4"
+dice 100:50 6:1
+ask HARM a=HC_STRIKE b=AS_EDGE w1=12
+want b=1
+char
+end
+dice
+ask EQUIP a=2 text="+mailhbk4"
+dice 100:50 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_POINT w1=10
+want b=2
+dice
+ask EQUIP a=2 text=""
+
+# Amputation (Combat 14): a grievous edge strike where the table has t, its levels in d6 over a tenth of her
+# weight (15): severed, a G5; a grievous limb made useless either way
+
+char
+end
+case the forearm's edge 17 a G4t: 4d6 of 16 over 15, severed: a G5
+dice 100:37 6:4 6:4 6:4 6:4 6:1 6:1 6:1 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_EDGE w1=17
+want b=3 text="a grievous deep gash to your left forearm (G5)" e0.cond&C_ARM_USELESS=C_ARM_USELESS
+want e0.cond&C_BLEEDING=C_BLEEDING status="UP 5 BLEEDING"
+
+char
+end
+case the amputation roll at 15, not over: a G4, the arm useless still
+dice 100:37 6:4 6:4 6:4 6:3 6:1 6:1 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_EDGE w1=17
+want text="a grievous deep gash to your left forearm (G4)" e0.cond&C_ARM_USELESS=C_ARM_USELESS
+
+char
+end
+case a blunt 17 to the forearm a G4, no amputation roll
+dice 100:37 6:1 6:1 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=17
+want text="a grievous crush to your left forearm (G4)"
+
+# Shock (Combat 14, Skills 22): over Endurance senseless; a shock roll each round to come round, then one more
+# (over: in shock); HOUSE.md: awake after an hour whatever the rolls
+
+char
+vol 3 0 0 0 0
+end
+case three fatigue levels and an S2 (UP 5): 5d6 of 15 over 12, senseless; awake the next round (10 seconds)
+dice 100:50 6:6 6:6 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=5
+want b=2 w2=100 e0.cond&C_UNCONSCIOUS=C_UNCONSCIOUS status="UP 5" sum.health=H_HURT
+
+char
+vol 3 0 0 0 0
+end
+case the shock roll at Endurance, not over: still up
+dice 100:50 6:6 6:2 6:1 6:1 6:2
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=5
+want w2=0 e0.cond&C_UNCONSCIOUS=0 status="UP 5"
+
+char
+vol 3 0 0 0 0
+end
+case senseless two rounds: the first round's roll over Endurance too
+dice 100:50 6:6 6:6 6:1 6:1 6:1 6:6 6:6 6:6 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=5
+want w2=200 status="UP 5"
+
+char
+vol 3 0 0 0 0
+end
+case come round, the last roll over Endurance: in shock
+dice 100:50 6:6 6:6 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:1 6:6 6:6 6:6 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=5
+want w2=100 status="UP 5 SHOCK" sum.health=H_DOWN sum.cond&C_STUNNED=C_STUNNED
+
+char
+vol 3 0 0 0 0
+end
+case every roll over Endurance: awake after an hour (359 rounds' rolls)
+dice 100:50 6:6*
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=5
+want w2=36000 status="UP 5" dice=1801
+
+# Stumbles (Combat 14): a leg's wound (the table's u) a stumble roll, 3d6 and the physical penalty over AGL prone
+# (Skills 22); a grievous one to a limb an automatic stumble, the limb useless
+
+char
+end
+case a leg's S2: a stumble roll of 13 (11 and PP 2) over AGL 12, prone
+dice 100:81 6:1 6:1 6:4 6:4 6:3
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=5
+want e0.loc=BP_THIGH text="a serious fracture to your left thigh (S2)" e0.cond&C_PRONE=C_PRONE
+
+char
+end
+case a leg's S2: a stumble roll of 12, not over: standing
+dice 100:81 6:1 6:1 6:4 6:3 6:3
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=5
+want e0.cond&C_PRONE=0
+
+char
+end
+case an arm's S2: no stumble roll
+dice 100:16 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=5
+want e0.cond&C_PRONE=0
+
+char
+end
+case a leg's G4: down at once (no roll), the leg useless
+dice 100:81 6:1 6:1 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=13
+want e0.cond&C_PRONE=C_PRONE e0.cond&C_LEG_USELESS=C_LEG_USELESS text="a grievous crush to your left thigh (G4)"
+
+# Her own part hurt striking a thing (HC_STRUCK: the impact its own, a hand or a foot either side, a d2); HOUSE.md:
+# she stops once it's hurt enough (a serious injury, three levels to the part, senseless)
+
+char
+end
+case a fist's blows at a thing: a bruise each, the third one's three levels enough to stop
+dice 2:2 6:1
+ask HARM a=HC_STRUCK c=BP_HAND w1=3
+want result=0 e0.loc=BP_HAND|BP_RIGHT text="a minor bruise to your right hand (M1)"
+dice 2:1 6:1 6:1
+ask HARM a=HC_STRUCK c=BP_HAND w1=3 w2=1
+want result=0 text="a minor bruise to your right hand (M1); a minor bruise to your left hand (M1)"
+dice 2:2 6:1 6:1 6:1
+ask HARM a=HC_STRUCK c=BP_HAND w1=3 w2=2
+want result=1 status="UP 3"
+
+char
+end
+case a blow at a thing that does an S2 to the hand: enough
+dice 2:1 6:1 6:1
+ask HARM a=HC_STRUCK c=BP_HAND w1=5
+want result=1 b=2 text="a serious fracture to your left hand (S2)"
+
+char
+end
+case the head's own: no side to roll; a foot's M1 a stumble roll
+dice 6:1
+ask HARM a=HC_STRUCK c=BP_SKULL w1=3
+want result=0 text="a minor bruise to your skull (M1)"
+char
+end
+dice 2:1 6:1 6:1 6:1 6:1
+ask HARM a=HC_STRUCK c=BP_FOOT w1=3
+want result=0 text="a minor bruise to your left foot (M1)"
+
+# ---- Bleeding (Combat 14): a point of bloodloss a minute for each grievous wound, over Endurance death
+
+char
+inj 8 0 3 4 0 1
+end
+case a bleeding G4: twelve minutes 12 bloodloss (at Endurance, alive), a minute more death
+want status="UP 4 BLEEDING" sum.health=H_BADLY sum.cond&C_BLEEDING=C_BLEEDING
+dice
+ask TIME w1=12
+want result=0 b=H_BADLY
+dice
+ask DESCRIBE b=1
+want text~"IP   4  BL  12"
+dice
+ask TIME w1=1
+want result=1 b=H_DEAD status="UP 4 DEAD"
+
+char
+inj 8 0 3 4 0 1
+inj 9 1 3 4 0 1
+end
+case two bleeders: six minutes 12, a minute more 14, dead
+want sum.health=H_CRITICAL
+dice
+ask TIME w1=6
+want result=0
+dice
+ask TIME w1=1
+want result=1
+
+char
+inj 8 0 2 3 0 0
+end
+case a wound that doesn't bleed: no bloodloss
+dice
+ask TIME w1=100
+want result=0
+dice
+ask DESCRIBE b=1
+want text~"BL   0"
+
+# ---- Health in words (HOUSE.md: by the injuries' levels against Endurance) and the conditions a sheet makes
+
+char
+inj 8 0 2 3 0 0
+end
+case three levels hurt, four badly hurt, eight critical; senseless down
+want sum.health=H_HURT
+char
+inj 8 0 2 3 0 0
+inj 12 0 1 1 0 0
+end
+want sum.health=H_BADLY
+char
+inj 8 0 3 4 0 0
+inj 9 0 3 4 0 0
+end
+want sum.health=H_CRITICAL
+char
+vol 0 0 0 1 0
+end
+want sum.health=H_DOWN status="UP 0 OUT" sum.cond&C_UNCONSCIOUS=C_UNCONSCIOUS
+
+char
+inj 6 1 3 4 0 9
+inj 140 0 3 4 0 8
+end
+case an arm and a leg made useless, the arm bleeding
+want sum.cond&C_ARM_USELESS=C_ARM_USELESS sum.cond&C_LEG_USELESS=C_LEG_USELESS sum.cond&C_BLEEDING=C_BLEEDING
+
+# ---- Digging (HOUSE.md: Mining (30), a spell's feet by the tool and the material, a critical success twice, a
+# marginal failure half, a critical failure none; the wear it does the tool)
+
+char
+end
+case bare hands in earth: a foot a spell (MS), 2 (CS), none at half (MF) or a critical failure
+dice 100:29
+ask TEST a=P_DIG b=MAT_EARTH
+want result=0 grade=G_MS w1=1 w2=0 text="hands"
+dice 100:30
+ask TEST a=P_DIG b=MAT_EARTH
+want w1=2
+dice 100:31
+ask TEST a=P_DIG b=MAT_EARTH
+want grade=G_MF w1=0
+dice 100:35
+ask TEST a=P_DIG b=MAT_EARTH
+want grade=G_CF w1=0
+
+case bare hands in stone: nothing that would bite into it, no test
+dice
+ask TEST a=P_DIG b=MAT_STONE
+want result=1 w1=0 text="hands"
+
+case a shovel in earth: 3 feet a spell, 6, 1 (half, rounded down), none; no wear
+dice
+ask EQUIP a=2 text=" shovel4"
+dice 100:29
+ask TEST a=P_DIG b=MAT_EARTH
+want w1=3 w2=0 text="shovel"
+dice 100:30
+ask TEST a=P_DIG b=MAT_EARTH
+want w1=6
+dice 100:31
+ask TEST a=P_DIG b=MAT_EARTH
+want w1=1
+dice 100:35
+ask TEST a=P_DIG b=MAT_EARTH
+want w1=0
+dice
+ask TEST a=P_DIG b=MAT_STONE
+want result=1
+
+case a pick in stone: 2 feet a spell, its wear 1; a pick and a shovel: the shovel in earth, the pick in flags
+dice
+ask EQUIP a=2 text=" pick4"
+dice 100:29
+ask TEST a=P_DIG b=MAT_STONE
+want w1=2 w2=1 text="pick"
+dice
+ask EQUIP a=2 text=" pick4 shovel4"
+dice 100:29
+ask TEST a=P_DIG b=MAT_EARTH
+want w1=3 text="shovel"
+dice 100:29
+ask TEST a=P_DIG b=MAT_FLAGS
+want w1=3 w2=1 text="pick"
+
+case a chisel and a pick in masonry: the chisel (2 feet); a blade in earth: no better than her hands, which it doesn't dull
+dice
+ask EQUIP a=2 text=" pick4 chisel4"
+dice 100:29
+ask TEST a=P_DIG b=MAT_MASONRY
+want w1=2 w2=1 text="chisel"
+dice
+ask EQUIP a=2 text="*blade4"
+dice 100:29
+ask TEST a=P_DIG b=MAT_EARTH
+want w1=1 w2=0 text="hands"
+dice
+ask EQUIP a=2 text=""
+
+char
+inj 8 0 1 1 0 0
+end
+case Mining with an M1 (a craft, UP 1): 25
+dice 100:25
+ask TEST a=P_DIG b=MAT_EARTH
+want grade=G_CS w1=2
+
+# ---- Appraising (HOUSE.md: the craft that knows the thing)
+
+char
+end
+case a weapon by Weaponcraft (not opened: SB 12, 12), a book by Lore (24)
+dice 100:12
+ask TEST a=P_APPRAISE b=AP_WEAPON
+want grade=G_MS
+dice 100:13
+ask TEST a=P_APPRAISE b=AP_ARMOUR
+want grade=G_MF
+dice 100:24
+ask TEST a=P_APPRAISE b=AP_BOOK
+want grade=G_MS
+dice 100:26
+ask TEST a=P_APPRAISE b=AP_BONE
+want grade=G_MF
+
+char
+ml wpn 40
+end
+case Weaponcraft opened (40)
+dice 100:40
+ask TEST a=P_APPRAISE b=AP_WEAPON
+want grade=G_CS
+dice 100:41
+ask TEST a=P_APPRAISE b=AP_WEAPON
+want grade=G_MF
+
+case stone by Masonry (not opened: SB 12 and Ulandus's 2, 14)
+dice 100:14
+ask TEST a=P_APPRAISE b=AP_STONE
+want grade=G_MS
+dice 100:16
+ask TEST a=P_APPRAISE b=AP_STONE
+want grade=G_MF
+
+# ---- The tongues last: a file's "language" lines are kept for good once read (the referee reads one file a game)
+
+char
+language elvish
+end
+case a tongue her file names: Rhetoric in it
+dice 100:50
+ask TEST a=P_PERSUADE text="elvish"
+want result=0 grade=G_CS
+dice
+ask TEST a=P_PERSUADE text="khuzdul"
+want result=2

@@ -2688,6 +2688,20 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0rules', what: 'Dingus Quest Zero\'s referee\'s unit tests (Phase 3A: tests/ram/t_rules, its cases in rules.txt beside it): the HarnMaster referee (dq0harn) asked rs.h\'s requests by a program playing the world\'s part, its dice fixed (RS_DICE: dice.h\'s hook), each answer held to the book\'s rules and HOUSE.md\'s, and the dice each rolled to the book\'s: the tests\' grades at their edges (critical and marginal, the 5-95 clamp, the penalty each skill takes), noticing by pace and state, falls by height and ground (a landing on the feet, a hold grabbed), injuries by impact, aspect, location and armour (Combat 13-14), the kill, amputation, shock and stumble rolls, senselessness and coming round, bleeding, encumbrance by load, fatigue by exertion and rest, digging and appraising',
+      init: 't_rc', cycles: 1100e6,
+      pc: { files: () => ({ 't_rules.hyx': fs.readFileSync(path.join(__dirname, '..', 'obj', 'tests', 't_rules.hyx')),
+        'rules.txt': fs.readFileSync(path.join(__dirname, 'ram', 't_rules', 'rules.txt')) }) },
+      machine: { input: '\u0101cp /pc/t_rules.hyx /ram/t_rules.hyx; cp /pc/rules.txt /ram/rules.txt\r\u0101/ram/t_rules.hyx /ram/rules.txt\r' },
+      expect: ['t_rules: PASS'],
+      check(m, out) {
+        const t = out.slice(out.indexOf('% /ram/t_rules.hyx'));
+        this.notes = [(t.match(/^ok - /gm) || []).length + ' cases held'];
+        return [...t.matchAll(/^not ok - ([^\r\n]*)/gm)].map(k => k[1]);
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0earth', what: 'Dingus Quest Zero\'s materials (the maker\'s: dq0m/fixtures.c, a room\'s floor, walls and ceiling by its stratum\'s style and age), the world\'s dig taking the floor\'s from the chunk: a shovel (dq0 -k shovel) digs a room\'s earth floor (seed 3\'s first), the referee taking it, named, till the stratum\'s rock under it stops it (the user: the floor, then the rock); then a flagged floor (seed 5\'s), its flags lifted, then the rock',
       init: 't_rc', cycles: 900e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -k shovel -T\r' +

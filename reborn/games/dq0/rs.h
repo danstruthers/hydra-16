@@ -227,6 +227,12 @@ enum {
     RS_EXPORT,                                  /* The character as a neutral one (struct rs_neutral) */
     RS_IMPORT,                                  /* A neutral character made one of this ruleset's */
     RS_SAVE, RS_RESTORE, RS_QUIT,
+    RS_DICE,                                    /* (A test's: the referee's unit tests, tests/ram/t_rules) Its dice
+                                                **   fixed: x the faces the next dice show, in turn, to a 0, and b
+                                                **   every die's after them (0: the dice as they fall); a 1, its dice
+                                                **   seeded anew from w1.  The reply what was rolled since the last:
+                                                **   w1 the dice, c the faces forced but not rolled, x the first
+                                                **   ones' sides (0 past the last) */
 };
 
 /* A neutral character: what carries over between rulesets.  Attributes on a 3-18 scale (HarnMaster's as they are; a
