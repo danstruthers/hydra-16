@@ -155,7 +155,8 @@ void o_help (void)
          "the other, put the one on the other, use the key on the way out (or open the way out with it).");
     msg ("Pace: creep (sneak), walk slowly, walk, jog, run, sprint (set pace to jog; run north); search for traps as "
          "you go (move carefully), listen as you go, map as you go; stop searching (listening, mapping, running).  "
-         "Small moves: step forward, move left one space, go north 20 feet, back up two squares (a square 5 feet).");
+         "Small moves: step forward, move left one space, go north 20 feet, back up two squares (a square 5 feet).  "
+         "Places: go to the centre, the far left corner, the other side.  Look north, listen at the door; stop.");
     msg ("Fights: attack the rat (hit, fight), with what you hold; defend (dodge, block, counter, none, best).");
     msg ("Names: name my sword Linda (alias the sword as Linda), then drop Linda, attack the rat with Linda; call this "
          "room the Mausoleum; forget the name Linda.");

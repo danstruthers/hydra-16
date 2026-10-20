@@ -820,7 +820,7 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
 - **History and themes** (Phase 3D): a region's history generated first (themegen), each stratum built from its layer
   of it (stratagen: built, ruined, reused; a temple over an older keep's ruin), the stocking and the denizens from it,
   four goal kinds.
-- **Where you are, going places, and long tasks** (slice 4.0, begun 2026-10-20): where in a room the character
+- **Where you are, going places, and long tasks** (slice 4.0, built 2026-10-20): where in a room the character
   stands, and where things are, in words relative to its facing only, never the compass ("on the right side of a
   large room", "a rat in the far corner", "against the wall behind you"; only what's known: "somewhere in a cavern,
   its walls beyond your light"); going to named places and features, not counting squares ("go to the centre of the
@@ -833,8 +833,10 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   ("Searching about...").  Built so far (Moving, above): the long tasks, a walk a square at a time, the bar, the
   beats, stop, the hard stops and the soft questions (a denizen new in sight, a sound, tiring); where you are and
   going to places in a room; things out of reach walked to first, a blow's close-in, engagement; the search a long
-  task, its finds told as it ends; a dig half done kept (its change record); battering a long task, a blow at a time.
-  Still to come in it (in hand, 2026-10-20): looking one way.
+  task, its finds told as it ends; a dig half done kept (its change record); battering a long task, a blow at a time;
+  looking one way (3 seconds, twice a glance's reach ahead, through what lets sight through), listening one way;
+  every occupation the book lists in hmchar, and the player's own.  The slice built (2026-10-20); a smell layer's
+  sniffing one way the trace layer's (slice 4.1).
 - **Light and traces** (slice 4.1): lights burning down and refilled (fuel), a spare torch and oil in the kit (D5);
   rooms lit only where denizens keep lights; the deposit layer: tracks in the dust, smells, smoke, fading with age;
   Tracking.

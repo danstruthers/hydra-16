@@ -109,7 +109,7 @@ typedef char w_fits[sizeof (struct wayseen) <= 300 ? 1 : -1];   /* (In lb's end:
 void o_focus_words (void)
 {
     struct beyond* b;
-    unsigned char i, k;
+    unsigned char i, k, sk = 0xFF, sr = 0xFF;
 
     hub_mem (SIGHT_BANK, &W, WAY_SEEN, sizeof W);
     if (W.seq != S.seq) {
@@ -125,6 +125,11 @@ void o_focus_words (void)
                                                 **   the hall, 30 feet on." */
         k = b->noun;
         if (b->what == WB_SHUT) {
+            if (k == sk && b->rel == sr) {
+                continue;                       /* (Two doors the same way, shut: said once) */
+            }
+            sk = k;
+            sr = b->rel;
             sayf (" You can't see past the %s %s: %s.", noun[k], rel_w[(b->rel + 1) & 3], k == BN_WINDOW ?
                 "its shutters are closed" : "it's closed");
             continue;
