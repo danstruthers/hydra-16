@@ -2,39 +2,54 @@
 ** hmchar.c - a HârnMaster character made, as the book's Character article makes one (harn.h), and written to a file
 ** (harn_write's text) for a game, Dingus Quest Zero's or any other, to read.  Standalone or run by a game.
 **
-** hmchar [-s seed] [-o file] [-q] [-p species]
+** hmchar [-s seed] [-o file] [-q] [-p species] [-c occupation]
 **   -s seed    the same character each time
 **   -o file    where it's written (default: NAME.hm, in the current directory, NAME the character's)
-**   -q         no questions: the first roll kept, an occupation, weapons and option points chosen at random, a
-**              name made up
+**   -q         no questions: the first roll kept, an occupation (one of the book's), weapons and option points chosen
+**              at random, a name made up
 **   -p species the character's species, not rolled (Character 2's 97 in 100 human): human, elf (Sindarin) or
 **              dwarf (Khuzdul), by its first letter (h, e or s, d or k); the book's changes to its attributes, its
 **              culture and the rest made by harn_create
+**   -c occupation  the occupation, by its name (case ignored, a beginning enough), not asked or drawn (-q's draw made
+**              all the same: the rest of the character as it would be)
 **
-** The steps (Character 1): the attributes rolled (kept, or rolled again); an occupation, its skills opened as the
-** Occupational Skills table has them (Character 15; a few of the book's, those of use in a dungeon; "three weapons
-** at OML + SB" chosen); the five option points spent (Character 16: a skill opened at its OML for one, or improved
-** by its SB for one; but no more than two points in one skill, the user's: so improved once at most; ? lists the
-** skills, the open ones' ML and the others' OML); a name.  Not here: the family's occupation and its skills, contacts,
-** the veterans' points.
+** The steps (Character 1): the attributes rolled (kept, or rolled again); an occupation, any of the book's that
+** occupations.txt has (the Occupational Skills table, Character 15; a soldier's unit by the character's culture,
+** Character 27; a cleric's church by its deity, Character 23, a church making its deity the character's if it has
+** none; not yet a mage's, Character 25, whose skills come with magic), its skills opened as the book has them (the
+** weapons or crafts it gives chosen); or the player's own occupation (the user's, 2026-10-20): 11 points (the book's
+** occupations' median, a point opening a skill at its OML and a point for each SB more), two in a skill at most and
+** three in one, its primary; then the five option points spent (Character 16: a skill opened at its OML for one, or
+** improved by its SB for one; but no more than two points in one skill, the user's: so improved once at most; ? lists
+** the skills, the open ones' ML and the others' OML); a name.  Not here: the family's occupation and its skills,
+** contacts, the veterans' points.
+**
+** Its lib/hmchar (in its own directory, as rc's $prog has it, else the card's /sd/0/games/lib/hmchar): the
+** occupations (occupations.txt), and the occupation's step, a bank program (hmocc.bp: bank/hmocc, bankprog.h; this
+** main RAM hasn't the room for it, harn.h's tables taking most of it), with hmchar's exports for it (hmchar.exp).
 */
 
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <harn.h>
+#include <bankprog.h>
+#include "hmchar.h"
 
-static harn_char h, t;
+harn_char h;
+static harn_char t;
 static char name[24];
-static unsigned char quiet, occ;
+char ab[40], occname[20], libdir[48];
+unsigned char quiet;
+const char* cname;
 
 /* ---- Output and input, through fds 0 and 1 (no stdio: harn.h's tables and stdio leave too little room) */
 
 static char ob[128];
 static unsigned char on;
+unsigned char col;
 
-static void flush (void)
+void flush (void)
 {
     if (on) {
         write (1, ob, on);
@@ -42,29 +57,36 @@ static void flush (void)
     }
 }
 
-static void __fastcall__ s (const char* t)
+void __fastcall__ ch (char c)
+{
+    if (on == sizeof ob) {
+        flush ();
+    }
+    ob[on++] = c;
+    col = c == '\n' ? 0 : col + 1;
+}
+
+void __fastcall__ s (const char* t)
 {
     while (*t) {
-        if (on == sizeof ob) {
-            flush ();
-        }
-        ob[on++] = *t++;
+        ch (*t++);
     }
 }
 
-static void __fastcall__ err (const char* t)
+/* t said after a space, or on a line of its own (indented) if it would pass the 78th column */
+void __fastcall__ err (const char* t)
 {
     write (2, t, strlen (t));
 }
 
-static void __fastcall__ n (int v)
+void __fastcall__ n (int v)
 {
     char b[8];
 
     s (itoa (v, b, 10));
 }
 
-static void __fastcall__ named (const char* label, int v, const char* after)
+void __fastcall__ named (const char* label, int v, const char* after)
 {
     s (label);
     s (" ");
@@ -73,7 +95,7 @@ static void __fastcall__ named (const char* label, int v, const char* after)
 }
 
 /* A line typed, trimmed, lower case: its length */
-static unsigned char __fastcall__ ask (const char* q, char* b, unsigned char max)
+unsigned char __fastcall__ ask (const char* q, char* b, unsigned char max)
 {
     unsigned char k;
 
@@ -91,37 +113,14 @@ static unsigned char __fastcall__ ask (const char* q, char* b, unsigned char max
         --k;
     }
     b[k] = 0;
+    col = 0;
     return k;
 }
 
-/* ---- The occupations (Character 15): each skill and its OML's multiple; HARN_NSKILLS + n: three weapons at
-** OML + SB times n; the script, native (70 + SB) */
-
-#define WEAPONS     0x80                        /* (Three weapons at OML + SB times the low bits) */
-struct occupation {
-    const char*     name;
-    unsigned char   years;
-    unsigned char   sk[9][2];                   /* Skill, its OML's multiple (0: the skill's own OML) */
-};
-static const struct occupation occs[] = {
-    { "Gladiator", 4, { { HARN_INI, 6 }, { WEAPONS | 2, 0 }, { HARN_UNA, 6 }, { HARN_PHY, 2 } } },
-    { "Hunter/Trapper", 5, { { HARN_TRK, 5 }, { WEAPONS | 1, 0 }, { HARN_STL, 4 }, { HARN_FOR, 4 }, { HARN_SUR, 4 },
-                             { HARN_HID, 3 }, { HARN_HUN, 3 }, { HARN_FLE, 2 } } },
-    { "Thief", 3, { { HARN_LEG, 4 }, { HARN_AWA, 5 }, { HARN_STL, 4 }, { HARN_NTR, 4 }, { HARN_LCK, 3 },
-                    { HARN_CLU, 5 }, { HARN_DAG, 4 }, { HARN_ACR, 3 } } },
-    { "Physician", 7, { { HARN_PHY, 4 }, { HARN_HRB, 3 }, { HARN_ALC, 3 }, { HARN_SCR, 0 } } },
-    { "Miner", 6, { { HARN_MIN, 4 }, { HARN_ENG, 3 }, { HARN_WOO, 3 }, { HARN_MET, 2 }, { HARN_JEW, 1 } } },
-    { "Sage", 5, { { HARN_FOL, 5 }, { HARN_MAT, 2 }, { HARN_SCR, 0 } } },
-};
-#define NOCC    (sizeof occs / sizeof occs[0])
-
-static const unsigned char weapons[] = {
-    HARN_AXE, HARN_BOW, HARN_CLU, HARN_DAG, HARN_FLA, HARN_NET, HARN_POL, HARN_SHD, HARN_SLG, HARN_SPR, HARN_SWD,
-    HARN_WHP, HARN_BLO
-};
-
-/* A skill named (case ignored, a beginning of its name enough if only one has it): it, or 0xFF */
-static unsigned char __fastcall__ skill_named (const char* w, const unsigned char* among, unsigned char count)
+/* A skill named (case ignored, a beginning of its name enough if only one has it), among count (among's, or skills
+** base on): it, 0xFE (more than one begins so) or 0xFF */
+unsigned char __fastcall__ skill_named (const char* w, const unsigned char* among, unsigned char base,
+                                        unsigned char count)
 {
     unsigned char k, sk, found = 0xFF, len = strlen (w);
     const char* nm;
@@ -130,7 +129,7 @@ static unsigned char __fastcall__ skill_named (const char* w, const unsigned cha
         return 0xFF;
     }
     for (k = 0; k < count; ++k) {
-        sk = among ? among[k] : k;
+        sk = among ? among[k] : base + k;
         nm = harn_skill_name (sk);
         if (!strnicmp (nm, w, len)) {
             if (strlen (nm) == len) {
@@ -145,80 +144,8 @@ static unsigned char __fastcall__ skill_named (const char* w, const unsigned cha
     return found;
 }
 
-static void three_weapons (unsigned char times)
-{
-    static char b[40];
-    unsigned char got = 0, k, sk;
-
-    if (!quiet) {
-        s (times == 1 ? "Three weapon skills, opened at their OML plus SB. The weapons:" :
-            "Three weapon skills, opened at their OML plus twice SB. The weapons:");
-        for (k = 0; k < sizeof weapons; ++k) {
-            s (k ? ", " : " ");
-            s (harn_skill_name (weapons[k]));
-        }
-        s (".\n");
-    }
-    while (got < 3) {
-        if (quiet) {
-            sk = weapons[random (sizeof weapons)];
-        } else {
-            s (got == 0 ? "The first: " : got == 1 ? "The second: " : "The third: ");
-            ask ("", b, sizeof b);
-            sk = skill_named (b, weapons, sizeof weapons);
-            if (sk >= 0xFE) {
-                s (sk == 0xFE ? "Which? More than one begins so.\n" : "That's not one of them.\n");
-                continue;
-            }
-        }
-        if (h.ml[sk] && h.ml[sk] > harn_get_oml (&h, sk)) {
-            if (!quiet) {
-                s ("That one's chosen already.\n");
-            }
-            continue;
-        }
-        h.ml[sk] = harn_get_oml (&h, sk) + times * harn_get_sb (&h, sk);
-        ++got;
-    }
-}
-
-/* The occupation's skills: an automatic skill listed takes the occupation's OML, not the two added (Character 16) */
-static void occupation (void)
-{
-    const struct occupation* o;
-    static char b[8];
-    unsigned char k, sk, m;
-
-    if (quiet) {
-        occ = random (NOCC);
-    } else {
-        s ("\nAn occupation (Character 15):\n");
-        for (k = 0; k < NOCC; ++k) {
-            s ("  ");
-            n (k + 1);
-            s (" ");
-            s (occs[k].name);
-            named (",", occs[k].years, " years\n");
-        }
-        do {
-            ask ("Which (1-6)? ", b, sizeof b);
-            occ = atoi (b) - 1;
-        } while (occ >= NOCC);
-    }
-    o = &occs[occ];
-    for (k = 0; k < 9 && (o->sk[k][0] | o->sk[k][1]); ++k) {    /* (An empty place is 0, 0: Acrobatics is skill 0) */
-        sk = o->sk[k][0];
-        m = o->sk[k][1];
-        if (sk & WEAPONS) {
-            three_weapons (sk & 7);
-        } else {
-            h.ml[sk] = m ? m * harn_get_sb (&h, sk) : harn_get_oml (&h, sk);
-        }
-    }
-}
-
-/* The skills listed (? at the option points' prompt): the open ones at their ML; the others (but the rituals: the
-** character has no deity) at the OML they'd open at; three to a line */
+/* The skills listed (? at the points' prompt): the open ones at their ML; the others (but the rituals: the character
+** has no deity, or its own's open) at the OML they'd open at; three to a line */
 static void list_skills (void)
 {
     unsigned char k, pass, col, v, w;
@@ -250,54 +177,68 @@ static void list_skills (void)
     }
 }
 
-/* Five option points: a skill opened at OML for one; an open skill improved by its SB for one (Character 16); no more
-** than two points in a skill (the user's: the book's second improvement, two more, would make three) */
-static void option_points (void)
+/* Points spent, op of them (Character 16's option points; or own, the player's own occupation's): a skill's name opens
+** it at its OML for one, or improves an open one by its SB for one; no more than two points in a skill (an option
+** point's: an open skill has had one, its opening; the user's, the book's second improvement, two more, would make
+** three), but three in one skill, the player's own occupation's primary */
+void __fastcall__ spend (unsigned char op, unsigned char own)
 {
-    static unsigned char improved[HARN_NSKILLS];
-    static char b[40];
-    unsigned char op = 5, sk, cost;
+    static unsigned char pts[HARN_NSKILLS];
+    unsigned char sk, primary = !own;
 
+    for (sk = 0; sk < HARN_NSKILLS; ++sk) {
+        pts[sk] = !own && h.ml[sk];
+    }
     if (!quiet) {
-        s ("\nFive option points: a skill's name opens it at its OML (1 point), or improves an open one by its SB\n"
-           "(1 point), no more than two points in a skill. ? lists them. Enter alone keeps what's left.\n");
+        s (own ? "\nYour own occupation, 11 points: a skill's name opens it at its OML (1 point),\n"
+                 "or improves an open one by its SB (1 point); two points in a skill at most, but\n"
+                 "three in one, its primary. ? lists them. Enter alone keeps what's left.\n" :
+            "\nFive option points: a skill's name opens it at its OML (1 point), or improves an open one by its SB\n"
+            "(1 point), no more than two points in a skill. ? lists them. Enter alone keeps what's left.\n");
     }
     while (op) {
         if (quiet) {
             sk = random (HARN_NSKILLS);
-            if (sk >= HARN_RAGR && sk <= HARN_RSIE) {
-                continue;                       /* (Not a ritual: the character has no deity) */
-            }
         } else {
             named ("Points left:", op, ". A skill: ");
-            if (!ask ("", b, sizeof b)) {
+            if (!ask ("", ab, sizeof ab)) {
                 return;
             }
-            if (b[0] == '?' && !b[1]) {
+            if (ab[0] == '?' && !ab[1]) {
                 list_skills ();
                 continue;
             }
-            sk = skill_named (b, 0, HARN_NSKILLS);
+            sk = skill_named (ab, 0, 0, HARN_NSKILLS);
             if (sk >= 0xFE) {
                 s (sk == 0xFE ? "Which? More than one begins so.\n" : "There's no such skill.\n");
                 continue;
             }
         }
-        cost = !h.ml[sk] || !improved[sk] ? 1 : 0xFF;
-        if (cost > op) {
+        if (sk >= HARN_RAGR && sk <= HARN_RSIE && (quiet || sk != HARN_RAGR + h.att[HARN_DTY])) {
             if (!quiet) {
-                s (cost == 0xFF ? "No more than two points in a skill: that one's had its share.\n" :
-                    "Not enough points left for that.\n");
+                s ("Not your deity's ritual.\n");   /* (-q's draws none: its dice as they were) */
             }
             continue;
+        }
+        if (pts[sk] >= 2 && (primary || pts[sk] > 2)) {
+            if (!quiet) {
+                s ("No more than two points in a skill");
+                if (own) {
+                    s (", or three in one");
+                }
+                s (": that one's had its share.\n");
+            }
+            continue;
+        }
+        if (pts[sk]++ == 2) {
+            primary = 1;
         }
         if (!h.ml[sk]) {
             harn_open_skill (&h, sk);
         } else {
             h.ml[sk] += harn_get_sb (&h, sk);
-            ++improved[sk];
         }
-        op -= cost;
+        --op;
         if (!quiet) {
             s (harn_skill_name (sk));
             named (" is", h.ml[sk], "\n");
@@ -334,9 +275,9 @@ static void profile (void)
     s (harn_culture_name (h.culture));
     s (" ");
     s (harn_class_name (h.social));
-    if (occ < NOCC) {
+    if (occname[0]) {
         s (", ");
-        s (occs[occ].name);
+        s (occname);
     }
     s ("\n");
     n (h.sibrank);
@@ -416,12 +357,24 @@ static unsigned char __fastcall__ species (const char* w)
     return 0xFF;
 }
 
-/* (The occupation into the file, by name, a line of hmchar's own) */
+/* ---- The program: its lib/hmchar (its directory's, as rc's $prog has it, if it's there; else the card's), its bank
+** program (the occupation, bank/hmocc's) loaded; the character made; its file written (the occupation by name, a line
+** of hmchar's own) */
+
+static char exppath[56], bppath[56];
+
+static char* __fastcall__ in (char* p, const char* name)
+{
+    return strcat (strcat (strcpy (p, libdir), "/"), name);
+}
+
 int main (int argc, char* argv[])
 {
-    static char b[40], path[64], line[48];
+    static char path[64], line[48];
     const char* out = 0;
     unsigned char i, sp = 0xFF;
+    struct bank_fn* occ;
+    char* e;
     int fd;
 
     for (i = 1; i < argc; ++i) {
@@ -431,28 +384,53 @@ int main (int argc, char* argv[])
             out = argv[++i];
         } else if (!strcmp (argv[i], "-q")) {
             quiet = 1;
+        } else if (!strcmp (argv[i], "-c") && i + 1 < argc) {
+            cname = argv[++i];
         } else if (!strcmp (argv[i], "-p") && i + 1 < argc && (sp = species (argv[++i])) != 0xFF) {
         } else {
-            err ("usage: hmchar [-s seed] [-o file] [-q] [-p species]\n");
+            err ("usage: hmchar [-s seed] [-o file] [-q] [-p species] [-c occupation]\n");
             return 1;
         }
     }
+    fd = open ("/env/prog", O_RDONLY);
+    i = 0;
+    if (fd >= 0) {
+        i = read (fd, libdir, 30);
+        close (fd);
+    }
+    libdir[i < 31 ? i : 0] = 0;
+    e = strrchr (libdir, '/');
+    strcpy (e ? e + 1 : libdir, "lib/hmchar");
+    if ((fd = open (in (path, "hmocc.bp"), O_RDONLY)) < 0) {
+        strcpy (libdir, "/sd/0/games/lib/hmchar");
+    } else {
+        close (fd);
+    }
+    bank_setup (in (exppath, "hmchar.exp"), 0x60, 16);
+    if (!(occ = bank_fn (in (bppath, "hmocc.bp"), "occupation"))) {
+        err ("hmchar: its bank program (lib/hmchar/hmocc.bp) can't be loaded\n");
+        return 1;
+    }
     harn_template (&t);                         /* (A species asked for, the rest rolled) */
     t.att[HARN_SP] = sp != 0xFF ? sp : HARN_ANY;
-    occ = 0xFF;
     for (;;) {
         harn_create (&h, &t);
         if (quiet) {
             break;
         }
         profile ();
-        ask ("\nKeep this character, or roll again (k or r)? ", b, sizeof b);
-        if (b[0] == 'k' || b[0] == 'K') {
+        ask ("\nKeep this character, or roll again (k or r)? ", ab, sizeof ab);
+        if (ab[0] == 'k' || ab[0] == 'K') {
             break;
         }
     }
-    occupation ();
-    option_points ();
+    if ((i = bank_call (occ, unsigned char (*)(void)))) {
+        flush ();
+        err (i == 1 ? "hmchar: -c: no such occupation, or more than one begins so\n" :
+            "hmchar: no lib/hmchar/occupations.txt\n");
+        return 1;
+    }
+    spend (5, 0);
     if (quiet) {
         make_name ();
     } else {
@@ -478,7 +456,7 @@ int main (int argc, char* argv[])
     strcat (line, name);
     harn_write_line (fd, line);
     strcpy (line, "occupation ");
-    strcat (line, occs[occ].name);
+    strcat (line, occname);
     harn_write_line (fd, line);
     close (fd);
     s ("Written to ");
