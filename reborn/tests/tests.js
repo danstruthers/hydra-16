@@ -2994,57 +2994,71 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0denizens', what: 'Dingus Quest Zero\'s denizens (dq0d: the populations decided as a stratum is grown, from a stand-in theme\'s kinds, kinds.txt): the giant rats that lair by the top stratum\'s ways placed round the way down as the character starts there (dq0 -T), seen (the world\'s actors, in what it perceives), and moving about as time passes (their own task deciding): at the turns pace through all the time a minute\'s search takes (the clock on a slice at a time as they keep up, told as they stir before it\'s done), told only as what they do changes (keeping their distance), not again when nothing has; then (seed 5, down its ladder) the rats there cornered, and in the character\'s way: the world stops it short of them, and won\'t let it walk onto a rat\'s square',
+      name: 'dq0denizens', what: 'Dingus Quest Zero\'s denizens (dq0d: the populations decided as a stratum is grown, from a stand-in theme\'s kinds, kinds.txt), by the actors\' records, their events and what the character perceives (their kinds\' records the referee\'s, HarnMaster\'s): the giant rats that lair by the top stratum\'s ways placed round the way down as the character starts there (dq0 -T), seen (the world\'s actors, in what it perceives), and moving about as time passes (their own task deciding): at the turns pace through all the time a minute\'s search takes (the clock on a slice at a time as they keep up), their stirring told (the world\'s E_VIEW) as what the character sees of them changes (gone out of sight), not again when nothing has; then (seed 5, down its ladder) the rats there seen, cornered, and in the character\'s way: the world stops it short of them, and won\'t let it walk or step onto a rat\'s square (dq0steps\' rat in the way, a step, in it)',
       init: 't_rc', cycles: 900e6,
-      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T\r' +
-        ['look', 'search', 'search', 'look', 'quit'].map(l => '\u0101' + l + '\r').join('') + '\u0101dq0 -p t -s 5 -c /ram/c.hm -T\r' +
-        ['d', 'map', 'go right', 'go forward', 'look', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
-      expect: ['A giant rat is ', ' feet away', 'stirs', 'keeping its', 'ladder going up. A giant rat is', 'A giant rat is in the way.', '% echo $status'],
-      // (The rats by the ladder at seed 5 in the look as the character comes down: since move 2.4 the world gives the
-      // denizens their turn as it gets somewhere, before what it sees is told, so they're there, not told stirring after
-      // it.  The first search's stir told before its prompt (at this seed the rats gone out of sight: the referee's and the
-      // denizens' dice the same at the turns pace whatever the timing), the second's none: nothing they do has changed; the way
-      // blocked: down the ladder, the map looked at while the rats are by it still (the caves' chamber there
-      // ragged, a tunnel off it: given longer, they're off down it), the rats cornered, a step towards them told
-      // they're in the way, as it stops short of one crossing to them, and then going on: no step taken)
-      check(m, out) {
-        const o = out.replace(/\x1b\[[0-9;]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), s1 = o.indexOf('You search about'), s2 = o.indexOf('You search about', s1 + 1);
-        const seg = (a, b) => a < 0 ? '' : o.slice(a, o.indexOf(b, a));
-        const f = [];
-        if (!seg(s1, '> look').includes('Nothing stirs in sight now.')) f.push('the rats not told gone out of sight while the first search went on');
-        if (seg(s2, '> look').includes('Something stirs.')) f.push('the rats told stirring again, with nothing changed');
-        const g = seg(o.indexOf('> go forward', o.indexOf('> go forward') + 1), '> look');
-        if (!g.includes('A giant rat is in the way.') || g.includes('You cross')) f.push('the character not stopped by the rat in its way');
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'search', 'search', 'quit',
+        'dq0 -p t -s 5 -c /ram/c.hm -T', 'd', 'go right', 'go forward', 'step forward', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [], g = T.of('dq0 -p t -s 3 -c /ram/c.hm -T'), s0 = g.after;
+        const rats = s => s ? s.actors.filter(a => a.state && a.name === 'giant rat') : [];
+        const near = (s, n) => rats(s).filter(a => a.sn === s.pc.sn && Math.max(Math.abs(a.x - s.pc.x), Math.abs(a.y - s.pc.y)) <= n);
+        if (near(s0, 4).length < 2) f.push('the giant rats not placed round the way down: ' + JSON.stringify(rats(s0)));
+        if (!s0 || !s0.sight || !s0.sight.dens.some(d => d.name === 'giant rat')) f.push('the rats not seen as it starts');
+        const s1 = T.of('search'), s2 = T.after(s1, 'search'), at = r => r.x + ',' + r.y;
+        if (!dq0Ev(s1, 'E_DEN', { de: 'DE_MOVED' }).length || rats(s1.after).map(at).join(' ') === rats(s0).map(at).join(' ')) f.push('the rats not moving about as the search went on');
+        dq0Need(f, s1, 'E_VIEW', { why: 'V_STIR' }, 'the rats\' stirring not told as they went out of sight');
+        if (!s1.after || !s1.after.sight || s1.after.sight.dens.length) f.push('the rats not gone out of sight');
+        dq0Never(f, s2, 'E_VIEW', { why: 'V_STIR' }, 'the rats told stirring again, with nothing seen changed');
+        const d = T.of('d');
+        if (!d.after || !d.after.sight || d.after.sight.dens.filter(x => x.name === 'giant rat').length < 2) f.push('the rats by the ladder not seen as the character comes down');
+        const r = T.of('go right'), gf = T.of('go forward'), sf = T.of('step forward');
+        dq0Need(f, r, 'E_NOWAY', { why: 'N_DEN' }, 'not stopped short of the rats');
+        for (const t of [gf, sf]) {
+          dq0Need(f, t, 'E_NOWAY', { why: 'N_DEN' }, t.line + ': a rat not in the way');
+          if (!t.at || !t.after || t.after.pc.x !== t.at.pc.x || t.after.pc.y !== t.at.pc.y) f.push(t.line + ': moved onto a rat\'s square');
+        }
         return f;
       },
       sdcard: true
     },
     {
-      name: 'dq0sway', what: 'Dingus Quest Zero\'s attitudes and influence (DENIZENS.md; the user: "skills like animal husbandry could influence animals encountered"): a character good with animals (Animalcraft 90, hmchar\'s file) at seed 21\'s giant rats (wary, the vermin faction\'s), words refused (an animal: persuasion doesn\'t reach it), how one seems (examined), befriended (the referee\'s Animalcraft, a test at a time, the attitude a step or two each success: won over, then asked no more), named Grub, asked to wait and seen waiting as the character turns round, then to follow, following it across the room (seen as it turns round again) and down the stairway (come along to the stratum below); the game kept (dq0 -d) and carried on, Grub its ally still; then a fresh game, a blow at a rat out of reach not struck (the fights\', dq0fight, have the harm done: the rat and its kin turned on the character)',
-      init: 't_rc', cycles: 1800e6,
-      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/a.hm\rāecho ml ani 90 >> /ram/a.hm\rādq0 -p t -s 21 -c /ram/a.hm -T -d /ram/kept\r' +
-        ['persuade the rat', 'examine the rat', ...Array(3).fill('befriend the rat'),
-         'name the rat grub', 'tell grub to wait', 'turn around', 'follow me', 'go east', 'turn around', 'wait', 'd', 'look',
-         'quit', 'dq0 -d /ram/kept', 'examine grub', 'quit',
-         'dq0 -p t -s 3 -c /ram/a.hm -T', 'look', 'attack the rat', 'look', 'examine the rat', 'quit',
-         'echo $status'].map(l => 'ā' + l + '\r').join('') },
-      expect: ['words won\'t reach it', 'The giant rat seems wary of you.', 'You coax the giant rat.', 'It\'s won over: it will follow you now.',
-        'The giant rat is Grub now.', 'Grub waits here.', 'Grub follows you.', 'You come into the ', 'Grub seems your ally.',
-        'It\'s out of reach: go up to it first.', 'The giant rat seems wary of you.', '% echo $status'],
-      // (The referee's dice the commands', in their order, at the turns pace (the denizens' asking nothing of it
-      // here; the same story with pauses at every prompt, keys held before Enter, the RAM's seed changed): at seed
-      // 21 the first coaxing sways the rat to indifferent, the second wins it over, the third is refused (asked no
-      // more).  Waiting: seen so as the character turns round; following: as it turns round again once it's crossed
-      // the room, and beside it as it comes down the stairway)
-      check(m, out) {
-        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
-        const seg = (a, b, from = 0) => { const i = o.indexOf(a, from); return i < 0 ? '' : o.slice(i, o.indexOf(b, i + a.length)); };
-        if (!/Grub is [^.]*, waiting\./.test(seg('> tell grub to wait', '> follow me'))) f.push('Grub not seen waiting');
-        if (!/Grub is [^.]*, following you\./.test(seg('> go east', '> d'))) f.push('Grub not seen following across the room');
-        if (!/Grub is [^.]*, following you\./.test(seg('You come into the ', '> quit'))) f.push('Grub not come along down the stairway');
-        inTurn(o, ['> befriend the rat', 'You coax the giant rat. It\'s swayed: it seems indifferent to you now.', '> befriend the rat',
-          'You coax the giant rat. It\'s won over: it will follow you now.', '> befriend the rat',
-          'The giant rat seems your ally already: that won\'t move it further.', '> name the rat grub'], f);
+      name: 'dq0sway', what: 'Dingus Quest Zero\'s attitudes and influence (DENIZENS.md; the user: "skills like animal husbandry could influence animals encountered"), by the denizens\' replies to the character\'s ways with them (the hub\'s sway: the result, the attitude before and after) and the actors\' records (the referee\'s Animalcraft tests in their order at this seed: HarnMaster\'s): a character good with animals (Animalcraft 90, hmchar\'s file) at seed 21\'s giant rats (wary, the vermin faction\'s), words refused (an animal: persuasion doesn\'t reach it), how one seems (examined: wary), befriended a test at a time (indifferent, then won over: an ally, following; then asked no more), named Grub, asked to wait and seen waiting as the character turns round, then to follow, following it across the room (seen beside it as it turns round again) and down the stairway (come along to the stratum below); the game kept (dq0 -d) and carried on, Grub its ally still; then a fresh game, a blow at a rat out of reach not struck, the rat as wary as it was',
+      init: 't_rc', cycles: 1400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/a.hm', 'echo ml ani 90 >> /ram/a.hm', 'dq0 -p t -s 21 -c /ram/a.hm -T -d /ram/kept',
+        'persuade the rat', 'examine the rat', 'befriend the rat', 'befriend the rat', 'befriend the rat', 'name the rat grub', 'tell grub to wait', 'turn around',
+        'follow me', 'go east', 'turn around', 'd', 'quit', 'dq0 -d /ram/kept', 'examine grub', 'quit', 'dq0 -p t -s 3 -c /ram/a.hm -T', 'attack the rat',
+        'examine the rat', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [];
+        const sw = (t, want, what) => { if (!dq0Rep(t, 'sway', want).length) f.push(what + ' (' + JSON.stringify(t.replies.filter(r => r.req === 'sway')) + ')'); };
+        sw(T.of('persuade the rat'), { kind: 'SW_PERSUADE', result: 'SR_BEAST' }, 'words not refused for an animal');
+        sw(T.of('examine the rat'), { kind: 'SW_LOOK', result: 'SR_OK', now: 'AT_WARY' }, 'the rat not seen wary');
+        const b = T.filter(t => t.line === 'befriend the rat');
+        sw(b[0], { kind: 'SW_BEFRIEND', result: 'SR_OK', was: 'AT_WARY', now: 'AT_INDIFFERENT' }, 'the first coaxing not swaying it to indifferent');
+        sw(b[1], { kind: 'SW_BEFRIEND', result: 'SR_OK', was: 'AT_INDIFFERENT', now: 'AT_ALLIED' }, 'the second not winning it over');
+        sw(b[2], { kind: 'SW_BEFRIEND', result: 'SR_AS_FAR' }, 'the third not refused (asked no more)');
+        const grub = s => s ? s.actors.find(a => a.name === 'Grub') : null, near = s => { const g = grub(s); return g && g.sn === s.pc.sn && Math.max(Math.abs(g.x - s.pc.x), Math.abs(g.y - s.pc.y)) <= 2; };
+        const seen = (t, doing) => t.after && t.after.sight && t.after.sight.dens.some(d => d.name === 'Grub' && d.doing === doing);
+        const nm = T.of('name the rat grub');
+        sw(nm, { kind: 'SW_NAME', result: 'SR_OK' }, 'the rat not named');
+        if (!grub(nm.after) || grub(nm.after).attitude !== 'AT_ALLIED') f.push('no ally Grub');
+        const w = T.of('tell grub to wait'), ta = T.after(w, 'turn around'), fm = T.of('follow me'), ge = T.of('go east'), ta2 = T.after(ge, 'turn around');
+        sw(w, { kind: 'SW_ORDER', order: 'OR_WAIT', result: 'SR_OK' }, 'Grub not asked to wait');
+        if (!seen(ta, 'DO_WAIT')) f.push('Grub not seen waiting as the character turned round');
+        sw(fm, { kind: 'SW_ORDER', order: 'OR_FOLLOW', result: 'SR_OK' }, 'Grub not asked to follow');
+        dq0Need(f, ge, 'E_ARRIVE', {}, 'the room not crossed');
+        if (!seen(ta2, 'DO_FOLLOW') || !near(ta2.after)) f.push('Grub not seen following across the room, beside the character');
+        const d = T.of('d');
+        dq0Need(f, d, 'E_ARRIVE', { how: 'A_DOWN' }, 'not down the stairway');
+        if (!d.after || d.after.pc.sn !== 1 || !near(d.after)) f.push('Grub not come along down the stairway');
+        const c = T.of('dq0 -d /ram/kept');
+        dq0Need(f, c, 'E_ARRIVE', { how: 'A_RESUMED' }, 'the game not carried on');
+        sw(T.of('examine grub'), { kind: 'SW_LOOK', result: 'SR_OK', now: 'AT_ALLIED' }, 'Grub not an ally still, carried on');
+        const a = T.of('attack the rat');
+        if (dq0Ev(a, 'E_FIGHT', { who: 0 }).length) f.push('a blow struck at a rat out of reach');
+        sw(T.after(a, 'examine the rat'), { kind: 'SW_LOOK', now: 'AT_WARY' }, 'the rat not as wary as it was');
         return f;
       },
       sdcard: true
@@ -3140,25 +3154,28 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0heard', what: 'Dingus Quest Zero\'s denizens\' events perceived by some and not others (DENIZENS.md: events): down the ladder at seed 5, the torch put out: in the dark the giant rats move about unseen (nothing told as stirring, none seen) but heard, near enough for the character\'s hearing, by the way they lie, in their sound\'s words (SOUND.md: "You hear a scurrying to your right."), and played as they\'re heard (the sound task\'s: the YM2151\'s channels 4-6, on the side they lie, a rat to the right of the character facing north on the right speaker); the turns pace, the denizens kept up a slice at a time',
-      init: 't_rc', cycles: 900e6,
-      machine: { ymLog: true, input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 5 -c /ram/c.hm -T\r' +
-        ['d', 'douse the torch', 'wait', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
-      expect: ['You put out the torch.', 'You hear a scurrying to your right.', '% echo $status'],
-      // (The rats heard as the torch goes out, to the right, and again as the character waits, behind it to the right:
-      // the denizens' dice the same whatever the timing, at the turns pace)
+      name: 'dq0heard', what: 'Dingus Quest Zero\'s denizens\' events perceived by some and not others (DENIZENS.md: events), by the denizens\' events, what the character perceives and the YM2151\'s key-ons: down the ladder at seed 5, the torch put out: in the dark the giant rats move about unseen (their steps told, none on a square the character sees; none seen, nothing told as stirring) but heard, near enough for the character\'s hearing (the referee\'s), by the way they lie (SOUND.md: the UI\'s "You hear a scurrying to your right."), and played as they\'re heard (the sound task\'s: the YM2151\'s channels 4-6, on the side they lie: a rat to the right on the right speaker); the turns pace, the denizens kept up a slice at a time; its cave, seed 5\'s small stratum, irregular, every square reached',
+      init: 't_rc', cycles: 700e6,
+      machine: { ymLog: true, input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 5 -c /ram/c.hm -T', 'd',
+        'douse the torch', 'wait', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
       check(m, out) {
-        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), a = o.indexOf('You put out the torch.'), b = o.indexOf('> quit', a);
-        const seg = a < 0 || b < 0 ? '' : o.slice(a, b), f = [], ons = YM_KEYPANS(m);
-        if (!seg.includes('You hear a scurrying')) f.push('the rats not heard in the dark');
-        inTurn(seg, ['You put out the torch.', 'You hear a scurrying to your right.', '> wait', 'You hear a scurrying behind you to your right.'], f);
-        if (seg.includes('Something stirs') || seg.includes('A giant rat is')) f.push('a rat seen in the dark');
+        const T = dq0Turns(m), f = [], x = T.of('douse the torch'), w = T.of('wait'), ons = YM_KEYPANS(m);
+        if (!x.after || !x.after.sight || !x.after.sight.dark) f.push('not dark, the torch put out');
+        const dark = [x, w], steps = dark.flatMap(t => dq0Ev(t, 'E_DEN', { de: 'DE_MOVED' }));
+        if (!steps.length) f.push('the rats not moving about in the dark');
+        if (steps.some(e => e.seen)) f.push('a rat\'s step on a square the character sees, in the dark');
+        for (const t of dark) {
+          if (t.after && t.after.sight && t.after.sight.dens.length) f.push(t.line + ': a rat seen in the dark');
+          dq0Never(f, t, 'E_VIEW', { why: 'V_STIR' }, t.line + ': a stirring told in the dark');
+        }
+        const o = dq0Story(out), seg = o.slice(o.indexOf('> douse the torch'), o.indexOf('> quit'));
+        if (!/You hear [^.]* to your right\./.test(seg)) f.push('the rats not heard to the right');
         if (o.includes('You hear something')) f.push('a sound told without its words (the sound task\'s table not in the hub)');
-        if (!o.includes('facing N')) f.push('the character not facing north');
         if (!ons.some(k => k === '4R' || k === '5R' || k === '6R')) f.push('no rat played on the right: ' + ons.join(' '));
         if (ons.some(k => !/^[456]/.test(k))) f.push('a key-on off the sound task\'s channels: ' + ons.join(' '));
         this.notes = ['the YM2151\'s key-ons: ' + ons.join(' ')];
-        f.push(...caveReport(m, 1, 1));          // (Its cave, seed 5's small stratum: irregular, every square reached)
+        f.push(...caveReport(m, 1, 1));
         return f;
       },
       sdcard: true
