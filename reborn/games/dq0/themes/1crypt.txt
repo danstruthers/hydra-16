@@ -37,6 +37,40 @@
 #   lock      the way out, shut: told as it's tried, or looked at
 #   opened    the way out, open
 #   ending    escaped, ruled or died | its words
+#
+# And its history (games/dq0/HISTORY.md): what the dungeon is what's left of.  A hand-written theme may give any of
+# it, or none; a game's own theme is themegen's (games/themegen), which writes all of it, and fills in what a
+# hand-written one (dq0 -t FILE) leaves out.  The record keeps what the engine builds by (theme.h); the rest is the
+# file's, to read.
+#   seed      the seed themegen made it from (for the record)
+#   region    the land it lies in: its name; its land (mountains, hills, forest, marsh, coast, plain); its rock
+#             (granite, limestone, sandstone, basalt, slate, chalk); its water (springs, river, lake, sea, none); its
+#             climate (cold, mild, warm, wet, dry)
+#   people    a people of its history (8 at most): its name (15 letters at most), what they are (dwarves, men,
+#             elves, kobolds ...: the game's own), their tongue (namegen's, 1-8), how they build (hewn, dressed,
+#             brick, timber, rough)
+#   era       an age of its history, oldest first (6 at most, numbered from 1): its people (a people's name), what
+#             they made (keep, temple, mine, tomb, town, hold), how it ended (abandoned, conquered, collapsed,
+#             flooded, cursed; or held, theirs still), how long ago (centuries), what was left (nothing, stores,
+#             bones, treasure, the dead, a curse), and its words (what happened, as the clues tell it)
+#   layer     a stratum's history, oldest first (3 a stratum at most; a stratum without any has one, built to its
+#             stratum line's purpose): the stratum (0 the top), the era (0 none said), what befell it (built,
+#             ruined, reused), and how: built or reused, its purpose (as a stratum's: halls, keep ...; the uses'
+#             plan its last); ruined, how (abandoned, conquered, collapsed, flooded, cursed).  A stratum's age is
+#             its oldest layer's era's, if its layers say one (else the dungeon's dice)
+#   faction   the inhabitants now (8 at most): its name (11 letters at most); its kinds (dq0d/kinds.txt's keys,
+#             spaces between); its strata (first-last, from the top: 0); about how many on each of them; its leader
+#             (a kind's key, or -); its lair's stratum; its attitude to the character as it first meets it (h
+#             hostile, u unfriendly, w wary, i indifferent, f friendly); and how it stands with the others ("name
+#             h/w/f, ...", as dq0d/factions.txt had them).  The denizens' (popgen's); without a denizens line, the
+#             factions' kinds are the ones that live in it
+#   goal      what the game's for (themegen's goal kinds, games/themegen/goals.txt): artifact, evil, prisoner or
+#             through; the artifact's, the evil's, the prisoner's or the far exit's name; its stratum (a far exit's:
+#             a way out there, open from the start); its guardians (a faction's name, or -)
+#   and a piece's line two more values, if it has them: its era (it lies among that era's works: 1 ...; or -,
+#   anywhere) and its guardians (a faction's name: their lair by it, popgen's; or -).
+# The theme checker (make.js's, themegen's) holds every theme to it: every goal reachable (each rule's things to be
+# had, the mission's ending a rule can bring about), every faction placed (each one's kinds living in its strata).
 
 theme    | the Crypt of the Dead King
 mission  | both
@@ -54,6 +88,16 @@ stratum  | the King's Rest | bn | crypt
 rooms    | chamber | hall | cell | vault | crypt | gallery | cave | storeroom
 light    | lit by torches in iron brackets
 denizens | *
+
+region   | the Barrow Hill | hills | limestone | springs | mild
+people   | hill-kings | men | 3 | dressed
+era      | hill-kings | tomb | abandoned | 9 | the dead | Aldric, last of the kings under the hill, was laid in his
+           crypt with his crown and his seal, and the hill was shut after him.
+
+faction  | vermin   | rat | 0-7 | 7 | - | 0 | w | crawlers h, kobolds h, beasts w
+faction  | crawlers | spider | 1-7 | 3 | - | 1 | h | vermin h, kobolds w
+faction  | dead     | ghoul skel | 0-7 | 9 | - | 2 | h | vermin h, crawlers h, beasts h, kobolds h
+faction  | beasts   | bear | 1-7 | 1 | - | 1 | w | kobolds w
 
 kind     | stone tablet | - | 6 | 3 | 3 | stone | stone | 0
 kind     | sunstone | - | 1 | 0 | 1 | stone | jewel | 40

@@ -20,13 +20,23 @@
 ** and what it does (the way out opened, the place ruled);
 ** its mission (to escape, to rule the place, or either); the way out's lock in words, shut and open; and the
 ** endings' words (escaped, ruled, dead).
+**
+** And its history (the user's, DesignIdeas.md: "determine what the history of the geographic area is, then you can
+** build a believable dungeon"; games/dq0/HISTORY.md): the region, its peoples and its eras (who came, what they
+** made, how it ended, how long ago), each stratum's layers of it (one to three, oldest first: built to a purpose,
+** ruined, reused for another: a temple over an older keep's ruin), each piece's era (it lies among that era's works)
+** and its guardians, the inhabitants now (the factions: their kinds, strata, numbers, leaders, lairs and attitudes),
+** and the goal (an artifact found, the evil cleared out, a prisoner rescued, a far exit won through to: themegen's
+** goal kinds).  A stand-in's history is a line or two of its own, or none (each stratum one layer: built to its
+** purpose).  The maker builds each stratum from its layers (dq0m: stratagen), the denizens' populations come from
+** the factions (the theme file's lines: popgen's).
 */
 
 #ifndef _THEME_H
 #define _THEME_H
 
 #define THEME_SIZE      0x1000                  /* A theme's bytes in dq0t.dat (its record, then its words) */
-#define THEME_HEAD      982                     /* (struct theme's: make.js lays it out the same) */
+#define THEME_HEAD      1297                    /* (struct theme's: make.js lays it out the same) */
 #define NTKINDS         8                       /* Its own kinds of things, */
 #define KI_THEME        (NKINDS - NTKINDS)      /*   the catalogue's from here (items.h's NKINDS) */
 #define NPIECES         8                       /* The puzzle's pieces (and its fixtures: an altar, a throne) */
@@ -55,6 +65,36 @@ enum { P_HALLS, P_KEEP, P_TEMPLE, P_CELLARS, P_CRYPT, P_WORKS };  /* A stratum's
 #define P_FORT          0x80                    /*   and fortified */
 #define TUSES           12                      /* The uses' words past the rooms' eight (world.h's U_KITCHEN on) */
 
+/* ---- The history (HISTORY.md) */
+#define TLAYERS         3                       /* A stratum's layers of history, at most */
+#define TERAS           6                       /* The eras, */
+#define TFACTIONS       8                       /*   the factions */
+struct tlayer {                                 /* A stratum's layer (oldest first) */
+    unsigned char   era;                        /* Its era (1 ...: the theme's; 0 none said) */
+    unsigned char   did;                        /* TL_* */
+    unsigned char   work;                       /* Built or reused: its purpose (P_*, P_FORT); ruined: how (EN_*) */
+};
+enum { TL_BUILT, TL_RUINED, TL_REUSED };
+enum { EN_ABANDONED, EN_CONQUERED, EN_COLLAPSED, EN_FLOODED, EN_CURSED, EN_HELD };   /* How an era ended (or not: still held), a work was ruined */
+enum { W_KEEP, W_TEMPLE, W_MINE, W_TOMB, W_TOWN, W_HOLD };    /* What an era's people made */
+struct tera {                                   /* An era (oldest first) */
+    unsigned char   people;                     /* Its people (0 ...: the theme's) */
+    unsigned char   tongue;                     /* Their tongue (namegen's: 1 ...) */
+    unsigned char   work;                       /* W_* */
+    unsigned char   end;                        /* EN_* */
+    unsigned char   ago;                        /* How long ago it ended: centuries */
+};
+struct tfaction {                               /* The inhabitants now (the theme file's faction lines: popgen's) */
+    char            name[12];
+    unsigned long   kinds;                      /* Its kinds (the bestiary's: as dens, a bit each) */
+    unsigned char   d0, d1;                     /* The strata it lives in */
+    unsigned char   lair;                       /* Its lair's stratum */
+    unsigned char   number;                     /* About how many on each stratum it lives in */
+    unsigned char   leader;                     /* Its leader's kind (kinds.txt's, 1 ...; 0 none) */
+    unsigned char   attitude;                   /* To the character as it first meets it (hub.h's AT_*) */
+};
+enum { G_NONE, G_ARTIFACT, G_EVIL, G_PRISONER, G_THROUGH };   /* The goal's kind (G_NONE: the mission's puzzle alone) */
+
 struct theme {
     unsigned char   count;                      /* The themes in the file (the first one's) */
     unsigned char   mission;                    /* TM_* */
@@ -73,7 +113,20 @@ struct theme {
                                                 **   shut (tried, examined), and open; */
     unsigned        end[4];                     /*   the endings' (END_*) */
     char            uses[TUSES][16];            /* A room's words by its use, past the eight (U_KITCHEN ...) */
-    unsigned char   purpose[TSTRATA];           /* Each stratum's purpose (P_*, P_FORT) */
+    unsigned char   purpose[TSTRATA];           /* Each stratum's purpose (P_*, P_FORT: its layers' last built or
+                                                **   reused, the uses' plan's) */
+    /* Its history (HISTORY.md) */
+    unsigned char   goal, goal_sn, goal_guard;  /* The goal (G_*), its stratum (a far exit's: the way out there), its
+                                                **   guardians (a faction: 1 ...; 0 none) */
+    unsigned char   sage[TSTRATA];              /* Each stratum's age, centuries (0: the world's dice) */
+    unsigned char   nlayers[TSTRATA];           /* Each stratum's layers (0: one, built to its purpose) */
+    struct tlayer   layer[TSTRATA][TLAYERS];
+    unsigned char   neras;
+    struct tera     era[TERAS];
+    unsigned char   pera[NPIECES];              /* Each piece's era: it lies among that era's works (0: anywhere) */
+    unsigned char   pguard[NPIECES];            /*   and its guardians (a faction: 1 ...; 0 none) */
+    unsigned char   nfactions;
+    struct tfaction faction[TFACTIONS];
 };
 #define THEME           ((struct theme*) 0x8000)    /* (In the hub's theme bank) */
 typedef char theme_head[sizeof (struct theme) == THEME_HEAD ? 1 : -1];

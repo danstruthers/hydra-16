@@ -17,6 +17,16 @@ uses     | cookpit | larder | warriors' den | armoury | shrine | sleeping burrow
 light    | lit by smoky tallow lamps
 denizens | kobold rat spider bear
 
+region   | the Scarps | hills | slate | springs | cold
+people   | warren-kin | kobolds | 5 | rough
+era      | warren-kin | mine | held | 0 | stores | The kobolds came up through the old diggings and took the
+           ruin above for their own, and they keep it still.
+
+faction  | kobolds  | kobold | 1-7 | 9 | kobold | 3 | u | vermin h
+faction  | vermin   | rat | 0-7 | 7 | - | 0 | w | crawlers h, kobolds h, beasts w
+faction  | crawlers | spider | 2-7 | 3 | - | 2 | h | vermin h, kobolds w
+faction  | beasts   | bear | 3-7 | 1 | - | 4 | w | kobolds w
+
 kind     | map scrap | - | 0 | 0 | 1 | other | book | 2
 kind     | key bow | - | 1 | 0 | 1 | bronze | metal | 10
 kind     | key blade | - | 1 | 0 | 1 | bronze | metal | 10
