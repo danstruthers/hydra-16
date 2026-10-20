@@ -152,6 +152,11 @@ ovl_out:
             OVFN        help, 6
             OVFN        sway_words, 6
             OVFN        dig_words, 1
+            OVFN        task_words, 3
+            OVFN        beat_words, 3
+            OVFN        stop_kind, 3
+            OVFN        answer_of, 3
+            OVFN        bar_text, 3
             OVFN        climb_words, 1
             OVFN        entered, 1
             OVFN        portal_words, 1
@@ -200,6 +205,7 @@ ovl_out:
             SWPART      7, 8                ; The game's arguments, its own theme made (main.c)
 
             SWFN        begin, 1
+            SWFN        size, 1
             SWFN        finish, 1
             SWFN        save_game, 1
             SWFN        command, 2

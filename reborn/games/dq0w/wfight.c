@@ -29,11 +29,16 @@ static char wb[32];                             /* (A blow's words on their way 
 #pragma code-name ("SW15CODE")
 #pragma rodata-name ("SW15RODATA")
 
+extern unsigned char pc_hit;                    /* (dq0w.c's: a blow at the character stops its long task, hard) */
+
 /* A blow told (E_FIGHT): attacker att, defender def (0 the character, else an actor's entry plus 1; body bd the one in
 ** it), how it came out (O_*, FO_BLED), what it left them in (FF_*); its words the ring's, fring; the ring on */
 static void __fastcall__ told (unsigned char att, unsigned char def, unsigned char out, unsigned char f)
 {
     hub_map (0);
+    if (!def) {
+        pc_hit = 1;
+    }
     bev.kind = E_FIGHT;
     bev.who = att;
     bev.a = def;

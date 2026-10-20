@@ -1912,6 +1912,8 @@ const DQ0_REPEATS = [
   { what: /^(The|A) .* (bites|claws|strikes|swings|lunges|thrusts)\b.*\bat you\b|^You (strike|swing|thrust|punch|kick|lunge)\b/,
     why: 'a fight\'s rounds, each blow told as it falls (attack: the rounds till it ends, the same words some of them)' },
   { what: /^You hear /, why: 'a sound heard each time it\'s made (main.c\'s heard: half a minute apart the same way, five seconds any; a search\'s or a wait\'s minute hears several)' },
+  { what: /^(The passage turns (left|right)|You go through a doorway|You go on down the passage|The way (rises|falls away))\.$/,
+    why: 'a walk\'s beats as it goes (slice 4.0): a winding passage turns the same way more than once, has more than one doorway, goes on quietly every 30 feet' },
   { what: /^Something stirs\.$/, why: 'each stir\'s first words: one for each time what it sees of the denizens changes (a long command\'s answer has several)' },
 ];
 function dq0Answers(out) {
@@ -1979,8 +1981,8 @@ function dq0Turns(m) {
   const r = m.dq0 || { games: [], lines: [], final: () => null }, all = { events: [], dens: [], replies: [], snaps: [] };   // (None: sim/dl's)
   r.games.forEach((g, gi) => { for (const k of Object.keys(all)) for (const e of g[k]) all[k].push(Object.assign({ game: gi }, e)); });
   const fin = r.final(), of = (list, k) => list.filter(e => e.line === k + 1);
-  // (A dq0 line as the test wrote it: RULES=NAME's -r NAME, sim/test.js's, after it taken off)
-  const T = r.lines.map(l => l.replace(/^(dq0(?: .*)?) -r \S+$/, '$1')).map((line, k) => ({ k, line, events: of(all.events, k), dens: of(all.dens, k), replies: of(all.replies, k),
+  // (A dq0 line as the test wrote it: sim/test.js's -a, and RULES=NAME's -r NAME, taken off)
+  const T = r.lines.map(l => l.replace(/^(dq0(?: .*)?) -a$/, '$1').replace(/^(dq0(?: .*)?) -r \S+$/, '$1').replace(/^(dq0(?: .*)?) -a$/, '$1')).map((line, k) => ({ k, line, events: of(all.events, k), dens: of(all.dens, k), replies: of(all.replies, k),
     at: all.snaps.find(s => s.line === k + 1) || null }));
   T.forEach((t, k) => {
     t.after = k + 1 < T.length ? T[k + 1].at || fin : fin;
@@ -3762,12 +3764,15 @@ module.exports = {
         const first = mine(a[0])[0];
         if (!first) return ['no blow struck at the rat (' + dq0Evs(a[0]) + ')'];
         if (new Set(a.slice(0, 3).flatMap(theirs).map(e => e.who)).size < 2) f.push('the rat and its kin not both striking at the character');
-        for (const t of a.slice(0, 3)) if (!mine(t).some(e => e.def === first.def && e.out === 'O_DODGED')) f.push(t.k + ': the blow not dodged (' + dq0Evs(t) + ')');
-        if (!mine(a[3]).some(e => e.def === first.def && e.out === 'O_HIT' && (e.ff & FF_D_DOWN))) f.push('the fourth blow didn\'t knock the rat senseless (' + dq0Evs(a[3]) + ')');
+        // (Which rat "the rat" is, as each blow's struck, the one in front then: since slice 4.0's walks a square at a
+        // time, the first blow may fall on its kin; the rat the fourth knocks senseless the one finished last)
+        for (const t of a.slice(0, 3)) if (!mine(t).some(e => e.out === 'O_DODGED')) f.push(t.k + ': the blow not dodged (' + dq0Evs(t) + ')');
+        const down = mine(a[3]).find(e => e.out === 'O_HIT' && (e.ff & FF_D_DOWN));
+        if (!down) f.push('the fourth blow didn\'t knock a rat senseless (' + dq0Evs(a[3]) + ')');
         const other = mine(r[0])[0];
-        if (!other || other.def === first.def || other.out !== 'O_HIT' || !(other.ff & FF_D_DOWN)) f.push('the rat ahead to the right not struck senseless (' + dq0Evs(r[0]) + ')');
+        if (!other || (down && other.def === down.def) || other.out !== 'O_HIT' || !(other.ff & FF_D_DOWN)) f.push('the rat ahead to the right not struck senseless (' + dq0Evs(r[0]) + ')');
         if (!mine(r[1]).some(e => other && e.def === other.def && e.out === 'O_DISPATCH' && (e.ff & FF_D_DEAD))) f.push('the rat ahead to the right not finished');
-        if (!mine(a[4]).some(e => e.def === first.def && e.out === 'O_DISPATCH' && (e.ff & FF_D_DEAD))) f.push('the first rat not finished');
+        if (!mine(a[4]).some(e => down && e.def === down.def && e.out === 'O_DISPATCH' && (e.ff & FF_D_DEAD))) f.push('the first rat down not finished');
         const lk = T.of('look');
         if (!lk.after || !lk.after.sight || lk.after.sight.items.filter(i => i.name === 'body').length < 2) f.push('their bodies not seen');
         if (!lk.after || !(lk.after.sum.health > 0)) f.push('the character not hurt by their blows');
@@ -3826,9 +3831,11 @@ module.exports = {
           if (!mine(t).length) f.push(t.line + ': no blow struck (' + dq0Evs(t) + ')');
           if (!t.after || t.after.pc.strike !== sk) f.push(t.line + ': struck with ' + (t.after && t.after.pc.strike) + ', not ' + sk);
         }
-        const rat = (mine(k)[0] || {}).def;
+        // (The rat the second punch fells: "the rat" the one in front as each blow's struck, since slice 4.0's walks a
+        // square at a time the kick's maybe its kin)
+        const felled = mine(p[1]).find(e => e.ff & FF_D_DOWN), rat = felled ? felled.def : (mine(k)[0] || {}).def;
         if (!k.after || k.after.actors.filter(a => a.doing === 'DO_FIGHT').length < 2) f.push('the rat and its kin not turned on the character');
-        if (!mine(p[1]).some(e => e.def === rat && (e.ff & FF_D_DOWN))) f.push('the second punch didn\'t fell the rat (' + dq0Evs(p[1]) + ')');
+        if (!felled) f.push('the second punch didn\'t fell a rat (' + dq0Evs(p[1]) + ')');
         const kin = p[1].after ? p[1].after.actors.filter(a => a.k + 1 !== rat) : [];
         if (!kin.length || kin.some(a => a.doing !== 'DO_FLEE')) f.push('its kin not fleeing: ' + kin.map(a => a.doing).join(', '));
         if (!mine(p[2]).some(e => e.def === rat && e.out === 'O_DISPATCH' && (e.ff & FF_D_DEAD))) f.push('the one down not finished');

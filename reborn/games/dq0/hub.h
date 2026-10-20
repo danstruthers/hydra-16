@@ -259,18 +259,20 @@ enum { V_TURNED, V_LIT, V_DARK, V_STIR, V_FACING };    /* E_VIEW's why (V_STIR: 
                                                 **   from it, or doing something else; V_FACING: a turn begun, its
                                                 **   look to come, V_TURNED) */
 enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL };  /* E_DIG's how */
-enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE_IDLE };   /* E_TASK's: stopped as
+enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE_IDLE, TE_CANT };   /* E_TASK's: stopped as
                                                 **   the player asked; stopped hard, by a wound or a blow (HOUSE.md:
                                                 **   all wounds), by a hostile in sight within 30 feet; asking, soft
                                                 **   (something new seen, tiring); carried on, the answer yes; not
-                                                **   the task named (its kind the hub's pc_task's); no task to stop */
+                                                **   the task named (its kind the hub's pc_task's); no task to stop;
+                                                **   one that can't be stopped now (a climb part way) */
 enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN };   /* E_BEAT's: a quiet stretch (HOUSE.md:
                                                 **   every 30 feet), the way turns, a side passage, a door passed, it
                                                 **   opens out, it rises, it falls */
 enum { WS_AHEAD, WS_LEFT, WS_RIGHT };           /* E_BEAT's side (or a turn's way) */
-enum { K_BEGUN, K_ON, K_BACK, K_FELL, K_UP, K_DOWN, K_JUMPED, K_NOHOLD };    /* E_CLIMB's how: begun, on, slipped
+enum { K_BEGUN, K_ON, K_BACK, K_FELL, K_UP, K_DOWN, K_JUMPED, K_NOHOLD, K_HELD };    /* E_CLIMB's how: begun, on, slipped
                                                 **   back, fallen, up, down; jumped down (a ledge, a shaft); no hold
-                                                **   found yet (at its foot: nothing to slip back, nor to fall) */
+                                                **   found yet (at its foot: nothing to slip back, nor to fall); its
+                                                **   grip kept, struck or hurt part way (HOUSE.md: holding on) */
 enum { PA_OPEN, PA_CLOSE, PA_UNLOCK, PA_FORCE, PA_SEARCH,     /* I_PORTAL's: what's done (a door's opened, ... */
        PA_RAISE, PA_LOWER, PA_BREAK, PA_THROUGH, PA_DISARM,    /*   a portcullis raised, a window's glass broken,
                                                 **   climbed through, a trap disarmed: one in reach, or the door's; */

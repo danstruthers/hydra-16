@@ -145,6 +145,19 @@ function rulesOf(t) {
   } });
 }
 if (RULES) for (const t of tests) if (/^dq0/.test(t.name)) rulesOf(t);
+
+// Every dq0 test's dq0 lines with -a (games/dq0: a long task goes on at every soft question, "Keep walking?", unasked:
+// slice 4.0's questions only in the tests about them, those with asks: true), so a test's next line isn't taken for
+// an answer
+function asksOf(t) {
+  const d = Object.getOwnPropertyDescriptor(t, 'machine');
+  Object.defineProperty(t, 'machine', { configurable: true, enumerable: true, get() {
+    const m = d ? (d.get ? d.get.call(this) : d.value) : {};
+    if (typeof m.input !== 'string') return m;
+    return Object.assign({}, m, { input: m.input.replace(/(\u0101dq0(?: [^\r]*)?)\r/g, '$1 -a\r') });
+  } });
+}
+for (const t of tests) if (/^dq0/.test(t.name) && !t.asks) asksOf(t);
 function meaningArgs(argv) {
   if (!RULES) return argv;
   for (let i = 0; i < argv.length; i++) {

@@ -200,6 +200,13 @@ struct sway;
 void __fastcall__ sway_words (const struct sway* s);   /* Overlay 6: the character's way with a denizen, the
                                                 **   denizens' task's answer (the hub's sway, copied), into lb */
 void __fastcall__ dig_words (unsigned char how, unsigned char feet);   /* Overlay 1: digging's, how it goes */
+unsigned char __fastcall__ task_words (unsigned w, unsigned char named);   /* Overlay 3: a long task's (task.c) */
+void __fastcall__ beat_words (unsigned w);
+unsigned char __fastcall__ stop_kind (const char* word);
+unsigned char __fastcall__ answer_of (const char* l);
+void __fastcall__ bar_text (char* s, unsigned done, unsigned len);
+extern unsigned char stop_named;                /* (The kind a stop named: main.c's) */
+char* __fastcall__ env (const char* name, char* buf, unsigned char size);  /* The environment's (main.c) */
 void __fastcall__ appraise (const struct ireq* q, signed char g);       /* Overlay 1: a thing judged */
 extern char dig_with[16];                       /* The tool a dig's taken up, to name (then ""): main.c's */
 void __fastcall__ climb_words (unsigned char how, unsigned char feet); /* Overlay 1: climbing's (a ledge's:

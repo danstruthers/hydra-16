@@ -100,6 +100,7 @@ go:
             SWPART      20, 7               ; The things' files: a chunk's put out, read in (ipage.c)
             SWPART      21, 5               ; The ways across a room worked out (dq0w.c's ways)
             SWPART      22, 8               ; The strata's records out of the hub, back (sfile.c)
+            SWPART      23, 1               ; The long task as it goes: a walk a square at a time (dq0w.c's)
 
             SWFN        start_dig, 1
             SWFN        dig_on, 1
@@ -156,6 +157,9 @@ go:
             SWFN        it_out, 20
             SWFN        it_in, 20
             SWFN        ways_go, 21
+            SWFN        step_on, 23
+            SWFN        task_word, 23
+            SWFN        path_ways, 23
             SWFN        it_flush, 17
             SWFN        st_out, 22
             SWFN        st_in, 22

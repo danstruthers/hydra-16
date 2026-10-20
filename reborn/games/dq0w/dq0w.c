@@ -68,6 +68,9 @@ void __fastcall__ go (unsigned char h);         /* Part 9 */
 void __fastcall__ go_to (unsigned x, unsigned y);
 void __fastcall__ step_to (unsigned char h, unsigned char n, unsigned char keep);
 void __fastcall__ door_work (unsigned char what);   /* Part 12 */
+void step_on (void);                            /* Part 23 */
+void __fastcall__ task_word (const struct msg* m);
+void __fastcall__ path_ways (unsigned char tx, unsigned char ty);
 struct work wk;
 extern char _SWAP_START__[];
 unsigned char den_done;                         /* (wbody.h's) */
@@ -85,6 +88,8 @@ static void __fastcall__ advance (unsigned long d)
 }
 
 static unsigned char evb;                       /* (The next event's b: then 0) */
+extern unsigned char pc_hit;
+unsigned char cl_hold;                          /* (A climb struck or hurt part way: its next test to keep its grip) */
 static void __fastcall__ event (unsigned char kind, unsigned char who, unsigned w1)
 {
     static struct msg m;
@@ -96,6 +101,9 @@ static void __fastcall__ event (unsigned char kind, unsigned char who, unsigned 
     m.w1 = w1;
     m.t = HUB->now;
     hub_event (&m);
+    if (kind == E_HARM && !who) {
+        pc_hit = 1;                             /* (A wound: its long task stopped, hard) */
+    }
 }
 
 /* What the character sees, changed (E_VIEW's why: V_*), told the UI */
@@ -103,6 +111,17 @@ static void __fastcall__ view (unsigned w)
 {
     event (E_VIEW, 0, w);
 }
+
+/* ---- A move's way, a square at a time (HOUSE.md's long tasks, slice 4.0): each square's heading and its time from
+** the start kept as it's worked out (path_add, path_ways: in the ways' bank, after their queue), and walked as the
+** clock goes (stepping): the character on each square in its turn, its long task's part done, its words as it goes
+** (E_BEAT), what it meets on the way (a denizen in it, a blow, something new seen) */
+#define PATH_MAX        250
+static unsigned char npath, pnext, pwalk0, pon; /* (Its squares; the next to step onto; where a walk's passage begins;
+                                                **   a walk on it under way) */
+static unsigned long pt0, pbase, pdue;          /* (When it set out; the time a part of it begins, path_add's; when
+                                                **   its next square comes, stepping's) */
+static void __fastcall__ path_add (unsigned char h, unsigned long t);
 
 /* The character busy for t tenths: free again at pc_ready (the turns pace: the clock moved on to it a slice at a
 ** time, turns_run), standing where it is unless a move says where it's going (bound_for) */
@@ -124,6 +143,60 @@ static void __fastcall__ bound_for (unsigned x, unsigned y)
 {
     HUB->pc_tx = x;
     HUB->pc_ty = y;
+}
+
+/* The denizens the character sees now, by the look's marks (as the senses' dens.c decides): a bit an actor */
+static unsigned char seen_now (void)
+{
+    struct actor* a;
+    unsigned char k, s = 0, sn;
+    unsigned char* p;
+    unsigned x, y;
+
+    for (k = 0; k < NACTORS; ++k) {
+        hub_map (0);
+        a = &HUB->actor[k];
+        if (!a->state || (sn = a->sn) != HUB->pc_stratum) {
+            continue;
+        }
+        x = a->x;
+        y = a->y;
+        if ((p = at (sn, x, y)) != 0 && (*p & T_VIS)) {
+            s |= 1 << k;
+        }
+    }
+    hub_map (0);
+    return s;
+}
+
+/* The character's long task begun (HOUSE.md's long tasks: the hub's pc_task, the UI's bar): its kind, its length in
+** its own units; what disturbs it from now on (a blow, a wound: pc_hit; a denizen not seen till now: pseen) */
+unsigned char pc_hit;                           /* (A blow at the character, or a wound: wfight.c's too) */
+static unsigned char pseen;                     /* (The denizens seen as it began, and since) */
+static void __fastcall__ task (unsigned char kind, unsigned len)
+{
+    pseen = seen_now ();
+    HUB->pc_task.kind = kind;
+    HUB->pc_task.asking = 0;
+    HUB->pc_task.len = len;
+    HUB->pc_task.done = 0;
+    pc_hit = 0;
+    pt0 = HUB->now;
+}
+
+/* A walk set out on, its way the path's: the character busy for t tenths, its long task a walk of the path's
+** squares, stepped as the clock goes (stepping) */
+static unsigned char pquiet, plast, pfull;
+static void __fastcall__ set_off (unsigned long t)
+{
+    busy (t);
+    task (LT_WALK, npath);
+    pnext = 0;
+    pquiet = 0;
+    pfull = npath;
+    pon = 1;
+    pdue = 0;                                   /* (Its first square looked for at once) */
+    plast = HUB->pc_face;
 }
 
 /* ---- The denizens in the character's way: the actors' squares on its stratum, as a move's worked out (dens_where)
@@ -247,6 +320,7 @@ static unsigned long __fastcall__ walk (unsigned char d)
     unsigned char* p;
     int z;
 
+    pwalk0 = npath;
     while (n < lim_) {
         if (!step_ok (sn_, mx, my, d) || (blocked = den_on (mx + dir_x[d], my + dir_y[d])) != 0) {
             break;
@@ -257,6 +331,7 @@ static unsigned long __fastcall__ walk (unsigned char d)
         ++n;
         p = at (sn_, mx, my);
         t += cost (C->elev[cy_][cx_] - z, TILE (*p) == T_STEPS);
+        path_add (H_OF (d), pbase + t);
         inside = TILE (*p) != T_DOOR && room_of (sn_, mx, my) != 0xFF;
         if (inside) {                           /* (Through a door, into a room) */
             break;
@@ -340,6 +415,29 @@ extern unsigned char at_bank;                   /* (chunk.c's: at ()'s chunk's b
 static unsigned char last_d;                    /* (way's: the way into its square) */
 void __fastcall__ ways_go (unsigned char r, unsigned char fx, unsigned char fy);    /* (Part 21's) */
 static unsigned char wr, wfx, wfy, wneed;       /* (The ways wanted: worked out as the first is looked up) */
+
+/* ---- The path (above: a move's way, a square at a time) kept in the ways' bank, after their queue: three bytes a
+** square, its heading and its time from the start (the chunk in the window again after) */
+#define PATH_AT         ((unsigned char*) (WAYS_Q + CW * CW))
+typedef char path_fits[CW * CW * (sizeof (struct wcell) + 2) + 3 * PATH_MAX <= 0x2000 ? 1 : -1];
+
+static void __fastcall__ path_add (unsigned char h, unsigned long t)
+{
+    unsigned char* p;
+
+    if (npath < PATH_MAX) {
+        if (t > 0xFFFE) {
+            t = 0xFFFE;
+        }
+        hy_bank (ovbank[OVBANKS + 1]);
+        p = PATH_AT + 3 * npath++;
+        p[0] = h;
+        p[1] = (unsigned char) t;
+        p[2] = (unsigned char) (t >> 8);
+        hub_map (at_bank);
+    }
+}
+
 
 static void __fastcall__ ways (unsigned char r, unsigned char fx, unsigned char fy)
 {
@@ -509,7 +607,9 @@ static void __fastcall__ across (unsigned char h, unsigned char r)
                 move.sn = sn_;
                 move.x = mx;
                 move.y = my;
+                pbase = t;
                 t += walk (h >> 1);
+                pbase = 0;
                 move.face = H_OF (mface);
                 hub_map (0);
                 if (!n && blocked && mx == move.x && my == move.y) {
@@ -517,7 +617,7 @@ static void __fastcall__ across (unsigned char h, unsigned char r)
                     den_way ();
                     return;
                 }
-                busy (t);
+                set_off (t);
                 bound_for (mx, my);
                 return;
             }
@@ -541,6 +641,7 @@ static void __fastcall__ across (unsigned char h, unsigned char r)
             ty_ = cy_;
             fx_ = cx_ - head_x[h];
             fy_ = cy_ - head_y[h];
+            path_add (h, cut_t);
             on_way ();
             return;
         }
@@ -548,6 +649,7 @@ static void __fastcall__ across (unsigned char h, unsigned char r)
         mx = nx;
         my = ny;
         ++n;
+        path_add (h, t);
     }
     hub_map (0);
     if (!n) {
@@ -572,7 +674,7 @@ static void __fastcall__ across (unsigned char h, unsigned char r)
     move.face = h;
     move.ledge = ledge;
     move.den = blocked;
-    busy (t);
+    set_off (t);
     bound_for (mx, my);
 }
 
@@ -590,6 +692,7 @@ void __fastcall__ s_go_to (unsigned x, unsigned y)
     dens_where ();
     here ();
     paced ();
+    npath = 0;
     if ((r = room_of (sn_, mx, my)) == 0xFF || x - (mx - cx_) >= CW || y - (my - cy_) >= CW) {
         hub_map (0);
         no_way (N_NO_EXIT);
@@ -629,9 +732,11 @@ void __fastcall__ s_go_to (unsigned x, unsigned y)
         return;
     }
     if (cut) {
+        path_ways (tx_, ty_);
         on_way ();                              /* (A trap on its way) */
         return;
     }
+    path_ways (tx, ty);
     hub_map (0);
     move.on = 1;
     move.how = A_WENT_TO;
@@ -640,7 +745,7 @@ void __fastcall__ s_go_to (unsigned x, unsigned y)
     move.y = my - fy + ty;
     move.face = tx == x - (mx - fx) && ty == y - (my - fy) ? HUB->pc_face : bearing ((int) x - move.x, (int) y - move.y);
     move.ledge = 0;
-    busy (tt);
+    set_off (tt);
     bound_for (move.x, move.y);
 }
 
@@ -776,6 +881,7 @@ static unsigned char __fastcall__ start_ledge (unsigned char up, unsigned char f
         return 1;
     }
     event (E_CLIMB, 0, K_BEGUN << 8 | (cl.need > 255 ? 255 : cl.need));
+    task (LT_CLIMB, cl.need);
     climb_round ();
     return 1;
 }
@@ -789,6 +895,15 @@ void s_climb_on (void)
     sn_ = HUB->pc_stratum;
     g = test_w (P_CLIMB, 0);
     hub_map (0);
+    if (cl_hold) {                              /* (Struck or hurt part way: a test to keep its grip, HOUSE.md's) */
+        cl_hold = 0;
+        if (g == G_MS || g == G_CS) {
+            event (E_CLIMB, 0, K_HELD << 8 | (cl.need - cl.done > 255 ? 255 : cl.need - cl.done));
+            climb_round ();
+            return;
+        }
+        g = G_CF;                               /* (Its grip lost: a fall, from as high as it got) */
+    }
     if (g == G_CF && !(cl.up ? cl.done : cl.need - cl.done)) {
         g = G_MF;                               /* (Not off the ground yet: nothing to fall) */
     }
@@ -810,6 +925,7 @@ void s_climb_on (void)
     }
     t = g != G_MF ? K_ON : cl.done ? K_BACK : K_NOHOLD;   /* (A slip: back, if it's off the ground) */
     cl.done = g == G_CS ? cl.done + 20 : g == G_MS ? cl.done + 10 : cl.done > 5 ? cl.done - 5 : 0;
+    HUB->pc_task.done = cl.done < cl.need ? cl.done : cl.need;
     if (cl.done < cl.need) {
         event (E_CLIMB, 0, t << 8 | (cl.need - cl.done > 255 ? 255 : cl.need - cl.done));
         climb_round ();
@@ -846,6 +962,7 @@ void __fastcall__ s_go (unsigned char h)
     dens_where ();
     here ();
     paced ();
+    npath = 0;
     if ((r = room_of (sn_, mx, my)) != 0xFF) {
         rx0 = ox = mx - cx_;                    /* (The chunk's first square, in the frame) */
         ry0 = oy = my - cy_;
@@ -886,15 +1003,19 @@ void __fastcall__ s_go (unsigned char h)
                 return;
             }
             if (way (k, d), cut) {
+                path_ways (tx_, ty_);
                 on_way ();                      /* (A trap on its way to it) */
                 return;
             }
+            path_ways (k - dir_x[best], d - dir_y[best]);
             mx = ox + k - dir_x[best];          /* (From the room's square before it, walked on) */
             my = oy + d - dir_y[best];
             d = best;
             move.x = mx;
             move.y = my;
+            pbase = bt;
             t = bt + walk (d);
+            pbase = 0;
             goto set_out;
         }
         if ((q = portal_at (bx, by)) != 0 && !(q->state & PS_OPEN)) {
@@ -912,15 +1033,19 @@ void __fastcall__ s_go (unsigned char h)
             bt += 2 * stept;
         }
         if (way (bx, by), cut) {
+            path_ways (tx_, ty_);
             on_way ();
             return;
         }
+        path_ways (bx, by);
         mx = ox + bx;
         my = oy + by;
         d = best;
         move.x = mx;
         move.y = my;
+        pbase = bt;
         t = bt + walk (d);
+        pbase = 0;
     } else if ((h & 1) || !step_ok (sn_, mx, my, d)) {
         hub_map (0);
         no_way (N_NO_EXIT);
@@ -942,7 +1067,7 @@ set_out:
     move.dir = d;
     move.sn = sn_;
     move.face = H_OF (mface);
-    busy (t);
+    set_off (t);
     bound_for (mx, my);
 }
 
@@ -957,6 +1082,7 @@ void __fastcall__ s_step_to (unsigned char h, unsigned char n, unsigned char kee
     dens_where ();
     here ();
     paced ();
+    npath = 0;
     lim_ = n;
     move.on = 0;
     if ((r = room_of (sn_, mx, my)) != 0xFF) {
@@ -1266,11 +1392,21 @@ static void arrive (void)
     mx = move.x;
     my = move.y;
     dens_where ();
-    if (how == A_WALKED) {
-        walk (move.dir);                        /* (Stopped short, if a denizen's come into its way; its squares the
-                                                **   senses', felt: the look's walk) */
-    } else if ((how == A_CROSSED || how == A_STEPPED) && move.den) {
-        blocked = den_on (mx + head_x[move.face], my + head_y[move.face]);
+    if (pon) {                                  /* (A walk, stepped: where it's got to, stopped short if a denizen's
+                                                **   come into its way; a walk's passage squares the senses', felt:
+                                                **   the look's walk) */
+        pon = 0;
+        hub_map (0);
+        mx = HUB->pc_x;
+        my = HUB->pc_y;
+        walked = pnext > pwalk0 ? pnext - pwalk0 : 0;
+        if (pnext < pfull) {
+            move.face = HUB->pc_face;           /* (Stopped short: facing as it went) */
+        }
+        if (move.den) {
+            blocked = den_on (mx + head_x[move.face], my + head_y[move.face]);
+        }
+        npath = 0;
     } else if (how <= A_START) {                /* (Down, up, begun: looking into the room) */
         move.face = toward_middle ();
     }
@@ -1594,6 +1730,7 @@ void __fastcall__ s_start_dig (unsigned char d)
     }
     hub_map (0);
     event (E_DIG, 0, D_BEGUN << 8 | (dig.need > 510 ? 255 : dig.need / 2));    /* (Told in feet) */
+    task (LT_DIG, dig.need);
     spell ();
 }
 
@@ -1616,6 +1753,7 @@ void s_dig_on (void)
     }
     dig.done += made;
     hub_map (0);
+    HUB->pc_task.done = dig.done;
     noise (6);
     if (dig.done < dig.need) {
         event (E_DIG, 0, (g == G_CS || g == G_MS ? D_GOOD : g == G_MF ? D_POOR : D_SLIP) << 8 |
@@ -1876,7 +2014,7 @@ static void on_way (void)
     move.x = tx_;
     move.y = ty_;
     move.face = bearing ((int) (tx_ - fx_), (int) (ty_ - fy_));
-    busy (cut_t);
+    set_off (cut_t);
 }
 
 /* On the trap on its way (A_STOPPED): set off (wtrap.c's) */
@@ -1888,9 +2026,262 @@ static void stopped (void)
     worked (0);
 }
 
+
+/* The character's long task as the clock goes: its part done, if it's a wait; its work, if there's any (part 23's:
+** a walk's next square come, a blow or a wound to see to) */
+static void stepping (void)
+{
+    hub_map (0);
+    if (!HUB->pc_task.kind || HUB->pc_task.asking) {
+        return;
+    }
+    if (HUB->pc_task.kind == LT_WAIT) {
+        HUB->pc_task.done = (unsigned) (HUB->now - pt0);
+    }
+    if (pc_hit || (pon && pnext < npath && HUB->now >= pdue)) {
+        step_on ();
+    }
+}
+
+#pragma code-name (push, "SW23CODE")
+#pragma rodata-name (push, "SW23RODATA")
+
+/* ---- The long task as it goes (HOUSE.md's long tasks): a walk stepped a square at a time as the clock goes, what
+** it meets told; any task stopped, hard (a blow or a wound: all wounds, the user's; a hostile in sight within 30
+** feet), or put to the player, soft (something else new seen: "Keep walking?"), or stopped as the player asks */
+static unsigned long pask;                      /* (When the question was put) */
+static unsigned prem;                           /* (The tenths it had left then) */
+
+static void __fastcall__ halt (unsigned char why)
+{
+    hub_map (0);
+    npath = pnext;                              /* (A walk: its way's end where it's got to) */
+    move.den = blocked;
+    went = (unsigned) (HUB->now - pt0);
+    HUB->pc_ready = HUB->now;
+    HUB->pc_task.asking = 0;
+    if (why != 0xFF) {
+        event (E_TASK, 0, why | HUB->pc_task.kind << 8);
+    }
+}
+
+static void __fastcall__ stop (unsigned char why)
+{
+    if (pon) {
+        halt (why);
+        return;
+    }
+    hub_map (0);
+    move.on = 0;                                /* (A spell of digging given up, or a wait cut short) */
+    HUB->pc_ready = HUB->now;
+    HUB->pc_task.asking = 0;
+    event (E_TASK, 0, why | HUB->pc_task.kind << 8);
+}
+
+static void __fastcall__ ask (unsigned char why)
+{
+    hub_map (0);
+    HUB->pc_task.asking = 1;
+    pask = HUB->now;
+    prem = HUB->pc_ready > HUB->now ? (unsigned) (HUB->pc_ready - HUB->now) : 0;
+    HUB->pc_ready = HUB->now;                   /* (The clock still at the turns pace till it's answered) */
+    event (E_TASK, 0, why | HUB->pc_task.kind << 8);
+}
+
+/* Something new seen as it goes: a hostile within 30 feet stops it (6 squares), anything else asks; 1 if so */
+static unsigned char news (void)
+{
+    unsigned char n = seen_now (), k, nigh = 0;
+    struct actor* a;
+    unsigned dx, dy;
+
+    n &= ~pseen;
+    pseen |= n;
+    if (!n || !HUB->pc_task.kind) {
+        return 0;
+    }
+    for (k = 0, a = HUB->actor; k < NACTORS; ++k, ++a) {
+        if (n & 1 << k) {
+            dx = a->x > HUB->pc_x ? a->x - HUB->pc_x : HUB->pc_x - a->x;
+            dy = a->y > HUB->pc_y ? a->y - HUB->pc_y : HUB->pc_y - a->y;
+            nigh |= a->attitude == AT_HOSTILE && dx <= 6 && dy <= 6;
+        }
+    }
+    view (V_STIR);                              /* (What it sees now, worded first) */
+    if (nigh) {
+        stop (TE_NEAR);
+    } else {
+        ask (TE_ASK_SEEN);
+    }
+    return 1;
+}
+
+/* A walk's beat as it comes onto square x, y heading h (in a passage: E_BEAT): it turns, goes through a doorway,
+** rises or falls, or a quiet stretch (6 squares, 30 feet); 1 if one's told */
+static signed char pz;
+static unsigned char __fastcall__ beat (unsigned x, unsigned y, unsigned char h)
+{
+    unsigned char b = 0xFF, s = WS_AHEAD, t;
+    unsigned char* p;
+    signed char z, dz;
+
+    p = at (sn_, x, y);
+    t = p ? TILE (*p) : T_CORR;
+    z = elev_at (sn_, x, y);
+    dz = z - pz;
+    pz = z;
+    if (room_of (sn_, x, y) == 0xFF) {
+        if (h != plast) {
+            b = WB_TURN;
+            s = ((h - plast) & 7) < 4 ? WS_RIGHT : WS_LEFT;
+        } else if (t == T_DOOR) {
+            b = WB_DOOR;
+        } else if (dz >= 2 || dz <= -2 || t == T_STEPS) {
+            b = dz > 0 ? WB_UP : WB_DOWN;
+        } else if (++pquiet >= 6) {
+            b = WB_QUIET;
+        }
+    }
+    plast = h;
+    hub_map (0);
+    if (b == 0xFF) {
+        return 0;
+    }
+    pquiet = 0;
+    event (E_BEAT, 0, b | s << 8);
+    return 1;
+}
+
+/* The character's long task as the clock goes (stepping's, as there's work for it): a walk's squares stepped as
+** their times come, a look every third square or at a beat (what's new seen); a task in place (a dig, a climb, a
+** wait) disturbed hard at once */
+void s_step_on (void)
+{
+    static unsigned char h, b;
+    static unsigned t, x, y;
+    unsigned char* p;
+
+    hub_map (0);
+    if (!HUB->pc_task.kind || HUB->pc_task.asking) {
+        return;
+    }
+    if (!pon) {                                 /* (In place) */
+        if (pc_hit) {
+            pc_hit = 0;
+            if (move.on && move.how == A_CLIMBING) {
+                cl_hold = 1;                    /* (Its grip tested at once: the round's end now) */
+                HUB->pc_ready = HUB->now;
+            } else {
+                stop (TE_HIT);
+            }
+        }
+        return;
+    }
+    if (pc_hit) {
+        pc_hit = 0;
+        halt (TE_HIT);
+        return;
+    }
+    dens_where ();
+    while (pnext < npath) {
+        hy_bank (ovbank[OVBANKS + 1]);
+        p = PATH_AT + 3 * pnext;
+        h = p[0];
+        t = p[1] | p[2] << 8;
+        hub_map (0);
+        if (HUB->now < pt0 + t) {
+            pdue = pt0 + t;                     /* (When the next comes: stepping looks for it) */
+            break;
+        }
+        x = HUB->pc_x + head_x[h];
+        y = HUB->pc_y + head_y[h];
+        if ((blocked = den_on (x, y)) != 0) {
+            HUB->pc_face = h;
+            halt (0xFF);                        /* (A denizen come into its way: stopped short, told as it arrives) */
+            return;
+        }
+        if (!pnext) {
+            pz = elev_at (sn_, HUB->pc_x, HUB->pc_y);
+        }
+        hub_map (0);
+        HUB->pc_x = x;
+        HUB->pc_y = y;
+        HUB->pc_face = h;
+        HUB->pc_task.done = ++pnext;
+        b = beat (x, y, h);
+        if (pnext < npath && (b || pnext % 3 == 0)) {
+            see (0);                            /* (Looking about as it goes: what's come into sight) */
+            if (news ()) {
+                return;
+            }
+        }
+    }
+}
+
+/* The player's stop (I_STOP: a its kind named, or none) and a soft question's answer (I_GO_ON) */
+void __fastcall__ s_task_word (const struct msg* m)
+{
+    unsigned char k;
+
+    hub_map (0);
+    k = HUB->pc_task.kind;
+    if (m->kind == I_GO_ON) {
+        if (HUB->pc_task.asking) {
+            HUB->pc_task.asking = 0;
+            pt0 += HUB->now - pask;
+            HUB->pc_ready = HUB->now + prem;
+            event (E_TASK, 0, TE_ON | k << 8);
+        }
+        return;
+    }
+    if (!k) {
+        event (E_TASK, 0, TE_IDLE);
+    } else if (m->a && m->a != k) {
+        event (E_TASK, 0, TE_NOT | k << 8);
+    } else if (k == LT_CLIMB) {
+        event (E_TASK, 0, TE_CANT | k << 8);   /* (Part way up: no stopping) */
+    } else {
+        stop (TE_STOPPED);
+    }
+}
+
+/* The way across the room to its chunk's square tx, ty (the ways as worked out last), its squares added to the path
+** from where it began, in order */
+void __fastcall__ s_path_ways (unsigned char tx, unsigned char ty)
+{
+    static unsigned i;
+    static unsigned char n, k, d;
+    struct wcell* w;
+    unsigned char* p;
+
+    hy_bank (ovbank[OVBANKS + 1]);
+    for (n = 0, i = (unsigned) ty * CW + tx; (d = WAYS_AT[i].from) < 4 && n < PATH_MAX; ++n) {
+        i -= dir_x[d] + (int) dir_y[d] * CW;
+    }
+    if (npath + n > PATH_MAX) {
+        n = PATH_MAX - npath;
+    }
+    npath = k = npath + n;
+    for (i = (unsigned) ty * CW + tx; n && (d = (w = &WAYS_AT[i])->from) < 4; --n) {
+        p = PATH_AT + 3 * --k;
+        p[0] = H_OF (d);
+        p[1] = (unsigned char) w->t;
+        p[2] = (unsigned char) (w->t >> 8);
+        i -= dir_x[d] + (int) dir_y[d] * CW;
+    }
+    hub_map (at_bank);
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 static unsigned char pc_waited;
 static void __fastcall__ intent (struct msg* m)
 {
+    if (m->kind == I_STOP || m->kind == I_GO_ON) {
+        task_word (m);                          /* (The long task's: no rest begun) */
+        return;
+    }
     if ((HUB->pcsum.cond & C_FATIGUED) && HUB->now > free_at) {
         spend (GA_REST, HUB->now - free_at);    /* (Stood still since it was last free: rest, the referee's) */
         hub_map (0);
@@ -1900,6 +2291,9 @@ static void __fastcall__ intent (struct msg* m)
     case I_WAIT:
         pc_waited = 1;                             /* (Its eyes looked to as it ends: the senses') */
         busy (m->w1 ? m->w1 : HUB->round);
+        if (!m->w2 && m->w1 > HUB->round) {
+            task (LT_WAIT, m->w1);              /* (A wait longer than a round: a long task) */
+        }
         free_at = HUB->now;                     /* (Waiting: rest) */
         if (!m->w2) {
             event (E_TIME, 0, m->w1 ? m->w1 : HUB->round);
@@ -2015,6 +2409,7 @@ static unsigned char turns_run (void)
     }
     hub_map (0);
     advance (d < TURN_SLICE ? d : TURN_SLICE);
+    stepping ();                                /* (Its walk on, square by square, before the denizens' turn) */
     turn ();
     return 1;
 }
@@ -2089,6 +2484,7 @@ int main (int argc, char* argv[])
             answer ();                          /* (The UI's: the save, a close look) */
         }
         clock_run ();
+        stepping ();                            /* (The long task as the clock goes: a walk a square at a time) */
         if (den_saw && !move.on) {
             den_saw = 0;                        /* (A body fallen: looked at again, the things too) */
             see (0);
@@ -2102,10 +2498,10 @@ int main (int argc, char* argv[])
         if (turns_run ()) {
             continue;                           /* (The turns pace: the denizens catching up) */
         }
-        if (move.on && HUB->now >= HUB->pc_ready) {
+        if (move.on && HUB->now >= HUB->pc_ready && !HUB->pc_task.asking) {
             arrive ();
         }
-        if (was_busy && !move.on && HUB->now >= HUB->pc_ready) {
+        if (was_busy && !move.on && HUB->now >= HUB->pc_ready && !HUB->pc_task.asking) {
             if (pc_waited) {
                 pc_waited = 0;
                 ask_look (LK_EYES);             /* (A wait's end: its eyes, as time's gone, the senses') */
@@ -2114,6 +2510,7 @@ int main (int argc, char* argv[])
             if (took == 1) {
                 see (0);
             } else if (!took) {
+                HUB->pc_task.kind = LT_NONE;    /* (Its long task over) */
                 event (E_READY, 0, 0);          /* (The character free again: the UI takes its next line) */
             }
             was_busy = took == 2;

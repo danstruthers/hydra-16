@@ -174,12 +174,17 @@ unsigned char t_getkey (void)
 /* The window's size: its consctl's size line (C R), else $COLUMNS and $LINES, else 80 by 24; and whether the console
 ** shows its terminals both (the serial port's and the Vera X's screen: "terminal both"), and whether the screen has a
 ** keyboard someone's typed at ("keyboard screen": the console's, the Vera X's) */
+void size (void);                               /* (Part 1's: its stub, bank.s) */
 static unsigned char both, kbd, whole;          /* (Both; the keyboard; the screen alone made so by the game, put
                                                 **   back as it ends) */
-static void size (void)
+#pragma code-name (push, "SW1CODE")             /* (The UI's part 1: as the terminal's set up) */
+#pragma rodata-name (push, "SW1RODATA")
+
+void s_size (void)
 {
     static char b[100];
     char* p;
+    char eb[8];
     int fd, n = 0;
 
     tw = 80;
@@ -209,13 +214,16 @@ static void size (void)
     if (tw != 80 || th != 24) {
         return;                                 /* (The console's) */
     }
-    if ((p = getenv ("COLUMNS")) != 0 && atoi (p) > 0) {
+    if ((p = env ("COLUMNS", eb, sizeof eb)) != 0 && atoi (p) > 0) {
         tw = atoi (p);
     }
-    if ((p = getenv ("LINES")) != 0 && atoi (p) > 0) {
+    if ((p = env ("LINES", eb, sizeof eb)) != 0 && atoi (p) > 0) {
         th = atoi (p);
     }
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- The screen */
 

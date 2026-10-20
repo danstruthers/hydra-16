@@ -46,6 +46,10 @@ unsigned char pc_face;                          /* (The character's facing, copi
 unsigned char pace = 0xFF, paused;
 const char* const pacename[4] = { "relaxed", "normal", "menacing", "turns" };
 
+static unsigned char asking;                    /* (A long task's soft question put, the answer awaited) */
+static unsigned char autogo;                    /* (dq0 -a: every soft question answered yes, unasked: the tests') */
+unsigned char stop_named;                       /* (The kind a stop named: task.c's) */
+static unsigned bar_done;                       /* (The long task's part done as the bar was last drawn) */
 static unsigned char busy = 1;                  /* The character's doing something: no command till it's free (nor
                                                 **   till the world's started, and says so: E_READY) */
 static unsigned place;                          /* Where this task is in the world's events */
@@ -88,9 +92,39 @@ static void interrupted (int sig)
 
 char gamedir[40], libdir[48];
 
+/* A variable of the environment (the kernel's ENV_GET: this task's) into buf, size bytes at most with its 0 (a list's
+** words a space between, as getenv gives them): buf, or NULL (it isn't set).  The C library's getenv not wanted: its
+** 256 bytes' buffer, the main RAM's */
+char* __fastcall__ env (const char* name, char* buf, unsigned char size)
+{
+    struct hy_regs r;
+    unsigned char n, i;
+
+    r.a = 0xFF;
+    r.r[0] = (unsigned) name;
+    r.r[1] = (unsigned) buf;
+    r.r[2] = --size;
+    r.r[3] = 0;
+    if (hy_call (HY_ENV_GET, &r)) {
+        return 0;
+    }
+    n = r.x || r.a > size ? size : r.a;
+    if (n && !buf[n - 1]) {
+        --n;
+    }
+    for (i = 0; i < n; ++i) {
+        if (!buf[i]) {
+            buf[i] = ' ';
+        }
+    }
+    buf[n] = 0;
+    return buf;
+}
+
 static void find_dirs (void)
 {
-    const char* prog = getenv ("prog");
+    char pv[sizeof gamedir + 1];
+    const char* prog = env ("prog", pv, sizeof pv);
     char* slash;
     int fd;
 
@@ -625,11 +659,14 @@ unsigned char untarget;                         /* (The target let go at the nex
 
 void status (void)
 {
-    static char left[48], right[40];
+    static char left[48], right[56];
     char n[6];
 
     strcpy (left, P.name[0] ? P.name : "Dingus Quest Zero");
     strcpy (right, paused ? "PAUSED  " : "");
+    if (HUB->pc_task.kind && HUB->pc_task.len) {    /* (A long task's bar: its part done, task.c's) */
+        bar_text (right, bar_done = HUB->pc_task.done, HUB->pc_task.len);
+    }
     if (task_[T_WORLD] > 0) {
         strcat (right, HUB->pcstatus);          /* (The referee's words: "UP 0" ...) */
         strcat (right, "  facing ");
@@ -787,6 +824,21 @@ static unsigned char events (void)          /* (How many there were) */
                      m.w1 == N_NO_STAIRS ? T_THERE_S_NO : m.w1 == N_NO_DIG ?
                      T_THERE_S_NOTHING : m.w1 == N_CLOSED ? T_THE_PORTCULLIS_IS : m.w1 == N_DOOR ? T_DOOR_SHUT :
                      T_YOU_CAN_T);
+            }
+            break;
+        case E_TASK:                            /* (The long task's: stopped, asked, refused; slice 4.0's) */
+            if (m.who == 0) {
+                k = (unsigned char) m.w1;
+                if (autogo && (k == TE_ASK_SEEN || k == TE_ASK_TIRED)) {
+                    intend2 (I_GO_ON, 0, 0);    /* (dq0 -a's: on, unasked) */
+                } else if ((asking = task_words (m.w1, stop_named)) != 0) {
+                    t_prompt (1);               /* (Its answer's prompt: the character still busy) */
+                }
+            }
+            break;
+        case E_BEAT:                            /* (A walk's, as it goes) */
+            if (m.who == 0) {
+                beat_words (m.w1);
             }
             break;
         case E_DIG:
@@ -1203,6 +1255,9 @@ static unsigned char __fastcall__ chores (unsigned char action)
     case VB_WAIT:
         intend (I_WAIT, 0);
         break;
+    case VB_STOP:                               /* (The long task: "stop", "stop digging") */
+        intend (I_STOP, stop_named = stop_kind (cmd.obj.word));
+        break;
     case VB_META_SHEET:
         sheet ();
         break;
@@ -1241,7 +1296,7 @@ static unsigned char __fastcall__ at_once (const char* l)
 {
     cq_cmd (l);                                 /* (Its command: the command parser's, the line's) */
     return cmd.action == VB_META_INVENTORY || cmd.action == VB_META_SHEET || cmd.action == VB_META_MAP ||
-        cmd.action == VB_META_HELP || !strcmp (l, "status");
+        cmd.action == VB_META_HELP || cmd.action == VB_STOP || !strcmp (l, "status");
 }
 
 #pragma code-name (push, "SW2CODE")
@@ -1604,6 +1659,8 @@ void __fastcall__ s_args (int argc, char* argv[])
             kit = argv[++i];                    /* (A tool to begin with: till the items layer, the tests') */
         } else if (!strcmp (argv[i], "-C")) {
             small = 1;                          /* (For the tests: the caches small, paged to the save folder soon) */
+        } else if (!strcmp (argv[i], "-a")) {
+            autogo = 1;                         /* (For the tests: a long task goes on at every soft question) */
         } else if (!strcmp (argv[i], "-T")) {
             ++test_start;                       /* (For the tests: the character begins at a way down; -T twice, by
                                                 **   the theme's first piece; three times, four strata down) */
@@ -1616,7 +1673,7 @@ void __fastcall__ s_args (int argc, char* argv[])
             pace = argv[i][0] == 'r' ? PACE_RELAXED : argv[i][0] == 'm' ? PACE_MENACING :
                 argv[i][0] == 't' ? PACE_TURNS : PACE_NORMAL;
         } else {
-            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d folder] [-t theme] [-k things] [-r rules] [-T [-T]] [-C]");
+            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d folder] [-t theme] [-k things] [-r rules] [-T [-T]] [-C] [-a]");
         }
     }
 }
@@ -1701,7 +1758,8 @@ int main (int argc, char* argv[])
         k = events ();
         heard ();
         now = hub_now ();
-        if (k || ((now >= next || now < next - 600) && hy_ticks () - shown >= (inn ? 1000 : 200))) {
+        if (k || ((now >= next || now < next - 600 || (HUB->pc_task.kind && HUB->pc_task.done != bar_done)) &&
+            hy_ticks () - shown >= (inn ? 1000 : 200))) {
             next = (now / 600 + 1) * 600;       /* (The status line as the events change it, and its clock as a
                                                 **   game minute goes, a real second apart at most, five while a
                                                 **   line's being typed: only what's changed drawn, t_status; the
@@ -1730,7 +1788,18 @@ int main (int argc, char* argv[])
             HUB->ui_cmd = 1;                    /* (A command in hand: the senses' look gives way meanwhile, from
                                                 **   its first look, at_once's, on: a line typed as a look began
                                                 **   waited for it, its parsing a third of the CPU) */
-            if (busy && (held = !at_once (l))) {
+            if (asking) {                       /* (A soft question's answer: yes goes on, no stops it; a command
+                                                **   stops it, then is carried out as the character's free) */
+                asking = 0;
+                if ((k = answer_of (l)) != 0) {
+                    t_line ();                  /* (Its line taken: no command) */
+                    cq_drop ();
+                    HUB->ui_cmd = 0;
+                    l = 0;
+                }
+                intend2 (k == 1 ? I_GO_ON : I_STOP, 0, 0);
+            }
+            if (l && busy && (held = !at_once (l))) {
                 HUB->ui_cmd = 0;                /* (Held: the next waits for the character, not parsed again) */
                 l = 0;
             }
