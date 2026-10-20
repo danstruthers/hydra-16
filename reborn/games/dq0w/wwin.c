@@ -40,7 +40,7 @@ static unsigned char __fastcall__ portcullis (unsigned char what)
         }
         noise (7);
         wk.tt += 100;
-        if (!G_OK (test (P_FORCE, PM_IRON, -6 - (signed char) wk.pq.thick))) {
+        if (!G_OK (test (P_FORCE, PM_IRON, -6 - (signed char) (wk.pq.thick / TH_IN)))) {
             return PO_BARS_HOLD;
         }
         door_state (PS_WRECKED | PS_OPEN);

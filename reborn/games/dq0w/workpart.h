@@ -164,7 +164,7 @@ static void __fastcall__ spring (unsigned char on)
         o = k == TK_GAS ? TO_RESISTED : TO_DODGED;
     } else if (k == TK_GAS) {
         o = TO_CHOKED;
-        wk.tt += wk.tq.power * 300;             /* (Senseless, half a minute a step of its power) */
+        wk.tt += wk.tq.power * 300;             /* (Senseless, half a minute a point of its power) */
     }
     trap_told (o);
     if (o == TO_SPRUNG && k < TK_GAS) {

@@ -6,8 +6,9 @@
 const fs = require('fs');
 const path = require('path');
 
-const THEME_SIZE = 0x1000, HEAD = 982, NTKINDS = 8, NPIECES = 8, NRULES = 8, TSTRATA = 8;    // theme.h's
-const KIND = 36;                                                    // items.h's struct kind
+const THEME_SIZE = 0x1000, HEAD = 990, NTKINDS = 8, NPIECES = 8, NRULES = 8, TSTRATA = 8;    // theme.h's
+const KIND = 37;                                                    // items.h's struct kind
+const WT_LB = 4, SQ_FT = 5;                                         // rs.h's units: a pound's quarters, a square's feet
 const STYLES = { b: 0, n: 1, m: 2, x: 3 };                          // level.h's ST_*
 const WAYS = { c: [0, 0x01], h: [0, 0x10], t: [0, 0x90], w: [0, 0x08], g: [0, 0x20], p: [0, 0x40],
   s: [1, 0x10], f: [1, 0x80] };                                     // items.h's K_* (0), KF_* (1: its keeps)
@@ -55,6 +56,11 @@ function theme(f, keys, count) {
     if (s.length >= max) bad(l, `"${s}" is longer than ${max - 1}`);
     b.write(s, at, 'latin1');
   };
+  const num = (l, s, per, max, what) => {                           // A value in rs.h's unit: the data's (pounds,
+    const n = +(s || 0) * per;                                      //   feet, pints, steps) made the game's, once
+    if (!Number.isInteger(n) || n < 0) bad(l, `${what}: ${s}?`);
+    return Math.min(n, max);
+  };
   const kinds = [], strata = [], uses = USES.slice();
   let npieces = 0, nrules = 0;
   b[0] = count;
@@ -65,7 +71,7 @@ function theme(f, keys, count) {
       case 'mission':
         b[1] = v[0] === 'both' ? 3 : v[0] === 'rule' ? 2 : v[0] === 'escape' ? 1 : bad(l, 'escape, rule or both');
         break;
-      case 'story': b.writeUInt16LE(text(l, v[0]), 768); break;
+      case 'story': b.writeUInt16LE(text(l, v[0]), 776); break;
       case 'stratum':
         if (strata.length >= TSTRATA || !/^[bnmx]{1,2}$/.test(v[1] || '')) bad(l, 'a name, and one or two styles');
         if (v[2] && !/^(halls|keep|temple|cellars|crypt|works)( fortified| open)?$/.test(v[2])) {
@@ -93,7 +99,7 @@ function theme(f, keys, count) {
         break;
       }
       case 'kind': {
-        if (kinds.length >= NTKINDS || v.length < 8) bad(l, 'a kind: name, ways, weight, bulk, size, ...');
+        if (kinds.length >= NTKINDS || v.length < 8) bad(l, 'a kind: name, ways, weight, bulk, how far seen, ...');
         const at = 384 + KIND * kinds.length, mat = MATS.indexOf(v[5]), craft = CRAFTS.indexOf(v[6]);
         if (mat < 0 || craft < 0) bad(l, 'its material or its craft');
         str(l, v[0], at, 14);
@@ -106,28 +112,30 @@ function theme(f, keys, count) {
           flags |= 0x01;
           keeps |= 0x03;
         }
+        if (+v[4] % SQ_FT) bad(l, `how far off it's made out: feet, a square's ${SQ_FT} each`);
         b[at + 14] = flags;
-        b[at + 15] = Math.min(255, 4 * +v[2]);
-        b[at + 16] = +v[3];
-        b[at + 17] = +(v[8] || 0);
-        b[at + 18] = +(v[9] || 0);
-        b[at + 21] = +v[4];
-        b[at + 30] = mat;
-        b[at + 31] = craft;
-        b.writeUInt16LE(+v[7], at + 32);
-        b[at + 34] = keeps;
+        b[at + 15] = num(l, v[2], WT_LB, 255, 'its weight, pounds (to a quarter)');
+        b[at + 16] = num(l, v[3], 1, 255, 'its bulk, pints');
+        b[at + 17] = num(l, v[8], 1, 255, 'its room, pints');
+        b.writeUInt16LE(num(l, v[9], WT_LB, 0xFFFF, 'the weight it bears, pounds (to a quarter)'), at + 18);
+        b[at + 22] = num(l, v[4], 1, 15 * SQ_FT, 'how far off it\'s made out, feet') / SQ_FT;   // (Squares)
+        b[at + 31] = mat;
+        b[at + 32] = craft;
+        b.writeUInt16LE(num(l, v[7], 1, 0xFFFF, 'its worth, pennies'), at + 33);
+        b[at + 35] = keeps;
         kinds.push(v[0]);
         break;
       }
       case 'piece': {
-        const k = kinds.indexOf(v[0]), d = (v[1] || '').split('-').map(Number), at = 672 + 5 * npieces;
+        const k = kinds.indexOf(v[0]), d = (v[1] || '').split('-').map(Number), at = 680 + 5 * npieces;
         if (npieces >= NPIECES || k < 0 || d.length !== 2 || !(d[0] <= d[1])) bad(l, 'a piece: kind, strata ...');
-        [k, d[0], d[1], v[2] === '-' ? 0xFF : +v[2], +(v[3] || 1)].forEach((x, i) => { b[at + i] = x; });
+        [k, d[0], d[1], v[2] === '-' ? 0xFF : num(l, v[2], 1, 30, 'concealed, steps'), +(v[3] || 1)]
+          .forEach((x, i) => { b[at + i] = x; });
         ++npieces;
         break;
       }
       case 'rule': {
-        const verb = TR.indexOf(v[0]), at = 712 + 7 * nrules, kind = s => {
+        const verb = TR.indexOf(v[0]), at = 720 + 7 * nrules, kind = s => {
           const k = kinds.indexOf(s);
           if (k < 0) bad(l, `no kind ${s} of the theme's`);
           return k;
@@ -146,11 +154,11 @@ function theme(f, keys, count) {
         ++nrules;
         break;
       }
-      case 'lock': b.writeUInt16LE(text(l, v[0]), 770); break;
-      case 'opened': b.writeUInt16LE(text(l, v[0]), 772); break;
+      case 'lock': b.writeUInt16LE(text(l, v[0]), 778); break;
+      case 'opened': b.writeUInt16LE(text(l, v[0]), 780); break;
       case 'ending':
         if (!ENDS[v[0]]) bad(l, 'an ending: escaped, ruled or died');
-        b.writeUInt16LE(text(l, v[1]), 774 + 2 * ENDS[v[0]]);
+        b.writeUInt16LE(text(l, v[1]), 782 + 2 * ENDS[v[0]]);
         break;
       default: bad(l, `no key ${l.key}`);
     }
@@ -162,11 +170,11 @@ function theme(f, keys, count) {
     b[36 + 2 * k] = STYLES[s[1][0]];
     b[37 + 2 * k] = STYLES[s[1][s[1].length - 1]];
     const p = (s[2] || 'halls').split(' ');                         // (Its purpose: a keep fortified, unless open)
-    b[974 + k] = PURPOSES.indexOf(p[0]) | (p[1] === 'fortified' || (p[0] === 'keep' && p[1] !== 'open') ? 0x80 : 0);
+    b[982 + k] = PURPOSES.indexOf(p[0]) | (p[1] === 'fortified' || (p[0] === 'keep' && p[1] !== 'open') ? 0x80 : 0);
   }
   uses.forEach((w, k) => {
     if (w.length >= 16) throw new Error(`${path.basename(f)}: "${w}" is longer than 15`);
-    b.write(w, 782 + 16 * k, 'latin1');
+    b.write(w, 790 + 16 * k, 'latin1');
   });
   b[2] = npieces;
   b[3] = nrules;

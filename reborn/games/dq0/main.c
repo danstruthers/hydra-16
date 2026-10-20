@@ -269,7 +269,7 @@ static void sheet (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    10                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    11                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -285,7 +285,8 @@ static void sheet (void)
                                                 **   written back since the last are the save's only once it's
                                                 **   whole; 10, the old saves' readers gone, the last save's fields
                                                 **   the world's now with them: till the release, only a save of this
-                                                **   version is carried on) */
+                                                **   version is carried on; 11, a thing's concealment in steps, rs.h's
+                                                **   scale) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
@@ -1052,7 +1053,7 @@ static void __fastcall__ inspect (unsigned char obj, unsigned char orel)
 }
 
 /* A thing hidden where the character stands (Concealment: the referee's test, the things' record), worded by how
-** well */
+** well (its difficulty, in steps) */
 static void __fastcall__ hide (const char* w)
 {
     unsigned char d;
@@ -1061,7 +1062,7 @@ static void __fastcall__ hide (const char* w)
         tell (T_HIDE_WHAT_HIDING);
     } else if (things (IO_HIDE, w) == IR_OK) {
         d = HUB->ireq.qty;
-        tell (d >= 6 ? T_HID_CUNNINGLY : d >= 3 ? T_HID_WELL : T_HID_POORLY);
+        tell (d >= 10 ? T_HID_CUNNINGLY : d >= 4 ? T_HID_WELL : T_HID_POORLY);
         to_hand ();
         intend2 (I_WAIT, 600, 1);
     } else {

@@ -332,9 +332,9 @@ static void room (void)
     }
     if (sight_close && S->size != S_PART) {      /* (Its figures, a close look's: what it's seen of it) */
         add (" It is ");
-        addn (5 * S->rw);
+        addn (SQ_FT * S->rw);
         add (" feet by ");
-        addn (5 * S->rh);
+        addn (SQ_FT * S->rh);
         add (".");
     } else if (sight_close) {
         add (S->lit ? " You haven't seen all of it yet." : " Its far side is lost in the dark.");

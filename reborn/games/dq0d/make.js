@@ -11,6 +11,7 @@ const STYLES = { b: 0, n: 1, m: 2, x: 3 };      // level.h's ST_*: a bit each
 const MINDS = { m: 0, b: 1, l: 2, a: 3, c: 4 }; // dq0d.c's M_*
 const AT = { h: 0, u: 1, w: 2, i: 3, f: 4 };    // hub.h's AT_*
 const KREC = 40, FREC = 32, NFACT = 8;          // (dq0d.c's: a kind's record, a faction's, the factions at most)
+const SQ_FT = 5;                                // rs.h's: a square's feet (kinds.txt's distances in feet)
 
 const lines = f => fs.readFileSync(f, 'utf8').split(/\r?\n/).filter(l => l.trim() && !l.startsWith('#'))
   .map(l => l.split('|').map(s => s.trim()));
@@ -28,10 +29,15 @@ function build({ dir, objdir, say = () => {} }) {
       throw new Error(`dq0d/kinds.txt: line ${i + 1}: ${f.join(' | ')}`);
     out.write(f[0], at, 'latin1');
     out.write(f[1], at + 12, 'latin1');
-    const [d0, d1] = pair(f[4]), [n0, n1] = pair(f[5]), [sl, sd] = pair(f[8]);
+    const sq = ft => {                          // (A distance's feet made the map's squares, once: in fives)
+      if (!(+ft >= 0) || +ft % SQ_FT || +ft > 255 * SQ_FT)
+        throw new Error(`dq0d/kinds.txt: line ${i + 1}: ${ft}: a distance in feet, a square's ${SQ_FT} each`);
+      return +ft / SQ_FT;
+    };
+    const [d0, d1] = pair(f[4]), [n0, n1] = pair(f[5]), [sl, sd] = f[8].split('-').map(sq);
     const flags = [...f[2]].reduce((a, c) => a | (WAYS[c] || 0), 0);
     const styles = [...f[3]].reduce((a, c) => a | (1 << STYLES[c]), 0);
-    [flags, styles, d0, d1, n0, n1, +f[6], +f[7], sl, sd, +f[9], +f[10], fac, MINDS[f[12]], +f[13] & 0xFF, +f[14]]
+    [flags, styles, d0, d1, n0, n1, +f[6], sq(f[7]), sl, sd, sq(f[9]), +f[10], fac, MINDS[f[12]], +f[13] & 0xFF, +f[14]]
       .forEach((v, k) => { out[at + 20 + k] = v; });
   });
   const rel = names.map(() => names.map(() => AT.i)), base = KREC * (kinds.length + 1);

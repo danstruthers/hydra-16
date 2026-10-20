@@ -99,7 +99,7 @@ void s_doors (void)
                 out = PO_NO_LOCK;
                 break;
             }
-            g = test (P_PICKLOCK, wk.pq.lock, -2 * (signed char) wk.pq.lock);
+            g = test (P_PICKLOCK, wk.pq.lock, -(signed char) wk.pq.lock);
             if (wres) {
                 out = PO_NO_PICKS;
                 break;

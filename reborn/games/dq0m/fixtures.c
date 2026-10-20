@@ -219,7 +219,7 @@ static void fortify (void)
 
 static void make (void)
 {
-    static const unsigned char rot[4] = { 2, 2, 1, 0 };    /* (PM_*: tenths of a step of wear a century) */
+    static const unsigned char rot[4] = { 2, 2, 1, 0 };    /* (PM_*: tenths of a grade of wear a century) */
     struct stratum* s = &STRATUM (L->sn);
     struct portal* p;
     unsigned char i, w, h, t, q, f, alike = s->style == ST_BUILT || s->style == ST_MINE;
@@ -260,11 +260,11 @@ static void make (void)
             f |= w >= 5 ? PF_DOUBLE : 0;
         }
         p->size = w | h << 4;
-        p->thick = t;
+        p->thick = t * TH_IN;                  /* (Inches made the thickness's eighths) */
         p->qual = q;
         p->feat = f;
         p->harm = 0;
-        p->tough = part_body (p->mat, p->size, t, q) >> (p->kind == PK_PORTCULLIS);   /* (Bars half a plate) */
+        p->tough = part_body (p->mat, p->size, p->thick, q) >> (p->kind == PK_PORTCULLIS);   /* (Bars half a plate) */
         if (p->kind == PK_WINDOW && p->tough > 15) {
             p->tough = 15;                      /* (A window's parts' harm a nibble each: the world's, wblow.c) */
         }

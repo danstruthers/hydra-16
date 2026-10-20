@@ -188,7 +188,7 @@ static void __fastcall__ tell_one (const struct told* t)
     add (many ? " are " : " is ");
     add (relname[t->rel & 7]);
     add (", ");
-    addn (5 * t->d);
+    addn (SQ_FT * t->d);
     add (many && t->doing == DO_SHY ? " feet away, keeping their distance." : doing[t->doing]);
 }
 
