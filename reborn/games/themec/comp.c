@@ -122,7 +122,21 @@ void comp_begin (void)
     R[0] = 1;                                   /* (One theme in its file) */
 }
 
-/* A kind's line: name, ways, weight, bulk, size, material, craft, worth; a container's room and what it bears */
+/* A weight in pounds, to a quarter ("2", "2.25", "2.5", "2.75"), made quarter pounds (rs.h's WT_LB), max at most */
+static unsigned __fastcall__ pounds (const char* s, unsigned max)
+{
+    unsigned long q = (unsigned long) atoi (s) * WT_LB;
+    const char* d = strchr (s, '.');
+
+    if (d) {
+        q += d[1] == '2' ? 1 : d[1] == '5' ? 2 : d[1] == '7' ? 3 : 0;
+    }
+    return q > max ? max : (unsigned) q;
+}
+
+/* A kind's line: name, ways, weight (pounds), bulk (pints), how far off it's made out (feet, in fives: the map's
+** squares), material, craft, worth (pennies); a container's room (pints) and the weight it bears (pounds): rs.h's
+** units made of them, as make.js makes them */
 static void __fastcall__ kind_line (struct line* l)
 {
     char** v = l->v;
@@ -133,9 +147,14 @@ static void __fastcall__ kind_line (struct line* l)
     int w;
 
     if (nkinds >= NTKINDS || l->n < 8 || mat < 0 || craft < 0) {
-        err = "a kind: name, ways, weight, bulk, size, material, craft, worth";
+        err = "a kind: name, ways, weight, bulk, how far seen, material, craft, worth";
         return;
     }
+    if ((w = atoi (v[4])) % SQ_FT) {
+        err = "how far off it's made out: feet, a square's five each";
+        return;
+    }
+    k->seen = (w > 15 * SQ_FT ? 15 * SQ_FT : w) / SQ_FT;
     put (v[0], (unsigned char*) k->name - R, 14);
     if (strcmp (v[1], "-")) {
         for (c = v[1]; *c; ++c) {
@@ -157,12 +176,12 @@ static void __fastcall__ kind_line (struct line* l)
         keeps |= 0x03;
     }
     k->flags = flags;
-    w = 4 * atoi (v[2]);
-    k->weight = w > 255 ? 255 : w;
-    k->bulk = atoi (v[3]);
-    k->cap_bulk = l->n > 8 ? atoi (v[8]) : 0;
-    k->cap_weight = l->n > 9 ? atoi (v[9]) : 0;
-    k->size = atoi (v[4]);
+    k->weight = pounds (v[2], 255);
+    w = atoi (v[3]);
+    k->bulk = w > 255 ? 255 : w;
+    w = l->n > 8 ? atoi (v[8]) : 0;
+    k->cap_bulk = w > 255 ? 255 : w;
+    k->cap_weight = l->n > 9 ? pounds (v[9], 0xFFFF) : 0;
     k->mat = mat;
     k->craft = craft;
     k->value = atoi (v[7]);
@@ -181,7 +200,7 @@ static void __fastcall__ piece_line (struct line* l)
         return;
     }
     p->kind = k;
-    p->hide = l->n < 3 || !strcmp (v[2], "-") ? 0xFF : atoi (v[2]);
+    p->hide = l->n < 3 || !strcmp (v[2], "-") ? 0xFF : atoi (v[2]) > 30 ? 30 : atoi (v[2]);   /* (Steps, 30 at most) */
     p->qty = l->n > 3 && *v[3] ? atoi (v[3]) : 1;
     e = l->n > 4 && *v[4] && strcmp (v[4], "-") ? atoi (v[4]) : 0;
     if (e > TERAS) {
@@ -364,7 +383,7 @@ const char* __fastcall__ comp_line (struct line* l)
         return "no values";
     }
     if (!strcmp (k, "theme")) {
-        put (v[0], 4, 32);
+        put (v[0], (unsigned char*) T->name - R, sizeof T->name);
     } else if (!strcmp (k, "mission")) {
         R[1] = !strcmp (v[0], "both") ? 3 : !strcmp (v[0], "rule") ? 2 : !strcmp (v[0], "escape") ? 1 : 0;
         if (!R[1]) {
@@ -391,17 +410,17 @@ const char* __fastcall__ comp_line (struct line* l)
             return "eight words for rooms";
         }
         for (i = 0; i < 8; ++i) {
-            put (v[i], 212 + 16 * i, 16);
+            put (v[i], (unsigned char*) T->room[i] - R, sizeof T->room[0]);
         }
     } else if (!strcmp (k, "uses")) {
         if (l->n != TUSES) {
             return "twelve words for the uses";
         }
         for (i = 0; i < TUSES; ++i) {
-            put (v[i], 782 + 16 * i, 16);
+            put (v[i], (unsigned char*) T->uses[i] - R, sizeof T->uses[0]);
         }
     } else if (!strcmp (k, "light")) {
-        put (v[0], 340, 40);
+        put (v[0], (unsigned char*) T->light - R, sizeof T->light);
     } else if (!strcmp (k, "denizens")) {
         for (m = 0, c = strtok (v[0], " "); c; c = strtok (0, " ")) {
             if (!strcmp (c, "*")) {
@@ -485,8 +504,8 @@ const char* comp_end (void)
         }
     }
     for (k = 0; k < TUSES; ++k) {
-        if (!R[782 + 16 * k]) {
-            put (uses[k], 782 + 16 * k, 16);
+        if (!T->uses[k][0]) {                   /* (By the struct's fields: make.js's numbers move with it) */
+            put (uses[k], (unsigned char*) T->uses[k] - R, sizeof T->uses[0]);
         }
     }
     T->npieces = npieces;

@@ -373,7 +373,7 @@ static void goal_lines (void)
         strcat (w, "-");
         strcat (w, num (k));
         val (w);
-        val (random (3) ? "-" : num (2 + random (3)));
+        val (random (3) ? "-" : num (2 + 2 * random (3)));   /* (In plain view, or concealed: steps) */
         val ("1");
         valn (e + 1);
         end_line ();

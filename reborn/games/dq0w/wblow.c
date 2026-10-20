@@ -126,7 +126,7 @@ void s_blows (void)
             wk.hm = 15;
             wk.hs = part == PP_BARS ? 4 : 0;
             if ((out = batter (part == PP_GLASS ? 4 : part == PP_BARS ? PM_IRON : wk.pq.mat, part == PP_GLASS ? 1 :
-                part == PP_BARS ? part_body (PM_IRON, wk.pq.size, 1, wk.pq.qual) >> 1 : wk.pq.tough)) == 0) {
+                part == PP_BARS ? part_body (PM_IRON, wk.pq.size, TH_IN, wk.pq.qual) >> 1 : wk.pq.tough)) == 0) {
                 wk.pq.parts &= ~part;
                 door_state (wk.pq.state | PS_OPEN);
                 if (part != PP_SHUTTERS) {      /* (Its glass in shards at the character's feet; its bars broken out) */

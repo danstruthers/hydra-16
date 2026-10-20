@@ -1,11 +1,15 @@
 /*
 ** main.c - Dingus Quest Zero: the UI's task, its start and its loop.
 **
-** dq0 [-s seed] [-p pace] [-c file] [-d folder] [-k things] [-T [-T]]: -d keeps the game in a folder (on any card), and
-** carries on the game kept there if there is one; without it nothing's kept. the seed makes the same game each time (the dice: dice.h's rseed); the pace is
+** dq0 [-s seed] [-p pace] [-c file] [-d folder] [-k things] [-r rules] [-T [-T]]: -d keeps the game in a folder (on
+** any card), and carries on the game kept there if there is one; without it nothing's kept. the seed makes the same
+** game each time (the dice: dice.h's rseed); the pace is
 ** r, n, m (relaxed, normal, menacing: asked at the start if it isn't given) or t (turns: the world moves only as
-** the character acts, for tests); the file a character made already (hmchar's).  Without one, hmchar is run to make
-** one (in this window, the screen as it is outside the game while it runs), into /ram/dq0.hm.
+** the character acts, for tests); the file a character made already (the ruleset's: hmchar's).  Without one, the
+** ruleset's character generator (its referee names it: hmchar) is run to make one (in this window, the screen as it
+** is outside the game while it runs), into /ram/dq0.hm; a ruleset with none makes its own.  The rules: the ruleset's
+** name (RULESETS.md: harn, HarnMaster's, if none's given; null, flat odds), its referee libdir/dq0NAME (the save's: a
+** game carried on keeps its own).
 **
 ** The game is tasks that meet in the hub (hub.h): this one, the UI, makes it and starts the others (the world,
 ** libdir/dq0w; the referee, libdir/dq0harn: the rules, asked in rs.h's terms; the maker, libdir/dq0m: the
@@ -135,7 +139,7 @@ static void ovl_load (void)
     close (fd);
 }
 
-/* ---- The character: hmchar's, its file read by the referee */
+/* ---- The character: the ruleset's (hmchar's), its file read by the referee */
 
 /* A line written to the window's consctl: on an fd kept open (raw mode lasts while the consctl that set it is) */
 void __fastcall__ consctl (const char* what)
@@ -150,35 +154,37 @@ void __fastcall__ consctl (const char* what)
     }
 }
 
-/* hmchar run to make one (the console cooked for it, the screen whole: on the terminals the game's on), then its file
-** read */
-static char pcfile[64];
-
 #pragma code-name (push, "SW1CODE")
 #pragma rodata-name (push, "SW1RODATA")
 
-static void __fastcall__ character (const char* file, unsigned long seed)
+/* The character's file for the referee to read (RS_LOAD_PC's path, put in the UI's slot): file (-c's, or the save's);
+** else one the ruleset's character generator makes (maker, the referee's RS_HELLO names it: hmchar ...), run in this
+** window (the console cooked for it, the screen whole: on the terminals the game's on), its arguments -o FILE -s SEED;
+** else none (maker ""): the referee makes its own */
+static void __fastcall__ character (const char* file, unsigned long seed, const char* maker)
 {
     static char s[32] = "-o\0/ram/dq0.hm\0-s", s2[48];
     int task;
 
-    if (!file) {
+    if (!*file && *maker) {
         file = s + 3;                           /* (hmchar -o /ram/dq0.hm -s seed) */
+        strcpy (s2, gamedir);
+        strcat (s2, "/");
+        strcat (s2, maker);
         t_away ();
         consctl ("rawoff");
         ultoa (seed, s + 18, 10);
         s[19 + strlen (s + 18)] = 0;
-        strcpy (s2, gamedir);
-        strcat (s2, "/hmchar");
         task = hub_run (s2, s);
         if (task < 0 || hub_join (task)) {
             t_end ();
-            hy_exits ("dq0: hmchar didn't make a character");
+            hy_exits ("dq0: its character generator made none");
         }
         consctl ("rawon");
         t_init ();
     }
-    strcpy (pcfile, file);
+    hub_map (0);
+    strcpy (HUB->slot[SLOT_UI].text, file);
 }
 
 /* The referee's reply's text: its next line (cut at its \n), or NULL */
@@ -220,14 +226,13 @@ struct req* __fastcall__ ask_b (unsigned char kind, unsigned char a, unsigned ch
 #pragma code-name (push, "SW1CODE")
 #pragma rodata-name (push, "SW1RODATA")
 
-/* The character's file read by the referee: its name and its calling */
+/* The character's file read by the referee (its path in the slot already: character's): its name and its calling */
 static void load_pc (void)
 {
     struct req* r;
     char* at;
     char* l;
 
-    strcpy (HUB->slot[SLOT_UI].text, pcfile);
     r = referee (RS_LOAD_PC, 0);
     if (r->result) {
         t_end ();
@@ -269,7 +274,7 @@ static void sheet (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    10                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    12                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -285,11 +290,14 @@ static void sheet (void)
                                                 **   written back since the last are the save's only once it's
                                                 **   whole; 10, the old saves' readers gone, the last save's fields
                                                 **   the world's now with them: till the release, only a save of this
-                                                **   version is carried on) */
+                                                **   version is carried on; 11, the ruleset's referee: a game carried
+                                                **   on with the ruleset it was made with; 12, a thing's concealment
+                                                **   in steps, rs.h's scale) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
     unsigned long   seed;
+    char            referee[12];                /* The ruleset's referee (dq0 -r NAME's: dq0NAME) */
     struct pc       pc;
     struct quest    q;                          /* (Its theme, its puzzle, and its ending: a game done isn't carried
                                                 **   on, but a new one begun) */
@@ -416,12 +424,13 @@ static void __fastcall__ start (const char* name, unsigned char t, const char* m
 
 static void world_words (void);
 
-static void start_world (unsigned long seed)
+static void __fastcall__ start_world (unsigned long seed, const char* file)
 {
     struct req* r;
     unsigned char k;
     unsigned round;
     int w;
+    char* l;
 
     if (hub_create (HUB_BANKS)) {
         t_end ();
@@ -435,9 +444,11 @@ static void start_world (unsigned long seed)
     hub_map (0);
     start ("dq0c", T_COMMANDS, libdir);         /* (Its command parser: its tables read as the others start) */
     start ("dq0s", T_SOUND, libdir);            /* (Its sound: SOUND.md) */
-    start ("dq0harn", T_REFEREE, libdir);       /* (Its rules: its folder, for its overlay) */
+    start (sv.referee, T_REFEREE, libdir);      /* (Its rules, the ruleset's referee: its folder, for its overlay) */
     r = referee (RS_HELLO, 0);
     round = r->w1;                              /* (The ruleset's round, in tenths: the world's to keep) */
+    l = strchr (r->text, '\n');                 /* (Its name, then its character generator's: none, "") */
+    character (file, seed, l ? l + 1 : "");     /* (The character: its file, or the generator's) */
     r->state = REQ_FREE;
     load_pc ();                                 /* (Its senses the referee's, before the world looks through them) */
     if (savedir) {
@@ -588,7 +599,7 @@ static void __fastcall__ blow (const struct msg* m)
 
     msg (lb);
     if (HUB->pcsum.cond & C_DEAD) {
-        quit = 1;
+        end (END_DIED);                         /* (The game's end, as harm's is) */
     } else if (out) {
         intend2 (I_WAIT, out, 1);               /* (Out: the time it's senseless) */
     }
@@ -1020,8 +1031,8 @@ unsigned tx, ty;
 #define find(obj, orel) pick ((obj), (orel))
 
 /* A portal it sees looked at closely (the parser's thing, the way it lies): the world's record of it (the hub's
-** wreq, WQ_EXAMINE: a doorway has none), judged by the craft that knows its material (the referee's test: wood
-** Timbercraft, iron Metalcraft, stone Masonry), in words (overlay 4); a few seconds' looking */
+** wreq, WQ_EXAMINE: a doorway has none), judged by the craft that knows its material (the referee's test,
+** P_APPRAISE: AP_WOOD, AP_METAL, AP_STONE), in words (overlay 4); a few seconds' looking */
 static void __fastcall__ inspect (unsigned char obj, unsigned char orel)
 {
     struct req* r;
@@ -1051,8 +1062,8 @@ static void __fastcall__ inspect (unsigned char obj, unsigned char orel)
     intend2 (I_WAIT, 50, 1);
 }
 
-/* A thing hidden where the character stands (Concealment: the referee's test, the things' record), worded by how
-** well */
+/* A thing hidden where the character stands (P_CONCEAL: the referee's test, the things' record), worded by how
+** well (its difficulty, in steps) */
 static void __fastcall__ hide (const char* w)
 {
     unsigned char d;
@@ -1061,7 +1072,7 @@ static void __fastcall__ hide (const char* w)
         tell (T_HIDE_WHAT_HIDING);
     } else if (things (IO_HIDE, w) == IR_OK) {
         d = HUB->ireq.qty;
-        tell (d >= 6 ? T_HID_CUNNINGLY : d >= 3 ? T_HID_WELL : T_HID_POORLY);
+        tell (d >= 10 ? T_HID_CUNNINGLY : d >= 4 ? T_HID_WELL : T_HID_POORLY);
         to_hand ();
         intend2 (I_WAIT, 600, 1);
     } else {
@@ -1400,7 +1411,7 @@ portal:
             tell (T_YOU_CARRY_NONE);
         }
         return;
-    case V_HIDE:                                /* (Concealment: a thing; oneself comes with the denizens) */
+    case V_HIDE:                                /* (P_CONCEAL: a thing; oneself comes with the denizens) */
         hide (c.word);
         return;
     case V_HOLD:
@@ -1460,7 +1471,8 @@ static unsigned long seed;                      /* (Its seed: the clock's, as th
 
 void __fastcall__ s_begin (int argc, char* argv[])
 {
-    const char* file = 0;
+    const char* file = "";
+    const char* rules = "harn";                 /* (The ruleset, if none's given: HarnMaster's) */
     unsigned char i;
     char* l;
 
@@ -1480,12 +1492,14 @@ void __fastcall__ s_begin (int argc, char* argv[])
                                                 **   the theme's first piece; three times, four strata down) */
         } else if (!strcmp (argv[i], "-c") && i + 1 < argc) {
             file = argv[++i];
+        } else if (!strcmp (argv[i], "-r") && i + 1 < argc) {
+            rules = argv[++i];                  /* (The ruleset, by its name: its referee dq0NAME) */
         } else if (!strcmp (argv[i], "-p") && i + 1 < argc) {
             ++i;
             pace = argv[i][0] == 'r' ? PACE_RELAXED : argv[i][0] == 'm' ? PACE_MENACING :
                 argv[i][0] == 't' ? PACE_TURNS : PACE_NORMAL;
         } else {
-            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d folder] [-k things] [-T [-T]] [-C]");
+            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d folder] [-k things] [-r rules] [-T [-T]] [-C]");
         }
     }
     if (savedir && !load_save ()) {             /* (A game kept there: carried on) */
@@ -1499,12 +1513,16 @@ void __fastcall__ s_begin (int argc, char* argv[])
     } else if (savedir) {
         mkdir (savedir, 0755);                  /* (A new game: its folder) */
     }
+    if (!resumed) {                             /* (Its ruleset's referee: a game carried on keeps its own) */
+        strcpy (sv.referee, "dq0");             /* (strncpy, not strncat: the library's in the main RAM) */
+        strncpy (sv.referee + 3, rules, sizeof sv.referee - 4);
+        sv.referee[sizeof sv.referee - 1] = 0;
+    }
     rseed (seed);
     signal (SIGINT, interrupted);
     t_init ();
     title ();
-    character (file, seed);
-    start_world (seed);
+    start_world (seed, file);                   /* (The character with it: its file, or the ruleset's generator) */
     status ();
     story (resumed);                            /* (The theme's) */
     blank ();

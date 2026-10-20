@@ -330,7 +330,8 @@ static unsigned char defence (void)
 static void attack (void)
 {
     unsigned char z = R->a == Z_HIGH ? HARN_HIGH : R->a == Z_LOW ? HARN_LOW : HARN_MID, def, al, dl, res, n, k, ab;
-    int mod = 5 * (signed char) R->steps, dmod = -10 * (int) R->c;
+    int mod = STEP_PCT * (signed char) R->steps, dmod = -2 * STEP_PCT * (int) R->c;   /* (Outnumbered: two steps
+                                                **   worse each one more) */
 
     R->a = 0;
     R->c = 0;
@@ -352,10 +353,10 @@ static void attack (void)
     }
     def = defence ();
     if (z != HARN_MID && def != HARN_IGNORE) {
-        mod -= 10;                              /* (Aimed high or low: Ignore's free) */
+        mod -= 2 * STEP_PCT;                    /* (Aimed high or low, two steps: Ignore's free) */
     }
     if (is_prone (&D)) {
-        mod += 20;
+        mod += 4 * STEP_PCT;                    /* (Prone, four steps the easier) */
     }
     al = harn_test (A.aml + mod);
     dl = def == HARN_IGNORE ? 0 : harn_test ((def == HARN_COUNTER ? D.aml : def == HARN_DODGE ? D.dodge : D.dml) +
@@ -475,7 +476,7 @@ static unsigned char __fastcall__ courage (const struct bkind* b, signed char st
     if (b->flags & BF_MINDLESS) {
         return M_STEADY;                        /* (Bones fear nothing) */
     }
-    lv = harn_test (b->ini - 5 * harn_get_pp (&cr) + 5 * steps);
+    lv = harn_test (b->ini - 5 * harn_get_pp (&cr) + STEP_PCT * steps);
     R->grade = lv == HARN_CF ? G_CF : lv == HARN_MF ? G_MF : lv == HARN_MS ? G_MS : G_CS;
     if (lv == HARN_MF) {
         return M_CAUTIOUS;

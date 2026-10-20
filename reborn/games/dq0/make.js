@@ -9,9 +9,10 @@
 const fs = require('fs');
 const path = require('path');
 
-const THEME_SIZE = 0x1000, HEAD = 1297, NTKINDS = 8, NPIECES = 8, NRULES = 8, TSTRATA = 8;   // theme.h's
+const THEME_SIZE = 0x1000, HEAD = 1305, NTKINDS = 8, NPIECES = 8, NRULES = 8, TSTRATA = 8;   // theme.h's
 const TLAYERS = 3, TERAS = 6, TFACTIONS = 8, TPEOPLES = 8;
-const KIND = 36;                                                    // items.h's struct kind
+const KIND = 37;                                                    // items.h's struct kind
+const WT_LB = 4, SQ_FT = 5;                                         // rs.h's units: a pound's quarters, a square's feet
 const STYLES = { b: 0, n: 1, m: 2, x: 3 };                          // level.h's ST_*
 const WAYS = { c: [0, 0x01], h: [0, 0x10], t: [0, 0x90], w: [0, 0x08], g: [0, 0x20], p: [0, 0x40],
   s: [1, 0x10], f: [1, 0x80] };                                     // items.h's K_* (0), KF_* (1: its keeps)
@@ -74,6 +75,11 @@ function compile(text, f, beasts, count) {
     if (s.length >= max) bad(l, `"${s}" is longer than ${max - 1}`);
     b.write(s, at, 'latin1');
   };
+  const num = (l, s, per, max, what) => {                           // A value in rs.h's unit: the data's (pounds,
+    const n = +(s || 0) * per;                                      //   feet, pints, steps) made the game's, once
+    if (!Number.isInteger(n) || n < 0) bad(l, `${what}: ${s}?`);
+    return Math.min(n, max);
+  };
   const range = (l, s) => {                                         // "first-last" (or one): [first, last]
     const d = String(s || '').split('-').map(Number);
     if (d.length === 1) d.push(d[0]);
@@ -91,7 +97,7 @@ function compile(text, f, beasts, count) {
       case 'mission':
         b[1] = t.mission = v[0] === 'both' ? 3 : v[0] === 'rule' ? 2 : v[0] === 'escape' ? 1 : bad(l, 'escape, rule or both');
         break;
-      case 'story': b.writeUInt16LE(text_(l, v[0]), 768); break;
+      case 'story': b.writeUInt16LE(text_(l, v[0]), 776); break;
       case 'stratum':
         if (strata.length >= TSTRATA || !/^[bnmx]{1,2}$/.test(v[1] || '')) bad(l, 'a name, and one or two styles');
         if (v[2] && !/^(halls|keep|temple|cellars|crypt|works)( fortified| open)?$/.test(v[2])) {
@@ -119,7 +125,7 @@ function compile(text, f, beasts, count) {
         break;
       }
       case 'kind': {
-        if (kinds.length >= NTKINDS || v.length < 8) bad(l, 'a kind: name, ways, weight, bulk, size, ...');
+        if (kinds.length >= NTKINDS || v.length < 8) bad(l, 'a kind: name, ways, weight, bulk, how far seen, ...');
         const at = 384 + KIND * kinds.length, mat = MATS.indexOf(v[5]), craft = CRAFTS.indexOf(v[6]);
         if (mat < 0 || craft < 0) bad(l, 'its material or its craft');
         str(l, v[0], at, 14);
@@ -132,33 +138,35 @@ function compile(text, f, beasts, count) {
           flags |= 0x01;
           keeps |= 0x03;
         }
+        if (+v[4] % SQ_FT) bad(l, `how far off it's made out: feet, a square's ${SQ_FT} each`);
         b[at + 14] = flags;
-        b[at + 15] = Math.min(255, 4 * +v[2]);
-        b[at + 16] = +v[3];
-        b[at + 17] = +(v[8] || 0);
-        b[at + 18] = +(v[9] || 0);
-        b[at + 21] = +v[4];
-        b[at + 30] = mat;
-        b[at + 31] = craft;
-        b.writeUInt16LE(+v[7], at + 32);
-        b[at + 34] = keeps;
+        b[at + 15] = num(l, v[2], WT_LB, 255, 'its weight, pounds (to a quarter)');
+        b[at + 16] = num(l, v[3], 1, 255, 'its bulk, pints');
+        b[at + 17] = num(l, v[8], 1, 255, 'its room, pints');
+        b.writeUInt16LE(num(l, v[9], WT_LB, 0xFFFF, 'the weight it bears, pounds (to a quarter)'), at + 18);
+        b[at + 22] = num(l, v[4], 1, 15 * SQ_FT, 'how far off it\'s made out, feet') / SQ_FT;   // (Squares)
+        b[at + 31] = mat;
+        b[at + 32] = craft;
+        b.writeUInt16LE(num(l, v[7], 1, 0xFFFF, 'its worth, pennies'), at + 33);
+        b[at + 35] = keeps;
         kinds.push(v[0]);
         t.kinds.push({ name: v[0], fixed: (keeps & 0x80) !== 0 });
         break;
       }
       case 'piece': {
-        const k = kinds.indexOf(v[0]), d = (v[1] || '').split('-').map(Number), at = 672 + 5 * npieces;
+        const k = kinds.indexOf(v[0]), d = (v[1] || '').split('-').map(Number), at = 680 + 5 * npieces;
         if (npieces >= NPIECES || k < 0 || d.length !== 2 || !(d[0] <= d[1])) bad(l, 'a piece: kind, strata ...');
-        [k, d[0], d[1], v[2] === '-' ? 0xFF : +v[2], +(v[3] || 1)].forEach((x, i) => { b[at + i] = x; });
+        [k, d[0], d[1], v[2] === '-' ? 0xFF : num(l, v[2], 1, 30, 'concealed, steps'), +(v[3] || 1)]
+          .forEach((x, i) => { b[at + i] = x; });
         const era = v[4] && v[4] !== '-' ? +v[4] : 0;
         if (!Number.isInteger(era) || era > TERAS) bad(l, `its era ${v[4]}`);
-        b[1104 + npieces] = era;
+        b[1112 + npieces] = era;
         t.pieces.push({ kind: k, d0: d[0], d1: d[1], qty: +(v[3] || 1), era, guard: v[5] && v[5] !== '-' ? v[5] : null, l, i: npieces });
         ++npieces;
         break;
       }
       case 'rule': {
-        const verb = TR.indexOf(v[0]), at = 712 + 7 * nrules, kind = s => {
+        const verb = TR.indexOf(v[0]), at = 720 + 7 * nrules, kind = s => {
           const k = kinds.indexOf(s);
           if (k < 0) bad(l, `no kind ${s} of the theme's`);
           return k;
@@ -178,11 +186,11 @@ function compile(text, f, beasts, count) {
         ++nrules;
         break;
       }
-      case 'lock': b.writeUInt16LE(text_(l, v[0]), 770); break;
-      case 'opened': b.writeUInt16LE(text_(l, v[0]), 772); break;
+      case 'lock': b.writeUInt16LE(text_(l, v[0]), 778); break;
+      case 'opened': b.writeUInt16LE(text_(l, v[0]), 780); break;
       case 'ending':
         if (!ENDS[v[0]]) bad(l, 'an ending: escaped, ruled or died');
-        b.writeUInt16LE(text_(l, v[1]), 774 + 2 * ENDS[v[0]]);
+        b.writeUInt16LE(text_(l, v[1]), 782 + 2 * ENDS[v[0]]);
         break;
       // ---- The history (HISTORY.md): the record keeps what the engine builds by; the rest is the file's to read
       case 'seed': case 'region': break;
@@ -195,7 +203,7 @@ function compile(text, f, beasts, count) {
         if (eras.length >= TERAS || p < 0 || w < 0 || e < 0 || !(+v[3] >= 0 && +v[3] <= 255)) {
           bad(l, 'an era: a people of the theme\'s, what they made, how it ended, how long ago (centuries)');
         }
-        const at = 1074 + 5 * eras.length;
+        const at = 1082 + 5 * eras.length;
         [p, peoples[p].tongue, w, e, +v[3]].forEach((x, i) => { b[at + i] = x; });
         eras.push({ people: p, work: w, end: e, ago: +v[3] });
         break;
@@ -220,7 +228,7 @@ function compile(text, f, beasts, count) {
         if (ks.some(k => k < 0)) bad(l, `no kind ${v[1]} in dq0d/kinds.txt`);
         const [d0, d1] = range(l, v[2]), lead = v[4] === '-' ? 0 : keys.indexOf(v[4]) + 1;
         if (lead < 0 || !(+v[3] >= 0 && +v[3] <= 255) || !(+v[5] >= 0 && +v[5] <= 255) || !(v[6] in AT)) bad(l, 'its number, its leader (a kind, or -), its lair (a stratum), its attitude (h u w i f)');
-        const at = 1121 + 22 * factions.length;
+        const at = 1129 + 22 * factions.length;
         b.write(v[0], at, 'latin1');
         b.writeUInt32LE(ks.reduce((m, k) => m | 1 << (k + 1), 0) >>> 0, at + 12);
         [d0, d1, +v[5], +v[3], lead, AT[v[6]]].forEach((x, i) => { b[at + 16 + i] = x; });
@@ -250,26 +258,26 @@ function compile(text, f, beasts, count) {
     const p = (s[2] || 'halls').split(' ');                         // (Its purpose: a keep fortified, unless open)
     let purpose = PURPOSES.indexOf(p[0]) | (p[1] === 'fortified' || (p[0] === 'keep' && p[1] !== 'open') ? 0x80 : 0);
     for (const y of ls) if (y.did !== 1) purpose = y.work;          // (Its layers' last built or reused, if it has any)
-    b[974 + k] = purpose;
-    b[993 + k] = ls.length;
-    ls.forEach((y, i) => { [y.era, y.did, y.work].forEach((x, j) => { b[1001 + 9 * k + 3 * i + j] = x; }); });
+    b[982 + k] = purpose;
+    b[1001 + k] = ls.length;
+    ls.forEach((y, i) => { [y.era, y.did, y.work].forEach((x, j) => { b[1009 + 9 * k + 3 * i + j] = x; }); });
     const old = ls.find(y => y.era);                                // (Its age: its oldest layer's era's, else the dice)
-    b[985 + k] = old ? Math.min(255, eras[old.era - 1].ago + 1) : 0;
+    b[993 + k] = old ? Math.min(255, eras[old.era - 1].ago + 1) : 0;
   }
   uses.forEach((w, k) => {
     if (w.length >= 16) throw new Error(`${f}: "${w}" is longer than 15`);
-    b.write(w, 782 + 16 * k, 'latin1');
+    b.write(w, 790 + 16 * k, 'latin1');
   });
   b[2] = npieces;
   b[3] = nrules;
   if (t.goal) {
-    b[982] = t.goal.kind;
-    b[983] = t.goal.sn;
-    b[984] = t.goal.guard ? faction(t.goal.l, t.goal.guard) : 0;
+    b[990] = t.goal.kind;
+    b[991] = t.goal.sn;
+    b[992] = t.goal.guard ? faction(t.goal.l, t.goal.guard) : 0;
   }
-  for (const p of t.pieces) b[1112 + p.i] = p.guard ? faction(p.l, p.guard) : 0;
-  b[1073] = eras.length;
-  b[1120] = factions.length;
+  for (const p of t.pieces) b[1120 + p.i] = p.guard ? faction(p.l, p.guard) : 0;
+  b[1081] = eras.length;
+  b[1128] = factions.length;
   if (dens === null) dens = factions.reduce((m, x) => x.kinds.reduce((a, k) => a | 1 << (k + 1), m), 0) >>> 0;
   b.writeUInt32LE(dens, 380);
   return { data: b, used: words, t };

@@ -86,7 +86,8 @@ void __fastcall__ o_harm (struct req* r)
 {
     static harn_injury d;
     struct rs_effect* e = (struct rs_effect*) r->x;
-    unsigned char how = 0, aspect, zone = HARN_MID, n = pc.ninj, k, w, loc = 0xFF;
+    unsigned char how = 0, aspect, zone = HARN_MID, n = pc.ninj, w, loc = 0xFF;
+    unsigned k;                                 /* (The rounds senseless: up to 360) */
     int impact;
 
     memset (r->x, 0, sizeof r->x);
@@ -139,8 +140,8 @@ void __fastcall__ o_harm (struct req* r)
     } else if (w & HARN_W_INJURED) {
         told (&pc.inj[pc.ninj - 1], pc.inj[pc.ninj - 1].sev, e);
         r->b = e->band;
-        if ((w & HARN_W_STUMBLE) && harn_stumble_roll (&pc, 0)) {
-            e->cond |= C_PRONE;                 /* (A leg's: fallen) */
+        if ((w & HARN_W_STUMBLE) && ((w & HARN_W_LIMB) || harn_stumble_roll (&pc, 0))) {
+            e->cond |= C_PRONE;                 /* (A leg's: fallen; a grievous one at once, Combat 14) */
         }
     } else if (how & HARN_FALL_WRENCHED) {
         r->b = HARN_MINOR;
@@ -269,34 +270,18 @@ void o_brief (void)
     pair ("IP ", harn_get_ip (&pc), "BL ", pc.bl);
 }
 
-/* ---- What the character notices, by its state (DUNGEON.md: moving; the game's steps): its pace as it moves (a creep
-** or a slow walk a step better, but not by feel in the dark; a jog two worse, a run four, a sprint six); in shock four
-** worse (the book's universal penalty, its injuries' and its fatigue's, is in every test already); listening, a sound
-** two better.  A hazard underfoot (P_NOTICE_SIGHT's b 1, its steps the hiding's) by a search's chance while it
-** searches as it goes, else a passing glance's: twice its hiding's steps, and two more (r a copy; the hub's pace and
-** watchfulness in ps) */
+/* ---- What the character notices, by its state (DUNGEON.md: moving; the game's steps): its pace as it moves, its
+** listening, a hazard underfoot by a glance or a search (the house's, every referee's: rshouse.h's house_notice); in
+** shock four worse (the book's universal penalty, its injuries' and its fatigue's, is in every test already) (r a
+** copy; the hub's pace and watchfulness in ps) */
 
-static const signed char by_pace[NGAITS] = { 1, 1, 0, -2, -4, -6 };
+#define RS_HOUSE_NOTICE                         /* (The pace's and the watchfulness's: every referee's) */
+#define RS_HOUSE_STATE
+#include "../dq0/rshouse.h"
 
 signed char __fastcall__ o_noticing (const struct req* r)
 {
-    unsigned char g = ps.go & ~GOING_DARK;
-    signed char s = 0, p;
-
-    if (r->a == P_NOTICE_SIGHT && r->b == 1 && !(ps.watch & WA_TRAPS)) {
-        s = r->steps - 2;
-    }
-    if (g && g <= NGAITS) {
-        p = by_pace[g - 1];
-        s += p > 0 && (ps.go & GOING_DARK) ? 0 : p;
-    }
-    if (pc.state == HARN_SHOCK) {
-        s -= 4;
-    }
-    if (r->a == P_NOTICE_SOUND && (ps.watch & WA_LISTEN)) {
-        s += 2;
-    }
-    return s;
+    return house_notice (r, ps.go, ps.watch) - (pc.state == HARN_SHOCK ? 4 : 0);
 }
 
 /* ---- Fatigue (DUNGEON.md: moving; the book's movement fatigue, Combat 6: a level a day walking, one each five
@@ -352,9 +337,9 @@ void __fastcall__ o_spent (unsigned t)
 
 /* ---- The character's state (the status command's: RS_DESCRIBE b 3, ps's): its pace, what it's held to and its feet
 ** a round (the book's rates of its Move, Combat 6; the game's two slower), its watchfulness; then (all of it) its
-** condition (its health, its injuries in brief, its fatigue and its load, the penalties they make) and its light */
+** condition (its health, its injuries in brief, its fatigue and its load, the penalties they make) and its light (the
+** pace's, the watchfulness's and the light's words the house's, every referee's: rshouse.h's) */
 
-static const char* const pace_name[NGAITS] = { "a creep", "a slow walk", "a walk", "a jog", "a run", "a sprint" };
 static const unsigned char feet[NGAITS][2] = { { 5, 6 }, { 5, 4 }, { 5, 2 }, { 5, 1 }, { 10, 1 }, { 15, 1 } };
 
 static void __fastcall__ penalty (unsigned char n, const char* a, const char* b, const char* c, const char* what)
@@ -371,30 +356,14 @@ static void __fastcall__ penalty (unsigned char n, const char* a, const char* b,
 
 void o_state (void)
 {
-    unsigned char g = ps.gait, h = g, k, worst = 0, bleed = 0;
+    unsigned char h, k, worst = 0, bleed = 0;
     const harn_injury* j;
 
-    if (h > GA_SLOW && ((ps.watch & (WA_TRAPS | WA_MAP)) || ps.dark)) {
-        h = GA_SLOW;
-    } else if (h > GA_WALK && (ps.watch & WA_LISTEN)) {
-        h = GA_WALK;
-    }
-    put ("Pace: ");
-    put (pace_name[g]);
-    if (h != g) {
-        put (", held to ");
-        put (pace_name[h]);
-        put (ps.watch & WA_TRAPS ? " while you search as you go" : ps.watch & WA_MAP ? " while you map as you go" :
-            ps.dark && h == GA_SLOW ? " in the dark" : " while you listen");
-    }
+    h = house_pace (ps.gait, ps.watch, ps.dark);    /* (The pace's words, every referee's: rshouse.h) */
     put (" (");
     putn (harn_move (&pc) * feet[h][0] / feet[h][1]);
-    put (" feet a round).\nWatching: ");
-    put (!ps.watch ? "nothing in particular" : ps.watch & WA_TRAPS ? "for traps and hidden doors as you go" : "");
-    put ((ps.watch & WA_TRAPS) && (ps.watch & (WA_LISTEN | WA_MAP)) ? "; " : "");
-    put (ps.watch & WA_LISTEN ? (ps.watch & WA_MAP ? "listening and mapping as you go" : "listening as you go") :
-        ps.watch & WA_MAP ? "mapping as you go" : "");
-    put (".");
+    put (" feet a round)");
+    house_watching (ps.watch);
     if (!ps.full) {
         return;
     }
@@ -429,14 +398,6 @@ void o_state (void)
     putn (harn_get_up (&pc));
     put (", physical ");
     putn (harn_get_pp (&pc));
-    put (".\nLight: ");
-    if (ps.light) {
-        put ("your ");
-        put (ps.lamp);
-        put (" (");
-        putn (5 * ps.light);
-        put (" feet).");
-    } else {
-        put (ps.dark ? "none: it's dark here, and you feel your way." : "none of your own: this place's own light.");
-    }
+    put (".");
+    house_light (ps.light, ps.lamp, ps.dark);
 }

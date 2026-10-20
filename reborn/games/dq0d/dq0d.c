@@ -93,7 +93,7 @@ struct dkind {
 #define K_LAIR          0x02                    /* It keeps to its lair */
 #define K_WAYS          0x04                    /* Its lairs are by the stratum's ways in and out */
 #define K_BOLD          0x08                    /* It comes towards the character */
-enum { M_MINDLESS, M_BEAST, M_LOW, M_AVERAGE, M_CUNNING };   /* Its mind: nothing sways it; Animalcraft only; easily
+enum { M_MINDLESS, M_BEAST, M_LOW, M_AVERAGE, M_CUNNING };   /* Its mind: nothing sways it; P_ANIMALS only; easily
                                                 **   fooled, hard to reason with; neither; hard to fool */
 #define KINDS           ((struct dkind*) 0x8000)
 typedef char dkind_fits[sizeof (struct dkind) == 40 ? 1 : -1];     /* (make.js's records) */
@@ -928,7 +928,7 @@ static void hear (void)
     settle ();
 }
 
-/* ---- Fights (the referee's, RS_ATTACK: HarnMaster's melee): the world's to strike, every blow.  A hostile actor
+/* ---- Fights (the referee's, RS_ATTACK: the ruleset's melee): the world's to strike, every blow.  A hostile actor
 ** beside the character, sensing it, strikes at it a round at a time (its intent, I_ATTACK: the referee's round), as
 ** the character strikes at one (the world's own, I_ATTACK: the hub's pc_foe); each blow told (E_FIGHT, in the
 ** denizens' events: its words in their ring, FIGHT_AT, the world's, for the UI; played, the sound task's) and what it
@@ -948,8 +948,8 @@ static void __fastcall__ kill (unsigned char k)
     HUB->actor[k].name[0] = 0;
 }
 
-/* Actor k fallen (dead, senseless): its kin among the actors test their courage (RS_MORALE, a bad situation: the book's
-** "seeing a friend slain", Combat 18), and those it breaks (or shakes, a shy kind) flee */
+/* Actor k fallen (dead, senseless): its kin among the actors test their courage (RS_MORALE, a bad situation, two
+** steps worse: a friend seen slain), and those it breaks (or shakes, a shy kind) flee */
 static void __fastcall__ dismay (unsigned char k)
 {
     unsigned char j;
@@ -1497,7 +1497,7 @@ void __fastcall__ s_harmed (unsigned char k)
     }
 }
 
-/* Words to sway actor k (sw's how): by its mind (nothing sways the mindless; an animal only by Animalcraft, within
+/* Words to sway actor k (sw's how): by its mind (nothing sways the mindless; an animal only by P_ANIMALS, within
 ** reach), in its faction's tongue (but a threat), a test of the referee's (P_PERSUADE, P_DECEIVE, P_INTIMIDATE,
 ** P_ANIMALS) at steps by its attitude, its kind and its mind; the attitude moved by the grade, as far as that way of
 ** swaying goes (a critical success two steps, a success one, a critical failure a step back: a lie found out two, a

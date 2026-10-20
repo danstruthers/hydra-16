@@ -19,7 +19,8 @@ struct style {
     unsigned char   glow;                       /* (Caves) a chamber with a glow: in 10 */
     unsigned char   things;                     /* A thing in a room (two tries): in 20 */
     unsigned char   hidden;                     /*   concealed: in 20 */
-    unsigned char   h_lo, h_span;               /*   how well: a difficulty from h_lo, h_span of them (0-9) */
+    unsigned char   h_lo, h_span;               /*   how well: a difficulty (steps) from h_lo, two more for each of
+                                                **   h_span grades */
     unsigned char   kinds[8];                   /* What's lying about (items.h's KI_*) */
     unsigned char   hide_kinds[4];              /* What's concealed */
     unsigned char   f_earth, p_earth;           /* (fixtures.c) A room's floor bare earth (else flagged; a cave's

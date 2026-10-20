@@ -95,16 +95,16 @@ ended    | flooded | until the water broke in from below and drowned it
 ended    | cursed | until %N's curse fell on them, and their dead would not lie still
 ended    | held | and it is theirs still
 
-clue     | keep | worn plaque | f | 20 | 4 | 3 | bronze | metal | 0 | The plaque is cast in the letters of %P.  You
+clue     | keep | worn plaque | f | 20 | 4 | 15 | bronze | metal | 0 | The plaque is cast in the letters of %P.  You
            make out enough of it: %W.
-clue     | temple | carved slab | f | 400 | 100 | 6 | stone | stone | 0 | The slab is carved in the letters of %P.  You
+clue     | temple | carved slab | f | 400 | 100 | 30 | stone | stone | 0 | The slab is carved in the letters of %P.  You
            make out enough of it: %W.
-clue     | mine | tally stone | - | 6 | 3 | 2 | stone | stone | 0 | The stone is scratched with %P's tallies, and
+clue     | mine | tally stone | - | 6 | 3 | 10 | stone | stone | 0 | The stone is scratched with %P's tallies, and
            under them, in their letters: %W.
-clue     | tomb | grave slab | f | 400 | 100 | 6 | stone | stone | 0 | The slab is cut with the names of the dead of
+clue     | tomb | grave slab | f | 400 | 100 | 30 | stone | stone | 0 | The slab is cut with the names of the dead of
            %P, and a line under them: %W.
-clue     | town | ledger | - | 2 | 2 | 1 | other | book | 5 | The ledger's last pages are in the hand of %P: %W.
-clue     | hold | rune pillar | f | 800 | 200 | 7 | stone | stone | 0 | The pillar is cut with the runes of %P, round
+clue     | town | ledger | - | 2 | 2 | 5 | other | book | 5 | The ledger's last pages are in the hand of %P: %W.
+clue     | hold | rune pillar | f | 800 | 200 | 35 | stone | stone | 0 | The pillar is cut with the runes of %P, round
            and round it: %W.
 
 rooms    | default | chamber | hall | cell | vault | crypt | gallery | cave | storeroom

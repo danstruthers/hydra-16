@@ -240,7 +240,7 @@ static void __fastcall__ door (unsigned char x, unsigned char y, int z)
     p->state = k < SP->d_open ? PS_OPEN : 0;    /* (By the style's proportions) */
     p->lock = 0;
     if (k >= 20 - SP->d_locked - SP->d_barred && k < 20 - SP->d_barred) {
-        p->lock = 1 + dr (5);
+        p->lock = 2 + 2 * dr (5);              /* (Its difficulty: 2 a simple lock ... 10 a sound one) */
         p->state = PS_LOCKED;
     } else if (k >= 20 - SP->d_barred) {
         p->state = PS_BARRED;

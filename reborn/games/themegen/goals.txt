@@ -23,18 +23,18 @@
 #   and the theme's lines: kind, piece, rule, story (said after the history's words), lock, opened, ending
 
 goal     | artifact | escape | built
-thing    | a | the Crown of %N | gold crown | w | 3 | 2 | 2 | other | jewel | 2000
-thing    | a | the Horn of %N | silver horn | h | 2 | 2 | 2 | silver | jewel | 900
-thing    | a | the Sceptre of %N | sceptre | h | 3 | 2 | 2 | silver | jewel | 1500
-thing    | a | the Cup of %N | jade cup | h | 1 | 1 | 1 | stone | jewel | 800
-thing    | a | the Mask of %N | bronze mask | w | 2 | 2 | 2 | bronze | jewel | 700
-thing    | a | the Book of %N | iron book | h | 6 | 3 | 2 | iron | book | 600
+thing    | a | the Crown of %N | gold crown | w | 3 | 2 | 10 | other | jewel | 2000
+thing    | a | the Horn of %N | silver horn | h | 2 | 2 | 10 | silver | jewel | 900
+thing    | a | the Sceptre of %N | sceptre | h | 3 | 2 | 10 | silver | jewel | 1500
+thing    | a | the Cup of %N | jade cup | h | 1 | 1 | 5 | stone | jewel | 800
+thing    | a | the Mask of %N | bronze mask | w | 2 | 2 | 10 | bronze | jewel | 700
+thing    | a | the Book of %N | iron book | h | 6 | 3 | 10 | iron | book | 600
 called   | %A
 title    | the Quest for %A
 title    | %A
-kind     | journal | - | 1 | 1 | 1 | other | book | 5
+kind     | journal | - | 1 | 1 | 5 | other | book | 5
 piece    | journal | 0-0 | - | 1
-piece    | %a | %s-%s | 4 | 1 | %E | %G
+piece    | %a | %s-%s | 6 | 1 | %E | %G
 rule     | read | journal | The journal is a seeker's, %M's, its last pages scrawled in haste: "%A is down there,
            in %S, among the works of %P.  %g keep it.  The door above won't let me out without it: the old wards
            answer to nothing else."
@@ -50,16 +50,16 @@ ending   | escaped | You climb out into the daylight with %A in your hands.  Beh
 ending   | died | %A stays where it lies, and you with it.
 
 goal     | evil | rule | cursed
-thing    | a | the Bell of %M | silver bell | h | 3 | 2 | 2 | silver | jewel | 400
-thing    | a | the Staff of %M | white staff | t | 4 | 4 | 3 | wood | wood | 200
-thing    | a | the Lamp of %M | holy lamp | h | 3 | 2 | 2 | bronze | metal | 300
-thing    | b | the altar of %N | black altar | sf | 400 | 400 | 8 | stone | stone | 0 | 60 | 400
-thing    | b | the idol of %N | bone idol | sf | 300 | 200 | 7 | bone | bone | 0 | 20 | 300
+thing    | a | the Bell of %M | silver bell | h | 3 | 2 | 10 | silver | jewel | 400
+thing    | a | the Staff of %M | white staff | t | 4 | 4 | 15 | wood | wood | 200
+thing    | a | the Lamp of %M | holy lamp | h | 3 | 2 | 10 | bronze | metal | 300
+thing    | b | the altar of %N | black altar | sf | 400 | 400 | 40 | stone | stone | 0 | 60 | 400
+thing    | b | the idol of %N | bone idol | sf | 300 | 200 | 35 | bone | bone | 0 | 20 | 300
 called   | %B
 title    | the Curse of %N
-kind     | old scroll | - | 1 | 1 | 1 | other | book | 20
+kind     | old scroll | - | 1 | 1 | 5 | other | book | 20
 piece    | old scroll | %u-%u | - | 1 | %e
-piece    | %a | %u-%u | 3 | 1 | %e
+piece    | %a | %u-%u | 4 | 1 | %e
 piece    | %b | %s-%s | - | 1 | %E | %G
 rule     | read | old scroll | The scroll is %M's, who fought %N's curse and lost: "%B is where the curse was
            made, in %S.  Lay %A upon it, and it will be broken, and the dead of %P will sleep."
@@ -73,13 +73,13 @@ ending   | ruled | %N's curse is broken, and %R are free of it.  The way out ope
 ending   | died | You join the dead of %P, and walk the dark with them.
 
 goal     | prisoner | escape | lair
-thing    | a | the key to the chains | shackle key | - | 1 | 0 | 1 | iron | metal | 10
-thing    | b | %M | chained man | sf | 150 | 100 | 6 | other | cloth | 0 | 10 | 50
-thing    | b | %M | chained woman | sf | 120 | 90 | 6 | other | cloth | 0 | 10 | 40
+thing    | a | the key to the chains | shackle key | - | 1 | 0 | 5 | iron | metal | 10
+thing    | b | %M | chained man | sf | 150 | 100 | 30 | other | cloth | 0 | 10 | 50
+thing    | b | %M | chained woman | sf | 120 | 90 | 30 | other | cloth | 0 | 10 | 40
 called   | %M
 title    | the Rescue of %M
 piece    | %b | %s-%s | - | 1 | - | %G
-piece    | %a | %s-%s | 3 | 1 | - | %G
+piece    | %a | %s-%s | 4 | 1 | - | %G
 rule     | put | %a | %b | open | You turn the key in the shackles, and they fall away.  %M stands, stiff, and
            whispers: "There's another way up, the old stair the guards use.  Follow me."  Far above, stone grinds on
            stone: a way out is open.
@@ -92,7 +92,7 @@ ending   | escaped | You come out into the daylight with %M beside you, free at 
 ending   | died | %M waits in the dark for someone else.
 
 goal     | through | escape | deep
-thing    | a | - | old map | - | 0 | 0 | 1 | other | book | 2
+thing    | a | - | old map | - | 0 | 0 | 5 | other | book | 2
 exit     | the %X Gate
 exit     | the Gate of %X
 exit     | the Far Door

@@ -27,15 +27,15 @@ faction  | vermin   | rat | 0-7 | 7 | - | 0 | w | crawlers h, beasts w
 faction  | crawlers | spider | 2-7 | 3 | - | 3 | h | vermin h
 faction  | dead     | ghoul skel | 0-7 | 9 | - | 1 | h | vermin h, crawlers h, beasts h
 
-kind     | scroll | - | 1 | 1 | 1 | other | book | 20
-kind     | pearl | - | 1 | 0 | 1 | other | jewel | 600
-kind     | chalice | h | 2 | 1 | 2 | silver | jewel | 300
-kind     | full chalice | h | 3 | 1 | 2 | silver | jewel | 900
-kind     | altar | sf | 400 | 400 | 8 | stone | stone | 0 | 60 | 400
+kind     | scroll | - | 1 | 1 | 5 | other | book | 20
+kind     | pearl | - | 1 | 0 | 5 | other | jewel | 600
+kind     | chalice | h | 2 | 1 | 10 | silver | jewel | 300
+kind     | full chalice | h | 3 | 1 | 10 | silver | jewel | 900
+kind     | altar | sf | 400 | 400 | 40 | stone | stone | 0 | 60 | 400
 
 piece    | scroll | 0-0 | - | 1
 piece    | chalice | 1-1 | 2 | 1
-piece    | pearl | 1-2 | 3 | 1
+piece    | pearl | 1-2 | 4 | 1
 piece    | altar | 1-1 | - | 1
 
 rule     | read | scroll | The scroll is swollen with damp, but you make it out: "The Mother takes her pearl in her
