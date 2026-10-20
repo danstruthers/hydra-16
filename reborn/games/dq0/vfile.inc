@@ -6,8 +6,7 @@
 ** header (its stamp) written last, so a version cut short by a crash is no version; read, the newest valid version:
 ** one the last save had (stamped up to the hub's vsaved), or this session's (past its vbase), never one a session wrote
 ** and ended without its save (stamped between them).  A stamp's past the hub's vlo, this task's count from it (each
-** writer's own: two tasks' stamps may be the same, never two versions of one file's).  A version 8 save's change file
-** (struct chead's header, CH_MAGIC: its slot ".dat") is stamped 0, the save's.
+** writer's own: two tasks' stamps may be the same, never two versions of one file's).
 **
 ** Before it's included: VF_STATIC (static, for a swapped part's own copy; or nothing), and the code's segments (a
 ** swapped part's: its BSS too, the part's own, what's kept between calls the main RAM's).  The hub's header in the
@@ -61,9 +60,6 @@ static int __fastcall__ vf_head (unsigned char k)
     hub_map (0);
     vh.stamp = 0;
     if (read (vfd, &vh, sizeof (struct chead)) == sizeof (struct chead) && vh.gen == gen) {
-        if (vh.magic == CH_MAGIC && !k) {
-            return vfd;                         /* (A version 8 save's: stamped 0) */
-        }
         if (vh.magic == VF_MAGIC && read (vfd, &vh.stamp, 4) == 4 && (!vlt (&vsv, &vh.stamp) || vlt (&vbs, &vh.stamp))) {
             return vfd;
         }

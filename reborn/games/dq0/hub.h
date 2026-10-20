@@ -601,8 +601,7 @@ struct wrec {
 
 /* The world's part of the save (DUNGEON.md: the save; save version 8 on): world.dat in the save folder, the world's to
 ** write (WQ_SAVE) and read back (WQ_START, the hub's resume): this record, then its strata's records (struct wrec's
-** strata).  A save of version 5 to 7 kept them in the UI's game.dat: the UI writes them out as a world.dat (its
-** reader) before the world's begun */
+** strata) */
 #define WSAVE_MAGIC     0x5744                  /* "DW" */
 struct wsave {
     unsigned        magic;
@@ -725,7 +724,7 @@ struct wsave {
 **   own hub.di_tail world                                      (Its reader's place)
 **   own hub.den_go world                                       (The denizens' turn: the turns pace's)
 **   own hub.dsense senses +denizens                            (An actor's senses: the denizens' request)
-**   own hub.ui_cmd ui                                          (A command in hand: the senses' look gives way)
+**   own hub.ui_cmd ui                                          (A command in hand: the look and the minds give way)
 **   own hub.vsaved world                                       (The region files' versions: the world's, as it
 **   own hub.vbase world                                        (begins and keeps a game)
 **   own hub.vlo world

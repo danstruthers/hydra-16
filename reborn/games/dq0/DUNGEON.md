@@ -161,11 +161,11 @@ but grown again from their seeds, the same.)  The world keeps its own part with 
 hub.h's struct wsave: the clock, the character's place, its pace and watchfulness, its body's position, the puzzle's
 way out and rules done, then the strata's records), written as the UI asks the save (WQ_SAVE) and read back by the
 world as a game's carried on (WQ_START, the hub's resume); the UI's game.dat keeps the seed, the pace chosen, the
-character's name and the theme, and the names given.  A save of version 5 to 7 (the world's part in game.dat) is made
-into a world.dat by the UI as it's carried on (main.c's old_world), before the world's begun: tests/dq0/v7save, the
-test dq0oldsave.  Since version 9 (move 2.8, below) the save's region files are in versions, the save's last step the
-world's (WQ_SAVE: its change records, its things, its own, then the versions written made the save's), the denizens'
-and the maker's before it; a version 8 save (tests/dq0/v8save, the test dq0v8save) is carried on as it was.
+character's name and the theme, and the names given.  Since version 9 (move 2.8, below) the save's region files are
+in versions, the save's last step the world's (WQ_SAVE: its change records, its things, its own, then the versions
+written made the save's), the denizens' and the maker's before it.  Until the release only a save of the game's own
+version is carried on (version 10, Phase 3A, 2026-10-19: the user's, no old saves till then): an older one isn't
+read, and a new game begins in its folder.
 
 ### No fixed size
 

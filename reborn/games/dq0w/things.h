@@ -31,7 +31,6 @@ struct ires {
 struct ipg {
     struct ires     r[NIRES];
     unsigned        stamp;
-    unsigned char   rebuild;                    /* (A version 8 save's store, its table not yet made: it_near's) */
     unsigned char   lsn;                        /* (The chunk the character was in, as it_near last looked: its
                                                 **   stratum plus 1, 0 none yet) */
     unsigned        lcx, lcy;

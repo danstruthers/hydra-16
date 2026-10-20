@@ -46,8 +46,7 @@ struct beast {
     unsigned char   kind;                       /* Its bestiary entry plus 1 (0: none yet) */
     unsigned char   att[5];                     /* Strength, Stamina, Dexterity, Agility, Will */
     unsigned char   wt;                         /* Its weight, in 4 lb */
-    unsigned char   state;                      /* HARN_CONSCIOUS ... (a version 7 save's | 0x80: fallen, its body's
-                                                **   position the world's now) */
+    unsigned char   state;                      /* HARN_CONSCIOUS ... */
     unsigned char   bl;                         /* Bloodloss */
     unsigned char   ninj;
     harn_injury     inj[3];                     /* (More: the last takes their levels) */

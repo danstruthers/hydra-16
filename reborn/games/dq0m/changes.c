@@ -38,8 +38,7 @@ struct seen {
 
 #define NSEEN           (SEEN_BANKS * SEEN_PER_BANK)
 #define NSREG           16
-#define SM_MAGIC        0x4D53                  /* "SM": seen.dat's, its regions' table first (a version 8 save's: its
-                                                **   maps alone) */
+#define SM_MAGIC        0x4D53                  /* "SM": seen.dat's, its regions' table first */
 static unsigned char seb;                       /* The first bank */
 unsigned char detail_bank;                      /* (The regions' details' cache: plan.c's, emptied here) */
 static unsigned char plb;                       /* (The big plans' pages' bank) */
@@ -521,8 +520,7 @@ void pl_flush (void)
 
 /* ---- The save (the hub's savedir): seen.dat (SM_MAGIC, the regions' table, then the maps in the banks); the squares
 ** seen in the chunks in the cache kept first (seen_keep), so nothing seen is lost.  (The change records are the
-** world's: its changes.dat and the regions' files.)  0, or -1.  Back: a version 8 save's, its maps alone (no magic):
-** their regions the table's */
+** world's: its changes.dat and the regions' files.)  0, or -1 */
 
 #pragma code-name (push, "SW2CODE")
 #pragma rodata-name (push, "SW2RODATA")
@@ -566,31 +564,19 @@ int s_changes_save (void)
 int s_changes_restore (void)
 {
     static unsigned m;
-    unsigned char k, j;
+    unsigned char k;
     int fd;
 
     if ((fd = open_in ("seen.dat", O_RDONLY)) < 0) {
         return -1;
     }
-    if (read (fd, &m, 2) == 2 && m == SM_MAGIC) {
-        read (fd, sreg, sizeof sreg);
-    } else {
-        lseek (fd, 0, SEEK_SET);
-        m = 0;                                  /* (A version 8 save's) */
+    if (read (fd, &m, 2) != 2 || m != SM_MAGIC) {
+        close (fd);
+        return -1;                              /* (Not this version's) */
     }
+    read (fd, sreg, sizeof sreg);
     for (k = 0; k < NSEEN && read (fd, &r, sizeof r) == sizeof r; ++k) {
         memcpy (seen_at (k), &r, sizeof r);
-        if (!m) {                               /* (Its region the table's) */
-            rsn = r.sn;
-            rrx = r.cx >> 3;
-            rry = r.cy >> 3;
-            if (sreg_find () == 0xFF && (j = sfree) != 0xFF) {
-                sreg[j].sn = rsn + 1;
-                sreg[j].rx = rrx;
-                sreg[j].ry = rry;
-                sreg[j].stamp = ++sstamp;
-            }
-        }
     }
     nexts = k % NSEEN;
     close (fd);

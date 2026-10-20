@@ -2700,33 +2700,6 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0oldsave', what: 'Dingus Quest Zero carrying on a version 7 save (tests/dq0/v7save: dq0save\'s game, kept by the game before move 2.7 of Phase 2, its strata\'s records and the character\'s place in game.dat): copied from /pc into /ram/kept and carried on, its world\'s part made a world.dat (the UI\'s reader of a save of 5 to 7) and read back by the world, in the stratum below, where it stood, with what it carried; quit (kept, version 8) and carried on again',
-      init: 't_rc', cycles: 1100e6,
-      pc: { files: () => Object.fromEntries(fs.readdirSync(path.join(__dirname, 'dq0', 'v7save')).map(n => [n, fs.readFileSync(path.join(__dirname, 'dq0', 'v7save', n))])) },
-      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101mkdir /ram/kept; for (f in `{ls /pc}) cp /pc/$f /ram/kept/$f\r' +
-        ['dq0 -d /ram/kept', 'look', 'inventory', 'quit', 'ls /ram/kept', 'dq0 -d /ram/kept', 'look', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
-      expect: ['takes up where they left off.', 'You stand by a\nstairway leading up.', 'a belt, worn (on it: a pouch (in it: 12 pennies), a waterskin)',
-        'world.dat', 'takes up where they left off.', 'You stand by a\nstairway leading up.', '% echo $status'],
-      sdcard: true
-    },
-    {
-      name: 'dq0v8save', what: 'Dingus Quest Zero carrying on a version 8 save (tests/dq0/v8save: kept by the game before move 2.8 of Phase 2: its change records\' region files without a stamp, items.dat its banks alone, without its chunks\' table): copied from /pc into /ram/kept and carried on, in the stratum below, where it stood, Linda its sword; up the stairway, the dagger it put down there lying where it was (the store\'s table made from the things as they lie); quit (kept, version 9) and carried on again, the dagger there still',
-      init: 't_rc', cycles: 1400e6,
-      pc: { files: () => Object.fromEntries(fs.readdirSync(path.join(__dirname, 'dq0', 'v8save')).map(n => [n, fs.readFileSync(path.join(__dirname, 'dq0', 'v8save', n))])) },
-      machine: { input: 'ābind -a /sd/0/games /bin\rāmkdir /ram/kept; for (f in `{ls /pc}) cp /pc/$f /ram/kept/$f\r' +
-        ['dq0 -d /ram/kept', 'look', 'inventory', 'u', 'look', 'quit', 'dq0 -d /ram/kept', 'look', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
-      expect: ['takes up where they left off.', 'You stand by a\nstairway leading up.', 'Linda, your sword', 'You climb the stairway.', 'takes up where they left off.', '% echo $status'],
-      check(m, out) {
-        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
-        const seg = (a, b, from = 0) => { const i = o.indexOf(a, from); return i < 0 ? '' : o.slice(i, o.indexOf(b, i + a.length)); };
-        if (!seg('> u ', '> quit').includes('At your feet lies a dagger.')) f.push('the dagger not lying where it was put down, up the stairway');
-        const j = o.lastIndexOf('% dq0 -d /ram/kept');
-        if (!seg('> look', '> quit', j).includes('At your feet lies a dagger.')) f.push('the dagger not there as the game\'s carried on again');
-        return f;
-      },
-      sdcard: true
-    },
-    {
       name: 'dq0page', what: 'Dingus Quest Zero\'s stores paged to the save folder (DUNGEON.md: no fixed size; the user, 2026-10-16: "It should be as big as it needs to be, given there is enough disk space to hold it"), eviction and write-back: dq0 -C (the caches small: a page of change records, the item store 64 records, only the character\'s chunk kept round it) and -d /ram/kept: the dagger put down on the top stratum, down the stairway (the stratum below\'s records want the change page, the top\'s region written back, rg0...; its things put out of the store as the stratum below\'s are stocked, it0...), up again (the top\'s region read back in, its chunk\'s things too: the dagger lying where it was put down), quit and carried on (the dagger there still); then the game\'s game.dat gone and a new game begun in the folder (seed 5): the old game\'s region files gone from it, none of its things or changes seen',
       init: 't_rc', cycles: 1500e6,
       machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T -C -d /ram/kept\r' +
@@ -5507,6 +5480,7 @@ module.exports = {
 };
 
 module.exports.dq0Check = dq0Check;
+module.exports.sdcardOf = sdcardOf;                 // (sim/tools/soak.js's games: the SD card's in device 0)
 
 // The tests that run a sample, or play a song of the SD card's: its image in SD device 0
 for (const t of module.exports.tests) if (t.sdcard) sdcardOf(t);

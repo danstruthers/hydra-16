@@ -270,51 +270,14 @@ static void tidy (void)
     } while (gone);
 }
 
-/* A version 8 save's item store (wfile.c's keep: its table not kept, IPG's rebuild): the chunks its things lie in,
-** each in the table (as the game's carried on, the strata's records known) */
-static void rebuild (void)
-{
-    struct ires* r;
-    unsigned i = 0, cx, cy;
-    unsigned char sn, k, f;
-
-    hy_bank (ovbank[OVBANKS]);
-    if (!IPG->rebuild) {
-        return;
-    }
-    IPG->rebuild = 0;
-    while ((i = items (i, IN_SQUARE | IN_PORTAL, 0)) != 0) {
-        sn = ip->sn;
-        cx = (ip->x - STRATUM (sn).x0) >> CW_BITS;
-        cy = (ip->y - STRATUM (sn).y0) >> CW_BITS;
-        hy_bank (ovbank[OVBANKS]);
-        for (k = 0, f = 0xFF, r = IPG->r; k < NIRES; ++k, ++r) {
-            if (r->used && r->sn == sn && r->cx == cx && r->cy == cy) {
-                break;
-            }
-            if (!r->used && f == 0xFF) {
-                f = k;
-            }
-        }
-        if (k == NIRES && f != 0xFF) {
-            r = &IPG->r[f];
-            r->used = 1;
-            r->sn = sn;
-            r->cx = cx;
-            r->cy = cy;
-        }
-    }
-}
-
 /* The game begun (resume: carried on from its save): its generation, the last game's in the folder and one more (a
 ** new game's: the old game's region files gone), or its own; its stamps (the save's, and this session's from the most
-** the last could have given: changes.dat's, written again before anything's written); a version 6 save's records (its
-** changes.dat: their count, then them) read in */
+** the last could have given: changes.dat's, written again before anything's written) */
 #pragma bss-name (push, "BSS")                  /* (Its locals the main RAM's: it calls a part, which puts this one
                                                 **   out and in again, its own data as its image has it) */
 void __fastcall__ s_store_begin (unsigned char resume)
 {
-    unsigned gen = 0, n = 0;
+    unsigned gen = 0;
     unsigned long hi = 0;
     int fd;
 
@@ -323,20 +286,13 @@ void __fastcall__ s_store_begin (unsigned char resume)
     if (in_dir ("changes.dat") && (fd = open (path, O_RDONLY)) >= 0) {
         if (read (fd, &bh, sizeof (struct chead)) == sizeof (struct chead) && bh.magic == CH_MAGIC) {
             gen = bh.gen;
-            if (bh.n >= 2 && read (fd, &bh.stamp, 4) == 4 && read (fd, &hi, 4) == 4 && resume) {
+            if (bh.n == CH_VER && read (fd, &bh.stamp, 4) == 4 && read (fd, &hi, 4) == 4 && resume) {
                 hub_map (0);
-                HUB->vsaved = bh.stamp;         /* (A version 9 save's stamps) */
+                HUB->vsaved = bh.stamp;         /* (The save's stamps) */
             }
-        } else if (resume) {                    /* (A version 6 save's: the count first, then the records) */
-            close (fd);
-            fd = open (path, O_RDONLY);
-            read (fd, &n, sizeof n);
         }
         hub_map (WORLD_BANK);
         WREC->cgen = resume && gen ? gen : gen + 1;
-        for (; n && read (fd, &rec, sizeof rec) == sizeof rec; --n) {
-            store_put ();
-        }
         close (fd);
     } else {
         hub_map (WORLD_BANK);
@@ -351,17 +307,13 @@ void __fastcall__ s_store_begin (unsigned char resume)
     HUB->vbase = HUB->vlo = hi;
     HUB->vhi = hi + VF_BLOCK;
     stamps_kept ();
-    if (resume) {
-        rebuild ();
-    }
     hub_map (0);
 }
 #pragma bss-name (pop)
 
 /* ---- The item store kept (back: read again), the save folder's items.dat: its banks a piece at a time, through
 ** main RAM (the window's only the task's own: the kernel's copies want the task's memory), then its table (IP_MAGIC,
-** and its entries: ipage.c's); a version 8 save's, without one: its table made as the character first comes into a
-** chunk (it_near's) */
+** and its entries: ipage.c's) */
 #define PIECE   64
 void __fastcall__ s_keep (unsigned char back)
 {
@@ -391,9 +343,7 @@ void __fastcall__ s_keep (unsigned char back)
     if (!back) {
         write (fd, &off, 2);
     } else if (read (fd, &off, 2) != 2 || off != IP_MAGIC) {
-        hy_bank (ovbank[OVBANKS]);
-        IPG->rebuild = 1;                       /* (A version 8 save's: none) */
-        goto done;
+        goto done;                              /* (No table: not this version's) */
     }
     for (off = 0; off < NIRES * sizeof (struct ires) + 2; off += PIECE) {     /* (Its table: its entries, its
                                                 **   stamp) */
@@ -407,8 +357,6 @@ void __fastcall__ s_keep (unsigned char back)
             write (fd, buf, PIECE);
         }
     }
-    hy_bank (ovbank[OVBANKS]);
-    IPG->rebuild = 0;
 done:
     close (fd);
     hub_map (0);

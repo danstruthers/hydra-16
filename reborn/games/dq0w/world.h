@@ -285,9 +285,8 @@ struct cpage {                                  /* A page of the change records 
     unsigned        stamp;                      /* When its region was last wanted */
 };
 #define CH_MAGIC        0x4843                  /* "CH": the save's changes.dat (the store's: CH_MAGIC, its generation,
-                                                **   CH_VER; then, CH_VER 2, the region files' stamps: the save's and
-                                                **   the most given, hub.h's vsaved and vhi), a version 8 save's region
-                                                **   file (CH_MAGIC, the generation, its count: struct vfh's start) */
+                                                **   CH_VER; then the region files' stamps: the save's and the most
+                                                **   given, hub.h's vsaved and vhi) */
 #define CH_VER          2
 struct chead {
     unsigned        magic;
@@ -299,13 +298,12 @@ typedef char change_fits[sizeof (struct change) == 8 && CH_PER_PAGE == 32 ? 1 : 
 /* ---- The save folder's region files (DUNGEON.md: no fixed size): a store's records for a region (the change
 ** records', rgSXXYY.dat; the things', itSXXYY.dat; the denizens', dnSXXYY.dat; the seen maps', smSXXYY.dat: S its
 ** stratum, XX YY its region, in hex), each written whole as a new version of it, the name's last letter its slot (t,
-** 1, 2: ".dat", ".da1", ".da2"), its header first (struct vfh: the game's generation, its stamp; a version 8 save's
-** change file, struct chead's, stamped 0).  Read: the newest version that's valid, by the hub's vsaved and vbase (the
+** 1, 2: ".dat", ".da1", ".da2"), its header first (struct vfh: the game's generation, its stamp).  Read: the newest version that's valid, by the hub's vsaved and vbase (the
 ** last save's, or this session's: never one a session wrote and ended without its save); written: over a version
 ** that's neither the save's nor (with three slots: the things', read as they're written) the newest, so a crash
 ** loses no more than the save didn't have (vfile.c, every writer's and reader's) */
 struct vfh {
-    unsigned        magic;                      /* VF_MAGIC (CH_MAGIC: a version 8 save's, its stamp 0) */
+    unsigned        magic;                      /* VF_MAGIC */
     unsigned        gen;                        /* The game's (wrec's cgen) */
     unsigned        n;                          /* Its records */
     unsigned long   stamp;                      /* When it was written: past the hub's vlo, up to its vhi */

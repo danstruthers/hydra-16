@@ -164,9 +164,6 @@ unsigned char __fastcall__ choose (struct pcmd* c);    /* The command (parsed) a
 struct quest {                                  /* The game's theme and its end (kept in the save) */
     unsigned char   theme;                      /* The theme's number (the save's: the one it began with) */
     unsigned char   done;                       /* The game's ending (theme.h's END_*: 0 not yet) */
-    unsigned char   open;                       /* (A version 7 save's: the way out opened, and the theme's rules done,
-                                                **   a bit each; now the world's, its world.dat's) */
-    unsigned char   flags;
 };
 extern struct quest Q;                          /* (main.c's) */
 extern char tname[32];                          /* A theme's name for something (theme_named's) */

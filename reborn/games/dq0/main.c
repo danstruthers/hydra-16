@@ -269,7 +269,7 @@ static void sheet (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    9                           /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    10                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -283,13 +283,13 @@ static void sheet (void)
                                                 **   changes.dat their stamps, items.dat its chunks' table after its
                                                 **   banks; the save's last step the world's, so the region files
                                                 **   written back since the last are the save's only once it's
-                                                **   whole: a save of 8 read as it was) */
+                                                **   whole; 10, the old saves' readers gone, the last save's fields
+                                                **   the world's now with them: till the release, only a save of this
+                                                **   version is carried on) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
-    unsigned long   seed, now;                  /* (now ... y: a version 7 save's, world.dat's since) */
-    unsigned char   stratum, face, light;
-    unsigned        x, y;
+    unsigned long   seed;
     struct pc       pc;
     struct quest    q;                          /* (Its theme, its puzzle, and its ending: a game done isn't carried
                                                 **   on, but a new one begun) */
@@ -319,10 +319,7 @@ static int load_save (void)
     }
     n = read (fd, &sv, sizeof sv);
     close (fd);
-    return n == sizeof sv && sv.magic == SAVE_MAGIC && sv.version >= 5 && sv.version <= SAVE_VER && !sv.q.done ? 0 :
-        -1;                                     /* (5's the same, but for the names after the strata: none; 6's, but
-                                                **   for its changes.dat, the world's to read; 5 to 7, the world's
-                                                **   world.dat in it, old_world's) */
+    return n == sizeof sv && sv.magic == SAVE_MAGIC && sv.version == SAVE_VER && !sv.q.done ? 0 : -1;
 }
 
 /* The game kept: the referee's sheet, the maker's seen maps, the denizens' records, the world's (its change records,
@@ -367,49 +364,13 @@ void s_save_game (void)
     }
 }
 
-/* A save of version 5 to 7 (game.dat at its strata's records, fd): the world's part of it made a world.dat (hub.h's
-** struct wsave, then the records), for the world to read back as it's begun (through lb) */
-static void __fastcall__ old_world (int fd)
-{
-    struct wsave* w = (struct wsave*) lb;
-    unsigned n;
-    int k, out;
-
-    if ((out = open (save_path ("world.dat"), O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0) {
-        return;
-    }
-    memset (w, 0, sizeof *w);
-    w->magic = WSAVE_MAGIC;
-    w->version = 1;
-    w->sn = sv.stratum;
-    w->face = sv.face;
-    w->x = sv.x;
-    w->y = sv.y;
-    w->gait = pc_gait;                          /* (Its pace and watchfulness: pc.hm's, the referee's) */
-    w->watch = pc_watch;
-    w->open = sv.q.open;
-    w->done = sv.q.flags;
-    w->now = sv.now;
-    write (out, w, sizeof *w);
-    for (n = sizeof ((struct wrec*) 0)->strata; n; n -= k) {
-        if ((k = read (fd, lb, n < sizeof lb ? n : sizeof lb)) <= 0) {
-            break;
-        }
-        write (out, lb, k);
-    }
-    close (out);
-}
-
-/* The save's names given (after its header; a save of 5 to 7, after the strata's records: its world.dat made) */
+/* The save's names given (after its header) */
 static void __fastcall__ load_names (void)
 {
     int fd = open (save_path ("game.dat"), O_RDONLY);
 
     if (fd >= 0) {
         read (fd, &sv, sizeof sv);
-        if (sv.version < 8) {
-            old_world (fd);
-        }
     }
     names_keep (fd, 1);
     if (fd >= 0) {
