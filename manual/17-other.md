@@ -168,9 +168,9 @@ environment of the task that's looking, a file for each variable:
 
 ```session
 /> ls /env
-prompt
-path
 task
+path
+prompt
 prog
 ```
 
@@ -193,7 +193,6 @@ program that sets a variable doesn't change its parent's.
 /> ls /proc
 0/
 1/
-2/
 12/
 13/
 14/
@@ -218,14 +217,15 @@ In each are these files:
 
 ```session
 /> cat /proc/1/status
-forth wait - 98 1
+forth call - 121 1
 /> cat /proc/1/fd
 /
-0 rw #c 367 #c/cons
-1 rw #c 367 #c/cons
-2 rw #c 367 #c/cons
+0 rw #c 368 #c/cons
+1 rw #c 368 #c/cons
+2 rw #c 368 #c/cons
+3 r #p 0 /proc/1/fd
 /> cat /proc/1/regs
-PC=EAA0 A=00 X=02 Y=01 S=E7 P=37 W=00 U=00 RAM=00 ROM=1F
+PC=DAE9 A=EB X=F3 Y=FD S=DA P=98 W=02 U=DA RAM=00 ROM=1F
 ```
 
 | `ctl` command | What it does |
@@ -236,6 +236,10 @@ PC=EAA0 A=00 X=02 Y=01 S=E7 P=37 W=00 U=00 RAM=00 ROM=1F
 | `stop` | Stop it: it isn't given any more turns until it's started again |
 | `start` | Start it again |
 | `step`, `next`, `break`, `nobreak` | For the debugger, `db` (Chapter 29) |
+
+`cat` ran in task 1, HyForth's own (section 7.5), so it was looking at itself: task 1 was in the `call` state
+because `cat` was asking `/proc`'s driver for the file, fd 3 is the file `cat` had open, and the registers are
+the task's as it stopped to wait for the driver, in the middle of `cat`'s request (in the kernel: `W=02`).
 
 `ps` and `top` read `/proc`; so does the debugger, which reads and writes a program's memory through `mem`.
 

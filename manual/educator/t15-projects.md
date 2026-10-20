@@ -164,7 +164,7 @@ rc jot2 Buy solder
 /ram> rc jot2 -n
       2
 /ram> rc jot2 -f solder
-2000-01-01 00:01:12 Buy solder
+2000-01-01 00:01:13 Buy solder
 /ram> rc jot2 -z
 usage: jot [-n] [-l] [-f word] [words ...]
 ```

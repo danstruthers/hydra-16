@@ -18,7 +18,7 @@ It assumes the manual has been read, and it says the same thing about every entr
 |---|---|
 | 1. HyBASIC keywords | Every statement, function and operator: 175 |
 | 2. Commands | Every program in `/bin`, the system's own, and the shell's built-in commands |
-| 3. System calls | All 92, with every constant and error code |
+| 3. System calls | All 96, with every constant and error code |
 | 4. HyForth words | The core and every library, the Hydra's own among them: 294 entries |
 | 5. hylang forms | The special forms, the functions and the libraries: 163 entries |
 

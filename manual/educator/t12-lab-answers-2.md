@@ -27,9 +27,9 @@ terminal serial
 sdhc 17 MB 34816 blocks
 hydrafs label=HYDRA-16
 partition at block 2048
-free 15612 KB of 16380 KB
+free 15440 KB of 16380 KB
 /> cat /dev/time
-2000-01-01 00:00:07
+2000-01-01 00:00:06
 ```
 
 **3.** `echo` said it, because it was `echo` whose write failed; but the *reason*, `invalid argument`, came back
@@ -110,12 +110,12 @@ s/
 sdhc 17 MB 34816 blocks
 hydrafs label=HYDRA-16
 partition at block 2048
-free 15612 KB of 16380 KB
+free 15440 KB of 16380 KB
 /> cat /dev/sd/x/ctl
 rom 4 MB 8192 blocks
 hydrafs label=ROM
 partition at block 1056
-free 2 KB of 671 KB
+free 1 KB of 735 KB
 /> cat /dev/sd/r/ctl
 ram 256 KB 512 blocks
 hydrafs label=RAM
@@ -148,8 +148,8 @@ rc: /rom/test: read-only
 ```session
 /> df
 disk  kind   size        free        label
-0     sdhc   16380 KB    15612 KB    HYDRA-16
-x     rom    671 KB      2 KB        ROM
+0     sdhc   16380 KB    15440 KB    HYDRA-16
+x     rom    735 KB      1 KB        ROM
 r     ram    255 KB      253 KB      RAM
 s     sram   511 KB      510 KB      SRAM
 /> echo x >/sd/0/tiny
@@ -157,8 +157,8 @@ s     sram   511 KB      510 KB      SRAM
 --rw-rw-rw- f0        2 2000-01-01 00:00 /sd/0/tiny
 /> df
 disk  kind   size        free        label
-0     sdhc   16380 KB    15608 KB    HYDRA-16
-x     rom    671 KB      2 KB        ROM
+0     sdhc   16380 KB    15436 KB    HYDRA-16
+x     rom    735 KB      1 KB        ROM
 r     ram    255 KB      253 KB      RAM
 s     sram   511 KB      510 KB      SRAM
 ```
@@ -178,10 +178,10 @@ segment 15
 ```session
 /> du /sd/0/sample
 14      /sd/0/sample/as
-212     /sd/0/sample/c
-232     /sd/0/sample
+209     /sd/0/sample/c
+229     /sd/0/sample
 /> du /rom/bin
-223     /rom/bin
+270     /rom/bin
 ```
 
 **6.** `HYDRA-16`, on the sample card.
@@ -211,8 +211,8 @@ shared  1024 KB, 0 KB in segments (0), 1024 KB free
 /> echo start 16 >/dev/sd/s/ctl
 /> df
 disk  kind   size        free        label
-0     sdhc   16380 KB    15612 KB    HYDRA-16
-x     rom    671 KB      2 KB        ROM
+0     sdhc   16380 KB    15440 KB    HYDRA-16
+x     rom    735 KB      1 KB        ROM
 r     ram    255 KB      253 KB      RAM
 s     sram   127 KB      127 KB      SRAM
 /> free
@@ -353,25 +353,28 @@ wired this way round because a VIA pin can take in much more current than it can
 
 ```session
 /> cat /proc/1/status
-forth wait - 98 1
+forth call - 121 1
 /> cat /proc/1/fd
 /
-0 rw #c 367 #c/cons
-1 rw #c 367 #c/cons
-2 rw #c 367 #c/cons
+0 rw #c 368 #c/cons
+1 rw #c 368 #c/cons
+2 rw #c 368 #c/cons
+3 r #p 0 /proc/1/fd
 ```
 
 `status` is the task's name, its state, its parent, the processor time it's had (in ticks), and its note
 group. `fd` starts with its current directory, and then lists its open files: for a shell, the window's
-keyboard and screen, as files 0, 1 and 2.
+keyboard and screen, as files 0, 1 and 2. File 3 is `/proc/1/fd` itself: `cat` runs inside the shell's own task
+(the manual's section 7.5), so the file it's reading is open there while it reads, and the state is `call` because
+`cat` is asking a driver for that file at that moment.
 
 **7.**
 
 ```session
 /> ls /env
-prompt
-path
 task
+path
+prompt
 prog
 /> cat /env/path
 ./bin/>
@@ -415,13 +418,13 @@ Without a real Hydra, the task names:
 
 ```session
 % for(t in /proc/*) cat $t/status
-kernel ready - 458 0
-forth wait - 97 1
+kernel ready - 467 0
+forth wait - 115 1
 snd idle - 5 12
-kdev ready - 41 13
-storage idle - 302 14
-cons event - 105 15
-rc wait 1 31 1
+kdev ready - 48 13
+storage idle - 295 14
+cons event - 103 15
+rc call 1 40 1
 ```
 
 ## Lab 15. Numbers and Bases

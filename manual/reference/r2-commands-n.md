@@ -149,7 +149,8 @@ One line is printed for each task in use, under a heading:
 | `name` | The program it is running |
 
 Task 0 is the kernel. The drivers are the tasks at the top of the range, and the programs a user starts are
-given the lowest free numbers.
+given the lowest free numbers. `ps` typed at a prompt runs in the shell's own task (chapter 2's introduction),
+so it isn't in its own list; in a pipeline it is.
 
 Arguments other than `-a` are ignored.
 

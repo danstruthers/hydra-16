@@ -509,7 +509,7 @@ hylang> (roll)
 5 2 makes 7
 => NIL
 hylang> (roll)
-2 3 makes 5
+4 4 makes 8
 => NIL
 ```
 

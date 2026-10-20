@@ -274,15 +274,16 @@ L1004:
 
 ## 28.6 Inside the Hydra's tools
 
-The Hydra's own tools are programs too, on the ROM disk in `/rom/bin`, and `dis` can take any of them apart. Here is
-the start of `echo`:
+The Hydra's own tools are programs too, on the ROM disk in `/rom/bin`, and `dis` can take any of them apart. Most of
+them are **bank programs**, which run from a RAM bank at $8000 (that's how a shell can run them inside its own task,
+section 7.5), so `dis` shows them as they are there. Here is the start of `echo`:
 
 <!-- session
 -->
 
 ```session indented
 /> dis /rom/bin/echo | head -40
-; /rom/bin/echo, as dis read it: as assembles this to its bytes again
+; /rom/bin/echo, a bank program, as dis read it: its text as linked, at $8000
 .include "hydra.inc"
 
 .include "hyx2.inc"
@@ -295,39 +296,39 @@ main:
         lda r0+1
         sta $23
         lda #$01
-        sta B0A40
-        sta B0A41
+        sta B8240
+        sta B8241
         ldx #$00
         lda ($22)
         cmp #$2D
-        bne L085B
+        bne L805B
         ldy #$01
         lda ($22),y
         cmp #$6E
-        bne L085B
+        bne L805B
         iny
         lda ($22),y
-        bne L085B
-        stz B0A40
-        jsr L088D
-L085B:
+        bne L805B
+        stz B8240
+        jsr L808D
+L805B:
         lda ($22)
-        beq L087D
-        lda B0A41
-        bne L0869
+        beq L807D
+        lda B8241
+        bne L8069
         lda #$20
-        jsr L08A0
-L0869:
-        stz B0A41
+        jsr L80A0
+L8069:
+        stz B8241
         ldy #$00
-L086E:
+L806E:
         lda ($22),y
 ```
 
 You can read it like a puzzle. It keeps its arguments' address (r0) on the zero page at $22. Then it checks for `-n`:
 the first argument's first character is $2D (`-`), its second $6E (`n`), and then it ends. If so, it clears the
-variable at $0A40, which is whether to print a new line at the end, and moves on to the next argument (`L088D`).
-Then, at `L085B`, it prints each argument (`L08A0` puts a character into its output), with a space ($20) before
+variable at $8240, which is whether to print a new line at the end, and moves on to the next argument (`L808D`).
+Then, at `L805B`, it prints each argument (`L80A0` puts a character into its output), with a space ($20) before
 each but the first.
 
 ## 28.7 Disassembling in HyForth
@@ -370,10 +371,10 @@ lib disasm
 
 ```session indented
 /> hex f800 4 disasm decimal
- F800  4C 8D EB  jmp $EB8D
- F803  4C C6 EB  jmp $EBC6
- F806  4C DD EE  jmp $EEDD
- F809  4C 41 EB  jmp $EB41
+ F800  4C 97 EC  jmp $EC97
+ F803  4C D0 EC  jmp $ECD0
+ F806  4C F0 EF  jmp $EFF0
+ F809  4C 4B EC  jmp $EC4B
 /> hex f950 2 disasm decimal
  F950  4C 61 E2  jmp $E261
  F953  4C 06 E3  jmp $E306

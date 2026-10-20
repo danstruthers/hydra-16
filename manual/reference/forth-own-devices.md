@@ -302,8 +302,8 @@ The commands `df`, `fsck` and `label`; Chapter 14.
 /> char x disk-ctl type
 rom 4 MB 8192 blocks
 hydrafs label=ROM
-partition at block 1024
-free 11 KB of 623 KB
+partition at block 1056
+free 1 KB of 735 KB
 /> cards .
 1
 ```

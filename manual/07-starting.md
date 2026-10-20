@@ -343,17 +343,18 @@ The `ps` command lists the tasks, in a friendlier form than init's table, with t
 /> ps
 task  state   parent     cpu group  name
    0  ready   -          1.5     0  kernel
-   1  wait    -          0.4     1  forth
-   2  ready    1         0.0     1  ps
+   1  ready   -          0.5     1  forth
   12  idle    -          0.0    12  snd
   13  idle    -          0.1    13  kdev
   14  idle    -          1.4    14  storage
-  15  event   -          0.5    15  cons
+  15  event   -          0.4    15  cons
 ```
 
-You can see the kernel (task 0), the shell, `forth` (task 1: it's where init was), `ps` itself (task 2: the shell
-started it, so its parent is 1), and the four drivers in tasks 12 to 15 (C to F). That leaves ten tasks free for your
-programs and for more windows. The `cpu` column is in seconds.
+You can see the kernel (task 0), the shell, `forth` (task 1: it's where init was), and the four drivers in tasks 12
+to 15 (C to F). `ps` isn't there, because it didn't need a task of its own: a command like this one runs inside the
+shell's own task, which is why `forth` is `ready` (it was running `ps`). Most of the commands work that way, and
+each one stays loaded in the shell's memory, so it starts at once the next time you type it. That leaves ten tasks
+free for your programs and for more windows. The `cpu` column is in seconds.
 
 The `group` column is each task's **note group**. A **note** is a short message that HydraOS, or another task, sends
 a task. <kbd>CTRL</kbd>-<kbd>C</kbd> is one: it sends the note `interrupt` to every task in the group of the window

@@ -23,8 +23,10 @@ also a shell, because it hands every line that isn't Forth to a second shell, **
 Hello
 ```
 
-`2` is a number, so the first line is Forth. `echo` isn't a Forth word, so rc runs the second line. You can type
-commands without thinking about Forth at all.
+`2` is a number, so the first line is Forth. `echo` isn't a Forth word, so the second line is a command. (A plain
+command like this one, just a program and its words, HyForth runs itself, in its own task, as rc would; anything more,
+such as the `|` and `;` you'll meet below, it hands to rc.) You can type commands without thinking about Forth at
+all.
 
 Sometimes a program has the same name as a Forth word. To make sure rc gets a line, start it with `%` and a space:
 
@@ -238,7 +240,7 @@ And `|[2]` pipes standard error instead of standard output.
 
 ```session
 % echo today is `{date}
-today is 2000-01-01 00:00:04
+today is 2000-01-01 00:00:05
 ```
 
 ## 8.9 Success and failure
