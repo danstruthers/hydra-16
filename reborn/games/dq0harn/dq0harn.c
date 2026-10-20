@@ -202,7 +202,7 @@ static const unsigned char purpose[P_THEME] = {
     HARN_CND, ATTR | HARN_END, ATTR | HARN_WIL, HARN_DGE,
     HARN_PHY, HARN_LOR, HARN_TRK, HARN_RHE, HARN_RHE, HARN_ANI,
     HARN_MIN,                                                           /* Digging: Mining */
-    HARN_WEA,                                                           /* Appraising: by its craft (appraiser) */
+    HARN_WPN,                                                           /* Appraising: by its craft (appraiser) */
     HARN_STL,                                                           /* Concealment: HarnMaster's Stealth */
     HARN_LCK,                                                           /* A mechanism made out: Lockcraft (traps) */
     HARN_NTR,                                                           /* Guile: Intrigue */
@@ -212,7 +212,7 @@ static const unsigned char purpose[P_THEME] = {
 ** hide Hideworking, cloth Textilecraft, pottery Ceramics, jewels Jewelcraft, books and bones Lore, food Cookery, stone
 ** Masonry, glass Glassworking */
 static const unsigned char appraiser[NAP] = {
-    HARN_WEA, HARN_WEA, HARN_MET, HARN_TIM, HARN_HID, HARN_TEX, HARN_CER, HARN_JEW, HARN_LOR, HARN_COO, HARN_LOR,
+    HARN_WPN, HARN_WPN, HARN_MET, HARN_TIM, HARN_HID, HARN_TEX, HARN_CER, HARN_JEW, HARN_LOR, HARN_COO, HARN_LOR,
     HARN_MSN, HARN_GLA
 };
 
