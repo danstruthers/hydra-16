@@ -86,7 +86,8 @@ void __fastcall__ o_harm (struct req* r)
 {
     static harn_injury d;
     struct rs_effect* e = (struct rs_effect*) r->x;
-    unsigned char how = 0, aspect, zone = HARN_MID, n = pc.ninj, k, w, loc = 0xFF;
+    unsigned char how = 0, aspect, zone = HARN_MID, n = pc.ninj, w, loc = 0xFF;
+    unsigned k;                                 /* (The rounds senseless: up to 360) */
     int impact;
 
     memset (r->x, 0, sizeof r->x);
@@ -139,8 +140,8 @@ void __fastcall__ o_harm (struct req* r)
     } else if (w & HARN_W_INJURED) {
         told (&pc.inj[pc.ninj - 1], pc.inj[pc.ninj - 1].sev, e);
         r->b = e->band;
-        if ((w & HARN_W_STUMBLE) && harn_stumble_roll (&pc, 0)) {
-            e->cond |= C_PRONE;                 /* (A leg's: fallen) */
+        if ((w & HARN_W_STUMBLE) && ((w & HARN_W_LIMB) || harn_stumble_roll (&pc, 0))) {
+            e->cond |= C_PRONE;                 /* (A leg's: fallen; a grievous one at once, Combat 14) */
         }
     } else if (how & HARN_FALL_WRENCHED) {
         r->b = HARN_MINOR;
