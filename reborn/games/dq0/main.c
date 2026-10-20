@@ -424,6 +424,7 @@ static void __fastcall__ start (const char* name, unsigned char t, const char* m
 }
 
 static void world_words (void);
+static char gods[112];                          /* (The world's deities' names, read as the game starts: world_words') */
 
 static void __fastcall__ start_world (unsigned long seed, const char* file)
 {
@@ -433,6 +434,13 @@ static void __fastcall__ start_world (unsigned long seed, const char* file)
     int w;
     char* l;
 
+    strcat (libdir, "/dq0g.txt");               /* (Read before any of the game's tasks is begun: the time it takes
+                                                **   theirs alike) */
+    w = open (libdir, O_RDONLY);
+    libdir[strlen (libdir) - 9] = 0;
+    k = read (w, gods, sizeof gods - 1);
+    gods[k < sizeof gods ? k : 0] = 0;
+    close (w);
     if (hub_create (HUB_BANKS)) {
         t_end ();
         hy_exits ("dq0: no shared segment or semaphores for its tasks");
@@ -505,7 +513,6 @@ static void world_words (void)
     static char nm[sizeof CATALOGUE[0].name + 1];
     static unsigned n;
     unsigned char i, k;
-    int fd;
 
     n = 0;
     for (i = 0; i < NKINDS; ++i) {
@@ -520,18 +527,10 @@ static void world_words (void)
     }
     HUB_WINDOW[n++] = 0;                        /* (Then the names given: none) */
     HUB_WINDOW[n++] = 0;
-    hub_map (0);
-    strcat (libdir, "/dq0g.txt");               /* (Then the deities') */
-    fd = open (libdir, O_RDONLY);
-    libdir[strlen (libdir) - 9] = 0;
-    while (n < CQ_WORDS - sizeof nm && (k = read (fd, nm, sizeof nm)) - 1 < sizeof nm) {
-        hub_map (CMD_BANK);                     /* (None, or the file's end: 0 or -1, done) */
-        memcpy (HUB_WINDOW + n, nm, k);
+    if (n + (k = strlen (gods)) < CQ_WORDS) {   /* (Then the deities') */
+        memcpy (HUB_WINDOW + n, gods, k);
         n += k;
-        hub_map (0);
     }
-    close (fd);
-    hub_map (CMD_BANK);
     HUB_WINDOW[n] = 0;
     hub_map (0);
     HUB->cq.kind = CQ_WORLD;
