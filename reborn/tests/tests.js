@@ -186,7 +186,7 @@ const RC_LINES = [
   ["~ a a && echo and; ~ a b || echo or","and\nor"],
   ["cat /nothing; echo status $status","cat: /nothing: not found\nstatus 1"],
   ["echo /rom/lib/n*","/rom/lib/namespace"],
-  ["echo /rom/lib/*","/rom/lib/as /rom/lib/basic /rom/lib/edit /rom/lib/font /rom/lib/forth /rom/lib/hylang /rom/lib/namespace /rom/lib/profile /rom/lib/shell /rom/lib/windows"],
+  ["echo /rom/lib/*","/rom/lib/as /rom/lib/bank /rom/lib/basic /rom/lib/edit /rom/lib/font /rom/lib/forth /rom/lib/hylang /rom/lib/namespace /rom/lib/profile /rom/lib/shell /rom/lib/windows"],
   ["echo 'no*match'*","no*match*"],
   ["cd /rom/lib; pwd; cd","/rom/lib"],
   ["rc -c 'echo sub $x'","sub a b c"],
@@ -204,12 +204,12 @@ const RC_LINES = [
   ["bind '#n' /mnt; ls /mnt","null\nzero\nkmesg"],
   ["{mount /mnt}","rc: usage: mount [-abc] '#x' old [spec]"],
   ["{bind /mnt}","rc: usage: bind [-abc] new old"],
-  ["ls /rom/lib","as/\nbasic/\nedit/\nfont/\nforth/\nhylang/\nnamespace\nprofile\nshell\nwindows"],
+  ["ls /rom/lib","as/\nbank/\nbasic/\nedit/\nfont/\nforth/\nhylang/\nnamespace\nprofile\nshell\nwindows"],
   ["cat /bin/echo >/ram/hi; cd /ram; hi from dot; cd","from dot"],
   ["cat /nothing >[2]/ram/e; cat /ram/e","cat: /nothing: not found"],
   ["cat /nothing |[2] cat >/ram/p; echo -n 'p: '; cat /ram/p","p: cat: /nothing: not found"],
   ["echo $task $#path $path # a comment","2 2 . /bin"],
-  ["path=(); ls; path=(. /bin); ls /rom/lib","rc: ls: not found\nas/\nbasic/\nedit/\nfont/\nforth/\nhylang/\nnamespace\nprofile\nshell\nwindows"],
+  ["path=(); ls; path=(. /bin); ls /rom/lib","rc: ls: not found\nas/\nbank/\nbasic/\nedit/\nfont/\nforth/\nhylang/\nnamespace\nprofile\nshell\nwindows"],
   ["! ~ a b && echo not; echo $status","not\n"],
 ];
 
@@ -221,7 +221,7 @@ const HYSH_RC = RC_LINES.filter(([l]) => l[0] !== '{' &&
   !/^(echo \$"x|echo x\^|echo \$x\(2-\)|rc -c 'echo sub|whatis greet|whatis echo x|eval echo evaled|echo \$task)/.test(l));
 const HYSH_LINES = [
   ['(+ 1 2)', '=> 3'], ['(map (fn {x} {* x x}) {1 2 3})', '=> {1 4 9}'], ['cd /rom/lib', null, '/rom/lib'], ['pwd', '/rom/lib'],
-  ['ls | wc -l', '     10'], ['cmp namespace profile >/dev/null', null], ['(+ status 0)', '=> 1'], ['echo $status', '1'],
+  ['ls | wc -l', '     11'], ['cmp namespace profile >/dev/null', null], ['(+ status 0)', '=> 1'], ['echo $status', '1'],
   ['cd /none', '/none: not found'], ['bind -x a b', 'usage: bind [-abc] new old'], ["bind -a '#n' /mnt", null], ['ls /mnt', 'null\nzero\nkmesg'],
   ['unmount /mnt', null], ['ls /mnt', null], ['nosuch', 'rc: nosuch: not found'], ['sleep 1 &', null], ['echo $#apid', '1'],
   ['cd', null, '/'],
@@ -2312,7 +2312,7 @@ module.exports = {
           ': h ." note " . true ;', '\' h on-note sys-getpid 16 note 7 .', ': lp 10 0 do i 5 = if sys-getpid 17 note then loop ." done" ;',
           'lp', ': h2 drop false ;', '\' h2 on-note sys-getpid 18 note 1 .', 'pause 2 .', 'exit'].map(l => 'ā' + l + '\r').join(''),
       },
-      expect: ['/> argc .\n0 \n', '/> s" /rom/lib" ls-dir\nas basic edit font forth hylang namespace profile shell windows \n/> s" /ram/newdir" 0 =mkdir . s" /ram" ls-dir\n0 bin lib newdir \n' +
+      expect: ['/> argc .\n0 \n', '/> s" /rom/lib" ls-dir\nas bank basic edit font forth hylang namespace profile shell windows \n/> s" /ram/newdir" 0 =mkdir . s" /ram" ls-dir\n0 bin lib newdir \n' +
         '/> s" /rom" set-dir . pad 64 get-dir type\n0 /rom\n/rom> s" /none" set-dir ior>text type\nnot found\n' +
         '/rom> s" foo" s" bar" setenv s" foo" getenv type s" foo" unsetenv s" foo" getenv nip .\nbar0 \n' +
         '/rom> : h ." note " . true ;\n/rom> \' h on-note sys-getpid 16 note 7 .\nnote 16 7 \n' +
@@ -4024,6 +4024,25 @@ module.exports = {
         return +w[1] && +w[2] ? [] : ['the ' + (+w[1] ? 'consumers' : 'producers') + ' never waited'];
       },
       sdcard: true
+    },
+    {
+      name: 'bankprog', what: 'bank programs (Phase 3B: sdk/c/include/bankprog.h, sdk/c/lib/bankprog.s; the user\'s design, 2026-10-18): tests/ram/t_bank, a C program, loads a child (tests/bank: o65, linked at $8000) into a RAM bank of its own and calls it, calls it again (still loaded: its count goes on), 200 calls timed; its words in the caller\'s RAM, three arguments; BANK_MAX more loaded, the first given up for them and loaded again as it\'s called; and refused with their reasons: too much zero page, an import its caller hasn\'t (named), no such entry, no such file',
+      init: 't_rc', cycles: 600e6,
+      pc: { files: () => {
+        const o = n => fs.readFileSync(path.join(__dirname, '..', 'obj', 'tests', n)), c = o('count.bp');
+        return Object.assign({ 't_bank.hyx': o('t_bank.hyx'), 't_bank.exp': o('t_bank.exp'), 'count.bp': c, 'fill.bp': o('fill.bp'),
+          'bigzp.bp': o('bigzp.bp'), 'nosuch.bp': o('nosuch.bp') }, ...[1, 2, 3, 4, 5, 6].map(k => ({ ['c' + k + '.bp']: c })));
+      } },
+      machine: { input: '\u0101for (f in `{ls /pc}) cp /pc/$f /ram/$f\r\u0101/ram/t_bank.hyx\r' },
+      expect: ['t_bank: PASS']
+    },
+    {
+      name: 'bankrun', what: 'bankrun (Phase 3B): a bank program run from the shell, the ROM disk\'s /rom/lib/bank/hello.bp (bank/hello: printf its caller\'s), its arguments said back and its value the status; called 50 times, still loaded, the calls timed; one with no file refused, its reason said',
+      init: 't_rc', cycles: 400e6,
+      machine: { input: ['bankrun /rom/lib/bank/hello.bp one two; echo status $status', 'bankrun -n 50 /rom/lib/bank/hello.bp >/dev/null',
+        'bankrun /rom/lib/bank/none.bp', 'echo done'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['hello from a bank program (/rom/lib/bank/hello.bp) one two\nstatus 2', 'bankrun: /rom/lib/bank/none.bp: no such file',
+        '% echo done']
     },
     {
       name: 'round', what: 'the round sample (sdk/c/samples/round: a barrier, then each task its own time) at rc, as a copy named /ram/rnd (the build\'s, through /pc: only $prog can find it): four tasks sing a round on YM2151 channels 0-3, an eighth 12 ticks; each voice\'s 27 notes in time (hy_sleep_until: within 5 ticks), each voice two bars after the one before',
