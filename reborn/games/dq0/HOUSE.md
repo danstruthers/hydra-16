@@ -261,6 +261,32 @@ silent on all of it.
   comes into sight, a blow comes from one it doesn't see, a trap is set off.  (resolve.c; blows.c, fixt.c:
   untarget.)
 
+## Characters *(hmchar: HarnMaster's character generator)*
+
+- **Every occupation the book lists, and one of the player's own** (the user's, 2026-10-20).  hmchar offers the
+  Occupational Skills table whole (Character 15: its 55 occupations, unguilded, guilded and noble); the soldiers of
+  the character's culture, by unit (Character 27: the Feudal's with the fighting orders', the Imperial's, the
+  Vikings', the Khuzdul's, the Sindarin's; the Tribal have none); and the clerics, by church (Character 23: a
+  character with a deity its own church's; one with none any of the ten, the church making its deity the
+  character's, its ritual skill opened).  Not yet the mages (Character 25): their skills come with magic.  A
+  soldier has every soldier's skills too, a cleric every cleric's; a skill both list, the higher.  The book's
+  specialties are their skills (Ratcraft and Dogcraft Animalcraft, a lance Polearm, a falchion or a longknife Sword,
+  a hartbow Bow); a second language and more scripts are left out (harn.h has one Language and one Script).  The
+  table is games/hmchar/occupations.txt (on the card in games/lib/hmchar, beside hmchar), read a line at a time as
+  it's wanted.  An occupation is chosen by its number or a beginning of its name (a group listed by its first
+  letter, ? and one its skills shown); -c NAME picks one and -q draws one, the one draw either way, so the rest of
+  the character comes out the same.  (hmchar's bank program, bank/hmocc; hmchar.fs and hmchar.hl the same.)
+- **The player's own occupation is 11 points** (the user's: the book's 55 are worth 1 to 21 points, 11 their median
+  and their mean, a point opening a skill at its OML and a point for each SB more).  A point opens a skill at its
+  OML, or improves an open one (an automatic one too) by its SB; two points in a skill at most, and three in one
+  only, its primary (3 + 2 + 2 + 2 + 2 spends them all); the player names it.  Then the usual 5 option points, two
+  in a skill at most (an open skill takes one more): the primary's three are the player's own occupation's alone.
+  (hmchar.c's spend.)
+- **An automatic skill an occupation lists takes the occupation's OML**, not the two added (Character 16); a skill
+  listed twice, the higher.  The weapons an occupation gives to choose open at their OML plus its number of SBs (the
+  Gladiator's three at OML + 2 SB, the Mercantyler's one at its OML), its crafts at SB times its number (the
+  Chandler's three at SB x 3).
+
 ## The null ruleset (dq0null)
 
 A second referee with no book behind it (Phase 3A: RULESETS.md), to show the game asks a ruleset nothing but rs.h's
@@ -394,11 +420,6 @@ climb's test to hold on).
 - **Bearings and mental maps** (DUNGEON.md: the character's sense of where it is, by Awareness or Mining; a map in
   its head that fades): slices 4.1-4.2.
 
-- **Every occupation the book lists, and one of the player's own** (the user's, 2026-10-20): hmchar offers the book's
-  whole table (Character 15), the soldiers by the character's culture and unit (Character 27) and the clerics by
-  deity (Character 23); the mages (Character 25) come with magic.  The player's own occupation is 11 points (the
-  book's occupations' median, a point opening a skill at its OML, a point for each SB more), at most 2 in a skill
-  and 3 in one, its primary; then the usual 5 option points, 2 a skill at most.  Today hmchar offers six.
 - **A theme's own tests name a purpose** (the user's, 2026-10-20), as the rest of the game's do, which each
   ruleset's referee maps to its own skill.  Today they're an even chance (P_THEME on).
 - **Climbing's rate by the face's grade** (the user's, 2026-10-20): faster up an easy face, slower up a sheer one,
@@ -408,7 +429,7 @@ climb's test to hold on).
 ## Open
 
 - **Each occupation's balance** (the user's, 2026-10-20: "we will need to look at game balance for each
-  occupation"): once hmchar offers them all, each one's worth in the game looked at, not only its points (the book's
+  occupation"): now that hmchar offers them all, each one's worth in the game looked at, not only its points (the book's
   run from 1 to 21; a dungeon favours some skills, a fighter's, a thief's, a miner's, over others), and evened out
   as the user decides.
 - **D9, hearing:** how far each sound carries and how well each actor hears, tuned by ear once the real

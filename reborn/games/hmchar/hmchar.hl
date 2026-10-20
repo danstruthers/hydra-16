@@ -3,25 +3,29 @@
 ; (harnfile.c's text) for a game, Dingus Quest Zero's or any other, to read: C's hmchar (games/hmchar) in hylang, the
 ; same questions, the same profile, the same file.
 ;
-; hmchar.hl [-o file] [-q] [-p species]
+; hmchar.hl [-o file] [-q] [-p species] [-c occupation]
 ;   -o file    where it's written (default: NAME.hm, in the current directory, NAME the character's)
-;   -q         no questions: the first roll kept, an occupation, weapons and option points chosen at random, a
-;              name made up
+;   -q         no questions: the first roll kept, an occupation (one of the book's), weapons and option points chosen
+;              at random, a name made up
 ;   -p species the character's species, not rolled: human, elf (Sindarin) or dwarf (Khuzdul), by its first letter
 ;              (h, e or s, d or k)
+;   -c occupation  the occupation, by its name (case ignored, a beginning enough), not asked or drawn
 ; (C's -s seed, the same character each time, isn't here: hylang's random can't be seeded.  HyForth's hmchar.fs has
 ; it, and gives the character C's hmchar does)
 ;
-; The steps (Character 1): the attributes rolled (kept, or rolled again); an occupation, its skills opened as the
-; Occupational Skills table has them (Character 15; a few of the book's, those of use in a dungeon; "three weapons at
-; OML + SB" chosen); the five option points spent (Character 16: a skill opened at its OML for one, or improved by its
-; SB for one, a second time for two more); a name.  Not here: the family's occupation and its skills, contacts, the
-; veterans' points.
+; The steps (Character 1): the attributes rolled (kept, or rolled again); an occupation, any of the book's that
+; occupations.txt has (C's hmchar's, its lib/hmchar: the Occupational Skills table, Character 15; a soldier's unit by
+; the character's culture, Character 27; a cleric's church by its deity, Character 23; not yet a mage's, Character
+; 25), its skills opened as the book has them (the weapons or crafts it gives chosen); or the player's own (11
+; points, two in a skill at most and three in one, its primary); the five option points spent (Character 16: a skill
+; opened at its OML for one, or improved by its SB for one, two points in a skill at most); a name.  Not here: the
+; family's occupation and its skills, contacts, the veterans' points.
 
 ; The options (before the library: a wrong one is said at once)
 (def {quiet} NIL)
 (def {out} NIL)
 (def {species} NIL)
+(def {cname} NIL)
 (def {species-of} (fn {w} {do                   ; -p's: h a human, e or s an elf, d or k a dwarf: 0-2, or NIL
   =(c ?((eq w "") "" (str-lower (substring w 0 1))))
   ?((eq c "h") 0 ?((or (eq c "e") (eq c "s")) 1 ?((or (eq c "d") (eq c "k")) 2 NIL)))}))
@@ -29,39 +33,37 @@
 (while {a} {do
   =(o (fst a))
   ?((and (eq o "-o") (tail a)) (do (set! {out} (snd a)) (set! {a} (tail a)))
+  ?((and (eq o "-c") (tail a)) (do (set! {cname} (snd a)) (set! {a} (tail a)))
   ?((and (eq o "-p") (and (tail a) (not (nil? (species-of (snd a)))))) (do (set! {species} (species-of (snd a)))
     (set! {a} (tail a)))
   ?((eq o "-q") (set! {quiet} T)
     (do
       ?((eq o "-s")
         (print-to stderr "hmchar.hl: -s: hylang's random can't be seeded (hmchar.fs and C's hmchar have -s)") NIL)
-      (print-to stderr "usage: hmchar.hl [-o file] [-q] [-p species]")
-      (exit 1)))))
+      (print-to stderr "usage: hmchar.hl [-o file] [-q] [-p species] [-c occupation]")
+      (exit 1))))))
   (set! {a} (tail a))})
 
 (use "harn")
 (set! {harn.species} species)
 
-(def {occ} NIL)
+(def {occname} NIL)
 (def {name} "")
 (def {h} NIL)
+
+; The column the output's at (the occupation's words wrapped as C's are)
+(def {col} 0)
+(def {say} (fn {tx} {do (write tx) (set! {col} (+ col (len tx)))}))
+(def {nl} (fn {} {do (print) (set! {col} 0)}))
+(def {w} (fn {tx} {do ?((> (+ col (len tx)) 77) (do (nl) (say "  ")) (say " ")) (say tx)}))
 
 ; A line typed, trimmed (the input's end: the end, nothing written)
 (def {ask} (fn {q} {do
   (write q)
+  (set! {col} 0)
   =(l (read-line))
   ?((nil? l) (do (print) (exit 1)) (str-trim l))}))
 
-; ---- The occupations (Character 15): each skill and its ML's multiple of SB (0: the skill's own OML); :w n, three
-; weapons at OML + SB times n
-(def {occs} {
-  {"Gladiator" 4 {{"ini" 6} {:w 2} {"una" 6} {"phy" 2}}}
-  {"Hunter/Trapper" 5 {{"trk" 5} {:w 1} {"stl" 4} {"for" 4} {"sur" 4} {"hid" 3} {"hun" 3} {"fle" 2}}}
-  {"Thief" 3 {{"leg" 4} {"awa" 5} {"stl" 4} {"ntr" 4} {"lck" 3} {"clu" 5} {"dag" 4} {"acr" 3}}}
-  {"Physician" 7 {{"phy" 4} {"hrb" 3} {"alc" 3} {"scr" 0}}}
-  {"Miner" 6 {{"min" 4} {"eng" 3} {"woo" 3} {"met" 2} {"jew" 1}}}
-  {"Sage" 5 {{"fol" 5} {"mat" 2} {"scr" 0}}}
-})
 (def {weapons} (map harn.skill-of {"axe" "bow" "clu" "dag" "fla" "net" "pol" "shd" "slg" "spr" "swd" "whp" "blo"}))
 
 ; A skill named (case ignored, a beginning of its name enough if only one has it), among some: it, :two (more than
@@ -74,38 +76,169 @@
   =(exact (filter (fn {sk} {eq (len (harn.skill-name sk)) n}) begins))
   ?((zero? n) NIL ?(exact (fst exact) ?((nil? begins) NIL ?((nil? (tail begins)) (fst begins) :two))))}))
 
-(def {three-weapons} (fn {times} {do
-  ?(quiet NIL (print (+ "Three weapon skills, opened at their OML plus " ?((eq times 1) "" "twice ") "SB. The weapons: "
-    (str-join (map harn.skill-name weapons) ", ") ".")))
+; ---- The occupations: occupations.txt (lib/hmchar beside hmchar.hl, as rc's $prog has it, else the card's: C's
+; hmchar's), read once, those offered the character kept in its order: {:title KIND TEXT}, {:all KIND SKILLS} (a kind's
+; every one's skills), {:occ KIND NAME YEARS SKILLS DEITY NUMBER} (DEITY a church's, else 10)
+(def {libdir} "/sd/0/games/lib/hmchar")
+(def {find-lib} (fn {} {do
+  =(p (try (read-file "/env/prog") {""}))
+  =(i (last-index-of p "/"))
+  =(d (+ ?((>= i 0) (substring p 0 (+ i 1)) "") "lib/hmchar"))
+  ?((exists? (+ d "/occupations.txt")) (set! {libdir} d) NIL)}))
+
+(def {items} {})
+(def {cul} "")
+(def {kind} "")
+(def {sect} NIL)
+(def {sdty} 10)
+(def {dnames} (map str-lower harn.deity-names))
+(def {snames} (map (fn {k} {str-lower (harn.skill-name k)}) (range 0 91)))
+(def {name-in} (fn {l q k} {?(l ?((eq (fst l) q) k (name-in (tail l) q (+ k 1))) k)}))   ; (q's place in l, or its length)
+; A group's header, [KIND] or [KIND QUALIFIER] and its title: offered with no qualifier, or the character's culture,
+; or its deity, or a deity when it has none
+(def {header} (fn {l} {do
+  =(i (index-of l "]"))
+  =(inside (substring l 1 (- i 1)))
+  =(sp (index-of inside " "))
+  =(q ?((>= sp 0) (substring inside (+ sp 1)) ""))
+  (set! {kind} ?((>= sp 0) (substring inside 0 sp) inside))
+  (set! {sdty} ?((eq q "") 10 (name-in dnames (str-lower q) 0)))
+  (set! {sect} (or (eq q "") (or (eq (str-lower q) cul)
+    (and (< sdty 10) (or (eq (h :dty) 10) (eq (h :dty) sdty))))))
+  =(title (str-trim (substring l (+ i 1))))
+  ?((and sect (> (len title) 0)) (set! {items} (cons (list :title kind title) items)) NIL)}))
+(def {occ-line} (fn {l} {?(sect (do              ; (Its skills kept as they're written: skills-of splits them)
+  =(i (index-of l "|"))
+  =(nm (str-trim ?((>= i 0) (substring l 0 i) l)))
+  =(r ?((>= i 0) (substring l (+ i 1)) ""))
+  =(j (index-of r "|"))
+  =(yr (str-trim ?((>= j 0) (substring r 0 j) r)))
+  =(sk ?((>= j 0) (substring r (+ j 1)) ""))
+  ?((> (len nm) 0)
+    (set! {items} (cons ?((eq (str-lower nm) "all") (list :all kind sk) (list :occ kind nm yr sk sdty)) items)) NIL))
+  NIL)}))
+(def {skills-of} (fn {s} {?((eq (str-trim s) "") {} (map str-trim (str-split s ",")))}))
+(def {num} 0)
+(def {read-occs} (fn {} {do                    ; (A line at a time: read-lines garbles a file over 8K)
+  (set! {items} {})
+  (set! {cul} (str-lower (nth (h :culture) harn.culture-names)))
+  =(f (try (open (+ libdir "/occupations.txt")) {NIL}))
+  =(l ?(f (read-line f) NIL))
+  (while {not (nil? l)} {do
+    =(c (substring l 0 1))
+    ?((or (eq c ";") (eq (str-trim l) "")) NIL ?((eq c "[") (header l) (occ-line l)))
+    (set! {l} (read-line f))})
+  ?(f (close f) NIL)
+  (set! {items} (map (fn {x} {?((eq (fst x) :occ) (do (set! {num} (+ num 1)) (join x (list num))) x)})
+    (reverse items)))}))
+(def {occs} (fn {} {filter (fn {x} {eq (fst x) :occ}) items}))
+
+; The menu: each kind's numbers, from its first to its last
+(def {upto} (fn {first last} {print ?((eq first last) "" (+ "-" last))}))
+(def {menu-kinds} (fn {l k last first} {
+  ?(l ?((eq (snd (fst l)) last) (menu-kinds (tail l) (+ k 1) last first)
+        (do ?((eq last "") NIL (upto first (- k 1))) (write (+ "  " (snd (fst l)) " " k))
+          (menu-kinds (tail l) (+ k 1) (snd (fst l)) k)))
+    ?((eq last "") NIL (upto first (- k 1))))}))
+
+; A list of skills said, a comma between (and a full stop after the last: dot), wrapped
+(def {say-list} (fn {l dot} {?(l (do (w (fst l)) (say ?((tail l) "," ?(dot "." ""))) (say-list (tail l) dot)) NIL)}))
+(def {say-skills} (fn {p l} {do (say p) (say-list l NIL) (nl)}))
+
+; A group listed (its kind's first letter g): its titles, its every one's skills, its occupations three to a line;
+; how many
+(def {cell} 0)
+(def {listed} 0)
+(def {brk} (fn {} {do ?((> col 0) (nl) NIL) (set! {cell} 0)}))
+(def {pad} (fn {c} {?((< col c) (do (say " ") (pad c)) NIL)}))
+(def {title} (fn {tx} {do                         ; (A long one broken at a space past the 68th column)
+  =(ws (str-split tx " "))
+  (say (fst ws))
+  (each (fn {x} {do ?((> col 68) (do (nl) (say "  ")) (say " ")) (say x)}) (tail ws))}))
+(def {list-item} (fn {x} {
+  ?((eq (fst x) :title) (do (brk) (title (thd x)) (nl))
+  ?((eq (fst x) :all) (do (brk) (say-skills (+ "Every " (snd x) ":") (skills-of (thd x))))
+    (do
+      ?((eq cell 3) (brk) NIL)
+      (pad (* cell 26))
+      (say (+ ?((< (nth 6 x) 10) "   " "  ") (nth 6 x) " " (nth 2 x)))
+      (set! {cell} (+ cell 1))
+      (set! {listed} (+ listed 1)))))}))
+(def {list-group} (fn {g} {do
+  (set! {listed} 0)
+  (each (fn {x} {?((eq (substring (snd x) 0 1) g) (list-item x) NIL)}) items)
+  (brk)
+  listed}))
+
+; The occupation numbered so, or named by a beginning of its name (exactly: that one): it, :two (more than one
+; begins so), or NIL
+(def {find-occ} (fn {w} {do
+  =(l (occs))
+  ?((digit? w) (do =(n (val w)) ?((and (> n 0) (<= n (len l))) (nth (- n 1) l) NIL))
+    (do
+      =(lw (str-lower w))
+      =(b (filter (fn {x} {starts-with? (str-lower (nth 2 x)) lw}) l))
+      =(e (filter (fn {x} {eq (str-lower (nth 2 x)) lw}) b))
+      ?(e (fst e) ?((nil? b) NIL ?((nil? (tail b)) (fst b) :two)))))}))
+
+; A skill of an occupation's: SKILL/N, SKILL (at its OML), Ritual/N (the deity's), or weapons N/M or crafts N/M
+; (chosen after: pend, {weapons? N M}); a skill listed twice, the higher
+(def {pend} NIL)
+(def {raise} (fn {sk m} {do
+  =(v ?((zero? m) (harn.get-oml h sk) (* m (harn.get-sb h sk))))
+  ?((< (harn.get-ml h sk) v) (harn.put-ml h sk v) NIL)}))
+(def {skill-token} (fn {tx} {do
+  =(i (index-of tx "/"))
+  =(m ?((>= i 0) (val (substring tx (+ i 1))) 0))
+  =(nm ?((>= i 0) (substring tx 0 i) tx))
+  =(lw (str-lower nm))
+  ?((or (starts-with? lw "weapons ") (starts-with? lw "crafts "))
+    (set! {pend} (list (starts-with? lw "w") (val (snd (str-split nm " "))) m))
+  ?((eq lw "ritual") ?((eq (h :dty) 10) NIL (raise (+ 21 (h :dty)) m))
+    (do
+      =(sk (name-in snames lw 0))
+      ?((< sk 91) NIL (set! {sk} (skill-named nm (range 0 91))))
+      ?((or (nil? sk) (eq sk :two)) (print-to stderr (+ "hmchar.hl: occupations.txt: no skill " nm)) (raise sk m)))))}))
+
+; An occupation's skills said (its kind's every one's, then its own), and taken (apply)
+(def {take-occ} (fn {x apply} {do
+  (each (fn {a} {?((and (eq (fst a) :all) (eq (snd a) (snd x)))
+    (do
+      =(s (skills-of (thd a)))
+      ?(quiet NIL (say-skills (+ "Every " (snd a) ":") s))
+      ?(apply (each skill-token s) NIL)) NIL)}) items)
+  =(s (skills-of (nth 4 x)))
+  ?(quiet NIL (say-skills (+ (nth 2 x) ", " (nth 3 x) " years:") s))
+  ?(apply (each skill-token s) NIL)}))
+
+; The weapons (pend's first) or crafts an occupation gives the character to choose: N of them, each opened at its
+; OML plus SB times M (a weapon), or at SB times M (a craft)
+(def {choose} (fn {} {do
+  =(wp (fst pend))
+  =(n (snd pend))
+  =(m (thd pend))
+  =(among ?(wp weapons (range 48 91)))
+  ?(quiet NIL (do
+    (say (+ (nth (- n 1) {"One" "Two" "Three"}) ?(wp " weapon skill" " craft") ?((> n 1) "s, opened at " ", opened at ")))
+    ?(wp (do (say "their OML") ?((zero? m) NIL (say " plus "))) NIL)
+    ?((or (> m 0) (not wp)) (say (+ (nth m {"" "" "twice " "three times "}) ?(wp "SB" "their SB"))) NIL)
+    (say ?(wp ". The weapons:" ". The crafts:"))
+    (say-list (map harn.skill-name among) T)
+    (nl)))
   =(got 0)
-  (while {< got 3} {do
-    =(sk ?(quiet (nth (random 13) weapons)
-      (skill-named (ask (nth got {"The first: " "The second: " "The third: "})) weapons)))
+  (while {< got n} {do
+    =(sk ?(quiet (nth (random (len among)) among)
+      (skill-named (ask (nth got {"The first: " "The second: " "The third: "})) among)))
     ?((or (nil? sk) (eq sk :two)) (print ?((eq sk :two) "Which? More than one begins so." "That's not one of them."))
-    ?((> (harn.get-ml h sk) (harn.get-oml h sk)) ?(quiet NIL (print "That one's chosen already."))
       (do
-        (harn.put-ml h sk (+ (harn.get-oml h sk) (* times (harn.get-sb h sk))))
-        (set! {got} (+ got 1)))))})}))
+        =(v (+ (* m (harn.get-sb h sk)) ?(wp (harn.get-oml h sk) 0)))
+        ?((>= (harn.get-ml h sk) v) ?(quiet NIL (print "That one's chosen already."))
+          (do
+            (harn.put-ml h sk v)
+            (set! {got} (+ got 1))))))})}))
 
-; The occupation's skills: an automatic skill listed takes the occupation's ML, not the two added (Character 16)
-(def {occupation} (fn {} {do
-  ?(quiet (set! {occ} (random 6))
-    (do
-      (print)
-      (print "An occupation (Character 15):")
-      (dotimes {k 6} (print (+ "  " (+ k 1) " " (fst (nth k occs)) ", " (snd (nth k occs)) " years")))
-      (while {nil? occ} {do
-        =(n (ask "Which (1-6)? "))
-        =(k ?((and (> (len n) 0) (digit? n)) (- (val n) 1) -1))
-        ?((and (>= k 0) (< k 6)) (set! {occ} k) NIL)})))
-  (each @({s} {?((eq (fst s) :w) (three-weapons (snd s))
-    (do
-      =(sk (harn.skill-of (fst s)))
-      (harn.put-ml h sk ?((zero? (snd s)) (harn.get-oml h sk) (* (snd s) (harn.get-sb h sk))))))})
-    (thd (nth occ occs)))}))
-
-; The skills listed (? at the option points' prompt): the open ones at their ML; the others (but the rituals: the
-; character has no deity) at the OML they'd open at; three to a line
+; The skills listed (? at the points' prompt): the open ones at their ML; the others (but the rituals: the character
+; has no deity, or its own's open) at the OML they'd open at; three to a line
 (def {cells} (fn {l n} {do
   ?(l
     (do
@@ -123,35 +256,94 @@
   (cells (map (fn {sk} {list sk (harn.get-oml h sk)})
     (filter (fn {sk} {and (zero? (harn.get-ml h sk)) (or (< sk 21) (> sk 30))}) (range 0 91))) 0)}))
 
-; Five option points: a skill opened at OML for one; an open skill improved by its SB for one (Character 16); no more
-; than two points in a skill (the user's: the book's second improvement, two more, would make three)
-(def {option-points} (fn {} {do
-  =(improved (buffer 91))
-  =(op 5)
-  ?(quiet NIL (do
-    (print)
-    (print "Five option points: a skill's name opens it at its OML (1 point), or improves an open one by its SB")
-    (print "(1 point), no more than two points in a skill. ? lists them. Enter alone keeps what's left.")))
-  (while {> op 0} {do
+; Points spent, op of them (Character 16's option points; or own, the player's own occupation's): a skill's name opens
+; it at its OML for one, or improves an open one by its SB for one; no more than two points in a skill (an option
+; point's: an open skill has had one, its opening), but three in one skill, the player's own occupation's primary
+(def {spend} (fn {op own} {do
+  =(pts (buffer 91))
+  (each (fn {k} {?((and (not own) (> (harn.get-ml h k) 0)) (buffer-put pts k 1) NIL)}) (range 0 91))
+  =(primary (not own))
+  =(left op)
+  ?(quiet NIL ?(own (do
+      (print)
+      (print "Your own occupation, 11 points: a skill's name opens it at its OML (1 point),")
+      (print "or improves an open one by its SB (1 point); two points in a skill at most, but")
+      (print "three in one, its primary. ? lists them. Enter alone keeps what's left."))
+    (do
+      (print)
+      (print "Five option points: a skill's name opens it at its OML (1 point), or improves an open one by its SB")
+      (print "(1 point), no more than two points in a skill. ? lists them. Enter alone keeps what's left."))))
+  (while {> left 0} {do
     =(sk ?(quiet (random 91)
-      (do =(w (ask (+ "Points left: " op ". A skill: "))) ?((eq w "") :done ?((eq w "?") :list
+      (do =(w (ask (+ "Points left: " left ". A skill: "))) ?((eq w "") :done ?((eq w "?") :list
         (skill-named w (range 0 91)))))))
-    ?((eq sk :done) (set! {op} 0)
+    ?((eq sk :done) (set! {left} 0)
     ?((eq sk :list) (list-skills)
     ?((or (nil? sk) (eq sk :two)) (print ?((eq sk :two) "Which? More than one begins so." "There's no such skill."))
-    ?((and quiet (>= sk 21) (<= sk 30)) NIL             ; (Not a ritual: the character has no deity)
+    ?((and (and (>= sk 21) (<= sk 30)) (or quiet (not (eq sk (+ 21 (h :dty))))))
+      ?(quiet NIL (print "Not your deity's ritual."))           ; (-q's draws none)
       (do
-        =(ml (harn.get-ml h sk))
-        =(i (buffer-get improved sk))
-        =(cost ?((or (zero? ml) (zero? i)) 1 99))
-        ?((> cost op)
-          ?(quiet NIL (print ?((eq cost 99) "No more than two points in a skill: that one's had its share."
-            "Not enough points left for that.")))
+        =(p (buffer-get pts sk))
+        ?((and (>= p 2) (or primary (> p 2)))
+          ?(quiet NIL (print (+ "No more than two points in a skill" ?(own ", or three in one" "")
+            ": that one's had its share.")))
           (do
-            ?((zero? ml) (harn.open-skill h sk)
-              (do (harn.put-ml h sk (+ ml (harn.get-sb h sk))) (buffer-put improved sk (+ i 1))))
-            (set! {op} (- op cost))
+            ?((eq p 2) (set! {primary} T) NIL)
+            (buffer-put pts sk (+ p 1))
+            =(ml (harn.get-ml h sk))
+            ?((zero? ml) (harn.open-skill h sk) (harn.put-ml h sk (+ ml (harn.get-sb h sk))))
+            (set! {left} (- left 1))
             ?(quiet NIL (print (+ (harn.skill-name sk) " is " (harn.get-ml h sk)))))))))))})}))
+
+; The occupation: one of the book's, chosen (by its number or its name, a group listed by its kind's first letter, ?
+; and one its skills shown), or -c's, or -q's at random; its skills opened (an automatic skill listed takes the
+; occupation's OML, not the two added: Character 16); or the player's own (:own)
+(def {choose-occ} (fn {count} {do
+  =(pick NIL)
+  (while {nil? pick} {do
+    =(a (ask "Which? "))
+    =(show (starts-with? a "?"))
+    =(p (str-trim ?(show (substring a 1) a)))
+    ?((eq p "") NIL
+    ?((and (not show) (and (eq (len p) 1) (> (list-group (str-lower p)) 0))) NIL
+      (do
+        =(x ?((and (digit? p) (eq (val p) (+ count 1))) :own
+          ?((and (not (digit? p)) (starts-with? "your own" (str-lower p))) :own (find-occ p))))
+        ?((or (nil? x) (eq x :two)) (print ?((eq x :two) "Which? More than one begins so." "There's no such occupation."))
+        ?(show ?((eq x :own) (print "Your own: 11 points spent as option points are, three in one skill (its primary).")
+            (take-occ x NIL))
+          (set! {pick} x))))))})
+  pick}))
+(def {occupation} (fn {} {do
+  (read-occs)
+  =(l (occs))
+  =(count (len l))
+  ?((zero? count) (do (print-to stderr "hmchar.hl: no lib/hmchar/occupations.txt") (exit 1)) NIL)
+  ?((and (not quiet) (nil? cname)) (do
+    (print)
+    (print "An occupation (Character 15; not yet a mage's, Character 25: theirs come with magic):")
+    (menu-kinds l 1 "" 0)
+    (print (+ "  your own " (+ count 1)))
+    (print "A group's first letter lists it; a number or a name chooses one (a beginning")
+    (print "enough), and ? before one shows its skills.")) NIL)
+  =(pick ?(quiet (nth (random count) l) NIL))
+  ?(cname (do
+    (set! {pick} (find-occ cname))
+    ?((or (nil? pick) (eq pick :two)) (do (print-to stderr "hmchar.hl: -c: no such occupation, or more than one begins so")
+      (exit 1)) NIL))
+    ?(quiet NIL (set! {pick} (choose-occ count))))
+  ?((eq pick :own)
+    (do
+      (spend 11 T)
+      (set! {occname} "")
+      (while {eq occname ""} {do (print) (set! {occname} (ask "Your occupation's name: "))}))
+    (do
+      =(d (nth 5 pick))
+      ?((and (< d 10) (eq (h :dty) 10)) (do (hash-put h [:dty d]) (harn.open-skill h (+ 21 d))) NIL)
+      (set! {occname} (nth 2 pick))
+      (set! {pend} NIL)
+      (take-occ pick T)
+      ?(pend (choose) NIL)))}))
 
 ; ---- The profile
 (def {profile} (fn {} {do
@@ -159,7 +351,7 @@
   (write ?((eq name "") "" (+ name ", ")) (nth (h :sp) harn.species-names) " " (nth (h :sx) harn.sex-names) ", born "
     (bit-and (h :bd) 255) " " (harn.month-name (shr (h :bd) 8)) " (" (harn.sunsign-name (h :ss)) "); "
     (nth (h :culture) harn.culture-names) " " (nth (h :social) harn.class-names))
-  (print ?(occ (+ ", " (fst (nth occ occs))) ""))
+  (print ?(occname (+ ", " occname) ""))
   (print (+ "" (h :sibrank) " of " (h :famsize) "; " (nth (h :parent) harn.parent-names) ", "
     (nth (h :estrange) harn.estrangement-names) "; clanhead: " (nth (h :clanhead) harn.clanhead-names)))
   (print (+ "" (h :ht) "\", " (nth (h :fr) harn.frame-names) ", " (h :wt) " lb (size " (harn.size h) "); "
@@ -193,6 +385,7 @@
   (nth (random 11) {"dan" "ric" "nel" "gyn" "wen" "lor" "vik" "mar" "seth" "ka" "ven"}))}))
 
 ; ---- The program
+(find-lib)
 (def {kept} NIL)
 (while {not kept} {do
   (set! {h} (harn.create))
@@ -203,10 +396,10 @@
       =(b (ask "Keep this character, or roll again (k or r)? "))
       ?((and (> (len b) 0) (eq (str-lower (substring b 0 1)) "k")) (set! {kept} T) NIL)))})
 (occupation)
-(option-points)
+(spend 5 NIL)
 ?(quiet (make-name) (while {eq name ""} {do (print) (set! {name} (ask "A name: "))}))
 (profile)
 ?(out NIL (set! {out} (+ name ".hm")))
-(try (harn.write out h (list (+ "name " name) (+ "occupation " (fst (nth occ occs)))))
+(try (harn.write out h (list (+ "name " name) (+ "occupation " occname)))
   {do (print-to stderr (+ "hmchar.hl: " out ": can't write it")) (exit 1)})
 (print (+ "Written to " out))

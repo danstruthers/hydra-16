@@ -1,0 +1,144 @@
+; occupations.txt - hmchar's occupations (games/hmchar: C's hmchar, hmchar.hl and hmchar.fs read it, a line at a
+; time, as they need it; on the card in games/lib/hmchar, beside them): the book's Occupational Skills table
+; (Character 15), its military units by culture (Character 27) and its churches (Character 23), in harn.h's skill names.
+;
+; A group of occupations follows its header, [KIND] or [KIND QUALIFIER], then its title (said as the group's listed).
+; Each kind begins with its own letter (the menu's: u lists the unguilded).  A qualifier is a culture's name (the
+; group offered to that culture's characters: the soldiers by their units) or a deity's (offered to its followers, or
+; to a character who has none, the church making its deity theirs: the clerics).  An occupation is its name (19
+; letters at most: the game keeps no more), its years, and its skills, a | between.  A kind's line named "all" is
+; every one of its occupations' skills too (Character 23, 27: a skill both list, the higher OML).
+;
+; A skill: SKILL/N, opened at SB times N; SKILL alone, at its OML (Script: the native script, 70 + SB); Ritual/N, the
+; character's deity's ritual skill; weapons N/M, N weapons chosen (Axe ... Blowgun), each at its OML plus M times SB;
+; crafts N/M, N crafts chosen (Agriculture ... Woodcraft), each at SB times M.  An automatic skill listed takes the
+; occupation's OML, not the two added (Character 16); a skill listed twice, the higher.
+;
+; Left out: a second language and more scripts (harn.h has one Language and one Script), the specialties (each is its
+; skill: Ratcraft and Dogcraft Animalcraft, Horsecraft too, Needlework Textilecraft, a lance Polearm, a falchion or a
+; longknife Sword, a hartbow Bow, a roundshield Shield ...), the temple tongues, the military units' option skills; the
+; mages (Character 25: their skills come with magic, later); a soldier's unit by its culture only (the book's
+; Tribal have none).
+
+[unguilded] Unguilded (Character 15):
+Animal Trainer      | 3 | Animalcraft/4, Hidework/3, Riding/2
+Beggar              | 1 | Rhetoric/5, Intrigue/4, Dagger/4
+Cartographer/Artist | 5 | Drawing/4, Mathematics/2, Script
+Cook/Servant        | 3 | Intrigue/4, Rhetoric/4, Cookery/4, Textilecraft/4, Herblore/2
+Farmer              | 4 | Agriculture/4, Weatherlore/4, Animalcraft/3
+Fisherman           | 5 | Fishing/6, Seamanship/5, Weatherlore/4, Piloting/2, Shipwright/2
+Gladiator           | 4 | Initiative/6, weapons 3/2, Unarmed/6, Physician/2
+Herdsman            | 2 | Animalcraft/4, Tracking/4, Survival/4, Weatherlore/4
+Hunter/Trapper      | 5 | Tracking/5, weapons 3/1, Stealth/4, Foraging/4, Survival/4, Hidework/3, Hunting/3, Fletching/2
+Laborer             | 1 | Intrigue/4
+Longshoreman        | 1 | Intrigue/4, Seamanship/3
+Prostitute/Pimp     | 1 | Lovecraft/4, Intrigue/4, Dagger/4
+Ratter              | 3 | Animalcraft/5, Net/3, Club/5, Herblore/2
+Sage/Tutor          | 5 | Folklore/5, Mathematics/2, Script
+Scribe              | 5 | Drawing/3, Mathematics/2, Script
+Teamster            | 2 | Riding/4, Animalcraft/3, Whip/3, Woodcraft/3
+Thatcher            | 4 | Climbing/5, Woodcraft/4, Engineering/2
+Toymaker            | 5 | Woodcraft/5, Lockcraft/3, Drawing/3, Hidework/3
+
+[guilded] Guilded (Character 15):
+Alchemist           | 7 | Alchemy/4, Mathematics/3, Herblore/3, Mining/2, Physician/2, Script
+Apothecary          | 6 | Herblore/4, Alchemy/2, Mathematics/2, Physician/2, Script
+Astrologer          | 4 | Astrology/4, Mathematics/3, Drawing/3, Tarotry/2, Script
+Chandler            | 4 | crafts 3/3, Alchemy/2, Metalcraft/2, Script
+Charcoaler          | 3 | Timbercraft/3, Survival/4, Woodcraft/3, Metalcraft/2
+Clothier            | 6 | Textilecraft/5, Hidework/4, Jewelcraft/3, Script
+Courtesan           | 3 | Lovecraft/5, Intrigue/5, Singing/5, Musician/3, Dancing/3, Script
+Embalmer            | 7 | Embalming/4, Woodcraft/3, Alchemy/2, Perfumery/2, Script
+Glassworker         | 7 | Glassworking/4, Ceramics/3, Alchemy/2, Script
+Harper/Skald        | 7 | Singing/5, Folklore/5, Oratory/4, Musician/4, Woodcraft/3, Script
+Hideworker          | 5 | Hidework/5, Textilecraft/3, Alchemy/2
+Innkeeper           | 5 | Brewing/5, Cookery/4, Rhetoric/4, Intrigue/4, Script
+Jeweler             | 7 | Jewelcraft/4, Metalcraft/3, Mining/2, Script
+Lexigrapher         | 5 | Hidework/5, Inkcraft/4, Drawing/3, Script
+Litigant            | 7 | Law/4, Oratory/5, Rhetoric/5, Intrigue/5, Script
+Locksmith           | 6 | Lockcraft/4, Metalcraft/3, Woodcraft/3, Script
+Mason               | 7 | Masonry/4, Woodcraft/4, Engineering/3, Mathematics/2, Script
+Mercantyler         | 6 | Rhetoric/5, Intrigue/5, Mathematics/3, Law/2, weapons 1/0, Script
+Metalsmith          | 6 | Metalcraft/4, Mining/2, Weaponcraft/2
+Miller/Millwright   | 6 | Milling/4, Engineering/3, Agriculture/3, Script
+Miner               | 6 | Mining/4, Engineering/3, Woodcraft/3, Metalcraft/2, Jewelcraft/1
+Ostler              | 5 | Animalcraft/4, Riding/4, Hidework/4
+Perfumer            | 6 | Perfumery/4, Alchemy/3, Herblore/3, Embalming/2, Script
+Physician           | 7 | Physician/4, Herblore/3, Alchemy/3, Script
+Pilot               | 9 | Piloting/4, Weatherlore/5, Seamanship/4, Drawing/3, weapons 1/0, Shipwright/2, Mathematics/2, Script
+Potter              | 6 | Ceramics/5, Glassworking/2
+Salter              | 4 | Mining/3, Cookery/4, Survival/4, Fishing/4, Herblore/1
+Seaman              | 5 | Seamanship/5, Climbing/5, Club/5, Dagger/4, Fishing/4, Weatherlore/4, Piloting/2, Shipwright/2
+Shipwright          | 7 | Shipwright/4, Woodcraft/4, Timbercraft/3, Metalcraft/2, Mathematics/2, Seamanship/3, Script
+Tentmaker           | 5 | Textilecraft/4, Hidework/4, Woodcraft/2
+Thespian            | 7 | Acting/5, Oratory/4, Singing/4, Musician/3, Drawing/3
+Thief (Lia-Kavair)  | 3 | Legerdemain/4, Awareness/5, Stealth/4, Intrigue/4, Lockcraft/3, Club/5, Dagger/4, Acrobatics/3
+Timberwright        | 6 | Timbercraft/4, Survival/4, Weatherlore/4, Woodcraft/3
+Weaponcrafter       | 7 | Weaponcraft/4, weapons 2/0, Metalcraft/3, Fletching/3, Mining/2
+Woodcrafter         | 7 | Woodcraft/5, Metalcraft/2, Hidework/3
+
+[noble] Noble (Character 15; a knight is a soldier):
+Herald              | 5 | Heraldry/4, Oratory/4, Rhetoric/4, Intrigue/5, Drawing/4, Script, Riding, Polearm, Sword, Axe, Dagger, Shield, Dancing
+Lady                | 7 | Intrigue/5, Folklore/4, Textilecraft/3, Dancing/3, Heraldry/3, Astrology/2, Drawing/3
+
+[soldier] Soldiers (Character 27): UF unarmoured foot, LF light foot, MF medium foot, HF heavy foot, LH light horse, MH medium horse, HH heavy horse, SB shortbow, LB longbow
+all                 | 4 | Initiative/5, Foraging/4, Survival/4, Heraldry/2, Physician/2, Weaponcraft/2
+[soldier Feudal] Feudal, and the fighting orders:
+Militia UF          | 4 | Spear/4, Shield/4
+Yeoman LF           | 4 | Spear/5, Sword/4, Dagger/4, Shield/4
+Guardsman LF        | 4 | Spear/6, Sword/5, Dagger/5, Shield/5
+Guardsman MF        | 4 | Spear/6, Sword/5, Dagger/5, Shield/5
+Yeoman SB           | 4 | Bow/5, Sword/5, Dagger/5, Shield/5
+Yeoman LB           | 4 | Bow/5, Sword/5, Dagger/5, Shield/5
+Knight MH           | 7 | Riding/6, Initiative/6, Polearm/6, Sword/5, Axe/5, Dagger/5, Shield/6, Dancing/3
+Knight HH           | 7 | Riding/6, Initiative/6, Polearm/6, Sword/5, Axe/5, Dagger/5, Shield/6, Dancing/3
+Knight/Bailiff      | 7 | Riding/6, Initiative/6, Polearm/6, Sword/5, Axe/5, Dagger/5, Shield/6, Dancing/3, Law/3, Agriculture/2
+Order infantry LF   | 4 | Spear/6, Sword/5, Dagger/5, Shield/5
+Order infantry MF   | 4 | Spear/6, Sword/5, Dagger/5, Shield/5
+Order archer SB     | 4 | Bow/5, Sword/5, Dagger/5, Shield/5
+Order knight MH     | 7 | Riding/6, Initiative/6, Polearm/6, Sword/5, Club/5, Dagger/5, Shield/6, Dancing/3
+Order knight HH     | 7 | Riding/6, Initiative/6, Polearm/6, Sword/5, Club/5, Dagger/5, Shield/6, Dancing/3
+[soldier Imperial] Imperial:
+Militia UF          | 4 | Spear/4, Shield/4
+Legionnaire LF      | 4 | Spear/5, Sword/4, Dagger/4, Shield/5
+Legionnaire MF      | 4 | Spear/6, Sword/5, Dagger/4, Shield/5
+Legionnaire SB      | 4 | Bow/6, Sword/5, Dagger/5, Shield/5
+Patrician MH        | 7 | Riding/6, Initiative/6, Polearm/6, Sword/5, Axe/5, Dagger/5, Shield/6, Dancing/3
+[soldier Viking] Viking:
+Clansman UF         | 4 | Spear/5, Shield/5, Axe/4, Seamanship/3
+Clansman LF         | 4 | Spear/6, Shield/6, Bow/5, Dagger/4, Axe/4, Seamanship/3
+Huscarl MF          | 4 | Axe/6, Initiative/6, Sword/5, Shield/5, Dagger/5, Seamanship/3, Piloting/2
+Huscarl LH          | 4 | Riding/6, Initiative/6, Polearm/6, Sword/5, Dagger/5, Shield/5, Axe/4, Seamanship/3, Piloting/2
+[soldier Khuzan] Khuzdul:
+Clansman LF         | 4 | Spear/6, Axe/5, Shield/5
+Low Guard MF        | 4 | Spear/6, Axe/5, Dagger/5, Shield/5
+High Guard HF       | 4 | Initiative/6, Polearm/6, Club/5, Dagger/5, Shield/5
+[soldier Sindarin] Sindarin:
+Ranger UF           | 4 | Bow/6, Sword/5, Dagger/5, Shield/5
+Ranger LF           | 4 | Bow/6, Sword/5, Dagger/5, Shield/5
+Guardian MF         | 4 | Spear/7, Sword/6, Dagger/5, Shield/6
+Horsebow LH         | 4 | Riding/6, Bow/6, Polearm/5, Sword/5, Shield/6, Dancing/3, Musician/2
+Knight MH           | 7 | Riding/7, Initiative/6, Polearm/7, Sword/6, Shield/6, Dancing/3, Musician/2
+
+[cleric] Clerics (Character 23; a church makes its deity the character's, if it has none):
+all                 | 5-7 | Ritual/4, Rhetoric/4, Intrigue/4, Mental Conflict/4, Oratory/3, Folklore/4, Embalming/2, Physician/2, Law/2, Drawing/3, Heraldry/2, Script
+[cleric Agrik]
+Cleric (Agrik)      | 5-7 | Initiative/5, Unarmed/5, Axe/4, Club/5, Shield/4, Heraldry/3
+[cleric Halea]
+Cleric (Halea)      | 5-7 | Lovecraft/4, Dancing/3, Mathematics/2, Musician/2, Perfumery/2
+[cleric Ilvir]
+Cleric (Ilvir)      | 5-7 | Animalcraft/4, Drawing/4, Physician/3, Tarotry/2, Herblore/2
+[cleric Larani]
+Cleric (Larani)     | 5-7 | Initiative/5, Unarmed/5, Dagger/4, Sword/4, Shield/4, Heraldry/3
+[cleric Morgath]
+Cleric (Morgath)    | 5-7 | Dagger/4, Embalming/3, Hidework/3, Woodcraft/3, Tarotry/2
+[cleric Naveh]
+Cleric (Naveh)      | 5-7 | Initiative/5, Unarmed/6, Stealth/5, Dagger/4, Acrobatics/4, Legerdemain/2, Lockcraft/2
+[cleric Peoni]
+Cleric (Peoni)      | 5-7 | Agriculture/4, Weatherlore/4, Animalcraft/3, Herblore/3, Physician/3, Textilecraft/3
+[cleric Sarajin]
+Cleric (Sarajin)    | 5-7 | Initiative/5, Unarmed/5, Axe/4, Dagger/4, Shield/4, Runecraft/3, Seamanship/3
+[cleric Save-K'nor]
+Cleric (Save-K'nor) | 5-7 | Drawing/4, Mathematics/3, Law/3, Heraldry/2
+[cleric Siem]
+Cleric (Siem)       | 5-7 | Astrology/4, Runecraft/3, Foraging/4, Survival/4, Weatherlore/4, Tarotry/2, Musician/2, Herblore/2
