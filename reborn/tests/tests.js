@@ -1836,6 +1836,8 @@ function inTurn(o, want, f, name = '') {
 // twice, its trap twice: the look told it twice).  sim/test.js's dq0 check, in every dq0 test (HUBOWN=0 too)
 const DQ0_REPEATS = [
   { what: /^\(\d+ feet to go\.\)/, why: 'a dig\'s spells, each told as it ends (dig down: many spells to an answer)' },
+  { what: /^You (?:climb on|slip back a little|find no hold yet) \(\d+ feet to go\)\.$/,
+    why: 'a climb\'s rounds, each told as it ends (a long climb: many rounds to an answer, some the same)' },
   { what: /^(The|A) .* (bites|claws|strikes|swings|lunges|thrusts)\b.*\bat you\b|^You (strike|swing|thrust|punch|kick|lunge)\b/,
     why: 'a fight\'s rounds, each blow told as it falls (attack: the rounds till it ends, the same words some of them)' },
   { what: /^You hear /, why: 'a sound heard each time it\'s made (main.c\'s heard: half a minute apart the same way, five seconds any; a search\'s or a wait\'s minute hears several)' },
@@ -1857,11 +1859,15 @@ function dq0Answers(out) {
 function dq0Repeats(name, out) {
   const found = [];
   for (const a of dq0Answers(out)) {
-    const n = new Map();
-    for (const t of a.text.split(/(?<=[.!?])\s+/)) if (t.length > 8 && /[a-z]{2}/i.test(t)) n.set(t, (n.get(t) || 0) + 1);
-    for (const [sentence, c] of n) {
-      if (c < 2 || DQ0_REPEATS.some(r => r.what.test(sentence) && (!r.tests || r.tests.test(name)))) continue;
-      found.push({ test: name, cmd: a.cmd, sentence, n: c });
+    // (Each stir a telling of its own: a denizen's place told again after a change between, "two rats" then "a rat",
+    // is what changed, not a repeat; within a telling, a look's or a stir's, nothing twice)
+    for (const part of a.text.split(/(?=Something stirs\.)/)) {
+      const n = new Map();
+      for (const t of part.split(/(?<=[.!?])\s+/)) if (t.length > 8 && /[a-z]{2}/i.test(t)) n.set(t, (n.get(t) || 0) + 1);
+      for (const [sentence, c] of n) {
+        if (c < 2 || DQ0_REPEATS.some(r => r.what.test(sentence) && (!r.tests || r.tests.test(name)))) continue;
+        found.push({ test: name, cmd: a.cmd, sentence, n: c });
+      }
     }
   }
   return found;
@@ -2671,12 +2677,12 @@ module.exports = {
         ['look', 'ne', 'e', 'u', 'u', 'turn around', 'jump down', 'sheet', 'map', 'quit', 'cat /ram/hurt/pc.hm', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
       expect: ['You haul yourself up over the edge.', 'You jump, and drop 10 feet.', 'You land hard: a ', 'Injuries: ', 'IP ', '\ninj ', '% echo $status'],
       // (The referee's dice the commands', in their order, at the turns pace (the same with the typing's timing
-      // changed): at seed 517 the first climb's test a critical failure, a fall from its foot (Climbing 85 fell
-      // too), the second up)
+      // changed): at seed 517 the first climb's test a critical failure at its foot, no hold found (nothing to fall:
+      // the soak's, 2026-10-19, "you fall 0 feet" no more), the next round's up; the second u the way out's, shut)
       check(m, out) {
         const f = [];
-        inTurn(dq0Story(out), ['> u', 'Your hold gives way: you fall 0 feet. You land, shaken, but unhurt.', '> u',
-          'You haul yourself up over the edge.', '> jump down', 'You jump, and drop 10 feet.'], f);
+        inTurn(dq0Story(out), ['> u', 'You find no hold yet (10 feet to go).', 'You haul yourself up over the edge.', '> u',
+          '> jump down', 'You jump, and drop 10 feet.'], f);
         return f;
       },
       sdcard: true

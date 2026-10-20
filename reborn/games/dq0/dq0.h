@@ -130,6 +130,10 @@ struct pcmd {
                                                 **   struct sway's, copied whole) */
 };
 extern unsigned char pc_face;                   /* (The hub's, copied for the overlays) */
+#define TOLD        24                          /* (A look's sentences said this answer: look.c's told, ntold) */
+extern unsigned told[TOLD];
+extern unsigned char ntold;
+void lb_said (void);                            /* (A look's words said, lbsaid.s's: words.c's and seen.c's lb_out) */
 
 /* ---- pace.c (part 4): the pace, the watchfulness, the state, small moves, from the line typed */
 
@@ -275,6 +279,7 @@ signed char __fastcall__ cq_cmd (struct pcmd* c, const char* l);   /* Part 2 (ma
                                                 **   0 not one; -1 too long; -2 none, the game ending) */
 void cq_drop (void);                            /* Part 2 (main.c): the line posted seen to (its reply waited for) */
 extern unsigned char cq_again;                  /* (The line changed since it was posted: names_subst's) */
+extern unsigned char cq_verb;                   /* (The line's verb, cq_cmd's: with c 0, that alone) */
 void __fastcall__ take (const char* name);      /* Part 2: a thing taken up, by its name */
 void __fastcall__ took_up (unsigned r);         /* Part 2: a thing taken up, or not, told (an E_TAKEN's: IR_*, the
                                                 **   light before times 256) */

@@ -789,6 +789,9 @@ void s_climb_on (void)
     sn_ = HUB->pc_stratum;
     g = test_w (P_CLIMB, 0);
     hub_map (0);
+    if (g == G_CF && !(cl.up ? cl.done : cl.need - cl.done)) {
+        g = G_MF;                               /* (Not off the ground yet: nothing to fall) */
+    }
     if (g == G_CF) {                            /* (A fall: from as high as it got, up; to the foot, down) */
         t = cl.up ? cl.done : cl.need - cl.done;
         event (E_CLIMB, 0, K_FELL << 8 | t);
@@ -805,9 +808,10 @@ void s_climb_on (void)
         see (0);
         return;
     }
+    t = g != G_MF ? K_ON : cl.done ? K_BACK : K_NOHOLD;   /* (A slip: back, if it's off the ground) */
     cl.done = g == G_CS ? cl.done + 20 : g == G_MS ? cl.done + 10 : cl.done > 5 ? cl.done - 5 : 0;
     if (cl.done < cl.need) {
-        event (E_CLIMB, 0, (g == G_MF ? K_BACK : K_ON) << 8 | (cl.need - cl.done > 255 ? 255 : cl.need - cl.done));
+        event (E_CLIMB, 0, t << 8 | (cl.need - cl.done > 255 ? 255 : cl.need - cl.done));
         climb_round ();
         return;
     }

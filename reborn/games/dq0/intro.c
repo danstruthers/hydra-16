@@ -51,6 +51,9 @@ void __fastcall__ o_climb_words (unsigned char how, unsigned char feet)
     case K_BACK:
         sayf ("\nYou slip back a little (%u feet to go).", feet);
         return;
+    case K_NOHOLD:
+        sayf ("\nYou find no hold yet (%u feet to go).", feet);
+        return;
     case K_FELL:
         sayf ("\nYour hold gives way: you fall %u feet.", feet);
         return;

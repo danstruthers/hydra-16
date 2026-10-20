@@ -27,6 +27,9 @@ char* lbe;                                      /*   their end, */
 unsigned lbn;                                   /*   and how many a look's said already (streamed: lb_stream) */
 unsigned char lb_stream;                        /* A look's words said a sentence at a time as they're made (words.c's
                                                 **   add): its first out while the rest is worked out */
+unsigned told[TOLD];                            /* The sentences the looks have said this answer, each one's hash
+                                                **   (words.c's lb_out: none said twice; none yet as a command's taken), */
+unsigned char ntold;                            /*   and how many */
 struct sight sight_copy;                        /* The hub's record, copied for the overlay */
 unsigned char sight_light;                      /*   and the character's light, */
 char sight_lamp[14];                            /*   what gives it, named */

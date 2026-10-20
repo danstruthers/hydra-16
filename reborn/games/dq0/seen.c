@@ -23,18 +23,9 @@ static const char* const relname[8] = {
 
 static struct sight* S;
 
-/* words.c's: the words so far said (a look's, streamed), and out */
-static void lb_out (void)
-{
-    if (lbn) {
-        say (lb);
-    } else {
-        msg (lb);
-    }
-    lbn += lbe - lb;
-    *(lbe = lb) = 0;
-    t_flush ();
-}
+/* words.c's: the words so far said (a look's, streamed), and out (look.c's lb_said: none a look's said already this
+** answer) */
+#define lb_out  lb_said
 
 #pragma register-vars (push, on)
 static void __fastcall__ add (const char* s)
@@ -121,17 +112,17 @@ static unsigned char __fastcall__ afar (unsigned char i)
     return !(S->item[i].hid & 1) && apart (S->item[i].x, S->item[i].y) > 1 + S->eye / 2 + (S->item[i].hid >> 4);
 }
 
-/* Thing k one to be told with thing i (both lying about, nothing on them, one of their kind, not named; the same
-** kind, where they lie, as easily made out): "On the floor ahead lie two iron pots." */
+/* Thing k one to be told with thing i (both lying about, nothing on them, not named; the same kind, where they lie,
+** as easily made out, and the same in form: each one thing, "On the floor ahead lie two iron pots."; each some of a
+** plural kind, "some potsherds"; or each a count of them, "5 rations": told once) */
 static unsigned char __fastcall__ alike (unsigned char i, unsigned char k)
 {
     const struct sitem* p = &S->item[i];
     const struct sitem* q = &S->item[k];
 
     return i != k && !(q->hid & 2) && !(p->hid & 2) && (k + 1 >= S->nitems || !(q[1].hid & 2)) &&
-        (i + 1 >= S->nitems || !(p[1].hid & 2)) && q->qty <= 1 && !q->plural && q->name[0] != '#' &&
-        q->rel == p->rel && q->hid == p->hid && p->qty <= 1 && !p->plural && !strcmp (q->name, p->name) &&
-        afar (i) == afar (k);
+        (i + 1 >= S->nitems || !(p[1].hid & 2)) && (q->qty > 1) == (p->qty > 1) && q->plural == p->plural &&
+        q->name[0] != '#' && q->rel == p->rel && q->hid == p->hid && !strcmp (q->name, p->name) && afar (i) == afar (k);
 }
 
 /* The things it sees lying about: "On the floor ahead lies a pick." "At your feet lie some bones." "On the table
@@ -141,11 +132,13 @@ static unsigned char __fastcall__ alike (unsigned char i, unsigned char k)
 static void items (void)
 {
     unsigned char i, k, n, on = 0, sz, b, skip = 0;
+    unsigned q;
 
     for (i = 0; i < S->nitems; ++i) {
         sz = S->item[i].hid >> 4;
         b = afar (i);
         n = 1;
+        q = S->item[i].qty;
         if (S->item[i].hid & 2) {
             if (skip) {
                 continue;                       /* (On a thing behind it, or too far to make out) */
@@ -165,6 +158,7 @@ static void items (void)
                         break;
                     }
                     ++n;
+                    q += q > 1 ? S->item[k].qty : 0;   /* (Counted ones: their counts together) */
                 }
             }
             if (k < S->nitems) {
@@ -177,7 +171,7 @@ static void items (void)
                 add (" ");
             }
         }
-        if (n > 1) {
+        if (n > 1 && !S->item[i].plural && q <= 1) {
             add ("lie ");
             add (few[n]);
             add (b ? (sz <= 2 ? " small things." : sz >= 5 ? " large things." : " things.") :
@@ -192,9 +186,9 @@ static void items (void)
             add (sz <= 2 ? "lies something small." : sz >= 5 ? "lies something large." : "lies something.");
             continue;
         }
-        add (S->item[i].plural || S->item[i].qty > 1 ? "lie " : "lies ");
-        if (S->item[i].qty > 1) {
-            addn (S->item[i].qty);
+        add (S->item[i].plural || q > 1 ? "lie " : "lies ");
+        if (q > 1) {
+            addn (q);
             add (" ");
         } else {
             add (S->item[i].plural ? "some " : !(S->item[i].hid & 4) && strchr ("aeiou", S->item[i].name[0]) ? "an " :

@@ -44,7 +44,7 @@
 
 (* ---- Moving and facing ---- *)
 <move>           ::= [ <pace-word> ] [ <MOVE> ] <move-dir> [ <number> [ "space" | "spaces" | "square" | "squares" ] ]   (* "run north": this move at run; "walk north": the verb *)
-<move-dir>       ::= <direction> | <TOWARD> <thing>
+<move-dir>       ::= <direction> | <TOWARD> <thing> | <ALONG> <thing>   (* "go down the stairs", "walk down the corridor" *)
 <face>           ::= [ "change" ] ( "face" | "facing" | "turn" ) [ "half" ] [ "to" ] <direction> | "turn" "around"   (* "turn around" is a half turn: facing back; "turn half left": an eighth *)
 
 (* ---- Handling things (question 2: CLOSE and OPEN are actions) ---- *)
@@ -149,6 +149,7 @@
 <DETAIL>     ::= "close" | "in detail"
 <MOVE>       ::= "m" | "walk" | "go"
 <TOWARD>     ::= "to" | "towards" | "toward" | "in the direction of" | "into" | "onto" | "past" | "through"
+<ALONG>      ::= "up" | "down" | "along" | "across"   (* up or down a stairway or a ladder; along a passage *)
 <GET>        ::= "get" | "take" | "pick up" | "pick"
 <DROP>       ::= "drop" | "put down"
 <PUT>        ::= "put" | "place"
@@ -249,7 +250,7 @@
 (* ---- Engagement (HarnMaster Combat 6-7): engage, disengage and pass ---- *)
 <engage>         ::= "engage" <object>                          (* an Engage option: a half-move, then a melee attack *)
 <disengage>      ::= <DISENGAGE> [ <direction> ]
-<DISENGAGE>      ::= "disengage" | "withdraw" | "break" "off"   (* one hex, then a half-move if now unengaged; no attack *)
+<DISENGAGE>      ::= "disengage" | "withdraw" | "break" "off" | "b" "away"   (* one hex, then a half-move if now unengaged; no attack; "back away": back is b's alias *)
 <pass>           ::= "pass"                                     (* an engaged character forfeits the turn *)
 
 (* ---- Religion (HarnMaster Religion: prayer, divine intervention, performing invocations) ---- *)

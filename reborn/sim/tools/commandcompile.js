@@ -120,6 +120,8 @@ const TASKS = ['digging', 'crawling', 'waiting', 'searching', 'climbing', 'sleep
 // Words no object may be: the player is "me", never "you" (question 14).
 const NOT_OBJECT = new Set(['you', 'character', 'yourself']);
 const SPELL_STOP = new Set(['at', 'toward', 'towards', 'to', 'spell', 'the', 'a', 'an', 'my', 'this', 'that', 'these', 'those']);
+// What's gone up or down, not along: "go down the stairs" is a way down, "go down the corridor" along it
+const CLIMBABLE = new Set(['stairs', 'stair', 'stairway', 'staircase', 'steps', 'ladder', 'shaft', 'hole', 'pit', 'rope', 'chimney']);
 const MOVE_WORDS = new Set(['move', 'mv', 'walk', 'trundle', 'mosey', 'saunter', 'run', 'crawl', 'go', 'head']);
 const SPEECH_WORDS = new Set(['say', 'yell', 'scream', 'shout', 'whisper']);
 // These take no object: "wait the sword" is a role error, not a parse error.
@@ -486,6 +488,12 @@ function phraseSem(spec, env, ctx) {
       const pw = kidsOf(spec, 'pace-word')[0];
       const first = wordsOf(spec, env)[0];
       const pace = pw ? paceOf(pw, env) : (['run', 'crawl'].includes(first) ? first : undefined);
+      const along = md && kidsOf(md, 'ALONG')[0], hw = along ? wordsOf(findFirst(md, 'head'), env) : [];
+      if (along && !CLIMBABLE.has(hw[hw.length - 1])) {   // (Along a passage, not up or down it: "walk down the corridor")
+        const o = objRole(findFirst(md, 'object'), env, ctx);
+        if (o.stop) return o.stop;
+        return act('VB_MOVE_TOWARD', { object: o.value });
+      }
       if (md && findFirst(md, 'object') && ['to', 'towards', 'toward', 'in', 'into', 'onto', 'past'].includes(wordsOf(md, env)[0])) {
         const o = objRole(findFirst(md, 'object'), env, ctx);
         if (o.stop) return o.stop;

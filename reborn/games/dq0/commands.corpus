@@ -475,3 +475,8 @@ hide the pouch	VB_HIDE	object=pouch	near=pouch	a thing hidden
 wear the mail hauberk	VB_EQUIP_OBJECT	object=hauberk	near=hauberk	a name of two words: a noun before it
 get the small brass key	VB_RETRIEVE_OBJECT	object=key	near=key	an adjective, then a noun
 drop the brass key	VB_DROP_OBJECT	object=key	near=key	a noun before the name
+go down the stairs	VB_MOVE_DIRECTION	direction=D	near=stairs	down a stairway: a way down
+climb up the ladder	VB_CLIMB	object=ladder;direction=U	near=ladder	up a ladder: a climb
+go up the ladder	VB_MOVE_DIRECTION	direction=U	near=ladder	up a ladder, gone
+walk down the corridor	VB_MOVE_TOWARD	object=corridor	near=corridor	along a passage, not down it
+back away	VB_DISENGAGE	-	engaged=goblin	backing away from a fight

@@ -537,6 +537,7 @@ static unsigned char cq_st;                     /* The line posted to the comman
 #define CQ_IN       2
 static signed char cq_res;                      /* (Its verdict, cq_cmd's) */
 unsigned char cq_again;                         /* The line changed since it was posted (names_subst's): posted again */
+unsigned char cq_verb;                          /* (Its verb, cq_cmd's: at_once's, its whole command not wanted) */
 
 /* ---- The status line */
 
@@ -1142,12 +1143,10 @@ static void __fastcall__ chores (unsigned char verb)
 /* A command that takes no time and wants nothing of the character (what it carries, its sheet, the map, the help):
 ** carried out at once, the character busy or not (on its way somewhere, looking about: the user, "the UI is slow to
 ** respond"), if it's the next one typed */
-static struct pcmd at_c;                        /* (at_once's command: the command parser's, the line's) */
 static unsigned char __fastcall__ at_once (const char* l)
 {
-    cq_cmd (&at_c, l);
-    return at_c.verb == V_INVENTORY || at_c.verb == V_SHEET || at_c.verb == V_MAP || at_c.verb == V_HELP ||
-        !strcmp (l, "status");
+    cq_cmd (0, l);                              /* (Its verb: the command parser's, the line's) */
+    return cq_verb == V_INVENTORY || cq_verb == V_SHEET || cq_verb == V_MAP || cq_verb == V_HELP || !strcmp (l, "status");
 }
 
 #pragma code-name (push, "SW2CODE")
@@ -1202,10 +1201,18 @@ signed char __fastcall__ s_cq_cmd (struct pcmd* c, const char* l)
     s_cq_post (l);
     cq_wait ();
     if (cq_res == -2) {
-        memset (c, 0, sizeof *c);               /* (V_NONE: nothing) */
+        cq_verb = V_NONE;
+        if (c) {
+            memset (c, 0, sizeof *c);           /* (V_NONE: nothing) */
+        }
         return -2;
     }
     hub_map (CMD_BANK);
+    cq_verb = HUB_WINDOW[CQ_PCMD];              /* (struct pcmd's first: its verb) */
+    if (!c) {
+        hub_map (0);
+        return cq_res;
+    }
     memcpy (c, HUB_WINDOW + CQ_PCMD, sizeof *c);
     hub_map (0);
     f = HUB->pc_face;
@@ -1570,6 +1577,7 @@ int main (int argc, char* argv[])
         }
         if ((l = (char*) t_next ()) != 0 && (!busy || !held)) {
             cq_post (l);                        /* (The command parser at work on it meanwhile) */
+            ntold = 0;                          /* (Its answer: no look's sentence said yet) */
             hub_map (0);
             HUB->ui_cmd = 1;                    /* (A command in hand: the senses' look gives way meanwhile, from
                                                 **   its first look, at_once's, on: a line typed as a look began

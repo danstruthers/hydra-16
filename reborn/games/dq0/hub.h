@@ -248,8 +248,9 @@ enum { V_TURNED, V_LIT, V_DARK, V_STIR, V_FACING };    /* E_VIEW's why (V_STIR: 
                                                 **   from it, or doing something else; V_FACING: a turn begun, its
                                                 **   look to come, V_TURNED) */
 enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL };  /* E_DIG's how */
-enum { K_BEGUN, K_ON, K_BACK, K_FELL, K_UP, K_DOWN, K_JUMPED };    /* E_CLIMB's how: begun, on, slipped back,
-                                                **   fallen, up, down; jumped down (a ledge, a shaft) */
+enum { K_BEGUN, K_ON, K_BACK, K_FELL, K_UP, K_DOWN, K_JUMPED, K_NOHOLD };    /* E_CLIMB's how: begun, on, slipped
+                                                **   back, fallen, up, down; jumped down (a ledge, a shaft); no hold
+                                                **   found yet (at its foot: nothing to slip back, nor to fall) */
 enum { PA_OPEN, PA_CLOSE, PA_UNLOCK, PA_FORCE, PA_SEARCH,     /* I_PORTAL's: what's done (a door's opened, ... */
        PA_RAISE, PA_LOWER, PA_BREAK, PA_THROUGH, PA_DISARM,    /*   a portcullis raised, a window's glass broken,
                                                 **   climbed through, a trap disarmed: one in reach, or the door's; */
