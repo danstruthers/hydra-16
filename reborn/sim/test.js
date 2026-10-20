@@ -7,7 +7,9 @@
 // table) in every Dingus Quest Zero test (dq0...): a write to the hub's banks by a task its region doesn't allow, and
 // not known (the table's moves), fails the test.  HUBOWN=1: each test's every violation said, known or not, and a
 // summary of them all after the tests (grouped by the move that's to end them); HUBOWN=0: no check.  And in every dq0
-// test (HUBOWN=0 too), nothing told twice in one answer, nor a chunk's door or trap made twice (tests.js's dq0Check).
+// test (HUBOWN=0 too), nothing told twice in one answer, nor a chunk's door or trap made twice (tests.js's dq0Check);
+// and what happened recorded, the hub's events, replies and state a line at a time (sim/lib/dq0meaning.js: m.dq0, for
+// the tests' meaning checks, tests.js's dq0Turns).
 //
 // Usage: [HUBOWN=0|1] node sim/test.js [NAME ...] [--build] [-v] [--seed N] [-j N] [--dl]
 'use strict';
