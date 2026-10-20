@@ -1955,6 +1955,9 @@ function dq0Thing(s, name) {
   return all.find(i => carried.has(i.n)) || all.find(here) || all[0] || null;
 }
 const dq0Holder = (s, i) => s && i && i.where === 'IW_ITEM' ? s.items.find(j => j.n === i.x) || null : null;
+// What the character perceives of the place (the senses' record, struct sight), the denizens aside (they go their own
+// ways), as one string: the same place seen the same, compared
+const dq0View = s => !s || !s.sight ? '' : JSON.stringify(Object.assign({}, s.sight, { seq: 0, dens: [], first: 0 }));
 const DQ0_I = { LIT: 0x01, HELD: 0x02, WORN: 0x04, HIDDEN: 0x08 };   // (items.h's I_*)
 // A dq0 test's lines typed, each at its prompt (rc's "% ", the game's "> ")
 const dq0Typed = lines => lines.map(l => '\u0101' + l + '\r').join('');
@@ -2856,98 +2859,86 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0save', what: 'Dingus Quest Zero kept (dq0 -d: the save on a card, here /ram): a thing put down, down a stairway, quit (kept as it ends), the folder listed (the UI game, the things, the referee sheet, the world\'s change records, by region, and the maker\'s seen maps), then the game carried on: in the stratum below, where it stood, with what it carried',
-      init: 't_rc', cycles: 900e6,
-      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/kept\r' +
-        ['drop the dagger', 'd', 'quit', 'ls /ram/kept', 'dq0 -d /ram/kept', 'look', 'inventory', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
-      expect: ['You come into the', 'changes.dat', 'dens.dat', 'game.dat', 'items.dat', 'pc.hm', 'seen.dat', 'takes up where they left off.', 'You stand by a\nstairway leading up.', 'a belt, worn (on it: a pouch (in it: 12 pennies), a waterskin)', '% echo $status'],
-      sdcard: true
-    },
-    {
-      name: 'dq0page', what: 'Dingus Quest Zero\'s stores paged to the save folder (DUNGEON.md: no fixed size; the user, 2026-10-16: "It should be as big as it needs to be, given there is enough disk space to hold it"), eviction and write-back: dq0 -C (the caches small: a page of change records, the item store 64 records, only the character\'s chunk kept round it) and -d /ram/kept: the dagger put down on the top stratum, down the stairway (the stratum below\'s records want the change page, the top\'s region written back, rg0...; its things put out of the store as the stratum below\'s are stocked, it0...), up again (the top\'s region read back in, its chunk\'s things too: the dagger lying where it was put down), quit and carried on (the dagger there still); then the game\'s game.dat gone and a new game begun in the folder (seed 5): the old game\'s region files gone from it, none of its things or changes seen',
-      init: 't_rc', cycles: 1500e6,
-      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T -C -d /ram/kept\r' +
-        ['drop the dagger', 'look', 'd', 'look', 'u', 'look', 'd', 'look', 'u', 'quit', 'ls /ram/kept', 'dq0 -C -d /ram/kept', 'look', 'quit', 'rm /ram/kept/game.dat',
-         'dq0 -p t -s 5 -c /ram/c.hm -T -C -d /ram/kept', 'quit', 'ls /ram/kept', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
-      expect: ['Put down.', 'You come into the', 'takes up where they left off.', '% echo $status'],
+      name: 'dq0save', meaning: true, what: 'Dingus Quest Zero kept (dq0 -d: the save on a card, here /ram), by the game\'s state: a thing put down, down a stairway, quit (kept as it ends: the world\'s save), the folder listed (the UI\'s game, the things, the world\'s change records, the denizens\', the maker\'s seen maps), then the game carried on: in the stratum below, where it stood and as it faced, seeing what it saw, carrying what it carried, each thing where it was (worn, held, in what)',
+      init: 't_rc', cycles: 800e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/kept', 'drop the dagger',
+        'd', 'quit', 'ls /ram/kept', 'dq0 -d /ram/kept', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
       check(m, out) {
-        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
-        const seg = (a, b, from = 0) => { const i = o.indexOf(a, from); return i < 0 ? '' : o.slice(i, o.indexOf(b, i + a.length)); };
-        if (!seg('> drop the dagger', '> d ').includes('At your feet lies a dagger.')) f.push('the dagger not seen lying where it was put down');
-        if (!seg('> u ', '> d ').includes('At your feet lies a dagger.')) f.push('the dagger not seen again, up the stairway (its chunk\'s things read back in)');
-        if (!/A giant rat is/.test(seg('> d ', '> u ', 0))) f.push('the giant rats by the stairway below not seen there, as the character first goes down (their region\'s records put out as the stratum\'s populations were decided, read back in)');
-        if (!seg('% dq0 -C -d /ram/kept', '> quit').includes('At your feet lies a dagger.')) f.push('the dagger not seen as the game\'s carried on');
-        const ls1 = seg('% ls /ram/kept', '% dq0'), ls2 = seg('% ls /ram/kept', '% echo', o.indexOf('% ls /ram/kept') + 5);
-        if (!/rg0\w{4}\.da/.test(ls1) || !/rg1\w{4}\.da/.test(ls1)) f.push('no change records written back (rg0..., rg1...)');
-        if (!/it0\w{4}\.da/.test(ls1)) f.push('no things of the top stratum put out (it0...)');
-        if (!/dn0\w{4}\.da/.test(ls1) || !/dn1\w{4}\.da/.test(ls1)) f.push('no denizens\' records put out (dn0..., dn1...)');
-        if (/rg1\w{4}\.da/.test(ls2)) f.push('the old game\'s region files left in the folder for the new game (its stratum below\'s)');
-        if (seg('% dq0 -p t -s 5', '% ls').includes('dagger')) f.push('the old game\'s dagger seen in the new game');
+        const T = dq0Turns(m), f = [], dr = T.of('drop the dagger'), d = T.of('d'), q = T.and(T.of('quit')), c = T.of('dq0 -d /ram/kept');
+        if (!dq0Here(dr.after).some(i => i.name === 'dagger')) f.push('the dagger not put down');
+        dq0Need(f, d, 'E_ARRIVE', { how: 'A_DOWN' }, 'not down the stairway');
+        dq0Need(f, q, 'E_BYE', {}, 'the game not ended');
+        if (!dq0Rep(q, 'wreq', { kind: 'WQ_SAVE' }).length) f.push('the game not kept as it ended (the world\'s WQ_SAVE)');
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), ls = o.slice(o.indexOf('% ls /ram/kept'), o.indexOf('% dq0 -d'));
+        for (const n of ['changes.dat', 'dens.dat', 'game.dat', 'items.dat', 'seen.dat']) if (!ls.includes(n)) f.push('no ' + n + ' in the save folder');
+        dq0Need(f, c, 'E_ARRIVE', { how: 'A_RESUMED' }, 'the game not carried on');
+        const a = d.after, b = c.after;
+        if (!a || !b || a.pc.sn !== 1 || b.pc.sn !== a.pc.sn || b.pc.x !== a.pc.x || b.pc.y !== a.pc.y || b.pc.face !== a.pc.face)
+          f.push('not carried on where it stood, as it faced: ' + JSON.stringify(b && b.pc) + ', kept ' + JSON.stringify(a && a.pc));
+        if (dq0View(b) !== dq0View(a)) f.push('not seeing what it saw: ' + dq0View(b) + ', kept ' + dq0View(a));
+        const kit = s => dq0Carried(s).map(i => i.name + '/' + (dq0Holder(s, i) || { name: '' }).name + '/' + (i.flags & 7)).sort().join(', ');
+        if (!kit(b) || kit(b) !== kit(a)) f.push('not carrying what it carried: ' + kit(b) + ', kept ' + kit(a));
+        if (/dagger\//.test(kit(b))) f.push('the dagger carried, put down before');
         return f;
       },
       sdcard: true
     },
     {
-      name: 'dq0strata', what: 'Dingus Quest Zero\'s strata out of the hub\'s slots (move 2.8: no fixed count of strata; world.h\'s STRATUM, a stratum\'s record in its slot, the rest in the save folder, stSS.dat): dq0 -T -T -T (three strata grown below the top, the character at the foot of the second\'s way up) and -C (two slots, so each stratum made puts out the one two above it, and the second, read back into its slot as the character starts there, the fourth): up (the top\'s record read back into the slot the third had, its plan grown again, the third\'s put out), down again, seeing there what it saw first; quit and carried on, the same again',
-      init: 't_rc', cycles: 1500e6,
-      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 3 -c /ram/c.hm -T -T -T -C -d /ram/kept\r' +
-        ['look', 'u', 'look', 'd', 'look', 'quit', 'ls /ram/kept', 'dq0 -C -d /ram/kept', 'look', 'u', 'd', 'look', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
-      expect: ['You climb', 'You go down', 'takes up where they left off.', '% echo $status'],
-      check(m, out) {
-        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
-        const looks = o.split('> look ').slice(1).map(x => x.slice(0, x.indexOf('> ')).replace(/(A giant rat|Something stirs)[^.]*\./g, '').replace(/\s+/g, ' ').trim())
-          .filter(x => x);                     // (Each look's words, but the rats': they go their own ways meanwhile)
-        if (looks.length < 5) f.push('fewer looks than five');
-        else {
-          if (looks[0] !== looks[2]) f.push('the second stratum not as it was, down again: "' + looks[0] + '" then "' + looks[2] + '"');
-          if (looks[0] !== looks[3] || looks[0] !== looks[4]) f.push('the second stratum not as it was, carried on');
-        }
-        if ((o.match(/You climb/g) || []).length < 2) f.push('not up, twice');
-        if ((o.match(/You go down/g) || []).length < 2) f.push('not down, twice');
-        const ls = o.slice(o.indexOf('% ls /ram/kept'), o.indexOf('% dq0 -C'));
-        if (!/st[0-9a-f]0000\.da/.test(ls)) f.push('no stratum\'s record put out (st...)');
-        return f;
-      },
-      sdcard: true
-    },
-    {
-      name: 'dq0vast', what: 'Dingus Quest Zero\'s plans past PLAN_MAX regions (move 2.8: no fixed size of a stratum\'s plan): dq0 -T -T -T -T (the stratum below the top 27 regions each way, 729 of them, its plan paged to the save folder by the maker, plSS0000.dat, its pages of 42 regions in a bank of its own) and -C (16 of those pages, made way for as it grows) and -d: down the stairway, the stratum below grown, looked at and mapped; quit and carried on (its plan grown again, the same), the same seen',
+      name: 'dq0vast', meaning: true, what: 'Dingus Quest Zero\'s plans past PLAN_MAX regions (move 2.8: no fixed size of a stratum\'s plan), by what the character perceives and the maker\'s map: dq0 -T -T -T -T (the stratum below the top 27 regions each way, 729 of them, its plan paged to the save folder by the maker, plSS0000.dat, its pages of 42 regions in a bank of its own) and -C (16 of those pages, made way for as it grows) and -d: down the stairway, the stratum below grown, mapped; quit and carried on (its plan grown again, the same): seen the same, the map the same',
       init: 't_rc', cycles: 3600e6,
-      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 3 -c /ram/c.hm -T -T -T -T -C -d /ram/kept\r' +
-        ['d', 'look', 'map', 'quit', 'ls /ram/kept', 'dq0 -C -d /ram/kept', 'look', 'map', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
-      expect: ['You come into the', 'The map (you face', 'takes up where they left off.', '% echo $status'],
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -T -T -T -C -d /ram/kept', 'd',
+        'map', 'quit', 'ls /ram/kept', 'dq0 -C -d /ram/kept', 'map', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
       check(m, out) {
-        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
-        const looks = o.split('> look ').slice(1).map(x => x.slice(0, x.indexOf('> ')).replace(/(A giant rat|Something stirs)[^.]*\./g, '').replace(/\s+/g, ' ').trim()).filter(x => x);
-        if (looks.length < 2 || looks[0] !== looks[1]) f.push('the vast stratum not the same carried on: "' + looks[0] + '" then "' + looks[1] + '"');
+        const T = dq0Turns(m), f = [], d = T.of('d'), c = T.of('dq0 -C -d /ram/kept'), m1 = T.of('map'), m2 = T.after(c, 'map');
+        dq0Need(f, d, 'E_ARRIVE', { how: 'A_DOWN' }, 'not down the stairway');
+        dq0Need(f, c, 'E_ARRIVE', { how: 'A_RESUMED' }, 'the game not carried on');
+        if (!d.after || d.after.pc.sn !== 1 || !c.after || c.after.pc.sn !== 1 || dq0View(c.after) !== dq0View(d.after))
+          f.push('the vast stratum not seen the same carried on: ' + dq0View(c.after) + ', first ' + dq0View(d.after));
+        if (!m1.after || !m2.after || !m1.after.map.some(r => r.trim()) || m1.after.map.join('\n') !== m2.after.map.join('\n')) f.push('the map not the same carried on');
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' ');
         if (!/pl10000\.dat/.test(o.slice(o.indexOf('% ls /ram/kept')))) f.push('no plan paged to the save folder (pl10000.dat)');
         return f;
       },
       sdcard: true
     },
     {
-      name: 'dq0soak', what: 'Dingus Quest Zero\'s stores paged, a soak (move 2.8: no fixed size): dq0 -C (the caches small: the chunks\' twelve slots, a change page, 24 of the item store\'s records, two of the denizens\' regions, two of the strata\'s slots, two seen maps) and -T -T -T (three strata grown below the top, the character on the second): the dagger put down by the stairway there, up (the strata\'s slots made way in), the rations put down by the stairway on the top, down and up again and again, every cache made way in each time (the chunks made again from their seeds, the change records, the things and the denizens read back from their files, the seen maps too); the map; quit and carried on: the dagger and the rations where they were put down, the map as it was',
-      init: 't_rc', cycles: 3000e6,
-      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 3 -c /ram/c.hm -T -T -T -C -d /ram/kept\r' +
-        ['drop the dagger', 'u', 'drop the rations', 'look', 'd', 'look', 'u', 'look', 'd', 'look', 'u', 'look', 'd', 'look', 'map', 'quit', 'ls /ram/kept',
-         'dq0 -C -d /ram/kept', 'look', 'map', 'u', 'look', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
-      expect: ['Put down.', 'You climb', 'You go down', 'takes up where they left off.', '% echo $status'],
+      name: 'dq0soak', meaning: true, what: 'Dingus Quest Zero\'s stores paged to the save folder (move 2.8, DUNGEON.md: no fixed size; the user, 2026-10-16: "It should be as big as it needs to be, given there is enough disk space to hold it"), eviction and write-back, a soak, by what the character perceives (the senses\' record) and the stores\' records: dq0 -C (the caches small: the chunks\' twelve slots, a change page, 24 of the item store\'s records, two of the denizens\' regions, two of the strata\'s slots, two seen maps) and -T -T -T (three strata grown below the top, the character on the second): the dagger put down by the stairway there, up (the strata\'s slots made way in: the top\'s record read back into a slot), the rations put down by the stairway on the top, down and up again and again, every cache made way in each time (the chunks made again from their seeds, the change records, the things and the denizens read back from their files, the seen maps too): each stratum seen each time as it was first (the dagger, the rations where they were put down), the giant rats by the stairway seen; the map; the folder\'s region files (rg, it, dn, sm, st); quit and carried on: where it was, seen the same, the map as it was, up again, the rations there; then the game\'s game.dat gone and a new game begun in the folder (seed 5): the old game\'s region files of its stratum below gone, none of its things lying about (dq0page\'s and dq0strata\'s, these together)',
+      init: 't_rc', cycles: 2400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -T -T -C -d /ram/kept',
+        'drop the dagger', 'u', 'drop the rations', 'd', 'u', 'd', 'u', 'd', 'map', 'quit', 'ls /ram/kept', 'dq0 -C -d /ram/kept', 'map', 'u', 'quit',
+        'rm /ram/kept/game.dat', 'dq0 -p t -s 5 -c /ram/c.hm -T -C -d /ram/kept', 'quit', 'ls /ram/kept', 'echo $status']) },
+      expect: ['% echo $status'],
       check(m, out) {
-        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
-        const at = (a, from) => o.indexOf(a, from);
-        const seg = (a, b, from = 0) => { const i = at(a, from); return i < 0 ? '' : o.slice(i, at(b, i + a.length)); };
-        const s2 = at('% dq0 -C -d /ram/kept');
-        if (!seg('> look', '> d ', at('> drop the rations')).includes('At your feet lie 3 rations.')) f.push('the rations not seen where they were put down');
-        if (!seg('> look', '> u ', at('> d ')).includes('At your feet lies a dagger.')) f.push('the dagger not seen again, down the stairway');
-        const u3 = at('> u ', at('> u ', at('> u ') + 4) + 4);
-        if (!seg('> look', '> d ', u3).includes('At your feet lie 3 rations.')) f.push('the rations not seen again, up the stairway the third time');
-        if (!seg('> look', '> map', at('> d ', u3)).includes('At your feet lies a dagger.')) f.push('the dagger not seen again, down the third time');
-        if (!seg('> look', '> map', s2).includes('At your feet lies a dagger.')) f.push('the dagger not there as the game\'s carried on');
-        if (!seg('> look', '> quit', at('> u ', s2)).includes('At your feet lie 3 rations.')) f.push('the rations not there as the game\'s carried on');
-        const map1 = seg('The map', '> quit', at('> map')), map2 = seg('The map', '> u', at('> map', s2));
-        if (!map1 || map1 !== map2) f.push('the map not as it was, carried on');
-        const ls = seg('% ls /ram/kept', '% dq0');
-        for (const p of ['rg', 'it', 'dn', 'sm', 'st']) if (!new RegExp(p + '[0-9a-f]{5,6}\.da').test(ls)) f.push('no ' + p + '... region files');
+        const T = dq0Turns(m), f = [], at = (s, n) => s && dq0Here(s).some(i => i.name === n);
+        const d0 = T.of('drop the dagger'), r0 = T.of('drop the rations');
+        if (!at(d0.after, 'dagger') || !d0.after || d0.after.pc.sn !== 1) f.push('the dagger not put down on the second stratum');
+        if (!at(r0.after, 'rations') || !r0.after || r0.after.pc.sn !== 0) f.push('the rations not put down on the top');
+        const view = { 1: dq0View(d0.after), 0: dq0View(r0.after) };
+        let rats = 0;
+        for (const t of T.filter(t => (t.line === 'u' || t.line === 'd') && t.game === 0 && t.k > r0.k)) {     // (Each way, after both were put down)
+          const s = t.after, sn = t.line === 'u' ? 0 : 1;
+          dq0Need(f, t, 'E_ARRIVE', { how: t.line === 'u' ? 'A_UP' : 'A_DOWN' }, 'not ' + (t.line === 'u' ? 'up' : 'down') + ' the stairway');
+          if (!s || s.pc.sn !== sn) { f.push('> ' + t.line + ' (line ' + t.k + '): not on stratum ' + sn); continue; }
+          if (dq0View(s) !== view[sn]) f.push('stratum ' + sn + ' not as it was (line ' + t.k + '): ' + dq0View(s) + ', first ' + view[sn]);
+          if (s.sight.dens.some(d => d.name === 'giant rat')) rats++;
+        }
+        if (!rats) f.push('the giant rats by the stairways never seen (their regions\' records read back)');
+        const mp = T.of('map'), q = T.of('quit'), c = T.of('dq0 -C -d /ram/kept'), mp2 = T.after(c, 'map'), u2 = T.after(c, 'u');
+        dq0Need(f, c, 'E_ARRIVE', { how: 'A_RESUMED' }, 'the game not carried on');
+        if (!c.after || !q.at || c.after.pc.sn !== q.at.pc.sn || c.after.pc.x !== q.at.pc.x || c.after.pc.y !== q.at.pc.y || dq0View(c.after) !== view[1])
+          f.push('not carried on where it was, seen the same');
+        if (!mp.after || !mp2.after || !mp.after.map.some(r => r.trim()) || mp.after.map.join('\n') !== mp2.after.map.join('\n')) f.push('the map not as it was, carried on');
+        if (!u2.after || dq0View(u2.after) !== view[0]) f.push('the top not as it was, up again once carried on (the rations)');
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' ');
+        const ls1 = o.slice(o.indexOf('% ls /ram/kept'), o.indexOf('% dq0 -C')), ls2 = o.slice(o.lastIndexOf('% ls /ram/kept'), o.indexOf('% echo $status'));
+        for (const p of ['rg', 'it', 'dn', 'sm', 'st']) if (!new RegExp(p + '[0-9a-f]{5,6}\\.da').test(ls1)) f.push('no ' + p + '... region files');
+        if (/rg1\w{4}\.da/.test(ls2)) f.push('the old game\'s region files left in the folder for the new game (its stratum below\'s)');
+        const g = T.of('dq0 -p t -s 5 -c /ram/c.hm -T -C -d /ram/kept');
+        dq0Need(f, g, 'E_ARRIVE', { how: 'A_START' }, 'the new game not begun');
+        if (!g.after || g.after.game !== 2 || g.after.items.some(i => i.where === 'IW_SQUARE' && (i.name === 'dagger' || i.name === 'rations')))
+          f.push('the old game\'s things lying about in the new game');
         return f;
       },
       sdcard: true

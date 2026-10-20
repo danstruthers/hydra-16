@@ -80,6 +80,7 @@ const EXPRS = {
   tNglows: F('struct sight', 'nglows'), tGlow: F('struct sight', 'glow'), tGlowSize: S('struct sight', 'glow[0]'), seeGlows: 'SEE_GLOWS',
   gRel: F('struct sight', 'glow[0].rel'), gDist: F('struct sight', 'glow[0].dist'), gHow: F('struct sight', 'glow[0].how'),
   tDazzled: F('struct sight', 'dazzled'),
+  uiBank: 'UI_BANK', uMap: F('struct uirec', 'map'), mapH: 'MAP_H', mapW: 'MAP_W',
 };
 
 // The headers' enums and #defines with a number: { names: { NAME: value }, blocks: [[NAME ...] an enum's members] }
@@ -169,7 +170,7 @@ function createRecorder() {
       pc: { sn: h[L.pcSn], x: w16(h, L.pcX), y: w16(h, L.pcY), face: h[L.pcFace], light: h[L.pcLight], lamp: str(h, L.pcLamp, 14),
         pos: h[L.pcPos], gait: h[L.gait], watch: h[L.watch], going: h[L.pcGoing], stance: h[L.pcStance] },
       sum: { cond: w16(h, L.pcsum + L.sCond), health: h[L.pcsum + L.sHealth], load: h[L.pcsum + L.sLoad], sight: h[L.pcsum + L.sSight] },
-      actors: [], items: [], names: [], sight: null, theme: '' };
+      actors: [], items: [], names: [], sight: null, theme: '', map: [] };
     for (let k = 0; k < L.nactors; k++) {
       const o = L.actor + k * L.actorSize, a = { k, state: h[o + L.aState], sn: h[o + L.aSn], face: h[o + L.aFace], pos: h[o + L.aPos],
         x: w16(h, o + L.aX), y: w16(h, o + L.aY), doing: name('DO_ROAM', h[o + L.aDoing]), name: str(h, o + L.aName, 12),
@@ -194,6 +195,8 @@ function createRecorder() {
           kind: str(th, o + L.nmKind, 14), name: str(th, o + L.nmName, 20) });
       }
     }
+    const ui = bank(L.uiBank);                                   // (The map's rows, as the maker last drew them)
+    if (ui) for (let r = 0; r < L.mapH; r++) s.map.push(str(ui, L.uMap + r * (L.mapW + 1), L.mapW));
     const t = bank(L.sightBank);
     if (t) {
       const list = (n, max, at, size, f) => Array.from({ length: Math.min(t[n], max) }, (_, i) => f(at + i * size - at, i));
