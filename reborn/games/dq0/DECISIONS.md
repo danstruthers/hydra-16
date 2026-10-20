@@ -698,3 +698,35 @@ occupation's alone (every character's option points keep 2 a skill).  And, the u
 will need to look at game balance for each occupation" (HOUSE.md, open).
 
 **Design:** HOUSE.md, decided, not yet built.
+
+### The decisions after slice 4.0
+
+Asked 2026-10-20 ("Prompt me for outstanding decisions"), the user chose:
+- **Occupations by class and sex:** the book's limits.  A serf's or an unguilded character's choice is the unguilded
+  occupations, a guilded one's those and the guilded, a noble's all of them; Lady is for women.  hmchar -q draws
+  within the limits.
+- **Culture:** rolled, mostly Feudal, with the book's exceptions (Imperial, Viking, Tribal; elves Sindarin, dwarves
+  Khuzan); -q rolls it too.
+- **Deity:** the player's choice, one of the ten or none, the book's morality ranges shown as a guide; -q none.
+- **Tiring:** strenuous work tires the character as a run does (digging, climbing, battering), and a long dig or
+  climb asks ("You're tiring.  Keep digging?").
+- **Engaging:** the book's optional engage initiative test is used: as a character engages an enemy, both test
+  Initiative, and a defender that does better gains a tactical advantage (it strikes first, or disengages).
+- **A grope while engaged:** taking a thing up, drawing or swapping a weapon while engaged is a Dexterity test; a
+  failure wastes the round.
+- **Denizens' places:** a denizen keeps its bearing and distance (as built), not a corner's words.
+- **A look one way's reach:** kept at 31 squares for now, and the user: "I don't know that sight of 6 is
+  keen...lighting will restrict what is seen more so than absolute distance usually, but depending on sight
+  attribute, you might be able to see decent detail much further away.  It is the level of detail that is
+  affected, unless completely blind, of course.  For example, a low-vision person might be able to only see
+  movement beyond a certain distance, where a person with better vision would be able to resolve general shape
+  (humanoid or not) and someone with even better vision might be able to tell the race (khuzdul, gargun,
+  sindarin, human).  That should be modeled if possible, but may need to wait.  I will leave that dermination
+  for later.  For now, keep it as is."
+- **hylang:** its two faults found by the occupations work fixed now: read-lines on a file over 8 KB (garbage), and
+  its slow reading of source.
+- **A search cut short:** covers only the part done (the squares nearest first), each at the full chance, not
+  every square at a harder one.
+- **Battering's noise:** every blow heard, not only the first.
+
+**Design:** HOUSE.md, decided, not yet built (and Open: sight's detail by distance).

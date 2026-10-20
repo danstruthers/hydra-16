@@ -430,8 +430,30 @@ climb's test to hold on).
   once the maker gives faces a grade.  Today it's 10 feet a round at a marginal success and 20 at a critical,
   everywhere.
 
+- **Occupations by class and sex** (the user's, 2026-10-20): a serf's or an unguilded character's choice is the
+  unguilded occupations, a guilded one's those and the guilded, a noble's all; Lady for women; -q within them.
+  Today any occupation for anyone.
+- **A human's culture rolled, mostly Feudal** (the user's, 2026-10-20), the book's exceptions Imperial, Viking and
+  Tribal (elves Sindarin, dwarves Khuzan), -q too.  Today every human is Feudal.
+- **A deity the player's choice** (the user's, 2026-10-20): one of the ten or none, the morality ranges a guide;
+  its Ritual opened, as the book has it; -q none.  Today none but a cleric's.
+- **Strenuous work tires** (the user's, 2026-10-20): digging, climbing and battering tire as a run does, a long dig
+  or climb asking.  Today only the pace tires.
+- **The engage initiative test** (the user's, 2026-10-20; the book's optional rule): as a character engages an
+  enemy (its walk into the zone, a close-in, an enemy coming at it), both test Initiative, and a defender that
+  does better gains a tactical advantage: it strikes first, or disengages.  Today the close-in strikes at once.
+- **A grope while engaged** (the user's, 2026-10-20): taking a thing up, drawing or swapping a weapon, engaged, is a
+  Dexterity test; a failure wastes the round.  Today it never fails.
+- **A search cut short covers the part done** (the user's, 2026-10-20): the squares nearest first, each at the full
+  chance, as far as its time went.  Today every square at a harder chance (up to 20 for the part not done).
+- **Battering heard every blow** (the user's, 2026-10-20).  Today its noise is made once, as it begins.
+
 ## Open
 
+- **Sight's detail by distance** (the user's, 2026-10-20): the light limits what's seen more than distance does,
+  but within it the eyes set how much detail is made out (movement only, then a shape, humanoid or not, then the
+  race), by the sight attribute, unless blind; modelled if it can be, perhaps later.  For now a look one way's
+  reach stays capped at 31 squares.
 - **Each occupation's balance** (the user's, 2026-10-20: "we will need to look at game balance for each
   occupation"): now that hmchar offers them all, each one's worth in the game looked at, not only its points (the book's
   run from 1 to 21; a dungeon favours some skills, a fighter's, a thief's, a miner's, over others), and evened out
