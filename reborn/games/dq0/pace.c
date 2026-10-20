@@ -166,8 +166,9 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
             any ("carefully\0careful\0warily\0")) {
             wa |= WA_TRAPS;
         }
-        if (any ("listen\0listening\0")) {
-            wa |= WA_LISTEN;
+        if (any ("listen\0listening\0") && (k || any ("listening\0"))) {
+            wa |= WA_LISTEN;                    /* ("Listen as I go", "keep listening"; "listen" alone, "listen at the
+                                                **   door", a listen, the command's: way.c's) */
         }
         if (any ("mapping\0") || (any ("map\0") && k)) {
             wa |= WA_MAP;                       /* (The map's side, its materials, the orientation's) */

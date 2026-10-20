@@ -700,9 +700,11 @@ static void __fastcall__ end (unsigned char how)
 ** a step or a noise within its loudness times (hearing + 3) / 2 squares, on its stratum, of one on a square it doesn't
 ** see (one it sees is told as seen: the world's V_STIR), told by the way it lies, in its sound's words (the sound
 ** task's table, SOUND.md: each square of wall or rock between four squares further, each shut door two, as it's
-** played); not the same way again for half a minute, nor any for five seconds.  The rest pass it by */
+** played); not the same way again for half a minute, nor any for five seconds.  The rest pass it by.  Listening one
+** way (way.c's lsn: "listen at the door"), twice as far that way (HOUSE.md's) */
 static unsigned dplace;
-static unsigned long heard_at;
+unsigned long heard_at;
+unsigned char lsn;                              /* (A listen, or a sniff, under way: way.c's) */
 static unsigned char heard_rel = 0xFF;
 char heard_what[20];
 
@@ -741,6 +743,9 @@ static void heard (void)
         dx = (int) dx < 0 ? -dx : dx;
         dy = (int) dy < 0 ? -dy : dy;
         dx = (dx > dy ? dx : dy) + 4 * (m.x[3] & 15) + 2 * (m.x[3] >> 4);
+        if ((lsn & 1) && ((rel + 1) & 7) < 3) {
+            dx >>= 1;                           /* (Listened for, that way: twice as far) */
+        }
         if (dx * 2 > m.b * (HUB->pcsum.hearing + 3) || m.t < heard_at + (rel == heard_rel ? 300 : 50)) {
             continue;
         }
@@ -780,6 +785,9 @@ static unsigned char events (void)          /* (How many there were) */
                 heard ();                       /* (What came before it, told before the prompt: a blow's words;
                                                 **   knocked senseless by one, busy again; dead of one, the
                                                 **   game's end: no prompt, however the tasks' timing falls) */
+                if (lsn) {
+                    look_way (VB_NONE);         /* (A listen's or a sniff's end: way.c's) */
+                }
                 if (!quit) {
                     t_prompt (!busy);
                 }
@@ -824,7 +832,7 @@ static unsigned char events (void)          /* (How many there were) */
                     t_flush ();
                     break;
                 }
-                look (0);
+                look ((unsigned char) m.w1 & V_LOOKED);     /* (A look one way's own words: way.c's) */
             }
             break;
         case E_NOWAY:
@@ -1261,14 +1269,14 @@ static unsigned char __fastcall__ deal (unsigned char how)
 static unsigned char __fastcall__ chores (unsigned char action)
 {
     switch (action) {
-    case VB_OBSERVE_DIRECTION:                  /* (Looked one way: turned to it, the turn's look; else, and at a */
-        if (cmd.dir <= H_NW && cmd.dir != HUB->pc_face) {   /*   thing, through it or round it, about, as */
-            intend (I_TURN, cmd.dir);           /*   ever, till slice 4.0's looking one way) */
-            break;
-        }
-    case VB_OBSERVE_LOCALE:
-    case VB_OBSERVE_OBJECT:
+    case VB_OBSERVE_DIRECTION:                  /* (Looked, listened, sniffed one way, or at a thing, through it: */
+    case VB_OBSERVE_OBJECT:                     /*   way.c's, part 6) */
     case VB_OBSERVE_THROUGH:
+    case VB_LISTEN:
+    case VB_SMELL:
+        look_way (action);
+        break;
+    case VB_OBSERVE_LOCALE:
     case VB_OBSERVE_AROUND:
     case VB_FIND_OBJECT:
         look (0);

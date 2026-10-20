@@ -262,7 +262,15 @@ struct sight* sight_get (void);                 /* The senses' record copied int
 const char* tt (void);                          /* The things' words (the UI bank's) copied into lb (look.c's): it */
 extern unsigned char sight_light;
 extern char sight_lamp[14];                     /* (What gives its light, named: the hub's pc_lamp) */
-extern unsigned char sight_close;               /* (A close look: the room's figures, its size and its ceiling's) */
+extern unsigned char sight_close;               /* (A close look: the room's figures, its size and its ceiling's; 8,
+                                                **   a look one way's words) */
+/* ---- way.c: looking one way, listening and sniffing one way (HOUSE.md's slice 4.0) */
+void __fastcall__ look_way (unsigned char action);  /* Part 6: "look north", "look at the door", "listen at the door",
+                                                **   "sniff" (the command's action, VB_*); VB_NONE: a listen's or a
+                                                **   sniff's end (main.c's E_READY) */
+void focus_words (void);                        /* Overlay 11: a look one way's words, into lb (words.c's) */
+extern unsigned char lsn;                       /* (main.c's: a listen, 1 one way, 2 about; 4, a sniff; 0, none) */
+extern unsigned long heard_at;                  /* (main.c's: when a sound was last told) */
 
 /* ---- bank.s */
 

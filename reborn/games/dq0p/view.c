@@ -19,6 +19,10 @@
 ** worked out in it): a turn where it stands looks in the same grid, its marks taken out; a step or a walk moves it,
 ** only the squares come into it copied in.  (The light layer works its lamps' lines out in the same grid, before the
 ** look's: grid ()'s lmode, the chunks the cache has alone.)
+**
+** A look one way (HOUSE.md's looking one way: dq0p.c's v_way) is the same look, reaching twice as far (WAY_R squares
+** at most, the grid's) in the quarter ahead of the character (within 45 degrees of the way it faces: cast.s's), as far
+** as the light allows: a glance's reach every way else.
 */
 
 #include <string.h>
@@ -34,11 +38,12 @@
 #define EYE         5                           /* The eyes, feet above the floor */
 #define GRID        ((unsigned char*) 0x8000)   /* The grid (cast.s's): a row 128 bytes, a square two (its flags, its
                                                 **   floor) */
-#define VMAX        45                          /* (The view's squares each way, at most: 2 (4 + 2 * 9) + 1) */
+#define VMAX        (2 * WAY_R + 1)             /* (The view's squares each way, at most: a look one way's; a glance's
+                                                **   2 (4 + 2 * 9) + 1) */
 
 extern unsigned char g_r, g_m, g_hx, g_hy, g_bright, g_lmax, g_nl, g_li[NLAMPS], g_lj[NLAMPS], g_lr[NLAMPS];
 extern unsigned char g_lzl[NLAMPS], g_lzh[NLAMPS], g_lo[VMAX], g_hi[VMAX];
-extern unsigned g_r2, g_l2, g_u2;
+extern unsigned g_r2, g_l2, g_u2, g_o2;
 extern int g_ez;
 extern unsigned char* run_g;
 void __fastcall__ cast_row (unsigned char j);
@@ -205,6 +210,10 @@ void __fastcall__ s_view (unsigned char sn, unsigned x, unsigned y, unsigned cha
         return;
     }
     range = 4 + 2 * (sight > 9 ? 9 : sight);
+    g_o2 = range * range;                       /* (A glance's reach; a look one way's twice it, in the quarter ahead) */
+    if (v_way) {
+        range = 2 * range < WAY_R ? 2 * range : WAY_R;
+    }
     g_r = range;
     g_r2 = range * range;
     g_l2 = light * light;

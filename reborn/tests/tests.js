@@ -3532,6 +3532,62 @@ module.exports = {
       sdcard: true
     },
     {
+      // (Seed 7, dq0glow's dungeon: the kitchen the character begins in, lit by its own torches, its south door opened
+      // (its dart trap set off) and down the straight passage south to a dark hall; the kitchen's floor ends at row
+      // 32840, its door at 32841, the hall's north door at 32850, and an iron pot lies on the kitchen's floor at 32785,
+      // 32839, straight up the passage from the hall's doorway square, 32785,32851, and its far side, 32785,32855; the
+      // hall's east door, at its far side's 32787,32855, closed.  A character of Eyesight 5: HarnMaster's sight 1, a
+      // glance's reach 6 squares, a look one way's 12; the null ruleset's sight 5, 14 and 28)
+      name: 'dq0lookway', meaning: true, what: 'Dingus Quest Zero\'s looking one way, listening and sniffing one way (HOUSE.md\'s slice 4.0, the user\'s: "look north", "look at the door", "listen at the door"; told by the facing alone), by the hub\'s events and the senses\' record (what the character perceives, and a look one way\'s own: WAY_SEEN): at seed 7 in the dark hall below the lit kitchen, a glance and then a look north from its doorway and from its far side: a look one way reaches twice a glance\'s squares (the ruleset\'s sight: 4 + 2 sight) in the quarter ahead, so the kitchen\'s iron pot straight up the passage is in the glance\'s record only within its reach and in the look one way\'s within twice it, and one of the two looks sees it where the glance doesn\'t; the look one way\'s own record what\'s beyond the hall\'s open door, the kitchen, lit (a room\'s kind, U_KITCHEN), or only the dark past the look\'s reach; each look one way the world\'s I_LOOK, E_VIEW V_LOOKED, 3 seconds; looking east at the closed door, turned to it first (V_FACING), not seen past (WB_SHUT); listening at the door, turned to it already, 3 seconds and no look, the watchfulness not set (not "listen as I go"); listening about and sniffing, 3 seconds each',
+      init: 't_rc', cycles: 900e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'cp /ram/c.hm /ram/e.hm', 'echo att eye 5 >> /ram/e.hm',
+        'dq0 -p t -s 7 -c /ram/e.hm', 'open the door behind me', 's', 'turn around', 'look north', 'move south 4 squares', 'face north',
+        'look north', 'look east', 'listen at the door', 'listen', 'sniff', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [], at = (t, what) => t.k >= 0 && t.at && t.after && t.after.sight && t.after.way ? true : (f.push(what + ' not typed, or no record'), false);
+        const ln = T.filter(t => t.line === 'look north'), glance = [T.of('turn around'), T.of('face north')];
+        if (ln.length !== 2 || !glance.every((g, i) => at(g, 'the glance ' + i)) || !ln.every((t, i) => at(t, 'look north ' + i))) return f.concat(['the looks not typed']);
+        const pot = (ln[1].after.items || []).find(i => i.name === 'iron pot' && i.x === 32785 && i.where === 'IW_SQUARE');
+        if (!pot) return ['the kitchen\'s iron pot not found at 32785'];
+        const has = s => s.items.some(i => i.name === 'iron pot' && i.rel === 0);
+        let more = 0;
+        ln.forEach((t, i) => {
+          const r = 4 + 2 * Math.min(t.at.sum.sight, 9), w = Math.min(2 * r, 31), g = glance[i].after, s = t.after.sight, d = t.after.pc.y - pot.y, k = t.after.pc.y - 32840;
+          const what = 'look north ' + i + ' (' + d + ' squares from the pot, a glance\'s reach ' + r + ')';
+          if (t.after.pc.face !== 0 || t.after.pc.x !== 32785) f.push(what + ': not facing north up the passage');
+          if (has(g.sight) !== (d <= r)) f.push(what + ': the glance ' + (d <= r ? 'doesn\'t see' : 'sees') + ' the pot');
+          if (has(s) !== (d <= w)) f.push(what + ': the look one way ' + (d <= w ? 'doesn\'t see' : 'sees') + ' the pot');
+          more += !has(g.sight) && has(s);
+          dq0Need(f, t, 'E_VIEW', { why: 'V_LOOKED' }, what + ': no V_LOOKED');
+          dq0Never(f, t, 'E_VIEW', { why: 'V_FACING' }, what + ': turned, facing north already');
+          if (t.after.now - t.at.now !== 30) f.push(what + ': ' + (t.after.now - t.at.now) + ' tenths, not 30');
+          const b = t.after.way.valid ? t.after.way.beyond.find(e => e.rel === 0 && e.noun === 'BN_OPEN') : null;
+          if (!b) f.push(what + ': nothing beyond the open door ahead in the look one way\'s own: ' + JSON.stringify(t.after.way));
+          else if (k <= w ? b.what !== 'WB_ROOM' || b.kind !== 8 || !b.lit : b.what !== 'WB_DARK') f.push(what + ': beyond the door ' + JSON.stringify(b) + ', the kitchen ' + k + ' squares off');
+          if (has(s) && !t.after.way.items.some(e => e.name === 'iron pot')) f.push(what + ': the pot not among the things ahead');
+        });
+        if (!more) f.push('no look one way saw the pot where the glance didn\'t');
+        const e = T.of('look east'), l = T.of('listen at the door');
+        if (at(e, 'look east')) {
+          dq0Need(f, e, 'E_VIEW', { why: 'V_FACING' }, 'look east: not turned first');
+          dq0Need(f, e, 'E_VIEW', { why: 'V_LOOKED' }, 'look east: no V_LOOKED');
+          if (e.after.pc.face !== 2) f.push('look east: facing ' + e.after.pc.face);
+          if (!e.after.way.valid || !e.after.way.beyond.some(b => b.rel === 0 && b.noun === 'BN_DOOR' && b.what === 'WB_SHUT')) f.push('look east: the closed door not shut to the look: ' + JSON.stringify(e.after.way));
+        }
+        for (const [x, face] of [[l, 2], [T.of('listen'), 2], [T.of('sniff'), 2]]) {
+          if (!at(x, x.line)) continue;
+          dq0Never(f, x, 'E_VIEW', { why: 'V_LOOKED' }, x.line + ': a look');
+          dq0Never(f, x, 'E_VIEW', { why: 'V_FACING' }, x.line + ': turned');
+          if (x.after.pc.face !== face) f.push(x.line + ': facing ' + x.after.pc.face);
+          if (x.after.now - x.at.now !== 30) f.push(x.line + ': ' + (x.after.now - x.at.now) + ' tenths, not 30');
+          if (x.after.pc.watch & 2) f.push(x.line + ': listening as it goes set (WA_LISTEN)');
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
       // (The sound task's scene, dq0s -t: the character faces north, its hearing 5; then the YM2151's key-ons, each
       // with its speakers: the rat's three hits on the right, the squeak on the left, the growl on both, the
       // yapping on the right, the bear's tread in its place on the left; nothing on 0-3 or 7, the music's and bell's)
