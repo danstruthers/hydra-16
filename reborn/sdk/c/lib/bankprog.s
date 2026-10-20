@@ -38,7 +38,8 @@ FN_SIZE     = 8
 BANKREG     = $00                   ; The bank register: the window's bank
 WIN         = $8000                 ; The window, and its end
 WTOP        = $A000
-RBUF        = 64                    ; A file's bytes read at a time
+RBUF        = 255                   ; A file's bytes read at a time (a READ costs some 24K cycles from a card,
+                                    ;   whatever its size: the more at once the better, to a byte's count)
 NAMEMAX     = 31                    ; An export's name, at most
 
 BE_SETUP    = 1                     ; bankprog.h's BE_*
@@ -652,23 +653,33 @@ imports:
             jcs         @short
             cmp         #0
             jne         @format
-            lda         iend                ; Their names: each 0-ended
-            sta         impn
-            sta         ptr4
-            lda         iend + 1
+            lda         iend                ; Their names: each its length's byte (its bytes to the next
+            sta         impn                ;   one's: its letters, its 0 and itself, so a name another's
+            sta         ptr4                ;   length is passed over at once, match's), then its letters,
+            lda         iend + 1            ;   0-ended
             sta         impn + 1
             sta         ptr4 + 1
             ldx         nimp
             beq         @addr
+@imp:       lda         ptr4                ; (Its length's byte, its place in ptr2 till it's known)
+            sta         ptr2
+            lda         ptr4 + 1
+            sta         ptr2 + 1
+            jsr         inc4
+            jcs         @format
+            ldy         #1
 @name:      jsr         rdbyte
             jcs         @short
             sta         (ptr4)
+            iny
             jsr         inc4
             jcs         @format
             cmp         #0
             bne         @name
+            tya
+            sta         (ptr2)
             dex
-            bne         @name
+            bne         @imp
 @addr:      lda         ptr4                ; Their addresses: none found yet
             sta         impa
             lda         ptr4 + 1
@@ -763,9 +774,14 @@ match:
             sta         ptr2 + 1
             ldx         nimp
             beq         @done
-@imp:       ldy         #0
+@imp:       lda         (ptr4)              ; (Its length the export's?)
+            sec
+            sbc         #2
+            cmp         enlen
+            bne         @no
+            ldy         #1
 @cmp:       lda         (ptr4),y
-            cmp         ename,y
+            cmp         ename - 1,y
             bne         @no
             iny
             cmp         #0
@@ -775,12 +791,7 @@ match:
             ldy         #1
             lda         rval + 1
             sta         (ptr2),y
-@no:        ldy         #0                  ; (Past its name)
-:           lda         (ptr4),y
-            iny
-            cmp         #0
-            bne         :-
-            tya
+@no:        lda         (ptr4)              ; (Past its name: its length)
             clc
             adc         ptr4
             sta         ptr4
@@ -813,12 +824,7 @@ missing:
             and         (ptr2)
             cmp         #$FF
             beq         @miss
-            ldy         #0
-:           lda         (ptr4),y
-            iny
-            cmp         #0
-            bne         :-
-            tya
+            lda         (ptr4)              ; (Past its name: its length)
             clc
             adc         ptr4
             sta         ptr4
@@ -834,15 +840,15 @@ missing:
             bne         @imp
 @ok:        clc
             rts
-@miss:      ldy         #0
+@miss:      ldy         #1                  ; (Its letters, after its length)
 :           lda         (ptr4),y
-            sta         _bank_missing,y
+            sta         _bank_missing - 1,y
             beq         :+
             iny
-            cpy         #15
+            cpy         #16
             bne         :-
             lda         #0
-            sta         _bank_missing,y
+            sta         _bank_missing - 1,y
 :           lda         #BE_IMPORT
             sta         _bank_err
             sec
@@ -850,7 +856,7 @@ missing:
 
 ; ---- relocate: a relocation table applied, its places from rbase - 1 on (each its offset from the last, 255 one of
 ; 254 more; then its type: the value's kind, high 3 bits, and its segment, low 4: an import's index after it, a
-; HIGH's low byte after that), up to its 0.  C = 1 if it's not one this loader takes
+; HIGH's low byte after that, but an import's: ld65 writes none), up to its 0.  C = 1 if it's not one this loader takes
 relocate:
             lda         rbase
             bne         :+
@@ -881,10 +887,10 @@ relocate:
             stz         rval + 1
             bra         @apply
 @import:    jsr         rdbyte              ; (Its index: the import's address, from impa)
-            bcs         @short
+            jcs         @short
             sta         rval
             jsr         rdbyte
-            bcs         @short
+            jcs         @short
             sta         rval + 1
             asl         rval
             rol         rval + 1
@@ -912,9 +918,14 @@ relocate:
             beq         @low
             cmp         #$40
             bne         @format
-            jsr         rdbyte              ; HIGH: its low byte after it
+            lda         rtype               ; HIGH: its low byte after it; but an import's has none (ld65
+            and         #$0F                ;   writes none), its offset's low byte taken as 0 (build.js
+            beq         @hi0                ;   refuses a child with any other)
+            jsr         rdbyte
             bcs         @short
-            clc
+            bra         @hi
+@hi0:       lda         #0
+@hi:        clc
             adc         rval
             lda         (ptr4)
             adc         rval + 1

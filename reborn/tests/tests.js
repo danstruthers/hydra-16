@@ -1726,6 +1726,25 @@ function hmRun(out, cmd) {
 // ceilings), portals, squares and floors, and its passages' ceiling (pceil); those of stratum sn that look whole
 const U_HALL = 1, U_CELL = 2, U_STORE = 7, U_KITCHEN = 8, U_PANTRY = 9, U_QUARTERS = 13, U_GATEHOUSE = 17;
 const PK_PORTCULLIS = 2, T_DOOR = 3, T_STEPS = 5;           // (T_FLOOR, T_CORR: the caves' above)
+// The bytes xd said after the line it was typed on (cmd: its command line), up to the prompt: each line "OFFSET  hex
+// ...  text"; and a theme's text as themegen said it (its command line typed, up to the next prompt), its CRs gone
+function xdBytes(out, cmd) {
+  const o = out.replace(/\r/g, ''), at = o.indexOf('% ' + cmd + '\n'), end = o.indexOf('\n% ', at + 1);
+  const bytes = [];
+  if (at < 0) return Buffer.alloc(0);
+  for (const l of o.slice(at + cmd.length + 3, end < 0 ? undefined : end).split('\n')) {
+    const m = /^([0-9a-f]{7})  ((?:[0-9a-f]{2} ?)+)/.exec(l);
+    if (m) for (const h of m[2].trim().split(' ')) bytes.push(parseInt(h, 16));
+  }
+  return Buffer.from(bytes);
+}
+function saidTheme(out, cmd) {
+  const o = out.replace(/\r/g, ''), at = o.indexOf('% ' + cmd + '\n'), end = o.indexOf('\n% ', at + 1);
+  return at < 0 ? '' : o.slice(at + cmd.length + 3, end < 0 ? undefined : end + 1);
+}
+const DQ0_MAKE = () => require('../games/dq0/make.js');
+const DQ0_BEASTS = () => DQ0_MAKE().bestiary(path.join(__dirname, '..', 'games', 'dq0'));
+
 function builtChunks(m, sn) {
   const out = [], C = { room: 8, zone: 56, portal: 219, tile: 443, elev: 1467, pceil: 2555 };
   for (const b of Object.values(m.sharedBanks())) {
@@ -3764,6 +3783,68 @@ module.exports = {
         'The crypt is yours, and all who lie in it.', 'The game is over.', '% echo $status'],
       sdcard: true
     },    {
+      name: 'dq0themegen', what: 'Dingus Quest Zero\'s theme generator (Phase 3D; games/themegen, its bank programs bank/histgen, goalgen, linegen and namegen: HISTORY.md): "themegen -s 3" says a region\'s history and its theme (the region, its peoples and eras, the strata as layers, the inhabitants, the goal, its clues, the story), the same each time (made twice into folders, the files the same, cmp); its record (themec, run in its place, theme.dat) held to games/dq0/make.js\'s compile of the theme it said, byte for byte, and that theme to the theme checker (every goal reachable, every faction placed)',
+      init: 't_rc', cycles: 900e6,
+      machine: { input: ['bind -a /sd/0/games /bin', 'themegen -s 3', 'themegen -q -s 3 -o /ram/a', 'echo $status',
+        'themegen -q -s 3 -o /ram/b', 'cmp /ram/a/theme.txt /ram/b/theme.txt', 'cmp /ram/a/theme.dat /ram/b/theme.dat', 'echo $status',
+        'xd /ram/a/theme.dat', 'echo done'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['seed     | 3', 'region   | the ', 'era      | ', 'layer    | ', 'faction  | ', 'goal     | ', 'story    | Under the',
+        '% cmp /ram/a/theme.dat /ram/b/theme.dat\n% echo $status\n\n', '% echo done\ndone\n'],
+      check(m, out) {
+        const f = [], text = saidTheme(out, 'themegen -s 3'), dq0 = DQ0_MAKE(), beasts = DQ0_BEASTS();
+        let r;
+        try { r = dq0.compile(text, 'themegen -s 3', beasts, 1); } catch (e) { return ['its theme isn\'t one: ' + e.message]; }
+        f.push(...dq0.check(r.t, beasts, 'themegen -s 3'));
+        const dat = xdBytes(out, 'xd /ram/a/theme.dat');
+        if (dat.length !== dq0.THEME_SIZE) f.push('theme.dat: ' + dat.length + ' bytes, not ' + dq0.THEME_SIZE);
+        else for (let i = 0; i < dat.length; i++) if (dat[i] !== r.data[i]) { f.push('theme.dat: byte ' + i + ' is ' + dat[i] + ', make.js\'s ' + r.data[i]); break; }
+        if (/^\s+\S/m.test(text.split('\n').filter(l => /^[a-z]/.test(l)).join('\n'))) f.push('a line not in the theme format');
+        this.notes = [(text.match(/^theme +\| (.*)/m) || [])[1] + ': ' + text.split('\n').filter(l => /^[a-z]/.test(l)).length + ' lines, ' + (r.used - dq0.HEAD) + ' bytes of words'];
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0goals', what: 'Dingus Quest Zero\'s goal kinds (G5: data, games/themegen/goals.txt): themegen\'s histories for seeds 1-12, each passing the theme checker (themec, in themegen\'s place: its status), all four kinds among them (an artifact found, the evil cleared out, a prisoner rescued, a far exit won through to), each goal\'s stratum one of its history\'s and its guardians a faction there',
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: ['bind -a /sd/0/games /bin', ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].flatMap(s => ['themegen -q -s ' + s + ' -o /ram/g',
+        'echo seed ' + s + ' status $status', 'grep goal /ram/g/theme.txt']), 'echo done'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['seed 12 status\n', '% echo done\ndone\n'],
+      check(m, out) {
+        const o = out.replace(/\r/g, ''), f = [], kinds = new Set();
+        for (let s = 1; s <= 12; s++) {
+          if (!o.includes('seed ' + s + ' status\n')) f.push('seed ' + s + ': the checker refused it (or it wasn\'t made)');
+          const g = new RegExp('% grep goal /ram/g/theme.txt\\n(goal +\\|.*)').exec(o.slice(o.indexOf('seed ' + s + ' status')));
+          if (!g) f.push('seed ' + s + ': no goal line'); else kinds.add(g[1].split('|')[1].trim());
+        }
+        for (const k of ['artifact', 'evil', 'prisoner', 'through']) if (!kinds.has(k)) f.push('no ' + k + ' goal among seeds 1-12');
+        this.notes = ['goal kinds: ' + [...kinds].join(', ')];
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0themec', what: 'Dingus Quest Zero\'s theme compiler (games/themec): the stand-in themes (the card\'s lib/dq0/themes) compiled on the Hydra into the same records as make.js makes them at build time (dq0t.dat\'s, but for their count), byte for byte; and the theme checker refusing a theme whose way out can\'t be opened (no rule opens it) and whose faction can\'t live where it\'s said to (kobolds on a built stratum), said why',
+      init: 't_rc', cycles: 900e6,
+      machine: { input: ['bind -a /sd/0/games /bin', ...['1crypt', '2temple', '3warren'].flatMap(n => ['themec -o /ram/' + n + '.dat /sd/0/games/lib/dq0/themes/' + n + '.txt',
+        'xd /ram/' + n + '.dat']), 'echo \'theme    | the Bad Place\' >/ram/bad.txt', 'echo \'mission  | escape\' >>/ram/bad.txt',
+        'echo \'stratum  | Top | b | halls\' >>/ram/bad.txt', 'echo \'faction  | kobolds | kobold | 0-0 | 9 | - | 0 | u | -\' >>/ram/bad.txt',
+        'themec /ram/bad.txt', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['the Crypt of the Dead King: ', 'the Drowned Temple: ', 'the Kobold Warren: ', 'the theme checker: the way out can\'t be opened',
+        'the theme checker: kobolds: none of its kinds lives in its strata', '% echo $status\n1\n'],
+      check(m, out) {
+        const f = [], dq0 = DQ0_MAKE(), beasts = DQ0_BEASTS();
+        for (const n of ['1crypt', '2temple', '3warren']) {
+          const r = dq0.compile(fs.readFileSync(path.join(__dirname, '..', 'games', 'dq0', 'themes', n + '.txt'), 'latin1'), n, beasts, 1).data;
+          const dat = xdBytes(out, 'xd /ram/' + n + '.dat');
+          if (dat.length !== r.length) { f.push(n + ': ' + dat.length + ' bytes, not ' + r.length); continue; }
+          for (let i = 0; i < r.length; i++) if (dat[i] !== r[i]) { f.push(n + ': byte ' + i + ' is ' + dat[i] + ', make.js\'s ' + r[i]); break; }
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0plan', what: 'Dingus Quest Zero\'s built strata built to a plan (DUNGEON.md, the user\'s, 2026-10-16: "feast halls near kitchens near pantries and storage"; "Larger rooms tend to have higher ceilings, and corridors and smaller rooms tend to have uniform ceiling heights"; "Prior usage can also inform ... what kinds of detritus"): at seed 3 the crypt\'s Upper Halls (their purpose halls: a domestic suite by the way in), the character beginning in a kitchen, its iron pot lying there (what its use left), and its well (there\'s water); the chunks made, read from the hub\'s cache (world.h\'s struct chunk in the shared segment\'s banks): a hall joined to a kitchen by a passage of its own, through no other room; every hall\'s ceiling higher than the passages\' (the chunk\'s pceil), every storeroom\'s, pantry\'s, cell\'s and bedchamber\'s flat at the passages\' height; every room\'s floor flat, at the stratum\'s one level (but a hall\'s dais, two feet up)',
       init: 't_rc', cycles: 500e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 3 -c /ram/c.hm\r' +
