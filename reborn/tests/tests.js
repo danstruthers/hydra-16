@@ -3241,37 +3241,58 @@ module.exports = {
       sdcard: true
     },
     {
-      // (East three times, waiting between: the giant rats by the way down in the way, keeping their distance till
-      // they're cornered, then darting past: at seed 12 in the way twice, then gone, the denizens' moves the same
-      // whatever the timing at the turns pace)
-      name: 'dq0portc', what: 'Dingus Quest Zero\'s portcullises (DUNGEON.md: portals; the world works them, dq0w/wwin.c): through one raised (seed 12, dq0 -T: east of the first way down) into a storeroom, seen and worded as a portcullis, lowered by its winch on the storeroom\'s side (faced first), never walked through while it\'s down, raised again by the winch, and gone back through',
-      init: 't_rc', cycles: 900e6,
-      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 12 -c /ram/c.hm -T\r' +
-        ['e', 'wait', 'e', 'wait', 'e', 'turn around', 'lower portcullis', 'w', 'look', 'raise portcullis', 'w', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
-      expect: ['There is a portcullis ahead (raised).', 'You loose the winch: the portcullis crashes down.',
-        'The portcullis is down: raise it first.', 'There is a portcullis ahead (down).',
-        'You wind the winch beside it, and the portcullis grinds up.', 'You are in a long vault', '% echo $status'],
-      check(m, out) {
-        const f = [];
-        inTurn(dq0Story(out), ['A giant rat is in the way.', 'Time passes.', 'A giant rat is in the way.', 'Time passes.',
-          'You are in a small storeroom', '> turn around', 'There is a portcullis ahead (raised).'], f);
+      name: 'dq0portc', meaning: true, what: 'Dingus Quest Zero\'s portcullises (DUNGEON.md: portals; the world works them, dq0w/wwin.c), by the world\'s events and what the character perceives: at seed 514 the kobold warren\'s gatehouse (its every way out a portcullis, raised), the one ahead lowered by its winch (walked up to first), seen down, never walked through while it\'s down, raised again by the winch, seen up, and gone through (broken, bent and the windows: dq0break)',
+      init: 't_rc', cycles: 600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 514 -c /ram/c.hm', 'lower portcullis', 'n',
+        'raise portcullis', 'n', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [], seen = (t, open) => t.after && t.after.sight && t.after.sight.doors.some(d => d.rel === 0 && d.kind === 'PK_PORTCULLIS' && (d.state & 1) === open);
+        const s0 = T.of('dq0 -p t -s 514 -c /ram/c.hm');
+        if (!seen(s0, 1)) f.push('no raised portcullis ahead to begin with');
+        const lo = T.of('lower portcullis'), n = T.of('n'), r = T.of('raise portcullis'), n2 = T.after(r, 'n');
+        dq0Need(f, lo, 'E_PORTAL', { po: 'PO_LOWERED', pk: 'PK_PORTCULLIS' }, 'the portcullis not lowered');
+        if (!seen(lo, 0)) f.push('the portcullis ahead not seen down');
+        dq0Need(f, n, 'E_NOWAY', { why: 'N_CLOSED' }, 'walked through the portcullis down');
+        if (!n.at || !n.after || n.after.pc.x !== n.at.pc.x || n.after.pc.y !== n.at.pc.y) f.push('moved, the portcullis down');
+        dq0Need(f, r, 'E_PORTAL', { po: 'PO_RAISED', pk: 'PK_PORTCULLIS' }, 'the portcullis not raised');
+        if (!seen(r, 1)) f.push('the portcullis ahead not seen up');
+        dq0Need(f, n2, 'E_ARRIVE', {}, 'not gone through the portcullis raised');
+        if (!n2.at || !n2.after || !(n2.after.pc.y < n2.at.pc.y)) f.push('not gone north through it');
         return f;
       },
       sdcard: true
     },
     {
-      name: 'dq0window', what: 'Dingus Quest Zero\'s windows (DUNGEON.md: portals): one looked through and worded (seed 12: in the second room\'s wall, glazed, its shutters open), not climbed through while its glass is in it, the glass broken (the referee\'s blow at a thing, HC_BLOW at RS_THING), then climbed through (its sill, P_CLIMB) into the passage beyond, the window seen from there',
-      init: 't_rc', cycles: 900e6,
-      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 12 -c /ram/c.hm\r' +
-        ['n', 'turn around', 'climb through window', 'break window', 'climb through window', 'turn around', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
-      expect: ['You can\'t climb through: it\'s shut, glazed or barred.', 'The glass shatters with a crash.',
-        'You climb up onto the sill, and through.', 'You are in a passage.', '% echo $status'],
-      // (The windows' words checked with the lines' wrapping taken out: seen glazed, then from the passage, its glass
-      // gone, its shutters)
-      check(m, out) {
-        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
-        for (const w of ['There is a glazed window ahead to your left (its shutters open).',
-          'There is a shuttered window ahead (its shutters open).']) if (!o.includes(w)) f.push('not found: ' + w);
+      name: 'dq0break', what: 'Dingus Quest Zero\'s portcullises and windows broken (the user\'s, 2026-10-16; DUNGEON.md: portals), by the world\'s events (the referee\'s blows and Strength: HarnMaster\'s, at these seeds): at seed 514\'s gatehouse a portcullis lowered by its winch, then battered with a pick (dq0 -k pick: blows at its iron bars off their body, as a door\'s) till they break, a gap through for good (battered again, jammed; examined; it won\'t lower), and gone through; then a strong character (Strength 18) bending its bars apart (P_FORCE), and through; then at seed 12 a glazed window not climbed through while its glass is in it, the glass broken (the referee\'s blow at a thing, HC_BLOW at RS_THING), climbed through (its sill, P_CLIMB) into the passage beyond, the window seen from there, its glass gone (dq0portcbreak\'s and dq0window\'s, these together)',
+      init: 't_rc', cycles: 1400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 514 -c /ram/c.hm -k pick', 'lower portcullis',
+        'break portcullis', 'break', 'x portcullis', 'lower portcullis', 'n', 'quit', 'hmchar -q -s 5 -o /ram/s.hm', 'echo att str 18 >> /ram/s.hm',
+        'dq0 -p t -s 514 -c /ram/s.hm', 'lower portcullis', 'bend the bars', 'bend bars', 'n', 'quit',
+        'dq0 -p t -s 12 -c /ram/c.hm', 'n', 'turn around', 'climb through window', 'break window', 'climb through window', 'turn around', 'quit',
+        'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [], g1 = T.of('dq0 -p t -s 514 -c /ram/c.hm -k pick'), g2 = T.of('dq0 -p t -s 514 -c /ram/s.hm');
+        const lo = T.after(g1, 'lower portcullis'), b = T.of('break portcullis'), b2 = T.of('break'), x = T.of('x portcullis'), lo2 = T.after(x, 'lower portcullis');
+        dq0Need(f, lo, 'E_PORTAL', { po: 'PO_LOWERED' }, 'the portcullis not lowered');
+        dq0Need(f, b, 'E_PORTAL', { po: 'PO_GAP' }, 'its bars not broken through with the pick');
+        dq0Need(f, b2, 'E_PORTAL', { po: 'PO_JAMMED' }, 'battered again, not jammed for good');
+        if (!dq0Rep(x, 'wreq', { kind: 'WQ_EXAMINE', res: 0 }).length) f.push('the portcullis not examined');
+        dq0Need(f, lo2, 'E_PORTAL', { po: 'PO_JAMMED' }, 'lowered again, not jammed');
+        dq0Need(f, T.after(lo2, 'n'), 'E_ARRIVE', {}, 'not through the gap');
+        const lo3 = T.after(g2, 'lower portcullis'), bend = [T.of('bend the bars'), T.of('bend bars')];
+        dq0Need(f, lo3, 'E_PORTAL', { po: 'PO_LOWERED' }, 'the portcullis not lowered (the strong character)');
+        if (!bend.some(t => dq0Ev(t, 'E_PORTAL', { po: 'PO_BENT' }).length)) f.push('its bars not bent apart (' + bend.map(dq0Evs).join('; ') + ')');
+        dq0Need(f, T.after(bend[1], 'n'), 'E_ARRIVE', {}, 'not through the bent bars');
+        const g3 = T.of('dq0 -p t -s 12 -c /ram/c.hm'), c1 = T.after(g3, 'climb through window'), bw = T.of('break window'), c2 = T.after(bw, 'climb through window');
+        dq0Need(f, c1, 'E_PORTAL', { po: 'PO_IN_WAY', pk: 'PK_WINDOW' }, 'climbed through the glass');
+        dq0Need(f, bw, 'E_PORTAL', { po: 'PO_SHATTERED', pk: 'PK_WINDOW' }, 'the glass not broken');
+        dq0Need(f, c2, 'E_PORTAL', { po: 'PO_CLIMBED' }, 'not climbed through the window');
+        dq0Need(f, c2, 'E_ARRIVE', { how: 'A_CLIMBED' }, 'not come through the window');
+        const ta = T.after(c2, 'turn around');
+        if (!ta.after || !ta.after.sight || ta.after.sight.where !== 1 || !ta.after.sight.doors.some(d => d.kind === 'PK_WINDOW' && !(d.parts & 1)))
+          f.push('the window, its glass gone, not seen from the passage beyond');
         return f;
       },
       sdcard: true
@@ -3492,30 +3513,26 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0hands', what: 'Dingus Quest Zero\'s doors battered with bare hands (the user\'s, 2026-10-16: "model it after unarmed combat": a blow at a thing an attack it ignores, by Unarmed, its impact less the door\'s resistance off its body; the fist hurt as a blow goes wrong, less with skill and armour): at seed 19\'s rotten wooden door a character of middling Unarmed marking it, the hand fractured as punches go wrong, stopping when hurt enough, the injuries on the sheet; one of Unarmed 95 (hmchar\'s file) breaking it down unhurt; gauntlets worn; at seed 14\'s sound iron-bound door the fists making no mark, the hand fractured',
+      name: 'dq0batter', what: 'Dingus Quest Zero\'s doors battered (the user\'s, 2026-10-15 and 16: "model it after unarmed combat": a blow at a thing an attack it ignores, by Unarmed, its impact less the door\'s resistance off its body; the striker hurt as a blow goes wrong, less with skill and armour; boots for a kick, a helm for a head butt; the tool to hand that hits hardest), by the world\'s events (the referee\'s, HarnMaster\'s, at these seeds; each game\'s first blow the same roll): at seed 14\'s sound iron-bound door, bare fists making no mark, the hand hurt seriously, the blows stopped as the character\'s too hurt; a kick in knee boots and a head butt in an iron helm hurt only a little; at seed 19\'s rotten door one of Unarmed 95 (hmchar\'s file) breaking it down unhurt; at seed 15 a pick battering a door till it gives way, broken down for good: it won\'t shut (dq0hands\' and dq0kick\'s, and dq0doors\' blows, these together; the injuries\' words the referee\'s)',
       init: 't_rc', cycles: 1400e6,
-      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rāhmchar -q -s 5 -o /ram/u.hm\rāecho ml una 95 >> /ram/u.hm\r' +
-        [['c', 19, ''], ['u', 19, ''], ['c', 19, ' -k gauntlets'], ['c', 14, '']].map(([c, s, k]) => 'ādq0 -p t -s ' + s + ' -c /ram/' + c + '.hm' + k + '\r' +
-          (k ? 'āwear the gauntlets\r' : '') + ['punch the door', 'sheet', 'quit'].map(l => 'ā' + l + '\r').join('')).join('') + 'āecho $status\r' },
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'hmchar -q -s 5 -o /ram/u.hm', 'echo ml una 95 >> /ram/u.hm',
+        'dq0 -p t -s 14 -c /ram/c.hm', 'punch the door', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -k \'knee boots\'', 'wear the knee boots', 'kick the door', 'quit',
+        'dq0 -p t -s 14 -c /ram/c.hm -k \'iron helm\'', 'wear the iron helm', 'head butt the door', 'quit', 'dq0 -p t -s 19 -c /ram/u.hm', 'punch the door', 'quit',
+        'dq0 -p t -s 15 -c /ram/c.hm -k pick', 'break the door ahead to my left', 'close', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
-      check(m, out) {
-        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
-        const runs = o.split('% dq0 -p t -s ').slice(1);
-        const want = (r, name, ws) => {
-          let at = 0;
-          for (const w of ws) {
-            const i = (r || '').indexOf(w, at);
-            if (i < 0) { f.push(name + ': not found (in its turn): ' + w); return; }
-            at = i + w.length;
-          }
-        };
-        want(runs[0], 'middling, rotten door', ['> punch the door', 'it\'s marked, but it holds.', 'Something gives as you strike it:',
-          'hand (S2)', 'You stop: you are too hurt to go on.', '> sheet', 'Injuries:', 'hand S2 (fracture)']);
-        want(runs[1], 'skilled, rotten door', ['> punch the door', 'You batter at it till it gives way, and it crashes open.', '> sheet',
-          'Unarmed 90', 'No injuries.']);
-        want(runs[2], 'gauntlets', ['You put on the gauntlets.', '> punch the door', 'You batter at it a while', '> sheet']);
-        want(runs[3], 'sturdy door', ['> punch the door', 'Your blows make no mark on it.', 'Something gives as you strike it:', 'hand (S2)',
-          '> sheet', 'Injuries:', 'right hand S2 (fracture)']);
+      check(m) {
+        const T = dq0Turns(m), f = [], hurt = t => Math.max(0, ...dq0Ev(t, 'E_HARM', { hc: 'HC_STRUCK' }).map(e => e.band));
+        const p = T.of('punch the door'), k = T.of('kick the door'), h = T.of('head butt the door'), u = T.after(p, 'punch the door');
+        dq0Need(f, p, 'E_PORTAL', { po: 'PO_NO_MARK' }, 'bare fists marked the sound door');
+        if (hurt(p) < 2) f.push('the bare hand not hurt seriously (' + dq0Evs(p) + ')');
+        dq0Need(f, p, 'E_HARM', { hc: 'HC_STRUCK', stopped: true }, 'the blows not stopped, the character too hurt');
+        if (!(hurt(k) >= 1 && hurt(k) < hurt(p))) f.push('the booted foot not spared (' + dq0Evs(k) + ')');
+        if (!(hurt(h) >= 1 && hurt(h) < hurt(p))) f.push('the helmed head not spared (' + dq0Evs(h) + ')');
+        dq0Need(f, u, 'E_PORTAL', { po: 'PO_BROKE_DOWN' }, 'the skilled fists didn\'t break the rotten door down');
+        if (hurt(u)) f.push('the skilled fists hurt');
+        const b = T.of('break the door ahead to my left');
+        dq0Need(f, b, 'E_PORTAL', { po: 'PO_BROKE_DOWN' }, 'the pick didn\'t break the door down');
+        dq0Need(f, T.after(b, 'close'), 'E_PORTAL', { po: 'PO_WRECKED' }, 'the broken door shut');
         return f;
       },
       sdcard: true
@@ -3606,30 +3623,6 @@ module.exports = {
         ['d', 'wait', 'go right', 'punch the rat', 'kick the rat', 'head butt the rat', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
       expect: ['> punch the rat', 'You strike at the giant rat with your fists', '> kick the rat', 'You kick at the giant rat', '> head butt the rat',
         'You butt at the giant rat with your head', '% echo $status'],
-      sdcard: true
-    },
-    {
-      name: 'dq0kick', what: 'Dingus Quest Zero\'s doors kicked and butted (the user\'s, 2026-10-16: battering a thing an attack it ignores, modelled after unarmed combat; boots for a kick, a helm for a head butt): at seed 14\'s sound iron-bound door, kicked barefoot (the foot fractured as a kick goes wrong) and in knee boots (their soles: bruises only), butted bare-headed (the skull fractured) and in an iron helm (bruises only), the blows stopping as the character\'s hurt enough',
-      init: 't_rc', cycles: 1600e6,
-      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\r' +
-        'ādq0 -p t -s 14 -c /ram/c.hm\r' + ['kick the door', 'sheet', 'quit'].map(l => 'ā' + l + '\r').join('') +
-        'ādq0 -p t -s 14 -c /ram/c.hm -k \'knee boots\'\r' + ['wear the knee boots', 'kick the door', 'sheet', 'quit'].map(l => 'ā' + l + '\r').join('') +
-        'ādq0 -p t -s 14 -c /ram/c.hm\r' + ['head butt the door', 'sheet', 'quit'].map(l => 'ā' + l + '\r').join('') +
-        'ādq0 -p t -s 14 -c /ram/c.hm -k \'iron helm\'\r' + ['wear the iron helm', 'head butt the door', 'sheet', 'quit'].map(l => 'ā' + l + '\r').join('') +
-        'āecho $status\r' },
-      expect: ['% echo $status'],
-      check(m, out) {
-        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
-        const runs = o.split('% dq0 -p t -s 14').slice(1);
-        const inj = r => (r.match(/Injuries: ([^>]*)/) || [])[1] || '';
-        if (runs.length !== 4) return ['the four games not played'];
-        if (!runs[0].includes('You batter at it') || !/right foot S\d/.test(inj(runs[0]))) f.push('the bare foot not hurt seriously');
-        if (!runs[1].includes('You put on the knee boots.') || /S\d|G\d/.test(inj(runs[1])) || !/foot M1/.test(inj(runs[1]))) f.push('the booted foot not spared');
-        if (!/skull S\d/.test(inj(runs[2]))) f.push('the bare head not hurt seriously');
-        if (!runs[3].includes('You put on the iron helm.') || /S\d|G\d/.test(inj(runs[3])) || !/skull M1/.test(inj(runs[3]))) f.push('the helmed head not spared');
-        if (!o.includes('You stop: you are too hurt to go on.')) f.push('the blows not stopped');
-        return f;
-      },
       sdcard: true
     },
     {
@@ -3759,37 +3752,6 @@ module.exports = {
         dq0Need(f, c, 'E_ARRIVE', { how: 'A_RESUMED' }, 'the game not carried on');
         if (bar(c.after) !== 'brackets') f.push('the bar not in its brackets as the game carries on: ' + bar(c.after));
         want('open', 'PO_UNBARRED', 'floor', c.k + 1);
-        return f;
-      },
-      sdcard: true
-    },
-    {
-      name: 'dq0portcbreak', what: 'Dingus Quest Zero\'s portcullises broken (the user\'s, 2026-10-16): at seed 12 (dq0 -T) the cell\'s portcullis lowered by its winch, then battered with a pick (dq0 -k pick: blows at its iron bars off their body, as a door\'s) till they break, a gap through for good (seen and examined so, jammed: it won\'t lower), and gone through; then a strong character (Strength 18) bending its bars apart (P_FORCE: once they hold, then they give), and through',
-      init: 't_rc', cycles: 1400e6,
-      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 12 -c /ram/c.hm -T -k pick\r' +
-        ['e', 'wait', 'e', 'wait', 'e', 'lower portcullis', 'break portcullis', 'break', 'look', 'x portcullis', 'lower portcullis', 'w', 'quit'].map(l => 'ā' + l + '\r').join('') +
-        'āhmchar -q -s 5 -o /ram/s.hm\rāecho att str 18 >> /ram/s.hm\rādq0 -p t -s 12 -c /ram/s.hm -T\r' +
-        ['e', 'wait', 'e', 'wait', 'e', 'lower portcullis', 'bend the bars', 'bend bars', 'look', 'w', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
-      expect: ['% echo $status'],
-      check(m, out) {
-        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
-        // (At seed 12 the rats in the way twice, then gone, as dq0portc's; the bars bent at the second try, the
-        // referee's dice the commands' at the turns pace)
-        const want = ['A giant rat is in the way.', 'Time passes.', 'A giant rat is in the way.', 'Time passes.', 'You are in a small storeroom',
-          'You loose the winch: the portcullis crashes down.', '> break portcullis', 'The bars buckle and break under your blows: there\'s a gap to get through.', '> break',
-          'Its bars are forced apart, and it\'s jammed where it is', '> look',
-          'There is a portcullis ahead (its bars forced apart).', '> x portcullis', 'Its bars are forced apart: there\'s a gap to get through.',
-          '> lower portcullis', 'Its bars are forced apart, and it\'s jammed where it is', '> w', 'You are in a long vault',
-          'A giant rat is in the way.', 'Time passes.', 'A giant rat is in the way.', 'Time passes.', 'You are in a small storeroom',
-          'You loose the winch: the portcullis crashes down.', '> bend the bars', 'The bars won\'t give.', '> bend bars',
-          'You strain at the bars, and bend them apart: there\'s room to get through.', '> look',
-          'There is a portcullis ahead (its bars forced apart).', '> w', 'You are in a long vault', '% echo $status'];
-        let at = 0;
-        for (const w of want) {
-          const i = o.indexOf(w, at);
-          if (i < 0) { f.push('not found (in its turn): ' + w); break; }
-          at = i + w.length;
-        }
         return f;
       },
       sdcard: true

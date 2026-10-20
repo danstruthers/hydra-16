@@ -152,7 +152,8 @@ function createRecorder() {
       case 'E_CLIMB': e.how = name('K_BEGUN', w >> 8); e.feet = w & 0xFF; break;
       case 'E_LEDGE': e.rise = s8(w & 0xFF); break;
       case 'E_PORTAL': e.po = name('PO_NONE', w & 0xFF); e.pk = name('PK_DOOR', w >> 8); break;
-      case 'E_HARM': e.hc = name('HC_FALL', w & 0xFF); e.band = w >> 8 & 7; e.out = !!(w & 0x4000); e.caught = !!(w & 0x8000); break;
+      case 'E_HARM': e.hc = name('HC_FALL', w & 0xFF); e.band = w >> 8 & 7; e.out = !!(w & 0x4000); e.caught = !!(w & 0x8000);
+        e.stopped = e.hc === 'HC_STRUCK' && e.caught; break;          // (E_CAUGHT a fall's, E_STOPPED a blow's)
       case 'E_TRAP': e.tk = name('TK_PIT', w & 15); e.tt = name('TT_PLATE', w >> 4 & 15); e.to = name('TO_SPRUNG', w >> 8); break;
       case 'E_TAKEN': e.ir = name('IR_OK', w & 0xFF); break;
       case 'E_DEN': e.de = name('DE_MOVED', e.a); e.sn = e.x[0]; e.seen = !!e.x[2]; break;
