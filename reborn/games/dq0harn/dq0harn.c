@@ -82,19 +82,14 @@ void __fastcall__ putn (int v)
 /* ---- What's to hand (the keys of the tools the character carries, all of them: the UI's, from the things), and
 ** digging judged by it: a skill used, the one versed in it takes out the tool that suits the job best (the user's: a
 ** shovel in earth, a pick in stone; a sword digs earth too, poorly, and dulls).  The book has no rules for digging:
-** the game's own, a tool's feet a spell of work (ten minutes) at a marginal success, by what it's into (earth, stone,
-** masonry); a critical success twice that, a marginal failure half, a critical failure none; bare hands dig only
-** earth; and the wear a spell does the tool */
+** the game's own, every referee's (../dq0/rshouse.h's table: a tool's feet a spell of work by what it's into, and
+** its wear) */
 
 char tools[NTOOLS][8];
 unsigned char tflag[NTOOLS], tqual[NTOOLS];
 
-static const struct { char key[8]; unsigned char rate[4], wear[4]; } digger[] = {    /* Earth, stone, masonry, flags */
-    { "hands", { 1, 0, 0, 0 }, { 0, 0, 0, 0 } }, { "shovel", { 3, 0, 0, 1 }, { 0, 0, 0, 0 } },
-    { "spade", { 3, 0, 0, 1 }, { 0, 0, 0, 0 } }, { "pick", { 2, 2, 1, 3 }, { 0, 1, 1, 1 } },
-    { "mattock", { 3, 2, 1, 3 }, { 0, 1, 1, 1 } }, { "chisel", { 0, 1, 2, 1 }, { 0, 1, 1, 1 } },
-    { "blade", { 1, 0, 0, 0 }, { 40, 0, 0, 0 } }, { "knife", { 1, 0, 0, 0 }, { 40, 0, 0, 0 } },
-};
+#define RS_HOUSE_DIG
+#include "../dq0/rshouse.h"
 
 /* All that's to hand, anew: the keys in the text, each after its mark (* held, + worn, a space neither) and its
 ** quality after it (a digit) */
@@ -168,26 +163,9 @@ unsigned char __fastcall__ has (const char* key)
 #pragma code-name (push, "SW2CODE")
 #pragma rodata-name (push, "SW2RODATA")
 
-/* The tool to hand that suits the material best (bare hands, digger's 0, if none does better; of two as good, the
-** one it wears less): its digger's number */
-unsigned char __fastcall__ s_dig_tool (unsigned char m)
-{
-    unsigned char k, t, best = 0, r, br = digger[0].rate[m];
-
-    for (k = 0; k < NTOOLS; ++k) {
-        for (t = 1; tools[k][0] && t < sizeof digger / sizeof digger[0]; ++t) {
-            if (strcmp (tools[k], digger[t].key)) {
-                continue;
-            }
-            r = digger[t].rate[m];
-            if (r > br || (r && r == br && digger[t].wear[m] < digger[best].wear[m])) {
-                best = t;
-                br = r;
-            }
-        }
-    }
-    return best;
-}
+/* The tool to hand that suits the material best (rshouse.h's, s_dig_tool: its digger's number) */
+#define RS_HOUSE_DIG_TOOL   s_dig_tool
+#include "../dq0/rshouse.h"
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -544,7 +522,7 @@ static void __fastcall__ answer (struct req* r)
         break;
     case RS_HELLO:
         r->w1 = 100;                            /* (A round: 10 seconds, Combat 7) */
-        put ("HarnMaster 3.5");
+        put ("HarnMaster 3.5\nhmchar");         /* (Its character generator: hmchar's files, RS_LOAD_PC's) */
         break;
     case RS_LOAD_PC:
         load_pc (r);
