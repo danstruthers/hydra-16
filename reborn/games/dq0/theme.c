@@ -22,18 +22,27 @@
 
 #define T               TCOPY
 
-/* The theme read in: libdir/dq0t.dat's t'th (counted round: the file's first says how many) into this overlay's bank
-** (TCOPY) and the hub's theme bank (THEME), through the main RAM (lb); its kinds of things the world's to put
-** in the hub's catalogue, after the catalogue's own (the UI's IO_THEME, after) */
+/* The theme read in: libdir/dq0t.dat's t'th (counted round: the file's first says how many), or (t 0xFF) the game's
+** own, its record theme.dat (themegen's) in the save's folder (the hub's savedir; /ram/dq0 without one), into this
+** overlay's bank (TCOPY) and the hub's theme bank (THEME), through the main RAM (lb); its kinds of things the world's
+** to put in the hub's catalogue, after the catalogue's own (the UI's IO_THEME, after) */
 void __fastcall__ o_theme_load (unsigned char t)
 {
     char* path = lb + 300;
     unsigned off;
-    unsigned char k;
+    unsigned char k, own = t == 0xFF;
     int fd, n;
 
-    strcpy (path, libdir);
-    strcat (path, "/dq0t.dat");
+    if (own) {
+        hub_mem (0, path, (const void*) HUB->savedir, sizeof HUB->savedir);
+        if (!*path) {
+            strcpy (path, "/ram/dq0");
+        }
+        strcat (path, "/theme.dat");
+    } else {
+        strcpy (path, libdir);
+        strcat (path, "/dq0t.dat");
+    }
     if ((fd = open (path, O_RDONLY)) < 0) {
         t_end ();
         hy_exits ("dq0: its themes (lib/dq0/dq0t.dat) not found");
@@ -51,7 +60,7 @@ void __fastcall__ o_theme_load (unsigned char t)
         }
     }
     close (fd);
-    Q.theme = t;                                /* (Its kinds the world's to put in the catalogue: IO_THEME) */
+    Q.theme = own ? 0xFF : t;                   /* (Its kinds the world's to put in the catalogue: IO_THEME) */
 }
 
 /* A theme's name for something (TN_*): its own, a stratum's by its number, into tname; a room's by its kind, a lit

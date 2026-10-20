@@ -32,11 +32,17 @@ A theme is data (a file of the game's, one of several, picked by the game's seed
   those), or its inhabitants, a faction a line (its theme file's, theme.txt in the save folder: who lives there now,
   as the history left them; popgen places them, below);
 - **its own kinds of things:** eight at most (the catalogue's last eight, KI_THEME on, written into the hub's
-  catalogue as the game starts), one of them perhaps fixed where it stands (an altar, a throne: never taken up).
+  catalogue as the game starts), one of them perhaps fixed where it stands (an altar, a throne: never taken up);
+- **its history** (HISTORY.md): the region, its peoples and eras, each stratum's layers, the inhabitants now (the
+  factions: their kinds, strata, numbers, leaders, lairs, attitudes and how they stand with each other), the goal
+  (an artifact, an evil, a prisoner, a far exit: its stratum and its guardians), each piece's era and guardians.
 
-There are three stand-in themes for the engine (the real ones are the user's to write): a crypt of a dead king (the
-first: the styles, rooms and light the dungeon was first grown by, the six kinds the bestiary had then), a drowned
-temple, a kobold warren.
+A game's own theme is themegen's (games/themegen, HISTORY.md): its region's history and its theme made from the
+game's seed as it begins, a new region each game, its inhabitants among its lines (theme.txt in the save folder).
+There are three stand-in themes for the engine and the tests (a seed under 65,536 picks one; the real ones are the
+user's to write): a crypt of a dead king (the first: the styles, rooms and light the dungeon was first grown by, the
+six kinds the bestiary had then), a drowned temple, a kobold warren; each with a line or two of history and its
+factions written down, no layers (nothing of theirs in the save folder: their denizens the stand-in's, below).
 
 - **The data:** a text file a theme (games/dq0/themes, in their files' order; the first has the format), made at build
   time the game's lib/dq0/dq0t.dat (make.js: theme.h's struct theme, 4K a theme with its words).  It says its name and
@@ -44,10 +50,12 @@ temple, a kobold warren.
   words, and its light; its kinds; its own things; the puzzle's pieces, each a kind of its own, the strata it may lie
   in, hidden or in plain view; the rules of what's done with them, each with its words and its effect; the way out's
   lock in words, shut and open; and the endings' words (escaped, ruled, died).
-- **Picked** by the seed's second byte, counted round the themes (a game's seed is the clock's, so any; the tests'
-  small seeds pick the first), and kept in the save (game.dat, with the game's ending; the puzzle as it stands the
-  world's, its world.dat).  The UI reads it into the hub's theme bank (THEME_BANK: every task's to read) and its
-  overlay 5's bank (theme.c's copy: the theme's words, its puzzle).
+- **Picked:** a game's own, made by themegen into the save's folder (theme.txt, and its record theme.dat: themec's),
+  or for a seed under 65,536 a stand-in by the seed's second byte, counted round them (the tests' small seeds pick
+  the first); `dq0 -t FILE` a theme written by hand, filled out by themegen.  Kept in the save (game.dat's Q.theme:
+  a stand-in's number, or the folder's own; the puzzle as it stands the world's, its world.dat).  The UI reads it
+  into the hub's theme bank (THEME_BANK: every task's to read) and its overlay 5's bank (theme.c's copy: the
+  theme's words, its puzzle).
 - **The pieces placed with the plan** (DUNGEON.md): each one's stratum is picked from the game's seed among those it
   may lie in; when that stratum's plan is grown its place is decided, a chunk of a region of halls, from the stratum's
   seed (the maker's, dq0m/plan.c: the same each time it's grown), kept in the theme bank; and it's put down when that
@@ -63,9 +71,9 @@ temple, a kobold warren.
 - **The endings:** escaped (up the way out, opened), ruled (a rule's), or dead (a fatal wound); the theme's words, the
   game over, and the save marked done (dq0 -d on it again begins a new game).
 
-The things lying about come from the maker's styles (dq0m/make.c's lists, by the style, the rooms' uses and the
-stratum's age), not the theme; the factions are a theme's inhabitants, or the denizens' own stand-in's
-(dq0d/factions.txt, below).
+The things lying about come from the maker's styles (dq0m/uses.c's lists, by the style, the rooms' uses, the
+chunk's layer of history and the stratum's age), not the theme; the factions are a theme's inhabitants, or the
+denizens' own stand-in's (dq0d/factions.txt, below).
 
 ### Populations
 

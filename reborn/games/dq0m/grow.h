@@ -39,12 +39,18 @@ extern struct style sty;
 
 /* uses.c (overlay 7's): a built stratum's plan of uses (DUNGEON.md: built to a plan) */
 unsigned char __fastcall__ uses (unsigned char step, unsigned char arg);
-enum { US_STYLE, US_PLAN, US_FLOOR, US_THING, US_SIGN };   /* The style arg's copied into sty (make.c's, for each
-                                                **   chunk); the chunk's rooms given their uses (built.c's, sorted);
-                                                **   their floors and ceilings by them (once they're zoned); what room
-                                                **   arg & 7 has lying about (its die arg >> 3: a kind, or 0), its use's
-                                                **   mark (and arg's 0x80, a kitchen's well) (stock.c's) */
+enum { US_STYLE, US_PLAN, US_FLOOR, US_THING, US_SIGN, US_UNDER };   /* The style arg's copied into sty (make.c's,
+                                                **   for each chunk); the chunk's rooms given their uses (built.c's,
+                                                **   sorted); their floors and ceilings by them (once they're zoned);
+                                                **   what room arg & 7 has lying about (its die arg >> 3: a kind, or
+                                                **   0), its use's mark (and arg's 0x80, a kitchen's well), the mark
+                                                **   room arg's use under the chunk's older layer left (stock.c's) */
 extern unsigned char ufort, uwater;             /* (The chunk's stratum fortified (P_FORT), the chunk's water) */
+extern unsigned char ulayer, uruin;             /* (The chunk's layer of its history, theme.h's SG_*; a ruin after
+                                                **   it, EN_*, or 0xFF: US_PLAN's) */
+unsigned char __fastcall__ layer_at (unsigned char sn, unsigned cx, unsigned cy);  /* Which of stratum sn's layers
+                                                **   chunk (cx, cy) is now (SG_*: stratagen's; uses.c's, a stub) */
+extern const char* libpath;                     /* (The game's lib folder: dq0m.c's, its third argument) */
 
 extern struct chunk* L;
 extern const struct edges* E;

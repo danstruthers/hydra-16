@@ -1,0 +1,135 @@
+# history.txt - (themegen) the words a region's history is made of: the game's own world (G3: its own peoples and
+# names, none of HarnWorld's), its peoples, its lands, what the peoples made and how it ended, the strata's names,
+# the clues each era leaves, the rooms' words and their light.  make.js makes it themegen's data file
+# (lib/dq0/themegen.dat) with goals.txt and the bestiary (dq0d/kinds.txt, factions.txt); themegen reads it as it
+# starts.  The same line format as a theme's (a key and its values between bars; a line begun with spaces goes on
+# with the one before).  In the words, a slot is a % and a letter, filled as the history's made:
+#   %R the region's name        %P an era's people         %K what they are (dwarves ...)
+#   %N the era's great one      %X a place's name, theirs  %O the people who came after
+#   %C how many centuries ago   %W what the era did (the era's words, for a clue)
+#
+# The keys:
+#   people   what a people is (its name made by namegen, in its tongue), its tongue (namegen's: 1-6), how it
+#            builds, the lands it lives in, and what it makes (the works below)
+#   land     a land, the words for a region of it (one picked: a plural, the region's name said as "the Kharum
+#            Hills"), its rocks, its waters, its climates
+#   work     what a people makes: the strata it leaves, from the top down, each a purpose and its styles
+#   name     a stratum's names, by its work and its place in the work's strata (0 its top): one picked that fits
+#            (19 letters at most)
+#   built    an era's words, by what its people made
+#   reused   an era's words, its people making an older work their own (the older's word in %W: noun's)
+#   noun     a work's word, as the eras after it speak of it
+#   ended    how an era ended: its words
+#   clue     what an era leaves to be read, by what its people made: a kind of the theme's (theme.txt's kind line's
+#            values), and the words it's read in
+#   rooms    the rooms' eight words (a theme's rooms line), by the people above (default: any other)
+#   uses     the uses' twelve words, by the people above
+#   light    a room's light, by the people above
+#   folk     a faction (the bestiary's, dq0d/factions.txt) in words
+#   now      the story's words for who has it now, by the faction that's strongest there
+#   open     the story's first words
+#   ago      how long ago an era ended, in words (%C the centuries)
+
+people   | dwarves | 1 | hewn | mountains hills | hold mine keep tomb
+people   | men | 2 | dressed | hills forest plain coast marsh mountains | keep temple town tomb
+people   | elves | 3 | dressed | forest coast hills | temple hold tomb
+people   | hill-men | 4 | rough | hills plain marsh mountains forest | keep tomb
+people   | kobolds | 5 | rough | mountains hills | mine
+people   | sun-priests | 6 | brick | plain marsh coast hills forest | temple tomb
+
+land     | mountains | Peaks Crags Mountains | granite basalt slate | springs river | cold mild
+land     | hills | Hills Downs Fells | limestone sandstone chalk | springs river | mild cold wet
+land     | forest | Woods Forests Wealds | sandstone limestone | river springs | mild wet
+land     | marsh | Fens Marshes Meres | sandstone chalk | lake river | wet mild
+land     | coast | Cliffs Shores Strands | chalk basalt granite | sea springs | wet mild
+land     | plain | Plains Wolds Heaths | chalk limestone sandstone | river springs | dry warm mild
+
+work     | keep | keep fortified | b | cellars | bn
+work     | temple | temple | b | crypt | bn
+work     | mine | works | m | works | mx
+work     | tomb | crypt | b | crypt | bn
+work     | town | cellars | b | halls | bn
+work     | hold | halls | b | keep open | b | works | m
+work     | deep | halls | n | halls | n
+
+name     | keep | 0 | %X Gate | %X Keep | the Keep
+name     | keep | 1 | the Undercroft | %X Cellars | the Keep Cellars
+name     | temple | 0 | the Fane of %X | %X Temple | the Holy Halls
+name     | temple | 1 | the Holy Vaults | the Temple Crypt | %X's Rest
+name     | mine | 0 | the %X Mines | the Old Diggings | the Upper Works
+name     | mine | 1 | the Deep Works | the Lower Shafts | the %X Pits
+name     | tomb | 0 | the Barrows | %X's Tomb | the Grave Halls
+name     | tomb | 1 | the Bone Vaults | the Black Crypts | the Deep Graves
+name     | town | 0 | the Undercity | %X Cellars | the Old Cellars
+name     | town | 1 | the Old Streets | the Sunken Halls | the Lower Town
+name     | hold | 0 | the Halls of %X | %X Hall | the Long Halls
+name     | hold | 1 | the Hold Gate | %X Deep | the Inner Keep
+name     | hold | 2 | the %X Delvings | the Hold Mines | the Low Works
+name     | deep | 0 | the Deeps | the Dark Ways | the Root Caves
+name     | deep | 1 | the Black Water | the Under-Dark | the Abyss
+
+built    | keep | %P %K raised a keep there called %X, and %N held it
+built    | temple | %P %K built a temple there to their god, and %N was its high priest
+built    | mine | %P %K delved the mines of %X under %R, and %N was their master
+built    | tomb | %P %K laid their dead in the tombs of %X, %N the greatest of them
+built    | town | %P %K built the town of %X there and dug its cellars deep, and %N was its lord
+built    | hold | %P %K carved the halls of %X out of the rock, and %N was their king
+reused   | keep | %P %K came after and made a keep of the old %W, and %N held it
+reused   | temple | %P %K came after and made a temple of the old %W, and %N was its high priest
+reused   | mine | %P %K came after and dug their warren through the old %W, %N their chief
+reused   | tomb | %P %K came after and laid their dead in the old %W, %N the greatest of them
+reused   | town | %P %K came after and built their town over the old %W, and %N was its lord
+reused   | hold | %P %K came after and made their hall in the old %W, and %N was their king
+
+noun     | keep | keep
+noun     | temple | temple
+noun     | mine | mines
+noun     | tomb | tombs
+noun     | town | cellars
+noun     | hold | halls
+
+ended    | abandoned | until they went away, and none know where
+ended    | conquered | until %O came against them and took it from them
+ended    | collapsed | until the deep halls fell in on them
+ended    | flooded | until the water broke in from below and drowned it
+ended    | cursed | until %N's curse fell on them, and their dead would not lie still
+ended    | held | and it is theirs still
+
+clue     | keep | worn plaque | f | 20 | 4 | 15 | bronze | metal | 0 | The plaque is cast in the letters of %P.  You
+           make out enough of it: %W.
+clue     | temple | carved slab | f | 400 | 100 | 30 | stone | stone | 0 | The slab is carved in the letters of %P.  You
+           make out enough of it: %W.
+clue     | mine | tally stone | - | 6 | 3 | 10 | stone | stone | 0 | The stone is scratched with %P's tallies, and
+           under them, in their letters: %W.
+clue     | tomb | grave slab | f | 400 | 100 | 30 | stone | stone | 0 | The slab is cut with the names of the dead of
+           %P, and a line under them: %W.
+clue     | town | ledger | - | 2 | 2 | 5 | other | book | 5 | The ledger's last pages are in the hand of %P: %W.
+clue     | hold | rune pillar | f | 800 | 200 | 35 | stone | stone | 0 | The pillar is cut with the runes of %P, round
+           and round it: %W.
+
+rooms    | default | chamber | hall | cell | vault | crypt | gallery | cave | storeroom
+rooms    | kobolds | den | burrow | pen | midden | lair | gallery | cave | storeroom
+rooms    | sun-priests | chapel | nave | cell | treasury | shrine | cloister | grotto | sacristy
+uses     | kobolds | cookpit | larder | warriors' den | armoury | shrine | sleeping burrow | chieftain's den | well
+           | cistern | gatehouse | guardroom | workshop
+uses     | sun-priests | kitchen | larder | dormitory | armoury | lady chapel | priest's cell | abbot's lodging
+           | well room | cistern | gatehouse | porter's lodge | scriptorium
+light    | default | lit by torches in iron brackets
+light    | dwarves | lit by lamps in carved niches
+light    | elves | lit by lamps of green glass
+light    | hill-men | lit by smoky torches
+light    | kobolds | lit by smoky tallow lamps
+light    | sun-priests | lit by lamps of hanging bronze
+
+folk     | vermin | the rats
+folk     | crawlers | the spiders
+folk     | dead | the dead
+folk     | beasts | the beasts
+folk     | kobolds | the kobolds
+now      | dead | Now the dead walk there in the dark, and worse things with them.
+now      | kobolds | Now the kobolds dig and squabble in it, and keep what they find.
+now      | beasts | Now beasts lair in it, and the dark has it.
+now      | crawlers | Now spiders spin in it, and the dark has it.
+now      | vermin | Now rats run in it, and the dark has it.
+open     | Under %R lies a deep place, older than memory.
+ago      | some %C centuries ago

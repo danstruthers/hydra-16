@@ -53,6 +53,20 @@ games/lib/dq0/dq0s.dat ../obj/games/dq0s.dat
 games/lib/dq0/dq0c  ../obj/games/dq0c.hyx       ;   its command parser (assembly), and its tables
 games/lib/dq0/dq0c.dat ../obj/games/dq0c.dat
 games/hmchar        ../obj/games/hmchar.hyx
+games/themegen      ../obj/games/themegen.hyx   ; themegen, a region's history and its theme made (the game's, as a new
+games/lib/dq0/themegen.dat ../obj/games/themegen.dat ;   game begins: its words, its goal kinds, the bestiary),
+games/lib/dq0/themegen.exp ../obj/games/themegen.exp ;   its exports and its bank programs (the history, the
+games/lib/dq0/histgen.bp ../obj/bank/histgen.bp ;   goal, the lines, names); themec, a theme compiled into
+games/lib/dq0/goalgen.bp ../obj/bank/goalgen.bp ;   its record, the game's (theme.h), and checked; and the
+games/lib/dq0/linegen.bp ../obj/bank/linegen.bp ;   stand-in themes, to read (a game's from a small seed)
+games/lib/dq0/namegen.bp ../obj/bank/namegen.bp
+games/lib/dq0/stratagen.bp ../obj/bank/stratagen.bp ; (the maker's and themegen's: a stratum's layers planned)
+games/lib/dq0/dq0m.exp ../obj/games/dq0m.exp ;   (the maker's exports, for it)
+games/themec        ../obj/games/themec.hyx
+games/lib/dq0/bestiary.dat ../obj/games/bestiary.dat
+games/lib/dq0/themes/1crypt.txt ../games/dq0/themes/1crypt.txt
+games/lib/dq0/themes/2temple.txt ../games/dq0/themes/2temple.txt
+games/lib/dq0/themes/3warren.txt ../games/dq0/themes/3warren.txt
 songs/test.zsm      songs/test.zsm              ; Songs (play /sd/0/songs/test.zsm): the old system's test song
 songs/vera.mml      songs/vera.mml              ;   (os_rom/songs/test.mml), and a score for both chips (the PSG's
                                                 ;   with a Vera X); scom.zsm stays in the ROM (/rom/songs)

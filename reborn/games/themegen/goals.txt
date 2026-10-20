@@ -1,0 +1,112 @@
+# goals.txt - (themegen) the goal kinds (the user's, DesignIdeas.md: "Each dungeon needs a goal, and it may be to
+# find a specific artifact, clean out the evil denizens, rescue a prisoner, or just find a way through to a distant
+# exit"; G5: all four, maybe more, so they're data: a kind more is a block more here).  make.js makes them part of
+# themegen's data file (lib/dq0/themegen.dat), checking each one's lines as a theme's.
+#
+# A goal kind is a block: its goal line, then its things, then the theme's lines it adds, in the theme format with
+# slots in them (history.txt's %R, %P, %K, %N; and these):
+#   %A the goal's name (its first thing's, or a far exit's)   %a its first thing's kind (a theme kind's name)
+#   %B its second thing's name                                %b its second thing's kind
+#   %M a person of the goal's (a prisoner, a seeker, an old priest)
+#   %S the goal's stratum's name   %s its number   %E its era (its number)   %G its guardians (a faction, or -)
+#   %g the guardians in words ("the dead")   %U a stratum above it, its name   %u its number   %e its era
+#   %T the top stratum's name
+# The lines:
+#   goal     its name (the theme's goal line's), the mission (escape, rule), and where its stratum is: built (a
+#            stratum an era built, not the deepest), cursed (an era's that ended cursed: the history makes one),
+#            lair (a faction's lair that keeps a prisoner: kobolds'), or deep (the deepest stratum)
+#   thing    a thing it may have (one of each role picked): its role (a, b), its name ("the Horn of %N"), and its
+#            kind (a theme's kind line's values)
+#   exit     a far exit's name, one picked (%A)
+#   called   the goal's name (its goal line's), its slots filled
+#   title    the theme's name, one picked (31 letters at most; the first that fits)
+#   and the theme's lines: kind, piece (the goal's own thing first: dq0 -T -T begins by the first), rule, story (said
+#            after the history's words), lock, opened, ending
+
+goal     | artifact | escape | built
+thing    | a | the Crown of %N | gold crown | w | 3 | 2 | 10 | other | jewel | 2000
+thing    | a | the Horn of %N | silver horn | h | 2 | 2 | 10 | silver | jewel | 900
+thing    | a | the Sceptre of %N | sceptre | h | 3 | 2 | 10 | silver | jewel | 1500
+thing    | a | the Cup of %N | jade cup | h | 1 | 1 | 5 | stone | jewel | 800
+thing    | a | the Mask of %N | bronze mask | w | 2 | 2 | 10 | bronze | jewel | 700
+thing    | a | the Book of %N | iron book | h | 6 | 3 | 10 | iron | book | 600
+called   | %A
+title    | the Quest for %A
+title    | %A
+kind     | journal | - | 1 | 1 | 5 | other | book | 5
+piece    | %a | %s-%s | 6 | 1 | %E | %G
+piece    | journal | 0-0 | - | 1
+rule     | read | journal | The journal is a seeker's, %M's, its last pages scrawled in haste: "%A is down there,
+           in %S, among the works of %P.  %g keep it.  The door above won't let me out without it: the old wards
+           answer to nothing else."
+rule     | out | %a | open | You hold up %A before the door.  Its old wards know it: the stone groans, and the door
+           swings open on the way up.
+story    | Somewhere below, in %S, lies %A.  You came down to find it, and the door has shut behind you: its wards,
+           they say, answer to nothing else.
+lock     | The way out is shut fast.  Whatever opens it is somewhere below.  The door is carved with the marks of %P,
+           and its wards are cold.
+opened   | The door stands open on the way up: go up to leave.
+ending   | escaped | You climb out into the daylight with %A in your hands.  Behind you %R keep their dark; you have
+           found what you came for, and lived.
+ending   | died | %A stays where it lies, and you with it.
+
+goal     | evil | rule | cursed
+thing    | a | the Bell of %M | silver bell | h | 3 | 2 | 10 | silver | jewel | 400
+thing    | a | the Staff of %M | white staff | t | 4 | 4 | 15 | wood | wood | 200
+thing    | a | the Lamp of %M | holy lamp | h | 3 | 2 | 10 | bronze | metal | 300
+thing    | b | the altar of %N | black altar | sf | 400 | 400 | 40 | stone | stone | 0 | 60 | 400
+thing    | b | the idol of %N | bone idol | sf | 300 | 200 | 35 | bone | bone | 0 | 20 | 300
+called   | %B
+title    | the Curse of %N
+kind     | old scroll | - | 1 | 1 | 5 | other | book | 20
+piece    | %b | %s-%s | - | 1 | %E | %G
+piece    | %a | %u-%u | 4 | 1 | %e
+piece    | old scroll | %u-%u | - | 1 | %e
+rule     | read | old scroll | The scroll is %M's, who fought %N's curse and lost: "%B is where the curse was
+           made, in %S.  Lay %A upon it, and it will be broken, and the dead of %P will sleep."
+rule     | put | %a | %b | rule | You lay %A upon %B.  A cry goes through the dark, far and near, and dies away;
+           and all through %S the dead fall still.  The curse is broken.
+story    | %N's curse lies on %R still: the dead of %P walk in the dark under them.  They say %A will break it,
+           laid upon %B in %S; you came down to try, and the way has shut behind you.
+lock     | The way out is shut fast.  The curse holds it, and you with it, till the curse is broken.
+ending   | ruled | %N's curse is broken, and %R are free of it.  The way out opens of itself, and you climb out
+           into the daylight while the dead of %P sleep at last.
+ending   | died | You join the dead of %P, and walk the dark with them.
+
+goal     | prisoner | escape | lair
+thing    | a | the key to the chains | shackle key | - | 1 | 0 | 5 | iron | metal | 10
+thing    | b | %M | chained man | sf | 150 | 100 | 30 | other | cloth | 0 | 10 | 50
+thing    | b | %M | chained woman | sf | 120 | 90 | 30 | other | cloth | 0 | 10 | 40
+called   | %M
+title    | the Rescue of %M
+piece    | %b | %s-%s | - | 1 | - | %G
+piece    | %a | %s-%s | 4 | 1 | - | %G
+rule     | put | %a | %b | open | You turn the key in the shackles, and they fall away.  %M stands, stiff, and
+           whispers: "There's another way up, the old stair the guards use.  Follow me."  Far above, stone grinds on
+           stone: a way out is open.
+story    | %M was taken by %g and carried down into %S, and kept there in chains.  You came down after, and the stair
+           has fallen in behind you; if anyone knows another way up, it's %M.
+lock     | The way out is shut fast: the stair has fallen in behind you.  If anyone knows another way up, it's %M.
+opened   | %M's way up stands open: go up to leave.
+ending   | escaped | You come out into the daylight with %M beside you, free at last.  Behind you %R keep their
+           dark.  You have done what you came to do.
+ending   | died | %M waits in the dark for someone else.
+
+goal     | through | escape | deep
+thing    | a | - | old map | - | 0 | 0 | 5 | other | book | 2
+exit     | the %X Gate
+exit     | the Gate of %X
+exit     | the Far Door
+called   | %A
+title    | the Road Through %R
+title    | the Way to %A
+piece    | old map | 0-0 | - | 1
+rule     | read | old map | The map is old and torn, but plain enough: the stair down, the ways below, and far
+           down at the bottom, in %S, %A, that %P made long ago: a way out, on the far side of %R.
+story    | The way in fell in behind you as you came; the only way on is down, through the deeps of %R, to %A, the
+           old way out that %P made long ago in %S.
+lock     | The way in has fallen in behind you: there's no going back that way.  The only way out is through, and
+           down.
+ending   | escaped | You come up at last through %A into the open air, far from where you went in.  You have won
+           through.
+ending   | died | %A is still down there, for someone luckier.

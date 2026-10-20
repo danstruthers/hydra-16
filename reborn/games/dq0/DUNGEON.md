@@ -316,9 +316,11 @@ and so on to 4 and beyond), a few chunks in four taking the next ring's for vari
 | works    | works          | works      | garrison, works     | stores            |
 | halls    | domestic       | stores     | domestic, lord's    | cells             |
 
-A stratum's purpose is its **first layer of history**, what it was first built for, each stratum making sense in
-itself; what came after (ruined, reused, built over: a temple over an older keep's ruin) is still to come, with the
-histories (below).
+A stratum's purpose is its **history's** (HISTORY.md): its layers, oldest first, one to three (built to a purpose,
+ruined, reused for another: a temple over an older keep's ruin), each stratum making sense in itself.  A stratum of
+one layer (a stand-in's) is its purpose throughout; of more, each chunk is the layer stratagen says (a bank program
+the maker loads: the oldest built layer the whole stratum's, a later one reused a part of it round the way in, a
+ruin breaking a chunk of the works standing by its kind's odds), and its rooms' uses are that layer's purpose's.
 
 (A fortified stratum's ring 0 is a gate whatever its purpose.)  A role is a **suite**: its main room (the chunk's
 largest; a gate's, the room the way in comes out in) and the uses along the chain of rooms each side of it, as the
@@ -355,7 +357,10 @@ for anyone who reads it (the lights', the denizens', the senses').
   bones and potsherds; a pantry's sacks and baskets; an armoury's rusted blades and arrows; a chapel's candle stubs;
   a barracks' or a cell's straw and bones; a guardroom's table and chair; a vault's chest and pennies; a workshop's
   tools; the theme's word for each where it has one.  Age rots what rots: the older the stratum, the more of the
-  wood, the cloth, the straw and the food gone to dust (bones and potsherds last).
+  wood, the cloth, the straw and the food gone to dust (bones and potsherds last).  A chunk with an older layer
+  under it has that layer's remnants too, each room's use under the older purpose its mark (an old chapel's candle
+  stubs under a garrison's barracks), rotted by the older layer's age; a ruined chunk its debris (bones where it
+  was taken or cursed, potsherds else).  A stratum's age is its history's, its oldest layer's era's.
 
 ### Openings and ways between strata
 

@@ -1,10 +1,11 @@
 /*
 ** main.c - Dingus Quest Zero: the UI's task, its start and its loop.
 **
-** dq0 [-s seed] [-p pace] [-c file] [-d folder] [-k things] [-r rules] [-T [-T]]: -d keeps the game in a folder (on
-** any card), and carries on the game kept there if there is one; without it nothing's kept. the seed makes the same
-** game each time (the dice: dice.h's rseed); the pace is
-** r, n, m (relaxed, normal, menacing: asked at the start if it isn't given) or t (turns: the world moves only as
+** dq0 [-s seed] [-p pace] [-c file] [-d folder] [-t theme] [-k things] [-r rules] [-T [-T]]: -d keeps the game in a
+** folder (on any card), and carries on the game kept there if there is one; without it nothing's kept. the seed makes
+** the same game each time (the dice: dice.h's rseed), and its region's history and theme (themegen's: theme.h), but
+** a seed under 65,536 a stand-in theme's (the tests'); -t a theme written by hand, the history made to fit it; the
+** pace is r, n, m (relaxed, normal, menacing: asked at the start if it isn't given) or t (turns: the world moves only as
 ** the character acts, for tests); the file a character made already (the ruleset's: hmchar's).  Without one, the
 ** ruleset's character generator (its referee names it: hmchar) is run to make one (in this window, the screen as it
 ** is outside the game while it runs), into /ram/dq0.hm; a ruleset with none makes its own.  The rules: the ruleset's
@@ -52,6 +53,8 @@ static int task_[NTASKS];                       /* Each task's number, as it was
 static unsigned char test_start;
 static unsigned char small;                     /* (dq0 -C: the caches small, the tests') */
 static const char* kit;                         /* (dq0 -k: things more, as the game starts: a tool, ...) */
+static const char* tfile;                       /* (dq0 -t: a theme written by hand) */
+static unsigned char made;                      /* (The theme to read: 0xFF the game's own, themegen's; theme.h) */
 static const char* savedir;                     /* (dq0 -d: the save's folder) */
 static unsigned char __fastcall__ things (unsigned char op, const char* name);
 static void to_hand (void);
@@ -156,6 +159,57 @@ void __fastcall__ consctl (const char* what)
 
 #pragma code-name (push, "SW1CODE")
 #pragma rodata-name (push, "SW1RODATA")
+
+#pragma code-name (push, "SW7CODE")
+#pragma rodata-name (push, "SW7RODATA")
+
+/* A game's own theme (theme.h): a game carried on, its save's (Q.theme 0xFF: its folder's); a new one's (a seed of
+** 65,536 or more, or dq0 -t's) its region's history and its theme made by themegen from the game's seed, in the
+** save's folder (or /ram/dq0): theme.txt, and its record, theme.dat; a hand-written theme's (dq0 -t) filled out.  The
+** theme to read (theme.c's): 0xFF the game's own; else a stand-in's, the save's or the seed's second byte's (a small
+** seed's, or themegen can't be run, or it failed).  (Part 7's, part 1 full: its arguments in lb, nothing the game's
+** yet; its own spawn, hub_run being part 1's) */
+static unsigned char resumed;
+unsigned char __fastcall__ s_history (unsigned long seed)
+{
+    struct hy_regs r;
+    char* p = lb;
+
+    if (resumed) {
+        return Q.theme;
+    }
+    if (!tfile && seed < 65536UL) {
+        return (unsigned char) (seed >> 8);
+    }
+    msg ("The place's history is being made ...");
+    strcpy (p, "-q");
+    strcpy (p += 3, "-s");
+    ultoa (seed, p += 3, 10);
+    strcpy (p += strlen (p) + 1, "-o");
+    strcpy (p += 3, savedir ? savedir : "/ram/dq0");
+    strcpy (p += strlen (p) + 1, "-l");
+    strcpy (p += 3, libdir);
+    p += strlen (p) + 1;
+    if (tfile) {
+        strcpy (p, "-t");
+        strcpy (p += 3, tfile);
+        p += strlen (p) + 1;
+    }
+    *p = 0;
+    strcpy (lb + 300, gamedir);
+    strcat (lb + 300, "/themegen");
+    r.a = 0;
+    r.r[0] = (unsigned) (lb + 300);
+    r.r[1] = (unsigned) lb;
+    if (hy_call (HY_SPAWN, &r)) {
+        return (unsigned char) (seed >> 8);
+    }
+    r.r[0] = 0;                                 /* (Its task in r.a: waited for, its status 0) */
+    return hy_call (HY_WAIT, &r) || r.x ? (unsigned char) (seed >> 8) : 0xFF;
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* The character's file for the referee to read (RS_LOAD_PC's path, put in the UI's slot): file (-c's, or the save's);
 ** else one the ruleset's character generator makes (maker, the referee's RS_HELLO names it: hmchar ...), run in this
@@ -485,7 +539,7 @@ static void __fastcall__ start_world (unsigned long seed, const char* file)
     hub_call (&HUB->wreq, T_WORLD);
     HUB->wreq.state = REQ_FREE;
     things (IO_TOOLS, "");                      /* (The world's catalogue read in: the theme's kinds after it) */
-    theme_load (resumed ? Q.theme : (unsigned char) (seed >> 8));     /* (The seed's second byte: theme.h) */
+    theme_load (made);                          /* (The game's own, 0xFF; a stand-in's, theme.h: history's) */
     things (IO_THEME, "");
     world_words ();
     if (!resumed) {                             /* (The character's kit: a new game's, -k's things too) */
@@ -1523,16 +1577,17 @@ portal:
 }
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "SW1CODE")
-#pragma rodata-name (push, "SW1RODATA")
 
-/* The game begun: its arguments, a game kept carried on, the title, the character, the world started */
+/* The game's arguments (s_begin's: part 7's, part 1 full; the defaults' words in the main RAM) */
 static unsigned long seed;                      /* (Its seed: the clock's, as the task starts, but for -s's) */
+static const char* file = "";                   /* (-c's: the character's file) */
+static const char* rules = "harn";              /* (The ruleset, if none's given: HarnMaster's) */
 
-void __fastcall__ s_begin (int argc, char* argv[])
+#pragma code-name (push, "SW7CODE")
+#pragma rodata-name (push, "SW7RODATA")
+
+void __fastcall__ s_args (int argc, char* argv[])
 {
-    const char* file = "";
-    const char* rules = "harn";                 /* (The ruleset, if none's given: HarnMaster's) */
     unsigned char i;
     char* l;
 
@@ -1543,6 +1598,8 @@ void __fastcall__ s_begin (int argc, char* argv[])
             }
         } else if (!strcmp (argv[i], "-d") && i + 1 < argc) {
             savedir = argv[++i];                /* (The save's folder) */
+        } else if (!strcmp (argv[i], "-t") && i + 1 < argc) {
+            tfile = argv[++i];                  /* (A theme written by hand: themegen's to fill out) */
         } else if (!strcmp (argv[i], "-k") && i + 1 < argc) {
             kit = argv[++i];                    /* (A tool to begin with: till the items layer, the tests') */
         } else if (!strcmp (argv[i], "-C")) {
@@ -1559,9 +1616,21 @@ void __fastcall__ s_begin (int argc, char* argv[])
             pace = argv[i][0] == 'r' ? PACE_RELAXED : argv[i][0] == 'm' ? PACE_MENACING :
                 argv[i][0] == 't' ? PACE_TURNS : PACE_NORMAL;
         } else {
-            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d folder] [-k things] [-r rules] [-T [-T]] [-C]");
+            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d folder] [-t theme] [-k things] [-r rules] [-T [-T]] [-C]");
         }
     }
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+#pragma code-name (push, "SW1CODE")
+#pragma rodata-name (push, "SW1RODATA")
+
+/* The game begun: its arguments, a game kept carried on, the title, the character, the world started */
+void __fastcall__ s_begin (int argc, char* argv[])
+{
+    args (argc, argv);
     if (savedir && !load_save ()) {             /* (A game kept there: carried on) */
         resumed = 1;
         seed = sv.seed;
@@ -1582,6 +1651,7 @@ void __fastcall__ s_begin (int argc, char* argv[])
     signal (SIGINT, interrupted);
     t_init ();
     title ();
+    made = history (seed);                      /* (The game's own theme, or a stand-in's: which) */
     start_world (seed, file);                   /* (The character with it: its file, or the ruleset's generator) */
     status ();
     story (resumed);                            /* (The theme's) */

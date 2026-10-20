@@ -403,6 +403,22 @@ static unsigned plstamp;
 static unsigned char plbuf[PL_BYTES];
 static unsigned char plim = PL_PAGES;           /* (The pages used: dq0 -C's 16, its plan's pages made way for soon) */
 
+/* Stratum sn's plan's file's name, in path (0: no save folder): the window put back after (vf_name leaves the hub's
+** header in it; the paging's code is an overlay's) */
+static unsigned char __fastcall__ pl_name (unsigned char sn)
+{
+    unsigned w = hub_here ();
+    unsigned char k = vf_name (path, "pl", sn, 0, 0);
+
+    hub_back (w);
+    return k;
+}
+
+/* (The paging overlay 2's, room made in the main RAM for the bank programs' loader: stratagen's, uses.c's; called
+** through bank.s's stubs) */
+#pragma code-name (push, "OV2CODE")
+#pragma rodata-name (push, "OV2RODATA")
+
 /* Stratum sn's plan's file, open (kept open for the next page: pl_flush closes it; trunc: emptied): its fd, or -1 */
 static int plfd = -1;
 static unsigned char plfsn;
@@ -412,7 +428,7 @@ static int __fastcall__ pl_fd (unsigned char sn, unsigned char trunc)
         close (plfd);
         plfd = -1;
     }
-    if (plfd < 0 && vf_name (path, "pl", sn, 0, 0)) {
+    if (plfd < 0 && pl_name (sn)) {
         plfd = open (path, trunc ? O_RDWR | O_CREAT | O_TRUNC : O_RDWR | O_CREAT, 0644);
         plfsn = sn;
     }
@@ -465,7 +481,7 @@ static char* __fastcall__ pl_at (unsigned char sn, unsigned idx)
 }
 
 /* (Called from plan.c's code, an overlay's in the window: the window as it was after each, hub_back) */
-void __fastcall__ pl_get (unsigned char sn, unsigned idx, struct region* to)
+void __fastcall__ o_pl_get (unsigned char sn, unsigned idx, struct region* to)
 {
     unsigned w = hub_here ();
 
@@ -473,7 +489,7 @@ void __fastcall__ pl_get (unsigned char sn, unsigned idx, struct region* to)
     hub_back (w);
 }
 
-void __fastcall__ pl_put (unsigned char sn, unsigned idx, const struct region* from)
+void __fastcall__ o_pl_put (unsigned char sn, unsigned idx, const struct region* from)
 {
     unsigned w = hub_here ();
     char* a = pl_at (sn, idx);
@@ -487,14 +503,13 @@ void __fastcall__ pl_put (unsigned char sn, unsigned idx, const struct region* f
 }
 
 /* Stratum sn's big plan begun again (its file emptied, its pages in the bank none) */
-void __fastcall__ pl_new (unsigned char sn)
+void __fastcall__ o_pl_new (unsigned char sn)
 {
     unsigned w = hub_here ();
     unsigned char k;
-    int fd;
 
-    hub_map (0);
-    plim = HUB->small ? 16 : PL_PAGES;
+    hub_get (0, &HUB->small, &k, 1);           /* (The hub's header read through the main RAM: an overlay's) */
+    plim = k ? 16 : PL_PAGES;
     for (k = 0; k < PL_PAGES; ++k) {
         if (plt[k].sn == sn + 1) {
             plt[k].sn = 0;
@@ -505,7 +520,7 @@ void __fastcall__ pl_new (unsigned char sn)
 }
 
 /* Every page changed written back (a plan grown: the denizens read it from its file) */
-void pl_flush (void)
+void o_pl_flush (void)
 {
     unsigned char k;
 
@@ -517,6 +532,9 @@ void pl_flush (void)
         plfd = -1;
     }
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- The save (the hub's savedir): seen.dat (SM_MAGIC, the regions' table, then the maps in the banks); the squares
 ** seen in the chunks in the cache kept first (seen_keep), so nothing seen is lost.  (The change records are the

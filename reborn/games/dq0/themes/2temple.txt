@@ -18,6 +18,15 @@ uses     | kitchen | larder | dormitory | armoury | lady chapel | priest's cell 
 light    | lit by lamps of green glass
 denizens | rat spider ghoul skel
 
+region   | the Mere | marsh | sandstone | lake | wet
+people   | Mother's folk | men | 4 | dressed
+era      | Mother's folk | temple | flooded | 1 | the dead | The temple of the Deep Mother sank into the marsh, and its
+           priests with it; its doors were sealed against the water.
+
+faction  | vermin   | rat | 0-7 | 7 | - | 0 | w | crawlers h, beasts w
+faction  | crawlers | spider | 2-7 | 3 | - | 3 | h | vermin h
+faction  | dead     | ghoul skel | 0-7 | 9 | - | 1 | h | vermin h, crawlers h, beasts h
+
 kind     | scroll | - | 1 | 1 | 5 | other | book | 20
 kind     | pearl | - | 1 | 0 | 5 | other | jewel | 600
 kind     | chalice | h | 2 | 1 | 10 | silver | jewel | 300

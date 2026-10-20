@@ -142,6 +142,25 @@ void __fastcall__ o_stock (const struct chunk* c, unsigned x0, unsigned y0)
             }
         }
     }
+    for (i = 0; (ulayer & (SG_HASUNDER | SG_RUINED)) && i < c->nrooms; ++i) {   /* (Its history's: an older layer's
+                                                **   remnants, its rooms' uses' marks; a ruin's debris, bones where it
+                                                **   was taken or cursed, potsherds else) */
+        r = &c->room[i];
+        for (n = 0; n < 2; ++n) {
+            lx = r->x + random (r->w);
+            ly = r->y + random (r->h);
+            if (!n) {
+                k = ulayer & SG_HASUNDER ? uses (US_UNDER, i) : 0;
+            } else if (!(ulayer & SG_RUINED) || random (2)) {
+                k = 0;
+            } else {
+                k = uruin == EN_CONQUERED || uruin == EN_CURSED ? KI_BONES : KI_POTSHERDS;
+            }
+            if (k && lx < CW && ly < CW && TILE (c->tile[ly][lx]) == T_FLOOR) {
+                put_down (k, c->sn, x0 + lx, y0 + ly, 1, ST_SHOWN);
+            }
+        }
+    }
     for (i = 0; i < NPIECES; ++i) {             /* (The theme's pieces whose place is the chunk: on a room's floor) */
         hub_get (THEME_BANK, &THEME_PLACE[i], &pl, sizeof pl);
         if (pl.sn == c->sn && pl.cx == c->cx && pl.cy == c->cy) {

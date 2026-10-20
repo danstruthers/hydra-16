@@ -15,11 +15,13 @@
 #include <string.h>
 #include <unistd.h>
 #include <hydra.h>
+#include <bankprog.h>
 #include "../dq0/hub.h"
 #include "../dq0w/world.h"
 #include "grow.h"
 
 struct stratum strata[MAXSTRATA];               /* (This task's copy of the hub's) */
+const char* libpath;                            /* (The game's lib folder: its bank programs', stratagen's) */
 #define OVLS    7                               /* Its overlays: built.c, pass.c, caves.c, plan.c, fixtures.c; the
                                                 **   swapped parts' images (../dq0/swap.inc: map.c's, changes.c's);
                                                 **   uses.c */
@@ -116,6 +118,11 @@ static void __fastcall__ serve (unsigned char i)
         pl_flush ();
         break;
     }
+    hub_map (0);
+    if (HUB->small) {                           /* (dq0 -C, the tests' small caches: its bank programs given up after
+                                                **   each request, loaded again as they're next called) */
+        bank_flush ();
+    }
     hub_reply (&HUB->mreq[i]);
 }
 
@@ -126,6 +133,7 @@ int main (int argc, char* argv[])
     if (argc < 4 || ovl_load (argv[3]) || hub_attach (atoi (argv[1]), atoi (argv[2]))) {
         return 1;
     }
+    libpath = argv[3];
     changes_init ();
     hub_set (THEME_BANK, THEME_PLACE, 0xFF, NPIECES * sizeof (struct tplace));     /* (No piece placed yet) */
     for (;;) {

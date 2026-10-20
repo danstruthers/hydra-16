@@ -178,6 +178,8 @@ void __fastcall__ theme_named (unsigned char what, unsigned char n);   /* Overla
                                                 **   lb */
 void __fastcall__ story (unsigned char resumed);    /* Overlay 5: the theme's name (and its story, a new game's) */
 void way_words (void);                          /* Overlay 5: the way out, shut or open */
+unsigned char __fastcall__ history (unsigned long seed);    /* Part 7: a game's own theme made, themegen's (main.c):
+                                                **   the theme to read (0xFF its own, else a stand-in's) */
 void __fastcall__ ending (unsigned char how);   /* Overlay 5: an ending's words (END_*) */
 unsigned char __fastcall__ puzzle (struct cmd* c);      /* Overlay 5: a command the puzzle's (Q_*: the world's
                                                 **   judgement, IO_PUZZLE, worded) */
@@ -262,6 +264,7 @@ extern unsigned char ovbank[11];
 
 /* ---- The swapped parts (bank.s's stubs: swap.inc), run in the main RAM's top (dq0.cfg's SWAP), a part at a time */
 
+void __fastcall__ args (int argc, char* argv[]);    /* Part 7 (main.c): the game's arguments read (begin's) */
 void __fastcall__ begin (int argc, char* argv[]);   /* Part 1 (main.c): the arguments, the world started, the game
                                                 **   begun */
 void finish (void);                             /* Part 1: the game kept, the world stopped */

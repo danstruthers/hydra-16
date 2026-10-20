@@ -36,6 +36,10 @@ static unsigned ri;
 ** no fixed size) */
 #define BIG(s)          ((unsigned) (s)->rw * (s)->rh > PLAN_MAX)
 
+/* (The two in the main RAM: overlay 4 full, the pieces' places overlay 5's) */
+#pragma code-name (push, "CODE")
+#pragma rodata-name (push, "RODATA")
+
 static struct region* __fastcall__ rg (unsigned char sn, unsigned char rx, unsigned char ry)
 {
     ri = (unsigned) ry * STRATUM (sn).rw + rx;
@@ -58,6 +62,9 @@ static void rp (void)
         hub_put (rb, ra, &R, sizeof R);
     }
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* A region's corner's lie (feet), the plan's edge's for a corner past it */
 static int __fastcall__ corner (unsigned char sn, unsigned char rx, unsigned char ry)
@@ -109,6 +116,10 @@ void __fastcall__ o_plan_stratum (unsigned char n)
 
     s->rw = (s->w + RW - 1) / RW;
     s->rh = (s->h + RW - 1) / RW;
+    hub_get (THEME_BANK, &THEME->sage[n < TSTRATA ? n : TSTRATA - 1], &k, 1);
+    if (k) {
+        s->age = k;                             /* (Its age its history's: its oldest layer's era's, theme.h) */
+    }
     hub_get (0, HUB->savedir, &k, 1);
     while (!k && (unsigned) s->rw * s->rh > PLAN_MAX) {  /* (Without a save folder, a plan as big as its bank's
                                                 **   half holds; with one, any: its file's) */
@@ -252,11 +263,38 @@ void __fastcall__ o_plan_stratum (unsigned char n)
 /* Stratum n's own links down (one or two, in its halls; none from the deepest), to stratum n + 1 */
 void __fastcall__ o_links_down (unsigned char n)
 {
+    static unsigned char g[2];
     struct stratum* s = &STRATUM (n);
     unsigned char k, tries;
-    unsigned o;
+    unsigned o, x, y, d, best;
     struct link* l;
 
+    hub_get (THEME_BANK, &THEME->goal, g, 2);   /* (A far exit's stratum, the goal's: a way out there, open, as far
+                                                **   from the way in as it's found, a stair up to the daylight) */
+    if (g[0] == G_THROUGH && g[1] == n && s->nlinks < NLINKS) {
+        l = &s->link[s->nlinks];
+        for (best = tries = 0; tries < 30; ++tries) {
+            o = 2 + random (s->w - 4);
+            x = s->x0 + INSET (o);
+            o = 2 + random (s->h - 4);
+            y = s->y0 + INSET (o);
+            if (rg (n, (x - s->x0) >> 8, (y - s->y0) >> 8)->kind == RG_HALLS) {
+                o = x > s->link[0].x ? x - s->link[0].x : s->link[0].x - x;
+                d = y > s->link[0].y ? y - s->link[0].y : s->link[0].y - y;
+                if ((d = (d > o ? d : o) + 1) > best) {
+                    best = d;
+                    l->x = x;
+                    l->y = y;
+                }
+            }
+        }
+        if (best) {
+            l->kind = O_WAY_OUT;
+            l->to = 0xFF;
+            l->dug = 0;
+            ++s->nlinks;
+        }
+    }
     hub_get (0, HUB->savedir, &k, 1);
     if (n == 0xFE || n + 1 >= MAXSTRATA && !k) {
         return;                                 /* (The deepest: the hub's slots all wanted, without a save folder for
@@ -284,12 +322,25 @@ void __fastcall__ o_links_down (unsigned char n)
 ** down too): a chunk of a region of its halls, from the stratum's seed, so the same each time it's grown (a game
 ** carried on); in the hub's theme bank, where the stock finds them as it first makes a chunk (stock.c).  A piece
 ** whose stratum isn't grown yet has none.  (The places' own dice: the plan's and the links' are done) */
+#pragma code-name (push, "OV5CODE")            /* (Overlay 5's: 4 full) */
+#pragma rodata-name (push, "OV5RODATA")
+
+/* Chunk (cx, cy) of stratum n is the era's works, or has them under it (its layer's, or the older one's) */
+static unsigned char __fastcall__ era_here (unsigned char n, unsigned cx, unsigned cy, unsigned char era)
+{
+    static struct tlayer y[TLAYERS];
+    unsigned char g = layer_at (n, cx, cy);
+
+    hub_get (THEME_BANK, THEME->layer[n < TSTRATA ? n : TSTRATA - 1], y, sizeof y);
+    return y[g & SG_LAYER].era == era || ((g & SG_HASUNDER) && y[(g & SG_UNDER) >> 4].era == era);
+}
+
 void __fastcall__ o_place_pieces (unsigned char n)
 {
     static struct tpiece tp;
     static struct tplace pl;
     struct stratum* s = &STRATUM (n);
-    unsigned char p, np, tries, rx, ry, sn[NPIECES];
+    unsigned char p, np, tries, rx, ry, sn[NPIECES], era;
     unsigned kw, kh;
 
     hub_get (THEME_BANK, &THEME->npieces, &np, 1);
@@ -309,6 +360,7 @@ void __fastcall__ o_place_pieces (unsigned char n)
             pl.cx = (s->link[0].x - s->x0) / CW;
             pl.cy = (s->link[0].y - s->y0) / CW;
         }
+        hub_get (THEME_BANK, &THEME->pera[p], &era, 1);
         for (tries = 0; tries < 40; ++tries) {
             rx = random (s->rw);
             ry = random (s->rh);
@@ -317,12 +369,17 @@ void __fastcall__ o_place_pieces (unsigned char n)
                 kh = (s->h - (unsigned) ry * RW + CW - 1) / CW;
                 pl.cx = (unsigned) rx * RCH + random (kw > RCH ? RCH : kw);
                 pl.cy = (unsigned) ry * RCH + random (kh > RCH ? RCH : kh);
-                break;
+                if (!era || tries >= 30 || era_here (n, pl.cx, pl.cy, era)) {
+                    break;                      /* (A piece of an era's among that era's works: HISTORY.md) */
+                }
             }
         }
         hub_put (THEME_BANK, &THEME_PLACE[p], &pl, sizeof pl);
     }
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- A region's own ways between its chunks: (the last asked for's) each chunk's north and west edges', kept in
 ** the cache's bank (detail_bank: changes.c's), a place for each region by its number */

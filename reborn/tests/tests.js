@@ -1724,8 +1724,28 @@ function hmRun(out, cmd) {
 // A built stratum's chunks (dq0m/built.c, uses.c), read from the hub's cache in the shared segments' banks (world.h's
 // struct chunk, three to a bank, 0xAA0 apart): each one's place, rooms (their uses, world.h's U_*), zones (their
 // ceilings), portals, squares and floors, and its passages' ceiling (pceil); those of stratum sn that look whole
-const U_HALL = 1, U_CELL = 2, U_STORE = 7, U_KITCHEN = 8, U_PANTRY = 9, U_QUARTERS = 13, U_GATEHOUSE = 17;
+const U_HALL = 1, U_CELL = 2, U_CRYPT = 4, U_STORE = 7, U_KITCHEN = 8, U_PANTRY = 9, U_QUARTERS = 13, U_GATEHOUSE = 17,
+  U_GUARDROOM = 18;
 const PK_PORTCULLIS = 2, T_DOOR = 3, T_STEPS = 5;           // (T_FLOOR, T_CORR: the caves' above)
+// The bytes xd said after the line it was typed on (cmd: its command line), up to the prompt: each line "OFFSET  hex
+// ...  text"; and a theme's text as themegen said it (its command line typed, up to the next prompt), its CRs gone
+function xdBytes(out, cmd) {
+  const o = out.replace(/\r/g, ''), at = o.indexOf('% ' + cmd + '\n'), end = o.indexOf('\n% ', at + 1);
+  const bytes = [];
+  if (at < 0) return Buffer.alloc(0);
+  for (const l of o.slice(at + cmd.length + 3, end < 0 ? undefined : end).split('\n')) {
+    const m = /^([0-9a-f]{7})  ((?:[0-9a-f]{2} ?)+)/.exec(l);
+    if (m) for (const h of m[2].trim().split(' ')) bytes.push(parseInt(h, 16));
+  }
+  return Buffer.from(bytes);
+}
+function saidTheme(out, cmd) {
+  const o = out.replace(/\r/g, ''), at = o.indexOf('% ' + cmd + '\n'), end = o.indexOf('\n% ', at + 1);
+  return at < 0 ? '' : o.slice(at + cmd.length + 3, end < 0 ? undefined : end + 1);
+}
+const DQ0_MAKE = () => require('../games/dq0/make.js');
+const DQ0_BEASTS = () => DQ0_MAKE().bestiary(path.join(__dirname, '..', 'games', 'dq0'));
+
 function builtChunks(m, sn) {
   const out = [], C = { room: 8, zone: 56, portal: 219, tile: 443, elev: 1467, pceil: 2555 };
   for (const b of Object.values(m.sharedBanks())) {
@@ -1770,6 +1790,54 @@ function liveChunks(m, sn) {
   }
   return out;
 }
+
+// A stratum's record in the hub's world bank (hub.h's struct wrec: the strata's records first, 8 of 79 bytes, world.h's
+// struct stratum: made, n, ..., x0 at 11, y0, w, h, ..., nlinks at 22, its links from 23, 7 bytes each: kind, to, x,
+// y, dug): stratum sn's bounds and links ({ x0, y0, w, h, links: [{ kind, to, x, y }] }), or null
+const O_WAY_OUT = 7, O_NOWHERE = 0xFF;
+function stratumRec(m, sn) {
+  const banks = m.sharedBanks(), keys = Object.keys(banks).map(Number).sort((a, b) => a - b);
+  const hub = keys.find(k => banks[k][0] === 0x44 && banks[k][1] === 0x51), w = hub === undefined ? null : banks[hub + WORLD_BANK_N];
+  for (let i = 0; w && i < 8; i++) {
+    const r = w.subarray(i * 79, i * 79 + 79), u16 = k => r[k] | r[k + 1] << 8;
+    if (!r[0] || r[1] !== sn) continue;
+    const links = [];
+    for (let j = 0; j < Math.min(r[22], 8); j++) links.push({ kind: r[23 + j * 7], to: r[24 + j * 7], x: u16(25 + j * 7), y: u16(27 + j * 7) });
+    return { x0: u16(11), y0: u16(13), w: u16(15), h: u16(17), links };
+  }
+  return null;
+}
+
+// A dq0 test's start(m) for what each game made and loaded: as "> quit" is typed (the game still as it stands), the
+// chunks of the top stratum in the hub's cache (builtChunks) and the strata's records (stratumRec, 0-7), t.games[k]
+// for the test's game k (0 on: the hubs made, m.dq0's); and each file a program OPENs (the kernel's call, by its jump
+// table slot: base/obj/gen/api.json's), its task and the hubs made by then (a game's themegen runs before its hub's
+// made, its maker after), in t.opens
+function dq0Made(t, m) {
+  const api = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'base', 'obj', 'gen', 'api.json'), 'utf8'));
+  const OPEN = api.calls.find(c => c.name === 'OPEN').addr, cpu = m.cpu, step = cpu.step.bind(cpu);
+  const games = t.games = [], opens = t.opens = [];
+  let out = m.out, qpos = 0;
+  cpu.step = v => {
+    if (cpu.PC === OPEN && m.W === 0) {
+      const r = m.taskRam[m.T], a = r[2] | r[3] << 8;
+      let s = '';
+      for (let i = 0; i < 64 && a + i < 0x8000 && r[a + i]; i++) s += String.fromCharCode(r[a + i]);
+      opens.push({ T: m.T, path: s, hubs: m.dq0 ? m.dq0.games.length : 0 });
+    }
+    return step(v);
+  };
+  Object.defineProperty(m, 'out', { get: () => out, set: v => {
+    let i;
+    while ((i = v.indexOf('> quit', qpos)) >= 0) {
+      if (m.dq0 && m.dq0.games.length) games[m.dq0.games.length - 1] = { chunks: builtChunks(m, 0), strata: [0, 1, 2, 3, 4, 5, 6, 7].map(sn => stratumRec(m, sn)) };
+      qpos = i + 6;
+    }
+    out = v;
+  } });
+}
+// (A chunk's main room: its largest, the first of the largest; the uses' plan's)
+const mainRoom = c => c.rooms.reduce((a, r) => r.w * r.h > a.w * a.h ? r : a, c.rooms[0]);
 // Two chunks' bytes compared (struct chunk's: rooms from 8, 8 bytes each, their flags the 5th; openings 188-217, their
 // count at 7; portals from 219, 14 bytes each, their state, parts, harm the 4th, 9th and 14th; squares from 443, their
 // floors from 1467; traps from 2513, 7 bytes each, their state the 5th): the squares' seen and visible bits (T_SEEN,
@@ -4048,6 +4116,207 @@ module.exports = {
         const p = T.of('put the crown on the throne');
         rep('put the crown on the throne', 'IO_PUT', 'IR_OK', 'the crown not put on the throne');
         dq0Need(f, p, 'E_BYE', {}, 'the game not ended, the place ruled');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0themegen', what: 'Dingus Quest Zero\'s theme generator (Phase 3D; games/themegen, its bank programs bank/histgen, goalgen, linegen and namegen: HISTORY.md): "themegen -s 3" says a region\'s history and its theme (the region, its peoples and eras, the strata as layers, the inhabitants, the goal, its clues, the story), the same each time (made twice into folders, the files the same, cmp); its record (themec, run in its place, theme.dat) held to games/dq0/make.js\'s compile of the theme it said, byte for byte, and that theme to the theme checker (every goal reachable, every faction placed)',
+      init: 't_rc', cycles: 900e6,
+      machine: { input: ['bind -a /sd/0/games /bin', 'themegen -s 3', 'themegen -q -s 3 -o /ram/a', 'echo $status',
+        'themegen -q -s 3 -o /ram/b', 'cmp /ram/a/theme.txt /ram/b/theme.txt', 'cmp /ram/a/theme.dat /ram/b/theme.dat', 'echo $status',
+        'xd /ram/a/theme.dat', 'echo done'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['seed     | 3', 'region   | the ', 'era      | ', 'layer    | ', 'faction  | ', 'goal     | ', 'story    | Under the',
+        '% cmp /ram/a/theme.dat /ram/b/theme.dat\n% echo $status\n\n', '% echo done\ndone\n'],
+      check(m, out) {
+        const f = [], text = saidTheme(out, 'themegen -s 3'), dq0 = DQ0_MAKE(), beasts = DQ0_BEASTS();
+        let r;
+        try { r = dq0.compile(text, 'themegen -s 3', beasts, 1); } catch (e) { return ['its theme isn\'t one: ' + e.message]; }
+        f.push(...dq0.check(r.t, beasts, 'themegen -s 3'));
+        const dat = xdBytes(out, 'xd /ram/a/theme.dat');
+        if (dat.length !== dq0.THEME_SIZE) f.push('theme.dat: ' + dat.length + ' bytes, not ' + dq0.THEME_SIZE);
+        else for (let i = 0; i < dat.length; i++) if (dat[i] !== r.data[i]) { f.push('theme.dat: byte ' + i + ' is ' + dat[i] + ', make.js\'s ' + r.data[i]); break; }
+        if (/^\s+\S/m.test(text.split('\n').filter(l => /^[a-z]/.test(l)).join('\n'))) f.push('a line not in the theme format');
+        this.notes = [(text.match(/^theme +\| (.*)/m) || [])[1] + ': ' + text.split('\n').filter(l => /^[a-z]/.test(l)).length + ' lines, ' + (r.used - dq0.HEAD) + ' bytes of words'];
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0goals', what: 'Dingus Quest Zero\'s goal kinds (G5: data, games/themegen/goals.txt): themegen\'s histories for seeds 1-12, each passing the theme checker (themec, in themegen\'s place: its status), all four kinds among them (an artifact found, the evil cleared out, a prisoner rescued, a far exit won through to), each goal\'s stratum one of its history\'s and its guardians a faction there',
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: ['bind -a /sd/0/games /bin', ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].flatMap(s => ['themegen -q -s ' + s + ' -o /ram/g',
+        'echo seed ' + s + ' status $status', 'grep goal /ram/g/theme.txt']), 'echo done'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['seed 12 status\n', '% echo done\ndone\n'],
+      check(m, out) {
+        const o = out.replace(/\r/g, ''), f = [], kinds = new Set();
+        for (let s = 1; s <= 12; s++) {
+          if (!o.includes('seed ' + s + ' status\n')) f.push('seed ' + s + ': the checker refused it (or it wasn\'t made)');
+          const g = new RegExp('% grep goal /ram/g/theme.txt\\n(goal +\\|.*)').exec(o.slice(o.indexOf('seed ' + s + ' status')));
+          if (!g) f.push('seed ' + s + ': no goal line'); else kinds.add(g[1].split('|')[1].trim());
+        }
+        for (const k of ['artifact', 'evil', 'prisoner', 'through']) if (!kinds.has(k)) f.push('no ' + k + ' goal among seeds 1-12');
+        this.notes = ['goal kinds: ' + [...kinds].join(', ')];
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0themec', what: 'Dingus Quest Zero\'s theme compiler (games/themec): the stand-in themes (the card\'s lib/dq0/themes) compiled on the Hydra into the same records as make.js makes them at build time (dq0t.dat\'s, but for their count), byte for byte; and the theme checker refusing a theme whose way out can\'t be opened (no rule opens it) and whose faction can\'t live where it\'s said to (kobolds on a built stratum), said why',
+      init: 't_rc', cycles: 900e6,
+      machine: { input: ['bind -a /sd/0/games /bin', ...['1crypt', '2temple', '3warren'].flatMap(n => ['themec -o /ram/' + n + '.dat /sd/0/games/lib/dq0/themes/' + n + '.txt',
+        'xd /ram/' + n + '.dat']), 'echo \'theme    | the Bad Place\' >/ram/bad.txt', 'echo \'mission  | escape\' >>/ram/bad.txt',
+        'echo \'stratum  | Top | b | halls\' >>/ram/bad.txt', 'echo \'faction  | kobolds | kobold | 0-0 | 9 | - | 0 | u | -\' >>/ram/bad.txt',
+        'themec /ram/bad.txt', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['the Crypt of the Dead King: ', 'the Drowned Temple: ', 'the Kobold Warren: ', 'the theme checker: the way out can\'t be opened',
+        'the theme checker: kobolds: none of its kinds lives in its strata', '% echo $status\n1\n'],
+      check(m, out) {
+        const f = [], dq0 = DQ0_MAKE(), beasts = DQ0_BEASTS();
+        for (const n of ['1crypt', '2temple', '3warren']) {
+          const r = dq0.compile(fs.readFileSync(path.join(__dirname, '..', 'games', 'dq0', 'themes', n + '.txt'), 'latin1'), n, beasts, 1).data;
+          const dat = xdBytes(out, 'xd /ram/' + n + '.dat');
+          if (dat.length !== r.length) { f.push(n + ': ' + dat.length + ' bytes, not ' + r.length); continue; }
+          for (let i = 0; i < r.length; i++) if (dat[i] !== r[i]) { f.push(n + ': byte ' + i + ' is ' + dat[i] + ', make.js\'s ' + r[i]); break; }
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0history', what: 'Dingus Quest Zero\'s own theme (theme.h): a game whose seed is past the stand-ins\' (65,536 and on, as a clock\'s is) has its region\'s history and its theme made as it begins (themegen, run by the UI before the world: "The place\'s history is being made"), into its save\'s folder (theme.txt, theme.dat), its story told the theme\'s word for word (its name, then its story: the region, its eras, who has it now, the goal), the top stratum named by it; quit and carried on (dq0 -d), the same theme read back from the folder, not made again',
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 70001 -c /ram/c.hm -d /ram/h', 'map', 'quit',
+        'ls /ram/h', 'cat /ram/h/theme.txt', 'dq0 -d /ram/h', 'quit', 'echo done'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['The place\'s history is being made', 'Under the ', 'theme.dat', 'theme.txt', 'takes up where they left off.', '% echo done\ndone\n'],
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\r/g, ''), f = [], dq0 = DQ0_MAKE();
+        const text = saidTheme(out, 'cat /ram/h/theme.txt');
+        let r;
+        try { r = dq0.compile(text, 'theme.txt', DQ0_BEASTS(), 1); } catch (e) { return ['its theme.txt isn\'t a theme: ' + e.message]; }
+        const words = s => s.replace(/\s+/g, ' ').trim(), name = (text.match(/^theme +\| (.*)/m) || [])[1] || '?';
+        const story = words(r.data.toString('latin1', r.data.readUInt16LE(776), r.data.indexOf(0, r.data.readUInt16LE(776))));
+        const game = words(o.slice(o.indexOf('history is being made'), o.indexOf('enters the dungeon.')));
+        const title = name[0].toUpperCase() + name.slice(1) + '.';
+        if (!game.includes(title)) f.push('its name not told: ' + title);
+        if (!game.includes(story)) f.push('its story not told word for word: ' + story.slice(0, 80) + ' ...');
+        const top = (text.match(/^stratum +\| ([^|]*)\|/m) || [])[1].trim();
+        if (!o.includes(top.slice(0, 14))) f.push('the top stratum not named by it: ' + top);
+        const again = o.slice(o.indexOf('% dq0 -d /ram/h'));
+        if (again.includes('history is being made')) f.push('carried on, its history made again');
+        if (!again.includes(title)) f.push('carried on, its name not told: ' + title);
+        this.notes = [name + ': ' + text.split('\n').filter(l => /^[a-z]/.test(l)).length + ' lines; ' + (story.length) + ' letters of story'];
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0layers', meaning: true, what: 'Dingus Quest Zero\'s dungeon made from its history (Phase 3D, games/dq0/HISTORY.md; D12, the user\'s: "A temple could sit over the ruin of an older keep, say.  I just want the things on the same strata to make sense"): at seed 70018 (a region of its own, themegen\'s) the top stratum the tombs the hill-men built, fallen in, and the temple the sun-priests made of them after (its layers: built, ruined, reused): by the way in (those who came after came in that way) the chunks the maker made the temple\'s (a kitchen or a pantry among them, no main room a crypt), and by the way down (dq0 -T, the far side) the old tombs\' (each main room a crypt, no kitchen nor pantry); stratagen (bank/stratagen, a bank program: a stratum\'s layers chunk by chunk) loaded by themegen (its checker) and by the maker, once for all the maker\'s chunks, and with dq0 -C (the bank programs given up after each request) again and again; then at seed 70008 a keep the conquerors made of an older temple: in a guardroom of the keep\'s by the way in, the temple\'s chapel\'s candle stubs (the older layer\'s mark: a guardroom\'s own use leaves none)',
+      init: 't_rc', cycles: 1300e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 70018 -c /ram/c.hm', 'quit',
+        'dq0 -p t -s 70018 -c /ram/c.hm -T -C', 'quit', 'dq0 -p t -s 70008 -c /ram/c.hm', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      start(m) { dq0Made(this, m); },
+      check(m) {
+        const T = dq0Turns(m), f = [], g = this.games || [], opens = this.opens || [];
+        if (!g[0] || !g[1] || !g[2]) return ['the three games\' quits not all seen'];
+        const has = (c, u) => c.rooms.some(r => r.kind === u), at = c => c.cx + ',' + c.cy, uses = c => at(c) + ' ' + c.rooms.map(r => r.kind).join('/');
+        const a = g[0].chunks, b = g[1].chunks;
+        if (!a.length || !b.length) return ['no chunks of the top stratum made (by the way in: ' + a.length + ', by the way down: ' + b.length + ')'];
+        if (!a.some(c => has(c, U_KITCHEN) || has(c, U_PANTRY))) f.push('by the way in no kitchen nor pantry, the temple\'s (' + a.map(uses).join('; ') + ')');
+        for (const c of a) if (mainRoom(c).kind === U_CRYPT) f.push('by the way in, chunk ' + at(c) + '\'s main room a crypt, the old tombs\'');
+        for (const c of b) {
+          if (mainRoom(c).kind !== U_CRYPT) f.push('by the way down, chunk ' + at(c) + '\'s main room not a crypt (' + uses(c) + ')');
+          if (has(c, U_KITCHEN) || has(c, U_PANTRY)) f.push('by the way down, chunk ' + at(c) + ' the temple\'s (' + uses(c) + ')');
+        }
+        // (stratagen's loads by game, by its caller: the task that read themegen's exports, before game k's hub was made,
+        // or the maker's, after it)
+        const loads = (k, exp) => {
+          const h = exp === 'themegen.exp' ? k : k + 1, here = opens.filter(o => o.hubs === h);
+          const ts = new Set(here.filter(o => o.path.endsWith('/' + exp)).map(o => o.T));
+          return here.filter(o => ts.has(o.T) && o.path.endsWith('/stratagen.bp')).length;
+        };
+        for (const k of [0, 1, 2]) if (loads(k, 'themegen.exp') !== 1) f.push('game ' + (k + 1) + ': stratagen loaded by themegen ' + loads(k, 'themegen.exp') + ' times, not once');
+        if (loads(0, 'dq0m.exp') !== 1) f.push('stratagen loaded by the maker ' + loads(0, 'dq0m.exp') + ' times for its ' + a.length + ' chunks, not once (kept)');
+        if (loads(1, 'dq0m.exp') < 2) f.push('with dq0 -C, stratagen loaded by the maker ' + loads(1, 'dq0m.exp') + ' times, not again after it was given up');
+        // (Seed 70008: the candle stubs in a guardroom of a chunk by the way in)
+        const s = T.of('quit', T.of('dq0 -p t -s 70008 -c /ram/c.hm').k).at, st = g[2].strata[0];
+        if (!s || !st) return f.concat(['seed 70008: no state at its quit']);
+        const room = i => {
+          const c = g[2].chunks.find(c => c.cx === (i.x - st.x0) >> 5 && c.cy === (i.y - st.y0) >> 5), x = (i.x - st.x0) & 31, y = (i.y - st.y0) & 31;
+          return c && c.rooms.find(r => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h);
+        };
+        const stubs = s.items.filter(i => i.name === 'candle stubs' && i.where === 'IW_SQUARE' && i.sn === 0);
+        if (!g[2].chunks.some(c => has(c, U_GATEHOUSE))) f.push('seed 70008: no gatehouse by the way in, the keep\'s');
+        if (!stubs.some(i => (room(i) || {}).kind === U_GUARDROOM)) f.push('seed 70008: no candle stubs in a guardroom (the temple\'s chapel\'s, under the keep\'s): ' +
+          stubs.map(i => (room(i) || { kind: '-' }).kind).join(' '));
+        this.notes = [a.length + ' chunks by the way in, ' + b.length + ' by the way down; the maker\'s stratagen loads with -C: ' + loads(1, 'dq0m.exp')];
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0quest', meaning: true, what: 'Dingus Quest Zero\'s goals from a region\'s history played to their ends (Phase 3D: G5, the user\'s: "Each dungeon needs a goal, and it may be to find a specific artifact, clean out the evil denizens, rescue a prisoner, or just find a way through to a distant exit"; themegen\'s goals.txt kinds): at seed 70000 the Cup of Rowon (an artifact): dq0 -T -T begins by the goal\'s own thing, the jade cup lying hidden where the history put it; with it to hand (dq0 -k) and the seeker\'s journal read, the way out shut, the cup held up to it (open), and up it: escaped; at seed 70007 the curse of Yiskeek (an evil): by the bone idol (dq0 -T -T), the silver bell and the old scroll to hand, the scroll read, the bell laid on the idol: the curse broken (ruled, the game ended); at seed 70012 Voven, the kobolds\' prisoner: the shackle key put to the chained woman, the way out open (hers), and up it: escaped; at seed 70008 the Far Door (a way through): dq0 -T -T -T (four strata grown below the top) the goal\'s stratum (the fourth) with a way out of its own, a far exit, and none on the strata between',
+      init: 't_rc', cycles: 2200e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm',
+        'dq0 -p t -s 70000 -c /ram/c.hm -T -T', 'quit',
+        'dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup,journal\'', 'read the journal', 'u', 'use the cup on the way out', 'u',
+        'dq0 -p t -s 70007 -c /ram/c.hm -T -T -k \'silver bell,old scroll\'', 'read the scroll', 'put the bell on the idol',
+        'dq0 -p t -s 70012 -c /ram/c.hm -k \'shackle key,chained woman\'', 'drop the woman', 'put the key on the woman', 'u',
+        'dq0 -p t -s 70008 -c /ram/c.hm -T -T -T', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      start(m) { dq0Made(this, m); },
+      check(m) {
+        const T = dq0Turns(m), f = [], has = (t, n) => dq0Carried(t.after).some(i => i.name === n);
+        const g1 = T.of('dq0 -p t -s 70000 -c /ram/c.hm -T -T');
+        if (!g1.after || !dq0Here(g1.after).some(i => i.name === 'jade cup' && (i.flags & DQ0_I.HIDDEN))) f.push('dq0 -T -T not begun by the jade cup, the goal\'s, hidden');
+        const g2 = T.of('dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup,journal\'');
+        if (!has(g2, 'jade cup') || !has(g2, 'journal')) f.push('the cup and the journal not to hand (dq0 -k)');
+        if (!dq0Rep(T.after(g2, 'read the journal'), 'ireq', { kind: 'IO_FIND', result: 'IR_OK' }).length) f.push('the journal not read (a piece found to hand)');
+        dq0Need(f, T.after(g2, 'u'), 'E_NOWAY', { why: 'N_SHUT' }, 'the way out not shut');
+        const u = T.after(g2, 'use the cup on the way out');
+        if (!u.after || !u.after.wayOpen || (u.at && u.at.wayOpen)) f.push('the way out not opened by the cup');
+        const l = T.after(u, 'u');
+        dq0Need(f, l, 'E_LEFT', {}, 'the way out not taken (escaped)');
+        dq0Need(f, T.and(l), 'E_BYE', {}, 'the artifact\'s game not ended');
+        const g3 = T.of('dq0 -p t -s 70007 -c /ram/c.hm -T -T -k \'silver bell,old scroll\'');
+        if (!g3.after || !dq0Here(g3.after).some(i => i.name === 'bone idol')) f.push('dq0 -T -T not begun by the bone idol, the curse\'s');
+        if (!dq0Rep(T.after(g3, 'read the scroll'), 'ireq', { kind: 'IO_FIND', result: 'IR_OK' }).length) f.push('the old scroll not read (a piece found to hand)');
+        const p = T.after(g3, 'put the bell on the idol');
+        if (!dq0Rep(p, 'ireq', { kind: 'IO_PUT', result: 'IR_OK' }).length) f.push('the bell not laid on the idol');
+        dq0Need(f, T.and(p), 'E_BYE', {}, 'the curse not broken (the game not ended, ruled)');
+        const g4 = T.of('dq0 -p t -s 70012 -c /ram/c.hm -k \'shackle key,chained woman\''), k = T.after(g4, 'put the key on the woman');
+        if (!k.after || !k.after.wayOpen || (k.at && k.at.wayOpen)) f.push('the prisoner\'s way out not opened by the key');
+        const l4 = T.after(k, 'u');
+        dq0Need(f, l4, 'E_LEFT', {}, 'the prisoner\'s way out not taken (escaped)');
+        dq0Need(f, T.and(l4), 'E_BYE', {}, 'the prisoner\'s game not ended');
+        // (Seed 70008, the strata's records at its quit: the goal's stratum, the fourth, with a far exit)
+        const st = (this.games || [])[4] ? this.games[4].strata : [];
+        const outs = sn => st[sn] ? st[sn].links.filter(l => l.kind === O_WAY_OUT && l.to === O_NOWHERE).length : -1;
+        if (outs(3) !== 1) f.push('the Far Door\'s stratum (the fourth) with ' + outs(3) + ' ways out of its own, not one');
+        for (const sn of [1, 2]) if (outs(sn) !== 0) f.push('stratum ' + sn + ' with ' + outs(sn) + ' ways out, not the goal\'s');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0handtheme', meaning: true, what: 'Dingus Quest Zero\'s hand-written theme (dq0 -t FILE: games/dq0/themes/1crypt.txt\'s format, its history\'s groups): a theme giving its name, its region and its two strata, made into a game\'s own by themegen (its seed\'s history filling the rest: the head\'s mission and story made, line by line; the eras, the inhabitants, the goal and its puzzle), written into the save\'s folder and compiled (theme.txt, theme.dat), even at a small seed (5: a stand-in\'s, but for -t); the game in it: the theme\'s name, its top stratum the one given',
+      init: 't_rc', cycles: 900e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm',
+        'echo \'theme    | the Pit of Echoes\' > /ram/t.txt', 'echo \'region   | the Grey Fells | hills | granite | springs | cold\' >> /ram/t.txt',
+        'echo \'stratum  | the Upper Pit | bx | keep\' >> /ram/t.txt', 'echo \'stratum  | the Echoing Deep | n\' >> /ram/t.txt',
+        'dq0 -p t -s 5 -c /ram/c.hm -t /ram/t.txt -d /ram/y', 'quit', 'cat /ram/y/theme.txt', 'echo done']) },
+      expect: ['% echo done\ndone\n'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], text = saidTheme(out, 'cat /ram/y/theme.txt'), keyed = k => text.split('\n').filter(l => l.startsWith(k.padEnd(9) + '|'));
+        try { DQ0_MAKE().compile(text, 'theme.txt', DQ0_BEASTS(), 1); } catch (e) { f.push('its theme.txt isn\'t a theme: ' + e.message); }
+        const want = { theme: ['theme    | the Pit of Echoes'], region: ['region   | the Grey Fells | hills | granite | springs | cold'],
+          stratum: ['stratum  | the Upper Pit | bx | keep', 'stratum  | the Echoing Deep | n'] };
+        for (const [k, w] of Object.entries(want)) if (keyed(k).join('\n') !== w.join('\n')) f.push('its ' + k + ' lines not the ones given: ' + keyed(k).join(' / '));
+        for (const k of ['mission', 'story', 'era', 'faction', 'goal', 'piece']) if (!keyed(k).length) f.push('no ' + k + ' line made');
+        const s = T.of('dq0 -p t -s 5 -c /ram/c.hm -t /ram/t.txt -d /ram/y').after;
+        if (!s || s.theme !== 'the Pit of Echoes') f.push('the game not in the hand-written theme: ' + (s && s.theme));
+        if (!s || !s.strata || s.strata[0] !== 'the Upper Pit') f.push('the top stratum not the one given: ' + (s && s.strata && s.strata[0]));
+        this.notes = [text.split('\n').filter(l => /^[a-z]/.test(l)).length + ' lines, ' + keyed('era').length + ' eras, ' + keyed('faction').length + ' factions made'];
         return f;
       },
       sdcard: true

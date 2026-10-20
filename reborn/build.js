@@ -300,6 +300,36 @@ function writeExports(map, out) {
   return names;
 }
 
+// A child's o65 file as the o65 spec has it: an import's HIGH relocation entry given the low byte ld65 leaves out
+// (the spec has one after every HIGH entry, whatever its segment, and the loader reads one: without it the table's
+// misread from there on, and the child refused, BE_FORMAT); every other entry kept as it is, so a loader may put the
+// child anywhere.  OUT: the file's bytes
+function childRelocs(bp) {
+  const w = o => bp[o] | bp[o + 1] << 8;
+  let p = 26;
+  while (bp[p]) p += bp[p];
+  p += 1 + w(10) + w(14);                               // (Past its options, its text and data)
+  const nimp = w(p);
+  p += 2;
+  for (let i = 0; i < nimp; i++) { while (bp[p]) p++; p++; }   // (Past its imports' names)
+  const head = bp.subarray(0, p), tables = [];
+  for (let k = 0; k < 2; k++) {                         // (Its text's table, then its data's)
+    const out = [];
+    for (;;) {
+      let c = bp[p++];
+      out.push(c);
+      if (!c) break;
+      while (c === 255) { c = bp[p++]; out.push(c); }
+      const t = bp[p++], seg = t & 15, extra = (seg === 0 ? 2 : 0) + ((t & 0xE0) === 0x40 && seg !== 0 ? 1 : 0);
+      out.push(t, ...bp.subarray(p, p + extra));
+      p += extra;
+      if (seg === 0 && (t & 0xE0) === 0x40) out.push(0);     // (An import's HIGH: its low byte, 0, the guard's: an
+    }                                                   //   offset's low byte is 0, buildChild's check)
+    tables.push(Buffer.from(out));
+  }
+  return Buffer.concat([head, ...tables, bp.subarray(p)]);
+}
+
 // A bank program (a child: sdk/c/include/bankprog.h, sdk/c/child.cfg), dir's .c and .s files, into objdir/NAME.bp:
 // an o65 module at $8000, its imports what its objects use and don't have (od65's --dump-imports), its exports
 // their globals (--dump-exports); checked against each caller its parents file names (its exports: exportsOf), the
@@ -310,6 +340,13 @@ function buildChild(dir, objdir) {
   const names = (opt, re) => [...new Set(objs.flatMap(o => [...execFileSync(OD65, [opt, o], { encoding: 'latin1' }).matchAll(re)].map(m => m[1])))];
   const exps = names('--dump-exports', /Name:\s+"([^"]+)"/g), own = new Set(exps);
   const imps = names('--dump-imports', /Name:\s+"([^"]+)"/g).filter(n => !own.has(n));
+  const hi = [];                                        // (The high byte of an import's address and an offset whose
+  for (const f of csources(dir)) {                      //   low byte isn't 0: ld65's o65 has no room for that low
+    const s = f.endsWith('.c') ? path.join(od, path.basename(f).replace(/\.c$/, '.s')) : f;   //   byte, so the loader
+    for (const [x, n, sg, v] of fs.readFileSync(s, 'latin1').matchAll(/>\(\s*([A-Za-z_.@][\w.@]*)\s*([+-])\s*(\$?[0-9A-Fa-f]+)\s*\)/g))
+      if (imps.includes(n) && (sg === '-' || parseInt(v.replace('$', ''), v.startsWith('$') ? 16 : 10) % 256)) hi.push(path.basename(s) + ': ' + x);
+  }                                                     //   can't carry from it: refused)
+  if (hi.length) throw new Error('bank program ' + name + ': the high byte of an import\'s address and an offset, which o65 can\'t carry: ' + [...new Set(hi)].join(', '));
   const list = [...exps.map(n => 'export = ' + n), ...imps.map(n => 'import = ' + n)];
   const cfg = fs.readFileSync(at('sdk', 'c', 'child.cfg'), 'latin1').replace(', IMPORTS_AND_EXPORTS;', list.length ? ', ' + list.join(', ') + ';' : ';');
   fs.writeFileSync(path.join(od, name + '.cfg'), cfg);
@@ -318,7 +355,7 @@ function buildChild(dir, objdir) {
   const bp = fs.readFileSync(out);                      // (ld65's o65 header's date of making, option 4, made the
   for (let at = 26; at < bp.length && bp[at]; at += bp[at]) // same each time: the images the same each build)
     if (bp[at + 1] === 4) bp.fill(0x20, at + 2, at + bp[at] - 1).write('2026-01-01', at + 2, 'latin1');
-  fs.writeFileSync(out, bp);
+  fs.writeFileSync(out, childRelocs(bp));
   const parents = path.join(dir, 'parents');
   if (fs.existsSync(parents)) {
     for (const p of fs.readFileSync(parents, 'latin1').split(/\s+/).filter(Boolean)) {

@@ -271,6 +271,33 @@ requests; the house's rules above marked *(every ruleset's)* it plays as HarnMas
 - **Its character** is any file's name, occupation, pace and language lines (hmchar's will do), with its wounds;
   without one it makes its own, Dingus, a wanderer.  It speaks common and its file's tongues.
 
+## The history and the theme *(every ruleset's)*
+
+- **A game's own theme** (G2): a seed of 65,536 or more has its region's history and its theme made as it begins
+  (themegen: HISTORY.md); a seed under it, a stand-in theme's, by its second byte.  (main.c's s_begin.)  Why: the
+  clock's seeds are all past it, so every game has a region of its own; the tests' small seeds keep the themes
+  they were written against.
+- **A far exit is open** from the start: a way out below the top stratum (the through goal's) lets the character up
+  it to the daylight, the game won (escaped); the way in, above, has fallen in (no rule opens it).  (dq0w.c's
+  s_climb.)  Why: winning through is the goal; the way in shut is what makes it one.
+- **A stratum's age is its history's:** its oldest layer's era's, the centuries since it ended and one more (a
+  stand-in's, the world's dice: 1-40 centuries, 1-20 the top's).  (dq0m/plan.c, from the record's sage.)  Why: what's
+  rotted, what's flagged and what's earth follow the history.
+- **What a history leaves lying about:** a chunk with an older layer under it, each room's use under the older
+  purpose its mark (rotted by the older layer's age: a kind that rots gone as often as its centuries in 40); a
+  chunk a ruin broke, a room in two its debris (bones where the era was conquered or cursed, potsherds else).
+  (dq0m/stock.c, uses.c's US_UNDER.)  Why: exploring tells the story (DesignIdeas.md).
+- **A ruin's odds** (stratagen): a chunk of the works standing when it came is broken one in two for a collapse, one
+  in three for a conquest, a flood or a curse, one in four for an abandoning; a later people's own part (a reuse:
+  a third to two thirds of the way from the way in to the stratum's far side, by its seed) isn't.  Why: a ruin's a
+  ruin in places, and those who came after mended what they took.
+- **The evil's goal won where it's done:** the relic laid on the curse's altar ends the game, the curse broken (the
+  ruled ending's words); its dead aren't stilled first.  Why: the denizens' answer to it is popgen's, to come.
+- **A faction's others are the theme's own:** themegen writes how a faction stands with the factions the region has
+  (the bestiary's factions.txt lists them all), and only a game of its own writes faction lines in the save folder
+  (theme.txt: popgen's), a stand-in's game none.  Why: popgen reads every name it's given, and the stand-ins' games
+  (the tests') keep the stand-in's denizens.
+
 ## Decided, not yet built
 
 - **D13, Strength and weapons:** Strength doesn't add to impact; it sets how heavy a weapon can be wielded without
