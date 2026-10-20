@@ -55,10 +55,10 @@ occupation tester
 pace 2 0 0
 end
 
-case the referee says who it is, its round 10 seconds (Combat 7)
+case the referee says who it is, its round 10 seconds (Combat 7), its character generator hmchar (the second line)
 dice
 ask HELLO
-want w1=100 text="HarnMaster 3.5"
+want w1=100 text~"HarnMaster 3.5" text~"hmchar"
 
 char
 end
