@@ -13,18 +13,19 @@
 
 #define SS      (KF_SOLID | KF_SMALL)           /* (What most containers keep: things whole, and small ones) */
 
-/* The catalogue: name, flags, weight (quarter pounds), bulk (pints), its room (pints, pounds), slots, light, size,
-** tool's key, material, the craft that knows it, its worth (pennies); what it keeps (KF_*: a surface KF_ON), its own
-** form (0 a thing whole) */
+/* The catalogue, in rs.h's units: name, flags, weight (quarter pounds), bulk (pints), its room (pints; the weight it
+** bears, quarter pounds), slots, light (squares), how far off it's made out (squares past a speck), tool's key,
+** material, the craft that knows it, its worth (pennies); what it keeps (KF_*: a surface KF_ON), its own form (0 a
+** thing whole) */
 typedef char kinds_fit[KI_COUNT <= KI_THEME ? 1 : -1];   /* (The theme's after the catalogue's own) */
 const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, theme.h: the UI's, as it starts) */
     { "", 0 },
     { "torch", K_LIGHT | K_HAND, 4, 2, 0, 0, 0, 4, 3, "torch", MT_WOOD, AP_WOOD, 1 },
-    { "backpack", K_CONTAINER | K_WEAR, 8, 20, 32, 40, 0, 0, 5, "", MT_LEATHER, AP_HIDE, 24, SS },
+    { "backpack", K_CONTAINER | K_WEAR, 8, 20, 32, 160, 0, 0, 5, "", MT_LEATHER, AP_HIDE, 24, SS },
     { "belt", K_BELT | K_WEAR, 2, 1, 0, 0, 4, 0, 2, "", MT_LEATHER, AP_HIDE, 6 },
-    { "pouch", K_CONTAINER | K_HANG, 1, 1, 2, 4, 0, 0, 1, "", MT_LEATHER, AP_HIDE, 3, SS },
+    { "pouch", K_CONTAINER | K_HANG, 1, 1, 2, 16, 0, 0, 1, "", MT_LEATHER, AP_HIDE, 3, SS },
     { "dagger", K_HAND | K_HANG, 4, 1, 0, 0, 0, 0, 2, "knife", MT_IRON, AP_WEAPON, 60 },
-    { "waterskin", K_CONTAINER | K_HANG, 4, 4, 4, 5, 0, 0, 2, "", MT_LEATHER, AP_HIDE, 8, KF_LIQUID },
+    { "waterskin", K_CONTAINER | K_HANG, 4, 4, 4, 20, 0, 0, 2, "", MT_LEATHER, AP_HIDE, 8, KF_LIQUID },
     { "rations", K_PLURAL, 4, 2, 0, 0, 0, 0, 2, "", MT_OTHER, AP_FOOD, 4 },
     { "tinderbox", 0, 1, 1, 0, 0, 0, 0, 1, "tinder", MT_IRON, AP_METAL, 6 },
     { "pick", K_HAND | K_TWO, 24, 6, 0, 0, 0, 0, 4, "pick", MT_IRON, AP_METAL, 48 },
@@ -37,18 +38,18 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "iron key", 0, 1, 0, 0, 0, 0, 0, 1, "key", MT_IRON, AP_METAL, 4 },
     { "candle", K_LIGHT | K_HAND, 1, 1, 0, 0, 0, 2, 1, "", MT_OTHER, AP_FOOD, 1 },
     { "lantern", K_LIGHT | K_HAND | K_HANG, 8, 4, 0, 0, 0, 6, 3, "", MT_IRON, AP_METAL, 30 },
-    { "sack", K_CONTAINER, 2, 2, 24, 30, 0, 0, 3, "", MT_CLOTH, AP_CLOTH, 3, SS },
-    { "chest", K_CONTAINER, 120, 80, 60, 100, 0, 0, 7, "", MT_WOOD, AP_WOOD, 80, SS },
+    { "sack", K_CONTAINER, 2, 2, 24, 120, 0, 0, 3, "", MT_CLOTH, AP_CLOTH, 3, SS },
+    { "chest", K_CONTAINER, 120, 80, 60, 400, 0, 0, 7, "", MT_WOOD, AP_WOOD, 80, SS },
     { "skull", 0, 4, 2, 0, 0, 0, 0, 3, "", MT_BONE, AP_BONE, 0 },
     { "broken sword", 0, 12, 2, 0, 0, 0, 0, 4, "blade", MT_IRON, AP_WEAPON, 10 },
     { "cloak", K_WEAR, 8, 6, 0, 0, 0, 0, 4, "", MT_CLOTH, AP_CLOTH, 24 },
     { "potsherds", K_PLURAL, 2, 1, 0, 0, 0, 0, 2, "", MT_CLAY, AP_POTTERY, 0 },
     { "sword", K_HAND | K_HANG, 12, 3, 0, 0, 0, 0, 4, "blade", MT_IRON, AP_WEAPON, 240 },
-    { "basket", K_CONTAINER, 4, 8, 16, 20, 0, 0, 3, "", MT_WOOD, AP_WOOD, 2, KF_SOLID },
+    { "basket", K_CONTAINER, 4, 8, 16, 80, 0, 0, 3, "", MT_WOOD, AP_WOOD, 2, KF_SOLID },
     { "heap of sand", 0, 8, 1, 0, 0, 0, 0, 2, "", MT_STONE, AP_POTTERY, 0, 0, KF_SMALL },
-    { "table", 0, 160, 60, 30, 100, 0, 0, 7, "", MT_WOOD, AP_WOOD, 20, KF_ON },
-    { "chair", 0, 40, 20, 8, 30, 0, 0, 5, "", MT_WOOD, AP_WOOD, 8, KF_ON },
-    { "quiver", K_CONTAINER | K_HANG, 2, 2, 4, 6, 0, 0, 2, "", MT_LEATHER, AP_HIDE, 4, KF_SOLID },
+    { "table", 0, 160, 60, 30, 400, 0, 0, 7, "", MT_WOOD, AP_WOOD, 20, KF_ON },
+    { "chair", 0, 40, 20, 8, 120, 0, 0, 5, "", MT_WOOD, AP_WOOD, 8, KF_ON },
+    { "quiver", K_CONTAINER | K_HANG, 2, 2, 4, 24, 0, 0, 2, "", MT_LEATHER, AP_HIDE, 4, KF_SOLID },
     { "arrows", K_PLURAL, 2, 2, 0, 0, 0, 0, 2, "", MT_WOOD, AP_WEAPON, 1 },
     { "bar", 0, 40, 12, 0, 0, 0, 0, 5, "", MT_WOOD, AP_WOOD, 4 },        /* (A portal's parts: a door's bar, */
     { "pane of glass", 0, 4, 6, 0, 0, 0, 0, 3, "", MT_GLASS, AP_GLASS, 30 },     /*   a window's glass, */
@@ -69,7 +70,7 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "mace", K_HAND | K_HANG, 16, 3, 0, 0, 0, 0, 3, "mace", MT_IRON, AP_WEAPON, 84 },     /* (Weapons) */
     { "spear", K_HAND, 20, 6, 0, 0, 0, 0, 5, "spear", MT_WOOD, AP_WEAPON, 60 },
     { "round shield", K_HAND, 24, 12, 0, 0, 0, 0, 4, "shield", MT_WOOD, AP_WEAPON, 42 },
-    { "iron pot", K_CONTAINER, 32, 8, 6, 12, 0, 0, 3, "", MT_IRON, AP_METAL, 10, SS | KF_LIQUID }, /* (A room's use's
+    { "iron pot", K_CONTAINER, 32, 8, 6, 48, 0, 0, 3, "", MT_IRON, AP_METAL, 10, SS | KF_LIQUID }, /* (A room's use's
                                                 **   leavings: the stock's, dq0m/uses.c) */
     { "heap of straw", 0, 4, 8, 0, 0, 0, 0, 3, "", MT_OTHER, AP_WOOD, 0 },
     { "candle stubs", K_PLURAL, 1, 1, 0, 0, 0, 0, 1, "", MT_OTHER, AP_FOOD, 0 },

@@ -26,8 +26,9 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     4                       /* (2: the command parser's role and request, dq0c; 3: its meaning;
-                                                **   4: its command, struct cmd) */
+#define HUB_VERSION     5                       /* (2: the command parser's role and request, dq0c; 3: its meaning;
+                                                **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
+                                                **   parser's command, struct cmd, and P_THROW's ability) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -391,7 +392,7 @@ typedef char cmd_fits[sizeof (struct cmd) == CMD_SIZE ? 1 : -1];   /* (dq0c's, g
 struct req {
     RQH;                                        /* (kind: RS_*) */
     unsigned char   actor, other;               /* Who asks about whom */
-    signed char     steps;                      /* The circumstances: + better, - worse */
+    signed char     steps;                      /* The circumstances (rs.h's steps): + better, - worse */
     unsigned char   a, b, c;
     unsigned        w1, w2;
     unsigned char   x[32];                      /* By kind: a reply's effects (rs.h's), a summary ... */
@@ -419,7 +420,7 @@ struct actor {
                                                 **   gone: I_LEAVE, or dead); 0 none */
     unsigned char   sn, face;
     unsigned long   ready;                      /* When it can act again */
-    unsigned char   step;                       /* Tenths of a second to go 5 feet */
+    unsigned char   step;                       /* Tenths of a second to go a square */
     unsigned char   pos;                        /* Its body's position (POS_*: standing, prone ...) */
     unsigned char   gait;                       /* The pace it goes at (rs.h's GA_*: a walk, till their paces come) */
     unsigned        x, y;                       /* (These, its doing and its name as struct sight's den: copied whole) */
@@ -445,7 +446,7 @@ enum { AT_HOSTILE, AT_UNFRIENDLY, AT_WARY, AT_INDIFFERENT, AT_FRIENDLY, AT_ALLIE
 /* The character's way with a denizen (the UI asks the denizens' task: the hub's sway, REQ_*, its doorbell; the
 ** denizens' task finds the one meant, among those the character sees, by its name or its kind's, and asks the
 ** referee in the UI's slot, lent it while the UI waits): words to sway it (the referee's test, by the kind's mind:
-** an animal's by Animalcraft alone; words want a tongue in common), a request to an ally, a name given to one, a
+** an animal's by P_ANIMALS alone; words want a tongue in common), a request to an ally, a name given to one, a
 ** look at how it seems, a blow (a stand-in for the fights) */
 enum { SW_LOOK, SW_TALK, SW_PERSUADE, SW_DECEIVE, SW_THREATEN, SW_CALM, SW_BEFRIEND, SW_ATTACK, SW_ORDER, SW_NAME };
                                                 /* (dq0.h's V_TALK ... V_NAME in the same order) */

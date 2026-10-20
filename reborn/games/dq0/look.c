@@ -135,7 +135,7 @@ static void __fastcall__ make_panel (const char* rules)
     strcat (b, head_abbr[HUB->pc_face & 7]);
     pline (b);
     if (HUB->pc_light) {
-        num ("Light ", HUB->pc_light * 5, " ft");
+        num ("Light ", HUB->pc_light * SQ_FT, " ft");
     } else {
         pline ("No light");
     }

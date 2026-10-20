@@ -129,6 +129,8 @@ unsigned __fastcall__ o_fight_words (const struct msg* m)
             who (dname, 0);
             add (" with your ");
             add (aw);
+        } else if (!*aw) {
+            add (" strikes at you");            /* (A ruleset that names no weapon: the null one's) */
         } else if (!strcmp (aw, "bite") || !strcmp (aw, "claws")) {
             add (*aw == 'b' ? " bites at you" : " claws at you");
         } else {

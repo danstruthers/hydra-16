@@ -7,9 +7,10 @@
 //   cause, the turns lived), a start never left (no other room come into), the lines the grammar refused.
 // The player: commands drawn from the game's verbs, weighted toward moving and looking, its things and denizens the
 // ones the game's words have named (a thing seen lying, a denizen in sight), by a random stream of the seed's own.
-//   node sim/tools/soak.js [-n SEEDS] [-from FIRST] [-seeds A,B,...] [-turns N] [-j N] [-v]
+//   [RULES=NAME] node sim/tools/soak.js [-n SEEDS] [-from FIRST] [-seeds A,B,...] [-turns N] [-j N] [-v]
 //     -n 20, -from 1: seeds FIRST to FIRST + SEEDS - 1; -turns 60: the commands a game is given before it's quit;
-//     -j the cores; -v every game's transcript in obj/soak/SEED.txt (else only the ones that went wrong)
+//     -j the cores; -v every game's transcript in obj/soak/SEED.txt (else only the ones that went wrong); RULES, the
+//     games with that ruleset's referee (dq0 -r NAME: games/dq0/RULESETS.md)
 // Exit status 0 if every game soaked clean.  Each game is a process of its own (--one SEED), the reports in order.
 'use strict';
 const fs = require('fs');
@@ -81,7 +82,8 @@ function one(s, turns, verbose) {
   let quitting = false, pushed = 0;
   const t = {
     name: 'dq0soak-' + s, what: 'a soak', init: 't_rc', cycles: 400e6 + turns * TURN_CYCLES,
-    machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s ' + s + ' -o /ram/c.hm\rādq0 -p t -s ' + s + ' -c /ram/c.hm\r' },
+    machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s ' + s + ' -o /ram/c.hm\rādq0 -p t -s ' + s + ' -c /ram/c.hm' +
+      (process.env.RULES ? ' -r ' + process.env.RULES : '') + '\r' },
     expect: ['% echo soaked'],
     start(m) {
       let out = m.out, from = 0;

@@ -93,9 +93,9 @@ void things_stocked (void)
 }
 
 /* ---- The things the character sees (sight.c's): on the squares it sees now, not hidden, named, where they lie; a
-** surface's things after it, seen with it (hid 2: on the one before), and each one's size (hid's high four bits: the
-** kind's, how easily it's seen, for the UI's words at a distance).  Each entry made in se (struct sight's item's
-** layout: its way and square the square's), then copied in */
+** surface's things after it, seen with it (hid 2: on the one before), and how far off each is made out (hid's high
+** four bits: the kind's, squares past a speck, for the UI's words at a distance).  Each entry made in se (struct
+** sight's item's layout: its way and square the square's), then copied in */
 static struct { char name[14]; unsigned char qty, plural, rel, hid; unsigned n, x, y; } se;
 typedef char se_fits[sizeof se == sizeof ((struct sight*) 0)->item[0] ? 1 : -1];
 
@@ -109,7 +109,7 @@ static void __fastcall__ seen_one (struct sight* s, unsigned i, unsigned char on
     se.plural = (k->flags & K_PLURAL) != 0;
     se.qty = rec.qty;
     on = on ? 2 : (rec.flags & I_HIDDEN) != 0;
-    se.hid = (rec.flags & I_LIT ? on | 4 : on) | k->size << 4;
+    se.hid = (rec.flags & I_LIT ? on | 4 : on) | k->seen << 4;
     se.n = i;
     memcpy (&s->item[s->nitems++], &se, sizeof se);
 }

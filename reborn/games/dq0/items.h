@@ -11,8 +11,8 @@
 #ifndef _ITEMS_H
 #define _ITEMS_H
 
-/* What a thing's made of: its resistance to each kind of harm (0 none ... 9 all but proof), and its toughness (the
-** durability a pound of it gives, at middling quality) */
+/* What a thing's made of: its resistance to each kind of harm (0 none ... 9 all but proof: the referee's impact, not a
+** difficulty), and its toughness (the durability a quarter pound of it gives, at middling quality) */
 enum { MT_NONE, MT_WOOD, MT_IRON, MT_STEEL, MT_BRONZE, MT_LEATHER, MT_CLOTH, MT_BONE, MT_CLAY, MT_STONE, MT_GLASS,
     MT_SILVER, MT_OTHER, NMATS };
 #define MAT_TOUGH       { 1, 3, 6, 8, 5, 3, 1, 2, 1, 8, 1, 4, 1 }
@@ -23,17 +23,19 @@ struct material {
     unsigned char   tough;
 };
 
-/* A kind of thing (the catalogue's: a stand-in for the theme's data) */
+/* A kind of thing (the catalogue's: a stand-in for the theme's data), in rs.h's units */
 #define NKINDS          64
 struct kind {
     char            name[14];                   /* "torch", "backpack" ... */
     unsigned char   flags;                      /* K_* */
-    unsigned char   weight;                     /* In quarter pounds */
-    unsigned char   bulk;                       /* Its room: in pints, near enough */
-    unsigned char   cap_bulk, cap_weight;       /* A container's: what it holds (pints; pounds) */
+    unsigned char   weight;                     /* Its weight: quarter pounds (255, near 64 pounds, at most) */
+    unsigned char   bulk;                       /* Its size: pints */
+    unsigned char   cap_bulk;                   /* A container's (a surface's): the size it holds, pints, */
+    unsigned        cap_weight;                 /*   and the weight it bears, quarter pounds */
     unsigned char   slots;                      /* A belt's: things that hang from it */
-    unsigned char   light;                      /* A light's reach, lit: in squares */
-    unsigned char   size;                       /* How easily it's seen: 0 tiny ... 9 huge */
+    unsigned char   light;                      /* A light's reach, lit: squares */
+    unsigned char   seen;                       /* How far off it's made out, past a speck: squares (1 a key, 4 a
+                                                **   sword, 7 a chest; 15 at most) */
     char            tool[8];                    /* Its key for the referee's tests ("pick", "picks"), or "" */
     unsigned char   mat;                        /* What it's mostly made of, as a rule (MT_*: one may differ) */
     unsigned char   craft;                      /* The craft that knows it (rs.h's AP_*: its appraiser's) */
@@ -84,15 +86,16 @@ struct item {
     unsigned char   qty;
     unsigned char   owner;                      /* Whose it is (0: nobody's; a faction's, an actor's) */
     unsigned char   wear;                       /* Its wear, 0 new ... 255 (a blade dug with, dulled) */
-    unsigned char   hide;                       /* Concealed on purpose (I_HIDDEN): how hard to find, 0-9 (the
-                                                **   method's quality and the concealer's skill) */
+    unsigned char   hide;                       /* Concealed on purpose (I_HIDDEN): how hard to find, the steps worse
+                                                **   a search for it goes (rs.h's: the method's and the concealer's
+                                                **   skill's; 0 a floor's dust and corners only) */
     /* Its own (no two alike: the world's, as it first comes to it, a look's; id 0 till then) */
     unsigned        id;                         /* Its number, never another's (record 0's x the last given) */
     unsigned char   quality;                    /* How well it's made: 0 crude ... 9 a master's */
     unsigned char   mat;                        /* What it's made of (MT_*: its resistances) */
     unsigned        dur, dur_max;               /* Its durability: the harm it can take before it breaks, what's
                                                 **   left (its most by its quality, its material, its weight) */
-    unsigned char   size;                       /* Its size, where it matters (a portal's part's: its portal's
+    unsigned char   size;                       /* Its measure, where it matters (a portal's part's: its portal's
                                                 **   opening, world.h's: feet, its width the low four bits; or 0) */
     unsigned char   thick;                      /*   and its thickness, in eighths of an inch (or 0) */
 };
@@ -135,7 +138,7 @@ enum { IO_KIT, IO_GET, IO_DROP, IO_LIST, IO_SAVE, IO_RESTORE,
                                                 **   things_text */
     IO_DESCRIBE,                                /* A thing (carried, or seen) looked at closely: what it truly is,
                                                 **   in the request (for the appraiser's judgement: the UI's) */
-    IO_HIDE,                                    /* A thing carried hidden where it stands (Concealment, the referee's
+    IO_HIDE,                                    /* A thing carried hidden where it stands (P_CONCEAL, the referee's
                                                 **   test): its difficulty back in qty */
     IO_FIND,                                    /* The thing named that's to hand (carried, or within reach: the
                                                 **   theme's puzzle's): its kind back in x, and 256 if carried */
@@ -197,8 +200,8 @@ struct sthing {
     signed char     x, y;                       /* Its square, from the chunk's first (a portal's part's may be in the
                                                 **   next chunk: a bar's by its door) */
     unsigned char   qty;
-    unsigned char   hide;                       /* Concealed: how hard to find, 0-9; ST_SHOWN not; ST_PORTAL a portal's
-                                                **   part in it (else a part lies by it) */
+    unsigned char   hide;                       /* Concealed: how hard to find (struct item's, steps); ST_SHOWN not;
+                                                **   ST_PORTAL a portal's part in it (else a part lies by it) */
     unsigned char   make;                       /* A portal's part's: its material (MT_*) times 16, and its quality */
     unsigned char   size;                       /*   and its size (its portal's opening, a bar's its width) */
 };

@@ -219,10 +219,9 @@ static void paced (void)
     HUB->pc_going = g + 1 | (dk ? GOING_DARK : 0);
 }
 
-/* A square's time to walk into, tenths of a second: the pace's step (the referee's: HarnMaster's walking, half its
-** Move a round, and the rest), more uphill (half again a foot of rise), a little more steeply downhill (a quarter a
-** foot past the first), more on steps (half again); a slower pace's (a slow walk's: feeling the way in the dark)
-** times as many */
+/* A square's time to walk into, tenths of a second: the pace's step (the referee's, its summary's gstep), more uphill
+** (half again a foot of rise), a little more steeply downhill (a quarter a foot past the first), more on steps (half
+** again); a slower pace's (a slow walk's: feeling the way in the dark) times as many */
 static unsigned __fastcall__ cost (int dz, unsigned char steps)
 {
     unsigned base = pst, c = base;
@@ -648,11 +647,12 @@ void __fastcall__ s_go_to (unsigned x, unsigned y)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ---- Climbing a ledge (HarnMaster's Climbing, Skills 8: feet of progress a test, a test a round, the game's
-** choice; a hard climb, rough stone: 20 feet on a critical success, 10 on a success, 5 back on a marginal failure,
+/* ---- Climbing a ledge (the referee's P_CLIMB: feet of progress a test, a test a round, the game's choice, HOUSE.md;
+** a hard climb, rough stone: 20 feet on a critical success, 10 on a success, 5 back on a marginal failure,
 ** and on a critical failure a fall, the referee's harm); or jumping down one */
 
-#define ROUND_T         100                     /* Tenths: a round */
+#define ROUND_T         HUB->round              /* Tenths: a round, the ruleset's (RS_HELLO's: the hub's header in
+                                                **   the window) */
 
 #pragma code-name (push, "SW2CODE")
 #pragma rodata-name (push, "SW2RODATA")
@@ -1438,7 +1438,7 @@ void __fastcall__ s_start (const char* dir)
 #pragma rodata-name (pop)
 
 /* ---- Digging (DUNGEON.md: changing the dungeon): a wall or the rock beside the character, or a shaft down through
-** its floor; a spell of work at a time (ten minutes), the referee's test of it (P_DIG: HarnMaster's Mining) the feet
+** its floor; a spell of work at a time (ten minutes), the referee's test of it (P_DIG: the house's tools) the feet
 ** it makes (a critical success three, a success two, a marginal failure one, a critical failure none), loud (a noise
 ** each spell, for the denizens); through, the square's a passage, or the shaft a way down to the stratum below (a
 ** link, both its ends: the stratum below grown if no one has been there; or solid rock beneath, if the stratum

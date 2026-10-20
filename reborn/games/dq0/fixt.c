@@ -196,7 +196,7 @@ static void __fastcall__ portal_far (const struct portal* p, unsigned char d)
         add (matname[p->mat & 3]);
     }
     add (", some ");
-    addn (5 * d);
+    addn (SQ_FT * d);
     add (" feet off");
     add (p->state & PS_WRECKED ? ", broken down." : k == PK_PORTCULLIS ? (p->state & PS_OPEN ? ", raised." :
          ", down.") : p->state & PS_OPEN ? ", standing open." : ".");
@@ -244,8 +244,8 @@ void __fastcall__ o_portal_look (const struct portal* p, signed char g)
     add (" high");
     if (k == PK_DOOR || k == PK_PORTCULLIS || (k == PK_WINDOW && (p->parts & PP_SHUTTERS))) {
         add (k == PK_WINDOW ? "; its shutters of wood, " : k == PK_PORTCULLIS ? "; its bars " : ", ");
-        addn (p->thick);
-        add (p->thick == 1 ? " inch thick." : " inches thick.");
+        addn (p->thick / TH_IN);
+        add (p->thick == TH_IN ? " inch thick." : " inches thick.");
     } else {
         add (".");
     }
@@ -266,7 +266,7 @@ void __fastcall__ o_portal_look (const struct portal* p, signed char g)
         }
         if (p->lock || (p->state & PS_LOCKED)) {
             add (" It has a lock: ");
-            add (g < G_MS ? "of what sort, you can't tell." : p->lock <= 2 ? "a simple one." : p->lock <= 5 ?
+            add (g < G_MS ? "of what sort, you can't tell." : p->lock <= 4 ? "a simple one." : p->lock <= 10 ?
                  "a sound one." : "an intricate one.");
         }
         add (p->state & PS_WRECKED ? " It's been broken down, and hangs in pieces." : p->state & PS_OPEN ?

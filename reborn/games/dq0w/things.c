@@ -862,13 +862,13 @@ void s_list (void)
     load = 0;
     contents (IW_ACTOR, 0, 0);
     put (" In all, ");                          /* (Its load: the referee's encumbrance of it, the UI's to word) */
-    put (utoa ((load + 2) / 4, b, 10));
+    put (utoa ((load + WT_LB / 2) / WT_LB, b, 10));
     put (" lb.");
 }
 
 /* ---- A search for what's concealed about the character (on the squares it sees, within SEARCH_R): the referee's
-** test for each (its search, at the concealment's difficulty: two steps of it each, from +2), the ones found no
-** longer hidden, and named in the hub's text; but what's hidden by magic (found by magical means only) */
+** test for each (its search, at the concealment's difficulty: its steps worse), the ones found no longer hidden,
+** and named in the hub's text; but what's hidden by magic (found by magical means only) */
 #define SEARCH_R        3
 unsigned char s_search (void)
 {
@@ -899,7 +899,7 @@ unsigned char s_search (void)
         r->actor = 0;
         r->a = P_SEARCH;
         r->b = HIDE_MECHANICAL;
-        r->steps = 2 - 2 * rec.hide;
+        r->steps = -(signed char) rec.hide;
         r = hub_ask (SLOT_UI);
         g = r->grade;
         r->state = REQ_FREE;
@@ -918,7 +918,7 @@ unsigned char s_search (void)
 
 /* ---- A thing looked at closely (carried, or seen): what it truly is, in the request, for the appraiser's judgement
 ** (the UI's, by the referee's test of the craft that knows it); and how far off it is, in squares (0 carried), its
-** kind's size above it (the request's to: the UI's, what it makes out at a distance) */
+** kind's seen above it (how far off it's made out: the request's to, the UI's, what it makes out at a distance) */
 unsigned char __fastcall__ s_describe (const char* name)
 {
     const struct kind* k;
@@ -946,7 +946,7 @@ unsigned char __fastcall__ s_describe (const char* name)
     r->value = k->value;
     r->size = rec.size;
     r->thick = rec.thick;
-    r->to = k->size << 8 | seen_d;
+    r->to = k->seen << 8 | seen_d;
     return IR_OK;
 }
 
@@ -1206,8 +1206,9 @@ void __fastcall__ s_lay_body (unsigned char kind, unsigned char sn, unsigned x, 
 }
 
 /* (Part 13's: a rare command's) Hidden where the character stands (the user: hiding is a skill, Concealment; a thing's difficulty to find by the
-** method's quality and the concealer's skill): its difficulty, the method's 1 (a floor's dust and corners) and the
-** referee's test's (rs.h's P_CONCEAL); known to the character, who hid it */
+** method's quality and the concealer's skill): its difficulty, in steps, the referee's test's (rs.h's P_CONCEAL: 12
+** at a critical success, 6 a marginal one, 2 a marginal failure; at a critical failure 0, a floor's dust and corners
+** only); known to the character, who hid it */
 unsigned char __fastcall__ drop (const char* name);
 unsigned char __fastcall__ s_hide (const char* name)
 {
@@ -1228,7 +1229,7 @@ unsigned char __fastcall__ s_hide (const char* name)
     r = hub_ask (SLOT_UI);
     g = r->grade;
     r->state = REQ_FREE;
-    d = 1 + (g == G_CS ? 6 : g == G_MS ? 3 : g == G_MF ? 1 : 0);
+    d = g == G_CS ? 12 : g == G_MS ? 6 : g == G_MF ? 2 : 0;
     item_at (dropped)->flags |= I_HIDDEN | I_KNOWN;
     item_at (dropped)->hide = d;
     hub_map (0);
@@ -1320,8 +1321,8 @@ static void __fastcall__ o_flags (unsigned n, unsigned char set, unsigned char c
 static unsigned char __fastcall__ o_fits (unsigned n, unsigned c)
 {
     static const struct kind* k;
-    static unsigned j;
-    static unsigned char kf, form, lit, cf, keeps, room, bear, slots;
+    static unsigned j, bear;
+    static unsigned char kf, form, lit, cf, keeps, room, slots;
 
     k = KIND (n);
     kf = k->flags;
@@ -1356,7 +1357,7 @@ static unsigned char __fastcall__ o_fits (unsigned n, unsigned c)
     if (m1 (bulk_in, c) + m1 (bulk_of, n) > room) {
         return SA_NO_ROOM;
     }
-    return m2 (weight_in, IW_ITEM, c) + m1 (weight_of, n) > bear * 4 ? SA_TOO_HEAVY : 0;
+    return m2 (weight_in, IW_ITEM, c) + m1 (weight_of, n) > bear ? SA_TOO_HEAVY : 0;
 }
 
 /* The other thing (iq's into: carried, or within reach), named in yn: its number; else 0, its words why */

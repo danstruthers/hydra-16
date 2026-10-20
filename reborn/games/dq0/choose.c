@@ -105,7 +105,7 @@ static void __fastcall__ named (unsigned char k, unsigned char n)
                 break;
             }
             add (", ");
-            add (utoa (5 * apart (px[k], py[k]), b, 10));
+            add (utoa (SQ_FT * apart (px[k], py[k]), b, 10));
             add (" feet off");
             break;
         }
