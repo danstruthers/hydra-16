@@ -66,7 +66,7 @@ const at = (...p) => path.join(ROOT, ...p);
 const atBase = (...p) => path.join(base.ROOT, ...p);
 
 const tool = base.tool;
-const CA65 = tool('ca65'), LD65 = tool('ld65'), CC65 = tool('cc65'), AR65 = tool('ar65');
+const CA65 = tool('ca65'), LD65 = tool('ld65'), CC65 = tool('cc65'), AR65 = tool('ar65'), OD65 = tool('od65');
 
 // cc65's home: $CC65_HOME, else the folder above the one its tools are in
 function cc65Home() {
@@ -276,9 +276,55 @@ function cprog(dir, objdir, out, extra) {
   if (fs.existsSync(own)) partsChecked(csources(dir), objdir);
   run(LD65, ['-C', fs.existsSync(own) ? own : at('sdk', 'c', 'hydra.cfg'), '-o', out, '-m', path.join(objdir, name + '.map'), '-Ln', path.join(objdir, name + '.lbl'),
     ...objs, at('obj', 'sdk', 'c', 'hydra.lib')]);
+  exportsOf.set(name, writeExports(path.join(objdir, name + '.map'), out.replace(/\.hyx$/, '') + '.exp'));
   const data = fs.readFileSync(out);
   check.checkModule(name, data, 0x0800);
   return data;
+}
+
+// A C program's exports by name, for the bank programs it calls (bankprog.h: their imports found in them as they're
+// loaded): NAME.exp beside NAME.hyx, from its link's map: "BX", 1, then each its name's length, its name and its
+// address (two bytes), a 0 after the last.  OUT: the names (exportsOf keeps each program's, for buildChild's check)
+const exportsOf = new Map();
+function writeExports(map, out) {
+  const t = fs.readFileSync(map, 'latin1'), a = t.indexOf('Exports list by name:'), b = t.indexOf('Exports list by value:');
+  const parts = [Buffer.from([0x42, 0x58, 1])], names = new Set();
+  for (const [, n, v] of t.slice(a, b).matchAll(/([A-Za-z_.][\w.]*)\s+([0-9A-F]{6})\s+R\w*/g)) {
+    const x = parseInt(v, 16);
+    if (names.has(n) || n.length > 31 || x > 0xFFFF) continue;
+    names.add(n);
+    parts.push(Buffer.from([n.length]), Buffer.from(n, 'latin1'), Buffer.from([x & 255, x >> 8]));
+  }
+  parts.push(Buffer.from([0]));
+  fs.writeFileSync(out, Buffer.concat(parts));
+  return names;
+}
+
+// A bank program (a child: sdk/c/include/bankprog.h, sdk/c/child.cfg), dir's .c and .s files, into objdir/NAME.bp:
+// an o65 module at $8000, its imports what its objects use and don't have (od65's --dump-imports), its exports
+// their globals (--dump-exports); checked against each caller its parents file names (its exports: exportsOf), the
+// build failing if one hasn't something the child uses.  OUT: its file's bytes
+function buildChild(dir, objdir) {
+  const name = path.basename(dir), od = path.join(objdir, name);
+  const objs = compileC(csources(dir), od);
+  const names = (opt, re) => [...new Set(objs.flatMap(o => [...execFileSync(OD65, [opt, o], { encoding: 'latin1' }).matchAll(re)].map(m => m[1])))];
+  const exps = names('--dump-exports', /Name:\s+"([^"]+)"/g), own = new Set(exps);
+  const imps = names('--dump-imports', /Name:\s+"([^"]+)"/g).filter(n => !own.has(n));
+  const list = [...exps.map(n => 'export = ' + n), ...imps.map(n => 'import = ' + n)];
+  const cfg = fs.readFileSync(at('sdk', 'c', 'child.cfg'), 'latin1').replace(', IMPORTS_AND_EXPORTS;', list.length ? ', ' + list.join(', ') + ';' : ';');
+  fs.writeFileSync(path.join(od, name + '.cfg'), cfg);
+  const out = path.join(objdir, name + '.bp');
+  run(LD65, ['-C', path.join(od, name + '.cfg'), '-o', out, ...objs]);   // (No map: ld65's fails on an o65's imports)
+  const parents = path.join(dir, 'parents');
+  if (fs.existsSync(parents)) {
+    for (const p of fs.readFileSync(parents, 'latin1').split(/\s+/).filter(Boolean)) {
+      const has = exportsOf.get(p);
+      if (!has) throw new Error('bank program ' + name + ': its caller ' + p + ' isn\'t built (or isn\'t a C program)');
+      const lack = imps.filter(n => !has.has(n));
+      if (lack.length) throw new Error('bank program ' + name + ': its caller ' + p + ' hasn\'t ' + lack.join(', '));
+    }
+  }
+  return fs.readFileSync(out);
 }
 
 // bin/sdk/asm: the assembly SDK, to take away: sdk/asm's files, the generated hydra.inc, the samples' sources
@@ -298,7 +344,7 @@ function sdk() {
   const c = at('bin', 'sdk', 'c');
   fs.rmSync(c, { recursive: true, force: true });
   for (const d of ['include', 'lib', 'samples']) mkdir(path.join(c, d));
-  for (const f of ['README.md', 'hydra.cfg']) fs.copyFileSync(at('sdk', 'c', f), path.join(c, f));
+  for (const f of ['README.md', 'hydra.cfg', 'child.cfg']) fs.copyFileSync(at('sdk', 'c', f), path.join(c, f));
   for (const f of fs.readdirSync(at('sdk', 'c', 'include'))) fs.copyFileSync(at('sdk', 'c', 'include', f), path.join(c, 'include', f));
   fs.copyFileSync(at('obj', 'sdk', 'c', 'hydra.lib'), path.join(c, 'lib', 'hydra.lib'));
   for (const d of fs.readdirSync(at('sdk', 'c', 'samples'), { withFileTypes: true }).filter(d => d.isDirectory())) {
@@ -373,6 +419,11 @@ function build(opt = {}) {
       const make = at('games', d.name, 'make.js');                                                          //   it has one
       if (fs.existsSync(make)) require(make).build({ dir: at('games', d.name), objdir: at('obj', 'games', d.name), say });
     }
+  const children = {};                                  // The bank programs (children: bankprog.h), their callers
+  for (const [src, od] of [[at('tests', 'bank'), at('obj', 'tests')], [at('bank'), at('obj', 'bank')]])   //   built:
+    if (fs.existsSync(src))                                                                                 //   the tests',
+      for (const d of fs.readdirSync(src, { withFileTypes: true }).filter(d => d.isDirectory()))           //   then the
+        children[d.name] = buildChild(path.join(src, d.name), od);                                         //   system's
   const room = headroom(Object.keys(games));            // (Their room: a dq0 task short of HEADROOM fails the build)
   say(room.text);
   if (room.faults.length) throw new Error('a game\'s task short of main RAM (HEADROOM ' + HEADROOM + '): ' + room.faults.join('; '));

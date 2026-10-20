@@ -83,6 +83,9 @@ bin/cat             ../obj/programs/cat.hyx     ;   each left most of its 16K ba
 bin/ls              ../obj/programs/ls.hyx
 bin/ps              ../obj/programs/ps.hyx
 bin/pwd             ../obj/programs/pwd.hyx
+bin/bankrun         ../obj/programs/bankrun.hyx ; A bank program run from the shell (bankprog.h), with its exports
+lib/bank/bankrun.exp ../obj/programs/bankrun.exp
+lib/bank/hello.bp   ../obj/bank/hello.bp        ; A bank program to try with it
 bin/mkdir           ../obj/programs/mkdir.hyx
 bin/rmdir           ../obj/programs/rmdir.hyx
 bin/rm              ../obj/programs/rm.hyx

@@ -180,6 +180,39 @@ ca65 --cpu 65C02 hello.s
 ld65 -C sdk/c/hydra.cfg -o hello.hyx hello.o sdk/c/lib/hydra.lib
 ```
 
+## Bank programs
+
+A bank program (a child) is a subroutine kept in a RAM bank of its caller's own, not a task: it's called like any
+function, on the caller's C stack, and works on the caller's RAM.  A program has some 30K of main RAM; its children
+each have a bank's 8K more, loaded from a file the first time they're called, and kept loaded till a bank is wanted
+(`bankprog.h`):
+
+```c
+#include <bankprog.h>
+
+struct bank_fn* make;
+int n;
+
+bank_setup ("/lib/me.exp", 0x60, 16);           /* Once: my exports, and my children's zero page */
+make = bank_fn ("/lib/maker.bp", "make");      /* maker.bp's make (NULL: bank_err says why) */
+n = bank_call (make, int (*)(char*, int), buf, 10);
+```
+
+A child's folder (its `.c` and `.s` files) builds into `NAME.bp`: an o65 module linked at $8000
+(`sdk/c/child.cfg`), what it uses of its caller (cc65's runtime's helpers, the caller's functions and data) its
+imports, its globals its entries.  In this repository a child is `bank/NAME` (its `parents` file names the
+programs that call it: the build fails if one of them hasn't something the child uses), and every C program's
+exports, `NAME.exp`, are written beside its `NAME.hyx`.  As a child's loaded its imports are found in its
+caller's exports by name, its own zero page put where `bank_setup` says, its text and data read into the bank, its
+BSS cleared.  A call maps the child's bank at $8000 (the bank register alone: the hub's shared bank comes back as it
+was) and costs some 60 cycles more than a JSR; when the task has no bank to spare (`BANK_MAX` children, or the
+kernel's banks all taken) the child called least lately is given up, and loaded again as it's next called.
+
+What a child can't do: it has the $8000 window while it runs, so it can't map another bank there, nor call another
+child; it can call only its caller's main RAM's code (not its overlays nor its swapped parts); its code, data and BSS
+fit one bank.  `bankrun [-n N] CHILD [ARG ...]` runs one from the shell (its `run (int argc, char** argv)`), lending
+it cc65's whole runtime and the C library's usual functions: `bankrun /rom/lib/bank/hello.bp one two`.
+
 ## Running it
 
 As an assembly program is run (`sdk/asm/README.md`): copy it to a card or the RAM disk, and type its path, or its
