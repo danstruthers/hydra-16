@@ -46,14 +46,16 @@ function choose(r, seen) {
     return r.pick(['go through the ' + w, 'enter the ' + w, 'go to the ' + w, 'go through the ' + w, 'approach the ' + w]);
   }
   if (den && k < 42) return r.pick(['attack the ' + den, 'kick the ' + den, 'talk to the ' + den, 'calm the ' + den, 'threaten the ' + den,
-    'look at the ' + den, 'flee', 'defend', 'back away ' + r.pick(['n', 's', 'e', 'w'])]);
+    'look at the ' + den, 'flee', 'defend', 'back away ' + r.pick(['n', 's', 'e', 'w']),
+    'target the ' + den, 'throw the dagger at the ' + den, 'throw the ' + thing + ' hard at the closest ' + den, 'attack', 'target']);
   if (k < 45) return r.pick([...DIRS, ...DIRS, 'go ' + r.pick(DIRS), 'run ' + r.pick(DIRS), 'walk ' + r.pick(DIRS), 'go through the door',
     'go to the door', 'enter the door', 'climb the stairs', 'go down the stairs', 'go up', 'turn ' + r.pick(['left', 'right', 'around']),
     'face ' + r.pick(['north', 'south', 'east', 'west']), 'approach the ' + fixture, 'step ' + r.pick(['left', 'right', 'back'])]);
   if (k < 65) return r.pick(['look', 'look', 'l', 'look ' + r.pick(DIRS), 'x room', 'examine the ' + fixture, 'search', 'listen',
     'look around', 'look at the ' + thing, 'examine the ' + thing]);
   if (k < 80) return r.pick(['inventory', 'i', 'get the ' + thing, 'take the ' + thing, 'drop the ' + thing, 'pick up the ' + thing,
-    'light the torch', 'put out the torch', 'hold the dagger', 'put the ' + thing + ' in the backpack', 'eat the rations', 'drink the waterskin']);
+    'light the torch', 'put out the torch', 'hold the dagger', 'put the ' + thing + ' in the backpack', 'eat the rations', 'drink the waterskin',
+    'take', 'take all', 'take it', 'drop', 'drop it', 'take the closest', 'clear target']);
   if (k < 90) return r.pick(['open the door', 'close the door', 'unlock the door', 'force the door', 'kick the door', 'break the window',
     'raise the portcullis', 'lower the portcullis', 'disarm the trap', 'bar the door', 'climb through the window']);
   return r.pick(['wait', 'wait', 'wait 5 minutes', 'map', 'status', 'sheet', 'rest', 'hide', 'sneak ' + r.pick(['n', 's', 'e', 'w']),
@@ -110,6 +112,12 @@ function one(s, turns, verbose) {
   if (res.failures.some(f => /^missing:/.test(f)))
     problems.push('hung: no prompt after ' + JSON.stringify(typed[typed.length - 1] || '(the start)') + ' (turn ' + typed.length + ')');
   if (shellAt >= 0 && (quitAt < 0 || shellAt < quitAt) && !dead) problems.push('the game ended by itself after ' + JSON.stringify(typed[typed.length - 1] || '(the start)'));
+  // (The start, as the first command finds it: in a room by the stairs up to the way out, what the character perceives
+  // says, sim/lib/dq0meaning.js's; a passage's dead end is a dead-end start: tests.js's dq0start0 and dq0start1 hold
+  // twelve of the seeds that were, the soak the rest)
+  const s0 = res.m.dq0 && res.m.dq0.games.length ? res.m.dq0.games[0].snaps[0] : null;
+  if (s0 && s0.sight && (s0.sight.where !== 0 || !s0.sight.open.some(w => w.kind === 'O_WAY_OUT' && w.rel === 255)))
+    problems.push('a dead-end start: not in a room by the way out (' + (s0.sight.where ? 'a passage' : 'no way out at its feet') + ')');
   const mins = [...game.matchAll(/(\d+) min\b/g)].map(m => +m[1]);
   let still = 0, most = 0;
   for (let i = 1; i < mins.length; i++) { still = mins[i] === mins[i - 1] ? still + 1 : 0; most = Math.max(most, still); }

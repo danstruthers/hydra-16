@@ -271,6 +271,37 @@ static void words_lines (void)
     words_of (TK_LIGHT, who);
 }
 
+/* A faction's others ("NAME h, NAME w ...", the bestiary's), those of the theme's alone: popgen's (dq0d/pop.h), or - */
+static const char* __fastcall__ others_of (const struct fac* f)
+{
+    static char o[sizeof f->others];
+    const char* p = f->others;
+    const char* e;
+    unsigned char k, n, i;
+
+    for (i = 0; *p && *p != '-'; ) {
+        for (e = p; *e && *e != ','; ++e) {
+        }
+        for (n = 0; p + n < e && p[n] != ' '; ++n) {
+        }
+        for (k = 0; k < nf && (strlen (fa[k].name) != n || strncmp (fa[k].name, p, n)); ++k) {
+        }
+        if (k < nf) {
+            if (i) {
+                o[i++] = ',';
+                o[i++] = ' ';
+            }
+            while (p < e) {
+                o[i++] = *p++;
+            }
+        }
+        for (p = e; *p == ',' || *p == ' '; ++p) {
+        }
+    }
+    o[i] = 0;
+    return i ? o : "-";
+}
+
 static void dens_lines (void)
 {
     static char r[8];
@@ -289,7 +320,7 @@ static void dens_lines (void)
         val (f->leader ? beasts[f->leader - 1].key : "-");
         valn (f->lair);
         val (f->att);
-        val (f->others);
+        val (others_of (f));
         end_line ();
     }
 }

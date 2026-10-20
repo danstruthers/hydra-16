@@ -17,12 +17,14 @@ ovx:        .res        1
 
             .include    "../dq0/swap.inc"
 
-            SWPART      1, 1                ; The kinds read in, the populations, the placing, the records kept
+            SWPART      1, 1                ; The populations, the placing
             SWPART      2, 1                ; The character's ways with a denizen (the UI's sway), and harmed
             SWPART      3, 2                ; The records paged
-            SWPART      4, 2                ; The regions round the character wanted, the records kept
+            SWPART      4, 2                ; The regions round the character wanted, the records kept; the start
+                                            ;   (the kinds read in, popgen loaded);
+                                            ;   an actor made, retired, killed, its kin dismayed, an ally come along,
+                                            ;   a cornered one's dart
 
-            SWFN        kinds_load, 1
             SWFN        populate, 1
             SWFN        place, 1
             SWFN        keep, 4
@@ -31,3 +33,10 @@ ovx:        .res        1
             SWFN        dneed, 4
             SWFN        harmed, 2
             SWFN        sway, 2
+            SWFN        start, 4
+            SWFN        enlist, 4
+            SWFN        retire, 4
+            SWFN        killed, 4
+            SWFN        dismay, 4
+            SWFN        along, 4
+            SWFN        dart, 4

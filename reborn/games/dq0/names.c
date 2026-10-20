@@ -50,7 +50,6 @@ typedef char ob_fits[360 + INMAX + 1 <= sizeof ob ? 1 : -1];
 static char* wd[16];
 static unsigned char nw;
 static char dn[NAME_LEN];                       /* A name as it's said */
-static struct pcmd pc;                          /* (The parser's, of a name: a word it needs?) */
 
 #define NM_ANY          0xFF                    /* (find's: any entry in use) */
 
@@ -305,12 +304,13 @@ static unsigned char __fastcall__ taken (const char* k, struct tname* self)
             return 1;
         }
     }
-    if (!strchr (k, ' ') && strlen (k) < sizeof pc.word) {     /* (A word the parser needs: a word of a command) */
+    if (!strchr (k, ' ') && strlen (k) < sizeof cmd.obj.word) {    /* (A word the parser needs: a word of a command) */
         cq_drop ();                             /* (The line's, posted as it was typed, let go: asked again if
                                                 **   it's a command's) */
-        cq_cmd (&pc, k);
+        cq_cmd (k);
         cq_drop ();
-        if (pc.verb != V_MOVE || pc.dir != 0xFF || pc.obj || stricmp (pc.word, k)) {
+        if (!(cmd.flags & CF_NOVERB) || cmd.dir != 0xFF || cmd.obj.kind || cmd.obj.sel || cmd.n ||
+            stricmp (cmd.obj.word, k)) {
             msg ("That name is taken: it's a word your commands need.");
             return 1;
         }

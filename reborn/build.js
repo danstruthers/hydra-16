@@ -300,12 +300,10 @@ function writeExports(map, out) {
   return names;
 }
 
-// A child's o65 file with only the relocations its loader has work in (bankprog.s's relocate): an import's (segment 0)
-// and the zero page's (5); a child runs where it was linked, $8000, so its own segments' (text, data, BSS) add 0 to
-// what's there, and they're most of its file (a READ from a card costs some 340 cycles a byte): each table rebuilt,
-// its offsets from the entries kept (255: 254 on); and an import's HIGH entry given the low byte ld65 leaves out (the
-// o65 spec has one after every HIGH entry, and the loader reads one: without it the table's misread, the child
-// refused).  OUT: the file's bytes
+// A child's o65 file as the o65 spec has it: an import's HIGH relocation entry given the low byte ld65 leaves out
+// (the spec has one after every HIGH entry, whatever its segment, and the loader reads one: without it the table's
+// misread from there on, and the child refused, BE_FORMAT); every other entry kept as it is, so a loader may put the
+// child anywhere.  OUT: the file's bytes
 function childRelocs(bp) {
   const w = o => bp[o] | bp[o + 1] << 8;
   let p = 26;
@@ -317,24 +315,16 @@ function childRelocs(bp) {
   const head = bp.subarray(0, p), tables = [];
   for (let k = 0; k < 2; k++) {                         // (Its text's table, then its data's)
     const out = [];
-    let at = -1, last = -1;
     for (;;) {
       let c = bp[p++];
+      out.push(c);
       if (!c) break;
-      while (c === 255) { at += 254; c = bp[p++]; }
-      at += c;
+      while (c === 255) { c = bp[p++]; out.push(c); }
       const t = bp[p++], seg = t & 15, extra = (seg === 0 ? 2 : 0) + ((t & 0xE0) === 0x40 && seg !== 0 ? 1 : 0);
-      const more = bp.subarray(p, p + extra);
+      out.push(t, ...bp.subarray(p, p + extra));
       p += extra;
-      if (seg !== 0 && seg !== 5) continue;
-      for (let d = at - last; ; d -= 254) { if (d <= 254) { out.push(d); break; } out.push(255); }
-      out.push(t, ...more);
-      if (seg === 0 && (t & 0xE0) === 0x40) out.push(0);     // (An import's HIGH: ld65 writes no low byte after it, the
-                                                    //   o65 spec and bankprog.s's relocate one; its offset's is 0, the
-                                                    //   guard's, so the 0 put there's the true one)
-      last = at;
-    }
-    out.push(0);
+      if (seg === 0 && (t & 0xE0) === 0x40) out.push(0);     // (An import's HIGH: its low byte, 0, the guard's: an
+    }                                                   //   offset's low byte is 0, buildChild's check)
     tables.push(Buffer.from(out));
   }
   return Buffer.concat([head, ...tables, bp.subarray(p)]);

@@ -11,9 +11,10 @@ const tables = require('../../sim/tools/commandtables.js');
 const { loadRules } = require('../../sim/tools/commandcompile.js');
 const words = require('../../sim/tools/commandwords.js');
 
-const DAT_VERSION = 2;                                            // (dq0c.s's DAT_VERSION)
+const DAT_VERSION = 3;                                            // (dq0c.s's DAT_VERSION)
 const SAME = ['HUB_MAGIC', 'HUB_VERSION', 'HUBO_SEM', 'HUBO_TASK', 'HUBO_BEAT', 'HUBO_CQ', 'HUBO_QUIT', 'CQO_BANK',
-  'CQO_LEN', 'CQO_RES', 'CQO_FACE', 'CQ_WORDS', 'CQ_PCMD', 'PCMD_SIZE', 'REQ_FREE', 'REQ_POSTED', 'REQ_DONE', 'CQ_NONE', 'CQ_MATCH', 'CQ_WORLD'];
+  'CQO_LEN', 'CQO_RES', 'CQO_FACE', 'CQ_WORDS', 'CQ_CMD', 'CMD_SIZE', 'REQ_FREE', 'REQ_POSTED', 'REQ_DONE', 'CQ_NONE', 'CQ_MATCH', 'CQ_WORLD'];
+const MEAN = ['CM_SIZE', 'CF_NOVERB', 'CF_HALF', 'CF_UNSAID'];                 // (cmdmean.s's, hub.h's: CMD_SIZE, CF_*)
 
 // The grammar table's counts and words (its first part): their bytes (commandtables.js's layout: 11 bytes, then each
 // word its length and its letters, 5 bits each)
@@ -57,18 +58,41 @@ function build({ dir, objdir, say = () => {} }) {
   const w = words.encode(words.load(), tables.indexWords(i, g));
   const h = grammarHead(g), head = g.subarray(0, h), body = g.subarray(h);
   const u16 = n => [n & 255, n >> 8];
-  const hdr = Buffer.from([0x44, 0x51, 0x30, 0x43, DAT_VERSION, ...[head, i, a, w, body].flatMap(x => u16(x.length))]);
-  const dat = Buffer.concat([hdr, head, i, a, w, body]);
+  const hdr = Buffer.from([0x44, 0x51, 0x30, 0x43, DAT_VERSION, ...[head, i, a, body, w].flatMap(x => u16(x.length))]);
+  const dat = Buffer.concat([hdr, head, i, a, body, w]);
   const lim = incNames(fs.readFileSync(path.join(dir, 'dq0c.s'), 'latin1'));
-  const ram = hdr.length + head.length + i.length + a.length + w.length;
+  const mean = incNames(fs.readFileSync(path.join(dir, 'cmdmean.s'), 'latin1'));
+  const bad = MEAN.filter(n => mean[n] === undefined || mean[n] !== (n === 'CM_SIZE' ? hub.CMD_SIZE : hub[n]));
+  if (bad.length) throw new Error('games/dq0c/cmdmean.s and games/dq0/hub.h differ: ' + bad.join(', '));
+  actionsSame(path.join(dir, '..', 'dq0'));
+  const ram = hdr.length + head.length + i.length + a.length;
   if (hdr.length !== lim.DAT_HEAD) throw new Error('dq0c.dat: its header ' + hdr.length + " bytes, dq0c.s's DAT_HEAD " + lim.DAT_HEAD);
   if (!(ram <= lim.TABLES_MAX)) throw new Error('obj/games/dq0c.dat: ' + ram + " bytes for dq0c's RAM, more than dq0c.s's TABLES_MAX (" + lim.TABLES_MAX + ')');
   if (!(body.length <= lim.RULES_MAX)) throw new Error('obj/games/dq0c.dat: the rules ' + body.length + " bytes, more than dq0c.s's RULES_MAX (" + lim.RULES_MAX + ')');
+  if (!(w.length <= lim.WORDS_MAX)) throw new Error('obj/games/dq0c.dat: the words ' + w.length + " bytes, more than dq0c.s's WORDS_MAX (" + lim.WORDS_MAX + ')');
   fs.mkdirSync(objdir, { recursive: true });
   fs.writeFileSync(path.join(objdir, '..', 'dq0c.dat'), dat);
   say('dq0c.dat: ' + dat.length + ' bytes: in the RAM ' + ram + ' (the grammar\'s words ' + head.length + ', its index ' + i.length +
-    ', the aliases ' + a.length + ', the game\'s words ' + w.length + '; room for ' + lim.TABLES_MAX + '), in a bank the rules ' +
-    body.length + ' (room for ' + lim.RULES_MAX + ')');
+    ', the aliases ' + a.length + '; room for ' + lim.TABLES_MAX + '), in banks the rules ' + body.length + ' (room for ' +
+    lim.RULES_MAX + ') and the game\'s words and verbs ' + w.length + ' (room for ' + lim.WORDS_MAX + ')');
+}
+
+// actions.h's enum held to the catalogue (commands.actions' [actions], in order, VB_NONE first, NACTIONS last)
+function actionsSame(game) {
+  const cat = fs.readFileSync(path.join(game, 'commands.actions'), 'latin1').split(/\r?\n/);
+  const want = ['VB_NONE'];
+  let on = false;
+  for (const l of cat) {
+    if (l.startsWith('[')) { on = l.trim() === '[actions]'; continue; }
+    if (on && /^VB_/.test(l)) want.push(l.split(/\s+/)[0]);
+  }
+  want.push('NACTIONS');
+  const h = fs.readFileSync(path.join(game, 'actions.h'), 'latin1').replace(/\/\*[\s\S]*?\*\//g, ' ');
+  const e = h.match(/enum\s*\{([^}]*)\}/);
+  const have = e ? e[1].split(',').map(s => s.trim()).filter(Boolean) : [];
+  const at = want.findIndex((n, k) => have[k] !== n);
+  if (at >= 0 || have.length !== want.length) throw new Error('games/dq0/actions.h and commands.actions differ' +
+    (at >= 0 ? ': ' + want[at] + ' (actions.h has ' + have[at] + ')' : ''));
 }
 
 module.exports = { build };

@@ -1,6 +1,6 @@
 # 1crypt.txt - (dq0) a stand-in theme: the crypt of a dead king.  The first of the themes (their files' names in
 # order: the first is the one the tests' small seeds pick, theme.h), and the one the dungeon was grown by before
-# themes were data: its strata's styles, its rooms' words and its light the same, all the bestiary in it.  make.js
+# themes were data: its strata's styles, its rooms' words and its light the same, all the bestiary of then in it.  make.js
 # makes the themes the game's lib/dq0/dq0t.dat (theme.h's struct theme a theme, its words after), which it reads
 # as it starts.  The real themes are the user's to write; these are for the engine.
 #
@@ -89,7 +89,7 @@ stratum  | Deep Halls | bn | keep
 stratum  | the King's Rest | bn | crypt
 rooms    | chamber | hall | cell | vault | crypt | gallery | cave | storeroom
 light    | lit by torches in iron brackets
-denizens | *
+denizens | rat spider ghoul skel bear kobold
 
 region   | the Barrow Hill | hills | limestone | springs | mild
 people   | hill-kings | men | 3 | dressed

@@ -36,7 +36,7 @@ extern struct str st[TSTRATA];
 struct fac {
     char            name[12];
     unsigned char   d0, d1, lair, leader, n;
-    char            kinds[32], att[2], others[48];
+    char            kinds[32], att[2], others[64];   /* (others: the bestiary's, factions.txt's, whole) */
 };
 extern struct fac fa[TFACTIONS];
 extern unsigned char gk;                        /* The goal kind (the data's goal line: 0 ...), 0xFF none */

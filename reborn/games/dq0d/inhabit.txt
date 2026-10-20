@@ -1,0 +1,13 @@
+# inhabit.txt - (dq0d) a theme file's inhabitants, written by hand (pop.h has their lines' format): who lives in the
+# dungeon now, as a history leaves them.  Copied into a game's save folder as theme.txt (before the game's begun:
+# mkdir /ram/g; cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt; dq0 -d /ram/g), its factions are the game's,
+# placed by popgen (bank/popgen) as each stratum's grown, in place of the stand-in's (kinds.txt's, factions.txt's).
+# The history's generator (themegen) writes these lines with the rest of a theme; a theme's other lines are passed
+# over here.
+#
+# faction | name     | kinds      | strata | number | leader  | lair | attitude | others
+faction   | Gnawers  | rat bat    | 0-3    | 40     | -       | 0    | h        | Diggers h, Brigands w
+faction   | Diggers  | kobold rat | 1-4    | 30     | koblord | 2    | u        | Gnawers h, Brigands h,
+            Hollow h
+faction   | Brigands | bandit     | 0-1    | 9      | banlord | 0    | u        | Diggers h
+faction   | Hollow   | skel wight | 2-5    | 24     | shade   | 4    | h        | -

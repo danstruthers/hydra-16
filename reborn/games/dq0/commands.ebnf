@@ -49,23 +49,24 @@
 
 (* ---- Handling things (question 2: CLOSE and OPEN are actions) ---- *)
 <get>            ::= <GET> [ <object> ] [ <from-phrase> ] | <GET> <object> <off-phrase> | <GET> <object> "up"   (* bare: the last thing named, else things near (question 8); "pick the sword up" *)
-<drop>           ::= <DROP> <object> | "put" <object> "down"
+<drop>           ::= <DROP> [ <object> ] | "put" <object> "down"   (* bare: the last thing named *)
 <put>            ::= <PUT> <thing> <put-prep> <object>   (* "put the bar back in its brackets": back, a way, passed over *)
 <put-prep>       ::= "in" | "into" | "inside" | "on" | "onto" | "on top of" | "under" | "against"
 <use>            ::= <USE> <object> [ ( "on" | "with" ) <object> ]
-<equip>          ::= <EQUIP> <object>
-<unequip>        ::= <UNEQUIP> <object> | "put" <object> "away" | "take" <object> "off"   (* "put away the sword", "put the sword away", "take the helm off" *)
+<equip>          ::= <EQUIP> [ <object> ]   (* bare: the last thing named *)
+<unequip>        ::= <UNEQUIP> [ <object> ] | "put" <object> "away" | "take" <object> "off"   (* "put away the sword", "put the sword away", "take the helm off" *)
 <open>           ::= "o" [ <thing> ] [ <manner> ]                (* "open" alone: what's in front *)
 <close>          ::= "close" [ <thing> ] [ <manner> ]           (* "close look" is <DETAIL> <LOOK>, not this *)
 <from-phrase>    ::= "from" <object> | "out" "of" <object>
 <off-phrase>     ::= "off" <object>
 
 (* ---- Fighting ---- *)
-<attack>         ::= <ATTACK> <thing> [ "with" <object> ]
+<attack>         ::= <ATTACK> [ <thing> [ "with" <object> ] ]   (* bare: the target, else the nearest foe *)
 <grapple>        ::= <GRAPPLE> <object> | <THROW> <object> | "put" <object> "in" [ "a" ] ( "head" "lock" | "headlock" )   (* a grapple maneuver: the object is engaged; "toss" and "throw" a creature are grapples too *)
-<throw>          ::= <THROW> [ <object> ] [ <manner> ] <at-phrase>          (* at something: a target *)
-                   | <THROW> [ <object> ] [ <manner> ] <throw-dir>
+<throw>          ::= <THROW> [ <throwing> ] <at-phrase>          (* at something: a target *)
+                   | <THROW> [ <throwing> ] <throw-dir>
                    | <THROW>          (* in a direction: a floor square, distance asked *)
+<throwing>       ::= <manner> [ <object> ] | <object> [ <manner> ]   (* "throw hard the apple", "throw the apple hard" *)
 <throw-dir>      ::= <direction> | "around the corner"
 <shoot>          ::= <SHOOT> [ <object> ] [ <at-phrase> ]   (* "fire the bow at the goblin", "shoot at the goblin", "shoot the goblin" *)
 <load>           ::= <LOAD> <object>
@@ -114,13 +115,14 @@
 (* ---- Objects ---- *)
 <object>         ::= <object-one> { "and" <object-one> }
 <object-one>     ::= <np> | <pronoun> | <me-phrase> | <everything> | <way-out>   (* "the sword and the shield": a list, one command for each *)
+<chosen>         ::= ( "closest" | "nearest" | "largest" | "biggest" | "smallest" | "lead" | <ordinal> ) [ "one" ]   (* "the closest", "the second one": of those it perceives *)
 <way-out>        ::= [ "the" ] "way" "out"          (* the theme's way out of the dungeon *)
-<np>             ::= [ <det> ] [ <selector> ] { <adj> } <head>
+<np>             ::= [ <det> ] ( [ <selector> ] { <adj> } <head> | <chosen> )
 <thing>          ::= <object> [ <lies> ]            (* a thing in the place, and where it lies: "the door ahead to my left" *)
 <lies>           ::= <compass> | <relative>
 <det>            ::= "a" | "an" | "the" | "this" | "that" | "these" | "those" | "its"   (* "my coat": <me-phrase> *)
 <selector>       ::= <number> | "all" | "every" | "each" | "any" | <ordinal>
-                   | "closest" | "nearest" | "largest" | "smallest" | "lead"
+                   | "closest" | "nearest" | "largest" | "biggest" | "smallest" | "lead"
 <head>           ::= { <noun> } <name>                (* every word a thing can be called: "the mail hauberk" (a noun: no adjective, number or ordinal) *)
 <pronoun>        ::= "it" | "them" | "that" | "this" | "one" | "he" | "she" | "him" | "her"   (* "it": the last thing of any kind (question 7); he, she, him, her: the last person named (context "person=") *)
 <me-phrase>      ::= <here-ref> | "my" <np>
@@ -226,7 +228,7 @@
 <lock>           ::= "lock" <thing>
 <unlock>         ::= "unlock" <thing> [ "with" <object> ]
 <fill>           ::= "fill" <object> [ <from-phrase> ]
-<read>           ::= "read" <object>
+<read>           ::= "read" [ <object> ]   (* bare: the last thing named *)
 <taste>          ::= "taste" <object>
 <touch>          ::= ( "touch" | "feel" ) <object>
 (* ---- Defence, fleeing and following ---- *)

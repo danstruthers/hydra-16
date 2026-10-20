@@ -142,6 +142,7 @@ void __fastcall__ hub_ring (unsigned char t)
 #ifndef HUB_NO_QUEUES                           /* (A task that neither sends nor takes intents and events: its room) */
 /* ---- The UI's intents, to the world */
 
+#ifndef HUB_NO_SEND                             /* (A task that only reads the queues: the denizens' room) */
 unsigned char __fastcall__ hub_send (const struct msg* m)
 {
     unsigned char h = HUB->iq_head, n = (h + 1) % IQ_SIZE;
@@ -154,8 +155,9 @@ unsigned char __fastcall__ hub_send (const struct msg* m)
     hub_ring (T_WORLD);
     return 1;
 }
+#endif
 
-#ifdef HUB_ATTACHED                             /* (The world's) */
+#if defined (HUB_ATTACHED) && !defined (HUB_NO_SEND)    /* (The world's) */
 unsigned char __fastcall__ hub_take (struct msg* m)
 {
     unsigned char t = HUB->iq_tail;
@@ -171,7 +173,7 @@ unsigned char __fastcall__ hub_take (struct msg* m)
 
 /* ---- The world's events, to everyone (a reader that falls EQ_SIZE behind loses the oldest) */
 
-#ifdef HUB_ATTACHED                             /* (The world's, the maker's) */
+#if defined (HUB_ATTACHED) && !defined (HUB_NO_SEND)    /* (The world's, the maker's) */
 void __fastcall__ hub_event (const struct msg* m)
 {
     unsigned h = HUB->eq_head;

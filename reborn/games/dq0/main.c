@@ -54,7 +54,7 @@ static unsigned char test_start;
 static unsigned char small;                     /* (dq0 -C: the caches small, the tests') */
 static const char* kit;                         /* (dq0 -k: things more, as the game starts: a tool, ...) */
 static const char* tfile;                       /* (dq0 -t: a theme written by hand) */
-static unsigned char made;                      /* (The theme the game's own, themegen's: theme.h) */
+static unsigned char made;                      /* (The theme to read: 0xFF the game's own, themegen's; theme.h) */
 static const char* savedir;                     /* (dq0 -d: the save's folder) */
 static unsigned char __fastcall__ things (unsigned char op, const char* name);
 static void to_hand (void);
@@ -160,18 +160,27 @@ void __fastcall__ consctl (const char* what)
 #pragma code-name (push, "SW1CODE")
 #pragma rodata-name (push, "SW1RODATA")
 
-#pragma code-name (push, "SW6CODE")
-#pragma rodata-name (push, "SW6RODATA")
+#pragma code-name (push, "SW7CODE")
+#pragma rodata-name (push, "SW7RODATA")
 
-/* A game's own theme (theme.h): its region's history and its theme made by themegen from the game's seed, in the
-** save's folder (or /ram/dq0): theme.txt, and its record, theme.dat; a hand-written theme's (dq0 -t) filled out.  1, or
-** 0 (themegen can't be run, or it failed: a stand-in theme's, as for a small seed).  (Part 6's, part 1 full: its
-** arguments in lb, nothing the game's yet; its own spawn, hub_run being part 1's) */
+/* A game's own theme (theme.h): a game carried on, its save's (Q.theme 0xFF: its folder's); a new one's (a seed of
+** 65,536 or more, or dq0 -t's) its region's history and its theme made by themegen from the game's seed, in the
+** save's folder (or /ram/dq0): theme.txt, and its record, theme.dat; a hand-written theme's (dq0 -t) filled out.  The
+** theme to read (theme.c's): 0xFF the game's own; else a stand-in's, the save's or the seed's second byte's (a small
+** seed's, or themegen can't be run, or it failed).  (Part 7's, part 1 full: its arguments in lb, nothing the game's
+** yet; its own spawn, hub_run being part 1's) */
+static unsigned char resumed;
 unsigned char __fastcall__ s_history (unsigned long seed)
 {
     struct hy_regs r;
     char* p = lb;
 
+    if (resumed) {
+        return Q.theme;
+    }
+    if (!tfile && seed < 65536UL) {
+        return (unsigned char) (seed >> 8);
+    }
     msg ("The place's history is being made ...");
     strcpy (p, "-q");
     strcpy (p += 3, "-s");
@@ -193,10 +202,10 @@ unsigned char __fastcall__ s_history (unsigned long seed)
     r.r[0] = (unsigned) (lb + 300);
     r.r[1] = (unsigned) lb;
     if (hy_call (HY_SPAWN, &r)) {
-        return 0;
+        return (unsigned char) (seed >> 8);
     }
     r.r[0] = 0;                                 /* (Its task in r.a: waited for, its status 0) */
-    return !hy_call (HY_WAIT, &r) && !r.x;
+    return hy_call (HY_WAIT, &r) || r.x ? (unsigned char) (seed >> 8) : 0xFF;
 }
 
 #pragma code-name (pop)
@@ -319,7 +328,7 @@ static void sheet (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    12                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    13                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -337,7 +346,8 @@ static void sheet (void)
                                                 **   the world's now with them: till the release, only a save of this
                                                 **   version is carried on; 11, the ruleset's referee: a game carried
                                                 **   on with the ruleset it was made with; 12, a thing's concealment
-                                                **   in steps, rs.h's scale) */
+                                                **   in steps, rs.h's scale; 13, each denizen's record its faction:
+                                                **   the theme's inhabitants) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
@@ -468,6 +478,7 @@ static void __fastcall__ start (const char* name, unsigned char t, const char* m
 }
 
 static void world_words (void);
+static char gods[112];                          /* (The world's deities' names, read as the game starts: world_words') */
 
 static void __fastcall__ start_world (unsigned long seed, const char* file)
 {
@@ -477,6 +488,13 @@ static void __fastcall__ start_world (unsigned long seed, const char* file)
     int w;
     char* l;
 
+    strcat (libdir, "/dq0g.txt");               /* (Read before any of the game's tasks is begun: the time it takes
+                                                **   theirs alike) */
+    w = open (libdir, O_RDONLY);
+    libdir[strlen (libdir) - 9] = 0;
+    k = read (w, gods, sizeof gods - 1);
+    gods[k < sizeof gods ? k : 0] = 0;
+    close (w);
     if (hub_create (HUB_BANKS)) {
         t_end ();
         hy_exits ("dq0: no shared segment or semaphores for its tasks");
@@ -521,8 +539,7 @@ static void __fastcall__ start_world (unsigned long seed, const char* file)
     hub_call (&HUB->wreq, T_WORLD);
     HUB->wreq.state = REQ_FREE;
     things (IO_TOOLS, "");                      /* (The world's catalogue read in: the theme's kinds after it) */
-    theme_load (made ? 0xFF : resumed ? Q.theme : (unsigned char) (seed >> 8));   /* (The game's own, 0xFF; a
-                                                **   stand-in's: the seed's second byte, theme.h) */
+    theme_load (made);                          /* (The game's own, 0xFF; a stand-in's, theme.h: history's) */
     things (IO_THEME, "");
     world_words ();
     if (!resumed) {                             /* (The character's kit: a new game's, -k's things too) */
@@ -543,7 +560,8 @@ static void __fastcall__ start_world (unsigned long seed, const char* file)
 
 /* The command parser told the world's words: the catalogue's kinds' names (the theme's with them), so a word of its
 ** grammar's is a thing's name too where one's called by it ("drop the pick", "wear the knee boots"; the game's own
-** things, "door", "room", it knows).  None given names, no deities yet */
+** things, "door", "room", it knows); no names given yet; and the world's deities' names, "call on Imma"
+** (libdir/dq0g.txt: the denizens' data's, deities.txt's, spaces between) */
 static void world_words (void)
 {
     static char nm[sizeof CATALOGUE[0].name + 1];
@@ -561,7 +579,13 @@ static void world_words (void)
             n += k + 1;
         }
     }
-    HUB_WINDOW[n] = 0;                          /* (Then the names given and the deities: none) */
+    HUB_WINDOW[n++] = 0;                        /* (Then the names given: none) */
+    HUB_WINDOW[n++] = 0;
+    if (n + (k = strlen (gods)) < CQ_WORDS) {   /* (Then the deities') */
+        memcpy (HUB_WINDOW + n, gods, k);
+        n += k;
+    }
+    HUB_WINDOW[n] = 0;
     hub_map (0);
     HUB->cq.kind = CQ_WORLD;
     HUB->cq.len = n + 1;
@@ -589,12 +613,13 @@ static void stop_world (void)
 #pragma rodata-name (pop)
 
 static unsigned char cq_st;                     /* The line posted to the command parser: none (0), its reply not
-                                                **   taken (CQ_OUT), or taken (CQ_IN: its struct pcmd in CMD_BANK) */
+                                                **   taken (CQ_OUT), or taken (CQ_IN: its struct cmd in CMD_BANK) */
 #define CQ_OUT      1
 #define CQ_IN       2
 static signed char cq_res;                      /* (Its verdict, cq_cmd's) */
 unsigned char cq_again;                         /* The line changed since it was posted (names_subst's): posted again */
-unsigned char cq_verb;                          /* (Its verb, cq_cmd's: at_once's, its whole command not wanted) */
+struct cmd cmd;                                 /* The command being carried out (the parser's, cq_cmd's) */
+unsigned char untarget;                         /* (The target let go at the next command: resolve.c's) */
 
 /* ---- The status line */
 
@@ -1030,6 +1055,7 @@ void __fastcall__ s_took_up (unsigned r)
     }
     if ((unsigned char) r == IR_OK) {
         after (r >> 8, 20, IO_GET);
+        taken_next (pending);                   /* ("Take all": the next, as it's free) */
     }
 }
 
@@ -1126,23 +1152,22 @@ static void __fastcall__ hide (const char* w)
     }
 }
 
-/* The character's way with a denizen (how: hub.h's SW_*; the parser's words, the one meant and a name or a thing,
-** and its request): asked of the denizens' task (the hub's sway: it lends the UI's slot to the referee meanwhile),
-** waited for, worded (overlay 6: but none found, if SW_QUIET), and the time it took the character's.  Its result */
+/* The character's way with a denizen (how: hub.h's SW_*, the command's verb's: commands.verbs' aux; its things, the
+** one meant and a name or a thing, and its request): asked of the denizens' task (the hub's sway: it lends the UI's
+** slot to the referee meanwhile), waited for, worded (overlay 6: but none found, if SW_QUIET), and the time it took
+** the character's.  Its result */
 #define SW_QUIET    0x80
-typedef char sway_copies[offsetof (struct sway, order) - offsetof (struct sway, word) ==
-    offsetof (struct pcmd, order) - offsetof (struct pcmd, word) ? 1 : -1];   /* (The same, word to order) */
-typedef char pcmd_fits[sizeof (struct pcmd) == PCMD_SIZE && offsetof (struct pcmd, word) == 7 &&
-    offsetof (struct pcmd, prep) == 23 && offsetof (struct pcmd, word2) == 24 && offsetof (struct pcmd, order) == 40 ?
-    1 : -1];                                    /* (dq0c's, games/dq0c/cmdmean.s's PC_*) */
 #define dealt       (*(struct sway*) (lb + sizeof lb - sizeof (struct sway)))  /* (Its copy at lb's end: the
                                                 **   words, a line or two, go at its start) */
-static unsigned char __fastcall__ deal (unsigned char how, const struct pcmd* c)
+static unsigned char __fastcall__ deal (unsigned char how)
 {
     struct sway* s = &HUB->sway;
 
     s->kind = how & ~SW_QUIET;
-    memcpy (s->word, c->word, sizeof c->word + 1 + sizeof c->word2 + 1);   /* (word, prep, word2, order) */
+    strcpy (s->word, cmd.obj.word);
+    s->prep = cmd.prep;
+    strcpy (s->word2, cmd.other.word);
+    s->order = cmd.order;
     hub_call (s, T_DENIZENS);
     memcpy (&dealt, s, sizeof dealt);
     s->state = REQ_FREE;
@@ -1156,42 +1181,54 @@ static unsigned char __fastcall__ deal (unsigned char how, const struct pcmd* c)
     return dealt.result;
 }
 
-/* The commands that want nothing but their verb */
-static void __fastcall__ chores (unsigned char verb)
+/* The commands that want nothing but their action: 1 if it was one of them, carried out */
+static unsigned char __fastcall__ chores (unsigned char action)
 {
-    switch (verb) {
-    case V_LOOK:
+    switch (action) {
+    case VB_OBSERVE_DIRECTION:                  /* (Looked one way: turned to it, the turn's look; else, and at a */
+        if (cmd.dir <= H_NW && cmd.dir != HUB->pc_face) {   /*   thing, through it or round it, about, as */
+            intend (I_TURN, cmd.dir);           /*   ever, till slice 4.0's looking one way) */
+            break;
+        }
+    case VB_OBSERVE_LOCALE:
+    case VB_OBSERVE_OBJECT:
+    case VB_OBSERVE_THROUGH:
+    case VB_OBSERVE_AROUND:
+    case VB_FIND_OBJECT:
         look (0);
-        return;
-    case V_MAP:
+        break;
+    case VB_META_MAP:
         show_map ();
-        return;
-    case V_WAIT:
+        break;
+    case VB_WAIT:
         intend (I_WAIT, 0);
-        return;
-    case V_SHEET:
+        break;
+    case VB_META_SHEET:
         sheet ();
-        return;
-    case V_PAUSE:
+        break;
+    case VB_META_PAUSE:
         wset (WS_PAUSE, paused = 1, 0);
         tell (T_PAUSED);
         status ();
-        return;
-    case V_HELP:
+        break;
+    case VB_META_HELP:
         help ();
-        return;
-    case V_QUIT:
+        break;
+    case VB_META_QUIT:
         quit = 1;
-        return;
-    case V_SAVE:
+        break;
+    case VB_META_SAVE:
         if (!savedir) {
             tell (T_NOT_KEPT);
         } else {
             save_game ();
             tell (T_KEPT);
         }
-        return;
+        break;
+    default:
+        return 0;
     }
+    return 1;
 }
 
 #pragma code-name (pop)
@@ -1202,8 +1239,9 @@ static void __fastcall__ chores (unsigned char verb)
 ** respond"), if it's the next one typed */
 static unsigned char __fastcall__ at_once (const char* l)
 {
-    cq_cmd (0, l);                              /* (Its verb: the command parser's, the line's) */
-    return cq_verb == V_INVENTORY || cq_verb == V_SHEET || cq_verb == V_MAP || cq_verb == V_HELP || !strcmp (l, "status");
+    cq_cmd (l);                                 /* (Its command: the command parser's, the line's) */
+    return cmd.action == VB_META_INVENTORY || cmd.action == VB_META_SHEET || cmd.action == VB_META_MAP ||
+        cmd.action == VB_META_HELP || !strcmp (l, "status");
 }
 
 #pragma code-name (push, "SW2CODE")
@@ -1249,39 +1287,32 @@ static void cq_wait (void)
     }
 }
 
-/* What line l means (the command parser's: the line posted, if it wasn't), into c: its ways as the character faces
-** made the compass's as it faces now (dq0c's CQ_REL | n), a half turn an eighth ("turn half left").  Its verdict */
-signed char __fastcall__ s_cq_cmd (struct pcmd* c, const char* l)
+/* The command line l makes (the command parser's: the line posted, if it wasn't), into cmd: its ways as the
+** character faces made the compass's as it faces now (dq0c's CQ_REL | n), a half turn an eighth ("turn half
+** left").  Its verdict */
+signed char __fastcall__ s_cq_cmd (const char* l)
 {
     static unsigned char f, d;
 
     s_cq_post (l);
     cq_wait ();
     if (cq_res == -2) {
-        cq_verb = V_NONE;
-        if (c) {
-            memset (c, 0, sizeof *c);           /* (V_NONE: nothing) */
-        }
+        memset (&cmd, 0, sizeof cmd);           /* (VB_NONE: nothing) */
         return -2;
     }
     hub_map (CMD_BANK);
-    cq_verb = HUB_WINDOW[CQ_PCMD];              /* (struct pcmd's first: its verb) */
-    if (!c) {
-        hub_map (0);
-        return cq_res;
-    }
-    memcpy (c, HUB_WINDOW + CQ_PCMD, sizeof *c);
+    memcpy (&cmd, HUB_WINDOW + CQ_CMD, sizeof cmd);
     hub_map (0);
     f = HUB->pc_face;
-    if (c->dir != 0xFF && (c->dir & CQ_REL)) {
-        c->dir = (f + c->dir) & 7;
+    if (cmd.dir != 0xFF && (cmd.dir & CQ_REL)) {
+        cmd.dir = (f + cmd.dir) & 7;
     }
-    if (c->orel != 0xFF && (c->orel & CQ_REL)) {
-        c->orel = (f + c->orel) & 7;
+    if (cmd.obj.lies != 0xFF && (cmd.obj.lies & CQ_REL)) {
+        cmd.obj.lies = (f + cmd.obj.lies) & 7;
     }
-    if (c->verb == V_TURN && c->half && c->dir < GO_UP) {
-        d = (c->dir - f) & 7;
-        c->dir = d == 6 ? (f + 7) & 7 : d == 2 ? (f + 1) & 7 : c->dir;
+    if (cmd.action == VB_FACE_DIRECTION && (cmd.flags & CF_HALF) && cmd.dir < GO_UP) {
+        d = (cmd.dir - f) & 7;
+        cmd.dir = d == 6 ? (f + 7) & 7 : d == 2 ? (f + 1) & 7 : cmd.dir;
     }
     return cq_res;
 }
@@ -1293,28 +1324,33 @@ void s_cq_drop (void)
     cq_st = 0;
 }
 
-/* A command, the parser's, carried out */
+/* A command, the parser's, carried out: by its action (actions.h's VB_*), the verb's own value its aux (the things'
+** request, a door's work, the denizens' sway: commands.verbs') */
 void __fastcall__ s_command (char* l)
 {
-    static struct pcmd c;
     struct req* r;
     unsigned char d, pa;
     signed char ok;
 
-    ok = s_cq_cmd (&c, l);                      /* (What the command parser made of it: dq0c's, the grammar's
-                                                **   verdict with it) */
+    ok = s_cq_cmd (l);                          /* (The command the parser made: dq0c's, the grammar's verdict with
+                                                **   it) */
     pc_face = HUB->pc_face;
-    d = choose (&c);                            /* (A choice asked for: this line's, the command again) */
+    d = choose (&cmd);                          /* (A choice asked for: this line's, the command again; a fixture's, */
+    d |= answer (d);                            /*   or a thing's) */
     tx = 0;
-    if (c.word[0] && c.verb == V_MOVE && c.dir == 0xFF && !c.obj) {
-        sayf ("\nI don't know how to %s.", c.word);
+    if ((cmd.obj.word[0] || cmd.n) && (cmd.action == VB_MOVE_TOWARD || cmd.action == VB_MOVE_DIRECTION) &&
+        cmd.dir == 0xFF && !cmd.obj.kind) {     /* (A word alone, or a number, that's no way: "foo", "1") */
+        sayf ("\nI don't know how to %s.", cmd.obj.word[0] ? cmd.obj.word : l);
         return;
     }
     if (!d && !ok) {                            /* (Words the game knows, but not a command the grammar has) */
         sayf ("\nI don't understand that.");
         return;
     }
-    if ((d = puzzle (&c)) != Q_NONE) {          /* (The theme's puzzle's: theme.c) */
+    if (resolve () != RV_ON) {                  /* (Its things found, its unsaid filled; or a question asked) */
+        return;
+    }
+    if ((d = puzzle (&cmd)) != Q_NONE) {        /* (The theme's puzzle's: theme.c) */
         if (d >= Q_DONE) {
             intend2 (I_WAIT, 50, 1);            /* (Its time: the way out opened the world's already) */
         }
@@ -1323,95 +1359,95 @@ void __fastcall__ s_command (char* l)
         }
         return;
     }
-    switch (c.verb) {
-    case V_NONE:
+    switch (cmd.action) {
+    case VB_NONE:
         return;
-    case V_MOVE:
-    case V_ENTER:
-    case V_APPROACH:
-        if (c.obj) {                            /* (A thing: up to it, or through it) */
-            if (find (c.obj | PICK_TELL, c.orel) != 1) {
+    case VB_MOVE_DIRECTION:
+    case VB_MOVE_TOWARD:
+    case VB_ENTER:
+    case VB_APPROACH_OBJECT:
+        if (cmd.obj.kind && cmd.action != VB_MOVE_DIRECTION) {   /* (A thing: up to it, or through it) */
+            if (find (cmd.obj.kind | PICK_TELL, cmd.obj.lies) != 1) {
                 return;                         /* (None, told; or which, asked) */
             }
-            if (c.obj == OB_WINDOW && (c.how == HOW_THROUGH || c.verb == V_ENTER)) {
+            if (cmd.obj.kind == OB_WINDOW && (cmd.how == HOW_THROUGH || cmd.action == VB_ENTER)) {
                 pa = PA_THROUGH;                /* (Climbed through) */
                 goto portal;
-            } else if ((c.how == HOW_THROUGH || c.verb == V_ENTER) && (c.obj == OB_DOOR || c.obj == OB_PASSAGE)) {
+            } else if ((cmd.how == HOW_THROUGH || cmd.action == VB_ENTER) &&
+                (cmd.obj.kind == OB_DOOR || cmd.obj.kind == OB_PASSAGE)) {
                 intend (I_GO, bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y));
             } else {
                 intend2 (I_GOTO, tx, ty);
             }
-        } else if (c.dir == GO_UP || c.dir == GO_DOWN) {
-            intend (I_CLIMB, c.dir == GO_UP ? DIR_UP : DIR_DOWN);
-        } else if (c.dir != 0xFF) {
-            intend (I_GO, c.dir);
+        } else if (cmd.dir == GO_UP || cmd.dir == GO_DOWN) {
+            intend (I_CLIMB, cmd.dir == GO_UP ? DIR_UP : DIR_DOWN);    /* (Up or down: the stairs, a ladder) */
+        } else if (cmd.dir != 0xFF) {
+            intend (I_GO, cmd.dir);
         } else {
             tell (T_GO_WHICH_WAY);
         }
         return;
-    case V_CLIMB:
-        if (c.obj == OB_WINDOW || c.how == HOW_THROUGH) {
-            c.obj = OB_WINDOW;                  /* (Through a window) */
+    case VB_CLIMB:
+        if (cmd.obj.kind == OB_WINDOW || cmd.how == HOW_THROUGH) {
+            cmd.obj.kind = OB_WINDOW;           /* (Through a window) */
             pa = PA_THROUGH;
             goto portal;
         }
-        intend (I_CLIMB, c.dir == GO_DOWN ? DIR_DOWN : DIR_UP);
+        intend (I_CLIMB, cmd.dir == GO_DOWN ? DIR_DOWN : DIR_UP);
         return;
-    case V_TURN:
-    case V_FACE:
-        if (c.dir > H_NW) {
+    case VB_FACE_DIRECTION:
+        if (cmd.dir > H_NW) {
             tell (T_WHICH_WAY_LEFT);
-        } else if (c.dir == HUB->pc_face) {
-            sayf ("\nYou face %s already.", head_name[c.dir]);
+        } else if (cmd.dir == HUB->pc_face) {
+            sayf ("\nYou face %s already.", head_name[cmd.dir]);
         } else {
-            intend (I_TURN, c.dir);
+            intend (I_TURN, cmd.dir);
         }
         return;
-    case V_OPEN:
-    case V_CLOSE:
-    case V_UNLOCK:
-    case V_FORCE:
-    case V_RAISE:
-    case V_LOWER:
-    case V_BREAK:
-    case V_DISARM:
-    case V_BAR:
-    case V_BEND:
-        pa = c.verb == V_OPEN ? PA_OPEN : c.verb == V_CLOSE ? PA_CLOSE : c.verb == V_FORCE ? PA_FORCE :
-            c.verb == V_RAISE ? PA_RAISE : c.verb == V_LOWER ? PA_LOWER : c.verb == V_BREAK ? PA_BREAK :
-            c.verb == V_DISARM ? PA_DISARM : c.verb == V_BAR ? PA_BAR : c.verb == V_BEND ? PA_BEND : PA_UNLOCK;
-        if (pa == PA_RAISE && c.word[0]) {
+    case VB_OPEN_OBJECT:                        /* (A door's work: the verb's, PA_*) */
+    case VB_CLOSE_OBJECT:
+    case VB_UNLOCK_OBJECT:
+    case VB_FORCE_OBJECT:
+    case VB_RAISE_OBJECT:
+    case VB_LOWER_OBJECT:
+    case VB_BREAK_OBJECT:
+    case VB_DISARM_OBJECT:
+    case VB_BAR_OBJECT:
+    case VB_BEND_OBJECT:
+        pa = cmd.aux;
+        if (pa == PA_RAISE && cmd.obj.word[0]) {
             pa = PA_LIFT;                       /* ("Lift the bar": a portal's part lifted out) */
         } else if (pa == PA_RAISE || pa == PA_LOWER) {
-            c.obj = OB_PORTC;
-        } else if (c.obj == OB_WINDOW && !strcmp (c.word, "bars") && !find (OB_WINDOW | PICK_ANY, c.orel)) {
-            c.obj = OB_PORTC;                   /* ("Bend the bars": a portcullis's, with no window there) */
+            cmd.obj.kind = OB_PORTC;
+        } else if (cmd.obj.kind == OB_WINDOW && !strcmp (cmd.obj.word, "bars") &&
+            !find (OB_WINDOW | PICK_ANY, cmd.obj.lies)) {
+            cmd.obj.kind = OB_PORTC;            /* ("Bend the bars": a portcullis's, with no window there) */
         }
         strike = SK_BEST;                       /* (Broken with the best to hand) */
 portal:
-        if (c.obj && (d = find (c.obj, c.orel)) == 2) {
+        if (cmd.obj.kind && (d = find (cmd.obj.kind, cmd.obj.lies)) == 2) {
             return;                             /* (Which, asked) */
         }
-        if (c.obj && d) {
-            c.orel = bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y);    /* (The one it sees: faced) */
+        if (cmd.obj.kind && d) {
+            cmd.obj.lies = bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y);    /* (The one it sees: faced) */
         }
-        if (c.orel != 0xFF && c.orel <= H_NW && c.orel != HUB->pc_face) {
-            intend (I_TURN, c.orel);            /* (The door that way: faced first) */
+        if (cmd.obj.lies != 0xFF && cmd.obj.lies <= H_NW && cmd.obj.lies != HUB->pc_face) {
+            intend (I_TURN, cmd.obj.lies);      /* (The door that way: faced first) */
         }
         HUB->ireq.to = 0;
         barw = pa == PA_BAR && things (IO_BAR, "") == IR_NO ? HUB->ireq.x : 0;    /* (The widest bar to hand) */
-        work (pa, c.obj);
+        work (pa, cmd.obj.kind);
         return;
-    case V_EXAMINE:                             /* (A thing looked at closely: judged, by the craft that knows it; a
-                                                **   portal, or its part if it's not there; else the room) */
-        if (c.word[0] && !c.obj && deal (SW_LOOK | SW_QUIET, &c) != SR_NONE) {
+    case VB_EXAMINE_OBJECT:                     /* (A thing looked at closely: judged, by the craft that knows it; a */
+    case VB_EXAMINE_LOCALE:                     /*   portal, or its part if it's not there; else the room) */
+        if (cmd.obj.word[0] && !cmd.obj.kind && deal (SW_LOOK | SW_QUIET) != SR_NONE) {
             return;                             /* (A denizen it sees: how it seems) */
         }
-        if (!c.word[0] || things (IO_DESCRIBE, c.word) != IR_OK) {
-            if (c.obj == OB_DOOR || c.obj == OB_WINDOW || c.obj == OB_PORTC) {
-                inspect (c.obj, c.orel);
-            } else if (c.word[0]) {
-                sayf ("\nYou see no %s here.", c.word);
+        if (!cmd.obj.word[0] || things (IO_DESCRIBE, cmd.obj.word) != IR_OK) {
+            if (cmd.obj.kind == OB_DOOR || cmd.obj.kind == OB_WINDOW || cmd.obj.kind == OB_PORTC) {
+                inspect (cmd.obj.kind, cmd.obj.lies);
+            } else if (cmd.obj.word[0]) {
+                sayf ("\nYou see no %s here.", cmd.obj.word);
             } else {
                 look (2);                       /* (A close look about: the room's figures) */
             }
@@ -1424,12 +1460,12 @@ portal:
         appraise (&judged, d);
         msg (lb);
         return;
-    case V_SEARCH:
+    case VB_SEARCH:
         finds = things (IO_SEARCH, "");         /* (Things concealed about it; then the walls) */
         intend (I_PORTAL, PA_SEARCH);
         return;
-    case V_DIG:
-        d = c.dir;
+    case VB_DIG:
+        d = cmd.dir;
         if (d == GO_DOWN) {
             intend (I_DIG, DIR_DOWN);
         } else if (d <= H_NW && !(d & 1)) {
@@ -1438,49 +1474,63 @@ portal:
             tell (T_DIG_WHICH_WAY);
         }
         return;
-    case V_GET:
-        if (c.prep == PR_FROM) {
-            handle (IO_TAKE, c.word, c.word2, 0);
-        } else if (!c.word[0]) {
+    case VB_RETRIEVE_OBJECT:
+        if (cmd.prep == PR_FROM) {
+            handle (IO_TAKE, cmd.obj.word, cmd.other.word, 0);
+        } else if (!cmd.obj.word[0]) {
             tell (T_TAKE_WHAT);
         } else {
-            take (c.word);
+            take (cmd.obj.word);
         }
         return;
-    case V_DROP:
-        if (!c.word[0]) {
+    case VB_DROP_OBJECT:
+        if (!cmd.obj.word[0]) {
             tell (T_PUT_DOWN_WHAT);
-        } else if (d = HUB->pc_light, things (IO_DROP, c.word) == IR_OK) {
+        } else if (d = HUB->pc_light, things (IO_DROP, cmd.obj.word) == IR_OK) {
             tell (T_PUT_DOWN);
             after (d, 10, IO_DROP);
         } else {
             tell (T_YOU_CARRY_NONE);
         }
         return;
-    case V_HIDE:                                /* (P_CONCEAL: a thing; oneself comes with the denizens) */
-        hide (c.word);
+    case VB_HIDE:                               /* (P_CONCEAL: a thing; oneself comes with the denizens) */
+        hide (cmd.obj.word);
         return;
-    case V_HOLD:
-    case V_STOW:
-    case V_PUT:
-    case V_DON:
-    case V_DOFF:
-    case V_LIGHT:
-    case V_DOUSE:
-        handle (c.verb == V_HOLD ? IO_HOLD : c.verb == V_STOW ? IO_STOW : c.verb == V_PUT ? IO_PUT : c.verb == V_DON ?
-            IO_DON : c.verb == V_DOFF ? IO_DOFF : c.verb == V_LIGHT ? IO_LIGHT : IO_DOUSE, c.word, c.word2,
-            c.prep == PR_ON);
+    case VB_HOLD_OBJECT:                        /* (A thing handled: the things' request the verb's, IO_*) */
+    case VB_EQUIP_OBJECT:
+    case VB_UNEQUIP_OBJECT:
+    case VB_PUT_OBJECT:
+    case VB_HANG_OBJECT:
+    case VB_LIGHT_OBJECT:
+    case VB_EXTINGUISH_OBJECT:
+        handle (cmd.aux, cmd.obj.word, cmd.other.word, cmd.prep == PR_ON);
         return;
-    case V_INVENTORY:
+    case VB_THROW_OBJECT:                       /* (Thrown at the thing said, or the target: the world's throw, its
+                                                **   words overlay 11's) */
+        d = HUB->pc_light;
+        if (cmd.other.x) {
+            HUB->ireq.x = cmd.other.x;
+            HUB->ireq.y = cmd.other.y;
+            HUB->ireq.to = cmd.manner;
+            pa = things (IO_THROW, cmd.obj.word);
+        } else {
+            pa = cmd.other.word[0] ? IR_NOT_HERE : IR_FULL;   /* (No mark it sees; none said) */
+        }
+        throw_words (pa | HUB->ireq.qty << 8);
+        if (pa == IR_OK) {
+            after (d, 20, IO_DROP);             /* (Its time; a light thrown, the world's look in the new light) */
+        }
+        return;
+    case VB_META_INVENTORY:
         things (IO_LIST, "");
         msg (tt ());
         if ((d = HUB->pcsum.load) != 0) {
             tell (T_BURDENED - 1 + d);          /* (Its load, as the referee has it: its encumbrance) */
         }
         return;
-    case V_ATTACK:                              /* (A blow at a denizen beside it, overlay 6's choice; or the stance */
-    case V_DEFEND:                              /*   set, the referee's defence for the character) */
-        if ((d = fight_target (&c)) == FT_THING) {
+    case VB_ATTACK_OBJECT:                      /* (A blow at a denizen beside it, overlay 6's choice; or the stance */
+    case VB_DEFEND:                             /*   set, the referee's defence for the character) */
+        if ((d = fight_target (&cmd)) == FT_THING) {
             pa = PA_BREAK;                      /* (A blow at a thing: broken by it) */
             goto portal;
         }
@@ -1490,35 +1540,54 @@ portal:
         }
         msg (lb);
         return;
-    case V_JUMP:
-        if (c.dir == GO_DOWN) {
+    case VB_JUMP:
+        if (cmd.dir == GO_DOWN) {
             intend (I_CLIMB, DIR_DOWN | I_JUMP);    /* (Down a ledge, or a shaft: a fall) */
         } else {
             tell (T_YOU_JUMP_AND);
         }
         return;
-    default:                                    /* (A denizen's: V_TALK ... in SW_TALK's order; the rest chores) */
-        if (c.verb >= V_TALK) {
-            deal (c.verb - V_TALK + SW_TALK, &c);
-        } else {
-            chores (c.verb);
+    case VB_TELL_OBJECT:                        /* (A denizen swayed, an ally asked, a name given: the denizens' */
+    case VB_PERSUADE:                           /*   sway the verb's, SW_*) */
+    case VB_DECEIVE:
+    case VB_FAST_TALK:
+    case VB_THREATEN:
+    case VB_INTIMIDATE:
+    case VB_CALM:
+    case VB_BEFRIEND:
+    case VB_ORDER:
+    case VB_ALLY_COME:
+    case VB_ALLY_STAY:
+    case VB_ALLY_DISMISS:
+    case VB_NAME_OBJECT:
+    case VB_NAME_PLACE:
+        deal (cmd.aux);
+        return;
+    default:                                    /* (The rest that want nothing but their action; and those the game
+                                                **   doesn't do yet: its verb, as typed) */
+        if (!chores (cmd.action)) {
+            for (d = 0; l[d] && l[d] != ' ' && d < 15; ++d) {
+                lb[d] = l[d];
+            }
+            lb[d] = 0;
+            sayf ("\nI don't know how to %s.", lb);
         }
         return;
     }
 }
-
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "SW1CODE")
-#pragma rodata-name (push, "SW1RODATA")
 
-/* The game begun: its arguments, a game kept carried on, the title, the character, the world started */
+/* The game's arguments (s_begin's: part 7's, part 1 full; the defaults' words in the main RAM) */
 static unsigned long seed;                      /* (Its seed: the clock's, as the task starts, but for -s's) */
+static const char* file = "";                   /* (-c's: the character's file) */
+static const char* rules = "harn";              /* (The ruleset, if none's given: HarnMaster's) */
 
-void __fastcall__ s_begin (int argc, char* argv[])
+#pragma code-name (push, "SW7CODE")
+#pragma rodata-name (push, "SW7RODATA")
+
+void __fastcall__ s_args (int argc, char* argv[])
 {
-    const char* file = "";
-    const char* rules = "harn";                 /* (The ruleset, if none's given: HarnMaster's) */
     unsigned char i;
     char* l;
 
@@ -1550,6 +1619,18 @@ void __fastcall__ s_begin (int argc, char* argv[])
             hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d folder] [-t theme] [-k things] [-r rules] [-T [-T]] [-C]");
         }
     }
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+#pragma code-name (push, "SW1CODE")
+#pragma rodata-name (push, "SW1RODATA")
+
+/* The game begun: its arguments, a game kept carried on, the title, the character, the world started */
+void __fastcall__ s_begin (int argc, char* argv[])
+{
+    args (argc, argv);
     if (savedir && !load_save ()) {             /* (A game kept there: carried on) */
         resumed = 1;
         seed = sv.seed;
@@ -1570,7 +1651,7 @@ void __fastcall__ s_begin (int argc, char* argv[])
     signal (SIGINT, interrupted);
     t_init ();
     title ();
-    made = resumed ? Q.theme == 0xFF : (tfile || seed >= 65536UL) && history (seed);
+    made = history (seed);                      /* (The game's own theme, or a stand-in's: which) */
     start_world (seed, file);                   /* (The character with it: its file, or the ruleset's generator) */
     status ();
     story (resumed);                            /* (The theme's) */

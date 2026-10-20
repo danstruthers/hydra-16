@@ -1,0 +1,466 @@
+# commands.verbs - Dingus Quest Zero's verbs as data (the plan's "Verbs are data"): each verb, the words that say it,
+# the action it makes (commands.actions' VB_*: actions.h) by the phrase's shape, the thing it takes when none is said,
+# its own value for the game, the skill it tests and whether it's a long task.  The parser (games/dq0c, cmdmean.s)
+# reads them compiled (sim/tools/commandwords.js's encode, a part of dq0c.dat, in a bank of dq0c's own) and gives the
+# UI a command (hub.h's struct cmd: the action and its roles); sim/tools/commandwords.js is the host's reference.  A
+# new phrasing is a word or a field here; a new verb a line; a new action a line of commands.actions and the game's
+# code for it.
+#
+# [verbs]: a verb a line, its name, then its fields (name=value; none needed but one action):
+#   alone=VB_*     the action when nothing follows the verb (no thing, no way): the thing's, its default filling it,
+#                  if none's given
+#   thing=VB_*     with a thing ("look at the wall")
+#   way=VB_*       with a way and no thing ("look north"): the thing's, if none's given (the way where it lies)
+#   WORD=VB_*      with a thing, that word straight after the verb ("look through the window", "look around the
+#                  corner"): a preposition's own meaning for the verb
+#   unsaid=        the thing when none is said: place (where the character is), last (the last thing named), near
+#                  (the last thing named, else the things near: which, asked; none, said so), front (what's in
+#                  front), target (the target, else the nearest foe), hand (what's in hand), none (it must be said)
+#   aux=           the verb's own value for the game (struct cmd's aux): the things' request it is (IO_*), the
+#                  denizens' sway (SW_*), what a blow strikes with (SK_*), an ally's request (OR_*)
+#   skill=         the skill it tests (rs.h's P_*: the referee's)
+#   task=          a long task, of its kind (hub.h's LT_*: interruptible, "stop" ends it)
+#
+# [words]: a word (or words: a verb of several, matched before one of one) = the verb it says, as a line's first;
+# each also as the root its alias gives (commands.aliases: "peer" is look's, "attack" fight's).  A line that begins
+# with none is a way, or a thing, alone: going there (move's).
+
+[verbs]
+move        way=VB_MOVE_DIRECTION thing=VB_MOVE_TOWARD alone=VB_MOVE_DIRECTION unsaid=none task=LT_WALK
+enter       thing=VB_ENTER unsaid=front
+approach    thing=VB_APPROACH_OBJECT unsaid=none task=LT_WALK
+look        alone=VB_OBSERVE_LOCALE thing=VB_OBSERVE_OBJECT way=VB_OBSERVE_DIRECTION through=VB_OBSERVE_THROUGH around=VB_OBSERVE_AROUND for=VB_FIND_OBJECT unsaid=place skill=P_NOTICE_SIGHT
+examine     alone=VB_EXAMINE_LOCALE thing=VB_EXAMINE_OBJECT unsaid=place skill=P_APPRAISE
+search      thing=VB_SEARCH unsaid=place skill=P_SEARCH task=LT_SEARCH
+turn        way=VB_FACE_DIRECTION unsaid=none
+face        way=VB_FACE_DIRECTION unsaid=none
+climb       thing=VB_CLIMB way=VB_CLIMB alone=VB_CLIMB unsaid=front skill=P_CLIMB task=LT_CLIMB
+jump        thing=VB_JUMP way=VB_JUMP alone=VB_JUMP skill=P_JUMP
+open        thing=VB_OPEN_OBJECT unsaid=front aux=PA_OPEN
+close       thing=VB_CLOSE_OBJECT unsaid=front aux=PA_CLOSE
+unlock      thing=VB_UNLOCK_OBJECT unsaid=front aux=PA_UNLOCK skill=P_PICKLOCK
+lock        thing=VB_LOCK_OBJECT unsaid=front
+force       thing=VB_FORCE_OBJECT unsaid=front aux=PA_FORCE skill=P_FORCE
+raise       thing=VB_RAISE_OBJECT unsaid=front aux=PA_RAISE skill=P_LIFT
+lower       thing=VB_LOWER_OBJECT unsaid=front aux=PA_LOWER
+break       thing=VB_BREAK_OBJECT unsaid=front aux=PA_BREAK
+bend        thing=VB_BEND_OBJECT unsaid=front aux=PA_BEND skill=P_FORCE
+disarm      thing=VB_DISARM_OBJECT unsaid=front aux=PA_DISARM skill=P_DISARM
+bar         thing=VB_BAR_OBJECT unsaid=front aux=PA_BAR
+dig         thing=VB_DIG way=VB_DIG unsaid=none skill=P_DIG task=LT_DIG
+get         thing=VB_RETRIEVE_OBJECT unsaid=near aux=IO_GET
+drop        thing=VB_DROP_OBJECT unsaid=last aux=IO_DROP
+put         thing=VB_PUT_OBJECT unsaid=last aux=IO_PUT
+hang        thing=VB_HANG_OBJECT unsaid=last aux=IO_PUT
+don         thing=VB_EQUIP_OBJECT unsaid=last aux=IO_DON
+wield       thing=VB_EQUIP_OBJECT unsaid=last aux=IO_HOLD
+hold        thing=VB_HOLD_OBJECT unsaid=last aux=IO_HOLD
+doff        thing=VB_UNEQUIP_OBJECT unsaid=last aux=IO_DOFF
+stow        thing=VB_UNEQUIP_OBJECT unsaid=last aux=IO_STOW
+light       thing=VB_LIGHT_OBJECT unsaid=hand aux=IO_LIGHT
+douse       thing=VB_EXTINGUISH_OBJECT unsaid=hand aux=IO_DOUSE
+hide        thing=VB_HIDE unsaid=none skill=P_CONCEAL
+read        thing=VB_READ_OBJECT unsaid=last
+use         thing=VB_USE_OBJECT unsaid=last
+combine     thing=VB_COMBINE_OBJECT unsaid=none
+wait        alone=VB_WAIT thing=VB_WAIT unsaid=none task=LT_WAIT
+map         alone=VB_META_MAP
+sheet       alone=VB_META_SHEET
+help        alone=VB_META_HELP
+pause       alone=VB_META_PAUSE
+quit        alone=VB_META_QUIT
+save        alone=VB_META_SAVE
+inventory   alone=VB_META_INVENTORY
+status      alone=VB_META_STATUS
+attack      thing=VB_ATTACK_OBJECT unsaid=target aux=SK_BEST
+punch       thing=VB_ATTACK_OBJECT unsaid=target aux=SK_PUNCH
+kick        thing=VB_ATTACK_OBJECT unsaid=target aux=SK_KICK
+headbutt    thing=VB_ATTACK_OBJECT unsaid=target aux=SK_HEAD
+defend      thing=VB_DEFEND unsaid=none aux=D_AUTO
+dodge       alone=VB_DEFEND thing=VB_DEFEND aux=D_DODGE
+block       alone=VB_DEFEND thing=VB_DEFEND aux=D_BLOCK
+talk        thing=VB_TELL_OBJECT unsaid=none aux=SW_TALK task=LT_TALK
+persuade    thing=VB_PERSUADE unsaid=none aux=SW_PERSUADE skill=P_PERSUADE task=LT_TALK
+deceive     thing=VB_DECEIVE unsaid=none aux=SW_DECEIVE skill=P_DECEIVE task=LT_TALK
+bluff       thing=VB_FAST_TALK unsaid=none aux=SW_DECEIVE skill=P_DECEIVE task=LT_TALK
+threaten    thing=VB_THREATEN unsaid=none aux=SW_THREATEN skill=P_INTIMIDATE
+intimidate  thing=VB_INTIMIDATE unsaid=none aux=SW_THREATEN skill=P_INTIMIDATE
+calm        thing=VB_CALM unsaid=none aux=SW_CALM skill=P_ANIMALS task=LT_TALK
+befriend    thing=VB_BEFRIEND unsaid=none aux=SW_BEFRIEND skill=P_ANIMALS task=LT_TALK
+tell        thing=VB_TELL_OBJECT unsaid=none aux=SW_ORDER
+command     thing=VB_ORDER unsaid=none aux=SW_ORDER
+come        alone=VB_ALLY_COME thing=VB_ALLY_COME aux=SW_ORDER
+stay        alone=VB_ALLY_STAY thing=VB_ALLY_STAY aux=SW_ORDER
+dismiss     thing=VB_ALLY_DISMISS unsaid=none aux=SW_ORDER
+name        thing=VB_NAME_OBJECT room=VB_NAME_PLACE place=VB_NAME_PLACE unsaid=none aux=SW_NAME
+throw       thing=VB_THROW_OBJECT unsaid=hand
+target      thing=VB_TARGET_SET alone=VB_TARGET_SHOW unsaid=none
+stop        alone=VB_STOP thing=VB_STOP
+step        way=VB_STEP_DIRECTION alone=VB_STEP_DIRECTION
+shoot       thing=VB_SHOOT_OBJECT unsaid=target
+load        thing=VB_LOAD_OBJECT unsaid=hand
+say         alone=VB_SAY thing=VB_SAY
+cast        alone=VB_CAST_SPELL thing=VB_CAST_SPELL
+eat         thing=VB_EAT_OBJECT unsaid=none
+drink       alone=VB_DRINK thing=VB_DRINK
+swim        alone=VB_SWIM thing=VB_SWIM way=VB_SWIM skill=P_SWIM
+find        thing=VB_FIND_OBJECT unsaid=none
+where       alone=VB_WHERE
+listen      alone=VB_LISTEN thing=VB_LISTEN way=VB_LISTEN skill=P_NOTICE_SOUND
+smell       alone=VB_SMELL thing=VB_SMELL way=VB_SMELL skill=P_NOTICE_SMELL
+track       alone=VB_TRACK thing=VB_TRACK skill=P_TRACK task=LT_WALK
+sleep       alone=VB_SLEEP thing=VB_SLEEP task=LT_SLEEP
+sit         alone=VB_SIT thing=VB_SIT
+stand       alone=VB_STAND
+crouch      alone=VB_CROUCH
+pretend     thing=VB_PRETEND unsaid=none
+leave       alone=VB_LEAVE thing=VB_LEAVE way=VB_LEAVE task=LT_WALK
+wake        alone=VB_WAKE thing=VB_WAKE
+sneak       alone=VB_SNEAK way=VB_SNEAK skill=P_STEALTH task=LT_WALK
+knock       thing=VB_KNOCK_OBJECT unsaid=front
+push        thing=VB_PUSH_OBJECT unsaid=front skill=P_FORCE
+pull        thing=VB_PULL_OBJECT unsaid=front skill=P_FORCE
+give        thing=VB_GIVE_OBJECT unsaid=last
+fill        thing=VB_FILL_OBJECT unsaid=last
+taste       thing=VB_TASTE_OBJECT unsaid=last
+touch       thing=VB_TOUCH_OBJECT unsaid=front
+flee        alone=VB_FLEE way=VB_FLEE task=LT_WALK
+follow      alone=VB_ALLY_COME thing=VB_ALLY_COME aux=SW_ORDER
+again       alone=VB_REPEAT
+engage      thing=VB_ENGAGE unsaid=target
+disengage   alone=VB_DISENGAGE way=VB_DISENGAGE
+pray        alone=VB_PRAY thing=VB_PRAY_FOR task=LT_WAIT
+charge      alone=VB_CHARGE
+activate    thing=VB_ACTIVATE unsaid=none
+dispel      thing=VB_DISPEL unsaid=none
+release     thing=VB_RELEASE_PRINCIPLE unsaid=none
+memorize    thing=VB_MEMORIZE unsaid=none
+possess     thing=VB_POSSESS unsaid=none
+judge       thing=VB_JUDGE_SINCERITY unsaid=none
+taunt       thing=VB_TAUNT unsaid=none
+negotiate   alone=VB_NEGOTIATE thing=VB_NEGOTIATE
+untarget    alone=VB_TARGET_CLEAR
+pace        alone=VB_PACE_SHOW thing=VB_SET_PACE
+double      alone=VB_SET_PACE
+liedown     alone=VB_LIE_DOWN
+pass        alone=VB_PASS
+intervene   alone=VB_CALL_INTERVENTION thing=VB_CALL_INTERVENTION
+invoke      alone=VB_INVOKE thing=VB_INVOKE
+learn       thing=VB_LEARN_SPELL divination=VB_LEARN_INVOCATION baptism=VB_LEARN_INVOCATION passage=VB_LEARN_INVOCATION consecration=VB_LEARN_INVOCATION exorcism=VB_LEARN_INVOCATION curse=VB_LEARN_INVOCATION blessing=VB_LEARN_INVOCATION balefire=VB_LEARN_INVOCATION unsaid=none
+fasting     alone=VB_FASTING
+unmemorize  thing=VB_UNMEMORIZE unsaid=none
+research    thing=VB_RESEARCH unsaid=none
+counter     thing=VB_COUNTER unsaid=none
+talent      alone=VB_USE_TALENT thing=VB_USE_TALENT
+link        thing=VB_LINK_MIND unsaid=none
+orate       alone=VB_ORATE thing=VB_ORATE
+
+[words]
+change facing = face
+clear target = untarget
+slow walk = move
+double time = double
+fast charge = charge
+fast talk = bluff
+short rest = sleep
+short sleep = sleep
+get up = stand
+lie down = liedown
+lay down = liedown
+go prone = liedown
+run away = flee
+pass the time = wait
+call on = intervene
+sense a lie = judge
+mental bolt = talent
+turn on = light
+turn off = douse
+take a gander = look
+take a look = look
+take a close look = examine
+head butt = headbutt
+look closely = examine
+look close = examine
+look in detail = examine
+close look = examine
+really look = examine
+pick up = get
+put out = douse
+take off = doff
+put on = don
+put down = drop
+set down = drop
+put away = stow
+where is = find
+where am = where
+aim at = target
+make use of = use
+move = move
+mv = move
+walk = move
+go = move
+trundle = move
+mosey = move
+saunter = move
+run = move
+crawl = move
+head = move
+m = move
+enter = enter
+approach = approach
+look = look
+peer = look
+gaze = look
+gander = look
+examine = examine
+inspect = examine
+x = examine
+search = search
+turn = turn
+face = face
+climb = climb
+jump = jump
+j = jump
+open = open
+o = open
+close = close
+shut = close
+unlock = unlock
+pick = unlock
+lock = lock
+force = force
+dig = dig
+mine = dig
+don = don
+wear = don
+equip = don
+ready = wield
+wield = wield
+hold = hold
+grip = hold
+grasp = hold
+brandish = wield
+doff = doff
+remove = doff
+unequip = doff
+store = stow
+stow = stow
+pack = stow
+put = put
+place = put
+set = put
+lay = put
+hang = hang
+sheathe = hang
+get = get
+take = get
+grab = get
+acquire = get
+drop = drop
+light = light
+douse = douse
+extinguish = douse
+quench = douse
+wait = wait
+z = wait
+map = map
+sheet = sheet
+skills = sheet
+help = help
+? = help
+pause = pause
+quit = quit
+q = quit
+save = save
+inventory = inventory
+inv = inventory
+i = inventory
+status = status
+hide = hide
+conceal = hide
+stash = hide
+h = hide
+raise = raise
+lift = raise
+winch = raise
+lower = lower
+break = break
+smash = break
+bend = bend
+disarm = disarm
+disable = disarm
+bar = bar
+rebar = bar
+read = read
+use = use
+apply = use
+try = use
+combine = combine
+join = combine
+fit = combine
+mend = combine
+talk = talk
+speak = talk
+chat = talk
+greet = talk
+hail = talk
+persuade = persuade
+convince = persuade
+recruit = persuade
+reason = persuade
+win = persuade
+bargain = persuade
+deceive = deceive
+trick = deceive
+fool = deceive
+bluff = bluff
+lie = bluff
+threaten = threaten
+scare = threaten
+frighten = threaten
+menace = threaten
+intimidate = intimidate
+calm = calm
+soothe = calm
+placate = calm
+pacify = calm
+befriend = befriend
+tame = befriend
+coax = befriend
+attack = attack
+fight = attack
+hit = attack
+strike = attack
+kill = attack
+slash = attack
+bash = attack
+stab = attack
+bite = attack
+elbow = attack
+knee = attack
+slap = attack
+punch = punch
+kick = kick
+headbutt = headbutt
+butt = headbutt
+defend = defend
+dodge = dodge
+parry = block
+block = block
+duck = dodge
+tell = tell
+ask = tell
+order = tell
+command = command
+follow = follow
+come = come
+heel = come
+stay = stay
+halt = stay
+dismiss = dismiss
+name = name
+call = name
+throw = throw
+t = throw
+sling = throw
+target = target
+stop = stop
+step = step
+shoot = shoot
+fire = shoot
+draw = load
+load = load
+say = say
+yell = say
+whisper = say
+cast = cast
+c = cast
+eat = eat
+drink = drink
+swim = swim
+find = find
+listen = listen
+smell = smell
+sniff = smell
+track = track
+sleep = sleep
+rest = sleep
+sit = sit
+stand = stand
+crouch = crouch
+kneel = crouch
+squat = crouch
+pretend = pretend
+exit = leave
+wake = wake
+rouse = wake
+awaken = wake
+sneak = sneak
+knock = knock
+push = push
+pull = pull
+give = give
+g = give
+fill = fill
+taste = taste
+touch = touch
+feel = touch
+flee = flee
+escape = flee
+again = again
+engage = engage
+disengage = disengage
+withdraw = disengage
+pray = pray
+charge = charge
+activate = activate
+dispel = dispel
+release = release
+memorize = memorize
+possess = possess
+judge = judge
+taunt = taunt
+negotiate = negotiate
+facing = face
+untarget = untarget
+pace = pace
+trot = move
+jog = move
+sprint = move
+prone = liedown
+beseech = intervene
+invoke = invoke
+perform = invoke
+chant = invoke
+baptise = invoke
+baptize = invoke
+convert = invoke
+learn = learn
+fast = fasting
+unmemorize = unmemorize
+research = research
+counter = counter
+charm = talent
+clairvoyance = talent
+disembodiment = talent
+heal = talent
+healing = talent
+hex = talent
+medium = talent
+bolt = talent
+negation = talent
+negate = talent
+prescience = talent
+foresee = talent
+psychometry = talent
+pyrokinesis = talent
+ignite = talent
+sensitivity = talent
+telekinesis = talent
+telepathy = talent
+transference = talent
+transmutation = talent
+transmute = talent
+link = link
+orate = orate
+address = orate

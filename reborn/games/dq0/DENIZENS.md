@@ -29,7 +29,8 @@ A theme is data (a file of the game's, one of several, picked by the game's seed
   (one picked by its seed) and its purpose, fortified or open (DUNGEON.md, built to a plan); the words for rooms (by a
   room's kind, and the built rooms' uses) and its rooms' light;
 - **its denizens:** the bestiary's kinds that live in it (dq0d/kinds.txt's keys: the denizens' task populates only
-  those);
+  those), or its inhabitants, a faction a line (its theme file's, theme.txt in the save folder: who lives there now,
+  as the history left them; popgen places them, below);
 - **its own kinds of things:** eight at most (the catalogue's last eight, KI_THEME on, written into the hub's
   catalogue as the game starts), one of them perhaps fixed where it stands (an altar, a throne: never taken up);
 - **its history** (HISTORY.md): the region, its peoples and eras, each stratum's layers, the inhabitants now (the
@@ -37,9 +38,11 @@ A theme is data (a file of the game's, one of several, picked by the game's seed
   (an artifact, an evil, a prisoner, a far exit: its stratum and its guardians), each piece's era and guardians.
 
 A game's own theme is themegen's (games/themegen, HISTORY.md): its region's history and its theme made from the
-game's seed as it begins, a new region each game.  There are three stand-in themes, the tests' (a seed under 65,536
-picks one): a crypt of a dead king (the first: the styles, rooms and light the dungeon was first grown by, all the
-bestiary), a drowned temple, a kobold warren; each with a line or two of history and its factions, no layers.
+game's seed as it begins, a new region each game, its inhabitants among its lines (theme.txt in the save folder).
+There are three stand-in themes for the engine and the tests (a seed under 65,536 picks one; the real ones are the
+user's to write): a crypt of a dead king (the first: the styles, rooms and light the dungeon was first grown by, the
+six kinds the bestiary had then), a drowned temple, a kobold warren; each with a line or two of history and its
+factions written down, no layers (nothing of theirs in the save folder: their denizens the stand-in's, below).
 
 - **The data:** a text file a theme (games/dq0/themes, in their files' order; the first has the format), made at build
   time the game's lib/dq0/dq0t.dat (make.js: theme.h's struct theme, 4K a theme with its words).  It says its name and
@@ -69,21 +72,27 @@ bestiary), a drowned temple, a kobold warren; each with a line or two of history
   game over, and the save marked done (dq0 -d on it again begins a new game).
 
 The things lying about come from the maker's styles (dq0m/uses.c's lists, by the style, the rooms' uses, the
-chunk's layer of history and the stratum's age), not the theme.  The factions are the theme's (its faction lines:
-factions.txt's, for the stand-ins, absorbed into them) for popgen to place; till popgen, the denizens' task reads its
-own data (dq0d/factions.txt, below).
+chunk's layer of history and the stratum's age), not the theme; the factions are a theme's inhabitants, or the
+denizens' own stand-in's (dq0d/factions.txt, below).
 
 ### Populations
 
 Nothing is made up as the character turns a corner.  When a stratum's plan is grown (DUNGEON.md), the denizens'
-task (games/dq0d) decides its populations at once, from the stratum's seed: for each of the theme's kinds that lives
-in the stratum's style at its depth, its lairs (by the stratum's ways in and out, for those that lair there; else a
-chunk of a region of halls) and how many in each, each denizen a record from then on (its kind, its faction, its
-attitude, where it is, what it's doing, its state: the referee's sheet once it has one).  The kinds are data
-(dq0d/kinds.txt: a name, the referee's key, its ways, the styles and depths it lives in, its numbers, its range, its
-senses, its pace, its faction, its mind, its sway, its eyes), made a data file the task reads into a bank of its own
-(lib/dq0/dq0d.dat, with the factions).  No lair is by the dungeon's way in (the top stratum's first: where the
-character begins).
+task (games/dq0d) decides its populations at once, from the stratum's seed.  If the theme has inhabitants (its theme
+file's faction lines: dq0d/pop.h has their format), they're placed as the history left them by popgen (bank/popgen,
+a bank program, bankprog.h's): each faction's number spread over its strata, the most on its lair's
+and fewer the further from it, shared among its kinds (the first twice each other's share), in lairs of its kinds'
+group sizes, its leader in its home (HOUSE.md, who lives where).  Else the stand-in's: for each of the theme's kinds
+that lives in the stratum's style at its depth, its lairs and how many in each.  Each lair lies where its kind lairs
+(by the stratum's ways in and out, for those that lair there; else a chunk of a region of halls), each denizen a
+record from then on (its kind, its faction, its attitude, where it is, what it's doing, its state: the referee's
+sheet once it has one).  The kinds are data, the game's bestiary (dq0d/kinds.txt: seventeen, modelled on the HarnWorld
+Bestiary's creatures that suit a dungeon, and folk of the game's own; a name, the referee's key, its ways, the styles
+and depths it lives in, its numbers, its range, its senses, its pace, its stand-in faction, its mind, its sway, its
+eyes, and for the history its habitat, nature, size and arms, and what it leaves dead), made a data file the task
+reads into a bank of its own (lib/dq0/dq0d.dat, with the stand-in's factions).  The world's peoples and deities are
+data beside them (dq0d/peoples.txt, deities.txt: lore.h), the history's to draw on.  No lair is by the dungeon's way
+in (the top stratum's first: where the character begins).
 
 - **Placing:** a lair's denizens are put on squares of their own as the character comes into its chunk or one beside
   it (round the way, or in a room of the chunk), by the lair's own numbers, so it's the same whenever it happens: none
@@ -106,11 +115,12 @@ requests).  Each denizen's is in its record, saved with them, and an actor's in 
 and faction: the fights read them, a hostile one fights; its foe, an actor of a faction hostile to its own within
 four squares).
 
-**Factions** (dq0d/factions.txt, part of the denizens' data file): each one's tongue, its attitude to the character
-as it first meets it, and how it stands with each other one (hostile, wary, indifferent, friendly: the worse of the two
-ways it's said).  Each kind (kinds.txt) has its faction, its mind (mindless, a beast, low, average, cunning) and its
-own steps for or against swaying it.  The denizens' head keeps each faction's attitude now (its newcomers': a stratum
-populated later starts from it).
+**Factions** (a theme's inhabitants; else the stand-in's, dq0d/factions.txt, part of the denizens' data file): each
+one's tongue (a theme's faction speaks its first kind's stand-in faction's), its attitude to the character as it first
+meets it, and how it stands with each other one (hostile, wary, indifferent, friendly: the worse of the two ways it's
+said).  Each denizen's record has its faction (a kind may be in two); each kind (kinds.txt) its stand-in faction, its
+mind (mindless, a beast, low, average, cunning) and its own steps for or against swaying it.  The denizens' head
+keeps each faction's attitude now (its newcomers': a stratum populated later starts from it).
 
 An attitude moves by what happens: a lair intruded on (a kind that keeps to its lair, the character beside its home:
 a step down, once a visit), the character seen with an ally of a faction hostile to its own (a step down, once), harm
@@ -268,8 +278,9 @@ task, an ally's mind one day) reads either and applies its own senses, and the h
 ### Fights
 
 - **Sheets:** each actor has the referee's sheet (RS_NEW_ACTOR, by its kind's key, its record's number:
-  dq0harn/fight.c's stand-in bestiary, the game's own numbers, each attribute varied by a die of its own so no die of
-  the referee's is spent on it: HOUSE.md's fights), made the first time and kept after (its wounds, its state) in a
+  dq0harn/fight.c's bestiary: the first six kinds' the game's own numbers, the rest the HarnWorld Bestiary's for the
+  like creature; each attribute varied by a die of its own so no die of the referee's is spent on it: HOUSE.md's
+  fights), made the first time and kept after (its wounds, its state) in a
   bank of the referee's, saved with the game (beasts.dat).
 - **Blows** (the referee's HarnMaster melee, behind rs.h's RS_ATTACK): a hostile actor sensing the character beside it
   strikes at it, a round at a time (the referee's round: at the turns pace a slice; at the real paces as the clock
@@ -292,10 +303,10 @@ task, an ally's mind one day) reads either and applies its own senses, and the h
 
 What the plans bring later, by the slice or phase that brings it:
 
-- **History and themes** (Phase 3D): a region's history generated first (themegen), its eras, peoples and goal; the
-  denizens placed as the history leaves them (popgen, a bank program), factions that fit the region and the history,
-  from the HarnWorld Bestiary read as a reference (in the game's own words), with their relations, numbers, leaders
-  and lairs; four goal kinds (an artifact found, evil cleared, a prisoner rescued, a way through); the theme checker.
+- **History and themes** (Phase 3D): a region's history generated first (themegen), its eras, peoples and goal;
+  factions that fit the region and the history, from the bestiary (built: the denizens placed as a theme file's
+  inhabitants say, by popgen, with their relations, numbers, leaders and lairs); four goal kinds (an artifact found,
+  evil cleared, a prisoner rescued, a way through); the theme checker.
   The theme format completed (Phase 7): factions and tongues, the bestiary's kinds and numbers, the pieces' keepers
   (a guardian, a faction's hoard), the strata's ages and sizes, the things lying about by theme.
 - **The command interpreter** (Phase 3C): a denizen's mind making the same command structure as the player's, the
