@@ -135,7 +135,7 @@ enum { IO_KIT, IO_GET, IO_DROP, IO_LIST, IO_SAVE, IO_RESTORE,
                                                 **   things_text */
     IO_DESCRIBE,                                /* A thing (carried, or seen) looked at closely: what it truly is,
                                                 **   in the request (for the appraiser's judgement: the UI's) */
-    IO_HIDE,                                    /* A thing carried hidden where it stands (Concealment, the referee's
+    IO_HIDE,                                    /* A thing carried hidden where it stands (P_CONCEAL, the referee's
                                                 **   test): its difficulty back in qty */
     IO_FIND,                                    /* The thing named that's to hand (carried, or within reach: the
                                                 **   theme's puzzle's): its kind back in x, and 256 if carried */

@@ -1,6 +1,6 @@
 /*
 ** wdoor.c - (dq0w) doors worked (DUNGEON.md: portals), and a window's shutters as a door is: opened (unbarred, if
-** barred from this side), closed, a lock picked (the referee's Lockcraft, by the tools to hand: a minute a try, harder
+** barred from this side), closed, a lock picked (the referee's P_PICKLOCK, by the tools to hand: a minute a try, harder
 ** the more complex the lock), forced (Strength against the door's material: its lock or bar burst; loud; a rotten
 ** door forced more easily, a new one less); a door's bar lifted out (only from its side; or as the door's unbarred to
 ** open it) and set down at the character's feet, or set in its brackets again (bar the door: shut, from its side, a

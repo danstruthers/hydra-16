@@ -1,7 +1,7 @@
 /*
 ** wfight.c - (dq0w) the blows (DENIZENS.md: fights), every one the world's to strike: the character's at a denizen
 ** (I_ATTACK, the UI's: a round of its time, the hub's pc_foe) and a denizen's at the character (its intent, I_ATTACK:
-** a round of its own) alike.  The referee asked in the world's own slot (RS_ATTACK: HarnMaster's melee), its words
+** a round of its own) alike.  The referee asked in the world's own slot (RS_ATTACK: the ruleset's melee), its words
 ** put in the fights' ring in the denizens' events' bank (FIGHT_AT, the world's: the UI words them), what the blow left
 ** the body in kept (senseless a while, fleeing, holding back a round, bleeding, dead: its remains put down, the item
 ** store's), and the blow told (E_FIGHT, the denizens' events: the denizens take it to heart, their minds' courage and

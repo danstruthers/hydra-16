@@ -3,8 +3,9 @@
 ** the ruleset (HarnMaster, Castles & Crusades, ...).  The game never names a skill, a class or a die: it asks for a
 ** purpose (notice a sound, climb, resist poison), gives the circumstances as steps (each a nudge of about 5%, for the
 ** better or the worse), and gets back a grade, conditions, effects and words.  A ruleset is a program of its own,
-** the referee (dq0harn, dq0cc ...), that answers through the hub (hub.h: its request and reply areas), and a
-** character generator (hmchar ...) whose files it reads; its manifest (lib/dq0/rules/NAME) says where they are.
+** the referee (dq0harn, dq0null, dq0cc ...: lib/dq0/dq0NAME, dq0 -r NAME's), that answers through the hub (hub.h: its
+** request and reply areas), and a character generator (hmchar ...) whose files it reads, the referee's RS_HELLO
+** naming it (RULESETS.md: what a ruleset answers, and what the game assumes of it).
 **
 ** Converting a character between rulesets goes through a neutral character (struct rs_neutral): each ruleset can
 ** make one of its own characters (RS_EXPORT) and make its own from one (RS_IMPORT).
@@ -189,7 +190,10 @@ struct rs_summary {
 
 /* ---- The requests (the hub's referee areas carry one, and its reply) */
 enum {
-    RS_HELLO,                                   /* -> its name, its round (tenths), its standard action times */
+    RS_HELLO,                                   /* -> its name, its round (tenths), its standard action times; its
+                                                **   text a line its name, a line its character generator (a
+                                                **   program in the game's folder, run NAME -o FILE -s SEED; none:
+                                                **   "", RS_LOAD_PC's path empty, the referee's own character) */
     RS_LOAD_PC,                                 /* A character file -> its name, calling, summary; a and b the pace
                                                 **   and the watchfulness its file says (GA_WALK and 0 if none: the
                                                 **   world's to set, a new game's) */

@@ -385,7 +385,7 @@ enum { AT_HOSTILE, AT_UNFRIENDLY, AT_WARY, AT_INDIFFERENT, AT_FRIENDLY, AT_ALLIE
 /* The character's way with a denizen (the UI asks the denizens' task: the hub's sway, REQ_*, its doorbell; the
 ** denizens' task finds the one meant, among those the character sees, by its name or its kind's, and asks the
 ** referee in the UI's slot, lent it while the UI waits): words to sway it (the referee's test, by the kind's mind:
-** an animal's by Animalcraft alone; words want a tongue in common), a request to an ally, a name given to one, a
+** an animal's by P_ANIMALS alone; words want a tongue in common), a request to an ally, a name given to one, a
 ** look at how it seems, a blow (a stand-in for the fights) */
 enum { SW_LOOK, SW_TALK, SW_PERSUADE, SW_DECEIVE, SW_THREATEN, SW_CALM, SW_BEFRIEND, SW_ATTACK, SW_ORDER, SW_NAME };
                                                 /* (dq0.h's V_TALK ... V_NAME in the same order) */
