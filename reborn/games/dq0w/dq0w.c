@@ -1964,23 +1964,27 @@ static void __fastcall__ intent (struct msg* m)
 ** denizens given their turn at each (the hub's den_go, rung: they act, and say when they've done, I_DONE), and at the
 ** same clock after work of its own (an event told since their last: the character arrived, its work done, free
 ** again), so they act through all the time what it does takes, and the game's the same whatever the tasks' timing;
-** waited for each time (their intents carried out as they come, the world asleep on its doorbell between; one slow to
-** is left to catch up as it can, late, till the character's next command).  The character's blow struck as the clock
+** waited for each time (their intents carried out as they come, the world asleep on its doorbell between), for as long
+** as they take: thirty seconds at most, by the clock, not by its wakes (each intent rings it: a turn of many
+** denizens woke it a thousand times, and a turn cut short at a count made the game turn on the tasks' timing); one
+** that stuck is left to catch up as it can, late, till the character's next command.  The character's blow struck as the clock
 ** moves on, before it (its round's: the slice's first, seen by the denizens as they see the slice).  1 if it moved it
 ** on or gave them a turn */
-static unsigned waited, go_eq;
+#define TURN_WAIT       (30 * HY_TICK_HZ)       /* (The longest a turn's waited for: a stuck task's, not a slow one's) */
+
+static unsigned go_eq;
 
 #define BEHIND          (den_done != HUB->den_go)
 
 static void turn (void)
 {
+    unsigned t0;
+
     go_eq = HUB->eq_head;
     ++HUB->den_go;
     hub_ring (T_DENIZENS);
-    for (waited = 0; !late && BEHIND && waited < 1000; ++waited) {
-        hub_sleep (1);                          /* (Waited for here, a thousand wakes at most, a tick each at most:
-                                                **   five seconds; the rest of the round's no use, and a fight's blows
-                                                **   ask the referee a few times over) */
+    for (t0 = hy_ticks (); !late && BEHIND && (unsigned) (hy_ticks () - t0) < TURN_WAIT; ) {
+        hub_sleep (1);                          /* (Waited for here, a tick at a time at most) */
         if (DEN_INTENTS ()) {
             den_intents ();                     /* (Their intents carried out as they come) */
         }
