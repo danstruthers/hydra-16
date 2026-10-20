@@ -70,7 +70,8 @@ struct sight {
     unsigned char   nitems;                     /* The things it sees lying about (the things', named) */
     struct sitem { char name[14]; unsigned char qty, plural, rel, hid; unsigned n, x, y; } item[SEE_ITEMS];
                                                 /* (hid: 1 it hid it, 2 on the surface before it, 4 lit; its high
-                                                **   four bits its size, how easily it's seen: 0 tiny ... 9 huge) */
+                                                **   four bits how far off it's made out, squares past a speck: the
+                                                **   kind's seen) */
     unsigned char   stratum, sname, style;      /* The stratum: its number, its name (the theme's), its style */
     int             z;                          /* The floor where it stands: feet above the way in */
     unsigned        x, y;                       /* Its square */

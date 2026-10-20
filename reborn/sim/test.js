@@ -8,8 +8,11 @@
 // not known (the table's moves), fails the test.  HUBOWN=1: each test's every violation said, known or not, and a
 // summary of them all after the tests (grouped by the move that's to end them); HUBOWN=0: no check.  And in every dq0
 // test (HUBOWN=0 too), nothing told twice in one answer, nor a chunk's door or trap made twice (tests.js's dq0Check).
+// RULES=NAME (null ...): the dq0 tests run with that ruleset's referee (games/dq0/RULESETS.md: dq0 -r NAME added to
+// each dq0 line typed), and with no test named, those that are meaning checks (tests.js's meaning: true: their checks
+// what happened, not its words) are the ones run.
 //
-// Usage: [HUBOWN=0|1] node sim/test.js [NAME ...] [--build] [-v] [--seed N] [-j N] [--dl]
+// Usage: [HUBOWN=0|1] [RULES=NAME] node sim/test.js [NAME ...] [--build] [-v] [--seed N] [-j N] [--dl]
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -126,9 +129,33 @@ function summary(list) {
   if (idle.length) console.log('  known, but none of these tests wrote it: ' + idle.join('; '));
 }
 
+// RULES=NAME: each dq0 test's machine with dq0 -r NAME typed (its input's dq0 lines, after a prompt), and the list
+// to run, if none's named, the meaning checks
+const RULES = process.env.RULES || '';
+function rulesOf(t) {
+  const d = Object.getOwnPropertyDescriptor(t, 'machine');
+  Object.defineProperty(t, 'machine', { configurable: true, enumerable: true, get() {
+    const m = d ? (d.get ? d.get.call(this) : d.value) : {};
+    if (typeof m.input !== 'string') return m;
+    return Object.assign({}, m, { input: m.input.replace(/(\u0101dq0(?: [^\r]*)?)\r/g, '$1 -r ' + RULES + '\r') });
+  } });
+}
+if (RULES) for (const t of tests) if (/^dq0/.test(t.name)) rulesOf(t);
+function meaningArgs(argv) {
+  if (!RULES) return argv;
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === '--one') return argv;
+    if (argv[i] === '-j' || argv[i] === '--seed') { i++; continue; }
+    if (!argv[i].startsWith('-')) return argv;                // (Tests named: those)
+  }
+  const names = tests.filter(t => /^dq0/.test(t.name) && t.meaning).map(t => t.name);
+  if (!names.length) { console.error('RULES=' + RULES + ': no dq0 test is a meaning check (meaning: true)'); process.exit(2); }
+  return [...argv, ...names];
+}
+
 runner.setup({ root: ROOT, tests, IRQ_OFF_MAX, image, pcFolder, self: __filename, instrument, summary,
   build: () => require('../build.js').buildBoth({ quiet: true }),
   runDl: (...a) => require('./dl/bridge.js').runDl(...a) });
 
-if (require.main === module) runner.main(process.argv.slice(2));
+if (require.main === module) runner.main(meaningArgs(process.argv.slice(2)));
 module.exports = { runTest: runner.runTest, runTestDl: runner.runTestDl, image };

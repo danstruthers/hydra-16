@@ -192,7 +192,7 @@ ovl_out:
             SWPART      3, 9                ; The map (look.c)
             SWPART      4, 9                ; The pace, the watchfulness, the state, small moves (pace.c)
             SWPART      5, 10               ; The names given (names.c)
-            SWPART      6, 10               ; The names said (names.c)
+            SWPART      6, 10               ; The names said (names.c), and the world's words (main.c)
 
             SWFN        begin, 1
             SWFN        finish, 1
@@ -213,3 +213,4 @@ ovl_out:
             SWFN        names_look, 6
             SWFN        names_keep, 6
             SWFN        room_named, 6
+            SWFN        world_words, 6

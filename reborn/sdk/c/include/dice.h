@@ -14,6 +14,10 @@
 ** n times, its values into an array (dice.dl's roll, globals.dl's repeat); best_of_rolls and worst_of_rolls keep the
 ** best (or worst) a of b such rolls; dnd_attr_rolls is a set of six D&D attributes: eight rolls of 4d6 less the
 ** lowest, the best six (dnd_attr_rolls_detailed: each with its four dice too).
+**
+** A test's hook: dice_hook, set, rolls every die instead (die's and so all the dice's: its sides, and the face it
+** gives), so a test can fix the faces or see what was rolled (Dingus Quest Zero's referee: its RS_DICE).  random
+** itself isn't hooked: rseed makes its numbers the same each time.
 */
 
 #ifndef _DICE_H
@@ -30,6 +34,7 @@ unsigned __fastcall__ random (unsigned n);      /* From 0 to n - 1 (n 0: 0) */
 
 int __fastcall__ die_plus (unsigned sides, int mod);    /* 1 to sides, and mod */
 int __fastcall__ die (unsigned sides);                  /* 1 to sides */
+extern int __fastcall__ (*dice_hook) (unsigned sides);  /* (A test's: every die rolled by it; 0, none) */
 
 #define d3()            die (3)
 #define d3_plus(m)      die_plus (3, (m))

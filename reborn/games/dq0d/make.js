@@ -26,6 +26,7 @@ const DOMAINS = ['war', 'fire', 'cruelty', 'death', 'undead', 'chaos', 'wealth',
 const GOOD = ['good', 'neutral', 'evil'], ORDER = ['order', 'balance', 'chaos'];   // TE_*
 const BURIALS = ['none', 'crypt', 'barrow', 'pyre', 'earth'];                       // BU_*
 const LREC = 64;                                // (lore.h's struct people, struct deity)
+const SQ_FT = 5;                                // rs.h's: a square's feet (kinds.txt's distances in feet)
 
 const lines = f => fs.readFileSync(f, 'utf8').split(/\r?\n/).filter(l => l.trim() && !l.startsWith('#'))
   .map(l => l.split('|').map(s => s.trim()));
@@ -96,14 +97,19 @@ function build({ dir, objdir, say = () => {} }) {
         !(f[19] in NATURES) || !/^[1-6]$/.test(f[15]) || !/^(body|bones)$/.test(f[21])) bad();
     out.write(f[0], at, 'latin1');
     out.write(f[1], at + 12, 'latin1');
-    const [d0, d1] = pair(f[4]), [n0, n1] = pair(f[5]), [sl, sd] = pair(f[8]);
+    const sq = ft => {                          // (A distance's feet made the map's squares, once: in fives)
+      if (!(+ft >= 0) || +ft % SQ_FT || +ft > 255 * SQ_FT)
+        throw new Error(`dq0d/kinds.txt: line ${i + 1}: ${ft}: a distance in feet, a square's ${SQ_FT} each`);
+      return +ft / SQ_FT;
+    };
+    const [d0, d1] = pair(f[4]), [n0, n1] = pair(f[5]), [sl, sd] = f[8].split('-').map(sq);
     const flags = [...f[2]].reduce((a, c) => a | (WAYS[c] || 0), 0) | (f[21] === 'bones' ? K_BONES : 0);
     const styles = [...f[3]].reduce((a, c) => a | (1 << STYLES[c]), 0);
     const arms = f[20].split(/\s+/).reduce((a, w) => {
       if (ARMS.indexOf(w) < 0) bad();
       return a | 1 << ARMS.indexOf(w);
     }, 0);
-    [flags, styles, d0, d1, n0, n1, +f[6], +f[7], sl, sd, +f[9], +f[10], fac, MINDS[f[12]], +f[13] & 0xFF, +f[14],
+    [flags, styles, d0, d1, n0, n1, +f[6], sq(f[7]), sl, sd, sq(f[9]), +f[10], fac, MINDS[f[12]], +f[13] & 0xFF, +f[14],
       +f[15] | NATURES[f[19]] << 3 | LIGHTS[f[18]] << 6, bits(f[16], LANDS, 'land'), bits(f[17], CLIMATES, 'climate'),
       arms].forEach((v, k) => { out[at + 20 + k] = v; });
   });

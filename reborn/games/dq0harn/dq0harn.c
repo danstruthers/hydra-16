@@ -18,7 +18,7 @@
 ** three (the world's, the UI's, and the denizens' task's: DSLOT, a short one), each rung for, answered in place, the
 ** asker rung with the reply (hub.h's protocol).  hmchar's file read and written, and the creatures' sheets kept, are swapped part 1's (../dq0/swap.inc: run
 ** in the main RAM's top, a part at a time, copied there from overlay 4's bank as it's called; harnfile.c), the names
-** part 2's (harnname.c), with the tool a dig takes.
+** part 2's (harnname.c), with the tool a dig takes.  And a test's, RS_DICE: its dice fixed (its unit tests').
 **
 ** The game's own choices in using the book (not the book's rules): a purpose names the skill (or attribute times 5)
 ** a GM would call for; a skill not opened is tested at its OML, as if opened on first use.
@@ -41,6 +41,7 @@ void __fastcall__ load_pc (struct req* r);      /* (Part 1's stubs: bank.s's) */
 void __fastcall__ save_pc (struct req* r);
 void __fastcall__ beasts (unsigned char back);
 unsigned char __fastcall__ dig_tool (unsigned char m);     /* (Part 2's) */
+void __fastcall__ dice_set (struct req* r);
 
 harn_char pc;                                   /* The character */
 char name[16], calling[20];
@@ -82,19 +83,14 @@ void __fastcall__ putn (int v)
 /* ---- What's to hand (the keys of the tools the character carries, all of them: the UI's, from the things), and
 ** digging judged by it: a skill used, the one versed in it takes out the tool that suits the job best (the user's: a
 ** shovel in earth, a pick in stone; a sword digs earth too, poorly, and dulls).  The book has no rules for digging:
-** the game's own, a tool's feet a spell of work (ten minutes) at a marginal success, by what it's into (earth, stone,
-** masonry); a critical success twice that, a marginal failure half, a critical failure none; bare hands dig only
-** earth; and the wear a spell does the tool */
+** the game's own, every referee's (../dq0/rshouse.h's table: a tool's feet a spell of work by what it's into, and
+** its wear) */
 
 char tools[NTOOLS][8];
 unsigned char tflag[NTOOLS], tqual[NTOOLS];
 
-static const struct { char key[8]; unsigned char rate[4], wear[4]; } digger[] = {    /* Earth, stone, masonry, flags */
-    { "hands", { 1, 0, 0, 0 }, { 0, 0, 0, 0 } }, { "shovel", { 3, 0, 0, 1 }, { 0, 0, 0, 0 } },
-    { "spade", { 3, 0, 0, 1 }, { 0, 0, 0, 0 } }, { "pick", { 2, 2, 1, 3 }, { 0, 1, 1, 1 } },
-    { "mattock", { 3, 2, 1, 3 }, { 0, 1, 1, 1 } }, { "chisel", { 0, 1, 2, 1 }, { 0, 1, 1, 1 } },
-    { "blade", { 1, 0, 0, 0 }, { 40, 0, 0, 0 } }, { "knife", { 1, 0, 0, 0 }, { 40, 0, 0, 0 } },
-};
+#define RS_HOUSE_DIG
+#include "../dq0/rshouse.h"
 
 /* All that's to hand, anew: the keys in the text, each after its mark (* held, + worn, a space neither) and its
 ** quality after it (a digit) */
@@ -168,26 +164,9 @@ unsigned char __fastcall__ has (const char* key)
 #pragma code-name (push, "SW2CODE")
 #pragma rodata-name (push, "SW2RODATA")
 
-/* The tool to hand that suits the material best (bare hands, digger's 0, if none does better; of two as good, the
-** one it wears less): its digger's number */
-unsigned char __fastcall__ s_dig_tool (unsigned char m)
-{
-    unsigned char k, t, best = 0, r, br = digger[0].rate[m];
-
-    for (k = 0; k < NTOOLS; ++k) {
-        for (t = 1; tools[k][0] && t < sizeof digger / sizeof digger[0]; ++t) {
-            if (strcmp (tools[k], digger[t].key)) {
-                continue;
-            }
-            r = digger[t].rate[m];
-            if (r > br || (r && r == br && digger[t].wear[m] < digger[best].wear[m])) {
-                best = t;
-                br = r;
-            }
-        }
-    }
-    return best;
-}
+/* The tool to hand that suits the material best (rshouse.h's, s_dig_tool: its digger's number) */
+#define RS_HOUSE_DIG_TOOL   s_dig_tool
+#include "../dq0/rshouse.h"
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -202,7 +181,7 @@ static const unsigned char purpose[P_THEME] = {
     HARN_CND, ATTR | HARN_END, ATTR | HARN_WIL, HARN_DGE,
     HARN_PHY, HARN_LOR, HARN_TRK, HARN_RHE, HARN_RHE, HARN_ANI,
     HARN_MIN,                                                           /* Digging: Mining */
-    HARN_WEA,                                                           /* Appraising: by its craft (appraiser) */
+    HARN_WPN,                                                           /* Appraising: by its craft (appraiser) */
     HARN_STL,                                                           /* Concealment: HarnMaster's Stealth */
     HARN_LCK,                                                           /* A mechanism made out: Lockcraft (traps) */
     HARN_NTR,                                                           /* Guile: Intrigue */
@@ -212,7 +191,7 @@ static const unsigned char purpose[P_THEME] = {
 ** hide Hideworking, cloth Textilecraft, pottery Ceramics, jewels Jewelcraft, books and bones Lore, food Cookery, stone
 ** Masonry, glass Glassworking */
 static const unsigned char appraiser[NAP] = {
-    HARN_WEA, HARN_WEA, HARN_MET, HARN_TIM, HARN_HID, HARN_TEX, HARN_CER, HARN_JEW, HARN_LOR, HARN_COO, HARN_LOR,
+    HARN_WPN, HARN_WPN, HARN_MET, HARN_TIM, HARN_HID, HARN_TEX, HARN_CER, HARN_JEW, HARN_LOR, HARN_COO, HARN_LOR,
     HARN_MSN, HARN_GLA
 };
 
@@ -226,7 +205,7 @@ static signed char __fastcall__ grade (unsigned char level)
 /* A skill's test (or an attribute's: ATTR), at the steps (a skill not learnt: its opening level, less a penalty) */
 static signed char __fastcall__ test_sk (harn_char* c, unsigned char sk, signed char steps)
 {
-    int mod = 5 * steps;
+    int mod = STEP_PCT * steps;
 
     if (sk & ATTR) {
         return grade (harn_test_attr (c, sk & ~ATTR, 5, mod));
@@ -240,7 +219,7 @@ static signed char __fastcall__ test_sk (harn_char* c, unsigned char sk, signed 
 static signed char __fastcall__ test (harn_char* c, unsigned char p, signed char steps)
 {
     if (p >= P_THEME) {
-        return grade (harn_test (50 + 5 * steps));      /* (A theme's own: till themes say, an even chance) */
+        return grade (harn_test (50 + STEP_PCT * steps));   /* (A theme's own: till themes say, an even chance) */
     }
     return test_sk (c, purpose[p], steps);
 }
@@ -505,6 +484,50 @@ static void __fastcall__ pace_set (unsigned char a)
     state ();
 }
 
+/* ---- The dice fixed, for a test (RS_DICE: the referee's unit tests, tests/ram/t_rules): dice.h's hook, set by the
+** first, rolls every die after it, the faces given first (then the generator's), and keeps what each was (its sides) */
+
+#define DFIX    sizeof ((struct req*) 0)->x
+static char dface[DFIX + 1];                    /* The faces forced, to a 0, */
+static unsigned char dk, drep;                  /*   the next, and the face after them (0: the generator's) */
+static unsigned char dlog[DFIX], dl;            /* The sides of the first dice rolled, how many kept */
+static unsigned drolled;                        /* The dice rolled */
+
+static int __fastcall__ fixed (unsigned sides)
+{
+    ++drolled;
+    if (dl < DFIX) {
+        dlog[dl++] = sides;
+    }
+    if (dface[dk]) {
+        return dface[dk++];
+    }
+    return drep ? drep : 1 + (int) random (sides);
+}
+
+#pragma code-name (push, "SW2CODE")
+#pragma rodata-name (push, "SW2RODATA")
+
+void __fastcall__ s_dice_set (struct req* r)
+{
+    if (r->a & 1) {
+        rseed (r->w1);
+    }
+    r->w1 = drolled;
+    r->c = strlen (dface + dk);
+    memcpy (dface, r->x, DFIX);
+    dk = 0;
+    drep = r->b;
+    memcpy (r->x, dlog, DFIX);
+    memset (dlog, 0, DFIX);
+    dl = 0;
+    drolled = 0;
+    dice_hook = fixed;
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 /* ---- A request answered */
 
 static unsigned char rq[offsetof (struct req, text)];  /* (A request's copy, for the overlay: but its text) */
@@ -544,7 +567,7 @@ static void __fastcall__ answer (struct req* r)
         break;
     case RS_HELLO:
         r->w1 = 100;                            /* (A round: 10 seconds, Combat 7) */
-        put ("HarnMaster 3.5");
+        put ("HarnMaster 3.5\nhmchar");         /* (Its character generator: hmchar's files, RS_LOAD_PC's) */
         break;
     case RS_LOAD_PC:
         load_pc (r);
@@ -633,6 +656,9 @@ static void __fastcall__ answer (struct req* r)
         } else {
             sheet ();
         }
+        break;
+    case RS_DICE:                               /* (A test's: its dice fixed) */
+        dice_set (r);
         break;
     default:
         r->result = 0xFF;                       /* (Not yet) */

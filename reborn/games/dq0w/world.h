@@ -104,7 +104,8 @@ struct portal {
     unsigned char   x, y;
     unsigned char   kind;                       /* PK_* */
     unsigned char   state;                      /* PS_* */
-    unsigned char   lock;                       /* A mechanical lock's complexity, 1-9 (0: none) */
+    unsigned char   lock;                       /* A mechanical lock's difficulty, the steps worse picking it goes
+                                                **   (0: none) */
     unsigned char   mat;                        /* PM_* (a window's: its shutters', else its bars') */
     unsigned char   tough;                      /* Its body: the net harm it takes before it fails (each blow's
                                                 **   impact less its material's resistance), by its material, its
@@ -115,7 +116,8 @@ struct portal {
                                                 **   portcullis's bars */
     /* Its make (the maker's, with its own dice: fixtures.c's), what an observer judges (examine the door) */
     unsigned char   size;                       /* Its opening, in feet: its width (the low four bits), its height */
-    unsigned char   thick;                      /* Its leaf's thickness, in inches (a door's, shutters', bars') */
+    unsigned char   thick;                      /* Its leaf's thickness, in eighths of an inch (a door's, shutters',
+                                                **   bars': whole inches) */
     unsigned char   qual;                       /* Its state as made and as the years have left it: 0 rotten ...
                                                 **   4 sound ... 9 new */
     unsigned char   feat;                       /* PF_* */
@@ -166,8 +168,10 @@ struct trap {
     unsigned char   kind;                       /* TK_* */
     unsigned char   trigger;                    /* TT_* */
     unsigned char   state;                      /* TS_* */
-    unsigned char   hide;                       /* Hidden: how well, 0-9 (a search's steps) */
-    unsigned char   power;                      /* A pit's depth in feet; else how hard it strikes, 1-9 */
+    unsigned char   hide;                       /* Hidden: how well, the steps worse a search for it goes */
+    unsigned char   power;                      /* A pit's depth in feet; else how hard it strikes, its impact more
+                                                **   (1-9: the referee's points; half that the steps worse it is to
+                                                **   dodge or resist, to make out and to disarm) */
 };
 enum { TK_PIT, TK_COVERED, TK_SPIKED, TK_DEADFALL, TK_BLADE, TK_DARTS, TK_GAS, TK_ALARM };   /* A pit (open,
                                                 **   covered, spiked and covered), a deadfall, a scything blade,

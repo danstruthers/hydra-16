@@ -216,7 +216,7 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
                 S.up_rel = REL8 (z->gy > 0 ? H_S : H_N, face);
                 S.up_ft = (z->gy > 0 ? z->gy : -z->gy) / 2;
             }
-            if (!S.dark && (S.lit || (unsigned) light * 5 + EYE >= z->cmid)) {
+            if (!S.dark && (S.lit || (unsigned) light * SQ_FT + EYE >= z->cmid)) {
                 S.ceil = z->ceil;
                 S.cmid = z->cmid;
                 S.cwall = z->cwall;

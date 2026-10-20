@@ -23,14 +23,16 @@
 #   denizens  the bestiary's kinds that live here (dq0d/kinds.txt's keys, spaces between), or * all
 #   kind      a kind of thing of its own (8 at most): its name (13 letters at most), its ways (letters: h held in a
 #             hand, t in both, w worn, g hangs from a belt, c a container, s a surface (things lie on it), f fixed
-#             where it stands (never taken up), p its name's a plural; - none), its weight (pounds), its bulk
-#             (pints), how easily it's seen (0 tiny ... 9 huge), its material (wood iron steel bronze leather cloth
-#             bone clay stone glass silver other), the craft that knows it (weapon armour metal wood hide cloth
-#             pottery jewel book food bone stone glass), its worth (pennies); a container's or a surface's room
-#             (pints) and the weight it bears (pounds)
+#             where it stands (never taken up), p its name's a plural; - none), its weight (pounds, to a quarter:
+#             63 and three quarters at most, more taken as that), its bulk (pints, 255 at most), how far off it's
+#             made out past a speck (feet, in fives, the map's squares: 5 a coin or a key, 20 a sword, 35 a chest,
+#             75 at most), its material (wood iron steel bronze leather cloth bone clay stone glass silver other),
+#             the craft that knows it (weapon armour metal wood hide cloth pottery jewel book food bone stone glass),
+#             its worth (pennies); a container's or a surface's room (pints) and the weight it bears (pounds)
 #   piece     a piece of the puzzle (or a fixture of it: an altar, a throne), put down in the dungeon (8 at most):
-#             its kind, the strata it may lie in (first-last, from the top: 0), concealed (0-9: how hard to find,
-#             by searching) or - in plain view, how many
+#             its kind, the strata it may lie in (first-last, from the top: 0), concealed (how hard to find by
+#             searching: the steps worse a search goes, rs.h's scale, 0 to 30: 2 tucked away, 6 hidden well, 12
+#             cunningly) or - in plain view, how many
 #   rule      what's done with the pieces (8 at most): read X | words; combine X + Y = Z | words (both to hand:
 #             they become Z); put X | Y | effect | words (X put on Y, or in it); out X | effect | words (X used on
 #             the way out); the effect - nothing more, open (the way out opened), rule (the place ruled: an ending)
@@ -55,17 +57,17 @@ rooms    | chamber | hall | cell | vault | crypt | gallery | cave | storeroom
 light    | lit by torches in iron brackets
 denizens | rat spider ghoul skel bear kobold
 
-kind     | stone tablet | - | 6 | 3 | 3 | stone | stone | 0
-kind     | sunstone | - | 1 | 0 | 1 | stone | jewel | 40
-kind     | moonstone | - | 1 | 0 | 1 | stone | jewel | 40
-kind     | king's seal | - | 2 | 1 | 2 | stone | jewel | 400
-kind     | iron crown | w | 3 | 2 | 2 | iron | jewel | 1200
-kind     | throne | sf | 200 | 200 | 8 | stone | stone | 0 | 40 | 200
+kind     | stone tablet | - | 6 | 3 | 15 | stone | stone | 0
+kind     | sunstone | - | 1 | 0 | 5 | stone | jewel | 40
+kind     | moonstone | - | 1 | 0 | 5 | stone | jewel | 40
+kind     | king's seal | - | 2 | 1 | 10 | stone | jewel | 400
+kind     | iron crown | w | 3 | 2 | 10 | iron | jewel | 1200
+kind     | throne | sf | 200 | 200 | 40 | stone | stone | 0 | 40 | 200
 
 piece    | stone tablet | 0-0 | - | 1
 piece    | sunstone | 1-1 | - | 1
-piece    | moonstone | 1-2 | 3 | 1
-piece    | iron crown | 2-2 | 4 | 1
+piece    | moonstone | 1-2 | 4 | 1
+piece    | iron crown | 2-2 | 6 | 1
 piece    | throne | 2-2 | - | 1
 
 rule     | read | stone tablet | The tablet is cut with the old letters: "Here lies Aldric, king under the hill.  His

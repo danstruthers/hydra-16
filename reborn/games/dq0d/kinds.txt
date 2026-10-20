@@ -15,16 +15,16 @@
 #   strata    the strata it lives in, from the top (0) down: first-last
 #   group     how many in a lair: least-most
 #   lairs     lairs a stratum, at most
-#   range     squares from its lair it goes
-#   sight     squares it sees the character by the character's light, and with none (its darkvision)
-#   hearing   squares it hears the character
+#   range     feet from its lair it goes (its distances in feet, in fives: the map's squares, rs.h's units)
+#   sight     feet it sees the character by the character's light, and with none (its darkvision)
+#   hearing   feet it hears the character
 #   step      tenths of a second it takes to go a square (5 feet)
 #   faction   its faction (factions.txt's, a stand-in theme's): its tongue, its attitude to the character as it
 #             first meets it, and to the other factions; a theme's factions (the theme file's inhabitants) take
 #             their place, and speak the tongue of their first kind's
-#   mind      m mindless (nothing sways it), b a beast (Animalcraft only), l low (easily fooled, hard to reason
+#   mind      m mindless (nothing sways it), b a beast (the animals' test only), l low (easily fooled, hard to reason
 #             with), a average, c cunning (hard to fool)
-#   sway      steps (each about 5%) for or against swaying it, besides its attitude and mind: a bear's hard to calm
+#   sway      steps (rs.h's, each 5%) for or against swaying it, besides its attitude and mind: a bear's hard to calm
 #   eyes      its eyes' adapting to the dark (the senses keep each actor's: DUNGEON.md's perception as layers): tenths
 #             of a second to a 16th of a light level darker (a man's 19: a torch's light to the dark in some 4.5
 #             minutes); 0 at once (the dead's sight isn't the eyes').  Its darkvision (sight's second) is the less as
@@ -49,20 +49,20 @@
 # their priest.
 #
 # name      | key     | ways | styles | strata | group | lairs | range | sight | hearing | step | faction  | mind | sway | eyes | size | land   | climate | light | nature | arms              | remains
-giant rat   | rat     | sw   | bnmx   | 0-7    | 2-5   | 2     | 10    | 8-3   | 6       | 6    | vermin   | b    | 0    | 4    | 2    | *      | *       | *     | v      | bite              | body
-cave spider | spider  | l    | nx     | 1-7    | 1-2   | 2     | 3     | 4-4   | 3       | 8    | crawlers | b    | -2   | 4    | 2    | *      | tw      | d     | v      | bite              | body
-ghoul       | ghoul   | a    | bx     | 1-7    | 2-4   | 2     | 24    | 10-8  | 8       | 10   | dead     | l    | -4   | 0    | 4    | *      | *       | d     | d      | claws bite        | body
-skeleton    | skel    | l    | b      | 0-7    | 2-5   | 1     | 4     | 8-8   | 4       | 12   | dead     | m    | 0    | 0    | 4    | *      | *       | *     | d      | weapon            | bones
-cave bear   | bear    | a    | n      | 1-7    | 1-1   | 1     | 20    | 6-2   | 8       | 9    | beasts   | b    | -2   | 12   | 5    | mhf    | ct      | *     | a      | claws bite        | body
-kobold      | kobold  | -    | m      | 1-7    | 3-6   | 2     | 30    | 10-6  | 8       | 10   | kobolds  | c    | 0    | 6    | 3    | mh     | *       | *     | f      | weapon            | body
-bat         | bat     | s    | nx     | 0-5    | 3-8   | 2     | 20    | 2-6   | 12      | 3    | vermin   | b    | 0    | 0    | 1    | *      | tw      | d     | a      | bite              | body
-cave adder  | adder   | l    | nmx    | 0-4    | 1-2   | 3     | 3     | 6-2   | 3       | 10   | crawlers | b    | -2   | 6    | 2    | mhs    | tw      | *     | a      | bite              | body
-basilisk    | basilsk | la   | bn     | 2-7    | 1-1   | 1     | 8     | 8-6   | 3       | 8    | beasts   | b    | -4   | 8    | 5    | mh     | tw      | d     | m      | bite              | body
-lindworm    | lindwrm | la   | nx     | 3-7    | 1-1   | 1     | 12    | 12-4  | 10      | 6    | beasts   | b    | -4   | 8    | 6    | fsc    | ct      | *     | m      | claws bite crush  | body
-wight       | wight   | la   | bx     | 2-7    | 2-6   | 2     | 6     | 8-8   | 6       | 11   | dead     | m    | 0    | 0    | 4    | *      | *       | d     | d      | touch claws       | body
-shade       | shade   | -    | b      | 3-7    | 1-1   | 1     | 10    | 10-10 | 8       | 10   | dead     | c    | -2   | 0    | 4    | *      | *       | d     | d      | weapon touch      | body
-kobold lord | koblord | -    | m      | 1-7    | 1-1   | 1     | 20    | 10-6  | 8       | 10   | kobolds  | c    | -1   | 6    | 3    | mh     | *       | *     | f      | weapon            | body
-bandit      | bandit  | -    | bx     | 0-2    | 2-5   | 2     | 20    | 10-2  | 8       | 10   | outlaws  | a    | 0    | 19   | 4    | *      | *       | l     | f      | weapon            | body
-bandit lord | banlord | -    | bx     | 0-2    | 1-1   | 1     | 12    | 10-2  | 8       | 10   | outlaws  | c    | -1   | 19   | 4    | *      | *       | l     | f      | weapon            | body
-cultist     | cultist | -    | b      | 1-5    | 2-4   | 2     | 12    | 10-2  | 8       | 10   | cult     | a    | -1   | 19   | 4    | *      | *       | l     | f      | weapon            | body
-high priest | priest  | -    | b      | 1-5    | 1-1   | 1     | 8     | 10-2  | 8       | 10   | cult     | c    | -2   | 19   | 4    | *      | *       | l     | f      | weapon            | body
+giant rat   | rat     | sw   | bnmx   | 0-7    | 2-5   | 2     | 50    | 40-15 | 30      | 6    | vermin   | b    | 0    | 4    | 2    | *      | *       | *     | v      | bite              | body
+cave spider | spider  | l    | nx     | 1-7    | 1-2   | 2     | 15    | 20-20 | 15      | 8    | crawlers | b    | -2   | 4    | 2    | *      | tw      | d     | v      | bite              | body
+ghoul       | ghoul   | a    | bx     | 1-7    | 2-4   | 2     | 120   | 50-40 | 40      | 10   | dead     | l    | -4   | 0    | 4    | *      | *       | d     | d      | claws bite        | body
+skeleton    | skel    | l    | b      | 0-7    | 2-5   | 1     | 20    | 40-40 | 20      | 12   | dead     | m    | 0    | 0    | 4    | *      | *       | *     | d      | weapon            | bones
+cave bear   | bear    | a    | n      | 1-7    | 1-1   | 1     | 100   | 30-10 | 40      | 9    | beasts   | b    | -2   | 12   | 5    | mhf    | ct      | *     | a      | claws bite        | body
+kobold      | kobold  | -    | m      | 1-7    | 3-6   | 2     | 150   | 50-30 | 40      | 10   | kobolds  | c    | 0    | 6    | 3    | mh     | *       | *     | f      | weapon            | body
+bat         | bat     | s    | nx     | 0-5    | 3-8   | 2     | 100   | 10-30 | 60      | 3    | vermin   | b    | 0    | 0    | 1    | *      | tw      | d     | a      | bite              | body
+cave adder  | adder   | l    | nmx    | 0-4    | 1-2   | 3     | 15    | 30-10 | 15      | 10   | crawlers | b    | -2   | 6    | 2    | mhs    | tw      | *     | a      | bite              | body
+basilisk    | basilsk | la   | bn     | 2-7    | 1-1   | 1     | 40    | 40-30 | 15      | 8    | beasts   | b    | -4   | 8    | 5    | mh     | tw      | d     | m      | bite              | body
+lindworm    | lindwrm | la   | nx     | 3-7    | 1-1   | 1     | 60    | 60-20 | 50      | 6    | beasts   | b    | -4   | 8    | 6    | fsc    | ct      | *     | m      | claws bite crush  | body
+wight       | wight   | la   | bx     | 2-7    | 2-6   | 2     | 30    | 40-40 | 30      | 11   | dead     | m    | 0    | 0    | 4    | *      | *       | d     | d      | touch claws       | body
+shade       | shade   | -    | b      | 3-7    | 1-1   | 1     | 50    | 50-50 | 40      | 10   | dead     | c    | -2   | 0    | 4    | *      | *       | d     | d      | weapon touch      | body
+kobold lord | koblord | -    | m      | 1-7    | 1-1   | 1     | 100   | 50-30 | 40      | 10   | kobolds  | c    | -1   | 6    | 3    | mh     | *       | *     | f      | weapon            | body
+bandit      | bandit  | -    | bx     | 0-2    | 2-5   | 2     | 100   | 50-10 | 40      | 10   | outlaws  | a    | 0    | 19   | 4    | *      | *       | l     | f      | weapon            | body
+bandit lord | banlord | -    | bx     | 0-2    | 1-1   | 1     | 60    | 50-10 | 40      | 10   | outlaws  | c    | -1   | 19   | 4    | *      | *       | l     | f      | weapon            | body
+cultist     | cultist | -    | b      | 1-5    | 2-4   | 2     | 60    | 50-10 | 40      | 10   | cult     | a    | -1   | 19   | 4    | *      | *       | l     | f      | weapon            | body
+high priest | priest  | -    | b      | 1-5    | 1-1   | 1     | 40    | 50-10 | 40      | 10   | cult     | c    | -2   | 19   | 4    | *      | *       | l     | f      | weapon            | body
