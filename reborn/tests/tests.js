@@ -3903,31 +3903,62 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0theme', what: 'Dingus Quest Zero\'s themes (theme.h: data, games/dq0/themes, made dq0t.dat): the theme picked by the seed (its second byte: seed 3 the first theme, the crypt; seed 259 the second, the drowned temple), its name and story told, its strata named by it, kept in the save and the game carried on in it; the way out shut by its lock (its words, the theme\'s); then the crypt\'s puzzle\'s pieces (dq0 -k: the sunstone and the moonstone to hand) combined into the king\'s seal (its rule\'s words), the seal used on the way out (it opens), the way out examined, and taken: the game ended (escaped, the theme\'s ending), and the save marked done (a new game begun in its folder, not carried on)',
-      init: 't_rc', cycles: 1500e6,
-      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 259 -c /ram/c.hm -d /ram/t\r' +
-        ['look', 'u', 'quit', 'dq0 -d /ram/t', 'map', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone -d /ram/q', 'u',
-          'combine the sunstone with the moonstone', 'i', 'use the seal on the way out', 'x the way out', 'u', 'echo $status',
-          'dq0 -p t -c /ram/c.hm -d /ram/q', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
-      expect: ['The Drowned Temple.\nThe temple of the Deep Mother sank', 'enters the dungeon.', 'part of a treasury', 'The temple\'s\ndoors are sealed with green bronze',
-        'The Drowned Temple.\n', 'takes up where they left off.', 'Temple Steps',
-        'The Crypt of the Dead King.\nAldric, last of the kings', 'The way out is shut fast. Whatever opens it is somewhere below. A door of',
-        'You fit the two stones together', 'a king\'s seal', 'You press the seal into the hollow in the black door.',
-        'The black door stands open on the stair up to the daylight: go up to leave.', 'You climb the stair into the light of day',
-        'You have escaped.', 'The game is over.', '% echo $status', 'Tordan, Hunter/Trapper, enters the dungeon.'],
+      name: 'dq0theme', meaning: true, what: 'Dingus Quest Zero\'s themes (theme.h: data, games/dq0/themes, made dq0t.dat), by the theme bank, the world\'s events and the things\' records: the theme picked by the seed (its second byte: seed 259 the second theme, the drowned temple; seed 3 the first, the crypt), kept in the save and the game carried on in it, its strata named by it (the senses\' record\'s stratum, the theme\'s names); the way out shut by its lock; then the crypt\'s puzzle\'s pieces (dq0 -k: the sunstone and the moonstone to hand) combined into the king\'s seal (its rule\'s: the stones gone, the seal carried), the seal used on the way out (it opens: the world\'s way_open), and taken: the game ended (escaped, E_LEFT), and the save marked done (a new game begun in its folder, not carried on) (its words, the theme\'s: the themes\' own data)',
+      init: 't_rc', cycles: 1400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 259 -c /ram/c.hm -d /ram/t', 'u', 'quit', 'dq0 -d /ram/t',
+        'map', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone -d /ram/q', 'u', 'combine the sunstone with the moonstone', 'use the seal on the way out',
+        'u', 'dq0 -p t -c /ram/c.hm -d /ram/q', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [], theme = t => t.after ? t.after.theme : '?';
+        const g0 = T.of('dq0 -p t -s 259 -c /ram/c.hm -d /ram/t'), g1 = T.of('dq0 -d /ram/t'), g2 = T.of('dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone -d /ram/q');
+        if (theme(g0) !== 'the Drowned Temple') f.push('seed 259 not the second theme: ' + theme(g0));
+        dq0Need(f, T.after(g0, 'u'), 'E_NOWAY', { why: 'N_SHUT' }, 'the way out not shut by its lock');
+        dq0Need(f, g1, 'E_ARRIVE', { how: 'A_RESUMED' }, 'the game not carried on');
+        if (theme(g1) !== 'the Drowned Temple') f.push('the theme not kept with the game: ' + theme(g1));
+        const mp = T.after(g1, 'map');
+        const st = mp.after && mp.after.sight ? mp.after.strata[mp.after.sight.sname] : '?';
+        if (st !== 'Temple Steps') f.push('the stratum not named by the theme: ' + st);
+        if (theme(g2) !== 'the Crypt of the Dead King') f.push('seed 3 not the first theme: ' + theme(g2));
+        dq0Need(f, T.after(g2, 'u'), 'E_NOWAY', { why: 'N_SHUT' }, 'the crypt\'s way out not shut');
+        const c = T.of('combine the sunstone with the moonstone'), has = (t, n) => dq0Carried(t.after).some(i => i.name === n);
+        if (!dq0Rep(c, 'ireq', { kind: 'IO_COMBINE', result: 'IR_OK' }).length) f.push('the stones not combined');
+        if (!has(c, 'king\'s seal') || has(c, 'sunstone') || has(c, 'moonstone')) f.push('the stones not made the king\'s seal');
+        const u = T.of('use the seal on the way out');
+        if (!u.after || !u.after.wayOpen || (u.at && u.at.wayOpen)) f.push('the way out not opened by the seal');
+        const l = T.after(u, 'u');
+        dq0Need(f, l, 'E_LEFT', {}, 'the way out not taken (escaped)');
+        dq0Need(f, T.and(l), 'E_BYE', {}, 'the game not ended');
+        dq0Need(f, T.of('dq0 -p t -c /ram/c.hm -d /ram/q'), 'E_ARRIVE', { how: 'A_START' }, 'the done save carried on, not a new game begun');
+        return f;
+      },
       sdcard: true
     },
     {
-      name: 'dq0pieces', what: 'Dingus Quest Zero\'s puzzle\'s pieces placed with the plan (theme.h: each one\'s stratum from the seed, its chunk in the stratum\'s halls as its plan is grown, put down as the chunk is made, by the maker\'s stock): the crypt\'s stone tablet on the top stratum (dq0 -T -T: the character begins on it), seen, taken and read (the parser\'s read, its rule\'s words); then the crown and the throne (dq0 -k), the throne put down and not taken up again (fixed where it stands), the crown put on it: the place ruled, the game ended (ruled, the theme\'s ending)',
-      init: 't_rc', cycles: 1200e6,
-      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -T -T\r' +
-        ['look', 'take the tablet', 'read the tablet', 'read the dagger', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -k crown,throne', 'drop the throne',
-          'take the throne', 'put the crown on the throne', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
-      expect: ['stone tablet', 'Taken.', 'The tablet is cut with the old letters: "Here lies Aldric', 'There\'s nothing written on the dagger.',
-        'The throne is fixed where it stands.', 'You put the iron crown on the throne.', 'You set the iron crown upon the throne.',
-        'The crypt is yours, and all who lie in it.', 'The game is over.', '% echo $status'],
+      name: 'dq0pieces', meaning: true, what: 'Dingus Quest Zero\'s puzzle\'s pieces placed with the plan (theme.h: each one\'s stratum from the seed, its chunk in the stratum\'s halls as its plan is grown, put down as the chunk is made, by the maker\'s stock), by what the character perceives and the things\' records and replies: the crypt\'s stone tablet on the top stratum (dq0 -T -T: the character begins on it), seen at its feet, taken and read (the parser\'s read: a piece of the puzzle found to hand), a dagger not (nothing written on it); then the crown and the throne (dq0 -k), the throne put down and not taken up again (fixed where it stands: refused), the crown put on it: the place ruled, the game ended (the theme\'s ending; its words, the theme\'s data)',
+      init: 't_rc', cycles: 800e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -T', 'take the tablet', 'read the tablet',
+        'read the dagger', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -k crown,throne', 'drop the throne', 'take the throne', 'put the crown on the throne', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [], rep = (l, kind, result, what) => { if (!dq0Rep(T.of(l), 'ireq', { kind, result }).length) f.push(what + ' (' + JSON.stringify(T.of(l).replies.filter(r => r.req === 'ireq').map(r => r.kind + ' ' + r.result)) + ')'); };
+        const s0 = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -T').after;
+        if (!s0 || !s0.sight || !s0.sight.items.some(i => i.name === 'stone tablet' && i.rel === 255)) f.push('the stone tablet not seen at its feet as it begins');
+        rep('take the tablet', 'IO_GET', 'IR_OK', 'the tablet not taken');
+        if (!dq0Carried(T.of('take the tablet').after).some(i => i.name === 'stone tablet')) f.push('the tablet not carried');
+        rep('read the tablet', 'IO_FIND', 'IR_OK', 'the tablet not read (a piece found to hand)');
+        rep('read the dagger', 'IO_FIND', 'IR_NONE', 'the dagger read as a piece');
+        const d = T.of('drop the throne');
+        if (!dq0Here(d.after).some(i => i.name === 'throne')) f.push('the throne not put down');
+        rep('take the throne', 'IO_GET', 'IR_NO', 'the throne taken up again (not fixed where it stands)');
+        const p = T.of('put the crown on the throne');
+        rep('put the crown on the throne', 'IO_PUT', 'IR_OK', 'the crown not put on the throne');
+        dq0Need(f, p, 'E_BYE', {}, 'the game not ended, the place ruled');
+        return f;
+      },
       sdcard: true
-    },    {
+    },
+    {
       name: 'dq0plan', meaning: true, what: 'Dingus Quest Zero\'s built strata built to a plan (DUNGEON.md, the user\'s, 2026-10-16: "feast halls near kitchens near pantries and storage"; "Larger rooms tend to have higher ceilings, and corridors and smaller rooms tend to have uniform ceiling heights"; "Prior usage can also inform ... what kinds of detritus"): at seed 3 the crypt\'s Upper Halls (their purpose halls: a domestic suite by the way in), the character beginning in a kitchen, its iron pot lying there (what its use left), and its well (there\'s water); the chunks made, read from the hub\'s cache (world.h\'s struct chunk in the shared segment\'s banks): a hall joined to a kitchen by a passage of its own, through no other room; every hall\'s ceiling higher than the passages\' (the chunk\'s pceil), every storeroom\'s, pantry\'s, cell\'s and bedchamber\'s flat at the passages\' height; every room\'s floor flat, at the stratum\'s one level (but a hall\'s dais, two feet up)',
       init: 't_rc', cycles: 500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm', 'quit', 'echo $status']) },

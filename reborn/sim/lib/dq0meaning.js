@@ -51,7 +51,8 @@ const EXPRS = {
   aState: F('struct actor', 'state'), aSn: F('struct actor', 'sn'), aFace: F('struct actor', 'face'), aPos: F('struct actor', 'pos'),
   aX: F('struct actor', 'x'), aY: F('struct actor', 'y'), aDoing: F('struct actor', 'doing'), aName: F('struct actor', 'name'),
   aAttitude: F('struct actor', 'attitude'), aFaction: F('struct actor', 'faction'), aKind: F('struct actor', 'kind'),
-  themeBank: 'THEME_BANK', thName: F('struct theme', 'name'),
+  themeBank: 'THEME_BANK', thName: F('struct theme', 'name'), thStratum: F('struct theme', 'stratum'), tstrata: 'TSTRATA',
+  tSname: F('struct sight', 'sname'),
   namesAt: '(unsigned) NAMES_AT - 0x8000', tnames: 'TNAMES', tname: 'sizeof (struct tname)', nmWhat: F('struct tname', 'what'),
   nmSn: F('struct tname', 'sn'), nmX: F('struct tname', 'x'), nmY: F('struct tname', 'y'), nmKind: F('struct tname', 'kind'),
   nmName: F('struct tname', 'name'),
@@ -191,6 +192,7 @@ function createRecorder() {
     const th = bank(L.themeBank);
     if (th) {
       s.theme = str(th, L.thName, 32);
+      s.strata = Array.from({ length: L.tstrata }, (_, i) => str(th, L.thStratum + i * 20, 20));   // (Its strata's names, the top down)
       for (let i = 0; i < L.tnames; i++) {
         const o = L.namesAt + i * L.tname;
         if (!th[o + L.nmWhat]) continue;
@@ -205,7 +207,7 @@ function createRecorder() {
       const list = (n, max, at, size, f) => Array.from({ length: Math.min(t[n], max) }, (_, i) => f(at + i * size - at, i));
       const d0 = L.tDoor, o0 = L.tOpen, i0 = L.tItem, n0 = L.tDen, p0 = L.tTrap, g0 = L.tGlow;
       s.sight = { seq: t[L.tSeq], where: t[L.tWhere], dark: t[L.tDark], kind: t[L.tKind], size: t[L.tSize], rw: t[L.tRw], rh: t[L.tRh],
-        lit: t[L.tLit], ceil: t[L.tCeil], first: t[L.tFirst], z: w16(t, L.tZ) << 16 >> 16, stratum: t[L.tStratum], x: w16(t, L.tX), y: w16(t, L.tY), nways: t[L.tNways], dazzled: t[L.tDazzled],
+        lit: t[L.tLit], ceil: t[L.tCeil], sname: t[L.tSname], first: t[L.tFirst], z: w16(t, L.tZ) << 16 >> 16, stratum: t[L.tStratum], x: w16(t, L.tX), y: w16(t, L.tY), nways: t[L.tNways], dazzled: t[L.tDazzled],
         doors: list(L.tNdoors, L.seeDoors, d0, L.tDoorSize, o => ({ rel: t[L.dRel + o], state: t[L.dState + o], x: w16(t, L.dX + o),
           y: w16(t, L.dY + o), kind: name('PK_DOOR', t[L.dKind + o]), parts: t[L.dParts + o] })),
         open: list(L.tNopen, L.seeOpen, o0, L.tOpenSize, o => ({ rel: t[L.oRel + o], kind: name('O_STAIRS_UP', t[L.oKind + o]) })),
