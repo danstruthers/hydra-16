@@ -26,9 +26,10 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     5                       /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     6                       /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
-                                                **   parser's command, struct cmd, and P_THROW's ability) */
+                                                **   parser's command, struct cmd, and P_THROW's ability; 6: the
+                                                **   character's long task, pc_task, I_STOP, E_TASK) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -158,6 +159,9 @@ enum {
                                                 **   I_GOTO's), t the thing (its item: the reply's); the world walks
                                                 **   there (again, as long as the walk gets it nearer) and takes it up,
                                                 **   E_TAKEN */
+    I_STOP,                                     /* The character's long task stopped (the player's "stop"): a its kind
+                                                **   named (LT_*: "stop digging"; LT_NONE whatever it is); E_TASK */
+    I_GO_ON,                                    /* A soft interruption answered: go on (E_TASK's TE_ASK*: "yes") */
     NINTENTS
 };
 /* The denizens' intents (their ring, the hub's di: the minds', for their actors' bodies, the world's to carry out
@@ -216,6 +220,10 @@ enum {
                                                 **   to ask, as for any thing handled, no E_READY till then; IR_FIXED a
                                                 **   portal's part, or a thing fixed where it stands, the UI's to see
                                                 **   to), w2 the light it carried before (the hub's pc_light) */
+    E_TASK,                                     /* who's long task (the hub's pc_task): w1 what came of it (TE_*), its
+                                                **   kind (LT_*) times 256 */
+    E_BEAT,                                     /* who's walk, as it goes (DUNGEON.md: moving): w1 the beat (WB_*), its
+                                                **   side (WS_*) times 256 */
     NEVENTS
 };
 enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST };    /* E_DEN's what: a step, a noise of its own (a squeak, a
@@ -251,6 +259,15 @@ enum { V_TURNED, V_LIT, V_DARK, V_STIR, V_FACING };    /* E_VIEW's why (V_STIR: 
                                                 **   from it, or doing something else; V_FACING: a turn begun, its
                                                 **   look to come, V_TURNED) */
 enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL };  /* E_DIG's how */
+enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE_IDLE };   /* E_TASK's: stopped as
+                                                **   the player asked; stopped hard, by a wound or a blow (HOUSE.md:
+                                                **   all wounds), by a hostile in sight within 30 feet; asking, soft
+                                                **   (something new seen, tiring); carried on, the answer yes; not
+                                                **   the task named (its kind the hub's pc_task's); no task to stop */
+enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN };   /* E_BEAT's: a quiet stretch (HOUSE.md:
+                                                **   every 30 feet), the way turns, a side passage, a door passed, it
+                                                **   opens out, it rises, it falls */
+enum { WS_AHEAD, WS_LEFT, WS_RIGHT };           /* E_BEAT's side (or a turn's way) */
 enum { K_BEGUN, K_ON, K_BACK, K_FELL, K_UP, K_DOWN, K_JUMPED, K_NOHOLD };    /* E_CLIMB's how: begun, on, slipped
                                                 **   back, fallen, up, down; jumped down (a ledge, a shaft); no hold
                                                 **   found yet (at its foot: nothing to slip back, nor to fall) */
@@ -621,6 +638,15 @@ struct hub {                                    /* Bank 0, at $8000 */
     ** world, the denizens, the maker) stamps a file past vlo, up to vhi (vfile.c's) */
     unsigned long   vsaved, vbase, vlo, vhi;
     unsigned char   small;                      /* dq0 -C (the tests'): the caches small, so a short game pages them */
+    /* The character's long task (HOUSE.md's long tasks: anything it does that takes more than a round), the world's
+    ** to keep for every actor alike, the character's here for the UI: its bar on the status line, its words; the
+    ** player's stop and a soft interruption's answer the world's intents (I_STOP, I_GO_ON) */
+    struct ltask {
+        unsigned char kind;                     /* LT_*: none, a walk, a climb, a dig, a search, a wait */
+        unsigned char asking;                   /* A soft interruption put to the player (E_TASK's TE_ASK*): 1 */
+        unsigned    len, done;                  /* Its length and its part done, its own units (a walk's squares, a
+                                                **   dig's half-feet, a climb's feet, a wait's tenths) */
+    }               pc_task;
 };
 #define SN_SEEN         0x01                    /* (dsense's res: the character seen, */
 #define SN_HEARD        0x02                    /*   heard) */
@@ -793,6 +819,7 @@ struct wsave {
 **   own hub.vlo world
 **   own hub.vhi world
 **   own hub.small ui                                           (dq0 -C)
+**   own hub.pc_task world                                      (The character's long task: slice 4.0's)
 **   own banks(1,PLAN_BANKS) maker                              (The plans: grown from the seed)
 **   own banks(CACHE_BANK(0),CACHE_BANKS) none                  (The chunks' cache: its room past three chunks)
 **   own chunk maker                                            (A chunk: made from the seed)
