@@ -108,6 +108,12 @@ function one(s, turns, verbose) {
   if (res.failures.some(f => /^missing:/.test(f)))
     problems.push('hung: no prompt after ' + JSON.stringify(typed[typed.length - 1] || '(the start)') + ' (turn ' + typed.length + ')');
   if (shellAt >= 0 && (quitAt < 0 || shellAt < quitAt) && !dead) problems.push('the game ended by itself after ' + JSON.stringify(typed[typed.length - 1] || '(the start)'));
+  // (The start, as the first command finds it: in a room by the stairs up to the way out, what the character perceives
+  // says, sim/lib/dq0meaning.js's; a passage's dead end is a dead-end start: tests.js's dq0start0 and dq0start1 hold
+  // twelve of the seeds that were, the soak the rest)
+  const s0 = res.m.dq0 && res.m.dq0.games.length ? res.m.dq0.games[0].snaps[0] : null;
+  if (s0 && s0.sight && (s0.sight.where !== 0 || !s0.sight.open.some(w => w.kind === 'O_WAY_OUT' && w.rel === 255)))
+    problems.push('a dead-end start: not in a room by the way out (' + (s0.sight.where ? 'a passage' : 'no way out at its feet') + ')');
   const mins = [...game.matchAll(/(\d+) min\b/g)].map(m => +m[1]);
   let still = 0, most = 0;
   for (let i = 1; i < mins.length; i++) { still = mins[i] === mins[i - 1] ? still + 1 : 0; most = Math.max(most, still); }

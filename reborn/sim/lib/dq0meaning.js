@@ -184,7 +184,8 @@ function createRecorder() {
     for (let i = 0; i < L.nitems; i++) {
       const b = bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize;
       if (!b || !b[o + L.iKind]) continue;
-      s.items.push({ n: i, kind: b[o + L.iKind], name: kname(b[o + L.iKind]), flags: b[o + L.iFlags], where: name('IW_SQUARE', b[o + L.iWhere]),
+      s.items.push({ n: i, kind: b[o + L.iKind], name: kname(b[o + L.iKind]), weight: cat ? cat[b[o + L.iKind] * L.kindSize + L.kWeight] : 0,
+        kflags: cat ? cat[b[o + L.iKind] * L.kindSize + L.kFlags] : 0, flags: b[o + L.iFlags], where: name('IW_SQUARE', b[o + L.iWhere]),
         sn: b[o + L.iSn], x: w16(b, o + L.iX), y: w16(b, o + L.iY), qty: b[o + L.iQty], id: w16(b, o + L.iId) });
     }
     const th = bank(L.themeBank);
