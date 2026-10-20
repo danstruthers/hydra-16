@@ -284,4 +284,4 @@ function judge(res) {
 const line = e => e.region + ' (' + e.owner + '\'s) written by the ' + e.writer + ' ' + e.count + 'x, first at ' + e.pc +
   ' from ' + e.from + ' (' + e.at + ')' + (e.known ? ' [move ' + e.known + ']' : ' [NEW]');
 
-module.exports = { map, createCheck, judge, line, table, TASKS, PROGS };
+module.exports = { map, createCheck, judge, line, table, evaluate, TASKS, PROGS };

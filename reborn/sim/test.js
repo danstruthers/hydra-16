@@ -22,6 +22,7 @@ const romfs = require('../tools/romfs.js');
 const { readManifest, hwtest } = require('../build.js');
 const { tests, IRQ_OFF_MAX, dq0Check } = require('../tests/tests.js');
 const hubown = require('./lib/hubown.js');
+const dq0meaning = require('./lib/dq0meaning.js');
 
 const ROOT = path.join(__dirname, '..');
 const bin = (dir, n) => fs.readFileSync(path.join(ROOT, 'obj', dir, n + '.bin'));
@@ -85,9 +86,10 @@ const HUBOWN = process.env.HUBOWN || '';
 const hubDir = path.join(ROOT, 'obj', 'hubown');
 function instrument(t) {
   if (!/^dq0/.test(t.name)) return null;
-  if (HUBOWN === '0') return { boot: {}, attach: () => {}, judge: m => ({ failures: dq0Check(t.name, m), notes: [] }) };
+  const r = dq0meaning.createRecorder(), on = mm => { r.attach(mm); mm.dq0 = r; };   // (What happened: m.dq0, tests.js's dq0Turns)
+  if (HUBOWN === '0') return { boot: { sharedWrite: r.hook }, attach: on, judge: m => ({ failures: dq0Check(t.name, m), notes: [] }) };
   const M = hubown.map(), c = hubown.createCheck(M);
-  return { boot: { sharedWrite: c.hook }, attach: c.attach, judge: m => {
+  return { boot: { sharedWrite: (k, o, v, T, pc, W) => { c.hook(k, o, v, T, pc, W); r.hook(k, o, v); } }, attach: mm => { c.attach(mm); on(mm); }, judge: m => {
     const r = c.result(), { known, fresh } = hubown.judge(r), notes = [], failures = [...fresh.map(e => 'hub: ' + hubown.line(e)), ...dq0Check(t.name, m)];
     try { fs.mkdirSync(hubDir, { recursive: true }); fs.writeFileSync(path.join(hubDir, t.name + '.json'), JSON.stringify(r)); } catch (e) { /* (No summary) */ }
     if (!r.found) return { failures, notes: ['hub writers: no hub made'] };

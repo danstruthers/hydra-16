@@ -1896,6 +1896,56 @@ function dq0Check(name, m) {
     ...dq0Doubled(m).map(s => 'a chunk\'s fixtures doubled: ' + s)];
 }
 
+// What a dq0 test's lines did, by their meaning (Phase 3A: tests cut to meaning, not words): sim/lib/dq0meaning.js's
+// record (m.dq0, in every dq0 test: the world's events, the denizens', the requests' replies, the state each line
+// found as it was entered), a line at a time.  dq0Turns(m): the lines typed (as the serial port gave them, each to its
+// CR), each { k, line, game (the game its events are in, 0 on), events, dens, replies, at (the state the line found),
+// after (the next line's, or the test's end's) }; T.of(line, from): the first turn of that line from turn from on (or
+// one of nothing, its k -1), T.after(turn, line): the first of that line after it.  A meaning test (meaning: true)
+// checks only these, and nothing of the ruleset's own (its numbers, its dice's outcomes, its words): the null ruleset
+// runs them too (dq0null's agent's)
+function dq0Turns(m) {
+  const r = m.dq0, all = { events: [], dens: [], replies: [], snaps: [] };
+  r.games.forEach((g, gi) => { for (const k of Object.keys(all)) for (const e of g[k]) all[k].push(Object.assign({ game: gi }, e)); });
+  const fin = r.final(), of = (list, k) => list.filter(e => e.line === k + 1);
+  const T = r.lines.map((line, k) => ({ k, line, events: of(all.events, k), dens: of(all.dens, k), replies: of(all.replies, k),
+    at: all.snaps.find(s => s.line === k + 1) || null }));
+  T.forEach((t, k) => {
+    t.after = k + 1 < T.length ? T[k + 1].at || fin : fin;
+    t.game = t.events.length ? t.events[0].game : t.after ? t.after.game : -1;
+  });
+  const none = { k: -1, line: '', events: [], dens: [], replies: [], at: null, after: null, game: -1 };
+  T.of = (line, from = 0) => T.find(t => t.k >= from && t.line === line) || Object.assign({}, none, { line });
+  T.after = (t, line) => T.of(line, t.k + 1);
+  return T;
+}
+// A turn's events (the world's and the denizens') of a kind, with the fields given (each a value, or a test of it)
+const dq0Ev = (t, kind, want = {}) => [...t.events, ...t.dens].filter(e => e.kind === kind &&
+  Object.entries(want).every(([k, v]) => (typeof v === 'function' ? v(e[k]) : e[k] === v)));
+const dq0Rep = (t, req, want = {}) => t.replies.filter(e => e.req === req && Object.entries(want).every(([k, v]) => (typeof v === 'function' ? v(e[k]) : e[k] === v)));
+// A turn's events as words, for a failure's
+function dq0Evs(t) {
+  if (t.k < 0) return '"' + t.line + '" not typed';
+  const one = e => e.kind + ['how', 'why', 'po', 'hc', 'band', 'to', 'tk', 'ir', 'de', 'out'].filter(k => e[k] !== undefined && e[k] !== false).map(k => ' ' + e[k]).join('');
+  return '> ' + t.line + ': ' + ([...t.events, ...t.dens.filter(e => e.kind === 'E_FIGHT')].map(one).join(', ') || 'no events');
+}
+// A check: event kind (want's fields) in turn t, or (never) none; what the failure says
+function dq0Need(f, t, kind, want, what) { if (!dq0Ev(t, kind, want).length) f.push(what + ' (' + dq0Evs(t) + ')'); }
+function dq0Never(f, t, kind, want, what) { if (t.k >= 0 && dq0Ev(t, kind, want).length) f.push(what + ' (' + dq0Evs(t) + ')'); }
+// The things carried (the item store's: on the character, or in what it carries), by kind's name: [{ name, flags, ... }]
+function dq0Carried(s) {
+  if (!s) return [];
+  const on = new Set(), by = new Map(s.items.map(i => [i.n, i]));
+  const mine = i => { for (let d = 0; i && d < 8; d++) { if (i.where === 'IW_ACTOR') return i.x === 0; if (i.where !== 'IW_ITEM') return false; i = by.get(i.x); } return false; };
+  return s.items.filter(i => mine(i) && !on.has(i.n) && on.add(i.n));
+}
+// The things lying on the character's square (its stratum's), by name
+const dq0Here = s => s ? s.items.filter(i => i.where === 'IW_SQUARE' && i.sn === s.pc.sn && i.x === s.pc.x && i.y === s.pc.y) : [];
+const dq0Named = (list, name) => list.filter(i => i.name === name);
+const DQ0_I = { LIT: 0x01, HELD: 0x02, WORN: 0x04, HIDDEN: 0x08 };   // (items.h's I_*)
+// A dq0 test's lines typed, each at its prompt (rc's "% ", the game's "> ")
+const dq0Typed = lines => lines.map(l => '\u0101' + l + '\r').join('');
+
 // Dingus Quest Zero's answers timed (dq0answer's): each command's Enter (the CR as the ACIA has it) to its answer's first
 // letter in the story (want: the words it begins with), and to the story's last letter before the prompt ("> " on
 // the line typed's row) comes back; the status line (reverse video) and the escapes not the story's.  dq0Timer(m),
@@ -2598,18 +2648,42 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0', what: 'Dingus Quest Zero (games/dq0) at rc, its turns pace: a character from hmchar\'s file (-c), commands typed ahead (each waits for its prompt): looking, the way out shut, the map, going, quit (digging: dq0dig, dq0tools, dq0earth); a ledge climbed (seed 517, the kobold warren\'s mixed top stratum: a built stratum\'s floors are flat), its words\' u climbing it though the way out\'s in the room; then the game running hmchar itself, in its window, answered as a player would, and the character it made read back',
-      init: 't_rc', cycles: 1000e6,
-      // (\u0101: wait for a prompt, the game's "> " too; \u0100: wait a while, for hmchar's questions)
-      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm\r' +
-        ['look', 'u', 'map', 'n', 'open the door behind me on my right', 'n', 'look', 'open', 'n', 'e', 'u', 'look', 's', 'w', 'go west', 'map', 'wait', 'help', 'foo', 'quit', 'echo $status',
-         'dq0 -p t -s 517 -c /ram/c.hm', 'ne', 'e', 'u', 'quit'].map(l => '\u0101' + l + '\r').join('') +
-        '\u0101dq0 -p t -s 7\r\u0100\u0100k\r\u01002\r\u0100bow\r\u0100spear\r\u0100sword\r\u0100\r\u0100Dorn\r' +
-        '\u0101sheet\r\u0101quit\r\u0101echo done\r' },
-      expect: ['Tordan, Hunter/Trapper, enters the dungeon.', 'The way out is shut fast.', 'The map (you face', 'You open the door.', 'at a ledge ahead', 'You set to climbing',
-        '> wait', 'Time passes.', 'Commands: north, northeast, east',
-        "I don't know how to foo.", '% echo $status', 'Keep this character, or roll again (k or r)?', 'Written to /ram/dq0.hm',
-        'Dorn, Hunter/Trapper, enters the dungeon.', 'Dorn, Human Female, Hunter/Trapper; born 10 Ilvin (Skorus).', '% echo done\ndone'],
+      name: 'dq0', meaning: true, what: 'Dingus Quest Zero (games/dq0) at rc, its turns pace, by what happens (the hub\'s events and state: sim/lib/dq0meaning.js, tests.js\'s dq0Turns): a character from hmchar\'s file (-c) begins in a room by the way out; commands typed ahead (each waits for its prompt): the way out shut, a shut door in the way, a door opened (turned to first), walked through to a passage, another opened and a room come into the first time, crossed, no stairs there, back to the first room; west and go west the same (no way there); the map, the help, a word the game doesn\'t know and a look taking no time, a wait a round; quit, the game\'s end (the ledges: dq0harm; the game running hmchar itself: dq0veraserial)',
+      init: 't_rc', cycles: 800e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm', 'look', 'u', 'n',
+        'open the door behind me on my right', 'n', 'open', 'n', 'e', 'u', 's', 'w', 'go west', 'map', 'help', 'foo', 'look', 'wait', 'quit',
+        'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [], g = T.of('dq0 -p t -s 3 -c /ram/c.hm'), s = g.after;
+        dq0Need(f, g, 'E_ARRIVE', { how: 'A_START' }, 'the game not begun');
+        if (!s || !s.sight || s.sight.where !== 0 || !s.sight.open.some(o => o.kind === 'O_WAY_OUT')) f.push('not begun in a room by the way out');
+        const u = T.of('u'), n = T.of('n'), o = T.of('open the door behind me on my right');
+        dq0Need(f, u, 'E_NOWAY', { why: 'N_SHUT' }, 'the way out not shut');
+        dq0Need(f, n, 'E_NOWAY', { why: 'N_DOOR' }, 'no shut door in the way');
+        dq0Need(f, o, 'E_PORTAL', { po: 'PO_OPENED' }, 'the door behind not opened');
+        if (o.at && o.after && o.at.pc.face === o.after.pc.face) f.push('not turned to the door behind');
+        const n2 = T.after(o, 'n'), op = T.after(n2, 'open'), n3 = T.after(op, 'n'), e = T.after(n3, 'e'), u2 = T.after(e, 'u'), s2 = T.after(u2, 's');
+        dq0Need(f, n2, 'E_ARRIVE', {}, 'not through the door');
+        if (n2.at && n2.after && !(n2.after.pc.y < n2.at.pc.y)) f.push('not gone north');
+        dq0Need(f, op, 'E_PORTAL', { po: 'PO_OPENED' }, 'the next door not opened');
+        dq0Need(f, n3, 'E_ARRIVE', { first: true }, 'no room come into the first time');
+        dq0Need(f, e, 'E_ARRIVE', {}, 'the room not crossed');
+        if (e.at && e.after && !(e.after.pc.x > e.at.pc.x)) f.push('not gone east');
+        dq0Need(f, u2, 'E_NOWAY', { why: 'N_NO_STAIRS' }, 'up with no stairs not refused');
+        dq0Need(f, s2, 'E_ARRIVE', {}, 'not back south');
+        if (!s2.after || !s2.after.sight || !s2.after.sight.open.some(o => o.kind === 'O_WAY_OUT')) f.push('not back by the way out');
+        for (const l of ['w', 'go west']) dq0Need(f, T.after(s2, l), 'E_NOWAY', { why: 'N_NO_EXIT' }, l + ': not refused (no way)');
+        for (const l of ['map', 'help', 'foo', 'look']) {
+          const t = T.after(s2, l);
+          if (t.k < 0 || t.events.length || !t.at || !t.after || t.after.now !== t.at.now) f.push(l + ': not a moment\'s (' + dq0Evs(t) + ')');
+        }
+        const w = T.of('wait');
+        dq0Need(f, w, 'E_TIME', {}, 'no time waited');
+        if (w.at && w.after && !(w.after.now > w.at.now)) f.push('the clock not on after a wait');
+        dq0Need(f, T.of('quit'), 'E_BYE', {}, 'the game not ended');
+        return f;
+      },
       sdcard: true
     },
     {
@@ -3646,60 +3720,52 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0pace', what: 'Dingus Quest Zero\'s pace and watchfulness (the user\'s, 2026-10-16: DUNGEON.md, moving): status (the pace, its feet a round by HarnMaster\'s rates of the Move, what it watches for, its condition, its light); a jog set, then searching for traps as it goes (held to a slow walk), listening (a walk at most, while it\'s not searching), mapping as it goes (a slow walk), each stopped; a sprint set; "run north" setting the run as it goes (the move the command\'s); "run south" going on at it, unsaid; kept with the sheet (dq0 -d: pc.hm\'s pace line) and the game carried on at it; the help\'s words',
-      init: 't_rc', cycles: 2500e6,
-      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 3 -c /ram/c.hm -d /ram/p\r' +
-        ['status', 'jog', 'search for traps as I go', 'listen as I go', 'stop searching', 'stop listening', 'map as I go',
-          'stop mapping', 'set pace to sprint', 'walk slowly', 'run north', 'run south', 'creep', 'listen as I go',
-          'quit', 'grep pace /ram/p/pc.hm', 'dq0 -p t -d /ram/p', 'status', 'help', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      name: 'dq0pace', meaning: true, what: 'Dingus Quest Zero\'s pace and watchfulness (the user\'s, 2026-10-16: DUNGEON.md, moving), by the world\'s state of them (the hub\'s gait and watch: the UI\'s requests, WQ_SET): a walk to begin with; a jog set, then searching for traps as it goes, listening too, each stopped, mapping as it goes and stopped; a sprint set, a slow walk; "run north" setting the run as it goes (the move the command\'s), "run south" going on at it; a creep, listening as it goes; kept (dq0 -d: the world\'s world.dat) and the game carried on at them (its words: dq0words)',
+      init: 't_rc', cycles: 1000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -d /ram/p', 'status', 'jog',
+        'search for traps as I go', 'listen as I go', 'stop searching', 'stop listening', 'map as I go', 'stop mapping', 'set pace to sprint',
+        'walk slowly', 'run north', 'run south', 'creep', 'listen as I go', 'quit', 'dq0 -p t -d /ram/p', 'status', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
-      check(m, out) {
-        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
-        const want = ['> status', 'Pace: a walk (40 feet a round). Watching: nothing in particular. Condition: unhurt; a little burdened (encumbrance 1); penalties: universal 0, physical 1. Light: your torch (20 feet).',
-          '> jog', 'Pace: a jog (80 feet a round). Watching: nothing in particular.',
-          '> search for traps as I go', 'Pace: a jog, held to a slow walk while you search as you go (20 feet a round). Watching: for traps and hidden doors as you go.',
-          '> listen as I go', 'Watching: for traps and hidden doors as you go; listening as you go.',
-          '> stop searching', 'Pace: a jog, held to a walk while you listen (40 feet a round). Watching: listening as you go.',
-          '> stop listening', 'Pace: a jog (80 feet a round). Watching: nothing in particular.',
-          '> map as I go', 'Pace: a jog, held to a slow walk while you map as you go (20 feet a round). Watching: mapping as you go.',
-          '> stop mapping', 'Pace: a jog (80', '> set pace to sprint', 'Pace: a sprint (240 feet a round).',
-          '> walk slowly', 'Pace: a slow walk (20 feet a round).', '> run north', 'Pace: a run (160 feet a round).',
-          '> run south', '> creep', 'Pace: a creep (13 feet a round).', '> listen as I go', 'Watching: listening as you go.',
-          '% grep pace /ram/p/pc.hm', 'pace 0 2 ', '% dq0 -p t -d /ram/p', '> status', 'Pace: a creep (13 feet a round). Watching: listening as you go.',
-          '> help', 'Pace: creep (sneak), walk slowly, walk, jog, run, sprint', '% echo $status'];
-        let at = 0;
-        for (const w of want) {
-          const i = o.indexOf(w, at);
-          if (i < 0) { f.push('not found (in its turn): ' + w); break; }
-          at = i + w.length;
+      check(m) {
+        // (rs.h's GA_CREEP 0 ... GA_SPRINT 5; hub.h's WA_TRAPS 1, WA_LISTEN 2, WA_MAP 4)
+        const T = dq0Turns(m), f = [];
+        const want = [['status', 2, 0], ['jog', 3, 0], ['search for traps as I go', 3, 1], ['listen as I go', 3, 3], ['stop searching', 3, 2],
+          ['stop listening', 3, 0], ['map as I go', 3, 4], ['stop mapping', 3, 0], ['set pace to sprint', 5, 0], ['walk slowly', 1, 0],
+          ['run north', 4, 0], ['run south', 4, 0], ['creep', 0, 0], ['listen as I go', 0, 2], ['dq0 -p t -d /ram/p', 0, 2], ['status', 0, 2]];
+        let k = 0;
+        for (const [l, gait, watch] of want) {
+          const t = T.of(l, k), s = t.after;
+          k = t.k + 1;
+          if (t.k < 0 || !s || s.pc.gait !== gait || s.pc.watch !== watch) { f.push(l + ': pace ' + (s && s.pc.gait) + ', watching ' + (s && s.pc.watch) + ', not ' + gait + ', ' + watch); if (t.k < 0) break; }
         }
-        const door = o.slice(o.indexOf('> run south'), o.indexOf('> creep'));
-        if (/Pace:/.test(door)) f.push('the pace said again going on as it was: ' + door);
+        dq0Need(f, T.of('dq0 -p t -d /ram/p'), 'E_ARRIVE', { how: 'A_RESUMED' }, 'the game not carried on');
         return f;
       },
       sdcard: true
     },
     {
-      name: 'dq0steps', what: 'Dingus Quest Zero\'s small moves (the user\'s, 2026-10-16: "move left one space"; a square 5 feet, the game\'s): at seed 12\'s first room (a small storeroom), facing northeast, a step forward (a square that way, its facing so), a move to the right three spaces stopped by the wall, backing up 10 feet (two squares behind it, but the room\'s one: still facing northeast), a sidestep left into the wall; turned about, "run 2 squares east" (its pace set to a run, east one square to the wall, facing east, its look as a run ends brief: no ceiling); then at seed 3 (dq0 -T) a step forward stopped by a giant rat in the way',
-      init: 't_rc', cycles: 1500e6,
-      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 12 -c /ram/c.hm\r' +
-        ['map', 'step forward', 'map', 'move right 3 spaces', 'back up 10 feet', 'map', 'sidestep left', 'turn around',
-          'run 2 squares east', 'map', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'set pace to sprint', 'step forward', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      name: 'dq0steps', meaning: true, what: 'Dingus Quest Zero\'s small moves (the user\'s, 2026-10-16: "move left one space"; a square 5 feet, the game\'s), by where the character stands and faces (the hub\'s): at seed 12\'s first room (a small storeroom), facing northeast, a step forward (a square that way, its facing kept), a move to the right three spaces stopped by the wall (not moved), backing up 10 feet (the room\'s one square behind it, still facing northeast), a sidestep left into the wall; turned about, "run 2 squares east" (its pace set to a run, east one square to the wall, facing east) (a step stopped by a denizen in the way: dq0denizens; the look as a run ends, brief: dq0words)',
+      init: 't_rc', cycles: 600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 12 -c /ram/c.hm', 'step forward',
+        'move right 3 spaces', 'back up 10 feet', 'sidestep left', 'turn around', 'run 2 squares east', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
-      check(m, out) {
-        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
-        const want = ['> map', 'Sq -68,-30', 'Facing NE', '> step forward', '> map', 'Sq -67,-31', 'Facing NE', '> move right 3 spaces',
-          'You can\'t go that way.', '> back up 10 feet', '> map', 'Sq -68,-30', 'Facing NE', '> sidestep left', 'You can\'t go that way.',
-          '> run 2 squares east', 'Pace: a run', 'You are in a small storeroom, by the light of your torch. There is a door', '> map',
-          'Sq -67,-30', 'Facing E', '% dq0 -p t -s 3', '> step forward', 'A giant rat is in the way.', '% echo $status'];
-        let at = 0;
-        for (const w of want) {
-          const i = o.indexOf(w, at);
-          if (i < 0) { f.push('not found (in its turn): ' + w); break; }
-          at = i + w.length;
-        }
-        const run = o.slice(o.indexOf('> run 2 squares east'), o.lastIndexOf('> map'));
-        if (/ceiling/.test(run)) f.push('the look as a run ends not brief: ' + run);
+      check(m) {
+        const T = dq0Turns(m), f = [], p0 = (T.of('dq0 -p t -s 12 -c /ram/c.hm').after || {}).pc;
+        if (!p0 || p0.face !== 1) return ['not begun facing northeast: ' + JSON.stringify(p0)];
+        const at = (l, dx, dy, face, why) => {
+          const t = T.of(l), p = t.after && t.after.pc;
+          if (!p || p.x !== p0.x + dx || p.y !== p0.y + dy || p.face !== face)
+            f.push(l + ': at ' + (p ? (p.x - p0.x) + ',' + (p.y - p0.y) + ' facing ' + p.face : '?') + ', not ' + dx + ',' + dy + ' facing ' + face);
+          if (why) dq0Need(f, t, 'E_NOWAY', { why }, l + ': not refused');
+          return t;
+        };
+        at('step forward', 1, -1, 1);
+        at('move right 3 spaces', 1, -1, 1, 'N_NO_EXIT');
+        at('back up 10 feet', 0, 0, 1);
+        at('sidestep left', 0, 0, 1, 'N_NO_EXIT');
+        at('turn around', 0, 0, 5);
+        const r = at('run 2 squares east', 1, 0, 2);
+        if (!r.after || r.after.pc.gait !== 4) f.push('the pace not set to a run (GA_RUN): ' + (r.after && r.after.pc.gait));
         return f;
       },
       sdcard: true
