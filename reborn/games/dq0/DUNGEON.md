@@ -639,14 +639,16 @@ or a shaft can be jumped down (jump down: a fall of its height).
   denizens heard further); **mapping** ("map as I go"; "stop mapping"), a slow walk at most (what it does for the map
   is still to come: below); **moving quietly** ("sneak", "move quietly") is the creep.  The hub's pc_going says the
   pace the character's going at; the denizens don't hear the character's steps by it yet.
-- **What it notices** goes by its state, the referee's: every notice test (P_NOTICE_SIGHT, SOUND, SMELL, whoever
-  asks: a trap underfoot, the senses' look as it arrives) is the worse the faster it was moving, and the worse for
-  its condition (HOUSE.md's noticing: the steps for each pace, shock, listening).  A trap underfoot is told by its
+- **What it notices** goes by its state: every notice test (P_NOTICE_SIGHT, SOUND, SMELL, whoever asks: a trap
+  underfoot, the senses' look as it arrives) is the worse the faster it was moving (the steps for each pace, the
+  watchfulness and a hazard underfoot are house rules every ruleset plays alike, rshouse.h's), and the worse for its
+  condition (the referee's own: shock; HOUSE.md's noticing).  A trap underfoot is told by its
   hiding (rs.h's P_NOTICE_SIGHT b 1), the referee choosing the chance: a search's while it's searching as it goes,
   else the passing glance's.  And the look as a run or a sprint ends is worded briefly: the place and its ways out,
   not its ceiling, its zones or what lies about.
-- **status** says it all in a few lines (the referee's words, RS_DESCRIBE b 3): the pace chosen and what it's held
-  to, its feet a round; the watchfulness; the condition (well or hurt, its wounds in brief, bleeding, shock or
+- **status** says it all in a few lines (RS_DESCRIBE b 3: the pace's, the watchfulness's and the light's words
+  rshouse.h's, every ruleset's alike; the condition's the referee's own): the pace chosen and what it's held to, its
+  feet a round; the watchfulness; the condition (well or hurt, its wounds in brief, bleeding, shock or
   senseless; its fatigue levels; its load's encumbrance; the penalties they make); and its light (what gives it, or
   none: by feel).
 - **Small moves** ("move left one space", "step forward", "go north 20 feet", "back up two squares", "sidestep
