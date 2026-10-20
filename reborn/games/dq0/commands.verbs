@@ -43,7 +43,7 @@ lock        thing=VB_LOCK_OBJECT unsaid=front
 force       thing=VB_FORCE_OBJECT unsaid=front aux=PA_FORCE skill=P_FORCE
 raise       thing=VB_RAISE_OBJECT unsaid=front aux=PA_RAISE skill=P_LIFT
 lower       thing=VB_LOWER_OBJECT unsaid=front aux=PA_LOWER
-break       thing=VB_BREAK_OBJECT unsaid=front aux=PA_BREAK
+break       thing=VB_BREAK_OBJECT unsaid=front aux=PA_BREAK task=LT_BATTER
 bend        thing=VB_BEND_OBJECT unsaid=front aux=PA_BEND skill=P_FORCE
 disarm      thing=VB_DISARM_OBJECT unsaid=front aux=PA_DISARM skill=P_DISARM
 bar         thing=VB_BAR_OBJECT unsaid=front aux=PA_BAR

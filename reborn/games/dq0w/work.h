@@ -20,7 +20,7 @@ void store_put (void);                          /* (The record in rec kept) */
 /* ---- The work: what's to be done (dq0w.c's work () sets it), and what came of it (the parts') */
 struct work {
     unsigned char   sn;                         /* The character's stratum */
-    unsigned char   what;                       /* PA_*, or W_STEP */
+    unsigned char   what;                       /* PA_*, or W_STEP; a battering's W_BLOW, W_GONE as it goes */
     unsigned char   pd;                         /* The way from where the character stands to the portal */
     unsigned char   link;                       /* PA_BAR's: the widest bar to hand, its width (0 none); a search's:
                                                 **   1, as it goes (quietly) */
@@ -36,15 +36,21 @@ struct work {
     unsigned char   through;                    /* (Climbed through a window: on its far side) */
     unsigned char   hb;                         /* (The striker's own hurt by its blows at a thing: the worst, told */
     unsigned        hw;                         /*   once they're done; hw's E_OUT, E_STOPPED) */
-    unsigned char   hm, hs;                     /* (The part battered's harm: its mask, its shift in the portal's) */
+    unsigned char   hm, hs;                     /* (The part battered's harm: its mask, its shift in the portal's; */
+    unsigned char   was;                        /*   its harm as the battering began) */
     struct portal   pq;                         /* (The portal worked, as it was) */
     struct trap     tq;                         /* (The trap) */
     struct msg      m;                          /* (An event told) */
 };
 extern struct work wk;
+#define W_BLOW          0xFD                    /* (A battering under way: its next blow as the character's free; */
+#define W_GONE          0xFE                    /*   the part given way at the last, told as it's free) */
+#define BLOWS           12                      /* (A battering's blows at most: its long task's length) */
+extern unsigned char pc_cut;                    /* (The character's long task stopped, hard or by the player: dq0w.c's;
+                                                **   a battering's blows given up, wblow.c's) */
 
 void doors (void);                              /* (Part 5's) A door worked, or a window's shutters */
-void blows (void);                              /* (Part 6's) A portal broken by blows */
+void blows (void);                              /* (Part 6's) A portal broken by blows: begun, or its next blow */
 void portals (void);                            /* (Part 7's) A portcullis or a window worked */
 void traps (void);                              /* (Part 8's) A trap stepped onto, disarmed; a search */
 

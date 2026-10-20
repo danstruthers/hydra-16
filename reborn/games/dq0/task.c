@@ -12,8 +12,9 @@
 #pragma rodata-name ("OV3RODATA")
 
 static const char* const doing[] = {           /* (By LT_*) */
-    "doing anything", "walking", "climbing", "digging", "searching", "waiting", "sleeping", "talking"
+    "doing anything", "walking", "climbing", "digging", "searching", "waiting", "sleeping", "talking", "battering"
 };
+#define NDOING          (sizeof doing / sizeof doing[0])
 
 /* An enemy the character's met (E_TASK's b, TE_ENGAGED's, TE_FAR's: its entry plus 1), as it's said: "the giant
 ** rat" (the first letter a capital, cap), or "something" if it isn't seen */
@@ -45,7 +46,7 @@ static const char* __fastcall__ foe (unsigned char b, unsigned char cap)
 unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
 {
     unsigned char k = w >> 8;
-    const char* d = doing[k < 8 ? k : 0];
+    const char* d = doing[k < NDOING ? k : 0];
 
     if ((unsigned char) w <= TE_NEAR || (unsigned char) w == TE_ENGAGED) {
         reach = 0;                              /* (A walk over to a thing stopped: its command dropped) */
@@ -64,7 +65,7 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
         sayf ("\nYou're tiring.  Keep %s?", d);
         break;
     case TE_NOT:
-        sayf ("\nYou aren't %s: you're %s.", doing[named < 8 ? named : 0], d);
+        sayf ("\nYou aren't %s: you're %s.", doing[named < NDOING ? named : 0], d);
         break;
     case TE_IDLE:
         msg ("You aren't doing anything to stop.");
@@ -167,9 +168,10 @@ unsigned __fastcall__ o_wait_of (const char* l, unsigned char n)
 unsigned char __fastcall__ o_stop_kind (const char* word)
 {
     static const char* const word_[] = { "walking", "going", "moving", "climbing", "digging", "working", "searching",
-                                         "waiting", "resting", "sleeping", "talking" };
+                                         "waiting", "resting", "sleeping", "talking", "battering", "breaking",
+                                         "smashing" };
     static const unsigned char kind_[] = { LT_WALK, LT_WALK, LT_WALK, LT_CLIMB, LT_DIG, LT_DIG, LT_SEARCH, LT_WAIT,
-                                           LT_WAIT, LT_SLEEP, LT_TALK };
+                                           LT_WAIT, LT_SLEEP, LT_TALK, LT_BATTER, LT_BATTER, LT_BATTER };
     unsigned char i;
 
     for (i = 0; i < sizeof kind_; ++i) {
@@ -184,7 +186,8 @@ unsigned char __fastcall__ o_stop_kind (const char* word)
 unsigned char __fastcall__ o_answer_of (const char* l)
 {
     static const char* const yes[] = { "y", "yes", "yeah", "ok", "sure", "go on", "keep going", "carry on",
-                                       "continue", "keep walking", "keep digging", "keep waiting", "keep searching" };
+                                       "continue", "keep walking", "keep digging", "keep waiting", "keep searching",
+                                       "keep battering" };
     static const char* const no[] = { "n", "no", "nope", "stop", "halt" };
     unsigned char i;
 

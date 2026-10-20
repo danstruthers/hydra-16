@@ -147,6 +147,7 @@ sleep	VB_SLEEP	-	-	sleep
 stop	VB_STOP	task=current	-	stop, any task (question 9)
 stop digging	VB_STOP	task=digging	-	stop, named (question 9)
 stop walking	VB_STOP	task=walking	-	stop, named: a walk (slice 4.0's long tasks)
+stop battering	VB_STOP	task=battering	-	stop, named: a door battered (slice 4.0's long tasks)
 
 # --- naming and meta-commands (question 15) ---
 name the sword Linda	VB_NAME_OBJECT	object=sword;name=Linda	near=sword	name a thing

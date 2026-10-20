@@ -11,9 +11,10 @@
 //
 // createRecorder() gives { hook, attach(m), games, final() }: hook is the machine's opt.sharedWrite (sim/test.js
 // chains it with the hub writers' check in every dq0 test), attach(m) once it's booted; games: each game played (a
-// hub made: its magic written), { events, dens, replies, snaps }, each record with line, the number of lines entered
-// before it.  final(): the state now (the last snapshot, at the test's end).  sim/test.js puts it on the machine as
-// m.dq0; tests.js's dq0Turns reads it a line at a time.
+// hub made: its magic written), { events, dens, replies, snaps, tasks (the character's long task's part done, as it
+// changes: { kind, len, done }) }, each record with line, the number of lines entered before it.  final(): the state
+// now (the last snapshot, at the test's end).  sim/test.js puts it on the machine as m.dq0; tests.js's dq0Turns reads
+// it a line at a time.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -251,7 +252,7 @@ function createRecorder() {
       const b = m.sharedBanks()[k];
       if (b && b[0] === (L.magic & 0xFF)) {
         key0 = k;
-        games.push(game = { line: enters, events: [], dens: [], replies: [], snaps: [], eq: 0, dq: 0 });
+        games.push(game = { line: enters, events: [], dens: [], replies: [], snaps: [], tasks: [], eq: 0, dq: 0 });
       }
       return;
     }
@@ -266,6 +267,9 @@ function createRecorder() {
       game.dq = v;
       const b = bank(L.denBank);
       if (b) game.dens.push(decode(b, ((v - 1) & (L.dqSize - 1)) * L.msg, true));
+    } else if (off === L.pcTask + L.ltDone + 1) {               // (The long task's part done, its high byte written last)
+      const kind = name('LT_NONE', h[L.pcTask + L.ltKind]), done = h[off - 1] | v << 8, t = game.tasks[game.tasks.length - 1];
+      if (!t || t.kind !== kind || t.done !== done) game.tasks.push({ line: enters, kind, len: w16(h, L.pcTask + L.ltLen), done, cyc: m.cpu.cyc });
     } else if (v === 2) {                                       // (A reply: its state REQ_DONE, the rest written)
       if (off === L.ireq) game.replies.push({ line: enters, req: 'ireq', kind: name('IO_KIT', h[off + L.irKind]), result: name('IR_OK', h[off + L.irResult]),
         item: w16(h, off + L.irItem), to: w16(h, off + L.irTo), name: str(h, off + L.irName, 16), into: str(h, off + L.irInto, 16),

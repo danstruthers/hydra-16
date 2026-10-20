@@ -149,6 +149,7 @@ go:
             SWFN        describe, 11
             SWFN        hide, 13
             SWFN        door_work, 12
+            SWFN        batter_on, 12
             SWFN        keep, 19
             SWFN        kit, 13
             SWFN        theme_kinds, 13
