@@ -355,6 +355,22 @@ K_LOAD:
             bcs         @done
             jsr         l_rdhead                            ; Its header
             bcs         @done
+            lda         TA_PATH + HX_FLAGS                  ; (A bank program: it loads itself as it starts, run.s:
+            and         #HF_BANK                            ;   its break from PROG_LOAD, its file left open)
+            beq         :+
+            lda         #<K_BANK_START
+            sta         TA_ENTRY
+            lda         #>K_BANK_START
+            sta         TA_ENTRY + 1
+            lda         #<PROG_LOAD
+            sta         TA_BRK
+            sta         TA_BRKMIN
+            lda         #>PROG_LOAD
+            sta         TA_BRK + 1
+            sta         TA_BRKMIN + 1
+            clc
+            rts
+:
             jsr         l_image
             bcs         @done
             jsr         l_close
@@ -493,7 +509,7 @@ l_check:
             cmp         #HT_PROGRAM
             bne         @no
             lda         TA_PATH + HX_FLAGS
-            and         #HF_INPLACE
+            and         #HF_INPLACE | HF_BANK               ; (A bank program: run.s holds it to its form)
             bne         @yes
             lda         TA_PATH + HX_LOAD + 1               ; A RAM program
             cmp         #>PROG_LOAD

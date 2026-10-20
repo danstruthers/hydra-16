@@ -742,9 +742,10 @@ run_words:
             lda         exec_this                           ; (rc -c's last: in rc's place)
             sta         xexec
             stz         exec_this
+            lda         #SPAWN_RUN | RUN_LEND               ; (A bank program: run in rc's task, kept)
+            sta         xf
             lda         xw
             ldx         xw + 1
-            stz         xf
             jsr         spawn_path
             stz         xexec
             bcs         status_error2

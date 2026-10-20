@@ -326,6 +326,14 @@ rc_rest:
 :
             tya
             sta         dlo,x
+            lda         bg                                  ; (Not in the background: run here if it can be)
+            bne         :+
+            jsr         run_here
+            bcs         :+
+            inx                                             ; (Ran: the line dropped)
+            inx
+            bra         @status
+:
             jsr         prog_rc
             lda         #0
             ldy         bg
@@ -345,12 +353,59 @@ rc_rest:
             jmp         set_status
 @wait:
             jsr         prog_wait
+@status:
             bit         intr                                ; (A Ctrl-C ended it: the shell goes on, on a new
             bvc         :+                                  ;   line, as rc does)
             stz         intr
             jsr         cr
 :
             jmp         set_status
+
+; ( c-addr u -- c-addr u ): the line run in forth's own task if it's a simple command (none of rc's special
+; characters in it) whose program is a bank program that runs in place (prog_run: RUN, kept in a bank of forth's own,
+; quick the next time), not by an rc of its own.  OUT: C = 0, tmp2 its status; C = 1 if it's rc's to run
+run_here:
+            lda         dlo + 1,x                           ; (The line: p1, its length .Y)
+            sta         p1
+            lda         dhi + 1,x
+            sta         p1 + 1
+            lda         dhi,x
+            bne         @rc
+            ldy         dlo,x
+            beq         @rc
+@char:
+            dey
+            lda         (p1),y
+            phy
+            ldy         #RC_SPECIAL - 1
+:
+            cmp         s_special,y
+            beq         @special
+            dey
+            bpl         :-
+            ply
+            tya
+            bne         @char
+            dex                                             ; ( c-addr u c-addr u ): prog_args takes the copy
+            dex
+            lda         dlo + 2,x
+            sta         dlo,x
+            lda         dhi + 2,x
+            sta         dhi,x
+            lda         dlo + 3,x
+            sta         dlo + 1,x
+            lda         dhi + 3,x
+            sta         dhi + 1,x
+            jsr         prog_args
+            jmp         prog_run
+@special:
+            ply
+@rc:
+            sec
+            rts
+
+s_special:  .byte       "#;&|^$=`'\{}()<>*?[]~!", $22   ; (and a double quote)
+RC_SPECIAL  = * - s_special
 
 ; ( -- c-addr u ): the rest of the source's line, from >IN; >IN at its end
 rest_line:

@@ -45,6 +45,12 @@ K_MEM_START:
             stz         TA_BANKMAP,X
             dex
             bpl         :-
+            lda         #$FF                                ; (No code cache, nothing running in place: run.s)
+            sta         TK_RCACHE
+            sta         TK_RBANK
+            stz         TK_RFRAME + 1
+            stz         TK_RNOTE
+            stz         TK_RMAX
             rts
 
 ; ****************************************************************************

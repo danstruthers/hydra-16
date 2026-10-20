@@ -3,7 +3,10 @@
 ; it with hydra.inc (the calls and constants: made by tools/apigen.js) and modules/module.cfg (the link: code at
 ; $A000 in the module's own paged ROM bank, run in place; data and BSS in its task's RAM, from $0400).  Or, for a
 ; RAM program (a program in a file, which SPAWN's loader reads into its task's RAM), assemble with -D HYX2_RAM and
-; link with sdk/asm/hyx2.cfg: its header, code and data from $0800, its BSS after them.
+; link with sdk/asm/hyx2.cfg: its header, code and data from $0800, its BSS after them.  Or, for a bank program (one
+; the kernel keeps in a RAM bank and can run in its caller's task: RUN), assemble with -D HYX2_BANK and link with
+; sdk/asm/bank.cfg: an o65 module at $8000, its header first (HF_BANK), the build's copy of it before it in its file
+; (its HX_LENGTH there the file's bytes to the module's data's end: the o65 header without its options, text, data).
 ;
 ;   HYX2_PROGRAM "name", main [, banks]                 a program: main gets r0 = its arguments; returning is
 ;                                                       EXITS with code 0
@@ -31,7 +34,10 @@
 
 .import     __DATA_LOAD__, __DATA_RUN__, __DATA_SIZE__, __BSS_RUN__, __BSS_SIZE__, __RAM_LAST__
 
-.ifdef HYX2_RAM
+.ifdef HYX2_BANK
+HYX2_LOAD       = $8000                                     ; (A bank program: in a RAM bank, run.s)
+HYX2_INPLACE    = HF_BANK
+.elseif .defined(HYX2_RAM)
 HYX2_LOAD       = $0800                                     ; (A RAM program: read there by SPAWN)
 HYX2_INPLACE    = 0
 .else
@@ -51,7 +57,7 @@ HYX2_BANKS      = 1
 HYX2_BANKS      = banks
 .endif
 .assert     HYX2_BANKS >= 1 .and HYX2_BANKS <= 8, error, "A module is one bank to eight"
-.ifdef HYX2_RAM
+.if .defined(HYX2_RAM) .or .defined(HYX2_BANK)
 .assert     HYX2_BANKS = 1, error, "A RAM program is one image"
 .endif
 .pushseg
@@ -62,7 +68,10 @@ HYX2_BANKS      = banks
             .byte       flags | HYX2_INPLACE                ; HX_FLAGS
             .byte       ABI_VERSION                         ; HX_ABI
             .word       HYX2_LOAD                           ; HX_LOAD
-.ifdef HYX2_RAM
+.ifdef HYX2_BANK
+            .word       48                                  ; HX_LENGTH (its header: the o65 module after it)
+            .word       0, 0, 0, 0, 0, 0                    ; (Its data, BSS and top: the o65 module's)
+.elseif .defined(HYX2_RAM)
             .word       __DATA_LOAD__ + __DATA_SIZE__ - HYX2_LOAD ; HX_LENGTH (to its data's end)
 .elseif HYX2_BANKS = 1
             .word       __ROM_LAST__ - HYX2_LOAD            ; HX_LENGTH (in its last bank)
@@ -70,12 +79,14 @@ HYX2_BANKS      = banks
 .import     .ident(.sprintf("__ROM%d_LAST__", HYX2_BANKS))
             .word       .ident(.sprintf("__ROM%d_LAST__", HYX2_BANKS)) - HYX2_LOAD
 .endif
+.ifndef HYX2_BANK
             .word       __DATA_LOAD__                       ; HX_DATA_LOAD
             .word       __DATA_RUN__                        ; HX_DATA_RUN
             .word       __DATA_SIZE__                       ; HX_DATA_LEN
             .word       __BSS_RUN__                         ; HX_BSS
             .word       __BSS_SIZE__                        ; HX_BSS_LEN
             .word       __RAM_LAST__                        ; HX_TOP
+.endif
             .word       main                                ; HX_MAIN
             .word       serve                               ; HX_SERVE
             .word       irq                                 ; HX_IRQ

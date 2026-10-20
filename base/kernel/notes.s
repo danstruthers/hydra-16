@@ -304,7 +304,8 @@ K_NOTE_TRAMP:
             tya
             ora         #$80
 :
-            jmp         K_EXITS
+            sty         TK_RNOTE                            ; (A program running in place: its run ends, the note
+            jmp         K_EXITS                             ;   posted again for the caller, run.s)
 
 @resume:
             sei

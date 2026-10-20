@@ -65,6 +65,11 @@ function report(root, built = {}) {
     if (names.length) lines.push(title);
     for (const n of names) {
       const d = set[n], load = d.readUInt16LE(8), top = d.readUInt16LE(22), bss = d.readUInt16LE(20);
+      if (d[6] & 0x04) {                                        // (A bank program: its o65 module's sizes)
+        const o = 48, w = i => d.readUInt16LE(o + i), task = d[6] & 0x08 ? ', a task of its own' : '';
+        lines.push('  ' + n.padEnd(12) + String(d.length).padStart(6) + ' bytes   bank program: ' + (w(10) + w(14)) + ' of image, BSS ' + w(18) + ', zero page ' + w(22) + task);
+        continue;
+      }
       lines.push('  ' + n.padEnd(12) + String(d.length).padStart(6) + ' bytes   RAM ' + hx(load) + '-' + hx(top - 1) + ' (BSS ' + bss + ')');
     }
   };

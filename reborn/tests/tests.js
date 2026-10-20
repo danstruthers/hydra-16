@@ -2414,10 +2414,10 @@ module.exports = {
         const f = [], text = out.replace(/\r/g, ''), lists = text.split('task  state   parent     cpu group  name\n').slice(1).map(t => t.split('\n/> ')[0].split('\n').map(l => l.trim().split(/\s+/)));
         const names = l => l.map(r => r[0] + ':' + r[5] + ':' + r[2]).join(' ');
         if (lists.length !== 3) return ['ps listed the tasks ' + lists.length + ' times, not 3'];
-        if (names(lists[0]) !== '0:kernel:- 1:forth:- 2:ps:1 12:snd:- 13:kdev:- 14:storage:- 15:cons:-') f.push('at the first prompt: ' + names(lists[0]));
+        if (names(lists[0]) !== '0:kernel:- 1:forth:- 12:snd:- 13:kdev:- 14:storage:- 15:cons:-') f.push('at the first prompt: ' + names(lists[0]));   // (ps run in the shell's task: RUN)
         if (lists[0].find(r => r[5] === 'cons')[1] !== 'event') f.push('cons isn\'t waiting for its events: ' + lists[0].find(r => r[5] === 'cons')[1]);
-        if (names(lists[1]) !== '0:kernel:- 1:forth:- 2:sleep:- 3:ps:1 12:snd:- 13:kdev:- 14:storage:- 15:cons:-') f.push('after the login shell ended: ' + names(lists[1]));
-        if (!/ 1:forth:- 2:sleep:- 3:sleep:1 4:forth:- 5:ps:4 /.test(' ' + names(lists[2]) + ' ')) f.push('in the window made: ' + names(lists[2]));
+        if (names(lists[1]) !== '0:kernel:- 1:forth:- 2:sleep:- 12:snd:- 13:kdev:- 14:storage:- 15:cons:-') f.push('after the login shell ended: ' + names(lists[1]));
+        if (!/ 1:forth:- 2:sleep:- 3:forth:- 12:/.test(' ' + names(lists[2]) + ' ')) f.push('in the window made: ' + names(lists[2]));   // (sleep 8 in task 1's, ps in 3's)
         return f;
       },
     },
@@ -2433,7 +2433,8 @@ module.exports = {
       },
       expect: ['HyForth (Forth 2012), bye to end\n/> 2 3 + .\n5 \n/> echo $window\n\n/> ', '/> echo $window\n1\n/> send 0 echo hi from 1\n/> ',
         '/> send 0 echo ' + SEND_LONG + '\n/> ',
-        '/> echo hi from 1\nhi from 1\n/> echo ' + SEND_LONG + '\n' + SEND_LONG + '\n/> echo back in 0\nback in 0\n/> '],
+        '/> echo hi from 1\nhi from 1\n/> echo ' + SEND_LONG + '\n' + SEND_LONG + '\n/>', 'echo back in 0\nback in 0\n/> '],
+      // (Window 0's screen drawn again as it's shown: its prompt there already, the cursor put after it, or not yet)
     },
     {
       name: 'spi', what: 'SPI and #S (storage): transactions, kept bytes, modes 0 and 3, one open at a time, the time a byte takes',
@@ -4031,7 +4032,7 @@ module.exports = {
       pc: { files: () => {
         const o = n => fs.readFileSync(path.join(__dirname, '..', 'obj', 'tests', n)), c = o('count.bp');
         return Object.assign({ 't_bank.hyx': o('t_bank.hyx'), 't_bank.exp': o('t_bank.exp'), 'count.bp': c, 'fill.bp': o('fill.bp'),
-          'bigzp.bp': o('bigzp.bp'), 'nosuch.bp': o('nosuch.bp') }, ...[1, 2, 3, 4, 5, 6].map(k => ({ ['c' + k + '.bp']: c })));
+          'bigzp.bp': o('bigzp.bp'), 'nosuch.bp': o('nosuch.bp'), 'b1.bp': o('big.bp'), 'b2.bp': o('big.bp') });
       } },
       machine: { input: '\u0101for (f in `{ls /pc}) cp /pc/$f /ram/$f\r\u0101/ram/t_bank.hyx\r' },
       expect: ['t_bank: PASS']
@@ -4155,7 +4156,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dis', what: 'dis, the disassembler (/rom/bin/dis: as\'s inverse, the asm library\'s instructions): the SDK\'s tick as as\'s source (its code followed from main, its labels, hydra.inc\'s calls and registers, its data and BSS); sources that as assembles to the same bytes: hi with its labels (as -l), upper in the SDK\'s columns (-w), db (C, 20K) with ld65\'s labels, every opcode (three operands each) raw from an address (-c -o); its usage and a file not a program',
+      name: 'dis', what: 'dis, the disassembler (/rom/bin/dis: as\'s inverse, the asm library\'s instructions): the SDK\'s tick as as\'s source (its code followed from main, its labels, hydra.inc\'s calls and registers, its data and BSS); sources that as assembles to the same bytes: hi with its labels (as -l), upper in the SDK\'s columns (-w), db (C, 20K) with ld65\'s labels, every opcode (three operands each) raw from an address (-c -o); a bank program (/rom/bin/echo: its text as linked, at $8000); its usage and a file not a program',
       init: 't_rc', cycles: 2500e6,
       pc: {
         files: () => {
@@ -4169,7 +4170,8 @@ module.exports = {
           'as /ram/h.s /ram/h2; cmp /ram/hi /ram/h2; echo $status', "dis -w /sd/0/sample/upper >/ram/u.s; grep -c '^            jsr ' /ram/u.s",
           'as /ram/u.s /ram/u2; cmp /sd/0/sample/upper /ram/u2; echo $status', 'dis -l /pc/db.lbl /rom/bin/db >/ram/db.s; grep -c _exit /ram/db.s',
           'as /ram/db.s /ram/db2; cmp /rom/bin/db /ram/db2; echo $status', 'dis -c -o 1000 /pc/ops.bin >/ram/o.s; as -b /ram/o.s /ram/o2',
-          'cmp /pc/ops.bin /ram/o2; echo $status', 'dis', 'dis /rom/doc/api.md'].map(l => 'ā' + l + '\r').join(''),
+          'cmp /pc/ops.bin /ram/o2; echo $status', 'dis /rom/bin/echo | head -12', 'dis',
+          'dis /rom/doc/api.md'].map(l => 'ā' + l + '\r').join(''),
       },
       expect: ['% dis /sd/0/sample/tick\n; /sd/0/sample/tick, as dis read it: as assembles this to its bytes again\n.include "hydra.inc"\n\n' +
         '.include "hyx2.inc"\n\n\tHYX2_PROGRAM "tick", main\n.code\nmain:\n\tstz B0895\n\tstz B0896\n\tlda #$86\n\tsta r0\n\tlda #$08\n\tsta r0+1\n' +
@@ -4177,7 +4179,10 @@ module.exports = {
         '\tora #$30\n\tjsr PUTC\n', '\trts\n\t.byte $8D, $95, $08, $18, "` seconds", $0A, $00\n.bss\nB0895:\n\t.res 1\nB0896:\n\t.res 1\n%',
         '% as /ram/h.s /ram/h2; cmp /ram/hi /ram/h2; echo $status\n\n%', '% as /ram/u.s /ram/u2; cmp /sd/0/sample/upper /ram/u2; echo $status\n\n%',
         '% as /ram/db.s /ram/db2; cmp /rom/bin/db /ram/db2; echo $status\n\n%', '% cmp /pc/ops.bin /ram/o2; echo $status\n\n%',
-        '% dis\nusage: dis [-cnw] [-l labels] [-o addr] file\n%', '% dis /rom/doc/api.md\ndis: /rom/doc/api.md: not a HYX2 RAM program (-o addr: raw bytes from addr)\n%'],
+        '% dis /rom/bin/echo | head -12\n; /rom/bin/echo, a bank program, as dis read it: its text as linked, at $8000\n.include "hydra.inc"\n\n' +
+        '.include "hyx2.inc"\n\n\tHYX2_PROGRAM "echo", main\n.code\nmain:\n\tlda r0\n\tsta $22\n\tlda r0+1\n\tsta $23\n%',
+        '% dis\nusage: dis [-cnw] [-l labels] [-o addr] file\n%',
+        '% dis /rom/doc/api.md\ndis: /rom/doc/api.md: not a HYX2 RAM program nor a bank program (-o addr: raw bytes from addr)\n%'],
       check(m, out) {
         const f = [], n = out.match(/grep -c '\^            jsr ' \/ram\/u\.s\n(\d+)\n/), k = out.match(/grep -c _exit \/ram\/db\.s\n(\d+)\n/);
         if (!n || +n[1] < 20) f.push('dis -w: upper\'s jsr lines not in the SDK\'s columns (' + (n && n[1]) + ')');

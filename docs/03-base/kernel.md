@@ -144,6 +144,8 @@ waiting.
     starts.  Sixteen tasks can run the same module at once.  A `SPAWN` of a module takes about 14 ms.
   * **any other program is a RAM program**: the new task gets the file as an fd and loads itself, at `$0800`, as it
     starts, so `SPAWN` doesn't wait for the load.
+  * **a bank program** (`HF_BANK`) loads itself the same way, but into a RAM bank of its task's own, at `$8000`
+    (below).
 * **Drivers** take the **highest** free task, task F first.  A driver runs its `init`, then is `IDLE`, running only for
   calls (requests) and interrupts.  A driver with work of its own between its calls (a device to look at now and
   then, things to do when a key comes) doesn't return from its `init`: it waits in **`SRV_NAP`**, for a time or till
@@ -157,6 +159,10 @@ waiting.
   directory, its namespace and its environment; what was the old program's goes as at its end (its interrupt lines,
   segments, semaphores, served devices, note handler, pages and banks).  The parent's `WAIT` gets the new program's
   status.  rc uses it for the last command of `rc -c`, so a command typed at HyForth's prompt takes one task, not two.
+* **`RUN`** runs a **bank program in the calling task**, as a subroutine, and waits for it: no task is made, and the
+  program stays loaded for the next time.  [Bank programs](#bank-programs), below.  `SPAWN` with `SPAWN_RUN` does
+  the same for a caller that would wait for the program at once, and gives back its own task, whose `WAIT` gets the
+  program's status; a program that isn't a bank program starts in a task of its own as ever.
 * **`EXITS`** ends a task with a status: a code (0 for success) and a message (31 characters).  Returning from a
   program's entry point is `EXITS` with 0.  Everything the task had is given back: its fds, pages, banks, segments,
   semaphores, interrupt lines.
@@ -166,6 +172,46 @@ waiting.
 * **Init again.**  `INIT_RUN` asks the kernel task to start init again in a task of its own, with a number as its
   argument (HydraOS's console: the window the user made); and the kernel does it itself, with `0`, when the task init
   was in has `EXEC`ed and then ends ([the boot](boot.md#step-5-the-tick-init-and-the-idle-loop)).
+
+---
+
+## Bank programs
+*`run.s` (page 5, its calls' entries on page 0)*
+
+A **bank program** is a program built to run from a RAM bank: an o65 module (as ld65 links it, its text at `$8000`,
+its zero page `$22` up, its relocations kept) after a HYX2 header with `HF_BANK` set.  Most of the tools in
+`/rom/bin` are bank programs.  The kernel can run one in a task of its own, as `SPAWN` runs any program, or in the
+**caller's own task** (`RUN`):
+
+* **The code cache.**  The kernel keeps a task's bank programs in RAM banks of the task's own (eight at most, from
+  `BANKS_ALLOC`), several to a bank, one above the other.  Each bank's last 256 bytes are its directory: where each
+  program is, its file's identity (`STAT`'s qid, version, length and time, so a changed file is loaded again), when it
+  was last used, and whether it's running.  A program is put in the lowest gap it fits; with none, in a new bank;
+  with no bank to be had, the program used least lately is given up, and the next, till it fits.  The cache goes
+  with the task (at its end, or an `EXEC`).
+* **Loading.**  The first time, the program is read into its place and relocated there: its code and data by where it
+  went, its zero page by where that goes.  A program placed where it was linked, at a bank's start, isn't relocated at
+  all; in a task of its own it's read in one piece, its text landing where it was linked (its file's `HX_LENGTH`,
+  the build's, says how much).  A copy of its data is kept, so each run starts with its data as it was loaded and its BSS cleared, as a new
+  load's would.
+* **Running in place.**  The program runs on the caller's stack, with its bank at `$8000` and its zero page where the
+  caller's program's is (the caller's bytes kept and put back).  It gets what `SPAWN` would give it: its arguments at
+  `r0`, the caller's fds 0, 1 and 2 or a map of them, no note handler.  With `RUN_LEND` it may move the break past
+  the caller's (its memory for `BREAK`; put back after), so a caller says whether the RAM past its break is free.  It
+  ends as any program does, returning or `EXITS` or a note's default action (Ctrl-C), and then everything is the
+  caller's again: its fds (the program's closed), note handler, zero page, banks and break.  A note that ended the
+  program (but a kill) is posted again, so the caller's own handler sees it.  A program running in place can `RUN`
+  another.
+* **What can't run in place**: a program marked `HF_TASK` (one that changes what's the caller's, or needs more RAM
+  than a caller can lend) runs only in a task of its own; and a program that isn't a bank program at all (a RAM
+  program, a module) is `SPAWN`ed.
+
+**Children** are bank programs of a program's own: modules whose functions the program calls itself, on its own C
+stack (`sdk/c/include/bankprog.h`; Dingus Quest Zero's pieces).  `BANK_LOAD` puts one in the same code cache, its
+imports found by name in the caller's exports file (`NAME.exp`, the build's), its zero page where the caller says,
+and tells the caller its bank and directory entry; the caller maps the bank (`$00` alone), calls the entry and maps
+its own bank back, checking first that the entry is still the same load.  `BANK_FLUSH` empties the cache (and sets how
+many banks it may have).
 
 ---
 

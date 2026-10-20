@@ -43,6 +43,7 @@
 #define HY_SEM_FREE             0xF878
 #define HY_EXEC                 0xF87B
 #define HY_SEM_WAIT             0xF87E
+#define HY_RUN                  0xF881
 
 /* ---- memory: Memory: the break, pages, banks, shared segments (phase 1.8) */
 #define HY_BREAK                0xF890
@@ -58,6 +59,8 @@
 #define HY_SEGINFO              0xF8AE
 #define HY_BANKS_ALLOC_IN       0xF8B1
 #define HY_SEG_CREATE_IN        0xF8B4
+#define HY_BANK_LOAD            0xF8B7
+#define HY_BANK_FLUSH           0xF8BA
 
 /* ---- file: Files (phase 2) */
 #define HY_OPEN                 0xF8C0
@@ -160,6 +163,22 @@
 #define HY_INIT_TASK            1         /* init's task (and its note group: the console's foreground at first) */
 #define HY_PROG_ZP              0x22      /* A program's own zero page: $22-$7F */
 #define HY_PROG_ZP_END          0x80
+#define HY_RB_DIR               0x9F00    /* A code cache bank's directory (BANK_LOAD): its entries at RB_DIR + 16 x n, n 1-15 */
+#define HY_RE_START             0         /* A cache directory entry: where its module is (2) */
+#define HY_RE_END               2         /* A cache directory entry: the first byte past it (2) */
+#define HY_RE_TABLE             4         /* A cache directory entry: a child's exports' table (2) */
+#define HY_RE_GEN               6         /* A cache directory entry: its load's number (0: free) */
+#define HY_RE_FLAGS             7         /* A cache directory entry: RF_* */
+#define HY_RE_STAMP             8         /* A cache directory entry: when it was last used (TK_RCLOCK) (2) */
+#define HY_TK_RCLOCK            0xEC      /* A task's code cache's uses counted (2): its zero page's */
+#define HY_RC_BANKS             8         /* A task's code cache's banks at most, to start with (BANK_FLUSH) */
+#define HY_BL_FILE              2         /* BANK_LOAD's why (.X): its file not there, or not read */
+#define HY_BL_FORMAT            3         /* BANK_LOAD's why (.X): not a child (o65, linked at $8000, in a bank) */
+#define HY_BL_ZP                4         /* BANK_LOAD's why (.X): its zero page more than the caller gives */
+#define HY_BL_EXPORTS           5         /* BANK_LOAD's why (.X): the caller's exports' file not there, or not of its form */
+#define HY_BL_IMPORT            6         /* BANK_LOAD's why (.X): an import the caller hasn't (its name in TA_SCRATCH) */
+#define HY_BL_BANK              7         /* BANK_LOAD's why (.X): no bank, or no room in one */
+#define HY_TA_SCRATCH           0x0280    /* A task's call scratch (32 bytes): an exit message, BANK_LOAD's missing import */
 #define HY_TASK_ARGS            0x0350    /* A task's arguments: zero-terminated strings, an empty one after the last (176 bytes at most) */
 #define HY_ARGS_MAX             176       /* SPAWN's arguments: their bytes at most (each string's 0, and the empty one that ends them) */
 #define HY_TASK_NAME            0x0230    /* A task's name, zero-terminated */
@@ -172,6 +191,8 @@
 #define HY_HT_LIBRARY           3
 #define HY_HF_INPLACE           0x01      /* HYX2 flags: runs in place in the paged ROM */
 #define HY_HF_BOOT              0x02      /* HYX2 flags: a driver the kernel starts at boot */
+#define HY_HF_BANK              0x04      /* HYX2 flags: a bank program: an o65 module after the header, run in a RAM bank (RUN) */
+#define HY_HF_TASK              0x08      /* HYX2 flags: a bank program that runs only in a task of its own (not in place: RUN) */
 #define HY_HX_MAGIC             0         /* The HYX2 header (HX_SIZE bytes, a program's first): HYX2 */
 #define HY_HX_HSIZE             4         /* HYX2: the header's size (48) */
 #define HY_HX_TYPE              5         /* HYX2: the type (HT_*) */
@@ -227,6 +248,8 @@
 #define HY_SPAWN_FDMAP          0x04      /* SPAWN's flags: the child's fds are r2's map (else the caller's 0, 1 and 2) */
 #define HY_SPAWN_NOENV          0x08      /* SPAWN's flags: the child starts with an empty environment (else a copy of its parent's) */
 #define HY_SPAWN_STOPPED        0x10      /* SPAWN's flags: the child stops at its entry point, for the debugger (/proc/N/ctl's step) */
+#define HY_SPAWN_RUN            0x20      /* SPAWN's flags: a bank program that runs in place does, in this task (RUN), and SPAWN gives this task back */
+#define HY_RUN_LEND             0x40      /* RUN's flags (and SPAWN_RUN's): the program may move the break past the caller's */
 #define HY_ENV_SIZE             1024      /* TASKREAD's TR_ENV: its buffer, an environment's first variables, whole, and a 0 */
 #define HY_ENV_MAX              8192      /* An environment's bytes at most: each variable its name's length, its name, its value's length (2), its value; a 0 */
 #define HY_ENV_NAME_MAX         31        /* A variable's name's length at most */

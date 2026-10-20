@@ -333,6 +333,8 @@ K_TASK_SETUP:
             stz         TK_WOKEN
             stz         TK_EVENT
             stz         TK_STEPHIT                          ; (No step out: debug.s)
+            stz         TK_RFRAME + 1                       ; (Nothing running in place: run.s)
+            stz         TK_RNOTE
             stz         TA_NOTIFY + 1
             stz         T_REGISTER                          ; ---- Back (a moment)
             plp
@@ -1132,6 +1134,7 @@ K_EXEC:
             stz         TK_DUE
             stz         TK_INNOTE
             stz         TK_STEPHIT
+            stz         TK_RFRAME + 1                       ; (Its runs in place gone: run.s)
             stz         TA_NOTIFY
             stz         TA_NOTIFY + 1
             stz         TA_SERVEVEC                         ; (A program: no calls served, no interrupts)
@@ -1165,8 +1168,13 @@ K_EXEC:
             stz         TA_ENTRY + 1
             jmp         K_TASK_LOAD
 
-; EXITS: end this task.  IN: .A = the exit code; r0 = a message (31 characters at most), or 0.  Doesn't return
+; EXITS: end this task.  IN: .A = the exit code; r0 = a message (31 characters at most), or 0.  Doesn't return.  (In a
+; program running in place, RUN's, its run ends: run.s)
 K_EXITS:
+            ldx         TK_RFRAME + 1
+            beq         :+
+            jmp         K_RUN_EXIT
+:
             pha
             FARCALL     K_CLOSE_ALL                         ; Its fds (file.s: the last of a channel clunks it)
             pla

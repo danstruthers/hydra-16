@@ -148,6 +148,30 @@ function clib() {
   return lib;
 }
 
+// A bank program (docs/design/plans/RUN.md: dir/bank says so, "run", or "task" for one that runs only in a task of its
+// own): dir/*.s assembled with HYX2_BANK and linked by sdk/asm/bank.cfg into an o65 module at $8000, its file
+// (objdir/NAME.hyx) a copy of its own HYX2 header (HF_BANK set, and HF_TASK) then the module.  OUT: its file's bytes
+const HF_BANK = 0x04, HF_TASK = 0x08;
+function bankProgram(dir, objdir, defines) {
+  const name = path.basename(dir), od = path.join(objdir, name), kind = fs.readFileSync(path.join(dir, 'bank'), 'latin1').trim().split(/\s+/)[0];
+  if (kind !== 'run' && kind !== 'task') throw new Error(name + '/bank: "run" or "task", not "' + kind + '"');
+  const objs = base.assemble(sources(dir), od, [...INCLUDES, dir, path.dirname(dir)], [...defines, 'HYX2_BANK']);
+  const o65 = path.join(od, name + '.o65');
+  run(LD65, ['-C', atBase('sdk', 'asm', 'bank.cfg'), '-o', o65, '-m', path.join(od, name + '.map'), '-Ln', path.join(od, name + '.lbl'), ...objs]);
+  const m = fs.readFileSync(o65);
+  let p = 26;                                                   // (Its text: past the o65 header and its options)
+  while (m[p]) p += m[p];
+  const hdr = Buffer.from(m.subarray(p + 1, p + 49));
+  if (hdr.toString('latin1', 0, 4) !== 'HYX2') throw new Error(name + ': a bank program\'s text starts with its HYX2 header');
+  hdr[6] |= HF_BANK | (kind === 'task' ? HF_TASK : 0);
+  const w = i => m[i] | m[i + 1] << 8, room = w(10) + w(14) + w(18) + 41 + w(22) + w(14);   // (In its bank: its image, BSS,
+  hdr.writeUInt16LE(48 + 27 + w(10) + w(14), 10);               // (HX_LENGTH: its file's bytes to its data's end)
+  if (room > 0x1E00) throw new Error(name + ": a bank program, its frame and its data's copy are " + room + " bytes, past a bank's 7,680");   //   frame and data's copy)
+  const out = Buffer.concat([hdr, o65Bare(m)]);
+  fs.writeFileSync(path.join(objdir, name + '.hyx'), out);
+  return out;
+}
+
 // A game's swapped parts (its own NAME.cfg's SWn segments: code in the main RAM's area only while it's called,
 // through its stub; games/dq0/swap.inc) checked in its sources: the compiler's output (objdir's .s of each .c) and
 // its own assembly (the folder's .s, and what they .include of its own: ../dq0w/at.s ...): no reference to a
@@ -300,6 +324,14 @@ function writeExports(map, out) {
   return names;
 }
 
+// An o65 file's bytes without ld65's options (its name and version, and the time: an image the same each build; a
+// bank program's loader, in its own task, reads its header and text at once)
+function o65Bare(m) {
+  let p = 26;
+  while (m[p]) p += m[p];
+  return Buffer.concat([m.subarray(0, 26), Buffer.from([0]), m.subarray(p + 1)]);
+}
+
 // A bank program (a child: sdk/c/include/bankprog.h, sdk/c/child.cfg), dir's .c and .s files, into objdir/NAME.bp:
 // an o65 module at $8000, its imports what its objects use and don't have (od65's --dump-imports), its exports
 // their globals (--dump-exports); checked against each caller its parents file names (its exports: exportsOf), the
@@ -315,6 +347,10 @@ function buildChild(dir, objdir) {
   fs.writeFileSync(path.join(od, name + '.cfg'), cfg);
   const out = path.join(objdir, name + '.bp');
   run(LD65, ['-C', path.join(od, name + '.cfg'), '-o', out, ...objs]);   // (No map: ld65's fails on an o65's imports)
+  const bp = fs.readFileSync(out);                      // (ld65's o65 header's date of making, option 4, made the
+  for (let at = 26; at < bp.length && bp[at]; at += bp[at]) // same each time: the images the same each build)
+    if (bp[at + 1] === 4) bp.fill(0x20, at + 2, at + bp[at] - 1).write('2026-01-01', at + 2, 'latin1');
+  fs.writeFileSync(out, bp);
   const parents = path.join(dir, 'parents');
   if (fs.existsSync(parents)) {
     for (const p of fs.readFileSync(parents, 'latin1').split(/\s+/).filter(Boolean)) {
@@ -364,6 +400,10 @@ function prog(dir) {
     cprog(dir, od, bin, (process.env.HYC_CFLAGS || '').split(/\s+/).filter(Boolean));
     return bin;
   }
+  if (fs.existsSync(path.join(dir, 'bank'))) {                // (A bank program: dir/bank says so)
+    fs.writeFileSync(bin, bankProgram(dir, path.dirname(od), []));
+    return bin;
+  }
   const objs = assemble(sources(dir), od, [at('sdk', 'asm'), ...base.INCLUDES, dir], ['HYX2_RAM']);
   run(LD65, ['-C', atBase('sdk', 'asm', 'hyx2.cfg'), '-o', bin, '-m', path.join(od, name + '.map'), ...objs]);
   check.checkModule(name, fs.readFileSync(bin), 0x0800);
@@ -386,7 +426,7 @@ function build(opt = {}) {
   // The C library (the C programs need it), the modules, the test modules and the test RAM programs
   clib();
   const ram = (dir, objdir) => isC(dir) ? cprog(dir, path.join(objdir, path.basename(dir)), path.join(objdir, path.basename(dir) + '.hyx'))
-    : buildModule(dir, objdir, defines, true);
+    : fs.existsSync(path.join(dir, 'bank')) ? bankProgram(dir, objdir, defines) : buildModule(dir, objdir, defines, true);
   const modules = {}, tests = {}, progs = {}, programs = {}, samples = {}, games = {};
   mkdir(at('obj', 'modules'));                          // The base's modules (kdev, ser, wozmon) as HydraOS's too: in
   for (const [n, data] of Object.entries(baseBuilt.modules)) {  //   obj/modules with its own, for the tools that read them there

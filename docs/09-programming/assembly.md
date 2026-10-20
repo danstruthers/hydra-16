@@ -91,6 +91,15 @@ $ ld65 -C sdk/asm/hyx2.cfg -o hello.hyx hello.o
 `-D HYX2_RAM` makes a program in a file.  Without it, `hyx2.inc` makes a module of the paged ROM
 ([below](#modules-of-the-paged-rom)).
 
+**A bank program** is built from the same sources: a file named `bank` in its folder, with `run` in it (or `task`, for
+one that must have a task of its own), and `node build.js prog` assembles it with `-D HYX2_BANK`, links it with
+`sdk/asm/bank.cfg` (an o65 module at `$8000`, its relocations kept) and puts a copy of its HYX2 header, `HF_BANK` set,
+before it in its file.  The shells run a bank program in their own task, kept in a RAM bank for the next time ([the
+kernel](../03-base/kernel.md#bank-programs)); in its own task it runs from a bank of that task's.  Its code, data and BSS
+fit one bank, 7.5K less its data's size again (a copy, for each run), and it mustn't map a bank at `$8000` itself.  A
+program that changes what's its task's (the environment, the namespace, the directory) or needs much RAM (`BREAK`)
+should be `task`: in place those are its shell's.
+
 ---
 
 ## Running it

@@ -20,7 +20,7 @@ function gives.
 
 <!-- calls:begin -->
 
-Made from `base/spec/api.def` and `base/spec/errors.def` by `node docs/build/callref.js`: 93 calls in 9 groups.
+Made from `base/spec/api.def` and `base/spec/errors.def` by `node docs/build/callref.js`: 96 calls in 9 groups.
 
 **The groups:** [system](#system-f800), [task](#task-f830), [memory](#memory-f890), [file](#file-f8c0), [name](#name-f920), [cons](#cons-f950), [time](#time-f980), [server](#server-f9b0), [dbg](#dbg-fa10); [the error codes](#the-error-codes); [the constants](#the-constants).
 
@@ -115,7 +115,7 @@ Call a routine in another bank of the paged ROM (a library module's: HT_LIBRARY,
 
 ## task (`$F830`)
 
-Tasks: starting and ending them, waiting, scheduling, ticks: 32 slots from `$F830`, 27 used.
+Tasks: starting and ending them, waiting, scheduling, ticks: 32 slots from `$F830`, 28 used.
 
 | Call | Address | What it does |
 | :--- | :------ | :----------- |
@@ -146,6 +146,7 @@ Tasks: starting and ending them, waiting, scheduling, ticks: 32 slots from `$F83
 | [`SEM_FREE`](#sem_free) | `$F878` | Free a semaphore (any task may). |
 | [`EXEC`](#exec) | `$F87B` | Run a program in this task, in place of the one that calls it (Plan 9's exec). |
 | [`SEM_WAIT`](#sem_wait) | `$F87E` | SEM_ACQUIRE with a time limit. |
+| [`RUN`](#run) | `$F881` | Run a bank program in this task, as a subroutine, and wait for it. |
 
 ### EXITS
 
@@ -179,18 +180,18 @@ Wait for a child to end, and take its exit status.  A child that has ended alrea
 
 ### SPAWN
 
-`$F836`, a far call (its routine on another BIOS page).
+`$F836`.
 
 | | |
 | :-- | :-- |
-| **In** | r0 = the program's path (through the namespace: /bin/NAME; or #m/NAME, a module in the paged ROM); r1 = its arguments (zero-terminated strings, an empty one after the last: 176 bytes at most), or 0; .A = flags (SPAWN_NEWGROUP, SPAWN_NEWNS, SPAWN_FDMAP, SPAWN_NOENV, SPAWN_STOPPED); r2 = an fd map (with SPAWN_FDMAP) |
-| **Out** | .A = the new task |
+| **In** | r0 = the program's path (through the namespace: /bin/NAME; or #m/NAME, a module in the paged ROM); r1 = its arguments (zero-terminated strings, an empty one after the last: 176 bytes at most), or 0; .A = flags (SPAWN_NEWGROUP, SPAWN_NEWNS, SPAWN_FDMAP, SPAWN_NOENV, SPAWN_STOPPED, SPAWN_RUN, RUN_LEND); r2 = an fd map (with SPAWN_FDMAP) |
+| **Out** | .A = the new task (SPAWN_RUN: this one, if the program ran in it) |
 | **Errors** | E_NOENT (no such file), E_NOEXEC (not a program this kernel runs), E_NOTASK (no free task), E_TOOBIG (the arguments), E_INVAL (the map), E_MFILE, E_INTR (and what else OPEN and READ give) |
 | **Waits** | yes |
 | **HyForth** | `sys-spawn ( r0 r1 .A r2 -- .A ior )` |
 | **hylang** | `sys-spawn r0=s r1=args? .A=n? r2=map? -> .A` |
 
-Start a program in a task of its own.  SPAWN opens the file and reads its HYX2 header (HX_*): a module of the paged ROM (HF_INPLACE: #m's files) runs in place, in its bank (the module directory's of its name); any other program is read into the new task's RAM at its load address ($0800), by the task itself as it starts, and its BSS cleared (one that can't be read ends at once, with the error as its exit code).  It starts at its entry point with r0 pointing to its arguments (at TASK_ARGS: the list), its name the header's.  Its fds: the caller's 0, 1 and 2; or with SPAWN_FDMAP, the map's: a count (SPAWN_FDS at most), then for each of the child's fds from 0 the caller's fd that becomes it ($FF, or a closed one: closed).  Each shares the caller's channel and offset; the rest are closed.  Its parent is the caller, which can WAIT for it.  It's in the caller's note group unless SPAWN_NEWGROUP starts one (its number: the child's), and it shares the caller's namespace unless SPAWN_NEWNS gives it an empty one.  Its environment is a copy of the caller's (SPAWN_NOENV: empty).  SPAWN_STOPPED: it's stopped at its entry point, for the debugger (TASKSTEP; /proc/N/ctl's step, or start).
+Start a program in a task of its own.  SPAWN opens the file and reads its HYX2 header (HX_*): a module of the paged ROM (HF_INPLACE: #m's files) runs in place, in its bank (the module directory's of its name); any other program is read into the new task's RAM at its load address ($0800), by the task itself as it starts, and its BSS cleared (one that can't be read ends at once, with the error as its exit code).  It starts at its entry point with r0 pointing to its arguments (at TASK_ARGS: the list), its name the header's.  Its fds: the caller's 0, 1 and 2; or with SPAWN_FDMAP, the map's: a count (SPAWN_FDS at most), then for each of the child's fds from 0 the caller's fd that becomes it ($FF, or a closed one: closed).  Each shares the caller's channel and offset; the rest are closed.  Its parent is the caller, which can WAIT for it.  It's in the caller's note group unless SPAWN_NEWGROUP starts one (its number: the child's), and it shares the caller's namespace unless SPAWN_NEWNS gives it an empty one.  Its environment is a copy of the caller's (SPAWN_NOENV: empty).  SPAWN_STOPPED: it's stopped at its entry point, for the debugger (TASKSTEP; /proc/N/ctl's step, or start).  A bank program (HF_BANK) is loaded into a RAM bank of its task's own and runs there.  SPAWN_RUN, for a caller that waits for the program at once: a bank program that may run in place (not HF_TASK) runs in this task (RUN, with the map and RUN_LEND as given) before SPAWN returns, and the task given back is this one, whose WAIT gives the program's exit status; any other program, or with SPAWN_NEWGROUP, SPAWN_NEWNS, SPAWN_NOENV or SPAWN_STOPPED, starts in a task of its own as ever.  rc runs a simple command this way.
 
 ### GETPID
 
@@ -550,11 +551,26 @@ Run a program in this task, in place of the one that calls it (Plan 9's exec): t
 
 SEM_ACQUIRE with a time limit: take one of a semaphore's count; if there's none, wait (using no CPU) till SEM_RELEASE gives one back or the ticks have passed, whichever comes first.  A doorbell with a timeout: a task with work of its own to do every so often (a clock to keep) sleeps on its semaphore, and is woken at once when it's rung.
 
+### RUN
+
+`$F881`.
+
+| | |
+| :-- | :-- |
+| **In** | r0 = a bank program's path (as SPAWN's); r1 = its arguments (as SPAWN's), or 0; .A = flags (SPAWN_FDMAP, RUN_LEND); r2 = an fd map (with SPAWN_FDMAP, as SPAWN's).  None of them in the window ($8000-$9FFF) |
+| **Out** | .A = its exit code; r0 = its exit message (31 characters at most: TA_SCRATCH, "" for none) |
+| **Errors** | E_NOEXEC (not a bank program that runs in place: SPAWN it), E_NOENT, E_BUSY (running already), E_NOMEM (no bank for it), E_TOOBIG, E_FAULT (a pointer in the window), E_INTR (and what STAT and READ give) |
+| **Waits** | yes |
+| **HyForth** | `sys-run ( r0 r1 .A r2 -- .A r0 ior )` |
+| **hylang** | `sys-run r0=s r1=args? .A=n? r2=map? -> .A` |
+
+Run a bank program in this task, as a subroutine, and wait for it.  A bank program (HF_BANK, not HF_TASK) is kept in this task's code cache: RAM banks of its own (eight at most, BANKS_ALLOC's), several programs to a bank, one above the other, each loaded the first time it's run (its file's o65 module, relocated where it's put) and kept for the next; when there's no room the one run least lately is given up.  The program is known by its file (STAT's), so a changed file is loaded again.  It runs with its bank at $8000 and its zero page in the program's ($22 up), on this task's stack: its arguments at r0, its fds this task's 0, 1 and 2 (SPAWN_FDMAP: the map's), no note handler (the task keeps its name).  It ends as a program does (returning from main, EXITS, a note's default: Ctrl-C), and then the task is the caller's again: its fds (the program's closed), note handler, zero page, banks at $8000 and $A000 and break; a note that ended the program (but a kill) is posted again, for the caller's own handler.  RUN_LEND lets the program move the break past the caller's (BREAK: memory the caller doesn't use; it's put back after); without it, BREAK fails.  The banks and pages the program takes (and not gives back) are the task's till it ends.  A program running in place can RUN another.
+
 ---
 
 ## memory (`$F890`)
 
-Memory: the break, pages, banks, shared segments (phase 1.8): 16 slots from `$F890`, 13 used.
+Memory: the break, pages, banks, shared segments (phase 1.8): 16 slots from `$F890`, 15 used.
 
 | Call | Address | What it does |
 | :--- | :------ | :----------- |
@@ -571,6 +587,8 @@ Memory: the break, pages, banks, shared segments (phase 1.8): 16 slots from `$F8
 | [`SEGINFO`](#seginfo) | `$F8AE` | The shared RAM, as free shows it. |
 | [`BANKS_ALLOC_IN`](#banks_alloc_in) | `$F8B1` | BANKS_ALLOC, from a range of the task's banks (the RAM disk's start FROM-TO: the modules its banks are on). |
 | [`SEG_CREATE_IN`](#seg_create_in) | `$F8B4` | SEG_CREATE, from a range of the shared RAM (the shared RAM disk's start FROM-TO). |
+| [`BANK_LOAD`](#bank_load) | `$F8B7` | A child (a bank program of a caller's, bankprog.h's: its functions called by the caller itself) in this task's code cache, as RUN keeps programs there (several to a bank, the one used least lately given up when there's no room), loaded if it isn't. |
+| [`BANK_FLUSH`](#bank_flush) | `$F8BA` | Give up every program and child in this task's code cache (but a program running), and free the banks left empty. |
 
 ### BREAK
 
@@ -766,6 +784,36 @@ BANKS_ALLOC, from a range of the task's banks (the RAM disk's start FROM-TO: the
 | **hylang** | `sys-seg-create-in .A=n .X=n .Y=n -> .A` |
 
 SEG_CREATE, from a range of the shared RAM (the shared RAM disk's start FROM-TO).
+
+### BANK_LOAD
+
+`$F8B7`, a far call (its routine on another BIOS page).
+
+| | |
+| :-- | :-- |
+| **In** | r0 = a child's path (an o65 module, linked at $8000: sdk/c/child.cfg); r1 = its caller's exports (NAME.exp), or 0; .A = where its zero page goes; .X = the bytes there it may have.  None of them in the window |
+| **Out** | .A = its bank; .X = its directory entry (RB_DIR + 16 x .X in its bank: RE_GEN its load, RE_TABLE its table) |
+| **Errors** | E_NOENT (its file; or an import the exports haven't), E_NOEXEC (not a child), E_RANGE (its zero page), E_IO (the exports), E_NOMEM, E_TOOBIG (no room), E_FAULT (a pointer in the window) |
+| **Waits** | yes |
+| **HyForth** | `sys-bank-load ( r0 r1 .A .X -- .A .X ior )` |
+| **hylang** | `sys-bank-load r0=s r1=s? .A=n .X=n -> .A .X` |
+
+A child (a bank program of a caller's, bankprog.h's: its functions called by the caller itself) in this task's code cache, as RUN keeps programs there (several to a bank, the one used least lately given up when there's no room), loaded if it isn't: its imports found by name in the caller's exports (its NAME.exp, the build's: "BX", 1, then each export its name's length, its name and its address, a 0 after the last), its zero page where the caller says.  Its exports' table (RE_TABLE: each its name, a 0, its address; a 0 after the last) gives its entries.  A call: its bank in the window ($00 alone), the entry's jsr, the bank put back; RE_GEN, as it was when it was found, says it's still there (it may have been given up for another meanwhile: then BANK_LOAD again), and the caller sets RE_STAMP from TK_RCLOCK (one more) as it calls.  On a failure .X says why (BL_*), and a missing import's name is in TA_SCRATCH.
+
+### BANK_FLUSH
+
+`$F8BA`, a far call (its routine on another BIOS page).
+
+| | |
+| :-- | :-- |
+| **In** | .A = the banks the code cache may have from now on (RC_BANKS to start with), or 0 (as it was) |
+| **Out** | - |
+| **Errors** | - |
+| **Waits** | yes |
+| **HyForth** | `sys-bank-flush ( .A -- )` |
+| **hylang** | `sys-bank-flush .A=n ->` |
+
+Give up every program and child in this task's code cache (but a program running), and free the banks left empty.
 
 ---
 
@@ -1604,6 +1652,22 @@ What `hydra.inc` defines besides the calls and the error codes (`hydracalls.h` h
 | `INIT_TASK` | `1` | init's task (and its note group: the console's foreground at first) |
 | `PROG_ZP` | `$22` | A program's own zero page: $22-$7F |
 | `PROG_ZP_END` | `$80` |  |
+| `RB_DIR` | `$9F00` | A code cache bank's directory (BANK_LOAD): its entries at RB_DIR + 16 x n, n 1-15 |
+| `RE_START` | `0` | A cache directory entry: where its module is (2) |
+| `RE_END` | `2` | A cache directory entry: the first byte past it (2) |
+| `RE_TABLE` | `4` | A cache directory entry: a child's exports' table (2) |
+| `RE_GEN` | `6` | A cache directory entry: its load's number (0: free) |
+| `RE_FLAGS` | `7` | A cache directory entry: RF_* |
+| `RE_STAMP` | `8` | A cache directory entry: when it was last used (TK_RCLOCK) (2) |
+| `TK_RCLOCK` | `$EC` | A task's code cache's uses counted (2): its zero page's |
+| `RC_BANKS` | `8` | A task's code cache's banks at most, to start with (BANK_FLUSH) |
+| `BL_FILE` | `2` | BANK_LOAD's why (.X): its file not there, or not read |
+| `BL_FORMAT` | `3` | BANK_LOAD's why (.X): not a child (o65, linked at $8000, in a bank) |
+| `BL_ZP` | `4` | BANK_LOAD's why (.X): its zero page more than the caller gives |
+| `BL_EXPORTS` | `5` | BANK_LOAD's why (.X): the caller's exports' file not there, or not of its form |
+| `BL_IMPORT` | `6` | BANK_LOAD's why (.X): an import the caller hasn't (its name in TA_SCRATCH) |
+| `BL_BANK` | `7` | BANK_LOAD's why (.X): no bank, or no room in one |
+| `TA_SCRATCH` | `$0280` | A task's call scratch (32 bytes): an exit message, BANK_LOAD's missing import |
 | `TASK_ARGS` | `$0350` | A task's arguments: zero-terminated strings, an empty one after the last (176 bytes at most) |
 | `ARGS_MAX` | `176` | SPAWN's arguments: their bytes at most (each string's 0, and the empty one that ends them) |
 | `TASK_NAME` | `$0230` | A task's name, zero-terminated |
@@ -1616,6 +1680,8 @@ What `hydra.inc` defines besides the calls and the error codes (`hydracalls.h` h
 | `HT_LIBRARY` | `3` |  |
 | `HF_INPLACE` | `$01` | HYX2 flags: runs in place in the paged ROM |
 | `HF_BOOT` | `$02` | HYX2 flags: a driver the kernel starts at boot |
+| `HF_BANK` | `$04` | HYX2 flags: a bank program: an o65 module after the header, run in a RAM bank (RUN) |
+| `HF_TASK` | `$08` | HYX2 flags: a bank program that runs only in a task of its own (not in place: RUN) |
 | `HX_MAGIC` | `0` | The HYX2 header (HX_SIZE bytes, a program's first): HYX2 |
 | `HX_HSIZE` | `4` | HYX2: the header's size (48) |
 | `HX_TYPE` | `5` | HYX2: the type (HT_*) |
@@ -1671,6 +1737,8 @@ What `hydra.inc` defines besides the calls and the error codes (`hydracalls.h` h
 | `SPAWN_FDMAP` | `$04` | SPAWN's flags: the child's fds are r2's map (else the caller's 0, 1 and 2) |
 | `SPAWN_NOENV` | `$08` | SPAWN's flags: the child starts with an empty environment (else a copy of its parent's) |
 | `SPAWN_STOPPED` | `$10` | SPAWN's flags: the child stops at its entry point, for the debugger (/proc/N/ctl's step) |
+| `SPAWN_RUN` | `$20` | SPAWN's flags: a bank program that runs in place does, in this task (RUN), and SPAWN gives this task back |
+| `RUN_LEND` | `$40` | RUN's flags (and SPAWN_RUN's): the program may move the break past the caller's |
 | `ENV_SIZE` | `1024` | TASKREAD's TR_ENV: its buffer, an environment's first variables, whole, and a 0 |
 | `ENV_MAX` | `8192` | An environment's bytes at most: each variable its name's length, its name, its value's length (2), its value; a 0 |
 | `ENV_NAME_MAX` | `31` | A variable's name's length at most |
