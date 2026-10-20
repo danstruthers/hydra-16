@@ -30,7 +30,8 @@ plays them as HarnMaster's referee does.
   climbing Climbing; jumping Jumping; swimming Swimming; balance Acrobatics; forcing and lifting Strength (an
   attribute times 5); picking a lock, disarming and making out a mechanism Lockcraft; enduring Condition; resisting
   poison Endurance times 5; resisting the mind Will times 5; dodging a hazard Dodge; first aid Physician; lore Lore;
-  tracking Tracking; persuading and intimidating Rhetoric; animals Animalcraft; digging Mining; guile Intrigue.
+  tracking Tracking; persuading and intimidating Rhetoric; animals Animalcraft; digging Mining; guile Intrigue;
+  throwing Throwing.
   (dq0harn.c's purpose table.)  Why: the game's code stays the same whatever the ruleset; only the referee knows
   skills.
 - **A skill never opened is tried at its opening level,** less five a point of the physical penalty, as if opened
@@ -185,6 +186,45 @@ RS_TEST P_DIG.)  *(Every ruleset's.)*
 - **Health in words,** for every ruleset: fine with no injuries; hurt while the injury points are under a third of
   the Endurance; badly hurt under two thirds; critical past that; down when senseless or in shock.  (dq0harn.c's
   health_of.)
+
+## Throwing
+
+- **Anything thrown goes by Throwing** (P_THROW), whatever it is, at the book's missile ranges (Combat 15): a
+  short band, then medium, long and extreme, each twice as far as the last, at 0, 20, 40 and 80 less (0, 4, 8 and 16
+  steps).  (dq0harn.c's purpose table; dq0w/things.c's s_throw_at.)
+- **A kind's reach is its short band, in squares** (5 feet each): 2 for a thing a hand throws well (a dagger, a
+  torch, rations, a key, a skull, bones, pennies, a candle), 1 for a heavy or an awkward one (a pick, a shovel, a
+  sword, a mace, a shield, a helm, boots, a basket, a rope, a pane), 4 for a spear (a javelin's), 0 for what isn't
+  thrown (a chest, a table, a chair, a cloak, body armour, a backpack, a belt, a body, a well); a theme's own kinds
+  none yet.  (dq0w/kinds.c's throws: the plan's affordances in the kinds' data.)  Why: the book gives thrown
+  weapons' ranges; other things are judged by their weight and their shape.
+- **Thrown hard: twice as far, and 10 less** (2 steps).  ("throw the dagger hard at the rat": struct cmd's manner.)
+- **Beyond the extreme band it falls short**, at the band's end on the line to the mark; **a miss lands beside the
+  mark** (on its square, as yet); **a hit strikes it**, but wounds nothing yet: the referee's missile attack (Combat
+  15's: its defences, its impact) is to come.  The thing lands out of the thrower's hands, where it falls.
+
+## Commands
+
+- **"It" is the last thing named,** of any kind (the user's answer 7): a thing, a denizen, a part of the place.
+  "Take it" with nothing named yet says so.  (resolve.c.)
+- **A verb said alone takes its own thing** (commands.verbs' unsaid): drop, put, wear, wield, hold, read, use the
+  last thing named; take the last thing named if it lies near, else the thing near, asking which of several, and
+  saying so when there's none (the user's answer 8); attack and throw the target; open, close, break ... what's in
+  front; look and examine the place.  (resolve.c; main.c.)
+- **"Take all"** takes each thing it sees lying about, the nearest first (those in reach before those walked to),
+  in turn; one it can't take, or no longer sees, ends it.  (resolve.c's taken_next.)
+- **Which of several:** the closest by squares (and the lead, as yet, the closest); the largest and the smallest by
+  a thing's size (how easily it's seen); the second as they lie from the character's left round to its right; any,
+  the closest.  Several of a name and none said: the one the world's services choose, as ever (the nearest thing,
+  the denizen beside it), but a throw's mark and a target set must be one: then which, asked.  (resolve.c.)
+- **A question** lists the choices from the left round to the right, how far off each is where two lie the same
+  way, and takes a number, a way ("left"), a selector ("the closest", "the second") or a name; any other line lets
+  it go (the user's answer 13).  (resolve.c; the doors' and the stairs' own, choose.c.)
+- **The target** is set by "target the rat", or by any "at the rat"; shown by "target"; it's what attack and throw
+  take when nothing's said.  It's let go by "clear target"; as it's down while another denizen in sight is up; as
+  it's dropped or thrown away; as it's out of sight; as the character's made to turn: a denizen it didn't see before
+  comes into sight, a blow comes from one it doesn't see, a trap is set off.  (resolve.c; blows.c, fixt.c:
+  untarget.)
 
 ## The null ruleset (dq0null)
 

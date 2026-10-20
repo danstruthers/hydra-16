@@ -46,14 +46,16 @@ function choose(r, seen) {
     return r.pick(['go through the ' + w, 'enter the ' + w, 'go to the ' + w, 'go through the ' + w, 'approach the ' + w]);
   }
   if (den && k < 42) return r.pick(['attack the ' + den, 'kick the ' + den, 'talk to the ' + den, 'calm the ' + den, 'threaten the ' + den,
-    'look at the ' + den, 'flee', 'defend', 'back away ' + r.pick(['n', 's', 'e', 'w'])]);
+    'look at the ' + den, 'flee', 'defend', 'back away ' + r.pick(['n', 's', 'e', 'w']),
+    'target the ' + den, 'throw the dagger at the ' + den, 'throw the ' + thing + ' hard at the closest ' + den, 'attack', 'target']);
   if (k < 45) return r.pick([...DIRS, ...DIRS, 'go ' + r.pick(DIRS), 'run ' + r.pick(DIRS), 'walk ' + r.pick(DIRS), 'go through the door',
     'go to the door', 'enter the door', 'climb the stairs', 'go down the stairs', 'go up', 'turn ' + r.pick(['left', 'right', 'around']),
     'face ' + r.pick(['north', 'south', 'east', 'west']), 'approach the ' + fixture, 'step ' + r.pick(['left', 'right', 'back'])]);
   if (k < 65) return r.pick(['look', 'look', 'l', 'look ' + r.pick(DIRS), 'x room', 'examine the ' + fixture, 'search', 'listen',
     'look around', 'look at the ' + thing, 'examine the ' + thing]);
   if (k < 80) return r.pick(['inventory', 'i', 'get the ' + thing, 'take the ' + thing, 'drop the ' + thing, 'pick up the ' + thing,
-    'light the torch', 'put out the torch', 'hold the dagger', 'put the ' + thing + ' in the backpack', 'eat the rations', 'drink the waterskin']);
+    'light the torch', 'put out the torch', 'hold the dagger', 'put the ' + thing + ' in the backpack', 'eat the rations', 'drink the waterskin',
+    'take', 'take all', 'take it', 'drop', 'drop it', 'take the closest', 'clear target']);
   if (k < 90) return r.pick(['open the door', 'close the door', 'unlock the door', 'force the door', 'kick the door', 'break the window',
     'raise the portcullis', 'lower the portcullis', 'disarm the trap', 'bar the door', 'climb through the window']);
   return r.pick(['wait', 'wait', 'wait 5 minutes', 'map', 'status', 'sheet', 'rest', 'hide', 'sneak ' + r.pick(['n', 's', 'e', 'w']),

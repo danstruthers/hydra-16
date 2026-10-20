@@ -147,9 +147,13 @@ by a request or an intent.
   (WS_PAUSE), ended (I_QUIT: the hub's quit, the world first, the others after it).
 - **The command** is the parser's (dq0c, a task of its own, in assembly: games/dq0c): the UI posts each line to it
   as it's taken (the hub's cq) and takes its verdict where the command is carried out: whether the grammar has it
-  (commands.ebnf), and what it means (the game's struct pcmd, made by dq0c from the game's words, commands.words, and
-  the catalogue's and the game's things' names the UI sends it as the game starts).  A line the grammar doesn't have
-  is "I don't understand that."
+  (commands.ebnf), and the command it makes (hub.h's struct cmd: an action, actions.h's VB_*, the catalogue's,
+  commands.actions, and its roles: the thing, the other, the way, how, the manner ...; made by dq0c from the verbs as
+  data, commands.verbs, the game's words, commands.words, and the catalogue's and the game's things' names the UI
+  sends it as the game starts).  A line the grammar doesn't have is "I don't understand that."  The UI resolves the
+  command's things among those the character perceives (resolve.c: "it", the thing a bare verb takes, which of
+  several, the target, a question only where it must be one) and carries it out by its action; the world throws a
+  thing for it (the item store's IO_THROW: the catalogue's reach, the referee's Throwing).
 
 ### The save
 
@@ -735,7 +739,8 @@ squares off (the summary's sight, 0-9; the kind's seen, how far past a speck it'
 denizen more than 3 + sight squares off only as something there; a portal or a thing more than two squares off
 (NEAR_SQ) examined only as it's seen from there (a portal's kind, its size against the character's, a door's
 material within 3 + sight squares), "You'd have to go closer to make out more".  Where several things or doors fit a
-command and none is ahead, the UI asks which, in a numbered list (choose.c).
+command and none is ahead, the UI asks which, in a numbered list (choose.c); and where several things or denizens
+could be the one meant and it must be one (a bare take, a throw's mark, a target set), resolve.c asks the same way.
 
 ### Names
 
@@ -753,7 +758,7 @@ One table of the names the character gives (dq0/names.c), in the hub's theme ban
 A line that names (its first word name, call, alias, rename, dub, forget or unname) is the names' before it's a
 command.  A name is refused if it clashes: with another name ("That name is taken by your sword."), a kind of thing's
 (a word of it, or its start: "sw" would be a sword's), a kind of creature's (dq0d.dat's), a denizen's in sight, or (a
-name of one word) a word the parser needs ("north", "take": dq0c asked).  "forget the name Linda", "unname my sword",
+name of one word) a word the parser needs ("north", "take", "first", "one": dq0c asked).  "forget the name Linda", "unname my sword",
 "unname this room" take one back (an ally keeps its name).  A thing's name works in every command that names a thing:
 the line's names are made the thing's own word before it's parsed ("#" and its id, which the world's item store finds
 it by), and "attack the rat with Linda" takes Linda in hand first.  The words say it: what's carried ("Linda, your

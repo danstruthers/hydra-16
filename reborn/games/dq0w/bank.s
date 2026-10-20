@@ -137,6 +137,7 @@ go:
             SWFN        carry, 10
             SWFN        about, 10
             SWFN        drop, 10
+            SWFN        throw_at, 4
             SWFN        list, 11
             SWFN        wear, 11
             SWFN        make_own, 13

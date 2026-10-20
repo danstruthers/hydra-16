@@ -1,5 +1,5 @@
 /* cmdmean.c - the command's meaning (games/dq0c/cmdmean.s) on sim65, cc65's 6502 simulator: each line matched, then
-   its struct pcmd made (the character facing the line's number, modulo 8), printed with the cycles cmd_mean took, for
+   its struct cmd made (the character facing the line's number, modulo 8), printed with the cycles cmd_mean took, for
    sim/tools/commandmatch-test.js --mean, which holds each to the host's (commandwords.js's scan).  The cmd_*.h files
    are commandmatch-gen.js's. */
 #include <stdio.h>
@@ -12,7 +12,7 @@
 #include "cmd_words.h"
 #include "cmd_lines.h"
 
-/* The words' table (cmd_words.h's), and a line's meaning: the struct pcmd (dq0.h's) at cm_cmd */
+/* The words' table (cmd_words.h's), and a line's meaning: the struct cmd (hub.h's) at cm_cmd */
 int __fastcall__ cmd_winit(const unsigned char *words);
 const unsigned char *__fastcall__ cmd_mean(unsigned char face);
 
@@ -37,10 +37,16 @@ int main(void)
     c = cmd_mean(i & 7);
     t = clk() - t;
     printf("%d %d %lu", i, r, t);
-    for (j = 0; j < 7; j++) {
+    for (j = 0; j < 13; j++) {                  /* (Its fields, action to n; then each thing's kind, sel, n, lies) */
       printf(" %u", c[j]);
     }
-    printf(" %u %u |%s|%s|\n", c[23], c[40], (const char *) c + 7, (const char *) c + 24);
+    for (j = 0; j < 4; j++) {
+      printf(" %u", c[13 + j]);
+    }
+    for (j = 0; j < 4; j++) {
+      printf(" %u", c[37 + j]);
+    }
+    printf(" |%s|%s|\n", (const char *) c + 21, (const char *) c + 45);
   }
   printf("done %d\n", CMD_LINES);
   return 0;
