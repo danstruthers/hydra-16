@@ -3640,10 +3640,10 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0armour', what: 'Dingus Quest Zero\'s denizens fighting and armour (DENIZENS.md: fights; the catalogue\'s armour kinds, worn: the things tell the referee what\'s worn and how well made, RS_EQUIP\'s marks; HarnMaster\'s protection by location, the layers summed, Combat 4-5), by the blows told and the character\'s state (the referee\'s dice at this seed): a gambeson under a mail hauberk (dq0 -k) worn; down the stairway at seed 7 a ghoul (its faction hostile to the character) seen as the character comes down, coming up to it and clawing at it a round at a time as it waits (its own turns: the referee\'s round); the character dodging (defend dodge: its stance), a claw dodged, one turned by the armour; then standing undefended (defend none), wounded, worse, knocked senseless and killed: the character\'s death, the game\'s end (dq0ghoul\'s, in it)',
+      name: 'dq0armour', what: 'Dingus Quest Zero\'s denizens fighting and armour (DENIZENS.md: fights; the catalogue\'s armour kinds, worn: the things tell the referee what\'s worn and how well made, RS_EQUIP\'s marks; HarnMaster\'s protection by location, the layers summed, Combat 4-5), by the blows told and the character\'s state (the referee\'s dice at this seed): a gambeson under a mail hauberk (dq0 -k) worn; down the stairway at seed 7 a ghoul (its faction hostile to the character) seen as the character comes down, coming up to it and clawing at it a round at a time as it waits (its own turns: the referee\'s round); the character dodging (defend dodge: its stance), a claw dodged, one turned by the armour; then standing undefended (defend none), wounded, worse, knocked down, then clawed till it\'s killed: the character\'s death, the game\'s end (dq0ghoul\'s, in it)',
       init: 't_rc', cycles: 1000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 7 -c /ram/c.hm -k \'gambeson,mail hauberk\' -T',
-        'wear the gambeson', 'wear the mail hauberk', 'd', 'defend dodge', 'wait', 'wait', 'defend none', 'wait', 'wait', 'wait', 'echo $status']) },
+        'wear the gambeson', 'wear the mail hauberk', 'd', 'defend dodge', 'wait', 'wait', 'defend none', ...Array(18).fill('wait'), 'echo $status']) },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [], FF_D_DOWN = 4, FF_D_DEAD = 8, FF_STOPPED = 0x40;
@@ -3657,15 +3657,21 @@ module.exports = {
         const dd = T.of('defend dodge'), dn = T.of('defend none'), w = T.filter(t => t.line === 'wait');
         if (!dd.after || dd.after.pc.stance !== 'D_DODGE') f.push('the stance not dodging: ' + (dd.after && dd.after.pc.stance));
         if (!dn.after || dn.after.pc.stance !== 'D_NONE') f.push('the stance not none: ' + (dn.after && dn.after.pc.stance));
-        if (w.length !== 5) return [...f, 'the waits not typed'];
+        if (w.length !== 20) return [...f, 'the waits not typed'];
         if (!claws(w[0]).some(e => e.out === 'O_DODGED')) f.push('the first claw not dodged (' + dq0Evs(w[0]) + ')');
         if (!claws(w[1]).some(e => e.ff & FF_STOPPED)) f.push('the second claw not turned by the armour (' + dq0Evs(w[1]) + ')');
         const h = t => t.after ? t.after.sum.health : -1;
         if (!(claws(w[2]).some(e => e.out === 'O_HIT') && h(w[2]) > h(w[1]))) f.push('undefended, not wounded');
         if (!(claws(w[3]).some(e => e.out === 'O_HIT') && h(w[3]) > h(w[2]))) f.push('undefended, not wounded worse');
-        if (!claws(w[4]).some(e => e.ff & FF_D_DOWN) || !claws(w[4]).some(e => e.ff & FF_D_DEAD)) f.push('not knocked senseless and killed (' + dq0Evs(w[4]) + ')');
-        if (!w[4].after || !(w[4].after.sum.cond & 4)) f.push('the character not dead (C_DEAD)');
-        dq0Need(f, w[4], 'E_BYE', {}, 'the game not ended by the death');
+        if (!claws(w[4]).some(e => e.ff & FF_D_DOWN)) f.push('the third undefended claw not knocking the character down (' + dq0Evs(w[4]) + ')');
+        // (Then down, in shock, clawed a round a wait till a blow kills it: the referee's, some fifteen rounds at this seed;
+        // the waits after it the shell's)
+        const k = w.slice(5).find(t => dq0Ev(t, 'E_FIGHT', { ff: x => x & FF_D_DEAD }).length);
+        if (!k) f.push('the character, down, not killed by the ghoul\'s claws');
+        else {
+          if (!k.after || !(k.after.sum.cond & 4)) f.push('the character not dead (C_DEAD)');
+          dq0Need(f, k, 'E_BYE', {}, 'the game not ended by the death');
+        }
         return f;
       },
       sdcard: true
