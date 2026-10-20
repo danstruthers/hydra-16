@@ -1917,6 +1917,10 @@ function dq0Turns(m) {
   const none = { k: -1, line: '', events: [], dens: [], replies: [], at: null, after: null, game: -1 };
   T.of = (line, from = 0) => T.find(t => t.k >= from && t.line === line) || Object.assign({}, none, { line });
   T.after = (t, line) => T.of(line, t.k + 1);
+  // (A turn and the one after, as one: a quit with a save folder has its end's events, its save, as the next line's
+  // typed, the game's "> " back before it's done)
+  T.and = t => { const u = T[t.k + 1]; return t.k < 0 || !u ? t : Object.assign({}, t, { events: [...t.events, ...u.events], dens: [...t.dens, ...u.dens],
+    replies: [...t.replies, ...u.replies], after: u.after }); };
   return T;
 }
 // A turn's events (the world's and the denizens') of a kind, with the fields given (each a value, or a test of it)
@@ -1942,6 +1946,15 @@ function dq0Carried(s) {
 // The things lying on the character's square (its stratum's), by name
 const dq0Here = s => s ? s.items.filter(i => i.where === 'IW_SQUARE' && i.sn === s.pc.sn && i.x === s.pc.x && i.y === s.pc.y) : [];
 const dq0Named = (list, name) => list.filter(i => i.name === name);
+// A thing by its kind's name: the one carried, else the one on the character's square or in (or on) one there, else
+// any (null: none); and what holds it (the item it's in or on, or null)
+function dq0Thing(s, name) {
+  if (!s) return null;
+  const by = new Map(s.items.map(i => [i.n, i])), all = s.items.filter(i => i.name === name), carried = new Set(dq0Carried(s).map(i => i.n));
+  const here = i => { for (let d = 0; i && d < 8; d++) { if (i.where === 'IW_SQUARE') return i.sn === s.pc.sn && i.x === s.pc.x && i.y === s.pc.y; if (i.where !== 'IW_ITEM') return false; i = by.get(i.x); } return false; };
+  return all.find(i => carried.has(i.n)) || all.find(here) || all[0] || null;
+}
+const dq0Holder = (s, i) => s && i && i.where === 'IW_ITEM' ? s.items.find(j => j.n === i.x) || null : null;
 const DQ0_I = { LIT: 0x01, HELD: 0x02, WORN: 0x04, HIDDEN: 0x08 };   // (items.h's I_*)
 // A dq0 test's lines typed, each at its prompt (rc's "% ", the game's "> ")
 const dq0Typed = lines => lines.map(l => '\u0101' + l + '\r').join('');
@@ -2712,28 +2725,99 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0items', what: 'Dingus Quest Zero\'s things (items.h, dq0p/things.c): the kit a character begins with, listed (worn, held, inside), a thing put down and seen at its feet, taken up again, and one out of reach walked over to first',
-      init: 't_rc', cycles: 1200e6,
-      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -k pick -T\r' +
-        ['inventory', 'examine the dagger', 'x torch', 'examine pennies', 'examine the moon', 'drop the dagger', 'look', 'get dagger', 'drop pick', 'walk to the door ahead', 'turn around', 'look', 'take the pick', 'look', 'i', 'drop rocks', 'hide the pouch', 'look', 'i', 'take pouch', 'i', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
-      expect: ['You carry', 'backpack', 'rations', 'pennies', 'You judge it', 'You see no moon here.', 'Put down.', 'At your feet lies a dagger.', 'Taken.', 'On the floor to your right lies a pick.', 'You go over to it.', 'You carry none of those.', 'You hide it', 'Hidden at your feet lies a pouch.', 'Taken.', '% echo $status'],
+      name: 'dq0items', meaning: true, what: 'Dingus Quest Zero\'s things (items.h, the world\'s item store), by where each one is (the store\'s records) and what the world said to each request (ireq\'s result): the kit a character begins with (dq0 -k pick: a pick more), its torch lit in hand, its pack and belt worn; what it carries listed; a thing examined, one there isn\'t refused; a thing put down (on its square, seen at its feet), taken up again; one out of reach walked over to first (the world\'s I_TAKE); one it hasn\'t refused; a thing hidden where it stands (on its square, hidden, seen so), taken up again (its words: dq0words)',
+      init: 't_rc', cycles: 800e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T', 'inventory',
+        'examine the dagger', 'examine the moon', 'drop the dagger', 'look', 'get dagger', 'drop pick', 'walk to the door ahead', 'turn around',
+        'take the pick', 'drop rocks', 'hide the pouch', 'look', 'take pouch', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [], I = DQ0_I, mine = (s, n) => dq0Carried(s).some(i => i.name === n), here = (s, n) => dq0Here(s).find(i => i.name === n);
+        const rep = (l, kind, result) => { const t = T.of(l); if (!dq0Rep(t, 'ireq', { kind, result }).length) f.push(l + ': no ' + kind + ' ' + result + ' ' + JSON.stringify(t.replies.filter(r => r.req === 'ireq'))); return t; };
+        const s0 = T.of('dq0 -p t -s 3 -c /ram/c.hm -k pick -T').after;
+        for (const n of ['torch', 'backpack', 'rations', 'tinderbox', 'belt', 'pouch', 'pennies', 'dagger', 'waterskin', 'pick'])
+          if (!mine(s0, n)) f.push('the kit without its ' + n);
+        const torch = dq0Thing(s0, 'torch');
+        if (!torch || (torch.flags & (I.LIT | I.HELD)) !== (I.LIT | I.HELD)) f.push('the torch not lit in hand');
+        for (const n of ['backpack', 'belt']) { const i = dq0Thing(s0, n); if (!i || !(i.flags & I.WORN)) f.push('the ' + n + ' not worn'); }
+        rep('inventory', 'IO_LIST', 'IR_OK');
+        rep('examine the dagger', 'IO_DESCRIBE', 'IR_OK');
+        rep('examine the moon', 'IO_DESCRIBE', 'IR_NONE');
+        const d = rep('drop the dagger', 'IO_DROP', 'IR_OK');
+        if (!here(d.after, 'dagger') || mine(d.after, 'dagger')) f.push('the dagger not put down where it stands');
+        const lk = T.after(d, 'look');
+        if (!lk.after || !lk.after.sight || !lk.after.sight.items.some(i => i.name === 'dagger' && i.rel === 255)) f.push('the dagger not seen at its feet');
+        if (!mine(rep('get dagger', 'IO_GET', 'IR_OK').after, 'dagger')) f.push('the dagger not taken up again');
+        const p = rep('drop pick', 'IO_DROP', 'IR_OK'), at = p.after && p.after.pc;
+        if (!here(p.after, 'pick')) f.push('the pick not put down');
+        const w = T.of('walk to the door ahead');
+        dq0Need(f, w, 'E_ARRIVE', { how: 'A_WENT_TO' }, 'not walked to the door');
+        if (at && w.after && Math.max(Math.abs(w.after.pc.x - at.x), Math.abs(w.after.pc.y - at.y)) < 2) f.push('the pick not out of reach after the walk');
+        const t = rep('take the pick', 'IO_GET', 'IR_NOT_HERE');
+        dq0Need(f, t, 'E_TAKEN', { ir: 'IR_OK' }, 'the pick out of reach not walked over to and taken');
+        if (!mine(t.after, 'pick') || !at || t.after.pc.x !== at.x || t.after.pc.y !== at.y) f.push('not at the pick\'s square with it');
+        const r = rep('drop rocks', 'IO_DROP', 'IR_NONE');
+        if (r.at && r.after && dq0Carried(r.at).length !== dq0Carried(r.after).length) f.push('something put down for rocks it hasn\'t');
+        const h = rep('hide the pouch', 'IO_HIDE', 'IR_OK'), hp = here(h.after, 'pouch');
+        if (!hp || !(hp.flags & I.HIDDEN) || mine(h.after, 'pouch')) f.push('the pouch not hidden where it stands');
+        const lk2 = T.after(h, 'look');
+        if (!lk2.after || !lk2.after.sight || !lk2.after.sight.items.some(i => i.name === 'pouch' && (i.hid & 1))) f.push('the pouch not seen hidden at its feet');
+        const tp = rep('take pouch', 'IO_GET', 'IR_OK'), pp = dq0Thing(tp.after, 'pouch');
+        if (!mine(tp.after, 'pouch') || (pp.flags & I.HIDDEN)) f.push('the pouch not taken up again');
+        return f;
+      },
       sdcard: true
     },
     {
-      name: 'dq0equip', what: 'Dingus Quest Zero\'s things handled (dq0p/things.c): a kit of things more (dq0 -k, commas between: a table held in both hands, the rest in the pack); a table put down and a candle put on it (seen with it), taken from it again; a cloak worn and taken off; a basket held that won\'t keep sand, a waterskin that keeps only liquids, a quiver hung on the belt and arrows put in it, a candle that won\'t hang, hands full, the pack not into what\'s in it; then down to a dark place: the torch put out, a candle lit from the tinderbox (out of the pack into a hand), the torch lit, put down lit (its light lies about it, the room still seen), taken up again',
-      init: 't_rc', cycles: 3000e6,
-      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 3 -c /ram/c.hm -T -k table,basket,sand,cloak,candle,quiver,arrows\r' +
-        ['i', 'drop table', 'put the candle on the table', 'look', 'take the candle from the table', 'wear cloak', 'hold basket', 'put sand in basket',
-         'put the dagger in the waterskin', 'hang the quiver on my belt', 'put arrows in quiver', 'hang the candle', 'wield the dagger', 'stow basket',
-         'put the backpack in the basket', 'take the cloak off', 'stow cloak', 'i',
-         'd', 'douse the torch', 'look', 'light the candle', 'look', 'light torch', 'drop the torch', 'douse candle', 'look', 'get torch', 'i', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
-      expect: ['in both hands', 'Put down.', 'You put the candle on the table.', 'At your feet lies a table.', 'On the table\nlies a candle.',
-        'You take the candle from the table. It\'s in your backpack.', 'You put on the cloak.', 'You take the basket in your hand.',
-        'The basket won\'t keep the heap of sand: it would run out.', 'The dagger won\'t go in the waterskin.', 'You hang the quiver from your belt.',
-        'You put the arrows in the quiver.', 'The candle won\'t hang from a belt.', 'Your hands are full', 'You stow the basket in your backpack.',
-        'The backpack won\'t go inside itself.', 'You take off the cloak. It\'s in your hand.', 'You stow the cloak in your backpack.',
-        'a quiver (in it: arrows)', 'You put out the torch.', 'It is dark', 'You light the candle.', 'by the light of your candle', 'You light the torch.',
-        'Put down.', 'lit torch', 'You put out the candle.', 'Taken.', 'a torch (lit), in your hand', '% echo $status'],
+      name: 'dq0equip', meaning: true, what: 'Dingus Quest Zero\'s things handled (the world\'s item store, dq0w/things.c), by where each one is and its state (held, worn, lit: the store\'s records) and what the world said to each (ireq\'s result: done or refused): a kit of things more (dq0 -k, commas between: a table held in both hands, the rest in the pack); a table put down and a candle put on it, taken from it again; a cloak worn and taken off; a basket held that won\'t keep sand, a waterskin that won\'t take a dagger, a quiver hung on the belt and arrows put in it, a candle that won\'t hang, a dagger not taken in hand with the hands full, the pack not into the basket that\'s in it; then down to a dark place: the torch put out (dark), a candle lit (out of the pack into a hand: light), the torch lit, put down lit (its light lies about it, the room still seen with the candle out), taken up again (their words: dq0words)',
+      init: 't_rc', cycles: 1200e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k table,basket,sand,cloak,candle,quiver,arrows',
+        'drop table', 'put the candle on the table', 'look', 'take the candle from the table', 'wear cloak', 'hold basket', 'put sand in basket',
+        'put the dagger in the waterskin', 'hang the quiver on my belt', 'put arrows in quiver', 'hang the candle', 'wield the dagger', 'stow basket',
+        'put the backpack in the basket', 'take the cloak off', 'stow cloak', 'd', 'douse the torch', 'light the candle', 'light torch',
+        'drop the torch', 'douse candle', 'look', 'get torch', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [], I = DQ0_I;
+        const put = (l, kind, result) => { const t = T.of(l); if (!dq0Rep(t, 'ireq', { kind, result }).length) f.push(l + ': no ' + kind + ' ' + result + ' ' + JSON.stringify(t.replies.filter(r => r.req === 'ireq').map(r => r.kind + ' ' + r.result))); return t; };
+        const thing = (t, n) => dq0Thing(t.after, n), holder = (t, n) => { const h = dq0Holder(t.after, thing(t, n)); return h ? h.name : ''; };
+        const flags = (t, n, on, off, what) => { const i = thing(t, n); if (!i || (i.flags & on) !== on || (i.flags & off)) f.push(t.line + ': the ' + n + ' not ' + what + ' (flags ' + (i && i.flags) + ')'); };
+        const s0 = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -k table,basket,sand,cloak,candle,quiver,arrows');
+        flags(s0, 'table', I.HELD, 0, 'held');
+        for (const n of ['basket', 'heap of sand', 'cloak', 'candle', 'quiver', 'arrows']) if (holder(s0, n) !== 'backpack') f.push('the kit\'s ' + n + ' not in the pack');
+        const dt = put('drop table', 'IO_DROP', 'IR_OK');
+        if (!dq0Here(dt.after).some(i => i.name === 'table')) f.push('the table not put down');
+        if (holder(put('put the candle on the table', 'IO_PUT', 'IR_OK'), 'candle') !== 'table') f.push('the candle not on the table');
+        if (holder(put('take the candle from the table', 'IO_TAKE', 'IR_OK'), 'candle') !== 'backpack') f.push('the candle not taken from the table into the pack');
+        flags(put('wear cloak', 'IO_DON', 'IR_OK'), 'cloak', I.WORN, 0, 'worn');
+        flags(put('hold basket', 'IO_HOLD', 'IR_OK'), 'basket', I.HELD, 0, 'held');
+        if (holder(put('put sand in basket', 'IO_PUT', 'IR_NO'), 'heap of sand') !== 'backpack') f.push('the sand moved into the basket');
+        if (holder(put('put the dagger in the waterskin', 'IO_PUT', 'IR_NO'), 'dagger') === 'waterskin') f.push('the dagger in the waterskin');
+        if (holder(put('hang the quiver on my belt', 'IO_PUT', 'IR_OK'), 'quiver') !== 'belt') f.push('the quiver not hung on the belt');
+        if (holder(put('put arrows in quiver', 'IO_PUT', 'IR_OK'), 'arrows') !== 'quiver') f.push('the arrows not in the quiver');
+        if (holder(put('hang the candle', 'IO_PUT', 'IR_NO'), 'candle') !== 'backpack') f.push('the candle moved, hung');
+        flags(put('wield the dagger', 'IO_HOLD', 'IR_NO'), 'dagger', 0, I.HELD, 'left alone (the hands full)');
+        if (holder(put('stow basket', 'IO_STOW', 'IR_OK'), 'basket') !== 'backpack') f.push('the basket not stowed');
+        flags(put('put the backpack in the basket', 'IO_PUT', 'IR_NO'), 'backpack', I.WORN, 0, 'still worn');
+        flags(put('take the cloak off', 'IO_DOFF', 'IR_OK'), 'cloak', I.HELD, I.WORN, 'taken off into a hand');
+        if (holder(put('stow cloak', 'IO_STOW', 'IR_OK'), 'cloak') !== 'backpack') f.push('the cloak not stowed');
+        dq0Need(f, T.of('d'), 'E_ARRIVE', { how: 'A_DOWN' }, 'not down the stairway');
+        const dark = (t, d, what) => { if (!t.after || !t.after.sight || t.after.sight.dark !== d) f.push(t.line + ': ' + what); };
+        const dz = put('douse the torch', 'IO_DOUSE', 'IR_OK');
+        flags(dz, 'torch', 0, I.LIT, 'put out');
+        dark(dz, 1, 'not dark');
+        const lc = put('light the candle', 'IO_LIGHT', 'IR_OK');
+        flags(lc, 'candle', I.LIT | I.HELD, 0, 'lit in a hand');
+        dark(lc, 0, 'dark still, the candle lit');
+        flags(put('light torch', 'IO_LIGHT', 'IR_OK'), 'torch', I.LIT, 0, 'lit');
+        const dr = put('drop the torch', 'IO_DROP', 'IR_OK'), tr = dq0Here(dr.after).find(i => i.name === 'torch');
+        if (!tr || !(tr.flags & I.LIT)) f.push('the torch not put down lit');
+        flags(put('douse candle', 'IO_DOUSE', 'IR_OK'), 'candle', 0, I.LIT, 'put out');
+        dark(T.after(dr, 'look'), 0, 'dark, the torch lit on the floor');
+        flags(put('get torch', 'IO_GET', 'IR_OK'), 'torch', I.LIT, 0, 'taken up lit');
+        if (!dq0Carried(T.of('get torch').after).some(i => i.name === 'torch')) f.push('the torch not carried again');
+        return f;
+      },
       sdcard: true
     },
     {
@@ -2869,25 +2953,38 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0names', what: 'Dingus Quest Zero\'s names (the user, 2026-10-16: "I would like to be able to reference items by aliases, as long as the alias doesn\'t clash with something else"; names.c): a sword named Linda (dq0 -k sword), shown in what the character carries ("Linda, your sword"), names that clash refused (another name, a kind of thing\'s, a kind of creature\'s, a word the parser needs), Linda used in commands (dropped, seen lying there by its name, taken up, examined, taken in hand to strike a rat with), the room named the Mausoleum and said so as it\'s looked at; the game kept and carried on, the names with it; then a name forgotten',
-      init: 't_rc', cycles: 1200e6,
-      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 3 -c /ram/c.hm -T -k sword -d /ram/kept\r' +
-        ['name my sword Linda', 'inventory', 'alias the dagger as linda', 'name the dagger Torch', 'name the dagger kobold', 'name the dagger north',
-         'drop Linda', 'look', 'take Linda', 'examine Linda', 'attack the rat with Linda', 'call this room the mausoleum', 'look', 'quit',
-         'dq0 -d /ram/kept', 'look', 'inventory', 'forget the name Linda', 'inventory', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
-      expect: ['You name your sword Linda.', 'Linda, your sword', 'That name is taken by your sword.', 'That name is taken by a kind of thing (torch).',
-        'That name is taken by a kind of creature (kobold).', 'That name is taken: it\'s a word your commands need.',
-        'You name this room the Mausoleum.', 'the Mausoleum, a', 'takes up where they left off.', 'the Mausoleum, a',
-        'Linda, your sword', 'You forget the name Linda.', '% echo $status'],
-      check(m, out) {
-        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
-        const seg = (a, b, from = 0) => { const i = o.indexOf(a, from); return i < 0 ? '' : o.slice(i, o.indexOf(b, i + a.length)); };
-        if (/#\d/.test(o)) f.push('a thing\'s mark ("#12") said');
-        if (!seg('> look', '> take Linda').includes('lies Linda, your sword.')) f.push('Linda not seen lying there by its name');
-        if (!seg('> attack the rat', '> call this').includes('You take the sword in your hand.')) f.push('Linda not taken in hand to strike with');
-        if (!seg('> forget the name Linda', '> quit').includes('a sword')) f.push('the sword not its own again once its name\'s forgotten');
-        if (seg('> forget the name Linda', '> quit').includes('Linda,')) f.push('Linda still said once forgotten');
-        if (!/You (take|pick)|Taken/.test(seg('> take Linda', '> examine Linda'))) f.push('Linda not taken up by its name');
+      name: 'dq0names', meaning: true, what: 'Dingus Quest Zero\'s names (the user, 2026-10-16: "I would like to be able to reference items by aliases, as long as the alias doesn\'t clash with something else"; names.c), by the names table (hub.h\'s struct tname, NAMES_AT) and the things\' records: a sword named Linda (dq0 -k sword: its record marked named), names that clash refused (another name, a kind of thing\'s, a kind of creature\'s, a word the parser needs: no name made), Linda used in commands (dropped, seen lying there, taken up, examined, taken in hand to strike a rat with), the room named the Mausoleum; the game kept and carried on, the names with it; then a name forgotten (its record no longer named) (the names\' words: dq0words)',
+      init: 't_rc', cycles: 1000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k sword -d /ram/kept',
+        'name my sword Linda', 'alias the dagger as linda', 'name the dagger Torch', 'name the dagger kobold', 'name the dagger north', 'drop Linda',
+        'look', 'take Linda', 'examine Linda', 'attack the rat with Linda', 'call this room the mausoleum', 'quit', 'dq0 -d /ram/kept',
+        'forget the name Linda', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [], NAMED = 0x40;
+        const names = t => (t.after ? t.after.names : []).map(n => n.what + ' ' + n.name).join(', ');
+        const sword = t => dq0Thing(t.after, 'sword');
+        const n1 = T.of('name my sword Linda');
+        if (names(n1) !== 'NM_ITEM Linda') f.push('the sword not named Linda: ' + names(n1));
+        if (!sword(n1) || !(sword(n1).flags & NAMED)) f.push('the sword\'s record not marked named');
+        for (const l of ['alias the dagger as linda', 'name the dagger Torch', 'name the dagger kobold', 'name the dagger north'])
+          if (names(T.of(l)) !== 'NM_ITEM Linda') f.push(l + ': a name that clashes made: ' + names(T.of(l)));
+        const d = T.of('drop Linda');
+        if (!dq0Here(d.after).some(i => i.name === 'sword')) f.push('Linda not put down');
+        const lk = T.after(d, 'look');
+        if (!lk.after || !lk.after.sight || !lk.after.sight.items.some(i => i.name === 'sword' && i.rel === 255)) f.push('Linda not seen lying there');
+        if (!dq0Carried(T.of('take Linda').after).some(i => i.name === 'sword')) f.push('Linda not taken up');
+        if (!dq0Rep(T.of('examine Linda'), 'ireq', { kind: 'IO_DESCRIBE', result: 'IR_OK', name: 'sword' }).length) f.push('Linda not examined');
+        const a = T.of('attack the rat with Linda');
+        if (!sword(a) || !(sword(a).flags & DQ0_I.HELD)) f.push('Linda not taken in hand to strike with');
+        const r = T.of('call this room the mausoleum');
+        if (names(r) !== 'NM_ITEM Linda, NM_ROOM the Mausoleum') f.push('the room not named the Mausoleum: ' + names(r));
+        const c = T.of('dq0 -d /ram/kept');
+        dq0Need(f, c, 'E_ARRIVE', { how: 'A_RESUMED' }, 'the game not carried on');
+        if (names(c) !== 'NM_ITEM Linda, NM_ROOM the Mausoleum') f.push('the names not kept with the game: ' + names(c));
+        const g = T.of('forget the name Linda');
+        if (names(g) !== 'NM_ROOM the Mausoleum') f.push('Linda not forgotten: ' + names(g));
+        if (!sword(g) || (sword(g).flags & NAMED)) f.push('the sword\'s record still marked named');
         return f;
       },
       sdcard: true
@@ -3640,27 +3737,37 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0rebar', what: 'Dingus Quest Zero\'s doors barred again (the user\'s, 2026-10-16): at seed 4 the door\'s bar lifted out of its brackets and taken, then put back (bar the door: from its side, the door shut): out of the pack (the load lighter), in its brackets again (examined), the door barred (opened, the bar lifted out again, at its feet); not while the door stands open; put back from the floor (put the bar back in its brackets); kept (dq0 -d), the door still barred and the bar in it as the game carries on',
-      init: 't_rc', cycles: 1000e6,
-      machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -o /ram/c.hm\rādq0 -p t -s 4 -c /ram/c.hm -d /ram/g\r' +
-        ['take the bar', 'bar the door', 'i', 'x door', 'open', 'look', 'bar the door', 'close', 'put the bar back in its brackets', 'quit'].map(l => 'ā' + l + '\r').join('') +
-        'ādq0 -p t -d /ram/g\r' + ['x door', 'i', 'open', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      name: 'dq0rebar', meaning: true, what: 'Dingus Quest Zero\'s doors barred again (the user\'s, 2026-10-16), by the world\'s events and the bar\'s record (a portal\'s part, IW_PORTAL, on the square of its side, or a thing carried or lying): at seed 4 the door\'s bar lifted out of its brackets and taken, then put back (bar the door: from its side, the door shut): out of the pack, in its brackets again, the door barred (opened: the bar lifted out again, at its feet); not while the door stands open; put back from the floor (put the bar back in its brackets); kept (dq0 -d), the door still barred and the bar in it as the game carries on (their words: dq0words)',
+      init: 't_rc', cycles: 800e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 4 -c /ram/c.hm -d /ram/g', 'take the bar',
+        'bar the door', 'open', 'bar the door', 'close', 'put the bar back in its brackets', 'quit', 'dq0 -p t -d /ram/g', 'open', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
-      check(m, out) {
-        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
-        const want = ['> take the bar', 'You lift the bar out of its brackets, and set it down.', 'Taken.', '> bar the door',
-          'You set the bar in its brackets: the door is barred.', '> i', 'a tinderbox); a belt', 'In all, 7 lb.', '> x door',
-          'Brackets for a bar are fixed on this side, the bar in them.', '> open', 'You lift the bar and open the door.',
-          'At your feet lies a bar.', '> bar the door', 'It stands open: shut it first, then bar it.', '> close',
-          '> put the bar back in its brackets', 'You set the bar in its brackets: the door is barred.',
-          'takes up where they left off.', '> x door', 'Brackets for a bar are fixed on this side, the bar in them.', '> i',
-          'In all, 7 lb.', '> open', 'You lift the bar and open the door.', '% echo $status'];
-        let at = 0;
-        for (const w of want) {
-          const i = o.indexOf(w, at);
-          if (i < 0) { f.push('not found (in its turn): ' + w); break; }
-          at = i + w.length;
-        }
+      check(m) {
+        const T = dq0Turns(m), f = [];
+        // (The bar: in its brackets, IW_PORTAL on the square of its side; carried; or lying where the character stands)
+        const bar = s => { const b = s && s.items.filter(i => i.name === 'bar'); if (!b) return '?';
+          if (dq0Carried(s).some(i => i.name === 'bar')) return 'carried';
+          return b.some(i => i.where === 'IW_PORTAL' && i.sn === s.pc.sn && i.x === s.pc.x && i.y === s.pc.y) ? 'brackets' :
+            dq0Here(s).some(i => i.name === 'bar') ? 'floor' : 'gone'; };
+        const want = (l, po, where, from = 0) => {
+          const t = T.of(l, from);
+          dq0Need(f, t, 'E_PORTAL', { po }, l + ': not ' + po);
+          if (bar(t.after) !== where) f.push(l + ': the bar ' + bar(t.after) + ', not ' + where);
+          return t;
+        };
+        const s0 = T.of('dq0 -p t -s 4 -c /ram/c.hm -d /ram/g').after;      // (Its bar's side a square off, the door's)
+        if (!s0 || !s0.items.some(i => i.name === 'bar' && i.where === 'IW_PORTAL' && Math.abs(i.x - s0.pc.x) + Math.abs(i.y - s0.pc.y) <= 1)) f.push('the door by it not barred to begin with');
+        want('take the bar', 'PO_LIFTED', 'carried');
+        const b = want('bar the door', 'PO_REBARRED', 'brackets');
+        const o = want('open', 'PO_UNBARRED', 'floor');
+        if (!o.after || !o.after.sight || !o.after.sight.doors.some(d => d.rel === 0 && (d.state & 1))) f.push('the door ahead not open');
+        want('bar the door', 'PO_SHUT_FIRST', 'floor', o.k + 1);
+        want('close', 'PO_CLOSED', 'floor');
+        const p = want('put the bar back in its brackets', 'PO_REBARRED', 'brackets');
+        const c = T.of('dq0 -p t -d /ram/g');
+        dq0Need(f, c, 'E_ARRIVE', { how: 'A_RESUMED' }, 'the game not carried on');
+        if (bar(c.after) !== 'brackets') f.push('the bar not in its brackets as the game carries on: ' + bar(c.after));
+        want('open', 'PO_UNBARRED', 'floor', c.k + 1);
         return f;
       },
       sdcard: true
