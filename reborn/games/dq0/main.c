@@ -269,7 +269,7 @@ static void sheet (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    10                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    11                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -285,7 +285,8 @@ static void sheet (void)
                                                 **   written back since the last are the save's only once it's
                                                 **   whole; 10, the old saves' readers gone, the last save's fields
                                                 **   the world's now with them: till the release, only a save of this
-                                                **   version is carried on) */
+                                                **   version is carried on; 11, each denizen's record its faction: the
+                                                **   theme's inhabitants) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;

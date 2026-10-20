@@ -137,6 +137,28 @@ lifted, not cut (the user: a material of their own).  (dq0harn.c's digger table,
   by magical means; a pit not at all.  (wtrap.c.)
 - **A trap's strike, a burn,** have the armour where they strike taken off them.  (sheet.c's o_harm.)
 
+## Who lives where
+
+A theme's inhabitants (its theme file's faction lines: games/dq0d/pop.h) are placed by popgen (bank/popgen), the
+denizens' task's population generator; with none, the stand-in's (kinds.txt and factions.txt) are.  The book is
+silent on all of it.
+
+- **A faction's number is spread over its strata,** each weighed by how near its lair's stratum it is: the lair's
+  its strata's count and one, each stratum further a step less; each share rounded down, what's left over the lair's.
+  (popgen.c's share.)  Why: a people lives most where it makes its home, and fewer the further they go from it.
+- **On a stratum, its first kind has twice each other kind's share** (what's left over its too).  (popgen.c's
+  pg_stratum.)  Why: a faction's first kind is what it is; the rest go with it (the kobolds' rats).
+- **A kind's share is in lairs of its kind's group's size** (kinds.txt's group), drawn by the stratum's seed; eight
+  lairs of a kind at most on a stratum, the groups the bigger if there are more.  (popgen.c's groups.)
+- **A faction's leader is one, in its home:** the first lair of its first kind on its lair's stratum, the leader
+  with them.  (popgen.c; dq0d.c's lair_add.)
+- **Where a lair lies is its kind's way,** as the stand-in's: by the stratum's ways in and out if its kind lairs
+  there (a theme's lairs in the halls when the ways are all taken), else in a region of halls.  (dq0d.c's lair_add.)
+- **A theme's faction speaks its first kind's tongue** (the stand-in faction's of that kind: kobolds kobold, bandits
+  and cultists common).  (dq0d.c's start.)
+- **How factions stand with one another** is the worse of the two ways it's said; unsaid, indifferent.
+  (popgen.c's faction, as make.js does factions.txt.)
+
 ## Fights
 
 - **The creatures' sheets come from the referee's bestiary** (fight.c's, by the kinds' keys): the first six (the

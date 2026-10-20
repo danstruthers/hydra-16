@@ -1,9 +1,12 @@
 /*
 ** dq0d.c - Dingus Quest Zero's denizens (DENIZENS.md): a task of its own, started by the UI (dq0d SEG ROLE LIBDIR:
 ** the hub's segment, its role there, hub.h, and the game's lib folder).  As each stratum's plan is grown, it decides
-** the stratum's populations, by its style and its depth, from the kinds a stand-in theme has (kinds.txt, made
-** lib/dq0/dq0d.dat, read into a bank of its own as it starts): the lairs, where they lie in the plan, and the
-** denizens of each, a record each from then on; so nothing is made up as the character turns a corner.  As the
+** the stratum's populations: as the history left them, if the theme has inhabitants of its own (the save folder's
+** theme file, its faction lines: pop.h), each faction's lairs as popgen gives them (bank/popgen, a bank program in a
+** bank of its own: their kinds and how many, its leader in its home); else the stand-in's, by the stratum's style
+** and its depth, from the kinds the theme names (kinds.txt, the game's bestiary, made lib/dq0/dq0d.dat, read into a
+** bank of its own as it starts): the lairs, where they lie in the plan, and the denizens of each, a record each from
+** then on; so nothing is made up as the character turns a corner.  As the
 ** character comes near a lair (its chunk, or one beside it), its denizens are placed in it, each on a square of its
 ** own (the chunk made, the maker's, if it isn't yet); and those near the character are actors (the hub's: the world
 ** keeps the character out of their way, the senses see them), each deciding what it means to do by its kind and what
@@ -17,8 +20,8 @@
 ** character does takes, the same whatever the tasks' timing: those out of its sight and not sensing it coarsely, a
 ** few squares a while.  Those out but away from the character (not actors) move coarsely too, to squares about their
 ** lairs in chunks that are made (roam): their records are its own.  No two are on a square, nor any on the
-** character's or where it's going.  Each has an attitude to the character, its faction's to begin with
-** (factions.txt's, a stand-in theme's: a theme's will take their place), moved by what happens and by the character's
+** character's or where it's going.  Each has an attitude to the character, its faction's to begin with (its
+** record's: the theme's, or the stand-in's, factions.txt's), moved by what happens and by the character's
 ** words (the UI's request, the hub's sway: the referee's test), and acts by it: the hostile come at the character, an
 ** ally follows it and takes its requests; factions hostile to one another keep off one another.  (Their own exploring
 ** comes later.)
@@ -33,10 +36,10 @@
 ** table in its head.
 **
 ** Its code that's seldom called is in swapped parts (../dq0/swap.inc: run in the main RAM's top, a part at a time,
-** copied there from the overlays' file's banks, LIBDIR/dq0d.ovl, as it's called; bank.s's stubs): part 1, the kinds
-** read in, the populations, the placing; part 2, the character's ways with a denizen, and harmed; part 3, the
-** records paged; part 4, the regions round the character wanted, the records kept, the task's start, and what
-** its actors seldom do (one made an actor or no longer one, killed, its kin dismayed, an ally come along, a
+** copied there from the overlays' file's banks, LIBDIR/dq0d.ovl, as it's called; bank.s's stubs): part 1, the
+** populations, the placing; part 2, the character's ways with a denizen, and harmed; part 3, the records paged; part
+** 4, the regions round the character wanted, the records kept, the task's start (the kinds read in, popgen loaded),
+** and what its actors seldom do (one made an actor or no longer one, killed, its kin dismayed, an ally come along, a
 ** cornered one's dart).
 ** The blows its actors strike and take are the world's, told as the denizens' events (E_FIGHT): it takes them to heart
 ** (fought: fleeing, dismay, harmed, a death recorded).
@@ -48,19 +51,20 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <bankprog.h>
 #include <dice.h>
 #include <hydra.h>
 #include "../dq0/hub.h"
 #include "../dq0w/world.h"
 #include "lore.h"
+#include "pop.h"
 
 #pragma static-locals (on)                      /* (Its locals static: quicker, and nothing here is reentered) */
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 
 /* ---- The swapped parts' stubs (bank.s's) */
 
-int __fastcall__ kinds_load (const char* dir);  /* Part 1 */
-void __fastcall__ populate (unsigned char n);
+void __fastcall__ populate (unsigned char n);   /* Part 1 */
 void __fastcall__ place (unsigned char i);
 void __fastcall__ keep (unsigned char back);    /* Part 3 */
 unsigned char __fastcall__ rec_new (unsigned char lair);
@@ -126,7 +130,6 @@ typedef char faction_fits[sizeof (struct faction) == 32 ? 1 : -1];
 static unsigned char nfacts;
 static char ftongue[NFACT][8];
 static unsigned char fatt0[NFACT], frel[NFACT][NFACT];
-static unsigned char kfact[SND_KINDS];          /* (Each kind's faction: for the records, without their kinds) */
 
 /* ---- The records: the lairs and the denizens, in a bank of their own (a cache: its records' places free, kind 0,
 ** or a region's that's in it) */
@@ -155,6 +158,7 @@ struct den {
     unsigned char   lsn, lrx, lry;              /* Its lair's stratum, and its region (its own, not placed yet: the
                                                 **   lair's rx, ry) */
     unsigned        hx, hy;                     /* Its lair's home square (placed) */
+    unsigned char   fac;                        /* Its faction (its kind's, the stand-in's; or the theme's) */
 };
 #define D_OUT           0x01                    /* On a square of its own */
 #define D_ACTOR         0x02                    /* An actor now (the hub's entry the truth while it is) */
@@ -233,11 +237,11 @@ static void __fastcall__ den_put (unsigned char i)
     hub_map (0);
 }
 
-#pragma code-name (push, "SW1CODE")
-#pragma rodata-name (push, "SW1RODATA")
+#pragma code-name (push, "SW4CODE")
+#pragma rodata-name (push, "SW4RODATA")
 
-/* The kinds read in (dir/dq0d.dat): 0, or -1 */
-int __fastcall__ s_kinds_load (const char* dir)
+/* The kinds read in (dir/dq0d.dat): 0, or -1 (part 4's: the start's) */
+static int __fastcall__ kinds_load (const char* dir)
 {
     static char path[64];
     struct faction* f;
@@ -257,9 +261,6 @@ int __fastcall__ s_kinds_load (const char* dir)
     hy_bank (kb);                               /* (The first record's the counts; the factions after the kinds) */
     nkinds = KINDS[0].flags;
     nfacts = KINDS[0].styles < NFACT ? KINDS[0].styles : NFACT;
-    for (n = 0; n < nkinds && n < SND_KINDS; ++n) {
-        kfact[n] = KINDS[n].faction;
-    }
     for (n = 0; n < nfacts; ++n) {
         f = (struct faction*) (KINDS + nkinds) + n;
         memcpy (ftongue[n], f->tongue, sizeof ftongue[0]);
@@ -331,69 +332,118 @@ static unsigned char __fastcall__ plan_kind (unsigned char n, unsigned idx)
     return r.kind;
 }
 
-void __fastcall__ s_populate (unsigned char n)
+/* A lair of stratum n's, of kind k (K its record, copied out), the j'th of its kind there, faction lf's: by the
+** stratum's ways if its kind lairs there (the first ones: not the dungeon's way in, the top's first, where the
+** character begins), else in a region of halls, a chunk of it; ln denizens of it (0: as many as its kind's group,
+** drawn), and one of kind ll with them (its faction's leader, in its home: 0 none).  0 if no more of its kind can be
+** had there (its ways all taken, but lspill puts it in the halls then; no room for its records), else 1 (made, or no
+** halls found for it).  Its numbers the stratum's seed's, in turn */
+static unsigned char lf, ln, ll, lspill;
+
+static unsigned char __fastcall__ lair_add (unsigned char n, unsigned char k, unsigned char j)
 {
     struct stratum* s = &STRATUM (n);
-    unsigned char k, j, m, i, rx = 0, ry = 0, t, u;
+    unsigned char i, rx = 0, ry = 0, t, u;
     unsigned w = (s->w + CW - 1) / CW, h = (s->h + CW - 1) / CW;
 
-    rseed (s->seed ^ 0x44454E5AUL);
-    for (k = 1; k < nkinds; ++k) {
-        kind_get (k);
-        if (!(K.styles & (1 << s->style)) || n < K.deep0 || n > K.deep1 || !(tdens & 1UL << k)) {
-            continue;
+    memset (&L, 0, sizeof L);
+    L.sn = n;
+    L.kind = k;
+    L.link = 0xFF;
+    if ((K.flags & K_WAYS) && (u = j + (n == 0)) < s->nlinks) {
+        L.link = u;
+        L.cx = (s->link[u].x - s->x0) / CW;
+        L.cy = (s->link[u].y - s->y0) / CW;
+    } else if ((K.flags & K_WAYS) && !lspill) {
+        return 0;
+    } else {
+        for (t = 0; t < 8; ++t) {               /* (A region of halls, a chunk of it) */
+            rx = random (s->rw);
+            ry = random (s->rh);
+            if (plan_kind (n, (unsigned) ry * s->rw + rx) == RG_HALLS) {
+                break;
+            }
         }
-        m = K.flags & K_WAYS ? K.lairs : random (K.lairs + 1);
-        for (j = 0; j < m; ++j) {
-            memset (&L, 0, sizeof L);
-            L.sn = n;
-            L.kind = k;
-            L.link = 0xFF;
-            if (K.flags & K_WAYS) {             /* (By the stratum's ways, the first ones: not the dungeon's way in,
-                                                **   the top's first, where the character begins) */
-                if ((u = j + (n == 0)) >= s->nlinks) {
-                    break;
-                }
-                L.link = u;
-                L.cx = (s->link[u].x - s->x0) / CW;
-                L.cy = (s->link[u].y - s->y0) / CW;
-            } else {
-                for (t = 0; t < 8; ++t) {       /* (A region of halls, a chunk of it) */
-                    rx = random (s->rw);
-                    ry = random (s->rh);
-                    if (plan_kind (n, (unsigned) ry * s->rw + rx) == RG_HALLS) {
-                        break;
-                    }
-                }
-                hub_map (0);
-                if (t == 8) {
-                    continue;
-                }
-                L.cx = (unsigned) rx * RCH + random (RCH);
-                L.cy = (unsigned) ry * RCH + random (RCH);
-                L.cx = L.cx < w ? L.cx : w - 1;
-                L.cy = L.cy < h ? L.cy : h - 1;
+        hub_map (0);
+        if (t == 8) {
+            return 1;
+        }
+        L.cx = (unsigned) rx * RCH + random (RCH);
+        L.cy = (unsigned) ry * RCH + random (RCH);
+        L.cx = L.cx < w ? L.cx : w - 1;
+        L.cy = L.cy < h ? L.cy : h - 1;
+    }
+    L.n = ln ? ln : K.nmin + random (K.nmax - K.nmin + 1);
+    L.rx = (s->x0 + (L.cx << CW_BITS)) >> 8;
+    L.ry = (s->y0 + (L.cy << CW_BITS)) >> 8;
+    if (!reg_need (n, L.rx, L.ry) || (t = rec_new (1)) == 0xFF) {
+        return 0;                               /* (Its region in the cache first: no room, no folder) */
+    }
+    L.id = ++hd.lids;
+    memset (&D, 0, sizeof D);
+    D.kind = k;
+    D.fac = lf;
+    D.lid = L.id;
+    D.sn = D.lsn = n;
+    D.lrx = L.rx;
+    D.lry = L.ry;
+    D.attitude = hd.fatt[lf & (NFACT - 1)];    /* (Its faction's, as the character stands with it) */
+    for (i = 0; i < L.n + (ll != 0) && (u = rec_new (0)) != 0xFF; ++i) {
+        if (i == L.n) {
+            D.kind = ll;                        /* (Its leader, the last) */
+        }
+        D.id = ++hd.ids;
+        den_put (u);
+    }
+    L.n = i;
+    lair_put (t);
+    return 1;
+}
+
+/* popgen (a bank program: pop.h), if the theme has inhabitants of its own: its entry for a stratum's lairs (0: none,
+** the stand-in's), its arguments, the lairs it gives, the paths it's called by (bankprog.h keeps them) */
+static struct bank_fn* pgs;
+static struct pgarg pga;
+static struct pglair pgl[POP_LAIRS];
+static char pgexp[48], pgbp[48], pgthm[48];
+
+void __fastcall__ s_populate (unsigned char n)
+{
+    static unsigned char ways[SND_KINDS];       /* (Each kind's lairs by the ways, so far) */
+    struct stratum* s = &STRATUM (n);
+    struct pglair* p;
+    unsigned char k, j, m;
+
+    rseed (s->seed ^ 0x44454E5AUL);
+    if (pgs) {                                  /* (The theme's factions, as popgen places them) */
+        pga.sn = n;
+        pga.seed = (unsigned) s->seed;
+        m = bank_call (pgs, unsigned char __fastcall__ (*) (struct pgarg*), &pga);
+        memset (ways, 0, sizeof ways);
+        for (j = 0, p = pgl; j < m && j < POP_LAIRS; ++j, ++p) {
+            if (p->flags & PL_LEADER) {
+                continue;                       /* (With its home, the lair before it) */
             }
-            L.n = K.nmin + random (K.nmax - K.nmin + 1);
-            L.rx = (s->x0 + (L.cx << CW_BITS)) >> 8;
-            L.ry = (s->y0 + (L.cy << CW_BITS)) >> 8;
-            if (!reg_need (n, L.rx, L.ry) || (t = rec_new (1)) == 0xFF) {
-                break;                          /* (Its region in the cache first: no room, no folder) */
+            kind_get (k = p->kind);
+            lf = p->fac;
+            ln = p->n;
+            ll = j + 1 < m && (p[1].flags & PL_LEADER) ? p[1].kind : 0;
+            lspill = 1;
+            if (!lair_add (n, k, ways[k & (SND_KINDS - 1)]++)) {
+                break;
             }
-            L.id = ++hd.lids;
-            memset (&D, 0, sizeof D);
-            D.kind = k;
-            D.lid = L.id;
-            D.sn = D.lsn = n;
-            D.lrx = L.rx;
-            D.lry = L.ry;
-            D.attitude = hd.fatt[K.faction & (NFACT - 1)];    /* (Its faction's, as the character stands with it) */
-            for (i = 0; i < L.n && (u = rec_new (0)) != 0xFF; ++i) {
-                D.id = ++hd.ids;
-                den_put (u);
+        }
+    } else {
+        for (k = 1; k < nkinds; ++k) {          /* (The stand-in's: each kind that lives in its style at its depth) */
+            kind_get (k);
+            if (!(K.styles & (1 << s->style)) || n < K.deep0 || n > K.deep1 || !(tdens & 1UL << k)) {
+                continue;
             }
-            L.n = i;
-            lair_put (t);
+            m = K.flags & K_WAYS ? K.lairs : random (K.lairs + 1);
+            lf = K.faction;
+            ln = ll = lspill = 0;
+            for (j = 0; j < m && lair_add (n, k, j); ++j) {
+            }
         }
     }
     hd.done[n >> 3] |= 1 << (n & 7);
@@ -721,7 +771,7 @@ void __fastcall__ s_enlist (unsigned char i, unsigned char k)
     a.ready = D.ready > now ? D.ready : now;
     a.step = K.step;
     a.attitude = D.attitude;
-    a.faction = K.faction;
+    a.faction = D.fac;
     aorder[k] = D.order;
     sgen[k] = 0;
     alert[k] = 0;
@@ -1520,7 +1570,7 @@ void __fastcall__ s_harmed (unsigned char k)
     settle ();
     for (j = 0; j < hd.ndens; ++j, ++r) {
         hy_bank (pb);
-        if (r->kind && !(r->flags & D_ACTOR) && kfact[r->kind % SND_KINDS] == f) {
+        if (r->kind && !(r->flags & D_ACTOR) && r->fac == f) {
             n = r->lid == l ? 2 : 1;
             r->attitude = r->attitude > n ? r->attitude - n : AT_HOSTILE;
             if (r->attitude < AT_ALLIED) {
@@ -1577,11 +1627,11 @@ static void __fastcall__ influence (unsigned char k)
     r = DSLOT;                                  /* (This task's own slot: DTEXT of text, a tongue's name) */
     r->text[0] = 0;
     if (!sw.beast && h != SW_THREATEN) {        /* (Words: in its tongue, if it has one) */
-        if (!ftongue[K.faction & (NFACT - 1)][0]) {
+        if (!ftongue[HUB->actor[k].faction & (NFACT - 1)][0]) {
             sw.result = SR_TONGUE;
             return;
         }
-        strcpy (r->text, ftongue[K.faction & (NFACT - 1)]);
+        strcpy (r->text, ftongue[HUB->actor[k].faction & (NFACT - 1)]);
     }
     r->kind = RS_TEST;
     r->actor = 0;
@@ -1743,8 +1793,39 @@ static int __fastcall__ ovl_load (const char* dir)
 ** kept ones read back: 0, or -1 */
 int __fastcall__ s_start (const char* dir)
 {
+    struct bank_fn* h;
+    unsigned char f, k;
+    int fd;
+
     if (kinds_load (dir)) {
         return -1;
+    }
+    hub_map (0);
+    if (HUB->savedir[0] && strlen (HUB->savedir) + sizeof THEME_FILE < sizeof pgthm && strlen (dir) + 12 < sizeof pgbp &&
+        (fd = open (strcat (strcat (strcpy (pgthm, HUB->savedir), "/"), THEME_FILE), O_RDONLY)) >= 0) {
+        close (fd);                             /* (A theme file: its inhabitants, if it has any, popgen's) */
+        pga.lib = dir;
+        pga.theme = pgthm;
+        pga.att = piece;                        /* (Its factions' attitudes, relations, first kinds: through the
+                                                **   files' pieces, taken only if there are any) */
+        pga.rel = piece + POP_NFACT;
+        pga.first = piece + POP_NFACT * (POP_NFACT + 1);
+        pga.lair = pgl;
+        if (bank_setup (strcat (strcpy (pgexp, dir), "/dq0d.exp"), 0x60, 16) ||
+            (h = bank_fn (strcat (strcpy (pgbp, dir), "/popgen.bp"), "pg_load")) == 0 ||
+            !bank_call (h, unsigned char __fastcall__ (*) (struct pgarg*), &pga) ||
+            (pgs = bank_fn (pgbp, "pg_stratum")) == 0) {
+            bank_flush ();                      /* (None: its bank given back, the stand-in's populations) */
+        } else {
+            memcpy (fatt0, piece, NFACT);
+            memcpy (frel, piece + POP_NFACT, NFACT * NFACT);
+            memcpy (piece + 128, ftongue, sizeof ftongue);
+            for (f = 1; f < NFACT; ++f) {       /* (Each its first kind's stand-in faction's tongue) */
+                kind_get (piece[POP_NFACT * (POP_NFACT + 1) + f]);
+                k = K.faction & (NFACT - 1);
+                memcpy (ftongue[f], piece + 128 + k * sizeof ftongue[0], sizeof ftongue[0]);
+            }
+        }
     }
     hub_map (THEME_BANK);                       /* (The theme's denizens: which of the kinds) */
     tdens = THEME->dens;
