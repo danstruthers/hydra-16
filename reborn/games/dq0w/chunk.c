@@ -176,6 +176,7 @@ static unsigned char shut_ok (void)
     return !p || (p->state & (PS_OPEN | PS_HIDDEN)) == PS_OPEN;
 }
 
+#ifndef CHUNK_NO_ROOMS                          /* (A task that never asks a square's room, nor a wall's: its room) */
 unsigned char __fastcall__ room_of (unsigned char sn, unsigned x, unsigned y)
 {
     unsigned char r;
@@ -192,6 +193,7 @@ unsigned char __fastcall__ room_of (unsigned char sn, unsigned x, unsigned y)
     }
     return 0xFF;
 }
+#endif
 
 #ifdef CHUNK_ZONES                              /* (Only for a task that asks: none yet, its room the others') */
 unsigned char __fastcall__ zone_of (unsigned char sn, unsigned x, unsigned y)
@@ -211,6 +213,7 @@ unsigned char __fastcall__ zone_of (unsigned char sn, unsigned x, unsigned y)
 }
 #endif
 
+#ifndef CHUNK_NO_ROOMS
 unsigned char wall_x, wall_y;
 
 unsigned char __fastcall__ wall_tile (struct room* p, unsigned char d, unsigned char k)
@@ -230,3 +233,4 @@ unsigned char __fastcall__ wall_tile (struct room* p, unsigned char d, unsigned 
     }
     return 1;
 }
+#endif

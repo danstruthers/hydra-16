@@ -35,7 +35,9 @@
 ** Its code that's seldom called is in swapped parts (../dq0/swap.inc: run in the main RAM's top, a part at a time,
 ** copied there from the overlays' file's banks, LIBDIR/dq0d.ovl, as it's called; bank.s's stubs): part 1, the kinds
 ** read in, the populations, the placing; part 2, the character's ways with a denizen, and harmed; part 3, the
-** records paged and kept.
+** records paged; part 4, the regions round the character wanted, the records kept, the task's start, and what
+** its actors seldom do (one made an actor or no longer one, killed, its kin dismayed, an ally come along, a
+** cornered one's dart).
 ** The blows its actors strike and take are the world's, told as the denizens' events (E_FIGHT): it takes them to heart
 ** (fought: fleeing, dismay, harmed, a death recorded).
 */
@@ -65,6 +67,13 @@ unsigned char __fastcall__ reg_need (unsigned char sn, unsigned char rx, unsigne
 void dneed (void);
 void __fastcall__ harmed (unsigned char k);     /* Part 2 */
 void sway (void);
+int __fastcall__ start (const char* dir);      /* Part 4 */
+void __fastcall__ enlist (unsigned char i, unsigned char k);
+void __fastcall__ retire (unsigned char k);
+void __fastcall__ killed (unsigned char k);
+void __fastcall__ dismay (unsigned char k);
+unsigned char __fastcall__ along (unsigned char k);
+unsigned char __fastcall__ dart (unsigned char k);
 extern unsigned char ovbank[2];
 extern char _SWAP_START__[];
 
@@ -642,6 +651,19 @@ static unsigned char anear[NACTORS];            /* (Each one beside the characte
 static unsigned refx, refy;                     /* (The square step_for's S_AWAY and S_TOWARD go by: the character's,
                                                 **   a foe's, the one an ally follows to) */
 
+/* The name the character gave denizen number id (its entry in the head's names; id 0: a free one), or NNAMES */
+static unsigned char __fastcall__ name_of (unsigned id)
+{
+    unsigned char n;
+
+    for (n = 0; n < NNAMES && hd.names[n].id != id; ++n) {
+    }
+    return n;
+}
+
+#pragma code-name (push, "SW4CODE")
+#pragma rodata-name (push, "SW4RODATA")
+
 /* Actor k's place, time, attitude and request written back to its record */
 static void __fastcall__ write_back (unsigned char k)
 {
@@ -657,19 +679,9 @@ static void __fastcall__ write_back (unsigned char k)
     D.order = aorder[k];
 }
 
-/* The name the character gave denizen number id (its entry in the head's names; id 0: a free one), or NNAMES */
-static unsigned char __fastcall__ name_of (unsigned id)
-{
-    unsigned char n;
-
-    for (n = 0; n < NNAMES && hd.names[n].id != id; ++n) {
-    }
-    return n;
-}
-
 /* Actor k no longer one (far from the character): its record its own again, its body gone from the world's keeping
 ** (I_LEAVE), the entry free */
-static void __fastcall__ retire (unsigned char k)
+void __fastcall__ s_retire (unsigned char k)
 {
     write_back (k);
     D.flags &= ~D_ACTOR;
@@ -686,7 +698,7 @@ static void __fastcall__ retire (unsigned char k)
 /* Denizen i made an actor, in free entry k (its time from now: the coarse moves have kept it while it wasn't one):
 ** its mind's fields written, its body given the world (I_ENTER: its place, its step, its time, bleeding or not); its
 ** sheet the referee's (RS_NEW_ACTOR, by its kind's key: made the first time, the same one after) */
-static void __fastcall__ enlist (unsigned char i, unsigned char k)
+void __fastcall__ s_enlist (unsigned char i, unsigned char k)
 {
     struct rs_summary* s = (struct rs_summary*) rq.x;
 
@@ -732,6 +744,9 @@ static void __fastcall__ enlist (unsigned char i, unsigned char k)
     post (I_ENTER, k + 1);
     settle ();
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* The denizens out near the character made actors, as there are entries free; those left over noted (nearx ...) */
 static void enlist_near (void)
@@ -866,14 +881,20 @@ static void __fastcall__ coarse (unsigned char k, unsigned lim)
     wt = 60 + random (60);
 }
 
+#pragma code-name (push, "SW4CODE")
+#pragma rodata-name (push, "SW4RODATA")
+
 /* Actor a (the copy), shy and cornered beside the character: it darts past it, to the square beyond (open, no one
 ** on it: dsx, dsy), a moment's dash; 1 if it can */
-static unsigned char __fastcall__ dart (unsigned char k)
+unsigned char __fastcall__ s_dart (unsigned char k)
 {
     dsx = pcx + (pcx - a.x);
     dsy = pcy + (pcy - a.y);
     return open_sq (at (a.sn, dsx, dsy)) && !taken (k, dsx, dsy);
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- Its events (DENIZENS.md: events): what its actors do, the world's to tell as it does it (the hub's denizens'
 ** events: nobody waits for them, and each perceives them or not by its own senses); and the noises they hear, their
@@ -939,8 +960,11 @@ static void hear (void)
 
 #define FLEE_T          24                      /* Turns a broken one flees for (a step each, or a moment) */
 
+#pragma code-name (push, "SW4CODE")
+#pragma rodata-name (push, "SW4RODATA")
+
 /* Actor k dead (the hub's entry as it is: its body the world's, gone): its record so, the entry free */
-static void __fastcall__ kill (unsigned char k)
+void __fastcall__ s_killed (unsigned char k)
 {
     write_back (k);
     D.flags = (D.flags & ~(D_ACTOR | D_OUT)) | D_DEAD;
@@ -950,7 +974,7 @@ static void __fastcall__ kill (unsigned char k)
 
 /* Actor k fallen (dead, senseless): its kin among the actors test their courage (RS_MORALE, a bad situation: the book's
 ** "seeing a friend slain", Combat 18), and those it breaks (or shakes, a shy kind) flee */
-static void __fastcall__ dismay (unsigned char k)
+void __fastcall__ s_dismay (unsigned char k)
 {
     unsigned char j;
 
@@ -964,6 +988,9 @@ static void __fastcall__ dismay (unsigned char k)
         }
     }
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* The blows the world's struck since the last look (E_FIGHT, the denizens' events), taken to heart, in turn: 1 if
 ** there were any */
@@ -994,7 +1021,7 @@ static unsigned char fought (void)
             }
         }
         if (f & (att ? FF_A_DEAD : FF_D_DEAD)) {
-            kill (k);
+            killed (k);
         }
     }
     return n;
@@ -1284,9 +1311,12 @@ static unsigned char roam (void)
     return n;
 }
 
+#pragma code-name (push, "SW4CODE")
+#pragma rodata-name (push, "SW4RODATA")
+
 /* Ally k come along with the character, up or down: on a square beside it, open, no one's on it (its intent,
 ** I_CLIMB: the world puts it there).  1 if it is */
-static unsigned char __fastcall__ along (unsigned char k)
+unsigned char __fastcall__ s_along (unsigned char k)
 {
     unsigned char h;
     unsigned x, y;
@@ -1308,6 +1338,9 @@ static unsigned char __fastcall__ along (unsigned char k)
     hub_map (0);
     return 0;
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* Each actor tended: those far from the character retired, those free to act deciding (at the turns pace, each
 ** caught up with the clock: its intents carried out, the world waiting for them); the denizens near it placed (for a
@@ -1699,23 +1732,15 @@ static int __fastcall__ ovl_load (const char* dir)
     return 0;
 }
 
-int main (int argc, char* argv[])
-{
-    static unsigned lpx, lpy;
-    static unsigned char lpl;
-    static unsigned long done_at;
-    static unsigned char gone, g, act, gw;
-    unsigned char* p;
-    int b;
+#pragma code-name (push, "SW4CODE")
+#pragma rodata-name (push, "SW4RODATA")
 
-    if (argc < 4 || ovl_load (argv[3]) || (b = hy_banks_alloc (2)) < 0 ||
-        hub_attach (atoi (argv[1]), atoi (argv[2]))) {
-        return 1;
-    }
-    kb = b;
-    pb = b + 1;
-    if (kinds_load (argv[3])) {
-        return 1;
+/* The task begun, its banks had: the kinds read in (dir's), the theme's denizens, the records new or the game's
+** kept ones read back: 0, or -1 */
+int __fastcall__ s_start (const char* dir)
+{
+    if (kinds_load (dir)) {
+        return -1;
     }
     hub_map (THEME_BANK);                       /* (The theme's denizens: which of the kinds) */
     tdens = THEME->dens;
@@ -1727,6 +1752,41 @@ int main (int argc, char* argv[])
     hd.magic = DN_MAGIC;
     if (HUB->resume) {
         keep (1);
+    }
+    return 0;
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* A number's digits (the task's arguments) */
+static unsigned char __fastcall__ num (const char* s)
+{
+    unsigned char n = 0;
+
+    while (*s >= '0' && *s <= '9') {
+        n = n * 10 + *s++ - '0';
+    }
+    return n;
+}
+
+int main (int argc, char* argv[])
+{
+    static unsigned lpx, lpy;
+    static unsigned char lpl;
+    static unsigned long done_at;
+    static unsigned char gone, g, act, gw;
+    unsigned char* p;
+    int b;
+
+    if (argc < 4 || ovl_load (argv[3]) || (b = hy_banks_alloc (2)) < 0 ||
+        hub_attach (num (argv[1]), num (argv[2]))) {
+        return 1;
+    }
+    kb = b;
+    pb = b + 1;
+    if (start (argv[3])) {
+        return 1;
     }
     wplace = HUB->eq_head;                      /* (Its events from now on) */
     dplace = fplace = HUB->dq_head;
