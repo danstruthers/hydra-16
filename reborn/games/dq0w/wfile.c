@@ -4,8 +4,9 @@
 ** (each region changed since written, then, the save's last step, its versions made the save's: changes.dat's
 ** stamps), and the game begun (its generation; a new game's folder rid of an old game's region files; a session's
 ** stamps, the save's kept, so a crash between a write-back and the next save loses nothing the save had and reads
-** nothing it didn't); and the item store's (ipage.c's) kept with the game, items.dat, read back as it's begun.
-** Swapped part 18's (the regions' files, the save), and 19's (the game begun, the item store kept: ../dq0/swap.inc,
+** nothing it didn't); and the item store's (ipage.c's) kept with the game, items.dat, read back as it's begun.  And a
+** square's record of a kind looked up (store_get: a hole dug part way, DUG, as a dig begins).  Swapped part 18's (the
+** regions' files, the save), and 19's (the game begun, the item store kept, a record looked up: ../dq0/swap.inc,
 ** bank.s's stubs).
 */
 
@@ -30,6 +31,7 @@
 #include "../dq0/vfile.inc"
 
 void stocks (void);
+void store_in (void);                           /* (Part 18's, through its stub: part 19's store_get) */
 extern unsigned char rsn, rrx, rry;             /* (store.c's: the region wanted, */
 extern struct change rec;                       /*   the record written, */
 extern struct change buf[8];                    /*   records through the main RAM, */
@@ -190,6 +192,58 @@ void s_store_save (void)
 #pragma bss-name (push, "SW19RODATA")
 
 static struct vfh bh;
+
+/* The region wanted's pages looked through for the record of rec's square and kind (the lock held): 2, found (copied
+** into rec); 1, not there; 0, none of the region's pages in */
+static unsigned char look (void)
+{
+    struct cpage* q;
+    struct change* c;
+    unsigned char p, n, had = 0;
+
+    for (p = 0; p < NCPAGES; ++p) {
+        hub_map (WORLD_BANK);
+        q = &WREC->cpage[p];
+        if (!q->used || q->sn != rsn || q->rx != rrx || q->ry != rry) {
+            continue;
+        }
+        had = 1;
+        q->stamp = WREC->cstamp;
+        n = q->n;
+        hub_map (CHANGE_BANK (p));
+        for (c = CHANGE_AT (p); n; --n, ++c) {
+            if (!memcmp (c, &rec, 5) && c->link == rec.link) {
+                memcpy (&rec, c, sizeof rec);
+                return 2;
+            }
+        }
+    }
+    return had;
+}
+
+/* The record of rec's square and kind (its stratum, its square; its link, a kind of its own: DUG ...) found, its
+** region wanted as store_put wants it (read in from its file, if it has one: part 18's): copied into rec, 1; or 0,
+** rec as it was (the hub's header in the window after; called from part 19's own code) */
+unsigned char store_get (void)
+{
+    struct stratum* s = &STRATUM (rec.sn);
+    unsigned char k;
+
+    rsn = rec.sn;
+    rrx = (rec.x - s->x0) >> 8;                 /* (RW squares a region) */
+    rry = (rec.y - s->y0) >> 8;
+    hub_map (0);
+    hy_sem_acquire (HUB->change_lock);
+    if (!(k = look ())) {
+        store_in ();                            /* (Its file read in, if it has one, and looked through again: this
+                                                **   part put out and in, its own data as its image has it, k set
+                                                **   after) */
+        k = look ();
+    }
+    hub_map (0);
+    hy_sem_release (HUB->change_lock);
+    return k >> 1;
+}
 
 /* The save folder's file name (the hub's savedir: "" none): 0, or its path in path */
 static unsigned char __fastcall__ in_dir (const char* name)

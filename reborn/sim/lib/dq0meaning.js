@@ -3,9 +3,11 @@
 // change things (the things', the denizens' sway, the world's, the referee's slots), and at each line entered (a CR
 // read from the serial port) the state the line finds: the character's place, facing, light, pace, position and
 // summary, the denizens near it, the things in the item store, the names given, what it perceives (the senses'
-// record, struct sight), the theme.  hub.h's structs are laid out by cc65 (hubown.js's evaluate: the build's own
-// compiler, so the offsets are the game's), kept in obj/dq0meaning.json as the headers stand; their enums and
-// constants read from the headers, so an event's numbers come back as names (E_PORTAL, PO_OPENED ...).
+// record, struct sight), the theme, its long task (the hub's pc_task), the change records in the cache's pages
+// (world.h's: a square's, a portal's state, its harm, a trap's, a chunk stocked, a hole dug part way).  hub.h's
+// structs are laid out by cc65 (hubown.js's evaluate: the build's own compiler, so the offsets are the game's), kept
+// in obj/dq0meaning.json as the headers stand; their enums and constants read from the headers, so an event's numbers
+// come back as names (E_PORTAL, PO_OPENED ...).
 //
 // createRecorder() gives { hook, attach(m), games, final() }: hook is the machine's opt.sharedWrite (sim/test.js
 // chains it with the hub writers' check in every dq0 test), attach(m) once it's booted; games: each game played (a
@@ -82,6 +84,11 @@ const EXPRS = {
   gRel: F('struct sight', 'glow[0].rel'), gDist: F('struct sight', 'glow[0].dist'), gHow: F('struct sight', 'glow[0].how'),
   tDazzled: F('struct sight', 'dazzled'),
   uiBank: 'UI_BANK', uMap: F('struct uirec', 'map'), mapH: 'MAP_H', mapW: 'MAP_W',
+  worldBank: 'WORLD_BANK', wCpage: F('struct wrec', 'cpage'), cpSize: 'sizeof (struct cpage)', ncpages: 'NCPAGES',
+  cpUsed: F('struct cpage', 'used'), cpN: F('struct cpage', 'n'), chBank0: 'CHANGE_BANK (0)', chPage: 'CH_PAGE',
+  chSize: 'sizeof (struct change)', chSn: F('struct change', 'sn'), chX: F('struct change', 'x'), chY: F('struct change', 'y'),
+  chTile: F('struct change', 'tile'), chElev: F('struct change', 'elev'), chLink: F('struct change', 'link'),
+  pcTask: F('struct hub', 'pc_task'), ltKind: F('struct ltask', 'kind'), ltLen: F('struct ltask', 'len'), ltDone: F('struct ltask', 'done'),
 };
 
 // The headers' enums and #defines with a number: { names: { NAME: value }, blocks: [[NAME ...] an enum's members] }
@@ -202,6 +209,17 @@ function createRecorder() {
         if (!th[o + L.nmWhat]) continue;
         s.names.push({ what: name('NM_NONE', th[o + L.nmWhat]), sn: th[o + L.nmSn], x: w16(th, o + L.nmX), y: w16(th, o + L.nmY),
           kind: str(th, o + L.nmKind, 14), name: str(th, o + L.nmName, 20) });
+      }
+    }
+    s.task = { kind: name('LT_NONE', h[L.pcTask + L.ltKind]), len: w16(h, L.pcTask + L.ltLen), done: w16(h, L.pcTask + L.ltDone) };
+    s.changes = [];                                              // (The change records in the cache's pages: world.h's,
+    const wb = bank(L.worldBank), cper = Math.floor(0x2000 / L.chPage);  //   the world's, by page)
+    if (wb) for (let p = 0; p < L.ncpages; p++) {
+      const q = L.wCpage + p * L.cpSize, b = wb[q + L.cpUsed] ? bank(L.chBank0 + Math.floor(p / cper)) : null;
+      for (let i = 0; b && i < wb[q + L.cpN]; i++) {
+        const o = (p % cper) * L.chPage + i * L.chSize, link = b[o + L.chLink];
+        s.changes.push({ sn: b[o + L.chSn], x: w16(b, o + L.chX), y: w16(b, o + L.chY), tile: b[o + L.chTile], elev: s8(b[o + L.chElev]), link,
+          what: ['PORTAL_STATE', 'PORTAL_HARM', 'TRAP_STATE', 'STOCKED', 'DUG'].find(n => K[n] === link) || (link === 0xFF ? 'SQUARE' : 'OPENING') });
       }
     }
     const ui = bank(L.uiBank);                                   // (The map's rows, as the maker last drew them)

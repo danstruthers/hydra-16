@@ -13,7 +13,8 @@
 **
 ** The rarer work is swapped part 4's (../dq0/swap.inc, bank.s's stubs): the chunks stocked marked, the UI's requests
 ** (the save, a portal looked at closely); the files' work part 18's (wfile.c: a region read in, a page made room for,
-** a region written back, a version of its file each time; the save's; the game begun: its generation, its stamps).
+** a region written back, a version of its file each time; the save's; the game begun: its generation, its stamps); a
+** square's record of a kind looked up, part 19's (wfile.c's store_get: a hole dug part way, DUG, as a dig begins).
 */
 
 #include <fcntl.h>

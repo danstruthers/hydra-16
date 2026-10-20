@@ -380,7 +380,9 @@ The dungeon isn't only what the growers made: those in it change it, and the cha
   feet of progress (kept in half-feet; bare hands half a foot, and only in soft soil); slow (hours for a wall, days for a shaft), and loud (the denizens hear it: an event).  A shaft
   dug down goes through the floor (earth or soil two feet, flags or masonry one) and then the stratum's rock, and comes out
   in the stratum below (grown then, if no one has been there): a new link between the strata, its two ends' squares
-  the same.  A wall is two feet, a square of rock five.
+  the same.  A wall is two feet, a square of rock five.  A dig stopped keeps the feet it's dug (HOUSE.md's what
+  stopping costs: a change record of its own, DUG, the hole's half-feet and the way it's dug), and one begun again on
+  its square, the same way, goes on from there ("You set to digging again where you left off.").
 - **Breaking** (powder, a ram, magic; by accident, a ceiling an old stratum's age has weakened brought down) and
   **tunnellers** (creatures that dig by nature, the denizens' task choosing where) are still to come (below).
 

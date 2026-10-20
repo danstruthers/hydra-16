@@ -96,7 +96,7 @@ go:
             SWPART      16, 6               ; The game's own rules: the puzzle judged, a thing walked to (wgame.c)
             SWPART      17, 8               ; The things' files: their chunks paged (ipage.c)
             SWPART      18, 7               ; The change records' files, the save's stamps (wfile.c)
-            SWPART      19, 8               ; The game's files begun, the item store kept (wfile.c)
+            SWPART      19, 8               ; The game's files begun, the item store kept (wfile.c); a hole dug kept
             SWPART      20, 7               ; The things' files: a chunk's put out, read in (ipage.c)
             SWPART      21, 5               ; The ways across a room worked out (dq0w.c's ways)
             SWPART      22, 8               ; The strata's records out of the hub, back (sfile.c)
@@ -115,6 +115,7 @@ go:
             SWFN        store_save, 18
             SWFN        store_begin, 19
             SWFN        store_commit, 19
+            SWFN        dig_kept, 19
             SWFN        answer, 4
             SWFN        stocked, 4
             SWFN        doors, 5

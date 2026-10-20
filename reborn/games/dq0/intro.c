@@ -134,6 +134,9 @@ void __fastcall__ o_dig_words (unsigned char how, unsigned char feet)
     case D_BEGUN:
         sayf ("\nYou set to digging: some %u feet of it, by the look of it.", feet);
         return;
+    case D_AGAIN:                               /* (A hole dug part way before: on from there) */
+        msg ("You set to digging again where you left off.");
+        break;
     case D_GOOD:
     case D_POOR:
     case D_SLIP:

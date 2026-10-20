@@ -858,7 +858,7 @@ static unsigned char events (void)          /* (How many there were) */
         case E_DIG:
             if (m.who == 0) {
                 k = m.w1 >> 8;
-                if (k == D_BEGUN) {
+                if (k == D_BEGUN || k == D_AGAIN) {
                     dug_with[0] = 0;
                 } else if (k != D_NO_TOOL) {
                     dig_used (m.b);

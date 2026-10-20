@@ -77,7 +77,8 @@ static void __fastcall__ change_put (struct chunk* k, unsigned char lx, unsigned
 {
     unsigned char i;
 
-    if (link == STOCKED) {                      /* (Its things put down: the record only a mark) */
+    if (link == STOCKED || link == DUG) {       /* (Its things put down: the record only a mark; a hole dug part way:
+                                                **   the world's, nothing in the chunk) */
         return;
     }
     if (link == PORTAL_STATE || link == PORTAL_HARM) {     /* (A portal's state: tile it, elev its parts; or the
