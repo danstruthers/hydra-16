@@ -52,6 +52,7 @@
 #include <hydra.h>
 #include "../dq0/hub.h"
 #include "../dq0w/world.h"
+#include "lore.h"
 
 #pragma static-locals (on)                      /* (Its locals static: quicker, and nothing here is reentered) */
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
@@ -77,7 +78,7 @@ unsigned char __fastcall__ dart (unsigned char k);
 extern unsigned char ovbank[2];
 extern char _SWAP_START__[];
 
-/* ---- The kinds: the data file's (make.js's, from kinds.txt), in a bank of their own */
+/* ---- The kinds: the data file's (make.js's, from kinds.txt: the game's bestiary), in a bank of their own */
 
 struct dkind {
     char            name[12];
@@ -96,12 +97,15 @@ struct dkind {
     signed char     sway;                       /* Steps for (or against) swaying it, besides its attitude and mind */
     unsigned char   eyes;                       /* Its eyes' adapting to the dark: tenths to a 16th of a level (the
                                                 **   senses', who keep them: DUNGEON.md's perception as layers) */
-    unsigned char   spare[4];
+    unsigned char   form;                       /* Its size, its nature, the light it keeps to (lore.h's KF_*) */
+    unsigned char   land, climate;              /* Its habitat (LA_*, CL_*: the history's, choosing a region's) */
+    unsigned char   arms;                       /* How it fights (AR_*) */
 };
 #define K_SHY           0x01                    /* It keeps its distance from the character */
 #define K_LAIR          0x02                    /* It keeps to its lair */
 #define K_WAYS          0x04                    /* Its lairs are by the stratum's ways in and out */
 #define K_BOLD          0x08                    /* It comes towards the character */
+#define K_BONES         0x10                    /* It leaves its bones, dead (else its body) */
 enum { M_MINDLESS, M_BEAST, M_LOW, M_AVERAGE, M_CUNNING };   /* Its mind: nothing sways it; Animalcraft only; easily
                                                 **   fooled, hard to reason with; neither; hard to fool */
 #define KINDS           ((struct dkind*) 0x8000)
@@ -730,7 +734,7 @@ void __fastcall__ s_enlist (unsigned char i, unsigned char k)
     im.b = (s->cond & C_BLEEDING) != 0;
     strcpy (a.name, (i = name_of (D.id)) < NNAMES ? hd.names[i].name : K.name);
     a.kind = D.kind;
-    a.remains = strcmp (K.key, "skel") ? KI_BODY : KI_BONES;    /* (A skeleton's its bones: the stand-in theme's) */
+    a.remains = K.flags & K_BONES ? KI_BONES : KI_BODY;
     a.timid = (K.flags & K_SHY) != 0;
     hub_map (0);
     memcpy (HUB->actor[k].name, a.name, sizeof a - offsetof (struct actor, name));

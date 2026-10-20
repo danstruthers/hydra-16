@@ -486,12 +486,14 @@ static void start_world (unsigned long seed)
 
 /* The command parser told the world's words: the catalogue's kinds' names (the theme's with them), so a word of its
 ** grammar's is a thing's name too where one's called by it ("drop the pick", "wear the knee boots"; the game's own
-** things, "door", "room", it knows).  None given names, no deities yet */
+** things, "door", "room", it knows); no names given yet; and the world's deities' names, "call on Imma"
+** (libdir/dq0g.txt: the denizens' data's, deities.txt's, spaces between) */
 static void world_words (void)
 {
     static char nm[sizeof CATALOGUE[0].name + 1];
     static unsigned n;
     unsigned char i, k;
+    int fd;
 
     n = 0;
     for (i = 0; i < NKINDS; ++i) {
@@ -504,7 +506,21 @@ static void world_words (void)
             n += k + 1;
         }
     }
-    HUB_WINDOW[n] = 0;                          /* (Then the names given and the deities: none) */
+    HUB_WINDOW[n++] = 0;                        /* (Then the names given: none) */
+    HUB_WINDOW[n++] = 0;
+    hub_map (0);
+    strcat (libdir, "/dq0g.txt");               /* (Then the deities') */
+    fd = open (libdir, O_RDONLY);
+    libdir[strlen (libdir) - 9] = 0;
+    while (n < CQ_WORDS - sizeof nm && (k = read (fd, nm, sizeof nm)) - 1 < sizeof nm) {
+        hub_map (CMD_BANK);                     /* (None, or the file's end: 0 or -1, done) */
+        memcpy (HUB_WINDOW + n, nm, k);
+        n += k;
+        hub_map (0);
+    }
+    close (fd);
+    hub_map (CMD_BANK);
+    HUB_WINDOW[n] = 0;
     hub_map (0);
     HUB->cq.kind = CQ_WORLD;
     HUB->cq.len = n + 1;

@@ -139,16 +139,20 @@ lifted, not cut (the user: a material of their own).  (dq0harn.c's digger table,
 
 ## Fights
 
-- **The creatures' sheets come from a stand-in bestiary of the game's own** (fight.c's bestiary: its numbers the
-  game's, a theme to bring its own), each attribute varied as the book suggests: less 7, and 2d6, at least 1 and at
-  most twice its own; by a die of its own, the same creature each time.  Why: the HarnWorld Bestiary is to replace
-  it (slice 4.5).
+- **The creatures' sheets come from the referee's bestiary** (fight.c's, by the kinds' keys): the first six (the
+  giant rat, the cave spider, the ghoul, the skeleton, the cave bear, the kobold) a stand-in of the game's own; the
+  rest the HarnWorld Bestiary's averages for the like creature (the page each came from beside it), and for folk the
+  book's for men (attributes about 10 to 12, skills by their trade); each attribute varied as the book suggests: less
+  7, and 2d6, at least 1 and at most twice its own; by a die of its own, the same creature each time.  Why: the game's
+  own world (G3), its creatures modelled on the book's (the user: "for denizens, read the harnmaster bestiary"); the
+  first six keep their numbers till the tests are cut to meaning (the ghoul is the book's grave-wight, the cave bear
+  its black bear: Bestiary pp48, 13).
 - **A creature defends** by dodging, or by counterstriking if it's better at that, as the book advises for animals.
 - **Aiming high or low** is ten worse; **a prone defender** twenty easier to strike; **outnumbered,** ten worse for
   each enemy more.  (fight.c.)
 - **Armour's quality:** a poor piece a point less protection, a fine one a point more.  (fight.c.)
 - **Bones that move** (mindless) feel no shock, bleed nothing, fear nothing, and fall apart when their injuries
-  reach their Endurance.  (fight.c.)
+  reach their Endurance; so too the death god's mindless dead, the wights (the book's: Bestiary p78).  (fight.c.)
 - **A creature's courage** is its Initiative test, its injuries its penalty: a marginal failure holds it back a
   round; a critical failure breaks it, a d100: berserk (1-25), desperate (26-50), broken (51-75), cautious (76-100).
   A wounded creature still standing is tested; a shy one that holds back flees.  (fight.c's courage, left.)

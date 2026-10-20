@@ -3,11 +3,13 @@
 ** 18): the creatures' sheets, a blow struck and its defence, morale, bleeding.  A request's read and answered in a
 ** copy of it in the main RAM (the hub's not in the window while the overlay is), its words put into its text.
 **
-** A creature's sheet comes from its kind's key (the denizens' kinds', kinds.txt's) in a stand-in bestiary of the
-** game's own (its numbers are the game's, not the book's: a theme will bring its own): each attribute varied as the
-** book suggests (less 7, and 2d6: at least 1, at most twice), by a die of its own (the game's seed and the record's
-** number: the same creature each time, and no die of the referee's spent on it); its sheet kept in the referee's bank
-** (dq0harn.c's sheet_get), its injuries, its state, its bloodloss, the time it's senseless till.
+** A creature's sheet comes from its kind's key (the denizens' kinds', kinds.txt's) in the referee's bestiary: the
+** first six a stand-in of the game's own (their numbers the game's); the rest the HarnWorld Bestiary's averages for
+** the like creature (each entry's page given), or for folk HarnMaster's for men (about 10 to 12, their skills by
+** their trade).  Each attribute varied as the book suggests (less 7, and 2d6: at least 1, at most twice), by a die
+** of its own (the game's seed and the record's number: the same creature each time, and no die of the referee's
+** spent on it); its sheet kept in the referee's bank (dq0harn.c's sheet_get), its injuries, its state, its
+** bloodloss, the time it's senseless till.
 **
 ** A blow (RS_ATTACK): the attacker's weapon (the character's: the best it holds, by its attack mastery, its skill's
 ** EML and the weapon's attack class, Combat 3; its fists if it holds none; a creature's own, the first it has most
@@ -66,6 +68,28 @@ static const struct bkind {
       { { "claws", 65, 6, HARN_EDGE, HARN_HAND }, { "bite", 55, 7, HARN_POINT, HARN_FACE } } },
     { "kobold", { 8, 10, 12, 13, 9 }, 15, 3, 40, 55, { 2, 2, 1, 1 }, 0,
       { { "spear", 45, 5, HARN_POINT, 0xFF }, { "" } } },
+    { "bat", { 3, 8, 10, 10, 8 }, 1, 1, 45, 50, { 1, 1, 0, 1 }, 0,                  /* (Bats 1, p10) */
+      { { "bite", 45, 1, HARN_POINT, HARN_FACE }, { "" } } },
+    { "adder", { 4, 10, 12, 12, 8 }, 1, 2, 45, 60, { 1, 1, 0, 1 }, 0,               /* (Snakes 3, p88) */
+      { { "bite", 55, 3, HARN_POINT, HARN_FACE }, { "" } } },
+    { "basilsk", { 16, 13, 14, 14, 10 }, 28, 5, 55, 70, { 6, 6, 4, 4 }, 0,         /* (Dragons 13, p36) */
+      { { "bite", 65, 5, HARN_POINT, HARN_FACE }, { "" } } },
+    { "lindwrm", { 22, 18, 4, 18, 16 }, 200, 6, 85, 90, { 5, 9, 4, 5 }, 0,         /* (Dragons 14, p37) */
+      { { "claws", 85, 7, HARN_EDGE, HARN_HAND }, { "bite", 68, 7, HARN_POINT, HARN_FACE } } },
+    { "wight", { 12, 12, 6, 10, 1 }, 40, 4, 60, 35, { 1, 1, 1, 0 }, BF_MINDLESS,    /* (Morvrin 5, p78: a man's, */
+      { { "claws", 55, 3, HARN_POINT, HARN_HAND }, { "" } } },                      /*   its will gone) */
+    { "shade", { 11, 12, 11, 11, 15 }, 38, 4, 70, 50, { 2, 2, 1, 0 }, 0,            /* (Morvrin 3, p76: a priest's) */
+      { { "sword", 60, 5, HARN_EDGE, 0xFF }, { "" } } },
+    { "koblord", { 11, 12, 12, 13, 12 }, 20, 3, 60, 55, { 3, 3, 2, 1 }, 0,
+      { { "axe", 55, 6, HARN_EDGE, 0xFF }, { "" } } },
+    { "bandit", { 11, 11, 11, 11, 11 }, 40, 4, 50, 45, { 2, 2, 1, 1 }, 0,
+      { { "sword", 50, 5, HARN_EDGE, 0xFF }, { "" } } },
+    { "banlord", { 14, 13, 12, 12, 13 }, 45, 4, 65, 55, { 4, 5, 3, 2 }, 0,
+      { { "sword", 65, 6, HARN_EDGE, 0xFF }, { "" } } },
+    { "cultist", { 10, 10, 11, 10, 12 }, 38, 4, 55, 40, { 1, 1, 0, 0 }, 0,
+      { { "dagger", 45, 3, HARN_POINT, 0xFF }, { "" } } },
+    { "priest", { 10, 11, 12, 11, 16 }, 38, 4, 70, 45, { 2, 2, 1, 1 }, 0,
+      { { "mace", 55, 5, HARN_BLUNT, 0xFF }, { "" } } },
 };
 #define NBEASTS         (sizeof bestiary / sizeof bestiary[0])
 
