@@ -636,7 +636,23 @@ or a shaft can be jumped down (jump down: a fall of its height).
   pace till it's answered, yes going on, no stopping it, and any other command stopping it and then carried out.
   "stop" stops it, and "stop digging" (walking, waiting ...) names it, a task that isn't the one refused ("You aren't
   walking: you're digging"); a climb can't be stopped part way, and struck or hurt it's a test to keep the grip, a
-  fall if it fails.  (dq0 -a, the tests': every question answered yes, unasked.)
+  fall if it fails.  (dq0 -a, the tests': every question answered yes, unasked.)  A search is one too, a minute,
+  "Searching about..." as it begins and what it finds told as it ends (cut short, its tests the harder for the part
+  not done); a walk's exertion is the referee's as it goes, and a fatigue level more asks ("You're tiring.  Keep
+  walking?").
+- **Engagement** (HOUSE.md's, the book's engagement zones): a hostile or unfriendly denizen on its feet and conscious
+  has a zone, its square and the eight round it (not round a corner); any walk stops as it comes into one ("The
+  giant rat engages you: you stop walking."), and one begun in one goes a square and stops if it's still in one.
+- **Out of reach, walked to first**: a command whose thing is out of reach (take, hold, wear, put in or on, take
+  from, light; the way out's puzzle) walks over to it first, a walk like any other (stopped by what it meets), and is
+  carried out as the character gets there; a blow at a denizen out of reach ("attack the goblin", "attack" with a
+  target) closes with it first, the walk ending beside it and the blow struck (the denizen's own blow as it comes up
+  no stop), or engaged by another first, no blow; engaged already, refused.
+- **Going places in a room**, by the facing: the centre, the far side (the other side, the far end, the wall ahead),
+  the near, left or right side, a corner ("go to the far left corner", "walk forward to the other side"); where the
+  place itself is rock (a cave's), the nearest square the way reaches.  And where you are said the same way: "You are
+  in the far left corner of a large, long hall"; a thing in a corner or against a wall said so ("Against the wall to
+  your left lies a pick."; a denizen keeps its bearing and distance, a fight's words).
 - **The pace** is the player's, kept in the hub (its gait: creep, walk slowly, walk, jog, run, sprint; "set pace to
   jog", or a pace's word alone; "run north" sets it and goes: the world's to set, as the UI asks, WQ_SET), and kept
   with the game in the save (the world's world.dat).  Each pace's step is the referee's, in its summary (rs.h's
@@ -813,9 +829,10 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   asks: "A rat comes into the light. Keep digging?"), by events and by the actor's own state; "stop", "stop
   digging"; looking one way, through what lets sight through ("look north"); whatever a test finds told as found
   ("Searching about...").  Built so far (Moving, above): the long tasks, a walk a square at a time, the bar, the
-  beats, stop, the hard stops and the soft questions (a denizen new in sight, a sound); still to come in it: where
-  you are and going to named places, looking one way, things told as found, tiring as a question, a dig half done
-  kept, searching and battering as long tasks.
+  beats, stop, the hard stops and the soft questions (a denizen new in sight, a sound, tiring); where you are and
+  going to places in a room; things out of reach walked to first, a blow's close-in, engagement; the search a long
+  task, its finds told as it ends.  Still to come in it (in hand, 2026-10-20): looking one way, a dig half done kept,
+  battering a long task.
 - **Light and traces** (slice 4.1): lights burning down and refilled (fuel), a spare torch and oil in the kit (D5);
   rooms lit only where denizens keep lights; the deposit layer: tracks in the dust, smells, smoke, fading with age;
   Tracking.

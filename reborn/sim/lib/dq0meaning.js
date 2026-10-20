@@ -61,7 +61,7 @@ const EXPRS = {
   iWhere: F('struct item', 'where'), iSn: F('struct item', 'sn'), iX: F('struct item', 'x'), iY: F('struct item', 'y'),
   iQty: F('struct item', 'qty'), iId: F('struct item', 'id'),
   sightBank: 'SIGHT_BANK', tSeq: F('struct sight', 'seq'), tWhere: F('struct sight', 'where'), tDark: F('struct sight', 'dark'),
-  tKind: F('struct sight', 'kind'), tSize: F('struct sight', 'size'), tRw: F('struct sight', 'rw'), tRh: F('struct sight', 'rh'),
+  tKind: F('struct sight', 'kind'), tSize: F('struct sight', 'size'), tRw: F('struct sight', 'rw'), tRh: F('struct sight', 'rh'), tRx: F('struct sight', 'rx'), tRy: F('struct sight', 'ry'),
   tLit: F('struct sight', 'lit'), tCeil: F('struct sight', 'ceil'), tFirst: F('struct sight', 'first'), tZ: F('struct sight', 'z'),
   tNdoors: F('struct sight', 'ndoors'), tDoor: F('struct sight', 'door'), tDoorSize: S('struct sight', 'door[0]'), seeDoors: 'SEE_DOORS',
   dRel: F('struct sight', 'door[0].rel'), dState: F('struct sight', 'door[0].state'), dX: F('struct sight', 'door[0].x'),
@@ -210,7 +210,7 @@ function createRecorder() {
     if (t) {
       const list = (n, max, at, size, f) => Array.from({ length: Math.min(t[n], max) }, (_, i) => f(at + i * size - at, i));
       const d0 = L.tDoor, o0 = L.tOpen, i0 = L.tItem, n0 = L.tDen, p0 = L.tTrap, g0 = L.tGlow;
-      s.sight = { seq: t[L.tSeq], where: t[L.tWhere], dark: t[L.tDark], kind: t[L.tKind], size: t[L.tSize], rw: t[L.tRw], rh: t[L.tRh],
+      s.sight = { seq: t[L.tSeq], where: t[L.tWhere], dark: t[L.tDark], kind: t[L.tKind], size: t[L.tSize], rw: t[L.tRw], rh: t[L.tRh], rx: w16(t, L.tRx), ry: w16(t, L.tRy),
         lit: t[L.tLit], ceil: t[L.tCeil], sname: t[L.tSname], first: t[L.tFirst], z: w16(t, L.tZ) << 16 >> 16, stratum: t[L.tStratum], x: w16(t, L.tX), y: w16(t, L.tY), nways: t[L.tNways], dazzled: t[L.tDazzled],
         doors: list(L.tNdoors, L.seeDoors, d0, L.tDoorSize, o => ({ rel: t[L.dRel + o], state: t[L.dState + o], x: w16(t, L.dX + o),
           y: w16(t, L.dY + o), kind: name('PK_DOOR', t[L.dKind + o]), parts: t[L.dParts + o] })),

@@ -339,7 +339,16 @@ climb's test to hold on).
   no blow, and the player says what next.  Engaged already, a blow at one out of reach isn't closed with (the
   user's).  The denizens move by the same rule: one coming at the character stops in its zone.  Not used: the book's
   long-reach weapons' two squares (with the missiles, slice 4.7), its reaction zones (the game's 30 feet stands for
-  them: a hostile seen that near stops a long task) and its engage initiative test.
+  them: a hostile seen that near stops a long task) and its engage initiative test.  As built: a close-in's target
+  struck at the character as it comes beside it is no stop (it's the fight it went for: the character's blow follows);
+  "attack the rat" with several in sight and none beside the character closes with the nearest; a bare "attack" with
+  no target, nothing beside it, is refused, as before.
+- **Going places, as built:** the place's square worked out from the room's floor as the character faces (the floor
+  in thirds for the centre, its edge rows for a side or a corner, the nearer end of each when a corner's not said);
+  where it's rock (a cave's), the nearest square the way reaches; "You're there already." if it is.  The search's
+  minute a long task, its tests at its end, cut short four steps (20) the harder at the most, for the part not done.
+  Tiring asked of a walk only, for now (the referee tires the character by its pace; digging and climbing don't tire
+  it yet).
 - **A long task** is anything the character does that takes more than a round (10 seconds): a walk, a dig, a climb, a
   search, battering a door, a wait.  Its progress is a bar on the status line, ten cells, its part done of its length
   (a walk's squares, a dig's feet, a climb's feet, a wait's time), redrawn at most once a real second; and words as it

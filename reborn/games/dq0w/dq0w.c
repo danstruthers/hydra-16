@@ -2235,8 +2235,10 @@ void s_step_on (void)
         return;
     }
     if (pc_hit) {
-        pc_hit = 0;
-        halt (TE_HIT);
+        pc_hit = 0;                             /* (Struck as it closes with its target, beside it: no stop, the
+                                                **   blow back as it arrives) */
+        hub_map (0);
+        halt (pfoe && zone_step (HUB->pc_x, HUB->pc_y, HUB->pc_x, HUB->pc_y) == 0xFF ? 0xFF : TE_HIT);
         return;
     }
     dens_where ();

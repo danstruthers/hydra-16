@@ -919,7 +919,7 @@ unsigned char s_search (void)
         r->state = REQ_FREE;
         if (g >= G_MS) {
             item_at (i)->flags = (rec.flags & ~I_HIDDEN) | I_KNOWN;
-            put (found ? ", and " : "Searching, you turn up ");
+            put (found ? ", and " : "You turn up ");
             s_thing_words (&rec);
             ++found;
         }

@@ -1812,3 +1812,17 @@ want result=0 grade=G_CS
 dice
 ask TEST a=P_PERSUADE text="khuzdul"
 want result=2
+
+# ---- Tiring (RS_EXERT: the time a pace took; HOUSE.md's long tasks: a fatigue level more is asked of, the reply's
+# result 1 if one was gained, the world's soft question)
+
+char
+end
+case a minute's sprint: a fatigue level more, the reply says so
+dice
+ask EXERT a=GA_SPRINT w1=600
+want result=1 sum.cond&C_FATIGUED=C_FATIGUED
+case five seconds more of it: no level more
+dice
+ask EXERT a=GA_SPRINT w1=50
+want result=0

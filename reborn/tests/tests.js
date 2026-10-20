@@ -3247,6 +3247,48 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0reach', meaning: true, what: 'Dingus Quest Zero\'s things out of reach walked to first, places in a room, a blow\'s close-in and engagement (slice 4.0; HOUSE.md: out of reach, walked to first, going places, engagement; the user\'s, 2026-10-20), by the hub\'s events, the world\'s replies and where the character ends (the referee\'s dice at these seeds): at seed 3 the pick put down and walked away from, then "stow the pick" walks over to it (the things\' IR_NOT_HERE, I_TAKE\'s walk alone) and stows it as it gets there (the command carried out again: IR_OK); the room\'s centre, its far left corner, its near side and, walking forward, its other side gone to by the facing (I_GOTO: each square the room\'s own); at seed 7 the ghoul down the stairway attacked from two squares off: closed with (I_CLOSE: a walk), its blow back as the character comes beside it not a stop, and the character\'s blow struck; in another game the walk toward the far side stopped as it comes into the ghoul\'s zone (TE_ENGAGED) and, begun in it, after a square (TE_ENGAGED, engaged still)',
+      init: 't_rc', cycles: 1800e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T',
+        'drop pick', 'walk to the door ahead', 'turn around', 'stow the pick', 'go to the centre of the room', 'go to the far left corner',
+        'go to the near side', 'walk forward to the other side', 'quit', 'echo ml swd 80 >> /ram/c.hm',
+        'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'attack the ghoul', 'quit',
+        'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'go to the far side',
+        'go to the far side', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [];
+        const st = T.of('stow the pick');
+        if (!dq0Rep(st, 'ireq', { result: 'IR_NOT_HERE' }).length || !dq0Rep(st, 'ireq', { result: 'IR_OK' }).length) f.push('the pick not walked over to and stowed (' + st.replies.map(r => r.req + ' ' + (r.result || '')).join(', ') + ')');
+        dq0Need(f, st, 'E_ARRIVE', { how: 'A_WENT_TO' }, 'no walk over to the pick');
+        const pk = dq0Thing(st.after, 'pick');
+        if (!pk || pk.where !== 'IW_ITEM') f.push('the pick not in the pack: ' + (pk && pk.where));
+        // (The places: the room's floor rx, ry, rw by rh, the character facing north as it ends each)
+        const at = (t, what, want) => {
+          const s = t.after, r = s && s.sight;
+          if (!r || r.where !== 0) { f.push(t.line + ': not in a room'); return; }
+          const w = want(r);
+          if (s.pc.x !== w[0] || s.pc.y !== w[1]) f.push(t.line + ': at ' + s.pc.x + ',' + s.pc.y + ', not ' + what + ' ' + w.join(',') + ' (' + dq0Evs(t) + ')');
+        };
+        at(T.of('go to the centre of the room'), 'the centre', r => [r.rx + (r.rw - 1 >> 1), r.ry + (r.rh - 1 >> 1)]);
+        at(T.of('go to the far left corner'), 'the far left corner', r => [r.rx, r.ry]);
+        at(T.of('go to the near side'), 'the near side', r => [r.rx, r.ry + r.rh - 1]);
+        at(T.of('walk forward to the other side'), 'the other side', r => [r.rx, r.ry]);
+        const a = T.of('attack the ghoul'), gh = a.at && a.at.actors.find(x => x.name === 'ghoul');
+        if (!gh) return [...f, 'no ghoul'];
+        dq0Need(f, a, 'E_ARRIVE', { how: 'A_WENT_TO' }, 'the ghoul not closed with');
+        if (!dq0Ev(a, 'E_FIGHT', { who: 0, def: gh.k + 1 }).length) f.push('no blow struck at the ghoul as the character came up to it (' + dq0Evs(a) + ')');
+        const g = T.filter(t => t.line === 'go to the far side');
+        if (g.length !== 2) return [...f, 'the walks not typed'];
+        if (!dq0Ev(g[0], 'E_TASK', { te: 'TE_ENGAGED', still: false }).length) f.push('the walk not stopped by the ghoul\'s zone (' + dq0Evs(g[0]) + ')');
+        if (!dq0Ev(g[1], 'E_TASK', { te: 'TE_ENGAGED', still: true }).length) f.push('the walk begun engaged not stopped after a square (' + dq0Evs(g[1]) + ')');
+        const p0 = g[0].after && g[0].after.pc, p1 = g[1].after && g[1].after.pc;
+        if (p0 && p1 && Math.max(Math.abs(p1.x - p0.x), Math.abs(p1.y - p0.y)) > 1) f.push('more than a square walked engaged');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0sway', what: 'Dingus Quest Zero\'s attitudes and influence (DENIZENS.md; the user: "skills like animal husbandry could influence animals encountered"), by the denizens\' replies to the character\'s ways with them (the hub\'s sway: the result, the attitude before and after) and the actors\' records (the referee\'s Animalcraft tests in their order at this seed: HarnMaster\'s): a character good with animals (Animalcraft 90, hmchar\'s file) at seed 21\'s giant rats (wary, the vermin faction\'s), words refused (an animal: persuasion doesn\'t reach it), how one seems (examined: wary), befriended a test at a time (indifferent, then won over: an ally, following; then asked no more), named Grub, asked to wait and seen waiting as the character turns round, then to follow, following it across the room (seen beside it as it turns round again) and down the stairway (come along to the stratum below); the game kept (dq0 -d) and carried on, Grub its ally still; then a fresh game, a blow at a rat out of reach not struck, the rat as wary as it was',
       init: 't_rc', cycles: 1400e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/a.hm', 'echo ml ani 90 >> /ram/a.hm', 'dq0 -p t -s 21 -c /ram/a.hm -T -d /ram/kept',

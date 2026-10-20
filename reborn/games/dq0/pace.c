@@ -149,6 +149,9 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
         if (g == GA_WALK) {
             g = 0xFF;                           /* ("stop walking": the long task's, the parser's: slice 4.0) */
         }
+        if (HUB->pc_task.kind == LT_SEARCH && any ("searching\0search\0")) {
+            return 0;                           /* ("stop searching" as a search goes: the long task's too) */
+        }
         k = wa;
         wa &= any ("searching\0search\0watching\0looking\0") ? ~WA_TRAPS : 0xFF;
         wa &= any ("listening\0listen\0") ? ~WA_LISTEN : 0xFF;

@@ -118,7 +118,8 @@ void __fastcall__ o_portal_words (unsigned char out)
         "You lift the bar and open the door.", "The lock gives with a click.", "The lock defeats you, for now.",
         "You've nothing to pick a lock with.", "There's no lock on it to pick.",
         "With a crack the door bursts open.", "The door holds.",
-        "Searching the walls, you find a door hidden in them.", "You search about, and find nothing hidden."
+        "You find a door hidden in the wall.", "You find nothing hidden."   /* (Told as a search ends: "Searching
+                                                **   about..." as it began, HOUSE.md's things told as found) */
     };
 
     msg (said[out]);
