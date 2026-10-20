@@ -789,11 +789,17 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
 - **History and themes** (Phase 3D): a region's history generated first (themegen), each stratum built from its layer
   of it (stratagen: built, ruined, reused; a temple over an older keep's ruin), the stocking and the denizens from it,
   four goal kinds.
-- **Where you are, going places, and long tasks** (slice 4.0): where in a room the character stands ("on the right
-  side of a large room"); going to named places and features, not counting squares; one system for every task longer
-  than a tick, with progress, words as it goes ("the corridor turns right"), and interruptions (by events, and by the
-  actor's own state: hurt, tiring, a hostile seen); looking one way, through what lets sight through ("look north");
-  whatever a test finds told as found ("Searching about...").
+- **Where you are, going places, and long tasks** (slice 4.0, begun 2026-10-20): where in a room the character
+  stands, and where things are, in words relative to its facing only, never the compass ("on the right side of a
+  large room", "a rat in the far corner", "against the wall behind you"; only what's known: "somewhere in a cavern,
+  its walls beyond your light"); going to named places and features, not counting squares ("go to the centre of the
+  room", "walk forward to the other side", "approach the door ahead and to my left"); one system for every task
+  longer than a tick, its progress a bar on the status line (redrawn at most once a real second) and words as it goes
+  ("the corridor turns right", "your torch gutters"), at each change and on a quiet stretch about every 30 feet;
+  interruptions hard (it stops: any wound taken, a blow, a trap sprung, a fall, the light going out) or soft (it
+  asks: "A rat comes into the light. Keep digging?"), by events and by the actor's own state; "stop", "stop
+  digging"; looking one way, through what lets sight through ("look north"); whatever a test finds told as found
+  ("Searching about...").
 - **Light and traces** (slice 4.1): lights burning down and refilled (fuel), a spare torch and oil in the kit (D5);
   rooms lit only where denizens keep lights; the deposit layer: tracks in the dust, smells, smoke, fading with age;
   Tracking.

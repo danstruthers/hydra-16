@@ -305,6 +305,52 @@ requests; the house's rules above marked *(every ruleset's)* it plays as HarnMas
   (theme.txt: popgen's), a stand-in's game none.  Why: popgen reads every name it's given, and the stand-ins' games
   (the tests') keep the stand-in's denizens.
 
+## Where you are, going places, and long tasks *(slice 4.0: drafted and reviewed by the user, 2026-10-20)*
+
+Every ruleset's.  The user's choices at the slice's start (DECISIONS.md, 2026-10-20) are taken as given; the user kept
+the draft's numbers as they are (the sizes, a hostile's 30 feet, a look one way's 3 seconds and twice the reach, a
+climb's test to hold on).
+
+- **Where you are is told by the facing alone**, never the compass (the user's).  A room's floor is taken in thirds
+  each way by the character's facing: far (ahead), middle, near (behind), and left, middle, right.  The character is
+  "in the middle of" a room, "on the right side of" it, "at the far end of" it, "in the near left corner of" it, and
+  so on; a thing or a denizen the same ("a rat in the far corner"), and "against the wall" ahead, behind, to the left
+  or right when it's within a square of it.  Only what's known: with the walls beyond the light, "somewhere in a
+  cavern, its walls beyond your light".
+- **A room's size and shape words**, by its floor: small under 150 square feet, a plain room to 600, large to 2,500,
+  vast beyond; long when it's at least twice as long as it's wide, and narrow too if it's 10 feet across or less;
+  wide when it's 40 feet across or more ("a long, narrow hall", "a wide hall", "a vast cavern").
+- **Going places**: the centre (the middle), the far side (straight ahead to the wall: "walk forward to the other
+  side"), the near side, the left or right side, a corner ("the far left corner"), a wall, a feature or a thing seen
+  ("the door ahead to my left", the pillar, the body).  The way goes round what's in it through squares the
+  character knows; one it doesn't know of is found as it's met.  The small moves stay for fine work.
+- **A long task** is anything the character does that takes more than a round (10 seconds): a walk, a dig, a climb, a
+  search, battering a door, a wait.  Its progress is a bar on the status line, ten cells, its part done of its length
+  (a walk's squares, a dig's feet, a climb's feet, a wait's time), redrawn at most once a real second; and words as it
+  goes (the user's: both).
+- **A walk's words**: a beat at each change (the way turns, a side passage or a door is passed, it widens or opens
+  into a room, the light changes, a sound is heard), and on a quiet stretch a short line every 6 squares (30 feet) of
+  none ("You go on down the passage."; the user's: about every 30 feet).
+- **Interruptions, hard** (the task stops at once, and says why): any wound taken (the user's: all wounds), a blow at
+  the character, a trap sprung, a fall, its light going out, a hostile denizen coming into sight within 30 feet.
+  **Soft** (it asks, "A rat comes into the light.  Keep digging?"; yes carries on, anything else stops it, and a new
+  command typed instead stops it and runs): something new seen, heard or smelled (a denizen not hostile, a hostile
+  one farther off than 30 feet, a sound), a fatigue level more.
+- **Stopping**: "stop" stops what can be stopped; "stop digging" (climbing, searching, walking, waiting) names it, and
+  a name that isn't the task's is refused ("You aren't digging.").  What's imposed can't be stopped: senseless, a fall
+  under way.
+- **What stopping costs**: a walk stops where the character is; a dig keeps the feet dug (the change record: a hole
+  half dug stays half dug); battering keeps the harm done; a search or a wait cut short finds and rests for the part
+  done; a climb, disturbed hard, is a Climbing test to keep the grip (the plan's holding on), a fall from where it is
+  if it fails.
+- **Looking one way** ("look north", "look left", "look at the door"): a focused look that way, 3 seconds, twice as far
+  as a glance about, as far as the light and the eyes allow (the light layer, distant lights, the dark's adapting);
+  through what lets sight through (a doorway, a window, a grating, bars, a slit, a hole), what lies beyond.  Listening
+  or sniffing one way ("listen at the door", "sniff at the grating") the same, through what lets sound or air through.
+- **Things told as found**: whatever a test finds (a search, a trap noticed underfoot, a hidden door, a sound heard by
+  listening) is told after what's plain at a glance, as its own line, saying how it was found: "You arrive at a
+  closed door.", "Searching about...", "You find a gas trap, set to go off when the door is opened."
+
 ## Decided, not yet built
 
 - **D13, Strength and weapons:** Strength doesn't add to impact; it sets how heavy a weapon can be wielded without

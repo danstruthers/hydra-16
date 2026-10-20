@@ -647,3 +647,13 @@ The user's answers to the house rules' open questions (each the recommended one)
 D9 (hearing) stays open, tuned by ear once the real sounds are in.
 
 **Design:** HOUSE.md, tests, digging, decided but not built.
+
+### Slice 4.0's words
+
+The user, starting Phase 4 ("On to the next phase then."), at the slice's first step:
+- where the character is, and where things are, in words relative to its facing only, never the compass;
+- a long task's progress shown both ways: a bar on the status line and words as it goes;
+- interruptions: "I like hard stops, soft ask, but all wounds taken should be hard stops";
+- a walk's words at each change, and a line on a quiet stretch about every 30 feet.
+
+**Design:** DUNGEON.md, still to come (slice 4.0).
