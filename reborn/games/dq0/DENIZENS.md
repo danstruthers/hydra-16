@@ -72,7 +72,7 @@ stratum's age), not the theme; the factions are a theme's inhabitants, or the de
 Nothing is made up as the character turns a corner.  When a stratum's plan is grown (DUNGEON.md), the denizens'
 task (games/dq0d) decides its populations at once, from the stratum's seed.  If the theme has inhabitants (its theme
 file's faction lines: dq0d/pop.h has their format), they're placed as the history left them by popgen (bank/popgen,
-a bank program in a bank of the task's own): each faction's number spread over its strata, the most on its lair's
+a bank program, bankprog.h's): each faction's number spread over its strata, the most on its lair's
 and fewer the further from it, shared among its kinds (the first twice each other's share), in lairs of its kinds'
 group sizes, its leader in its home (HOUSE.md, who lives where).  Else the stand-in's: for each of the theme's kinds
 that lives in the stratum's style at its depth, its lairs and how many in each.  Each lair lies where its kind lairs

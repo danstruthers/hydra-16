@@ -1,6 +1,6 @@
 /*
 ** pop.h - Dingus Quest Zero's populations (Phase 3D): the denizens' task (dq0d) and its population generator, popgen
-** (bank/popgen: a bank program, sdk/c/include/bankprog.h, run in a bank of the task's own), between them.
+** (bank/popgen: a bank program, sdk/c/include/bankprog.h's), between them.
 **
 ** A theme file (the history's: themegen's, or one written by hand, in the save folder: THEME_FILE) says who lives in
 ** the dungeon now, its inhabitants, a line a faction:

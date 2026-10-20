@@ -1,10 +1,10 @@
 /*
 ** popgen.c - Dingus Quest Zero's population generator (Phase 3D: games/dq0d/pop.h has what it does): a bank program
-** (sdk/c/include/bankprog.h), the denizens' task's, run in a bank of the task's own.  It places the theme's factions
+** (sdk/c/include/bankprog.h), the denizens' task's, called through bankprog.h's API.  It places the theme's factions
 ** as the history leaves them: from the theme file's inhabitants (its faction lines) and the kinds' groups (the
 ** denizens' data file, dq0d.dat), each stratum's lairs, their kinds, their factions and how many, the leaders in their
 ** homes; and the factions' attitudes, how they stand with one another, and their first kinds (their tongues').  What
-** it read is kept in its bank's BSS while it's loaded, and read again if it was given up (its BSS cleared).
+** it read is kept in its BSS while it's loaded, and read again if it was given up and loaded again (its BSS cleared).
 **
 ** Its callers give it only the C library's files and strings (open, read, write, close, strncmp ...: the task's and
 ** bankrun's both) and the helpers both have, so it keeps its own die and does its own sums.  From the shell, bankrun

@@ -2,8 +2,8 @@
 ** dq0d.c - Dingus Quest Zero's denizens (DENIZENS.md): a task of its own, started by the UI (dq0d SEG ROLE LIBDIR:
 ** the hub's segment, its role there, hub.h, and the game's lib folder).  As each stratum's plan is grown, it decides
 ** the stratum's populations: as the history left them, if the theme has inhabitants of its own (the save folder's
-** theme file, its faction lines: pop.h), each faction's lairs as popgen gives them (bank/popgen, a bank program in a
-** bank of its own: their kinds and how many, its leader in its home); else the stand-in's, by the stratum's style
+** theme file, its faction lines: pop.h), each faction's lairs as popgen gives them (bank/popgen, a bank program,
+** bankprog.h's: their kinds and how many, its leader in its home); else the stand-in's, by the stratum's style
 ** and its depth, from the kinds the theme names (kinds.txt, the game's bestiary, made lib/dq0/dq0d.dat, read into a
 ** bank of its own as it starts): the lairs, where they lie in the plan, and the denizens of each, a record each from
 ** then on; so nothing is made up as the character turns a corner.  As the
