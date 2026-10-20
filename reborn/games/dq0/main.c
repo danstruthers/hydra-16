@@ -1030,8 +1030,8 @@ unsigned tx, ty;
 #define find(obj, orel) pick ((obj), (orel))
 
 /* A portal it sees looked at closely (the parser's thing, the way it lies): the world's record of it (the hub's
-** wreq, WQ_EXAMINE: a doorway has none), judged by the craft that knows its material (the referee's test: wood
-** Timbercraft, iron Metalcraft, stone Masonry), in words (overlay 4); a few seconds' looking */
+** wreq, WQ_EXAMINE: a doorway has none), judged by the craft that knows its material (the referee's test,
+** P_APPRAISE: AP_WOOD, AP_METAL, AP_STONE), in words (overlay 4); a few seconds' looking */
 static void __fastcall__ inspect (unsigned char obj, unsigned char orel)
 {
     struct req* r;
@@ -1061,7 +1061,7 @@ static void __fastcall__ inspect (unsigned char obj, unsigned char orel)
     intend2 (I_WAIT, 50, 1);
 }
 
-/* A thing hidden where the character stands (Concealment: the referee's test, the things' record), worded by how
+/* A thing hidden where the character stands (P_CONCEAL: the referee's test, the things' record), worded by how
 ** well */
 static void __fastcall__ hide (const char* w)
 {
@@ -1410,7 +1410,7 @@ portal:
             tell (T_YOU_CARRY_NONE);
         }
         return;
-    case V_HIDE:                                /* (Concealment: a thing; oneself comes with the denizens) */
+    case V_HIDE:                                /* (P_CONCEAL: a thing; oneself comes with the denizens) */
         hide (c.word);
         return;
     case V_HOLD:

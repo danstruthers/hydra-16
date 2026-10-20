@@ -269,12 +269,10 @@ void o_brief (void)
     pair ("IP ", harn_get_ip (&pc), "BL ", pc.bl);
 }
 
-/* ---- What the character notices, by its state (DUNGEON.md: moving; the game's steps): its pace as it moves (a creep
-** or a slow walk a step better, but not by feel in the dark; a jog two worse, a run four, a sprint six); in shock four
-** worse (the book's universal penalty, its injuries' and its fatigue's, is in every test already); listening, a sound
-** two better.  A hazard underfoot (P_NOTICE_SIGHT's b 1, its steps the hiding's) by a search's chance while it
-** searches as it goes, else a passing glance's: twice its hiding's steps, and two more (r a copy; the hub's pace and
-** watchfulness in ps) */
+/* ---- What the character notices, by its state (DUNGEON.md: moving; the game's steps): its pace as it moves, its
+** listening, a hazard underfoot by a glance or a search (the house's, every referee's: rshouse.h's house_notice); in
+** shock four worse (the book's universal penalty, its injuries' and its fatigue's, is in every test already) (r a
+** copy; the hub's pace and watchfulness in ps) */
 
 #define RS_HOUSE_NOTICE                         /* (The pace's and the watchfulness's: every referee's) */
 #define RS_HOUSE_STATE
@@ -338,7 +336,8 @@ void __fastcall__ o_spent (unsigned t)
 
 /* ---- The character's state (the status command's: RS_DESCRIBE b 3, ps's): its pace, what it's held to and its feet
 ** a round (the book's rates of its Move, Combat 6; the game's two slower), its watchfulness; then (all of it) its
-** condition (its health, its injuries in brief, its fatigue and its load, the penalties they make) and its light */
+** condition (its health, its injuries in brief, its fatigue and its load, the penalties they make) and its light (the
+** pace's, the watchfulness's and the light's words the house's, every referee's: rshouse.h's) */
 
 static const unsigned char feet[NGAITS][2] = { { 5, 6 }, { 5, 4 }, { 5, 2 }, { 5, 1 }, { 10, 1 }, { 15, 1 } };
 

@@ -69,13 +69,12 @@ unsigned char t_getkey (void);                  /* The next key, waiting (conio'
 void __fastcall__ consctl (const char* what);   /* (main.c) A line to the window's consctl (rawon, rawoff) */
 void __fastcall__ ask_line (char* b, unsigned char max);  /* A line typed, waiting */
 
-/* ---- The clock: the book's time, in tenths of a second (a combat round 100), run at the pace */
+/* ---- The clock: the game's time, in tenths of a second (a round the ruleset's, RS_HELLO's), run at the pace */
 
 #define PACE_RELAXED    0
 #define PACE_NORMAL     1
 #define PACE_MENACING   2
 #define PACE_TURNS      3                       /* The world moves only as the character does (a turn game) */
-#define ROUND           100                     /* A combat round, 10 seconds (Combat 7) */
 extern unsigned long now;                       /* The game's time */
 extern unsigned char pace, paused;
 extern const char* const pacename[4];

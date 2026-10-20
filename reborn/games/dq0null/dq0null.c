@@ -140,11 +140,15 @@ static unsigned char __fastcall__ has (const char* key)
     return k < NTOOLS;
 }
 
-/* What the character strikes with (the hub's pc_strike): a fist, a foot, the head, or the first thing it holds */
+/* What the character strikes with (the hub's pc_strike): its fists, a foot, the head (bare 1), or the first thing it
+** holds (the words the UI knows: RULESETS.md) */
+static unsigned char bare;
+
 static const char* weapon (void)
 {
     unsigned char k, s = HUB->pc_strike;
 
+    bare = 1;
     if (s == SK_KICK) {
         return "foot";
     }
@@ -153,10 +157,11 @@ static const char* weapon (void)
     }
     for (k = 0; s == SK_BEST && k < NTOOLS; ++k) {
         if (tools[k][0] && held[k]) {
+            bare = 0;
             return tools[k];
         }
     }
-    return "fist";
+    return "fists";
 }
 
 /* Whether it speaks tongue t */
@@ -367,8 +372,8 @@ static void __fastcall__ attack (struct req* r)
     r->w2 = 0;
     if (d == RS_THING) {
         r->w1 = t < 6 ? 6 - t : 0;
-        r->result = HUB->pc_strike != SK_BEST ? 2 : 0;
         put (weapon ());
+        r->result = bare ? 2 : 0;               /* (A part of it struck the thing) */
         return;
     }
     if ((a && d) || (a ? sheet[aden[(a - 1) & 7]] >= BTOUGH : wounds >= TOUGH)) {
@@ -489,7 +494,8 @@ static void __fastcall__ answer (struct req* r)
             r->w1 = g == G_CS ? 2 * k : g == G_MS ? k : g == G_MF ? k / 2 : 0;
             break;
         }
-        if (((r->a == P_SEARCH || r->a == P_DISARM) && r->b == HIDE_MAGICAL) || (r->a == P_PICKLOCK && !has ("picks"))) {
+        if (((r->a == P_SEARCH || r->a == P_DISARM) && r->b == HIDE_MAGICAL) ||
+            (r->a == P_PICKLOCK && !has ("picks"))) {
             r->result = 1;                      /* (No magic; no lockpicks) */
             break;
         }

@@ -18,7 +18,7 @@
 #   step      tenths of a second it takes to go a square (5 feet)
 #   faction   its faction (factions.txt's): its tongue, its attitude to the character as it first meets it, and to
 #             the other factions
-#   mind      m mindless (nothing sways it), b a beast (Animalcraft only), l low (easily fooled, hard to reason
+#   mind      m mindless (nothing sways it), b a beast (the animals' test only), l low (easily fooled, hard to reason
 #             with), a average, c cunning (hard to fool)
 #   sway      steps (each about 5%) for or against swaying it, besides its attitude and mind: a bear's hard to calm
 #   eyes      its eyes' adapting to the dark (the senses keep each actor's: DUNGEON.md's perception as layers): tenths

@@ -10,6 +10,10 @@ to review.  The last two sections are what's decided but not built yet, and what
 
 A step is the game's unit of circumstance everywhere: 5 points on a d100 test (rs.h: the steps of a request).
 
+The rules marked *(every ruleset's)* are the game's own whatever the ruleset: their code is games/dq0/rshouse.h,
+which each referee includes (RULESETS.md), so the null ruleset (dq0 -r null: its own rules are the last section's)
+plays them as HarnMaster's referee does.
+
 ## Tests
 
 - **A purpose names one skill.**  The game asks for a purpose, never a skill (rs.h's P_*); the referee picks the
@@ -40,13 +44,14 @@ A step is the game's unit of circumstance everywhere: 5 points on a d100 test (r
 - **A sense is 0 to 9** from its attribute: 3 or less none, 18 or more 9, else (attribute - 3) x 3 / 5; an average
   10 or 11 gives 4.  (dq0harn.c's sense.)  Why: the senses' task (dq0p) works in one scale for every actor.
 - **Listening as it goes** makes hearing two better (at most 9), and a sound test two steps better.  (dq0harn.c's
-  status; sheet.c's o_noticing.)
+  status; rshouse.h's house_notice.)  *(Every ruleset's.)*
 - **Pace while noticing:** a creep or a slow walk one step better (but not feeling the way in the dark), a jog two
-  worse, a run four, a sprint six.  (sheet.c's by_pace.)  Why: the faster one goes, the less one takes in.
+  worse, a run four, a sprint six.  (rshouse.h's by_pace.)  Why: the faster one goes, the less one takes in.
+  *(Every ruleset's.)*
 - **In shock, four steps worse** on top of the universal penalty already in every test.  (sheet.c's o_noticing.)
 - **A hazard underfoot** (a trap stepped onto) is noticed by a passing glance: twice its hiding's steps worse, and
   two more.  Searching as it goes (watching for traps), the character notices it as a search would: its hiding's
-  steps worse.  (sheet.c's o_noticing; wtrap.c.)
+  steps worse.  (rshouse.h's house_notice; wtrap.c.)  *(Every ruleset's.)*
 - **The Khuzdul always know north underground** (the summary's northsense), a trait of their species.
   (dq0harn.c's status.)
 
@@ -72,7 +77,8 @@ A step is the game's unit of circumstance everywhere: 5 points on a d100 test (r
 - **A ledge is climbed a round (10 seconds) at a time,** a Climbing test each: a critical success 20 feet, a
   marginal success 10, a marginal failure a slip back of 5 feet (the climb goes on), a critical failure a fall from
   as high as it got (climbing down: to the foot).  Holds may catch the fall: then the climb goes on.  (dq0w.c's
-  s_climb_on.)  Why: the book gives the test, not the rate; 10 feet a round is a careful climber's pace.
+  s_climb_on.)  Why: the book gives the test, not the rate; 10 feet a round is a careful climber's pace.  The round
+  is the ruleset's (RS_HELLO's: HarnMaster's 10 seconds, the null ruleset's the same).
 - **Jumping down a ledge** is a clear fall of its height.  (dq0w.c's start_ledge.)
 - **A fall strikes where a middle strike would,** or low if it lands on its feet, with no armour taken off; the
   book's falling dice and grabbing a hold (Skills 8) otherwise.  (sheet.c's o_harm.)  Why: armour doesn't soften
@@ -98,7 +104,8 @@ marginal success, by material (earth, stone, masonry, a floor's flags), and the 
 | a blade, a knife | 1 | -     | -       | -     | earth 40 (it dulls) |
 
 A critical success digs twice as far, a marginal failure half, a critical failure nothing.  A floor's flags are
-lifted, not cut (the user: a material of their own).  (dq0harn.c's digger table, RS_TEST P_DIG.)
+lifted, not cut (the user: a material of their own).  (rshouse.h's digger table and the tool's choice; dq0harn.c's
+RS_TEST P_DIG.)  *(Every ruleset's.)*
 
 ## Portals
 
@@ -157,6 +164,25 @@ lifted, not cut (the user: a material of their own).  (dq0harn.c's digger table,
 - **Health in words,** for every ruleset: fine with no injuries; hurt while the injury points are under a third of
   the Endurance; badly hurt under two thirds; critical past that; down when senseless or in shock.  (dq0harn.c's
   health_of.)
+
+## The null ruleset (dq0null)
+
+A second referee with no book behind it (Phase 3A: RULESETS.md), to show the game asks a ruleset nothing but rs.h's
+requests; the house's rules above marked *(every ruleset's)* it plays as HarnMaster's referee does.  Its own:
+
+- **A test** succeeds on a d100 of at most 60 and 5 a step (5 to 95); the lowest fifth of the success band is a
+  critical success, the highest fifth of the failure band a critical failure.  No skills, no attributes, no
+  penalties.  Why: flat odds, the steps the only difficulty.
+- **The character takes 10 wounds** (dead at 10), **a creature 6.**  A fall does a wound each 10 feet, a trap's
+  strike or a burn 2.  Health: hurt under a third, badly hurt under two thirds, critical past that.
+- **A blow** is a flat test (a prone defender four steps easier, two harder for each other foe); a hit 2 wounds, a
+  critical 4.  A prone attacker gets up instead.  A creature wounded that stands holds on a flat test (a shy one four
+  steps worse), else it flees.  A blow at a thing does 6, less the thing's least resistance.
+- **No fatigue, no bleeding, no shock, no senselessness, no encumbrance.**  Senses all 5 (hearing 7 listening as it
+  goes); a square takes 4.5, 3, 1.5, 0.8, 0.4 and 0.3 seconds at a creep, a slow walk, a walk, a jog, a run and a
+  sprint.
+- **Its character** is any file's name, occupation, pace and language lines (hmchar's will do), with its wounds;
+  without one it makes its own, Dingus, a wanderer.  It speaks common and its file's tongues.
 
 ## Decided, not yet built
 
