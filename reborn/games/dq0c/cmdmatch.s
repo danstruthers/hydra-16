@@ -35,7 +35,8 @@
 ; Its size: 4.6K of code; 4K of RAM (the tokens, the cache, the working values' stack, the dictionary's marks and
 ; alias chains, the aliases, the rules' addresses) and 42 bytes of zero page.  The tables are read where they are: the
 ; grammar may be in a RAM bank at $8000 while it matches (sim/tools/cmdmatch/cmdhy.c), the index and the aliases not.
-; Speed (sim/tools/commandmatch-test.js): about 34,000 cycles a command on the corpus; 37,000 under HydraOS.
+; Speed (sim/tools/commandmatch-test.js): about 41,000 cycles a command on the corpus (2026-10-19: the grammar's
+; bare verbs and its selectors alone; 34,000 before); a command's round trip through dq0c (--task) about 64,000.
 ; ****************************************************************************
 
             .setcpu     "65C02"

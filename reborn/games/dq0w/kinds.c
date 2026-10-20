@@ -78,6 +78,23 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
                                                 **   up; its water the water's work's, to come) */
 };
 
+/* What a kind of thing affords (the plan's affordances, in the kinds' data): thrown, its reach (the short band of
+** HarnMaster's missile ranges, in squares: 0, not a thing to throw; things.c's s_throw_at), by KI_* (the theme's own
+** kinds none yet) */
+const unsigned char throws[KI_COUNT] = {
+    0, 2, 0, 0, 2, 2, 1, 2, 2, 1,               /* (none), torch, backpack, belt, pouch, dagger, waterskin, rations,
+                                                **   tinderbox, pick */
+    1, 2, 2, 1, 2, 2, 2, 2, 1, 0,               /* shovel, lockpicks, chisel, rope, bones, pennies, key, candle, lantern,
+                                                **   sack */
+    0, 2, 1, 0, 2, 1, 1, 0, 0, 0,               /* chest, skull, broken sword, cloak, potsherds, sword, basket, sand,
+                                                **   table, chair */
+    1, 1, 1, 1, 0, 2, 0,                        /* quiver, arrows, bar, pane, bars, shards, body */
+    1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1,            /* leather cap ... hobnail boots: armour (a helm, boots, a cap) */
+    1, 4, 1,                                    /* mace, spear (a javelin's), shield */
+    1, 0, 2, 0                                  /* pot, straw, stubs, well */
+};
+typedef char throws_fit[sizeof throws == KI_COUNT ? 1 : -1];
+
 /* The things' words (things.h's SA_*): % the thing's name, # the other's (the pack's, the belt's, a container's) */
 const char* const said[SA_COUNT] = {
     "You take the % in your hand.",

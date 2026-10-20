@@ -28,6 +28,8 @@ void __fastcall__ o_trap_words (unsigned w)
     };
     unsigned char kind = w & 0x0F, trigger = w >> 4 & 3, o = w >> 8;
 
+    untarget |= o == TO_SPRUNG;                 /* (Set off: the character turns, its target let go) */
+
     lb[0] = 0;
     switch (o) {
     case TO_SPRUNG:
