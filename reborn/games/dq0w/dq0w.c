@@ -2601,7 +2601,7 @@ void __fastcall__ s_close_go (const struct msg* m)
 unsigned char s_close_on (void)
 {
     static unsigned x, y, px, py, dx, dy;
-    static unsigned char k;
+    static unsigned char k, leg;
     struct actor* a;
 
     hub_map (0);
@@ -2628,6 +2628,7 @@ unsigned char s_close_on (void)
             dx = dy;
         }
         if (dx < pfd) {
+            leg = pfd != 0xFF;                  /* (A later leg: its target moved on) */
             pfd = dx > 0xFE ? 0xFE : (unsigned char) dx;
             go_near = 1;                        /* (The nearest square it can reach, if the way can't reach its
                                                 **   target's: out of reach still, TE_FAR, as it gets there) */
@@ -2635,6 +2636,8 @@ unsigned char s_close_on (void)
             go_near = 0;
             if (!move.on) {
                 pfoe = 0;
+            } else if (leg) {
+                move.how = A_WALKED;            /* (Walked on: "You go over to it." told of its first leg alone) */
             }
             return move.on ? 2 : 0;
         }
