@@ -25,7 +25,7 @@ static const struct material mats[NMATS] = {
     { "steel", { 7, 8, 8, 8, 6, 3 } }, { "bronze", { 6, 6, 6, 7, 6, 4 } }, { "leather", { 5, 3, 3, 2, 6, 3 } },
     { "cloth", { 6, 1, 2, 0, 5, 1 } }, { "bone", { 3, 5, 5, 4, 7, 2 } }, { "clay", { 1, 6, 5, 9, 8, 6 } },
     { "stone", { 6, 8, 9, 9, 9, 4 } }, { "glass", { 0, 5, 3, 6, 4, 9 } }, { "silver", { 4, 5, 5, 6, 6, 5 } },
-    { "", { 0, 0, 0, 0, 0, 0 } },
+    { "", { 0, 0, 0, 0, 0, 0 } }, { "beeswax", { 2, 1, 1, 0, 3, 2 } }, { "tallow", { 1, 1, 1, 0, 2, 1 } },
 };
 static const char* const harm[NDMG] = { "blows", "edges", "points", "fire", "cold", "acid" };
 static const char* const make[10] = {
@@ -137,8 +137,11 @@ void __fastcall__ o_appraise (const struct ireq* q, signed char g)
         life = q->dur_max ? (unsigned char) (dur / (q->dur_max / 10 + 1)) : 10;
     }
     add (". ");
-    if (q->size) {                              /* (Its size and thickness, plain to see: a portal's part's) */
+    if (q->size || q->thick) {                  /* (Its size and thickness, plain to see: a portal's part's; a
+                                                **   candle's thickness) */
         add (q->plural ? "They're " : "It's ");
+    }
+    if (q->size) {
         add (utoa (q->size & 15, b, 10));
         if (q->size >> 4) {
             add (" by ");
@@ -149,6 +152,10 @@ void __fastcall__ o_appraise (const struct ireq* q, signed char g)
         }
         if (q->thick) {
             add (", ");
+        }
+    }
+    if (q->size || q->thick) {
+        if (q->thick) {
             add (q->thick >= 8 ? utoa (q->thick >> 3, b, 10) : q->thick >= 4 ? "half an" : q->thick >= 2 ? "a quarter" :
                 "an eighth of an");
             add (q->thick >= 16 ? " inches thick" : " inch thick");

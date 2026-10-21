@@ -40,7 +40,8 @@
 ** I_STEP, each a command's one part); the item store's, parts 10, 11 and 13 (things.c); part 12, a door's work begun
 ** (door_work: the door walked up to, its part's work asked); part 14, the denizens' bodies (wbody.c), part 15 the
 ** blows (wfight.c); part 16, the game's own rules (wgame.c: the theme's puzzle judged, IO_PUZZLE; a thing walked over
-** to and taken up, I_TAKE; the game begun, the character's state set, the UI's WQ_START and WQ_SET; world.dat).
+** to and taken up, I_TAKE; the game begun, the character's state set, the UI's WQ_START and WQ_SET; world.dat); part
+** 27, the lights burning down (a game minute at a time: slice 4.1's).
 */
 
 #include <fcntl.h>
@@ -2474,6 +2475,23 @@ void __fastcall__ s_task_word (const struct msg* m)
     }
 }
 
+/* The character's light gone out (part 27's: its fuel burnt, b its kind, the UI's to word), and it's in the dark:
+** its long task stopped hard with it (HOUSE.md's long tasks: the light going out), told as one (TE_OUT, its kind);
+** but a climb, part way up, and a fight go on, the light's going told alone */
+void __fastcall__ s_task_out (unsigned char b)
+{
+    unsigned char k;
+
+    hub_map (0);
+    k = HUB->pc_task.kind;
+    evb = b;
+    if (!k || k == LT_CLIMB || k == LT_FIGHT) {
+        event (E_TASK, 0, TE_OUT);
+    } else {
+        stop (TE_OUT);
+    }
+}
+
 /* The way across the room to its chunk's square tx, ty (the ways as worked out last), its squares added to the path
 ** from where it began, in order */
 void __fastcall__ s_path_ways (unsigned char tx, unsigned char ty)
@@ -3175,6 +3193,7 @@ static void __fastcall__ intent (struct msg* m)
         door_work (m->a);
         break;
     case I_LIGHT:
+        burn_ask = 1;                           /* (Its light's minutes left, the hub's, at once: part 27's) */
         busy (m->a ? 3 * stept : stept);
         see (0);
         view (m->a ? V_LIT : V_DARK);
@@ -3339,6 +3358,11 @@ int main (int argc, char* argv[])
         if (HUB->den_seq != dseq) {
             dseq = HUB->den_seq;
             stirred ();                         /* (The denizens' bodies' changes: what it sees of them) */
+            hub_map (0);
+        }
+        if (HUB->round && (burn_ask || HUB->now >= burn_due)) {
+            burns_now ();                       /* (The lights burnt down, a game minute's: part 27's; once the game's
+                                                **   begun, WQ_START's, its clock a game carried on's) */
             hub_map (0);
         }
         ++HUB->beat[T_WORLD];
@@ -3519,6 +3543,158 @@ unsigned char __fastcall__ s_ways_near (unsigned char* tx, unsigned char* ty)
     *tx = bx;
     *ty = by;
     return 1;
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part 27: the lights burning (slice 4.1's: DUNGEON.md's light, HOUSE.md's burning) */
+#pragma code-name (push, "SW27CODE")
+#pragma rodata-name (push, "SW27RODATA")
+
+/* Every light lit burns down as the clock goes, wherever it is (carried, put down, set in a sconce: but not one its
+** keepers tend, I_TENDED, nor one that never burns down, a glow, the theme's), a game minute at a time: the store's
+** few lit records gone through once a minute (burn_due, the main loop's), the minutes since the last taken off each
+** one's fuel (a chunk's things paged out caught up as they're read in: ipage.c's).  So no lighting, putting out or
+** filling has any work for it, nor the record any room (a minute's pass of the store, in assembly, and this part's
+** swap: off every hot path).  In its last ten minutes it's burning low, told if it's the character's; at none it goes
+** out (a candle burnt away, gone; a lantern dry, a torch burnt out, kept to be renewed), told if it's the
+** character's, or one it sees (E_TASK's TE_LOW, TE_OUT: b its kind, | 0x80 not the character's), the light layer
+** about one lying there out of date (E_LIGHT: the senses'); the character's light made again and looked about in (its
+** only light gone, in the dark: its long task stopped hard, part 23's task_out); and the minutes left of the light it
+** carries in the hub (pc_fuel: the status line's) */
+void __fastcall__ task_out (unsigned char b);   /* (Part 23's) */
+unsigned long burn_due;
+unsigned char burn_ask;                         /* (The minutes left made again at once: a light's change) */
+static unsigned char burn_on;                   /* (The first minute begun) */
+
+/* The character's light's minutes left (f, its brightest's: 0xFFFF it never burns down), in words for the status
+** line, the hub's pc_left ("torch 40m", "lantern 5h59m"; "" none: the UI's main RAM's room, as the referee's
+** words, pcstatus, are its) */
+static void __fastcall__ left_words (unsigned f)
+{
+    char* e = HUB->pc_left;
+
+    *e = 0;
+    if (!HUB->pc_light || f == 0xFFFF) {
+        return;
+    }
+    strncpy (e, HUB->pc_lamp, 12);
+    e[12] = 0;
+    e += strlen (e);
+    *e++ = ' ';
+    if (f >= 60) {
+        utoa (f / 60, e, 10);
+        strcat (e, f % 60 < 10 ? "h0" : "h");
+        e += strlen (e);
+    }
+    utoa (f % 60, e, 10);
+    strcat (e, "m");
+}
+
+void s_burns_now (void)
+{
+    struct msg lm;                              /* (On the C stack: the main RAM's room) */
+    struct item q;
+    const struct burn* b;
+    struct item* p;
+    unsigned char* sq;
+    unsigned i, j, d, left, bf, wx, wy;
+    unsigned char mine, r, best, out, seen, ww, ws;
+
+    hub_map (0);
+    burn_ask = 0;
+    if (!burn_on) {
+        burn_on = 1;                            /* (The first: a minute from now, the game begun or carried on) */
+        burn_due = HUB->now + 600;
+    }
+    for (d = 0; HUB->now >= burn_due; ++d) {    /* (The minutes gone, a minute at a time: no long division; none, a
+                                                **   light's change, I_LIGHT's, the minutes left made again) */
+        burn_due += 600;
+    }
+    best = out = seen = 0;
+    bf = 0xFFFF;
+    for (i = 0; (i = items (i, IN_FLAGS | IN_SQUARE | IN_ACTOR | IN_ITEM | IN_PORTAL, I_LIT)) != 0; ) {
+        memcpy (&q, ip, sizeof q);
+        for (j = i; (p = item_at (j))->where == IW_ITEM; j = p->x) {   /* (Up to whoever has it, or where it lies) */
+        }
+        ww = p->where;                          /* (Copied: the window moves) */
+        ws = p->sn;
+        wx = p->x;
+        wy = p->y;
+        mine = ww == IW_ACTOR && !wx;
+        hub_map (CAT_BANK);
+        r = mine ? CATALOGUE[q.kind].light : 0;
+        if (!q.id || (q.flags & I_TENDED) || !(b = burn_of (q.kind))) {
+            if (r > best) {                     /* (The brightest it carries: never burning down) */
+                best = r;
+                bf = 0xFFFF;
+            }
+            continue;
+        }
+        left = q.fuel > d ? q.fuel - d : 0;
+        item_at (i)->fuel = left;
+        if (r > best) {
+            best = r;
+            bf = left;
+        }
+        if (left) {
+            if (mine && q.fuel > BURN_LOW && left <= BURN_LOW) {
+                hub_map (0);
+                evb = q.kind;
+                event (E_TASK, 0, TE_LOW);      /* ("Your torch is burning low.") */
+            }
+            continue;
+        }
+        burn_ask = 1;                           /* (Its minutes left made again, the next time round) */
+        if (!b->fuels) {
+            item_at (i)->kind = 0;              /* (Burnt away: a candle gone) */
+        } else {
+            item_at (i)->flags &= ~I_LIT;       /* (A lantern dry, a torch burnt out: to be renewed) */
+        }
+        if (mine) {
+            out = q.kind;                       /* (The character's: its light made again, below) */
+            continue;
+        }
+        if (ww != IW_SQUARE && ww != IW_PORTAL) {
+            continue;                           /* (An actor's: the denizens' lights, to come) */
+        }
+        lm.kind = E_LIGHT;                      /* (One lying there: the light layer about it out of date) */
+        lm.a = ws;
+        lm.w1 = wx;
+        lm.w2 = wy;
+        hub_map (0);
+        lm.t = HUB->now;
+        hub_event (&lm);
+        if (lm.a == HUB->pc_stratum && (sq = at (lm.a, lm.w1, lm.w2)) != 0 && (*sq & T_VIS)) {
+            hub_map (0);
+            evb = q.kind | 0x80;                /* ("The torch gutters and goes out.": one it sees) */
+            event (E_TASK, 0, TE_OUT);
+            seen = 1;
+        }
+    }
+    if (out || seen) {
+        if (out) {
+            light_now ();                       /* (Its light made again: another lit still, or none) */
+            hub_map (0);
+            HUB->pc_left[0] = 0;                /* (Its words too, the next time round) */
+        }
+        see (0);                                /* (Looked about in the new light) */
+        hub_map (0);
+        if (out && (sq = at (HUB->pc_stratum, HUB->pc_x, HUB->pc_y)) != 0 && !(*sq & T_VIS)) {
+            task_out (out);                     /* (In the dark: its long task stopped, part 23's) */
+        } else if (out) {
+            hub_map (0);
+            evb = out;
+            event (E_TASK, 0, TE_OUT);          /* ("Your torch gutters and goes out.": another lit still, or a
+                                                **   room's own light) */
+        }
+        view (V_DARK);
+    } else {
+        hub_map (0);
+        HUB->pc_fuel = bf;
+        left_words (bf);
+    }
 }
 
 #pragma code-name (pop)

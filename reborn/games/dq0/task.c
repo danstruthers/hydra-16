@@ -2,7 +2,9 @@
 ** task.c - (dq0) the long tasks' words (HOUSE.md's long tasks, slice 4.0: the world keeps them, the hub's pc_task the
 ** character's): what came of one (E_TASK: stopped, asked, carried on, refused), a walk's beats as it goes (E_BEAT),
 ** the task a stop names ("stop digging": its LT_*), a question's answer read, and a line typed as the character's
-** busy carried out at once or held (fighting on's: a command taking over).  Overlay 3's.
+** busy carried out at once or held (fighting on's: a command taking over); a light burning low and going out (E_TASK's
+** too), and the status line's light left (slice 4.1's).  Overlay 3's (the stop's word and a question's answer overlay
+** 8's).
 */
 
 #include <string.h>
@@ -45,15 +47,26 @@ static const char* __fastcall__ foe (unsigned char b, unsigned char cap)
     return fn;
 }
 
+/* A light's kind's name (E_TASK's b, TE_LOW's, TE_OUT's: the catalogue's, its kind | 0x80), in fn; and whether it's a
+** plural (K_PLURAL: candle stubs) */
+static unsigned char __fastcall__ lamp (unsigned char b)
+{
+    unsigned char f;
+
+    hub_mem (CAT_BANK, fn, CATALOGUE[b & 0x7F].name, sizeof CATALOGUE[0].name);
+    hub_mem (CAT_BANK, &f, &CATALOGUE[b & 0x7F].flags, 1);
+    return f & K_PLURAL;
+}
+
 /* What came of the character's long task: E_TASK's w (TE_*, its kind times 256); named, the kind its stop named (b),
-** or the foe (TE_FIGHT's), or the health (TE_ASK_HURT's).  1 if a question's put; 2 one answered yes unasked (dq0
-** -a's, the tests': not put); 4 fighting on begun (the character busy) */
+** or the foe (TE_FIGHT's), or the health (TE_ASK_HURT's), or a light's kind (TE_LOW's, TE_OUT's).  1 if a question's
+** put; 2 one answered yes unasked (dq0 -a's, the tests': not put); 4 fighting on begun (the character busy) */
 unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
 {
-    unsigned char k = w >> 8;
+    unsigned char k = w >> 8, p;
     const char* d = doing[k < NDOING ? k : 0];
 
-    if ((unsigned char) w <= TE_NEAR || (unsigned char) w == TE_ENGAGED) {
+    if ((unsigned char) w <= TE_NEAR || (unsigned char) w == TE_ENGAGED || ((unsigned char) w == TE_OUT && k)) {
         reach = 0;                              /* (A walk over to a thing stopped: its command dropped) */
     }
     k = (unsigned char) w;
@@ -124,6 +137,20 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
     case TE_NO_FOE:                             /* (b 1: in shock, in no state to fight on) */
         msg (named ? "You're in no state to fight." : "No foe is left beside you.");
         break;
+    case TE_LOW:                                /* (A light it carries in its last ten minutes: slice 4.1's) */
+        p = lamp (named);
+        sayf ("\nYour %s %s burning low.", fn, p ? "are" : "is");
+        break;
+    case TE_OUT:                                /* (Its fuel burnt: its own, its only light, its task stopped with
+                                                **   it; or one it sees lying there, | 0x80) */
+        p = lamp (named);
+        sayf ("\n%s %s gutter%s and go%s out", named & 0x80 ? "The" : "Your", fn, p ? "" : "s", p ? "" : "es");
+        if (w >> 8) {
+            sayf (": you stop %s.", d);
+        } else {
+            say (".");
+        }
+        break;
     }
     return k == TE_ASK_SEEN || k == TE_ASK_TIRED || k == TE_ASK_HEARD || k == TE_ASK_HURT;    /* (1: a question put) */
 }
@@ -147,26 +174,37 @@ void __fastcall__ o_state_words (unsigned char cond)
     harm_told |= cond;
 }
 
-/* The bar of a long task's part done, ten cells, put after the status line's right side so far (s); a task of no
-** length its words (a fight's, its foe: "Fighting the giant rat") */
+/* The status line's right side so far (s), and after it: the bar of a long task's part done, ten cells; a task of
+** no length its words (a fight's, its foe: "Fighting the giant rat"); then the light the character carries, its
+** minutes left (slice 4.1's player aid, the world's words, the hub's pc_left: "torch 40m", "lantern 5h59m"), if
+** there's room for it beside the referee's words, the facing and the clock (the status line's 72) */
 void __fastcall__ o_bar_text (char* s, unsigned done, unsigned len)
 {
     unsigned char i, b;
+    char* e;
+    char t[sizeof HUB->pc_left];                /* (On the C stack: the main RAM's none) */
 
-    if (!len) {
-        hub_mem (0, &b, &HUB->pc_task.foe, 1);
+    hub_mem (0, &b, &HUB->pc_task.kind, 1);
+    hub_mem (0, &i, &HUB->pc_task.foe, 1);
+    if (b && !len && i) {
         strcat (s, "Fighting ");
-        strcat (s, foe (b, 0));
+        strcat (s, foe (i, 0));
         strcat (s, "  ");
-        return;
+    } else if (b && len) {
+        b = done >= len ? 10 : (unsigned char) ((unsigned long) done * 10 / len);
+        e = s + strlen (s);
+        *e++ = '[';
+        for (i = 0; i < 10; ++i) {
+            *e++ = i < b ? '#' : '.';
+        }
+        strcpy (e, "]  ");
     }
-    b = done >= len ? 10 : (unsigned char) ((unsigned long) done * 10 / len);
-    s += strlen (s);
-    *s++ = '[';
-    for (i = 0; i < 10; ++i) {
-        *s++ = i < b ? '#' : '.';
+    hub_mem (0, t, HUB->pc_left, sizeof t);     /* (Its words the world's, as it burns: "" none, or none that burns
+                                                **   down) */
+    if (*t && strlen (s) + strlen (t) <= 32) {  /* (Room left for the referee's 15, the facing's 13, the clock's 9) */
+        strcat (s, t);
+        strcat (s, "  ");
     }
-    strcpy (s, "]  ");
 }
 
 /* A walk's beat as it goes (E_BEAT's w: WB_*, its side times 256) */
@@ -206,6 +244,12 @@ unsigned __fastcall__ o_wait_of (const char* l, unsigned char n)
     }
     return t > 60000UL ? 60000U : (unsigned) t;
 }
+
+/* (Overlay 8's, its bank's room after parts 1 and 7: the stop's word and a question's answer, overlay 3's room the
+** lights' words', slice 4.1's) */
+#pragma code-name (push, "OV8CODE")
+#pragma rodata-name (push, "OV8RODATA")
+#pragma local-strings (push, on)               /* (Their words with them) */
 
 /* The task a stop names, by its word ("digging"; "": none, LT_NONE) */
 unsigned char __fastcall__ o_stop_kind (const char* word)
@@ -247,6 +291,10 @@ unsigned char __fastcall__ o_answer_of (const char* l)
     }
     return 0;
 }
+
+#pragma local-strings (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* A line typed as the character's busy (main.c's at_once: its command the parser's, cmd): 1 if it's carried out at
 ** once, taking no time (what it carries, its sheet, the map, the help, a stop, its state, a look about, a stance),

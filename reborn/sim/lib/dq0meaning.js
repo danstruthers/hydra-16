@@ -63,7 +63,9 @@ const EXPRS = {
   catBank: 'CAT_BANK', kindSize: 'sizeof (struct kind)', nkinds: 'NKINDS', kFlags: F('struct kind', 'flags'), kWeight: F('struct kind', 'weight'),
   item0: 'ITEM_BANK (0)', itemSize: 'sizeof (struct item)', nitems: 'NITEMS', iKind: F('struct item', 'kind'), iFlags: F('struct item', 'flags'),
   iWhere: F('struct item', 'where'), iSn: F('struct item', 'sn'), iX: F('struct item', 'x'), iY: F('struct item', 'y'),
-  iQty: F('struct item', 'qty'), iId: F('struct item', 'id'),
+  iQty: F('struct item', 'qty'), iId: F('struct item', 'id'), iFuel: F('struct item', 'fuel'), iThick: F('struct item', 'thick'),
+  iMat: F('struct item', 'mat'), iQuality: F('struct item', 'quality'), pcFuel: F('struct hub', 'pc_fuel'), pcLeft: F('struct hub', 'pc_left'),
+  ioName: 'IO_NAME', ioTheme: 'IO_THEME', ioBegin: 'IO_BEGIN', ioPuzzle: 'IO_PUZZLE', ioThrow: 'IO_THROW', ioFill: 'IO_FILL',
   sightBank: 'SIGHT_BANK', tSeq: F('struct sight', 'seq'), tWhere: F('struct sight', 'where'), tDark: F('struct sight', 'dark'),
   tKind: F('struct sight', 'kind'), tSize: F('struct sight', 'size'), tRw: F('struct sight', 'rw'), tRh: F('struct sight', 'rh'), tRx: F('struct sight', 'rx'), tRy: F('struct sight', 'ry'),
   tLit: F('struct sight', 'lit'), tCeil: F('struct sight', 'ceil'), tFirst: F('struct sight', 'first'), tZ: F('struct sight', 'z'),
@@ -144,12 +146,15 @@ function layout() {
   const blockOf = {};
   for (const b of C.blocks) for (const n of b) if (!blockOf[n]) blockOf[n] = b;
   const name = (member, v) => { const b = blockOf[member] || []; const n = b.find(x => byName[x] === v); return n === undefined ? v : n; };
-  return (LAYOUT = { L: j.L, K: byName, name });
+  // (A things' request's kind: items.h's IO_*, the enum's or those #defined after it, IO_NAME ... IO_FILL)
+  const D = j.L, ioDefs = { [D.ioName]: 'IO_NAME', [D.ioTheme]: 'IO_THEME', [D.ioBegin]: 'IO_BEGIN', [D.ioPuzzle]: 'IO_PUZZLE', [D.ioThrow]: 'IO_THROW', [D.ioFill]: 'IO_FILL' };
+  const ioName = v => { const n = name('IO_KIT', v); return typeof n === 'number' && ioDefs[v] ? ioDefs[v] : n; };
+  return (LAYOUT = { L: j.L, K: byName, name, ioName });
 }
 
 // The recorder (a test's machine's, sim/test.js's instrument)
 function createRecorder() {
-  const { L, K, name } = layout();
+  const { L, K, name, ioName } = layout();
   let m = null, key0 = -1, game = null, enters = 0;
   const games = [];
   const bank = n => m && key0 >= 0 ? m.sharedBanks()[key0 + n] : null;
@@ -179,6 +184,7 @@ function createRecorder() {
         else if (e.te === 'TE_NO_FOE') e.shock = !!e.b;                    //   its end, in shock or none left)
         else if (e.te === 'TE_BREAK') { e.by = (e.b & 0x3F) - 1; e.how = ['back', 'flight', 'run'][w >> 8]; delete e.task; }   // (A disengage's)
         else if (e.te === 'TE_FREE') e.none = ['engaged', 'near', 'way'][e.b];   // (None: not engaged, nothing near to flee, no way back)
+        else if (e.te === 'TE_LOW' || e.te === 'TE_OUT') { e.lamp = e.b & 0x7F; e.seen = !!(e.b & 0x80); }   // (A light's kind; one lying there seen)
         else e.named = name('LT_NONE', e.b);
         break;
       case 'E_BEAT': e.beat = name('WB_QUIET', w & 0xFF); e.side = name('WS_AHEAD', w >> 8); break;
@@ -194,7 +200,7 @@ function createRecorder() {
     if (!h || h[0] !== (L.magic & 0xFF) || h[1] !== L.magic >> 8) return null;
     const s = { line: enters, game: games.length - 1, cyc: m.cpu.cyc, now: w32(h, L.now), quit: h[L.quit], wayOpen: h[L.wayOpen],
       status: str(h, L.pcstatus, 16), digTool: [0, 1, 2, 3].map(i => str(h, L.digTool + i * 8, 8)),
-      pc: { sn: h[L.pcSn], x: w16(h, L.pcX), y: w16(h, L.pcY), face: h[L.pcFace], light: h[L.pcLight], lamp: str(h, L.pcLamp, 14),
+      pc: { sn: h[L.pcSn], x: w16(h, L.pcX), y: w16(h, L.pcY), face: h[L.pcFace], light: h[L.pcLight], lamp: str(h, L.pcLamp, 14), fuel: w16(h, L.pcFuel), left: str(h, L.pcLeft, 20),
         pos: h[L.pcPos], gait: h[L.gait], watch: h[L.watch], going: h[L.pcGoing], stance: name('D_NONE', h[L.pcStance]), strike: name('SK_BEST', h[L.pcStrike]),
         task: { kind: name('LT_NONE', h[L.pcTask]), asking: h[L.pcTask + 1], len: w16(h, L.pcTask + 2), done: w16(h, L.pcTask + 4), foe: h[L.pcTask + L.ltFoe] - 1 },
         ready: w16(h, L.pcReady) + w16(h, L.pcReady + 2) * 65536, now: w16(h, L.hubNow) + w16(h, L.hubNow + 2) * 65536 },
@@ -214,7 +220,8 @@ function createRecorder() {
       if (!b || !b[o + L.iKind]) continue;
       s.items.push({ n: i, kind: b[o + L.iKind], name: kname(b[o + L.iKind]), weight: cat ? cat[b[o + L.iKind] * L.kindSize + L.kWeight] : 0,
         kflags: cat ? cat[b[o + L.iKind] * L.kindSize + L.kFlags] : 0, flags: b[o + L.iFlags], where: name('IW_SQUARE', b[o + L.iWhere]),
-        sn: b[o + L.iSn], x: w16(b, o + L.iX), y: w16(b, o + L.iY), qty: b[o + L.iQty], id: w16(b, o + L.iId) });
+        sn: b[o + L.iSn], x: w16(b, o + L.iX), y: w16(b, o + L.iY), qty: b[o + L.iQty], id: w16(b, o + L.iId), fuel: w16(b, o + L.iFuel),
+        thick: b[o + L.iThick], mat: b[o + L.iMat], quality: b[o + L.iQuality] });
     }
     const th = bank(L.themeBank);
     if (th) {
@@ -296,7 +303,7 @@ function createRecorder() {
       const kind = name('LT_NONE', h[L.pcTask + L.ltKind]), done = h[off - 1] | v << 8, t = game.tasks[game.tasks.length - 1];
       if (!t || t.kind !== kind || t.done !== done) game.tasks.push({ line: enters, kind, len: w16(h, L.pcTask + L.ltLen), done, cyc: m.cpu.cyc });
     } else if (v === 2) {                                       // (A reply: its state REQ_DONE, the rest written)
-      if (off === L.ireq) game.replies.push({ line: enters, req: 'ireq', kind: name('IO_KIT', h[off + L.irKind]), result: name('IR_OK', h[off + L.irResult]),
+      if (off === L.ireq) game.replies.push({ line: enters, req: 'ireq', kind: ioName(h[off + L.irKind]), result: name('IR_OK', h[off + L.irResult]),
         item: w16(h, off + L.irItem), to: w16(h, off + L.irTo), name: str(h, off + L.irName, 16), into: str(h, off + L.irInto, 16),
         x: w16(h, off + L.irX), y: w16(h, off + L.irY), qty: h[off + L.irQty] });
       else if (off === L.sway) game.replies.push({ line: enters, req: 'sway', kind: name('SW_LOOK', h[off + L.swKind]), word: str(h, off + L.swWord, 16),

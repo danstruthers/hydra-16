@@ -104,6 +104,7 @@ go:
             SWPART      24, 9               ; Engagement, a blow's close-in, fighting on (dq0w.c's)
             SWPART      25, 7               ; The engage initiative test, a grope's (dq0w.c's)
             SWPART      26, 9               ; Disengaging (dq0w.c's)
+            SWPART      27, 9               ; The lights burning down (dq0w.c's: slice 4.1's)
 
             SWFN        start_dig, 1
             SWFN        dig_on, 1
@@ -194,3 +195,6 @@ go:
             SWFN        take_up, 16
             SWFN        world_keep, 16
             SWFN        pc_asked, 16
+            SWFN        burns_now, 27
+            SWFN        task_out, 23
+            SWFN        fill, 27
