@@ -504,6 +504,10 @@ climb's test to hold on).
   throwing daggers, the same way: shot or thrown at the target while it's in range, the next taken each time, the
   next foe in range after it, till none is left, the missiles run out, or an enemy engages the character (then
   fighting on in melee).  Today nothing thrown wounds.
+- **Auto-engaging at a range the player sets** (the user's, 2026-10-20, an enhancement): "autoengage with sword at
+  close range", "autotarget with bow at medium range": a hostile coming within it begins fighting on (melee's
+  close range the engagement zone and a square more, closed in on; a missile weapon's the book's bands).  Today
+  only an enemy engaging the character, or one attacked, is fought.
 - **A round's defences** (the user's, 2026-10-20): automatic, a block or a dodge, the better against the blow, each
   once a round (a block once for each weapon or shield that blocks: two attackers, the shield blocks one and the
   sword the other; a dodge once); a counterstrike only on command (defend counter), its weapon used for the round;

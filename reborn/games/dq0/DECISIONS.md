@@ -766,4 +766,11 @@ on with a missile weapon (slice 4.7's, with the missiles) shoots or throws at it
 next arrow or dagger taken each time, turning to the next foe in range, till none is left, the missiles run out, or
 an enemy engages the character, when it stops (fighting on in melee then, from the engagement: the lead's reading).
 
+And then: "For ranged attacks, the player will want to be able to specify the range at which they want to
+auto-target and attack hostiles, something like "autotarget with bow at medium range".  That can be an enhancement,
+but the same can be done for auto-engaging enemies with melee (autoengage with sword at close range), with close range
+defined specifically as within one square of normal engagement zone, and range weapon ranges defined as per the ranged
+weapons tables."  So a setting, later: a weapon and a range at which a hostile begins fighting on by itself (melee's
+close-in at the engagement zone and a square more; a missile weapon's at the book's bands, short to extreme).
+
 **Design:** HOUSE.md, decided, not yet built.
