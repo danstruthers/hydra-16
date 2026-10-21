@@ -66,7 +66,8 @@ void sheet (void);                              /* The sheet, into the reply */
 void brief (void);                              /*   its short lines */
 void state (void);                              /*   its state: pace, watchfulness, condition, light (ps's) */
 signed char __fastcall__ noticing (const struct req* r);  /* A notice's steps by its state (r a copy; ps's) */
-void __fastcall__ spent (unsigned t);           /* Time spent (t tenths) at spent_at's pace (or GA_REST): fatigue */
+void __fastcall__ spent (unsigned t);           /* Time spent (t tenths) at spent_at's pace (or GA_WORK, GA_REST):
+                                                **   fatigue */
 void __fastcall__ harm (struct req* r);         /* A harm (r a copy, in the main RAM, but its text) */
 
 /* fight.c (overlay 2) */

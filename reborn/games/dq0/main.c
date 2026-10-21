@@ -898,11 +898,9 @@ static unsigned char events (void)          /* (How many there were) */
             break;
         case E_PORTAL:
             if (m.who == 0) {
-                if (finds == 0xFF) {            /* (A search's end: the things concealed about it too, as hard as the
-                                                **   walls were, the part of it done) */
-                    k = HUB->pc_task.len > HUB->pc_task.done ? (unsigned char) ((unsigned long) (HUB->pc_task.len -
-                        HUB->pc_task.done) * 4 / HUB->pc_task.len) : 0;
-                    HUB->ireq.to = k;
+                if (finds == 0xFF) {            /* (A search's end: the things concealed about it too, as far as the
+                                                **   walls were searched, the part of it done: the world's reach) */
+                    HUB->ireq.to = m.a;
                     finds = things (IO_SEARCH, "");
                 }
                 if (!finds || m.w1 != PO_NOTHING) {

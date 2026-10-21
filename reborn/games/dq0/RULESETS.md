@@ -44,7 +44,7 @@ it answers with result 0xFF.
 | RS_SAVE | the UI (the path of the save's pc.hm) | nothing (the referee writes its character, and its creatures' sheets into the save folder: the hub's savedir) |
 | RS_EQUIP | the UI (a 2: every key to hand, each after its mark and with its quality, w1 the load in quarter pounds) | nothing (pcsum anew: load, step) |
 | RS_TEST | the world, the UI, the denizens' task | grade (G_CF ... G_CS); result 1 can't (no tool, magic only), 2 a tongue it doesn't speak; P_DIG's text the tool's key ("hands": bare), w1 the half-feet, w2 the wear |
-| RS_EXERT | the world (w1 tenths at pace a, or GA_REST) | nothing (pcsum anew) |
+| RS_EXERT | the world (w1 tenths at pace a, or at strenuous work, GA_WORK: a climb's rounds, a dig's spells, a battering's blows; or GA_REST) | result 1 if it tired the character a level more (the world's soft question); pcsum anew |
 | RS_HARM | the world (a cause, HC_*, and its numbers) | x the effects (rs.h's struct rs_effect, X_NONE after the last); b the worst wound's band (0 none); w2 the tenths it's senseless (0); result 1 a fall stopped by a hold; the text its words; pcsum anew (cond: C_DEAD ends the game) |
 | RS_ATTACK | the world (a blow: actor at other, a its aim, b AS_BEST, w2 shy and prone bits) | result O_* (0xFF: none struck), a whose fumble or stumble, c AF_* (AF_CAUTIOUS, AF_BLEEDING), grade hub.h's FF_* (senseless, dead, flees, fallen), w2 the tenths one's out for, x the effects (X_COND_ON C_PRONE: fallen), the text its four lines (below); at RS_THING (other): w1 the harm the thing takes, c, w2 and result's bit 0 the striker's own hurt (bit 1: a part of it struck) |
 | RS_TIME | the world (actor 0xFF: the bleeders, w2's bits) | w1 the bits of those dead of it |

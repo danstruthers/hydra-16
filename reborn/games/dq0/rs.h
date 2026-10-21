@@ -86,9 +86,12 @@ enum { MAT_EARTH, MAT_STONE, MAT_MASONRY, MAT_FLAGS, MAT_SOIL };    /* (Earth ha
                                                 **   bare hands dig, the user's, 2026-10-20) */
 
 /* ---- Paces: how fast an actor goes, the slowest first (a creep, a slow walk, a walk, a jog, a run, a sprint); the
-** summary's gstep each one's time a square; RS_EXERT's a the one the time went at (GA_REST: standing still) */
+** summary's gstep each one's time a square; RS_EXERT's a the one the time went at (GA_REST: standing still; GA_WORK:
+** strenuous work, not a pace, HOUSE.md's tiring: a climb's rounds, a dig's spells, a battering's blows, and swimming
+** when there's water, slice 4.9) */
 enum { GA_CREEP, GA_SLOW, GA_WALK, GA_JOG, GA_RUN, GA_SPRINT, NGAITS };
 #define GA_REST         0xFF
+#define GA_WORK         0xFE
 
 /* ---- Conditions (bits): what the world must know of an actor's state */
 #define C_PRONE         0x0001
@@ -231,9 +234,9 @@ enum {
     RS_HARM,                                    /* A cause (fall, fire, poison ...) and its dice -> effects */
     RS_TIME,                                    /* Minutes passed (w1): bleeding, fatigue -> effects (b its health,
                                                 **   result 1 if it died of them) */
-    RS_EXERT,                                   /* Time passed (w1 tenths) moving at a pace (a: GA_*), or standing
-                                                **   still (GA_REST): fatigue gained, or rested off (its summary
-                                                **   anew) */
+    RS_EXERT,                                   /* Time passed (w1 tenths) moving at a pace (a: GA_*), at strenuous
+                                                **   work (GA_WORK), or standing still (GA_REST): fatigue gained, or
+                                                **   rested off (its summary anew; result 1, a level more) */
     RS_REST,                                    /* Hours resting: healing, advancement -> effects, words */
     RS_TREAT,                                   /* A healer, a patient -> effects */
     RS_EQUIP,                                   /* An item taken up (a 1) or put away (a 0): its key in the text

@@ -96,24 +96,35 @@ static unsigned char near_trap (void)
 }
 
 /* A search about the character (a minute): the referee's test (P_SEARCH) against each hidden door and each
-** hidden trap within a few squares that it sees (a trap harder the better it's hidden); a door found is a door like
-** any other from then on, a trap known (told as it's found); or (link 1) where the world's character stops as it
-** searches as it goes, quietly and in no more time */
+** hidden trap within a few squares that it sees (a trap harder the better it's hidden), the nearest first as far as
+** its time went, each at the full chance (HOUSE.md: a search cut short covers the part done); a door found is a door
+** like any other from then on, a trap known (told as it's found, and its reach, the UI's things' search the same); or
+** (link 1) where the world's character stops as it searches as it goes, quietly and in no more time, all of them */
 #define SEARCH_R        3
+static const unsigned char sq_[] = { 9, 4, 1, 0, 1, 4, 9 };    /* (A square's distance off, squared, by its offset) */
+
 static void search (void)
 {
     unsigned i, j;
-    unsigned char found = 0, k;
+    unsigned char found = 0, k, r, a, b;
     unsigned char* p;
 
-    for (j = wk.fy - SEARCH_R; j <= wk.fy + SEARCH_R; ++j) {
-        for (i = wk.fx - SEARCH_R; i <= wk.fx + SEARCH_R; ++i) {
-            if ((p = sq (i, j)) == 0 || !(*p & T_VIS)) {
-                continue;
+    hub_map (0);                                /* (Its reach, r: a square searched if its distance off, squared, is
+                                                **   less; 19 all of them, the corners' 18; one for each 32 tenths of
+                                                **   its minute done, the hub's long task's, about as many squares as
+                                                **   that part of the 49, the nearest first) */
+    i = (HUB->pc_task.done + 31) >> 5;
+    r = wk.link || i > 19 ? 19 : i;
+    for (b = 0; b <= 2 * SEARCH_R; ++b) {
+        j = wk.fy - SEARCH_R + b;
+        for (a = 0; a <= 2 * SEARCH_R; ++a) {
+            i = wk.fx - SEARCH_R + a;
+            if (sq_[a] + sq_[b] >= r || (p = sq (i, j)) == 0 || !(*p & T_VIS)) {
+                continue;                       /* (Beyond its reach, or unseen) */
             }
             if ((trap_on (i, j, 0) || trap_on (i, j, 1)) && (wk.tq.state & TS_HIDDEN)) {
                 if (test (P_SEARCH, wk.tq.state & TS_MAGIC ? HIDE_MAGICAL : HIDE_MECHANICAL,
-                    -(signed char) (wk.tq.hide + srch_pen)) > 0 && !wres) {
+                    -(signed char) wk.tq.hide) > 0 && !wres) {
                     trap_state (wk.tq.state & ~TS_HIDDEN);
                     trap_told (TO_FOUND);
                     found |= 2;
@@ -129,8 +140,7 @@ static void search (void)
                 continue;
             }
             wk.pq = C->portal[k];
-            if (test (P_SEARCH, wk.pq.state & PS_MAGIC ? HIDE_MAGICAL : HIDE_MECHANICAL, -(signed char) srch_pen) > 0 &&
-                !wres) {
+            if (test (P_SEARCH, wk.pq.state & PS_MAGIC ? HIDE_MAGICAL : HIDE_MECHANICAL, 0) > 0 && !wres) {
                 wk.px = i;
                 wk.py = j;
                 door_state (wk.pq.state & ~PS_HIDDEN);
@@ -146,7 +156,7 @@ static void search (void)
     } else {
         wk.tt = 600;
     }
-    told (E_PORTAL, found & 1 ? PO_FOUND : found ? PO_FOUND_TRAP : PO_NOTHING, 0);
+    told (E_PORTAL, found & 1 ? PO_FOUND : found ? PO_FOUND_TRAP : PO_NOTHING, r);
 }
 
 /* A trap stepped onto (W_STEP: at px, py); a search; a trap disarmed: the door's at px, py, or one in reach (else res

@@ -46,6 +46,8 @@ extern struct work wk;
 #define W_BLOW          0xFD                    /* (A battering under way: its next blow as the character's free; */
 #define W_GONE          0xFE                    /*   the part given way at the last, told as it's free) */
 #define BLOWS           12                      /* (A battering's blows at most: its long task's length) */
+#define BLOW_T          30                      /* (A blow's time, tenths: its strenuous work, the referee's to tire
+                                                **   the character by) */
 extern unsigned char pc_cut;                    /* (The character's long task stopped, hard or by the player: dq0w.c's;
                                                 **   a battering's blows given up, wblow.c's) */
 
@@ -57,7 +59,6 @@ void traps (void);                              /* (Part 8's) A trap stepped ont
 /* dq0w.c's: the referee asked (kind, a, b; its w1 ww1, its steps wsteps, 0 after): its grade, wres its result */
 signed char __fastcall__ ask_w (unsigned char kind, unsigned char a, unsigned char b);
 extern unsigned char wres;
-extern unsigned char srch_pen;                  /* (A search cut short: its tests the harder, steps; dq0w.c's) */
 extern signed char wsteps;
 
 #endif
