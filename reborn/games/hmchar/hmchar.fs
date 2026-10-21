@@ -4,7 +4,7 @@
 \ (games/hmchar) in HyForth, the same questions, the same profile, the same file; and from the same seed the same
 \ character, its dice rolled in the same order.
 \
-\ hmchar.fs [-s seed] [-o file] [-q] [-p species] [-c occupation]
+\ hmchar.fs [-s seed] [-o file] [-q] [-p species] [-c occupation] [-u culture]
 \   -s seed    the same character each time
 \   -o file    where it's written (default: NAME.hm, in the current directory, NAME the character's)
 \   -q         no questions: the first roll kept, an occupation (one of the book's), weapons and option points chosen
@@ -12,15 +12,18 @@
 \   -p species the character's species, not rolled: human, elf (Sindarin) or dwarf (Khuzdul), by its first letter
 \              (h, e or s, d or k)
 \   -c occupation  the occupation, by its name (case ignored, a beginning enough), not asked or drawn (-q's draw made
-\              all the same: the rest of the character as it would be)
+\              all the same: the rest of the character as it would be), not held to the character's class or sex
+\   -u culture a human's culture, not rolled: feudal, imperial, viking or tribal (a beginning enough)
 \
-\ The steps (Character 1): the attributes rolled (kept, or rolled again); an occupation, any of the book's that
-\ occupations.txt has (C's hmchar's, its lib/hmchar: the Occupational Skills table, Character 15; a soldier's unit by
-\ the character's culture, Character 27; a cleric's church by its deity, Character 23; not yet a mage's, Character
-\ 25), its skills opened as the book has them (the weapons or crafts it gives chosen); or the player's own (11
-\ points, two in a skill at most and three in one, its primary); the five option points spent (Character 16: a
-\ skill opened at its OML for one, or improved by its SB for one, two points in a skill at most); a name.  Not here:
-\ the family's occupation and its skills, contacts, the veterans' points.
+\ The steps (Character 1): the attributes rolled, a human's culture too (Character 3: mostly Feudal), kept, or
+\ rolled again; a deity, the player's choice (Character 12: one of the ten or none, the book's Morality for each a
+\ guide; -q's none); an occupation, any of the book's that occupations.txt has (C's hmchar's, its lib/hmchar: the
+\ Occupational Skills table, Character 15; a soldier's unit by the character's culture, Character 27; a cleric's
+\ church by its deity, Character 23; not yet a mage's, Character 25) that the character's class and sex allow it
+\ (the book's limits), its skills opened as the book has them (the weapons or crafts it gives chosen); or the
+\ player's own (11 points, two in a skill at most and three in one, its primary); the five option points spent
+\ (Character 16: a skill opened at its OML for one, or improved by its SB for one, two points in a skill at most); a
+\ name.  Not here: the family's occupation and its skills, contacts, the veterans' points.
 
 require hydra.fl
 require harn.fs
@@ -104,17 +107,26 @@ variable f-a  variable f-u
 
 create kind 12 allot  0 value kind-n              \ The group's kind ("soldier")
 0 value sect   10 value sdty                      \ The group offered, its deity (a church's; else none: 10)
-\ A group's header, its [ passed: its kind, whether it's offered (no qualifier, or the character's culture, or its
-\ deity, or a deity when it has none), its deity: true if a title follows (the line's rest, cur)
-create qual 2 cells allot
+\ Whether a header's word (its kind, or a qualifier) lets the character have the group (C's admits, hmocc's): a
+\ deity's name, if the character's is that deity or it has none (sdty: the deity); a culture's, if it's the
+\ character's; a class's (Guilded, Noble), if the character's is that or higher; a sex's, if it's the character's;
+\ any other, yes.  -c's occupation isn't held to the class or the sex
+: admits? ( c-addr u -- flag )
+  10 0 do 2dup i harn-deity-name same? if 2drop i to sdty  harn-dty harn@ dup 10 = swap i = or unloop exit then loop
+  6 0 do 2dup i harn-culture-name same? if 2drop harn-culture c@ i = unloop exit then loop
+  5 3 do 2dup i harn-class-name same? if 2drop cname-n 0<> harn-social c@ i < 0= or unloop exit then loop
+  2 0 do 2dup i harn-sex-name same? if 2drop cname-n 0<> harn-sx harn@ i = or unloop exit then loop
+  2drop true ;
+: first-word ( c-addr u -- c-addr' u' c-addr2 u2 )  \ The first word (to a space or the end), and the rest after it
+  over >r  begin dup if over c@ bl <> else false then while 1 /string repeat
+  over r@ -  r> swap 2>r  dup if 1 /string then  2r> ;
+\ A group's header, [KIND] or [KIND QUALIFIER ...], its [ passed: its kind, whether it's offered (every word of it
+\ admits the character), its deity: true if a title follows (the line's rest, cur)
 : header ( -- title? )
   cur 2@ over >r begin dup if over c@ [char] ] <> else false then while 1 /string repeat  ( a' u' )
   over r@ - r> swap 2swap  dup if 1 /string then cur 2!   ( start len )
-  2dup s"  " search if 2swap 2 pick - 11 min  2swap 1 /string 11 min else 2drop 11 min 0 0 then  qual 2!
-  dup to kind-n kind swap move
-  10 to sdty  10 0 do qual 2@ i harn-deity-name same? if i to sdty then loop
-  qual 2@ nip 0=  qual 2@ harn-culture c@ harn-culture-name same? or
-  sdty 10 <> harn-dty harn@ dup 10 = swap sdty = or and or to sect
+  10 to sdty  first-word 2dup 11 min dup to kind-n kind swap move  admits? to sect
+  begin dup while first-word admits? sect and to sect repeat 2drop
   cur 2@ if c@ bl = else drop false then  dup if cur 2@ 1 /string cur 2! then ;
 \ The title said (a long one broken at a space past the 68th column)
 : title ( -- )
@@ -275,12 +287,50 @@ create pts 91 allot   variable op   0 value own   0 value primary
     then then then
   repeat ;
 
+\ ---- The culture (Character 3; C's culture, hmocc's): a human's rolled, mostly Feudal (01-70 Feudal, 71-80
+\ Imperial, 81-90 Viking, 91-00 Tribal), or -u's; an elf's and a dwarf's harn-create's.  One not Feudal has its own
+\ social class rolled (the book's table by culture), and so the native tongue's OML again
+create cult-t 70 , 80 , 90 , 100 ,
+create cult-of 2 c, 3 c, 1 c, 0 c,                \ (Feudal, Imperial, Viking, Tribal)
+-1 value ucult                                    \ -u's culture (0-3), or -1: rolled
+: culture ( -- )
+  harn-sp harn@ if exit then
+  ucult dup 0< if drop d100 cult-t 4 htable cult-of + c@ then
+  dup 2 = if drop exit then
+  dup harn-culture c!  d100 swap 5 * cells class-t + 5 htable harn-social c!  19 harn-oml 19 harn-ml! ;
+
+\ ---- The deity (Character 12; C's deity, hmocc's): the player's choice, one of the ten or none (-q's none), the
+\ book's Morality for each shown as a guide; its ritual skill opened, as harn-create opens a religious character's
+create morals 3 c, 13 c, 5 c, 16 c, 5 c, 16 c, 8 c, 18 c, 3 c, 7 c, 3 c, 10 c, 8 c, 18 c, 5 c, 16 c, 8 c, 18 c, 11 c, 18 c,
+create dbuf 20 allot  variable dn
+: db+ ( c-addr u -- ) tuck dbuf dn @ + swap move dn +! ;
+: dbn+ ( n -- ) 0 <# #s #> db+ ;
+variable dfound  variable dcount
+: deity-named ( c-addr u -- d count )             \ The deities (None too) an answer begins: the last, how many
+  0 dcount !  11 0 do 2dup i harn-deity-name begins? if i dfound ! 1 dcount +! then loop 2drop  dfound @ dcount @ ;
+: deity ( -- )
+  nl s" A deity (Character 12): the Morality each favours, a guide (yours is " say harn-mor harn@ sayn s" ):" say
+  10 0 do                                         \ ("Agrik 3-13," ... "Siem 11-18.")
+    0 dn !  i harn-deity-name db+  s"  " db+  i 2* morals + c@ dbn+  s" -" db+  i 2* 1+ morals + c@ dbn+
+    i 9 < if s" ," else s" ." then db+  dbuf dn @ w
+  loop nl
+  begin
+    s" Which (a beginning enough; Enter alone, none)? " ask  dup 0= if 2drop exit then
+    deity-named  dup 1 <> if
+      if ." Which? More than one begins so." else ." There's no such deity." then cr drop false
+    else drop true then
+  until
+  dup 10 = if drop exit then
+  dup harn-dty harn!  21 + dup harn-open  dup harn-skill-name type  dup harn-ml@ >r s"  is" r> s" " named cr drop ;
+
 \ ---- The occupation: one of the book's, chosen (by its number or its name, a group listed by its kind's first
 \ letter, ? and one its skills shown), or -c's, or -q's at random (one draw, -c or not); its skills opened (an
-\ automatic skill listed takes the occupation's OML, not the two added: Character 16); or the player's own
+\ automatic skill listed takes the occupation's OML, not the two added: Character 16); or the player's own.  The
+\ deity first (Character 12), asked of the player
 0 value occs#   0 value show
 : no-occ ( -- ) s" hmchar.fs: no lib/hmchar/occupations.txt" 2 write-line drop  1 0 sys-exits ;
 : occupation ( -- )
+  quiet 0= if deity then
   cname cname-n wname 2!  quiet 0= cname-n 0= and to talk
   talk if cr ." An occupation (Character 15; not yet a mage's, Character 25: theirs come with magic):" cr then
   o-count scan dup to occs# 0= if no-occ then
@@ -336,7 +386,8 @@ create pts 91 allot   variable op   0 value own   0 value primary
   harn-mor 1+ harn-str do
     i harn-attr-name i harn@ i harn-voi = i harn-mor = or if s" " else s" , " then named  i harn-voi = if cr then
   loop cr
-  s" Endurance" harn-end s" , " named  s" Move" harn-move s" , " named  s" Piety" harn-pty harn@ s" ; medical:" named
+  s" Endurance" harn-end s" , " named  s" Move" harn-move s" , " named  s" Piety" harn-pty harn@ s" " named
+  harn-dty harn@ dup 10 < if ."  (" harn-deity-name type ." )" else drop then  ." ; medical:"   \ (The deity worshipped)
   0 harn-med c@ if 4 0 do i harn-med c@ ?dup if space harn-medical-name type then loop else ."  none" then cr
   ." Skills (ML):"  0  harn-nskills 0 do        \ (A line 78 at most, as C's: the column)
     i harn-ml@ if
@@ -353,10 +404,14 @@ create pts 91 allot   variable op   0 value own   0 value primary
 
 \ ---- The program
 : err ( c-addr u -- ) 2 write-file drop ;
-: usage ( -- ) s" usage: hmchar.fs [-s seed] [-o file] [-q] [-p species] [-c occupation]" 2 write-line drop  1 0 sys-exits ;
+: usage ( -- ) s" usage: hmchar.fs [-s seed] [-o file] [-q] [-p species] [-c occupation] [-u culture]" 2 write-line drop
+  1 0 sys-exits ;
 : species-of ( c-addr u -- sp )                   \ -p's: h a human, e or s an elf, d or k a dwarf: 0-2, or -1
   0= if drop -1 exit then  c@ lower-c
   5 0 do s" hesdk" drop i + c@ over = if drop i 1+ 2/ unloop exit then loop  drop -1 ;
+: culture-of ( c-addr u -- c )                    \ -u's: a beginning of tribal, viking, feudal or imperial: 0-3, or -1
+  dup 0= if 2drop -1 exit then
+  4 0 do 2dup i harn-culture-name begins? if 2drop i unloop exit then loop  2drop -1 ;
 variable ai
 : option ( -- )                                   \ The option at ai, ai past it (and its value)
   ai @ arg
@@ -365,13 +420,14 @@ variable ai
   2dup s" -s" word= if 2drop ai @ 1+ arg 0 0 2swap >number 2drop rseed  2 ai +! exit then
   2dup s" -p" word= if 2drop ai @ 1+ arg species-of dup 0< if usage then harn-species !  2 ai +! exit then
   2dup s" -c" word= if 2drop ai @ 1+ arg 23 min dup to cname-n cname swap move  2 ai +! exit then
+  2dup s" -u" word= if 2drop ai @ 1+ arg culture-of dup 0< if usage then to ucult  2 ai +! exit then
   s" -o" word= if ai @ 1+ arg 63 min dup to out-n out swap move  2 ai +! exit then
   usage ;
 : options ( -- ) 1 ai !  begin ai @ argc < while option repeat ;
 : hmchar ( -- )
   options
   find-lib  lib-ok? 0= if 0 to libdir-n s" /sd/0/games/lib/hmchar" lib+ then
-  begin harn-create  quiet if true else
+  begin harn-create  culture  quiet if true else
     profile cr s" Keep this character, or roll again (k or r)? " ask if c@ lower-c [char] k = else drop false then
   then until
   occupation  5 false spend

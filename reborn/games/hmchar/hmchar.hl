@@ -3,45 +3,56 @@
 ; (harnfile.c's text) for a game, Dingus Quest Zero's or any other, to read: C's hmchar (games/hmchar) in hylang, the
 ; same questions, the same profile, the same file.
 ;
-; hmchar.hl [-o file] [-q] [-p species] [-c occupation]
+; hmchar.hl [-o file] [-q] [-p species] [-c occupation] [-u culture]
 ;   -o file    where it's written (default: NAME.hm, in the current directory, NAME the character's)
 ;   -q         no questions: the first roll kept, an occupation (one of the book's), weapons and option points chosen
 ;              at random, a name made up
 ;   -p species the character's species, not rolled: human, elf (Sindarin) or dwarf (Khuzdul), by its first letter
 ;              (h, e or s, d or k)
-;   -c occupation  the occupation, by its name (case ignored, a beginning enough), not asked or drawn
+;   -c occupation  the occupation, by its name (case ignored, a beginning enough), not asked or drawn, not held to
+;              the character's class or sex
+;   -u culture a human's culture, not rolled: feudal, imperial, viking or tribal (a beginning enough)
 ; (C's -s seed, the same character each time, isn't here: hylang's random can't be seeded.  HyForth's hmchar.fs has
 ; it, and gives the character C's hmchar does)
 ;
-; The steps (Character 1): the attributes rolled (kept, or rolled again); an occupation, any of the book's that
-; occupations.txt has (C's hmchar's, its lib/hmchar: the Occupational Skills table, Character 15; a soldier's unit by
-; the character's culture, Character 27; a cleric's church by its deity, Character 23; not yet a mage's, Character
-; 25), its skills opened as the book has them (the weapons or crafts it gives chosen); or the player's own (11
-; points, two in a skill at most and three in one, its primary); the five option points spent (Character 16: a skill
-; opened at its OML for one, or improved by its SB for one, two points in a skill at most); a name.  Not here: the
-; family's occupation and its skills, contacts, the veterans' points.
+; The steps (Character 1): the attributes rolled, a human's culture too (Character 3: mostly Feudal), kept, or
+; rolled again; a deity, the player's choice (Character 12: one of the ten or none, the book's Morality for each a
+; guide; -q's none); an occupation, any of the book's that occupations.txt has (C's hmchar's, its lib/hmchar: the
+; Occupational Skills table, Character 15; a soldier's unit by the character's culture, Character 27; a cleric's
+; church by its deity, Character 23; not yet a mage's, Character 25) that the character's class and sex allow it (the
+; book's limits), its skills opened as the book has them (the weapons or crafts it gives chosen); or the player's own
+; (11 points, two in a skill at most and three in one, its primary); the five option points spent (Character 16: a
+; skill opened at its OML for one, or improved by its SB for one, two points in a skill at most); a name.  Not here:
+; the family's occupation and its skills, contacts, the veterans' points.
 
 ; The options (before the library: a wrong one is said at once)
 (def {quiet} NIL)
 (def {out} NIL)
 (def {species} NIL)
 (def {cname} NIL)
+(def {ucult} NIL)
 (def {species-of} (fn {w} {do                   ; -p's: h a human, e or s an elf, d or k a dwarf: 0-2, or NIL
   =(c ?((eq w "") "" (str-lower (substring w 0 1))))
   ?((eq c "h") 0 ?((or (eq c "e") (eq c "s")) 1 ?((or (eq c "d") (eq c "k")) 2 NIL)))}))
+(def {culture-of} (fn {w} {do                   ; -u's: a beginning of tribal, viking, feudal or imperial: 0-3, or NIL
+  =(lw (str-lower w))
+  =(m (filter (fn {k} {starts-with? (nth k {"tribal" "viking" "feudal" "imperial"}) lw}) {0 1 2 3}))
+  ?((or (eq lw "") (nil? m)) NIL (fst m))}))
 (def {a} (tail args))
 (while {a} {do
   =(o (fst a))
   ?((and (eq o "-o") (tail a)) (do (set! {out} (snd a)) (set! {a} (tail a)))
   ?((and (eq o "-c") (tail a)) (do (set! {cname} (snd a)) (set! {a} (tail a)))
+  ?((and (eq o "-u") (and (tail a) (not (nil? (culture-of (snd a)))))) (do (set! {ucult} (culture-of (snd a)))
+    (set! {a} (tail a)))
   ?((and (eq o "-p") (and (tail a) (not (nil? (species-of (snd a)))))) (do (set! {species} (species-of (snd a)))
     (set! {a} (tail a)))
   ?((eq o "-q") (set! {quiet} T)
     (do
       ?((eq o "-s")
         (print-to stderr "hmchar.hl: -s: hylang's random can't be seeded (hmchar.fs and C's hmchar have -s)") NIL)
-      (print-to stderr "usage: hmchar.hl [-o file] [-q] [-p species] [-c occupation]")
-      (exit 1))))))
+      (print-to stderr "usage: hmchar.hl [-o file] [-q] [-p species] [-c occupation] [-u culture]")
+      (exit 1)))))))
   (set! {a} (tail a))})
 
 (use "harn")
@@ -87,24 +98,37 @@
   ?((exists? (+ d "/occupations.txt")) (set! {libdir} d) NIL)}))
 
 (def {items} {})
-(def {cul} "")
 (def {kind} "")
 (def {sect} NIL)
 (def {sdty} 10)
 (def {dnames} (map str-lower harn.deity-names))
 (def {snames} (map (fn {k} {str-lower (harn.skill-name k)}) (range 0 91)))
+(def {cnames} (map str-lower harn.culture-names))
+(def {xnames} (map str-lower harn.sex-names))
 (def {name-in} (fn {l q k} {?(l ?((eq (fst l) q) k (name-in (tail l) q (+ k 1))) k)}))   ; (q's place in l, or its length)
-; A group's header, [KIND] or [KIND QUALIFIER] and its title: offered with no qualifier, or the character's culture,
-; or its deity, or a deity when it has none
+; Whether a header's word (its kind, or a qualifier) lets the character have the group (C's admits, hmocc's): a
+; deity's name, if the character's is that deity or it has none (sdty: the deity); a culture's, if it's the
+; character's; a class's (Guilded, Noble), if the character's is that or higher; a sex's, if it's the character's; any
+; other, yes.  -c's occupation isn't held to the class or the sex
+(def {admits} (fn {w} {do
+  =(lw (str-lower w))
+  =(d (name-in dnames lw 0))
+  =(c (name-in cnames lw 0))
+  =(k (name-in {"guilded" "noble"} lw 0))
+  =(x (name-in xnames lw 0))
+  ?((< d 10) (do (set! {sdty} d) (or (eq (h :dty) 10) (eq (h :dty) d)))
+  ?((< c 6) (eq (h :culture) c)
+  ?((< k 2) (or (not (nil? cname)) (>= (h :social) (+ k 3)))
+  ?((< x 2) (or (not (nil? cname)) (eq (h :sx) x)) T))))}))
+(def {all-admit} (fn {ws} {?(ws (do =(a (admits (fst ws))) =(r (all-admit (tail ws))) (and a r)) T)}))
+; A group's header, [KIND] or [KIND QUALIFIER ...] and its title, if it has one: offered if every word of it admits
+; the character
 (def {header} (fn {l} {do
   =(i (index-of l "]"))
-  =(inside (substring l 1 (- i 1)))
-  =(sp (index-of inside " "))
-  =(q ?((>= sp 0) (substring inside (+ sp 1)) ""))
-  (set! {kind} ?((>= sp 0) (substring inside 0 sp) inside))
-  (set! {sdty} ?((eq q "") 10 (name-in dnames (str-lower q) 0)))
-  (set! {sect} (or (eq q "") (or (eq (str-lower q) cul)
-    (and (< sdty 10) (or (eq (h :dty) 10) (eq (h :dty) sdty))))))
+  =(ws (str-split (substring l 1 (- i 1)) " "))
+  (set! {kind} (fst ws))
+  (set! {sdty} 10)
+  (set! {sect} (all-admit ws))
   =(title (str-trim (substring l (+ i 1))))
   ?((and sect (> (len title) 0)) (set! {items} (cons (list :title kind title) items)) NIL)}))
 (def {occ-line} (fn {l} {?(sect (do              ; (Its skills kept as they're written: skills-of splits them)
@@ -121,7 +145,6 @@
 (def {num} 0)
 (def {read-occs} (fn {} {do                    ; (A line at a time: read-lines garbles a file over 8K)
   (set! {items} {})
-  (set! {cul} (str-lower (nth (h :culture) harn.culture-names)))
   =(f (try (open (+ libdir "/occupations.txt")) {NIL}))
   =(l ?(f (read-line f) NIL))
   (while {not (nil? l)} {do
@@ -295,9 +318,40 @@
             (set! {left} (- left 1))
             ?(quiet NIL (print (+ (harn.skill-name sk) " is " (harn.get-ml h sk)))))))))))})}))
 
-; The occupation: one of the book's, chosen (by its number or its name, a group listed by its kind's first letter, ?
-; and one its skills shown), or -c's, or -q's at random; its skills opened (an automatic skill listed takes the
-; occupation's OML, not the two added: Character 16); or the player's own (:own)
+; ---- The culture (Character 3; C's culture, hmocc's): a human's rolled, mostly Feudal (01-70 Feudal, 71-80 Imperial,
+; 81-90 Viking, 91-00 Tribal), or -u's; an elf's and a dwarf's harn.create's.  One not Feudal has its own social class
+; rolled (the book's table by culture), and so the native tongue's OML again
+(def {culture} (fn {} {?((zero? (h :sp)) (do
+  =(c ?((nil? ucult) (nth (harn.table {70 80 90 100} (harn.d 100)) {2 3 1 0}) ucult))
+  ?((eq c 2) NIL (do
+    (hash-put h [:culture c] [:social (harn.table (nth c harn.class-table) (harn.d 100))])
+    (harn.put-ml h 19 (harn.get-oml h 19))))) NIL)}))
+
+; ---- The deity (Character 12; C's deity, hmocc's): the player's choice, one of the ten or none (-q's none), the
+; book's Morality for each shown as a guide; its ritual skill opened, as harn.create opens a religious character's
+(def {morals} {3 13 5 16 5 16 8 18 3 7 3 10 8 18 5 16 8 18 11 18})
+(def {deity} (fn {} {do
+  (nl)
+  (say (+ "A deity (Character 12): the Morality each favours, a guide (yours is " (h :mor) "):"))
+  (each (fn {d} {w (+ (nth d harn.deity-names) " " (nth (* 2 d) morals) "-" (nth (+ 1 (* 2 d)) morals)
+    ?((< d 9) "," "."))}) (range 0 10))
+  (nl)
+  =(pick NIL)
+  (while {nil? pick} {do
+    =(a (str-lower (ask "Which (a beginning enough; Enter alone, none)? ")))
+    =(m (filter (fn {d} {starts-with? (str-lower (nth d harn.deity-names)) a}) (range 0 11)))
+    ?((eq a "") (set! {pick} 10)
+    ?((nil? m) (print "There's no such deity.")
+    ?((tail m) (print "Which? More than one begins so.") (set! {pick} (fst m)))))})
+  ?((< pick 10) (do
+    (hash-put h [:dty pick])
+    (harn.open-skill h (+ 21 pick))
+    (print (+ (harn.skill-name (+ 21 pick)) " is " (harn.get-ml h (+ 21 pick))))) NIL)}))
+
+; ---- The occupation: one of the book's, chosen (by its number or its name, a group listed by its kind's first
+; letter, ? and one its skills shown), or -c's, or -q's at random; its skills opened (an automatic skill listed takes
+; the occupation's OML, not the two added: Character 16); or the player's own (:own).  The deity first (Character
+; 12), asked of the player
 (def {choose-occ} (fn {count} {do
   =(pick NIL)
   (while {nil? pick} {do
@@ -315,6 +369,7 @@
           (set! {pick} x))))))})
   pick}))
 (def {occupation} (fn {} {do
+  ?(quiet NIL (deity))
   (read-occs)
   =(l (occs))
   =(count (len l))
@@ -360,7 +415,8 @@
   (print (+ "Strength " (h :str) ", Stamina " (h :sta) ", Dexterity " (h :dex) ", Agility " (h :agl) ", Eyesight "
     (h :eye) ", Hearing " (h :hrg) ", Smell " (h :sml) ", Voice " (h :voi)))
   (print (+ "Intelligence " (h :int) ", Aura " (h :aur) ", Will " (h :wil) ", Morality " (h :mor)))
-  (write "Endurance " (harn.end h) ", Move " (harn.move h) ", Piety " (h :pty) "; medical:")
+  (write "Endurance " (harn.end h) ", Move " (harn.move h) ", Piety " (h :pty)
+    ?((eq (h :dty) 10) "" (+ " (" (nth (h :dty) harn.deity-names) ")")) "; medical:")
   (medical (h :med))
   (write "Skills (ML):")
   (skills 0 0)}))
@@ -389,6 +445,7 @@
 (def {kept} NIL)
 (while {not kept} {do
   (set! {h} (harn.create))
+  (culture)
   ?(quiet (set! {kept} T)
     (do
       (profile)

@@ -1,9 +1,11 @@
 /*
-** hmocc.c - (a bank program: sdk/c/include/bankprog.h) hmchar's occupation (games/hmchar): one of the book's that
-** occupations.txt has (hmchar's lib/hmchar: the Occupational Skills table, Character 15; a soldier's unit by the
-** character's culture, Character 27; a cleric's church by its deity, Character 23, the church's deity made the
-** character's if it has none), chosen by its number or its name, or -c's, or -q's at random; its skills opened as the
-** book has them (the weapons or crafts it gives chosen); or the player's own (hmchar's spend: 11 points, the user's,
+** hmocc.c - (a bank program: sdk/c/include/bankprog.h) hmchar's culture, deity and occupation (games/hmchar): a
+** human's culture rolled (Character 3), or -u's; the deity the player's choice (Character 12); then the occupation,
+** one of the book's that occupations.txt has (hmchar's lib/hmchar: the Occupational Skills table, Character 15; a
+** soldier's unit by the character's culture, Character 27; a cleric's church by its deity, Character 23, the church's
+** deity made the character's if it has none), those the character's class and sex allow it (the user's, 2026-10-20:
+** the book's limits), chosen by its number or its name, or -c's, or -q's at random; its skills opened as the book has
+** them (the weapons or crafts it gives chosen); or the player's own (hmchar's spend: 11 points, the user's,
 ** 2026-10-20).  The file's read a line at a time each time it's wanted, none of it kept; hmchar's main RAM hasn't
 ** the room for this (harn.h's tables take most of it), its bank has.
 */
@@ -114,34 +116,63 @@ static void __fastcall__ rest (unsigned char say)
     }
 }
 
-/* A group's header, [KIND] or [KIND QUALIFIER], its [ read: its kind, and whether it's offered (sect: no qualifier,
-** or the character's culture, or its deity, or a deity when it has none), the deity (sdty): the byte after it (a
-** space: a title follows) */
+/* Whether a header's word (its kind, or a qualifier) lets the character have the group: a deity's name, if the
+** character's is that deity or it has none (sdty: the deity); a culture's, if it's the character's; a class's (Guilded,
+** Noble), if the character's is that or higher (a slave's, a serf's and an unguilded character's the unguilded
+** occupations: the user's, 2026-10-20, the book's limits); a sex's, if it's the character's (the Lady's); any other
+** (soldier, Unguilded), yes.  -c's occupation (a game's or a test's choice) isn't held to the class or the sex */
+static unsigned char __fastcall__ admits (const char* w)
+{
+    unsigned char k, d = h.att[HARN_DTY];
+
+    for (k = 0; k < HARN_NODEITY; ++k) {
+        if (same (w, harn_deity_name (k))) {
+            sdty = k;
+            return d == HARN_NODEITY || d == k;
+        }
+    }
+    for (k = 0; k <= HARN_SINDARIN_C; ++k) {
+        if (same (w, harn_culture_name (k))) {
+            return h.culture == k;
+        }
+    }
+    for (k = HARN_GUILDED; k <= HARN_NOBLE; ++k) {
+        if (same (w, harn_class_name (k))) {
+            return cname || h.social >= k;
+        }
+    }
+    for (k = HARN_F; k <= HARN_M; ++k) {
+        if (same (w, harn_sex_name (k))) {
+            return cname || h.att[HARN_SX] == k;
+        }
+    }
+    return 1;
+}
+
+/* A group's header, [KIND] or [KIND QUALIFIER ...], its [ read: its kind, and whether it's offered (sect: every word
+** of it admits the character), the deity (sdty: a church's, else none): the byte after it (a space: a title
+** follows) */
 static char header (void)
 {
-    unsigned char k = 0, d;
+    unsigned char k = 0;
     char c, *f = kind;
 
-    tk[0] = 0;
-    while ((c = next ()) && c != ']' && c != '\n') {
-        if (c == ' ' && f == kind) {
-            kind[k] = 0;
-            f = tk;
-            k = 0;
-        } else if (k < 11) {
-            f[k++] = c;
-        }
-    }
-    f[k] = 0;
     sdty = HARN_NODEITY;
-    for (d = 0; d < HARN_NODEITY; ++d) {
-        if (same (tk, harn_deity_name (d))) {
-            sdty = d;
+    sect = 1;
+    do {
+        if ((c = next ()) && c != ']' && c != '\n' && c != ' ') {
+            if (k < 11) {
+                f[k++] = c;
+            }
+            continue;
         }
-    }
-    d = h.att[HARN_DTY];
-    sect = !tk[0] || same (tk, harn_culture_name (h.culture)) ||
-        sdty != HARN_NODEITY && (d == HARN_NODEITY || d == sdty);
+        f[k] = 0;                               /* (A word's end: the kind, then each qualifier in tk) */
+        if (!admits (f)) {
+            sect = 0;
+        }
+        f = tk;
+        k = 0;
+    } while (c && c != ']' && c != '\n');
     return c == ']' ? next () : c;
 }
 
@@ -404,15 +435,95 @@ static void choose (void)
     }
 }
 
+/* ---- The culture (Character 3: by birthplace, most of Harn's Feudal, the common exceptions Imperial, Viking and
+** Tribal): a human's rolled (the user's, 2026-10-20: mostly Feudal; 01-70 Feudal, 71-80 Imperial, 81-90 Viking, 91-00
+** Tribal), or -u's (a test's: the same character each time); an elf's Sindarin and a dwarf's Khuzan, harn_create's.
+** A culture not harn_create's (its Feudal) has its own social class rolled (the book's table by culture), and so the
+** native tongue's OML (by class) again.  0; or 1, -u's not one of the four (a beginning of the name enough) */
+unsigned char culture (void)
+{
+    unsigned char c = 0xFF, r;
+
+    if (uname) {
+        for (c = HARN_TRIBAL; c <= HARN_IMPERIAL && (!*uname || strnicmp (harn_culture_name (c), uname, strlen (uname)));
+            ++c) {
+        }
+        if (c > HARN_IMPERIAL) {
+            return 1;
+        }
+    }
+    if (h.att[HARN_SP] == HARN_HUM) {
+        if (c == 0xFF) {
+            r = d100 ();
+            c = r <= 70 ? HARN_FEUDAL : r <= 80 ? HARN_IMPERIAL : r <= 90 ? HARN_VIKING : HARN_TRIBAL;
+        }
+        if (c != HARN_FEUDAL) {
+            h.culture = c;
+            h.social = harn_rand_class (c);
+            h.ml[HARN_LAN] = harn_get_oml (&h, HARN_LAN);
+        }
+    }
+    return 0;
+}
+
+/* ---- The deity (Character 12): the player's choice (the user's, 2026-10-20), one of the ten or none (-q's none), the
+** book's Morality for each shown as a guide; its ritual skill opened, as harn_create opens a religious character's
+** (Skills 12).  A cleric's church (the occupation, after) is its deity's, or any of the ten for one with none */
+static const unsigned char morals[] = { 3, 13, 5, 16, 5, 16, 8, 18, 3, 7, 3, 10, 8, 18, 5, 16, 8, 18, 11, 18 };
+
+static void deity (void)
+{
+    static char b[20];
+    unsigned char d, got, len;
+
+    s ("\nA deity (Character 12): the Morality each favours, a guide (yours is ");
+    n (h.att[HARN_MOR]);
+    s ("):");
+    for (d = 0; d < HARN_NODEITY; ++d) {        /* ("Agrik 3-13," ... "Siem 11-18.") */
+        strcat (strcpy (b, harn_deity_name (d)), " ");
+        itoa (morals[d * 2], b + strlen (b), 10);
+        strcat (b, "-");
+        itoa (morals[d * 2 + 1], b + strlen (b), 10);
+        strcat (b, d + 1 < HARN_NODEITY ? "," : ".");
+        w (b);
+    }
+    ch ('\n');
+    for (;;) {
+        if (!(len = ask ("Which (a beginning enough; Enter alone, none)? ", ab, sizeof ab))) {
+            return;
+        }
+        got = 0;
+        for (d = 0; d <= HARN_NODEITY; ++d) {   /* (None too) */
+            if (!strnicmp (harn_deity_name (d), ab, len)) {
+                got = got ? 0xFF : d + 1;
+            }
+        }
+        if (got && got != 0xFF) {
+            break;
+        }
+        s (got ? "Which? More than one begins so.\n" : "There's no such deity.\n");
+    }
+    if (--got != HARN_NODEITY) {
+        h.att[HARN_DTY] = got;
+        harn_open_skill (&h, got += HARN_RAGR);
+        s (harn_skill_name (got));
+        named (" is", h.ml[got], "\n");
+    }
+}
+
 /* ---- The occupation: one of the book's, chosen (by its number or its name, a group listed by its kind's first
 ** letter, ? and one its skills shown), or -c's, or -q's at random (one draw, -c or not); its skills opened (an
-** automatic skill listed takes the occupation's OML, not the two added: Character 16); or the player's own */
+** automatic skill listed takes the occupation's OML, not the two added: Character 16); or the player's own.  The
+** deity first (Character 12), asked of the player */
 unsigned char occupation (void)
 {
     unsigned char count, show, got;
     char* p;
     int k;
 
+    if (!quiet) {
+        deity ();
+    }
     wname = cname;
     talk = !quiet && !cname;
     if (talk) {
