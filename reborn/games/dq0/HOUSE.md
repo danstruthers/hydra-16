@@ -500,6 +500,10 @@ climb's test to hold on).
   engaged it), a blow each round as it can, a long task, without "attack" again; any command takes over; its target
   beaten (dead, senseless, fled out of reach), the next enemy engaging it; none left, it stops and says so.  Today
   each attack is one blow.
+- **Fighting on with missiles** (the user's, 2026-10-20; slice 4.7, with the missiles): a bow's arrows, a brace of
+  throwing daggers, the same way: shot or thrown at the target while it's in range, the next taken each time, the
+  next foe in range after it, till none is left, the missiles run out, or an enemy engages the character (then
+  fighting on in melee).  Today nothing thrown wounds.
 - **A round's defences** (the user's, 2026-10-20): automatic, a block or a dodge, the better against the blow, each
   once a round (a block once for each weapon or shield that blocks: two attackers, the shield blocks one and the
   sword the other; a dodge once); a counterstrike only on command (defend counter), its weapon used for the round;

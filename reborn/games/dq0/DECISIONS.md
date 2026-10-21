@@ -758,4 +758,12 @@ user chose:
   round; a counterstrike only when the player says (defend counter), its weapon used for the round as a block's
   is (the lead's reading); none left, no defence.
 
+And the user, after: "if using ranged attacks, you can continue attacking targets as long as they are within range or
+you run out of ammo.  Throwing daggers (if you have a brace of them) would be handled the same way as arrows for your
+bow; you throw/fire, grab the next one/knock the next arrow, repeat attack.  Should all be done automatically until
+foes are all dispatched, you are out of ammo, or you are engaged and need to switch to a melee weapon."  So fighting
+on with a missile weapon (slice 4.7's, with the missiles) shoots or throws at its target while it's in range, the
+next arrow or dagger taken each time, turning to the next foe in range, till none is left, the missiles run out, or
+an enemy engages the character, when it stops (fighting on in melee then, from the engagement: the lead's reading).
+
 **Design:** HOUSE.md, decided, not yet built.
